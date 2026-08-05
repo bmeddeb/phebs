@@ -1,0 +1,247 @@
+package search
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"slices"
+	"sort"
+
+	"github.com/bmeddeb/phebs/internal/servicequery"
+)
+
+const (
+	ScopeReceiptSchema = "phebs-search-scope-v1"
+	ScopeAllCode       = "all_code"
+	ScopeService       = "service"
+
+	allCodeMembershipPolicy = "visible-indexed-repositories-v1"
+	serviceMembershipPolicy = "accepted-roles-union-shared-included-unowned-excluded-v1"
+)
+
+var ErrInvalidScopeSelector = errors.New("invalid search scope selector")
+
+type ScopeSelector struct {
+	Kind       string `json:"kind"`
+	Repository string `json:"repository,omitempty"`
+	ServiceKey string `json:"service_key,omitempty"`
+}
+
+type ScopeRevision struct {
+	Repository string `json:"repository"`
+	Commit     string `json:"commit"`
+}
+
+// ScopeReceipt is the shared HTTP/MCP/UI identity for one completed search.
+// ResultSetDigest binds the exact emitted citations without claiming that a
+// truncated or zero-result query exhausts the searched corpus.
+type ScopeReceipt struct {
+	Schema           string                  `json:"schema"`
+	Kind             string                  `json:"kind"`
+	Repository       string                  `json:"repository,omitempty"`
+	ServiceKey       string                  `json:"service_key,omitempty"`
+	ServiceStatus    string                  `json:"service_status,omitempty"`
+	MembershipPolicy string                  `json:"membership_policy"`
+	ExpressionDigest string                  `json:"expression_digest"`
+	Authority        *servicequery.Authority `json:"service_authority,omitempty"`
+	Revisions        []ScopeRevision         `json:"revisions"`
+	ResultSetDigest  string                  `json:"result_set_digest"`
+	ResultFiles      int                     `json:"result_files"`
+	ResultMatches    int                     `json:"result_matches"`
+	Digest           string                  `json:"digest"`
+}
+
+// SearchScoped selects the ordinary All code reader or the exact v2 service
+// reader and attaches one closed receipt to the existing result wire shape.
+func (s *Searcher) SearchScoped(
+	ctx context.Context,
+	selector ScopeSelector,
+	expression string,
+	opts Options,
+) (*Result, error) {
+	selector, err := validateScopeSelector(selector)
+	if err != nil {
+		return nil, err
+	}
+	var result *Result
+	var authority *servicequery.Authority
+	switch selector.Kind {
+	case ScopeAllCode:
+		result, err = s.Search(ctx, expression, opts)
+	case ScopeService:
+		var serviceResult *ServiceResult
+		serviceResult, err = s.SearchService(ctx, ServiceRequest{
+			Repository: selector.Repository, ServiceKey: selector.ServiceKey,
+			Expression: expression, RevisionSelector: "HEAD",
+		}, opts)
+		if serviceResult != nil {
+			result = serviceResult.Result
+			copy := serviceResult.Authority
+			authority = &copy
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := newScopeReceipt(selector, expression, result, authority)
+	if err != nil {
+		return nil, err
+	}
+	result.Scope = &receipt
+	return result, nil
+}
+
+// StreamScoped preserves progressive All code delivery. Service scope already
+// uses one exact static reader, so it emits one bounded result batch.
+func (s *Searcher) StreamScoped(
+	ctx context.Context,
+	selector ScopeSelector,
+	expression string,
+	opts Options,
+	sink func(*Result),
+) (*Stats, *ScopeReceipt, error) {
+	selector, err := validateScopeSelector(selector)
+	if err != nil {
+		return nil, nil, err
+	}
+	if selector.Kind == ScopeService {
+		result, err := s.SearchScoped(ctx, selector, expression, opts)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(result.Files) > 0 {
+			sink(result)
+		}
+		stats := result.Stats
+		return &stats, result.Scope, nil
+	}
+	files := make([]FileResult, 0, clamp(opts.MaxMatches, 50, 500))
+	stats, err := s.Stream(ctx, expression, opts, func(batch *Result) {
+		for _, file := range batch.Files {
+			files = append(files, FileResult{
+				Repo: file.Repo, Path: file.Path, Ref: file.Ref,
+			})
+		}
+		sink(batch)
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	receipt, err := newScopeReceipt(
+		selector, expression, &Result{Files: files, Stats: *stats}, nil,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return stats, &receipt, nil
+}
+
+func validateScopeSelector(selector ScopeSelector) (ScopeSelector, error) {
+	if selector.Kind == "" {
+		selector.Kind = ScopeAllCode
+	}
+	switch selector.Kind {
+	case ScopeAllCode:
+		if selector.Repository != "" || selector.ServiceKey != "" {
+			return ScopeSelector{}, fmt.Errorf(
+				"%w: all_code scope cannot name a service", ErrInvalidScopeSelector,
+			)
+		}
+	case ScopeService:
+		if selector.Repository == "" || selector.ServiceKey == "" {
+			return ScopeSelector{}, fmt.Errorf(
+				"%w: service scope requires repository and service_key", ErrInvalidScopeSelector,
+			)
+		}
+	default:
+		return ScopeSelector{}, fmt.Errorf(
+			"%w: unsupported search scope %q", ErrInvalidScopeSelector, selector.Kind,
+		)
+	}
+	return selector, nil
+}
+
+type scopeCitation struct {
+	Repository string `json:"repository"`
+	Commit     string `json:"commit"`
+	Path       string `json:"path"`
+}
+
+func newScopeReceipt(
+	selector ScopeSelector,
+	expression string,
+	result *Result,
+	authority *servicequery.Authority,
+) (ScopeReceipt, error) {
+	if result == nil {
+		return ScopeReceipt{}, errors.New("search scope result is absent")
+	}
+	citations := make([]scopeCitation, 0, len(result.Files))
+	revisions := make([]ScopeRevision, 0, len(result.Files))
+	for _, file := range result.Files {
+		citations = append(citations, scopeCitation{
+			Repository: file.Repo, Commit: file.Ref, Path: file.Path,
+		})
+		revisions = append(revisions, ScopeRevision{
+			Repository: file.Repo, Commit: file.Ref,
+		})
+	}
+	sort.Slice(citations, func(i, j int) bool {
+		if citations[i].Repository != citations[j].Repository {
+			return citations[i].Repository < citations[j].Repository
+		}
+		if citations[i].Commit != citations[j].Commit {
+			return citations[i].Commit < citations[j].Commit
+		}
+		return citations[i].Path < citations[j].Path
+	})
+	sort.Slice(revisions, func(i, j int) bool {
+		if revisions[i].Repository != revisions[j].Repository {
+			return revisions[i].Repository < revisions[j].Repository
+		}
+		return revisions[i].Commit < revisions[j].Commit
+	})
+	revisions = slices.Compact(revisions)
+	receipt := ScopeReceipt{
+		Schema: ScopeReceiptSchema, Kind: selector.Kind,
+		Repository: selector.Repository, ServiceKey: selector.ServiceKey,
+		ExpressionDigest: scopeDigest("phebs-search-expression-v1\x00", expression),
+		Revisions:        revisions, ResultSetDigest: scopeJSONDigest(
+			"phebs-search-result-citations-v1\x00", citations,
+		),
+		ResultFiles: len(result.Files), ResultMatches: result.Stats.MatchCount,
+	}
+	if selector.Kind == ScopeService {
+		if authority == nil {
+			return ScopeReceipt{}, errors.New("service search authority is absent")
+		}
+		receipt.MembershipPolicy = serviceMembershipPolicy
+		receipt.ServiceStatus = authority.Status
+		copy := *authority
+		receipt.Authority = &copy
+	} else {
+		receipt.MembershipPolicy = allCodeMembershipPolicy
+	}
+	receipt.Digest = scopeReceiptDigest(receipt)
+	return receipt, nil
+}
+
+func scopeReceiptDigest(receipt ScopeReceipt) string {
+	receipt.Digest = ""
+	return scopeJSONDigest("phebs-search-scope-v1\x00", receipt)
+}
+
+func scopeJSONDigest(domain string, value any) string {
+	raw, _ := json.Marshal(value)
+	return scopeDigest(domain, string(raw))
+}
+
+func scopeDigest(domain, value string) string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(domain))
+	_, _ = hash.Write([]byte(value))
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}

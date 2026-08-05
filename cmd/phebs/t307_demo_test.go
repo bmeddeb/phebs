@@ -545,6 +545,126 @@ func TestT335ServiceDirectoryCatalogIsPinnedAndNeutral(t *testing.T) {
 	}
 }
 
+func TestBindT344ServiceSearchDemoIsWholeAndCatalogBacked(t *testing.T) {
+	fixture := t344FixturePath(t)
+	catalogPath := t344CatalogPath(t)
+	repository, err := phebssync.RepoName(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("ordinary serve remains unchanged", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindT344ServiceSearchDemo(cfg, "", ""); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(cfg, &config.Config{}) {
+			t.Fatalf("empty setting changed config: %+v", cfg)
+		}
+	})
+
+	t.Run("exact inputs bind an ordinary whole repository without evidence flags", func(t *testing.T) {
+		cfg := &config.Config{}
+		for range 2 {
+			if err := bindT344ServiceSearchDemo(cfg, fixture, catalogPath); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(cfg.Connections) != 1 || !reflect.DeepEqual(cfg.Connections[0], config.Connection{
+			Name: "t34-service-search-demo", Type: "git", URL: fixture,
+		}) {
+			t.Fatalf("demo connections = %+v", cfg.Connections)
+		}
+		if len(cfg.AnalysisUnits) != 0 {
+			t.Fatalf("whole-repository demo gained analysis units: %+v", cfg.AnalysisUnits)
+		}
+		if cfg.Experimental != (config.Experimental{}) {
+			t.Fatalf("demo enabled experimental evidence: %+v", cfg.Experimental)
+		}
+		if got := cfg.ServiceCatalogs[repository]; got != (config.ServiceCatalog{
+			Kind: servicecatalog.AuthorityOperator, ID: "t344-demo",
+			Version: "v1", Path: catalogPath,
+		}) {
+			t.Fatalf("demo catalog selection = %+v", got)
+		}
+	})
+
+	t.Run("invalid settings fail before mutation", func(t *testing.T) {
+		drifted := filepath.Join(t.TempDir(), "t344-service-catalog.json")
+		raw, err := os.ReadFile(catalogPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(drifted, append(raw, '\n'), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		focused := &config.Config{AnalysisUnits: map[string]analysisunit.Config{
+			repository: {Name: "not-whole", Primary: []string{"services"}},
+		}}
+		collision := &config.Config{ServiceCatalogs: map[string]config.ServiceCatalog{
+			repository: {Kind: servicecatalog.AuthorityOperator, ID: "other", Version: "v2", Path: catalogPath},
+		}}
+		rows := []struct {
+			name             string
+			cfg              *config.Config
+			fixture, catalog string
+		}{
+			{name: "nil config", fixture: fixture, catalog: catalogPath},
+			{name: "missing bundle", cfg: &config.Config{}, catalog: catalogPath},
+			{name: "missing catalog", cfg: &config.Config{}, fixture: fixture},
+			{name: "relative bundle", cfg: &config.Config{}, fixture: "spike/t323/t323-neutral-corpus.bundle", catalog: catalogPath},
+			{name: "catalog drift", cfg: &config.Config{}, fixture: fixture, catalog: drifted},
+			{name: "focused collision", cfg: focused, fixture: fixture, catalog: catalogPath},
+			{name: "catalog collision", cfg: collision, fixture: fixture, catalog: catalogPath},
+		}
+		for _, row := range rows {
+			t.Run(row.name, func(t *testing.T) {
+				if row.cfg == nil {
+					if err := bindT344ServiceSearchDemo(nil, row.fixture, row.catalog); err == nil {
+						t.Fatal("invalid setting succeeded")
+					}
+					return
+				}
+				before := cloneT307Config(row.cfg)
+				if err := bindT344ServiceSearchDemo(row.cfg, row.fixture, row.catalog); err == nil {
+					t.Fatal("invalid setting succeeded")
+				}
+				if !reflect.DeepEqual(*row.cfg, before) {
+					t.Fatalf("failed binding changed config: before=%+v after=%+v", before, *row.cfg)
+				}
+			})
+		}
+	})
+}
+
+func TestT344ServiceSearchCatalogIsPinnedAndNeutral(t *testing.T) {
+	raw, err := os.ReadFile(t344CatalogPath(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := servicecatalog.Decode(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := servicecatalog.Digest(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded := fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
+	if len(raw) != t344CatalogEncodedBytes || encoded != t344CatalogEncodedSHA256 ||
+		digest != "sha256:09e585dee6f6e59d40aabe8318eef96e6177576b2fbcb636f84f2003d34eab63" {
+		t.Fatalf("catalog identity = %d/%s/%s", len(raw), encoded, digest)
+	}
+	if len(catalog.Services) != 5 || len(catalog.Memberships) != 13 || len(catalog.Unowned) != 6 {
+		t.Fatalf("catalog shape = %d/%d/%d", len(catalog.Services), len(catalog.Memberships), len(catalog.Unowned))
+	}
+	if catalog.Authority != (servicecatalog.Authority{
+		Kind: servicecatalog.AuthorityOperator, ID: "t344-demo", Version: "v1",
+	}) {
+		t.Fatalf("catalog authority = %+v", catalog.Authority)
+	}
+}
+
 func t307FixturePath(t *testing.T) string {
 	t.Helper()
 	fixture, err := filepath.Abs(filepath.Join(
@@ -562,6 +682,29 @@ func t335CatalogPath(t *testing.T) string {
 	catalog, err := filepath.Abs(filepath.Join(
 		"..", "..", "docs", "fixtures", "t33.5-service-directory",
 		"t335-service-catalog.json",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return catalog
+}
+
+func t344FixturePath(t *testing.T) string {
+	t.Helper()
+	fixture, err := filepath.Abs(filepath.Join(
+		"..", "..", "spike", "t323", "t323-neutral-corpus.bundle",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fixture
+}
+
+func t344CatalogPath(t *testing.T) string {
+	t.Helper()
+	catalog, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "t34.4-service-search",
+		"t344-service-catalog.json",
 	))
 	if err != nil {
 		t.Fatal(err)

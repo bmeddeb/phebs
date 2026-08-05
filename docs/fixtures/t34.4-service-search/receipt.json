@@ -1,0 +1,28 @@
+{
+  "schema": "t34.4-service-search-demo-v1",
+  "source_bundle": "../../../spike/t323/t323-neutral-corpus.bundle",
+  "source_bundle_bytes": 6771,
+  "source_bundle_sha256": "sha256:8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa",
+  "source_commit": "4ac5335893fc18a1243b60a005faa1f09268d858",
+  "regular_file_count": 14,
+  "catalog": "t344-service-catalog.json",
+  "catalog_encoded_bytes": 3401,
+  "catalog_encoded_sha256": "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94",
+  "catalog_semantic_sha256": "sha256:09e585dee6f6e59d40aabe8318eef96e6177576b2fbcb636f84f2003d34eab63",
+  "authority": {
+    "kind": "operator",
+    "id": "t344-demo",
+    "version": "v1"
+  },
+  "service_count": 5,
+  "membership_count": 13,
+  "unowned_placement_count": 6,
+  "role_counts": {
+    "primary": 4,
+    "supporting": 3,
+    "shared": 4,
+    "generated": 1,
+    "typed": 1
+  },
+  "observation": "Neutral All code/service product input only; no relationship, evidence, runtime-use, extraction-accuracy/completeness, target SLO/scale, migration-completion, decommission-safety, or release claim."
+}

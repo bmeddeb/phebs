@@ -33,6 +33,28 @@ export interface Stats {
 export interface SearchResult {
   files: FileResult[]
   stats: Stats
+  scope_receipt?: SearchScopeReceipt
+}
+
+export interface SearchScopeRevision {
+  repository: string
+  commit: string
+}
+
+export interface SearchScopeReceipt {
+  schema: 'phebs-search-scope-v1'
+  kind: 'all_code' | 'service'
+  repository?: string
+  service_key?: string
+  service_status?: ServiceStatus
+  membership_policy: string
+  expression_digest: string
+  service_authority?: Record<string, unknown>
+  revisions: SearchScopeRevision[]
+  result_set_digest: string
+  result_files: number
+  result_matches: number
+  digest: string
 }
 
 export interface IndexJob {
@@ -2294,8 +2316,13 @@ export function streamSearch(
   onBatch: (r: SearchResult) => void,
   onDone: (s: Stats) => void,
   onError: (msg: string) => void,
+  scope: { kind: 'all_code' | 'service'; repository?: string; serviceKey?: string } = { kind: 'all_code' },
+  onScope: (receipt: SearchScopeReceipt) => void = () => {},
 ): () => void {
-  const es = new EventSource(`/api/stream_search?q=${encodeURIComponent(q)}`)
+  const params = new URLSearchParams({ q, scope: scope.kind })
+  if (scope.repository) params.set('repository', scope.repository)
+  if (scope.serviceKey) params.set('service_key', scope.serviceKey)
+  const es = new EventSource(`/api/stream_search?${params.toString()}`)
   let ended = false
   const fail = (message: string) => {
     if (ended) return
@@ -2322,6 +2349,15 @@ export function streamSearch(
     ended = true
     es.close()
     onDone(payload)
+  })
+  es.addEventListener('scope', (e) => {
+    if (ended) return
+    const payload = parseEvent(e.data)
+    if (!isSearchScopeReceipt(payload)) {
+      fail('invalid search scope event')
+      return
+    }
+    onScope(payload)
   })
   // A single 'error' handler: EventSource fires this event type for BOTH a
   // server-sent `event: error` (has e.data — a real backend message) and a
@@ -2409,5 +2445,24 @@ function isSearchResult(value: unknown): value is SearchResult {
     Array.isArray(value.files) &&
     value.files.every(isFileResult) &&
     isStats(value.stats)
+  )
+}
+
+function isSearchScopeReceipt(value: unknown): value is SearchScopeReceipt {
+  return (
+    isRecord(value) &&
+    value.schema === 'phebs-search-scope-v1' &&
+    (value.kind === 'all_code' || value.kind === 'service') &&
+    typeof value.membership_policy === 'string' &&
+    typeof value.expression_digest === 'string' &&
+    Array.isArray(value.revisions) &&
+    value.revisions.every((revision) =>
+      isRecord(revision) &&
+      typeof revision.repository === 'string' &&
+      typeof revision.commit === 'string') &&
+    typeof value.result_set_digest === 'string' &&
+    isFiniteNumber(value.result_files) &&
+    isFiniteNumber(value.result_matches) &&
+    typeof value.digest === 'string'
   )
 }

@@ -2601,6 +2601,30 @@ source-free authority/lifecycle demonstration, not evidence of runtime use,
 relationships, completeness, extraction accuracy, supported scale, migration
 completion, decommission safety, or release readiness.
 
+### Source-free All code/service-search walkthrough
+
+`make dev` and `make dev-api` also bind the retained T32.3 bundle and the exact
+`docs/fixtures/t34.4-service-search/t344-service-catalog.json` as a separate
+ordinary whole-repository cohort. Startup pins both file names and catalog
+bytes, rejects a focused-unit or catalog collision, and leaves every
+experimental evidence flag disabled. Ordinary `phebs serve` does not select
+this cohort unless both `PHEBS_T344_SERVICE_SEARCH_REPO` and
+`PHEBS_T344_SERVICE_SEARCH_CATALOG` name the exact clean absolute files.
+
+After indexing and service-generation reconciliation settle, open the
+repository's service directory and use **Search this service** for Orders API.
+The selector, HTTP parameters, SSE scope event, and MCP `search_code` fields
+all use the same All code/service contract. Shared paths are included for each
+accepted service; explicit unowned paths remain visible only through All code.
+A current-to-stale transition stays labeled and bound to the last complete
+active authority. Unavailable scope refuses without widening.
+
+The [T34.4 fixture receipt](../fixtures/t34.4-service-search/receipt.json)
+pins the bundle, commit, catalog, and closed cardinalities. Scope receipts bind
+emitted citations rather than corpus completeness. The walkthrough adds no
+evidence pack, relationship/runtime-use claim, extraction accuracy, supported
+scale, migration/decommission conclusion, or release authority.
+
 ### Thrift field-zero development walkthrough
 
 This retained specialized walkthrough is no longer part of `make dev` or

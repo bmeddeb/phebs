@@ -139,8 +139,9 @@ complete. T33.4 supplies authorization-first paged HTTP/MCP inventory and
 exact bounded service detail over that state; T33.5's accessible source-free
 directory and neutral ordinary-worker demo close Epic 33. T34.1's immutable
 repository source/search generation, T34.2's exact service-query compiler,
-and T34.3's fail-closed migration/recovery are complete; T34.4 is scheduled,
-and the remaining Epics 34–39 stay
+T34.3's fail-closed migration/recovery, and T34.4's shared All code/service
+product and neutral demo close Epic 34; T35.1 is scheduled, and the remaining
+Epics 35–39 stay
 dependency-ordered drafts, and Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,

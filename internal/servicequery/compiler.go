@@ -38,6 +38,7 @@ const (
 
 var (
 	ErrInvalidScope           = errors.New("invalid service query scope")
+	ErrInvalidExpression      = errors.New("invalid service query expression")
 	ErrUnsupportedComposition = errors.New("unsupported service query composition")
 	ErrUnavailable            = errors.New("service query scope unavailable")
 )
@@ -105,8 +106,9 @@ func Compile(request Request) (Compiled, error) {
 	}
 	if len(request.Expression) > MaxExpressionBytes ||
 		!utf8.ValidString(request.Expression) {
-		return Compiled{}, invalidf(
-			"expression must be valid UTF-8 of at most %d bytes",
+		return Compiled{}, fmt.Errorf(
+			"%w: expression must be valid UTF-8 of at most %d bytes",
+			ErrInvalidExpression,
 			MaxExpressionBytes,
 		)
 	}
@@ -138,7 +140,7 @@ func Compile(request Request) (Compiled, error) {
 	}
 	parsed, err := query.Parse(request.Expression)
 	if err != nil {
-		return Compiled{}, fmt.Errorf("%w: parse expression: %v", ErrInvalidScope, err)
+		return Compiled{}, fmt.Errorf("%w: parse expression: %v", ErrInvalidExpression, err)
 	}
 	pathQuery, predicateBytes, err := compilePaths(resolved.paths)
 	if err != nil {

@@ -212,7 +212,7 @@ func TestCompileDeduplicatesRolesAndBoundsPredicateComplexity(t *testing.T) {
 		Expression:       strings.Repeat("x", MaxExpressionBytes+1),
 		RevisionSelector: "HEAD", Scopes: []PreparedScope{{}},
 	}
-	if _, err := Compile(request); !errors.Is(err, ErrInvalidScope) {
+	if _, err := Compile(request); !errors.Is(err, ErrInvalidExpression) {
 		t.Fatalf("oversized expression error = %v", err)
 	}
 

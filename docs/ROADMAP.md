@@ -70,9 +70,10 @@ desired/active/status/incarnation/tombstone state and bounded repository
 summary, T33.4's authorization-first paged HTTP/MCP inventory and exact
 detail, and T33.5's accessible service directory and neutral epic demo
 completed on 2026-08-05, closing Epic 33. T34.1's immutable repository
-source/search generation, T34.2's exact service-query compiler, and T34.3's
-fail-closed publication migration, activation, and recovery also completed on
-2026-08-05. T34.4's shared All code/service product and demo is scheduled next.
+source/search generation, T34.2's exact service-query compiler, T34.3's
+fail-closed publication migration, activation, and recovery, and T34.4's
+shared All code/service product and neutral demo completed on 2026-08-05,
+closing Epic 34. T35.1's generation-scoped chunk scheduler is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -388,9 +389,10 @@ migration, T33.3 supplies independent service lifecycle state, T33.4 exposes
 its authorization-first bounded HTTP/MCP reads, and T33.5 closes the epic with
 the accessible directory and neutral ordinary-worker demo. T34.1 publishes
 the immutable repository source/search generation, T34.2 supplies the exact
-pre-ranking service compiler, and T34.3 supplies the v2-only internal service
-reader, atomic activation, final fences, and exact recovery; T34.4 is the
-scheduled dependency-ordered ticket. Epics 25–28 remain
+pre-ranking service compiler, T34.3 supplies the v2-only service reader,
+atomic activation, final fences, and exact recovery, and T34.4 supplies the
+shared All code/service product and neutral demo. T35.1 is the scheduled
+dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -519,11 +521,11 @@ service count × repository bytes
   ingestion and v1 migration, T33.3 supplies independent service state, T33.4
   supplies authorized bounded HTTP/MCP reads, and T33.5 supplies the accessible
   source-free directory and neutral ordinary-worker demo.
-- **Epic 34 — shared search (T34.1–T34.3 complete):** the immutable
+- **Epic 34 — shared search (complete):** the immutable
   source/search generation, direct physical root, exact pre-ranking service
-  predicate, v2-only internal service reader, atomic activation, and recovery
-  are complete; T34.4 next owns the shared product surface and demo.
-- **Epic 35 — bounded lifecycle:** add chunk scheduling, fairness, progress,
+  predicate, v2-only service reader, atomic activation/recovery, shared
+  HTTP/MCP/UI selector and receipt, and neutral whole-repository demo are complete.
+- **Epic 35 — bounded lifecycle (T35.1 scheduled):** add chunk scheduling, fairness, progress,
   pin-aware retention/GC, recovery, and capacity controls before multiplying
   high-cardinality artifacts.
 - **Epic 36 — shared source observations:** batch immutable Git reads, parse

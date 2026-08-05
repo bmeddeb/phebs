@@ -4,9 +4,9 @@ import { Input } from 'baseui/input'
 import { Notification, KIND } from 'baseui/notification'
 import type { LanguageSupport } from '@codemirror/language'
 import { fetchRepoStatus, streamSearch } from '../api'
-import type { FileResult, Range, RepoStatus, Stats } from '../api'
+import type { FileResult, Range, RepoStatus, SearchScopeReceipt, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
-import { usePhebsTokens, useMode, FONTS } from '../theme'
+import { usePhebsTokens, useMode, FONTS, type PhebsTokens } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
@@ -23,12 +23,18 @@ const firstMatchLine = (f: FileResult) =>
 
 export default function SearchPage({ params }: { params: URLSearchParams }) {
   const urlQuery = params.get('q') ?? ''
+  const serviceRepository = params.get('repository') ?? ''
+  const serviceKey = params.get('service_key') ?? ''
+  const scopeKind = params.get('scope') === 'service' && serviceRepository && serviceKey
+    ? 'service'
+    : 'all_code'
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode } = useMode()
   const [input, setInput] = useState(urlQuery)
   const [files, setFiles] = useState<FileResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
+  const [scopeReceipt, setScopeReceipt] = useState<SearchScopeReceipt | null>(null)
   const [repositories, setRepositories] = useState<RepoStatus[]>([])
   const [repositoriesLoading, setRepositoriesLoading] = useState(true)
   const [repositoriesError, setRepositoriesError] = useState('')
@@ -88,10 +94,12 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
       setPhase('idle')
       setFiles([])
       setStats(null)
+      setScopeReceipt(null)
       return
     }
     setFiles([])
     setStats(null)
+    setScopeReceipt(null)
     setError('')
     setPhase('streaming')
     stopRef.current = streamSearch(
@@ -105,9 +113,13 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
         setError(msg)
         setPhase('error')
       },
+      scopeKind === 'service'
+        ? { kind: 'service', repository: serviceRepository, serviceKey }
+        : { kind: 'all_code' },
+      setScopeReceipt,
     )
     return () => stopRef.current()
-  }, [urlQuery, searchGeneration])
+  }, [urlQuery, searchGeneration, scopeKind, serviceRepository, serviceKey])
 
   // group by repo, preserving arrival order
   const groups = useMemo(() => {
@@ -348,7 +360,9 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           const next = input.trim()
           if (!next) return
           if (next === urlQuery) setSearchGeneration((generation) => generation + 1)
-          else navigate('/search', { q: next })
+          else navigate('/search', searchRouteParams(
+            next, scopeKind, serviceRepository, serviceKey,
+          ))
         }}
         className={css({ width: '100%', position: 'relative' })}
       >
@@ -421,6 +435,14 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
         )}
       </form>
 
+      <SearchScopeSelector
+        kind={scopeKind}
+        repository={serviceRepository}
+        serviceKey={serviceKey}
+        query={urlQuery || input.trim()}
+        receipt={scopeReceipt}
+      />
+
       <SearchMeta
         input={input}
         setInput={setInput}
@@ -474,7 +496,11 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
             '@media screen and (max-width: 900px)': { flexDirection: 'column', gap: '12px' },
           })}>
             {files.length > 0 && (
-              <FacetRail files={files} query={urlQuery} />
+              <FacetRail
+                files={files}
+                query={urlQuery}
+                scope={{ kind: scopeKind, repository: serviceRepository, serviceKey }}
+              />
             )}
             <div className={css({ flex: '1 1 0', minWidth: 0, width: '100%' })}>
               {phase === 'error' && (
@@ -518,6 +544,95 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   )
 }
 
+function searchRouteParams(
+  q: string,
+  kind: string,
+  repository: string,
+  serviceKey: string,
+): Record<string, string> {
+  const result: Record<string, string> = { q }
+  if (kind === 'service' && repository && serviceKey) {
+    result.scope = 'service'
+    result.repository = repository
+    result.service_key = serviceKey
+  }
+  return result
+}
+
+function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
+  kind: string
+  repository: string
+  serviceKey: string
+  query: string
+  receipt: SearchScopeReceipt | null
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const allCodeHref = href('/search', { q: query })
+  const serviceHref = repository && serviceKey
+    ? href('/search', searchRouteParams(query, 'service', repository, serviceKey))
+    : ''
+  return (
+    <fieldset className={css({ margin: '12px 0 0', padding: '10px 12px', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', minWidth: 0 })}>
+      <legend className={css({ padding: '0 5px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '14px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>
+        Search scope
+      </legend>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' })}>
+        <a
+          href={allCodeHref}
+          aria-current={kind === 'all_code' ? 'page' : undefined}
+          className={css(scopeChoice(tok, kind === 'all_code'))}
+        >
+          All code
+        </a>
+        {serviceHref ? (
+          <a
+            href={serviceHref}
+            aria-current={kind === 'service' ? 'page' : undefined}
+            className={css(scopeChoice(tok, kind === 'service'))}
+          >
+            Service · {serviceKey}
+          </a>
+        ) : (
+          <a href={href('/services')} className={css(scopeChoice(tok, false))}>Choose a service</a>
+        )}
+        <span role="status" className={css({ marginLeft: 'auto', minWidth: 0, fontSize: '10.5px', lineHeight: '16px', color: tok.textTertiary, overflowWrap: 'anywhere', '@media screen and (max-width: 620px)': { width: '100%', marginLeft: 0 } })}>
+          {kind === 'service'
+            ? receipt
+              ? `${receipt.service_status} · shared paths included · unowned paths excluded · ${receipt.result_files} cited files`
+              : 'Shared paths are included; unowned paths are excluded. Exact current or stale authority is required.'
+            : receipt
+              ? `Visible indexed repositories · ${receipt.revisions.length} exact revision${receipt.revisions.length === 1 ? '' : 's'} · ${receipt.result_files} cited files`
+              : 'Search every visible indexed repository.'}
+        </span>
+      </div>
+      {kind === 'service' && repository && (
+        <div className={css({ marginTop: '6px', fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
+          {repository} · receipt {receipt ? receipt.digest.slice(0, 23) : 'pending'}
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+function scopeChoice(tok: PhebsTokens, active: boolean) {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    minHeight: '30px',
+    padding: '0 10px',
+    border: `1px solid ${active ? tok.accent : tok.cardBorder}`,
+    borderRadius: '6px',
+    backgroundColor: active ? tok.selectedLineBg : tok.pageBg,
+    color: active ? tok.textPrimary : tok.textSecondary,
+    textDecoration: 'none',
+    fontSize: '11.5px',
+    fontWeight: active ? 600 : 500,
+    ':hover': { backgroundColor: tok.hoverFill },
+    ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+  } as const
+}
+
 function Kbd({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -539,7 +654,11 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 // FacetRail derives repo and language counts from the streamed files; each
 // facet toggles a repo:/lang: term in the query and re-navigates.
-function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
+function FacetRail({ files, query, scope }: {
+  files: FileResult[]
+  query: string
+  scope: { kind: string; repository: string; serviceKey: string }
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
 
@@ -563,7 +682,9 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
     const next = new Set(terms)
     if (next.has(term)) next.delete(term)
     else next.add(term)
-    navigate('/search', { q: [...next].join(' ') })
+    navigate('/search', searchRouteParams(
+      [...next].join(' '), scope.kind, scope.repository, scope.serviceKey,
+    ))
   }
   const shortRepo = (r: string) => r.slice(r.lastIndexOf('/') + 1)
 

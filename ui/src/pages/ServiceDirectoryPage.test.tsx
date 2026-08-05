@@ -52,6 +52,11 @@ test('renders exact authority, page summaries, lifecycle states, roles, and sour
   expect(screen.getAllByText('Removed').length).toBeGreaterThan(0)
   expect(screen.getByText('Active generation is stale')).toBeTruthy()
   expect(screen.getByText('service/orders')).toBeTruthy()
+  expect(decodeURIComponent(
+    screen.getByRole('link', { name: 'Search this service' }).getAttribute('href') ?? '',
+  )).toBe(
+    '#/search?q=&scope=service&repository=example.invalid/neutral+mono&service_key=orders-api',
+  )
   expect(screen.getByText(/Paths are authority identities/)).toBeTruthy()
   expect(api.fetchServiceInventory).toHaveBeenCalledWith({
     repository: repositoryName,

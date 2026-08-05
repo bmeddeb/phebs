@@ -431,6 +431,17 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, onRetry }
           <SmallTag text={`incarnation ${service.incarnation}`} quiet />
           <SmallTag text={`state r${service.control_revision}`} quiet />
         </div>
+        {(service.status === 'current' || service.status === 'stale') && (
+          <a
+            href={href('/search', {
+              q: '', scope: 'service', repository: route.repository,
+              service_key: service.key,
+            })}
+            className={css({ ...primaryLink(tok), display: 'inline-flex', marginTop: '12px' })}
+          >
+            Search this service
+          </a>
+        )}
       </header>
 
       <StateNotice service={service} successors={detail.successors} />

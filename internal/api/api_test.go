@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -42,6 +43,12 @@ type historyStore struct {
 type analysisUnitAPIStore struct {
 	fakeStore
 	unit *analysisunit.State
+}
+
+type faultSearchStore struct{ fakeStore }
+
+func (faultSearchStore) GetRepo(context.Context, string) (*store.Repo, error) {
+	return nil, errors.New("store unavailable")
 }
 
 func (s *analysisUnitAPIStore) ListRepos(context.Context) ([]store.Repo, error) {
@@ -268,8 +275,45 @@ func TestStreamSearchSSE(t *testing.T) {
 		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "event: done") || !strings.Contains(body, `"match_count":0`) {
-		t.Errorf("stream body missing done event with stats:\n%s", body)
+	if !strings.Contains(body, "event: scope") ||
+		!strings.Contains(body, `"schema":"phebs-search-scope-v1"`) ||
+		!strings.Contains(body, `"kind":"all_code"`) ||
+		!strings.Contains(body, "event: done") ||
+		!strings.Contains(body, `"match_count":0`) {
+		t.Errorf("stream body missing scope/done events:\n%s", body)
+	}
+}
+
+func TestSearchErrorClassificationUsesTypedBoundaries(t *testing.T) {
+	open := func(t *testing.T, st store.Store) http.Handler {
+		t.Helper()
+		searcher, err := search.Open(t.TempDir(), st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(searcher.Close)
+		return api.New(api.Options{Version: "t", Store: st, Search: searcher})
+	}
+	tests := []struct {
+		name  string
+		path  string
+		store store.Store
+		want  int
+	}{
+		{name: "invalid query", path: "/api/search?q=%5B", store: &fakeStore{}, want: http.StatusBadRequest},
+		{name: "invalid selector", path: "/api/search?q=x&scope=all_code&repository=r", store: &fakeStore{}, want: http.StatusBadRequest},
+		{name: "internal service fault", path: "/api/search?q=x&scope=service&repository=r&service_key=s", store: &faultSearchStore{}, want: http.StatusInternalServerError},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			open(t, test.store).ServeHTTP(
+				recorder, httptest.NewRequest(http.MethodGet, test.path, nil),
+			)
+			if recorder.Code != test.want {
+				t.Fatalf("status = %d, want %d; body=%s", recorder.Code, test.want, recorder.Body)
+			}
+		})
 	}
 }
 

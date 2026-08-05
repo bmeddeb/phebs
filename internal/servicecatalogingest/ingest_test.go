@@ -87,6 +87,66 @@ func TestT335NeutralCatalogUsesOrdinaryCensusAndPublication(t *testing.T) {
 	}
 }
 
+func TestT344WholeSearchCatalogUsesOrdinaryCensusAndPublication(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	const repository = "example.invalid/t344-neutral-search"
+	fixture, err := filepath.Abs(filepath.Join(
+		"..", "..", "spike", "t323", "t323-neutral-corpus.bundle",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogPath, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "t34.4-service-search",
+		"t344-service-catalog.json",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	mirror, err := phebssync.SafeRepoDir(dataDir, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(mirror), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	testGit(t, "", "clone", "-q", "--bare", fixture, mirror)
+	commit := strings.TrimSpace(testGit(t, mirror, "rev-parse", "HEAD"))
+	const wantCommit = "4ac5335893fc18a1243b60a005faa1f09268d858"
+	if commit != wantCommit {
+		t.Fatalf("neutral search fixture commit = %s, want %s", commit, wantCommit)
+	}
+
+	state := &memoryStore{repositories: map[string]store.Repo{
+		repository: {Name: repository, IndexedCommitHash: commit},
+	}}
+	reconciler := Reconciler{
+		DataDir: dataDir,
+		Store:   state,
+		Selections: map[string]config.ServiceCatalog{
+			repository: {
+				Kind: servicecatalog.AuthorityOperator, ID: "t344-demo",
+				Version: "v1", Path: catalogPath,
+			},
+		},
+	}
+	outcome, err := reconciler.ReconcileRepository(t.Context(), repository)
+	if err != nil || outcome != OutcomePublished {
+		t.Fatalf("neutral search catalog reconcile = %q, %v", outcome, err)
+	}
+	publication := state.current[repository]
+	if publication.SourceCommit != commit || publication.SourceFileCount != 14 ||
+		publication.AcceptedFileCount != 8 || publication.UnownedFileCount != 6 ||
+		publication.Authority != (servicecatalog.Authority{
+			Kind: servicecatalog.AuthorityOperator, ID: "t344-demo", Version: "v1",
+		}) || state.stateReconciles != 1 {
+		t.Fatalf("neutral search catalog publication = %+v, reconciles %d", publication, state.stateReconciles)
+	}
+}
+
 func TestCommittedCatalogReconcileAndFailedReplacementPreservesPrior(t *testing.T) {
 	repository := "example.com/acme/mono"
 	dataDir, mirror, commit := testMirror(t, repository, map[string]string{
