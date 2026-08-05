@@ -7482,3 +7482,41 @@ state is unchanged because nothing imports the package yet.
 This establishes mechanics only—not observation completeness, parser accuracy,
 target scale/SLO, migration/decommission, or release authority. `GATE2-V2`
 remains `NOT_ESTABLISHED`; T36.2 is scheduled next.
+
+**T36.2 ✅ · Go source-observation contract** *(2026-08-05; needs T36.1)* —
+adds the unregistered `phebs-go-source-observation-v1` closed model. One
+bounded Go parse records only relationship-relevant imports/aliases,
+function and receiver clues, typed parameters, constructor origin, bounded
+local propagation, selector calls with exact byte/line spans, and selected
+Sarama/kafka-go topic sites. It is deliberately not a serialized AST.
+
+The content-keyed canonical identity excludes placement paths. Source is
+capped at 4 MiB, imports at 512, functions at 4,096, selector calls and topic
+sites independently at 8,192, bindings per value at 16, propagation steps at
+16,384, and retained text at 4,096 bytes. Closed validation rejects malformed,
+noncanonical, out-of-span, over-limit, or incomplete state; one digest binds
+the complete policy and limit set. Topic literals and
+same-file constants resolve; dynamic identifiers/calls/selectors, invalid
+topics, ambiguous Sarama imports, dot-import receiver flow, and propagation
+exhaustion remain explicit dynamic or unsupported observations rather than
+disappearing.
+
+Four adapters consume the same validated bytes independently. gRPC and Thrift
+match typed or constructor-derived receiver clues against exact external
+generated-symbol descriptors; Kafka producer and consumer filter the shared
+topic sites. A gRPC ambiguity therefore cannot suppress an independently
+resolved Thrift call or either Kafka plane. Tests compare all four projections
+directly with the existing direct gRPC/Thrift scanner and Kafka extractors on
+the same source, requiring equal operations/topics and exact byte citations.
+They also pin different-path/two-run byte identity, closed validation, source
+and call limits, propagation exhaustion, and explicit dynamic/unsupported
+states.
+
+No scheduler, partition consumer, worker, store row/schema, publication,
+pointer, lease/cache, lifecycle owner, backup byte, startup/sync/search path,
+API, MCP, UI, or existing extractor is registered or changed. A future parse
+holds one admitted source, one Go AST, and its bounded observation; adapters
+walk bounded slices and start no child. Ordinary steady state is unchanged
+because no production package imports the package. This ticket establishes no
+accuracy/completeness, target scale/SLO, migration/decommission, or release
+claim. `GATE2-V2` remains `NOT_ESTABLISHED`; T36.3 is scheduled next.

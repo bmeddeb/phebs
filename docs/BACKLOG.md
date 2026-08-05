@@ -13,7 +13,8 @@ are also complete, closing Epic 34. T35.1's generation-scoped scheduler and
 T35.2's pin-aware lifecycle decision and T35.3's bounded sweep/capacity
 control and T35.4's lifecycle recovery demo are complete, closing Epic 35.
 T36.1's bounded immutable Git reader and source-partition contract is complete.
-T36.2 is the next scheduled ticket, and the remaining Epics 36–39 tickets stay
+T36.2's shared Go source-observation contract is complete. T36.3 is the next
+scheduled ticket, and the remaining Epics 36–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -30,21 +31,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 36 · Shared source-observation plane *(T36.2 scheduled · needs completed Epics 34–35)*
+## Epic 36 · Shared source-observation plane *(T36.1–T36.2 complete · T36.3 scheduled)*
 
 Read and parse supported source once per exact repository generation and pack
 policy, then reuse bounded target-independent observations across services and
 relationship families.
 
-**T36.2 · Go source-observation contract** *(scheduled; needs T36.1)* — parse imports,
-aliases, receivers/generated-client clues, constructor origin, selector spans,
-bounded local propagation, Kafka call/topic shapes, and explicit dynamic or
-unsupported states once. AC: the representation is not a generic serialized
-AST; gRPC, Thrift, Kafka producer, and Kafka consumer adapters consume the same
-source observation without merging their semantic failures; exact citations,
-limits, double-run determinism, and existing supported-case parity pass.
-
-**T36.3 · Content-addressed observation publication** *(needs T36.2)* —
+**T36.3 · Content-addressed observation publication** *(scheduled; needs T36.2)* —
 publish immutable partition members and one atomic root keyed by source
 generation, language/policy, and content identity. AC: unchanged blobs reuse
 only after exact semantic compatibility; changed blobs invalidate affected

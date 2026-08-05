@@ -77,7 +77,8 @@ closing Epic 34. T35.1's generation-scoped chunk scheduler, T35.2's pin-aware
 lifecycle decision, T35.3's bounded sweep/capacity control, and T35.4's
 lifecycle recovery/operator demo completed on 2026-08-05, closing Epic 35.
 T36.1's bounded immutable Git reader and source-partition contract completed
-on 2026-08-05. T36.2's Go source-observation contract is scheduled next.
+on 2026-08-05. T36.2's Go source-observation contract completed on 2026-08-05;
+T36.3's content-addressed publication is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -400,7 +401,9 @@ generation scheduler, T35.2 freezes owner-separated lifecycle policy, T35.3
 implements bounded sweeping and pressure admission, and T35.4 closes the epic
 with deterministic recovery receipts plus bounded administrator status. T36.1
 supplies the unregistered bounded immutable Git reader and deterministic
-source-partition input contract; T36.2 is scheduled.
+source-partition input contract, and T36.2 supplies the unregistered shared Go
+observation schema and four independent protocol projections; T36.3 is
+scheduled.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -543,10 +546,10 @@ service count × repository bytes
   bounded catalog/scheduler/job collection, hard-watermark admission,
   deterministic recovery receipt, exact cursor backup/restore, and
   administrator-only source-free status are complete.
-- **Epic 36 — shared source observations (T36.1 complete; T36.2 scheduled):**
-  bounded batch immutable Git reads and deterministic source partitions are
-  complete; parse supported source once, publish content-addressed observations,
-  and incrementally invalidate only affected work next.
+- **Epic 36 — shared source observations (T36.1–T36.2 complete; T36.3 scheduled):**
+  bounded batch immutable Git reads, deterministic source partitions, and the
+  shared Go observation/adapters are complete; publish content-addressed
+  observations and incrementally invalidate only affected work next.
 - **Epic 37 — relationship index:** publish declaration namespaces, caller and
   Kafka postings, service projections, atomic roots, and authorized keyed
   readers.

@@ -144,7 +144,8 @@ product and neutral demo close Epic 34. T35.1's bounded generation-scoped
 scheduler, T35.2's pin-aware lifecycle decision, T35.3's bounded
 sweep/capacity control, and T35.4's source-free recovery/operator demo close
 Epic 35. T36.1's bounded immutable Git reader and partition contract is
-complete; T36.2 is scheduled next, and the remaining Epics 36–39 stay
+complete, as is T36.2's shared Go source-observation contract; T36.3 is
+scheduled next, and the remaining Epics 36–39 stay
 dependency-ordered drafts, and Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
