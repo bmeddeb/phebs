@@ -24,6 +24,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -76,6 +77,19 @@ connections:
 	indexedBefore, err := st.GetRepo(ctx, names[0])
 	if err != nil || indexedBefore.IndexedCommitHash == "" {
 		t.Fatalf("initial indexed repo = %+v, %v", indexedBefore, err)
+	}
+	serviceCatalogBeforeRestore := recoveryServiceCatalogPublication(
+		t, names[0], indexedBefore.IndexedCommitHash,
+		filepath.Join(root, "service-catalog.json"),
+	)
+	if err := st.PublishServiceCatalog(ctx, serviceCatalogBeforeRestore); err != nil {
+		t.Fatalf("publish pre-backup service catalog: %v", err)
+	}
+	serviceCatalogBeforeRestore, err = requireRecoveryServiceCatalog(
+		ctx, st, names[0],
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
 	candidatePointer := store.CandidateManifestPublication{
 		Repository:       names[0],
@@ -434,6 +448,19 @@ connections:
 	got, err := restored.GetRepo(ctx, names[0])
 	if err != nil || got.IndexedCommitHash != indexedBefore.IndexedCommitHash {
 		t.Fatalf("restored repo = %+v, %v; want commit %q", got, err, indexedBefore.IndexedCommitHash)
+	}
+	serviceCatalogAfterRestore, err := requireRecoveryServiceCatalog(
+		ctx, restored, names[0],
+	)
+	if err != nil ||
+		serviceCatalogAfterRestore.GenerationDigest != serviceCatalogBeforeRestore.GenerationDigest ||
+		serviceCatalogAfterRestore.ControlRevision != serviceCatalogBeforeRestore.ControlRevision ||
+		!serviceCatalogAfterRestore.PublishedAt.Equal(serviceCatalogBeforeRestore.PublishedAt) ||
+		!bytes.Equal(serviceCatalogAfterRestore.Canonical, serviceCatalogBeforeRestore.Canonical) {
+		t.Fatalf(
+			"restored service catalog = %+v, %v; want %+v",
+			serviceCatalogAfterRestore, err, serviceCatalogBeforeRestore,
+		)
 	}
 	retainedJobAfterRestore := requireRecoveryJob(
 		t, ctx, restored, store.JobFetch, store.StatusFailed,
@@ -895,6 +922,65 @@ func makeOrigin(t *testing.T, root string) string {
 	git("add", "main.go")
 	git("commit", "-m", "recovery fixture")
 	return origin
+}
+
+func recoveryServiceCatalogPublication(
+	t *testing.T,
+	repository, commit, sourcePath string,
+) servicecatalog.Publication {
+	t.Helper()
+	catalog := servicecatalog.Catalog{
+		Schema: servicecatalog.Schema,
+		Authority: servicecatalog.Authority{
+			Kind: servicecatalog.AuthorityCommitted,
+			ID:   "recovery-catalog", Version: commit,
+		},
+		Services: []servicecatalog.Service{{
+			Key: "recovery", DisplayName: "Recovery",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+		Memberships: []servicecatalog.Membership{{
+			ServiceKey: "recovery", Path: "main.go",
+			Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+		}},
+		Unowned: []servicecatalog.UnownedPlacement{},
+	}
+	canonical, err := servicecatalog.Canonical(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogDigest, err := servicecatalog.Digest(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication := servicecatalog.Publication{
+		Schema: servicecatalog.PublicationSchema, Repository: repository,
+		SourceKind: servicecatalog.SourceCommitted, SourcePath: sourcePath,
+		SourceCommit:       commit,
+		SourceCensusDigest: "sha256:" + strings.Repeat("e", 64),
+		SourceFileCount:    1, AcceptedFileCount: 1,
+		Authority: catalog.Authority, CatalogDigest: catalogDigest,
+		Canonical: canonical,
+	}
+	publication.GenerationDigest, err =
+		servicecatalog.PublicationGenerationDigest(publication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return publication
+}
+
+func requireRecoveryServiceCatalog(
+	ctx context.Context,
+	state store.ServiceCatalogPublicationStore,
+	repository string,
+) (servicecatalog.Publication, error) {
+	publication, err := state.GetServiceCatalog(ctx, repository)
+	if err != nil {
+		return servicecatalog.Publication{}, err
+	}
+	return *publication, nil
 }
 
 func zoektBinary(t *testing.T) string {

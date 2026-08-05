@@ -202,6 +202,26 @@ analysis_units: {}
 #       kind: scip
 #       path: services/payments/index.scip
 
+# Optional multi-service v2 catalog input (T33.2). The map key is the exact
+# repository name and selects one normalized JSON file; phebs never scans a
+# directory or invokes a build-system adapter to invent service authority.
+# Both kinds require an absolute, clean, non-symlink regular file. A committed
+# catalog declares its exact indexed HEAD in authority.version, so `version`
+# is omitted here; its operator-supplied bytes are not verified against a Git
+# blob. An operator catalog instead repeats the configured opaque version in
+# its JSON. A selected replacement is published only after its
+# complete regular-file census proves every path accepted or explicitly
+# unowned; refusal preserves the prior authority. When no v2 entry exists, a
+# committed analysis-unit-v1 state is imported side by side automatically;
+# removing a v2 entry therefore makes that v1 import current on reconciliation.
+service_catalogs: {}
+# service_catalogs:
+#   github.com/acme/monorepo:
+#     kind: operator # committed | operator
+#     id: platform-catalog
+#     version: "2026-08-04.1"
+#     path: /etc/phebs/service-catalog.json
+
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must
 # omit embedded credentials, query, and fragment. Code-host tokens are optional

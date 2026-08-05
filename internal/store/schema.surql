@@ -50,6 +50,53 @@ DEFINE INDEX IF NOT EXISTS usage_event_created ON usage_event FIELDS created_at;
 -- steady-state Open. A marker is written only after every row update commits.
 DEFINE TABLE IF NOT EXISTS store_migration SCHEMALESS;
 
+-- T33.2: precious immutable service-catalog generations and the one atomic
+-- current authority pointer per repository. Unlike resolver catalogs, the
+-- canonical JSON is database authority and survives backup/restore directly.
+DEFINE TABLE IF NOT EXISTS service_catalog_generation SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS schema ON service_catalog_generation TYPE string
+    ASSERT $value = 'phebs-service-catalog-publication-v1';
+DEFINE FIELD IF NOT EXISTS repository ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS source_kind ON service_catalog_generation TYPE string
+    ASSERT $value INSIDE ['committed', 'operator', 'analysis-unit-v1'];
+DEFINE FIELD IF NOT EXISTS source_path ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS source_commit ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS source_census_digest ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS source_file_count ON service_catalog_generation TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS accepted_file_count ON service_catalog_generation TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS unowned_file_count ON service_catalog_generation TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS authority_kind ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS authority_id ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS authority_version ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS override_id ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS override_version ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_digest ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS legacy_analysis_unit_digest ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS generation_digest ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_json ON service_catalog_generation TYPE string;
+DEFINE FIELD IF NOT EXISTS recorded_at ON service_catalog_generation TYPE datetime;
+
+-- One point row per selected authority/override version prevents a
+-- same-version/different-canonical-byte replacement without scanning immutable
+-- generation history.
+DEFINE TABLE IF NOT EXISTS service_catalog_authority_version SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS authority_kind ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS authority_id ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS authority_version ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS override_id ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS override_version ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_digest ON service_catalog_authority_version TYPE string;
+DEFINE FIELD IF NOT EXISTS recorded_at ON service_catalog_authority_version TYPE datetime;
+
+DEFINE TABLE IF NOT EXISTS service_catalog_current SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON service_catalog_current TYPE string;
+DEFINE FIELD IF NOT EXISTS generation_digest ON service_catalog_current TYPE string;
+DEFINE FIELD IF NOT EXISTS control_revision ON service_catalog_current TYPE int ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS published_at ON service_catalog_current TYPE datetime;
+DEFINE INDEX IF NOT EXISTS service_catalog_current_repository
+    ON service_catalog_current FIELDS repository UNIQUE;
+
 -- repo <-> code-host identity permission edges (T10.3), mirrored from host
 -- ACLs; the search pre-pass compiles them into a per-user RepoSet.
 DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;

@@ -116,6 +116,41 @@ connections:
 			"unsafe repository-relative Git path",
 		},
 		{
+			"committed service catalog valid",
+			"service_catalogs:\n  github.com/acme/api: {kind: committed, id: build-catalog, path: /tmp/catalog.json}\n",
+			"",
+		},
+		{
+			"operator service catalog valid",
+			"service_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, version: 2026-08-04.1, path: /tmp/catalog.json}\n",
+			"",
+		},
+		{
+			"committed service catalog version is implicit",
+			"service_catalogs:\n  github.com/acme/api: {kind: committed, id: build-catalog, version: main, path: /tmp/catalog.json}\n",
+			"committed version is the indexed HEAD and must be omitted",
+		},
+		{
+			"operator service catalog version required",
+			"service_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, path: /tmp/catalog.json}\n",
+			"authority version must be a nonempty",
+		},
+		{
+			"service catalog path must be absolute",
+			"service_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, version: v1, path: catalog.json}\n",
+			"operator path must be absolute",
+		},
+		{
+			"service catalog kind closed",
+			"service_catalogs:\n  github.com/acme/api: {kind: guessed, id: platform, path: /tmp/catalog.json}\n",
+			"kind must be \"committed\" or \"operator\"",
+		},
+		{
+			"service catalog repository canonical",
+			"service_catalogs:\n  ../outside: {kind: operator, id: platform, version: v1, path: /tmp/catalog.json}\n",
+			"repository \"../outside\" is not canonical",
+		},
+		{
 			"auth bootstrap valid",
 			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  trusted_proxies: ['127.0.0.1/32', 'fd00::/8']\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
 			"",
