@@ -1361,6 +1361,21 @@ by a later whole index. An already-current index retry returns before reading,
 hashing, or rewriting these files. Missing/corrupt v2 roots do not relabel v1
 results; T34.3 owns startup backfill and repair.
 
+T34.2 adds the side-by-side service-query compiler contract but does not
+register it with the live reader. A prepared scope accepts one authorized
+repository-local service in `current` or explicit `stale` state, verifies its
+current catalog/state fences and exact active catalog against the T34.1 direct
+search root, then places repository, exact branch, and all distinct authorized
+path prefixes inside the zoekt query before ranking. Unowned paths never enter
+a service scope. Unavailable, conflict, removed, mismatched-source, and
+multi-repository scopes refuse. The compiler caps expressions at 16 KiB and
+inherits 128 distinct paths/64 KiB of path bytes, producing at most 128 path
+atoms and 132,608 conservative quote-expanded predicate bytes. Reusing one
+opaque prepared scope for another expression or indexed selector does not
+reopen a catalog, source member, or shard. Current All code requests still use
+the v1 reader; T34.3 owns strict runtime opening, final response fences,
+activation, migration, repair, and active-reader retirement.
+
 Searcher startup records manifest/member identities before the synchronous
 shared-directory open, captures the loaded repository inventory once, and
 rechecks store/filesystem identity afterward. It does not hash the whole fleet
