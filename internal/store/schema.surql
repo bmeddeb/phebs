@@ -15,11 +15,13 @@ DEFINE TABLE IF NOT EXISTS connection_sync_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON connection_sync_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS connection_sync_job_status ON connection_sync_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS connection_sync_job_lifecycle ON connection_sync_job FIELDS status, finished_at;
 
 DEFINE TABLE IF NOT EXISTS indexing_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON indexing_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS indexing_job_status ON indexing_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS indexing_job_lifecycle ON indexing_job FIELDS status, finished_at;
 
 DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS user_normalized_email ON user FIELDS normalized_email UNIQUE;
@@ -222,6 +224,15 @@ DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_identity ON generation_sche
 DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_ready ON generation_schedule_chunk FIELDS schedule_digest, status, priority, not_before, offset;
 DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_stale ON generation_schedule_chunk FIELDS resource_class, status, heartbeat_at;
 
+-- T35.3: durable bounded-maintenance cursors. Owners retain their own root
+-- proofs; this table stores only opaque bounded progress and fair rotation.
+DEFINE TABLE IF NOT EXISTS lifecycle_cursor SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS key ON lifecycle_cursor TYPE string;
+DEFINE FIELD IF NOT EXISTS cursor ON lifecycle_cursor TYPE string;
+DEFINE FIELD IF NOT EXISTS revision ON lifecycle_cursor TYPE int ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS updated_at ON lifecycle_cursor TYPE datetime;
+DEFINE INDEX IF NOT EXISTS lifecycle_cursor_key ON lifecycle_cursor FIELDS key UNIQUE;
+
 -- repo <-> code-host identity permission edges (T10.3), mirrored from host
 -- ACLs; the search pre-pass compiles them into a per-user RepoSet.
 DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;
@@ -232,11 +243,13 @@ DEFINE TABLE IF NOT EXISTS repo_fetch_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON repo_fetch_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_status ON repo_fetch_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS repo_fetch_job_lifecycle ON repo_fetch_job FIELDS status, finished_at;
 
 DEFINE TABLE IF NOT EXISTS extraction_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON extraction_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS extraction_job_status ON extraction_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS extraction_job_lifecycle ON extraction_job FIELDS status, finished_at;
 
 -- Commit-bound candidate planning is a distinct durable queue stage between
 -- indexing and extraction (T30.4).
@@ -244,6 +257,7 @@ DEFINE TABLE IF NOT EXISTS candidate_manifest_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON candidate_manifest_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS candidate_manifest_job_status ON candidate_manifest_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS candidate_manifest_job_lifecycle ON candidate_manifest_job FIELDS status, finished_at;
 
 -- One strict current pointer per repository. Candidate member files remain
 -- derived filesystem artifacts; this row is the atomic authority that binds
@@ -269,6 +283,7 @@ DEFINE TABLE IF NOT EXISTS resolver_catalog_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON resolver_catalog_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS resolver_catalog_job_status ON resolver_catalog_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS resolver_catalog_job_lifecycle ON resolver_catalog_job FIELDS status, finished_at;
 
 DEFINE TABLE IF NOT EXISTS resolver_catalog_publication SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS repository ON resolver_catalog_publication TYPE string;
@@ -306,6 +321,7 @@ DEFINE TABLE IF NOT EXISTS caller_leaf_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON caller_leaf_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS caller_leaf_job_status ON caller_leaf_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS caller_leaf_job_lifecycle ON caller_leaf_job FIELDS status, finished_at;
 
 DEFINE TABLE IF NOT EXISTS caller_leaf_outcome SCHEMALESS;
 DEFINE FIELD OVERWRITE repository ON caller_leaf_outcome TYPE string;
@@ -455,6 +471,7 @@ DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON investigation_run_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS investigation_run_job_status ON investigation_run_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS investigation_run_job_lifecycle ON investigation_run_job FIELDS status, finished_at;
 
 -- Contract-intelligence evidence layer (T12.1, PLAN ADRs 2026-07-12).
 -- Atoms are content-keyed and shared across repos/commits; repository

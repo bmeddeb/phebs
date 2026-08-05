@@ -119,6 +119,13 @@ analytics:
 proof_bundles:
   retention: "0"
 
+# Owner-separated bounded lifecycle is enabled by default. False disables
+# automated age/count/byte and pressure collection, but hard-watermark safety
+# admission, live roots, proof/Investigation pins, active leases, tombstones,
+# and proof_bundles.retention remain in force.
+lifecycle:
+  enabled: true
+
 # Validation-gated work. Keep disabled in production. The provisional proto
 # reader has exact source provenance, but T11.1 is STOP/not established and it
 # does not yet have canonical descriptor/module lineage (T12.3).

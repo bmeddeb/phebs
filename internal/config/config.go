@@ -35,6 +35,7 @@ type Config struct {
 	Audit        Audit        `yaml:"audit"`
 	Analytics    Analytics    `yaml:"analytics"`
 	ProofBundles ProofBundles `yaml:"proof_bundles"`
+	Lifecycle    Lifecycle    `yaml:"lifecycle"`
 	Experimental Experimental `yaml:"experimental"`
 	// Permissions enables permission-aware search (T10.3) when the block is
 	// present: non-administrators then see only public repositories, the
@@ -173,6 +174,19 @@ type ProofBundles struct {
 	// Retention expires bundles this long after their most recent successful
 	// materialization. Empty or "0" disables expiry.
 	Retention string `yaml:"retention"`
+}
+
+// Lifecycle controls T35's owner-separated bounded maintenance. Safety
+// admission at the hard disk watermark remains active when collection is
+// disabled.
+type Lifecycle struct {
+	Enabled *bool `yaml:"enabled"`
+}
+
+// EnabledFor reports the default-on collection posture. A pointer preserves
+// the semantic distinction between omission and an explicit false value.
+func (l Lifecycle) EnabledFor() bool {
+	return l.Enabled == nil || *l.Enabled
 }
 
 // RetentionFor returns the parsed proof-bundle retention; 0 means disabled.

@@ -141,8 +141,8 @@ directory and neutral ordinary-worker demo close Epic 33. T34.1's immutable
 repository source/search generation, T34.2's exact service-query compiler,
 T34.3's fail-closed migration/recovery, and T34.4's shared All code/service
 product and neutral demo close Epic 34. T35.1's bounded generation-scoped
-scheduler and T35.2's pin-aware lifecycle decision are complete; T35.3 is
-scheduled, and the remaining
+scheduler, T35.2's pin-aware lifecycle decision, and T35.3's bounded
+sweep/capacity control are complete; T35.4 is scheduled, and the remaining
 Epics 35–39 stay
 dependency-ordered drafts, and Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,

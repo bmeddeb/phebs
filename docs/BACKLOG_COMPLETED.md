@@ -7331,3 +7331,64 @@ and exact/lower-bound/unavailable status without startup full-history work.
 This docs-only ticket adds no configuration parser, store query, filesystem
 stat, lock, child, startup/sync/search work, deletion, runtime registration,
 or release claim. `GATE2-V2` remains `NOT_ESTABLISHED`; T35.3 is scheduled next.
+
+**T35.3 ✅ · Bounded sweep and capacity control** *(2026-08-05; needs T35.2)*
+— implements the frozen policy with a default-on `phebs-lifecycle-v1`
+controller. Thirteen closed owners share durable CAS cursors and one sorted
+rotation cursor. One turn advances exactly one owner; failure preserves that
+owner's cursor but advances rotation, so a corrupt owner cannot starve its
+siblings. Cursor work costs four bounded queries on a successful turn and is
+byte-capped in schema and Go.
+
+Three current owners perform destructive work. Catalog turns inspect at most
+eleven generations, recheck the current pointer, desired/active service
+references, and current-plus-two rollback set in each transaction, and remove
+at most one immutable generation. Generation-schedule turns inspect at most
+eleven settled/superseded schedules, recheck current and running leases, and
+remove no more than fifteen chunks plus an empty schedule within the global
+sixteen-row ceiling. Cursor wrap makes a lease-blocked schedule visible on a
+later pass. Catalog authority-version claims are never removed.
+
+The durable-job owner covers exactly `connection_sync_job`, `indexing_job`,
+`repo_fetch_job`, `candidate_manifest_job`, `extraction_job`,
+`resolver_catalog_job`, `caller_leaf_job`, and `investigation_run_job`. Each
+table first drains at most sixteen terminal rows older than 30 days, then
+continues a durable 64-row physical census. A lower-bound count beyond 100,000
+enters an oldest-first trim phase of at most sixteen terminal rows per turn.
+Every deletion rechecks terminal status and `finished_at`; pending, claimed,
+and running rows cannot be selected. Concurrent writes make the paged census a
+documented lower bound, never an exact snapshot.
+
+The ten non-generic-delete owners are explicit rather than inferred. Current
+source/search and resolver publications have no independent historical
+namespace to sweep; observations and relationships have no registered
+publication yet; proof/Investigation state and tombstones retain their
+explicit indefinite owner lifecycle; readers retire after replacement and
+final lease; partial crash stages remain owned by the existing startup
+reconcilers. Malformed or failed owners report unavailable instead of borrowing
+another owner's policy.
+
+All destructive store turns share the focused-index mutation lock with online
+backup. The aggregate turn envelope is 16 query calls, 64 candidates, 16
+deletions, 256 stats, eight descriptors, and 1 MiB bounded metadata. Current
+owners use at most two descriptors and four filesystem stat/capacity calls and
+read no Git object, source, source-member, shard, or corpus byte.
+
+Capacity probing opens and identity-fences the real nonsymlink
+`server.data_dir` descriptor. Exact no-op indexing returns before admission; a
+real rebuild checks current allocated pressure before creating a workspace or
+child. The 25-GiB generation ceiling is not treated as a reservation that
+would reject a smaller filesystem. At 80% allocated use maintenance accelerates, at 90% new
+derived work refuses, and a latched refusal resumes only below 75%. Unsupported
+capacity remains visible and fails closed for future T35 workloads while the
+pre-existing index path keeps its prior behavior.
+
+`lifecycle.enabled` defaults true. False starts no automated collector, but it
+does not weaken hard-watermark admission, roots, proof/Investigation pins,
+leases, tombstones, or `proof_bundles.retention`. Race/unit tests pin pressure
+projection and hysteresis, symlink refusal, durable cross-restart fairness,
+failure localization, query budgets, and lock refusal. Live SurrealDB tests
+pin cursor CAS, catalog rollback roots, running schedule leases, bounded chunk
+collection, paged terminal-job census, and age deletion. Indexer tests pin
+admission after exact no-op and before any generation mutation. T35.4 is
+scheduled next; `GATE2-V2` remains `NOT_ESTABLISHED`.

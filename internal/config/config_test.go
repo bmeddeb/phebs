@@ -726,12 +726,22 @@ func TestDefaults(t *testing.T) {
 	if got := cfg.ProofBundles.RetentionFor(); got != 0 {
 		t.Errorf("proof bundle retention = %v, want disabled", got)
 	}
+	if !cfg.Lifecycle.EnabledFor() {
+		t.Error("lifecycle default is disabled, want enabled")
+	}
 	configured, err := Parse([]byte("proof_bundles:\n  retention: 168h\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := configured.ProofBundles.RetentionFor(); got != 7*24*time.Hour {
 		t.Errorf("configured proof bundle retention = %v, want 168h", got)
+	}
+	disabled, err := Parse([]byte("lifecycle:\n  enabled: false\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled.Lifecycle.EnabledFor() {
+		t.Error("explicit lifecycle false is enabled")
 	}
 }
 

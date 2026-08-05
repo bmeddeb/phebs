@@ -90,6 +90,7 @@ service_catalogs:
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
 | `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible; omission or `"0"` keeps bundles and pins indefinitely |
+| `lifecycle.enabled`                         | `true`           | runs T35.3's bounded owner-separated catalog, generation-schedule, and terminal-job maintenance; `false` disables automated collection but keeps hard-watermark admission and every root/pin/lease/tombstone fence |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
@@ -103,15 +104,19 @@ service_catalogs:
 
 ### Historical publication retention
 
-There is no historical-publication retention key. T30.6m explicitly retains
-the current unbounded posture and changes no cleanup behavior; strict config
-validation therefore rejects guessed keys such as `publication_retention` or
-`retention.historical_publications`. The existing `proof_bundles.retention`
-key is narrower: a positive lifetime removes an expired immutable bundle and
+T35.2 supersedes T30.6m with fixed owner-specific policy, and T35.3 implements
+the first bounded collectors behind one boolean rather than operator-tunable
+age/count/byte values. Strict config validation still rejects guessed keys such
+as `publication_retention` or `retention.historical_publications`.
+`lifecycle.enabled` defaults true; false disables automated collection but
+does not disable 90% hard-watermark admission, live roots, proof/Investigation
+pins, active leases, tombstones, or the independent
+`proof_bundles.retention` lifecycle. The latter remains narrower: a positive
+lifetime removes an expired immutable bundle and
 its exact `proof-bundle:<id>` pins. Bundle expiry deletes no extraction
 evidence; the independent evidence sweeper may later reclaim a newly unpinned
 superseded run only when that run is otherwise eligible. This key does not
-bound historical published scopes or the other retained owners.
+change the T35 catalog/schedule/job collectors.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,
@@ -137,13 +142,15 @@ adds counts but does not infer physical database bytes. Ordered `logical_encoded
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
 `physical_database` byte kinds are non-combinable accounting contracts, not
 selectable configuration. The `proof_bundles` owner exposes the existing
-`proof_bundles.retention` control.
+`proof_bundles.retention` control, while `lifecycle.enabled` controls only the
+T35 automated collectors as a group.
 Its `default_state` and `accumulating` posture follow the effective configured
 lifetime: zero reports disabled/accumulating and a positive duration reports
 enabled/nonaccumulating. A positive lifetime deletes the expired bundle and
 exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence;
 the independent evidence sweep may later reclaim newly unpinned superseded
-evidence when otherwise eligible. Every other owner has no retention control.
+evidence when otherwise eligible. Owner-specific T35 ages, counts, byte kinds,
+and watermarks are fixed decisions rather than additional configuration keys.
 The fixed 4,096-report/4,148-scan aggregate allocation and
 64-KiB response ceiling are implementation safety contracts, not configuration
 keys. For the shipped core collector, registry indices 0–17 receive 79 report

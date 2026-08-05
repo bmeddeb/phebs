@@ -2651,9 +2651,9 @@ bounds, not capacity guidance.
 
 #### Frozen lifecycle policy
 
-T35.2 freezes the policy that T35.3 will implement; it does not install a
-collector or configuration key yet. Do not manually delete scheduler rows,
-catalogs, publications, pins, or partial stages to resolve pressure.
+T35.2 froze the policy and T35.3 now installs its bounded controller and
+`lifecycle.enabled` switch. Do not manually delete scheduler rows, catalogs,
+publications, pins, or partial stages to resolve pressure.
 
 Protection is evaluated before eligibility. Current repository, catalog,
 service, source/search, and scheduler pointers are live roots. A stale
@@ -2697,9 +2697,49 @@ refuses only new pressure-dependent T35 workloads.
 
 A removed service must first commit its durable tombstone; only then may its
 prior generation leave the live-root set. Proof and Investigation pins and
-active leases always win, even if disk remains above 90%. T35.3 must recheck
-all roots immediately before collection and coordinate with backup. Until that
-implementation lands, the T30.6m physical unbounded posture remains unchanged.
+active leases always win, even if disk remains above 90%. T35.3 rechecks all
+roots immediately before collection and coordinates with backup.
+
+The installed controller has thirteen closed owners and advances one owner per
+turn through durable CAS cursors. A successful turn uses at most sixteen store
+queries including four cursor operations, 64 candidate rows, sixteen deleted
+rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
+Failure is local: the failed owner's cursor stays put while durable rotation
+gives the next owner a turn. Backlog and 80% pressure use the five-second
+cadence; a completed unpressured cycle returns to one hour. Destructive store
+turns share the index mutation lock, so online backup observes either before or
+after a sweep.
+
+Catalog collection transactionally protects current, every service desired or
+active catalog reference, and current plus two rollback generations. It scans
+at most eleven candidates and deletes one immutable generation per turn;
+authority-version claims remain. Generation-schedule collection protects the
+current pointer and every running lease, then removes no more than fifteen
+chunks plus an empty schedule. Its wrapped key cursor reconsiders a schedule
+after a lease releases.
+
+Job maintenance covers all eight durable job tables. It deletes at most
+sixteen terminal rows older than 30 days, performs a restart-resumable 64-row
+physical census, and trims at most sixteen oldest terminal rows when the
+lower-bound census exceeds 100,000. Concurrent queue writes mean census status
+is `lower_bound`; each deletion still rechecks terminal status and finish time.
+Pending, claimed, and running jobs are never candidates.
+
+Source/search and resolver publications currently expose no separate
+historical namespace to this controller. Observation and relationship owners
+remain exact empty until those pipelines register publications. Proofs,
+Investigations, tombstones, readers, and crash-stage recovery retain their
+explicit existing lifecycle and are never swept by analogy. A malformed owner
+is `unavailable`, not permission to widen another collector.
+
+Capacity admission opens and identity-fences the real data-directory
+descriptor; a symlink or changing root is unavailable. Exact no-op indexing
+returns before the check. A real rebuild checks current allocated pressure
+before workspace or child creation; the 25-GiB generation ceiling is not a
+reservation that rejects smaller filesystems. Existing indexing keeps
+its prior behavior when the platform cannot report capacity, while future T35
+workloads must fail closed. T35.4 still owns the neutral churn/recovery and
+operator-status demo.
 
 ### Thrift field-zero development walkthrough
 
