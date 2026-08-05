@@ -75,8 +75,10 @@ an indexed `analysis-unit-v1` scope imports as one digest-identical service
 with its primary/supporting/typed roles and explicit unowned complement. These
 catalog generations now reconcile independent desired/active/status rows,
 monotonic incarnations, and retained removed tombstones. Catalog and lifecycle
-state are durable and backup-safe but intentionally have no HTTP, MCP, search,
-or UI registration yet; T33.4–T33.5 own those surfaces.
+state are durable and backup-safe. Authorization-first bounded inventory and
+exact detail are now available through HTTP and MCP; no service-directory UI,
+service-scoped search, relationship claim, or release authority exists yet.
+T33.5 owns the accessible directory and neutral epic demo.
 
 ## Evidence boundary
 

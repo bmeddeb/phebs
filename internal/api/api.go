@@ -73,6 +73,10 @@ type Options struct {
 	ContractCatalog  *ContractCatalogService
 	CallerMap        *CallerMapService
 	CallerComparison *CallerComparisonService
+	// ServiceDirectory is the T33.4 authorization-first catalog/state read
+	// service shared with MCP. Production binds the store-backed instance;
+	// nil leaves both routes and capability discovery absent.
+	ServiceDirectory *ServiceDirectoryService
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService
@@ -143,6 +147,9 @@ type Options struct {
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
 // document at /api/openapi.json and docs UI at /api/docs.
 func New(opts Options) http.Handler {
+	if opts.ServiceDirectory == nil {
+		opts.ServiceDirectory = NewServiceDirectoryService(opts)
+	}
 	// Construct the exact caller engine once so Caller Map, comparison,
 	// citations, HTTP, and capability discovery share one HMAC secret and one
 	// bounded reverse-index/binding cache. Production supplies these instances
@@ -402,6 +409,7 @@ func New(opts Options) http.Handler {
 	registerContractCatalogAPI(api, opts)
 	registerCallerMapAPI(api, opts)
 	registerCallerComparisonAPI(api, opts)
+	registerServiceDirectoryAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 	registerWorkbench(api, opts)
