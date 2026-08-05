@@ -12,7 +12,8 @@ T34.3's publication migration/recovery, and T34.4's shared search product/demo
 are also complete, closing Epic 34. T35.1's generation-scoped scheduler and
 T35.2's pin-aware lifecycle decision and T35.3's bounded sweep/capacity
 control and T35.4's lifecycle recovery demo are complete, closing Epic 35.
-T36.1 is the next scheduled ticket, and the remaining Epics 36–39 tickets stay
+T36.1's bounded immutable Git reader and source-partition contract is complete.
+T36.2 is the next scheduled ticket, and the remaining Epics 36–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -29,23 +30,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 36 · Shared source-observation plane *(T36.1 scheduled · needs completed Epics 34–35)*
+## Epic 36 · Shared source-observation plane *(T36.2 scheduled · needs completed Epics 34–35)*
 
 Read and parse supported source once per exact repository generation and pack
 policy, then reuse bounded target-independent observations across services and
 relationship families.
 
-**T36.1 · Batch immutable Git reader and partitions** *(scheduled)* — add bounded
-`git cat-file --batch` sessions over manifest-selected immutable blobs and a
-versioned source-partition contract. AC: pure-reader rules, no lazy fetch or
-replacement refs, output/time/blob/aggregate/descriptor limits, cancellation,
-missing-object classification, path-free diagnostics, deterministic
-partitioning, and one admitted blob read per generation/policy. A genuinely
-re-current A after A→B→A must prove its settled content-addressed partitions
-need no scheduling or use a distinguishable schedule identity; T35.1's
-superseded digest is never resurrected.
-
-**T36.2 · Go source-observation contract** *(needs T36.1)* — parse imports,
+**T36.2 · Go source-observation contract** *(scheduled; needs T36.1)* — parse imports,
 aliases, receivers/generated-client clues, constructor origin, selector spans,
 bounded local propagation, Kafka call/topic shapes, and explicit dynamic or
 unsupported states once. AC: the representation is not a generic serialized
