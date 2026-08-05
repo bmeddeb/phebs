@@ -3,7 +3,10 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/exec"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -82,6 +85,146 @@ func TestServiceCatalogPublicationLifecycle(t *testing.T) {
 		historical.ControlRevision != 0 || !historical.PublishedAt.IsZero() ||
 		string(historical.Canonical) != string(first.Canonical) {
 		t.Fatalf("historical generation = %+v, %v", historical, err)
+	}
+}
+
+func TestCatalogLifecycleRetainsCurrentAndTwoRollbackGenerations(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "example.com/acme/catalog-lifecycle"
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://example.com/acme/catalog-lifecycle.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	publications := make([]servicecatalog.Publication, 0, 5)
+	for index := range 5 {
+		commit := fmt.Sprintf("%040d", index+1)
+		if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+			t.Fatal(err)
+		}
+		publication := testCatalogPublication(
+			t, repository, commit, "catalog", fmt.Sprintf("Orders %d", index),
+		)
+		if err := s.PublishServiceCatalog(ctx, publication); err != nil {
+			t.Fatal(err)
+		}
+		publications = append(publications, publication)
+		time.Sleep(20 * time.Millisecond)
+	}
+	sweep, err := s.SweepCatalogLifecycle(
+		ctx, "", 11, 16, 3,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleted := sweep.Deleted
+	for attempts := 0; sweep.More && attempts < 10; attempts++ {
+		sweep, err = s.SweepCatalogLifecycle(
+			ctx, sweep.Cursor, 11, 16, 3,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleted += sweep.Deleted
+	}
+	var missing []int
+	for index, publication := range publications {
+		_, err := s.GetServiceCatalogGeneration(ctx, repository, publication.GenerationDigest)
+		if err != nil && strings.Contains(err.Error(), "current generation is absent") {
+			missing = append(missing, index)
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if deleted != 2 || !reflect.DeepEqual(missing, []int{0, 1}) {
+		t.Fatalf("catalog lifecycle deleted=%d final=%+v, missing=%v; want oldest two", deleted, sweep, missing)
+	}
+}
+
+func TestCatalogLifecycleProtectsActiveServiceCatalog(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "example.com/acme/catalog-active-root"
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://example.com/acme/catalog-active-root.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	publications := make([]servicecatalog.Publication, 0, 5)
+	for index := range 5 {
+		commit := fmt.Sprintf("%040d", index+20)
+		if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+			t.Fatal(err)
+		}
+		publication := testCatalogPublication(
+			t, repository, commit, "catalog", fmt.Sprintf("Active %d", index),
+		)
+		if err := s.PublishServiceCatalog(ctx, publication); err != nil {
+			t.Fatal(err)
+		}
+		publications = append(publications, publication)
+		if index == 0 {
+			persisted, err := s.GetServiceCatalog(ctx, repository)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.ReconcileServiceStates(ctx, *persisted); err != nil {
+				t.Fatal(err)
+			}
+			state, err := s.GetServiceState(ctx, repository, "orders")
+			if err != nil {
+				t.Fatal(err)
+			}
+			summary, err := s.GetServiceStateSummary(ctx, repository)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.ActivateService(ctx, servicecatalog.ServiceActivation{
+				Repository: repository, ServiceKey: "orders",
+				Incarnation: state.Incarnation, DesiredGeneration: state.DesiredGeneration,
+				StateControlRevision:      state.ControlRevision,
+				RepositoryControlRevision: summary.ControlRevision,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			// Catalog timestamps use the store's second-precision wire format.
+			// Put the active generation strictly before the later rollback set
+			// so this test proves the service root, rather than a timestamp tie,
+			// preserves it.
+			nextSecond := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+			time.Sleep(time.Until(nextSecond) + 20*time.Millisecond)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	cursor := ""
+	deleted := 0
+	for range 30 {
+		sweep, err := s.SweepCatalogLifecycle(
+			ctx, cursor, 11, 16, 3,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleted += sweep.Deleted
+		cursor = sweep.Cursor
+	}
+	if _, err := s.GetServiceCatalogGeneration(
+		ctx, repository, publications[0].GenerationDigest,
+	); err != nil {
+		t.Fatalf("active historical catalog was collected: %v", err)
+	}
+	var missing []int
+	for index, publication := range publications {
+		_, err := s.GetServiceCatalogGeneration(ctx, repository, publication.GenerationDigest)
+		if err != nil && strings.Contains(err.Error(), "current generation is absent") {
+			missing = append(missing, index)
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if deleted != 1 || len(missing) != 1 || missing[0] == 0 || missing[0] == 4 {
+		t.Fatalf("catalog lifecycle deleted=%d cursor=%q missing=%v; want one unrooted historical generation", deleted, cursor, missing)
 	}
 }
 

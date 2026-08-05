@@ -49,6 +49,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
@@ -306,6 +307,47 @@ func serve(args []string) error {
 		})
 	}
 	defer stopBackground()
+
+	capacityGate := lifecycle.NewGate(cfg.Server.DataDir)
+	if cfg.Lifecycle.EnabledFor() {
+		acquireLifecycleMutation := func(lockCtx context.Context) (func(), error) {
+			return focusedindex.AcquireMutationLock(
+				lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
+			)
+		}
+		lifecycleOwners := []lifecycle.Owner{
+			lifecycle.CatalogGenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
+			lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
+			lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
+		}
+		lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
+		lifecycleController, lifecycleErr := lifecycle.NewController(
+			st, lifecycleOwners...,
+		)
+		if lifecycleErr != nil {
+			return fmt.Errorf("configure lifecycle maintenance: %w", lifecycleErr)
+		}
+		runBackground(func() {
+			lifecycle.Run(
+				ctx, lifecycleController, capacityGate,
+				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
+				func(result lifecycle.OwnerResult) {
+					if result.Err != nil {
+						diagnostics.Logf(
+							"lifecycle owner=%q completeness=%s: %v",
+							result.Owner, result.Completeness, result.Err,
+						)
+					} else if result.Deleted > 0 {
+						diagnostics.Logf(
+							"lifecycle owner=%q completeness=%s scanned=%d deleted=%d backlog=%t",
+							result.Owner, result.Completeness, result.Scanned,
+							result.Deleted, result.More,
+						)
+					}
+				},
+			)
+		})
+	}
 
 	// T10.1: one audit recorder feeds the auth surface and the huma middleware.
 	// The actor comes from the request principal when the caller did not
@@ -707,6 +749,17 @@ func serve(args []string) error {
 			Revisions:     cfg.Revisions,
 			AnalysisUnits: analysisUnits,
 			OnIndexed:     onIndexed,
+			AdmitDerived: func(admitCtx context.Context) error {
+				_, admissionErr := capacityGate.Check(admitCtx, 0)
+				if errors.Is(admissionErr, lifecycle.ErrCapacityUnavailable) {
+					// T35 workloads fail closed when capacity is unavailable. The
+					// pre-existing index pipeline retains its historical behavior,
+					// while a measured hard/projected watermark still refuses it.
+					diagnostics.Logf("lifecycle capacity unavailable for legacy index admission: %v", admissionErr)
+					return nil
+				}
+				return admissionErr
+			},
 		}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}

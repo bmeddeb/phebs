@@ -469,6 +469,11 @@ func TestShortCircuitAndForce(t *testing.T) {
 	if len(generationBefore) < 3 {
 		t.Fatalf("repository generation artifacts = %d, want roots and member", len(generationBefore))
 	}
+	admissions := 0
+	ix.AdmitDerived = func(context.Context) error {
+		admissions++
+		return nil
+	}
 
 	repo, _ = st.GetRepo(ctx, name) // re-read: row now carries indexed_commit_hash
 	start := time.Now()
@@ -486,6 +491,24 @@ func TestShortCircuitAndForce(t *testing.T) {
 	if after := repositoryGenerationStamps(t, dataDir); !reflect.DeepEqual(after, generationBefore) {
 		t.Fatalf("no-op touched repository generation: before=%v after=%v", generationBefore, after)
 	}
+	if admissions != 0 {
+		t.Fatalf("no-op performed %d derived admissions", admissions)
+	}
+	wantAdmission := errors.New("disk pressure")
+	ix.AdmitDerived = func(context.Context) error {
+		admissions++
+		return wantAdmission
+	}
+	if err := ix.Index(ctx, *repo, true); !errors.Is(err, wantAdmission) {
+		t.Fatalf("pressure refusal = %v, want %v", err, wantAdmission)
+	}
+	if after := repositoryGenerationStamps(t, dataDir); !reflect.DeepEqual(after, generationBefore) {
+		t.Fatalf("refused admission touched generation: before=%v after=%v", generationBefore, after)
+	}
+	ix.AdmitDerived = func(context.Context) error {
+		admissions++
+		return nil
+	}
 
 	time.Sleep(1100 * time.Millisecond) // ensure a distinguishable shard mtime
 	if err := ix.Index(ctx, *repo, true); err != nil {
@@ -499,6 +522,9 @@ func TestShortCircuitAndForce(t *testing.T) {
 	}
 	if !rebuilt {
 		t.Error("force did not rebuild any shard")
+	}
+	if admissions != 2 {
+		t.Fatalf("forced/refused rebuild admissions = %d, want 2", admissions)
 	}
 }
 

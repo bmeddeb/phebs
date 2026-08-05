@@ -180,6 +180,9 @@ type Indexer struct {
 	// AnalysisUnits is the validated repository-keyed semantic scope. Its
 	// presence selects the focused child and manifest-bound publication.
 	AnalysisUnits map[string]analysisunit.Scope
+	// AdmitDerived runs after the exact no-op fence and before any staging
+	// directory or child is created. T35.3 uses it for hard-watermark refusal.
+	AdmitDerived func(context.Context) error
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
 	// index→candidate chain hook, mirroring how sync chains index. It also runs
@@ -242,6 +245,11 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		!focusedindex.IsPublishing(filepath.Join(ix.DataDir, "index"), repo.Name) {
 		ix.verbosef("index %s: already current at %s; skipping child", repo.Name, head)
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
+	}
+	if ix.AdmitDerived != nil {
+		if err := ix.AdmitDerived(ctx); err != nil {
+			return fmt.Errorf("index %s: derived-artifact admission: %w", repo.Name, err)
+		}
 	}
 
 	indexDir := filepath.Join(ix.DataDir, "index")

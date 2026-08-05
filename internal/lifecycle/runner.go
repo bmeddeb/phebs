@@ -1,0 +1,61 @@
+package lifecycle
+
+import (
+	"context"
+	"log"
+	"time"
+)
+
+const (
+	DefaultIdleInterval = time.Hour
+	DefaultBacklogDelay = 5 * time.Second
+)
+
+type Reporter func(OwnerResult)
+
+func Run(
+	ctx context.Context,
+	controller *Controller,
+	gate *Gate,
+	idleInterval, backlogDelay time.Duration,
+	report Reporter,
+) {
+	if controller == nil || idleInterval <= 0 || backlogDelay <= 0 {
+		return
+	}
+	delay := time.Duration(0)
+	for {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+		}
+		result := controller.Tick(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		if report != nil {
+			func() {
+				defer func() { _ = recover() }()
+				report(result)
+			}()
+		} else if result.Err != nil {
+			log.Printf("lifecycle owner %q: %v", result.Owner, result.Err)
+		}
+		pressureAccelerated := false
+		if gate != nil {
+			capacity, _ := gate.Check(ctx, 0)
+			pressureAccelerated = capacity.Pressure == PressureCollect ||
+				capacity.Pressure == PressureRefuse
+		}
+		if result.More || !result.CycleComplete || pressureAccelerated {
+			delay = backlogDelay
+		} else {
+			delay = idleInterval
+		}
+	}
+}
