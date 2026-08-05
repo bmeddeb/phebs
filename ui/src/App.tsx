@@ -14,6 +14,7 @@ import LoginPage from './pages/LoginPage'
 const SearchPage = lazy(() => import('./pages/SearchPage'))
 const FilePage = lazy(() => import('./pages/FilePage'))
 const ReposPage = lazy(() => import('./pages/ReposPage'))
+const ServiceDirectoryPage = lazy(() => import('./pages/ServiceDirectoryPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BlamePage = lazy(() => import('./pages/BlamePage'))
@@ -86,12 +87,15 @@ export default function App() {
   const workbenchEvidenceAvailable =
     capabilities.includes('change-workbench-evidence')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
+  const servicesAvailable = capabilities.includes('service-catalog-v2')
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
   else if (path.startsWith('/blame')) page = <BlamePage params={params} />
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />
-  else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} serviceDirectoryAvailable={servicesAvailable} />
+  else if (path.startsWith('/services') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/services') && servicesAvailable) page = <ServiceDirectoryPage params={params} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
@@ -126,7 +130,7 @@ export default function App() {
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
-  const compactMain = path.startsWith('/file') || path.startsWith('/repos')
+  const compactMain = path.startsWith('/file') || path.startsWith('/repos') || path.startsWith('/services')
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
@@ -166,7 +170,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   const { mode, toggle } = useMode()
 
   const isSettings = path.startsWith('/settings')
-  const isRepos = path.startsWith('/repos')
+  const isRepos = path.startsWith('/repos') || path.startsWith('/services')
   const isAudit = path.startsWith('/audit')
   const isAnalytics = path.startsWith('/analytics')
   const isImpact = path.startsWith('/impact') || path.startsWith('/callers') ||

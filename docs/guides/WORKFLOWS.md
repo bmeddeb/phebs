@@ -403,15 +403,18 @@ ordinary production startup still supplies neither service to MCP.
 
 `make dev` and `make dev-api` bind one retained neutral Git bundle through the
 ordinary sync, focused-index, candidate, extraction, resolver, caller-leaf,
-complete-publication, and store-derived Workbench paths. The repository's
-active `orders-service` unit selects `service/orders`, its protobuf/generated
-supporting files, snapshot, and `go.mod`. It deliberately leaves an unrelated
-bulk needle and one real gRPC caller outside the focused shard. The former is
-absent from Search; the latter remains visible only through the separately
-labeled repository-overlay Caller Map generation. One `_test.go` file is
-classified and reported as excluded `go_test` evidence. Protobuf declarations,
-the in-unit registration, and Kafka producer/consumer facts are extracted from
-committed source rather than projected by a response fixture.
+complete-publication, and store-derived Workbench paths. They also select the
+companion T33.5 operator catalog through the ordinary catalog ingestion and
+service-state reconciliation paths; there is no directory response fixture.
+The repository's active `orders-service` analysis unit selects
+`service/orders`, its protobuf/generated supporting files, snapshot, and
+`go.mod`. It deliberately leaves an unrelated bulk needle and one real gRPC
+caller outside the focused shard. The former is absent from Search; the latter
+remains visible only through the separately labeled repository-overlay Caller
+Map generation. One `_test.go` file is classified and reported as excluded
+`go_test` evidence. Protobuf declarations, the in-unit registration, and Kafka
+producer/consumer facts are extracted from committed source rather than
+projected by a response fixture.
 
 Search labels a result with that exact focused scope only when the result's
 single revision equals the loaded repository status `indexed_commit_hash`.
@@ -424,9 +427,45 @@ The recipes explicitly clear the Investigation, Contract Atlas, synthetic
 Workbench, retained Workbench-closure, and Thrift-field fixture bindings. The
 Contracts and Workbench surfaces therefore use the same store-derived evidence
 and authorization fences as an ordinary provisional instance. Ordinary
-`phebs serve` remains unchanged and default-dark. The exact demo steps,
-fixture census, receipt, and non-claims are retained in the
-[T30.7 cohort README](../fixtures/t30.7-neutral-service/README.md).
+`phebs serve` remains unchanged and default-dark. The exact source and evidence
+demo steps are retained in the
+[T30.7 cohort README](../fixtures/t30.7-neutral-service/README.md); the catalog
+census, directory steps, receipt, and non-claims are retained in the
+[T33.5 companion README](../fixtures/t33.5-service-directory/README.md).
+
+## Service directory
+
+When the authenticated server advertises `service-catalog-v2`, each visible
+repository row offers **Services**. The link opens the source-free directory
+with the repository fixed in the hash route. Authority, source/catalog/state
+identities and revisions, lifecycle counts, accepted/unowned source counts,
+and shared placements describe the exact catalog and service-state snapshot;
+they do not read source bytes or infer a runtime topology.
+
+Use lifecycle and disposition filters to isolate unavailable, stale, conflict,
+proposal, or accepted identities. Removed identities are excluded by default
+and require **Include removed identities**. Choosing a row adds its exact
+`service_key` to the route and shows incarnation, desired/active identities,
+reason or successor lineage, and its primary, supporting, shared, generated,
+and typed path roles. A successor is declared catalog lineage, not proof that
+one service calls, deploys with, or replaces another at runtime.
+
+The route retains repository, filters, removed opt-in, cursor, and selected
+service. Reload and browser back/forward therefore repeat the same authorized
+request. Changing a filter deliberately clears the cursor and selected detail.
+**Next** replaces the page with the server's opaque continuation; **First
+page** clears that continuation exactly, while browser back/forward returns to
+visited cursor routes. A filtered page may be empty while still offering Next:
+the bounded server scan stopped at its continuation rather than proving there
+are no later matches. A refused cursor or changed authority is an error, not an
+empty directory. A missing selected service leaves the valid inventory usable
+and reports the refusal only in the detail panel; either retry reloads the
+current exact route.
+
+The page mounts one 50-row inventory page and at most one detail. It does not
+poll, accumulate prior pages, cache authority across principals, compile a
+service search predicate, or turn catalog paths into evidence. Service-scoped
+search and service relationships begin in later epics.
 
 ## Synthetic Change Workbench shell
 

@@ -22,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
@@ -353,6 +354,197 @@ func TestT307NeutralServiceFixtureIsPinnedAndExtractable(t *testing.T) {
 	}
 }
 
+func TestBindT335ServiceDirectoryDemoIsExplicitAndCatalogBacked(t *testing.T) {
+	fixture := t307FixturePath(t)
+	catalogPath := t335CatalogPath(t)
+	repository, err := phebssync.RepoName(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("ordinary serve remains unchanged", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindT335ServiceDirectoryDemo(cfg, "", ""); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(cfg, &config.Config{}) {
+			t.Fatalf("empty setting changed config: %+v", cfg)
+		}
+	})
+
+	t.Run("exact companion catalog selects the ordinary v2 ingestion path", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+			t.Fatal(err)
+		}
+		for range 2 {
+			if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalogPath); err != nil {
+				t.Fatal(err)
+			}
+		}
+		selection, ok := cfg.ServiceCatalogs[repository]
+		if !ok || len(cfg.ServiceCatalogs) != 1 ||
+			selection != (config.ServiceCatalog{
+				Kind: servicecatalog.AuthorityOperator, ID: "t335-demo",
+				Version: "v1", Path: catalogPath,
+			}) {
+			t.Fatalf("service catalog selection = %+v", cfg.ServiceCatalogs)
+		}
+	})
+
+	t.Run("invalid settings fail before mutation", func(t *testing.T) {
+		directory := filepath.Join(t.TempDir(), "t335-service-catalog.json")
+		if err := os.Mkdir(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		symlink := filepath.Join(t.TempDir(), "t335-service-catalog.json")
+		if err := os.Symlink(catalogPath, symlink); err != nil {
+			t.Fatal(err)
+		}
+		drifted := filepath.Join(t.TempDir(), "t335-service-catalog.json")
+		raw, err := os.ReadFile(catalogPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(drifted, append(raw, '\n'), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		bound := func() *config.Config {
+			cfg := &config.Config{}
+			if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+				t.Fatal(err)
+			}
+			return cfg
+		}
+		collision := bound()
+		collision.ServiceCatalogs = map[string]config.ServiceCatalog{
+			repository: {
+				Kind: servicecatalog.AuthorityOperator, ID: "another",
+				Version: "v2", Path: catalogPath,
+			},
+		}
+		rows := []struct {
+			name    string
+			fixture string
+			catalog string
+			cfg     *config.Config
+		}{
+			{name: "nil config", fixture: fixture, catalog: catalogPath},
+			{name: "missing cohort", fixture: fixture, catalog: catalogPath, cfg: &config.Config{}},
+			{name: "missing bundle", catalog: catalogPath, cfg: bound()},
+			{name: "relative catalog", fixture: fixture, catalog: filepath.Join("docs", "fixtures", "t33.5-service-directory", "t335-service-catalog.json"), cfg: bound()},
+			{name: "padded catalog", fixture: fixture, catalog: catalogPath + " ", cfg: bound()},
+			{name: "wrong basename", fixture: fixture, catalog: filepath.Join(filepath.Dir(catalogPath), "catalog.json"), cfg: bound()},
+			{name: "missing catalog", fixture: fixture, catalog: filepath.Join(t.TempDir(), "t335-service-catalog.json"), cfg: bound()},
+			{name: "catalog directory", fixture: fixture, catalog: directory, cfg: bound()},
+			{name: "catalog symlink", fixture: fixture, catalog: symlink, cfg: bound()},
+			{name: "catalog byte drift", fixture: fixture, catalog: drifted, cfg: bound()},
+			{name: "selection collision", fixture: fixture, catalog: catalogPath, cfg: collision},
+		}
+		for _, row := range rows {
+			t.Run(row.name, func(t *testing.T) {
+				if row.cfg == nil {
+					if err := bindT335ServiceDirectoryDemo(nil, row.fixture, row.catalog); err == nil {
+						t.Fatal("nil config succeeded")
+					}
+					return
+				}
+				before := cloneT307Config(row.cfg)
+				if err := bindT335ServiceDirectoryDemo(row.cfg, row.fixture, row.catalog); err == nil {
+					t.Fatal("invalid T33.5 demo setting succeeded")
+				}
+				if !reflect.DeepEqual(*row.cfg, before) {
+					t.Fatalf("failed binding changed config: before=%+v after=%+v", before, *row.cfg)
+				}
+			})
+		}
+	})
+}
+
+func TestT335ServiceDirectoryCatalogIsPinnedAndNeutral(t *testing.T) {
+	catalogPath := t335CatalogPath(t)
+	raw, err := os.ReadFile(catalogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := servicecatalog.Decode(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := servicecatalog.Digest(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedDigest := sha256.Sum256(raw)
+	const wantEncodedDigest = t335CatalogEncodedSHA256
+	const wantCatalogDigest = "sha256:8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84"
+	encoded := "sha256:" + hex.EncodeToString(encodedDigest[:])
+	if got := encoded; got != wantEncodedDigest ||
+		digest != wantCatalogDigest {
+		t.Fatalf("catalog digests = %s/%s", got, digest)
+	}
+	receiptBytes, err := os.ReadFile(filepath.Join(filepath.Dir(catalogPath), "receipt.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var receipt struct {
+		CatalogEncodedSHA256  string `json:"catalog_encoded_sha256"`
+		CatalogSemanticSHA256 string `json:"catalog_semantic_sha256"`
+		CatalogEncodedBytes   int    `json:"catalog_encoded_bytes"`
+		ServiceCount          int    `json:"service_count"`
+		MembershipCount       int    `json:"membership_count"`
+		UnownedCount          int    `json:"unowned_placement_count"`
+		RoleCounts            struct {
+			Primary    int `json:"primary"`
+			Supporting int `json:"supporting"`
+			Shared     int `json:"shared"`
+			Generated  int `json:"generated"`
+			Typed      int `json:"typed"`
+		} `json:"role_counts"`
+	}
+	if err := json.Unmarshal(receiptBytes, &receipt); err != nil {
+		t.Fatal(err)
+	}
+	if receipt.CatalogEncodedSHA256 != encoded ||
+		receipt.CatalogSemanticSHA256 != digest ||
+		receipt.CatalogEncodedBytes != len(raw) {
+		t.Fatalf("catalog receipt = %+v, observed %s/%s/%d", receipt, encoded, digest, len(raw))
+	}
+	if len(catalog.Services) != 5 || len(catalog.Memberships) != 11 ||
+		len(catalog.Unowned) != 2 ||
+		receipt.ServiceCount != len(catalog.Services) ||
+		receipt.MembershipCount != len(catalog.Memberships) ||
+		receipt.UnownedCount != len(catalog.Unowned) {
+		t.Fatalf("catalog shape = services %d memberships %d unowned %d", len(catalog.Services), len(catalog.Memberships), len(catalog.Unowned))
+	}
+	roleCounts := map[string]int{}
+	for _, membership := range catalog.Memberships {
+		roleCounts[membership.Role]++
+	}
+	if roleCounts[servicecatalog.RolePrimary] != receipt.RoleCounts.Primary ||
+		roleCounts[servicecatalog.RoleSupporting] != receipt.RoleCounts.Supporting ||
+		roleCounts[servicecatalog.RoleShared] != receipt.RoleCounts.Shared ||
+		roleCounts[servicecatalog.RoleGenerated] != receipt.RoleCounts.Generated ||
+		roleCounts[servicecatalog.RoleTyped] != receipt.RoleCounts.Typed {
+		t.Fatalf("catalog role counts = %v, receipt %+v", roleCounts, receipt.RoleCounts)
+	}
+	states := map[string]string{}
+	for _, service := range catalog.Services {
+		states[service.Key] = service.Disposition
+	}
+	for key, disposition := range map[string]string{
+		"billing-control":  servicecatalog.DispositionConflict,
+		"legacy-orders":    servicecatalog.DispositionRejected,
+		"orders-api":       servicecatalog.DispositionAccepted,
+		"orders-events":    servicecatalog.DispositionAccepted,
+		"returns-proposal": servicecatalog.DispositionProposal,
+	} {
+		if states[key] != disposition {
+			t.Fatalf("service %s disposition = %q", key, states[key])
+		}
+	}
+}
+
 func t307FixturePath(t *testing.T) string {
 	t.Helper()
 	fixture, err := filepath.Abs(filepath.Join(
@@ -363,6 +555,18 @@ func t307FixturePath(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return fixture
+}
+
+func t335CatalogPath(t *testing.T) string {
+	t.Helper()
+	catalog, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "t33.5-service-directory",
+		"t335-service-catalog.json",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return catalog
 }
 
 func cloneT307Config(source *config.Config) config.Config {
@@ -377,6 +581,15 @@ func cloneT307Config(source *config.Config) config.Config {
 			unit.Primary = append([]string(nil), unit.Primary...)
 			unit.Supporting = append([]string(nil), unit.Supporting...)
 			clone.AnalysisUnits[repository] = unit
+		}
+	}
+	if source.ServiceCatalogs != nil {
+		clone.ServiceCatalogs = make(
+			map[string]config.ServiceCatalog,
+			len(source.ServiceCatalogs),
+		)
+		for repository, catalog := range source.ServiceCatalogs {
+			clone.ServiceCatalogs[repository] = catalog
 		}
 	}
 	return clone

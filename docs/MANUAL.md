@@ -76,9 +76,12 @@ with its primary/supporting/typed roles and explicit unowned complement. These
 catalog generations now reconcile independent desired/active/status rows,
 monotonic incarnations, and retained removed tombstones. Catalog and lifecycle
 state are durable and backup-safe. Authorization-first bounded inventory and
-exact detail are now available through HTTP and MCP; no service-directory UI,
-service-scoped search, relationship claim, or release authority exists yet.
-T33.5 owns the accessible directory and neutral epic demo.
+exact detail are available through HTTP and MCP. The capability-gated
+repository → Services directory renders that same source-free authority and
+lifecycle state, including conflicts, removed identities, roles, unowned and
+shared summaries, exact deep links, and explicit non-claims. It does not read
+source bytes or establish runtime relationships. Service-scoped search and
+release authority remain future work.
 
 ## Evidence boundary
 

@@ -15,7 +15,77 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
+
+func TestT335NeutralCatalogUsesOrdinaryCensusAndPublication(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	const repository = "example.invalid/t307-neutral-service"
+	fixture, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "t30.7-neutral-service",
+		"t307-neutral-service.bundle",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogPath, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "t33.5-service-directory",
+		"t335-service-catalog.json",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	mirror, err := phebssync.SafeRepoDir(dataDir, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(mirror), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	testGit(t, "", "clone", "-q", "--bare", fixture, mirror)
+	commit := strings.TrimSpace(testGit(t, mirror, "rev-parse", "HEAD"))
+	const wantCommit = "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb"
+	if commit != wantCommit {
+		t.Fatalf("neutral fixture commit = %s, want %s", commit, wantCommit)
+	}
+
+	state := &memoryStore{repositories: map[string]store.Repo{
+		repository: {Name: repository, IndexedCommitHash: commit},
+	}}
+	reconciler := Reconciler{
+		DataDir: dataDir,
+		Store:   state,
+		Selections: map[string]config.ServiceCatalog{
+			repository: {
+				Kind: servicecatalog.AuthorityOperator, ID: "t335-demo",
+				Version: "v1", Path: catalogPath,
+			},
+		},
+	}
+	outcome, err := reconciler.ReconcileRepository(t.Context(), repository)
+	if err != nil || outcome != OutcomePublished {
+		t.Fatalf("neutral catalog reconcile = %q, %v", outcome, err)
+	}
+	publication := state.current[repository]
+	if publication.SourceCommit != commit || publication.SourceFileCount != 9 ||
+		publication.AcceptedFileCount != 7 || publication.UnownedFileCount != 2 ||
+		publication.Authority != (servicecatalog.Authority{
+			Kind: servicecatalog.AuthorityOperator, ID: "t335-demo", Version: "v1",
+		}) || state.stateReconciles != 1 {
+		t.Fatalf("neutral catalog publication = %+v, reconciles %d", publication, state.stateReconciles)
+	}
+	catalog, err := servicecatalog.Decode(publication.Canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Services) != 5 || len(catalog.Memberships) != 11 ||
+		len(catalog.Unowned) != 2 {
+		t.Fatalf("published catalog shape = %d/%d/%d", len(catalog.Services), len(catalog.Memberships), len(catalog.Unowned))
+	}
+}
 
 func TestCommittedCatalogReconcileAndFailedReplacementPreservesPrior(t *testing.T) {
 	repository := "example.com/acme/mono"

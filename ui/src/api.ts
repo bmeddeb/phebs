@@ -94,6 +94,124 @@ export interface RepoStatus {
   analysis_unit?: AnalysisUnitState
 }
 
+export type ServiceStatus =
+  | 'current'
+  | 'stale'
+  | 'unavailable'
+  | 'conflict'
+  | 'removed'
+
+export type ServiceDisposition =
+  | 'accepted'
+  | 'proposal'
+  | 'conflict'
+  | 'rejected'
+
+export type ServiceMembershipRole =
+  | 'primary'
+  | 'supporting'
+  | 'shared'
+  | 'generated'
+  | 'typed'
+
+export interface ServiceAuthority {
+  kind: string
+  id: string
+  version: string
+  override_id?: string
+  override_version?: string
+}
+
+export interface ServiceRepository {
+  repository: string
+  source_kind: string
+  source_commit: string
+  source_file_count: number
+  accepted_file_count: number
+  unowned_file_count: number
+  authority: ServiceAuthority
+  catalog_digest: string
+  catalog_generation: string
+  catalog_control_revision: number
+  state_control_revision: number
+  catalog_service_count: number
+  live_service_count: number
+  current_count: number
+  stale_count: number
+  unavailable_count: number
+  conflict_count: number
+  tombstone_count: number
+  published_at: string
+  state_updated_at: string
+}
+
+export interface ServiceRoleCounts {
+  primary: number
+  supporting: number
+  shared: number
+  generated: number
+  typed: number
+}
+
+export interface ServiceRecord {
+  repository: string
+  key: string
+  display_name: string
+  disposition: ServiceDisposition
+  origin: string
+  reason?: string
+  successor_count: number
+  incarnation: number
+  desired_generation?: string
+  desired_source_generation?: string
+  desired_catalog_generation?: string
+  active_desired_generation?: string
+  active_source_generation?: string
+  active_catalog_generation?: string
+  status: ServiceStatus
+  removed: boolean
+  membership_count: number
+  distinct_path_count: number
+  role_counts: ServiceRoleCounts
+  state_digest: string
+  control_revision: number
+  changed_at: string
+}
+
+export interface ServiceMembership {
+  path: string
+  role: ServiceMembershipRole
+  origin: string
+}
+
+export interface ServicePagination {
+  order: string
+  page_size: number
+  returned: number
+  next_cursor?: string
+}
+
+export interface ServiceInventory {
+  schema: string
+  repository: ServiceRepository
+  filters: {
+    repository: string
+    status?: ServiceStatus
+    disposition?: ServiceDisposition
+    include_removed?: boolean
+  }
+  services: ServiceRecord[]
+  pagination: ServicePagination
+}
+
+export interface ServiceDetail {
+  schema: string
+  repository: ServiceRepository
+  service: ServiceRecord
+  successors: string[]
+  memberships: ServiceMembership[]
+}
+
 export interface SourceFile {
   content: string
   encoding: 'utf8' | 'base64'
@@ -1704,7 +1822,7 @@ async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
   return res.json() as Promise<T>
 }
 
-const query = (values: Record<string, string | number | undefined>) =>
+const query = (values: Record<string, string | number | boolean | undefined>) =>
   new URLSearchParams(
     Object.entries(values)
       .filter(([, value]) => value !== '' && value !== undefined)
@@ -1713,6 +1831,27 @@ const query = (values: Record<string, string | number | undefined>) =>
 
 export const fetchRepoStatus = (signal?: AbortSignal) =>
   getJSON<RepoStatus[]>('/api/repo-status', signal)
+
+export const fetchServiceInventory = (
+  values: {
+    repository: string
+    status?: ServiceStatus
+    disposition?: ServiceDisposition
+    include_removed?: boolean
+    page_size?: number
+    cursor?: string
+  },
+  signal?: AbortSignal,
+) => getJSON<ServiceInventory>(`/api/services?${query(values)}`, signal)
+
+export const fetchServiceDetail = (
+  repository: string,
+  serviceKey: string,
+  signal?: AbortSignal,
+) => getJSON<ServiceDetail>(
+  `/api/service?${query({ repository, service_key: serviceKey })}`,
+  signal,
+)
 
 export const fetchFolderContents = (
   repo: string,
