@@ -102,10 +102,11 @@ fresh repositories with fixed Git identity and timestamps; require identical
 commits, trees, bundle, receipt, and artifact digests; strict-decode every
 closed shape; and compare the retained files byte-for-byte with fresh output.
 
-The bundle digest also pins the current Git pack encoding, while the SCIP blob
-pins the current protobuf deterministic encoding. A Git upgrade may therefore
-change the bundle bytes while the commit and tree identities remain stable; a
-protobuf upgrade may change a semantically equivalent SCIP blob and thereby
+The retained bundle was last authored with Git 2.54.0, and its digest pins that
+pack encoding, while the SCIP blob pins the current protobuf deterministic
+encoding. A Git upgrade may therefore change the bundle bytes while the commit
+and tree identities remain stable; a protobuf upgrade may change a semantically
+equivalent SCIP blob and thereby
 change its tree and commit identities. Either case must fail loudly and
 requires reviewed receipt re-authoring rather than an automatic re-pin.
 

@@ -6461,7 +6461,7 @@ production code changes.
 — retained a deterministic five-commit public Git history, closed neutral
 authority inputs, independent correctness oracles, and complete synthetic
 1,000/5,000-service load profiles under `spike/t323/`. The bundle is pinned by
-SHA-256 `05a1b845a2eaee1c6a2b0beda972aa0ea6ffe9cc636d886014887202728e2194`;
+SHA-256 `8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa`;
 its revisions cover stable-identity placement rename, split, merge, removal,
 restricted scope, proposal, malformed and conflicting authority, stale,
 partial, unavailable, conflict, and tombstone states.
