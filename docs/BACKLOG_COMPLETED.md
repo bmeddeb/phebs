@@ -6621,3 +6621,68 @@ Git/blob read, lock, cache, allocation, child process, schema, migration,
 writer, or retained runtime artifact. It establishes no SLO, accuracy,
 completeness, migration completion, decommission safety, or release claim;
 `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+## Epic 33 · Versioned service catalog and lifecycle *(in progress)*
+
+**T33.1 ✅ · Canonical service-catalog contract** *(2026-08-04)* — added the
+production-neutral `internal/servicecatalog` package and selected the closed
+`phebs-service-catalog-v2` JSON contract. The package is a pure decoder,
+validator, normalizer, canonical encoder, and semantic digest; no runtime
+package imports it and this ticket selects, stores, or publishes no catalog.
+
+One catalog carries exactly one `committed` or `operator` base authority and
+at most one versioned operator override. A committed version is a full
+lowercase 40- or 64-digit Git object ID; operator versions and authority IDs
+are bounded explicit tokens. Every service, membership, and unowned record
+retains `base` or `override` provenance, and override provenance is refused
+unless the override authority is present. Stable service keys use the existing
+128-byte `analysis-unit-v1` token grammar and remain independent of display
+name and repository placement.
+
+Services explicitly retain `accepted`, `proposal`, `conflict`, or `rejected`
+disposition. Nonaccepted claims retain bounded reasons; accepted services must
+have a primary membership; rejected records alone can carry bounded successor
+edges. The complete successor graph is reference-checked and cycle-checked
+iteratively. Membership is normalized and duplicate-checked by
+`(service_key,path,role)`, with nonexclusive `primary`, `supporting`, `shared`,
+`generated`, and `typed` roles. Exact paths may carry several roles and belong
+to many services; typed requires an exact supporting record. Distinct prefix
+overlap within one service is refused, while cross-service exact and prefix
+overlap remains legal. Unowned paths are unique, prefix-safe, and cannot
+overlap any accepted placement. T33.2 owns exact source-census binding and the
+proof that these explicit records form the complete repository complement.
+
+The token decoder accepts exactly one object and refuses unknown, duplicate,
+missing, null, wrongly typed, or trailing values. It checks each collection
+before appending past the selected dimension. Validation retains the T32.5
+caps: 4,000 services, 20,000 membership triples, 12,000 distinct
+membership-or-unowned paths, exact accepted-path fan-out 20, and 5 MiB each
+for input and canonical output. Each service retains the inherited 128-path,
+64-KiB aggregate path-byte, 4,096-byte path, and 128-byte key/name bounds.
+Authority IDs and versions are capped at 128 bytes, semantic reasons at 512
+bytes, and aggregate successor edges at 4,000. The bounded canonical encoder
+checks capacity before every output append, orders services, successor keys,
+memberships, and unowned paths, and derives a domain-separated SHA-256 digest.
+
+The maximum-shape test exercises exactly 4,000 accepted services, 20,000
+membership records, 12,000 distinct paths, shared-path fan-out 20, closed
+canonical encoding, strict decoding, revalidation, and digesting. Independent
+tests cover every collection refusal, the canonical-byte refusal, per-service
+path and byte bounds, fan-out, unsafe and overlapping paths, many-to-many
+membership, override provenance, typed/supporting pairing, dispositions,
+successor references and cycles, stable ordering, input immutability, and a
+pinned neutral digest. A non-printable astral-rune regression separately proves
+that canonical display names and reasons use JSON-native escaping and round
+trip through the strict decoder rather than emitting Go-only `\U` escapes.
+
+Requests, queries, startup/restart, sync ticks, retries/no-ops, and publication
+transitions perform no T33.1 work. There is no store/filesystem operation,
+corpus/shard or Git/blob read, child, lock, cache, retained artifact, migration,
+or writer. Explicit callers of the pure package pay work bounded by the
+admitted input and collection caps; malformed replacement input yields no
+partial normalized catalog. T33.2 is scheduled next and owns repository/source
+binding, immutable ingestion, exact census complement, restart/reconcile,
+failed-replacement preservation, backup/restore, and side-by-side
+`analysis-unit-v1` migration. No runtime registration, scale/SLO, accuracy,
+completeness, migration-completion, decommission-safety, or release claim is
+created; `GATE2-V2` remains `NOT_ESTABLISHED`.

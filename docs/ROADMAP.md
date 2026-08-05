@@ -63,8 +63,9 @@ T32.5 completed on 2026-08-04 with a conditional implementation GO: it freezes
 the v2 identities, explicit authority precedence, membership roles,
 independent current/stale behavior, side-by-side migration, conservative
 initial admission caps, and named deferrals without authorizing runtime
-registration or release. T33.1's canonical service-catalog contract is
-scheduled next.
+registration or release. T33.1's strict canonical service-catalog contract
+completed on 2026-08-04 without runtime registration; T33.2 ingestion and v1
+migration is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -374,8 +375,9 @@ Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
 observability and Epic 32 are complete. T32.4 selected direct shared
 whole-repository shards for the initial v2 path after the T32.2 direct baseline
 completed and all T32.3 neutral topology gates passed; cohorts and P6 remain
-trigger-gated. T32.5 then closed the conditional v2 implementation gate;
-T33.1 is the scheduled dependency-ordered ticket. Epics 25–28 remain
+trigger-gated. T32.5 then closed the conditional v2 implementation gate, and
+T33.1 completed the pure catalog contract; T33.2 is the scheduled
+dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -499,9 +501,9 @@ service count × repository bytes
   measure the target whole repository, build the neutral
   authority/correctness profiles, and select direct shards, cohorts, or a P6
   escalation.
-- **Epic 33 — service catalog:** ship strict multi-service authority,
-  membership, independent state, v1 migration, authorized reads, and a service
-  directory.
+- **Epic 33 — service catalog:** T33.1 supplies the strict pure multi-service
+  authority and membership contract; next ingest it with exact v1 migration,
+  then add independent state, authorized reads, and a service directory.
 - **Epic 34 — shared search:** publish one exact repository search generation
   under the selected topology and provide exact all-code/service-scoped query
   parity.
@@ -525,7 +527,9 @@ T32.1 completed the decision/documentation closure after T31.1 diagnostics;
 T32.2–T32.4 supplied the source-free target observation, neutral oracle/load
 profiles, and direct shared-search selection. T32.5 closed Epic 32 with a
 conditional implementation GO and conservative admission/refusal caps below
-the largest synthetic envelope. Those caps are not release limits. Target
+the largest synthetic envelope. T33.1 now implements those caps, strict
+authority/membership validation, and canonical identity as a production-neutral
+pure package; T33.2 owns ingestion. Those caps are not release limits. Target
 operating limits, pack accuracy, workflow value, and any release decision
 remain T39 gates; every epic ends in a demoable state.
 
