@@ -31,6 +31,7 @@ evidence.
   and [artifact receipt](../spike/t323/receipt.json)
 - [T32.4 search-topology and cost spike](../spike/t324/README.md)
   and [source-free measurement receipt](../spike/t324/results.json)
+- [T34.1 repository source/search generation gates](../spike/t341/README.md)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -59,6 +60,13 @@ child, and measures the complete 1,000/5,000-service synthetic profiles. Its
 closed receipt selects direct whole-repository shards for the initial v2 path;
 cohorts and P6 remain trigger-gated. The ctags-disabled synthetic timings set
 no target SLO, scale limit, extraction accuracy, or release authority.
+
+The T34.1 directory runs the production source-generation census over the
+frozen T32.3 1,000-service profile and proves that its 3,151 files remain 3,151
+physical owners despite 5,000 logical memberships. Its second gate revalidates
+the T32.4 digest binding to T32.2's completed source-free target receipt and
+the retained direct-topology decision without reading private input. It adds
+no target timing, scale, accuracy, or release claim.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed

@@ -15,6 +15,7 @@ import (
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
 
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -224,6 +225,42 @@ func ValidateWholePublishedContext(
 	return validateWholePublishedContext(
 		ctx, indexDir, repository, revisions, false,
 	)
+}
+
+// ValidateRepositorySearchGeneration proves the T34.1 source/search root
+// against the already strict whole-shard publication it names.
+func ValidateRepositorySearchGeneration(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (repositoryindex.SearchManifest, error) {
+	whole, err := ValidateWholePublishedContext(
+		ctx, indexDir, repository, revisions,
+	)
+	if err != nil {
+		return repositoryindex.SearchManifest{}, err
+	}
+	return repositoryindex.ValidatePublished(
+		ctx, indexDir, repository, revisions, wholePhysicalRoot(whole),
+	)
+}
+
+func wholePhysicalRoot(manifest WholeManifest) repositoryindex.PhysicalRoot {
+	root := repositoryindex.PhysicalRoot{
+		Schema:         WholeManifestSchema,
+		ManifestName:   WholeManifestName(manifest.Repository),
+		ManifestDigest: manifest.Digest,
+		Members:        make([]repositoryindex.PhysicalMember, 0, len(manifest.Members)),
+	}
+	for _, member := range manifest.Members {
+		root.Members = append(root.Members, repositoryindex.PhysicalMember{
+			Ordinal: member.Ordinal, Count: member.Count, Name: member.Name,
+			ContentDigest:  member.ContentDigest,
+			ContentBytes:   member.ContentBytes,
+			MetadataDigest: member.MetadataDigest,
+		})
+	}
+	return root
 }
 
 // ValidateCommittedWholePublication proves a whole publication while

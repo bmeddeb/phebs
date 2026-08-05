@@ -1162,8 +1162,8 @@ indexing:
 ```
 
 Each forwarded child line is prefixed with the repository. Parent messages
-cover child start, successful completion with duration and total shard bytes,
-state commit, and already-current skips. Child lines longer than 64 KiB are
+cover repository-census start/summary, child start, successful completion with
+duration and total shard bytes, state commit, and already-current skips. Child lines longer than 64 KiB are
 split into bounded continued records and invalid UTF-8 is replaced before
 logging. Independent of this switch, a failed child carries only its newest
 1 MiB of output into failure classification and the job error; successful
@@ -1326,6 +1326,40 @@ repository publication marker remains present. The matching indexed row
 commits before the marker is removed. The manifest digest is a byte-publication
 receipt, not semantic identity: a builder timestamp can change it across
 equivalent rebuilds.
+
+New whole-repository publications also carry two side-by-side v2-derived
+receipts. `phebs-source-<repository-sha256>.manifest.json` binds the exact
+ordered indexed revision set and immutable JSONL census members. Equal
+path/mode/type/object/size identities across revisions have one physical-owner
+record with multiple revision ordinals; validation rejects two owners for one
+path in one revision. Symlinks and gitlinks are recorded as explicit
+boundaries, and the zoekt child is invoked with submodule recursion disabled.
+`phebs-search-<repository-sha256>.manifest.json` binds that source digest to
+the direct topology and the complete existing whole-shard root and member
+identities. T34.1 writes this authority side by side; current all-code search
+continues to use the v1 whole reader until T34.3 owns migration.
+
+The source census is bounded to eight indexed revisions, 10,000,000 physical
+owners, 80,000,000 revision placements, 4,096 records and 64 MiB per member,
+16,384 members, 4 GiB of encoded members, 4,096-byte paths, and 8 MiB control
+files. It starts at most eight `git ls-tree` children and retains one current
+record per child plus the at-most-eight owners for the current path; it does
+not load the repository inventory or blob bytes into memory. Publication
+strictly rereads each staged census member once before binding its root. The whole zoekt
+command explicitly fixes a 2-MiB file limit, 100-MiB shard-corpus split, 20,000
+trigrams per document, and nonrecursive gitlinks. A configured or discovered
+`zoekt-git-index` is refused unless its Go build metadata names the expected
+main package and exact zoekt module version/checksum linked by this source
+line.
+
+Source members and root move first under the ordinary publication marker,
+then shard members and the whole root, and the search root moves last. The
+repository indexed row still commits before marker removal. Repository cleanup
+owns the hashed source/search names and removes them with shards after a failed
+state commit or deletion. They are derived, excluded from backup, and rebuilt
+by a later whole index. An already-current index retry returns before reading,
+hashing, or rewriting these files. Missing/corrupt v2 roots do not relabel v1
+results; T34.3 owns startup backfill and repair.
 
 Searcher startup records manifest/member identities before the synchronous
 shared-directory open, captures the loaded repository inventory once, and
@@ -3001,7 +3035,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | Symptom                                                           | Cause                                                                                                  | Fix                                                                                                   |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | `start surreal child: exec: "surreal": executable file not found` | SurrealDB not installed                                                                                | see [prerequisites](./GETTING_STARTED.md#prerequisites)                                                                   |
-| log: `zoekt-git-index not found — indexing disabled`              | binary built without `make build`/`make dev`                                                           | `make build`, or set `PHEBS_ZOEKT_GIT_INDEX=/path/to/zoekt-git-index`                                 |
+| log: `zoekt-git-index not found — indexing disabled` or module-identity mismatch | binary absent, not built from the exact linked zoekt module pin, or built without Go metadata | `make build`; overrides must use this source line's exact `zoekt-git-index` build                      |
 | log: `phebs-focused-index not found`                               | configured analysis units but focused child is absent                                                  | `make build`, or set `PHEBS_FOCUSED_INDEX=/path/to/phebs-focused-index`                               |
 | log: contract compatibility disabled                              | Buf is missing/mismatched, or the OS sandbox cannot be enforced                                        | use `make build` or set `PHEBS_BUF` to the pinned v1.72.0 binary; install `bubblewrap` on Linux        |
 | `listen tcp 127.0.0.1:3070: bind: address already in use`         | another phebs (or process) on the port                                                                 | stop it, or `-addr 127.0.0.1:3071`                                                                    |
