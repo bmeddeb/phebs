@@ -27,6 +27,11 @@ type ServiceCatalogPublicationStore interface {
 
 var _ ServiceCatalogPublicationStore = (*Surreal)(nil)
 
+type verifiedServiceCatalog struct {
+	Publication *servicecatalog.Publication
+	Verified    servicecatalog.VerifiedPublication
+}
+
 type serviceCatalogGenerationRec struct {
 	Schema                   string           `json:"schema"`
 	Repository               string           `json:"repository"`
@@ -280,6 +285,17 @@ func (s *Surreal) GetServiceCatalog(
 	ctx context.Context,
 	repository string,
 ) (*servicecatalog.Publication, error) {
+	opened, err := s.getVerifiedServiceCatalog(ctx, repository)
+	if err != nil {
+		return nil, err
+	}
+	return opened.Publication, nil
+}
+
+func (s *Surreal) getVerifiedServiceCatalog(
+	ctx context.Context,
+	repository string,
+) (*verifiedServiceCatalog, error) {
 	if err := validateCandidateRepository(repository); err != nil {
 		return nil, fmt.Errorf("get service catalog: repository: %w", err)
 	}
@@ -348,7 +364,8 @@ func (s *Surreal) GetServiceCatalog(
 			ErrInvalidServiceCatalogPublication,
 		)
 	}
-	if err := servicecatalog.ValidatePublication(publication, true); err != nil {
+	verified, err := servicecatalog.VerifyPublication(publication, true)
+	if err != nil {
 		return nil, fmt.Errorf(
 			"get service catalog: %w: %v",
 			ErrInvalidServiceCatalogPublication, err,
@@ -385,5 +402,8 @@ func (s *Surreal) GetServiceCatalog(
 			ErrInvalidServiceCatalogPublication,
 		)
 	}
-	return &publication, nil
+	return &verifiedServiceCatalog{
+		Publication: &publication,
+		Verified:    verified,
+	}, nil
 }

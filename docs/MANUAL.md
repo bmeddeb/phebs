@@ -73,8 +73,10 @@ fenced to the exact indexed HEAD and a complete regular-file census; invalid
 replacement input preserves the previous authority. Without a v2 selection,
 an indexed `analysis-unit-v1` scope imports as one digest-identical service
 with its primary/supporting/typed roles and explicit unowned complement. These
-catalog generations are durable and backup-safe but intentionally have no
-HTTP, MCP, search, or UI registration yet; T33.3–T33.5 own those surfaces.
+catalog generations now reconcile independent desired/active/status rows,
+monotonic incarnations, and retained removed tombstones. Catalog and lifecycle
+state are durable and backup-safe but intentionally have no HTTP, MCP, search,
+or UI registration yet; T33.4–T33.5 own those surfaces.
 
 ## Evidence boundary
 

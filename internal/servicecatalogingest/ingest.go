@@ -29,6 +29,7 @@ type repositoryStore interface {
 	store.ServiceCatalogPublicationStore
 	GetRepo(context.Context, string) (*store.Repo, error)
 	ListRepos(context.Context) ([]store.Repo, error)
+	ReconcileServiceStates(context.Context, servicecatalog.Publication) error
 }
 
 // Reconciler reads only explicitly selected inputs. It never guesses a
@@ -166,6 +167,11 @@ func (r *Reconciler) reconcileV2(
 		current.CatalogDigest == catalogDigest && current.LegacyAnalysisUnitDigest == "" {
 		// Operator inputs are read once on restart to catch version reuse, but
 		// exact catalog/source identity avoids the repository census entirely.
+		// T33.3 still strict-reconciles its point summary so a crash between the
+		// catalog and state transactions repairs on retry.
+		if err := r.Store.ReconcileServiceStates(ctx, *current); err != nil {
+			return "", err
+		}
 		return OutcomeCurrent, nil
 	}
 	census, err := r.census(ctx, repository.Name, head, catalog, false)
@@ -182,6 +188,9 @@ func (r *Reconciler) reconcileV2(
 	if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
 		return "", err
 	}
+	if err := r.reconcilePublishedServiceStates(ctx, repository.Name); err != nil {
+		return "", err
+	}
 	return OutcomePublished, nil
 }
 
@@ -194,6 +203,9 @@ func (r *Reconciler) reconcileLegacy(
 	if current != nil && current.SourceKind == servicecatalog.SourceAnalysisUnitV1 &&
 		current.SourceCommit == repository.IndexedCommitHash &&
 		current.LegacyAnalysisUnitDigest == unit.Digest {
+		if err := r.Store.ReconcileServiceStates(ctx, *current); err != nil {
+			return "", err
+		}
 		return OutcomeCurrent, nil
 	}
 	catalog := legacyCatalog(unit)
@@ -223,7 +235,24 @@ func (r *Reconciler) reconcileLegacy(
 	if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
 		return "", err
 	}
+	if err := r.reconcilePublishedServiceStates(ctx, repository.Name); err != nil {
+		return "", err
+	}
 	return OutcomeLegacyImported, nil
+}
+
+func (r *Reconciler) reconcilePublishedServiceStates(
+	ctx context.Context,
+	repository string,
+) error {
+	publication, err := r.Store.GetServiceCatalog(ctx, repository)
+	if err != nil {
+		return fmt.Errorf("strict-open catalog for service state: %w", err)
+	}
+	if err := r.Store.ReconcileServiceStates(ctx, *publication); err != nil {
+		return fmt.Errorf("reconcile service state: %w", err)
+	}
+	return nil
 }
 
 func legacyCatalog(unit *analysisunit.State) servicecatalog.Catalog {

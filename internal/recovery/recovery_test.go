@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +89,34 @@ connections:
 	serviceCatalogBeforeRestore, err = requireRecoveryServiceCatalog(
 		ctx, st, names[0],
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ReconcileServiceStates(ctx, serviceCatalogBeforeRestore); err != nil {
+		t.Fatalf("reconcile pre-backup service state: %v", err)
+	}
+	serviceStateBeforeRestore, err := st.GetServiceState(ctx, names[0], "recovery")
+	if err != nil {
+		t.Fatalf("read pre-backup service state: %v", err)
+	}
+	serviceStateSummaryBeforeRestore, err := st.GetServiceStateSummary(ctx, names[0])
+	if err != nil {
+		t.Fatalf("read pre-backup service summary: %v", err)
+	}
+	if err := st.ActivateService(ctx, servicecatalog.ServiceActivation{
+		Repository: names[0], ServiceKey: serviceStateBeforeRestore.ServiceKey,
+		Incarnation:               serviceStateBeforeRestore.Incarnation,
+		DesiredGeneration:         serviceStateBeforeRestore.DesiredGeneration,
+		StateControlRevision:      serviceStateBeforeRestore.ControlRevision,
+		RepositoryControlRevision: serviceStateSummaryBeforeRestore.ControlRevision,
+	}); err != nil {
+		t.Fatalf("activate pre-backup service state: %v", err)
+	}
+	serviceStateBeforeRestore, err = st.GetServiceState(ctx, names[0], "recovery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceStateSummaryBeforeRestore, err = st.GetServiceStateSummary(ctx, names[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,6 +489,24 @@ connections:
 		t.Fatalf(
 			"restored service catalog = %+v, %v; want %+v",
 			serviceCatalogAfterRestore, err, serviceCatalogBeforeRestore,
+		)
+	}
+	serviceStateAfterRestore, err := restored.GetServiceState(
+		ctx, names[0], "recovery",
+	)
+	if err != nil || !reflect.DeepEqual(serviceStateAfterRestore, serviceStateBeforeRestore) {
+		t.Fatalf(
+			"restored service state = %+v, %v; want %+v",
+			serviceStateAfterRestore, err, serviceStateBeforeRestore,
+		)
+	}
+	serviceStateSummaryAfterRestore, err := restored.GetServiceStateSummary(ctx, names[0])
+	if err != nil || !reflect.DeepEqual(
+		serviceStateSummaryAfterRestore, serviceStateSummaryBeforeRestore,
+	) {
+		t.Fatalf(
+			"restored service summary = %+v, %v; want %+v",
+			serviceStateSummaryAfterRestore, err, serviceStateSummaryBeforeRestore,
 		)
 	}
 	retainedJobAfterRestore := requireRecoveryJob(

@@ -6748,8 +6748,81 @@ pointer revision, and publication time. Recovery tests prove that this precious
 authority survives while derived candidate, resolver, and caller pointers are
 still cleared and rebuilt. Focused unit/config, ingestion, immutable-version,
 stale-HEAD, failed-replacement, strict reopen, and real backup/restore tests
-cover the closure. T33.3 is scheduled next for independent service
+cover the closure. T33.3 subsequently completed independent service
 incarnation/desired/active/removal state; T33.4 owns authorized reads. No HTTP,
 MCP, search, relationship, or UI catalog surface is registered, and no scale,
 SLO, accuracy, completeness, migration-completion, decommission-safety, or
 release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T33.3 ✅ · Independent service desired/active state** *(2026-08-05)* — added
+one strict current lifecycle row per repository-local service key and one
+bounded repository summary. A domain-separated source generation binds the
+repository, indexed commit, census digest, and file count. Each desired service
+generation then binds that source identity, the store-minted incarnation, and
+only the normalized service record and its own memberships. It deliberately excludes sibling records,
+unowned paths, and whole-catalog authority versions, so a sibling-only catalog
+transition advances the repository fence without changing an unchanged
+service's desired digest, row revision, status, or active identity.
+
+Each service begins at incarnation one. Display/role/source edits retain the
+incarnation and advance the desired generation; a store-minted row revision
+preserves an intervening `A → B → A`. Rejected catalog records become removed
+tombstones with their explicit successor edges. Omitting a previously live key
+creates a tombstone with an explicit catalog-removal reason. Rename and
+split/merge therefore remain key replacement rather than guessed identity
+continuity. Re-adding a tombstoned key increments its incarnation and clears
+the old incarnation's active identity. Tombstones remain precious current
+control state; T35 may collect retained catalog generations but does not gain
+implicit authority to delete them.
+
+Accepted services are `unavailable` before activation, `stale` when their
+retained active desired/source identity differs, and `current` only on an exact
+desired/source match. Proposal remains unavailable, conflict remains explicit,
+and removed is never servable. The active catalog generation records where the
+active service projection came from; it may be older than the repository's
+current catalog only when the service-local desired and source generations are
+unchanged, which is the sibling-isolation rule. Compare-and-swap activation
+fences service key, incarnation, desired generation, row revision, repository
+summary revision, and current catalog before changing only that row and the
+summary counts.
+
+The repository summary binds the exact catalog generation and catalog control
+revision, carries current/stale/unavailable/conflict/live/catalog/tombstone
+counts, and has its own digest and monotonic control revision. Catalog and
+service-state publication are consecutive transactions. During the narrow
+crash or persistence-failure gap, strict summary/detail reads reject the
+catalog/summary mismatch; the exact startup or post-index retry repairs it.
+The state transaction compare-and-swaps the prior summary and every changed
+row, so a stale/concurrent writer or row conflict rolls the complete transition
+back. It scans neither immutable catalog generations nor historical tombstones.
+
+Exact no-op reconciliation revalidates at most the admitted 5-MiB catalog and
+reads only the catalog-current and state-summary point rows. A real transition
+performs no Git/blob/shard read and starts no child; it holds maps bounded by at
+most 4,000 desired services plus 4,000 prior live rows, point-reads tombstones
+only for current desired keys, and atomically writes only changed rows plus the
+summary. Ordinary HTTP, MCP, search, relationship, extraction, and sync-tick
+paths add no T33.3 work because no product reader is registered yet.
+
+Review closure removed a latent all-service cost from the future detail path.
+One service point read still strict-validates the complete admitted catalog,
+but binary-searches the normalized service and membership sets and allocates
+and hashes only that requested projection; it no longer derives up to 4,000
+sibling digests. Activation obtains one catalog/summary snapshot and reuses it
+through the row proof and compare-and-swap attempt instead of nesting detail,
+summary, and catalog opens. State-digest construction also normalizes nil and
+empty successor sets to the same non-null empty-array representation, so a
+store round trip cannot change an otherwise semantically equivalent digest.
+
+Pure digest/validation and maximum-current-plan tests plus live SurrealDB
+transition tests cover sibling isolation, source/incarnation binding,
+current/stale/unavailable/conflict/removed states,
+rename, split/merge, omission, removal/re-add incarnation, `A → B → A`, stale
+activation, and concurrent writers. The real backup/restore path retains and
+strict-opens exact desired/active identities, digests, revisions, timestamps,
+incarnations, tombstones, and summary state while derived candidate, resolver,
+and caller pointers remain rebuildable. T33.4 is scheduled next for
+authorization-first paged/detail HTTP and MCP reads. T34.3 still owns real
+physical active-generation transition validation. No product-surface, target
+scale/SLO, accuracy, completeness, migration-completion, decommission-safety,
+or release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
