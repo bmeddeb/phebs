@@ -9,8 +9,9 @@ authorized catalog reads, and T33.5's service directory/neutral demo are
 retained in the completed backlog, closing Epic 33. T34.1's immutable
 repository source/search generation, T34.2's exact service-query compiler,
 T34.3's publication migration/recovery, and T34.4's shared search product/demo
-are also complete, closing Epic 34. T35.1's generation-scoped scheduler is
-complete. T35.2 is the next scheduled ticket, and the remaining
+are also complete, closing Epic 34. T35.1's generation-scoped scheduler and
+T35.2's pin-aware lifecycle decision are complete. T35.3 is the next scheduled
+ticket, and the remaining
 Epics 35–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -28,20 +29,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 35 · Bounded scheduling, retention, and recovery *(T35.2 scheduled · T35.1 complete; blocks Epics 36–37)*
+## Epic 35 · Bounded scheduling, retention, and recovery *(T35.3 scheduled · T35.1–T35.2 complete; blocks Epics 36–37)*
 
 Prevent thousands of services and generations from multiplying unbounded job
 history, partial artifacts, or retained publications.
 
-**T35.2 · Pin-aware lifecycle and retention decision** *(scheduled · needs T35.1)* —
-freeze roots and owner lifecycles for catalogs, source/search generations,
-observations, resolver namespaces, relationships, proofs, Investigations,
-readers, jobs, tombstones, and partial stages. AC: explicit age/count/byte and
-disk-watermark behavior; proof/Investigation pins and active leases win;
-removed services tombstone before collection; defaults, disable behavior, and
-non-combinable byte metrics are documented by a dated ADR.
-
-**T35.3 · Bounded sweep and capacity control** *(needs T35.2)* — implement
+**T35.3 · Bounded sweep and capacity control** *(scheduled · needs T35.2)* — implement
 restart-resumable bounded collectors/sweepers without startup full-history
 work. AC: fair progress, exact/lower-bound/unavailable status, disk-pressure
 admission before unsafe work, no live-root/pin/lease deletion, symlink/path
