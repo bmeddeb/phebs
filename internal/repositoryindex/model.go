@@ -326,6 +326,32 @@ func ReadSearchManifest(directory, repository string) (SearchManifest, error) {
 	return manifest, nil
 }
 
+// ValidateSearchControls proves the closed source/search control roots and
+// their physical whole-shard binding without rereading source-member content.
+// A reader may use this only after its generation cache performed the complete
+// ValidatePublished pass and retained file-identity fences for every member.
+func ValidateSearchControls(
+	search SearchManifest,
+	source SourceManifest,
+	revisions []store.IndexedRevision,
+	physical PhysicalRoot,
+) error {
+	if err := ValidateSearchManifest(search); err != nil {
+		return err
+	}
+	if err := ValidateSourceManifest(source); err != nil {
+		return err
+	}
+	if search.Repository != source.Repository ||
+		!slices.Equal(search.Revisions, revisions) ||
+		!slices.Equal(source.Revisions, revisions) ||
+		search.SourceGenerationDigest != source.Digest ||
+		!equalPhysicalRoot(search.PhysicalRoot, physical) {
+		return invalidf("search generation control binding mismatch")
+	}
+	return nil
+}
+
 // ValidatePublished proves every source member byte and the closed search
 // root. The physical shard root is supplied by focusedindex, which owns the
 // existing whole-shard format and avoids a package cycle.
@@ -339,17 +365,12 @@ func ValidatePublished(
 	if err != nil {
 		return SearchManifest{}, err
 	}
-	if !slices.Equal(search.Revisions, revisions) ||
-		!equalPhysicalRoot(search.PhysicalRoot, physical) {
-		return SearchManifest{}, invalidf("search generation root mismatch")
-	}
 	source, err := ReadSourceManifest(directory, repository)
 	if err != nil {
 		return SearchManifest{}, err
 	}
-	if !slices.Equal(source.Revisions, revisions) ||
-		source.Digest != search.SourceGenerationDigest {
-		return SearchManifest{}, invalidf("search generation source mismatch")
+	if err := ValidateSearchControls(search, source, revisions, physical); err != nil {
+		return SearchManifest{}, err
 	}
 	if err := validateSourceMembers(ctx, directory, source, nil); err != nil {
 		return SearchManifest{}, err

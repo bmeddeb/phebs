@@ -231,8 +231,8 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		return Manifest{}, err
 	}
 	focusedPath := filepath.Join(stage, FocusedIndexName)
-	focusedReport, err := focusedindex.CreateArchiveWithReport(
-		filepath.Join(dataDir, "index"), focusedPath,
+	focusedReport, err := focusedindex.CreateArchiveWithReportContext(
+		ctx, filepath.Join(dataDir, "index"), focusedPath,
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("archive focused index publications: %w", err)

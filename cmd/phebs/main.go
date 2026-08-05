@@ -57,6 +57,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
+	"github.com/bmeddeb/phebs/internal/servicequery"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/ui"
@@ -483,6 +484,37 @@ func serve(args []string) error {
 			failure.Repository, failure.Err,
 		)
 	}
+	serviceRepositories := make(map[string]struct{},
+		len(cfg.ServiceCatalogs)+len(analysisUnits))
+	for repository := range cfg.ServiceCatalogs {
+		serviceRepositories[repository] = struct{}{}
+	}
+	for repository := range analysisUnits {
+		serviceRepositories[repository] = struct{}{}
+	}
+	serviceNames := make([]string, 0, len(serviceRepositories))
+	for repository := range serviceRepositories {
+		serviceNames = append(serviceNames, repository)
+	}
+	sort.Strings(serviceNames)
+	for _, repository := range serviceNames {
+		outcome, reconcileErr := reconcileServiceSearchGeneration(
+			ctx, st, cfg.Server.DataDir, repository,
+		)
+		if reconcileErr != nil {
+			diagnostics.Logf(
+				"service search reconciliation unavailable: repository=%q error=%v",
+				repository, reconcileErr,
+			)
+			continue
+		}
+		if outcome.Activated > 0 {
+			diagnostics.Logf(
+				"service search reconciliation: repository=%q activated=%d search_generation=%s",
+				repository, outcome.Activated, outcome.Search.Digest,
+			)
+		}
+	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
@@ -514,7 +546,12 @@ func serve(args []string) error {
 					return nil
 				}
 			}
-			_, err := catalogReconciler.ReconcileRepository(ctx, repository)
+			if _, err := catalogReconciler.ReconcileRepository(ctx, repository); err != nil {
+				return err
+			}
+			_, err := reconcileServiceSearchGeneration(
+				ctx, st, cfg.Server.DataDir, repository,
+			)
 			return err
 		}
 	}
@@ -1504,6 +1541,27 @@ func enqueueCandidateAfterIndex(
 		)
 	}
 	return nil
+}
+
+func reconcileServiceSearchGeneration(
+	ctx context.Context,
+	st *store.Surreal,
+	dataDir, repository string,
+) (servicequery.ReconcileOutcome, error) {
+	repo, err := st.GetRepo(ctx, repository)
+	if errors.Is(err, store.ErrNotFound) ||
+		err == nil && (repo.Deleting || repo.IndexedCommitHash == "" ||
+			repo.IndexedAnalysisUnit != nil &&
+				repo.IndexedAnalysisUnit.SearchIndexPosture ==
+					analysisunit.SearchIndexFocused) {
+		return servicequery.ReconcileOutcome{}, nil
+	}
+	if err != nil {
+		return servicequery.ReconcileOutcome{}, err
+	}
+	return servicequery.ReconcileGeneration(
+		ctx, filepath.Join(dataDir, "index"), st, repository,
+	)
 }
 
 type analysisUnitPostureDiagnostic struct {

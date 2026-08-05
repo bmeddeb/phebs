@@ -2,6 +2,7 @@ package focusedindex
 
 import (
 	"archive/tar"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -15,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 )
 
 const (
@@ -24,7 +27,7 @@ const (
 	maxArchiveNameBytes  = 255
 )
 
-// ArchiveReport records derived focused state that was safe to preserve and
+// ArchiveReport records derived search state that was safe to preserve and
 // residue that was deliberately omitted. Omission never weakens restore:
 // archives still contain only complete self-contained publications.
 type ArchiveReport struct {
@@ -53,23 +56,18 @@ func VerifyArchiveWithReport(archivePath string) (ArchiveReport, error) {
 	if err := RestoreArchive(archivePath, indexDir); err != nil {
 		return ArchiveReport{}, err
 	}
-	entries, err := os.ReadDir(indexDir)
+	var report ArchiveReport
+	publications, _, err := validatedPublications(indexDir)
 	if err != nil {
 		return ArchiveReport{}, err
 	}
-	var report ArchiveReport
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "phebs-focus-") &&
-			strings.HasSuffix(entry.Name(), ".manifest.json") {
-			report.Publications++
-		}
-	}
+	report.Publications = len(publications)
 	return report, nil
 }
 
-// CreateArchive writes a deterministic inventory of every complete focused
-// publication. Invalid or interrupted derived state is omitted so it cannot
-// prevent backup of the precious database export.
+// CreateArchive writes a deterministic inventory of every complete focused or
+// repository-search v2 publication. Invalid or interrupted derived state is
+// omitted so it cannot prevent backup of the precious database export.
 func CreateArchive(indexDir, destination string) error {
 	_, err := CreateArchiveWithReport(indexDir, destination)
 	return err
@@ -80,7 +78,18 @@ func CreateArchive(indexDir, destination string) error {
 func CreateArchiveWithReport(
 	indexDir, destination string,
 ) (ArchiveReport, error) {
-	expectations, report, err := archivablePublications(indexDir)
+	return CreateArchiveWithReportContext(
+		context.Background(), indexDir, destination,
+	)
+}
+
+// CreateArchiveWithReportContext is the cancellable backup boundary used by
+// recovery while it holds the shared index backup lock.
+func CreateArchiveWithReportContext(
+	ctx context.Context,
+	indexDir, destination string,
+) (ArchiveReport, error) {
+	expectations, report, err := archivablePublications(ctx, indexDir)
 	if err != nil {
 		return report, err
 	}
@@ -106,6 +115,10 @@ func CreateArchiveWithReport(
 	writer := tar.NewWriter(file)
 	var total int64
 	for _, name := range files {
+		if err := ctx.Err(); err != nil {
+			_ = writer.Close()
+			return report, err
+		}
 		path := filepath.Join(indexDir, name)
 		info, err := os.Lstat(path)
 		if err != nil || !info.Mode().IsRegular() ||
@@ -456,7 +469,7 @@ func validateArchiveHeader(
 		(header.Format != tar.FormatUSTAR && header.Format != tar.FormatPAX) ||
 		len(name) == 0 || len(name) > maxArchiveNameBytes ||
 		filepath.Base(name) != name ||
-		!strings.HasPrefix(name, "phebs-focus-") ||
+		!safeArchiveName(name) ||
 		seen[name] ||
 		header.Linkname != "" ||
 		header.Mode != 0o600 ||
@@ -488,6 +501,7 @@ func validateArchiveHeader(
 }
 
 func archivablePublications(
+	ctx context.Context,
 	indexDir string,
 ) (map[string]archiveExpectation, ArchiveReport, error) {
 	var report ArchiveReport
@@ -503,6 +517,9 @@ func archivablePublications(
 	candidateManifests := map[string]bool{}
 	selectedMarkers := map[string]bool{}
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return nil, report, err
+		}
 		if !strings.HasPrefix(entry.Name(), "phebs-focus-") ||
 			!strings.HasSuffix(entry.Name(), ".manifest.json") {
 			continue
@@ -538,9 +555,47 @@ func archivablePublications(
 		}
 	}
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return nil, report, err
+		}
+		if !strings.HasPrefix(entry.Name(), "phebs-search-") ||
+			!strings.HasSuffix(entry.Name(), ".manifest.json") {
+			continue
+		}
+		candidateManifests[entry.Name()] = true
+		var envelope repositoryindex.SearchManifest
+		if err := readControlFile(
+			filepath.Join(indexDir, entry.Name()), &envelope,
+		); err != nil ||
+			entry.Name() != repositoryindex.SearchManifestName(envelope.Repository) ||
+			publications["search:"+envelope.Repository] != "" {
+			report.OmittedPublications++
+			continue
+		}
+		search, err := ValidateRepositorySearchGeneration(
+			ctx, indexDir, envelope.Repository, envelope.Revisions,
+		)
+		if err != nil {
+			report.OmittedPublications++
+			continue
+		}
+		publicationFiles, err := archiveRepositorySearchExpectations(
+			indexDir, search,
+		)
+		if err != nil {
+			report.OmittedPublications++
+			continue
+		}
+		publications["search:"+search.Repository] = search.Digest
+		selectedMarkers[PublishingName(search.Repository)] = true
+		for name, expectation := range publicationFiles {
+			files[name] = expectation
+		}
+	}
+	for _, entry := range entries {
 		name := entry.Name()
 		if _, selected := files[name]; selected ||
-			!strings.HasPrefix(name, "phebs-focus-") {
+			!isSearchArchiveArtifact(name) {
 			continue
 		}
 		if selectedMarkers[name] {
@@ -591,6 +646,55 @@ func archivePublicationExpectations(
 			)
 		}
 		files[sidecarName] = expectation
+	}
+	return files, nil
+}
+
+func archiveRepositorySearchExpectations(
+	indexDir string,
+	search repositoryindex.SearchManifest,
+) (map[string]archiveExpectation, error) {
+	source, err := repositoryindex.ReadSourceManifest(indexDir, search.Repository)
+	if err != nil {
+		return nil, err
+	}
+	whole, err := ReadWholeManifest(indexDir, search.Repository, search.Revisions)
+	if err != nil {
+		return nil, err
+	}
+	files := make(map[string]archiveExpectation, 3+len(source.Members)+len(whole.Members))
+	searchName := repositoryindex.SearchManifestName(search.Repository)
+	var searchSnapshot repositoryindex.SearchManifest
+	expectation, err := archiveControlExpectation(
+		filepath.Join(indexDir, searchName), &searchSnapshot,
+	)
+	if err != nil || !reflect.DeepEqual(searchSnapshot, search) {
+		return nil, errors.New("repository-search manifest changed after validation")
+	}
+	files[searchName] = expectation
+	sourceName := repositoryindex.SourceManifestName(search.Repository)
+	var sourceSnapshot repositoryindex.SourceManifest
+	expectation, err = archiveControlExpectation(
+		filepath.Join(indexDir, sourceName), &sourceSnapshot,
+	)
+	if err != nil || !reflect.DeepEqual(sourceSnapshot, source) {
+		return nil, errors.New("repository-source manifest changed after validation")
+	}
+	files[sourceName] = expectation
+	wholeName := WholeManifestName(search.Repository)
+	var wholeSnapshot WholeManifest
+	expectation, err = archiveControlExpectation(
+		filepath.Join(indexDir, wholeName), &wholeSnapshot,
+	)
+	if err != nil || !reflect.DeepEqual(wholeSnapshot, whole) {
+		return nil, errors.New("whole-search manifest changed after validation")
+	}
+	files[wholeName] = expectation
+	for _, member := range source.Members {
+		files[member.Name] = archiveExpectation{digest: member.Digest}
+	}
+	for _, member := range whole.Members {
+		files[member.Name] = archiveExpectation{digest: member.ContentDigest}
 	}
 	return files, nil
 }
@@ -683,12 +787,53 @@ func validatedPublications(indexDir string) (map[string]string, []string, error)
 			files[member.Name+MemberSuffix] = true
 		}
 	}
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), "phebs-search-") ||
+			!strings.HasSuffix(entry.Name(), ".manifest.json") {
+			continue
+		}
+		var envelope repositoryindex.SearchManifest
+		if err := readControlFile(filepath.Join(indexDir, entry.Name()), &envelope); err != nil {
+			return nil, nil, err
+		}
+		key := "search:" + envelope.Repository
+		if entry.Name() != repositoryindex.SearchManifestName(envelope.Repository) ||
+			publications[key] != "" {
+			return nil, nil, errors.New(
+				"repository-search manifest filename or repository is ambiguous",
+			)
+		}
+		search, err := ValidateRepositorySearchGeneration(
+			context.Background(), indexDir, envelope.Repository, envelope.Revisions,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		source, err := repositoryindex.ReadSourceManifest(indexDir, search.Repository)
+		if err != nil {
+			return nil, nil, err
+		}
+		whole, err := ReadWholeManifest(indexDir, search.Repository, search.Revisions)
+		if err != nil {
+			return nil, nil, err
+		}
+		publications[key] = search.Digest
+		files[entry.Name()] = true
+		files[repositoryindex.SourceManifestName(search.Repository)] = true
+		files[WholeManifestName(search.Repository)] = true
+		for _, member := range source.Members {
+			files[member.Name] = true
+		}
+		for _, member := range whole.Members {
+			files[member.Name] = true
+		}
+	}
 	names := make([]string, 0, len(files))
 	for name := range files {
 		names = append(names, name)
 	}
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "phebs-focus-") && !files[entry.Name()] {
+		if isSearchArchiveArtifact(entry.Name()) && !files[entry.Name()] {
 			return nil, nil, fmt.Errorf(
 				"focused archive contains undeclared artifact %q", entry.Name(),
 			)
@@ -696,4 +841,15 @@ func validatedPublications(indexDir string) (map[string]string, []string, error)
 	}
 	sort.Strings(names)
 	return publications, names, nil
+}
+
+func safeArchiveName(name string) bool {
+	return strings.HasPrefix(name, "phebs-focus-") ||
+		strings.HasPrefix(name, "phebs-source-") ||
+		strings.HasPrefix(name, "phebs-search-") ||
+		strings.HasPrefix(name, "phebs-whole-")
+}
+
+func isSearchArchiveArtifact(name string) bool {
+	return safeArchiveName(name)
 }

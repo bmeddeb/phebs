@@ -245,6 +245,57 @@ func ValidateRepositorySearchGeneration(
 	)
 }
 
+// ReadRepositorySearchGeneration opens only the closed v2 control roots. It
+// deliberately does not hash shard or source-member content; hot readers pair
+// it with a whole-cache lease whose fill already performed the complete
+// generation validation and retained identity fences for every named file.
+func ReadRepositorySearchGeneration(
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (repositoryindex.SearchManifest, repositoryindex.SourceManifest, error) {
+	if IsPublishing(indexDir, repository) {
+		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{},
+			errors.New("whole-repository publication is in progress")
+	}
+	whole, err := ReadWholeManifest(indexDir, repository, revisions)
+	if err != nil {
+		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
+	}
+	search, err := repositoryindex.ReadSearchManifest(indexDir, repository)
+	if err != nil {
+		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
+	}
+	source, err := repositoryindex.ReadSourceManifest(indexDir, repository)
+	if err != nil {
+		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
+	}
+	if err := repositoryindex.ValidateSearchControls(
+		search, source, revisions, wholePhysicalRoot(whole),
+	); err != nil {
+		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
+	}
+	return search, source, nil
+}
+
+// ValidateCommittedRepositorySearchGeneration permits only the prior-process
+// publication marker used by startup recovery. Every v2 source/search/shard
+// byte must otherwise validate before the marker can be retired.
+func ValidateCommittedRepositorySearchGeneration(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (repositoryindex.SearchManifest, error) {
+	whole, err := validateWholePublishedContext(
+		ctx, indexDir, repository, revisions, true,
+	)
+	if err != nil {
+		return repositoryindex.SearchManifest{}, err
+	}
+	return repositoryindex.ValidatePublished(
+		ctx, indexDir, repository, revisions, wholePhysicalRoot(whole),
+	)
+}
+
 func wholePhysicalRoot(manifest WholeManifest) repositoryindex.PhysicalRoot {
 	root := repositoryindex.PhysicalRoot{
 		Schema:         WholeManifestSchema,

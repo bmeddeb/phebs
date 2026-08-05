@@ -30,7 +30,7 @@ import (
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
-func TestLiveBackupRestoreAndStartupReindex(t *testing.T) {
+func TestLiveBackupRestoreAndStartupExactSearchRecovery(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
@@ -603,12 +603,25 @@ connections:
 		t.Fatalf("restored control outcome = %v, want ErrNotFound", err)
 	}
 
-	// This is the same boot seam serve executes: reconcile clears an index
-	// claim whose derived shard is absent, boot sync recreates the excluded
-	// mirror and queues indexing, and the index worker rebuilds the shard.
+	// This is the same boot seam serve executes: the exact v2 source/search
+	// generation survives restore, so reconcile retains the indexed claim and
+	// boot sync recreates the excluded mirror and queues the ordinary index
+	// handoff, whose exact no-op path must retain the restored generation.
 	report, err := phebssync.ReconcileArtifacts(ctx, restored, dataDir, false)
-	if err != nil || report.RevisionRepairs != 1 {
+	if err != nil || report.RevisionRepairs != 0 {
 		t.Fatalf("startup reconcile = %+v, %v", report, err)
+	}
+	revisions := indexedBefore.IndexedRevisions
+	if len(revisions) == 0 {
+		revisions = []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD", Commit: indexedBefore.IndexedCommitHash,
+		}}
+	}
+	restoredSearch, err := focusedindex.ValidateRepositorySearchGeneration(
+		ctx, filepath.Join(dataDir, "index"), names[0], revisions,
+	)
+	if err != nil {
+		t.Fatalf("restored exact repository search generation: %v", err)
 	}
 	if err := phebssync.EnqueueMissing(ctx, restored, cfg); err != nil {
 		t.Fatal(err)
@@ -624,16 +637,24 @@ connections:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := (&indexer.Indexer{DataDir: dataDir, Bin: bin, Store: restored}).Handle(ctx, *indexJob); err != nil {
-		t.Fatalf("startup index: %v", err)
+	if err := (&indexer.Indexer{DataDir: dataDir, Bin: bin, Store: restored}).Handle(
+		ctx, *indexJob,
+	); err != nil {
+		t.Fatalf("startup index no-op: %v", err)
+	}
+	afterSearch, err := focusedindex.ValidateRepositorySearchGeneration(
+		ctx, filepath.Join(dataDir, "index"), names[0], revisions,
+	)
+	if err != nil || afterSearch.Digest != restoredSearch.Digest {
+		t.Fatalf("post-sync restored search = %+v, %v; want %q", afterSearch, err, restoredSearch.Digest)
 	}
 	got, err = restored.GetRepo(ctx, names[0])
 	if err != nil || got.IndexedCommitHash != indexedBefore.IndexedCommitHash {
-		t.Fatalf("automatically reindexed repo = %+v, %v", got, err)
+		t.Fatalf("exactly restored indexed repo = %+v, %v", got, err)
 	}
 	shards, err := filepath.Glob(filepath.Join(dataDir, "index", "*.zoekt"))
 	if err != nil || len(shards) == 0 {
-		t.Fatalf("rebuilt shards = %v, %v", shards, err)
+		t.Fatalf("restored shards = %v, %v", shards, err)
 	}
 
 	if _, err := recovery.Restore(ctx, recovery.RestoreOptions{

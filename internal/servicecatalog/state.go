@@ -65,6 +65,7 @@ type ServiceState struct {
 	ActiveDesiredGeneration  string
 	ActiveSourceGeneration   string
 	ActiveCatalogGeneration  string
+	ActiveSearchGeneration   string
 	Status                   string
 	Removed                  bool
 	StateDigest              string
@@ -341,6 +342,10 @@ func ValidateServiceState(state ServiceState, persisted bool) error {
 	if activeAny != activeAll {
 		return stateInvalidf("active identities must be all present or all absent")
 	}
+	if state.ActiveSearchGeneration != "" &&
+		(!activeAll || !validSHA256Digest(state.ActiveSearchGeneration)) {
+		return stateInvalidf("active search identity requires valid active identities")
+	}
 	if state.Removed {
 		if state.Status != StatusRemoved || state.Disposition != DispositionRejected {
 			return stateInvalidf("removed tombstone requires rejected/removed state")
@@ -482,6 +487,7 @@ func serviceStateDigest(state ServiceState) (string, error) {
 		ActiveDesiredGeneration  string   `json:"active_desired_generation,omitempty"`
 		ActiveSourceGeneration   string   `json:"active_source_generation,omitempty"`
 		ActiveCatalogGeneration  string   `json:"active_catalog_generation,omitempty"`
+		ActiveSearchGeneration   string   `json:"active_search_generation,omitempty"`
 		Status                   string   `json:"status"`
 		Removed                  bool     `json:"removed"`
 	}{
@@ -495,6 +501,7 @@ func serviceStateDigest(state ServiceState) (string, error) {
 		ActiveDesiredGeneration:  state.ActiveDesiredGeneration,
 		ActiveSourceGeneration:   state.ActiveSourceGeneration,
 		ActiveCatalogGeneration:  state.ActiveCatalogGeneration,
+		ActiveSearchGeneration:   state.ActiveSearchGeneration,
 		Status:                   state.Status, Removed: state.Removed,
 	}
 	return digestJSON("phebs-service-state-v1\x00", binding)

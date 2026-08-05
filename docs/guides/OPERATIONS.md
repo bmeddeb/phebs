@@ -1336,8 +1336,10 @@ path in one revision. Symlinks and gitlinks are recorded as explicit
 boundaries, and the zoekt child is invoked with submodule recursion disabled.
 `phebs-search-<repository-sha256>.manifest.json` binds that source digest to
 the direct topology and the complete existing whole-shard root and member
-identities. T34.1 writes this authority side by side; current all-code search
-continues to use the v1 whole reader until T34.3 owns migration.
+identities. All code can still read an older v1 whole publication only when
+this v2 search root is absent. A service search requires the complete v2 root;
+if a v2 root is present but invalid, phebs reports the scope unavailable and
+never falls back to or relabels legacy results.
 
 The source census is bounded to eight indexed revisions, 10,000,000 physical
 owners, 80,000,000 revision placements, 4,096 records and 64 MiB per member,
@@ -1356,10 +1358,13 @@ Source members and root move first under the ordinary publication marker,
 then shard members and the whole root, and the search root moves last. The
 repository indexed row still commits before marker removal. Repository cleanup
 owns the hashed source/search names and removes them with shards after a failed
-state commit or deletion. They are derived, excluded from backup, and rebuilt
-by a later whole index. An already-current index retry returns before reading,
-hashing, or rewriting these files. Missing/corrupt v2 roots do not relabel v1
-results; T34.3 owns startup backfill and repair.
+state commit or deletion. Complete v2 generations are derived but included
+byte-for-byte in the existing search-index backup archive. Invalid or
+incomplete generations are omitted with explicit backup counts; their precious
+catalog and service state still restore, and the service remains unavailable
+until a later whole index rebuilds the derived generation. An already-current
+index retry validates only the bounded control roots and returns before Git,
+source-member or shard hashing, rewriting, or activation work.
 
 T34.2 adds the side-by-side service-query compiler contract but does not
 register it with the live reader. A prepared scope accepts one authorized
@@ -1372,9 +1377,18 @@ multi-repository scopes refuse. The compiler caps expressions at 16 KiB and
 inherits 128 distinct paths/64 KiB of path bytes, producing at most 128 path
 atoms and 132,608 conservative quote-expanded predicate bytes. Reusing one
 opaque prepared scope for another expression or indexed selector does not
-reopen a catalog, source member, or shard. Current All code requests still use
-the v1 reader; T34.3 owns strict runtime opening, final response fences,
-activation, migration, repair, and active-reader retirement.
+reopen a catalog, source member, or shard. The internal service reader now
+strict-opens that prepared scope against an exact immutable whole-reader lease
+and repeats its repository, state, catalog, source/search control, and lease
+fences after the query. Concurrent index, catalog, restore, rollback, or
+deletion transitions discard the response. Startup and completed whole-index
+reconciliation fully validate a generation before atomically activating
+accepted services; proposal, conflict, and removed services remain independent.
+Activation records the exact search-generation digest, so even a same-source
+shard replacement must pass validation and advance the service-state fence.
+Reader replacement retires the prior generation only after its last active
+lease releases. T34.4 owns public HTTP/MCP/UI registration and the shared All
+code/service product surface.
 
 Searcher startup records manifest/member identities before the synchronous
 shared-directory open, captures the loaded repository inventory once, and

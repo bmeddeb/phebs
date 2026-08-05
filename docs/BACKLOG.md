@@ -7,8 +7,9 @@ registration or release. T33.1's canonical service-catalog contract, T33.2's
 catalog ingestion/v1 migration, T33.3 independent service state, T33.4
 authorized catalog reads, and T33.5's service directory/neutral demo are
 retained in the completed backlog, closing Epic 33. T34.1's immutable
-repository source/search generation and T34.2's exact service-query compiler
-are also complete. T34.3 is the next scheduled ticket, and the remaining
+repository source/search generation, T34.2's exact service-query compiler,
+and T34.3's publication migration/recovery are also complete. T34.4 is the
+next scheduled ticket, and the remaining
 Epics 34–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -18,7 +19,7 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–33, T34.1–T34.2, and P5 hardening are retained in the
+Epics 0–24, Epics 29–33, T34.1–T34.3, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -26,20 +27,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 34 · Shared repository search with exact service scope *(T34.3 scheduled · T34.1–T34.2 complete)*
+## Epic 34 · Shared repository search with exact service scope *(T34.4 scheduled · T34.1–T34.3 complete)*
 
 Index repository content once under the topology selected by T32.5, while
 making All code and service-scoped search equally exact.
 
-**T34.3 · Search publication migration and recovery** *(scheduled · needs T34.2)* —
-dual-read/single-write through v1/v2 transition, cut over only with an exact
-replacement, and retain fail-closed repair, backup/restore, repository removal,
-and active-reader behavior. AC: old whole/focused results are never relabeled
-as v2 service results; interrupted build/publication, stale shards, invalid
-catalog, restore, and rollback keep the prior exact state or become visibly
-unavailable; derived bytes remain rebuildable.
-
-**T34.4 · All code/service search product and demo** *(needs T34.3)* — add
+**T34.4 · All code/service search product and demo** *(scheduled · needs T34.3)* — add
 one shared scope selector and scope receipt across UI, HTTP, and MCP. AC:
 service deep links, query preservation, exact result/citation scope, explicit
 shared/unowned behavior, stale/current transitions, mobile/accessibility, and
