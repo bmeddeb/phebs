@@ -21,9 +21,67 @@ type ServiceStateStore interface {
 	ActivateService(context.Context, servicecatalog.ServiceActivation) error
 	GetServiceState(context.Context, string, string) (*servicecatalog.ServiceState, error)
 	GetServiceStateSummary(context.Context, string) (*servicecatalog.RepositoryState, error)
+	GetServiceStateRead(context.Context, string, string) (*ServiceStateRead, error)
+	ConfirmServiceStateSnapshot(
+		context.Context,
+		string,
+		servicecatalog.RepositoryState,
+	) error
+	ListServiceStates(
+		context.Context,
+		string,
+		ServiceStateFilter,
+		ServiceStatePosition,
+		int,
+	) (*ServiceStatePage, error)
 }
 
 var _ ServiceStateStore = (*Surreal)(nil)
+
+const (
+	MaxServiceStateReadPage = 101
+	maxServiceStateScanPage = 500
+)
+
+// ServiceStateFilter is the closed inventory filter. Empty status or
+// disposition means any value; removed rows require IncludeRemoved.
+type ServiceStateFilter struct {
+	Status         string
+	Disposition    string
+	IncludeRemoved bool
+}
+
+// ServiceStatePosition is the stable seek boundary carried by an authorized
+// cursor. Incarnation makes removal/re-add of the boundary key invalidate the
+// cursor even if its spelling returns.
+type ServiceStatePosition struct {
+	ServiceKey  string
+	Incarnation uint64
+}
+
+// ServiceStateEntry pairs one strict lifecycle row with its current catalog
+// projection. Projection is nil only for an omitted-key tombstone that is no
+// longer present in the selected catalog.
+type ServiceStateEntry struct {
+	State      servicecatalog.ServiceState
+	Projection *servicecatalog.ServiceProjection
+}
+
+// ServiceStateRead is one exact detail snapshot under a catalog/summary fence.
+type ServiceStateRead struct {
+	Publication servicecatalog.Publication
+	Summary     servicecatalog.RepositoryState
+	Entry       ServiceStateEntry
+}
+
+// ServiceStatePage is one ordered bounded inventory snapshot. Continuation is
+// the scan boundary when a sparse filter did not fill the requested page.
+type ServiceStatePage struct {
+	Publication  servicecatalog.Publication
+	Summary      servicecatalog.RepositoryState
+	Entries      []ServiceStateEntry
+	Continuation *ServiceStatePosition
+}
 
 type serviceStateRec struct {
 	Schema                   string           `json:"schema"`
@@ -295,6 +353,34 @@ func (s *Surreal) GetServiceStateSummary(
 	return summary, nil
 }
 
+// ConfirmServiceStateSnapshot performs the final response fence with only the
+// current catalog-pointer and summary points. The caller already strict-opened
+// the catalog while building its response, so this avoids a second 5-MiB
+// decode without weakening the generation/revision/digest comparison.
+func (s *Surreal) ConfirmServiceStateSnapshot(
+	ctx context.Context,
+	repository string,
+	expected servicecatalog.RepositoryState,
+) error {
+	generation, catalogRevision, err := s.serviceCatalogPointer(ctx, repository)
+	if err != nil {
+		return fmt.Errorf("confirm service state snapshot: catalog pointer: %w", err)
+	}
+	current, err := s.getRawServiceStateSummary(ctx, repository)
+	if err != nil {
+		return fmt.Errorf("confirm service state snapshot: %w", err)
+	}
+	if generation != expected.CatalogGeneration ||
+		catalogRevision != expected.CatalogControlRevision ||
+		current.CatalogGeneration != expected.CatalogGeneration ||
+		current.CatalogControlRevision != expected.CatalogControlRevision ||
+		current.ControlRevision != expected.ControlRevision ||
+		current.SummaryDigest != expected.SummaryDigest {
+		return fmt.Errorf("confirm service state snapshot: state changed: %w", ErrConflict)
+	}
+	return nil
+}
+
 // serviceStateSnapshot binds one strict current catalog read to its one point
 // summary. Callers may reuse both values throughout a CAS attempt instead of
 // reopening and reprojecting the catalog through nested public reads.
@@ -331,14 +417,37 @@ func (s *Surreal) GetServiceState(
 	ctx context.Context,
 	repository, serviceKey string,
 ) (*servicecatalog.ServiceState, error) {
+	read, err := s.GetServiceStateRead(ctx, repository, serviceKey)
+	if err != nil {
+		return nil, err
+	}
+	state := read.Entry.State
+	state.Successors = slices.Clone(state.Successors)
+	return &state, nil
+}
+
+// GetServiceStateRead strict-opens one point row and retains the exact catalog
+// projection and repository summary used to prove it.
+func (s *Surreal) GetServiceStateRead(
+	ctx context.Context,
+	repository, serviceKey string,
+) (*ServiceStateRead, error) {
 	if err := validateCandidateRepository(repository); err != nil {
 		return nil, fmt.Errorf("get service state: repository: %w", err)
 	}
-	_, verified, _, err := s.serviceStateSnapshot(ctx, repository)
+	publication, verified, summary, err := s.serviceStateSnapshot(ctx, repository)
 	if err != nil {
 		return nil, fmt.Errorf("get service state: %w", err)
 	}
-	return s.getServiceStateAtSnapshot(ctx, repository, serviceKey, verified)
+	entry, err := s.getServiceStateEntryAtSnapshot(ctx, repository, serviceKey, verified)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceStateRead{
+		Publication: cloneServiceStatePublication(*publication),
+		Summary:     *summary,
+		Entry:       *entry,
+	}, nil
 }
 
 func (s *Surreal) getServiceStateAtSnapshot(
@@ -346,6 +455,22 @@ func (s *Surreal) getServiceStateAtSnapshot(
 	repository, serviceKey string,
 	verified servicecatalog.VerifiedPublication,
 ) (*servicecatalog.ServiceState, error) {
+	entry, err := s.getServiceStateEntryAtSnapshot(
+		ctx, repository, serviceKey, verified,
+	)
+	if err != nil {
+		return nil, err
+	}
+	state := entry.State
+	state.Successors = slices.Clone(state.Successors)
+	return &state, nil
+}
+
+func (s *Surreal) getServiceStateEntryAtSnapshot(
+	ctx context.Context,
+	repository, serviceKey string,
+	verified servicecatalog.VerifiedPublication,
+) (*ServiceStateEntry, error) {
 	results, err := surrealdb.Query[[]serviceStateRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceStateID(repository, serviceKey)},
@@ -364,32 +489,182 @@ func (s *Surreal) getServiceStateAtSnapshot(
 	if err != nil {
 		return nil, fmt.Errorf("get service state: %w", err)
 	}
-	projection, found, err := verified.ProjectService(serviceKey)
+	projection, err := verifyServiceStateProjection(*state, verified)
 	if err != nil {
-		return nil, fmt.Errorf("get service state: project catalog: %w", err)
+		return nil, fmt.Errorf("get service state: %w", err)
 	}
-	if found {
-		desiredGeneration, generationErr := servicecatalog.ServiceDesiredGeneration(
-			projection, state.Incarnation,
+	return &ServiceStateEntry{State: *state, Projection: projection}, nil
+}
+
+// ListServiceStates returns one bounded, service-key-ordered page under one
+// verified publication. It scans at most maxServiceStateScanPage rows through
+// the existing repository/key index, applies filters in Go, and independently
+// digest- and projection-checks every scanned row before it escapes.
+func (s *Surreal) ListServiceStates(
+	ctx context.Context,
+	repository string,
+	filter ServiceStateFilter,
+	after ServiceStatePosition,
+	limit int,
+) (*ServiceStatePage, error) {
+	if err := validateCandidateRepository(repository); err != nil {
+		return nil, fmt.Errorf("list service states: repository: %w", err)
+	}
+	if err := validateServiceStateFilter(filter); err != nil {
+		return nil, fmt.Errorf("list service states: %w", err)
+	}
+	if limit < 1 || limit > MaxServiceStateReadPage {
+		return nil, fmt.Errorf("list service states: invalid page limit")
+	}
+	if (after.ServiceKey == "") != (after.Incarnation == 0) {
+		return nil, fmt.Errorf("list service states: invalid seek position")
+	}
+	publication, verified, summary, err := s.serviceStateSnapshot(ctx, repository)
+	if err != nil {
+		return nil, fmt.Errorf("list service states: %w", err)
+	}
+	if after.ServiceKey != "" {
+		anchor, anchorErr := s.getServiceStateEntryAtSnapshot(
+			ctx, repository, after.ServiceKey, verified,
 		)
-		if generationErr != nil {
-			return nil, fmt.Errorf("get service state: desired generation: %w", generationErr)
+		if anchorErr != nil || anchor.State.Incarnation != after.Incarnation {
+			return nil, fmt.Errorf("list service states: seek position changed: %w", ErrConflict)
 		}
-		if state.DesiredGeneration != desiredGeneration ||
-			state.DesiredSourceGeneration != projection.SourceGeneration ||
-			state.Removed != projection.Removed {
-			return nil, fmt.Errorf(
-				"get service state: desired projection disagrees with catalog: %w",
-				servicecatalog.ErrInvalidServiceState,
-			)
+	}
+	results, err := surrealdb.Query[[]serviceStateRec](
+		ctx, s.db,
+		`SELECT * FROM service_state_current
+			WHERE repository = $repository
+				AND service_key > $after
+			ORDER BY service_key ASC LIMIT $limit`,
+		map[string]any{
+			"repository": repository, "after": after.ServiceKey,
+			"limit": maxServiceStateScanPage + 1,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list service states: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) > maxServiceStateScanPage+1 {
+		return nil, fmt.Errorf("list service states: store exceeded scan limit: %w", ErrConflict)
+	}
+	hasMoreRows := len(rows) > maxServiceStateScanPage
+	if hasMoreRows {
+		rows = rows[:maxServiceStateScanPage]
+	}
+	entries := make([]ServiceStateEntry, 0, min(limit, len(rows)))
+	priorKey := after.ServiceKey
+	var continuation *ServiceStatePosition
+	for index, row := range rows {
+		state, stateErr := serviceStateFromRec(row)
+		if stateErr != nil {
+			return nil, fmt.Errorf("list service states: %w", stateErr)
 		}
-	} else if !state.Removed {
+		if state.Repository != repository || state.ServiceKey <= priorKey {
+			return nil, fmt.Errorf("list service states: inconsistent row: %w", servicecatalog.ErrInvalidServiceState)
+		}
+		projection, projectionErr := verifyServiceStateProjection(*state, verified)
+		if projectionErr != nil {
+			return nil, fmt.Errorf("list service states: %w", projectionErr)
+		}
+		priorKey = state.ServiceKey
+		matches := (filter.Status == "" || state.Status == filter.Status) &&
+			(filter.Disposition == "" || state.Disposition == filter.Disposition) &&
+			(filter.IncludeRemoved || !state.Removed)
+		if !matches {
+			continue
+		}
+		entries = append(entries, ServiceStateEntry{
+			State: *state, Projection: projection,
+		})
+		if len(entries) == limit {
+			if index < len(rows)-1 || hasMoreRows {
+				continuation = &ServiceStatePosition{
+					ServiceKey: state.ServiceKey, Incarnation: state.Incarnation,
+				}
+			}
+			break
+		}
+	}
+	if len(entries) < limit && hasMoreRows && len(rows) != 0 {
+		last, stateErr := serviceStateFromRec(rows[len(rows)-1])
+		if stateErr != nil {
+			return nil, fmt.Errorf("list service states: %w", stateErr)
+		}
+		continuation = &ServiceStatePosition{
+			ServiceKey: last.ServiceKey, Incarnation: last.Incarnation,
+		}
+	}
+	return &ServiceStatePage{
+		Publication:  cloneServiceStatePublication(*publication),
+		Summary:      *summary,
+		Entries:      entries,
+		Continuation: continuation,
+	}, nil
+}
+
+func verifyServiceStateProjection(
+	state servicecatalog.ServiceState,
+	verified servicecatalog.VerifiedPublication,
+) (*servicecatalog.ServiceProjection, error) {
+	projection, found, err := verified.ProjectService(state.ServiceKey)
+	if err != nil {
+		return nil, fmt.Errorf("project catalog: %w", err)
+	}
+	if !found {
+		if state.Removed {
+			return nil, nil
+		}
 		return nil, fmt.Errorf(
-			"get service state: live key is absent from catalog: %w",
+			"live key is absent from catalog: %w",
 			servicecatalog.ErrInvalidServiceState,
 		)
 	}
-	return state, nil
+	desiredGeneration, err := servicecatalog.ServiceDesiredGeneration(
+		projection, state.Incarnation,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("desired generation: %w", err)
+	}
+	if state.DesiredGeneration != desiredGeneration ||
+		state.DesiredSourceGeneration != projection.SourceGeneration ||
+		state.Removed != projection.Removed {
+		return nil, fmt.Errorf(
+			"desired projection disagrees with catalog: %w",
+			servicecatalog.ErrInvalidServiceState,
+		)
+	}
+	return &projection, nil
+}
+
+func validateServiceStateFilter(filter ServiceStateFilter) error {
+	switch filter.Status {
+	case "", servicecatalog.StatusCurrent, servicecatalog.StatusStale,
+		servicecatalog.StatusUnavailable, servicecatalog.StatusConflict,
+		servicecatalog.StatusRemoved:
+	default:
+		return fmt.Errorf("invalid status filter")
+	}
+	switch filter.Disposition {
+	case "", servicecatalog.DispositionAccepted, servicecatalog.DispositionProposal,
+		servicecatalog.DispositionConflict, servicecatalog.DispositionRejected:
+	default:
+		return fmt.Errorf("invalid disposition filter")
+	}
+	if filter.Status == servicecatalog.StatusRemoved && !filter.IncludeRemoved {
+		return fmt.Errorf("removed status requires removed rows")
+	}
+	return nil
+}
+
+func cloneServiceStatePublication(publication servicecatalog.Publication) servicecatalog.Publication {
+	publication.Canonical = slices.Clone(publication.Canonical)
+	if publication.Override != nil {
+		override := *publication.Override
+		publication.Override = &override
+	}
+	return publication
 }
 
 type serviceStateUpdate struct {

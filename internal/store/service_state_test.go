@@ -35,6 +35,38 @@ func TestServiceStateIndependentTransitionsAndABA(t *testing.T) {
 		summary.ControlRevision != 1 {
 		t.Fatalf("initial summary = %+v", summary)
 	}
+	page, err := s.ListServiceStates(ctx, repository, store.ServiceStateFilter{
+		Status: servicecatalog.StatusUnavailable,
+	}, store.ServiceStatePosition{}, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Entries) != 2 || page.Entries[0].State.ServiceKey != "orders" ||
+		page.Entries[1].State.ServiceKey != "payments" ||
+		page.Entries[0].Projection == nil ||
+		len(page.Entries[0].Projection.Memberships) != 1 ||
+		page.Summary.SummaryDigest != summary.SummaryDigest {
+		t.Fatalf("initial service page = %+v", page)
+	}
+	if err := s.ConfirmServiceStateSnapshot(ctx, repository, page.Summary); err != nil {
+		t.Fatalf("confirm initial service page: %v", err)
+	}
+	changedSummary := page.Summary
+	changedSummary.ControlRevision++
+	if err := s.ConfirmServiceStateSnapshot(
+		ctx, repository, changedSummary,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("confirm changed service page = %v, want ErrConflict", err)
+	}
+	read, err := s.GetServiceStateRead(ctx, repository, "orders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.Entry.Projection == nil || read.Entry.State.ServiceKey != "orders" ||
+		read.Publication.GenerationDigest != page.Publication.GenerationDigest ||
+		read.Summary.SummaryDigest != page.Summary.SummaryDigest {
+		t.Fatalf("initial service detail = %+v", read)
+	}
 	currentCatalog, err := s.GetServiceCatalog(ctx, repository)
 	if err != nil {
 		t.Fatal(err)
@@ -153,6 +185,12 @@ func TestServiceStateIndependentTransitionsAndABA(t *testing.T) {
 	if readded.Incarnation != 2 || readded.Status != servicecatalog.StatusUnavailable ||
 		readded.ActiveDesiredGeneration != "" {
 		t.Fatalf("re-added service = %+v", readded)
+	}
+	if _, err := s.ListServiceStates(
+		ctx, repository, store.ServiceStateFilter{},
+		store.ServiceStatePosition{ServiceKey: "orders", Incarnation: 1}, 2,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("stale incarnation seek = %v, want ErrConflict", err)
 	}
 	finalSummary := requireStateSummary(t, ctx, s, repository)
 	if finalSummary.LiveServiceCount != 2 || finalSummary.UnavailableCount != 1 ||
