@@ -7275,3 +7275,59 @@ now explicitly requires a genuinely re-current A after A→B→A either to reuse
 already-settled content-addressed partitions without scheduling or to mint a
 distinguishable schedule identity; a superseded digest remains permanently
 refused by design.
+
+**T35.2 ✅ · Pin-aware lifecycle and retention decision** *(2026-08-05; needs
+T35.1)* — replaces the installation-wide unbounded default selected by T30.6m
+with a prospective owner-separated policy while authorizing no collector or
+deletion before T35.3. The root order is closed: live repository, catalog,
+service, source/search, and scheduler pointers; stale services' exact active
+identities; durable proof and Investigation ownership; active reader/worker
+leases; then the current-plus-one rollback floor. A backup is still an
+external snapshot, never a live pin. Any protected identity wins over age,
+count, byte, and disk pressure.
+
+Complete unrooted catalog generations default to 30 days, three generations,
+and 64 MiB canonical JSON per repository. Source and search generations each
+default to 14 days and two generations; source charges at most 8 GiB encoded
+members and search independently charges at most 50 GiB filesystem allocated
+bytes per repository. Observation, resolver, and relationship namespaces each
+default to 14 days and two generations with separate 20 GiB, 10 GiB, and
+20 GiB encoded-member ceilings. Beyond the protected floor, crossing any
+enabled matching age, count, or byte limit makes the oldest unrooted identity
+eligible; it does not make collection compulsory or authorize substitution of
+another metric.
+
+Abandoned partial stages retain a 24-hour grace and at most two stages per
+repository/stage, charging their owning artifact class. Settled generation
+schedules and chunks retain seven days and two settled schedules per
+repository/stage. The existing eight durable job tables retain terminal rows
+for 30 days and at most 100,000 rows per table; row count is deliberately not
+treated as database bytes. Reader cache entries retire after replacement and
+their final lease rather than by age or count.
+
+Current service tombstones remain precious indefinite incarnation/ABA fences.
+A removed service must commit that tombstone before prior service artifacts
+lose their live root. Proof bundles and Investigation/Workbench state remain
+indefinite by default and release only through their existing explicit owner
+lifecycle; the existing positive proof-bundle TTL still deletes only one
+bundle and its exact proof-owned pins. Unsupported owners remain unbounded
+rather than being collected by analogy.
+
+The future lifecycle default is enabled. Explicit `lifecycle.enabled: false`
+disables automated age/count/byte and pressure collection without weakening
+roots, pins, leases, tombstones, or the independent proof-bundle TTL. Disabled
+lifecycle still refuses new derived-artifact or partial-stage work at the hard
+watermark instead of deleting. The filesystem containing `server.data_dir`
+uses allocated-byte watermarks: 80% accelerates bounded collection, 90%
+refuses new derived work, and admission resumes below 75%. Unknown capacity is
+visible as unavailable and refuses only pressure-dependent new T35 workloads.
+
+Canonical JSON, encoded members, filesystem logical bytes, filesystem
+allocated bytes, and database row counts are non-combinable typed metrics.
+An unavailable metric disables only its matching byte rule. T35.3 must add
+restart-resumable bounded discovery and collection, root rechecks immediately
+before deletion, fair owner progress, backup coordination, pressure admission,
+and exact/lower-bound/unavailable status without startup full-history work.
+This docs-only ticket adds no configuration parser, store query, filesystem
+stat, lock, child, startup/sync/search work, deletion, runtime registration,
+or release claim. `GATE2-V2` remains `NOT_ESTABLISHED`; T35.3 is scheduled next.

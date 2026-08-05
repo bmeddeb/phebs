@@ -73,8 +73,9 @@ completed on 2026-08-05, closing Epic 33. T34.1's immutable repository
 source/search generation, T34.2's exact service-query compiler, T34.3's
 fail-closed publication migration, activation, and recovery, and T34.4's
 shared All code/service product and neutral demo completed on 2026-08-05,
-closing Epic 34. T35.1's generation-scoped chunk scheduler completed on
-2026-08-05; T35.2's pin-aware lifecycle and retention decision is scheduled next.
+closing Epic 34. T35.1's generation-scoped chunk scheduler and T35.2's
+pin-aware lifecycle and retention decision completed on 2026-08-05; T35.3's
+bounded sweep and capacity control is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -393,7 +394,8 @@ the immutable repository source/search generation, T34.2 supplies the exact
 pre-ranking service compiler, T34.3 supplies the v2-only service reader,
 atomic activation, final fences, and exact recovery, and T34.4 supplies the
 shared All code/service product and neutral demo. T35.1 supplies the bounded
-generation scheduler; T35.2 is the scheduled dependency-ordered ticket.
+generation scheduler, T35.2 freezes owner-separated lifecycle policy, and
+T35.3 is the scheduled dependency-ordered ticket.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -527,11 +529,13 @@ service count × repository bytes
   source/search generation, direct physical root, exact pre-ranking service
   predicate, v2-only service reader, atomic activation/recovery, shared
   HTTP/MCP/UI selector and receipt, and neutral whole-repository demo are complete.
-- **Epic 35 — bounded lifecycle (T35.1 complete; T35.2 scheduled):** the
+- **Epic 35 — bounded lifecycle (T35.1–T35.2 complete; T35.3 scheduled):** the
   generation-scoped paged scheduler, fair resource pools, repository tokens,
-  coalescing, retry successors, and stale-worker fences are complete; next
-  freeze pin-aware retention/GC, recovery, and capacity controls before
-  multiplying high-cardinality artifacts.
+  coalescing, retry successors, and stale-worker fences are complete. The
+  root-first owner matrix, protected-pin/lease precedence, independent
+  age/count/typed-byte limits, tombstone fence, and 80/90/75% disk-watermark
+  posture are frozen; next implement bounded sweeping and capacity control
+  before multiplying high-cardinality artifacts.
 - **Epic 36 — shared source observations:** batch immutable Git reads, parse
   supported source once, publish content-addressed partitions, and incrementally
   invalidate only affected work.

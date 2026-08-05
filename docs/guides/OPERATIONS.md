@@ -2647,9 +2647,59 @@ page, 80,000,000 items and 1,000,000 logical chunks per schedule, eight active
 stages and eight tokens per repository, and eight attempts. Process pools admit
 at most 64 handlers, 8 GiB declared memory, and 4,096 declared descriptors;
 each handler may declare at most 1 GiB and 256 descriptors. These are refusal
-bounds, not capacity guidance. T35.2–T35.3 still own terminal history and
-artifact retention, disk-pressure admission, and sweeping; do not manually
-delete scheduler rows to resolve pressure before those policies land.
+bounds, not capacity guidance.
+
+#### Frozen lifecycle policy
+
+T35.2 freezes the policy that T35.3 will implement; it does not install a
+collector or configuration key yet. Do not manually delete scheduler rows,
+catalogs, publications, pins, or partial stages to resolve pressure.
+
+Protection is evaluated before eligibility. Current repository, catalog,
+service, source/search, and scheduler pointers are live roots. A stale
+service's exact active generations remain rooted. Proof and Investigation
+ownership is transitive, active reader and worker leases protect their exact
+generation, and current plus one prior complete generation forms the rollback
+floor. A backup does not pin live data. No age, count, byte, or watermark rule
+may override these protections.
+
+| Owner | Default age | Default count | Independent byte/quantity metric |
+| --- | ---: | ---: | --- |
+| catalog generations | 30 days | 3 per repository | 64 MiB canonical JSON per repository |
+| source generations | 14 days | 2 per repository | 8 GiB encoded members per repository |
+| search generations | 14 days | 2 per repository | 50 GiB filesystem allocated bytes per repository |
+| observation namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
+| resolver namespaces | 14 days | 2 per repository | 10 GiB encoded members per repository |
+| relationship namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
+| abandoned partial stages | 24 hours | 2 per repository/stage | charged to the owning artifact class |
+| settled generation schedules/chunks | 7 days | 2 per repository/stage | row count only; no byte substitution |
+| terminal rows in each existing durable job table | 30 days | 100,000 per table | row count only; no database-byte claim |
+| current service tombstones | indefinite | disabled | precious incarnation/ABA fence |
+| proof bundles and Investigation/Workbench state | indefinite | disabled | released only by the explicit owner lifecycle |
+| retired readers | final lease release | current replacement only | no age/count/byte policy |
+
+For an unrooted identity above the rollback floor, any enabled matching age,
+count, or byte limit makes it eligible, oldest first. Canonical JSON bytes,
+encoded member bytes, filesystem logical bytes, filesystem allocated bytes,
+and database row counts are separate metric kinds. They must not be added or
+used as substitutes. If one byte metric is unavailable, only that byte rule is
+disabled and the status remains visibly unavailable.
+
+The future default is `lifecycle.enabled: true`. Explicit false disables
+automated age/count/byte and pressure collection, but not safety admission,
+roots, pins, leases, tombstones, or the existing independent
+`proof_bundles.retention` lifecycle. The filesystem containing
+`server.data_dir` uses allocated-byte watermarks: 80% begins accelerated
+bounded collection, 90% refuses new derived artifacts and partial stages, and
+admission resumes only below 75%. With lifecycle disabled, the 90% condition
+refuses rather than deletes. Unknown capacity is reported unavailable and
+refuses only new pressure-dependent T35 workloads.
+
+A removed service must first commit its durable tombstone; only then may its
+prior generation leave the live-root set. Proof and Investigation pins and
+active leases always win, even if disk remains above 90%. T35.3 must recheck
+all roots immediately before collection and coordinate with backup. Until that
+implementation lands, the T30.6m physical unbounded posture remains unchanged.
 
 ### Thrift field-zero development walkthrough
 
