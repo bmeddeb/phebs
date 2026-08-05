@@ -1,0 +1,35 @@
+{
+  "schema": "t33.5-service-directory-demo-v1",
+  "repository": "example.invalid/t307-neutral-service",
+  "source_bundle": "../t30.7-neutral-service/t307-neutral-service.bundle",
+  "source_commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+  "catalog": "t335-service-catalog.json",
+  "catalog_encoded_sha256": "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0",
+  "catalog_semantic_sha256": "sha256:8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84",
+  "catalog_encoded_bytes": 2801,
+  "authority": {
+    "kind": "operator",
+    "id": "t335-demo",
+    "version": "v1"
+  },
+  "service_count": 5,
+  "membership_count": 11,
+  "unowned_placement_count": 2,
+  "accepted_source_files": 7,
+  "unowned_source_files": 2,
+  "initial_lifecycle_counts": {
+    "current": 0,
+    "stale": 0,
+    "unavailable": 3,
+    "conflict": 1,
+    "tombstone": 1
+  },
+  "role_counts": {
+    "primary": 4,
+    "supporting": 3,
+    "shared": 3,
+    "generated": 1,
+    "typed": 0
+  },
+  "observation": "Neutral source-free directory input only; no relationship, runtime-use, completeness, extraction-accuracy, target-scale, migration-completion, decommission-safety, or release claim."
+}

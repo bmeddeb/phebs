@@ -36,6 +36,7 @@ dev: bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## boot phebs with e
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
 		PHEBS_INVESTIGATION_FIXTURES= \
 		PHEBS_CONTRACT_ATLAS_FIXTURE= \
 		PHEBS_WORKBENCH_CLOSURE_REPO= \
@@ -48,6 +49,7 @@ dev-api: bin/zoekt-git-index bin/phebs-focused-index bin/buf ## backend-only loo
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
 		PHEBS_INVESTIGATION_FIXTURES= \
 		PHEBS_CONTRACT_ATLAS_FIXTURE= \
 		PHEBS_WORKBENCH_CLOSURE_REPO= \

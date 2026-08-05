@@ -6622,7 +6622,7 @@ writer, or retained runtime artifact. It establishes no SLO, accuracy,
 completeness, migration completion, decommission safety, or release claim;
 `GATE2-V2` remains `NOT_ESTABLISHED`.
 
-## Epic 33 · Versioned service catalog and lifecycle *(in progress)*
+## Epic 33 · Versioned service catalog and lifecycle ✅ 2026-08-05
 
 **T33.1 ✅ · Canonical service-catalog contract** *(2026-08-04)* — added the
 production-neutral `internal/servicecatalog` package and selected the closed
@@ -6833,8 +6833,9 @@ exact detail. HTTP registers `GET /api/services` and `GET /api/service`; MCP
 registers `list_services` and `get_service`. The authenticated version response
 advertises `service-catalog-v2`. Both transports return the same exported Go
 types and call the same service, so MCP cannot reinterpret HTTP authorization,
-cursor, lifecycle, membership, or response semantics. T33.5 still owns the
-accessible directory UI and neutral epic demo.
+cursor, lifecycle, membership, or response semantics. T33.5 subsequently
+added the accessible directory UI and neutral epic demo without changing this
+transport contract.
 
 Every read resolves repository visibility and authorizes the requested
 repository before page-size, filter, cursor, catalog, state, count, or
@@ -6895,3 +6896,67 @@ only exact detail retains bounded path strings. No UI, service-scoped search,
 relationship, target scale/SLO,
 accuracy, completeness, migration-completion, decommission-safety, or release
 claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T33.5 ✅ · Service directory and epic demo** *(2026-08-05)* — added one
+authenticated, capability-gated repository → service directory at
+`#/services`. Repos exposes the entry only when `service-catalog-v2` is
+advertised; the directory remains a repository-contextual subroute rather than
+a new global navigation promise. Its exact hash route retains repository,
+lifecycle/disposition filters, removed opt-in, opaque cursor, and selected
+service key, so reload and browser back/forward repeat the exact authorized
+request.
+
+The React page consumes only T33.4's typed inventory/detail HTTP projections.
+It mounts one 50-row page and at most one selected detail, replaces pages
+instead of accumulating them, and aborts superseded requests. Loading,
+bounded error/retry, true empty, sparse filtered page with continuation,
+unavailable, stale, conflict, and removed states remain distinct. The
+repository summary labels authority, source/catalog/state identities and
+revisions, lifecycle counts, accepted/unowned source counts, and shared
+placements in the returned page. Detail labels incarnation,
+desired/active identities, disposition/reason, successor lineage, and exact
+primary/supporting/shared/generated/typed path roles. Successors are explicitly
+catalog lineage rather than runtime relationships, and paths are authority
+identities rather than source-byte reads.
+
+Native links, labeled selects and checkbox, buttons, landmarks, live status,
+visible focus, and a two-column-to-single-column responsive layout preserve
+desktop, 390-pixel, and keyboard operation. Focused tests pin exact deep-link
+construction, filter/cursor preservation and reset, repository capability
+gating, authority and lifecycle rendering, sparse empty semantics, error/retry,
+and the no-repository no-request boundary. The typed API tests pin exact URL
+encoding; the existing App and Repos tests prove the directory is a Repos
+subroute rather than a top-level navigation item.
+
+`make dev` and `make dev-api` now pair the retained T30.7 neutral source bundle
+with a 2,801-byte `operator · t335-demo · v1` catalog. The receipt pins encoded
+SHA-256 `7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0`
+and semantic SHA-256
+`8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84`.
+Five identities cover two accepted services, one proposal, one conflict, and
+one rejected/tombstoned predecessor; eleven membership records carry four
+primary, three supporting, three shared, one generated, and zero typed roles.
+Seven of nine source files are accepted and two remain explicitly unowned.
+The initial reconciled lifecycle is zero current, zero stale, three
+unavailable, one conflict, and one tombstone. Startup validates the exact
+companion filename, source cohort, authority, digests, bytes, counts, and
+dispositions, then installs the ordinary operator-catalog selection. There is
+no response fixture, catalog authoring at startup, or alternate lifecycle
+engine; ordinary `serve` remains unchanged.
+
+Steady state adds one inventory request per directory route and one parallel
+detail request only when a service is selected. Each remains inside T33.4's
+one-catalog, 500-row scan, 1-MiB response, and exact-detail path bounds. The UI
+polls nothing, retains no principal-independent cache, reads no source/blob or
+shard, starts no child, writes no state, and holds no new lock. Development
+startup adds one bounded selected-catalog file read and ordinary T33.2/T33.3
+ingestion/reconciliation on startup and index completion; unchanged retries
+retain their strict point-read/no-census no-op behavior. Source-free workflow
+and operations guidance record reset/retry behavior and the distinction among
+authority metadata, source evidence, and runtime relationships.
+
+Epic 33 is now implementation-complete and demoable through the ordinary
+worker cohort. T34.1 is scheduled next. No service relationship, runtime-use,
+completeness, extraction accuracy, target-scale/SLO, migration-completion,
+decommission-safety, or release claim is created; `GATE2-V2` remains
+`NOT_ESTABLISHED`.
