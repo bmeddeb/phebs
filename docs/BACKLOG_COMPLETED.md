@@ -6956,7 +6956,85 @@ and operations guidance record reset/retry behavior and the distinction among
 authority metadata, source evidence, and runtime relationships.
 
 Epic 33 is now implementation-complete and demoable through the ordinary
-worker cohort. T34.1 is scheduled next. No service relationship, runtime-use,
+worker cohort. T34.1 subsequently completed the immutable repository
+source/search generation, and T34.2 is scheduled next. No service relationship, runtime-use,
 completeness, extraction accuracy, target-scale/SLO, migration-completion,
 decommission-safety, or release claim is created; `GATE2-V2` remains
 `NOT_ESTABLISHED`.
+
+**T34.1 ✅ · Repository source/search generation** *(2026-08-05)* — added one
+immutable source generation and one direct search-generation root beside each
+new whole-repository shard publication. The source root binds the canonical
+repository and exact ordered HEAD-plus-allowlisted revision set. Its census
+starts at most eight bounded `git ls-tree -r -l -z --full-tree` children and
+k-way merges their already path-ordered streams while retaining only one
+record per child. Equal path/object identities across revisions become one
+physical-owner record with ordered revision ordinals. Different content at the
+same path remains a different physical owner, and strict validation rejects
+two owners claiming the same path/revision. Regular files, symlinks, and
+gitlinks remain explicit separate kinds; gitlinks are boundaries, not a
+recursive corpus.
+
+Canonical JSONL records split at 4,096 records or 64 MiB per member. The
+closed source contract independently caps 10,000,000 physical owners,
+80,000,000 revision placements, 16,384 members, 4 GiB of encoded member bytes,
+4,096-byte paths, and 8 MiB control files. Each member receipt binds its exact
+ordinal/count, name, record count, byte length, content digest, and first/last
+ordering key. The root binds exact member order, per-revision selector/branch/
+commit and kind counts/digest, aggregate kind and placement counts, regular
+declared bytes, encoded bytes, census policy, and its own domain-separated
+digest. Strict open checks canonical record encoding, descriptor-stable file
+identity, full member hashes, global record order, path/revision uniqueness,
+per-revision reconstruction, aggregate counts, and both root digests before it
+returns authority.
+
+The search root selects `zoekt-direct-whole-repository-v1`, binds the source
+generation digest, and copies the complete existing whole-shard root and every
+member's ordinal/count, basename, exact content bytes/digest, and decoded-
+metadata digest. Publication retains the existing repository marker: source
+members, source root, zoekt shards, the v1 whole root, and the new search root
+become durable under that marker; the indexed repository row commits before
+the marker is removed. Repository cleanup recognizes the hashed source/search
+namespace even when bytes are corrupt or replaced by symlinks. A failed state
+commit clears the row and removes both source/search roots and shards.
+
+The existing direct whole reader remains the live v1 reader in this ticket.
+Its exact static bindings, at-most-two fills, descriptor-stable mmap proof,
+generation fingerprints, final barriers, and lease-delayed retirement still
+ensure an active query holds its exact shard generation until release. T34.1
+does not label those results as v2; T34.3 owns side-by-side migration and
+backfill. The builder command now explicitly freezes the selected current
+limits: 2 MiB per file, 100 MiB shard corpus, 20,000 trigrams, and no gitlink
+recursion. Startup/runtime binary discovery additionally reads Go build
+metadata and rejects an override or PATH `zoekt-git-index` unless its main
+package and exact zoekt module version/checksum match the embedded pin. A test
+binds those embedded values back to `go.mod` and `go.sum`, so a toolchain pin
+change cannot silently leave the runtime fence stale.
+
+A changed or forced whole index adds one bounded revision census before the
+existing OOM-isolated zoekt child, then writes/hashes the source members and
+performs one exact source-member validation reread plus the existing exact
+shard metadata/content pass. It holds no
+corpus-sized map and reads no blobs. The maximum live census state is eight
+Git children/readers plus one record per revision and one at-most-eight-entry
+owner group; member encoding is serial. Exact no-op indexing exits before
+workspace creation, Git census, child launch, generation read/hash/write, or
+publication work, and tests require both shards and all source/search artifact
+mtimes to remain unchanged.
+
+The retained neutral gate materializes T32.3's exact 1,000-service profile and
+runs this production census: 3,151 source files produce exactly 3,151 physical
+owners and placements despite 5,000 logical service memberships. The separate
+target-derived gate revalidates T32.4's digest binding to the completed T32.2
+source-free target result and its direct-topology GO, one visible shard, and
+zero restart children without reopening private inputs. Package tests also
+cover multi-revision owner reuse/content change, symlink accounting, tampered
+members, mismatched physical roots, atomic index publication, failed-state
+cleanup, and no-op cost.
+
+Focused `analysis-unit-v1` indexing and its backup contract remain unchanged.
+Source/search files are derived and excluded from backup. No service query
+predicate, v2 reader, startup migration/repair, catalog/state activation,
+relationship, UI/API/MCP surface, scale/SLO, accuracy, completeness,
+migration-completion, decommission-safety, or release claim is created;
+`GATE2-V2` remains `NOT_ESTABLISHED`. T34.2 is scheduled next.

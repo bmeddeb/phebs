@@ -643,7 +643,7 @@ func serve(args []string) error {
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
 	if bin, err := indexer.FindBinary(); err != nil {
-		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
+		diagnostics.Logf("WARNING: zoekt-git-index unavailable — indexing disabled (make build provides the exact linked module pin; or set PHEBS_ZOEKT_GIT_INDEX): %v", err)
 	} else {
 		focusedBin, focusedErr := focusedindex.FindBinary()
 		if focusedErr != nil && len(analysisUnits) > 0 {

@@ -7,12 +7,14 @@ package indexer
 
 import (
 	"context"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"syscall"
@@ -23,16 +25,28 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
 )
 
+const (
+	zoektModuleVersion = "v0.0.0-20260709064101-33f1f18af292"
+	zoektModuleSum     = "h1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8="
+)
+
 // FindBinary locates zoekt-git-index: env override, next to our executable,
 // ./bin beside the executable (the `make build` layout), then PATH.
 func FindBinary() (string, error) {
+	var candidate string
+	var err error
 	if p := os.Getenv("PHEBS_ZOEKT_GIT_INDEX"); p != "" {
-		return executablePath(p)
+		candidate, err = executablePath(p)
+		if err != nil {
+			return "", err
+		}
+		return candidate, VerifyBinaryPin(candidate)
 	}
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
@@ -41,7 +55,9 @@ func FindBinary() (string, error) {
 			filepath.Join(dir, "bin", "zoekt-git-index"),
 		} {
 			if resolved, err := executablePath(p); err == nil {
-				return resolved, nil
+				if pinErr := VerifyBinaryPin(resolved); pinErr == nil {
+					return resolved, nil
+				}
 			}
 		}
 	}
@@ -49,7 +65,78 @@ func FindBinary() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return executablePath(p)
+	candidate, err = executablePath(p)
+	if err != nil {
+		return "", err
+	}
+	return candidate, VerifyBinaryPin(candidate)
+}
+
+// VerifyBinaryPin rejects a child whose embedded module identity differs from
+// the zoekt reader linked into this process. This turns the same-module build
+// convention into a runtime admission fence for overrides and PATH binaries.
+func VerifyBinaryPin(binary string) error {
+	candidate, err := buildinfo.ReadFile(binary)
+	if err != nil {
+		return fmt.Errorf("read zoekt-git-index build identity: %w", err)
+	}
+	if candidate.Path != "github.com/sourcegraph/zoekt/cmd/zoekt-git-index" ||
+		candidate.Main.Path != "github.com/sourcegraph/zoekt" {
+		return fmt.Errorf(
+			"zoekt-git-index has unexpected package/module identity %q/%q",
+			candidate.Path, candidate.Main.Path,
+		)
+	}
+	want := "github.com/sourcegraph/zoekt@" + zoektModuleVersion + " " +
+		zoektModuleSum
+	linked, err := linkedZoektModuleIdentity()
+	if err != nil {
+		return err
+	}
+	if linked != want {
+		return fmt.Errorf(
+			"embedded zoekt pin %s differs from linked reader %s", want, linked,
+		)
+	}
+	got := moduleIdentity(candidate.Main)
+	if got != want {
+		return fmt.Errorf(
+			"zoekt-git-index module identity %s differs from linked reader %s",
+			got, want,
+		)
+	}
+	return nil
+}
+
+func linkedZoektModuleIdentity() (string, error) {
+	build, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "", errors.New("read linked zoekt module identity")
+	}
+	if build.Main.Path == "github.com/sourcegraph/zoekt" {
+		return moduleIdentity(build.Main), nil
+	}
+	for _, dependency := range build.Deps {
+		if dependency.Path == "github.com/sourcegraph/zoekt" {
+			return moduleIdentity(*dependency), nil
+		}
+	}
+	// External-package test binaries can link only the indexer seams exercised
+	// by that test and omit the zoekt reader dependency from their final build
+	// metadata. Their child remains fenced by the embedded pin, whose separate
+	// test binds it to go.mod and go.sum. Production binaries stay fail closed.
+	if strings.HasSuffix(build.Path, ".test") {
+		return "github.com/sourcegraph/zoekt@" + zoektModuleVersion + " " +
+			zoektModuleSum, nil
+	}
+	return "", errors.New("linked zoekt module identity is absent")
+}
+
+func moduleIdentity(module debug.Module) string {
+	if module.Replace != nil {
+		module = *module.Replace
+	}
+	return module.Path + "@" + module.Version + " " + module.Sum
 }
 
 // The index child changes its working directory to the bare mirror. Resolve
@@ -166,6 +253,27 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return fmt.Errorf("index %s: create staging workspace: %w", repo.Name, err)
 	}
 	defer func() { _ = os.RemoveAll(workspace) }()
+	var sourceManifest repositoryindex.SourceManifest
+	var sourceStageDir string
+	if unit == nil {
+		sourceStageDir = filepath.Join(workspace, "source")
+		ix.verbosef(
+			"index %s: starting repository source census revisions=%d",
+			repo.Name, len(revisions),
+		)
+		sourceManifest, err = repositoryindex.BuildSourceGeneration(
+			ctx, dir, sourceStageDir, repo.Name, revisions,
+		)
+		if err != nil {
+			return fmt.Errorf("index %s: source generation: %w", repo.Name, err)
+		}
+		ix.verbosef(
+			"index %s: source generation owners=%d placements=%d members=%d bytes=%d",
+			repo.Name, sourceManifest.OwnerCount,
+			sourceManifest.PlacementCount, len(sourceManifest.Members),
+			sourceManifest.EncodedMemberBytes,
+		)
+	}
 	// zoekt.name makes shard repo names equal store names, which the T4.1
 	// RepoSet pre-pass depends on; the child reads it from the repo config
 	if _, err := sync.GitConfig(ctx, dir, "zoekt.name", repo.Name); err != nil {
@@ -198,7 +306,14 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			ctx, ix.FocusedBin, "-request", requestPath, "-result", resultPath,
 		)
 	} else {
-		args := []string{"-index", stageDir, "-incremental=false"}
+		args := []string{
+			"-index", stageDir,
+			"-incremental=false",
+			"-submodules=false",
+			"-file_limit=2097152",
+			"-shard_limit=104857600",
+			"-max_trigram_count=20000",
+		}
 		if len(revisions) > 1 {
 			branches := make([]string, 0, len(revisions))
 			for _, revision := range revisions {
@@ -287,8 +402,9 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		); err != nil {
 			return ix.failPublication(ctx, repo.Name, indexDir, err)
 		}
-	} else if err := focusedindex.PublishWhole(
-		ctx, indexDir, stageDir, repo.Name, revisions,
+	} else if err := focusedindex.PublishWholeGeneration(
+		ctx, indexDir, stageDir, sourceStageDir, repo.Name, revisions,
+		sourceManifest,
 	); err != nil {
 		return ix.failPublication(ctx, repo.Name, indexDir, err)
 	}
