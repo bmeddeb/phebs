@@ -48,7 +48,7 @@ func TestCommittedCatalogReconcileAndFailedReplacementPreservesPrior(t *testing.
 	prior := state.current[repository]
 	if prior.SourceCommit != commit || prior.SourceFileCount != 3 ||
 		prior.AcceptedFileCount != 2 || prior.UnownedFileCount != 1 ||
-		prior.ControlRevision != 1 {
+		prior.ControlRevision != 1 || state.stateReconciles != 1 {
 		t.Fatalf("published binding = %+v", prior)
 	}
 
@@ -61,6 +61,9 @@ func TestCommittedCatalogReconcileAndFailedReplacementPreservesPrior(t *testing.
 	outcome, err = reconciler.ReconcileRepository(t.Context(), repository)
 	if err != nil || outcome != OutcomeCurrent {
 		t.Fatalf("restart no-op without mirror = %q, %v", outcome, err)
+	}
+	if state.stateReconciles != 2 {
+		t.Fatalf("restart state reconciles = %d, want 2", state.stateReconciles)
 	}
 	if err := os.Rename(hiddenMirror, mirror); err != nil {
 		t.Fatal(err)
@@ -135,6 +138,9 @@ func TestAnalysisUnitV1ImportPreservesDigestRolesAndComplement(t *testing.T) {
 	if len(catalog.Unowned) != 1 || catalog.Unowned[0].Path != "README.md" {
 		t.Fatalf("legacy unowned complement = %+v", catalog.Unowned)
 	}
+	if state.stateReconciles != 1 {
+		t.Fatalf("legacy state reconciles = %d, want 1", state.stateReconciles)
+	}
 
 	// Exact v1/source identity is metadata-only on restart.
 	if err := os.Rename(mirror, mirror+".hidden"); err != nil {
@@ -143,6 +149,9 @@ func TestAnalysisUnitV1ImportPreservesDigestRolesAndComplement(t *testing.T) {
 	outcome, err = reconciler.ReconcileRepository(t.Context(), repository)
 	if err != nil || outcome != OutcomeCurrent {
 		t.Fatalf("legacy restart no-op = %q, %v", outcome, err)
+	}
+	if state.stateReconciles != 2 {
+		t.Fatalf("legacy restart state reconciles = %d, want 2", state.stateReconciles)
 	}
 }
 
@@ -228,9 +237,10 @@ func TestReconcileIsRepositoryIndependentAndDoesNotGuess(t *testing.T) {
 }
 
 type memoryStore struct {
-	repositories map[string]store.Repo
-	current      map[string]servicecatalog.Publication
-	history      []servicecatalog.Publication
+	repositories    map[string]store.Repo
+	current         map[string]servicecatalog.Publication
+	history         []servicecatalog.Publication
+	stateReconciles int
 }
 
 func (s *memoryStore) GetRepo(_ context.Context, repository string) (*store.Repo, error) {
@@ -301,6 +311,19 @@ func (s *memoryStore) PublishServiceCatalog(
 	publication.PublishedAt = time.Now().UTC()
 	s.current[publication.Repository] = publication
 	s.history = append(s.history, publication)
+	return nil
+}
+
+func (s *memoryStore) ReconcileServiceStates(
+	_ context.Context,
+	publication servicecatalog.Publication,
+) error {
+	current, exists := s.current[publication.Repository]
+	if !exists || current.GenerationDigest != publication.GenerationDigest ||
+		current.ControlRevision != publication.ControlRevision {
+		return store.ErrConflict
+	}
+	s.stateReconciles++
 	return nil
 }
 

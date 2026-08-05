@@ -49,9 +49,45 @@ type Publication struct {
 	PublishedAt              time.Time
 }
 
+// VerifiedPublication is an opaque strict-open publication and its already
+// decoded catalog. Service-local readers may reuse it without parsing the
+// admitted catalog again; its unexported fields prevent callers from forging a
+// validation result.
+type VerifiedPublication struct {
+	publication Publication
+	catalog     Catalog
+	verified    bool
+}
+
 // ValidatePublication proves that every stored scalar agrees with the strict
 // canonical catalog and with the domain-separated generation identity.
 func ValidatePublication(publication Publication, persisted bool) error {
+	_, err := VerifyPublication(publication, persisted)
+	return err
+}
+
+// VerifyPublication performs strict validation once and returns an opaque view
+// that can derive one or many service projections from the decoded catalog.
+func VerifyPublication(
+	publication Publication,
+	persisted bool,
+) (VerifiedPublication, error) {
+	var catalog Catalog
+	if err := validatePublication(publication, persisted, &catalog); err != nil {
+		return VerifiedPublication{}, err
+	}
+	return VerifiedPublication{
+		publication: publication,
+		catalog:     catalog,
+		verified:    true,
+	}, nil
+}
+
+func validatePublication(
+	publication Publication,
+	persisted bool,
+	opened *Catalog,
+) error {
 	if publication.Schema != PublicationSchema {
 		return publicationInvalidf("schema must be %q", PublicationSchema)
 	}
@@ -144,6 +180,9 @@ func ValidatePublication(publication Publication, persisted bool) error {
 	}
 	if !persisted && (publication.ControlRevision != 0 || !publication.PublishedAt.IsZero()) {
 		return publicationInvalidf("unpublished input cannot mint revision or time")
+	}
+	if opened != nil {
+		*opened = catalog
 	}
 	return nil
 }
