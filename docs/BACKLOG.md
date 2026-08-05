@@ -2,11 +2,11 @@
 
 T31.1 bounded pipeline diagnostics and T32.1's microservice-first program
 contract completed on 2026-08-04 and are retained in the completed backlog.
-T32.2's authorized whole-monorepo baseline completed on 2026-08-04 with a
-source-free checked-in receipt. T32.3's neutral service-authority/correctness
-corpus completed on 2026-08-04; T32.4's search-topology and cost spike is
-scheduled. Epics 33–39 are dependency-ordered program drafts, not
-implementation authorization.
+T32.2's authorized whole-monorepo baseline, T32.3's neutral
+service-authority/correctness corpus, and T32.4's direct search-topology
+decision completed on 2026-08-04 with source-free retained receipts. T32.5's
+multi-service v2 gate is scheduled. Epics 33–39 are dependency-ordered program
+drafts, not implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -22,7 +22,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1–T32.3 complete 2026-08-04 · T32.4 scheduled)*
+## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1–T32.4 complete 2026-08-04 · T32.5 scheduled)*
 
 Freeze the product and system contract before converting the current
 single-unit path into a multi-service implementation. The invariant is one
@@ -40,19 +40,8 @@ count.
   credentials, or infrastructure enter fixtures or reports.
 - Synthetic 1,000/5,000-service profiles are load evidence, not a target SLO or
   accuracy result. Pack validation and pilot continuation remain separate.
-- Direct whole-repository shards, bounded cohorts, and P6 are alternatives to
-  measure; none is selected by aspiration.
-
-**T32.4 · Search-topology and cost spike** *(scheduled; needs T32.2, T32.3)* — compare
-the direct whole-repository generation with bounded prefix-aware/hybrid
-cohorts only where the baseline or frozen experiment requires them. AC:
-service-scoped results equal the independent service oracle and all-code
-results equal the whole-repository oracle under broad queries, adversarial
-ranking ties, top-K truncation, revisions, catalog changes, interrupted
-publication, and `A → B → A`; measure build/update wall time, RSS, disk,
-shards, cold/warm query time, mmaps, descriptors, and no-op work; prove the
-service predicate is inside the zoekt query; retain one GO/NO-GO table for
-direct shards, cohorts, and P6 without changing production behavior.
+- T32.4 selected direct whole-repository shards for the initial v2 path.
+  Bounded cohorts and P6 remain evidence-triggered escape hatches.
 
 **T32.5 · Multi-service v2 gate** *(needs T32.2–T32.4)* — freeze the
 implementation input: service/catalog identity, authority precedence,

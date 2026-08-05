@@ -1,0 +1,191 @@
+{
+  "schema": "t324-search-topology-cost-receipt-v1",
+  "measured_on": "2026-08-04",
+  "inputs": {
+    "t322_results_sha256": "sha256:d1ec7b658eef84d2974c50c66d6dca00160a412fd49154c1ad4e232baae695ad",
+    "t323_receipt_sha256": "sha256:ce94187fd3b9c1ad42b64f131c9234399a5df918a07c5f452b94393873ab8611",
+    "t323_bundle_sha256": "sha256:05a1b845a2eaee1c6a2b0beda972aa0ea6ffe9cc636d886014887202728e2194"
+  },
+  "environment": {
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_version": "go1.26.5",
+    "logical_cpus": 10,
+    "zoekt_binary_sha256": "sha256:93d87f652bd796cc1a2dbeff29b1b5126ae9e61b650e548e38f64a0b0c7f0c9b",
+    "ctags_disabled": true
+  },
+  "cohort_trigger": {
+    "baseline_outcome": "completed",
+    "index_outcome": "succeeded",
+    "search_outcome": "succeeded",
+    "triggered": false,
+    "reason": "T32.2 completed its prospectively frozen direct whole-repository envelope"
+  },
+  "correctness": {
+    "revisions": 5,
+    "oracle_queries": 40,
+    "executed_queries": 33,
+    "authority_empty_queries": 7,
+    "authority_admission_checked": true,
+    "all_code_equal": true,
+    "service_equal": true,
+    "predicates_inside_zoekt": true,
+    "broad_queries_equal": true,
+    "adversarial_ranking_stable": true,
+    "top_k_equal": true,
+    "revision_bound": true,
+    "per_revision_catalog_equal": true,
+    "prior_revision_repeatable": true,
+    "branch_a_b_a_selection_equal": true
+  },
+  "neutral_cost": {
+    "build": {
+      "wall_ms": 54,
+      "peak_rss_bytes": 101662720,
+      "shard_bytes": 89333,
+      "shard_count": 1
+    },
+    "reader": {
+      "mmap_count": 1,
+      "mmap_method": "one-zoekt-mmap-per-visible-shard",
+      "descriptor_base": 6,
+      "descriptor_open": 11,
+      "descriptor_delta": 5,
+      "descriptor_method": "lsof-numeric-fd"
+    },
+    "cold_query_ms": 1,
+    "warm_query_ms": 1,
+    "query_count": 33,
+    "result_digest": "sha256:25bdbbacf902d91bf95a7da027ee432e4aa9168835bfc7b966f6bcec9ac906fd"
+  },
+  "profiles": [
+    {
+      "name": "services-1000",
+      "services": 1000,
+      "files": 3151,
+      "memberships": 5000,
+      "build": {
+        "wall_ms": 345,
+        "peak_rss_bytes": 114507776,
+        "shard_bytes": 803142,
+        "shard_count": 1
+      },
+      "single_file_edit": {
+        "wall_ms": 288,
+        "peak_rss_bytes": 102023168,
+        "shard_bytes": 803361,
+        "shard_count": 1
+      },
+      "reader": {
+        "mmap_count": 1,
+        "mmap_method": "one-zoekt-mmap-per-visible-shard",
+        "descriptor_base": 8,
+        "descriptor_open": 13,
+        "descriptor_delta": 5,
+        "descriptor_method": "lsof-numeric-fd"
+      },
+      "queries": {
+        "query_count": 4,
+        "cold_total_us": 1059,
+        "warm_total_us": 884,
+        "cold_warm_equal": true,
+        "broad_top_k": 20,
+        "service_top_k": 1,
+        "result_digest": "sha256:6c7265495ceb8752992dcfa92af0a73c652fe66ac3fc64a72ac90d3779246180"
+      },
+      "predicates": {
+        "compiled_services": 1000,
+        "placements": 5000,
+        "wall_us": 10659,
+        "canonical_bytes": 369000,
+        "max_bytes": 369
+      },
+      "no_op": {
+        "wall_us": 0,
+        "state_comparisons": 1,
+        "child_runs": 0,
+        "file_scans": 0,
+        "shard_reads": 0,
+        "shard_bytes_delta": 0
+      }
+    },
+    {
+      "name": "services-5000",
+      "services": 5000,
+      "files": 15751,
+      "memberships": 25000,
+      "build": {
+        "wall_ms": 1827,
+        "peak_rss_bytes": 142262272,
+        "shard_bytes": 3876442,
+        "shard_count": 1
+      },
+      "single_file_edit": {
+        "wall_ms": 1300,
+        "peak_rss_bytes": 176078848,
+        "shard_bytes": 3876661,
+        "shard_count": 1
+      },
+      "reader": {
+        "mmap_count": 1,
+        "mmap_method": "one-zoekt-mmap-per-visible-shard",
+        "descriptor_base": 10,
+        "descriptor_open": 15,
+        "descriptor_delta": 5,
+        "descriptor_method": "lsof-numeric-fd"
+      },
+      "queries": {
+        "query_count": 4,
+        "cold_total_us": 4540,
+        "warm_total_us": 4788,
+        "cold_warm_equal": true,
+        "broad_top_k": 20,
+        "service_top_k": 1,
+        "result_digest": "sha256:aa5892c90647fb87b05c8f37ab7c00dc7911a1132f168042c827c8fbfebd51f6"
+      },
+      "predicates": {
+        "compiled_services": 5000,
+        "placements": 25000,
+        "wall_us": 52776,
+        "canonical_bytes": 1845000,
+        "max_bytes": 369
+      },
+      "no_op": {
+        "wall_us": 0,
+        "state_comparisons": 1,
+        "child_runs": 0,
+        "file_scans": 0,
+        "shard_reads": 0,
+        "shard_bytes_delta": 0
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "topology": "direct",
+      "decision": "go",
+      "reason": "target baseline completed and the neutral oracle is exact with pre-ranking service predicates",
+      "next_gate": "T32.5"
+    },
+    {
+      "topology": "bounded-cohorts",
+      "decision": "no_go",
+      "reason": "the prospectively frozen cohort trigger was not met; cohort duplication and top-K merge cost remain unmeasured",
+      "next_gate": "reopen only after a named direct-topology limit fails"
+    },
+    {
+      "topology": "p6",
+      "decision": "no_go",
+      "reason": "no single-node capacity or correctness failure triggered fleet escalation",
+      "next_gate": "demand-driven P6 review"
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "selects_initial_topology": true,
+    "establishes_slo": false,
+    "establishes_accuracy": false,
+    "authorizes_multi_service_release": false,
+    "changes_production_behavior": false
+  }
+}

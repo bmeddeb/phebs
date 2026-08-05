@@ -125,8 +125,10 @@ authorized whole-monorepo baseline completed on 2026-08-04 with a source-free
 receipt at `spike/t322/results.json`; it establishes no SLO and selects no
 topology. T32.3's deterministic neutral service-authority/correctness corpus
 and 1,000/5,000-service load profiles completed on 2026-08-04 without selecting
-a production catalog schema or scale claim. T32.4's search-topology and cost
-spike is scheduled; Epics 33–39 remain dependency-ordered drafts and Epics
+a production catalog schema or scale claim. T32.4's source-free topology spike
+selected direct shared whole-repository shards for the initial v2 path on
+2026-08-04; cohorts and P6 remain evidence-triggered escape hatches. T32.5's
+multi-service v2 gate is scheduled; Epics 33–39 remain dependency-ordered drafts and Epics
 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,

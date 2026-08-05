@@ -55,8 +55,11 @@ establishes no SLO and selects no topology. T32.3's neutral service-authority
 and correctness corpus completed on 2026-08-04 with five deterministic Git
 revisions, independent membership/search/relationship/currentness oracles, and
 complete 1,000/5,000-service load profiles. It selects neither a production
-catalog schema nor a topology or target SLO. T32.4's search-topology and cost
-spike is scheduled next.
+catalog schema nor a topology or target SLO. T32.4's source-free topology and
+cost spike completed on 2026-08-04: direct shared whole-repository shards are
+the initial v2 topology, service membership is compiled inside the exact
+revision-bound zoekt query, and bounded cohorts/P6 remain trigger-gated.
+T32.5's multi-service v2 gate is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -363,9 +366,10 @@ until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
 Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
-observability, T32.1's program-contract closure, T32.2's source-free
-whole-monorepo baseline, and T32.3's neutral oracle are complete. T32.4 is the
-scheduled dependency-ordered ticket. Epics 25–28 remain
+observability and T32.1–T32.4 are complete. T32.4 selected direct shared
+whole-repository shards for the initial v2 path after the T32.2 direct baseline
+completed and all T32.3 neutral topology gates passed; cohorts and P6 remain
+trigger-gated. T32.5 is the scheduled dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -465,6 +469,9 @@ service count × repository bytes
    frozen envelope, compare bounded cohorts against whole-repository and
    per-service oracles under broad queries, ranking ties, truncation, cold
    mmap/FD pressure, and generation transitions before selecting cohorts.
+   T32.4 recorded that the trigger did not fire and selected direct shared
+   shards for the initial v2 path; this gate reopens only after a named limit
+   fails.
 5. **Evidence quality:** every pack separately measures call-site extraction,
    service attribution, and end-to-end service relationship precision/recall,
    processing coverage, and unresolved behavior. `GATE2-V2` remains

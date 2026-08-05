@@ -29,6 +29,8 @@ evidence.
   and [source-free receipt](../spike/t322/results.json)
 - [T32.3 neutral service-authority/correctness corpus](../spike/t323/README.md)
   and [artifact receipt](../spike/t323/receipt.json)
+- [T32.4 search-topology and cost spike](../spike/t324/README.md)
+  and [source-free measurement receipt](../spike/t324/results.json)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -50,6 +52,13 @@ authority-input schema is fixture vocabulary rather than a production catalog
 contract. Deterministic authoring tests pin every Git tree and artifact byte;
 the record selects no topology, target SLO, extraction accuracy, or production
 registration.
+
+The T32.4 directory binds the completed T32.2 receipt and T32.3 corpus, replays
+the five-revision independent search oracle through a real same-module zoekt
+child, and measures the complete 1,000/5,000-service synthetic profiles. Its
+closed receipt selects direct whole-repository shards for the initial v2 path;
+cohorts and P6 remain trigger-gated. The ctags-disabled synthetic timings set
+no target SLO, scale limit, extraction accuracy, or release authority.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed

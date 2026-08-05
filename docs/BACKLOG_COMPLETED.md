@@ -6409,7 +6409,7 @@ Targeted tests, full vet and golangci-lint, the uncached full Go suite, the race
 suite, docs checks, diff hygiene, and the steady-state-cost review form the
 completion gate.
 
-## Epic 32 · Microservice program contract and validation *(T32.1–T32.3 complete)*
+## Epic 32 · Microservice program contract and validation *(T32.1–T32.4 complete)*
 
 **T32.1 ✅ · Microservice-first program contract** *(2026-08-04)* — selected
 services as the primary product scope over shared repository source/search
@@ -6484,3 +6484,41 @@ children, files, hashes, and complete in-memory profile envelopes. The largest
 retained profile contains 5,000 service records, 15,751 file records, and
 25,000 placements; validation uses precomputed file/directory indexes rather
 than multiplying files by memberships. No production runtime behavior changes.
+
+**T32.4 ✅ · Search-topology and cost spike** *(2026-08-04)* — selected one
+direct whole-repository zoekt generation per exact repository revision set for
+the initial multi-service v2 path. T32.2 completed its prospectively frozen
+direct envelope, so the preregistered bounded-cohort trigger did not fire. The
+source-free retained receipt at `spike/t324/results.json` is pinned by SHA-256
+`4992dcdafb9100e3ca6f34cf3f7b1b54030b58f811f48ff55b870469a4775f7c`
+and binds the exact T32.2 receipt, T32.3 receipt and neutral Git bundle.
+
+The real same-module zoekt child indexed all five public revisions in one
+direct shard set. All 40 independent oracle cases passed: 33 exact/stale
+queries executed and seven restricted, removed, or unavailable cases stopped
+at authority admission; All code and service results were exact; every service
+predicate was inside the exact branch-bound zoekt query before ranking and
+top-K. Broad raw-byte queries, adversarial all-document ranking stability,
+top-K truncation, revision binding, per-revision catalog/oracle equality,
+repeatable prior-revision selection, and static `A → B → A` branch selection
+within one immutable shard set passed. The spike did not interrupt publication
+or transition physical generations.
+
+The complete 1,000/5,000-service synthetic inputs materialized 3,151/15,751
+files and 5,000/25,000 memberships into one shard each. Initial builds measured
+345/1,827 ms, one-file revision builds 288/1,300 ms, shard bytes
+803,142/3,876,442 before the edit, and peak child RSS remained explicitly
+environment-bound. One service's five-placement query tree was 369 bytes;
+compiling all services measured aggregate spike work only, not a production
+per-request loop. Each reader mapped one visible shard and added five numeric
+descriptors under the recorded Darwin/lsof method. Profile no-op checks loaded
+desired Git HEAD and the published shard's active branch version before timing
+one identity comparison with zero child, file scan, shard read, or shard-byte
+change; T32.2 separately supplies the real target restart/no-op receipt.
+
+The decision table records direct shards **GO to T32.5**, bounded cohorts
+**NO-GO because the trigger was not met**, and P6 **NO-GO because no fleet
+escalation trigger was met**. Reopening either alternative requires a named
+direct-topology failure and a newly frozen experiment. Synthetic ctags-disabled
+timings establish no target SLO, accuracy, scale limit, or release authority.
+Production packages do not import the spike and no runtime behavior changed.
