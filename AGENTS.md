@@ -33,7 +33,7 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 ## Layout
 
-`cmd/phebs/` · `internal/{api,auth,codenav,compat,config,extract,gitobj,indexer,mcp,recovery,search,store,sync}` ·
+`cmd/phebs/` · `internal/{api,auth,codenav,compat,config,extract,gitobj,indexer,mcp,recovery,search,servicecatalog,servicecatalogingest,store,sync}` ·
 `ui/` · `docs/` · shards at `$DATA/index`, bare repos at
 `$DATA/repos/<host>/<path>.git`
 
@@ -133,9 +133,11 @@ recorded a conditional implementation GO with explicit authority, identity,
 migration, admission-limit, and deferral boundaries but no runtime or release
 authorization. T33.1's strict `phebs-service-catalog-v2` contract and T33.2's
 exact catalog ingestion, source-census binding, immutable store authority,
-backup/restore, and v1 migration are complete without product-surface
-registration; T33.3 independent service state is scheduled, the remaining Epics 33–39 stay dependency-ordered
-drafts, and Epics 25–28 remain unscheduled.
+backup/restore, and v1 migration are complete. T33.3's service-local desired,
+active, status, incarnation, tombstone, and bounded-summary state is also
+complete without product-surface registration; T33.4 authorized reads are
+scheduled, the remaining Epics 33–39 stay dependency-ordered drafts, and Epics
+25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.

@@ -396,9 +396,21 @@ removing the repository's `service_catalogs` entry makes the next reconcile
 publish the deterministic v1 import as a real new current-pointer transition;
 the prior v2 generation remains immutable but is no longer current.
 
-T33.2 registers no catalog HTTP, MCP, search, relationship, or product UI
-surface. Independent service incarnation and current/stale lifecycle belong to
-T33.3, authorized reads to T33.4, and retained-generation GC to T35.
+Each current catalog also reconciles one independently fenced lifecycle row per
+service key. A service-local desired digest binds the key's incarnation and
+changes for its exact source or own record/memberships, not for a sibling-only
+catalog edit. Accepted services begin
+`unavailable` until an exact active generation is published; later exact
+transitions may be `current` or `stale`, conflicts stay explicit, and rejected
+or omitted prior keys retain removed tombstones. Re-adding a removed key mints
+the next incarnation and never inherits its prior active identity. Catalog and
+state publication are consecutive transactions: a crash between them makes
+state reads unavailable until the exact startup/index retry repairs the point
+summary; it never serves a mixed catalog/state view.
+
+T33.3 registers no catalog HTTP, MCP, search, relationship, or product UI
+surface. Authorization-first reads belong to T33.4, real active physical
+generation transitions to T34.3, and retained-generation GC to T35.
 
 
 ### Provisional Change Workbench

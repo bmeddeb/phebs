@@ -88,8 +88,13 @@ publications, and restore/startup re-fences them against imported store
 authority. Service-catalog generations differ: their canonical JSON, exact
 source-census binding, and current revision are precious SurrealDB authority,
 so database export/import retains them byte-for-byte and restore does not
-clear them with derived candidate/resolver/caller pointers. Startup strict-opens
-and reconciles that authority against the restored repository state. A different config that only points at the same
+clear them with derived candidate/resolver/caller pointers. Independent service
+desired/active rows, incarnations, tombstones, row revisions, and their bounded
+repository summary are precious state too and restore exactly. Startup
+strict-opens and reconciles that authority against the restored repository
+state. A catalog pointer newer than its service summary is a fail-closed
+interrupted transition; the exact retry repairs it without a Git census or
+historical-generation scan. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
 containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`,
 `caller-publication.tar`, and `manifest.json`. The
