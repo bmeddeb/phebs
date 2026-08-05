@@ -9,7 +9,8 @@ authorized catalog reads, and T33.5's service directory/neutral demo are
 retained in the completed backlog, closing Epic 33. T34.1's immutable
 repository source/search generation, T34.2's exact service-query compiler,
 T34.3's publication migration/recovery, and T34.4's shared search product/demo
-are also complete, closing Epic 34. T35.1 is the next scheduled ticket, and the remaining
+are also complete, closing Epic 34. T35.1's generation-scoped scheduler is
+complete. T35.2 is the next scheduled ticket, and the remaining
 Epics 35–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -27,20 +28,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 35 · Bounded scheduling, retention, and recovery *(T35.1 scheduled · needs T32.5, Epic 33; blocks Epics 36–37)*
+## Epic 35 · Bounded scheduling, retention, and recovery *(T35.2 scheduled · T35.1 complete; blocks Epics 36–37)*
 
 Prevent thousands of services and generations from multiplying unbounded job
 history, partial artifacts, or retained publications.
 
-**T35.1 · Generation-scoped chunk scheduler** *(scheduled)* — add bounded chunk identity,
-fan-out pages, repository fairness, resource classes, per-repository tokens,
-commit coalescing, stale-worker fencing, and successor semantics. AC: one turn
-does bounded work; no queue transaction enumerates all services; never-run,
-retryable, and stale priorities are deterministic; cancellation/restart and
-attempt exhaustion preserve settled siblings; process-wide concurrency and
-memory/descriptor bounds pass.
-
-**T35.2 · Pin-aware lifecycle and retention decision** *(needs T35.1)* —
+**T35.2 · Pin-aware lifecycle and retention decision** *(scheduled · needs T35.1)* —
 freeze roots and owner lifecycles for catalogs, source/search generations,
 observations, resolver namespaces, relationships, proofs, Investigations,
 readers, jobs, tombstones, and partial stages. AC: explicit age/count/byte and
@@ -72,7 +65,10 @@ relationship families.
 versioned source-partition contract. AC: pure-reader rules, no lazy fetch or
 replacement refs, output/time/blob/aggregate/descriptor limits, cancellation,
 missing-object classification, path-free diagnostics, deterministic
-partitioning, and one admitted blob read per generation/policy.
+partitioning, and one admitted blob read per generation/policy. A genuinely
+re-current A after A→B→A must prove its settled content-addressed partitions
+need no scheduling or use a distinguishable schedule identity; T35.1's
+superseded digest is never resurrected.
 
 **T36.2 · Go source-observation contract** *(needs T36.1)* — parse imports,
 aliases, receivers/generated-client clues, constructor origin, selector spans,
