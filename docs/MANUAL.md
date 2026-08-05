@@ -67,6 +67,15 @@ complete-generation publication, authorized Caller Map reads and comparison,
 and Workbench composition now consume that overlay; the shared scope panel
 labels it `repository-overlay` beside focused Search and local evidence.
 
+An optional `service_catalogs` entry can now ingest one explicit normalized
+committed or operator multi-service authority for a repository. Publication is
+fenced to the exact indexed HEAD and a complete regular-file census; invalid
+replacement input preserves the previous authority. Without a v2 selection,
+an indexed `analysis-unit-v1` scope imports as one digest-identical service
+with its primary/supporting/typed roles and explicit unowned complement. These
+catalog generations are durable and backup-safe but intentionally have no
+HTTP, MCP, search, or UI registration yet; T33.3–T33.5 own those surfaces.
+
 ## Evidence boundary
 
 Search, browsing, authentication, SCIP, and history are shipped product

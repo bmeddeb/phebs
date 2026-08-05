@@ -57,6 +57,14 @@ analysis_units:
     name: payments
     primary: [services/payments/src]
     supporting: [contracts/payment.proto, services/payments/go.mod]
+
+# Optional: one explicit normalized multi-service authority per repository.
+service_catalogs:
+  github.com/acme/monorepo:
+    kind: operator
+    id: platform-catalog
+    version: "2026-08-04.1"
+    path: /etc/phebs/service-catalog.json
 ```
 
 
@@ -91,6 +99,7 @@ analysis_units:
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 | `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
+| `service_catalogs`                          | `{}`             | repo name → one explicit normalized `committed` or `operator` catalog file; exact replacement is reconciled at startup and after indexing; see [Service catalogs](#service-catalogs) |
 
 ### Historical publication retention
 
@@ -310,6 +319,86 @@ extraction. Their exact evidence scope has an empty unit digest, and their
 legacy root `index.scip` behavior remains available. Migrated historical
 whole-repository publications remain readable by their original commit and
 empty-unit identity, but never satisfy a focused lookup.
+
+
+### Service catalogs
+
+`service_catalogs` selects at most one normalized
+`phebs-service-catalog-v2` JSON authority for an exact repository. This is an
+explicit ingestion boundary, not discovery: phebs does not scan directories,
+run a build, read deployment configuration, or invoke an authority adapter to
+invent services. The JSON file contains the complete accepted, proposal,
+conflict, rejected, membership, optional override, and unowned projection.
+One map entry therefore cannot express two competing base authorities or an
+implicit precedence order.
+
+Both source kinds use an absolute, clean path to a non-symlink regular local
+file. The path is not a secret field and does not expand `${ENV}` or `~`.
+The explicit `id` must equal `authority.id` in the JSON:
+
+```yaml
+service_catalogs:
+  github.com/acme/monorepo:
+    kind: committed
+    id: build-catalog
+    path: /srv/phebs-catalogs/acme-monorepo.json
+
+  github.com/acme/other-repo:
+    kind: operator
+    id: platform-catalog
+    version: "2026-08-04.1"
+    path: /srv/phebs-catalogs/other-repo.json
+```
+
+A `committed` catalog's JSON uses the repository's exact indexed HEAD commit
+as `authority.version`; configuration omits `version` because the indexed
+commit supplies it. The normalized JSON is a selected projection of that
+commit, not a catalog file recursively required to contain its own Git commit
+ID. The selected bytes are still operator-supplied: T33.2 verifies the declared
+HEAD fence and canonical byte immutability, not that the bytes exist in or
+equal a blob from that commit. Reading an in-repository blob remains a separate
+automatic-authority-adapter decision. An `operator` catalog uses the explicit
+configured opaque `version`, which must equal its JSON authority version. A
+selected catalog may carry the one optional versioned operator override defined
+by the JSON contract. Reusing an authority/override version with different
+canonical catalog bytes is refused.
+
+Before publication, phebs streams the exact indexed commit's regular-file Git
+tree once. Every catalog membership and unowned placement must resolve to at
+least one regular file. Each regular file must be covered by an accepted
+membership or an explicit unowned placement, never both. Proposal, conflict,
+and rejected memberships retain provenance and must resolve, but they do not
+become accepted authority; a proposal-only file must therefore also remain
+explicitly unowned. File mode, blob object ID, and path enter the census
+digest. Symlinks and gitlinks are not regular census members and cannot
+satisfy a selected placement.
+
+The catalog, source commit/census, and provenance form one immutable generation
+stored in SurrealDB. A separate monotonic current revision records each actual
+pointer transition. Invalid JSON, admission-limit refusal, a census gap, stale
+HEAD, missing input, same-version byte change, or store failure leaves the
+prior complete authority unchanged. Repositories reconcile independently at
+startup, so one refusal is logged without preventing unrelated repositories
+from publishing. A completed index run retries its repository's catalog after
+the existing candidate handoff. An exact v2 retry rereads only the bounded
+selected JSON and strict store rows; it does not repeat the Git census.
+
+When no `service_catalogs` entry exists, an already indexed
+`analysis-unit-v1` state imports deterministically as one accepted service.
+Its existing name becomes the service key/display name, the exact v1 digest is
+preserved, primary/supporting paths and an exact typed designation become v2
+roles, and every other regular file becomes an exact unowned record. The
+legacy repository/index state remains side by side and readable; a failed v2
+replacement cannot relabel it. The unchanged 12,000 distinct-path admission
+cap applies, so a legacy import with too many exact unowned files refuses while
+the existing v1 pipeline remains authoritative. If both authorities exist,
+removing the repository's `service_catalogs` entry makes the next reconcile
+publish the deterministic v1 import as a real new current-pointer transition;
+the prior v2 generation remains immutable but is no longer current.
+
+T33.2 registers no catalog HTTP, MCP, search, relationship, or product UI
+surface. Independent service incarnation and current/stale lifecycle belong to
+T33.3, authorized reads to T33.4, and retained-generation GC to T35.
 
 
 ### Provisional Change Workbench

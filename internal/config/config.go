@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/reponame"
+	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"gopkg.in/yaml.v3"
 )
 
@@ -53,6 +55,20 @@ type Config struct {
 	// repository. T30.2 commits its identity with index state; T30.3 makes the
 	// physical zoekt corpus honor the selected paths.
 	AnalysisUnits map[string]analysisunit.Config `yaml:"analysis_units"`
+	// ServiceCatalogs explicitly selects one v2 base authority per repository.
+	// When absent, T33.2 imports the committed analysis-unit-v1 state instead.
+	ServiceCatalogs map[string]ServiceCatalog `yaml:"service_catalogs"`
+}
+
+// ServiceCatalog selects one exact normalized catalog input. Both kinds use an
+// absolute local Path; committed content must declare the indexed HEAD as its
+// Version, while operator content uses the explicit configured Version. T33.2
+// deliberately installs no build-system or directory adapter.
+type ServiceCatalog struct {
+	Kind    string `yaml:"kind" json:"kind"`
+	ID      string `yaml:"id" json:"id"`
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
+	Path    string `yaml:"path" json:"path"`
 }
 
 // MaxIndexedRevisions is the total per-repository revision ceiling, including
@@ -673,6 +689,58 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 
+	serviceCatalogRepos := make([]string, 0, len(c.ServiceCatalogs))
+	for repo := range c.ServiceCatalogs {
+		serviceCatalogRepos = append(serviceCatalogRepos, repo)
+	}
+	sort.Strings(serviceCatalogRepos)
+	for _, repo := range serviceCatalogRepos {
+		selection := c.ServiceCatalogs[repo]
+		if err := reponame.Validate(repo); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"service_catalogs: repository %q is not canonical", repo,
+			))
+		}
+		switch selection.Kind {
+		case servicecatalog.AuthorityCommitted:
+			if selection.Version != "" {
+				errs = append(errs, fmt.Errorf(
+					"service_catalogs[%s]: committed version is the indexed HEAD and must be omitted",
+					repo,
+				))
+			}
+			if err := servicecatalog.ValidateAuthority(servicecatalog.Authority{
+				Kind: selection.Kind, ID: selection.ID,
+				Version: strings.Repeat("0", 40),
+			}); err != nil {
+				errs = append(errs, fmt.Errorf("service_catalogs[%s]: %v", repo, err))
+			}
+			if !validCatalogFilePath(selection.Path) {
+				errs = append(errs, fmt.Errorf(
+					"service_catalogs[%s]: committed path must be absolute, clean, and unpadded",
+					repo,
+				))
+			}
+		case servicecatalog.AuthorityOperator:
+			if err := servicecatalog.ValidateAuthority(servicecatalog.Authority{
+				Kind: selection.Kind, ID: selection.ID, Version: selection.Version,
+			}); err != nil {
+				errs = append(errs, fmt.Errorf("service_catalogs[%s]: %v", repo, err))
+			}
+			if !validCatalogFilePath(selection.Path) {
+				errs = append(errs, fmt.Errorf(
+					"service_catalogs[%s]: operator path must be absolute, clean, and unpadded",
+					repo,
+				))
+			}
+		default:
+			errs = append(errs, fmt.Errorf(
+				"service_catalogs[%s]: kind must be %q or %q",
+				repo, servicecatalog.AuthorityCommitted, servicecatalog.AuthorityOperator,
+			))
+		}
+	}
+
 	seen := map[string]bool{}
 	for i, conn := range c.Connections {
 		switch {
@@ -803,6 +871,19 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func validCatalogFilePath(value string) bool {
+	if value == "" || !filepath.IsAbs(value) || filepath.Clean(value) != value ||
+		strings.TrimSpace(value) != value {
+		return false
+	}
+	for _, current := range value {
+		if current < 0x20 || current == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 // AnalysisUnitScopes returns a defensive, repository-keyed copy of the
