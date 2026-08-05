@@ -85,7 +85,11 @@ and runs that executable's live `export`. Candidate, resolver-catalog, and
 caller-generation transitions are not covered by that focused-index lock;
 their derived archives independently admit only exact marker-free immutable
 publications, and restore/startup re-fences them against imported store
-authority. A different config that only points at the same
+authority. Service-catalog generations differ: their canonical JSON, exact
+source-census binding, and current revision are precious SurrealDB authority,
+so database export/import retains them byte-for-byte and restore does not
+clear them with derived candidate/resolver/caller pointers. Startup strict-opens
+and reconciles that authority against the restored repository state. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
 containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`,
 `caller-publication.tar`, and `manifest.json`. The
