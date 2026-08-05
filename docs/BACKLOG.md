@@ -4,9 +4,9 @@ T31.1 bounded pipeline diagnostics and Epic 32's complete microservice v2
 contract/validation gate are retained in the completed backlog. T32.5 recorded
 a conditional implementation GO on 2026-08-04 without authorizing runtime
 registration or release. T33.1's canonical service-catalog contract, T33.2's
-catalog ingestion/v1 migration, and T33.3 independent service state are
-retained in the completed backlog; T33.4 authorized catalog reads are the next
-scheduled ticket, and the remaining Epics 33–39 tickets stay
+catalog ingestion/v1 migration, T33.3 independent service state, and T33.4
+authorized catalog reads are retained in the completed backlog; T33.5 is the
+next scheduled ticket, and the remaining Epics 34–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -15,7 +15,7 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–32, T33.1–T33.3, and P5 hardening are retained in the
+Epics 0–24, Epics 29–32, T33.1–T33.4, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -23,17 +23,10 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 33 · Versioned service catalog and lifecycle *(T33.1–T33.3 complete · T33.4 scheduled)*
+## Epic 33 · Versioned service catalog and lifecycle *(T33.1–T33.4 complete · T33.5 scheduled)*
 
 Make many services per repository durable, inspectable, and independently
 current before any high-cardinality relationship plane depends on them.
-
-**T33.4 · Authorized catalog API and MCP** *(needs T33.3)* — add paged
-repository/service inventory and exact detail over the same shared service
-type. AC: permission checks precede repository, service, count, membership,
-and cursor work; hidden and absent are indistinguishable; cursors bind catalog
-generation, authorization projection, ordering, filters, and incarnation;
-page/response/path bounds and OpenAPI/MCP schema parity pass.
 
 **T33.5 · Service directory and epic demo** *(needs T33.4)* — add an
 accessible repository → service directory with status, authority, conflicts,

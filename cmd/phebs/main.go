@@ -838,6 +838,7 @@ func serve(args []string) error {
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
+	apiOpts.ServiceDirectory = api.NewServiceDirectoryService(apiOpts)
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
 	workbenchMode := ""
 	if cfg.Experimental.ProvisionalWorkbench {
@@ -924,6 +925,7 @@ func serve(args []string) error {
 		ContractCatalog:       catalogQueries,
 		CallerMap:             callerMapQueries,
 		CallerComparison:      comparisonQueries,
+		ServiceDirectory:      apiOpts.ServiceDirectory,
 		Workbench:             apiOpts.Workbench,
 		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
 		Principal:             apiOpts.Principal,
