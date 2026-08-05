@@ -7428,4 +7428,57 @@ fixtures, or alternate deletion paths. The receipt proves mechanics and
 recovery only; its synthetic profile cardinalities establish no SLO,
 supported-scale, accuracy/completeness, migration/decommission, or release
 claim. `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 35 is complete and T36.1 is
-scheduled next.
+complete below.
+
+**T36.1 ✅ · Batch immutable Git reader and partitions** *(2026-08-05; needs
+completed Epics 34–35)* — adds an unregistered, parser-neutral source input
+contract over T34.1's validated repository generation. A closed suffix policy
+and the complete frozen bound set form policy identity. Selected regular
+placements spool by a domain-separated object-ID hash, split by successive
+bits, then sort by object ID and path/mode/revision. Identical immutable objects
+coalesce into one record retaining every placement, so one admitted object is
+read once rather than once per path or service.
+
+`phebs-source-partition-manifest-v1` names canonical JSONL members capped at
+4,096 blobs, 4,096 placements, 64 MiB unique declared source bytes, and 64 MiB
+metadata each. The closed plan caps at 16,384 members, 4 GiB unique source
+bytes, 4 GiB canonical member bytes, an 8 MiB root, 4 MiB records, and 8 GiB
+peak logical split-spool bytes.
+Validation refuses malformed, missing, special, extra, overlapping-prefix,
+noncanonical, digest-divergent, or totals-divergent bytes before use. Planning
+reads the source root once, then performs T34.1's separate complete validation
+and delivery passes over source-member metadata; it reads no Git blob.
+
+One member read opens one hardened `git cat-file --batch` child. The shared Git
+command strips inherited `GIT_*`, disables replacement objects, lazy fetch,
+prompts, optional locks, and system/global configuration; this package also
+refuses external object alternates. The session caps a blob at 4 MiB, unique
+blob bytes at 64 MiB, total protocol output at 65 MiB, duration at five
+minutes, and child pipes at three. It checks the echoed OID, blob type, size,
+terminator, declared bytes, record counts, placement counts, and aggregate
+bytes. Cancellation tears down the child; a missing object wraps the shared
+not-found class. Reader-boundary errors retain `errors.Is` classification but
+render only a bounded ordinal, never paths, OIDs, blob bytes, child stderr, or
+visitor detail.
+
+Race tests pin two-run byte determinism, same-OID/multiple-path coalescing and
+one-read behavior, real replacement-ref resistance, external-alternate
+refusal, cancellation, path-free missing-object classification, cap refusal,
+closed policy/stage validation, and exact A→B→A identity. The latter rebuilds
+A after B and requires byte-identical A plan/member bytes plus a distinct B
+generation: a retained, completely validated settled A needs no scheduler
+resurrection. No scheduler or worker is registered here. If later publication
+cannot prove those settled bytes remain complete, it must use a distinguishable
+schedule identity instead of re-enqueueing T35.1's permanently superseded
+digest.
+
+The package adds no startup, sync, search, API, MCP, UI, store schema, parser,
+publication pointer, lifecycle owner, backup byte, or release behavior. One
+build self-validates every member; `Open` repeats complete plan validation once
+per retained handle; and one real partition read rereads only its selected
+member, performs one bounded child and one request/response per unique object,
+and holds at most one 4-MiB blob plus bounded member metadata. Ordinary steady
+state is unchanged because nothing imports the package yet.
+This establishes mechanics only—not observation completeness, parser accuracy,
+target scale/SLO, migration/decommission, or release authority. `GATE2-V2`
+remains `NOT_ESTABLISHED`; T36.2 is scheduled next.
