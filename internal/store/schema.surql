@@ -97,6 +97,64 @@ DEFINE FIELD IF NOT EXISTS published_at ON service_catalog_current TYPE datetime
 DEFINE INDEX IF NOT EXISTS service_catalog_current_repository
     ON service_catalog_current FIELDS repository UNIQUE;
 
+-- T33.3: one current lifecycle row per repository-local service key. The
+-- service-local desired digest excludes sibling records; incarnation and the
+-- mutable control revision independently fence removal/re-add and A -> B -> A.
+DEFINE TABLE IF NOT EXISTS service_state_current SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS schema ON service_state_current TYPE string
+    ASSERT $value = 'phebs-service-state-v1';
+DEFINE FIELD IF NOT EXISTS repository ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS service_key ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS display_name ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS disposition ON service_state_current TYPE string
+    ASSERT $value INSIDE ['accepted', 'proposal', 'conflict', 'rejected'];
+DEFINE FIELD IF NOT EXISTS origin ON service_state_current TYPE string
+    ASSERT $value INSIDE ['base', 'override'];
+DEFINE FIELD IF NOT EXISTS reason ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS successors ON service_state_current TYPE array<string>
+    ASSERT array::len($value) <= 4000;
+DEFINE FIELD IF NOT EXISTS incarnation ON service_state_current TYPE int ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS desired_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS desired_source_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS desired_catalog_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS active_desired_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS active_source_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS active_catalog_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS status ON service_state_current TYPE string
+    ASSERT $value INSIDE ['current', 'stale', 'unavailable', 'conflict', 'removed'];
+DEFINE FIELD IF NOT EXISTS removed ON service_state_current TYPE bool;
+DEFINE FIELD IF NOT EXISTS state_digest ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS control_revision ON service_state_current TYPE int ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS changed_at ON service_state_current TYPE datetime;
+DEFINE INDEX IF NOT EXISTS service_state_repository_key
+    ON service_state_current FIELDS repository, service_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS service_state_repository_removed
+    ON service_state_current FIELDS repository, removed;
+
+-- The point summary is the transition serialization row and carries current
+-- counts without scanning historical catalog generations or old tombstones.
+DEFINE TABLE IF NOT EXISTS service_state_repository SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS schema ON service_state_repository TYPE string
+    ASSERT $value = 'phebs-service-state-repository-v1';
+DEFINE FIELD IF NOT EXISTS repository ON service_state_repository TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_generation ON service_state_repository TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_control_revision ON service_state_repository TYPE int
+    ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS catalog_service_count ON service_state_repository TYPE int
+    ASSERT $value >= 0 AND $value <= 4000;
+DEFINE FIELD IF NOT EXISTS live_service_count ON service_state_repository TYPE int
+    ASSERT $value >= 0 AND $value <= 4000;
+DEFINE FIELD IF NOT EXISTS current_count ON service_state_repository TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS stale_count ON service_state_repository TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS unavailable_count ON service_state_repository TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS conflict_count ON service_state_repository TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS tombstone_count ON service_state_repository TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS summary_digest ON service_state_repository TYPE string;
+DEFINE FIELD IF NOT EXISTS control_revision ON service_state_repository TYPE int ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS updated_at ON service_state_repository TYPE datetime;
+DEFINE INDEX IF NOT EXISTS service_state_repository_name
+    ON service_state_repository FIELDS repository UNIQUE;
+
 -- repo <-> code-host identity permission edges (T10.3), mirrored from host
 -- ACLs; the search pre-pass compiles them into a per-user RepoSet.
 DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;

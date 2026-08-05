@@ -214,6 +214,8 @@ analysis_units: {}
 # unowned; refusal preserves the prior authority. When no v2 entry exists, a
 # committed analysis-unit-v1 state is imported side by side automatically;
 # removing a v2 entry therefore makes that v1 import current on reconciliation.
+# Each current catalog also reconciles independent service lifecycle rows;
+# a catalog/state crash gap is unavailable until the exact retry repairs it.
 service_catalogs: {}
 # service_catalogs:
 #   github.com/acme/monorepo:
