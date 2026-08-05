@@ -11,6 +11,7 @@ import (
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -107,6 +108,82 @@ func PublishWhole(
 	return syncDirectory(indexDir)
 }
 
+// PublishWholeGeneration publishes the T34.1 source/search authority beside
+// the unchanged whole-shard v1 receipt. The stable publication marker hides
+// both roots until the caller commits the matching repository row.
+func PublishWholeGeneration(
+	ctx context.Context,
+	indexDir, shardStageDir, sourceStageDir, repository string,
+	revisions []store.IndexedRevision,
+	source repositoryindex.SourceManifest,
+) error {
+	if err := repositoryindex.ValidateSourceGeneration(
+		ctx, sourceStageDir, source,
+	); err != nil {
+		return err
+	}
+	manifest, err := createWholeStageManifest(
+		ctx, shardStageDir, repository, revisions,
+	)
+	if err != nil {
+		return err
+	}
+	search, err := repositoryindex.WriteSearchManifest(
+		sourceStageDir, repository, revisions, source,
+		wholePhysicalRoot(manifest),
+	)
+	if err != nil {
+		return err
+	}
+	if err := startPublication(indexDir, repository); err != nil {
+		return err
+	}
+	if err := removeRepositoryArtifacts(ctx, indexDir, repository, true); err != nil {
+		return err
+	}
+	for _, member := range source.Members {
+		if err := moveRegular(
+			filepath.Join(sourceStageDir, member.Name),
+			filepath.Join(indexDir, member.Name),
+		); err != nil {
+			return err
+		}
+	}
+	if err := moveRegular(
+		filepath.Join(sourceStageDir, repositoryindex.SourceManifestName(repository)),
+		filepath.Join(indexDir, repositoryindex.SourceManifestName(repository)),
+	); err != nil {
+		return err
+	}
+	for _, member := range manifest.Members {
+		if err := moveRegular(
+			filepath.Join(shardStageDir, member.Name),
+			filepath.Join(indexDir, member.Name),
+		); err != nil {
+			return err
+		}
+	}
+	if err := syncDirectory(indexDir); err != nil {
+		return err
+	}
+	if err := moveRegular(
+		filepath.Join(shardStageDir, WholeManifestName(repository)),
+		filepath.Join(indexDir, WholeManifestName(repository)),
+	); err != nil {
+		return err
+	}
+	if err := moveRegular(
+		filepath.Join(sourceStageDir, repositoryindex.SearchManifestName(repository)),
+		filepath.Join(indexDir, repositoryindex.SearchManifestName(repository)),
+	); err != nil {
+		return err
+	}
+	if search.Digest == "" {
+		return errors.New("repository search generation has no digest")
+	}
+	return syncDirectory(indexDir)
+}
+
 func FinishPublication(indexDir, repository string) error {
 	path := filepath.Join(indexDir, PublishingName(repository))
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -154,6 +231,7 @@ func removeRepositoryArtifacts(
 		if entry.Type()&os.ModeSymlink != 0 {
 			if strings.HasPrefix(name, focusedBase) ||
 				name == wholeManifest ||
+				repositoryindex.IsArtifactName(repository, name) ||
 				(strings.HasPrefix(
 					name, WholeShardPrefix(repository)+"_v",
 				) && strings.HasSuffix(name, ".zoekt")) {
@@ -162,7 +240,7 @@ func removeRepositoryArtifacts(
 			continue
 		}
 		remove := strings.HasPrefix(name, focusedBase) ||
-			name == wholeManifest
+			name == wholeManifest || repositoryindex.IsArtifactName(repository, name)
 		if strings.HasPrefix(
 			name, WholeShardPrefix(repository)+"_v",
 		) && strings.HasSuffix(name, ".zoekt") {

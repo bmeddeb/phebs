@@ -6,7 +6,8 @@ a conditional implementation GO on 2026-08-04 without authorizing runtime
 registration or release. T33.1's canonical service-catalog contract, T33.2's
 catalog ingestion/v1 migration, T33.3 independent service state, T33.4
 authorized catalog reads, and T33.5's service directory/neutral demo are
-retained in the completed backlog, closing Epic 33. T34.1 is the next
+retained in the completed backlog, closing Epic 33. T34.1's immutable
+repository source/search generation is also complete. T34.2 is the next
 scheduled ticket, and the remaining Epics 34–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -24,19 +25,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 34 · Shared repository search with exact service scope *(T34.1 scheduled · needs Epic 33)*
+## Epic 34 · Shared repository search with exact service scope *(T34.2 scheduled · T34.1 complete)*
 
 Index repository content once under the topology selected by T32.5, while
 making All code and service-scoped search equally exact.
 
-**T34.1 · Repository source/search generation** *(scheduled)* — publish the selected
-single-node physical topology from one immutable revision set and one streamed
-census. AC: every path has one physical owner; shared logical membership does
-not duplicate indexed bytes; exact root/member manifests, metadata, size
-splitting, limits, atomic visibility, mmap/descriptor retirement, and
-same-module zoekt pin pass the neutral and target-derived gates.
-
-**T34.2 · Service query compiler** *(needs T34.1)* — compile one service's
+**T34.2 · Service query compiler** *(scheduled · needs T34.1)* — compile one service's
 complete authorized placement membership into repository/cohort selection plus
 exact zoekt path predicates before ranking. AC: no result-time filtering;
 single- and multi-repository placement behavior remains explicit; equality to

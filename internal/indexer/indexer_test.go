@@ -193,6 +193,9 @@ func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	if got := shardCount(t, dataDir); got != 0 {
 		t.Fatalf("shards after failed state commit = %d, want 0", got)
 	}
+	if got := len(repositoryGenerationStamps(t, dataDir)); got != 0 {
+		t.Fatalf("repository generation artifacts after failed state commit = %d, want 0", got)
+	}
 	repo, getErr := st.GetRepo(ctx, name)
 	if getErr != nil {
 		t.Fatal(getErr)
@@ -348,6 +351,16 @@ func TestIndexViaJob(t *testing.T) {
 	if repo.IndexedCommitHash != head || repo.IndexedAt == nil || repo.LatestJobStatus != "done" {
 		t.Errorf("repo state = %+v, want indexed at %s", repo, head)
 	}
+	searchGeneration, err := focusedindex.ValidateRepositorySearchGeneration(
+		ctx, filepath.Join(dataDir, "index"), name, repo.IndexedRevisions,
+	)
+	if err != nil {
+		t.Fatalf("validate repository search generation: %v", err)
+	}
+	if searchGeneration.SourceGenerationDigest == "" ||
+		searchGeneration.PhysicalRoot.ManifestDigest == "" {
+		t.Fatalf("incomplete repository search generation: %+v", searchGeneration)
+	}
 }
 
 // shardStamps maps shard file → mtime, to prove a no-op touched nothing.
@@ -364,6 +377,29 @@ func shardStamps(t *testing.T, dataDir string) map[string]time.Time {
 			t.Fatal(err)
 		}
 		stamps[s] = fi.ModTime()
+	}
+	return stamps
+}
+
+func repositoryGenerationStamps(
+	t *testing.T,
+	dataDir string,
+) map[string]time.Time {
+	t.Helper()
+	patterns := []string{"phebs-source-*", "phebs-search-*"}
+	stamps := map[string]time.Time{}
+	for _, pattern := range patterns {
+		paths, err := filepath.Glob(filepath.Join(dataDir, "index", pattern))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range paths {
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			stamps[path] = info.ModTime()
+		}
 	}
 	return stamps
 }
@@ -426,8 +462,12 @@ func TestShortCircuitAndForce(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := shardStamps(t, dataDir)
+	generationBefore := repositoryGenerationStamps(t, dataDir)
 	if len(before) == 0 {
 		t.Fatal("no shards after first index")
+	}
+	if len(generationBefore) < 3 {
+		t.Fatalf("repository generation artifacts = %d, want roots and member", len(generationBefore))
 	}
 
 	repo, _ = st.GetRepo(ctx, name) // re-read: row now carries indexed_commit_hash
@@ -442,6 +482,9 @@ func TestShortCircuitAndForce(t *testing.T) {
 		if !mt.Equal(before[s]) {
 			t.Errorf("no-op touched shard %s", s)
 		}
+	}
+	if after := repositoryGenerationStamps(t, dataDir); !reflect.DeepEqual(after, generationBefore) {
+		t.Fatalf("no-op touched repository generation: before=%v after=%v", generationBefore, after)
 	}
 
 	time.Sleep(1100 * time.Millisecond) // ensure a distinguishable shard mtime
