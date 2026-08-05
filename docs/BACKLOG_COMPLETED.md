@@ -7216,3 +7216,62 @@ service-reader tests pin typed generation/fence unavailability.
 No evidence pack, relationship/runtime-use, extraction accuracy/completeness,
 target SLO/scale, migration-completion, decommission-safety, or release claim
 is created. `GATE2-V2` remains `NOT_ESTABLISHED`; T35.1 is scheduled next.
+
+**T35.1 ✅ · Generation-scoped chunk scheduler** *(2026-08-05)* — added the
+durable bounded execution substrate required before shared observations or
+cross-service relationship work may multiply. One immutable
+`phebs-generation-schedule-v1` plan binds repository, stage, semantic
+generation, closed CPU/IO/memory resource class, total ordinal population,
+chunk size, attempts, and repository tokens. Its digest and one current
+repository/stage pointer are the coalescing fence: a newer generation switches
+that pointer without scanning services or old chunks, running old workers lose
+the final current-generation fence, and prior settled siblings remain
+immutable. A superseded A cannot be selected again after A→B→A.
+
+Fan-out materializes at most 64 chunks per CAS-fenced planner turn. Each chunk
+names only offset and length, covers at most 4,096 item ordinals, and has a
+domain-separated identity. No transaction receives or enumerates a service
+list. The admitted envelope is 80,000,000 items, 1,000,000 logical chunks,
+eight active stages and eight running tokens per repository, eight execution
+attempts, 64 stale reaps per pass, and a 512-schedule claim window derived from
+64 repository candidates times eight stages. These are integrity/refusal
+bounds, not measured supported scale.
+
+Claims order never-run, retry, and stale work as priorities 0, 1, and 2, then
+offset and attempt. One claim atomically consumes both a physical chunk lease
+and repository token. Retry terminalizes the failed physical row and creates a
+fresh immutable attempt successor. Cancellation or restart clears the old
+lease without consuming an attempt; stale reaping gives that pending row the
+deterministic stale priority. Heartbeat, completion, retry, release, reaping,
+and generation replacement fence physical row, worker, random lease, schedule,
+and current pointer. Attempt exhaustion settles only its logical chunk and
+does not rewrite successful siblings.
+
+The reusable process runner starts only declared class pools whose aggregate
+budgets fit at most 64 concurrent handlers, 8 GiB declared memory, and 4,096
+descriptors. One handler may declare at most 1 GiB and 256 descriptors and
+receives that immutable budget with one chunk. Every class has one bounded
+planner/reaper loop; each worker holds one handler and heartbeat goroutine.
+Report sinks are panic-contained. No workload is registered in production by
+this ticket, so ordinary startup, sync, search, evidence, HTTP, MCP, UI,
+retry, and no-op behavior is unchanged beyond idempotent schema definitions.
+
+Live SurrealDB tests pin 64+1 fan-out, exact counters, per-repository token
+exclusion, deterministic never-run-before-retry ordering, fresh retry identity,
+O(1) commit coalescing, A→B→A refusal, stale-worker lease loss and recovery,
+repository fairness, and sibling-preserving exhaustion. Race tests pin class
+and process admission, maximum active handlers, immutable memory/descriptor
+budgets, cancellation, success, and retry localization.
+
+Terminal-row and artifact retention, pins and leases as collection roots,
+age/count/byte defaults, disk watermarks, and bounded sweeping remain T35.2
+and T35.3. No relationship/evidence, target-scale/SLO, accuracy/completeness,
+migration-completion, decommission-safety, fleet, or release claim is created.
+`GATE2-V2` remains `NOT_ESTABLISHED`; T35.2 is scheduled next.
+
+Review closure passes `MaxGenerationActiveStagesPerRepository` into the
+enqueue transaction instead of duplicating its value in SurrealQL. T36.1's AC
+now explicitly requires a genuinely re-current A after A→B→A either to reuse
+already-settled content-addressed partitions without scheduling or to mint a
+distinguishable schedule identity; a superseded digest remains permanently
+refused by design.

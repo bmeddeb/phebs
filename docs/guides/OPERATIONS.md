@@ -2625,6 +2625,32 @@ emitted citations rather than corpus completeness. The walkthrough adds no
 evidence pack, relationship/runtime-use claim, extraction accuracy, supported
 scale, migration/decommission conclusion, or release authority.
 
+### Generation scheduler boundary
+
+T35.1 installs a reusable durable generation scheduler but registers no
+production workload. Operators therefore do not configure a new worker or see
+new product/API state yet. T36 and T37 may use the scheduler only by naming an
+immutable repository/stage/generation plan and a closed CPU, IO, or memory
+class; they may not enqueue one job per service.
+
+One planner tick materializes at most 64 offset/length chunks. One worker holds
+one chunk, one heartbeat, and its declared memory/descriptor budget. Repository
+tokens cap cross-stage work even with multiple processes. A new generation
+coalesces the current pointer without deleting history; an old worker is
+allowed to finish computation but cannot commit through the final fence.
+Retries create fresh attempt rows, cancellation consumes no attempt, and stale
+leases return with lower deterministic priority than never-run and retryable
+work. Attempt exhaustion affects only that chunk.
+
+The hard admission ceilings are 4,096 ordinals per chunk, 64 chunks per fan-out
+page, 80,000,000 items and 1,000,000 logical chunks per schedule, eight active
+stages and eight tokens per repository, and eight attempts. Process pools admit
+at most 64 handlers, 8 GiB declared memory, and 4,096 declared descriptors;
+each handler may declare at most 1 GiB and 256 descriptors. These are refusal
+bounds, not capacity guidance. T35.2–T35.3 still own terminal history and
+artifact retention, disk-pressure admission, and sweeping; do not manually
+delete scheduler rows to resolve pressure before those policies land.
+
 ### Thrift field-zero development walkthrough
 
 This retained specialized walkthrough is no longer part of `make dev` or

@@ -156,6 +156,72 @@ DEFINE FIELD IF NOT EXISTS updated_at ON service_state_repository TYPE datetime;
 DEFINE INDEX IF NOT EXISTS service_state_repository_name
     ON service_state_repository FIELDS repository UNIQUE;
 
+-- T35.1: immutable generation plans, bounded fan-out chunks, one current
+-- pointer per repository/stage, and one repository-wide concurrency token row.
+DEFINE TABLE IF NOT EXISTS generation_schedule SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS schema ON generation_schedule TYPE string ASSERT $value = 'phebs-generation-schedule-v1';
+DEFINE FIELD IF NOT EXISTS digest ON generation_schedule TYPE string;
+DEFINE FIELD IF NOT EXISTS repository ON generation_schedule TYPE string;
+DEFINE FIELD IF NOT EXISTS stage ON generation_schedule TYPE string;
+DEFINE FIELD IF NOT EXISTS generation ON generation_schedule TYPE string;
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory'];
+DEFINE FIELD IF NOT EXISTS total_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 80000000;
+DEFINE FIELD IF NOT EXISTS chunk_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 4096;
+DEFINE FIELD IF NOT EXISTS total_chunks ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 1000000;
+DEFINE FIELD IF NOT EXISTS max_attempts ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 8;
+DEFINE FIELD IF NOT EXISTS repository_tokens ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 8;
+DEFINE FIELD IF NOT EXISTS next_offset ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS materialized ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS pending ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS running ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS succeeded ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS failed ON generation_schedule TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS status ON generation_schedule TYPE string ASSERT $value INSIDE ['active', 'superseded', 'settled'];
+DEFINE FIELD IF NOT EXISTS created_at ON generation_schedule TYPE datetime;
+DEFINE FIELD IF NOT EXISTS updated_at ON generation_schedule TYPE datetime;
+DEFINE FIELD IF NOT EXISTS last_claimed_at ON generation_schedule TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS generation_schedule_digest ON generation_schedule FIELDS digest UNIQUE;
+DEFINE INDEX IF NOT EXISTS generation_schedule_ready ON generation_schedule FIELDS resource_class, status, last_claimed_at;
+DEFINE INDEX IF NOT EXISTS generation_schedule_repository_stage ON generation_schedule FIELDS repository, status, stage;
+
+DEFINE TABLE IF NOT EXISTS generation_schedule_current SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON generation_schedule_current TYPE string;
+DEFINE FIELD IF NOT EXISTS stage ON generation_schedule_current TYPE string;
+DEFINE FIELD IF NOT EXISTS schedule_digest ON generation_schedule_current TYPE string;
+DEFINE FIELD IF NOT EXISTS generation ON generation_schedule_current TYPE string;
+DEFINE FIELD IF NOT EXISTS updated_at ON generation_schedule_current TYPE datetime;
+DEFINE INDEX IF NOT EXISTS generation_schedule_current_scope ON generation_schedule_current FIELDS repository, stage UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS generation_schedule_repository SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON generation_schedule_repository TYPE string;
+DEFINE FIELD IF NOT EXISTS running ON generation_schedule_repository TYPE int ASSERT $value >= 0 AND $value <= 8;
+DEFINE FIELD IF NOT EXISTS last_claimed_at ON generation_schedule_repository TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS updated_at ON generation_schedule_repository TYPE datetime;
+DEFINE INDEX IF NOT EXISTS generation_schedule_repository_name ON generation_schedule_repository FIELDS repository UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS generation_schedule_chunk SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS identity ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS schedule_digest ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS repository ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS stage ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS generation ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory'];
+DEFINE FIELD IF NOT EXISTS offset ON generation_schedule_chunk TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS length ON generation_schedule_chunk TYPE int ASSERT $value > 0 AND $value <= 4096;
+DEFINE FIELD IF NOT EXISTS attempt ON generation_schedule_chunk TYPE int ASSERT $value >= 0 AND $value < 8;
+DEFINE FIELD IF NOT EXISTS priority ON generation_schedule_chunk TYPE int ASSERT $value INSIDE [0, 1, 2];
+DEFINE FIELD IF NOT EXISTS status ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['pending', 'running', 'done', 'failed', 'canceled'];
+DEFINE FIELD IF NOT EXISTS not_before ON generation_schedule_chunk TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS claimed_by ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS claimed_at ON generation_schedule_chunk TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS heartbeat_at ON generation_schedule_chunk TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS finished_at ON generation_schedule_chunk TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS error ON generation_schedule_chunk TYPE string;
+DEFINE FIELD IF NOT EXISTS lease_token ON generation_schedule_chunk TYPE string;
+DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_identity ON generation_schedule_chunk FIELDS identity UNIQUE;
+DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_ready ON generation_schedule_chunk FIELDS schedule_digest, status, priority, not_before, offset;
+DEFINE INDEX IF NOT EXISTS generation_schedule_chunk_stale ON generation_schedule_chunk FIELDS resource_class, status, heartbeat_at;
+
 -- repo <-> code-host identity permission edges (T10.3), mirrored from host
 -- ACLs; the search pre-pass compiles them into a per-user RepoSet.
 DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;
