@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -378,9 +379,22 @@ func reclaimCommittedPublicationMarkers(
 			)
 			committed = validateErr == nil
 		} else {
-			_, validateErr := focusedindex.ValidateCommittedWholePublication(
-				ctx, indexDir, repo.Name, wholeRevisions(repo),
+			searchPath := filepath.Join(
+				indexDir, repositoryindex.SearchManifestName(repo.Name),
 			)
+			_, searchErr := os.Lstat(searchPath)
+			var validateErr error
+			if searchErr == nil {
+				_, validateErr = focusedindex.ValidateCommittedRepositorySearchGeneration(
+					ctx, indexDir, repo.Name, wholeRevisions(repo),
+				)
+			} else if errors.Is(searchErr, os.ErrNotExist) {
+				_, validateErr = focusedindex.ValidateCommittedWholePublication(
+					ctx, indexDir, repo.Name, wholeRevisions(repo),
+				)
+			} else {
+				validateErr = searchErr
+			}
 			committed = validateErr == nil
 		}
 		if !committed {

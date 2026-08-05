@@ -16,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -72,14 +73,15 @@ type wholeSharedCandidate struct {
 }
 
 type wholeCacheEntry struct {
-	revisions   []store.IndexedRevision
-	fingerprint focusedFingerprint
-	searcher    zoekt.Streamer
-	failures    int
-	retryAt     time.Time
-	lastError   error
-	refs        int
-	retired     bool
+	revisions    []store.IndexedRevision
+	fingerprint  focusedFingerprint
+	searchDigest string
+	searcher     zoekt.Streamer
+	failures     int
+	retryAt      time.Time
+	lastError    error
+	refs         int
+	retired      bool
 }
 
 type wholeCacheLoad struct {
@@ -383,10 +385,9 @@ func (c *wholeCache) validateShared(
 	var err error
 	select {
 	case c.loadSlots <- struct{}{}:
-		manifest, validateErr :=
-			focusedindex.ValidateWholePublishedContext(
-				validation.ctx, c.indexDir, repository, revisions,
-			)
+		manifest, validateErr := validateWholeSearchPublication(
+			validation.ctx, c.indexDir, repository, revisions,
+		)
 		err = validateErr
 		if err == nil {
 			afterManifest, after, snapshotErr :=
@@ -684,7 +685,7 @@ func (c *wholeCache) load(
 	if focusedindex.IsPublishing(c.indexDir, repository) {
 		return nil, errors.New("whole-repository publication is in progress")
 	}
-	manifest, err := focusedindex.ValidateWholePublishedContext(
+	manifest, err := validateWholeSearchPublication(
 		ctx, c.indexDir, repository, revisions,
 	)
 	if err != nil {
@@ -760,10 +761,19 @@ func (c *wholeCache) load(
 		)
 	}
 	return &wholeCacheEntry{
-		revisions:   append([]store.IndexedRevision(nil), revisions...),
-		fingerprint: after,
-		searcher:    searcher,
+		revisions:    append([]store.IndexedRevision(nil), revisions...),
+		fingerprint:  after,
+		searchDigest: repositorySearchDigest(c.indexDir, repository),
+		searcher:     searcher,
 	}, nil
+}
+
+func repositorySearchDigest(indexDir, repository string) string {
+	manifest, err := repositoryindex.ReadSearchManifest(indexDir, repository)
+	if err != nil {
+		return ""
+	}
+	return manifest.Digest
 }
 
 func wholePublicationSnapshot(
@@ -780,10 +790,31 @@ func wholePublicationSnapshot(
 	if err != nil {
 		return focusedindex.WholeManifest{}, nil, err
 	}
-	names := make([]string, 0, len(manifest.Members)+1)
+	names := make([]string, 0, len(manifest.Members)+3)
 	names = append(names, focusedindex.WholeManifestName(repository))
 	for _, member := range manifest.Members {
 		names = append(names, member.Name)
+	}
+	searchPath := filepath.Join(
+		indexDir, repositoryindex.SearchManifestName(repository),
+	)
+	if _, statErr := os.Lstat(searchPath); statErr == nil {
+		_, source, openErr := focusedindex.ReadRepositorySearchGeneration(
+			indexDir, repository, revisions,
+		)
+		if openErr != nil {
+			return focusedindex.WholeManifest{}, nil, openErr
+		}
+		names = append(
+			names,
+			repositoryindex.SearchManifestName(repository),
+			repositoryindex.SourceManifestName(repository),
+		)
+		for _, member := range source.Members {
+			names = append(names, member.Name)
+		}
+	} else if !errors.Is(statErr, os.ErrNotExist) {
+		return focusedindex.WholeManifest{}, nil, statErr
 	}
 	fingerprint := make(focusedFingerprint, 0, len(names))
 	for _, name := range names {
@@ -808,6 +839,33 @@ func wholePublicationSnapshot(
 		})
 	}
 	return manifest, fingerprint, nil
+}
+
+// validateWholeSearchPublication is the dual-read/single-write transition
+// boundary. A repository with no v2 search root may still use its exact legacy
+// whole receipt. Once a v2 root exists, any malformed or incomplete v2 byte is
+// an error and never falls back to the legacy receipt beside it.
+func validateWholeSearchPublication(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (focusedindex.WholeManifest, error) {
+	searchPath := filepath.Join(
+		indexDir, repositoryindex.SearchManifestName(repository),
+	)
+	if _, err := os.Lstat(searchPath); err == nil {
+		if _, err := focusedindex.ValidateRepositorySearchGeneration(
+			ctx, indexDir, repository, revisions,
+		); err != nil {
+			return focusedindex.WholeManifest{}, err
+		}
+		return focusedindex.ReadWholeManifest(indexDir, repository, revisions)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return focusedindex.WholeManifest{}, err
+	}
+	return focusedindex.ValidateWholePublishedContext(
+		ctx, indexDir, repository, revisions,
+	)
 }
 
 func wholeRepoListMatches(
@@ -950,6 +1008,16 @@ func (l *wholeLease) invalidate() {
 		l.repo.entry = nil
 	}
 	l.repo.mu.Unlock()
+}
+
+func (l *wholeLease) matchesSearchDigest(digest string) bool {
+	if l == nil || digest == "" {
+		return false
+	}
+	l.repo.mu.Lock()
+	defer l.repo.mu.Unlock()
+	return !l.entry.retired && l.entry.searcher != nil &&
+		l.entry.searchDigest == digest
 }
 
 func retireWholeEntry(entry *wholeCacheEntry) {

@@ -120,6 +120,7 @@ DEFINE FIELD IF NOT EXISTS desired_catalog_generation ON service_state_current T
 DEFINE FIELD IF NOT EXISTS active_desired_generation ON service_state_current TYPE string;
 DEFINE FIELD IF NOT EXISTS active_source_generation ON service_state_current TYPE string;
 DEFINE FIELD IF NOT EXISTS active_catalog_generation ON service_state_current TYPE string;
+DEFINE FIELD IF NOT EXISTS active_search_generation ON service_state_current TYPE string;
 DEFINE FIELD IF NOT EXISTS status ON service_state_current TYPE string
     ASSERT $value INSIDE ['current', 'stale', 'unavailable', 'conflict', 'removed'];
 DEFINE FIELD IF NOT EXISTS removed ON service_state_current TYPE bool;

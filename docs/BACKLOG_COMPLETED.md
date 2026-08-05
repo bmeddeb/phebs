@@ -7105,3 +7105,64 @@ runtime scope opening, final response fences, v1/v2 migration, real active
 generation transitions, interrupted publication/restore/rollback behavior,
 and active-reader retirement. `GATE2-V2` remains `NOT_ESTABLISHED`; T34.3 is
 scheduled next.
+
+**T34.3 ✅ · Search publication migration and recovery** *(2026-08-05)* —
+completed the internal v1/v2 reader transition without registering a public
+service-search product. All code retains an explicit dual-read posture: a
+legacy whole publication remains readable only while no v2 search root exists.
+Service search is v2-only and strict-opens the current repository, catalog,
+summary, lifecycle row, historical active catalog when stale, exact T34.1
+source/search/whole controls, and an immutable whole-reader lease before
+compiling T34.2's path predicate. A present invalid or interrupted v2 root is
+a refusal, never fallback authority, so neither old whole nor focused results
+can be relabeled as service results.
+
+The internal search path authorization-checks before service state reads and
+repeats repository, catalog, summary, service, source/search control, and
+reader-generation fences after zoekt returns. Publication, restore, rollback,
+repository removal, catalog/state transition, or member replacement during a
+query therefore discards its response. A legacy cache entry discovered beside
+a newly published v2 root is retired and refilled before service use; active
+leases keep the old mmap/descriptors alive until release, then close them.
+
+One generation reconciler runs at startup and after each completed whole index.
+It verifies catalog HEAD and regular-file census equality, uses control-only
+checks for exact no-ops, fully validates every source member and whole shard
+before a transition, and atomically activates all accepted noncurrent services
+against one catalog/source/search snapshot. Proposal, conflict, and removed
+states remain independent. The batch path decodes/projects the admitted catalog
+once and updates at most 4,000 rows, closing the earlier per-service O(N²)
+activation risk. Each activated row records the exact search-generation digest;
+a same-source shard replacement therefore still requires activation, while the
+optional digest field preserves pre-T34.3 state-digest bytes until startup
+backfills them. Startup removes a prior-process publication marker only after
+full v2 validation whenever a v2 root exists; malformed v2 cannot fall through
+to the legacy marker rule.
+
+The existing derived-search archive now preserves complete focused and v2
+repository-search publications byte-for-byte. Backup fully validates a v2
+source/search/whole generation, streams each selected artifact once, and
+self-verifies the exact tar inventory. Restore performs structural preflight,
+extracts privately, fully revalidates every publication, and installs manifests
+last. An incomplete or corrupt v2 publication is omitted with explicit counts;
+precious catalog/state rows still restore exactly and the service remains
+visibly unavailable until the ordinary whole-index rebuild repairs derived
+bytes. Repository deletion retains canonical hashed-name ownership of source,
+search, whole, and shard artifacts even when their contents are corrupt.
+
+Focused tests use real Git census and zoekt generations to prove an exact
+in-scope result with an identical out-of-scope match, post-query store-fence
+refusal, invalid-v2/no-legacy-fallback behavior, validate-before-activation,
+lease-delayed retirement, and byte-equal archive/restore with corrupt-member
+omission. Store tests pin historical catalog strict-open and atomic generation
+activation while proposals remain unavailable.
+
+Warm service queries add bounded point/control reads, at most two admitted
+catalog decodes for a genuinely stale service, at most 128 path atoms, one
+static reader lease, and final fences; they do not reread source members or
+hash shards. Exact startup/index no-ops add no Git/blob/member/shard scan,
+child, write, or activation. A real activation and cold cache fill each perform
+one complete generation validation. No HTTP, MCP, UI, cursor, relationship,
+evidence, target SLO/scale, accuracy/completeness, migration-completion,
+decommission-safety, or release claim is created. `GATE2-V2` remains
+`NOT_ESTABLISHED`; T34.4 is scheduled next.

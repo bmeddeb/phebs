@@ -292,6 +292,30 @@ func (s *Surreal) GetServiceCatalog(
 	return opened.Publication, nil
 }
 
+// GetServiceCatalogGeneration strict-opens one immutable historical catalog
+// without treating it as the current pointer. Historical generations carry no
+// current control revision or publication time; callers must separately fence
+// the current catalog and service-state summary before using one as active
+// authority.
+func (s *Surreal) GetServiceCatalogGeneration(
+	ctx context.Context,
+	repository, generation string,
+) (*servicecatalog.Publication, error) {
+	if err := validateCandidateRepository(repository); err != nil {
+		return nil, fmt.Errorf("get service catalog generation: repository: %w", err)
+	}
+	if !validSHA256Digest(generation) {
+		return nil, fmt.Errorf("get service catalog generation: invalid generation digest")
+	}
+	opened, err := s.getVerifiedServiceCatalogGeneration(
+		ctx, repository, generation, 0, time.Time{}, false,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get service catalog generation: %w", err)
+	}
+	return opened.Publication, nil
+}
+
 func (s *Surreal) getVerifiedServiceCatalog(
 	ctx context.Context,
 	repository string,
@@ -318,9 +342,22 @@ func (s *Surreal) getVerifiedServiceCatalog(
 			ErrInvalidServiceCatalogPublication,
 		)
 	}
+	return s.getVerifiedServiceCatalogGeneration(
+		ctx, repository, current.GenerationDigest,
+		current.ControlRevision, current.PublishedAt.UTC(), true,
+	)
+}
+
+func (s *Surreal) getVerifiedServiceCatalogGeneration(
+	ctx context.Context,
+	repository, generationDigest string,
+	controlRevision uint64,
+	publishedAt time.Time,
+	persisted bool,
+) (*verifiedServiceCatalog, error) {
 	generationResults, err := surrealdb.Query[[]serviceCatalogGenerationRec](
 		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogGenerationID(current.GenerationDigest)},
+		map[string]any{"rid": serviceCatalogGenerationID(generationDigest)},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service catalog: generation: %w", err)
@@ -349,8 +386,8 @@ func (s *Surreal) getVerifiedServiceCatalog(
 		LegacyAnalysisUnitDigest: generation.LegacyAnalysisUnitDigest,
 		GenerationDigest:         generation.GenerationDigest,
 		Canonical:                []byte(generation.CatalogJSON),
-		ControlRevision:          current.ControlRevision,
-		PublishedAt:              current.PublishedAt.UTC(),
+		ControlRevision:          controlRevision,
+		PublishedAt:              publishedAt.UTC(),
 	}
 	if generation.OverrideID != "" || generation.OverrideVersion != "" {
 		publication.Override = &servicecatalog.OperatorOverride{
@@ -358,13 +395,13 @@ func (s *Surreal) getVerifiedServiceCatalog(
 		}
 	}
 	if publication.Repository != repository ||
-		publication.GenerationDigest != current.GenerationDigest {
+		publication.GenerationDigest != generationDigest {
 		return nil, fmt.Errorf(
 			"get service catalog: %w: pointer and generation disagree",
 			ErrInvalidServiceCatalogPublication,
 		)
 	}
-	verified, err := servicecatalog.VerifyPublication(publication, true)
+	verified, err := servicecatalog.VerifyPublication(publication, persisted)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"get service catalog: %w: %v",

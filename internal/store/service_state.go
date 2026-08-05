@@ -19,6 +19,8 @@ import (
 type ServiceStateStore interface {
 	ReconcileServiceStates(context.Context, servicecatalog.Publication) error
 	ActivateService(context.Context, servicecatalog.ServiceActivation) error
+	ServiceGenerationActivationNeeded(context.Context, string, string, string, string) (bool, error)
+	ActivateServiceGeneration(context.Context, string, string, string, string) (int, error)
 	GetServiceState(context.Context, string, string) (*servicecatalog.ServiceState, error)
 	GetServiceStateSummary(context.Context, string) (*servicecatalog.RepositoryState, error)
 	GetServiceStateRead(context.Context, string, string) (*ServiceStateRead, error)
@@ -34,6 +36,65 @@ type ServiceStateStore interface {
 		ServiceStatePosition,
 		int,
 	) (*ServiceStatePage, error)
+}
+
+// ServiceGenerationActivationNeeded proves at most one accepted non-current
+// row under the current catalog/summary snapshot. Proposal/conflict rows do not
+// force a repeated full filesystem validation on every startup or retry.
+func (s *Surreal) ServiceGenerationActivationNeeded(
+	ctx context.Context,
+	repository, catalogGeneration, sourceGeneration, searchGeneration string,
+) (bool, error) {
+	if !validSHA256Digest(searchGeneration) {
+		return false, fmt.Errorf("service generation activation check: invalid search generation")
+	}
+	publication, verified, _, err := s.serviceStateSnapshot(ctx, repository)
+	if err != nil {
+		return false, fmt.Errorf("service generation activation check: %w", err)
+	}
+	wantSource, err := servicecatalog.SourceGenerationDigest(*publication)
+	if err != nil || publication.GenerationDigest != catalogGeneration ||
+		wantSource != sourceGeneration {
+		return false, fmt.Errorf("service generation activation check: generation changed: %w", ErrConflict)
+	}
+	results, err := surrealdb.Query[[]serviceStateRec](
+		ctx, s.db,
+		`SELECT * FROM service_state_current
+			WHERE repository = $repository
+				AND removed = false
+				AND disposition = $accepted
+				AND (status != $current OR (active_search_generation ?? '') != $search)
+			LIMIT 1`,
+		map[string]any{
+			"repository": repository,
+			"accepted":   servicecatalog.DispositionAccepted,
+			"current":    servicecatalog.StatusCurrent,
+			"search":     searchGeneration,
+		},
+	)
+	if err != nil {
+		return false, fmt.Errorf("service generation activation check: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) > 1 {
+		return false, fmt.Errorf("service generation activation check exceeded point bound: %w", ErrConflict)
+	}
+	if len(rows) == 0 {
+		return false, nil
+	}
+	state, err := serviceStateFromRec(rows[0])
+	if err != nil {
+		return false, fmt.Errorf("service generation activation check: %w", err)
+	}
+	if _, err := verifyServiceStateProjection(*state, verified); err != nil {
+		return false, fmt.Errorf("service generation activation check: %w", err)
+	}
+	if state.Status != servicecatalog.StatusCurrent &&
+		state.Status != servicecatalog.StatusStale &&
+		state.Status != servicecatalog.StatusUnavailable {
+		return false, fmt.Errorf("service generation activation check: invalid accepted status: %w", servicecatalog.ErrInvalidServiceState)
+	}
+	return true, nil
 }
 
 var _ ServiceStateStore = (*Surreal)(nil)
@@ -99,6 +160,7 @@ type serviceStateRec struct {
 	ActiveDesiredGeneration  string           `json:"active_desired_generation"`
 	ActiveSourceGeneration   string           `json:"active_source_generation"`
 	ActiveCatalogGeneration  string           `json:"active_catalog_generation"`
+	ActiveSearchGeneration   string           `json:"active_search_generation"`
 	Status                   string           `json:"status"`
 	Removed                  bool             `json:"removed"`
 	StateDigest              string           `json:"state_digest"`
@@ -293,6 +355,7 @@ func (s *Surreal) ActivateService(
 	next.ActiveDesiredGeneration = state.DesiredGeneration
 	next.ActiveSourceGeneration = state.DesiredSourceGeneration
 	next.ActiveCatalogGeneration = state.DesiredCatalogGeneration
+	next.ActiveSearchGeneration = ""
 	next.Status = servicecatalog.StatusCurrent
 	next.ControlRevision++
 	next.ChangedAt = now
@@ -338,6 +401,115 @@ func (s *Surreal) ActivateService(
 		return nil
 	}
 	return err
+}
+
+// ActivateServiceGeneration atomically advances every accepted service whose
+// desired identity belongs to one already-validated repository search
+// generation. Catalog decoding, projection, and row loading are each bounded
+// once per repository transition rather than once per service.
+func (s *Surreal) ActivateServiceGeneration(
+	ctx context.Context,
+	repository, catalogGeneration, sourceGeneration, searchGeneration string,
+) (int, error) {
+	if !validSHA256Digest(catalogGeneration) ||
+		!validSHA256Digest(sourceGeneration) ||
+		!validSHA256Digest(searchGeneration) {
+		return 0, fmt.Errorf("activate service generation: invalid generation identity")
+	}
+	publication, verified, summary, err := s.serviceStateSnapshot(ctx, repository)
+	if err != nil {
+		return 0, fmt.Errorf("activate service generation: %w", err)
+	}
+	if publication.GenerationDigest != catalogGeneration {
+		return 0, fmt.Errorf("activate service generation: catalog changed: %w", ErrConflict)
+	}
+	wantSource, err := servicecatalog.SourceGenerationDigest(*publication)
+	if err != nil {
+		return 0, fmt.Errorf("activate service generation: source identity: %w", err)
+	}
+	if wantSource != sourceGeneration {
+		return 0, fmt.Errorf("activate service generation: source changed: %w", ErrConflict)
+	}
+	projections, err := verified.ProjectServices()
+	if err != nil {
+		return 0, fmt.Errorf("activate service generation: project catalog: %w", err)
+	}
+	existing, err := s.serviceStatesForTransition(ctx, repository, projections)
+	if err != nil {
+		return 0, fmt.Errorf("activate service generation: %w", err)
+	}
+	now := storeTimestamp(time.Now())
+	nextByKey := make(map[string]servicecatalog.ServiceState, len(projections))
+	updates := make([]serviceStateUpdate, 0, len(projections))
+	for _, projection := range projections {
+		state, found := existing[projection.Service.Key]
+		if !found {
+			return 0, fmt.Errorf(
+				"activate service generation: service state is absent: %w",
+				servicecatalog.ErrInvalidServiceState,
+			)
+		}
+		if _, err := verifyServiceStateProjection(state, verified); err != nil {
+			return 0, fmt.Errorf("activate service generation: %w", err)
+		}
+		if projection.Removed ||
+			projection.Service.Disposition != servicecatalog.DispositionAccepted {
+			nextByKey[state.ServiceKey] = state
+			continue
+		}
+		if state.Status == servicecatalog.StatusCurrent &&
+			state.ActiveDesiredGeneration == state.DesiredGeneration &&
+			state.ActiveSourceGeneration == state.DesiredSourceGeneration &&
+			state.ActiveCatalogGeneration == state.DesiredCatalogGeneration &&
+			state.ActiveSearchGeneration == searchGeneration {
+			nextByKey[state.ServiceKey] = state
+			continue
+		}
+		if state.Status != servicecatalog.StatusCurrent &&
+			state.Status != servicecatalog.StatusStale &&
+			state.Status != servicecatalog.StatusUnavailable {
+			return 0, fmt.Errorf(
+				"activate service generation: accepted service %q has status %q: %w",
+				state.ServiceKey, state.Status, servicecatalog.ErrInvalidServiceState,
+			)
+		}
+		next := state
+		next.Successors = slices.Clone(state.Successors)
+		next.ActiveDesiredGeneration = state.DesiredGeneration
+		next.ActiveSourceGeneration = state.DesiredSourceGeneration
+		next.ActiveCatalogGeneration = state.DesiredCatalogGeneration
+		next.ActiveSearchGeneration = searchGeneration
+		next.Status = servicecatalog.StatusCurrent
+		next.ControlRevision++
+		next.ChangedAt = now
+		if err := servicecatalog.SetServiceStateDigest(&next); err != nil {
+			return 0, fmt.Errorf("activate service generation: %w", err)
+		}
+		if err := servicecatalog.ValidateServiceState(next, true); err != nil {
+			return 0, fmt.Errorf("activate service generation: %w", err)
+		}
+		nextByKey[next.ServiceKey] = next
+		updates = append(updates, serviceStateUpdate{
+			State: next, ExpectedRevision: state.ControlRevision,
+			ExpectedDigest: state.StateDigest,
+		})
+	}
+	if len(updates) == 0 {
+		return 0, nil
+	}
+	nextSummary, err := buildServiceStateSummary(
+		*publication, projections, nextByKey, summary.TombstoneCount, summary, now,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("activate service generation: %w", err)
+	}
+	if err := s.commitServiceStateTransition(
+		ctx, *publication, summary.ControlRevision, summary.SummaryDigest,
+		nextSummary, updates,
+	); err != nil {
+		return 0, fmt.Errorf("activate service generation: %w", err)
+	}
+	return len(updates), nil
 }
 
 // GetServiceStateSummary strict-opens the point summary against the current
@@ -917,6 +1089,7 @@ func projectServiceState(
 			next.ActiveDesiredGeneration = prior.ActiveDesiredGeneration
 			next.ActiveSourceGeneration = prior.ActiveSourceGeneration
 			next.ActiveCatalogGeneration = prior.ActiveCatalogGeneration
+			next.ActiveSearchGeneration = prior.ActiveSearchGeneration
 		}
 	}
 	switch projection.Service.Disposition {
@@ -1056,6 +1229,7 @@ func serviceStateFromRec(row serviceStateRec) (*servicecatalog.ServiceState, err
 		ActiveDesiredGeneration:  row.ActiveDesiredGeneration,
 		ActiveSourceGeneration:   row.ActiveSourceGeneration,
 		ActiveCatalogGeneration:  row.ActiveCatalogGeneration,
+		ActiveSearchGeneration:   row.ActiveSearchGeneration,
 		Status:                   row.Status, Removed: row.Removed, StateDigest: row.StateDigest,
 		ControlRevision: row.ControlRevision, ChangedAt: row.ChangedAt.UTC(),
 	}
@@ -1093,6 +1267,7 @@ func serviceStateContent(state servicecatalog.ServiceState) map[string]any {
 		"active_desired_generation":  state.ActiveDesiredGeneration,
 		"active_source_generation":   state.ActiveSourceGeneration,
 		"active_catalog_generation":  state.ActiveCatalogGeneration,
+		"active_search_generation":   state.ActiveSearchGeneration,
 		"status":                     state.Status, "removed": state.Removed,
 		"state_digest":     state.StateDigest,
 		"control_revision": state.ControlRevision, "changed_at": state.ChangedAt,

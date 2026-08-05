@@ -75,6 +75,14 @@ func TestServiceCatalogPublicationLifecycle(t *testing.T) {
 		stored.ControlRevision != 2 {
 		t.Fatalf("second stored publication = %+v, %v", stored, err)
 	}
+	historical, err := s.GetServiceCatalogGeneration(
+		ctx, repository, first.GenerationDigest,
+	)
+	if err != nil || historical.GenerationDigest != first.GenerationDigest ||
+		historical.ControlRevision != 0 || !historical.PublishedAt.IsZero() ||
+		string(historical.Canonical) != string(first.Canonical) {
+		t.Fatalf("historical generation = %+v, %v", historical, err)
+	}
 }
 
 func TestServiceCatalogAnalysisUnitV1Fence(t *testing.T) {

@@ -291,6 +291,101 @@ func TestServiceStateConcurrentReconcileAndStaleActivationFailClosed(t *testing.
 	}
 }
 
+func TestServiceStateGenerationActivationIsAtomicAndIgnoresProposals(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "example.com/acme/service-generation-activation"
+	commit := "7777777777777777777777777777777777777777"
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://example.com/acme/service-generation-activation.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	publication := statePublication(t, repository, commit, "generation-v1", []servicecatalog.Service{
+		acceptedStateService("orders", "Orders"),
+		acceptedStateService("payments", "Payments"),
+		{
+			Key: "proposal", DisplayName: "Proposal",
+			Disposition: servicecatalog.DispositionProposal,
+			Origin:      servicecatalog.OriginBase, Reason: "not accepted",
+		},
+	})
+	publishStateCatalog(t, ctx, s, publication)
+	current, err := s.GetServiceCatalog(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceGeneration, err := servicecatalog.SourceGenerationDigest(*current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	needed, err := s.ServiceGenerationActivationNeeded(
+		ctx, repository, current.GenerationDigest, sourceGeneration,
+		"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	)
+	if err != nil || !needed {
+		t.Fatalf("activation needed = %t, %v", needed, err)
+	}
+	before := requireStateSummary(t, ctx, s, repository)
+	activated, err := s.ActivateServiceGeneration(
+		ctx, repository, current.GenerationDigest, sourceGeneration,
+		"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	)
+	if err != nil || activated != 2 {
+		t.Fatalf("generation activation = %d, %v", activated, err)
+	}
+	after := requireStateSummary(t, ctx, s, repository)
+	if after.ControlRevision != before.ControlRevision+1 ||
+		after.CurrentCount != 2 || after.UnavailableCount != 1 {
+		t.Fatalf("generation summary = %+v; before %+v", after, before)
+	}
+	for _, key := range []string{"orders", "payments"} {
+		if state := requireServiceState(t, ctx, s, repository, key); state.Status != servicecatalog.StatusCurrent {
+			t.Fatalf("activated state %q = %+v", key, state)
+		}
+	}
+	if proposal := requireServiceState(t, ctx, s, repository, "proposal"); proposal.Status != servicecatalog.StatusUnavailable ||
+		proposal.ActiveDesiredGeneration != "" {
+		t.Fatalf("proposal was activated = %+v", proposal)
+	}
+	needed, err = s.ServiceGenerationActivationNeeded(
+		ctx, repository, current.GenerationDigest, sourceGeneration,
+		"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	)
+	if err != nil || needed {
+		t.Fatalf("post-activation needed = %t, %v", needed, err)
+	}
+	const replacementSearch = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+	needed, err = s.ServiceGenerationActivationNeeded(
+		ctx, repository, current.GenerationDigest, sourceGeneration, replacementSearch,
+	)
+	if err != nil || !needed {
+		t.Fatalf("same-source replacement activation needed = %t, %v", needed, err)
+	}
+	activated, err = s.ActivateServiceGeneration(
+		ctx, repository, current.GenerationDigest, sourceGeneration, replacementSearch,
+	)
+	if err != nil || activated != 2 {
+		t.Fatalf("same-source replacement activation = %d, %v", activated, err)
+	}
+	for _, key := range []string{"orders", "payments"} {
+		state := requireServiceState(t, ctx, s, repository, key)
+		if state.ActiveSearchGeneration != replacementSearch {
+			t.Fatalf("replacement search identity for %q = %+v", key, state)
+		}
+	}
+	if _, err := s.ActivateServiceGeneration(
+		ctx, repository, current.GenerationDigest,
+		"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("mismatched source activation = %v, want ErrConflict", err)
+	}
+}
+
 func acceptedStateService(key, displayName string) servicecatalog.Service {
 	return servicecatalog.Service{
 		Key: key, DisplayName: displayName,

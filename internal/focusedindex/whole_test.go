@@ -1,6 +1,7 @@
 package focusedindex
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -10,8 +11,103 @@ import (
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
 
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestRepositorySearchGenerationArchiveIsExactAndFailClosed(t *testing.T) {
+	repositoryDir := t.TempDir()
+	git(t, repositoryDir, "init", "-b", "main")
+	if err := os.WriteFile(
+		filepath.Join(repositoryDir, "main.go"),
+		[]byte("package main\nconst ArchiveNeedle = true\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repositoryDir, "add", "main.go")
+	git(t, repositoryDir, "commit", "-m", "fixture")
+	const repository = "example.com/acme/archive-v2"
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD",
+		Commit: git(t, repositoryDir, "rev-parse", "HEAD"),
+	}}
+	indexDir := t.TempDir()
+	wholeStage := buildWholeStageFixture(t, repository, revisions, 1)
+	sourceStage := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(
+		t.Context(), repositoryDir, sourceStage, repository, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := PublishWholeGeneration(
+		t.Context(), indexDir, wholeStage, sourceStage,
+		repository, revisions, source,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+	search, err := ValidateRepositorySearchGeneration(
+		t.Context(), indexDir, repository, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, names, err := validatedPublications(indexDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archivePath := filepath.Join(t.TempDir(), "search-index.tar")
+	report, err := CreateArchiveWithReport(indexDir, archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report != (ArchiveReport{Publications: 1}) {
+		t.Fatalf("repository-search archive report = %+v", report)
+	}
+	restored := filepath.Join(t.TempDir(), "index")
+	if err := RestoreArchive(archivePath, restored); err != nil {
+		t.Fatal(err)
+	}
+	restoredSearch, err := ValidateRepositorySearchGeneration(
+		t.Context(), restored, repository, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restoredSearch.Digest != search.Digest {
+		t.Fatalf("restored search digest = %q, want %q", restoredSearch.Digest, search.Digest)
+	}
+	for _, name := range names {
+		before, err := os.ReadFile(filepath.Join(indexDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		after, err := os.ReadFile(filepath.Join(restored, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(before, after) {
+			t.Fatalf("restored repository-search artifact %q is not byte-exact", name)
+		}
+	}
+
+	member := source.Members[0].Name
+	if err := os.WriteFile(filepath.Join(indexDir, member), []byte("corrupt\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	omittedPath := filepath.Join(t.TempDir(), "omitted.tar")
+	omitted, err := CreateArchiveWithReport(indexDir, omittedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if omitted.Publications != 0 || omitted.OmittedPublications != 1 ||
+		omitted.OmittedArtifacts == 0 {
+		t.Fatalf("corrupt repository-search archive report = %+v", omitted)
+	}
+}
 
 func TestWholePublicationCanonicalMultiShardAndCleanupIsolation(
 	t *testing.T,
