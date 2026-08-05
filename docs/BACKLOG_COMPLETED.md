@@ -6680,9 +6680,76 @@ transitions perform no T33.1 work. There is no store/filesystem operation,
 corpus/shard or Git/blob read, child, lock, cache, retained artifact, migration,
 or writer. Explicit callers of the pure package pay work bounded by the
 admitted input and collection caps; malformed replacement input yields no
-partial normalized catalog. T33.2 is scheduled next and owns repository/source
+partial normalized catalog. T33.2 subsequently completed repository/source
 binding, immutable ingestion, exact census complement, restart/reconcile,
 failed-replacement preservation, backup/restore, and side-by-side
-`analysis-unit-v1` migration. No runtime registration, scale/SLO, accuracy,
+`analysis-unit-v1` migration. No product-surface registration, scale/SLO, accuracy,
 completeness, migration-completion, decommission-safety, or release claim is
 created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T33.2 ✅ · Catalog ingestion and v1 migration** *(2026-08-04)* — added one
+explicit repository-keyed `service_catalogs` selection for a normalized local
+JSON file. `committed` authority must declare the repository's exact indexed
+HEAD; `operator` authority repeats the configured ID and opaque version. Both
+paths are absolute, clean, bounded regular files and symlinks are refused.
+`Committed` is asserted provenance here: its operator-supplied bytes are not
+read from or compared with a repository blob. This ticket installs no
+build/deployment/directory adapter and makes no proposal accepted implicitly.
+
+Every replacement strict-decodes and canonicalizes the T33.1 contract, then
+streams one exact indexed-commit `git ls-tree -rz` census without buffering the
+repository tree. The census accepts only canonical regular files and hashes
+each mode, immutable blob OID, and path. Every membership and unowned placement
+must resolve. Every regular file must be covered by accepted membership or
+explicit unowned placement, never both; proposal, conflict, and rejected
+placements resolve but do not count as accepted coverage. Census count and
+digest, repository, source kind/path/commit, authority/override, catalog
+digest, and any legacy digest form one domain-separated immutable generation.
+
+SurrealDB retains canonical catalog JSON in immutable
+`service_catalog_generation` rows and one atomic `service_catalog_current`
+pointer per repository. One deterministic authority-version claim makes byte
+immutability a point check rather than a historical-generation scan. The publish transaction fences the current indexed
+HEAD and, for legacy import, the exact committed unit digest; rejects reused
+authority/override versions with changed canonical bytes; exact-reuses an
+existing generation; and advances a store-minted monotonic control revision
+only for a real pointer transition. Invalid JSON, missing or special selected
+paths, complement gaps, stale HEAD, version reuse, and store failure therefore
+leave the prior complete authority unchanged. Strict reads re-decode canonical
+bytes and recompute catalog and generation digests before returning authority.
+
+With no v2 selection, one already committed `analysis-unit-v1` state imports
+deterministically as a single accepted service. Its name remains the key and
+display name, its exact v1 digest remains the legacy namespace and authority
+version, primary/supporting paths retain their roles, the exact typed
+designation adds a nonexclusive typed role, and every other regular source
+file becomes an explicit exact unowned record. The existing repository/index
+v1 state remains side by side; no migration byte or historical catalog
+generation is reclaimed. An over-cap complement refuses while the v1 pipeline
+remains unchanged. When both authorities exist, removing the v2 selection
+publishes this deterministic v1 import as a real current-pointer transition;
+the immutable prior v2 generation remains retained but is no longer current.
+
+Startup reconciles repositories independently, logging per-repository refusal
+without stopping unrelated authorities. Index completion reruns that
+repository after the existing candidate handoff, closing the restart gap.
+An exact v2 restart rereads at most the admitted 5-MiB selected JSON and strict
+generation/current point rows but does not rescan Git; an exact v1 restart is
+metadata-only after those point reads. Ordinary requests, searches, MCP,
+sync ticks, extraction, and unselected whole-repository rows add no catalog
+work. A new generation starts one bounded Git child, streams records capped by
+the 4,096-byte path contract, retains placement maps bounded by 12,000 distinct
+paths plus the admitted 5-MiB canonical input/output, and performs one atomic
+store transition. Historical generation storage remains unbounded pending
+T35 retention.
+
+Database backup/restore retains the exact canonical bytes, generation digest,
+pointer revision, and publication time. Recovery tests prove that this precious
+authority survives while derived candidate, resolver, and caller pointers are
+still cleared and rebuilt. Focused unit/config, ingestion, immutable-version,
+stale-HEAD, failed-replacement, strict reopen, and real backup/restore tests
+cover the closure. T33.3 is scheduled next for independent service
+incarnation/desired/active/removal state; T33.4 owns authorized reads. No HTTP,
+MCP, search, relationship, or UI catalog surface is registered, and no scale,
+SLO, accuracy, completeness, migration-completion, decommission-safety, or
+release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.

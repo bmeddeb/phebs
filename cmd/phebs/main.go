@@ -54,6 +54,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/search"
+	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/ui"
@@ -445,6 +446,29 @@ func serve(args []string) error {
 	} else if queued > 0 {
 		log.Printf("analysis unit reconciliation: queued %d index rebuild(s)", queued)
 	}
+	catalogReconciler := &servicecatalogingest.Reconciler{
+		DataDir: cfg.Server.DataDir, Store: st, Selections: cfg.ServiceCatalogs,
+	}
+	serviceCatalogReport, err := catalogReconciler.Reconcile(ctx)
+	if err != nil {
+		return fmt.Errorf("reconcile service catalogs: %w", err)
+	}
+	if serviceCatalogReport.Current+serviceCatalogReport.Published+
+		serviceCatalogReport.LegacyImported+serviceCatalogReport.NotReady+
+		serviceCatalogReport.Unselected+len(serviceCatalogReport.Failures) > 0 {
+		diagnostics.Logf(
+			"service catalog reconciliation: current=%d published=%d legacy_imported=%d not_ready=%d unselected=%d failed=%d",
+			serviceCatalogReport.Current, serviceCatalogReport.Published,
+			serviceCatalogReport.LegacyImported, serviceCatalogReport.NotReady,
+			serviceCatalogReport.Unselected, len(serviceCatalogReport.Failures),
+		)
+	}
+	for _, failure := range serviceCatalogReport.Failures {
+		diagnostics.Logf(
+			"service catalog reconciliation failed: repository=%q error=%v",
+			failure.Repository, failure.Err,
+		)
+	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
@@ -469,6 +493,17 @@ func serve(args []string) error {
 	// index children. Each runner processes repositories serially, bounding
 	// Git/parser resource use at this integration seam.
 	var onIndexed func(context.Context, string, string) error
+	if len(cfg.ServiceCatalogs)+len(analysisUnits) > 0 {
+		onIndexed = func(ctx context.Context, repository, _ string) error {
+			if _, selected := cfg.ServiceCatalogs[repository]; !selected {
+				if _, legacy := analysisUnits[repository]; !legacy {
+					return nil
+				}
+			}
+			_, err := catalogReconciler.ReconcileRepository(ctx, repository)
+			return err
+		}
+	}
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
@@ -567,10 +602,16 @@ func serve(args []string) error {
 		if callerRunner != nil {
 			runBackground(func() { callerRunner.Run(ctx) })
 		}
+		catalogAfterIndex := onIndexed
 		onIndexed = func(ctx context.Context, name, commit string) error {
-			return enqueueCandidateAfterIndex(
+			candidateErr := enqueueCandidateAfterIndex(
 				ctx, st, name, commit, cfg.Diagnostics.Candidates,
 			)
+			var catalogErr error
+			if catalogAfterIndex != nil {
+				catalogErr = catalogAfterIndex(ctx, name, commit)
+			}
+			return errors.Join(candidateErr, catalogErr)
 		}
 	}
 	if lifetime := cfg.ProofBundles.RetentionFor(); lifetime > 0 {

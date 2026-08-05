@@ -168,7 +168,7 @@ func normalize(catalog Catalog) (Catalog, error) {
 	if catalog.Schema != Schema {
 		return Catalog{}, invalidf("schema must be %q", Schema)
 	}
-	if err := validateAuthority(catalog.Authority); err != nil {
+	if err := ValidateAuthority(catalog.Authority); err != nil {
 		return Catalog{}, err
 	}
 	if catalog.Override != nil {
@@ -362,7 +362,10 @@ func normalize(catalog Catalog) (Catalog, error) {
 	return normalized, nil
 }
 
-func validateAuthority(authority Authority) error {
+// ValidateAuthority validates the selected base identity without requiring a
+// complete catalog. T33.2 uses it to reject invalid explicit configuration
+// before reading an operator file or repository blob.
+func ValidateAuthority(authority Authority) error {
 	if authority.Kind != AuthorityCommitted && authority.Kind != AuthorityOperator {
 		return invalidf("authority kind must be %q or %q", AuthorityCommitted, AuthorityOperator)
 	}

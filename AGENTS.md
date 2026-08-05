@@ -131,9 +131,10 @@ selected direct shared whole-repository shards for the initial v2 path on
 2026-08-04; cohorts and P6 remain evidence-triggered escape hatches. T32.5
 recorded a conditional implementation GO with explicit authority, identity,
 migration, admission-limit, and deferral boundaries but no runtime or release
-authorization. T33.1's strict `phebs-service-catalog-v2` pure contract is
-complete without runtime registration; T33.2 catalog ingestion and v1
-migration is scheduled, the remaining Epics 33–39 stay dependency-ordered
+authorization. T33.1's strict `phebs-service-catalog-v2` contract and T33.2's
+exact catalog ingestion, source-census binding, immutable store authority,
+backup/restore, and v1 migration are complete without product-surface
+registration; T33.3 independent service state is scheduled, the remaining Epics 33–39 stay dependency-ordered
 drafts, and Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
