@@ -11,8 +11,8 @@ repository source/search generation, T34.2's exact service-query compiler,
 T34.3's publication migration/recovery, and T34.4's shared search product/demo
 are also complete, closing Epic 34. T35.1's generation-scoped scheduler and
 T35.2's pin-aware lifecycle decision and T35.3's bounded sweep/capacity
-control are complete. T35.4 is the next scheduled ticket, and the remaining
-Epics 35–39 tickets stay
+control and T35.4's lifecycle recovery demo are complete, closing Epic 35.
+T36.1 is the next scheduled ticket, and the remaining Epics 36–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -29,24 +29,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 35 · Bounded scheduling, retention, and recovery *(T35.4 scheduled · T35.1–T35.3 complete; blocks Epics 36–37)*
-
-Prevent thousands of services and generations from multiplying unbounded job
-history, partial artifacts, or retained publications.
-
-**T35.4 · Lifecycle recovery demo** *(scheduled · needs T35.3)* — exercise catalog churn,
-commit coalescing, interrupted stages, reader leases, pin/release, disk
-pressure, sweep, restart, backup, and restore across the neutral scale profile.
-AC: deterministic source-free receipts, no false-current state, retained proof
-readability, operations/UI status, and a bounded `make dev` scenario.
-
-## Epic 36 · Shared source-observation plane *(draft · needs Epics 34–35)*
+## Epic 36 · Shared source-observation plane *(T36.1 scheduled · needs completed Epics 34–35)*
 
 Read and parse supported source once per exact repository generation and pack
 policy, then reuse bounded target-independent observations across services and
 relationship families.
 
-**T36.1 · Batch immutable Git reader and partitions** — add bounded
+**T36.1 · Batch immutable Git reader and partitions** *(scheduled)* — add bounded
 `git cat-file --batch` sessions over manifest-selected immutable blobs and a
 versioned source-partition contract. AC: pure-reader rules, no lazy fetch or
 replacement refs, output/time/blob/aggregate/descriptor limits, cancellation,

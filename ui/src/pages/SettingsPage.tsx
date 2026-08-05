@@ -3,13 +3,14 @@ import { useStyletron } from 'baseui'
 import { Button, KIND as BUTTON_KIND, SIZE } from 'baseui/button'
 import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
-import { createAPIKey, fetchAPIKeys, revokeAPIKey } from '../api'
-import type { APIKeyCapability, APIKeySummary } from '../api'
+import { Spinner } from 'baseui/spinner'
+import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '../api'
+import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { usePhebsTokens, FONTS } from '../theme'
 import { isAbortError } from '../util'
 
-export default function SettingsPage() {
+export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [keys, setKeys] = useState<APIKeySummary[]>([])
@@ -21,6 +22,8 @@ export default function SettingsPage() {
   const [pendingRevoke, setPendingRevoke] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [lifecycleStatus, setLifecycleStatus] = useState<LifecycleStatus | null>(null)
+  const [lifecycleError, setLifecycleError] = useState('')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -31,6 +34,17 @@ export default function SettingsPage() {
       })
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    const controller = new AbortController()
+    fetchLifecycleStatus(controller.signal)
+      .then(setLifecycleStatus)
+      .catch((cause) => {
+        if (!isAbortError(cause)) setLifecycleError(String(cause))
+      })
+    return () => controller.abort()
+  }, [isAdmin])
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -72,6 +86,33 @@ export default function SettingsPage() {
 
   return (
     <div className={css({ maxWidth: '880px', margin: '0 auto' })}>
+      {isAdmin && (
+        <section aria-labelledby="lifecycle-heading" className={css({ marginBottom: '32px' })}>
+          <div className={css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' })}>
+            <div>
+              <h1 id="lifecycle-heading" className={css({ margin: 0, fontSize: '20px', lineHeight: '28px', fontWeight: 600, color: tok.textPrimary })}>
+                Lifecycle maintenance
+              </h1>
+              <div className={css({ marginTop: '4px', fontSize: '12px', lineHeight: '18px', color: tok.textTertiary })}>
+                Bounded owner turns and allocated-disk pressure. This view never lists source paths or retained content.
+              </div>
+            </div>
+            {lifecycleStatus && <LifecycleBadge status={lifecycleStatus} />}
+          </div>
+          {lifecycleError ? (
+            <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
+              Lifecycle status unavailable: {lifecycleError}
+            </Notification>
+          ) : !lifecycleStatus ? (
+            <div role="status" aria-label="Loading lifecycle status" className={css({ minHeight: '96px', display: 'grid', placeItems: 'center', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
+              <Spinner $size="small" />
+            </div>
+          ) : (
+            <LifecyclePanel status={lifecycleStatus} />
+          )}
+        </section>
+      )}
+
       <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' })}>
         <KeyIcon size={20} />
         <h1 className={css({ margin: 0, fontSize: '20px', lineHeight: '28px', fontWeight: 600, color: tok.textPrimary })}>
@@ -190,6 +231,72 @@ export default function SettingsPage() {
       </div>
     </div>
   )
+}
+
+function LifecycleBadge({ status }: { status: LifecycleStatus }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const pressure = status.capacity.pressure
+  const color = pressure === 'normal' ? tok.statusGreen
+    : pressure === 'collect' ? tok.statusAmber
+      : tok.statusRed
+  const label = !status.policy.enabled ? 'Collection disabled'
+    : pressure === 'normal' ? 'Normal'
+      : pressure === 'collect' ? 'Collecting'
+        : pressure === 'refuse' ? 'Admission refused'
+          : 'Capacity unavailable'
+  return (
+    <span role="status" className={css({ flexShrink: 0, border: `1px solid ${color}`, color, borderRadius: '999px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 })}>
+      {label}
+    </span>
+  )
+}
+
+function LifecyclePanel({ status }: { status: LifecycleStatus }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const completed = status.owners.filter((owner) => owner.state !== 'not_run').length
+  const failures = status.owners.filter((owner) => owner.state === 'error').length
+  const backlog = status.owners.filter((owner) => owner.backlog).length
+  const disk = status.capacity.completeness === 'exact' && status.capacity.used_percent !== undefined
+    ? `${status.capacity.used_percent}% allocated (${formatBytes(status.capacity.used_bytes ?? 0)} of ${formatBytes(status.capacity.total_bytes ?? 0)})`
+    : 'Capacity unavailable'
+  return (
+    <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
+      <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', '@media screen and (max-width: 640px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } })}>
+        <LifecycleMetric label="Disk" value={disk} />
+        <LifecycleMetric label="Owners observed" value={`${completed} / ${status.policy.owners}`} />
+        <LifecycleMetric label="Backlog owners" value={String(backlog)} />
+        <LifecycleMetric label="Failed owners" value={String(failures)} />
+      </div>
+      <div className={css({ borderTop: `1px solid ${tok.cardBorder}`, padding: '10px 12px', fontSize: '11px', lineHeight: '17px', color: tok.textTertiary })}>
+        Per turn: at most {status.policy.max_candidates_per_turn} candidates, {status.policy.max_deletes_per_turn} deletions, and {status.policy.max_queries_per_turn} store queries. Pressure accelerates at {status.policy.soft_watermark_percent}%, refuses new derived work at {status.policy.hard_watermark_percent}%, and resumes below {status.policy.resume_watermark_percent}%.
+      </div>
+    </div>
+  )
+}
+
+function LifecycleMetric({ label, value }: { label: string; value: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <div className={css({ minWidth: 0, padding: '12px', borderRight: `1px solid ${tok.cardBorder}`, ':last-child': { borderRight: 'none' } })}>
+      <div className={css({ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{label}</div>
+      <div className={css({ marginTop: '5px', fontSize: '12px', lineHeight: '17px', color: tok.textPrimary, overflowWrap: 'anywhere' })}>{value}</div>
+    </div>
+  )
+}
+
+function formatBytes(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0 B'
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+  let amount = value
+  let index = 0
+  while (amount >= 1024 && index < units.length - 1) {
+    amount /= 1024
+    index++
+  }
+  return `${amount >= 10 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`
 }
 
 function formatDate(value: string): string {

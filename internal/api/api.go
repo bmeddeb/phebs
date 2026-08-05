@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicequery"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -42,6 +43,9 @@ type Options struct {
 	// handler authorizes before invoking this function so a denial cannot
 	// consume inventory work.
 	RetentionStatusSource RetentionStatusSource
+	// LifecycleStatusSource supplies T35.4's fixed, source-free in-memory
+	// maintenance snapshot. The handler authorizes before invoking it.
+	LifecycleStatusSource func(context.Context) lifecycle.Status
 
 	// T10.1 audit log. AuditRecord is called for every mutating huma operation
 	// (serve resolves the actor from the request context); nil disables
@@ -419,6 +423,7 @@ func New(opts Options) http.Handler {
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
 	registerRetentionStatus(api, opts)
+	registerLifecycleStatus(api, opts)
 	registerEvidence(api, opts)
 	registerContractCatalogAPI(api, opts)
 	registerCallerMapAPI(api, opts)

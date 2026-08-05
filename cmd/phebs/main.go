@@ -309,18 +309,24 @@ func serve(args []string) error {
 	defer stopBackground()
 
 	capacityGate := lifecycle.NewGate(cfg.Server.DataDir)
+	acquireLifecycleMutation := func(lockCtx context.Context) (func(), error) {
+		return focusedindex.AcquireMutationLock(
+			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
+		)
+	}
+	lifecycleOwners := []lifecycle.Owner{
+		lifecycle.CatalogGenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
+		lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
+		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
+	}
+	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
+	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
+		cfg.Lifecycle.EnabledFor(), lifecycleOwners,
+	)
+	if lifecycleErr != nil {
+		return fmt.Errorf("configure lifecycle status: %w", lifecycleErr)
+	}
 	if cfg.Lifecycle.EnabledFor() {
-		acquireLifecycleMutation := func(lockCtx context.Context) (func(), error) {
-			return focusedindex.AcquireMutationLock(
-				lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
-			)
-		}
-		lifecycleOwners := []lifecycle.Owner{
-			lifecycle.CatalogGenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
-			lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
-			lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
-		}
-		lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
 		lifecycleController, lifecycleErr := lifecycle.NewController(
 			st, lifecycleOwners...,
 		)
@@ -332,6 +338,7 @@ func serve(args []string) error {
 				ctx, lifecycleController, capacityGate,
 				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
 				func(result lifecycle.OwnerResult) {
+					lifecycleStatus.ObserveOwner(result)
 					if result.Err != nil {
 						diagnostics.Logf(
 							"lifecycle owner=%q completeness=%s: %v",
@@ -345,6 +352,7 @@ func serve(args []string) error {
 						)
 					}
 				},
+				lifecycleStatus.ObserveCapacity,
 			)
 		})
 	}
@@ -750,7 +758,8 @@ func serve(args []string) error {
 			AnalysisUnits: analysisUnits,
 			OnIndexed:     onIndexed,
 			AdmitDerived: func(admitCtx context.Context) error {
-				_, admissionErr := capacityGate.Check(admitCtx, 0)
+				capacity, admissionErr := capacityGate.Check(admitCtx, 0)
+				lifecycleStatus.ObserveCapacity(capacity, admissionErr)
 				if errors.Is(admissionErr, lifecycle.ErrCapacityUnavailable) {
 					// T35 workloads fail closed when capacity is unavailable. The
 					// pre-existing index pipeline retains its historical behavior,
@@ -890,6 +899,9 @@ func serve(args []string) error {
 		RetentionStatusSource: api.NewCompleteRetentionStatusSource(
 			st, retentionStatus, nil,
 		),
+		LifecycleStatusSource: func(context.Context) lifecycle.Status {
+			return lifecycleStatus.Snapshot()
+		},
 		IsAdmin: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin

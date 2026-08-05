@@ -127,7 +127,7 @@ export default function App() {
       />
     )
   }
-  else if (path.startsWith('/settings')) page = <SettingsPage />
+  else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 
   const compactMain = path.startsWith('/file') || path.startsWith('/repos') || path.startsWith('/services')

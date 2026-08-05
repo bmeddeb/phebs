@@ -258,6 +258,42 @@ export interface APIKeySummary {
   expires_at?: string
 }
 
+export type LifecycleCompleteness = 'exact' | 'lower_bound' | 'unavailable'
+export type LifecyclePressure = 'normal' | 'collect' | 'refuse' | 'unavailable'
+
+export interface LifecycleOwnerStatus {
+  name: string
+  state: 'not_run' | 'ok' | 'error'
+  completeness: LifecycleCompleteness
+  scanned: number
+  deleted: number
+  backlog: boolean
+  attempted_at?: string
+}
+
+export interface LifecycleStatus {
+  schema: 'phebs-lifecycle-status-v1'
+  policy: {
+    enabled: boolean
+    owners: number
+    soft_watermark_percent: number
+    hard_watermark_percent: number
+    resume_watermark_percent: number
+    max_candidates_per_turn: number
+    max_deletes_per_turn: number
+    max_queries_per_turn: number
+  }
+  capacity: {
+    completeness: 'exact' | 'unavailable'
+    pressure: LifecyclePressure
+    total_bytes?: number
+    used_bytes?: number
+    used_percent?: number
+    observed_at?: string
+  }
+  owners: LifecycleOwnerStatus[]
+}
+
 export interface CreatedAPIKey {
   key: APIKeySummary
   token: string
@@ -2216,6 +2252,9 @@ export async function postChangeImpact(requestBody: CompatibilityRequest, signal
 
 export const fetchAPIKeys = (signal?: AbortSignal) =>
   getJSON<{ keys: APIKeySummary[] }>('/api/auth/keys', signal)
+
+export const fetchLifecycleStatus = (signal?: AbortSignal) =>
+  getJSON<LifecycleStatus>('/api/lifecycle-status', signal)
 
 export async function createAPIKey(
   name: string,

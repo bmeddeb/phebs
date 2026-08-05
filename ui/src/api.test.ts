@@ -11,6 +11,7 @@ import {
   fetchFieldImpact,
   fetchFolderContents,
   fetchHover,
+  fetchLifecycleStatus,
   fetchReferences,
   fetchRepoStatus,
   fetchServiceDetail,
@@ -179,6 +180,17 @@ describe('request helpers', () => {
     vi.stubGlobal('fetch', fetchMock)
     await fetchRepoStatus(signal)
     expect(fetchMock).toHaveBeenCalledWith('/api/repo-status', {
+      credentials: 'same-origin',
+      signal,
+    })
+  })
+
+  it('passes AbortSignal through lifecycle status requests', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchLifecycleStatus(signal)
+    expect(fetchMock).toHaveBeenCalledWith('/api/lifecycle-status', {
       credentials: 'same-origin',
       signal,
     })

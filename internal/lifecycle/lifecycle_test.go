@@ -1,7 +1,9 @@
 package lifecycle
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -98,6 +100,50 @@ func TestGateUnavailableAndRootHardening(t *testing.T) {
 	}
 	if _, err := ProbeCapacity(t.Context(), symlink); err == nil {
 		t.Fatal("ProbeCapacity accepted a symlink data root")
+	}
+}
+
+func TestStatusMonitorIsBoundedSourceFreeAndKeepsLastOwnerResult(t *testing.T) {
+	var calls []string
+	owners := []Owner{
+		recordingOwner{name: "alpha", calls: &calls},
+		recordingOwner{name: "bravo", calls: &calls},
+	}
+	monitor, err := NewStatusMonitor(true, owners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixed := time.Date(2026, 8, 5, 20, 0, 0, 0, time.UTC)
+	monitor.now = func() time.Time { return fixed }
+	monitor.ObserveOwner(OwnerResult{
+		Owner: "bravo", Completeness: LowerBound, Scanned: 64,
+		Deleted: 16, More: true,
+	})
+	monitor.ObserveOwner(OwnerResult{
+		Owner: "bravo", Completeness: Unavailable,
+		Err: errors.New("private path /do/not/expose"),
+	})
+	monitor.ObserveCapacity(Capacity{
+		TotalBytes: 1_000, UsedBytes: 810, UsedPercent: 81,
+		Pressure: PressureCollect,
+	}, nil)
+
+	status := monitor.Snapshot()
+	if err := ValidateStatus(status); err != nil {
+		t.Fatal(err)
+	}
+	if status.Owners[0].State != "not_run" || status.Owners[1].State != "error" ||
+		status.Owners[1].Scanned != 0 || status.Owners[1].Deleted != 0 ||
+		status.Owners[1].AttemptedAt == nil ||
+		status.Capacity.UsedPercent == nil || *status.Capacity.UsedPercent != 81 {
+		t.Fatalf("lifecycle status = %+v", status)
+	}
+	encoded, err := json.Marshal(status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(encoded, []byte("private")) || len(encoded) > 16<<10 {
+		t.Fatalf("status leaked an error or exceeded bound: %d bytes: %s", len(encoded), encoded)
 	}
 }
 

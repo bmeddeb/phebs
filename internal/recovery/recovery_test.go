@@ -412,6 +412,11 @@ connections:
 		retainedJobBeforeRestore.FinishedAt == nil {
 		t.Fatalf("pre-backup retained terminal job = %+v", retainedJobBeforeRestore)
 	}
+	if err := st.CompareAndSwapLifecycleCursor(
+		ctx, "rotation", 0, "generation-schedules",
+	); err != nil {
+		t.Fatalf("persist pre-backup lifecycle cursor: %v", err)
+	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -516,6 +521,10 @@ connections:
 	assertRecoveryJobEqual(
 		t, retainedJobBeforeRestore, retainedJobAfterRestore,
 	)
+	lifecycleCursor, lifecycleRevision, err := restored.GetLifecycleCursor(ctx, "rotation")
+	if err != nil || lifecycleCursor != "generation-schedules" || lifecycleRevision != 1 {
+		t.Fatalf("restored lifecycle cursor = %q/%d, %v", lifecycleCursor, lifecycleRevision, err)
+	}
 	if got.CallerPublicationRevision != int64(callerRevisionBeforeRestore)+1 {
 		t.Fatalf(
 			"restored caller publication revision = %d, want exactly %d",
