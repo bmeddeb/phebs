@@ -12,6 +12,7 @@ const (
 )
 
 type Reporter func(OwnerResult)
+type CapacityReporter func(Capacity, error)
 
 func Run(
 	ctx context.Context,
@@ -19,6 +20,7 @@ func Run(
 	gate *Gate,
 	idleInterval, backlogDelay time.Duration,
 	report Reporter,
+	reportCapacity CapacityReporter,
 ) {
 	if controller == nil || idleInterval <= 0 || backlogDelay <= 0 {
 		return
@@ -48,7 +50,10 @@ func Run(
 		}
 		pressureAccelerated := false
 		if gate != nil {
-			capacity, _ := gate.Check(ctx, 0)
+			capacity, capacityErr := gate.Check(ctx, 0)
+			if reportCapacity != nil {
+				reportCapacity(capacity, capacityErr)
+			}
 			pressureAccelerated = capacity.Pressure == PressureCollect ||
 				capacity.Pressure == PressureRefuse
 		}

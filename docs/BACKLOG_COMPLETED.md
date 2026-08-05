@@ -7390,5 +7390,42 @@ projection and hysteresis, symlink refusal, durable cross-restart fairness,
 failure localization, query budgets, and lock refusal. Live SurrealDB tests
 pin cursor CAS, catalog rollback roots, running schedule leases, bounded chunk
 collection, paged terminal-job census, and age deletion. Indexer tests pin
-admission after exact no-op and before any generation mutation. T35.4 is
-scheduled next; `GATE2-V2` remains `NOT_ESTABLISHED`.
+admission after exact no-op and before any generation mutation. T35.4
+subsequently completed the epic; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T35.4 ✅ · Lifecycle recovery demo** *(2026-08-05; needs T35.3)* — closes
+Epic 35 with a deterministic source-free receipt and an administrator-only
+operator surface. The retained `spike/t354/results.json`
+(`sha256:74af703392474a7993edd94f6ee71a7db9eddd5547cf3f4258228a1749f203c3`)
+is regenerated twice and byte-compared with the checked-in result. It binds
+the frozen T32.3 synthetic 1,000/5,000-service profiles to ten named
+production-path cases without retaining source, paths, queries, errors,
+credentials, hosts, or operator identities.
+
+Catalog churn preserves current, active-service, and current-plus-two roots
+while count excess is collected. Generation coalescing never resurrects a
+superseded schedule or disturbs settled siblings. Interrupted publication
+leaves the prior complete generation current. Reader/worker leases delay
+retirement, proof-bundle and Investigation release remove only exact owned
+pins, and 80/90/75 pressure hysteresis remains latched. The fair one-of-thirteen
+rotation survives restart, and the live backup/restore gate now requires the
+exact lifecycle rotation cursor and revision to restore with precious catalog,
+service, job, and proof authority.
+
+`GET /api/lifecycle-status` adds a fixed
+`phebs-lifecycle-status-v1` administrator read. Authorization runs before its
+source. The 16-KiB-bounded response copies one in-memory result per closed
+owner plus enabled state, fixed turn/watermark limits, and the latest allocated
+capacity class. It exposes no cursor, repository, generation, path, retained
+content, or raw error, and it performs no store query, filesystem probe,
+corpus/shard/member read, child, lock, or lifecycle turn. Settings renders the
+same snapshot with normal/collect/refuse/unavailable state and bounded counts;
+non-administrators do not request it.
+
+The existing `make dev` neutral cohorts now demonstrate the real default-on
+controller and Settings status without seeding old rows, synthetic response
+fixtures, or alternate deletion paths. The receipt proves mechanics and
+recovery only; its synthetic profile cardinalities establish no SLO,
+supported-scale, accuracy/completeness, migration/decommission, or release
+claim. `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 35 is complete and T36.1 is
+scheduled next.

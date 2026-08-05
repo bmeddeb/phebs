@@ -1,0 +1,156 @@
+{
+  "schema": "t354-lifecycle-recovery-receipt-v1",
+  "outcome": "completed",
+  "neutral_input": {
+    "schema": "t323-neutral-corpus-receipt-v1",
+    "receipt_sha256": "sha256:899492dcfe2f768de7e75003ff5d420655cbfeb8c44d9a76505bf6d6b8dededd",
+    "synthetic": true
+  },
+  "profiles": [
+    {
+      "name": "services-1000",
+      "services": 1000,
+      "memberships": 5000,
+      "file_records": 3151,
+      "max_path_fanout": 25
+    },
+    {
+      "name": "services-5000",
+      "services": 5000,
+      "memberships": 25000,
+      "file_records": 15751,
+      "max_path_fanout": 25
+    }
+  ],
+  "cases": [
+    {
+      "name": "catalog_churn",
+      "outcome": "passed",
+      "assertions": [
+        "current_and_service_roots_preserved",
+        "count_excess_collected"
+      ],
+      "gates": [
+        "TestCatalogLifecycleRetainsCurrentAndTwoRollbackGenerations",
+        "TestCatalogLifecycleProtectsActiveServiceCatalog"
+      ]
+    },
+    {
+      "name": "commit_coalescing",
+      "outcome": "passed",
+      "assertions": [
+        "superseded_generation_never_reactivated",
+        "settled_siblings_unchanged"
+      ],
+      "gates": [
+        "TestGenerationScheduleRetryCoalescingAndStaleFence"
+      ]
+    },
+    {
+      "name": "interrupted_stage",
+      "outcome": "passed",
+      "assertions": [
+        "prior_publication_remains_current",
+        "startup_reconciler_owns_stage"
+      ],
+      "gates": [
+        "TestIndexStateFailureRemovesUncommittedShard"
+      ]
+    },
+    {
+      "name": "reader_lease",
+      "outcome": "passed",
+      "assertions": [
+        "replacement_waits_for_final_lease",
+        "result_generation_not_relabeled"
+      ],
+      "gates": [
+        "TestServiceSearchRetiresReaderOnlyAfterActiveLeaseReleases"
+      ]
+    },
+    {
+      "name": "proof_pin_release",
+      "outcome": "passed",
+      "assertions": [
+        "bundle_readable_while_retained",
+        "release_removes_only_owned_pins"
+      ],
+      "gates": [
+        "TestProofBundleExpiryReleasesOnlyOwnedPins",
+        "TestInvestigationRetentionArtifactSweepReleasesOnlyItsOwnPins"
+      ]
+    },
+    {
+      "name": "pressure_hysteresis",
+      "outcome": "passed",
+      "assertions": [
+        "collect_at_80",
+        "refuse_at_90",
+        "resume_below_75"
+      ],
+      "gates": [
+        "TestGateWatermarksProjectionAndHysteresis"
+      ]
+    },
+    {
+      "name": "bounded_sweep",
+      "outcome": "passed",
+      "assertions": [
+        "one_of_13_owners_per_turn",
+        "64_candidates_16_deletes_16_queries"
+      ],
+      "gates": [
+        "TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure"
+      ]
+    },
+    {
+      "name": "restart",
+      "outcome": "passed",
+      "assertions": [
+        "rotation_cursor_persisted",
+        "failed_owner_cursor_preserved"
+      ],
+      "gates": [
+        "TestLifecycleCursorCompareAndSwap",
+        "TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure"
+      ]
+    },
+    {
+      "name": "backup_restore",
+      "outcome": "passed",
+      "assertions": [
+        "lifecycle_cursor_byte_equal",
+        "precious_authority_preserved"
+      ],
+      "gates": [
+        "TestLiveBackupRestoreAndStartupExactSearchRecovery"
+      ]
+    },
+    {
+      "name": "operator_status",
+      "outcome": "passed",
+      "assertions": [
+        "authorization_before_source",
+        "fixed_source_free_snapshot"
+      ],
+      "gates": [
+        "TestLifecycleStatusAuthorizesBeforeSourceAndReturnsBoundedSnapshot",
+        "TestStatusMonitorIsBoundedSourceFreeAndKeepsLastOwnerResult"
+      ]
+    }
+  ],
+  "operator_status": {
+    "schema": "phebs-lifecycle-status-v1",
+    "authorization": "administrator_first",
+    "maximum_bytes": 16384,
+    "raw_errors": false,
+    "source_identities": false
+  },
+  "claims": {
+    "source_free": true,
+    "no_false_current": true,
+    "no_slo": true,
+    "no_release_authority": true,
+    "no_scale_qualification": true
+  }
+}

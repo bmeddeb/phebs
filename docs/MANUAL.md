@@ -80,8 +80,11 @@ exact detail are available through HTTP and MCP. The capability-gated
 repository → Services directory renders that same source-free authority and
 lifecycle state, including conflicts, removed identities, roles, unowned and
 shared summaries, exact deep links, and explicit non-claims. It does not read
-source bytes or establish runtime relationships. Service-scoped search and
-release authority remain future work.
+source bytes or establish runtime relationships. The administrator Settings
+view also exposes the bounded lifecycle controller's enabled state, allocated
+disk-pressure class, fixed per-turn limits, and source-free owner census; it
+does not list cursors, repositories, generations, paths, content, or raw
+errors. Service-scoped search and release authority remain future work.
 
 ## Evidence boundary
 

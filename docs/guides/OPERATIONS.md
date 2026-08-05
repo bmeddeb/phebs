@@ -2738,8 +2738,27 @@ returns before the check. A real rebuild checks current allocated pressure
 before workspace or child creation; the 25-GiB generation ceiling is not a
 reservation that rejects smaller filesystems. Existing indexing keeps
 its prior behavior when the platform cannot report capacity, while future T35
-workloads must fail closed. T35.4 still owns the neutral churn/recovery and
-operator-status demo.
+workloads must fail closed.
+
+#### Lifecycle operator status and recovery demo
+
+Administrators can open Settings or request `GET /api/lifecycle-status` to see
+the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
+source. The response is capped at 16 KiB and reports only enabled state, fixed
+turn/watermark limits, the latest allocated-capacity class, and one latest
+source-free result for each of the thirteen owners. It contains no cursor,
+repository, generation, path, retained content, or raw error. A status request
+does not run a turn, probe the filesystem, acquire the mutation lock, or read
+the store; it copies the bounded in-memory monitor populated by normal
+maintenance and index admission.
+
+The retained source-free receipt at `spike/t354/results.json` binds T32.3's
+synthetic 1,000/5,000-service profiles to production-path gates for catalog
+churn, coalescing, interrupted stages, reader leases, proof-pin release,
+80/90/75 pressure hysteresis, sweep/restart, and live backup/restore. It is a
+mechanics receipt, not a supported-scale, SLO, completeness, or release claim.
+The ordinary `make dev` cohort runs the default-on controller and exposes the
+same Settings view without manufacturing old rows or bypassing root checks.
 
 ### Thrift field-zero development walkthrough
 
@@ -3238,7 +3257,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, lifecycle, caller-overlay, and store-derived Workbench paths; explicitly disable synthetic response fixtures; run with embedded UI |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, default-on bounded lifecycle, caller-overlay, and store-derived Workbench paths; expose administrator lifecycle pressure/owner status in Settings without seeding historical rows; explicitly disable synthetic response fixtures; run with embedded UI |
 | `make dev-api`       | backend-only loop over the same neutral focused-service/catalog cohort and real store-derived paths (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |

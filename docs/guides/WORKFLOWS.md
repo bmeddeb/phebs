@@ -1280,6 +1280,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/service?repository=&service_key=`                             | GET             | one exact authorized service with lifecycle identities, successors, and bounded membership paths |
 | `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
 | `/api/retention-status`                                             | GET             | administrator only: fixed twelve-owner/fifty-two-component retained-capacity status shell      |
+| `/api/lifecycle-status`                                             | GET             | administrator only: fixed 16-KiB source-free lifecycle owner/pressure snapshot; no cursor, path, identity, content, raw error, or mutation |
 | `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
 | `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |

@@ -90,7 +90,7 @@ service_catalogs:
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
 | `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible; omission or `"0"` keeps bundles and pins indefinitely |
-| `lifecycle.enabled`                         | `true`           | runs T35.3's bounded owner-separated catalog, generation-schedule, and terminal-job maintenance; `false` disables automated collection but keeps hard-watermark admission and every root/pin/lease/tombstone fence |
+| `lifecycle.enabled`                         | `true`           | runs T35.3's bounded owner-separated catalog, generation-schedule, and terminal-job maintenance and reports its source-free state through T35.4's administrator status; `false` disables automated collection but keeps hard-watermark admission and every root/pin/lease/tombstone fence |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
@@ -117,6 +117,10 @@ its exact `proof-bundle:<id>` pins. Bundle expiry deletes no extraction
 evidence; the independent evidence sweeper may later reclaim a newly unpinned
 superseded run only when that run is otherwise eligible. This key does not
 change the T35 catalog/schedule/job collectors.
+Administrators can inspect the fixed 16-KiB-bounded
+`GET /api/lifecycle-status` or Settings projection; it copies in-memory
+aggregate state only and exposes no cursor, repository, generation, path,
+retained content, or raw error.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,
