@@ -90,3 +90,10 @@ test('Service directory remains a repository sub-route', () => {
   expect(link.getAttribute('aria-current')).toBe('page')
   expect(screen.queryByRole('link', { name: 'Services' })).toBeNull()
 })
+
+test('Relationship explorer remains a repository sub-route', () => {
+  header(false, false, '/relationships')
+  const link = screen.getByRole('link', { name: 'Repos' })
+  expect(link.getAttribute('aria-current')).toBe('page')
+  expect(screen.queryByRole('link', { name: 'Relationships' })).toBeNull()
+})

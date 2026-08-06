@@ -12,6 +12,7 @@ import {
 } from '../api'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import { href } from '../router'
 
 const RELATIONSHIP_PAGE_SIZE = 25
 const views: ServiceRelationshipView[] = ['dependencies', 'callers', 'topics']
@@ -187,7 +188,12 @@ export default function ServiceOverview({
               Static source relationships at one digest-bound publication. Counts open the exact rows below; citations read only their immutable source spans.
             </p>
           </div>
-          <OverviewState state={snapshot.state} reason={snapshot.reason} />
+          <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' })}>
+            <OverviewState state={snapshot.state} reason={snapshot.reason} />
+            {relationshipsAvailable && (
+              <a href={href('/relationships', { repository: detail.repository.repository, service_key: detail.service.key })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Explore across repositories</a>
+            )}
+          </div>
         </div>
 
         <nav aria-label="Service relationship summaries" className={css({ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden', marginTop: '14px', '@media screen and (max-width: 620px)': { gridTemplateColumns: '1fr' } })}>
@@ -475,7 +481,8 @@ function validateRelationshipPage(
   page: ServiceRelationshipPage,
 ): string {
   const repository = detail.repository.repository
-  if (page.query.view !== view || page.query.service_key !== detail.service.key ||
+  if (page.schema !== 'phebs-service-relationship-page-v1' ||
+      page.query.view !== view || page.query.service_key !== detail.service.key ||
       page.query.repositories.length !== 1 || page.query.repositories[0] !== repository) {
     return 'relationship response query authority differs from the requested service'
   }

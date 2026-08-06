@@ -234,7 +234,7 @@ export interface ServiceDetail {
   memberships: ServiceMembership[]
 }
 
-export type ServiceRelationshipView = 'dependencies' | 'callers' | 'topics'
+export type ServiceRelationshipView = 'all' | 'dependencies' | 'callers' | 'topics'
 
 export interface ServiceRelationshipRoleClaim {
   role: string
@@ -2048,9 +2048,12 @@ export const fetchServiceDetail = (
 
 export const fetchServiceRelationships = (
   values: {
-    repository: string
+    repository?: string
     service_key: string
     view: ServiceRelationshipView
+    kind?: 'rpc' | 'kafka'
+    plane?: string
+    lookup_key?: string
     page_size?: number
     cursor?: string
   },
