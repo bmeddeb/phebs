@@ -18,6 +18,8 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── .surreal-runtime.json  # private, process-owned live-backup rendezvous
 ├── repos/<host>/<path>.git  # bare mirrors
 ├── candidates/            # derived candidate manifests and NDJSON members
+├── observation-plans/     # restartable derived Go partition planning state
+├── observations/          # immutable current/historical Go observations
 ├── resolver-catalogs/     # derived immutable resolver catalog publications
 ├── caller-leaves/         # derived caller pair artifacts and complete manifests
 └── index/                 # whole/focused zoekt shards; focused manifests and sidecars
@@ -52,6 +54,11 @@ visible. Backup preserves only an exact, marker-free complete-generation
 manifest and the precise immutable leaf artifacts it references; incomplete,
 ambiguous, invalid, marker-covered, or unreferenced caller state is omitted for
 reconstruction from candidate and resolver authority.
+Go source observations are likewise derived. Backup preserves every fully
+validated current immutable observation generation byte-exactly, but excludes
+restartable `observation-plans/`, incomplete stages, and historical generations.
+Restore strict-opens the staged root before installing it and grants no
+authority to an invalid or omitted generation.
 
 The selected historical-publication posture is unbounded in the live
 installation, but backup is not a live retention pin and does not promise the
@@ -97,7 +104,7 @@ interrupted transition; the exact retry repairs it without a Git census or
 historical-generation scan. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
 containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`,
-`caller-publication.tar`, and `manifest.json`. The
+`caller-publication.tar`, `observation-publication.tar`, and `manifest.json`. The
 focused archive contains only complete, revalidated focused manifests,
 sidecars, and shard members; it never includes whole-repository shards. A
 stale marker is omitted but cannot hide an otherwise complete valid
@@ -109,8 +116,8 @@ proves the exact canonical tar inventory in one bounded streaming pass; it
 does not extract the archive into a second temporary tree. Restore's
 pre-import verification and final installation still perform the complete
 structural extraction and semantic publication validation. The
-`phebs-backup-manifest-v5` manifest
-binds all four artifacts' sizes and SHA-256 digests, the exact raw config digest,
+`phebs-backup-manifest-v6` manifest
+binds all five artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
 exclusions, including `$DATA/candidates` and invalid or incomplete caller
@@ -120,6 +127,17 @@ omitted publications/artifacts, and stale markers; verification independently
 recovers and compares the archived publication count. It contains no host
 binary path or database password. Preserve the exact config separately; the
 backup contains its digest, not its bytes.
+
+`observation-publication.tar` contains only the strict current generation for
+each repository. Discovery and creation completely validate every canonical
+member and distinct observation; the completed tar is then restored into a
+private verification tree through the same validator before backup succeeds.
+Corrupt derived publications are counted and omitted rather than blocking the
+precious database export. The archive admits at most 10,000,000 regular entries
+and 1 TiB of declared bytes. Restore accepts only safe regular paths, caps those
+same dimensions, validates every restored publication, and installs the private
+tree by one rename. The `phebs-observation-archive-report-v1` manifest section
+records publication, file, logical-byte, and omission counts.
 
 `resolver-catalog.tar` contains every and only strict, marker-free immutable
 catalog publication. Catalog manifests and canonical NDJSON members retain
@@ -2726,8 +2744,12 @@ is `lower_bound`; each deletion still rechecks terminal status and finish time.
 Pending, claimed, and running jobs are never candidates.
 
 Source/search and resolver publications currently expose no separate
-historical namespace to this controller. Observation and relationship owners
-remain exact empty until those pipelines register publications. Proofs,
+historical namespace to this controller. The observation owner protects its
+current pointer, publishing marker, active cache leases, and one prior complete
+generation. It first renames one eligible excess generation out of authority,
+then removes at most sixteen regular files/directories per turn; every resumed
+turn rechecks those roots and the lease before continuing. The relationship
+owner remains exact empty until that pipeline registers publications. Proofs,
 Investigations, tombstones, readers, and crash-stage recovery retain their
 explicit existing lifecycle and are never swept by analogy. A malformed owner
 is `unavailable`, not permission to widen another collector.

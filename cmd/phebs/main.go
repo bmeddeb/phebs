@@ -48,9 +48,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -319,12 +321,25 @@ func serve(args []string) error {
 		lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
 		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
 	}
+	observationCache := &observationpublication.Cache{}
+	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationGenerationOwner{
+		Root: filepath.Join(cfg.Server.DataDir, "observations"),
+		Pins: observationCache, Acquire: acquireLifecycleMutation,
+	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
 	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
 		cfg.Lifecycle.EnabledFor(), lifecycleOwners,
 	)
 	if lifecycleErr != nil {
 		return fmt.Errorf("configure lifecycle status: %w", lifecycleErr)
+	}
+	observationRuntime := &observationpublication.Runtime{
+		DataDir: cfg.Server.DataDir, Store: st,
+		Admit: func(admitCtx context.Context) error {
+			capacity, admissionErr := capacityGate.Check(admitCtx, 0)
+			lifecycleStatus.ObserveCapacity(capacity, admissionErr)
+			return admissionErr
+		},
 	}
 	if cfg.Lifecycle.EnabledFor() {
 		lifecycleController, lifecycleErr := lifecycle.NewController(
@@ -616,6 +631,62 @@ func serve(args []string) error {
 			return err
 		}
 	}
+	catalogAfterIndex := onIndexed
+	onIndexed = func(ctx context.Context, repository, commit string) error {
+		var catalogErr error
+		if catalogAfterIndex != nil {
+			catalogErr = catalogAfterIndex(ctx, repository, commit)
+		}
+		if _, focused := analysisUnits[repository]; focused {
+			return catalogErr
+		}
+		observationErr := observationRuntime.Reconcile(ctx, repository)
+		return errors.Join(catalogErr, observationErr)
+	}
+	if repositories, listErr := st.ListRepos(ctx); listErr != nil {
+		return fmt.Errorf("list repositories for observation recovery: %w", listErr)
+	} else {
+		for _, repository := range repositories {
+			if repository.Deleting || repository.IndexedCommitHash == "" || repository.IndexedAnalysisUnit != nil {
+				continue
+			}
+			release, lockErr := acquireLifecycleMutation(ctx)
+			if lockErr != nil {
+				return fmt.Errorf("lock observation recovery: %w", lockErr)
+			}
+			reconcileErr := observationRuntime.Reconcile(ctx, repository.Name)
+			release()
+			if reconcileErr != nil {
+				diagnostics.Logf(
+					"observation publication recovery unavailable: repository=%q error=%v",
+					repository.Name, reconcileErr,
+				)
+			}
+		}
+	}
+	observationScheduler := &generationscheduler.Scheduler{
+		Store: st,
+		Classes: map[store.GenerationResourceClass]generationscheduler.Class{
+			store.GenerationResourceCPU: {
+				Concurrency: 2,
+				Budget: generationscheduler.Budget{
+					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
+				},
+				Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
+					return observationRuntime.Handle(workerCtx, chunk)
+				},
+			},
+		},
+		PollEvery: time.Second, WorkerPrefix: "observation-worker",
+		Report: func(err error) {
+			diagnostics.Logf("observation scheduler unavailable: %v", err)
+		},
+	}
+	runBackground(func() {
+		if err := observationScheduler.Run(ctx); err != nil && ctx.Err() == nil {
+			diagnostics.Logf("observation scheduler stopped: %v", err)
+		}
+	})
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service

@@ -22,20 +22,23 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const (
-	ManifestSchema                       = "phebs-backup-manifest-v5"
+	ManifestSchema                       = "phebs-backup-manifest-v6"
 	FocusedIndexArchiveReportSchema      = "phebs-focused-archive-report-v1"
 	ResolverCatalogArchiveReportSchema   = "phebs-resolver-catalog-archive-report-v1"
 	CallerPublicationArchiveReportSchema = "phebs-caller-publication-archive-report-v1"
+	ObservationArchiveReportSchema       = "phebs-observation-archive-report-v1"
 	ManifestName                         = "manifest.json"
 	DatabaseName                         = "database.surql"
 	FocusedIndexName                     = "focused-index.tar"
 	ResolverCatalogName                  = "resolver-catalog.tar"
 	CallerPublicationName                = "caller-publication.tar"
+	ObservationPublicationName           = "observation-publication.tar"
 
 	maxManifestBytes = 1 << 20
 	maxCommandOutput = 64 << 10
@@ -46,6 +49,7 @@ var derivedExclusions = []string{
 	"index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
 	"repos/ (bare repository mirrors)",
 	"candidates/ (content-addressed candidate manifests and partition rows)",
+	"observation-plans/ (restartable source-partition planning state)",
 	"caller-leaves/ invalid, incomplete, marker-covered, and unreferenced derived caller publications",
 	"temporary extraction and build caches",
 }
@@ -104,6 +108,14 @@ type CallerPublicationArchiveReport struct {
 	TruncatedDetails    int                          `json:"truncated_details"`
 }
 
+type ObservationArchiveReport struct {
+	Schema       string `json:"schema"`
+	Publications int    `json:"publications"`
+	Files        int    `json:"files"`
+	Bytes        int64  `json:"bytes"`
+	Omitted      int    `json:"omitted"`
+}
+
 // Manifest binds one database export to the exact recovery-compatible inputs.
 // ManifestSHA256 digests the canonical JSON with that field empty, avoiding a
 // recursive file hash while still detecting every meaningful manifest change.
@@ -120,6 +132,7 @@ type Manifest struct {
 	FocusedIndex      FocusedIndexArchiveReport      `json:"focused_index_archive"`
 	ResolverCatalog   ResolverCatalogArchiveReport   `json:"resolver_catalog_archive"`
 	CallerPublication CallerPublicationArchiveReport `json:"caller_publication_archive"`
+	Observation       ObservationArchiveReport       `json:"observation_archive"`
 	DerivedExclusions []string                       `json:"derived_exclusions"`
 	ManifestSHA256    string                         `json:"manifest_sha256"`
 }
@@ -327,6 +340,32 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	observationPath := filepath.Join(stage, ObservationPublicationName)
+	observationReport, err := observationpublication.CreateArchive(
+		ctx, filepath.Join(dataDir, "observations"), observationPath,
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("archive observation publications: %w", err)
+	}
+	if observationReport.Omitted > 0 {
+		log.Printf(
+			"backup observation derived state: archived=%d omitted=%d",
+			observationReport.Publications, observationReport.Omitted,
+		)
+	}
+	if err := os.Chmod(observationPath, 0o600); err != nil {
+		return Manifest{}, fmt.Errorf("protect observation-publication artifact: %w", err)
+	}
+	if err := syncFile(observationPath); err != nil {
+		return Manifest{}, err
+	}
+	observationArtifact, err := inspectArtifact(
+		ctx, observationPath, ObservationPublicationName,
+		"derived-byte-exact", "application/x-tar",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
 	now := time.Now
 	if opts.Now != nil {
 		now = opts.Now
@@ -345,6 +384,7 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		ExportCommand: slices.Clone(exportCommand),
 		Inventory: []Artifact{
 			artifact, focusedArtifact, resolverArtifact, callerArtifact,
+			observationArtifact,
 		},
 		FocusedIndex: FocusedIndexArchiveReport{
 			Schema:              FocusedIndexArchiveReportSchema,
@@ -370,6 +410,12 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 			StaleMarkers:        callerReport.StaleMarkers,
 			Details:             slices.Clone(callerReport.Details),
 			TruncatedDetails:    callerReport.TruncatedDetails,
+		},
+		Observation: ObservationArchiveReport{
+			Schema:       ObservationArchiveReportSchema,
+			Publications: observationReport.Publications,
+			Files:        observationReport.Files, Bytes: observationReport.Bytes,
+			Omitted: observationReport.Omitted,
 		},
 		DerivedExclusions: slices.Clone(derivedExclusions),
 	}
@@ -470,6 +516,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore caller publications: %w", err)
 	}
+	if err := observationpublication.RestoreArchive(
+		ctx, filepath.Join(backup, ObservationPublicationName),
+		filepath.Join(target, "observations"),
+	); err != nil {
+		return Manifest{}, fmt.Errorf("restore observation publications: %w", err)
+	}
 
 	// Opening once applies the supported idempotent schema/migration set and
 	// proves the imported database reaches the same application boundary.
@@ -563,7 +615,7 @@ func VerifyContext(
 	slices.Sort(names)
 	if !slices.Equal(names, []string{
 		CallerPublicationName, DatabaseName, FocusedIndexName, ManifestName,
-		ResolverCatalogName,
+		ObservationPublicationName, ResolverCatalogName,
 	}) {
 		return Manifest{}, fmt.Errorf("backup inventory is incomplete or contains undeclared files: %v", names)
 	}
@@ -645,6 +697,16 @@ func VerifyContext(
 	if caller != manifest.Inventory[3] {
 		return Manifest{}, errors.New("backup caller-publication artifact differs from its manifest")
 	}
+	observation, err := inspectArtifact(
+		ctx, filepath.Join(backup, ObservationPublicationName),
+		ObservationPublicationName, "derived-byte-exact", "application/x-tar",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if observation != manifest.Inventory[4] {
+		return Manifest{}, errors.New("backup observation-publication artifact differs from its manifest")
+	}
 	focusedReport, err := focusedindex.VerifyArchiveWithReport(
 		filepath.Join(backup, FocusedIndexName),
 	)
@@ -685,6 +747,17 @@ func VerifyContext(
 			"backup caller-publication count differs from its manifest",
 		)
 	}
+	observationArchiveReport, err := observationpublication.VerifyArchive(
+		ctx, filepath.Join(backup, ObservationPublicationName),
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("verify observation-publication artifact: %w", err)
+	}
+	if observationArchiveReport.Publications != manifest.Observation.Publications {
+		return Manifest{}, errors.New(
+			"backup observation-publication count differs from its manifest",
+		)
+	}
 	return manifest, nil
 }
 
@@ -695,7 +768,7 @@ func validateManifest(manifest Manifest) error {
 		manifest.Surreal.Version == "" || manifest.Surreal.SHA256 == "" || manifest.ManifestSHA256 == "" {
 		return errors.New("backup manifest identity is incomplete")
 	}
-	if len(manifest.Inventory) != 4 || manifest.Inventory[0].Path != DatabaseName ||
+	if len(manifest.Inventory) != 5 || manifest.Inventory[0].Path != DatabaseName ||
 		manifest.Inventory[0].Classification != "precious" ||
 		manifest.Inventory[0].MediaType != "application/surrealql" || manifest.Inventory[0].Size <= 0 {
 		return errors.New("backup manifest inventory is invalid")
@@ -717,6 +790,12 @@ func validateManifest(manifest Manifest) error {
 		manifest.Inventory[3].MediaType != "application/x-tar" ||
 		manifest.Inventory[3].Size <= 0 {
 		return errors.New("backup caller-publication inventory is invalid")
+	}
+	if manifest.Inventory[4].Path != ObservationPublicationName ||
+		manifest.Inventory[4].Classification != "derived-byte-exact" ||
+		manifest.Inventory[4].MediaType != "application/x-tar" ||
+		manifest.Inventory[4].Size <= 0 {
+		return errors.New("backup observation-publication inventory is invalid")
 	}
 	if manifest.FocusedIndex.Schema != FocusedIndexArchiveReportSchema ||
 		manifest.FocusedIndex.Publications < 0 ||
@@ -762,6 +841,11 @@ func validateManifest(manifest Manifest) error {
 			return errors.New("backup caller-publication omission detail is invalid")
 		}
 	}
+	if manifest.Observation.Schema != ObservationArchiveReportSchema ||
+		manifest.Observation.Publications < 0 || manifest.Observation.Files < 0 ||
+		manifest.Observation.Bytes < 0 || manifest.Observation.Omitted < 0 {
+		return errors.New("backup observation archive report is invalid")
+	}
 	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
 		return errors.New("backup manifest derived-state classification is invalid")
 	}
@@ -772,6 +856,7 @@ func validateManifest(manifest Manifest) error {
 		manifest.ConfigSHA256, manifest.Phebs.SHA256, manifest.Surreal.SHA256,
 		manifest.Inventory[0].SHA256, manifest.Inventory[1].SHA256,
 		manifest.Inventory[2].SHA256, manifest.Inventory[3].SHA256,
+		manifest.Inventory[4].SHA256,
 		manifest.ManifestSHA256,
 	} {
 		if !validSHA256(digest) {
