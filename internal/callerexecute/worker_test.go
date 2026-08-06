@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,8 +19,10 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
+	reposync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 type workerTestPlan struct {
@@ -422,6 +425,20 @@ type workerHarness struct {
 	job      store.Job
 }
 
+type admissionNotifyingStore struct {
+	*workerTestStore
+	once    sync.Once
+	reached chan struct{}
+}
+
+func (state *admissionNotifyingStore) GetCallerGenerationAdmission(
+	ctx context.Context,
+	generation store.CallerGenerationIdentity,
+) (*store.CallerGenerationAdmission, error) {
+	state.once.Do(func() { close(state.reached) })
+	return state.workerTestStore.GetCallerGenerationAdmission(ctx, generation)
+}
+
 func newWorkerHarness(t *testing.T, leafCount int) workerHarness {
 	t.Helper()
 	const repository = "github.com/acme/caller-worker"
@@ -557,6 +574,92 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	}
 	if harness.provider.opens != opens {
 		t.Fatalf("control-only reuse reopened candidate content: %d -> %d", opens, harness.provider.opens)
+	}
+}
+
+func TestWorkerMirrorWaitCannotConsumeAttemptBudget(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.worker.timeout = 20 * time.Millisecond
+	repoDir, err := reposync.SafeRepoDir(
+		harness.worker.dataDir, harness.state.repo.Name,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	releaseExtraction := repowork.Lock(repoDir)
+	defer releaseExtraction()
+
+	reached := make(chan struct{})
+	harness.worker.store = &admissionNotifyingStore{
+		workerTestStore: harness.state,
+		reached:         reached,
+	}
+	result := make(chan error, 1)
+	go func() {
+		result <- harness.worker.Handle(t.Context(), harness.job)
+	}()
+	<-reached
+
+	select {
+	case err := <-result:
+		t.Fatalf("caller returned while extraction held mirror lock: %v", err)
+	case <-time.After(4 * harness.worker.timeout):
+	}
+	releaseExtraction()
+
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatalf("caller after mirror release: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("caller did not begin its fresh work budget after mirror release")
+	}
+	if got, want := harness.state.events, []string{
+		"enqueue:false", "record:succeeded",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("post-contention mutations = %v, want %v", got, want)
+	}
+}
+
+func TestWorkerMirrorWaitCancellationMutatesNoCallerState(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.worker.timeout = 20 * time.Millisecond
+	repoDir, err := reposync.SafeRepoDir(
+		harness.worker.dataDir, harness.state.repo.Name,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	releaseExtraction := repowork.Lock(repoDir)
+	defer releaseExtraction()
+
+	reached := make(chan struct{})
+	harness.worker.store = &admissionNotifyingStore{
+		workerTestStore: harness.state,
+		reached:         reached,
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	result := make(chan error, 1)
+	go func() {
+		result <- harness.worker.Handle(ctx, harness.job)
+	}()
+	<-reached
+	cancel()
+
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled mirror wait error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("canceled mirror wait did not return")
+	}
+	if harness.provider.opens != 0 {
+		t.Fatalf("canceled mirror wait opened caller plan %d time(s)", harness.provider.opens)
+	}
+	if len(harness.state.events) != 0 {
+		t.Fatalf("canceled mirror wait mutated caller state: %v", harness.state.events)
 	}
 }
 

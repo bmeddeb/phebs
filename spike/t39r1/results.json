@@ -1,0 +1,89 @@
+{
+  "schema": "t39r1-mirror-lock-contention-closure-v1",
+  "outcome": "precondition_closed",
+  "completed_on": "2026-08-06",
+  "inputs": [
+    {
+      "path": "spike/t392/results.json",
+      "kind": "t392-authorized-target-operating-envelope-v1",
+      "sha256": "sha256:20e95fc8e7bf11fb9ae317aa57aeda2966fbf1c866d812f37fadb11aabd26a41"
+    },
+    {
+      "path": "spike/t395/results.json",
+      "kind": "t395-release-suspension-continuation-decision-v1",
+      "sha256": "sha256:7143aaa34a38a8f14bdaa9d7f695ee65f5b89dcf3f4592ec9f6b4ea64d45677d"
+    }
+  ],
+  "diagnosis": {
+    "holder": "aggregate_extraction",
+    "waiter": "caller_leaf_execution",
+    "shared_boundary": "repository_immutable_mirror_lock",
+    "prior_budget_start": "before_mirror_lock_wait",
+    "failure_mechanism": "admitted_extraction_lock_occupancy_consumed_caller_execution_budget_and_ordinary_retries",
+    "failure_class": "pipeline_contention",
+    "required_change": "bounded_serialization_boundary",
+    "admission_change": false,
+    "retry_accounting_change": false,
+    "timeout_limit_raised": false,
+    "attempt_limit_raised": false
+  },
+  "resolution": {
+    "preflight_budget_milliseconds": 300000,
+    "mirror_wait_context": "lease_heartbeated_parent_job_context",
+    "execution_budget_start": "after_repository_mirror_lock_acquisition",
+    "execution_budget_milliseconds": 300000,
+    "max_attempts": 3,
+    "serialization": "one_repository_lock_unchanged",
+    "cancellation": "interrupt_wait_without_caller_state_mutation",
+    "lease_loss": "runner_cancels_wait_and_performs_no_stale_transition",
+    "prior_publication": "preserved_until_existing_successor_first_repair_fences_complete"
+  },
+  "gates": [
+    {
+      "name": "TestWorkerMirrorWaitCannotConsumeAttemptBudget",
+      "proves": "lock wait can exceed the tightened execution budget without returning an attempt-consuming error"
+    },
+    {
+      "name": "TestWorkerMirrorWaitCancellationMutatesNoCallerState",
+      "proves": "parent cancellation interrupts lock wait before caller plan or durable caller mutation"
+    },
+    {
+      "name": "TestWorkerReplayDeadlineStaysRetryableWithoutSuccessorMark",
+      "proves": "a genuine execution-budget expiry remains an ordinary retryable pair failure"
+    },
+    {
+      "name": "TestWorkerParentCancellationIsDistinctFromWorkerDeadline",
+      "proves": "parent cancellation remains distinguishable from execution-budget expiry"
+    },
+    {
+      "name": "TestRunnerStopsHandlerWhenHeartbeatLosesLease",
+      "proves": "lease loss cancels the handler without a stale terminal queue transition"
+    },
+    {
+      "name": "TestWorkerRepairsStateWithoutFileQueueBeforeClear",
+      "proves": "repair queues a successor and retires a bad pointer before changing prior leaf outcomes"
+    }
+  ],
+  "rerun_policy": {
+    "t392_superseded": false,
+    "rerun_authorized": false,
+    "required_authorities": [
+      "new_explicit_approval",
+      "new_nonce",
+      "new_frozen_plan",
+      "new_teardown_deadline",
+      "source_free_receipt"
+    ],
+    "receipt_requirement": "new_receipt_cannot_rewrite_or_supersede_t392_without_a_completed_authorized_run"
+  },
+  "claims": {
+    "source_free": true,
+    "changes_production_scheduling": true,
+    "authorizes_target_rerun": false,
+    "supersedes_stopped_run": false,
+    "raises_timeout": false,
+    "raises_attempt_limit": false,
+    "establishes_slo": false,
+    "establishes_release": false
+  }
+}

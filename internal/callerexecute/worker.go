@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
@@ -91,6 +92,7 @@ type Worker struct {
 	dataDir      string
 	root         string
 	resolverRoot string
+	timeout      time.Duration
 	store        Store
 	manifests    extract.CandidateCallerPlanProvider
 	registry     *Registry
@@ -142,6 +144,7 @@ func NewWorkerWithPublicationRegistry(
 	worker := &Worker{
 		dataDir: dataDir, root: Root(dataDir),
 		resolverRoot: filepath.Join(dataDir, "resolver-catalogs"),
+		timeout:      callerleaf.WorkerTimeout,
 		store:        state, manifests: manifests, registry: registry,
 		publications: publications,
 		readBlob:     gitobj.ReadBlob, open: resolvermaterialize.OpenCallerResolvers,
@@ -201,18 +204,28 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		worker.publications == nil {
 		return errors.New("caller worker is not initialized")
 	}
+	if worker.timeout <= 0 || worker.timeout > callerleaf.WorkerTimeout {
+		return errors.New("caller worker timeout must be a positive production tightening")
+	}
 	if job.Kind != store.JobCallerLeaf || job.Target == "" {
 		return errors.New("caller worker received the wrong job kind")
 	}
-	workCtx, cancel := context.WithTimeout(ctx, callerleaf.WorkerTimeout)
-	defer cancel()
 
-	current, err := worker.currentAuthority(workCtx, job.Target)
+	// Bound the pointer/control preflight independently. The immutable-mirror
+	// wait that follows is serialization behind fetch, indexing, candidate
+	// planning, and aggregate extraction; it is not caller-leaf execution and
+	// must not consume the caller's fixed work budget. The runner continues to
+	// heartbeat the lease while LockContext waits, and parent cancellation or
+	// lease loss still interrupts the wait without a caller state mutation.
+	preflightCtx, cancelPreflight := context.WithTimeout(ctx, worker.timeout)
+	defer cancelPreflight()
+
+	current, err := worker.currentAuthority(preflightCtx, job.Target)
 	if err != nil || current == nil {
 		return err
 	}
 	if err := worker.publications.ActivateRepository(
-		workCtx, job.Target,
+		preflightCtx, job.Target,
 	); err != nil {
 		return fmt.Errorf("activate caller publication repository: %w", err)
 	}
@@ -220,16 +233,16 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		worker.forgetValidation(current.semantic.Digest)
 	}
 	if admission, getErr := worker.store.GetCallerGenerationAdmission(
-		workCtx, current.stored,
+		preflightCtx, current.stored,
 	); getErr == nil && admission != nil {
 		switch admission.Disposition {
 		case store.CallerGenerationAdmitted:
 			currentPublication, publicationErr := worker.completePublicationCurrent(
-				workCtx, current,
+				preflightCtx, current,
 			)
 			if publicationErr != nil {
 				if deterministicPublicationFailure(publicationErr) {
-					return worker.handlePublicationFailure(workCtx, job, current)
+					return worker.handlePublicationFailure(preflightCtx, job, current)
 				}
 				return publicationErr
 			}
@@ -240,7 +253,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 				current.semantic.Digest,
 			); cached != nil {
 				return worker.republishCachedGeneration(
-					workCtx, job, current, cached,
+					preflightCtx, job, current, cached,
 				)
 			}
 		case store.CallerGenerationTerminalGenerationRefusal:
@@ -257,11 +270,18 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err != nil {
 		return fmt.Errorf("mirror path: %w", err)
 	}
-	unlock, err := repowork.LockContext(workCtx, repoDir)
+	cancelPreflight()
+	unlock, err := repowork.LockContext(ctx, repoDir)
 	if err != nil {
 		return fmt.Errorf("lock mirror: %w", err)
 	}
 	defer unlock()
+
+	// Caller-leaf execution owns a fresh, fixed budget only after the mirror is
+	// fenced. This preserves the five-minute cap while preventing an unrelated
+	// admitted holder from spending the caller's retry attempts on lock wait.
+	workCtx, cancelWork := context.WithTimeout(ctx, worker.timeout)
+	defer cancelWork()
 
 	current, err = worker.currentAuthority(workCtx, job.Target)
 	if err != nil || current == nil {

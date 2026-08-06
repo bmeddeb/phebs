@@ -93,7 +93,10 @@ target run stopped on one terminal incremental pipeline failure and completed
 its teardown on 2026-08-06. T39.3's independent security/lifecycle gate
 completed on 2026-08-06. T39.4 stopped before unsealing because the
 evidence/workflow protocols remain unsealed design drafts. T39.5 retained the
-no-release decision and closed Epic 39 on 2026-08-06.
+no-release decision and closed Epic 39 on 2026-08-06. T39.R1 then closed the
+conditional mirror-lock contention prerequisite without authorizing a rerun:
+caller execution now receives its unchanged five-minute budget only after the
+shared repository lock is acquired.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -434,6 +437,8 @@ T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
 closing Epic 38. T39.1 is complete; T39.2 retained an honest stopped result;
 T39.3's independent security/lifecycle matrix is complete. T39.4 retained an
 honest pre-unsealing stop; T39.5 retained no release and closed Epic 39.
+T39.R1's bounded-serialization repair is complete; T39.2 remains stopped and
+no rerun is authorized.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -600,7 +605,9 @@ service count × repository bytes
   before unsealing because no execution-binding Gate-0 protocol, independent
   gold, or workflow baseline exists. The final decision is `DO_NOT_RELEASE`:
   all packs remain experimental-dark, human continuation is ineligible, and
-  no rerun or next implementation ticket is authorized.
+  no rerun or next implementation ticket is authorized. T39.R1 subsequently
+  moved the unchanged caller execution budget after mirror-lock acquisition,
+  closing the contention prerequisite without superseding T39.2.
 
 T32.1 completed the decision/documentation closure after T31.1 diagnostics;
 T32.2–T32.4 supplied the source-free target observation, neutral oracle/load
