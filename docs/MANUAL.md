@@ -11,6 +11,7 @@ workflows, and operations do not compete in one long document.
 | Install prerequisites, build, and complete first-administrator setup | [Getting started](./guides/GETTING_STARTED.md) |
 | Configure authentication, connectors, synchronization, and repository discovery | [Configuration and connections](./guides/CONFIGURATION.md) |
 | Search, browse, use SCIP/history, call HTTP/MCP, or evaluate the experimental workflows | [Product workflows](./guides/WORKFLOWS.md) |
+| Run the complete neutral service-centered change walkthrough | [Microservice change workflow](./guides/MICROSERVICE_WORKFLOW.md) |
 | Back up, restore, secure, monitor, troubleshoot, or develop phebs | [Operations and development](./guides/OPERATIONS.md) |
 | Review every available option | [Annotated configuration](./config.example.yaml) |
 
@@ -79,12 +80,17 @@ state are durable and backup-safe. Authorization-first bounded inventory and
 exact detail are available through HTTP and MCP. The capability-gated
 repository → Services directory renders that same source-free authority and
 lifecycle state, including conflicts, removed identities, roles, unowned and
-shared summaries, exact deep links, and explicit non-claims. It does not read
-source bytes or establish runtime relationships. The administrator Settings
-view also exposes the bounded lifecycle controller's enabled state, allocated
-disk-pressure class, fixed per-turn limits, and source-free owner census; it
-does not list cursors, repositories, generations, paths, content, or raw
-errors. Service-scoped search and release authority remain future work.
+shared summaries, exact deep links, and explicit non-claims. When their
+reviewed experimental authorities are present, exact service-scoped search,
+static relationship lists and comparisons, citation reads, service-aware
+Workbench impact, and matching MCP reads are also available. They fail closed
+when authority is unavailable or changes: no service request falls back to
+All code and no static evidence is relabeled as runtime topology. The
+administrator Settings view also exposes the bounded lifecycle controller's
+enabled state, allocated disk-pressure class, fixed per-turn limits, and
+source-free owner census; it does not list cursors, repositories, generations,
+paths, content, or raw errors. Epic 39 owns measured validation and any release
+decision for these experimental surfaces.
 
 ## Evidence boundary
 

@@ -782,10 +782,17 @@ mean that migration is complete or that retirement is safe.
 For MCP, call `search_contract_operations` first and carry the returned
 protocol, repository, declaration lineage, and operation fields unchanged
 into `preview_change_workbench`. Use the existing Contract Atlas, Caller Map
-and comparison, search, SCIP, history, and proof tools for evidence drill-down;
-there is no second Workbench evidence tool. A write-capable named key may then
-use the existing explicit create/Disposition tools under the capability and
-owner checks described in [Agents (MCP)](#agents-mcp).
+and comparison, search, SCIP, history, and proof tools for evidence drill-down.
+`get_change_workbench_impact` returns the same bounded impact page and optional
+service scope as HTTP without adding Decision authority. A write-capable named
+key may then use the existing explicit create/Disposition tools under the
+capability and owner checks described in [Agents (MCP)](#agents-mcp).
+
+The complete neutral add/modify/migrate/retire journey across All code,
+service overview, dependency evidence, comparison, Workbench, proof, and MCP
+is documented in [Microservice change workflow](./MICROSERVICE_WORKFLOW.md).
+It is a standalone product/operator walkthrough; source-of-truth planning
+documents are not required to follow it.
 
 The retained receipt is
 `docs/fixtures/change-workbench/receipt.json`. It pins the two-commit bundle,

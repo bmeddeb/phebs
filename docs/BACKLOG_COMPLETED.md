@@ -8180,3 +8180,46 @@ accuracy/completeness, runtime or broker topology, supported-scale/SLO,
 migration-complete, decommission-safe, or release claim is created.
 `GATE2-V2` remains `NOT_ESTABLISHED`. T38.5 owns product closure and the
 end-to-end neutral demo.
+
+**T38.5 ✅ · Product closure and neutral demo** *(2026-08-06; needs T38.1–T38.4)*
+— closed Epic 38 with one deterministic source-free
+add/modify/migrate/retire walkthrough across the seven already-shipped product
+stages: All code discovery, exact service overview, dependency evidence,
+two-generation comparison, Workbench, proof, and strict MCP parity. The
+standalone [Microservice change workflow](./guides/MICROSERVICE_WORKFLOW.md)
+keeps T34.4's five-service whole-search cohort, T33.5's separate five workflow
+identities—two accepted, one proposal, one conflict, and one removed/rejected
+successor lineage—and T37.5's three-repository/four-service relationship
+envelope distinct.
+Every stage preserves exact repository, service, Investigation, revision,
+root, incarnation, and generation authority where applicable. Exact, shared,
+unowned, unaccepted, unresolved, partial, stale, unavailable, and gap states
+remain visible; proposal and successor claims never become inferred runtime,
+migration, or retirement authority.
+
+The closure receipt binds the exact retained T37.5 and T38.1–T38.4 receipt
+bytes, all four stories, both `1440x1000` desktop and `390x844` mobile
+viewports, and six named executable gate groups. Failure and restart coverage
+retains bounded same-route retry, invalid-v2 refusal without legacy fallback,
+complete relationship recovery before pointer swap, observation restart
+no-op, and final Workbench root/revision refusal. The browser and accessibility
+gate preserves page identity, meaningful content, console health, screenshots,
+keyboard interaction and focus return, named controls, text-plus-color states,
+announced loading/empty/partial/error states, locally scrollable evidence
+tables, and no document overflow.
+
+This ticket adds only the retained source-free receipt and user/operator
+guidance. It changes no production query, mutation, cache, lease, lock, schema,
+startup, sync/retry/no-op, publication, indexing, search, filesystem read,
+background job, child process, memory bound, or disk bound; the closure has
+zero steady-state runtime cost. The deterministic receipt is retained at
+`spike/t385/results.json`
+(`sha256:a50056e72c40a01aa5abc58eb580286413a67db936e8e83706a8cadd685d82e0`).
+It retains no source, path, object ID, citation bytes, repository identity,
+raw error, private topology, or product measurement.
+
+No accuracy/completeness, runtime or broker topology, task/Decision authority,
+supported scale/SLO, migration-complete, decommission-safe, or release claim
+is created. The service-centered surfaces remain experimental;
+`GATE2-V2` remains `NOT_ESTABLISHED`. Epic 38 is complete. T39.1 owns the
+neutral correctness, scale, and recovery gate.

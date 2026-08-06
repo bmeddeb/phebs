@@ -20,10 +20,10 @@ resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
 and T37.4's service projections and atomic relationship roots are complete;
 T37.5's exact readers, comparison, proof/Workbench integration, and neutral
 demo are also complete, closing Epic 37. T38.1's exact service overview,
-T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench, and
-T38.4's strict MCP parity are complete; T38.5 is the next scheduled ticket,
-and the remaining Epics 38–39 tickets stay
-dependency-ordered drafts, not implicit implementation authorization.
+T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench,
+T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
+closing Epic 38. T39.1 is the next scheduled ticket; the remaining Epic 39
+tickets stay dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -39,24 +39,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 38 · Microservice product workflows *(T38.1–T38.4 complete · T38.5 scheduled)*
-
-Turn the catalog and relationship engine into the service-centered experience
-that differentiates phebs from repository/file search.
-
-**T38.5 · Product closure and neutral demo** *(needs T38.1–T38.4)* — run an
-add/modify/migrate/retire scenario across multiple neutral services from All
-code discovery through service overview, dependency evidence, comparison,
-Workbench, proof, and MCP. AC: desktop/390px/accessibility/browser, failure and
-restart states, operations guidance, full merge bar, and a demo understandable
-without source-of-truth documents; surfaces remain experimental until Epic 39.
-
-## Epic 39 · Multi-service validation and release decision *(draft · needs Epic 38)*
+## Epic 39 · Multi-service validation and release decision *(T39.1 scheduled · needs Epic 38)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.1 · Neutral correctness, scale, and recovery gate** — execute the
+**T39.1 · Neutral correctness, scale, and recovery gate** *(scheduled)* — execute the
 T32.3 oracles and frozen 1,000/5,000 profiles against the final writers/readers.
 AC: membership/search/relationship equality, deterministic rebuild, bounded
 cold/warm/no-op/update/GC costs, partial publication, auth, recovery, restore,

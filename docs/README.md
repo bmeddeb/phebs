@@ -37,6 +37,8 @@ when two pages appear to overlap.
   connectors, synchronization, webhooks, watch mode, and cleanup.
 - [Product workflows](./guides/WORKFLOWS.md) — demos, Workbench, search, UI,
   SCIP/history, HTTP, and MCP.
+- [Microservice change workflow](./guides/MICROSERVICE_WORKFLOW.md) — standalone
+  neutral All code → service → relationship → Workbench → proof → MCP demo.
 - [Operations and development](./guides/OPERATIONS.md) — storage, backup,
   security, extraction operations, metrics, troubleshooting, and contributor
   commands.
