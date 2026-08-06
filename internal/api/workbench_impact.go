@@ -248,20 +248,21 @@ type WorkbenchImpactPagination struct {
 }
 
 type WorkbenchImpactPage struct {
-	SchemaVersion    string                        `json:"schema_version"`
-	InvestigationID  string                        `json:"investigation_id"`
-	RevisionID       string                        `json:"revision_id"`
-	TicketKind       store.ChangeBriefTicketKind   `json:"ticket_kind"`
-	ScenarioEmphasis []string                      `json:"scenario_emphasis"`
-	Atlas            []WorkbenchAtlasImpact        `json:"atlas"`
-	Callers          []WorkbenchCallerImpact       `json:"callers"`
-	Comparison       *CallerComparisonExactPage    `json:"comparison,omitempty"`
-	Compatibility    *WorkbenchCompatibilityImpact `json:"compatibility,omitempty"`
-	FieldReferences  *FieldReferencePage           `json:"field_references,omitempty"`
-	ResourcePlanes   []ResourcePlaneSnapshot       `json:"resource_planes"`
-	AnalysisScope    WorkbenchAnalysisScope        `json:"analysis_scope"`
-	Pagination       WorkbenchImpactPagination     `json:"pagination"`
-	Caveat           string                        `json:"caveat"`
+	SchemaVersion        string                        `json:"schema_version"`
+	InvestigationID      string                        `json:"investigation_id"`
+	RevisionID           string                        `json:"revision_id"`
+	TicketKind           store.ChangeBriefTicketKind   `json:"ticket_kind"`
+	ScenarioEmphasis     []string                      `json:"scenario_emphasis"`
+	Atlas                []WorkbenchAtlasImpact        `json:"atlas"`
+	Callers              []WorkbenchCallerImpact       `json:"callers"`
+	Comparison           *CallerComparisonExactPage    `json:"comparison,omitempty"`
+	Compatibility        *WorkbenchCompatibilityImpact `json:"compatibility,omitempty"`
+	FieldReferences      *FieldReferencePage           `json:"field_references,omitempty"`
+	ResourcePlanes       []ResourcePlaneSnapshot       `json:"resource_planes"`
+	RelationshipCoverage *RelationshipProofCoverage    `json:"relationship_coverage,omitempty"`
+	AnalysisScope        WorkbenchAnalysisScope        `json:"analysis_scope"`
+	Pagination           WorkbenchImpactPagination     `json:"pagination"`
+	Caveat               string                        `json:"caveat"`
 }
 
 type workbenchImpactStreamCursor struct {
@@ -279,6 +280,7 @@ type workbenchImpactCursor struct {
 	AtlasDigest         string                                 `json:"atlas_digest"`
 	CompatibilityDigest string                                 `json:"compatibility_digest"`
 	ResourceDigest      string                                 `json:"resource_digest"`
+	RelationshipDigest  string                                 `json:"relationship_digest,omitempty"`
 	Streams             map[string]workbenchImpactStreamCursor `json:"streams"`
 }
 
@@ -412,6 +414,7 @@ func (service *WorkbenchImpactService) Read(
 		next.AtlasDigest = cursor.AtlasDigest
 		next.CompatibilityDigest = cursor.CompatibilityDigest
 		next.ResourceDigest = cursor.ResourceDigest
+		next.RelationshipDigest = cursor.RelationshipDigest
 	}
 
 	atlasDigest, err := service.readWorkbenchAtlas(
@@ -487,6 +490,23 @@ func (service *WorkbenchImpactService) Read(
 		return nil, err
 	}
 	workbenchResourcePlaneScope(page)
+	if service.opts.Relationships != nil {
+		page.RelationshipCoverage, err = workbenchRelationshipCoverage(
+			ctx, service.opts.Relationships, view.Brief.What.Selections,
+		)
+		if err != nil {
+			return nil, err
+		}
+		relationshipDigest := page.RelationshipCoverage.Digest
+		if err := bindWorkbenchImpactDigest("relationship coverage", &next.RelationshipDigest, relationshipDigest, request.Cursor != ""); err != nil {
+			return nil, err
+		}
+		state, reason := "enabled", ""
+		if page.RelationshipCoverage.GapCount != 0 {
+			state, reason = "partial", "relationship_root_gap"
+		}
+		workbenchAddCapability(page, "service-relationships", state, reason)
+	}
 
 	expectedStreams := make(map[string]struct{})
 	switch view.Brief.TicketKind {
@@ -1590,6 +1610,27 @@ func workbenchResourcePlaneScope(page *WorkbenchImpactPage) {
 			)
 		}
 	}
+}
+
+type relationshipCoverageReader interface {
+	RootCoverage(context.Context, []string) (*RelationshipProofCoverage, error)
+}
+
+func workbenchRelationshipCoverage(
+	ctx context.Context,
+	reader relationshipCoverageReader,
+	selections []store.ChangeBriefContractSelection,
+) (*RelationshipProofCoverage, error) {
+	if reader == nil {
+		return nil, nil
+	}
+	repositories := make([]string, 0, len(selections))
+	for _, selection := range selections {
+		repositories = append(repositories, selection.Repository)
+	}
+	sort.Strings(repositories)
+	repositories = slices.Compact(repositories)
+	return reader.RootCoverage(ctx, repositories)
 }
 
 func sortWorkbenchImpactScope(scope *WorkbenchAnalysisScope) {

@@ -105,12 +105,16 @@ func TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically(t *testing.T) {
 	}
 	foundShared := false
 	foundUnownedTarget := false
+	projectionDigests := []string{}
 	for _, receipt := range rootValue.RepositoryMembers {
 		member, err := publication.openRepositoryMember(t.Context(), receipt)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for _, projection := range member.Projections {
+			if len(projectionDigests) < 2 {
+				projectionDigests = append(projectionDigests, projection.Digest)
+			}
 			if projection.PostingDigest == rpcValues[1].Digest {
 				foundShared = len(projection.Source.Claims) == 2
 				foundUnownedTarget = projection.Target != nil && projection.Target.Unowned &&
@@ -121,6 +125,35 @@ func TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically(t *testing.T) {
 	}
 	if !foundShared || !foundUnownedTarget {
 		t.Fatalf("shared=%t unowned-target=%t", foundShared, foundUnownedTarget)
+	}
+	projections, err := publication.ReadProjections(t.Context(), projectionDigests)
+	if err != nil || len(projections) != len(projectionDigests) {
+		t.Fatalf("batched projections = %d, %v", len(projections), err)
+	}
+	cache := &Cache{}
+	lease, err := cache.AcquireGeneration(
+		t.Context(), root, catalog.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	)
+	if err != nil || !cache.Pinned(catalog.Repository, rootValue.GenerationDigest) {
+		t.Fatalf("historical lease = %v, pinned=%t", err, cache.Pinned(catalog.Repository, rootValue.GenerationDigest))
+	}
+	if _, member, err := lease.Publication().ReadService(t.Context(), "payments"); err != nil || len(member.References) != 3 {
+		t.Fatalf("historical service read = %+v, %v", member, err)
+	}
+	lease.Release()
+	collected := publication.directory + ".collected"
+	if err := os.Rename(publication.directory, collected); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cache.AcquireGeneration(
+		t.Context(), root, catalog.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("released historical cache entry survived collection: %v", err)
+	}
+	if err := os.Rename(collected, publication.directory); err != nil {
+		t.Fatal(err)
 	}
 
 	// A corrupt service partition cannot block its sibling's sparse read.

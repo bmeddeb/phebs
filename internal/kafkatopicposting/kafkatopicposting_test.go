@@ -96,6 +96,19 @@ func TestBuildSeparatesPlanesSpellingClassificationsAndOccurrences(t *testing.T)
 	if err != nil || len(producers) != 4 {
 		t.Fatalf("producer postings = %+v, %v", producers, err)
 	}
+	reopened, err := OpenGeneration(
+		t.Context(), root, rootValue.Authority.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byDigest, err := reopened.ReadDigest(
+		t.Context(), "producer", "orders-v1", producers[0].Digest,
+	)
+	if err != nil || byDigest.Digest != producers[0].Digest {
+		t.Fatalf("exact generation digest read = %+v, %v", byDigest, err)
+	}
 	consumers, err := publication.ReadTopic(t.Context(), "consumer", "orders-v1")
 	if err != nil || len(consumers) != 4 {
 		t.Fatalf("consumer postings = %+v, %v", consumers, err)

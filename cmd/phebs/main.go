@@ -1105,6 +1105,12 @@ func serve(args []string) error {
 			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
 		},
 	)
+	if relationshipRuntime != nil {
+		apiOpts.Relationships = api.NewRelationshipService(apiOpts, relationshipCache)
+		if apiOpts.Relationships == nil {
+			return errors.New("configure exact relationship readers")
+		}
+	}
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
 	workbenchMode := ""
 	if cfg.Experimental.ProvisionalWorkbench {
@@ -1193,6 +1199,7 @@ func serve(args []string) error {
 		CallerComparison:      comparisonQueries,
 		ServiceDirectory:      apiOpts.ServiceDirectory,
 		ObservationProgress:   apiOpts.ObservationProgress,
+		Relationships:         apiOpts.Relationships,
 		Workbench:             apiOpts.Workbench,
 		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
 		Principal:             apiOpts.Principal,

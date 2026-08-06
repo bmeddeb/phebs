@@ -84,7 +84,10 @@ type ProofBundle struct {
 	ExtractorVersions []BundleExtractor           `json:"extractor_versions"`
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
 	Compatibility     *compat.CompatibilityResult `json:"compatibility,omitempty"`
-	Caveat            string                      `json:"caveat"`
+	// RelationshipCoverage is an optional T37.5 annex. Omitempty preserves
+	// byte-for-byte canonical re-encoding of retained v1 proof bundles.
+	RelationshipCoverage *RelationshipProofCoverage `json:"relationship_coverage,omitempty"`
+	Caveat               string                     `json:"caveat"`
 
 	// visibilityReceipt is a request-local result fence. It is deliberately
 	// excluded from canonical proof JSON and persisted bundle identity.
@@ -534,6 +537,27 @@ func buildProofBundleValue(
 				"repository authorization or indexed scope changed while building the proof bundle; retry",
 			)
 		}
+		var relationshipCoverage *RelationshipProofCoverage
+		if opts.Relationships != nil {
+			repositoryNames := make([]string, len(confirmedVisible))
+			for index := range confirmedVisible {
+				repositoryNames[index] = confirmedVisible[index].Name
+			}
+			if len(repositoryNames) <= relationshipMaxRepositories {
+				relationshipCoverage, err = opts.Relationships.RootCoverage(ctx, repositoryNames)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				relationshipCoverage = &RelationshipProofCoverage{
+					SchemaVersion:          "phebs-relationship-proof-coverage-v1",
+					Visibility:             visibilityContext(ctx, opts, certificate),
+					VisibleRepositoryCount: len(repositoryNames), GapCount: len(repositoryNames),
+					State: "gap", Reason: "repository_bound", Roots: []RelationshipRootReceipt{},
+				}
+				relationshipCoverage.Digest = digestJSON(relationshipCoverage)
+			}
+		}
 		caveat := proofCaveat
 		if compatibility != nil {
 			caveat = compatibilityCaveat
@@ -545,7 +569,8 @@ func buildProofBundleValue(
 			ExtractorVersions: certificateExtractors(certificate),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
 			Compatibility:     compatibility, Caveat: caveat,
-			visibilityReceipt: cloneVisibleEvidenceScopes(confirmedVisible),
+			RelationshipCoverage: relationshipCoverage,
+			visibilityReceipt:    cloneVisibleEvidenceScopes(confirmedVisible),
 		}
 		return &bundle, nil
 	}

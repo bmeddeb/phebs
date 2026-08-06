@@ -18,8 +18,9 @@ observation publication, and T36.4's authorized progress/neutral multi-pack
 demo are complete, closing Epic 36. T37.1's namespace-sharded declaration and
 resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
 and T37.4's service projections and atomic relationship roots are complete;
-T37.5 is the next scheduled ticket, and
-the remaining Epics 37–39 tickets stay
+T37.5's exact readers, comparison, proof/Workbench integration, and neutral
+demo are also complete, closing Epic 37. T38.1 is the next scheduled ticket,
+and the remaining Epics 38–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -36,27 +37,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 37 · Cross-service relationship index *(T37.1–T37.4 complete · T37.5 scheduled)*
-
-Join repository-shared observations to declarations once, publish keyed
-relationship postings, and project them onto services without claiming runtime
-or universal completeness.
-
-**T37.5 · Exact readers, comparison, proof, and demo** *(needs T37.4)* —
-serve paged service dependency/caller/topic reads and two-generation comparison
-through shared HTTP/MCP types; compose only authorized repository-placement
-roots and integrate exact roots into coverage, proof, and Workbench without
-rewriting retained v1–v3 bytes. AC: permission resolution precedes cross-repo
-aggregation; cursor/incarnation fences, citation leases, truncation, zero/gap
-states, migration parity, bounded caches/concurrency, and a cross-service
-neutral demo.
-
-## Epic 38 · Microservice product workflows *(draft · needs Epic 37)*
+## Epic 38 · Microservice product workflows *(T38.1 scheduled · needs Epic 37)*
 
 Turn the catalog and relationship engine into the service-centered experience
 that differentiates phebs from repository/file search.
 
-**T38.1 · Service overview** — build one service page showing identity and
+**T38.1 · Service overview** *(scheduled)* — build one service page showing identity and
 authority, source roles, contracts provided/used, callers, topics, dependent
 and dependency services, owner/deployable attribution, currentness, and gaps.
 AC: every count links to exact rows/citations; ambiguity, unowned/shared,

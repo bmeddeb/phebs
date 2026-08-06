@@ -304,6 +304,43 @@ func OpenCurrent(ctx context.Context, root, repository string) (*Publication, er
 	}, nil
 }
 
+// OpenGeneration opens one exact immutable relationship generation without
+// consulting the mutable current pointer. Callers that expose the result must
+// hold a Cache lease for the same generation so lifecycle collection cannot
+// retire its bytes while a cursor, comparison, or citation still references
+// them.
+func OpenGeneration(
+	ctx context.Context,
+	root, repository, generation, rootDigestValue string,
+) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if reponame.Validate(repository) != nil || !validDigest(generation) ||
+		!validDigest(rootDigestValue) {
+		return nil, fmt.Errorf("%w: generation lookup", ErrInvalid)
+	}
+	directory := generationPath(root, repository, generation)
+	raw, err := readRegular(filepath.Join(directory, "root.json"), MaxRootBytes)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	var value Root
+	if err := decodeExact(raw, MaxRootBytes, &value); err != nil || validateRoot(value) != nil ||
+		value.Authority.Repository != repository || value.GenerationDigest != generation ||
+		value.Digest != rootDigestValue {
+		return nil, fmt.Errorf("%w: generation root", ErrInvalid)
+	}
+	canonical, _ := json.Marshal(value)
+	if !slices.Equal(raw, canonical) {
+		return nil, fmt.Errorf("%w: generation root canonical bytes", ErrInvalid)
+	}
+	return &Publication{directory: directory, rootValue: value}, nil
+}
+
 func (publication *Publication) Root() Root {
 	if publication == nil {
 		return Root{}
@@ -315,6 +352,22 @@ func (publication *Publication) Root() Root {
 }
 
 func (publication *Publication) OpenService(
+	ctx context.Context,
+	serviceKey string,
+) (ServiceReceipt, *ServiceMember, error) {
+	receipt, member, err := publication.ReadService(ctx, serviceKey)
+	if err != nil {
+		return receipt, member, err
+	}
+	if err := publication.ConfirmCurrent(); err != nil {
+		return ServiceReceipt{}, nil, err
+	}
+	return receipt, member, nil
+}
+
+// ReadService validates one selected service member without consulting the
+// mutable pointer. It is for a caller holding an exact generation lease.
+func (publication *Publication) ReadService(
 	ctx context.Context,
 	serviceKey string,
 ) (ServiceReceipt, *ServiceMember, error) {
@@ -338,11 +391,106 @@ func (publication *Publication) OpenService(
 	if err != nil {
 		return ServiceReceipt{}, nil, err
 	}
+	return receipt, &member, nil
+}
+
+// ReadProjection validates and returns exactly one repository projection.
+// It deliberately does not consult current.json: the caller may be resolving
+// a citation against a lease-pinned historical generation. Current response
+// paths call ConfirmCurrent immediately before emission.
+func (publication *Publication) ReadProjection(
+	ctx context.Context,
+	digest string,
+) (Projection, error) {
+	if publication == nil || !validDigest(digest) {
+		return Projection{}, fmt.Errorf("%w: projection lookup", ErrInvalid)
+	}
+	bucket := projectionBucket(digest)
+	index, found := slices.BinarySearchFunc(
+		publication.rootValue.RepositoryMembers,
+		bucket,
+		func(value MemberReceipt, wanted int) int { return value.Bucket - wanted },
+	)
+	if !found {
+		return Projection{}, ErrNotFound
+	}
+	member, err := publication.openRepositoryMember(
+		ctx, publication.rootValue.RepositoryMembers[index],
+	)
+	if err != nil {
+		return Projection{}, err
+	}
+	projectionIndex, found := slices.BinarySearchFunc(
+		member.Projections,
+		digest,
+		func(value Projection, wanted string) int {
+			return strings.Compare(value.Digest, wanted)
+		},
+	)
+	if !found {
+		return Projection{}, ErrNotFound
+	}
+	return cloneProjection(member.Projections[projectionIndex]), nil
+}
+
+// ReadProjections batches one page of projection lookups by bucket so a page
+// never rereads the same repository member once per row.
+func (publication *Publication) ReadProjections(
+	ctx context.Context,
+	digests []string,
+) (map[string]Projection, error) {
+	if publication == nil || len(digests) == 0 || len(digests) > 100 {
+		return nil, fmt.Errorf("%w: projection page", ErrInvalid)
+	}
+	wanted := make(map[int]map[string]struct{})
+	for _, digest := range digests {
+		if !validDigest(digest) {
+			return nil, fmt.Errorf("%w: projection page digest", ErrInvalid)
+		}
+		bucket := projectionBucket(digest)
+		if wanted[bucket] == nil {
+			wanted[bucket] = make(map[string]struct{})
+		}
+		wanted[bucket][digest] = struct{}{}
+	}
+	result := make(map[string]Projection, len(digests))
+	for bucket, bucketWanted := range wanted {
+		index, found := slices.BinarySearchFunc(
+			publication.rootValue.RepositoryMembers,
+			bucket,
+			func(value MemberReceipt, wanted int) int { return value.Bucket - wanted },
+		)
+		if !found {
+			return nil, ErrNotFound
+		}
+		member, err := publication.openRepositoryMember(
+			ctx, publication.rootValue.RepositoryMembers[index],
+		)
+		if err != nil {
+			return nil, err
+		}
+		for _, projection := range member.Projections {
+			if _, present := bucketWanted[projection.Digest]; present {
+				result[projection.Digest] = cloneProjection(projection)
+			}
+		}
+	}
+	if len(result) != len(digests) {
+		return nil, ErrNotFound
+	}
+	return result, nil
+}
+
+// ConfirmCurrent is the final response fence for a current-root read.
+func (publication *Publication) ConfirmCurrent() error {
+	if publication == nil || len(publication.pointerRaw) == 0 || publication.base == "" {
+		return fmt.Errorf("%w: current publication fence", ErrInvalid)
+	}
 	current, err := readRegular(filepath.Join(publication.base, "current.json"), MaxRootBytes)
 	if err != nil || !slices.Equal(current, publication.pointerRaw) {
-		return ServiceReceipt{}, nil, ErrPublishing
+		return ErrPublishing
 	}
-	return receipt, &member, nil
+	return nil
 }
 
 func openDirectoryComplete(ctx context.Context, directory string, expected Root) (*Publication, error) {

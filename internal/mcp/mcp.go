@@ -65,6 +65,8 @@ type Options struct {
 	// ObservationProgress is the same T36.4 authorization-first service used
 	// by Huma. Nil keeps the tool undiscoverable.
 	ObservationProgress ObservationProgressQueries
+	// Relationships is the same bounded T37.5 service supplied to Huma.
+	Relationships RelationshipQueries
 	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
 	// annex only when both real shared services are present. Principal is the
 	// same authenticated identity projection used by Huma.
@@ -184,6 +186,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerCallerComparisonTool(s, opts)
 	registerServiceDirectoryTools(s, opts)
 	registerObservationProgressTool(s, opts)
+	registerRelationshipTools(s, opts)
 	registerWorkbenchTools(s, opts)
 
 	return s

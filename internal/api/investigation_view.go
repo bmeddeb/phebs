@@ -119,6 +119,9 @@ func apiCapabilities(opts Options) []string {
 	if opts.ServiceDirectory != nil || NewServiceDirectoryService(opts) != nil {
 		capabilities = append(capabilities, serviceDirectoryCapability)
 	}
+	if opts.Relationships != nil {
+		capabilities = append(capabilities, serviceRelationshipsCapability)
+	}
 	if NewContractCatalogService(opts) != nil {
 		capabilities = append(capabilities, contractCatalogCapability)
 	}

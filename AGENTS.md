@@ -149,8 +149,10 @@ observation publication, and T36.4's authorized progress/neutral multi-pack
 demo are complete, closing Epic 36. T37.1's ownership-neutral namespace-sharded
 declaration/resolver catalog, T37.2's classified RPC caller postings,
 T37.3's Kafka topic postings, and T37.4's service projections and atomic
-relationship roots are complete; T37.5 is scheduled next, the remaining
-Epics 37–39 stay dependency-ordered drafts, and Epics 25–28 remain
+relationship roots are complete; T37.5's exact readers, comparison,
+proof/Workbench integration, and neutral demo are complete, closing Epic 37.
+T38.1 is scheduled next, the remaining Epics 38–39 stay dependency-ordered
+drafts, and Epics 25–28 remain
 unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
