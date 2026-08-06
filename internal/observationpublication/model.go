@@ -22,6 +22,8 @@ const (
 	RecordSchema   = "phebs-observation-record-v1"
 	PointerSchema  = "phebs-observation-pointer-v1"
 	MarkerSchema   = "phebs-observation-marker-v1"
+	ReceiptSchema  = "phebs-observation-operation-receipt-v1"
+	BindingSchema  = "phebs-observation-schedule-binding-v1"
 
 	LanguagePack               = "go"
 	MaxManifestBytes           = 8 << 20
@@ -50,6 +52,29 @@ type Record struct {
 	ContentDigest     string                      `json:"content_digest"`
 	ObservationDigest string                      `json:"observation_digest,omitempty"`
 	ObservationName   string                      `json:"observation_name,omitempty"`
+	ObservationOrigin string                      `json:"observation_origin,omitempty"` // parsed | reused
+}
+
+// ReasonCount is one closed unsupported-source classification. It contains no
+// path, object identity, source sample, or parser error text.
+type ReasonCount struct {
+	Reason string `json:"reason"`
+	Count  int    `json:"count"`
+}
+
+// OperationReceipt is the source-free, digest-bound accounting for one
+// complete publication. SourceBlobReads counts inputs incorporated into
+// successfully published members; failed or interrupted attempts are outside
+// this immutable publication receipt and remain scheduler diagnostics.
+type OperationReceipt struct {
+	Schema             string        `json:"schema"`
+	InputBlobs         int           `json:"input_blobs"`
+	SourceBlobReads    int           `json:"source_blob_reads"`
+	ParsedObservations int           `json:"parsed_observations"`
+	ReusedObservations int           `json:"reused_observations"`
+	ObservedBlobs      int           `json:"observed_blobs"`
+	UnsupportedBlobs   int           `json:"unsupported_blobs"`
+	UnsupportedReasons []ReasonCount `json:"unsupported_reasons"`
 }
 
 type Member struct {
@@ -65,22 +90,23 @@ type Member struct {
 }
 
 type Manifest struct {
-	Schema                    string   `json:"schema"`
-	Repository                string   `json:"repository"`
-	Language                  string   `json:"language"`
-	SourceGenerationDigest    string   `json:"source_generation_digest"`
-	PartitionGenerationDigest string   `json:"partition_generation_digest"`
-	PartitionManifestDigest   string   `json:"partition_manifest_digest"`
-	PartitionPolicyDigest     string   `json:"partition_policy_digest"`
-	ObservationPolicyDigest   string   `json:"observation_policy_digest"`
-	GenerationDigest          string   `json:"generation_digest"`
-	Members                   []Member `json:"members"`
-	RecordCount               int      `json:"record_count"`
-	ObservedCount             int      `json:"observed_count"`
-	UnsupportedCount          int      `json:"unsupported_count"`
-	EncodedMemberBytes        int64    `json:"encoded_member_bytes"`
-	ObservationBytes          int64    `json:"observation_bytes"`
-	Digest                    string   `json:"digest"`
+	Schema                    string            `json:"schema"`
+	Repository                string            `json:"repository"`
+	Language                  string            `json:"language"`
+	SourceGenerationDigest    string            `json:"source_generation_digest"`
+	PartitionGenerationDigest string            `json:"partition_generation_digest"`
+	PartitionManifestDigest   string            `json:"partition_manifest_digest"`
+	PartitionPolicyDigest     string            `json:"partition_policy_digest"`
+	ObservationPolicyDigest   string            `json:"observation_policy_digest"`
+	GenerationDigest          string            `json:"generation_digest"`
+	Members                   []Member          `json:"members"`
+	RecordCount               int               `json:"record_count"`
+	ObservedCount             int               `json:"observed_count"`
+	UnsupportedCount          int               `json:"unsupported_count"`
+	EncodedMemberBytes        int64             `json:"encoded_member_bytes"`
+	ObservationBytes          int64             `json:"observation_bytes"`
+	OperationReceipt          *OperationReceipt `json:"operation_receipt,omitempty"`
+	Digest                    string            `json:"digest"`
 }
 
 type Pointer struct {
@@ -104,6 +130,16 @@ type Metrics struct {
 	ReusedObservations int
 	UnsupportedBlobs   int
 	WrittenBytes       int64
+}
+
+type scheduleBinding struct {
+	Schema                  string `json:"schema"`
+	Repository              string `json:"repository"`
+	ScheduleGeneration      string `json:"schedule_generation"`
+	PublicationGeneration   string `json:"publication_generation"`
+	PriorScheduleDigest     string `json:"prior_schedule_digest,omitempty"`
+	SourceGenerationDigest  string `json:"source_generation_digest"`
+	PartitionManifestDigest string `json:"partition_manifest_digest"`
 }
 
 func GenerationDigest(partition sourcepartition.Manifest) (string, error) {

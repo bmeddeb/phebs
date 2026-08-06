@@ -2782,6 +2782,66 @@ mechanics receipt, not a supported-scale, SLO, completeness, or release claim.
 The ordinary `make dev` cohort runs the default-on controller and exposes the
 same Settings view without manufacturing old rows or bypassing root checks.
 
+### Shared source-observation progress and neutral demo
+
+Whole-repository indexing publishes one immutable Go source-observation
+generation under `$DATA/observations/`. Each complete generation now binds a
+`phebs-observation-operation-receipt-v1` containing only scalar mechanics:
+unique admitted blobs, source reads incorporated into successfully published
+members, distinct parsed and prior-generation-reused observations, observed
+and unsupported blob counts, and a sorted closed unsupported-reason census.
+The receipt contains no paths, object IDs, source samples, or raw errors.
+Failed or interrupted attempts remain visible through scheduler counters and
+are not mislabeled as successful-publication reads.
+
+An authorized caller can inspect one exact repository with either transport:
+
+- `GET /api/observation-progress?repository=<canonical-repository>`
+- MCP `get_observation_progress` with the same repository input
+
+Both invoke the same `phebs-observation-progress-v1` service and return the
+same closed state: `current`, `building`, `failed`, `stale`, or `unavailable`.
+The response includes exact source/publication/schedule generation digests,
+bounded partition counters, publication totals, and the operation receipt.
+A generation created before T36.4 can report `legacy_unavailable` receipt
+state; it never becomes an invented zero. The encoded response is capped at
+64 KiB.
+
+Repository visibility and current indexed authority are resolved before the
+progress reader touches any source, publication, schedule, or count. The
+reader repeats source, observation pointer, publishing marker, durable
+schedule, repository, and visibility fences before emission. A denied or
+deleted repository is indistinguishable from absence and invokes no progress
+read.
+
+If an observation schedule exhausts its attempts, the prior complete
+publication remains current. Reconciliation keeps already validated staged
+members and creates a domain-separated recovery schedule identity bound to the
+same target publication and the terminal schedule digest. It never reactivates
+or resets the settled schedule row. Recovery workers retain the T36.3 exact
+schedule and source-generation checks before currenting.
+
+Warm current progress acquires the shared validated cache and performs two
+repository point reads, two source-control reads, three pointer reads, two
+marker reads, two schedule point reads, bounded encoding, and short cache
+bookkeeping. It opens no Git child, reads no source/member/observation bytes,
+parses nothing, and takes neither the lifecycle mutation lock nor the
+publication transition mutex. Cold cache fill performs one complete T36.3
+validation pass. A building or failed read additionally opens only the bounded
+partition-plan manifest. A current reconcile performs one strict schedule point
+read and removes the bounded derived plan and binding controls only after that
+schedule is durably settled. Search, extraction, scheduler polling, backup, and
+lifecycle costs otherwise retain their T36.3/T35 bounds.
+
+The retained [T36.4 receipt](../../spike/t364/results.json) deterministically
+parses one neutral Go content identity once and projects it independently to
+gRPC caller, Thrift caller, Kafka producer, and Kafka consumer adapters. It
+binds named production tests for publication, recovery, cache cost,
+authorization, HTTP/MCP parity, backup/lifecycle, and adapter parity. It is a
+mechanics demonstration only, not accuracy, completeness, supported scale,
+SLO, migration, decommission, extractor-promotion, or release evidence.
+`GATE2-V2` remains `NOT_ESTABLISHED`.
+
 ### Thrift field-zero development walkthrough
 
 This retained specialized walkthrough is no longer part of `make dev` or

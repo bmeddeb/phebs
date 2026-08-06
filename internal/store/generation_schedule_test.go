@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,46 @@ func generationSpec(repository, generation string) GenerationScheduleSpec {
 		Repository: repository, Stage: "source-observation", Generation: generation,
 		ResourceClass: GenerationResourceCPU, TotalItems: 130,
 		ChunkItems: 2, MaxAttempts: 3, RepositoryTokens: 1,
+	}
+}
+
+func TestGenerationScheduleValidationClosesProgressRows(t *testing.T) {
+	spec := generationSpec("github.com/example/progress", "sha256:"+strings.Repeat("a", 64))
+	digest, err := GenerationScheduleDigest(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	active := GenerationSchedule{
+		Schema: GenerationScheduleSchema, Digest: digest,
+		Repository: spec.Repository, Stage: spec.Stage, Generation: spec.Generation,
+		ResourceClass: spec.ResourceClass, TotalItems: spec.TotalItems,
+		ChunkItems:       spec.ChunkItems,
+		TotalChunks:      int((spec.TotalItems + int64(spec.ChunkItems) - 1) / int64(spec.ChunkItems)),
+		MaxAttempts:      spec.MaxAttempts,
+		RepositoryTokens: spec.RepositoryTokens, Status: GenerationScheduleActive,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := ValidateGenerationSchedule(active); err != nil {
+		t.Fatal(err)
+	}
+	settled := active
+	settled.Status = GenerationScheduleSettled
+	settled.NextOffset = settled.TotalItems
+	settled.Materialized = settled.TotalChunks
+	settled.Succeeded = settled.TotalChunks
+	if err := ValidateGenerationSchedule(settled); err != nil {
+		t.Fatal(err)
+	}
+	invalid := settled
+	invalid.Pending = 1
+	if err := ValidateGenerationSchedule(invalid); err == nil {
+		t.Fatal("settled schedule with pending work validated")
+	}
+	invalid = active
+	invalid.Digest = "sha256:" + strings.Repeat("b", 64)
+	if err := ValidateGenerationSchedule(invalid); err == nil {
+		t.Fatal("schedule with relabeled digest validated")
 	}
 }
 

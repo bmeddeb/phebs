@@ -1037,6 +1037,12 @@ func serve(args []string) error {
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
 	apiOpts.ServiceDirectory = api.NewServiceDirectoryService(apiOpts)
+	apiOpts.ObservationProgress = api.NewObservationProgressService(
+		apiOpts,
+		&observationpublication.ProgressReader{
+			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
+		},
+	)
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
 	workbenchMode := ""
 	if cfg.Experimental.ProvisionalWorkbench {
@@ -1124,6 +1130,7 @@ func serve(args []string) error {
 		CallerMap:             callerMapQueries,
 		CallerComparison:      comparisonQueries,
 		ServiceDirectory:      apiOpts.ServiceDirectory,
+		ObservationProgress:   apiOpts.ObservationProgress,
 		Workbench:             apiOpts.Workbench,
 		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
 		Principal:             apiOpts.Principal,
