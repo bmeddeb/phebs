@@ -23,9 +23,10 @@ demo are also complete, closing Epic 37. T38.1's exact service overview,
 T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench,
 T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
 closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
-gate is retained in the completed backlog. T39.2 is the next scheduled ticket;
-the remaining Epic 39 tickets stay dependency-ordered drafts, not implicit
-implementation authorization.
+gate and T39.2's honestly stopped authorized target run are retained in the
+completed backlog. T39.3 is the next scheduled ticket; the remaining Epic 39
+tickets stay dependency-ordered drafts, not implicit implementation
+authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -41,19 +42,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 39 · Multi-service validation and release decision *(T39.1 complete · T39.2 scheduled)*
+## Epic 39 · Multi-service validation and release decision *(T39.1–T39.2 complete · T39.3 scheduled)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.2 · Authorized target operating-envelope gate** *(scheduled; needs T39.1)* — run
-the approved target monorepo under frozen resource, freshness, query,
-availability, and retention thresholds. AC: exact artifact/tool/config/source
-identities, source-free retained report, cold/incremental/no-op/query/recovery
-measurements, failure census, teardown/custody, and direct/cohort/P6 decision;
-no result generalizes beyond the named environment.
-
-**T39.3 · Security and lifecycle gate** *(needs T39.1)* — independently
+**T39.3 · Security and lifecycle gate** *(scheduled; needs T39.1)* — independently
 exercise hidden service names/counts, shared paths, cross-service edges,
 revocation, cursor/proof reuse, partial/stale roots, malicious catalog/source
 inputs, disk pressure, pin/lease retention, sweep, backup/restore, and teardown.
