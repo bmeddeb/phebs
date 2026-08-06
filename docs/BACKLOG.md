@@ -19,7 +19,8 @@ demo are complete, closing Epic 36. T37.1's namespace-sharded declaration and
 resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
 and T37.4's service projections and atomic relationship roots are complete;
 T37.5's exact readers, comparison, proof/Workbench integration, and neutral
-demo are also complete, closing Epic 37. T38.1 is the next scheduled ticket,
+demo are also complete, closing Epic 37. T38.1's exact service overview is
+complete; T38.2 is the next scheduled ticket,
 and the remaining Epics 38–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -37,19 +38,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 38 · Microservice product workflows *(T38.1 scheduled · needs Epic 37)*
+## Epic 38 · Microservice product workflows *(T38.1 complete · T38.2 scheduled)*
 
 Turn the catalog and relationship engine into the service-centered experience
 that differentiates phebs from repository/file search.
 
-**T38.1 · Service overview** *(scheduled)* — build one service page showing identity and
-authority, source roles, contracts provided/used, callers, topics, dependent
-and dependency services, owner/deployable attribution, currentness, and gaps.
-AC: every count links to exact rows/citations; ambiguity, unowned/shared,
-partial, failed, stale, unsupported, and empty states remain distinct;
-authorization, paging, mobile, keyboard, and screen-reader gates pass.
-
-**T38.2 · Cross-service relationship explorer** *(needs T38.1)* — add
+**T38.2 · Cross-service relationship explorer** *(scheduled · needs T38.1)* — add
 source-first filtered tables and an optional deterministic visualization over
 the same authoritative rows. AC: service/contract/topic/direction/evidence
 filters; no graph-invented edges or transitivity; shared table/diagram ids,

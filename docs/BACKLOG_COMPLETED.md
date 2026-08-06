@@ -7953,3 +7953,59 @@ No relationship accuracy/completeness, runtime or broker topology,
 supported-scale/SLO, migration/decommission-safety, or release claim is
 created. `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 37 is complete; T38.1 owns
 the service overview product.
+
+**T38.1 ✅ · Exact service overview** *(2026-08-06)* — extended the existing
+repository-local service directory with the first service-centered product
+surface. A selected service keeps T33.4's exact catalog identity, authority,
+disposition, incarnation, desired/active generations, lifecycle currentness,
+source-role/path/origin attribution, successors, and search entry. When the
+runtime advertises `service-relationships-v1`, the same detail opens three
+T37.5 exact views: RPC source participation for contracts used and dependency
+services, RPC target participation for contracts provided, callers, and
+dependent services, and Kafka producer/consumer source evidence for topics.
+
+Each linked summary count is the server's exact `scanned_references` value and
+opens a bounded 25-row native table. Rows preserve protocol/plane/class/reason,
+participation, operation or topic spelling, accepted counterpart services,
+source and target paths, and every catalog claim including accepted,
+proposal, conflict, and rejected roles/origins. Shared, unowned, and ambiguous
+postures remain visible. One **View citation** action calls the lease-pinned
+T37.5 citation reader and shows only the immutable source span with its exact
+relationship generation/root and source object/content identities.
+
+The client validates query, repository, service, root, incarnation,
+generation, row, citation, count, and page authority before relabeling a JSON
+response. It requires all three views to share one relationship
+generation/root and match the catalog detail's service incarnation and desired
+generation before labeling the overview current. Unsupported capability,
+request failure, failed/unavailable root, stale authority, admitted
+truncation, exact empty, mixed-generation refusal, shared/unowned placement,
+and conflict ambiguity remain distinct; a gap never becomes an empty count.
+Catalog detail failure stays isolated from the inventory, preserving T33.5's
+deep-link behavior.
+
+One selected service performs the pre-existing inventory/detail requests plus
+three concurrent 25-row first-page relationship reads. Those three server
+bindings are created once per selected service and reused across tab changes;
+one next-page navigation advances only the originating opaque bound cursor and
+replaces that view. The browser holds at most three 25-row pages plus one
+citation, aborts superseded reads, performs no polling or source prefetch, and
+adds no startup, sync, retry/no-op, publication, search, Workbench, proof, MCP,
+or unselected-directory work. Citation cost remains one at-most-4-MiB
+immutable Git blob read under T37.5's two-reader semaphore. The responsive
+single-column layout, labeled table scroll region, native links/tables/details,
+live and error regions, visible focus, touch-sized actions, and non-color state
+text preserve mobile, keyboard, and screen-reader operation.
+
+The deterministic source-free neutral receipt is retained at
+`spike/t381/results.json`
+(`sha256:65351feda11fb284da15a87ebc578b9aab54b02c6c91bda77aa60b7417e991b2`).
+Its five cases bind executable catalog authorization/snapshot, exact overview,
+state-honesty, binding-reuse/paging, relationship authority, and citation
+gates. It retains no source, path, object ID, citation content, repository
+identity, raw error, private topology, or measurement corpus.
+
+No relationship accuracy/completeness, runtime or broker topology,
+supported-scale/SLO, migration/decommission-safety, or release claim is
+created. `GATE2-V2` remains `NOT_ESTABLISHED`. T38.2 owns the cross-service
+relationship explorer and optional deterministic visualization.

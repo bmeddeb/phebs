@@ -88,6 +88,7 @@ export default function App() {
     capabilities.includes('change-workbench-evidence')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
   const servicesAvailable = capabilities.includes('service-catalog-v2')
+  const serviceRelationshipsAvailable = capabilities.includes('service-relationships-v1')
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
@@ -95,7 +96,7 @@ export default function App() {
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} serviceDirectoryAvailable={servicesAvailable} />
   else if (path.startsWith('/services') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/services') && servicesAvailable) page = <ServiceDirectoryPage params={params} />
+  else if (path.startsWith('/services') && servicesAvailable) page = <ServiceDirectoryPage params={params} relationshipsAvailable={serviceRelationshipsAvailable} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />

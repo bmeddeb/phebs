@@ -10,8 +10,10 @@ import {
   type ServiceInventory,
   type ServiceMembershipRole,
   type ServiceRecord,
+  type ServiceRelationshipView,
   type ServiceStatus,
 } from '../api'
+import ServiceOverview from '../components/ServiceOverview'
 import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError, relTime } from '../util'
@@ -25,9 +27,14 @@ interface DirectoryRoute {
   includeRemoved: boolean
   cursor: string
   serviceKey: string
+  relationshipView: ServiceRelationshipView
+  relationshipCursor: string
 }
 
-export default function ServiceDirectoryPage({ params }: { params: URLSearchParams }) {
+export default function ServiceDirectoryPage({ params, relationshipsAvailable = false }: {
+  params: URLSearchParams
+  relationshipsAvailable?: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const route = directoryRoute(params)
@@ -153,18 +160,23 @@ export default function ServiceDirectoryPage({ params }: { params: URLSearchPara
         <>
           <RepositorySummary inventory={inventory} />
           <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.9fr) minmax(0, 1.45fr)', gap: '16px', marginTop: '16px', alignItems: 'start', '@media screen and (max-width: 900px)': { gridTemplateColumns: 'minmax(0, 1fr)' } })}>
-            <ServiceList
-              inventory={inventory}
-              route={route}
-              onRoute={setRoute}
-            />
-            <ServiceDetailPanel
-              detail={detail}
-              detailError={detailError}
-              selectedKey={route.serviceKey}
-              route={route}
-              onRetry={() => setReload((value) => value + 1)}
-            />
+            <div className={css({ minWidth: 0, '@media screen and (max-width: 900px)': { order: route.serviceKey ? 2 : 1 } })}>
+              <ServiceList
+                inventory={inventory}
+                route={route}
+                onRoute={setRoute}
+              />
+            </div>
+            <div className={css({ minWidth: 0, '@media screen and (max-width: 900px)': { order: route.serviceKey ? 1 : 2 } })}>
+              <ServiceDetailPanel
+                detail={detail}
+                detailError={detailError}
+                selectedKey={route.serviceKey}
+                route={route}
+                relationshipsAvailable={relationshipsAvailable}
+                onRetry={() => setReload((value) => value + 1)}
+              />
+            </div>
           </div>
           <SourceFreeBoundary />
         </>
@@ -189,7 +201,7 @@ function DirectoryHeader({ route }: { route: DirectoryRoute }) {
         </h1>
       </div>
       <span className={css({ fontSize: '12px', lineHeight: '18px', color: tok.textTertiary, maxWidth: '420px', textAlign: 'right', '@media screen and (max-width: 720px)': { textAlign: 'left' } })}>
-        Catalog authority and lifecycle metadata · no source content or runtime relationship inference
+        Catalog authority plus exact static relationships · source content only on citation
       </span>
     </header>
   )
@@ -349,7 +361,7 @@ function ServiceListRow({ service, route }: { service: ServiceRecord; route: Dir
   const roles = roleEntries(service).filter(([, count]) => count > 0)
   return (
     <a
-      href={directoryHref(route, { serviceKey: service.key })}
+      href={directoryHref(route, { serviceKey: service.key, relationshipCursor: '' })}
       aria-current={selected ? 'true' : undefined}
       className={css({ display: 'block', padding: '12px', textDecoration: 'none', color: tok.textPrimary, backgroundColor: selected ? tok.selectedLineBg : tok.pageBg, boxShadow: selected ? `inset 2px 0 0 ${tok.accent}` : 'none', ':hover': { backgroundColor: selected ? tok.selectedLineBg : tok.hoverFill }, ':focus-visible': { ...focusRing(tok), position: 'relative', zIndex: 1 } })}
     >
@@ -372,11 +384,12 @@ function ServiceListRow({ service, route }: { service: ServiceRecord; route: Dir
   )
 }
 
-function ServiceDetailPanel({ detail, detailError, selectedKey, route, onRetry }: {
+function ServiceDetailPanel({ detail, detailError, selectedKey, route, relationshipsAvailable, onRetry }: {
   detail: ServiceDetail | null
   detailError: string
   selectedKey: string
   route: DirectoryRoute
+  relationshipsAvailable: boolean
   onRetry: () => void
 }) {
   const [css] = useStyletron()
@@ -457,7 +470,10 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, onRetry }
           <Identity label="Active catalog" value={service.active_catalog_generation} />
         </div>
 
-        <h3 className={css({ ...sectionHeading(tok), marginTop: '20px' })}>Catalog placements</h3>
+        <h3 className={css({ ...sectionHeading(tok), marginTop: '20px' })}>Source roles & deployable attribution</h3>
+        <p className={css({ margin: '5px 0 0', fontSize: '10.5px', lineHeight: '16px', color: tok.textTertiary })}>
+          Exact catalog roles attribute paths to this service identity. Shared, generated, typed, proposal, and rejected authority remain explicit; no runtime owner is inferred.
+        </p>
         {detail.memberships.length === 0 ? (
           <div className={css({ padding: '16px 0 2px', fontSize: '12px', lineHeight: '18px', color: tok.textTertiary })}>No membership paths are attached to this authority record.</div>
         ) : (
@@ -477,6 +493,16 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, onRetry }
           Changed <time dateTime={service.changed_at} title={new Date(service.changed_at).toLocaleString()}>{relTime(service.changed_at)}</time> · {service.membership_count} role records across {service.distinct_path_count} paths
         </div>
       </div>
+      <ServiceOverview
+        detail={detail}
+        relationshipsAvailable={relationshipsAvailable}
+        activeView={route.relationshipView}
+        cursor={route.relationshipCursor}
+        viewHref={(view, cursor = '') => directoryHref(route, {
+          relationshipView: view,
+          relationshipCursor: cursor,
+        })}
+      />
     </article>
   )
 }
@@ -524,7 +550,7 @@ function SourceFreeBoundary() {
     <aside className={css({ marginTop: '16px', padding: '12px 14px', border: `1px dashed ${tok.cardBorder}`, borderRadius: '8px', display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap', color: tok.textTertiary })}>
       <strong className={css({ fontSize: '11px', lineHeight: '16px', color: tok.textSecondary })}>Source-free boundary</strong>
       <span className={css({ fontSize: '11px', lineHeight: '17px' })}>
-        This directory reads catalog and lifecycle metadata only. Paths are authority identities; no file bytes, search shards, runtime edges, completeness, or accuracy claim is loaded.
+        The inventory and catalog detail read authority metadata. The relationship overview reads exact derived rows; source bytes are loaded only after <strong>View citation</strong>. Paths are authority identities, and no runtime edges, completeness, or accuracy claim is made.
       </span>
     </aside>
   )
@@ -574,6 +600,11 @@ function roleEntries(service: ServiceRecord): [ServiceMembershipRole, number][] 
 function directoryRoute(params: URLSearchParams): DirectoryRoute {
   const status = params.get('status') as ServiceStatus | null
   const disposition = params.get('disposition') as ServiceDisposition | null
+  const requestedView = params.get('relationship_view')
+  const relationshipView: ServiceRelationshipView =
+    requestedView === 'callers' || requestedView === 'topics'
+      ? requestedView
+      : 'dependencies'
   return {
     repository: params.get('repository') ?? '',
     status: status || undefined,
@@ -581,6 +612,8 @@ function directoryRoute(params: URLSearchParams): DirectoryRoute {
     includeRemoved: params.get('include_removed') === 'true',
     cursor: params.get('cursor') ?? '',
     serviceKey: params.get('service_key') ?? '',
+    relationshipView,
+    relationshipCursor: params.get('relationship_cursor') ?? '',
   }
 }
 
@@ -591,6 +624,8 @@ function directoryParams(route: DirectoryRoute): Record<string, string> {
   if (route.includeRemoved) result.include_removed = 'true'
   if (route.cursor) result.cursor = route.cursor
   if (route.serviceKey) result.service_key = route.serviceKey
+  if (route.relationshipView !== 'dependencies') result.relationship_view = route.relationshipView
+  if (route.relationshipCursor) result.relationship_cursor = route.relationshipCursor
   return result
 }
 

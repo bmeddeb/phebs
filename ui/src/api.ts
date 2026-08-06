@@ -234,6 +234,141 @@ export interface ServiceDetail {
   memberships: ServiceMembership[]
 }
 
+export type ServiceRelationshipView = 'dependencies' | 'callers' | 'topics'
+
+export interface ServiceRelationshipRoleClaim {
+  role: string
+  origin: string
+}
+
+export interface ServiceRelationshipClaim {
+  service_key: string
+  disposition: string
+  roles: ServiceRelationshipRoleClaim[]
+}
+
+export interface ServiceRelationshipPlacement {
+  path: string
+  unowned: boolean
+  claims: ServiceRelationshipClaim[]
+}
+
+export interface ServiceRelationshipSpan {
+  start_byte: number
+  end_byte: number
+  start_line: number
+  end_line: number
+}
+
+export interface ServiceRelationshipEvidence {
+  kind: string
+  plane: string
+  class: string
+  reason?: string
+  path: string
+  object_id: string
+  content_digest: string
+  span: ServiceRelationshipSpan
+  source_role: string
+  operation?: string
+  candidate_operations?: string[]
+  declaration_path?: string
+  declaration_lineage?: string
+  resolver_record_digests?: string[]
+  topic_spelling?: string
+  group_id_spelling?: string
+  library?: string
+  shape?: string
+  binding?: string
+  posting_digest: string
+}
+
+export interface ServiceRelationshipRow {
+  repository: string
+  service_key: string
+  service_incarnation: number
+  service_generation: string
+  kind: string
+  plane: string
+  class: string
+  lookup_key?: string
+  participation: string[]
+  counterpart_services: string[]
+  projection_digest: string
+  posting_digest: string
+  source: ServiceRelationshipPlacement
+  target?: ServiceRelationshipPlacement
+  evidence: ServiceRelationshipEvidence
+  citation: string
+}
+
+export interface ServiceRelationshipRootReceipt {
+  repository: string
+  state: 'complete' | 'empty' | 'failed' | 'unavailable'
+  reason?: string
+  generation?: string
+  root_digest?: string
+  authority_digest?: string
+  service_key: string
+  service_incarnation?: number
+  service_generation?: string
+  reference_count: number
+  repository_complete?: boolean
+  all_services_complete?: boolean
+  failed_service_count?: number
+}
+
+export interface ServiceRelationshipPage {
+  schema: string
+  query: {
+    repositories: string[]
+    service_key: string
+    view: ServiceRelationshipView
+    kind?: string
+    plane?: string
+    lookup_key?: string
+  }
+  rows_state: 'nonempty' | 'empty' | 'gap'
+  roots: ServiceRelationshipRootReceipt[]
+  rows: ServiceRelationshipRow[]
+  coverage: {
+    authorized_repositories: number
+    complete_roots: number
+    empty_roots: number
+    failed_roots: number
+    unavailable_roots: number
+    scanned_references: number
+    returned_rows: number
+    truncated: boolean
+  }
+  pagination: {
+    order: string
+    page_size: number
+    returned: number
+    next_cursor?: string
+  }
+  caveat: string
+}
+
+export interface ServiceRelationshipCitation {
+  schema: string
+  repository: string
+  generation: string
+  root_digest: string
+  projection: {
+    kind: string
+    posting_digest: string
+    class: string
+    plane: string
+    lookup_key?: string
+    source: ServiceRelationshipPlacement
+    target?: ServiceRelationshipPlacement
+    digest: string
+  }
+  evidence: ServiceRelationshipEvidence
+  content: string
+}
+
 export interface SourceFile {
   content: string
   encoding: 'utf8' | 'base64'
@@ -1908,6 +2043,28 @@ export const fetchServiceDetail = (
   signal?: AbortSignal,
 ) => getJSON<ServiceDetail>(
   `/api/service?${query({ repository, service_key: serviceKey })}`,
+  signal,
+)
+
+export const fetchServiceRelationships = (
+  values: {
+    repository: string
+    service_key: string
+    view: ServiceRelationshipView
+    page_size?: number
+    cursor?: string
+  },
+  signal?: AbortSignal,
+) => getJSON<ServiceRelationshipPage>(
+  `/api/service-relationships?${query(values)}`,
+  signal,
+)
+
+export const fetchServiceRelationshipCitation = (
+  citation: string,
+  signal?: AbortSignal,
+) => getJSON<ServiceRelationshipCitation>(
+  `/api/service-relationship-citation?${query({ citation })}`,
   signal,
 )
 
