@@ -24,6 +24,7 @@ func TestHandWrittenStrictOutputSchemasAdmitEveryField(t *testing.T) {
 		{"get_contract_operation", reflect.TypeOf(contractOperationResult{}), contractOperationOutputSchema()},
 		{"read_operation_caller_citation", reflect.TypeOf(api.CallerMapCitation{}), callerCitationOutputSchema()},
 		{"compare_operation_callers", reflect.TypeOf(api.CallerComparisonExactPage{}), callerComparisonOutputSchema()},
+		{"get_change_workbench_impact", reflect.TypeOf(api.WorkbenchImpactPage{}), workbenchImpactOutputSchema()},
 	} {
 		t.Run(guard.name, func(t *testing.T) {
 			missing := schemaMissingFields(guard.typ, guard.schema, guard.name)

@@ -464,6 +464,14 @@ surfaces only when `experimental.provisional_proto_extraction` or
 store-derived Contract Atlas. It adds no route or capability identifier and
 does not change the production-registration gate.
 
+When that complete shared Workbench evidence set is available, MCP also
+registers the read-only `get_change_workbench_impact` projection. It accepts
+the same exact Investigation revision, service filters, page size, and cursor
+as HTTP and returns the same relationship authority and typed gaps. Both
+transports reject an encoded impact page above 8 MiB. The tool stays
+undiscoverable when the shared impact service, Workbench/checklist annex, or
+principal projection is absent; it adds no configuration switch of its own.
+
 `PHEBS_SYNTHETIC_WORKBENCH` is parsed strictly before the registration matrix:
 only an empty value or exact `1` is accepted. The two stable typed startup
 refusal classes are:

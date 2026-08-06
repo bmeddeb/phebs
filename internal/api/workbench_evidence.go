@@ -17,6 +17,11 @@ import (
 const (
 	workbenchEvidenceQueryBytes   = 64 << 10
 	workbenchDispositionBodyBytes = 512 << 10
+	// WorkbenchImpactResponseByteLimit is shared by the HTTP and MCP
+	// projections. The page is already row-paginated; this final encoded fence
+	// prevents one unusually wide evidence row from consuming an unbounded
+	// transport response.
+	WorkbenchImpactResponseByteLimit = 8 << 20
 )
 
 // WorkbenchImpactReader, WorkbenchImplementationReader, and
@@ -188,6 +193,9 @@ func registerWorkbenchEvidence(api huma.API, opts Options) {
 				err,
 			)
 		}
+		if err := ValidateWorkbenchImpactResponse(value); err != nil {
+			return nil, err
+		}
 		return &workbenchImpactPageOutput{Body: *value}, nil
 	})
 
@@ -313,4 +321,28 @@ func registerWorkbenchEvidence(api huma.API, opts Options) {
 		}
 		return &workbenchDispositionOutput{Body: *value}, nil
 	})
+}
+
+// ValidateWorkbenchImpactResponse applies the identical last-mile encoded
+// output fence to HTTP and MCP without changing the shared evidence service.
+func ValidateWorkbenchImpactResponse(value *WorkbenchImpactPage) error {
+	if value == nil {
+		return huma.Error500InternalServerError(
+			"encode workbench impact response",
+			errors.New("workbench impact response is nil"),
+		)
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return huma.Error500InternalServerError(
+			"encode workbench impact response",
+			err,
+		)
+	}
+	if len(encoded) > WorkbenchImpactResponseByteLimit {
+		return huma.Error500InternalServerError(
+			"workbench impact response exceeds its 8 MiB bound",
+		)
+	}
+	return nil
 }

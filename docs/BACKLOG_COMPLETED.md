@@ -8123,3 +8123,60 @@ No implicit write, task completion, relationship accuracy/completeness,
 runtime or broker topology, supported-scale/SLO, migration-complete,
 decommission-safe, or release claim is created. `GATE2-V2` remains
 `NOT_ESTABLISHED`. T38.4 owns strict MCP microservice parity.
+
+**T38.4 ✅ · MCP microservice parity** *(2026-08-06; needs T38.1–T38.3)*
+— completed the strict agent projection as six read-only tools over the same
+services used by HTTP: `list_services`, `get_service`,
+`list_service_relationships`, `compare_service_relationships`,
+`read_service_relationship_citation`, and the new
+`get_change_workbench_impact`. The existing five retain their exact service,
+catalog, lifecycle, root, incarnation, generation, placement, posting,
+immutable-source, authorization, pagination, error, and citation semantics.
+They now also advertise explicit read-only, closed-world annotations and state
+that their output is evidence rather than Decision or safety authority.
+
+The impact tool accepts a strict field-for-field projection of the shared
+`WorkbenchImpactRequest` and returns the exact `WorkbenchImpactPage`, including
+source/target service scope, citation-free relationship snapshots, final root
+authority, typed gaps, caveat, and continuation cursor. The adapter calls the
+same shared service once, forwards the request context, derives the principal
+through the existing non-disclosing Workbench boundary, and preserves shared
+status errors. It registers only when the complete Workbench/checklist read
+annex, impact reader, and principal projection are present; partial capability
+sets expose nothing.
+
+The input schema is a strict transport mirror rather than a second semantic
+type. Its explicit 1:1 conversion avoids the MCP SDK's process-global schema
+cache changing an existing disposition schema when the shared filter type is
+reflected in a different order. Because Contract Atlas messages are
+recursive, the impact output uses a hand-written
+`additionalProperties:false` top-level schema that names every shared page
+field; a reflection guard rejects future omissions, while the existing
+bounded service remains authoritative for nested objects. HTTP and MCP now
+share one final 8-MiB encoded impact-response fence. Unknown nested inputs are
+rejected before the service, cancellation reaches the shared read, and
+hidden/missing authority has one indistinguishable error shape.
+
+The closed test registry contains exactly 18 read tools: ten core, two service
+directory, three relationship, two base Workbench, and one impact. All six
+microservice input/output schema digests are pinned. Existing five-tool costs
+do not change. One impact call performs the existing T38.3 read, one bounded
+JSON encoding for the shared final fence, and normal MCP serialization; it
+adds no cache, retained binding, lock, source read, durable state, polling,
+prefetch, startup scan, sync/retry/no-op work, publication, indexing, search,
+background job, or child process.
+
+The deterministic source-free receipt is retained at
+`spike/t384/results.json`
+(`sha256:a3e192d592e489c4bc834ae33b4b8ee90bd05d0040509dc174ea7e68c518e26b`).
+Its five cases bind exact shared projection, inherited bounds and capability
+darkness, hostile-client and output refusal, cancellation, schema/tool-count
+identity, existing-reader parity, and the negative authority claims. It
+retains no source, path, object ID, citation bytes, repository identity, raw
+error, private topology, or measurement corpus.
+
+No write, task completion, agent Decision authority, relationship
+accuracy/completeness, runtime or broker topology, supported-scale/SLO,
+migration-complete, decommission-safe, or release claim is created.
+`GATE2-V2` remains `NOT_ESTABLISHED`. T38.5 owns product closure and the
+end-to-end neutral demo.

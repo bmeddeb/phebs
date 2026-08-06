@@ -1,0 +1,98 @@
+{
+  "schema": "t384-mcp-microservice-parity-v1",
+  "outcome": "completed",
+  "tools": {
+    "parity_tool_count": 6,
+    "complete_read_tool_count": 18,
+    "names": [
+      "compare_service_relationships",
+      "get_change_workbench_impact",
+      "get_service",
+      "list_service_relationships",
+      "list_services",
+      "read_service_relationship_citation"
+    ]
+  },
+  "bounds": {
+    "service_response_bytes": 1048576,
+    "relationship_response_bytes": 2097152,
+    "citation_blob_bytes": 4194304,
+    "impact_response_bytes": 8388608,
+    "maximum_page_rows": 100,
+    "maximum_relationship_repositories": 32
+  },
+  "cases": [
+    {
+      "name": "shared_contract",
+      "assertions": [
+        "exact_request_projection",
+        "exact_page_projection",
+        "authority_and_gaps_preserved"
+      ],
+      "gates": [
+        "TestMicroserviceMCPImpactUsesExactSharedContract"
+      ]
+    },
+    {
+      "name": "strict_bounded_darkness",
+      "assertions": [
+        "unknown_nested_field_refused",
+        "output_ceiling_shared",
+        "incomplete_capability_dark",
+        "authorization_non_disclosing"
+      ],
+      "gates": [
+        "TestMicroserviceMCPToolsAreStrictBoundedAndCapabilityGated",
+        "TestWorkbenchImpactResponseCeilingIsEncodedAndClosed"
+      ]
+    },
+    {
+      "name": "cancellation",
+      "assertions": [
+        "request_context_forwarded",
+        "shared_read_canceled"
+      ],
+      "gates": [
+        "TestMicroserviceMCPImpactCancellationReachesSharedService"
+      ]
+    },
+    {
+      "name": "tool_identity",
+      "assertions": [
+        "six_parity_tools",
+        "eighteen_complete_read_tools",
+        "strict_schema_digests_pinned",
+        "read_only_annotations",
+        "production_wiring"
+      ],
+      "gates": [
+        "TestMicroserviceMCPToolCountAndSchemaDigests",
+        "TestHTTPHandlerAuthenticationBoundaries"
+      ]
+    },
+    {
+      "name": "existing_shared_readers",
+      "assertions": [
+        "directory_shared",
+        "relationships_shared",
+        "citations_shared"
+      ],
+      "gates": [
+        "TestServiceDirectoryToolsShareResponsesAndSchemas",
+        "TestRelationshipMCPToolsUseSharedProjectionAndStayDefaultDark"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_write": true,
+    "no_task_completion": true,
+    "no_decision_authority": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_runtime_topology": true,
+    "no_migration_safety": true,
+    "no_decommission_safety": true,
+    "no_release_authority": true
+  }
+}

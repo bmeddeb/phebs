@@ -1596,7 +1596,8 @@ The production MCP tool set is read-only with respect to Investigations, so
 ordinary named keys need no capability. When and only when the documented
 synthetic Change Workbench adapter is enabled, MCP adds a default-dark
 Workbench annex over the same shared services as Huma. Read-capable
-credentials discover `preview_change_workbench` and `get_change_workbench`.
+credentials discover `preview_change_workbench`, `get_change_workbench`, and
+`get_change_workbench_impact`.
 Preview writes nothing, but invocation requires a named key carrying
 `investigation:write` because its digest can bind a later mutation.
 
@@ -1610,17 +1611,15 @@ service. The capability is only the credential gate: repository visibility,
 Investigation ownership, current revision, preview and evidence snapshots,
 suggestion identity, supersession, and idempotency checks remain authoritative.
 
-Twelve core tools are always present, including the store-backed
-`list_services` and `get_service` reads. Enabling any provisional extraction
-pack adds five evidence-query tools, for seventeen. Enabling a protobuf or
-Thrift caller pack also adds the four-tool Caller Map annex and the comparison
-tool, for twenty-two tools. A pinned Buf binary and successful host-sandbox
-startup probe adds compatibility as the final tool, for twenty-three total;
-otherwise compatibility stays undiscoverable. A complete synthetic Workbench
-adds two read tools for otherwise authenticated credentials and two additional
-durable mutation tools only for a write-capable named key. The maximum
-synthetic counts alongside every existing annex are therefore twenty-five and
-twenty-seven.
+Ten core tools are always present. The complete T38.4 microservice read
+configuration adds two service-directory tools, three relationship tools, two
+base Workbench reads, and one Workbench-impact read, for a pinned total of 18.
+Observation progress can add one independently. Enabling provisional proof
+packs adds five evidence-query tools; the complete Contract Atlas/Caller Map
+annex adds four; and a pinned Buf binary plus successful host-sandbox probe
+adds compatibility as one more tool. With every existing read annex enabled,
+the count is 29. A currently write-capable named key discovers the two explicit
+Workbench mutations as well, for 31; otherwise they remain undiscoverable.
 
 The agent workflow is explicit: discover an endpoint with
 `search_contract_operations`, preview a complete Workbench plan, submit that
@@ -1640,6 +1639,9 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `list_repos`       | every indexed repo with branch/visibility/index-time metadata plus the same active analysis-unit name, exact selected paths, search posture, and typed-index posture exposed by HTTP repository status                                                                                                                        |
 | `list_services`    | one visible repository's exact service-key-ordered lifecycle page; supports bounded status/disposition/removed filters and a catalog/authorization/summary/incarnation-bound cursor, while returning counts but no paths |
 | `get_service`      | one exact visible service with the same list-row type plus successors and bounded primary/supporting/shared/generated/typed membership paths |
+| `list_service_relationships` | one exact service's authorization-scoped dependency, caller, or source-spelled topic evidence with root/incarnation authority, gaps, placement claims, bounded pagination, and opaque citations |
+| `compare_service_relationships` | added, removed, and unchanged exact relationship evidence across two lease-pinned generations; unavailable and truncated states remain explicit |
+| `read_service_relationship_citation` | reauthorize and read only the immutable source span named by one current relationship citation; repeats exact root, posting, object, digest, and span authority |
 | `find_definitions` | precise SCIP definition for `{repo,path,line,character,ref?}`                                                                                                                                                                                               |
 | `find_references`  | precise SCIP references for the same position; maximum 500 locations with `truncated`                                                                                                                                                                       |
 | `hover`            | SCIP symbol, signature, documentation, and source range                                                                                                                                                                                                     |
@@ -1661,6 +1663,7 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |
 | `create_change_workbench` | explicit durable creation of one preview-bound Investigation and initial immutable revision; advertised only to a write-capable named key |
 | `get_change_workbench` | authorized read of one current Workbench revision and its human-authored brief; creates no evidence or durable state |
+| `get_change_workbench_impact` | exact shared Workbench impact page with optional source/target service scope, relationship authority, typed gaps, caveat, and continuation cursor; capped at 8 MiB and creates no write, task, Decision, completeness, or safety authority |
 | `record_change_disposition` | explicit durable append of one immutable fixed-category Disposition over an exact current suggestion; advertised only to a write-capable named key |
 
 

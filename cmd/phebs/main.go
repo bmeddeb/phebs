@@ -1201,6 +1201,7 @@ func serve(args []string) error {
 		ObservationProgress:   apiOpts.ObservationProgress,
 		Relationships:         apiOpts.Relationships,
 		Workbench:             apiOpts.Workbench,
+		WorkbenchImpact:       apiOpts.WorkbenchImpact,
 		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
 		Principal:             apiOpts.Principal,
 		InvestigationMutation: mcpInvestigationMutation,

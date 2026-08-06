@@ -20,8 +20,8 @@ resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
 and T37.4's service projections and atomic relationship roots are complete;
 T37.5's exact readers, comparison, proof/Workbench integration, and neutral
 demo are also complete, closing Epic 37. T38.1's exact service overview,
-T38.2's cross-service explorer, and T38.3's service-aware Impact/Workbench are
-complete; T38.4 is the next scheduled ticket,
+T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench, and
+T38.4's strict MCP parity are complete; T38.5 is the next scheduled ticket,
 and the remaining Epics 38–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -39,17 +39,10 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 38 · Microservice product workflows *(T38.1–T38.3 complete · T38.4 scheduled)*
+## Epic 38 · Microservice product workflows *(T38.1–T38.4 complete · T38.5 scheduled)*
 
 Turn the catalog and relationship engine into the service-centered experience
 that differentiates phebs from repository/file search.
-
-**T38.4 · MCP microservice parity** *(scheduled · needs T38.1–T38.3)* — expose service
-inventory/detail, dependencies, change impact, gaps, and citations through
-strict bounded tools or extensions to existing tools. AC: same service types,
-authority, pagination, errors, authorization, and capability gating as HTTP;
-tool-count/schema digests, hostile clients, cancellation, and output ceilings
-pass; agents receive evidence, not decision authority.
 
 **T38.5 · Product closure and neutral demo** *(needs T38.1–T38.4)* — run an
 add/modify/migrate/retire scenario across multiple neutral services from All

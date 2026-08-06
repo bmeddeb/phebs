@@ -200,7 +200,7 @@ func TestWorkbenchToolSchemasAndCredentialDiscovery(t *testing.T) {
 		"preview_change_workbench":  "sha256:b1a10bbcf8c8b5bda3ea9c98b4ec0ddac00143e5cc62827cb54648fe93483c9d",
 		"create_change_workbench":   "sha256:745cd55f472b066da575ffac55160911cc83aa778277a12376edb2251360b595",
 		"get_change_workbench":      "sha256:0ee9d08b20bb3f61b225ae849c39fa3f2b1225d633df68e21f6803b69a8b8f1e",
-		"record_change_disposition": "sha256:63c341ce5fc23b7eb6638ec523ad9a6ecd764bcf876638424a76e8e42e1381ba",
+		"record_change_disposition": "sha256:6c3c0535747149252cf87a6c76283c0d6f1807394c3587e8765284b08783ef57",
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
