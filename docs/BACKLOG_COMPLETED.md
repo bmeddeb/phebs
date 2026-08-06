@@ -8307,6 +8307,51 @@ path, response body, raw error, or private topology.
 This is a valid stopped gate, not a pass. It establishes no target operating
 envelope, general SLO, accuracy/completeness, release authority, migration
 completion, or decommission safety. `GATE2-V2` remains `NOT_ESTABLISHED`.
-T39.3 is scheduled next as the independent security/lifecycle gate. T39.4 and
-T39.5 must preserve this stop unless a separately approved, newly frozen rerun
-supersedes it; missing later phases cannot be reinterpreted as passing evidence.
+T39.3 was scheduled next as the independent security/lifecycle gate and
+subsequently completed below. T39.4 and T39.5 must preserve this stop unless a
+separately approved, newly frozen rerun supersedes it; missing later phases
+cannot be reinterpreted as passing evidence.
+
+**T39.3 ✅ · Security and lifecycle gate**
+*(2026-08-06; needs T39.1)* — retained ten required negative-case groups over
+34 named executable gates. Authorization non-disclosure proves hidden service
+names/counts remain absent and authorization precedes repository, state, and
+filesystem work. Shared/cross-service authority retains exact many-to-many,
+nonaccepted, and unowned placements. Revocation suppresses in-flight output;
+cursors bind principal, revision, snapshot, and incarnation; proof reads
+authorize again. Invalid v2 authority never falls back, incomplete generations
+never move current pointers, and stale transitions fail their final fence.
+
+Hostile catalog gates refuse unknown/duplicate fields, wrong types, semantic
+cycles/overlap/roles, and every pre-growth limit crossing. Hostile source/Git
+gates ignore replacement refs and refuse alternates, symlinked shards, missing
+objects without identity leakage, and oversized blobs before Git reads.
+Pressure gates retain exact collect/refuse/resume hysteresis at 80/90/75%,
+refuse unavailable capacity, and reject changed or symlinked roots. Current and
+rollback roots, active reader leases, and owned proof pins survive collection;
+owner rotation remains restart-fair and query/delete/trim budgets remain
+bounded. Live SurrealDB pin/lease tests and live exact backup/restore pass.
+
+The exact T39.1, stopped T39.2, and T35.4 receipts are immutable inputs. The
+T39.2 authority remains `stopped`, with one terminal incremental `pipeline`
+failure, all later phases `not_run`, and no supersession. A passing T39.3 gate
+cannot relabel it. The dedicated teardown probe deletes its derived bytes and
+credential from one exact temporary workspace while preserving sibling data.
+
+The deterministic source-free receipt is `spike/t393/results.json`
+(`sha256:8ccfabee2ed675f5539d1921fdce3280a947f22f51eaf94816eb702b8e694051`).
+It retains only public input paths/digests, closed case/assertion/test names,
+the prior stop shape, stop/review policy, teardown mechanics, and negative
+claims. It contains no repository/service identity, source/path/query/object
+bytes, credential value, host, raw error, private topology, or target
+measurement.
+
+Review authority remains outside the receipt: an independent reviewer is
+required before merge, and the implementer cannot self-approve. Any failed or
+skipped negative case stops release; warnings are not approval; thresholds
+cannot be raised to manufacture a pass. T39.3 establishes neither
+comprehensive security nor a general SLO, accuracy/completeness, release,
+migration completion, or decommission safety. `GATE2-V2` remains
+`NOT_ESTABLISHED`. T39.4 is scheduled next. Conditional T39.R1 must diagnose
+the T39.2 immutable-mirror contention before any separately authorized rerun,
+but does not block T39.4 or supersede the retained stop.

@@ -1,0 +1,212 @@
+{
+  "schema": "t393-security-lifecycle-gate-v1",
+  "outcome": "passed",
+  "completed_on": "2026-08-06",
+  "inputs": [
+    {
+      "path": "spike/t391/results.json",
+      "schema": "t391-neutral-correctness-scale-recovery-gate-v1",
+      "sha256": "sha256:301d01bccd1ed35b0b539cacdf624cda586e4fbf0267d5c2fe886e097b5501c6"
+    },
+    {
+      "path": "spike/t392/results.json",
+      "schema": "t392-authorized-target-operating-envelope-v1",
+      "sha256": "sha256:20e95fc8e7bf11fb9ae317aa57aeda2966fbf1c866d812f37fadb11aabd26a41"
+    },
+    {
+      "path": "spike/t354/results.json",
+      "schema": "t354-lifecycle-recovery-receipt-v1",
+      "sha256": "sha256:74af703392474a7993edd94f6ee71a7db9eddd5547cf3f4258228a1749f203c3"
+    }
+  ],
+  "t392_stop_authority": {
+    "outcome": "stopped",
+    "failure_phase": "incremental",
+    "failure_class": "pipeline",
+    "terminal_failures": 1,
+    "later_phases": "not_run",
+    "preserved_as_stop": true,
+    "superseded": false
+  },
+  "cases": [
+    {
+      "name": "authorization_non_disclosure",
+      "outcome": "passed",
+      "assertions": [
+        "hidden_service_names_and_counts_absent",
+        "authorization_precedes_repository_state_and_filesystem",
+        "operational_denials_remain_classified"
+      ],
+      "gates": [
+        "internal/api.TestServiceDirectoryHiddenAndAbsentPrecedeInputAndStateWork",
+        "internal/relationshippublication.TestAuthorizationPrecedesRepositoryValidationAndFilesystem",
+        "internal/api.TestExactCallerMapPreservesOperationalAuthorizationErrors"
+      ]
+    },
+    {
+      "name": "shared_and_cross_service_authority",
+      "outcome": "passed",
+      "assertions": [
+        "shared_paths_remain_explicit_many_to_many",
+        "cross_service_edges_retain_both_placements",
+        "unowned_and_nonaccepted_claims_do_not_become_authority"
+      ],
+      "gates": [
+        "internal/servicecatalog.TestCatalogAllowsExactManyToManyAndCrossServicePrefixes",
+        "internal/relationshippublication.TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically",
+        "internal/api.TestRelationshipServiceAuthorizationGapAndRetainedProofShape"
+      ]
+    },
+    {
+      "name": "revocation_cursor_and_proof_reuse",
+      "outcome": "passed",
+      "assertions": [
+        "revocation_suppresses_inflight_page",
+        "cursor_binds_principal_revision_and_incarnation",
+        "proof_read_reauthorizes"
+      ],
+      "gates": [
+        "internal/api.TestExactCallerMapSuppressesPageWhenAuthorizationIsLostMidRequest",
+        "internal/api.TestExactCallerMapCursorBindsTamperQueryPrincipalAndRevision",
+        "internal/api.TestServiceDirectoryCursorBindsSnapshotAndIncarnation",
+        "internal/api.TestProofBundleAdminMemberIsolationAndReadReauthorization"
+      ]
+    },
+    {
+      "name": "partial_and_stale_roots",
+      "outcome": "passed",
+      "assertions": [
+        "invalid_v2_never_falls_back",
+        "partial_generation_never_moves_pointer",
+        "stale_gap_transition_fails_final_fence"
+      ],
+      "gates": [
+        "internal/search.TestServiceSearchRefusesInvalidV2WithoutLegacyFallback",
+        "internal/relationshippublication.TestRecoveryValidatesCompleteGenerationBeforePointerSwap",
+        "internal/api.TestExactCallerMapRejectsGapTransitionAtResultFence"
+      ]
+    },
+    {
+      "name": "malicious_catalog",
+      "outcome": "passed",
+      "assertions": [
+        "unknown_duplicate_and_wrong_type_fields_refused",
+        "limits_checked_before_collection_growth",
+        "cycles_overlap_and_invalid_roles_refused"
+      ],
+      "gates": [
+        "internal/servicecatalog.TestDecodeStrictClosedWire",
+        "internal/servicecatalog.TestDecodeStopsBeforeCollectionGrowthPastLimits",
+        "internal/servicecatalog.TestCatalogSemanticRefusals"
+      ]
+    },
+    {
+      "name": "malicious_source_and_git",
+      "outcome": "passed",
+      "assertions": [
+        "replacement_refs_ignored",
+        "alternates_and_symlinked_shards_refused",
+        "missing_object_error_has_no_identity",
+        "oversized_blob_refused_before_git_read"
+      ],
+      "gates": [
+        "internal/sourcepartition.TestBatchReaderIgnoresReplacementRefs",
+        "internal/sourcepartition.TestBatchReaderCancellationAndExternalAlternatesFailClosed",
+        "internal/sourcepartition.TestBatchReaderClassifiesMissingWithoutIdentityLeak",
+        "internal/sourcepartition.TestPlannerRefusesOversizedSelectedBlobBeforeGitRead",
+        "internal/search.TestOpenRejectsSymlinkedShard"
+      ]
+    },
+    {
+      "name": "disk_pressure_and_admission",
+      "outcome": "passed",
+      "assertions": [
+        "collect_refuse_resume_hysteresis_exact",
+        "unknown_capacity_refuses_new_pressure_work",
+        "data_root_identity_and_symlinks_fail_closed"
+      ],
+      "gates": [
+        "internal/lifecycle.TestGateWatermarksProjectionAndHysteresis",
+        "internal/lifecycle.TestGateUnavailableAndRootHardening",
+        "internal/api.TestLifecycleStatusAuthorizesBeforeSourceAndReturnsBoundedSnapshot"
+      ]
+    },
+    {
+      "name": "pin_and_lease_retention",
+      "outcome": "passed",
+      "assertions": [
+        "current_and_rollback_floor_preserved",
+        "active_reader_lease_blocks_collection",
+        "proof_expiry_releases_only_owned_pins"
+      ],
+      "gates": [
+        "internal/relationshippublication.TestLifecyclePreservesCurrentRollbackFloorAndReaderLease",
+        "internal/observationpublication.TestLifecyclePreservesCurrentRollbackFloorAndLease",
+        "internal/store.TestProofBundleExpiryReleasesOnlyOwnedPins"
+      ]
+    },
+    {
+      "name": "bounded_sweep",
+      "outcome": "passed",
+      "assertions": [
+        "owner_rotation_restart_fair",
+        "failure_localized_to_owner",
+        "query_delete_and_trim_budgets_enforced",
+        "running_lease_protected"
+      ],
+      "gates": [
+        "internal/lifecycle.TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure",
+        "internal/lifecycle.TestGenerationOwnerHonorsAggregateQueryBudgetAndBackupLock",
+        "internal/lifecycle.TestJobOwnerTrimIsBounded",
+        "internal/store.TestGenerationLifecycleProtectsCurrentRollbackFloorAndRunningLease"
+      ]
+    },
+    {
+      "name": "backup_restore_and_teardown",
+      "outcome": "passed",
+      "assertions": [
+        "precious_authority_restored_exact",
+        "composite_generation_validated_or_omitted",
+        "dedicated_artifacts_and_credentials_destroyed",
+        "neighbor_data_preserved"
+      ],
+      "gates": [
+        "internal/recovery.TestLiveBackupRestoreAndStartupExactSearchRecovery",
+        "internal/relationshippublication.TestArchiveRoundTripPreservesExactCompositeAuthority",
+        "spike/t393.TestEphemeralGateTeardownDestroysDedicatedArtifacts"
+      ]
+    }
+  ],
+  "independent_review": {
+    "required": true,
+    "implementer_may_approve": false,
+    "merge_requires_independent_review": true,
+    "receipt_self_certifies_review": false,
+    "authority": "outside_receipt"
+  },
+  "stop_policy": {
+    "failed_negative_case_stops_release": true,
+    "warning_is_approval": false,
+    "skipped_case_is_pass": false,
+    "threshold_raise_allowed": false
+  },
+  "teardown": {
+    "outcome": "passed",
+    "scope": "dedicated_ephemeral_gate_workspace",
+    "derived_data_retained": false,
+    "credentials_retained": false,
+    "neighbor_data_preserved": true,
+    "gate": "spike/t393.TestEphemeralGateTeardownDestroysDedicatedArtifacts"
+  },
+  "claims": {
+    "source_free": true,
+    "t392_stop_preserved": true,
+    "establishes_security_complete": false,
+    "establishes_general_slo": false,
+    "establishes_accuracy": false,
+    "authorizes_release": false,
+    "establishes_migration_complete": false,
+    "establishes_decommission_safety": false,
+    "changes_production_behavior": false
+  }
+}
