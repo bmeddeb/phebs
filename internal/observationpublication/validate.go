@@ -26,6 +26,49 @@ type Publication struct {
 	manifest Manifest
 }
 
+// WalkObserved rereads the immutable member and observation bytes owned by an
+// already validated publication and yields each observed content identity once
+// with all of its placements. Unsupported source records are not observations
+// and remain accounted by the manifest operation receipt.
+func (publication *Publication) WalkObserved(
+	ctx context.Context,
+	visit func(Record, sourceobservation.Observation) error,
+) error {
+	if publication == nil || visit == nil {
+		return invalid("observation visitor")
+	}
+	directory := generationDirectory(
+		publication.root, publication.manifest.Repository,
+		publication.manifest.GenerationDigest,
+	)
+	for ordinal, expected := range publication.manifest.Members {
+		member, records, err := readMember(
+			ctx, directory, ordinal, len(publication.manifest.Members),
+		)
+		member.SourceMemberDigest = expected.SourceMemberDigest
+		if err != nil || member != expected {
+			return invalid("walk member mismatch")
+		}
+		for _, record := range records {
+			if record.State != "observed" {
+				continue
+			}
+			observation, err := readObservation(directory, record)
+			if err != nil {
+				return err
+			}
+			record.Placements = slices.Clone(record.Placements)
+			for index := range record.Placements {
+				record.Placements[index].Revisions = slices.Clone(record.Placements[index].Revisions)
+			}
+			if err := visit(record, observation); err != nil {
+				return err
+			}
+		}
+	}
+	return ctx.Err()
+}
+
 func (publication *Publication) Manifest() Manifest {
 	if publication == nil {
 		return Manifest{}
@@ -482,16 +525,24 @@ func validUnsupportedReason(reason string) bool {
 }
 
 func validateObservation(directory string, record Record) error {
+	_, err := readObservation(directory, record)
+	return err
+}
+
+func readObservation(
+	directory string,
+	record Record,
+) (sourceobservation.Observation, error) {
 	raw, err := readBoundedRegular(filepath.Join(directory, record.ObservationName), MaxObservationBytes)
 	if err != nil || digest("phebs-observation-bytes-v1", string(raw)) != record.ObservationDigest {
-		return invalid("observation bytes")
+		return sourceobservation.Observation{}, invalid("observation bytes")
 	}
 	var observation sourceobservation.Observation
 	if err := decodeCanonical(raw, &observation); err != nil || sourceobservation.Validate(observation) != nil ||
 		observation.ContentDigest != record.ContentDigest || observation.PolicyDigest != sourceobservation.PolicyDigest() {
-		return invalid("observation contract")
+		return sourceobservation.Observation{}, invalid("observation contract")
 	}
-	return nil
+	return observation, nil
 }
 
 func readPointer(root, repository string) (Pointer, error) {

@@ -162,6 +162,10 @@ func ManifestDigest(value Manifest) (string, error) {
 	return digest("phebs-observation-manifest-v1", string(raw)), nil
 }
 
+// ValidateManifest exposes the closed publication-control validator to later
+// immutable consumers without granting filesystem or mutation capabilities.
+func ValidateManifest(value Manifest) error { return validateManifest(value) }
+
 func repositoryDirectory(root, repository string) string {
 	return filepath.Join(root, repositoryHash(repository))
 }
