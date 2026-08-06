@@ -152,8 +152,9 @@ T37.3's Kafka topic postings, and T37.4's service projections and atomic
 relationship roots are complete; T37.5's exact readers, comparison,
 proof/Workbench integration, and neutral demo are complete, closing Epic 37.
 T38.1's exact selected-service overview, T38.2's source-first cross-service
-explorer, and T38.3's service-aware Impact/Workbench composition are complete;
-T38.4 is scheduled next, the remaining Epic 38–39
+explorer, T38.3's service-aware Impact/Workbench composition, and T38.4's
+strict MCP microservice parity are complete; T38.5 is scheduled next, the
+remaining Epic 38–39
 tickets stay dependency-ordered drafts, and Epics
 25–28 remain
 unscheduled.

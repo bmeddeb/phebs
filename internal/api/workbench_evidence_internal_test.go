@@ -23,6 +23,33 @@ type workbenchImpactAPIFake struct {
 	err       error
 }
 
+func TestWorkbenchImpactResponseCeilingIsEncodedAndClosed(t *testing.T) {
+	page := &WorkbenchImpactPage{
+		SchemaVersion:   workbenchImpactSchemaVersion,
+		InvestigationID: workbenchEvidenceInvestigationID,
+		RevisionID:      workbenchEvidenceRevisionID,
+		Atlas:           []WorkbenchAtlasImpact{},
+		Callers:         []WorkbenchCallerImpact{},
+		ResourcePlanes:  []ResourcePlaneSnapshot{},
+		AnalysisScope: WorkbenchAnalysisScope{
+			Coverage:     []WorkbenchImpactCoverage{},
+			Capabilities: []WorkbenchImpactCapability{},
+			Gaps:         []WorkbenchImpactGap{},
+		},
+	}
+	if err := ValidateWorkbenchImpactResponse(page); err != nil {
+		t.Fatalf("bounded response refused: %v", err)
+	}
+	page.Caveat = strings.Repeat("x", WorkbenchImpactResponseByteLimit)
+	if err := ValidateWorkbenchImpactResponse(page); err == nil ||
+		!strings.Contains(err.Error(), "8 MiB") {
+		t.Fatalf("oversized response error = %v", err)
+	}
+	if err := ValidateWorkbenchImpactResponse(nil); err == nil {
+		t.Fatal("nil response passed the output fence")
+	}
+}
+
 func (fake *workbenchImpactAPIFake) Read(
 	_ context.Context,
 	principal string,

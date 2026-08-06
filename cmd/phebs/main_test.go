@@ -36,6 +36,8 @@ type authenticationWorkbenchFake struct{}
 
 type authenticationWorkbenchChecklistFake struct{}
 
+type authenticationWorkbenchImpactFake struct{}
+
 func TestCodeNavigationRepositoryErrorClassifiesNotFound(t *testing.T) {
 	wrapped := fmt.Errorf("lookup: %w", store.ErrNotFound)
 	if err := codeNavigationRepositoryError(
@@ -123,6 +125,14 @@ func (authenticationWorkbenchChecklistFake) RecordDisposition(
 	return &store.WorkbenchDisposition{}, nil
 }
 
+func (authenticationWorkbenchImpactFake) Read(
+	context.Context,
+	string,
+	api.WorkbenchImpactRequest,
+) (*api.WorkbenchImpactPage, error) {
+	return &api.WorkbenchImpactPage{}, nil
+}
+
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -178,6 +188,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	mcpOpts := phebsmcp.Options{
 		Version: "test", Workbench: authenticationWorkbenchFake{},
 		WorkbenchChecklist: authenticationWorkbenchChecklistFake{},
+		WorkbenchImpact:    authenticationWorkbenchImpactFake{},
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			if !ok || principal.User == nil {
@@ -345,6 +356,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	for _, name := range []string{
 		"preview_change_workbench",
 		"get_change_workbench",
+		"get_change_workbench_impact",
 	} {
 		if !readTools[name] {
 			t.Fatalf("read-only named key omitted %s: %v", name, readTools)
@@ -409,6 +421,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		"preview_change_workbench",
 		"create_change_workbench",
 		"get_change_workbench",
+		"get_change_workbench_impact",
 		"record_change_disposition",
 	} {
 		if !writeTools[name] {

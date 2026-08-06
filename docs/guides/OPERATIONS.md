@@ -3461,6 +3461,15 @@ walk members, source, shards, or Git objects. None of the reader, comparison,
 proof, or Workbench surfaces establishes relationship completeness, runtime
 topology, migration/decommission safety, an SLO, or release authority.
 
+T38.4 projects that same Workbench Impact reader through MCP as
+`get_change_workbench_impact`. The adapter performs no relationship join or
+classification: it forwards the exact HTTP request semantics, preserves the
+shared page, authority, gap and error types, and applies the same final 8 MiB
+encoded-response fence. Cancellation reaches the shared read. All six
+microservice MCP tools are read-only and closed-world; their evidence cannot
+authorize an agent Decision, task completion, migration, decommission, or
+release action.
+
 ## Developing phebs
 
 

@@ -68,9 +68,12 @@ type Options struct {
 	// Relationships is the same bounded T37.5 service supplied to Huma.
 	Relationships RelationshipQueries
 	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
-	// annex only when both real shared services are present. Principal is the
-	// same authenticated identity projection used by Huma.
+	// annex only when both real shared services are present. WorkbenchImpact
+	// adds T38.4's exact read-only impact projection when the same service is
+	// available to Huma. Principal is the same authenticated identity
+	// projection used by Huma.
 	Workbench          store.InvestigationWorkbench
+	WorkbenchImpact    WorkbenchImpactQueries
 	WorkbenchChecklist WorkbenchChecklistQueries
 	Principal          func(context.Context) string
 	// InvestigationMutation rechecks that the current MCP request carries a
