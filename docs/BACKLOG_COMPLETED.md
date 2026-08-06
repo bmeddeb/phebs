@@ -7765,3 +7765,58 @@ Kafka producer/consumer postings; T37.4 owns runtime registration, lifecycle,
 backup, and atomic repository/service relationship roots. No accuracy,
 completeness, target-scale/SLO, migration/decommission, or release claim is
 created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T37.3 ✅ · Kafka producer/consumer postings** *(2026-08-05; needs T37.1)* —
+adds the unregistered `phebs-kafka-topic-posting-root-v1` production contract.
+Its public builder accepts one concrete validated T36.3 observation
+publication and binds repository, exact observation generation, manifest,
+source generation, and the digest of every pack limit. It does not accept an
+interface that could supply unvalidated production bytes and does not consult
+resolver, service catalog, broker, deployment, or runtime state.
+
+Producer and consumer postings remain separate planes. A `literal` posting
+retains the exact decoded topic source spelling and its `literal` or
+`same-file-const` binding. This is source evidence only: it asserts no Kafka
+cluster, environment, deployment, partition, or runtime topic identity.
+Dynamic expressions and unsupported shapes—including cross-file or mutable
+identifiers and invalid topic literals—remain `unresolved`, with a closed
+`dynamic_topic` or `unsupported_topic` classification plus the bounded source
+reason and with no topic or binding authority. Library, import path, syntax
+shape, optional group-id source spelling, and production/test/vendor role stay
+explicit. Path, mode, revision ordinals, immutable object/content identity,
+and exact byte/line span make every placement an exact citation; identical
+content at multiple placements never collapses.
+
+Literal postings hash by topic spelling across 256 buckets independently for
+each plane. Unresolved postings route through one fixed sentinel-selected
+bucket per plane, which may also contain ordinary topic-hash collisions. A
+topic read and the bounded unresolved read validate only their selected
+member. Complete stage and post-install passes rederive canonical
+posting/member bytes, receipts, producer/consumer and literal/unresolved
+totals, encoded bytes, and exact inventory. Corruption in an unrelated bucket
+does not block a keyed read, while selecting corrupt bytes refuses.
+
+The digest-bound policy admits 256 buckets per plane, at most 512 members,
+1,000,000 postings, 50,000 postings per member, 4,096-byte retained text,
+249-byte topic spellings, 1-MiB postings, 128-MiB members, an 8-MiB root, 1 GiB
+of canonical posting identity, and 20 GiB of encoded members. Posting count,
+identity bytes, and per-member growth are checked before map/slice mutation;
+the member count is structurally bounded by the two closed planes and bucket
+count. Tests pin plane separation, spelling-only authority, dynamic and
+unsupported non-promotion, exact multi-placement citations and roles,
+deterministic generation reuse, sparse corruption isolation, the real
+per-member pre-growth path, and set-equal supported-case topic/span parity with
+the direct Kafka producer and consumer extractors.
+
+T37.3 registers no scheduler, worker, store row, current pointer,
+lifecycle/backup owner, startup/sync hook, API, MCP, UI, or request consumer,
+so steady state is unchanged. When explicitly invoked, build rereads the
+validated observation members and observations once, holds only the bounded
+posting groups, writes each nonempty member once, and performs one stage plus
+one post-install complete pass. It performs no source parse, Git read, store
+query, resolver lookup, network request, or child process. One sparse read
+opens the at-most-8-MiB root plus one at-most-128-MiB member. T37.4 owns runtime
+registration, lifecycle/backup, atomic repository/service relationship roots,
+and service projection. No accuracy, completeness, broker/runtime topology,
+target-scale/SLO, migration/decommission, or release claim is created;
+`GATE2-V2` remains `NOT_ESTABLISHED`.
