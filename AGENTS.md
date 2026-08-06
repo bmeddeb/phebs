@@ -154,8 +154,9 @@ proof/Workbench integration, and neutral demo are complete, closing Epic 37.
 T38.1's exact selected-service overview, T38.2's source-first cross-service
 explorer, T38.3's service-aware Impact/Workbench composition, T38.4's strict
 MCP microservice parity, and T38.5's product closure and neutral demo are
-complete, closing Epic 38. T39.1 is scheduled next; the remaining Epic 39
-tickets stay dependency-ordered drafts, and Epics
+complete, closing Epic 38. T39.1's neutral correctness, admission, and recovery
+gate is complete; T39.2 is scheduled next, the remaining Epic 39 tickets stay
+dependency-ordered drafts, and Epics
 25–28 remain
 unscheduled.
 A physical Go-test search overlay,

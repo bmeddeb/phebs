@@ -8223,3 +8223,48 @@ supported scale/SLO, migration-complete, decommission-safe, or release claim
 is created. The service-centered surfaces remain experimental;
 `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 38 is complete. T39.1 owns the
 neutral correctness, scale, and recovery gate.
+
+**T39.1 ✅ · Neutral correctness, scale-admission, and recovery gate**
+*(2026-08-06; needs Epic 38)* — replayed the independent T32.3 corpus through
+the final service-catalog contract and bound the complete final production
+writer/reader safety suite. The explicit fixture adapter retains accepted,
+proposal, conflict, tombstone, unowned, and malformed authority. It adds the
+final contract's required exact supporting role beside each fixture typed
+placement, then removes only that adapter-added role when projecting back to
+the frozen vocabulary. Canonical encode/decode, a second deterministic build,
+all 67 accepted memberships, 40 All code/service query results, ten RPC/topic
+relationships, 38 capability states, eight tombstones, and five malformed
+path refusals are exact across five revisions.
+
+The unchanged frozen profiles exercise admission honestly rather than being
+reshaped to pass. The 1,000-service profile has 5,000 memberships, 3,151 file
+records, and accepted fan-out 25, so it is refused at the final fan-out cap of
+20. The 5,000-service profile has 25,000 memberships and 15,751 file records,
+so it is refused at the 4,000-service cap before service-map growth. No reader
+starts after either refusal. These are passing fail-closed results, not a
+supported-scale or SLO claim.
+
+Four cost gate groups bind cold/warm complete-generation reads, restart no-op,
+affected-only update/service-local failure, and rollback/lease/budget-bounded
+GC. Five safety groups bind prior-pointer preservation on partial publication,
+authorization before repository/state work, marker and exhausted-schedule
+recovery, byte-exact composite/live restore, and retained v1/v2 proof reads
+with read-time reauthorization. The named gates live in the final search,
+observation, resolver, relationship, lifecycle, API, and recovery packages;
+the retained receipt does not substitute a synthetic implementation for them.
+
+The deterministic source-free receipt is retained at
+`spike/t391/results.json`
+(`sha256:301d01bccd1ed35b0b539cacdf624cda586e4fbf0267d5c2fe886e097b5501c6`).
+It binds the exact T32.3 corpus/bundle, T32.4 topology, T35.4 lifecycle, T37.5
+relationship, and T38.5 product receipts and retains no repository identity,
+source/path/query/object bytes, credential, host, raw error, private topology,
+or target measurement. No production package imports the gate, so requests,
+queries, startup/restart, sync/retry/no-op, publications, caches, leases,
+locks, filesystem/store work, jobs, children, and runtime memory/disk cost do
+not change.
+
+T39.1 establishes no target-corpus SLO, accuracy/completeness, supported
+service count, migration completion, decommission safety, target-run, or
+release authority. `GATE2-V2` remains `NOT_ESTABLISHED`. T39.2 is scheduled
+next under its separately approved frozen target operating envelope.

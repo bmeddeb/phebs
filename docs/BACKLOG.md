@@ -22,8 +22,10 @@ T37.5's exact readers, comparison, proof/Workbench integration, and neutral
 demo are also complete, closing Epic 37. T38.1's exact service overview,
 T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench,
 T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
-closing Epic 38. T39.1 is the next scheduled ticket; the remaining Epic 39
-tickets stay dependency-ordered drafts, not implicit implementation authorization.
+closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
+gate is retained in the completed backlog. T39.2 is the next scheduled ticket;
+the remaining Epic 39 tickets stay dependency-ordered drafts, not implicit
+implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -39,18 +41,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 39 · Multi-service validation and release decision *(T39.1 scheduled · needs Epic 38)*
+## Epic 39 · Multi-service validation and release decision *(T39.1 complete · T39.2 scheduled)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.1 · Neutral correctness, scale, and recovery gate** *(scheduled)* — execute the
-T32.3 oracles and frozen 1,000/5,000 profiles against the final writers/readers.
-AC: membership/search/relationship equality, deterministic rebuild, bounded
-cold/warm/no-op/update/GC costs, partial publication, auth, recovery, restore,
-and retained-proof gates pass or record STOP; no target-corpus SLO claim.
-
-**T39.2 · Authorized target operating-envelope gate** *(needs T39.1)* — run
+**T39.2 · Authorized target operating-envelope gate** *(scheduled; needs T39.1)* — run
 the approved target monorepo under frozen resource, freshness, query,
 availability, and retention thresholds. AC: exact artifact/tool/config/source
 identities, source-free retained report, cold/incremental/no-op/query/recovery

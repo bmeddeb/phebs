@@ -1,0 +1,255 @@
+{
+  "schema": "t391-neutral-correctness-scale-recovery-gate-v1",
+  "outcome": "passed",
+  "completed_on": "2026-08-06",
+  "inputs": [
+    {
+      "path": "spike/t323/receipt.json",
+      "schema": "t323-neutral-corpus-receipt-v1",
+      "sha256": "sha256:899492dcfe2f768de7e75003ff5d420655cbfeb8c44d9a76505bf6d6b8dededd"
+    },
+    {
+      "path": "spike/t323/t323-neutral-corpus.bundle",
+      "schema": "git-bundle",
+      "sha256": "sha256:8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa"
+    },
+    {
+      "path": "spike/t324/results.json",
+      "schema": "t324-search-topology-cost-receipt-v1",
+      "sha256": "sha256:4992dcdafb9100e3ca6f34cf3f7b1b54030b58f811f48ff55b870469a4775f7c"
+    },
+    {
+      "path": "spike/t354/results.json",
+      "schema": "t354-lifecycle-recovery-receipt-v1",
+      "sha256": "sha256:74af703392474a7993edd94f6ee71a7db9eddd5547cf3f4258228a1749f203c3"
+    },
+    {
+      "path": "spike/t375/results.json",
+      "schema": "t375-relationship-reader-demo-v1",
+      "sha256": "sha256:7f2aa20cedf98c1dbaa2da00102470ba00eaea4dc7a8e9c6e3de1069da3f7ec0"
+    },
+    {
+      "path": "spike/t385/results.json",
+      "schema": "t385-microservice-product-closure-v1",
+      "sha256": "sha256:a50056e72c40a01aa5abc58eb580286413a67db936e8e83706a8cadd685d82e0"
+    }
+  ],
+  "correctness": {
+    "revisions": 5,
+    "oracle_memberships": 67,
+    "oracle_queries": 40,
+    "oracle_relationships": 10,
+    "oracle_states": 38,
+    "oracle_tombstones": 8,
+    "malformed_refusals": 5,
+    "catalog_adapter": "t323-fixture-to-phebs-service-catalog-v2",
+    "catalog_round_trip_equal": true,
+    "membership_equal": true,
+    "search_equal": true,
+    "relationship_equal": true,
+    "state_equal": true,
+    "deterministic_rebuild": true,
+    "production_reader_gates": true,
+    "production_writer_gates": true
+  },
+  "profiles": [
+    {
+      "name": "services-1000",
+      "services": 1000,
+      "memberships": 5000,
+      "file_records": 3151,
+      "max_path_fanout": 25,
+      "outcome": "expected_refusal",
+      "refusal": "accepted_path_fanout",
+      "limit": 20,
+      "checked_before_map_growth": true,
+      "readers_started": false
+    },
+    {
+      "name": "services-5000",
+      "services": 5000,
+      "memberships": 25000,
+      "file_records": 15751,
+      "max_path_fanout": 25,
+      "outcome": "expected_refusal",
+      "refusal": "service_count",
+      "limit": 4000,
+      "checked_before_map_growth": true,
+      "readers_started": false
+    }
+  ],
+  "final_writer_reader_gates": [
+    {
+      "name": "catalog_writer",
+      "outcome": "passed",
+      "assertions": [
+        "t323_head_census_exact",
+        "canonical_publication_bound_to_head",
+        "failed_replacement_preserves_prior"
+      ],
+      "gates": [
+        "internal/servicecatalogingest.TestT344WholeSearchCatalogUsesOrdinaryCensusAndPublication",
+        "internal/servicecatalogingest.TestCommittedCatalogReconcileAndFailedReplacementPreservesPrior"
+      ]
+    },
+    {
+      "name": "search_reader",
+      "outcome": "passed",
+      "assertions": [
+        "catalog_paths_inside_zoekt_query",
+        "exact_v2_generation_and_final_fence",
+        "invalid_v2_never_falls_back"
+      ],
+      "gates": [
+        "internal/servicequery.TestCompileBindsCurrentServiceInsideZoektQuery",
+        "internal/search.TestServiceSearchUsesExactV2PredicateAndFinalFence",
+        "internal/search.TestServiceSearchRefusesInvalidV2WithoutLegacyFallback"
+      ]
+    },
+    {
+      "name": "relationship_writer_reader",
+      "outcome": "passed",
+      "assertions": [
+        "rpc_and_topic_postings_classified",
+        "atomic_service_projection",
+        "authorized_reader_retains_gaps_and_proof_shape"
+      ],
+      "gates": [
+        "internal/rpccallerposting.TestBuildPublishesResolvedNameMatchUnresolvedAndOccurrenceIdentity",
+        "internal/kafkatopicposting.TestBuildSeparatesPlanesSpellingClassificationsAndOccurrences",
+        "internal/relationshippublication.TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically",
+        "internal/api.TestRelationshipServiceAuthorizationGapAndRetainedProofShape"
+      ]
+    }
+  ],
+  "cost_gates": [
+    {
+      "name": "cold_warm_reads",
+      "outcome": "passed",
+      "assertions": [
+        "cold_open_validates_complete_generation",
+        "warm_read_reuses_digest_bound_cache",
+        "final_fence_discards_transition"
+      ],
+      "gates": [
+        "internal/search.TestServiceSearchUsesExactV2PredicateAndFinalFence",
+        "internal/observationpublication.TestWarmCacheDoesNotRereadMemberAndCorruptColdOpenRefuses"
+      ]
+    },
+    {
+      "name": "restart_no_op",
+      "outcome": "passed",
+      "assertions": [
+        "current_generation_reused",
+        "no_member_reread_on_warm_progress",
+        "no_duplicate_schedule"
+      ],
+      "gates": [
+        "internal/observationpublication.TestRuntimeSchedulesPublishesAndRestartNoOps",
+        "internal/observationpublication.TestProgressReportsCurrentReceiptAndWarmReadsNoMembers"
+      ]
+    },
+    {
+      "name": "bounded_update",
+      "outcome": "passed",
+      "assertions": [
+        "only_affected_namespace_rebuilt",
+        "service_limit_localizes_failure",
+        "resident_charge_released"
+      ],
+      "gates": [
+        "internal/resolvernamespace.TestOnlyAffectedNamespaceRebuilds",
+        "internal/relationshippublication.TestServiceLimitPublishesFailedPartitionWithoutBlockingSibling",
+        "internal/relationshippublication.TestResidentFenceFailsOnlyCrossingService"
+      ]
+    },
+    {
+      "name": "bounded_gc",
+      "outcome": "passed",
+      "assertions": [
+        "current_and_rollback_floor_preserved",
+        "active_lease_prevents_collection",
+        "sweep_budget_bounded"
+      ],
+      "gates": [
+        "internal/relationshippublication.TestLifecyclePreservesCurrentRollbackFloorAndReaderLease",
+        "internal/observationpublication.TestLifecyclePreservesCurrentRollbackFloorAndLease",
+        "internal/lifecycle.TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure"
+      ]
+    }
+  ],
+  "safety_gates": [
+    {
+      "name": "partial_publication",
+      "outcome": "passed",
+      "assertions": [
+        "prior_pointer_preserved",
+        "incomplete_generation_never_authoritative"
+      ],
+      "gates": [
+        "internal/resolvernamespace.TestRecoveryValidatesCompleteGenerationBeforePointerSwap",
+        "internal/relationshippublication.TestRecoveryValidatesCompleteGenerationBeforePointerSwap"
+      ]
+    },
+    {
+      "name": "authorization",
+      "outcome": "passed",
+      "assertions": [
+        "authorization_precedes_repository_validation",
+        "hidden_service_precedes_state_and_input_work"
+      ],
+      "gates": [
+        "internal/relationshippublication.TestAuthorizationPrecedesRepositoryValidationAndFilesystem",
+        "internal/api.TestServiceDirectoryHiddenAndAbsentPrecedeInputAndStateWork"
+      ]
+    },
+    {
+      "name": "recovery",
+      "outcome": "passed",
+      "assertions": [
+        "marker_recovery_preserves_prior",
+        "exhausted_schedule_mints_distinct_recovery_identity"
+      ],
+      "gates": [
+        "internal/observationpublication.TestMarkerRecoveryPreservesPriorAndCacheDelaysRetirement",
+        "internal/observationpublication.TestRuntimeMintsDistinctRecoveryScheduleAfterExhaustion"
+      ]
+    },
+    {
+      "name": "restore",
+      "outcome": "passed",
+      "assertions": [
+        "composite_authority_byte_equal",
+        "live_restore_revalidates_exact_search"
+      ],
+      "gates": [
+        "internal/relationshippublication.TestArchiveRoundTripPreservesExactCompositeAuthority",
+        "internal/recovery.TestLiveBackupRestoreAndStartupExactSearchRecovery"
+      ]
+    },
+    {
+      "name": "retained_proof",
+      "outcome": "passed",
+      "assertions": [
+        "v1_proof_remains_readable",
+        "v2_candidate_scope_remains_readable",
+        "authorization_rechecked_on_read"
+      ],
+      "gates": [
+        "internal/api.TestRetainedV1ProofBundleScopePostureRemainsReadable",
+        "internal/api.TestRetainedV2ProofBundleCandidateScopeRemainsReadable",
+        "internal/api.TestProofBundleAdminMemberIsolationAndReadReauthorization"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "expected_refusal_is_not_scale_pass": true,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "qualifies_supported_scale": false,
+    "authorizes_target_run": false,
+    "authorizes_release": false,
+    "changes_production_behavior": false
+  }
+}
