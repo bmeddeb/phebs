@@ -25,7 +25,8 @@ T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
 closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
 gate and T39.2's honestly stopped authorized target run are retained in the
 completed backlog. T39.3's security/lifecycle gate is also retained there.
-T39.4 is the next scheduled ticket; the remaining Epic 39
+T39.4's evidence/workflow gate stopped before unsealing and is retained in the
+completed backlog. T39.5 is the next scheduled ticket; the remaining Epic 39
 tickets stay dependency-ordered drafts, not implicit implementation
 authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -43,20 +44,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 39 · Multi-service validation and release decision *(T39.1–T39.3 complete · T39.4 scheduled)*
+## Epic 39 · Multi-service validation and release decision *(T39.1–T39.4 complete · T39.5 scheduled)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.4 · Evidence-quality and workflow gate** *(scheduled; needs T39.2)* — under the
-existing preregistered pilot authority, measure pack-specific call-site
-quality, service-attribution hops, end-to-end service relationships,
-processing coverage, unresolved states, and migration-inventory workflow cost
-against the independent baseline. AC: thresholds were frozen before unsealing;
-underpowered/inconclusive is not a pass; every correction and owner-routing
-cost remains counted; existing pilot scope is not broadened.
-
-**T39.5 · Release, suspension, and continuation decision** *(needs
+**T39.5 · Release, suspension, and continuation decision** *(scheduled; needs
 T39.1–T39.4)* — complete the relevant evidence-pack cards and record separate
 validation and human continuation decisions. AC: release is limited to the
 measured service/language/framework/workflow/envelope; default-dark, shadow,

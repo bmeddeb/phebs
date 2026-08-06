@@ -1,0 +1,156 @@
+{
+  "schema": "t394-evidence-quality-workflow-gate-v1",
+  "outcome": "stopped_before_unsealing",
+  "completed_on": "2026-08-06",
+  "inputs": [
+    {
+      "path": "spike/t392/results.json",
+      "kind": "t392-authorized-target-operating-envelope-v1",
+      "sha256": "sha256:20e95fc8e7bf11fb9ae317aa57aeda2966fbf1c866d812f37fadb11aabd26a41"
+    },
+    {
+      "path": "docs/PILOT_CHARTER.md",
+      "kind": "pilot_charter_draft",
+      "sha256": "sha256:eed8290d0d6185a2a672c050aa535e6e503a83d4721efcaa6b4de8e969d134d0"
+    },
+    {
+      "path": "docs/ACCURACY_GOLD_PROTOCOL.md",
+      "kind": "accuracy_preregistration_draft",
+      "sha256": "sha256:31024a617fe0fde6e8a5c56e24f7d85e496cda40f5fb7a7e37daa6b613ea4248"
+    },
+    {
+      "path": "docs/CURRENT_WORKFLOW_BASELINE_PROTOCOL.md",
+      "kind": "workflow_preregistration_draft",
+      "sha256": "sha256:d273ce456063044b8a72418680acaeabc216ddbaccd804d3a8d02803bfa25dc8"
+    }
+  ],
+  "t392_stop_authority": {
+    "outcome": "stopped",
+    "failure_phase": "incremental",
+    "failure_class": "pipeline",
+    "terminal_failures": 1,
+    "later_phases": "not_run",
+    "preserved_as_stop": true,
+    "superseded": false
+  },
+  "measurement_authority": {
+    "pilot_charter_status": "design_draft",
+    "accuracy_protocol_status": "unsealed_synthetic_fixture",
+    "workflow_protocol_status": "unsealed_synthetic_fixture",
+    "gate0_approved": false,
+    "thresholds_frozen_before_unseal": false,
+    "independent_gold_sealed": false,
+    "independent_baseline_sealed": false,
+    "measurement_authorized": false,
+    "predictions_unsealed": false,
+    "target_evidence_accessed": false,
+    "existing_pilot_scope_broadened": false
+  },
+  "gates": [
+    {
+      "name": "go_grpc_call_site_quality",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "processing_coverage",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "build_target_attribution",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "deployable_attribution",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "service_attribution",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "owner_record_resolution",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "end_to_end_service_operation_quality",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "evidence_reproduction",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "unresolved_state_rate",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "workflow_inventory_time",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "workflow_labor",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "post_acceptance_correction_cost",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    },
+    {
+      "name": "owner_routing_cost",
+      "outcome": "not_run",
+      "value_state": "unmeasured",
+      "reason": "unsealed_preregistration"
+    }
+  ],
+  "evaluation_policy": {
+    "underpowered_or_inconclusive_is_pass": false,
+    "missing_values_imputed": false,
+    "corrections_counted": true,
+    "owner_routing_counted": true,
+    "threshold_changes_allowed": false,
+    "stop_before_unsealing": true
+  },
+  "independent_review": {
+    "required": true,
+    "implementer_may_approve": false,
+    "merge_requires_independent_review": true,
+    "receipt_self_certifies_review": false,
+    "authority": "outside_receipt"
+  },
+  "stop_reason": "preregistration_not_execution_binding",
+  "claims": {
+    "source_free": true,
+    "t392_stop_preserved": true,
+    "establishes_accuracy": false,
+    "establishes_coverage": false,
+    "establishes_workflow_value": false,
+    "authorizes_release": false,
+    "establishes_migration_complete": false,
+    "establishes_decommission_safety": false,
+    "changes_production_behavior": false
+  }
+}
