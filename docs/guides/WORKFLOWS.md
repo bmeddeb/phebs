@@ -463,9 +463,40 @@ and reports the refusal only in the detail panel; either retry reloads the
 current exact route.
 
 The page mounts one 50-row inventory page and at most one detail. It does not
-poll, accumulate prior pages, cache authority across principals, compile a
-service search predicate, or turn catalog paths into evidence. Service-scoped
-search and service relationships begin in later epics.
+poll, accumulate prior inventory pages, cache authority across principals, or
+turn catalog paths into evidence. **Search this service** uses the exact
+service-search scope when the service is current or explicitly stale.
+
+When the server also advertises `service-relationships-v1`, the selected
+detail adds an **Exact relationship overview**. Its three linked summaries are
+the exact bounded reference counts for:
+
+- **Contracts used & dependencies** — RPC source participation, with accepted
+  dependency services where catalog placement proves one;
+- **Contracts provided, callers & dependents** — RPC target participation,
+  with accepted caller/dependent services where placement proves one; and
+- **Topics** — Kafka producer/consumer source evidence, preserving source
+  spelling, plane, and classification.
+
+Each summary opens its exact 25-row table. Rows retain source and target paths,
+all accepted/proposal/conflict/rejected role-and-origin claims, shared and
+unowned posture, classification/reason, and accepted counterpart services.
+**View citation** reauthorizes and reads only that row's immutable source span;
+the panel repeats its relationship generation/root and source object/content
+identities. It is evidence, not a runtime call, broker, deployment, or owner
+claim.
+
+The page creates three first-page relationship bindings once per selected
+service and reuses them when switching summaries. **Next exact page** advances
+only the selected server-bound cursor; **First page** returns to its retained
+first page. Reloading an opaque cursor after its five-minute lease expires is
+a visible refusal and requires restarting that summary. Mixed relationship
+root identities, a different service incarnation/desired generation, failed
+or unavailable roots, admitted truncation, missing capability, and exact-empty
+results display as distinct failed, stale, unavailable, partial, unsupported,
+and empty states. Gaps never become zero counts. The narrow layout stacks the
+directory and detail and keeps the wide exact table inside its own labeled
+scroll region.
 
 ## Synthetic Change Workbench shell
 

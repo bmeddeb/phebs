@@ -1,0 +1,99 @@
+{
+  "schema": "t381-service-overview-demo-v1",
+  "outcome": "completed",
+  "fixture": {
+    "repositories": 1,
+    "services": 3,
+    "catalog_roles": 2,
+    "relationship_views": 3,
+    "rpc_references": 5,
+    "kafka_references": 1
+  },
+  "reader": {
+    "first_page_bindings": 3,
+    "page_rows": 25,
+    "maximum_page_rows": 100,
+    "citation_reads_per_action": 1
+  },
+  "states": [
+    "ambiguous",
+    "current",
+    "empty",
+    "failed",
+    "partial",
+    "shared",
+    "stale",
+    "unavailable",
+    "unowned",
+    "unsupported"
+  ],
+  "cases": [
+    {
+      "name": "catalog_authority",
+      "assertions": [
+        "authorization_first",
+        "catalog_and_state_snapshot_fenced",
+        "source_roles_exact"
+      ],
+      "gates": [
+        "TestServiceDirectoryAuthorizationCursorAndDetail",
+        "TestServiceDirectoryCursorBindsSnapshotAndIncarnation"
+      ]
+    },
+    {
+      "name": "exact_overview",
+      "assertions": [
+        "counts_link_exact_rows",
+        "contracts_callers_topics_and_counterparts_visible",
+        "immutable_citation_span"
+      ],
+      "gates": [
+        "links exact relationship counts to fenced rows and reads immutable citations"
+      ]
+    },
+    {
+      "name": "state_honesty",
+      "assertions": [
+        "unsupported_failed_empty_and_mixed_distinct",
+        "shared_unowned_ambiguous_visible",
+        "no_empty_inference_from_gap"
+      ],
+      "gates": [
+        "keeps unsupported, failed, empty, and mixed-generation relationship states distinct"
+      ]
+    },
+    {
+      "name": "bounded_navigation",
+      "assertions": [
+        "three_first_page_bindings_once",
+        "tab_reuse",
+        "selected_cursor_only"
+      ],
+      "gates": [
+        "reuses three first-page bindings across tabs and advances only the selected cursor"
+      ]
+    },
+    {
+      "name": "reader_authority",
+      "assertions": [
+        "permission_before_aggregation",
+        "root_and_incarnation_fenced",
+        "citation_lease_pinned"
+      ],
+      "gates": [
+        "TestRelationshipServiceAuthorizationGapAndRetainedProofShape",
+        "TestWorkbenchRelationshipCoverageBindsExactRootDigest"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_runtime_topology": true,
+    "no_scale": true,
+    "no_slo": true,
+    "no_migration_safety": true,
+    "no_release_authority": true
+  }
+}
