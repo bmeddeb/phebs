@@ -33,6 +33,7 @@ evidence.
   and [source-free measurement receipt](../spike/t324/results.json)
 - [T34.1 repository source/search generation gates](../spike/t341/README.md)
 - [T34.2 exact service-query compiler gate](../spike/t342/README.md)
+- [Source-free 2026-08-06 large-monorepo diagnostic](../spike/large-monorepo-20260806/REPORT.md)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -76,6 +77,14 @@ truncation cannot be consumed by 100 matching out-of-service files because
 the path predicate is inside the query. It retains no generated index or
 measurement and adds no target timing, scale, accuracy, migration, or release
 claim.
+
+The 2026-08-06 large-monorepo diagnostic reduces one unfrozen private runtime
+log to source-free counts, timings, limits, lifecycle transitions, and closed
+failure classes. Private names, paths, filenames, revisions, digests, job
+identities, raw errors, and the high-entropy per-shard vector remain outside
+the repository. The record establishes mechanical behavior only: it is not a
+validation receipt, supported-scale result, SLO, topology decision, accuracy
+or completeness result, T39.R1 evaluation, or release authority.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed
