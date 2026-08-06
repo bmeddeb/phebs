@@ -1,0 +1,235 @@
+{
+  "schema": "t385-microservice-product-closure-v1",
+  "outcome": "completed",
+  "inputs": [
+    {
+      "ticket": "T37.5",
+      "schema": "t375-relationship-reader-demo-v1",
+      "digest": "sha256:7f2aa20cedf98c1dbaa2da00102470ba00eaea4dc7a8e9c6e3de1069da3f7ec0"
+    },
+    {
+      "ticket": "T38.1",
+      "schema": "t381-service-overview-demo-v1",
+      "digest": "sha256:65351feda11fb284da15a87ebc578b9aab54b02c6c91bda77aa60b7417e991b2"
+    },
+    {
+      "ticket": "T38.2",
+      "schema": "t382-cross-service-explorer-demo-v1",
+      "digest": "sha256:ff4eadb4fd923695750585c4f75f1baca3ccd6e623896d182a78ac0040f5eb0b"
+    },
+    {
+      "ticket": "T38.3",
+      "schema": "t383-service-aware-workbench-demo-v1",
+      "digest": "sha256:662dac9b997259a174529610257ca7e9474f129fdc4fc89a1fa507bfafe20a8e"
+    },
+    {
+      "ticket": "T38.4",
+      "schema": "t384-mcp-microservice-parity-v1",
+      "digest": "sha256:a3e192d592e489c4bc834ae33b4b8ee90bd05d0040509dc174ea7e68c518e26b"
+    }
+  ],
+  "topology": {
+    "relationship_repositories": 3,
+    "relationship_services": 4,
+    "search_services": 5,
+    "workflow_services": 5,
+    "workflow_accepted_services": 2,
+    "workflow_proposal_services": 1,
+    "workflow_conflict_services": 1,
+    "workflow_removed_services": 1
+  },
+  "stages": [
+    "all_code_discovery",
+    "service_overview",
+    "dependency_evidence",
+    "comparison",
+    "workbench",
+    "proof",
+    "mcp"
+  ],
+  "stories": [
+    {
+      "name": "add",
+      "services": [
+        "orders-api",
+        "returns-proposal"
+      ],
+      "workbench_selections": [
+        "analogous",
+        "proposal"
+      ],
+      "expected_states": [
+        "exact",
+        "unaccepted",
+        "unowned",
+        "gap"
+      ]
+    },
+    {
+      "name": "modify",
+      "services": [
+        "orders-api",
+        "orders-events"
+      ],
+      "workbench_selections": [
+        "current"
+      ],
+      "expected_states": [
+        "exact",
+        "shared",
+        "unresolved",
+        "partial"
+      ]
+    },
+    {
+      "name": "migrate",
+      "services": [
+        "legacy-orders",
+        "orders-api"
+      ],
+      "workbench_selections": [
+        "current",
+        "replacement"
+      ],
+      "expected_states": [
+        "added",
+        "removed",
+        "unchanged",
+        "unavailable"
+      ]
+    },
+    {
+      "name": "retire",
+      "services": [
+        "legacy-orders",
+        "orders-api",
+        "orders-events"
+      ],
+      "workbench_selections": [
+        "current"
+      ],
+      "expected_states": [
+        "exact",
+        "stale",
+        "gap",
+        "unresolved"
+      ]
+    }
+  ],
+  "browser": {
+    "desktop_viewport": "1440x1000",
+    "mobile_viewport": "390x844",
+    "checks": [
+      "page_identity",
+      "nonblank",
+      "no_framework_overlay",
+      "console_health",
+      "screenshot_evidence",
+      "keyboard_and_interaction",
+      "no_document_overflow"
+    ]
+  },
+  "cases": [
+    {
+      "name": "discovery_and_service_scope",
+      "assertions": [
+        "all_code_identity",
+        "service_scope_receipt",
+        "catalog_detail_authority"
+      ],
+      "gates": [
+        "TestSharedSearchScopeReceiptDistinguishesAllCodeAndService",
+        "service deep link preserves query while switching scope and renders receipt posture",
+        "TestServiceDirectoryAuthorizationCursorAndDetail"
+      ]
+    },
+    {
+      "name": "relationships_comparison_citations",
+      "assertions": [
+        "source_first_rows",
+        "exact_two_generation_comparison",
+        "immutable_citation",
+        "gap_not_empty"
+      ],
+      "gates": [
+        "uses broad authorized fallback and shares deterministic ids between exact rows and the optional diagram",
+        "renders two exact generations, four classifications, and range-only citations",
+        "reauthorizes and validates an immutable citation before showing source content"
+      ]
+    },
+    {
+      "name": "four_workbench_stories",
+      "assertions": [
+        "add",
+        "modify",
+        "migrate",
+        "retire",
+        "service_authority_bound",
+        "no_task_or_decision"
+      ],
+      "gates": [
+        "TestWorkbenchImpactScenarioComposition",
+        "TestT2114ScenarioFailureAccessibilityAndImplementationClosure",
+        "TestWorkbenchChecklistCompletionHasNoTaskOrDecisionSurface"
+      ]
+    },
+    {
+      "name": "proof_and_mcp",
+      "assertions": [
+        "coverage_gaps_explicit",
+        "shared_http_mcp_types",
+        "agent_evidence_only"
+      ],
+      "gates": [
+        "TestRelationshipServiceAuthorizationGapAndRetainedProofShape",
+        "TestMicroserviceMCPImpactUsesExactSharedContract",
+        "TestMicroserviceMCPToolsAreStrictBoundedAndCapabilityGated"
+      ]
+    },
+    {
+      "name": "failure_and_restart",
+      "assertions": [
+        "bounded_retry",
+        "invalid_v2_no_fallback",
+        "complete_recovery_before_pointer",
+        "restart_noop",
+        "root_change_refused"
+      ],
+      "gates": [
+        "shows bounded errors and retries the same exact route",
+        "TestServiceSearchRefusesInvalidV2WithoutLegacyFallback",
+        "TestRecoveryValidatesCompleteGenerationBeforePointerSwap",
+        "TestRuntimeSchedulesPublishesAndRestartNoOps",
+        "TestWorkbenchImpactRejectsServiceRootChangeAtFinalFence"
+      ]
+    },
+    {
+      "name": "responsive_accessibility_browser",
+      "assertions": [
+        "desktop",
+        "390px",
+        "named_controls",
+        "focus_return",
+        "route_reproducible",
+        "console_clean"
+      ],
+      "gates": [
+        "mobile repository drawer exposes an explicit collapsed lifecycle",
+        "real hash navigation reaches How at a mobile viewport",
+        "endpoint discovery has named controls, Escape focus return, and outside-click dismissal"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_runtime_topology": true,
+    "no_task_or_decision": true,
+    "no_scale": true,
+    "no_slo": true,
+    "no_migration_safety": true,
+    "no_decommission_safety": true,
+    "no_release_authority": true
+  }
+}

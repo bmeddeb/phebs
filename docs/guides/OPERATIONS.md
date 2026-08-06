@@ -3470,6 +3470,16 @@ microservice MCP tools are read-only and closed-world; their evidence cannot
 authorize an agent Decision, task completion, migration, decommission, or
 release action.
 
+Use [Microservice change workflow](./MICROSERVICE_WORKFLOW.md) for the complete
+neutral add/modify/migrate/retire operator journey. Start its first run with a
+fresh data directory so every authority is published through the ordinary
+pipeline; repeat the same run against that directory to verify restart/no-op
+behavior. A corrupt or interrupted derived generation remains unavailable
+until normal recovery or rebuilding restores a completely validated current
+generation. Do not delete control files, edit publication pointers, reuse an
+expired citation, or bypass a failed generation fence to make the demo pass.
+Epic 39 owns measured replay, operating gates, and any release decision.
+
 ## Developing phebs
 
 
