@@ -8009,3 +8009,58 @@ No relationship accuracy/completeness, runtime or broker topology,
 supported-scale/SLO, migration/decommission-safety, or release claim is
 created. `GATE2-V2` remains `NOT_ESTABLISHED`. T38.2 owns the cross-service
 relationship explorer and optional deterministic visualization.
+
+**T38.2 ✅ · Cross-service relationship explorer** *(2026-08-06; needs
+T38.1)* — added a capability-gated, source-first `#/relationships` product
+route over the unchanged T37.5 exact reader. One exact service key is required.
+Repository is optional: when omitted, T37.5 resolves and reauthorizes the
+complete visible indexed repository set before opening any relationship root,
+up to its existing 32-repository bound. Direction maps only to the closed
+all/dependency/caller/topic view plus producer/consumer plane; evidence maps
+only to RPC/Kafka kind; and contract or topic maps only to exact lookup key.
+Filters, diagram posture, and the opaque cursor are native reproducible route
+state.
+
+The table is the authority and leads with immutable source path/span. Every row
+retains repository, exact operation or source topic spelling, participation,
+service-to-counterpart or service-to-topic route, source and target placement,
+all accepted/proposal/conflict/rejected role-and-origin claims, unowned posture,
+classification/reason, projection/posting digests, and one exact citation.
+Coverage visibly separates complete, empty, failed, unavailable, scanned,
+returned, and admission-truncated state. Client validation refuses a different
+page schema, normalized filter/repository echo, root set, coverage arithmetic,
+page size, row incarnation/generation, or citation
+root/projection/posting/object/content/span before relabeling it. A root gap is
+never exact empty.
+
+The optional deterministic diagram is a client projection of the current
+sorted page only. It shares `R-01` through at most `R-50` with the table/list
+and draws one straight exact route per returned row. It performs no request,
+loads no hidden page, aggregates no row, and adds no inferred service,
+transitive edge, or graph authority. Desktop keeps the table primary beside a
+narrow diagram; the 390px layout uses a source-first vertical list followed by
+the same page-only diagram. The selected-service overview links into the
+explorer with its exact key/repository prefilled, while the header keeps it a
+repository workflow rather than adding another global navigation item.
+
+One initial query creates one at-most-20,000-reference T37.5 binding for five
+minutes and returns at most 50 rows within the inherited 2-MiB response cap. A
+next cursor reuses that exact binding; the browser retains only the current
+page and one citation. Diagram toggle and filter editing add no read. One
+citation retains the inherited reauthorization and at-most-4-MiB immutable Git
+blob read under the two-reader semaphore. There is no polling, prefetch,
+persistent cache, store write, source/member scan beyond the inherited reader,
+startup, sync/retry/no-op, publication, search, Workbench, proof, or MCP work.
+
+The deterministic source-free receipt is retained at
+`spike/t382/results.json`
+(`sha256:ff4eadb4fd923695750585c4f75f1baca3ccd6e623896d182a78ac0040f5eb0b`).
+Its five cases bind executable source-first filter, broad fallback/coverage,
+table/diagram identity, citation-authority, and gap-honesty gates. It retains
+no source, path, object ID, citation content, repository identity, raw error,
+private topology, or measurement corpus.
+
+No relationship accuracy/completeness, runtime or broker topology,
+supported-scale/SLO, migration/decommission-safety, or release claim is
+created. `GATE2-V2` remains `NOT_ESTABLISHED`. T38.3 owns service-aware Impact
+and Workbench composition.

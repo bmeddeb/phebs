@@ -498,6 +498,49 @@ and empty states. Gaps never become zero counts. The narrow layout stacks the
 directory and detail and keeps the wide exact table inside its own labeled
 scroll region.
 
+### Explore relationships across repositories
+
+From an exact service overview, choose **Explore across repositories** to open
+`#/relationships` with that service and repository prefilled. The relationship
+explorer requires one exact `service_key`; the repository is optional. Clearing
+repository deliberately asks the existing authorization-first reader for the
+same service key across all visible indexed repositories, up to its 32-root
+bound. This is a broad fallback, not a claim that equal keys across repositories
+share one deployment or owner.
+
+The remaining filters map directly to the exact reader rather than filtering a
+larger client result:
+
+- **Direction** selects all evidence, RPC uses/dependencies, RPC
+  provided/callers, Kafka producers, or Kafka consumers;
+- **Evidence** selects all, RPC, or Kafka source observations; and
+- **Contract or topic** is an optional exact operation/topic lookup key, not
+  fuzzy search.
+
+**Apply filters** creates one new bounded reader binding and records every
+filter in the hash route. Editing fields alone performs no read. **Next exact
+page** advances the opaque cursor bound to that query and authorization
+snapshot; **First exact page** starts the same filter set without the cursor.
+An expired or crossed cursor is a visible refusal and requires restarting the
+query.
+
+Coverage above the results repeats authorized, complete, empty, failed,
+unavailable, scanned, returned, and truncated authority. A failed or
+unavailable root remains a gap, and admission truncation remains partial; the
+screen never relabels either as exact empty. Desktop presents source path and
+span first in the authoritative table. Mobile uses the same rows as a vertical
+list so primary evidence does not require horizontal page scrolling. Every row
+retains its exact repository, contract/topic, direction, service route,
+catalog claims, classification/reason, and **View citation** action.
+
+**Show page diagram** is optional and performs no server request. It renders
+one straight route for each currently visible sorted row and shares that row's
+`R-01` through `R-50` identifier with the table/list. It never loads hidden
+pages, aggregates duplicate-looking evidence, adds a service, invents a
+transitive edge, or becomes authority. The table remains authoritative. A
+citation still reauthorizes and reads only its immutable source span while
+repeating the exact relationship root and source object/content identities.
+
 ## Synthetic Change Workbench shell
 
 The retained synthetic adapter is available to tests and deliberately explicit

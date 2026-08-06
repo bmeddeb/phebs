@@ -84,8 +84,8 @@ namespace-sharded declaration/resolver catalog, T37.2's RPC caller postings,
 T37.3's Kafka topic postings, and T37.4's service projections and atomic
 relationship roots completed on 2026-08-05. T37.5's exact readers,
 comparison, proof/Workbench integration, and neutral demo completed on
-2026-08-06, closing Epic 37. T38.1's exact selected-service overview completed
-on 2026-08-06; T38.2 is scheduled next.
+2026-08-06, closing Epic 37. T38.1's exact selected-service overview and
+T38.2's cross-service explorer completed on 2026-08-06; T38.3 is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -420,8 +420,8 @@ T37.2's classified, occurrence-exact RPC posting partitions and sparse readers
 and T37.3's source-spelled producer/consumer posting partitions are complete.
 T37.4's registered bounded workload, placement projection, atomic
 repository/service roots, lifecycle owner, and backup/restore are complete.
-T37.5 completed on 2026-08-06. T38.1's exact service overview is complete;
-T38.2 is scheduled.
+T37.5 completed on 2026-08-06. T38.1's exact service overview and T38.2's
+cross-service explorer are complete; T38.3 is scheduled.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -575,9 +575,9 @@ service count × repository bytes
   projections, atomic repository/service relationship roots, authorized keyed
   HTTP/MCP readers, exact two-generation comparison, lease-pinned citations,
   proof/Workbench root coverage, and the neutral demo are complete.
-- **Epic 38 — microservice product (T38.1 complete; T38.2 next):** the exact
-  selected-service overview is complete; source-first cross-service
-  exploration, change-impact workflows, UI/API/MCP parity, and the end-to-end
+- **Epic 38 — microservice product (T38.1–T38.2 complete; T38.3 next):** the
+  exact selected-service overview and source-first cross-service explorer are
+  complete; change-impact workflows, UI/API/MCP parity, and the end-to-end
   neutral demo remain.
 - **Epic 39 — validation and release:** execute the neutral and authorized
   target gates, close operating/security/workflow evidence, and make a separate

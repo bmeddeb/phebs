@@ -186,6 +186,9 @@ test('links exact relationship counts to fenced rows and reads immutable citatio
   expect(screen.getByRole('link', { name: /Contracts provided, callers & dependents2/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: /Topics1/ })).toBeTruthy()
   expect(screen.getByText(/Current · all views share the current service authority/)).toBeTruthy()
+  expect(decodeURIComponent(screen.getByRole('link', { name: 'Explore across repositories' }).getAttribute('href') ?? '')).toBe(
+    '#/relationships?repository=example.invalid/neutral+mono&service_key=orders-api',
+  )
   expect(screen.getAllByText('payments').length).toBeGreaterThan(0)
   expect(screen.getByText('Shared')).toBeTruthy()
   expect(screen.getByText('Unowned')).toBeTruthy()
@@ -403,12 +406,12 @@ function detail(): ServiceDetail {
 }
 
 function relationshipPage(view: ServiceRelationshipView): ServiceRelationshipPage {
-  const counts = { dependencies: 3, callers: 2, topics: 1 }
+  const counts = { all: 3, dependencies: 3, callers: 2, topics: 1 }
   const rows = view === 'dependencies'
     ? [relationshipRow(view, 0, 'shared'), relationshipRow(view, 1, 'unowned'), relationshipRow(view, 2, 'ambiguous')]
     : [relationshipRow(view, 0, 'owned')]
   return {
-    schema: 'phebs-service-relationships-v1',
+    schema: 'phebs-service-relationship-page-v1',
     query: { repositories: [repositoryName], service_key: 'orders-api', view },
     rows_state: 'nonempty',
     roots: [{

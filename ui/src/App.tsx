@@ -15,6 +15,7 @@ const SearchPage = lazy(() => import('./pages/SearchPage'))
 const FilePage = lazy(() => import('./pages/FilePage'))
 const ReposPage = lazy(() => import('./pages/ReposPage'))
 const ServiceDirectoryPage = lazy(() => import('./pages/ServiceDirectoryPage'))
+const RelationshipExplorerPage = lazy(() => import('./pages/RelationshipExplorerPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BlamePage = lazy(() => import('./pages/BlamePage'))
@@ -97,6 +98,8 @@ export default function App() {
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} serviceDirectoryAvailable={servicesAvailable} />
   else if (path.startsWith('/services') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/services') && servicesAvailable) page = <ServiceDirectoryPage params={params} relationshipsAvailable={serviceRelationshipsAvailable} />
+  else if (path.startsWith('/relationships') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/relationships') && serviceRelationshipsAvailable) page = <RelationshipExplorerPage params={params} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
@@ -131,7 +134,7 @@ export default function App() {
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 
-  const compactMain = path.startsWith('/file') || path.startsWith('/repos') || path.startsWith('/services')
+  const compactMain = path.startsWith('/file') || path.startsWith('/repos') || path.startsWith('/services') || path.startsWith('/relationships')
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
@@ -171,7 +174,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   const { mode, toggle } = useMode()
 
   const isSettings = path.startsWith('/settings')
-  const isRepos = path.startsWith('/repos') || path.startsWith('/services')
+  const isRepos = path.startsWith('/repos') || path.startsWith('/services') || path.startsWith('/relationships')
   const isAudit = path.startsWith('/audit')
   const isAnalytics = path.startsWith('/analytics')
   const isImpact = path.startsWith('/impact') || path.startsWith('/callers') ||
