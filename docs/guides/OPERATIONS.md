@@ -3336,8 +3336,11 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 T37.1 adds the production library contract for the repository-shared
 declaration/resolver namespace, but does not register a scheduler, worker,
 startup hook, API, MCP tool, UI surface, backup member, or lifecycle owner.
-There is therefore no operator action or new steady-state process cost until
-T37.2 registers the RPC posting workload.
+T37.2 adds the corresponding repository-shared RPC caller-posting contract,
+but preserves the same no-registration posture. T37.4 owns runtime scheduling,
+atomic generation activation, lifecycle, backup/restore, and operator-visible
+failure handling. There is therefore no operator action or new steady-state
+process cost yet.
 
 The catalog admits Go gRPC and Thrift resolver symbols from one exact prior
 resolver generation. Identity is partitioned by language, protocol, and import
@@ -3355,6 +3358,24 @@ rebuilt from the exact upstream resolver authority. Sparse keyed reads validate
 the selected namespace and repeat the current pointer fence. A corrupt sibling
 does not authorize fallback or guessing and does not relabel the selected
 namespace complete.
+
+An explicit T37.2 build joins one fully validated observation publication to
+one exact resolver catalog. It walks observed source records once, reads each
+referenced resolver namespace at most once per protocol, and publishes one
+path-, revision-, span-, object-, and content-bound occurrence per placement.
+Exact receiver authority yields `resolved`; a unique method-only fallback is
+kept distinct as `name_match`; dynamic or unsupported receivers, generated
+inputs, ambiguous provenance, and every resolver abstention remain classified
+`unresolved`. The builder never parses source again, guesses through a
+conflict, reads Git or the store, or starts a child process.
+
+Posting members are split into 256 deterministic buckets per protocol. An
+operation lookup validates only the selected member; unresolved inspection
+uses the protocol's fixed sentinel bucket. Complete validation still runs
+while staging and again after installation, and an identical prior generation
+is reused only after that validation. These derived generations have no
+current pointer or runtime reader registration until T37.4, so operators must
+not edit, promote, or repair them by hand.
 
 ## Developing phebs
 

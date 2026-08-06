@@ -7699,7 +7699,69 @@ and namespace grouping, writes each member once, and completes one full
 stage-validation pass; publication performs a second complete post-install
 pass before the pointer swap, and recovery reads the complete admitted
 generation once. It
-opens no Git child and performs no store query. T37.2 owns registration and
-the RPC posting join, and may consume only this catalog's strict current keyed
-authority. No accuracy/completeness, target scale/SLO, migration/decommission,
+opens no Git child and performs no store query. T37.2 owns the RPC posting join
+and may consume only this catalog's strict current keyed authority; T37.4 owns
+runtime registration. No accuracy/completeness, target scale/SLO, migration/decommission,
 or release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T37.2 ✅ · RPC caller postings** *(2026-08-05; needs T37.1)* — adds the
+unregistered `phebs-rpc-caller-posting-root-v1` production contract. The public
+builder accepts only concrete, already validated T36.3 observation and T37.1
+resolver publications. Authority binds the repository, observation generation,
+manifest and source generation, resolver commit, generation and root, plus the
+digest of every posting bound. A narrow read-only observation visitor streams
+each observed content identity with cloned placements, and a namespace reader
+lets the join cache each referenced `(go, protocol, import path)` member once.
+Neither seam exposes mutation or unvalidated bytes.
+
+Each gRPC and Thrift call becomes at most one classified posting per exact
+source placement. `resolved` requires one strict generated-symbol identity and
+retains its exact operation and declaration path/lineage. A unique method-only
+fallback is `name_match`: it retains one candidate operation but leaves the
+asserted operation and declaration authority empty. Dynamic or unsupported
+receiver flow, multiple strict generated provenances, resolver conflict, and
+ambiguous/unsupported/unavailable resolver records are `unresolved`; candidate
+operations may remain sorted for diagnosis, but no winner is promoted. A
+catalog-owned generated source is likewise an explicit
+`resolver_generated_input` unresolved posting. Production, test, vendor, and
+generated source roles are closed and never merged. One content observation at
+multiple paths or revision sets emits distinct occurrence digests because path,
+mode, revisions, immutable object/content identity, and exact byte/line span
+all participate.
+
+Resolved and unique name-match postings hash by candidate operation into 256
+buckets per protocol; unresolved postings route through one fixed
+sentinel-selected bucket per protocol, which may also contain ordinary
+operation-hash collisions.
+Within each member records are sorted by operation, placement, object, span,
+class, and digest. A keyed operation read validates exactly its selected member;
+the bounded unresolved read validates only the gap bucket. Complete stage and
+post-install passes recompute canonical posting/member bytes, every receipt and
+class/byte/count total, and the exact directory inventory before accepting an
+immutable generation. A corrupt sibling bucket does not block an unrelated
+operation read, while selecting the corrupt member refuses.
+
+The digest-bound policy admits 256 buckets per protocol, at most 512 members,
+1,000,000 postings, 50,000 postings per member, 32 candidate operations and 64
+resolver record digests per posting, 16,384 referenced namespace reads,
+4,096-byte text, 1-MiB postings, 128-MiB members, an 8-MiB root, 1 GiB of
+canonical posting identity, and 20 GiB of encoded members. Growth checks precede
+map/slice insertion. Tests pin resolved/name-match/unresolved separation,
+dynamic/conflict non-promotion, exact production/test/vendor/generated roles,
+multi-placement identity, one-read namespace caching, deterministic rebuild,
+sparse corruption isolation, pre-growth candidate limits, and resolved plus
+name-match parity with the current direct-caller extractor.
+
+T37.2 registers no scheduler, worker, store row, lifecycle/backup owner,
+startup/sync hook, API, MCP, UI, or request consumer, so current steady state is
+unchanged. When explicitly invoked after acquiring a validated observation
+lease, the build rereads the admitted observation members and canonical
+observations once, performs no source parse, Git read, store query, or child,
+and retains at most the inherited T37.1 catalog envelope plus the bounded
+posting model. It writes each nonempty bucket once, validates the stage once,
+and publication performs one second complete validation pass. An exact sparse
+read opens the at-most-8-MiB root plus one at-most-128-MiB member. T37.3 owns
+Kafka producer/consumer postings; T37.4 owns runtime registration, lifecycle,
+backup, and atomic repository/service relationship roots. No accuracy,
+completeness, target-scale/SLO, migration/decommission, or release claim is
+created; `GATE2-V2` remains `NOT_ESTABLISHED`.

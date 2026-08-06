@@ -147,7 +147,8 @@ Epic 35. T36.1's bounded immutable Git reader and partition contract,
 T36.2's shared Go source-observation contract, T36.3's content-addressed
 observation publication, and T36.4's authorized progress/neutral multi-pack
 demo are complete, closing Epic 36. T37.1's ownership-neutral namespace-sharded
-declaration/resolver catalog is complete; T37.2 is scheduled next, the remaining
+declaration/resolver catalog and T37.2's classified RPC caller postings are
+complete; T37.3 is scheduled next, the remaining
 Epics 37–39 stay dependency-ordered drafts, and Epics 25–28 remain
 unscheduled.
 A physical Go-test search overlay,

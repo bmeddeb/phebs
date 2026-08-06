@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
+	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -37,6 +38,21 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 		t.Fatalf("A operation receipt = %+v", receipt)
 	}
 	recordsA := publicationRecords(t, publicationA)
+	walked := 0
+	if err := publicationA.WalkObserved(
+		t.Context(),
+		func(record Record, observation sourceobservation.Observation) error {
+			walked++
+			if observation.ContentDigest != record.ContentDigest || len(record.Placements) == 0 {
+				t.Fatalf("walked observation mismatch: %+v %+v", record, observation)
+			}
+			// The visitor receives a clone; mutation cannot alter publication authority.
+			record.Placements[0].Revisions[0] = 99
+			return nil
+		},
+	); err != nil || walked != publicationA.manifest.ObservedCount {
+		t.Fatalf("walk observed = %d, %v", walked, err)
+	}
 
 	if err := os.WriteFile(filepath.Join(repository, "b.go"), []byte("package demo\nconst B = 2\n"), 0o600); err != nil {
 		t.Fatal(err)

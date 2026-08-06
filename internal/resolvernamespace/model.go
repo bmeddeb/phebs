@@ -357,6 +357,10 @@ func validateRoot(value Root) error {
 	return nil
 }
 
+// ValidateRoot exposes the closed root-control validator to downstream
+// relationship builders without exposing publication internals.
+func ValidateRoot(value Root) error { return validateRoot(value) }
+
 func setRootDigests(value *Root) error {
 	value.GenerationDigest, value.Digest = "", ""
 	generation, err := digestValue(*value)

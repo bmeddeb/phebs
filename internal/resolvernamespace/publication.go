@@ -193,6 +193,30 @@ func (publication *Publication) Lookup(
 		!validText(namespace) || !validText(clientType) || !validText(method) {
 		return nil, fmt.Errorf("%w: lookup", ErrInvalid)
 	}
+	records, err := publication.LookupNamespace(ctx, language, protocol, namespace)
+	if err != nil {
+		return nil, err
+	}
+	result := []Record{}
+	for _, record := range records {
+		if record.ClientType == clientType && record.Method == method {
+			result = append(result, record)
+		}
+	}
+	return cloneRecords(result), nil
+}
+
+// LookupNamespace validates and returns exactly one namespace member. It is
+// the sparse caching seam for T37 posting builders; callers still receive
+// cloned records and cannot mutate publication authority.
+func (publication *Publication) LookupNamespace(
+	ctx context.Context,
+	language, protocol, namespace string,
+) ([]Record, error) {
+	if publication == nil || language != LanguageGo ||
+		(protocol != "grpc" && protocol != "thrift") || !validText(namespace) {
+		return nil, fmt.Errorf("%w: namespace lookup", ErrInvalid)
+	}
 	wanted := namespaceKey(language, protocol, namespace)
 	index, found := slices.BinarySearchFunc(
 		publication.rootValue.Namespaces, wanted,
@@ -207,13 +231,7 @@ func (publication *Publication) Lookup(
 	if err != nil {
 		return nil, err
 	}
-	result := []Record{}
-	for _, record := range member.Records {
-		if record.ClientType == clientType && record.Method == method {
-			result = append(result, record)
-		}
-	}
-	return cloneRecords(result), nil
+	return cloneRecords(member.Records), nil
 }
 
 // LookupCurrent fences both sides of a sparse member read with the exact
