@@ -104,7 +104,8 @@ interrupted transition; the exact retry repairs it without a Git census or
 historical-generation scan. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
 containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`,
-`caller-publication.tar`, `observation-publication.tar`, and `manifest.json`. The
+`caller-publication.tar`, `observation-publication.tar`,
+`relationship-publication.tar`, and `manifest.json`. The
 focused archive contains only complete, revalidated focused manifests,
 sidecars, and shard members; it never includes whole-repository shards. A
 stale marker is omitted but cannot hide an otherwise complete valid
@@ -116,8 +117,8 @@ proves the exact canonical tar inventory in one bounded streaming pass; it
 does not extract the archive into a second temporary tree. Restore's
 pre-import verification and final installation still perform the complete
 structural extraction and semantic publication validation. The
-`phebs-backup-manifest-v6` manifest
-binds all five artifacts' sizes and SHA-256 digests, the exact raw config digest,
+`phebs-backup-manifest-v7` manifest
+binds all six artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
 exclusions, including `$DATA/candidates` and invalid or incomplete caller
@@ -3333,14 +3334,13 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 ## Resolver namespace catalog contract
 
-T37.1 adds the production library contract for the repository-shared
-declaration/resolver namespace, but does not register a scheduler, worker,
-startup hook, API, MCP tool, UI surface, backup member, or lifecycle owner.
-T37.2 adds the corresponding repository-shared RPC caller-posting contract,
-but preserves the same no-registration posture. T37.4 owns runtime scheduling,
-atomic generation activation, lifecycle, backup/restore, and operator-visible
-failure handling. There is therefore no operator action or new steady-state
-process cost yet.
+T37.1 adds the repository-shared declaration/resolver namespace contract.
+T37.2 adds classified RPC caller postings and T37.3 adds Kafka
+producer/consumer postings. T37.4 registers their bounded relationship
+workload when resolver adapters are enabled, adds atomic repository/service
+roots, migrates the relationship lifecycle owner, and adds exact composite
+backup/restore. T37.5 still owns HTTP, MCP, UI, comparison, proof, and
+Workbench consumers.
 
 The catalog admits Go gRPC and Thrift resolver symbols from one exact prior
 resolver generation. Identity is partitioned by language, protocol, and import
@@ -3349,7 +3349,7 @@ unsupported, unavailable, and conflicting resolution remain explicit records;
 operators must never repair these derived bytes or choose a conflict candidate
 by editing a member.
 
-When a future registered owner invokes the builder, unchanged namespace
+When the registered relationship owner invokes the builder, unchanged namespace
 members are revalidated and hard-linked, while only changed namespaces receive
 new bytes. A complete validation pass precedes the atomic current-pointer swap.
 Startup recovery may complete a marked generation only after repeating that
@@ -3374,8 +3374,9 @@ operation lookup validates only the selected member; unresolved inspection
 uses the protocol's fixed sentinel bucket. Complete validation still runs
 while staging and again after installation, and an identical prior generation
 is reused only after that validation. These derived generations have no
-current pointer or runtime reader registration until T37.4, so operators must
-not edit, promote, or repair them by hand.
+independent product authority. T37.4 consumes them only through their exact
+generation/root digests, so operators must not edit, promote, or repair them
+by hand.
 
 T37.3 adds the parallel unregistered Kafka topic-posting contract. Producer and
 consumer evidence remains in separate planes. Literal and same-file-constant
@@ -3391,9 +3392,32 @@ writes deterministic topic buckets, and performs complete stage and
 post-install validation. Keyed topic and unresolved reads validate only their
 selected at-most-128-MiB member after the at-most-8-MiB root. The build starts
 no parser, Git or store read, resolver lookup, network request, or child.
-T37.3 also has no scheduler, current pointer, lifecycle/backup owner, startup
-hook, or product surface; T37.4 owns those transitions. Operators must not edit
-or promote these derived bytes manually.
+The T37.4 worker runs one durable memory-class item after exact observation,
+resolver, or catalog publication. It holds the shared mutation/backup lock,
+leases the observation generation, pages verified service states, and rechecks
+all precious and derived controls before moving the relationship pointer.
+The accepted-service desired/incarnation-set digest makes catalog A after
+A→B→A distinct from an earlier incarnation even when catalog bytes recur.
+Source and declaration-target membership may resolve to zero, one, or many
+services. Shared, unowned, proposal, conflict, and rejected claims remain
+explicit. One failed service partition does not block repository authority or
+unrelated service members, and `all_services_complete` stays false until every
+named accepted service is complete or explicitly empty against the same root.
+
+The worker declares one GiB and applies pre-growth resident charges: 128 MiB
+resolver, 192 MiB RPC, 128 MiB Kafka, and 512 MiB relationship data. It starts
+no Git, network, or parser child. When enabled, its idle scheduler performs one
+planner/reaper and one bounded claim probe per second. Ordinary search,
+evidence, directory, HTTP, MCP, and UI requests perform no relationship work.
+
+Lifecycle preserves current plus one rollback root and active reader leases,
+renames an eligible root before bounded deletion, and deletes a component only
+when no surviving relationship root or resolver control references it.
+Backup-manifest v7 includes only fully validated current composite authority;
+corrupt or in-flight relationship state is counted as omitted and rebuilt
+after restore rather than blocking the precious database export. T37.5 has not
+yet registered a product reader, so operators should treat these roots as
+derived internal authority and never edit or promote them manually.
 
 ## Developing phebs
 

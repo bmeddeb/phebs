@@ -35,9 +35,10 @@ type repositoryStore interface {
 // Reconciler reads only explicitly selected inputs. It never guesses a
 // service from directory shape and never clears a prior current authority.
 type Reconciler struct {
-	DataDir    string
-	Store      repositoryStore
-	Selections map[string]config.ServiceCatalog
+	DataDir     string
+	Store       repositoryStore
+	Selections  map[string]config.ServiceCatalog
+	OnPublished func(context.Context, string) error
 }
 
 type Outcome string
@@ -80,6 +81,9 @@ func (r *Reconciler) Reconcile(ctx context.Context) (Report, error) {
 			return report, err
 		}
 		outcome, reconcileErr := r.reconcile(ctx, repository)
+		if reconcileErr == nil {
+			reconcileErr = r.afterPublish(ctx, repository.Name, outcome)
+		}
 		if reconcileErr != nil {
 			report.Failures = append(report.Failures, Failure{
 				Repository: repository.Name, Err: reconcileErr,
@@ -104,7 +108,22 @@ func (r *Reconciler) ReconcileRepository(
 	if err != nil {
 		return "", err
 	}
-	return r.reconcile(ctx, *current)
+	outcome, err := r.reconcile(ctx, *current)
+	if err == nil {
+		err = r.afterPublish(ctx, repository, outcome)
+	}
+	return outcome, err
+}
+
+func (r *Reconciler) afterPublish(
+	ctx context.Context, repository string, outcome Outcome,
+) error {
+	if r.OnPublished == nil ||
+		(outcome != OutcomeCurrent && outcome != OutcomePublished &&
+			outcome != OutcomeLegacyImported) {
+		return nil
+	}
+	return r.OnPublished(ctx, repository)
 }
 
 func (r *Reconciler) reconcile(

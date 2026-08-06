@@ -295,6 +295,10 @@ func validateRoot(value Root) error {
 	return nil
 }
 
+// ValidateRoot exposes the closed root-control validator to the atomic
+// relationship-root publisher without granting member or mutation access.
+func ValidateRoot(value Root) error { return validateRoot(value) }
+
 func validateAuthority(value Authority) error {
 	if reponame.Validate(value.Repository) != nil || !validDigest(value.ObservationGenerationDigest) ||
 		!validDigest(value.ObservationManifestDigest) || !validDigest(value.ObservationSourceDigest) ||

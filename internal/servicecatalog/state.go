@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -43,6 +44,29 @@ type ServiceProjection struct {
 	CatalogGeneration string
 	GenerationDigest  string
 	Removed           bool
+}
+
+// PlacementClaim is one service authority claim on a repository path prefix.
+// Nonaccepted claims remain visible to relationship projection and are never
+// silently promoted to accepted ownership.
+type PlacementClaim struct {
+	ServiceKey  string
+	Disposition string
+	Roles       []PlacementRole
+}
+
+type PlacementRole struct {
+	Role   string
+	Origin string
+}
+
+// PlacementAuthority is one canonical membership prefix or explicit unowned
+// path. A path may carry multiple service claims and may carry rejected claims
+// alongside an explicit unowned complement record.
+type PlacementAuthority struct {
+	Path    string
+	Unowned bool
+	Claims  []PlacementClaim
 }
 
 // ServiceState is the one current lifecycle row for a repository-local service
@@ -166,6 +190,72 @@ func (verified VerifiedPublication) ProjectServices() ([]ServiceProjection, erro
 		projections = append(projections, projection)
 	}
 	return projections, nil
+}
+
+// ProjectPlacements derives the complete sorted path-prefix authority from an
+// already verified catalog decode. It is intended for one bounded batch join;
+// point readers should continue to use ProjectService.
+func (verified VerifiedPublication) ProjectPlacements() ([]PlacementAuthority, error) {
+	if !verified.verified {
+		return nil, publicationInvalidf("publication was not verified")
+	}
+	services := make(map[string]Service, len(verified.catalog.Services))
+	for _, service := range verified.catalog.Services {
+		services[service.Key] = service
+	}
+	byPath := make(map[string]map[string]*PlacementClaim)
+	for _, membership := range verified.catalog.Memberships {
+		claims := byPath[membership.Path]
+		if claims == nil {
+			claims = make(map[string]*PlacementClaim)
+			byPath[membership.Path] = claims
+		}
+		claim := claims[membership.ServiceKey]
+		if claim == nil {
+			service := services[membership.ServiceKey]
+			claim = &PlacementClaim{
+				ServiceKey: service.Key, Disposition: service.Disposition,
+				Roles: []PlacementRole{},
+			}
+			claims[membership.ServiceKey] = claim
+		}
+		claim.Roles = append(claim.Roles, PlacementRole{Role: membership.Role, Origin: membership.Origin})
+	}
+	unowned := make(map[string]struct{}, len(verified.catalog.Unowned))
+	for _, placement := range verified.catalog.Unowned {
+		unowned[placement.Path] = struct{}{}
+		if byPath[placement.Path] == nil {
+			byPath[placement.Path] = make(map[string]*PlacementClaim)
+		}
+	}
+	paths := make([]string, 0, len(byPath))
+	for path := range byPath {
+		paths = append(paths, path)
+	}
+	slices.Sort(paths)
+	result := make([]PlacementAuthority, 0, len(paths))
+	for _, path := range paths {
+		claims := byPath[path]
+		keys := make([]string, 0, len(claims))
+		for key := range claims {
+			keys = append(keys, key)
+		}
+		slices.Sort(keys)
+		value := PlacementAuthority{Path: path, Claims: make([]PlacementClaim, 0, len(keys))}
+		_, value.Unowned = unowned[path]
+		for _, key := range keys {
+			claim := *claims[key]
+			slices.SortFunc(claim.Roles, func(left, right PlacementRole) int {
+				if left.Role != right.Role {
+					return strings.Compare(left.Role, right.Role)
+				}
+				return strings.Compare(left.Origin, right.Origin)
+			})
+			value.Claims = append(value.Claims, claim)
+		}
+		result = append(result, value)
+	}
+	return result, nil
 }
 
 // ProjectService strict-opens one publication and derives only the requested

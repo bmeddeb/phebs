@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -22,6 +23,9 @@ type observationSource interface {
 type BuildRequest struct {
 	Root         string
 	Observations *observationpublication.Publication
+	// ResidentLimitBytes is an operational pre-growth charge fence used by a
+	// registered worker. Zero preserves the contract's frozen identity bound.
+	ResidentLimitBytes int64
 }
 
 type Prepared struct {
@@ -33,10 +37,18 @@ type Prepared struct {
 }
 
 func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
-	return buildSource(ctx, request.Root, request.Observations)
+	return buildSourceBounded(
+		ctx, request.Root, request.Observations, request.ResidentLimitBytes,
+	)
 }
 
 func buildSource(ctx context.Context, root string, observations observationSource) (*Prepared, error) {
+	return buildSourceBounded(ctx, root, observations, 0)
+}
+
+func buildSourceBounded(
+	ctx context.Context, root string, observations observationSource, residentLimit int64,
+) (*Prepared, error) {
 	if root == "" || observations == nil {
 		return nil, errors.New("kafka topic posting inputs are incomplete")
 	}
@@ -62,6 +74,13 @@ func buildSource(ctx context.Context, root string, observations observationSourc
 	byMember := make(map[string][]Posting)
 	seen := make(map[string]struct{})
 	var identityBytes int64
+	var residentCharge int64
+	if residentLimit == 0 {
+		residentLimit = math.MaxInt64
+	}
+	if residentLimit < 1 {
+		return nil, ErrLimit
+	}
 	postingCount := 0
 	walkedRecords := 0
 	err = observations.WalkObserved(ctx, func(
@@ -84,7 +103,10 @@ func buildSource(ctx context.Context, root string, observations observationSourc
 				if err := validatePosting(posting); err != nil {
 					return err
 				}
-				if err := addPosting(byMember, seen, &postingCount, &identityBytes, posting); err != nil {
+				if err := addPosting(
+					byMember, seen, &postingCount, &identityBytes,
+					&residentCharge, residentLimit, posting,
+				); err != nil {
 					return err
 				}
 			}
@@ -105,6 +127,8 @@ func addPosting(
 	seen map[string]struct{},
 	postingCount *int,
 	identityBytes *int64,
+	residentCharge *int64,
+	residentLimit int64,
 	posting Posting,
 ) error {
 	if _, duplicate := seen[posting.Digest]; duplicate {
@@ -125,9 +149,15 @@ func addPosting(
 	if len(raw) > MaxPostingBytes || int64(len(raw)) > MaxPostingIdentityBytes-*identityBytes {
 		return ErrLimit
 	}
+	const postingOverhead = 512
+	charge := int64(len(raw) + postingOverhead)
+	if charge > residentLimit-*residentCharge {
+		return ErrLimit
+	}
 	seen[posting.Digest] = struct{}{}
 	(*postingCount)++
 	*identityBytes += int64(len(raw))
+	*residentCharge += charge
 	byMember[key] = append(byMember[key], posting)
 	return nil
 }

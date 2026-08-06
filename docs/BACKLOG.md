@@ -16,8 +16,9 @@ T36.1's bounded immutable Git reader and source-partition contract is complete.
 T36.2's shared Go source-observation contract, T36.3's content-addressed
 observation publication, and T36.4's authorized progress/neutral multi-pack
 demo are complete, closing Epic 36. T37.1's namespace-sharded declaration and
-resolver catalog, T37.2's RPC caller postings, and T37.3's Kafka topic postings
-are complete; T37.4 is the next scheduled ticket, and
+resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
+and T37.4's service projections and atomic relationship roots are complete;
+T37.5 is the next scheduled ticket, and
 the remaining Epics 37–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -35,19 +36,11 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 37 · Cross-service relationship index *(T37.1–T37.3 complete · T37.4 scheduled)*
+## Epic 37 · Cross-service relationship index *(T37.1–T37.4 complete · T37.5 scheduled)*
 
 Join repository-shared observations to declarations once, publish keyed
 relationship postings, and project them onto services without claiming runtime
 or universal completeness.
-
-**T37.4 · Service projections and atomic relationship roots** *(needs
-T37.2–T37.3; scheduled)* — project source and target membership onto zero, one, or many
-services and publish exact per-service plus repository-complete roots. AC:
-shared/unowned/conflicting memberships stay explicit; a broken service does
-not block unrelated service roots; an all-services claim requires every named
-partition against identical source/catalog/resolver roots; progress cannot
-masquerade as complete; authorization precedes indexes, counts, and files.
 
 **T37.5 · Exact readers, comparison, proof, and demo** *(needs T37.4)* —
 serve paged service dependency/caller/topic reads and two-generation comparison

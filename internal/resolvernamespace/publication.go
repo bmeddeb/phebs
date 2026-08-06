@@ -175,6 +175,32 @@ func OpenCurrent(ctx context.Context, root, repository string) (*Publication, er
 	return publication, nil
 }
 
+// Open validates one exact immutable generation independently of the current
+// pointer. Relationship roots use this path so restore and historical reads
+// cannot relabel a newer namespace pointer as the generation they cite.
+func Open(ctx context.Context, root string, expected Root) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := validateRoot(expected); err != nil {
+		return nil, err
+	}
+	directory := generationPath(root, expected.Authority.Repository, expected.GenerationDigest)
+	pointer := Pointer{
+		Schema: PointerSchema, Repository: expected.Authority.Repository,
+		GenerationDigest: expected.GenerationDigest, RootDigest: expected.Digest,
+		RootFile: "root.json",
+	}
+	if err := setPointerDigest(&pointer); err != nil {
+		return nil, err
+	}
+	rootValue, err := readRoot(directory, pointer)
+	if err != nil {
+		return nil, err
+	}
+	return openGeneration(ctx, directory, rootValue, true)
+}
+
 func (publication *Publication) Root() Root {
 	if publication == nil {
 		return Root{}

@@ -79,6 +79,33 @@ func TestServiceProjectionIsolatesSiblingAndBindsSource(t *testing.T) {
 	}
 }
 
+func TestProjectPlacementsRetainsCanonicalClaims(t *testing.T) {
+	publication := stateTestPublication(t, "4444444444444444444444444444444444444444")
+	verified, err := VerifyPublication(publication, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	placements, err := verified.ProjectPlacements()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(placements) != 2 || placements[0].Path != "orders" ||
+		placements[1].Path != "payments" || placements[0].Unowned ||
+		len(placements[0].Claims) != 1 ||
+		placements[0].Claims[0].ServiceKey != "orders" ||
+		placements[0].Claims[0].Disposition != DispositionAccepted ||
+		!reflect.DeepEqual(placements[0].Claims[0].Roles, []PlacementRole{{
+			Role: RolePrimary, Origin: OriginBase,
+		}}) {
+		t.Fatalf("placement projection = %+v", placements)
+	}
+	placements[0].Claims[0].Roles[0].Role = RoleShared
+	again, err := verified.ProjectPlacements()
+	if err != nil || again[0].Claims[0].Roles[0].Role != RolePrimary {
+		t.Fatalf("placement projection alias = %+v, %v", again, err)
+	}
+}
+
 func TestServiceStateAndSummaryDigestsRejectMutation(t *testing.T) {
 	publication := stateTestPublication(t, "3333333333333333333333333333333333333333")
 	projections, err := ProjectServices(publication)
