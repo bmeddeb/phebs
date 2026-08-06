@@ -26,8 +26,8 @@ closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
 gate and T39.2's honestly stopped authorized target run are retained in the
 completed backlog. T39.3's security/lifecycle gate is also retained there.
 T39.4's evidence/workflow gate stopped before unsealing and T39.5 retained the
-no-release decision, closing Epic 39. T39.R1 remains conditional only before a
-separately authorized rerun; it is not scheduled implementation authority.
+no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
+is also complete without authorizing or superseding a target rerun.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -42,22 +42,6 @@ points are summarized in [ROADMAP.md](./ROADMAP.md).
 New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
-
-## Epic 39 · Multi-service validation and release decision *(complete)*
-
-Validate the implemented system and decide a narrow shadow/advisory release;
-feature completeness alone cannot promote it.
-
-**T39.R1 · Mirror-lock contention diagnosis and authorized-rerun precondition**
-*(conditional; unscheduled)* — before any T39.2 rerun, reproduce
-and classify immutable-mirror lock occupancy between aggregate extraction and
-caller-leaf execution, then record whether bounded serialization, admission,
-or retry accounting changes are required. AC: one workload cannot exhaust all
-attempts solely while waiting behind another admitted workload; cancellation,
-lease loss, and prior-publication preservation remain exact; no timeout or
-attempt limit is raised to manufacture a pass. Any rerun still requires a new
-explicit approval, nonce, frozen plan, teardown deadline, and source-free
-receipt. This chip does not supersede the retained T39.2 stop.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 

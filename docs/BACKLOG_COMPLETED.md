@@ -8448,6 +8448,53 @@ no production behavior.
 
 No “all runtime callers,” accuracy/completeness, SLO, migration-complete,
 decommission-safe, pilot-continuation, or release claim is created.
-`GATE2-V2` remains `NOT_ESTABLISHED`. Epic 39 is complete. T39.R1 remains an
-unscheduled conditional prerequisite, not the next ticket; Epics 25–28 remain
-unscheduled drafts.
+`GATE2-V2` remains `NOT_ESTABLISHED`. Epic 39 is complete. T39.R1 subsequently
+closed its conditional contention prerequisite below without authorizing a
+rerun; Epics 25–28 remain unscheduled drafts.
+
+**T39.R1 ✅ · Mirror-lock contention diagnosis and authorized-rerun precondition**
+*(2026-08-06; conditional follow-up to stopped T39.2)* — reproduces the exact
+aggregate-extraction/caller-leaf contention shape and classifies the stop as a
+budget-boundary defect. Both workloads correctly serialize through the same
+repository immutable-mirror lock, but caller-leaf previously started its
+five-minute execution context before waiting. An admitted aggregate extraction
+could spend that entire context while caller-leaf performed no work, returning
+an ordinary retry that could repeat until the unchanged three-attempt runner
+limit failed the job.
+
+The correction is bounded serialization, not a larger timeout, attempt count,
+or admission envelope. Caller pointer/control preflight keeps an independent
+at-most-five-minute context. Mirror acquisition then uses the runner's
+lease-heartbeated parent job context, and caller execution receives a fresh
+at-most-five-minute context only after the lock is held. The repository lock,
+caller policy digest, admission rules, retry accounting, five-minute production
+limit, three-attempt limit, and successor-first repair/publication ordering are
+unchanged.
+
+Executable gates prove that a lock wait longer than a tightened execution
+budget returns no attempt-consuming error; releasing the extraction holder
+starts and durably settles the caller turn; parent cancellation opens no caller
+plan and mutates no caller state; genuine post-acquisition deadline expiry
+remains retryable; parent cancellation stays distinct from that deadline;
+runner lease loss cancels without a stale transition; and prior caller outcomes
+remain behind the existing successor-first repair fence.
+
+Warm current work still returns in pointer/control preflight without a mirror
+lock. A noncurrent queued turn performs no query, file read, hash, allocation,
+or child while waiting beyond the already completed preflight; it retains one
+runner lease and one process-local lock waiter, with the existing heartbeat.
+After acquisition, its bounded work and memory/disk/child limits are unchanged.
+Total claim wall time may now include bounded preflight, external serialized
+lock occupancy, and bounded execution rather than one five-minute envelope.
+
+The deterministic source-free receipt is `spike/t39r1/results.json`
+(`sha256:92a2751a9d6f31f5e3c9d692bb9fd2022ac84d9bdf9e143f76504cab5c1e502e`).
+It binds the exact stopped T39.2 and no-release T39.5 receipts. It contains no
+target/repository/service identity, source/path/query bytes, host, credential,
+raw error, private topology, or measurement.
+
+T39.2 remains stopped and nonsuperseded. This ticket authorizes no target rerun,
+SLO, accuracy/completeness, migration-complete, decommission-safe, pilot
+continuation, or release claim. Any rerun still requires a new explicit
+approval, nonce, frozen plan, teardown deadline, and source-free receipt.
+`GATE2-V2` remains `NOT_ESTABLISHED`; Epics 25–28 remain unscheduled drafts.

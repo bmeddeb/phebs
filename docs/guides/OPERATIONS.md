@@ -443,6 +443,16 @@ admission plus complete publication run in their own fresh turn after the
 last pair. The pair remains expected when that leaf contains no record for
 the domain and publishes a canonical empty artifact.
 
+The five-minute caller execution deadline starts only after the repository
+mirror lock is acquired. Pointer/control preflight has its own at-most-five-
+minute context; waiting behind fetch, indexing, candidate planning, or
+aggregate extraction uses the runner's lease-heartbeated parent context and
+does not consume a caller attempt. Cancellation or lease loss interrupts that
+wait before the candidate caller plan is opened or caller state is mutated.
+This changes no timeout, attempt, admission, or retry limit: a pair that cannot
+finish within the unchanged post-acquisition deadline remains an ordinary
+retry and can still exhaust honestly.
+
 Startup stage cleanup performs one bounded sorted read of the caller root
 (at most 65,536 entries) and one bounded sorted read of each package-shaped
 repository directory (at most 65,536 entries each), for `O(R + ΣE_r)` names;
