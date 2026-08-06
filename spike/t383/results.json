@@ -1,0 +1,102 @@
+{
+  "schema": "t383-service-aware-workbench-demo-v1",
+  "outcome": "completed",
+  "fixture": {
+    "service_sides": 2,
+    "root_receipts": 2,
+    "affected_rows": 4,
+    "candidate_rows": 2,
+    "human_dispositions": 3
+  },
+  "reader": {
+    "maximum_snapshots_per_read": 2,
+    "maximum_rows_per_snapshot": 50,
+    "retained_relationship_bindings": 0,
+    "maximum_repositories_per_snapshot": 32,
+    "final_root_set_fences": 1,
+    "maximum_checklist_suggestions": 1000
+  },
+  "states": [
+    "ambiguous",
+    "current",
+    "empty",
+    "exact",
+    "gap",
+    "partial",
+    "stale",
+    "unowned",
+    "unaccepted"
+  ],
+  "cases": [
+    {
+      "name": "service_snapshot_composition",
+      "assertions": [
+        "source_and_target_exact",
+        "contract_lookup_exact",
+        "zero_retained_bindings"
+      ],
+      "gates": [
+        "TestWorkbenchImpactComposesExactServiceSnapshotsWithoutRetainedBindings"
+      ]
+    },
+    {
+      "name": "final_authority_fence",
+      "assertions": [
+        "revision_rechecked",
+        "root_set_rechecked",
+        "changed_root_refused"
+      ],
+      "gates": [
+        "TestWorkbenchImpactRejectsServiceRootChangeAtFinalFence"
+      ]
+    },
+    {
+      "name": "source_first_product",
+      "assertions": [
+        "affected_services_visible",
+        "unowned_candidate_visible",
+        "exact_explorer_handoff"
+      ],
+      "gates": [
+        "Where applies exact service scope and renders affected and unowned evidence"
+      ]
+    },
+    {
+      "name": "fail_closed_and_reproducible",
+      "assertions": [
+        "malformed_root_refused",
+        "source_target_route_preserved",
+        "service_change_invalidates"
+      ],
+      "gates": [
+        "Where refuses a service row whose root differs from final authority",
+        "exact service scope survives revision and step deep links"
+      ]
+    },
+    {
+      "name": "human_disposition_only",
+      "assertions": [
+        "fixed_categories",
+        "stale_evidence_visible",
+        "no_task_or_decision_surface"
+      ],
+      "gates": [
+        "TestWorkbenchChecklistDispositionSupersessionAndStaleEvidence",
+        "TestWorkbenchChecklistCompletionHasNoTaskOrDecisionSurface"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_implicit_write": true,
+    "no_task_completion": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_runtime_topology": true,
+    "no_scale": true,
+    "no_slo": true,
+    "no_migration_safety": true,
+    "no_decommission_safety": true,
+    "no_release_authority": true
+  }
+}

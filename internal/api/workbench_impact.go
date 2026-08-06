@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	workbenchImpactSchemaVersion = "workbench-impact-inventory-v2"
-	workbenchImpactCursorVersion = "workbench-impact-cursor-v2"
+	workbenchImpactSchemaVersion = "workbench-impact-inventory-v3"
+	workbenchImpactCursorVersion = "workbench-impact-cursor-v3"
 	workbenchImpactCursorLimit   = 64 << 10
-	workbenchImpactCaveat        = "Cited static evidence within the displayed authorization and extraction snapshots; rows, empty pages, and completed pagination do not establish runtime use, completeness, migration completion, or decommissioning safety."
+	workbenchServicePageSize     = 50
+	workbenchImpactCaveat        = "Cited static evidence within the displayed authorization, service, relationship, and extraction snapshots; rows, empty pages, and completed pagination do not establish runtime use, completeness, migration completion, or decommission safety and create no implicit write or task completion."
 )
 
 type workbenchImpactReader interface {
@@ -103,6 +104,7 @@ type WorkbenchImpactService struct {
 	fields        workbenchImpactFieldReferences
 	compatibility workbenchImpactCompatibility
 	resources     *ResourcePlaneRegistry
+	relationships RelationshipSnapshotQueries
 }
 
 func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
@@ -143,6 +145,7 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 		resources = DefaultWorkbenchResourcePlanes()
 	}
 	compatibility, _ := opts.Workbench.(workbenchImpactCompatibility)
+	relationships, _ := opts.Relationships.(RelationshipSnapshotQueries)
 	return &WorkbenchImpactService{
 		opts:          opts,
 		cursorSecret:  callers.exact.secret,
@@ -153,19 +156,23 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 		fields:        fields,
 		compatibility: compatibility,
 		resources:     resources,
+		relationships: relationships,
 	}
 }
 
 type WorkbenchImpactFilters struct {
-	Unit       string `json:"unit,omitempty"`
-	Owner      string `json:"owner,omitempty"`
-	PathPrefix string `json:"path_prefix,omitempty"`
-	CodeRole   string `json:"code_role,omitempty"`
-	Tier       string `json:"tier,omitempty"`
-	Freshness  string `json:"freshness,omitempty"`
-	Resolution string `json:"resolution,omitempty"`
-	Ordering   string `json:"ordering,omitempty"`
-	Level      string `json:"level,omitempty"`
+	Unit              string `json:"unit,omitempty"`
+	Owner             string `json:"owner,omitempty"`
+	PathPrefix        string `json:"path_prefix,omitempty"`
+	CodeRole          string `json:"code_role,omitempty"`
+	Tier              string `json:"tier,omitempty"`
+	Freshness         string `json:"freshness,omitempty"`
+	Resolution        string `json:"resolution,omitempty"`
+	Ordering          string `json:"ordering,omitempty"`
+	Level             string `json:"level,omitempty"`
+	ServiceRepository string `json:"service_repository,omitempty"`
+	SourceService     string `json:"source_service,omitempty"`
+	TargetService     string `json:"target_service,omitempty"`
 }
 
 type WorkbenchImpactRequest struct {
@@ -260,9 +267,23 @@ type WorkbenchImpactPage struct {
 	FieldReferences      *FieldReferencePage           `json:"field_references,omitempty"`
 	ResourcePlanes       []ResourcePlaneSnapshot       `json:"resource_planes"`
 	RelationshipCoverage *RelationshipProofCoverage    `json:"relationship_coverage,omitempty"`
+	ServiceImpact        *WorkbenchServiceImpact       `json:"service_impact,omitempty"`
 	AnalysisScope        WorkbenchAnalysisScope        `json:"analysis_scope"`
 	Pagination           WorkbenchImpactPagination     `json:"pagination"`
 	Caveat               string                        `json:"caveat"`
+}
+
+type WorkbenchServiceImpactSide struct {
+	Role      string                             `json:"role" enum:"source,target"`
+	Selection store.ChangeBriefContractSelection `json:"selection"`
+	Snapshot  RelationshipSnapshotPage           `json:"snapshot"`
+}
+
+type WorkbenchServiceImpact struct {
+	Source    *WorkbenchServiceImpactSide `json:"source,omitempty"`
+	Target    *WorkbenchServiceImpactSide `json:"target,omitempty"`
+	Authority RelationshipProofCoverage   `json:"authority"`
+	Caveat    string                      `json:"caveat"`
 }
 
 type workbenchImpactStreamCursor struct {
@@ -281,6 +302,7 @@ type workbenchImpactCursor struct {
 	CompatibilityDigest string                                 `json:"compatibility_digest"`
 	ResourceDigest      string                                 `json:"resource_digest"`
 	RelationshipDigest  string                                 `json:"relationship_digest,omitempty"`
+	ServiceDigest       string                                 `json:"service_digest,omitempty"`
 	Streams             map[string]workbenchImpactStreamCursor `json:"streams"`
 }
 
@@ -332,6 +354,8 @@ func (service *WorkbenchImpactService) Read(
 		return nil, store.ErrNotFound
 	}
 	revisionDigest := workbenchImpactRevisionDigest(view)
+	var serviceAuthorityRepositories []string
+	var serviceAuthorityDigest string
 	// Every subordinate service has its own result-time repository/evidence
 	// fence. Repeat the Investigation authority last as well so a revocation or
 	// revision advance during composition cannot leak the subordinate error or
@@ -354,6 +378,23 @@ func (service *WorkbenchImpactService) Read(
 			resultErr = huma.Error409Conflict(
 				"workbench impact revision changed while building the response",
 			)
+			return
+		}
+		if serviceAuthorityDigest != "" {
+			coverage, err := service.opts.Relationships.RootCoverage(
+				ctx, serviceAuthorityRepositories,
+			)
+			if err != nil || coverage == nil ||
+				coverage.Digest != serviceAuthorityDigest {
+				result = nil
+				if err != nil {
+					resultErr = err
+				} else {
+					resultErr = huma.Error409Conflict(
+						"service relationship authority changed while building the Workbench impact response",
+					)
+				}
+			}
 		}
 	}()
 	if request.CompatibilityRun != "" &&
@@ -415,6 +456,7 @@ func (service *WorkbenchImpactService) Read(
 		next.CompatibilityDigest = cursor.CompatibilityDigest
 		next.ResourceDigest = cursor.ResourceDigest
 		next.RelationshipDigest = cursor.RelationshipDigest
+		next.ServiceDigest = cursor.ServiceDigest
 	}
 
 	atlasDigest, err := service.readWorkbenchAtlas(
@@ -506,6 +548,22 @@ func (service *WorkbenchImpactService) Read(
 			state, reason = "partial", "relationship_root_gap"
 		}
 		workbenchAddCapability(page, "service-relationships", state, reason)
+	}
+	page.ServiceImpact, serviceAuthorityRepositories, err =
+		service.readWorkbenchServiceImpact(ctx, view.Brief, request.Filters)
+	if err != nil {
+		return nil, err
+	}
+	serviceDigest := ""
+	if page.ServiceImpact != nil {
+		serviceAuthorityDigest = page.ServiceImpact.Authority.Digest
+		serviceDigest = digestJSON(page.ServiceImpact)
+	}
+	if err := bindWorkbenchImpactDigest(
+		"service impact", &next.ServiceDigest, serviceDigest,
+		request.Cursor != "",
+	); err != nil {
+		return nil, err
 	}
 
 	expectedStreams := make(map[string]struct{})
@@ -644,6 +702,190 @@ func normalizeWorkbenchImpactFilters(
 		filters.Level = "occurrence"
 	}
 	return filters
+}
+
+func (service *WorkbenchImpactService) readWorkbenchServiceImpact(
+	ctx context.Context,
+	brief store.ChangeBrief,
+	filters WorkbenchImpactFilters,
+) (*WorkbenchServiceImpact, []string, error) {
+	requested := filters.SourceService != "" || filters.TargetService != ""
+	if !requested {
+		if filters.ServiceRepository != "" {
+			return nil, nil, huma.Error400BadRequest(
+				"service_repository requires source_service or target_service",
+			)
+		}
+		return nil, nil, nil
+	}
+	for _, value := range []string{
+		filters.ServiceRepository,
+		filters.SourceService,
+		filters.TargetService,
+	} {
+		if value != "" && !validRelationshipText(value) {
+			return nil, nil, huma.Error400BadRequest(
+				"service impact scope contains invalid bounded text",
+			)
+		}
+	}
+	if service.relationships == nil || service.opts.Relationships == nil {
+		return nil, nil, huma.Error503ServiceUnavailable(
+			"service-aware Workbench impact is unavailable",
+		)
+	}
+	repositories := []string{}
+	if filters.ServiceRepository != "" {
+		repositories = []string{filters.ServiceRepository}
+	}
+	impact := &WorkbenchServiceImpact{
+		Caveat: "Exact static service relationship evidence only. Affected, unresolved, unowned, empty, and complete-page states create no implicit write, task completion, runtime-use, migration-complete, or decommission-safe conclusion.",
+	}
+	type sideRequest struct {
+		role       string
+		serviceKey string
+		selection  store.ChangeBriefContractSelection
+	}
+	requests := []sideRequest{}
+	if filters.SourceService != "" {
+		selection, ok := workbenchServiceImpactSelection(brief, false)
+		if !ok {
+			return nil, nil, errors.New(
+				"service-aware Workbench impact has no source contract selection",
+			)
+		}
+		requests = append(requests, sideRequest{
+			role: "source", serviceKey: filters.SourceService,
+			selection: selection,
+		})
+	}
+	if filters.TargetService != "" {
+		selection, ok := workbenchServiceImpactSelection(brief, true)
+		if !ok {
+			return nil, nil, errors.New(
+				"service-aware Workbench impact has no target contract selection",
+			)
+		}
+		requests = append(requests, sideRequest{
+			role: "target", serviceKey: filters.TargetService,
+			selection: selection,
+		})
+	}
+	repositorySet := make(map[string]struct{})
+	for _, request := range requests {
+		snapshot, err := service.relationships.Snapshot(
+			ctx,
+			RelationshipQuery{
+				Repositories: slices.Clone(repositories),
+				ServiceKey:   request.serviceKey,
+				View:         "all",
+				Kind:         "rpc",
+				LookupKey:    request.selection.CanonicalOperation,
+			},
+			workbenchServicePageSize,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		if snapshot == nil ||
+			snapshot.SchemaVersion != relationshipSnapshotSchema ||
+			snapshot.Query.ServiceKey != request.serviceKey ||
+			snapshot.Query.View != "all" ||
+			snapshot.Query.Kind != "rpc" ||
+			snapshot.Query.LookupKey != request.selection.CanonicalOperation {
+			return nil, nil, errors.New(
+				"service-aware Workbench relationship snapshot is inconsistent",
+			)
+		}
+		for _, repository := range snapshot.Query.Repositories {
+			repositorySet[repository] = struct{}{}
+		}
+		side := &WorkbenchServiceImpactSide{
+			Role: request.role, Selection: request.selection,
+			Snapshot: *snapshot,
+		}
+		if request.role == "source" {
+			impact.Source = side
+		} else {
+			impact.Target = side
+		}
+	}
+	authorityRepositories := make([]string, 0, len(repositorySet))
+	for repository := range repositorySet {
+		authorityRepositories = append(authorityRepositories, repository)
+	}
+	sort.Strings(authorityRepositories)
+	authority, err := service.opts.Relationships.RootCoverage(
+		ctx, authorityRepositories,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if authority == nil || authority.Digest == "" ||
+		!workbenchServiceRootsMatch(impact, authority.Roots) {
+		return nil, nil, huma.Error409Conflict(
+			"service relationship authority changed while composing Workbench impact",
+		)
+	}
+	impact.Authority = *authority
+	return impact, authorityRepositories, nil
+}
+
+func workbenchServiceImpactSelection(
+	brief store.ChangeBrief,
+	target bool,
+) (store.ChangeBriefContractSelection, bool) {
+	if target {
+		if selection, ok := workbenchSelection(
+			brief.What.Selections, store.ChangeBriefReplacement,
+		); ok {
+			return selection, true
+		}
+	}
+	if selection, ok := workbenchSelection(
+		brief.What.Selections, store.ChangeBriefCurrent,
+	); ok {
+		return selection, true
+	}
+	if len(brief.What.Selections) == 0 {
+		return store.ChangeBriefContractSelection{}, false
+	}
+	return brief.What.Selections[0], true
+}
+
+func workbenchServiceRootsMatch(
+	impact *WorkbenchServiceImpact,
+	authorityRoots []RelationshipRootReceipt,
+) bool {
+	if impact == nil {
+		return false
+	}
+	authority := make(map[string]RelationshipRootReceipt, len(authorityRoots))
+	for _, root := range authorityRoots {
+		if _, exists := authority[root.Repository]; exists {
+			return false
+		}
+		authority[root.Repository] = root
+	}
+	seen := make(map[string]struct{}, len(authority))
+	check := func(side *WorkbenchServiceImpactSide) bool {
+		if side == nil {
+			return true
+		}
+		for _, root := range side.Snapshot.Roots {
+			current, ok := authority[root.Repository]
+			if !ok || current.State != root.State ||
+				current.Generation != root.Generation ||
+				current.RootDigest != root.RootDigest ||
+				current.AuthorityDigest != root.AuthorityDigest {
+				return false
+			}
+			seen[root.Repository] = struct{}{}
+		}
+		return true
+	}
+	return check(impact.Source) && check(impact.Target) &&
+		len(seen) == len(authority)
 }
 
 func (service *WorkbenchImpactService) readWorkbenchAtlas(

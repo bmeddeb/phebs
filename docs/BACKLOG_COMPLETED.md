@@ -8064,3 +8064,62 @@ No relationship accuracy/completeness, runtime or broker topology,
 supported-scale/SLO, migration/decommission-safety, or release claim is
 created. `GATE2-V2` remains `NOT_ESTABLISHED`. T38.3 owns service-aware Impact
 and Workbench composition.
+
+**T38.3 ✅ · Service-aware Impact and Workbench** *(2026-08-06; needs T38.1)*
+— upgraded the exact Workbench impact contract to
+`workbench-impact-inventory-v3` and composed optional source/target service
+scope into existing Investigation revisions without adding a plan mutation or
+service-ownership authority. The Workbench route, evidence filter, checklist
+input, and step/revision links carry one optional exact repository plus source
+and target service keys. The selected-service overview can seed the source
+scope without creating an Investigation or preview.
+
+Each selected side maps only to the current or replacement contract selection,
+the exact canonical RPC operation, and the closed `all` relationship view. The
+server opens at most two sequential, citation-free
+`phebs-service-relationship-snapshot-v1` pages of 50 rows. A snapshot reuses
+T37.5's authorization-first repository selection, current root/service
+incarnation, exact row hydration, response bound, and result-time confirmation,
+but never enters the retained cursor/citation binding map. Its exact generation
+leases are released before the next side begins, so at most one admitted
+20,000-reference entry map is resident and no new five-minute binding is held.
+
+Source-first rows preserve repository, service incarnation/generation,
+projection/posting identities, immutable object/content/span evidence,
+accepted counterpart services, and every accepted/proposal/conflict/rejected
+placement role/origin. The UI validates each side against the final authority
+before showing exact affected services, shared/unowned/ambiguous state, and a
+separate unresolved/unowned candidate list. **Open exact sources** moves into
+the dedicated T38.2 explorer; the Workbench snapshot itself cannot mint or
+retain a citation capability.
+
+After both sides, one root-coverage pass must match every snapshot root.
+Immediately before response emission, the service repeats that identical
+root-set digest and the exact current Investigation revision. Permission,
+revision, publication, source-service incarnation, target-service incarnation,
+or root changes refuse the whole response. The outer continuation cursor binds
+the complete service-impact digest. Checklist evidence includes the
+citation-free rows and authority, so any service/root change mints different
+suggestion evidence and prior human Dispositions become stale.
+
+The checklist adds deterministic affected-service,
+unowned/unresolved-candidate, and service-truncation suggestions within the
+existing 1,000-suggestion/32-evidence limits. Only the existing explicit
+fixed-category Disposition mutation writes; the reader retains no task,
+Decision, generic state, or implicit completion surface. Filter editing adds
+no request until Apply. Startup, sync/retry/no-op, publication, search, proof,
+MCP, and Workbench requests without service scope add no work, lock, cache,
+hash, filesystem read, or child.
+
+The deterministic source-free receipt is retained at
+`spike/t383/results.json`
+(`sha256:662dac9b997259a174529610257ca7e9474f129fdc4fc89a1fa507bfafe20a8e`).
+Its five cases bind executable one-shot snapshot, final authority fence,
+source-first affected/unowned rendering, malformed-root refusal/reproducible
+routes, and human-Disposition-only gates. It retains no source, path, object
+ID, repository identity, raw error, private topology, or measurement corpus.
+
+No implicit write, task completion, relationship accuracy/completeness,
+runtime or broker topology, supported-scale/SLO, migration-complete,
+decommission-safe, or release claim is created. `GATE2-V2` remains
+`NOT_ESTABLISHED`. T38.4 owns strict MCP microservice parity.

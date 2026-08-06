@@ -1070,6 +1070,31 @@ func checklistCallerEvidence(
 	}
 }
 
+func checklistServiceRelationshipEvidence(
+	role string,
+	row RelationshipSnapshotRow,
+) store.WorkbenchSuggestionEvidence {
+	id := checklistEvidenceID(
+		"service_relationship",
+		struct {
+			Role string                  `json:"role"`
+			Row  RelationshipSnapshotRow `json:"row"`
+		}{Role: role, Row: row},
+	)
+	return store.WorkbenchSuggestionEvidence{
+		Plane:      "service_relationship",
+		Kind:       role,
+		ID:         id,
+		Digest:     digestJSON(row),
+		Repository: row.Repository,
+		Path:       row.Evidence.Path,
+		StartByte:  row.Evidence.Span.StartByte,
+		EndByte:    row.Evidence.Span.EndByte,
+		StartLine:  row.Evidence.Span.StartLine,
+		EndLine:    row.Evidence.Span.EndLine,
+	}
+}
+
 func checklistCatalogEvidence(
 	kind string,
 	source ContractCatalogSource,
@@ -1158,6 +1183,62 @@ func rawSuggestionsFromImpact(
 	page WorkbenchImpactPage,
 ) []workbenchChecklistRawSuggestion {
 	raw := make([]workbenchChecklistRawSuggestion, 0)
+	if page.ServiceImpact != nil {
+		for _, side := range []*WorkbenchServiceImpactSide{
+			page.ServiceImpact.Source,
+			page.ServiceImpact.Target,
+		} {
+			if side == nil {
+				continue
+			}
+			for _, row := range side.Snapshot.Rows {
+				kind := "review_affected_service"
+				selectionRule := "t38.3:affected_service_v1"
+				if row.Source.Unowned ||
+					(row.Target != nil && row.Target.Unowned) {
+					kind = "resolve_unowned_service_candidate"
+					selectionRule = "t38.3:unowned_service_candidate_v1"
+				} else if row.Class != "resolved" ||
+					len(row.CounterpartServices) == 0 {
+					kind = "resolve_service_relationship_candidate"
+					selectionRule = "t38.3:unresolved_service_candidate_v1"
+				}
+				lookup := row.LookupKey
+				if lookup == "" {
+					lookup = row.Evidence.Operation
+				}
+				raw = append(raw, workbenchChecklistRawSuggestion{
+					kind: kind,
+					summary: boundedWorkbenchChecklistSummary(fmt.Sprintf(
+						"Review %s service relationship %s at %s:%s.",
+						side.Role, lookup, row.Repository,
+						row.Evidence.Path,
+					)),
+					selectionRule: selectionRule,
+					evidence: []store.WorkbenchSuggestionEvidence{
+						checklistServiceRelationshipEvidence(side.Role, row),
+					},
+				})
+			}
+			if side.Snapshot.Coverage.Truncated || side.Snapshot.Truncated {
+				raw = append(raw, workbenchChecklistRawSuggestion{
+					kind: "review_remaining_service_relationships",
+					summary: boundedWorkbenchChecklistSummary(
+						"Review remaining bounded " + side.Role +
+							" service relationship evidence.",
+					),
+					selectionRule: "t38.3:service_relationship_truncation_v1",
+					evidence: []store.WorkbenchSuggestionEvidence{
+						checklistGenericEvidence(
+							"service_relationship", "truncation",
+							"service_relationship_truncation_"+side.Role,
+							side.Snapshot.Coverage,
+						),
+					},
+				})
+			}
+		}
+	}
 	for _, caller := range page.Callers {
 		for _, row := range caller.ResolvedCallers {
 			raw = append(raw, workbenchChecklistRawSuggestion{

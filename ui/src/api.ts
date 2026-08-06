@@ -675,6 +675,73 @@ export interface WorkbenchImpactFilters {
   resolution?: string
   ordering?: string
   level?: string
+  service_repository?: string
+  source_service?: string
+  target_service?: string
+}
+
+export interface WorkbenchServiceRelationshipSnapshotRow {
+  repository: string
+  service_key: string
+  service_incarnation: number
+  service_generation: string
+  kind: string
+  plane: string
+  class: string
+  lookup_key?: string
+  participation: string[]
+  counterpart_services: string[]
+  projection_digest: string
+  posting_digest: string
+  source: ServiceRelationshipPlacement
+  target?: ServiceRelationshipPlacement
+  evidence: ServiceRelationshipEvidence
+}
+
+export interface WorkbenchServiceRelationshipSnapshot {
+  schema: 'phebs-service-relationship-snapshot-v1'
+  query: {
+    repositories: string[]
+    service_key: string
+    view: ServiceRelationshipView
+    kind?: string
+    plane?: string
+    lookup_key?: string
+  }
+  rows_state: 'nonempty' | 'empty' | 'gap'
+  roots: ServiceRelationshipRootReceipt[]
+  rows: WorkbenchServiceRelationshipSnapshotRow[]
+  coverage: ServiceRelationshipPage['coverage']
+  truncated: boolean
+  caveat: string
+}
+
+export interface WorkbenchServiceImpactSide {
+  role: 'source' | 'target'
+  selection: WorkbenchContractSelection
+  snapshot: WorkbenchServiceRelationshipSnapshot
+}
+
+export interface WorkbenchServiceImpact {
+  source?: WorkbenchServiceImpactSide
+  target?: WorkbenchServiceImpactSide
+  authority: {
+    schema: string
+    visibility: {
+      principal: string
+      authorization_provider: string
+      permission_snapshot: string
+      visible_repository_set_digest: string
+    }
+    visible_repository_count: number
+    exact_root_count: number
+    gap_count: number
+    state: 'exact' | 'gap'
+    reason?: string
+    roots: ServiceRelationshipRootReceipt[]
+    digest: string
+  }
+  caveat: string
 }
 
 export interface WorkbenchResourcePlaneRelationship {
@@ -711,7 +778,7 @@ export interface WorkbenchCallerImpact {
 }
 
 export interface WorkbenchImpactPage {
-  schema_version: 'workbench-impact-inventory-v2'
+  schema_version: 'workbench-impact-inventory-v3'
   investigation_id: string
   revision_id: string
   ticket_kind: WorkbenchTicketKind
@@ -772,6 +839,7 @@ export interface WorkbenchImpactPage {
     caveat: string
   }
   resource_planes: WorkbenchResourcePlane[]
+  service_impact?: WorkbenchServiceImpact
   analysis_scope: {
     coverage: {
       capability: string

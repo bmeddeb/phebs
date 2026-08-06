@@ -533,6 +533,115 @@ type impactResourcePack struct {
 	err           error
 }
 
+type impactRelationshipFake struct {
+	rootCoverageCalls int
+	snapshotCalls     int
+	changeAfter       int
+}
+
+func (fake *impactRelationshipFake) List(
+	context.Context,
+	RelationshipQuery,
+	int,
+	string,
+) (*RelationshipPage, error) {
+	return nil, errors.New("retained relationship List was not expected")
+}
+
+func (fake *impactRelationshipFake) Compare(
+	context.Context,
+	RelationshipComparisonQuery,
+	int,
+	string,
+) (*RelationshipComparisonPage, error) {
+	return nil, errors.New("relationship comparison was not expected")
+}
+
+func (fake *impactRelationshipFake) ReadCitation(
+	context.Context,
+	string,
+) (*RelationshipCitation, error) {
+	return nil, errors.New("relationship citation was not expected")
+}
+
+func (fake *impactRelationshipFake) RootCoverage(
+	_ context.Context,
+	repositories []string,
+) (*RelationshipProofCoverage, error) {
+	fake.rootCoverageCalls++
+	roots := make([]RelationshipRootReceipt, len(repositories))
+	for index, repository := range repositories {
+		rootDigest := "sha256:" + strings.Repeat("8", 64)
+		if fake.changeAfter != 0 && fake.rootCoverageCalls >= fake.changeAfter {
+			rootDigest = "sha256:" + strings.Repeat("9", 64)
+		}
+		roots[index] = RelationshipRootReceipt{
+			Repository: repository,
+			State:      "complete", Generation: "sha256:" + strings.Repeat("7", 64),
+			RootDigest: rootDigest, AuthorityDigest: "sha256:" + strings.Repeat("6", 64),
+		}
+	}
+	return &RelationshipProofCoverage{
+		SchemaVersion: "phebs-relationship-proof-coverage-v1",
+		Visibility: VisibilityContext{
+			Principal: "user:t217", AuthorizationProvider: "fixture",
+			PermissionSnapshot:         "sha256:" + strings.Repeat("5", 64),
+			VisibleRepositorySetDigest: "sha256:" + strings.Repeat("4", 64),
+		},
+		VisibleRepositoryCount: len(repositories), ExactRootCount: len(repositories),
+		State: "exact", Roots: roots, Digest: digestJSON(roots),
+	}, nil
+}
+
+func (fake *impactRelationshipFake) Snapshot(
+	_ context.Context,
+	query RelationshipQuery,
+	pageSize int,
+) (*RelationshipSnapshotPage, error) {
+	fake.snapshotCalls++
+	if pageSize != workbenchServicePageSize {
+		return nil, fmt.Errorf("snapshot page size = %d", pageSize)
+	}
+	root := RelationshipRootReceipt{
+		Repository: query.Repositories[0], State: "complete",
+		Generation:      "sha256:" + strings.Repeat("7", 64),
+		RootDigest:      "sha256:" + strings.Repeat("8", 64),
+		AuthorityDigest: "sha256:" + strings.Repeat("6", 64),
+		ServiceKey:      query.ServiceKey, ServiceIncarnation: 3,
+		ServiceGeneration: "sha256:" + strings.Repeat("3", 64),
+	}
+	row := RelationshipSnapshotRow{
+		Repository: query.Repositories[0], ServiceKey: query.ServiceKey,
+		ServiceIncarnation: 3, ServiceGeneration: root.ServiceGeneration,
+		Kind: "rpc", Plane: "grpc", Class: "resolved",
+		LookupKey: query.LookupKey, Participation: []string{"source"},
+		CounterpartServices: []string{"checkout"},
+		ProjectionDigest:    "sha256:" + strings.Repeat("2", 64),
+		PostingDigest:       "sha256:" + strings.Repeat("1", 64),
+		Source: RelationshipPlacement{Path: "service/client.go", Claims: []RelationshipServiceClaim{{
+			ServiceKey: query.ServiceKey, Disposition: "accepted",
+			Roles: []RelationshipRoleClaim{{Role: "primary", Origin: "base"}},
+		}}},
+		Evidence: RelationshipEvidence{
+			Kind: "rpc", Plane: "grpc", Class: "resolved",
+			Path: "service/client.go", ObjectID: strings.Repeat("a", 40),
+			ContentDigest: "sha256:" + strings.Repeat("a", 64),
+			Span:          RelationshipSpan{StartByte: 1, EndByte: 2, StartLine: 7, EndLine: 7},
+			Operation:     query.LookupKey, PostingDigest: "sha256:" + strings.Repeat("1", 64),
+		},
+	}
+	return &RelationshipSnapshotPage{
+		SchemaVersion: relationshipSnapshotSchema, Query: query,
+		RowsState: "nonempty", Roots: []RelationshipRootReceipt{root},
+		Rows: []RelationshipSnapshotRow{row},
+		Coverage: RelationshipCoverage{
+			AuthorizedRepositories: 1, CompleteRoots: 1,
+			ScannedReferences: 1, ReturnedRows: 1,
+		},
+		Caveat: relationshipCaveat,
+	}, nil
+}
+
 func (pack *impactResourcePack) ReadResourcePlane(
 	_ context.Context,
 	_ ResourcePlaneContext,
@@ -749,6 +858,98 @@ func TestWorkbenchImpactUsesSharedExactCallerServices(t *testing.T) {
 	}
 	if NewWorkbenchImpactService(separate) != nil {
 		t.Fatal("Workbench Impact admitted a separately keyed comparison engine")
+	}
+}
+
+func TestWorkbenchImpactComposesExactServiceSnapshotsWithoutRetainedBindings(
+	t *testing.T,
+) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	replacement := impactSelection(store.ChangeBriefReplacement, "replacement")
+	service, _, _, _, _ := impactService(
+		impactView(store.ChangeBriefMigrate, []store.ChangeBriefContractSelection{
+			current, replacement,
+		}),
+		nil,
+		nil,
+	)
+	relationships := &impactRelationshipFake{}
+	service.opts.Relationships = relationships
+	service.relationships = relationships
+	page, err := service.Read(
+		t.Context(),
+		"user:t217",
+		WorkbenchImpactRequest{
+			InvestigationID: impactInvestigationID,
+			RevisionID:      impactRevisionID,
+			Filters: WorkbenchImpactFilters{
+				ServiceRepository: "github.com/acme/current",
+				SourceService:     "cart-v1",
+				TargetService:     "cart-v2",
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.ServiceImpact == nil || page.ServiceImpact.Source == nil ||
+		page.ServiceImpact.Target == nil ||
+		page.ServiceImpact.Source.Snapshot.Query.ServiceKey != "cart-v1" ||
+		page.ServiceImpact.Target.Snapshot.Query.ServiceKey != "cart-v2" ||
+		page.ServiceImpact.Source.Snapshot.Query.LookupKey !=
+			current.CanonicalOperation ||
+		page.ServiceImpact.Target.Snapshot.Query.LookupKey !=
+			replacement.CanonicalOperation ||
+		page.ServiceImpact.Authority.Digest == "" ||
+		relationships.snapshotCalls != 2 ||
+		relationships.rootCoverageCalls != 3 {
+		t.Fatalf(
+			"service impact = %+v snapshots=%d coverage=%d",
+			page.ServiceImpact,
+			relationships.snapshotCalls,
+			relationships.rootCoverageCalls,
+		)
+	}
+	if !strings.Contains(page.Caveat, "no implicit write") {
+		t.Fatalf("service-aware caveat = %q", page.Caveat)
+	}
+	suggestions := rawSuggestionsFromImpact(*page)
+	if !slices.ContainsFunc(suggestions, func(value workbenchChecklistRawSuggestion) bool {
+		return value.kind == "review_affected_service" &&
+			strings.HasPrefix(value.selectionRule, "t38.3:") &&
+			len(value.evidence) == 1 &&
+			value.evidence[0].Plane == "service_relationship"
+	}) {
+		t.Fatalf("service-aware checklist suggestions = %+v", suggestions)
+	}
+}
+
+func TestWorkbenchImpactRejectsServiceRootChangeAtFinalFence(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	service, _, _, _, _ := impactService(
+		impactView(store.ChangeBriefModify, []store.ChangeBriefContractSelection{current}),
+		nil,
+		nil,
+	)
+	relationships := &impactRelationshipFake{changeAfter: 3}
+	service.opts.Relationships = relationships
+	service.relationships = relationships
+	page, err := service.Read(
+		t.Context(),
+		"user:t217",
+		WorkbenchImpactRequest{
+			InvestigationID: impactInvestigationID,
+			RevisionID:      impactRevisionID,
+			Filters: WorkbenchImpactFilters{
+				ServiceRepository: "github.com/acme/current",
+				SourceService:     "cart-v1",
+			},
+		},
+	)
+	if page != nil || err == nil || !strings.Contains(
+		err.Error(), "authority changed",
+	) {
+		t.Fatalf("changed service authority = %+v, %v", page, err)
 	}
 }
 

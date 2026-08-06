@@ -486,6 +486,12 @@ the panel repeats its relationship generation/root and source object/content
 identities. It is evidence, not a runtime call, broker, deployment, or owner
 claim.
 
+**Assess change in Workbench** opens the Change Workbench with that exact
+repository and service key prefilled as the source service scope. This handoff
+does not create an Investigation or preview. The operator still chooses the
+contract change and explicitly previews/creates the revision through the
+ordinary Workbench flow.
+
 The page creates three first-page relationship bindings once per selected
 service and reuses them when switching summaries. **Next exact page** advances
 only the selected server-bound cursor; **First page** returns to its retained
@@ -991,6 +997,42 @@ the one snapshot-consistent old-to-replacement comparison; it never zips two
 independently timed caller pages. Retire keeps callers, name matches,
 extractor abstentions, unsupported planes, and gaps adjacent and never derives
 a safe-to-decommission result.
+
+T38.3 adds an optional **Service change scope** above the existing evidence
+filters. **Source service**, **Target service**, and **Repository scope** are
+exact values recorded in the Workbench hash route and checklist evidence
+input, not durable service ownership or plan authority. A blank repository
+deliberately uses the authorization-first visible-repository fallback. Source
+maps to the current contract selection when present; target maps to the
+replacement selection when present. Both use the exact RPC operation and
+never fuzzy-match a contract or service.
+
+**Apply service scope** performs at most two sequential, citation-free
+relationship snapshots of 50 rows each. Every snapshot is authorization- and
+service-incarnation-fenced and releases its publication leases before the
+response returns, so Workbench consumes no retained relationship cursor or
+citation binding. The server then proves the combined root set again and
+rechecks that same root-set digest plus the current Investigation revision
+immediately before emission. A permission, revision, source-service,
+target-service, or relationship-root change refuses the whole preview.
+
+The **Exact affected services** table remains source first: immutable path and
+span, exact contract, selected-service route, accepted counterparts,
+shared/unowned/ambiguous classification, and root identity. **Open exact
+sources** hands the row to the dedicated relationship explorer, whose retained
+binding owns citations. Unresolved and unowned candidates remain a separate
+visible list. Exact-empty, failed/unavailable roots, and admission truncation
+stay distinct. The source/target route parameters survive step changes and
+exact-revision deep links; editing them does nothing until Apply.
+
+The existing checklist derives deterministic affected-service,
+unowned/unresolved-candidate, and truncation suggestions from these exact
+rows. Its evidence snapshot includes the complete service/root authority, so
+a later service or publication change makes prior human Dispositions stale.
+Only the existing explicit fixed-category Disposition mutation writes. A
+preview, affected row, accepted/rejected/completed/reopened/waived
+Disposition, or fully paged checklist creates no task, Investigation Decision,
+migration-complete result, or decommission-safe conclusion.
 
 How starts from the current Revision's exact selected contracts plus up to 32
 explicit user pins — each an exact visible repository, immutable indexed

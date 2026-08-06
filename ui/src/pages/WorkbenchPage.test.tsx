@@ -190,7 +190,7 @@ function preview(
 
 function emptyImpact(kind: WorkbenchTicketKind): WorkbenchImpactPage {
   return {
-    schema_version: 'workbench-impact-inventory-v2',
+    schema_version: 'workbench-impact-inventory-v3',
     investigation_id: investigationID,
     revision_id: revisionID,
     ticket_kind: kind,
@@ -715,6 +715,52 @@ test('real hash navigation reaches How at a mobile viewport', async () => {
     .toBeGreaterThan(0)
   expect(api.fetchWorkbenchImplementation).toHaveBeenCalledTimes(1)
   expect(api.fetchWorkbenchChecklist).toHaveBeenCalledTimes(1)
+})
+
+test('exact service scope survives revision and step deep links', async () => {
+  api.fetchWorkbench.mockResolvedValue(view('migrate'))
+  api.fetchWorkbenchImpact.mockResolvedValue(emptyImpact('migrate'))
+  api.fetchWorkbenchImplementation.mockResolvedValue(
+    emptyImplementation('migrate'),
+  )
+  api.fetchWorkbenchChecklist.mockResolvedValue(emptyChecklist('migrate'))
+  window.location.hash =
+    `#/workbench?step=where&investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}&service_repository=${encodeURIComponent(repository)}` +
+    '&source_service=catalog-api&target_service=catalog-v2'
+  render(wrappedRouted())
+
+  expect(await screen.findByRole('heading', {
+    name: 'Where is impact visible?',
+  })).toBeTruthy()
+  expect((screen.getByLabelText('Source service') as HTMLInputElement).value)
+    .toBe('catalog-api')
+  expect((screen.getByLabelText('Target service') as HTMLInputElement).value)
+    .toBe('catalog-v2')
+  expect((screen.getByLabelText('Repository scope') as HTMLInputElement).value)
+    .toBe(repository)
+  expect(api.fetchWorkbenchImpact).toHaveBeenCalledWith(
+    investigationID,
+    revisionID,
+    expect.objectContaining({
+      filters: expect.objectContaining({
+        service_repository: repository,
+        source_service: 'catalog-api',
+        target_service: 'catalog-v2',
+      }),
+    }),
+    expect.any(AbortSignal),
+  )
+
+  fireEvent.click(screen.getByRole('link', { name: /How/ }))
+  expect(window.location.hash).toContain('source_service=catalog-api')
+  expect(window.location.hash).toContain('target_service=catalog-v2')
+  expect(window.location.hash).toContain(
+    `service_repository=${encodeURIComponent(repository)}`,
+  )
+  expect(await screen.findByRole('heading', {
+    name: 'How might implementation proceed?',
+  })).toBeTruthy()
 })
 
 test('leaving an exact revision clears it from the unpinned Workbench home', async () => {

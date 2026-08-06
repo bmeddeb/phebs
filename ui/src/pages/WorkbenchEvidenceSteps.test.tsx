@@ -25,6 +25,7 @@ import {
   type WorkbenchChecklistPage,
   type WorkbenchDisposition,
   type WorkbenchImpactPage,
+  type WorkbenchServiceImpact,
   type WorkbenchImplementationPage,
 } from '../api'
 import { lightTheme, ModeContext } from '../theme'
@@ -94,7 +95,7 @@ function impactPage(
   complete = false,
 ): WorkbenchImpactPage {
   return {
-    schema_version: 'workbench-impact-inventory-v2',
+    schema_version: 'workbench-impact-inventory-v3',
     investigation_id: investigationID,
     revision_id: revisionID,
     ticket_kind: 'migrate',
@@ -221,6 +222,106 @@ function emptyImpactPage(): WorkbenchImpactPage {
     callers: [],
     resource_planes: [],
     scenario_emphasis: [],
+  }
+}
+
+function serviceImpact(): WorkbenchServiceImpact {
+  const root = {
+    repository,
+    state: 'complete' as const,
+    generation: `sha256:${'a'.repeat(64)}`,
+    root_digest: `sha256:${'b'.repeat(64)}`,
+    authority_digest: `sha256:${'c'.repeat(64)}`,
+    service_key: 'catalog-api',
+    service_incarnation: 4,
+    service_generation: `sha256:${'d'.repeat(64)}`,
+    reference_count: 1,
+  }
+  const row = {
+    repository,
+    service_key: 'catalog-api',
+    service_incarnation: 4,
+    service_generation: root.service_generation,
+    kind: 'rpc',
+    plane: 'grpc',
+    class: 'resolved',
+    lookup_key: '/demo.v1.Catalog/Get',
+    participation: ['source'],
+    counterpart_services: ['checkout-api'],
+    projection_digest: `sha256:${'e'.repeat(64)}`,
+    posting_digest: `sha256:${'f'.repeat(64)}`,
+    source: {
+      path: 'src/catalog/client.go',
+      unowned: true,
+      claims: [],
+    },
+    evidence: {
+      kind: 'rpc',
+      plane: 'grpc',
+      class: 'resolved',
+      path: 'src/catalog/client.go',
+      object_id: '1'.repeat(40),
+      content_digest: `sha256:${'1'.repeat(64)}`,
+      span: { start_byte: 10, end_byte: 20, start_line: 14, end_line: 15 },
+      source_role: 'production',
+      operation: '/demo.v1.Catalog/Get',
+      candidate_operations: [],
+      resolver_record_digests: [],
+      posting_digest: `sha256:${'f'.repeat(64)}`,
+    },
+  }
+  return {
+    source: {
+      role: 'source',
+      selection: {
+        role: 'current',
+        protocol: 'protobuf',
+        repository,
+        declaration_lineage: 'catalog-v1',
+        canonical_operation: '/demo.v1.Catalog/Get',
+      },
+      snapshot: {
+        schema: 'phebs-service-relationship-snapshot-v1',
+        query: {
+          repositories: [repository],
+          service_key: 'catalog-api',
+          view: 'all',
+          kind: 'rpc',
+          lookup_key: '/demo.v1.Catalog/Get',
+        },
+        rows_state: 'nonempty',
+        roots: [root],
+        rows: [row],
+        coverage: {
+          authorized_repositories: 1,
+          complete_roots: 1,
+          empty_roots: 0,
+          failed_roots: 0,
+          unavailable_roots: 0,
+          scanned_references: 1,
+          returned_rows: 1,
+          truncated: false,
+        },
+        truncated: false,
+        caveat: 'Static source evidence only.',
+      },
+    },
+    authority: {
+      schema: 'phebs-relationship-proof-coverage-v1',
+      visibility: {
+        principal: 'user:test',
+        authorization_provider: 'fixture',
+        permission_snapshot: `sha256:${'2'.repeat(64)}`,
+        visible_repository_set_digest: `sha256:${'3'.repeat(64)}`,
+      },
+      visible_repository_count: 1,
+      exact_root_count: 1,
+      gap_count: 0,
+      state: 'exact',
+      roots: [root],
+      digest: `sha256:${'4'.repeat(64)}`,
+    },
+    caveat: 'No implicit write or migration-complete conclusion.',
   }
 }
 
@@ -518,6 +619,66 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
     }),
     expect.any(AbortSignal),
   )
+})
+
+test('Where applies exact service scope and renders affected and unowned evidence', async () => {
+  const page = impactPage('src/callers/current.ts', true)
+  page.service_impact = serviceImpact()
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+  render(<EvidenceHarness step="where" />)
+
+  fireEvent.change(screen.getByLabelText('Source service'), {
+    target: { value: 'catalog-api' },
+  })
+  fireEvent.change(screen.getByLabelText('Repository scope'), {
+    target: { value: repository },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply service scope' }))
+
+  expect(await screen.findByRole('heading', {
+    name: 'Exact affected services',
+  })).toBeTruthy()
+  expect(screen.getByText('src/catalog/client.go')).toBeTruthy()
+  expect(screen.getByText('catalog-api → checkout-api')).toBeTruthy()
+  expect(screen.getAllByText('Unowned').length).toBeGreaterThan(0)
+  expect(screen.getByText(/Preview authority/).textContent)
+    .toContain('invalidates when either exact service/root authority changes')
+  expect(screen.getByRole('link', { name: 'Open exact sources' }).getAttribute('href'))
+    .toContain('service_key=catalog-api')
+  expect(api.fetchWorkbenchImpact).toHaveBeenLastCalledWith(
+    investigationID,
+    revisionID,
+    expect.objectContaining({
+      filters: expect.objectContaining({
+        service_repository: repository,
+        source_service: 'catalog-api',
+      }),
+    }),
+    expect.any(AbortSignal),
+  )
+})
+
+test('Where refuses a service row whose root differs from final authority', async () => {
+  const page = impactPage('src/callers/current.ts', true)
+  const service = serviceImpact()
+  if (service.source) {
+    service.source.snapshot.roots[0] = {
+      ...service.source.snapshot.roots[0],
+      root_digest: `sha256:${'9'.repeat(64)}`,
+    }
+  }
+  page.service_impact = service
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+
+  const { rerender } = render(<EvidenceHarness step="where" />)
+  rerender(<EvidenceHarness step="where" />)
+  fireEvent.change(screen.getByLabelText('Source service'), {
+    target: { value: 'catalog-api' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply service scope' }))
+
+  expect(await screen.findByText(/Service impact response refused/)).toBeTruthy()
+  expect(screen.queryByText('src/catalog/client.go')).toBeNull()
 })
 
 test('Where renders a typed caller-generation gap without zero or classifications', async () => {
