@@ -3331,8 +3331,30 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | sync fails with `auth: git …` and retries slowly                  | credential failure, classified `auth` (10 m backoff)                                                   | fix the token; reindex/restart to retry immediately                                                   |
 | startup rejects a clone URL containing credentials/query data     | URL secrets are no longer persisted                                                                    | move HTTP credentials to `http_auth`; keep `url` credential-free                                      |
 
+## Resolver namespace catalog contract
 
+T37.1 adds the production library contract for the repository-shared
+declaration/resolver namespace, but does not register a scheduler, worker,
+startup hook, API, MCP tool, UI surface, backup member, or lifecycle owner.
+There is therefore no operator action or new steady-state process cost until
+T37.2 registers the RPC posting workload.
 
+The catalog admits Go gRPC and Thrift resolver symbols from one exact prior
+resolver generation. Identity is partitioned by language, protocol, and import
+path and deliberately excludes service and analysis-unit ownership. Ambiguous,
+unsupported, unavailable, and conflicting resolution remain explicit records;
+operators must never repair these derived bytes or choose a conflict candidate
+by editing a member.
+
+When a future registered owner invokes the builder, unchanged namespace
+members are revalidated and hard-linked, while only changed namespaces receive
+new bytes. A complete validation pass precedes the atomic current-pointer swap.
+Startup recovery may complete a marked generation only after repeating that
+pass; invalid derived bytes leave the prior pointer authoritative and should be
+rebuilt from the exact upstream resolver authority. Sparse keyed reads validate
+the selected namespace and repeat the current pointer fence. A corrupt sibling
+does not authorize fallback or guessing and does not relabel the selected
+namespace complete.
 
 ## Developing phebs
 

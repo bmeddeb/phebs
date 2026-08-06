@@ -15,7 +15,8 @@ control and T35.4's lifecycle recovery demo are complete, closing Epic 35.
 T36.1's bounded immutable Git reader and source-partition contract is complete.
 T36.2's shared Go source-observation contract, T36.3's content-addressed
 observation publication, and T36.4's authorized progress/neutral multi-pack
-demo are complete, closing Epic 36. T37.1 is the next scheduled ticket, and
+demo are complete, closing Epic 36. T37.1's namespace-sharded declaration and
+resolver catalog is complete; T37.2 is the next scheduled ticket, and
 the remaining Epics 37–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -33,19 +34,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 37 · Cross-service relationship index *(T37.1 scheduled · needs Epics 35–36)*
+## Epic 37 · Cross-service relationship index *(T37.1 complete · T37.2 scheduled)*
 
 Join repository-shared observations to declarations once, publish keyed
 relationship postings, and project them onto services without claiming runtime
 or universal completeness.
 
-**T37.1 · Namespace-sharded declaration/resolver catalog** *(scheduled)* — partition exact
-contract and generated-symbol identity by language/protocol/namespace under
-one complete root. AC: declaration identity stays independent of unit
-ownership; conflict/ambiguity/unsupported inputs remain records; only affected
-namespaces rebuild; atomic root, bounds, recovery, and keyed lookup pass.
-
-**T37.2 · RPC caller postings** *(needs T37.1)* — join shared Go observations
+**T37.2 · RPC caller postings** *(scheduled; needs T37.1)* — join shared Go observations
 to gRPC/Thrift resolver identities once and publish sorted postings by exact
 operation. AC: resolved/name-match/unresolved classes and source roles remain
 separate; dynamic/ambiguous sites never guess; sparse keyed reads, partition
