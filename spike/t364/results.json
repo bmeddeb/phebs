@@ -1,0 +1,134 @@
+{
+  "schema": "t364-observation-plane-receipt-v1",
+  "outcome": "completed",
+  "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+  "content_digest": "sha256:743135e1e0c4b09a3f7e470fe7e1f9a4b702c864acaf00f0c0bf33d90a11ffa4",
+  "shared_parses": 1,
+  "packs": [
+    {
+      "name": "grpc",
+      "evidence": 1,
+      "resolved": 1,
+      "dynamic": 0,
+      "ambiguous": 0,
+      "unsupported": 0
+    },
+    {
+      "name": "thrift",
+      "evidence": 1,
+      "resolved": 1,
+      "dynamic": 0,
+      "ambiguous": 0,
+      "unsupported": 0
+    },
+    {
+      "name": "kafka-producer",
+      "evidence": 2,
+      "resolved": 2,
+      "dynamic": 0,
+      "ambiguous": 0,
+      "unsupported": 0
+    },
+    {
+      "name": "kafka-consumer",
+      "evidence": 1,
+      "resolved": 1,
+      "dynamic": 0,
+      "ambiguous": 0,
+      "unsupported": 0
+    }
+  ],
+  "operation_receipt": {
+    "schema": "phebs-observation-operation-receipt-v1",
+    "input_blobs": 1,
+    "source_blob_reads": 1,
+    "parsed_observations": 1,
+    "reused_observations": 0,
+    "unsupported_blobs": 0
+  },
+  "cases": [
+    {
+      "name": "content_reuse",
+      "assertions": [
+        "exact_policy_and_content_identity",
+        "aba_reactivation_without_schedule_resurrection"
+      ],
+      "gates": [
+        "TestPublicationReusesOnlyExactContentAndReactivatesABA"
+      ]
+    },
+    {
+      "name": "exhausted_recovery",
+      "assertions": [
+        "settled_schedule_not_resurrected",
+        "distinct_recovery_identity_reuses_validated_members"
+      ],
+      "gates": [
+        "TestRuntimeMintsDistinctRecoveryScheduleAfterExhaustion",
+        "TestProgressShowsFailedScheduleAndDistinctRecovery"
+      ]
+    },
+    {
+      "name": "progress_cost",
+      "assertions": [
+        "warm_control_reads_only",
+        "corrupt_cold_member_refused"
+      ],
+      "gates": [
+        "TestProgressReportsCurrentReceiptAndWarmReadsNoMembers"
+      ]
+    },
+    {
+      "name": "authorization",
+      "assertions": [
+        "permission_before_counts",
+        "authority_re_fenced_before_emission"
+      ],
+      "gates": [
+        "TestObservationProgressAuthorizesBeforeReadingCounts"
+      ]
+    },
+    {
+      "name": "transport_parity",
+      "assertions": [
+        "shared_projection_for_http_and_mcp",
+        "bounded_source_free_response"
+      ],
+      "gates": [
+        "TestObservationProgressHTTPUsesSharedBoundedProjection",
+        "TestObservationProgressToolReturnsSharedProjection"
+      ]
+    },
+    {
+      "name": "backup_lifecycle",
+      "assertions": [
+        "validated_archive_round_trip",
+        "current_prior_and_lease_preserved"
+      ],
+      "gates": [
+        "TestArchiveRoundTripPreservesExactCurrentPublication",
+        "TestLifecyclePreservesCurrentRollbackFloorAndLease"
+      ]
+    },
+    {
+      "name": "multi_pack",
+      "assertions": [
+        "one_parse_four_independent_projections",
+        "no_adapter_reparse"
+      ],
+      "gates": [
+        "TestSharedObservationDeterminismCitationsAndIndependentAdapters",
+        "TestExistingGRPCAndThriftDirectCallerParity",
+        "TestExistingKafkaPlaneParity"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_slo": true,
+    "no_release_authority": true,
+    "no_extractor_promotion": true
+  }
+}

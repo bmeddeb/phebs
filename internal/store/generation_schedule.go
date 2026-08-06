@@ -202,6 +202,51 @@ func generationScheduleDigest(spec GenerationScheduleSpec) string {
 	}, "\x00"))
 }
 
+// GenerationScheduleDigest returns the immutable identity for one admitted
+// schedule specification. Progress readers use it only to re-prove persisted
+// rows; it does not create, reactivate, or mutate a schedule.
+func GenerationScheduleDigest(spec GenerationScheduleSpec) (string, error) {
+	normalized, err := normalizeGenerationScheduleSpec(spec)
+	if err != nil {
+		return "", err
+	}
+	return generationScheduleDigest(normalized), nil
+}
+
+// ValidateGenerationSchedule proves one bounded current-row projection before
+// it is used as progress authority. Chunk errors and worker identities are
+// deliberately not part of this source-free schedule summary.
+func ValidateGenerationSchedule(schedule GenerationSchedule) error {
+	spec, err := normalizeGenerationScheduleSpec(GenerationScheduleSpec{
+		Repository: schedule.Repository, Stage: schedule.Stage,
+		Generation: schedule.Generation, ResourceClass: schedule.ResourceClass,
+		TotalItems: schedule.TotalItems, ChunkItems: schedule.ChunkItems,
+		MaxAttempts: schedule.MaxAttempts, RepositoryTokens: schedule.RepositoryTokens,
+	})
+	if err != nil || schedule.Schema != GenerationScheduleSchema ||
+		schedule.Digest != generationScheduleDigest(spec) ||
+		schedule.TotalChunks != int((schedule.TotalItems+int64(schedule.ChunkItems)-1)/int64(schedule.ChunkItems)) ||
+		schedule.NextOffset < 0 || schedule.NextOffset > schedule.TotalItems ||
+		schedule.Materialized < 0 || schedule.Materialized > schedule.TotalChunks*schedule.MaxAttempts ||
+		schedule.Pending < 0 || schedule.Running < 0 || schedule.Succeeded < 0 || schedule.Failed < 0 ||
+		schedule.Pending+schedule.Running > schedule.Materialized ||
+		schedule.Succeeded+schedule.Failed > schedule.TotalChunks || schedule.CreatedAt.IsZero() ||
+		schedule.UpdatedAt.IsZero() || schedule.UpdatedAt.Before(schedule.CreatedAt) {
+		return errors.New("generation schedule row is invalid")
+	}
+	switch schedule.Status {
+	case GenerationScheduleActive, GenerationScheduleSuperseded:
+	case GenerationScheduleSettled:
+		if schedule.NextOffset != schedule.TotalItems || schedule.Pending != 0 || schedule.Running != 0 ||
+			schedule.Succeeded+schedule.Failed != schedule.TotalChunks {
+			return errors.New("settled generation schedule row is invalid")
+		}
+	default:
+		return errors.New("generation schedule status is invalid")
+	}
+	return nil
+}
+
 func generationCurrentID(repository, stage string) string {
 	return generationSchedulerDigest("phebs-generation-schedule-current-v1", repository+"\x00"+stage)
 }
@@ -395,6 +440,9 @@ RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[s
 		return nil, fmt.Errorf("get generation schedule: %w", ErrNotFound)
 	}
 	schedule := rows[0].schedule()
+	if err := ValidateGenerationSchedule(schedule); err != nil {
+		return nil, fmt.Errorf("get generation schedule: %w", err)
+	}
 	return &schedule, nil
 }
 

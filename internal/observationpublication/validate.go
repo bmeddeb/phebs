@@ -11,6 +11,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
@@ -30,6 +32,11 @@ func (publication *Publication) Manifest() Manifest {
 	}
 	value := publication.manifest
 	value.Members = append([]Member(nil), value.Members...)
+	if value.OperationReceipt != nil {
+		receipt := *value.OperationReceipt
+		receipt.UnsupportedReasons = append([]ReasonCount(nil), receipt.UnsupportedReasons...)
+		value.OperationReceipt = &receipt
+	}
 	return value
 }
 
@@ -47,6 +54,7 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 		GenerationDigest:          stage.generation, Members: []Member{},
 	}
 	objects := make(map[string]int64)
+	receipt := newReceiptAccumulator()
 	for ordinal, sourceMember := range stage.partition.Members {
 		member, records, err := readMember(ctx, stage.directory, ordinal, len(stage.partition.Members))
 		if err != nil {
@@ -62,6 +70,9 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 		manifest.UnsupportedCount += member.UnsupportedCount
 		manifest.EncodedMemberBytes += member.ContentBytes
 		for _, record := range records {
+			if err := receipt.add(record); err != nil {
+				return nil, err
+			}
 			if record.State != "observed" {
 				continue
 			}
@@ -84,6 +95,7 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 		manifest.EncodedMemberBytes > MaxGenerationBytes {
 		return nil, invalid("generation totals")
 	}
+	manifest.OperationReceipt = receipt.value()
 	digestValue, err := ManifestDigest(manifest)
 	if err != nil {
 		return nil, err
@@ -149,6 +161,7 @@ func openGeneration(ctx context.Context, root string, manifest Manifest) (*Publi
 	}
 	directory := generationDirectory(root, manifest.Repository, manifest.GenerationDigest)
 	objects := make(map[string]struct{})
+	receipt := newReceiptAccumulator()
 	var observationBytes int64
 	for ordinal, expected := range manifest.Members {
 		member, records, err := readMember(ctx, directory, ordinal, len(manifest.Members))
@@ -157,6 +170,9 @@ func openGeneration(ctx context.Context, root string, manifest Manifest) (*Publi
 			return nil, invalid("member mismatch")
 		}
 		for _, record := range records {
+			if err := receipt.add(record); err != nil {
+				return nil, err
+			}
 			if record.State != "observed" {
 				continue
 			}
@@ -176,6 +192,11 @@ func openGeneration(ctx context.Context, root string, manifest Manifest) (*Publi
 	}
 	if observationBytes != manifest.ObservationBytes {
 		return nil, invalid("observation byte total mismatch")
+	}
+	wantReceipt := receipt.value()
+	if manifest.OperationReceipt != nil && (wantReceipt == nil ||
+		!equalOperationReceipt(*wantReceipt, *manifest.OperationReceipt)) {
+		return nil, invalid("operation receipt mismatch")
 	}
 	if err := validateGenerationInventory(directory, manifest, objects); err != nil {
 		return nil, err
@@ -259,6 +280,9 @@ func validateManifest(value Manifest) error {
 		value.EncodedMemberBytes < 0 || value.EncodedMemberBytes > MaxGenerationBytes ||
 		value.ObservationBytes < 0 || value.ObservationBytes > MaxGenerationBytes {
 		return invalid("manifest identity")
+	}
+	if value.OperationReceipt != nil && validateOperationReceipt(*value.OperationReceipt, value) != nil {
+		return invalid("manifest operation receipt")
 	}
 	var records, observed, unsupported int
 	var encoded int64
@@ -345,17 +369,116 @@ func validateRecord(value Record) error {
 	case "observed":
 		if value.Reason != "" || !validDigest(value.ObservationDigest) || value.ObservationName == "" ||
 			filepath.Clean(value.ObservationName) != value.ObservationName || filepath.IsAbs(value.ObservationName) ||
-			filepath.Dir(value.ObservationName) != "objects" || !validObservationBasename(filepath.Base(value.ObservationName)) {
+			filepath.Dir(value.ObservationName) != "objects" || !validObservationBasename(filepath.Base(value.ObservationName)) ||
+			value.ObservationOrigin != "" && value.ObservationOrigin != "parsed" && value.ObservationOrigin != "reused" {
 			return invalid("observed record")
 		}
 	case "unsupported":
-		if value.Reason == "" || len(value.Reason) > 64 || value.ObservationDigest != "" || value.ObservationName != "" {
+		if !validUnsupportedReason(value.Reason) || value.ObservationDigest != "" || value.ObservationName != "" ||
+			value.ObservationOrigin != "" {
 			return invalid("unsupported record")
 		}
 	default:
 		return invalid("record state")
 	}
 	return nil
+}
+
+type receiptAccumulator struct {
+	input       int
+	observed    int
+	unsupported int
+	legacy      bool
+	origins     map[string]string
+	reasons     map[string]int
+}
+
+func newReceiptAccumulator() *receiptAccumulator {
+	return &receiptAccumulator{
+		origins: make(map[string]string), reasons: make(map[string]int),
+	}
+}
+
+func (receipt *receiptAccumulator) add(record Record) error {
+	receipt.input++
+	if record.State == "unsupported" {
+		receipt.unsupported++
+		receipt.reasons[record.Reason]++
+		return nil
+	}
+	receipt.observed++
+	if record.ObservationOrigin == "" {
+		receipt.legacy = true
+		return nil
+	}
+	if prior, present := receipt.origins[record.ObservationName]; present && prior != record.ObservationOrigin {
+		return invalid("observation origin mismatch")
+	}
+	receipt.origins[record.ObservationName] = record.ObservationOrigin
+	return nil
+}
+
+func (receipt *receiptAccumulator) value() *OperationReceipt {
+	if receipt.legacy {
+		return nil
+	}
+	result := &OperationReceipt{
+		Schema: ReceiptSchema, InputBlobs: receipt.input,
+		SourceBlobReads: receipt.input, ObservedBlobs: receipt.observed,
+		UnsupportedBlobs: receipt.unsupported, UnsupportedReasons: []ReasonCount{},
+	}
+	for _, origin := range receipt.origins {
+		if origin == "reused" {
+			result.ReusedObservations++
+		} else {
+			result.ParsedObservations++
+		}
+	}
+	for reason, count := range receipt.reasons {
+		result.UnsupportedReasons = append(result.UnsupportedReasons, ReasonCount{Reason: reason, Count: count})
+	}
+	sort.Slice(result.UnsupportedReasons, func(left, right int) bool {
+		return result.UnsupportedReasons[left].Reason < result.UnsupportedReasons[right].Reason
+	})
+	return result
+}
+
+func validateOperationReceipt(receipt OperationReceipt, manifest Manifest) error {
+	if receipt.Schema != ReceiptSchema || receipt.InputBlobs != manifest.RecordCount ||
+		receipt.SourceBlobReads != receipt.InputBlobs || receipt.ObservedBlobs != manifest.ObservedCount ||
+		receipt.UnsupportedBlobs != manifest.UnsupportedCount || receipt.ParsedObservations < 0 ||
+		receipt.ReusedObservations < 0 || receipt.ParsedObservations+receipt.ReusedObservations > receipt.ObservedBlobs ||
+		receipt.UnsupportedReasons == nil {
+		return invalid("operation receipt totals")
+	}
+	total := 0
+	for index, reason := range receipt.UnsupportedReasons {
+		if !validUnsupportedReason(reason.Reason) || reason.Count < 1 ||
+			index > 0 && reason.Reason <= receipt.UnsupportedReasons[index-1].Reason {
+			return invalid("operation receipt reason")
+		}
+		total += reason.Count
+	}
+	if total != receipt.UnsupportedBlobs {
+		return invalid("operation receipt unsupported total")
+	}
+	return nil
+}
+
+func equalOperationReceipt(left, right OperationReceipt) bool {
+	return left.Schema == right.Schema && left.InputBlobs == right.InputBlobs &&
+		left.SourceBlobReads == right.SourceBlobReads && left.ParsedObservations == right.ParsedObservations &&
+		left.ReusedObservations == right.ReusedObservations && left.ObservedBlobs == right.ObservedBlobs &&
+		left.UnsupportedBlobs == right.UnsupportedBlobs && slices.Equal(left.UnsupportedReasons, right.UnsupportedReasons)
+}
+
+func validUnsupportedReason(reason string) bool {
+	switch reason {
+	case "source_limit", "invalid_utf8", "parse_error", "unsupported_source", "observation_too_large":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateObservation(directory string, record Record) error {

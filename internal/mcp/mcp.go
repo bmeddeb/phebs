@@ -62,6 +62,9 @@ type Options struct {
 	// ServiceDirectory is the same T33.4 store-backed service supplied to
 	// Huma. Nil keeps the tools undiscoverable.
 	ServiceDirectory ServiceDirectoryQueries
+	// ObservationProgress is the same T36.4 authorization-first service used
+	// by Huma. Nil keeps the tool undiscoverable.
+	ObservationProgress ObservationProgressQueries
 	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
 	// annex only when both real shared services are present. Principal is the
 	// same authenticated identity projection used by Huma.
@@ -180,6 +183,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
 	registerServiceDirectoryTools(s, opts)
+	registerObservationProgressTool(s, opts)
 	registerWorkbenchTools(s, opts)
 
 	return s

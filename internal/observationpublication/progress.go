@@ -1,0 +1,366 @@
+package observationpublication
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
+	"github.com/bmeddeb/phebs/internal/sourcepartition"
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+const ProgressSchema = "phebs-observation-progress-v1"
+
+type ProgressStore interface {
+	GetGenerationSchedule(context.Context, string, string) (*store.GenerationSchedule, error)
+}
+
+// ProgressReader composes one fully validated cached publication with bounded
+// source, marker, plan, and schedule controls. It never reads source blobs or
+// observation members on a warm cache hit.
+type ProgressReader struct {
+	DataDir string
+	Store   ProgressStore
+	Cache   *Cache
+}
+
+type Progress struct {
+	Schema                 string               `json:"schema"`
+	Repository             string               `json:"repository"`
+	State                  string               `json:"state"` // current | building | failed | stale | unavailable
+	SourceGenerationDigest string               `json:"source_generation_digest"`
+	Publication            *PublicationProgress `json:"publication,omitempty"`
+	Schedule               *ScheduleProgress    `json:"schedule,omitempty"`
+}
+
+type PublicationProgress struct {
+	State                  string            `json:"state"` // current | stale
+	GenerationDigest       string            `json:"generation_digest"`
+	SourceGenerationDigest string            `json:"source_generation_digest"`
+	RecordCount            int               `json:"record_count"`
+	ObservedCount          int               `json:"observed_count"`
+	UnsupportedCount       int               `json:"unsupported_count"`
+	ReceiptState           string            `json:"receipt_state"` // complete | legacy_unavailable
+	Receipt                *OperationReceipt `json:"receipt,omitempty"`
+}
+
+type ScheduleProgress struct {
+	State                 string `json:"state"` // active | settled | failed
+	ScheduleGeneration    string `json:"schedule_generation"`
+	PublicationGeneration string `json:"publication_generation"`
+	TotalPartitions       int    `json:"total_partitions"`
+	Materialized          int    `json:"materialized"`
+	Pending               int    `json:"pending"`
+	Running               int    `json:"running"`
+	Succeeded             int    `json:"succeeded"`
+	Failed                int    `json:"failed"`
+}
+
+func (reader *ProgressReader) Read(ctx context.Context, repository string) (Progress, error) {
+	if reader == nil || !filepath.IsAbs(reader.DataDir) || reader.Store == nil ||
+		reader.Cache == nil || validateRepository(repository) != nil {
+		return Progress{}, invalid("progress reader configuration")
+	}
+	source, err := repositoryindex.ReadSourceManifest(filepath.Join(reader.DataDir, "index"), repository)
+	if err != nil {
+		return Progress{}, err
+	}
+	root := filepath.Join(reader.DataDir, "observations")
+	pointer, pointerPresent, err := readOptionalPointer(root, repository)
+	if err != nil {
+		return Progress{}, err
+	}
+	var publicationManifest *Manifest
+	if pointerPresent {
+		lease, acquireErr := reader.Cache.Acquire(ctx, root, repository)
+		if acquireErr != nil {
+			return Progress{}, acquireErr
+		}
+		defer lease.Release()
+		manifest := lease.Publication().Manifest()
+		if manifest.GenerationDigest != pointer.GenerationDigest || manifest.Digest != pointer.ManifestDigest {
+			return Progress{}, invalid("progress publication fence")
+		}
+		publicationManifest = &manifest
+	}
+	marker, markerPresent, err := readMarker(root, repository)
+	if err != nil {
+		return Progress{}, err
+	}
+	schedule, schedulePresent, err := reader.readSchedule(ctx, repository)
+	if err != nil {
+		return Progress{}, err
+	}
+	var targetGeneration, targetSource string
+	if markerPresent {
+		targetGeneration = marker.GenerationDigest
+		plan, planErr := reader.readPlan(repository, targetGeneration)
+		if planErr != nil {
+			return Progress{}, planErr
+		}
+		targetSource = plan.SourceGenerationDigest
+		if schedulePresent {
+			runtime := Runtime{DataDir: reader.DataDir}
+			target, targetErr := runtime.scheduleTarget(repository, schedule.Generation)
+			if targetErr != nil || target != targetGeneration {
+				return Progress{}, errors.Join(targetErr, invalid("progress schedule target"))
+			}
+		}
+	} else if schedulePresent && schedule.Status == store.GenerationScheduleActive &&
+		(publicationManifest == nil || publicationManifest.SourceGenerationDigest != source.Digest) {
+		return Progress{}, invalid("active progress schedule has no publication marker")
+	}
+
+	result := projectProgress(repository, source.Digest, publicationManifest, schedule, targetGeneration, targetSource)
+	if err := ValidateProgress(result); err != nil {
+		return Progress{}, err
+	}
+	if err := reader.confirm(ctx, repository, source.Digest, pointer, pointerPresent, marker, markerPresent, schedule, schedulePresent); err != nil {
+		return Progress{}, err
+	}
+	return result, nil
+}
+
+func (reader *ProgressReader) readPlan(repository, generation string) (sourcepartition.Manifest, error) {
+	directory := filepath.Join(
+		reader.DataDir, "observation-plans", repositoryHash(repository),
+		stringsTrimDigest(generation),
+	)
+	manifest, err := sourcepartition.ReadManifest(directory, repository)
+	if err != nil {
+		return sourcepartition.Manifest{}, err
+	}
+	want, err := GenerationDigest(manifest)
+	if err != nil || want != generation {
+		return sourcepartition.Manifest{}, errors.Join(err, invalid("progress plan generation"))
+	}
+	return manifest, nil
+}
+
+func (reader *ProgressReader) readSchedule(
+	ctx context.Context, repository string,
+) (*store.GenerationSchedule, bool, error) {
+	schedule, err := reader.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if schedule == nil || store.ValidateGenerationSchedule(*schedule) != nil {
+		return nil, false, invalid("progress schedule")
+	}
+	value := *schedule
+	return &value, true, nil
+}
+
+func (reader *ProgressReader) confirm(
+	ctx context.Context,
+	repository, sourceDigest string,
+	pointer Pointer,
+	pointerPresent bool,
+	marker Marker,
+	markerPresent bool,
+	schedule *store.GenerationSchedule,
+	schedulePresent bool,
+) error {
+	source, err := repositoryindex.ReadSourceManifest(filepath.Join(reader.DataDir, "index"), repository)
+	if err != nil || source.Digest != sourceDigest {
+		return errors.Join(err, ErrStale)
+	}
+	root := filepath.Join(reader.DataDir, "observations")
+	confirmedPointer, confirmedPointerPresent, err := readOptionalPointer(root, repository)
+	if err != nil || confirmedPointerPresent != pointerPresent || confirmedPointerPresent && confirmedPointer != pointer {
+		return errors.Join(err, ErrStale)
+	}
+	confirmedMarker, confirmedMarkerPresent, err := readMarker(root, repository)
+	if err != nil || confirmedMarkerPresent != markerPresent || confirmedMarkerPresent && confirmedMarker != marker {
+		return errors.Join(err, ErrStale)
+	}
+	confirmedSchedule, confirmedSchedulePresent, err := reader.readSchedule(ctx, repository)
+	if err != nil || confirmedSchedulePresent != schedulePresent ||
+		confirmedSchedulePresent && scheduleFenceOf(*confirmedSchedule) != scheduleFenceOf(*schedule) {
+		return errors.Join(err, ErrStale)
+	}
+	return nil
+}
+
+func projectProgress(
+	repository, sourceDigest string,
+	manifest *Manifest,
+	schedule *store.GenerationSchedule,
+	targetGeneration, targetSource string,
+) Progress {
+	result := Progress{
+		Schema: ProgressSchema, Repository: repository, State: "unavailable",
+		SourceGenerationDigest: sourceDigest,
+	}
+	publicationCurrent := false
+	if manifest != nil {
+		state := "stale"
+		if manifest.SourceGenerationDigest == sourceDigest {
+			state = "current"
+			publicationCurrent = true
+		}
+		receiptState := "legacy_unavailable"
+		var receipt *OperationReceipt
+		if manifest.OperationReceipt != nil {
+			receiptState = "complete"
+			value := *manifest.OperationReceipt
+			value.UnsupportedReasons = append([]ReasonCount(nil), value.UnsupportedReasons...)
+			receipt = &value
+		}
+		result.Publication = &PublicationProgress{
+			State: state, GenerationDigest: manifest.GenerationDigest,
+			SourceGenerationDigest: manifest.SourceGenerationDigest,
+			RecordCount:            manifest.RecordCount, ObservedCount: manifest.ObservedCount,
+			UnsupportedCount: manifest.UnsupportedCount,
+			ReceiptState:     receiptState, Receipt: receipt,
+		}
+	}
+	if schedule != nil && targetGeneration != "" {
+		state := string(schedule.Status)
+		if schedule.Status == store.GenerationScheduleSettled && schedule.Failed > 0 {
+			state = "failed"
+		}
+		result.Schedule = &ScheduleProgress{
+			State: state, ScheduleGeneration: schedule.Generation,
+			PublicationGeneration: targetGeneration,
+			TotalPartitions:       schedule.TotalChunks, Materialized: schedule.Materialized,
+			Pending: schedule.Pending, Running: schedule.Running,
+			Succeeded: schedule.Succeeded, Failed: schedule.Failed,
+		}
+	}
+	switch {
+	case publicationCurrent:
+		result.State = "current"
+	case result.Schedule != nil && targetSource == sourceDigest && result.Schedule.State == "active":
+		result.State = "building"
+	case result.Schedule != nil && targetSource == sourceDigest && result.Schedule.State == "failed":
+		result.State = "failed"
+	case result.Publication != nil || targetSource != "" && targetSource != sourceDigest:
+		result.State = "stale"
+	}
+	return result
+}
+
+func ValidateProgress(progress Progress) error {
+	if progress.Schema != ProgressSchema || validateRepository(progress.Repository) != nil ||
+		!validDigest(progress.SourceGenerationDigest) {
+		return invalid("progress identity")
+	}
+	switch progress.State {
+	case "current", "building", "failed", "stale", "unavailable":
+	default:
+		return invalid("progress state")
+	}
+	if progress.Publication != nil {
+		publication := progress.Publication
+		if publication.State != "current" && publication.State != "stale" ||
+			!validDigest(publication.GenerationDigest) || !validDigest(publication.SourceGenerationDigest) ||
+			publication.RecordCount < 0 || publication.RecordCount > MaxGenerationRecords ||
+			publication.ObservedCount < 0 || publication.UnsupportedCount < 0 ||
+			publication.RecordCount != publication.ObservedCount+publication.UnsupportedCount {
+			return invalid("progress publication")
+		}
+		switch publication.ReceiptState {
+		case "complete":
+			if publication.Receipt == nil || validateProgressReceipt(*publication.Receipt, *publication) != nil {
+				return invalid("progress receipt")
+			}
+		case "legacy_unavailable":
+			if publication.Receipt != nil {
+				return invalid("legacy progress receipt")
+			}
+		default:
+			return invalid("progress receipt state")
+		}
+		if publication.State == "current" && publication.SourceGenerationDigest != progress.SourceGenerationDigest ||
+			publication.State == "stale" && publication.SourceGenerationDigest == progress.SourceGenerationDigest {
+			return invalid("progress publication currency")
+		}
+	}
+	if progress.Schedule != nil {
+		schedule := progress.Schedule
+		if schedule.State != "active" && schedule.State != "settled" && schedule.State != "failed" ||
+			!validDigest(schedule.ScheduleGeneration) || !validDigest(schedule.PublicationGeneration) ||
+			schedule.TotalPartitions < 1 || schedule.TotalPartitions > store.MaxGenerationChunks ||
+			schedule.Materialized < 0 || schedule.Pending < 0 || schedule.Running < 0 ||
+			schedule.Succeeded < 0 || schedule.Failed < 0 ||
+			schedule.Succeeded+schedule.Failed > schedule.TotalPartitions {
+			return invalid("progress schedule projection")
+		}
+		if schedule.State == "failed" && schedule.Failed == 0 ||
+			schedule.State == "settled" && schedule.Failed != 0 {
+			return invalid("progress schedule state")
+		}
+	}
+	switch progress.State {
+	case "current":
+		if progress.Publication == nil || progress.Publication.State != "current" {
+			return invalid("current progress authority")
+		}
+	case "building":
+		if progress.Schedule == nil || progress.Schedule.State != "active" {
+			return invalid("building progress authority")
+		}
+	case "failed":
+		if progress.Schedule == nil || progress.Schedule.State != "failed" {
+			return invalid("failed progress authority")
+		}
+	case "unavailable":
+		if progress.Publication != nil && progress.Publication.State == "current" ||
+			progress.Schedule != nil && (progress.Schedule.State == "active" || progress.Schedule.State == "failed") {
+			return invalid("unavailable progress authority")
+		}
+	}
+	return nil
+}
+
+func validateProgressReceipt(receipt OperationReceipt, publication PublicationProgress) error {
+	manifest := Manifest{
+		RecordCount: publication.RecordCount, ObservedCount: publication.ObservedCount,
+		UnsupportedCount: publication.UnsupportedCount,
+	}
+	return validateOperationReceipt(receipt, manifest)
+}
+
+func readOptionalPointer(root, repository string) (Pointer, bool, error) {
+	pointer, err := readPointer(root, repository)
+	if errors.Is(err, os.ErrNotExist) {
+		return Pointer{}, false, nil
+	}
+	return pointer, err == nil, err
+}
+
+type scheduleFence struct {
+	Digest       string
+	Generation   string
+	Status       store.GenerationScheduleStatus
+	NextOffset   int64
+	Materialized int
+	Pending      int
+	Running      int
+	Succeeded    int
+	Failed       int
+	UpdatedAt    time.Time
+}
+
+func scheduleFenceOf(schedule store.GenerationSchedule) scheduleFence {
+	return scheduleFence{
+		Digest: schedule.Digest, Generation: schedule.Generation, Status: schedule.Status,
+		NextOffset: schedule.NextOffset, Materialized: schedule.Materialized,
+		Pending: schedule.Pending, Running: schedule.Running,
+		Succeeded: schedule.Succeeded, Failed: schedule.Failed, UpdatedAt: schedule.UpdatedAt,
+	}
+}
+
+func stringsTrimDigest(value string) string {
+	if len(value) == len("sha256:")+64 && value[:len("sha256:")] == "sha256:" {
+		return value[len("sha256:"):]
+	}
+	return value
+}

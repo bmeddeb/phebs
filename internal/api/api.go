@@ -82,6 +82,9 @@ type Options struct {
 	// service shared with MCP. Production binds the store-backed instance;
 	// nil leaves both routes and capability discovery absent.
 	ServiceDirectory *ServiceDirectoryService
+	// ObservationProgress is T36.4's authorization-first, source-free current
+	// publication and durable schedule projection shared with MCP.
+	ObservationProgress *ObservationProgressService
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService
@@ -429,6 +432,7 @@ func New(opts Options) http.Handler {
 	registerCallerMapAPI(api, opts)
 	registerCallerComparisonAPI(api, opts)
 	registerServiceDirectoryAPI(api, opts)
+	registerObservationProgressAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 	registerWorkbench(api, opts)

@@ -31,6 +31,11 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 	if metricsA.ParsedBlobs != 2 || metricsA.ReusedObservations != 0 || publicationA.manifest.ObservedCount != 2 {
 		t.Fatalf("A metrics/publication = %+v %+v", metricsA, publicationA.manifest)
 	}
+	if receipt := publicationA.manifest.OperationReceipt; receipt == nil ||
+		receipt.InputBlobs != 2 || receipt.SourceBlobReads != 2 ||
+		receipt.ParsedObservations != 2 || receipt.ReusedObservations != 0 {
+		t.Fatalf("A operation receipt = %+v", receipt)
+	}
 	recordsA := publicationRecords(t, publicationA)
 
 	if err := os.WriteFile(filepath.Join(repository, "b.go"), []byte("package demo\nconst B = 2\n"), 0o600); err != nil {
@@ -47,6 +52,11 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 	}
 	if metricsB.ParsedBlobs != 1 || metricsB.ReusedObservations != 1 || publicationB.manifest.GenerationDigest == publicationA.manifest.GenerationDigest {
 		t.Fatalf("B metrics/publication = %+v %+v", metricsB, publicationB.manifest)
+	}
+	if receipt := publicationB.manifest.OperationReceipt; receipt == nil ||
+		receipt.InputBlobs != 2 || receipt.SourceBlobReads != 2 ||
+		receipt.ParsedObservations != 1 || receipt.ReusedObservations != 1 {
+		t.Fatalf("B operation receipt = %+v", receipt)
 	}
 	recordsB := publicationRecords(t, publicationB)
 	aA, aB := recordForPath(t, recordsA, "a.go"), recordForPath(t, recordsB, "a.go")
@@ -223,6 +233,11 @@ func TestArchiveRoundTripPreservesExactCurrentPublication(t *testing.T) {
 	if publication.manifest.UnsupportedCount != 1 {
 		t.Fatalf("unsupported count = %d", publication.manifest.UnsupportedCount)
 	}
+	if receipt := publication.manifest.OperationReceipt; receipt == nil ||
+		receipt.UnsupportedBlobs != 1 || len(receipt.UnsupportedReasons) != 1 ||
+		receipt.UnsupportedReasons[0] != (ReasonCount{Reason: "parse_error", Count: 1}) {
+		t.Fatalf("unsupported receipt = %+v", receipt)
+	}
 	archive := filepath.Join(t.TempDir(), "observations.tar")
 	report, err := CreateArchive(t.Context(), root, archive)
 	if err != nil {
@@ -315,6 +330,45 @@ func TestLifecyclePreservesCurrentRollbackFloorAndLease(t *testing.T) {
 type scheduleCapture struct {
 	store.GenerationSchedulerStore
 	specs []store.GenerationScheduleSpec
+}
+
+type recoveryScheduleCapture struct {
+	store.GenerationSchedulerStore
+	current *store.GenerationSchedule
+	specs   []store.GenerationScheduleSpec
+}
+
+func (capture *recoveryScheduleCapture) EnqueueGenerationSchedule(
+	_ context.Context, spec store.GenerationScheduleSpec,
+) (*store.GenerationSchedule, error) {
+	capture.specs = append(capture.specs, spec)
+	scheduleDigest, err := store.GenerationScheduleDigest(spec)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	capture.current = &store.GenerationSchedule{
+		Schema:     store.GenerationScheduleSchema,
+		Digest:     scheduleDigest,
+		Repository: spec.Repository, Stage: spec.Stage, Generation: spec.Generation,
+		ResourceClass: spec.ResourceClass, TotalItems: spec.TotalItems,
+		ChunkItems:  spec.ChunkItems,
+		TotalChunks: int((spec.TotalItems + int64(spec.ChunkItems) - 1) / int64(spec.ChunkItems)),
+		MaxAttempts: spec.MaxAttempts, RepositoryTokens: spec.RepositoryTokens,
+		Status: store.GenerationScheduleActive, CreatedAt: now, UpdatedAt: now,
+	}
+	value := *capture.current
+	return &value, nil
+}
+
+func (capture *recoveryScheduleCapture) GetGenerationSchedule(
+	_ context.Context, _, _ string,
+) (*store.GenerationSchedule, error) {
+	if capture.current == nil {
+		return nil, store.ErrNotFound
+	}
+	value := *capture.current
+	return &value, nil
 }
 
 func (capture *scheduleCapture) EnqueueGenerationSchedule(
@@ -445,6 +499,88 @@ func TestRuntimeSchedulesPublishesAndRestartNoOps(t *testing.T) {
 	current, err := CurrentGeneration(filepath.Join(dataDirectory, "observations"), repositoryName)
 	if err != nil || current != spec.Generation {
 		t.Fatalf("A reactivation current = %q, %v", current, err)
+	}
+}
+
+func TestRuntimeMintsDistinctRecoveryScheduleAfterExhaustion(t *testing.T) {
+	dataDirectory := t.TempDir()
+	repositoryName := "github.com/example/observation-recovery-schedule"
+	repositoryDirectory := filepath.Join(dataDirectory, "repos", filepath.FromSlash(repositoryName)+".git")
+	if err := os.MkdirAll(repositoryDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	runObservationGit(t, repositoryDirectory, "init")
+	runObservationGit(t, repositoryDirectory, "config", "user.email", "test@example.com")
+	runObservationGit(t, repositoryDirectory, "config", "user.name", "Test")
+	if err := os.WriteFile(filepath.Join(repositoryDirectory, "main.go"), []byte("package main\nfunc main() {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runObservationGit(t, repositoryDirectory, "add", "main.go")
+	runObservationGit(t, repositoryDirectory, "commit", "-m", "fixture")
+	commit := strings.TrimSpace(runObservationGit(t, repositoryDirectory, "rev-parse", "HEAD"))
+	if _, err := repositoryindex.BuildSourceGeneration(
+		t.Context(), repositoryDirectory, filepath.Join(dataDirectory, "index"), repositoryName,
+		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	capture := &recoveryScheduleCapture{}
+	runtime := &Runtime{DataDir: dataDirectory, Store: capture}
+	if err := runtime.Reconcile(t.Context(), repositoryName); err != nil {
+		t.Fatal(err)
+	}
+	if len(capture.specs) != 1 {
+		t.Fatalf("initial schedules = %+v", capture.specs)
+	}
+	target := capture.specs[0].Generation
+	capture.current.Status = store.GenerationScheduleSettled
+	capture.current.Failed = 1
+	capture.current.Materialized = 1
+	capture.current.TotalChunks = 1
+	if err := runtime.Reconcile(t.Context(), repositoryName); err != nil {
+		t.Fatal(err)
+	}
+	initialScheduleDigest, err := store.GenerationScheduleDigest(capture.specs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(capture.specs) != 2 || capture.specs[1].Generation == target ||
+		capture.specs[1].Generation != recoveryScheduleGeneration(target, initialScheduleDigest) {
+		t.Fatalf("recovery schedules = %+v", capture.specs)
+	}
+	recovery := capture.specs[1]
+	if err := runtime.Handle(t.Context(), store.GenerationChunk{
+		Repository: repositoryName, Stage: recovery.Stage, Generation: recovery.Generation,
+		Offset: 0, Length: int(recovery.TotalItems),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Open(t.Context(), filepath.Join(dataDirectory, "observations"), repositoryName)
+	if err != nil || publication.manifest.GenerationDigest != target || publication.manifest.OperationReceipt == nil {
+		t.Fatalf("recovered publication = %+v, %v", publication, err)
+	}
+	if _, err := os.Lstat(runtime.scheduleBindingPath(repositoryName, recovery.Generation)); err != nil {
+		t.Fatalf("active recovery binding was removed before schedule settlement: %v", err)
+	}
+	if err := runtime.Handle(t.Context(), store.GenerationChunk{
+		Repository: repositoryName, Stage: recovery.Stage, Generation: recovery.Generation,
+		Offset: 0, Length: int(recovery.TotalItems),
+	}); err != nil {
+		t.Fatalf("late sibling did not converge on complete recovery: %v", err)
+	}
+	capture.current.Status = store.GenerationScheduleSettled
+	capture.current.NextOffset = capture.current.TotalItems
+	capture.current.Materialized = capture.current.TotalChunks
+	capture.current.Succeeded = capture.current.TotalChunks
+	capture.current.UpdatedAt = capture.current.UpdatedAt.Add(time.Second)
+	if err := runtime.Reconcile(t.Context(), repositoryName); err != nil {
+		t.Fatal(err)
+	}
+	if len(capture.specs) != 2 {
+		t.Fatalf("current publication rescheduled: %+v", capture.specs)
+	}
+	if _, err := os.Lstat(runtime.scheduleBindingPath(repositoryName, recovery.Generation)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("settled recovery binding remains: %v", err)
 	}
 }
 

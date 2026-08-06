@@ -7593,3 +7593,57 @@ authorized progress, durable failure and
 unsupported census, HTTP/MCP parity, and the neutral epic demo. This ticket
 creates no accuracy/completeness, target-scale/SLO, migration/decommission, or
 release claim; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T36.4 ✅ · Observation progress and epic demo** *(2026-08-05; needs T36.3)* —
+closes Epic 36 with the shared authorization-first
+`phebs-observation-progress-v1` service. `GET /api/observation-progress` and
+MCP `get_observation_progress` call the same projection: repository visibility
+and current indexed authority are resolved before any source, publication,
+schedule, or count read, and both are re-fenced before emission. Responses are
+limited to 64 KiB and carry only repository/digest authority, the closed
+`current | building | failed | stale | unavailable` state, durable partition
+counters, publication totals, and the operation receipt. They contain no raw
+paths, object IDs, source samples, parser/worker errors, or mutation. A legacy
+publication without the new receipt reports `legacy_unavailable`, never a
+false zero.
+
+Every newly completed manifest digest-binds one
+`phebs-observation-operation-receipt-v1`: unique admitted blobs, source reads
+incorporated into successful publication members, distinct parsed and reused
+observation objects, observed/unsupported blobs, and the sorted closed
+unsupported-reason census. The strict cold opener recomputes that receipt from
+all canonical records; the warm progress path reuses the validated lease and
+reads controls only. Failed or interrupted attempts are intentionally outside
+the immutable successful-publication read count and remain visible through
+bounded schedule state.
+
+Exhausted work now follows T35.1's no-resurrection rule. Reconcile retains
+already validated stage members and writes a closed binding from a new
+domain-separated schedule identity to the unchanged target publication. That
+identity incorporates the prior immutable schedule digest; workers continue
+to fence the exact current schedule and source generation immediately before
+activation. Repeated exhaustion therefore advances to another distinguishable
+identity without reusing a terminal row or discarding successful siblings.
+
+The deterministic source-free `t364-observation-plane-receipt-v1` parses one
+neutral Go content identity once and independently projects gRPC, Thrift,
+Kafka-producer, and Kafka-consumer results. Seven gate groups bind content
+reuse/A→B→A, exhausted recovery, warm/cold cost, permission-before-counts,
+HTTP/MCP parity, backup/lifecycle, and multi-pack adapter parity. The retained
+`spike/t364/results.json` digest is
+`sha256:613898e98a904e435eb2ac277fbd84c1a260569962831f37c6b09e6337089ee6`.
+
+A denied request performs no progress read. A warm authorized current request
+performs two repository point reads, two source-control reads, three pointer
+reads, two marker reads, two schedule point reads, bounded JSON encoding, and
+short cache bookkeeping; it starts no child, reads no source/member/observation
+bytes, parses nothing, and takes no lifecycle or publication-transition lock.
+Cold cache fill retains T36.3's one complete validation pass; a building or
+failed response additionally reads only the bounded plan manifest. Each current
+reconcile adds one strict schedule point read so a durably settled binding can
+remove its bounded derived plan and binding controls. All other idle, startup,
+sync, retry, publication, backup, and lifecycle costs retain the bounds recorded
+by T36.3. The receipt is mechanics-only: no accuracy,
+completeness, target scale/SLO, migration/decommission, extractor promotion,
+or release claim is created, and `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 36
+is complete; T37.1 is scheduled next.

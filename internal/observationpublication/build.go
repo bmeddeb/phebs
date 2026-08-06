@@ -24,6 +24,9 @@ type Stage struct {
 	generation string
 	partition  sourcepartition.Manifest
 	directory  string
+	priorRead  bool
+	prior      string
+	priorErr   error
 }
 
 func Begin(root string, partition sourcepartition.Manifest) (*Stage, error) {
@@ -195,6 +198,7 @@ func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord
 		record.State = "observed"
 		record.ObservationName = name
 		record.ObservationDigest = digest("phebs-observation-bytes-v1", string(raw))
+		record.ObservationOrigin = stage.existingObservationOrigin(name, destination)
 		return record, raw, nil
 	}
 	if reused, err := stage.reuseObservation(name, destination, contentDigest); err != nil {
@@ -207,6 +211,7 @@ func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord
 		record.State = "observed"
 		record.ObservationName = name
 		record.ObservationDigest = digest("phebs-observation-bytes-v1", string(raw))
+		record.ObservationOrigin = "reused"
 		if metrics != nil {
 			metrics.ReusedObservations++
 		}
@@ -237,6 +242,7 @@ func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord
 	if err := os.MkdirAll(filepath.Dir(destination), 0o700); err != nil {
 		return Record{}, nil, err
 	}
+	origin := "parsed"
 	if err := writeExclusiveBytes(destination, raw); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return Record{}, nil, err
@@ -246,15 +252,35 @@ func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord
 			return Record{}, nil, errors.Join(existingErr, invalid("concurrent observation mismatch"))
 		}
 		raw = existing
+		origin = stage.existingObservationOrigin(name, destination)
 	}
 	record.State = "observed"
 	record.ObservationName = name
 	record.ObservationDigest = digest("phebs-observation-bytes-v1", string(raw))
+	record.ObservationOrigin = origin
 	if metrics != nil {
 		metrics.ParsedBlobs++
 		metrics.WrittenBytes += int64(len(raw))
 	}
 	return record, raw, nil
+}
+
+func (stage *Stage) existingObservationOrigin(name, destination string) string {
+	prior, err := stage.priorGeneration()
+	if err != nil || prior == "" || prior == stage.generation {
+		return "parsed"
+	}
+	priorInfo, err := os.Lstat(filepath.Join(
+		generationDirectory(stage.root, stage.repository, prior), name,
+	))
+	if err != nil || !priorInfo.Mode().IsRegular() {
+		return "parsed"
+	}
+	destinationInfo, err := os.Lstat(destination)
+	if err == nil && destinationInfo.Mode().IsRegular() && os.SameFile(priorInfo, destinationInfo) {
+		return "reused"
+	}
+	return "parsed"
 }
 
 func (stage *Stage) existingObservation(path, contentDigest string) ([]byte, bool, error) {
@@ -274,14 +300,17 @@ func (stage *Stage) existingObservation(path, contentDigest string) ([]byte, boo
 }
 
 func (stage *Stage) reuseObservation(name, destination, contentDigest string) (bool, error) {
-	pointer, err := readPointer(stage.root, stage.repository)
+	priorGeneration, err := stage.priorGeneration()
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	prior := generationDirectory(stage.root, stage.repository, pointer.GenerationDigest)
+	if priorGeneration == "" || priorGeneration == stage.generation {
+		return false, nil
+	}
+	prior := generationDirectory(stage.root, stage.repository, priorGeneration)
 	source := filepath.Join(prior, name)
 	raw, err := readBoundedRegular(source, MaxObservationBytes)
 	if errors.Is(err, os.ErrNotExist) {
@@ -311,6 +340,23 @@ func (stage *Stage) reuseObservation(name, destination, contentDigest string) (b
 		return false, errors.Join(existingErr, invalid("concurrent reused observation mismatch"))
 	}
 	return true, nil
+}
+
+func (stage *Stage) priorGeneration() (string, error) {
+	if stage.priorRead {
+		return stage.prior, stage.priorErr
+	}
+	stage.priorRead = true
+	pointer, err := readPointer(stage.root, stage.repository)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		stage.priorErr = err
+		return "", err
+	}
+	stage.prior = pointer.GenerationDigest
+	return stage.prior, nil
 }
 
 func classifyParseError(err error) string {

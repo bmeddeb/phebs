@@ -13,9 +13,10 @@ are also complete, closing Epic 34. T35.1's generation-scoped scheduler and
 T35.2's pin-aware lifecycle decision and T35.3's bounded sweep/capacity
 control and T35.4's lifecycle recovery demo are complete, closing Epic 35.
 T36.1's bounded immutable Git reader and source-partition contract is complete.
-T36.2's shared Go source-observation contract and T36.3's content-addressed
-observation publication are complete. T36.4 is the next scheduled ticket, and
-the remaining Epics 36–39 tickets stay
+T36.2's shared Go source-observation contract, T36.3's content-addressed
+observation publication, and T36.4's authorized progress/neutral multi-pack
+demo are complete, closing Epic 36. T37.1 is the next scheduled ticket, and
+the remaining Epics 37–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -32,27 +33,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 36 · Shared source-observation plane *(T36.1–T36.3 complete · T36.4 scheduled)*
-
-Read and parse supported source once per exact repository generation and pack
-policy, then reuse bounded target-independent observations across services and
-relationship families.
-
-**T36.4 · Observation progress and epic demo** *(scheduled; needs T36.3)* — expose
-authorized bounded progress, failure/unsupported census, input/read/reuse
-counts, and source-free operations receipts. AC: no raw paths or samples in
-logs, permission-before-counts, exact current/stale state, HTTP/MCP parity,
-neutral multi-pack demo, and steady-state cost proof; reconcile any durable
-failed/exhausted observation schedules without weakening T36.3's source,
-schedule, publication, lease, or lifecycle fences.
-
-## Epic 37 · Cross-service relationship index *(draft · needs Epics 35–36)*
+## Epic 37 · Cross-service relationship index *(T37.1 scheduled · needs Epics 35–36)*
 
 Join repository-shared observations to declarations once, publish keyed
 relationship postings, and project them onto services without claiming runtime
 or universal completeness.
 
-**T37.1 · Namespace-sharded declaration/resolver catalog** — partition exact
+**T37.1 · Namespace-sharded declaration/resolver catalog** *(scheduled)* — partition exact
 contract and generated-symbol identity by language/protocol/namespace under
 one complete root. AC: declaration identity stays independent of unit
 ownership; conflict/ambiguity/unsupported inputs remain records; only affected

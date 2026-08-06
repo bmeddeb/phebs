@@ -47,8 +47,10 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 		return workFailure(err)
 	}
 	if currentMatchesSource(root, repository, source.Digest) {
+		runtime.cleanupSettledSchedule(ctx, repository)
 		return nil
 	}
+	runtime.cleanupSettledSchedule(ctx, repository)
 	if runtime.Admit != nil {
 		if err := runtime.Admit(ctx); err != nil {
 			return workFailure(err)
@@ -124,12 +126,44 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 		_ = os.RemoveAll(planDirectory)
 		return nil
 	}
+	scheduleGeneration, priorScheduleDigest, err := runtime.scheduleGeneration(ctx, repository, generation)
+	if err != nil {
+		return workFailure(err)
+	}
+	binding := scheduleBinding{
+		Schema: BindingSchema, Repository: repository,
+		ScheduleGeneration: scheduleGeneration, PublicationGeneration: generation,
+		PriorScheduleDigest:     priorScheduleDigest,
+		SourceGenerationDigest:  partition.SourceGenerationDigest,
+		PartitionManifestDigest: partition.Digest,
+	}
+	if err := runtime.writeScheduleBinding(binding); err != nil {
+		return workFailure(err)
+	}
 	_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
-		Repository: repository, Stage: ScheduleStage, Generation: generation,
+		Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
 		ResourceClass: store.GenerationResourceCPU, TotalItems: int64(len(partition.Members)),
 		ChunkItems: ScheduleChunkItems, MaxAttempts: ScheduleMaxAttempts,
 		RepositoryTokens: ScheduleRepositoryTokens,
 	})
+	if errors.Is(err, store.ErrGenerationStale) && scheduleGeneration == generation {
+		current, currentErr := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+		if currentErr != nil {
+			return workFailure(errors.Join(err, currentErr))
+		}
+		scheduleGeneration = recoveryScheduleGeneration(generation, current.Digest)
+		binding.ScheduleGeneration = scheduleGeneration
+		binding.PriorScheduleDigest = current.Digest
+		if bindingErr := runtime.writeScheduleBinding(binding); bindingErr != nil {
+			return workFailure(bindingErr)
+		}
+		_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
+			Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
+			ResourceClass: store.GenerationResourceCPU, TotalItems: int64(len(partition.Members)),
+			ChunkItems: ScheduleChunkItems, MaxAttempts: ScheduleMaxAttempts,
+			RepositoryTokens: ScheduleRepositoryTokens,
+		})
+	}
 	return workFailure(err)
 }
 
@@ -137,12 +171,16 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 // after the final member exists. A slower earlier chunk also observes that
 // sentinel and can finalize, so correctness does not depend on completion order.
 func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) error {
-	if runtime == nil || chunk.Stage != ScheduleStage || chunk.Generation == "" ||
+	if runtime == nil || chunk.Stage != ScheduleStage || !validDigest(chunk.Generation) ||
 		chunk.Offset < 0 || chunk.Length < 1 {
 		return workFailure(invalid("runtime chunk"))
 	}
+	targetGeneration, err := runtime.scheduleTarget(chunk.Repository, chunk.Generation)
+	if err != nil {
+		return workFailure(err)
+	}
 	root := filepath.Join(runtime.DataDir, "observations")
-	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, chunk.Generation); err == nil {
+	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, targetGeneration); err == nil {
 		runtime.transition.Lock()
 		defer runtime.transition.Unlock()
 		if err := runtime.fenceChunk(ctx, chunk, publication.manifest.SourceGenerationDigest); err != nil {
@@ -151,12 +189,13 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if err := activate(root, publication.manifest); err != nil {
 			return workFailure(err)
 		}
-		if err := clearMarker(root, chunk.Repository, chunk.Generation); err != nil {
+		if err := clearMarker(root, chunk.Repository, targetGeneration); err != nil {
 			return workFailure(err)
 		}
+		runtime.dropPlan(chunk.Repository, targetGeneration)
 		return nil
 	}
-	plan, err := runtime.openPlan(ctx, chunk.Repository, chunk.Generation)
+	plan, err := runtime.openPlan(ctx, chunk.Repository, targetGeneration)
 	if err != nil {
 		return workFailure(err)
 	}
@@ -169,7 +208,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil {
 		return workFailure(err)
 	}
-	stage := resumedStage(root, partition, chunk.Generation)
+	stage := resumedStage(root, partition, targetGeneration)
 	for ordinal := int(chunk.Offset); ordinal < int(end); ordinal++ {
 		if err := stage.BuildPartition(ctx, plan, repositoryDirectory, ordinal, nil); err != nil {
 			return workFailure(err)
@@ -188,7 +227,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err := runtime.fenceChunk(ctx, chunk, partition.SourceGenerationDigest); err != nil {
 		return workFailure(err)
 	}
-	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, chunk.Generation); err == nil {
+	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, targetGeneration); err == nil {
 		if err := activate(root, publication.manifest); err != nil {
 			return workFailure(err)
 		}
@@ -197,9 +236,140 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 			return workFailure(err)
 		}
 	}
-	runtime.dropPlan(chunk.Repository, chunk.Generation)
-	_ = os.RemoveAll(runtime.planDirectory(chunk.Repository, chunk.Generation))
+	runtime.dropPlan(chunk.Repository, targetGeneration)
 	return nil
+}
+
+func (runtime *Runtime) cleanupSettledSchedule(ctx context.Context, repository string) {
+	schedule, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if err != nil || schedule.Status != store.GenerationScheduleSettled || schedule.Failed != 0 {
+		return
+	}
+	binding, err := runtime.readScheduleBinding(repository, schedule.Generation)
+	if err != nil {
+		return
+	}
+	runtime.dropPlan(repository, binding.PublicationGeneration)
+	_ = os.RemoveAll(runtime.planDirectory(repository, binding.PublicationGeneration))
+	_ = runtime.removeScheduleBinding(repository, schedule.Generation)
+}
+
+func (runtime *Runtime) scheduleGeneration(
+	ctx context.Context, repository, target string,
+) (string, string, error) {
+	current, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if errors.Is(err, store.ErrNotFound) {
+		return target, "", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	currentTarget, targetErr := runtime.scheduleTarget(repository, current.Generation)
+	if targetErr == nil && currentTarget == target {
+		if current.Status == store.GenerationScheduleActive {
+			if current.Generation == target {
+				return current.Generation, "", nil
+			}
+			binding, bindingErr := runtime.readScheduleBinding(repository, current.Generation)
+			if bindingErr != nil {
+				return "", "", bindingErr
+			}
+			return current.Generation, binding.PriorScheduleDigest, nil
+		}
+		return recoveryScheduleGeneration(target, current.Digest), current.Digest, nil
+	}
+	return target, "", nil
+}
+
+func recoveryScheduleGeneration(target, priorScheduleDigest string) string {
+	return digest("phebs-observation-recovery-schedule-v1", target+"\x00"+priorScheduleDigest)
+}
+
+func (runtime *Runtime) scheduleTarget(repository, scheduleGeneration string) (string, error) {
+	binding, err := runtime.readScheduleBinding(repository, scheduleGeneration)
+	if err == nil {
+		return binding.PublicationGeneration, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	marker, present, markerErr := readMarker(filepath.Join(runtime.DataDir, "observations"), repository)
+	if markerErr != nil {
+		return "", markerErr
+	}
+	if present && marker.GenerationDigest == scheduleGeneration {
+		return scheduleGeneration, nil
+	}
+	pointer, pointerErr := readPointer(filepath.Join(runtime.DataDir, "observations"), repository)
+	if pointerErr == nil && pointer.GenerationDigest == scheduleGeneration {
+		return scheduleGeneration, nil
+	}
+	return "", invalid("runtime schedule binding")
+}
+
+func (runtime *Runtime) writeScheduleBinding(binding scheduleBinding) error {
+	if validateScheduleBinding(binding) != nil {
+		return invalid("runtime schedule binding")
+	}
+	path := runtime.scheduleBindingPath(binding.Repository, binding.ScheduleGeneration)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	if err := writeExclusiveCanonical(path, binding); err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return err
+		}
+		existing, readErr := runtime.readScheduleBinding(binding.Repository, binding.ScheduleGeneration)
+		if readErr != nil || existing != binding {
+			return errors.Join(readErr, invalid("runtime schedule binding collision"))
+		}
+	}
+	return syncDirectory(filepath.Dir(path))
+}
+
+func (runtime *Runtime) readScheduleBinding(repository, scheduleGeneration string) (scheduleBinding, error) {
+	raw, err := readBoundedRegular(runtime.scheduleBindingPath(repository, scheduleGeneration), MaxManifestBytes)
+	if err != nil {
+		return scheduleBinding{}, err
+	}
+	var binding scheduleBinding
+	if decodeCanonical(raw, &binding) != nil || validateScheduleBinding(binding) != nil ||
+		binding.Repository != repository || binding.ScheduleGeneration != scheduleGeneration {
+		return scheduleBinding{}, invalid("runtime schedule binding")
+	}
+	return binding, nil
+}
+
+func validateScheduleBinding(binding scheduleBinding) error {
+	if binding.Schema != BindingSchema || validateRepository(binding.Repository) != nil ||
+		!validDigest(binding.ScheduleGeneration) || !validDigest(binding.PublicationGeneration) ||
+		!validDigest(binding.SourceGenerationDigest) || !validDigest(binding.PartitionManifestDigest) {
+		return invalid("schedule binding")
+	}
+	if binding.ScheduleGeneration == binding.PublicationGeneration {
+		if binding.PriorScheduleDigest != "" {
+			return invalid("initial schedule binding")
+		}
+	} else if !validDigest(binding.PriorScheduleDigest) ||
+		binding.ScheduleGeneration != recoveryScheduleGeneration(binding.PublicationGeneration, binding.PriorScheduleDigest) {
+		return invalid("recovery schedule binding")
+	}
+	return nil
+}
+
+func (runtime *Runtime) removeScheduleBinding(repository, scheduleGeneration string) error {
+	path := runtime.scheduleBindingPath(repository, scheduleGeneration)
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return syncDirectory(filepath.Dir(path))
+}
+
+func (runtime *Runtime) scheduleBindingPath(repository, scheduleGeneration string) string {
+	return filepath.Join(
+		runtime.DataDir, "observation-plans", repositoryHash(repository),
+		"schedule-"+strings.TrimPrefix(scheduleGeneration, "sha256:")+".json",
+	)
 }
 
 func (runtime *Runtime) fenceChunk(
