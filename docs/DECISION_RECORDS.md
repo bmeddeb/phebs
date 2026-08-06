@@ -77,3 +77,10 @@ met), both complete under the minimum-field rule. The BACKLOG Epic 16
 heading is then updated citing both rows — in the same PR, per the ADR
 convention. Any other path — partial rounds, trends, enthusiasm — does not
 unlock it.
+
+T39.5 applies the same separation to the final program decision. When the
+validation record is `NOT_ESTABLISHED`, Template B is not eligible: the record
+states that no human continuation decision exists instead of inventing an
+acting principal or treating silence as assent. The charter's project outcome
+is `STOP`, and a later attempt requires new authority rather than editing the
+stopped record.
