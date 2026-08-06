@@ -7646,4 +7646,60 @@ sync, retry, publication, backup, and lifecycle costs retain the bounds recorded
 by T36.3. The receipt is mechanics-only: no accuracy,
 completeness, target scale/SLO, migration/decommission, extractor promotion,
 or release claim is created, and `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 36
-is complete; T37.1 is scheduled next.
+is complete; T37.1's namespace-sharded catalog follows below.
+
+**T37.1 ✅ · Namespace-sharded declaration/resolver catalog** *(2026-08-05;
+needs Epics 35–36)* — adds the unregistered
+`phebs-resolver-namespace-root-v1` production contract. One complete root binds
+the repository and commit, the exact prior resolver generation and manifest,
+and a digest of every frozen bound. Generated Go resolver symbols are
+partitioned by the explicit `(language, protocol, import path)` namespace;
+service keys, analysis units, placements, and ownership are absent from both
+identity and bytes. Each symbol retains its exact generated path/object/content
+identity, method and constructor spellings, operation, and declaration
+path/lineage. Resolved, ambiguous, unsupported, and unavailable inputs remain
+closed records. Multiple distinct declaration targets for one lookup key add a
+sorted `conflict` record with no winner; multiple generated occurrences of the
+same exact target remain separate nonconflicting symbol records.
+
+Admission is checked before collection growth: at most 16,384 namespaces,
+8,192 records per namespace, 100,000 records and 512 MiB of canonical record
+identity per generation, 64 constructors per symbol, 32 distinct candidates
+per conflict, 4,096 bytes per retained text field, 1 MiB per record, 64 MiB per
+namespace member, an 8 MiB root, and 10 GiB of encoded namespace members. The
+policy and every bound are digest identity. Canonical records, members, root,
+pointer, and publication marker are strict-decoded with duplicate/unknown and
+trailing-data refusal; regular-file identity is checked before, during, and
+after each bounded read, and symlinks or undeclared generation entries fail
+closed.
+
+Build compares every namespace with a previously validated publication. An
+unchanged namespace is revalidated byte-for-byte and hard-linked into the new
+generation; a changed namespace alone receives new bytes. The staged root is
+fully validated before installation. Publication installs immutable bytes,
+writes a digest-bound marker, revalidates the complete generation, and swaps
+the one canonical current pointer last. Recovery follows the same complete
+validation path and cannot displace the prior pointer with a missing,
+malformed, noncanonical, or extra-entry generation. A sparse keyed read opens
+the at-most-8-MiB root and only the selected at-most-64-MiB namespace member;
+`LookupCurrent` repeats the exact current-pointer fence after that read, so a
+concurrent publication discards rather than relabels the result. A corrupt
+sibling namespace does not block an unrelated exact keyed lookup, while its own
+lookup refuses.
+
+Race tests pin deterministic no-op bytes, explicit language/protocol/namespace
+lookup, closed unsupported and ambiguous states, conflict preservation, equal
+target/nonconflict behavior, hard-link reuse of only unaffected namespaces,
+complete marked recovery with prior-pointer preservation on corruption,
+sparse sibling isolation, and pre-growth conflict bounds. T37.1 registers no
+scheduler, worker, lifecycle owner, backup byte, startup/sync hook, API, MCP,
+UI, or request-path consumer. Therefore current steady state is unchanged.
+When explicitly invoked, build retains the admitted bounded descriptor model
+and namespace grouping, writes each member once, and completes one full
+stage-validation pass; publication performs a second complete post-install
+pass before the pointer swap, and recovery reads the complete admitted
+generation once. It
+opens no Git child and performs no store query. T37.2 owns registration and
+the RPC posting join, and may consume only this catalog's strict current keyed
+authority. No accuracy/completeness, target scale/SLO, migration/decommission,
+or release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
