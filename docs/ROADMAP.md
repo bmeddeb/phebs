@@ -88,8 +88,9 @@ comparison, proof/Workbench integration, and neutral demo completed on
 T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench
 composition, T38.4's strict MCP parity, and T38.5's neutral product closure
 completed on 2026-08-06, closing Epic 38. T39.1's neutral correctness,
-scale-admission, and recovery gate completed on 2026-08-06; T39.2 is scheduled
-next.
+scale-admission, and recovery gate completed on 2026-08-06. T39.2's authorized
+target run stopped on one terminal incremental pipeline failure and completed
+its teardown on 2026-08-06; T39.3 is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -427,7 +428,8 @@ repository/service roots, lifecycle owner, and backup/restore are complete.
 T37.5 completed on 2026-08-06. T38.1's exact service overview, T38.2's
 cross-service explorer, T38.3's service-aware Impact/Workbench composition,
 T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
-closing Epic 38. T39.1 is complete; T39.2 is scheduled.
+closing Epic 38. T39.1 is complete; T39.2 retained an honest stopped result;
+T39.3 is scheduled.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -585,10 +587,12 @@ service count × repository bytes
   overview, source-first cross-service explorer, service-aware
   Impact/Workbench composition, strict shared-service MCP parity, and
   end-to-end neutral product demo are complete. Surfaces remain experimental.
-- **Epic 39 — validation and release (T39.1 complete; T39.2 next):** the neutral
-  correctness/admission/recovery gate is complete. Execute the authorized
-  target, security, and workflow gates, then make a separate shadow/advisory
-  release decision.
+- **Epic 39 — validation and release (T39.1–T39.2 complete; T39.3 next):** the
+  neutral correctness/admission/recovery gate is complete. The authorized
+  target gate stopped on a terminal incremental pipeline failure, skipped all
+  later phases under its frozen STOP rule, and destroyed derived custody.
+  Execute the independent security and workflow gates without relabeling that
+  stop, then make a separate shadow/advisory release decision.
 
 T32.1 completed the decision/documentation closure after T31.1 diagnostics;
 T32.2–T32.4 supplied the source-free target observation, neutral oracle/load

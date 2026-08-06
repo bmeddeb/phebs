@@ -1,0 +1,120 @@
+{
+  "schema": "t392-source-free-operating-observation-v1",
+  "measured_on": "REPLACE_WITH_YYYY-MM-DD",
+  "phebs_commit": "REPLACE_WITH_FROZEN_PHEBS_COMMIT",
+  "outcome": "stopped",
+  "total_wall_ms": 0,
+  "preflight": {
+    "outcome": "not_run",
+    "artifact_exact": false,
+    "config_exact": false,
+    "source_exact": false,
+    "catalog_exact": false,
+    "host_exact": false,
+    "authority_confirmed": false,
+    "tools_exact": 0,
+    "authorization_valid": false
+  },
+  "authority": {
+    "services": 0,
+    "memberships": 0,
+    "unowned_paths": 0,
+    "max_accepted_fanout": 0,
+    "canonical_bytes": 0
+  },
+  "cold": {
+    "outcome": "not_run",
+    "wall_ms": 0,
+    "peak_rss_bytes": 0,
+    "shard_allocated_bytes": 0,
+    "shard_count": 0,
+    "derived_allocated_bytes": 0,
+    "source_member_bytes": 0,
+    "source_members": 0,
+    "observation_bytes": 0,
+    "observation_records": 0,
+    "relationship_bytes": 0,
+    "relationship_records": 0,
+    "availability_ms": 0,
+    "current": false
+  },
+  "incremental": {
+    "outcome": "not_run",
+    "wall_ms": 0,
+    "peak_rss_bytes": 0,
+    "changed_files": 0,
+    "shard_allocated_bytes_after": 0,
+    "source_generation_changed": false,
+    "search_generation_changed": false,
+    "observation_generation_changed": false,
+    "relationship_generation_checked": false,
+    "relationship_generation_changed": false,
+    "unaffected_services_exact": 0,
+    "current": false
+  },
+  "no_op": {
+    "outcome": "not_run",
+    "wall_ms": 0,
+    "index_children": 0,
+    "git_children": 0,
+    "new_schedule_chunks": 0,
+    "shard_bytes_delta": 0,
+    "generation_changes": 0,
+    "durable_writes": 0
+  },
+  "query": {
+    "outcome": "not_run",
+    "query_count": 0,
+    "cold": {"completed": 0, "failed": 0, "total_wall_ms": 0, "max_wall_ms": 0},
+    "warm": {"completed": 0, "failed": 0, "total_wall_ms": 0, "max_wall_ms": 0},
+    "result_sets_equal": false,
+    "authority_receipts": 0,
+    "final_fences_passed": 0,
+    "authorization_passed": 0
+  },
+  "recovery": {
+    "outcome": "not_run",
+    "interrupted_phase": "source",
+    "wall_ms": 0,
+    "prior_publication_preserved": false,
+    "partial_invisible": false,
+    "eventual_current": false
+  },
+  "restore": {
+    "outcome": "not_run",
+    "wall_ms": 0,
+    "precious_authority_exact": false,
+    "derived_generations_exact": 0,
+    "derived_generations_omitted": 0,
+    "eventual_current": false
+  },
+  "retention": {
+    "outcome": "not_run",
+    "wall_ms": 0,
+    "owners_observed": 0,
+    "status_bytes": 0,
+    "capacity_available": false,
+    "available_before_bytes": 0,
+    "available_after_bytes": 0,
+    "sweep_turns": 0,
+    "deleted_rows": 0,
+    "deleted_generations": 0,
+    "protected_roots": 0
+  },
+  "failures": [
+    {"phase": "preflight", "class": "environment", "terminal": true}
+  ],
+  "topology": {
+    "direct": "stop",
+    "cohorts": "not_triggered",
+    "p6": "not_triggered",
+    "reason": "stopped_before_decision"
+  },
+  "teardown": {
+    "outcome": "destroyed",
+    "wall_ms": 0,
+    "source_copy_retained": false,
+    "derived_data_retained": false,
+    "custody": "released"
+  }
+}

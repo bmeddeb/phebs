@@ -1,0 +1,89 @@
+{
+  "schema": "t392-private-authorized-operating-plan-v1",
+  "commitment_nonce": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "frozen_at": "REPLACE_WITH_RFC3339",
+  "authorization": {
+    "approved_at": "REPLACE_WITH_RFC3339",
+    "expires_at": "REPLACE_WITH_RFC3339",
+    "approver": "REPLACE_PRIVATELY",
+    "custodian": "REPLACE_PRIVATELY"
+  },
+  "target": {
+    "repository": "REPLACE_PRIVATELY",
+    "base_commit": "REPLACE_WITH_EXACT_GIT_OBJECT_ID",
+    "target_commit": "REPLACE_WITH_EXACT_GIT_OBJECT_ID",
+    "mirror_path": "REPLACE_WITH_PRIVATE_ABSOLUTE_PATH"
+  },
+  "artifact": {
+    "phebs_commit": "REPLACE_WITH_40_LOWERCASE_HEX_CHARACTERS",
+    "binary_sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+    "config_sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS"
+  },
+  "tools": [
+    {"name": "git", "version": "REPLACE_PRIVATELY", "sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS"},
+    {"name": "go", "version": "REPLACE_PRIVATELY", "sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS"},
+    {"name": "surreal", "version": "REPLACE_PRIVATELY", "sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS"},
+    {"name": "zoekt-git-index", "version": "REPLACE_PRIVATELY", "sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS"}
+  ],
+  "host": {
+    "identifier": "REPLACE_PRIVATELY",
+    "operating_system": "REPLACE_PRIVATELY",
+    "architecture": "REPLACE_PRIVATELY",
+    "logical_cpus": 0,
+    "memory_bytes": 0,
+    "data_volume_available_bytes": 0
+  },
+  "authority": {
+    "catalog_path": "REPLACE_WITH_PRIVATE_ABSOLUTE_PATH",
+    "catalog_sha256": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+    "catalog_version": "REPLACE_PRIVATELY",
+    "services": 0,
+    "memberships": 0,
+    "unowned_paths": 0,
+    "max_accepted_fanout": 0,
+    "canonical_bytes": 0,
+    "authority_confirmed": false
+  },
+  "thresholds": {
+    "total_wall_ms": 0,
+    "cold_wall_ms": 0,
+    "cold_peak_rss_bytes": 0,
+    "cold_shard_allocated_bytes": 0,
+    "cold_derived_allocated_bytes": 0,
+    "cold_availability_ms": 0,
+    "incremental_catchup_ms": 0,
+    "incremental_peak_rss_bytes": 0,
+    "no_op_wall_ms": 0,
+    "query_cold_max_wall_ms": 0,
+    "query_warm_max_wall_ms": 0,
+    "recovery_wall_ms": 0,
+    "restore_wall_ms": 0,
+    "retention_wall_ms": 0,
+    "minimum_available_data_bytes": 0,
+    "maximum_lifecycle_status_bytes": 16384,
+    "maximum_final_failure_count": 0
+  },
+  "query_battery": [
+    {"id": "REPLACE", "class": "broad", "scope": "all_code", "query": "REPLACE_PRIVATELY"},
+    {"id": "REPLACE", "class": "literal", "scope": "service", "service_key": "REPLACE_PRIVATELY", "query": "REPLACE_PRIVATELY"},
+    {"id": "REPLACE", "class": "path", "scope": "relationship", "service_key": "REPLACE_PRIVATELY", "query": "REPLACE_PRIVATELY"},
+    {"id": "REPLACE", "class": "symbol", "scope": "all_code", "query": "REPLACE_PRIVATELY"}
+  ],
+  "phase_order": ["preflight", "cold", "incremental", "no_op", "query", "recovery", "restore", "retention", "teardown"],
+  "failure_classes": ["authority", "physical_index", "pipeline", "query", "recovery_restore", "lifecycle_capacity", "environment"],
+  "stop_conditions": [
+    {"id": "REPLACE", "class": "authority", "condition": "REPLACE_PRIVATELY"}
+  ],
+  "teardown": {
+    "owner": "REPLACE_PRIVATELY",
+    "deadline": "REPLACE_WITH_RFC3339",
+    "procedure": "REPLACE_PRIVATELY"
+  },
+  "safety": {
+    "dedicated_data_directory": false,
+    "raw_artifacts_outside_repository": false,
+    "no_plan_mutation_after_freeze": false,
+    "direct_topology_only": false,
+    "no_automatic_authority": false
+  }
+}

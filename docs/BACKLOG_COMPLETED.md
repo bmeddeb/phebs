@@ -8266,5 +8266,47 @@ not change.
 
 T39.1 establishes no target-corpus SLO, accuracy/completeness, supported
 service count, migration completion, decommission safety, target-run, or
-release authority. `GATE2-V2` remains `NOT_ESTABLISHED`. T39.2 is scheduled
-next under its separately approved frozen target operating envelope.
+release authority. `GATE2-V2` remains `NOT_ESTABLISHED`. T39.2 was scheduled
+next under its separately approved frozen target operating envelope and
+subsequently completed with the stopped result retained below.
+
+**T39.2 ✅ · Authorized target operating-envelope gate**
+*(2026-08-06; needs T39.1)* — executed one explicitly approved, digest-frozen
+private target plan and honored its first terminal stop. Exact preflight matched
+the artifact, configuration, source, catalog, host, and all four tool
+identities. The operator-confirmed catalog stayed within the production
+contract at four services, 32 memberships, 46 unowned paths, accepted fan-out
+four, and 4,913 canonical bytes; no source-derived authority was admitted.
+
+Cold publication reached current in 1,288,509 ms. Peak RSS was 782,286,848
+bytes; one shard allocated 122,634,240 bytes; all derived data allocated
+190,402,560 bytes; availability took 1,272,914 ms. The source generation had
+one 653,878-byte member, the observation publication retained 2,172 records,
+and the relationship publication retained five rows. These values describe
+only the frozen private environment and are not product SLOs.
+
+The one-file incremental transition changed source, search, observation, and
+checked relationship generations. Three unaffected services remained exact,
+shard allocation stayed 122,634,240 bytes, and peak RSS was 896,532,480 bytes.
+After 2,584,690 ms the phase was still non-current and its bounded census
+contained one terminal `pipeline` failure, violating the frozen maximum of
+zero. The run therefore stopped. No-op, query, recovery, restore, and retention
+were not run; zeros on those receipt fields mean `not_run`, never successful
+zero work. Direct stopped, and neither cohort nor P6 work was triggered because
+the run stopped before a topology decision.
+
+The dedicated process stopped and the derived database, publications, raw
+captures/logs/metrics, and credentials were permanently destroyed in 33,922
+ms. The prepared source copy remains only under separately renewed private
+authorization; no derived T39.2 data remains. The source-free receipt is
+`spike/t392/results.json`
+(`sha256:20e95fc8e7bf11fb9ae317aa57aeda2966fbf1c866d812f37fadb11aabd26a41`).
+It retains no target, source/path/query bytes, credential, host identity, tool
+path, response body, raw error, or private topology.
+
+This is a valid stopped gate, not a pass. It establishes no target operating
+envelope, general SLO, accuracy/completeness, release authority, migration
+completion, or decommission safety. `GATE2-V2` remains `NOT_ESTABLISHED`.
+T39.3 is scheduled next as the independent security/lifecycle gate. T39.4 and
+T39.5 must preserve this stop unless a separately approved, newly frozen rerun
+supersedes it; missing later phases cannot be reinterpreted as passing evidence.
