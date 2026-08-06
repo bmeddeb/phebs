@@ -54,7 +54,6 @@ func ClosedOwners() []Owner {
 	return []Owner{
 		StaticOwner{OwnerName: SourceOwner, Completeness: Exact},
 		StaticOwner{OwnerName: SearchOwner, Completeness: Exact},
-		StaticOwner{OwnerName: ObservationOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ResolverOwner, Completeness: Exact},
 		StaticOwner{OwnerName: RelationshipOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ProofOwner, Completeness: Exact},

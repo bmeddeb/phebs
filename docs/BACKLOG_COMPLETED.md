@@ -7520,3 +7520,76 @@ walk bounded slices and start no child. Ordinary steady state is unchanged
 because no production package imports the package. This ticket establishes no
 accuracy/completeness, target scale/SLO, migration/decommission, or release
 claim. `GATE2-V2` remains `NOT_ESTABLISHED`; T36.3 is scheduled next.
+
+**T36.3 ✅ · Content-addressed observation publication** *(2026-08-05; needs
+T36.2)* — adds the immutable `phebs-observation-publication-v1` generation.
+Its identity binds repository, exact T34.1 source generation, complete T36.1
+partition generation/manifest/policy, the T36.2 observation-policy digest,
+and the Go language pack. Canonical partition members retain one record per
+unique Git object with every placement, content digest, explicit
+observed/unsupported state, and an exact observation artifact reference.
+Publication validates the complete generation before one fsynced atomic
+`current.json` replacement; a publishing marker preserves the prior pointer
+until completion. Startup activates a completely valid staged root, resumes an
+exact durable plan/schedule, or discards only a superseded incomplete derived
+stage; none of those paths weakens the prior current root.
+
+Whole-repository index completion now builds the `.go` source plan and
+enqueues `go-source-observation` on T35.1 with eight partitions per chunk, five
+attempts, two repository tokens, and the CPU resource class. Two process
+workers each declare 256 MiB and eight descriptors. Every worker rechecks the
+current durable schedule and repository source generation immediately before
+publication, so a superseded or concurrently reindexed worker cannot relabel
+its bytes. One partition uses T36.1's hardened single Git batch child and
+parses each unique admitted content once. A completed A generation is
+cold-validated and atomically reactivated on A→B→A without attempting to
+resurrect T35.1's stale A schedule. Durable planning state lives under
+`observation-plans/`, is restart-opened through complete T36.1 validation, and
+is excluded from backup; no observation becomes a SurrealDB row.
+
+Within a new generation, an existing retry artifact is accepted only after
+closed observation validation and exact content/policy equality. Across
+generations, an unchanged blob is hard-linked from the current generation only
+after that same semantic and canonical-byte proof; changed content receives a
+different name and is reparsed. Members are idempotently strict-opened on
+retry. The root caps its manifest at 8 MiB, one member at 128 MiB, one
+observation at 64 MiB, one generation at 250,000 unique records, and encoded
+members and distinct observation bytes independently at 20 GiB per generation,
+retaining all tighter T36.1/T36.2 input and parse bounds.
+
+Cold cache fill validates every member and distinct observation before issuing
+a lease. Warm acquisition rereads only the bounded pointer; replacement keeps
+the prior generation pinned until its final lease releases. Online backup adds
+`observation-publication.tar` and backup-manifest v6: only fully validated
+current publications are archived, corrupt derived state is counted and
+omitted rather than blocking precious database export, archive creation
+self-restores through the same strict validator, and restore installs one
+validated private stage by rename. The T35 observation owner now preserves
+current plus one prior complete generation, skips publishing and leased roots,
+renames at most one eligible generation out of authority, and removes at most
+the controller's sixteen filesystem entries per turn with root/marker/lease
+rechecks; restart resumes the bounded drain.
+
+Race tests pin exact-content hard-link reuse, changed-content invalidation,
+byte-identical A→B→A reactivation with zero blob reads, explicit unsupported
+records, incomplete/complete marker recovery, warm/cold corruption behavior,
+lease-delayed retirement, byte-exact backup/restore, bounded lifecycle release,
+durable runtime schedule publication, restart no-op, and stale-schedule refusal
+whose rendered worker error contains no source identity. Ordinary search,
+evidence, extraction, HTTP, MCP, and UI requests perform no observation work.
+A registered idle runtime holds one planner/reaper and two worker goroutines;
+once per second it performs one bounded expansion probe, one stale-lease reap,
+and at most two claim probes, with no Git child or source/member read on an
+empty queue. An unchanged sync/index retry reaches the bounded current-control
+fence before planning or admission.
+A current startup reads bounded source/observation controls; missing or stale
+authority performs the complete source-metadata planning pass and schedules
+bounded Git/parser work while holding the existing index/backup mutation lock,
+so source members cannot disappear mid-plan. Chunk Git reads and parsing hold
+no global mutation lock; only the short schedule/source recheck and atomic
+publication transition use the runtime transition mutex. Cache locks cover
+entry/lease bookkeeping only, never validation or member reads. T36.4 owns
+authorized progress, durable failure and
+unsupported census, HTTP/MCP parity, and the neutral epic demo. This ticket
+creates no accuracy/completeness, target-scale/SLO, migration/decommission, or
+release claim; `GATE2-V2` remains `NOT_ESTABLISHED`.
