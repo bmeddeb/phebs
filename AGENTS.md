@@ -157,8 +157,8 @@ MCP microservice parity, and T38.5's product closure and neutral demo are
 complete, closing Epic 38. T39.1's neutral correctness, admission, and recovery
 gate is complete. T39.2's authorized target run stopped honestly on one
 terminal incremental pipeline failure and destroyed its derived custody;
-T39.3 is scheduled next, the remaining Epic 39 tickets stay dependency-ordered
-drafts, and Epics
+T39.3's independent security/lifecycle matrix is complete; T39.4 is scheduled
+next, the remaining Epic 39 tickets stay dependency-ordered drafts, and Epics
 25–28 remain
 unscheduled.
 A physical Go-test search overlay,

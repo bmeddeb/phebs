@@ -24,7 +24,8 @@ T38.2's cross-service explorer, T38.3's service-aware Impact/Workbench,
 T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
 closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
 gate and T39.2's honestly stopped authorized target run are retained in the
-completed backlog. T39.3 is the next scheduled ticket; the remaining Epic 39
+completed backlog. T39.3's security/lifecycle gate is also retained there.
+T39.4 is the next scheduled ticket; the remaining Epic 39
 tickets stay dependency-ordered drafts, not implicit implementation
 authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -42,19 +43,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 39 · Multi-service validation and release decision *(T39.1–T39.2 complete · T39.3 scheduled)*
+## Epic 39 · Multi-service validation and release decision *(T39.1–T39.3 complete · T39.4 scheduled)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.3 · Security and lifecycle gate** *(scheduled; needs T39.1)* — independently
-exercise hidden service names/counts, shared paths, cross-service edges,
-revocation, cursor/proof reuse, partial/stale roots, malicious catalog/source
-inputs, disk pressure, pin/lease retention, sweep, backup/restore, and teardown.
-AC: every negative case passes or stops release; review is independent of the
-implementer; no bypass or warning becomes approval.
-
-**T39.4 · Evidence-quality and workflow gate** *(needs T39.2)* — under the
+**T39.4 · Evidence-quality and workflow gate** *(scheduled; needs T39.2)* — under the
 existing preregistered pilot authority, measure pack-specific call-site
 quality, service-attribution hops, end-to-end service relationships,
 processing coverage, unresolved states, and migration-inventory workflow cost
@@ -69,6 +63,17 @@ measured service/language/framework/workflow/envelope; default-dark, shadow,
 advisory, suspension, expiry, rollback, and revalidation semantics are exact;
 no "all runtime callers," migration-complete, or decommission-safe claim; STOP
 and teardown are first-class valid outcomes.
+
+**T39.R1 · Mirror-lock contention diagnosis and authorized-rerun precondition**
+*(conditional; does not block T39.3–T39.5)* — before any T39.2 rerun, reproduce
+and classify immutable-mirror lock occupancy between aggregate extraction and
+caller-leaf execution, then record whether bounded serialization, admission,
+or retry accounting changes are required. AC: one workload cannot exhaust all
+attempts solely while waiting behind another admitted workload; cancellation,
+lease loss, and prior-publication preservation remain exact; no timeout or
+attempt limit is raised to manufacture a pass. Any rerun still requires a new
+explicit approval, nonce, frozen plan, teardown deadline, and source-free
+receipt. This chip does not supersede the retained T39.2 stop.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
