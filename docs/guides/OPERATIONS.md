@@ -3377,6 +3377,24 @@ is reused only after that validation. These derived generations have no
 current pointer or runtime reader registration until T37.4, so operators must
 not edit, promote, or repair them by hand.
 
+T37.3 adds the parallel unregistered Kafka topic-posting contract. Producer and
+consumer evidence remains in separate planes. Literal and same-file-constant
+topics retain their decoded source spelling; that spelling is not a broker,
+cluster, environment, deployment, or runtime identity. Dynamic expressions,
+cross-file or mutable identifiers, invalid literals, and unsupported shapes
+remain unresolved records with no topic authority. Exact path, revision,
+object/content, byte/line span, library/shape, and source-role citations remain
+part of each posting identity.
+
+An explicit Kafka build rereads the validated observation publication once,
+writes deterministic topic buckets, and performs complete stage and
+post-install validation. Keyed topic and unresolved reads validate only their
+selected at-most-128-MiB member after the at-most-8-MiB root. The build starts
+no parser, Git or store read, resolver lookup, network request, or child.
+T37.3 also has no scheduler, current pointer, lifecycle/backup owner, startup
+hook, or product surface; T37.4 owns those transitions. Operators must not edit
+or promote these derived bytes manually.
+
 ## Developing phebs
 
 
