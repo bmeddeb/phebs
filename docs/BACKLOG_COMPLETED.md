@@ -8352,6 +8352,50 @@ skipped negative case stops release; warnings are not approval; thresholds
 cannot be raised to manufacture a pass. T39.3 establishes neither
 comprehensive security nor a general SLO, accuracy/completeness, release,
 migration completion, or decommission safety. `GATE2-V2` remains
-`NOT_ESTABLISHED`. T39.4 is scheduled next. Conditional T39.R1 must diagnose
-the T39.2 immutable-mirror contention before any separately authorized rerun,
-but does not block T39.4 or supersede the retained stop.
+`NOT_ESTABLISHED`. T39.4 was scheduled next and subsequently stopped before
+unsealing below. Conditional T39.R1 must diagnose the T39.2 immutable-mirror
+contention before any separately authorized rerun, but does not supersede the
+retained stop.
+
+**T39.4 ✅ · Evidence-quality and workflow gate**
+*(2026-08-06; needs T39.2; outcome `stopped_before_unsealing`)* — inspected
+only the exact public authority documents and stopped before accessing target
+evidence or unsealing predictions. The pilot charter remains a design draft
+with unfilled Gate-0 authority and threshold fields. The accuracy protocol
+remains an unsealed synthetic fixture without complete thresholds or sealed
+independent gold. The workflow protocol remains an unsealed synthetic fixture
+that explicitly grants no measurement authority and supplies no sealed
+independent baseline. Those inputs cannot authorize the measurement described
+by the ticket, and no private pilot draft can substitute for them or broaden
+their scope.
+
+The deterministic receipt retains thirteen required projections as explicit
+`not_run` / `unmeasured` records: Go/gRPC call-site quality, processing
+coverage, build-target/deployable/service/owner attribution, direct
+service-operation edge quality, evidence reproduction, unresolved-state rate,
+inventory time, discovery/triage/routing labor, post-acceptance correction
+cost, and owner-routing cost. No unmeasured value is encoded as numeric zero.
+Underpowered or inconclusive is not a pass, missing values are not imputed,
+corrections and owner routing remain mandatory costs, and thresholds cannot be
+moved after unsealing.
+
+The exact T39.2 receipt is a digest-bound input and remains `stopped`: one
+terminal incremental `pipeline` failure, later phases `not_run`, and
+`superseded:false`. T39.4 neither relabels that authority nor creates new
+target authority. The source-free receipt is `spike/t394/results.json`
+(`sha256:46c039eb6193afc63e94ae28ab1837a09b7870fc48a09292184254c02e863e97`).
+It contains only public paths/digests, the prior stop shape, the closed
+authority assessment, unmeasured gate names, refusal policy, and negative
+claims; it contains no target/repository/service identity, source/path/query
+bytes, credential, host, raw error, private topology, label, baseline row, or
+measurement.
+
+The receipt cannot self-certify independent review and changes no production
+behavior. It establishes no accuracy, coverage, workflow value, release,
+migration completion, or decommission safety. `GATE2-V2` remains
+`NOT_ESTABLISHED`. T39.5 is scheduled next and must make the separate
+release/suspension and human-continuation decision against this accumulated
+stopped authority. A future evidence-quality attempt requires separately
+approved, digest-frozen, independently sealed authority and cannot edit this
+stop into a pass. T39.R1 remains mandatory before any separately authorized
+T39.2 rerun.
