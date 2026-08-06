@@ -54,6 +54,7 @@ import (
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/retentionstatus"
@@ -322,9 +323,14 @@ func serve(args []string) error {
 		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
 	}
 	observationCache := &observationpublication.Cache{}
+	relationshipCache := &relationshippublication.Cache{}
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationGenerationOwner{
 		Root: filepath.Join(cfg.Server.DataDir, "observations"),
 		Pins: observationCache, Acquire: acquireLifecycleMutation,
+	})
+	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwner{
+		DataDir: cfg.Server.DataDir, Pins: relationshipCache,
+		Acquire: acquireLifecycleMutation,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
 	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
@@ -340,6 +346,31 @@ func serve(args []string) error {
 			lifecycleStatus.ObserveCapacity(capacity, admissionErr)
 			return admissionErr
 		},
+	}
+	var relationshipRuntime *relationshippublication.Runtime
+	var reconcileRelationship func(context.Context, string) error
+	if resolverRegistry.Enabled() {
+		relationshipRuntime = &relationshippublication.Runtime{
+			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
+			Acquire: acquireLifecycleMutation,
+			Admit: func(admitCtx context.Context) error {
+				capacity, admissionErr := capacityGate.Check(admitCtx, 0)
+				lifecycleStatus.ObserveCapacity(capacity, admissionErr)
+				return admissionErr
+			},
+		}
+		reconcileRelationship = func(reconcileCtx context.Context, repository string) error {
+			err := relationshipRuntime.Reconcile(reconcileCtx, repository)
+			if errors.Is(err, relationshippublication.ErrNotFound) {
+				diagnostics.Logf(
+					"relationship authority not ready: repository=%q error=%v",
+					repository, err,
+				)
+				return nil
+			}
+			return err
+		}
+		observationRuntime.OnPublished = reconcileRelationship
 	}
 	if cfg.Lifecycle.EnabledFor() {
 		lifecycleController, lifecycleErr := lifecycle.NewController(
@@ -540,6 +571,9 @@ func serve(args []string) error {
 	catalogReconciler := &servicecatalogingest.Reconciler{
 		DataDir: cfg.Server.DataDir, Store: st, Selections: cfg.ServiceCatalogs,
 	}
+	if relationshipRuntime != nil {
+		catalogReconciler.OnPublished = reconcileRelationship
+	}
 	serviceCatalogReport, err := catalogReconciler.Reconcile(ctx)
 	if err != nil {
 		return fmt.Errorf("reconcile service catalogs: %w", err)
@@ -687,6 +721,31 @@ func serve(args []string) error {
 			diagnostics.Logf("observation scheduler stopped: %v", err)
 		}
 	})
+	if relationshipRuntime != nil {
+		relationshipScheduler := &generationscheduler.Scheduler{
+			Store: st,
+			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
+				store.GenerationResourceMemory: {
+					Concurrency: 1,
+					Budget: generationscheduler.Budget{
+						MaxMemoryBytes: 1 << 30, MaxDescriptors: 32,
+					},
+					Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
+						return relationshipRuntime.Handle(workerCtx, chunk)
+					},
+				},
+			},
+			PollEvery: time.Second, WorkerPrefix: "relationship-worker",
+			Report: func(err error) {
+				diagnostics.Logf("relationship scheduler unavailable: %v", err)
+			},
+		}
+		runBackground(func() {
+			if err := relationshipScheduler.Run(ctx); err != nil && ctx.Err() == nil {
+				diagnostics.Logf("relationship scheduler stopped: %v", err)
+			}
+		})
+	}
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
@@ -744,6 +803,9 @@ func serve(args []string) error {
 			)
 			if err != nil {
 				return fmt.Errorf("configure resolver materialization: %w", err)
+			}
+			if relationshipRuntime != nil {
+				resolverWorker.OnPublished = reconcileRelationship
 			}
 			if err := resolvermaterialize.EnqueueBackfill(ctx, st); err != nil {
 				return err

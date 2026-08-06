@@ -48,6 +48,10 @@ type Worker struct {
 	manifests ManifestProvider
 	registry  *Registry
 	readBlob  BlobReader
+	// OnPublished runs only after an exact current resolver publication is
+	// strict-open. A failure keeps the durable resolver job retryable while
+	// leaving the already-complete resolver generation intact.
+	OnPublished func(context.Context, string) error
 
 	cacheMu sync.Mutex
 	cache   map[string]*resolvercatalog.Publication
@@ -208,17 +212,17 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			return err
 		}
 		if authorityCurrent {
-			state := stateFromStore(*current)
+			state := StateFromStore(*current)
 			if cached := worker.cached(repository.Name); cached != nil &&
 				reflect.DeepEqual(cached.State(), state) && cached.Current() {
-				return nil
+				return worker.afterPublish(workCtx, repository.Name)
 			}
 			publication, openErr := resolvercatalog.Open(
 				workCtx, worker.root, state,
 			)
 			if openErr == nil {
 				worker.remember(repository.Name, publication)
-				return nil
+				return worker.afterPublish(workCtx, repository.Name)
 			}
 			if err := workCtx.Err(); err != nil {
 				return err
@@ -291,7 +295,14 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		))
 	}
 	worker.remember(repository.Name, publication)
-	return nil
+	return worker.afterPublish(workCtx, repository.Name)
+}
+
+func (worker *Worker) afterPublish(ctx context.Context, repository string) error {
+	if worker.OnPublished == nil {
+		return nil
+	}
+	return worker.OnPublished(ctx, repository)
 }
 
 func (worker *Worker) currentDeclarations(
@@ -528,7 +539,10 @@ func pointerMatchesIdentity(
 	return true
 }
 
-func stateFromStore(pointer store.ResolverCatalogPublication) resolvercatalog.State {
+// StateFromStore reconstructs the exact immutable resolver-catalog authority
+// named by its durable current row. Callers must separately perform the
+// ResolverCatalogPublicationCurrent fence after any derived work.
+func StateFromStore(pointer store.ResolverCatalogPublication) resolvercatalog.State {
 	declarations := make(
 		[]resolvercatalog.DeclarationPublication, len(pointer.Declarations),
 	)

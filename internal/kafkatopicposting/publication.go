@@ -78,6 +78,64 @@ func (publication *Publication) Root() Root {
 	return value
 }
 
+// WalkPostings validates the complete immutable member inventory while
+// yielding cloned postings. Callers publish visitor side effects only after a
+// successful complete walk.
+func (publication *Publication) WalkPostings(
+	ctx context.Context,
+	visit func(Posting) error,
+) error {
+	if publication == nil || visit == nil {
+		return fmt.Errorf("%w: posting visitor", ErrInvalid)
+	}
+	entries, err := os.ReadDir(publication.directory)
+	if err != nil || len(entries) != len(publication.rootValue.Members)+1 {
+		return fmt.Errorf("%w: generation inventory", ErrInvalid)
+	}
+	wanted := map[string]struct{}{"root.json": {}}
+	var postingCount, producerCount, consumerCount, literalCount, unresolvedCount int
+	var encodedBytes int64
+	for _, receipt := range publication.rootValue.Members {
+		wanted[receipt.Name] = struct{}{}
+		member, err := publication.openMember(ctx, receipt)
+		if err != nil {
+			return err
+		}
+		postingCount += len(member.Postings)
+		encodedBytes += receipt.ContentBytes
+		for _, posting := range member.Postings {
+			if posting.Plane == "producer" {
+				producerCount++
+			} else {
+				consumerCount++
+			}
+			if posting.Class == "literal" {
+				literalCount++
+			} else {
+				unresolvedCount++
+			}
+			cloned := clonePostings([]Posting{posting})[0]
+			if err := visit(cloned); err != nil {
+				return err
+			}
+		}
+	}
+	if postingCount != publication.rootValue.PostingCount ||
+		producerCount != publication.rootValue.ProducerCount ||
+		consumerCount != publication.rootValue.ConsumerCount ||
+		literalCount != publication.rootValue.LiteralCount ||
+		unresolvedCount != publication.rootValue.UnresolvedCount ||
+		encodedBytes != publication.rootValue.EncodedMemberBytes {
+		return fmt.Errorf("%w: posting walk totals", ErrInvalid)
+	}
+	for _, entry := range entries {
+		if _, present := wanted[entry.Name()]; !present || entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%w: unexpected generation entry", ErrInvalid)
+		}
+	}
+	return ctx.Err()
+}
+
 func (publication *Publication) ReadTopic(
 	ctx context.Context,
 	plane, topicSpelling string,

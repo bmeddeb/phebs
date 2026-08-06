@@ -278,7 +278,11 @@ func TestMemberLimitCheckedBeforeGrowth(t *testing.T) {
 	seen := map[string]struct{}{}
 	count := 0
 	var identityBytes int64
-	if err := addPosting(byMember, seen, &count, &identityBytes, posting); !errors.Is(err, ErrLimit) {
+	var residentCharge int64
+	if err := addPosting(
+		byMember, seen, &count, &identityBytes, &residentCharge,
+		MaxPostingIdentityBytes, posting,
+	); !errors.Is(err, ErrLimit) {
 		t.Fatalf("member limit error = %v", err)
 	}
 	if len(byMember[key]) != MaxPostingsPerMember || len(seen) != 0 || count != 0 || identityBytes != 0 {

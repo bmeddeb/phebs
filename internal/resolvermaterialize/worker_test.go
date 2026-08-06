@@ -524,7 +524,7 @@ func TestWorkerFirstPublish(t *testing.T) {
 	}
 	publication, err := resolvercatalog.Open(
 		fixture.t.Context(), fixture.worker.root,
-		stateFromStore(*fixture.state.pointer),
+		StateFromStore(*fixture.state.pointer),
 	)
 	if err != nil {
 		t.Fatalf("open first publication: %v", err)
@@ -703,7 +703,7 @@ func TestWorkerRecoversMarkedPublicationWhileHoldingRepositoryLock(t *testing.T)
 			lockObserved, fixture.state.publishCalls, fixture.state.pointer,
 		)
 	}
-	if got := stateFromStore(*fixture.state.pointer); !reflect.DeepEqual(got, markedState) {
+	if got := StateFromStore(*fixture.state.pointer); !reflect.DeepEqual(got, markedState) {
 		t.Fatalf("recovered state = %+v; want %+v", got, markedState)
 	}
 	if resolvercatalog.IsPublishing(fixture.worker.root, fixture.repository) {

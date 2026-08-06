@@ -81,8 +81,9 @@ on 2026-08-05. T36.2's Go source-observation contract, T36.3's
 content-addressed observation publication, and T36.4's authorized progress
 and neutral multi-pack demo completed on 2026-08-05, closing Epic 36. T37.1's
 namespace-sharded declaration/resolver catalog, T37.2's RPC caller postings,
-and T37.3's Kafka topic postings completed on 2026-08-05; T37.4's service
-projections and atomic relationship roots are scheduled next.
+T37.3's Kafka topic postings, and T37.4's service projections and atomic
+relationship roots completed on 2026-08-05; T37.5's exact readers,
+comparison, proof integration, and neutral demo are scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -415,7 +416,9 @@ ownership-neutral, namespace-sharded resolver contract, affected-only
 member reuse, atomic publication/recovery, and sparse keyed reads are complete;
 T37.2's classified, occurrence-exact RPC posting partitions and sparse readers
 and T37.3's source-spelled producer/consumer posting partitions are complete.
-T37.4 is scheduled.
+T37.4's registered bounded workload, placement projection, atomic
+repository/service roots, lifecycle owner, and backup/restore are complete.
+T37.5 is scheduled.
 Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
@@ -563,10 +566,12 @@ service count × repository bytes
   shared Go observation/adapters, exact content-addressed publication,
   authorization-first progress, source-free receipts, exhausted-schedule
   recovery, and the neutral multi-pack demo are complete.
-- **Epic 37 — relationship index (T37.1–T37.3 complete; T37.4 scheduled):**
+- **Epic 37 — relationship index (T37.1–T37.4 complete; T37.5 scheduled):**
   the ownership-neutral namespace-sharded declaration/resolver root and exact
-  classified RPC caller postings and Kafka topic postings are complete;
-  service projections, atomic relationship roots, and authorized keyed readers remain.
+  classified RPC caller postings, Kafka topic postings, service placement
+  projections, and atomic repository/service relationship roots are complete;
+  authorized keyed readers, comparison, proof integration, and the neutral
+  demo remain.
 - **Epic 38 — microservice product:** deliver service overview, dependency and
   change-impact workflows, comparison, UI/API/MCP parity, and an end-to-end
   neutral demo.

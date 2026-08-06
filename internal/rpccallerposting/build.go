@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -30,6 +31,9 @@ type BuildRequest struct {
 	Root         string
 	Observations *observationpublication.Publication
 	Resolver     *resolvernamespace.Publication
+	// ResidentLimitBytes is an operational pre-growth charge fence used by a
+	// registered worker. Zero preserves the contract's frozen identity bound.
+	ResidentLimitBytes int64
 }
 
 type Prepared struct {
@@ -59,7 +63,10 @@ type callProjection struct {
 }
 
 func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
-	return buildSources(ctx, request.Root, request.Observations, request.Resolver)
+	return buildSourcesBounded(
+		ctx, request.Root, request.Observations, request.Resolver,
+		request.ResidentLimitBytes,
+	)
 }
 
 func buildSources(
@@ -67,6 +74,16 @@ func buildSources(
 	root string,
 	observations observationSource,
 	resolver resolverSource,
+) (*Prepared, error) {
+	return buildSourcesBounded(ctx, root, observations, resolver, 0)
+}
+
+func buildSourcesBounded(
+	ctx context.Context,
+	root string,
+	observations observationSource,
+	resolver resolverSource,
+	residentLimit int64,
 ) (*Prepared, error) {
 	if root == "" || observations == nil || resolver == nil {
 		return nil, errors.New("RPC caller posting inputs are incomplete")
@@ -103,6 +120,13 @@ func buildSources(
 	byMember := make(map[string][]Posting)
 	seen := make(map[string]struct{})
 	var identityBytes int64
+	var residentCharge int64
+	if residentLimit == 0 {
+		residentLimit = math.MaxInt64
+	}
+	if residentLimit < 1 {
+		return nil, ErrLimit
+	}
 	postingCount := 0
 	walkedRecords := 0
 	err = observations.WalkObserved(
@@ -165,12 +189,18 @@ func buildSources(
 								int64(len(raw)) > MaxPostingIdentityBytes-identityBytes {
 								return ErrLimit
 							}
+							const postingOverhead = 512
+							charge := int64(len(raw) + postingOverhead)
+							if charge > residentLimit-residentCharge {
+								return ErrLimit
+							}
 							if postingCount >= MaxPostings {
 								return ErrLimit
 							}
 							seen[posting.Digest] = struct{}{}
 							postingCount++
 							identityBytes += int64(len(raw))
+							residentCharge += charge
 							bucket := partitionBucket(partitionOperation(posting))
 							key := memberKey(protocol, bucket)
 							if len(byMember[key]) >= MaxPostingsPerMember {

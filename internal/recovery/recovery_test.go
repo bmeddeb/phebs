@@ -964,6 +964,14 @@ func assertManifestDigests(t *testing.T, backupDir string, manifest recovery.Man
 	if got := "sha256:" + hex.EncodeToString(observationSum[:]); got != manifest.Inventory[4].SHA256 {
 		t.Fatalf("observation artifact digest = %s, want %s", got, manifest.Inventory[4].SHA256)
 	}
+	relationshipArtifact, err := os.ReadFile(filepath.Join(backupDir, recovery.RelationshipPublicationName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	relationshipSum := sha256.Sum256(relationshipArtifact)
+	if got := "sha256:" + hex.EncodeToString(relationshipSum[:]); got != manifest.Inventory[5].SHA256 {
+		t.Fatalf("relationship artifact digest = %s, want %s", got, manifest.Inventory[5].SHA256)
+	}
 	digestManifest := manifest
 	digestManifest.ManifestSHA256 = ""
 	canonical, err := json.Marshal(digestManifest)

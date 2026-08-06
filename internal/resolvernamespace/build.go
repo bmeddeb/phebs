@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -22,6 +23,9 @@ type BuildRequest struct {
 	ResolverManifestDigest   string
 	Descriptors              []gocaller.DirectDescriptor
 	Prior                    *Publication
+	// ResidentLimitBytes is an operational pre-growth charge fence used by a
+	// registered worker. Zero leaves only the frozen contract bounds.
+	ResidentLimitBytes int64
 }
 
 // Prepared is a completely validated but invisible generation stage.
@@ -50,6 +54,26 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 	}
 	if len(records) > MaxRecords {
 		return nil, ErrLimit
+	}
+	residentLimit := request.ResidentLimitBytes
+	if residentLimit == 0 {
+		residentLimit = math.MaxInt64
+	}
+	if residentLimit < 1 {
+		return nil, ErrLimit
+	}
+	var residentCharge int64
+	for _, record := range records {
+		raw, err := json.Marshal(record)
+		if err != nil {
+			return nil, err
+		}
+		const recordOverhead = 512
+		charge := int64(len(raw) + recordOverhead)
+		if charge > residentLimit-residentCharge {
+			return nil, ErrLimit
+		}
+		residentCharge += charge
 	}
 	byNamespace := make(map[string][]Record)
 	for _, record := range records {

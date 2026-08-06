@@ -7820,3 +7820,79 @@ registration, lifecycle/backup, atomic repository/service relationship roots,
 and service projection. No accuracy, completeness, broker/runtime topology,
 target-scale/SLO, migration/decommission, or release claim is created;
 `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T37.4 ✅ · Service projections and atomic relationship roots** *(2026-08-05;
+needs T37.2–T37.3)* — registers the first relationship workload and publishes
+one `phebs-relationship-root-v1` current authority per repository. The root
+binds the exact service-catalog generation/digest/source generation and a
+canonical accepted-service desired/incarnation-set digest,
+observation generation/manifest/source, resolver namespace generation/root,
+RPC generation/root, Kafka generation/root, and the digest of the closed
+relationship policy. Repository buckets and service partitions therefore
+cannot be relabeled across different upstream snapshots.
+
+The catalog projection retains each canonical membership prefix and exact
+unowned path. Source and declaration-target paths are walked through that
+authority without guessing: zero, one, or many service claims remain sorted,
+and accepted, proposal, conflict, and rejected dispositions retain every
+role/origin. RPC references record source and target participation; Kafka
+references record source participation while retaining its producer/consumer
+plane and source-spelled lookup key. Repository projections remain complete
+even when no accepted service owns either side.
+
+Every accepted service is bound to its persisted incarnation and desired
+generation. Its independent member contains only digest-bound references into
+the repository-complete projection set. Empty services publish explicit empty
+members. A service that crosses its reference, encoded-member, or operational
+resident fence publishes a `failed` receipt with no member; siblings still
+publish. `all_services_complete` is true only when every named accepted
+service is complete or empty against the same root authority. Missing,
+malformed, noncanonical, symlinked, extra, or mismatched stage/member bytes
+fail complete validation before the digest-bound marker and atomic current
+pointer can replace prior authority. Recovery repeats that full pass.
+
+The resolver-enabled runtime is triggered after exact observation, resolver,
+or service-catalog publication. One durable `service-relationship` schedule
+contains one memory-class item, five attempts, and one repository token. One
+worker declares 1 GiB and checks pre-growth operational charges of 128 MiB for
+resolver records, 192 MiB for RPC postings, 128 MiB for Kafka postings, and
+512 MiB for relationship projections/references. The frozen relationship
+pack also bounds 4,000 services, 2,000,000 repository projections, 1,000,000
+references per service, 20,000,000 total references, 4,000 claims per
+placement, five roles per claim, 256 repository buckets, 1-MiB projections,
+64-KiB references, 128-MiB repository/service members, an 8-MiB root, and a
+20-GiB encoded generation. The worker holds the shared mutation/backup lock,
+leases the exact observation generation, strict-opens the resolver catalog
+once, pages service rows under one verified summary, and rechecks observation,
+resolver, service-summary, and schedule authority immediately before the root
+pointer moves. Complete A bytes are deterministically reusable after A→B→A
+under a distinguishable recovery schedule identity.
+
+The relationship owner replaces T35's static placeholder. It protects current
+plus one rollback generation, publication markers, and active reader leases;
+renames one eligible root out of authority before bounded draining; and removes
+resolver/RPC/Kafka component generations only after no surviving root or
+resolver control references them. Backup manifest v7 adds
+`relationship-publication.tar`: backup includes only fully validated current
+relationship roots and their exact referenced components, visibly counts
+omitted corrupt/in-flight derived state, and never blocks the precious database
+export for rebuildable damage. Restore extracts privately and revalidates the
+closed composite tree before installation. Restartable relationship schedule
+bindings and invalid, in-flight, unreferenced, or non-current components remain
+explicit derived exclusions.
+
+Authorization-first open helpers call repository visibility before root
+controls, service keys, counts, or filesystem paths. No HTTP, MCP, UI,
+cross-repository aggregation, comparison, coverage/proof, or Workbench reader
+is registered; T37.5 owns those consumers and their final response fences. The
+idle resolver-enabled runtime adds one planner/reaper and one bounded claim
+probe per second. A publication transition performs the admitted observation,
+resolver, posting, catalog, and complete-validation passes; ordinary search,
+evidence, service-directory, HTTP, MCP, and UI requests add no relationship
+work. Tests pin shared/unowned/rejected placement honesty, source/target
+projection, sibling survival after one service failure, authorization order,
+complete recovery, sparse sibling isolation, lifecycle rollback/lease floors,
+and byte-exact composite archive round trip. No relationship accuracy or
+completeness, broker/runtime topology, target-scale/SLO,
+migration/decommission, or release claim is created; `GATE2-V2` remains
+`NOT_ESTABLISHED`.

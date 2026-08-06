@@ -27,6 +27,10 @@ type Runtime struct {
 	DataDir string
 	Store   store.GenerationSchedulerStore
 	Admit   func(context.Context) error
+	// OnPublished runs after an exact current observation is present. A
+	// failure keeps the scheduler chunk retryable without rolling back the
+	// already-complete content-addressed observation publication.
+	OnPublished func(context.Context, string) error
 
 	mu         sync.Mutex
 	plans      map[string]*sourcepartition.Plan
@@ -48,7 +52,7 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 	}
 	if currentMatchesSource(root, repository, source.Digest) {
 		runtime.cleanupSettledSchedule(ctx, repository)
-		return nil
+		return runtime.afterPublish(ctx, repository)
 	}
 	runtime.cleanupSettledSchedule(ctx, repository)
 	if runtime.Admit != nil {
@@ -88,7 +92,7 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 		}
 		runtime.dropPlan(repository, generation)
 		_ = os.RemoveAll(planDirectory)
-		return nil
+		return runtime.afterPublish(ctx, repository)
 	}
 	marker, markerPresent, err := readMarker(root, repository)
 	if err != nil {
@@ -124,7 +128,7 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 		}
 		runtime.dropPlan(repository, generation)
 		_ = os.RemoveAll(planDirectory)
-		return nil
+		return runtime.afterPublish(ctx, repository)
 	}
 	scheduleGeneration, priorScheduleDigest, err := runtime.scheduleGeneration(ctx, repository, generation)
 	if err != nil {
@@ -193,7 +197,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 			return workFailure(err)
 		}
 		runtime.dropPlan(chunk.Repository, targetGeneration)
-		return nil
+		return runtime.afterPublish(ctx, chunk.Repository)
 	}
 	plan, err := runtime.openPlan(ctx, chunk.Repository, targetGeneration)
 	if err != nil {
@@ -237,7 +241,14 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		}
 	}
 	runtime.dropPlan(chunk.Repository, targetGeneration)
-	return nil
+	return runtime.afterPublish(ctx, chunk.Repository)
+}
+
+func (runtime *Runtime) afterPublish(ctx context.Context, repository string) error {
+	if runtime.OnPublished == nil {
+		return nil
+	}
+	return runtime.OnPublished(ctx, repository)
 }
 
 func (runtime *Runtime) cleanupSettledSchedule(ctx context.Context, repository string) {
