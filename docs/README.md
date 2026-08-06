@@ -64,6 +64,8 @@ replace the user manual.
 - [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) — capability and validation
   template.
 - [PACK_MANIFEST.md](./PACK_MANIFEST.md) — manifest schema and lifecycle.
+- [PROTO_GRPC_PACK_CARDS.md](./PROTO_GRPC_PACK_CARDS.md) — Protobuf/gRPC
+  declaration, consumer, exact-caller, and field-reference pack cards.
 - [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) — Thrift declaration,
   consumer, and field-reference pack cards.
 - [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) — Kafka producer and consumer

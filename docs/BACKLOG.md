@@ -25,10 +25,9 @@ T38.4's strict MCP parity, and T38.5's neutral product closure are complete,
 closing Epic 38. T39.1's neutral correctness, scale-admission, and recovery
 gate and T39.2's honestly stopped authorized target run are retained in the
 completed backlog. T39.3's security/lifecycle gate is also retained there.
-T39.4's evidence/workflow gate stopped before unsealing and is retained in the
-completed backlog. T39.5 is the next scheduled ticket; the remaining Epic 39
-tickets stay dependency-ordered drafts, not implicit implementation
-authorization.
+T39.4's evidence/workflow gate stopped before unsealing and T39.5 retained the
+no-release decision, closing Epic 39. T39.R1 remains conditional only before a
+separately authorized rerun; it is not scheduled implementation authority.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -44,21 +43,13 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 39 · Multi-service validation and release decision *(T39.1–T39.4 complete · T39.5 scheduled)*
+## Epic 39 · Multi-service validation and release decision *(complete)*
 
 Validate the implemented system and decide a narrow shadow/advisory release;
 feature completeness alone cannot promote it.
 
-**T39.5 · Release, suspension, and continuation decision** *(scheduled; needs
-T39.1–T39.4)* — complete the relevant evidence-pack cards and record separate
-validation and human continuation decisions. AC: release is limited to the
-measured service/language/framework/workflow/envelope; default-dark, shadow,
-advisory, suspension, expiry, rollback, and revalidation semantics are exact;
-no "all runtime callers," migration-complete, or decommission-safe claim; STOP
-and teardown are first-class valid outcomes.
-
 **T39.R1 · Mirror-lock contention diagnosis and authorized-rerun precondition**
-*(conditional; does not block T39.3–T39.5)* — before any T39.2 rerun, reproduce
+*(conditional; unscheduled)* — before any T39.2 rerun, reproduce
 and classify immutable-mirror lock occupancy between aggregate extraction and
 caller-leaf execution, then record whether bounded serialization, admission,
 or retry accounting changes are required. AC: one workload cannot exhaust all

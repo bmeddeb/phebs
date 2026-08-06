@@ -159,10 +159,9 @@ gate is complete. T39.2's authorized target run stopped honestly on one
 terminal incremental pipeline failure and destroyed its derived custody;
 T39.3's independent security/lifecycle matrix is complete. T39.4 stopped
 before unsealing because its public evidence/workflow protocols remain
-unsealed design drafts; T39.5 is scheduled next, the remaining Epic 39
-tickets stay dependency-ordered drafts, and Epics
-25–28 remain
-unscheduled.
+unsealed design drafts. T39.5 recorded no release, kept all packs
+experimental-dark, and closed Epic 39; T39.R1 is conditional only before a
+separately authorized rerun. Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.

@@ -8393,9 +8393,61 @@ measurement.
 The receipt cannot self-certify independent review and changes no production
 behavior. It establishes no accuracy, coverage, workflow value, release,
 migration completion, or decommission safety. `GATE2-V2` remains
-`NOT_ESTABLISHED`. T39.5 is scheduled next and must make the separate
-release/suspension and human-continuation decision against this accumulated
-stopped authority. A future evidence-quality attempt requires separately
+`NOT_ESTABLISHED`. T39.5 was scheduled next and subsequently closed the epic
+below against this accumulated stopped authority. A future evidence-quality
+attempt requires separately
 approved, digest-frozen, independently sealed authority and cannot edit this
 stop into a pass. T39.R1 remains mandatory before any separately authorized
 T39.2 rerun.
+
+**T39.5 ✅ · Release, suspension, and continuation decision**
+*(2026-08-06; needs T39.1–T39.4; outcome `STOP`)* — closes Epic 39 with a
+source-free `NOT_ESTABLISHED / DO_NOT_RELEASE` validation decision. T39.1's
+neutral mechanics pass and T39.3's named security/lifecycle pass remain
+nonpromoting. T39.2 remains stopped on one terminal incremental `pipeline`
+failure with later phases `not_run`; T39.4 remains stopped before unsealing
+with every quality and workflow projection unmeasured. Neither is superseded.
+
+The new Protobuf/gRPC card set completes four pilot-relevant dark contracts:
+Protobuf declarations, syntactic Go gRPC consumers, exact lineage-resolved Go
+gRPC callers, and Protobuf field references. Each names the exact extractor
+and schema version, supported dark claim, explicit unresolved/gap behavior,
+and prohibited runtime/completeness/migration inference. The four existing
+Thrift and two Kafka cards remain experimental-dark and outside this pilot's
+scope. All ten packs therefore retain `status: experimental_dark` and
+`decision: do_not_release`; no shadow, advisory, released status, or
+PackRelease exists.
+
+The human continuation record remains separate rather than being derived from
+the validation score. The decision template allows that judgment only after
+an `ESTABLISHED` validation record. Because no such record exists,
+continuation is `not_eligible`, no acting principal or partner disposition is
+invented, and no next action or rerun is authorized. This is the charter's
+first-class STOP outcome, not missing approval rewritten as assent.
+
+Lifecycle semantics are closed even though no pack has ever been released.
+Current status is experimental-dark, so suspension does not apply now. A
+future release would suspend on validation expiry, artifact or measured-scope
+drift, authorization/evidence-reproduction failure, a frozen quality,
+coverage, or workflow threshold miss, or an operating-envelope exceedance.
+Rollback disables the exact opt-in and withdraws the PackRelease without
+rewriting historical evidence. Revalidation requires a new approved and
+digest-frozen Gate-0 package, sealed independent gold and workflow baseline,
+a fresh unseen adequately powered round, a complete target operating run,
+current security review, named independent validation and workflow owners,
+explicit expiry, and a signed PackRelease. T39.R1 is mandatory before any
+separately authorized T39.2 rerun.
+
+The deterministic receipt binds the exact T39.1–T39.4 receipts and all ten
+pack cards at `spike/t395/results.json`
+(`sha256:7143aaa34a38a8f14bdaa9d7f695ee65f5b89dcf3f4592ec9f6b4ea64d45677d`).
+It contains no target/repository/service identity, source/path/query bytes,
+credential, host, raw error, private topology, label, workflow row, or
+measurement. The receipt cannot self-certify independent review and changes
+no production behavior.
+
+No “all runtime callers,” accuracy/completeness, SLO, migration-complete,
+decommission-safe, pilot-continuation, or release claim is created.
+`GATE2-V2` remains `NOT_ESTABLISHED`. Epic 39 is complete. T39.R1 remains an
+unscheduled conditional prerequisite, not the next ticket; Epics 25–28 remain
+unscheduled drafts.

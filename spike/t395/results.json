@@ -1,0 +1,187 @@
+{
+  "schema": "t395-release-suspension-continuation-decision-v1",
+  "outcome": "stop",
+  "completed_on": "2026-08-06",
+  "inputs": [
+    {
+      "path": "spike/t391/results.json",
+      "kind": "t391-neutral-correctness-scale-recovery-gate-v1",
+      "sha256": "sha256:301d01bccd1ed35b0b539cacdf624cda586e4fbf0267d5c2fe886e097b5501c6"
+    },
+    {
+      "path": "spike/t392/results.json",
+      "kind": "t392-authorized-target-operating-envelope-v1",
+      "sha256": "sha256:20e95fc8e7bf11fb9ae317aa57aeda2966fbf1c866d812f37fadb11aabd26a41"
+    },
+    {
+      "path": "spike/t393/results.json",
+      "kind": "t393-security-lifecycle-gate-v1",
+      "sha256": "sha256:8ccfabee2ed675f5539d1921fdce3280a947f22f51eaf94816eb702b8e694051"
+    },
+    {
+      "path": "spike/t394/results.json",
+      "kind": "t394-evidence-quality-workflow-gate-v1",
+      "sha256": "sha256:46c039eb6193afc63e94ae28ab1837a09b7870fc48a09292184254c02e863e97"
+    },
+    {
+      "path": "docs/PROTO_GRPC_PACK_CARDS.md",
+      "kind": "protobuf_grpc_pack_cards",
+      "sha256": "sha256:96a7c06e72dfbf1fdbd6bf1c9667b13590724c79eb80af0d80aad8e2b9eb06de"
+    },
+    {
+      "path": "docs/THRIFT_PACK_CARDS.md",
+      "kind": "thrift_pack_cards",
+      "sha256": "sha256:68b233f68695399d1550e0cadda109b87e1877b36debf6e157fd6b75820c07db"
+    },
+    {
+      "path": "docs/KAFKA_PACK_CARDS.md",
+      "kind": "kafka_pack_cards",
+      "sha256": "sha256:3db269c9601d7384f664bcfcfe211d3c58ad5da79abc404c920fcfa828b85f14"
+    }
+  ],
+  "gate_summary": {
+    "neutral_mechanics": "passed",
+    "target_operating": "stopped",
+    "security_lifecycle": "passed_nonpromoting",
+    "evidence_workflow": "stopped_before_unsealing",
+    "t392_superseded": false,
+    "t394_superseded": false
+  },
+  "pack_decisions": [
+    {
+      "pack_id": "phebs.protobuf.contract",
+      "pilot_relevant": true,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "validation_and_operating_gates_stopped"
+    },
+    {
+      "pack_id": "phebs.grpc.consumer.go",
+      "pilot_relevant": true,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "validation_and_operating_gates_stopped"
+    },
+    {
+      "pack_id": "phebs.grpc.caller.go",
+      "pilot_relevant": true,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "validation_and_operating_gates_stopped"
+    },
+    {
+      "pack_id": "phebs.protobuf.field.go",
+      "pilot_relevant": true,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "validation_and_operating_gates_stopped"
+    },
+    {
+      "pack_id": "phebs.thrift.contract",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    },
+    {
+      "pack_id": "phebs.thrift.consumer.go",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    },
+    {
+      "pack_id": "phebs.thrift.field.apache",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    },
+    {
+      "pack_id": "phebs.thrift.field.thriftrw",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    },
+    {
+      "pack_id": "phebs.kafka.producer",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    },
+    {
+      "pack_id": "phebs.kafka.consumer",
+      "pilot_relevant": false,
+      "status": "experimental_dark",
+      "decision": "do_not_release",
+      "reason": "outside_t39_pilot_scope"
+    }
+  ],
+  "validation_decision": {
+    "gate_status": "NOT_ESTABLISHED",
+    "release_decision": "DO_NOT_RELEASE",
+    "shadow_eligible": false,
+    "advisory_eligible": false,
+    "released_eligible": false,
+    "measured_envelope": false,
+    "measured_quality": false,
+    "measured_workflow": false,
+    "reason": "required_target_operating_and_evidence_workflow_gates_stopped"
+  },
+  "human_continuation_decision": {
+    "status": "not_eligible",
+    "decision": "none",
+    "reason": "validation_gate_not_established",
+    "acting_principal": "none",
+    "positive_continuation_authorized": false,
+    "rerun_authorized": false,
+    "authorized_next_action": "none"
+  },
+  "lifecycle": {
+    "current_status": "experimental_dark",
+    "default_dark": true,
+    "suspension_applies_now": false,
+    "suspension_reason": "not_applicable_pack_never_released",
+    "future_suspension_triggers": [
+      "validation_expiry",
+      "artifact_or_supported_scope_drift",
+      "authorization_or_reproduction_failure",
+      "quality_coverage_or_workflow_threshold_failure",
+      "operating_envelope_exceeded"
+    ],
+    "expiry": "no_applicable_validation_exists",
+    "rollback": "disable_opt_in_and_withdraw_pack_release_without_rewriting_historical_evidence",
+    "rollback_rewrites_history": false,
+    "revalidation_requirements": [
+      "new_approved_digest_frozen_gate0_package",
+      "sealed_independent_gold_and_workflow_baseline",
+      "fresh_unseen_adequately_powered_round",
+      "complete_target_operating_envelope",
+      "current_security_review",
+      "named_validation_and_workflow_owners",
+      "explicit_expiry_and_signed_pack_release",
+      "t39r1_before_t392_rerun"
+    ]
+  },
+  "independent_review": {
+    "required": true,
+    "implementer_may_approve": false,
+    "merge_requires_independent_review": true,
+    "receipt_self_certifies_review": false,
+    "authority": "outside_receipt"
+  },
+  "claims": {
+    "source_free": true,
+    "authorizes_shadow": false,
+    "authorizes_advisory": false,
+    "authorizes_release": false,
+    "authorizes_pilot_continuation": false,
+    "establishes_runtime_callers": false,
+    "establishes_accuracy": false,
+    "establishes_migration_complete": false,
+    "establishes_decommission_safety": false,
+    "changes_production_behavior": false
+  }
+}
