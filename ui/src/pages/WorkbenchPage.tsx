@@ -28,7 +28,8 @@ import {
   WorkbenchWhereStep,
 } from './WorkbenchEvidenceSteps'
 import {
-  defaultWorkbenchEvidenceInput,
+  workbenchEvidenceInputFromRoute,
+  workbenchServiceRouteParams,
   type WorkbenchEvidenceInput,
 } from './workbenchEvidenceState'
 
@@ -75,6 +76,12 @@ export default function WorkbenchPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [seedKey],
   )
+	const routeEvidence = useMemo(
+		() => workbenchEvidenceInputFromRoute(params),
+		// See atlasSeed: canonical route bytes are the seed identity.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[seedKey],
+	)
   const [plan, setPlan] = useState<WorkbenchPlan | null>(atlasSeed)
   const [view, setView] = useState<WorkbenchView | null>(null)
   const [storedProposal, setStoredProposal] =
@@ -89,13 +96,13 @@ export default function WorkbenchPage({
   const [committing, setCommitting] = useState(false)
   const [actionFailure, setActionFailure] = useState<PageFailure | null>(null)
   const [evidence, setEvidence] = useState<WorkbenchEvidenceInput>(
-    defaultWorkbenchEvidenceInput,
+    routeEvidence,
   )
   const previousRouteKey = useRef(routeKey)
 
   useEffect(() => {
-    setEvidence(defaultWorkbenchEvidenceInput())
-  }, [routeKey])
+    setEvidence(routeEvidence)
+  }, [routeEvidence, routeKey])
 
   useEffect(() => {
     if (!investigationID && atlasSeed) {
@@ -282,6 +289,7 @@ export default function WorkbenchPage({
         investigation_id: committed.investigation.investigation_id,
         revision_id: committed.revision.revision_id,
         step: 'what',
+			...workbenchServiceRouteParams(evidence.filters),
       })
     } catch (cause) {
       if (!isAbortError(cause)) {
@@ -334,7 +342,11 @@ export default function WorkbenchPage({
           setBaselineFingerprint('')
           setPreview(null)
           setPreviewFingerprint('')
-          navigate('/workbench', { source: 'ticket', step: 'why' })
+          navigate('/workbench', {
+				source: 'ticket',
+				step: 'why',
+				...workbenchServiceRouteParams(evidence.filters),
+			})
         }}
       />
     )
@@ -373,6 +385,7 @@ export default function WorkbenchPage({
           step={step}
           investigationID={investigationID}
           revisionID={revisionID}
+		  serviceRoute={workbenchServiceRouteParams(evidence.filters)}
         />
         <main className={css({ minWidth: 0 })}>
           {step === 'why' && (
@@ -712,10 +725,12 @@ function StepRail({
   step,
   investigationID,
   revisionID,
+  serviceRoute,
 }: {
   step: WorkbenchStep
   investigationID: string
   revisionID: string
+  serviceRoute: Record<string, string>
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -741,7 +756,10 @@ function StepRail({
     >
       {steps.map((item) => {
         const current = item.id === step
-        const values: Record<string, string> = { step: item.id }
+        const values: Record<string, string> = {
+          step: item.id,
+          ...serviceRoute,
+        }
         if (investigationID && revisionID) {
           values.investigation_id = investigationID
           values.revision_id = revisionID

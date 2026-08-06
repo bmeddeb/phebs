@@ -19,8 +19,9 @@ demo are complete, closing Epic 36. T37.1's namespace-sharded declaration and
 resolver catalog, T37.2's RPC caller postings, T37.3's Kafka topic postings,
 and T37.4's service projections and atomic relationship roots are complete;
 T37.5's exact readers, comparison, proof/Workbench integration, and neutral
-demo are also complete, closing Epic 37. T38.1's exact service overview and
-T38.2's cross-service explorer are complete; T38.3 is the next scheduled ticket,
+demo are also complete, closing Epic 37. T38.1's exact service overview,
+T38.2's cross-service explorer, and T38.3's service-aware Impact/Workbench are
+complete; T38.4 is the next scheduled ticket,
 and the remaining Epics 38–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
@@ -38,19 +39,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 38 · Microservice product workflows *(T38.1–T38.2 complete · T38.3 scheduled)*
+## Epic 38 · Microservice product workflows *(T38.1–T38.3 complete · T38.4 scheduled)*
 
 Turn the catalog and relationship engine into the service-centered experience
 that differentiates phebs from repository/file search.
 
-**T38.3 · Service-aware Impact and Workbench** *(scheduled · needs T38.1)* — compose
-exact contract changes, affected services, unresolved/unowned candidates,
-comparison, and human dispositions into existing Investigation revisions. AC:
-current authorization and root identity rechecked at every seam; no implicit
-write, task completion, migration-complete, or decommission-safe conclusion;
-source/target service changes invalidate stale previews.
-
-**T38.4 · MCP microservice parity** *(needs T38.1–T38.3)* — expose service
+**T38.4 · MCP microservice parity** *(scheduled · needs T38.1–T38.3)* — expose service
 inventory/detail, dependencies, change impact, gaps, and citations through
 strict bounded tools or extensions to existing tools. AC: same service types,
 authority, pagination, errors, authorization, and capability gating as HTTP;

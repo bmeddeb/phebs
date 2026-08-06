@@ -200,7 +200,7 @@ func TestWorkbenchEvidenceHumaIsThinExactAndDefaultDark(t *testing.T) {
 			impact,
 		)
 	}
-	if body := impactResponse.Body.String(); !strings.Contains(body, `"schema_version":"workbench-impact-inventory-v2"`) ||
+	if body := impactResponse.Body.String(); !strings.Contains(body, `"schema_version":"workbench-impact-inventory-v3"`) ||
 		!strings.Contains(body, `"matching_rows_state":"exact"`) ||
 		!strings.Contains(body, `"plane":"repository-overlay"`) ||
 		strings.Contains(body, `"attribution_digest"`) {

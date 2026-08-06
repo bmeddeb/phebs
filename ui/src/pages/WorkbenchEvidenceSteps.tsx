@@ -15,6 +15,9 @@ import {
   type WorkbenchDispositionCategory,
   type WorkbenchImpactFilters,
   type WorkbenchImpactPage,
+  type WorkbenchServiceImpact,
+  type WorkbenchServiceImpactSide,
+  type WorkbenchServiceRelationshipSnapshotRow,
   type WorkbenchImplementationAnchor,
   type WorkbenchImplementationPage,
 } from '../api'
@@ -156,6 +159,63 @@ export function WorkbenchWhereStep({
         detail="Every row remains in its source evidence class. Empty or exhausted pages do not establish absence, completeness, migration completion, or retirement safety."
       />
 
+      <details open className={css(panelStyle(tok))}>
+        <summary className={css(summaryStyle(tok))}>
+          Service change scope · exact authority
+        </summary>
+        <div className={css({
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(150px, 1fr)) auto',
+          gap: '12px',
+          padding: '16px',
+          alignItems: 'end',
+          '@media screen and (max-width: 900px)': {
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          },
+          '@media screen and (max-width: 560px)': {
+            gridTemplateColumns: '1fr',
+          },
+        })}>
+          <FilterField
+            label="Source service"
+            value={draftFilters.source_service ?? ''}
+            onChange={(source_service) =>
+              setDraftFilters({ ...draftFilters, source_service })}
+          />
+          <FilterField
+            label="Target service"
+            value={draftFilters.target_service ?? ''}
+            onChange={(target_service) =>
+              setDraftFilters({ ...draftFilters, target_service })}
+          />
+          <FilterField
+            label="Repository scope"
+            value={draftFilters.service_repository ?? ''}
+            mono
+            onChange={(service_repository) =>
+              setDraftFilters({ ...draftFilters, service_repository })}
+          />
+          <Button
+            type="button"
+            size={BUTTON_SIZE.compact}
+            onClick={applyFilters}
+          >
+            Apply service scope
+          </Button>
+        </div>
+        <div className={css({
+          padding: '10px 16px',
+          borderTop: `1px solid ${tok.innerSep}`,
+          color: tok.textTertiary,
+          fontSize: '10.5px',
+          lineHeight: '17px',
+        })}>
+          Source and target are optional exact service keys. A blank repository
+          uses the existing authorization-first visible-repository fallback.
+          The preview invalidates when either service authority changes.
+        </div>
+      </details>
+
       <details className={css(panelStyle(tok))}>
         <summary className={css(summaryStyle(tok))}>
           Evidence filters · exact revision
@@ -245,6 +305,12 @@ export function WorkbenchWhereStep({
       {loading && <EvidenceLoading label="Loading exact impact evidence…" />}
       {!loading && page && (
         <div className={css({ display: 'grid', gap: '18px', marginTop: '18px' })}>
+          {page.service_impact && (
+            <ServiceImpactInventory
+              impact={page.service_impact}
+              filters={evidence.filters}
+            />
+          )}
           <AnalysisScope scope={page.analysis_scope} />
           <ImpactInventory page={page} />
           <PageControls
@@ -528,6 +594,344 @@ function AnalysisScope({
   )
 }
 
+function ServiceImpactInventory({
+  impact,
+  filters,
+}: {
+  impact: WorkbenchServiceImpact
+  filters: WorkbenchImpactFilters
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const failure = validateServiceImpact(impact, filters)
+  if (failure) {
+    return (
+      <section aria-labelledby="service-impact-heading" className={css(panelStyle(tok))}>
+        <div className={css(panelHeaderStyle(tok))}>
+          <h3 id="service-impact-heading" className={css(panelTitleStyle())}>
+            Exact affected services
+          </h3>
+        </div>
+        <EvidenceNotice>
+          Service impact response refused: {failure}. No partial service
+          projection is rendered.
+        </EvidenceNotice>
+      </section>
+    )
+  }
+  const sides = [impact.source, impact.target].filter(
+    (side): side is WorkbenchServiceImpactSide => Boolean(side),
+  )
+  const rows = sides.flatMap((side) => side.snapshot.rows.map((row, index) => ({
+    id: `${side.role === 'source' ? 'S' : 'T'}-${String(index + 1).padStart(2, '0')}`,
+    side,
+    row,
+  })))
+  const candidates = rows.filter(({ row }) => serviceRelationshipCandidate(row))
+  const gaps = sides.reduce(
+    (total, side) => total + side.snapshot.coverage.failed_roots +
+      side.snapshot.coverage.unavailable_roots,
+    0,
+  )
+  return (
+    <section aria-labelledby="service-impact-heading" className={css(panelStyle(tok))}>
+      <div className={css(panelHeaderStyle(tok))}>
+        <span>
+          <span className={css(eyebrowStyle(tok))}>
+            Exact source and target service authority
+          </span>
+          <h3 id="service-impact-heading" className={css(panelTitleStyle())}>
+            Exact affected services
+          </h3>
+        </span>
+        <EvidenceBadge tone={gaps > 0 ? 'amber' : 'neutral'}>
+          {rows.length} rows · {gaps} gaps
+        </EvidenceBadge>
+      </div>
+      <div
+        aria-label="Service impact authority summary"
+        className={css({
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          borderBottom: `1px solid ${tok.innerSep}`,
+          '@media screen and (max-width: 680px)': {
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          },
+        })}
+      >
+        <AuthorityMetric label="Source" value={impact.source
+          ? `${impact.source.snapshot.query.service_key} · ${impact.source.snapshot.rows_state}`
+          : 'not selected'} />
+        <AuthorityMetric label="Target" value={impact.target
+          ? `${impact.target.snapshot.query.service_key} · ${impact.target.snapshot.rows_state}`
+          : 'not selected'} />
+        <AuthorityMetric
+          label="Exact roots"
+          value={String(impact.authority.exact_root_count)}
+        />
+        <AuthorityMetric label="Gaps" value={String(impact.authority.gap_count)} />
+      </div>
+      <div className={css({
+        padding: '10px 16px',
+        borderBottom: `1px solid ${tok.innerSep}`,
+        color: tok.textSecondary,
+        fontSize: '10.5px',
+        lineHeight: '17px',
+      })}>
+        Preview authority <Mono>{shortDigest(impact.authority.digest)}</Mono>.
+        {' '}It invalidates when either exact service/root authority changes.
+      </div>
+      {rows.length === 0 ? (
+        <EvidenceEmpty>
+          No exact relationship rows are visible for this service and selected
+          contract. Gap and empty root states above remain distinct.
+        </EvidenceEmpty>
+      ) : (
+        <div role="table" aria-label="Exact affected service rows">
+          <div role="row" className={css(serviceImpactHeaderStyle(tok))}>
+            <span role="columnheader">ID</span>
+            <span role="columnheader">Source evidence</span>
+            <span role="columnheader">Contract</span>
+            <span role="columnheader">Exact service route</span>
+            <span role="columnheader">Authority</span>
+            <span role="columnheader">Exact rows</span>
+          </div>
+          {rows.map(({ id, side, row }) => (
+            <ServiceImpactRow key={`${side.role}:${row.projection_digest}`} id={id} side={side} row={row} />
+          ))}
+        </div>
+      )}
+      {candidates.length > 0 && (
+        <details open>
+          <summary className={css({
+            padding: '11px 16px',
+            cursor: 'pointer',
+            borderTop: `1px solid ${tok.innerSep}`,
+            color: tok.textPrimary,
+            fontSize: '11px',
+            fontWeight: 600,
+          })}>
+            Unresolved and unowned candidates · {candidates.length}
+          </summary>
+          {candidates.map(({ id, row }) => (
+            <div key={`candidate:${id}`} className={css({
+              display: 'grid',
+              gridTemplateColumns: '52px minmax(0, 1fr) minmax(180px, 0.7fr)',
+              gap: '10px',
+              padding: '10px 16px',
+              borderTop: `1px solid ${tok.innerSep}`,
+              '@media screen and (max-width: 560px)': {
+                gridTemplateColumns: '44px minmax(0, 1fr)',
+              },
+            })}>
+              <Mono>{id}</Mono>
+              <span className={css(rowDetailStyle(tok))}>
+                {row.evidence.path}:{row.evidence.span.start_line}–{row.evidence.span.end_line}
+              </span>
+              <span className={css({
+                ...rowDetailStyle(tok),
+                '@media screen and (max-width: 560px)': { gridColumn: '2' },
+              })}>
+                {serviceRelationshipState(row)} · {row.evidence.reason || 'explicit placement authority'}
+              </span>
+            </div>
+          ))}
+        </details>
+      )}
+      <Caveat>{impact.caveat}</Caveat>
+    </section>
+  )
+}
+
+function AuthorityMetric({ label, value }: { label: string; value: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <div className={css({
+      minWidth: 0,
+      padding: '10px 14px',
+      borderRight: `1px solid ${tok.innerSep}`,
+    })}>
+      <div className={css({ color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px' })}>{label}</div>
+      <div className={css({ marginTop: '2px', color: tok.textPrimary, fontSize: '10.5px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{value}</div>
+    </div>
+  )
+}
+
+function Mono({ children }: { children: string }) {
+  const [css] = useStyletron()
+  return <code className={css({ fontFamily: FONTS.MONO, fontSize: '0.95em' })}>{children}</code>
+}
+
+function ServiceImpactRow({
+  id,
+  side,
+  row,
+}: {
+  id: string
+  side: WorkbenchServiceImpactSide
+  row: WorkbenchServiceRelationshipSnapshotRow
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const root = side.snapshot.roots.find((value) => value.repository === row.repository)
+  return (
+    <div role="row" id={`service-impact-${id}`} className={css(serviceImpactRowStyle(tok))}>
+      <div role="cell"><Mono>{id}</Mono></div>
+      <div role="cell" className={css(serviceImpactCellStyle())}>
+        <span className={css(rowTitleStyle(tok))}>{row.evidence.path}</span>
+        <span className={css(rowDetailStyle(tok))}>
+          lines {row.evidence.span.start_line}–{row.evidence.span.end_line} · {row.kind}/{row.plane}
+        </span>
+      </div>
+      <div role="cell" className={css(serviceImpactCellStyle())}>
+        <span className={css(rowTitleStyle(tok))}>{row.lookup_key || row.evidence.operation || 'unresolved'}</span>
+        <span className={css(rowDetailStyle(tok))}>{humanize(row.class)}</span>
+      </div>
+      <div role="cell" className={css(serviceImpactCellStyle())}>
+        <span className={css(rowTitleStyle(tok))}>{serviceRelationshipRoute(side, row)}</span>
+        <span className={css(rowDetailStyle(tok))}>{row.counterpart_services.length} accepted counterparts</span>
+      </div>
+      <div role="cell" className={css(serviceImpactCellStyle())}>
+        <EvidenceBadge tone={serviceRelationshipCandidate(row) ? 'amber' : 'blue'}>
+          {serviceRelationshipState(row)}
+        </EvidenceBadge>
+        <div className={css(rowDetailStyle(tok))}>
+          root {shortDigest(root?.root_digest ?? '')}
+        </div>
+      </div>
+      <div role="cell" className={css(serviceImpactCellStyle())}>
+        <a
+          href={href('/relationships', {
+            repository: row.repository,
+            service_key: side.snapshot.query.service_key,
+            evidence: 'rpc',
+            ...(row.lookup_key ? { lookup_key: row.lookup_key } : {}),
+          })}
+          className={css({
+            color: tok.selectedText,
+            fontSize: '10px',
+            textDecoration: 'none',
+            ':hover': { textDecoration: 'underline' },
+          })}
+        >
+          Open exact sources
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function serviceImpactHeaderStyle(tok: PhebsTokens) {
+  return {
+    display: 'grid',
+    gridTemplateColumns: '52px minmax(180px, 1.2fr) minmax(150px, 1fr) minmax(170px, 1fr) 120px 110px',
+    gap: '10px',
+    padding: '8px 16px',
+    borderBottom: `1px solid ${tok.innerSep}`,
+    color: tok.textTertiary,
+    fontSize: '9px',
+    lineHeight: '14px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.04em',
+    '@media screen and (max-width: 760px)': { display: 'none' },
+  }
+}
+
+function serviceImpactRowStyle(tok: PhebsTokens) {
+  return {
+    display: 'grid',
+    gridTemplateColumns: '52px minmax(180px, 1.2fr) minmax(150px, 1fr) minmax(170px, 1fr) 120px 110px',
+    gap: '10px',
+    alignItems: 'start',
+    padding: '11px 16px',
+    borderBottom: `1px solid ${tok.innerSep}`,
+    '@media screen and (max-width: 760px)': {
+      gridTemplateColumns: '44px minmax(0, 1fr)',
+      rowGap: '8px',
+    },
+  }
+}
+
+function serviceImpactCellStyle() {
+  return {
+    minWidth: '0px',
+    '@media screen and (max-width: 760px)': {
+      gridColumn: '2',
+    },
+  }
+}
+
+function serviceRelationshipRoute(
+  side: WorkbenchServiceImpactSide,
+  row: WorkbenchServiceRelationshipSnapshotRow,
+) {
+  const selected = side.snapshot.query.service_key
+  const counterparts = row.counterpart_services.length > 0
+    ? row.counterpart_services.join(', ')
+    : 'no accepted counterpart'
+  if (row.participation.includes('target')) return `${counterparts} → ${selected}`
+  if (row.participation.includes('source')) return `${selected} → ${counterparts}`
+  return `${selected} · ${counterparts}`
+}
+
+function serviceRelationshipCandidate(row: WorkbenchServiceRelationshipSnapshotRow) {
+  return row.class !== 'resolved' || row.counterpart_services.length === 0 ||
+    row.source.unowned || Boolean(row.target?.unowned)
+}
+
+function serviceRelationshipState(row: WorkbenchServiceRelationshipSnapshotRow) {
+  if (row.source.unowned || row.target?.unowned) return 'Unowned'
+  if (row.class !== 'resolved') return humanize(row.class)
+  const accepted = [...row.source.claims, ...(row.target?.claims ?? [])]
+    .filter((claim) => claim.disposition === 'accepted')
+  return accepted.length > 1 ? 'Shared' : 'Exact'
+}
+
+function validateServiceImpact(
+  impact: WorkbenchServiceImpact,
+  filters: WorkbenchImpactFilters,
+) {
+  if (!impact.authority.digest || !Array.isArray(impact.authority.roots)) {
+    return 'authority receipt is incomplete'
+  }
+  const expected = [
+    ['source', filters.source_service, impact.source],
+    ['target', filters.target_service, impact.target],
+  ] as const
+  const authority = new Map(impact.authority.roots.map((root) => [root.repository, root]))
+  for (const [role, service, side] of expected) {
+    if (Boolean(service) !== Boolean(side)) return `${role} scope differs from the request`
+    if (!side) continue
+    const snapshot = side.snapshot
+    if (side.role !== role ||
+      snapshot.schema !== 'phebs-service-relationship-snapshot-v1' ||
+      snapshot.query.service_key !== service || snapshot.query.view !== 'all' ||
+      snapshot.query.kind !== 'rpc' || snapshot.rows.length > 50 ||
+      snapshot.coverage.returned_rows !== snapshot.rows.length) {
+      return `${role} snapshot shape or query is invalid`
+    }
+    for (const root of snapshot.roots) {
+      const current = authority.get(root.repository)
+      if (!current || current.generation !== root.generation ||
+        current.root_digest !== root.root_digest || current.state !== root.state) {
+        return `${role} root differs from the final authority fence`
+      }
+    }
+    for (const row of snapshot.rows) {
+      const root = snapshot.roots.find((value) => value.repository === row.repository)
+      if (!root || row.service_key !== service ||
+        row.service_incarnation !== root.service_incarnation ||
+        row.service_generation !== root.service_generation ||
+        !row.projection_digest || !row.posting_digest ||
+        !row.evidence.path || !row.evidence.content_digest) {
+        return `${role} row differs from its exact service root`
+      }
+    }
+  }
+  return ''
+}
+
 function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -543,6 +947,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
   ), [page.analysis_scope.capabilities])
   const groupCount = page.atlas.length +
     page.callers.length +
+    (page.service_impact ? 1 : 0) +
     (page.comparison ? 1 : 0) +
     (page.compatibility ? 1 : 0) +
     (page.field_references ? 1 : 0) +
@@ -2300,6 +2705,7 @@ function evidenceRowStyle(tok: PhebsTokens) {
 
 function rowTitleStyle(tok: PhebsTokens) {
   return {
+    display: 'block',
     color: tok.textSecondary,
     fontSize: '11px',
     fontWeight: 650,
@@ -2310,6 +2716,7 @@ function rowTitleStyle(tok: PhebsTokens) {
 
 function rowDetailStyle(tok: PhebsTokens) {
   return {
+    display: 'block',
     margin: '3px 0 0',
     color: tok.textTertiary,
     fontSize: '10px',

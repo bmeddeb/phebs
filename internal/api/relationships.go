@@ -30,6 +30,7 @@ import (
 const (
 	serviceRelationshipsCapability  = "service-relationships-v1"
 	relationshipPageSchema          = "phebs-service-relationship-page-v1"
+	relationshipSnapshotSchema      = "phebs-service-relationship-snapshot-v1"
 	relationshipComparisonSchema    = "phebs-service-relationship-comparison-v1"
 	relationshipCitationSchema      = "phebs-service-relationship-citation-v1"
 	relationshipCursorSchema        = "phebs-service-relationship-cursor-v1"
@@ -224,6 +225,42 @@ type RelationshipPage struct {
 	Caveat        string                    `json:"caveat"`
 }
 
+// RelationshipSnapshotRow is the citation-free projection used only by
+// server-side compositions such as Workbench. It carries the same exact
+// source and root identity as a product row without retaining a process-local
+// cursor binding after the composition returns.
+type RelationshipSnapshotRow struct {
+	Repository          string                 `json:"repository"`
+	ServiceKey          string                 `json:"service_key"`
+	ServiceIncarnation  uint64                 `json:"service_incarnation"`
+	ServiceGeneration   string                 `json:"service_generation"`
+	Kind                string                 `json:"kind"`
+	Plane               string                 `json:"plane"`
+	Class               string                 `json:"class"`
+	LookupKey           string                 `json:"lookup_key,omitempty"`
+	Participation       []string               `json:"participation"`
+	CounterpartServices []string               `json:"counterpart_services"`
+	ProjectionDigest    string                 `json:"projection_digest"`
+	PostingDigest       string                 `json:"posting_digest"`
+	Source              RelationshipPlacement  `json:"source"`
+	Target              *RelationshipPlacement `json:"target,omitempty"`
+	Evidence            RelationshipEvidence   `json:"evidence"`
+}
+
+// RelationshipSnapshotPage is a one-shot, citation-free relationship page.
+// It never enters the retained cursor/citation binding cache; callers that
+// need an immutable source span must open the dedicated relationship reader.
+type RelationshipSnapshotPage struct {
+	SchemaVersion string                    `json:"schema"`
+	Query         RelationshipQuery         `json:"query"`
+	RowsState     string                    `json:"rows_state"`
+	Roots         []RelationshipRootReceipt `json:"roots"`
+	Rows          []RelationshipSnapshotRow `json:"rows"`
+	Coverage      RelationshipCoverage      `json:"coverage"`
+	Truncated     bool                      `json:"truncated"`
+	Caveat        string                    `json:"caveat"`
+}
+
 type RelationshipComparisonRow struct {
 	Change string           `json:"change"` // added | removed | unchanged
 	Before *RelationshipRow `json:"before,omitempty"`
@@ -320,6 +357,10 @@ type RelationshipQueries interface {
 	Compare(context.Context, RelationshipComparisonQuery, int, string) (*RelationshipComparisonPage, error)
 	ReadCitation(context.Context, string) (*RelationshipCitation, error)
 	RootCoverage(context.Context, []string) (*RelationshipProofCoverage, error)
+}
+
+type RelationshipSnapshotQueries interface {
+	Snapshot(context.Context, RelationshipQuery, int) (*RelationshipSnapshotPage, error)
 }
 
 func NewRelationshipService(
@@ -422,6 +463,76 @@ func (service *RelationshipService) List(
 			QueryDigest: queryDigest, Offset: next,
 		})
 	}
+	if err := service.confirmBinding(ctx, binding, authorization); err != nil {
+		return nil, err
+	}
+	if err := validateRelationshipResponse(page); err != nil {
+		return nil, err
+	}
+	return page, nil
+}
+
+// Snapshot performs the same authorization, publication, service-state, and
+// result-time fences as List, but releases every generation lease before it
+// returns. It is deliberately citation-free and has no continuation cursor,
+// so a server-side composition cannot consume the process binding budget.
+func (service *RelationshipService) Snapshot(
+	ctx context.Context,
+	query RelationshipQuery,
+	pageSize int,
+) (*RelationshipSnapshotPage, error) {
+	if service == nil {
+		return nil, huma.Error503ServiceUnavailable("service relationships unavailable")
+	}
+	pageSize, err := validateRelationshipQuery(&query, pageSize)
+	if err != nil {
+		return nil, err
+	}
+	repositories, authorization, err := service.authorizeRepositories(ctx, query.Repositories)
+	if err != nil {
+		return nil, err
+	}
+	query.Repositories = repositoryNames(repositories)
+	queryDigest := digestJSON(struct {
+		Schema   string            `json:"schema"`
+		Query    RelationshipQuery `json:"query"`
+		PageSize int               `json:"page_size"`
+	}{relationshipSnapshotSchema, query, pageSize})
+	finish, err := beginRelationshipRead(ctx, service.reads)
+	if err != nil {
+		return nil, err
+	}
+	defer finish()
+	binding, err := service.buildCurrentBinding(
+		ctx, query, queryDigest, repositories, authorization,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer service.releaseUnadmittedBinding(binding)
+	rows, next, err := service.relationshipRows(ctx, binding, 0, pageSize)
+	if err != nil {
+		return nil, relationshipReadError("read service relationship snapshot", err)
+	}
+	projected := make([]RelationshipSnapshotRow, len(rows))
+	for index, row := range rows {
+		projected[index] = relationshipSnapshotRow(row)
+	}
+	coverage := relationshipCoverage(binding, len(projected))
+	truncated := next < len(binding.entries)
+	coverage.Truncated = coverage.Truncated || truncated
+	page := &RelationshipSnapshotPage{
+		SchemaVersion: relationshipSnapshotSchema,
+		Query:         query,
+		Roots:         relationshipReceipts(binding.sources),
+		Rows:          projected,
+		Coverage:      coverage,
+		Truncated:     truncated,
+		Caveat:        relationshipCaveat,
+	}
+	page.RowsState = relationshipRowsState(
+		page.Roots, len(page.Rows), page.Coverage.Truncated,
+	)
 	if err := service.confirmBinding(ctx, binding, authorization); err != nil {
 		return nil, err
 	}
@@ -1304,6 +1415,26 @@ func projectRelationshipProjection(value relationshippublication.Projection) Rel
 		Plane: value.Plane, LookupKey: value.LookupKey,
 		Source: projectRelationshipPlacement(value.Source),
 		Target: projectOptionalRelationshipPlacement(value.Target), Digest: value.Digest,
+	}
+}
+
+func relationshipSnapshotRow(value RelationshipRow) RelationshipSnapshotRow {
+	return RelationshipSnapshotRow{
+		Repository:          value.Repository,
+		ServiceKey:          value.ServiceKey,
+		ServiceIncarnation:  value.ServiceIncarnation,
+		ServiceGeneration:   value.ServiceGeneration,
+		Kind:                value.Kind,
+		Plane:               value.Plane,
+		Class:               value.Class,
+		LookupKey:           value.LookupKey,
+		Participation:       slices.Clone(value.Participation),
+		CounterpartServices: slices.Clone(value.CounterpartServices),
+		ProjectionDigest:    value.ProjectionDigest,
+		PostingDigest:       value.PostingDigest,
+		Source:              value.Source,
+		Target:              value.Target,
+		Evidence:            value.Evidence,
 	}
 }
 
