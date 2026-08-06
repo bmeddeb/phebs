@@ -1,0 +1,111 @@
+{
+  "schema": "t375-relationship-reader-demo-v1",
+  "outcome": "completed",
+  "topology": {
+    "authorized_repositories": 3,
+    "services": 4,
+    "rpc_dependencies": 2,
+    "rpc_callers": 2,
+    "kafka_producers": 1,
+    "kafka_consumers": 1,
+    "empty_states": 1,
+    "gap_states": 1
+  },
+  "reader": {
+    "maximum_repositories": 32,
+    "maximum_page_rows": 100,
+    "maximum_list_references": 20000,
+    "maximum_comparison_references": 40000,
+    "maximum_bindings": 8,
+    "maximum_binding_references": 80000,
+    "binding_lifetime_seconds": 300,
+    "maximum_concurrent_reads": 8,
+    "maximum_concurrent_citations": 2,
+    "maximum_response_bytes": 2097152
+  },
+  "cases": [
+    {
+      "name": "atomic_projection",
+      "assertions": [
+        "all_placement_claims_retained",
+        "service_failure_isolated",
+        "incarnation_bound"
+      ],
+      "gates": [
+        "TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically",
+        "TestServiceIncarnationChangesRootIdentity",
+        "TestServiceLimitPublishesFailedPartitionWithoutBlockingSibling"
+      ]
+    },
+    {
+      "name": "exact_readers",
+      "assertions": [
+        "bucket_batched_projection_reads",
+        "keyed_posting_reads",
+        "historical_generation_lease"
+      ],
+      "gates": [
+        "TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically",
+        "TestBuildPublishesResolvedNameMatchUnresolvedAndOccurrenceIdentity",
+        "TestBuildSeparatesPlanesSpellingClassificationsAndOccurrences"
+      ]
+    },
+    {
+      "name": "authorization_and_gaps",
+      "assertions": [
+        "permission_before_aggregation",
+        "empty_failed_unavailable_distinct",
+        "retained_proof_shape_unchanged"
+      ],
+      "gates": [
+        "TestAuthorizationPrecedesRepositoryValidationAndFilesystem",
+        "TestRelationshipServiceAuthorizationGapAndRetainedProofShape"
+      ]
+    },
+    {
+      "name": "proof_and_workbench",
+      "assertions": [
+        "optional_exact_root_coverage_annex",
+        "workbench_cursor_binds_root_set",
+        "legacy_bytes_unchanged"
+      ],
+      "gates": [
+        "TestRelationshipServiceAuthorizationGapAndRetainedProofShape",
+        "TestWorkbenchRelationshipCoverageBindsExactRootDigest"
+      ]
+    },
+    {
+      "name": "transport_parity",
+      "assertions": [
+        "shared_http_mcp_types",
+        "default_dark_registration",
+        "bounded_citations"
+      ],
+      "gates": [
+        "TestRelationshipMCPToolsUseSharedProjectionAndStayDefaultDark"
+      ]
+    },
+    {
+      "name": "recovery_and_retention",
+      "assertions": [
+        "complete_recovery_before_pointer",
+        "current_prior_and_reader_lease_preserved",
+        "byte_exact_composite_archive"
+      ],
+      "gates": [
+        "TestRecoveryValidatesCompleteGenerationBeforePointerSwap",
+        "TestLifecyclePreservesCurrentRollbackFloorAndReaderLease",
+        "TestArchiveRoundTripPreservesExactCompositeAuthority"
+      ]
+    }
+  ],
+  "claims": {
+    "source_free": true,
+    "no_accuracy": true,
+    "no_completeness": true,
+    "no_runtime_topology": true,
+    "no_slo": true,
+    "no_migration_safety": true,
+    "no_release_authority": true
+  }
+}

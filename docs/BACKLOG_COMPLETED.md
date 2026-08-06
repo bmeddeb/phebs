@@ -7896,3 +7896,60 @@ and byte-exact composite archive round trip. No relationship accuracy or
 completeness, broker/runtime topology, target-scale/SLO,
 migration/decommission, or release claim is created; `GATE2-V2` remains
 `NOT_ESTABLISHED`.
+
+**T37.5 ✅ · Exact readers, comparison, proof, and demo** *(2026-08-06;
+needs T37.4)* — closes Epic 37 with one shared service for paged dependency,
+caller, and source-spelled Kafka topic reads across at most 32 authorized
+repositories. Permission resolution and repository snapshot capture finish
+before any relationship pointer, service key, count, or member is opened; the
+same visibility/index/evidence snapshot and every current pointer are rechecked
+before emission. HTTP and MCP call the identical service and wire types.
+
+One current service query opens one exact service partition per selected
+repository and retains only references admitted by the closed view and optional
+kind/plane/lookup filters. Rows preserve the root authority, service
+incarnation and desired generation, projection and posting digests, all source
+and target placement claims including rejected/proposal/conflict and unowned
+evidence, protocol classification, immutable object/content/span authority,
+and an opaque citation. Empty, failed, unavailable, nonempty, and truncated
+states are separate. Two-generation comparison requires both generation and
+root digests, pins both immutable generations, and reports exact reference
+identities as added, removed, or unchanged.
+
+Opaque HMAC cursors and citations reference an in-memory binding for five
+minutes. The binding owns the lifecycle leases and authorization/incarnation
+fences, not source or member bytes. Citation resolution reauthorizes, validates
+one projection and one keyed RPC/Kafka member, rejects Git alternates, reads one
+immutable object capped by the 4-MiB observation input limit, verifies its full
+content digest, and returns only the cited byte span. Eight query reads and two
+citation blob reads may run concurrently. One response contains at most 100
+rows and 2 MiB. A list binding retains at most 20,000 references, a comparison
+at most 40,000 union identities, and eight bindings at most 80,000 identities.
+Pressure evicts only idle bindings and releases their exact leases.
+
+Page hydration groups its at-most-100 projection digests by relationship bucket
+and postings by kind/plane/lookup key. Each selected at-most-128-MiB member is
+read once per page; no page walks a complete relationship or posting
+generation. Construction allocates only fixed semaphores, an empty binding
+map, and an HMAC secret and performs no store/filesystem work. Proof-bundle v1
+adds an optional `omitempty` relationship-root coverage annex, so retained
+bundles without it re-encode byte-for-byte. Workbench Impact binds the same
+source-free exact root-set digest into its continuation cursor. Those annexes
+open at most 32 root controls and no service/repository/posting member, source,
+shard, Git object, network request, or child.
+
+The deterministic source-free neutral receipt is retained at
+`spike/t375/results.json`
+(`sha256:7f2aa20cedf98c1dbaa2da00102470ba00eaea4dc7a8e9c6e3de1069da3f7ec0`).
+Its six cases name executable production gates for atomic placement honesty,
+incarnation and sibling-failure isolation, batched sparse reads, keyed posting
+lookups, historical leases, authorization/gaps, retained proof shape,
+Workbench cursor binding, HTTP/MCP parity, complete recovery, rollback/lease
+retention, and exact composite archive recovery. The receipt retains no source,
+path, object ID, citation content, repository identity, raw error, or private
+topology.
+
+No relationship accuracy/completeness, runtime or broker topology,
+supported-scale/SLO, migration/decommission-safety, or release claim is
+created. `GATE2-V2` remains `NOT_ESTABLISHED`. Epic 37 is complete; T38.1 owns
+the service overview product.

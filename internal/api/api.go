@@ -85,6 +85,10 @@ type Options struct {
 	// ObservationProgress is T36.4's authorization-first, source-free current
 	// publication and durable schedule projection shared with MCP.
 	ObservationProgress *ObservationProgressService
+	// Relationships is T37.5's shared authorization-first exact relationship
+	// reader. Nil leaves HTTP, MCP, proof annexes, and capability discovery
+	// absent without adding filesystem work to ordinary requests.
+	Relationships RelationshipQueries
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService
@@ -433,6 +437,7 @@ func New(opts Options) http.Handler {
 	registerCallerComparisonAPI(api, opts)
 	registerServiceDirectoryAPI(api, opts)
 	registerObservationProgressAPI(api, opts)
+	registerRelationshipAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 	registerWorkbench(api, opts)

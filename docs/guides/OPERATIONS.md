@@ -3415,9 +3415,51 @@ renames an eligible root before bounded deletion, and deletes a component only
 when no surviving relationship root or resolver control references it.
 Backup-manifest v7 includes only fully validated current composite authority;
 corrupt or in-flight relationship state is counted as omitted and rebuilt
-after restore rather than blocking the precious database export. T37.5 has not
-yet registered a product reader, so operators should treat these roots as
-derived internal authority and never edit or promote them manually.
+after restore rather than blocking the precious database export. Operators
+must continue to treat these roots as derived immutable authority and never
+edit or promote them manually.
+
+When resolver adapters are enabled, T37.5 exposes the shared exact reader over
+HTTP and MCP. `GET /api/service-relationships` (MCP
+`list_service_relationships`) accepts one service key, an optional explicit
+repository set, the `all`, `dependencies`, `callers`, or `topics` view, and
+optional kind/plane/lookup filters. Omitting repositories selects the complete
+visible set and refuses when that set exceeds 32; selecting repositories
+explicitly is the bounded remedy. Permission resolution completes before any
+relationship pointer or member is opened. Responses distinguish nonempty,
+empty, failed, unavailable, and truncated states and repeat exact root,
+incarnation, placement, projection, posting, object, digest, and span
+authority. Kafka topic values remain source spellings, never broker/runtime
+identity.
+
+`GET /api/service-relationship-comparison` (MCP
+`compare_service_relationships`) requires the generation and root digest for
+both sides. Its cursor pins both immutable generations for five minutes and
+reports added, removed, and unchanged exact references. A stale, expired,
+reauthorized, or incarnation-mismatched cursor refuses with a restartable
+conflict; it never advances against replacement authority. Each response is
+capped at 100 rows and 2 MiB. Initial list and comparison scans are explicitly
+truncated at 20,000 and 40,000 retained reference identities respectively.
+
+Rows carry an opaque citation accepted by
+`GET /api/service-relationship-citation` and MCP
+`read_service_relationship_citation`. A citation is valid only while its
+reader lease remains in the bounded eight-binding/80,000-reference cache
+(normally five minutes, possibly shorter under idle-binding pressure). It
+reauthorizes the repository, rejects Git alternates, verifies the exact
+immutable object and whole-content digest, and returns only the published byte
+span. At most eight relationship requests and two citation blob reads execute
+concurrently. Expiry is an expected bounded-state transition: rerun the list or
+comparison to mint a current citation.
+
+Proof bundles may carry an optional source-free relationship-root coverage
+annex; retained bundles without it keep byte-identical v1 content. Workbench
+Impact binds the same exact root-set digest into its continuation cursor. A
+visible set above 32 produces an explicit relationship coverage gap rather
+than a partial root sample. These annexes read root controls only and do not
+walk members, source, shards, or Git objects. None of the reader, comparison,
+proof, or Workbench surfaces establishes relationship completeness, runtime
+topology, migration/decommission safety, an SLO, or release authority.
 
 ## Developing phebs
 

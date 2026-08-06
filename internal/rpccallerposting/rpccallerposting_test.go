@@ -117,6 +117,19 @@ func charge(client any) { _ = pb.Marker; client.Charge(nil) }
 	if err != nil || len(resolvedPostings) != 4 {
 		t.Fatalf("operation postings = %+v, %v", resolvedPostings, err)
 	}
+	reopened, err := OpenGeneration(
+		t.Context(), root, rootValue.Authority.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byDigest, err := reopened.ReadDigest(
+		t.Context(), "grpc", operation, resolvedPostings[0].Digest,
+	)
+	if err != nil || byDigest.Digest != resolvedPostings[0].Digest {
+		t.Fatalf("exact generation digest read = %+v, %v", byDigest, err)
+	}
 	classes := map[string]int{}
 	roles := map[string]int{}
 	digests := map[string]struct{}{}

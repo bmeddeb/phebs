@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
 type Publication struct {
@@ -65,6 +67,35 @@ func Open(ctx context.Context, root string, expected Root) (*Publication, error)
 	canonical, err := json.Marshal(value)
 	if err != nil || !slices.Equal(raw, canonical) {
 		return nil, fmt.Errorf("%w: root canonical bytes", ErrInvalid)
+	}
+	return openDirectory(ctx, directory, value, false)
+}
+
+// OpenGeneration opens exact immutable controls named by a relationship root.
+func OpenGeneration(
+	ctx context.Context,
+	root, repository, generation, rootDigest string,
+) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if reponame.Validate(repository) != nil || !validDigest(generation) || !validDigest(rootDigest) {
+		return nil, fmt.Errorf("%w: generation lookup", ErrInvalid)
+	}
+	directory := generationDirectory(root, repository, generation)
+	raw, err := readRegular(filepath.Join(directory, "root.json"), MaxRootBytes)
+	if err != nil {
+		return nil, err
+	}
+	var value Root
+	if err := decodeExact(raw, MaxRootBytes, &value); err != nil || validateRoot(value) != nil ||
+		value.Authority.Repository != repository || value.GenerationDigest != generation ||
+		value.Digest != rootDigest {
+		return nil, fmt.Errorf("%w: generation root", ErrInvalid)
+	}
+	canonical, err := json.Marshal(value)
+	if err != nil || !slices.Equal(raw, canonical) {
+		return nil, fmt.Errorf("%w: generation root canonical bytes", ErrInvalid)
 	}
 	return openDirectory(ctx, directory, value, false)
 }
@@ -152,6 +183,32 @@ func (publication *Publication) ReadUnresolved(ctx context.Context, plane string
 	return publication.readSelected(ctx, plane, partitionBucket("__unresolved__"), func(value Posting) bool {
 		return value.Class == "unresolved"
 	})
+}
+
+// ReadDigest resolves one projection-bound posting through one keyed member.
+func (publication *Publication) ReadDigest(
+	ctx context.Context,
+	plane, topic, digest string,
+) (Posting, error) {
+	if !validDigest(digest) {
+		return Posting{}, fmt.Errorf("%w: posting digest lookup", ErrInvalid)
+	}
+	var values []Posting
+	var err error
+	if topic == "" {
+		values, err = publication.ReadUnresolved(ctx, plane)
+	} else {
+		values, err = publication.ReadTopic(ctx, plane, topic)
+	}
+	if err != nil {
+		return Posting{}, err
+	}
+	for _, value := range values {
+		if value.Digest == digest {
+			return value, nil
+		}
+	}
+	return Posting{}, ErrNotFound
 }
 
 func (publication *Publication) readSelected(
