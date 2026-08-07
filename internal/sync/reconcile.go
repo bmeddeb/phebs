@@ -375,7 +375,8 @@ func reclaimCommittedPublicationMarkers(
 			recovered, recoverErr := focusedindex.RecoverSearchPublication(
 				ctx, indexDir, repo.Name, wholeRevisions(repo),
 			)
-			if recoverErr != nil {
+			if recoverErr != nil &&
+				!errors.Is(recoverErr, focusedindex.ErrSearchPublicationRevisionMismatch) {
 				errs = append(errs, fmt.Errorf(
 					"recover search generation publication for %s: %w",
 					repo.Name, recoverErr,

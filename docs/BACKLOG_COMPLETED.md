@@ -8822,3 +8822,14 @@ gates close the ticket. T40.6 is next. No supported-scale, target-SLO,
 accuracy/completeness, freshness, migration/decommission, topology, pilot, or
 release claim is established; `GATE2-V2` remains `NOT_ESTABLISHED` and
 `DO_NOT_RELEASE` remains in force.
+
+The round-1 reverse audit subsequently closed R1-15 through R1-21. Whole to
+focused transitions now release their search root; unresolved store commits
+retain recoverable controls and resolve before retry work; exact legacy-marker
+mismatch falls through to committed validation; current-host allocated bytes
+remain pressure policy rather than content identity; recovery shares the
+normal prospective-root constructor; malformed namespaces advance an explicit
+error cursor; and bounded prefix recovery drains crash-stage overflow. Known
+macOS metadata is removed only as an identity-rechecked regular file within the
+existing deletion budget. Unknown entries and symlinks still fail closed.
+Targeted tests cover every reported failure scenario.
