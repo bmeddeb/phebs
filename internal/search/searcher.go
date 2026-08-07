@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -26,11 +27,12 @@ import (
 // that asynchronous view and served through manifest-bound exact-generation
 // searchers in focusedCache.
 type Searcher struct {
-	z        zoekt.Streamer
-	st       store.Store
-	indexDir string
-	focused  *focusedCache
-	whole    *wholeCache
+	z              zoekt.Streamer
+	st             store.Store
+	indexDir       string
+	focused        *focusedCache
+	whole          *wholeCache
+	generationPins *focusedindex.SearchGenerationPins
 
 	wholeRepairMu sync.Mutex
 	wholeRepairs  map[string]wholeRepairRequest
@@ -69,6 +71,18 @@ const (
 )
 
 func Open(indexDir string, st store.Store) (*Searcher, error) {
+	return open(indexDir, st, nil)
+}
+
+func OpenWithGenerationPins(
+	indexDir string, st store.Store, pins *focusedindex.SearchGenerationPins,
+) (*Searcher, error) {
+	return open(indexDir, st, pins)
+}
+
+func open(
+	indexDir string, st store.Store, pins *focusedindex.SearchGenerationPins,
+) (*Searcher, error) {
 	// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters
 	// at this boundary too so library callers cannot mount sibling shards.
 	if strings.ContainsAny(indexDir, `*?[\`) {
@@ -132,7 +146,7 @@ func Open(indexDir string, st store.Store) (*Searcher, error) {
 	return &Searcher{
 		z: z, st: st, indexDir: indexDir,
 		focused: newFocusedCache(indexDir),
-		whole:   whole,
+		whole:   whole, generationPins: pins,
 	}, nil
 }
 
@@ -400,6 +414,7 @@ type compiledSearch struct {
 	sharedRevisions     map[string][]store.IndexedRevision
 	focused             []*focusedLease
 	whole               []*wholeLease
+	searchGenerations   []*focusedindex.SearchGenerationLease
 	legacyWhole         bool
 	validateFocused     func(context.Context, *focusedLease, bool) bool
 	validateWholeLease  func(context.Context, *wholeLease, bool) bool
@@ -433,6 +448,10 @@ func (c *compiledSearch) release() {
 		lease.release()
 	}
 	c.whole = nil
+	for _, lease := range c.searchGenerations {
+		lease.Release()
+	}
+	c.searchGenerations = nil
 }
 
 func (c *compiledSearch) focusedCurrent(
@@ -994,6 +1013,7 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 	baseBranchRepos := make(map[string][]string)
 	var focusedLeases []*focusedLease
 	var wholeLeases []*wholeLease
+	var searchGenerationLeases []*focusedindex.SearchGenerationLease
 	legacyWhole := false
 	releaseLeases := func() {
 		for _, lease := range focusedLeases {
@@ -1001,6 +1021,9 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		}
 		for _, lease := range wholeLeases {
 			lease.release()
+		}
+		for _, lease := range searchGenerationLeases {
+			lease.Release()
 		}
 	}
 	for _, repo := range repos {
@@ -1047,6 +1070,31 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 			focusedLeases = append(focusedLeases, lease)
 		} else {
 			revisions := canonicalWholeRevisions(repo)
+			if s.generationPins != nil {
+				root, rootErr := focusedindex.ReadSearchGenerationRoot(s.indexDir, repo.Name)
+				if rootErr == nil {
+					if !slices.Equal(root.Current.Revisions, revisions) {
+						releaseLeases()
+						return nil, fmt.Errorf(
+							"%w: repository %q search-generation root is stale",
+							errWholeGenerationChanged, repo.Name,
+						)
+					}
+					generationLease, acquireErr := s.generationPins.Acquire(
+						repo.Name, root.Current.GenerationDigest,
+					)
+					if acquireErr != nil {
+						releaseLeases()
+						return nil, acquireErr
+					}
+					searchGenerationLeases = append(searchGenerationLeases, generationLease)
+				} else if !errors.Is(rootErr, os.ErrNotExist) {
+					releaseLeases()
+					return nil, fmt.Errorf(
+						"read search-generation root for %q: %w", repo.Name, rootErr,
+					)
+				}
+			}
 			if s.whole == nil {
 				// Test/compatibility construction without the generation
 				// cache retains the pre-receipt result fence. Production Open
@@ -1117,6 +1165,7 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		return &compiledSearch{
 			query: empty, versions: versions, baseRevisions: baseRevisions,
 			sharedRevisions:          sharedRevisions,
+			searchGenerations:        searchGenerationLeases,
 			validateFocused:          s.validateFocusedLease,
 			validateWholeLease:       s.validateWholeLease,
 			validateWhole:            s.validateWholeRepository,
@@ -1133,6 +1182,7 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		sharedRevisions:          sharedRevisions,
 		focused:                  focusedLeases,
 		whole:                    wholeLeases,
+		searchGenerations:        searchGenerationLeases,
 		legacyWhole:              legacyWhole,
 		validateFocused:          s.validateFocusedLease,
 		validateWholeLease:       s.validateWholeLease,

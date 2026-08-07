@@ -8761,3 +8761,64 @@ next. No supported-scale, target-SLO, accuracy/completeness, freshness,
 migration/decommission, topology, pilot-continuation, or release claim is
 established; `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains
 in force.
+
+**T40.4 ✅ · Hierarchical observation inventory and bounded validation v2**
+*(2026-08-07; commit `2c0c430`; needs T40.3)* — adds the non-authoritative
+`phebs-observation-inventory-root-v2` contract over at most sixteen retained
+250,000-record segment envelopes. Each segment keeps the v1 observation
+member/record/object formats and binds one consecutive source-super-root member
+range, exact totals, operation receipt, and digest; the small root binds ordered
+ranges, segment digests, source/policy generations, and aggregate totals. A
+keyed read opens one root, one segment control, one member, and at most one
+object. Complete validation releases each segment's bounded name map before
+opening the next and never retains the four-million-record generation.
+
+The builder accepts only a completely validated super-plan, checks bounds
+before growth, writes the root last, reuses valid restart segments, rebuilds
+invalid work, and may hard-link exact members/objects from one completely
+validated prior inventory through a segment-local source-member index. A
+striped build fence converges same-output writers. Empty, unsupported/gap,
+small-delta, A→B→A, invalid restart, prior reuse, concurrent writer,
+corrupt-cold/sibling, maximum/one-over, cancellation, and warm no-reread tests
+close the ticket. No runtime pointer, worker, recovery, lifecycle, archive, or
+product reader selects v2; T40.6 retains that ownership after T40.5. No scale,
+SLO, accuracy/completeness, freshness, migration/decommission, topology, pilot,
+or release claim is established; `GATE2-V2` remains `NOT_ESTABLISHED` and
+`DO_NOT_RELEASE` remains in force.
+
+**T40.5 ✅ · Search-generation build, replacement headroom, and lifecycle owner**
+*(2026-08-07; needs T40.4)* — replaces destructive flat whole-search
+replacement and the static `search-generations` owner with immutable
+generation directories, a canonical current/prior root, a crash-recoverable
+transition marker, hard-linked flat zoekt compatibility view, process-local
+reader pins, and one bounded fair lifecycle owner. The retained large-monorepo
+diagnostic's 28,775,361,432-byte generation and 57,499,771,878-byte
+old-plus-new observation select prospective, separately typed bounds of 48 GiB
+logical and allocated per generation and 96 GiB for current plus one rollback,
+with 256 shards, 512 MiB logical per shard, and 16,644 authority files.
+
+A real build performs a zero-byte pressure probe, then reserves
+`min(48 GiB, 3 × regular declared bytes + source encoded-member bytes)` from
+the exact streamed census before starting the child. The completed stage is
+measured and fenced before authority changes. The parent removes inherited
+`ZOEKT_DISABLE_CATFILE_BATCH` values and sets exactly `true`, explicitly
+retaining go-git after T40.1's small comparison; each immutable receipt reports
+the effective mode, offered files, zero batch reads, exact fallback reads,
+shards/files, and separate logical/allocated totals. Publication or store
+failure restores the prior complete searchable generation; startup chooses
+only the candidate or previous generation matching the durable revision set.
+Archives remain current snapshots rather than live pins.
+
+One lifecycle turn opens one of at most 4,096 repository namespaces and a
+bounded maximum of 64 generation names, reads one selected receipt and bounded
+root/marker controls, protects current, prior, marker, backup/mutation lock,
+and active query leases, then rechecks identities, renames one stale generation
+out of authority, and removes at most sixteen regular entries. Abandoned
+prior-process stages resume through the same path. Symlinks, special/unknown
+entries, root movement, and pins refuse. Exact current/prior/one-over,
+rollback/recovery, logical/allocated accounting, reader pin, bounded drain,
+symlink refusal, inherited-environment, archive, search, recovery, and lifecycle
+gates close the ticket. T40.6 is next. No supported-scale, target-SLO,
+accuracy/completeness, freshness, migration/decommission, topology, pilot, or
+release claim is established; `GATE2-V2` remains `NOT_ESTABLISHED` and
+`DO_NOT_RELEASE` remains in force.

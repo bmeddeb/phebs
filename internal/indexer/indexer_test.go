@@ -470,7 +470,7 @@ func TestShortCircuitAndForce(t *testing.T) {
 		t.Fatalf("repository generation artifacts = %d, want roots and member", len(generationBefore))
 	}
 	admissions := 0
-	ix.AdmitDerived = func(context.Context) error {
+	ix.AdmitDerived = func(context.Context, int64) error {
 		admissions++
 		return nil
 	}
@@ -495,7 +495,7 @@ func TestShortCircuitAndForce(t *testing.T) {
 		t.Fatalf("no-op performed %d derived admissions", admissions)
 	}
 	wantAdmission := errors.New("disk pressure")
-	ix.AdmitDerived = func(context.Context) error {
+	ix.AdmitDerived = func(context.Context, int64) error {
 		admissions++
 		return wantAdmission
 	}
@@ -505,7 +505,7 @@ func TestShortCircuitAndForce(t *testing.T) {
 	if after := repositoryGenerationStamps(t, dataDir); !reflect.DeepEqual(after, generationBefore) {
 		t.Fatalf("refused admission touched generation: before=%v after=%v", generationBefore, after)
 	}
-	ix.AdmitDerived = func(context.Context) error {
+	ix.AdmitDerived = func(context.Context, int64) error {
 		admissions++
 		return nil
 	}
@@ -523,8 +523,11 @@ func TestShortCircuitAndForce(t *testing.T) {
 	if !rebuilt {
 		t.Error("force did not rebuild any shard")
 	}
-	if admissions != 2 {
-		t.Fatalf("forced/refused rebuild admissions = %d, want 2", admissions)
+	// The refused force performs only the zero-byte watermark probe. The
+	// successful force then performs that probe plus the census-derived
+	// replacement reservation.
+	if admissions != 3 {
+		t.Fatalf("forced/refused rebuild admissions = %d, want 3", admissions)
 	}
 }
 

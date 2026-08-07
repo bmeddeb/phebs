@@ -3,6 +3,7 @@ package indexer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -28,6 +29,25 @@ func TestExecutablePathResolvesConfiguredPathBeforeChildChdir(t *testing.T) {
 	}
 	if got != want {
 		t.Fatalf("executablePath() = %q, want %q", got, want)
+	}
+}
+
+func TestGoGitChildEnvironmentOverridesInheritedBatchMode(t *testing.T) {
+	environment := goGitChildEnvironment([]string{
+		"PATH=/bin", "ZOEKT_DISABLE_CATFILE_BATCH=false",
+		"SAFE=value", "ZOEKT_DISABLE_CATFILE_BATCH=invalid",
+	})
+	var batch []string
+	for _, value := range environment {
+		if strings.HasPrefix(value, "ZOEKT_DISABLE_CATFILE_BATCH=") {
+			batch = append(batch, value)
+		}
+	}
+	if len(batch) != 1 || batch[0] != "ZOEKT_DISABLE_CATFILE_BATCH=true" {
+		t.Fatalf("batch environment = %v", batch)
+	}
+	if !slices.Contains(environment, "PATH=/bin") || !slices.Contains(environment, "SAFE=value") {
+		t.Fatalf("unrelated environment was not preserved: %v", environment)
 	}
 }
 

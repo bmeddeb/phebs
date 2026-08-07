@@ -1,0 +1,536 @@
+{
+  "diffPath": ".qwen/tmp/qwen-review-local-diff.txt",
+  "diffPathAbsolute": "/Users/ben/phebs.com/.qwen/tmp/qwen-review-local-diff.txt",
+  "diffLines": 2583,
+  "diffChars": 114149,
+  "srcDiffLines": 1944,
+  "testDiffLines": 319,
+  "docsDiffLines": 320,
+  "generatedDiffLines": 0,
+  "chunks": [
+    {
+      "id": 1,
+      "startLine": 1,
+      "endLine": 156,
+      "lines": 156,
+      "chars": 17239,
+      "maxLineChars": 4055,
+      "oversized": false,
+      "files": [
+        { "path": "AGENTS.md", "newStart": 167, "newEnd": 175 },
+        { "path": "PLAN.md", "newStart": 455, "newEnd": 463 },
+        { "path": "cmd/phebs/main.go", "newStart": 327, "newEnd": 988 },
+        { "path": "docs/BACKLOG.md", "newStart": 30, "newEnd": 527 }
+      ]
+    },
+    {
+      "id": 2,
+      "startLine": 157,
+      "endLine": 461,
+      "lines": 305,
+      "chars": 19751,
+      "maxLineChars": 427,
+      "oversized": false,
+      "files": [
+        { "path": "docs/BACKLOG_COMPLETED.md", "newStart": 8761, "newEnd": 8824 },
+        { "path": "docs/ROADMAP.md", "newStart": 108, "newEnd": 720 },
+        { "path": "docs/guides/CONFIGURATION.md", "newStart": 81, "newEnd": 96 },
+        { "path": "docs/guides/OPERATIONS.md", "newStart": 2810, "newEnd": 2866 },
+        { "path": "internal/focusedindex/archive.go", "newStart": 851, "newEnd": 864 },
+        { "path": "internal/focusedindex/publication.go", "newStart": 135, "newEnd": 198 }
+      ]
+    },
+    {
+      "id": 3,
+      "startLine": 462,
+      "endLine": 844,
+      "lines": 383,
+      "chars": 15322,
+      "maxLineChars": 102,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/publication.go", "newStart": 206, "newEnd": 226 },
+        { "path": "internal/indexer/binary_internal_test.go", "newStart": 3, "newEnd": 56 },
+        { "path": "internal/indexer/indexer.go", "newStart": 182, "newEnd": 533 },
+        { "path": "internal/indexer/indexer_test.go", "newStart": 470, "newEnd": 533 },
+        { "path": "internal/lifecycle/policy.go", "newStart": 30, "newEnd": 41 },
+        { "path": "internal/lifecycle/static.go", "newStart": 53, "newEnd": 58 },
+        { "path": "internal/search/searcher.go", "newStart": 6, "newEnd": 1030 }
+      ]
+    },
+    {
+      "id": 4,
+      "startLine": 845,
+      "endLine": 921,
+      "lines": 77,
+      "chars": 3129,
+      "maxLineChars": 103,
+      "oversized": false,
+      "files": [
+        { "path": "internal/search/searcher.go", "newStart": 1070, "newEnd": 1188 },
+        { "path": "internal/sync/reconcile.go", "newStart": 370, "newEnd": 393 }
+      ]
+    },
+    {
+      "id": 5,
+      "startLine": 922,
+      "endLine": 1320,
+      "lines": 399,
+      "chars": 15838,
+      "maxLineChars": 154,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/search_generation.go", "newStart": 1, "newEnd": 393 }
+      ]
+    },
+    {
+      "id": 6,
+      "startLine": 1321,
+      "endLine": 1719,
+      "lines": 399,
+      "chars": 13129,
+      "maxLineChars": 110,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/search_generation.go", "newStart": 394, "newEnd": 792 }
+      ]
+    },
+    {
+      "id": 7,
+      "startLine": 1720,
+      "endLine": 1889,
+      "lines": 170,
+      "chars": 5807,
+      "maxLineChars": 124,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/search_generation.go", "newStart": 793, "newEnd": 927 },
+        { "path": "internal/focusedindex/search_generation_bytes_other.go", "newStart": 1, "newEnd": 7 },
+        { "path": "internal/focusedindex/search_generation_bytes_unix.go", "newStart": 1, "newEnd": 16 }
+      ]
+    },
+    {
+      "id": 8,
+      "startLine": 1890,
+      "endLine": 2269,
+      "lines": 380,
+      "chars": 12939,
+      "maxLineChars": 130,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/search_generation_lifecycle.go", "newStart": 1, "newEnd": 374 }
+      ]
+    },
+    {
+      "id": 9,
+      "startLine": 2270,
+      "endLine": 2583,
+      "lines": 314,
+      "chars": 10995,
+      "maxLineChars": 121,
+      "oversized": false,
+      "files": [
+        { "path": "internal/focusedindex/search_generation_lifecycle.go", "newStart": 375, "newEnd": 402 },
+        { "path": "internal/focusedindex/search_generation_test.go", "newStart": 1, "newEnd": 230 },
+        { "path": "internal/lifecycle/search.go", "newStart": 1, "newEnd": 44 }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 167, "newEnd": 175 }
+      ],
+      "addedLines": 3,
+      "removedLines": 1,
+      "changedLines": 4,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "PLAN.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 455, "newEnd": 463 }
+      ],
+      "addedLines": 3,
+      "removedLines": 0,
+      "changedLines": 3,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "cmd/phebs/main.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 327, "newEnd": 337 },
+        { "newStart": 908, "newEnd": 917 },
+        { "newStart": 982, "newEnd": 988 }
+      ],
+      "addedLines": 9,
+      "removedLines": 4,
+      "changedLines": 13,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 30, "newEnd": 36 },
+        { "newStart": 52, "newEnd": 58 },
+        { "newStart": 96, "newEnd": 101 },
+        { "newStart": 520, "newEnd": 527 }
+      ],
+      "addedLines": 4,
+      "removedLines": 52,
+      "changedLines": 56,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "docs/BACKLOG_COMPLETED.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 8761, "newEnd": 8824 }
+      ],
+      "addedLines": 61,
+      "removedLines": 0,
+      "changedLines": 61,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 108, "newEnd": 117 },
+        { "newStart": 121, "newEnd": 127 },
+        { "newStart": 676, "newEnd": 682 },
+        { "newStart": 714, "newEnd": 720 }
+      ],
+      "addedLines": 7,
+      "removedLines": 5,
+      "changedLines": 12,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "docs/guides/CONFIGURATION.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 81, "newEnd": 87 },
+        { "newStart": 90, "newEnd": 96 }
+      ],
+      "addedLines": 2,
+      "removedLines": 2,
+      "changedLines": 4,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "docs/guides/OPERATIONS.md",
+      "kind": "docs",
+      "hunks": [
+        { "newStart": 2810, "newEnd": 2857 },
+        { "newStart": 2859, "newEnd": 2866 }
+      ],
+      "addedLines": 44,
+      "removedLines": 6,
+      "changedLines": 50,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/archive.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 851, "newEnd": 864 }
+      ],
+      "addedLines": 9,
+      "removedLines": 0,
+      "changedLines": 9,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/publication.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 135, "newEnd": 163 },
+        { "newStart": 191, "newEnd": 198 },
+        { "newStart": 206, "newEnd": 212 },
+        { "newStart": 217, "newEnd": 226 }
+      ],
+      "addedLines": 20,
+      "removedLines": 40,
+      "changedLines": 60,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/indexer/binary_internal_test.go",
+      "kind": "test",
+      "hunks": [
+        { "newStart": 3, "newEnd": 9 },
+        { "newStart": 32, "newEnd": 56 }
+      ],
+      "addedLines": 20,
+      "removedLines": 0,
+      "changedLines": 20,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/indexer/indexer.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 182, "newEnd": 188 },
+        { "newStart": 247, "newEnd": 253 },
+        { "newStart": 281, "newEnd": 306 },
+        { "newStart": 350, "newEnd": 356 },
+        { "newStart": 429, "newEnd": 441 },
+        { "newStart": 449, "newEnd": 481 },
+        { "newStart": 488, "newEnd": 512 },
+        { "newStart": 516, "newEnd": 533 }
+      ],
+      "addedLines": 76,
+      "removedLines": 8,
+      "changedLines": 84,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/indexer/indexer_test.go",
+      "kind": "test",
+      "hunks": [
+        { "newStart": 470, "newEnd": 476 },
+        { "newStart": 495, "newEnd": 501 },
+        { "newStart": 505, "newEnd": 511 },
+        { "newStart": 523, "newEnd": 533 }
+      ],
+      "addedLines": 8,
+      "removedLines": 5,
+      "changedLines": 13,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/lifecycle/policy.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 30, "newEnd": 41 }
+      ],
+      "addedLines": 6,
+      "removedLines": 1,
+      "changedLines": 7,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/lifecycle/static.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 53, "newEnd": 58 }
+      ],
+      "addedLines": 0,
+      "removedLines": 1,
+      "changedLines": 1,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/search/searcher.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 6, "newEnd": 12 },
+        { "newStart": 27, "newEnd": 38 },
+        { "newStart": 71, "newEnd": 88 },
+        { "newStart": 146, "newEnd": 152 },
+        { "newStart": 414, "newEnd": 420 },
+        { "newStart": 448, "newEnd": 457 },
+        { "newStart": 1013, "newEnd": 1019 },
+        { "newStart": 1022, "newEnd": 1030 },
+        { "newStart": 1070, "newEnd": 1100 },
+        { "newStart": 1165, "newEnd": 1171 },
+        { "newStart": 1182, "newEnd": 1188 }
+      ],
+      "addedLines": 56,
+      "removedLines": 6,
+      "changedLines": 62,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/sync/reconcile.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 370, "newEnd": 393 }
+      ],
+      "addedLines": 18,
+      "removedLines": 0,
+      "changedLines": 18,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/search_generation.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 1, "newEnd": 927 }
+      ],
+      "addedLines": 927,
+      "removedLines": 0,
+      "changedLines": 927,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/search_generation_bytes_other.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 1, "newEnd": 7 }
+      ],
+      "addedLines": 7,
+      "removedLines": 0,
+      "changedLines": 7,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/search_generation_bytes_unix.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 1, "newEnd": 16 }
+      ],
+      "addedLines": 16,
+      "removedLines": 0,
+      "changedLines": 16,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/search_generation_lifecycle.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 1, "newEnd": 402 }
+      ],
+      "addedLines": 402,
+      "removedLines": 0,
+      "changedLines": 402,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/focusedindex/search_generation_test.go",
+      "kind": "test",
+      "hunks": [
+        { "newStart": 1, "newEnd": 230 }
+      ],
+      "addedLines": 230,
+      "removedLines": 0,
+      "changedLines": 230,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    },
+    {
+      "path": "internal/lifecycle/search.go",
+      "kind": "source",
+      "hunks": [
+        { "newStart": 1, "newEnd": 44 }
+      ],
+      "addedLines": 44,
+      "removedLines": 0,
+      "changedLines": 44,
+      "preLines": 0,
+      "fileLines": 0,
+      "rewriteRatio": 0,
+      "heavy": false,
+      "binary": false
+    }
+  ],
+  "budget": {
+    "inlineAngles": 6,
+    "sweep": true,
+    "specialistCap": 2,
+    "verifyShard": 8
+  },
+  "untrackedFiles": [
+    "internal/focusedindex/search_generation.go",
+    "internal/focusedindex/search_generation_bytes_other.go",
+    "internal/focusedindex/search_generation_bytes_unix.go",
+    "internal/focusedindex/search_generation_lifecycle.go",
+    "internal/focusedindex/search_generation_test.go",
+    "internal/lifecycle/search.go"
+  ],
+  "skippedFiles": [],
+  "effort": "high"
+}

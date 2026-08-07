@@ -1,0 +1,5 @@
+{
+  "available": false,
+  "build": null,
+  "note": "the plan carries no mergeBaseSha, so there is no base commit to build (a local review, or a merge base that could not be resolved)"
+}

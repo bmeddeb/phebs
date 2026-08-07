@@ -370,6 +370,24 @@ func reclaimCommittedPublicationMarkers(
 			focusedindex.PublicationMarkerOwnedByCurrentProcess(indexDir, repo.Name) {
 			continue
 		}
+		if repo.IndexedAnalysisUnit == nil ||
+			repo.IndexedAnalysisUnit.SearchIndexPosture != analysisunit.SearchIndexFocused {
+			recovered, recoverErr := focusedindex.RecoverSearchPublication(
+				ctx, indexDir, repo.Name, wholeRevisions(repo),
+			)
+			if recoverErr != nil {
+				errs = append(errs, fmt.Errorf(
+					"recover search generation publication for %s: %w",
+					repo.Name, recoverErr,
+				))
+				continue
+			}
+			if recovered {
+				report.LifecycleArtifacts++
+				report.Deleted++
+				continue
+			}
+		}
 		committed := false
 		if repo.IndexedAnalysisUnit != nil &&
 			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {

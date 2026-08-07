@@ -2810,11 +2810,48 @@ is `unavailable`, not permission to widen another collector.
 
 Capacity admission opens and identity-fences the real data-directory
 descriptor; a symlink or changing root is unavailable. Exact no-op indexing
-returns before the check. A real rebuild checks current allocated pressure
-before workspace or child creation; the 25-GiB generation ceiling is not a
-reservation that rejects smaller filesystems. Existing indexing keeps
-its prior behavior when the platform cannot report capacity, while future T35
-workloads must fail closed.
+returns before any check. A real whole-search rebuild first performs a
+zero-byte hard-watermark probe, streams its already-required source census,
+then reserves
+`min(48 GiB, 3 × regular declared bytes + source encoded-member bytes)` before
+starting `zoekt-git-index`. The completed stage is measured again: one shard
+may carry at most 512 MiB logical bytes, one immutable generation at most 256
+shards, 16,644 authority files, 48 GiB logical bytes, and 48 GiB allocated
+bytes. Current plus one rollback generation may carry at most 96 GiB of each
+byte kind, evaluated independently. These are prospective validation bounds,
+not a fixed reservation charged to every repository. An unavailable capacity
+probe may pass only the initial compatibility probe; the measured replacement
+reservation fails closed.
+
+Whole-search children explicitly use the go-git blob reader. The parent
+removes every inherited `ZOEKT_DISABLE_CATFILE_BATCH` value and installs
+exactly `true`; local shell state cannot silently select batch mode. Each
+immutable `phebs-search-generation-receipt-v1` records `go_git`, exact files
+offered, zero batch reads, fallback reads equal to offered regular placements,
+shard/file counts, and separate logical/allocated totals. Verbose indexing
+logs the same source-free mode and counters.
+
+Whole-search publication retains immutable bytes under
+`index/search-generations/<repository-hash>/<search-digest>/`. The flat
+`index/*.zoekt` view is a hard-linked compatibility view for the shared zoekt
+reader; `phebs-search-generation-root-v1` is the current/rollback lifecycle
+authority. A transition marker exists before flat replacement. Publication or
+an uncommitted/ambiguous database transition restores the previous complete
+generation, while startup selects only the candidate or previous revision set
+matching the durable repository row. Online backup's exclusive index mutation
+lock waits for publication/collection, then snapshots current flat authority.
+A completed archive is an external snapshot and never pins live generations.
+
+The `search-generations` lifecycle owner advances one durable fair repository
+cursor per turn. It protects current, rollback, transition candidates, and
+active query leases, then rechecks those controls immediately before renaming
+one stale generation to `collecting-*`. It removes at most sixteen regular
+entries per turn and resumes after restart. Prior-process partial stages use
+the same bounded drain. Symlinks, special/unknown entries, changed identities,
+root movement, and active pins refuse. Search queries lease the selected
+immutable generation until their final fence, so the collector cannot unlink
+its retired immutable names while a query still binds them. Underlying mmap
+retirement retains zoekt's existing reader-lease behavior.
 
 #### Lifecycle operator status and recovery demo
 
@@ -2822,7 +2859,8 @@ Administrators can open Settings or request `GET /api/lifecycle-status` to see
 the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
 source. The response is capped at 16 KiB and reports only enabled state, fixed
 turn/watermark limits, the latest allocated-capacity class, and one latest
-source-free result for each of the thirteen owners. It contains no cursor,
+source-free result for each of the thirteen owners, including the real
+`search-generations` owner. It contains no cursor,
 repository, generation, path, retained content, or raw error. A status request
 does not run a turn, probe the filesystem, acquire the mutation lock, or read
 the store; it copies the bounded in-memory monitor populated by normal

@@ -851,5 +851,14 @@ func safeArchiveName(name string) bool {
 }
 
 func isSearchArchiveArtifact(name string) bool {
+	// Search-generation lifecycle controls and immutable rollback directories
+	// are live derived state, not backup pins. The archive remains a byte-exact
+	// snapshot of the selected current publication and restores into the
+	// backward-compatible flat layout; the next replacement adopts it.
+	if strings.HasPrefix(name, "phebs-search-lifecycle-") ||
+		strings.HasPrefix(name, "phebs-search-transition-") ||
+		name == searchGenerationDirectoryName {
+		return false
+	}
 	return safeArchiveName(name)
 }

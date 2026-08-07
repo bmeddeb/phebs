@@ -135,56 +135,29 @@ func PublishWholeGeneration(
 	if err != nil {
 		return err
 	}
-	if err := startPublication(indexDir, repository); err != nil {
+	candidate, err := createImmutableSearchGeneration(
+		ctx, indexDir, shardStageDir, sourceStageDir, repository,
+		revisions, source, manifest, search, SearchBlobReaderGoGit,
+	)
+	if err != nil {
 		return err
 	}
-	if err := removeRepositoryArtifacts(ctx, indexDir, repository, true); err != nil {
-		return err
-	}
-	for _, member := range source.Members {
-		if err := moveRegular(
-			filepath.Join(sourceStageDir, member.Name),
-			filepath.Join(indexDir, member.Name),
-		); err != nil {
-			return err
-		}
-	}
-	if err := moveRegular(
-		filepath.Join(sourceStageDir, repositoryindex.SourceManifestName(repository)),
-		filepath.Join(indexDir, repositoryindex.SourceManifestName(repository)),
-	); err != nil {
-		return err
-	}
-	for _, member := range manifest.Members {
-		if err := moveRegular(
-			filepath.Join(shardStageDir, member.Name),
-			filepath.Join(indexDir, member.Name),
-		); err != nil {
-			return err
-		}
-	}
-	if err := syncDirectory(indexDir); err != nil {
-		return err
-	}
-	if err := moveRegular(
-		filepath.Join(shardStageDir, WholeManifestName(repository)),
-		filepath.Join(indexDir, WholeManifestName(repository)),
-	); err != nil {
-		return err
-	}
-	if err := moveRegular(
-		filepath.Join(sourceStageDir, repositoryindex.SearchManifestName(repository)),
-		filepath.Join(indexDir, repositoryindex.SearchManifestName(repository)),
-	); err != nil {
+	marker, err := prepareSearchGenerationTransition(
+		ctx, indexDir, repository, candidate,
+	)
+	if err != nil {
 		return err
 	}
 	if search.Digest == "" {
 		return errors.New("repository search generation has no digest")
 	}
-	return syncDirectory(indexDir)
+	return completeSearchGenerationTransition(ctx, indexDir, marker)
 }
 
 func FinishPublication(indexDir, repository string) error {
+	if err := removeSearchTransition(indexDir, repository); err != nil {
+		return err
+	}
 	path := filepath.Join(indexDir, PublishingName(repository))
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -218,6 +191,8 @@ func removeRepositoryArtifacts(
 	}
 	focusedBase := strings.TrimSuffix(ManifestName(repository), ".manifest.json")
 	wholeManifest := WholeManifestName(repository)
+	searchLifecycleRoot := SearchGenerationRootName(repository)
+	searchTransition := searchGenerationMarkerName(repository)
 	removals := make([]string, 0)
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
@@ -231,6 +206,7 @@ func removeRepositoryArtifacts(
 		if entry.Type()&os.ModeSymlink != 0 {
 			if strings.HasPrefix(name, focusedBase) ||
 				name == wholeManifest ||
+				name == searchLifecycleRoot || name == searchTransition ||
 				repositoryindex.IsArtifactName(repository, name) ||
 				(strings.HasPrefix(
 					name, WholeShardPrefix(repository)+"_v",
@@ -241,6 +217,10 @@ func removeRepositoryArtifacts(
 		}
 		remove := strings.HasPrefix(name, focusedBase) ||
 			name == wholeManifest || repositoryindex.IsArtifactName(repository, name)
+		remove = remove || name == searchLifecycleRoot || name == searchTransition
+		if preserveMarker && (name == searchLifecycleRoot || name == searchTransition) {
+			remove = false
+		}
 		if strings.HasPrefix(
 			name, WholeShardPrefix(repository)+"_v",
 		) && strings.HasSuffix(name, ".zoekt") {
