@@ -1,0 +1,9 @@
+# Dedicated UX-track dev instance (T43.x browser rounds). Own port and data
+# dir so it never collides with the scale track's default instance.
+connections:
+  - name: zoekt
+    type: git
+    url: https://github.com/sourcegraph/zoekt.git
+server:
+  addr: "127.0.0.1:3073"
+  data_dir: "~/.phebs-ux-dev"
