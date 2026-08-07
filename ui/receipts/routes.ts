@@ -24,6 +24,10 @@ export interface ReceiptRoute {
 
 export const ROUTES: ReceiptRoute[] = [
   { name: 'search', path: '/' },
+  // Single-repository query: multi-repo streams render groups in arrival
+  // order (nondeterministic — tracked for a stable-ordering fix), so the
+  // results + authority-chip surface is pinned on a one-repo result set.
+  { name: 'search-results', path: '/search?q=%22T323_ORDERS_API_PRODUCER%22' },
   { name: 'repos', path: '/repos' },
   { name: 'service-directory', path: `/services?${q({ repository: T307_REPO })}` },
   { name: 'relationship-explorer', path: `/relationships?${q({ repository: T307_REPO })}` },
@@ -38,7 +42,9 @@ export const ROUTES: ReceiptRoute[] = [
   { name: 'workbench', path: '/workbench' },
   { name: 'settings', path: '/settings' },
   { name: 'audit', path: '/audit', mask: ['main table'] },
-  { name: 'analytics', path: '/analytics' },
+  // Analytics content is usage-derived in whole (the harness's own searches
+  // mutate it), so the body is masked and the receipt pins chrome only.
+  { name: 'analytics', path: '/analytics', mask: ['main'] },
 ]
 
 export const THEMES = ['light', 'dark'] as const

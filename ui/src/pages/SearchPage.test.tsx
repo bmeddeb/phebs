@@ -570,6 +570,10 @@ test('service deep link preserves query while switching scope and renders receip
     digest: 'sha256:receipt',
   }))
   expect(screen.getByText(/stale · shared paths included · unowned paths excluded/)).toBeTruthy()
+  // T43.5: the receipt is a compact authority chip; digests never lead the band.
+  const chip = screen.getByRole('button', { name: 'stale · as of abc' })
+  expect(chip.getAttribute('aria-haspopup')).toBe('dialog')
+  expect(screen.queryByText(/sha256:/)).toBeNull()
   expect(decodeURIComponent(
     screen.getByRole('link', { name: 'All code' }).getAttribute('href') ?? '',
   )).toBe('#/search?q=needle')

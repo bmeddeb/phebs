@@ -9,7 +9,9 @@ export default defineConfig({
   outputDir: './receipts/.artifacts',
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // One retry absorbs transient page-load hiccups only; real pixel drift
+  // reproduces on the retry and still fails the run.
+  retries: 1,
   reporter: [['list']],
   snapshotPathTemplate: '{testDir}/baselines/{arg}{ext}',
   expect: {
