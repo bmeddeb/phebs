@@ -144,6 +144,18 @@ func (runtime *Runtime) HandlePlanning(ctx context.Context, chunk store.Generati
 	if err := runtime.checkPlanningFence(ctx, chunk, binding, false); err != nil {
 		return planningFailure(err)
 	}
+	// Collection precedes any admission of larger aggregate bytes: superseded
+	// plan directories and bindings are removed under this chunk's lease before
+	// the census can stage new work. A collector refusal keeps the turn retryable
+	// rather than admitting more derived bytes behind an unproved namespace.
+	if _, collectErr := runtime.CollectSupersededPlans(
+		ctx, chunk, CollectRemovalLimit,
+	); collectErr != nil {
+		if ctx.Err() != nil {
+			return planningFailure(ctx.Err())
+		}
+		return planningFailure(collectErr)
+	}
 	source, err := repositoryindex.ReadSourceManifest(
 		filepath.Join(runtime.DataDir, "index"), chunk.Repository,
 	)
@@ -168,6 +180,10 @@ func (runtime *Runtime) HandlePlanning(ctx context.Context, chunk store.Generati
 func (runtime *Runtime) enqueuePlanning(
 	ctx context.Context, binding planningBinding,
 ) (PlanningEnqueue, error) {
+	// Keep a binding continuously protected until its durable schedule either
+	// owns it or the enqueue path has classified the competing authority.
+	runtime.planMutation.Lock()
+	defer runtime.planMutation.Unlock()
 	if err := runtime.writePlanningBinding(binding); err != nil {
 		return "", planningFailure(err)
 	}

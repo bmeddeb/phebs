@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.2 complete 2026-08-06 · T40.3 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.2 complete 2026-08-06 · T40.3 in progress 2026-08-07)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -96,7 +96,12 @@ nonpublishing extraction work.
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
 
-**T40.3 · Source-partition super-root and aggregate policy v2** — retain the
+**T40.3 · Source-partition super-root and aggregate policy v2** *(in progress
+2026-08-07: the v2 super-root contract, single-pass builder, keyed/complete
+validation, refusal dimension, and the lease-fenced superseded-plan collector
+are implemented and race-tested on `codex/t40.3-superroot-aggregate-policy-v2`;
+runtime adoption of the super-root for production planning is deliberately
+sequenced with the T40.4 observation-inventory consumer)* — retain the
 shipped v1 manifest, ordered members, 4,096-blob/placement partition bounds,
 64-MiB per-partition declared-byte bound, content-addressed coalescing, and
 immutable Git reader defenses. Evolve only the actual blocker: the single
@@ -115,8 +120,10 @@ streamed repository-source pass rather than validate-then-reread, keeps staged
 output invisible until the final root re-fence, and never yields a corrupt
 prefix; before v2 admits larger aggregate bytes, a bounded schedule/lease-fenced
 collector removes superseded plan directories and bindings without touching
-active execution or a current publication marker; unchanged segments/members
-are byte-exactly reused across small deltas and A→B→A; v1 stays strict-readable; cancellation
+active execution or a current publication marker; unchanged member bytes are
+physically hard-linked from a completely validated prior super-root across
+small deltas and A→B→A, with explicit reuse/write counters; v1 stays
+strict-readable; cancellation
 kills/reaps Git children; exact maximum-shape, tamper, race, and cost tests;
 full merge bar.
 
