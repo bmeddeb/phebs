@@ -14,6 +14,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [keys, setKeys] = useState<APIKeySummary[]>([])
+  const [keysLoaded, setKeysLoaded] = useState(false)
   const [name, setName] = useState('')
   const [investigationWrite, setInvestigationWrite] = useState(false)
   const [createdToken, setCreatedToken] = useState('')
@@ -28,7 +29,10 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   useEffect(() => {
     const controller = new AbortController()
     fetchAPIKeys(controller.signal)
-      .then(({ keys: rows }) => setKeys(rows))
+      .then(({ keys: rows }) => {
+        setKeys(rows)
+        setKeysLoaded(true)
+      })
       .catch((cause) => {
         if (!isAbortError(cause)) setError(String(cause))
       })
@@ -193,7 +197,12 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
       </form>
 
       <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
-        {keys.length === 0 && (
+        {!keysLoaded && !error && (
+          <div role="status" className={css({ display: 'flex', alignItems: 'center', gap: '8px', padding: '24px 0', color: tok.textTertiary, fontSize: '14px' })}>
+            <Spinner $size="small" /> Loading API keys…
+          </div>
+        )}
+        {keysLoaded && keys.length === 0 && (
           <div className={css({ padding: '24px 0', color: tok.textTertiary, fontSize: '14px' })}>No API keys.</div>
         )}
         {keys.map((key) => (
