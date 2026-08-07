@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.3 are complete and T40.4 is in progress,
+explicit scale-convergence program: T40.1–T40.5 are complete and T40.6 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.3 complete · T40.4 in progress 2026-08-07)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.5 complete · T40.6 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,54 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.4 · Hierarchical observation inventory and bounded validation v2** *(in progress
-2026-08-07 on `codex/t40.4-hierarchical-observation-inventory-v2`; the
-non-authoritative v2 root/segment contract, builder, sparse/full readers,
-cache/leases, restart and prior-member reuse are implemented; runtime pointer,
-recovery, lifecycle, and archive adoption remain with T40.6)* —
-retain the shipped v1 partition members and content-addressed observation
-objects, but remove the 250,000-record generation ceiling and generation-wide
-object maps/full inventory passes as the scaling mechanism. T40.4 must use
-T40.1's frozen semantic refusal to select a small root of bounded inventory
-segments whose receipts can be streamed and verified without retaining every
-observation name. Preserve the
-`sourceobservation` classification contract and v1 reader compatibility. AC:
-each inventory segment is ordered, canonical, source/partition/policy-bound,
-and independently capped; finalization proves exact object inventory through a
-streaming merge rather than a generation-wide map; a keyed OID/partition open
-validates only root, one segment, one existing member, and selected object;
-explicit full validation visits every segment once with bounded memory;
-partial/corrupt sets never become current; restart reuses complete segments and
-rebuilds only absent/invalid work; cache/lease, nil/empty, unsupported/gap,
-small-delta, concurrent-writer, corrupt-cold, no-reread, and A→B→A tests; full
-merge bar.
-
-**T40.5 · Search-generation build, replacement headroom, and lifecycle owner**
-— replace the static search lifecycle owner before the two-million-owner gate.
-T40.5 must measure logical and allocated bytes for current plus rollback search
-generations and select an exact count/byte policy rather than inheriting the
-existing 50-GiB repository ceiling or raising it blindly. It also replaces the
-legacy one-shot 25-GiB capacity estimate with measured bounded per-shard/stage
-reservations plus one aggregate generation fence, or another prospectively
-measured admission contract. AC: select the production blob-reader posture
-explicitly using T40.1's bound small-projection comparison as input, not as a
-selection. Selecting batch sets `ZOEKT_DISABLE_CATFILE_BATCH=false` on the
-same-SHA whole-repository zoekt child only after parent-side
-`gitobj`-equivalent environment scrubbing, replace-object, lazy-fetch,
-prompt/lock, and alternates defenses are enforced and tested; otherwise the
-go-git fallback remains an explicit recorded posture rather than an inherited
-environment accident. Source-free diagnostics report the effective mode and
-batch/fallback read counts. Current, one
-rollback generation, active reader leases, publication marker, and in-progress
-backup/mutation lock outrank collection; completed backups are snapshots, never
-live pins; interrupted replacement keeps at least one complete searchable
-generation and resumes cleanup; old readers retire only after lease release;
-the real owner scans/deletes in bounded turns with durable fair cursors,
-symlink refusal, identity rechecks immediately before action, allocated and
-logical byte kinds kept separate, pressure/status integration, and exact
-current/prior/one-over tests; small-delta and A→B→A do not strand 50+ GiB
-generations; full search/recovery/lifecycle merge bars.
 
 **T40.6 · Observation recovery, lifecycle, and archive migration** — make the
 v2 source-partition/observation generations restart-resumable and pin-aware
@@ -568,8 +520,8 @@ deliberate as a result.
   mapping, fail-closed rendering, state completeness, deep-link discipline,
   dual-viewport QA, keyboard completeness, accessibility pass, screenshot
   receipts, and charter review with recorded findings.
-- The scale program keeps precedence: T40.1–T40.3 are complete and T40.4 is the
-  active scale ticket,
+- The scale program keeps precedence: T40.1–T40.5 are complete and T40.6 is the
+  next scale ticket,
   Epics 40–42 sequencing is unchanged, and this epic may not modify a scale
   plane. T41.7's v3 parity later builds on this epic's shared kit.
 - Screenshot receipts are environment-bound engineering records; walkthrough

@@ -182,7 +182,7 @@ type Indexer struct {
 	AnalysisUnits map[string]analysisunit.Scope
 	// AdmitDerived runs after the exact no-op fence and before any staging
 	// directory or child is created. T35.3 uses it for hard-watermark refusal.
-	AdmitDerived func(context.Context) error
+	AdmitDerived func(context.Context, int64) error
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
 	// index→candidate chain hook, mirroring how sync chains index. It also runs
@@ -247,7 +247,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
 	if ix.AdmitDerived != nil {
-		if err := ix.AdmitDerived(ctx); err != nil {
+		if err := ix.AdmitDerived(ctx, 0); err != nil {
 			return fmt.Errorf("index %s: derived-artifact admission: %w", repo.Name, err)
 		}
 	}
@@ -280,6 +280,26 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			repo.Name, sourceManifest.OwnerCount,
 			sourceManifest.PlacementCount, len(sourceManifest.Members),
 			sourceManifest.EncodedMemberBytes,
+		)
+		if ix.AdmitDerived != nil {
+			reservation, reservationErr := focusedindex.SearchGenerationReservation(sourceManifest)
+			if reservationErr != nil {
+				return fmt.Errorf("index %s: search reservation: %w", repo.Name, reservationErr)
+			}
+			if err := ix.AdmitDerived(ctx, reservation); err != nil {
+				return fmt.Errorf(
+					"index %s: measured search-generation admission (%d bytes): %w",
+					repo.Name, reservation, err,
+				)
+			}
+		}
+		batchReads, fallbackReads, countErr := focusedindex.SearchGenerationReaderCounts(sourceManifest)
+		if countErr != nil {
+			return fmt.Errorf("index %s: search reader accounting: %w", repo.Name, countErr)
+		}
+		ix.verbosef(
+			"index %s: search reader mode=go_git files_offered=%d batch_reads=%d fallback_reads=%d",
+			repo.Name, fallbackReads, batchReads, fallbackReads,
 		)
 	}
 	// zoekt.name makes shard repo names equal store names, which the T4.1
@@ -330,6 +350,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			args = append(args, "-branches="+strings.Join(branches, ","))
 		}
 		cmd = exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
+		cmd.Env = goGitChildEnvironment(os.Environ())
 	}
 	ix.verbosef(
 		"index %s: starting %s revisions=%d force=%t",
@@ -408,13 +429,13 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		if err := focusedindex.PublishFocused(
 			ctx, indexDir, stageDir, repo.Name, unit, revisions,
 		); err != nil {
-			return ix.failPublication(ctx, repo.Name, indexDir, err)
+			return ix.failPublication(ctx, repo.Name, indexDir, err, false)
 		}
 	} else if err := focusedindex.PublishWholeGeneration(
 		ctx, indexDir, stageDir, sourceStageDir, repo.Name, revisions,
 		sourceManifest,
 	); err != nil {
-		return ix.failPublication(ctx, repo.Name, indexDir, err)
+		return ix.failPublication(ctx, repo.Name, indexDir, err, true)
 	}
 	totalShardBytes := dirBytes(indexDir)
 	shardBytes.Set(totalShardBytes)
@@ -428,13 +449,33 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		// The child has already replaced the shard. If the DB commit fails,
 		// remove both sides of the claimed state so search cannot serve revision
 		// B while MCP defaults to the previously recorded revision A.
+		stateErr := fmt.Errorf("index %s: record state: %w", repo.Name, err)
+		freshState, readErr := ix.Store.GetRepo(ctx, repo.Name)
+		if readErr == nil && freshState.IndexedCommitHash == head &&
+			revisionsEqual(revisions, freshState.IndexedRevisions, freshState.IndexedCommitHash) &&
+			analysisunit.EqualState(unit, freshState.IndexedAnalysisUnit) {
+			finishErr := focusedindex.FinishPublication(indexDir, repo.Name)
+			return errors.Join(stateErr, wrapIfError("finish ambiguously committed publication", finishErr))
+		}
+		if unit == nil {
+			rollbackErr := focusedindex.RollbackSearchPublication(ctx, indexDir, repo.Name)
+			rootPath := filepath.Join(indexDir, focusedindex.SearchGenerationRootName(repo.Name))
+			_, rootErr := os.Lstat(rootPath)
+			var clearErr error
+			if errors.Is(rootErr, os.ErrNotExist) {
+				clearErr = ix.Store.ClearRepoIndexState(ctx, repo.Name)
+			}
+			return errors.Join(
+				stateErr, wrapIfError("reload ambiguous index state", readErr),
+				wrapIfError("restore prior search generation", rollbackErr),
+				wrapIfError("clear index state without rollback", clearErr),
+			)
+		}
 		clearErr := ix.Store.ClearRepoIndexState(ctx, repo.Name)
 		removeErr := focusedindex.RemoveRepository(ctx, indexDir, repo.Name)
-		return errors.Join(
-			fmt.Errorf("index %s: record state: %w", repo.Name, err),
+		return errors.Join(stateErr, wrapIfError("reload ambiguous index state", readErr),
 			wrapIfError("clear index state", clearErr),
-			wrapIfError("remove uncommitted shards", removeErr),
-		)
+			wrapIfError("remove uncommitted shards", removeErr))
 	}
 	if err := focusedindex.FinishPublication(indexDir, repo.Name); err != nil {
 		return fmt.Errorf("index %s: expose committed publication: %w", repo.Name, err)
@@ -447,9 +488,24 @@ func (ix *Indexer) failPublication(
 	ctx context.Context,
 	repository, indexDir string,
 	cause error,
+	whole bool,
 ) error {
 	if !focusedindex.IsPublishing(indexDir, repository) {
 		return fmt.Errorf("index %s: publish: %w", repository, cause)
+	}
+	if whole {
+		rollbackErr := focusedindex.RollbackSearchPublication(ctx, indexDir, repository)
+		rootPath := filepath.Join(indexDir, focusedindex.SearchGenerationRootName(repository))
+		_, rootErr := os.Lstat(rootPath)
+		var clearErr error
+		if errors.Is(rootErr, os.ErrNotExist) {
+			clearErr = ix.Store.ClearRepoIndexState(ctx, repository)
+		}
+		return errors.Join(
+			fmt.Errorf("index %s: publish: %w", repository, cause),
+			wrapIfError("restore prior search generation", rollbackErr),
+			wrapIfError("clear index state without rollback", clearErr),
+		)
 	}
 	clearErr := ix.Store.ClearRepoIndexState(ctx, repository)
 	removeErr := focusedindex.RemoveRepository(ctx, indexDir, repository)
@@ -458,6 +514,18 @@ func (ix *Indexer) failPublication(
 		wrapIfError("clear interrupted index state", clearErr),
 		wrapIfError("remove interrupted publication", removeErr),
 	)
+}
+
+func goGitChildEnvironment(environment []string) []string {
+	result := make([]string, 0, len(environment)+1)
+	for _, value := range environment {
+		key, _, _ := strings.Cut(value, "=")
+		if key == "ZOEKT_DISABLE_CATFILE_BATCH" {
+			continue
+		}
+		result = append(result, value)
+	}
+	return append(result, "ZOEKT_DISABLE_CATFILE_BATCH=true")
 }
 
 func (ix *Indexer) desiredAnalysisUnit(repository string) (*analysisunit.State, error) {

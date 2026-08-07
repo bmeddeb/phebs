@@ -53,7 +53,6 @@ func (owner StaticOwner) Sweep(
 func ClosedOwners() []Owner {
 	return []Owner{
 		StaticOwner{OwnerName: SourceOwner, Completeness: Exact},
-		StaticOwner{OwnerName: SearchOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ResolverOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ProofOwner, Completeness: Exact},
 		StaticOwner{OwnerName: InvestigationOwner, Completeness: Exact},

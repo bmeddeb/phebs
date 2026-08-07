@@ -1,0 +1,101 @@
+{
+  "ok": true,
+  "agents": 15,
+  "blindAgents": [],
+  "idleAgents": [],
+  "unopenedAgents": [],
+  "rewrittenPrompts": [],
+  "driftedLaunches": [],
+  "missingRoles": [],
+  "missingRoleSelectors": [],
+  "disclosures": [],
+  "unreadBriefs": [],
+  "missingChunks": [],
+  "uncoverableChunks": [],
+  "coveredChunks": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "plannedChunks": [
+    {
+      "id": 1,
+      "files": [
+        "AGENTS.md",
+        "PLAN.md",
+        "cmd/phebs/main.go",
+        "docs/BACKLOG.md"
+      ]
+    },
+    {
+      "id": 2,
+      "files": [
+        "docs/BACKLOG_COMPLETED.md",
+        "docs/ROADMAP.md",
+        "docs/guides/CONFIGURATION.md",
+        "docs/guides/OPERATIONS.md",
+        "internal/focusedindex/archive.go",
+        "internal/focusedindex/publication.go"
+      ]
+    },
+    {
+      "id": 3,
+      "files": [
+        "internal/focusedindex/publication.go",
+        "internal/indexer/binary_internal_test.go",
+        "internal/indexer/indexer.go",
+        "internal/indexer/indexer_test.go",
+        "internal/lifecycle/policy.go",
+        "internal/lifecycle/static.go",
+        "internal/search/searcher.go"
+      ]
+    },
+    {
+      "id": 4,
+      "files": [
+        "internal/search/searcher.go",
+        "internal/sync/reconcile.go"
+      ]
+    },
+    {
+      "id": 5,
+      "files": [
+        "internal/focusedindex/search_generation.go"
+      ]
+    },
+    {
+      "id": 6,
+      "files": [
+        "internal/focusedindex/search_generation.go"
+      ]
+    },
+    {
+      "id": 7,
+      "files": [
+        "internal/focusedindex/search_generation.go",
+        "internal/focusedindex/search_generation_bytes_other.go",
+        "internal/focusedindex/search_generation_bytes_unix.go"
+      ]
+    },
+    {
+      "id": 8,
+      "files": [
+        "internal/focusedindex/search_generation_lifecycle.go"
+      ]
+    },
+    {
+      "id": 9,
+      "files": [
+        "internal/focusedindex/search_generation_lifecycle.go",
+        "internal/focusedindex/search_generation_test.go",
+        "internal/lifecycle/search.go"
+      ]
+    }
+  ]
+}

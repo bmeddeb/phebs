@@ -30,7 +30,12 @@ const (
 	MaxDescriptorsPerTick   = 8
 	MaxMetadataBytesPerTick = 1 << 20
 
-	MaxPressureDependentAdmissionBytes int64 = 25 << 30
+	// One pressure-dependent admission may reserve at most the prospectively
+	// measured T40.5 search-generation ceiling. Whole search passes its exact
+	// source-census-derived reservation; other owners keep their smaller
+	// existing estimates. This is a validation bound, not a fixed 48-GiB
+	// reservation for every build.
+	MaxPressureDependentAdmissionBytes int64 = 48 << 30
 	GenerationScheduleRetained               = 2
 )
 

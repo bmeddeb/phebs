@@ -327,6 +327,11 @@ func serve(args []string) error {
 		lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
 		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
 	}
+	searchGenerationPins := &focusedindex.SearchGenerationPins{}
+	lifecycleOwners = append(lifecycleOwners, lifecycle.SearchGenerationOwnerImpl{
+		IndexDir: filepath.Join(cfg.Server.DataDir, "index"),
+		Pins:     searchGenerationPins, Acquire: acquireLifecycleMutation,
+	})
 	observationCache := &observationpublication.Cache{}
 	relationshipCache := &relationshippublication.Cache{}
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationGenerationOwner{
@@ -903,10 +908,10 @@ func serve(args []string) error {
 			Revisions:     cfg.Revisions,
 			AnalysisUnits: analysisUnits,
 			OnIndexed:     onIndexed,
-			AdmitDerived: func(admitCtx context.Context) error {
-				capacity, admissionErr := capacityGate.Check(admitCtx, 0)
+			AdmitDerived: func(admitCtx context.Context, estimatedBytes int64) error {
+				capacity, admissionErr := capacityGate.Check(admitCtx, estimatedBytes)
 				lifecycleStatus.ObserveCapacity(capacity, admissionErr)
-				if errors.Is(admissionErr, lifecycle.ErrCapacityUnavailable) {
+				if estimatedBytes == 0 && errors.Is(admissionErr, lifecycle.ErrCapacityUnavailable) {
 					// T35 workloads fail closed when capacity is unavailable. The
 					// pre-existing index pipeline retains its historical behavior,
 					// while a measured hard/projected watermark still refuses it.
@@ -977,7 +982,7 @@ func serve(args []string) error {
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("create index dir: %w", err)
 	}
-	searcher, err := search.Open(indexDir, st)
+	searcher, err := search.OpenWithGenerationPins(indexDir, st, searchGenerationPins)
 	if err != nil {
 		return err
 	}

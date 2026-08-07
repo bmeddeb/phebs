@@ -1,0 +1,18 @@
+{
+  "target": {
+    "type": "local"
+  },
+  "effort": "high",
+  "effortSource": "explicit",
+  "comment": {
+    "requested": false,
+    "effective": false
+  },
+  "fix": {
+    "requested": false,
+    "effective": false
+  },
+  "extraTokens": [],
+  "unknownFlags": [],
+  "warnings": []
+}

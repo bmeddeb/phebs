@@ -108,8 +108,10 @@ accuracy, topology, or release result. On 2026-08-06 Epics 40–42 became the
 explicit next program:
 T40.1 closed refusal attribution and froze the two-million-owner neutral
 envelope on 2026-08-06; T40.2 then detached derived planning from committed
-search authority, and T40.3 added the bounded source-partition super-root on
-2026-08-07. T40.4's hierarchical observation inventory is in progress. Epic 41 separately targets 10,000
+search authority, T40.3 added the bounded source-partition super-root, T40.4
+added the non-authoritative hierarchical observation inventory, and T40.5
+installed immutable search-generation replacement/lifecycle ownership on
+2026-08-07. T40.6 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -119,7 +121,7 @@ presentation-only track: twelve charter-gated tickets from audit ledger and
 semantic tokens through authority drawers, contract-exact caveats, citation
 objects, scope continuity, keyboard navigation, operator cards, and
 ten-thousand-row density, closing with a motion pass. It touches no scale
-plane, authority, or claim; T40.4 remains the active scale ticket.
+plane, authority, or claim; T40.6 remains the next scale ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -674,7 +676,7 @@ service count × repository bytes
 ### Program sequence
 
 - **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.3 complete, T40.4 in progress):** exact source-free refusal attribution,
+  T40.1–T40.5 complete, T40.6 next):** exact source-free refusal attribution,
   the frozen neutral envelope, and independent generation-scoped planning
   ownership are complete. Next evolve existing partition/
   observation members behind measured aggregate roots, replace the static
@@ -712,7 +714,7 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.3 is the only next scale ticket. Later tickets stay dependency-ordered
+- T40.6 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and
