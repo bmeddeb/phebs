@@ -29,6 +29,24 @@ type Runner struct {
 	LifecycleReports JobLifecycleSink
 }
 
+type durableErrorTexter interface {
+	DurableErrorText() string
+}
+
+// DurableErrorText selects a structurally supplied persistence-safe message
+// from anywhere in an error chain. Errors without that method retain their
+// ordinary rendered message exactly.
+func DurableErrorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	var durable durableErrorTexter
+	if errors.As(err, &durable) {
+		return durable.DurableErrorText()
+	}
+	return err.Error()
+}
+
 func (r *Runner) defaults() {
 	if r.Interval == 0 {
 		r.Interval = 15 * time.Second
@@ -183,9 +201,9 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}
 		if r.persist(job, action, func(writeCtx context.Context) error {
 			if IsSuccessorRetry(err) {
-				return r.Store.FailJobWithSuccessor(writeCtx, job, err.Error())
+				return r.Store.FailJobWithSuccessor(writeCtx, job, DurableErrorText(err))
 			}
-			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, err.Error())
+			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, DurableErrorText(err))
 		}) {
 			recordJob(r.Kind, "failed")
 			recordJobError(r.Kind, err)
@@ -193,7 +211,7 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}
 	case IsYield(err):
 		if r.persist(job, "yield job", func(writeCtx context.Context) error {
-			return r.Store.ReleaseJob(writeCtx, job, err.Error())
+			return r.Store.ReleaseJob(writeCtx, job, DurableErrorText(err))
 		}) {
 			recordJob(r.Kind, "deferred")
 			r.emitLifecycle("yielded", job, handleDuration, "yield", nil)
@@ -206,9 +224,9 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}
 		if r.persist(job, action, func(writeCtx context.Context) error {
 			if IsSuccessorRetry(err) {
-				return r.Store.FailJobWithSuccessor(writeCtx, job, err.Error())
+				return r.Store.FailJobWithSuccessor(writeCtx, job, DurableErrorText(err))
 			}
-			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, err.Error())
+			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, DurableErrorText(err))
 		}) {
 			recordJob(r.Kind, "failed")
 			recordJobError(r.Kind, err)
@@ -220,7 +238,7 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 			nextNotBefore = time.Now().UTC().Add(
 				r.Backoff(err, job.Attempts+1),
 			)
-			return r.Store.RequeueJob(writeCtx, job, err.Error(), nextNotBefore)
+			return r.Store.RequeueJob(writeCtx, job, DurableErrorText(err), nextNotBefore)
 		}) {
 			recordJob(r.Kind, "requeued")
 			recordJobError(r.Kind, err)

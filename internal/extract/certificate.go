@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -1004,6 +1005,9 @@ func marshalLegacyExclusionReceipt(
 func validCertificateOutcomeReceipt(
 	receipt ExtractionDomainOutcomeReceipt,
 ) bool {
+	if !validCertificateOutcomeRefusal(receipt.Refusal, receipt.Disposition) {
+		return false
+	}
 	if receipt.InventoryMS < 0 || receipt.OpenedSourceMS < 0 ||
 		receipt.ExtractorMS < 0 || receipt.StagingMS < 0 {
 		return false
@@ -1057,6 +1061,33 @@ func validCertificateOutcomeReceipt(
 	return validCertificateOutcomeReason(
 		receipt.Disposition, receipt.Reason,
 	)
+}
+
+func validCertificateOutcomeRefusal(
+	refusal *pipelinerefusal.Receipt,
+	disposition store.DomainOutcomeDisposition,
+) bool {
+	if refusal == nil {
+		// Retained v1 receipts predate the optional T40.1 projection.
+		return true
+	}
+	if disposition == store.DomainOutcomePublished ||
+		disposition == store.DomainOutcomeUnavailablePrerequisite ||
+		pipelinerefusal.Validate(*refusal) != nil {
+		return false
+	}
+	switch refusal.Stage {
+	case pipelinerefusal.StageCandidateStrictOpen:
+		return refusal.GenerationKind == pipelinerefusal.GenerationCandidate
+	case pipelinerefusal.StageDomainInventory,
+		pipelinerefusal.StageExtractorExecution,
+		pipelinerefusal.StageEvidenceStaging,
+		pipelinerefusal.StageFinalPublication:
+		return refusal.GenerationKind ==
+			pipelinerefusal.GenerationExtractionDomain
+	default:
+		return false
+	}
 }
 
 func validCertificateOutcomeReason(

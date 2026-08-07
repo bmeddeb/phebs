@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
@@ -477,16 +478,18 @@ type flakyRunnerStore struct {
 	mu                 sync.Mutex
 	terminalFailures   int
 	statuses           []JobStatus
+	statusErrors       []string
 	releases           []Job
 	successorFailures  []Job
 	heartbeatErr       error
 	heartbeatLeaseLost bool
 }
 
-func (s *flakyRunnerStore) SetJobStatus(_ context.Context, _ Job, status JobStatus, _ string) error {
+func (s *flakyRunnerStore) SetJobStatus(_ context.Context, _ Job, status JobStatus, message string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.statuses = append(s.statuses, status)
+	s.statusErrors = append(s.statusErrors, message)
 	if status != StatusRunning && s.terminalFailures > 0 {
 		s.terminalFailures--
 		return errors.New("temporary store failure")
@@ -521,6 +524,50 @@ func (s *flakyRunnerStore) ReleaseJob(
 	defer s.mu.Unlock()
 	s.releases = append(s.releases, job)
 	return nil
+}
+
+func TestRunnerPersistsStructuralDurableErrorText(t *testing.T) {
+	privateCause := errors.New("private /repo/path object deadbeef")
+	refusal := pipelinerefusal.Unknown(
+		privateCause,
+		pipelinerefusal.StageObservationPublication,
+		pipelinerefusal.GenerationObservation,
+	)
+	wrappedRefusal := WithTerminal(fmt.Errorf("outer private token: %w", refusal))
+	if !errors.Is(wrappedRefusal, privateCause) {
+		t.Fatal("outer wrapper lost the refusal cause")
+	}
+	ordinary := WithTerminal(fmt.Errorf("ordinary wrapper: %w", errors.New("ordinary cause")))
+
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "inner refusal", err: wrappedRefusal, want: refusal.Error()},
+		{name: "ordinary error", err: ordinary, want: ordinary.Error()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			st := &flakyRunnerStore{}
+			runner := &Runner{
+				Store: st, Kind: JobExtract,
+				Handle:         func(context.Context, Job) error { return test.err },
+				HeartbeatEvery: time.Hour, MaxAttempts: 3, Who: "durable-error-worker",
+			}
+			runner.execute(context.Background(), Job{
+				ID: "extraction_job:durable-error", Kind: JobExtract, Target: "repo",
+				ClaimedBy: runner.Who, LeaseToken: "lease",
+			})
+
+			st.mu.Lock()
+			defer st.mu.Unlock()
+			if len(st.statuses) != 2 || st.statuses[1] != StatusFailed ||
+				len(st.statusErrors) != 2 || st.statusErrors[1] != test.want {
+				t.Fatalf("status/errors = %v/%q, want failed message %q", st.statuses, st.statusErrors, test.want)
+			}
+		})
+	}
 }
 
 func TestRunnerRetriesTerminalPersistence(t *testing.T) {

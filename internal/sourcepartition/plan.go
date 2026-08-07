@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 )
@@ -62,6 +63,21 @@ var sourceBlobHash = productionSourceBlobHash
 
 func productionSourceBlobHash(objectID string) [sha256.Size]byte {
 	return sha256.Sum256([]byte(BlobHashPolicy + "\x00" + objectID))
+}
+
+func checkPlanLimit(
+	dimension pipelinerefusal.Dimension,
+	observed,
+	limit int64,
+	message string,
+) error {
+	if observed <= limit {
+		return nil
+	}
+	return pipelinerefusal.Measure(
+		fmt.Errorf("%w: %s", ErrTooLarge, message),
+		dimension, observed, limit,
+	)
 }
 
 func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
@@ -119,7 +135,11 @@ func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
 				return nil
 			}
 			if record.DeclaredBytes > MaxBlobBytes {
-				return fmt.Errorf("%w: selected blob exceeds the per-blob bound", ErrTooLarge)
+				return checkPlanLimit(
+					pipelinerefusal.DimensionBlobBytes,
+					record.DeclaredBytes, MaxBlobBytes,
+					"selected blob exceeds the per-blob bound",
+				)
 			}
 			if metrics.SelectedPlacements == math.MaxInt {
 				return fmt.Errorf("%w: selected placement count overflows", ErrTooLarge)
@@ -162,7 +182,11 @@ func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
 		}
 	}
 	if len(leaves) > MaxPartitions {
-		return Manifest{}, fmt.Errorf("%w: partition count exceeds %d", ErrTooLarge, MaxPartitions)
+		return Manifest{}, checkPlanLimit(
+			pipelinerefusal.DimensionPartitionCount,
+			int64(len(leaves)), MaxPartitions,
+			"partition count exceeds its bound",
+		)
 	}
 
 	members := make([]Member, 0, len(leaves))
@@ -185,9 +209,21 @@ func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
 		members = append(members, member)
 		manifest.BlobCount += member.BlobCount
 		manifest.PlacementCount += member.PlacementCount
-		if member.DeclaredBytes > MaxGenerationBlobBytes-manifest.DeclaredBytes ||
-			member.ContentBytes > MaxGenerationContentBytes-manifest.EncodedMemberBytes {
-			return Manifest{}, fmt.Errorf("%w: generation byte total exceeds its bound", ErrTooLarge)
+		if member.DeclaredBytes > MaxGenerationBlobBytes-manifest.DeclaredBytes {
+			return Manifest{}, checkPlanLimit(
+				pipelinerefusal.DimensionGenerationBlobBytes,
+				manifest.DeclaredBytes+member.DeclaredBytes,
+				MaxGenerationBlobBytes,
+				"generation declared bytes exceed their bound",
+			)
+		}
+		if member.ContentBytes > MaxGenerationContentBytes-manifest.EncodedMemberBytes {
+			return Manifest{}, checkPlanLimit(
+				pipelinerefusal.DimensionGenerationEncodedBytes,
+				manifest.EncodedMemberBytes+member.ContentBytes,
+				MaxGenerationContentBytes,
+				"generation encoded bytes exceed their bound",
+			)
 		}
 		manifest.DeclaredBytes += member.DeclaredBytes
 		manifest.EncodedMemberBytes += member.ContentBytes
@@ -231,11 +267,15 @@ func appendSpool(destination *spool, record spoolRecord) error {
 	}
 	payload = append(payload, '\n')
 	if len(payload) > MaxRecordBytes {
-		return fmt.Errorf("%w: spool record exceeds its byte bound", ErrTooLarge)
+		return invalidf("spool record violates its encoded bound")
 	}
 	if destination.metrics != nil &&
 		int64(len(payload)) > MaxSpoolBytes-destination.metrics.currentSpoolBytes {
-		return fmt.Errorf("%w: spool bytes exceed %d", ErrTooLarge, MaxSpoolBytes)
+		return checkPlanLimit(
+			pipelinerefusal.DimensionPlanningSpoolBytes,
+			destination.metrics.currentSpoolBytes+int64(len(payload)),
+			MaxSpoolBytes, "planning spool bytes exceed their bound",
+		)
 	}
 	file, err := os.OpenFile(
 		destination.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600,
@@ -275,10 +315,18 @@ func splitSpool(ctx context.Context, directory string, current *spool, leaves *[
 	}
 	if allSameObject {
 		if current.placements > MaxPlacementsPerPartition {
-			return fmt.Errorf("%w: one blob has too many placements", ErrTooLarge)
+			return checkPlanLimit(
+				pipelinerefusal.DimensionBlobPlacements,
+				int64(current.placements), MaxPlacementsPerPartition,
+				"one blob has too many placements",
+			)
 		}
 		if len(*leaves) >= MaxPartitions {
-			return fmt.Errorf("%w: partition count exceeds %d", ErrTooLarge, MaxPartitions)
+			return checkPlanLimit(
+				pipelinerefusal.DimensionPartitionCount,
+				int64(len(*leaves)+1), MaxPartitions,
+				"partition count exceeds its bound",
+			)
 		}
 		*leaves = append(*leaves, current)
 		return nil
@@ -286,7 +334,11 @@ func splitSpool(ctx context.Context, directory string, current *spool, leaves *[
 	if current.placements <= MaxPlacementsPerPartition &&
 		current.declaredBytes <= MaxPartitionBlobBytes {
 		if len(*leaves) >= MaxPartitions {
-			return fmt.Errorf("%w: partition count exceeds %d", ErrTooLarge, MaxPartitions)
+			return checkPlanLimit(
+				pipelinerefusal.DimensionPartitionCount,
+				int64(len(*leaves)+1), MaxPartitions,
+				"partition count exceeds its bound",
+			)
 		}
 		*leaves = append(*leaves, current)
 		return nil
@@ -355,7 +407,10 @@ func forEachSpool(ctx context.Context, path string, visit func(spoolRecord) erro
 			_ = file.Close()
 			return err
 		}
-		line, err := readLine(reader, MaxRecordBytes)
+		line, err := readLine(
+			reader, MaxRecordBytes,
+			pipelinerefusal.DimensionUnknown,
+		)
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -436,8 +491,11 @@ func writeMember(
 		}
 		current.Placements = append(current.Placements, placement)
 	}
-	if len(blobs) > MaxBlobsPerPartition || len(records) > MaxPlacementsPerPartition {
-		return Member{}, fmt.Errorf("%w: planned member exceeds item bounds", ErrTooLarge)
+	if len(blobs) > MaxBlobsPerPartition {
+		return Member{}, invalidf("planned member blob count violates its partition")
+	}
+	if len(records) > MaxPlacementsPerPartition {
+		return Member{}, invalidf("planned member placements violate their partition")
 	}
 	name := memberName(repository, generation, ordinal)
 	file, err := os.OpenFile(
@@ -460,7 +518,7 @@ func writeMember(
 		}
 		if blob.DeclaredBytes > MaxPartitionBlobBytes-member.DeclaredBytes {
 			_ = file.Close()
-			return Member{}, fmt.Errorf("%w: partition blob bytes exceed their bound", ErrTooLarge)
+			return Member{}, invalidf("planned member bytes violate their partition")
 		}
 		payload, err := json.Marshal(blob)
 		if err != nil {
@@ -470,7 +528,7 @@ func writeMember(
 		payload = append(payload, '\n')
 		if int64(len(payload)) > MaxMemberContentBytes-member.ContentBytes {
 			_ = file.Close()
-			return Member{}, fmt.Errorf("%w: partition metadata exceeds its bound", ErrTooLarge)
+			return Member{}, invalidf("planned member metadata violates its partition")
 		}
 		written, err := file.Write(payload)
 		if err != nil || written != len(payload) {
@@ -532,7 +590,11 @@ func hashBit(hash []byte, bit int) byte {
 	return (hash[bit/8] >> (7 - uint(bit%8))) & 1
 }
 
-func readLine(reader *bufio.Reader, maximum int) ([]byte, error) {
+func readLine(
+	reader *bufio.Reader,
+	maximum int,
+	dimension pipelinerefusal.Dimension,
+) ([]byte, error) {
 	var result []byte
 	for {
 		fragment, prefix, err := reader.ReadLine()
@@ -540,7 +602,13 @@ func readLine(reader *bufio.Reader, maximum int) ([]byte, error) {
 			return nil, err
 		}
 		if len(fragment) > maximum-len(result) {
-			return nil, fmt.Errorf("%w: line exceeds its byte bound", ErrTooLarge)
+			if dimension == pipelinerefusal.DimensionUnknown {
+				return nil, invalidf("encoded line violates its bound")
+			}
+			return nil, checkPlanLimit(
+				dimension, int64(len(result)+len(fragment)), int64(maximum),
+				"line exceeds its byte bound",
+			)
 		}
 		result = append(result, fragment...)
 		if !prefix {
@@ -571,7 +639,11 @@ func writeCanonicalJSON(path string, value any, maximum int) error {
 	}
 	raw = append(raw, '\n')
 	if len(raw) > maximum {
-		return fmt.Errorf("%w: control bytes exceed their bound", ErrTooLarge)
+		return checkPlanLimit(
+			pipelinerefusal.DimensionGenerationControlBytes,
+			int64(len(raw)), int64(maximum),
+			"control bytes exceed their bound",
+		)
 	}
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {

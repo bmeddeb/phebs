@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -48,7 +49,7 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 	sourceDirectory := filepath.Join(runtime.DataDir, "index")
 	source, err := repositoryindex.ReadSourceManifest(sourceDirectory, repository)
 	if err != nil {
-		return workFailure(err)
+		return planningFailure(err)
 	}
 	if currentMatchesSource(root, repository, source.Digest) {
 		runtime.cleanupSettledSchedule(ctx, repository)
@@ -62,11 +63,14 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 	}
 	plan, planDirectory, err := runtime.buildPlan(ctx, repository, sourceDirectory, source)
 	if err != nil {
-		return workFailure(err)
+		return planningFailure(err)
 	}
 	partition := plan.Manifest()
-	if partition.BlobCount > MaxGenerationRecords {
-		return workFailure(ErrLimit)
+	if err := checkPublicationLimit(
+		ErrLimit, pipelinerefusal.DimensionGenerationRecords,
+		int64(partition.BlobCount), MaxGenerationRecords,
+	); err != nil {
+		return workFailure(err)
 	}
 	generation, err := GenerationDigest(partition)
 	if err != nil {
@@ -559,16 +563,45 @@ func clearMarker(root, repository, generation string) error {
 	return syncDirectory(repositoryDirectory(root, repository))
 }
 
-type workBoundary struct{ cause error }
-
-func (workBoundary) Error() string { return ErrWorkUnavailable.Error() }
-func (failure workBoundary) Unwrap() error {
-	return errors.Join(ErrWorkUnavailable, failure.cause)
-}
-
 func workFailure(err error) error {
 	if err == nil {
 		return nil
 	}
-	return workBoundary{cause: err}
+	cause := errors.Join(ErrWorkUnavailable, err)
+	if errors.Is(err, ErrInvalid) || errors.Is(err, sourcepartition.ErrInvalid) {
+		return pipelinerefusal.Classified(
+			cause,
+			pipelinerefusal.StageObservationPublication,
+			pipelinerefusal.GenerationObservation,
+			pipelinerefusal.ClassificationInvalid,
+			pipelinerefusal.DimensionUnknown,
+		)
+	}
+	return pipelinerefusal.At(
+		cause,
+		pipelinerefusal.StageObservationPublication,
+		pipelinerefusal.GenerationObservation,
+	)
+}
+
+func planningFailure(err error) error {
+	if err == nil {
+		return nil
+	}
+	cause := errors.Join(ErrWorkUnavailable, err)
+	if errors.Is(err, sourcepartition.ErrInvalid) ||
+		errors.Is(err, repositoryindex.ErrInvalidGeneration) {
+		return pipelinerefusal.Classified(
+			cause,
+			pipelinerefusal.StageSourcePartitionPlanning,
+			pipelinerefusal.GenerationSourcePartition,
+			pipelinerefusal.ClassificationInvalid,
+			pipelinerefusal.DimensionUnknown,
+		)
+	}
+	return pipelinerefusal.At(
+		cause,
+		pipelinerefusal.StageSourcePartitionPlanning,
+		pipelinerefusal.GenerationSourcePartition,
+	)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -321,6 +323,93 @@ func TestPlannerRefusesOversizedSelectedBlobBeforeGitRead(t *testing.T) {
 	})
 	if !errors.Is(err, ErrTooLarge) || strings.Contains(err.Error(), "large.go") {
 		t.Fatalf("oversized error = %v", err)
+	}
+	var measurement *pipelinerefusal.Measurement
+	if !errors.As(err, &measurement) || measurement == nil ||
+		measurement.Dimension != pipelinerefusal.DimensionBlobBytes ||
+		measurement.Observed != MaxBlobBytes+1 || measurement.Limit != MaxBlobBytes {
+		t.Fatalf("oversized measurement = %+v", measurement)
+	}
+}
+
+func TestPlannerBlobPlacementBoundAtOwningSplit(t *testing.T) {
+	content := []byte("package shared\n")
+	for _, testCase := range []struct {
+		name  string
+		files int
+		want  bool
+	}{
+		{name: "exact", files: MaxPlacementsPerPartition},
+		{name: "one over", files: MaxPlacementsPerPartition + 1, want: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			files := make(map[string][]byte, testCase.files)
+			for index := range testCase.files {
+				files[fmt.Sprintf("file-%05d.go", index)] = content
+			}
+			repository, commit := sourceFixture(t, files)
+			sourceDirectory := filepath.Join(t.TempDir(), "source")
+			source, err := repositoryindex.BuildSourceGeneration(
+				t.Context(), repository, sourceDirectory, "example/placements",
+				[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = Build(t.Context(), BuildRequest{
+				SourceDirectory: sourceDirectory, OutputDirectory: t.TempDir(),
+				Repository: source.Repository, Source: source,
+				Policy: Policy{Schema: PolicySchema, Name: "go-source", Version: "1.0.0", IncludeSuffixes: []string{".go"}},
+			})
+			if !testCase.want {
+				if err != nil {
+					t.Fatalf("exact bound: %v", err)
+				}
+				return
+			}
+			var measurement *pipelinerefusal.Measurement
+			if !errors.Is(err, ErrTooLarge) || !errors.As(err, &measurement) ||
+				measurement == nil ||
+				measurement.Dimension != pipelinerefusal.DimensionBlobPlacements ||
+				measurement.Observed != MaxPlacementsPerPartition+1 ||
+				measurement.Limit != MaxPlacementsPerPartition {
+				t.Fatalf("one-over refusal = %v, measurement=%+v", err, measurement)
+			}
+		})
+	}
+}
+
+func TestClassifiedPlanLimitsAcceptExactAndRefuseOneOver(t *testing.T) {
+	tests := []struct {
+		name      string
+		dimension pipelinerefusal.Dimension
+		limit     int64
+	}{
+		{name: "blob bytes", dimension: pipelinerefusal.DimensionBlobBytes, limit: MaxBlobBytes},
+		{name: "blob placements", dimension: pipelinerefusal.DimensionBlobPlacements, limit: MaxPlacementsPerPartition},
+		{name: "partition count", dimension: pipelinerefusal.DimensionPartitionCount, limit: MaxPartitions},
+		{name: "generation blob bytes", dimension: pipelinerefusal.DimensionGenerationBlobBytes, limit: MaxGenerationBlobBytes},
+		{name: "generation encoded bytes", dimension: pipelinerefusal.DimensionGenerationEncodedBytes, limit: MaxGenerationContentBytes},
+		{name: "generation control bytes", dimension: pipelinerefusal.DimensionGenerationControlBytes, limit: MaxManifestBytes},
+		{name: "planning spool bytes", dimension: pipelinerefusal.DimensionPlanningSpoolBytes, limit: MaxSpoolBytes},
+		{name: "batch header bytes", dimension: pipelinerefusal.DimensionBatchHeaderBytes, limit: 256},
+		{name: "batch output bytes", dimension: pipelinerefusal.DimensionBatchOutputBytes, limit: MaxBatchOutputBytes},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			for _, observed := range []int64{testCase.limit - 1, testCase.limit} {
+				if err := checkPlanLimit(testCase.dimension, observed, testCase.limit, "classified bound"); err != nil {
+					t.Fatalf("observed %d at limit %d: %v", observed, testCase.limit, err)
+				}
+			}
+			err := checkPlanLimit(testCase.dimension, testCase.limit+1, testCase.limit, "classified bound")
+			var measurement *pipelinerefusal.Measurement
+			if !errors.Is(err, ErrTooLarge) || !errors.As(err, &measurement) ||
+				measurement == nil || measurement.Dimension != testCase.dimension ||
+				measurement.Observed != testCase.limit+1 || measurement.Limit != testCase.limit {
+				t.Fatalf("one-over refusal = %v, measurement=%+v", err, measurement)
+			}
+		})
 	}
 }
 

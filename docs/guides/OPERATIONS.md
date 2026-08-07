@@ -1249,6 +1249,49 @@ process logger while the repository mirror lock is held, so a slow log
 destination can extend that diagnostic turn. Keep the destination draining
 and enable these switches only for a bounded investigation.
 
+#### Closed pipeline refusals
+
+Derived-pipeline failures that reach the source-partition, observation,
+candidate, or extraction boundaries now expose the source-free
+`phebs-pipeline-refusal-v1` shape. The rendered and durable form contains only
+`schema`, `stage`, `generation_kind`, `classification`, `dimension`,
+`observed`, and `limit`. Repository names, paths, object IDs, digests, child
+output, and raw errors are not part of this projection.
+
+The closed stage/generation pairs are:
+
+| Stage | Generation kind |
+| --- | --- |
+| `source_partition_planning` | `source_partition` |
+| `observation_publication` | `observation` |
+| `candidate_strict_open` | `candidate` |
+| `domain_inventory` | `extraction_domain` |
+| `extractor_execution` | `extraction_domain` |
+| `evidence_staging` | `extraction_domain` |
+| `final_publication` | `extraction_domain` |
+
+A `limit` refusal names the owning dimension and records the exact nonnegative
+`observed` and `limit` scalars with `observed > limit`. An `invalid` or
+`unknown` refusal uses `dimension: unknown` with both scalars zero; phebs does
+not infer a measurement it did not obtain. Crossed stage/generation or
+stage/dimension authority is invalid and is resealed as a closed `unknown`
+failure rather than rendered with private context.
+
+The original in-process error remains available to `errors.Is`/`errors.As`,
+but durable queue text is selected structurally from the closed refusal even
+when another error wraps it. Extraction outcome receipts carry the same
+optional projection. When it is absent, the retained v1 outcome bytes remain
+unchanged. This classification changes neither retry policy nor a previously
+settled generation.
+
+Limit scalars reuse counters already required by the owning boundary. On a
+successful request, sync tick, startup/restart, retry/no-op, or publication
+transition, this mechanism adds no read, hash, store operation, child process,
+or formatting work; only a failure allocates and encodes the small projection.
+The observation-progress response keeps its existing JSON `schema` field; the
+Go-only field rename merely prevents Huma from producing a duplicate-`Schema`
+warning during OpenAPI generation.
+
 #### Analysis-unit state and rebuilds
 
 At startup, phebs always emits one source-free analysis-unit posture receipt

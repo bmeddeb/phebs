@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -542,9 +543,10 @@ func TestGitCorpusCandidateSymlinkPolicy(t *testing.T) {
 	})
 
 	tests := []struct {
-		name    string
-		want    string
-		prepare func(*corpusGitFixture)
+		name      string
+		want      string
+		dimension pipelinerefusal.Dimension
+		prepare   func(*corpusGitFixture)
 	}{
 		{
 			name: "repository escape",
@@ -594,8 +596,8 @@ func TestGitCorpusCandidateSymlinkPolicy(t *testing.T) {
 			},
 		},
 		{
-			name: "excessive depth",
-			want: "depth limit",
+			name:      "excessive depth",
+			dimension: pipelinerefusal.DimensionSymlinkDepth,
 			prepare: func(f *corpusGitFixture) {
 				f.commitFile("final.thrift", "service Final {}", "final")
 				f.addSymlink("service.thrift", "chain01")
@@ -609,8 +611,8 @@ func TestGitCorpusCandidateSymlinkPolicy(t *testing.T) {
 			},
 		},
 		{
-			name: "oversized target",
-			want: "target exceeds",
+			name:      "oversized target",
+			dimension: pipelinerefusal.DimensionSourceBlobBytes,
 			prepare: func(f *corpusGitFixture) {
 				f.stageBlob("120000", "service.thrift", strings.Repeat("x", maxCorpusPathBytes+1))
 			},
@@ -635,7 +637,9 @@ func TestGitCorpusCandidateSymlinkPolicy(t *testing.T) {
 				context.Background(),
 				func(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") },
 			)
-			if err == nil || !strings.Contains(err.Error(), test.want) {
+			if test.dimension != "" {
+				requirePipelineMeasurement(t, err, test.dimension)
+			} else if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("Inventory error = %v, want %q", err, test.want)
 			}
 		})
@@ -715,9 +719,9 @@ func TestGitCorpusRejectsOversizedBlob(t *testing.T) {
 	// The bounded runner stops reading at the cap, so memory stays bounded
 	// even though there is no separate size pre-check anymore.
 	_, err := walkThenRead(t, GitCorpus(f.dataDir).New(f.repoName, head), "large.proto")
-	if err == nil || !strings.Contains(err.Error(), "exceeds") {
-		t.Fatalf("oversized blob error = %v", err)
-	}
+	requirePipelineMeasurement(
+		t, err, pipelinerefusal.DimensionSourceBlobBytes,
+	)
 }
 
 func TestGitCorpusSCIPIndexUsesIndependentRootOnlyLimit(t *testing.T) {
@@ -732,9 +736,10 @@ func TestGitCorpusSCIPIndexUsesIndependentRootOnlyLimit(t *testing.T) {
 	if err := corpus.WalkFiles(context.Background(), func(string) error { return nil }); err != nil {
 		t.Fatalf("WalkFiles: %v", err)
 	}
-	if _, err := corpus.Read(context.Background(), "index.scip"); err == nil || !strings.Contains(err.Error(), "exceeds") {
-		t.Fatalf("ordinary source read error = %v, want 10 MiB refusal", err)
-	}
+	_, err := corpus.Read(context.Background(), "index.scip")
+	requirePipelineMeasurement(
+		t, err, pipelinerefusal.DimensionSourceBlobBytes,
+	)
 	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
 	if !ok {
 		t.Fatal("production corpus does not expose the bounded SCIP capability")
@@ -847,10 +852,10 @@ func TestT206VerifiedSCIPCapabilityFailsClosed(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := verified.ReadSCIPIndex(context.Background()); err == nil ||
-			!strings.Contains(err.Error(), "exceeds byte limit") {
-			t.Fatalf("oversized SCIP error = %v", err)
-		}
+		_, err := verified.ReadSCIPIndex(context.Background())
+		requirePipelineMeasurement(
+			t, err, pipelinerefusal.DimensionSourceBlobBytes,
+		)
 	})
 }
 
@@ -999,20 +1004,32 @@ func TestScopedCandidateManifestBlocksOutOfUnitExactProbes(t *testing.T) {
 func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(pathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
-	if err == nil ||
-		!errors.Is(err, errOperationLimitRefusal) ||
-		!strings.Contains(err.Error(), "aggregate path limit") {
-		t.Fatalf("Inventory error = %v", err)
-	}
+	requirePipelineMeasurement(
+		t, err, pipelinerefusal.DimensionInventoryPathBytes,
+	)
 }
 
 func TestVerifiedCorpusBoundsUnreadableAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(unreadablePathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
-	if err == nil ||
-		!errors.Is(err, errOperationLimitRefusal) ||
-		!strings.Contains(err.Error(), "aggregate path limit") {
-		t.Fatalf("Inventory error = %v", err)
+	requirePipelineMeasurement(
+		t, err, pipelinerefusal.DimensionInventoryPathBytes,
+	)
+}
+
+func requirePipelineMeasurement(
+	t *testing.T,
+	err error,
+	dimension pipelinerefusal.Dimension,
+) {
+	t.Helper()
+	var measurement *pipelinerefusal.Measurement
+	if err == nil || !errors.Is(err, errOperationLimitRefusal) ||
+		!errors.As(err, &measurement) || measurement == nil ||
+		measurement.Dimension != dimension ||
+		measurement.Observed <= measurement.Limit {
+		t.Fatalf("measurement = %+v from %v, want one-over %s refusal",
+			measurement, err, dimension)
 	}
 }
 

@@ -8,12 +8,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 )
@@ -36,8 +36,11 @@ func Begin(root string, partition sourcepartition.Manifest) (*Stage, error) {
 	if err := sourcepartition.ValidateManifest(partition); err != nil {
 		return nil, err
 	}
-	if partition.BlobCount > MaxGenerationRecords {
-		return nil, ErrLimit
+	if err := checkPublicationLimit(
+		ErrLimit, pipelinerefusal.DimensionGenerationRecords,
+		int64(partition.BlobCount), MaxGenerationRecords,
+	); err != nil {
+		return nil, err
 	}
 	generation, err := GenerationDigest(partition)
 	if err != nil {
@@ -49,6 +52,12 @@ func Begin(root string, partition sourcepartition.Manifest) (*Stage, error) {
 	}
 	entries, err := boundedDirectory(repositoryRoot, MaxRepositoryGenerations+2)
 	if err != nil {
+		if errors.Is(err, ErrLimit) {
+			return nil, checkPublicationLimit(
+				ErrLimit, pipelinerefusal.DimensionRepositoryEntries,
+				MaxRepositoryGenerations+3, MaxRepositoryGenerations+2,
+			)
+		}
 		return nil, err
 	}
 	generations := 0
@@ -58,7 +67,10 @@ func Begin(root string, partition sourcepartition.Manifest) (*Stage, error) {
 		}
 	}
 	if generations >= MaxRepositoryGenerations {
-		return nil, ErrLimit
+		return nil, checkPublicationLimit(
+			ErrLimit, pipelinerefusal.DimensionRepositoryGenerations,
+			int64(generations+1), MaxRepositoryGenerations,
+		)
 	}
 	marker := Marker{Schema: MarkerSchema, Repository: partition.Repository, GenerationDigest: generation}
 	if err := writeExclusiveCanonical(markerPath(root, partition.Repository), marker); err != nil {
@@ -127,7 +139,10 @@ func (stage *Stage) BuildPartition(
 			return err
 		}
 		if int64(len(line)+1) > MaxMemberBytes-contentBytes {
-			return fmt.Errorf("%w: member bytes", ErrLimit)
+			return checkPublicationLimit(
+				ErrLimit, pipelinerefusal.DimensionObservationMemberBytes,
+				contentBytes+int64(len(line)+1), MaxMemberBytes,
+			)
 		}
 		if _, err := writer.Write(line); err != nil {
 			return err

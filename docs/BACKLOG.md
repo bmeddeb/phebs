@@ -30,9 +30,12 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1 is next, Epic 41 separately targets
+explicit scale-convergence program: T40.1 is complete and T40.2 is next, while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
+Epic 43 runs in parallel as the charter-governed presentation track: it
+applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
+starts at T43.1, and may not touch a scale plane, authority, or claim.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -48,7 +51,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(scheduled 2026-08-06 · T40.1 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1 complete 2026-08-06 · T40.2 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -92,52 +95,6 @@ nonpublishing extraction work.
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
 
-**T40.1 · Closed scale-refusal attribution and frozen neutral envelope** —
-replace generic post-index and extraction boundary failures with typed,
-source-free classifications that name the exact stage, policy dimension,
-observed scalar, admitted limit, and generation kind while keeping private
-names, paths, object IDs, digests, child output, and raw errors excluded.
-Preserve `errors.Is` causes through the job boundary; the durable operation
-receipt must distinguish source-partition planning, observation publication,
-candidate strict-open, domain inventory, staging, and final publication
-refusal. Fix the Huma/OpenAPI `reflect.StructOf: duplicate field Schema`
-startup warning on the observation progress surface and pin warning-free
-schema generation with a focused test while preserving the exact JSON
-`schema` wire field. Freeze and compare the same-SHA whole-repository zoekt
-child's effective blob-reader posture—go-git versus the upstream
-`git cat-file --batch --buffer` candidate—including indexed-content and
-query-result equality, peak child-plus-Git RSS, descriptors, cancellation, and
-missing/corrupt-object behavior without changing production posture. Add a
-deterministic metadata-heavy structural profile and a smaller content-bearing
-semantic profile. The first-party author streams into an external scratch bare
-Git repository with fixed Git identity, timestamps, modes, path order, profile
-version, and seeds; it may not retain a corpus-sized path-to-bytes map or place
-the giant generated repository in this worktree. The structural profile starts
-from 10,000 neutral cells with 200 eligible Go paths each, reports controls
-separately, and uses fixed padding plus deliberately bounded blob reuse to
-separate at least two million physical owners and more than 8 GiB of declared
-Go placements from unique-content cost. The semantic profile independently
-carries at least 262,144 distinct eligible Go blobs and at least 32,768 IDL
-candidates with closed supported and explicit-gap template families. A small
-pinned real-generator parity subset may validate templates; Bazel, Gazelle,
-`protoc`, Buf, sqlc, and ent are not bulk corpus dependencies. Freeze exact
-counts, declared/logical/encoded/allocated byte kinds,
-repository/caller placements and unique blobs, domain partition/member/fact/
-row/result-byte aggregates, expected refusal/pass outcomes, generator/tool
-identities, and digests before production limits move. The author emits
-baseline A, bounded B, and A-content-return revisions plus named failure
-injection points; an independent oracle consumes the profile rather than phebs
-results. AC: the retained
-historical diagnostic remains honestly `unknown`, while a neutral reproducer maps every currently collapsed
-cause to exactly one closed refusal without private input; every newly
-classified or frozen dimension has a table-driven positive, exact-bound, and
-one-over test, while all existing owning limit tests remain green; unknown
-failures remain `unknown` rather than guessed; two independent builds are
-byte-identical; every authoring error is checked; normal tests use retained
-small projections rather than generating the giant corpus; no production cap,
-timeout, retry, topology, or release state changes; dated PLAN decision and
-full merge bar.
-
 **T40.2 · Independent derived-plan job ownership** — move observation/source
 partition planning out of the indexing job's synchronous success boundary.
 With respect to repository-wide derived planning, the index job commits and
@@ -161,8 +118,8 @@ shipped v1 manifest, ordered members, 4,096-blob/placement partition bounds,
 64-MiB per-partition declared-byte bound, content-addressed coalescing, and
 immutable Git reader defenses. Evolve only the actual blocker: the single
 independent 4-GiB generation declared-byte and encoded-member bounds plus
-complete-generation planning/publication ownership. T40.1 selects a measured
-v2 super-root over independently bounded
+complete-generation planning/publication ownership. T40.3 must use T40.1's
+frozen profiles to select a measured v2 super-root over independently bounded
 v1-compatible segments. AC: the small root binds ordered nonoverlapping
 segment ranges, every segment/member digest and byte kind, aggregate unique
 blobs/placements/declared/encoded bytes, policy, and source generation; no
@@ -181,9 +138,10 @@ full merge bar.
 **T40.4 · Hierarchical observation inventory and bounded validation v2** —
 retain the shipped v1 partition members and content-addressed observation
 objects, but remove the 250,000-record generation ceiling and generation-wide
-object maps/full inventory passes as the scaling mechanism. T40.1 selects a
-small root of bounded inventory segments whose receipts can be streamed and
-verified without retaining every observation name. Preserve the
+object maps/full inventory passes as the scaling mechanism. T40.4 must use
+T40.1's frozen semantic refusal to select a small root of bounded inventory
+segments whose receipts can be streamed and verified without retaining every
+observation name. Preserve the
 `sourceobservation` classification contract and v1 reader compatibility. AC:
 each inventory segment is ordered, canonical, source/partition/policy-bound,
 and independently capped; finalization proves exact object inventory through a
@@ -197,14 +155,15 @@ merge bar.
 
 **T40.5 · Search-generation build, replacement headroom, and lifecycle owner**
 — replace the static search lifecycle owner before the two-million-owner gate.
-T40.1 must measure logical and allocated bytes for current plus rollback search
+T40.5 must measure logical and allocated bytes for current plus rollback search
 generations and select an exact count/byte policy rather than inheriting the
 existing 50-GiB repository ceiling or raising it blindly. It also replaces the
 legacy one-shot 25-GiB capacity estimate with measured bounded per-shard/stage
 reservations plus one aggregate generation fence, or another prospectively
-measured admission contract. AC: implement T40.1's selected blob-reader
-posture explicitly. Selecting batch sets `ZOEKT_DISABLE_CATFILE_BATCH=false`
-on the same-SHA whole-repository zoekt child only after parent-side
+measured admission contract. AC: select the production blob-reader posture
+explicitly using T40.1's bound small-projection comparison as input, not as a
+selection. Selecting batch sets `ZOEKT_DISABLE_CATFILE_BATCH=false` on the
+same-SHA whole-repository zoekt child only after parent-side
 `gitobj`-equivalent environment scrubbing, replace-object, lazy-fetch,
 prompt/lock, and alternates defenses are enforced and tested; otherwise the
 go-git fallback remains an explicit recorded posture rather than an inherited
@@ -289,9 +248,9 @@ source/observation partition; retries reuse settled siblings; exhaustion keeps
 the prior domain pointer and exposes failed partitions; planning pre-reserves
 every partition's maximum fact/row/reference/byte contribution and refuses an
 over-aggregate schedule before any content lease, while each concurrently
-running worker remains inside its reservation; a file-local
-packageless Protobuf or well-formed but unsupported Thrift construct produces a
-classified gap when file isolation is sound, while corrupt shared authority
+running worker remains inside its reservation; a file-local unresolved
+Protobuf declaration or well-formed but unsupported Thrift construct produces
+a classified gap when file isolation is sound, while corrupt shared authority
 still refuses; zero-applicable-input publishes honest empty or unavailable per
 pack contract; pointer swap is last; restart, cancellation, stale lease,
 supersession, concurrent assembly, small delta, and A→B→A tests; full merge bar.
@@ -624,6 +583,120 @@ target operating evidence, validation, and release. Epic 42 closes with a
 source-free digest-pinned demo receipt, but `GATE2-V2` and `DO_NOT_RELEASE`
 remain unchanged absent a separate sealed validation and release program. The
 closure cannot be cited as commit-cadence, catch-up, or freshness evidence.
+
+## Epic 43 · Charter-governed product experience *(scheduled 2026-08-06 · parallel presentation track · T43.1 first)*
+
+Make the interface earn the product's honesty. The
+[design charter](./DESIGN_CHARTER.md) now owns presentation philosophy,
+discipline, and design language; this epic applies it to every product
+surface as a parallel presentation-only track. Half of adoption risk is
+experience: a stale service, an abstention, or a refusal must feel as
+deliberate as a result.
+
+### Boundary
+
+- Scope is presentation only: `ui/`, UI tests, shared front-end components,
+  screenshot tooling, docs, and retained design records. No store, schema,
+  pipeline, endpoint, authorization, claim, or caveat-wording change; new
+  reads use only existing authorized HTTP surfaces.
+- The charter's discipline section gates every ticket: authority-boundary
+  mapping, fail-closed rendering, state completeness, deep-link discipline,
+  dual-viewport QA, keyboard completeness, accessibility pass, screenshot
+  receipts, and charter review with recorded findings.
+- The scale program keeps precedence: T40.1 is complete and T40.2 is the next scale ticket,
+  Epics 40–42 sequencing is unchanged, and this epic may not modify a scale
+  plane. T41.7's v3 parity later builds on this epic's shared kit.
+- Screenshot receipts are environment-bound engineering records; walkthrough
+  timings on neutral cohorts are mechanics evidence only. Neither is a
+  usability, user-validation, accuracy, or release claim; all packs remain
+  experimental-dark and `DO_NOT_RELEASE` remains in force.
+
+**T43.1 · Surface audit and findings ledger** — audit every routed product
+surface against charter §§1–3: hierarchy of trust, density, state
+completeness, keyboard journeys, motion, and copy. AC: findings ranked
+blocker/major/minor with exact surface and element; each finding names the
+charter rule it violates; the ledger is retained as a source-free record
+with a per-surface rubric table; no production file changes.
+
+**T43.2 · Semantic design tokens** — formalize the design language into one
+token module: the closed five-state status palette in both themes, spacing
+and type scale, mono/tabular identity rules, density variables, and motion
+duration/easing tokens with a reduced-motion mapping. AC: every surface
+consumes tokens with no literal status colors or ad-hoc durations left;
+WCAG AA contrast verified in both themes; zero behavior change; UI suite
+and production build green.
+
+**T43.3 · Shared evidence component kit** *(needs T43.2)* — extract the
+recurring evidence primitives into one kit: status badge, staleness chip,
+identity/digest display, empty/sparse/filtered/error/retry states, caveat
+collapse, and citation row. AC: one implementation per primitive with the
+per-page copies deleted; every state has a component test; page behavior
+is unchanged; bundle delta recorded.
+
+**T43.4 · Deterministic screenshot receipts** *(needs T43.3)* — add a
+screenshot harness over the `make dev` neutral cohorts with a dedicated
+make target. AC: stable-viewport captures of every routed surface in both
+themes and both densities; baselines stored and diffed with a bounded
+threshold; drift fails the run with a visual diff; baselines are
+environment-bound engineering records, refreshed only by an explicit
+reviewed update.
+
+**T43.5 · Authority drawer and receipt disclosure** *(needs T43.3)* —
+implement chip → drawer → receipt on the search and service-search
+surfaces. AC: scope receipts render as compact authority chips; the drawer
+presents state, generations, scope, and citations; the receipt view exposes
+copyable digests and a verify affordance; digests never lead a surface;
+keyboard and screen-reader complete; screenshot receipts updated.
+
+**T43.6 · Caveat and staleness presentation** *(needs T43.3)* — apply the
+collapsing caveat pattern and "as of" staleness chips across every claiming
+surface. AC: one-line summaries with expandable establishes/does-not-
+establish sections; caveat wording remains byte-identical to the owning
+contract constants, verified by test; every non-current authority carries
+an exact-generation chip with relative and absolute time.
+
+**T43.7 · Citation object experience** *(needs T43.3)* — make citations
+first-class across overview, explorer, and Workbench. AC: `path:line`
+chips open in place with span context; the audit altitude exposes the
+immutable citation identity; expired or superseded citations fail closed
+with a refresh path; keyboard complete; screenshots updated.
+
+**T43.8 · Scope context bar** *(needs T43.5)* — carry one exact scope
+(repository, service, generation) across search → directory → explorer →
+Workbench. AC: a persistent context bar renders the active scope with its
+authority chip; every transition preserves exact scope in the URL; reload
+and back/forward reproduce the same authorized request; clearing scope is
+explicit, never implied.
+
+**T43.9 · Global keyboard navigator** *(needs T43.3)* — add a command
+palette for navigation and scope jumps. AC: every routed surface and
+recent scope is reachable keyboard-only; existing `/` search focus is
+preserved; the palette issues no reads beyond existing authorized
+endpoints; fully accessible with visible focus and announced results.
+
+**T43.10 · Operator console presentation** *(needs T43.3)* — present
+lifecycle, capacity, and refusal state as actionable cards. AC: pressure,
+owner-progress, and backlog cards render the existing source-free status
+fields; refusal cards present stage, dimension, observed scalar, and
+admitted limit exactly as delivered by T40.1, with legacy statuses rendered
+unchanged alongside the closed refusal shape; no new status endpoint
+or field.
+
+**T43.11 · Directory and explorer at density** *(needs T43.3)* — prepare
+the service directory and relationship explorer for ten-thousand-service
+catalogs. AC: virtualized lists hold interaction latency under a recorded
+budget at 10,000 synthetic rows in the test harness; instant filter and
+group-by-state; dense mode; keyboard navigation through virtualized rows;
+exact counts and truncation language unchanged; real 10,000-service data
+remains Epic 41's.
+
+**T43.12 · Motion pass and charter closure** *(needs T43.4–T43.11)* —
+apply the charter's motion language and close the epic. AC: motion exists
+only on state transitions using duration/easing tokens with the
+reduced-motion path verified; a final charter-review sweep across every
+surface records zero open blocker findings; the closure retains refreshed
+screenshot receipts and a source-free record binding the T43.1 ledger to
+its resolutions; no claim beyond presentation mechanics.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 

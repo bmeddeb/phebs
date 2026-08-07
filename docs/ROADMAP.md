@@ -106,10 +106,18 @@ while derived observation/extraction work can still fail to converge. It
 supplies an engineering direction, not a supported-scale, target-SLO,
 accuracy, topology, or release result. On 2026-08-06 Epics 40–42 became the
 explicit next program:
-T40.1 first closes refusal attribution and freezes a two-million-owner neutral
-envelope; Epic 41 separately targets 10,000 accepted services with an 8,000
-accepted-service floor; Epic 42 composes both dimensions. No private rerun is
-authorized.
+T40.1 closed refusal attribution and froze the two-million-owner neutral
+envelope on 2026-08-06; T40.2 is next. Epic 41 separately targets 10,000
+accepted services with an 8,000 accepted-service floor; Epic 42 composes both
+dimensions. No private rerun is authorized.
+
+On the same day the [design charter](./DESIGN_CHARTER.md) became the
+presentation authority, and Epic 43 was scheduled as its parallel
+presentation-only track: twelve charter-gated tickets from audit ledger and
+semantic tokens through authority drawers, contract-exact caveats, citation
+objects, scope continuity, keyboard navigation, operator cards, and
+ten-thousand-row density, closing with a motion pass. It touches no scale
+plane, authority, or claim; T40.2 remains the next scale ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -663,9 +671,10 @@ service count × repository bytes
 
 ### Program sequence
 
-- **Epic 40 — very-large-monorepo derived-pipeline convergence (scheduled;
-  T40.1 next):** close exact source-free refusal attribution, detach derived
-  planning failure from committed search authority, evolve existing partition/
+- **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
+  T40.1 complete, T40.2 next):** exact source-free refusal attribution and the
+  frozen neutral envelope are complete. Next detach derived planning failure
+  from committed search authority, evolve existing partition/
   observation members behind measured aggregate roots, replace the static
   search lifecycle owner, make evidence append cost proportional to one chunk,
   partition extraction behind atomic domain authority, preserve recovery/
@@ -701,9 +710,9 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.1 is the only next ticket. Later tickets stay dependency-ordered and may
-  be refined by preceding retained measurements, but may not broaden identity,
-  authority, authorization, or release semantics.
+- T40.2 is the only next scale ticket. Later tickets stay dependency-ordered
+  and may be refined by preceding retained measurements, but may not broaden
+  identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

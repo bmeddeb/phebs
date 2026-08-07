@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -379,7 +380,7 @@ func TestExtractionOperationReportsFocusedExclusions(t *testing.T) {
 	}
 	var receipt ExtractionDomainOutcomeReceipt
 	raw := encodeExtractionDomainOutcomeReceipt(
-		domain, store.DomainOutcomePublished,
+		domain, store.DomainOutcomePublished, nil,
 	)
 	if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
 		t.Fatal(err)
@@ -529,8 +530,12 @@ func TestExtractionOperationNilManifestIsClassifiedWithoutPanic(t *testing.T) {
 		context.Background(),
 		store.Job{Target: repository.Name},
 	)
-	if err == nil ||
-		!strings.Contains(err.Error(), "candidate manifest provider returned nil") {
+	refusal, ok := pipelinerefusal.From(err)
+	if err == nil || !ok ||
+		refusal.Stage != pipelinerefusal.StageCandidateStrictOpen ||
+		refusal.GenerationKind != pipelinerefusal.GenerationCandidate ||
+		refusal.Classification != pipelinerefusal.ClassificationInvalid ||
+		strings.Contains(err.Error(), "candidate manifest provider returned nil") {
 		t.Fatalf("Handle error = %v", err)
 	}
 	report, _ := read()

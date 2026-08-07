@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -41,6 +42,18 @@ var (
 	ErrPinned   = errors.New("observation publication is pinned")
 	ErrComplete = errors.New("observation publication is already complete")
 )
+
+func checkPublicationLimit(
+	cause error,
+	dimension pipelinerefusal.Dimension,
+	observed,
+	limit int64,
+) error {
+	if observed <= limit {
+		return nil
+	}
+	return pipelinerefusal.Measure(cause, dimension, observed, limit)
+}
 
 type Record struct {
 	Schema            string                      `json:"schema"`

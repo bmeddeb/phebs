@@ -1,0 +1,83 @@
+{
+  "schema": "t401-neutral-git-manifest-v1",
+  "profile": "semantic-262144-v1",
+  "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+  "repository": "example.invalid/t401-neutral-scale",
+  "projection": false,
+  "aggregate": {
+    "physical_owners": 294914,
+    "regular_files": 294914,
+    "eligible_go_files": 262144,
+    "idl_candidates": 32768,
+    "control_files": 2,
+    "repository_lane_placements": 262144,
+    "caller_lane_placements": 131072,
+    "unique_go_blobs": 262144,
+    "unique_idl_blobs": 32768,
+    "declared_repository_go_bytes": 134217728,
+    "logical_source_bytes": 146800716,
+    "control_bytes": 76,
+    "modeled_domain_partitions": 72,
+    "modeled_domain_members": 72,
+    "domain_partition_model": "neutral_input_chunks_4096_v1",
+    "observation_records": 262144,
+    "observation_gap_classifications": 131072,
+    "extractor_facts": 49152,
+    "extractor_gap_facts": 16384,
+    "extractor_staging_rows": 98304,
+    "canonical_observation_bytes": 234684416,
+    "canonical_extractor_bytes": 39182336,
+    "canonical_result_byte_model": "sum_per_input_sourceobservation_or_sdk_fact_array_v1"
+  },
+  "revisions": [
+    {
+      "revision": "a",
+      "commit": "16dd851f7f270e85cced78ba961ad015ac2370e0",
+      "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 0
+    },
+    {
+      "revision": "b",
+      "commit": "a6b288a5aaf419b1d3132fb25979c5332d61e72f",
+      "tree": "663339667bd5d714c62b9736ad023264af664cde",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 1
+    },
+    {
+      "revision": "a-return",
+      "commit": "3616c279d70d1383658689213502559a73fefac4",
+      "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 1
+    }
+  ],
+  "byte_metrics": [
+    {
+      "kind": "declared_repository_go",
+      "measurement": "exact",
+      "bytes": 134217728
+    },
+    {
+      "kind": "logical_source",
+      "measurement": "exact",
+      "bytes": 146800716
+    }
+  ],
+  "failure_points": [
+    "before_git_init",
+    "after_git_init",
+    "before_revision_a",
+    "after_revision_a",
+    "before_revision_b",
+    "after_revision_b",
+    "before_revision_a_return",
+    "after_revision_a_return",
+    "before_git_verify",
+    "before_metadata",
+    "before_publish"
+  ]
+}

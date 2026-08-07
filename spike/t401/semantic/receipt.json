@@ -1,0 +1,104 @@
+{
+  "schema": "t401-neutral-author-receipt-v1",
+  "outcome": "authored",
+  "profile": "semantic-262144-v1",
+  "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+  "artifacts": [
+    {
+      "name": "profile.json",
+      "bytes": 9695,
+      "sha256": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b"
+    },
+    {
+      "name": "oracle.json",
+      "bytes": 8194,
+      "sha256": "sha256:0d752c83181e38c6bec5a039f7d587caf628a4613d23d5af7bc149f8c0782536"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 2461,
+      "sha256": "sha256:ca4925f3ca3ddad42955e5c3dc0e9b5610e7fa8ac4ce3e614a9ad091e23362a8"
+    }
+  ],
+  "revisions": [
+    {
+      "revision": "a",
+      "commit": "16dd851f7f270e85cced78ba961ad015ac2370e0",
+      "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 0
+    },
+    {
+      "revision": "b",
+      "commit": "a6b288a5aaf419b1d3132fb25979c5332d61e72f",
+      "tree": "663339667bd5d714c62b9736ad023264af664cde",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 1
+    },
+    {
+      "revision": "a-return",
+      "commit": "3616c279d70d1383658689213502559a73fefac4",
+      "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+      "regular_files": 294914,
+      "unique_go_blobs": 262144,
+      "changed_files": 1
+    }
+  ],
+  "git": {
+    "name": "git",
+    "version": "git version 2.50.1 (Apple Git-155)"
+  },
+  "byte_metrics": [
+    {
+      "kind": "profile_canonical",
+      "measurement": "exact",
+      "bytes": 9695
+    },
+    {
+      "kind": "oracle_canonical",
+      "measurement": "exact",
+      "bytes": 8194
+    },
+    {
+      "kind": "manifest_canonical",
+      "measurement": "exact",
+      "bytes": 2461
+    },
+    {
+      "kind": "declared_repository_go",
+      "measurement": "exact",
+      "bytes": 134217728
+    },
+    {
+      "kind": "logical_source",
+      "measurement": "exact",
+      "bytes": 146800716
+    },
+    {
+      "kind": "bare_git_logical",
+      "measurement": "exact",
+      "bytes": 24960332
+    },
+    {
+      "kind": "bare_git_allocated",
+      "measurement": "exact",
+      "bytes": 25583616
+    }
+  ],
+  "historical_diagnostic": {
+    "artifact": "spike/large-monorepo-20260806/REPORT.md",
+    "sha256": "sha256:b4b7231603c9a67f1f09b722117aa48a49bb674acb3ffff53ce6b28b26be570b",
+    "outcome": "unknown",
+    "scope": "unfrozen_source_free_engineering_diagnostic"
+  },
+  "claims": {
+    "synthetic": true,
+    "explicit_authoring_only": true,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "qualifies_supported_scale": false,
+    "authorizes_release": false
+  }
+}

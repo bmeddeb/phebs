@@ -1,0 +1,122 @@
+{
+  "schema": "t401-zoekt-blob-reader-comparison-v1",
+  "binary": {
+    "name": "zoekt-git-index",
+    "version": "github.com/sourcegraph/zoekt@v0.0.0-20260709064101-33f1f18af292 h1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=",
+    "sha256": "sha256:93d87f652bd796cc1a2dbeff29b1b5126ae9e61b650e548e38f64a0b0c7f0c9b"
+  },
+  "fixture_profile_digest": "sha256:14a42c23b073919255281e2a35126a71a5fd5357e9003222cd17687de3988a6c",
+  "fixture_manifest_digest": "sha256:e3b2aa714d7d8c5b3fc255e2a900c271bcb369e7f0feaf51f46a78ee09551ce2",
+  "fixture_tree": "a162006919d1379be2335ed158cefa66cba90525",
+  "queries": [
+    "T401",
+    "padding"
+  ],
+  "query_set_digest": "sha256:83ec48cbfe8213223f81d521b4bd738394e3a158d078f4fe58606f4b82022732",
+  "modes": [
+    {
+      "name": "go_git_default",
+      "environment_value": "true",
+      "index_sha256": "sha256:891ca8d2eb89c705852fdf8bd530bf58ca218ea6c3d95d41a070db1394a4edc7",
+      "index_bytes": 5168672,
+      "shard_count": 1,
+      "indexed_content_sha256": "sha256:91098e21b540ba336ff60dd1adbaf3ae3ba7fd5b72202b62977dc2483fe523b8",
+      "query_results_sha256": "sha256:a2a558ba8cf66c5fff8cdc2abfcf278122abbd33218fe5c853d8b5db38aa8e14",
+      "files_seen": 4098,
+      "resources": {
+        "rss_state": "sampled",
+        "sampled_max_rss_bytes": 87506944,
+        "rss_method": "sampled-10ms-ps-process-tree-rss-kib",
+        "descriptor_state": "sampled",
+        "sampled_max_descriptors": 6,
+        "descriptor_method": "sampled-10ms-proc-or-lsof-process-tree",
+        "includes_descendants": true
+      }
+    },
+    {
+      "name": "cat_file_batch_candidate",
+      "environment_value": "false",
+      "index_sha256": "sha256:3f0728e2406a54ac655f78e55f428399bd3e6f47c08c4e81550f5358ceb69241",
+      "index_bytes": 5168672,
+      "shard_count": 1,
+      "indexed_content_sha256": "sha256:91098e21b540ba336ff60dd1adbaf3ae3ba7fd5b72202b62977dc2483fe523b8",
+      "query_results_sha256": "sha256:a2a558ba8cf66c5fff8cdc2abfcf278122abbd33218fe5c853d8b5db38aa8e14",
+      "files_seen": 4098,
+      "resources": {
+        "rss_state": "sampled",
+        "sampled_max_rss_bytes": 87785472,
+        "rss_method": "sampled-10ms-ps-process-tree-rss-kib",
+        "descriptor_state": "sampled",
+        "sampled_max_descriptors": 9,
+        "descriptor_method": "sampled-10ms-proc-or-lsof-process-tree",
+        "includes_descendants": true
+      }
+    }
+  ],
+  "index_bytes_equal": false,
+  "indexed_content_equal": true,
+  "query_results_equal": true,
+  "boundary_probes": [
+    {
+      "mode": "go_git_default",
+      "kind": "cancellation",
+      "boundary": "zoekt_child_started",
+      "outcome": "refused",
+      "class": "cancellation",
+      "parent_reaped": true,
+      "git_descendant_state": "not_observed"
+    },
+    {
+      "mode": "cat_file_batch_candidate",
+      "kind": "cancellation",
+      "boundary": "git_descendant_observed",
+      "outcome": "refused",
+      "class": "cancellation",
+      "parent_reaped": true,
+      "git_descendant_state": "observed_reaped"
+    },
+    {
+      "mode": "go_git_default",
+      "kind": "missing_object",
+      "boundary": "object_read",
+      "outcome": "completed_with_gap",
+      "class": "missing_object",
+      "parent_reaped": true,
+      "git_descendant_state": "not_measured"
+    },
+    {
+      "mode": "cat_file_batch_candidate",
+      "kind": "missing_object",
+      "boundary": "object_read",
+      "outcome": "completed_with_gap",
+      "class": "missing_object",
+      "parent_reaped": true,
+      "git_descendant_state": "not_measured"
+    },
+    {
+      "mode": "go_git_default",
+      "kind": "corrupt_object",
+      "boundary": "object_read",
+      "outcome": "refused",
+      "class": "corrupt_object",
+      "parent_reaped": true,
+      "git_descendant_state": "not_measured"
+    },
+    {
+      "mode": "cat_file_batch_candidate",
+      "kind": "corrupt_object",
+      "boundary": "object_read",
+      "outcome": "completed_with_gap",
+      "class": "corrupt_object",
+      "parent_reaped": true,
+      "git_descendant_state": "not_measured"
+    }
+  ],
+  "claims": {
+    "same_binary": true,
+    "small_neutral_fixture": true,
+    "selects_production_reader": false,
+    "establishes_giant_cost": false,
+    "changes_production_posture": false
+  }
+}

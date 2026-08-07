@@ -8498,3 +8498,100 @@ SLO, accuracy/completeness, migration-complete, decommission-safe, pilot
 continuation, or release claim. Any rerun still requires a new explicit
 approval, nonce, frozen plan, teardown deadline, and source-free receipt.
 `GATE2-V2` remains `NOT_ESTABLISHED`; Epics 25–28 remain unscheduled drafts.
+
+**T40.1 ✅ · Closed scale-refusal attribution and frozen neutral envelope**
+*(2026-08-06; first Epic 40 ticket)* — replaces opaque derived-pipeline limit
+and boundary errors with the closed, source-free
+`phebs-pipeline-refusal-v1` projection. Its seven legal stage/generation pairs
+are source-partition planning/source-partition, observation
+publication/observation, candidate strict-open/candidate, and domain
+inventory, extractor execution, evidence staging, and final
+publication/extraction-domain. Crossed authority is invalid. `limit` names an
+owning dimension and exact `observed > limit`; `invalid` and `unknown` carry
+`dimension: unknown` and zero scalars rather than invented measurements.
+
+The rendered and durable forms contain only schema, stage, generation kind,
+classification, dimension, observed scalar, and limit. Repository names,
+paths, object IDs, digests, child output, and raw error strings remain hidden,
+while the in-process chain preserves the original cause for `errors.Is` and
+`errors.As`. Durable runner and generation-scheduler writes select the closed
+form structurally even through outer wrappers. Extraction outcome receipts
+carry the same optional projection; an absent projection preserves retained
+v1 bytes exactly. Terminal candidate-control and per-domain failures retain
+the refusal beside their durable outcome, while retryable strict-open failures
+cannot replace a previously settled generation.
+
+The observation-progress Go field is now `SchemaVersion` with the exact
+existing JSON tag `schema`. A focused Huma schema-generation test captures
+stderr, proves the prior duplicate-`Schema` warning is absent, and verifies
+that OpenAPI still exposes both the wire `schema` field and Huma's `$schema`
+field. HTTP and MCP bytes are otherwise unchanged.
+
+The deterministic frozen envelope is
+[`spike/t401/envelope.json`](../spike/t401/envelope.json)
+(`sha256:92cce848e6e42942c24e2fa066968571fb5693252b7b41b7a91c889881fe7f94`).
+The structural profile contains 2,000,000 eligible Go paths plus two controls,
+2,000,000 repository placements, an explicitly synthetic/non-production-
+parity 1,000,000-placement caller lane, 512 unique Go blobs with maximum
+fan-in 3,907, and 9,216,000,000 declared Go placement bytes. Its modeled
+source-partition and observation stages are admitted; every later stage is
+`not_run`. The semantic profile contains 262,144 distinct Go blobs and 32,768
+IDL inputs. Its source-partition shape is admitted, observation publication
+honestly refuses 262,144 records against the current 250,000-record limit,
+and every later stage is `not_run`, never successful zero work.
+
+Real source-observation caller/Kafka adapters and the production Proto/Thrift
+extractors validate the first and last frozen ordinal of each semantic family.
+The closed families include resolved RPC and literal Kafka evidence, dynamic
+receiver/topic gaps, supported Proto declarations, unresolved Proto
+declarations as `DECLARATION_NOT_FOUND`, supported Thrift declarations, and a
+Thrift typedef cycle as `TYPEDEF_CHAIN_LIMIT`; a separate production-extractor
+parity case proves package-less Proto support. Observation records/gaps,
+extractor facts/gaps/staging rows, and their canonical byte models remain
+separate units; the neutral 4,096-item partition count is explicitly modeled
+rather than claimed as a production hash-leaf measurement.
+
+Two separate explicit author invocations for each frozen profile produced
+identical profile, oracle, manifest, commit, and tree identities, including
+A→B→A-content return. The strict source-free paired-build receipt is
+[`spike/t401/reproducibility.json`](../spike/t401/reproducibility.json)
+(`sha256:b7b0491af659007eb8e903279ca63c6f8178878a8af114a9af0cd407e52ccb1a`).
+The deterministic source-free manifests and one environment-bound
+author receipt per profile are retained at
+[`spike/t401/structural/`](../spike/t401/structural/) and
+[`spike/t401/semantic/`](../spike/t401/semantic/): manifest/receipt digests are
+`4ae92b8e…` / `bd80bef3…` and `ca4925f3…` / `e096b17f…`, respectively.
+Declared and logical source bytes belong to deterministic manifest identity;
+bare-Git logical and filesystem-allocated bytes are exact per-run receipt
+observations and are never summed with source or canonical-result bytes. The
+external scratch repositories, index shards, author binaries, checkpoints,
+PIDs, and raw process samples were destroyed after validation.
+
+The same verified zoekt binary comparison is retained at
+[`spike/t401/comparison.json`](../spike/t401/comparison.json)
+(`sha256:3527bec297c80c71b6c5081b1b386d25efc9ec8894643f599c7c57848be3b402`).
+On the bound 4,098-file structural projection, go-git and the upstream
+`git cat-file --batch --buffer` candidate produced equal indexed-content and
+ordered per-query returned-file/content projection digests but different raw
+shard digests. Both represented a missing object as a gap; go-git refused a
+corrupt object while the candidate
+completed with a gap. Cancellation reaped the zoekt child in both modes and
+proved the exact observed cat-file descendant exited. RSS and descriptors are
+10 ms process-tree samples, not exact peaks or giant-profile cost evidence.
+The candidate remains unselected.
+
+Steady-state cost is unchanged: successful reads, sync ticks, no-ops,
+retries, and publications add no refusal read, hash, store operation, child,
+or formatting work. Existing counters supply exact limit scalars; only a
+failure allocates and encodes the small projection. The profile author and
+comparison remain explicit spike commands and no production package imports
+them.
+
+The retained historical diagnostic remains `unknown`. Corpus authoring is not
+a phebs two-million-owner convergence pass, and the semantic refusal is a
+frozen current-limit outcome rather than a defect hidden as success. T40.1
+changes no production cap, timeout, retry, reader selection, topology, or
+release state and establishes no target SLO, supported scale,
+accuracy/completeness, commit-cadence freshness, migration completion,
+decommission safety, pilot continuation, or release. `GATE2-V2` remains
+`NOT_ESTABLISHED`, `DO_NOT_RELEASE` remains in force, and T40.2 is next.

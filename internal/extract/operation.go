@@ -14,6 +14,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -151,6 +152,7 @@ type ExtractionDomainOutcomeReceipt struct {
 	Counts           ExtractionOperationDomainCounts `json:"counts"`
 	Bytes            ExtractionOperationDomainBytes  `json:"bytes"`
 	Limits           ExtractionOperationDomainLimits `json:"limits"`
+	Refusal          *pipelinerefusal.Receipt        `json:"refusal,omitempty"`
 }
 
 type extractionOperationMinimal struct {
@@ -537,8 +539,14 @@ func (domain *domainOperationRecorder) snapshot() ExtractionOperationDomain {
 func encodeExtractionDomainOutcomeReceipt(
 	domain *domainOperationRecorder,
 	disposition store.DomainOutcomeDisposition,
+	failure error,
 ) string {
 	report := domain.snapshot()
+	var refusal *pipelinerefusal.Receipt
+	if projected, ok := pipelinerefusal.From(failure); ok {
+		copyOfProjected := projected
+		refusal = &copyOfProjected
+	}
 	receipt := ExtractionDomainOutcomeReceipt{
 		Schema:           store.ExtractionOutcomeReceiptSchema,
 		Domain:           report.Domain,
@@ -552,6 +560,7 @@ func encodeExtractionDomainOutcomeReceipt(
 		Counts:           report.Counts,
 		Bytes:            report.Bytes,
 		Limits:           report.Limits,
+		Refusal:          refusal,
 	}
 	data, err := json.Marshal(receipt)
 	if err == nil && len(data) <= store.MaxExtractionOutcomeReceiptBytes {
@@ -660,6 +669,32 @@ var (
 
 func operationLimitError(message string) error {
 	return fmt.Errorf("%w: %s", errOperationLimitRefusal, message)
+}
+
+func measuredOperationLimitError(
+	message string,
+	dimension pipelinerefusal.Dimension,
+	observed, limit int64,
+) error {
+	return measuredOperationLimitCause(message, nil, dimension, observed, limit)
+}
+
+func measuredOperationLimitCause(
+	message string,
+	cause error,
+	dimension pipelinerefusal.Dimension,
+	observed, limit int64,
+) error {
+	if observed <= limit {
+		return nil
+	}
+	limitCause := operationLimitError(message)
+	if cause != nil {
+		limitCause = errors.Join(limitCause, cause)
+	}
+	return pipelinerefusal.Measure(
+		limitCause, dimension, observed, limit,
+	)
 }
 
 func encodeExtractionOperation(

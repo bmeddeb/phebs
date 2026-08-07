@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/spike/t201"
 )
@@ -699,6 +700,14 @@ func TestWorkerRejectsFactBeyondChunkedRunLimit(t *testing.T) {
 		!strings.Contains(outcome.Receipt, `"reason":"limit_refusal"`) {
 		t.Fatalf("limit outcome = %+v, %v", outcome, err)
 	}
+	refusal := outcomeRefusal(t, outcome)
+	if refusal == nil ||
+		refusal.Stage != pipelinerefusal.StageEvidenceStaging ||
+		refusal.Dimension != pipelinerefusal.DimensionFacts ||
+		refusal.Observed != maxFactsPerRun+1 ||
+		refusal.Limit != maxFactsPerRun {
+		t.Fatalf("fact-limit refusal = %+v", refusal)
+	}
 	if err := worker.Handle(
 		context.Background(),
 		store.Job{Target: repo.Name, Force: true},
@@ -742,6 +751,9 @@ func TestWorkerPublishAcknowledgementLossPreservesPublishedOutcome(t *testing.T)
 		outcome.RunID == "" || !evidence.published {
 		t.Fatalf("published outcome after acknowledgement loss = %+v, %v",
 			outcome, err)
+	}
+	if refusal := outcomeRefusal(t, outcome); refusal != nil {
+		t.Fatalf("published outcome retained transient refusal: %+v", refusal)
 	}
 }
 
@@ -936,6 +948,12 @@ func TestWorkerStagingConflictLeavesRunInvisible(t *testing.T) {
 		outcome.Disposition != store.DomainOutcomeRetryableFailure {
 		t.Fatalf("staging retry outcome = %+v, %v", outcome, outcomeErr)
 	}
+	refusal := outcomeRefusal(t, outcome)
+	if refusal == nil ||
+		refusal.Stage != pipelinerefusal.StageEvidenceStaging ||
+		refusal.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("staging failure refusal = %+v", refusal)
+	}
 	if err := worker.Handle(
 		context.Background(), store.Job{Target: repo.Name},
 	); err != nil {
@@ -1050,6 +1068,20 @@ func TestWorkerPreservesUnexplainedPublishConflict(t *testing.T) {
 	if !evidence.aborted {
 		t.Fatal("unexplained conflict did not abort staged run")
 	}
+	outcome, outcomeErr := evidence.LatestExtractionDomainOutcome(
+		context.Background(), store.ExtractionScope{
+			Repository: repo.Name, Commit: unitCommit, Domain: "unit",
+		},
+	)
+	if outcomeErr != nil {
+		t.Fatal(outcomeErr)
+	}
+	refusal := outcomeRefusal(t, outcome)
+	if refusal == nil ||
+		refusal.Stage != pipelinerefusal.StageFinalPublication ||
+		refusal.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("publication refusal = %+v", refusal)
+	}
 }
 
 // Waiting behind a long index or fetch of the same mirror must not consume
@@ -1120,7 +1152,10 @@ func TestWorkerRecoversExtractorPanicAndAborts(t *testing.T) {
 	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
 		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), "extractor panic") ||
+	requireExtractionRefusalStage(
+		t, err, pipelinerefusal.StageExtractorExecution,
+	)
+	if strings.Contains(err.Error(), "extractor panic") ||
 		store.Classify(err) != store.ClassExtract {
 		t.Fatalf("Handle error = %v", err)
 	}
@@ -1142,7 +1177,10 @@ func TestWorkerRecoversCandidatePanicBeforeBeginningRun(t *testing.T) {
 	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
 		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), "candidate predicate panic") ||
+	requireExtractionRefusalStage(
+		t, err, pipelinerefusal.StageDomainInventory,
+	)
+	if strings.Contains(err.Error(), "candidate predicate panic") ||
 		store.Classify(err) != store.ClassExtract {
 		t.Fatalf("Handle error = %v", err)
 	}
@@ -1169,7 +1207,10 @@ func TestWorkerRefusesUnreadCandidateWhenWalkErrorIgnored(t *testing.T) {
 	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
 		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), "candidate \"a.proto\" was not read") {
+	requireExtractionRefusalStage(
+		t, err, pipelinerefusal.StageExtractorExecution,
+	)
+	if strings.Contains(err.Error(), "candidate \"a.proto\" was not read") {
 		t.Fatalf("Handle error = %v", err)
 	}
 	if evidence.published || !evidence.aborted {
@@ -1310,12 +1351,13 @@ func TestWorkerIsolatesPerDomainFailures(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
 	attempts := map[string]int{}
+	domainFailure := errors.New("private d1 failure")
 	extractorFor := func(domain string, fail bool) unitExtractor {
 		return unitExtractor{domain: domain, version: "1",
 			extract: func(context.Context, sdk.Corpus, sdk.Emit) (sdk.Coverage, error) {
 				attempts[domain]++
 				if fail {
-					return sdk.Coverage{}, errors.New(domain + " exploded")
+					return sdk.Coverage{}, domainFailure
 				}
 				return sdk.Coverage{Protocols: []string{"protobuf"}}, nil
 			}}
@@ -1326,7 +1368,10 @@ func TestWorkerIsolatesPerDomainFailures(t *testing.T) {
 		}}
 
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), "d1 exploded") {
+	requireExtractionRefusalStage(
+		t, err, pipelinerefusal.StageExtractorExecution,
+	)
+	if !errors.Is(err, domainFailure) || strings.Contains(err.Error(), domainFailure.Error()) {
 		t.Fatalf("aggregate error = %v", err)
 	}
 	if attempts["d1"] != 1 || attempts["d2"] != 1 || attempts["d3"] != 1 {
@@ -1344,7 +1389,10 @@ func TestWorkerIsolatesPerDomainFailures(t *testing.T) {
 
 	// Retry: published domains short-circuit, the aborted domain runs again.
 	err = worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), "d1 exploded") {
+	requireExtractionRefusalStage(
+		t, err, pipelinerefusal.StageExtractorExecution,
+	)
+	if !errors.Is(err, domainFailure) || strings.Contains(err.Error(), domainFailure.Error()) {
 		t.Fatalf("retry error = %v", err)
 	}
 	if attempts["d1"] != 2 || attempts["d2"] != 1 || attempts["d3"] != 1 {
@@ -1360,5 +1408,19 @@ func TestWorkerIsolatesPerDomainFailures(t *testing.T) {
 	}
 	if attempts["d1"] != 2 || attempts["d2"] != 1 || attempts["d3"] != 1 {
 		t.Fatalf("canceled attempts = %v", attempts)
+	}
+}
+
+func requireExtractionRefusalStage(
+	t *testing.T,
+	err error,
+	stage pipelinerefusal.Stage,
+) {
+	t.Helper()
+	receipt, ok := pipelinerefusal.From(err)
+	if err == nil || !ok || receipt.Stage != stage ||
+		receipt.GenerationKind != pipelinerefusal.GenerationExtractionDomain {
+		t.Fatalf("refusal = %+v, present=%t from %v, want stage %s",
+			receipt, ok, err, stage)
 	}
 }
