@@ -75,6 +75,9 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
   if (!document) return null
 
   const envelope = document.envelope
+  // On refusal every tab renders the same RefusalView; disable the inactive
+  // tabs so the tablist doesn't promise views the refusal withholds.
+  const refused = envelope.outcome === 'refused'
   return (
     <div className={css({ maxWidth: '1400px', margin: '0 auto', color: tok.textPrimary })}>
       <InvestigationHeader
@@ -100,6 +103,7 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
             type="button"
             role="tab"
             aria-selected={tab === item.id}
+            disabled={refused && tab !== item.id}
             onClick={() => setTab(item.id)}
             className={css({
               border: 0,
@@ -114,6 +118,7 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
               whiteSpace: 'nowrap',
               ':hover': { color: tok.textPrimary },
               ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+              ':disabled': { color: tok.textTertiary, cursor: 'default' },
             })}
           >
             {item.label}

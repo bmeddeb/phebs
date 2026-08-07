@@ -327,8 +327,8 @@ function DesktopRow({ id, row, onCitation }: { id: string; row: ServiceRelations
   const tok = usePhebsTokens()
   const route = exactRoute(row)
   return (
-    <tr className={css({ borderTop: `1px solid ${tok.innerSep}`, ':hover': { backgroundColor: tok.hoverFill } })}>
-      <td className={css(tableCell(tok))}><a href={`#${id}`} className={css(idLink(tok))}>{id}</a></td>
+    <tr id={`${id}-desktop`} className={css({ borderTop: `1px solid ${tok.innerSep}`, scrollMarginTop: '70px', ':hover': { backgroundColor: tok.hoverFill } })}>
+      <td className={css(tableCell(tok))}><span className={css(idBadge(tok))}>{id}</span></td>
       <td className={css(tableCell(tok))}><EvidenceCell row={row} /></td>
       <td className={css(tableCell(tok))}><SubjectCell row={row} /></td>
       <td className={css(tableCell(tok))}><RouteCell route={route} /></td>
@@ -346,7 +346,7 @@ function MobileRow({ id, row, onCitation }: { id: string; row: ServiceRelationsh
   return (
     <li id={id} className={css({ padding: '13px 12px', borderTop: `1px solid ${tok.innerSep}`, scrollMarginTop: '70px' })}>
       <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
-        <a href={`#${id}`} className={css(idLink(tok))}>{id}</a>
+        <span className={css(idBadge(tok))}>{id}</span>
         <ClassificationCell row={row} />
       </div>
       <div className={css({ marginTop: '8px' })}><EvidenceCell row={row} /></div>
@@ -420,7 +420,17 @@ function PageDiagram({ page }: { page: ServiceRelationshipPage }) {
           const id = rowID(index)
           return (
             <li key={`${row.repository}:${row.projection_digest}`} className={css({ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr) 32px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minHeight: '70px', padding: '8px 10px', borderTop: index === 0 ? 'none' : `1px solid ${tok.innerSep}` })}>
-              <a href={`#${id}`} className={css(idLink(tok))}>{id}</a>
+              <button
+                type="button"
+                aria-label={`Scroll to source row ${id}`}
+                onClick={() => {
+                  // The desktop table and mobile list both render the row; scroll the visible one.
+                  const target = [document.getElementById(`${id}-desktop`), document.getElementById(id)]
+                    .find((el): el is HTMLElement => el !== null && el.offsetParent !== null)
+                  target?.scrollIntoView({ block: 'center' })
+                }}
+                className={css({ ...idLink(tok), border: 0, padding: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left' })}
+              >{id}</button>
               <DiagramNode>{route.from}</DiagramNode>
               <span aria-label={route.posture} title={route.posture} className={css({ textAlign: 'center', color: tok.textTertiary, fontSize: '16px' })}>→</span>
               <DiagramNode>{route.to}</DiagramNode>
@@ -620,6 +630,7 @@ function tableCell(tok: PhebsTokens) { return { padding: '10px 9px', verticalAli
 function codeWrap(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '9.5px', lineHeight: '15px', whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const } }
 function meta(tok: PhebsTokens) { return { marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', overflowWrap: 'anywhere' as const } }
 function idLink(tok: PhebsTokens) { return { color: tok.selectedText, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600, textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
+function idBadge(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600 } }
 function citationButton(tok: PhebsTokens) { return { minHeight: '32px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.selectedText, fontFamily: 'inherit', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { backgroundColor: tok.hoverFill }, ':focus-visible': focusRing(tok) } }
 function secondaryLink(tok: PhebsTokens) { return { minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'none', ':focus-visible': focusRing(tok) } }
 function primaryLink(tok: PhebsTokens) { return { ...secondaryLink(tok), border: 'none', backgroundColor: tok.textPrimary, color: tok.pageBg, fontWeight: 600 } }

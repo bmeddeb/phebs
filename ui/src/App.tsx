@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { FOCUS_SEARCH, useHashRoute } from './router'
-import { useMode, usePhebsTokens } from './theme'
+import { FONTS, useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { useAuth } from './auth'
@@ -90,47 +90,27 @@ export default function App() {
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
   const servicesAvailable = capabilities.includes('service-catalog-v2')
   const serviceRelationshipsAvailable = capabilities.includes('service-relationships-v1')
+  // Capability-gated prefixes never fall through to Search: absent capability
+  // renders a terminal boundary page under the original URL.
+  const gate = (available: boolean, label: string, render: () => ReactNode) =>
+    !capabilitiesLoaded ? <Spinner $size="small" /> : available ? render() : <CapabilityUnavailablePage label={label} path={path} />
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
   else if (path.startsWith('/blame')) page = <BlamePage params={params} />
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} serviceDirectoryAvailable={servicesAvailable} />
-  else if (path.startsWith('/services') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/services') && servicesAvailable) page = <ServiceDirectoryPage params={params} relationshipsAvailable={serviceRelationshipsAvailable} />
-  else if (path.startsWith('/relationships') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/relationships') && serviceRelationshipsAvailable) page = <RelationshipExplorerPage params={params} />
+  else if (path.startsWith('/services')) page = gate(servicesAvailable, 'The service directory', () => <ServiceDirectoryPage params={params} relationshipsAvailable={serviceRelationshipsAvailable} />)
+  else if (path.startsWith('/relationships')) page = gate(serviceRelationshipsAvailable, 'The relationship explorer', () => <RelationshipExplorerPage params={params} />)
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
-  else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} workbenchAvailable={workbenchAvailable} />
-  else if (path.startsWith('/callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/callers') && callerMapAvailable) page = <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />
-  else if (path.startsWith('/compare-callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/compare-callers') && callerComparisonAvailable) page = <CallerComparisonPage params={params} />
-  else if (path.startsWith('/impact') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/impact') && impactAvailable) {
-    page = (
-      <ImpactPage
-        params={params}
-        compatibilityAvailable={compatibilityAvailable}
-        capabilities={capabilities}
-      />
-    )
-  }
-  else if (path.startsWith('/topics') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/topics') && topicsAvailable) page = <KafkaTopicsPage params={params} />
-  else if (path.startsWith('/investigations') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/investigations') && investigationsAvailable) page = <InvestigationPage params={params} />
-  else if (path.startsWith('/workbench') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/workbench') && workbenchAvailable) {
-    page = (
-      <WorkbenchPage
-        params={params}
-        evidenceAvailable={workbenchEvidenceAvailable}
-      />
-    )
-  }
+  else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} workbenchAvailable={workbenchAvailable} />)
+  else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />)
+  else if (path.startsWith('/compare-callers')) page = gate(callerComparisonAvailable, 'Caller comparison', () => <CallerComparisonPage params={params} />)
+  else if (path.startsWith('/impact')) page = gate(impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
+  else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} />)
+  else if (path.startsWith('/investigations')) page = gate(investigationsAvailable, 'Investigations', () => <InvestigationPage params={params} />)
+  else if (path.startsWith('/workbench')) page = gate(workbenchAvailable, 'The change workbench', () => <WorkbenchPage params={params} evidenceAvailable={workbenchEvidenceAvailable} />)
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 
@@ -165,6 +145,30 @@ export default function App() {
         <Suspense fallback={<Spinner $size="small" />}>{page}</Suspense>
       </main>
     </div>
+  )
+}
+
+function CapabilityUnavailablePage({ label, path }: { label: string; path: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <section aria-labelledby="capability-unavailable-heading" className={css({ maxWidth: '520px', margin: '56px auto 0' })}>
+      <h1 id="capability-unavailable-heading" className={css({ margin: 0, color: tok.textPrimary, fontSize: '18px', lineHeight: '26px', fontWeight: 600 })}>
+        {label} is not available on this instance
+      </h1>
+      <p className={css({ margin: '10px 0 0', color: tok.textSecondary, fontSize: '13px', lineHeight: '20px' })}>
+        This deployment does not expose the capability that{' '}
+        <code className={css({ fontFamily: FONTS.MONO, fontSize: '12px' })}>{path}</code>{' '}
+        requires, so this page cannot render. This is a capability boundary of
+        the instance, not a claim about the underlying evidence.
+      </p>
+      <a
+        href="#/"
+        className={css({ display: 'inline-block', marginTop: '14px', color: tok.textPrimary, fontSize: '13px', fontWeight: 600, textDecoration: 'underline', ':focus-visible': { outline: `2px solid ${tok.textPrimary}`, outlineOffset: '2px' } })}
+      >
+        Go to Search
+      </a>
+    </section>
   )
 }
 
@@ -226,7 +230,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         {contractsAvailable && <NavLink href="#/contracts" label="Contracts" active={isContracts} />}
         {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {topicsAvailable && <NavLink href="#/topics" label="Topics" active={isTopics} />}
-        {investigationsAvailable && <NavLink href="#/investigations?id=04" label="Investigations" active={isInvestigations} />}
+        {investigationsAvailable && <NavLink href="#/investigations" label="Investigations" active={isInvestigations} />}
         {workbenchAvailable && <NavLink href="#/workbench" label="Workbench" active={isWorkbench} />}
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
