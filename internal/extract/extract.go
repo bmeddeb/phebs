@@ -21,6 +21,7 @@ import (
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -225,6 +226,7 @@ func (w *Worker) Handle(
 		)
 		operation.addStrictOpen(nonnegativeDuration(openStarted, now()))
 		if err != nil {
+			err = candidateStrictOpenFailure(err)
 			return w.recordManifestOpenOutcomes(
 				mirrorCtx, repo, extractors, policyDigest, pointerIdentity,
 				operation, err,
@@ -232,9 +234,11 @@ func (w *Worker) Handle(
 		}
 		inventoryPolicy, boundaries, err = validateCandidateManifest(candidateManifest)
 		if err != nil {
-			operation.completeRemaining(operationReason(err))
-			return store.WithClass(store.ClassExtract,
-				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
+			err = candidateStrictValidationFailure(err)
+			return w.recordManifestOpenOutcomes(
+				mirrorCtx, repo, extractors, policyDigest, pointerIdentity,
+				operation, err,
+			)
 		}
 		operation.bindManifest(candidateManifest.Identity())
 		if control, ok := candidateManifest.(CandidateManifestControl); ok {
@@ -243,8 +247,12 @@ func (w *Worker) Handle(
 		if _, production := w.Manifests.(CandidateManifestGenerationProvider); production {
 			control, ok := candidateManifest.(CandidateManifestControl)
 			if !ok || control.CandidateControlRevision() == 0 {
-				return store.WithClass(store.ClassExtract, errors.New(
+				err = candidateStrictValidationFailure(errors.New(
 					"strict candidate manifest has no durable control revision"))
+				return w.recordManifestOpenOutcomes(
+					mirrorCtx, repo, extractors, policyDigest, pointerIdentity,
+					operation, err,
+				)
 			}
 			if pointerIdentity.ControlRevision != 0 &&
 				(control.CandidateControlRevision() !=
@@ -295,6 +303,7 @@ func (w *Worker) Handle(
 				policyDigest,
 			)
 		if generationErr != nil {
+			generationErr = candidateStrictValidationFailure(generationErr)
 			domainOperation.complete(operationReason(generationErr))
 			disposition, controlFailure := classifyDomainOutcome(generationErr)
 			if w.Diagnostics {
@@ -304,7 +313,7 @@ func (w *Worker) Handle(
 			}
 			if recordErr := w.recordDomainOutcome(
 				mirrorCtx, scope, generation, disposition, controlFailure, "",
-				domainOperation, "",
+				domainOperation, generationErr, "",
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -375,7 +384,7 @@ func (w *Worker) Handle(
 			if err := w.recordDomainOutcome(
 				mirrorCtx, scope, generation,
 				store.DomainOutcomeUnavailablePrerequisite, false, "",
-				domainOperation, outcomeDisposition(exactLatest),
+				domainOperation, nil, outcomeDisposition(exactLatest),
 			); err != nil {
 				if errors.Is(err, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -553,7 +562,7 @@ func (w *Worker) Handle(
 			if recordErr := w.recordDomainOutcome(
 				mirrorCtx, task.scope, task.generation,
 				disposition, controlFailure, attempt.runID,
-				domainOperation, task.previousDisposition,
+				domainOperation, runErr, task.previousDisposition,
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -597,7 +606,7 @@ func (w *Worker) Handle(
 		if recordErr := w.recordDomainOutcome(
 			aggregateCtx, task.scope, task.generation,
 			store.DomainOutcomeRetryableFailure, false, task.previousRunID,
-			domainOperation, task.previousDisposition,
+			domainOperation, nil, task.previousDisposition,
 		); recordErr != nil {
 			if errors.Is(recordErr, errStaleRun) {
 				operation.completeRemaining(OperationReasonStale)
@@ -614,12 +623,12 @@ func (w *Worker) Handle(
 		if len(deferred) > 0 && yieldAfterDeferrals {
 			result = store.WithYield(result)
 		}
-		return store.WithClass(store.ClassExtract, result)
+		return closePipelineRefusal(store.WithClass(store.ClassExtract, result))
 	}
 	if len(terminalErrs) > 0 {
-		return store.WithClass(store.ClassExtract, store.WithTerminal(
+		return closePipelineRefusal(store.WithClass(store.ClassExtract, store.WithTerminal(
 			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(terminalErrs...)),
-		))
+		)))
 	}
 	return nil
 }
@@ -914,6 +923,47 @@ func classifyDomainOutcome(
 	}
 }
 
+func candidateStrictOpenFailure(err error) error {
+	if errors.Is(err, candidatepkg.ErrInvalidManifest) {
+		return pipelinerefusal.Classified(
+			err,
+			pipelinerefusal.StageCandidateStrictOpen,
+			pipelinerefusal.GenerationCandidate,
+			pipelinerefusal.ClassificationInvalid,
+			pipelinerefusal.DimensionUnknown,
+		)
+	}
+	return pipelinerefusal.At(
+		err,
+		pipelinerefusal.StageCandidateStrictOpen,
+		pipelinerefusal.GenerationCandidate,
+	)
+}
+
+func candidateStrictValidationFailure(err error) error {
+	return candidateStrictOpenFailure(errors.Join(
+		candidatepkg.ErrInvalidManifest, err,
+	))
+}
+
+func extractionBoundaryFailure(err error, stage pipelinerefusal.Stage) error {
+	return pipelinerefusal.At(
+		err, stage, pipelinerefusal.GenerationExtractionDomain,
+	)
+}
+
+// closePipelineRefusal makes the closed projection the rendered outer error
+// while retaining every taxonomy/terminal/cause wrapper below it. This keeps
+// errors.Is/errors.As behavior without allowing a repository or raw child
+// diagnostic added by an enclosing formatter to enter the job error string.
+func closePipelineRefusal(err error) error {
+	receipt, ok := pipelinerefusal.From(err)
+	if !ok {
+		return err
+	}
+	return pipelinerefusal.Wrap(err, receipt)
+}
+
 func outcomeDisposition(
 	outcome *store.ExtractionDomainOutcome,
 ) store.DomainOutcomeDisposition {
@@ -931,6 +981,7 @@ func (w *Worker) recordDomainOutcome(
 	controlFailure bool,
 	runID string,
 	operation *domainOperationRecorder,
+	failure error,
 	previous store.DomainOutcomeDisposition,
 ) error {
 	outcome := store.ExtractionDomainOutcome{
@@ -941,7 +992,7 @@ func (w *Worker) recordDomainOutcome(
 		RunID:                   runID,
 		ReceiptSchema:           store.ExtractionOutcomeReceiptSchema,
 		Receipt: encodeExtractionDomainOutcomeReceipt(
-			operation, disposition,
+			operation, disposition, failure,
 		),
 	}
 	if err := w.Evidence.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
@@ -968,27 +1019,30 @@ func (w *Worker) recordManifestOpenOutcomes(
 	openErr error,
 ) error {
 	disposition, controlFailure := classifyDomainOutcome(openErr)
+	operation.completeRemaining(operationReason(openErr))
+	// Retryable strict-open failures must not replace a previously settled
+	// domain outcome. There is no trustworthy new candidate generation to bind
+	// a durable outcome to until the strict open succeeds.
 	if !disposition.Settled() {
-		operation.completeRemaining(operationReason(openErr))
-		return store.WithClass(store.ClassExtract,
+		return closePipelineRefusal(store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: open candidate manifest: %w",
-				repo.Name, openErr))
+				repo.Name, openErr)))
 	}
 	if !validSHA256(pointer.ManifestDigest) ||
 		!validSHA256(pointer.PolicyDigest) ||
 		pointer.ControlRevision == 0 {
-		operation.completeRemaining(operationReason(openErr))
-		return store.WithClass(store.ClassExtract,
+		return closePipelineRefusal(store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: open candidate manifest: %w",
-				repo.Name, openErr))
+				repo.Name, openErr)))
 	}
 	inventoryPolicy, policyErr := candidateManifestInventoryPolicy(
 		pointer.ManifestDigest,
 	)
 	if policyErr != nil {
-		return store.WithClass(store.ClassExtract,
+		policyErr = candidateStrictOpenFailure(policyErr)
+		return closePipelineRefusal(store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: candidate identity: %w",
-				repo.Name, policyErr))
+				repo.Name, policyErr)))
 	}
 	if policyDigest == "" {
 		policyDigest = pointer.PolicyDigest
@@ -1014,24 +1068,29 @@ func (w *Worker) recordManifestOpenOutcomes(
 			store.ComputeExtractionGenerationDigest(generation)
 		if err := w.recordDomainOutcome(
 			ctx, extractionScope(repo, ex.domain), generation,
-			disposition, controlFailure, "", domainOperation, "",
+			disposition, controlFailure, "", domainOperation, openErr, "",
 		); err != nil {
 			if errors.Is(err, errStaleRun) {
-				operation.completeRemaining(OperationReasonStale)
-				return nil
+				if disposition.Settled() {
+					operation.completeRemaining(OperationReasonStale)
+					return nil
+				}
+				return closePipelineRefusal(store.WithClass(store.ClassExtract,
+					fmt.Errorf("extract %s: open candidate manifest: %w",
+						repo.Name, openErr)))
 			}
 			retryable = append(retryable, err)
 		}
 	}
 	if len(retryable) > 0 {
-		return store.WithClass(store.ClassExtract,
+		return closePipelineRefusal(store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: persist manifest outcomes: %w",
-				repo.Name, errors.Join(retryable...)))
+				repo.Name, errors.Join(openErr, errors.Join(retryable...)))))
 	}
-	return store.WithClass(store.ClassExtract, store.WithTerminal(
+	return closePipelineRefusal(store.WithClass(store.ClassExtract, store.WithTerminal(
 		fmt.Errorf("extract %s: open candidate manifest: %w",
 			repo.Name, openErr),
-	))
+	)))
 }
 
 type registeredExtractor struct {
@@ -1135,10 +1194,17 @@ func (w *Worker) runOne(
 		)
 		operation.addStaging(operation.elapsed(stageStarted))
 		if beginErr != nil {
-			return fmt.Errorf("%s: begin: %w", ex.domain, beginErr)
+			return fmt.Errorf("%s: begin: %w", ex.domain,
+				extractionBoundaryFailure(
+					beginErr, pipelinerefusal.StageEvidenceStaging,
+				))
 		}
 		if started == nil || started.ID == "" {
-			return fmt.Errorf("%s: begin returned no run identity", ex.domain)
+			return fmt.Errorf("%s: begin: %w", ex.domain,
+				extractionBoundaryFailure(
+					errors.New("begin returned no run identity"),
+					pipelinerefusal.StageEvidenceStaging,
+				))
 		}
 		run = started
 		attempt.runID = run.ID
@@ -1206,7 +1272,10 @@ func (w *Worker) runOne(
 	if err != nil {
 		// Inventory is the admission gate, not a run start: rejected manifest
 		// members must never create staged evidence or attempt markers.
-		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
+		return fmt.Errorf("%s: inventory corpus: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageDomainInventory,
+			))
 	}
 	if w.Diagnostics {
 		diagnostics.Logf(
@@ -1238,20 +1307,44 @@ func (w *Worker) runOne(
 	operation.captureCoverage(coverage, w.ExtractorDetails)
 	closeResources()
 	if extractErr != nil {
+		sinkFailure := sink.failure()
+		if sinkFailure != nil {
+			extractErr = extractionBoundaryFailure(
+				errors.Join(extractErr, sinkFailure),
+				pipelinerefusal.StageEvidenceStaging,
+			)
+		} else {
+			extractErr = extractionBoundaryFailure(
+				extractErr, pipelinerefusal.StageExtractorExecution,
+			)
+		}
 		return fmt.Errorf("%s: extract: %w", ex.domain, extractErr)
 	}
 	if err := sink.Finish(); err != nil {
-		return fmt.Errorf("%s: stage: %w", ex.domain, err)
+		return fmt.Errorf("%s: stage: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageEvidenceStaging,
+			))
 	}
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("%s: canceled before publish: %w", ex.domain, err)
+		return fmt.Errorf("%s: canceled before publish: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageFinalPublication,
+			))
 	}
 	stats, err := verifiedCorpus.Stats()
 	if err != nil {
-		return fmt.Errorf("%s: corpus coverage: %w", ex.domain, err)
+		return fmt.Errorf("%s: corpus coverage: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageExtractorExecution,
+			))
 	}
 	if candidateManifest != nil && stats.unitDigest != scope.UnitDigest {
-		return fmt.Errorf("%s: candidate coverage unit does not match extraction scope", ex.domain)
+		return fmt.Errorf("%s: coverage: %w", ex.domain,
+			extractionBoundaryFailure(
+				errors.New("candidate coverage unit does not match extraction scope"),
+				pipelinerefusal.StageExtractorExecution,
+			))
 	}
 	// Boundary inventory comes from the trusted corpus, never the extractor.
 	// A corpus without the capability (in-memory test corpora) has no
@@ -1265,7 +1358,10 @@ func (w *Worker) runOne(
 		coverage, sink.atomCount, sink.assertionCount, sink.unresolvedCount,
 		stats, boundaries, inventoryPolicy)
 	if err != nil {
-		return fmt.Errorf("%s: coverage: %w", ex.domain, err)
+		return fmt.Errorf("%s: coverage: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageExtractorExecution,
+			))
 	}
 	operation.capture(verifiedCorpus, sink)
 	operation.complete(successfulOperationReason(stats, sink.factCount))
@@ -1276,7 +1372,7 @@ func (w *Worker) runOne(
 		RunID:         run.ID,
 		ReceiptSchema: store.ExtractionOutcomeReceiptSchema,
 		Receipt: encodeExtractionDomainOutcomeReceipt(
-			operation, store.DomainOutcomePublished,
+			operation, store.DomainOutcomePublished, nil,
 		),
 	}
 	publicationStarted := operation.started()
@@ -1287,13 +1383,20 @@ func (w *Worker) runOne(
 		if errors.Is(err, store.ErrConflict) {
 			stale, checkErr := w.runBecameStale(ctx, scope)
 			if checkErr != nil {
-				return fmt.Errorf("%s: publish: %w (verify conflict: %v)", ex.domain, err, checkErr)
+				return fmt.Errorf("%s: publish: %w", ex.domain,
+					extractionBoundaryFailure(
+						errors.Join(err, checkErr),
+						pipelinerefusal.StageFinalPublication,
+					))
 			}
 			if stale {
 				return fmt.Errorf("%s: %w", ex.domain, errStaleRun)
 			}
 		}
-		return fmt.Errorf("%s: publish: %w", ex.domain, err)
+		return fmt.Errorf("%s: publish: %w", ex.domain,
+			extractionBoundaryFailure(
+				err, pipelinerefusal.StageFinalPublication,
+			))
 	}
 	operation.addPublication(operation.elapsed(publicationStarted))
 	if w.Diagnostics {
@@ -1415,8 +1518,10 @@ func (s *runSink) Emit(fact sdk.Fact) error {
 		return s.err
 	}
 	if s.factCount >= maxFactsPerRun {
-		s.err = operationLimitError(
+		s.err = measuredOperationLimitError(
 			fmt.Sprintf("run exceeds %d-fact limit", maxFactsPerRun),
+			pipelinerefusal.DimensionFacts,
+			int64(s.factCount+1), int64(maxFactsPerRun),
 		)
 		return s.err
 	}
@@ -1521,15 +1626,22 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	unreadable := 0
 	visit := func(filePath string, isCandidate bool) error {
 		if len(paths)+unreadable >= maxCorpusFiles {
-			return operationLimitError(
+			return measuredOperationLimitError(
 				fmt.Sprintf("corpus inventory exceeds %d-file limit", maxCorpusFiles),
+				pipelinerefusal.DimensionInventoryFiles,
+				int64(len(paths)+unreadable+1), int64(maxCorpusFiles),
 			)
 		}
 		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
-			return operationLimitError(fmt.Sprintf(
-				"corpus inventory exceeds %d-byte aggregate path limit",
-				maxCorpusInventoryPathBytes,
-			))
+			return measuredOperationLimitError(
+				fmt.Sprintf(
+					"corpus inventory exceeds %d-byte aggregate path limit",
+					maxCorpusInventoryPathBytes,
+				),
+				pipelinerefusal.DimensionInventoryPathBytes,
+				int64(pathBytes+len(filePath)),
+				int64(maxCorpusInventoryPathBytes),
+			)
 		}
 		pathBytes += len(filePath)
 		if pathErr := checkCorpusPath(filePath); pathErr != nil {
@@ -1648,16 +1760,25 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 			}
 			seen[entry.path] = struct{}{}
 			if manifestFiles >= maxCorpusFiles {
-				return operationLimitError(fmt.Sprintf(
-					"candidate manifest %s exceeds %d-file extraction limit",
-					domain, maxCorpusFiles,
-				))
+				return measuredOperationLimitError(
+					fmt.Sprintf(
+						"candidate manifest %s exceeds %d-file extraction limit",
+						domain, maxCorpusFiles,
+					),
+					pipelinerefusal.DimensionInventoryFiles,
+					int64(manifestFiles+1), int64(maxCorpusFiles),
+				)
 			}
 			if len(entry.path) > maxCorpusInventoryPathBytes-pathBytes {
-				return operationLimitError(fmt.Sprintf(
-					"candidate manifest %s exceeds %d-byte aggregate path limit",
-					domain, maxCorpusInventoryPathBytes,
-				))
+				return measuredOperationLimitError(
+					fmt.Sprintf(
+						"candidate manifest %s exceeds %d-byte aggregate path limit",
+						domain, maxCorpusInventoryPathBytes,
+					),
+					pipelinerefusal.DimensionInventoryPathBytes,
+					int64(pathBytes+len(entry.path)),
+					int64(maxCorpusInventoryPathBytes),
+				)
 			}
 			pathBytes += len(entry.path)
 			required, err := callCandidate(candidate, entry.path)
@@ -1942,8 +2063,10 @@ func (c *verifiedCorpus) read(
 	}
 	if c.readCount >= maxCorpusFiles*4 {
 		c.mu.Unlock()
-		return sdk.Blob{}, operationLimitError(
+		return sdk.Blob{}, measuredOperationLimitError(
 			fmt.Sprintf("corpus exceeds %d-read limit", maxCorpusFiles*4),
+			pipelinerefusal.DimensionSourceReadAttempts,
+			int64(c.readCount+1), int64(maxCorpusFiles*4),
 		)
 	}
 	c.readCount++
@@ -1962,8 +2085,10 @@ func (c *verifiedCorpus) read(
 		return sdk.Blob{}, err
 	}
 	if int64(len(blob.Content)) > maxBytes {
-		return sdk.Blob{}, operationLimitError(
+		return sdk.Blob{}, measuredOperationLimitError(
 			fmt.Sprintf("corpus blob %q exceeds byte limit", filePath),
+			pipelinerefusal.DimensionSourceBlobBytes,
+			int64(len(blob.Content)), maxBytes,
 		)
 	}
 	if fromManifest && int64(len(blob.Content)) != manifestEntry.size {
@@ -1985,16 +2110,22 @@ func (c *verifiedCorpus) read(
 		return sdk.Blob{}, errors.New("corpus used after extractor returned")
 	}
 	if _, exists := c.sources[filePath]; !exists && int64(len(blob.Content)) > maxCorpusRunBytes-c.readBytes {
-		return sdk.Blob{}, operationLimitError(fmt.Sprintf(
-			"corpus exceeds %d-byte aggregate read limit", maxCorpusRunBytes,
-		))
+		return sdk.Blob{}, measuredOperationLimitError(
+			fmt.Sprintf(
+				"corpus exceeds %d-byte aggregate read limit", maxCorpusRunBytes,
+			),
+			pipelinerefusal.DimensionSourceReadBytes,
+			c.readBytes+int64(len(blob.Content)), maxCorpusRunBytes,
+		)
 	}
 	if previous, ok := c.sources[filePath]; ok && previous != record {
 		return sdk.Blob{}, fmt.Errorf("corpus blob %q changed during extraction", filePath)
 	}
 	if _, ok := c.sources[filePath]; !ok && len(c.sources) >= maxCorpusFiles {
-		return sdk.Blob{}, operationLimitError(
+		return sdk.Blob{}, measuredOperationLimitError(
 			fmt.Sprintf("corpus exceeds %d-read-file limit", maxCorpusFiles),
+			pipelinerefusal.DimensionSourceReadFiles,
+			int64(len(c.sources)+1), int64(maxCorpusFiles),
 		)
 	}
 	if _, exists := c.sources[filePath]; !exists {
@@ -2203,6 +2334,15 @@ func (s *runSink) operationSnapshot() runSinkOperationSnapshot {
 	}
 }
 
+func (s *runSink) failure() error {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.err
+}
+
 func (s *runSink) Close() {
 	s.mu.Lock()
 	s.closed = true
@@ -2335,9 +2475,13 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 	}
 	chunkStagedRows := len(assocs) + len(asserts)
 	if s.stagedRows+chunkStagedRows > s.maxStagedRows {
-		return fmt.Errorf(
-			"%w: domain would exceed %d staged rows",
-			errExtractionDomainBudget, s.maxStagedRows,
+		return pipelinerefusal.Measure(
+			fmt.Errorf(
+				"%w: domain would exceed %d staged rows",
+				errExtractionDomainBudget, s.maxStagedRows,
+			),
+			pipelinerefusal.DimensionStagedRows,
+			int64(s.stagedRows+chunkStagedRows), int64(s.maxStagedRows),
 		)
 	}
 	if err := s.evidence.AddEvidence(s.ctx, s.runID, atoms, assocs, asserts); err != nil {

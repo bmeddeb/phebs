@@ -28,7 +28,7 @@ type ProgressReader struct {
 }
 
 type Progress struct {
-	Schema                 string               `json:"schema"`
+	SchemaVersion          string               `json:"schema"`
 	Repository             string               `json:"repository"`
 	State                  string               `json:"state"` // current | building | failed | stale | unavailable
 	SourceGenerationDigest string               `json:"source_generation_digest"`
@@ -195,7 +195,7 @@ func projectProgress(
 	targetGeneration, targetSource string,
 ) Progress {
 	result := Progress{
-		Schema: ProgressSchema, Repository: repository, State: "unavailable",
+		SchemaVersion: ProgressSchema, Repository: repository, State: "unavailable",
 		SourceGenerationDigest: sourceDigest,
 	}
 	publicationCurrent := false
@@ -248,7 +248,7 @@ func projectProgress(
 }
 
 func ValidateProgress(progress Progress) error {
-	if progress.Schema != ProgressSchema || validateRepository(progress.Repository) != nil ||
+	if progress.SchemaVersion != ProgressSchema || validateRepository(progress.Repository) != nil ||
 		!validDigest(progress.SourceGenerationDigest) {
 		return invalid("progress identity")
 	}

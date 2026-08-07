@@ -9,16 +9,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type schedulerStore struct {
-	mu        sync.Mutex
-	chunks    []store.GenerationChunk
-	completed int
-	retried   int
-	released  int
-	done      chan struct{}
+	mu          sync.Mutex
+	chunks      []store.GenerationChunk
+	completed   int
+	retried     int
+	retryErrors []string
+	released    int
+	done        chan struct{}
 }
 
 func (scheduler *schedulerStore) EnqueueGenerationSchedule(context.Context, store.GenerationScheduleSpec) (*store.GenerationSchedule, error) {
@@ -55,14 +57,63 @@ func (scheduler *schedulerStore) CompleteGenerationChunk(_ context.Context, _ st
 	}
 	return nil
 }
-func (scheduler *schedulerStore) RetryGenerationChunk(_ context.Context, _ store.GenerationChunk, _ string, _ time.Time) (*store.GenerationChunk, error) {
+func (scheduler *schedulerStore) RetryGenerationChunk(_ context.Context, _ store.GenerationChunk, message string, _ time.Time) (*store.GenerationChunk, error) {
 	scheduler.mu.Lock()
 	defer scheduler.mu.Unlock()
 	scheduler.retried++
+	scheduler.retryErrors = append(scheduler.retryErrors, message)
 	if scheduler.done != nil && scheduler.completed+scheduler.retried == cap(scheduler.done) {
 		close(scheduler.done)
 	}
 	return &store.GenerationChunk{}, nil
+}
+
+func TestSchedulerPersistsStructuralDurableErrorText(t *testing.T) {
+	privateCause := errors.New("private /repo/path object deadbeef")
+	refusal := pipelinerefusal.Unknown(
+		privateCause,
+		pipelinerefusal.StageDomainInventory,
+		pipelinerefusal.GenerationExtractionDomain,
+	)
+	wrappedRefusal := fmt.Errorf("outer private token: %w", refusal)
+	if !errors.Is(wrappedRefusal, privateCause) {
+		t.Fatal("outer wrapper lost the refusal cause")
+	}
+	ordinary := fmt.Errorf("ordinary wrapper: %w", errors.New("ordinary cause"))
+
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "inner refusal", err: wrappedRefusal, want: refusal.Error()},
+		{name: "ordinary error", err: ordinary, want: ordinary.Error()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fake := &schedulerStore{}
+			scheduler := &Scheduler{
+				Store: fake, HeartbeatEvery: time.Hour,
+				Backoff: func(int) time.Duration { return time.Millisecond },
+			}
+			scheduler.execute(t.Context(), Class{
+				Budget: Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+				Handle: func(context.Context, store.GenerationChunk, Budget) error {
+					return test.err
+				},
+			}, store.GenerationChunk{
+				ID: "chunk", ResourceClass: store.GenerationResourceIO,
+				Status: store.GenerationChunkRunning, LeaseToken: "lease",
+			})
+
+			fake.mu.Lock()
+			defer fake.mu.Unlock()
+			if fake.retried != 1 || len(fake.retryErrors) != 1 ||
+				fake.retryErrors[0] != test.want {
+				t.Fatalf("retry/errors = %d/%q, want %q", fake.retried, fake.retryErrors, test.want)
+			}
+		})
+	}
 }
 func (scheduler *schedulerStore) ReleaseGenerationChunk(context.Context, store.GenerationChunk, string) error {
 	scheduler.mu.Lock()

@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -105,7 +106,11 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 		}
 		member.SourceMemberDigest = sourceMember.Digest
 		if member.RecordCount > MaxGenerationRecords-manifest.RecordCount {
-			return nil, ErrLimit
+			return nil, checkPublicationLimit(
+				ErrLimit, pipelinerefusal.DimensionGenerationRecords,
+				int64(manifest.RecordCount+member.RecordCount),
+				MaxGenerationRecords,
+			)
 		}
 		manifest.Members = append(manifest.Members, member)
 		manifest.RecordCount += member.RecordCount
@@ -128,15 +133,23 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 			}
 			objects[record.ObservationName] = info.Size()
 			if info.Size() > MaxGenerationBytes-manifest.ObservationBytes {
-				return nil, ErrLimit
+				return nil, checkPublicationLimit(
+					ErrLimit, pipelinerefusal.DimensionGenerationArtifactBytes,
+					manifest.ObservationBytes+info.Size(), MaxGenerationBytes,
+				)
 			}
 			manifest.ObservationBytes += info.Size()
 		}
 	}
 	if manifest.RecordCount != stage.partition.BlobCount ||
-		manifest.RecordCount != manifest.ObservedCount+manifest.UnsupportedCount ||
-		manifest.EncodedMemberBytes > MaxGenerationBytes {
+		manifest.RecordCount != manifest.ObservedCount+manifest.UnsupportedCount {
 		return nil, invalid("generation totals")
+	}
+	if err := checkPublicationLimit(
+		ErrLimit, pipelinerefusal.DimensionGenerationEncodedBytes,
+		manifest.EncodedMemberBytes, MaxGenerationBytes,
+	); err != nil {
+		return nil, err
 	}
 	manifest.OperationReceipt = receipt.value()
 	digestValue, err := ManifestDigest(manifest)
@@ -145,8 +158,14 @@ func (stage *Stage) Finalize(ctx context.Context) (*Publication, error) {
 	}
 	manifest.Digest = digestValue
 	raw, err := json.Marshal(manifest)
-	if err != nil || len(raw) > MaxManifestBytes {
-		return nil, ErrLimit
+	if err != nil {
+		return nil, err
+	}
+	if err := checkPublicationLimit(
+		ErrLimit, pipelinerefusal.DimensionGenerationControlBytes,
+		int64(len(raw)), MaxManifestBytes,
+	); err != nil {
+		return nil, err
 	}
 	if err := writeExclusiveBytes(filepath.Join(stage.directory, manifestName()), raw); err != nil {
 		return nil, err
@@ -252,6 +271,13 @@ func validateGenerationInventory(
 ) error {
 	entries, err := boundedDirectory(directory, len(manifest.Members)+2)
 	if err != nil {
+		if errors.Is(err, ErrLimit) {
+			return checkPublicationLimit(
+				ErrLimit, pipelinerefusal.DimensionGenerationEntries,
+				int64(len(manifest.Members)+3),
+				int64(len(manifest.Members)+2),
+			)
+		}
 		return err
 	}
 	expected := make(map[string]struct{}, len(manifest.Members)+2)

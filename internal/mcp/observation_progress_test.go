@@ -17,7 +17,7 @@ func (fixture *observationProgressToolFixture) Read(
 ) (*observationpublication.Progress, error) {
 	fixture.calls++
 	return &observationpublication.Progress{
-		Schema: observationpublication.ProgressSchema, Repository: repository,
+		SchemaVersion: observationpublication.ProgressSchema, Repository: repository,
 		State: "current", SourceGenerationDigest: "sha256:" + strings.Repeat("a", 64),
 		Publication: &observationpublication.PublicationProgress{
 			State: "current", GenerationDigest: "sha256:" + strings.Repeat("b", 64),

@@ -1,0 +1,265 @@
+{
+  "schema": "t401-neutral-author-reproducibility-v1",
+  "profiles": [
+    {
+      "profile": "structural-2m-v1",
+      "kind": "structural",
+      "scale": "frozen",
+      "profile_digest": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430",
+      "builds": [
+        {
+          "ordinal": 1,
+          "artifacts": [
+            {
+              "name": "profile.json",
+              "bytes": 6629,
+              "sha256": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430"
+            },
+            {
+              "name": "oracle.json",
+              "bytes": 6510,
+              "sha256": "sha256:8974c843fb9a9bcdb8864367f5e42394d97069058e87481d9d7e8f21e77944df"
+            },
+            {
+              "name": "manifest.json",
+              "bytes": 2416,
+              "sha256": "sha256:4ae92b8efa58d459fe8fa10ba23c5cedad3adc7b2dddbd7618ea8d96c306604b"
+            },
+            {
+              "name": "receipt.json",
+              "bytes": 2741,
+              "sha256": "sha256:bd80bef34f61f35c2f701d0877d4c013ec3c7d0ce62ec3756b32b7a4f103b2c2"
+            }
+          ],
+          "revisions": [
+            {
+              "revision": "a",
+              "commit": "b548a84f91ff295f4ce7c6fa226b6901f6177a9e",
+              "tree": "96b33ec020abad515767d23b0ab0a3c12933ae22",
+              "regular_files": 2000002,
+              "unique_go_blobs": 512,
+              "changed_files": 0
+            },
+            {
+              "revision": "b",
+              "commit": "73644b82d26a7e4eb354f7293d583ea577816318",
+              "tree": "f58ccffd268a5cf4bc40dcd9d2c5a64476589aec",
+              "regular_files": 2000002,
+              "unique_go_blobs": 513,
+              "changed_files": 1
+            },
+            {
+              "revision": "a-return",
+              "commit": "abf9ec6f3849e3f4708e31592f5eb72ddf6759db",
+              "tree": "96b33ec020abad515767d23b0ab0a3c12933ae22",
+              "regular_files": 2000002,
+              "unique_go_blobs": 512,
+              "changed_files": 1
+            }
+          ],
+          "git": {
+            "name": "git",
+            "version": "git version 2.50.1 (Apple Git-155)"
+          },
+          "bare_git_logical_bytes": 553218,
+          "bare_git_allocated_bytes": 643072
+        },
+        {
+          "ordinal": 2,
+          "artifacts": [
+            {
+              "name": "profile.json",
+              "bytes": 6629,
+              "sha256": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430"
+            },
+            {
+              "name": "oracle.json",
+              "bytes": 6510,
+              "sha256": "sha256:8974c843fb9a9bcdb8864367f5e42394d97069058e87481d9d7e8f21e77944df"
+            },
+            {
+              "name": "manifest.json",
+              "bytes": 2416,
+              "sha256": "sha256:4ae92b8efa58d459fe8fa10ba23c5cedad3adc7b2dddbd7618ea8d96c306604b"
+            },
+            {
+              "name": "receipt.json",
+              "bytes": 2741,
+              "sha256": "sha256:bd80bef34f61f35c2f701d0877d4c013ec3c7d0ce62ec3756b32b7a4f103b2c2"
+            }
+          ],
+          "revisions": [
+            {
+              "revision": "a",
+              "commit": "b548a84f91ff295f4ce7c6fa226b6901f6177a9e",
+              "tree": "96b33ec020abad515767d23b0ab0a3c12933ae22",
+              "regular_files": 2000002,
+              "unique_go_blobs": 512,
+              "changed_files": 0
+            },
+            {
+              "revision": "b",
+              "commit": "73644b82d26a7e4eb354f7293d583ea577816318",
+              "tree": "f58ccffd268a5cf4bc40dcd9d2c5a64476589aec",
+              "regular_files": 2000002,
+              "unique_go_blobs": 513,
+              "changed_files": 1
+            },
+            {
+              "revision": "a-return",
+              "commit": "abf9ec6f3849e3f4708e31592f5eb72ddf6759db",
+              "tree": "96b33ec020abad515767d23b0ab0a3c12933ae22",
+              "regular_files": 2000002,
+              "unique_go_blobs": 512,
+              "changed_files": 1
+            }
+          ],
+          "git": {
+            "name": "git",
+            "version": "git version 2.50.1 (Apple Git-155)"
+          },
+          "bare_git_logical_bytes": 553218,
+          "bare_git_allocated_bytes": 643072
+        }
+      ],
+      "profile_bytes_equal": true,
+      "oracle_bytes_equal": true,
+      "manifest_bytes_equal": true,
+      "revision_identity_equal": true
+    },
+    {
+      "profile": "semantic-262144-v1",
+      "kind": "semantic",
+      "scale": "frozen",
+      "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+      "builds": [
+        {
+          "ordinal": 1,
+          "artifacts": [
+            {
+              "name": "profile.json",
+              "bytes": 9695,
+              "sha256": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b"
+            },
+            {
+              "name": "oracle.json",
+              "bytes": 8194,
+              "sha256": "sha256:0d752c83181e38c6bec5a039f7d587caf628a4613d23d5af7bc149f8c0782536"
+            },
+            {
+              "name": "manifest.json",
+              "bytes": 2461,
+              "sha256": "sha256:ca4925f3ca3ddad42955e5c3dc0e9b5610e7fa8ac4ce3e614a9ad091e23362a8"
+            },
+            {
+              "name": "receipt.json",
+              "bytes": 2751,
+              "sha256": "sha256:86ab3bbe43764be46398f0a0d85d36a3391c3395c7c0c0ab33f315dbcbc87198"
+            }
+          ],
+          "revisions": [
+            {
+              "revision": "a",
+              "commit": "16dd851f7f270e85cced78ba961ad015ac2370e0",
+              "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 0
+            },
+            {
+              "revision": "b",
+              "commit": "a6b288a5aaf419b1d3132fb25979c5332d61e72f",
+              "tree": "663339667bd5d714c62b9736ad023264af664cde",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 1
+            },
+            {
+              "revision": "a-return",
+              "commit": "3616c279d70d1383658689213502559a73fefac4",
+              "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 1
+            }
+          ],
+          "git": {
+            "name": "git",
+            "version": "git version 2.50.1 (Apple Git-155)"
+          },
+          "bare_git_logical_bytes": 24960332,
+          "bare_git_allocated_bytes": 25976832
+        },
+        {
+          "ordinal": 2,
+          "artifacts": [
+            {
+              "name": "profile.json",
+              "bytes": 9695,
+              "sha256": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b"
+            },
+            {
+              "name": "oracle.json",
+              "bytes": 8194,
+              "sha256": "sha256:0d752c83181e38c6bec5a039f7d587caf628a4613d23d5af7bc149f8c0782536"
+            },
+            {
+              "name": "manifest.json",
+              "bytes": 2461,
+              "sha256": "sha256:ca4925f3ca3ddad42955e5c3dc0e9b5610e7fa8ac4ce3e614a9ad091e23362a8"
+            },
+            {
+              "name": "receipt.json",
+              "bytes": 2751,
+              "sha256": "sha256:0706a4e6c7debf4846df07e95d825442406ae851236d3e7c60c4407daf77c8ce"
+            }
+          ],
+          "revisions": [
+            {
+              "revision": "a",
+              "commit": "16dd851f7f270e85cced78ba961ad015ac2370e0",
+              "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 0
+            },
+            {
+              "revision": "b",
+              "commit": "a6b288a5aaf419b1d3132fb25979c5332d61e72f",
+              "tree": "663339667bd5d714c62b9736ad023264af664cde",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 1
+            },
+            {
+              "revision": "a-return",
+              "commit": "3616c279d70d1383658689213502559a73fefac4",
+              "tree": "cd8f83b8b9418ca337bc4391493ad791cd21c92d",
+              "regular_files": 294914,
+              "unique_go_blobs": 262144,
+              "changed_files": 1
+            }
+          ],
+          "git": {
+            "name": "git",
+            "version": "git version 2.50.1 (Apple Git-155)"
+          },
+          "bare_git_logical_bytes": 24960332,
+          "bare_git_allocated_bytes": 25059328
+        }
+      ],
+      "profile_bytes_equal": true,
+      "oracle_bytes_equal": true,
+      "manifest_bytes_equal": true,
+      "revision_identity_equal": true
+    }
+  ],
+  "claims": {
+    "synthetic": true,
+    "source_free": true,
+    "separate_author_invocations": true,
+    "establishes_target_slo": false,
+    "qualifies_supported_scale": false,
+    "authorizes_release": false
+  }
+}

@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -281,10 +282,14 @@ func (g *gitCorpus) walkTree(
 				// bounded display-safe sample) and never traversed (T19.8).
 				boundaries.count++
 				if boundaries.count > maxCorpusFiles {
-					walkErr = operationLimitError(fmt.Sprintf(
-						"walk corpus: more than %d gitlink boundaries",
-						maxCorpusFiles,
-					))
+					walkErr = measuredOperationLimitError(
+						fmt.Sprintf(
+							"walk corpus: more than %d gitlink boundaries",
+							maxCorpusFiles,
+						),
+						pipelinerefusal.DimensionInventoryFiles,
+						int64(boundaries.count), int64(maxCorpusFiles),
+					)
 					break
 				}
 				_, _ = boundaryHash.Write([]byte(entry.path))
@@ -329,17 +334,26 @@ func (g *gitCorpus) walkTree(
 					break
 				}
 				if len(candidateSymlinks) >= maxCorpusFiles {
-					walkErr = operationLimitError(fmt.Sprintf(
-						"corpus inventory exceeds %d candidate-symlink limit",
-						maxCorpusFiles,
-					))
+					walkErr = measuredOperationLimitError(
+						fmt.Sprintf(
+							"corpus inventory exceeds %d candidate-symlink limit",
+							maxCorpusFiles,
+						),
+						pipelinerefusal.DimensionInventoryFiles,
+						int64(len(candidateSymlinks)+1), int64(maxCorpusFiles),
+					)
 					break
 				}
 				if len(entry.path) > maxCorpusInventoryPathBytes-candidateSymlinkPathBytes {
-					walkErr = operationLimitError(fmt.Sprintf(
-						"corpus inventory exceeds %d-byte candidate-symlink path limit",
-						maxCorpusInventoryPathBytes,
-					))
+					walkErr = measuredOperationLimitError(
+						fmt.Sprintf(
+							"corpus inventory exceeds %d-byte candidate-symlink path limit",
+							maxCorpusInventoryPathBytes,
+						),
+						pipelinerefusal.DimensionInventoryPathBytes,
+						int64(candidateSymlinkPathBytes+len(entry.path)),
+						int64(maxCorpusInventoryPathBytes),
+					)
 					break
 				}
 				candidateSymlinkPathBytes += len(entry.path)
@@ -352,9 +366,13 @@ func (g *gitCorpus) walkTree(
 			default:
 				fileCount++
 				if fileCount > maxCorpusFiles {
-					walkErr = operationLimitError(fmt.Sprintf(
-						"walk corpus: more than %d regular files", maxCorpusFiles,
-					))
+					walkErr = measuredOperationLimitError(
+						fmt.Sprintf(
+							"walk corpus: more than %d regular files", maxCorpusFiles,
+						),
+						pipelinerefusal.DimensionInventoryFiles,
+						int64(fileCount), int64(maxCorpusFiles),
+					)
 					break
 				}
 				// Entries with unrepresentable names are still visited so the
@@ -465,9 +483,14 @@ func resolveCandidateSymlink(
 			content, err := gitobj.ReadBlob(ctx, dir, current.oid, maxCorpusPathBytes)
 			if err != nil {
 				if errors.Is(err, gitobj.ErrTooLarge) {
-					return fmt.Errorf(
-						"walk corpus: symlink %q target exceeds %d-byte limit: %w",
-						current.path, maxCorpusPathBytes, err)
+					return measuredOperationLimitCause(
+						fmt.Sprintf(
+							"walk corpus: symlink %q target exceeds %d-byte limit",
+							current.path, maxCorpusPathBytes,
+						),
+						err, pipelinerefusal.DimensionSourceBlobBytes,
+						maxCorpusPathBytes+1, maxCorpusPathBytes,
+					)
 				}
 				return fmt.Errorf("walk corpus: read symlink %q target: %w", current.path, err)
 			}
@@ -515,10 +538,14 @@ func resolveCandidateSymlink(
 				alias.path, next.objectType, resolved)
 		case next.mode == "120000":
 			if depth+1 == maxCorpusSymlinkDepth {
-				return operationLimitError(fmt.Sprintf(
-					"walk corpus: candidate symlink %q exceeds %d-link depth limit",
-					alias.path, maxCorpusSymlinkDepth,
-				))
+				return measuredOperationLimitError(
+					fmt.Sprintf(
+						"walk corpus: candidate symlink %q exceeds %d-link depth limit",
+						alias.path, maxCorpusSymlinkDepth,
+					),
+					pipelinerefusal.DimensionSymlinkDepth,
+					int64(depth+2), int64(maxCorpusSymlinkDepth),
+				)
 			}
 			current = next
 		case next.mode == "100644" || next.mode == "100755":
@@ -534,10 +561,14 @@ func resolveCandidateSymlink(
 				alias.path, next.mode, resolved)
 		}
 	}
-	return operationLimitError(fmt.Sprintf(
-		"walk corpus: candidate symlink %q exceeds %d-link depth limit",
-		alias.path, maxCorpusSymlinkDepth,
-	))
+	return measuredOperationLimitError(
+		fmt.Sprintf(
+			"walk corpus: candidate symlink %q exceeds %d-link depth limit",
+			alias.path, maxCorpusSymlinkDepth,
+		),
+		pipelinerefusal.DimensionSymlinkDepth,
+		int64(maxCorpusSymlinkDepth+1), int64(maxCorpusSymlinkDepth),
+	)
 }
 
 func resolveCorpusSymlinkTarget(linkPath, target string) (string, error) {
@@ -566,10 +597,11 @@ func resolveCorpusSymlinkTarget(linkPath, target string) (string, error) {
 }
 
 func lookupTreeEntry(ctx context.Context, dir, commit, filePath string) (treeRecord, error) {
+	const outputLimit = int64(maxTreeRecordBytes + 2)
 	out, err := gitobj.Output(
 		ctx,
 		dir,
-		int64(maxTreeRecordBytes+2),
+		outputLimit,
 		"ls-tree",
 		"-z",
 		"--full-tree",
@@ -578,6 +610,12 @@ func lookupTreeEntry(ctx context.Context, dir, commit, filePath string) (treeRec
 		":(literal)"+filePath,
 	)
 	if err != nil {
+		if errors.Is(err, gitobj.ErrTooLarge) {
+			return treeRecord{}, pipelinerefusal.Measure(
+				err, pipelinerefusal.DimensionTreeRecordBytes,
+				outputLimit+1, outputLimit,
+			)
+		}
 		return treeRecord{}, err
 	}
 	if len(out) == 0 {
@@ -647,10 +685,11 @@ func lookupSizedTreeEntry(
 	ctx context.Context,
 	dir, commit, filePath string,
 ) (treeRecord, error) {
+	const outputLimit = int64(maxTreeRecordBytes + 32)
 	out, err := gitobj.Output(
 		ctx,
 		dir,
-		int64(maxTreeRecordBytes+32),
+		outputLimit,
 		"ls-tree",
 		"-l",
 		"-z",
@@ -660,6 +699,12 @@ func lookupSizedTreeEntry(
 		":(literal)"+filePath,
 	)
 	if err != nil {
+		if errors.Is(err, gitobj.ErrTooLarge) {
+			return treeRecord{}, pipelinerefusal.Measure(
+				err, pipelinerefusal.DimensionTreeRecordBytes,
+				outputLimit+1, outputLimit,
+			)
+		}
 		return treeRecord{}, err
 	}
 	if len(out) == 0 {
@@ -736,10 +781,14 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 			records++
 			if records > maxCorpusLookupRecords {
 				stopTreeCommand(cmd, stdout)
-				return false, operationLimitError(fmt.Sprintf(
-					"lookup corpus root %q exceeds %d-record probe limit",
-					root, maxCorpusLookupRecords,
-				))
+				return false, measuredOperationLimitError(
+					fmt.Sprintf(
+						"lookup corpus root %q exceeds %d-record probe limit",
+						root, maxCorpusLookupRecords,
+					),
+					pipelinerefusal.DimensionLookupRecords,
+					int64(records), int64(maxCorpusLookupRecords),
+				)
 			}
 			entry, parseErr := parseSizedTreeRecord(record)
 			if parseErr != nil {
@@ -749,10 +798,14 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 			pathBytes += len(entry.path)
 			if pathBytes > maxCorpusLookupPathBytes {
 				stopTreeCommand(cmd, stdout)
-				return false, operationLimitError(fmt.Sprintf(
-					"lookup corpus root %q exceeds %d-byte path probe limit",
-					root, maxCorpusLookupPathBytes,
-				))
+				return false, measuredOperationLimitError(
+					fmt.Sprintf(
+						"lookup corpus root %q exceeds %d-byte path probe limit",
+						root, maxCorpusLookupPathBytes,
+					),
+					pipelinerefusal.DimensionLookupPathBytes,
+					int64(pathBytes), int64(maxCorpusLookupPathBytes),
+				)
 			}
 			if entry.path != root &&
 				strings.HasPrefix(entry.path, root+"/") &&
@@ -805,8 +858,10 @@ func (g *gitCorpus) readManifestBlob(
 			entry.path)
 	}
 	if entry.size > maxBytes {
-		return sdk.Blob{}, operationLimitError(
+		return sdk.Blob{}, measuredOperationLimitError(
 			fmt.Sprintf("corpus blob %q exceeds byte limit", entry.path),
+			pipelinerefusal.DimensionSourceBlobBytes,
+			entry.size, maxBytes,
 		)
 	}
 	dir, err := g.repoDir()
@@ -877,6 +932,13 @@ func (g *gitCorpus) read(ctx context.Context, filePath string, maxBytes int64) (
 	}
 	content, err := gitobj.ReadBlob(ctx, dir, oid, maxBytes)
 	if err != nil {
+		if errors.Is(err, gitobj.ErrTooLarge) {
+			return sdk.Blob{}, measuredOperationLimitCause(
+				fmt.Sprintf("read corpus %q: content exceeds byte limit", filePath),
+				err, pipelinerefusal.DimensionSourceBlobBytes,
+				maxBytes+1, maxBytes,
+			)
+		}
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: content: %w", filePath, err)
 	}
 	digest := sha256.Sum256(content)
@@ -965,8 +1027,14 @@ func parseSizedTreeRecord(record []byte) (treeRecord, error) {
 func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 	record, err := r.ReadSlice(0)
 	if errors.Is(err, bufio.ErrBufferFull) || len(record) > max+1 {
-		return nil, operationLimitError(
+		observed := len(record)
+		if observed <= max {
+			observed = max + 1
+		}
+		return nil, measuredOperationLimitError(
 			fmt.Sprintf("tree record exceeds %d-byte limit", max),
+			pipelinerefusal.DimensionTreeRecordBytes,
+			int64(observed), int64(max),
 		)
 	}
 	if len(record) > 0 && record[len(record)-1] != 0 && errors.Is(err, io.EOF) {

@@ -26,6 +26,7 @@ when two pages appear to overlap.
 | Completed ticket history | [BACKLOG_COMPLETED.md](./BACKLOG_COMPLETED.md) | Append through a reviewed archive move; do not rewrite completed narratives |
 | Architecture and decisions | [PLAN.md](../PLAN.md) | Append dated ADR rows; do not rewrite historical decisions |
 | Product direction | [VISION.md](./VISION.md) | Describe direction, not current behavior or setup |
+| Interface philosophy, discipline, and design language | [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) | Governs presentation only; it cannot broaden authority, claims, or caveats |
 | Pilot authority and claims | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | Downstream documents cannot broaden its authority |
 | Validation records | [`spike/t111/`](../spike/t111/) | Sealed evidence: never rewrite, relocate, or summarize as a new result |
 
@@ -51,6 +52,8 @@ These documents specify product concepts and transport shapes. They do not
 replace the user manual.
 
 - [VISION.md](./VISION.md) — product direction and sequencing.
+- [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) — interface philosophy, design
+  discipline, and the shared design language for every product surface.
 - [INVESTIGATIONS.md](./INVESTIGATIONS.md) — Investigation product shape and UX.
 - [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) —
   normative Investigation identities, lifecycle, authorization, and review

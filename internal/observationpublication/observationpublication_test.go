@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -450,9 +451,15 @@ func TestRuntimeSchedulesPublishesAndRestartNoOps(t *testing.T) {
 		Repository: repositoryName, Stage: spec.Stage,
 		Generation: "sha256:" + strings.Repeat("0", 64),
 	})
-	if err := runtime.Handle(t.Context(), chunk); err == nil || err.Error() != ErrWorkUnavailable.Error() ||
+	if err := runtime.Handle(t.Context(), chunk); err == nil ||
+		!errors.Is(err, ErrWorkUnavailable) ||
 		!errors.Is(err, store.ErrGenerationStale) {
 		t.Fatalf("stale runtime error = %v", err)
+	} else if receipt, ok := pipelinerefusal.From(err); !ok ||
+		receipt.Stage != pipelinerefusal.StageObservationPublication ||
+		receipt.GenerationKind != pipelinerefusal.GenerationObservation ||
+		receipt.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("stale runtime refusal = %+v, present=%t", receipt, ok)
 	}
 	capture.specs = capture.specs[:1]
 	if err := runtime.Handle(t.Context(), chunk); err != nil {

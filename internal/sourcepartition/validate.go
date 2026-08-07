@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -197,7 +198,10 @@ func readMember(
 			_ = file.Close()
 			return nil, err
 		}
-		line, readErr := readLine(reader, MaxRecordBytes)
+		line, readErr := readLine(
+			reader, MaxRecordBytes,
+			pipelinerefusal.DimensionUnknown,
+		)
 		if errors.Is(readErr, io.EOF) {
 			break
 		}

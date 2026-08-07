@@ -285,7 +285,9 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		return
 	}
 	notBefore := time.Now().UTC().Add(scheduler.Backoff(chunk.Attempt + 1))
-	if _, err := scheduler.Store.RetryGenerationChunk(writeCtx, chunk, handleErr.Error(), notBefore); err != nil &&
+	if _, err := scheduler.Store.RetryGenerationChunk(
+		writeCtx, chunk, store.DurableErrorText(handleErr), notBefore,
+	); err != nil &&
 		!errors.Is(err, store.ErrGenerationExhausted) &&
 		!errors.Is(err, store.ErrGenerationLeaseLost) &&
 		!errors.Is(err, store.ErrGenerationStale) {

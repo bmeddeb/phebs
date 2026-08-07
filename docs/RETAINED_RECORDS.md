@@ -34,6 +34,12 @@ evidence.
 - [T34.1 repository source/search generation gates](../spike/t341/README.md)
 - [T34.2 exact service-query compiler gate](../spike/t342/README.md)
 - [Source-free 2026-08-06 large-monorepo diagnostic](../spike/large-monorepo-20260806/REPORT.md)
+- [T40.1 closed scale-refusal and neutral-envelope record](../spike/t401/README.md),
+  including the [frozen envelope](../spike/t401/envelope.json),
+  [blob-reader comparison](../spike/t401/comparison.json), and source-free
+  [paired-build receipt](../spike/t401/reproducibility.json),
+  [structural](../spike/t401/structural/manifest.json) and
+  [semantic](../spike/t401/semantic/manifest.json) authoring records
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -85,6 +91,38 @@ identities, raw errors, and the high-entropy per-shard vector remain outside
 the repository. The record establishes mechanical behavior only: it is not a
 validation receipt, supported-scale result, SLO, topology decision, accuracy
 or completeness result, T39.R1 evaluation, or release authority.
+
+The T40.1 directory retains the deterministic profile author, independent
+oracles, semantic parity gates, strict source-free schemas, and seven explicit
+artifacts. Their SHA-256 digests are:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `envelope.json` | `92cce848e6e42942c24e2fa066968571fb5693252b7b41b7a91c889881fe7f94` |
+| `comparison.json` | `3527bec297c80c71b6c5081b1b386d25efc9ec8894643f599c7c57848be3b402` |
+| `reproducibility.json` | `b7b0491af659007eb8e903279ca63c6f8178878a8af114a9af0cd407e52ccb1a` |
+| `structural/manifest.json` | `4ae92b8efa58d459fe8fa10ba23c5cedad3adc7b2dddbd7618ea8d96c306604b` |
+| `structural/receipt.json` | `bd80bef34f61f35c2f701d0877d4c013ec3c7d0ce62ec3756b32b7a4f103b2c2` |
+| `semantic/manifest.json` | `ca4925f3ca3ddad42955e5c3dc0e9b5610e7fa8ac4ce3e614a9ad091e23362a8` |
+| `semantic/receipt.json` | `e096b17faccd3ace38f0272234bc7fdfff97b0dfb1ccd23fa388e888d966d6d3` |
+
+The structural profile freezes 2,000,000 eligible Go paths plus two controls
+and more than 8 GiB of declared placement bytes; the semantic profile freezes
+262,144 distinct Go blobs plus 32,768 IDL inputs and an explicit current-limit
+observation refusal. The comparison binds one small structural projection to
+the same verified zoekt binary: indexed content and ordered per-query returned-
+file/content projections are equal, raw shard bytes differ, and missing/corrupt-
+object outcomes are recorded without selecting the cat-file candidate. Author
+receipts report bare-Git logical and filesystem-allocated bytes as
+environment-bound observations,
+separate from deterministic semantic identity. The external scratch
+repositories and process artifacts were destroyed after validation.
+
+These records freeze input shape, expected admission/refusal posture, and
+mechanical parity only. They are not a two-million-owner phebs convergence
+run, supported-scale result, target SLO, exact peak-resource measurement,
+accuracy/completeness evidence, freshness result, topology decision, or
+release authority. T40.1 changes no production bound or blob-reader selection.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed

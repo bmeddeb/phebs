@@ -1,0 +1,1379 @@
+{
+  "schema": "t401-neutral-scale-envelope-v1",
+  "profiles": [
+    {
+      "schema": "t401-neutral-scale-profile-v1",
+      "name": "structural-2m-v1",
+      "kind": "structural",
+      "scale": "frozen",
+      "seed": "t401-neutral-structural-v1",
+      "generator": {
+        "name": "phebs-t401-fast-import-author",
+        "version": "1.0.0",
+        "git_object_format": "sha1",
+        "path_order": "ascii_lexicographic",
+        "path_layout": "control_then_kind_bucket_ordinal_v1",
+        "template_policy": "fixed_width_family_semantics_with_comment_padding_v1",
+        "blob_reuse_policy": "structural_ordinal_modulo_classes_semantic_unique_v1",
+        "timestamp": 1785974400,
+        "author_name": "phebs-t401-fixture-author",
+        "author_email": "fixture@example.invalid"
+      },
+      "shape": {
+        "cells": 10000,
+        "eligible_go_paths_per_cell": 200,
+        "caller_paths_per_cell": 100,
+        "go_file_bytes": 4608,
+        "go_blob_reuse_classes": 512,
+        "idl_file_bytes": 0,
+        "control_files": 2
+      },
+      "template_families": [
+        {
+          "name": "metadata_reused_go",
+          "plane": "go",
+          "suffix": ".go",
+          "outcome": "structural",
+          "inputs": 2000000,
+          "records_per_input": 0,
+          "gaps_per_input": 0,
+          "staging_rows_per_input": 0,
+          "canonical_bytes_per_input": 0
+        }
+      ],
+      "adapter_expectations": [],
+      "lane_projections": [
+        {
+          "name": "repository",
+          "selection": "all_eligible_go_paths_v1",
+          "unit": "path_placement",
+          "placements": 2000000,
+          "unique_go_blobs": 512,
+          "declared_bytes": 9216000000,
+          "logical_bytes": 9216000000,
+          "production_candidate_parity": true
+        },
+        {
+          "name": "caller",
+          "selection": "synthetic_first_offsets_per_cell_v1",
+          "unit": "path_placement",
+          "placements": 1000000,
+          "unique_go_blobs": 512,
+          "declared_bytes": 4608000000,
+          "logical_bytes": 4608000000,
+          "production_candidate_parity": false
+        }
+      ],
+      "aggregate": {
+        "physical_owners": 2000002,
+        "regular_files": 2000002,
+        "eligible_go_files": 2000000,
+        "idl_candidates": 0,
+        "control_files": 2,
+        "repository_lane_placements": 2000000,
+        "caller_lane_placements": 1000000,
+        "unique_go_blobs": 512,
+        "unique_idl_blobs": 0,
+        "declared_repository_go_bytes": 9216000000,
+        "logical_source_bytes": 9216000076,
+        "control_bytes": 76,
+        "modeled_domain_partitions": 489,
+        "modeled_domain_members": 489,
+        "domain_partition_model": "neutral_input_chunks_4096_v1",
+        "observation_records": 0,
+        "observation_gap_classifications": 0,
+        "extractor_facts": 0,
+        "extractor_gap_facts": 0,
+        "extractor_staging_rows": 0,
+        "canonical_observation_bytes": 0,
+        "canonical_extractor_bytes": 0,
+        "canonical_result_byte_model": "sum_per_input_sourceobservation_or_sdk_fact_array_v1"
+      },
+      "dimensions": [
+        {
+          "name": "physical_owners",
+          "baseline": 2000002,
+          "admitted": 2000002
+        },
+        {
+          "name": "repository_lane_placements",
+          "baseline": 2000000,
+          "admitted": 2000000
+        },
+        {
+          "name": "caller_lane_placements",
+          "baseline": 1000000,
+          "admitted": 1000000
+        },
+        {
+          "name": "unique_go_blobs",
+          "baseline": 512,
+          "admitted": 513
+        },
+        {
+          "name": "declared_repository_go_bytes",
+          "baseline": 9216000000,
+          "admitted": 9216000000
+        },
+        {
+          "name": "logical_source_bytes",
+          "baseline": 9216000076,
+          "admitted": 9216000076
+        },
+        {
+          "name": "idl_candidates",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "control_files",
+          "baseline": 2,
+          "admitted": 2
+        },
+        {
+          "name": "modeled_domain_partitions",
+          "baseline": 489,
+          "admitted": 489
+        },
+        {
+          "name": "modeled_domain_members",
+          "baseline": 489,
+          "admitted": 489
+        },
+        {
+          "name": "observation_records",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "observation_gap_classifications",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_facts",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_gap_facts",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_staging_rows",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "canonical_observation_bytes",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "canonical_extractor_bytes",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "transition_changed_files",
+          "baseline": 1,
+          "admitted": 1
+        }
+      ],
+      "expected_outcomes": [
+        {
+          "stage": "source_partition_planning",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "blob_placements",
+          "observed": 3907,
+          "limit": 4096
+        },
+        {
+          "stage": "observation_publication",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "generation_records",
+          "observed": 512,
+          "limit": 250000
+        },
+        {
+          "stage": "candidate_strict_open",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "domain_inventory",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "extractor_execution",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "evidence_staging",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "final_publication",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        }
+      ],
+      "transitions": [
+        {
+          "revision": "a",
+          "posture": "baseline",
+          "changed_regular_files": 0,
+          "tree_relation": "baseline"
+        },
+        {
+          "revision": "b",
+          "parent": "a",
+          "posture": "bounded_delta",
+          "changed_regular_files": 1,
+          "tree_relation": "different_from_a"
+        },
+        {
+          "revision": "a-return",
+          "parent": "b",
+          "posture": "content_return",
+          "changed_regular_files": 1,
+          "tree_relation": "equal_to_a"
+        }
+      ],
+      "claims": {
+        "synthetic": true,
+        "explicit_authoring_only": true,
+        "establishes_target_slo": false,
+        "establishes_accuracy": false,
+        "qualifies_supported_scale": false,
+        "authorizes_release": false
+      }
+    },
+    {
+      "schema": "t401-neutral-scale-profile-v1",
+      "name": "semantic-262144-v1",
+      "kind": "semantic",
+      "scale": "frozen",
+      "seed": "t401-neutral-semantic-v1",
+      "generator": {
+        "name": "phebs-t401-fast-import-author",
+        "version": "1.0.0",
+        "git_object_format": "sha1",
+        "path_order": "ascii_lexicographic",
+        "path_layout": "control_then_kind_bucket_ordinal_v1",
+        "template_policy": "fixed_width_family_semantics_with_comment_padding_v1",
+        "blob_reuse_policy": "structural_ordinal_modulo_classes_semantic_unique_v1",
+        "timestamp": 1785974400,
+        "author_name": "phebs-t401-fixture-author",
+        "author_email": "fixture@example.invalid"
+      },
+      "shape": {
+        "cells": 4096,
+        "eligible_go_paths_per_cell": 64,
+        "caller_paths_per_cell": 32,
+        "go_file_bytes": 512,
+        "go_blob_reuse_classes": 262144,
+        "idl_file_bytes": 384,
+        "control_files": 2
+      },
+      "template_families": [
+        {
+          "name": "go_rpc_resolved",
+          "plane": "go",
+          "suffix": ".go",
+          "outcome": "supported",
+          "inputs": 65536,
+          "records_per_input": 1,
+          "gaps_per_input": 0,
+          "staging_rows_per_input": 0,
+          "canonical_bytes_per_input": 757
+        },
+        {
+          "name": "go_kafka_literal",
+          "plane": "go",
+          "suffix": ".go",
+          "outcome": "supported",
+          "inputs": 65536,
+          "records_per_input": 1,
+          "gaps_per_input": 0,
+          "staging_rows_per_input": 0,
+          "canonical_bytes_per_input": 1011
+        },
+        {
+          "name": "go_dynamic_call",
+          "plane": "go",
+          "suffix": ".go",
+          "outcome": "gap",
+          "reason": "dynamic_receiver",
+          "inputs": 65536,
+          "records_per_input": 1,
+          "gaps_per_input": 1,
+          "staging_rows_per_input": 0,
+          "canonical_bytes_per_input": 816
+        },
+        {
+          "name": "go_dynamic_topic",
+          "plane": "go",
+          "suffix": ".go",
+          "outcome": "gap",
+          "reason": "unresolved-ident",
+          "inputs": 65536,
+          "records_per_input": 1,
+          "gaps_per_input": 1,
+          "staging_rows_per_input": 0,
+          "canonical_bytes_per_input": 997
+        },
+        {
+          "name": "proto_supported",
+          "plane": "idl",
+          "suffix": ".proto",
+          "outcome": "supported",
+          "inputs": 8192,
+          "records_per_input": 1,
+          "gaps_per_input": 0,
+          "staging_rows_per_input": 2,
+          "canonical_bytes_per_input": 731
+        },
+        {
+          "name": "proto_unresolved_type",
+          "plane": "idl",
+          "suffix": ".proto",
+          "outcome": "gap",
+          "reason": "DECLARATION_NOT_FOUND",
+          "inputs": 8192,
+          "records_per_input": 2,
+          "gaps_per_input": 1,
+          "staging_rows_per_input": 4,
+          "canonical_bytes_per_input": 1726
+        },
+        {
+          "name": "thrift_supported",
+          "plane": "idl",
+          "suffix": ".thrift",
+          "outcome": "supported",
+          "inputs": 8192,
+          "records_per_input": 1,
+          "gaps_per_input": 0,
+          "staging_rows_per_input": 2,
+          "canonical_bytes_per_input": 739
+        },
+        {
+          "name": "thrift_typedef_cycle",
+          "plane": "idl",
+          "suffix": ".thrift",
+          "outcome": "gap",
+          "reason": "TYPEDEF_CHAIN_LIMIT",
+          "inputs": 8192,
+          "records_per_input": 2,
+          "gaps_per_input": 1,
+          "staging_rows_per_input": 4,
+          "canonical_bytes_per_input": 1587
+        }
+      ],
+      "adapter_expectations": [
+        {
+          "family": "go_rpc_resolved",
+          "adapter": "caller",
+          "protocol": "grpc",
+          "import_path": "example.invalid/rpc",
+          "client_type": "Client",
+          "method": "Ping",
+          "operation": "/neutral.Service/Ping",
+          "state": "resolved"
+        },
+        {
+          "family": "go_kafka_literal",
+          "adapter": "kafka",
+          "plane": "producer",
+          "state": "resolved"
+        },
+        {
+          "family": "go_dynamic_call",
+          "adapter": "caller",
+          "protocol": "grpc",
+          "import_path": "example.invalid/rpc",
+          "client_type": "Client",
+          "method": "Ping",
+          "operation": "/neutral.Service/Ping",
+          "state": "dynamic",
+          "reason": "dynamic_receiver"
+        },
+        {
+          "family": "go_dynamic_topic",
+          "adapter": "kafka",
+          "plane": "producer",
+          "state": "dynamic",
+          "reason": "unresolved-ident"
+        }
+      ],
+      "lane_projections": [
+        {
+          "name": "repository",
+          "selection": "all_eligible_go_paths_v1",
+          "unit": "path_placement",
+          "placements": 262144,
+          "unique_go_blobs": 262144,
+          "declared_bytes": 134217728,
+          "logical_bytes": 134217728,
+          "production_candidate_parity": true
+        },
+        {
+          "name": "caller",
+          "selection": "synthetic_first_offsets_per_cell_v1",
+          "unit": "path_placement",
+          "placements": 131072,
+          "unique_go_blobs": 131072,
+          "declared_bytes": 67108864,
+          "logical_bytes": 67108864,
+          "production_candidate_parity": false
+        }
+      ],
+      "aggregate": {
+        "physical_owners": 294914,
+        "regular_files": 294914,
+        "eligible_go_files": 262144,
+        "idl_candidates": 32768,
+        "control_files": 2,
+        "repository_lane_placements": 262144,
+        "caller_lane_placements": 131072,
+        "unique_go_blobs": 262144,
+        "unique_idl_blobs": 32768,
+        "declared_repository_go_bytes": 134217728,
+        "logical_source_bytes": 146800716,
+        "control_bytes": 76,
+        "modeled_domain_partitions": 72,
+        "modeled_domain_members": 72,
+        "domain_partition_model": "neutral_input_chunks_4096_v1",
+        "observation_records": 262144,
+        "observation_gap_classifications": 131072,
+        "extractor_facts": 49152,
+        "extractor_gap_facts": 16384,
+        "extractor_staging_rows": 98304,
+        "canonical_observation_bytes": 234684416,
+        "canonical_extractor_bytes": 39182336,
+        "canonical_result_byte_model": "sum_per_input_sourceobservation_or_sdk_fact_array_v1"
+      },
+      "dimensions": [
+        {
+          "name": "physical_owners",
+          "baseline": 294914,
+          "admitted": 294914
+        },
+        {
+          "name": "repository_lane_placements",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "caller_lane_placements",
+          "baseline": 131072,
+          "admitted": 131072
+        },
+        {
+          "name": "unique_go_blobs",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "declared_repository_go_bytes",
+          "baseline": 134217728,
+          "admitted": 134217728
+        },
+        {
+          "name": "logical_source_bytes",
+          "baseline": 146800716,
+          "admitted": 146800716
+        },
+        {
+          "name": "idl_candidates",
+          "baseline": 32768,
+          "admitted": 32768
+        },
+        {
+          "name": "control_files",
+          "baseline": 2,
+          "admitted": 2
+        },
+        {
+          "name": "modeled_domain_partitions",
+          "baseline": 72,
+          "admitted": 72
+        },
+        {
+          "name": "modeled_domain_members",
+          "baseline": 72,
+          "admitted": 72
+        },
+        {
+          "name": "observation_records",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "observation_gap_classifications",
+          "baseline": 131072,
+          "admitted": 131072
+        },
+        {
+          "name": "extractor_facts",
+          "baseline": 49152,
+          "admitted": 49152
+        },
+        {
+          "name": "extractor_gap_facts",
+          "baseline": 16384,
+          "admitted": 16384
+        },
+        {
+          "name": "extractor_staging_rows",
+          "baseline": 98304,
+          "admitted": 98304
+        },
+        {
+          "name": "canonical_observation_bytes",
+          "baseline": 234684416,
+          "admitted": 234684416
+        },
+        {
+          "name": "canonical_extractor_bytes",
+          "baseline": 39182336,
+          "admitted": 39182336
+        },
+        {
+          "name": "transition_changed_files",
+          "baseline": 1,
+          "admitted": 1
+        }
+      ],
+      "expected_outcomes": [
+        {
+          "stage": "source_partition_planning",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "blob_placements",
+          "observed": 1,
+          "limit": 4096
+        },
+        {
+          "stage": "observation_publication",
+          "outcome": "refused",
+          "class": "dimension_limit",
+          "dimension": "generation_records",
+          "observed": 262144,
+          "limit": 250000
+        },
+        {
+          "stage": "candidate_strict_open",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "domain_inventory",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "extractor_execution",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "evidence_staging",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "final_publication",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        }
+      ],
+      "transitions": [
+        {
+          "revision": "a",
+          "posture": "baseline",
+          "changed_regular_files": 0,
+          "tree_relation": "baseline"
+        },
+        {
+          "revision": "b",
+          "parent": "a",
+          "posture": "bounded_delta",
+          "changed_regular_files": 1,
+          "tree_relation": "different_from_a"
+        },
+        {
+          "revision": "a-return",
+          "parent": "b",
+          "posture": "content_return",
+          "changed_regular_files": 1,
+          "tree_relation": "equal_to_a"
+        }
+      ],
+      "claims": {
+        "synthetic": true,
+        "explicit_authoring_only": true,
+        "establishes_target_slo": false,
+        "establishes_accuracy": false,
+        "qualifies_supported_scale": false,
+        "authorizes_release": false
+      }
+    }
+  ],
+  "oracles": [
+    {
+      "schema": "t401-independent-scale-oracle-v1",
+      "profile": "structural-2m-v1",
+      "profile_digest": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430",
+      "aggregate": {
+        "physical_owners": 2000002,
+        "regular_files": 2000002,
+        "eligible_go_files": 2000000,
+        "idl_candidates": 0,
+        "control_files": 2,
+        "repository_lane_placements": 2000000,
+        "caller_lane_placements": 1000000,
+        "unique_go_blobs": 512,
+        "unique_idl_blobs": 0,
+        "declared_repository_go_bytes": 9216000000,
+        "logical_source_bytes": 9216000076,
+        "control_bytes": 76,
+        "modeled_domain_partitions": 489,
+        "modeled_domain_members": 489,
+        "domain_partition_model": "neutral_input_chunks_4096_v1",
+        "observation_records": 0,
+        "observation_gap_classifications": 0,
+        "extractor_facts": 0,
+        "extractor_gap_facts": 0,
+        "extractor_staging_rows": 0,
+        "canonical_observation_bytes": 0,
+        "canonical_extractor_bytes": 0,
+        "canonical_result_byte_model": "sum_per_input_sourceobservation_or_sdk_fact_array_v1"
+      },
+      "dimensions": [
+        {
+          "name": "physical_owners",
+          "baseline": 2000002,
+          "admitted": 2000002
+        },
+        {
+          "name": "repository_lane_placements",
+          "baseline": 2000000,
+          "admitted": 2000000
+        },
+        {
+          "name": "caller_lane_placements",
+          "baseline": 1000000,
+          "admitted": 1000000
+        },
+        {
+          "name": "unique_go_blobs",
+          "baseline": 512,
+          "admitted": 513
+        },
+        {
+          "name": "declared_repository_go_bytes",
+          "baseline": 9216000000,
+          "admitted": 9216000000
+        },
+        {
+          "name": "logical_source_bytes",
+          "baseline": 9216000076,
+          "admitted": 9216000076
+        },
+        {
+          "name": "idl_candidates",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "control_files",
+          "baseline": 2,
+          "admitted": 2
+        },
+        {
+          "name": "modeled_domain_partitions",
+          "baseline": 489,
+          "admitted": 489
+        },
+        {
+          "name": "modeled_domain_members",
+          "baseline": 489,
+          "admitted": 489
+        },
+        {
+          "name": "observation_records",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "observation_gap_classifications",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_facts",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_gap_facts",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "extractor_staging_rows",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "canonical_observation_bytes",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "canonical_extractor_bytes",
+          "baseline": 0,
+          "admitted": 1
+        },
+        {
+          "name": "transition_changed_files",
+          "baseline": 1,
+          "admitted": 1
+        }
+      ],
+      "expected_outcomes": [
+        {
+          "stage": "source_partition_planning",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "blob_placements",
+          "observed": 3907,
+          "limit": 4096
+        },
+        {
+          "stage": "observation_publication",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "generation_records",
+          "observed": 512,
+          "limit": 250000
+        },
+        {
+          "stage": "candidate_strict_open",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "domain_inventory",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "extractor_execution",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "evidence_staging",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "final_publication",
+          "outcome": "not_run",
+          "class": "not_executed_by_t401_envelope",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        }
+      ],
+      "families": [
+        {
+          "name": "metadata_reused_go",
+          "inputs": 2000000,
+          "outcome": "structural",
+          "facts": 0,
+          "gaps": 0,
+          "staging_rows": 0,
+          "canonical_bytes": 0
+        }
+      ],
+      "revisions": [
+        {
+          "revision": "a",
+          "regular_files": 2000002,
+          "unique_go_blobs": 512,
+          "changed_files": 0,
+          "expected_tree": "baseline"
+        },
+        {
+          "revision": "b",
+          "regular_files": 2000002,
+          "unique_go_blobs": 513,
+          "changed_files": 1,
+          "expected_tree": "different_from_a"
+        },
+        {
+          "revision": "a-return",
+          "regular_files": 2000002,
+          "unique_go_blobs": 512,
+          "changed_files": 1,
+          "expected_tree": "equal_to_a"
+        }
+      ],
+      "failures": [
+        {
+          "point": "before_git_init",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_git_init",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_a",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_a",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_b",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_b",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_a_return",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_a_return",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_git_verify",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_metadata",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_publish",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        }
+      ]
+    },
+    {
+      "schema": "t401-independent-scale-oracle-v1",
+      "profile": "semantic-262144-v1",
+      "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+      "aggregate": {
+        "physical_owners": 294914,
+        "regular_files": 294914,
+        "eligible_go_files": 262144,
+        "idl_candidates": 32768,
+        "control_files": 2,
+        "repository_lane_placements": 262144,
+        "caller_lane_placements": 131072,
+        "unique_go_blobs": 262144,
+        "unique_idl_blobs": 32768,
+        "declared_repository_go_bytes": 134217728,
+        "logical_source_bytes": 146800716,
+        "control_bytes": 76,
+        "modeled_domain_partitions": 72,
+        "modeled_domain_members": 72,
+        "domain_partition_model": "neutral_input_chunks_4096_v1",
+        "observation_records": 262144,
+        "observation_gap_classifications": 131072,
+        "extractor_facts": 49152,
+        "extractor_gap_facts": 16384,
+        "extractor_staging_rows": 98304,
+        "canonical_observation_bytes": 234684416,
+        "canonical_extractor_bytes": 39182336,
+        "canonical_result_byte_model": "sum_per_input_sourceobservation_or_sdk_fact_array_v1"
+      },
+      "dimensions": [
+        {
+          "name": "physical_owners",
+          "baseline": 294914,
+          "admitted": 294914
+        },
+        {
+          "name": "repository_lane_placements",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "caller_lane_placements",
+          "baseline": 131072,
+          "admitted": 131072
+        },
+        {
+          "name": "unique_go_blobs",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "declared_repository_go_bytes",
+          "baseline": 134217728,
+          "admitted": 134217728
+        },
+        {
+          "name": "logical_source_bytes",
+          "baseline": 146800716,
+          "admitted": 146800716
+        },
+        {
+          "name": "idl_candidates",
+          "baseline": 32768,
+          "admitted": 32768
+        },
+        {
+          "name": "control_files",
+          "baseline": 2,
+          "admitted": 2
+        },
+        {
+          "name": "modeled_domain_partitions",
+          "baseline": 72,
+          "admitted": 72
+        },
+        {
+          "name": "modeled_domain_members",
+          "baseline": 72,
+          "admitted": 72
+        },
+        {
+          "name": "observation_records",
+          "baseline": 262144,
+          "admitted": 262144
+        },
+        {
+          "name": "observation_gap_classifications",
+          "baseline": 131072,
+          "admitted": 131072
+        },
+        {
+          "name": "extractor_facts",
+          "baseline": 49152,
+          "admitted": 49152
+        },
+        {
+          "name": "extractor_gap_facts",
+          "baseline": 16384,
+          "admitted": 16384
+        },
+        {
+          "name": "extractor_staging_rows",
+          "baseline": 98304,
+          "admitted": 98304
+        },
+        {
+          "name": "canonical_observation_bytes",
+          "baseline": 234684416,
+          "admitted": 234684416
+        },
+        {
+          "name": "canonical_extractor_bytes",
+          "baseline": 39182336,
+          "admitted": 39182336
+        },
+        {
+          "name": "transition_changed_files",
+          "baseline": 1,
+          "admitted": 1
+        }
+      ],
+      "expected_outcomes": [
+        {
+          "stage": "source_partition_planning",
+          "outcome": "pass",
+          "class": "admitted",
+          "dimension": "blob_placements",
+          "observed": 1,
+          "limit": 4096
+        },
+        {
+          "stage": "observation_publication",
+          "outcome": "refused",
+          "class": "dimension_limit",
+          "dimension": "generation_records",
+          "observed": 262144,
+          "limit": 250000
+        },
+        {
+          "stage": "candidate_strict_open",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "domain_inventory",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "extractor_execution",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "evidence_staging",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        },
+        {
+          "stage": "final_publication",
+          "outcome": "not_run",
+          "class": "blocked_by_observation_refusal",
+          "dimension": "not_observed",
+          "observed": 0,
+          "limit": 0
+        }
+      ],
+      "families": [
+        {
+          "name": "go_rpc_resolved",
+          "inputs": 65536,
+          "outcome": "supported",
+          "facts": 65536,
+          "gaps": 0,
+          "staging_rows": 0,
+          "canonical_bytes": 49610752
+        },
+        {
+          "name": "go_kafka_literal",
+          "inputs": 65536,
+          "outcome": "supported",
+          "facts": 65536,
+          "gaps": 0,
+          "staging_rows": 0,
+          "canonical_bytes": 66256896
+        },
+        {
+          "name": "go_dynamic_call",
+          "inputs": 65536,
+          "outcome": "gap",
+          "facts": 65536,
+          "gaps": 65536,
+          "staging_rows": 0,
+          "canonical_bytes": 53477376,
+          "reason": "dynamic_receiver"
+        },
+        {
+          "name": "go_dynamic_topic",
+          "inputs": 65536,
+          "outcome": "gap",
+          "facts": 65536,
+          "gaps": 65536,
+          "staging_rows": 0,
+          "canonical_bytes": 65339392,
+          "reason": "unresolved-ident"
+        },
+        {
+          "name": "proto_supported",
+          "inputs": 8192,
+          "outcome": "supported",
+          "facts": 8192,
+          "gaps": 0,
+          "staging_rows": 16384,
+          "canonical_bytes": 5988352
+        },
+        {
+          "name": "proto_unresolved_type",
+          "inputs": 8192,
+          "outcome": "gap",
+          "facts": 16384,
+          "gaps": 8192,
+          "staging_rows": 32768,
+          "canonical_bytes": 14139392,
+          "reason": "DECLARATION_NOT_FOUND"
+        },
+        {
+          "name": "thrift_supported",
+          "inputs": 8192,
+          "outcome": "supported",
+          "facts": 8192,
+          "gaps": 0,
+          "staging_rows": 16384,
+          "canonical_bytes": 6053888
+        },
+        {
+          "name": "thrift_typedef_cycle",
+          "inputs": 8192,
+          "outcome": "gap",
+          "facts": 16384,
+          "gaps": 8192,
+          "staging_rows": 32768,
+          "canonical_bytes": 13000704,
+          "reason": "TYPEDEF_CHAIN_LIMIT"
+        }
+      ],
+      "revisions": [
+        {
+          "revision": "a",
+          "regular_files": 294914,
+          "unique_go_blobs": 262144,
+          "changed_files": 0,
+          "expected_tree": "baseline"
+        },
+        {
+          "revision": "b",
+          "regular_files": 294914,
+          "unique_go_blobs": 262144,
+          "changed_files": 1,
+          "expected_tree": "different_from_a"
+        },
+        {
+          "revision": "a-return",
+          "regular_files": 294914,
+          "unique_go_blobs": 262144,
+          "changed_files": 1,
+          "expected_tree": "equal_to_a"
+        }
+      ],
+      "failures": [
+        {
+          "point": "before_git_init",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_git_init",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_a",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_a",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_b",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_b",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_revision_a_return",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "after_revision_a_return",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_git_verify",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_metadata",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        },
+        {
+          "point": "before_publish",
+          "class": "injected",
+          "cleanup": "final_target_absent_resumable_or_unstarted"
+        }
+      ]
+    }
+  ],
+  "failure_points": [
+    {
+      "name": "before_git_init",
+      "boundary": "git_init",
+      "leaves_target": false
+    },
+    {
+      "name": "after_git_init",
+      "boundary": "git_init",
+      "leaves_target": false
+    },
+    {
+      "name": "before_revision_a",
+      "boundary": "revision_a",
+      "leaves_target": false
+    },
+    {
+      "name": "after_revision_a",
+      "boundary": "revision_a",
+      "leaves_target": false
+    },
+    {
+      "name": "before_revision_b",
+      "boundary": "revision_b",
+      "leaves_target": false
+    },
+    {
+      "name": "after_revision_b",
+      "boundary": "revision_b",
+      "leaves_target": false
+    },
+    {
+      "name": "before_revision_a_return",
+      "boundary": "revision_a_return",
+      "leaves_target": false
+    },
+    {
+      "name": "after_revision_a_return",
+      "boundary": "revision_a_return",
+      "leaves_target": false
+    },
+    {
+      "name": "before_git_verify",
+      "boundary": "git_verify",
+      "leaves_target": false
+    },
+    {
+      "name": "before_metadata",
+      "boundary": "metadata",
+      "leaves_target": false
+    },
+    {
+      "name": "before_publish",
+      "boundary": "publish",
+      "leaves_target": false
+    }
+  ],
+  "blob_reader_trial": {
+    "schema": "t401-zoekt-blob-reader-trial-v1",
+    "binary_authority": "same_verified_go_mod_version_and_checksum",
+    "fixture": "small_structural_projection",
+    "modes": [
+      {
+        "name": "go_git_default",
+        "environment_name": "ZOEKT_DISABLE_CATFILE_BATCH",
+        "environment_value": "true",
+        "production": true
+      },
+      {
+        "name": "cat_file_batch_candidate",
+        "environment_name": "ZOEKT_DISABLE_CATFILE_BATCH",
+        "environment_value": "false",
+        "production": false
+      }
+    ],
+    "queries": [
+      "T401",
+      "padding"
+    ],
+    "checks": [
+      "index_bytes_observed",
+      "indexed_content_equal",
+      "query_results_equal",
+      "child_and_git_rss",
+      "child_and_git_descriptors",
+      "cancellation",
+      "missing_object_classification",
+      "corrupt_object_classification"
+    ],
+    "giant_measurement": "explicit_not_run",
+    "production_selected": false
+  },
+  "historical_diagnostic": {
+    "artifact": "spike/large-monorepo-20260806/REPORT.md",
+    "sha256": "sha256:b4b7231603c9a67f1f09b722117aa48a49bb674acb3ffff53ce6b28b26be570b",
+    "outcome": "unknown",
+    "scope": "unfrozen_source_free_engineering_diagnostic"
+  },
+  "claims": {
+    "synthetic": true,
+    "giant_authoring_explicit": true,
+    "generates_giant_in_tests": false,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "qualifies_supported_scale": false,
+    "selects_blob_reader": false,
+    "changes_production_behavior": false,
+    "authorizes_release": false
+  }
+}

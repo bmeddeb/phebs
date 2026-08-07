@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/humatest"
 
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -53,7 +57,7 @@ func TestObservationProgressAuthorizesBeforeReadingCounts(t *testing.T) {
 		Name: repository, IndexedCommitHash: strings.Repeat("1", 40), IndexedAt: &now,
 	}}
 	capture := &observationProgressCapture{value: observationpublication.Progress{
-		Schema: observationpublication.ProgressSchema, Repository: repository,
+		SchemaVersion: observationpublication.ProgressSchema, Repository: repository,
 		State: "unavailable", SourceGenerationDigest: "sha256:" + strings.Repeat("a", 64),
 	}}
 	denied := NewObservationProgressService(Options{
@@ -86,7 +90,7 @@ func TestObservationProgressHTTPUsesSharedBoundedProjection(t *testing.T) {
 		Name: repository, IndexedCommitHash: strings.Repeat("1", 40), IndexedAt: &now,
 	}}
 	want := observationpublication.Progress{
-		Schema: observationpublication.ProgressSchema, Repository: repository,
+		SchemaVersion: observationpublication.ProgressSchema, Repository: repository,
 		State: "current", SourceGenerationDigest: "sha256:" + strings.Repeat("a", 64),
 		Publication: &observationpublication.PublicationProgress{
 			State: "current", GenerationDigest: "sha256:" + strings.Repeat("b", 64),
@@ -110,8 +114,59 @@ func TestObservationProgressHTTPUsesSharedBoundedProjection(t *testing.T) {
 		t.Fatalf("HTTP status = %d: %s", recorder.Code, recorder.Body.String())
 	}
 	var got observationpublication.Progress
-	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil || got.Repository != want.Repository ||
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil ||
+		got.SchemaVersion != observationpublication.ProgressSchema || got.Repository != want.Repository ||
 		got.Publication == nil || got.Publication.Receipt == nil || got.Publication.Receipt.InputBlobs != 1 {
 		t.Fatalf("HTTP progress = %+v, %v", got, err)
 	}
+}
+
+func TestObservationProgressOpenAPISchemaGenerationIsWarningFree(t *testing.T) {
+	config := huma.DefaultConfig("test", "test")
+	_, testAPI := humatest.New(t, config)
+	warning := captureObservationProgressSchemaStderr(t, func() {
+		registerObservationProgressAPI(testAPI, Options{
+			ObservationProgress: &ObservationProgressService{},
+		})
+	})
+	if warning != "" {
+		t.Fatalf("observation progress schema generation wrote stderr: %q", warning)
+	}
+
+	operation := testAPI.OpenAPI().Paths[ObservationProgressPath].Get
+	if operation == nil {
+		t.Fatal("observation progress OpenAPI operation is absent")
+	}
+	response := operation.Responses["200"]
+	if response == nil || response.Content["application/json"] == nil {
+		t.Fatal("observation progress OpenAPI response schema is absent")
+	}
+	ref := response.Content["application/json"].Schema.Ref
+	schema := testAPI.OpenAPI().Components.Schemas.SchemaFromRef(ref)
+	if ref == "" || schema == nil || schema.Properties["schema"] == nil ||
+		schema.Properties["$schema"] == nil {
+		t.Fatalf("observation progress OpenAPI schema = ref %q, schema %+v", ref, schema)
+	}
+}
+
+func captureObservationProgressSchemaStderr(t *testing.T, action func()) string {
+	t.Helper()
+	original := os.Stderr
+	capture, err := os.CreateTemp(t.TempDir(), "observation-progress-schema-stderr-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	func() {
+		os.Stderr = capture
+		defer func() { os.Stderr = original }()
+		action()
+	}()
+	if err := capture.Close(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(capture.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

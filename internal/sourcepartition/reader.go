@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -93,12 +94,22 @@ func (plan *Plan) ReadPartition(
 		if err := writer.Flush(); err != nil {
 			return ReadStats{}, batchFailure(batchContext, index, "flush request", err)
 		}
-		header, err := readLine(reader, 256)
+		header, err := readLine(
+			reader, 256, pipelinerefusal.DimensionBatchHeaderBytes,
+		)
 		if err != nil {
 			return ReadStats{}, batchFailure(batchContext, index, "read header", err)
 		}
 		if int64(len(header)+1) > MaxBatchOutputBytes-stats.OutputBytes {
-			return ReadStats{}, fmt.Errorf("read immutable blob %d: %w", index, ErrTooLarge)
+			return ReadStats{}, fmt.Errorf(
+				"read immutable blob %d: %w", index,
+				checkPlanLimit(
+					pipelinerefusal.DimensionBatchOutputBytes,
+					stats.OutputBytes+int64(len(header)+1),
+					MaxBatchOutputBytes,
+					"batch output bytes exceed their bound",
+				),
+			)
 		}
 		stats.OutputBytes += int64(len(header) + 1)
 		fields := strings.Fields(string(header))
@@ -122,7 +133,14 @@ func (plan *Plan) ReadPartition(
 			return ReadStats{}, fmt.Errorf("read immutable blob %d: %w", index, ErrSizeMismatch)
 		}
 		if size+1 > MaxBatchOutputBytes-stats.OutputBytes {
-			return ReadStats{}, fmt.Errorf("read immutable blob %d: %w", index, ErrTooLarge)
+			return ReadStats{}, fmt.Errorf(
+				"read immutable blob %d: %w", index,
+				checkPlanLimit(
+					pipelinerefusal.DimensionBatchOutputBytes,
+					stats.OutputBytes+size+1, MaxBatchOutputBytes,
+					"batch output bytes exceed their bound",
+				),
+			)
 		}
 		content := make([]byte, size)
 		if _, err := io.ReadFull(reader, content); err != nil {
