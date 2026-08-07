@@ -15,6 +15,7 @@ func addEvidenceSweepProgress(total *EvidenceSweepProgress, step EvidenceSweepPr
 	total.RunsDeleted += step.RunsDeleted
 	total.AssociationRowsDeleted += step.AssociationRowsDeleted
 	total.AssertionRowsDeleted += step.AssertionRowsDeleted
+	total.ChunkRowsDeleted += step.ChunkRowsDeleted
 	total.AtomRowsDeleted += step.AtomRowsDeleted
 	total.RetentionPhasesAdvanced += step.RetentionPhasesAdvanced
 }
@@ -153,7 +154,10 @@ func TestT205ChunkBoundariesResumeAndPreserveSharedAtoms(t *testing.T) {
 		}
 		if step.AssociationRowsDeleted > evidenceSweepRowBatchSize ||
 			step.AssertionRowsDeleted > evidenceSweepRowBatchSize ||
-			(step.AssociationRowsDeleted > 0 && step.AssertionRowsDeleted > 0) {
+			step.ChunkRowsDeleted > evidenceSweepRowBatchSize ||
+			(step.AssociationRowsDeleted > 0 && step.AssertionRowsDeleted > 0) ||
+			(step.ChunkRowsDeleted > 0 &&
+				(step.AssociationRowsDeleted > 0 || step.AssertionRowsDeleted > 0)) {
 			t.Fatalf("step %d exceeded one physical chunk: %+v", stepCount, step)
 		}
 		addEvidenceSweepProgress(&total, step)
@@ -171,14 +175,15 @@ func TestT205ChunkBoundariesResumeAndPreserveSharedAtoms(t *testing.T) {
 			state, found := readEvidenceRetentionState(t, s, old.ID)
 			if !found || state.Status != "deleting" ||
 				(state.Phase != "associations" && state.Phase != "assertions" &&
-					state.Phase != "finalize") {
+					state.Phase != "chunks" && state.Phase != "finalize") {
 				t.Fatalf("step %d durable continuation = %+v, found=%v", stepCount, state, found)
 			}
 		}
 	}
 	if total.RunsMarkedDeleting != 1 || total.RunsDeleted != 1 ||
 		total.AssociationRowsDeleted != facts || total.AssertionRowsDeleted != facts ||
-		total.AtomRowsDeleted != 0 || total.RetentionPhasesAdvanced != 2 {
+		total.ChunkRowsDeleted != 1 || total.AtomRowsDeleted != 0 ||
+		total.RetentionPhasesAdvanced != 3 {
 		t.Fatalf("resumable sweep totals = %+v", total)
 	}
 	if _, found := readEvidenceRetentionState(t, s, old.ID); found {

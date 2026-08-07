@@ -2484,7 +2484,9 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 			int64(s.stagedRows+chunkStagedRows), int64(s.maxStagedRows),
 		)
 	}
-	if err := s.evidence.AddEvidence(s.ctx, s.runID, atoms, assocs, asserts); err != nil {
+	if err := s.evidence.AddEvidenceChunk(
+		s.ctx, s.runID, chunk.ID, len(chunk.Facts), atoms, assocs, asserts,
+	); err != nil {
 		return err
 	}
 	s.stagedRows += chunkStagedRows

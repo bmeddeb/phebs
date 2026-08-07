@@ -1886,10 +1886,11 @@ described above. T30.6m explicitly selects unbounded historical-publication
 retention without changing cleanup. T30.6n bounds job-history reads and
 repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
-unconditional capacity warning. T30.6p now populates its 21 core SurrealDB
+unconditional capacity warning. The core collector now populates 22 SurrealDB
 components, T30.6q now populates the 24 Investigation/Workbench table
 components, and T30.6r now adds the final seven derived filesystem/store
-collectors plus installation capacity, completing the declared surface.
+collectors plus installation capacity. T40.7 adds `evidence_chunk` beneath the
+evidence-publication owner, expanding the declared surface to 53 components.
 
 ##### Scope-aware result diagnostics
 
@@ -2156,8 +2157,10 @@ configuration.
 T30.6o adds administrator-only `GET /api/retention-status` as an
 authorization-first shell. Authorization completes before any component store,
 filesystem, or cache touch; denial consumes none of the component-scan budget.
-The `phebs-retention-status-v1` shell freezes all twelve owner groups and all 52
-declared components in their exact order, the aggregate fixed-work allocation,
+The `phebs-retention-status-v1` shell exposes all twelve owner groups and all 53
+declared components in their exact order. T40.7 added `evidence_chunk` to the
+original 52-component registry because its durable receipts are a separately
+retained and separately swept physical population. The aggregate fixed-work allocation,
 at-most-4,096 reported identities after at most one 4,097th sentinel per
 summary, a 64 KiB encoded response, and independent `exact`, `lower_bound`, or
 `unavailable` labels for counts and typed byte metrics. Each component's
@@ -2165,11 +2168,12 @@ ordered `byte_metrics` array declares one or more of `logical_encoded`,
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
 `physical_database`. Those kinds describe different accounting planes, may
 coexist on one component, and must never be summed. Endpoint-wide
-work is not 4,097 multiplied by 52: 4,096 report slots are split fairly, with
-79 reserved for each of the first 40 components and 78 for each of the last 12,
-plus one private sentinel each for a 4,148-scan aggregate. The zero-inventory
-T30.6o shell fixture is 19,955 bytes, and the maximum-shaped fixed envelope is
-20,922 bytes. The earlier 20,766-byte fixture was large but not maximal: an
+work is not 4,097 multiplied by 53: 4,096 report slots are split fairly, with
+78 reserved for each of the first 15 components and 77 for each of the last 38,
+plus one private sentinel each for a 4,149-scan aggregate. The zero-inventory
+shell fixture is 20,256 bytes, and the maximum-shaped fixed envelope is
+21,239 bytes. The earlier fixtures were not maximal after the additive
+component: an
 unavailable count with its full scan allocation encodes three additional bytes
 per component. A live completed response is not fixed at the shell-fixture size:
 its observed counts, typed byte metrics, and data-volume digit widths vary, and
@@ -2194,8 +2198,9 @@ independent evidence sweep may later reclaim newly unpinned superseded
 evidence when otherwise eligible. Every other owner encodes null. This is
 disclosure of an existing lifecycle, not a new cross-owner retention control.
 
-T30.6p populates the 21 core SurrealDB components: four evidence-publication
-graph components, extraction attempts, extraction outcomes, three logical
+The core collector populates 22 SurrealDB components: five evidence-publication
+graph components—including `evidence_chunk` receipts—extraction attempts,
+extraction outcomes, three logical
 evidence-pin namespaces, proof bundles, all eight durable job tables, and the
 three caller-row tables. The v1 wire reports one aggregate bounded row count
 per table or pin namespace; it does not expose or compute lifecycle or
@@ -2204,13 +2209,12 @@ its state. The evidence collector counts shared `evidence_atom` rows directly
 instead of multiplying an atom by the number of associations that reference it.
 
 Each component keeps its non-transferable shell allocation. Registry indices
-0–17 receive 79 report slots plus one sentinel; the caller-row components at
-indices 48–50 receive 78 plus one. A complete T30.6p request can therefore scan
-at most 1,677 component identities, not 21 times the old per-summary ceiling.
-That 79/78 placement belongs to the API registry. The store accepts any report
+0–14 receive 78 report slots plus one sentinel; every later component receives
+77 plus one. A complete core request can therefore scan at most 1,731 component
+identities. That 78/77 placement belongs to the API registry. The store accepts any report
 allocation from 1 through 79 only when scan is exactly report plus one and
-independently enforces the unchanged 1,656-report/1,677-scan aggregate ceilings.
-The implementation produces 21 component summaries using at most 23 bounded
+independently enforces the 1,709-report/1,731-scan aggregate ceilings.
+The implementation produces 22 component summaries using at most 24 bounded
 row-range queries: the `other` pin namespace is the complement of two reserved
 prefixes and therefore uses as many as three disjoint index ranges. Collection
 follows four cached writer/migration-marker point checks and one required
@@ -2223,7 +2227,7 @@ as a scalar string, so an array-shaped value cannot undermine those ranges. A
 failed readiness check or component query leaves only the affected readiness
 group or component `unavailable`; successful later components remain visible.
 The production reporter emits one log event per failed component under only the
-`not_ready` or `query_error` class, so one request emits at most 21 such events.
+`not_ready` or `query_error` class, so one request emits at most 22 such events.
 
 Counts become `exact` only when the bounded query exhausts its table or
 namespace. Consuming the private sentinel reports the component allocation as
@@ -2236,13 +2240,13 @@ job diagnostics. Per-component `physical_database` metrics remain
 installation data-volume metrics were unavailable. Those unavailable values
 were not zeros.
 
-T30.6p adds no new index or row bootstrap. `store.Open` applies the one scalar
-field definition as part of its existing batched schema, with no retained-row
-scan, backfill, sort, synchronous indexing, writer-generation bump, or migration
-generation. It adds no sync-tick, retry, writer, publication-transition, or
-maintenance work.
+The retention collector adds no index or row bootstrap. It reuses the
+`evidence_chunk` table and indexes required by T40.7's accounting writer, with
+no additional retained-row scan, backfill, sort, writer-generation bump, or
+migration generation. It adds no sync-tick, retry, writer,
+publication-transition, or maintenance work.
 
-An authorized request performs at most five readiness queries and 23 bounded
+An authorized request performs at most five readiness queries and 24 bounded
 row-range queries. The resulting summaries are weakly consistent diagnostics,
 not one frozen cross-table snapshot; denial still precedes all of them.
 Computing an exact proof-bundle byte metric may inspect up to 80 bounded 64-MiB
@@ -2256,10 +2260,9 @@ above and retains one independent aggregate summary for every table. The fixed
 v1 wire has no owner-lifecycle partition field, so it does not compute a hidden
 partition: every physical row contributes regardless of owner, release,
 override, access, review, or Watch state, and `investigation_run_job` remains
-only in durable-job history. Components at registry indices 18–39 receive 79
-report slots plus one sentinel; `investigation_watch` and
-`investigation_watch_revision` at indices 40–41 receive 78 plus one. The q
-allocation is therefore 1,894 reported and at most 1,918 scanned identities.
+only in durable-job history. All 24 Investigation components receive 77 report
+slots plus one sentinel. The q allocation is therefore 1,848 reported and at
+most 1,872 scanned identities.
 
 One `INFO FOR DB` catalog preflight must return exactly one result envelope and
 proves which of the closed 24-table allowlist is present. The collector then
@@ -2269,7 +2272,7 @@ only that component unavailable; a row-query failure does the same, while a
 catalog-query failure leaves all 24 unavailable rather than inventing zero.
 Successful siblings remain visible and are weakly consistent rather than a
 frozen owner snapshot. One q request performs at most 25 SurrealDB calls,
-returns at most 1,918 identities, retains at most 80 selected IDs for the
+returns at most 1,872 identities, retains at most 78 selected IDs for the
 active table plus 24 summaries, and receives at most the 24 fixed allowlisted
 names from the server-side catalog intersection. It emits at most 24
 `not_ready` or `query_error` events. It reads no row payload or byte content,
@@ -2277,9 +2280,9 @@ so every q `physical_database` byte metric remains unavailable.
 
 T30.6q uses the existing table record order and schema catalog. It adds no
 query index, schema backfill, migration marker, first-open reconstruction,
-writer, or owner-lifecycle work. Together T30.6p and T30.6q populate 45
-components within 3,550-report, 3,595-scan, 53-query, and 45-event ceilings.
-The deterministic empty core-plus-Investigation response is 19,505 bytes under
+writer, or owner-lifecycle work. Together the core and T30.6q collectors populate 46
+components within 3,557-report, 3,603-scan, 54-query, and 46-event ceilings.
+The deterministic empty core-plus-Investigation response is 19,797 bytes under
 the unchanged 64-KiB encoded-response cap.
 
 These are per-request ceilings. The surface adds no retention-specific cache
@@ -2290,12 +2293,12 @@ process-level bound.
 T30.6r populates the final seven derived components: candidate store authority
 and managed files, focused repository state and publication files, resolver
 store authority and package-owned files, and managed caller artifacts. The
-four authority selections accept at most 312 reported/316 scanned rows behind
+four authority selections accept at most 308 reported/312 scanned rows behind
 one four-name catalog query, three existing readiness point checks, four
 direct bounded row reads, and one batched caller current-authority fence—at
-most nine store client calls, or 62 across the complete T30.6p+q+r path. The
-fence remains one client round trip but performs at most 312 bounded
-server-internal point reads—four for each of at most 78 caller authorities—
+most nine store client calls, or 63 across the complete collector path. The
+fence remains one client round trip but performs at most 308 bounded
+server-internal point reads—four for each of at most 77 caller authorities—
 plus its marker check. The caller authority is bounded support for artifact
 reconciliation, not a second component. Focused state bounds the raw
 repository-ID prefix before applying the schemaless analysis-unit predicate;
@@ -2326,7 +2329,7 @@ Go/platform directory-iterator duplicates or rooted traversal internals.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
-The 78-report/79-scan slots allocate the response envelope rather than promise
+The 77-report/78-scan slots allocate the response envelope rather than promise
 universal exactness. The 4,096-stat ceiling covers the regression-gated lean
 maximum allocation; recognized residue, nested stages, or the independent
 64-MiB metadata limit may still localize a lower-bound or unavailable metric.
@@ -2334,7 +2337,7 @@ Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.
 Foreign entries consume those physical budgets. Each file component still owns
-only its 78-report/79-scan summary allocation. A private sentinel is a
+only its 77-report/78-scan summary allocation. A private sentinel is a
 truncated lower bound; a positive prefix stopped by the observation, stat, or
 metadata budget is a non-truncated lower bound; zero observed before an
 incomplete stop is unavailable. A missing managed subroot under a verified data
@@ -2343,7 +2346,7 @@ is unreadable, symlinked, special, or otherwise invalid, all filesystem and
 data-volume metrics remain unavailable while independent store summaries stay
 visible. Check the service log for the localized cause; do not repair status by
 hand-deleting artifacts. T30.6r emits at most nine localized diagnostics per
-request; together with T30.6p+q, the complete event ceiling is 54.
+request; together with the core and q collectors, the complete event ceiling is 55.
 
 The 64-MiB metadata allowance is aggregate I/O, not a Go-heap meter. Parsing is
 serial: one caller manifest may retain up to 32 MiB of raw bytes while
@@ -2351,8 +2354,10 @@ allocating its separately bounded decoded pair structure; resolver raw
 metadata is capped at 1 MiB. Concurrent administrator requests multiply that
 one-at-a-time raw-plus-decoded heap work.
 
-T30.6r completes collector coverage across the fixed 52-component registry and
-populates filesystem total/available capacity for the verified data directory.
+T30.6r completed collector coverage across the original 52-component registry;
+T40.7's `evidence_chunk` collector makes the current surface 53 components.
+The derived collector populates filesystem total/available capacity for the
+verified data directory.
 Resolver/caller canonical byte metrics require the supported rooted nonblocking
 regular-file opener. On a build without it, those canonical metrics remain
 typed unavailable while physical component inventory continues.
@@ -2383,7 +2388,7 @@ endpoint is not a claim to
 inventory every database table. After ordinary authentication, a denied
 request performs only the administrator check. An authorized production
 request runs all three bounded collector planes, then validates and encodes one
-fixed `O(52)` structure with a sub-64-KiB body. Startup still adds only the
+fixed `O(53)` structure with a sub-64-KiB body. Startup still adds only the
 existing warning log line plus T30.6p's scalar field definition inside the
 existing batched schema. T30.6r additionally allocates only its bounded
 collector and four-entry policy map; T30.6q and T30.6r add no startup retention

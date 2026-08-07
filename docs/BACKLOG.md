@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.6 are complete and T40.7 is next,
+explicit scale-convergence program: T40.1–T40.7 are complete and T40.8 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.6 complete · T40.7 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.7 complete · T40.8 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,20 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.7 · Constant-cost evidence-stage accounting** — replace `AddEvidence`'s
-per-chunk full-run count scans with idempotent chunk identities and charged
-row/reference/fact deltas under the staged-run serialization fence. Keep the
-existing 256-fact worker chunk, 12,500-fact run, 25,000-row run, and reference
-limits; T40.9 owns the separately bounded aggregate domain root above these
-partition results. AC: a successful append performs
-work proportional to the submitted chunk, not prior run size; duplicate replay
-is a no-op with byte-identical counters; conflicting replay refuses; every
-counter is checked before insert and updated atomically with rows; final
-publication independently verifies the exact aggregate and refuses tampered or
-drifted accounting; abort, sweep, retry, restore, and migration remain safe;
-live maximum-shape and concurrent-append tests record query count, transaction
-size, wall time, and memory without becoming an SLO; full merge bar.
 
 **T40.8 · Sparse candidate reader and extraction-partition contract** — add a
 small candidate root/index that lets a domain enumerate only its admitted

@@ -42,10 +42,7 @@ func investigationRetentionTestRequests() []RetentionComponentRequest {
 	components := investigationRetentionTestComponents()
 	requests := make([]RetentionComponentRequest, len(components))
 	for index, component := range components {
-		reported := 79
-		if index >= 22 {
-			reported = 78
-		}
+		reported := 77
 		requests[index] = RetentionComponentRequest{
 			Component:          component,
 			ReportedIdentities: reported,
@@ -111,8 +108,8 @@ func TestInvestigationRetentionEmptyReadyStoreIsExactZero(t *testing.T) {
 			t.Fatalf("empty component %d = %+v", index, result)
 		}
 	}
-	if reportedTotal != 1_894 || scanTotal != 1_918 {
-		t.Fatalf("Investigation allocation = %d/%d, want 1894/1918", reportedTotal, scanTotal)
+	if reportedTotal != 1_848 || scanTotal != 1_872 {
+		t.Fatalf("Investigation allocation = %d/%d, want 1848/1872", reportedTotal, scanTotal)
 	}
 	if _, included := investigationRetentionPlans[RetentionComponent(JobInvestigate)]; included {
 		t.Fatal("investigation_run_job is present in the Investigation retention plans")
@@ -565,7 +562,7 @@ func TestInvestigationRetentionAllocationUsesSafetyBounds(t *testing.T) {
 
 	requests := investigationRetentionTestRequests()
 	if _, err := store.CollectInvestigationRetention(ctx, requests); err != nil {
-		t.Fatalf("full 1894/1918 allocation: %v", err)
+		t.Fatalf("full 1848/1872 allocation: %v", err)
 	}
 	overAggregate := make([]RetentionComponentRequest, len(requests))
 	for index, component := range investigationRetentionTestComponents() {
@@ -574,7 +571,7 @@ func TestInvestigationRetentionAllocationUsesSafetyBounds(t *testing.T) {
 		}
 	}
 	if _, err := store.CollectInvestigationRetention(ctx, overAggregate); err == nil {
-		t.Fatal("aggregate 1896/1920 allocation was accepted")
+		t.Fatal("aggregate 1896/1920 allocation was accepted above the 1848/1872 ceiling")
 	}
 	if _, err := store.CollectInvestigationRetention(ctx, []RetentionComponentRequest{
 		{Component: RetentionInvestigation, ReportedIdentities: 1, ScanIdentities: 2},

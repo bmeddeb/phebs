@@ -112,7 +112,8 @@ search authority, T40.3 added the bounded source-partition super-root, T40.4
 added the non-authoritative hierarchical observation inventory, and T40.5
 installed immutable search-generation replacement/lifecycle ownership, and
 T40.6 installed restart-safe joint v2 observation authority plus bounded
-lifecycle/archive recovery on 2026-08-07. T40.7 is next. Epic 41 separately targets 10,000
+lifecycle/archive recovery, and T40.7 installed constant-cost evidence-stage
+accounting on 2026-08-07. T40.8 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -677,14 +678,14 @@ service count × repository bytes
 ### Program sequence
 
 - **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.6 complete, T40.7 next):** exact source-free refusal attribution,
-  the frozen neutral envelope, and independent generation-scoped planning
-  ownership are complete. Next evolve existing partition/
-  observation members behind measured aggregate roots, replace the static
-  search lifecycle owner, make evidence append cost proportional to one chunk,
-  partition extraction behind atomic domain authority, preserve recovery/
-  lifecycle/archive behavior, replay downstream consumers, and close on a
-  neutral two-million-owner gate.
+  T40.1–T40.7 complete, T40.8 next):** exact source-free refusal attribution,
+  the frozen neutral envelope, independent generation-scoped planning,
+  hierarchical source/observation roots, immutable search lifecycle, joint
+  observation recovery/archive ownership, and chunk-proportional evidence
+  append are complete. Next add sparse candidate enumeration and partition
+  extraction behind atomic domain authority, preserve recovery/lifecycle/
+  archive behavior, replay downstream consumers, and close on a neutral
+  two-million-owner gate.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
   freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
   a v3 root with dual service/path member views, publish immutable precious
@@ -715,7 +716,7 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.7 is the only next scale ticket. Later tickets stay dependency-ordered
+- T40.8 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and

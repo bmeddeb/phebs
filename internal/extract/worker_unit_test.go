@@ -178,6 +178,18 @@ func (m *memoryEvidence) AddEvidence(_ context.Context, _ string, atoms []store.
 	return nil
 }
 
+func (m *memoryEvidence) AddEvidenceChunk(
+	ctx context.Context,
+	runID string,
+	_ string,
+	_ int,
+	atoms []store.EvidenceAtom,
+	assocs []store.SnapshotEvidence,
+	asserts []store.Assertion,
+) error {
+	return m.AddEvidence(ctx, runID, atoms, assocs, asserts)
+}
+
 func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, coverage store.CoverageManifest) error {
 	m.mu.Lock()
 	hook := m.publishHook

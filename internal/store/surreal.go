@@ -357,10 +357,10 @@ DEFINE INDEX IF NOT EXISTS caller_leaf_job_pending_key ON caller_leaf_job FIELDS
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
 // retiredEvidenceStoreSchemas are the writer generations this binary neither
-// writes nor upgrades: their per-generation upgrade passes never ran on any
-// store that reaches this binary, so their rows are quarantined instead. The
-// supported predecessors are retired for writes but upgraded rather than
-// quarantined, so they are named separately and appended by
+// writes nor upgrades: they are skipped/retracted generations or have aged
+// beyond the explicit two-predecessor migration window, so their rows are
+// quarantined. Supported predecessors are retired for writes but upgraded
+// rather than quarantined, so they are named separately and appended by
 // retiredEvidenceWriterGenerations.
 //
 // This is the single source of truth on purpose. Four hand-maintained copies
@@ -373,12 +373,14 @@ var retiredEvidenceStoreSchemas = []string{
 }
 
 // retiredEvidenceWriterGenerations is every generation this binary refuses to
-// write: the quarantined set plus both upgraded-in-place predecessors. A row at
-// a supported predecessor is migrated forward, but nothing may create a new one.
+// write: the quarantined set plus every upgraded-in-place predecessor. A row
+// at a supported predecessor is migrated forward, but nothing may create a new
+// one.
 func retiredEvidenceWriterGenerations() []string {
 	return append(slices.Clone(retiredEvidenceStoreSchemas),
 		evidencePreviousStoreSchemaVersion,
-		evidenceLegacyUpgradableStoreSchemaVersion)
+		evidenceLegacyUpgradableStoreSchemaVersion,
+		evidencePreUnitUpgradableStoreSchemaVersion)
 }
 
 // surrealStringList renders a SurrealQL array literal. Every caller passes
@@ -779,8 +781,8 @@ func validMigrationIdentity(value any) (string, bool) {
 		len(text) <= maxEvidenceIdentityBytes
 }
 
-// migrateEvidenceAttempts carries latest-attempt diagnostics forward from both
-// supported predecessors. The two need different treatment and must not be
+// migrateEvidenceAttempts carries latest-attempt diagnostics forward from all
+// supported predecessors. Their shapes need different treatment and must not be
 // conflated: binding the pre-unit reshape to "the previous generation" instead
 // of to its own literal is what would force a correctly keyed unit-scoped row
 // into the whole-repository slot on the next bump, and hard-fail Open on the
@@ -802,10 +804,13 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 			`SELECT id, run_id, repo, commit, unit_digest, domain, extractor, status,
 				started_at, store_schema_version, evidence_format_version
 			FROM extraction_attempt
-			WHERE store_schema_version = $previous_schema
+			WHERE store_schema_version IN $previous_schemas
 			ORDER BY id LIMIT $limit`, map[string]any{
-				"previous_schema": evidencePreviousStoreSchemaVersion,
-				"limit":           evidenceMigrationBatchSize,
+				"previous_schemas": []string{
+					evidencePreviousStoreSchemaVersion,
+					evidenceLegacyUpgradableStoreSchemaVersion,
+				},
+				"limit": evidenceMigrationBatchSize,
 			})
 		if err != nil {
 			return err
@@ -834,10 +839,13 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 			if _, err := surrealdb.Query[any](ctx, s.db,
 				`UPDATE $rid SET store_schema_version = $store_schema_version,
 					evidence_migration_version = $evidence_migration_version
-				WHERE store_schema_version = $previous_schema RETURN NONE`,
+					WHERE store_schema_version IN $previous_schemas RETURN NONE`,
 				map[string]any{
-					"rid":                        *row.RecID,
-					"previous_schema":            evidencePreviousStoreSchemaVersion,
+					"rid": *row.RecID,
+					"previous_schemas": []string{
+						evidencePreviousStoreSchemaVersion,
+						evidenceLegacyUpgradableStoreSchemaVersion,
+					},
 					"store_schema_version":       evidenceStoreSchemaVersion,
 					"evidence_migration_version": evidenceMigrationVersion,
 				}); err != nil {
@@ -860,7 +868,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 			FROM extraction_attempt
 			WHERE store_schema_version = $legacy_schema
 			ORDER BY id LIMIT $limit`, map[string]any{
-				"legacy_schema": evidenceLegacyUpgradableStoreSchemaVersion,
+				"legacy_schema": evidencePreUnitUpgradableStoreSchemaVersion,
 				"limit":         evidenceMigrationBatchSize,
 			})
 		if err != nil {
@@ -913,7 +921,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 					"run_id": runID, "repo": repo, "commit": commit,
 					"domain": domain, "extractor": extractor,
 					"status": status, "started_at": row.StartedAt,
-					"legacy_schema":              evidenceLegacyUpgradableStoreSchemaVersion,
+					"legacy_schema":              evidencePreUnitUpgradableStoreSchemaVersion,
 					"store_schema_version":       evidenceStoreSchemaVersion,
 					"evidence_format_version":    evidenceFormatVersion,
 					"evidence_migration_version": evidenceMigrationVersion,
@@ -946,7 +954,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 						"new_rid":        extractionAttemptID(scope),
 						"retired_schema": retiredAttemptSchema,
 						"migration":      evidenceMigrationVersion,
-						"legacy_schema":  evidenceLegacyUpgradableStoreSchemaVersion,
+						"legacy_schema":  evidencePreUnitUpgradableStoreSchemaVersion,
 					},
 				)
 				if retireErr != nil {
@@ -967,7 +975,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 						WHERE store_schema_version = $legacy_schema LIMIT 1`,
 					map[string]any{
 						"rid":           *row.RecID,
-						"legacy_schema": evidenceLegacyUpgradableStoreSchemaVersion,
+						"legacy_schema": evidencePreUnitUpgradableStoreSchemaVersion,
 					},
 				)
 				if checkErr != nil {
@@ -1100,7 +1108,8 @@ func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
 func evidenceWriterIsUpgradable(schema string) bool {
 	return schema == evidenceStoreSchemaVersion ||
 		schema == evidencePreviousStoreSchemaVersion ||
-		schema == evidenceLegacyUpgradableStoreSchemaVersion
+		schema == evidenceLegacyUpgradableStoreSchemaVersion ||
+		schema == evidencePreUnitUpgradableStoreSchemaVersion
 }
 
 // evidenceWriterCarriesUnitDigest reports whether a row's writer generation
@@ -1109,7 +1118,8 @@ func evidenceWriterIsUpgradable(schema string) bool {
 // and an empty unit digest is the correct reading — not a malformed one.
 func evidenceWriterCarriesUnitDigest(schema string) bool {
 	return schema == evidenceStoreSchemaVersion ||
-		schema == evidencePreviousStoreSchemaVersion
+		schema == evidencePreviousStoreSchemaVersion ||
+		schema == evidenceLegacyUpgradableStoreSchemaVersion
 }
 
 func validEvidenceRunStatus(status string) bool {
@@ -1171,7 +1181,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 							OR (status = 'deleting' AND (
 								retention_phase = NONE
 								OR NOT (type::is_string(retention_phase))
-								OR retention_phase NOT IN ['associations', 'assertions', 'finalize']))
+								OR retention_phase NOT IN ['associations', 'assertions', 'chunks', 'finalize']))
 							OR (status != 'deleting' AND retention_phase != NONE)
 							OR (status = 'published' AND published_key = NONE)
 							OR (status != 'published' AND published_key != NONE)
@@ -1186,6 +1196,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"upgradable_predecessors": []string{
 					evidencePreviousStoreSchemaVersion,
 					evidenceLegacyUpgradableStoreSchemaVersion,
+					evidencePreUnitUpgradableStoreSchemaVersion,
 				},
 				"legacy_schemas": retiredEvidenceStoreSchemas,
 				"format":         evidenceFormatVersion,
@@ -1271,14 +1282,26 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				default:
 					status = "aborted"
 				}
+			} else if schema != evidenceStoreSchemaVersion && status == "deleting" {
+				// Restart predecessor retention from the durable owner. Proof-row
+				// deletes are idempotent, and the new ledger phase then drains zero
+				// rows for a pre-accounting generation.
+				status = "aborted"
+				retentionPhase = ""
 			} else if !statusPresent || !validEvidenceRunStatus(status) ||
 				(status == "deleting" && (schema != evidenceStoreSchemaVersion ||
 					!retentionPhasePresent ||
 					(retentionPhase != "associations" && retentionPhase != "assertions" &&
-						retentionPhase != "finalize"))) {
+						retentionPhase != "chunks" && retentionPhase != "finalize"))) {
 				status = "aborted"
 				retentionPhase = ""
 				quarantined = true
+			} else if schema != evidenceStoreSchemaVersion && status == "staged" {
+				// Pre-T40.7 staged rows have neither a trusted chunk identity nor
+				// reconstructible fact charges. Preserve visible terminal history,
+				// but retire incomplete work for a clean exact-generation retry.
+				status = "aborted"
+				retentionPhase = ""
 			} else if status != "deleting" && row.RetentionPhase != nil {
 				retentionPhase = ""
 				quarantined = true
@@ -1404,6 +1427,10 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				`BEGIN;
 				LET $updated = UPDATE $rid SET run_id = $run_id, status = $status,
 					unit_digest = $unit_digest,
+					staged_fact_count = 0,
+					staged_row_count = 0,
+					staged_reference_count = 0,
+					staged_chunk_count = 0,
 					store_schema_version = $store_schema_version,
 					evidence_format_version = $evidence_format_version,
 					evidence_migration_version = $evidence_migration_version,
@@ -1417,6 +1444,8 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				UPDATE snapshot_evidence SET run_id = $run_id
 					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
 				UPDATE assertion SET run_id = $run_id
+					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
+				UPDATE evidence_chunk SET run_id = $run_id
 					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
 				RETURN $updated;
 				COMMIT;`, vars)

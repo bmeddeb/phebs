@@ -494,6 +494,13 @@ DEFINE INDEX IF NOT EXISTS assertion_run ON assertion FIELDS run_id;
 DEFINE INDEX IF NOT EXISTS assertion_pred_obj ON assertion FIELDS predicate, object;
 DEFINE INDEX IF NOT EXISTS assertion_run_semantic ON assertion FIELDS assertion_key UNIQUE;
 
+-- T40.7: one point-addressed idempotency/accounting receipt per trusted
+-- worker chunk. The extraction run owns aggregate charged counters; this
+-- bounded ledger independently reconstructs fact/chunk totals at publication.
+DEFINE TABLE IF NOT EXISTS evidence_chunk SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS evidence_chunk_run ON evidence_chunk FIELDS run_id;
+DEFINE INDEX IF NOT EXISTS evidence_chunk_identity ON evidence_chunk FIELDS run_id, chunk_id UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS extraction_run SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS extraction_run_scope ON extraction_run FIELDS repo, domain, status;
 DEFINE INDEX IF NOT EXISTS extraction_run_scope_v8 ON extraction_run

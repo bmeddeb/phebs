@@ -8884,3 +8884,46 @@ path absent from the selected archive. The top-level workflow extracts through
 a sibling observation stage before database import, so interruption leaves the
 data directory empty and the next invocation can resume the same exact stage.
 Targeted regressions cover all five reported failure modes.
+
+**T40.7 ✅ · Constant-cost evidence-stage accounting**
+*(2026-08-07; needs T40.6)* — replaces `AddEvidence`'s per-append whole-run
+row/reference scans with a durable trusted-chunk identity and exact charged
+fact, row, reference, and chunk counters on the staged extraction-run fence.
+The production worker now passes its existing content-derived 256-fact chunk
+ID and fact count into the store. One point-addressed `evidence_chunk` receipt
+binds that ID to the normalized payload digest and exact deltas. Exact replay
+does not change a counter or revision; same-ID/different-content replay is a
+permanent conflict. New appends check the unchanged 12,500-fact, 25,000-row,
+and 20,000-reference limits before the corresponding mutations and commit
+proof rows, counters, and receipt atomically.
+
+Final publication independently scans exact stored associations, assertions,
+and references, sums the bounded chunk ledger, and compares both views with
+the charged run counters and caller coverage before any visibility change.
+Tampered or drifted accounting refuses. Migration preserves visible compatible
+history but aborts pre-accounting staged work for an exact clean retry because
+its fact charge cannot be reconstructed. Retention adds a bounded resumable
+chunk-ledger phase, so abort/sweep and interrupted lifecycle work cannot strand
+replay identities. Reopen/restore retains current receipts through the precious
+database authority.
+
+Exact replay/conflict, publication tamper, concurrent append, abort/sweep,
+migration, reopen, and production worker tests close the functional gate. The
+opt-in source-free receipt at `spike/t407/results.json` exercises one maximum
+12,500-fact/25,000-row run over a minimal published baseline through the
+production transaction and records
+append query count, maximum encoded transaction input, wall time, Go
+allocation, SurrealDB RSS, publication, paging, and complete sweep behavior
+without defining an SLO. T40.8 is next. No service-cap, topology,
+supported-scale, SLO, accuracy/completeness, freshness,
+migration/decommission, pilot, release, or private-rerun claim changes;
+`GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
+
+Review closure adds the new durable `evidence_chunk` receipts to the
+`evidence_publications` retention-status owner and core collector. The
+operator surface therefore expands from 52 to 53 components rather than
+underreporting a physical population that the evidence sweep already deletes
+separately. The unchanged 4,096-report allocation is redistributed fairly
+with one private sentinel per component; focused collector, authorization,
+allocation, deterministic-envelope, and response-bound tests cover the
+correction.
