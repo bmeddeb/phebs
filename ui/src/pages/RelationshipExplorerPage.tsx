@@ -236,7 +236,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
       ) : loading ? (
         <div role="status" aria-live="polite" className={css(statusBox(tok))}>Reading exact relationship roots and bounded source rows…</div>
       ) : error ? (
-        <div role="alert" className={css({ ...statusBox(tok), color: tok.statusRed })}>{error}</div>
+        <div role="alert" className={css({ ...statusBox(tok), color: tok.status.conflict.text })}>{error}</div>
       ) : page ? (
         <>
           <CoverageStrip page={page} />
@@ -288,7 +288,7 @@ function CoverageStrip({ page }: { page: ServiceRelationshipPage }) {
           <span>{label}</span><strong className={css({ color: tok.textPrimary, fontSize: '15px', fontVariantNumeric: 'tabular-nums' })}>{value}</strong>
         </div>
       ))}
-      <div className={css({ flex: '1 1 260px', minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', color: partial ? tok.statusAmber : tok.textTertiary, fontSize: '10.5px', lineHeight: '16px', '@media screen and (max-width: 720px)': { gridColumn: '1 / -1' } })}>
+      <div className={css({ flex: '1 1 260px', minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', color: partial ? tok.status.stale.text : tok.textTertiary, fontSize: '10.5px', lineHeight: '16px', '@media screen and (max-width: 720px)': { gridColumn: '1 / -1' } })}>
         {partial
           ? `Partial · ${page.coverage.truncated ? 'reference admission cap reached' : `${gaps} failed or unavailable root${gaps === 1 ? '' : 's'}`}`
           : 'Bounded exact roots · completeness beyond the published authority is not claimed'}
@@ -398,7 +398,7 @@ function ClassificationCell({ row }: { row: ServiceRelationshipRow }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const label = classificationLabel(row)
-  const color = label === 'Ambiguous' ? tok.statusRed : label === 'Unowned' || label === 'Unsupported' || label === 'Unresolved' ? tok.statusAmber : tok.textSecondary
+  const color = label === 'Ambiguous' ? tok.status.conflict.text : label === 'Unowned' || label === 'Unsupported' || label === 'Unresolved' ? tok.status.stale.text : tok.textSecondary
   return <div><span className={css({ color, fontSize: '10.5px', lineHeight: '15px', fontWeight: 600 })}>{label}</span><div className={css(meta(tok))}>{row.participation.join(' + ') || 'unattributed'}{row.evidence.reason ? ` · ${row.evidence.reason}` : ''}</div></div>
 }
 
@@ -470,7 +470,7 @@ function CitationPanel({ state, onClose }: { state: CitationState; onClose: () =
         <button type="button" onClick={onClose} className={css(citationButton(tok))}>Close citation</button>
       </div>
       {state.loading && <div role="status" className={css({ marginTop: '10px', color: tok.textSecondary, fontSize: '11px' })}>Reading immutable source span…</div>}
-      {state.error && <div role="alert" className={css({ marginTop: '10px', color: tok.statusRed, fontSize: '11px' })}>{state.error}</div>}
+      {state.error && <div role="alert" className={css({ marginTop: '10px', color: tok.status.conflict.text, fontSize: '11px' })}>{state.error}</div>}
       {state.value && <><div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px', marginTop: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: '1fr 1fr' } })}><Identity label="Generation" value={state.value.generation} /><Identity label="Root" value={state.value.root_digest} /><Identity label="Object" value={state.value.evidence.object_id} /><Identity label="Content" value={state.value.evidence.content_digest} /></div><pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>{state.value.content}</pre></>}
     </aside>
   )

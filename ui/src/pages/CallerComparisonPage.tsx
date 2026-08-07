@@ -598,7 +598,7 @@ function ComparisonProgress({ page, pageIndex }: { page: ComparisonResponse; pag
       data-matching-rows-state={page.matching_rows_state ?? 'legacy'}
       className={css({
       padding: '10px 12px',
-      border: `1px solid ${unavailable ? tok.statusAmber : tok.cardBorder}`,
+      border: `1px solid ${unavailable ? tok.status.stale.solid : tok.cardBorder}`,
       borderBottom: 'none',
       backgroundColor: tok.bandBg,
       color: tok.textSecondary,
@@ -721,7 +721,7 @@ function ComparisonSide({ label, side }: { label: string; side: CallerComparison
         </div>
       ))}
       {side.rows_truncated && (
-        <div className={css({ marginTop: '5px', color: tok.statusAmber, fontSize: '9px' })}>
+        <div className={css({ marginTop: '5px', color: tok.status.stale.text, fontSize: '9px' })}>
           Citation sample is bounded; {side.occurrence_count - side.rows.length} more occurrence(s).
         </div>
       )}
@@ -786,7 +786,7 @@ function EndpointIdentity({
             lineHeight: '14px',
           })}
         >
-          <span className={css({ color: exact ? tok.statusGreen : tok.statusAmber, fontWeight: 650 })}>
+          <span className={css({ color: exact ? tok.status.current.text : tok.status.stale.text, fontWeight: 650 })}>
             {exact ? 'exact rows' : 'rows unavailable'} · generation {generation.state}
           </span>
           {generation.reason && (
@@ -948,17 +948,17 @@ function StatusChip({ classification }: { classification: CallerComparisonRow['c
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const colors = {
-    old_only_evidence: tok.statusAmber,
-    both_evidence: tok.statusGreen,
-    new_only_evidence: tok.accent,
-    unresolved: tok.statusRed,
+    old_only_evidence: tok.status.stale,
+    both_evidence: tok.status.current,
+    new_only_evidence: { text: tok.accent, solid: tok.accent },
+    unresolved: tok.status.conflict,
   }
   return (
     <span className={css({
       display: 'inline-flex',
       padding: '2px 7px',
-      border: `1px solid ${colors[classification]}`,
-      color: colors[classification],
+      border: `1px solid ${colors[classification].solid}`,
+      color: colors[classification].text,
       fontSize: '9px',
       fontWeight: 650,
     })}>

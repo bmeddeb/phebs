@@ -56,7 +56,7 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
             <pre className={css({ margin: '0 0 24px', whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '14px', lineHeight: '22px', color: tok.textSecondary })}>{commit.commit.message}</pre>
           )}
           <ChangeList repo={repo} ref={commit.revision} changes={commit.changes} />
-          {diff?.truncated && <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.statusAmber, marginTop: '16px' })}><WarningIcon /> Diff truncated</div>}
+          {diff?.truncated && <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.status.stale.text, marginTop: '16px' })}><WarningIcon /> Diff truncated</div>}
           {diff && <PatchView patch={diff.patch} />}
         </>
       )}
@@ -82,7 +82,7 @@ function ChangeList({ repo, ref, changes }: { repo: string; ref: string; changes
             </a>
           )}
           <span className={css({ color: tok.textTertiary, paddingRight: '8px' })}>
-            {change.binary ? 'binary' : <><span className={css({ color: tok.statusGreen })}>+{change.additions ?? 0}</span>{' '}<span className={css({ color: tok.statusRed })}>-{change.deletions ?? 0}</span></>}
+            {change.binary ? 'binary' : <><span className={css({ color: tok.status.current.text })}>+{change.additions ?? 0}</span>{' '}<span className={css({ color: tok.status.conflict.text })}>-{change.deletions ?? 0}</span></>}
           </span>
         </div>
       ))}
@@ -98,7 +98,7 @@ function PatchView({ patch }: { patch: string }) {
       {patch.split('\n').map((line, index) => {
         const kind = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : 'plain'
         return (
-          <div key={index} className={css({ minHeight: '20px', paddingLeft: '10px', paddingRight: '14px', whiteSpace: 'pre', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '20px', color: kind === 'add' ? tok.statusGreen : kind === 'del' ? tok.statusRed : kind === 'hunk' ? tok.statusBlue : tok.plainCode, backgroundColor: kind === 'add' ? tok.addedLineBg : kind === 'del' ? tok.deletedLineBg : 'transparent' })}>
+          <div key={index} className={css({ minHeight: '20px', paddingLeft: '10px', paddingRight: '14px', whiteSpace: 'pre', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '20px', color: kind === 'add' ? tok.status.current.text : kind === 'del' ? tok.status.conflict.text : kind === 'hunk' ? tok.status.unavailable.text : tok.plainCode, backgroundColor: kind === 'add' ? tok.addedLineBg : kind === 'del' ? tok.deletedLineBg : 'transparent' })}>
             {line || ' '}
           </div>
         )
@@ -108,9 +108,9 @@ function PatchView({ patch }: { patch: string }) {
 }
 
 function statusColor(status: string, tok: ReturnType<typeof usePhebsTokens>): string {
-  if (status === 'added') return tok.statusGreen
-  if (status === 'deleted') return tok.statusRed
-  return tok.statusBlue
+  if (status === 'added') return tok.status.current.text
+  if (status === 'deleted') return tok.status.conflict.text
+  return tok.status.unavailable.text
 }
 
 function statusLabel(status: string): string {

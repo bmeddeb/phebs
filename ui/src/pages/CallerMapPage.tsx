@@ -13,7 +13,7 @@ import {
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
 import { href } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, toneFor, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
@@ -633,7 +633,7 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
         flexWrap: 'wrap',
         padding: '10px 12px',
         marginBottom: '10px',
-        border: `1px solid ${exact ? tok.statusGreen : tok.statusAmber}`,
+        border: `1px solid ${exact ? tok.status.current.solid : tok.status.stale.solid}`,
         backgroundColor: tok.bandBg,
       })}
     >
@@ -952,7 +952,7 @@ function CallerRow({
         {row.unresolved_reason && (
           <div className={css({
             marginTop: '7px',
-            color: tok.statusAmber,
+            color: tok.status.stale.text,
             fontSize: '11px',
             lineHeight: '17px',
           })}>
@@ -1200,11 +1200,11 @@ function Chip({
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const colors = {
-    green: tok.statusGreen,
-    blue: tok.statusBlue,
-    amber: tok.statusAmber,
-    red: tok.statusRed,
-    neutral: tok.textTertiary,
+    green: toneFor('green', tok),
+    blue: toneFor('blue', tok),
+    amber: toneFor('amber', tok),
+    red: toneFor('red', tok),
+    neutral: toneFor('neutral', tok),
   }
   return (
     <span className={css({
@@ -1212,8 +1212,8 @@ function Chip({
       alignItems: 'center',
       minHeight: '18px',
       padding: '0 6px',
-      border: `1px solid ${colors[tone]}`,
-      color: colors[tone],
+      border: `1px solid ${colors[tone].solid}`,
+      color: colors[tone].text,
       backgroundColor: tok.pageBg,
       fontSize: '9px',
       lineHeight: '14px',

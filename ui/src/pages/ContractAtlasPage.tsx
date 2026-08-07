@@ -24,7 +24,7 @@ import {
   OpenIcon,
 } from '../icons'
 import { href } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, toneFor, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ContractDependencyMap from '../components/ContractDependencyMap'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
@@ -1163,11 +1163,7 @@ function Cell({ children, mono = false }: { children: React.ReactNode; mono?: bo
 function StatusChip({ children, tone }: { children: React.ReactNode; tone: 'green' | 'amber' | 'red' | 'blue' | 'neutral' }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const color = tone === 'green' ? tok.statusGreen
-    : tone === 'amber' ? tok.statusAmber
-      : tone === 'red' ? tok.statusRed
-        : tone === 'blue' ? tok.statusBlue
-          : tok.textTertiary
+  const pair = toneFor(tone, tok)
   return (
     <span className={css({
       display: 'inline-flex',
@@ -1175,8 +1171,8 @@ function StatusChip({ children, tone }: { children: React.ReactNode; tone: 'gree
       minHeight: '18px',
       boxSizing: 'border-box',
       padding: '1px 6px',
-      border: `1px solid ${color}`,
-      color,
+      border: `1px solid ${pair.solid}`,
+      color: pair.text,
       fontSize: '9px',
       lineHeight: '13px',
       fontWeight: 650,
@@ -1194,7 +1190,7 @@ function BoundNotice({ children }: { children: React.ReactNode }) {
   return (
     <div role="status" className={css({
       padding: '9px 11px',
-      borderLeft: `3px solid ${tok.statusAmber}`,
+      borderLeft: `3px solid ${tok.status.stale.solid}`,
       backgroundColor: tok.bandBg,
       color: tok.textSecondary,
       fontSize: '11px',
@@ -1372,7 +1368,7 @@ function BoundarySummary({ run }: { run: CoverageRun }) {
         <div className={css({ color: tok.textTertiary })}>{paths.join(', ')}</div>
       )}
       {run.gitlink_sample_truncated && (
-        <div className={css({ color: tok.statusAmber })}>sample truncated</div>
+        <div className={css({ color: tok.status.stale.text })}>sample truncated</div>
       )}
     </>
   )

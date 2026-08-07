@@ -88,8 +88,8 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
           <span className={css({
             display: 'inline-flex',
             padding: '2px 6px',
-            border: `1px solid ${tok.statusAmber}`,
-            color: tok.statusAmber,
+            border: `1px solid ${tok.status.stale.solid}`,
+            color: tok.status.stale.text,
             fontSize: '9px',
           })}>
             exact citation unavailable
@@ -103,7 +103,7 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
       </div>
       {error && (
         <div role="alert" className={css({
-          marginTop: '7px', color: tok.statusRed, fontSize: '10px', lineHeight: '15px',
+          marginTop: '7px', color: tok.status.conflict.text, fontSize: '10px', lineHeight: '15px',
         })}>
           Exact citation unavailable: {error}
         </div>

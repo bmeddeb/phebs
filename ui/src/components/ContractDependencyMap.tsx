@@ -307,10 +307,10 @@ function DependencyDiagramEdge({
   const lineStartX = left ? edge.x + nodeWidth : edge.x
   const lineEndX = left ? centerX - 135 : centerX + 135
   const tone = edge.kind === 'implementation'
-    ? tok.statusGreen
+    ? tok.status.current.solid
     : edge.kind === 'caller'
-      ? tok.statusBlue
-      : tok.statusAmber
+      ? tok.status.unavailable.solid
+      : tok.status.stale.solid
   return (
     <a
       href={sourceHref(edge.source)}

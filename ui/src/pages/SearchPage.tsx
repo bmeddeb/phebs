@@ -6,7 +6,7 @@ import type { LanguageSupport } from '@codemirror/language'
 import { fetchRepoStatus, streamSearch } from '../api'
 import type { FileResult, Range, RepoStatus, SearchScopeReceipt, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
-import { usePhebsTokens, useMode, FONTS, type PhebsTokens } from '../theme'
+import { usePhebsTokens, useMode, FONTS, MOTION, REDUCED_MOTION, type PhebsTokens } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
@@ -396,7 +396,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
                   backgroundColor: phase === 'streaming' ? tok.fill : mode === 'dark' ? tok.textSecondary : tok.textPrimary,
                   boxShadow: phase === 'streaming' ? `inset 0 0 0 1px ${tok.kbdBorder}` : 'none',
                   cursor: 'pointer',
-                  ':hover': { backgroundColor: phase === 'streaming' ? tok.kbdBorder : mode === 'dark' ? tok.textTertiary : '#333333' },
+                  ':hover': { backgroundColor: phase === 'streaming' ? tok.kbdBorder : mode === 'dark' ? tok.textTertiary : tok.textSecondary },
                   ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
                 })}
               >
@@ -426,10 +426,10 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               backgroundSize: '50% 100%',
               backgroundRepeat: 'no-repeat',
               animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
-              animationDuration: '1.2s',
+              animationDuration: MOTION.pulse,
               animationTimingFunction: 'linear',
               animationIterationCount: 'infinite',
-              '@media (prefers-reduced-motion: reduce)': { animationName: 'none', backgroundColor: tok.accent, backgroundImage: 'none' },
+              [REDUCED_MOTION]: { animationName: 'none', backgroundColor: tok.accent, backgroundImage: 'none' },
             })}
           />
         )}
@@ -719,7 +719,7 @@ function FacetRail({ files, query, scope }: {
                   border: `1px solid ${active ? tok.accent : tok.kbdBorder}`,
                   borderRadius: '3px',
                   backgroundColor: active ? tok.accent : 'transparent',
-                  color: '#FFFFFF',
+                  color: tok.onAccent,
                   fontSize: '11px',
                   lineHeight: '11px',
                   textAlign: 'center',
@@ -748,7 +748,7 @@ function FacetRail({ files, query, scope }: {
                 label={`${active ? 'Remove' : 'Add'} language filter ${lang}`}
                 onClick={() => toggle(term)}
               >
-                <span className={css({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: langColor('x.' + lang) })} />
+                <span className={css({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: langColor('x.' + lang, tok) })} />
                 <span className={css({ flex: 1, fontSize: '12.5px', fontWeight: active ? 600 : 400, color: active ? tok.textPrimary : tok.textSecondary })}>
                   {lang}
                 </span>
@@ -892,11 +892,11 @@ function SearchMeta({
               height: '8px',
               flexShrink: 0,
               borderRadius: '50%',
-              backgroundColor: tok.statusBlue,
+              backgroundColor: tok.status.unavailable.solid,
               animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-              animationDuration: '1.4s',
+              animationDuration: MOTION.pulse,
               animationIterationCount: 'infinite',
-              '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+              [REDUCED_MOTION]: { animationName: 'none' },
             })}
           />
         )}
@@ -968,9 +968,9 @@ function RepoGroup({
         backgroundColor: tok.pageBg,
         ...(animateCard ? {
           animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-          animationDuration: '320ms',
-          animationTimingFunction: 'cubic-bezier(.22,1,.36,1)',
-          '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+          animationDuration: MOTION.element,
+          animationTimingFunction: MOTION.easeOut,
+          [REDUCED_MOTION]: { animationName: 'none' },
         } : {}),
       })}
     >
@@ -1069,14 +1069,14 @@ function FileBlock({
         backgroundColor: tok.pageBg,
         ...(animate ? {
           animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-          animationDuration: '320ms',
-          animationTimingFunction: 'cubic-bezier(.22,1,.36,1)',
-          '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+          animationDuration: MOTION.element,
+          animationTimingFunction: MOTION.easeOut,
+          [REDUCED_MOTION]: { animationName: 'none' },
         } : {}),
       })}
     >
       <div className={css({ height: '32px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
-        <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(file.path), flexShrink: 0 })} />
+        <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(file.path, tok), flexShrink: 0 })} />
         <a href={fileHref} className={css({ textDecoration: 'none', fontSize: '12.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
           <span className={css({ color: tok.textTertiary })}>{dir}</span>
           <span className={css({ color: tok.textPrimary, fontWeight: 500 })}>{name}</span>
@@ -1207,7 +1207,7 @@ function CopyButton({ text, title }: { text: string; title: string }) {
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
-      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
       {done ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
     </button>
@@ -1221,10 +1221,10 @@ function SkeletonCards() {
     backgroundImage: `linear-gradient(90deg, ${tok.fill} 0%, ${tok.cardBorder} 50%, ${tok.fill} 100%)`,
     backgroundSize: '200% 100%',
     animationName: { '0%': { backgroundPosition: '100% 0' }, '100%': { backgroundPosition: '0 0' } },
-    animationDuration: '1.4s',
+    animationDuration: MOTION.pulse,
     animationIterationCount: 'infinite',
     borderRadius: '4px',
-    '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+    [REDUCED_MOTION]: { animationName: 'none' },
   })
   return (
     <div data-testid="streaming-skeleton" className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', marginBottom: '14px', overflow: 'hidden' })} aria-hidden="true">

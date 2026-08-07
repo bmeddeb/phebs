@@ -10,7 +10,7 @@ import type {
   CoverageRun,
 } from '../api'
 import { SectionHelp } from './SectionHelp'
-import { FONTS, type PhebsTokens, usePhebsTokens } from '../theme'
+import { FONTS, type PhebsTokens, toneFor, usePhebsTokens } from '../theme'
 
 const maximumMountedRepositories = 24
 const maximumMountedRows = 24
@@ -379,7 +379,7 @@ export function AnalysisScopePanel({
             {omittedRepositories > 0 && (
               <div role="status" className={css({
                 padding: '9px 12px',
-                color: tok.statusAmber,
+                color: tok.status.stale.text,
                 fontSize: '10px',
                 lineHeight: '16px',
               })}>
@@ -530,7 +530,7 @@ function RepositoryDetail({
             {repository.posture === 'whole-repository' && (
               <div className={css({
                 marginTop: '9px',
-                color: tok.statusAmber,
+                color: tok.status.stale.text,
                 fontSize: '10px',
                 lineHeight: '15px',
               })}>
@@ -560,7 +560,7 @@ function RepositoryDetail({
               {repository.unit.typedIndexPosture !== 'unit-bound' && (
                 <div className={css({
                   marginTop: '4px',
-                  color: tok.statusAmber,
+                  color: tok.status.stale.text,
                   fontSize: '10px',
                   lineHeight: '15px',
                 })}>
@@ -683,7 +683,7 @@ function DomainStatus({ run }: { run: CoverageRun }) {
       })}>{reason}</div>}
       {recordedFailureCount > 0 && <div className={css({
         marginTop: '4px',
-        color: tok.statusAmber,
+        color: tok.status.stale.text,
         fontSize: '10px',
         lineHeight: '15px',
         overflowWrap: 'anywhere',
@@ -710,7 +710,7 @@ function DomainStatus({ run }: { run: CoverageRun }) {
           )}
           {candidate.typed_input && (
             <span className={css({
-              color: candidate.typed_input.present ? tok.statusGreen : tok.statusAmber,
+              color: candidate.typed_input.present ? tok.status.current.text : tok.status.stale.text,
             })}>
               typed input {candidate.typed_input.present ? 'present' : 'missing'}
             </span>
@@ -743,7 +743,7 @@ function ReceiptSummary({
     return (
       <div className={css({
         marginTop: '6px',
-        color: tok.statusAmber,
+        color: tok.status.stale.text,
         fontSize: '9px',
         lineHeight: '14px',
       })}>
@@ -932,7 +932,7 @@ function MountBoundNotice({ children }: { children: ReactNode }) {
   const tok = usePhebsTokens()
   return (
     <div role="status" className={css({
-      color: tok.statusAmber,
+      color: tok.status.stale.text,
       fontSize: '9px',
       lineHeight: '14px',
     })}>{children}</div>
@@ -963,18 +963,14 @@ function ScopeChip({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const color = tone === 'green' ? tok.statusGreen
-    : tone === 'blue' ? tok.statusBlue
-      : tone === 'amber' ? tok.statusAmber
-        : tone === 'red' ? tok.statusRed
-          : tok.textTertiary
+  const color = toneFor(tone, tok)
   return <span data-tone={tone} className={css({
     display: 'inline-flex',
     alignItems: 'center',
     minHeight: '18px',
     padding: '1px 6px',
-    border: `1px solid ${color}`,
-    color,
+    border: `1px solid ${color.solid}`,
+    color: color.text,
     fontSize: '9px',
     lineHeight: '14px',
     fontWeight: 650,

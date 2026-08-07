@@ -12,7 +12,7 @@ import {
   type GlossaryTerm,
   type GlossaryTermId,
 } from '../glossary.generated'
-import { usePhebsTokens } from '../theme'
+import { MOTION, REDUCED_MOTION, usePhebsTokens } from '../theme'
 
 const termById = new Map<GlossaryTermId, GlossaryTerm>(
   glossaryTerms.map((term) => [term.id, term]),
@@ -180,15 +180,15 @@ export function SectionHelp({
         border: `1px solid ${tok.cardBorder}`,
         borderRadius: '8px',
         backgroundColor: tok.pageBg,
-        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.24)',
+        boxShadow: tok.popoverShadow,
         color: tok.textSecondary,
         fontSize: '12px',
         lineHeight: '18px',
         opacity: position ? 1 : 0,
         transform: position ? 'translateY(0)' : 'translateY(-4px)',
         transitionProperty: reducedMotion ? 'none' : 'opacity, transform',
-        transitionDuration: reducedMotion ? '0ms' : '100ms',
-        '@media (prefers-reduced-motion: reduce)': {
+        transitionDuration: reducedMotion ? '0ms' : MOTION.element,
+        [REDUCED_MOTION]: {
           transitionProperty: 'none',
           transitionDuration: '0ms',
         },
@@ -246,7 +246,7 @@ export function SectionHelp({
             marginTop: '10px',
             paddingTop: '9px',
             borderTop: `1px solid ${tok.innerSep}`,
-            color: tok.statusAmber,
+            color: tok.status.stale.text,
           })}
         >
           {term.availability.unavailableHelp}

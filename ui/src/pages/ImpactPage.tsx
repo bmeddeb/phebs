@@ -323,13 +323,13 @@ function ReportView({
     }
     return enabled
   }, [capabilities, report.coverage.schema_version])
-  const conclusionColor = report.compatibility
-    ? report.compatibility.compatible ? tok.statusGreen : tok.statusRed
-    : tok.accent
+  const conclusionTone = report.compatibility
+    ? report.compatibility.compatible ? tok.status.current : tok.status.conflict
+    : { text: tok.accent, solid: tok.accent }
   return (
     <div data-testid="impact-report">
-      <section className={css({ border: `1px solid ${conclusionColor}`, padding: '12px 14px', marginBottom: '20px' })}>
-        <div className={css({ color: conclusionColor, fontSize: '14px', fontWeight: 600, lineHeight: '20px' })}>{report.conclusion.text}</div>
+      <section className={css({ border: `1px solid ${conclusionTone.solid}`, padding: '12px 14px', marginBottom: '20px' })}>
+        <div className={css({ color: conclusionTone.text, fontSize: '14px', fontWeight: 600, lineHeight: '20px' })}>{report.conclusion.text}</div>
         <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', minWidth: 0, marginTop: '5px', fontSize: '11px', lineHeight: '17px', color: tok.textTertiary, fontFamily: FONTS.MONO })}>
           <span className={css({ minWidth: 0, overflowWrap: 'anywhere' })}>bundle {report.bundle_id}</span>
           <span className={css({ minWidth: 0, overflowWrap: 'anywhere' })}>coverage {report.conclusion.coverage_digest}</span>
@@ -374,7 +374,7 @@ function CompatibilitySection({ report }: { report: ContractImpactReport }) {
   return (
     <section className={css({ marginBottom: '22px' })}>
       <SectionHeading>Compatibility classification</SectionHeading>
-      <div className={css({ fontSize: '13px', color: result.compatible ? tok.statusGreen : tok.statusRed, marginBottom: '8px' })}>
+      <div className={css({ fontSize: '13px', color: result.compatible ? tok.status.current.text : tok.status.conflict.text, marginBottom: '8px' })}>
         Buf {result.extraction_run.policy}: {result.compatible ? 'compatible for the committed inputs' : 'breaking findings for the committed inputs'}
       </div>
       {result.violations.length > 0 && (
@@ -458,7 +458,7 @@ function EvidenceRow({ row, unresolved }: { row: ImpactEvidenceRow; unresolved: 
       <Cell>{unresolved ? row.reason || row.classification : [row.classification, row.reason].filter(Boolean).join(' · ')}</Cell>
       <Cell mono>{row.tier}</Cell>
       <Cell>{row.code_role || '—'}</Cell>
-      <Cell><span className={css({ color: row.fresh ? tok.statusGreen : tok.statusAmber })}>{row.fresh ? 'current' : 'stale'}</span></Cell>
+      <Cell><span className={css({ color: row.fresh ? tok.status.current.text : tok.status.stale.text })}>{row.fresh ? 'current' : 'stale'}</span></Cell>
     </tr>
   )
 }
@@ -561,9 +561,9 @@ function CoverageSection({
 function CoverageRow({ row }: { row: ImpactCoverageRow }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const stateColor = row.state === 'covered' ? tok.statusGreen
-    : row.state === 'stale' || row.state === 'processing' || row.state === 'covered_with_failed_replacement' ? tok.statusAmber
-      : tok.statusRed
+  const stateColor = row.state === 'covered' ? tok.status.current.text
+    : row.state === 'stale' || row.state === 'processing' || row.state === 'covered_with_failed_replacement' ? tok.status.stale.text
+      : tok.status.conflict.text
   return (
     <tr className={css({ borderBottom: `1px solid ${tok.innerSep}` })}>
       <Cell><div>{row.repository}</div><div className={css({ color: tok.textTertiary, marginTop: '2px' })}>{row.domain}</div></Cell>

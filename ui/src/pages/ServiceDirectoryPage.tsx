@@ -407,7 +407,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
   if (detailError) {
     return (
       <aside role="alert" className={css({ minHeight: '220px', border: `1px solid ${tok.cardBorder}`, borderRadius: '10px', padding: '24px', boxSizing: 'border-box', color: tok.textSecondary })}>
-        <div className={css({ fontSize: '10.5px', lineHeight: '14px', letterSpacing: '0.08em', textTransform: 'uppercase', color: tok.statusRed })}>
+        <div className={css({ fontSize: '10.5px', lineHeight: '14px', letterSpacing: '0.08em', textTransform: 'uppercase', color: tok.status.conflict.text })}>
           Service detail unavailable
         </div>
         <h2 className={css({ margin: '7px 0 0', fontSize: '17px', lineHeight: '23px', color: tok.textPrimary })}>
@@ -512,27 +512,27 @@ function StateNotice({ service, successors }: { service: ServiceRecord; successo
   const tok = usePhebsTokens()
   let title = ''
   let body = service.reason ?? ''
-  let color = tok.statusBlue
+  let color = tok.status.unavailable.solid
   if (service.status === 'stale') {
     title = 'Active generation is stale'
     body = 'The active identity does not equal the current desired identity. No freshness is inferred.'
-    color = tok.statusAmber
+    color = tok.status.stale.solid
   } else if (service.status === 'conflict' || service.disposition === 'conflict') {
     title = 'Authority conflict'
     body = service.reason || 'The catalog retains an explicit unresolved authority conflict.'
-    color = tok.statusRed
+    color = tok.status.conflict.solid
   } else if (service.removed || service.status === 'removed') {
     title = 'Removed identity retained'
     body = successors.length
       ? `Authority successor${successors.length === 1 ? '' : 's'}: ${successors.join(', ')}. This is catalog lineage, not a runtime relationship.`
       : 'The tombstone remains inspectable and supplies no active service authority.'
-    color = tok.gutter
+    color = tok.status.removed.solid
   } else if (service.status === 'unavailable') {
     title = 'No exact active generation'
     body = service.disposition === 'accepted'
       ? 'The desired service exists, but no exact active generation has been published.'
       : service.reason || 'This authority disposition does not create an active generation.'
-    color = tok.statusBlue
+    color = tok.status.unavailable.solid
   }
   if (!title) return null
   return (
@@ -638,11 +638,11 @@ function directoryHref(
 
 function statusColor(status: ServiceStatus, tok: PhebsTokens): string {
   switch (status) {
-  case 'current': return tok.statusGreen
-  case 'stale': return tok.statusAmber
-  case 'conflict': return tok.statusRed
-  case 'removed': return tok.gutter
-  default: return tok.statusBlue
+  case 'current': return tok.status.current.solid
+  case 'stale': return tok.status.stale.solid
+  case 'conflict': return tok.status.conflict.solid
+  case 'removed': return tok.status.removed.solid
+  default: return tok.status.unavailable.solid
   }
 }
 

@@ -23,7 +23,7 @@ import {
 } from '../api'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { href } from '../router'
-import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, toneFor, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
 import type { WorkbenchEvidenceInput } from './workbenchEvidenceState'
@@ -1564,7 +1564,7 @@ function ChecklistEntry({
           <div className={css({
             marginTop: '10px',
             padding: '10px',
-            borderLeft: `3px solid ${tok.statusBlue}`,
+            borderLeft: `3px solid ${tok.status.unavailable.solid}`,
             backgroundColor: tok.bandBg,
           })}>
             <div className={css(rowTitleStyle(tok))}>
@@ -1637,7 +1637,7 @@ function ChecklistEntry({
         )}
         {recorded && (
           <div role="status" aria-live="polite" className={css({
-            color: tok.statusGreen,
+            color: tok.status.current.text,
             fontSize: '11px',
           })}>
             {recorded}
@@ -2024,7 +2024,7 @@ function CallerEvidenceRow({
         {row.unit.state === 'ambiguous' && (
           <div className={css({
             marginTop: '5px',
-            color: tok.statusAmber,
+            color: tok.status.stale.text,
             fontSize: '10px',
             lineHeight: '15px',
           })}>
@@ -2359,13 +2359,7 @@ function EvidenceBadge({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const color = tone === 'green'
-    ? tok.statusGreen
-    : tone === 'amber'
-      ? tok.statusAmber
-      : tone === 'blue'
-        ? tok.statusBlue
-        : tok.textTertiary
+  const colors = toneFor(tone, tok)
   return (
     <span className={css({
       display: 'inline-flex',
@@ -2373,8 +2367,8 @@ function EvidenceBadge({
       boxSizing: 'border-box',
       alignItems: 'center',
       padding: '1px 6px',
-      border: `1px solid ${color}`,
-      color,
+      border: `1px solid ${colors.solid}`,
+      color: colors.text,
       fontFamily: FONTS.MONO,
       fontSize: '8px',
       lineHeight: '13px',
@@ -2399,7 +2393,7 @@ function EvidenceNotice({ children }: { children: React.ReactNode }) {
     <div className={css({
       padding: '10px 16px',
       borderBottom: `1px solid ${tok.innerSep}`,
-      color: tok.statusAmber,
+      color: tok.status.stale.text,
       fontSize: '10px',
       lineHeight: '16px',
     })}>

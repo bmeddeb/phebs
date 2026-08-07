@@ -45,7 +45,7 @@ export default function BlamePage({ params }: { params: URLSearchParams }) {
       {error && <Notification kind={NOTIFICATION_KIND.negative}>{error}</Notification>}
       {!result && !error && <Spinner $size="small" />}
       {result?.truncated && (
-        <div className={css({ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '10px', color: tok.statusAmber, fontSize: '12px' })}>
+        <div className={css({ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '10px', color: tok.status.stale.text, fontSize: '12px' })}>
           <WarningIcon /> Result truncated
         </div>
       )}
