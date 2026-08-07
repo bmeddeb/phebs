@@ -8728,3 +8728,36 @@ accuracy/completeness, freshness-under-commit-cadence, migration completion,
 decommission safety, pilot continuation, topology, or release claim is
 established. `GATE2-V2` remains `NOT_ESTABLISHED`; `DO_NOT_RELEASE` remains in
 force.
+
+**T40.3 ✅ · Source-partition super-root and aggregate policy v2**
+*(2026-08-07; commit `919d79b`; needs T40.2)* — adds the closed
+`phebs-source-partition-superroot-v2` control over at most sixteen independently
+v1-bounded segments. The measured aggregate envelope is 16,384 members and
+64 GiB each of declared and encoded bytes while every retained per-blob,
+per-member, per-partition, immutable-Git-reader, and v1 manifest bound remains
+unchanged. The root binds ordered nonoverlapping prefix ranges, exact segment
+manifest digests, source/policy generations, and all aggregate byte kinds.
+Keyed reads open one root, one segment control, and one member; complete
+validation streams every segment and refuses missing, extra, reordered,
+special, cross-generation, or digest-mismatched artifacts.
+
+The builder consumes one identity-stable source pass, checks every segment and
+aggregate limit before growth, writes the root last, and can hard-link exact
+members from a completely validated prior super-root. Explicit reused/written
+member and byte counters prove physical reuse across a small delta and
+A→B→A; corrupt prior authority refuses. Complete validation reads each segment
+control once. Production planning remains on v1 until a hierarchical
+observation consumer exists.
+
+Before any larger aggregate can be admitted, the planning worker now performs
+one bounded collector pass. The exact planning lease is renewed and every
+schedule/source/pointer/marker authority is reconfirmed inside a short
+namespace-mutation fence shared with binding publication and build/stage
+admission. Eligible directories retire by same-parent rename and drain after
+the fence; registered live stages remain protected, while crash-orphaned stages
+advance through the closed 512-name scan window. Lease loss, authority movement,
+unknown artifacts, and malformed controls refuse before removal. T40.4 is
+next. No supported-scale, target-SLO, accuracy/completeness, freshness,
+migration/decommission, topology, pilot-continuation, or release claim is
+established; `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains
+in force.
