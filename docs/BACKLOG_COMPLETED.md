@@ -8833,3 +8833,54 @@ error cursor; and bounded prefix recovery drains crash-stage overflow. Known
 macOS metadata is removed only as an identity-rechecked regular file within the
 existing deletion budget. Unknown entries and symlinks still fail closed.
 Targeted tests cover every reported failure scenario.
+
+**T40.6 ✅ · Observation recovery, lifecycle, and archive migration**
+*(2026-08-07; needs T40.5)* — installs a separate joint v2 observation
+authority without changing the shipped v1 product pointer. One small
+`phebs-observation-inventory-publication-root-v2` reference binds the exact
+T40.3 source super-root and T40.4 observation inventory as current plus one
+rollback floor. A marker-owned stage exists before corpus work and contains
+separate `source/` and `inventory/` trees. Completion validates both trees and
+their cross-root binding, reruns the durable worker fence, records the exact
+candidate before same-parent rename, and only then advances the root; stale
+workers cannot publish. Startup holds the existing exclusive mutation lock,
+completes only a fully validated stage or post-rename candidate, and otherwise
+leaves the prior root unchanged. An incomplete worker can fence and retire its
+stage to a closed collecting name, mint a new transition, and resume without
+recursive deletion under the publication lock.
+
+The new `observation-v2-generations` lifecycle owner shares the backup/
+publication mutation lock and one durable fair repository cursor. It protects
+current, rollback floor, marker candidates, active exact-root cache leases,
+and explicit proof/Investigation pin providers. One unrooted generation or
+abandoned stage is renamed out of the publication namespace before at most
+sixteen regular entries are removed; interrupted drains resume, while unknown
+names, symlinks, special files, moving controls, and pin-provider errors refuse.
+Its generic status projection remains bounded and source-free. Existing
+80/90/75 pressure behavior is unchanged.
+
+Backup manifest v8 and `phebs-observation-archive-report-v2` preserve strict
+v1 current publications plus v2 current/rollback generations byte-exactly,
+including their source super-root bytes. The receipt distinguishes v1/v2,
+publication, file, logical-byte, omitted-publication, omitted-artifact, and
+stale-marker counts. Verification independently restores and compares exact
+publication/file/byte totals. Restore keeps a deterministic private stage,
+reuses already completed byte-identical entries after interruption, writes new
+entries through private partial files, validates all v1/v2 authority, and
+installs by one rename. Invalid or in-flight derived bytes remain visible
+omissions and never block precious SurrealDB export; a completed archive is an
+external snapshot, not a live pin. Recovery, archive, lifecycle, stale-fence,
+active/durable pin, one-delete drain, v1 compatibility, and startup wiring
+tests close the ticket. T40.7 is next. No supported-scale, target-SLO,
+accuracy/completeness, freshness, migration/decommission, topology,
+pilot-continuation, or release claim is established; `GATE2-V2` remains
+`NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
+
+The T40.6 reverse-audit closure preserves the rollback floor on exact
+same-generation retries, reserves both stage and marker namespace entries,
+counts retired stages against admission, and treats a cold cache opener's
+provisional lease as a lifecycle pin. Resumed restore now rejects every staged
+path absent from the selected archive. The top-level workflow extracts through
+a sibling observation stage before database import, so interruption leaves the
+data directory empty and the next invocation can resume the same exact stage.
+Targeted regressions cover all five reported failure modes.

@@ -11,6 +11,7 @@ const (
 	SourceOwner        = "source-generations"
 	SearchOwner        = "search-generations"
 	ObservationOwner   = "observation-namespaces"
+	ObservationV2Owner = "observation-v2-generations"
 	ResolverOwner      = "resolver-namespaces"
 	RelationshipOwner  = "relationship-namespaces"
 	ProofOwner         = "proof-bundles"

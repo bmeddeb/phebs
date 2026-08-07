@@ -451,6 +451,27 @@ func TestInventoryV2CachePinsAndWarmLeaseDoesNotReread(t *testing.T) {
 	}
 }
 
+func TestInventoryV2CacheProvisionalLeasePinsLifecycleIdentity(t *testing.T) {
+	digestValue := "sha256:" + strings.Repeat("a", 64)
+	repository := "example/inventory-v2-provisional-cache"
+	generation := "sha256:" + strings.Repeat("b", 64)
+	directory := filepath.Join(t.TempDir(), "inventory")
+	key := directory + "\x00" + digestValue
+	entry := &inventoryCacheEntryV2{
+		repository: repository, generation: generation,
+		leases: 1, ready: make(chan struct{}),
+	}
+	cache := &InventoryCacheV2{entries: map[string]*inventoryCacheEntryV2{key: entry}}
+	if !cache.Pinned(directory, digestValue) || !cache.PinnedGeneration(repository, generation) {
+		t.Fatal("provisional cache lease was not a lifecycle pin")
+	}
+	lease := &InventoryLeaseV2{cache: cache, key: key, entry: entry}
+	lease.Release()
+	if cache.Pinned(directory, digestValue) || cache.PinnedGeneration(repository, generation) {
+		t.Fatal("released provisional cache lease remained pinned")
+	}
+}
+
 func TestInventoryV2RefusesCorruptPriorBeforeReuse(t *testing.T) {
 	repository, commit := observationFixture(t, map[string][]byte{
 		"a.go": []byte("package demo\nconst A = 1\n"),

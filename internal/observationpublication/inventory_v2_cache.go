@@ -8,6 +8,8 @@ import (
 
 type inventoryCacheEntryV2 struct {
 	publication *InventoryPublicationV2
+	repository  string
+	generation  string
 	leases      int
 	ready       chan struct{}
 	err         error
@@ -31,7 +33,7 @@ type InventoryLeaseV2 struct {
 func (cache *InventoryCacheV2) Acquire(
 	ctx context.Context, directory string, expected InventoryRootV2,
 ) (*InventoryLeaseV2, error) {
-	if cache == nil || !validDigest(expected.Digest) {
+	if cache == nil || ValidateInventoryRootV2(expected) != nil {
 		return nil, invalid("inventory v2 cache input")
 	}
 	key := directory + "\x00" + expected.Digest
@@ -58,7 +60,10 @@ func (cache *InventoryCacheV2) Acquire(
 		}
 		return lease, nil
 	}
-	entry := &inventoryCacheEntryV2{leases: 1, ready: make(chan struct{})}
+	entry := &inventoryCacheEntryV2{
+		repository: expected.Repository, generation: expected.GenerationDigest,
+		leases: 1, ready: make(chan struct{}),
+	}
 	cache.entries[key] = entry
 	cache.mu.Unlock()
 
@@ -105,5 +110,25 @@ func (cache *InventoryCacheV2) Pinned(directory, digestValue string) bool {
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 	entry := cache.entries[directory+"\x00"+digestValue]
-	return entry != nil && entry.publication != nil && entry.leases > 0
+	return entry != nil && entry.leases > 0
+}
+
+// PinnedGeneration is the lifecycle-facing identity lookup. Cache keys remain
+// exact directory/root-digest pairs, but lifecycle authority is the bound
+// repository/generation pair stored inside the validated publication.
+func (cache *InventoryCacheV2) PinnedGeneration(repository, generation string) bool {
+	if cache == nil {
+		return false
+	}
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	for _, entry := range cache.entries {
+		if entry == nil || entry.leases < 1 {
+			continue
+		}
+		if entry.repository == repository && entry.generation == generation {
+			return true
+		}
+	}
+	return false
 }

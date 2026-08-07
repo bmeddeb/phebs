@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	ManifestSchema                       = "phebs-backup-manifest-v7"
+	ManifestSchema                       = "phebs-backup-manifest-v8"
 	FocusedIndexArchiveReportSchema      = "phebs-focused-archive-report-v1"
 	ResolverCatalogArchiveReportSchema   = "phebs-resolver-catalog-archive-report-v1"
 	CallerPublicationArchiveReportSchema = "phebs-caller-publication-archive-report-v1"
-	ObservationArchiveReportSchema       = "phebs-observation-archive-report-v1"
+	ObservationArchiveReportSchema       = "phebs-observation-archive-report-v2"
 	RelationshipArchiveReportSchema      = "phebs-relationship-archive-report-v1"
 	ManifestName                         = "manifest.json"
 	DatabaseName                         = "database.surql"
@@ -114,11 +114,16 @@ type CallerPublicationArchiveReport struct {
 }
 
 type ObservationArchiveReport struct {
-	Schema       string `json:"schema"`
-	Publications int    `json:"publications"`
-	Files        int    `json:"files"`
-	Bytes        int64  `json:"bytes"`
-	Omitted      int    `json:"omitted"`
+	Schema              string `json:"schema"`
+	Publications        int    `json:"publications"`
+	V1Publications      int    `json:"v1_publications"`
+	V2Publications      int    `json:"v2_publications"`
+	Files               int    `json:"files"`
+	Bytes               int64  `json:"bytes"`
+	Omitted             int    `json:"omitted"`
+	OmittedPublications int    `json:"omitted_publications"`
+	OmittedArtifacts    int    `json:"omitted_artifacts"`
+	StaleMarkers        int    `json:"stale_markers"`
 }
 
 type RelationshipArchiveReport struct {
@@ -363,8 +368,10 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	}
 	if observationReport.Omitted > 0 {
 		log.Printf(
-			"backup observation derived state: archived=%d omitted=%d",
-			observationReport.Publications, observationReport.Omitted,
+			"backup observation derived state: archived=%d v1=%d v2=%d omitted_publications=%d omitted_artifacts=%d stale_markers=%d",
+			observationReport.Publications, observationReport.V1Publications,
+			observationReport.V2Publications, observationReport.OmittedPublications,
+			observationReport.OmittedArtifacts, observationReport.StaleMarkers,
 		)
 	}
 	if err := os.Chmod(observationPath, 0o600); err != nil {
@@ -452,10 +459,15 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 			TruncatedDetails:    callerReport.TruncatedDetails,
 		},
 		Observation: ObservationArchiveReport{
-			Schema:       ObservationArchiveReportSchema,
-			Publications: observationReport.Publications,
-			Files:        observationReport.Files, Bytes: observationReport.Bytes,
-			Omitted: observationReport.Omitted,
+			Schema:         ObservationArchiveReportSchema,
+			Publications:   observationReport.Publications,
+			V1Publications: observationReport.V1Publications,
+			V2Publications: observationReport.V2Publications,
+			Files:          observationReport.Files, Bytes: observationReport.Bytes,
+			Omitted:             observationReport.Omitted,
+			OmittedPublications: observationReport.OmittedPublications,
+			OmittedArtifacts:    observationReport.OmittedArtifacts,
+			StaleMarkers:        observationReport.StaleMarkers,
 		},
 		Relationship: RelationshipArchiveReport{
 			Schema:       RelationshipArchiveReportSchema,
@@ -520,6 +532,15 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err := os.MkdirAll(target, 0o700); err != nil {
 		return Manifest{}, fmt.Errorf("create restore data directory: %w", err)
 	}
+	// Restore observations first through a sibling stage. Until its final
+	// rename, target remains empty, so an interrupted extraction is reachable
+	// and resumable through this same top-level workflow.
+	if err := observationpublication.RestoreArchiveWithStage(
+		ctx, filepath.Join(backup, ObservationPublicationName),
+		filepath.Join(target, "observations"), target+".observation-restore",
+	); err != nil {
+		return Manifest{}, fmt.Errorf("restore observation publications: %w", err)
+	}
 	runtime, stop, err := store.StartLocalImport(ctx, target)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("start restore database: %w", err)
@@ -561,12 +582,6 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		filepath.Join(target, "caller-leaves"),
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore caller publications: %w", err)
-	}
-	if err := observationpublication.RestoreArchive(
-		ctx, filepath.Join(backup, ObservationPublicationName),
-		filepath.Join(target, "observations"),
-	); err != nil {
-		return Manifest{}, fmt.Errorf("restore observation publications: %w", err)
 	}
 	if err := relationshippublication.RestoreArchive(
 		ctx, filepath.Join(backup, RelationshipPublicationName), target,
@@ -814,9 +829,13 @@ func VerifyContext(
 	if err != nil {
 		return Manifest{}, fmt.Errorf("verify observation-publication artifact: %w", err)
 	}
-	if observationArchiveReport.Publications != manifest.Observation.Publications {
+	if observationArchiveReport.Publications != manifest.Observation.Publications ||
+		observationArchiveReport.V1Publications != manifest.Observation.V1Publications ||
+		observationArchiveReport.V2Publications != manifest.Observation.V2Publications ||
+		observationArchiveReport.Files != manifest.Observation.Files ||
+		observationArchiveReport.Bytes != manifest.Observation.Bytes {
 		return Manifest{}, errors.New(
-			"backup observation-publication count differs from its manifest",
+			"backup observation-publication report differs from its manifest",
 		)
 	}
 	relationshipArchiveReport, err := relationshippublication.VerifyArchive(
@@ -922,8 +941,15 @@ func validateManifest(manifest Manifest) error {
 		}
 	}
 	if manifest.Observation.Schema != ObservationArchiveReportSchema ||
-		manifest.Observation.Publications < 0 || manifest.Observation.Files < 0 ||
-		manifest.Observation.Bytes < 0 || manifest.Observation.Omitted < 0 {
+		manifest.Observation.Publications < 0 ||
+		manifest.Observation.Publications != manifest.Observation.V1Publications+manifest.Observation.V2Publications ||
+		manifest.Observation.V1Publications < 0 || manifest.Observation.V2Publications < 0 ||
+		manifest.Observation.Files < 0 || manifest.Observation.Bytes < 0 ||
+		manifest.Observation.Omitted < 0 ||
+		manifest.Observation.Omitted != manifest.Observation.OmittedPublications+manifest.Observation.OmittedArtifacts ||
+		manifest.Observation.OmittedPublications < 0 || manifest.Observation.OmittedArtifacts < 0 ||
+		manifest.Observation.StaleMarkers < 0 ||
+		manifest.Observation.StaleMarkers > manifest.Observation.OmittedArtifacts {
 		return errors.New("backup observation archive report is invalid")
 	}
 	if manifest.Relationship.Schema != RelationshipArchiveReportSchema ||
