@@ -10,7 +10,7 @@ import {
   type ServiceRelationshipView,
 } from '../api'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
 const PAGE_SIZE = 50
@@ -619,9 +619,7 @@ function titleCase(value: string): string { return value ? value[0].toUpperCase(
 function boundedError(cause: unknown): string { const value = String(cause).replace(/^Error:\s*/, ''); return value.length <= 512 ? value : `${value.slice(0, 511)}…` }
 function shortIdentity(value: string): string { return value.length <= 28 ? value : `${value.slice(0, 17)}…${value.slice(-8)}` }
 
-function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) } }
-function focusRing(tok: PhebsTokens) { return { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' } }
-function inputStyle(tok: PhebsTokens) { return { width: '100%', height: '36px', boxSizing: 'border-box' as const, padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontFamily: 'inherit', fontSize: '11.5px', ':focus': { borderColor: tok.accent }, ':focus-visible': focusRing(tok) } }
+function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) } }function inputStyle(tok: PhebsTokens) { return { width: '100%', height: '36px', boxSizing: 'border-box' as const, padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontFamily: 'inherit', fontSize: '11.5px', ':focus': { borderColor: tok.accent }, ':focus-visible': focusRing(tok) } }
 function primaryButton(tok: PhebsTokens) { return { minHeight: '36px', padding: '0 13px', border: '0', borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) } }
 function resetLink(tok: PhebsTokens) { return { minHeight: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tok.selectedText, fontSize: '10.5px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
 function statusBox(tok: PhebsTokens) { return { minHeight: '90px', boxSizing: 'border-box' as const, display: 'flex', alignItems: 'center', padding: '20px', border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', color: tok.textTertiary, fontSize: '11.5px', lineHeight: '18px' } }

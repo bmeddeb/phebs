@@ -22,8 +22,9 @@ import {
   type WorkbenchImplementationPage,
 } from '../api'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
+import { StateNotice, StatusChip } from '../components/kit'
 import { href } from '../router'
-import { FONTS, toneFor, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
 import type { WorkbenchEvidenceInput } from './workbenchEvidenceState'
@@ -644,9 +645,9 @@ function ServiceImpactInventory({
             Exact affected services
           </h3>
         </span>
-        <EvidenceBadge tone={gaps > 0 ? 'amber' : 'neutral'}>
+        <StatusChip tone={gaps > 0 ? 'amber' : 'neutral'}>
           {rows.length} rows · {gaps} gaps
-        </EvidenceBadge>
+        </StatusChip>
       </div>
       <div
         aria-label="Service impact authority summary"
@@ -793,9 +794,9 @@ function ServiceImpactRow({
         <span className={css(rowDetailStyle(tok))}>{row.counterpart_services.length} accepted counterparts</span>
       </div>
       <div role="cell" className={css(serviceImpactCellStyle())}>
-        <EvidenceBadge tone={serviceRelationshipCandidate(row) ? 'amber' : 'blue'}>
+        <StatusChip tone={serviceRelationshipCandidate(row) ? 'amber' : 'blue'}>
           {serviceRelationshipState(row)}
-        </EvidenceBadge>
+        </StatusChip>
         <div className={css(rowDetailStyle(tok))}>
           root {shortDigest(root?.root_digest ?? '')}
         </div>
@@ -963,9 +964,9 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
             Source-first impact inventory
           </h3>
         </span>
-        <EvidenceBadge tone="neutral">
+        <StatusChip tone="neutral">
           {groupCount} evidence groups
-        </EvidenceBadge>
+        </StatusChip>
       </div>
       {page.scenario_emphasis.length > 0 && (
         <div className={css({
@@ -976,7 +977,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           borderBottom: `1px solid ${tok.innerSep}`,
         })}>
           {page.scenario_emphasis.map((value) => (
-            <EvidenceBadge key={value} tone="blue">{humanize(value)}</EvidenceBadge>
+            <StatusChip key={value} tone="blue">{humanize(value)}</StatusChip>
           ))}
         </div>
       )}
@@ -1118,12 +1119,12 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           ) : page.comparison.rows.map((row) => (
             <div key={row.key}>
               <div className={css(evidenceRowStyle(tok))}>
-                <EvidenceBadge tone={row.classification === 'unresolved'
+                <StatusChip tone={row.classification === 'unresolved'
                   ? 'amber'
                   : 'blue'}
                 >
                   {humanize(row.classification)}
-                </EvidenceBadge>
+                </StatusChip>
                 <div className={css({ minWidth: 0 })}>
                   <div className={css(rowTitleStyle(tok))}>{row.key}</div>
                   <div className={css(rowDetailStyle(tok))}>
@@ -1196,9 +1197,9 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           {page.field_references.rows.map((row) => (
             <div key={row.assertion.id}>
               <div className={css(evidenceRowStyle(tok))}>
-                <EvidenceBadge tone="blue">
+                <StatusChip tone="blue">
                   field {row.field.field_number}
-                </EvidenceBadge>
+                </StatusChip>
                 <div className={css({ minWidth: 0 })}>
                   <div className={css(rowTitleStyle(tok))}>
                     {row.field.message}
@@ -1256,9 +1257,9 @@ function ImplementationEvidence({
             Related implementation evidence
           </h3>
         </span>
-        <EvidenceBadge tone="neutral">
+        <StatusChip tone="neutral">
           {page.rows.length} / {page.pagination.total_rows}
-        </EvidenceBadge>
+        </StatusChip>
       </div>
       <CapabilityStrip
         capabilities={page.capabilities}
@@ -1296,14 +1297,14 @@ function ImplementationEvidence({
                 flexWrap: 'wrap',
                 marginBottom: '6px',
               })}>
-                <EvidenceBadge tone={row.review_state === 'selected'
+                <StatusChip tone={row.review_state === 'selected'
                   ? 'green'
                   : 'blue'}
                 >
                   {humanize(row.review_state)}
-                </EvidenceBadge>
-                <EvidenceBadge tone="neutral">{humanize(row.kind)}</EvidenceBadge>
-                <EvidenceBadge tone="neutral">{humanize(row.code_role)}</EvidenceBadge>
+                </StatusChip>
+                <StatusChip tone="neutral">{humanize(row.kind)}</StatusChip>
+                <StatusChip tone="neutral">{humanize(row.code_role)}</StatusChip>
               </div>
               <div className={css(rowTitleStyle(tok))}>
                 {row.symbol || row.selection_input || row.source.path}
@@ -1381,14 +1382,14 @@ function Checklist({
             Evidence-backed checklist
           </h3>
         </span>
-        <EvidenceBadge tone={
+        <StatusChip tone={
           page.evidence_snapshot.impact_truncated ||
           page.evidence_snapshot.implementation_truncated
             ? 'amber'
             : 'neutral'
         }>
           {page.entries.length} / {page.pagination.total_entries}
-        </EvidenceBadge>
+        </StatusChip>
       </div>
       {(page.evidence_snapshot.impact_truncated ||
         page.evidence_snapshot.implementation_truncated) && (
@@ -1513,15 +1514,15 @@ function ChecklistEntry({
           flexWrap: 'wrap',
           marginBottom: '7px',
         })}>
-          <EvidenceBadge tone={entry.evidence_state === 'stale' ? 'amber' : 'green'}>
+          <StatusChip tone={entry.evidence_state === 'stale' ? 'amber' : 'green'}>
             {entry.evidence_state} evidence
-          </EvidenceBadge>
-          <EvidenceBadge tone={entry.state === 'unaccepted' ? 'neutral' : 'blue'}>
+          </StatusChip>
+          <StatusChip tone={entry.state === 'unaccepted' ? 'neutral' : 'blue'}>
             {humanize(entry.state)}
-          </EvidenceBadge>
-          <EvidenceBadge tone="neutral">
+          </StatusChip>
+          <StatusChip tone="neutral">
             {humanize(entry.suggestion.kind)}
-          </EvidenceBadge>
+          </StatusChip>
         </div>
         <h4 className={css({
           margin: 0,
@@ -1561,22 +1562,19 @@ function ChecklistEntry({
           </div>
         </details>
         {entry.disposition && (
-          <div className={css({
-            marginTop: '10px',
-            padding: '10px',
-            borderLeft: `3px solid ${tok.status.unavailable.solid}`,
-            backgroundColor: tok.bandBg,
-          })}>
-            <div className={css(rowTitleStyle(tok))}>
-              Human-recorded {entry.disposition.category} · sequence{' '}
-              {entry.disposition.sequence}
-            </div>
-            <div className={css(rowDetailStyle(tok))}>
+          <div className={css({ marginTop: '10px' })}>
+            <StateNotice
+              tone="blue"
+              title={<>
+                Human-recorded {entry.disposition.category} · sequence{' '}
+                {entry.disposition.sequence}
+              </>}
+            >
               {entry.disposition.actor}
               {entry.disposition.rationale
                 ? ` · ${entry.disposition.rationale}`
                 : ''}
-            </div>
+            </StateNotice>
           </div>
         )}
       </div>
@@ -1796,7 +1794,7 @@ function ResourcePlanes({
       {planes.map((plane) => (
         <div key={plane.id}>
           <div className={css(evidenceRowStyle(tok))}>
-            <EvidenceBadge tone={
+            <StatusChip tone={
               plane.state === 'enabled'
                 ? 'green'
                 : plane.state === 'failed' || plane.state === 'stale'
@@ -1804,7 +1802,7 @@ function ResourcePlanes({
                   : 'neutral'
             }>
               {humanize(plane.state)}
-            </EvidenceBadge>
+            </StatusChip>
             <div className={css({ minWidth: 0 })}>
               <div className={css(rowTitleStyle(tok))}>{plane.label}</div>
               <div className={css(rowDetailStyle(tok))}>
@@ -1818,9 +1816,9 @@ function ResourcePlanes({
               key={`${relationship.kind}:${relationship.subject}:${relationship.object}:${relationshipIndex}`}
             >
               <div className={css(evidenceRowStyle(tok))}>
-                <EvidenceBadge tone="blue">
+                <StatusChip tone="blue">
                   {humanize(relationship.classification)}
-                </EvidenceBadge>
+                </StatusChip>
                 <div className={css({ minWidth: 0 })}>
                   <div className={css(rowTitleStyle(tok))}>
                     {relationship.subject} → {relationship.object}
@@ -1870,20 +1868,20 @@ function CapabilityStrip({
       borderBottom: `1px solid ${tok.innerSep}`,
     })}>
       {capabilities.map((capability) => (
-        <EvidenceBadge
+        <StatusChip
           key={capability.id}
           tone={capability.state === 'available' ? 'green' : 'neutral'}
         >
           {capability.id}: {capability.state}
-        </EvidenceBadge>
+        </StatusChip>
       ))}
       {gaps.map((gap, index) => (
-        <EvidenceBadge
+        <StatusChip
           key={`${gap.capability}:${gap.code}:${index}`}
           tone="amber"
         >
           {gap.capability}: {gap.code}
-        </EvidenceBadge>
+        </StatusChip>
       ))}
     </div>
   )
@@ -1919,7 +1917,7 @@ function EvidenceGroup({
         })}>
           {title}
         </h4>
-        <EvidenceBadge tone="neutral">{state}</EvidenceBadge>
+        <StatusChip tone="neutral">{state}</StatusChip>
       </div>
       {children}
     </section>
@@ -2008,14 +2006,14 @@ function CallerEvidenceRow({
           flexWrap: 'wrap',
         })}>
           <span className={css(rowTitleStyle(tok))}>{label}</span>
-          <EvidenceBadge tone={
+          <StatusChip tone={
             row.unit.state === 'ambiguous' ? 'amber' : 'neutral'
           }>
             unit {row.unit.state}
-          </EvidenceBadge>
-          <EvidenceBadge tone={row.fresh ? 'green' : 'amber'}>
+          </StatusChip>
+          <StatusChip tone={row.fresh ? 'green' : 'amber'}>
             {row.fresh ? 'fresh' : 'stale'}
-          </EvidenceBadge>
+          </StatusChip>
         </div>
         <div className={css(rowDetailStyle(tok))}>
           {row.resolution} · {row.tier}
@@ -2347,36 +2345,6 @@ function EvidenceError({
         </Button>
       )}
     </div>
-  )
-}
-
-function EvidenceBadge({
-  tone,
-  children,
-}: {
-  tone: 'green' | 'amber' | 'blue' | 'neutral'
-  children: React.ReactNode
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const colors = toneFor(tone, tok)
-  return (
-    <span className={css({
-      display: 'inline-flex',
-      minHeight: '20px',
-      boxSizing: 'border-box',
-      alignItems: 'center',
-      padding: '1px 6px',
-      border: `1px solid ${colors.solid}`,
-      color: colors.text,
-      fontFamily: FONTS.MONO,
-      fontSize: '8px',
-      lineHeight: '13px',
-      letterSpacing: '0.03em',
-      textTransform: 'uppercase',
-    })}>
-      {children}
-    </span>
   )
 }
 

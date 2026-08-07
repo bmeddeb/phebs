@@ -24,8 +24,9 @@ import {
   OpenIcon,
 } from '../icons'
 import { href } from '../router'
-import { FONTS, toneFor, usePhebsTokens } from '../theme'
+import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import { StateNotice, StatusChip } from '../components/kit'
 import ContractDependencyMap from '../components/ContractDependencyMap'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
@@ -748,18 +749,20 @@ function OperationDetail({
         <EvidenceBlock title="Operation declaration" claim={operation.declaration} />
 
         {(operation.shape_truncated || operation.relationships_truncated) && (
-          <BoundNotice>
-            This detail crossed a server bound:
-            {' '}
-            {[
-              operation.shape_truncated ? 'message shape' : '',
-              operation.relationships_truncated
-                ? humanize(operation.relationship_limit_reason || 'relationship limit')
-                : '',
-            ].filter(Boolean).join(', ')}.
-            {' '}
-            Omitted rows are not evidence of absence.
-          </BoundNotice>
+          <div role="status">
+            <StateNotice tone="amber">
+              This detail crossed a server bound:
+              {' '}
+              {[
+                operation.shape_truncated ? 'message shape' : '',
+                operation.relationships_truncated
+                  ? humanize(operation.relationship_limit_reason || 'relationship limit')
+                  : '',
+              ].filter(Boolean).join(', ')}.
+              {' '}
+              Omitted rows are not evidence of absence.
+            </StateNotice>
+          </div>
         )}
 
         <section>
@@ -1157,47 +1160,6 @@ function Cell({ children, mono = false }: { children: React.ReactNode; mono?: bo
     })}>
       {children}
     </td>
-  )
-}
-
-function StatusChip({ children, tone }: { children: React.ReactNode; tone: 'green' | 'amber' | 'red' | 'blue' | 'neutral' }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const pair = toneFor(tone, tok)
-  return (
-    <span className={css({
-      display: 'inline-flex',
-      alignItems: 'center',
-      minHeight: '18px',
-      boxSizing: 'border-box',
-      padding: '1px 6px',
-      border: `1px solid ${pair.solid}`,
-      color: pair.text,
-      fontSize: '9px',
-      lineHeight: '13px',
-      fontWeight: 650,
-      letterSpacing: '0.02em',
-      whiteSpace: 'nowrap',
-    })}>
-      {children}
-    </span>
-  )
-}
-
-function BoundNotice({ children }: { children: React.ReactNode }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <div role="status" className={css({
-      padding: '9px 11px',
-      borderLeft: `3px solid ${tok.status.stale.solid}`,
-      backgroundColor: tok.bandBg,
-      color: tok.textSecondary,
-      fontSize: '11px',
-      lineHeight: '18px',
-    })}>
-      {children}
-    </div>
   )
 }
 

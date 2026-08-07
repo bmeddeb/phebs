@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
-import { Spinner } from 'baseui/spinner'
 import {
   fetchInvestigationView,
   fetchInvestigationViews,
@@ -10,6 +9,7 @@ import {
   type InvestigationViewDocument,
   type InvestigationViewSummary,
 } from '../api'
+import { LoadingBlock } from '../components/kit'
 import { ChevronDown, ChevronRight, WarningIcon } from '../icons'
 import { navigate } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
@@ -64,7 +64,7 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
     }
   }, [requestedID])
 
-  if (loading && !document) return <Spinner $size="small" />
+  if (loading && !document) return <LoadingBlock label="Loading investigation views…" />
   if (error) {
     return (
       <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>

@@ -10,7 +10,8 @@ import type {
   CoverageRun,
 } from '../api'
 import { SectionHelp } from './SectionHelp'
-import { FONTS, type PhebsTokens, toneFor, usePhebsTokens } from '../theme'
+import { StatusChip } from './kit'
+import { FONTS, type PhebsTokens, usePhebsTokens } from '../theme'
 
 const maximumMountedRepositories = 24
 const maximumMountedRows = 24
@@ -202,23 +203,23 @@ export function AnalysisScopePanel({
           '@media screen and (max-width: 680px)': { justifyContent: 'flex-start' },
         })}>
           {(relevantRepositories.length > 0 || hasCoverage) && (
-            <ScopeChip tone="neutral">
+            <StatusChip tone="neutral">
               {relevantRepositories.length} {relevantRepositories.length === 1 ? 'repository' : 'repositories'}
-            </ScopeChip>
+            </StatusChip>
           )}
-          {focusedCount > 0 && <ScopeChip tone="blue">{focusedCount} focused</ScopeChip>}
-          {staleCount > 0 && <ScopeChip tone="amber">{staleCount} stale</ScopeChip>}
-          {refusalCount > 0 && <ScopeChip tone="red">{refusalCount} refused</ScopeChip>}
-          {unavailableCount > 0 && <ScopeChip tone="amber">{unavailableCount} unavailable</ScopeChip>}
-          {retryableCount > 0 && <ScopeChip tone="amber">{retryableCount} retrying</ScopeChip>}
+          {focusedCount > 0 && <StatusChip tone="blue">{focusedCount} focused</StatusChip>}
+          {staleCount > 0 && <StatusChip tone="amber">{staleCount} stale</StatusChip>}
+          {refusalCount > 0 && <StatusChip tone="red">{refusalCount} refused</StatusChip>}
+          {unavailableCount > 0 && <StatusChip tone="amber">{unavailableCount} unavailable</StatusChip>}
+          {retryableCount > 0 && <StatusChip tone="amber">{retryableCount} retrying</StatusChip>}
           {failedReplacementCount > 0 && (
-            <ScopeChip tone="red">
+            <StatusChip tone="red">
               {failedReplacementCount} failed replacement
               {failedReplacementCount === 1 ? '' : 's'}
-            </ScopeChip>
+            </StatusChip>
           )}
-          {typedGapCount > 0 && <ScopeChip tone="amber">{typedGapCount} typed-index gaps</ScopeChip>}
-          {gaps.length > 0 && <ScopeChip tone="amber">{gaps.length} explicit gaps</ScopeChip>}
+          {typedGapCount > 0 && <StatusChip tone="amber">{typedGapCount} typed-index gaps</StatusChip>}
+          {gaps.length > 0 && <StatusChip tone="amber">{gaps.length} explicit gaps</StatusChip>}
         </div>
       </header>
 
@@ -345,11 +346,11 @@ export function AnalysisScopePanel({
                       flexWrap: 'wrap',
                       '@media screen and (max-width: 620px)': { justifyContent: 'flex-start' },
                     })}>
-                      <ScopeChip tone={candidate.posture === 'focused' ? 'blue' : 'neutral'}>
+                      <StatusChip tone={candidate.posture === 'focused' ? 'blue' : 'neutral'}>
                         {candidate.posture}
-                      </ScopeChip>
+                      </StatusChip>
                       {candidate.runs.some((run) => !run.fresh) && (
-                        <ScopeChip tone="amber">stale or unpublished</ScopeChip>
+                        <StatusChip tone="amber">stale or unpublished</StatusChip>
                       )}
                       <span aria-hidden="true" className={css({ color: tok.gutter })}>
                         {expanded ? '▾' : '▸'}
@@ -539,13 +540,13 @@ function RepositoryDetail({
               </div>
             )}
             <div className={css({ marginTop: '9px' })}>
-              <ScopeChip tone={
+              <StatusChip tone={
                 repository.unit.typedIndexPosture === 'unit-bound'
                   ? 'green'
                   : 'amber'
               }>
                 typed index {humanize(repository.unit.typedIndexPosture)}
-              </ScopeChip>
+              </StatusChip>
               {repository.unit.typedIndexPath && (
                 <div className={css({
                   marginTop: '4px',
@@ -664,14 +665,14 @@ function DomainStatus({ run }: { run: CoverageRun }) {
           fontSize: '10px',
           fontWeight: 650,
         })}>{run.domain}</span>
-        <ScopeChip tone={domainTone(disposition, run)}>{humanize(label)}</ScopeChip>
+        <StatusChip tone={domainTone(disposition, run)}>{humanize(label)}</StatusChip>
         {run.evidence_scope_posture && (
-          <ScopeChip tone={run.evidence_scope_posture === 'focused-local' ? 'blue' : 'neutral'}>
+          <StatusChip tone={run.evidence_scope_posture === 'focused-local' ? 'blue' : 'neutral'}>
             {run.evidence_scope_posture}
-          </ScopeChip>
+          </StatusChip>
         )}
         {run.outcome?.candidate_control_failure && (
-          <ScopeChip tone="red">candidate control refusal</ScopeChip>
+          <StatusChip tone="red">candidate control refusal</StatusChip>
         )}
       </div>
       {reason && <div className={css({
@@ -800,15 +801,15 @@ function CallerPlane({ generation }: { generation: CallerMapGeneration }) {
     })}>
       <div className={css({ minWidth: 0 })}>
         <div className={css({ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' })}>
-          <ScopeChip tone={generation.state === 'current' ? 'green' : 'amber'}>
+          <StatusChip tone={generation.state === 'current' ? 'green' : 'amber'}>
             {generation.state}
-          </ScopeChip>
+          </StatusChip>
           <span className={css({ color: tok.textPrimary, fontSize: '11px', fontWeight: 650 })}>
             Repository-overlay callers
           </span>
-          {progress && <ScopeChip tone={progress.state === 'complete' ? 'green' : 'amber'}>
+          {progress && <StatusChip tone={progress.state === 'complete' ? 'green' : 'amber'}>
             partitions {progress.state}
-          </ScopeChip>}
+          </StatusChip>}
         </div>
         {generation.reason && <div className={css({
           marginTop: '4px',
@@ -876,7 +877,7 @@ function StatusRow({ row }: { row: AnalysisScopeStatusRow }) {
         <span className={css({ color: tok.textPrimary, fontSize: '10px', fontWeight: 650 })}>
           {row.label}
         </span>
-        <ScopeChip tone={statusTone(row.state)}>{humanize(row.state)}</ScopeChip>
+        <StatusChip tone={statusTone(row.state)}>{humanize(row.state)}</StatusChip>
       </div>
       {row.detail && <div className={css({
         marginTop: '3px',
@@ -914,7 +915,7 @@ function GapStatus({ gap }: { gap: AnalysisScopeGap }) {
             fontSize: '9px',
           })}>{gap.code}</code>
         )}
-        <ScopeChip tone={gapTone(gap.state)}>{humanize(gap.state)}</ScopeChip>
+        <StatusChip tone={gapTone(gap.state)}>{humanize(gap.state)}</StatusChip>
       </div>
       {gap.reason && <div className={css({
         marginTop: '3px',
@@ -952,30 +953,6 @@ function IdentityLine({ label, value }: { label: string; value?: string }) {
       overflowWrap: 'anywhere',
     })}>{label} {value}</div>
   )
-}
-
-function ScopeChip({
-  children,
-  tone,
-}: {
-  children: ReactNode
-  tone: 'green' | 'blue' | 'amber' | 'red' | 'neutral'
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const color = toneFor(tone, tok)
-  return <span data-tone={tone} className={css({
-    display: 'inline-flex',
-    alignItems: 'center',
-    minHeight: '18px',
-    padding: '1px 6px',
-    border: `1px solid ${color.solid}`,
-    color: color.text,
-    fontSize: '9px',
-    lineHeight: '14px',
-    fontWeight: 650,
-    whiteSpace: 'nowrap',
-  })}>{children}</span>
 }
 
 function domainTone(

@@ -6,6 +6,7 @@ import {
   type CallerMapCitation,
   type CallerMapSource,
 } from '../api'
+import { StatusChip } from '../components/kit'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
@@ -85,15 +86,7 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
             {loading ? 'Reading exact citation…' : citation ? 'Hide exact citation' : 'Read exact cited bytes'}
           </Button>
         ) : (
-          <span className={css({
-            display: 'inline-flex',
-            padding: '2px 6px',
-            border: `1px solid ${tok.status.stale.solid}`,
-            color: tok.status.stale.text,
-            fontSize: '9px',
-          })}>
-            exact citation unavailable
-          </span>
+          <StatusChip tone="amber">exact citation unavailable</StatusChip>
         )}
       </div>
       <div className={css({

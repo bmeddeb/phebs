@@ -13,9 +13,10 @@ import {
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
 import { href } from '../router'
-import { FONTS, toneFor, usePhebsTokens } from '../theme'
+import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
+import { StatusChip } from '../components/kit'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 const pageSize = 100
@@ -366,7 +367,7 @@ function EndpointHeader({
           fontSize: '11px',
           lineHeight: '17px',
         })}>
-          <Chip tone="blue">{endpoint.protocol}</Chip>
+          <StatusChip tone="blue">{endpoint.protocol}</StatusChip>
           <span>{endpoint.repository}</span>
           <span>· lineage {shortID(endpoint.declaration_lineage)}</span>
         </div>
@@ -642,9 +643,9 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
           display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
           color: tok.textPrimary, fontSize: '11px', fontWeight: 650,
         })}>
-          <Chip tone={exact ? 'green' : 'amber'}>
+          <StatusChip tone={exact ? 'green' : 'amber'}>
             {exact ? 'exact rows' : 'rows unavailable'}
-          </Chip>
+          </StatusChip>
           <span>
             {exact
               ? 'Exact repository-overlay generation'
@@ -939,15 +940,15 @@ function CallerRow({
           flexWrap: 'wrap',
           marginTop: '7px',
         })}>
-          <Chip tone={isUnresolved(row) ? 'amber' : 'green'}>
+          <StatusChip tone={isUnresolved(row) ? 'amber' : 'green'}>
             {humanize(row.classification)}
-          </Chip>
-          <Chip tone="blue">{row.resolution}</Chip>
-          <Chip>{row.tier}</Chip>
-          {row.code_role && <Chip>{row.code_role}</Chip>}
-          <Chip tone={row.fresh ? 'green' : 'amber'}>
+          </StatusChip>
+          <StatusChip tone="blue">{row.resolution}</StatusChip>
+          <StatusChip tone="neutral">{row.tier}</StatusChip>
+          {row.code_role && <StatusChip tone="neutral">{row.code_role}</StatusChip>}
+          <StatusChip tone={row.fresh ? 'green' : 'amber'}>
             {row.fresh ? 'fresh' : 'stale'}
-          </Chip>
+          </StatusChip>
         </div>
         {row.unresolved_reason && (
           <div className={css({
@@ -1001,7 +1002,7 @@ function CallerRow({
           <span className={css({ color: tok.textSecondary, fontSize: '11px', fontWeight: 650 })}>
             Unit attribution
           </span>
-          <Chip tone={unitTone(row.unit.state)}>{humanize(row.unit.state)}</Chip>
+          <StatusChip tone={unitTone(row.unit.state)}>{humanize(row.unit.state)}</StatusChip>
         </div>
         <div className={css({
           marginTop: '5px',
@@ -1188,41 +1189,6 @@ function unitTone(state: string): 'green' | 'amber' | 'neutral' {
   if (state === 'resolved') return 'green'
   if (state === 'ambiguous') return 'amber'
   return 'neutral'
-}
-
-function Chip({
-  children,
-  tone = 'neutral',
-}: {
-  children: React.ReactNode
-  tone?: 'green' | 'blue' | 'amber' | 'red' | 'neutral'
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const colors = {
-    green: toneFor('green', tok),
-    blue: toneFor('blue', tok),
-    amber: toneFor('amber', tok),
-    red: toneFor('red', tok),
-    neutral: toneFor('neutral', tok),
-  }
-  return (
-    <span className={css({
-      display: 'inline-flex',
-      alignItems: 'center',
-      minHeight: '18px',
-      padding: '0 6px',
-      border: `1px solid ${colors[tone].solid}`,
-      color: colors[tone].text,
-      backgroundColor: tok.pageBg,
-      fontSize: '9px',
-      lineHeight: '14px',
-      fontWeight: 650,
-      whiteSpace: 'nowrap',
-    })}>
-      {children}
-    </span>
-  )
 }
 
 function filterLabelStyle(color: string) {

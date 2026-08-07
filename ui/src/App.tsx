@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
-import { Spinner } from 'baseui/spinner'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { FOCUS_SEARCH, useHashRoute } from './router'
 import { FONTS, useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
+import { LoadingBlock } from './components/kit'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -93,7 +93,7 @@ export default function App() {
   // Capability-gated prefixes never fall through to Search: absent capability
   // renders a terminal boundary page under the original URL.
   const gate = (available: boolean, label: string, render: () => ReactNode) =>
-    !capabilitiesLoaded ? <Spinner $size="small" /> : available ? render() : <CapabilityUnavailablePage label={label} path={path} />
+    !capabilitiesLoaded ? <LoadingBlock label="Checking instance capabilities…" /> : available ? render() : <CapabilityUnavailablePage label={label} path={path} />
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
@@ -142,7 +142,7 @@ export default function App() {
             {authError}
           </Notification>
         )}
-        <Suspense fallback={<Spinner $size="small" />}>{page}</Suspense>
+        <Suspense fallback={<LoadingBlock label="Loading page…" />}>{page}</Suspense>
       </main>
     </div>
   )
