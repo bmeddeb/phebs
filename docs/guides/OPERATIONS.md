@@ -2983,6 +2983,37 @@ resolver/current-root controls, with at most one existing relationship-schedule
 enqueue. No observation member or source blob is read on that callback path.
 Those are refusal bounds, not a supported-scale or latency claim.
 
+T40.4 adds a non-authoritative hierarchical observation stage for the next
+migration step. Its small v2 root binds the exact source-partition super-root
+and at most sixteen independently validated observation segments. Each segment
+retains the existing canonical member, record, unsupported-reason, and
+content-addressed observation formats and admits at most 250,000 records; the
+root therefore admits at most 4,000,000 records while retaining the existing
+20-GiB aggregate encoded-member and segment-charged observation-byte ceilings.
+Object counts and bytes are charged per segment: identical objects hard-linked
+into two segments remain two logical charges and are never mislabeled globally
+unique.
+
+Cold construction requires a completely validated source super-root, reads
+each non-reused source member once, writes the root last, and performs a final
+complete self-validation. A restart revalidates complete segments, reuses them,
+and rebuilds only missing or invalid segments. A completely validated prior v2
+stage may supply exact hard-linked member and observation bytes; the builder
+reports read, parsed, reused-member, reused-observation, linked-byte, and
+written-byte counters. One keyed lookup binary-selects a root prefix range and
+opens one segment control, one bounded member, and at most one object. Complete
+validation holds at most one segment's 250,000-name object inventory rather
+than a generation-wide 4,000,000-name map. An exact-root cache performs the
+cold validation once; subsequent leases perform no filesystem reread and pin
+only that exact stage digest.
+
+These v2 bytes are not current production authority. No worker, pointer,
+startup recovery, backup/archive path, lifecycle collector, or product reader
+selects them in T40.4. T40.6 owns those mutations after their recovery and
+retention gates can understand both v1 and v2. The 4,000,000-record envelope is
+a source-free admission bound selected from the frozen 262,144-blob semantic
+profile, not a supported-scale, latency, or release claim.
+
 ### Shared source-observation progress and neutral demo
 
 Whole-repository indexing publishes one immutable Go source-observation

@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.2 are complete and T40.3 is next,
+explicit scale-convergence program: T40.1–T40.3 are complete and T40.4 is in progress,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.2 complete 2026-08-06 · T40.3 in progress 2026-08-07)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.3 complete · T40.4 in progress 2026-08-07)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -96,38 +96,11 @@ nonpublishing extraction work.
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
 
-**T40.3 · Source-partition super-root and aggregate policy v2** *(in progress
-2026-08-07: the v2 super-root contract, single-pass builder, keyed/complete
-validation, refusal dimension, and the lease-fenced superseded-plan collector
-are implemented and race-tested on `codex/t40.3-superroot-aggregate-policy-v2`;
-runtime adoption of the super-root for production planning is deliberately
-sequenced with the T40.4 observation-inventory consumer)* — retain the
-shipped v1 manifest, ordered members, 4,096-blob/placement partition bounds,
-64-MiB per-partition declared-byte bound, content-addressed coalescing, and
-immutable Git reader defenses. Evolve only the actual blocker: the single
-independent 4-GiB generation declared-byte and encoded-member bounds plus
-complete-generation planning/publication ownership. T40.3 must use T40.1's
-frozen profiles to select a measured v2 super-root over independently bounded
-v1-compatible segments. AC: the small root binds ordered nonoverlapping
-segment ranges, every segment/member digest and byte kind, aggregate unique
-blobs/placements/declared/encoded bytes, policy, and source generation; no
-corpus-sized path/blob map; every aggregate and segment limit is pre-growth;
-one keyed partition open reads root, one segment control, and one existing
-member; complete publication streams segments once and rejects gaps, overlaps,
-extras, symlinks, reordered keys, cross-generation members, and digest/byte
-mismatch before authority changes; cold planning consumes one identity-stable
-streamed repository-source pass rather than validate-then-reread, keeps staged
-output invisible until the final root re-fence, and never yields a corrupt
-prefix; before v2 admits larger aggregate bytes, a bounded schedule/lease-fenced
-collector removes superseded plan directories and bindings without touching
-active execution or a current publication marker; unchanged member bytes are
-physically hard-linked from a completely validated prior super-root across
-small deltas and A→B→A, with explicit reuse/write counters; v1 stays
-strict-readable; cancellation
-kills/reaps Git children; exact maximum-shape, tamper, race, and cost tests;
-full merge bar.
-
-**T40.4 · Hierarchical observation inventory and bounded validation v2** —
+**T40.4 · Hierarchical observation inventory and bounded validation v2** *(in progress
+2026-08-07 on `codex/t40.4-hierarchical-observation-inventory-v2`; the
+non-authoritative v2 root/segment contract, builder, sparse/full readers,
+cache/leases, restart and prior-member reuse are implemented; runtime pointer,
+recovery, lifecycle, and archive adoption remain with T40.6)* —
 retain the shipped v1 partition members and content-addressed observation
 objects, but remove the 250,000-record generation ceiling and generation-wide
 object maps/full inventory passes as the scaling mechanism. T40.4 must use
@@ -595,8 +568,8 @@ deliberate as a result.
   mapping, fail-closed rendering, state completeness, deep-link discipline,
   dual-viewport QA, keyboard completeness, accessibility pass, screenshot
   receipts, and charter review with recorded findings.
-- The scale program keeps precedence: T40.1–T40.2 are complete and T40.3 is the
-  next scale ticket,
+- The scale program keeps precedence: T40.1–T40.3 are complete and T40.4 is the
+  active scale ticket,
   Epics 40–42 sequencing is unchanged, and this epic may not modify a scale
   plane. T41.7's v3 parity later builds on this epic's shared kit.
 - Screenshot receipts are environment-bound engineering records; walkthrough

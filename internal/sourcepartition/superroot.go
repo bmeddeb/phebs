@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -242,6 +243,7 @@ func checkSegmentBinding(root SuperRoot, entry SegmentEntry, manifest Manifest) 
 type SuperPlan struct {
 	directory string
 	root      SuperRoot
+	complete  bool
 }
 
 func (plan *SuperPlan) Root() SuperRoot {
@@ -274,7 +276,40 @@ func OpenSuperRoot(ctx context.Context, directory string, expected SuperRoot) (*
 	if err := ValidateSuperRootStage(ctx, directory, expected); err != nil {
 		return nil, err
 	}
-	return &SuperPlan{directory: directory, root: cloneSuperRoot(expected)}, nil
+	return &SuperPlan{directory: directory, root: cloneSuperRoot(expected), complete: true}, nil
+}
+
+// Complete reports whether every segment and member was validated when this
+// handle opened. Consumers that build new authority must reject keyed-only
+// handles and may then read individual source members without revalidating the
+// complete source generation on every partition.
+func (plan *SuperPlan) Complete() bool { return plan != nil && plan.complete }
+
+// SegmentManifest returns one root-bound v1 segment control. It reads no
+// member bytes and preserves the keyed-open cost boundary.
+func (plan *SuperPlan) SegmentManifest(segment int) (Manifest, error) {
+	opened, err := plan.openSegment(segment)
+	if err != nil {
+		return Manifest{}, err
+	}
+	return opened.Manifest(), nil
+}
+
+// Segment opens one root-bound v1 segment control once so a sequential
+// consumer can read several members without reopening that control per member.
+// The returned Plan retains the ordinary one-member validation boundary.
+func (plan *SuperPlan) Segment(segment int) (*Plan, error) {
+	return plan.openSegment(segment)
+}
+
+// ObjectPrefix returns the frozen source-partition hash prefix used to locate
+// one object in a hierarchical consumer without opening sibling segments.
+func ObjectPrefix(objectID string, bits int) (string, error) {
+	if !gitobj.IsObjectID(objectID) || bits < InitialPrefixBits || bits > sha256.Size*8 {
+		return "", invalidf("object prefix input is invalid")
+	}
+	hash := sourceBlobHash(objectID)
+	return bitPrefix(hash[:], bits), nil
 }
 
 // openSegment reads exactly one segment control and binds it to the root.
