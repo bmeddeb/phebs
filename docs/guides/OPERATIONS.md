@@ -2836,6 +2836,129 @@ mechanics receipt, not a supported-scale, SLO, completeness, or release claim.
 The ordinary `make dev` cohort runs the default-on controller and exposes the
 same Settings view without manufacturing old rows or bypassing root checks.
 
+### Independent source-observation planning ownership
+
+Whole-repository indexing commits the immutable repository source and search
+controls before it invokes derived-pipeline callbacks. The selected
+service-catalog, service-state, and service-search reconciliation remains first
+at that callback seam. Go source-partition planning follows as an independently
+owned `go-source-observation-plan` schedule. Once that one-item schedule is
+durably enqueued, a later planning refusal cannot roll back, relabel, or rebuild
+the already-current search generation. If enqueue itself fails before durable
+ownership exists, the indexing callback remains retryable; the committed search
+authority is still current, and a duplicate callback coalesces against any
+ownership established by the earlier attempt.
+
+Planning diagnostics expose only the following closed disposition, never a
+repository, path, object ID, digest, child output, or raw error:
+
+| Disposition | Operational meaning |
+| --- | --- |
+| `current` | The current observation publication already binds the committed source generation. |
+| `active` | The exact planning target already has durable planning or compatible v1 execution ownership. |
+| `failed` | The exact planning target settled with a closed terminal refusal or exhausted its bounded retries; no automatic same-generation census is created. |
+| `enqueued` | A new one-item, generation-scoped planning schedule was durably committed. |
+
+After an index callback, the process emits only
+`observation planning: disposition=<value>`. Startup lists repository controls,
+skips deleting, unindexed, and focused-analysis-unit repositories, and repeats
+the same bounded enqueue check for each eligible whole repository. This repairs
+a crash after source/search commit but before enqueue without opening source
+members or Git objects. Startup emits only aggregate `current`, `active`,
+`failed`, `enqueued`, and `unavailable` counts; `unavailable` means that the
+bounded ownership check failed, without retaining or rendering its repository
+or error. A nonzero `unavailable` count is the sole source-free startup signal
+that those repositories require attention. Correct the underlying store/control
+availability and restart or let the ordinary index callback retry; do not delete
+a settled schedule or current publication.
+
+The planning worker owns the expensive source-generation census through the
+durable scheduler before it begins. It streams the existing bounded source
+generation and writes the existing content-addressed source-partition v1 plan;
+it does not start another zoekt child. The long census runs without the
+repository mirror lock. For an A→B→A return, the worker fully validates and
+pins the historical observation generation against lifecycle collection before
+acquiring transition locks. A short final transition acquires the exclusive
+index/lifecycle mutation fence and briefly probes the repository mirror lock.
+If the mirror is busy, planning releases the exclusive fence and retries; this
+cannot form a lock cycle with either index publication's repository-then-shared
+order or lifecycle's shared-then-repository order. After both locks are held,
+the worker renews the exact chunk lease, confirms the historical manifest
+control when applicable, and rechecks both the exact committed source
+generation and still-active planning schedule before it may stage observation
+execution. A newer commit therefore supersedes stale work, and a stale worker
+can neither change the prior complete observation pointer nor contribute a
+failure to the newer schedule.
+
+Cancellation releases the planning chunk for later work without consuming an
+attempt. Heartbeat or lease loss cancels the handler and grants it no terminal
+store write. Reaping binds release to the exact stale heartbeat selected, so a
+later successful renewal wins rather than being revoked by old evidence; that
+reaper fence and the final exact-lease renewal decide subsequent ownership.
+Transient owned failures retain the scheduler's bounded retry behavior. A
+closed `limit` or `invalid` pipeline refusal instead settles the exact chunk
+terminally, creates no retry successor, and remains visible as `failed`; a
+same-source callback returns that disposition rather than repeating the tree
+census. Exhausting the bounded transient attempts has the same settled
+same-source posture. A genuinely newer source generation receives its own
+target. If A returns after A→B→A, the recovery schedule identity also binds
+the prior schedule digest, so the re-current A work is distinguishable from
+its settled pre-B history.
+
+This ownership split changes no observation execution bytes. Existing
+`phebs-source-partition-manifest-v1` plans and current
+`go-source-observation` schedules remain strict-readable and continue through
+the existing CPU handler. The new IO planning handler only produces or reuses
+that v1 input and then hands work to the same execution/publication path. The
+long census writes a unique hidden plan stage. Cancellation or a stale final
+fence removes only that worker's stage; after the exact fence, the durable
+publication marker precedes an atomic same-parent move into the
+content-addressed plan path. A stale creator therefore cannot delete a
+replacement worker's adopted plan. An interrupted observation stage moves into
+the existing bounded lifecycle `collecting-` namespace; if its marker names
+current authority, only the marker is cleared and the current generation stays
+in place. Before that move, a process-local build fence blocks new v1 handlers
+for the exact stage and waits, without the mirror or mutation lock, for every
+already-admitted handler to return. Every v1 handler registers before opening
+the canonical stage, so an admitted writer drains before rename and a later
+writer cannot create a member beneath the absent canonical parent. The
+lifecycle owner accepts multiple
+bounded `collecting-` generations; closed ordinal suffixes distinguish repeated
+pre-publication incarnations of one content generation. Because the rename has
+already removed those paths from authority, lifecycle can drain them
+deterministically from a newer marker even before the repository has its first
+`current.json`, while existing reader pins still outrank deletion. Ordinary plus
+collecting generations remain capped at 64. If neither pointer nor marker can
+recover the repository identity, lifecycle counts the bounded collecting
+inventory as inspected but retains it without advertising perpetual pending
+work; a later marker restores pin-safe cleanup authority. A crash-shaped extra
+collecting incarnation is drained before an ordinary-only over-limit state is
+refused. Once v1 execution owns a plan, the existing settled-only cleanup
+posture remains; T40.3 owns bounded schedule/lease-fenced collection before v2
+can admit larger aggregate plan bytes.
+
+That writer fence adds two short process-local mutex operations to every v1
+CPU-handler turn (registration and release), holds no mutex across the work,
+and adds no per-chunk store or source-control read. Stale-stage quiescence polls
+only the process-local admitted-handler count while existing writers drain.
+
+The steady-state planning-ownership path reads bounded controls only: the
+at-most-8-MiB source root, at-most-8-MiB observation pointer/manifest and
+planning binding controls as applicable, plus generation-schedule point state.
+It performs no source-member scan, Git tree census, Git-object read, parser
+work, or child process. Startup adds one repository listing and that same
+per-eligible-repository control envelope, retaining counters rather than raw
+errors. Actual planning is one IO-class chunk with one repository token, at
+most five attempts, process concurrency one, and a declared 256-MiB memory / 8
+descriptor budget. Its source-partition v1 work remains capped at 16,384
+members, 4,096 blobs and placements per member, 64 MiB per member, 4 GiB each
+of declared unique-blob and encoded-member bytes, and 8 GiB of temporary spool
+bytes. A current publication also invokes the unchanged resolver-enabled
+relationship reconciliation seam: bounded catalog/service-state pages and
+resolver/current-root controls, with at most one existing relationship-schedule
+enqueue. No observation member or source blob is read on that callback path.
+Those are refusal bounds, not a supported-scale or latency claim.
+
 ### Shared source-observation progress and neutral demo
 
 Whole-repository indexing publishes one immutable Go source-observation
@@ -2877,11 +3000,13 @@ schedule and source-generation checks before currenting.
 
 Warm current progress acquires the shared validated cache and performs two
 repository point reads, two source-control reads, three pointer reads, two
-marker reads, two schedule point reads, bounded encoding, and short cache
+marker reads, four schedule point reads (initial and final checks for both
+planning and execution), bounded encoding, and short cache
 bookkeeping. It opens no Git child, reads no source/member/observation bytes,
 parses nothing, and takes neither the lifecycle mutation lock nor the
 publication transition mutex. Cold cache fill performs one complete T36.3
-validation pass. A building or failed read additionally opens only the bounded
+validation pass. A planning-owned read additionally opens one bounded planning
+binding; a v1 building or failed read additionally opens only the bounded
 partition-plan manifest. A current reconcile performs one strict schedule point
 read and removes the bounded derived plan and binding controls only after that
 schedule is durably settled. Search, extraction, scheduler polling, backup, and

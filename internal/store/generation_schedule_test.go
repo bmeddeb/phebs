@@ -212,6 +212,103 @@ func TestGenerationScheduleReleaseAndAttemptExhaustionPreserveSiblings(t *testin
 	}
 }
 
+func TestFailGenerationChunkFencesImmediateTerminalSettlement(t *testing.T) {
+	tests := []struct {
+		name            string
+		mode            string
+		wantErr         error
+		wantChunkStatus GenerationChunkStatus
+		wantStatus      GenerationScheduleStatus
+		wantFailed      int
+		wantRunning     int
+	}{
+		{
+			name: "current lease settles without retry", mode: "current",
+			wantChunkStatus: GenerationChunkFailed,
+			wantStatus:      GenerationScheduleSettled, wantFailed: 1,
+		},
+		{
+			name: "superseded generation cancels without contribution", mode: "stale",
+			wantErr: ErrGenerationStale, wantChunkStatus: GenerationChunkCanceled,
+			wantStatus: GenerationScheduleActive,
+		},
+		{
+			name: "lost lease cannot mutate", mode: "lease-lost",
+			wantErr: ErrGenerationLeaseLost, wantChunkStatus: GenerationChunkRunning,
+			wantStatus: GenerationScheduleActive, wantRunning: 1,
+		},
+	}
+	for index, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state := newRunnerStore(t)
+			spec := generationSpec(
+				fmt.Sprintf("example.invalid/terminal-%d", index),
+				"sha256:"+fmt.Sprintf("%064d", index+100),
+			)
+			spec.TotalItems = 1
+			spec.ChunkItems = 1
+			if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := state.ExpandGenerationSchedule(
+				t.Context(), spec.Repository, spec.Stage, spec.Generation,
+			); err != nil {
+				t.Fatal(err)
+			}
+			chunk, err := state.ClaimGenerationChunk(
+				t.Context(), spec.ResourceClass, "terminal-worker",
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			originalLease := chunk.LeaseToken
+			currentSpec := spec
+			switch test.mode {
+			case "current":
+			case "stale":
+				currentSpec.Generation = "sha256:" + fmt.Sprintf("%064d", index+200)
+				if _, err := state.EnqueueGenerationSchedule(t.Context(), currentSpec); err != nil {
+					t.Fatal(err)
+				}
+			case "lease-lost":
+				chunk.LeaseToken = "wrong-lease"
+			default:
+				t.Fatalf("unknown test mode %q", test.mode)
+			}
+
+			err = state.FailGenerationChunk(t.Context(), *chunk, "terminal refusal")
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("FailGenerationChunk error = %v, want %v", err, test.wantErr)
+			}
+			stored, err := state.generationChunkByIdentity(t.Context(), chunk.Identity)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stored.Status != test.wantChunkStatus {
+				t.Fatalf("chunk status = %q, want %q", stored.Status, test.wantChunkStatus)
+			}
+			if test.mode == "lease-lost" {
+				if stored.Error != "" || stored.FinishedAt != nil || stored.LeaseToken != originalLease {
+					t.Fatalf("lost lease mutated chunk: %+v", stored)
+				}
+			} else if stored.Error != "terminal refusal" || stored.FinishedAt == nil ||
+				stored.LeaseToken != "" {
+				t.Fatalf("terminal chunk settlement = %+v", stored)
+			}
+			current, err := state.GetGenerationSchedule(
+				t.Context(), currentSpec.Repository, currentSpec.Stage,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if current.Generation != currentSpec.Generation || current.Status != test.wantStatus ||
+				current.Failed != test.wantFailed || current.Running != test.wantRunning {
+				t.Fatalf("current schedule = %+v", current)
+			}
+		})
+	}
+}
+
 func TestGenerationScheduleRepositoryFairnessAndStaleLeaseRecovery(t *testing.T) {
 	store := newRunnerStore(t)
 	for index, repository := range []string{"example.invalid/a", "example.invalid/b"} {
@@ -240,6 +337,28 @@ func TestGenerationScheduleRepositoryFairnessAndStaleLeaseRecovery(t *testing.T)
 	}
 	if err := store.HeartbeatGenerationChunk(t.Context(), *second); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](t.Context(), store.db,
+		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*second), "old": time.Now().UTC().Add(-time.Hour),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := store.generationChunkByIdentity(t.Context(), second.Identity)
+	if err != nil || selected.HeartbeatAt == nil {
+		t.Fatalf("selected stale candidate = %+v, %v", selected, err)
+	}
+	if err := store.HeartbeatGenerationChunk(t.Context(), *second); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.releaseStaleGenerationChunk(
+		t.Context(), *selected, time.Now().UTC().Add(-time.Minute),
+	); !errors.Is(err, ErrGenerationLeaseLost) {
+		t.Fatalf("reaper revoked a lease renewed after selection: %v", err)
+	}
+	if running, err := store.generationChunkByIdentity(t.Context(), second.Identity); err != nil ||
+		running.Status != GenerationChunkRunning || running.LeaseToken != second.LeaseToken {
+		t.Fatalf("renewed chunk after stale reaper = %+v, %v", running, err)
 	}
 	if _, err := surrealdb.Query[any](t.Context(), store.db,
 		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{

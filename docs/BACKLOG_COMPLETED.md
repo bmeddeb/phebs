@@ -8595,3 +8595,136 @@ release state and establishes no target SLO, supported scale,
 accuracy/completeness, commit-cadence freshness, migration completion,
 decommission safety, pilot continuation, or release. `GATE2-V2` remains
 `NOT_ESTABLISHED`, `DO_NOT_RELEASE` remains in force, and T40.2 is next.
+
+**T40.2 ✅ · Independent derived-plan job ownership**
+*(2026-08-06; needs T40.1)* — removes source-partition/observation planning
+from the indexing job's expensive synchronous success boundary. Whole-repo
+indexing still commits the exact source, search, shard, and repository state
+first. Its post-index chain still runs candidate ownership, then selected
+service-catalog/state/search reconciliation, then observation planning. The
+last step now performs only bounded control reads, writes one immutable
+planning binding, and durably enqueues one exact-generation
+`go-source-observation-plan` IO item. Focused repositories retain their exact
+bypass. An enqueue failure before store ownership remains retryable through
+the unchanged-index callback, which starts no source census or zoekt child;
+startup scans indexed whole repositories through the same bounded request seam
+and repairs the commit/enqueue crash window before workers start.
+
+Planning identity binds the repository, committed source-generation digest,
+and frozen source-partition policy. Duplicate callbacks coalesce on the
+current active row. A settled same-target failure remains failed and causes no
+new census. A different source supersedes the prior planning pointer, and an
+A→B→A return uses a target-plus-prior-schedule recovery identity rather than
+resurrecting a permanently stale schedule. Planning bindings are canonical,
+exclusive, identity-checked controls. Existing `go-source-observation` v1
+schedules and bindings remain strict-readable and retain their execution,
+recovery, partition, and publication behavior.
+
+The planning worker owns the prior full streamed census under one scheduler
+lease and the existing five-attempt bound. It performs capacity admission in
+the worker, holds no repository lock during the long plan, then takes the
+exclusive index/lifecycle mutation fence and briefly probes the process-local
+mirror lock. A busy mirror makes it release the exclusive fence and retry, so
+it cannot deadlock either the repository-then-shared index publication order or
+the shared-then-repository lifecycle order. Once both are held, it renews the
+exact chunk lease and performs the final current-planning-schedule and
+source-generation re-fence.
+An A→B→A reactivation fully validates and pins the historical publication
+before those locks, then confirms its manifest control inside the short
+transition; lifecycle collection cannot rename it across the pointer swap.
+Stale work cannot create an observation marker, enqueue a v1 successor,
+activate an already-complete stale generation, or move the prior observation
+pointer. Cancellation and a stale pre-ownership fence remove newly created
+unique staging output; a publication marker is durable before the validated
+stage is atomically installed at its content-addressed path, so another worker
+can never adopt bytes that their stale creator later removes. Heartbeat lease
+loss cancels the handler and leaves settlement to the reaper; stale selection
+and release bind the exact observed heartbeat, and the final store transition
+remains lease- and generation-fenced.
+
+Stale observation-stage retirement is also writer-fenced. Every v1 CPU handler
+registers before opening its canonical stage. Planning blocks new handlers for
+the exact stale generation, waits for already-admitted handlers to return
+without holding the mirror or mutation lock, and only then moves the stage out
+of the canonical namespace; a later handler cannot create a member beneath the
+now-absent canonical parent. A
+current marker left by a crash is cleared without moving current authority.
+Multiple pre-first-publication stale stages use the existing bounded
+`collecting-` namespace. Closed ordinal suffixes distinguish repeated
+incarnations of the same content generation, while lifecycle treats every
+renamed path as retired and drains it deterministically using the newer
+marker's repository authority even while `current.json` is absent. Existing
+reader pins still outrank deletion. The combined ordinary-plus-collecting
+generation ceiling remains 64. If both pointer and marker are absent, the
+bounded collecting inventory is counted as inspected and retained without
+advertising perpetual pending work; a later marker restores cleanup authority.
+If a crash-shaped extra collecting incarnation crosses the combined ceiling,
+lifecycle drains one repository-authorized, unpinned collecting path before
+refusing an ordinary-only overflow.
+
+Every v1 CPU-handler turn therefore adds two short process-local mutex
+operations for registration and release. No mutex remains held across source
+reads, parsing, member writes, or publication; no per-chunk store or source
+control read was added. Stale-stage quiescence polls only the process-local
+admitted-handler count until those already-running handlers drain.
+
+The generation scheduler now has an immediate `FailGenerationChunk`
+transition. A deterministic planning `limit` or `invalid` refusal stores only
+the closed durable T40.1 text, creates no retry successor, increments failure
+only for the exact current generation, and settles the one-item schedule.
+Unknown operational failures retain bounded retries. A superseded terminal
+worker can only cancel its old chunk and cannot contribute a failure to the
+new schedule. This extends the existing v1 schema rather than adding another
+job table, migration, backup surface, or lifecycle owner.
+
+Observation progress retains schema `phebs-observation-progress-v1` and the
+exact old JSON shape when no planning row exists. Its optional `planning`
+projection distinguishes active, settled, and failed ownership with bounded
+counts and exact generation controls; reads re-fence both planning and v1
+schedule rows. Startup and post-index diagnostics emit only closed
+dispositions or aggregate counts, never a repository/path/raw-error payload.
+The operations guide records that search may correctly be current while the
+derived plane is planning or failed and that a same-generation terminal
+refusal requires a changed generation or explicit future policy decision, not
+an implicit census retry.
+
+Steady-state cost is closed. Ordinary search, service, and workflow request
+paths and ordinary sync ticks are unchanged. An explicit observation-progress
+request adds two bounded planning-schedule point reads (initial plus final
+fence) and, when present, one small canonical binding read. A warm index
+callback reads the source root, observation pointer/manifest controls, and at
+most one planning and one v1 schedule point plus their small bindings; it reads
+no source member or Git object, hashes no
+corpus, and starts no child. In a resolver-enabled process, the callback then
+retains the pre-existing relationship reconciliation seam: it pages the
+bounded accepted service-state snapshot, reads catalog/resolver/current-root
+controls, and may enqueue one existing relationship schedule. Startup is
+O(indexed repositories) in those bounded controls plus that same existing
+current-publication callback work. Only a real planning transition streams the existing source
+generation and uses one IO worker with one repository token, 256 MiB declared
+process memory, and eight descriptors; the mirror lock and exclusive mutation
+fence cover only the final control re-fence/ownership transition. Observation
+CPU workers remain concurrency two with their prior budget. Planning and observation plan files remain rebuildable
+derived state excluded from precious backup authority. T40.2 removes a newly
+created unique plan stage when cancellation or a stale fence wins before
+publication-marker ownership. The marker precedes the atomic install of its
+content-addressed plan. An already execution-owned v1 plan retains the prior settled-only
+cleanup posture; T40.3 now explicitly owns bounded schedule/lease-fenced
+collection before v2 may admit larger aggregate plan bytes.
+
+Executable gates cover interrupted enqueue repair, duplicate control-only
+callbacks with source members and the mirror unavailable, terminal
+same-target no-reschedule, an exact A→B→A reactivation race with pre-lock
+pinning and the composed index-lock order, stale final-fence pointer preservation,
+exact-heartbeat reaper refusal, independent planning-stage cleanup, current-marker preservation,
+active-v1-writer quiescence, and A→B→A→C convergence before a first publication,
+legacy v1 publication and exact absent-planning wire bytes, callback ordering
+and independent joined failures, startup filtering/source-free accounting, immediate terminal
+settlement, stale/lease-loss races, and cancellation/reaper behavior. No
+production cap, source reader, search/observation/extraction semantics,
+service-catalog bytes or revisions, topology, or release state changes.
+T40.3 is next. No supported-scale, target-SLO,
+accuracy/completeness, freshness-under-commit-cadence, migration completion,
+decommission safety, pilot continuation, topology, or release claim is
+established. `GATE2-V2` remains `NOT_ESTABLISHED`; `DO_NOT_RELEASE` remains in
+force.

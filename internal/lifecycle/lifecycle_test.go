@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -182,6 +183,62 @@ type recordingOwner struct {
 	name  string
 	calls *[]string
 	fail  bool
+}
+
+type lifecycleObservationPins struct{}
+
+func (lifecycleObservationPins) Pinned(string, string) bool { return false }
+
+func TestObservationOwnerIdentitylessCollectionAdvancesWithoutPendingLoop(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "observations")
+	for _, digit := range []string{"1", "2"} {
+		repositoryRoot := filepath.Join(root, strings.Repeat(digit, 64))
+		if err := os.MkdirAll(filepath.Join(
+			repositoryRoot, "collecting-"+strings.Repeat(digit, 64),
+		), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	owner := ObservationGenerationOwner{
+		Root: root, Pins: lifecycleObservationPins{},
+		Acquire: func(context.Context) (func(), error) { return func() {}, nil },
+	}
+	store := newMemoryCursorStore()
+	controller, err := NewController(store, owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for turn, wantCursor := range []string{strings.Repeat("1", 64), strings.Repeat("2", 64), strings.Repeat("1", 64)} {
+		result := controller.Tick(t.Context())
+		if result.Err != nil || result.Scanned != 1 || result.Deleted != 0 ||
+			!result.More || result.Cursor != wantCursor {
+			t.Fatalf("orphan collecting turn %d = %+v", turn, result)
+		}
+	}
+
+	// A single identity-less root must not advertise perpetual pending work,
+	// and its unchanged durable cursor remains valid because the candidate was
+	// inspected and deliberately retained.
+	singleRoot := filepath.Join(t.TempDir(), "observations")
+	digest := strings.Repeat("3", 64)
+	if err := os.MkdirAll(filepath.Join(singleRoot, digest, "collecting-"+digest), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	singleStore := newMemoryCursorStore()
+	singleController, err := NewController(singleStore, ObservationGenerationOwner{
+		Root: singleRoot, Pins: lifecycleObservationPins{},
+		Acquire: func(context.Context) (func(), error) { return func() {}, nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for turn := range 2 {
+		result := singleController.Tick(t.Context())
+		if result.Err != nil || result.Scanned != 1 || result.Deleted != 0 ||
+			result.More || result.Cursor != digest || result.Completeness != Exact {
+			t.Fatalf("single orphan collecting turn %d = %+v", turn, result)
+		}
+	}
 }
 
 func (owner recordingOwner) Name() string { return owner.name }

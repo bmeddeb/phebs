@@ -30,7 +30,8 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1 is complete and T40.2 is next, while Epic 41 separately targets
+explicit scale-convergence program: T40.1–T40.2 are complete and T40.3 is next,
+while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
 Epic 43 runs in parallel as the charter-governed presentation track: it
@@ -51,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1 complete 2026-08-06 · T40.2 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.2 complete 2026-08-06 · T40.3 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,24 +96,6 @@ nonpublishing extraction work.
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
 
-**T40.2 · Independent derived-plan job ownership** — move observation/source
-partition planning out of the indexing job's synchronous success boundary.
-With respect to repository-wide derived planning, the index job commits and
-reports source/search authority plus durable enqueue of the exact
-derived-generation request; the existing selected service-catalog/state/search
-generation reconciliation hook remains ordered and unchanged. A downstream
-planning failure settles on its own generation-scoped schedule and cannot
-relabel or rebuild an already-current search generation. AC: enqueue failure
-before durable ownership remains retryable; crash after search commit and
-before enqueue is repaired on
-startup/reconcile; duplicate callbacks coalesce; terminal derived refusal does
-not trigger another tree census or zoekt child; a newer commit supersedes stale
-work without altering the prior complete derived pointer; warm search no-op
-performs only bounded control reads; cancellation, lease loss, and A→B→A have
-dedicated race tests; current v1 schedules remain readable; service-catalog
-reconcile ordering, failure, and no-op tests stay byte- and behavior-identical;
-diagnostics and operations guidance updated; full merge bar.
-
 **T40.3 · Source-partition super-root and aggregate policy v2** — retain the
 shipped v1 manifest, ordered members, 4,096-blob/placement partition bounds,
 64-MiB per-partition declared-byte bound, content-addressed coalescing, and
@@ -130,8 +113,10 @@ extras, symlinks, reordered keys, cross-generation members, and digest/byte
 mismatch before authority changes; cold planning consumes one identity-stable
 streamed repository-source pass rather than validate-then-reread, keeps staged
 output invisible until the final root re-fence, and never yields a corrupt
-prefix; unchanged segments/members are byte-exactly reused across small deltas
-and A→B→A; v1 stays strict-readable; cancellation
+prefix; before v2 admits larger aggregate bytes, a bounded schedule/lease-fenced
+collector removes superseded plan directories and bindings without touching
+active execution or a current publication marker; unchanged segments/members
+are byte-exactly reused across small deltas and A→B→A; v1 stays strict-readable; cancellation
 kills/reaps Git children; exact maximum-shape, tamper, race, and cost tests;
 full merge bar.
 
@@ -603,7 +588,8 @@ deliberate as a result.
   mapping, fail-closed rendering, state completeness, deep-link discipline,
   dual-viewport QA, keyboard completeness, accessibility pass, screenshot
   receipts, and charter review with recorded findings.
-- The scale program keeps precedence: T40.1 is complete and T40.2 is the next scale ticket,
+- The scale program keeps precedence: T40.1–T40.2 are complete and T40.3 is the
+  next scale ticket,
   Epics 40–42 sequencing is unchanged, and this epic may not modify a scale
   plane. T41.7's v3 parity later builds on this epic's shared kit.
 - Screenshot receipts are environment-bound engineering records; walkthrough

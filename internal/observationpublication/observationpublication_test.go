@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -344,6 +345,58 @@ func TestLifecyclePreservesCurrentRollbackFloorAndLease(t *testing.T) {
 	}
 }
 
+func TestLifecycleRepairsCombinedGenerationLimitByDrainingCollectingFirst(t *testing.T) {
+	const repository = "example/lifecycle-limit-repair"
+	root := filepath.Join(t.TempDir(), "observations")
+	repositoryRoot := repositoryDirectory(root, repository)
+	if err := os.MkdirAll(repositoryRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	markerGeneration := "sha256:" + strings.Repeat("f", 64)
+	if err := writeExclusiveCanonical(markerPath(root, repository), Marker{
+		Schema: MarkerSchema, Repository: repository, GenerationDigest: markerGeneration,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < MaxRepositoryGenerations; index++ {
+		if err := os.Mkdir(filepath.Join(repositoryRoot, fmt.Sprintf("%064x", index)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	collectingName := collectingStageName("sha256:"+strings.Repeat("e", 64), -1)
+	if err := os.Mkdir(filepath.Join(repositoryRoot, collectingName), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	result, err := SweepLifecycle(t.Context(), root, time.Now().UTC(), "", testPins{}, 1)
+	if err != nil || result.Deleted != 1 {
+		t.Fatalf("over-limit collecting repair = %+v, %v", result, err)
+	}
+	if _, err := os.Lstat(filepath.Join(repositoryRoot, collectingName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("collecting generation after repair = %v", err)
+	}
+
+	ordinaryOnlyRoot := filepath.Join(t.TempDir(), "observations")
+	ordinaryOnlyRepositoryRoot := repositoryDirectory(ordinaryOnlyRoot, repository)
+	if err := os.MkdirAll(ordinaryOnlyRepositoryRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeExclusiveCanonical(markerPath(ordinaryOnlyRoot, repository), Marker{
+		Schema: MarkerSchema, Repository: repository, GenerationDigest: markerGeneration,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index <= MaxRepositoryGenerations; index++ {
+		if err := os.Mkdir(filepath.Join(ordinaryOnlyRepositoryRoot, fmt.Sprintf("%064x", index)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := SweepLifecycle(
+		t.Context(), ordinaryOnlyRoot, time.Now().UTC(), "", testPins{}, 1,
+	); !errors.Is(err, ErrLimit) {
+		t.Fatalf("ordinary-only over-limit lifecycle = %v", err)
+	}
+}
+
 type scheduleCapture struct {
 	store.GenerationSchedulerStore
 	specs []store.GenerationScheduleSpec
@@ -379,9 +432,9 @@ func (capture *recoveryScheduleCapture) EnqueueGenerationSchedule(
 }
 
 func (capture *recoveryScheduleCapture) GetGenerationSchedule(
-	_ context.Context, _, _ string,
+	_ context.Context, _, stage string,
 ) (*store.GenerationSchedule, error) {
-	if capture.current == nil {
+	if capture.current == nil || capture.current.Stage != stage {
 		return nil, store.ErrNotFound
 	}
 	value := *capture.current
@@ -405,6 +458,9 @@ func (capture *scheduleCapture) GetGenerationSchedule(
 		return nil, store.ErrNotFound
 	}
 	spec := capture.specs[len(capture.specs)-1]
+	if spec.Stage != stage {
+		return nil, store.ErrNotFound
+	}
 	return &store.GenerationSchedule{
 		Repository: repository, Stage: stage, Generation: spec.Generation,
 		Status: store.GenerationScheduleActive,

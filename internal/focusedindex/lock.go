@@ -25,6 +25,15 @@ func AcquireMutationLock(ctx context.Context, indexDir string) (func(), error) {
 // publication bytes. Candidate, resolver, and caller publication lifecycles
 // use their own exact-state reconciliation rather than this lock.
 func AcquireBackupLock(ctx context.Context, indexDir string) (func(), error) {
+	return AcquireExclusiveMutationLock(ctx, indexDir)
+}
+
+// AcquireExclusiveMutationLock excludes every publication/lifecycle mutation
+// admitted through AcquireMutationLock. Callers acquire this before any
+// per-repository lock, matching artifact reconciliation's lock order. Short
+// cross-authority pointer transitions use it so a lifecycle rename cannot land
+// between the final control check and pointer swap.
+func AcquireExclusiveMutationLock(ctx context.Context, indexDir string) (func(), error) {
 	return acquireLock(ctx, indexDir, true)
 }
 

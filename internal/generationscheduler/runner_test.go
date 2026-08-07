@@ -19,6 +19,8 @@ type schedulerStore struct {
 	completed   int
 	retried     int
 	retryErrors []string
+	failed      int
+	failErrors  []string
 	released    int
 	done        chan struct{}
 }
@@ -52,7 +54,17 @@ func (scheduler *schedulerStore) CompleteGenerationChunk(_ context.Context, _ st
 	scheduler.mu.Lock()
 	defer scheduler.mu.Unlock()
 	scheduler.completed++
-	if scheduler.done != nil && scheduler.completed+scheduler.retried == cap(scheduler.done) {
+	if scheduler.done != nil && scheduler.completed+scheduler.retried+scheduler.failed == cap(scheduler.done) {
+		close(scheduler.done)
+	}
+	return nil
+}
+func (scheduler *schedulerStore) FailGenerationChunk(_ context.Context, _ store.GenerationChunk, message string) error {
+	scheduler.mu.Lock()
+	defer scheduler.mu.Unlock()
+	scheduler.failed++
+	scheduler.failErrors = append(scheduler.failErrors, message)
+	if scheduler.done != nil && scheduler.completed+scheduler.retried+scheduler.failed == cap(scheduler.done) {
 		close(scheduler.done)
 	}
 	return nil
@@ -62,7 +74,7 @@ func (scheduler *schedulerStore) RetryGenerationChunk(_ context.Context, _ store
 	defer scheduler.mu.Unlock()
 	scheduler.retried++
 	scheduler.retryErrors = append(scheduler.retryErrors, message)
-	if scheduler.done != nil && scheduler.completed+scheduler.retried == cap(scheduler.done) {
+	if scheduler.done != nil && scheduler.completed+scheduler.retried+scheduler.failed == cap(scheduler.done) {
 		close(scheduler.done)
 	}
 	return &store.GenerationChunk{}, nil
@@ -80,14 +92,31 @@ func TestSchedulerPersistsStructuralDurableErrorText(t *testing.T) {
 		t.Fatal("outer wrapper lost the refusal cause")
 	}
 	ordinary := fmt.Errorf("ordinary wrapper: %w", errors.New("ordinary cause"))
+	terminalOrdinary := store.WithTerminal(ordinary)
 
 	tests := []struct {
-		name string
-		err  error
-		want string
+		name        string
+		err         error
+		want        string
+		wantRetried int
+		wantFailed  int
 	}{
-		{name: "inner refusal", err: wrappedRefusal, want: refusal.Error()},
-		{name: "ordinary error", err: ordinary, want: ordinary.Error()},
+		{
+			name: "retryable inner refusal", err: wrappedRefusal,
+			want: refusal.Error(), wantRetried: 1,
+		},
+		{
+			name: "retryable ordinary error", err: ordinary,
+			want: ordinary.Error(), wantRetried: 1,
+		},
+		{
+			name: "terminal inner refusal", err: store.WithTerminal(wrappedRefusal),
+			want: refusal.Error(), wantFailed: 1,
+		},
+		{
+			name: "terminal ordinary error", err: terminalOrdinary,
+			want: terminalOrdinary.Error(), wantFailed: 1,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -108,9 +137,18 @@ func TestSchedulerPersistsStructuralDurableErrorText(t *testing.T) {
 
 			fake.mu.Lock()
 			defer fake.mu.Unlock()
-			if fake.retried != 1 || len(fake.retryErrors) != 1 ||
-				fake.retryErrors[0] != test.want {
-				t.Fatalf("retry/errors = %d/%q, want %q", fake.retried, fake.retryErrors, test.want)
+			if fake.retried != test.wantRetried || fake.failed != test.wantFailed {
+				t.Fatalf(
+					"retried/failed = %d/%d, want %d/%d",
+					fake.retried, fake.failed, test.wantRetried, test.wantFailed,
+				)
+			}
+			persisted := fake.retryErrors
+			if test.wantFailed == 1 {
+				persisted = fake.failErrors
+			}
+			if len(persisted) != 1 || persisted[0] != test.want {
+				t.Fatalf("persisted errors = %q, want %q", persisted, test.want)
 			}
 		})
 	}
