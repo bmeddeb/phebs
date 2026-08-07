@@ -317,6 +317,11 @@ func serve(args []string) error {
 			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
 		)
 	}
+	acquireObservationTransition := func(lockCtx context.Context) (func(), error) {
+		return focusedindex.AcquireExclusiveMutationLock(
+			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
+		)
+	}
 	lifecycleOwners := []lifecycle.Owner{
 		lifecycle.CatalogGenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
 		lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
@@ -340,7 +345,8 @@ func serve(args []string) error {
 		return fmt.Errorf("configure lifecycle status: %w", lifecycleErr)
 	}
 	observationRuntime := &observationpublication.Runtime{
-		DataDir: cfg.Server.DataDir, Store: st,
+		DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
+		AcquireTransition: acquireObservationTransition,
 		Admit: func(admitCtx context.Context) error {
 			capacity, admissionErr := capacityGate.Check(admitCtx, 0)
 			lifecycleStatus.ObserveCapacity(capacity, admissionErr)
@@ -666,41 +672,48 @@ func serve(args []string) error {
 		}
 	}
 	catalogAfterIndex := onIndexed
-	onIndexed = func(ctx context.Context, repository, commit string) error {
-		var catalogErr error
-		if catalogAfterIndex != nil {
-			catalogErr = catalogAfterIndex(ctx, repository, commit)
-		}
-		if _, focused := analysisUnits[repository]; focused {
-			return catalogErr
-		}
-		observationErr := observationRuntime.Reconcile(ctx, repository)
-		return errors.Join(catalogErr, observationErr)
-	}
+	onIndexed = chainObservationPlanningAfterIndex(
+		catalogAfterIndex,
+		func(repository string) bool {
+			_, focused := analysisUnits[repository]
+			return focused
+		},
+		observationRuntime.EnqueuePlanning,
+		func(disposition observationpublication.PlanningEnqueue) {
+			diagnostics.Logf(
+				"observation planning: disposition=%s", disposition,
+			)
+		},
+	)
 	if repositories, listErr := st.ListRepos(ctx); listErr != nil {
 		return fmt.Errorf("list repositories for observation recovery: %w", listErr)
 	} else {
-		for _, repository := range repositories {
-			if repository.Deleting || repository.IndexedCommitHash == "" || repository.IndexedAnalysisUnit != nil {
-				continue
-			}
-			release, lockErr := acquireLifecycleMutation(ctx)
-			if lockErr != nil {
-				return fmt.Errorf("lock observation recovery: %w", lockErr)
-			}
-			reconcileErr := observationRuntime.Reconcile(ctx, repository.Name)
-			release()
-			if reconcileErr != nil {
-				diagnostics.Logf(
-					"observation publication recovery unavailable: repository=%q error=%v",
-					repository.Name, reconcileErr,
-				)
-			}
+		summary, recoveryErr := enqueueObservationPlanningStartup(
+			ctx, repositories, observationRuntime.EnqueuePlanning,
+		)
+		if recoveryErr != nil {
+			return recoveryErr
+		}
+		if summary.total() > 0 {
+			diagnostics.Logf(
+				"observation planning recovery: current=%d active=%d failed=%d enqueued=%d unavailable=%d",
+				summary.Current, summary.Active, summary.Failed,
+				summary.Enqueued, summary.Unavailable,
+			)
 		}
 	}
 	observationScheduler := &generationscheduler.Scheduler{
 		Store: st,
 		Classes: map[store.GenerationResourceClass]generationscheduler.Class{
+			store.GenerationResourceIO: {
+				Concurrency: 1,
+				Budget: generationscheduler.Budget{
+					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
+				},
+				Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
+					return observationRuntime.HandlePlanning(workerCtx, chunk)
+				},
+			},
 			store.GenerationResourceCPU: {
 				Concurrency: 2,
 				Budget: generationscheduler.Budget{
@@ -1850,6 +1863,94 @@ func enqueueCandidateAfterIndex(
 		)
 	}
 	return nil
+}
+
+type postIndexCallback func(context.Context, string, string) error
+
+type observationPlanningEnqueue func(
+	context.Context,
+	string,
+) (observationpublication.PlanningEnqueue, error)
+
+// chainObservationPlanningAfterIndex preserves the selected service-catalog
+// and service-search transition as the first step at this seam. Planning is
+// still attempted when that transition fails so both independently owned
+// errors remain visible, while focused repositories retain their exact bypass.
+func chainObservationPlanningAfterIndex(
+	prior postIndexCallback,
+	focused func(string) bool,
+	enqueue observationPlanningEnqueue,
+	report func(observationpublication.PlanningEnqueue),
+) postIndexCallback {
+	return func(ctx context.Context, repository, commit string) error {
+		var priorErr error
+		if prior != nil {
+			priorErr = prior(ctx, repository, commit)
+		}
+		if focused != nil && focused(repository) {
+			return priorErr
+		}
+		disposition, planningErr := enqueue(ctx, repository)
+		if planningErr == nil && report != nil {
+			report(disposition)
+		}
+		return errors.Join(priorErr, planningErr)
+	}
+}
+
+type observationPlanningStartupSummary struct {
+	Current     int
+	Active      int
+	Failed      int
+	Enqueued    int
+	Unavailable int
+}
+
+func (summary observationPlanningStartupSummary) total() int {
+	return summary.Current + summary.Active + summary.Failed +
+		summary.Enqueued + summary.Unavailable
+}
+
+// enqueueObservationPlanningStartup repairs the crash window between a
+// committed whole-repository search generation and its durable planning
+// ownership. The returned aggregate is deliberately source-free: callers log
+// no repository identity or raw enqueue error.
+func enqueueObservationPlanningStartup(
+	ctx context.Context,
+	repositories []store.Repo,
+	enqueue observationPlanningEnqueue,
+) (observationPlanningStartupSummary, error) {
+	var summary observationPlanningStartupSummary
+	for _, repository := range repositories {
+		if err := ctx.Err(); err != nil {
+			return summary, err
+		}
+		if repository.Deleting || repository.IndexedCommitHash == "" ||
+			repository.IndexedAnalysisUnit != nil {
+			continue
+		}
+		disposition, err := enqueue(ctx, repository.Name)
+		if err != nil {
+			if ctx.Err() != nil {
+				return summary, ctx.Err()
+			}
+			summary.Unavailable++
+			continue
+		}
+		switch disposition {
+		case observationpublication.PlanningCurrent:
+			summary.Current++
+		case observationpublication.PlanningActive:
+			summary.Active++
+		case observationpublication.PlanningFailed:
+			summary.Failed++
+		case observationpublication.PlanningEnqueued:
+			summary.Enqueued++
+		default:
+			summary.Unavailable++
+		}
+	}
+	return summary, nil
 }
 
 func reconcileServiceSearchGeneration(

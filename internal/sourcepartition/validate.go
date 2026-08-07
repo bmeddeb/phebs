@@ -28,6 +28,34 @@ type Plan struct {
 	manifest  Manifest
 }
 
+// MoveValidatedStage atomically installs a completely validated plan within
+// its existing parent directory without reopening corpus-sized members while
+// a caller holds its final authority fence. The destination must be absent;
+// an existing content-addressed plan must be validated with Open instead.
+func MoveValidatedStage(plan *Plan, destination string) (*Plan, error) {
+	if plan == nil || !filepath.IsAbs(plan.directory) || !filepath.IsAbs(destination) ||
+		filepath.Dir(plan.directory) != filepath.Dir(destination) ||
+		filepath.Clean(plan.directory) == filepath.Clean(destination) {
+		return nil, invalidf("plan move identity is invalid")
+	}
+	info, err := os.Lstat(plan.directory)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.Join(err, invalidf("plan stage is missing or special"))
+	}
+	if _, err := os.Lstat(destination); err == nil {
+		return nil, invalidf("plan destination already exists")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err := os.Rename(plan.directory, destination); err != nil {
+		return nil, err
+	}
+	if err := syncDirectory(filepath.Dir(destination)); err != nil {
+		return nil, err
+	}
+	return &Plan{directory: destination, manifest: cloneManifest(plan.manifest)}, nil
+}
+
 func Open(ctx context.Context, directory string, expected Manifest) (*Plan, error) {
 	if !filepath.IsAbs(directory) {
 		return nil, invalidf("plan directory must be absolute")

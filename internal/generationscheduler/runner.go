@@ -284,6 +284,16 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		}
 		return
 	}
+	if store.IsTerminal(handleErr) {
+		if err := scheduler.Store.FailGenerationChunk(
+			writeCtx, chunk, store.DurableErrorText(handleErr),
+		); err != nil &&
+			!errors.Is(err, store.ErrGenerationLeaseLost) &&
+			!errors.Is(err, store.ErrGenerationStale) {
+			scheduler.report(fmt.Errorf("fail terminal generation chunk: %w", err))
+		}
+		return
+	}
 	notBefore := time.Now().UTC().Add(scheduler.Backoff(chunk.Attempt + 1))
 	if _, err := scheduler.Store.RetryGenerationChunk(
 		writeCtx, chunk, store.DurableErrorText(handleErr), notBefore,

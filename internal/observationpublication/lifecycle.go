@@ -69,20 +69,30 @@ func SweepLifecycle(
 	result.Cursor = repositories[index]
 	result.More = len(repositories) > 1
 	repositoryRoot := filepath.Join(root, repositories[index])
+	var pointer Pointer
+	pointerPresent := false
 	pointerRaw, err := readBoundedRegular(filepath.Join(repositoryRoot, "current.json"), MaxManifestBytes)
-	if err != nil {
+	if err == nil {
+		if decodeCanonical(pointerRaw, &pointer) != nil ||
+			repositoryHash(pointer.Repository) != repositories[index] {
+			return result, invalid("lifecycle pointer")
+		}
+		pointerPresent = true
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return result, err
 	}
-	var pointer Pointer
-	if decodeCanonical(pointerRaw, &pointer) != nil || repositoryHash(pointer.Repository) != repositories[index] {
-		return result, invalid("lifecycle pointer")
-	}
+	repository := pointer.Repository
 	markerGeneration := ""
 	if raw, markerErr := readBoundedRegular(filepath.Join(repositoryRoot, "publishing.json"), MaxManifestBytes); markerErr == nil {
 		var marker Marker
-		if decodeCanonical(raw, &marker) != nil || marker.Repository != pointer.Repository {
+		if decodeCanonical(raw, &marker) != nil || marker.Schema != MarkerSchema ||
+			validateRepository(marker.Repository) != nil ||
+			repositoryHash(marker.Repository) != repositories[index] ||
+			!validDigest(marker.GenerationDigest) ||
+			(repository != "" && marker.Repository != repository) {
 			return result, invalid("lifecycle marker")
 		}
+		repository = marker.Repository
 		markerGeneration = marker.GenerationDigest
 	} else if !errors.Is(markerErr, os.ErrNotExist) {
 		return result, markerErr
@@ -109,26 +119,54 @@ func SweepLifecycle(
 			generations = append(generations, candidate{name: entry.Name(), generation: "sha256:" + entry.Name(), modified: entry.ModTime()})
 			continue
 		}
-		const collectingPrefix = "collecting-"
-		if strings.HasPrefix(entry.Name(), collectingPrefix) && len(entry.Name()) == len(collectingPrefix)+64 &&
-			validLowerHex(strings.TrimPrefix(entry.Name(), collectingPrefix)) {
-			collecting = append(collecting, candidate{name: entry.Name(), generation: "sha256:" + strings.TrimPrefix(entry.Name(), collectingPrefix), modified: entry.ModTime()})
+		if generation, ok := collectingStageGeneration(entry.Name()); ok {
+			collecting = append(collecting, candidate{
+				name: entry.Name(), generation: generation, modified: entry.ModTime(),
+			})
 		}
 	}
-	if len(generations) > MaxRepositoryGenerations || len(collecting) > 1 {
-		return result, ErrLimit
-	}
-	if len(collecting) == 1 {
-		result.Scanned = 1
-		if err := lifecycleFence(root, pointer.Repository, collecting[0].generation, pins); errors.Is(err, ErrPinned) {
+	overLimit := len(generations)+len(collecting) > MaxRepositoryGenerations
+	if len(collecting) > 0 {
+		sort.Slice(collecting, func(i, j int) bool {
+			return collecting[i].name < collecting[j].name
+		})
+		if repository == "" {
+			// Without a pointer or marker the repository name cannot be recovered
+			// from its one-way directory hash, so pins cannot be checked safely.
+			// Record the bounded scan but do not advertise perpetual pending work;
+			// a later marker makes the orphan recoverable on the next sweep.
+			result.Scanned = len(collecting)
 			return result, nil
-		} else if err != nil {
+		}
+		result.More = result.More || len(collecting) > 1
+		for _, candidate := range collecting {
+			result.Scanned++
+			// A collecting path is already outside the publication namespace.
+			// Current/marker controls name the canonical digest directory, which may
+			// be a newer pre-publication incarnation of the same content identity.
+			// Existing reader pins still outrank deletion.
+			if pins.Pinned(repository, candidate.generation) {
+				continue
+			}
+			deleted, complete, err := deleteGenerationStep(
+				filepath.Join(repositoryRoot, candidate.name), deleteLimit,
+			)
+			result.Deleted = deleted
+			result.More = result.More || !complete
 			return result, err
 		}
-		deleted, complete, err := deleteGenerationStep(filepath.Join(repositoryRoot, collecting[0].name), deleteLimit)
-		result.Deleted = deleted
-		result.More = result.More || !complete
-		return result, err
+		if overLimit {
+			// Pins may prevent the only safe repair. Preserve the over-limit
+			// refusal until an unpinned collecting generation can be drained.
+			return result, ErrLimit
+		}
+		return result, nil
+	}
+	if overLimit {
+		return result, ErrLimit
+	}
+	if !pointerPresent {
+		return result, nil
 	}
 	sort.Slice(generations, func(i, j int) bool {
 		if !generations[i].modified.Equal(generations[j].modified) {
@@ -169,11 +207,10 @@ func SweepLifecycle(
 
 func lifecycleFence(root, repository, generation string, pins PinChecker) error {
 	current, err := readPointer(root, repository)
-	if err != nil {
-		return err
-	}
-	if current.GenerationDigest == generation {
+	if err == nil && current.GenerationDigest == generation {
 		return ErrStale
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
 	raw, err := readBoundedRegular(markerPath(root, repository), MaxManifestBytes)
 	if err == nil {
@@ -327,6 +364,34 @@ func validLowerHex(value string) bool {
 		}
 	}
 	return value != ""
+}
+
+func collectingStageName(generation string, ordinal int) string {
+	base := "collecting-" + strings.TrimPrefix(generation, "sha256:")
+	if ordinal < 0 {
+		return base
+	}
+	const alphabet = "0123456789abcdef"
+	return base + "-" + string([]byte{
+		alphabet[(ordinal>>4)&0xf], alphabet[ordinal&0xf],
+	})
+}
+
+func collectingStageGeneration(name string) (string, bool) {
+	const prefix = "collecting-"
+	if !strings.HasPrefix(name, prefix) {
+		return "", false
+	}
+	value := strings.TrimPrefix(name, prefix)
+	switch {
+	case len(value) == 64 && validLowerHex(value):
+		return "sha256:" + value, true
+	case len(value) == 67 && value[64] == '-' &&
+		validLowerHex(value[:64]) && validLowerHex(value[65:]):
+		return "sha256:" + value[:64], true
+	default:
+		return "", false
+	}
 }
 
 func boundedDirectory(path string, limit int) ([]os.FileInfo, error) {

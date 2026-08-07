@@ -33,7 +33,19 @@ type Progress struct {
 	State                  string               `json:"state"` // current | building | failed | stale | unavailable
 	SourceGenerationDigest string               `json:"source_generation_digest"`
 	Publication            *PublicationProgress `json:"publication,omitempty"`
+	Planning               *PlanningProgress    `json:"planning,omitempty"`
 	Schedule               *ScheduleProgress    `json:"schedule,omitempty"`
+}
+
+type PlanningProgress struct {
+	State                  string `json:"state"` // active | settled | failed
+	ScheduleGeneration     string `json:"schedule_generation"`
+	TargetGeneration       string `json:"target_generation"`
+	SourceGenerationDigest string `json:"source_generation_digest"`
+	Pending                int    `json:"pending"`
+	Running                int    `json:"running"`
+	Succeeded              int    `json:"succeeded"`
+	Failed                 int    `json:"failed"`
 }
 
 type PublicationProgress struct {
@@ -90,7 +102,19 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 	if err != nil {
 		return Progress{}, err
 	}
-	schedule, schedulePresent, err := reader.readSchedule(ctx, repository)
+	planning, planningPresent, err := reader.readSchedule(ctx, repository, PlanningScheduleStage)
+	if err != nil {
+		return Progress{}, err
+	}
+	var planningBindingValue planningBinding
+	if planningPresent {
+		runtime := Runtime{DataDir: reader.DataDir}
+		planningBindingValue, err = runtime.readPlanningBinding(repository, planning.Generation)
+		if err != nil {
+			return Progress{}, err
+		}
+	}
+	schedule, schedulePresent, err := reader.readSchedule(ctx, repository, ScheduleStage)
 	if err != nil {
 		return Progress{}, err
 	}
@@ -114,11 +138,17 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 		return Progress{}, invalid("active progress schedule has no publication marker")
 	}
 
-	result := projectProgress(repository, source.Digest, publicationManifest, schedule, targetGeneration, targetSource)
+	result := projectProgress(
+		repository, source.Digest, publicationManifest,
+		planning, planningBindingValue, schedule, targetGeneration, targetSource,
+	)
 	if err := ValidateProgress(result); err != nil {
 		return Progress{}, err
 	}
-	if err := reader.confirm(ctx, repository, source.Digest, pointer, pointerPresent, marker, markerPresent, schedule, schedulePresent); err != nil {
+	if err := reader.confirm(
+		ctx, repository, source.Digest, pointer, pointerPresent, marker, markerPresent,
+		planning, planningPresent, schedule, schedulePresent,
+	); err != nil {
 		return Progress{}, err
 	}
 	return result, nil
@@ -141,9 +171,9 @@ func (reader *ProgressReader) readPlan(repository, generation string) (sourcepar
 }
 
 func (reader *ProgressReader) readSchedule(
-	ctx context.Context, repository string,
+	ctx context.Context, repository, stage string,
 ) (*store.GenerationSchedule, bool, error) {
-	schedule, err := reader.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	schedule, err := reader.Store.GetGenerationSchedule(ctx, repository, stage)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, false, nil
 	}
@@ -164,6 +194,8 @@ func (reader *ProgressReader) confirm(
 	pointerPresent bool,
 	marker Marker,
 	markerPresent bool,
+	planning *store.GenerationSchedule,
+	planningPresent bool,
 	schedule *store.GenerationSchedule,
 	schedulePresent bool,
 ) error {
@@ -180,7 +212,16 @@ func (reader *ProgressReader) confirm(
 	if err != nil || confirmedMarkerPresent != markerPresent || confirmedMarkerPresent && confirmedMarker != marker {
 		return errors.Join(err, ErrStale)
 	}
-	confirmedSchedule, confirmedSchedulePresent, err := reader.readSchedule(ctx, repository)
+	confirmedPlanning, confirmedPlanningPresent, err := reader.readSchedule(
+		ctx, repository, PlanningScheduleStage,
+	)
+	if err != nil || confirmedPlanningPresent != planningPresent ||
+		confirmedPlanningPresent && scheduleFenceOf(*confirmedPlanning) != scheduleFenceOf(*planning) {
+		return errors.Join(err, ErrStale)
+	}
+	confirmedSchedule, confirmedSchedulePresent, err := reader.readSchedule(
+		ctx, repository, ScheduleStage,
+	)
 	if err != nil || confirmedSchedulePresent != schedulePresent ||
 		confirmedSchedulePresent && scheduleFenceOf(*confirmedSchedule) != scheduleFenceOf(*schedule) {
 		return errors.Join(err, ErrStale)
@@ -191,12 +232,27 @@ func (reader *ProgressReader) confirm(
 func projectProgress(
 	repository, sourceDigest string,
 	manifest *Manifest,
+	planning *store.GenerationSchedule,
+	planningBindingValue planningBinding,
 	schedule *store.GenerationSchedule,
 	targetGeneration, targetSource string,
 ) Progress {
 	result := Progress{
 		SchemaVersion: ProgressSchema, Repository: repository, State: "unavailable",
 		SourceGenerationDigest: sourceDigest,
+	}
+	if planning != nil {
+		state := string(planning.Status)
+		if planning.Status == store.GenerationScheduleSettled && planning.Failed > 0 {
+			state = "failed"
+		}
+		result.Planning = &PlanningProgress{
+			State: state, ScheduleGeneration: planning.Generation,
+			TargetGeneration:       planningBindingValue.TargetGeneration,
+			SourceGenerationDigest: planningBindingValue.SourceGenerationDigest,
+			Pending:                planning.Pending, Running: planning.Running,
+			Succeeded: planning.Succeeded, Failed: planning.Failed,
+		}
 	}
 	publicationCurrent := false
 	if manifest != nil {
@@ -237,11 +293,17 @@ func projectProgress(
 	switch {
 	case publicationCurrent:
 		result.State = "current"
+	case result.Planning != nil && result.Planning.SourceGenerationDigest == sourceDigest && result.Planning.State == "active":
+		result.State = "building"
+	case result.Planning != nil && result.Planning.SourceGenerationDigest == sourceDigest && result.Planning.State == "failed":
+		result.State = "failed"
 	case result.Schedule != nil && targetSource == sourceDigest && result.Schedule.State == "active":
 		result.State = "building"
 	case result.Schedule != nil && targetSource == sourceDigest && result.Schedule.State == "failed":
 		result.State = "failed"
-	case result.Publication != nil || targetSource != "" && targetSource != sourceDigest:
+	case result.Publication != nil ||
+		result.Planning != nil && result.Planning.SourceGenerationDigest != sourceDigest ||
+		targetSource != "" && targetSource != sourceDigest:
 		result.State = "stale"
 	}
 	return result
@@ -283,6 +345,28 @@ func ValidateProgress(progress Progress) error {
 			return invalid("progress publication currency")
 		}
 	}
+	if progress.Planning != nil {
+		planning := progress.Planning
+		target, _, targetErr := planningTarget(
+			progress.Repository, planning.SourceGenerationDigest,
+		)
+		if planning.State != "active" && planning.State != "settled" && planning.State != "failed" ||
+			!validDigest(planning.ScheduleGeneration) || !validDigest(planning.TargetGeneration) ||
+			!validDigest(planning.SourceGenerationDigest) ||
+			targetErr != nil || planning.TargetGeneration != target ||
+			planning.Pending < 0 || planning.Pending > 1 || planning.Running < 0 || planning.Running > 1 ||
+			planning.Succeeded < 0 || planning.Succeeded > 1 || planning.Failed < 0 || planning.Failed > 1 ||
+			planning.Pending+planning.Running+planning.Succeeded+planning.Failed > 1 {
+			return invalid("progress planning projection")
+		}
+		if planning.State == "active" && (planning.Succeeded != 0 || planning.Failed != 0) ||
+			planning.State == "settled" && (planning.Pending != 0 || planning.Running != 0 ||
+				planning.Succeeded != 1 || planning.Failed != 0) ||
+			planning.State == "failed" && (planning.Pending != 0 || planning.Running != 0 ||
+				planning.Succeeded != 0 || planning.Failed != 1) {
+			return invalid("progress planning state")
+		}
+	}
 	if progress.Schedule != nil {
 		schedule := progress.Schedule
 		if schedule.State != "active" && schedule.State != "settled" && schedule.State != "failed" ||
@@ -304,15 +388,20 @@ func ValidateProgress(progress Progress) error {
 			return invalid("current progress authority")
 		}
 	case "building":
-		if progress.Schedule == nil || progress.Schedule.State != "active" {
+		if (progress.Planning == nil || progress.Planning.State != "active" ||
+			progress.Planning.SourceGenerationDigest != progress.SourceGenerationDigest) &&
+			(progress.Schedule == nil || progress.Schedule.State != "active") {
 			return invalid("building progress authority")
 		}
 	case "failed":
-		if progress.Schedule == nil || progress.Schedule.State != "failed" {
+		if (progress.Planning == nil || progress.Planning.State != "failed" ||
+			progress.Planning.SourceGenerationDigest != progress.SourceGenerationDigest) &&
+			(progress.Schedule == nil || progress.Schedule.State != "failed") {
 			return invalid("failed progress authority")
 		}
 	case "unavailable":
 		if progress.Publication != nil && progress.Publication.State == "current" ||
+			progress.Planning != nil && (progress.Planning.State == "active" || progress.Planning.State == "failed") ||
 			progress.Schedule != nil && (progress.Schedule.State == "active" || progress.Schedule.State == "failed") {
 			return invalid("unavailable progress authority")
 		}

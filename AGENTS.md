@@ -165,8 +165,9 @@ separately authorized rerun. T39.R1 subsequently closed the mirror-lock
 contention prerequisite without authorizing or superseding that rerun. A later
 unfrozen very-large-monorepo diagnostic is retained as source-free engineering
 evidence, not a scale pass. Epics 40–42 are the scheduled scale-convergence
-program: T40.1's closed refusal envelope and frozen neutral corpus are complete,
-and T40.2 is the next scale ticket; Epic 40 targets bounded derived-pipeline
+program: T40.1's closed refusal envelope/frozen neutral corpus and T40.2's
+independent derived-plan ownership are complete, and T40.3 is the next scale
+ticket; Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41
 separately requires at least 8,000 accepted services and measures a target of
 10,000 accepted services; Epic 42 composes both dimensions before any topology

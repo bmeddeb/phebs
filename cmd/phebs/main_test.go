@@ -29,6 +29,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -77,6 +78,164 @@ func TestRetentionWarningPrecedesStoreOpenEvenWhenOpenFails(t *testing.T) {
 	}
 	if !slices.Equal(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
+	}
+}
+
+func TestPostIndexPlanningPreservesCatalogOrderingAndIndependentFailures(t *testing.T) {
+	catalogErr := errors.New("catalog unavailable")
+	planningErr := errors.New("planning enqueue unavailable")
+	tests := []struct {
+		name         string
+		catalog      bool
+		focused      bool
+		catalogErr   error
+		planningErr  error
+		wantEvents   []string
+		wantCatalog  bool
+		wantPlanning bool
+		wantReported bool
+	}{
+		{
+			name: "both succeed", catalog: true,
+			wantEvents:   []string{"catalog", "planning", "report"},
+			wantReported: true,
+		},
+		{
+			name: "catalog failure does not skip planning", catalog: true,
+			catalogErr:  catalogErr,
+			wantEvents:  []string{"catalog", "planning", "report"},
+			wantCatalog: true, wantReported: true,
+		},
+		{
+			name: "planning failure follows catalog", catalog: true,
+			planningErr:  planningErr,
+			wantEvents:   []string{"catalog", "planning"},
+			wantPlanning: true,
+		},
+		{
+			name: "joined failures retain both owners", catalog: true,
+			catalogErr: catalogErr, planningErr: planningErr,
+			wantEvents:  []string{"catalog", "planning"},
+			wantCatalog: true, wantPlanning: true,
+		},
+		{
+			name: "focused repository bypasses planning", catalog: true,
+			focused: true, wantEvents: []string{"catalog"},
+		},
+		{
+			name:         "planning works without catalog hook",
+			wantEvents:   []string{"planning", "report"},
+			wantReported: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var events []string
+			var prior postIndexCallback
+			if test.catalog {
+				prior = func(context.Context, string, string) error {
+					events = append(events, "catalog")
+					return test.catalogErr
+				}
+			}
+			callback := chainObservationPlanningAfterIndex(
+				prior,
+				func(string) bool { return test.focused },
+				func(context.Context, string) (observationpublication.PlanningEnqueue, error) {
+					events = append(events, "planning")
+					return observationpublication.PlanningEnqueued, test.planningErr
+				},
+				func(disposition observationpublication.PlanningEnqueue) {
+					if disposition != observationpublication.PlanningEnqueued {
+						t.Fatalf("reported disposition = %q", disposition)
+					}
+					events = append(events, "report")
+				},
+			)
+			err := callback(t.Context(), "example.com/acme/repo", "commit")
+			if !slices.Equal(events, test.wantEvents) {
+				t.Fatalf("events = %v, want %v", events, test.wantEvents)
+			}
+			if errors.Is(err, catalogErr) != test.wantCatalog ||
+				errors.Is(err, planningErr) != test.wantPlanning {
+				t.Fatalf(
+					"error ownership = catalog:%t planning:%t, want catalog:%t planning:%t: %v",
+					errors.Is(err, catalogErr), errors.Is(err, planningErr),
+					test.wantCatalog, test.wantPlanning, err,
+				)
+			}
+			if slices.Contains(events, "report") != test.wantReported {
+				t.Fatalf("reported = %t, want %t", slices.Contains(events, "report"), test.wantReported)
+			}
+		})
+	}
+}
+
+func TestObservationPlanningStartupIsFilteredAndSourceFree(t *testing.T) {
+	failed := errors.New("private repository path and raw store failure")
+	repositories := []store.Repo{
+		{Name: "example.com/current", IndexedCommitHash: "a"},
+		{Name: "example.com/active", IndexedCommitHash: "b"},
+		{Name: "example.com/failed", IndexedCommitHash: "c"},
+		{Name: "example.com/enqueued", IndexedCommitHash: "d"},
+		{Name: "example.com/unavailable", IndexedCommitHash: "e"},
+		{Name: "example.com/deleting", IndexedCommitHash: "f", Deleting: true},
+		{Name: "example.com/unindexed"},
+		{
+			Name: "example.com/focused", IndexedCommitHash: "g",
+			IndexedAnalysisUnit: &analysisunit.State{},
+		},
+	}
+	dispositions := map[string]observationpublication.PlanningEnqueue{
+		"example.com/current":  observationpublication.PlanningCurrent,
+		"example.com/active":   observationpublication.PlanningActive,
+		"example.com/failed":   observationpublication.PlanningFailed,
+		"example.com/enqueued": observationpublication.PlanningEnqueued,
+	}
+	var called []string
+	summary, err := enqueueObservationPlanningStartup(
+		t.Context(), repositories,
+		func(_ context.Context, repository string) (observationpublication.PlanningEnqueue, error) {
+			called = append(called, repository)
+			if repository == "example.com/unavailable" {
+				return "", failed
+			}
+			return dispositions[repository], nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantCalled := []string{
+		"example.com/current", "example.com/active", "example.com/failed",
+		"example.com/enqueued", "example.com/unavailable",
+	}
+	if !slices.Equal(called, wantCalled) {
+		t.Fatalf("called repositories = %v, want %v", called, wantCalled)
+	}
+	want := observationPlanningStartupSummary{
+		Current: 1, Active: 1, Failed: 1, Enqueued: 1, Unavailable: 1,
+	}
+	if summary != want || summary.total() != 5 {
+		t.Fatalf("summary = %+v total=%d, want %+v total=5", summary, summary.total(), want)
+	}
+	encoded := fmt.Sprintf("%+v", summary)
+	for _, private := range append(wantCalled, failed.Error()) {
+		if strings.Contains(encoded, private) {
+			t.Fatalf("source-free summary contains %q: %s", private, encoded)
+		}
+	}
+
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := enqueueObservationPlanningStartup(
+		canceled,
+		[]store.Repo{{Name: "example.com/canceled", IndexedCommitHash: "f"}},
+		func(ctx context.Context, _ string) (observationpublication.PlanningEnqueue, error) {
+			return "", ctx.Err()
+		},
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled startup repair = %v", err)
 	}
 }
 

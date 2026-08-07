@@ -133,6 +133,7 @@ type GenerationSchedulerStore interface {
 	ClaimGenerationChunk(context.Context, GenerationResourceClass, string) (*GenerationChunk, error)
 	HeartbeatGenerationChunk(context.Context, GenerationChunk) error
 	CompleteGenerationChunk(context.Context, GenerationChunk) error
+	FailGenerationChunk(context.Context, GenerationChunk, string) error
 	RetryGenerationChunk(context.Context, GenerationChunk, string, time.Time) (*GenerationChunk, error)
 	ReleaseGenerationChunk(context.Context, GenerationChunk, string) error
 	ReapStaleGenerationChunks(context.Context, GenerationResourceClass, time.Duration) (int, error)
@@ -712,6 +713,74 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 	return nil
 }
 
+const failGenerationChunkSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM $chunk WHERE status = 'running'
+	AND lease_token = $lease AND claimed_by = $worker LIMIT 1)[0].id;
+LET $current_digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
+LET $is_current = $current_digest = $digest;
+IF $owned != NONE {
+	UPDATE $chunk SET status = IF $is_current THEN 'failed' ELSE 'canceled' END,
+		error = $error, finished_at = time::now(), lease_token = '', heartbeat_at = NONE
+		RETURN NONE;
+	UPDATE $schedule SET running -= 1,
+		failed += IF $is_current THEN 1 ELSE 0 END,
+		status = IF $is_current AND next_offset = total_items AND pending = 0
+			AND running = 1 AND succeeded + failed + 1 = total_chunks
+			THEN 'settled' ELSE status END,
+		updated_at = time::now() RETURN NONE;
+	UPDATE $repository_state SET running -= 1, updated_at = time::now() RETURN NONE;
+};
+RETURN [{ owned: $owned != NONE, current: $is_current, exhausted: true }];
+COMMIT;`
+
+// FailGenerationChunk settles one deterministic terminal result without
+// materializing a retry successor. The exact worker lease and current schedule
+// pointer are rechecked in the same transaction, so a superseded worker can
+// only cancel its old chunk and cannot contribute failure to the new schedule.
+func (s *Surreal) FailGenerationChunk(
+	ctx context.Context,
+	chunk GenerationChunk,
+	errMessage string,
+) error {
+	if err := validGenerationChunkLease(chunk); err != nil {
+		return err
+	}
+	results, err := surrealdb.Query[[]generationTransitionRec](
+		ctx, s.db, failGenerationChunkSQL, map[string]any{
+			"chunk": generationChunkRecordID(chunk),
+			"schedule": models.NewRecordID(
+				"generation_schedule",
+				strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
+			),
+			"current": models.NewRecordID(
+				"generation_schedule_current",
+				strings.TrimPrefix(
+					generationCurrentID(chunk.Repository, chunk.Stage),
+					"sha256:",
+				),
+			),
+			"repository_state": models.NewRecordID(
+				"generation_schedule_repository",
+				strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:"),
+			),
+			"digest": chunk.ScheduleDigest, "lease": chunk.LeaseToken,
+			"worker": chunk.ClaimedBy, "error": boundedGenerationError(errMessage),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("fail generation chunk: %w", err)
+	}
+	rows := generationTransitionRows(results)
+	if len(rows) != 1 || !rows[0].Owned {
+		return ErrGenerationLeaseLost
+	}
+	if !rows[0].Current {
+		return ErrGenerationStale
+	}
+	return nil
+}
+
 const retryGenerationChunkSQL = `
 BEGIN;
 LET $owned = (SELECT id FROM $chunk WHERE status = 'running'
@@ -837,6 +906,78 @@ func (s *Surreal) ReleaseGenerationChunk(ctx context.Context, chunk GenerationCh
 	return nil
 }
 
+const reapGenerationChunkSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM $chunk WHERE status = 'running'
+	AND lease_token = $lease AND claimed_by = $worker
+	AND heartbeat_at = $heartbeat AND heartbeat_at < $cutoff LIMIT 1)[0].id;
+LET $current_digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
+LET $is_current = $current_digest = $digest;
+IF $owned != NONE {
+	UPDATE $chunk SET status = IF $is_current THEN 'pending' ELSE 'canceled' END,
+		priority = IF $is_current THEN 2 ELSE priority END,
+		not_before = IF $is_current THEN time::now() ELSE NONE END,
+		error = $error, claimed_by = '', claimed_at = NONE,
+		heartbeat_at = NONE, lease_token = '' RETURN NONE;
+	UPDATE $schedule SET running -= 1,
+		pending += IF $is_current THEN 1 ELSE 0 END,
+		updated_at = time::now() RETURN NONE;
+	UPDATE $repository_state SET running -= 1, updated_at = time::now() RETURN NONE;
+};
+RETURN [{ owned: $owned != NONE, current: $is_current, exhausted: false }];
+COMMIT;`
+
+// releaseStaleGenerationChunk binds the destructive release to the exact
+// heartbeat observed by the reaper's candidate read. A worker heartbeat that
+// lands after selection therefore wins, and the reaper cannot revoke the
+// renewed lease using stale evidence.
+func (s *Surreal) releaseStaleGenerationChunk(
+	ctx context.Context,
+	chunk GenerationChunk,
+	cutoff time.Time,
+) error {
+	if err := validGenerationChunkLease(chunk); err != nil {
+		return err
+	}
+	if chunk.HeartbeatAt == nil || !chunk.HeartbeatAt.Before(cutoff) {
+		return ErrGenerationLeaseLost
+	}
+	results, err := surrealdb.Query[[]generationTransitionRec](
+		ctx, s.db, reapGenerationChunkSQL, map[string]any{
+			"chunk": generationChunkRecordID(chunk),
+			"schedule": models.NewRecordID(
+				"generation_schedule",
+				strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
+			),
+			"current": models.NewRecordID(
+				"generation_schedule_current",
+				strings.TrimPrefix(
+					generationCurrentID(chunk.Repository, chunk.Stage),
+					"sha256:",
+				),
+			),
+			"repository_state": models.NewRecordID(
+				"generation_schedule_repository",
+				strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:"),
+			),
+			"digest": chunk.ScheduleDigest, "lease": chunk.LeaseToken,
+			"worker": chunk.ClaimedBy, "heartbeat": chunk.HeartbeatAt.UTC(),
+			"cutoff": cutoff.UTC(), "error": "stale worker lease reaped",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("reap generation chunk: %w", err)
+	}
+	rows := generationTransitionRows(results)
+	if len(rows) != 1 || !rows[0].Owned {
+		return ErrGenerationLeaseLost
+	}
+	if !rows[0].Current {
+		return ErrGenerationStale
+	}
+	return nil
+}
+
 func (s *Surreal) ReapStaleGenerationChunks(
 	ctx context.Context,
 	class GenerationResourceClass,
@@ -862,7 +1003,7 @@ SELECT * FROM generation_schedule_chunk WITH INDEX generation_schedule_chunk_sta
 		if chunkErr != nil {
 			return reaped, chunkErr
 		}
-		if releaseErr := s.ReleaseGenerationChunk(ctx, chunk, "stale worker lease reaped"); releaseErr != nil {
+		if releaseErr := s.releaseStaleGenerationChunk(ctx, chunk, cutoff); releaseErr != nil {
 			if errors.Is(releaseErr, ErrGenerationStale) {
 				reaped++
 				continue

@@ -1,6 +1,8 @@
 package observationpublication
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,6 +100,108 @@ func TestProgressShowsFailedScheduleAndDistinctRecovery(t *testing.T) {
 		recovery.Schedule.PublicationGeneration != target ||
 		recovery.Schedule.ScheduleGeneration == target {
 		t.Fatalf("recovery progress = %+v, %v", recovery, err)
+	}
+}
+
+func TestProgressDistinguishesPlanningOwnershipAndFailure(t *testing.T) {
+	dataDirectory, _, repository, _ := progressFixture(t)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{},
+		AcquireTransition: func(context.Context) (func(), error) {
+			return func() {}, nil
+		},
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("planning enqueue = %q, %v", disposition, err)
+	}
+	reader := &ProgressReader{DataDir: dataDirectory, Store: state, Cache: &Cache{}}
+	building, err := reader.Read(t.Context(), repository)
+	if err != nil || building.State != "building" || building.Planning == nil ||
+		building.Planning.State != "active" || building.Schedule != nil ||
+		building.Planning.SourceGenerationDigest != building.SourceGenerationDigest {
+		t.Fatalf("planning progress = %+v, %v", building, err)
+	}
+	state.settlePlanningFailure(t)
+	failed, err := reader.Read(t.Context(), repository)
+	if err != nil || failed.State != "failed" || failed.Planning == nil ||
+		failed.Planning.State != "failed" || failed.Planning.Failed != 1 {
+		t.Fatalf("failed planning progress = %+v, %v", failed, err)
+	}
+}
+
+func TestProgressTreatsMismatchedPlanningAsStaleAuthority(t *testing.T) {
+	repository := "github.com/example/observation-progress"
+	currentSource := "sha256:" + strings.Repeat("a", 64)
+	planningSource := "sha256:" + strings.Repeat("b", 64)
+	planningGeneration := "sha256:" + strings.Repeat("c", 64)
+	targetGeneration, _, err := planningTarget(repository, planningSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projected := projectProgress(
+		repository, currentSource, nil,
+		&store.GenerationSchedule{
+			Generation: planningGeneration, Status: store.GenerationScheduleActive,
+		},
+		planningBinding{
+			TargetGeneration:       targetGeneration,
+			SourceGenerationDigest: planningSource,
+		},
+		nil, "", "",
+	)
+	if projected.State != "stale" || projected.Planning == nil ||
+		projected.Planning.SourceGenerationDigest != planningSource {
+		t.Fatalf("mismatched planning projection = %+v", projected)
+	}
+	if err := ValidateProgress(projected); err != nil {
+		t.Fatalf("stale planning projection is invalid: %v", err)
+	}
+
+	for _, state := range []string{"building", "failed"} {
+		t.Run(state, func(t *testing.T) {
+			crossed := projected
+			crossed.State = state
+			planningState := "active"
+			if state == "failed" {
+				planningState = "failed"
+			}
+			crossed.Planning = &PlanningProgress{
+				State: planningState, ScheduleGeneration: planningGeneration,
+				TargetGeneration:       targetGeneration,
+				SourceGenerationDigest: planningSource,
+			}
+			if state == "failed" {
+				crossed.Planning.Failed = 1
+			}
+			if err := ValidateProgress(crossed); err == nil {
+				t.Fatal("crossed planning authority justified current-source progress")
+			}
+		})
+	}
+}
+
+func TestProgressAbsentPlanningPreservesLegacyJSONBytes(t *testing.T) {
+	progress := Progress{
+		SchemaVersion:          ProgressSchema,
+		Repository:             "github.com/example/observation-progress",
+		State:                  "building",
+		SourceGenerationDigest: "sha256:" + strings.Repeat("a", 64),
+		Schedule: &ScheduleProgress{
+			State:                 "active",
+			ScheduleGeneration:    "sha256:" + strings.Repeat("b", 64),
+			PublicationGeneration: "sha256:" + strings.Repeat("c", 64),
+			TotalPartitions:       2, Materialized: 2, Pending: 1, Running: 1,
+		},
+	}
+	encoded, err := json.Marshal(progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"schema":"phebs-observation-progress-v1","repository":"github.com/example/observation-progress","state":"building","source_generation_digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schedule":{"state":"active","schedule_generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","publication_generation":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","total_partitions":2,"materialized":2,"pending":1,"running":1,"succeeded":0,"failed":0}}`
+	if string(encoded) != want {
+		t.Fatalf("legacy progress JSON = %s\nwant %s", encoded, want)
 	}
 }
 

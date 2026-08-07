@@ -62,7 +62,9 @@ func Begin(root string, partition sourcepartition.Manifest) (*Stage, error) {
 	}
 	generations := 0
 	for _, entry := range entries {
-		if entry.IsDir() && len(entry.Name()) == 64 {
+		name := entry.Name()
+		_, collecting := collectingStageGeneration(name)
+		if entry.IsDir() && (len(name) == 64 && validLowerHex(name) || collecting) {
 			generations++
 		}
 	}
