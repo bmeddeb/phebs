@@ -30,6 +30,11 @@ type BuildRequest struct {
 	Source          repositoryindex.SourceManifest
 	Policy          Policy
 	Metrics         *BuildMetrics
+	// PriorSuperRootDirectory optionally names a fully validated v2 stage whose
+	// unchanged members may be hard-linked into a new v2 build. V1 Build ignores
+	// this field.
+	PriorSuperRootDirectory string
+	SuperRootMetrics        *SuperRootBuildMetrics
 }
 
 type BuildMetrics struct {
@@ -38,6 +43,15 @@ type BuildMetrics struct {
 	UniqueBlobBytes    int64
 	PeakSpoolBytes     int64
 	currentSpoolBytes  int64
+}
+
+// SuperRootBuildMetrics makes physical reuse observable rather than inferring
+// it from deterministic byte equality.
+type SuperRootBuildMetrics struct {
+	ReusedMembers  int
+	ReusedBytes    int64
+	WrittenMembers int
+	WrittenBytes   int64
 }
 
 type spoolRecord struct {
@@ -124,69 +138,9 @@ func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
 	}
 	defer func() { _ = os.RemoveAll(spoolDirectory) }()
 
-	roots := make(map[string]*spool)
-	_, err = repositoryindex.WalkPublishedSource(
-		ctx, request.SourceDirectory, request.Repository,
-		func(record repositoryindex.SourceRecord) error {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-			if record.Kind != "regular" || !matches(request.Policy, record.Path) {
-				return nil
-			}
-			if record.DeclaredBytes > MaxBlobBytes {
-				return checkPlanLimit(
-					pipelinerefusal.DimensionBlobBytes,
-					record.DeclaredBytes, MaxBlobBytes,
-					"selected blob exceeds the per-blob bound",
-				)
-			}
-			if metrics.SelectedPlacements == math.MaxInt {
-				return fmt.Errorf("%w: selected placement count overflows", ErrTooLarge)
-			}
-			hash := sourceBlobHash(record.ObjectID)
-			prefix := bitPrefix(hash[:], InitialPrefixBits)
-			current := roots[prefix]
-			if current == nil {
-				current = &spool{
-					path:   filepath.Join(spoolDirectory, "root-"+prefix+".jsonl"),
-					prefix: prefix, bits: InitialPrefixBits, metrics: metrics,
-				}
-				roots[prefix] = current
-			}
-			if err := appendSpool(current, spoolRecord{
-				ObjectID: record.ObjectID, DeclaredBytes: record.DeclaredBytes,
-				Path: record.Path, Mode: record.Mode,
-				Revisions: slices.Clone(record.Revisions),
-				Hash:      hex.EncodeToString(hash[:]),
-			}); err != nil {
-				return err
-			}
-			metrics.SelectedPlacements++
-			return nil
-		},
-	)
+	leaves, err := planLeaves(ctx, request, metrics, spoolDirectory)
 	if err != nil {
 		return Manifest{}, err
-	}
-
-	prefixes := make([]string, 0, len(roots))
-	for prefix := range roots {
-		prefixes = append(prefixes, prefix)
-	}
-	slices.Sort(prefixes)
-	leaves := make([]*spool, 0)
-	for _, prefix := range prefixes {
-		if err := splitSpool(ctx, spoolDirectory, roots[prefix], &leaves); err != nil {
-			return Manifest{}, err
-		}
-	}
-	if len(leaves) > MaxPartitions {
-		return Manifest{}, checkPlanLimit(
-			pipelinerefusal.DimensionPartitionCount,
-			int64(len(leaves)), MaxPartitions,
-			"partition count exceeds its bound",
-		)
 	}
 
 	members := make([]Member, 0, len(leaves))
@@ -254,6 +208,82 @@ func Build(ctx context.Context, request BuildRequest) (Manifest, error) {
 		return Manifest{}, err
 	}
 	return manifest, nil
+}
+
+// planLeaves performs the one streamed repository-source pass: every selected
+// record is spooled by hash prefix and split into bounded ordered leaves. Both
+// the v1 and v2 builders consume the same pass; neither reopens the source.
+func planLeaves(
+	ctx context.Context,
+	request BuildRequest,
+	metrics *BuildMetrics,
+	spoolDirectory string,
+) ([]*spool, error) {
+	roots := make(map[string]*spool)
+	_, err := repositoryindex.WalkPublishedSource(
+		ctx, request.SourceDirectory, request.Repository,
+		func(record repositoryindex.SourceRecord) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if record.Kind != "regular" || !matches(request.Policy, record.Path) {
+				return nil
+			}
+			if record.DeclaredBytes > MaxBlobBytes {
+				return checkPlanLimit(
+					pipelinerefusal.DimensionBlobBytes,
+					record.DeclaredBytes, MaxBlobBytes,
+					"selected blob exceeds the per-blob bound",
+				)
+			}
+			if metrics.SelectedPlacements == math.MaxInt {
+				return fmt.Errorf("%w: selected placement count overflows", ErrTooLarge)
+			}
+			hash := sourceBlobHash(record.ObjectID)
+			prefix := bitPrefix(hash[:], InitialPrefixBits)
+			current := roots[prefix]
+			if current == nil {
+				current = &spool{
+					path:   filepath.Join(spoolDirectory, "root-"+prefix+".jsonl"),
+					prefix: prefix, bits: InitialPrefixBits, metrics: metrics,
+				}
+				roots[prefix] = current
+			}
+			if err := appendSpool(current, spoolRecord{
+				ObjectID: record.ObjectID, DeclaredBytes: record.DeclaredBytes,
+				Path: record.Path, Mode: record.Mode,
+				Revisions: slices.Clone(record.Revisions),
+				Hash:      hex.EncodeToString(hash[:]),
+			}); err != nil {
+				return err
+			}
+			metrics.SelectedPlacements++
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	prefixes := make([]string, 0, len(roots))
+	for prefix := range roots {
+		prefixes = append(prefixes, prefix)
+	}
+	slices.Sort(prefixes)
+	leaves := make([]*spool, 0)
+	for _, prefix := range prefixes {
+		if err := splitSpool(ctx, spoolDirectory, roots[prefix], &leaves); err != nil {
+			return nil, err
+		}
+	}
+	if len(leaves) > MaxPartitions {
+		return nil, checkPlanLimit(
+			pipelinerefusal.DimensionPartitionCount,
+			int64(len(leaves)), MaxPartitions,
+			"partition count exceeds its bound",
+		)
+	}
+	return leaves, nil
 }
 
 func appendSpool(destination *spool, record spoolRecord) error {
@@ -460,6 +490,47 @@ func writeMember(
 	count, ordinal int,
 	leaf *spool,
 ) (Member, error) {
+	name := memberName(repository, generation, ordinal)
+	member, err := writeMemberAt(ctx, filepath.Join(directory, name), leaf)
+	if err != nil {
+		return Member{}, err
+	}
+	member.Ordinal, member.Count, member.Name = ordinal, count, name
+	return member, nil
+}
+
+// writeMemberAt encodes one ordered coalesced member and hashes exactly the
+// bytes it writes. Identity fields that depend on final placement (ordinal,
+// count, name) stay unset: member content is placement-independent, which is
+// what makes byte-exact reuse across generations possible.
+func writeMemberAt(ctx context.Context, path string, leaf *spool) (Member, error) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return Member{}, err
+	}
+	member, err := encodeMember(ctx, file, leaf)
+	if err != nil {
+		_ = file.Close()
+		return Member{}, err
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return Member{}, err
+	}
+	if err := file.Close(); err != nil {
+		return Member{}, err
+	}
+	return member, nil
+}
+
+// summarizeMember performs the canonical encoding and digest pass without
+// materializing bytes. A matching validated prior member can then be linked
+// directly; only misses perform the second pass that writes new bytes.
+func summarizeMember(ctx context.Context, leaf *spool) (Member, error) {
+	return encodeMember(ctx, io.Discard, leaf)
+}
+
+func encodeMember(ctx context.Context, output io.Writer, leaf *spool) (Member, error) {
 	records := make([]spoolRecord, 0, leaf.placements)
 	if err := forEachSpool(ctx, leaf.path, func(record spoolRecord) error {
 		records = append(records, record)
@@ -497,58 +568,38 @@ func writeMember(
 	if len(records) > MaxPlacementsPerPartition {
 		return Member{}, invalidf("planned member placements violate their partition")
 	}
-	name := memberName(repository, generation, ordinal)
-	file, err := os.OpenFile(
-		filepath.Join(directory, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600,
-	)
-	if err != nil {
-		return Member{}, err
-	}
 	hasher := sha256.New()
 	_, _ = hasher.Write([]byte("phebs-source-partition-member-v1\x00"))
+	writtenOutput := io.MultiWriter(output, hasher)
 	member := Member{
-		Ordinal: ordinal, Count: count, Name: name,
 		Prefix: leaf.prefix, PrefixBits: leaf.bits,
 		PlacementCount: len(records), BlobCount: len(blobs),
 	}
 	for index, blob := range blobs {
 		if err := ctx.Err(); err != nil {
-			_ = file.Close()
 			return Member{}, err
 		}
 		if blob.DeclaredBytes > MaxPartitionBlobBytes-member.DeclaredBytes {
-			_ = file.Close()
 			return Member{}, invalidf("planned member bytes violate their partition")
 		}
 		payload, err := json.Marshal(blob)
 		if err != nil {
-			_ = file.Close()
 			return Member{}, err
 		}
 		payload = append(payload, '\n')
 		if int64(len(payload)) > MaxMemberContentBytes-member.ContentBytes {
-			_ = file.Close()
 			return Member{}, invalidf("planned member metadata violates its partition")
 		}
-		written, err := file.Write(payload)
+		written, err := writtenOutput.Write(payload)
 		if err != nil || written != len(payload) {
-			_ = file.Close()
 			return Member{}, errors.Join(err, io.ErrShortWrite)
 		}
-		_, _ = hasher.Write(payload)
 		member.DeclaredBytes += blob.DeclaredBytes
 		member.ContentBytes += int64(written)
 		if index == 0 {
 			member.FirstObjectID = blob.ObjectID
 		}
 		member.LastObjectID = blob.ObjectID
-	}
-	if err := file.Sync(); err != nil {
-		_ = file.Close()
-		return Member{}, err
-	}
-	if err := file.Close(); err != nil {
-		return Member{}, err
 	}
 	member.Digest = "sha256:" + hex.EncodeToString(hasher.Sum(nil))
 	return member, nil

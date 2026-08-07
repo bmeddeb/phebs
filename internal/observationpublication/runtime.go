@@ -45,7 +45,11 @@ type Runtime struct {
 	plans          map[string]*sourcepartition.Plan
 	activeBuilds   map[string]int
 	retiringBuilds map[string]bool
-	transition     sync.Mutex
+	planningStages map[string]bool
+	// planMutation serializes the short destructive planning-namespace fence
+	// with binding publication and in-process build/stage admission.
+	planMutation sync.Mutex
+	transition   sync.Mutex
 }
 
 // Reconcile binds the current complete repository source generation to one
@@ -101,13 +105,13 @@ func (runtime *Runtime) reconcileSource(
 			return workFailure(err)
 		}
 	}
-	plan, stagingPlanDirectory, err := runtime.buildPlan(
+	plan, _, cleanupPlanStage, err := runtime.buildPlan(
 		ctx, repository, sourceDirectory, source,
 	)
 	if err != nil {
 		return planningFailure(err)
 	}
-	defer func() { _ = os.RemoveAll(stagingPlanDirectory) }()
+	defer cleanupPlanStage()
 	partition := plan.Manifest()
 	if err := checkPublicationLimit(
 		ErrLimit, pipelinerefusal.DimensionGenerationRecords,
@@ -269,45 +273,50 @@ func (runtime *Runtime) reconcileSource(
 		_ = os.RemoveAll(planDirectory)
 		return runtime.afterPublish(ctx, repository)
 	}
+	return workFailure(runtime.enqueueExecutionSchedule(ctx, repository, generation, partition))
+}
+
+func (runtime *Runtime) enqueueExecutionSchedule(
+	ctx context.Context, repository, generation string, partition sourcepartition.Manifest,
+) error {
+	runtime.planMutation.Lock()
+	defer runtime.planMutation.Unlock()
 	scheduleGeneration, priorScheduleDigest, err := runtime.scheduleGeneration(ctx, repository, generation)
 	if err != nil {
-		return workFailure(err)
+		return err
 	}
 	binding := scheduleBinding{
 		Schema: BindingSchema, Repository: repository,
 		ScheduleGeneration: scheduleGeneration, PublicationGeneration: generation,
-		PriorScheduleDigest:     priorScheduleDigest,
-		SourceGenerationDigest:  partition.SourceGenerationDigest,
+		PriorScheduleDigest: priorScheduleDigest, SourceGenerationDigest: partition.SourceGenerationDigest,
 		PartitionManifestDigest: partition.Digest,
 	}
 	if err := runtime.writeScheduleBinding(binding); err != nil {
-		return workFailure(err)
+		return err
 	}
-	_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
-		Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
-		ResourceClass: store.GenerationResourceCPU, TotalItems: int64(len(partition.Members)),
-		ChunkItems: ScheduleChunkItems, MaxAttempts: ScheduleMaxAttempts,
-		RepositoryTokens: ScheduleRepositoryTokens,
-	})
-	if errors.Is(err, store.ErrGenerationStale) && scheduleGeneration == generation {
-		current, currentErr := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
-		if currentErr != nil {
-			return workFailure(errors.Join(err, currentErr))
-		}
-		scheduleGeneration = recoveryScheduleGeneration(generation, current.Digest)
-		binding.ScheduleGeneration = scheduleGeneration
-		binding.PriorScheduleDigest = current.Digest
-		if bindingErr := runtime.writeScheduleBinding(binding); bindingErr != nil {
-			return workFailure(bindingErr)
-		}
-		_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
-			Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
+	enqueue := func(schedule string) error {
+		_, enqueueErr := runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
+			Repository: repository, Stage: ScheduleStage, Generation: schedule,
 			ResourceClass: store.GenerationResourceCPU, TotalItems: int64(len(partition.Members)),
 			ChunkItems: ScheduleChunkItems, MaxAttempts: ScheduleMaxAttempts,
 			RepositoryTokens: ScheduleRepositoryTokens,
 		})
+		return enqueueErr
 	}
-	return workFailure(err)
+	err = enqueue(scheduleGeneration)
+	if !errors.Is(err, store.ErrGenerationStale) || scheduleGeneration != generation {
+		return err
+	}
+	current, currentErr := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if currentErr != nil {
+		return errors.Join(err, currentErr)
+	}
+	binding.ScheduleGeneration = recoveryScheduleGeneration(generation, current.Digest)
+	binding.PriorScheduleDigest = current.Digest
+	if bindingErr := runtime.writeScheduleBinding(binding); bindingErr != nil {
+		return bindingErr
+	}
+	return enqueue(binding.ScheduleGeneration)
 }
 
 // Handle executes one durable scheduler chunk. Publication is attempted only
@@ -548,6 +557,8 @@ func (runtime *Runtime) fenceChunk(
 }
 
 func (runtime *Runtime) beginBuild(repository, generation string) (func(), error) {
+	runtime.planMutation.Lock()
+	defer runtime.planMutation.Unlock()
 	key := planKey(repository, generation)
 	runtime.mu.Lock()
 	if runtime.retiringBuilds[key] {
@@ -627,19 +638,20 @@ func (runtime *Runtime) buildRetiring(repository, generation string) bool {
 
 func (runtime *Runtime) buildPlan(
 	ctx context.Context, repository, sourceDirectory string, source repositoryindex.SourceManifest,
-) (*sourcepartition.Plan, string, error) {
+) (*sourcepartition.Plan, string, func(), error) {
 	planRoot := filepath.Join(runtime.DataDir, "observation-plans", repositoryHash(repository))
 	if err := os.MkdirAll(planRoot, 0o700); err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	temporary, err := os.MkdirTemp(planRoot, ".planning-")
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
+	cleanup := runtime.trackPlanningStage(temporary)
 	keep := false
 	defer func() {
 		if !keep {
-			_ = os.RemoveAll(temporary)
+			cleanup()
 		}
 	}()
 	manifest, err := sourcepartition.Build(ctx, sourcepartition.BuildRequest{
@@ -648,14 +660,36 @@ func (runtime *Runtime) buildPlan(
 		Policy: planningPolicy(),
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	plan, err := sourcepartition.Open(ctx, temporary, manifest)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	keep = true
-	return plan, temporary, nil
+	return plan, temporary, cleanup, nil
+}
+
+func (runtime *Runtime) trackPlanningStage(path string) func() {
+	runtime.planMutation.Lock()
+	runtime.mu.Lock()
+	if runtime.planningStages == nil {
+		runtime.planningStages = make(map[string]bool)
+	}
+	runtime.planningStages[path] = true
+	runtime.mu.Unlock()
+	runtime.planMutation.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			runtime.planMutation.Lock()
+			_ = os.RemoveAll(path)
+			runtime.mu.Lock()
+			delete(runtime.planningStages, path)
+			runtime.mu.Unlock()
+			runtime.planMutation.Unlock()
+		})
+	}
 }
 
 func (runtime *Runtime) openPlan(ctx context.Context, repository, generation string) (*sourcepartition.Plan, error) {

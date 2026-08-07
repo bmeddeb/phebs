@@ -170,7 +170,14 @@ func ValidateStage(ctx context.Context, directory string, expected Manifest) err
 	if opened.Digest != expected.Digest {
 		return invalidf("manifest changed before validation")
 	}
-	wantNames := map[string]bool{ManifestName(expected.Repository): true}
+	return validateOpenedStage(ctx, directory, opened)
+}
+
+// validateOpenedStage validates a manifest that was already read through the
+// canonical, identity-stable control path. Super-root validation uses this
+// helper so each segment control is opened exactly once.
+func validateOpenedStage(ctx context.Context, directory string, opened Manifest) error {
+	wantNames := map[string]bool{ManifestName(opened.Repository): true}
 	for _, member := range opened.Members {
 		wantNames[member.Name] = true
 		if _, err := readMember(

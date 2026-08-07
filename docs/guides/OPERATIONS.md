@@ -2934,8 +2934,23 @@ inventory as inspected but retains it without advertising perpetual pending
 work; a later marker restores pin-safe cleanup authority. A crash-shaped extra
 collecting incarnation is drained before an ordinary-only over-limit state is
 refused. Once v1 execution owns a plan, the existing settled-only cleanup
-posture remains; T40.3 owns bounded schedule/lease-fenced collection before v2
-can admit larger aggregate plan bytes.
+posture remains, and every owned planning run now also performs one bounded
+schedule/lease-fenced collection pass over that repository's
+`observation-plans/` namespace before its census. Collection removes at most
+eight superseded plan directories, crash-orphaned staging directories, or
+schedule/planning binding controls per pass after examining at most 512 names;
+the namespace is closed and each removal advances the bounded scan, so repeated
+passes cannot strand an artifact behind a fixed first window. It protects live
+registered staging directories, both current planning and execution schedules,
+the recovery identities a concurrent enqueue may mint, the current publication
+pointer and marker, and any in-process build. The collector renews the exact
+chunk lease and confirms all authority inside the same short namespace-mutation
+fence used by binding publication and build/stage admission. Authority movement
+or lease loss aborts before retirement. Eligible directories are renamed into
+a closed collecting namespace under that short fence and recursively drained
+after it is released; a crash leaves a bounded restart-visible drain name.
+Any collector refusal keeps the owned planning turn retryable rather than
+admitting more derived bytes behind an unproved namespace.
 
 That writer fence adds two short process-local mutex operations to every v1
 CPU-handler turn (registration and release), holds no mutex across the work,
@@ -2953,7 +2968,16 @@ most five attempts, process concurrency one, and a declared 256-MiB memory / 8
 descriptor budget. Its source-partition v1 work remains capped at 16,384
 members, 4,096 blobs and placements per member, 64 MiB per member, 4 GiB each
 of declared unique-blob and encoded-member bytes, and 8 GiB of temporary spool
-bytes. A current publication also invokes the unchanged resolver-enabled
+bytes. The T40.3 `phebs-source-partition-superroot-v2` contract (not yet the
+production planning path) retains every one of those per-member bounds and
+evolves only the generation ceiling: at most 16 independently v1-bounded
+segments, 16,384 aggregate members, and 64 GiB each of aggregate declared and
+encoded bytes, every limit checked before growth and refused under the closed
+`aggregate_segments` or generation-byte dimensions. A v2 build may first
+fully validate a prior super-root, canonically hash each new member without
+materializing it, and hard-link an exact prefix/summary/digest match; explicit
+reused/written member and byte counters prove physical reuse, and corrupt prior
+authority refuses rather than becoming input. A current publication also invokes the unchanged resolver-enabled
 relationship reconciliation seam: bounded catalog/service-state pages and
 resolver/current-root controls, with at most one existing relationship-schedule
 enqueue. No observation member or source blob is read on that callback path.

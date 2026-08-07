@@ -52,6 +52,7 @@ const (
 	DimensionBlobBytes               Dimension = "blob_bytes"
 	DimensionBlobPlacements          Dimension = "blob_placements"
 	DimensionPartitionCount          Dimension = "partition_count"
+	DimensionAggregateSegments       Dimension = "aggregate_segments"
 	DimensionObservationMemberBytes  Dimension = "observation_member_bytes"
 	DimensionGenerationBlobBytes     Dimension = "generation_blob_bytes"
 	DimensionGenerationEncodedBytes  Dimension = "generation_encoded_bytes"
@@ -307,7 +308,8 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 	case StageSourcePartitionPlanning:
 		switch dimension {
 		case DimensionBlobBytes, DimensionBlobPlacements,
-			DimensionPartitionCount, DimensionGenerationBlobBytes,
+			DimensionPartitionCount, DimensionAggregateSegments,
+			DimensionGenerationBlobBytes,
 			DimensionGenerationEncodedBytes, DimensionGenerationControlBytes,
 			DimensionPlanningSpoolBytes:
 			return true
@@ -391,7 +393,8 @@ func validClassification(classification Classification) bool {
 func validDimension(dimension Dimension) bool {
 	switch dimension {
 	case DimensionUnknown, DimensionBlobBytes, DimensionBlobPlacements,
-		DimensionPartitionCount, DimensionObservationMemberBytes,
+		DimensionPartitionCount, DimensionAggregateSegments,
+		DimensionObservationMemberBytes,
 		DimensionGenerationBlobBytes, DimensionGenerationEncodedBytes,
 		DimensionGenerationArtifactBytes, DimensionGenerationControlBytes,
 		DimensionRepositoryGenerations, DimensionRepositoryEntries,
