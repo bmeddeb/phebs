@@ -46,6 +46,24 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 - **Agents never merge into `main` without Ben's explicit request** (2026-07-22).
  Passing the merge bar authorizes a merge *request*, not the merge itself;
  completed ticket work stays on its ticket branch until Ben says to integrate.
+- **Parallel tracks (2026-08-07).** The scale track owns Epics 40–42 in this
+  checkout on `codex/t4*` branches and owns `internal/`, `cmd/`, `spike/`, the
+  store schema, `Makefile`, and `go.mod`. The presentation track owns Epic 43
+  in `../phebs-ux` on `ux/t43.*` branches and owns `ui/`,
+  `docs/DESIGN_CHARTER.md`, screenshot tooling, and retained design records;
+  it is governed by `docs/DESIGN_CHARTER.md` and must not alter a scale plane,
+  authority, claim, or caveat wording. Scale work must not modify `ui/` or
+  `docs/DESIGN_CHARTER.md` without a flagged handoff. Shared spine docs
+  (`PLAN.md`, `docs/BACKLOG.md`,
+  `docs/ROADMAP.md`, `AGENTS.md`, `docs/BACKLOG_COMPLETED.md`, and
+  `docs/README.md`) are append-only across tracks: edit only the owning epic's
+  sections and ADR rows, never reflow the other track's text, and the second
+  merger resolves conflicts and reruns `make docs-check` and
+  `make verify-glossary`. Stage only explicit paths; never use `git add -A` or
+  `git add .`, never stage the other track's files, and leave unfamiliar
+  `ui/` or design-document changes uncommitted. Any boundary crossing must be
+  identified in the ticket summary and wait for Ben's routing rather than
+  crossing silently.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
 - Every implementation review includes a steady-state-cost pass: enumerate work
@@ -167,8 +185,10 @@ unfrozen very-large-monorepo diagnostic is retained as source-free engineering
 evidence, not a scale pass. Epics 40–42 are the scheduled scale-convergence
 program: T40.1's closed refusal envelope/frozen neutral corpus, T40.2's
 independent derived-plan ownership, and T40.3's source-partition super-root are
-complete, T40.4's hierarchical observation inventory and T40.5's immutable
-search-generation lifecycle are complete, and T40.6 is the next scale ticket;
+complete, T40.4's hierarchical observation inventory, T40.5's immutable
+search-generation lifecycle, and T40.6's observation recovery/lifecycle/archive
+migration plus reverse-audit closure are complete, and T40.7 is the next scale
+ticket;
 Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41
 separately requires at least 8,000 accepted services and measures a target of

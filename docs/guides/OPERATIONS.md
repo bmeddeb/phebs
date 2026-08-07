@@ -55,9 +55,10 @@ manifest and the precise immutable leaf artifacts it references; incomplete,
 ambiguous, invalid, marker-covered, or unreferenced caller state is omitted for
 reconstruction from candidate and resolver authority.
 Go source observations are likewise derived. Backup preserves every fully
-validated current immutable observation generation byte-exactly, but excludes
-restartable `observation-plans/`, incomplete stages, and historical generations.
-Restore strict-opens the staged root before installing it and grants no
+validated current immutable v1 observation generation plus each joint v2
+current/rollback source-and-observation generation byte-exactly, but excludes
+restartable `observation-plans/`, incomplete stages, and unrooted generations.
+Restore strict-opens every staged v1/v2 root before installing it and grants no
 authority to an invalid or omitted generation.
 
 The selected historical-publication posture is unbounded in the live
@@ -117,7 +118,7 @@ proves the exact canonical tar inventory in one bounded streaming pass; it
 does not extract the archive into a second temporary tree. Restore's
 pre-import verification and final installation still perform the complete
 structural extraction and semantic publication validation. The
-`phebs-backup-manifest-v7` manifest
+`phebs-backup-manifest-v8` manifest
 binds all six artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
@@ -129,16 +130,28 @@ recovers and compares the archived publication count. It contains no host
 binary path or database password. Preserve the exact config separately; the
 backup contains its digest, not its bytes.
 
-`observation-publication.tar` contains only the strict current generation for
-each repository. Discovery and creation completely validate every canonical
-member and distinct observation; the completed tar is then restored into a
-private verification tree through the same validator before backup succeeds.
-Corrupt derived publications are counted and omitted rather than blocking the
-precious database export. The archive admits at most 10,000,000 regular entries
-and 1 TiB of declared bytes. Restore accepts only safe regular paths, caps those
-same dimensions, validates every restored publication, and installs the private
-tree by one rename. The `phebs-observation-archive-report-v1` manifest section
-records publication, file, logical-byte, and omission counts.
+`observation-publication.tar` contains the strict current v1 generation and
+the joint v2 current plus rollback-floor generations for each repository.
+Joint v2 generations retain both the source super-root tree and its bound
+observation inventory tree. Discovery and creation completely validate every
+canonical member and distinct observation; the completed tar is then restored
+into a private verification tree through the same validator before backup
+succeeds. Corrupt, in-flight, or unrooted derived publications are counted and
+omitted rather than blocking the precious database export. The archive admits
+at most 10,000,000 regular entries and 1 TiB of declared bytes. Restore accepts
+only safe regular paths, caps those same dimensions, retains a deterministic
+private stage across interruption, reuses only byte-identical completed
+entries, rejects every staged path absent from the selected tar, validates
+every restored publication, and installs the private tree by one rename. The
+top-level restore performs this extraction first through a sibling
+`<data>.observation-restore` stage; until the final observation rename the data
+directory remains empty, so a subsequent invocation reaches and resumes an
+interrupted extraction before database import. The
+`phebs-observation-archive-report-v2` manifest section
+records total and separate v1/v2 publications, files, logical bytes, omitted
+publications/artifacts, and stale markers. Verification independently compares
+the archived publication, file, and byte totals. The completed tar is an
+external snapshot and never remains a live-generation pin.
 
 `resolver-catalog.tar` contains every and only strict, marker-free immutable
 catalog publication. Catalog manifests and canonical NDJSON members retain
@@ -2741,6 +2754,7 @@ may override these protections.
 | source generations | 14 days | 2 per repository | 8 GiB encoded members per repository |
 | search generations | 14 days | 2 per repository | 50 GiB filesystem allocated bytes per repository |
 | observation namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
+| joint v2 observation generations | 14 days | current + 1 rollback per repository | separate 20 GiB encoded-member and 20 GiB segment-charged observation-byte ceilings per generation |
 | resolver namespaces | 14 days | 2 per repository | 10 GiB encoded members per repository |
 | relationship namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
 | abandoned partial stages | 24 hours | 2 per repository/stage | charged to the owning artifact class |
@@ -2772,7 +2786,7 @@ prior generation leave the live-root set. Proof and Investigation pins and
 active leases always win, even if disk remains above 90%. T35.3 rechecks all
 roots immediately before collection and coordinates with backup.
 
-The installed controller has thirteen closed owners and advances one owner per
+The installed controller has fourteen closed owners and advances one owner per
 turn through durable CAS cursors. A successful turn uses at most sixteen store
 queries including four cursor operations, 64 candidate rows, sixteen deleted
 rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
@@ -2807,6 +2821,23 @@ owner remains exact empty until that pipeline registers publications. Proofs,
 Investigations, tombstones, readers, and crash-stage recovery retain their
 explicit existing lifecycle and are never swept by analogy. A malformed owner
 is `unavailable`, not permission to widen another collector.
+
+The separate `observation-v2-generations` owner walks the closed `v2/`
+namespace under the same backup/publication mutation lock. Its small root
+protects current plus one rollback floor; a publishing marker protects its
+exact stage and any sealed post-rename candidate. Exact cache leases and the
+explicit proof/Investigation pin providers outrank age, count, pressure, and
+collection. One eligible generation or abandoned worker stage is renamed to a
+closed `collecting-*` name before deletion. Each turn removes at most sixteen
+known regular entries and resumes that collecting name after interruption;
+unknown names, symlinks, special files, changed controls, or pin-provider
+errors refuse. Its status is the standard bounded source-free owner result—no
+repository, generation, path, source, or retained content is exposed.
+Publication admission counts both `.stage-*` and `collecting-stage-*` names and
+reserves the new stage plus marker before either is created, keeping the
+74-entry namespace readable by archive and lifecycle after any interrupted
+begin/restart. A cache lease pins its expected repository/generation from the
+moment a cold open starts, before full filesystem validation completes.
 
 Capacity admission opens and identity-fences the real data-directory
 descriptor; a symlink or changing root is unavailable. Exact no-op indexing
@@ -3068,6 +3099,21 @@ selects them in T40.4. T40.6 owns those mutations after their recovery and
 retention gates can understand both v1 and v2. The 4,000,000-record envelope is
 a source-free admission bound selected from the frozen 262,144-blob semantic
 profile, not a supported-scale, latency, or release claim.
+
+T40.6 supplies that authority as a separate joint v2 plane without changing
+the v1 product pointer. `BeginInventoryPublicationV2` writes a marker before
+corpus work and returns closed `source/` and `inventory/` stage directories.
+Completion fully validates the source super-root, observation inventory, and
+their cross-root binding, reruns the durable worker fence, seals the candidate
+in the marker, same-parent-renames the stage, advances current/rollback, and
+clears the marker. A stale worker cannot publish. Startup holds the existing
+exclusive mutation lock, completes only a fully validated staged or already
+renamed candidate, and otherwise leaves the prior root unchanged. An exact
+worker may retire an incomplete stage to `collecting-stage-*` and mint a clean
+transition; the lifecycle owner drains the retired bytes later rather than
+performing recursive deletion under the publication fence.
+Republishing the exact current generation returns the unchanged root, including
+its existing rollback floor; a same-generation reference mismatch refuses.
 
 ### Shared source-observation progress and neutral demo
 

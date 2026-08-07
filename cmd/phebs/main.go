@@ -333,10 +333,16 @@ func serve(args []string) error {
 		Pins:     searchGenerationPins, Acquire: acquireLifecycleMutation,
 	})
 	observationCache := &observationpublication.Cache{}
+	observationInventoryCache := &observationpublication.InventoryCacheV2{}
 	relationshipCache := &relationshippublication.Cache{}
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationGenerationOwner{
 		Root: filepath.Join(cfg.Server.DataDir, "observations"),
 		Pins: observationCache, Acquire: acquireLifecycleMutation,
+	})
+	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationInventoryOwnerV2{
+		Root:    filepath.Join(cfg.Server.DataDir, "observations"),
+		Pins:    observationpublication.InventoryPinsV2{Cache: observationInventoryCache},
+		Acquire: acquireLifecycleMutation,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwner{
 		DataDir: cfg.Server.DataDir, Pins: relationshipCache,
@@ -382,6 +388,25 @@ func serve(args []string) error {
 			return err
 		}
 		observationRuntime.OnPublished = reconcileRelationship
+	}
+	releaseObservationRecovery, recoveryLockErr := acquireObservationTransition(ctx)
+	if recoveryLockErr != nil {
+		return fmt.Errorf("acquire observation v2 startup recovery lock: %w", recoveryLockErr)
+	}
+	observationV2Recovery, observationV2RecoveryErr :=
+		observationpublication.RecoverInventoryPublicationsV2(
+			ctx, filepath.Join(cfg.Server.DataDir, "observations"),
+		)
+	releaseObservationRecovery()
+	if observationV2RecoveryErr != nil {
+		return fmt.Errorf("recover observation v2 publications: %w", observationV2RecoveryErr)
+	}
+	if observationV2Recovery.Repositories > 0 {
+		diagnostics.Logf(
+			"observation v2 recovery: repositories=%d completed=%d incomplete=%d",
+			observationV2Recovery.Repositories, observationV2Recovery.Completed,
+			observationV2Recovery.Incomplete,
+		)
 	}
 	if cfg.Lifecycle.EnabledFor() {
 		lifecycleController, lifecycleErr := lifecycle.NewController(

@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.5 are complete and T40.6 is next,
+explicit scale-convergence program: T40.1–T40.6 are complete and T40.7 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.5 complete · T40.6 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.6 complete · T40.7 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,20 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.6 · Observation recovery, lifecycle, and archive migration** — make the
-v2 source-partition/observation generations restart-resumable and pin-aware
-across markers, reader leases, backup/restore, pressure, and collection. AC:
-startup completes only fully validated staged generations and otherwise keeps
-the prior pointer; stale workers cannot publish; current, rollback-floor,
-active-lease, proof, Investigation, and in-progress backup/mutation lock
-outrank collection, while completed archives do not pin live data; draining
-renames a generation out of the publication namespace before bounded deletion;
-v1 and v2 generations round-trip byte-exactly in the next archive schema with
-visible omission counts for invalid derived data; interrupted restore and
-collection resume; owner status exposes only bounded source-free counts;
-80/90/75 pressure behavior and precious-store backup remain unchanged; full
-recovery suite and merge bar.
 
 **T40.7 · Constant-cost evidence-stage accounting** — replace `AddEvidence`'s
 per-chunk full-run count scans with idempotent chunk identities and charged
