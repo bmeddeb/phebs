@@ -27,12 +27,13 @@ complete-publication workers. Their retained external validation result is
 compatibility, migration completion, decommission safety, or extraction
 accuracy.
 
-The current service model is intentionally incomplete: one repository may be
-whole-repository or have one configured analysis unit, but it cannot yet expose
-thousands of independently current services. The selected product direction
-is now microservice-first. Repositories remain shared physical source/index
-generations; services become first-class catalog, search, relationship, and
-workflow scopes over those generations.
+The current service model is intentionally bounded: its monolithic catalog,
+state convergence, and relationship authority admit at most 4,000 services and
+are not the selected shape for the new 8,000-or-more requirement. The product
+direction remains microservice-first. Repositories share physical source/index
+generations; services are first-class catalog, search, relationship, and
+workflow scopes over those generations. Epics 40–42 now evolve the physical
+pipeline and logical authority independently before one combined scale gate.
 
 ## Now
 
@@ -97,6 +98,18 @@ no-release decision and closed Epic 39 on 2026-08-06. T39.R1 then closed the
 conditional mirror-lock contention prerequisite without authorizing a rerun:
 caller execution now receives its unchanged five-minute budget only after the
 shared repository lock is acquired.
+
+One later unfrozen private diagnostic was reduced to the source-free retained
+[large-monorepo report](../spike/large-monorepo-20260806/REPORT.md). It shows
+that direct search can commit beyond 1.6 million regular-file physical owners
+while derived observation/extraction work can still fail to converge. It
+supplies an engineering direction, not a supported-scale, target-SLO,
+accuracy, topology, or release result. On 2026-08-06 Epics 40–42 became the
+explicit next program:
+T40.1 first closes refusal attribution and freezes a two-million-owner neutral
+envelope; Epic 41 separately targets 10,000 accepted services with an 8,000
+accepted-service floor; Epic 42 composes both dimensions. No private rerun is
+authorized.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -439,9 +452,8 @@ T39.3's independent security/lifecycle matrix is complete. T39.4 retained an
 honest pre-unsealing stop; T39.5 retained no release and closed Epic 39.
 T39.R1's bounded-serialization repair is complete; T39.2 remains stopped and
 no rerun is authorized.
-Epics 25–28 remain
-unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
-ticket. Epic 25 is an embedded
+Epics 25–28 remain unscheduled drafts in the [backlog](./BACKLOG.md); none is
+the next ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
 evidence proposal:
 committed PostgreSQL or MySQL schema-only dumps can independently supply
@@ -474,9 +486,10 @@ store, add a route or capability identifier, or permit a simultaneous
 synthetic/fixture catalog authority. It lets a pilot exercise Workbenches over
 real published evidence but changes no production registration, which stays
 behind the gates below. None of Epics 25–28 is an implicit next ticket; the
-microservice sequence below is the explicit direction after T31.1 and T32.1.
+completed microservice sequence below is the foundation for the explicit
+Epics 40–42 scale program.
 
-## Next: microservice architecture program
+## Completed foundation: microservice architecture program
 
 The program goal is not merely to index a large repository. It is to make
 services first-class without performing repository-sized work once per
@@ -605,9 +618,11 @@ service count × repository bytes
   before unsealing because no execution-binding Gate-0 protocol, independent
   gold, or workflow baseline exists. The final decision is `DO_NOT_RELEASE`:
   all packs remain experimental-dark, human continuation is ineligible, and
-  no rerun or next implementation ticket is authorized. T39.R1 subsequently
-  moved the unchanged caller execution budget after mirror-lock acquisition,
-  closing the contention prerequisite without superseding T39.2.
+  that decision authorized no rerun or next implementation ticket. T39.R1
+  subsequently moved the unchanged caller execution budget after mirror-lock
+  acquisition, closing the contention prerequisite without superseding T39.2.
+  The later post-Epic-39 ADR independently schedules Epics 40–42 without
+  changing the no-release or no-private-rerun decision.
 
 T32.1 completed the decision/documentation closure after T31.1 diagnostics;
 T32.2–T32.4 supplied the source-free target observation, neutral oracle/load
@@ -616,9 +631,93 @@ conditional implementation GO and conservative admission/refusal caps below
 the largest synthetic envelope. T33.1 implements those caps, strict
 authority/membership validation, and canonical identity; T33.2 now binds that
 contract to exact source censuses, immutable precious store authority, and
-side-by-side v1 migration, and T33.3 now owns independent state. Those caps are not release limits. Target
-operating limits, pack accuracy, workflow value, and any release decision
-remain T39 gates; every epic ends in a demoable state.
+side-by-side v1 migration, and T33.3 now owns independent state. Those caps are
+not release limits. Target operating limits, pack accuracy, workflow value,
+and any release decision need a separately authorized successor to the stopped
+T39 gates; Epics 40–42 establish bounded mechanics and neutral scale evidence
+only. Every epic ends in a demoable state.
+
+## Next: two-million-owner and 10,000-service convergence
+
+The next program separates two scale dimensions that prior evidence never
+measured together:
+
+| Dimension | Minimum program target | Why it is separate |
+|---|---:|---|
+| Shared physical repository | at least 2,000,000 regular-file owners | the retained diagnostic had no accepted multi-service catalog and stopped in derived work after search publication |
+| Logical service authority | 8,000 accepted floor; 10,000 accepted target; accepted-only 12,500-service comparator, with total records separate | the current 4,000-service catalog, state, and relationship layouts are monolithic; the large-repository run provides no service-cardinality evidence |
+| Combined product | at least 2,000,000 owners × 10,000 accepted services | only the combined gate can prove that logical membership does not multiply physical Git, index, observation, or source-storage work |
+
+The intended cost remains:
+
+```text
+physical owners + distinct admitted source bytes + changed bounded partitions
+  + emitted observations + logical membership/state changes
+```
+
+It must not become:
+
+```text
+service count × repository bytes
+```
+
+### Program sequence
+
+- **Epic 40 — very-large-monorepo derived-pipeline convergence (scheduled;
+  T40.1 next):** close exact source-free refusal attribution, detach derived
+  planning failure from committed search authority, evolve existing partition/
+  observation members behind measured aggregate roots, replace the static
+  search lifecycle owner, make evidence append cost proportional to one chunk,
+  partition extraction behind atomic domain authority, preserve recovery/
+  lifecycle/archive behavior, replay downstream consumers, and close on a
+  neutral two-million-owner gate.
+- **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
+  freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
+  a v3 root with dual service/path member views, publish immutable precious
+  authority with real lifecycle ownership, reconcile and activate state under
+  separate resumable fences, make authorized point/page reads member-local,
+  bucket relationship publications, and close on a neutral
+  10,000-service recovery/lifecycle/product gate. T41.1 owns final aggregate
+  limits; no constants-only increase is permitted.
+- **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
+  freeze a deterministic combined corpus and independent oracle, execute cold,
+  no-op, delta, A→B→A, interruption, restore, pressure, lifecycle, and product
+  paths through ordinary workers, then retain single-node direct topology,
+  request a bounded cohort experiment, request a P6 investigation, or stop
+  according to the frozen rule.
+
+The scale corpus is first-party and profile-separated. A streaming author
+creates external scratch bare-Git generations with fixed identities and A→B→A
+transitions; the repository retains generators, independent oracles, schemas,
+and source-free receipts rather than the giant generated tree. The physical
+profile separates two-million eligible-Go-path and declared-byte pressure from unique
+semantic content; the semantic profile separately exceeds the observation and
+IDL dimensions; the logical profiles carry 8,000/10,000/12,500 explicit
+accepted-service authority with shared fan-out at most 20; and T42 composes the
+10,000-service target without duplicating physical bytes. Bazel/Gazelle and
+bulk third-party code generators are not corpus dependencies. Runtime-trace
+datasets may inform neutral aggregate graph shapes only; they are not source,
+catalog, relationship, or correctness authority.
+
+### Decision and claim boundary
+
+- T40.1 is the only next ticket. Later tickets stay dependency-ordered and may
+  be refined by preceding retained measurements, but may not broaden identity,
+  authority, authorization, or release semantics.
+- Search, derived observations, extraction domains, service state, and
+  relationship roots remain separately visible authorities. A failure in one
+  cannot erase or relabel a valid sibling plane.
+- Existing per-service/path/fan-out limits and v1/v2 bytes remain exact.
+  Aggregate bounds move only in their named measured ticket, with pre-growth
+  refusal, maximum-shape, recovery, lifecycle, and steady-state-cost tests.
+- Epic 42 freezes individual source transitions and proves convergence; it does
+  not measure sustained commit velocity, queue catch-up, or freshness under a
+  commit cadence. Those remain target operating evidence for a separately
+  authorized successor to the stopped T39.2 operating gate.
+- The retained unfrozen private diagnostic authorizes no target rerun. Every
+  neutral receipt denies target SLO, supported customer scale, accuracy/completeness,
+  release, migration completion, and decommission safety. `GATE2-V2` remains
+  `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
 
 ## Gated product work
 

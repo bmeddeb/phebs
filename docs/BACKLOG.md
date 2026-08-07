@@ -27,7 +27,12 @@ gate and T39.2's honestly stopped authorized target run are retained in the
 completed backlog. T39.3's security/lifecycle gate is also retained there.
 T39.4's evidence/workflow gate stopped before unsealing and T39.5 retained the
 no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
-is also complete without authorizing or superseding a target rerun.
+is also complete without authorizing or superseding a target rerun. A
+source-free diagnostic from a later unfrozen very-large-monorepo run is
+retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
+explicit scale-convergence program: T40.1 is next, Epic 41 separately targets
+at least 8,000 accepted services and measures 10,000 accepted logical services,
+and Epic 42 composes the physical-repository and service-cardinality envelopes.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -35,13 +40,590 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–34, and P5 hardening are retained in the
+Epics 0–24, Epics 29–39, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
 New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
+
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(scheduled 2026-08-06 · T40.1 next)*
+
+Make the source-observation, candidate, extraction, and downstream generation
+pipeline converge under a neutral repository shape with at least two million
+regular-file owners. Search already demonstrated that it can publish a shared
+physical generation beyond 1.6 million owners in one unfrozen environment;
+that observation does not establish comfortable headroom, a supported scale,
+or derived-pipeline completion. This epic closes the semantic and bounded-work
+gaps that allowed committed search authority to coexist with opaque
+observation-plan refusal, repeated repository-wide manifest validation, and
+nonpublishing extraction work.
+
+### Boundary
+
+- Search publication and derived evidence are independent authority planes. A
+  committed, validated search generation remains current when observation,
+  extraction, resolver, or relationship work is unavailable or fails. The
+  exact derived generation remains visibly pending, failed, or unavailable.
+- The initial neutral envelope has at least 2,000,000 regular-file physical
+  owners, at least 1,000,000 repository-lane placements and separately at
+  least 1,000,000 caller-lane placements, more than 8 GiB of declared
+  repository-lane Go bytes, and at least 32,768 IDL candidate inputs. T40.1
+  separately
+  freezes each plane's placements, unique blobs, declared bytes, and encoded
+  bytes; overlapping repository/caller planes are never summed as unique
+  source. Exact structural and semantic profiles precede any production
+  aggregate cap change.
+- Existing per-blob, per-member, per-child, per-request, per-evidence-chunk,
+  and per-domain safety limits remain fixed unless the owning ticket measures
+  that exact dimension and records a reduce-first decision. Increasing a
+  timeout, retry count, or monolithic buffer is not an implementation.
+- Generation controls stay small; corpus-sized records live in ordered,
+  digest-bound members. Cold validation may stream a complete generation once;
+  hot point reads, no-ops, retries, and status reads may not reopen or hash the
+  complete corpus.
+- A file-local unsupported syntax becomes an explicit classified gap when the
+  pack contract permits per-file independence. It may not silently disappear
+  or fail unrelated files. A corrupt control, inconsistent member, unknown
+  authority, or aggregate-bound violation still refuses the complete domain.
+- This epic does not multiply work by service count, raise the 4,000-service
+  catalog cap, select cohorts or P6, authorize a private rerun, or change the
+  T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
+  the combined gate.
+
+**T40.1 · Closed scale-refusal attribution and frozen neutral envelope** —
+replace generic post-index and extraction boundary failures with typed,
+source-free classifications that name the exact stage, policy dimension,
+observed scalar, admitted limit, and generation kind while keeping private
+names, paths, object IDs, digests, child output, and raw errors excluded.
+Preserve `errors.Is` causes through the job boundary; the durable operation
+receipt must distinguish source-partition planning, observation publication,
+candidate strict-open, domain inventory, staging, and final publication
+refusal. Fix the Huma/OpenAPI `reflect.StructOf: duplicate field Schema`
+startup warning on the observation progress surface and pin warning-free
+schema generation with a focused test while preserving the exact JSON
+`schema` wire field. Freeze and compare the same-SHA whole-repository zoekt
+child's effective blob-reader posture—go-git versus the upstream
+`git cat-file --batch --buffer` candidate—including indexed-content and
+query-result equality, peak child-plus-Git RSS, descriptors, cancellation, and
+missing/corrupt-object behavior without changing production posture. Add a
+deterministic metadata-heavy structural profile and a smaller content-bearing
+semantic profile. The first-party author streams into an external scratch bare
+Git repository with fixed Git identity, timestamps, modes, path order, profile
+version, and seeds; it may not retain a corpus-sized path-to-bytes map or place
+the giant generated repository in this worktree. The structural profile starts
+from 10,000 neutral cells with 200 eligible Go paths each, reports controls
+separately, and uses fixed padding plus deliberately bounded blob reuse to
+separate at least two million physical owners and more than 8 GiB of declared
+Go placements from unique-content cost. The semantic profile independently
+carries at least 262,144 distinct eligible Go blobs and at least 32,768 IDL
+candidates with closed supported and explicit-gap template families. A small
+pinned real-generator parity subset may validate templates; Bazel, Gazelle,
+`protoc`, Buf, sqlc, and ent are not bulk corpus dependencies. Freeze exact
+counts, declared/logical/encoded/allocated byte kinds,
+repository/caller placements and unique blobs, domain partition/member/fact/
+row/result-byte aggregates, expected refusal/pass outcomes, generator/tool
+identities, and digests before production limits move. The author emits
+baseline A, bounded B, and A-content-return revisions plus named failure
+injection points; an independent oracle consumes the profile rather than phebs
+results. AC: the retained
+historical diagnostic remains honestly `unknown`, while a neutral reproducer maps every currently collapsed
+cause to exactly one closed refusal without private input; every newly
+classified or frozen dimension has a table-driven positive, exact-bound, and
+one-over test, while all existing owning limit tests remain green; unknown
+failures remain `unknown` rather than guessed; two independent builds are
+byte-identical; every authoring error is checked; normal tests use retained
+small projections rather than generating the giant corpus; no production cap,
+timeout, retry, topology, or release state changes; dated PLAN decision and
+full merge bar.
+
+**T40.2 · Independent derived-plan job ownership** — move observation/source
+partition planning out of the indexing job's synchronous success boundary.
+With respect to repository-wide derived planning, the index job commits and
+reports source/search authority plus durable enqueue of the exact
+derived-generation request; the existing selected service-catalog/state/search
+generation reconciliation hook remains ordered and unchanged. A downstream
+planning failure settles on its own generation-scoped schedule and cannot
+relabel or rebuild an already-current search generation. AC: enqueue failure
+before durable ownership remains retryable; crash after search commit and
+before enqueue is repaired on
+startup/reconcile; duplicate callbacks coalesce; terminal derived refusal does
+not trigger another tree census or zoekt child; a newer commit supersedes stale
+work without altering the prior complete derived pointer; warm search no-op
+performs only bounded control reads; cancellation, lease loss, and A→B→A have
+dedicated race tests; current v1 schedules remain readable; service-catalog
+reconcile ordering, failure, and no-op tests stay byte- and behavior-identical;
+diagnostics and operations guidance updated; full merge bar.
+
+**T40.3 · Source-partition super-root and aggregate policy v2** — retain the
+shipped v1 manifest, ordered members, 4,096-blob/placement partition bounds,
+64-MiB per-partition declared-byte bound, content-addressed coalescing, and
+immutable Git reader defenses. Evolve only the actual blocker: the single
+independent 4-GiB generation declared-byte and encoded-member bounds plus
+complete-generation planning/publication ownership. T40.1 selects a measured
+v2 super-root over independently bounded
+v1-compatible segments. AC: the small root binds ordered nonoverlapping
+segment ranges, every segment/member digest and byte kind, aggregate unique
+blobs/placements/declared/encoded bytes, policy, and source generation; no
+corpus-sized path/blob map; every aggregate and segment limit is pre-growth;
+one keyed partition open reads root, one segment control, and one existing
+member; complete publication streams segments once and rejects gaps, overlaps,
+extras, symlinks, reordered keys, cross-generation members, and digest/byte
+mismatch before authority changes; cold planning consumes one identity-stable
+streamed repository-source pass rather than validate-then-reread, keeps staged
+output invisible until the final root re-fence, and never yields a corrupt
+prefix; unchanged segments/members are byte-exactly reused across small deltas
+and A→B→A; v1 stays strict-readable; cancellation
+kills/reaps Git children; exact maximum-shape, tamper, race, and cost tests;
+full merge bar.
+
+**T40.4 · Hierarchical observation inventory and bounded validation v2** —
+retain the shipped v1 partition members and content-addressed observation
+objects, but remove the 250,000-record generation ceiling and generation-wide
+object maps/full inventory passes as the scaling mechanism. T40.1 selects a
+small root of bounded inventory segments whose receipts can be streamed and
+verified without retaining every observation name. Preserve the
+`sourceobservation` classification contract and v1 reader compatibility. AC:
+each inventory segment is ordered, canonical, source/partition/policy-bound,
+and independently capped; finalization proves exact object inventory through a
+streaming merge rather than a generation-wide map; a keyed OID/partition open
+validates only root, one segment, one existing member, and selected object;
+explicit full validation visits every segment once with bounded memory;
+partial/corrupt sets never become current; restart reuses complete segments and
+rebuilds only absent/invalid work; cache/lease, nil/empty, unsupported/gap,
+small-delta, concurrent-writer, corrupt-cold, no-reread, and A→B→A tests; full
+merge bar.
+
+**T40.5 · Search-generation build, replacement headroom, and lifecycle owner**
+— replace the static search lifecycle owner before the two-million-owner gate.
+T40.1 must measure logical and allocated bytes for current plus rollback search
+generations and select an exact count/byte policy rather than inheriting the
+existing 50-GiB repository ceiling or raising it blindly. It also replaces the
+legacy one-shot 25-GiB capacity estimate with measured bounded per-shard/stage
+reservations plus one aggregate generation fence, or another prospectively
+measured admission contract. AC: implement T40.1's selected blob-reader
+posture explicitly. Selecting batch sets `ZOEKT_DISABLE_CATFILE_BATCH=false`
+on the same-SHA whole-repository zoekt child only after parent-side
+`gitobj`-equivalent environment scrubbing, replace-object, lazy-fetch,
+prompt/lock, and alternates defenses are enforced and tested; otherwise the
+go-git fallback remains an explicit recorded posture rather than an inherited
+environment accident. Source-free diagnostics report the effective mode and
+batch/fallback read counts. Current, one
+rollback generation, active reader leases, publication marker, and in-progress
+backup/mutation lock outrank collection; completed backups are snapshots, never
+live pins; interrupted replacement keeps at least one complete searchable
+generation and resumes cleanup; old readers retire only after lease release;
+the real owner scans/deletes in bounded turns with durable fair cursors,
+symlink refusal, identity rechecks immediately before action, allocated and
+logical byte kinds kept separate, pressure/status integration, and exact
+current/prior/one-over tests; small-delta and A→B→A do not strand 50+ GiB
+generations; full search/recovery/lifecycle merge bars.
+
+**T40.6 · Observation recovery, lifecycle, and archive migration** — make the
+v2 source-partition/observation generations restart-resumable and pin-aware
+across markers, reader leases, backup/restore, pressure, and collection. AC:
+startup completes only fully validated staged generations and otherwise keeps
+the prior pointer; stale workers cannot publish; current, rollback-floor,
+active-lease, proof, Investigation, and in-progress backup/mutation lock
+outrank collection, while completed archives do not pin live data; draining
+renames a generation out of the publication namespace before bounded deletion;
+v1 and v2 generations round-trip byte-exactly in the next archive schema with
+visible omission counts for invalid derived data; interrupted restore and
+collection resume; owner status exposes only bounded source-free counts;
+80/90/75 pressure behavior and precious-store backup remain unchanged; full
+recovery suite and merge bar.
+
+**T40.7 · Constant-cost evidence-stage accounting** — replace `AddEvidence`'s
+per-chunk full-run count scans with idempotent chunk identities and charged
+row/reference/fact deltas under the staged-run serialization fence. Keep the
+existing 256-fact worker chunk, 12,500-fact run, 25,000-row run, and reference
+limits; T40.9 owns the separately bounded aggregate domain root above these
+partition results. AC: a successful append performs
+work proportional to the submitted chunk, not prior run size; duplicate replay
+is a no-op with byte-identical counters; conflicting replay refuses; every
+counter is checked before insert and updated atomically with rows; final
+publication independently verifies the exact aggregate and refuses tampered or
+drifted accounting; abort, sweep, retry, restore, and migration remain safe;
+live maximum-shape and concurrent-append tests record query count, transaction
+size, wall time, and memory without becoming an SLO; full merge bar.
+
+**T40.8 · Sparse candidate reader and extraction-partition contract** — add a
+small candidate root/index that lets a domain enumerate only its admitted
+source partitions instead of strict-opening every repository and caller member
+on every attempt. Freeze deterministic domain partition identity, ordering,
+per-partition fact/row/reference/byte quotas, result identity, and schedule
+identity without changing extractor semantics. AC: root validation proves the complete manifest once;
+point/partition reads open only bounded controls and selected members; typed
+input absence is established from controls and publishes `unavailable`
+without a corpus scan; admitted inputs stay at or below today's read, fact,
+row, and memory fences and retain the unchanged domain deadline; deadline
+exhaustion is a closed result, while the frozen maximum neutral partition must
+complete within it; overlapping repository/caller placements retain their
+byte-kind distinction; generation-scheduler fan-out is paged and coalesced;
+forged ranges, missing members, and stale candidates fail closed;
+v4 readers remain compatible; full merge bar.
+
+**T40.9 · Extraction partition-result and domain-root contract** — define pure,
+closed nonproduct partition results plus one atomic domain root before any
+source-backed worker registers them. Each partition result stays within the
+existing 12,500-fact/25,000-row run and T40.8 time/read/memory limits; T40.1's
+frozen aggregate policy independently caps partition count, facts, rows,
+reference edges, canonical/encoded/member bytes, and result inventory. AC:
+identities bind repository, candidate/source/observation generation, domain,
+extractor/policy, partition range, reserved quotas, and exact result digest;
+root validation
+requires the complete ordered expected partition set and recomputes every
+aggregate before authority; all caps are checked before growth; duplicate
+result identity must be byte-equal; success, empty, unavailable-prerequisite,
+terminal-refusal, and retryable states are closed and cannot be relabeled; no
+partition result is independently product-current; exact-bound, one-over,
+missing/extra/reordered/tampered, nil/empty, and deterministic two-build tests;
+no runtime registration; full merge bar.
+
+**T40.10 · Partitioned extraction and atomic domain assembly** — execute
+source-backed domains through the T40.8 schedule, stage each partition through
+T40.7 accounting, and install the T40.9 root only after every declared result
+settles and complete validation passes. AC: workers read only their bounded
+source/observation partition; retries reuse settled siblings; exhaustion keeps
+the prior domain pointer and exposes failed partitions; planning pre-reserves
+every partition's maximum fact/row/reference/byte contribution and refuses an
+over-aggregate schedule before any content lease, while each concurrently
+running worker remains inside its reservation; a file-local
+packageless Protobuf or well-formed but unsupported Thrift construct produces a
+classified gap when file isolation is sound, while corrupt shared authority
+still refuses; zero-applicable-input publishes honest empty or unavailable per
+pack contract; pointer swap is last; restart, cancellation, stale lease,
+supersession, concurrent assembly, small delta, and A→B→A tests; full merge bar.
+
+**T40.11 · Downstream generation adapters, archive, and lifecycle** — migrate
+resolver namespaces, RPC/Kafka postings, caller-leaf work, and service
+relationship projections to the T40.4/T40.9 roots without generation-wide hot
+rereads. AC: every downstream root binds exact upstream root/policy digests; a
+partial or failed upstream is unavailable and cannot fall back as current;
+unaffected partitions are reused; T39.R1's post-lock execution budget is
+exercised by a real caller-leaf schedule; current v1/v2 authorities remain
+readable; component markers, recovery, backup/restore, pins, leases, rollback
+floor, and bounded lifecycle own the new roots; archive omission of corrupt
+derived data remains visible; steady-state cost proves no repository scan per
+plan/no-op; focused recovery and merge bars.
+
+**T40.12 · Authorized and product-consumer compatibility replay** — migrate or
+adapt exact relationship readers, comparison, proof, Workbench, HTTP, MCP, and
+UI only where their generation seams changed, then replay their existing
+acceptance gates. AC: authorization precedes identity/control/filesystem work;
+root, cursor, citation, revision, and concurrent-publication fences remain
+exact; sparse point/page reads do not reopen a complete observation/extraction
+generation; partial/failed/unsupported states remain visible rather than
+empty; v1/v2 retained evidence and proof bytes remain readable; this ticket
+adds no new product claim or query shape; full API/MCP/UI and merge bars.
+
+**T40.13 · Neutral two-million-owner convergence gate** — run the frozen T40.1
+profiles through ordinary sync/index, candidate, observation, extraction,
+resolver, relationship, recovery, and lifecycle workers with a deliberately
+small at-most-100-accepted-service correctness control whose exact membership
+and unowned-prefix counts stay within the existing v2 12,000-path cap. AC: at
+least 2,000,000 regular-file physical owners publish one shared search
+generation; the receipt names T40.5's effective blob-reader mode and proves no
+silent batch disablement or go-git fallback; all applicable
+derived partitions settle and publish, with deliberately absent inputs and
+unsupported syntax remaining explicit; cold, warm no-op, one-partition delta,
+A→B→A, interruption, stale worker, pressure, archive/restore, collection, and
+authorized query cases pass exact oracles; the receipt reports wall/RSS,
+allocated/logical bytes, children, reads, writes, transactions, retries, and
+reuse by phase using closed source-free scalars; predetermined stop rules
+choose continue, reduce, cohort experiment, or P6 investigation without
+silently raising a bound. The result is mechanics evidence only—no target SLO,
+service-cardinality, accuracy/completeness, release, private-rerun, migration,
+or decommission claim. Epic 40 closes only on an independently reviewed receipt
+and demo.
+
+## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
+
+Raise logical-service capacity through segmented authority and bounded state/
+publication design, not a constants-only change. The required floor is 8,000
+accepted services; the planned accepted neutral target is 10,000, and an
+accepted-only 12,500-service shape is the ceiling comparator. Total service
+records across every disposition are a separate admitted dimension. The
+large-monorepo diagnostic selected no service catalog and provides no evidence
+for this epic.
+
+### Boundary
+
+- T41.1 creates a new schema/package/receipt and leaves the digest-bound T32.3
+  1,000/5,000-service v1 generator and artifacts byte-identical. Accepted-only
+  fan-out-20 profiles freeze candidate
+  services/memberships/distinct-path tuples of 8,000/48,000/25,280,
+  10,000/60,000/31,600, and 12,500/75,000/39,500. A separate small semantic
+  profile owns proposal/conflict/rejected, successor, tombstone, and re-add
+  cases so those records never distort the accepted-cardinality arithmetic.
+- Service key, incarnation, desired/active identity, dispositions, role
+  vocabulary, per-service path envelope, and accepted fan-out 20 remain exact.
+  Aggregate total records, memberships, distinct paths, successor edges,
+  logical bytes, and encoded publication bytes are independent caps. Total
+  claims per placement remains separately bounded even when accepted fan-out
+  is small.
+- `phebs-service-catalog-v3` uses a small immutable root, service-key-range
+  members, and placement-path-range members containing both accepted/
+  nonaccepted claims and unowned state. The two member views must agree exactly.
+  v1/v2 bytes remain readable; migration is side-by-side and lazy.
+- Point service and path reads are member-local; pages read only intersecting
+  members; full reconcile/relationship work streams each view once. No query
+  repeatedly decodes a 10,000-service catalog and no state transition places
+  every service in one database transaction.
+- v3 ingestion stays runtime-dark until state, sparse backend, transport, and
+  relationship consumers all exist. Partial reconcile is never authority for
+  service reads; later activation may make individual services current under
+  exact summary CAS fences. A successor catalog cannot skip an unsettled
+  reconcile generation.
+- Epic 41's closure uses a deliberately small at-most-50,000-regular-file
+  physical corpus. Passing it is not large-repository evidence, a supported
+  service count, target SLO, accuracy, release, or P6 claim. Epic 42 composes
+  both dimensions.
+
+**T41.1 · Production-aligned 10,000-service profiles and cap decision** — add
+new `t411-service-load-profile-v1` accepted-only 8,000-, 10,000-, and
+12,500-service profiles using typed-requires-supporting and fan-out 20, plus a
+separate small transition/authority profile. Reuse the deterministic identity
+discipline of T32.3 without changing or copying its retained bytes; service
+authority is explicit and never inferred from generated directories or import
+edges. Shared/generated fixture paths are assigned to deterministic groups of
+at most 20 accepted services rather than one global shared membership. Freeze
+accepted and total service
+records independently; exact memberships, paths, roles, successor graphs,
+canonical bytes, encoded publication bytes, fixture content, total
+claims-per-placement, and empty/mixed/dense relationship distributions. AC:
+10,000 accepted services is the pass target and anything below 8,000 cannot
+close the program; the 12,500 accepted-only comparator selects a measured hard
+total-record ceiling or exact pre-growth refusal. Draft reduce-only caps are
+12,500 total service records, 75,000 memberships, 40,000 distinct paths,
+12,500 aggregate successor edges, 512 successors for one service, 16 MiB
+logical canonical bytes, and 32 MiB encoded publication members; accepted
+fan-out 20, total claims per placement 4,000, and existing per-service/path
+limits do not increase. One maximum service combines maximum path and successor
+bytes, and one maximum path carries the total-claim bound; either must fit its
+2-MiB catalog member. The same maximum path must also fit the existing 1-MiB
+relationship-projection wire; otherwise T41.1 reduces the total-claim cap or
+selects an explicit bucketed claim representation. Two builds are byte-identical;
+old T32.3 artifacts/digests are unchanged;
+the receipt records RSS, wall, allocation, serialization, projection,
+store-transaction, filesystem, and lifecycle estimates by byte kind; no
+runtime registration or production cap change; dated PLAN decision and full
+merge bar.
+
+**T41.2 · Segmented service-catalog v3 contract** — implement the pure root and
+dual member views while retaining v2 record semantics. Draft reduce-only
+bounds are 512 services/2 MiB per service-range member, 2,048 paths/2 MiB per
+placement-range member, 64 total members, a 256-KiB root, and T41.1's separate
+logical/encoded aggregates. AC: the root binds repository/source/base/override
+authority, aggregate disposition/role/path/successor/claim counts, ordered
+nonoverlapping service and path ranges, all member digests/bytes, one logical
+catalog digest, and policy digest; validation proves internal membership/path
+cross-view equality, unowned exclusivity, overlap/fan-out/total-claim bounds,
+successor liveness/cycles, ordering, and exact member inventory. Source-file
+liveness and census complement remain T41.3. Placement members are
+prefix-routed subtrees: each contains a bounded, digest-accounted inherited
+ancestor-claim prelude, so cross-service nested prefixes are never missed and
+one file-path lookup reads root plus one matching placement member. Complete
+validation proves every inherited claim against the service view and rejects
+missing/extra duplication; T41.3 merge-streams the ordered placement view once
+against the source census rather than performing one lookup per file. Service
+lookup reads root plus one service member; full iteration streams in canonical order; every
+bound is pre-growth; every v2-admitted catalog maps to identical v3 logical
+semantics and a mapped digest, while expanded v3 refuses v2 downgrade; maximum
+combined service paths/successors and maximum path claims each fit one member;
+no runtime import; full merge bar.
+
+**T41.3 · Dark catalog-v3 ingestion and immutable store authority** — ingest
+operator or committed selections into T41.2, stream the source census to prove
+placement liveness and exact complement, and store precious immutable root/
+member rows instead of one monolithic JSON string. Keep ordinary v3 runtime
+selection unregistered through T41.9. AC: complete validation precedes a dark
+candidate pointer; every identity collision is byte-equal or refusal;
+same-authority-version/different-bytes refuses; committed still means declared
+version unless a separate provenance decision changes it; restart no-op uses
+bounded metadata and selected file reads; v1/v2 current/historical authority
+remains unchanged; startup schema uses an explicit idempotent migration rather
+than `IF NOT EXISTS` assertion drift; malicious, partial, concurrent,
+crash-gap, census, and live maximum-shape SurrealDB tests; full merge bar.
+
+**T41.4 · Catalog-v3 recovery, archive, and lifecycle owner** — own v3 root/
+member durability before state consumes it. AC: startup repairs only complete
+strict-valid candidates and removes bounded orphans without changing the v2
+pointer; backup/restore includes every referenced precious root/member byte
+and revalidates exact inventory; the lifecycle owner rechecks current, dark
+candidate, future desired/active state references, rollback floor, and active
+state roots inside the destructive transaction while holding the shared
+mutation lock across it; completed backups never pin live rows. One atomic
+`collecting`/tombstone transition removes the generation from historical
+authority before the first member drain; roots and members collect in bounded restartable order with exact
+logical/member byte accounting, fair cursors, malformed-owner isolation, and
+pressure/status integration; maximum-member, interrupted collection/restore,
+orphan, malformed-row, current/prior, and one-over tests; full recovery/merge
+bars.
+
+**T41.5 · Resumable service-state reconcile and activation** — replace
+all-service transactions with durable at-most-512-row chunks, reducible by
+T41.1 measurement, and explicitly separate the two protocols. Reconcile keeps
+the repository summary catalog-mismatched and all service reads unavailable
+until one final summary CAS; activation starts only after that match and updates
+each chunk of rows plus the already-matching summary atomically so independently
+current services remain readable. All v3 rows, summaries, plans, chunks, and
+pointers occupy a distinct versioned shadow namespace until T41.9; preactivation
+tests require existing v1/v2 rows, revisions, summaries, and pointers to remain
+byte-identical. AC: a store fence refuses publication of a
+successor catalog while reconcile is unsettled; every chunk fences catalog,
+plan, prior row revision/digest, and tombstone counters; restart reuses settled
+chunks; removed→re-added increments incarnation once; terminal failure permits
+bounded repair/continue only—rollback requires a future preimage/staged-row
+contract; stale/concurrent chunks roll back; active/desired generation
+references have an index or bounded aggregate pin; 10,000-service cold/no-op/
+small-delta/A→B→A/live-store tests bound rows, bytes, locks, reads, and wall
+time with no O(N²) projection; reconcile/activation plans and chunks reuse the
+generation-scheduler stage/lease identity and its named lifecycle coverage for
+settled, superseded, interrupted, and restored rows; explicit schema migration
+and full merge bar.
+
+**T41.6 · Sparse catalog/state/search backend** — migrate verified store point/
+page state reads and service-query compile/runtime to root/member authority,
+without adding HTTP/MCP/UI changes. AC: a service detail/search reads one root,
+one service member, bounded state rows, and at most one historical member for a
+stale service; inventory pages read only intersecting members; one verified
+generation/member cache has bounded entries and lease-delayed retirement;
+batch relationship consumers stream the catalog/state once instead of opening
+it per 101-row page; malformed current v3 never falls back to v2; selected
+512-successor service state remains within response/backend bounds; cold,
+warm, revocation seam, concurrent-publication, and exact read/hash/query count
+tests at 10,000 services; full focused and merge bars.
+
+**T41.7 · Authorized HTTP/MCP/UI v3 parity** — project T41.6 through service
+inventory/detail, status, search scope, HTTP, MCP, and the existing directory
+without changing authority semantics. AC: authorization precedes repository/
+service lookup; cursors bind visible repositories, catalog generation, member
+range, principal, and page state; one page reads only intersecting members;
+the selected 512-successor posture is returned under the existing bounded
+detail response rather than re-decided here; stale/partial/unavailable/conflict/
+removed states remain explicit; forged cursor, revocation, hidden-service,
+deep-link, pagination, concurrent publication, browser, and 10,000-service
+paged-UI bounds pass; v3 selection remains runtime-dark; full merge bar.
+
+**T41.8 · Dark bucketed relationship publication** — replace
+one-file-per-service relationship storage and the monolithic hot root with a
+small control root plus bounded buckets in the v3 shadow namespace. Preserve
+accepted-placement and nonaccepted-claim evidence. Keep the existing
+20-million total-reference,
+one-million per-service, 512-MiB resident, and 20-GiB generation ceilings unless
+T41.1 reduces them. AC: T41.1's exact empty/mixed/dense reference and
+claims-per-placement distributions drive maximum tests; repository/service
+reads touch required buckets only; full build streams catalog/state once;
+service-local failure remains visible; root identity binds incarnation/
+desired set and every upstream generation; complete validation/recovery is
+before pointer swap; lifecycle drains bounded buckets rather than one file per
+service; pins, leases, rollback floor, archive/restore, pressure, and corrupt
+derived omission remain exact; v1/v2 relationship authority remains
+byte-identical and selected; full merge bar.
+
+**T41.9 · Atomic v3 runtime registration and reverse transition** — add an
+explicit operator/config opt-in only after dark catalog, state, search, and
+relationship authority is fully reconciled and strict-current. A valid dark
+candidate never auto-promotes. AC: one CAS-controlled runtime selector is the
+linearization point across all v3 consumers; the prior v1/v2 authority remains
+readable until that selector changes; crash immediately before/after activation
+recovers to exactly old or new authority; startup verifies every selected root
+before serving; older binaries refuse the selector safely; disablement builds
+and reconciles the complete reverse target before a selector CAS—no pointer-only
+downgrade or mixed summary; authorization, no-fallback, concurrent catalog/
+state/relationship transition, rollback-floor, and backup/restore tests; the
+registration changes no evidence release posture; full merge bar.
+
+**T41.10 · Neutral 10,000-service closure gate** — exercise the T41.1 target on
+the deliberately small physical corpus through ingestion, state reconcile/
+activation, shared search, relationships, authorized HTTP/MCP/UI reads,
+archive/restore, and lifecycle. AC: 10,000 accepted services publish and become
+independently queryable; the floor of 8,000 accepted services is explicit; the
+separate transition profile passes; exact-bound and one-over behavior match
+T41.1; cold, no-op, point/page, one-service and 1% deltas, removal/re-add,
+A→B→A, partial activation,
+crash, stale worker, authorization, pressure, backup/restore, and collection
+pass; receipt records root/member/cache/transaction/query/read/write/RSS/disk
+cost without source identity; no operation performs service-count × repository
+bytes work. The result establishes no large-repository envelope, target SLO,
+supported customer limit, accuracy/completeness, release, migration, or
+decommission claim.
+
+## Epic 42 · Combined scale gate and topology decision *(scheduled after Epics 40–41)*
+
+Compose the independently proven physical and logical dimensions. A system
+that handles two million files with no service catalog, or 10,000 services over
+a tiny fixture, has not met the product target. Epic 42 proves that one shared
+repository generation can support both without multiplying source work by
+service count and makes the next topology decision from prospectively frozen
+evidence.
+
+### Boundary
+
+- The gate uses only deterministic neutral/public inputs and source-free
+  receipts. A private target replay remains separately authorized and cannot be
+  smuggled into these tickets.
+- The minimum combined pass shape is at least 2,000,000 regular-file physical
+  owners and 10,000 accepted services, with explicit shared/generated/typed/unowned
+  placements and bounded RPC/Kafka relationships. Logical memberships may not
+  multiply physical indexing, Git reads, observation parses, or stored source
+  bytes.
+- Exact correctness, authorization, publication, recovery, lifecycle, and
+  nonclaim gates outrank elapsed time. The plan freezes stop rules and host/tool
+  identity before measurement; a failure selects a named follow-up rather than
+  an in-run threshold change.
+- This gate freezes source transitions and proves eventual bounded convergence;
+  it does not generate or claim sustained commit-velocity, queue catch-up, or
+  freshness-under-cadence evidence. That operating gate remains owned by a
+  separately authorized successor to the stopped T39.2 operating gate.
+
+**T42.1 · Combined gate freeze and deterministic corpus** — construct the
+minimal deterministic corpus/profile adapter that composes the exact T40 and
+T41 authorities without materializing service-count × file-count bytes. Freeze
+revision history, ownership/membership oracle, query and relationship oracle,
+small-delta/A→B→A transitions, failure injection points, host/tool identities,
+resource ceilings, stop/teardown rules, and receipt schema before execution.
+Neutral chain, layered-DAG, bounded-fan-out, and hotspot families use fixed
+seeds and closed expected edges. External runtime traces may inform aggregate
+shape only after license review; their rows and opaque identities are not
+vendored and cannot become source, service, placement, relationship, or result
+authority.
+AC: independent oracle generation does not consume phebs results; two builds
+are byte-identical; physical owners, unique content, catalog membership and
+unowned prefixes, inherited placement-claim duplications, logical memberships,
+accepted fan-out, and every byte kind are separately reported; the exact main
+commit and upstream receipts are digest-bound; no production behavior, cap, or
+release state changes; independent plan review and full merge bar.
+
+**T42.2 · Combined convergence, recovery, and pressure execution** — run the
+frozen corpus through ordinary production workers and retain a closed receipt.
+AC: one physical source/search/observation generation with at least 2,000,000
+regular-file owners serves all 10,000 services; applicable extraction and
+relationship roots become current; exact All code/service/relationship queries
+match the oracle; cold, warm, small
+physical delta, small logical delta, A→B→A, partial service failure,
+interrupted publication, stale lease, process restart, backup/restore, reader
+lease, lifecycle collection, and 80/90/75 pressure cases settle under bounded
+work; measurements enumerate per-phase wall/RSS, children, physical/logical/
+allocated bytes, store rows/transactions, member reads, cache behavior, and
+reuse; any stop remains a stopped receipt with later phases `not_run`; no SLO
+or release inference; full recovery and merge bars.
+
+**T42.3 · Scale posture decision and neutral product closure** — independently
+review the T42.2 receipt, replay representative All code → service →
+relationship → Workbench → proof → MCP flows, and record one decision:
+single-node envelope retained, bounded cohort experiment required, P6
+investigation required, or program stopped. AC: UI/API/MCP authority receipts
+remain exact across pagination and concurrent publication; operations status
+shows source-free progress/refusal/pressure; every unsupported/partial/stale
+state remains visible; topology selection follows the frozen rule and cannot
+raise an admission bound; docs distinguish mechanics, neutral scale evidence,
+target operating evidence, validation, and release. Epic 42 closes with a
+source-free digest-pinned demo receipt, but `GATE2-V2` and `DO_NOT_RELEASE`
+remain unchanged absent a separate sealed validation and release program. The
+closure cannot be cited as commit-cadence, catch-up, or freshness evidence.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
