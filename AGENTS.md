@@ -162,8 +162,15 @@ before unsealing because its public evidence/workflow protocols remain
 unsealed design drafts. T39.5 recorded no release, kept all packs
 experimental-dark, and closed Epic 39; T39.R1 is conditional only before a
 separately authorized rerun. T39.R1 subsequently closed the mirror-lock
-contention prerequisite without authorizing or superseding that rerun. Epics
-25–28 remain unscheduled.
+contention prerequisite without authorizing or superseding that rerun. A later
+unfrozen very-large-monorepo diagnostic is retained as source-free engineering
+evidence, not a scale pass. Epics 40–42 are the scheduled scale-convergence
+program: T40.1 is next; Epic 40 targets bounded derived-pipeline convergence at
+at least two million regular-file physical owners; Epic 41 separately requires
+at least 8,000 accepted services and measures a target of 10,000 accepted
+services; Epic 42 composes both dimensions before any topology posture changes.
+The current 4,000-service cap remains until its named measured ticket. No
+private rerun or release is authorized. Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.
