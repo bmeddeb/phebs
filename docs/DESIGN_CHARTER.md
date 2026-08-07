@@ -32,6 +32,13 @@ The interface has one job: **make trustworthy evidence feel effortless**.
 - **Nothing implied.** No currency implied by layout, no completeness implied
   by a full page, no relationship implied by adjacency. If the authority does
   not establish it, the interface does not suggest it.
+- **Census exception** *(amended 2026-08-07, adjudicated in T43.1)*. On a
+  census-shaped surface — where the claim boundary makes coverage itself the
+  answer, as on the topic census — the census may lead. The exception is
+  narrow: it applies only where the census is itself the claim the authority
+  establishes; it never promotes digests or audit material to the leading
+  altitude; and the surface states in one line that the census is the answer,
+  so the ordering reads as deliberate rather than as preamble.
 
 ## 2. Design discipline
 
