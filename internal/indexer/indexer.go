@@ -227,6 +227,22 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	}
 	repo = *fresh
 
+	indexDir := filepath.Join(ix.DataDir, "index")
+	if focusedindex.IsPublishing(indexDir, repo.Name) {
+		// A prior attempt may have committed the repository row while losing
+		// the SetRepoIndexedState response and the immediate ambiguity reread.
+		// Resolve an existing whole-search transition against durable store
+		// authority before a retry can build over or roll back its marker.
+		if _, recoverErr := focusedindex.RecoverSearchPublication(
+			ctx, indexDir, repo.Name, storedWholeRevisions(repo),
+		); recoverErr != nil {
+			return fmt.Errorf(
+				"index %s: recover pending search publication: %w",
+				repo.Name, recoverErr,
+			)
+		}
+	}
+
 	head, err := sync.Head(ctx, dir)
 	if err != nil {
 		return fmt.Errorf("index %s: resolve HEAD: %w", repo.Name, err)
@@ -252,7 +268,6 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		}
 	}
 
-	indexDir := filepath.Join(ix.DataDir, "index")
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("index %s: %w", repo.Name, err)
 	}
@@ -454,8 +469,18 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		if readErr == nil && freshState.IndexedCommitHash == head &&
 			revisionsEqual(revisions, freshState.IndexedRevisions, freshState.IndexedCommitHash) &&
 			analysisunit.EqualState(unit, freshState.IndexedAnalysisUnit) {
-			finishErr := focusedindex.FinishPublication(indexDir, repo.Name)
+			finishErr := finishCommittedPublication(indexDir, repo.Name, unit)
 			return errors.Join(stateErr, wrapIfError("finish ambiguously committed publication", finishErr))
+		}
+		if readErr != nil && unit == nil {
+			// The commit outcome is still unknown. Preserve both publication
+			// controls so the next retry/startup can select the candidate or
+			// prior generation from the durable row; rolling back here would
+			// destroy the only evidence needed to resolve that ambiguity.
+			return errors.Join(
+				stateErr,
+				wrapIfError("reload ambiguous index state", readErr),
+			)
 		}
 		if unit == nil {
 			rollbackErr := focusedindex.RollbackSearchPublication(ctx, indexDir, repo.Name)
@@ -477,11 +502,33 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			wrapIfError("clear index state", clearErr),
 			wrapIfError("remove uncommitted shards", removeErr))
 	}
-	if err := focusedindex.FinishPublication(indexDir, repo.Name); err != nil {
+	if err := finishCommittedPublication(indexDir, repo.Name, unit); err != nil {
 		return fmt.Errorf("index %s: expose committed publication: %w", repo.Name, err)
 	}
 	ix.verbosef("index %s: committed index state at %s", repo.Name, head)
 	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func finishCommittedPublication(
+	indexDir, repository string, unit *analysisunit.State,
+) error {
+	var retireErr error
+	if unit != nil && unit.SearchIndexPosture == analysisunit.SearchIndexFocused {
+		retireErr = focusedindex.RetireSearchGenerationRoot(indexDir, repository)
+	}
+	if retireErr != nil {
+		return retireErr
+	}
+	return focusedindex.FinishPublication(indexDir, repository)
+}
+
+func storedWholeRevisions(repo store.Repo) []store.IndexedRevision {
+	if len(repo.IndexedRevisions) == 0 && repo.IndexedCommitHash != "" {
+		return []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD", Commit: repo.IndexedCommitHash,
+		}}
+	}
+	return append([]store.IndexedRevision(nil), repo.IndexedRevisions...)
 }
 
 func (ix *Indexer) failPublication(

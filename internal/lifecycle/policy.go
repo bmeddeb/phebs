@@ -92,8 +92,13 @@ type OwnerResult struct {
 	Deleted       int
 	More          bool
 	CycleComplete bool
-	Completeness  Completeness
-	Err           error
+	// AdvanceOnError is reserved for owners that have isolated a malformed
+	// namespace after selecting its exact durable cursor. It prevents one bad
+	// namespace from starving healthy siblings without relabeling the turn as
+	// successful or weakening the malformed namespace's refusal.
+	AdvanceOnError bool
+	Completeness   Completeness
+	Err            error
 }
 
 type Owner interface {

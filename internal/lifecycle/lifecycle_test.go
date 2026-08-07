@@ -277,6 +277,35 @@ func TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure(t *testi
 	}
 }
 
+type advancingFailureOwner struct{}
+
+func (advancingFailureOwner) Name() string { return "advancing-failure" }
+
+func (advancingFailureOwner) Sweep(
+	_ context.Context, _ time.Time, _ string, _ Limits,
+) OwnerResult {
+	return OwnerResult{
+		Cursor: "isolated", Scanned: 1, More: true,
+		AdvanceOnError: true, Completeness: Unavailable,
+		Err: errors.New("isolated namespace failure"),
+	}
+}
+
+func TestControllerPersistsExplicitIsolatedCursorOnError(t *testing.T) {
+	store := newMemoryCursorStore()
+	controller, err := NewController(store, advancingFailureOwner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := controller.Tick(t.Context())
+	if result.Err == nil || !result.AdvanceOnError {
+		t.Fatalf("isolated failure result = %+v", result)
+	}
+	if got := store.values["owner:advancing-failure"]; got != "isolated" {
+		t.Fatalf("isolated failure cursor = %q, want isolated", got)
+	}
+}
+
 func TestControllerRejectsDuplicateOwners(t *testing.T) {
 	store := newMemoryCursorStore()
 	var calls []string

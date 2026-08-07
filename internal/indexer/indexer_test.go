@@ -142,6 +142,41 @@ func (failIndexedStore) SetRepoIndexedState(context.Context, string, string, []s
 	return errors.New("injected index state failure")
 }
 
+type commitThenLoseResponseStore struct {
+	store.Store
+	committed      bool
+	failNextReload bool
+}
+
+func (s *commitThenLoseResponseStore) SetRepoIndexedState(
+	ctx context.Context,
+	name,
+	defaultCommit string,
+	revisions []store.IndexedRevision,
+	unit *analysisunit.State,
+	at time.Time,
+) error {
+	if s.committed {
+		return s.Store.SetRepoIndexedState(ctx, name, defaultCommit, revisions, unit, at)
+	}
+	if err := s.Store.SetRepoIndexedState(ctx, name, defaultCommit, revisions, unit, at); err != nil {
+		return err
+	}
+	s.committed = true
+	s.failNextReload = true
+	return errors.New("injected lost index-state response")
+}
+
+func (s *commitThenLoseResponseStore) GetRepo(
+	ctx context.Context, name string,
+) (*store.Repo, error) {
+	if s.failNextReload {
+		s.failNextReload = false
+		return nil, errors.New("injected ambiguity reload failure")
+	}
+	return s.Store.GetRepo(ctx, name)
+}
+
 type indexLogStore struct {
 	store.Store
 	repo store.Repo
@@ -202,6 +237,64 @@ func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	}
 	if repo.IndexedCommitHash != "" {
 		t.Fatalf("indexed hash after failed state commit = %q, want empty", repo.IndexedCommitHash)
+	}
+}
+
+func TestWholeIndexLostCommitResponsePreservesMarkerForRetryRecovery(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	origin := strings.TrimPrefix(repo.CloneURL, "file://")
+	if err := os.WriteFile(
+		filepath.Join(origin, "main.go"),
+		[]byte("package main\n\nfunc replacementNeedle() {}\n"), 0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", "main.go")
+	gitc(t, origin, "commit", "-m", "replacement")
+	if err := sync.Mirror(ctx, repo.CloneURL, sync.RepoDir(dataDir, name)); err != nil {
+		t.Fatal(err)
+	}
+
+	lost := &commitThenLoseResponseStore{Store: st}
+	ix.Store = lost
+	err = ix.Index(ctx, *repo, false)
+	if err == nil || !strings.Contains(err.Error(), "injected ambiguity reload failure") {
+		t.Fatalf("ambiguous index error = %v", err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if !focusedindex.IsPublishing(indexDir, name) {
+		t.Fatal("ambiguous whole publication lost its recovery marker")
+	}
+	committed, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := focusedindex.ReadSearchGenerationRoot(indexDir, name)
+	if err != nil || !reflect.DeepEqual(root.Current.Revisions, committed.IndexedRevisions) {
+		t.Fatalf("pending root/store = %+v/%+v, %v", root, committed.IndexedRevisions, err)
+	}
+
+	if err := ix.Index(ctx, *committed, false); err != nil {
+		t.Fatalf("retry recovery: %v", err)
+	}
+	if focusedindex.IsPublishing(indexDir, name) {
+		t.Fatal("retry recovery left publication marker")
+	}
+	if _, err := focusedindex.ValidateRepositorySearchGeneration(
+		ctx, indexDir, name, committed.IndexedRevisions,
+	); err != nil {
+		t.Fatalf("validate recovered generation: %v", err)
 	}
 }
 
@@ -586,6 +679,57 @@ func TestAnalysisUnitScopeChangeRebuildsSameHead(t *testing.T) {
 	if err != nil || whole.IndexedAnalysisUnit != nil {
 		t.Fatalf("removed unit state = %+v, %v", whole, err)
 	}
+}
+
+func TestWholeToFocusedCommitReleasesSearchGenerationRoot(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatal(err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	rootPath := filepath.Join(indexDir, focusedindex.SearchGenerationRootName(name))
+	if _, err := os.Lstat(rootPath); err != nil {
+		t.Fatalf("whole-search root is absent: %v", err)
+	}
+
+	ix.AnalysisUnits = map[string]analysisunit.Scope{name: {
+		Repository: name, Name: "service", Primary: []string{"main.go"},
+	}}
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Index(ctx, *repo, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(rootPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("focused commit retained whole-search root: %v", err)
+	}
+
+	pins := &focusedindex.SearchGenerationPins{}
+	cursor := ""
+	for turn := 0; turn < 64; turn++ {
+		result, sweepErr := focusedindex.SweepSearchGenerationLifecycle(
+			ctx, indexDir, time.Now().Add(30*24*time.Hour), cursor, pins, 16,
+		)
+		if sweepErr != nil {
+			t.Fatal(sweepErr)
+		}
+		cursor = result.Cursor
+		generations, globErr := filepath.Glob(filepath.Join(
+			focusedindex.SearchGenerationRootDirectory(indexDir), "*", "*",
+		))
+		if globErr != nil {
+			t.Fatal(globErr)
+		}
+		if len(generations) == 0 {
+			return
+		}
+	}
+	t.Fatal("focused posture left immutable whole-search generations rooted")
 }
 
 type analysisUnitReconcileStore struct {

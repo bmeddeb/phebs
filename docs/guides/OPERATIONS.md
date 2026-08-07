@@ -2835,20 +2835,37 @@ Whole-search publication retains immutable bytes under
 `index/search-generations/<repository-hash>/<search-digest>/`. The flat
 `index/*.zoekt` view is a hard-linked compatibility view for the shared zoekt
 reader; `phebs-search-generation-root-v1` is the current/rollback lifecycle
-authority. A transition marker exists before flat replacement. Publication or
-an uncommitted/ambiguous database transition restores the previous complete
-generation, while startup selects only the candidate or previous revision set
-matching the durable repository row. Online backup's exclusive index mutation
-lock waits for publication/collection, then snapshots current flat authority.
+authority. A transition marker exists before flat replacement. An uncommitted
+database transition restores the previous complete generation. If the store
+response and its immediate reread both fail, both controls remain: the next
+retry or startup selects only the candidate or previous revision set matching
+the durable repository row before it may build or roll back. A legacy whole
+publication remains eligible for exact committed validation when a newer
+marker matches neither durable revision; other recovery errors remain errors.
+A committed whole-to-focused posture removes the whole-search root before the
+focused publication becomes visible, releasing its immutable generations to
+pin-aware collection. Online backup's exclusive index mutation lock waits for
+publication/collection, then snapshots current flat authority.
 A completed archive is an external snapshot and never pins live generations.
+
+Allocated bytes in a generation receipt are the creation-host observation.
+Every deep validation remeasures and enforces the current filesystem's 48-GiB
+ceiling; a byte-exact stopped relocation may change `st_blocks` without
+changing content identity. Logical bytes, member counts, digests, and shard
+limits remain exact identity and policy fences.
 
 The `search-generations` lifecycle owner advances one durable fair repository
 cursor per turn. It protects current, rollback, transition candidates, and
 active query leases, then rechecks those controls immediately before renaming
 one stale generation to `collecting-*`. It removes at most sixteen regular
-entries per turn and resumes after restart. Prior-process partial stages use
-the same bounded drain. Symlinks, special/unknown entries, changed identities,
-root movement, and active pins refuse. Search queries lease the selected
+entries per turn and resumes after restart. Admission reserves eight partial-
+stage slots and one namespace-growth slot. A 73-entry bounded recovery prefix
+lets an older over-budget namespace drain one prior-process stage or stale
+generation per turn. Known `.DS_Store` and AppleDouble regular metadata is
+identity-rechecked and removed within the same budget. Symlinks,
+special/unknown entries, changed identities, root movement, and active pins
+refuse; after a repository is selected, that error cursor advances so a bad
+namespace cannot starve healthy repository siblings. Search queries lease the selected
 immutable generation until their final fence, so the collector cannot unlink
 its retired immutable names while a query still binds them. Underlying mmap
 retirement retains zoekt's existing reader-lease behavior.

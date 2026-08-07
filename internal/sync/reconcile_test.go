@@ -786,6 +786,84 @@ func TestWholeCommittedMismatchIgnoresForeignManagedMetadata(
 	}
 }
 
+func TestReconcileRetiresUnmatchedTransitionAroundCommittedLegacyWhole(t *testing.T) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const repository = "example.com/team/legacy-transition"
+	const commitA = "1111111111111111111111111111111111111111"
+	revisionsA := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD", Commit: commitA,
+	}}
+	stageDir := buildWholeMetadataStage(t, repository, commitA)
+	if err := focusedindex.PublishWhole(
+		t.Context(), indexDir, stageDir, repository, revisionsA,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := focusedindex.FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+
+	digest := "sha256:" + strings.Repeat("b", 64)
+	marker := struct {
+		Schema     string                           `json:"schema"`
+		Repository string                           `json:"repository"`
+		Candidate  focusedindex.SearchGenerationRef `json:"candidate"`
+	}{
+		Schema: focusedindex.SearchGenerationMarkerSchema, Repository: repository,
+		Candidate: focusedindex.SearchGenerationRef{
+			GenerationDigest: digest, Directory: strings.TrimPrefix(digest, "sha256:"),
+			Revisions: []store.IndexedRevision{{
+				Selector: "HEAD", Branch: "HEAD",
+				Commit: strings.Repeat("2", 40),
+			}},
+			LogicalBytes: 1, AllocatedState: "unavailable", ShardCount: 1, FileCount: 1,
+		},
+	}
+	rootName := focusedindex.SearchGenerationRootName(repository)
+	key := strings.TrimSuffix(
+		strings.TrimPrefix(rootName, "phebs-search-lifecycle-"), ".json",
+	)
+	transitionPath := filepath.Join(
+		indexDir, "phebs-search-transition-"+key+".json",
+	)
+	if err := focusedindex.WriteControlFile(transitionPath, marker); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(indexDir, focusedindex.PublishingName(repository)),
+		[]byte(repository+"\nprior-process\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	report := ReconcileReport{}
+	if err := reclaimCommittedPublicationMarkers(
+		t.Context(), dataDir,
+		[]store.Repo{{
+			Name: repository, IndexedCommitHash: commitA,
+			IndexedRevisions: revisionsA,
+		}},
+		&report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if focusedindex.IsPublishing(indexDir, repository) {
+		t.Fatal("reconcile left the committed legacy publication hidden")
+	}
+	if _, err := os.Lstat(transitionPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("reconcile left unmatched transition: %v", err)
+	}
+	if _, err := focusedindex.ValidateCommittedWholePublication(
+		t.Context(), indexDir, repository, revisionsA,
+	); err != nil {
+		t.Fatalf("committed legacy publication changed: %v", err)
+	}
+}
+
 func TestDeleteRepoArtifactsIgnoresUnrelatedUnreadableShard(t *testing.T) {
 	dataDir := t.TempDir()
 	repo := store.Repo{Name: "example.com/team/repo"}

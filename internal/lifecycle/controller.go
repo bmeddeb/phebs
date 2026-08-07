@@ -81,11 +81,21 @@ func (controller *Controller) Tick(ctx context.Context) OwnerResult {
 			result.Completeness = Unavailable
 		}
 	}
-	if result.Err == nil {
+	if result.Err != nil && result.AdvanceOnError &&
+		(result.Cursor == "" || result.Cursor == cursor) {
+		result.Err = errors.Join(
+			result.Err,
+			errors.New("lifecycle owner requested invalid cursor advancement on error"),
+		)
+		result.AdvanceOnError = false
+	}
+	if result.Err == nil || result.AdvanceOnError {
 		if err := controller.store.CompareAndSwapLifecycleCursor(
 			ctx, cursorKey, cursorRevision, result.Cursor,
 		); err != nil {
-			result.Err = fmt.Errorf("save lifecycle owner cursor: %w", err)
+			result.Err = errors.Join(
+				result.Err, fmt.Errorf("save lifecycle owner cursor: %w", err),
+			)
 			result.Completeness = Unavailable
 		}
 	}

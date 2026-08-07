@@ -50,12 +50,28 @@ func SweepSearchGenerationLifecycle(
 		return result, err
 	}
 	var repositories []string
+	var metadata []string
 	for _, entry := range entries {
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 &&
+			isIgnorableSearchMetadata(entry.Name()) {
+			metadata = append(metadata, entry.Name())
+			continue
+		}
 		if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 ||
 			len(entry.Name()) != 64 || !isLowerHex(entry.Name()) {
 			return result, errors.New("invalid search lifecycle repository inventory")
 		}
 		repositories = append(repositories, entry.Name())
+	}
+	if len(metadata) > 0 {
+		sort.Strings(metadata)
+		if err := removeSearchLifecycleRegular(filepath.Join(base, metadata[0])); err != nil {
+			return result, err
+		}
+		result.Scanned = 1
+		result.Deleted = 1
+		result.More = len(metadata) > 1 || len(repositories) > 0
+		return result, nil
 	}
 	sort.Strings(repositories)
 	if len(repositories) == 0 {
@@ -74,8 +90,8 @@ func SweepSearchGenerationLifecycle(
 	if err := ensureRealDirectory(repositoryDirectory); err != nil {
 		return result, err
 	}
-	generationEntries, err := boundedSearchDirectory(
-		repositoryDirectory, MaxSearchRepositoryGenerations+8,
+	generationEntries, inventoryMore, err := boundedSearchDirectoryPrefix(
+		repositoryDirectory, MaxSearchRepositoryGenerations+9,
 	)
 	if err != nil {
 		return result, err
@@ -86,9 +102,15 @@ func SweepSearchGenerationLifecycle(
 	}
 	var generations, collecting []generationCandidate
 	var abandonedStages []string
+	metadata = metadata[:0]
 	for _, entry := range generationEntries {
 		if err := ctx.Err(); err != nil {
 			return result, err
+		}
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 &&
+			isIgnorableSearchMetadata(entry.Name()) {
+			metadata = append(metadata, entry.Name())
+			continue
 		}
 		if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
 			return result, errors.New("invalid search lifecycle generation inventory")
@@ -116,6 +138,19 @@ func SweepSearchGenerationLifecycle(
 		} else {
 			generations = append(generations, candidate)
 		}
+	}
+	result.More = result.More || inventoryMore
+	if len(metadata) > 0 {
+		sort.Strings(metadata)
+		if err := removeSearchLifecycleRegular(
+			filepath.Join(repositoryDirectory, metadata[0]),
+		); err != nil {
+			return result, err
+		}
+		result.Scanned = 1
+		result.Deleted = 1
+		result.More = true
+		return result, nil
 	}
 	if len(abandonedStages) > 0 {
 		sort.Strings(abandonedStages)
@@ -189,9 +224,6 @@ func SweepSearchGenerationLifecycle(
 			return result, err
 		}
 		return result, nil
-	}
-	if len(generations) > MaxSearchRepositoryGenerations {
-		return result, errors.New("search lifecycle generation count exceeds policy")
 	}
 	sort.Slice(generations, func(i, j int) bool {
 		if !generations[i].modified.Equal(generations[j].modified) {
@@ -356,9 +388,26 @@ func deleteSearchGenerationStep(directory string, budget int) (deleted int, comp
 
 func validSearchGenerationEntry(name string) bool {
 	return name == searchGenerationReceiptName ||
+		isIgnorableSearchMetadata(name) ||
 		strings.HasPrefix(name, "phebs-source-") && (strings.HasSuffix(name, ".jsonl") || strings.HasSuffix(name, ".manifest.json")) ||
 		strings.HasPrefix(name, "phebs-whole-") && (strings.HasSuffix(name, ".zoekt") || strings.HasSuffix(name, ".manifest.json")) ||
 		strings.HasPrefix(name, "phebs-search-") && strings.HasSuffix(name, ".manifest.json")
+}
+
+func isIgnorableSearchMetadata(name string) bool {
+	return name == ".DS_Store" || len(name) > 2 && strings.HasPrefix(name, "._")
+}
+
+func removeSearchLifecycleRegular(path string) error {
+	before, err := os.Lstat(path)
+	if err != nil || !before.Mode().IsRegular() {
+		return errors.New("search lifecycle metadata changed before removal")
+	}
+	current, err := os.Lstat(path)
+	if err != nil || !os.SameFile(before, current) || !current.Mode().IsRegular() {
+		return errors.New("search lifecycle metadata identity changed before removal")
+	}
+	return os.Remove(path)
 }
 
 func searchGenerationControlDeletePriority(name string) int {
@@ -399,4 +448,30 @@ func boundedSearchDirectory(path string, limit int) ([]os.DirEntry, error) {
 		return nil, errors.New("search lifecycle directory exceeds policy")
 	}
 	return entries, nil
+}
+
+func boundedSearchDirectoryPrefix(path string, limit int) ([]os.DirEntry, bool, error) {
+	if limit < 1 {
+		return nil, false, errors.New("invalid bounded search directory prefix limit")
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, false, errors.New("search lifecycle path is not a real directory")
+	}
+	directory, err := os.Open(path)
+	if err != nil {
+		return nil, false, err
+	}
+	entries, readErr := directory.ReadDir(limit)
+	closeErr := directory.Close()
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		return nil, false, errors.Join(readErr, closeErr)
+	}
+	if closeErr != nil {
+		return nil, false, closeErr
+	}
+	return entries, len(entries) == limit && readErr == nil, nil
 }

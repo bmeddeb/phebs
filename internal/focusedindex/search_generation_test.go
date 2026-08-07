@@ -2,8 +2,10 @@ package focusedindex
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,6 +78,24 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 		receiptA.LogicalBytes <= 0 || receiptA.ShardCount != 2 {
 		t.Fatalf("first receipt = %+v", receiptA)
 	}
+	if receiptA.AllocatedState == "exact" {
+		drifted := receiptA
+		drifted.AllocatedBytes += 4096
+		if err := replaceSearchControlFile(
+			filepath.Join(directoryA, searchGenerationReceiptName), drifted,
+		); err != nil {
+			t.Fatal(err)
+		}
+		measured, err := validateImmutableSearchGeneration(
+			t.Context(), indexDir, repository, rootA.Current.GenerationDigest,
+		)
+		if err != nil || measured.AllocatedBytes != receiptA.AllocatedBytes {
+			t.Fatalf(
+				"allocation-drift validation = %d, %v; want current %d",
+				measured.AllocatedBytes, err, receiptA.AllocatedBytes,
+			)
+		}
+	}
 
 	revisionsB, rootB := publish("package main\nconst GenerationB = true\n", true)
 	if rootB.Prior == nil || rootB.Prior.GenerationDigest != rootA.Current.GenerationDigest ||
@@ -118,6 +138,94 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 	if err != nil || recoveryRoot.Current.GenerationDigest != pendingD.Current.GenerationDigest ||
 		recoveryRoot.Prior == nil || recoveryRoot.Prior.GenerationDigest != rootB.Current.GenerationDigest {
 		t.Fatalf("recovery root = %+v, %v", recoveryRoot, err)
+	}
+}
+
+func TestLegacyCommittedPublicationSurvivesUnmatchedSearchTransition(t *testing.T) {
+	repositoryDir := t.TempDir()
+	git(t, repositoryDir, "init", "-b", "main")
+	const repository = "example.com/acme/legacy-search-recovery"
+	indexDir := t.TempDir()
+	commit := func(content string) []store.IndexedRevision {
+		t.Helper()
+		if err := os.WriteFile(
+			filepath.Join(repositoryDir, "main.go"), []byte(content), 0o600,
+		); err != nil {
+			t.Fatal(err)
+		}
+		git(t, repositoryDir, "add", "main.go")
+		git(t, repositoryDir, "commit", "-m", content)
+		return []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD",
+			Commit: git(t, repositoryDir, "rev-parse", "HEAD"),
+		}}
+	}
+
+	revisionsA := commit("package main\nconst LegacyA = true\n")
+	legacyStage := buildWholeStageFixture(t, repository, revisionsA, 2)
+	if err := PublishWhole(
+		t.Context(), indexDir, legacyStage, repository, revisionsA,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+
+	revisionsB := commit("package main\nconst CandidateB = true\n")
+	wholeStage := buildWholeStageFixture(t, repository, revisionsB, 2)
+	whole, err := createWholeStageManifest(
+		t.Context(), wholeStage, repository, revisionsB,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceStage := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(
+		t.Context(), repositoryDir, sourceStage, repository, revisionsB,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	search, err := repositoryindex.WriteSearchManifest(
+		sourceStage, repository, revisionsB, source, wholePhysicalRoot(whole),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidate, err := createImmutableSearchGeneration(
+		t.Context(), indexDir, wholeStage, sourceStage, repository,
+		revisionsB, source, whole, search, SearchBlobReaderGoGit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker, err := prepareSearchGenerationTransition(
+		t.Context(), indexDir, repository, candidate,
+	)
+	if err != nil || marker.Previous != nil {
+		t.Fatalf("legacy transition marker = %+v, %v", marker, err)
+	}
+	if err := startPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+
+	recovered, err := RecoverSearchPublication(
+		t.Context(), indexDir, repository, revisionsA,
+	)
+	if recovered || !errors.Is(err, ErrSearchPublicationRevisionMismatch) {
+		t.Fatalf("unmatched legacy recovery = %t, %v", recovered, err)
+	}
+	if _, err := ValidateCommittedWholePublication(
+		t.Context(), indexDir, repository, revisionsA,
+	); err != nil {
+		t.Fatalf("legacy committed publication was not recoverable: %v", err)
+	}
+	if err := FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+	if IsPublishing(indexDir, repository) {
+		t.Fatal("legacy committed recovery left publication marker")
 	}
 }
 
@@ -226,5 +334,69 @@ func TestSearchGenerationLifecycleRefusesSymlinkEntry(t *testing.T) {
 	}
 	if raw, err := os.ReadFile(outside); err != nil || string(raw) != "keep\n" {
 		t.Fatalf("symlink target changed: %q, %v", raw, err)
+	}
+}
+
+func TestSearchGenerationLifecycleRemovesKnownHostMetadata(t *testing.T) {
+	indexDir := t.TempDir()
+	base := SearchGenerationRootDirectory(indexDir)
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	metadata := filepath.Join(base, ".DS_Store")
+	if err := os.WriteFile(metadata, []byte("finder metadata"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result, err := SweepSearchGenerationLifecycle(
+		t.Context(), indexDir, time.Now(), "", &SearchGenerationPins{}, 16,
+	)
+	if err != nil || result.Scanned != 1 || result.Deleted != 1 {
+		t.Fatalf("metadata sweep = %+v, %v", result, err)
+	}
+	if _, err := os.Lstat(metadata); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("known host metadata survived: %v", err)
+	}
+}
+
+func TestSearchGenerationLifecycleDrainsOverBudgetCrashStages(t *testing.T) {
+	indexDir := t.TempDir()
+	repositoryDirectory := filepath.Join(
+		SearchGenerationRootDirectory(indexDir), strings.Repeat("a", 64),
+	)
+	if err := os.MkdirAll(repositoryDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < MaxSearchRepositoryGenerations+9; index++ {
+		if err := os.Mkdir(
+			filepath.Join(repositoryDirectory, fmt.Sprintf(".stage-prior-owner-%03d", index)),
+			0o700,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := SweepSearchGenerationLifecycle(
+		t.Context(), indexDir, time.Now(), "", &SearchGenerationPins{}, 16,
+	)
+	if err != nil || result.Scanned != 1 || result.Deleted != 1 || !result.More {
+		t.Fatalf("overflow-stage sweep = %+v, %v", result, err)
+	}
+	entries, err := os.ReadDir(repositoryDirectory)
+	if err != nil || len(entries) != MaxSearchRepositoryGenerations+8 {
+		t.Fatalf("remaining overflow stages = %d, %v", len(entries), err)
+	}
+}
+
+func TestSearchGenerationAdmissionReservesCrashStageHeadroom(t *testing.T) {
+	repositoryDirectory := t.TempDir()
+	for index := 0; index < 8; index++ {
+		if err := os.Mkdir(
+			filepath.Join(repositoryDirectory, fmt.Sprintf(".stage-prior-owner-%03d", index)),
+			0o700,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := admitSearchGenerationGrowth(repositoryDirectory); err == nil {
+		t.Fatal("search generation admission accepted an exhausted stage budget")
 	}
 }

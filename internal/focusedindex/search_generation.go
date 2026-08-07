@@ -44,6 +44,10 @@ const (
 	searchGenerationReceiptName   = "generation.json"
 )
 
+var ErrSearchPublicationRevisionMismatch = errors.New(
+	"search publication marker matches no committed generation",
+)
+
 // SearchGenerationRef is the small immutable identity used by publication,
 // recovery, readers, and lifecycle. Logical and allocated bytes are distinct;
 // allocated bytes are unavailable rather than guessed on unsupported hosts.
@@ -91,6 +95,20 @@ type searchGenerationMarker struct {
 
 func SearchGenerationRootName(repository string) string {
 	return "phebs-search-lifecycle-" + repositoryKey(repository) + ".json"
+}
+
+// RetireSearchGenerationRoot releases whole-search lifecycle authority after
+// the durable repository row has committed a focused posture. Immutable bytes
+// remain lease-protected and are reclaimed by the bounded lifecycle owner.
+func RetireSearchGenerationRoot(indexDir, repository string) error {
+	err := os.Remove(filepath.Join(indexDir, SearchGenerationRootName(repository)))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	return syncDirectory(indexDir)
 }
 
 func searchGenerationMarkerName(repository string) string {
@@ -455,8 +473,16 @@ func admitSearchGenerationGrowth(repositoryDirectory string) error {
 	if err != nil {
 		return err
 	}
+	if len(entries) >= MaxSearchRepositoryGenerations+8 {
+		return errors.New("search generation namespace has no staging headroom")
+	}
 	generationCount := 0
+	stageCount := 0
 	for _, entry := range entries {
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 &&
+			isIgnorableSearchMetadata(entry.Name()) {
+			continue
+		}
 		if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
 			return errors.New("invalid search generation inventory")
 		}
@@ -467,12 +493,16 @@ func admitSearchGenerationGrowth(repositoryDirectory string) error {
 			continue
 		}
 		if strings.HasPrefix(name, ".stage-") || strings.HasPrefix(name, ".legacy-") {
+			stageCount++
 			continue
 		}
 		return errors.New("invalid search generation inventory")
 	}
 	if generationCount >= MaxSearchRepositoryGenerations {
 		return errors.New("search generation inventory limit exceeded")
+	}
+	if stageCount >= 8 {
+		return errors.New("search generation staging inventory limit exceeded")
 	}
 	return nil
 }
@@ -631,14 +661,20 @@ func validateImmutableSearchGeneration(
 		shards[member.Name] = true
 	}
 	logical, allocated, allocatedState, err := measureSearchGeneration(directory, files, shards)
-	if err != nil || logical != receipt.LogicalBytes || allocatedState != receipt.AllocatedState ||
-		(allocatedState == "exact" && allocated != receipt.AllocatedBytes) ||
+	if err != nil || logical != receipt.LogicalBytes ||
 		len(files) != receipt.FileCount || len(whole.Members) != receipt.ShardCount {
 		if err != nil {
 			return SearchGenerationReceipt{}, err
 		}
 		return SearchGenerationReceipt{}, errors.New("search generation accounting changed")
 	}
+	// Filesystem allocation is a current-host pressure measurement, not
+	// content identity. A stopped data-directory relocation may preserve every
+	// byte while changing st_blocks or support for allocated-byte reporting.
+	// measureSearchGeneration has already enforced the current-host ceiling;
+	// return its values to callers without rewriting the immutable receipt.
+	receipt.AllocatedState = allocatedState
+	receipt.AllocatedBytes = allocated
 	return receipt, nil
 }
 
@@ -867,7 +903,10 @@ func RollbackSearchPublication(ctx context.Context, indexDir, repository string)
 		return err
 	}
 	if marker.Previous == nil {
-		return removeRepositoryArtifacts(ctx, indexDir, repository, false)
+		if err := removeRepositoryArtifacts(ctx, indexDir, repository, false); err != nil {
+			return err
+		}
+		return FinishPublication(indexDir, repository)
 	}
 	if err := installStableSearchGeneration(ctx, indexDir, repository, marker.Previous.Current); err != nil {
 		return err
@@ -893,23 +932,24 @@ func RecoverSearchPublication(
 	if err != nil {
 		return false, err
 	}
-	selected := SearchGenerationRef{}
+	var selected SearchGenerationRef
 	var root SearchGenerationRoot
 	switch {
 	case sameSearchRevisions(marker.Candidate.Revisions, revisions):
 		selected = marker.Candidate
-		root = SearchGenerationRoot{
-			Schema: SearchGenerationRootSchema, Repository: repository, Current: selected,
-		}
-		if marker.Previous != nil && marker.Previous.Current.GenerationDigest != selected.GenerationDigest {
-			prior := marker.Previous.Current
-			root.Prior = &prior
+		var rootErr error
+		root, rootErr = prospectiveSearchGenerationRoot(marker)
+		if rootErr != nil {
+			return false, rootErr
 		}
 	case marker.Previous != nil && sameSearchRevisions(marker.Previous.Current.Revisions, revisions):
 		selected = marker.Previous.Current
 		root = *marker.Previous
 	default:
-		return false, errors.New("search publication marker matches no committed generation")
+		if len(revisions) == 0 && marker.Previous == nil {
+			return true, RollbackSearchPublication(ctx, indexDir, repository)
+		}
+		return false, ErrSearchPublicationRevisionMismatch
 	}
 	if err := installStableSearchGeneration(ctx, indexDir, repository, selected); err != nil {
 		return false, err

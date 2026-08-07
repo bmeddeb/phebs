@@ -31,7 +31,11 @@ func (owner SearchGenerationOwnerImpl) Sweep(
 		ctx, owner.IndexDir, now, cursor, owner.Pins, limits.Deletes,
 	)
 	if err != nil {
-		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+		return OwnerResult{
+			Cursor: result.Cursor, Scanned: result.Scanned, Deleted: result.Deleted,
+			More: result.More, AdvanceOnError: result.Cursor != "" && result.Cursor != cursor,
+			Completeness: Unavailable, Err: err,
+		}
 	}
 	completeness := Exact
 	if result.More {
