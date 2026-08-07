@@ -131,7 +131,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
       )}
 
       {createdToken && (
-        <div className={css({ border: `1px solid ${tok.statusGreen}`, borderRadius: '8px', padding: '14px', marginBottom: '20px' })}>
+        <div className={css({ border: `1px solid ${tok.status.current.solid}`, borderRadius: '8px', padding: '14px', marginBottom: '20px' })}>
           <div className={css({ fontSize: '12px', fontWeight: 600, color: tok.textSecondary, marginBottom: '8px' })}>
             New key
           </div>
@@ -246,16 +246,16 @@ function LifecycleBadge({ status }: { status: LifecycleStatus }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const pressure = status.capacity.pressure
-  const color = pressure === 'normal' ? tok.statusGreen
-    : pressure === 'collect' ? tok.statusAmber
-      : tok.statusRed
+  const tone = pressure === 'normal' ? tok.status.current
+    : pressure === 'collect' ? tok.status.stale
+      : tok.status.conflict
   const label = !status.policy.enabled ? 'Collection disabled'
     : pressure === 'normal' ? 'Normal'
       : pressure === 'collect' ? 'Collecting'
         : pressure === 'refuse' ? 'Admission refused'
           : 'Capacity unavailable'
   return (
-    <span role="status" className={css({ flexShrink: 0, border: `1px solid ${color}`, color, borderRadius: '999px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 })}>
+    <span role="status" className={css({ flexShrink: 0, border: `1px solid ${tone.solid}`, color: tone.text, borderRadius: '999px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 })}>
       {label}
     </span>
   )

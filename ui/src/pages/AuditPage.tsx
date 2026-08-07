@@ -152,7 +152,7 @@ function Row({ event }: { event: AuditEvent }) {
             borderRadius: '999px',
             padding: '2px 10px',
             backgroundColor: tok.fill,
-            color: ok ? tok.statusGreen : tok.statusRed,
+            color: ok ? tok.status.current.text : tok.status.conflict.text,
           })}
         >
           {event.status}

@@ -4,7 +4,7 @@ import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchRepoStatus, postReindex } from '../api'
 import type { RepoStatus } from '../api'
-import { usePhebsTokens, FONTS } from '../theme'
+import { usePhebsTokens, FONTS, MOTION, REDUCED_MOTION } from '../theme'
 import { href, navigate } from '../router'
 import { SearchIcon, CopyIcon, CheckIcon } from '../icons'
 import { isAbortError, relTime, repoFilter } from '../util'
@@ -168,7 +168,7 @@ function Row({ repo, canReindex, canBrowseServices, onReindex }: { repo: RepoSta
       <td className={cell}>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
           <span className={css({ fontWeight: 500, color: tok.textPrimary })}>{repo.name}</span>
-          {repo.orphaned && <Pill text="orphaned" bg={tok.deletedLineBg} fg={tok.statusRed} />}
+          {repo.orphaned && <Pill text="orphaned" bg={tok.deletedLineBg} fg={tok.status.conflict.text} />}
           {(repo.indexed_revisions?.length ?? 0) > 1 && (
             <Pill text={`${repo.indexed_revisions?.length} revs`} bg={tok.fill} fg={tok.textSecondary} />
           )}
@@ -258,18 +258,18 @@ function Status({ job, state }: { job: RepoStatus['last_index_job']; state: Repo
   }
   if (!job) return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.gutter} /> never indexed</span>
   const map: Record<string, { color: string; label: string }> = {
-    done: { color: tok.statusGreen, label: 'Indexed' },
-    failed: { color: tok.statusRed, label: 'Failed' },
+    done: { color: tok.status.current.solid, label: 'Indexed' },
+    failed: { color: tok.status.conflict.solid, label: 'Failed' },
     canceled: { color: tok.gutter, label: 'Canceled' },
   }
   const running = !['done', 'failed', 'canceled'].includes(job.status)
-  const s = map[job.status] ?? { color: tok.statusBlue, label: 'Indexing…' }
+  const s = map[job.status] ?? { color: tok.status.unavailable.solid, label: 'Indexing…' }
   return (
     <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, color: tok.textSecondary })}>
       <Dot color={s.color} pulse={running} />
       <span className={css({ flexShrink: 0 })}>{s.label}</span>
       {job.status === 'failed' && job.error && (
-        <span className={css({ minWidth: 0, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONTS.MONO, fontSize: '11px', color: tok.statusRed })} title={job.error}>
+        <span className={css({ minWidth: 0, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONTS.MONO, fontSize: '11px', color: tok.status.conflict.text })} title={job.error}>
           {job.error}
         </span>
       )}
@@ -290,9 +290,9 @@ function Dot({ color, pulse }: { color: string; pulse?: boolean }) {
         ...(pulse
           ? {
               animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-              animationDuration: '1.4s',
+              animationDuration: MOTION.pulse,
               animationIterationCount: 'infinite',
-              '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+              [REDUCED_MOTION]: { animationName: 'none' },
             }
           : {}),
       })}
@@ -323,7 +323,7 @@ function CommitChip({ hash }: { hash: string }) {
       className={css({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '11.5px', lineHeight: '15px', color: tok.textSecondary, backgroundColor: tok.hoverFill, border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', padding: '2px 7px', cursor: 'pointer', ':hover': { color: tok.textPrimary } })}
     >
       {hash.slice(0, 7)}
-      <span className={css({ display: 'flex', color: done ? tok.statusGreen : tok.textTertiary })}>{done ? <CheckIcon size={12} /> : <CopyIcon size={12} />}</span>
+      <span className={css({ display: 'flex', color: done ? tok.status.current.solid : tok.textTertiary })}>{done ? <CheckIcon size={12} /> : <CopyIcon size={12} />}</span>
     </button>
   )
 }

@@ -21,7 +21,7 @@ import {
   type WorkbenchView,
 } from '../api'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, toneFor, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import {
   WorkbenchHowStep,
@@ -577,7 +577,7 @@ function WorkbenchStart({
               </span>
               {ticketBytes > ticketTextLimit && (
                 <span role="alert" className={css({
-                  color: tok.statusRed,
+                  color: tok.status.conflict.text,
                   fontSize: '11px',
                   lineHeight: '17px',
                 })}>
@@ -1692,7 +1692,7 @@ function ProposalSourceEditor({
         </span>
         {sourceBytes > proposalFileBytes && (
           <span role="alert" className={css({
-            color: tok.statusRed,
+            color: tok.status.conflict.text,
             fontSize: '11px',
             lineHeight: '17px',
           })}>
@@ -1938,7 +1938,7 @@ function FailurePage({
     <section className={css({
       maxWidth: '760px',
       margin: '48px auto',
-      borderTop: `3px solid ${tok.statusRed}`,
+      borderTop: `3px solid ${tok.status.conflict.solid}`,
       padding: '24px 0',
     })}>
       <div className={css(eyebrowStyle(tok))}>
@@ -2140,13 +2140,7 @@ function StateChip({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const color = tone === 'green'
-    ? tok.statusGreen
-    : tone === 'amber'
-      ? tok.statusAmber
-      : tone === 'red'
-        ? tok.statusRed
-        : tok.textTertiary
+  const colors = toneFor(tone, tok)
   return (
     <span className={css({
       display: 'inline-flex',
@@ -2154,8 +2148,8 @@ function StateChip({
       minHeight: '23px',
       boxSizing: 'border-box',
       padding: '2px 7px',
-      border: `1px solid ${color}`,
-      color,
+      border: `1px solid ${colors.solid}`,
+      color: colors.text,
       fontFamily: FONTS.MONO,
       fontSize: '9px',
       lineHeight: '14px',

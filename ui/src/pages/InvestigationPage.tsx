@@ -163,11 +163,11 @@ function InvestigationHeader({
   const scope = envelope.scope
   const validation = envelope.validation
   const outcomeTone = envelope.outcome === 'ok'
-    ? tok.statusGreen
+    ? tok.status.current.text
     : envelope.outcome === 'partial'
-      ? tok.statusAmber
+      ? tok.status.stale.text
       : envelope.outcome === 'refused' || envelope.outcome === 'error'
-        ? tok.statusRed
+        ? tok.status.conflict.text
         : undefined
   return (
     <header className={css({ paddingBottom: '14px' })}>
@@ -273,11 +273,11 @@ function EligibilityView({ envelope }: { envelope: InvestigationEnvelope }) {
   if (eligibility.applicable && eligibility.eligible) {
     label = 'Eligible for bounded absence statement'
     detail = eligibility.qualification?.authoritative_text ?? 'The current scope satisfies the pack rule.'
-    tone = tok.statusGreen
+    tone = tok.status.current.text
   } else if (eligibility.applicable) {
     label = 'Not eligible'
     detail = eligibility.qualification?.authoritative_text ?? 'Coverage blockers prevent a bounded absence statement.'
-    tone = tok.statusRed
+    tone = tok.status.conflict.text
   }
   return (
     <section data-testid="derived-eligibility" className={css({ display: 'grid', gridTemplateColumns: '190px minmax(0, 1fr) minmax(220px, auto)', gap: '20px', alignItems: 'center', padding: '14px 0', borderBottom: `1px solid ${tok.cardBorder}`, '@media screen and (max-width: 760px)': { gridTemplateColumns: '1fr', gap: '7px' } })}>
@@ -291,7 +291,7 @@ function EligibilityView({ envelope }: { envelope: InvestigationEnvelope }) {
       </div>
       <div className={css({ color: tok.textSecondary, fontSize: '11px', lineHeight: '18px' })}>
         <div>Rule {eligibility.rule_version}</div>
-        <div className={css({ fontFamily: FONTS.MONO, overflowWrap: 'anywhere', color: eligibility.blocker_codes.length ? tok.statusRed : tok.textTertiary })}>
+        <div className={css({ fontFamily: FONTS.MONO, overflowWrap: 'anywhere', color: eligibility.blocker_codes.length ? tok.status.conflict.text : tok.textTertiary })}>
           {eligibility.blocker_codes.length ? eligibility.blocker_codes.join(' · ') : 'No blocker codes'}
         </div>
       </div>
@@ -358,9 +358,9 @@ function CoverageView({ envelope, compact = false }: { envelope: InvestigationEn
   const counts = [
     ['Eligible', coverage.eligible_units, tok.accent],
     ['Analyzed', coverage.processing.analyzed, tok.accent],
-    ['Failed', coverage.processing.failed, coverage.processing.failed ? tok.statusRed : tok.statusGreen],
-    ['Partial', coverage.processing.partial, coverage.processing.partial ? tok.statusAmber : tok.statusGreen],
-    ['Excluded', coverage.processing.excluded, coverage.processing.excluded ? tok.statusAmber : tok.textSecondary],
+    ['Failed', coverage.processing.failed, coverage.processing.failed ? tok.status.conflict.text : tok.status.current.text],
+    ['Partial', coverage.processing.partial, coverage.processing.partial ? tok.status.stale.text : tok.status.current.text],
+    ['Excluded', coverage.processing.excluded, coverage.processing.excluded ? tok.status.stale.text : tok.textSecondary],
   ] as const
   return (
     <section className={sectionStyle(css, tok, compact)}>
@@ -380,10 +380,10 @@ function CoverageView({ envelope, compact = false }: { envelope: InvestigationEn
             <div key={hop} className={css({ padding: '13px 16px', borderRight: `1px solid ${tok.cardBorder}` })}>
               <div className={css({ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px' })}>
                 <span>{humanize(hop)}</span>
-                <span className={css({ fontFamily: FONTS.MONO, color: complete ? tok.statusGreen : tok.statusAmber })}>{value.resolved}/{value.denominator}</span>
+                <span className={css({ fontFamily: FONTS.MONO, color: complete ? tok.status.current.text : tok.status.stale.text })}>{value.resolved}/{value.denominator}</span>
               </div>
               <div className={css({ height: '2px', marginTop: '8px', backgroundColor: tok.fill })}>
-                <div className={css({ height: '2px', width: `${value.denominator ? Math.min(100, value.resolved / value.denominator * 100) : 100}%`, backgroundColor: complete ? tok.statusGreen : tok.statusAmber })} />
+                <div className={css({ height: '2px', width: `${value.denominator ? Math.min(100, value.resolved / value.denominator * 100) : 100}%`, backgroundColor: complete ? tok.status.current.solid : tok.status.stale.solid })} />
               </div>
             </div>
           )
@@ -433,8 +433,8 @@ function RefusalView({ envelope }: { envelope: InvestigationEnvelope }) {
   const tok = usePhebsTokens()
   const validation = envelope.validation
   return (
-    <section className={css({ marginTop: '22px', borderLeft: `4px solid ${tok.statusRed}`, padding: '17px 20px', backgroundColor: tok.bandBg })}>
-      <div className={css({ display: 'flex', alignItems: 'center', gap: '9px', color: tok.statusRed })}>
+    <section className={css({ marginTop: '22px', borderLeft: `4px solid ${tok.status.conflict.solid}`, padding: '17px 20px', backgroundColor: tok.bandBg })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '9px', color: tok.status.conflict.text })}>
         <WarningIcon size={17} />
         <h2 className={css({ margin: 0, fontSize: '16px', lineHeight: '22px', fontWeight: 650 })}>Pack workflow unavailable</h2>
       </div>
@@ -444,10 +444,10 @@ function RefusalView({ envelope }: { envelope: InvestigationEnvelope }) {
       {validation && (
         <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', borderTop: `1px solid ${tok.cardBorder}`, '@media screen and (max-width: 780px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } })}>
           <RailItem label="Pack" value={`${validation.pack_id} ${validation.pack_version}`} mono />
-          <RailItem label="Status" value={humanize(validation.pack_status)} tone={tok.statusRed} />
-          <RailItem label="Workflow" value={humanize(validation.workflow_eligibility)} tone={tok.statusRed} />
+          <RailItem label="Status" value={humanize(validation.pack_status)} tone={tok.status.conflict.text} />
+          <RailItem label="Workflow" value={humanize(validation.workflow_eligibility)} tone={tok.status.conflict.text} />
           <RailItem label="Expired" value={validation.expires_at.slice(0, 10)} mono />
-          <RailItem label="Blocker" value={validation.applicability_blockers.join(' · ') || envelope.refusal?.code || 'Unavailable'} mono tone={tok.statusRed} />
+          <RailItem label="Blocker" value={validation.applicability_blockers.join(' · ') || envelope.refusal?.code || 'Unavailable'} mono tone={tok.status.conflict.text} />
         </div>
       )}
     </section>
@@ -460,9 +460,9 @@ function ProcessingGaps({ envelope }: { envelope: InvestigationEnvelope }) {
   const coverage = envelope.coverage
   if (!coverage) return null
   const rows = [
-    { outcome: 'Failed', count: coverage.processing.failed, code: 'UNITS_FAILED', tone: tok.statusRed },
-    { outcome: 'Partial', count: coverage.processing.partial, code: 'UNITS_PARTIAL', tone: tok.statusAmber },
-    ...Object.entries(coverage.exclusions_by_reason).map(([code, count]) => ({ outcome: 'Excluded', count, code, tone: tok.statusAmber })),
+    { outcome: 'Failed', count: coverage.processing.failed, code: 'UNITS_FAILED', tone: tok.status.conflict.text },
+    { outcome: 'Partial', count: coverage.processing.partial, code: 'UNITS_PARTIAL', tone: tok.status.stale.text },
+    ...Object.entries(coverage.exclusions_by_reason).map(([code, count]) => ({ outcome: 'Excluded', count, code, tone: tok.status.stale.text })),
   ].filter((row) => row.count > 0)
   return (
     <div className={css({ marginTop: '14px' })}>
@@ -492,7 +492,7 @@ function DerivationRow({ fact }: { fact: InvestigationFact }) {
           {Object.entries(fact.attribution_states).map(([hop, state]) => (
             <div key={hop}>
               <div className={css({ color: tok.textTertiary, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' })}>{humanize(hop)}</div>
-              <div className={css({ marginTop: '3px', color: state.state === 'resolved' ? tok.statusGreen : tok.statusAmber, fontSize: '12px' })}>{humanize(state.state)}</div>
+              <div className={css({ marginTop: '3px', color: state.state === 'resolved' ? tok.status.current.text : tok.status.stale.text, fontSize: '12px' })}>{humanize(state.state)}</div>
               {state.reason_codes.length > 0 && <div className={css({ marginTop: '3px', fontFamily: FONTS.MONO, color: tok.textTertiary, fontSize: '10px', overflowWrap: 'anywhere' })}>{state.reason_codes.join(' · ')}</div>}
             </div>
           ))}
@@ -507,7 +507,7 @@ function AttributionCell({ fact, hop }: { fact: InvestigationFact; hop: string }
   const tok = usePhebsTokens()
   const value = fact.attribution_states[hop]
   const unresolved = !value || value.state === 'unresolved' || value.state === 'ambiguous'
-  return <Cell><span className={css({ color: unresolved ? tok.statusAmber : tok.textSecondary })}>{unresolved ? 'Unresolved' : humanize(value.state)}</span></Cell>
+  return <Cell><span className={css({ color: unresolved ? tok.status.stale.text : tok.textSecondary })}>{unresolved ? 'Unresolved' : humanize(value.state)}</span></Cell>
 }
 
 function Meta({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {

@@ -22,7 +22,111 @@ export const darkTheme = createDarkTheme(monoOverride)
 
 export const FONTS = { MONO, SANS }
 
+// Counts and other numerals align in columns (charter §3).
+export const NUMERIC = { fontVariantNumeric: 'tabular-nums' } as const
+
+// Type scale (charter §3). caption is the floor: nothing persistent renders
+// below 11px. Adoption is enforced through the T43.3 kit; new work uses these
+// directly.
+export const TYPE = {
+  display: { fontSize: '20px', lineHeight: '28px', fontWeight: 600 },
+  title: { fontSize: '17px', lineHeight: '24px', fontWeight: 600 },
+  heading: { fontSize: '13px', lineHeight: '18px', fontWeight: 600 },
+  body: { fontSize: '13px', lineHeight: '20px', fontWeight: 450 },
+  small: { fontSize: '12px', lineHeight: '18px', fontWeight: 450 },
+  caption: { fontSize: '11px', lineHeight: '16px', fontWeight: 450 },
+} as const
+
+export const SPACE = { xs: '4px', sm: '8px', md: '12px', lg: '16px', xl: '20px', xxl: '28px' } as const
+
+// Two densities (charter §3): density changes spacing and row height, never
+// information. Consumed by the directory/explorer surfaces via T43.11.
+export const DENSITY = {
+  comfortable: { rowMinHeight: '44px', cellPadY: '10px', cellPadX: '12px' },
+  dense: { rowMinHeight: '32px', cellPadY: '5px', cellPadX: '10px' },
+} as const
+
+// Motion tokens (charter §3): 120–200ms elements, ≤300ms panels; motion
+// communicates state transitions only. Under prefers-reduced-motion, replace
+// movement with opacity or immediate state via REDUCED_MOTION overrides.
+export const MOTION = {
+  element: '160ms',
+  panel: '260ms',
+  // Indicator cadence (pulsing dots, shimmer, sweeps) — repetition, not a
+  // transition, so it sits outside the 120–300ms transition windows.
+  pulse: '1.4s',
+  easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  ease: 'cubic-bezier(0.4, 0, 0.2, 1)',
+} as const
+export const REDUCED_MOTION = '@media (prefers-reduced-motion: reduce)'
+
 export type Mode = 'light' | 'dark'
+
+// Closed five-state status vocabulary (charter §3), colored once for every
+// surface. `text` passes WCAG AA (≥4.5:1) on pageBg, bandBg, fill, and
+// hoverFill in its mode — verified in theme.test.ts. `solid` is for dots,
+// borders, and fills, never running text.
+export type StatusState = 'current' | 'stale' | 'conflict' | 'removed' | 'unavailable'
+export interface StatusTone { text: string; solid: string }
+
+const LIGHT_STATUS: Record<StatusState, StatusTone> = {
+  current: { text: '#0B6B38', solid: '#0E8345' },
+  stale: { text: '#8A6116', solid: '#FFC043' },
+  conflict: { text: '#C50F30', solid: '#DE1135' },
+  removed: { text: '#5E5E5E', solid: '#A6A6A6' },
+  unavailable: { text: '#1E5BD6', solid: '#276EF1' },
+}
+
+const DARK_STATUS: Record<StatusState, StatusTone> = {
+  current: { text: '#6FAE82', solid: '#5C9D70' },
+  stale: { text: '#FFC043', solid: '#FFC043' },
+  conflict: { text: '#E57779', solid: '#DE5B5D' },
+  removed: { text: '#ABABAB', solid: '#5D5D5D' },
+  unavailable: { text: '#7BA0E4', solid: '#5E8BDB' },
+}
+
+// Page-local status words collapse into the closed vocabulary; a word not in
+// the map is a vocabulary violation, not a styling choice — extend the map
+// deliberately or fix the word.
+const STATUS_WORDS: Record<string, StatusState> = {
+  current: 'current',
+  ok: 'current',
+  done: 'current',
+  stale: 'stale',
+  partial: 'stale',
+  unresolved: 'stale',
+  unowned: 'stale',
+  unsupported: 'stale',
+  unpublished: 'stale',
+  conflict: 'conflict',
+  ambiguous: 'conflict',
+  error: 'conflict',
+  failed: 'conflict',
+  refused: 'conflict',
+  removed: 'removed',
+  none: 'removed',
+  unavailable: 'unavailable',
+}
+
+/** Tone for a status word, collapsed into the closed five-state vocabulary. */
+export function statusToneFor(word: string, tok: PhebsTokens): StatusTone | undefined {
+  const state = STATUS_WORDS[word.toLowerCase()]
+  return state ? tok.status[state] : undefined
+}
+
+// Legacy page-local tone names, dispatched once. Pages keep choosing the tone
+// word; this is the single place a tone name becomes a color pair.
+export type ToneName = 'green' | 'amber' | 'red' | 'blue' | 'neutral'
+const TONE_STATE: Record<ToneName, StatusState> = {
+  green: 'current',
+  amber: 'stale',
+  red: 'conflict',
+  blue: 'unavailable',
+  neutral: 'removed',
+}
+export function toneFor(tone: ToneName, tok: PhebsTokens): StatusTone {
+  return tok.status[TONE_STATE[tone]]
+}
 
 // PhebsTokens are the exact design-handoff colors that don't map to a baseui
 // semantic token (match highlight, status dots, code gutter, deep-link line).
@@ -40,16 +144,15 @@ export interface PhebsTokens {
   innerSep: string
   kbdBorder: string
   accent: string
+  onAccent: string
+  popoverShadow: string
   selectedLineBg: string
   selectedText: string
   matchBg: string
   plainCode: string
   addedLineBg: string
   deletedLineBg: string
-  statusGreen: string
-  statusBlue: string
-  statusRed: string
-  statusAmber: string
+  status: Record<StatusState, StatusTone>
 }
 
 const LIGHT: PhebsTokens = {
@@ -65,16 +168,15 @@ const LIGHT: PhebsTokens = {
   innerSep: '#F3F3F3',
   kbdBorder: '#DDDDDD',
   accent: '#276EF1',
+  onAccent: '#FFFFFF',
+  popoverShadow: '0 12px 32px rgba(0, 0, 0, 0.24)',
   selectedLineBg: '#EFF4FE',
   selectedText: '#175BCC',
   matchBg: '#FBE5B6',
   plainCode: '#000000',
   addedLineBg: '#ECF8F0',
   deletedLineBg: '#FFF0F2',
-  statusGreen: '#0E8345',
-  statusBlue: '#276EF1',
-  statusRed: '#DE1135',
-  statusAmber: '#FFC043',
+  status: LIGHT_STATUS,
 }
 
 const DARK: PhebsTokens = {
@@ -90,16 +192,15 @@ const DARK: PhebsTokens = {
   innerSep: '#292929',
   kbdBorder: '#383838',
   accent: '#5E8BDB',
+  onAccent: '#FFFFFF',
+  popoverShadow: '0 12px 32px rgba(0, 0, 0, 0.24)',
   selectedLineBg: '#182946',
   selectedText: '#93B4EE',
   matchBg: '#4C3111',
   plainCode: '#DEDEDE',
   addedLineBg: '#10291A',
   deletedLineBg: '#35161B',
-  statusGreen: '#5C9D70',
-  statusBlue: '#5E8BDB',
-  statusRed: '#DE5B5D',
-  statusAmber: '#FFC043',
+  status: DARK_STATUS,
 }
 
 export const TOKENS: Record<Mode, PhebsTokens> = { light: LIGHT, dark: DARK }

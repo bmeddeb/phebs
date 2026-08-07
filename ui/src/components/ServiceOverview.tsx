@@ -222,7 +222,7 @@ export default function ServiceOverview({
           <div role="status" aria-live="polite" className={css(emptyState(tok))}>Reading exact relationship rows…</div>
         ) : activeError ? (
           <div role="alert" className={css(emptyState(tok))}>
-            <strong className={css({ color: tok.statusRed })}>Relationship view failed.</strong>{' '}{activeError}
+            <strong className={css({ color: tok.status.conflict.text })}>Relationship view failed.</strong>{' '}{activeError}
           </div>
         ) : !relationshipsAvailable ? (
           <div className={css(emptyState(tok))}>
@@ -301,7 +301,7 @@ function SummaryLink({ view, page, error, active, href, border }: {
     <a href={href} aria-current={active ? 'page' : undefined} className={css({ display: 'block', minHeight: '70px', boxSizing: 'border-box', padding: '12px 14px', color: tok.textPrimary, textDecoration: 'none', backgroundColor: active ? tok.selectedLineBg : tok.pageBg, borderRight: border ? `1px solid ${tok.cardBorder}` : 'none', boxShadow: active ? `inset 0 -2px 0 ${tok.accent}` : 'none', ':hover': { backgroundColor: active ? tok.selectedLineBg : tok.hoverFill }, ':focus-visible': focusRing(tok), '@media screen and (max-width: 620px)': { minHeight: '58px', borderRight: 'none', borderBottom: border ? `1px solid ${tok.cardBorder}` : 'none' } })}>
       <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' })}>
         <span className={css({ fontSize: '12px', lineHeight: '17px', fontWeight: 600 })}>{viewTitle(view)}</span>
-        <strong className={css({ fontSize: '18px', lineHeight: '22px', fontVariantNumeric: 'tabular-nums', color: error ? tok.statusRed : tok.textPrimary })}>{value}</strong>
+        <strong className={css({ fontSize: '18px', lineHeight: '22px', fontVariantNumeric: 'tabular-nums', color: error ? tok.status.conflict.text : tok.textPrimary })}>{value}</strong>
       </div>
       <span className={css({ display: 'block', marginTop: '4px', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
     </a>
@@ -317,7 +317,7 @@ function RelationshipTableHeader({ view, page }: { view: ServiceRelationshipView
         <h4 className={css({ margin: 0, fontSize: '12px', lineHeight: '17px', color: tok.textPrimary })}>{viewTitle(view)}</h4>
         <span className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
       </div>
-      {page?.coverage.truncated && <StateText label="Partial · admitted reference cap" color={tok.statusAmber} />}
+      {page?.coverage.truncated && <StateText label="Partial · admitted reference cap" color={tok.status.stale.text} />}
     </div>
   )
 }
@@ -348,7 +348,7 @@ function RelationshipRowView({ row, onCitation }: { row: ServiceRelationshipRow;
       <td className={css(tableCell(tok))}>
         <StateTag label={classificationLabel(row)} tone={classificationTone(row)} />
         <div className={css(metaLine(tok))}>{row.participation.join(' + ') || 'unattributed'}</div>
-        {row.evidence.reason && <div className={css({ ...metaLine(tok), color: tok.statusAmber })}>{row.evidence.reason}</div>}
+        {row.evidence.reason && <div className={css({ ...metaLine(tok), color: tok.status.stale.text })}>{row.evidence.reason}</div>}
       </td>
       <td className={css(tableCell(tok))}>
         <button type="button" onClick={() => onCitation(row)} className={css(citationButton(tok))} aria-haspopup="dialog">View citation</button>
@@ -365,7 +365,7 @@ function PlacementSummary({ placement }: { placement: ServiceRelationshipPlaceme
   return (
     <div className={css({ minWidth: 0 })}>
       <code className={css(codeWrap(tok))}>{placement.path}</code>
-      <span className={css({ marginLeft: '5px', fontSize: '9.5px', lineHeight: '14px', color: posture === 'ambiguous' ? tok.statusRed : posture === 'unowned' ? tok.statusAmber : tok.textTertiary })}>{posture}</span>
+      <span className={css({ marginLeft: '5px', fontSize: '9.5px', lineHeight: '14px', color: posture === 'ambiguous' ? tok.status.conflict.text : posture === 'unowned' ? tok.status.stale.text : tok.textTertiary })}>{posture}</span>
       {placement.claims.length > 0 && (
         <div className={css(metaLine(tok))}>
           {placement.claims.map((claim) => `${claim.service_key}:${claim.disposition}[${claim.roles.map((role) => `${role.role}/${role.origin}`).join(',')}]`).join(' · ')}
@@ -421,7 +421,7 @@ function CitationPanel({ loading, error, citation, onClose }: {
         <button type="button" onClick={onClose} className={css(quietButton(tok))}>Close citation</button>
       </div>
       {loading && <div role="status" className={css({ marginTop: '10px', fontSize: '11px', color: tok.textSecondary })}>Reading immutable source span…</div>}
-      {error && <div role="alert" className={css({ marginTop: '10px', fontSize: '11px', color: tok.statusRed })}>{error}</div>}
+      {error && <div role="alert" className={css({ marginTop: '10px', fontSize: '11px', color: tok.status.conflict.text })}>{error}</div>}
       {citation && (
         <>
           <div className={css({ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '5px 16px', '@media screen and (max-width: 520px)': { gridTemplateColumns: '1fr' } })}>
@@ -542,7 +542,7 @@ function StateText({ label, color }: { label: string; color: string }) {
 function StateTag({ label, tone = 'neutral' }: { label: string; tone?: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const color = tone === 'danger' ? tok.statusRed : tone === 'warning' ? tok.statusAmber : tone === 'good' ? tok.statusGreen : tok.textSecondary
+  const color = tone === 'danger' ? tok.status.conflict.text : tone === 'warning' ? tok.status.stale.text : tone === 'good' ? tok.status.current.text : tok.status.removed.text
   return <span className={css({ display: 'inline-flex', minHeight: '18px', alignItems: 'center', padding: '0 5px', border: `1px solid ${tok.cardBorder}`, borderRadius: '4px', color, backgroundColor: tok.pageBg, fontSize: '9.5px', lineHeight: '13px', overflowWrap: 'anywhere' })}>{label}</span>
 }
 
@@ -583,11 +583,11 @@ function viewNoun(view: ServiceRelationshipView): string {
 }
 
 function snapshotColor(state: string, tok: PhebsTokens): string {
-  if (state === 'current' || state === 'empty') return tok.statusGreen
-  if (state === 'failed') return tok.statusRed
-  if (state === 'partial' || state === 'stale') return tok.statusAmber
-  if (state === 'unsupported') return tok.gutter
-  return tok.statusBlue
+  if (state === 'current' || state === 'empty') return tok.status.current.solid
+  if (state === 'failed') return tok.status.conflict.solid
+  if (state === 'partial' || state === 'stale') return tok.status.stale.solid
+  if (state === 'unsupported') return tok.status.removed.solid
+  return tok.status.unavailable.solid
 }
 
 function titleCase(value: string): string {

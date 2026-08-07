@@ -1,5 +1,6 @@
 import { LanguageSupport, StreamLanguage } from '@codemirror/language'
 import type { StreamParser } from '@codemirror/language'
+import type { PhebsTokens } from './theme'
 
 // languageFor lazily loads the CM6 language pack for a path's extension (or
 // bare filename, e.g. Dockerfile), so language bundles stay out of the initial
@@ -118,7 +119,7 @@ async function load(key: string): Promise<LanguageSupport | null> {
 }
 
 // langColor is the language dot color for a path (design handoff palette,
-// extended). Falls back to gray for unmapped extensions.
+// extended). Falls back to the mode's gutter gray for unmapped extensions.
 const DOT: Record<string, string> = {
   go: '#016974',
   ts: '#175BCC', tsx: '#175BCC', mjs: '#DE9800', cjs: '#DE9800', js: '#DE9800', jsx: '#DE9800',
@@ -135,8 +136,8 @@ const DOT: Record<string, string> = {
   dockerfile: '#175BCC', proto: '#7C3EC3', thrift: '#7C3EC3',
 }
 
-export function langColor(path: string): string {
-  return DOT[langKey(path)] ?? '#A6A6A6'
+export function langColor(path: string, tok: PhebsTokens): string {
+  return DOT[langKey(path)] ?? tok.gutter
 }
 
 // langName is the human display name for a path's language (file-viewer header).

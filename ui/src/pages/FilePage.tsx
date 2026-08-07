@@ -430,7 +430,7 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
         },
       })}
     >
-      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path) })} />
+      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path, tok) })} />
       <span className={css({ fontSize: '12.5px', fontWeight: 600, color: tok.textPrimary })}>{name}</span>
       <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
         {langName(path)} · {lineCount} lines · {humanSize(bytes)}
@@ -460,7 +460,7 @@ function CopyInline({ text, title, size = 14 }: { text: string; title: string; s
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
-      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
       {done ? <CheckIcon size={size} /> : <CopyIcon size={size} />}
     </button>

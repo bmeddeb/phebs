@@ -254,7 +254,7 @@ function TreeRow({
   const fileParams = { repo, path, ...(ref ? { ref } : {}) }
   return (
     <a href={href('/file', fileParams)} className={rowStyle} aria-current={active ? 'page' : undefined}>
-      <span className={css({ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: langColor(path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
+      <span className={css({ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: langColor(path, tok), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
       <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{entry.name}</span>
     </a>
   )
@@ -305,7 +305,7 @@ function TreeRetry({
         paddingRight: '8px',
         border: 'none',
         backgroundColor: 'transparent',
-        color: tok.statusRed,
+        color: tok.status.conflict.text,
         fontSize: '12px',
         textAlign: 'left',
         cursor: 'pointer',
@@ -355,7 +355,7 @@ export default function RepositoryBrowser({
             border: 'none',
             padding: '12px',
             backgroundColor: 'transparent',
-            color: tok.statusRed,
+            color: tok.status.conflict.text,
             textAlign: 'left',
             cursor: 'pointer',
           })}
