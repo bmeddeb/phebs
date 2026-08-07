@@ -14,8 +14,9 @@ import {
   type ServiceStatus,
 } from '../api'
 import ServiceOverview from '../components/ServiceOverview'
+import { StateNotice, StatusWord } from '../components/kit'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, focusRing, usePhebsTokens, type PhebsTokens, type ToneName } from '../theme'
 import { isAbortError, relTime } from '../util'
 
 const PAGE_SIZE = 50
@@ -457,7 +458,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
         )}
       </header>
 
-      <StateNotice service={service} successors={detail.successors} />
+      <ServiceStateNotice service={service} successors={detail.successors} />
 
       <div className={css({ padding: '16px' })}>
         <h3 className={css(sectionHeading(tok))}>Lifecycle identities</h3>
@@ -507,38 +508,36 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
   )
 }
 
-function StateNotice({ service, successors }: { service: ServiceRecord; successors: string[] }) {
+function ServiceStateNotice({ service, successors }: { service: ServiceRecord; successors: string[] }) {
   const [css] = useStyletron()
-  const tok = usePhebsTokens()
   let title = ''
   let body = service.reason ?? ''
-  let color = tok.status.unavailable.solid
+  let tone: ToneName = 'blue'
   if (service.status === 'stale') {
     title = 'Active generation is stale'
     body = 'The active identity does not equal the current desired identity. No freshness is inferred.'
-    color = tok.status.stale.solid
+    tone = 'amber'
   } else if (service.status === 'conflict' || service.disposition === 'conflict') {
     title = 'Authority conflict'
     body = service.reason || 'The catalog retains an explicit unresolved authority conflict.'
-    color = tok.status.conflict.solid
+    tone = 'red'
   } else if (service.removed || service.status === 'removed') {
     title = 'Removed identity retained'
     body = successors.length
       ? `Authority successor${successors.length === 1 ? '' : 's'}: ${successors.join(', ')}. This is catalog lineage, not a runtime relationship.`
       : 'The tombstone remains inspectable and supplies no active service authority.'
-    color = tok.status.removed.solid
+    tone = 'neutral'
   } else if (service.status === 'unavailable') {
     title = 'No exact active generation'
     body = service.disposition === 'accepted'
       ? 'The desired service exists, but no exact active generation has been published.'
       : service.reason || 'This authority disposition does not create an active generation.'
-    color = tok.status.unavailable.solid
+    tone = 'blue'
   }
   if (!title) return null
   return (
-    <div className={css({ margin: '14px 16px 0', padding: '10px 12px', borderLeft: `3px solid ${color}`, backgroundColor: tok.bandBg })}>
-      <div className={css({ fontSize: '11.5px', lineHeight: '16px', fontWeight: 600, color: tok.textPrimary })}>{title}</div>
-      <div className={css({ marginTop: '2px', fontSize: '11px', lineHeight: '17px', color: tok.textSecondary })}>{body}</div>
+    <div className={css({ margin: '14px 16px 0' })}>
+      <StateNotice tone={tone} title={title}>{body}</StateNotice>
     </div>
   )
 }
@@ -570,15 +569,7 @@ function Identity({ label, value }: { label: string; value?: string }) {
 }
 
 function StatusBadge({ service }: { service: ServiceRecord }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const color = statusColor(service.status, tok)
-  return (
-    <span className={css({ display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0, fontSize: '10.5px', lineHeight: '15px', color: tok.textSecondary })}>
-      <span className={css({ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: color })} />
-      {titleCase(service.status)}
-    </span>
-  )
+  return <StatusWord tone={statusTone(service.status)}>{titleCase(service.status)}</StatusWord>
 }
 
 function SmallTag({ text, quiet = false }: { text: string; quiet?: boolean }) {
@@ -636,13 +627,13 @@ function directoryHref(
   return href('/services', directoryParams({ ...route, ...changes }))
 }
 
-function statusColor(status: ServiceStatus, tok: PhebsTokens): string {
+function statusTone(status: ServiceStatus): ToneName {
   switch (status) {
-  case 'current': return tok.status.current.solid
-  case 'stale': return tok.status.stale.solid
-  case 'conflict': return tok.status.conflict.solid
-  case 'removed': return tok.status.removed.solid
-  default: return tok.status.unavailable.solid
+  case 'current': return 'green'
+  case 'stale': return 'amber'
+  case 'conflict': return 'red'
+  case 'removed': return 'neutral'
+  default: return 'blue'
   }
 }
 
@@ -658,10 +649,6 @@ function titleCase(value: string): string {
 function boundedError(cause: unknown): string {
   const message = String(cause).replace(/^Error:\s*/, '')
   return message.length <= 512 ? message : `${message.slice(0, 511)}…`
-}
-
-function focusRing(tok: PhebsTokens) {
-  return { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' }
 }
 
 function primaryLink(tok: PhebsTokens) {

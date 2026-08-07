@@ -339,13 +339,16 @@ test('renders two exact generations, four classifications, and range-only citati
   await screen.findByText('Rows 1–4 of 4')
   expect(screen.getByTestId('caller-comparison-page').getAttribute('data-responsive-layout'))
     .toBe('desktop-columns-mobile-cards')
+  const rowText = screen.getAllByTestId('caller-comparison-row')
+    .map((row) => row.textContent)
+    .join('\n')
   for (const classification of [
-    'old_only_evidence',
-    'both_evidence',
-    'new_only_evidence',
-    'unresolved',
+    'Old plane only',
+    'Both planes',
+    'New plane only',
+    'Unresolved',
   ]) {
-    expect(screen.getByText(classification)).toBeTruthy()
+    expect(rowText).toContain(classification)
   }
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(4)
   const generations = screen.getAllByTestId('caller-comparison-generation')

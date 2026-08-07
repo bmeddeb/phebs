@@ -10,7 +10,8 @@ import {
   type ServiceRelationshipRow,
   type ServiceRelationshipView,
 } from '../api'
-import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
+import { StatusChip } from './kit'
 import { isAbortError } from '../util'
 import { href } from '../router'
 
@@ -339,14 +340,14 @@ function RelationshipRowView({ row, onCitation }: { row: ServiceRelationshipRow;
       </td>
       <td className={css(tableCell(tok))}>
         {row.counterpart_services.length > 0 ? (
-          <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '4px' })}>{row.counterpart_services.map((service) => <StateTag key={service} label={service} />)}</div>
+          <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '4px' })}>{row.counterpart_services.map((service) => <StatusChip key={service} tone="neutral">{service}</StatusChip>)}</div>
         ) : <span className={css({ fontSize: '10.5px', color: tok.textTertiary })}>No accepted counterpart</span>}
         <div className={css({ display: 'grid', gap: '3px', marginTop: '6px' })}>
           {placements.map((placement) => <PlacementSummary key={placement.path} placement={placement} />)}
         </div>
       </td>
       <td className={css(tableCell(tok))}>
-        <StateTag label={classificationLabel(row)} tone={classificationTone(row)} />
+        <StatusChip tone={classificationTone(row)}>{classificationLabel(row)}</StatusChip>
         <div className={css(metaLine(tok))}>{row.participation.join(' + ') || 'unattributed'}</div>
         {row.evidence.reason && <div className={css({ ...metaLine(tok), color: tok.status.stale.text })}>{row.evidence.reason}</div>}
       </td>
@@ -539,13 +540,6 @@ function StateText({ label, color }: { label: string; color: string }) {
   return <span className={css({ fontSize: '10.5px', lineHeight: '15px', color })}>{label}</span>
 }
 
-function StateTag({ label, tone = 'neutral' }: { label: string; tone?: string }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const color = tone === 'danger' ? tok.status.conflict.text : tone === 'warning' ? tok.status.stale.text : tone === 'good' ? tok.status.current.text : tok.status.removed.text
-  return <span className={css({ display: 'inline-flex', minHeight: '18px', alignItems: 'center', padding: '0 5px', border: `1px solid ${tok.cardBorder}`, borderRadius: '4px', color, backgroundColor: tok.pageBg, fontSize: '9.5px', lineHeight: '13px', overflowWrap: 'anywhere' })}>{label}</span>
-}
-
 function classificationLabel(row: ServiceRelationshipRow): string {
   if (row.source.unowned || row.target?.unowned) return 'Unowned'
   const claims = [...row.source.claims, ...(row.target?.claims ?? [])]
@@ -556,11 +550,11 @@ function classificationLabel(row: ServiceRelationshipRow): string {
   return titleCase(row.class)
 }
 
-function classificationTone(row: ServiceRelationshipRow): string {
+function classificationTone(row: ServiceRelationshipRow): 'red' | 'amber' | 'green' | 'neutral' {
   const label = classificationLabel(row).toLowerCase()
-  if (label === 'ambiguous' || label === 'conflict' || label === 'failed') return 'danger'
-  if (label === 'unowned' || label === 'unresolved' || label === 'unsupported' || label === 'partial') return 'warning'
-  if (label === 'resolved') return 'good'
+  if (label === 'ambiguous' || label === 'conflict' || label === 'failed') return 'red'
+  if (label === 'unowned' || label === 'unresolved' || label === 'unsupported' || label === 'partial') return 'amber'
+  if (label === 'resolved') return 'green'
   return 'neutral'
 }
 
@@ -601,10 +595,6 @@ function boundedError(cause: unknown): string {
 
 function shortIdentity(value: string): string {
   return value.length <= 30 ? value : `${value.slice(0, 18)}…${value.slice(-8)}`
-}
-
-function focusRing(tok: PhebsTokens) {
-  return { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' }
 }
 
 function emptyState(tok: PhebsTokens) {

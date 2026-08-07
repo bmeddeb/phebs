@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
-import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
+import { ErrorNotice } from '../components/kit'
 import { fetchRepoStatus, postReindex } from '../api'
 import type { RepoStatus } from '../api'
 import { usePhebsTokens, FONTS, MOTION, REDUCED_MOTION } from '../theme'
@@ -73,19 +73,24 @@ export default function ReposPage({ isAdmin = false, serviceDirectoryAvailable =
     }
   }
 
-  if (error)
-    return (
-      <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto' } } }}>
-        {error}
-      </Notification>
-    )
-  if (repos === null) return <Spinner $size="small" />
+  // Fail closed with context: a poll error never discards the last-good
+  // table. The band names the failure; the POLL_MS cycle self-heals it.
+  if (repos === null) {
+    if (error) return <ErrorNotice>Repository status poll failed: {error}. Polling continues.</ErrorNotice>
+    return <Spinner $size="small" />
+  }
 
   const indexed = repos.filter((r) => r.indexed_commit_hash).length
   const running = repos.filter((r) => r.last_index_job && !['done', 'failed', 'canceled'].includes(r.last_index_job.status)).length
   const indexingStateUnavailable = repos.some((r) => r.last_index_job_state === 'unavailable')
 
   return (
+    <>
+    {error && (
+      <div className={css({ marginBottom: '12px' })}>
+        <ErrorNotice>Repository status poll failed: {error}. Showing the last successful reading; polling continues.</ErrorNotice>
+      </div>
+    )}
     <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
       <div className={css({ height: '38px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.cardBorder}` })}>
         <span className={css({ fontSize: '14px', lineHeight: '18px', fontWeight: 600, color: tok.textPrimary })}>
@@ -149,6 +154,7 @@ export default function ReposPage({ isAdmin = false, serviceDirectoryAvailable =
         </div>
       )}
     </div>
+    </>
   )
 }
 

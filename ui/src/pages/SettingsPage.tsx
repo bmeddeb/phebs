@@ -7,6 +7,7 @@ import { Spinner } from 'baseui/spinner'
 import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '../api'
 import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
+import { LoadingBlock, StatusChip } from '../components/kit'
 import { usePhebsTokens, FONTS } from '../theme'
 import { isAbortError } from '../util'
 
@@ -198,9 +199,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
 
       <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
         {!keysLoaded && !error && (
-          <div role="status" className={css({ display: 'flex', alignItems: 'center', gap: '8px', padding: '24px 0', color: tok.textTertiary, fontSize: '14px' })}>
-            <Spinner $size="small" /> Loading API keys…
-          </div>
+          <LoadingBlock label="Loading API keys…" />
         )}
         {keysLoaded && keys.length === 0 && (
           <div className={css({ padding: '24px 0', color: tok.textTertiary, fontSize: '14px' })}>No API keys.</div>
@@ -243,22 +242,16 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
 }
 
 function LifecycleBadge({ status }: { status: LifecycleStatus }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
   const pressure = status.capacity.pressure
-  const tone = pressure === 'normal' ? tok.status.current
-    : pressure === 'collect' ? tok.status.stale
-      : tok.status.conflict
+  const tone = pressure === 'normal' ? 'green'
+    : pressure === 'collect' ? 'amber'
+      : 'red'
   const label = !status.policy.enabled ? 'Collection disabled'
     : pressure === 'normal' ? 'Normal'
       : pressure === 'collect' ? 'Collecting'
         : pressure === 'refuse' ? 'Admission refused'
           : 'Capacity unavailable'
-  return (
-    <span role="status" className={css({ flexShrink: 0, border: `1px solid ${tone.solid}`, color: tone.text, borderRadius: '999px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 })}>
-      {label}
-    </span>
-  )
+  return <StatusChip tone={tone} role="status">{label}</StatusChip>
 }
 
 function LifecyclePanel({ status }: { status: LifecycleStatus }) {

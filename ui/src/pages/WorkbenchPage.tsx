@@ -21,8 +21,9 @@ import {
   type WorkbenchView,
 } from '../api'
 import { href, navigate } from '../router'
-import { FONTS, toneFor, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import { StatusChip } from '../components/kit'
 import {
   WorkbenchHowStep,
   WorkbenchWhereStep,
@@ -711,11 +712,11 @@ function WorkbenchHeader({
           '@media screen and (max-width: 680px)': { justifyContent: 'flex-start' },
         })}
       >
-        <StateChip tone={dirty ? 'amber' : 'green'}>
+        <StatusChip tone={dirty ? 'amber' : 'green'}>
           {dirty ? (view ? 'Unsaved edits' : 'Uncommitted draft') : 'Revision exact'}
-        </StateChip>
-        {previewDrifted && <StateChip tone="red">Preview drifted</StateChip>}
-        <StateChip tone="neutral">No implicit writes</StateChip>
+        </StatusChip>
+        {previewDrifted && <StatusChip tone="red">Preview drifted</StatusChip>}
+        <StatusChip tone="neutral">No implicit writes</StatusChip>
       </div>
     </header>
   )
@@ -1724,9 +1725,9 @@ function StoredProposal({
         Retained proposal commitment · source bytes are not stored
       </div>
       <div className={css({ display: 'flex', gap: '7px', flexWrap: 'wrap' })}>
-        <StateChip tone="neutral">{value.protocol}</StateChip>
-        <StateChip tone="neutral">{value.files.length} files</StateChip>
-        <StateChip tone="neutral">{shortDigest(value.source_set_digest)}</StateChip>
+        <StatusChip tone="neutral">{value.protocol}</StatusChip>
+        <StatusChip tone="neutral">{value.files.length} files</StatusChip>
+        <StatusChip tone="neutral">{shortDigest(value.source_set_digest)}</StatusChip>
       </div>
       {value.files.map((file) => (
         <div
@@ -1835,17 +1836,17 @@ function PreviewDock({
         {preview && (
           <div className={css({ display: 'grid', gap: '14px' })}>
             <div className={css({ display: 'flex', gap: '7px', flexWrap: 'wrap' })}>
-              <StateChip tone={preview.ready && !previewDrifted ? 'green' : 'amber'}>
+              <StatusChip tone={preview.ready && !previewDrifted ? 'green' : 'amber'}>
                 {previewDrifted ? 'Preview expired after edits' : preview.ready ? 'Ready' : 'Blocked'}
-              </StateChip>
-              <StateChip tone="neutral">
+              </StatusChip>
+              <StatusChip tone="neutral">
                 revision {preview.next_revision_sequence}
-              </StateChip>
-              <StateChip tone="neutral">
+              </StatusChip>
+              <StatusChip tone="neutral">
                 {preview.estimate.analysis_units} bounded units
-              </StateChip>
+              </StatusChip>
               {preview.preview_digest && (
-                <StateChip tone="neutral">{shortDigest(preview.preview_digest)}</StateChip>
+                <StatusChip tone="neutral">{shortDigest(preview.preview_digest)}</StatusChip>
               )}
             </div>
             {preview.blockers.length > 0 && (
@@ -1879,16 +1880,16 @@ function PreviewDock({
             })}>
               <h3 className={css(minorHeadingStyle(tok))}>Compatibility</h3>
               <div className={css({ display: 'flex', gap: '7px', flexWrap: 'wrap', marginTop: '7px' })}>
-                <StateChip tone={preview.compatibility.status === 'available' ? 'green' : 'amber'}>
+                <StatusChip tone={preview.compatibility.status === 'available' ? 'green' : 'amber'}>
                   {preview.compatibility.status}
-                </StateChip>
+                </StatusChip>
                 {preview.compatibility.protocol && (
-                  <StateChip tone="neutral">{preview.compatibility.protocol}</StateChip>
+                  <StatusChip tone="neutral">{preview.compatibility.protocol}</StatusChip>
                 )}
                 {preview.compatibility.reason && (
-                  <StateChip tone="neutral">
+                  <StatusChip tone="neutral">
                     {humanize(preview.compatibility.reason)}
-                  </StateChip>
+                  </StatusChip>
                 )}
               </div>
               {preview.compatibility.status === 'unavailable' && (
@@ -2128,36 +2129,6 @@ function HonestEmpty({ children }: { children: React.ReactNode }) {
     })}>
       {children}
     </div>
-  )
-}
-
-function StateChip({
-  tone,
-  children,
-}: {
-  tone: 'green' | 'amber' | 'red' | 'neutral'
-  children: React.ReactNode
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const colors = toneFor(tone, tok)
-  return (
-    <span className={css({
-      display: 'inline-flex',
-      alignItems: 'center',
-      minHeight: '23px',
-      boxSizing: 'border-box',
-      padding: '2px 7px',
-      border: `1px solid ${colors.solid}`,
-      color: colors.text,
-      fontFamily: FONTS.MONO,
-      fontSize: '9px',
-      lineHeight: '14px',
-      letterSpacing: '0.025em',
-      textTransform: 'uppercase',
-    })}>
-      {children}
-    </span>
   )
 }
 

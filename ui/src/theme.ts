@@ -218,3 +218,8 @@ export const useMode = () => useContext(ModeContext)
 export function usePhebsTokens(): PhebsTokens {
   return TOKENS[useMode().mode]
 }
+
+/** Shared focus ring — the canonical form of the former per-page clones. */
+export function focusRing(tok: PhebsTokens) {
+  return { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' }
+}

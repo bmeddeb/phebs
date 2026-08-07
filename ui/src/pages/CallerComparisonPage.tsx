@@ -21,6 +21,7 @@ import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
+import { StatusChip } from '../components/kit'
 
 const pageSize = 100
 const maxCursorHistory = 500
@@ -661,7 +662,9 @@ function ComparisonRows({ page }: { page: ComparisonResponse }) {
             gap: '7px',
             flexWrap: 'wrap',
           })}>
-            <StatusChip classification={row.classification} />
+            <StatusChip tone={CLASSIFICATION_TONE[row.classification]}>
+              {CLASSIFICATION_LABEL[row.classification]}
+            </StatusChip>
             <span className={css({ color: tok.textTertiary, fontSize: '10px' })}>
               {row.level}
             </span>
@@ -944,27 +947,19 @@ function Loading({ label }: { label: string }) {
   )
 }
 
-function StatusChip({ classification }: { classification: CallerComparisonRow['classification'] }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const colors = {
-    old_only_evidence: tok.status.stale,
-    both_evidence: tok.status.current,
-    new_only_evidence: { text: tok.accent, solid: tok.accent },
-    unresolved: tok.status.conflict,
-  }
-  return (
-    <span className={css({
-      display: 'inline-flex',
-      padding: '2px 7px',
-      border: `1px solid ${colors[classification].solid}`,
-      color: colors[classification].text,
-      fontSize: '9px',
-      fontWeight: 650,
-    })}>
-      {classification}
-    </span>
-  )
+const CLASSIFICATION_TONE: Record<CallerComparisonRow['classification'], 'amber' | 'green' | 'accent' | 'red'> = {
+  old_only_evidence: 'amber',
+  both_evidence: 'green',
+  new_only_evidence: 'accent',
+  unresolved: 'red',
+}
+
+// Sanctioned copy fix (audit F23): human-readable labels instead of raw enum keys.
+const CLASSIFICATION_LABEL: Record<CallerComparisonRow['classification'], string> = {
+  old_only_evidence: 'Old plane only',
+  both_evidence: 'Both planes',
+  new_only_evidence: 'New plane only',
+  unresolved: 'Unresolved',
 }
 
 function endpointFromParams(params: URLSearchParams, prefix: string): CallerMapEndpoint | null {
