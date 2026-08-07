@@ -521,8 +521,12 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 	if allPinCount != evidenceMigrationBatchSize+2 {
 		t.Fatalf("batched canonical pin count = %d, want %d", allPinCount, evidenceMigrationBatchSize+2)
 	}
-	if err := s.AbortExtractionRun(ctx, "v3-staged"); err != nil {
-		t.Fatalf("upgraded compatible staged run was not writable: %v", err)
+	staged := evidenceMigrationState(t, s, "v3-staged")
+	if staged.Status != "aborted" || staged.Quarantined {
+		t.Fatalf("pre-accounting staged run was not safely retired: %+v", staged)
+	}
+	if err := s.AbortExtractionRun(ctx, "v3-staged"); !errors.Is(err, ErrConflict) {
+		t.Fatalf("retired pre-accounting run remained writable: %v", err)
 	}
 
 	before := evidenceMigrationMarker(t, s)

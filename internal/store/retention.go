@@ -18,6 +18,7 @@ type RetentionComponent string
 
 const (
 	RetentionExtractionRun                          RetentionComponent = "extraction_run"
+	RetentionEvidenceChunk                          RetentionComponent = "evidence_chunk"
 	RetentionSnapshotEvidence                       RetentionComponent = "snapshot_evidence"
 	RetentionAssertion                              RetentionComponent = "assertion"
 	RetentionEvidenceAtom                           RetentionComponent = "evidence_atom"
@@ -161,6 +162,7 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	RetentionExtractionRun: {
 		table: "extraction_run", readiness: retentionEvidenceReady,
 	},
+	RetentionEvidenceChunk:     {table: "evidence_chunk", readiness: retentionEvidenceReady},
 	RetentionSnapshotEvidence:  {table: "snapshot_evidence", readiness: retentionEvidenceReady},
 	RetentionAssertion:         {table: "assertion", readiness: retentionEvidenceReady},
 	RetentionEvidenceAtom:      {table: "evidence_atom", readiness: retentionEvidenceReady},
@@ -268,12 +270,12 @@ RETURN array::intersect(
 
 const (
 	maxRetentionReportedPerComponent            = 79
-	maxCoreRetentionRequests                    = 21
-	maxCoreRetentionReportedIdentities          = 1_656
-	maxCoreRetentionScanIdentities              = 1_677
+	maxCoreRetentionRequests                    = 22
+	maxCoreRetentionReportedIdentities          = 1_709
+	maxCoreRetentionScanIdentities              = 1_731
 	maxInvestigationRetentionRequests           = 24
-	maxInvestigationRetentionReportedIdentities = 1_894
-	maxInvestigationRetentionScanIdentities     = 1_918
+	maxInvestigationRetentionReportedIdentities = 1_848
+	maxInvestigationRetentionScanIdentities     = 1_872
 )
 
 type retentionRow struct {

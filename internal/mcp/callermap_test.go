@@ -840,6 +840,19 @@ func (s *callerToolStore) AddEvidence(
 	return errors.New("unexpected evidence write")
 }
 
+func (s *callerToolStore) AddEvidenceChunk(
+	context.Context,
+	string,
+	string,
+	int,
+	[]store.EvidenceAtom,
+	[]store.SnapshotEvidence,
+	[]store.Assertion,
+) error {
+	s.writes++
+	return errors.New("unexpected evidence write")
+}
+
 func (s *callerToolStore) PublishExtractionRun(
 	context.Context,
 	string,

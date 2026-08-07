@@ -130,7 +130,8 @@ authorization-first retention-status shell and capacity warning, and T30.6p's
 21 core SurrealDB retention collectors are also shipped. T30.6q's exact
 24-table Investigation/Workbench collector and T30.6r's bounded
 derived-publication store/filesystem collectors are shipped, completing the
-52-component retention-status surface. T30.7 closes the epic with scope-aware
+then-52-component retention-status surface; T40.7 adds the durable chunk
+ledger as the 53rd component. T30.7 closes the epic with scope-aware
 product surfaces, coverage-certificate v3 and durable domain receipts, exact
 caller record/progress summaries, HTTP/MCP scope parity, and a neutral
 ordinary-worker `make dev` cohort. Its post-review closure preserves retained
@@ -186,8 +187,9 @@ evidence, not a scale pass. Epics 40–42 are the scheduled scale-convergence
 program: T40.1's closed refusal envelope/frozen neutral corpus, T40.2's
 independent derived-plan ownership, and T40.3's source-partition super-root are
 complete, T40.4's hierarchical observation inventory, T40.5's immutable
-search-generation lifecycle, and T40.6's observation recovery/lifecycle/archive
-migration plus reverse-audit closure are complete, and T40.7 is the next scale
+search-generation lifecycle, T40.6's observation recovery/lifecycle/archive
+migration plus reverse-audit closure, and T40.7's constant-cost evidence-stage
+accounting are complete, and T40.8 is the next scale
 ticket;
 Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41

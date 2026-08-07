@@ -203,16 +203,16 @@ func TestCoreRetentionStatusEmptyStorePopulatesOnlyCoreComponents(t *testing.T) 
 	for index, request := range captured {
 		reportedTotal += request.ReportedIdentities
 		scanTotal += request.ScanIdentities
-		wantReported, wantScan := 79, 80
-		if index >= 18 {
+		wantReported, wantScan := 77, 78
+		if index < 15 {
 			wantReported, wantScan = 78, 79
 		}
 		if request.ReportedIdentities != wantReported || request.ScanIdentities != wantScan {
 			t.Fatalf("request %d %q allocation = %d/%d, want %d/%d", index, request.Component, request.ReportedIdentities, request.ScanIdentities, wantReported, wantScan)
 		}
 	}
-	if reportedTotal != 1_656 || scanTotal != 1_677 {
-		t.Fatalf("core allocation = %d/%d, want 1656/1677", reportedTotal, scanTotal)
+	if reportedTotal != 1_709 || scanTotal != 1_731 {
+		t.Fatalf("core allocation = %d/%d, want 1709/1731", reportedTotal, scanTotal)
 	}
 
 	populated, unavailable := 0, 0
@@ -250,10 +250,10 @@ func TestCoreRetentionStatusEmptyStorePopulatesOnlyCoreComponents(t *testing.T) 
 			}
 		}
 	}
-	if populated != 21 || unavailable != 31 {
-		t.Fatalf("component posture = %d populated/%d unavailable, want 21/31", populated, unavailable)
+	if populated != 22 || unavailable != 31 {
+		t.Fatalf("component posture = %d populated/%d unavailable, want 22/31", populated, unavailable)
 	}
-	const wantProductionEmptyCoreResponseBytes = 19_721
+	const wantProductionEmptyCoreResponseBytes = 20_013
 	if len(encoded) != wantProductionEmptyCoreResponseBytes {
 		t.Fatalf("production empty core response = %d bytes, want %d", len(encoded), wantProductionEmptyCoreResponseBytes)
 	}
@@ -287,7 +287,7 @@ func TestCoreRetentionStatusLocalizesFailureAndMapsCapPlusOne(t *testing.T) {
 				ReportedIdentities: 1,
 			},
 		}
-		outcomeIndex := 5
+		outcomeIndex := 6
 		bytes := int64(12_345)
 		results[outcomeIndex] = store.RetentionComponentResult{
 			Component: requests[outcomeIndex].Component,
@@ -459,10 +459,7 @@ func TestInvestigationRetentionStatusPopulatesExactRegistryOrderAndAllocation(t 
 				wantComponents[index],
 			)
 		}
-		wantReported, wantScan := 79, 80
-		if index >= 22 {
-			wantReported, wantScan = 78, 79
-		}
+		wantReported, wantScan := 77, 78
 		if request.ReportedIdentities != wantReported ||
 			request.ScanIdentities != wantScan {
 			t.Fatalf(
@@ -477,9 +474,9 @@ func TestInvestigationRetentionStatusPopulatesExactRegistryOrderAndAllocation(t 
 		reportedTotal += request.ReportedIdentities
 		scanTotal += request.ScanIdentities
 	}
-	if reportedTotal != 1_894 || scanTotal != 1_918 {
+	if reportedTotal != 1_848 || scanTotal != 1_872 {
 		t.Fatalf(
-			"Investigation allocation = %d/%d, want 1894/1918",
+			"Investigation allocation = %d/%d, want 1848/1872",
 			reportedTotal,
 			scanTotal,
 		)
@@ -521,9 +518,9 @@ func TestInvestigationRetentionStatusPopulatesExactRegistryOrderAndAllocation(t 
 			)
 		}
 	}
-	if populated != 24 || unavailable != 28 {
+	if populated != 24 || unavailable != 29 {
 		t.Fatalf(
-			"Investigation-only posture = %d populated/%d unavailable, want 24/28",
+			"Investigation-only posture = %d populated/%d unavailable, want 24/29",
 			populated,
 			unavailable,
 		)
@@ -584,14 +581,14 @@ func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
 			}
 		}
 	}
-	if populated != 45 || unavailable != 7 {
+	if populated != 46 || unavailable != 7 {
 		t.Fatalf(
-			"composed posture = %d populated/%d unavailable, want 45/7",
+			"composed posture = %d populated/%d unavailable, want 46/7",
 			populated,
 			unavailable,
 		)
 	}
-	const wantProductionEmptyCoreAndInvestigationResponseBytes = 19_505
+	const wantProductionEmptyCoreAndInvestigationResponseBytes = 19_797
 	if len(encoded) != wantProductionEmptyCoreAndInvestigationResponseBytes {
 		t.Fatalf(
 			"production empty core-plus-Investigation response = %d bytes, want %d",
@@ -720,7 +717,7 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 	if len(encoded) > api.RetentionStatusResponseByteLimit {
 		t.Fatalf("complete response = %d bytes, limit %d", len(encoded), api.RetentionStatusResponseByteLimit)
 	}
-	const wantCompleteEncodedBytes = 19_381
+	const wantCompleteEncodedBytes = 19_673
 	if len(encoded) != wantCompleteEncodedBytes {
 		t.Fatalf("complete encoded bytes = %d, want frozen %d", len(encoded), wantCompleteEncodedBytes)
 	}
@@ -1233,7 +1230,7 @@ func TestRetentionStatusEmptyInstallationFreezesRegistryAndUnavailableMetrics(t 
 		accumulating     bool
 		components       []string
 	}{
-		{"evidence_publications", "repository/commit/unit/domain", "selected_t306m_unbounded_retention", true, []string{"extraction_run", "snapshot_evidence", "assertion", "evidence_atom"}},
+		{"evidence_publications", "repository/commit/unit/domain", "selected_t306m_unbounded_retention", true, []string{"extraction_run", "evidence_chunk", "snapshot_evidence", "assertion", "evidence_atom"}},
 		{"extraction_attempts", "repository/commit/unit/domain", "selected_t306m_unbounded_retention", true, []string{"extraction_attempt"}},
 		{"extraction_outcomes", "repository/domain", "existing_owner_lifecycle_unchanged", false, []string{"extraction_domain_outcome"}},
 		{"evidence_pins", "run/kind", "mixed_owner_lifecycles_not_selected_by_t306m", true, []string{
@@ -1338,8 +1335,8 @@ func TestRetentionStatusEmptyInstallationFreezesRegistryAndUnavailableMetrics(t 
 			derivedComponents += len(owner.Components)
 		}
 	}
-	if coreComponents != 21 || investigationComponents != 24 || derivedComponents != 7 {
-		t.Fatalf("collector split = %d/%d/%d, want 21/24/7", coreComponents, investigationComponents, derivedComponents)
+	if coreComponents != 22 || investigationComponents != 24 || derivedComponents != 7 {
+		t.Fatalf("collector split = %d/%d/%d, want 22/24/7", coreComponents, investigationComponents, derivedComponents)
 	}
 	assertUnavailableRetentionMetric(t, "data volume total", status.DataVolume.TotalBytes, "bytes")
 	assertUnavailableRetentionMetric(t, "data volume available", status.DataVolume.AvailableBytes, "bytes")
@@ -1415,9 +1412,9 @@ func TestRetentionStatusAllocationIsAggregateBoundedAndCannotStarve(t *testing.T
 			if allocation.ScanIdentities != allocation.ReportedIdentities+1 {
 				t.Fatalf("component %q allocation = %+v, want one private sentinel", component.ID, allocation)
 			}
-			wantReported := 78
-			if componentIndex < 40 {
-				wantReported = 79
+			wantReported := 77
+			if componentIndex < 15 {
+				wantReported = 78
 			}
 			if allocation.ReportedIdentities != wantReported {
 				t.Fatalf("component %d %q report allocation = %d, want %d", componentIndex, component.ID, allocation.ReportedIdentities, wantReported)
@@ -1444,7 +1441,7 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 	if !bytes.Equal(firstEncoded, secondEncoded) {
 		t.Fatal("empty retention status encoding is not deterministic")
 	}
-	const wantEmptyEncodedBytes = 19_955
+	const wantEmptyEncodedBytes = 20_256
 	if len(firstEncoded) != wantEmptyEncodedBytes {
 		t.Fatalf("empty encoded bytes = %d, want frozen %d", len(firstEncoded), wantEmptyEncodedBytes)
 	}
@@ -1470,7 +1467,7 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 		*status = first
 		return nil
 	})
-	const wantMaximumEncodedBytes = 20_922
+	const wantMaximumEncodedBytes = 21_239
 	if len(maximumEncoded) != wantMaximumEncodedBytes {
 		t.Fatalf("maximum encoded bytes = %d, want frozen %d", len(maximumEncoded), wantMaximumEncodedBytes)
 	}
@@ -1518,7 +1515,7 @@ func TestRetentionStatusSchemaLinkAndBodyBoundIgnoreRequestHost(t *testing.T) {
 		t.Fatalf("status = %d (%s), want 200", recorder.Code, recorder.Body)
 	}
 	assertRetentionWarningHeader(t, recorder)
-	const wantEmptyEncodedBytes = 19_955
+	const wantEmptyEncodedBytes = 20_256
 	if recorder.Body.Len() != wantEmptyEncodedBytes {
 		t.Fatalf("host-varied body bytes = %d, want frozen %d", recorder.Body.Len(), wantEmptyEncodedBytes)
 	}

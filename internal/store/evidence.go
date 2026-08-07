@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -22,27 +23,28 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion         = "t12-store-v9"
-	evidencePreviousStoreSchemaVersion = "t12-store-v8"
-	// evidenceLegacyUpgradableStoreSchemaVersion is the second supported
-	// predecessor, exceptionally kept upgradable for one release: v8 was never
-	// released (it landed after the v0.2.0 tag), so v7 is the generation real
-	// stores are actually on and quarantining it would silently discard their
-	// evidence. Unlike v1–v6 its per-generation upgrade pass did run, so it is
-	// migrated rather than retired. It carries no unit digest — the v7 writer
-	// had one attempt row per repo/domain — so it maps to the explicit
-	// whole-repository scope. This window closes at the next bump, when v7
-	// finally joins retiredEvidenceStoreSchemas.
-	evidenceLegacyUpgradableStoreSchemaVersion = "t12-store-v7"
-	evidenceFormatVersion                      = "t12-evidence-v1"
-	evidenceMigrationVersion                   = "t12-evidence-migration-v8"
-	evidencePreviousMigrationVersion           = "t12-evidence-migration-v7"
-	evidenceWriterGuardEvent                   = "extraction_run_writer_v9"
-	reverseAssertionIndexName                  = "assertion_reverse_v6"
-	evidenceMigrationBatchSize                 = 128
-	evidenceSweepCandidateBatchSize            = 1
-	evidenceSweepRowBatchSize                  = 512
-	maxEvidenceRowsPerRun                      = 25_000
+	evidenceStoreSchemaVersion         = "t12-store-v10"
+	evidencePreviousStoreSchemaVersion = "t12-store-v9"
+	// The second predecessor remains readable/migratable for one release but is
+	// never writeable. Pre-T40.7 staged work has no trustworthy fact ledger and
+	// is aborted by migration for an exact clean retry.
+	evidenceLegacyUpgradableStoreSchemaVersion = "t12-store-v8"
+	// v7 is the last released pre-unit writer. Keep its explicit whole-scope
+	// migration path until a release line can prove that installed v7 stores no
+	// longer require a direct upgrade; it must never be inferred from a moving
+	// "previous" slot.
+	evidencePreUnitUpgradableStoreSchemaVersion = "t12-store-v7"
+	evidenceFormatVersion                       = "t12-evidence-v1"
+	evidenceMigrationVersion                    = "t12-evidence-migration-v9"
+	evidencePreviousMigrationVersion            = "t12-evidence-migration-v8"
+	evidenceWriterGuardEvent                    = "extraction_run_writer_v10"
+	reverseAssertionIndexName                   = "assertion_reverse_v6"
+	evidenceMigrationBatchSize                  = 128
+	evidenceSweepCandidateBatchSize             = 1
+	evidenceSweepRowBatchSize                   = 512
+	maxEvidenceRowsPerRun                       = 25_000
+	maxEvidenceFactsPerRun                      = 12_500
+	maxEvidenceFactsPerChunk                    = 256
 	// T20.3 raises whole-run admission only. Individual worker transactions
 	// remain independently bounded and are currently at most 256 facts.
 	maxEvidenceBatchRows              = 10_000
@@ -112,6 +114,10 @@ func snapshotEvidenceRecordID(runID, occurrenceID string) models.RecordID {
 
 func assertionRecordID(runID, assertionID string) models.RecordID {
 	return models.NewRecordID("assertion", hashIdentity("ara_", runID, assertionID))
+}
+
+func evidenceChunkRecordID(runID, chunkID string) models.RecordID {
+	return models.NewRecordID("evidence_chunk", hashIdentity("ec_", runID, chunkID))
 }
 
 func evidencePinRecordID(runID, kind string) models.RecordID {
@@ -332,7 +338,9 @@ LET $created = IF $writer_ok AND $attempt_ok THEN
 		evidence_format_version = $evidence_format_version,
 		evidence_migration_version = $evidence_migration_version,
 		retention_quarantined = false, retention_phase = NONE,
-		staged_revision = 0, retention_revision = 0 RETURN AFTER)
+		staged_revision = 0, staged_fact_count = 0,
+		staged_row_count = 0, staged_reference_count = 0,
+		staged_chunk_count = 0, retention_revision = 0 RETURN AFTER)
 	ELSE [] END;
 IF $writer_ok AND $attempt_ok {
 	UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit,
@@ -871,6 +879,38 @@ type normalizedEvidenceBatch struct {
 	asserts []map[string]any
 }
 
+func evidenceBatchDigest(batch normalizedEvidenceBatch) (string, error) {
+	canonical := func(rows []map[string]any, volatile ...string) []map[string]any {
+		result := make([]map[string]any, len(rows))
+		for index, row := range rows {
+			copyRow := make(map[string]any, len(row))
+			for key, value := range row {
+				copyRow[key] = value
+			}
+			for _, key := range volatile {
+				delete(copyRow, key)
+			}
+			result[index] = copyRow
+		}
+		return result
+	}
+	payload := struct {
+		Atoms   []map[string]any `json:"atoms"`
+		Assocs  []map[string]any `json:"associations"`
+		Asserts []map[string]any `json:"assertions"`
+	}{
+		Atoms:   canonical(batch.atoms, "first_seen"),
+		Assocs:  canonical(batch.assocs, "observed_at"),
+		Asserts: canonical(batch.asserts),
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("encode evidence chunk identity: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	return "sha256:" + hex.EncodeToString(digest[:]), nil
+}
+
 func normalizeEvidenceBatch(run *ExtractionRun, atoms []EvidenceAtom, assocs []SnapshotEvidence, asserts []Assertion, now time.Time) (normalizedEvidenceBatch, error) {
 	batch := normalizedEvidenceBatch{}
 	if len(atoms) > maxEvidenceBatchRows || len(assocs) > maxEvidenceBatchRows || len(asserts) > maxEvidenceBatchRows {
@@ -1046,17 +1086,44 @@ func normalizeEvidenceBatch(run *ExtractionRun, atoms []EvidenceAtom, assocs []S
 
 const addEvidenceSQL = `
 BEGIN;
-LET $locked = UPDATE $run SET staged_revision += 1
+LET $eligible = SELECT id, staged_revision, staged_fact_count,
+	staged_row_count, staged_reference_count, staged_chunk_count FROM $run
     WHERE status = 'staged'
       AND array::len(SELECT id FROM $migration_rid
 	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
-	      AND evidence_format_version = $evidence_format_version
-		  AND type::is_string(unit_digest)
-		  AND run_id = record::id(id)
-		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
-		  AND published_key = NONE
-      AND retention_quarantined = false RETURN AFTER;
+	  AND evidence_format_version = $evidence_format_version
+	  AND type::is_string(unit_digest)
+	  AND run_id = record::id(id)
+	  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+	  AND published_key = NONE
+	  AND retention_quarantined = false;
+LET $prior_chunk = IF array::len($eligible) = 1 THEN
+	(SELECT chunk_id, content_digest, fact_count, row_delta, reference_delta
+		FROM $chunk_rid LIMIT 1)[0]
+	ELSE NONE END;
+IF $prior_chunk != NONE AND
+	($prior_chunk.chunk_id != $chunk_id
+	 OR $prior_chunk.content_digest != $content_digest
+	 OR $prior_chunk.fact_count != $fact_count) {
+	THROW 'phebs-permanent: conflicting evidence chunk replay'
+};
+LET $is_new = array::len($eligible) = 1 AND $prior_chunk = NONE;
+LET $locked = IF $is_new THEN
+	(UPDATE $run SET staged_revision += 1,
+		staged_fact_count += $fact_count,
+		staged_chunk_count += 1
+		WHERE status = 'staged'
+		  AND staged_fact_count + $fact_count <= $max_run_facts
+		RETURN AFTER)
+	ELSE [] END;
+IF $is_new AND array::len($locked) != 1 {
+	THROW 'phebs-permanent: evidence run exceeds the fact limit'
+};
+LET $row_count_before = IF array::len($locked) = 1
+	THEN $locked[0].staged_row_count ELSE 0 END;
+LET $reference_count_before = IF array::len($locked) = 1
+	THEN $locked[0].staged_reference_count ELSE 0 END;
 LET $safe_atoms = IF array::len($locked) = 1 THEN $atoms ELSE [] END;
 FOR $a IN $safe_atoms {
     UPSERT $a.rid SET atom_id = $a.atom_id, schema_version = $a.schema_version,
@@ -1068,6 +1135,14 @@ FOR $a IN $safe_atoms {
 };
 LET $safe_assocs = IF array::len($locked) = 1 THEN $assocs ELSE [] END;
 FOR $e IN $safe_assocs {
+	LET $existing = (SELECT id FROM $e.rid LIMIT 1)[0];
+	IF $existing = NONE {
+		LET $charged = UPDATE $run SET staged_row_count += 1
+			WHERE staged_row_count + 1 <= $max_run_rows RETURN AFTER;
+		IF array::len($charged) != 1 {
+			THROW 'phebs-permanent: evidence run exceeds the row limit'
+		}
+	};
     UPSERT $e.rid SET occurrence_id = $e.occurrence_id, association_key = $e.association_key,
         atom_id = $e.atom_id, atom_record = $e.atom_record,
         repo = $e.repo, commit = $e.commit, path = $e.path,
@@ -1088,29 +1163,90 @@ FOR $x IN $safe_asserts {
         array::len(array::intersect($existing.contradicting ?? [], $x.supporting)) > 0) {
         THROW 'phebs-permanent: assertion evidence cannot both support and contradict'
     };
+	LET $prior_supporting = $existing.supporting ?? [];
+	LET $prior_contradicting = $existing.contradicting ?? [];
+	LET $next_supporting = array::union($prior_supporting, $x.supporting ?? []);
+	LET $next_contradicting = array::union($prior_contradicting, $x.contradicting ?? []);
+	LET $row_delta = IF $existing = NONE THEN 1 ELSE 0 END;
+	LET $reference_delta = array::len($next_supporting) + array::len($next_contradicting)
+		- array::len($prior_supporting) - array::len($prior_contradicting);
+	IF $row_delta > 0 OR $reference_delta > 0 {
+		LET $charged = UPDATE $run SET
+			staged_row_count += $row_delta,
+			staged_reference_count += $reference_delta
+			WHERE staged_row_count + $row_delta <= $max_run_rows
+			  AND staged_reference_count + $reference_delta <= $max_reference_edges
+			RETURN AFTER;
+		IF array::len($charged) != 1 {
+			THROW 'phebs-permanent: evidence run exceeds a bounded storage limit'
+		}
+	};
     UPSERT $x.rid SET assertion_id = $x.assertion_id, assertion_key = $x.assertion_key,
         attribute_key = $x.attribute_key,
         predicate = $x.predicate, subject = $x.subject, object = $x.object,
         lineage = $x.lineage, tier = $x.tier, code_role = $x.code_role, repo = $x.repo,
-        supporting = array::union(supporting ?? [], $x.supporting ?? []),
-        contradicting = array::union(contradicting ?? [], $x.contradicting ?? []),
+        supporting = $next_supporting,
+        contradicting = $next_contradicting,
         run_id = $x.run_id, detail = $x.detail RETURN NONE
 };
-LET $run_rows = array::len(SELECT VALUE id FROM snapshot_evidence WHERE run_id = $run_id) +
-    array::len(SELECT VALUE id FROM assertion WHERE run_id = $run_id);
-LET $reference_edges =
-    array::len(array::flatten(SELECT VALUE supporting FROM assertion WHERE run_id = $run_id)) +
-    array::len(array::flatten(SELECT VALUE contradicting FROM assertion WHERE run_id = $run_id));
-IF $run_rows > $max_run_rows OR $reference_edges > $max_reference_edges {
-    THROW 'phebs-permanent: evidence run exceeds a bounded storage limit'
+LET $accounting = IF array::len($locked) = 1 THEN
+	(SELECT staged_row_count, staged_reference_count FROM $run)[0]
+	ELSE NONE END;
+IF array::len($locked) = 1 {
+	CREATE $chunk_rid CONTENT {
+		run_id: $run_id,
+		chunk_id: $chunk_id,
+		content_digest: $content_digest,
+		fact_count: $fact_count,
+		row_delta: $accounting.staged_row_count - $row_count_before,
+		reference_delta: $accounting.staged_reference_count - $reference_count_before,
+		created_at: $now
+	} RETURN NONE
 };
-RETURN IF array::len($locked) = 1 THEN $locked ELSE [] END;
+RETURN IF $prior_chunk != NONE THEN $eligible ELSE $locked END;
 COMMIT;`
 
 // AddEvidence writes a self-contained batch under a staged run. Updating the
 // run record is the serialization point against publish, abort, deletion, and
 // sweep; a transaction that loses that race cannot append visible rows.
 func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []EvidenceAtom, assocs []SnapshotEvidence, asserts []Assertion) error {
+	return s.addEvidenceChunk(ctx, runID, "", -1, atoms, assocs, asserts)
+}
+
+// AddEvidenceChunk persists one trusted worker chunk identity with its exact
+// fact charge. The identity is separate from the normalized payload digest so
+// an exact replay is a no-op while same-identity/different-content replay is a
+// permanent conflict.
+func (s *Surreal) AddEvidenceChunk(
+	ctx context.Context,
+	runID string,
+	chunkID string,
+	factCount int,
+	atoms []EvidenceAtom,
+	assocs []SnapshotEvidence,
+	asserts []Assertion,
+) error {
+	if !validSHA256Digest(chunkID) {
+		return errors.New("add evidence: chunk id must be canonical sha256")
+	}
+	if factCount <= 0 || factCount > maxEvidenceFactsPerChunk {
+		return fmt.Errorf("add evidence: chunk fact count must be between 1 and %d", maxEvidenceFactsPerChunk)
+	}
+	if len(atoms) != factCount || len(assocs) != factCount || len(asserts) != factCount {
+		return errors.New("add evidence: trusted chunk fact and evidence cardinalities must match")
+	}
+	return s.addEvidenceChunk(ctx, runID, chunkID, factCount, atoms, assocs, asserts)
+}
+
+func (s *Surreal) addEvidenceChunk(
+	ctx context.Context,
+	runID string,
+	chunkID string,
+	factCount int,
+	atoms []EvidenceAtom,
+	assocs []SnapshotEvidence,
+	asserts []Assertion,
+) error {
 	run, err := s.getRun(ctx, runID)
 	if err != nil {
 		return fmt.Errorf("add evidence: %w", err)
@@ -1123,10 +1259,21 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 	if err != nil {
 		return fmt.Errorf("add evidence to run %s: %w", runID, err)
 	}
+	contentDigest, err := evidenceBatchDigest(batch)
+	if err != nil {
+		return fmt.Errorf("add evidence to run %s: %w", runID, err)
+	}
+	if chunkID == "" {
+		chunkID = contentDigest
+		factCount = max(len(batch.assocs), len(batch.asserts))
+	}
 	vars := map[string]any{
 		"run": extractionRunID(runID), "run_id": runID, "atoms": batch.atoms,
 		"assocs": batch.assocs, "asserts": batch.asserts,
-		"max_run_rows": maxEvidenceRowsPerRun, "max_reference_edges": maxEvidenceReferenceEdges,
+		"chunk_rid": evidenceChunkRecordID(runID, chunkID), "chunk_id": chunkID,
+		"content_digest": contentDigest, "fact_count": factCount, "now": now,
+		"max_run_rows": maxEvidenceRowsPerRun, "max_run_facts": maxEvidenceFactsPerRun,
+		"max_reference_edges":        maxEvidenceReferenceEdges,
 		"migration_rid":              evidenceMigrationStateID(),
 		"store_schema_version":       evidenceStoreSchemaVersion,
 		"evidence_format_version":    evidenceFormatVersion,
@@ -1141,6 +1288,7 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 			}
 			msg := queryErr.Error()
 			if strings.Contains(msg, "conflicting attributes") ||
+				strings.Contains(msg, "conflicting evidence chunk replay") ||
 				strings.Contains(msg, "support and contradict") {
 				return fmt.Errorf("add evidence to run %s: %w: %v", runID, ErrConflict, queryErr)
 			}
@@ -1195,10 +1343,23 @@ LET $max_occurrences = ((SELECT atom_id, count() AS count FROM snapshot_evidence
 LET $reference_edges =
     array::len(array::flatten(SELECT VALUE supporting FROM assertion WHERE run_id = $run_id)) +
     array::len(array::flatten(SELECT VALUE contradicting FROM assertion WHERE run_id = $run_id));
+LET $chunk_totals = (SELECT count() AS chunks,
+	math::sum(fact_count) AS facts,
+	math::sum(row_delta) AS rows,
+	math::sum(reference_delta) AS references
+	FROM evidence_chunk WHERE run_id = $run_id GROUP ALL)[0];
+LET $charged = $locked[0];
 LET $counts_ok = $assertion_count = $want_assertions AND $atom_count = $want_atoms
 	AND $unresolved_count = $want_unresolved AND $max_occurrences <= $max_occurrences_per_atom
 	AND ($association_count + $assertion_count) <= $max_run_rows
-	AND $reference_edges <= $max_reference_edges;
+	AND $reference_edges <= $max_reference_edges
+	AND ($charged.staged_row_count ?? -1) = $association_count + $assertion_count
+	AND ($charged.staged_reference_count ?? -1) = $reference_edges
+	AND ($charged.staged_fact_count ?? -1) = ($chunk_totals.facts ?? 0)
+	AND ($charged.staged_chunk_count ?? -1) = ($chunk_totals.chunks ?? 0)
+	AND ($chunk_totals.rows ?? 0) = $association_count + $assertion_count
+	AND ($chunk_totals.references ?? 0) = $reference_edges
+	AND ($charged.staged_fact_count ?? -1) <= $max_run_facts;
 LET $candidate = (SELECT repository, head_commit, unit_digest, policy_digest,
 	manifest_digest, control_revision FROM $candidate_rid)[0];
 LET $candidate_ok = IF $write_outcome = false
@@ -1382,6 +1543,7 @@ func (s *Surreal) publishExtractionRun(
 		"want_unresolved":                    coverage.UnresolvedCount,
 		"max_occurrences_per_atom":           maxEvidenceOccurrences,
 		"max_run_rows":                       maxEvidenceRowsPerRun,
+		"max_run_facts":                      maxEvidenceFactsPerRun,
 		"max_reference_edges":                maxEvidenceReferenceEdges,
 		"migration_rid":                      evidenceMigrationStateID(),
 		"store_schema_version":               evidenceStoreSchemaVersion,
@@ -2558,7 +2720,7 @@ FOR $row_id IN $gone {
 	DELETE $row_id RETURN NONE
 };
 LET $advanced = IF array::len($locked) = 1 AND array::len($gone) < $row_limit THEN
-	(UPDATE $rid SET retention_phase = 'finalize'
+	(UPDATE $rid SET retention_phase = 'chunks'
 		WHERE status = 'deleting' AND retention_phase = 'assertions' RETURN AFTER)
 	ELSE [] END;
 RETURN [{
@@ -2566,6 +2728,43 @@ RETURN [{
 	runs_deleted: 0,
 	association_rows_deleted: 0,
 	assertion_rows_deleted: array::len($gone),
+	chunk_rows_deleted: 0,
+	atom_rows_deleted: 0,
+	retention_phases_advanced: array::len($advanced)
+}];
+COMMIT;`
+
+const sweepEvidenceChunkSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $locked = IF $writer_ok THEN
+	(UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
+		WHERE status = 'deleting' AND retention_phase = 'chunks'
+		  AND evidence_format_version = $evidence_format_version
+		  AND retention_quarantined = false
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+		  AND published_key = NONE
+		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		RETURN AFTER)
+	ELSE [] END;
+LET $gone = SELECT VALUE id FROM evidence_chunk
+	WHERE run_id = $run AND array::len($locked) = 1
+	ORDER BY id LIMIT $row_limit;
+FOR $row_id IN $gone {
+	DELETE $row_id RETURN NONE
+};
+LET $advanced = IF array::len($locked) = 1 AND array::len($gone) < $row_limit THEN
+	(UPDATE $rid SET retention_phase = 'finalize'
+		WHERE status = 'deleting' AND retention_phase = 'chunks' RETURN AFTER)
+	ELSE [] END;
+RETURN [{
+	runs_marked_deleting: 0,
+	runs_deleted: 0,
+	association_rows_deleted: 0,
+	assertion_rows_deleted: 0,
+	chunk_rows_deleted: array::len($gone),
 	atom_rows_deleted: 0,
 	retention_phases_advanced: array::len($advanced)
 }];
@@ -2586,6 +2785,7 @@ LET $locked = IF $writer_ok THEN
 		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
 		  AND array::len(SELECT id FROM snapshot_evidence WHERE run_id = $run LIMIT 1) = 0
 		  AND array::len(SELECT id FROM assertion WHERE run_id = $run LIMIT 1) = 0
+		  AND array::len(SELECT id FROM evidence_chunk WHERE run_id = $run LIMIT 1) = 0
 		RETURN AFTER)
 	ELSE [] END;
 LET $deleted = IF array::len($locked) = 1 THEN
@@ -2596,6 +2796,7 @@ RETURN [{
 	runs_deleted: array::len($deleted),
 	association_rows_deleted: 0,
 	assertion_rows_deleted: 0,
+	chunk_rows_deleted: 0,
 	atom_rows_deleted: 0,
 	retention_phases_advanced: 0
 }];
@@ -2682,6 +2883,8 @@ func evidenceSweepStepSQL(candidate evidenceSweepCandidateRec) (string, error) {
 			return sweepAssociationChunkSQL, nil
 		case "assertions":
 			return sweepAssertionChunkSQL, nil
+		case "chunks":
+			return sweepEvidenceChunkSQL, nil
 		case "finalize":
 			return finalizeDeletingRunSQL, nil
 		default:

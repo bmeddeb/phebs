@@ -116,6 +116,18 @@ func (*replayAuditEvidence) AddEvidence(
 	return nil
 }
 
+func (evidence *replayAuditEvidence) AddEvidenceChunk(
+	ctx context.Context,
+	runID string,
+	_ string,
+	_ int,
+	atoms []store.EvidenceAtom,
+	assocs []store.SnapshotEvidence,
+	asserts []store.Assertion,
+) error {
+	return evidence.AddEvidence(ctx, runID, atoms, assocs, asserts)
+}
+
 func (evidence *replayAuditEvidence) PublishExtractionRun(
 	_ context.Context,
 	runID string,

@@ -475,13 +475,15 @@ type EvidenceSweepProgress struct {
 	RunsDeleted             int `json:"runs_deleted"`
 	AssociationRowsDeleted  int `json:"association_rows_deleted"`
 	AssertionRowsDeleted    int `json:"assertion_rows_deleted"`
+	ChunkRowsDeleted        int `json:"chunk_rows_deleted"`
 	AtomRowsDeleted         int `json:"atom_rows_deleted"`
 	RetentionPhasesAdvanced int `json:"retention_phases_advanced"`
 }
 
 // PhysicalRowsDeleted excludes the extraction-run record itself.
 func (p EvidenceSweepProgress) PhysicalRowsDeleted() int {
-	return p.AssociationRowsDeleted + p.AssertionRowsDeleted + p.AtomRowsDeleted
+	return p.AssociationRowsDeleted + p.AssertionRowsDeleted +
+		p.ChunkRowsDeleted + p.AtomRowsDeleted
 }
 
 // DidWork distinguishes a drained store from a metadata-only phase advance.
@@ -875,6 +877,18 @@ type EvidenceStore interface {
 	// non-conflicting support unions are idempotent; attribute or contradiction
 	// conflicts fail the transaction.
 	AddEvidence(ctx context.Context, runID string, atoms []EvidenceAtom, assocs []SnapshotEvidence, asserts []Assertion) error
+	// AddEvidenceChunk is the production staging path. ChunkID is a stable
+	// content identity assigned by the trusted worker, and FactCount is charged
+	// independently from rows that may collapse onto existing identities.
+	AddEvidenceChunk(
+		ctx context.Context,
+		runID string,
+		chunkID string,
+		factCount int,
+		atoms []EvidenceAtom,
+		assocs []SnapshotEvidence,
+		asserts []Assertion,
+	) error
 	// PublishExtractionRun atomically verifies that the repository still
 	// exists, is not deleting, and is indexed at the run's commit; validates
 	// caller counts against stored rows; publishes the run; and supersedes the

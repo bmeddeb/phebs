@@ -1109,7 +1109,7 @@ func TestT305PreUnitWriterMigratesOnlyToExplicitWholeScope(t *testing.T) {
 		"attempt_rid": legacyExtractionAttemptID(repository, domain),
 		"repo":        repository, "commit": commit, "domain": domain,
 		"forged_unit": focused.Digest, "now": now,
-		"previous_schema": evidenceLegacyUpgradableStoreSchemaVersion,
+		"previous_schema": evidencePreUnitUpgradableStoreSchemaVersion,
 		"format":          evidenceFormatVersion,
 		"empty_digest":    t305EmptyDigest,
 		"legacy_key":      legacyPublishedKey(repository, domain),
