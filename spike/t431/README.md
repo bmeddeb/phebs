@@ -29,11 +29,23 @@ isolated deterministic detector) plus a bounded live-browser round ·
   and Repos were exercised against a dedicated dev instance
   (`127.0.0.1:3073`, own data dir). Fixture indexing was refused by the
   T35.3 hard disk watermark (host disk at 92%), so populated-surface
-  confirmation is deferred; every ledger finding is source-verified with
-  exact file/line references and does not depend on that confirmation. The
-  refusal itself is retained as live evidence for F25/operator findings:
-  the Repos table showed only red "Failed index" with a truncated path
-  while the actual cause (disk pressure) appeared only in server logs.
+  confirmation was initially deferred; every ledger finding is
+  source-verified with exact file/line references and does not depend on
+  that confirmation. The refusal itself is retained as live evidence for
+  F25/operator findings: the Repos table showed only red "Failed index"
+  with a truncated path while the actual cause (disk pressure) appeared
+  only in server logs.
+- **Live round completion (same day):** after the operator freed disk to
+  88%, a fresh server instance indexed all three repositories
+  (`latest_indexing_job_status: done`). Populated-surface confirmation:
+  Search returned 528 matches with the scope panel and facets; the service
+  directory rendered all four fixture services with conflict/unavailable
+  states; the relationship explorer reproduced its query from the URL and
+  rendered an honest partial ("1 gap · no empty result is inferred") while
+  the typed root derivation was still pending. The F1 fix was verified
+  live at desktop and 390 px: `#/investigations` (capability absent on
+  this instance) renders the terminal boundary page under the original
+  URL instead of silently falling through to Search.
 
 ## Reading the ledger
 
