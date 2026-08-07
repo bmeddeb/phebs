@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "phebs-ux-dev",
+      "runtimeExecutable": "make",
+      "runtimeArgs": ["-C", "/Users/ben/phebs-ux", "dev", "ARGS=-config phebs-ux-dev.yaml"],
+      "port": 3073
+    }
+  ]
+}
