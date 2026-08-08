@@ -117,6 +117,20 @@ async function load(key: string): Promise<LanguageSupport | null> {
     // always mapped; the loader case was the missing piece.
     case 'proto':
       return stream((await import('@codemirror/legacy-modes/mode/protobuf')).protobuf)
+    // No published Thrift mode exists; built from the clike core with the
+    // IDL's own word lists. Thrift IDL is frozen, so the sets are stable.
+    case 'thrift': {
+      const { clike } = await import('@codemirror/legacy-modes/mode/clike')
+      const words = (list: string) => Object.fromEntries(list.split(' ').map((word) => [word, true]))
+      return stream(clike({
+        name: 'thrift',
+        keywords: words('namespace include cpp_include const typedef enum senum struct union exception service extends throws oneway required optional'),
+        types: words('void bool byte i8 i16 i32 i64 double string binary slist list set map uuid'),
+        atoms: words('true false'),
+        // Thrift also permits shell-style line comments.
+        hooks: { '#': (s: { skipToEnd: () => void }) => { s.skipToEnd(); return 'comment' } },
+      }))
+    }
     default:
       return null
   }

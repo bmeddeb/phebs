@@ -17,3 +17,21 @@ describe('proto language support (T44.1)', () => {
     expect(tokens.some((token) => token.color !== undefined)).toBe(true)
   })
 })
+
+describe('thrift language support (T44.1)', () => {
+  it('loads a language for .thrift files', async () => {
+    const lang = await languageFor('contracts/orders.thrift')
+    expect(lang).not.toBeNull()
+    expect(langName('contracts/orders.thrift')).toBe('Thrift')
+  })
+
+  it('tokenizes thrift keywords, base types, and both comment forms', async () => {
+    const lang = await languageFor('a.thrift')
+    expect(tokenize('struct Order {', lang, 'light').some((token) => token.color !== undefined)).toBe(true)
+    expect(tokenize('  1: required i64 id,', lang, 'light').some((token) => token.color !== undefined)).toBe(true)
+    const hash = tokenize('# a shell-style comment', lang, 'light')
+    const slash = tokenize('// a line comment', lang, 'light')
+    expect(hash.some((token) => token.fontStyle === 'italic')).toBe(true)
+    expect(slash.some((token) => token.fontStyle === 'italic')).toBe(true)
+  })
+})

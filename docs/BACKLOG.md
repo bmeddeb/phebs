@@ -468,7 +468,14 @@ a fixed-width reserved slot (its masked box sized itself to the live
 pressure word — the last content-derived mask geometry). Bundle: main
 chunk +0.8 kB (index gzip 93.43 → 93.76 kB), one new 0.8 kB lazy
 chunk, zero new dependencies; no interaction-path work — both loads
-are lazy on first use. Receipts: file and settings pairs re-baselined;
+are lazy on first use. Thrift rider: `.thrift` had the identical
+gap (name and dot mapped, no loader case) and no published mode
+exists — it is built from the clike stream core with the IDL's frozen
+word lists plus a `#` line-comment hook, riding the existing lazy
+clike chunk (cost: config bytes). The corpus holds no thrift files,
+so the pin is the four loader/keyword/comment tests — no live
+verification is possible today and no baseline moves. Receipts: file
+and settings pairs re-baselined;
 the eight relationship-explorer-service captures fail closed against
 retained baselines because main's T40.12 root validator refuses the
 fixture's pre-convergence bare unavailable roots — correct fail-closed
