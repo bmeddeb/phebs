@@ -75,11 +75,14 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
         <div className={css({ color: tok.textTertiary, padding: '32px 0' })}>No recorded actions yet.</div>
       ) : (
         <div className={css({ overflowX: 'auto' })}>
-          <table className={css({ width: '100%', borderCollapse: 'collapse', fontSize: '14px' })}>
+          {/* Fixed layout: column geometry is declared, never derived from
+              event content — one long target must not reflow the table
+              anatomy (long values ellipsize in place, full value on title). */}
+          <table className={css({ width: '100%', tableLayout: 'fixed', minWidth: '860px', borderCollapse: 'collapse', fontSize: '14px' })}>
             <thead>
               <tr className={css({ borderBottom: `1px solid ${tok.cardBorder}` })}>
-                {['When', 'Action', 'Actor', 'Target', 'Status', 'Source IP'].map((h, i) => (
-                  <th key={i} className={css({ textAlign: 'left', fontSize: '13px', fontWeight: 500, color: tok.textTertiary, padding: '0 12px 10px 0', whiteSpace: 'nowrap' })}>
+                {([['When', '190px'], ['Action', '170px'], ['Actor', '230px'], ['Target', ''], ['Status', '76px'], ['Source IP', '128px']] as const).map(([h, w]) => (
+                  <th key={h} style={w ? { width: w } : undefined} className={css({ textAlign: 'left', fontSize: '13px', fontWeight: 500, color: tok.textTertiary, padding: '0 12px 10px 0', whiteSpace: 'nowrap' })}>
                     {h}
                   </th>
                 ))}
@@ -122,44 +125,50 @@ function Row({ event }: { event: AuditEvent }) {
         <div className={css({ fontSize: '12px', color: tok.textTertiary, whiteSpace: 'nowrap' })}>{new Date(event.created_at).toLocaleString()}</div>
       </td>
       <td className={cell}>
-        <span className={css({ fontWeight: 500, color: tok.textPrimary, whiteSpace: 'nowrap' })}>{event.action}</span>
+        <div title={event.action} className={css({ fontWeight: 500, color: tok.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>{event.action}</div>
       </td>
       <td className={cell}>
         {event.actor_email ? (
           <div>
-            <div className={css({ color: tok.textSecondary })}>{event.actor_email}</div>
+            <div title={event.actor_email} className={css({ color: tok.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>{event.actor_email}</div>
             {event.auth_method === 'api_key' && <div className={css({ fontSize: '12px', color: tok.textTertiary })}>via API key</div>}
           </div>
         ) : event.api_key_id ? (
-          <span className={css({ color: tok.textSecondary })}>API key {event.api_key_id}</span>
+          <div title={`API key ${event.api_key_id}`} className={css({ color: tok.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>API key {event.api_key_id}</div>
         ) : (
-          <span className={css({ color: tok.textTertiary })}>—</span>
+          <div className={css({ color: tok.textTertiary })}>—</div>
         )}
       </td>
       <td className={cell}>
+        {/* Every cell's direct child is a block: the receipt mask covers
+            `td > *`, and a shrink-wrapped span would size its mask box to
+            the event's content — geometry must not depend on which event
+            occupies the row. */}
         {event.target ? (
-          <span className={css({ color: tok.textSecondary, wordBreak: 'break-all' })}>{event.target}</span>
+          <div title={event.target} className={css({ color: tok.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>{event.target}</div>
         ) : (
-          <span className={css({ color: tok.textTertiary })}>—</span>
+          <div className={css({ color: tok.textTertiary })}>—</div>
         )}
       </td>
       <td className={cell}>
-        <span
-          className={css({
-            display: 'inline-block',
-            fontSize: '12px',
-            fontWeight: 500,
-            borderRadius: '999px',
-            padding: '2px 10px',
-            backgroundColor: tok.fill,
-            color: ok ? tok.status.current.text : tok.status.conflict.text,
-          })}
-        >
-          {event.status}
-        </span>
+        <div>
+          <span
+            className={css({
+              display: 'inline-block',
+              fontSize: '12px',
+              fontWeight: 500,
+              borderRadius: '999px',
+              padding: '2px 10px',
+              backgroundColor: tok.fill,
+              color: ok ? tok.status.current.text : tok.status.conflict.text,
+            })}
+          >
+            {event.status}
+          </span>
+        </div>
       </td>
       <td className={cell}>
-        <span className={css({ color: tok.textTertiary, fontSize: '13px', whiteSpace: 'nowrap' })}>{event.source_ip || '—'}</span>
+        <div className={css({ color: tok.textTertiary, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>{event.source_ip || '—'}</div>
       </td>
     </tr>
   )

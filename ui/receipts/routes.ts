@@ -61,7 +61,9 @@ export const ROUTES: ReceiptRoute[] = [
   // A server restart queues index rebuilds; repos is captured only in its
   // terminal all-indexed state (twice this trap produced mid-reindex
   // baselines that were rejected in review).
-  { name: 'repos', path: '/repos', awaitAbsent: ['Indexing…', 'Cloning'] },
+  // 'Failed' is terminal, not transitional: a failed run must never become
+  // the baselined truth (T43.6) — the capture fails loudly until recovery.
+  { name: 'repos', path: '/repos', awaitAbsent: ['Indexing…', 'Cloning', 'Failed'] },
   { name: 'service-directory', path: `/services?${q({ repository: T307_REPO })}` },
   { name: 'relationship-explorer', path: `/relationships?${q({ repository: T307_REPO })}` },
   // T43.6 data-backed states: the service-scoped explorer (coverage strip,

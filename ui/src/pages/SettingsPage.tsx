@@ -283,7 +283,7 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
         <div data-volatile="lifecycle" className={css({ marginTop: '6px', color: tok.textPrimary, fontSize: '12px', lineHeight: '17px', overflowWrap: 'anywhere' })}>{disk}</div>
         {observed && (
           <div data-volatile="lifecycle" className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>
-            observed <time dateTime={observed} title={new Date(observed).toLocaleString()}>{relTime(observed)}</time>
+            observed <time dateTime={observed}>{relTime(observed)} · {new Date(observed).toLocaleString()}</time>
           </div>
         )}
         <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px' })}>
@@ -294,7 +294,10 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
         <div data-volatile="lifecycle" className={css({ color: tok.textPrimary, fontSize: '18px', lineHeight: '24px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' })}>
           {completed} / {status.policy.owners}
         </div>
-        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>owners observed this cycle</div>
+        {/* StatusMonitor retains each owner's most recent result across
+            rotations; the payload carries no cycle authority, so this count
+            must not claim one. */}
+        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>owners with recorded results</div>
         {failed.length > 0 ? (
           <div data-volatile="lifecycle" className={css({ marginTop: '7px', display: 'grid', gap: '3px' })}>
             {failed.slice(0, 4).map((owner) => (
@@ -325,8 +328,8 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
               <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
                 <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
                 {owner.attempted_at && Number.isFinite(Date.parse(owner.attempted_at)) && (
-                  <span className={css({ color: tok.textTertiary, fontSize: '10.5px', whiteSpace: 'nowrap' })}>
-                    attempted <time dateTime={owner.attempted_at} title={new Date(owner.attempted_at).toLocaleString()}>{relTime(owner.attempted_at)}</time>
+                  <span className={css({ color: tok.textTertiary, fontSize: '10.5px' })}>
+                    attempted <time dateTime={owner.attempted_at}>{relTime(owner.attempted_at)} · {new Date(owner.attempted_at).toLocaleString()}</time>
                   </span>
                 )}
               </div>

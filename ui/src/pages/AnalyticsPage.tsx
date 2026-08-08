@@ -122,9 +122,11 @@ function DailyBars({ daily }: { daily: { date: string; count: number }[] }) {
               flex: 1,
               minWidth: '4px',
               // A zero day renders a visible neutral tick: zero is a
-              // measured value, not a gap (audit F36).
+              // measured value, not a gap (audit F36). Neutral text ink, not
+              // innerSep — the hairline token is ~1.1:1 against the page and
+              // fails the 3:1 graphical-object floor.
               height: d.count === 0 ? '2px' : `${Math.max(3, Math.round((d.count / max) * 96))}px`,
-              backgroundColor: d.count === 0 ? tok.innerSep : tok.accent,
+              backgroundColor: d.count === 0 ? tok.textTertiary : tok.accent,
               borderTopLeftRadius: '3px',
               borderTopRightRadius: '3px',
             })}

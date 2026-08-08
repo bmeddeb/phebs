@@ -85,6 +85,7 @@ beforeEach(() => {
       scanned: index === 0 ? 11 : 0,
       deleted: index === 0 ? 1 : 0,
       backlog: index === 0,
+      attempted_at: index === 0 ? '2026-08-05T19:30:00Z' : undefined,
     })),
   })
 })
@@ -155,6 +156,15 @@ test('administrator sees bounded lifecycle pressure without owner content', asyn
   expect(backlogCard.textContent).toContain('owner-00')
   expect(screen.getByText('no failed owners')).toBeTruthy()
   expect(screen.queryByText(/owner-05/)).toBeNull()
+  // Retained results are not cycle-scoped: StatusMonitor keeps each owner's
+  // most recent result across rotations, and the payload carries no cycle
+  // authority — the caption must not claim one.
+  expect(screen.getByText('owners with recorded results')).toBeTruthy()
+  expect(screen.queryByText(/observed this cycle/)).toBeNull()
+  // Charter timestamp rule: relative and absolute rendered together as
+  // visible text (title-only absolutes are unreachable by touch and AT).
+  expect(screen.getByRole('region', { name: 'Pressure' }).textContent).toMatch(/observed .+ · .+/)
+  expect(backlogCard.textContent).toMatch(/attempted .+ · .+/)
 })
 
 test('capacity-unavailable uses the closed blue status tone', async () => {

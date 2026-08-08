@@ -685,8 +685,23 @@ closed: the Atlas 'unresolved' tier joins the closed vocabulary as
 stale/amber (F32). Rider F36: analytics bars carry per-bar accessible
 values and a zero day renders a visible neutral tick, distinct from a
 gap. Receipts: settings re-baselined to the card anatomy with values
-masked; the long-blocked repos pair settled at the current index
-generation — the full matrix is green (61/61) for the first time.
+masked. The repos pair retains the all-indexed baseline per T43.6 —
+review rejected a capture of the t323 repository's terminal Failed
+state as visual truth; the harness now refuses to capture repos while
+'Failed' renders, so those receipts fail loudly until the fixture
+host's disk pressure (hard-watermark admission refusal) clears. Review
+follow-up also corrected the owner-progress caption ('owners with
+recorded results' — StatusMonitor retains results across rotations and
+the payload carries no cycle authority), rendered lifecycle absolute
+times as visible text beside the relative form, and moved the
+analytics zero tick to neutral ink clearing the 3:1 graphical floor.
+The audit receipt's run-caused instability is closed structurally:
+the log table now declares fixed column geometry (long values
+ellipsize in place, full value on title) and every cell's direct
+child is a block element, so neither an event's content nor which
+event occupies a row can move the anatomy or resize a mask box —
+verified by injecting fresh login and long-target reindex events
+between capture and comparison.
 
 **T43.11 · Directory and explorer at density** *(needs T43.3)* — prepare
 the service directory and relationship explorer for ten-thousand-service

@@ -61,7 +61,7 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
     for (const text of route.awaitAbsent) {
       await expect.poll(
         () => page.locator('main').innerText().then((body) => body.includes(text)),
-        { message: `route still renders transitional state "${text}"`, timeout: 180_000, intervals: [3_000] },
+        { message: `route still renders a state excluded from baselines: "${text}"`, timeout: 180_000, intervals: [3_000] },
       ).toBe(false)
     }
   }
