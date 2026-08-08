@@ -8927,3 +8927,56 @@ separately. The unchanged 4,096-report allocation is redistributed fairly
 with one private sentinel per component; focused collector, authorization,
 allocation, deterministic-envelope, and response-bound tests cover the
 correction.
+
+**T40.8 ✅ · Sparse candidate reader and extraction-partition contract**
+*(2026-08-07; needs T40.7)* — adds a separate nonproduct
+`phebs-candidate-partition-root-v1` plus one bounded
+`phebs-candidate-domain-index-v1` per canonical v4 policy. Construction
+requires a completely validated `phebs-candidate-manifest-v4` publication,
+binds its exact manifest and generation digests, and dispatches each repository
+member, caller leaf, and focused-local member through at most one cold read.
+Each domain index contains only admitted immutable member partitions in
+manifest order. Repository, focused-local, and caller partitions retain
+distinct declared-byte kinds; caller prefix and focused-unit constraints remain
+exact.
+
+The small root freezes one expected authority digest, typed-input availability,
+domain schedule digests, and the existing five-minute deadline. Complete stage
+validation requires that trusted digest rather than accepting a root's
+self-recomputed digest. All controls are private `0600` files created with
+exclusive no-overwrite writes. A partition
+admits at most 4,096 candidate records, 64 MiB declared candidate bytes, 128 MiB
+encoded candidate bytes, 512 MiB opened and retained source bytes, 12,500
+facts, 25,000 rows, and 20,000 references. Generation fan-out is coalesced into
+deterministic pages of at most 256 partition identities; deadline exhaustion
+has a content-addressed closed disposition, and result identity binds the exact
+partition plus its result digest. Missing typed input is an exact
+control-derived `unavailable` state, is excluded before any member scan, and
+cannot schedule source replay. Every present typed input owns an explicit
+`typed_input` partition, including a typed-only domain with no ordinary member.
+One generation admits at most 131,072 partition descriptors and 128 MiB of
+aggregate serialized indexes in addition to the 16 MiB per-domain bound.
+
+Shallow open reads one existing v4 manifest and the small root; domain open
+reads one selected bounded index; partition replay reads and hashes exactly one
+selected candidate member. The trusted builder derives admitted ranges while
+hash-validating those members, and full stage validation binds its exact root
+digest plus every partition's ordered v4 member before a root may be retained.
+Recomputed forged ranges or members, reordered/duplicate partitions, missing
+members, stale candidate generations, unexpected root authority, symlinks,
+special controls, and undeclared stage entries fail closed. Deterministic
+two-build, focused/whole, zero-scan typed-unavailable, typed-only scheduling,
+overlapping-plane, exact/one-over aggregate and partition limits, private
+exclusive creation, paging, stale/tamper, and unchanged-v4-reader tests close
+the functional gate.
+The source-free receipt at `spike/t408/results.json` replays one exact 4,096-file
+maximum neutral partition in 8 ms with one 954,368-byte member read and
+9,877,536 allocated Go bytes on the retained machine, inside the unchanged
+300,000 ms deadline; it is implementation evidence, not an extractor SLO.
+
+T40.9 is next and still owns pure partition-result populations plus the atomic
+bounded domain root. T40.8 registers no worker, runtime schedule, product
+authority, recovery/lifecycle/archive owner, service-cap, topology,
+supported-scale, SLO, accuracy/completeness, freshness,
+migration/decommission, pilot, release, or private-rerun claim;
+`GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.

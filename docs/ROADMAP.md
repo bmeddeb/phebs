@@ -113,7 +113,8 @@ added the non-authoritative hierarchical observation inventory, and T40.5
 installed immutable search-generation replacement/lifecycle ownership, and
 T40.6 installed restart-safe joint v2 observation authority plus bounded
 lifecycle/archive recovery, and T40.7 installed constant-cost evidence-stage
-accounting on 2026-08-07. T40.8 is next. Epic 41 separately targets 10,000
+accounting, and T40.8 installed sparse candidate/partition controls on
+2026-08-07. T40.9 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -678,12 +679,12 @@ service count × repository bytes
 ### Program sequence
 
 - **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.7 complete, T40.8 next):** exact source-free refusal attribution,
+  T40.1–T40.8 complete, T40.9 next):** exact source-free refusal attribution,
   the frozen neutral envelope, independent generation-scoped planning,
   hierarchical source/observation roots, immutable search lifecycle, joint
-  observation recovery/archive ownership, and chunk-proportional evidence
-  append are complete. Next add sparse candidate enumeration and partition
-  extraction behind atomic domain authority, preserve recovery/lifecycle/
+  observation recovery/archive ownership, chunk-proportional evidence append,
+  and sparse candidate/partition controls are complete. Next add pure partition
+  results and atomic domain authority, then preserve recovery/lifecycle/
   archive behavior, replay downstream consumers, and close on a neutral
   two-million-owner gate.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
@@ -716,7 +717,7 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.8 is the only next scale ticket. Later tickets stay dependency-ordered
+- T40.9 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and
