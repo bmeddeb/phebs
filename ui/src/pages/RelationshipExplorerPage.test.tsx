@@ -97,7 +97,7 @@ test('reauthorizes and validates an immutable citation before showing source con
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce(relationshipCitation(page.rows[0]))
   renderPage(new URLSearchParams({ service_key: 'orders-api' }))
   await screen.findByRole('heading', { name: 'Exact source rows' })
-  fireEvent.click(screen.getAllByRole('button', { name: 'View citation' })[0])
+  fireEvent.click(screen.getAllByRole('button', { name: 'services/orders/client-0.go:4' })[0])
   expect(await screen.findByRole('dialog', { name: 'Exact source citation' })).toBeTruthy()
   expect(screen.getByText('client.Call(ctx, request)')).toBeTruthy()
   expect(api.fetchServiceRelationshipCitation).toHaveBeenCalledWith('citation-0', expect.any(AbortSignal))
@@ -108,7 +108,7 @@ test('reauthorizes and validates an immutable citation before showing source con
     generation: `sha256:${'9'.repeat(64)}`,
     content: 'forged source',
   })
-  fireEvent.click(screen.getAllByRole('button', { name: 'View citation' })[1])
+  fireEvent.click(screen.getAllByRole('button', { name: 'services/orders/client-1.go:5' })[0])
   expect(await screen.findByText(/citation response authority differs/)).toBeTruthy()
   expect(screen.queryByText('forged source')).toBeNull()
 })

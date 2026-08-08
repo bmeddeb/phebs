@@ -582,6 +582,19 @@ first-class across overview, explorer, and Workbench. AC: `path:line`
 chips open in place with span context; the audit altitude exposes the
 immutable citation identity; expired or superseded citations fail closed
 with a refresh path; keyboard complete; screenshots updated.
+*Implementation landed 2026-08-07.* CitationChip (kit) renders the
+citation as its `path:line[–end]` identity and replaces the generic
+"View citation" buttons on the explorer and overview; CitationPanel
+gains the keyboard contract (focus enters on open, Escape closes, focus
+returns to the chip) and a fail-closed refresh path that refetches rows
+at the current generation; the Workbench caller dialect keeps its
+path:line label and gains a retry action on its fail-closed error. No
+file deep links are fabricated: relationship citations are
+generation-bound and carry no git ref, so span context remains the
+authorized bytes plus identity. Verified by component tests (chip
+semantics, focus/Escape/return, refresh, retry); live populated
+exercise and citation-open receipts share the repos block on host disk
+relief — receipts otherwise show zero drift.
 
 **T43.8 · Scope context bar** *(needs T43.5)* — carry one exact scope
 (repository, service, generation) across search → directory → explorer →

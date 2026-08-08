@@ -5,7 +5,7 @@ afterEach(cleanup)
 import { BaseProvider } from 'baseui'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
-import { CaveatCollapse, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, StateNotice, StatusChip, StatusWord } from './kit'
+import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, StateNotice, StatusChip, StatusWord } from './kit'
 import type { ServiceRelationshipCitation } from '../api'
 import { ModeContext, TOKENS, focusRing, lightTheme } from '../theme'
 
@@ -160,6 +160,45 @@ describe('CitationPanel', () => {
     mounted.unmount()
     mount(<CitationPanel id="citation-error" loading={false} error="authority mismatch" citation={null} onClose={() => {}} />)
     expect(screen.getByRole('alert').textContent).toContain('authority mismatch')
+  })
+})
+
+describe('CitationChip', () => {
+  it('renders the citation as its path:line identity with dialog semantics', () => {
+    const onOpen = vi.fn()
+    mount(<CitationChip path="services/orders/kafka.go" span={{ start_line: 10, end_line: 10 }} onOpen={onOpen} />)
+    const chip = screen.getByRole('button', { name: 'services/orders/kafka.go:10' })
+    expect(chip.getAttribute('aria-haspopup')).toBe('dialog')
+    fireEvent.click(chip)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+  it('names multi-line spans with their range', () => {
+    mount(<CitationChip path="a.go" span={{ start_line: 3, end_line: 7 }} onOpen={() => {}} />)
+    expect(screen.getByRole('button', { name: 'a.go:3\u20137' })).toBeTruthy()
+  })
+})
+
+describe('CitationPanel keyboard contract (T43.7)', () => {
+  const kbdCitation = {
+    schema: 'phebs-service-relationship-citation-v1',
+    repository: 'r', generation: `sha256:${'a'.repeat(64)}`, root_digest: `sha256:${'b'.repeat(64)}`,
+    projection: { kind: 'rpc', posting_digest: `sha256:${'c'.repeat(64)}`, class: 'resolved', plane: 'caller', source: { path: 'p', unowned: false, claims: [] }, digest: `sha256:${'d'.repeat(64)}` },
+    evidence: { kind: 'rpc', plane: 'caller', class: 'resolved', path: 'p.go', object_id: 'e'.repeat(40), content_digest: `sha256:${'f'.repeat(64)}`, span: { start_byte: 0, end_byte: 4, start_line: 1, end_line: 1 }, source_role: 'caller', posting_digest: `sha256:${'c'.repeat(64)}` },
+    content: 'call()',
+  } satisfies ServiceRelationshipCitation
+  it('focuses the panel on open and closes on Escape', () => {
+    const onClose = vi.fn()
+    mount(<CitationPanel id="kbd" loading={false} error="" citation={kbdCitation} onClose={onClose} />)
+    const dialog = screen.getByRole('dialog', { name: 'Exact source citation' })
+    expect(document.activeElement).toBe(dialog)
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+  it('offers the fail-closed refresh path on error', () => {
+    const onRefresh = vi.fn()
+    mount(<CitationPanel id="rf" loading={false} error="citation response authority differs" citation={null} onClose={() => {}} onRefresh={onRefresh} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh evidence rows' }))
+    expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 })
 

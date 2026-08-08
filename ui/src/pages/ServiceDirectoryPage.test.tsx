@@ -200,7 +200,7 @@ test('links exact relationship counts to fenced rows and reads immutable citatio
     'relationship_cursor=next%2Fdependencies',
   )
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'View citation' })[0])
+  fireEvent.click(screen.getAllByRole('button', { name: /services\/orders\/client-\d\.go:4/ })[0])
   expect(await screen.findByRole('dialog', { name: 'Exact source citation' })).toBeTruthy()
   expect(screen.getByText('client.Call(ctx, request)')).toBeTruthy()
   expect(api.fetchServiceRelationshipCitation).toHaveBeenCalledWith(
@@ -213,7 +213,7 @@ test('links exact relationship counts to fenced rows and reads immutable citatio
     root_digest: `sha256:${'9'.repeat(64)}`,
     content: 'forged content',
   })
-  fireEvent.click(screen.getAllByRole('button', { name: 'View citation' })[1])
+  fireEvent.click(screen.getAllByRole('button', { name: /services\/orders\/client-\d\.go:4/ })[1])
   expect(await screen.findByText(/citation response authority differs/)).toBeTruthy()
   expect(screen.queryByText('forged content')).toBeNull()
 })

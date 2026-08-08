@@ -467,8 +467,8 @@ test('refuses a citation response that differs from the selected exact occurrenc
   await screen.findByText('Rows 1–3 of 3')
   fireEvent.click(screen.getAllByRole('button', { name: 'Read exact cited bytes' })[0])
 
-  expect(await screen.findByRole('alert')).toHaveProperty(
-    'textContent',
+  // The alert also carries the fail-closed retry action (T43.7).
+  expect((await screen.findByRole('alert')).textContent).toContain(
     'Exact citation unavailable: Exact citation response did not match the selected caller occurrence.',
   )
   expect(screen.queryByTestId('caller-map-exact-citation')).toBeNull()

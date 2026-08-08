@@ -11,7 +11,7 @@ import {
   type ServiceRelationshipView,
 } from '../api'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
-import { CitationPanel, StatusChip } from './kit'
+import { CitationChip, CitationPanel, StatusChip } from './kit'
 import { validateServiceRelationshipCitation } from './serviceRelationshipCitation'
 import { RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { isAbortError } from '../util'
@@ -55,6 +55,7 @@ export default function ServiceOverview({
   const [citationError, setCitationError] = useState('')
   const [citationLoading, setCitationLoading] = useState(false)
   const citationController = useRef<AbortController | null>(null)
+  const [reloadGeneration, setReloadGeneration] = useState(0)
 
   useEffect(() => {
     citationController.current?.abort()
@@ -109,6 +110,7 @@ export default function ServiceOverview({
   }, [
     detail,
     relationshipsAvailable,
+    reloadGeneration,
   ])
 
   useEffect(() => {
@@ -284,6 +286,14 @@ export default function ServiceOverview({
             setCitationError('')
             setCitationLoading(false)
           }}
+          onRefresh={() => {
+            citationController.current?.abort()
+            citationController.current = null
+            setCitation(null)
+            setCitationError('')
+            setCitationLoading(false)
+            setReloadGeneration((generation) => generation + 1)
+          }}
         />
       )}
     </section>
@@ -355,7 +365,7 @@ function RelationshipRowView({ row, onCitation }: { row: ServiceRelationshipRow;
         {row.evidence.reason && <div className={css({ ...metaLine(tok), color: tok.status.stale.text })}>{row.evidence.reason}</div>}
       </td>
       <td className={css(tableCell(tok))}>
-        <button type="button" onClick={() => onCitation(row)} className={css(citationButton(tok))} aria-haspopup="dialog">View citation</button>
+        <CitationChip path={row.evidence.path} span={row.evidence.span} onOpen={() => onCitation(row)} />
       </td>
     </tr>
   )
@@ -552,10 +562,6 @@ function codeWrap(tok: PhebsTokens) {
 
 function metaLine(tok: PhebsTokens) {
   return { marginTop: '3px', fontSize: '9.5px', lineHeight: '14px', color: tok.textTertiary, overflowWrap: 'anywhere' as const }
-}
-
-function citationButton(tok: PhebsTokens) {
-  return { minHeight: '30px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.selectedText, fontSize: '10.5px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill }, ':focus-visible': focusRing(tok) }
 }
 
 function quietButton(tok: PhebsTokens) {

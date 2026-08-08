@@ -96,9 +96,18 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
       </div>
       {error && (
         <div role="alert" className={css({
-          marginTop: '7px', color: tok.status.conflict.text, fontSize: '10px', lineHeight: '15px',
+          marginTop: '7px', display: 'flex', alignItems: 'baseline', gap: '9px', flexWrap: 'wrap',
         })}>
-          Exact citation unavailable: {error}
+          <span className={css({ color: tok.status.conflict.text, fontSize: '10px', lineHeight: '15px' })}>
+            Exact citation unavailable: {error}
+          </span>
+          <button
+            type="button"
+            onClick={toggleCitation}
+            className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '10px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' })}
+          >
+            Retry citation read
+          </button>
         </div>
       )}
       {citation && (

@@ -11,7 +11,7 @@ import {
 } from '../api'
 import { href, navigate } from '../router'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
-import { CitationPanel, ClaimBoundary } from '../components/kit'
+import { CitationChip, CitationPanel, ClaimBoundary } from '../components/kit'
 import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { validateServiceRelationshipCitation } from '../components/serviceRelationshipCitation'
 import { isAbortError } from '../util'
@@ -84,6 +84,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
   const [error, setError] = useState('')
   const [citation, setCitation] = useState<CitationState | null>(null)
   const citationController = useRef<AbortController | null>(null)
+  const [reloadGeneration, setReloadGeneration] = useState(0)
 
   useEffect(() => setDraft(draftFromRoute(route)), [route])
 
@@ -116,7 +117,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [queryRoute])
+  }, [queryRoute, reloadGeneration])
 
   useEffect(() => () => citationController.current?.abort(), [])
 
@@ -257,6 +258,10 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
           error={citation.error ?? ''}
           citation={citation.value ?? null}
           onClose={closeCitation}
+          onRefresh={() => {
+            closeCitation()
+            setReloadGeneration((generation) => generation + 1)
+          }}
         />
       )}
 
@@ -415,9 +420,7 @@ function ClassificationCell({ row }: { row: ServiceRelationshipRow }) {
 }
 
 function CitationButton({ row, onCitation }: { row: ServiceRelationshipRow; onCitation: (row: ServiceRelationshipRow) => void }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <button type="button" aria-haspopup="dialog" onClick={() => onCitation(row)} className={css(citationButton(tok))}>View citation</button>
+  return <CitationChip path={row.evidence.path} span={row.evidence.span} onOpen={() => onCitation(row)} />
 }
 
 function PageDiagram({ page }: { page: ServiceRelationshipPage }) {
@@ -603,6 +606,5 @@ function codeWrap(tok: PhebsTokens) { return { color: tok.textSecondary, fontFam
 function meta(tok: PhebsTokens) { return { marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', overflowWrap: 'anywhere' as const } }
 function idLink(tok: PhebsTokens) { return { color: tok.selectedText, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600, textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
 function idBadge(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600 } }
-function citationButton(tok: PhebsTokens) { return { minHeight: '32px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.selectedText, fontFamily: 'inherit', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { backgroundColor: tok.hoverFill }, ':focus-visible': focusRing(tok) } }
 function secondaryLink(tok: PhebsTokens) { return { minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'none', ':focus-visible': focusRing(tok) } }
 function primaryLink(tok: PhebsTokens) { return { ...secondaryLink(tok), border: 'none', backgroundColor: tok.textPrimary, color: tok.pageBg, fontWeight: 600 } }

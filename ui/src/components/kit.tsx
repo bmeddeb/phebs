@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { ServiceRelationshipCitation } from '../api'
@@ -191,23 +191,86 @@ export function CaveatCollapse({ summary, children }: { summary: ReactNode; chil
   )
 }
 
+/**
+ * The citation object's trigger (charter §3: a citation renders as
+ * path:line). The chip is the citation's identity, not a generic button.
+ */
+export function CitationChip({ path, span, onOpen, title }: {
+  path: string
+  span: { start_line: number; end_line: number }
+  onOpen: () => void
+  title?: string
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const label = span.end_line > span.start_line
+    ? `${path}:${span.start_line}–${span.end_line}`
+    : `${path}:${span.start_line}`
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      title={title ?? label}
+      onClick={onOpen}
+      className={css({
+        maxWidth: '100%',
+        border: `1px solid ${tok.cardBorder}`,
+        padding: '2px 7px',
+        background: 'transparent',
+        color: tok.textPrimary,
+        fontFamily: FONTS.MONO,
+        fontSize: '11px',
+        lineHeight: '16px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        ':hover': { backgroundColor: tok.hoverFill },
+        ':focus-visible': focusRing(tok),
+      })}
+    >
+      {label}
+    </button>
+  )
+}
+
 /** One shared exact relationship-citation disclosure. */
-export function CitationPanel({ id, loading, error, citation, onClose }: {
+export function CitationPanel({ id, loading, error, citation, onClose, onRefresh, refreshLabel = 'Refresh evidence rows' }: {
   id: string
   loading: boolean
   error: string
   citation: ServiceRelationshipCitation | null
   onClose: () => void
+  // The fail-closed refresh path: an expired or superseded citation cannot
+  // be re-read; the caller refetches its rows at the current generation.
+  onRefresh?: () => void
+  refreshLabel?: string
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const titleID = `${id}-title`
+  const panelRef = useRef<HTMLElement>(null)
+  const openerRef = useRef<Element | null>(null)
+  // Keyboard completeness: focus enters the panel on mount, Escape closes,
+  // and focus returns to the opening chip on unmount.
+  useEffect(() => {
+    openerRef.current = document.activeElement
+    panelRef.current?.focus()
+    return () => {
+      if (openerRef.current instanceof HTMLElement) openerRef.current.focus()
+    }
+  }, [])
   return (
     <aside
+      ref={panelRef}
       role="dialog"
       aria-modal="false"
       aria-labelledby={titleID}
-      className={css({ marginTop: '10px', border: `1px solid ${tok.cardBorder}`, padding: '14px', backgroundColor: tok.bandBg })}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose()
+      }}
+      className={css({ marginTop: '10px', border: `1px solid ${tok.cardBorder}`, padding: '14px', backgroundColor: tok.bandBg, ':focus-visible': focusRing(tok) })}
     >
       <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
         <div>
@@ -217,7 +280,16 @@ export function CitationPanel({ id, loading, error, citation, onClose }: {
         <button type="button" onClick={onClose} className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '11px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>Close citation</button>
       </div>
       {loading && <div role="status" className={css({ marginTop: '10px', color: tok.textSecondary, fontSize: '11px' })}>Reading immutable source span…</div>}
-      {error && <div role="alert" className={css({ marginTop: '10px', color: tok.status.conflict.text, fontSize: '11px' })}>{error}</div>}
+      {error && (
+        <div role="alert" className={css({ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' })}>
+          <span className={css({ color: tok.status.conflict.text, fontSize: '11px' })}>{error}</span>
+          {onRefresh && (
+            <button type="button" onClick={onRefresh} className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '11px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>
+              {refreshLabel}
+            </button>
+          )}
+        </div>
+      )}
       {citation && (
         <>
           <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px', marginTop: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: '1fr 1fr' } })}>
