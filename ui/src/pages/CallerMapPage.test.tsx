@@ -38,6 +38,17 @@ function route() {
   })
 }
 
+// Decoded URL-truth base for assertions on window.location.hash after an
+// interaction navigates (T43.8): filters, cursor, and view live in the URL.
+const callersBase =
+  `#/callers?protocol=protobuf&repository=${contractRepo}&lineage=${lineage}&operation=${operation}`
+
+function hashParams() {
+  const hash = window.location.hash
+  const queryIndex = hash.indexOf('?')
+  return new URLSearchParams(queryIndex === -1 ? '' : hash.slice(queryIndex + 1))
+}
+
 const declaration: ContractCatalogClaim = {
   assertion_id: 'decl-1',
   run_id: 'run-contract',
@@ -307,6 +318,7 @@ function renderPage(params = route(), comparisonAvailable = false) {
 }
 
 beforeEach(() => {
+  window.location.hash = ''
   api.fetchCallerCitation.mockReset().mockImplementation(
     async (token: string): Promise<CallerMapCitation> => {
       const index = Number(token.split('-').at(-1))
@@ -377,7 +389,7 @@ test('renders a typed generation gap without zero callers or required coverage',
 })
 
 test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile-safe controls', async () => {
-  renderPage(route(), true)
+  const rendered = renderPage(route(), true)
   await screen.findByText('Rows 1–3 of 3')
   expect(screen.getByTestId('caller-map-generation').getAttribute('data-matching-rows-state'))
     .toBe('exact')
@@ -442,17 +454,25 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   unitView.focus()
   expect(document.activeElement).toBe(unitView)
   fireEvent.click(unitView)
+  // URL truth: the view toggle is a navigation; the click itself issues no
+  // request and mounts no new rows.
+  expect(decodeURIComponent(window.location.hash)).toBe(`${callersBase}&view=group`)
+  expect(api.fetchContractCallers).toHaveBeenCalledTimes(requestCount)
+  rendered.rerender(pageElement(hashParams(), true))
+  await screen.findByText('Rows 1–3 of 3')
+  expect(screen.getByLabelText('Caller rows grouped by attributed unit')).toBeTruthy()
   const after = screen.getAllByTestId('caller-map-row')
     .map((row) => row.getAttribute('data-occurrence-id'))
     .sort()
   expect(after).toEqual(before)
-  expect(api.fetchContractCallers).toHaveBeenCalledTimes(requestCount)
 
   fireEvent.click(screen.getByRole('button', { name: 'Review unresolved' }))
-  await waitFor(() => expect(api.fetchContractCallers).toHaveBeenCalledTimes(2))
-  expect(api.fetchContractCallers.mock.calls[1][1]).toMatchObject({
+  expect(decodeURIComponent(window.location.hash))
+    .toBe(`${callersBase}&resolution=unresolved&view=group`)
+  rendered.rerender(pageElement(hashParams(), true))
+  await waitFor(() => expect(api.fetchContractCallers.mock.calls.at(-1)?.[1]).toMatchObject({
     resolution: 'unresolved',
-  })
+  }))
 })
 
 test('refuses a citation response that differs from the selected exact occurrence', async () => {
@@ -502,7 +522,7 @@ test('mounts at most one bounded ambiguous-candidate expansion', async () => {
 })
 
 test('applies every shared filter and resets pagination', async () => {
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Rows 1–3 of 3')
   fireEvent.change(screen.getByLabelText('Unit'), { target: { value: 'unit-a' } })
   fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'team-a' } })
@@ -513,8 +533,14 @@ test('applies every shared filter and resets pagination', async () => {
   fireEvent.change(screen.getByLabelText('Resolution'), { target: { value: 'syntax' } })
   fireEvent.change(screen.getByLabelText('Server ordering'), { target: { value: 'unit' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
-  await waitFor(() => expect(api.fetchContractCallers).toHaveBeenCalledTimes(2))
-  expect(api.fetchContractCallers.mock.calls[1]).toEqual([
+  // Apply is a navigation: every filter lands in the URL and the cursor is
+  // dropped, so reload and back/forward reproduce the authorized request.
+  expect(decodeURIComponent(window.location.hash)).toBe(
+    `${callersBase}&unit=unit-a&owner=team-a&path_prefix=src/a/&code_role=test` +
+    '&tier=heuristic&freshness=fresh&resolution=syntax&ordering=unit',
+  )
+  rendered.rerender(pageElement(hashParams()))
+  await waitFor(() => expect(api.fetchContractCallers).toHaveBeenLastCalledWith(
     {
       protocol: 'protobuf',
       repository: contractRepo,
@@ -534,7 +560,7 @@ test('applies every shared filter and resets pagination', async () => {
     100,
     '',
     expect.any(AbortSignal),
-  ])
+  ))
 })
 
 test('keeps a 10,000-row snapshot bounded to the current page', async () => {
@@ -549,7 +575,7 @@ test('keeps a 10,000-row snapshot bounded to the current page', async () => {
       10_000,
       'cursor-after-second',
     ))
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Page 1')
   expect(screen.getAllByTestId('caller-map-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-map-row"]')).toHaveLength(100)
@@ -557,8 +583,11 @@ test('keeps a 10,000-row snapshot bounded to the current page', async () => {
     .toContain('assertion-0')
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${callersBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Rows 101–200 of 10000')
   expect(api.fetchContractCallers).toHaveBeenCalledTimes(2)
+  expect(api.fetchContractCallers.mock.calls[1][3]).toBe('cursor-next')
   expect(screen.getAllByTestId('caller-map-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-map-row"]')).toHaveLength(100)
   expect(document.querySelector('[data-occurrence-id*="assertion-0"]')).toBeNull()
@@ -574,9 +603,11 @@ test('renders exact exhaustion when the final bounded page is reached', async ()
       'cursor-final',
     ))
     .mockResolvedValueOnce(callerPage([callerRow(100)], 101))
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Rows 1–100 of 101')
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${callersBase}&cursor=cursor-final`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Rows 101–101 of 101')
   expect(screen.getByText(/Exact snapshot exhausted on page 2\./)).toBeTruthy()
   expect(screen.getAllByTestId('caller-map-row')).toHaveLength(1)
@@ -586,15 +617,21 @@ test('renders retry and restarts a stale snapshot cursor', async () => {
   api.fetchContractCallers.mockReset()
     .mockResolvedValueOnce(callerPage([callerRow(0)], 2, 'cursor-next'))
     .mockRejectedValueOnce(new Error('409: caller map cursor is no longer valid'))
-    .mockResolvedValueOnce(callerPage([callerRow(0)], 2, 'cursor-next'))
-  renderPage()
+    .mockResolvedValue(callerPage([callerRow(0)], 2, 'cursor-next'))
+  const rendered = renderPage()
   await screen.findByText('Rows 1–1 of 2')
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${callersBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Caller snapshot changed.')
   expect(screen.getByText(/cursor is no longer valid/)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Restart from first page' }))
+  // The stale cursor is URL state, so restarting must navigate off it; a
+  // reload of the produced URL then performs the first-page read.
+  expect(decodeURIComponent(window.location.hash)).toBe(callersBase)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Rows 1–1 of 2')
-  expect(api.fetchContractCallers.mock.calls[2][3]).toBe('')
+  expect(api.fetchContractCallers.mock.calls.at(-1)?.[3]).toBe('')
 })
 
 test('changes endpoints without carrying the preceding endpoint cursor', async () => {
@@ -605,6 +642,8 @@ test('changes endpoints without carrying the preceding endpoint cursor', async (
   const rendered = renderPage()
   await screen.findByText('Rows 1–1 of 2')
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${callersBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Page 2')
   api.fetchContractCallers.mockClear()
 

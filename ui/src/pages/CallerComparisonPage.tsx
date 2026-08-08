@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button, KIND as BUTTON_KIND, SIZE as BUTTON_SIZE } from 'baseui/button'
 import { Input } from 'baseui/input'
@@ -17,7 +17,7 @@ import {
   type ContractCatalogList,
 } from '../api'
 import { OpenIcon } from '../icons'
-import { href } from '../router'
+import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
@@ -86,6 +86,7 @@ export default function CallerComparisonPage({ params }: { params: URLSearchPara
     <ComparisonResults
       oldEndpoint={oldEndpoint}
       replacementEndpoint={replacementEndpoint}
+      params={params}
     />
   )
 }
@@ -287,37 +288,56 @@ function ReplacementPicker({ oldEndpoint }: { oldEndpoint: CallerMapEndpoint }) 
 function ComparisonResults({
   oldEndpoint,
   replacementEndpoint,
+  params,
 }: {
   oldEndpoint: CallerMapEndpoint
   replacementEndpoint: CallerMapEndpoint
+  params: URLSearchParams
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [draft, setDraft] = useState<ComparisonFilters>(emptyFilters)
-  const [filters, setFilters] = useState<ComparisonFilters>(emptyFilters)
+  // Filters and cursor are URL state (charter §2); the previous-page stack
+  // is in-memory acceleration only.
+  const filters = useMemo(() => comparisonFiltersFromParams(params), [params])
+  const filtersKey = JSON.stringify(filters)
+  const cursor = params.get('cursor') ?? ''
+  const [draft, setDraft] = useState<ComparisonFilters>(filters)
   const [page, setPage] = useState<ComparisonResponse | null>(null)
-  const [cursors, setCursors] = useState<string[]>([''])
-  const [pageIndex, setPageIndex] = useState(0)
   const [reload, setReload] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const request = useRef<AbortController | null>(null)
+  const cursorStack = useRef<string[]>([''])
   const endpointKey = [
     ...Object.values(oldEndpoint),
     ...Object.values(replacementEndpoint),
   ].join('\u0000')
-  const [paginationEndpointKey, setPaginationEndpointKey] = useState(endpointKey)
-  // Reset the effective cursor during the first render of a changed endpoint
-  // pair, before effects can issue a request with the preceding pair's cursor.
-  const cursor = paginationEndpointKey === endpointKey
-    ? cursors[pageIndex] ?? ''
-    : ''
 
   useEffect(() => {
-    setCursors([''])
-    setPageIndex(0)
-    setPaginationEndpointKey(endpointKey)
+    setDraft(filters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey])
+
+  useEffect(() => {
+    cursorStack.current = cursor ? ['', cursor] : ['']
+    setPage(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpointKey])
+
+  const routeTo = (nextFilters: ComparisonFilters, nextCursor: string) => {
+    navigate('/compare-callers', {
+      old_protocol: oldEndpoint.protocol,
+      old_repository: oldEndpoint.repository,
+      old_lineage: oldEndpoint.declaration_lineage,
+      old_operation: oldEndpoint.operation,
+      replacement_protocol: replacementEndpoint.protocol,
+      replacement_repository: replacementEndpoint.repository,
+      replacement_lineage: replacementEndpoint.declaration_lineage,
+      replacement_operation: replacementEndpoint.operation,
+      ...comparisonFilterParams(nextFilters),
+      ...(nextCursor ? { cursor: nextCursor } : {}),
+    })
+  }
 
   useEffect(() => {
     request.current?.abort()
@@ -358,15 +378,16 @@ function ComparisonResults({
         }
       })
     return () => controller.abort()
-  }, [endpointKey, filters, cursor, reload]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpointKey, filtersKey, cursor, reload]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = () => {
-    setCursors([''])
-    setPageIndex(0)
+    cursorStack.current = ['']
     // A stale first page already has the empty cursor and page zero. Move an
     // explicit generation as well so "Restart" always performs a new read.
     setReload((generation) => generation + 1)
   }
+  const stackIndex = cursorStack.current.lastIndexOf(cursor)
+  const pageIndex = stackIndex === -1 ? (cursor ? 1 : 0) : stackIndex
   const stale = error.startsWith('409:')
   return (
     <div
@@ -420,18 +441,18 @@ function ComparisonResults({
         onChange={setDraft}
         onApply={(event) => {
           event.preventDefault()
-          setFilters({
+          reset()
+          routeTo({
             ...draft,
             unit: draft.unit.trim(),
             owner: draft.owner.trim(),
             pathPrefix: draft.pathPrefix.trim(),
-          })
-          reset()
+          }, '')
         }}
         onClear={() => {
           setDraft(emptyFilters)
-          setFilters(emptyFilters)
           reset()
+          routeTo(emptyFilters, '')
         }}
       />
       {error && (
@@ -456,7 +477,10 @@ function ComparisonResults({
                   type="button"
                   size={BUTTON_SIZE.mini}
                   kind={BUTTON_KIND.secondary}
-                  onClick={reset}
+                  onClick={() => {
+                    reset()
+                    routeTo(filters, '')
+                  }}
                 >
                   Restart from first page
                 </Button>
@@ -474,13 +498,16 @@ function ComparisonResults({
             <Pager
               pageIndex={pageIndex}
               nextCursor={page.pagination.next_cursor ?? ''}
-              canRememberNext={cursors.length < maxCursorHistory}
-              onPrevious={() => setPageIndex((value) => Math.max(0, value - 1))}
+              canRememberNext={cursorStack.current.length < maxCursorHistory}
+              onPrevious={() => {
+                if (pageIndex <= 0) return
+                routeTo(filters, cursorStack.current[pageIndex - 1] ?? '')
+              }}
               onNext={() => {
                 const next = page.pagination.next_cursor
-                if (!next || cursors.length >= maxCursorHistory) return
-                setCursors((values) => [...values.slice(0, pageIndex + 1), next])
-                setPageIndex((value) => value + 1)
+                if (!next || cursorStack.current.length >= maxCursorHistory) return
+                cursorStack.current = [...cursorStack.current, next]
+                routeTo(filters, next)
               }}
             />
           )}
@@ -975,6 +1002,42 @@ function itemEndpoint(item: ContractCatalogItem): CallerMapEndpoint {
     declaration_lineage: item.declaration_lineage,
     operation: item.operation ?? '',
   }
+}
+
+function comparisonFiltersFromParams(params: URLSearchParams): ComparisonFilters {
+  const freshness = params.get('freshness')
+  const resolution = params.get('resolution')
+  const ordering = params.get('ordering')
+  const level = params.get('level')
+  const classification = params.get('classification')
+  return {
+    unit: params.get('unit') ?? '',
+    owner: params.get('owner') ?? '',
+    pathPrefix: params.get('path_prefix') ?? '',
+    codeRole: params.get('code_role') ?? '',
+    tier: params.get('tier') ?? '',
+    freshness: freshness === 'fresh' || freshness === 'stale' ? freshness : 'any',
+    resolution: resolution === 'scip' || resolution === 'syntax' || resolution === 'unresolved' ? resolution : 'any',
+    ordering: ordering === 'unit' ? 'unit' : 'source',
+    level: level === 'unit' ? 'unit' : 'occurrence',
+    classification: classification === 'old_only_evidence' || classification === 'both_evidence' ||
+      classification === 'new_only_evidence' || classification === 'unresolved' ? classification : '',
+  }
+}
+
+function comparisonFilterParams(filters: ComparisonFilters): Record<string, string> {
+  const result: Record<string, string> = {}
+  if (filters.unit) result.unit = filters.unit
+  if (filters.owner) result.owner = filters.owner
+  if (filters.pathPrefix) result.path_prefix = filters.pathPrefix
+  if (filters.codeRole) result.code_role = filters.codeRole
+  if (filters.tier) result.tier = filters.tier
+  if (filters.freshness !== 'any') result.freshness = filters.freshness
+  if (filters.resolution !== 'any') result.resolution = filters.resolution
+  if (filters.ordering !== 'source') result.ordering = filters.ordering
+  if (filters.level !== 'occurrence') result.level = filters.level
+  if (filters.classification) result.classification = filters.classification
+  return result
 }
 
 function comparisonHref(oldEndpoint: CallerMapEndpoint, replacement?: CallerMapEndpoint) {

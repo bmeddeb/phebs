@@ -263,6 +263,24 @@ function catalog(items: ContractCatalogItem[] = [catalogItem()]): ContractCatalo
   }
 }
 
+// Decoded URL-truth base for assertions on window.location.hash after an
+// interaction navigates (T43.8): filters and cursor live in the URL.
+const compareBase = '#/compare-callers' +
+  `?old_protocol=${oldEndpoint.protocol}` +
+  `&old_repository=${oldEndpoint.repository}` +
+  `&old_lineage=${oldEndpoint.declaration_lineage}` +
+  `&old_operation=${oldEndpoint.operation}` +
+  `&replacement_protocol=${replacementEndpoint.protocol}` +
+  `&replacement_repository=${replacementEndpoint.repository}` +
+  `&replacement_lineage=${replacementEndpoint.declaration_lineage}` +
+  `&replacement_operation=${replacementEndpoint.operation}`
+
+function hashParams() {
+  const hash = window.location.hash
+  const queryIndex = hash.indexOf('?')
+  return new URLSearchParams(queryIndex === -1 ? '' : hash.slice(queryIndex + 1))
+}
+
 function pageElement(params = route()) {
   return (
     <StyletronProvider value={engine}>
@@ -278,6 +296,7 @@ function renderPage(params = route()) {
 }
 
 beforeEach(() => {
+  window.location.hash = ''
   api.fetchCallerCitation.mockReset().mockImplementation(
     async (token: string): Promise<CallerMapCitation> => {
       const parts = token.split('-')
@@ -391,7 +410,7 @@ test('renders two exact generations, four classifications, and range-only citati
 })
 
 test('forwards every shared filter, comparison level, and classification with a fixed page size', async () => {
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Rows 1–4 of 4')
   fireEvent.change(screen.getByLabelText('Unit'), { target: { value: ' //src/orders ' } })
   fireEvent.change(screen.getByLabelText('Owner'), { target: { value: ' team-orders ' } })
@@ -404,8 +423,15 @@ test('forwards every shared filter, comparison level, and classification with a 
   fireEvent.change(screen.getByLabelText('Resolution'), { target: { value: 'syntax' } })
   fireEvent.change(screen.getByLabelText('Ordering'), { target: { value: 'unit' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
-  await waitFor(() => expect(api.fetchCallerComparison).toHaveBeenCalledTimes(2))
-  expect(api.fetchCallerComparison.mock.calls[1]).toEqual([
+  // Apply is a navigation: every trimmed filter lands in the URL and the
+  // cursor is dropped, so reload reproduces the authorized request.
+  expect(decodeURIComponent(window.location.hash)).toBe(
+    `${compareBase}&unit=//src/orders&owner=team-orders&path_prefix=src/orders/` +
+    '&code_role=production&tier=heuristic&freshness=fresh&resolution=syntax' +
+    '&ordering=unit&level=unit&classification=old_only_evidence',
+  )
+  rendered.rerender(pageElement(hashParams()))
+  await waitFor(() => expect(api.fetchCallerComparison).toHaveBeenLastCalledWith(
     oldEndpoint,
     replacementEndpoint,
     {
@@ -423,7 +449,7 @@ test('forwards every shared filter, comparison level, and classification with a 
     100,
     '',
     expect.any(AbortSignal),
-  ])
+  ))
 })
 
 test('keeps only one bounded page mounted and restarts a stale cursor', async () => {
@@ -434,19 +460,25 @@ test('keeps only one bounded page mounted and restarts a stale cursor', async ()
       'cursor-next',
     ))
     .mockRejectedValueOnce(new Error('409: comparison cursor is no longer valid'))
-    .mockResolvedValueOnce(comparisonPage(
+    .mockResolvedValue(comparisonPage(
       Array.from({ length: 100 }, (_, index) => comparisonRow(index, 'both_evidence')),
       101,
       'cursor-next',
     ))
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Rows 1–100 of 101')
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${compareBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Comparison snapshot changed.')
   fireEvent.click(screen.getByRole('button', { name: 'Restart from first page' }))
+  // The stale cursor is URL state, so restarting must navigate off it; a
+  // reload of the produced URL then performs the first-page read.
+  expect(decodeURIComponent(window.location.hash)).toBe(compareBase)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Rows 1–100 of 101')
-  expect(api.fetchCallerComparison.mock.calls[2][4]).toBe('')
+  expect(api.fetchCallerComparison.mock.calls.at(-1)?.[4]).toBe('')
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
 })
 
@@ -462,7 +494,7 @@ test('pages the 10,000-row closure profile without retaining prior DOM rows', as
       10_000,
       'cursor-after-second',
     ))
-  renderPage()
+  const rendered = renderPage()
   await screen.findByText('Rows 1–100 of 10000')
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
@@ -471,7 +503,10 @@ test('pages the 10,000-row closure profile without retaining prior DOM rows', as
     .toBeGreaterThan(0)
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${compareBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Rows 101–200 of 10000')
+  expect(api.fetchCallerComparison.mock.calls[1][4]).toBe('cursor-next')
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
     .toBe(100)
@@ -504,6 +539,8 @@ test('changes endpoint pairs without carrying the preceding pair cursor', async 
   const rendered = renderPage()
   await screen.findByText('Rows 1–1 of 2')
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(`${compareBase}&cursor=cursor-next`)
+  rendered.rerender(pageElement(hashParams()))
   await screen.findByText('Page 2')
   api.fetchCallerComparison.mockClear()
 

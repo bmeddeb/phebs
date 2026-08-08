@@ -333,12 +333,12 @@ const detail: ContractCatalogOperation = {
 
 const engine = new Client()
 
-function page(
-  params = new URLSearchParams(),
-  callerMapAvailable = false,
-  workbenchAvailable = false,
+function tree(
+  params: URLSearchParams,
+  callerMapAvailable: boolean,
+  workbenchAvailable: boolean,
 ) {
-  return render(
+  return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <ContractAtlasPage
@@ -347,11 +347,34 @@ function page(
           workbenchAvailable={workbenchAvailable}
         />
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
 }
 
+function page(
+  params = new URLSearchParams(),
+  callerMapAvailable = false,
+  workbenchAvailable = false,
+) {
+  return render(tree(params, callerMapAvailable, workbenchAvailable))
+}
+
+function paramsFromHash() {
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '')
+}
+
+// URL-truth pages navigate on selection and filter changes; the harness
+// re-renders from the hash the way App does.
+function rerenderFromHash(
+  view: ReturnType<typeof page>,
+  callerMapAvailable = false,
+  workbenchAvailable = false,
+) {
+  view.rerender(tree(paramsFromHash(), callerMapAvailable, workbenchAvailable))
+}
+
 beforeEach(() => {
+  window.location.hash = ''
   api.fetchContractCatalog.mockReset()
     .mockResolvedValueOnce(firstPage)
     .mockResolvedValueOnce(secondPage)
@@ -395,9 +418,13 @@ test('browses duplicate declarations through stable bounded pages', async () => 
 })
 
 test('renders bounded shapes, qualified relationships, and pinned source links', async () => {
-  page(new URLSearchParams(), true, true)
+  const view = page(new URLSearchParams(), true, true)
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
+  expect(decodeURIComponent(window.location.hash)).toBe(
+    '#/contracts?sel_repository=github.com/acme/contracts&sel_lineage=lineage-a&sel_operation=/demo.Catalog/Get',
+  )
+  rerenderFromHash(view, true, true)
   await screen.findByTestId('contract-operation-detail')
 
   expect(api.fetchContractOperation).toHaveBeenCalledWith(
@@ -452,9 +479,10 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
 })
 
 test('keeps the Workbench launch undiscoverable without its capability', async () => {
-  page()
+  const view = page()
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
+  rerenderFromHash(view)
   await screen.findByTestId('contract-operation-detail')
   expect(screen.queryByRole('link', { name: 'Start Workbench' })).toBeNull()
 })
@@ -468,7 +496,7 @@ test('applies exact server filters and renders an honest bounded empty state', a
   api.fetchContractCatalog.mockReset()
     .mockResolvedValueOnce(firstPage)
     .mockResolvedValueOnce(empty)
-  page()
+  const view = page()
   await screen.findByText('3 rows')
   fireEvent.change(screen.getByLabelText('Repository'), {
     target: { value: 'github.com/acme/missing' },
@@ -480,6 +508,10 @@ test('applies exact server filters and renders an honest bounded empty state', a
     target: { value: 'lineage-missing' },
   })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  expect(decodeURIComponent(window.location.hash)).toBe(
+    '#/contracts?repository=github.com/acme/missing&package=demo.v2&lineage=lineage-missing',
+  )
+  rerenderFromHash(view)
   await screen.findByText(/No declaration rows were returned/)
   expect(api.fetchContractCatalog).toHaveBeenLastCalledWith(
     {
@@ -508,10 +540,12 @@ test('ignores an operation response after a newer selection', async () => {
     ],
   }
   api.fetchContractCatalog.mockReset().mockResolvedValue(listWithTwo)
-  page()
+  const view = page()
   await screen.findByText('4 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
+  rerenderFromHash(view)
   fireEvent.click(screen.getByRole('listitem', { name: /List/ }))
+  rerenderFromHash(view)
   await screen.findByRole('heading', { name: '/demo.Catalog/List' })
   resolveFirst(detail)
   await waitFor(() => expect(screen.queryByRole('heading', { name: '/demo.Catalog/Get' })).toBeNull())
@@ -576,9 +610,10 @@ test('renders a thrift operation with oneway chip, field 0, and union badge', as
     },
   }
   vi.mocked(api.fetchContractOperation).mockResolvedValue(thriftDetail)
-  page()
+  const view = page()
   await screen.findByText('3 rows')
   fireEvent.click(screen.getAllByRole('listitem')[0])
+  rerenderFromHash(view)
   await screen.findByTestId('contract-operation-detail')
   expect(screen.getByText('oneway')).toBeTruthy()
   expect(screen.queryByText('client stream')).toBeNull()
@@ -589,7 +624,7 @@ test('renders a thrift operation with oneway chip, field 0, and union badge', as
 })
 
 test('changing the protocol filter survives lazy updater evaluation', async () => {
-  page()
+  const view = page()
   await screen.findByText('3 rows')
   // Regression: the protocol select's onChange read event.currentTarget
   // inside the functional state updater; React nulls currentTarget after
@@ -598,6 +633,8 @@ test('changing the protocol filter survives lazy updater evaluation', async () =
   // the bug latent until the thrift option existed.
   fireEvent.change(screen.getByLabelText('Protocol'), { target: { value: 'thrift' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  expect(decodeURIComponent(window.location.hash)).toBe('#/contracts?protocol=thrift')
+  rerenderFromHash(view)
   await screen.findByText('2 rows')
   expect(api.fetchContractCatalog).toHaveBeenLastCalledWith(
     { repository: undefined, package: undefined, protocol: 'thrift', lineage: undefined },

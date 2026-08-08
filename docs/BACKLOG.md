@@ -611,6 +611,23 @@ Workbench. AC: a persistent context bar renders the active scope with its
 authority chip; every transition preserves exact scope in the URL; reload
 and back/forward reproduce the same authorized request; clearing scope is
 explicit, never implied.
+*Implementation landed 2026-08-07.* ScopeContextBar reads the scope from
+the URL on every route and renders repository + service identity with the
+catalog authority (status word and "as of" changed-at time; a failed read
+is "authority unavailable", never invented); its surface links carry the
+scope and Clear is an explicit action removing only scope params. F3
+(audit blocker) lands as the first act: Contract Atlas filters and the
+selected operation, Caller Map filters/cursor/view, and Caller Comparison
+filters/cursor are URL state — reload and back/forward reproduce the
+authorized request, with previous-page stacks kept only as in-memory
+acceleration and the Atlas load-more cursor documented as first-page on
+reload. Every route names itself in document.title (F38); the
+directory's existing "Search this service" action plus the bar close the
+F26 loop. Workbench receives the scope at the navigation level; its
+data-layer consumption of scope params is not implemented and not
+claimed. Note: on Caller Map and Atlas, a `repository` filter/endpoint
+param legitimately lights the bar — the surface is repository-scoped in
+exactly the bar's sense.
 
 **T43.9 · Global keyboard navigator** *(needs T43.3)* — add a command
 palette for navigation and scope jumps. AC: every routed surface and

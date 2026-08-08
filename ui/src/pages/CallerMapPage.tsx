@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button, KIND as BUTTON_KIND, SIZE as BUTTON_SIZE } from 'baseui/button'
 import { Input } from 'baseui/input'
@@ -12,7 +12,7 @@ import {
   type CallerMapUnitCandidate,
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
-import { href } from '../router'
+import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
@@ -67,29 +67,33 @@ export default function CallerMapPage({
         endpoint.operation,
       ].join('\u0000')
     : ''
-  const [draftFilters, setDraftFilters] = useState<CallerFilters>(emptyFilters)
-  const [appliedFilters, setAppliedFilters] = useState<CallerFilters>(emptyFilters)
+  // Filters, cursor, and view are URL state (charter §2): reload and
+  // back/forward reproduce the same authorized request. The previous-page
+  // stack is in-memory acceleration only; a deep link lands on its exact
+  // cursor with 'Previous' returning to the first page.
+  const appliedFilters = useMemo(() => callerFiltersFromParams(params), [params])
+  const filtersKey = JSON.stringify(appliedFilters)
+  const cursor = params.get('cursor') ?? ''
+  const view = params.get('view') === 'group' ? 'group' as const : 'source' as const
+  const [draftFilters, setDraftFilters] = useState<CallerFilters>(appliedFilters)
   const [page, setPage] = useState<CallerMapResponse | null>(null)
-  const [pageIndex, setPageIndex] = useState(0)
-  const [cursors, setCursors] = useState<string[]>([''])
-  const [paginationEndpointKey, setPaginationEndpointKey] = useState(endpointKey)
   const [reload, setReload] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [view, setView] = useState<'source' | 'group'>('source')
   const request = useRef<AbortController | null>(null)
-  // On an endpoint prop change, derive the first-page cursor immediately.
-  // The reset effect below then commits that state without issuing a
-  // transient request for the new endpoint with the old endpoint's cursor.
-  const cursor = paginationEndpointKey === endpointKey
-    ? cursors[pageIndex] ?? ''
-    : ''
+  const cursorStack = useRef<string[]>([''])
 
   useEffect(() => {
-    setCursors([''])
-    setPageIndex(0)
+    setDraftFilters(appliedFilters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey])
+
+  useEffect(() => {
+    cursorStack.current = cursor ? ['', cursor] : ['']
     setPage(null)
-    setPaginationEndpointKey(endpointKey)
+    // The stack reseeds only on an endpoint change; the cursor read is
+    // deliberate initialization, not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpointKey])
 
   useEffect(() => {
@@ -131,39 +135,57 @@ export default function CallerMapPage({
     return () => controller.abort()
   }, [endpointKey, appliedFilters, cursor, reload]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const routeTo = (filters: CallerFilters, nextCursor: string, nextView: 'source' | 'group' = view) => {
+    if (!endpoint) return
+    navigate('/callers', {
+      protocol: endpoint.protocol,
+      repository: endpoint.repository,
+      lineage: endpoint.declaration_lineage,
+      operation: endpoint.operation,
+      ...callerFilterParams(filters),
+      ...(nextCursor ? { cursor: nextCursor } : {}),
+      ...(nextView === 'group' ? { view: 'group' } : {}),
+    })
+  }
   const resetPagination = () => {
-    setCursors([''])
-    setPageIndex(0)
+    cursorStack.current = ['']
     // A first-page 409 leaves cursor === '' unchanged, so no effect dep
     // moves; the reload counter guarantees restart always refetches.
     setReload((generation) => generation + 1)
   }
   const applyFilters = (event: React.FormEvent) => {
     event.preventDefault()
-    setAppliedFilters({
+    resetPagination()
+    routeTo({
       ...draftFilters,
       unit: draftFilters.unit.trim(),
       owner: draftFilters.owner.trim(),
       pathPrefix: draftFilters.pathPrefix.trim(),
-    })
-    resetPagination()
+    }, '')
   }
   const clearFilters = () => {
     setDraftFilters(emptyFilters)
-    setAppliedFilters(emptyFilters)
     resetPagination()
+    routeTo(emptyFilters, '')
   }
   const reviewUnresolved = () => {
     const next = { ...appliedFilters, resolution: 'unresolved' as const }
     setDraftFilters(next)
-    setAppliedFilters(next)
     resetPagination()
+    routeTo(next, '')
   }
   const nextPage = () => {
     const next = page?.pagination.next_cursor
-    if (!next || cursors.length >= maxCursorHistory) return
-    setCursors((current) => [...current.slice(0, pageIndex + 1), next])
-    setPageIndex((current) => current + 1)
+    if (!next || cursorStack.current.length >= maxCursorHistory) return
+    cursorStack.current = [...cursorStack.current, next]
+    routeTo(appliedFilters, next)
+  }
+  const stackIndex = cursorStack.current.lastIndexOf(cursor)
+  const pageIndex = stackIndex === -1 ? (cursor ? 1 : 0) : stackIndex
+  const previousPage = () => {
+    if (pageIndex <= 0) return
+    const previous = cursorStack.current[pageIndex - 1] ?? ''
+    routeTo(appliedFilters, previous)
   }
   const staleCursor = error.startsWith('409:')
 
@@ -236,7 +258,12 @@ export default function CallerMapPage({
                   type="button"
                   size={BUTTON_SIZE.mini}
                   kind={BUTTON_KIND.secondary}
-                  onClick={resetPagination}
+                  onClick={() => {
+                    // URL-truth cursor: restart must clear it or the stale
+                    // cursor refetches forever.
+                    resetPagination()
+                    routeTo(appliedFilters, '')
+                  }}
                 >
                   Restart from first page
                 </Button>
@@ -277,15 +304,15 @@ export default function CallerMapPage({
             page={page}
             pageIndex={pageIndex}
             view={view}
-            onView={setView}
+            onView={(nextView) => routeTo(appliedFilters, cursor, nextView)}
             onReviewUnresolved={reviewUnresolved}
           />
           <CallerRows page={page} view={view} onRefreshRows={() => setReload((current) => current + 1)} />
           <Pager
             page={page}
             pageIndex={pageIndex}
-            canRememberNext={cursors.length < maxCursorHistory}
-            onPrevious={() => setPageIndex((current) => Math.max(0, current - 1))}
+            canRememberNext={cursorStack.current.length < maxCursorHistory}
+            onPrevious={previousPage}
             onNext={nextPage}
           />
           <div className={css({ marginTop: '14px' })}>
@@ -295,6 +322,35 @@ export default function CallerMapPage({
       )}
     </div>
   )
+}
+
+function callerFiltersFromParams(params: URLSearchParams): CallerFilters {
+  const freshness = params.get('freshness')
+  const resolution = params.get('resolution')
+  const ordering = params.get('ordering')
+  return {
+    unit: params.get('unit') ?? '',
+    owner: params.get('owner') ?? '',
+    pathPrefix: params.get('path_prefix') ?? '',
+    codeRole: params.get('code_role') ?? '',
+    tier: params.get('tier') ?? '',
+    freshness: freshness === 'fresh' || freshness === 'stale' ? freshness : 'any',
+    resolution: resolution === 'scip' || resolution === 'syntax' || resolution === 'unresolved' ? resolution : 'any',
+    ordering: ordering === 'unit' ? 'unit' : 'source',
+  }
+}
+
+function callerFilterParams(filters: CallerFilters): Record<string, string> {
+  const result: Record<string, string> = {}
+  if (filters.unit) result.unit = filters.unit
+  if (filters.owner) result.owner = filters.owner
+  if (filters.pathPrefix) result.path_prefix = filters.pathPrefix
+  if (filters.codeRole) result.code_role = filters.codeRole
+  if (filters.tier) result.tier = filters.tier
+  if (filters.freshness !== 'any') result.freshness = filters.freshness
+  if (filters.resolution !== 'any') result.resolution = filters.resolution
+  if (filters.ordering !== 'source') result.ordering = filters.ordering
+  return result
 }
 
 function endpointFromParams(params: URLSearchParams): CallerMapEndpoint | null {

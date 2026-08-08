@@ -6,6 +6,7 @@ import { FONTS, useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
+import { ScopeContextBar, type ActiveScope } from './components/ScopeContextBar'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -32,6 +33,21 @@ const KafkaTopicsPage = lazy(() => import('./pages/KafkaTopicsPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
+  // T43.8: one exact scope, read from the URL on every route. The bar
+  // persists it across surfaces; clearing is an explicit bar action.
+  const scopeRepository = params.get('repository') ?? ''
+  const scopeServiceKey = params.get('service_key') ?? ''
+  const scope: ActiveScope | null = scopeRepository
+    ? { repository: scopeRepository, serviceKey: scopeServiceKey }
+    : null
+
+  // Every route names itself (audit F38); the scoped service joins the title.
+  useEffect(() => {
+    const title = routeTitle(path)
+    document.title = scopeServiceKey
+      ? `phebs · ${title} · ${scopeServiceKey}`
+      : `phebs · ${title}`
+  }, [path, scopeServiceKey])
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { status, loading, error: authError, logout } = useAuth()
@@ -133,6 +149,7 @@ export default function App() {
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
       <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} workbenchAvailable={workbenchAvailable} onLogout={() => void logout().catch(() => {})} />
+      {scope && <ScopeContextBar scope={scope} path={path} params={params} />}
       <main
         className={css({
           width: '100%',
@@ -160,6 +177,27 @@ export default function App() {
       </main>
     </div>
   )
+}
+
+function routeTitle(path: string): string {
+  if (path.startsWith('/repos')) return 'Repositories'
+  if (path.startsWith('/services')) return 'Service directory'
+  if (path.startsWith('/relationships')) return 'Relationship explorer'
+  if (path.startsWith('/file')) return 'File'
+  if (path.startsWith('/history')) return 'History'
+  if (path.startsWith('/blame')) return 'Blame'
+  if (path.startsWith('/commit')) return 'Commit'
+  if (path.startsWith('/contracts')) return 'Contract atlas'
+  if (path.startsWith('/callers')) return 'Caller map'
+  if (path.startsWith('/compare-callers')) return 'Caller comparison'
+  if (path.startsWith('/impact')) return 'Contract impact'
+  if (path.startsWith('/topics')) return 'Kafka topics'
+  if (path.startsWith('/investigations')) return 'Investigations'
+  if (path.startsWith('/workbench')) return 'Change workbench'
+  if (path.startsWith('/audit')) return 'Audit log'
+  if (path.startsWith('/analytics')) return 'Analytics'
+  if (path.startsWith('/settings')) return 'Settings'
+  return 'Search'
 }
 
 export function CapabilityGate({ loaded, error, available, label, path, onRetry, render }: {

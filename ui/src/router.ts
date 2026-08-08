@@ -19,11 +19,11 @@ export function useHashRoute(): [string, URLSearchParams] {
 }
 
 export function navigate(path: string, params?: Record<string, string>) {
-  const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+  const qs = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''
   window.location.hash = `#${path}${qs}`
 }
 
 export function href(path: string, params?: Record<string, string>): string {
-  const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+  const qs = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''
   return `#${path}${qs}`
 }

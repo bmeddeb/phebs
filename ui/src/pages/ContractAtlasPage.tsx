@@ -23,7 +23,7 @@ import {
   ContractIcon,
   OpenIcon,
 } from '../icons'
-import { href } from '../router'
+import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import { ClaimBoundary, StateNotice, StatusChip } from '../components/kit'
@@ -67,12 +67,19 @@ export default function ContractAtlasPage({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const initialFilters = routeFilters(params)
-  const [draftFilters, setDraftFilters] = useState<CatalogFilters>(initialFilters)
-  const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>(initialFilters)
+  // Applied filters and the selected operation are URL state (charter §2):
+  // reload and back/forward reproduce the same authorized request. The
+  // load-more cursor stays in memory; a reload shows the first page.
+  const appliedFilters = useMemo(() => routeFilters(params), [params])
+  const filtersKey = JSON.stringify(appliedFilters)
+  const selection = useMemo(() => ({
+    repository: params.get('sel_repository') ?? '',
+    lineage: params.get('sel_lineage') ?? '',
+    operation: params.get('sel_operation') ?? '',
+  }), [params])
+  const selectionKey = `${selection.repository}\u0000${selection.lineage}\u0000${selection.operation}`
+  const [draftFilters, setDraftFilters] = useState<CatalogFilters>(appliedFilters)
   const [catalog, setCatalog] = useState<ContractCatalogList | null>(null)
-  const [selectedID, setSelectedID] = useState('')
-  const [selectedItem, setSelectedItem] = useState<ContractCatalogItem | null>(null)
   const [operation, setOperation] = useState<ContractCatalogOperation | null>(null)
   const [listLoading, setListLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -124,21 +131,44 @@ export default function ContractAtlasPage({
       })
   }
 
-  const loadOperation = (item: ContractCatalogItem) => {
+  const selectOperation = (item: ContractCatalogItem) => {
     if (!item.operation) return
+    navigate('/contracts', {
+      ...catalogParams(appliedFilters),
+      sel_repository: item.repository,
+      sel_lineage: item.declaration_lineage,
+      sel_operation: item.operation,
+    })
+  }
+
+  // Filters are URL truth: a filter change is a navigation, and this effect
+  // performs the authorized read it names.
+  useEffect(() => {
+    loadCatalog(appliedFilters)
+    return () => listRequest.current?.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey])
+
+  // The selected operation is fetched from its URL identity, independent of
+  // which catalog page the item sits on.
+  useEffect(() => {
+    if (!selection.repository || !selection.lineage || !selection.operation) {
+      setOperation(null)
+      setDetailError('')
+      setDetailLoading(false)
+      return
+    }
     detailRequest.current?.abort()
     const controller = new AbortController()
     const generation = ++detailGeneration.current
     detailRequest.current = controller
-    setSelectedID(catalogItemID(item))
-    setSelectedItem(item)
     setOperation(null)
     setDetailLoading(true)
     setDetailError('')
     fetchContractOperation(
-      item.repository,
-      item.declaration_lineage,
-      item.operation,
+      selection.repository,
+      selection.lineage,
+      selection.operation,
       controller.signal,
     )
       .then((result) => {
@@ -155,18 +185,9 @@ export default function ContractAtlasPage({
           setDetailLoading(false)
         }
       })
-  }
-
-  useEffect(() => {
-    loadCatalog(initialFilters)
-    return () => {
-      listRequest.current?.abort()
-      detailRequest.current?.abort()
-    }
-    // Route parameters seed the first load. In-page filter and selection
-    // changes stay local so opening an operation does not restart pagination.
+    return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [selectionKey])
 
   const groups = useMemo(
     () => groupCatalogItems(catalog?.items ?? []),
@@ -182,31 +203,46 @@ export default function ContractAtlasPage({
 
   const applyFilters = (event: React.FormEvent) => {
     event.preventDefault()
-    const next = {
+    navigate('/contracts', catalogParams({
       repository: draftFilters.repository.trim(),
       package: draftFilters.package.trim(),
       protocol: draftFilters.protocol,
       lineage: draftFilters.lineage.trim(),
-    }
-    setAppliedFilters(next)
-    setCatalog(null)
-    setSelectedID('')
-    setSelectedItem(null)
-    setOperation(null)
-    setDetailError('')
-    loadCatalog(next)
+    }))
   }
 
   const clearFilters = () => {
     setDraftFilters(emptyFilters)
-    setAppliedFilters(emptyFilters)
-    setCatalog(null)
-    setSelectedID('')
-    setSelectedItem(null)
-    setOperation(null)
-    setDetailError('')
-    loadCatalog(emptyFilters)
+    navigate('/contracts', {})
   }
+
+  // Drafts follow the URL so back/forward keeps the form truthful.
+  useEffect(() => {
+    setDraftFilters(appliedFilters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey])
+
+  // Selection display state derives from the URL identity: the list
+  // highlights the item when its page contains it, and the detail renders
+  // from the operation response either way.
+  const selectedItem = useMemo(() => {
+    if (!selection.operation) return null
+    return catalog?.items.find((item) =>
+      item.repository === selection.repository &&
+      item.declaration_lineage === selection.lineage &&
+      item.operation === selection.operation) ?? null
+  }, [catalog?.items, selection])
+  const selectedID = selectedItem ? catalogItemID(selectedItem) : ''
+  const selectedForDetail = selectedItem ?? (operation ? {
+    kind: 'operation' as const,
+    protocol: operation.declaration.sources[0]?.path.endsWith('.thrift') ? 'thrift' : 'protobuf',
+    repository: operation.repository,
+    declaration_lineage: operation.declaration_lineage,
+    service_fqn: operation.service_fqn,
+    method: operation.method,
+    operation: operation.operation,
+    declaration: operation.declaration,
+  } satisfies ContractCatalogItem : null)
 
   return (
     <div className={css({ maxWidth: '1320px', margin: '0 auto' })}>
@@ -389,7 +425,7 @@ export default function ContractAtlasPage({
               group={group}
               duplicate={(duplicateNames.get(group.serviceFQN) ?? 0) > 1}
               selectedID={selectedID}
-              onSelect={loadOperation}
+              onSelect={selectOperation}
             />
           ))}
 
@@ -446,10 +482,10 @@ export default function ContractAtlasPage({
               </p>
             </div>
           )}
-          {!detailLoading && operation && selectedItem && (
+          {!detailLoading && operation && selectedForDetail && (
             <OperationDetail
               operation={operation}
-              selected={selectedItem}
+              selected={selectedForDetail}
               callerMapAvailable={callerMapAvailable}
               workbenchAvailable={workbenchAvailable}
             />
@@ -1217,6 +1253,15 @@ function catalogItemID(item: ContractCatalogItem): string {
     item.method ?? '',
     item.kind,
   ].join('\u0000')
+}
+
+function catalogParams(filters: CatalogFilters): Record<string, string> {
+  const result: Record<string, string> = {}
+  if (filters.repository) result.repository = filters.repository
+  if (filters.package) result.package = filters.package
+  if (filters.protocol) result.protocol = filters.protocol
+  if (filters.lineage) result.lineage = filters.lineage
+  return result
 }
 
 function routeFilters(params: URLSearchParams): CatalogFilters {
