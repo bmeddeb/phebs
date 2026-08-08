@@ -65,6 +65,14 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
       ).toBe(false)
     }
   }
+  if (route.click) {
+    for (const selector of route.click) {
+      const target = page.locator(selector).first()
+      await expect(target, `required interaction target missing: ${selector}`).toBeVisible()
+      await target.click()
+    }
+    await waitForReceiptReady(page)
+  }
   if (route.expand) {
     await page.$$eval('main details', (nodes) => nodes.forEach((node) => { (node as HTMLDetailsElement).open = true }))
   }

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
-import { Button, KIND as BUTTON_KIND, SIZE as BUTTON_SIZE } from 'baseui/button'
 import {
   fetchCallerCitation,
   type CallerMapCitation,
   type CallerMapSource,
 } from '../api'
-import { StatusChip } from '../components/kit'
+import { CitationChip, IdentityText, StatusChip } from '../components/kit'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
@@ -15,7 +14,13 @@ import { isAbortError } from '../util'
  * Deliberately does not offer a whole-file fallback when that capability is
  * absent: an exact overlay occurrence is not generic repository-read access.
  */
-export default function ExactCallerCitation({ source }: { source: CallerMapSource }) {
+export default function ExactCallerCitation({ source, onRefreshRows }: {
+  source: CallerMapSource
+  // A caller citation token is bound to the listing that issued it; when a
+  // read fails the only honest recovery is refreshing the rows for a new
+  // token, supplied by the owning page.
+  onRefreshRows?: () => void
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [citation, setCitation] = useState<CallerMapCitation | null>(null)
@@ -65,29 +70,28 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
       <div className={css({
         display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap',
       })}>
-        <span className={css({
-          color: tok.textPrimary,
-          fontFamily: FONTS.MONO,
-          fontSize: '12px',
-          lineHeight: '18px',
-          overflowWrap: 'anywhere',
-        })}>
-          {label}
-        </span>
         {exactCapability ? (
-          <Button
-            type="button"
-            size={BUTTON_SIZE.mini}
-            kind={BUTTON_KIND.secondary}
-            aria-expanded={citation !== null}
-            disabled={loading}
-            onClick={toggleCitation}
-          >
-            {loading ? 'Reading exact citation…' : citation ? 'Hide exact citation' : 'Read exact cited bytes'}
-          </Button>
+          <CitationChip
+            path={`${source.repository}/${source.path}`}
+            span={{ start_line: source.start_line, end_line: source.end_line }}
+            expanded={citation !== null}
+            onOpen={toggleCitation}
+          />
         ) : (
-          <StatusChip tone="blue">exact citation unavailable</StatusChip>
+          <>
+            <span className={css({
+              color: tok.textPrimary,
+              fontFamily: FONTS.MONO,
+              fontSize: '12px',
+              lineHeight: '18px',
+              overflowWrap: 'anywhere',
+            })}>
+              {label}
+            </span>
+            <StatusChip tone="blue">exact citation unavailable</StatusChip>
+          </>
         )}
+        {loading && <span role="status" className={css({ color: tok.textSecondary, fontSize: '10px' })}>Reading exact citation…</span>}
       </div>
       <div className={css({
         marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '14px',
@@ -101,13 +105,15 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
           <span className={css({ color: tok.status.conflict.text, fontSize: '10px', lineHeight: '15px' })}>
             Exact citation unavailable: {error}
           </span>
-          <button
-            type="button"
-            onClick={toggleCitation}
-            className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '10px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' })}
-          >
-            Retry citation read
-          </button>
+          {onRefreshRows && (
+            <button
+              type="button"
+              onClick={onRefreshRows}
+              className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '10px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' })}
+            >
+              Refresh caller rows
+            </button>
+          )}
         </div>
       )}
       {citation && (
@@ -126,7 +132,21 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
             fontSize: '9px',
             lineHeight: '14px',
           })}>
-            Exact cited bytes · repository-overlay · object {shortID(citation.source.object_id ?? '')}
+            Exact cited bytes · repository-overlay
+          </div>
+          <div className={css({
+            padding: '6px 8px',
+            borderBottom: `1px solid ${tok.innerSep}`,
+            display: 'grid',
+            gap: '3px',
+            color: tok.textTertiary,
+            fontSize: '9px',
+            lineHeight: '14px',
+          })}>
+            <span>generation <IdentityText>{citation.generation.generation_digest}</IdentityText></span>
+            <span>object <IdentityText>{citation.source.object_id ?? ''}</IdentityText></span>
+            <span>blob <IdentityText>{citation.source.blob_digest ?? ''}</IdentityText></span>
+            <span>commit <IdentityText>{citation.source.commit}</IdentityText> · publication revision {citation.generation.publication_revision}</span>
           </div>
           <pre
             aria-label={`Exact cited bytes for ${label}`}
@@ -170,6 +190,3 @@ function exactCitationMatches(
     typeof citation.content === 'string'
 }
 
-function shortID(value: string) {
-  return value.length <= 18 ? value : `${value.slice(0, 10)}…${value.slice(-7)}`
-}

@@ -592,9 +592,18 @@ path:line label and gains a retry action on its fail-closed error. No
 file deep links are fabricated: relationship citations are
 generation-bound and carry no git ref, so span context remains the
 authorized bytes plus identity. Verified by component tests (chip
-semantics, focus/Escape/return, refresh, retry); live populated
-exercise and citation-open receipts share the repos block on host disk
-relief — receipts otherwise show zero drift.
+semantics, focus/Escape/return, refresh); review follow-up: the caller
+dialect's error action is the parent-supplied "Refresh caller rows" (a
+citation token expires with the listing that issued it — same-token
+retries are never offered), threaded through Caller Map, Comparison,
+and the Workbench caller step; the overview refresh also refetches the
+visible cursor page; the caller trigger is the same path:line–end chip
+with the full immutable authority (generation digest, object, blob,
+commit, publication revision) in its disclosure. The receipt harness
+gained a required-match click option so citation-open states are
+capturable; activating those routes and the live populated exercise
+share the repos block on host disk relief (the instance still refuses
+reconciliation at the watermark) — receipts otherwise show zero drift.
 
 **T43.8 · Scope context bar** *(needs T43.5)* — carry one exact scope
 (repository, service, generation) across search → directory → explorer →

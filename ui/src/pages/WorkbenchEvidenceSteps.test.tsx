@@ -589,12 +589,12 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
   expect(callerScope.getByText('proto/catalog.proto')).toBeTruthy()
   expect(screen.getByText(/2 candidate units/)).toBeTruthy()
   expect(screen.getByText('stale')).toBeTruthy()
-  expect(screen.getByText(`${repository}/src/callers/first.ts:42`)).toBeTruthy()
+  expect(screen.getByRole('button', { name: `${repository}/src/callers/first.ts:42\u201344` })).toBeTruthy()
   expect(screen.queryByRole('link', {
     name: /src\/callers\/first\.ts/,
   })).toBeNull()
   fireEvent.click(screen.getByRole('button', {
-    name: 'Read exact cited bytes',
+    name: `${repository}/src/callers/first.ts:42\u201344`,
   }))
   expect(await screen.findByText('client.Get(src/callers/first.ts)'))
     .toBeTruthy()
@@ -604,9 +604,9 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
   )
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-  expect(await screen.findByText(
-    `${repository}/src/callers/second.ts:42`,
-  )).toBeTruthy()
+  expect(await screen.findByRole('button', {
+    name: `${repository}/src/callers/second.ts:42\u201344`,
+  })).toBeTruthy()
   expect(screen.queryByText(
     `${repository}/src/callers/first.ts:42`,
   )).toBeNull()
@@ -703,7 +703,7 @@ test('Where renders a typed caller-generation gap without zero or classification
   expect(screen.queryByText(/0 exact matches/)).toBeNull()
   expect(screen.queryByText('resolved caller')).toBeNull()
   expect(screen.queryByRole('button', {
-    name: 'Read exact cited bytes',
+    name: /src\/callers\//,
   })).toBeNull()
 })
 
@@ -853,13 +853,11 @@ test('Where preserves comparison, field, and resource-plane source citations', a
   ]) {
     expect(screen.getByRole('link', { name: expected })).toBeTruthy()
   }
-  expect(screen.getByText(`${repository}/src/callers/current.ts:42`))
+  expect(screen.getByRole('button', { name: `${repository}/src/callers/current.ts:42\u201344` }))
     .toBeTruthy()
   expect(screen.queryByRole('link', {
     name: /src\/callers\/current\.ts/,
   })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Read exact cited bytes' }))
-    .toBeTruthy()
   expect(screen.getAllByTestId('workbench-caller-generation')).toHaveLength(2)
   expect(screen.getAllByText('5 candidates')).toHaveLength(2)
   expect(screen.getAllByText(/2\/2 settled/)).toHaveLength(2)

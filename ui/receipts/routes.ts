@@ -29,6 +29,10 @@ export interface ReceiptRoute {
   // in main. Guards transitional instance states (e.g. post-restart index
   // rebuilds) that are real but not the surface's settled truth.
   awaitAbsent?: string[]
+  // Interactions performed after readiness, before capture. Each selector
+  // MUST match — a missing element fails the capture instead of silently
+  // producing a baseline of the wrong state.
+  click?: string[]
 }
 
 const T323_REPO = 'local/Users/ben/phebs-ux/spike/t323/t323-neutral-corpus.bundle'

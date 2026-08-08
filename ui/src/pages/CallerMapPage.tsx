@@ -280,7 +280,7 @@ export default function CallerMapPage({
             onView={setView}
             onReviewUnresolved={reviewUnresolved}
           />
-          <CallerRows page={page} view={view} />
+          <CallerRows page={page} view={view} onRefreshRows={() => setReload((current) => current + 1)} />
           <Pager
             page={page}
             pageIndex={pageIndex}
@@ -764,9 +764,11 @@ function PageProgress({
 function CallerRows({
   page,
   view,
+  onRefreshRows,
 }: {
   page: CallerMapResponse
   view: 'source' | 'group'
+  onRefreshRows: () => void
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -823,6 +825,7 @@ function CallerRows({
                 expandedCandidates={expandedCandidates === rowIdentity(row)}
                 onExpandCandidates={(expanded) =>
                   setExpandedCandidates(expanded ? rowIdentity(row) : '')}
+                onRefreshRows={onRefreshRows}
               />
             ))}
           </details>
@@ -836,6 +839,7 @@ function CallerRows({
     <div className={css({ border: `1px solid ${tok.cardBorder}` })}>
       {unresolved.length > 0 && (
         <RowSection
+          onRefreshRows={onRefreshRows}
           title="Needs review"
           rows={unresolved}
           expandedCandidates={expandedCandidates}
@@ -844,6 +848,7 @@ function CallerRows({
       )}
       {resolved.length > 0 && (
         <RowSection
+          onRefreshRows={onRefreshRows}
           title="Resolved caller evidence"
           rows={resolved}
           expandedCandidates={expandedCandidates}
@@ -859,9 +864,11 @@ function RowSection({
   rows,
   expandedCandidates,
   onExpandCandidates,
+  onRefreshRows,
 }: {
   title: string
   rows: CallerMapRow[]
+  onRefreshRows: () => void
   expandedCandidates: string
   onExpandCandidates: (identity: string) => void
 }) {
@@ -890,6 +897,7 @@ function RowSection({
           expandedCandidates={expandedCandidates === rowIdentity(row)}
           onExpandCandidates={(expanded) =>
             onExpandCandidates(expanded ? rowIdentity(row) : '')}
+          onRefreshRows={onRefreshRows}
         />
       ))}
     </section>
@@ -900,10 +908,12 @@ function CallerRow({
   row,
   expandedCandidates,
   onExpandCandidates,
+  onRefreshRows,
 }: {
   row: CallerMapRow
   expandedCandidates: boolean
   onExpandCandidates: (expanded: boolean) => void
+  onRefreshRows: () => void
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -927,7 +937,7 @@ function CallerRow({
       })}
     >
       <div className={css({ minWidth: 0 })}>
-        <ExactCallerCitation source={row.source} />
+        <ExactCallerCitation source={row.source} onRefreshRows={onRefreshRows} />
         <div className={css({
           display: 'flex',
           gap: '5px',

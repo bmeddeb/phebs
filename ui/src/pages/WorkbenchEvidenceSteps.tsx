@@ -313,7 +313,7 @@ export function WorkbenchWhereStep({
             />
           )}
           <AnalysisScope scope={page.analysis_scope} />
-          <ImpactInventory page={page} />
+          <ImpactInventory page={page} onRefreshRows={() => setReload((current) => current + 1)} />
           <PageControls
             label="impact evidence"
             pageIndex={pageIndex}
@@ -933,7 +933,7 @@ function validateServiceImpact(
   return ''
 }
 
-function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
+function ImpactInventory({ page, onRefreshRows }: { page: WorkbenchImpactPage; onRefreshRows: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   // Caller cards reuse the shared scope panel, whose glossary help derives
@@ -1054,6 +1054,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
             <>
               {caller.resolved_callers.map((row, rowIndex) => (
                 <CallerEvidenceRow
+                  onRefreshRows={onRefreshRows}
                   key={`resolved:${row.source.assertion_id}:${rowIndex}`}
                   row={row}
                   label="resolved caller"
@@ -1061,6 +1062,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               ))}
               {caller.extractor_abstentions.map((row, rowIndex) => (
                 <CallerEvidenceRow
+                  onRefreshRows={onRefreshRows}
                   key={`abstention:${row.source.assertion_id}:${rowIndex}`}
                   row={row}
                   label="extractor abstention"
@@ -1135,6 +1137,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               </div>
               {row.old.rows.map((source, index) => (
                 <CallerEvidenceRow
+                  onRefreshRows={onRefreshRows}
                   key={`current:${source.source.assertion_id}:${index}`}
                   row={source}
                   label="current endpoint caller"
@@ -1148,6 +1151,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               )}
               {row.replacement.rows.map((source, index) => (
                 <CallerEvidenceRow
+                  onRefreshRows={onRefreshRows}
                   key={`replacement:${source.source.assertion_id}:${index}`}
                   row={source}
                   label="replacement endpoint caller"
@@ -1988,16 +1992,18 @@ function ClaimEvidenceRow({
 function CallerEvidenceRow({
   row,
   label,
+  onRefreshRows,
 }: {
   row: WorkbenchImpactPage['callers'][number]['resolved_callers'][number]
   label: string
+  onRefreshRows: () => void
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const candidates = row.unit.candidates ?? []
   return (
     <div className={css(evidenceRowStyle(tok))}>
-      <ExactCallerCitation source={row.source} />
+      <ExactCallerCitation source={row.source} onRefreshRows={onRefreshRows} />
       <div className={css({ minWidth: 0 })}>
         <div className={css({
           display: 'flex',

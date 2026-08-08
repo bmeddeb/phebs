@@ -469,7 +469,7 @@ function ComparisonResults({
       {!loading && page && (
         <>
           <ComparisonProgress page={page} pageIndex={pageIndex} />
-          <ComparisonRows page={page} />
+          <ComparisonRows page={page} onRefreshRows={() => setReload((current) => current + 1)} />
           {page.matching_rows_state !== 'unavailable' && (
             <Pager
               pageIndex={pageIndex}
@@ -618,7 +618,7 @@ function ComparisonProgress({ page, pageIndex }: { page: ComparisonResponse; pag
   )
 }
 
-function ComparisonRows({ page }: { page: ComparisonResponse }) {
+function ComparisonRows({ page, onRefreshRows }: { page: ComparisonResponse; onRefreshRows: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const rows = page.rows
@@ -688,8 +688,8 @@ function ComparisonRows({ page }: { page: ComparisonResponse }) {
             marginTop: '9px',
             '@media screen and (max-width: 680px)': { gridTemplateColumns: '1fr' },
           })}>
-            <ComparisonSide label="Old evidence" side={row.old} />
-            <ComparisonSide label="Replacement evidence" side={row.replacement} />
+            <ComparisonSide label="Old evidence" side={row.old} onRefreshRows={onRefreshRows} />
+            <ComparisonSide label="Replacement evidence" side={row.replacement} onRefreshRows={onRefreshRows} />
           </div>
         </article>
       ))}
@@ -697,7 +697,7 @@ function ComparisonRows({ page }: { page: ComparisonResponse }) {
   )
 }
 
-function ComparisonSide({ label, side }: { label: string; side: CallerComparisonSide }) {
+function ComparisonSide({ label, side, onRefreshRows }: { label: string; side: CallerComparisonSide; onRefreshRows: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
@@ -715,7 +715,7 @@ function ComparisonSide({ label, side }: { label: string; side: CallerComparison
         </div>
       ) : side.rows.map((row) => (
         <div key={rowIdentity(row)} className={css({ marginTop: '6px' })}>
-          <ExactCallerCitation source={row.source} />
+          <ExactCallerCitation source={row.source} onRefreshRows={onRefreshRows} />
         </div>
       ))}
       {side.rows_truncated && (

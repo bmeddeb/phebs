@@ -140,7 +140,7 @@ export default function ServiceOverview({
         }
       })
     return () => controller.abort()
-  }, [activeView, cursor, detail, relationshipsAvailable])
+  }, [activeView, cursor, detail, relationshipsAvailable, reloadGeneration])
 
   useEffect(() => () => citationController.current?.abort(), [])
 

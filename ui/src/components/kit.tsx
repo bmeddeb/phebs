@@ -195,11 +195,13 @@ export function CaveatCollapse({ summary, children }: { summary: ReactNode; chil
  * The citation object's trigger (charter §3: a citation renders as
  * path:line). The chip is the citation's identity, not a generic button.
  */
-export function CitationChip({ path, span, onOpen, title }: {
+export function CitationChip({ path, span, onOpen, title, expanded }: {
   path: string
   span: { start_line: number; end_line: number }
   onOpen: () => void
   title?: string
+  // For inline-toggle disclosures: renders aria-expanded when defined.
+  expanded?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -210,6 +212,7 @@ export function CitationChip({ path, span, onOpen, title }: {
     <button
       type="button"
       aria-haspopup="dialog"
+      aria-expanded={expanded}
       title={title ?? label}
       onClick={onOpen}
       className={css({

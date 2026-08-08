@@ -397,7 +397,7 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   const scopeDetail = screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement
   expect(scopeDetail.open).toBe(false)
   fireEvent.click(screen.getByText('Coverage certificate'))
-  const sourceScope = screen.getByRole('button', { name: new RegExp(sourceRepo) })
+  const sourceScope = screen.getByRole('button', { name: new RegExp(`${sourceRepo} whole-repository scope`) })
   fireEvent.click(sourceScope)
   const sourceScopeID = sourceScope.getAttribute('aria-controls')
   expect(sourceScopeID).not.toBeNull()
@@ -465,7 +465,7 @@ test('refuses a citation response that differs from the selected exact occurrenc
   } satisfies CallerMapCitation)
   renderPage()
   await screen.findByText('Rows 1–3 of 3')
-  fireEvent.click(screen.getAllByRole('button', { name: 'Read exact cited bytes' })[0])
+  fireEvent.click(screen.getByRole('button', { name: `${sourceRepo}/src/caller_1.go:2` }))
 
   // The alert also carries the fail-closed retry action (T43.7).
   expect((await screen.findByRole('alert')).textContent).toContain(
