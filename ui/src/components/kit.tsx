@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
-import { FONTS, NUMERIC, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
+import { FONTS, MOTION, NUMERIC, REDUCED_MOTION, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
 // keep choosing the tone word, the kit owns the anatomy. Status colors always
@@ -186,7 +186,22 @@ export function CaveatCollapse({ summary, children }: { summary: ReactNode; chil
   return (
     <details className={css({ minWidth: 0 })}>
       <summary className={css({ color: tok.textSecondary, fontSize: '11px', lineHeight: '17px', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>{summary}</summary>
-      <div className={css({ marginTop: '6px', color: tok.textSecondary, fontSize: '11px', lineHeight: '17px' })}>{children}</div>
+      <div
+        className={css({
+          marginTop: '6px',
+          color: tok.textSecondary,
+          fontSize: '11px',
+          lineHeight: '17px',
+          // T43.12: disclosure is a state transition — the body fades in on
+          // each open (the display toggle restarts the animation).
+          animationName: { from: { opacity: 0 }, to: { opacity: 1 } },
+          animationDuration: MOTION.element,
+          animationTimingFunction: MOTION.easeOut,
+          [REDUCED_MOTION]: { animationName: 'none' },
+        })}
+      >
+        {children}
+      </div>
     </details>
   )
 }
@@ -306,7 +321,20 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose()
       }}
-      className={css({ marginTop: '10px', border: `1px solid ${tok.cardBorder}`, padding: '14px', backgroundColor: tok.bandBg, ':focus-visible': focusRing(tok) })}
+      className={css({
+        marginTop: '10px',
+        border: `1px solid ${tok.cardBorder}`,
+        padding: '14px',
+        backgroundColor: tok.bandBg,
+        // T43.12: the chip → panel state transition gets the one panel
+        // entrance (charter §3) — the evidence surface arrives, it does
+        // not teleport.
+        animationName: { from: { opacity: 0, transform: 'translateY(9px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        animationDuration: MOTION.panel,
+        animationTimingFunction: MOTION.easeOut,
+        [REDUCED_MOTION]: { animationName: 'none' },
+        ':focus-visible': focusRing(tok),
+      })}
     >
       <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
         <div>

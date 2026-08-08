@@ -3,7 +3,7 @@ import { useStyletron } from 'baseui'
 import { Drawer } from 'baseui/drawer'
 import type { SearchScopeReceipt } from '../api'
 import { CheckIcon, CopyIcon } from '../icons'
-import { FONTS, MOTION, NUMERIC, focusRing, statusToneFor, usePhebsTokens, type PhebsTokens } from '../theme'
+import { FONTS, MOTION, NUMERIC, REDUCED_MOTION, focusRing, statusToneFor, usePhebsTokens, type PhebsTokens } from '../theme'
 import { IdentityText, StatusWord } from './kit'
 
 // T43.5 chip → drawer → receipt (charter §3 Disclosure). The chip is the
@@ -90,7 +90,7 @@ export function AuthorityDrawer({ receipt, citations = [], open, onClose }: {
           style: {
             transitionDuration: MOTION.panel,
             backgroundColor: tok.pageBg,
-            '@media (prefers-reduced-motion: reduce)': { transitionDuration: '0ms' },
+            [REDUCED_MOTION]: { transitionDuration: '0ms' },
           },
         },
         DrawerBody: { style: { marginTop: '52px', marginBottom: '20px', marginLeft: '20px', marginRight: '20px' } },

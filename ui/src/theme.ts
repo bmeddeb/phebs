@@ -57,6 +57,9 @@ export const MOTION = {
   pulse: '1.4s',
   easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
   ease: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  // For indicator loops only: a continuous sweep must not throb, so its
+  // easing is constant. Transitions never use it.
+  linear: 'linear',
 } as const
 export const REDUCED_MOTION = '@media (prefers-reduced-motion: reduce)'
 

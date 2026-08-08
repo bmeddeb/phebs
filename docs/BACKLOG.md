@@ -768,6 +768,25 @@ reduced-motion path verified; a final charter-review sweep across every
 surface records zero open blocker findings; the closure retains refreshed
 screenshot receipts and a source-free record binding the T43.1 ledger to
 its resolutions; no claim beyond presentation mechanics.
+*Shipped 2026-08-08 — epic closed.* Motion: the sweep justified exactly
+two additions — the citation panel entrance (chip → panel arrives on the
+260ms panel token) and the caveat disclosure body fade (160ms element
+token) — and rejected the rest by name (keyboard-frequency surfaces,
+detail swaps, trust surfaces, density flips stay instant, recorded as
+correct). The drawer's literal reduced-motion query became the token,
+and the vocabulary closed over its last gap (`MOTION.linear`, indicator
+loops only). The contract is now source-verified by `ui/src/motion.test.ts`:
+every animating file carries a reduced-motion path, no literal durations
+beyond reduced `0ms`, every easing a token. Closure record:
+`spike/t431/CLOSURE.md` binds all 38 T43.1 findings to their
+resolutions — 36 resolved, F14 partial (the sub-11px evidence-metadata
+dialect awaits a floor-vs-exception adjudication), F34 open minor
+(commit-diff density), plus three sweep observations (native confirm,
+two raw-error pages, single-surface SectionHelp) — zero blockers open.
+Re-critique with the T43.1 instrument: 36/40 against the 23/40
+baseline. Receipts stand at the full 117-capture matrix, both themes
+and densities, verified green after the motion pass; presentation
+mechanics only.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 

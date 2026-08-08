@@ -448,7 +448,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               backgroundRepeat: 'no-repeat',
               animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
               animationDuration: MOTION.pulse,
-              animationTimingFunction: 'linear',
+              animationTimingFunction: MOTION.linear,
               animationIterationCount: 'infinite',
               [REDUCED_MOTION]: { animationName: 'none', backgroundColor: tok.accent, backgroundImage: 'none' },
             })}
