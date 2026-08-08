@@ -34,6 +34,7 @@ type proofAPIStore struct {
 	calls         []string
 	onAssertions  func(store.AssertionQuery)
 	onListRepos   func()
+	onGetRepo     func(string)
 	onLatestRun   func(store.ExtractionScope)
 	onPut         func(store.ProofBundleRecord)
 	putConflicts  int
@@ -62,6 +63,9 @@ func (s *proofAPIStore) ListRepos(context.Context) ([]store.Repo, error) {
 
 func (s *proofAPIStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
 	s.calls = append(s.calls, "repo:"+name)
+	if s.onGetRepo != nil {
+		s.onGetRepo(name)
+	}
 	for _, repo := range s.repos {
 		if repo.Name == name {
 			copyOfRepo := repo

@@ -339,9 +339,12 @@ export interface ServiceRelationshipRootReceipt {
   repository: string
   state: 'complete' | 'empty' | 'failed' | 'unavailable'
   reason?: string
+  root_schema?: 'phebs-relationship-root-v1' | 'phebs-relationship-root-v2'
   generation?: string
   root_digest?: string
   authority_digest?: string
+  authority?: ServiceRelationshipAuthority
+  unavailable?: ServiceRelationshipUnavailableAuthority
   service_key: string
   service_incarnation?: number
   service_generation?: string
@@ -349,6 +352,60 @@ export interface ServiceRelationshipRootReceipt {
   repository_complete?: boolean
   all_services_complete?: boolean
   failed_service_count?: number
+}
+
+export interface ServiceRelationshipAuthority {
+  repository: string
+  catalog_generation_digest: string
+  catalog_digest: string
+  catalog_source_generation: string
+  service_state_set_digest: string
+  service_state_summary_digest?: string
+  service_state_control_revision?: number
+  observation_generation_digest: string
+  observation_manifest_digest: string
+  observation_source_digest: string
+  resolver_generation_digest: string
+  resolver_root_digest: string
+  rpc_generation_digest: string
+  rpc_root_digest: string
+  kafka_generation_digest: string
+  kafka_root_digest: string
+  policy_digest: string
+  upstream?: ServiceRelationshipUpstreamAuthority
+}
+
+export interface ServiceRelationshipUpstreamAuthority {
+  schema: string
+  repository: string
+  observation: {
+    version: string
+    repository: string
+    source_generation_digest: string
+    source_root_digest: string
+    observation_generation_digest: string
+    observation_root_digest: string
+    partition_policy_digest: string
+    observation_policy_digest: string
+    inventory_policy_digest?: string
+    record_count: number
+    observed_count: number
+  }
+  required_domain_count: number
+  published_domain_count: number
+  gaps: Array<{
+    domain: string
+    version: string
+    disposition: string
+  }>
+  digest: string
+}
+
+export interface ServiceRelationshipUnavailableAuthority {
+  schema: string
+  reason: string
+  digest: string
+  upstream: ServiceRelationshipUpstreamAuthority
 }
 
 export interface ServiceRelationshipPage {
@@ -386,8 +443,10 @@ export interface ServiceRelationshipPage {
 export interface ServiceRelationshipCitation {
   schema: string
   repository: string
+  root_schema: 'phebs-relationship-root-v1' | 'phebs-relationship-root-v2'
   generation: string
   root_digest: string
+  authority_digest: string
   projection: {
     kind: string
     posting_digest: string

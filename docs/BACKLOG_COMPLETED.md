@@ -9575,3 +9575,39 @@ and owns authorized product-consumer replay. T40.11 changes no service cap,
 topology, supported-scale/SLO, accuracy/completeness, freshness,
 migration/decommission, pilot, release, or private-rerun claim;
 `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
+
+**T40.12 ✅ · Authorized and product-consumer compatibility replay**
+*(2026-08-08; needs T40.11)* — keeps relationship page, snapshot, comparison,
+proof/Workbench, citation, HTTP, and MCP schemas additive while exposing the
+selected v1/v2 root schema and exact authority digest. V2 receipts project the
+complete source-free observation identity, required/published domain counts,
+and every non-success domain/version/disposition; the upstream digest remains
+the compact commitment to the complete plan/root/run and lower-level policy,
+candidate, index, and schedule authority. Retained v1 roots keep their original
+bytes and remain readable with no invented upstream.
+
+Current and unavailable controls are selected and confirmed with stable
+current-then-unavailable double reads. An exact unavailable marker is returned
+as a non-authority instead of generic absence, and a final result fence refuses
+publication movement. Signed citation tokens carry the bounded repository key;
+authorization completes before binding-cache, control, or filesystem access,
+then the cached repository and immutable root are cross-checked. Compact
+maximum-shape receipts at 32 repositories and 64 domains remain below half of
+the existing 2 MiB response envelope even at declared identity maxima.
+
+The explicitly routed presentation handoff teaches the shared directory and
+explorer validator to require recognized v1/v2 root schemas and exact root and
+authority digests. V2 receipts must carry the complete observation/gap seam;
+unavailable markers retain their own exact upstream identity. Citation content
+is shown only when repository, root schema, generation, root digest, authority
+digest, projection, posting, evidence identity, and span all reproduce the
+selected row. Valid v2, retained v1, missing-seam, and tampered citation cases
+are covered by the product tests.
+
+Request work remains one small root plus only selected service/evidence members
+with no source-observation or extraction-generation scan. UI validation is
+constant per returned root/citation and adds no read. T40.12 changes no query
+shape, service cap, topology, supported-scale/SLO, accuracy/completeness,
+freshness, migration/decommission, pilot, release, or private-rerun claim;
+`GATE2-V2` remains `NOT_ESTABLISHED`, `DO_NOT_RELEASE` remains in force, and
+T40.13 is next.

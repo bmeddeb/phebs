@@ -270,7 +270,7 @@ test('links exact relationship counts to fenced rows and reads immutable citatio
   fireEvent.click(screen.getByRole('button', { name: 'Close citation' }))
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce({
     ...relationshipCitation(),
-    root_digest: `sha256:${'9'.repeat(64)}`,
+    root_schema: 'phebs-relationship-root-v2',
     content: 'forged content',
   })
   fireEvent.click(screen.getAllByRole('button', { name: /services\/orders\/client-\d\.go:4/ })[1])
@@ -480,6 +480,7 @@ function relationshipPage(view: ServiceRelationshipView): ServiceRelationshipPag
     roots: [{
       repository: repositoryName,
       state: 'complete',
+      root_schema: 'phebs-relationship-root-v1',
       generation: `sha256:${'4'.repeat(64)}`,
       root_digest: `sha256:${'5'.repeat(64)}`,
       authority_digest: `sha256:${'6'.repeat(64)}`,
@@ -571,8 +572,10 @@ function relationshipCitation(): ServiceRelationshipCitation {
   return {
     schema: 'phebs-service-relationship-citation-v1',
     repository: repositoryName,
+    root_schema: 'phebs-relationship-root-v1',
     generation: `sha256:${'4'.repeat(64)}`,
     root_digest: `sha256:${'5'.repeat(64)}`,
+    authority_digest: `sha256:${'6'.repeat(64)}`,
     projection: {
       kind: row.kind,
       posting_digest: row.posting_digest,

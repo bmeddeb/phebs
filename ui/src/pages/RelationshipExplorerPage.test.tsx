@@ -111,7 +111,7 @@ test('reauthorizes and validates an immutable citation before showing source con
 
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce({
     ...relationshipCitation(page.rows[1]),
-    generation: `sha256:${'9'.repeat(64)}`,
+    authority_digest: `sha256:${'9'.repeat(64)}`,
     content: 'forged source',
   })
   renderPage(new URLSearchParams({ service_key: 'orders-api', sel_repo: page.rows[1].repository, sel_row: page.rows[1].projection_digest }))
@@ -177,6 +177,13 @@ test('refuses malformed response authority and keeps a root gap distinct from ex
   expect(await screen.findByText(/query authority differs/)).toBeTruthy()
   malformed.unmount()
 
+  const missingGenerationSeam = relationshipPage(defaultRequest())
+  missingGenerationSeam.roots[0] = { ...missingGenerationSeam.roots[0], root_schema: undefined }
+  api.fetchServiceRelationships.mockResolvedValueOnce(missingGenerationSeam)
+  const missing = renderPage(new URLSearchParams({ service_key: 'orders-api' }))
+  expect(await screen.findByText(/roots differ from the authorized repository set/)).toBeTruthy()
+  missing.unmount()
+
   const gap = relationshipPage(defaultRequest())
   gap.rows = []
   gap.rows_state = 'gap'
@@ -241,8 +248,11 @@ function relationshipPage(request: RequestValues): ServiceRelationshipPage {
       repository,
       state: index === 0 ? 'complete' : 'unavailable',
       reason: index === 0 ? undefined : 'publication_missing',
+      root_schema: index === 0 ? 'phebs-relationship-root-v2' : 'phebs-relationship-root-v1',
       generation: `sha256:${'4'.repeat(64)}`,
       root_digest: `sha256:${'5'.repeat(64)}`,
+      authority_digest: `sha256:${'6'.repeat(64)}`,
+      authority: index === 0 ? relationshipAuthority(repository) : undefined,
       service_key: request.service_key,
       service_incarnation: 2,
       service_generation: `sha256:${'c'.repeat(64)}`,
@@ -315,12 +325,58 @@ function relationshipRow(repository: string, index: number, request: RequestValu
   }
 }
 
+function relationshipAuthority(repository: string): NonNullable<ServiceRelationshipPage['roots'][number]['authority']> {
+  const digest = (marker: string) => `sha256:${marker.repeat(64)}`
+  return {
+    repository,
+    catalog_generation_digest: digest('1'),
+    catalog_digest: digest('2'),
+    catalog_source_generation: digest('3'),
+    service_state_set_digest: digest('4'),
+    service_state_summary_digest: digest('5'),
+    service_state_control_revision: 7,
+    observation_generation_digest: digest('6'),
+    observation_manifest_digest: digest('7'),
+    observation_source_digest: digest('8'),
+    resolver_generation_digest: digest('9'),
+    resolver_root_digest: digest('a'),
+    rpc_generation_digest: digest('b'),
+    rpc_root_digest: digest('c'),
+    kafka_generation_digest: digest('d'),
+    kafka_root_digest: digest('e'),
+    policy_digest: digest('f'),
+    upstream: {
+      schema: 'phebs-downstream-upstream-authority-v1',
+      repository,
+      observation: {
+        version: 'v2',
+        repository,
+        source_generation_digest: digest('1'),
+        source_root_digest: digest('2'),
+        observation_generation_digest: digest('3'),
+        observation_root_digest: digest('4'),
+        partition_policy_digest: digest('5'),
+        observation_policy_digest: digest('6'),
+        inventory_policy_digest: digest('7'),
+        record_count: 2,
+        observed_count: 2,
+      },
+      required_domain_count: 2,
+      published_domain_count: 1,
+      gaps: [{ domain: 'scip', version: 'v1', disposition: 'unavailable_prerequisite' }],
+      digest: digest('8'),
+    },
+  }
+}
+
 function relationshipCitation(row: ServiceRelationshipPage['rows'][number]): ServiceRelationshipCitation {
   return {
     schema: 'phebs-service-relationship-citation-v1',
     repository: row.repository,
+    root_schema: 'phebs-relationship-root-v2',
     generation: `sha256:${'4'.repeat(64)}`,
     root_digest: `sha256:${'5'.repeat(64)}`,
+    authority_digest: `sha256:${'6'.repeat(64)}`,
     projection: {
       kind: row.kind,
       posting_digest: row.posting_digest,

@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.11 are complete and T40.12 is next,
+explicit scale-convergence program: T40.1–T40.12 are complete and T40.13 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.11 complete · T40.12 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.12 complete · T40.13 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,16 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.12 · Authorized and product-consumer compatibility replay** — migrate or
-adapt exact relationship readers, comparison, proof, Workbench, HTTP, MCP, and
-UI only where their generation seams changed, then replay their existing
-acceptance gates. AC: authorization precedes identity/control/filesystem work;
-root, cursor, citation, revision, and concurrent-publication fences remain
-exact; sparse point/page reads do not reopen a complete observation/extraction
-generation; partial/failed/unsupported states remain visible rather than
-empty; v1/v2 retained evidence and proof bytes remain readable; this ticket
-adds no new product claim or query shape; full API/MCP/UI and merge bars.
 
 **T40.13 · Neutral two-million-owner convergence gate** — run the frozen T40.1
 profiles through ordinary sync/index, candidate, observation, extraction,

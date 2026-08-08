@@ -116,8 +116,9 @@ lifecycle/archive recovery, and T40.7 installed constant-cost evidence-stage
 accounting, T40.8 installed sparse candidate/partition controls, and T40.9
 closed bounded nonproduct partition results and atomic domain roots on
 2026-08-07, T40.10 installed partitioned extraction and atomic domain
-authority, and T40.11 migrated downstream generations plus their recovery,
-archive, rollback, pin, and lifecycle ownership. T40.12 is next. Epic 41 separately targets 10,000
+authority, T40.11 migrated downstream generations plus their recovery,
+archive, rollback, pin, and lifecycle ownership, and T40.12 replayed authorized
+product consumers across retained v1 and current v2 roots. T40.13 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -129,7 +130,7 @@ continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, five residue items queued as T43R.1–5. It
-touched no scale plane, authority, or claim; T40.12 remains the next scale
+touched no scale plane, authority, or claim; T40.13 remains the next scale
 ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
@@ -685,14 +686,14 @@ service count × repository bytes
 ### Program sequence
 
 - **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.10 complete, T40.11 next):** exact source-free refusal attribution,
+  T40.1–T40.12 complete, T40.13 next):** exact source-free refusal attribution,
   the frozen neutral envelope, independent generation-scoped planning,
   hierarchical source/observation roots, immutable search lifecycle, joint
   observation recovery/archive ownership, chunk-proportional evidence append,
   sparse candidate/partition controls, and bounded pure partition-result/domain
-  roots and partitioned extraction behind atomic domain authority are complete.
-  Next preserve recovery/lifecycle/archive behavior, replay
-  downstream consumers, and close on a neutral two-million-owner gate.
+  roots, partitioned extraction behind atomic domain authority, and downstream
+  recovery/lifecycle/archive ownership and authorized product-consumer replay
+  are complete. Next close on a neutral two-million-owner gate.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
   freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
   a v3 root with dual service/path member views, publish immutable precious
@@ -723,7 +724,7 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.11 is the only next scale ticket. Later tickets stay dependency-ordered
+- T40.13 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and

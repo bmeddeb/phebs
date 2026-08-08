@@ -854,6 +854,30 @@ func TestUnavailableAuthorityRetiresFallbackAndIsVisiblyOmitted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	selected, present, err := ReadUnavailable(t.Context(), root, catalog.Repository)
+	if err != nil || !present || selected.Digest != unavailable.Digest {
+		t.Fatalf("selected unavailable authority = %+v, %t, %v", selected, present, err)
+	}
+	if err := ConfirmUnavailable(t.Context(), root, catalog.Repository, &selected); err != nil {
+		t.Fatalf("confirm unavailable authority: %v", err)
+	}
+	if err := ConfirmUnavailable(t.Context(), root, catalog.Repository, nil); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("absent fence accepted unavailable marker: %v", err)
+	}
+	if err := replaceFile(
+		filepath.Join(repositoryRoot(root, catalog.Repository), "current.json"), publication.pointerRaw,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenCurrent(t.Context(), root, catalog.Repository); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("coexisting unavailable marker exposed stale current: %v", err)
+	}
+	if err := publication.ConfirmCurrent(); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("current fence accepted coexisting unavailable marker: %v", err)
+	}
+	if err := os.Remove(filepath.Join(repositoryRoot(root, catalog.Repository), "current.json")); err != nil {
+		t.Fatal(err)
+	}
 	if unavailable.Prior == nil || unavailable.Prior.GenerationDigest != publication.Root().GenerationDigest {
 		t.Fatalf("unavailable rollback floor = %+v", unavailable.Prior)
 	}
@@ -934,6 +958,22 @@ func TestRecoverAllRepinsOnlyValidatedV2RelationshipRoots(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	legacyResolver := fakeResolver{root: resolverRoot(t, repository)}
+	legacyRPC := fakeRPC{}
+	legacyRPC.root = rpcRoot(t, repository, legacyResolver.root, nil)
+	legacyKafka := fakeKafka{}
+	legacyKafka.root = kafkaRoot(t, repository, legacyRPC.root.Authority, nil)
+	legacyStage, err := buildSources(
+		t.Context(), filepath.Join(dataDir, "relationships"), catalog, states,
+		legacyResolver, legacyRPC, legacyKafka,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := legacyStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
 	resolverStage, err := resolvernamespace.BuildV2(t.Context(), resolvernamespace.BuildRequestV2{
 		BuildRequest: resolvernamespace.BuildRequest{
 			Root: filepath.Join(dataDir, "relationship-resolver-namespaces"), Repository: repository,
@@ -986,6 +1026,18 @@ func TestRecoverAllRepinsOnlyValidatedV2RelationshipRoots(t *testing.T) {
 	publication, err := stage.Publish(t.Context())
 	if err != nil {
 		t.Fatal(err)
+	}
+	cache := &Cache{}
+	for _, expected := range []*Publication{legacy, publication} {
+		rootValue := expected.Root()
+		lease, acquireErr := cache.AcquireGeneration(
+			t.Context(), filepath.Join(dataDir, "relationships"), repository,
+			rootValue.GenerationDigest, rootValue.Digest,
+		)
+		if acquireErr != nil || lease.Publication().Root().Schema != rootValue.Schema {
+			t.Fatalf("retained %s generation read = %v", rootValue.Schema, acquireErr)
+		}
+		lease.Release()
 	}
 	if !matchesCurrentV2Authority(publication.Root(), upstream, summary, resolver.Root().GenerationDigest) {
 		t.Fatal("exact point controls did not recognize the current v2 relationship root")

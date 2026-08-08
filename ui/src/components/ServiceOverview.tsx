@@ -12,7 +12,7 @@ import {
 } from '../api'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
 import { CitationChip, CitationPanel, StatusChip } from './kit'
-import { validateServiceRelationshipCitation } from './serviceRelationshipCitation'
+import { validateServiceRelationshipCitation, validateServiceRelationshipRoot } from './serviceRelationshipCitation'
 import { RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { isAbortError } from '../util'
 import { href } from '../router'
@@ -472,6 +472,8 @@ function validateRelationshipPage(
     return 'relationship response count or page bound is invalid'
   }
   const root = page.roots[0]
+  const rootError = validateServiceRelationshipRoot(root)
+  if (rootError) return rootError
   if (page.rows.some((row) => row.repository !== repository || row.service_key !== detail.service.key ||
       row.service_incarnation !== root.service_incarnation || row.service_generation !== root.service_generation ||
       !row.citation)) {

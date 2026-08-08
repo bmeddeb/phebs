@@ -356,17 +356,12 @@ func OpenCurrent(ctx context.Context, root, repository string) (*Publication, er
 		return nil, err
 	}
 	base := repositoryRoot(root, repository)
-	if _, unavailable, err := readUnavailable(root, repository); err != nil {
-		return nil, err
-	} else if unavailable {
-		return nil, ErrNotFound
-	}
-	raw, err := readRegular(filepath.Join(base, "current.json"), MaxRootBytes)
+	raw, current, _, unavailable, err := readRelationshipControls(root, repository)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, ErrNotFound
-		}
 		return nil, err
+	}
+	if unavailable || !current {
+		return nil, ErrNotFound
 	}
 	var pointer Pointer
 	if err := decodeExact(raw, MaxRootBytes, &pointer); err != nil || validatePointer(pointer) != nil ||
@@ -566,8 +561,10 @@ func (publication *Publication) ConfirmCurrent() error {
 	if publication == nil || len(publication.pointerRaw) == 0 || publication.base == "" {
 		return fmt.Errorf("%w: current publication fence", ErrInvalid)
 	}
-	current, err := readRegular(filepath.Join(publication.base, "current.json"), MaxRootBytes)
-	if err != nil || !slices.Equal(current, publication.pointerRaw) {
+	root := filepath.Dir(filepath.Dir(publication.base))
+	repository := publication.rootValue.Authority.Repository
+	current, present, _, unavailable, err := readRelationshipControls(root, repository)
+	if err != nil || unavailable || !present || !slices.Equal(current, publication.pointerRaw) {
 		return ErrPublishing
 	}
 	return nil

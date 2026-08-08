@@ -1,12 +1,14 @@
 package relationshippublication
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 )
 
@@ -80,18 +82,121 @@ func MarkUnavailable(
 }
 
 func readUnavailable(root, repository string) (Unavailable, bool, error) {
-	raw, err := readRegular(filepath.Join(repositoryRoot(root, repository), UnavailableName), MaxRootBytes)
-	if errors.Is(err, os.ErrNotExist) {
-		return Unavailable{}, false, nil
-	}
+	raw, present, err := readOptionalControl(
+		filepath.Join(repositoryRoot(root, repository), UnavailableName),
+	)
 	if err != nil {
 		return Unavailable{}, false, err
 	}
+	if !present {
+		return Unavailable{}, false, nil
+	}
+	value, err := decodeUnavailableControl(raw, repository)
+	return value, true, err
+}
+
+func decodeUnavailableControl(raw []byte, repository string) (Unavailable, error) {
 	var value Unavailable
 	if decodeExact(raw, MaxRootBytes, &value) != nil || validateUnavailable(value, repository) != nil {
-		return Unavailable{}, false, ErrInvalid
+		return Unavailable{}, ErrInvalid
+	}
+	return value, nil
+}
+
+func readOptionalControl(path string) ([]byte, bool, error) {
+	raw, err := readRegular(path, MaxRootBytes)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, false, nil
+	}
+	return raw, err == nil, err
+}
+
+// readRelationshipControls returns one stable current/unavailable control
+// snapshot. Both files are read in current-then-unavailable order twice, so a
+// transition that installs or removes either control cannot be mistaken for
+// the prior state. Identical A->B->A bytes remain the same exact authority.
+func readRelationshipControls(
+	root, repository string,
+) ([]byte, bool, Unavailable, bool, error) {
+	base := repositoryRoot(root, repository)
+	currentPath := filepath.Join(base, "current.json")
+	unavailablePath := filepath.Join(base, UnavailableName)
+	currentOne, currentOnePresent, err := readOptionalControl(currentPath)
+	if err != nil {
+		return nil, false, Unavailable{}, false, err
+	}
+	unavailableOne, unavailableOnePresent, err := readOptionalControl(unavailablePath)
+	if err != nil {
+		return nil, false, Unavailable{}, false, err
+	}
+	currentTwo, currentTwoPresent, err := readOptionalControl(currentPath)
+	if err != nil {
+		return nil, false, Unavailable{}, false, err
+	}
+	unavailableTwo, unavailableTwoPresent, err := readOptionalControl(unavailablePath)
+	if err != nil {
+		return nil, false, Unavailable{}, false, err
+	}
+	if currentOnePresent != currentTwoPresent || unavailableOnePresent != unavailableTwoPresent ||
+		!bytes.Equal(currentOne, currentTwo) || !bytes.Equal(unavailableOne, unavailableTwo) {
+		return nil, false, Unavailable{}, false, ErrPublishing
+	}
+	if !unavailableTwoPresent {
+		return currentTwo, currentTwoPresent, Unavailable{}, false, nil
+	}
+	unavailable, err := decodeUnavailableControl(unavailableTwo, repository)
+	if err != nil {
+		return nil, false, Unavailable{}, false, err
+	}
+	return currentTwo, currentTwoPresent, unavailable, true, nil
+}
+
+// ReadUnavailable returns the exact source-free unavailable marker selected by
+// a product reader after repository authorization. The result is safe for
+// projection into a receipt and contains no member, observation, extraction,
+// repository, or Git content reads.
+func ReadUnavailable(
+	ctx context.Context, root, repository string,
+) (Unavailable, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return Unavailable{}, false, err
+	}
+	value, present, err := readUnavailable(root, repository)
+	if err != nil || !present {
+		return value, present, err
+	}
+	value.Upstream.Required = append([]downstreamauthority.DomainIdentity(nil), value.Upstream.Required...)
+	value.Upstream.Domains = append([]candidate.DownstreamDomainAuthority(nil), value.Upstream.Domains...)
+	if value.Prior != nil {
+		prior := *value.Prior
+		value.Prior = &prior
 	}
 	return value, true, nil
+}
+
+// ConfirmUnavailable is the result-time fence for a current-reader gap. A nil
+// expected marker proves that the repository remains truly absent; a non-nil
+// marker proves the exact unavailable authority and digest remain selected.
+func ConfirmUnavailable(
+	ctx context.Context, root, repository string, expected *Unavailable,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	_, currentPresent, current, present, err := readRelationshipControls(root, repository)
+	if err != nil {
+		return err
+	}
+	if expected == nil {
+		if present || currentPresent {
+			return ErrPublishing
+		}
+		return nil
+	}
+	if !present || current.Digest != expected.Digest {
+		return ErrPublishing
+	}
+	return nil
 }
 
 func validateUnavailable(value Unavailable, repository string) error {

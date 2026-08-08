@@ -22,6 +22,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -73,38 +74,84 @@ type RelationshipComparisonQuery struct {
 }
 
 type RelationshipRootReceipt struct {
-	Repository          string                 `json:"repository"`
-	State               string                 `json:"state"` // complete | empty | failed | unavailable
-	Reason              string                 `json:"reason,omitempty"`
-	Generation          string                 `json:"generation,omitempty"`
-	RootDigest          string                 `json:"root_digest,omitempty"`
-	AuthorityDigest     string                 `json:"authority_digest,omitempty"`
-	Authority           *RelationshipAuthority `json:"authority,omitempty"`
-	ServiceKey          string                 `json:"service_key"`
-	ServiceIncarnation  uint64                 `json:"service_incarnation,omitempty"`
-	ServiceGeneration   string                 `json:"service_generation,omitempty"`
-	ReferenceCount      int                    `json:"reference_count"`
-	RepositoryComplete  bool                   `json:"repository_complete,omitempty"`
-	AllServicesComplete bool                   `json:"all_services_complete,omitempty"`
-	FailedServiceCount  int                    `json:"failed_service_count,omitempty"`
+	Repository          string                            `json:"repository"`
+	State               string                            `json:"state"` // complete | empty | failed | unavailable
+	Reason              string                            `json:"reason,omitempty"`
+	RootSchema          string                            `json:"root_schema,omitempty"`
+	Generation          string                            `json:"generation,omitempty"`
+	RootDigest          string                            `json:"root_digest,omitempty"`
+	AuthorityDigest     string                            `json:"authority_digest,omitempty"`
+	Authority           *RelationshipAuthority            `json:"authority,omitempty"`
+	Unavailable         *RelationshipUnavailableAuthority `json:"unavailable,omitempty"`
+	ServiceKey          string                            `json:"service_key"`
+	ServiceIncarnation  uint64                            `json:"service_incarnation,omitempty"`
+	ServiceGeneration   string                            `json:"service_generation,omitempty"`
+	ReferenceCount      int                               `json:"reference_count"`
+	RepositoryComplete  bool                              `json:"repository_complete,omitempty"`
+	AllServicesComplete bool                              `json:"all_services_complete,omitempty"`
+	FailedServiceCount  int                               `json:"failed_service_count,omitempty"`
 }
 
 type RelationshipAuthority struct {
+	Repository                  string                         `json:"repository"`
+	CatalogGenerationDigest     string                         `json:"catalog_generation_digest"`
+	CatalogDigest               string                         `json:"catalog_digest"`
+	CatalogSourceGeneration     string                         `json:"catalog_source_generation"`
+	ServiceStateSetDigest       string                         `json:"service_state_set_digest"`
+	ServiceStateSummaryDigest   string                         `json:"service_state_summary_digest,omitempty"`
+	ServiceStateControlRevision uint64                         `json:"service_state_control_revision,omitempty"`
+	ObservationGenerationDigest string                         `json:"observation_generation_digest"`
+	ObservationManifestDigest   string                         `json:"observation_manifest_digest"`
+	ObservationSourceDigest     string                         `json:"observation_source_digest"`
+	ResolverGenerationDigest    string                         `json:"resolver_generation_digest"`
+	ResolverRootDigest          string                         `json:"resolver_root_digest"`
+	RPCGenerationDigest         string                         `json:"rpc_generation_digest"`
+	RPCRootDigest               string                         `json:"rpc_root_digest"`
+	KafkaGenerationDigest       string                         `json:"kafka_generation_digest"`
+	KafkaRootDigest             string                         `json:"kafka_root_digest"`
+	PolicyDigest                string                         `json:"policy_digest"`
+	Upstream                    *RelationshipUpstreamAuthority `json:"upstream,omitempty"`
+}
+
+// RelationshipUpstreamAuthority is the complete source-free T40 generation
+// seam. It is intentionally repeated in product receipts so a v2 relationship
+// generation cannot be presented as if the legacy observation triplet alone
+// were its authority.
+type RelationshipUpstreamAuthority struct {
+	Schema               string                           `json:"schema"`
+	Repository           string                           `json:"repository"`
+	Observation          RelationshipObservationAuthority `json:"observation"`
+	RequiredDomainCount  int                              `json:"required_domain_count"`
+	PublishedDomainCount int                              `json:"published_domain_count"`
+	Gaps                 []RelationshipDomainGapAuthority `json:"gaps"`
+	Digest               string                           `json:"digest"`
+}
+
+type RelationshipObservationAuthority struct {
+	Version                     string `json:"version"`
 	Repository                  string `json:"repository"`
-	CatalogGenerationDigest     string `json:"catalog_generation_digest"`
-	CatalogDigest               string `json:"catalog_digest"`
-	CatalogSourceGeneration     string `json:"catalog_source_generation"`
-	ServiceStateSetDigest       string `json:"service_state_set_digest"`
+	SourceGenerationDigest      string `json:"source_generation_digest"`
+	SourceRootDigest            string `json:"source_root_digest"`
 	ObservationGenerationDigest string `json:"observation_generation_digest"`
-	ObservationManifestDigest   string `json:"observation_manifest_digest"`
-	ObservationSourceDigest     string `json:"observation_source_digest"`
-	ResolverGenerationDigest    string `json:"resolver_generation_digest"`
-	ResolverRootDigest          string `json:"resolver_root_digest"`
-	RPCGenerationDigest         string `json:"rpc_generation_digest"`
-	RPCRootDigest               string `json:"rpc_root_digest"`
-	KafkaGenerationDigest       string `json:"kafka_generation_digest"`
-	KafkaRootDigest             string `json:"kafka_root_digest"`
-	PolicyDigest                string `json:"policy_digest"`
+	ObservationRootDigest       string `json:"observation_root_digest"`
+	PartitionPolicyDigest       string `json:"partition_policy_digest"`
+	ObservationPolicyDigest     string `json:"observation_policy_digest"`
+	InventoryPolicyDigest       string `json:"inventory_policy_digest,omitempty"`
+	RecordCount                 int    `json:"record_count"`
+	ObservedCount               int    `json:"observed_count"`
+}
+
+type RelationshipDomainGapAuthority struct {
+	Domain      string `json:"domain"`
+	Version     string `json:"version"`
+	Disposition string `json:"disposition"`
+}
+
+type RelationshipUnavailableAuthority struct {
+	Schema   string                        `json:"schema"`
+	Reason   string                        `json:"reason"`
+	Digest   string                        `json:"digest"`
+	Upstream RelationshipUpstreamAuthority `json:"upstream"`
 }
 
 type RelationshipRoleClaim struct {
@@ -279,19 +326,22 @@ type RelationshipComparisonPage struct {
 }
 
 type RelationshipCitation struct {
-	SchemaVersion string                 `json:"schema"`
-	Repository    string                 `json:"repository"`
-	Generation    string                 `json:"generation"`
-	RootDigest    string                 `json:"root_digest"`
-	Projection    RelationshipProjection `json:"projection"`
-	Evidence      RelationshipEvidence   `json:"evidence"`
-	Content       string                 `json:"content"`
+	SchemaVersion   string                 `json:"schema"`
+	Repository      string                 `json:"repository"`
+	RootSchema      string                 `json:"root_schema"`
+	Generation      string                 `json:"generation"`
+	RootDigest      string                 `json:"root_digest"`
+	AuthorityDigest string                 `json:"authority_digest"`
+	Projection      RelationshipProjection `json:"projection"`
+	Evidence        RelationshipEvidence   `json:"evidence"`
+	Content         string                 `json:"content"`
 }
 
 type relationshipSource struct {
 	repository  store.Repo
 	lease       *relationshippublication.Lease
 	publication *relationshippublication.Publication
+	unavailable *relationshippublication.Unavailable
 	root        relationshippublication.Root
 	receipt     relationshippublication.ServiceReceipt
 	evidence    *relationshippublication.EvidenceReader
@@ -335,6 +385,7 @@ type relationshipCursor struct {
 type relationshipCitationToken struct {
 	Schema     string `json:"schema"`
 	Binding    string `json:"binding"`
+	Repository string `json:"repository"`
 	Source     int    `json:"source"`
 	Projection string `json:"projection"`
 }
@@ -649,8 +700,14 @@ func (service *RelationshipService) ReadCitation(
 	defer finish()
 	var token relationshipCitationToken
 	if len(encoded) > relationshipTokenBytes || service.decodeSigned(encoded, &token) != nil ||
-		token.Schema != relationshipCitationSchema {
+		token.Schema != relationshipCitationSchema || token.Repository == "" {
 		return nil, huma.Error400BadRequest("service relationship citation is invalid")
+	}
+	authorized, _, authorizationErr := service.authorizeRepositories(
+		ctx, []string{token.Repository},
+	)
+	if authorizationErr != nil || len(authorized) != 1 || authorized[0].Name != token.Repository {
+		return nil, huma.Error404NotFound("service relationship citation not found")
 	}
 	binding := service.acquireBinding(token.Binding)
 	if binding == nil {
@@ -661,8 +718,8 @@ func (service *RelationshipService) ReadCitation(
 		return nil, huma.Error400BadRequest("service relationship citation is invalid")
 	}
 	source := &binding.sources[token.Source]
-	_, authorization, err := service.authorizeRepositories(ctx, repositoryNames(binding.repositories))
-	if err != nil || authorization != binding.authorization {
+	if source.repository.Name != token.Repository ||
+		!sameRelationshipRepo(source.repository, authorized[0]) {
 		return nil, huma.Error404NotFound("service relationship citation not found")
 	}
 	projection, err := source.publication.ReadProjection(ctx, token.Projection)
@@ -681,7 +738,8 @@ func (service *RelationshipService) ReadCitation(
 	}
 	return &RelationshipCitation{
 		SchemaVersion: relationshipCitationSchema, Repository: source.repository.Name,
-		Generation: source.root.GenerationDigest, RootDigest: source.root.Digest,
+		RootSchema: source.root.Schema, Generation: source.root.GenerationDigest,
+		RootDigest: source.root.Digest, AuthorityDigest: source.root.AuthorityDigest,
 		Projection: projectRelationshipProjection(projection),
 		Evidence:   projectRelationshipEvidence(evidence), Content: string(content),
 	}, nil
@@ -707,6 +765,8 @@ func (service *RelationshipService) RootCoverage(
 		Roots: []RelationshipRootReceipt{}, State: "exact",
 	}
 	publications := make([]*relationshippublication.Publication, len(resolved))
+	unavailable := make([]relationshippublication.Unavailable, len(resolved))
+	unavailablePresent := make([]bool, len(resolved))
 	leases := []*relationshippublication.Lease{}
 	defer func() {
 		for _, lease := range leases {
@@ -726,6 +786,7 @@ func (service *RelationshipService) RootCoverage(
 			}
 			root := publication.Root()
 			authority := projectRelationshipAuthority(root.Authority)
+			receipt.RootSchema = root.Schema
 			receipt.Generation, receipt.RootDigest = root.GenerationDigest, root.Digest
 			receipt.AuthorityDigest, receipt.Authority = root.AuthorityDigest, &authority
 			receipt.RepositoryComplete, receipt.AllServicesComplete = root.RepositoryComplete, root.AllServicesComplete
@@ -737,7 +798,19 @@ func (service *RelationshipService) RootCoverage(
 			}
 			leases = append(leases, lease)
 			publications[index] = publication
-		} else if !errors.Is(openErr, relationshippublication.ErrNotFound) {
+		} else if errors.Is(openErr, relationshippublication.ErrNotFound) {
+			marker, present, markerErr := relationshippublication.ReadUnavailable(
+				ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
+			)
+			if markerErr != nil {
+				return nil, relationshipReadError("read relationship unavailable authority", markerErr)
+			}
+			if present {
+				receipt.Reason = marker.Reason
+				receipt.Unavailable = projectRelationshipUnavailable(marker)
+				unavailable[index], unavailablePresent[index] = marker, true
+			}
+		} else {
 			return nil, relationshipReadError("read relationship proof coverage", openErr)
 		}
 		if receipt.State == "complete" {
@@ -767,15 +840,17 @@ func (service *RelationshipService) RootCoverage(
 			}
 			continue
 		}
-		opened, openErr := relationshippublication.OpenCurrent(
-			ctx, filepath.Join(service.opts.DataDir, "relationships"), resolved[index].Name,
-		)
-		if openErr == nil {
-			_ = opened
-			return nil, huma.Error409Conflict("relationship coverage changed; retry")
+		var expected *relationshippublication.Unavailable
+		if unavailablePresent[index] {
+			expected = &unavailable[index]
 		}
-		if !errors.Is(openErr, relationshippublication.ErrNotFound) {
-			return nil, relationshipReadError("confirm relationship proof coverage", openErr)
+		if err := relationshippublication.ConfirmUnavailable(
+			ctx, filepath.Join(service.opts.DataDir, "relationships"), resolved[index].Name, expected,
+		); err != nil {
+			if errors.Is(err, relationshippublication.ErrPublishing) {
+				return nil, huma.Error409Conflict("relationship coverage changed; retry")
+			}
+			return nil, relationshipReadError("confirm relationship proof coverage", err)
 		}
 	}
 	result.Digest = digestJSON(struct {
@@ -788,6 +863,9 @@ func (service *RelationshipService) RootCoverage(
 		Reason                 string                    `json:"reason,omitempty"`
 		Roots                  []RelationshipRootReceipt `json:"roots"`
 	}{result.SchemaVersion, result.Visibility, result.VisibleRepositoryCount, result.ExactRootCount, result.GapCount, result.State, result.Reason, result.Roots})
+	if err := validateRelationshipResponse(result); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
@@ -903,7 +981,17 @@ func (service *RelationshipService) openCurrentSource(
 		ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
 	)
 	if errors.Is(err, relationshippublication.ErrNotFound) {
-		source.reason = "relationship_root_unavailable"
+		marker, present, markerErr := relationshippublication.ReadUnavailable(
+			ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
+		)
+		if markerErr != nil {
+			return source, nil, markerErr
+		}
+		if present {
+			source.unavailable, source.reason = &marker, marker.Reason
+		} else {
+			source.reason = "relationship_root_unavailable"
+		}
 		return source, []relationshippublication.ServiceReference{}, nil
 	}
 	if err != nil {
@@ -915,7 +1003,9 @@ func (service *RelationshipService) openCurrentSource(
 		return source, nil, errors.New("relationship lease has no publication")
 	}
 	source.root = source.publication.Root()
-	receipt, member, err := source.publication.OpenService(ctx, serviceKey)
+	// The cache lease pins this immutable generation. The shared result-time
+	// control snapshot below is the only mutable-current fence needed here.
+	receipt, member, err := source.publication.ReadService(ctx, serviceKey)
 	source.receipt = receipt
 	switch {
 	case errors.Is(err, relationshippublication.ErrNotFound):
@@ -1100,7 +1190,7 @@ func (service *RelationshipService) hydrateLocators(
 			}
 			row.Citation = service.encodeSigned(relationshipCitationToken{
 				Schema: relationshipCitationSchema, Binding: binding.id,
-				Source: sourceIndex, Projection: projection.Digest,
+				Repository: source.repository.Name, Source: sourceIndex, Projection: projection.Digest,
 			})
 			byKey[fmt.Sprintf("%d\x00%s", sourceIndex, projection.Digest)] = row
 		}
@@ -1237,15 +1327,14 @@ func (service *RelationshipService) confirmBinding(
 			}
 			return huma.Error409Conflict("relationship publication changed while building the response; retry")
 		}
-		opened, openErr := relationshippublication.OpenCurrent(
-			ctx, filepath.Join(service.opts.DataDir, "relationships"), source.repository.Name,
-		)
-		if openErr == nil {
-			_ = opened
-			return huma.Error409Conflict("relationship publication changed while building the response; retry")
-		}
-		if !errors.Is(openErr, relationshippublication.ErrNotFound) {
-			return relationshipReadError("confirm relationship publication", openErr)
+		if err := relationshippublication.ConfirmUnavailable(
+			ctx, filepath.Join(service.opts.DataDir, "relationships"),
+			source.repository.Name, source.unavailable,
+		); err != nil {
+			if errors.Is(err, relationshippublication.ErrPublishing) {
+				return huma.Error409Conflict("relationship publication changed while building the response; retry")
+			}
+			return relationshipReadError("confirm relationship publication", err)
 		}
 	}
 	return nil
@@ -1332,6 +1421,7 @@ func relationshipReceipts(sources []relationshipSource) []RelationshipRootReceip
 		result[index] = RelationshipRootReceipt{Repository: source.repository.Name, State: source.state, Reason: source.reason, ServiceKey: source.receipt.ServiceKey, ServiceIncarnation: source.receipt.Incarnation, ServiceGeneration: source.receipt.ServiceGeneration, ReferenceCount: source.receipt.ReferenceCount}
 		if source.publication != nil {
 			authority := projectRelationshipAuthority(source.root.Authority)
+			result[index].RootSchema = source.root.Schema
 			result[index].Generation, result[index].RootDigest = source.root.GenerationDigest, source.root.Digest
 			result[index].AuthorityDigest, result[index].Authority = source.root.AuthorityDigest, &authority
 			result[index].RepositoryComplete = source.root.RepositoryComplete
@@ -1340,18 +1430,22 @@ func relationshipReceipts(sources []relationshipSource) []RelationshipRootReceip
 			if result[index].ServiceKey == "" {
 				result[index].ServiceKey = source.receipt.ServiceKey
 			}
+		} else if source.unavailable != nil {
+			result[index].Unavailable = projectRelationshipUnavailable(*source.unavailable)
 		}
 	}
 	return result
 }
 
 func projectRelationshipAuthority(value relationshippublication.Authority) RelationshipAuthority {
-	return RelationshipAuthority{
+	result := RelationshipAuthority{
 		Repository:                  value.Repository,
 		CatalogGenerationDigest:     value.CatalogGenerationDigest,
 		CatalogDigest:               value.CatalogDigest,
 		CatalogSourceGeneration:     value.CatalogSourceGeneration,
 		ServiceStateSetDigest:       value.ServiceStateSetDigest,
+		ServiceStateSummaryDigest:   value.ServiceStateSummaryDigest,
+		ServiceStateControlRevision: value.ServiceStateControlRevision,
 		ObservationGenerationDigest: value.ObservationGenerationDigest,
 		ObservationManifestDigest:   value.ObservationManifestDigest,
 		ObservationSourceDigest:     value.ObservationSourceDigest,
@@ -1362,6 +1456,57 @@ func projectRelationshipAuthority(value relationshippublication.Authority) Relat
 		KafkaGenerationDigest:       value.KafkaGenerationDigest,
 		KafkaRootDigest:             value.KafkaRootDigest,
 		PolicyDigest:                value.PolicyDigest,
+	}
+	if value.Upstream != nil {
+		upstream := projectRelationshipUpstream(*value.Upstream)
+		result.Upstream = &upstream
+	}
+	return result
+}
+
+func projectRelationshipUpstream(value downstreamauthority.Authority) RelationshipUpstreamAuthority {
+	result := RelationshipUpstreamAuthority{
+		Schema: value.Schema, Repository: value.Repository, Digest: value.Digest,
+		Observation: RelationshipObservationAuthority{
+			Version: value.Observation.Version, Repository: value.Observation.Repository,
+			SourceGenerationDigest:      value.Observation.SourceGenerationDigest,
+			SourceRootDigest:            value.Observation.SourceRootDigest,
+			ObservationGenerationDigest: value.Observation.ObservationGenerationDigest,
+			ObservationRootDigest:       value.Observation.ObservationRootDigest,
+			PartitionPolicyDigest:       value.Observation.PartitionPolicyDigest,
+			ObservationPolicyDigest:     value.Observation.ObservationPolicyDigest,
+			InventoryPolicyDigest:       value.Observation.InventoryPolicyDigest,
+			RecordCount:                 value.Observation.RecordCount, ObservedCount: value.Observation.ObservedCount,
+		},
+		RequiredDomainCount: len(value.Required), PublishedDomainCount: len(value.Domains),
+		Gaps: []RelationshipDomainGapAuthority{},
+	}
+	domainIndex := 0
+	for _, required := range value.Required {
+		if domainIndex >= len(value.Domains) || value.Domains[domainIndex].Domain != required.Domain ||
+			value.Domains[domainIndex].Version != required.Version {
+			result.Gaps = append(result.Gaps, RelationshipDomainGapAuthority{
+				Domain: required.Domain, Version: required.Version, Disposition: "absent",
+			})
+			continue
+		}
+		domain := value.Domains[domainIndex]
+		domainIndex++
+		if domain.Disposition != "success" && domain.Disposition != "empty" {
+			result.Gaps = append(result.Gaps, RelationshipDomainGapAuthority{
+				Domain: domain.Domain, Version: domain.Version, Disposition: domain.Disposition,
+			})
+		}
+	}
+	return result
+}
+
+func projectRelationshipUnavailable(
+	value relationshippublication.Unavailable,
+) *RelationshipUnavailableAuthority {
+	return &RelationshipUnavailableAuthority{
+		Schema: value.Schema, Reason: value.Reason, Digest: value.Digest,
+		Upstream: projectRelationshipUpstream(value.Upstream),
 	}
 }
 

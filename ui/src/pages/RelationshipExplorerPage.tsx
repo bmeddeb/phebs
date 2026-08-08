@@ -14,7 +14,7 @@ import { FONTS, focusRing, useDensity, usePhebsTokens, type DensityName, type Ph
 import { CitationChip, CitationPanel, ClaimBoundary } from '../components/kit'
 import { VirtualList, type VirtualListHandle, type VirtualRowProps } from '../components/VirtualList'
 import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
-import { validateServiceRelationshipCitation } from '../components/serviceRelationshipCitation'
+import { validateServiceRelationshipCitation, validateServiceRelationshipRoot } from '../components/serviceRelationshipCitation'
 import { isAbortError } from '../util'
 
 const PAGE_SIZE = 50
@@ -735,7 +735,8 @@ function validatePage(route: ExplorerRoute, request: RelationshipRequest, page: 
   }
   const repositories = new Set(page.query.repositories)
   if (repositories.size !== page.query.repositories.length || page.roots.length !== repositories.size ||
-      page.roots.some((root) => !repositories.has(root.repository) || root.service_key !== route.serviceKey)) {
+      page.roots.some((root) => !repositories.has(root.repository) || root.service_key !== route.serviceKey ||
+        validateServiceRelationshipRoot(root) !== '')) {
     return 'relationship response roots differ from the authorized repository set'
   }
   const coverage = page.coverage

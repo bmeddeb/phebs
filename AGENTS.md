@@ -191,8 +191,9 @@ search-generation lifecycle, T40.6's observation recovery/lifecycle/archive
 migration plus reverse-audit closure, and T40.7's constant-cost evidence-stage
 accounting, T40.8's sparse candidate/partition contract, T40.9's bounded
 partition-result/domain-root contract, T40.10's partitioned extraction and
-atomic domain authority, and T40.11's downstream adapters plus complete
-recovery/lifecycle/archive ownership are complete, and T40.12 is the next scale ticket;
+atomic domain authority, T40.11's downstream adapters plus complete
+recovery/lifecycle/archive ownership, and T40.12's authorized product-consumer
+compatibility replay are complete, and T40.13 is the next scale ticket;
 Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41
 separately requires at least 8,000 accepted services and measures a target of

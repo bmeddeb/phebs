@@ -264,9 +264,9 @@ func TestMicroserviceMCPToolCountAndSchemaDigests(t *testing.T) {
 	wantDigests := map[string]string{
 		"list_services":                      "sha256:f03165fd4ba8ecd56f34ceaee7ecf0ee40249cbcfc4e4423e65cbd5e5dcd5b0b",
 		"get_service":                        "sha256:b8c6cd0c38baafc4eb1b9407d0ccd0f890329e79bb9ade9af3eb3e21069a64a1",
-		"list_service_relationships":         "sha256:b83bdde30f6f4444d09cc82d73f0f29ce26a865bcac3fc78ff8ec53dc527e17e",
-		"compare_service_relationships":      "sha256:32a183b263aaeba9ab1e1b2655056834e78d9bb4efce8330ce691990fa84994c",
-		"read_service_relationship_citation": "sha256:b9afbea7a17cbc13aad7d443dd5fdd229c3769a81a157f3952aa1757fd284f7b",
+		"list_service_relationships":         "sha256:5c619d34c964492bee4316549b08b84f2a5dcf5b77be62b09285ae63428c7955",
+		"compare_service_relationships":      "sha256:3300e5bb2b8d359bc8c49003b2e1d6bf019447fc2bc4b0f9123458e3a7fb27a1",
+		"read_service_relationship_citation": "sha256:9f632b48da15163c50ada60d85cf29fc3a772935eb651c6fc487a9680cd61d6f",
 		"get_change_workbench_impact":        "sha256:5efccf389c568004c4c04b19f75b33fd2e3feff71dcb5ec88dde6bef04fdbd0b",
 	}
 	for name, want := range wantDigests {

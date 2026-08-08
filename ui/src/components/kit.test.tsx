@@ -120,8 +120,10 @@ describe('CitationPanel', () => {
   const citation = {
     schema: 'phebs-service-relationship-citation-v1',
     repository: 'github.com/acme/orders',
+    root_schema: 'phebs-relationship-root-v1',
     generation: `sha256:${'a'.repeat(64)}`,
     root_digest: `sha256:${'b'.repeat(64)}`,
+    authority_digest: `sha256:${'0'.repeat(64)}`,
     projection: {
       kind: 'rpc',
       posting_digest: `sha256:${'c'.repeat(64)}`,
@@ -215,7 +217,8 @@ describe('CitationChip', () => {
 describe('CitationPanel keyboard contract (T43.7)', () => {
   const kbdCitation = {
     schema: 'phebs-service-relationship-citation-v1',
-    repository: 'r', generation: `sha256:${'a'.repeat(64)}`, root_digest: `sha256:${'b'.repeat(64)}`,
+    repository: 'r', root_schema: 'phebs-relationship-root-v1', generation: `sha256:${'a'.repeat(64)}`,
+    root_digest: `sha256:${'b'.repeat(64)}`, authority_digest: `sha256:${'0'.repeat(64)}`,
     projection: { kind: 'rpc', posting_digest: `sha256:${'c'.repeat(64)}`, class: 'resolved', plane: 'caller', source: { path: 'p', unowned: false, claims: [] }, digest: `sha256:${'d'.repeat(64)}` },
     evidence: { kind: 'rpc', plane: 'caller', class: 'resolved', path: 'p.go', object_id: 'e'.repeat(40), content_digest: `sha256:${'f'.repeat(64)}`, span: { start_byte: 0, end_byte: 4, start_line: 1, end_line: 1 }, source_role: 'caller', posting_digest: `sha256:${'c'.repeat(64)}` },
     content: 'call()',
