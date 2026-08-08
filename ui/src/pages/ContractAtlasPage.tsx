@@ -668,7 +668,10 @@ function OperationDetail({
               <StatusChip tone={tierTone(operation.declaration.tier)}>
                 {operation.declaration.tier}
               </StatusChip>
-              <StatusChip tone={fresh ? 'green' : 'amber'}>
+              <StatusChip
+                tone={fresh ? 'green' : 'amber'}
+                title={run?.commit ? `${fresh ? 'current' : 'stale'} · run ${run.run_id ?? 'unidentified'} at ${run.commit}` : undefined}
+              >
                 {fresh ? 'current' : 'stale'}
               </StatusChip>
             </div>

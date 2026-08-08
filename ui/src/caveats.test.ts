@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   CALLER_ROWS_UNAVAILABLE_ADDENDUM,
@@ -6,6 +8,17 @@ import {
   EXPLORER_DIAGRAM_ADDENDUM,
   RELATIONSHIP_CAVEAT_MIRROR,
 } from './caveats'
+
+// A mirror pin must depend on the OWNING Go constant, not on a second copy
+// of the same literal: read the Go source at test time and extract it, so a
+// Go-side wording change fails this suite instead of leaving a stale mirror.
+function goConstant(file: string, name: string): string {
+  // Vitest runs with cwd at ui/; the Go tree is the repo root above it.
+  const source = readFileSync(resolve(process.cwd(), '..', file), 'utf8')
+  const match = source.match(new RegExp(`${name}\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`))
+  if (!match) throw new Error(`constant ${name} not found in ${file}`)
+  return JSON.parse(`"${match[1]}"`)
+}
 
 // T43.6 byte-identity pins: claim-boundary wording is contract text, not
 // copy. A deliberate wording change edits BOTH the constant and this pin in
@@ -20,10 +33,9 @@ describe('claim-boundary wording is pinned byte-for-byte', () => {
       + 'evidence within it.',
     )
   })
-  it('relationshipCaveat mirror (internal/api/relationships.go)', () => {
+  it('relationshipCaveat mirror matches the owning Go constant byte-for-byte', () => {
     expect(RELATIONSHIP_CAVEAT_MIRROR).toBe(
-      'Static source evidence only; no runtime topology, completeness, '
-      + 'migration-complete, decommissioning-safety, or release claim.',
+      goConstant('internal/api/relationships.go', 'relationshipCaveat'),
     )
   })
   it('presentation addenda', () => {

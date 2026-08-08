@@ -57,6 +57,17 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   await page.waitForSelector('main', { state: 'visible' })
   await page.evaluate(() => document.fonts.ready)
   await waitForReceiptReady(page)
+  if (route.awaitAbsent) {
+    for (const text of route.awaitAbsent) {
+      await expect.poll(
+        () => page.locator('main').innerText().then((body) => body.includes(text)),
+        { message: `route still renders transitional state "${text}"`, timeout: 180_000, intervals: [3_000] },
+      ).toBe(false)
+    }
+  }
+  if (route.expand) {
+    await page.$$eval('main details', (nodes) => nodes.forEach((node) => { (node as HTMLDetailsElement).open = true }))
+  }
   await expect(page).toHaveScreenshot(`${name}.png`, {
     mask: route.mask?.map((selector) => page.locator(selector)),
   })

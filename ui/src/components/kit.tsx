@@ -133,20 +133,42 @@ export function IdentityText({ children, title }: { children: ReactNode; title?:
 
 /**
  * Claim boundary (charter §3): a one-line summary in the contract's own
- * words — the caveat's first clause — with the exact full text one gesture
- * away. `caveat` is rendered verbatim; server-delivered text is preferred
- * over any client mirror. Optional children carry pinned presentation
- * addenda after the contract text.
+ * words — the caveat's first clause — with an expandable establishes /
+ * does-not-establish disclosure carrying the exact contract language.
+ * `caveat` is rendered verbatim; server-delivered text is preferred over
+ * any client mirror. The two sections are exact substrings split at the
+ * contract's own first ';' (the caveats' establishes/negation boundary);
+ * a caveat without that shape renders whole, never re-worded. Optional
+ * children carry pinned presentation addenda after the contract text.
  */
 export function ClaimBoundary({ caveat, summary, children }: {
   caveat: string
   summary?: ReactNode
   children?: ReactNode
 }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const cut = caveat.indexOf(';')
+  const establishes = cut === -1 ? caveat : caveat.slice(0, cut + 1)
+  const doesNotEstablish = cut === -1 ? '' : caveat.slice(cut + 1).trim()
+  const label = (text: string) => (
+    <span className={css({ display: 'block', color: tok.textPrimary, fontSize: '10.5px', lineHeight: '15px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' })}>{text}</span>
+  )
   return (
     <CaveatCollapse summary={summary ?? firstClause(caveat)}>
-      <p style={{ margin: 0 }}>{caveat}</p>
-      {children}
+      <div className={css({ display: 'grid', gap: '7px' })}>
+        <div>
+          {label('Establishes')}
+          <p className={css({ margin: '2px 0 0' })}>{establishes}</p>
+        </div>
+        {doesNotEstablish && (
+          <div>
+            {label('Does not establish')}
+            <p className={css({ margin: '2px 0 0' })}>{doesNotEstablish}</p>
+          </div>
+        )}
+        {children}
+      </div>
     </CaveatCollapse>
   )
 }

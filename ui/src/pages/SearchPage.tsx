@@ -1033,7 +1033,11 @@ function RepoGroup({
         </span>
         <span className={css({ flex: 1 })} />
         {indexedAt && (
-          <span title={new Date(indexedAt).toLocaleString()} className={css({ fontSize: '11px', color: tok.textTertiary, whiteSpace: 'nowrap' })}>
+          <span
+            title={new Date(indexedAt).toLocaleString()}
+            aria-label={`indexed ${relTime(indexedAt)} (${new Date(indexedAt).toLocaleString()})`}
+            className={css({ fontSize: '11px', color: tok.textTertiary, whiteSpace: 'nowrap' })}
+          >
             indexed {relTime(indexedAt)}
           </span>
         )}

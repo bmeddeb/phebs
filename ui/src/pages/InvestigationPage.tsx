@@ -152,6 +152,23 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
   )
 }
 
+// The contract marks these fields omitempty (internal/investigation
+// envelope.go FreshnessAnalysis): render only a present, parseable instant —
+// an absent freshness time is stated by absence, never as an invalid date.
+function FreshnessTime({ label, iso }: { label: string; iso?: string }) {
+  if (!iso) return null
+  const parsed = Date.parse(iso)
+  if (!Number.isFinite(parsed)) return null
+  return (
+    <span>
+      {label}{' '}
+      <time dateTime={iso}>
+        {relTime(iso)} · {new Date(parsed).toLocaleString()}
+      </time>
+    </span>
+  )
+}
+
 function InvestigationHeader({
   document,
   summaries,
@@ -184,22 +201,8 @@ function InvestigationHeader({
             <Meta label="Referent" value={`${scope.claim.subject.kind}:${scope.claim.subject.id}`} mono />
             <Meta label="Claim family" value={humanize(scope.claim.claim_family)} />
             <Meta label="Decision sought" value={humanize(scope.claim.decision_sought)} />
-            {envelope.freshness && (
-              <>
-                <span>
-                  Analysis published{' '}
-                  <time dateTime={envelope.freshness.analysis.published} title={new Date(envelope.freshness.analysis.published).toLocaleString()}>
-                    {relTime(envelope.freshness.analysis.published)}
-                  </time>
-                </span>
-                <span>
-                  Snapshot committed{' '}
-                  <time dateTime={envelope.freshness.analysis.snapshot_committed} title={new Date(envelope.freshness.analysis.snapshot_committed).toLocaleString()}>
-                    {relTime(envelope.freshness.analysis.snapshot_committed)}
-                  </time>
-                </span>
-              </>
-            )}
+            <FreshnessTime label="Analysis published" iso={envelope.freshness?.analysis.published} />
+            <FreshnessTime label="Snapshot committed" iso={envelope.freshness?.analysis.snapshot_committed} />
           </div>
         </div>
         {summaries.length > 1 && (

@@ -286,7 +286,8 @@ function LifecycleMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className={css({ minWidth: 0, padding: '12px', borderRight: `1px solid ${tok.cardBorder}`, ':last-child': { borderRight: 'none' } })}>
       <div className={css({ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{label}</div>
-      <div className={css({ marginTop: '5px', fontSize: '12px', lineHeight: '17px', color: tok.textPrimary, overflowWrap: 'anywhere' })}>{value}</div>
+      {/* data-volatile: live host telemetry — masked by the receipt harness. */}
+      <div data-volatile="lifecycle" className={css({ marginTop: '5px', fontSize: '12px', lineHeight: '17px', color: tok.textPrimary, overflowWrap: 'anywhere' })}>{value}</div>
     </div>
   )
 }

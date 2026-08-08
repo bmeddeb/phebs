@@ -94,7 +94,7 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
       )}
       {loading ? <Spinner $size="small" /> : (
         <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
-          {commits.length === 0 && <div className={css({ padding: '28px 0', color: tok.textTertiary })}>No commits are visible for this path at the indexed revision.</div>}
+          {commits.length === 0 && <div className={css({ padding: '28px 0', color: tok.textTertiary })}>No commits are visible for this path at {ref ? <code>{ref}</code> : 'the indexed revision'}.</div>}
           {commits.map((commit) => (
             <a
               key={commit.id}

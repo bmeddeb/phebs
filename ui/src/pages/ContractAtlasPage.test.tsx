@@ -426,7 +426,12 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
   expect(screen.queryByText('9 gitlinks')).toBeNull()
   expect(screen.getAllByText('relationships truncated').length).toBeGreaterThan(0)
   expect(screen.getByText(/Omitted rows are not evidence of absence/)).toBeTruthy()
-  expect(screen.getAllByText(detail.caveat).length).toBeGreaterThanOrEqual(1)
+  // ClaimBoundary splits the contract text at its ';' into the establishes /
+  // does-not-establish sections — assert both exact halves and the labels.
+  expect(screen.getAllByText('Provisional source evidence only;').length).toBeGreaterThanOrEqual(1)
+  expect(screen.getAllByText('no completeness conclusion is implied.').length).toBeGreaterThanOrEqual(1)
+  expect(screen.getAllByText('Establishes').length).toBeGreaterThanOrEqual(1)
+  expect(screen.getAllByText('Does not establish').length).toBeGreaterThanOrEqual(1)
 
   const declaration = screen.getByRole('link', {
     name: /github.com\/acme\/contracts\/proto\/catalog.proto:7/,
