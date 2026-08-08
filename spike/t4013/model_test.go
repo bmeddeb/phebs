@@ -3,12 +3,46 @@ package t4013
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 const testSourceCommit = "3c4e22e1a907a663367fb29e1a2af998eb2d7729"
+
+func TestRetainedMeasuredStopMatchesFrozenPlan(t *testing.T) {
+	planBytes, err := os.ReadFile("plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := DecodePlan(planBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const (
+		executionCommit = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
+		planDigest      = "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0"
+		receiptDigest   = "sha256:7a641e6d8955fd51dc782e3f42437449fd0080ef229843bc38bb406593221b1e"
+	)
+	if plan.SourceCommit != executionCommit || PlanDigest(planBytes) != planDigest {
+		t.Fatalf("retained plan commit/digest = %q / %q", plan.SourceCommit, PlanDigest(planBytes))
+	}
+	receiptBytes, err := os.ReadFile("results.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if PlanDigest(receiptBytes) != receiptDigest || receipt.SourceCommit != executionCommit ||
+		receipt.Outcome != "stopped" || receipt.Decision.Selected != "reduce" ||
+		!receipt.Teardown.Completed || receipt.Teardown.DerivedDataRetained ||
+		receipt.Teardown.ScratchSourceRetained {
+		t.Fatalf("retained stopped receipt = %+v, digest %q", receipt, PlanDigest(receiptBytes))
+	}
+}
 
 func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 	root, err := filepath.Abs("../..")

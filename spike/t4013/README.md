@@ -162,6 +162,23 @@ freshness, release authority, private-rerun authority, migration completion, or
 decommission safety. `GATE2-V2` remains `NOT_ESTABLISHED` and
 `DO_NOT_RELEASE` remains in force.
 
+## Measured outcome
+
+The one authorized run on 2026-08-08 used execution commit
+`b1b4e808e1987b3bf28e4afac21cc83b72aa27f2` and the retained
+[`plan.json`](./plan.json) (`sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0`).
+The host passed the frozen 24-GiB-memory and 120-GiB-available-disk
+prerequisites. Preflight succeeded, but cold convergence stopped at its exact
+oracle before a successful cold phase fence. Every later phase is `not_run`.
+
+The retained [`results.json`](./results.json)
+(`sha256:7a641e6d8955fd51dc782e3f42437449fd0080ef229843bc38bb406593221b1e`)
+therefore selects `reduce`. Exact teardown removed the external authored
+repositories, data, logs, credentials, and binaries; the receipt retains no
+source or raw diagnostic. The result authorizes no rerun, threshold change,
+cohort/P6 selection, release, or scale claim and remains pending independent
+review.
+
 ```sh
 go test ./spike/t4013/... -count=1
 make docs-check

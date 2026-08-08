@@ -1,0 +1,431 @@
+{
+  "schema": "t4013-neutral-convergence-receipt-v1",
+  "plan_digest": "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0",
+  "source_commit": "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2",
+  "measured_on": "2026-08-08",
+  "outcome": "stopped",
+  "environment": {
+    "os": "darwin",
+    "arch": "arm64",
+    "memory_bytes": 25769803776,
+    "filesystem_total_bytes": 494384795648,
+    "filesystem_available_bytes": 175325106176,
+    "initial_used_percent": 64
+  },
+  "profiles": [
+    {
+      "name": "structural-2m-v1",
+      "regular_files": 2000002,
+      "physical_owners": 2000002,
+      "eligible_go_files": 0,
+      "idl_candidates": 0,
+      "declared_source_bytes": 9216000076,
+      "search_published": false,
+      "applicable_partitions": 0,
+      "settled_partitions": 0,
+      "published_domains": 0,
+      "relationship_published": false
+    },
+    {
+      "name": "semantic-262144-v1",
+      "regular_files": 294914,
+      "physical_owners": 294914,
+      "eligible_go_files": 0,
+      "idl_candidates": 0,
+      "declared_source_bytes": 146800716,
+      "search_published": false,
+      "applicable_partitions": 0,
+      "settled_partitions": 0,
+      "published_domains": 0,
+      "relationship_published": false
+    }
+  ],
+  "blob_readers": null,
+  "service_control": {
+    "accepted_services": 0,
+    "memberships": 0,
+    "distinct_paths": 0,
+    "unowned_prefixes": 0,
+    "within_v2_path_limit": false,
+    "exact_membership_oracle": false,
+    "exact_unowned_oracle": false
+  },
+  "explicit_states": {
+    "absent_typed_inputs": 0,
+    "unavailable_domains": 0,
+    "unsupported_syntax_facts": 0,
+    "gap_facts": 0,
+    "no_silent_empty": false
+  },
+  "phases": [
+    {
+      "name": "preflight",
+      "outcome": "succeeded",
+      "metrics": {
+        "wall_ms": 35755,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 4,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": true
+    },
+    {
+      "name": "cold",
+      "outcome": "failed",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "warm_noop",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "delta_b",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "return_a",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "interruption",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "stale_worker",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "pressure",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "archive_restore",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "collection",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "authorized_query",
+      "outcome": "not_run",
+      "metrics": {
+        "wall_ms": 0,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": false
+    },
+    {
+      "name": "teardown",
+      "outcome": "succeeded",
+      "metrics": {
+        "wall_ms": 11,
+        "peak_rss_bytes": 0,
+        "data_logical_bytes": 0,
+        "data_allocated_bytes": 0,
+        "git_children": 0,
+        "index_children": 0,
+        "other_children": 0,
+        "control_reads": 0,
+        "member_reads": 0,
+        "publication_writes": 0,
+        "publication_transactions": 0,
+        "orchestration_transactions": 0,
+        "retries": 0,
+        "reused_controls": 0,
+        "reused_members": 0
+      },
+      "authority_changed": false,
+      "oracle_exact": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "physical_owner_search_publication",
+      "passed": false
+    },
+    {
+      "name": "effective_blob_reader_receipts",
+      "passed": false
+    },
+    {
+      "name": "derived_partition_settlement",
+      "passed": false
+    },
+    {
+      "name": "explicit_absence_and_unsupported_syntax",
+      "passed": false
+    },
+    {
+      "name": "cold_exact_oracle",
+      "passed": false
+    },
+    {
+      "name": "warm_noop_reuse",
+      "passed": false
+    },
+    {
+      "name": "one_partition_delta",
+      "passed": false
+    },
+    {
+      "name": "a_to_b_to_a_identity",
+      "passed": false
+    },
+    {
+      "name": "interruption_recovery",
+      "passed": false
+    },
+    {
+      "name": "stale_worker_fence",
+      "passed": false
+    },
+    {
+      "name": "pressure_admission_and_collection",
+      "passed": false
+    },
+    {
+      "name": "archive_restore_authority",
+      "passed": false
+    },
+    {
+      "name": "bounded_collection",
+      "passed": false
+    },
+    {
+      "name": "authorization_first_queries",
+      "passed": false
+    },
+    {
+      "name": "small_service_control",
+      "passed": false
+    },
+    {
+      "name": "phase_accounting_complete",
+      "passed": false
+    }
+  ],
+  "failures": [
+    {
+      "phase": "cold",
+      "class": "oracle",
+      "code": "exact_gate_failed"
+    }
+  ],
+  "decision": {
+    "selected": "reduce",
+    "reason": "exact_mechanics_oracle_failed"
+  },
+  "teardown": {
+    "completed": true,
+    "derived_data_retained": false,
+    "scratch_source_retained": false
+  },
+  "claims": {
+    "mechanics_evidence_only": true,
+    "establishes_target_slo": false,
+    "establishes_service_scale": false,
+    "establishes_accuracy": false,
+    "establishes_completeness": false,
+    "authorizes_release": false,
+    "authorizes_private_rerun": false,
+    "establishes_migration": false,
+    "establishes_decommissioning": false
+  }
+}

@@ -126,6 +126,14 @@ and correctly blocked authoring. A later pre-freeze re-audit observed roughly
 163 GiB available, above the unchanged prerequisite; no giant authoring or
 execution has begun yet, no result exists, and the ticket remains open.
 
+Measured outcome (2026-08-08): the one authorized frozen run bound commit
+`b1b4e808e1987b3bf28e4afac21cc83b72aa27f2` and stopped at the cold exact
+oracle. Preflight passed the unchanged host prerequisites; no cold authority
+or successful cold phase metrics were retained, and every later mechanics
+case is explicitly `not_run`. Exact teardown removed derived and scratch
+custody. The source-free receipt selects `reduce`, authorizes no rerun or bound
+change, and awaits independent review before any ticket/Epic closure.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

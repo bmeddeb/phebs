@@ -1,0 +1,79 @@
+{
+  "schema": "t4013-neutral-convergence-plan-v1",
+  "frozen_on": "2026-08-08",
+  "source_commit": "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2",
+  "inputs": [
+    {
+      "path": "spike/t401/envelope.json",
+      "schema": "t401-neutral-scale-envelope-v1",
+      "sha256": "sha256:92cce848e6e42942c24e2fa066968571fb5693252b7b41b7a91c889881fe7f94"
+    },
+    {
+      "path": "spike/t401/structural/manifest.json",
+      "schema": "t401-neutral-git-manifest-v1",
+      "sha256": "sha256:4ae92b8efa58d459fe8fa10ba23c5cedad3adc7b2dddbd7618ea8d96c306604b"
+    },
+    {
+      "path": "spike/t401/semantic/manifest.json",
+      "schema": "t401-neutral-git-manifest-v1",
+      "sha256": "sha256:ca4925f3ca3ddad42955e5c3dc0e9b5610e7fa8ac4ce3e614a9ad091e23362a8"
+    },
+    {
+      "path": "spike/t401/comparison.json",
+      "schema": "t401-zoekt-blob-reader-comparison-v1",
+      "sha256": "sha256:3527bec297c80c71b6c5081b1b386d25efc9ec8894643f599c7c57848be3b402"
+    }
+  ],
+  "phase_order": [
+    "preflight",
+    "cold",
+    "warm_noop",
+    "delta_b",
+    "return_a",
+    "interruption",
+    "stale_worker",
+    "pressure",
+    "archive_restore",
+    "collection",
+    "authorized_query",
+    "teardown"
+  ],
+  "safety_envelope": {
+    "minimum_memory_bytes": 25769803776,
+    "minimum_available_disk_bytes": 128849018880,
+    "maximum_total_wall_ms": 28800000,
+    "maximum_peak_rss_bytes": 21474836480,
+    "maximum_data_allocated_bytes": 103079215104,
+    "maximum_retries_per_unit": 5
+  },
+  "stop_rules": [
+    {
+      "decision": "continue",
+      "trigger": "all exact mechanics checks pass inside production bounds and frozen host safety ceilings"
+    },
+    {
+      "decision": "reduce",
+      "trigger": "a frozen production bound, host prerequisite, or exact mechanics oracle refuses before complete authority"
+    },
+    {
+      "decision": "cohort_experiment",
+      "trigger": "direct mechanics converge but a frozen wall, RSS, allocation, recovery, or collection review ceiling is crossed"
+    },
+    {
+      "decision": "p6_investigation",
+      "trigger": "work multiplies by logical service count, cannot remain repository-bounded, or direct recovery cannot converge within fixed production bounds"
+    }
+  ],
+  "claims": {
+    "neutral": true,
+    "source_free_receipt": true,
+    "raises_production_bound": false,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "establishes_completeness": false,
+    "authorizes_release": false,
+    "authorizes_private_rerun": false,
+    "establishes_migration": false,
+    "establishes_decommissioning": false
+  }
+}
