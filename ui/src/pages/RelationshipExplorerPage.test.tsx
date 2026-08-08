@@ -59,7 +59,7 @@ test('uses broad authorized fallback and shares deterministic ids between exact 
   expect(api.fetchServiceRelationships).toHaveBeenCalledWith(defaultRequest(), expect.any(AbortSignal))
   expect(screen.getByText('Authorized repositories').parentElement?.textContent).toContain('2')
   expect(screen.getByText(/Partial · 1 failed or unavailable root/)).toBeTruthy()
-  expect(screen.getByText('Current page only · table remains authoritative')).toBeTruthy()
+  expect(screen.getByText('Current page only · the row list remains authoritative')).toBeTruthy()
   expect(screen.getAllByText('R-01').length).toBeGreaterThanOrEqual(2)
   expect(screen.getAllByText('orders-api').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Ambiguous').length).toBeGreaterThan(0)
@@ -95,22 +95,54 @@ test('reauthorizes and validates an immutable citation before showing source con
   const request = defaultRequest()
   const page = relationshipPage(request)
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce(relationshipCitation(page.rows[0]))
-  renderPage(new URLSearchParams({ service_key: 'orders-api' }))
-  await screen.findByRole('heading', { name: 'Exact source rows' })
-  fireEvent.click(screen.getAllByRole('button', { name: 'services/orders/client-0.go:4' })[0])
+  // T43.11: the citation action lives in the selected row's detail region,
+  // pinned by projection digest in the URL.
+  const first = renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: page.rows[0].projection_digest }))
+  expect(await screen.findByRole('region', { name: 'Row R-01 detail' })).toBeTruthy()
+  // Complete attribution renders in the detail — nothing the old table
+  // showed is dropped.
+  expect(screen.getByText('proto/payments/v1/service.proto')).toBeTruthy()
+  expect(screen.getByText(/payments:accepted\[typed\/base\]/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'services/orders/client-0.go:4' }))
   expect(await screen.findByRole('dialog', { name: 'Exact source citation' })).toBeTruthy()
   expect(screen.getByText('client.Call(ctx, request)')).toBeTruthy()
   expect(api.fetchServiceRelationshipCitation).toHaveBeenCalledWith('citation-0', expect.any(AbortSignal))
+  first.unmount()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Close citation' }))
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce({
     ...relationshipCitation(page.rows[1]),
     generation: `sha256:${'9'.repeat(64)}`,
     content: 'forged source',
   })
-  fireEvent.click(screen.getAllByRole('button', { name: 'services/orders/client-1.go:5' })[0])
+  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: page.rows[1].projection_digest }))
+  expect(await screen.findByRole('region', { name: 'Row R-02 detail' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'services/orders/client-1.go:5' }))
   expect(await screen.findByText(/citation response authority differs/)).toBeTruthy()
   expect(screen.queryByText('forged source')).toBeNull()
+})
+
+test('row selection is URL-borne and a stale pin fails honest', async () => {
+  renderPage(new URLSearchParams({ service_key: 'orders-api' }))
+  await screen.findByRole('heading', { name: 'Exact source rows' })
+  fireEvent.click(screen.getByRole('option', { name: /client-0\.go/ }))
+  expect(decodeURIComponent(window.location.hash)).toContain(`sel_row=sha256:${'1'.repeat(64)}`)
+  cleanup()
+  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: `sha256:${'f'.repeat(64)}` }))
+  await screen.findByRole('heading', { name: 'Exact source rows' })
+  expect(screen.getByText(/pinned row is not in this page/)).toBeTruthy()
+  expect(screen.queryByRole('region', { name: /detail/ })).toBeNull()
+})
+
+test('narrowing and grouping the loaded rows are instant, URL-borne, and window-scoped', async () => {
+  renderPage(new URLSearchParams({ service_key: 'orders-api', narrow: 'client-0', group: 'class' }))
+  await screen.findByRole('heading', { name: 'Exact source rows' })
+  expect(screen.getByText('1 of 2 loaded rows match · narrowing reads this page only')).toBeTruthy()
+  expect(screen.getByRole('option', { name: /client-0\.go/ })).toBeTruthy()
+  expect(screen.queryByRole('option', { name: /client-1\.go/ })).toBeNull()
+  // Classification group header (label + count) above the surviving row.
+  expect(screen.getAllByText('Ambiguous').length).toBeGreaterThanOrEqual(2)
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Narrow loaded rows' }), { target: { value: 'orders.v1' } })
+  expect(decodeURIComponent(window.location.hash)).toContain('narrow=orders.v1')
 })
 
 test('refuses malformed response authority and keeps a root gap distinct from exact empty', async () => {

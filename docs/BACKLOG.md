@@ -496,15 +496,20 @@ themes and both densities; baselines stored and diffed with a bounded
 threshold; drift fails the run with a visual diff; baselines are
 environment-bound engineering records, refreshed only by an explicit
 reviewed update.
-*Implementation landed 2026-08-07; AC closure remains pending T43.11's
-dense-mode control.* `make ui-receipts` / `ui-receipts-update`; frozen clock
+*Shipped: implementation 2026-08-07; AC closed 2026-08-08 when T43.11
+landed the product density control — the matrix runs every routed surface
+in both themes and both densities (dense pins density-ignoring surfaces
+as unchanged). The repos captures joined at recovery, as
+T43.6 prescribed: when host disk pressure cleared mid-T43.11, the
+comfortable pair passed against the retained all-indexed baselines
+unchanged, and the dense pair was first-captured from the recovered
+state. The full 117-capture matrix verifies green.* `make ui-receipts` / `ui-receipts-update`; frozen clock
 per instance generation; all 23 currently routed authenticated states plus
 sign-in captured in both themes, including the caller-map and caller-comparison
 required-identity states; run-caused audit values and analytics content masked
 without hiding audit-table anatomy. Request, loading-state, and rendered-DOM
 stability replace a fixed delay. Zero retries keep every failure first-class.
-The comfortable matrix is complete; its dense counterpart joins when T43.11
-lands the product density control.
+The full comfortable and dense matrices are captured.
 
 **T43.5 · Authority drawer and receipt disclosure** *(needs T43.3)* —
 implement chip → drawer → receipt on the search and service-search
@@ -710,6 +715,36 @@ budget at 10,000 synthetic rows in the test harness; instant filter and
 group-by-state; dense mode; keyboard navigation through virtualized rows;
 exact counts and truncation language unchanged; real 10,000-service data
 remains Epic 41's.
+*Shipped 2026-08-08.* One windowed list primitive (VirtualList: declared
+viewport and per-density fixed row heights, never measured; listbox
+semantics with exact aria-setsize/posinset under windowing) is consumed
+by both surfaces — the directory's service list and the explorer's exact
+rows, which drop the desktop-table/mobile-card fork for one presentation
+plus a complete selected-row detail region (full paths, every attribution
+placement, the citation action as a real control), pinned by projection
+digest in the URL and cleared when filters or cursors change the page.
+The 10,000-row proof runs in the component harness with synthetic rows
+under a recorded 150ms interaction budget (filter keystroke and far-end
+jump), with the DOM held to the window; both wire pages stay bounded at
+50 rows — real ten-thousand-service data remains Epic 41's. Instant
+narrow and group-by-state/classification are client-side over the loaded
+window only, URL-borne (narrowing replaces in place — no history spam),
+and name their bound explicitly; the existing count and truncation
+language is byte-unchanged beside them. Dense mode is a product-wide
+header control persisted per browser; the directory renders 80/48px rows
+and the explorer 44/32px (the density token minima), identical facts in
+both densities. Keyboard: the lists are single tab stops — arrows,
+PageUp/PageDown, Home/End (headers skipped), Enter commits; documented
+in the workflows guide. Receipts run the full dense matrix per T43.4 — 117 captures, all
+green: the fixture host's disk pressure cleared during the ticket, the
+retained repos baselines passed unchanged on recovery, and forced
+reindexes brought every repository to indexed (relationship publications
+remain unavailable on this instance, so the explorer's captured gap
+state — unchanged since T43.8 review — stays the honest truth; the row
+presentation is pinned by the harness until the instance publishes).
+Settings' lifecycle cards gained reserved fixed-height owner slots so
+live owner churn can never move the page between capture and check —
+the same declared-geometry principle as the list itself.
 
 **T43.12 · Motion pass and charter closure** *(needs T43.4–T43.11)* —
 apply the charter's motion language and close the epic. AC: motion exists

@@ -2,8 +2,8 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { FOCUS_SEARCH, useHashRoute } from './router'
-import { FONTS, useMode, usePhebsTokens } from './theme'
-import { LogoutIcon, MoonIcon, SunIcon } from './icons'
+import { FONTS, useDensity, useMode, usePhebsTokens, type PhebsTokens } from './theme'
+import { LogoutIcon, MoonIcon, RowsComfortableIcon, RowsDenseIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
 import { ScopeContextBar } from './components/ScopeContextBar'
@@ -294,6 +294,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
+  const { density, toggle: toggleDensity } = useDensity()
 
   const isSettings = path.startsWith('/settings')
   const isRepos = path.startsWith('/repos') || path.startsWith('/services') || path.startsWith('/relationships')
@@ -357,25 +358,17 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
       <div className={css({ flex: 1, '@media screen and (max-width: 720px)': { display: 'none' } })} />
       {email && <span className={css({ fontSize: '12px', color: tok.textTertiary, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '@media screen and (max-width: 720px)': { display: 'none' } })}>{email}</span>}
       <button
+        onClick={toggleDensity}
+        aria-label={density === 'dense' ? 'Switch to comfortable rows' : 'Switch to dense rows'}
+        title={density === 'dense' ? 'Comfortable rows' : 'Dense rows'}
+        className={css(headerIconButton(tok))}
+      >
+        {density === 'dense' ? <RowsComfortableIcon size={14} /> : <RowsDenseIcon size={14} />}
+      </button>
+      <button
         onClick={toggle}
         aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        className={css({
-          width: '28px',
-          height: '28px',
-          boxSizing: 'border-box',
-          flexShrink: 0,
-          padding: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: `1px solid ${tok.cardBorder}`,
-          borderRadius: '7px',
-          background: 'none',
-          cursor: 'pointer',
-          color: tok.textSecondary,
-          ':hover': { backgroundColor: tok.hoverFill },
-          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
-        })}
+        className={css(headerIconButton(tok))}
       >
         {mode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
       </button>
@@ -383,28 +376,32 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         onClick={onLogout}
         aria-label="Sign out"
         title="Sign out"
-        className={css({
-          width: '28px',
-          height: '28px',
-          boxSizing: 'border-box',
-          flexShrink: 0,
-          padding: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: `1px solid ${tok.cardBorder}`,
-          borderRadius: '7px',
-          background: 'none',
-          cursor: 'pointer',
-          color: tok.textSecondary,
-          ':hover': { backgroundColor: tok.hoverFill },
-          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
-        })}
+        className={css(headerIconButton(tok))}
       >
         <LogoutIcon size={14} />
       </button>
     </header>
   )
+}
+
+function headerIconButton(tok: PhebsTokens) {
+  return {
+    width: '28px',
+    height: '28px',
+    boxSizing: 'border-box' as const,
+    flexShrink: 0,
+    padding: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: `1px solid ${tok.cardBorder}`,
+    borderRadius: '7px',
+    background: 'none',
+    cursor: 'pointer',
+    color: tok.textSecondary,
+    ':hover': { backgroundColor: tok.hoverFill },
+    ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+  }
 }
 
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {

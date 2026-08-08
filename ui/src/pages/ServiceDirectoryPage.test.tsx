@@ -4,6 +4,7 @@ import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import ServiceDirectoryPage from './ServiceDirectoryPage'
+import { DensityContext } from '../theme'
 import type {
   ServiceDetail,
   ServiceInventory,
@@ -53,9 +54,10 @@ test('renders exact authority, page summaries, lifecycle states, roles, and sour
   expect(screen.getByText('2/4 accepted files')).toBeTruthy()
   expect(screen.getByText('Unowned files')).toBeTruthy()
   expect(screen.getByText('Shared roles · page')).toBeTruthy()
-  expect(screen.getByRole('link', { name: /Orders API/ })).toBeTruthy()
-  expect(screen.getByRole('link', { name: /Billing control/ })).toBeTruthy()
-  expect(screen.getByRole('link', { name: /Legacy orders/ })).toBeTruthy()
+  // T43.11: rows are options of the windowed listbox — still real links.
+  expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
+  expect(screen.getByRole('option', { name: /Billing control/ })).toBeTruthy()
+  expect(screen.getByRole('option', { name: /Legacy orders/ })).toBeTruthy()
   expect(screen.getAllByText('Stale').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Conflict').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Removed').length).toBeGreaterThan(0)
@@ -91,7 +93,7 @@ test('deep links retain filters and pagination while filter changes reset cursor
   }))
   await screen.findByRole('heading', { name: 'Orders API' })
 
-  const detailLink = screen.getByRole('link', { name: /Billing control/ })
+  const detailLink = screen.getByRole('option', { name: /Billing control/ })
   expect(decodeURIComponent(detailLink.getAttribute('href') ?? '')).toContain(
     'repository=example.invalid/neutral+mono&status=stale&include_removed=true&cursor=opaque/current&service_key=billing-control',
   )
@@ -131,7 +133,7 @@ test('shows bounded errors and retries the same exact route', async () => {
   expect(await screen.findByText('409: catalog changed')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await waitFor(() => expect(api.fetchServiceInventory).toHaveBeenCalledTimes(2))
-  expect(await screen.findByRole('link', { name: /Orders API/ })).toBeTruthy()
+  expect(await screen.findByRole('option', { name: /Orders API/ })).toBeTruthy()
 })
 
 test('keeps inventory usable when an exact detail deep link is unavailable', async () => {
@@ -143,12 +145,63 @@ test('keeps inventory usable when an exact detail deep link is unavailable', asy
   expect(await screen.findByText('Service detail unavailable')).toBeTruthy()
   expect(screen.getByText('The inventory is still current')).toBeTruthy()
   expect(screen.getByText('404: service not found')).toBeTruthy()
-  expect(screen.getByRole('link', { name: /Orders API/ })).toBeTruthy()
+  expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Clear selection' }).getAttribute('href')).toBe(
     '#/services?repository=example.invalid%2Fneutral+mono',
   )
   fireEvent.click(screen.getByRole('button', { name: 'Retry detail' }))
   await waitFor(() => expect(api.fetchServiceDetail).toHaveBeenCalledTimes(2))
+})
+
+test('narrow and group-by-state are instant, window-scoped, and URL-borne', async () => {
+  renderPage(new URLSearchParams({ repository: repositoryName, narrow: 'billing', group: 'state' }))
+  expect(await screen.findByRole('option', { name: /Billing control/ })).toBeTruthy()
+  // The narrowing names its bound and never claims catalog absence; the
+  // existing page count language stays byte-identical beside it.
+  expect(screen.getByText('1 of 3 loaded rows match · narrowing reads this page only')).toBeTruthy()
+  expect(screen.getByText('3 in this page')).toBeTruthy()
+  expect(screen.queryByRole('option', { name: /Orders API/ })).toBeNull()
+  // Group-by-state renders a header for the one populated state — the
+  // header label plus the row's own status word.
+  expect(screen.getAllByText('Conflict').length).toBeGreaterThanOrEqual(2)
+  // Typing updates the URL in place (deep-linkable, no history spam).
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Narrow loaded rows' }), { target: { value: 'orders' } })
+  expect(decodeURIComponent(window.location.hash)).toContain('narrow=orders')
+  expect(decodeURIComponent(window.location.hash)).toContain('group=state')
+})
+
+test('an empty narrowing names its window without an absence claim', async () => {
+  renderPage(new URLSearchParams({ repository: repositoryName, narrow: 'zzz-nothing' }))
+  expect(await screen.findByText('No loaded rows match this narrowing')).toBeTruthy()
+  expect(screen.getByText(/makes no claim about the rest of the catalog/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Clear narrowing' })).toBeTruthy()
+})
+
+test('dense mode tightens row geometry without dropping information', async () => {
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <DensityContext.Provider value={{ density: 'dense', toggle: () => {} }}>
+          <ServiceDirectoryPage params={new URLSearchParams({ repository: repositoryName })} />
+        </DensityContext.Provider>
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  const row = await screen.findByRole('option', { name: /Orders API/ })
+  expect(row.style.height).toBe('48px')
+  // Same facts as comfortable: identity, incarnation, disposition, roles,
+  // and the reason, truncated in place.
+  expect(row.textContent).toContain('orders-api · incarnation 2')
+  expect(row.textContent).toContain('accepted')
+})
+
+test('keyboard navigation moves through windowed rows and commits a selection', async () => {
+  renderPage(new URLSearchParams({ repository: repositoryName }))
+  const listbox = await screen.findByRole('listbox', { name: 'Services' })
+  fireEvent.keyDown(listbox, { key: 'ArrowDown' })
+  expect(listbox.getAttribute('aria-activedescendant')).toBe('service-directory-list-row-1')
+  fireEvent.keyDown(listbox, { key: 'Enter' })
+  expect(decodeURIComponent(window.location.hash)).toContain('service_key=billing-control')
 })
 
 test('bounds an oversized error body before rendering it', async () => {

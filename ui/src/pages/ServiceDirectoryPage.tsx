@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
@@ -15,11 +15,49 @@ import {
 } from '../api'
 import ServiceOverview from '../components/ServiceOverview'
 import { StateNotice, StatusWord } from '../components/kit'
-import { href, navigate } from '../router'
-import { FONTS, focusRing, usePhebsTokens, type PhebsTokens, type ToneName } from '../theme'
+import { VirtualList, type VirtualRowProps } from '../components/VirtualList'
+import { href, navigate, replaceRoute } from '../router'
+import { FONTS, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens, type ToneName } from '../theme'
 import { isAbortError, relTime } from '../util'
 
 const PAGE_SIZE = 50
+
+// T43.11: fixed per-density row heights — the windowed list's geometry is
+// declared, never measured, so it holds at ten-thousand-row catalogs. Both
+// densities carry identical information; dense merges the identity and
+// attribute lines.
+const LIST_ROW_HEIGHTS: Record<DensityName, number> = { comfortable: 80, dense: 48 }
+const LIST_HEIGHT = 620
+
+type ListItem =
+  | { kind: 'service'; service: ServiceRecord }
+  | { kind: 'header'; label: string; count: number }
+
+const STATE_ORDER: ServiceStatus[] = ['current', 'stale', 'conflict', 'unavailable', 'removed']
+
+// Instant, client-side, and window-bounded: narrowing reads only the rows
+// already delivered on this page. Absence claims stay with the server
+// filters; the match line names the bound explicitly.
+function narrowServices(services: ServiceRecord[], narrow: string): ServiceRecord[] {
+  const needle = narrow.trim().toLowerCase()
+  if (!needle) return services
+  return services.filter((service) =>
+    service.key.toLowerCase().includes(needle) ||
+    service.display_name.toLowerCase().includes(needle) ||
+    (service.reason ?? '').toLowerCase().includes(needle))
+}
+
+function groupItems(services: ServiceRecord[], group: 'none' | 'state'): ListItem[] {
+  if (group === 'none') return services.map((service) => ({ kind: 'service', service }))
+  const items: ListItem[] = []
+  for (const state of STATE_ORDER) {
+    const members = services.filter((service) => service.status === state)
+    if (members.length === 0) continue
+    items.push({ kind: 'header', label: titleCase(state), count: members.length })
+    for (const service of members) items.push({ kind: 'service', service })
+  }
+  return items
+}
 
 interface DirectoryRoute {
   repository: string
@@ -30,6 +68,10 @@ interface DirectoryRoute {
   serviceKey: string
   relationshipView: ServiceRelationshipView
   relationshipCursor: string
+  // Client-side view state over the loaded window (T43.11) — URL-borne per
+  // the charter's deep-link discipline, never sent to the server.
+  narrow: string
+  group: 'none' | 'state'
 }
 
 export default function ServiceDirectoryPage({ params, relationshipsAvailable = false }: {
@@ -261,8 +303,17 @@ function ServiceList({ inventory, route, onRoute }: {
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const { density } = useDensity()
+  const rowHeight = LIST_ROW_HEIGHTS[density]
   const filtered = Boolean(route.status || route.disposition || route.includeRemoved)
   const nextCursor = inventory.pagination.next_cursor ?? ''
+  const narrowed = useMemo(
+    () => narrowServices(inventory.services, route.narrow),
+    [inventory.services, route.narrow],
+  )
+  const items = useMemo(() => groupItems(narrowed, route.group), [narrowed, route.group])
+  const [activeIndex, setActiveIndex] = useState(0)
+  useEffect(() => setActiveIndex(0), [items.length, route.cursor])
   return (
     <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '10px', overflow: 'hidden', minWidth: 0 })}>
       <div className={css({ padding: '11px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg })}>
@@ -292,6 +343,30 @@ function ServiceList({ inventory, route, onRoute }: {
           />
           Include removed identities
         </label>
+        <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '8px', marginTop: '9px', '@media screen and (max-width: 480px)': { gridTemplateColumns: '1fr' } })}>
+          <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+            Narrow loaded rows
+            <input
+              type="search"
+              value={route.narrow}
+              placeholder="Key, name, or reason"
+              onChange={(event) => replaceRoute('/services', directoryParams({ ...route, narrow: event.currentTarget.value }))}
+              className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}
+            />
+          </label>
+          <FilterSelect
+            label="Group"
+            value={route.group === 'state' ? 'state' : ''}
+            onChange={(value) => onRoute({ group: value === 'state' ? 'state' : 'none' })}
+            options={['state']}
+            emptyLabel="None"
+          />
+        </div>
+        {route.narrow.trim() !== '' && (
+          <div role="status" className={css({ marginTop: '7px', fontSize: '11px', lineHeight: '16px', color: tok.textSecondary })}>
+            {narrowed.length} of {inventory.pagination.returned} loaded rows match · narrowing reads this page only
+          </div>
+        )}
       </div>
 
       {inventory.services.length === 0 ? (
@@ -312,14 +387,41 @@ function ServiceList({ inventory, route, onRoute }: {
             </button>
           )}
         </div>
+      ) : narrowed.length === 0 ? (
+        <div className={css({ padding: '32px 18px', color: tok.textSecondary })}>
+          <div className={css({ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: tok.textPrimary })}>
+            No loaded rows match this narrowing
+          </div>
+          <p className={css({ margin: '7px 0 0', fontSize: '12px', lineHeight: '18px', color: tok.textTertiary })}>
+            Narrowing reads only this page&apos;s {inventory.pagination.returned} loaded rows — it makes no claim about the rest of the catalog. Use the lifecycle and disposition filters or paging for the full inventory.
+          </p>
+          <button type="button" onClick={() => onRoute({ narrow: '' })} className={css({ ...textButton(tok), marginTop: '12px' })}>
+            Clear narrowing
+          </button>
+        </div>
       ) : (
-        <ul aria-label="Services" className={css({ maxHeight: '620px', overflowY: 'auto', listStyle: 'none', margin: 0, padding: 0 })}>
-          {inventory.services.map((service) => (
-            <li key={`${service.key}:${service.incarnation}`} className={css({ borderBottom: `1px solid ${tok.innerSep}`, ':last-child': { borderBottom: 'none' } })}>
-              <ServiceListRow service={service} route={route} />
-            </li>
-          ))}
-        </ul>
+        <VirtualList<ListItem>
+          items={items}
+          rowHeight={rowHeight}
+          height={Math.min(LIST_HEIGHT, items.length * rowHeight)}
+          ariaLabel="Services"
+          listboxId="service-directory-list"
+          activeIndex={activeIndex}
+          onActiveChange={setActiveIndex}
+          onCommit={(item) => {
+            if (item.kind === 'service') onRoute({ serviceKey: item.service.key, relationshipCursor: '' })
+          }}
+          getKey={(item) => item.kind === 'header' ? `header:${item.label}` : `${item.service.key}:${item.service.incarnation}`}
+          isHeader={(item) => item.kind === 'header'}
+          renderRow={(item, _index, rowProps, active) => item.kind === 'header' ? (
+            <div {...rowProps} className={css({ display: 'flex', alignItems: 'flex-end', gap: '7px', padding: `0 12px ${density === 'dense' ? '5px' : '8px'}`, backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}` })}>
+              <span className={css({ fontSize: '10.5px', lineHeight: '15px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
+              <span className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
+            </div>
+          ) : (
+            <ServiceListRow service={item.service} route={route} rowProps={rowProps} active={active} density={density} />
+          )}
+        />
       )}
 
       {(route.cursor || nextCursor) && (
@@ -336,11 +438,12 @@ function ServiceList({ inventory, route, onRoute }: {
   )
 }
 
-function FilterSelect({ label, value, options, onChange }: {
+function FilterSelect({ label, value, options, onChange, emptyLabel = 'All' }: {
   label: string
   value: string
   options: string[]
   onChange: (value: string) => void
+  emptyLabel?: string
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -348,38 +451,79 @@ function FilterSelect({ label, value, options, onChange }: {
     <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
       {label}
       <select value={value} onChange={(event) => onChange(event.currentTarget.value)} className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 28px 0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}>
-        <option value="">All</option>
+        <option value="">{emptyLabel}</option>
         {options.map((option) => <option key={option} value={option}>{titleCase(option)}</option>)}
       </select>
     </label>
   )
 }
 
-function ServiceListRow({ service, route }: { service: ServiceRecord; route: DirectoryRoute }) {
+// Fixed-height row (T43.11): the anatomy is constant per density so the
+// windowed list's geometry never depends on row content. Both densities show
+// the same facts — name, state, key, incarnation, disposition, roles, paths,
+// reason (truncated in place; complete in the detail panel on selection).
+function ServiceListRow({ service, route, rowProps, active, density }: {
+  service: ServiceRecord
+  route: DirectoryRoute
+  rowProps: VirtualRowProps
+  active: boolean
+  density: DensityName
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const selected = route.serviceKey === service.key
   const roles = roleEntries(service).filter(([, count]) => count > 0)
+  const dense = density === 'dense'
+  const attributes = (
+    <>
+      <SmallTag text={service.disposition} />
+      {roles.map(([role, count]) => <SmallTag key={role} text={`${role} ${count}`} quiet />)}
+      {service.distinct_path_count > 0 && <SmallTag text={`${service.distinct_path_count} paths`} quiet />}
+      {service.reason && (
+        // Basis 0: the reason takes leftover space only — under pressure it
+        // collapses before the identity or the tags do.
+        <span className={css({ minWidth: 0, flex: '1 1 0', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.reason}</span>
+      )}
+    </>
+  )
   return (
     <a
+      {...rowProps}
       href={directoryHref(route, { serviceKey: service.key, relationshipCursor: '' })}
+      tabIndex={-1}
       aria-current={selected ? 'true' : undefined}
-      className={css({ display: 'block', padding: '12px', textDecoration: 'none', color: tok.textPrimary, backgroundColor: selected ? tok.selectedLineBg : tok.pageBg, boxShadow: selected ? `inset 2px 0 0 ${tok.accent}` : 'none', ':hover': { backgroundColor: selected ? tok.selectedLineBg : tok.hoverFill }, ':focus-visible': { ...focusRing(tok), position: 'relative', zIndex: 1 } })}
+      // Explicit composed name: browsers are inconsistent computing
+      // name-from-content for options whose children are block elements.
+      aria-label={`${service.display_name} · ${service.key} · ${titleCase(service.status)}${service.reason ? ` · ${service.reason}` : ''}`}
+      className={css({
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: dense ? '3px' : '4px',
+        padding: `0 ${dense ? '10px' : '12px'}`,
+        overflow: 'hidden',
+        textDecoration: 'none',
+        color: tok.textPrimary,
+        backgroundColor: selected ? tok.selectedLineBg : active ? tok.hoverFill : tok.pageBg,
+        boxShadow: selected ? `inset 2px 0 0 ${tok.accent}` : active ? `inset 2px 0 0 ${tok.gutter}` : 'none',
+        borderBottom: `1px solid ${tok.innerSep}`,
+        ':hover': { backgroundColor: selected ? tok.selectedLineBg : tok.hoverFill },
+      })}
     >
-      <div className={css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' })}>
-        <div className={css({ minWidth: 0 })}>
-          <div className={css({ fontSize: '13px', lineHeight: '17px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.display_name}</div>
-          <div className={css({ marginTop: '1px', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.key} · incarnation {service.incarnation}</div>
-        </div>
+      <div className={css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px', minWidth: 0 })}>
+        <span className={css({ minWidth: 0, fontSize: dense ? '12px' : '13px', lineHeight: dense ? '16px' : '17px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.display_name}</span>
         <StatusBadge service={service} />
       </div>
-      <div className={css({ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '9px' })}>
-        <SmallTag text={service.disposition} />
-        {roles.map(([role, count]) => <SmallTag key={role} text={`${role} ${count}`} quiet />)}
-        {service.distinct_path_count > 0 && <SmallTag text={`${service.distinct_path_count} paths`} quiet />}
-      </div>
-      {service.reason && (
-        <div className={css({ marginTop: '7px', fontSize: '11px', lineHeight: '16px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.reason}</div>
+      {dense ? (
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' })}>
+          <code className={css({ flex: '0 1 auto', minWidth: 0, fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis' })}>{service.key} · incarnation {service.incarnation}</code>
+          {attributes}
+        </div>
+      ) : (
+        <>
+          <div className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.key} · incarnation {service.incarnation}</div>
+          <div className={css({ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' })}>{attributes}</div>
+        </>
       )}
     </a>
   )
@@ -576,7 +720,7 @@ function StatusBadge({ service }: { service: ServiceRecord }) {
 function SmallTag({ text, quiet = false }: { text: string; quiet?: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <span className={css({ padding: '2px 6px', borderRadius: '4px', backgroundColor: quiet ? tok.pageBg : tok.fill, border: quiet ? `1px solid ${tok.innerSep}` : 'none', color: quiet ? tok.textTertiary : tok.textSecondary, fontSize: '9.5px', lineHeight: '13px', whiteSpace: 'nowrap' })}>{text}</span>
+  return <span className={css({ flexShrink: 0, padding: '2px 6px', borderRadius: '4px', backgroundColor: quiet ? tok.pageBg : tok.fill, border: quiet ? `1px solid ${tok.innerSep}` : 'none', color: quiet ? tok.textTertiary : tok.textSecondary, fontSize: '9.5px', lineHeight: '13px', whiteSpace: 'nowrap' })}>{text}</span>
 }
 
 function roleEntries(service: ServiceRecord): [ServiceMembershipRole, number][] {
@@ -606,6 +750,8 @@ function directoryRoute(params: URLSearchParams): DirectoryRoute {
     serviceKey: params.get('service_key') ?? '',
     relationshipView,
     relationshipCursor: params.get('relationship_cursor') ?? '',
+    narrow: params.get('narrow') ?? '',
+    group: params.get('group') === 'state' ? 'state' : 'none',
   }
 }
 
@@ -618,6 +764,8 @@ function directoryParams(route: DirectoryRoute): Record<string, string> {
   if (route.serviceKey) result.service_key = route.serviceKey
   if (route.relationshipView !== 'dependencies') result.relationship_view = route.relationshipView
   if (route.relationshipCursor) result.relationship_cursor = route.relationshipCursor
+  if (route.narrow) result.narrow = route.narrow
+  if (route.group !== 'none') result.group = route.group
   return result
 }
 

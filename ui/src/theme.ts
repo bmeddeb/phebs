@@ -214,6 +214,19 @@ export const ModeContext = createContext<ModeCtx>({ mode: 'light', toggle: () =>
 
 export const useMode = () => useContext(ModeContext)
 
+// T43.11 product density control. One product-wide state, two values;
+// density changes spacing and row height, never information.
+export type DensityName = keyof typeof DENSITY
+
+interface DensityCtx {
+  density: DensityName
+  toggle: () => void
+}
+
+export const DensityContext = createContext<DensityCtx>({ density: 'comfortable', toggle: () => {} })
+
+export const useDensity = () => useContext(DensityContext)
+
 /** Current-mode design tokens. */
 export function usePhebsTokens(): PhebsTokens {
   return TOKENS[useMode().mode]

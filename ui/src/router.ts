@@ -23,6 +23,16 @@ export function navigate(path: string, params?: Record<string, string>) {
   window.location.hash = `#${path}${qs}`
 }
 
+// Replace-in-place navigation for continuous view state (per-keystroke
+// narrowing): the URL stays the deep link, but typing must not mint one
+// history entry per character. replaceState fires no hashchange, so dispatch
+// one for useHashRoute subscribers.
+export function replaceRoute(path: string, params?: Record<string, string>) {
+  const qs = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''
+  history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${path}${qs}`)
+  window.dispatchEvent(new HashChangeEvent('hashchange'))
+}
+
 export function href(path: string, params?: Record<string, string>): string {
   const qs = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''
   return `#${path}${qs}`

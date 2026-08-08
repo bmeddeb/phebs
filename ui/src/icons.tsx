@@ -96,6 +96,14 @@ export const StopIcon = ({ size = 16 }: IconProps) => svg(size, <rect x="4" y="4
 export const CommitIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><circle cx="8" cy="8" r="2.5" /><path d="M8 2v3.5M8 10.5V14" /></>)
 
+// Density toggle faces (T43.11): like Sun/Moon, each shows the density the
+// button switches TO — spaced rows for comfortable, tight rows for dense.
+export const RowsComfortableIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />)
+
+export const RowsDenseIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <path d="M2.5 3.5h11M2.5 6.5h11M2.5 9.5h11M2.5 12.5h11" />)
+
 export const SunIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><circle cx="8" cy="8" r="3" /><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1" /></>)
 

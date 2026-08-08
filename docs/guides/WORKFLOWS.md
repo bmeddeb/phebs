@@ -1296,6 +1296,18 @@ is a failure or terminal refusal.
   assistive technology), `Enter` opens the selected file at its first
   match, `y` copies the selected path, `o` collapses or expands the
   selected repository group.
+- **Directory and explorer lists** (T43.11): the service list and the
+  exact relationship rows are single tab stops. With the list focused,
+  `↑`/`↓` move the active row, `PageUp`/`PageDown` move by a viewport,
+  `Home`/`End` jump to the edges (group headers are skipped), and
+  `Enter` opens the active service or pins the active relationship row's
+  detail. The lists are windowed: only the visible rows exist in the
+  DOM, while assistive technology still announces exact positions
+  ("row 4,832 of 10,000").
+- **Row density**: the header's rows button (next to the theme toggle)
+  switches every density-aware surface between comfortable and dense
+  rows. Density changes spacing and row height, never information; the
+  choice persists locally per browser.
 
 - **Search** (`#/search?q=…`) — the repository explorer always lists the
 repositories visible to the signed-in user, even before a search returns

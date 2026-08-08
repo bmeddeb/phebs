@@ -9,9 +9,10 @@ import {
   type ServiceRelationshipRow,
   type ServiceRelationshipView,
 } from '../api'
-import { href, navigate } from '../router'
-import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
+import { href, navigate, replaceRoute } from '../router'
+import { FONTS, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens } from '../theme'
 import { CitationChip, CitationPanel, ClaimBoundary } from '../components/kit'
+import { VirtualList, type VirtualListHandle, type VirtualRowProps } from '../components/VirtualList'
 import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { validateServiceRelationshipCitation } from '../components/serviceRelationshipCitation'
 import { isAbortError } from '../util'
@@ -30,6 +31,12 @@ interface ExplorerRoute {
   lookupKey: string
   cursor: string
   diagram: boolean
+  // Client-side view state (T43.11): URL-borne, never part of the wire
+  // query. selectedRow pins a row by projection digest; narrow and group
+  // read only the delivered page.
+  selectedRow: string
+  narrow: string
+  group: 'none' | 'class'
 }
 
 interface DraftFilters {
@@ -70,6 +77,11 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
     lookupKey: route.lookupKey,
     cursor: route.cursor,
     diagram: false,
+    // Client-side view state (selection, narrowing, grouping) never
+    // re-issues the wire query.
+    selectedRow: '',
+    narrow: '',
+    group: 'none',
   }), [
     route.serviceKey,
     route.repository,
@@ -138,6 +150,8 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
       evidence: draft.evidence,
       lookupKey,
       cursor: '',
+      // A digest pin is page-scoped; new filters mean a new page.
+      selectedRow: '',
     }))
   }
 
@@ -244,8 +258,8 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
         <>
           <CoverageStrip page={page} />
           <div className={css({ display: 'grid', gridTemplateColumns: route.diagram ? 'minmax(0, 3fr) minmax(280px, 1fr)' : 'minmax(0, 1fr)', gap: '10px', alignItems: 'start', '@media screen and (max-width: 980px)': { gridTemplateColumns: '1fr' } })}>
-            <ExactRows page={page} onCitation={openCitation} />
-            {route.diagram && <PageDiagram page={page} />}
+            <ExactRows page={page} route={route} onCitation={openCitation} />
+            {route.diagram && <PageDiagram page={page} route={route} />}
           </div>
           <PageNavigation route={route} page={page} />
         </>
@@ -314,89 +328,247 @@ function CoverageStrip({ page }: { page: ServiceRelationshipPage }) {
   )
 }
 
-function ExactRows({ page, onCitation }: { page: ServiceRelationshipPage; onCitation: (row: ServiceRelationshipRow) => void }) {
+// T43.11: exact rows render through the windowed list — fixed per-density
+// row heights (the DENSITY token minima), one presentation at every width.
+// A row is a summary line; its complete evidence — full paths, every
+// attribution placement, the citation action — lives in the selected-row
+// detail region below, pinned by projection digest in the URL.
+const EXPLORER_ROW_HEIGHTS: Record<DensityName, number> = { comfortable: 44, dense: 32 }
+const EXPLORER_LIST_HEIGHT = 480
+
+type ExplorerListItem =
+  | { kind: 'row'; row: ServiceRelationshipRow; pageIndex: number }
+  | { kind: 'header'; label: string; count: number }
+
+function narrowRows(rows: ServiceRelationshipRow[], narrow: string): { row: ServiceRelationshipRow; pageIndex: number }[] {
+  const indexed = rows.map((row, pageIndex) => ({ row, pageIndex }))
+  const needle = narrow.trim().toLowerCase()
+  if (!needle) return indexed
+  return indexed.filter(({ row }) => {
+    const route = exactRoute(row)
+    return row.evidence.path.toLowerCase().includes(needle) ||
+      (row.evidence.operation || row.evidence.topic_spelling || row.lookup_key || '').toLowerCase().includes(needle) ||
+      route.from.toLowerCase().includes(needle) ||
+      route.to.toLowerCase().includes(needle) ||
+      classificationLabel(row).toLowerCase().includes(needle)
+  })
+}
+
+function groupRows(entries: { row: ServiceRelationshipRow; pageIndex: number }[], group: 'none' | 'class'): ExplorerListItem[] {
+  if (group === 'none') return entries.map((entry) => ({ kind: 'row', ...entry }))
+  const labels: string[] = []
+  for (const entry of entries) {
+    const label = classificationLabel(entry.row)
+    if (!labels.includes(label)) labels.push(label)
+  }
+  const items: ExplorerListItem[] = []
+  for (const label of labels) {
+    const members = entries.filter((entry) => classificationLabel(entry.row) === label)
+    items.push({ kind: 'header', label, count: members.length })
+    for (const entry of members) items.push({ kind: 'row', ...entry })
+  }
+  return items
+}
+
+function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage; route: ExplorerRoute; onCitation: (row: ServiceRelationshipRow) => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const { density } = useDensity()
+  const rowHeight = EXPLORER_ROW_HEIGHTS[density]
+  const narrowed = useMemo(() => narrowRows(page.rows, route.narrow), [page.rows, route.narrow])
+  const items = useMemo(() => groupRows(narrowed, route.group), [narrowed, route.group])
+  const [activeIndex, setActiveIndex] = useState(0)
+  useEffect(() => setActiveIndex(0), [items.length, route.cursor])
+  const listRef = useRef<VirtualListHandle>(null)
+  const selectedIndex = items.findIndex((item) => item.kind === 'row' && item.row.projection_digest === route.selectedRow)
+  const selected = selectedIndex >= 0 ? (items[selectedIndex] as { kind: 'row'; row: ServiceRelationshipRow; pageIndex: number }) : null
+  useEffect(() => {
+    if (selectedIndex >= 0) listRef.current?.scrollToIndex(selectedIndex)
+    // Reveal the pinned row whenever the pin or the list shape changes.
+  }, [route.selectedRow, selectedIndex])
+  const selectRow = (row: ServiceRelationshipRow) =>
+    navigate('/relationships', explorerParams({ ...route, selectedRow: row.projection_digest }))
   if (page.rows_state === 'gap') {
     return <div className={css(statusBox(tok))}>One or more requested relationship roots are gaps. No empty result is inferred.</div>
   }
   if (page.rows.length === 0) {
     return <div className={css(statusBox(tok))}>Exact empty page for these filters. Root gaps and admitted truncation remain reported above.</div>
   }
+  const columns = `44px minmax(0, 1.5fr) minmax(0, 1.1fr) minmax(0, 1.5fr) 96px`
+  const cellText = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 }
   return (
     <section aria-labelledby="exact-relationship-rows" className={css({ minWidth: 0, border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', overflow: 'hidden' })}>
       <h2 id="exact-relationship-rows" className={css({ margin: 0, padding: '10px 12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.cardBorder}`, color: tok.textPrimary, fontSize: '12px', lineHeight: '17px' })}>Exact source rows</h2>
-      <div role="region" aria-label="Exact relationship source table" className={css({ overflowX: 'auto', '@media screen and (max-width: 720px)': { display: 'none' } })}>
-        <table className={css({ width: '100%', minWidth: '920px', borderCollapse: 'collapse', tableLayout: 'fixed' })}>
-          <thead><tr>{['ID', 'Evidence', 'Contract / topic', 'Service route', 'Attribution', 'Classification', 'Citation'].map((label, index) => <th key={label} scope="col" className={css({ ...tableHead(tok), width: ['7%', '20%', '17%', '18%', '18%', '11%', '9%'][index] })}>{label}</th>)}</tr></thead>
-          <tbody>{page.rows.map((row, index) => <DesktopRow key={`${row.repository}:${row.projection_digest}`} id={rowID(index)} row={row} onCitation={onCitation} />)}</tbody>
-        </table>
+      <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '8px', padding: '9px 12px', borderBottom: `1px solid ${tok.innerSep}`, backgroundColor: tok.bandBg, '@media screen and (max-width: 480px)': { gridTemplateColumns: '1fr' } })}>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+          Narrow loaded rows
+          <input
+            type="search"
+            value={route.narrow}
+            placeholder="Path, identity, route, or class"
+            onChange={(event) => replaceRoute('/relationships', explorerParams({ ...route, narrow: event.currentTarget.value }))}
+            className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}
+          />
+        </label>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+          Group
+          <select
+            value={route.group === 'class' ? 'class' : ''}
+            onChange={(event) => navigate('/relationships', explorerParams({ ...route, group: event.currentTarget.value === 'class' ? 'class' : 'none' }))}
+            className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 28px 0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}
+          >
+            <option value="">None</option>
+            <option value="class">Classification</option>
+          </select>
+        </label>
       </div>
-      <ol aria-label="Exact relationship source rows" className={css({ display: 'none', margin: 0, padding: 0, listStyle: 'none', '@media screen and (max-width: 720px)': { display: 'block' } })}>
-        {page.rows.map((row, index) => <MobileRow key={`${row.repository}:${row.projection_digest}`} id={rowID(index)} row={row} onCitation={onCitation} />)}
-      </ol>
+      {route.narrow.trim() !== '' && (
+        <div role="status" className={css({ padding: '7px 12px', borderBottom: `1px solid ${tok.innerSep}`, fontSize: '11px', lineHeight: '16px', color: tok.textSecondary })}>
+          {narrowed.length} of {page.pagination.returned} loaded rows match · narrowing reads this page only
+        </div>
+      )}
+      {narrowed.length === 0 ? (
+        <div className={css({ padding: '24px 14px', color: tok.textSecondary, fontSize: '12px', lineHeight: '18px' })}>
+          No loaded rows match this narrowing. It reads only this page&apos;s {page.pagination.returned} rows and makes no claim about other pages — the filters above query the exact evidence.
+        </div>
+      ) : (
+        <>
+          <div aria-hidden="true" className={css({ display: 'grid', gridTemplateColumns: columns, gap: '8px', padding: `5px 12px`, borderBottom: `1px solid ${tok.innerSep}`, backgroundColor: tok.bandBg, '@media screen and (max-width: 720px)': { gridTemplateColumns: '44px minmax(0, 1fr) 96px' } })}>
+            {['ID', 'Evidence', 'Contract / topic', 'Service route', 'Class'].map((label, index) => (
+              <span key={label} className={css({ color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px', fontWeight: 600, ...(index === 2 || index === 3 ? { '@media screen and (max-width: 720px)': { display: 'none' } } : {}) })}>{label}</span>
+            ))}
+          </div>
+          <VirtualList<ExplorerListItem>
+            ref={listRef}
+            items={items}
+            rowHeight={rowHeight}
+            height={Math.min(EXPLORER_LIST_HEIGHT, items.length * rowHeight)}
+            ariaLabel="Exact relationship source rows"
+            listboxId="relationship-rows"
+            activeIndex={activeIndex}
+            onActiveChange={setActiveIndex}
+            onCommit={(item) => { if (item.kind === 'row') selectRow(item.row) }}
+            getKey={(item) => item.kind === 'header' ? `header:${item.label}` : `${item.row.repository}:${item.row.projection_digest}`}
+            isHeader={(item) => item.kind === 'header'}
+            renderRow={(item, _index, rowProps, active) => item.kind === 'header' ? (
+              <div {...rowProps} className={css({ display: 'flex', alignItems: 'flex-end', gap: '7px', padding: '0 12px 4px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}` })}>
+                <span className={css({ fontSize: '10px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
+                <span className={css({ fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
+              </div>
+            ) : (
+              <ExplorerRow item={item} rowProps={rowProps} active={active} selected={item.row.projection_digest === route.selectedRow} columns={columns} cellText={cellText} onSelect={() => selectRow(item.row)} />
+            )}
+          />
+        </>
+      )}
+      {route.selectedRow && !selected && narrowed.length > 0 && (
+        <div role="status" className={css({ padding: '9px 12px', borderTop: `1px solid ${tok.innerSep}`, fontSize: '11px', lineHeight: '16px', color: tok.status.stale.text })}>
+          The pinned row is not in this page&apos;s loaded rows. Selection is page-scoped; it may sit on another page or outside the current narrowing.
+        </div>
+      )}
+      {selected && <RowDetail row={selected.row} id={rowID(selected.pageIndex)} route={route} onCitation={onCitation} />}
     </section>
   )
 }
 
-function DesktopRow({ id, row, onCitation }: { id: string; row: ServiceRelationshipRow; onCitation: (row: ServiceRelationshipRow) => void }) {
+function ExplorerRow({ item, rowProps, active, selected, columns, cellText, onSelect }: {
+  item: { row: ServiceRelationshipRow; pageIndex: number }
+  rowProps: VirtualRowProps
+  active: boolean
+  selected: boolean
+  columns: string
+  cellText: Record<string, unknown>
+  onSelect: () => void
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const { row } = item
   const route = exactRoute(row)
-  return (
-    <tr id={`${id}-desktop`} className={css({ borderTop: `1px solid ${tok.innerSep}`, scrollMarginTop: '70px', ':hover': { backgroundColor: tok.hoverFill } })}>
-      <td className={css(tableCell(tok))}><span className={css(idBadge(tok))}>{id}</span></td>
-      <td className={css(tableCell(tok))}><EvidenceCell row={row} /></td>
-      <td className={css(tableCell(tok))}><SubjectCell row={row} /></td>
-      <td className={css(tableCell(tok))}><RouteCell route={route} /></td>
-      <td className={css(tableCell(tok))}><AttributionCell row={row} /></td>
-      <td className={css(tableCell(tok))}><ClassificationCell row={row} /></td>
-      <td className={css(tableCell(tok))}><CitationButton row={row} onCitation={onCitation} /></td>
-    </tr>
-  )
-}
-
-function MobileRow({ id, row, onCitation }: { id: string; row: ServiceRelationshipRow; onCitation: (row: ServiceRelationshipRow) => void }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const route = exactRoute(row)
-  return (
-    <li id={id} className={css({ padding: '13px 12px', borderTop: `1px solid ${tok.innerSep}`, scrollMarginTop: '70px' })}>
-      <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
-        <span className={css(idBadge(tok))}>{id}</span>
-        <ClassificationCell row={row} />
-      </div>
-      <div className={css({ marginTop: '8px' })}><EvidenceCell row={row} /></div>
-      <div className={css({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px', '@media screen and (max-width: 430px)': { gridTemplateColumns: '1fr' } })}>
-        <div><MobileLabel>Contract / topic</MobileLabel><SubjectCell row={row} /></div>
-        <div><MobileLabel>Exact route</MobileLabel><RouteCell route={route} /></div>
-      </div>
-      <details className={css({ marginTop: '9px' })}><summary className={css({ color: tok.textSecondary, fontSize: '10.5px', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>Attribution claims</summary><div className={css({ marginTop: '6px' })}><AttributionCell row={row} /></div></details>
-      <div className={css({ marginTop: '11px' })}><CitationButton row={row} onCitation={onCitation} /></div>
-    </li>
-  )
-}
-
-function EvidenceCell({ row }: { row: ServiceRelationshipRow }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <><code className={css(codeWrap(tok))}>{row.evidence.path}</code><div className={css(meta(tok))}>lines {row.evidence.span.start_line}–{row.evidence.span.end_line} · {row.evidence.source_role} · {row.repository}</div></>
-}
-
-function SubjectCell({ row }: { row: ServiceRelationshipRow }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
   const subject = row.evidence.operation || row.evidence.topic_spelling || row.lookup_key || 'No resolved identity'
-  return <><div className={css({ color: tok.textPrimary, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{subject}</div><div className={css(meta(tok))}>{row.kind} · {row.plane}</div></>
+  const label = classificationLabel(row)
+  const labelColor = label === 'Ambiguous' ? tok.status.conflict.text : label === 'Unowned' || label === 'Unsupported' || label === 'Unresolved' ? tok.status.stale.text : tok.textSecondary
+  return (
+    <div
+      {...rowProps}
+      onClick={onSelect}
+      aria-label={`${rowID(item.pageIndex)} · ${row.evidence.path}:${row.evidence.span.start_line}–${row.evidence.span.end_line} · ${subject} · ${route.from} → ${route.to} · ${label}`}
+      className={css({
+        display: 'grid',
+        gridTemplateColumns: columns,
+        gap: '8px',
+        alignItems: 'center',
+        padding: '0 12px',
+        cursor: 'pointer',
+        backgroundColor: selected ? tok.selectedLineBg : active ? tok.hoverFill : 'transparent',
+        boxShadow: selected ? `inset 2px 0 0 ${tok.accent}` : active ? `inset 2px 0 0 ${tok.gutter}` : 'none',
+        borderBottom: `1px solid ${tok.innerSep}`,
+        ':hover': { backgroundColor: selected ? tok.selectedLineBg : tok.hoverFill },
+        '@media screen and (max-width: 720px)': { gridTemplateColumns: '44px minmax(0, 1fr) 96px' },
+      })}
+    >
+      <span className={css(idBadge(tok))}>{rowID(item.pageIndex)}</span>
+      <span title={row.evidence.path} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '10px', color: tok.textSecondary })}>{row.evidence.path}:{row.evidence.span.start_line}–{row.evidence.span.end_line}</span>
+      <span title={subject} className={css({ ...cellText, fontSize: '10.5px', color: tok.textPrimary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{subject}</span>
+      <span title={`${route.from} → ${route.to}`} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '10px', color: tok.textSecondary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{route.from} <span aria-hidden="true">→</span> {route.to}</span>
+      <span className={css({ ...cellText, fontSize: '10px', fontWeight: 600, color: labelColor })}>{label}</span>
+    </div>
+  )
+}
+
+// The selected row's complete evidence: nothing the old table showed is
+// dropped — full paths wrap, every attribution placement renders, and the
+// citation action is a real, tabbable control.
+function RowDetail({ row, id, route, onCitation }: { row: ServiceRelationshipRow; id: string; route: ExplorerRoute; onCitation: (row: ServiceRelationshipRow) => void }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const exact = exactRoute(row)
+  const subject = row.evidence.operation || row.evidence.topic_spelling || row.lookup_key || 'No resolved identity'
+  return (
+    <section role="region" aria-label={`Row ${id} detail`} className={css({ borderTop: `2px solid ${tok.cardBorder}`, padding: '12px 14px' })}>
+      <div className={css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' })}>
+        <div className={css({ display: 'flex', alignItems: 'baseline', gap: '8px' })}>
+          <span className={css(idBadge(tok))}>{id}</span>
+          <ClassificationCell row={row} />
+        </div>
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '10px' })}>
+          <CitationButton row={row} onCitation={onCitation} />
+          <a href={explorerHref({ ...route, selectedRow: '' })} className={css({ color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'underline', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) })}>Clear selection</a>
+        </div>
+      </div>
+      <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px 16px', marginTop: '10px', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
+        <div>
+          <DetailLabel>Evidence</DetailLabel>
+          <code className={css(codeWrap(tok))}>{row.evidence.path}</code>
+          <div className={css(meta(tok))}>lines {row.evidence.span.start_line}–{row.evidence.span.end_line} · {row.evidence.source_role} · {row.repository}</div>
+        </div>
+        <div>
+          <DetailLabel>Contract / topic</DetailLabel>
+          <div className={css({ color: tok.textPrimary, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{subject}</div>
+          <div className={css(meta(tok))}>{row.kind} · {row.plane}</div>
+        </div>
+        <div>
+          <DetailLabel>Exact route</DetailLabel>
+          <div className={css({ fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '16px', color: tok.textSecondary, overflowWrap: 'anywhere' })}>
+            <strong className={css({ color: tok.textPrimary })}>{exact.from}</strong><span aria-hidden="true"> → </span><strong className={css({ color: tok.textPrimary })}>{exact.to}</strong>
+          </div>
+          <div className={css(meta(tok))}>{exact.posture}</div>
+        </div>
+        <div>
+          <DetailLabel>Attribution</DetailLabel>
+          <AttributionCell row={row} />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function DetailLabel({ children }: { children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return <div className={css({ marginBottom: '4px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>{children}</div>
 }
 
 interface ExactRoute { from: string; to: string; posture: string }
-
-function RouteCell({ route }: { route: ExactRoute }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <div className={css({ fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '16px', color: tok.textSecondary, overflowWrap: 'anywhere' })}><strong className={css({ color: tok.textPrimary })}>{route.from}</strong><span aria-hidden="true"> → </span><strong className={css({ color: tok.textPrimary })}>{route.to}</strong><div className={css(meta(tok))}>{route.posture}</div></div>
-}
 
 function AttributionCell({ row }: { row: ServiceRelationshipRow }) {
   const [css] = useStyletron()
@@ -423,32 +595,29 @@ function CitationButton({ row, onCitation }: { row: ServiceRelationshipRow; onCi
   return <CitationChip path={row.evidence.path} span={row.evidence.span} onOpen={() => onCitation(row)} />
 }
 
-function PageDiagram({ page }: { page: ServiceRelationshipPage }) {
+function PageDiagram({ page, route }: { page: ServiceRelationshipPage; route: ExplorerRoute }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
     <figure aria-labelledby="page-diagram-title" className={css({ margin: 0, border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', overflow: 'hidden' })}>
-      <figcaption id="page-diagram-title" className={css({ padding: '10px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '16px' })}>Current page only · table remains authoritative</figcaption>
+      <figcaption id="page-diagram-title" className={css({ padding: '10px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '16px' })}>Current page only · the row list remains authoritative</figcaption>
       <ol className={css({ margin: 0, padding: 0, listStyle: 'none' })}>
         {page.rows.map((row, index) => {
-          const route = exactRoute(row)
+          const exact = exactRoute(row)
           const id = rowID(index)
           return (
             <li key={`${row.repository}:${row.projection_digest}`} className={css({ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr) 32px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minHeight: '70px', padding: '8px 10px', borderTop: index === 0 ? 'none' : `1px solid ${tok.innerSep}` })}>
               <button
                 type="button"
-                aria-label={`Scroll to source row ${id}`}
-                onClick={() => {
-                  // The desktop table and mobile list both render the row; scroll the visible one.
-                  const target = [document.getElementById(`${id}-desktop`), document.getElementById(id)]
-                    .find((el): el is HTMLElement => el !== null && el.offsetParent !== null)
-                  target?.scrollIntoView({ block: 'center' })
-                }}
+                aria-label={`Select source row ${id}`}
+                // Rows are windowed, so the target may not be in the DOM;
+                // pinning it in the URL reveals and details it instead.
+                onClick={() => navigate('/relationships', explorerParams({ ...route, selectedRow: row.projection_digest }))}
                 className={css({ ...idLink(tok), border: 0, padding: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left' })}
               >{id}</button>
-              <DiagramNode>{route.from}</DiagramNode>
-              <span aria-label={route.posture} title={route.posture} className={css({ textAlign: 'center', color: tok.textTertiary, fontSize: '16px' })}>→</span>
-              <DiagramNode>{route.to}</DiagramNode>
+              <DiagramNode>{exact.from}</DiagramNode>
+              <span aria-label={exact.posture} title={exact.posture} className={css({ textAlign: 'center', color: tok.textTertiary, fontSize: '16px' })}>→</span>
+              <DiagramNode>{exact.to}</DiagramNode>
             </li>
           )
         })}
@@ -469,16 +638,10 @@ function PageNavigation({ route, page }: { route: ExplorerRoute; page: ServiceRe
   if (!route.cursor && !page.pagination.next_cursor) return null
   return (
     <nav aria-label="Relationship pages" className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '10px' })}>
-      {route.cursor ? <a href={explorerHref({ ...route, cursor: '' })} className={css(secondaryLink(tok))}>First exact page</a> : <span />}
-      {page.pagination.next_cursor && <a href={explorerHref({ ...route, cursor: page.pagination.next_cursor })} className={css(primaryLink(tok))}>Next exact page</a>}
+      {route.cursor ? <a href={explorerHref({ ...route, cursor: '', selectedRow: '' })} className={css(secondaryLink(tok))}>First exact page</a> : <span />}
+      {page.pagination.next_cursor && <a href={explorerHref({ ...route, cursor: page.pagination.next_cursor, selectedRow: '' })} className={css(primaryLink(tok))}>Next exact page</a>}
     </nav>
   )
-}
-
-function MobileLabel({ children }: { children: React.ReactNode }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <div className={css({ marginBottom: '4px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>{children}</div>
 }
 
 function explorerRoute(params: URLSearchParams): ExplorerRoute {
@@ -492,6 +655,9 @@ function explorerRoute(params: URLSearchParams): ExplorerRoute {
     lookupKey: params.get('lookup_key') ?? '',
     cursor: params.get('cursor') ?? '',
     diagram: params.get('diagram') === '1',
+    selectedRow: params.get('sel_row') ?? '',
+    narrow: params.get('narrow') ?? '',
+    group: params.get('group') === 'class' ? 'class' : 'none',
   }
 }
 
@@ -507,6 +673,9 @@ function explorerParams(route: ExplorerRoute): Record<string, string> {
   if (route.lookupKey) values.lookup_key = route.lookupKey
   if (route.cursor) values.cursor = route.cursor
   if (route.diagram) values.diagram = '1'
+  if (route.selectedRow) values.sel_row = route.selectedRow
+  if (route.narrow) values.narrow = route.narrow
+  if (route.group !== 'none') values.group = route.group
   return values
 }
 
@@ -600,8 +769,6 @@ function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontS
 function primaryButton(tok: PhebsTokens) { return { minHeight: '36px', padding: '0 13px', border: '0', borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) } }
 function resetLink(tok: PhebsTokens) { return { minHeight: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tok.selectedText, fontSize: '10.5px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
 function statusBox(tok: PhebsTokens) { return { minHeight: '90px', boxSizing: 'border-box' as const, display: 'flex', alignItems: 'center', padding: '20px', border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', color: tok.textTertiary, fontSize: '11.5px', lineHeight: '18px' } }
-function tableHead(tok: PhebsTokens) { return { padding: '8px 9px', textAlign: 'left' as const, backgroundColor: tok.bandBg, color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px', fontWeight: 600 } }
-function tableCell(tok: PhebsTokens) { return { padding: '10px 9px', verticalAlign: 'top' as const, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '16px', overflowWrap: 'anywhere' as const } }
 function codeWrap(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '9.5px', lineHeight: '15px', whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const } }
 function meta(tok: PhebsTokens) { return { marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', overflowWrap: 'anywhere' as const } }
 function idLink(tok: PhebsTokens) { return { color: tok.selectedText, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600, textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }

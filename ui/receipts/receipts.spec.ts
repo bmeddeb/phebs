@@ -34,7 +34,7 @@ async function waitForReceiptReady(page: Page) {
   }).toBeGreaterThanOrEqual(3)
 }
 
-async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], name: string) {
+async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], density: (typeof DENSITIES)[number], name: string) {
   const { path } = route
   if (route.viewport) await page.setViewportSize(route.viewport)
   // Fixed Date only — timers, rAF, and CodeMirror layout stay live; age copy
@@ -52,6 +52,7 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
     }
   })
   await page.addInitScript((mode) => localStorage.setItem('phebs-theme', mode as string), theme)
+  await page.addInitScript((value) => localStorage.setItem('phebs-density', value as string), density)
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`/#${path}`)
   await page.waitForSelector('main', { state: 'visible' })
@@ -91,7 +92,7 @@ for (const theme of THEMES) {
   for (const density of DENSITIES) {
     for (const route of ROUTES) {
       test(`${route.name} · ${theme} · ${density}`, async ({ page }) => {
-        await capture(page, route, theme, `${route.name}--${theme}--${density}`)
+        await capture(page, route, theme, density, `${route.name}--${theme}--${density}`)
       })
     }
   }

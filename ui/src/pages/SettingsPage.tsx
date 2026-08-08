@@ -298,19 +298,25 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
             rotations; the payload carries no cycle authority, so this count
             must not claim one. */}
         <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>owners with recorded results</div>
-        {failed.length > 0 ? (
-          <div data-volatile="lifecycle" className={css({ marginTop: '7px', display: 'grid', gap: '3px' })}>
-            {failed.slice(0, 4).map((owner) => (
-              <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
-                <StatusWord tone="red">error</StatusWord>
-                <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
-              </div>
-            ))}
-            {failed.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {failed.length - 4} more failed owners</div>}
-          </div>
-        ) : (
-          <div data-volatile="lifecycle" className={css({ marginTop: '7px' })}><StatusWord tone="green">no failed owners</StatusWord></div>
-        )}
+        {/* Reserved slot: live owner churn must never move the page —
+            geometry is declared (the T43.11 principle), content scrolls if
+            it ever exceeds the slot, and the receipt mask covers the fixed
+            box rather than a content-sized one. */}
+        <div data-volatile="lifecycle" className={css({ height: '76px', marginTop: '7px', overflowY: 'auto' })}>
+          {failed.length > 0 ? (
+            <div className={css({ display: 'grid', gap: '3px' })}>
+              {failed.slice(0, 4).map((owner) => (
+                <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
+                  <StatusWord tone="red">error</StatusWord>
+                  <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
+                </div>
+              ))}
+              {failed.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {failed.length - 4} more failed owners</div>}
+            </div>
+          ) : (
+            <StatusWord tone="green">no failed owners</StatusWord>
+          )}
+        </div>
         <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px' })}>
           Per turn: at most {status.policy.max_candidates_per_turn} candidates, {status.policy.max_deletes_per_turn} deletions, {status.policy.max_queries_per_turn} store queries
         </div>
@@ -319,24 +325,28 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
         <div data-volatile="lifecycle" className={css({ color: tok.textPrimary, fontSize: '18px', lineHeight: '24px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' })}>
           {backlog.length}
         </div>
+        {/* Count-invariant caption: the numeral above is masked, so the
+            caption must not vary with it. */}
         <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>
-          {backlog.length === 1 ? 'owner carries' : 'owners carry'} backlog into the next turn
+          owners carrying backlog into the next turn
         </div>
-        {backlog.length > 0 && (
-          <div data-volatile="lifecycle" className={css({ marginTop: '7px', display: 'grid', gap: '3px' })}>
-            {backlog.slice(0, 4).map((owner) => (
-              <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
-                <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
-                {owner.attempted_at && Number.isFinite(Date.parse(owner.attempted_at)) && (
-                  <span className={css({ color: tok.textTertiary, fontSize: '10.5px' })}>
-                    attempted <time dateTime={owner.attempted_at}>{relTime(owner.attempted_at)} · {new Date(owner.attempted_at).toLocaleString()}</time>
-                  </span>
-                )}
-              </div>
-            ))}
-            {backlog.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {backlog.length - 4} more</div>}
-          </div>
-        )}
+        <div data-volatile="lifecycle" className={css({ height: '76px', marginTop: '7px', overflowY: 'auto' })}>
+          {backlog.length > 0 && (
+            <div className={css({ display: 'grid', gap: '3px' })}>
+              {backlog.slice(0, 4).map((owner) => (
+                <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
+                  <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
+                  {owner.attempted_at && Number.isFinite(Date.parse(owner.attempted_at)) && (
+                    <span className={css({ color: tok.textTertiary, fontSize: '10.5px' })}>
+                      attempted <time dateTime={owner.attempted_at}>{relTime(owner.attempted_at)} · {new Date(owner.attempted_at).toLocaleString()}</time>
+                    </span>
+                  )}
+                </div>
+              ))}
+              {backlog.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {backlog.length - 4} more</div>}
+            </div>
+          )}
+        </div>
       </LifecycleCard>
     </div>
   )

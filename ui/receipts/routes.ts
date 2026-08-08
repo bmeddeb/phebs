@@ -109,4 +109,7 @@ export const THEMES = ['light', 'dark'] as const
 
 // Densities join the matrix when T43.11 lands the density control; until
 // then every capture is the comfortable default.
-export const DENSITIES = ['comfortable'] as const
+// T43.11 landed the product density control: the full matrix runs both
+// densities for every routed surface — surfaces that ignore density are
+// pinned to prove they ignore it.
+export const DENSITIES = ['comfortable', 'dense'] as const
