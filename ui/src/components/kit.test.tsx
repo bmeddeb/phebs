@@ -5,7 +5,7 @@ afterEach(cleanup)
 import { BaseProvider } from 'baseui'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
-import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, StateNotice, StatusChip, StatusWord } from './kit'
+import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, RefusalCard, StateNotice, StatusChip, StatusWord } from './kit'
 import type { ServiceRelationshipCitation } from '../api'
 import { ModeContext, TOKENS, focusRing, lightTheme } from '../theme'
 
@@ -160,6 +160,40 @@ describe('CitationPanel', () => {
     mounted.unmount()
     mount(<CitationPanel id="citation-error" loading={false} error="authority mismatch" citation={null} onClose={() => {}} />)
     expect(screen.getByRole('alert').textContent).toContain('authority mismatch')
+  })
+})
+
+describe('RefusalCard', () => {
+  it('presents the closed refusal shape exactly as delivered', () => {
+    mount(<RefusalCard refusal={{
+      schema: 'phebs-pipeline-refusal-v1',
+      stage: 'extractor_execution',
+      generation_kind: 'extraction_domain',
+      classification: 'limit',
+      dimension: 'source_read_bytes',
+      observed: 536870912,
+      limit: 268435456,
+    }} />)
+    const card = screen.getByRole('status')
+    expect(card.getAttribute('title')).toBe('phebs-pipeline-refusal-v1')
+    expect(card.textContent).toContain('Refused · extractor_execution · extraction_domain')
+    expect(card.textContent).toContain('limit · dimension source_read_bytes')
+    expect(card.textContent).toContain('536870912')
+    expect(card.textContent).toContain('268435456')
+  })
+  it('omits scalars for non-limit classifications (canonical zeroes are not measurements)', () => {
+    mount(<RefusalCard refusal={{
+      schema: 'phebs-pipeline-refusal-v1',
+      stage: 'candidate_strict_open',
+      generation_kind: 'candidate',
+      classification: 'invalid',
+      dimension: 'unknown',
+      observed: 0,
+      limit: 0,
+    }} />)
+    const card = screen.getByRole('status')
+    expect(card.textContent).toContain('invalid · dimension unknown')
+    expect(card.textContent).not.toContain('observed')
   })
 })
 

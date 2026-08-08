@@ -1313,7 +1313,9 @@ function tierTone(tier: string): 'green' | 'amber' | 'red' | 'blue' | 'neutral' 
   if (tier === 'exact') return 'green'
   if (tier === 'derived') return 'blue'
   if (tier === 'heuristic') return 'amber'
-  if (tier === 'unresolved') return 'red'
+  // Adjudicated with T43.10 (audit F32): 'unresolved' is the stale tone in
+  // the closed vocabulary everywhere — the explorer already renders it amber.
+  if (tier === 'unresolved') return 'amber'
   return 'neutral'
 }
 

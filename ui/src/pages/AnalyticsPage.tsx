@@ -114,13 +114,17 @@ function DailyBars({ daily }: { daily: { date: string; count: number }[] }) {
         {daily.map((d) => (
           <div
             key={d.date}
+            role="img"
+            aria-label={`${d.date}: ${d.count} search${d.count === 1 ? '' : 'es'}`}
             title={`${d.date} — ${d.count} search${d.count === 1 ? '' : 'es'}`}
             data-testid={`bar-${d.date}`}
             className={css({
               flex: 1,
               minWidth: '4px',
-              height: d.count === 0 ? '0' : `${Math.max(3, Math.round((d.count / max) * 96))}px`,
-              backgroundColor: tok.accent,
+              // A zero day renders a visible neutral tick: zero is a
+              // measured value, not a gap (audit F36).
+              height: d.count === 0 ? '2px' : `${Math.max(3, Math.round((d.count / max) * 96))}px`,
+              backgroundColor: d.count === 0 ? tok.innerSep : tok.accent,
               borderTopLeftRadius: '3px',
               borderTopRightRadius: '3px',
             })}

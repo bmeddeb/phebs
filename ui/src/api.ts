@@ -1391,6 +1391,19 @@ export type CoverageDomainDisposition =
   | 'terminal_generation_refusal'
   | 'retryable_failure'
 
+// T40.1 closed refusal projection (phebs-pipeline-refusal-v1): a source-free
+// operational envelope. Observed and limit are meaningful only for the
+// 'limit' classification; other classes carry canonical zeroes.
+export interface PipelineRefusalReceipt {
+  schema: string
+  stage: string
+  generation_kind: string
+  classification: string
+  dimension: string
+  observed: number
+  limit: number
+}
+
 export interface CoverageDomainOutcomeReceipt {
   schema: string
   domain: string
@@ -1404,6 +1417,8 @@ export interface CoverageDomainOutcomeReceipt {
   counts: CoverageReceiptCounts
   bytes: CoverageReceiptBytes
   limits: CoverageReceiptLimits
+  // Optional on retained v1 receipts, which predate the projection.
+  refusal?: PipelineRefusalReceipt
 }
 
 export interface CoverageDomainOutcome {

@@ -7,9 +7,9 @@ import { Spinner } from 'baseui/spinner'
 import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '../api'
 import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
-import { LoadingBlock, StatusChip } from '../components/kit'
+import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
 import { usePhebsTokens, FONTS } from '../theme'
-import { isAbortError } from '../util'
+import { isAbortError, relTime } from '../util'
 
 export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const [css] = useStyletron()
@@ -256,41 +256,110 @@ function LifecycleBadge({ status }: { status: LifecycleStatus }) {
   return <StatusChip tone={tone} role="status">{label}</StatusChip>
 }
 
+// T43.10: lifecycle, capacity, and owner state as cards, rendering only the
+// existing source-free status fields.
 function LifecyclePanel({ status }: { status: LifecycleStatus }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const completed = status.owners.filter((owner) => owner.state !== 'not_run').length
-  const failures = status.owners.filter((owner) => owner.state === 'error').length
-  const backlog = status.owners.filter((owner) => owner.backlog).length
+  const failed = status.owners.filter((owner) => owner.state === 'error')
+  const backlog = status.owners.filter((owner) => owner.backlog)
+  const pressure = status.capacity.pressure
+  const pressureTone = !status.policy.enabled ? 'neutral'
+    : pressure === 'normal' ? 'green'
+      : pressure === 'collect' ? 'amber'
+        : pressure === 'refuse' ? 'red'
+          : 'blue'
   const disk = status.capacity.completeness === 'exact' && status.capacity.used_percent !== undefined
     ? `${status.capacity.used_percent}% allocated (${formatBytes(status.capacity.used_bytes ?? 0)} of ${formatBytes(status.capacity.total_bytes ?? 0)})`
     : 'Capacity unavailable'
+  const observed = status.capacity.observed_at && Number.isFinite(Date.parse(status.capacity.observed_at))
+    ? status.capacity.observed_at
+    : ''
   return (
-    <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
-      <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', '@media screen and (max-width: 640px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } })}>
-        <LifecycleMetric label="Disk" value={disk} />
-        <LifecycleMetric label="Owners observed" value={`${completed} / ${status.policy.owners}`} />
-        <LifecycleMetric label="Backlog owners" value={String(backlog)} />
-        <LifecycleMetric label="Failed owners" value={String(failures)} />
-      </div>
-      <div className={css({ borderTop: `1px solid ${tok.cardBorder}`, padding: '10px 12px', fontSize: '11px', lineHeight: '17px', color: tok.textTertiary })}>
-        Per turn: at most {status.policy.max_candidates_per_turn} candidates, {status.policy.max_deletes_per_turn} deletions, and {status.policy.max_queries_per_turn} store queries. Pressure accelerates at {status.policy.soft_watermark_percent}%, refuses new derived work at {status.policy.hard_watermark_percent}%, and resumes below {status.policy.resume_watermark_percent}%.
-      </div>
+    <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px', '@media screen and (max-width: 760px)': { gridTemplateColumns: '1fr' } })}>
+      <LifecycleCard title="Pressure">
+        <div data-volatile="lifecycle"><StatusWord tone={pressureTone}>{pressureLabel(status)}</StatusWord></div>
+        <div data-volatile="lifecycle" className={css({ marginTop: '6px', color: tok.textPrimary, fontSize: '12px', lineHeight: '17px', overflowWrap: 'anywhere' })}>{disk}</div>
+        {observed && (
+          <div data-volatile="lifecycle" className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>
+            observed <time dateTime={observed} title={new Date(observed).toLocaleString()}>{relTime(observed)}</time>
+          </div>
+        )}
+        <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px' })}>
+          Accelerates at {status.policy.soft_watermark_percent}% · refuses new derived work at {status.policy.hard_watermark_percent}% · resumes below {status.policy.resume_watermark_percent}%
+        </div>
+      </LifecycleCard>
+      <LifecycleCard title="Owner progress">
+        <div data-volatile="lifecycle" className={css({ color: tok.textPrimary, fontSize: '18px', lineHeight: '24px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' })}>
+          {completed} / {status.policy.owners}
+        </div>
+        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>owners observed this cycle</div>
+        {failed.length > 0 ? (
+          <div data-volatile="lifecycle" className={css({ marginTop: '7px', display: 'grid', gap: '3px' })}>
+            {failed.slice(0, 4).map((owner) => (
+              <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
+                <StatusWord tone="red">error</StatusWord>
+                <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
+              </div>
+            ))}
+            {failed.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {failed.length - 4} more failed owners</div>}
+          </div>
+        ) : (
+          <div data-volatile="lifecycle" className={css({ marginTop: '7px' })}><StatusWord tone="green">no failed owners</StatusWord></div>
+        )}
+        <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px' })}>
+          Per turn: at most {status.policy.max_candidates_per_turn} candidates, {status.policy.max_deletes_per_turn} deletions, {status.policy.max_queries_per_turn} store queries
+        </div>
+      </LifecycleCard>
+      <LifecycleCard title="Backlog">
+        <div data-volatile="lifecycle" className={css({ color: tok.textPrimary, fontSize: '18px', lineHeight: '24px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' })}>
+          {backlog.length}
+        </div>
+        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px' })}>
+          {backlog.length === 1 ? 'owner carries' : 'owners carry'} backlog into the next turn
+        </div>
+        {backlog.length > 0 && (
+          <div data-volatile="lifecycle" className={css({ marginTop: '7px', display: 'grid', gap: '3px' })}>
+            {backlog.slice(0, 4).map((owner) => (
+              <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
+                <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
+                {owner.attempted_at && Number.isFinite(Date.parse(owner.attempted_at)) && (
+                  <span className={css({ color: tok.textTertiary, fontSize: '10.5px', whiteSpace: 'nowrap' })}>
+                    attempted <time dateTime={owner.attempted_at} title={new Date(owner.attempted_at).toLocaleString()}>{relTime(owner.attempted_at)}</time>
+                  </span>
+                )}
+              </div>
+            ))}
+            {backlog.length > 4 && <div className={css({ color: tok.textTertiary, fontSize: '11px' })}>and {backlog.length - 4} more</div>}
+          </div>
+        )}
+      </LifecycleCard>
     </div>
   )
 }
 
-function LifecycleMetric({ label, value }: { label: string; value: string }) {
+function pressureLabel(status: LifecycleStatus): string {
+  if (!status.policy.enabled) return 'collection disabled'
+  switch (status.capacity.pressure) {
+    case 'normal': return 'normal'
+    case 'collect': return 'collecting'
+    case 'refuse': return 'admission refused'
+    default: return 'capacity unavailable'
+  }
+}
+
+function LifecycleCard({ title, children }: { title: string; children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <div className={css({ minWidth: 0, padding: '12px', borderRight: `1px solid ${tok.cardBorder}`, ':last-child': { borderRight: 'none' } })}>
-      <div className={css({ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{label}</div>
-      {/* data-volatile: live host telemetry — masked by the receipt harness. */}
-      <div data-volatile="lifecycle" className={css({ marginTop: '5px', fontSize: '12px', lineHeight: '17px', color: tok.textPrimary, overflowWrap: 'anywhere' })}>{value}</div>
-    </div>
+    <section aria-label={title} className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', padding: '12px 14px', minWidth: 0 })}>
+      <h2 className={css({ margin: '0 0 8px', fontSize: '10px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{title}</h2>
+      {children}
+    </section>
   )
 }
+
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B'

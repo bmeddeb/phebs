@@ -669,6 +669,24 @@ fields; refusal cards present stage, dimension, observed scalar, and
 admitted limit exactly as delivered by T40.1, with legacy statuses rendered
 unchanged alongside the closed refusal shape; no new status endpoint
 or field.
+*Implementation landed 2026-08-07.* The Settings lifecycle section is
+three cards — Pressure (state word, allocation, observed-at time,
+watermark ladder), Owner progress (observed/total with failed owners
+named — source-free operational identifiers from the delivered payload;
+healthy owners stay counts-only), Backlog (count plus carrying owners
+with attempted-at times). RefusalCard (kit) renders the T40.1 closed
+shape exactly as delivered — stage, generation kind, classification,
+dimension, observed scalar of admitted limit (scalars shown only for
+the 'limit' classification; canonical zeroes are not measurements) —
+first-class beside the unchanged legacy receipt disclosure in the
+analysis scope panel; the TS type declares the wire's existing optional
+`refusal` field (no new endpoint or field). Deferred adjudication
+closed: the Atlas 'unresolved' tier joins the closed vocabulary as
+stale/amber (F32). Rider F36: analytics bars carry per-bar accessible
+values and a zero day renders a visible neutral tick, distinct from a
+gap. Receipts: settings re-baselined to the card anatomy with values
+masked; the long-blocked repos pair settled at the current index
+generation — the full matrix is green (61/61) for the first time.
 
 **T43.11 · Directory and explorer at density** *(needs T43.3)* — prepare
 the service directory and relationship explorer for ten-thousand-service

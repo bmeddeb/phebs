@@ -141,8 +141,20 @@ test('administrator sees bounded lifecycle pressure without owner content', asyn
   expect(await screen.findByText('Collecting')).toBeTruthy()
   expect(screen.getByText('81% allocated (810 B of 1000 B)')).toBeTruthy()
   expect(screen.getByText('4 / 13')).toBeTruthy()
-  expect(screen.getByText(/at most 64 candidates, 16 deletions, and 16 store queries/)).toBeTruthy()
-  expect(screen.queryByText(/owner-00/)).toBeNull()
+  // T43.10 cards: the per-turn bounds and watermark ladder live on the
+  // Owner progress and Pressure cards.
+  expect(screen.getByText(/at most 64 candidates, 16 deletions, 16 store queries/)).toBeTruthy()
+  expect(screen.getByText(/Accelerates at 80% · refuses new derived work at 90% · resumes below 75%/)).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Pressure' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Owner progress' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Backlog' })).toBeTruthy()
+  // Card semantics: only failed/backlog owners are named (source-free
+  // operational identifiers from the delivered payload); healthy owners
+  // stay counts-only.
+  const backlogCard = screen.getByRole('region', { name: 'Backlog' })
+  expect(backlogCard.textContent).toContain('owner-00')
+  expect(screen.getByText('no failed owners')).toBeTruthy()
+  expect(screen.queryByText(/owner-05/)).toBeNull()
 })
 
 test('capacity-unavailable uses the closed blue status tone', async () => {

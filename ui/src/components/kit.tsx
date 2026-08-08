@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
-import type { ServiceRelationshipCitation } from '../api'
+import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
 import { FONTS, NUMERIC, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
@@ -234,6 +234,39 @@ export function CitationChip({ path, span, onOpen, title, expanded }: {
     >
       {label}
     </button>
+  )
+}
+
+/**
+ * T40.1 closed refusal receipt as a first-class card (T43.10). Presents
+ * exactly the delivered fields — stage, generation kind, classification,
+ * dimension, observed scalar, admitted limit — no invented prose.
+ */
+export function RefusalCard({ refusal }: { refusal: PipelineRefusalReceipt }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const limitClass = refusal.classification === 'limit'
+  return (
+    <div
+      role="status"
+      className={css({ borderLeft: `3px solid ${tok.status.conflict.solid}`, backgroundColor: tok.bandBg, padding: '9px 11px', display: 'grid', gap: '3px' })}
+      title={refusal.schema}
+    >
+      <span className={css({ color: tok.status.conflict.text, fontSize: '11px', lineHeight: '16px', fontWeight: 600 })}>
+        Refused · {refusal.stage} · {refusal.generation_kind}
+      </span>
+      <span className={css({ color: tok.textSecondary, fontSize: '11px', lineHeight: '16px' })}>
+        {refusal.classification} · dimension <IdentityText>{refusal.dimension}</IdentityText>
+        {limitClass && (
+          <>
+            {' · observed '}
+            <span className={css({ ...NUMERIC, color: tok.textPrimary })}>{refusal.observed}</span>
+            {' of limit '}
+            <span className={css({ ...NUMERIC, color: tok.textPrimary })}>{refusal.limit}</span>
+          </>
+        )}
+      </span>
+    </div>
   )
 }
 

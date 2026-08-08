@@ -10,7 +10,7 @@ import type {
   CoverageRun,
 } from '../api'
 import { SectionHelp } from './SectionHelp'
-import { StatusChip } from './kit'
+import { RefusalCard, StatusChip } from './kit'
 import { FONTS, type PhebsTokens, usePhebsTokens } from '../theme'
 
 const maximumMountedRepositories = 24
@@ -740,6 +740,7 @@ function ReceiptSummary({
   // legacy_exclusion_shape receipts carry full recorded counts and timings;
   // only the excluded-source/SCIP counters predate their recording. They must
   // render as disclosed work, not as an absent receipt.
+  const refusal = receipt?.refusal
   if ((state !== 'full' && state !== 'legacy_exclusion_shape') || !receipt) {
     return (
       <div className={css({
@@ -753,6 +754,12 @@ function ReceiptSummary({
     )
   }
   return (
+    <>
+    {refusal && (
+      <div className={css({ marginTop: '6px' })}>
+        <RefusalCard refusal={refusal} />
+      </div>
+    )}
     <details className={css({ marginTop: '6px' })}>
       <summary className={css({
         cursor: 'pointer',
@@ -781,6 +788,7 @@ function ReceiptSummary({
         <span>limit {receipt.limits.domain_wall_ms} ms/domain</span>
       </div>
     </details>
+    </>
   )
 }
 
