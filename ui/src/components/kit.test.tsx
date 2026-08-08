@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 afterEach(cleanup)
 import { BaseProvider } from 'baseui'
@@ -154,6 +154,15 @@ describe('CitationPanel', () => {
     expect(screen.getByText('client.Get(order)')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Close citation' }))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('highlights cited bytes without altering them (T44.1)', async () => {
+    mount(<CitationPanel id="citation-hl" loading={false} error="" citation={citation} onClose={() => {}} />)
+    const pre = screen.getByText('client.Get(order)').closest('pre') ?? screen.getByText('client.Get(order)')
+    // The lazy tokenizer resolves and splits the content into spans…
+    await waitFor(() => expect(pre.querySelectorAll('span').length).toBeGreaterThan(0))
+    // …while the rendered text stays byte-identical to the citation.
+    expect(pre.textContent).toBe('client.Get(order)')
   })
 
   it('announces loading and fail-closed errors', () => {

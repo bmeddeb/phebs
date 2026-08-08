@@ -113,6 +113,10 @@ async function load(key: string): Promise<LanguageSupport | null> {
       return stream((await import('@codemirror/legacy-modes/mode/toml')).toml)
     case 'dockerfile':
       return stream((await import('@codemirror/legacy-modes/mode/dockerfile')).dockerFile)
+    // The contract surface's own language (T44.1) — name and dot color were
+    // always mapped; the loader case was the missing piece.
+    case 'proto':
+      return stream((await import('@codemirror/legacy-modes/mode/protobuf')).protobuf)
     default:
       return null
   }

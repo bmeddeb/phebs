@@ -102,7 +102,15 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
                 Bounded owner turns and allocated-disk pressure. This view never lists source paths or retained content.
               </div>
             </div>
-            {lifecycleStatus && <LifecycleBadge status={lifecycleStatus} />}
+            {/* Reserved slot: the badge word varies with live pressure, so
+                the masked box must not size itself to the word (declared
+                geometry — the T43.11 principle). Width fits the longest
+                state, 'Capacity unavailable'. */}
+            {lifecycleStatus && (
+              <div data-volatile="lifecycle" className={css({ width: '150px', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 })}>
+                <LifecycleBadge status={lifecycleStatus} />
+              </div>
+            )}
           </div>
           {lifecycleError ? (
             <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>

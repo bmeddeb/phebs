@@ -454,6 +454,26 @@ tokenizer. AC: proto files highlight in the viewer and search chunks;
 citation spans render highlighted in both themes; zero new dependencies;
 no screenshot baseline changes (no capture opens a citation today —
 recorded, not hidden); suite, lint, build, gates green.
+*Shipped 2026-08-08.* The loader case was the only missing piece — name
+and dot color were always mapped; `.proto` now streams through the
+legacy protobuf mode as its own 0.8 kB lazy chunk. Citation panels
+render cited bytes through the shared line-oriented tokenizer,
+lazy-loaded so the evidence kit adds no CodeMirror weight to the
+initial chunk; a test pins the bytes as identical through highlighting,
+and a failed load falls back to the plain bytes. Live-verified on the
+fixture's `api/orders.proto`. The file receipt route turned out to BE
+a proto file, so its four baselines now show the highlighting — the
+receipt showcases the ticket. Rider: the settings lifecycle badge got
+a fixed-width reserved slot (its masked box sized itself to the live
+pressure word — the last content-derived mask geometry). Bundle: main
+chunk +0.8 kB (index gzip 93.43 → 93.76 kB), one new 0.8 kB lazy
+chunk, zero new dependencies; no interaction-path work — both loads
+are lazy on first use. Receipts: file and settings pairs re-baselined;
+the eight relationship-explorer-service captures fail closed against
+retained baselines because main's T40.12 root validator refuses the
+fixture's pre-convergence bare unavailable roots — correct fail-closed
+behavior awaiting the in-flight T40.13 convergence gate, recorded
+here, not re-baselined.
 
 **T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
 palette registry over the single highlight module. AC: the current

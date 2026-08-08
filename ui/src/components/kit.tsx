@@ -1,8 +1,9 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
-import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
+import type { Token } from '../highlight'
+import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, useMode, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
 // keep choosing the tone word, the kit owns the anatomy. Status colors always
@@ -359,10 +360,52 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
             <CitationIdentity label="Object" value={citation.evidence.object_id} />
             <CitationIdentity label="Content" value={citation.evidence.content_digest} />
           </div>
-          <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>{citation.content}</pre>
+          <CitedSource path={citation.evidence.path} content={citation.content} />
         </>
       )}
     </aside>
+  )
+}
+
+// T44.1: cited bytes render highlighted through the same best-effort,
+// line-oriented tokenizer search chunks use. The text is exactly
+// `content` — only presentation spans are added — and any failure in
+// the lazy tokenizer/language load falls back to the plain bytes. The
+// tokenizer and language pack load lazily so the evidence kit adds no
+// CodeMirror weight to the initial chunk.
+function CitedSource({ path, content }: { path: string; content: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const { mode } = useMode()
+  const [tokenLines, setTokenLines] = useState<Token[][] | null>(null)
+  useEffect(() => {
+    let active = true
+    setTokenLines(null)
+    void Promise.all([import('../highlight'), import('../lang')])
+      .then(async ([highlight, lang]) => {
+        const language = await lang.languageFor(path)
+        if (!active) return
+        setTokenLines(content.split('\n').map((line) => highlight.tokenize(line, language, mode)))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [path, content, mode])
+  const lines = content.split('\n')
+  return (
+    <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>
+      {tokenLines
+        ? lines.map((line, index) => (
+          <Fragment key={index}>
+            {index > 0 ? '\n' : null}
+            {(tokenLines[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
+              <span key={spanIndex} style={span.color ? { color: span.color, fontStyle: span.fontStyle } : undefined}>
+                {line.slice(span.from, span.to)}
+              </span>
+            ))}
+          </Fragment>
+        ))
+        : content}
+    </pre>
   )
 }
 
