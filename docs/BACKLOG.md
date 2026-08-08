@@ -502,6 +502,18 @@ never in the URL; the viewer, search chunks, and citation spans re-color
 without reload; receipts capture the default palette only, plus the
 Appearance card in the settings baselines; bundle and interaction cost
 recorded.
+*Shipped 2026-08-08.* Registry in `ui/src/palette.ts` (Phebs default +
+Quiet, Classic, High contrast); `PaletteContext` persists the choice
+per browser, unknown values fall back to default. The AA gate lives in
+theme.test — every role × palette × mode ≥4.5:1 on pageBg and the
+anchor-line tint, high-contrast ≥7:1 on the page — and it caught the
+original default's sub-AA comment grays, now corrected. Viewer, search
+chunks, and citation source re-color live; a Settings · Appearance
+card with a lazy live specimen governs it. Bundle: palette data is a
+0.6 kB gzip chunk; the specimen and citation share the existing lazy
+highlight/lang chunks (no CodeMirror in the initial or settings
+chunk). Receipts: settings re-baselined with the card at the default
+palette. Suite 491/491.
 
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL

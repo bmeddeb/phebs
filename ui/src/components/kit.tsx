@@ -3,7 +3,7 @@ import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
 import type { Token } from '../highlight'
-import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, useMode, usePhebsTokens, type ToneName } from '../theme'
+import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, useMode, usePalette, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
 // keep choosing the tone word, the kit owns the anatomy. Status colors always
@@ -388,6 +388,7 @@ function CitedSource({ path, content }: { path: string; content: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode } = useMode()
+  const { palette } = usePalette()
   const [tokenLines, setTokenLines] = useState<Token[][] | null>(null)
   useEffect(() => {
     let active = true
@@ -399,11 +400,11 @@ function CitedSource({ path, content }: { path: string; content: string }) {
       .then(async ([highlight, lang]) => {
         const language = await lang.languageFor(path)
         if (!active) return
-        setTokenLines(lines.map((line) => highlight.tokenize(line, language, mode)))
+        setTokenLines(lines.map((line) => highlight.tokenize(line, language, mode, palette)))
       })
       .catch(() => {})
     return () => { active = false }
-  }, [path, content, mode])
+  }, [path, content, mode, palette])
   const lines = content.split('\n')
   return (
     <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>

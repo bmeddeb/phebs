@@ -6,7 +6,8 @@ import type { LanguageSupport } from '@codemirror/language'
 import { fetchRepoStatus, streamSearch } from '../api'
 import type { FileResult, Range, RepoStatus, SearchScopeReceipt, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
-import { usePhebsTokens, useMode, FONTS, MOTION, REDUCED_MOTION, animated, type PhebsTokens } from '../theme'
+import { usePhebsTokens, useMode, usePalette, FONTS, MOTION, REDUCED_MOTION, animated, type PhebsTokens } from '../theme'
+import type { PaletteName } from '../palette'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
@@ -1162,6 +1163,7 @@ function ChunkView({
 }) {
   const [css] = useStyletron()
   const { mode } = useMode()
+  const { palette } = usePalette()
   const tok = usePhebsTokens()
   const lines = chunk.content.replace(/\n$/, '').split('\n')
   return (
@@ -1190,7 +1192,7 @@ function ChunkView({
               {lineNo}
             </a>
             <code className={css({ flex: '1 1 0', minWidth: 0, whiteSpace: 'pre', overflowX: 'auto', tabSize: 4, color: tok.plainCode, paddingRight: '12px' })}>
-              {renderLine(line, lineNo, chunk.ranges, lang, mode, tok.matchBg)}
+              {renderLine(line, lineNo, chunk.ranges, lang, mode, palette, tok.matchBg)}
             </code>
           </div>
         )
@@ -1201,8 +1203,8 @@ function ChunkView({
 
 // renderLine tokenizes one source line and overlays match ranges, emitting
 // styled spans (syntax color + match background where they intersect).
-function renderLine(line: string, lineNo: number, ranges: Range[], lang: LanguageSupport | null, mode: 'light' | 'dark', matchBg: string) {
-  const tokens = tokenize(line, lang, mode)
+function renderLine(line: string, lineNo: number, ranges: Range[], lang: LanguageSupport | null, mode: 'light' | 'dark', palette: PaletteName, matchBg: string) {
+  const tokens = tokenize(line, lang, mode, palette)
   const matches = matchSpans(line, lineNo, ranges)
   const nodes: React.ReactNode[] = []
   let key = 0

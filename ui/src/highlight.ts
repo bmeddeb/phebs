@@ -2,27 +2,12 @@ import { HighlightStyle } from '@codemirror/language'
 import { tags as t, highlightTree } from '@lezer/highlight'
 import type { LanguageSupport } from '@codemirror/language'
 import type { Mode } from './theme'
+import { DEFAULT_PALETTE, PALETTES, type PaletteName, type RoleStyle } from './palette'
 
-// Syntax palette mapped from Base Web primitives (design handoff). Used both
-// by the CodeMirror viewer (FilePage) and by search-result chunk rendering.
-const LIGHT: Record<string, { color: string; fontStyle?: string }> = {
-  keyword: { color: '#7C3EC3' },
-  func: { color: '#175BCC' },
-  type: { color: '#016974' },
-  string: { color: '#166C3B' },
-  comment: { color: '#868686', fontStyle: 'italic' },
-  number: { color: '#A95F03' },
-  operator: { color: '#5E5E5E' },
-}
-const DARK: Record<string, { color: string; fontStyle?: string }> = {
-  keyword: { color: '#BDA7E4' },
-  func: { color: '#93B4EE' },
-  type: { color: '#72C1CD' },
-  string: { color: '#8FC19C' },
-  comment: { color: '#717171', fontStyle: 'italic' },
-  number: { color: '#DEA85E' },
-  operator: { color: '#ABABAB' },
-}
+// T44.2: role colors come from the curated palette registry (palette.ts),
+// selected product-wide via the Appearance preference. Used both by the
+// CodeMirror viewer (FilePage) and by chunk rendering (search results,
+// citations).
 
 // role assigns each Lezer tag group a palette role; one place drives both the
 // CM6 HighlightStyle and the standalone tokenizer.
@@ -36,12 +21,12 @@ const roleTags: Record<string, unknown[]> = {
   operator: [t.operator, t.punctuation, t.derefOperator, t.separator],
 }
 
-function styleFor(mode: Mode): Record<string, { color: string; fontStyle?: string }> {
-  return mode === 'dark' ? DARK : LIGHT
+function styleFor(mode: Mode, palette: PaletteName): Record<string, RoleStyle> {
+  return PALETTES[palette][mode]
 }
 
-export function highlightStyle(mode: Mode): HighlightStyle {
-  const p = styleFor(mode)
+export function highlightStyle(mode: Mode, palette: PaletteName = DEFAULT_PALETTE): HighlightStyle {
+  const p = styleFor(mode, palette)
   const specs = Object.entries(roleTags).map(([role, tags]) => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tag: tags as any,
@@ -64,9 +49,9 @@ export interface Token {
 // tokenizeLine highlights a single source line using a CM6 language pack,
 // returning colored spans in line-local coordinates. Falls back to one plain
 // token when no language is given.
-export function tokenize(line: string, lang: LanguageSupport | null, mode: Mode): Token[] {
+export function tokenize(line: string, lang: LanguageSupport | null, mode: Mode, palette: PaletteName = DEFAULT_PALETTE): Token[] {
   if (!lang) return [{ from: 0, to: line.length }]
-  const p = styleFor(mode)
+  const p = styleFor(mode, palette)
   const tree = lang.language.parser.parse(line)
   const style = {
     // highlightTree calls style(tags) per node; resolve the first tag that

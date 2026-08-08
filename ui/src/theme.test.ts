@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOTION, TOKENS, type Mode, type PhebsTokens } from './theme'
+import { PALETTES, PALETTE_NAMES, type RoleName } from './palette'
 
 // WCAG relative luminance / contrast ratio.
 function luminance(hex: string): number {
@@ -32,6 +33,33 @@ describe('status text tones are WCAG AA on every surface', () => {
           expect(contrast(tone.text, bg)).toBeGreaterThanOrEqual(4.5)
         })
       }
+    }
+  }
+})
+
+// T44.2: every curated syntax palette holds the AA floor on both code
+// surfaces — the page background and the anchor-line tint — in both modes;
+// the high-contrast palette additionally holds ≥7:1 against the page. This
+// gate found and fixed the original default palette's sub-AA comment
+// grays.
+describe('syntax palettes are WCAG AA on the code surfaces', () => {
+  const ROLES: RoleName[] = ['keyword', 'func', 'type', 'string', 'comment', 'number', 'operator']
+  for (const name of PALETTE_NAMES) {
+    for (const mode of ['light', 'dark'] as Mode[]) {
+      const tok = TOKENS[mode]
+      const roleStyles = PALETTES[name][mode]
+      for (const role of ROLES) {
+        it(`${name} ${mode} ${role} on pageBg`, () => {
+          const floor = name === 'high-contrast' ? 7 : 4.5
+          expect(contrast(roleStyles[role].color, tok.pageBg)).toBeGreaterThanOrEqual(floor)
+        })
+        it(`${name} ${mode} ${role} on selectedLineBg`, () => {
+          expect(contrast(roleStyles[role].color, tok.selectedLineBg)).toBeGreaterThanOrEqual(4.5)
+        })
+      }
+      it(`${name} ${mode} defines all seven roles`, () => {
+        expect(Object.keys(roleStyles).sort()).toEqual([...ROLES].sort())
+      })
     }
   }
 })

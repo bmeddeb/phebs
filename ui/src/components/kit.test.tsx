@@ -7,7 +7,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
 import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, RefusalCard, StateNotice, StatusChip, StatusWord } from './kit'
 import type { ServiceRelationshipCitation } from '../api'
-import { ModeContext, TOKENS, darkTheme, focusRing, lightTheme } from '../theme'
+import { ModeContext, PaletteContext, TOKENS, darkTheme, focusRing, lightTheme } from '../theme'
 
 const engine = new Styletron()
 
@@ -187,6 +187,26 @@ describe('CitationPanel', () => {
     // The palettes are theme-specific: the same token must not share a
     // color across modes.
     expect(darkColor).not.toBe(lightColor)
+  })
+
+  it('re-colors cited bytes under a different palette preference (T44.2)', async () => {
+    const goCitation = { ...citation, content: 'return "ok"' }
+    const phebs = mount(<CitationPanel id="pal-a" loading={false} error="" citation={goCitation} onClose={() => {}} />)
+    const phebsColor = (await keywordSpan()).style.color
+    phebs.unmount()
+    render(
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={lightTheme}>
+          <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
+            <PaletteContext.Provider value={{ palette: 'classic', setPalette: () => {} }}>
+              <CitationPanel id="pal-b" loading={false} error="" citation={goCitation} onClose={() => {}} />
+            </PaletteContext.Provider>
+          </ModeContext.Provider>
+        </BaseProvider>
+      </StyletronProvider>,
+    )
+    const classicColor = (await keywordSpan()).style.color
+    expect(classicColor).not.toBe(phebsColor)
   })
 
   it('highlights content at exactly the ceiling (T44.1f)', async () => {

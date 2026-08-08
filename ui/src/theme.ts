@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import { createLightTheme, createDarkTheme } from 'baseui'
+import { DEFAULT_PALETTE, type PaletteName } from './palette'
 
 // A crisp mono stack — the stock baseui token falls back to Lucida Console.
 const MONO = 'ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace'
@@ -288,6 +289,17 @@ interface DensityCtx {
 export const DensityContext = createContext<DensityCtx>({ density: 'comfortable', toggle: () => {} })
 
 export const useDensity = () => useContext(DensityContext)
+
+// T44.2 syntax-palette preference. Product-wide, persisted per browser
+// like density; consumed by every highlighting surface.
+interface PaletteCtx {
+  palette: PaletteName
+  setPalette: (palette: PaletteName) => void
+}
+
+export const PaletteContext = createContext<PaletteCtx>({ palette: DEFAULT_PALETTE, setPalette: () => {} })
+
+export const usePalette = () => useContext(PaletteContext)
 
 /** Current-mode design tokens. */
 export function usePhebsTokens(): PhebsTokens {

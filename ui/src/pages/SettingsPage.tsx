@@ -8,7 +8,9 @@ import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '
 import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
-import { usePhebsTokens, FONTS } from '../theme'
+import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
+import { PALETTES, PALETTE_NAMES, isPaletteName } from '../palette'
+import type { Token } from '../highlight'
 import { isAbortError, relTime } from '../util'
 
 export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -125,6 +127,8 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
           )}
         </section>
       )}
+
+      <AppearanceSection />
 
       <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' })}>
         <KeyIcon size={20} />
@@ -246,6 +250,83 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
         ))}
       </div>
     </div>
+  )
+}
+
+// T44.2 · Appearance: the product-wide syntax-palette preference with a
+// live specimen. The choice persists per browser (like density) and
+// re-colors the viewer, search chunks, and citations without reload.
+const SPECIMEN_LINES = [
+  '// verified span',
+  'func Count(limit int) error {',
+  '\treturn fmt.Errorf("bound=%d", 42)',
+  '}',
+]
+
+function AppearanceSection() {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const { palette, setPalette } = usePalette()
+  return (
+    <section aria-labelledby="appearance-heading" className={css({ marginBottom: '32px' })}>
+      <h1 id="appearance-heading" className={css({ margin: 0, fontSize: '20px', lineHeight: '28px', fontWeight: 600, color: tok.textPrimary })}>
+        Appearance
+      </h1>
+      <div className={css({ marginTop: '4px', marginBottom: '12px', fontSize: '12px', lineHeight: '18px', color: tok.textTertiary })}>
+        Code highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.
+      </div>
+      <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', padding: '12px 14px', display: 'grid', gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)', gap: '14px', alignItems: 'start', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+          Code highlight palette
+          <select
+            value={palette}
+            onChange={(event) => {
+              const next = event.currentTarget.value
+              if (isPaletteName(next)) setPalette(next)
+            }}
+            className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 28px 0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px' })}
+          >
+            {PALETTE_NAMES.map((name) => <option key={name} value={name}>{PALETTES[name].label}</option>)}
+          </select>
+        </label>
+        <PaletteSpecimen />
+      </div>
+    </section>
+  )
+}
+
+function PaletteSpecimen() {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const { mode } = useMode()
+  const { palette } = usePalette()
+  const [rows, setRows] = useState<Token[][] | null>(null)
+  useEffect(() => {
+    let active = true
+    // Lazy like the citation path: the settings chunk carries no
+    // CodeMirror weight until the specimen actually renders.
+    void Promise.all([import('../highlight'), import('../lang')])
+      .then(async ([highlight, lang]) => {
+        const language = await lang.languageFor('specimen.go')
+        if (!active) return
+        setRows(SPECIMEN_LINES.map((line) => highlight.tokenize(line, language, mode, palette)))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [mode, palette])
+  return (
+    <pre aria-hidden="true" className={css({ margin: 0, padding: '10px 12px', border: `1px solid ${tok.innerSep}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', overflowX: 'auto' })}>
+      {SPECIMEN_LINES.map((line, index) => (
+        <span key={index}>
+          {index > 0 ? '\n' : null}
+          {(rows?.[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
+            <span key={spanIndex} style={'color' in span && span.color ? { color: span.color, fontStyle: span.fontStyle } : undefined}>
+              {line.slice(span.from, span.to)}
+            </span>
+          ))}
+        </span>
+      ))}
+    </pre>
   )
 }
 

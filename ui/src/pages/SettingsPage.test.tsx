@@ -4,6 +4,7 @@ import { BaseProvider, LightTheme } from 'baseui'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import SettingsPage from './SettingsPage'
+import { PaletteContext } from '../theme'
 
 const api = vi.hoisted(() => ({
   createAPIKey: vi.fn(),
@@ -91,6 +92,31 @@ beforeEach(() => {
 })
 
 afterEach(cleanup)
+
+test('Appearance offers every curated palette and commits through the preference (T44.2)', async () => {
+  const setPalette = vi.fn()
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <PaletteContext.Provider value={{ palette: 'phebs', setPalette }}>
+          <SettingsPage />
+        </PaletteContext.Provider>
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  expect(await screen.findByRole('heading', { name: 'Appearance' })).toBeTruthy()
+  const select = screen.getByRole('combobox', { name: 'Code highlight palette' })
+  expect(Array.from(select.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
+    'Phebs', 'Quiet', 'Classic', 'High contrast',
+  ])
+  fireEvent.change(select, { target: { value: 'classic' } })
+  expect(setPalette).toHaveBeenCalledWith('classic')
+  // The live specimen renders through the lazy tokenizer.
+  await waitFor(() => {
+    const keyword = Array.from(document.querySelectorAll('pre span span')).find((el) => el.textContent === 'func') as HTMLElement | undefined
+    expect(keyword?.style.color).toBeTruthy()
+  })
+})
 
 test('lists reviewed capability names without secret material', async () => {
   renderPage()

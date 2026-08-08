@@ -21,7 +21,7 @@ import type {
 } from '../api'
 import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
-import { usePhebsTokens, useMode, FONTS } from '../theme'
+import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
 import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
 import { fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
@@ -483,6 +483,7 @@ function CodeViewer({
 }) {
   const [css] = useStyletron()
   const { mode } = useMode()
+  const { palette } = usePalette()
   const tok = usePhebsTokens()
   const host = useRef<HTMLDivElement>(null)
 
@@ -502,7 +503,7 @@ function CodeViewer({
         lineNumbers(),
         EditorView.editable.of(false),
         EditorState.readOnly.of(true),
-        syntaxHighlighting(highlightStyle(mode)),
+        syntaxHighlighting(highlightStyle(mode, palette)),
         EditorView.theme(
           {
             '&': { fontSize: '12.5px', lineHeight: '18px', color: tok.plainCode, backgroundColor: tok.pageBg },
@@ -548,7 +549,7 @@ function CodeViewer({
       cancelled = true
       view?.destroy()
     }
-  }, [content, path, focusLine, selectedLine, onPosition, mode, tok])
+  }, [content, path, focusLine, selectedLine, onPosition, mode, palette, tok])
 
   return <div ref={host} className={css({ overflow: 'hidden', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' })} />
 }
