@@ -37,25 +37,29 @@ describe('status text tones are WCAG AA on every surface', () => {
   }
 })
 
-// T44.2: every curated syntax palette holds the AA floor on both code
-// surfaces — the page background and the anchor-line tint — in both modes;
-// the high-contrast palette additionally holds ≥7:1 against the page. This
-// gate found and fixed the original default palette's sub-AA comment
-// grays.
-describe('syntax palettes are WCAG AA on the code surfaces', () => {
+// T44.2: every curated syntax palette holds the AA floor on every surface
+// syntax text can render on — the page background, the anchor-line tint,
+// AND the search-match highlight (matchBg, where matched syntax text is
+// drawn) — in both modes; high-contrast additionally holds ≥7:1 against
+// the page. This gate found the original default's sub-AA comment grays;
+// T44.2f added matchBg after comments/operators failed the amber/brown
+// match background it had missed.
+describe('syntax palettes are WCAG AA on every code surface', () => {
   const ROLES: RoleName[] = ['keyword', 'func', 'type', 'string', 'comment', 'number', 'operator']
+  const SURFACES: (keyof PhebsTokens)[] = ['pageBg', 'selectedLineBg', 'matchBg']
   for (const name of PALETTE_NAMES) {
     for (const mode of ['light', 'dark'] as Mode[]) {
       const tok = TOKENS[mode]
       const roleStyles = PALETTES[name][mode]
       for (const role of ROLES) {
-        it(`${name} ${mode} ${role} on pageBg`, () => {
-          const floor = name === 'high-contrast' ? 7 : 4.5
-          expect(contrast(roleStyles[role].color, tok.pageBg)).toBeGreaterThanOrEqual(floor)
-        })
-        it(`${name} ${mode} ${role} on selectedLineBg`, () => {
-          expect(contrast(roleStyles[role].color, tok.selectedLineBg)).toBeGreaterThanOrEqual(4.5)
-        })
+        for (const surface of SURFACES) {
+          it(`${name} ${mode} ${role} on ${surface}`, () => {
+            // The ≥7:1 high-contrast promise is against the page only; the
+            // tinted surfaces hold the shared 4.5 floor.
+            const floor = name === 'high-contrast' && surface === 'pageBg' ? 7 : 4.5
+            expect(contrast(roleStyles[role].color, tok[surface] as string)).toBeGreaterThanOrEqual(floor)
+          })
+        }
       }
       it(`${name} ${mode} defines all seven roles`, () => {
         expect(Object.keys(roleStyles).sort()).toEqual([...ROLES].sort())

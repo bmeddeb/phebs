@@ -34,7 +34,7 @@ export const PALETTES: Record<PaletteName, SyntaxPalette> = {
       func: { color: '#175BCC' },
       type: { color: '#016974' },
       string: { color: '#166C3B' },
-      comment: italic('#6A6A6A'),
+      comment: italic('#686868'),
       number: { color: '#95530A' },
       operator: { color: '#5E5E5E' },
     },
@@ -43,7 +43,7 @@ export const PALETTES: Record<PaletteName, SyntaxPalette> = {
       func: { color: '#93B4EE' },
       type: { color: '#72C1CD' },
       string: { color: '#8FC19C' },
-      comment: italic('#919191'),
+      comment: italic('#9F9F9F'),
       number: { color: '#DEA85E' },
       operator: { color: '#ABABAB' },
     },
@@ -57,7 +57,7 @@ export const PALETTES: Record<PaletteName, SyntaxPalette> = {
       func: { color: '#44403C' },
       type: { color: '#57534E' },
       string: { color: '#7C2D12' },
-      comment: italic('#6E6B64'),
+      comment: italic('#6A6761'),
       number: { color: '#8A3D0D' },
       operator: { color: '#625F58' },
     },
@@ -66,9 +66,9 @@ export const PALETTES: Record<PaletteName, SyntaxPalette> = {
       func: { color: '#D6D3D1' },
       type: { color: '#B8B2AC' },
       string: { color: '#DBA179' },
-      comment: italic('#98958E'),
+      comment: italic('#A19F98'),
       number: { color: '#E0A055' },
-      operator: { color: '#9C9A94' },
+      operator: { color: '#A09F99' },
     },
   },
   // Traditional editor hues: blue keywords, warm strings, green comments.
@@ -122,5 +122,8 @@ export const DEFAULT_PALETTE: PaletteName = 'phebs'
 export const PALETTE_NAMES = Object.keys(PALETTES) as PaletteName[]
 
 export function isPaletteName(value: string | null): value is PaletteName {
-  return value !== null && value in PALETTES
+  // Own-property check, not `in` — inherited names (constructor, __proto__,
+  // toString) would pass `in PALETTES` and then index to undefined,
+  // breaking highlighting. The unknown-value fallback must reject them.
+  return value !== null && Object.prototype.hasOwnProperty.call(PALETTES, value)
 }

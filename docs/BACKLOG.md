@@ -513,7 +513,15 @@ card with a lazy live specimen governs it. Bundle: palette data is a
 0.6 kB gzip chunk; the specimen and citation share the existing lazy
 highlight/lang chunks (no CodeMirror in the initial or settings
 chunk). Receipts: settings re-baselined with the card at the default
-palette. Suite 491/491.
+palette. Suite 491/491. Review follow-up (T44.2f): the AA gate now
+covers the search-match background (matchBg) too — matched syntax text
+renders on it — which caught five comment/operator grays across the
+default and Quiet palettes failing on the amber/brown match tint;
+corrected with sub-perceptible lightness nudges that clear all three
+surfaces. The persisted-value guard uses an own-property check, not
+`in`, so inherited names (constructor, __proto__, toString) fall back
+to the default instead of indexing to undefined; pinned by
+palette.test.ts.
 
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
