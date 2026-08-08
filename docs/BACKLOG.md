@@ -433,6 +433,74 @@ surfaces use.
 catalog (directory, explorer) and git (file, history, blame, commit)
 surfaces; it already reaches six surfaces through the analysis scope panel.
 
+## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
+
+Four operator-requested reading and chrome improvements, planned with the
+Epic 43 governance intact: charter-gated, presentation-only, per-ticket
+impeccable critique, per-ticket bundle and interaction cost records.
+Decisions settled at planning: the highlight palette is a Settings-level
+preference (never per-code-block chrome); markdown defaults to source with
+preview opt-in; the instance surfaces become three separate header icons.
+Skills deployment: `ui-ux-pro-max` palette curation (T44.2) and
+navigation/icon guidance (T44.5); `emil-design-eng` segmented control and
+icon-button details (T44.3/T44.5); `frontend-design` for the preview — the
+product's first Read-mode surface (T44.3); `impeccable` remains the
+critique instrument; `/security-review` gates T44.3 and T44.4.
+
+**T44.1 · Proto and citation highlighting** — wire `.proto` through the
+already-installed legacy protobuf stream mode with language name/color
+entries, and route citation-panel source spans through the shared chunk
+tokenizer. AC: proto files highlight in the viewer and search chunks;
+citation spans render highlighted in both themes; zero new dependencies;
+no screenshot baseline changes (no capture opens a citation today —
+recorded, not hidden); suite, lint, build, gates green.
+
+**T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
+palette registry over the single highlight module. AC: the current
+palette ships as the default plus at least three curated alternatives,
+each defining all seven roles in both themes; every palette passes the
+≥4.5:1 code-background contrast gate, pinned in theme.test alongside the
+status tones; a Settings · Appearance card (select plus live code
+specimen) governs the choice, persisted per browser like density and
+never in the URL; the viewer, search chunks, and citation spans re-color
+without reload; receipts capture the default palette only, plus the
+Appearance card in the settings baselines; bundle and interaction cost
+recorded.
+
+**T44.3 · Markdown source and preview** — a Markdown | Preview segmented
+control on the file viewer for markdown files. AC: view state in the URL
+(`view=preview`), source is the default, and `?L=` line deep-links force
+source; rendering via marked + DOMPurify in a lazy chunk loaded only on
+first preview activation; sanitization is a hard boundary over untrusted
+repository content (no script or raw-HTML pass-through; link policy
+applied) and `/security-review` passes before merge; repo-relative images
+render as named placeholders in v1 — deferred honestly, never
+half-fetched; the control is keyboard-complete and announced; receipts
+add a markdown-preview fixture route in both themes and densities;
+bundle record names the lazy chunk size with the main chunk unchanged.
+
+**T44.4 · Mermaid rendering with ELK** *(needs T44.3)* — mermaid fences
+in preview render as diagrams. AC: mermaid 11 with the ELK layout as the
+default, themed from the design tokens, `securityLevel: 'strict'`, no
+click handlers; mermaid and the ELK engine load as one async chunk
+fetched only when a rendered document actually contains a fence; a
+failing fence renders its source as a highlighted code block with a
+one-line error — never a blank; diagrams stay out of the screenshot
+matrix (SVG output is not render-stable) and are pinned by unit tests
+over structural properties of the rendered SVG; bundle record names the
+lazy chunk size.
+
+**T44.5 · Header instance-surface icons** *(last — re-captures the full
+matrix once)* — Audit, Analytics, and Settings are instance surfaces,
+not corpus surfaces; they leave the text nav. AC: three separate icon
+buttons right of the nav (admin gating unchanged), each with
+aria-label, title, and an aria-current active treatment; a separator
+between the instance icons and the session cluster; the corpus nav
+drops to seven text items; command-navigator entries and route titles
+unchanged; the 390px strip verified; the workflows guide's header
+description updated; the full receipt matrix re-captured in one
+reviewed update.
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary
