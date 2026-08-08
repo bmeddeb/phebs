@@ -115,8 +115,9 @@ T40.6 installed restart-safe joint v2 observation authority plus bounded
 lifecycle/archive recovery, and T40.7 installed constant-cost evidence-stage
 accounting, T40.8 installed sparse candidate/partition controls, and T40.9
 closed bounded nonproduct partition results and atomic domain roots on
-2026-08-07, and T40.10 installed partitioned extraction and atomic domain
-authority. T40.11 is next. Epic 41 separately targets 10,000
+2026-08-07, T40.10 installed partitioned extraction and atomic domain
+authority, and T40.11 migrated downstream generations plus their recovery,
+archive, rollback, pin, and lifecycle ownership. T40.12 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -128,7 +129,7 @@ continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, five residue items queued as T43R.1–5. It
-touched no scale plane, authority, or claim; T40.11 remains the next scale
+touched no scale plane, authority, or claim; T40.12 remains the next scale
 ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on

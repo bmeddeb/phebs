@@ -15,6 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
@@ -22,6 +23,7 @@ import (
 
 const (
 	RootSchema    = "phebs-resolver-namespace-root-v1"
+	RootSchemaV2  = "phebs-resolver-namespace-root-v2"
 	MemberSchema  = "phebs-resolver-namespace-member-v1"
 	RecordSchema  = "phebs-resolver-namespace-record-v1"
 	PointerSchema = "phebs-resolver-namespace-pointer-v1"
@@ -77,11 +79,12 @@ func FrozenPolicy() Policy {
 }
 
 type Authority struct {
-	Repository               string `json:"repository"`
-	Commit                   string `json:"commit"`
-	ResolverGenerationDigest string `json:"resolver_generation_digest"`
-	ResolverManifestDigest   string `json:"resolver_manifest_digest"`
-	PolicyDigest             string `json:"policy_digest"`
+	Repository               string                         `json:"repository"`
+	Commit                   string                         `json:"commit"`
+	ResolverGenerationDigest string                         `json:"resolver_generation_digest"`
+	ResolverManifestDigest   string                         `json:"resolver_manifest_digest"`
+	PolicyDigest             string                         `json:"policy_digest"`
+	Upstream                 *downstreamauthority.Authority `json:"upstream,omitempty"`
 }
 
 // Candidate is one exact target retained by a conflict record. It never
@@ -175,17 +178,24 @@ func newAuthority(repository, commit, generation, manifest string) (Authority, e
 		ResolverGenerationDigest: generation,
 		ResolverManifestDigest:   manifest, PolicyDigest: policyDigest,
 	}
-	if err := validateAuthority(value); err != nil {
+	if err := validateAuthority(RootSchema, value); err != nil {
 		return Authority{}, err
 	}
 	return value, nil
 }
 
-func validateAuthority(value Authority) error {
+func validateAuthority(schema string, value Authority) error {
 	if reponame.Validate(value.Repository) != nil || !validToken(value.Commit, 256) ||
 		!validDigest(value.ResolverGenerationDigest) ||
 		!validDigest(value.ResolverManifestDigest) || !validDigest(value.PolicyDigest) {
 		return fmt.Errorf("%w: authority", ErrInvalid)
+	}
+	if schema == RootSchema && value.Upstream != nil {
+		return fmt.Errorf("%w: v1 upstream authority", ErrInvalid)
+	}
+	if schema == RootSchemaV2 && (value.Upstream == nil ||
+		downstreamauthority.Validate(*value.Upstream) != nil || value.Upstream.Repository != value.Repository) {
+		return fmt.Errorf("%w: v2 upstream authority", ErrInvalid)
 	}
 	want, err := digestValue(FrozenPolicy())
 	if err != nil || value.PolicyDigest != want {
@@ -309,7 +319,8 @@ func validateMember(value Member) error {
 }
 
 func validateRoot(value Root) error {
-	if value.Schema != RootSchema || validateAuthority(value.Authority) != nil ||
+	if (value.Schema != RootSchema && value.Schema != RootSchemaV2) ||
+		validateAuthority(value.Schema, value.Authority) != nil ||
 		value.Policy != FrozenPolicy() || len(value.Namespaces) > MaxNamespaces ||
 		value.NamespaceCount != len(value.Namespaces) || value.RecordCount < 0 ||
 		value.RecordCount > MaxRecords || value.ContentBytes < 0 ||

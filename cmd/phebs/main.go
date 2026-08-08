@@ -38,6 +38,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/diagnostics"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
@@ -347,7 +348,7 @@ func serve(args []string) error {
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwner{
 		DataDir: cfg.Server.DataDir, Pins: relationshipCache,
-		Acquire: acquireLifecycleMutation,
+		AcquireExclusive: acquireObservationTransition, Store: st,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
 	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
@@ -368,8 +369,15 @@ func serve(args []string) error {
 	var relationshipRuntime *relationshippublication.Runtime
 	var reconcileRelationship func(context.Context, string) error
 	if resolverRegistry.Enabled() {
+		relationshipDomains := make([]downstreamauthority.DomainIdentity, 0, len(exs))
+		for _, extractor := range exs {
+			relationshipDomains = append(relationshipDomains, downstreamauthority.DomainIdentity{
+				Domain: extractor.Domain(), Version: extractor.Version(),
+			})
+		}
 		relationshipRuntime = &relationshippublication.Runtime{
 			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
+			InventoryCache: observationInventoryCache, Domains: relationshipDomains,
 			Acquire: acquireLifecycleMutation,
 			Admit: func(admitCtx context.Context) error {
 				capacity, admissionErr := capacityGate.Check(admitCtx, 0)
@@ -414,6 +422,13 @@ func serve(args []string) error {
 		observationpublication.RecoverInventoryPublicationsV2(
 			ctx, filepath.Join(cfg.Server.DataDir, "observations"),
 		)
+	var relationshipRecovery relationshippublication.RecoveryReport
+	var relationshipRecoveryErr error
+	if relationshipRuntime != nil {
+		relationshipRecovery, relationshipRecoveryErr = relationshippublication.RecoverAll(
+			ctx, cfg.Server.DataDir, st,
+		)
+	}
 	releaseObservationRecovery()
 	if observationV2RecoveryErr != nil {
 		return fmt.Errorf("recover observation v2 publications: %w", observationV2RecoveryErr)
@@ -423,6 +438,16 @@ func serve(args []string) error {
 			"observation v2 recovery: repositories=%d completed=%d incomplete=%d",
 			observationV2Recovery.Repositories, observationV2Recovery.Completed,
 			observationV2Recovery.Incomplete,
+		)
+	}
+	if relationshipRecoveryErr != nil {
+		return fmt.Errorf("recover relationship publications: %w", relationshipRecoveryErr)
+	}
+	if relationshipRecovery.Repositories > 0 {
+		diagnostics.Logf(
+			"relationship recovery: repositories=%d completed=%d unavailable=%d invalid=%d",
+			relationshipRecovery.Repositories, relationshipRecovery.Completed,
+			relationshipRecovery.Unavailable, relationshipRecovery.Invalid,
 		)
 	}
 	if cfg.Lifecycle.EnabledFor() {
@@ -903,6 +928,7 @@ func serve(args []string) error {
 			Root: partitionRoot, Store: st,
 			Executor:  &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
 			Publisher: extractionpublication.StorePublisher{Store: st},
+			OnSettled: reconcileRelationship,
 		}
 		partitionReconciler := &extractionpublication.Reconciler{
 			Root: partitionRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
@@ -2301,6 +2327,13 @@ func runEvidenceSweepPass(
 	for range evidenceSweepMaxStepsPerPass {
 		if err := ctx.Err(); err != nil {
 			return progress, false, err
+		}
+		if releaser, ok := evidence.(interface {
+			ReleaseOneUnrootedPartitionRun(context.Context) (bool, error)
+		}); ok {
+			if _, releaseErr := releaser.ReleaseOneUnrootedPartitionRun(ctx); releaseErr != nil {
+				return progress, false, releaseErr
+			}
 		}
 		step, err := evidence.SweepEvidence(ctx, time.Now().UTC(), staleStagedAfter)
 		if err != nil {

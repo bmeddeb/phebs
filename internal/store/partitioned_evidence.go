@@ -40,11 +40,97 @@ type PartitionedExtractionDomain struct {
 	References        int64  `json:"references"`
 	Plan              string `json:"plan"`
 	Root              string `json:"root"`
+	PriorRunID        string `json:"prior_run_id,omitempty"`
+	PriorPlanDigest   string `json:"prior_plan_digest,omitempty"`
+	PriorRootDigest   string `json:"prior_root_digest,omitempty"`
 }
 
 type PartitionedEvidenceStore interface {
 	PublishPartitionedExtractionDomain(context.Context, PartitionedExtractionDomain) error
 	GetPartitionedExtractionDomain(context.Context, string, string) (*PartitionedExtractionDomain, error)
+	PinPartitionedExtractionRun(context.Context, string, string) error
+	UnpinPartitionedExtractionRun(context.Context, string, string) error
+	UnpinPartitionedExtractionOwner(context.Context, string) error
+	ReconcilePartitionedExtractionOwners(context.Context, []string) error
+}
+
+func (s *Surreal) PinPartitionedExtractionRun(ctx context.Context, runID, owner string) error {
+	if strings.TrimSpace(runID) != runID || runID == "" || len(runID) > maxEvidenceIdentityBytes ||
+		strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
+		return errors.New("pin partitioned extraction run: invalid identity")
+	}
+	const query = `
+BEGIN;
+LET $run = (SELECT * FROM $run_rid WHERE run_id = $run_id AND run_id = record::id(id)
+	AND status = 'staged' AND (partition_sealed ?? false) = true
+	AND retention_quarantined = false LIMIT 1)[0];
+LET $rooted = array::len(SELECT id FROM extraction_domain_root
+	WHERE run_id = $run_id OR prior_run_id = $run_id LIMIT 1) = 1;
+LET $existing = array::len(SELECT id FROM $pin_rid WHERE run_id = $run_id AND kind = $owner LIMIT 1) = 1;
+LET $pinned = IF $run != NONE AND ($rooted OR $existing) THEN
+	(UPSERT $pin_rid CONTENT { pin_key: $pin_key, run_id: $run_id,
+		kind: $owner, created_at: time::now() } RETURN AFTER) ELSE [] END;
+RETURN $pinned;
+COMMIT;`
+	pinKey := hashIdentity("pin_", runID, owner)
+	results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, query, map[string]any{
+		"run_rid": extractionRunID(runID), "run_id": runID,
+		"pin_rid": evidencePinRecordID(runID, owner), "pin_key": pinKey, "owner": owner,
+	})
+	if err != nil {
+		return fmt.Errorf("pin partitioned extraction run: %w", err)
+	}
+	for _, result := range *results {
+		if len(result.Result) == 1 {
+			return nil
+		}
+	}
+	return fmt.Errorf("pin partitioned extraction run: authority changed: %w", ErrConflict)
+}
+
+func (s *Surreal) UnpinPartitionedExtractionRun(ctx context.Context, runID, owner string) error {
+	if strings.TrimSpace(runID) != runID || runID == "" || len(runID) > maxEvidenceIdentityBytes ||
+		strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
+		return errors.New("unpin partitioned extraction run: invalid identity")
+	}
+	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
+		"DELETE $rid WHERE run_id = $run_id AND kind = $owner RETURN BEFORE",
+		map[string]any{"rid": evidencePinRecordID(runID, owner), "run_id": runID, "owner": owner})
+	if err != nil {
+		return fmt.Errorf("unpin partitioned extraction run: %w", err)
+	}
+	return nil
+}
+
+func (s *Surreal) UnpinPartitionedExtractionOwner(ctx context.Context, owner string) error {
+	if strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
+		return errors.New("unpin partitioned extraction owner: invalid identity")
+	}
+	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
+		"DELETE evidence_pin WHERE kind = $owner RETURN BEFORE", map[string]any{"owner": owner})
+	if err != nil {
+		return fmt.Errorf("unpin partitioned extraction owner: %w", err)
+	}
+	return nil
+}
+
+func (s *Surreal) ReconcilePartitionedExtractionOwners(ctx context.Context, owners []string) error {
+	if len(owners) > 262_144 {
+		return errors.New("reconcile partitioned extraction owners: owner set exceeds bound")
+	}
+	for _, owner := range owners {
+		if strings.TrimSpace(owner) != owner || !strings.HasPrefix(owner, "relationship:sha256:") ||
+			len(owner) > maxEvidenceIdentityBytes {
+			return errors.New("reconcile partitioned extraction owners: invalid owner")
+		}
+	}
+	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
+		"DELETE evidence_pin WHERE string::starts_with(kind, 'relationship:') AND kind NOT IN $owners RETURN BEFORE",
+		map[string]any{"owners": owners})
+	if err != nil {
+		return fmt.Errorf("reconcile partitioned extraction owners: %w", err)
+	}
+	return nil
 }
 
 var _ PartitionedEvidenceStore = (*Surreal)(nil)
@@ -63,7 +149,11 @@ func (publication PartitionedExtractionDomain) Validate() error {
 		publication.Facts > MaxPartitionedFacts || publication.Rows > MaxPartitionedRows ||
 		publication.References > MaxPartitionedReferences ||
 		len(publication.Plan) > MaxPartitionedPlanBytes || len(publication.Root) > MaxPartitionedRootBytes ||
-		!json.Valid([]byte(publication.Plan)) || !json.Valid([]byte(publication.Root)) {
+		!json.Valid([]byte(publication.Plan)) || !json.Valid([]byte(publication.Root)) ||
+		((publication.PriorRunID == "") != (publication.PriorPlanDigest == "") ||
+			(publication.PriorRunID == "") != (publication.PriorRootDigest == "")) ||
+		(publication.PriorRunID != "" && (len(publication.PriorRunID) > maxEvidenceIdentityBytes ||
+			!validSHA256Digest(publication.PriorPlanDigest) || !validSHA256Digest(publication.PriorRootDigest))) {
 		return errors.New("partitioned extraction domain is incomplete or unbounded")
 	}
 	return nil
@@ -143,6 +233,9 @@ LET $published = IF array::len($marked) = 1 AND !$same THEN
 		candidate_digest: $candidate_digest, source_digest: $source_digest,
 		observation_digest: $observation_digest, facts: $facts, rows: $rows,
 		references: $references, plan: $plan, root: $root,
+		prior_run_id: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.run_id ELSE $existing.prior_run_id ?? NONE END,
+		prior_plan_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.plan_digest ELSE $existing.prior_plan_digest ?? NONE END,
+		prior_root_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.root_digest ELSE $existing.prior_root_digest ?? NONE END,
 		published_at: time::now()
 	} RETURN AFTER)
 	ELSE IF $ready AND $same THEN [$existing] ELSE [] END;
@@ -235,4 +328,35 @@ func (s *Surreal) GetPartitionedExtractionDomain(
 		return nil, errors.New("get partitioned extraction domain: invalid stored authority")
 	}
 	return &publication, nil
+}
+
+// ReleaseOneUnrootedPartitionRun transfers at most one sealed historical run
+// to the existing evidence sweeper. Current and one per-domain rollback floor
+// remain sealed; evidence pins still outrank collection in the later sweep.
+func (s *Surreal) ReleaseOneUnrootedPartitionRun(ctx context.Context) (bool, error) {
+	const query = `
+BEGIN;
+LET $candidate = (SELECT id, run_id, started_at FROM extraction_run
+	WHERE status = 'staged' AND (partition_sealed ?? false) = true
+		AND (partition_active ?? false) = false
+		AND retention_quarantined = false
+		AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
+		AND run_id NOT IN (SELECT VALUE run_id FROM extraction_domain_root)
+		AND run_id NOT IN (SELECT VALUE prior_run_id FROM extraction_domain_root
+			WHERE prior_run_id != NONE)
+	ORDER BY started_at, run_id LIMIT 1)[0];
+LET $released = IF $candidate != NONE THEN
+	(UPDATE $candidate.id SET partition_sealed = false RETURN AFTER) ELSE [] END;
+RETURN $released;
+COMMIT;`
+	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db, query, nil)
+	if err != nil {
+		return false, fmt.Errorf("release unrooted partition run: %w", err)
+	}
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }

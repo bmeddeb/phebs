@@ -14,7 +14,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/reponame"
@@ -31,6 +34,7 @@ const (
 	ScheduleMaxAttempts      = 5
 	ScheduleRepositoryTokens = 1
 	BindingSchema            = "phebs-relationship-schedule-binding-v1"
+	BindingSchemaV2          = "phebs-relationship-schedule-binding-v2"
 	ResolverResidentLimit    = 128 << 20
 	RPCResidentLimit         = 192 << 20
 	KafkaResidentLimit       = 128 << 20
@@ -43,29 +47,35 @@ type RuntimeStore interface {
 	store.ServiceCatalogPublicationStore
 	store.ServiceStateStore
 	store.ResolverCatalogPublicationStore
+	store.PartitionedEvidenceStore
 }
 
 type Runtime struct {
-	DataDir string
-	Store   RuntimeStore
-	Cache   *observationpublication.Cache
-	Admit   func(context.Context) error
-	Acquire func(context.Context) (func(), error)
+	DataDir        string
+	Store          RuntimeStore
+	Cache          *observationpublication.Cache
+	InventoryCache *observationpublication.InventoryCacheV2
+	Domains        []downstreamauthority.DomainIdentity
+	Admit          func(context.Context) error
+	Acquire        func(context.Context) (func(), error)
 
 	transition sync.Mutex
 }
 
 type scheduleBinding struct {
-	Schema                string `json:"schema"`
-	Repository            string `json:"repository"`
-	ScheduleGeneration    string `json:"schedule_generation"`
-	TargetGeneration      string `json:"target_generation"`
-	PriorScheduleDigest   string `json:"prior_schedule_digest,omitempty"`
-	ObservationGeneration string `json:"observation_generation"`
-	CatalogGeneration     string `json:"catalog_generation"`
-	ServiceStateSet       string `json:"service_state_set"`
-	ResolverGeneration    string `json:"resolver_generation"`
-	Digest                string `json:"digest"`
+	Schema                string                         `json:"schema"`
+	Repository            string                         `json:"repository"`
+	ScheduleGeneration    string                         `json:"schedule_generation"`
+	TargetGeneration      string                         `json:"target_generation"`
+	PriorScheduleDigest   string                         `json:"prior_schedule_digest,omitempty"`
+	ObservationGeneration string                         `json:"observation_generation"`
+	CatalogGeneration     string                         `json:"catalog_generation"`
+	ServiceStateSet       string                         `json:"service_state_set"`
+	ServiceStateSummary   string                         `json:"service_state_summary,omitempty"`
+	ServiceStateRevision  uint64                         `json:"service_state_revision,omitempty"`
+	ResolverGeneration    string                         `json:"resolver_generation"`
+	Digest                string                         `json:"digest"`
+	Upstream              *downstreamauthority.Authority `json:"upstream,omitempty"`
 }
 
 type runtimeSnapshot struct {
@@ -80,6 +90,9 @@ type runtimeSnapshot struct {
 func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error {
 	if err := runtime.validate(repository); err != nil {
 		return err
+	}
+	if runtime.v2Enabled() {
+		return runtime.reconcileV2(ctx, repository)
 	}
 	observationGeneration, err := observationpublication.CurrentGeneration(
 		filepath.Join(runtime.DataDir, "observations"), repository,
@@ -162,6 +175,147 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 	return err
 }
 
+func (runtime *Runtime) v2Enabled() bool {
+	return runtime != nil && runtime.InventoryCache != nil && runtime.Domains != nil
+}
+
+func (runtime *Runtime) reconcileV2(ctx context.Context, repository string) error {
+	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
+		ctx, filepath.Join(runtime.DataDir, "observations"), repository,
+	)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("%w: observation v2 authority", ErrNotFound)
+		}
+		return fmt.Errorf("relationship observation v2 authority: %w", err)
+	}
+	domains := make([]candidate.DownstreamDomainAuthority, 0, len(runtime.Domains))
+	for _, required := range runtime.Domains {
+		domain, domainErr := extractionpublication.CurrentDomainAuthority(
+			ctx, runtime.Store, repository, required.Domain,
+		)
+		if errors.Is(domainErr, store.ErrNotFound) {
+			continue
+		}
+		if domainErr != nil {
+			return fmt.Errorf("relationship extraction authority %s: %w", required.Domain, domainErr)
+		}
+		if !domainMatchesObservation(required, domain, observation) {
+			// A root from the previous observation generation is absent from the
+			// new required aggregate. BuildRequired will make that absence explicit
+			// and retire any stale relationship root below.
+			continue
+		}
+		domains = append(domains, domain)
+	}
+	upstream, err := downstreamauthority.BuildRequired(observation, runtime.Domains, domains)
+	if err != nil {
+		return err
+	}
+	if err := downstreamauthority.RequireUsable(upstream); err != nil {
+		release, acquireErr := runtime.Acquire(ctx)
+		if acquireErr != nil {
+			return acquireErr
+		}
+		defer release()
+		// Re-read every small upstream pointer under the mutation boundary so a
+		// late successful root cannot be hidden by an older unavailable marker.
+		confirmed, confirmErr := runtime.currentUpstreamAuthority(ctx, repository)
+		if confirmErr != nil || confirmed.Digest != upstream.Digest {
+			return errors.Join(confirmErr, ErrPublishing)
+		}
+		_, markErr := MarkUnavailable(ctx, runtime.relationshipRoot(), repository, upstream)
+		return markErr
+	}
+	summary, err := runtime.Store.GetServiceStateSummary(ctx, repository)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return fmt.Errorf("%w: catalog authority", ErrNotFound)
+		}
+		return err
+	}
+	if summary == nil || servicecatalog.ValidateRepositoryState(*summary, true) != nil ||
+		summary.Repository != repository {
+		return fmt.Errorf("%w: service-state summary", ErrInvalid)
+	}
+	resolver, err := runtime.Store.GetResolverCatalogPublication(ctx, repository)
+	if err != nil || resolver == nil {
+		return fmt.Errorf("%w: resolver authority", ErrNotFound)
+	}
+	resolverCurrent, err := runtime.Store.ResolverCatalogPublicationCurrent(ctx, *resolver)
+	if err != nil || !resolverCurrent {
+		return fmt.Errorf("%w: resolver authority changed", ErrPublishing)
+	}
+	if current, openErr := OpenCurrent(ctx, runtime.relationshipRoot(), repository); openErr == nil {
+		if matchesCurrentV2Authority(current.Root(), upstream, *summary, resolver.GenerationDigest) {
+			return nil
+		}
+	}
+	snapshot, err := runtime.loadServiceSnapshot(ctx, repository)
+	if err != nil {
+		return err
+	}
+	if !sameSummaryFence(snapshot.summary, *summary) {
+		return fmt.Errorf("%w: service-state summary changed", ErrPublishing)
+	}
+	stateSet, err := publicationServiceStateSetDigest(snapshot.catalog, snapshot.states)
+	if err != nil {
+		return err
+	}
+	target, err := runtimeTargetV2(
+		repository, upstream.Digest, snapshot.catalog.GenerationDigest,
+		stateSet, resolver.GenerationDigest, summary.SummaryDigest, summary.ControlRevision,
+	)
+	if err != nil {
+		return err
+	}
+	if runtime.Admit != nil {
+		if err := runtime.Admit(ctx); err != nil {
+			return err
+		}
+	}
+	scheduleGeneration, priorDigest, err := runtime.scheduleIdentity(ctx, repository, target)
+	if err != nil {
+		return err
+	}
+	binding := scheduleBinding{
+		Schema: BindingSchemaV2, Repository: repository,
+		ScheduleGeneration: scheduleGeneration, TargetGeneration: target,
+		PriorScheduleDigest:   priorDigest,
+		ObservationGeneration: observation.ObservationGenerationDigest,
+		CatalogGeneration:     snapshot.catalog.GenerationDigest, ServiceStateSet: stateSet,
+		ServiceStateSummary: summary.SummaryDigest, ServiceStateRevision: summary.ControlRevision,
+		ResolverGeneration: resolver.GenerationDigest, Upstream: &upstream,
+	}
+	if err := setBindingDigest(&binding); err != nil {
+		return err
+	}
+	if err := runtime.writeBinding(binding); err != nil {
+		return err
+	}
+	_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
+		Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
+		ResourceClass: store.GenerationResourceMemory, TotalItems: 1, ChunkItems: 1,
+		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
+	})
+	return err
+}
+
+func matchesCurrentV2Authority(
+	root Root,
+	upstream downstreamauthority.Authority,
+	summary servicecatalog.RepositoryState,
+	resolverGeneration string,
+) bool {
+	authority := root.Authority
+	return root.Schema == RootSchemaV2 && authority.Upstream != nil &&
+		authority.Upstream.Digest == upstream.Digest &&
+		authority.CatalogGenerationDigest == summary.CatalogGeneration &&
+		authority.ServiceStateSummaryDigest == summary.SummaryDigest &&
+		authority.ServiceStateControlRevision == summary.ControlRevision &&
+		authority.ResolverGenerationDigest == resolverGeneration
+}
+
 // Handle builds all repository-shared components and publishes the one atomic
 // relationship root only after rechecking every precious authority fence.
 func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) error {
@@ -184,14 +338,33 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return err
 	}
 	defer release()
-	lease, err := runtime.Cache.Acquire(ctx, filepath.Join(runtime.DataDir, "observations"), chunk.Repository)
-	if err != nil {
-		return fmt.Errorf("open relationship observations: %w", err)
-	}
-	defer lease.Release()
-	observations := lease.Publication()
-	if observations == nil || observations.Manifest().GenerationDigest != binding.ObservationGeneration {
-		return fmt.Errorf("%w: observation generation changed", ErrPublishing)
+	var observationsV1 *observationpublication.Publication
+	var observationsV2 observationpublication.DownstreamSource
+	if binding.Schema == BindingSchemaV2 {
+		if binding.Upstream == nil || runtime.InventoryCache == nil {
+			return fmt.Errorf("%w: relationship v2 observation configuration", ErrInvalid)
+		}
+		lease, acquireErr := runtime.InventoryCache.AcquireCurrent(
+			ctx, filepath.Join(runtime.DataDir, "observations"), chunk.Repository,
+			binding.Upstream.Observation,
+		)
+		if acquireErr != nil {
+			return fmt.Errorf("open relationship observations v2: %w", acquireErr)
+		}
+		defer lease.Release()
+		observationsV2 = lease.Publication()
+	} else {
+		lease, acquireErr := runtime.Cache.Acquire(
+			ctx, filepath.Join(runtime.DataDir, "observations"), chunk.Repository,
+		)
+		if acquireErr != nil {
+			return fmt.Errorf("open relationship observations: %w", acquireErr)
+		}
+		defer lease.Release()
+		observationsV1 = lease.Publication()
+		if observationsV1 == nil || observationsV1.Manifest().GenerationDigest != binding.ObservationGeneration {
+			return fmt.Errorf("%w: observation generation changed", ErrPublishing)
+		}
 	}
 
 	resolverPointer, err := runtime.Store.GetResolverCatalogPublication(ctx, chunk.Repository)
@@ -217,17 +390,40 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		}
 	}
 	var prior *resolvernamespace.Publication
+	var priorRPC *rpccallerposting.Publication
+	var priorKafka *kafkatopicposting.Publication
+	var priorRelationship *Publication
+	if current, openErr := OpenCurrent(ctx, runtime.relationshipRoot(), chunk.Repository); openErr == nil {
+		priorRelationship = current
+		authority := current.Root().Authority
+		priorRPC, _ = rpccallerposting.OpenGeneration(
+			ctx, runtime.rpcRoot(), chunk.Repository,
+			authority.RPCGenerationDigest, authority.RPCRootDigest,
+		)
+		priorKafka, _ = kafkatopicposting.OpenGeneration(
+			ctx, runtime.kafkaRoot(), chunk.Repository,
+			authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+		)
+	}
 	if current, openErr := resolvernamespace.OpenCurrent(
 		ctx, runtime.resolverNamespaceRoot(), chunk.Repository,
 	); openErr == nil {
 		prior = current
 	}
-	resolverStage, err := resolvernamespace.Build(ctx, resolvernamespace.BuildRequest{
+	resolverRequest := resolvernamespace.BuildRequest{
 		Root: runtime.resolverNamespaceRoot(), Repository: chunk.Repository,
 		Commit: resolverState.Commit, ResolverGenerationDigest: resolverState.GenerationDigest,
 		ResolverManifestDigest: resolverState.ManifestDigest, Descriptors: descriptors, Prior: prior,
 		ResidentLimitBytes: ResolverResidentLimit,
-	})
+	}
+	var resolverStage *resolvernamespace.Prepared
+	if binding.Schema == BindingSchemaV2 {
+		resolverStage, err = resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
+			BuildRequest: resolverRequest, Upstream: *binding.Upstream,
+		})
+	} else {
+		resolverStage, err = resolvernamespace.Build(ctx, resolverRequest)
+	}
 	if err != nil {
 		return fmt.Errorf("build relationship resolver namespaces: %w", err)
 	}
@@ -235,10 +431,18 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil {
 		return fmt.Errorf("publish relationship resolver namespaces: %w", err)
 	}
-	rpcStage, err := rpccallerposting.Build(ctx, rpccallerposting.BuildRequest{
-		Root: runtime.rpcRoot(), Observations: observations, Resolver: resolverPublication,
-		ResidentLimitBytes: RPCResidentLimit,
-	})
+	var rpcStage *rpccallerposting.Prepared
+	if binding.Schema == BindingSchemaV2 {
+		rpcStage, err = rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
+			Root: runtime.rpcRoot(), Observations: observationsV2, Resolver: resolverPublication,
+			Upstream: *binding.Upstream, Prior: priorRPC, ResidentLimitBytes: RPCResidentLimit,
+		})
+	} else {
+		rpcStage, err = rpccallerposting.Build(ctx, rpccallerposting.BuildRequest{
+			Root: runtime.rpcRoot(), Observations: observationsV1, Resolver: resolverPublication,
+			ResidentLimitBytes: RPCResidentLimit,
+		})
+	}
 	if err != nil {
 		return fmt.Errorf("build relationship RPC postings: %w", err)
 	}
@@ -246,10 +450,18 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil {
 		return fmt.Errorf("publish relationship RPC postings: %w", err)
 	}
-	kafkaStage, err := kafkatopicposting.Build(ctx, kafkatopicposting.BuildRequest{
-		Root: runtime.kafkaRoot(), Observations: observations,
-		ResidentLimitBytes: KafkaResidentLimit,
-	})
+	var kafkaStage *kafkatopicposting.Prepared
+	if binding.Schema == BindingSchemaV2 {
+		kafkaStage, err = kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
+			Root: runtime.kafkaRoot(), Observations: observationsV2,
+			Upstream: *binding.Upstream, Prior: priorKafka, ResidentLimitBytes: KafkaResidentLimit,
+		})
+	} else {
+		kafkaStage, err = kafkatopicposting.Build(ctx, kafkatopicposting.BuildRequest{
+			Root: runtime.kafkaRoot(), Observations: observationsV1,
+			ResidentLimitBytes: KafkaResidentLimit,
+		})
+	}
 	if err != nil {
 		return fmt.Errorf("build relationship Kafka postings: %w", err)
 	}
@@ -269,10 +481,24 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil || stateSet != binding.ServiceStateSet {
 		return fmt.Errorf("%w: service-state set changed", ErrPublishing)
 	}
-	stage, err := Build(ctx, BuildRequest{
+	if binding.Schema == BindingSchemaV2 &&
+		(snapshot.summary.SummaryDigest != binding.ServiceStateSummary ||
+			snapshot.summary.ControlRevision != binding.ServiceStateRevision) {
+		return fmt.Errorf("%w: service-state summary changed", ErrPublishing)
+	}
+	buildRequest := BuildRequest{
 		Root: runtime.relationshipRoot(), Catalog: snapshot.catalog, States: snapshot.states,
 		Resolver: resolverPublication, RPC: rpcPublication, Kafka: kafkaPublication,
-	})
+	}
+	var stage *Prepared
+	if binding.Schema == BindingSchemaV2 {
+		stage, err = BuildV2(ctx, BuildRequestV2{
+			BuildRequest: buildRequest, Upstream: *binding.Upstream,
+			ServiceSummary: snapshot.summary, Prior: priorRelationship,
+		})
+	} else {
+		stage, err = Build(ctx, buildRequest)
+	}
 	if err != nil {
 		return fmt.Errorf("build relationship root: %w", err)
 	}
@@ -281,6 +507,26 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	defer runtime.transition.Unlock()
 	if err := runtime.fence(ctx, binding, snapshot.summary); err != nil {
 		return err
+	}
+	if binding.Schema == BindingSchemaV2 {
+		owner := "relationship:" + stage.Root().GenerationDigest
+		pinned := make([]string, 0, len(binding.Upstream.Domains))
+		for _, domain := range binding.Upstream.Domains {
+			if err := runtime.Store.PinPartitionedExtractionRun(ctx, domain.RunID, owner); err != nil {
+				for _, runID := range pinned {
+					_ = runtime.Store.UnpinPartitionedExtractionRun(ctx, runID, owner)
+				}
+				return fmt.Errorf("pin relationship extraction root: %w", err)
+			}
+			pinned = append(pinned, domain.RunID)
+		}
+		if _, err := stage.Publish(ctx); err != nil {
+			for _, runID := range pinned {
+				_ = runtime.Store.UnpinPartitionedExtractionRun(ctx, runID, owner)
+			}
+			return fmt.Errorf("publish relationship root: %w", err)
+		}
+		return nil
 	}
 	if _, err := stage.Publish(ctx); err != nil {
 		return fmt.Errorf("publish relationship root: %w", err)
@@ -412,11 +658,23 @@ func sameSummaryFence(left, right servicecatalog.RepositoryState) bool {
 func (runtime *Runtime) fence(
 	ctx context.Context, binding scheduleBinding, summary servicecatalog.RepositoryState,
 ) error {
-	currentObservation, err := observationpublication.CurrentGeneration(
-		filepath.Join(runtime.DataDir, "observations"), binding.Repository,
-	)
-	if err != nil || currentObservation != binding.ObservationGeneration {
-		return fmt.Errorf("%w: observation fence", ErrPublishing)
+	if binding.Schema == BindingSchemaV2 {
+		if summary.SummaryDigest != binding.ServiceStateSummary ||
+			summary.ControlRevision != binding.ServiceStateRevision {
+			return fmt.Errorf("%w: service-state summary fence", ErrPublishing)
+		}
+		current, err := runtime.currentUpstreamAuthority(ctx, binding.Repository)
+		if err != nil || binding.Upstream == nil || current.Digest != binding.Upstream.Digest ||
+			downstreamauthority.RequireUsable(current) != nil {
+			return fmt.Errorf("%w: upstream v2 fence", ErrPublishing)
+		}
+	} else {
+		currentObservation, err := observationpublication.CurrentGeneration(
+			filepath.Join(runtime.DataDir, "observations"), binding.Repository,
+		)
+		if err != nil || currentObservation != binding.ObservationGeneration {
+			return fmt.Errorf("%w: observation fence", ErrPublishing)
+		}
 	}
 	resolver, err := runtime.Store.GetResolverCatalogPublication(ctx, binding.Repository)
 	if err != nil || resolver == nil || resolver.GenerationDigest != binding.ResolverGeneration {
@@ -437,6 +695,44 @@ func (runtime *Runtime) fence(
 	return nil
 }
 
+func (runtime *Runtime) currentUpstreamAuthority(
+	ctx context.Context, repository string,
+) (downstreamauthority.Authority, error) {
+	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
+		ctx, filepath.Join(runtime.DataDir, "observations"), repository,
+	)
+	if err != nil {
+		return downstreamauthority.Authority{}, err
+	}
+	domains := make([]candidate.DownstreamDomainAuthority, 0, len(runtime.Domains))
+	for _, required := range runtime.Domains {
+		domain, domainErr := extractionpublication.CurrentDomainAuthority(
+			ctx, runtime.Store, repository, required.Domain,
+		)
+		if errors.Is(domainErr, store.ErrNotFound) {
+			continue
+		}
+		if domainErr != nil {
+			return downstreamauthority.Authority{}, domainErr
+		}
+		if !domainMatchesObservation(required, domain, observation) {
+			continue
+		}
+		domains = append(domains, domain)
+	}
+	return downstreamauthority.BuildRequired(observation, runtime.Domains, domains)
+}
+
+func domainMatchesObservation(
+	required downstreamauthority.DomainIdentity,
+	domain candidate.DownstreamDomainAuthority,
+	observation observationpublication.DownstreamAuthority,
+) bool {
+	return domain.Domain == required.Domain && domain.Version == required.Version &&
+		domain.SourceGenerationDigest == observation.SourceGenerationDigest &&
+		domain.ObservationGenerationDigest == observation.ObservationGenerationDigest
+}
+
 func runtimeTarget(
 	repository, observation, catalog, serviceStateSet, resolver string,
 ) (string, error) {
@@ -455,6 +751,31 @@ func runtimeTarget(
 		Domain: "phebs-relationship-schedule-target-v1", Repository: repository,
 		Observation: observation, Catalog: catalog,
 		ServiceSet: serviceStateSet, Resolver: resolver,
+	})
+}
+
+func runtimeTargetV2(
+	repository, upstream, catalog, serviceStateSet, resolver, serviceSummary string,
+	serviceRevision uint64,
+) (string, error) {
+	if reponame.Validate(repository) != nil || !validDigest(upstream) ||
+		!validDigest(catalog) || !validDigest(serviceStateSet) || !validDigest(resolver) ||
+		!validDigest(serviceSummary) || serviceRevision == 0 {
+		return "", fmt.Errorf("%w: relationship v2 schedule authority", ErrInvalid)
+	}
+	return digestValue(struct {
+		Domain     string `json:"domain"`
+		Repository string `json:"repository"`
+		Upstream   string `json:"upstream"`
+		Catalog    string `json:"catalog"`
+		ServiceSet string `json:"service_state_set"`
+		Summary    string `json:"service_state_summary"`
+		Revision   uint64 `json:"service_state_revision"`
+		Resolver   string `json:"resolver"`
+	}{
+		Domain: "phebs-relationship-schedule-target-v2", Repository: repository,
+		Upstream: upstream, Catalog: catalog, ServiceSet: serviceStateSet,
+		Summary: serviceSummary, Revision: serviceRevision, Resolver: resolver,
 	})
 }
 
@@ -501,7 +822,8 @@ func setBindingDigest(value *scheduleBinding) error {
 }
 
 func validateBinding(value scheduleBinding) error {
-	if value.Schema != BindingSchema || reponame.Validate(value.Repository) != nil ||
+	if (value.Schema != BindingSchema && value.Schema != BindingSchemaV2) ||
+		reponame.Validate(value.Repository) != nil ||
 		!validDigest(value.ScheduleGeneration) || !validDigest(value.TargetGeneration) ||
 		!validDigest(value.ObservationGeneration) || !validDigest(value.CatalogGeneration) ||
 		!validDigest(value.ServiceStateSet) ||
@@ -509,10 +831,28 @@ func validateBinding(value scheduleBinding) error {
 		(value.PriorScheduleDigest != "" && !validDigest(value.PriorScheduleDigest)) {
 		return fmt.Errorf("%w: schedule binding", ErrInvalid)
 	}
-	want, err := runtimeTarget(
-		value.Repository, value.ObservationGeneration,
-		value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
-	)
+	var want string
+	var err error
+	if value.Schema == BindingSchemaV2 {
+		if value.Upstream == nil || downstreamauthority.RequireUsable(*value.Upstream) != nil ||
+			value.Upstream.Repository != value.Repository ||
+			value.Upstream.Observation.ObservationGenerationDigest != value.ObservationGeneration {
+			return fmt.Errorf("%w: schedule v2 upstream", ErrInvalid)
+		}
+		want, err = runtimeTargetV2(
+			value.Repository, value.Upstream.Digest,
+			value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
+			value.ServiceStateSummary, value.ServiceStateRevision,
+		)
+	} else {
+		if value.Upstream != nil || value.ServiceStateSummary != "" || value.ServiceStateRevision != 0 {
+			return fmt.Errorf("%w: schedule v1 upstream", ErrInvalid)
+		}
+		want, err = runtimeTarget(
+			value.Repository, value.ObservationGeneration,
+			value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
+		)
+	}
 	if err != nil || want != value.TargetGeneration {
 		return fmt.Errorf("%w: schedule target", ErrInvalid)
 	}

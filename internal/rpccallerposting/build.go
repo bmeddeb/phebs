@@ -1,6 +1,7 @@
 package rpccallerposting
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
@@ -33,6 +35,15 @@ type BuildRequest struct {
 	Resolver     *resolvernamespace.Publication
 	// ResidentLimitBytes is an operational pre-growth charge fence used by a
 	// registered worker. Zero preserves the contract's frozen identity bound.
+	ResidentLimitBytes int64
+}
+
+type BuildRequestV2 struct {
+	Root               string
+	Observations       observationpublication.DownstreamSource
+	Resolver           *resolvernamespace.Publication
+	Upstream           downstreamauthority.Authority
+	Prior              *Publication
 	ResidentLimitBytes int64
 }
 
@@ -67,6 +78,41 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 		ctx, request.Root, request.Observations, request.Resolver,
 		request.ResidentLimitBytes,
 	)
+}
+
+// BuildV2 binds the complete T40.4 source/inventory authority into the
+// component root. It shares the same cold posting walk as V1; only authority
+// construction and root schema differ.
+func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
+	if request.Observations == nil || request.Resolver == nil || request.Root == "" {
+		return nil, errors.New("RPC caller posting v2 observations are incomplete")
+	}
+	observation := request.Observations.DownstreamAuthority()
+	if downstreamauthority.RequireUsable(request.Upstream) != nil ||
+		request.Upstream.Observation != observation {
+		return nil, fmt.Errorf("%w: RPC caller posting v2 upstream", ErrInvalid)
+	}
+	resolverRoot := request.Resolver.Root()
+	policyDigest, err := digestValue(FrozenPolicy())
+	if err != nil {
+		return nil, err
+	}
+	authority := Authority{
+		Repository:                  observation.Repository,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ObservationManifestDigest:   observation.ObservationRootDigest,
+		ObservationSourceDigest:     observation.SourceGenerationDigest,
+		ResolverCommit:              resolverRoot.Authority.Commit,
+		ResolverGenerationDigest:    resolverRoot.GenerationDigest,
+		ResolverRootDigest:          resolverRoot.Digest, PolicyDigest: policyDigest,
+		ObservationV2: &observation, Upstream: &request.Upstream,
+	}
+	if validateAuthority(RootSchemaV2, authority) != nil ||
+		resolvernamespace.ValidateRoot(resolverRoot) != nil || observation.Repository != resolverRoot.Authority.Repository {
+		return nil, fmt.Errorf("%w: RPC caller posting v2 authority", ErrInvalid)
+	}
+	return buildObservedBounded(ctx, request.Root, request.Observations, request.Resolver, authority,
+		observation.ObservedCount, RootSchemaV2, request.Prior, request.ResidentLimitBytes)
 }
 
 func buildSources(
@@ -112,9 +158,21 @@ func buildSourcesBounded(
 		ResolverGenerationDigest:    resolverRoot.GenerationDigest,
 		ResolverRootDigest:          resolverRoot.Digest, PolicyDigest: policyDigest,
 	}
-	if err := validateAuthority(authority); err != nil {
+	if err := validateAuthority(RootSchema, authority); err != nil {
 		return nil, err
 	}
+	return buildObservedBounded(ctx, root, observations, resolver, authority,
+		observationManifest.ObservedCount, RootSchema, nil, residentLimit)
+}
+
+type observedSource interface {
+	WalkObserved(context.Context, func(observationpublication.Record, sourceobservation.Observation) error) error
+}
+
+func buildObservedBounded(
+	ctx context.Context, root string, observations observedSource, resolver resolverSource, authority Authority,
+	expectedObserved int, rootSchema string, prior *Publication, residentLimit int64,
+) (*Prepared, error) {
 
 	cache := &namespaceCache{resolver: resolver, values: make(map[string][]resolvernamespace.Record)}
 	byMember := make(map[string][]Posting)
@@ -129,11 +187,11 @@ func buildSourcesBounded(
 	}
 	postingCount := 0
 	walkedRecords := 0
-	err = observations.WalkObserved(
+	err := observations.WalkObserved(
 		ctx,
 		func(record observationpublication.Record, observation sourceobservation.Observation) error {
 			walkedRecords++
-			if walkedRecords > observationManifest.ObservedCount {
+			if walkedRecords > expectedObserved {
 				return fmt.Errorf("%w: observation walk exceeds manifest", ErrInvalid)
 			}
 			if sourceobservation.Validate(observation) != nil ||
@@ -217,10 +275,10 @@ func buildSourcesBounded(
 	if err != nil {
 		return nil, err
 	}
-	if walkedRecords != observationManifest.ObservedCount {
+	if walkedRecords != expectedObserved {
 		return nil, fmt.Errorf("%w: observation walk total", ErrInvalid)
 	}
-	return writeStage(ctx, root, authority, byMember)
+	return writeStage(ctx, root, authority, rootSchema, prior, byMember)
 }
 
 func projectCall(
@@ -469,6 +527,8 @@ func writeStage(
 	ctx context.Context,
 	root string,
 	authority Authority,
+	rootSchema string,
+	prior *Publication,
 	byMember map[string][]Posting,
 ) (*Prepared, error) {
 	if err := ensureRoot(root); err != nil {
@@ -497,7 +557,7 @@ func writeStage(
 	}
 	slices.Sort(keys)
 	rootValue := Root{
-		Schema: RootSchema, Authority: authority, Policy: FrozenPolicy(),
+		Schema: rootSchema, Authority: authority, Policy: FrozenPolicy(),
 		Members: []MemberReceipt{},
 	}
 	for _, key := range keys {
@@ -533,8 +593,10 @@ func writeStage(
 			return nil, ErrLimit
 		}
 		name := memberName(protocol, bucket)
-		if err := writeExclusive(filepath.Join(directory, name), raw); err != nil {
-			return nil, err
+		if !reusePriorMember(prior, name, member.Digest, raw, filepath.Join(directory, name)) {
+			if err := writeExclusive(filepath.Join(directory, name), raw); err != nil {
+				return nil, err
+			}
 		}
 		rootValue.Members = append(rootValue.Members, MemberReceipt{
 			Protocol: protocol, Bucket: bucket, Name: name,
@@ -576,4 +638,25 @@ func writeStage(
 	}
 	failed = false
 	return prepared, nil
+}
+
+func reusePriorMember(prior *Publication, name, digest string, raw []byte, destination string) bool {
+	if prior == nil {
+		return false
+	}
+	_, found := slices.BinarySearchFunc(prior.rootValue.Members, name, func(value MemberReceipt, target string) int {
+		return strings.Compare(value.Name, target)
+	})
+	if !found {
+		return false
+	}
+	priorRaw, err := readRegular(filepath.Join(prior.directory, name), MaxMemberBytes)
+	if err != nil || !bytes.Equal(priorRaw, raw) {
+		return false
+	}
+	var member Member
+	if decodeExact(priorRaw, MaxMemberBytes, &member) != nil || validateMember(member) != nil || member.Digest != digest {
+		return false
+	}
+	return os.Link(filepath.Join(prior.directory, name), destination) == nil
 }

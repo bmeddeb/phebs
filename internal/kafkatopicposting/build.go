@@ -1,6 +1,7 @@
 package kafkatopicposting
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 )
@@ -28,6 +30,14 @@ type BuildRequest struct {
 	ResidentLimitBytes int64
 }
 
+type BuildRequestV2 struct {
+	Root               string
+	Observations       observationpublication.DownstreamSource
+	Upstream           downstreamauthority.Authority
+	Prior              *Publication
+	ResidentLimitBytes int64
+}
+
 type Prepared struct {
 	root       string
 	repository string
@@ -40,6 +50,34 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 	return buildSourceBounded(
 		ctx, request.Root, request.Observations, request.ResidentLimitBytes,
 	)
+}
+
+func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
+	if request.Root == "" || request.Observations == nil {
+		return nil, errors.New("kafka topic posting v2 inputs are incomplete")
+	}
+	observation := request.Observations.DownstreamAuthority()
+	if downstreamauthority.RequireUsable(request.Upstream) != nil ||
+		request.Upstream.Observation != observation {
+		return nil, fmt.Errorf("%w: kafka topic posting v2 upstream", ErrInvalid)
+	}
+	policyDigest, err := digestValue(FrozenPolicy())
+	if err != nil {
+		return nil, err
+	}
+	authority := Authority{
+		Repository:                  observation.Repository,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ObservationManifestDigest:   observation.ObservationRootDigest,
+		ObservationSourceDigest:     observation.SourceGenerationDigest,
+		PolicyDigest:                policyDigest, ObservationV2: &observation,
+		Upstream: &request.Upstream,
+	}
+	if validateAuthority(RootSchemaV2, authority) != nil {
+		return nil, fmt.Errorf("%w: kafka topic posting v2 authority", ErrInvalid)
+	}
+	return buildObservedBounded(ctx, request.Root, request.Observations, authority,
+		observation.ObservedCount, RootSchemaV2, request.Prior, request.ResidentLimitBytes)
 }
 
 func buildSource(ctx context.Context, root string, observations observationSource) (*Prepared, error) {
@@ -67,9 +105,21 @@ func buildSourceBounded(
 		ObservationSourceDigest:     manifest.SourceGenerationDigest,
 		PolicyDigest:                policyDigest,
 	}
-	if err := validateAuthority(authority); err != nil {
+	if err := validateAuthority(RootSchema, authority); err != nil {
 		return nil, err
 	}
+	return buildObservedBounded(ctx, root, observations, authority,
+		manifest.ObservedCount, RootSchema, nil, residentLimit)
+}
+
+type observedSource interface {
+	WalkObserved(context.Context, func(observationpublication.Record, sourceobservation.Observation) error) error
+}
+
+func buildObservedBounded(
+	ctx context.Context, root string, observations observedSource, authority Authority,
+	expectedObserved int, rootSchema string, prior *Publication, residentLimit int64,
+) (*Prepared, error) {
 
 	byMember := make(map[string][]Posting)
 	seen := make(map[string]struct{})
@@ -83,12 +133,12 @@ func buildSourceBounded(
 	}
 	postingCount := 0
 	walkedRecords := 0
-	err = observations.WalkObserved(ctx, func(
+	err := observations.WalkObserved(ctx, func(
 		record observationpublication.Record,
 		observation sourceobservation.Observation,
 	) error {
 		walkedRecords++
-		if walkedRecords > manifest.ObservedCount {
+		if walkedRecords > expectedObserved {
 			return fmt.Errorf("%w: observation walk exceeds manifest", ErrInvalid)
 		}
 		if sourceobservation.Validate(observation) != nil || observation.ContentDigest != record.ContentDigest {
@@ -116,10 +166,10 @@ func buildSourceBounded(
 	if err != nil {
 		return nil, err
 	}
-	if walkedRecords != manifest.ObservedCount {
+	if walkedRecords != expectedObserved {
 		return nil, fmt.Errorf("%w: observation walk total", ErrInvalid)
 	}
-	return writeStage(ctx, root, authority, byMember)
+	return writeStage(ctx, root, authority, rootSchema, prior, byMember)
 }
 
 func addPosting(
@@ -213,6 +263,8 @@ func writeStage(
 	ctx context.Context,
 	root string,
 	authority Authority,
+	rootSchema string,
+	prior *Publication,
 	byMember map[string][]Posting,
 ) (*Prepared, error) {
 	if err := ensureRoot(root); err != nil {
@@ -240,7 +292,7 @@ func writeStage(
 		keys = append(keys, key)
 	}
 	slices.Sort(keys)
-	rootValue := Root{Schema: RootSchema, Authority: authority, Policy: FrozenPolicy(), Members: []MemberReceipt{}}
+	rootValue := Root{Schema: rootSchema, Authority: authority, Policy: FrozenPolicy(), Members: []MemberReceipt{}}
 	for _, key := range keys {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -270,8 +322,10 @@ func writeStage(
 			return nil, ErrLimit
 		}
 		name := memberName(plane, bucket)
-		if err := writeExclusive(filepath.Join(directory, name), raw); err != nil {
-			return nil, err
+		if !reusePriorMember(prior, name, member.Digest, raw, filepath.Join(directory, name)) {
+			if err := writeExclusive(filepath.Join(directory, name), raw); err != nil {
+				return nil, err
+			}
 		}
 		rootValue.Members = append(rootValue.Members, MemberReceipt{
 			Plane: plane, Bucket: bucket, Name: name, PostingCount: len(values),
@@ -314,4 +368,25 @@ func writeStage(
 	}
 	failed = false
 	return prepared, nil
+}
+
+func reusePriorMember(prior *Publication, name, digest string, raw []byte, destination string) bool {
+	if prior == nil {
+		return false
+	}
+	_, found := slices.BinarySearchFunc(prior.rootValue.Members, name, func(value MemberReceipt, target string) int {
+		return strings.Compare(value.Name, target)
+	})
+	if !found {
+		return false
+	}
+	priorRaw, err := readRegular(filepath.Join(prior.directory, name), MaxMemberBytes)
+	if err != nil || !bytes.Equal(priorRaw, raw) {
+		return false
+	}
+	var member Member
+	if decodeExact(priorRaw, MaxMemberBytes, &member) != nil || validateMember(member) != nil || member.Digest != digest {
+		return false
+	}
+	return os.Link(filepath.Join(prior.directory, name), destination) == nil
 }

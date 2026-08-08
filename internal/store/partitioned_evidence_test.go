@@ -242,12 +242,26 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	if err := s.PublishPartitionedExtractionDomain(ctx, publicationB); err != nil {
 		t.Fatalf("publish B: %v", err)
 	}
+	storedB, err := s.GetPartitionedExtractionDomain(ctx, repository, domain)
+	if err != nil || storedB.PriorRunID != run.ID ||
+		storedB.PriorPlanDigest != publication.PlanDigest || storedB.PriorRootDigest != publication.RootDigest {
+		t.Fatalf("B rollback floor = %+v, %v", storedB, err)
+	}
 	if err := s.PublishPartitionedExtractionDomain(ctx, publication); err != nil {
 		t.Fatalf("reactivate A: %v", err)
 	}
 	reactivated, err := s.GetPartitionedExtractionDomain(ctx, repository, domain)
-	if err != nil || reactivated.RunID != run.ID || reactivated.RootDigest != publication.RootDigest {
+	if err != nil || reactivated.RunID != run.ID || reactivated.RootDigest != publication.RootDigest ||
+		reactivated.PriorRunID != runB.ID || reactivated.PriorPlanDigest != publicationB.PlanDigest ||
+		reactivated.PriorRootDigest != publicationB.RootDigest {
 		t.Fatalf("reactivated A = %+v, %v", reactivated, err)
+	}
+	owner := "relationship:sha256:" + strings.Repeat("f", 64)
+	if err := s.PinPartitionedExtractionRun(ctx, runB.ID, owner); err != nil {
+		t.Fatalf("pin rollback run B: %v", err)
+	}
+	if err := s.ReconcilePartitionedExtractionOwners(ctx, []string{owner}); err != nil {
+		t.Fatalf("retain relationship pin owner: %v", err)
 	}
 
 	replacement := candidatePublication
@@ -268,6 +282,43 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	stillCurrent, err := s.GetPartitionedExtractionDomain(ctx, repository, domain)
 	if err != nil || stillCurrent.RootDigest != publication.RootDigest || stillCurrent.RunID != publication.RunID {
 		t.Fatalf("current after stale replacement = %+v, %v", stillCurrent, err)
+	}
+
+	planDigestC := "sha256:" + strings.Repeat("1", 64)
+	runC, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
+		Repository: repository, Commit: commit, Domain: domain,
+	}, "t40.11-lifecycle-v1", planDigestC, replacement.ManifestDigest,
+		PartitionedExtractionRunLimits{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicationC := publication
+	publicationC.RunID = runC.ID
+	publicationC.PlanDigest = planDigestC
+	publicationC.RootDigest = "sha256:" + strings.Repeat("2", 64)
+	publicationC.CandidateDigest = replacement.ManifestDigest
+	publicationC.Facts, publicationC.Rows, publicationC.References = 0, 0, 0
+	publicationC.Plan = `{"generation":"c"}`
+	publicationC.Root = `{"generation":"c"}`
+	if err := s.PublishPartitionedExtractionDomain(ctx, publicationC); err != nil {
+		t.Fatalf("publish C: %v", err)
+	}
+	storedC, err := s.GetPartitionedExtractionDomain(ctx, repository, domain)
+	if err != nil || storedC.PriorRunID != run.ID {
+		t.Fatalf("C rollback floor = %+v, %v", storedC, err)
+	}
+	if released, err := s.ReleaseOneUnrootedPartitionRun(ctx); err != nil || released {
+		t.Fatalf("pinned unrooted B release = %t, %v", released, err)
+	}
+	if err := s.ReconcilePartitionedExtractionOwners(ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	if released, err := s.ReleaseOneUnrootedPartitionRun(ctx); err != nil || !released {
+		t.Fatalf("unpinned unrooted B release = %t, %v", released, err)
+	}
+	releasedB, err := s.getRun(ctx, runB.ID)
+	if err != nil || releasedB.PartitionSealed {
+		t.Fatalf("released B = %+v, %v", releasedB, err)
 	}
 }
 

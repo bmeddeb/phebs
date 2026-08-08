@@ -29,6 +29,7 @@ type Runtime struct {
 	Executor  Executor
 	Publisher Publisher
 	Fence     Fence
+	OnSettled func(context.Context, string) error
 
 	assembly [64]sync.Mutex
 }
@@ -858,6 +859,9 @@ func (runtime *Runtime) publishRoot(
 ) error {
 	if root.Disposition == candidate.PartitionResultTerminalRefusal ||
 		root.Disposition == candidate.PartitionResultRetryable {
+		if runtime.OnSettled != nil {
+			return runtime.OnSettled(ctx, domain.Plan.Repository)
+		}
 		return nil
 	}
 	releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Chunk: chunk, Plan: domain.Plan})
@@ -867,7 +871,12 @@ func (runtime *Runtime) publishRoot(
 	if releaseFence == nil {
 		return invalid("publication fence returned no release")
 	}
-	defer releaseFence()
+	released := false
+	defer func() {
+		if !released {
+			releaseFence()
+		}
+	}()
 	if err := runtime.Publisher.PublishDomain(ctx, domain.Plan, root, domain.RunID); err != nil {
 		return err
 	}
@@ -879,7 +888,17 @@ func (runtime *Runtime) publishRoot(
 		RootDigest:       root.Digest,
 		RootName:         filepath.Join(domainKey(domain.Plan.Domain), rootName()),
 	}
-	return writeAtomicCanonical(runtime.currentPath(domain.Plan.Repository, domain.Plan.Domain), pointer)
+	if err := writeAtomicCanonical(runtime.currentPath(domain.Plan.Repository, domain.Plan.Domain), pointer); err != nil {
+		return err
+	}
+	// Downstream reconciliation acquires the shared side of the same mutation
+	// fence. Release the exclusive publication fence before invoking it.
+	releaseFence()
+	released = true
+	if runtime.OnSettled != nil {
+		return runtime.OnSettled(ctx, domain.Plan.Repository)
+	}
+	return nil
 }
 
 func (runtime *Runtime) finalizeZeroDomains(ctx context.Context, generation Generation, directory string) error {
@@ -902,6 +921,7 @@ func (runtime *Runtime) finalizeZeroDomains(ctx context.Context, generation Gene
 }
 
 func (runtime *Runtime) reactivateComplete(ctx context.Context, generation Generation, directory string) error {
+	settled := false
 	for _, descriptor := range generation.Domains {
 		domain, err := runtime.openDomainPlan(directory, descriptor)
 		if err != nil {
@@ -934,7 +954,11 @@ func (runtime *Runtime) reactivateComplete(ctx context.Context, generation Gener
 			releaseFence()
 			return err
 		}
+		settled = true
 		releaseFence()
+	}
+	if settled && runtime.OnSettled != nil {
+		return runtime.OnSettled(ctx, generation.Repository)
 	}
 	return nil
 }

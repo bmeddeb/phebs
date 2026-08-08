@@ -148,6 +148,7 @@ func cloneGeneration(
 	generation callerleaf.GenerationIdentity,
 ) callerleaf.GenerationIdentity {
 	generation.Extractors = slices.Clone(generation.Extractors)
+	generation.Upstream = slices.Clone(generation.Upstream)
 	return generation
 }
 

@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.10 are complete and T40.11 is next,
+explicit scale-convergence program: T40.1–T40.11 are complete and T40.12 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.10 complete · T40.11 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.11 complete · T40.12 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,18 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.11 · Downstream generation adapters, archive, and lifecycle** — migrate
-resolver namespaces, RPC/Kafka postings, caller-leaf work, and service
-relationship projections to the T40.4/T40.9 roots without generation-wide hot
-rereads. AC: every downstream root binds exact upstream root/policy digests; a
-partial or failed upstream is unavailable and cannot fall back as current;
-unaffected partitions are reused; T39.R1's post-lock execution budget is
-exercised by a real caller-leaf schedule; current v1/v2 authorities remain
-readable; component markers, recovery, backup/restore, pins, leases, rollback
-floor, and bounded lifecycle own the new roots; archive omission of corrupt
-derived data remains visible; steady-state cost proves no repository scan per
-plan/no-op; focused recovery and merge bars.
 
 **T40.12 · Authorized and product-consumer compatibility replay** — migrate or
 adapt exact relationship readers, comparison, proof, Workbench, HTTP, MCP, and

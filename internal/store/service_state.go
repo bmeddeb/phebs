@@ -518,9 +518,17 @@ func (s *Surreal) GetServiceStateSummary(
 	ctx context.Context,
 	repository string,
 ) (*servicecatalog.RepositoryState, error) {
-	_, _, summary, err := s.serviceStateSnapshot(ctx, repository)
+	generation, catalogRevision, err := s.serviceCatalogPointer(ctx, repository)
 	if err != nil {
-		return nil, fmt.Errorf("get service state summary: %w", err)
+		return nil, fmt.Errorf("get service state summary: catalog pointer: %w", err)
+	}
+	summary, err := s.getRawServiceStateSummary(ctx, repository)
+	if err != nil {
+		return nil, err
+	}
+	if summary.CatalogGeneration != generation ||
+		summary.CatalogControlRevision != catalogRevision {
+		return nil, fmt.Errorf("get service state summary: catalog transition is unreconciled: %w", ErrConflict)
 	}
 	return summary, nil
 }

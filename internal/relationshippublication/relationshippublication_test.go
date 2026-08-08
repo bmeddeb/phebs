@@ -14,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -48,6 +51,45 @@ func (value fakeRPC) WalkPostings(ctx context.Context, visit func(rpccallerposti
 type fakeKafka struct {
 	root   kafkatopicposting.Root
 	values []kafkatopicposting.Posting
+}
+
+type fakeDownstreamSource struct {
+	authority observationpublication.DownstreamAuthority
+}
+
+func (value fakeDownstreamSource) DownstreamAuthority() observationpublication.DownstreamAuthority {
+	return value.authority
+}
+
+func (fakeDownstreamSource) WalkObserved(
+	ctx context.Context,
+	visit func(observationpublication.Record, sourceobservation.Observation) error,
+) error {
+	if visit == nil {
+		return errors.New("nil observation visitor")
+	}
+	return ctx.Err()
+}
+
+type fakeRecoveryPins struct {
+	pins       []string
+	owners     []string
+	reconciles int
+}
+
+func (value *fakeRecoveryPins) PinPartitionedExtractionRun(
+	_ context.Context, runID, owner string,
+) error {
+	value.pins = append(value.pins, runID+"\x00"+owner)
+	return nil
+}
+
+func (value *fakeRecoveryPins) ReconcilePartitionedExtractionOwners(
+	_ context.Context, owners []string,
+) error {
+	value.reconciles++
+	value.owners = slices.Clone(owners)
+	return nil
 }
 
 func (value fakeKafka) Root() kafkatopicposting.Root { return value.root }
@@ -142,6 +184,28 @@ func TestBuildProjectsSharedUnownedAndTargetAuthorityAtomically(t *testing.T) {
 		t.Fatalf("historical service read = %+v, %v", member, err)
 	}
 	lease.Release()
+	releaseRetire, admitted := cache.BeginRetire(catalog.Repository, rootValue.GenerationDigest)
+	if !admitted {
+		t.Fatal("unleased historical generation was not admitted for retirement")
+	}
+	if _, err := cache.AcquireGeneration(
+		t.Context(), root, catalog.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("retiring historical generation admitted a new lease: %v", err)
+	}
+	if _, err := cache.Acquire(t.Context(), root, catalog.Repository); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("retiring generation admitted a delayed current-root lease: %v", err)
+	}
+	releaseRetire()
+	reopened, err := cache.AcquireGeneration(
+		t.Context(), root, catalog.Repository,
+		rootValue.GenerationDigest, rootValue.Digest,
+	)
+	if err != nil {
+		t.Fatalf("released retirement guard blocked historical lease: %v", err)
+	}
+	reopened.Release()
 	collected := publication.directory + ".collected"
 	if err := os.Rename(publication.directory, collected); err != nil {
 		t.Fatal(err)
@@ -375,6 +439,24 @@ func TestScheduleIdentityReusesActiveTargetAndDistinguishesABA(t *testing.T) {
 	}
 }
 
+func TestDomainAuthorityFromPriorObservationIsAbsentFromNewAggregate(t *testing.T) {
+	required := downstreamauthority.DomainIdentity{Domain: "proto-contract", Version: "v1"}
+	observation := observationpublication.DownstreamAuthority{
+		SourceGenerationDigest: fixedDigest("1"), ObservationGenerationDigest: fixedDigest("2"),
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: required.Domain, Version: required.Version,
+		SourceGenerationDigest: fixedDigest("1"), ObservationGenerationDigest: fixedDigest("0"),
+	}
+	if domainMatchesObservation(required, domain, observation) {
+		t.Fatal("prior-observation domain remained eligible for the new relationship aggregate")
+	}
+	domain.ObservationGenerationDigest = observation.ObservationGenerationDigest
+	if !domainMatchesObservation(required, domain, observation) {
+		t.Fatal("exact current-observation domain was not eligible")
+	}
+}
+
 type scheduleIdentityStore struct {
 	RuntimeStore
 	schedule *store.GenerationSchedule
@@ -500,8 +582,27 @@ func TestLifecyclePreservesCurrentRollbackFloorAndReaderLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Deleted == 0 {
-		t.Fatalf("lifecycle result = %+v", result)
+	if result.Deleted != 0 || result.ReleasedPinOwner == "" {
+		t.Fatalf("rename-before-unpin lifecycle result = %+v", result)
+	}
+	// A transient store-unpin failure leaves the collecting identity durable
+	// and returns the same owner on the next turn.
+	retry, err := SweepLifecycle(
+		t.Context(), dataDir, time.Now().UTC(), result.Cursor, cache, 64,
+	)
+	if err != nil || retry.ReleasedPinOwner != result.ReleasedPinOwner || retry.Deleted != 0 {
+		t.Fatalf("unconfirmed unpin retry = %+v, %v", retry, err)
+	}
+	if err := ConfirmLifecycleUnpin(
+		t.Context(), dataDir, result.Cursor, result.ReleasedPinOwner,
+	); err != nil {
+		t.Fatal(err)
+	}
+	result, err = SweepLifecycle(
+		t.Context(), dataDir, time.Now().UTC(), result.Cursor, cache, 64,
+	)
+	if err != nil || result.Deleted == 0 || result.ReleasedPinOwner != "" {
+		t.Fatalf("confirmed collection drain = %+v, %v", result, err)
 	}
 	if _, err := os.Lstat(generationPath(
 		relationshipRoot, repository, publications[0].Root().GenerationDigest,
@@ -518,6 +619,430 @@ func TestLifecyclePreservesCurrentRollbackFloorAndReaderLease(t *testing.T) {
 	current, err := OpenCurrent(t.Context(), relationshipRoot, repository)
 	if err != nil || current.Root().Digest != publications[3].Root().Digest {
 		t.Fatalf("current relationship changed: %v", err)
+	}
+}
+
+func TestLifecycleRepairsCrashStageAndOverLimitGenerationInventory(t *testing.T) {
+	dataDir := t.TempDir()
+	root := filepath.Join(dataDir, "relationships")
+	repository := "example.com/acme/repair-pressure"
+	base := repositoryRoot(root, repository)
+	stage := filepath.Join(base, ".stage-crash")
+	if err := os.MkdirAll(stage, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stage, "partial.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result, err := SweepLifecycle(t.Context(), dataDir, time.Now().UTC(), "", &Cache{}, 8)
+	if err != nil || result.Deleted == 0 {
+		t.Fatalf("stage repair = %+v, %v", result, err)
+	}
+	if _, err := os.Lstat(base); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stage-only repository remains: %v", err)
+	}
+	stage = filepath.Join(base, ".stage-restart")
+	if err := os.MkdirAll(stage, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stage, "partial.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pins := &fakeRecoveryPins{}
+	report, err := RecoverAll(t.Context(), dataDir, pins)
+	if err != nil || report.Invalid != 0 {
+		t.Fatalf("startup stage repair = %+v, %v", report, err)
+	}
+	if _, err := os.Lstat(base); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("startup stage-only repository remains: %v", err)
+	}
+
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	authority := testAuthority(t, repository)
+	accumulator := &buildAccumulator{
+		repository: map[int][]Projection{}, services: map[string]*serviceAccumulator{},
+		seen: map[string]struct{}{}, serviceRefLimit: MaxServiceReferences,
+		totalRefLimit: MaxTotalServiceReferences, residentLimit: MaxResidentChargeBytes,
+	}
+	prepared, err := writePublicationStage(
+		t.Context(), root, authority, mustDigest(t, authority), accumulator,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := prepared.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootRaw, err := os.ReadFile(filepath.Join(publication.directory, "root.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < MaxRepositoryGenerations; index++ {
+		name := fmt.Sprintf("%064x", index+1)
+		directory := filepath.Join(base, name)
+		if err := os.Mkdir(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(directory, "root.json"), rootRaw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pressureCache := &Cache{}
+	result, err = SweepLifecycle(t.Context(), dataDir, time.Now().UTC(), "", pressureCache, 8)
+	if err != nil || result.ReleasedPinOwner == "" || result.Deleted != 0 {
+		t.Fatalf("over-limit generation retirement = %+v, %v", result, err)
+	}
+	if err := ConfirmLifecycleUnpin(t.Context(), dataDir, result.Cursor, result.ReleasedPinOwner); err != nil {
+		t.Fatal(err)
+	}
+	result, err = SweepLifecycle(t.Context(), dataDir, time.Now().UTC(), result.Cursor, pressureCache, 8)
+	if err != nil || result.Deleted == 0 {
+		t.Fatalf("over-limit generation repair = %+v, %v", result, err)
+	}
+}
+
+func TestConfirmedCollectionRetainsMarkerAcrossOneDeleteTurns(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "root.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, collectionUnpinnedName), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	deleted, complete, err := drainUnpinnedCollection(directory, 1)
+	if err != nil || deleted != 1 || complete {
+		t.Fatalf("first one-delete turn = deleted %d complete %t err %v", deleted, complete, err)
+	}
+	if unpinned, err := collectionUnpinned(directory); err != nil || !unpinned {
+		t.Fatalf("collection marker after partial drain = %t, %v", unpinned, err)
+	}
+	deleted, complete, err = drainUnpinnedCollection(directory, 1)
+	if err != nil || deleted != 1 || !complete {
+		t.Fatalf("final one-delete turn = deleted %d complete %t err %v", deleted, complete, err)
+	}
+}
+
+func TestRecoveryDiscoversAndRemovesComponentOnlyCrashNamespaces(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/acme/component-only-recovery"
+	hash := repositoryHash(repository)
+	directories := []struct {
+		path       string
+		generation string
+	}{
+		{
+			path:       filepath.Join(dataDir, "relationships", "relationship-publications", hash),
+			generation: ".stage-relationship",
+		},
+		{
+			path:       filepath.Join(dataDir, "relationship-resolver-namespaces", "resolver-namespaces", hash),
+			generation: ".stage-resolver",
+		},
+		{
+			path:       filepath.Join(dataDir, "relationship-rpc-postings", "rpc-caller-postings", hash),
+			generation: strings.Repeat("a", 64),
+		},
+		{
+			path:       filepath.Join(dataDir, "relationship-kafka-postings", "kafka-topic-postings", hash),
+			generation: strings.Repeat("b", 64),
+		},
+	}
+	for _, directory := range directories {
+		generation := filepath.Join(directory.path, directory.generation)
+		if err := os.MkdirAll(generation, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(generation, "partial.json"), []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pins := &fakeRecoveryPins{}
+	report, err := RecoverAll(t.Context(), dataDir, pins)
+	if err != nil || report.Repositories != 0 || report.Invalid != 0 || len(pins.owners) != 0 {
+		t.Fatalf("component-only recovery = %+v, owners=%q, %v", report, pins.owners, err)
+	}
+	for _, directory := range directories {
+		if _, err := os.Lstat(directory.path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("orphan component namespace remains at %q: %v", directory.path, err)
+		}
+	}
+}
+
+func TestRecoveryDiscoveryReservesUnionHeadroomAtRelationshipCeiling(t *testing.T) {
+	dataDir := t.TempDir()
+	relationshipBase := filepath.Join(dataDir, "relationships", "relationship-publications")
+	componentBase := filepath.Join(dataDir, "relationship-rpc-postings", "rpc-caller-postings")
+	if err := os.MkdirAll(relationshipBase, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < MaxLifecycleRepositories; index++ {
+		if err := os.Mkdir(filepath.Join(relationshipBase, fmt.Sprintf("%064x", index)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	extra := fmt.Sprintf("%064x", MaxLifecycleRepositories)
+	if err := os.MkdirAll(filepath.Join(componentBase, extra), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	hashes, _, invalid, err := discoverRecoveryNamespaces(dataDir)
+	if err != nil || invalid != 0 || len(hashes) != MaxLifecycleRepositories+1 || hashes[len(hashes)-1] != extra {
+		t.Fatalf("recovery union = %d namespaces, invalid=%d, err=%v", len(hashes), invalid, err)
+	}
+}
+
+func TestRecoveryOwnerSelectionIsIndependentOfRepairGenerationEnvelope(t *testing.T) {
+	directory := t.TempDir()
+	for index := 0; index <= MaxRepositoryGenerations; index++ {
+		name := fmt.Sprintf("%064x", index+1)
+		if err := os.Mkdir(filepath.Join(directory, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := boundedLifecycleDirectory(directory, MaxRepositoryRepairEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected, err := recoveryProtectedGenerations(directory, entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(protected) != RetainedGenerations-1 || MaxRecoveryOwners != 16_384 {
+		t.Fatalf("protected owners = %d, global bound = %d", len(protected), MaxRecoveryOwners)
+	}
+}
+
+func TestUnavailableAuthorityRetiresFallbackAndIsVisiblyOmitted(t *testing.T) {
+	dataDir := t.TempDir()
+	root := filepath.Join(dataDir, "relationships")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	catalog, states := relationshipCatalog(t)
+	resolver := fakeResolver{root: resolverRoot(t, catalog.Repository)}
+	rpc := fakeRPC{}
+	rpc.root = rpcRoot(t, catalog.Repository, resolver.root, nil)
+	kafka := fakeKafka{}
+	kafka.root = kafkaRoot(t, catalog.Repository, rpc.root.Authority, nil)
+	prepared, err := buildSources(t.Context(), root, catalog, states, resolver, rpc, kafka)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := prepared.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: catalog.Repository,
+		SourceGenerationDigest: fixedDigest("1"), SourceRootDigest: fixedDigest("2"),
+		ObservationGenerationDigest: fixedDigest("3"), ObservationRootDigest: fixedDigest("4"),
+		PartitionPolicyDigest: fixedDigest("5"), ObservationPolicyDigest: fixedDigest("6"),
+		InventoryPolicyDigest: fixedDigest("7"), RecordCount: 1, ObservedCount: 1,
+	}
+	upstream, err := downstreamauthority.BuildRequired(
+		observation,
+		[]downstreamauthority.DomainIdentity{{Domain: "proto-contract", Version: "v1"}},
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unavailable, err := MarkUnavailable(t.Context(), root, catalog.Repository, upstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unavailable.Prior == nil || unavailable.Prior.GenerationDigest != publication.Root().GenerationDigest {
+		t.Fatalf("unavailable rollback floor = %+v", unavailable.Prior)
+	}
+	repeated, err := MarkUnavailable(t.Context(), root, catalog.Repository, upstream)
+	if err != nil || repeated.Prior == nil ||
+		repeated.Prior.GenerationDigest != publication.Root().GenerationDigest {
+		t.Fatalf("repeated unavailable rollback floor = %+v, %v", repeated.Prior, err)
+	}
+	marker := Marker{Schema: MarkerSchema, Pointer: publication.pointer}
+	marker.Digest, err = digestValue(Marker{Schema: marker.Schema, Pointer: marker.Pointer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	markerRaw, err := json.Marshal(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceFile(filepath.Join(repositoryRoot(root, catalog.Repository), "publishing.json"), markerRaw); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenCurrent(t.Context(), root, catalog.Repository); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unavailable fallback open = %v, want not found", err)
+	}
+	if recovered, err := Recover(t.Context(), root, catalog.Repository); err != nil || recovered {
+		t.Fatalf("unavailable recovery = %t, %v", recovered, err)
+	}
+	if _, err := os.Lstat(filepath.Join(repositoryRoot(root, catalog.Repository), "publishing.json")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale publishing marker survived unavailable recovery: %v", err)
+	}
+	retained, present, err := readUnavailable(root, catalog.Repository)
+	if err != nil || !present || retained.Prior == nil ||
+		retained.Prior.GenerationDigest != publication.Root().GenerationDigest {
+		t.Fatalf("recovered unavailable rollback floor = %+v, %t, %v", retained.Prior, present, err)
+	}
+	if _, err := os.Lstat(generationPath(root, catalog.Repository, publication.Root().GenerationDigest)); err != nil {
+		t.Fatalf("unavailable rollback floor missing: %v", err)
+	}
+
+	archive := filepath.Join(t.TempDir(), "relationships.tar")
+	report, err := CreateArchive(t.Context(), dataDir, archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Publications != 0 || report.Omitted != 1 || report.Files != 0 {
+		t.Fatalf("unavailable archive report = %+v", report)
+	}
+}
+
+func TestRecoverAllRepinsOnlyValidatedV2RelationshipRoots(t *testing.T) {
+	dataDir := t.TempDir()
+	catalog, states := relationshipCatalog(t)
+	repository := catalog.Repository
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: repository,
+		SourceGenerationDigest: fixedDigest("1"), SourceRootDigest: fixedDigest("2"),
+		ObservationGenerationDigest: fixedDigest("3"), ObservationRootDigest: fixedDigest("4"),
+		PartitionPolicyDigest: fixedDigest("5"), ObservationPolicyDigest: fixedDigest("6"),
+		InventoryPolicyDigest: fixedDigest("7"),
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: "proto-contract", Version: "v1", PlanDigest: fixedDigest("8"),
+		RootDigest: fixedDigest("9"), RunID: "partition-run", Disposition: candidate.PartitionResultEmpty,
+		CandidateManifestDigest: fixedDigest("a"), CandidatePartitionRootDigest: fixedDigest("b"),
+		CandidatePolicyDigest: fixedDigest("c"), SourceGenerationDigest: observation.SourceGenerationDigest,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ExtractionPolicyDigest:      fixedDigest("d"), DomainIndexDigest: fixedDigest("e"),
+		DomainScheduleDigest: fixedDigest("f"),
+	}
+	upstream, err := downstreamauthority.Build(observation, []candidate.DownstreamDomainAuthority{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, root := range []string{
+		"relationships", "relationship-resolver-namespaces",
+		"relationship-rpc-postings", "relationship-kafka-postings",
+	} {
+		if err := os.Mkdir(filepath.Join(dataDir, root), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resolverStage, err := resolvernamespace.BuildV2(t.Context(), resolvernamespace.BuildRequestV2{
+		BuildRequest: resolvernamespace.BuildRequest{
+			Root: filepath.Join(dataDir, "relationship-resolver-namespaces"), Repository: repository,
+			Commit: strings.Repeat("a", 40), ResolverGenerationDigest: fixedDigest("1"),
+			ResolverManifestDigest: fixedDigest("2"), Descriptors: []gocaller.DirectDescriptor{},
+		},
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver, err := resolverStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := fakeDownstreamSource{authority: observation}
+	rpcStage, err := rpccallerposting.BuildV2(t.Context(), rpccallerposting.BuildRequestV2{
+		Root: filepath.Join(dataDir, "relationship-rpc-postings"), Observations: source, Resolver: resolver,
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpc, err := rpcStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafkaStage, err := kafkatopicposting.BuildV2(t.Context(), kafkatopicposting.BuildRequestV2{
+		Root: filepath.Join(dataDir, "relationship-kafka-postings"), Observations: source,
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafka, err := kafkaStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary := relationshipSummary(t, catalog, states)
+	stage, err := BuildV2(t.Context(), BuildRequestV2{
+		BuildRequest: BuildRequest{
+			Root: filepath.Join(dataDir, "relationships"), Catalog: catalog, States: states,
+			Resolver: resolver, RPC: rpc, Kafka: kafka,
+		},
+		Upstream: upstream, ServiceSummary: summary,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := stage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !matchesCurrentV2Authority(publication.Root(), upstream, summary, resolver.Root().GenerationDigest) {
+		t.Fatal("exact point controls did not recognize the current v2 relationship root")
+	}
+	changedSummary := summary
+	changedSummary.ControlRevision++
+	if matchesCurrentV2Authority(publication.Root(), upstream, changedSummary, resolver.Root().GenerationDigest) {
+		t.Fatal("changed service-summary revision incorrectly reused the current relationship root")
+	}
+
+	pins := &fakeRecoveryPins{}
+	report, err := RecoverAll(t.Context(), dataDir, pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := "relationship:" + publication.Root().GenerationDigest
+	if report.Repositories != 1 || len(pins.pins) != 1 ||
+		pins.pins[0] != domain.RunID+"\x00"+owner || !slices.Equal(pins.owners, []string{owner}) {
+		t.Fatalf("recovery = %+v pins=%q owners=%q", report, pins.pins, pins.owners)
+	}
+	malformedStage := filepath.Join(
+		filepath.Join(dataDir, "relationship-resolver-namespaces", "resolver-namespaces", repositoryHash(repository)),
+		".stage-malformed",
+	)
+	if err := os.WriteFile(malformedStage, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pins.reconciles = 0
+	incomplete, err := RecoverAll(t.Context(), dataDir, pins)
+	if err != nil || incomplete.Invalid == 0 || pins.reconciles != 0 ||
+		!slices.Equal(pins.owners, []string{owner}) {
+		t.Fatalf("incomplete audit = %+v reconciles=%d owners=%q err=%v",
+			incomplete, pins.reconciles, pins.owners, err)
+	}
+	if err := os.Remove(malformedStage); err != nil {
+		t.Fatal(err)
+	}
+
+	corrupt := filepath.Join(
+		repositoryRoot(filepath.Join(dataDir, "relationships"), repository), strings.Repeat("0", 64),
+	)
+	if err := os.Mkdir(corrupt, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(corrupt, "root.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pins.pins = nil
+	pins.reconciles = 0
+	corruptReport, err := RecoverAll(t.Context(), dataDir, pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if corruptReport.Invalid == 0 || pins.reconciles != 0 || len(pins.pins) != 1 ||
+		!slices.Equal(pins.owners, []string{owner}) {
+		t.Fatalf("corrupt generation audit: report=%+v reconciles=%d pins=%q owners=%q",
+			corruptReport, pins.reconciles, pins.pins, pins.owners)
 	}
 }
 
@@ -689,6 +1214,28 @@ func relationshipCatalog(t *testing.T) (servicecatalog.Publication, []servicecat
 		states = append(states, state)
 	}
 	return publication, states
+}
+
+func relationshipSummary(
+	t *testing.T,
+	publication servicecatalog.Publication,
+	states []servicecatalog.ServiceState,
+) servicecatalog.RepositoryState {
+	t.Helper()
+	summary := servicecatalog.RepositoryState{
+		Schema: servicecatalog.RepositoryStateSchema, Repository: publication.Repository,
+		CatalogGeneration: publication.GenerationDigest, CatalogControlRevision: publication.ControlRevision,
+		CatalogServiceCount: 3, LiveServiceCount: len(states), UnavailableCount: len(states),
+		TombstoneCount: 1, ControlRevision: 1,
+		UpdatedAt: time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC),
+	}
+	if err := servicecatalog.SetRepositoryStateDigest(&summary); err != nil {
+		t.Fatal(err)
+	}
+	if err := servicecatalog.ValidateRepositoryState(summary, true); err != nil {
+		t.Fatal(err)
+	}
+	return summary
 }
 
 func resolverRoot(t *testing.T, repository string) resolvernamespace.Root {

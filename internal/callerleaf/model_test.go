@@ -1,8 +1,14 @@
 package callerleaf
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/candidate"
 )
 
 func TestAggregateReceiptCapAndCapPlusOne(t *testing.T) {
@@ -53,5 +59,96 @@ func TestGenerationValidationRejectsNoncanonicalPolicyEnvelope(t *testing.T) {
 		if err := ValidateGenerationIdentity(forged); err == nil {
 			t.Fatalf("ValidateGenerationIdentity accepted forged envelope: %+v", forged)
 		}
+	}
+}
+
+func TestGenerationV2BindsCanonicalUsableUpstreamAuthority(t *testing.T) {
+	generation, _ := testIdentity(t)
+	digest := func(char string) string { return "sha256:" + strings.Repeat(char, 64) }
+	type testObservation struct {
+		Version                     string `json:"version"`
+		Repository                  string `json:"repository"`
+		SourceGenerationDigest      string `json:"source_generation_digest"`
+		SourceRootDigest            string `json:"source_root_digest"`
+		ObservationGenerationDigest string `json:"observation_generation_digest"`
+		ObservationRootDigest       string `json:"observation_root_digest"`
+		PartitionPolicyDigest       string `json:"partition_policy_digest"`
+		ObservationPolicyDigest     string `json:"observation_policy_digest"`
+		InventoryPolicyDigest       string `json:"inventory_policy_digest,omitempty"`
+		RecordCount                 int    `json:"record_count"`
+		ObservedCount               int    `json:"observed_count"`
+	}
+	type testRequired struct {
+		Domain  string `json:"domain"`
+		Version string `json:"version"`
+	}
+	type testUpstream struct {
+		Schema      string                                `json:"schema"`
+		Repository  string                                `json:"repository"`
+		Observation testObservation                       `json:"observation"`
+		Required    []testRequired                        `json:"required"`
+		Domains     []candidate.DownstreamDomainAuthority `json:"domains"`
+		Digest      string                                `json:"digest"`
+	}
+	observation := testObservation{
+		Version: "observation-v2", Repository: generation.Repository,
+		SourceGenerationDigest: digest("1"), SourceRootDigest: digest("2"),
+		ObservationGenerationDigest: digest("3"), ObservationRootDigest: digest("4"),
+		PartitionPolicyDigest: digest("5"), ObservationPolicyDigest: digest("6"),
+		InventoryPolicyDigest: digest("7"), RecordCount: 8, ObservedCount: 7,
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: "grpc-caller", Version: "1.5.0", PlanDigest: digest("8"), RootDigest: digest("9"),
+		RunID: "caller-run", Disposition: candidate.PartitionResultEmpty,
+		CandidateManifestDigest: digest("a"), CandidatePartitionRootDigest: digest("b"),
+		CandidatePolicyDigest: digest("c"), SourceGenerationDigest: observation.SourceGenerationDigest,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ExtractionPolicyDigest:      digest("d"), DomainIndexDigest: digest("e"),
+		DomainScheduleDigest: digest("f"),
+	}
+	upstream := testUpstream{
+		Schema: "phebs-downstream-upstream-authority-v1", Repository: generation.Repository,
+		Observation: observation,
+		Required:    []testRequired{{Domain: domain.Domain, Version: domain.Version}},
+		Domains:     []candidate.DownstreamDomainAuthority{domain},
+	}
+	unsigned, err := json.Marshal(upstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(append([]byte("phebs-downstream-upstream-authority-v1\x00"), unsigned...))
+	upstream.Digest = "sha256:" + hex.EncodeToString(sum[:])
+	raw, err := json.Marshal(upstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation.Upstream, generation.UpstreamDigest = raw, upstream.Digest
+	v2, err := NewGenerationIdentity(generation)
+	if err != nil || v2.Schema != GenerationSchemaV2 || ValidateGenerationIdentity(v2) != nil {
+		t.Fatalf("v2 generation = %+v, %v", v2, err)
+	}
+	want := digestFields(
+		"phebs-caller-generation-v2\x00",
+		v2.Repository, v2.HeadCommit, v2.UnitDigest,
+		v2.DeclarationSetDigest, v2.CandidateManifestDigest,
+		v2.CandidatePolicyDigest, v2.SourceLanePolicy,
+		v2.ResolverGenerationDigest, v2.ResolverManifestDigest,
+		v2.CallerPolicyDigest, v2.ExtractorSetDigest, v2.UpstreamDigest,
+	)
+	if v2.Digest != want {
+		t.Fatalf("v2 digest = %q, want store-compatible %q", v2.Digest, want)
+	}
+
+	detached := generation
+	detached.UpstreamDigest = digest("0")
+	if _, err := NewGenerationIdentity(detached); err == nil {
+		t.Fatal("detached upstream digest was accepted")
+	}
+	mutated := upstream
+	mutated.Observation.ObservationRootDigest = digest("0")
+	detached.Upstream, _ = json.Marshal(mutated)
+	detached.UpstreamDigest = upstream.Digest
+	if _, err := NewGenerationIdentity(detached); err == nil {
+		t.Fatal("mutated embedded authority with unchanged digest was accepted")
 	}
 }

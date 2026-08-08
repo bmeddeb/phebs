@@ -173,6 +173,11 @@ func archiveCurrentPublication(
 ) ([]archiveFile, error) {
 	root := filepath.Join(dataDir, "relationships")
 	repositoryDirectory := filepath.Join(root, "relationship-publications", repositoryHashValue)
+	if _, err := os.Lstat(filepath.Join(repositoryDirectory, UnavailableName)); err == nil {
+		return nil, ErrNotFound
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
 	if _, err := os.Lstat(filepath.Join(repositoryDirectory, "publishing.json")); err == nil {
 		return nil, ErrPublishing
 	} else if !errors.Is(err, os.ErrNotExist) {

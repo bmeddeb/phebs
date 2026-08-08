@@ -17,9 +17,10 @@ type cacheEntry struct {
 }
 
 type Cache struct {
-	mu      sync.Mutex
-	entries map[string]*cacheEntry
-	retired []*cacheEntry
+	mu       sync.Mutex
+	entries  map[string]*cacheEntry
+	retired  []*cacheEntry
+	retiring map[string]struct{}
 }
 
 type Lease struct {
@@ -40,7 +41,7 @@ func (cache *Cache) Acquire(ctx context.Context, root, repository string) (*Leas
 	if err != nil {
 		return nil, err
 	}
-	return cache.acquirePublication(repository, publication), nil
+	return cache.acquirePublication(repository, publication)
 }
 
 // AcquireGeneration pins an exact immutable historical generation. The entry
@@ -59,6 +60,10 @@ func (cache *Cache) AcquireGeneration(
 		cache.entries = make(map[string]*cacheEntry)
 	}
 	key := repository + "\x00" + generation
+	if _, retiring := cache.retiring[key]; retiring {
+		cache.mu.Unlock()
+		return nil, ErrNotFound
+	}
 	if current := cache.entries[key]; current != nil && !current.retired &&
 		current.generation == generation {
 		current.leases++
@@ -106,17 +111,20 @@ func (cache *Cache) AcquireGeneration(
 	return &Lease{cache: cache, repository: key, entry: entry}, nil
 }
 
-func (cache *Cache) acquirePublication(repository string, publication *Publication) *Lease {
+func (cache *Cache) acquirePublication(repository string, publication *Publication) (*Lease, error) {
 	generation := publication.rootValue.GenerationDigest
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 	if cache.entries == nil {
 		cache.entries = make(map[string]*cacheEntry)
 	}
+	if _, retiring := cache.retiring[repository+"\x00"+generation]; retiring {
+		return nil, ErrNotFound
+	}
 	if current := cache.entries[repository]; current != nil && !current.retired &&
 		current.generation == generation {
 		current.leases++
-		return &Lease{cache: cache, repository: repository, entry: current}
+		return &Lease{cache: cache, repository: repository, entry: current}, nil
 	}
 	entry := &cacheEntry{publication: publication, generation: generation, leases: 1}
 	if current := cache.entries[repository]; current != nil {
@@ -126,7 +134,7 @@ func (cache *Cache) acquirePublication(repository string, publication *Publicati
 		}
 	}
 	cache.entries[repository] = entry
-	return &Lease{cache: cache, repository: repository, entry: entry}
+	return &Lease{cache: cache, repository: repository, entry: entry}, nil
 }
 
 func (lease *Lease) Publication() *Publication {
@@ -171,6 +179,56 @@ func (cache *Cache) Pinned(repository, generation string) bool {
 	}
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
+	if entry := cache.entries[repository]; entry != nil &&
+		entry.generation == generation && entry.leases != 0 {
+		return true
+	}
+	if entry := cache.entries[repository+"\x00"+generation]; entry != nil &&
+		entry.generation == generation && entry.leases != 0 {
+		return true
+	}
+	for _, entry := range cache.retired {
+		if entry.generation == generation && entry.leases != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// BeginRetire atomically excludes a new historical lease after proving that
+// no current or provisional lease exists. The caller holds the returned guard
+// through rename, after which AcquireGeneration can no longer open the old
+// immutable path even when the guard is released.
+func (cache *Cache) BeginRetire(repository, generation string) (func(), bool) {
+	if cache == nil {
+		return nil, false
+	}
+	key := repository + "\x00" + generation
+	cache.mu.Lock()
+	if cache.pinnedLocked(repository, generation) {
+		cache.mu.Unlock()
+		return nil, false
+	}
+	if cache.retiring == nil {
+		cache.retiring = make(map[string]struct{})
+	}
+	if _, present := cache.retiring[key]; present {
+		cache.mu.Unlock()
+		return nil, false
+	}
+	cache.retiring[key] = struct{}{}
+	cache.mu.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			cache.mu.Lock()
+			delete(cache.retiring, key)
+			cache.mu.Unlock()
+		})
+	}, true
+}
+
+func (cache *Cache) pinnedLocked(repository, generation string) bool {
 	if entry := cache.entries[repository]; entry != nil &&
 		entry.generation == generation && entry.leases != 0 {
 		return true

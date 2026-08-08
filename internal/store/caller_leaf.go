@@ -66,11 +66,22 @@ type CallerGenerationIdentity struct {
 	SourceLanePolicy         string `json:"source_lane_policy"`
 	CallerPolicyDigest       string `json:"caller_policy_digest"`
 	ExtractorSetDigest       string `json:"extractor_set_digest"`
+	UpstreamDigest           string `json:"upstream_digest,omitempty"`
 	Digest                   string `json:"digest"`
 }
 
 // ComputeCallerGenerationDigest is the sole store-side generation digest.
 func ComputeCallerGenerationDigest(identity CallerGenerationIdentity) string {
+	if identity.UpstreamDigest != "" {
+		return callerLeafDigestFields(
+			"phebs-caller-generation-v2\x00",
+			identity.Repository, identity.HeadCommit, identity.UnitDigest,
+			identity.DeclarationSetDigest, identity.CandidateManifestDigest,
+			identity.CandidatePolicyDigest, identity.SourceLanePolicy,
+			identity.ResolverGenerationDigest, identity.ResolverManifestDigest,
+			identity.CallerPolicyDigest, identity.ExtractorSetDigest, identity.UpstreamDigest,
+		)
+	}
 	return callerLeafDigestFields(
 		"phebs-caller-generation-v1\x00",
 		identity.Repository,
@@ -313,6 +324,9 @@ func prepareCallerGeneration(identity CallerGenerationIdentity) (CallerGeneratio
 		if !validSHA256Digest(digest) {
 			return identity, fmt.Errorf("%s must be canonical sha256", name)
 		}
+	}
+	if identity.UpstreamDigest != "" && !validSHA256Digest(identity.UpstreamDigest) {
+		return identity, errors.New("upstream_digest must be empty or canonical sha256")
 	}
 	if identity.CandidateControlRevision == 0 || identity.ResolverControlRevision == 0 {
 		return identity, errors.New("candidate and resolver control revisions are required")

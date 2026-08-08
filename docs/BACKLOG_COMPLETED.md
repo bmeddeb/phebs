@@ -9491,3 +9491,87 @@ outweighed the helpers and entrances. Interaction cost: no new work on
 any interaction path — entrances are one-shot compositor CSS, loops run
 only in loading states, and the recorded 150ms list-interaction budget
 is unchanged.
+
+**T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
+*(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
+RPC/Kafka postings, caller-leaf generation identities, and atomic service
+relationship projections to one bounded downstream authority that names the
+exact T40.4 source/observation generation, roots, and policies plus every
+required T40.9 domain plan, root, run, policy, index, schedule, version, and
+disposition. Planning reads only pointer/root-sized controls. Missing, failed,
+retryable, or terminal upstream work installs a durable `unavailable.json`
+non-authority before retiring `current.json`, preserving the prior generation
+only as an explicit rollback floor rather than a silent fallback.
+
+Resolver, RPC, Kafka, relationship, and caller-leaf v2 roots retain their v1
+readers and bytes. V2 component builders stream cold content once and hard-link
+byte-identical namespace, posting, repository, and service members from the
+prior validated generation. A caller-leaf v2 identity embeds canonical upstream
+authority bytes and binds their validated digest in its generation identity.
+Production caller work rereads candidate, resolver, observation, and domain-root
+authority after the repository lock, and the inherited five-minute execution
+deadline governs real source/executor work from that point; durable outcome
+installation uses the scheduler lease context so a completed attempt is not
+lost after its work deadline.
+
+The relationship root pins each cited partition evidence run under its exact
+generation owner before pointer publication and unwinds those pins if
+publication fails. Store domain authority retains one prior run/plan/root
+rollback floor across A→B→A. Startup validates component/root markers, restores
+current pointers, re-pins only complete v2 relationship generations, and
+removes orphan relationship pin owners. Relationship lifecycle preserves
+current, publishing, unavailable-prior, cache-lease, and store-pin authority;
+collection releases the exact relationship pin owner, after which the existing
+evidence sweep may reclaim an unrooted sealed run. Backup includes only a fully
+validated current component graph, while unavailable, corrupt, or in-flight
+derived state increments visible omission accounting. Focused tests cover
+unavailable no-fallback and archive omission, validated-root recovery pinning,
+rollback/pin collection, v1/v2 caller identity, and the post-lock deadline.
+
+The reverse-review closure aligns V2 caller/store generation identity, invokes
+downstream settlement only after releasing extraction's exclusive publication
+fence, treats prior-observation domain roots as absent during rollover, and
+preserves the unavailable rollback floor across repeated callbacks and restart.
+A newer unavailable marker defeats any stale publishing marker. Startup and
+lifecycle drain abandoned component/root stages and admit excess completed
+generations through a separate bounded 20,000-entry repair envelope rather
+than wedging at the 64-generation steady-state ceiling. V2 relationship roots
+bind the service-summary digest and control revision, so an exact hot no-op
+returns after point controls without paging the service-state census.
+
+The second reverse-review closure gives relationship lifecycle the exclusive
+global mutation lock, excluding every shared-lock component/root build until
+its final relationship authority is installed. Caller artifacts and the typed
+downstream authority now share one dependency-low canonical validator that
+recomputes the complete embedded authority digest. Startup discovers the union
+of relationship, resolver, RPC, and Kafka namespaces, deleting component-only
+crash residue when no final relationship anchor exists. Recovery retains pin
+owners only for current or unavailable-prior authority plus the single
+lifecycle rollback generation: at most 16,384 owners, with all namespace
+scans, generation-root reads, repair deletions, and pins charged to one
+two-million-operation startup budget.
+
+The third reverse-review closure reserves a 16,384-hash four-namespace union
+for recovery discovery without raising any namespace's 4,096 authoritative
+relationship ceiling. Any incomplete or invalid repository/component audit
+now suppresses destructive global owner reconciliation, preserving the pins
+of roots that could not be re-proved. Cache retirement and provisional lease
+admission share one mutex: lifecycle either sees the active lease or excludes
+new historical opens before rename. Collection renames and syncs first,
+retries store unpin while the generation-bearing collecting directory remains,
+durably marks successful unpin, and drains only on a later turn. The bounded
+startup envelope can still issue up to 524,288 sequential point-pin operations
+at the reachable maximum shape; no startup SLO is claimed without measurement.
+
+Hot reconcile/no-op reads two observation pointer controls, one bounded
+inventory root, one canonical plan/root pair per configured domain, service and
+resolver point controls, and the current relationship root; it performs no Git,
+candidate-member, source/observation-segment, evidence-row, or repository scan.
+Cold construction remains one bounded stream of the selected observation
+inventory and component inputs, with existing resident, file, member, and
+scheduler limits. Lifecycle handles one repository/generation per bounded pass;
+startup scans only bounded derived namespaces and small roots. T40.12 is next
+and owns authorized product-consumer replay. T40.11 changes no service cap,
+topology, supported-scale/SLO, accuracy/completeness, freshness,
+migration/decommission, pilot, release, or private-rerun claim;
+`GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.

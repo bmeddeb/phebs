@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 )
 
@@ -28,6 +29,11 @@ type BuildRequest struct {
 	ResidentLimitBytes int64
 }
 
+type BuildRequestV2 struct {
+	BuildRequest
+	Upstream downstreamauthority.Authority
+}
+
 // Prepared is a completely validated but invisible generation stage.
 type Prepared struct {
 	root       string
@@ -38,6 +44,21 @@ type Prepared struct {
 }
 
 func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
+	return build(ctx, request, RootSchema, nil)
+}
+
+func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
+	if downstreamauthority.RequireUsable(request.Upstream) != nil ||
+		request.Upstream.Repository != request.Repository {
+		return nil, fmt.Errorf("%w: resolver namespace v2 upstream", ErrInvalid)
+	}
+	return build(ctx, request.BuildRequest, RootSchemaV2, &request.Upstream)
+}
+
+func build(
+	ctx context.Context, request BuildRequest, rootSchema string,
+	upstream *downstreamauthority.Authority,
+) (*Prepared, error) {
 	if request.Root == "" {
 		return nil, errors.New("resolver namespace root is required")
 	}
@@ -46,6 +67,10 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 		request.ResolverManifestDigest,
 	)
 	if err != nil {
+		return nil, err
+	}
+	authority.Upstream = upstream
+	if err := validateAuthority(rootSchema, authority); err != nil {
 		return nil, err
 	}
 	records, err := normalizeDescriptors(request.Descriptors)
@@ -104,7 +129,7 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 
 	prior := priorReceipts(request.Prior)
 	rootValue := Root{
-		Schema: RootSchema, Authority: authority, Policy: FrozenPolicy(),
+		Schema: rootSchema, Authority: authority, Policy: FrozenPolicy(),
 		Namespaces: []NamespaceReceipt{},
 	}
 	for _, key := range keys {

@@ -3,6 +3,7 @@
 package callerleaf
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/reponame"
@@ -23,12 +25,13 @@ import (
 )
 
 const (
-	GenerationSchema = "phebs-caller-generation-v1"
-	PairSchema       = "phebs-caller-leaf-pair-v1"
-	RecordSchema     = "phebs-caller-leaf-record-v1"
-	MetadataSchema   = "phebs-caller-leaf-metadata-v1"
-	PolicyName       = "phebs-direct-caller-leaf-policy-v1"
-	LeafAdapterV1    = "direct-syntax-base-v1"
+	GenerationSchema   = "phebs-caller-generation-v1"
+	GenerationSchemaV2 = "phebs-caller-generation-v2"
+	PairSchema         = "phebs-caller-leaf-pair-v1"
+	RecordSchema       = "phebs-caller-leaf-record-v1"
+	MetadataSchema     = "phebs-caller-leaf-metadata-v1"
+	PolicyName         = "phebs-direct-caller-leaf-policy-v1"
+	LeafAdapterV1      = "direct-syntax-base-v1"
 
 	RecordResult     = "result"
 	RecordAbstention = "abstention"
@@ -132,6 +135,8 @@ type GenerationIdentity struct {
 	Extractors               []ExtractorIdentity `json:"extractors"`
 	ExtractorSetDigest       string              `json:"extractor_set_digest"`
 	Digest                   string              `json:"digest"`
+	Upstream                 json.RawMessage     `json:"upstream,omitempty"`
+	UpstreamDigest           string              `json:"upstream_digest,omitempty"`
 }
 
 type LeafDescriptor struct {
@@ -201,6 +206,20 @@ type Record struct {
 
 func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error) {
 	input.Schema = GenerationSchema
+	if len(input.Upstream) != 0 {
+		input.Schema = GenerationSchemaV2
+		if len(input.Upstream) > 1<<20 || !json.Valid(input.Upstream) || !validDigest(input.UpstreamDigest) {
+			return GenerationIdentity{}, errors.New("caller generation has invalid upstream authority")
+		}
+		upstream, validateErr := authorityvalidate.Canonical(input.Upstream)
+		if validateErr != nil || !upstream.Usable || upstream.Repository != input.Repository ||
+			upstream.Digest != input.UpstreamDigest {
+			return GenerationIdentity{}, errors.New("caller generation has invalid upstream authority")
+		}
+		input.Upstream = slices.Clone(input.Upstream)
+	} else if input.UpstreamDigest != "" {
+		return GenerationIdentity{}, errors.New("caller generation has detached upstream digest")
+	}
 	input.SourceLanePolicy = callerleafid.SourceLanePolicy
 	input.CallerPolicy = FrozenPolicy()
 	input.Digest = ""
@@ -284,7 +303,9 @@ func ValidateGenerationIdentity(input GenerationIdentity) error {
 		wanted.CallerPolicy != input.CallerPolicy ||
 		wanted.Digest != input.Digest ||
 		wanted.CallerPolicyDigest != input.CallerPolicyDigest ||
-		wanted.ExtractorSetDigest != input.ExtractorSetDigest {
+		wanted.ExtractorSetDigest != input.ExtractorSetDigest ||
+		!bytes.Equal(wanted.Upstream, input.Upstream) ||
+		wanted.UpstreamDigest != input.UpstreamDigest {
 		return errors.New("caller generation digest mismatch")
 	}
 	return nil
@@ -414,6 +435,16 @@ func (aggregate *AggregateReceipt) Add(receipt Receipt) error {
 }
 
 func generationDigest(input GenerationIdentity) (string, error) {
+	if len(input.Upstream) != 0 {
+		return digestFields(
+			"phebs-caller-generation-v2\x00",
+			input.Repository, input.HeadCommit, input.UnitDigest,
+			input.DeclarationSetDigest, input.CandidateManifestDigest,
+			input.CandidatePolicyDigest, input.SourceLanePolicy,
+			input.ResolverGenerationDigest, input.ResolverManifestDigest,
+			input.CallerPolicyDigest, input.ExtractorSetDigest, input.UpstreamDigest,
+		), nil
+	}
 	return digestFields(
 		"phebs-caller-generation-v1\x00",
 		input.Repository, input.HeadCommit, input.UnitDigest,

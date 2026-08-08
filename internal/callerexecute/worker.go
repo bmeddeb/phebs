@@ -2,6 +2,7 @@ package callerexecute
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,15 +15,21 @@ import (
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/store"
 	reposync "github.com/bmeddeb/phebs/internal/sync"
 )
+
+var ErrPartitionedCallerUnavailable = errors.New("partitioned caller upstream is unavailable")
 
 // Store is the exact state boundary used by the direct caller-leaf worker.
 type Store interface {
@@ -221,6 +228,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	defer cancelPreflight()
 
 	current, err := worker.currentAuthority(preflightCtx, job.Target)
+	if errors.Is(err, ErrPartitionedCallerUnavailable) {
+		if clearErr := worker.store.ClearCallerGenerationPublication(preflightCtx, job.Target); clearErr != nil &&
+			!errors.Is(clearErr, store.ErrNotFound) {
+			return clearErr
+		}
+		return worker.publications.Retire(preflightCtx, job.Target)
+	}
 	if err != nil || current == nil {
 		return err
 	}
@@ -284,6 +298,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	defer cancelWork()
 
 	current, err = worker.currentAuthority(workCtx, job.Target)
+	if errors.Is(err, ErrPartitionedCallerUnavailable) {
+		if clearErr := worker.store.ClearCallerGenerationPublication(workCtx, job.Target); clearErr != nil &&
+			!errors.Is(clearErr, store.ErrNotFound) {
+			return clearErr
+		}
+		return worker.publications.Retire(workCtx, job.Target)
+	}
 	if err != nil || current == nil {
 		return err
 	}
@@ -461,7 +482,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			resolverByProtocol[next.Adapter.Protocol] = resolver
 		}
 		outcome, queued, stop, runErr := worker.executeAndRecordPair(
-			workCtx, job, repoDir, plan, current, *next, resolver, inventory,
+			workCtx, ctx, job, repoDir, plan, current, *next, resolver, inventory,
 		)
 		successorQueued = successorQueued || queued
 		if runErr != nil {
@@ -733,7 +754,8 @@ func (worker *Worker) recordTerminalRefusal(
 }
 
 func (worker *Worker) executeAndRecordPair(
-	ctx context.Context,
+	executionCtx context.Context,
+	durableCtx context.Context,
 	job store.Job,
 	repositoryDir string,
 	plan extract.CandidateCallerPlan,
@@ -749,7 +771,7 @@ func (worker *Worker) executeAndRecordPair(
 		return outcome, false, false, err
 	}
 	defer func() { _ = stage.Discard() }()
-	err = worker.execute(ctx, ExecuteRequest{
+	err = worker.execute(executionCtx, ExecuteRequest{
 		RepositoryDir: repositoryDir, Plan: plan, Pair: pair,
 		Protocol:              pair.Adapter.Protocol,
 		ResolverCatalogDigest: current.semantic.ResolverManifestDigest,
@@ -769,14 +791,14 @@ func (worker *Worker) executeAndRecordPair(
 		}
 		if !terminal {
 			defer func() { _ = prepared.Discard() }()
-			if err = worker.ensureJobSuccessor(ctx, job, false); err != nil {
+			if err = worker.ensureJobSuccessor(durableCtx, job, false); err != nil {
 				return outcome, false, false, fmt.Errorf(
 					"enqueue caller publication recovery: %w", err,
 				)
 			}
 			queued = true
 			var publication *callerleaf.Publication
-			publication, err = worker.install(ctx, prepared, inventory)
+			publication, err = worker.install(durableCtx, prepared, inventory)
 			if errors.Is(err, callerleaf.ErrNondeterministic) {
 				exactPath, pathErr := callerleaf.ArtifactPath(
 					worker.root, current.semantic.Repository, prepared.Receipt(),
@@ -787,7 +809,7 @@ func (worker *Worker) executeAndRecordPair(
 				divergent := false
 				if _, statErr := os.Lstat(exactPath); statErr == nil {
 					if _, openErr := callerleaf.Open(
-						ctx, worker.root, current.semantic, pair.Identity,
+						durableCtx, worker.root, current.semantic, pair.Identity,
 						prepared.Receipt(), nil,
 					); openErr == nil {
 						// Install saw a different pair-prefix sibling before it
@@ -795,7 +817,7 @@ func (worker *Worker) executeAndRecordPair(
 						divergent = true
 					} else if errors.Is(openErr, callerleaf.ErrInvalidArtifact) {
 						if queueErr := worker.ensureJobSuccessor(
-							ctx, job, true,
+							durableCtx, job, true,
 						); queueErr != nil {
 							return outcome, true, false, queueErr
 						}
@@ -829,7 +851,7 @@ func (worker *Worker) executeAndRecordPair(
 					Generation: current.stored, Pair: storePair(pair),
 					Disposition: store.CallerLeafTerminalGenerationRefusal,
 				}
-				if err = worker.store.RecordCallerLeafOutcome(ctx, job, outcome); err != nil {
+				if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 					return outcome, true, false, err
 				}
 				return outcome, true, false, nil
@@ -839,7 +861,7 @@ func (worker *Worker) executeAndRecordPair(
 					Generation: current.stored, Pair: storePair(pair),
 					Disposition: store.CallerLeafTerminalGenerationRefusal,
 				}
-				if err = worker.store.RecordCallerLeafOutcome(ctx, job, outcome); err != nil {
+				if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 					return outcome, true, false, err
 				}
 				return outcome, true, false, nil
@@ -853,7 +875,7 @@ func (worker *Worker) executeAndRecordPair(
 				Disposition: store.CallerLeafSucceeded,
 				Receipt:     storeReceipt(receipt),
 			}
-			if err = worker.store.RecordCallerLeafOutcome(ctx, job, outcome); err != nil {
+			if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 				return outcome, true, false, err
 			}
 			worker.markPairValidated(
@@ -862,7 +884,7 @@ func (worker *Worker) executeAndRecordPair(
 			return outcome, true, false, nil
 		}
 	}
-	if err = worker.ensureJobSuccessor(ctx, job, false); err != nil {
+	if err = worker.ensureJobSuccessor(durableCtx, job, false); err != nil {
 		return outcome, false, false, fmt.Errorf(
 			"enqueue terminal caller recovery: %w", err,
 		)
@@ -871,7 +893,7 @@ func (worker *Worker) executeAndRecordPair(
 		Generation: current.stored, Pair: storePair(pair),
 		Disposition: store.CallerLeafTerminalGenerationRefusal,
 	}
-	if err = worker.store.RecordCallerLeafOutcome(ctx, job, outcome); err != nil {
+	if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 		return outcome, true, false, err
 	}
 	return outcome, true, false, nil
@@ -881,7 +903,57 @@ func (worker *Worker) currentAuthority(
 	ctx context.Context,
 	repository string,
 ) (*authority, error) {
-	return currentAuthority(ctx, worker.store, worker.registry, repository)
+	current, err := currentAuthority(ctx, worker.store, worker.registry, repository)
+	if err != nil || current == nil {
+		return current, err
+	}
+	partitioned, ok := any(worker.store).(store.PartitionedEvidenceStore)
+	if !ok {
+		return current, nil
+	}
+	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
+		ctx, filepath.Join(worker.dataDir, "observations"), repository,
+	)
+	if err != nil {
+		return nil, errors.Join(ErrPartitionedCallerUnavailable, err)
+	}
+	adapters := worker.registry.Adapters()
+	required := make([]downstreamauthority.DomainIdentity, len(adapters))
+	domains := make([]candidate.DownstreamDomainAuthority, 0, len(adapters))
+	for index, adapter := range adapters {
+		required[index] = downstreamauthority.DomainIdentity{Domain: adapter.Domain, Version: adapter.Version}
+		domain, domainErr := extractionpublication.CurrentDomainAuthority(
+			ctx, partitioned, repository, adapter.Domain,
+		)
+		if errors.Is(domainErr, store.ErrNotFound) {
+			continue
+		}
+		if domainErr != nil || domain.Version != adapter.Version {
+			return nil, errors.Join(ErrPartitionedCallerUnavailable, domainErr)
+		}
+		domains = append(domains, domain)
+	}
+	upstream, err := downstreamauthority.BuildRequired(observation, required, domains)
+	if err != nil || downstreamauthority.RequireUsable(upstream) != nil {
+		return nil, errors.Join(ErrPartitionedCallerUnavailable, err)
+	}
+	semantic := current.semantic
+	semantic.Upstream, err = json.Marshal(upstream)
+	if err != nil {
+		return nil, err
+	}
+	semantic.UpstreamDigest = upstream.Digest
+	semantic, err = callerleaf.NewGenerationIdentity(semantic)
+	if err != nil {
+		return nil, err
+	}
+	current.semantic = semantic
+	current.stored = storeGeneration(semantic, *current.candidate, *current.resolver)
+	if current.stored.Digest != semantic.Digest ||
+		store.ComputeCallerGenerationDigest(current.stored) != semantic.Digest {
+		return nil, errors.New("partitioned caller identity differs across artifact and store writers")
+	}
+	return current, nil
 }
 
 // authorityStore is the read-only subset needed to reconstruct the exact
@@ -992,6 +1064,7 @@ func storeGeneration(
 		SourceLanePolicy:         semantic.SourceLanePolicy,
 		CallerPolicyDigest:       semantic.CallerPolicyDigest,
 		ExtractorSetDigest:       semantic.ExtractorSetDigest,
+		UpstreamDigest:           semantic.UpstreamDigest,
 		Digest:                   semantic.Digest,
 	}
 }

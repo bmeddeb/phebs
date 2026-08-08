@@ -27,11 +27,44 @@ type Publication struct {
 	pointerRaw []byte
 }
 
+func (prepared *Prepared) Root() Root {
+	if prepared == nil {
+		return Root{}
+	}
+	return cloneRoot(prepared.rootValue)
+}
+
+func cloneRoot(value Root) Root {
+	value.RepositoryMembers = slices.Clone(value.RepositoryMembers)
+	value.Services = slices.Clone(value.Services)
+	if value.Authority.Upstream != nil {
+		upstream := *value.Authority.Upstream
+		upstream.Required = slices.Clone(upstream.Required)
+		upstream.Domains = slices.Clone(upstream.Domains)
+		value.Authority.Upstream = &upstream
+	}
+	return value
+}
+
 func writePublicationStage(
 	ctx context.Context,
 	root string,
 	authority Authority,
 	authorityDigest string,
+	accumulator *buildAccumulator,
+) (*Prepared, error) {
+	return writePublicationStageVersioned(
+		ctx, root, RootSchema, authority, authorityDigest, nil, accumulator,
+	)
+}
+
+func writePublicationStageVersioned(
+	ctx context.Context,
+	root string,
+	rootSchema string,
+	authority Authority,
+	authorityDigest string,
+	prior *Publication,
 	accumulator *buildAccumulator,
 ) (*Prepared, error) {
 	directory, err := stageDirectory(root, authority.Repository)
@@ -45,7 +78,7 @@ func writePublicationStage(
 		}
 	}()
 	value := Root{
-		Schema: RootSchema, Authority: authority, AuthorityDigest: authorityDigest,
+		Schema: rootSchema, Authority: authority, AuthorityDigest: authorityDigest,
 		Policy: FrozenPolicy(), RepositoryComplete: true,
 		RepositoryMembers: []MemberReceipt{}, Services: []ServiceReceipt{},
 		ProjectionCount: accumulator.projectionCount,
@@ -63,8 +96,16 @@ func writePublicationStage(
 		slices.SortFunc(projections, func(left, right Projection) int {
 			return strings.Compare(left.Digest, right.Digest)
 		})
+		memberSchema, memberAuthority := RepositoryMemberSchema, authorityDigest
+		if rootSchema == RootSchemaV2 {
+			memberSchema = RepositoryMemberSchemaV2
+			memberAuthority, err = repositoryPartitionAuthority(bucket, projections)
+			if err != nil {
+				return nil, err
+			}
+		}
 		member := RepositoryMember{
-			Schema: RepositoryMemberSchema, AuthorityDigest: authorityDigest,
+			Schema: memberSchema, AuthorityDigest: memberAuthority,
 			Bucket: bucket, Projections: projections,
 		}
 		member.Digest, err = digestValue(RepositoryMember{
@@ -82,8 +123,10 @@ func writePublicationStage(
 			return nil, ErrLimit
 		}
 		name := repositoryMemberName(bucket)
-		if err := writeExclusive(memberPath(directory, name), raw); err != nil {
-			return nil, err
+		if !reuseRelationshipMember(prior, name, raw, memberPath(directory, name)) {
+			if err := writeExclusive(memberPath(directory, name), raw); err != nil {
+				return nil, err
+			}
 		}
 		value.RepositoryMembers = append(value.RepositoryMembers, MemberReceipt{
 			Bucket: bucket, Name: name, RecordCount: len(projections),
@@ -111,8 +154,18 @@ func writePublicationStage(
 		slices.SortFunc(service.refs, func(left, right ServiceReference) int {
 			return strings.Compare(left.Digest, right.Digest)
 		})
+		memberSchema, memberAuthority := ServiceMemberSchema, authorityDigest
+		if rootSchema == RootSchemaV2 {
+			memberSchema = ServiceMemberSchemaV2
+			memberAuthority, err = servicePartitionAuthority(
+				key, service.state.Incarnation, service.state.DesiredGeneration, service.refs,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
 		member := ServiceMember{
-			Schema: ServiceMemberSchema, AuthorityDigest: authorityDigest,
+			Schema: memberSchema, AuthorityDigest: memberAuthority,
 			ServiceKey: key, Incarnation: service.state.Incarnation,
 			ServiceGeneration: service.state.DesiredGeneration,
 			References:        service.refs,
@@ -137,8 +190,10 @@ func writePublicationStage(
 			continue
 		}
 		name := serviceMemberName(key)
-		if err := writeExclusive(memberPath(directory, name), raw); err != nil {
-			return nil, err
+		if !reuseRelationshipMember(prior, name, raw, memberPath(directory, name)) {
+			if err := writeExclusive(memberPath(directory, name), raw); err != nil {
+				return nil, err
+			}
 		}
 		receipt.Name, receipt.ReferenceCount = name, len(service.refs)
 		receipt.ContentBytes, receipt.ContentDigest = int64(len(raw)), member.Digest
@@ -154,7 +209,7 @@ func writePublicationStage(
 		value.Services = append(value.Services, receipt)
 	}
 	value.AllServicesComplete = value.FailedServiceCount == 0
-	value.GenerationDigest, err = generationDigest(authorityDigest)
+	value.GenerationDigest, err = generationDigest(value.Schema, authorityDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +286,9 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 	if err := replaceFile(filepath.Join(base, "current.json"), pointerRaw); err != nil {
 		return nil, err
 	}
+	if err := os.Remove(filepath.Join(base, UnavailableName)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
 	if err := os.Remove(filepath.Join(base, "publishing.json")); err != nil {
 		return nil, err
 	}
@@ -246,6 +304,20 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 
 func Recover(ctx context.Context, root, repository string) (bool, error) {
 	base := repositoryRoot(root, repository)
+	if _, unavailable, unavailableErr := readUnavailable(root, repository); unavailableErr != nil {
+		return false, unavailableErr
+	} else if unavailable {
+		if err := os.Remove(filepath.Join(base, "current.json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		// The unavailable marker was installed after any surviving publication
+		// marker and therefore wins recovery ordering. Never resurrect the older
+		// generation across restart.
+		if err := os.Remove(filepath.Join(base, "publishing.json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		return false, syncDirectory(base)
+	}
 	raw, err := readRegular(filepath.Join(base, "publishing.json"), MaxRootBytes)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
@@ -270,6 +342,9 @@ func Recover(ctx context.Context, root, repository string) (bool, error) {
 	if err := replaceFile(filepath.Join(base, "current.json"), pointerRaw); err != nil {
 		return false, err
 	}
+	if err := os.Remove(filepath.Join(base, UnavailableName)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
 	if err := os.Remove(filepath.Join(base, "publishing.json")); err != nil {
 		return false, err
 	}
@@ -281,6 +356,11 @@ func OpenCurrent(ctx context.Context, root, repository string) (*Publication, er
 		return nil, err
 	}
 	base := repositoryRoot(root, repository)
+	if _, unavailable, err := readUnavailable(root, repository); err != nil {
+		return nil, err
+	} else if unavailable {
+		return nil, ErrNotFound
+	}
 	raw, err := readRegular(filepath.Join(base, "current.json"), MaxRootBytes)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -570,7 +650,7 @@ func (publication *Publication) openRepositoryMember(
 	if err := decodeExact(raw, MaxRepositoryMemberBytes, &value); err != nil ||
 		validateRepositoryMember(value) != nil || value.Bucket != receipt.Bucket ||
 		len(value.Projections) != receipt.RecordCount || value.Digest != receipt.ContentDigest ||
-		value.AuthorityDigest != publication.rootValue.AuthorityDigest {
+		(publication.rootValue.Schema == RootSchema && value.AuthorityDigest != publication.rootValue.AuthorityDigest) {
 		return RepositoryMember{}, fmt.Errorf("%w: repository member", ErrInvalid)
 	}
 	canonical, _ := json.Marshal(value)
@@ -596,7 +676,7 @@ func (publication *Publication) openServiceMember(
 		validateServiceMember(value) != nil || value.ServiceKey != receipt.ServiceKey ||
 		value.Incarnation != receipt.Incarnation || value.ServiceGeneration != receipt.ServiceGeneration ||
 		len(value.References) != receipt.ReferenceCount || value.Digest != receipt.ContentDigest ||
-		value.AuthorityDigest != publication.rootValue.AuthorityDigest {
+		(publication.rootValue.Schema == RootSchema && value.AuthorityDigest != publication.rootValue.AuthorityDigest) {
 		return ServiceMember{}, fmt.Errorf("%w: service member", ErrInvalid)
 	}
 	canonical, _ := json.Marshal(value)
@@ -607,7 +687,8 @@ func (publication *Publication) openServiceMember(
 }
 
 func validateRepositoryMember(value RepositoryMember) error {
-	if value.Schema != RepositoryMemberSchema || !validDigest(value.AuthorityDigest) ||
+	if (value.Schema != RepositoryMemberSchema && value.Schema != RepositoryMemberSchemaV2) ||
+		!validDigest(value.AuthorityDigest) ||
 		value.Bucket < 0 || value.Bucket >= RepositoryBuckets || len(value.Projections) < 1 {
 		return fmt.Errorf("%w: repository member", ErrInvalid)
 	}
@@ -619,6 +700,12 @@ func validateRepositoryMember(value RepositoryMember) error {
 		}
 		prior = projection.Digest
 	}
+	if value.Schema == RepositoryMemberSchemaV2 {
+		want, err := repositoryPartitionAuthority(value.Bucket, value.Projections)
+		if err != nil || want != value.AuthorityDigest {
+			return fmt.Errorf("%w: repository partition authority", ErrInvalid)
+		}
+	}
 	copyValue := value
 	copyValue.Digest = ""
 	digest, err := digestValue(copyValue)
@@ -629,7 +716,8 @@ func validateRepositoryMember(value RepositoryMember) error {
 }
 
 func validateServiceMember(value ServiceMember) error {
-	if value.Schema != ServiceMemberSchema || !validDigest(value.AuthorityDigest) ||
+	if (value.Schema != ServiceMemberSchema && value.Schema != ServiceMemberSchemaV2) ||
+		!validDigest(value.AuthorityDigest) ||
 		!validText(value.ServiceKey) || value.Incarnation == 0 ||
 		!validDigest(value.ServiceGeneration) || len(value.References) > MaxServiceReferences {
 		return fmt.Errorf("%w: service member", ErrInvalid)
@@ -641,6 +729,14 @@ func validateServiceMember(value ServiceMember) error {
 		}
 		prior = reference.Digest
 	}
+	if value.Schema == ServiceMemberSchemaV2 {
+		want, err := servicePartitionAuthority(
+			value.ServiceKey, value.Incarnation, value.ServiceGeneration, value.References,
+		)
+		if err != nil || want != value.AuthorityDigest {
+			return fmt.Errorf("%w: service partition authority", ErrInvalid)
+		}
+	}
 	copyValue := value
 	copyValue.Digest = ""
 	digest, err := digestValue(copyValue)
@@ -650,8 +746,47 @@ func validateServiceMember(value ServiceMember) error {
 	return nil
 }
 
+func repositoryPartitionAuthority(bucket int, projections []Projection) (string, error) {
+	return digestValue(struct {
+		Schema      string       `json:"schema"`
+		Bucket      int          `json:"bucket"`
+		Projections []Projection `json:"projections"`
+	}{
+		Schema: "phebs-relationship-repository-partition-authority-v2",
+		Bucket: bucket, Projections: projections,
+	})
+}
+
+func servicePartitionAuthority(
+	serviceKey string, incarnation uint64, generation string, references []ServiceReference,
+) (string, error) {
+	return digestValue(struct {
+		Schema      string             `json:"schema"`
+		ServiceKey  string             `json:"service_key"`
+		Incarnation uint64             `json:"incarnation"`
+		Generation  string             `json:"generation"`
+		References  []ServiceReference `json:"references"`
+	}{
+		Schema:     "phebs-relationship-service-partition-authority-v2",
+		ServiceKey: serviceKey, Incarnation: incarnation,
+		Generation: generation, References: references,
+	})
+}
+
+func reuseRelationshipMember(prior *Publication, name string, raw []byte, destination string) bool {
+	if prior == nil || prior.rootValue.Schema != RootSchemaV2 {
+		return false
+	}
+	priorRaw, err := readRegular(filepath.Join(prior.directory, name), len(raw))
+	if err != nil || !bytes.Equal(priorRaw, raw) {
+		return false
+	}
+	return os.Link(filepath.Join(prior.directory, name), destination) == nil
+}
+
 func validateRoot(value Root) error {
-	if value.Schema != RootSchema || validateAuthority(value.Authority) != nil ||
+	if (value.Schema != RootSchema && value.Schema != RootSchemaV2) ||
+		validateAuthority(value.Schema, value.Authority) != nil ||
 		value.Policy != FrozenPolicy() || !value.RepositoryComplete ||
 		!validDigest(value.AuthorityDigest) || len(value.RepositoryMembers) > RepositoryBuckets ||
 		len(value.Services) > MaxServices || value.ServiceCount != len(value.Services) ||
@@ -664,7 +799,7 @@ func validateRoot(value Root) error {
 		return fmt.Errorf("%w: root", ErrInvalid)
 	}
 	wantAuthority, _ := digestValue(value.Authority)
-	wantGeneration, _ := generationDigest(value.AuthorityDigest)
+	wantGeneration, _ := generationDigest(value.Schema, value.AuthorityDigest)
 	if wantAuthority != value.AuthorityDigest || wantGeneration != value.GenerationDigest ||
 		value.CompleteServiceCount+value.EmptyServiceCount+value.FailedServiceCount != value.ServiceCount ||
 		value.AllServicesComplete != (value.FailedServiceCount == 0) {
@@ -747,11 +882,11 @@ func validateRoot(value Root) error {
 // ValidateRoot exposes the closed root validator to later authorized readers.
 func ValidateRoot(value Root) error { return validateRoot(value) }
 
-func generationDigest(authorityDigest string) (string, error) {
+func generationDigest(schema, authorityDigest string) (string, error) {
 	return digestValue(struct {
 		Schema          string `json:"schema"`
 		AuthorityDigest string `json:"authority_digest"`
-	}{Schema: RootSchema, AuthorityDigest: authorityDigest})
+	}{Schema: schema, AuthorityDigest: authorityDigest})
 }
 
 func rootDigest(value Root) (string, error) {

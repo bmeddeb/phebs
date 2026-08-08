@@ -13,7 +13,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
@@ -21,6 +23,7 @@ import (
 
 const (
 	RootSchema    = "phebs-kafka-topic-posting-root-v1"
+	RootSchemaV2  = "phebs-kafka-topic-posting-root-v2"
 	MemberSchema  = "phebs-kafka-topic-posting-member-v1"
 	PostingSchema = "phebs-kafka-topic-posting-v1"
 	PolicySchema  = "phebs-kafka-topic-posting-policy-v1"
@@ -74,11 +77,13 @@ func FrozenPolicy() Policy {
 }
 
 type Authority struct {
-	Repository                  string `json:"repository"`
-	ObservationGenerationDigest string `json:"observation_generation_digest"`
-	ObservationManifestDigest   string `json:"observation_manifest_digest"`
-	ObservationSourceDigest     string `json:"observation_source_digest"`
-	PolicyDigest                string `json:"policy_digest"`
+	Repository                  string                                      `json:"repository"`
+	ObservationGenerationDigest string                                      `json:"observation_generation_digest"`
+	ObservationManifestDigest   string                                      `json:"observation_manifest_digest"`
+	ObservationSourceDigest     string                                      `json:"observation_source_digest"`
+	PolicyDigest                string                                      `json:"policy_digest"`
+	ObservationV2               *observationpublication.DownstreamAuthority `json:"observation_v2,omitempty"`
+	Upstream                    *downstreamauthority.Authority              `json:"upstream,omitempty"`
 }
 
 // Posting retains source evidence only. TopicSpelling and GroupIDSpelling do
@@ -216,7 +221,8 @@ func validateMember(value Member) error {
 }
 
 func validateRoot(value Root) error {
-	if value.Schema != RootSchema || validateAuthority(value.Authority) != nil ||
+	if (value.Schema != RootSchema && value.Schema != RootSchemaV2) ||
+		validateAuthority(value.Schema, value.Authority) != nil ||
 		value.Policy != FrozenPolicy() || len(value.Members) > MaxMembers ||
 		value.PostingCount < 0 || value.PostingCount > MaxPostings ||
 		value.ProducerCount < 0 || value.ConsumerCount < 0 ||
@@ -268,12 +274,32 @@ func validateRoot(value Root) error {
 // relationship-root publisher without granting mutation or member access.
 func ValidateRoot(value Root) error { return validateRoot(value) }
 
-func validateAuthority(value Authority) error {
+func validateAuthority(schema string, value Authority) error {
 	if reponame.Validate(value.Repository) != nil ||
 		!validDigest(value.ObservationGenerationDigest) ||
 		!validDigest(value.ObservationManifestDigest) ||
 		!validDigest(value.ObservationSourceDigest) || !validDigest(value.PolicyDigest) {
 		return fmt.Errorf("%w: authority", ErrInvalid)
+	}
+	if schema == RootSchema && (value.ObservationV2 != nil || value.Upstream != nil) {
+		return fmt.Errorf("%w: v1 observation authority", ErrInvalid)
+	}
+	if schema == RootSchemaV2 {
+		observation := value.ObservationV2
+		if observation == nil || value.Upstream == nil ||
+			downstreamauthority.RequireUsable(*value.Upstream) != nil ||
+			value.Upstream.Repository != value.Repository || value.Upstream.Observation != *observation ||
+			observation.Version != observationpublication.DownstreamAuthorityV2 ||
+			observation.Repository != value.Repository ||
+			observation.ObservationGenerationDigest != value.ObservationGenerationDigest ||
+			observation.ObservationRootDigest != value.ObservationManifestDigest ||
+			observation.SourceGenerationDigest != value.ObservationSourceDigest ||
+			!validDigest(observation.SourceRootDigest) || !validDigest(observation.PartitionPolicyDigest) ||
+			!validDigest(observation.ObservationPolicyDigest) || !validDigest(observation.InventoryPolicyDigest) ||
+			observation.RecordCount < 0 || observation.ObservedCount < 0 ||
+			observation.ObservedCount > observation.RecordCount {
+			return fmt.Errorf("%w: v2 observation authority", ErrInvalid)
+		}
 	}
 	want, err := digestValue(FrozenPolicy())
 	if err != nil || value.PolicyDigest != want {

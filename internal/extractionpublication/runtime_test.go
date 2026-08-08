@@ -192,6 +192,7 @@ type testFence struct {
 	calls   int
 	stale   bool
 	current string
+	held    bool
 }
 
 func (fence *testFence) FenceDomain(_ context.Context, request FenceRequest) (func(), error) {
@@ -201,7 +202,18 @@ func (fence *testFence) FenceDomain(_ context.Context, request FenceRequest) (fu
 	if fence.stale || fence.current != "" && fence.current != request.Plan.SourceGenerationDigest {
 		return nil, store.ErrGenerationStale
 	}
-	return func() {}, nil
+	fence.held = true
+	return func() {
+		fence.mu.Lock()
+		fence.held = false
+		fence.mu.Unlock()
+	}, nil
+}
+
+func (fence *testFence) active() bool {
+	fence.mu.Lock()
+	defer fence.mu.Unlock()
+	return fence.held
 }
 
 type testScheduleStore struct {
@@ -338,7 +350,13 @@ func currentChunk(t *testing.T, state *testScheduleStore, repository string, off
 
 func TestRuntimePointerLastRestartAndSettledRetryReuse(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("1", 64), true)
-	runtime, state, source, executor, publisher, _, domain := newRuntimeFixture(t, plan)
+	runtime, state, source, executor, publisher, fence, domain := newRuntimeFixture(t, plan)
+	runtime.OnSettled = func(context.Context, string) error {
+		if fence.active() {
+			return errors.New("downstream callback retained exclusive publication fence")
+		}
+		return nil
+	}
 	publisher.failures = 1
 	publisher.before = func(candidate.DomainResultRoot) {
 		if publisher.calls > 2 {

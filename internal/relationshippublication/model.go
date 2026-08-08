@@ -13,19 +13,23 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
 )
 
 const (
-	RootSchema             = "phebs-relationship-root-v1"
-	RepositoryMemberSchema = "phebs-relationship-repository-member-v1"
-	ProjectionSchema       = "phebs-relationship-projection-v1"
-	ServiceMemberSchema    = "phebs-service-relationship-member-v1"
-	ServiceReferenceSchema = "phebs-service-relationship-reference-v1"
-	PolicySchema           = "phebs-relationship-policy-v1"
-	PointerSchema          = "phebs-relationship-pointer-v1"
-	MarkerSchema           = "phebs-relationship-marker-v1"
+	RootSchema               = "phebs-relationship-root-v1"
+	RootSchemaV2             = "phebs-relationship-root-v2"
+	RepositoryMemberSchema   = "phebs-relationship-repository-member-v1"
+	RepositoryMemberSchemaV2 = "phebs-relationship-repository-member-v2"
+	ProjectionSchema         = "phebs-relationship-projection-v1"
+	ServiceMemberSchema      = "phebs-service-relationship-member-v1"
+	ServiceMemberSchemaV2    = "phebs-service-relationship-member-v2"
+	ServiceReferenceSchema   = "phebs-service-relationship-reference-v1"
+	PolicySchema             = "phebs-relationship-policy-v1"
+	PointerSchema            = "phebs-relationship-pointer-v1"
+	MarkerSchema             = "phebs-relationship-marker-v1"
 
 	RepositoryBuckets               = 256
 	MaxServices                     = 4_000
@@ -95,21 +99,24 @@ func FrozenPolicy() Policy {
 }
 
 type Authority struct {
-	Repository                  string `json:"repository"`
-	CatalogGenerationDigest     string `json:"catalog_generation_digest"`
-	CatalogDigest               string `json:"catalog_digest"`
-	CatalogSourceGeneration     string `json:"catalog_source_generation"`
-	ServiceStateSetDigest       string `json:"service_state_set_digest"`
-	ObservationGenerationDigest string `json:"observation_generation_digest"`
-	ObservationManifestDigest   string `json:"observation_manifest_digest"`
-	ObservationSourceDigest     string `json:"observation_source_digest"`
-	ResolverGenerationDigest    string `json:"resolver_generation_digest"`
-	ResolverRootDigest          string `json:"resolver_root_digest"`
-	RPCGenerationDigest         string `json:"rpc_generation_digest"`
-	RPCRootDigest               string `json:"rpc_root_digest"`
-	KafkaGenerationDigest       string `json:"kafka_generation_digest"`
-	KafkaRootDigest             string `json:"kafka_root_digest"`
-	PolicyDigest                string `json:"policy_digest"`
+	Repository                  string                         `json:"repository"`
+	CatalogGenerationDigest     string                         `json:"catalog_generation_digest"`
+	CatalogDigest               string                         `json:"catalog_digest"`
+	CatalogSourceGeneration     string                         `json:"catalog_source_generation"`
+	ServiceStateSetDigest       string                         `json:"service_state_set_digest"`
+	ServiceStateSummaryDigest   string                         `json:"service_state_summary_digest,omitempty"`
+	ServiceStateControlRevision uint64                         `json:"service_state_control_revision,omitempty"`
+	ObservationGenerationDigest string                         `json:"observation_generation_digest"`
+	ObservationManifestDigest   string                         `json:"observation_manifest_digest"`
+	ObservationSourceDigest     string                         `json:"observation_source_digest"`
+	ResolverGenerationDigest    string                         `json:"resolver_generation_digest"`
+	ResolverRootDigest          string                         `json:"resolver_root_digest"`
+	RPCGenerationDigest         string                         `json:"rpc_generation_digest"`
+	RPCRootDigest               string                         `json:"rpc_root_digest"`
+	KafkaGenerationDigest       string                         `json:"kafka_generation_digest"`
+	KafkaRootDigest             string                         `json:"kafka_root_digest"`
+	PolicyDigest                string                         `json:"policy_digest"`
+	Upstream                    *downstreamauthority.Authority `json:"upstream,omitempty"`
 }
 
 type RoleClaim struct {
@@ -239,7 +246,7 @@ type Marker struct {
 	Digest  string  `json:"digest"`
 }
 
-func validateAuthority(value Authority) error {
+func validateAuthority(schema string, value Authority) error {
 	if reponame.Validate(value.Repository) != nil ||
 		!validDigest(value.CatalogGenerationDigest) || !validDigest(value.CatalogDigest) ||
 		!validDigest(value.CatalogSourceGeneration) ||
@@ -250,6 +257,15 @@ func validateAuthority(value Authority) error {
 		!validDigest(value.RPCRootDigest) || !validDigest(value.KafkaGenerationDigest) ||
 		!validDigest(value.KafkaRootDigest) || !validDigest(value.PolicyDigest) {
 		return fmt.Errorf("%w: authority", ErrInvalid)
+	}
+	if schema == RootSchema && (value.Upstream != nil || value.ServiceStateSummaryDigest != "" ||
+		value.ServiceStateControlRevision != 0) {
+		return fmt.Errorf("%w: v1 upstream authority", ErrInvalid)
+	}
+	if schema == RootSchemaV2 && (value.Upstream == nil ||
+		downstreamauthority.RequireUsable(*value.Upstream) != nil || value.Upstream.Repository != value.Repository ||
+		!validDigest(value.ServiceStateSummaryDigest) || value.ServiceStateControlRevision == 0) {
+		return fmt.Errorf("%w: v2 upstream authority", ErrInvalid)
 	}
 	want, err := digestValue(FrozenPolicy())
 	if err != nil || want != value.PolicyDigest {

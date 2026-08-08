@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
@@ -26,6 +27,13 @@ type BuildRequest struct {
 	Resolver *resolvernamespace.Publication
 	RPC      *rpccallerposting.Publication
 	Kafka    *kafkatopicposting.Publication
+}
+
+type BuildRequestV2 struct {
+	BuildRequest
+	Upstream       downstreamauthority.Authority
+	ServiceSummary servicecatalog.RepositoryState
+	Prior          *Publication
 }
 
 type resolverSource interface {
@@ -82,6 +90,17 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 	)
 }
 
+func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
+	if downstreamauthority.RequireUsable(request.Upstream) != nil {
+		return nil, fmt.Errorf("%w: relationship v2 upstream", ErrInvalid)
+	}
+	return buildSourcesVersioned(
+		ctx, request.Root, request.Catalog, request.States,
+		request.Resolver, request.RPC, request.Kafka, RootSchemaV2, &request.Upstream,
+		&request.ServiceSummary, request.Prior,
+	)
+}
+
 func buildSources(
 	ctx context.Context,
 	root string,
@@ -90,6 +109,22 @@ func buildSources(
 	resolver resolverSource,
 	rpc rpcSource,
 	kafka kafkaSource,
+) (*Prepared, error) {
+	return buildSourcesVersioned(ctx, root, catalog, states, resolver, rpc, kafka, RootSchema, nil, nil, nil)
+}
+
+func buildSourcesVersioned(
+	ctx context.Context,
+	root string,
+	catalog servicecatalog.Publication,
+	states []servicecatalog.ServiceState,
+	resolver resolverSource,
+	rpc rpcSource,
+	kafka kafkaSource,
+	rootSchema string,
+	upstream *downstreamauthority.Authority,
+	serviceSummary *servicecatalog.RepositoryState,
+	prior *Publication,
 ) (*Prepared, error) {
 	if root == "" || resolver == nil || rpc == nil || kafka == nil {
 		return nil, errors.New("relationship publication inputs are incomplete")
@@ -128,6 +163,22 @@ func buildSources(
 		rpcRoot.Authority.ObservationSourceDigest != kafkaRoot.Authority.ObservationSourceDigest {
 		return nil, fmt.Errorf("%w: upstream authorities disagree", ErrInvalid)
 	}
+	if rootSchema == RootSchemaV2 {
+		if upstream == nil || resolverRoot.Schema != resolvernamespace.RootSchemaV2 ||
+			rpcRoot.Schema != rpccallerposting.RootSchemaV2 || kafkaRoot.Schema != kafkatopicposting.RootSchemaV2 ||
+			resolverRoot.Authority.Upstream == nil || resolverRoot.Authority.Upstream.Digest != upstream.Digest ||
+			rpcRoot.Authority.Upstream == nil || rpcRoot.Authority.Upstream.Digest != upstream.Digest ||
+			kafkaRoot.Authority.Upstream == nil || kafkaRoot.Authority.Upstream.Digest != upstream.Digest ||
+			rpcRoot.Authority.ObservationV2 == nil || kafkaRoot.Authority.ObservationV2 == nil ||
+			*rpcRoot.Authority.ObservationV2 != upstream.Observation ||
+			*kafkaRoot.Authority.ObservationV2 != upstream.Observation || serviceSummary == nil ||
+			servicecatalog.ValidateRepositoryState(*serviceSummary, true) != nil ||
+			serviceSummary.Repository != repository ||
+			serviceSummary.CatalogGeneration != catalog.GenerationDigest ||
+			serviceSummary.CatalogControlRevision != catalog.ControlRevision {
+			return nil, fmt.Errorf("%w: v2 component authorities disagree", ErrInvalid)
+		}
+	}
 	catalogSource, err := servicecatalog.SourceGenerationDigest(catalog)
 	if err != nil {
 		return nil, err
@@ -146,6 +197,11 @@ func buildSources(
 		RPCGenerationDigest: rpcRoot.GenerationDigest, RPCRootDigest: rpcRoot.Digest,
 		KafkaGenerationDigest: kafkaRoot.GenerationDigest, KafkaRootDigest: kafkaRoot.Digest,
 		PolicyDigest: policyDigest,
+		Upstream:     upstream,
+	}
+	if serviceSummary != nil {
+		authority.ServiceStateSummaryDigest = serviceSummary.SummaryDigest
+		authority.ServiceStateControlRevision = serviceSummary.ControlRevision
 	}
 	services, err := bindServiceStates(serviceProjections, states, repository)
 	if err != nil {
@@ -155,7 +211,7 @@ func buildSources(
 	if err != nil {
 		return nil, err
 	}
-	if err := validateAuthority(authority); err != nil {
+	if err := validateAuthority(rootSchema, authority); err != nil {
 		return nil, err
 	}
 	authorityDigest, err := digestValue(authority)
@@ -190,7 +246,7 @@ func buildSources(
 	}); err != nil {
 		return nil, fmt.Errorf("walk Kafka postings: %w", err)
 	}
-	return writeStage(ctx, root, authority, authorityDigest, accumulator)
+	return writeStage(ctx, root, rootSchema, authority, authorityDigest, prior, accumulator)
 }
 
 func serviceStateSetDigest(services map[string]*serviceAccumulator) (string, error) {
@@ -476,13 +532,15 @@ func projectionBucket(digest string) int {
 func writeStage(
 	ctx context.Context,
 	root string,
+	rootSchema string,
 	authority Authority,
 	authorityDigest string,
+	prior *Publication,
 	accumulator *buildAccumulator,
 ) (*Prepared, error) {
 	// Implemented in publication.go so staging and complete validation share
 	// the same closed file-name and byte-accounting rules.
-	return writePublicationStage(ctx, root, authority, authorityDigest, accumulator)
+	return writePublicationStageVersioned(ctx, root, rootSchema, authority, authorityDigest, prior, accumulator)
 }
 
 func sortedServiceKeys(values map[string]*serviceAccumulator) []string {
