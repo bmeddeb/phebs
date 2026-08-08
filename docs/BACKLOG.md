@@ -564,6 +564,25 @@ surface. AC: one-line summaries with expandable establishes/does-not-
 establish sections; caveat wording remains byte-identical to the owning
 contract constants, verified by test; every non-current authority carries
 an exact-generation chip with relative and absolute time.
+*Shipped 2026-08-07; the relative/absolute-time clause is re-scoped
+honestly.* ClaimBoundary (kit) collapses every claiming surface's caveat
+to the contract's own first clause with the full text one gesture away;
+server-delivered caveat fields render verbatim everywhere (the explorer
+and overview now consume `page.caveat` instead of drifted local mirrors),
+and remaining client wording is centralized in `caveats.ts` with
+byte-identity pins (`caveats.test.ts`) naming each Go owner. The census
+exception is named on-surface (CENSUS_LEADS_LINE). Riders: F27 workbench
+headline quieted and reassurance chip removed; F30 neutral search
+placeholder; F31 History emptiness names its scope; explorer's
+authorization-jargon line rewritten. Timestamps render with relative and
+absolute time wherever the payload carries one (directory, repos, file,
+search indexed-at, and Investigation's previously unrendered freshness
+fields); 15 of ~19 authority payloads carry no timestamp, so their
+non-current chips name the exact generation identity instead — the field
+addition is a recorded scale-track handoff, and the time clause completes
+when payloads carry time. Receipts: 6 reviewed baseline updates
+(explorer, workbench, settings) with the settings lifecycle telemetry
+masked as run-independent host state; 49/49 ×3 determinism.
 
 **T43.7 · Citation object experience** *(needs T43.3)* — make citations
 first-class across overview, explorer, and Workbench. AC: `path:line`

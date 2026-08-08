@@ -11,7 +11,8 @@ import {
 } from '../api'
 import { href, navigate } from '../router'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
-import { CitationPanel } from '../components/kit'
+import { CitationPanel, ClaimBoundary } from '../components/kit'
+import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { validateServiceRelationshipCitation } from '../components/serviceRelationshipCitation'
 import { isAbortError } from '../util'
 
@@ -232,7 +233,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
 
       {!route.serviceKey ? (
         <div className={css({ border: `1px dashed ${tok.cardBorder}`, borderRadius: '7px', padding: '40px 18px', color: tok.textTertiary, fontSize: '12px', lineHeight: '19px' })}>
-          Enter one exact repository-scoped service key. Leave repository blank to use the authorization-first visible-repository fallback.
+          Enter one repository-scoped service key. Leave repository blank to search across every repository you are authorized to see.
         </div>
       ) : loading ? (
         <div role="status" aria-live="polite" className={css(statusBox(tok))}>Reading exact relationship roots and bounded source rows…</div>
@@ -259,8 +260,10 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
         />
       )}
 
-      <div className={css({ marginTop: '12px', padding: '12px 14px', border: `1px dashed ${tok.cardBorder}`, borderRadius: '7px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '17px' })}>
-        Static source evidence only. The table is authoritative for this exact page; the optional diagram adds no edge, transitivity, runtime topology, completeness, migration, or release claim.
+      <div className={css({ marginTop: '12px' })}>
+        <ClaimBoundary caveat={page?.caveat ?? RELATIONSHIP_CAVEAT_MIRROR}>
+          <p style={{ margin: '6px 0 0' }}>{EXPLORER_DIAGRAM_ADDENDUM}</p>
+        </ClaimBoundary>
       </div>
     </section>
   )

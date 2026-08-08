@@ -56,7 +56,10 @@ export const ROUTES: ReceiptRoute[] = [
   { name: 'kafka-topics', path: '/topics' },
   { name: 'investigations', path: '/investigations' },
   { name: 'workbench', path: '/workbench' },
-  { name: 'settings', path: '/settings' },
+  // Lifecycle maintenance renders live host telemetry (disk pressure, owner
+  // turns, the capacity badge) that legitimately moves between runs; the
+  // section is masked and the receipt pins the API-keys anatomy and chrome.
+  { name: 'settings', path: '/settings', mask: ['section[aria-labelledby="lifecycle-heading"]'] },
   // The run mutates audit values, not table anatomy. Mask only the dynamic
   // cell contents so headers, rows, spacing, borders, and status-chip layout
   // remain under visual comparison.

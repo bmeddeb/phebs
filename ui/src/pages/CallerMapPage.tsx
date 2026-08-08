@@ -16,7 +16,8 @@ import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
-import { StatusChip } from '../components/kit'
+import { ClaimBoundary, StatusChip } from '../components/kit'
+import { CALLER_ROWS_UNAVAILABLE_ADDENDUM } from '../caveats'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 const pageSize = 100
@@ -287,15 +288,8 @@ export default function CallerMapPage({
             onPrevious={() => setPageIndex((current) => Math.max(0, current - 1))}
             onNext={nextPage}
           />
-          <div className={css({
-            marginTop: '14px',
-            padding: '11px 13px',
-            border: `1px solid ${tok.cardBorder}`,
-            color: tok.textTertiary,
-            fontSize: '11px',
-            lineHeight: '17px',
-          })}>
-            {page.caveat}
+          <div className={css({ marginTop: '14px' })}>
+            <ClaimBoundary caveat={page.caveat} />
           </div>
         </>
       )}
@@ -789,7 +783,7 @@ function CallerRows({
         lineHeight: '19px',
       })}>
         {unavailable
-          ? 'Caller rows are unavailable because no exact complete repository-overlay generation is current. This is not zero callers and no partial rows are shown.'
+          ? `Caller rows are unavailable. ${CALLER_ROWS_UNAVAILABLE_ADDENDUM}`
           : 'No caller rows matched these filters within the exact generation. This does not establish runtime use, completeness, migration completion, or decommissioning safety.'}
       </div>
     )

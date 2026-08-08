@@ -13,7 +13,7 @@ import { LoadingBlock } from '../components/kit'
 import { ChevronDown, ChevronRight, WarningIcon } from '../icons'
 import { navigate } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
-import { isAbortError } from '../util'
+import { isAbortError, relTime } from '../util'
 
 type ViewTab = 'overview' | 'census' | 'coverage' | 'evidence'
 
@@ -184,6 +184,22 @@ function InvestigationHeader({
             <Meta label="Referent" value={`${scope.claim.subject.kind}:${scope.claim.subject.id}`} mono />
             <Meta label="Claim family" value={humanize(scope.claim.claim_family)} />
             <Meta label="Decision sought" value={humanize(scope.claim.decision_sought)} />
+            {envelope.freshness && (
+              <>
+                <span>
+                  Analysis published{' '}
+                  <time dateTime={envelope.freshness.analysis.published} title={new Date(envelope.freshness.analysis.published).toLocaleString()}>
+                    {relTime(envelope.freshness.analysis.published)}
+                  </time>
+                </span>
+                <span>
+                  Snapshot committed{' '}
+                  <time dateTime={envelope.freshness.analysis.snapshot_committed} title={new Date(envelope.freshness.analysis.snapshot_committed).toLocaleString()}>
+                    {relTime(envelope.freshness.analysis.snapshot_committed)}
+                  </time>
+                </span>
+              </>
+            )}
           </div>
         </div>
         {summaries.length > 1 && (

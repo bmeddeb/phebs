@@ -17,6 +17,7 @@ import {
 } from '../api'
 import { ImpactIcon, OpenIcon } from '../icons'
 import { SectionHelp } from '../components/SectionHelp'
+import { ClaimBoundary } from '../components/kit'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { type GlossaryTermId } from '../glossary.generated'
 import { FONTS, usePhebsTokens } from '../theme'
@@ -359,8 +360,8 @@ function ReportView({
         enabledCapabilities={enabledCapabilities}
         unresolved
       />
-      <div className={css({ border: `1px solid ${tok.cardBorder}`, padding: '12px 14px', marginTop: '20px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
-        {report.caveat}
+      <div className={css({ marginTop: '20px' })}>
+        <ClaimBoundary caveat={report.caveat} />
       </div>
     </div>
   )

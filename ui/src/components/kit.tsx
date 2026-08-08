@@ -131,6 +131,32 @@ export function IdentityText({ children, title }: { children: ReactNode; title?:
   )
 }
 
+/**
+ * Claim boundary (charter §3): a one-line summary in the contract's own
+ * words — the caveat's first clause — with the exact full text one gesture
+ * away. `caveat` is rendered verbatim; server-delivered text is preferred
+ * over any client mirror. Optional children carry pinned presentation
+ * addenda after the contract text.
+ */
+export function ClaimBoundary({ caveat, summary, children }: {
+  caveat: string
+  summary?: ReactNode
+  children?: ReactNode
+}) {
+  return (
+    <CaveatCollapse summary={summary ?? firstClause(caveat)}>
+      <p style={{ margin: 0 }}>{caveat}</p>
+      {children}
+    </CaveatCollapse>
+  )
+}
+
+// The summary is the contract's own opening words, never a paraphrase.
+function firstClause(caveat: string): string {
+  const cut = caveat.search(/[;—.]/)
+  return cut === -1 ? caveat : `${caveat.slice(0, cut).trimEnd()} …`
+}
+
 /** One-line caveat that collapses open, never disappears (charter §3). */
 export function CaveatCollapse({ summary, children }: { summary: ReactNode; children: ReactNode }) {
   const [css] = useStyletron()

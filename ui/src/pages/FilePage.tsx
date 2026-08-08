@@ -434,7 +434,7 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
       <span className={css({ fontSize: '12.5px', fontWeight: 600, color: tok.textPrimary })}>{name}</span>
       <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
         {langName(path)} · {lineCount} lines · {humanSize(bytes)}
-        {meta?.indexed_at ? ` · indexed ${relTime(meta.indexed_at)}` : ''}
+        {meta?.indexed_at ? <span title={new Date(meta.indexed_at).toLocaleString()}>{` · indexed ${relTime(meta.indexed_at)}`}</span> : ''}
       </span>
       <div className={css({ flex: 1 })} />
       {line > 0 && (

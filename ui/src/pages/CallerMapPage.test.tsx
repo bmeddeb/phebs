@@ -370,7 +370,7 @@ test('renders a typed generation gap without zero callers or required coverage',
   expect(await screen.findByText('Caller totals unavailable')).toBeTruthy()
   expect(screen.getByText('rows unavailable').getAttribute('data-tone')).toBe('blue')
   expect(screen.getByText(/This is not evidence of zero callers/)).toBeTruthy()
-  expect(screen.getByText(/This is not zero callers and no partial rows are shown/))
+  expect(screen.getByText(/Caller rows are unavailable\. This is not zero callers, and no partial rows are shown\./))
     .toBeTruthy()
   expect(screen.queryByTestId('caller-map-coverage')).toBeNull()
   expect(screen.queryByText('No matching static evidence')).toBeNull()

@@ -383,7 +383,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           onChange={(e) => setInput(e.currentTarget.value)}
           name="q"
           aria-label="Search code"
-          placeholder='Search code — try func.*Parse repo:zoekt lang:go "exact phrase"'
+          placeholder='Search code — try func.*Handler repo:orders lang:go "exact phrase"'
           clearable
           autoFocus
           startEnhancer={<SearchIcon size={14} />}
@@ -1033,7 +1033,7 @@ function RepoGroup({
         </span>
         <span className={css({ flex: 1 })} />
         {indexedAt && (
-          <span className={css({ fontSize: '11px', color: tok.gutter, whiteSpace: 'nowrap' })}>
+          <span title={new Date(indexedAt).toLocaleString()} className={css({ fontSize: '11px', color: tok.textTertiary, whiteSpace: 'nowrap' })}>
             indexed {relTime(indexedAt)}
           </span>
         )}

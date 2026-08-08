@@ -22,7 +22,7 @@ import {
   type WorkbenchImplementationPage,
 } from '../api'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
-import { StateNotice, StatusChip } from '../components/kit'
+import { ClaimBoundary, StateNotice, StatusChip } from '../components/kit'
 import { href } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
@@ -322,7 +322,7 @@ export function WorkbenchWhereStep({
             onPrevious={() => setPageIndex((value) => Math.max(0, value - 1))}
             onNext={next}
           />
-          <Caveat>{page.caveat}</Caveat>
+          <ClaimBoundary caveat={page.caveat} />
         </div>
       )}
     </section>
@@ -530,7 +530,7 @@ export function WorkbenchHowStep({
               setChecklistPage((value) => value + 1)
             }}
           />
-          <Caveat>{checklist.caveat}</Caveat>
+          <ClaimBoundary caveat={checklist.caveat} />
         </div>
       )}
     </section>
@@ -739,7 +739,7 @@ function ServiceImpactInventory({
           ))}
         </details>
       )}
-      <Caveat>{impact.caveat}</Caveat>
+      <ClaimBoundary caveat={impact.caveat} />
     </section>
   )
 }
@@ -1353,7 +1353,7 @@ function ImplementationEvidence({
           )}
         </article>
       ))}
-      <Caveat>{page.caveat}</Caveat>
+      <ClaimBoundary caveat={page.caveat} />
     </section>
   )
 }
@@ -2367,21 +2367,6 @@ function EvidenceNotice({ children }: { children: React.ReactNode }) {
     })}>
       {children}
     </div>
-  )
-}
-
-function Caveat({ children }: { children: React.ReactNode }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <p className={css({
-      margin: 0,
-      color: tok.textTertiary,
-      fontSize: '10px',
-      lineHeight: '16px',
-    })}>
-      {children}
-    </p>
   )
 }
 

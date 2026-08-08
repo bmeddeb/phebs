@@ -497,12 +497,11 @@ function WorkbenchStart({
           <h1 className={css({
             maxWidth: '760px',
             margin: '8px 0 0',
-            fontSize: 'clamp(30px, 4vw, 54px)',
-            lineHeight: 1.03,
-            letterSpacing: '-0.045em',
-            fontWeight: 680,
+            fontSize: '22px',
+            lineHeight: '30px',
+            fontWeight: 650,
           })}>
-            Turn one contract change into an evidence-bound plan.
+            Plan one contract change against cited evidence.
           </h1>
         </div>
         <p className={css({
@@ -716,7 +715,6 @@ function WorkbenchHeader({
           {dirty ? (view ? 'Unsaved edits' : 'Uncommitted draft') : 'Revision exact'}
         </StatusChip>
         {previewDrifted && <StatusChip tone="red">Preview drifted</StatusChip>}
-        <StatusChip tone="neutral">No implicit writes</StatusChip>
       </div>
     </header>
   )

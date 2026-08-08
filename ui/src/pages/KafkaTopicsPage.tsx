@@ -14,6 +14,8 @@ import {
 import { FONTS, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
 import { isAbortError } from '../util'
+import { CENSUS_LEADS_LINE } from '../caveats'
+import { ClaimBoundary } from '../components/kit'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 const qualification = 'Topic-centered source evidence: producers → topic → consumers. A topic is a source spelling — no cluster, environment, or runtime identity — and production topics are overwhelmingly configuration-driven, so unresolved sites dominate by design.'
@@ -156,10 +158,9 @@ export default function KafkaTopicsPage({ params }: { params: URLSearchParams })
             evidence={bundle.evidence}
             empty="No consumer with a source-literal spelling of this topic is visible."
           />
-          <details className={css({ marginTop: '16px', fontSize: '12px', color: tok.textTertiary })}>
-            <summary>Bundle caveat ({envelope?.id})</summary>
-            <p className={css({ maxWidth: '72ch' })}>{bundle.caveat}</p>
-          </details>
+          <div className={css({ marginTop: '16px' })}>
+            <ClaimBoundary summary={`Bundle caveat (${envelope?.id})`} caveat={bundle.caveat} />
+          </div>
         </div>
       )}
     </div>
@@ -169,7 +170,9 @@ export default function KafkaTopicsPage({ params }: { params: URLSearchParams })
 // CensusPanel is deliberately rendered before any evidence: the unresolved
 // counts are the first-class honesty of this page, not a footnote. Per-plane
 // publication counts keep a producer-only replacement from making consumer
-// zeros look measured (and vice versa).
+// zeros look measured (and vice versa). The ordering is sanctioned by the
+// charter §1 census exception (adjudicated in T43.1) and named on-surface
+// by CENSUS_LEADS_LINE.
 function CensusPanel({ census }: { census: KafkaTopicCensus }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -182,6 +185,9 @@ function CensusPanel({ census }: { census: KafkaTopicCensus }) {
         <h2 className={css({ margin: 0, fontSize: '15px', fontWeight: 650, color: tok.textPrimary })}>
           Unresolved sites
         </h2>
+        <p className={css({ margin: '3px 0 0', fontSize: '11px', lineHeight: '16px', color: tok.textTertiary })}>
+          {CENSUS_LEADS_LINE}
+        </p>
         <p className={css({ margin: '6px 0 0', fontSize: '13px', lineHeight: '20px', color: tok.textSecondary })}>
           No Kafka extraction run has published in the visible repository universe — unresolved counts are
           not meaningful yet, and an empty answer here establishes nothing.
@@ -205,6 +211,9 @@ function CensusPanel({ census }: { census: KafkaTopicCensus }) {
       <h2 className={css({ margin: 0, fontSize: '15px', fontWeight: 650, color: tok.textPrimary })}>
         Unresolved sites
       </h2>
+      <p className={css({ margin: '3px 0 0', fontSize: '11px', lineHeight: '16px', color: tok.textTertiary })}>
+        {CENSUS_LEADS_LINE}
+      </p>
       <p className={css({ margin: '6px 0 12px', fontSize: '13px', lineHeight: '20px', color: tok.textSecondary })}>
         {census.producer_published_runs === 0
           ? 'No producer extraction run has published; producer zeros are not meaningful.'

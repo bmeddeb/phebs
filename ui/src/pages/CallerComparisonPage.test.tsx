@@ -207,6 +207,8 @@ function comparisonPage(
 function unavailableComparisonPage(): CallerComparisonExactPage {
   return {
     ...comparisonPage([]),
+    // The unavailable state's caveat mirrors internal/api/callercomparison_exact.go.
+    caveat: 'Caller comparison totals, classifications, and absence are unavailable until both authorized exact complete repository-overlay generations are current.',
     old: {
       endpoint: oldEndpoint,
       generation: generation(oldEndpoint, 'stale'),
@@ -541,8 +543,8 @@ test('shows independent generation states and suppresses every absence signal on
   expect(generations.map((item) => item.getAttribute('data-matching-rows-state')))
     .toEqual(['unavailable', 'exact'])
   expect(generations.map((item) => item.getAttribute('data-tone'))).toEqual(['blue', 'green'])
-  expect(screen.getByText(/at least one endpoint has no current complete caller generation/))
-    .toBeTruthy()
+  expect(screen.getAllByText(/until both authorized exact complete repository-overlay generations are current/).length)
+    .toBeGreaterThan(0)
   expect(screen.getByText(/this is not evidence of zero callers/)).toBeTruthy()
   expect(screen.queryByText(/No comparison rows matched/)).toBeNull()
   expect(screen.queryByText(/No matching comparison evidence/)).toBeNull()

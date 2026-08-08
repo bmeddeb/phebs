@@ -26,7 +26,7 @@ import {
 import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
-import { StateNotice, StatusChip } from '../components/kit'
+import { ClaimBoundary, StateNotice, StatusChip } from '../components/kit'
 import ContractDependencyMap from '../components/ContractDependencyMap'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
@@ -458,15 +458,8 @@ export default function ContractAtlasPage({
       </div>
 
       {catalog && (
-        <div className={css({
-          marginTop: '16px',
-          padding: '11px 13px',
-          border: `1px solid ${tok.cardBorder}`,
-          color: tok.textTertiary,
-          fontSize: '11px',
-          lineHeight: '17px',
-        })}>
-          {catalog.caveat}
+        <div className={css({ marginTop: '16px' })}>
+          <ClaimBoundary caveat={catalog.caveat} />
         </div>
       )}
     </div>
@@ -789,15 +782,7 @@ function OperationDetail({
           compact
         />
         <CoverageDetails certificate={operation.coverage} />
-        <div className={css({
-          padding: '11px 12px',
-          border: `1px solid ${tok.cardBorder}`,
-          color: tok.textTertiary,
-          fontSize: '11px',
-          lineHeight: '17px',
-        })}>
-          {operation.caveat}
-        </div>
+        <ClaimBoundary caveat={operation.caveat} />
       </div>
     </article>
   )

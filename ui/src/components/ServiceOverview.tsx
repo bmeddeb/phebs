@@ -13,6 +13,7 @@ import {
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
 import { CitationPanel, StatusChip } from './kit'
 import { validateServiceRelationshipCitation } from './serviceRelationshipCitation'
+import { RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { isAbortError } from '../util'
 import { href } from '../router'
 
@@ -400,7 +401,7 @@ function GapLedger({ detail, pages, errors, snapshot }: {
       <summary className={css({ cursor: 'pointer', fontSize: '11px', lineHeight: '16px', fontWeight: 600, color: tok.textSecondary, ':focus-visible': focusRing(tok) })}>Gaps and claim boundary</summary>
       <ul className={css({ margin: '7px 0 0', paddingLeft: '18px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '17px' })}>
         {gaps.map((gap) => <li key={gap}>{gap}</li>)}
-        <li>Static source evidence only; no runtime topology, completeness, SLO, migration, or release claim.</li>
+        <li>{Object.values(pages).find((page) => page?.caveat)?.caveat ?? RELATIONSHIP_CAVEAT_MIRROR}</li>
       </ul>
     </details>
   )

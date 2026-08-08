@@ -21,7 +21,8 @@ import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
-import { StatusChip } from '../components/kit'
+import { ClaimBoundary, StatusChip } from '../components/kit'
+import { COMPARISON_UNAVAILABLE_ADDENDUM } from '../caveats'
 
 const pageSize = 100
 const maxCursorHistory = 500
@@ -483,15 +484,8 @@ function ComparisonResults({
               }}
             />
           )}
-          <div className={css({
-            marginTop: '12px',
-            padding: '11px 12px',
-            border: `1px solid ${tok.cardBorder}`,
-            color: tok.textTertiary,
-            fontSize: '11px',
-            lineHeight: '17px',
-          })}>
-            {page.caveat}
+          <div className={css({ marginTop: '12px' })}>
+            <ClaimBoundary caveat={page.caveat} />
           </div>
         </>
       )}
@@ -639,7 +633,7 @@ function ComparisonRows({ page }: { page: ComparisonResponse }) {
         lineHeight: '18px',
       })}>
         {unavailable
-          ? 'Comparison evidence is unavailable because at least one endpoint has no current complete caller generation. No partial rows are classified, and this is not evidence of zero callers.'
+          ? `Comparison evidence is unavailable. ${COMPARISON_UNAVAILABLE_ADDENDUM}`
           : 'No comparison rows matched these filters within both exact generation snapshots. This does not establish runtime completion, absence, or decommissioning safety.'}
       </div>
     )
