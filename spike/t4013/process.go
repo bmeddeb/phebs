@@ -1,0 +1,311 @@
+package t4013
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+const privateToolchainSchema = "t4013-private-toolchain-v1"
+
+type privateToolchain struct {
+	Schema  string
+	Phebs   string
+	Zoekt   string
+	Focused string
+	Buf     string
+}
+
+type privateServer struct {
+	command *exec.Cmd
+	started time.Time
+	done    chan error
+	log     *os.File
+	logPath string
+	sampler *rssSampler
+}
+
+type rssSampler struct {
+	pid           int
+	stop          chan struct{}
+	done          chan struct{}
+	mu            sync.Mutex
+	peakRSS       int64
+	samples       int64
+	gitChildren   map[int]struct{}
+	indexChildren map[int]struct{}
+	otherChildren map[int]struct{}
+}
+
+func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (privateToolchain, error) {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) {
+		return privateToolchain{}, errors.New("T40.13 toolchain scope is invalid")
+	}
+	output := filepath.Join(workspace, "toolchain")
+	if err := os.Mkdir(output, 0o700); err != nil {
+		return privateToolchain{}, err
+	}
+	toolchain := privateToolchain{
+		Schema: privateToolchainSchema,
+		Phebs:  filepath.Join(output, "phebs"), Zoekt: filepath.Join(output, "zoekt-git-index"),
+		Focused: filepath.Join(output, "phebs-focused-index"), Buf: filepath.Join(output, "buf"),
+	}
+	builds := []struct {
+		output string
+		args   []string
+		env    []string
+	}{
+		{toolchain.Phebs, []string{"build", "-trimpath", "-o", toolchain.Phebs, "./cmd/phebs"}, nil},
+		{toolchain.Zoekt, []string{"build", "-trimpath", "-o", toolchain.Zoekt, "github.com/sourcegraph/zoekt/cmd/zoekt-git-index"}, nil},
+		{toolchain.Focused, []string{"build", "-trimpath", "-o", toolchain.Focused, "./cmd/phebs-focused-index"}, nil},
+		{toolchain.Buf, []string{"build", "-trimpath", "-o", toolchain.Buf, "github.com/bufbuild/buf/cmd/buf"}, []string{"CGO_ENABLED=0"}},
+	}
+	for _, build := range builds {
+		if _, err := os.Lstat(build.output); err == nil || !os.IsNotExist(err) {
+			return privateToolchain{}, errors.New("T40.13 toolchain output already exists")
+		}
+		command := exec.CommandContext(ctx, "go", build.args...)
+		command.Dir = moduleRoot
+		command.Env = append(scrubExecutionEnvironment(), build.env...)
+		if output, err := command.CombinedOutput(); err != nil {
+			_ = output
+			return privateToolchain{}, errors.New("T40.13 toolchain build failed")
+		}
+	}
+	return toolchain, nil
+}
+
+func startPrivateServer(
+	ctx context.Context,
+	profile PreparedProfile,
+	toolchain privateToolchain,
+	label string,
+) (*privateServer, error) {
+	if ctx == nil || toolchain.Schema != privateToolchainSchema ||
+		label == "" || strings.ContainsAny(label, "/\\: ") {
+		return nil, errors.New("T40.13 server start is invalid")
+	}
+	logPath := filepath.Join(filepath.Dir(profile.Config), "server-"+label+".log")
+	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	command := exec.CommandContext(ctx, toolchain.Phebs, "serve", "-config", profile.Config)
+	command.Stdout, command.Stderr = logFile, logFile
+	command.Env = append(scrubExecutionEnvironment(),
+		"PHEBS_ZOEKT_GIT_INDEX="+toolchain.Zoekt,
+		"PHEBS_FOCUSED_INDEX="+toolchain.Focused,
+		"PHEBS_BUF="+toolchain.Buf,
+	)
+	if err := command.Start(); err != nil {
+		_ = logFile.Close()
+		return nil, err
+	}
+	server := &privateServer{
+		command: command, started: time.Now(), done: make(chan error, 1), log: logFile, logPath: logPath,
+		sampler: newRSSSampler(command.Process.Pid),
+	}
+	go func() { server.done <- command.Wait() }()
+	go server.sampler.run()
+	inspector, err := newProfileInspector(profile)
+	if err != nil {
+		_ = server.stop(15 * time.Second)
+		return nil, err
+	}
+	deadline := time.NewTimer(90 * time.Second)
+	defer deadline.Stop()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if healthErr := inspector.health(ctx, profile); healthErr == nil {
+			return server, nil
+		}
+		select {
+		case err := <-server.done:
+			server.sampler.close()
+			_ = logFile.Close()
+			return nil, errors.Join(err, errors.New("T40.13 server exited before health"))
+		case <-deadline.C:
+			_ = server.stop(15 * time.Second)
+			return nil, errors.New("T40.13 server health deadline expired")
+		case <-ticker.C:
+		case <-ctx.Done():
+			_ = server.stop(15 * time.Second)
+			return nil, ctx.Err()
+		}
+	}
+}
+
+func (server *privateServer) stop(timeout time.Duration) error {
+	if server == nil || server.command == nil || server.command.Process == nil {
+		return nil
+	}
+	_ = server.command.Process.Signal(os.Interrupt)
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	var waitErr error
+	select {
+	case waitErr = <-server.done:
+	case <-timer.C:
+		_ = server.command.Process.Kill()
+		waitErr = <-server.done
+	}
+	server.sampler.close()
+	closeErr := server.log.Close()
+	if waitErr != nil {
+		var exit *exec.ExitError
+		if !errors.As(waitErr, &exit) || exit.ExitCode() != -1 {
+			return errors.Join(waitErr, closeErr)
+		}
+	}
+	return closeErr
+}
+
+func newRSSSampler(pid int) *rssSampler {
+	return &rssSampler{
+		pid: pid, stop: make(chan struct{}), done: make(chan struct{}),
+		gitChildren: map[int]struct{}{}, indexChildren: map[int]struct{}{}, otherChildren: map[int]struct{}{},
+	}
+}
+
+func (sampler *rssSampler) run() {
+	defer close(sampler.done)
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		sampler.sample()
+		select {
+		case <-sampler.stop:
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (sampler *rssSampler) sample() {
+	pids := processTree(sampler.pid)
+	var total int64
+	for _, pid := range pids {
+		command := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(pid))
+		output, err := command.Output()
+		if err != nil {
+			continue
+		}
+		kilobytes, err := strconv.ParseInt(string(bytesTrimSpace(output)), 10, 64)
+		if err == nil && kilobytes >= 0 && kilobytes <= (1<<63-1)/1024 {
+			total += kilobytes * 1024
+		}
+	}
+	sampler.mu.Lock()
+	if total > sampler.peakRSS {
+		sampler.peakRSS = total
+	}
+	for _, pid := range pids[1:] {
+		name := processName(pid)
+		switch {
+		case strings.Contains(name, "zoekt-git-index") || strings.Contains(name, "phebs-focused-index"):
+			sampler.indexChildren[pid] = struct{}{}
+		case filepath.Base(name) == "git":
+			sampler.gitChildren[pid] = struct{}{}
+		default:
+			sampler.otherChildren[pid] = struct{}{}
+		}
+	}
+	sampler.samples++
+	sampler.mu.Unlock()
+}
+
+func processTree(root int) []int {
+	result := []int{root}
+	for index := 0; index < len(result) && len(result) <= 128; index++ {
+		command := exec.Command("pgrep", "-P", strconv.Itoa(result[index]))
+		output, err := command.Output()
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Fields(string(output)) {
+			pid, parseErr := strconv.Atoi(line)
+			if parseErr == nil && pid > 0 {
+				result = append(result, pid)
+			}
+		}
+	}
+	return result
+}
+
+func processName(pid int) string {
+	command := exec.Command("ps", "-o", "comm=", "-p", strconv.Itoa(pid))
+	output, err := command.Output()
+	if err != nil {
+		return ""
+	}
+	return string(bytesTrimSpace(output))
+}
+
+func (sampler *rssSampler) metrics() (peakRSS, gitChildren, indexChildren, otherChildren int64) {
+	if sampler == nil {
+		return 0, 0, 0, 0
+	}
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	return sampler.peakRSS, int64(len(sampler.gitChildren)), int64(len(sampler.indexChildren)), int64(len(sampler.otherChildren))
+}
+
+func (sampler *rssSampler) resetWindow() {
+	if sampler == nil {
+		return
+	}
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	sampler.peakRSS = 0
+	sampler.samples = 0
+	sampler.gitChildren = map[int]struct{}{}
+	sampler.indexChildren = map[int]struct{}{}
+	sampler.otherChildren = map[int]struct{}{}
+}
+
+func (sampler *rssSampler) close() {
+	if sampler == nil {
+		return
+	}
+	select {
+	case <-sampler.done:
+		return
+	default:
+	}
+	close(sampler.stop)
+	<-sampler.done
+}
+
+func scrubExecutionEnvironment() []string {
+	result := make([]string, 0, len(os.Environ()))
+	for _, entry := range os.Environ() {
+		name, _, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(name, "PHEBS_") || name == "ZOEKT_DISABLE_CATFILE_BATCH" ||
+			strings.HasPrefix(name, "GIT_") {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return result
+}
+
+func validateToolchain(value privateToolchain) error {
+	if value.Schema != privateToolchainSchema {
+		return errors.New("T40.13 toolchain identity is invalid")
+	}
+	for _, path := range []string{value.Phebs, value.Zoekt, value.Focused, value.Buf} {
+		info, err := os.Lstat(path)
+		if err != nil || !info.Mode().IsRegular() || info.Mode()&0o111 == 0 {
+			return fmt.Errorf("T40.13 toolchain executable is invalid")
+		}
+	}
+	return nil
+}

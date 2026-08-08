@@ -116,6 +116,16 @@ service-cardinality, accuracy/completeness, release, private-rerun, migration,
 or decommission claim. Epic 40 closes only on an independently reviewed receipt
 and demo.
 
+Implementation note (2026-08-08): the prospective `spike/t4013` plan,
+isolated-custody preparer, ordinary-worker executor, exact control/product
+oracles, stopped-run teardown, and source-free receipt validator are in review.
+The frozen host prerequisite is 24 GiB memory and 120 GiB available disk so A
+and B can coexist inside T40.5's unchanged replacement/rollback and hard
+watermark envelopes. The initial host audit observed roughly 53 GiB available
+and correctly blocked authoring. A later pre-freeze re-audit observed roughly
+163 GiB available, above the unchanged prerequisite; no giant authoring or
+execution has begun yet, no result exists, and the ticket remains open.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
