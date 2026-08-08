@@ -634,7 +634,7 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
         flexWrap: 'wrap',
         padding: '10px 12px',
         marginBottom: '10px',
-        border: `1px solid ${exact ? tok.status.current.solid : tok.status.stale.solid}`,
+        border: `1px solid ${exact ? tok.status.current.solid : tok.status.unavailable.solid}`,
         backgroundColor: tok.bandBg,
       })}
     >
@@ -643,7 +643,7 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
           display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
           color: tok.textPrimary, fontSize: '11px', fontWeight: 650,
         })}>
-          <StatusChip tone={exact ? 'green' : 'amber'}>
+          <StatusChip tone={exact ? 'green' : 'blue'}>
             {exact ? 'exact rows' : 'rows unavailable'}
           </StatusChip>
           <span>

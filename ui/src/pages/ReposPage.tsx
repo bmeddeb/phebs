@@ -260,7 +260,7 @@ function Status({ job, state }: { job: RepoStatus['last_index_job']; state: Repo
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   if (!job && state === 'unavailable') {
-    return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.gutter} /> status unavailable</span>
+    return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.status.unavailable.solid} /> status unavailable</span>
   }
   if (!job) return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.gutter} /> never indexed</span>
   const map: Record<string, { color: string; label: string }> = {

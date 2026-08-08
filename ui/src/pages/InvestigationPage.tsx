@@ -85,46 +85,50 @@ export default function InvestigationPage({ params }: { params: URLSearchParams 
         summaries={summaries}
         onSelect={(id) => navigate('/investigations', { id })}
       />
-      <div
-        role="tablist"
-        aria-label="Investigation views"
-        className={css({
-          display: 'flex',
-          gap: '28px',
-          minHeight: '46px',
-          alignItems: 'stretch',
-          borderBottom: `1px solid ${tok.cardBorder}`,
-          overflowX: 'auto',
-        })}
-      >
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            disabled={refused && tab !== item.id}
-            onClick={() => setTab(item.id)}
-            className={css({
-              border: 0,
-              borderBottom: tab === item.id ? `2px solid ${tok.accent}` : '2px solid transparent',
-              padding: '0 2px',
-              background: 'transparent',
-              color: tab === item.id ? tok.accent : tok.textSecondary,
-              fontFamily: FONTS.SANS,
-              fontSize: '13px',
-              fontWeight: tab === item.id ? 600 : 450,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              ':hover': { color: tok.textPrimary },
-              ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
-              ':disabled': { color: tok.textTertiary, cursor: 'default' },
-            })}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {refused ? (
+        <div role="status" className={css({ minHeight: '46px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${tok.cardBorder}`, color: tok.textTertiary, fontSize: '12px', lineHeight: '18px' })}>
+          Investigation views are unavailable because this request was refused.
+        </div>
+      ) : (
+        <div
+          role="tablist"
+          aria-label="Investigation views"
+          className={css({
+            display: 'flex',
+            gap: '28px',
+            minHeight: '46px',
+            alignItems: 'stretch',
+            borderBottom: `1px solid ${tok.cardBorder}`,
+            overflowX: 'auto',
+          })}
+        >
+          {tabs.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
+              className={css({
+                border: 0,
+                borderBottom: tab === item.id ? `2px solid ${tok.accent}` : '2px solid transparent',
+                padding: '0 2px',
+                background: 'transparent',
+                color: tab === item.id ? tok.accent : tok.textSecondary,
+                fontFamily: FONTS.SANS,
+                fontSize: '13px',
+                fontWeight: tab === item.id ? 600 : 450,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                ':hover': { color: tok.textPrimary },
+                ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+              })}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {envelope.outcome === 'refused' ? (
         <RefusalView envelope={envelope} />

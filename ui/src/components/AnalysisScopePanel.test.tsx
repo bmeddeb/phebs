@@ -230,6 +230,9 @@ test('keeps exact paths behind one repository expansion while exposing v3 outcom
   const details = screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement
   expect(details.open).toBe(false)
   fireEvent.click(screen.getByText('Coverage certificate'))
+  const unavailableChip = screen.getAllByText('unavailable')
+    .find((node) => node.getAttribute('data-tone') !== null)
+  expect(unavailableChip?.getAttribute('data-tone')).toBe('blue')
   const checkout = screen.getByRole('button', { name: /github.com\/acme\/checkout/ })
   expect(checkout.getAttribute('aria-expanded')).toBe('false')
   expect(checkout.getAttribute('aria-controls')).toBeNull()

@@ -528,11 +528,15 @@ themes and both densities; baselines stored and diffed with a bounded
 threshold; drift fails the run with a visual diff; baselines are
 environment-bound engineering records, refreshed only by an explicit
 reviewed update.
-*Shipped 2026-08-07.* `make ui-receipts` / `ui-receipts-update`; frozen
-clock per instance generation; run-caused mutation masked (audit table,
-analytics body) and documented in `ui/receipts/routes.ts`; densities join
-the matrix at T43.11. Zero retries — every failure is a first-class
-signal; transient loads absorbed by navigation timeout.
+*Implementation landed 2026-08-07; AC closure remains pending T43.11's
+dense-mode control.* `make ui-receipts` / `ui-receipts-update`; frozen clock
+per instance generation; all 23 currently routed authenticated states plus
+sign-in captured in both themes, including the caller-map and caller-comparison
+required-identity states; run-caused audit values and analytics content masked
+without hiding audit-table anatomy. Request, loading-state, and rendered-DOM
+stability replace a fixed delay. Zero retries keep every failure first-class.
+The comfortable matrix is complete; its dense counterpart joins when T43.11
+lands the product density control.
 
 **T43.5 · Authority drawer and receipt disclosure** *(needs T43.3)* —
 implement chip → drawer → receipt on the search and service-search

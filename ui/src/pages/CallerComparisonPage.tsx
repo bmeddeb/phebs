@@ -597,9 +597,10 @@ function ComparisonProgress({ page, pageIndex }: { page: ComparisonResponse; pag
     <div
       data-testid="caller-comparison-progress"
       data-matching-rows-state={page.matching_rows_state ?? 'legacy'}
+      data-tone={unavailable ? 'blue' : 'neutral'}
       className={css({
       padding: '10px 12px',
-      border: `1px solid ${unavailable ? tok.status.stale.solid : tok.cardBorder}`,
+      border: `1px solid ${unavailable ? tok.status.unavailable.solid : tok.cardBorder}`,
       borderBottom: 'none',
       backgroundColor: tok.bandBg,
       color: tok.textSecondary,
@@ -778,6 +779,7 @@ function EndpointIdentity({
         <div
           data-testid="caller-comparison-generation"
           data-matching-rows-state={snapshot?.matching_rows_state ?? ''}
+          data-tone={exact ? 'green' : 'blue'}
           className={css({
             display: 'grid',
             gap: '3px',
@@ -789,7 +791,7 @@ function EndpointIdentity({
             lineHeight: '14px',
           })}
         >
-          <span className={css({ color: exact ? tok.status.current.text : tok.status.stale.text, fontWeight: 650 })}>
+          <span className={css({ color: exact ? tok.status.current.text : tok.status.unavailable.text, fontWeight: 650 })}>
             {exact ? 'exact rows' : 'rows unavailable'} · generation {generation.state}
           </span>
           {generation.reason && (

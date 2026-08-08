@@ -11,11 +11,12 @@ import {
 } from '../api'
 import { href, navigate } from '../router'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
+import { CitationPanel } from '../components/kit'
+import { validateServiceRelationshipCitation } from '../components/serviceRelationshipCitation'
 import { isAbortError } from '../util'
 
 const PAGE_SIZE = 50
 const PAGE_SCHEMA = 'phebs-service-relationship-page-v1'
-const CITATION_SCHEMA = 'phebs-service-relationship-citation-v1'
 
 type Direction = 'all' | 'uses' | 'provided' | 'produces' | 'consumes'
 type EvidenceKind = 'all' | 'rpc' | 'kafka'
@@ -154,7 +155,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
     void fetchServiceRelationshipCitation(row.citation, controller.signal)
       .then((value) => {
         if (controller.signal.aborted) return
-        const responseError = validateCitation(row, root, value)
+        const responseError = validateServiceRelationshipCitation(row, root, value)
         setCitation(responseError
           ? { row, error: responseError, loading: false }
           : { row, value, loading: false })
@@ -248,7 +249,15 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
         </>
       ) : null}
 
-      {citation && <CitationPanel state={citation} onClose={closeCitation} />}
+      {citation && (
+        <CitationPanel
+          id="relationship-explorer-citation"
+          loading={citation.loading}
+          error={citation.error ?? ''}
+          citation={citation.value ?? null}
+          onClose={closeCitation}
+        />
+      )}
 
       <div className={css({ marginTop: '12px', padding: '12px 14px', border: `1px dashed ${tok.cardBorder}`, borderRadius: '7px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '17px' })}>
         Static source evidence only. The table is authoritative for this exact page; the optional diagram adds no edge, transitivity, runtime topology, completeness, migration, or release claim.
@@ -460,28 +469,6 @@ function PageNavigation({ route, page }: { route: ExplorerRoute; page: ServiceRe
   )
 }
 
-function CitationPanel({ state, onClose }: { state: CitationState; onClose: () => void }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <aside role="dialog" aria-modal="false" aria-labelledby="explorer-citation-title" className={css({ marginTop: '10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', padding: '14px', backgroundColor: tok.bandBg })}>
-      <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '14px' })}>
-        <div><h2 id="explorer-citation-title" className={css({ margin: 0, color: tok.textPrimary, fontSize: '12px', lineHeight: '17px' })}>Exact source citation</h2><div className={css(meta(tok))}>{state.row.evidence.path} · lines {state.row.evidence.span.start_line}–{state.row.evidence.span.end_line}</div></div>
-        <button type="button" onClick={onClose} className={css(citationButton(tok))}>Close citation</button>
-      </div>
-      {state.loading && <div role="status" className={css({ marginTop: '10px', color: tok.textSecondary, fontSize: '11px' })}>Reading immutable source span…</div>}
-      {state.error && <div role="alert" className={css({ marginTop: '10px', color: tok.status.conflict.text, fontSize: '11px' })}>{state.error}</div>}
-      {state.value && <><div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px', marginTop: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: '1fr 1fr' } })}><Identity label="Generation" value={state.value.generation} /><Identity label="Root" value={state.value.root_digest} /><Identity label="Object" value={state.value.evidence.object_id} /><Identity label="Content" value={state.value.evidence.content_digest} /></div><pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>{state.value.content}</pre></>}
-    </aside>
-  )
-}
-
-function Identity({ label, value }: { label: string; value: string }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <div className={css({ minWidth: 0, color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px' })}>{label}<code title={value} className={css({ display: 'block', color: tok.textSecondary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis' })}>{shortIdentity(value)}</code></div>
-}
-
 function MobileLabel({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -579,21 +566,6 @@ function validatePage(route: ExplorerRoute, request: RelationshipRequest, page: 
   return ''
 }
 
-function validateCitation(row: ServiceRelationshipRow, root: ServiceRelationshipPage['roots'][number], value: ServiceRelationshipCitation): string {
-  const span = value.evidence.span
-  const expected = row.evidence.span
-  if (value.schema !== CITATION_SCHEMA || value.repository !== row.repository ||
-      value.generation !== root.generation || value.root_digest !== root.root_digest ||
-      value.projection.digest !== row.projection_digest || value.projection.posting_digest !== row.posting_digest ||
-      value.evidence.posting_digest !== row.evidence.posting_digest || value.evidence.path !== row.evidence.path ||
-      value.evidence.object_id !== row.evidence.object_id || value.evidence.content_digest !== row.evidence.content_digest ||
-      span.start_byte !== expected.start_byte || span.end_byte !== expected.end_byte ||
-      span.start_line !== expected.start_line || span.end_line !== expected.end_line) {
-    return 'citation response authority differs from the selected exact relationship row'
-  }
-  return ''
-}
-
 function exactRoute(row: ServiceRelationshipRow): ExactRoute {
   const counterparts = row.counterpart_services.length > 0 ? row.counterpart_services.join(' + ') : 'no accepted counterpart'
   const topic = row.evidence.topic_spelling || row.lookup_key || 'unresolved topic'
@@ -617,7 +589,6 @@ function classificationLabel(row: ServiceRelationshipRow): string {
 function rowID(index: number): string { return `R-${String(index + 1).padStart(2, '0')}` }
 function titleCase(value: string): string { return value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : value }
 function boundedError(cause: unknown): string { const value = String(cause).replace(/^Error:\s*/, ''); return value.length <= 512 ? value : `${value.slice(0, 511)}…` }
-function shortIdentity(value: string): string { return value.length <= 28 ? value : `${value.slice(0, 17)}…${value.slice(-8)}` }
 
 function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) } }function inputStyle(tok: PhebsTokens) { return { width: '100%', height: '36px', boxSizing: 'border-box' as const, padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontFamily: 'inherit', fontSize: '11.5px', ':focus': { borderColor: tok.accent }, ':focus-visible': focusRing(tok) } }
 function primaryButton(tok: PhebsTokens) { return { minHeight: '36px', padding: '0 13px', border: '0', borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) } }

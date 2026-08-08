@@ -243,9 +243,11 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
 
 function LifecycleBadge({ status }: { status: LifecycleStatus }) {
   const pressure = status.capacity.pressure
-  const tone = pressure === 'normal' ? 'green'
-    : pressure === 'collect' ? 'amber'
-      : 'red'
+  const tone = !status.policy.enabled ? 'neutral'
+    : pressure === 'normal' ? 'green'
+      : pressure === 'collect' ? 'amber'
+        : pressure === 'refuse' ? 'red'
+          : 'blue'
   const label = !status.policy.enabled ? 'Collection disabled'
     : pressure === 'normal' ? 'Normal'
       : pressure === 'collect' ? 'Collecting'

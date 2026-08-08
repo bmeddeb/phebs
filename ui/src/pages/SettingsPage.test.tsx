@@ -144,3 +144,20 @@ test('administrator sees bounded lifecycle pressure without owner content', asyn
   expect(screen.getByText(/at most 64 candidates, 16 deletions, and 16 store queries/)).toBeTruthy()
   expect(screen.queryByText(/owner-00/)).toBeNull()
 })
+
+test('capacity-unavailable uses the closed blue status tone', async () => {
+  const current = await api.fetchLifecycleStatus()
+  api.fetchLifecycleStatus.mockResolvedValueOnce({
+    ...current,
+    capacity: {
+      completeness: 'unavailable',
+      pressure: 'unavailable',
+      observed_at: '2026-08-05T20:00:00Z',
+    },
+  })
+  renderPage(true)
+  const matches = await screen.findAllByText('Capacity unavailable')
+  const badge = matches.find((match) => match.getAttribute('role') === 'status')
+  expect(badge).toBeTruthy()
+  expect(badge?.getAttribute('data-tone')).toBe('blue')
+})

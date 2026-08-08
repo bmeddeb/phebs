@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs'
 import { expect, test as setup } from '@playwright/test'
 
-const STATE = 'receipts/.artifacts/auth.json'
+// Keep reusable auth outside Playwright's outputDir: that directory is
+// cleared at the start of every run.
+const STATE = 'receipts/.auth/auth.json'
 
 // Authenticates against the local dev instance and stores the cookie session
 // for the receipts project. A still-valid stored session is reused so that

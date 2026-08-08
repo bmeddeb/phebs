@@ -368,6 +368,7 @@ test('renders a typed generation gap without zero callers or required coverage',
   renderPage()
 
   expect(await screen.findByText('Caller totals unavailable')).toBeTruthy()
+  expect(screen.getByText('rows unavailable').getAttribute('data-tone')).toBe('blue')
   expect(screen.getByText(/This is not evidence of zero callers/)).toBeTruthy()
   expect(screen.getByText(/This is not zero callers and no partial rows are shown/))
     .toBeTruthy()

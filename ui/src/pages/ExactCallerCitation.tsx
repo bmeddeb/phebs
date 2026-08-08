@@ -86,7 +86,7 @@ export default function ExactCallerCitation({ source }: { source: CallerMapSourc
             {loading ? 'Reading exact citation…' : citation ? 'Hide exact citation' : 'Read exact cited bytes'}
           </Button>
         ) : (
-          <StatusChip tone="amber">exact citation unavailable</StatusChip>
+          <StatusChip tone="blue">exact citation unavailable</StatusChip>
         )}
       </div>
       <div className={css({

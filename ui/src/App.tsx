@@ -5,7 +5,7 @@ import { FOCUS_SEARCH, useHashRoute } from './router'
 import { FONTS, useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
-import { LoadingBlock } from './components/kit'
+import { ErrorNotice, LoadingBlock } from './components/kit'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -37,6 +37,8 @@ export default function App() {
   const { status, loading, error: authError, logout } = useAuth()
   const [capabilities, setCapabilities] = useState<string[]>([])
   const [capabilitiesLoaded, setCapabilitiesLoaded] = useState(false)
+  const [capabilitiesError, setCapabilitiesError] = useState(false)
+  const [capabilitiesAttempt, setCapabilitiesAttempt] = useState(0)
 
   // "/" focuses search from anywhere (unless already typing)
   useEffect(() => {
@@ -56,13 +58,15 @@ export default function App() {
     if (!status?.authenticated) return
     const controller = new AbortController()
     let active = true
+    setCapabilities([])
     setCapabilitiesLoaded(false)
+    setCapabilitiesError(false)
     fetchVersion(controller.signal)
       .then((info) => {
         if (active) setCapabilities(info.capabilities ?? [])
       })
       .catch((cause) => {
-        if (active && !isAbortError(cause)) setCapabilities([])
+        if (active && !isAbortError(cause)) setCapabilitiesError(true)
       })
       .finally(() => {
         if (active) setCapabilitiesLoaded(true)
@@ -71,7 +75,7 @@ export default function App() {
       active = false
       controller.abort()
     }
-  }, [status?.authenticated])
+  }, [status?.authenticated, capabilitiesAttempt])
 
   if (loading) {
     return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><BrandLoader /></div>
@@ -91,9 +95,19 @@ export default function App() {
   const servicesAvailable = capabilities.includes('service-catalog-v2')
   const serviceRelationshipsAvailable = capabilities.includes('service-relationships-v1')
   // Capability-gated prefixes never fall through to Search: absent capability
-  // renders a terminal boundary page under the original URL.
-  const gate = (available: boolean, label: string, render: () => ReactNode) =>
-    !capabilitiesLoaded ? <LoadingBlock label="Checking instance capabilities…" /> : available ? render() : <CapabilityUnavailablePage label={label} path={path} />
+  // renders a terminal boundary page under the original URL. A failed read is
+  // distinct: transport failure cannot establish capability absence.
+  const gate = (available: boolean, label: string, render: () => ReactNode) => (
+    <CapabilityGate
+      loaded={capabilitiesLoaded}
+      error={capabilitiesError}
+      available={available}
+      label={label}
+      path={path}
+      onRetry={() => setCapabilitiesAttempt((attempt) => attempt + 1)}
+      render={render}
+    />
+  )
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
@@ -146,6 +160,29 @@ export default function App() {
       </main>
     </div>
   )
+}
+
+export function CapabilityGate({ loaded, error, available, label, path, onRetry, render }: {
+  loaded: boolean
+  error: boolean
+  available: boolean
+  label: string
+  path: string
+  onRetry: () => void
+  render: () => ReactNode
+}) {
+  const [css] = useStyletron()
+  if (!loaded) return <LoadingBlock label="Checking instance capabilities…" />
+  if (error) {
+    return (
+      <div className={css({ maxWidth: '520px', margin: '56px auto 0' })}>
+        <ErrorNotice onRetry={onRetry} retryLabel="Retry capability check">
+          Instance capability check failed. No capability absence is inferred.
+        </ErrorNotice>
+      </div>
+    )
+  }
+  return available ? render() : <CapabilityUnavailablePage label={label} path={path} />
 }
 
 function CapabilityUnavailablePage({ label, path }: { label: string; path: string }) {

@@ -126,6 +126,8 @@ test('fixture 04 keeps evidenced facts while rendering unresolved attribution se
 test('fixture 05 renders refusal without claim-bearing census or coverage counts', async () => {
   page('05')
   expect(await screen.findByRole('heading', { name: 'Pack workflow unavailable' })).toBeTruthy()
+  expect(screen.queryByRole('tablist', { name: 'Investigation views' })).toBeNull()
+  expect(screen.getByRole('status').textContent).toContain('views are unavailable because this request was refused')
   expect(screen.getByText('This pack is suspended and cannot serve claim-bearing requests.')).toBeTruthy()
   expect(screen.getByText('PACK_VALIDATION_EXPIRED')).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'Consumer census' })).toBeNull()

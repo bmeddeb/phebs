@@ -42,7 +42,7 @@ export default defineConfig({
       name: 'receipts',
       testMatch: /receipts\.spec\.ts/,
       dependencies: ['setup'],
-      use: { storageState: 'receipts/.artifacts/auth.json' },
+      use: { storageState: 'receipts/.auth/auth.json' },
     },
     { name: 'anon', testMatch: /anon\.spec\.ts/ },
   ],

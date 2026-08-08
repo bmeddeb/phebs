@@ -210,7 +210,7 @@ export function AnalysisScopePanel({
           {focusedCount > 0 && <StatusChip tone="blue">{focusedCount} focused</StatusChip>}
           {staleCount > 0 && <StatusChip tone="amber">{staleCount} stale</StatusChip>}
           {refusalCount > 0 && <StatusChip tone="red">{refusalCount} refused</StatusChip>}
-          {unavailableCount > 0 && <StatusChip tone="amber">{unavailableCount} unavailable</StatusChip>}
+          {unavailableCount > 0 && <StatusChip tone="blue">{unavailableCount} unavailable</StatusChip>}
           {retryableCount > 0 && <StatusChip tone="amber">{retryableCount} retrying</StatusChip>}
           {failedReplacementCount > 0 && (
             <StatusChip tone="red">
@@ -958,8 +958,9 @@ function IdentityLine({ label, value }: { label: string; value?: string }) {
 function domainTone(
   disposition: CoverageDomainDisposition | undefined,
   run: CoverageRun,
-): 'green' | 'amber' | 'red' | 'neutral' {
+): 'green' | 'amber' | 'red' | 'blue' | 'neutral' {
   if (disposition === 'terminal_generation_refusal') return 'red'
+  if (disposition === 'unavailable_prerequisite') return 'blue'
   if (run.latest_attempt?.failure) return 'red'
   if ((run.failures?.length ?? 0) > 0) return 'amber'
   if (disposition === 'published' && run.fresh) return 'green'
@@ -967,16 +968,18 @@ function domainTone(
   return run.status === 'published' ? 'green' : 'neutral'
 }
 
-function gapTone(state: string): 'amber' | 'red' {
+function gapTone(state: string): 'amber' | 'red' | 'blue' {
   if (state === 'failed' || state === 'terminal_generation_refusal') return 'red'
+  if (state === 'unavailable' || state === 'unavailable_prerequisite') return 'blue'
   return 'amber'
 }
 
-function statusTone(state: string): 'green' | 'amber' | 'red' | 'neutral' {
+function statusTone(state: string): 'green' | 'amber' | 'red' | 'blue' | 'neutral' {
   if (state === 'enabled' || state === 'available' || state === 'current' ||
     state === 'covered' || state === 'exact') return 'green'
   if (state === 'failed' || state === 'terminal_generation_refusal') return 'red'
-  if (state === 'stale' || state === 'unsupported' || state === 'processing' || state === 'unavailable') return 'amber'
+  if (state === 'unavailable' || state === 'unavailable_prerequisite') return 'blue'
+  if (state === 'stale' || state === 'unsupported' || state === 'processing') return 'amber'
   return 'neutral'
 }
 

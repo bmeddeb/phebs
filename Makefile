@@ -15,7 +15,7 @@ RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH
 T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
 .PHONY: dev dev-api build clean validate-version validate-release-version validate-release-target \
-	release verify-release smoke-release test ui-test lint ui db-server \
+	release verify-release smoke-release test ui-test ui-receipts ui-receipts-update lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal verify-glossary t20-closure \
 	docs-check ci ci-static ci-go ci-race ci-ui
 
@@ -159,6 +159,12 @@ t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failu
 
 ui-test: ## Vitest UI tests (T6.4); npm install is incremental (~1s when current)
 	cd ui && npm install --no-audit --no-fund && npm test
+
+ui-receipts: verify-node ## compare deterministic UI receipts against a running neutral dev instance
+	cd ui && npm ci && npm run receipts
+
+ui-receipts-update: verify-node ## explicitly refresh reviewed UI receipt baselines
+	cd ui && npm ci && npm run receipts:update
 
 lint: verify-glossary
 	golangci-lint run

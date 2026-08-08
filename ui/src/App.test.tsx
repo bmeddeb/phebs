@@ -1,9 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, expect, test } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
-import { Header } from './App'
+import { CapabilityGate, Header } from './App'
 
 const engine = new Client()
 
@@ -96,4 +96,27 @@ test('Relationship explorer remains a repository sub-route', () => {
   const link = screen.getByRole('link', { name: 'Repos' })
   expect(link.getAttribute('aria-current')).toBe('page')
   expect(screen.queryByRole('link', { name: 'Relationships' })).toBeNull()
+})
+
+test('capability transport failure never becomes an absence claim and can retry', () => {
+  const retry = vi.fn()
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <CapabilityGate
+          loaded
+          error
+          available={false}
+          label="The contract atlas"
+          path="/contracts"
+          onRetry={retry}
+          render={() => <div>contract atlas</div>}
+        />
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  expect(screen.getByRole('alert').textContent).toContain('No capability absence is inferred')
+  expect(screen.queryByText(/not available on this instance/)).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Retry capability check' }))
+  expect(retry).toHaveBeenCalledTimes(1)
 })

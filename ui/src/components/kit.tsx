@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
+import type { ServiceRelationshipCitation } from '../api'
 import { FONTS, NUMERIC, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
@@ -140,4 +141,61 @@ export function CaveatCollapse({ summary, children }: { summary: ReactNode; chil
       <div className={css({ marginTop: '6px', color: tok.textSecondary, fontSize: '11px', lineHeight: '17px' })}>{children}</div>
     </details>
   )
+}
+
+/** One shared exact relationship-citation disclosure. */
+export function CitationPanel({ id, loading, error, citation, onClose }: {
+  id: string
+  loading: boolean
+  error: string
+  citation: ServiceRelationshipCitation | null
+  onClose: () => void
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const titleID = `${id}-title`
+  return (
+    <aside
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={titleID}
+      className={css({ marginTop: '10px', border: `1px solid ${tok.cardBorder}`, padding: '14px', backgroundColor: tok.bandBg })}
+    >
+      <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
+        <div>
+          <h2 id={titleID} className={css({ margin: 0, fontSize: '12px', lineHeight: '17px', color: tok.textPrimary })}>Exact source citation</h2>
+          {citation && <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>{citation.evidence.path} · lines {citation.evidence.span.start_line}–{citation.evidence.span.end_line}</div>}
+        </div>
+        <button type="button" onClick={onClose} className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '11px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>Close citation</button>
+      </div>
+      {loading && <div role="status" className={css({ marginTop: '10px', color: tok.textSecondary, fontSize: '11px' })}>Reading immutable source span…</div>}
+      {error && <div role="alert" className={css({ marginTop: '10px', color: tok.status.conflict.text, fontSize: '11px' })}>{error}</div>}
+      {citation && (
+        <>
+          <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px', marginTop: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: '1fr 1fr' } })}>
+            <CitationIdentity label="Generation" value={citation.generation} />
+            <CitationIdentity label="Root" value={citation.root_digest} />
+            <CitationIdentity label="Object" value={citation.evidence.object_id} />
+            <CitationIdentity label="Content" value={citation.evidence.content_digest} />
+          </div>
+          <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>{citation.content}</pre>
+        </>
+      )}
+    </aside>
+  )
+}
+
+function CitationIdentity({ label, value }: { label: string; value: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <div className={css({ minWidth: 0, color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
+      {label}
+      <IdentityText title={value}>{shortIdentity(value)}</IdentityText>
+    </div>
+  )
+}
+
+function shortIdentity(value: string): string {
+  return value.length <= 28 ? value : `${value.slice(0, 17)}…${value.slice(-8)}`
 }

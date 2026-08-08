@@ -5,7 +5,8 @@ afterEach(cleanup)
 import { BaseProvider } from 'baseui'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
-import { CaveatCollapse, EmptyState, ErrorNotice, IdentityText, LoadingBlock, StateNotice, StatusChip, StatusWord } from './kit'
+import { CaveatCollapse, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, StateNotice, StatusChip, StatusWord } from './kit'
+import type { ServiceRelationshipCitation } from '../api'
 import { ModeContext, TOKENS, focusRing, lightTheme } from '../theme'
 
 const engine = new Styletron()
@@ -112,6 +113,53 @@ describe('CaveatCollapse', () => {
     expect(details.open).toBe(false)
     fireEvent.click(screen.getByText('Static source evidence within the displayed snapshots'))
     expect(screen.getByText('Establishes mechanics only; no runtime topology is implied.')).toBeTruthy()
+  })
+})
+
+describe('CitationPanel', () => {
+  const citation = {
+    schema: 'phebs-service-relationship-citation-v1',
+    repository: 'github.com/acme/orders',
+    generation: `sha256:${'a'.repeat(64)}`,
+    root_digest: `sha256:${'b'.repeat(64)}`,
+    projection: {
+      kind: 'rpc',
+      posting_digest: `sha256:${'c'.repeat(64)}`,
+      class: 'resolved',
+      plane: 'caller',
+      source: { path: 'service/orders', unowned: false, claims: [] },
+      digest: `sha256:${'d'.repeat(64)}`,
+    },
+    evidence: {
+      kind: 'rpc',
+      plane: 'caller',
+      class: 'resolved',
+      path: 'service/orders/caller.go',
+      object_id: 'e'.repeat(40),
+      content_digest: `sha256:${'f'.repeat(64)}`,
+      span: { start_byte: 10, end_byte: 18, start_line: 2, end_line: 2 },
+      source_role: 'caller',
+      posting_digest: `sha256:${'c'.repeat(64)}`,
+    },
+    content: 'client.Get(order)',
+  } satisfies ServiceRelationshipCitation
+
+  it('renders one named dialog with identities and cited bytes', () => {
+    const onClose = vi.fn()
+    mount(<CitationPanel id="citation-test" loading={false} error="" citation={citation} onClose={onClose} />)
+    expect(screen.getByRole('dialog', { name: 'Exact source citation' })).toBeTruthy()
+    expect(screen.getByText('service/orders/caller.go · lines 2–2')).toBeTruthy()
+    expect(screen.getByText('client.Get(order)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Close citation' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces loading and fail-closed errors', () => {
+    const mounted = mount(<CitationPanel id="citation-loading" loading error="" citation={null} onClose={() => {}} />)
+    expect(screen.getByRole('status').textContent).toContain('Reading immutable source span')
+    mounted.unmount()
+    mount(<CitationPanel id="citation-error" loading={false} error="authority mismatch" citation={null} onClose={() => {}} />)
+    expect(screen.getByRole('alert').textContent).toContain('authority mismatch')
   })
 })
 

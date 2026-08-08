@@ -11,7 +11,8 @@ import {
   type ServiceRelationshipView,
 } from '../api'
 import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
-import { StatusChip } from './kit'
+import { CitationPanel, StatusChip } from './kit'
+import { validateServiceRelationshipCitation } from './serviceRelationshipCitation'
 import { isAbortError } from '../util'
 import { href } from '../router'
 
@@ -162,7 +163,7 @@ export default function ServiceOverview({
     void fetchServiceRelationshipCitation(row.citation, controller.signal)
       .then((value) => {
         if (controller.signal.aborted) return
-        const responseError = validateCitation(row, root, value)
+        const responseError = validateServiceRelationshipCitation(row, root, value)
         if (responseError) setCitationError(responseError)
         else setCitation(value)
       })
@@ -271,6 +272,7 @@ export default function ServiceOverview({
 
       {(citationLoading || citationError || citation) && (
         <CitationPanel
+          id="service-overview-citation"
           loading={citationLoading}
           error={citationError}
           citation={citation}
@@ -404,46 +406,6 @@ function GapLedger({ detail, pages, errors, snapshot }: {
   )
 }
 
-function CitationPanel({ loading, error, citation, onClose }: {
-  loading: boolean
-  error: string
-  citation: ServiceRelationshipCitation | null
-  onClose: () => void
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <aside role="dialog" aria-modal="false" aria-labelledby="relationship-citation-title" className={css({ borderTop: `1px solid ${tok.cardBorder}`, padding: '14px 16px 16px', backgroundColor: tok.bandBg })}>
-      <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
-        <div>
-          <h4 id="relationship-citation-title" className={css({ margin: 0, fontSize: '12px', lineHeight: '17px', color: tok.textPrimary })}>Exact source citation</h4>
-          {citation && <div className={css(metaLine(tok))}>{citation.evidence.path} · lines {citation.evidence.span.start_line}–{citation.evidence.span.end_line}</div>}
-        </div>
-        <button type="button" onClick={onClose} className={css(quietButton(tok))}>Close citation</button>
-      </div>
-      {loading && <div role="status" className={css({ marginTop: '10px', fontSize: '11px', color: tok.textSecondary })}>Reading immutable source span…</div>}
-      {error && <div role="alert" className={css({ marginTop: '10px', fontSize: '11px', color: tok.status.conflict.text })}>{error}</div>}
-      {citation && (
-        <>
-          <div className={css({ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '5px 16px', '@media screen and (max-width: 520px)': { gridTemplateColumns: '1fr' } })}>
-            <CitationIdentity label="Generation" value={citation.generation} />
-            <CitationIdentity label="Root" value={citation.root_digest} />
-            <CitationIdentity label="Object" value={citation.evidence.object_id} />
-            <CitationIdentity label="Content" value={citation.evidence.content_digest} />
-          </div>
-          <pre tabIndex={0} className={css({ margin: '10px 0 0', padding: '12px', maxHeight: '280px', overflow: 'auto', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>{citation.content}</pre>
-        </>
-      )}
-    </aside>
-  )
-}
-
-function CitationIdentity({ label, value }: { label: string; value: string }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return <div className={css({ minWidth: 0, fontSize: '10px', lineHeight: '15px', color: tok.textTertiary })}>{label} <code title={value} className={css({ fontFamily: FONTS.MONO, color: tok.textSecondary })}>{shortIdentity(value)}</code></div>
-}
-
 interface SnapshotState { state: string; reason: string }
 
 function relationshipSnapshot(
@@ -503,28 +465,6 @@ function validateRelationshipPage(
       row.service_incarnation !== root.service_incarnation || row.service_generation !== root.service_generation ||
       !row.citation)) {
     return 'relationship row authority differs from its exact root'
-  }
-  return ''
-}
-
-function validateCitation(
-  row: ServiceRelationshipRow,
-  root: ServiceRelationshipPage['roots'][number],
-  citation: ServiceRelationshipCitation,
-): string {
-  const span = citation.evidence.span
-  const expectedSpan = row.evidence.span
-  if (citation.schema !== 'phebs-service-relationship-citation-v1' ||
-      citation.repository !== row.repository || citation.generation !== root.generation ||
-      citation.root_digest !== root.root_digest || citation.projection.digest !== row.projection_digest ||
-      citation.projection.posting_digest !== row.posting_digest ||
-      citation.evidence.posting_digest !== row.evidence.posting_digest ||
-      citation.evidence.path !== row.evidence.path ||
-      citation.evidence.object_id !== row.evidence.object_id ||
-      citation.evidence.content_digest !== row.evidence.content_digest ||
-      span.start_byte !== expectedSpan.start_byte || span.end_byte !== expectedSpan.end_byte ||
-      span.start_line !== expectedSpan.start_line || span.end_line !== expectedSpan.end_line) {
-    return 'citation response authority differs from the selected exact relationship row'
   }
   return ''
 }
@@ -591,10 +531,6 @@ function titleCase(value: string): string {
 function boundedError(cause: unknown): string {
   const message = String(cause).replace(/^Error:\s*/, '')
   return message.length <= 512 ? message : `${message.slice(0, 511)}…`
-}
-
-function shortIdentity(value: string): string {
-  return value.length <= 30 ? value : `${value.slice(0, 18)}…${value.slice(-8)}`
 }
 
 function emptyState(tok: PhebsTokens) {

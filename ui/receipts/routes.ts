@@ -47,12 +47,20 @@ export const ROUTES: ReceiptRoute[] = [
   { name: 'blame', path: `/blame?${q({ repo: T307_REPO, path: T307_FILE })}` },
   { name: 'commit', path: `/commit?${q({ repo: T307_REPO, ref: T307_COMMIT })}` },
   { name: 'contract-atlas', path: '/contracts' },
+  // Identity-required routes are still complete routed surfaces. These
+  // receipts pin their honest required-input states until deterministic
+  // endpoint fixtures are added with the owning workflow tickets.
+  { name: 'caller-map-required-identity', path: '/callers' },
+  { name: 'caller-comparison-required-identity', path: '/compare-callers' },
   { name: 'impact', path: '/impact' },
   { name: 'kafka-topics', path: '/topics' },
   { name: 'investigations', path: '/investigations' },
   { name: 'workbench', path: '/workbench' },
   { name: 'settings', path: '/settings' },
-  { name: 'audit', path: '/audit', mask: ['main table'] },
+  // The run mutates audit values, not table anatomy. Mask only the dynamic
+  // cell contents so headers, rows, spacing, borders, and status-chip layout
+  // remain under visual comparison.
+  { name: 'audit', path: '/audit', mask: ['main tbody td > *'] },
   // Analytics content is usage-derived in whole (the harness's own searches
   // mutate it), so the body is masked and the receipt pins chrome only.
   { name: 'analytics', path: '/analytics', mask: ['main'] },
