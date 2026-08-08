@@ -1296,6 +1296,14 @@ is a failure or terminal refusal.
   assistive technology), `Enter` opens the selected file at its first
   match, `y` copies the selected path, `o` collapses or expands the
   selected repository group.
+- **Citation highlighting** (T44.1): citation panels render cited source
+  bytes through the same best-effort line tokenizer search results use,
+  in both themes. The bytes are never altered — only presentation spans
+  are added. Highlighting is bounded: content over 65,536 UTF-16 units
+  or 1,500 lines renders as exact plain text instead (evidence spans are
+  normally tiny; the bound keeps adversarially large citations from
+  costing main-thread seconds), and any tokenizer failure falls back to
+  the plain bytes.
 - **Directory and explorer lists** (T43.11): the service list and the
   exact relationship rows are single tab stops. With the list focused,
   `↑`/`↓` move the active row, `PageUp`/`PageDown` move by a viewport,
@@ -1320,7 +1328,8 @@ results still stream in as shards respond, grouped repo → file, with match
 counts and highlighted spans; line numbers link into the viewer.
 - **File viewer** (`#/file?repo=…&path=…&ref=…&L=42`) — read-only CodeMirror with
 syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
-C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
+C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, and — as of T44.1 — the
+contract surfaces Protobuf and Thrift), a file-tree navigation
 column that auto-expands to the current file, and a highlighted, scrolled-to
 anchor line. Search links carry their immutable commit; old links without
 `ref` resolve the repo's recorded indexed commit before loading. Click a

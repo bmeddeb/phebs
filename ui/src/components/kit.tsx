@@ -373,6 +373,17 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
 // the lazy tokenizer/language load falls back to the plain bytes. The
 // tokenizer and language pack load lazily so the evidence kit adds no
 // CodeMirror weight to the initial chunk.
+//
+// Highlighting ceiling (T44.1f): citations may carry multi-MiB spans, and
+// tokenizing recurs on every mount and theme change on the main thread.
+// Content over 65,536 UTF-16 units or 1,500 lines renders as the exact
+// plain bytes instead — the guard runs before any lazy import, so an
+// oversized citation costs nothing beyond the native text node. The
+// bounds are documented in docs/guides/WORKFLOWS.md and pinned by
+// exact-bound and one-over tests.
+const CITATION_HIGHLIGHT_MAX_UNITS = 65_536
+const CITATION_HIGHLIGHT_MAX_LINES = 1_500
+
 function CitedSource({ path, content }: { path: string; content: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -381,11 +392,14 @@ function CitedSource({ path, content }: { path: string; content: string }) {
   useEffect(() => {
     let active = true
     setTokenLines(null)
+    if (content.length > CITATION_HIGHLIGHT_MAX_UNITS) return
+    const lines = content.split('\n')
+    if (lines.length > CITATION_HIGHLIGHT_MAX_LINES) return
     void Promise.all([import('../highlight'), import('../lang')])
       .then(async ([highlight, lang]) => {
         const language = await lang.languageFor(path)
         if (!active) return
-        setTokenLines(content.split('\n').map((line) => highlight.tokenize(line, language, mode)))
+        setTokenLines(lines.map((line) => highlight.tokenize(line, language, mode)))
       })
       .catch(() => {})
     return () => { active = false }

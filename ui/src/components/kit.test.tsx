@@ -7,7 +7,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
 import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, RefusalCard, StateNotice, StatusChip, StatusWord } from './kit'
 import type { ServiceRelationshipCitation } from '../api'
-import { ModeContext, TOKENS, focusRing, lightTheme } from '../theme'
+import { ModeContext, TOKENS, darkTheme, focusRing, lightTheme } from '../theme'
 
 const engine = new Styletron()
 
@@ -156,13 +156,66 @@ describe('CitationPanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('highlights cited bytes without altering them (T44.1)', async () => {
-    mount(<CitationPanel id="citation-hl" loading={false} error="" citation={citation} onClose={() => {}} />)
-    const pre = screen.getByText('client.Get(order)').closest('pre') ?? screen.getByText('client.Get(order)')
-    // The lazy tokenizer resolves and splits the content into spans…
-    await waitFor(() => expect(pre.querySelectorAll('span').length).toBeGreaterThan(0))
-    // …while the rendered text stays byte-identical to the citation.
-    expect(pre.textContent).toBe('client.Get(order)')
+  // Finds the span rendering exactly `return` — a Go keyword, so a colored
+  // span proves real tokenization (the null-language fallback also emits
+  // spans, but never colored ones).
+  const keywordSpan = async () => await waitFor(() => {
+    const span = Array.from(document.querySelectorAll('pre span')).find((el) => el.textContent === 'return') as HTMLElement | undefined
+    expect(span, 'no span isolates the keyword').toBeTruthy()
+    expect(span!.style.color, 'keyword span carries no palette color').toBeTruthy()
+    return span!
+  })
+
+  it('colors a known token in both themes without altering bytes (T44.1)', async () => {
+    const goCitation = { ...citation, content: 'return "ok"' }
+    const light = mount(<CitationPanel id="hl-light" loading={false} error="" citation={goCitation} onClose={() => {}} />)
+    const lightColor = (await keywordSpan()).style.color
+    expect(document.querySelector('pre')!.textContent).toBe('return "ok"')
+    light.unmount()
+
+    render(
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={darkTheme}>
+          <ModeContext.Provider value={{ mode: 'dark', toggle: () => {} }}>
+            <CitationPanel id="hl-dark" loading={false} error="" citation={goCitation} onClose={() => {}} />
+          </ModeContext.Provider>
+        </BaseProvider>
+      </StyletronProvider>,
+    )
+    const darkColor = (await keywordSpan()).style.color
+    expect(document.querySelector('pre')!.textContent).toBe('return "ok"')
+    // The palettes are theme-specific: the same token must not share a
+    // color across modes.
+    expect(darkColor).not.toBe(lightColor)
+  })
+
+  it('highlights content at exactly the ceiling (T44.1f)', async () => {
+    // 1,395 lines × 47 UTF-16 units — exactly 65,536 units, inside the
+    // 1,500-line bound.
+    const line = `return "${'k'.repeat(36)}"\n`
+    let content = line.repeat(Math.floor(65_536 / line.length))
+    content += 'x'.repeat(65_536 - content.length)
+    expect(content.length).toBe(65_536)
+    mount(<CitationPanel id="hl-bound" loading={false} error="" citation={{ ...citation, content }} onClose={() => {}} />)
+    await keywordSpan()
+    expect(document.querySelector('pre')!.textContent).toBe(content)
+  })
+
+  it('falls back to the exact plain bytes one unit over the ceiling (T44.1f)', async () => {
+    const content = 'x'.repeat(65_537)
+    mount(<CitationPanel id="hl-over" loading={false} error="" citation={{ ...citation, content }} onClose={() => {}} />)
+    const pre = document.querySelector('pre')!
+    await waitFor(() => expect(pre.textContent).toBe(content))
+    // The guard returns before any tokenizer import: no spans, ever.
+    expect(pre.querySelectorAll('span').length).toBe(0)
+  })
+
+  it('falls back one line over the line ceiling (T44.1f)', async () => {
+    const content = 'return\n'.repeat(1_501).slice(0, -1)
+    mount(<CitationPanel id="hl-lines" loading={false} error="" citation={{ ...citation, content }} onClose={() => {}} />)
+    const pre = document.querySelector('pre')!
+    await waitFor(() => expect(pre.textContent).toBe(content))
+    expect(pre.querySelectorAll('span').length).toBe(0)
   })
 
   it('announces loading and fail-closed errors', () => {

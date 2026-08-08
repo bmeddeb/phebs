@@ -454,7 +454,11 @@ tokenizer. AC: proto files highlight in the viewer and search chunks;
 citation spans render highlighted in both themes; zero new dependencies;
 no screenshot baseline changes (no capture opens a citation today —
 recorded, not hidden); suite, lint, build, gates green.
-*Shipped 2026-08-08.* The loader case was the only missing piece — name
+*Implementation landed 2026-08-08; the AC's deterministic-receipts
+clause stays open pending the scale track's T40.13 convergence gate
+(eight relationship-explorer captures fail closed against retained
+baselines until the fixture can serve marker-bearing roots).* The
+loader case was the only missing piece — name
 and dot color were always mapped; `.proto` now streams through the
 legacy protobuf mode as its own 0.8 kB lazy chunk. Citation panels
 render cited bytes through the shared line-oriented tokenizer,
@@ -480,7 +484,12 @@ the eight relationship-explorer-service captures fail closed against
 retained baselines because main's T40.12 root validator refuses the
 fixture's pre-convergence bare unavailable roots — correct fail-closed
 behavior awaiting the in-flight T40.13 convergence gate, recorded
-here, not re-baselined.
+here, not re-baselined. Review follow-up (T44.1f): citation
+highlighting is bounded — 65,536 UTF-16 units / 1,500 lines, guarded
+before any lazy import, exact plain-text fallback, pinned by
+exact-bound and one-over tests — and the highlight proof asserts a
+known keyword's palette color in both themes with byte-identical text,
+closing the null-language false-positive the first test allowed.
 
 **T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
 palette registry over the single highlight module. AC: the current
