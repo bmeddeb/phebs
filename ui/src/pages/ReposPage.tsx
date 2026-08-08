@@ -4,7 +4,7 @@ import { Spinner } from 'baseui/spinner'
 import { ErrorNotice } from '../components/kit'
 import { fetchRepoStatus, postReindex } from '../api'
 import type { RepoStatus } from '../api'
-import { usePhebsTokens, FONTS, MOTION, REDUCED_MOTION } from '../theme'
+import { usePhebsTokens, FONTS, MOTION, animated } from '../theme'
 import { href, navigate } from '../router'
 import { SearchIcon, CopyIcon, CheckIcon } from '../icons'
 import { isAbortError, relTime, repoFilter } from '../util'
@@ -294,12 +294,7 @@ function Dot({ color, pulse }: { color: string; pulse?: boolean }) {
         backgroundColor: color,
         flexShrink: 0,
         ...(pulse
-          ? {
-              animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-              animationDuration: MOTION.pulse,
-              animationIterationCount: 'infinite',
-              [REDUCED_MOTION]: { animationName: 'none' },
-            }
+          ? animated({ '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } }, { duration: MOTION.pulse, easing: MOTION.ease, loop: true })
           : {}),
       })}
     />

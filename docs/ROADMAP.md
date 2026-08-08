@@ -121,12 +121,15 @@ accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
-presentation authority, and Epic 43 was scheduled as its parallel
-presentation-only track: twelve charter-gated tickets from audit ledger and
-semantic tokens through authority drawers, contract-exact caveats, citation
-objects, scope continuity, keyboard navigation, operator cards, and
-ten-thousand-row density, closing with a motion pass. It touches no scale
-plane, authority, or claim; T40.11 remains the next scale ticket.
+presentation authority, and Epic 43 ran as its parallel presentation-only
+track: twelve charter-gated tickets from audit ledger and semantic tokens
+through authority drawers, contract-exact caveats, citation objects, scope
+continuity, keyboard navigation, operator cards, and ten-thousand-row
+density, closing with a motion pass. It completed on 2026-08-08 — closure
+record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
+baseline, zero open blockers, five residue items queued as T43R.1–5. It
+touched no scale plane, authority, or claim; T40.11 remains the next scale
+ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

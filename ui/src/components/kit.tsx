@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
-import { FONTS, MOTION, NUMERIC, REDUCED_MOTION, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
+import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, usePhebsTokens, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
 // keep choosing the tone word, the kit owns the anatomy. Status colors always
@@ -194,10 +194,7 @@ export function CaveatCollapse({ summary, children }: { summary: ReactNode; chil
           lineHeight: '17px',
           // T43.12: disclosure is a state transition — the body fades in on
           // each open (the display toggle restarts the animation).
-          animationName: { from: { opacity: 0 }, to: { opacity: 1 } },
-          animationDuration: MOTION.element,
-          animationTimingFunction: MOTION.easeOut,
-          [REDUCED_MOTION]: { animationName: 'none' },
+          ...animated({ from: { opacity: 0 }, to: { opacity: 1 } }, { duration: MOTION.element }),
         })}
       >
         {children}
@@ -329,10 +326,10 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
         // T43.12: the chip → panel state transition gets the one panel
         // entrance (charter §3) — the evidence surface arrives, it does
         // not teleport.
-        animationName: { from: { opacity: 0, transform: 'translateY(9px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-        animationDuration: MOTION.panel,
-        animationTimingFunction: MOTION.easeOut,
-        [REDUCED_MOTION]: { animationName: 'none' },
+        ...animated(
+          { from: { opacity: 0, transform: 'translateY(9px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+          { duration: MOTION.panel },
+        ),
         ':focus-visible': focusRing(tok),
       })}
     >

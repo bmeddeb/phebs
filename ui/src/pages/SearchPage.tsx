@@ -6,7 +6,7 @@ import type { LanguageSupport } from '@codemirror/language'
 import { fetchRepoStatus, streamSearch } from '../api'
 import type { FileResult, Range, RepoStatus, SearchScopeReceipt, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
-import { usePhebsTokens, useMode, FONTS, MOTION, REDUCED_MOTION, type PhebsTokens } from '../theme'
+import { usePhebsTokens, useMode, FONTS, MOTION, REDUCED_MOTION, animated, type PhebsTokens } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
@@ -443,14 +443,24 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               bottom: '-6px',
               height: '2px',
               borderRadius: '2px',
-              backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.accent} 50%, transparent 100%)`,
-              backgroundSize: '50% 100%',
-              backgroundRepeat: 'no-repeat',
-              animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
-              animationDuration: MOTION.pulse,
-              animationTimingFunction: MOTION.linear,
-              animationIterationCount: 'infinite',
-              [REDUCED_MOTION]: { animationName: 'none', backgroundColor: tok.accent, backgroundImage: 'none' },
+              overflow: 'hidden',
+              // Static accent bar when the sweep is removed.
+              [REDUCED_MOTION]: { backgroundColor: tok.accent },
+              // Compositor-only sweep: the gradient overlay translates; the
+              // background never repaints (T43.12f).
+              '::after': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: '50%',
+                backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.accent} 50%, transparent 100%)`,
+                ...animated(
+                  { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(300%)' } },
+                  { duration: MOTION.pulse, easing: MOTION.linear, loop: true, reduced: { display: 'none' } },
+                ),
+              },
             })}
           />
         )}
@@ -931,10 +941,7 @@ function SearchMeta({
               flexShrink: 0,
               borderRadius: '50%',
               backgroundColor: tok.status.unavailable.solid,
-              animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-              animationDuration: MOTION.pulse,
-              animationIterationCount: 'infinite',
-              [REDUCED_MOTION]: { animationName: 'none' },
+              ...animated({ '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } }, { duration: MOTION.pulse, easing: MOTION.ease, loop: true }),
             })}
           />
         )}
@@ -1011,12 +1018,9 @@ function RepoGroup({
         marginBottom: '14px',
         overflow: 'hidden',
         backgroundColor: tok.pageBg,
-        ...(animateCard ? {
-          animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-          animationDuration: MOTION.element,
-          animationTimingFunction: MOTION.easeOut,
-          [REDUCED_MOTION]: { animationName: 'none' },
-        } : {}),
+        ...(animateCard
+          ? animated({ from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } }, { duration: MOTION.element })
+          : {}),
       })}
     >
       <button
@@ -1118,12 +1122,9 @@ function FileBlock({
         borderTop: first ? 'none' : `1px solid ${tok.innerSep}`,
         ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
         backgroundColor: tok.pageBg,
-        ...(animate ? {
-          animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-          animationDuration: MOTION.element,
-          animationTimingFunction: MOTION.easeOut,
-          [REDUCED_MOTION]: { animationName: 'none' },
-        } : {}),
+        ...(animate
+          ? animated({ from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } }, { duration: MOTION.element })
+          : {}),
       })}
     >
       <div className={css({ height: '32px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
@@ -1269,13 +1270,25 @@ function SkeletonCards() {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const shimmer = css({
-    backgroundImage: `linear-gradient(90deg, ${tok.fill} 0%, ${tok.cardBorder} 50%, ${tok.fill} 100%)`,
-    backgroundSize: '200% 100%',
-    animationName: { '0%': { backgroundPosition: '100% 0' }, '100%': { backgroundPosition: '0 0' } },
-    animationDuration: MOTION.pulse,
-    animationIterationCount: 'infinite',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: tok.fill,
     borderRadius: '4px',
-    [REDUCED_MOTION]: { animationName: 'none' },
+    // Compositor-only shimmer: a translating gradient overlay, no
+    // background repaints (T43.12f). Reduced motion shows the flat fill.
+    '::after': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      width: '50%',
+      backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.cardBorder} 50%, transparent 100%)`,
+      ...animated(
+        { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(300%)' } },
+        { duration: MOTION.pulse, easing: MOTION.linear, loop: true, reduced: { display: 'none' } },
+      ),
+    },
   })
   return (
     <div data-testid="streaming-skeleton" className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', marginBottom: '14px', overflow: 'hidden' })} aria-hidden="true">

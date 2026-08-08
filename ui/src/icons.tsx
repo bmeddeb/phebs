@@ -1,18 +1,13 @@
 // Inline 16×16 icons, stroke: currentColor, 1.5px — the design handoff's icon
 // set. Sized via the `size` prop; color inherits from the parent.
-import type { Ref } from 'react'
 import { usePhebsTokens } from './theme'
 
 type IconProps = { size?: number }
 
-interface PhebsMarkProps extends IconProps {
-  dotRef?: Ref<SVGCircleElement>
-  pulseRef?: Ref<SVGCircleElement>
-}
-
-export function PhebsMark({ size = 24, dotRef, pulseRef }: PhebsMarkProps) {
+// T43.12f: the mark is static — its animated forms live in Brand.tsx's
+// loader, composed through the theme's motion helpers.
+export function PhebsMark({ size = 24 }: IconProps) {
   const tok = usePhebsTokens()
-  const animatedPartStyle = { transformBox: 'fill-box' as const, transformOrigin: 'center' }
 
   return (
     <svg
@@ -35,25 +30,7 @@ export function PhebsMark({ size = 24, dotRef, pulseRef }: PhebsMarkProps) {
         strokeWidth={0.9}
         strokeDasharray="1.8 1.6"
       />
-      <circle
-        ref={pulseRef}
-        cx="15.5"
-        cy="12"
-        r="7"
-        fill="none"
-        stroke={tok.accent}
-        strokeWidth={0.6}
-        opacity={0}
-        style={animatedPartStyle}
-      />
-      <circle
-        ref={dotRef}
-        cx="15.5"
-        cy="12"
-        r="1.9"
-        fill={tok.accent}
-        style={animatedPartStyle}
-      />
+      <circle cx="15.5" cy="12" r="1.9" fill={tok.accent} />
     </svg>
   )
 }

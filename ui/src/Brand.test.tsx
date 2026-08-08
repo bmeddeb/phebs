@@ -32,37 +32,19 @@ test('brand lockup uses the Context Port geometry and current theme colors', () 
   expect(paths[0].getAttribute('d')).toContain('M21 8.5')
   expect(paths[0].getAttribute('stroke')).toBe('currentColor')
   expect(paths[1].getAttribute('stroke')).toBe(TOKENS.light.gutter)
-  expect(circles[1].getAttribute('fill')).toBe(TOKENS.light.accent)
+  expect(circles[0].getAttribute('fill')).toBe(TOKENS.light.accent)
 })
 
-test('brand lockup docks on hover and skips motion when reduced motion is enabled', () => {
-  let reduce = false
-  vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: reduce })))
+test('brand lockup is static — hover triggers no animation (T43.12f)', () => {
   view(<BrandLockup href="#/" />)
-
   const link = screen.getByRole('link', { name: 'phebs' })
-  const [pulse, dot] = Array.from(link.querySelectorAll('circle'))
-  const pulseAnimate = vi.fn((
-    _keyframes: Keyframe[] | PropertyIndexedKeyframes | null,
-    _options?: number | KeyframeAnimationOptions,
-  ) => ({ cancel: vi.fn() }) as unknown as Animation)
-  const dotAnimate = vi.fn((
-    _keyframes: Keyframe[] | PropertyIndexedKeyframes | null,
-    _options?: number | KeyframeAnimationOptions,
-  ) => ({ cancel: vi.fn() }) as unknown as Animation)
-  Object.defineProperty(pulse, 'animate', { configurable: true, value: pulseAnimate })
-  Object.defineProperty(dot, 'animate', { configurable: true, value: dotAnimate })
-
+  const spies = Array.from(link.querySelectorAll('circle, path')).map((node) => {
+    const spy = vi.fn()
+    Object.defineProperty(node, 'animate', { configurable: true, value: spy })
+    return spy
+  })
   fireEvent.mouseEnter(link)
-  expect(dotAnimate).toHaveBeenCalledTimes(1)
-  expect(dotAnimate.mock.calls[0][1]).toMatchObject({ duration: 550 })
-  expect(pulseAnimate).toHaveBeenCalledTimes(1)
-  expect(pulseAnimate.mock.calls[0][1]).toMatchObject({ duration: 450, delay: 400 })
-
-  reduce = true
-  fireEvent.mouseEnter(link)
-  expect(dotAnimate).toHaveBeenCalledTimes(1)
-  expect(pulseAnimate).toHaveBeenCalledTimes(1)
+  for (const spy of spies) expect(spy).not.toHaveBeenCalled()
 })
 
 test('brand loader renders without Web Animations support', () => {

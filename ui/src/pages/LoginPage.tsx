@@ -58,7 +58,7 @@ export default function LoginPage() {
     })}>
       <div className={css({ width: '100%', maxWidth: '360px' })}>
         <div className={css({ marginBottom: '24px' })}>
-          <BrandLockup markSize={24} wordmarkSize={24} gap={9} animate={false} />
+          <BrandLockup markSize={24} wordmarkSize={24} gap={9} />
         </div>
         <h1 className={css({ fontSize: '18px', lineHeight: '24px', fontWeight: 600, color: tok.textPrimary, marginTop: 0, marginBottom: '16px' })}>
           {firstRun ? 'Set up administrator' : 'Sign in'}

@@ -12,7 +12,7 @@ import {
   type GlossaryTerm,
   type GlossaryTermId,
 } from '../glossary.generated'
-import { MOTION, REDUCED_MOTION, usePhebsTokens } from '../theme'
+import { transitioned, usePhebsTokens } from '../theme'
 
 const termById = new Map<GlossaryTermId, GlossaryTerm>(
   glossaryTerms.map((term) => [term.id, term]),
@@ -186,12 +186,7 @@ export function SectionHelp({
         lineHeight: '18px',
         opacity: position ? 1 : 0,
         transform: position ? 'translateY(0)' : 'translateY(-4px)',
-        transitionProperty: reducedMotion ? 'none' : 'opacity, transform',
-        transitionDuration: reducedMotion ? '0ms' : MOTION.element,
-        [REDUCED_MOTION]: {
-          transitionProperty: 'none',
-          transitionDuration: '0ms',
-        },
+        ...transitioned(['opacity', 'transform']),
       })}
     >
       <div className={css({

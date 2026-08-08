@@ -55,12 +55,71 @@ export const MOTION = {
   // Indicator cadence (pulsing dots, shimmer, sweeps) — repetition, not a
   // transition, so it sits outside the 120–300ms transition windows.
   pulse: '1.4s',
+  // The brand loader's full choreography loop (T43.12f) — the one long
+  // cadence in the product, and it plays only while authentication loads.
+  loader: '4.6s',
   easeOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
   ease: 'cubic-bezier(0.4, 0, 0.2, 1)',
   // For indicator loops only: a continuous sweep must not throb, so its
   // easing is constant. Transitions never use it.
   linear: 'linear',
 } as const
+
+// ————— Charter §3 motion helpers (T43.12f) —————
+// Motion is a closed system: every animation and transition in the product
+// is composed through these helpers. They admit compositor properties only
+// (opacity and transform, typed), token durations and easings only
+// (literal-union types), and embed the reduced-motion path by
+// construction, so a motion without one cannot be written.
+// ui/src/motion.test.ts bans WAAPI and raw motion properties outside this
+// module.
+
+export interface CompositorFrame {
+  opacity?: number | string
+  transform?: string
+}
+
+type MotionDuration = (typeof MOTION)['element' | 'panel' | 'pulse' | 'loader']
+type MotionEasing = (typeof MOTION)['easeOut' | 'ease' | 'linear']
+
+interface AnimatedOptions {
+  duration: MotionDuration
+  easing?: MotionEasing
+  loop?: boolean
+  // Extra static styles under prefers-reduced-motion (e.g. hiding a
+  // shimmer overlay). The animation itself is always removed.
+  reduced?: Record<string, string | number>
+}
+
+export function animated(frames: Record<string, CompositorFrame>, opts: AnimatedOptions) {
+  return {
+    animationName: frames,
+    animationDuration: opts.duration,
+    animationTimingFunction: opts.easing ?? MOTION.easeOut,
+    ...(opts.loop ? { animationIterationCount: 'infinite' } : {}),
+    [REDUCED_MOTION]: { animationName: 'none', ...(opts.reduced ?? {}) },
+  }
+}
+
+export function transitioned(properties: ('opacity' | 'transform')[], duration: MotionDuration = MOTION.element) {
+  return {
+    transitionProperty: properties.join(', '),
+    transitionDuration: duration,
+    transitionTimingFunction: MOTION.easeOut,
+    [REDUCED_MOTION]: { transitionDuration: '0ms' },
+  }
+}
+
+// Base Web's drawer animates its own transform; this pins any drawer
+// layer (container and backdrop alike) to the panel token and the
+// reduced path so the layers settle together.
+export function panelTransition() {
+  return {
+    transitionDuration: MOTION.panel,
+    transitionTimingFunction: MOTION.ease,
+    [REDUCED_MOTION]: { transitionDuration: '0ms' },
+  }
+}
 export const REDUCED_MOTION = '@media (prefers-reduced-motion: reduce)'
 
 export type Mode = 'light' | 'dark'

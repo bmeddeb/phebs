@@ -198,9 +198,10 @@ separately requires at least 8,000 accepted services and measures a target of
 10,000 accepted services; Epic 42 composes both dimensions before any topology
 posture changes.
 The current 4,000-service cap remains until its named measured ticket.
-`docs/DESIGN_CHARTER.md` is the presentation authority, and Epic 43 runs in
-parallel as its charter-gated presentation-only track starting at T43.1; it
-touches no scale plane, authority, or claim. No private rerun or release is
+`docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
+charter-gated presentation-only track, completed on 2026-08-08 (closure
+record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active
+backlog) and touched no scale plane, authority, or claim. No private rerun or release is
 authorized. Epics 25–28 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,

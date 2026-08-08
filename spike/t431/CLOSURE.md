@@ -56,17 +56,29 @@ Sev **B** blocker · **M** major · **m** minor.
 
 ## 2. T43.12 motion pass
 
-Motion exists only on state transitions, from tokens, reduced-motion
-covered — now source-verified (`ui/src/motion.test.ts`): every animating
-file carries a reduced-motion path; no literal millisecond values beyond
-reduced `0ms`; every easing is a `MOTION` token. The pass added the two
-entrances the sweep justified and nothing else: the citation panel
-(chip → panel arrives, 260ms panel token) and the caveat disclosure body
-(160ms element token). Deliberately not animated, recorded as correct:
-the command navigator and all list navigation (keyboard-frequency
-disqualifier), detail-region swaps (keyboard-committed, data being
-read), the scope bar and status words (trust surfaces), density flips,
-and load-time notices (no user state transition).
+Motion is a closed system (T43.12f). The theme's helpers —
+`animated`, `transitioned`, `panelTransition` — are the only place
+motion properties may be written: they admit compositor properties only
+(opacity/transform, typed so the compiler rejects paint properties),
+token durations and easings only (literal-union types), and embed the
+reduced-motion path by construction. `ui/src/motion.test.ts` closes the
+system at the source level: WAAPI is banned, raw motion properties and
+literal durations are banned outside `theme.ts`, and each helper is
+verified to carry its reduced override. Under this contract the brand
+lockup's hover dock (decorative WAAPI motion on navigation) was
+removed, the loader was rebuilt as CSS choreography through the helper
+(its stroke draw became an opacity reveal — compositor-only; with
+animations removed the attribute state is the complete settled logo),
+the shimmer sweeps became translating overlays (no background
+repaints), and both drawer layers ride the panel token so container and
+backdrop settle together. The pass added the two entrances the sweep
+justified and nothing else: the citation panel (chip → panel arrives,
+260ms panel token) and the caveat disclosure body (160ms element
+token). Deliberately not animated, recorded as correct: the command
+navigator and all list navigation (keyboard-frequency disqualifier),
+detail-region swaps (keyboard-committed, data being read), the scope
+bar and status words (trust surfaces), density flips, and load-time
+notices (no user state transition).
 
 ## 3. Re-critique (same instrument, same mode as T43.1 §2)
 
@@ -81,9 +93,9 @@ and load-time notices (no user state transition).
 | 7 | Flexibility & efficiency | 2 | 5 | Global navigator, shortcuts, density control, virtualized keyboard lists — now a defining strength |
 | 8 | Aesthetic & minimalist | 2 | 3 | Digests behind the audit altitude; caveats collapse; the sub-11px metadata dialect (F14 residue) holds it at 3 |
 | 9 | Error recovery | 3 | 4 | F8 fixed; bounded errors on catalog surfaces; raw `String(cause)` persists on History/Analytics (S2) |
-| 10 | Help & documentation | 2 | 2 | SectionHelp still wired to one surface (S3); the workflows guide grew, in-product help did not |
+| 10 | Help & documentation | 2 | 3 | Re-audited (T43.12f): SectionHelp reaches Search, Contract Atlas, Caller Map, Impact, Kafka Topics, and the Workbench through the analysis scope panel, plus Impact's direct use — the first pass undercounted it as one surface. The catalog (directory/explorer) and git surfaces still carry no in-product help, which holds the score at 3 |
 
-**Total: 36/40** (T43.1 baseline 23/40).
+**Total: 37/40** (T43.1 baseline 23/40).
 
 ## 4. Open residue (post-epic candidates, none blocking)
 
@@ -91,12 +103,16 @@ and load-time notices (no user state transition).
 - **F34 (open, m):** Commit diff per-file grouping + `contentVisibility`.
 - **S1 (m):** replace the Workbench native `window.confirm` with the house dialog.
 - **S2 (m):** bounded errors on History/Analytics (`boundedError` exists; two pages bypass it).
-- **S3 (m):** deploy SectionHelp beyond its single surface.
+- **S3 (m):** extend SectionHelp to the catalog (directory, explorer) and git (file, history, blame, commit) surfaces; it already reaches six surfaces through the analysis scope panel.
 
 ## 5. Receipts at closure
 
-The screenshot matrix stands at 117 captures — every routed surface,
-both themes, both densities — verified green in independent runs, with
-the repos pair restored-then-recovered under the T43.6 retention rule.
-Motion changes alter no settled pixels; the closing verify run is
-recorded in the T43.12 backlog note.
+The retained matrix is 118 baselines — 29 authenticated routes ×
+2 themes × 2 densities, plus the themed sign-in pair (sign-in precedes
+any user preference, so it captures per theme only). The cardinality is
+derived from the executable manifest, not hand-counted:
+`ui/src/receiptManifest.test.ts` asserts baseline count = routes ×
+themes × densities + themes. The matrix verified green in independent
+runs, with the repos pair restored-then-recovered under the T43.6
+retention rule. Motion changes alter no settled pixels; the closing
+verify run is recorded in the T43.12 backlog note.
