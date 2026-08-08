@@ -513,6 +513,17 @@ DEFINE INDEX IF NOT EXISTS extraction_run_ambiguous_run_id ON extraction_run
 -- historical run table as it grows.
 DEFINE INDEX IF NOT EXISTS extraction_run_retention ON extraction_run
     FIELDS retention_quarantined, status, started_at, run_id;
+
+-- T40.10: one latest partitioned domain authority per repository/domain. The
+-- referenced run remains invisible to legacy published-run readers; T40.11
+-- consumers require this exact root and run together. The selected staged run
+-- is sealed against further appends and root-pinned against the legacy sweep;
+-- T40.11 installs the complete historical pin-aware lifecycle owner.
+DEFINE TABLE IF NOT EXISTS extraction_domain_root SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS extraction_domain_root_scope ON extraction_domain_root
+    FIELDS repository, domain UNIQUE;
+DEFINE INDEX IF NOT EXISTS extraction_domain_root_run ON extraction_domain_root
+    FIELDS run_id;
 -- Only a published row carries published_key. Its unique index is installed
 -- after Open migrates any pre-slot rows, alongside the pending-job indexes.
 

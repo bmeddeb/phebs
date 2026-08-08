@@ -29,10 +29,17 @@ type Budget struct {
 
 type Handler func(context.Context, store.GenerationChunk, Budget) error
 
+// ExhaustedHandler records a source-free terminal retry result after the
+// scheduler has atomically exhausted the final attempt. It runs only after the
+// chunk is no longer leased, so implementations must re-fence the current
+// schedule before installing any authority.
+type ExhaustedHandler func(context.Context, store.GenerationChunk, error) error
+
 type Class struct {
 	Concurrency int
 	Budget      Budget
 	Handle      Handler
+	OnExhausted ExhaustedHandler
 }
 
 type Scheduler struct {
@@ -162,7 +169,8 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 	totalDescriptors := 0
 	for class, configuration := range scheduler.Classes {
 		if class != store.GenerationResourceCPU && class != store.GenerationResourceIO &&
-			class != store.GenerationResourceMemory {
+			class != store.GenerationResourceMemory &&
+			class != store.GenerationResourceExtraction {
 			return nil, fmt.Errorf("generation scheduler resource class %q is invalid", class)
 		}
 		if configuration.Concurrency < 1 || configuration.Handle == nil ||
@@ -297,8 +305,19 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	notBefore := time.Now().UTC().Add(scheduler.Backoff(chunk.Attempt + 1))
 	if _, err := scheduler.Store.RetryGenerationChunk(
 		writeCtx, chunk, store.DurableErrorText(handleErr), notBefore,
-	); err != nil &&
-		!errors.Is(err, store.ErrGenerationExhausted) &&
+	); errors.Is(err, store.ErrGenerationExhausted) {
+		if configuration.OnExhausted != nil {
+			callbackCtx, callbackCancel := context.WithTimeout(
+				context.WithoutCancel(ctx), 5*time.Second,
+			)
+			defer callbackCancel()
+			if callbackErr := configuration.OnExhausted(
+				callbackCtx, chunk, handleErr,
+			); callbackErr != nil && !errors.Is(callbackErr, store.ErrGenerationStale) {
+				scheduler.report(fmt.Errorf("record exhausted generation chunk: %w", callbackErr))
+			}
+		}
+	} else if err != nil &&
 		!errors.Is(err, store.ErrGenerationLeaseLost) &&
 		!errors.Is(err, store.ErrGenerationStale) {
 		scheduler.report(fmt.Errorf("retry generation chunk: %w", err))

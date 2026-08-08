@@ -19,6 +19,7 @@ type RetentionComponent string
 const (
 	RetentionExtractionRun                          RetentionComponent = "extraction_run"
 	RetentionEvidenceChunk                          RetentionComponent = "evidence_chunk"
+	RetentionExtractionDomainRoot                   RetentionComponent = "extraction_domain_root"
 	RetentionSnapshotEvidence                       RetentionComponent = "snapshot_evidence"
 	RetentionAssertion                              RetentionComponent = "assertion"
 	RetentionEvidenceAtom                           RetentionComponent = "evidence_atom"
@@ -162,7 +163,10 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	RetentionExtractionRun: {
 		table: "extraction_run", readiness: retentionEvidenceReady,
 	},
-	RetentionEvidenceChunk:     {table: "evidence_chunk", readiness: retentionEvidenceReady},
+	RetentionEvidenceChunk: {table: "evidence_chunk", readiness: retentionEvidenceReady},
+	RetentionExtractionDomainRoot: {
+		table: "extraction_domain_root", readiness: retentionEvidenceReady,
+	},
 	RetentionSnapshotEvidence:  {table: "snapshot_evidence", readiness: retentionEvidenceReady},
 	RetentionAssertion:         {table: "assertion", readiness: retentionEvidenceReady},
 	RetentionEvidenceAtom:      {table: "evidence_atom", readiness: retentionEvidenceReady},
@@ -270,9 +274,9 @@ RETURN array::intersect(
 
 const (
 	maxRetentionReportedPerComponent            = 79
-	maxCoreRetentionRequests                    = 22
-	maxCoreRetentionReportedIdentities          = 1_709
-	maxCoreRetentionScanIdentities              = 1_731
+	maxCoreRetentionRequests                    = 23
+	maxCoreRetentionReportedIdentities          = 1_745
+	maxCoreRetentionScanIdentities              = 1_768
 	maxInvestigationRetentionRequests           = 24
 	maxInvestigationRetentionReportedIdentities = 1_848
 	maxInvestigationRetentionScanIdentities     = 1_872

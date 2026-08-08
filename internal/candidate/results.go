@@ -288,6 +288,29 @@ func DecodeDomainResultPlan(reader io.Reader, domain *SparseDomain) (DomainResul
 	return plan, nil
 }
 
+// DecodeDomainResultPlanControl enforces the raw control fence and validates
+// the complete self-contained plan. Runtime owners use this only after the
+// plan was originally closed against an opened sparse domain by
+// BuildDomainResultPlan; consumers that still have that domain should prefer
+// DecodeDomainResultPlan so the upstream controls are re-bound as well.
+func DecodeDomainResultPlanControl(reader io.Reader) (DomainResultPlan, error) {
+	var plan DomainResultPlan
+	if err := strictDecode(reader, MaxDomainResultPlanBytes, &plan); err != nil {
+		return DomainResultPlan{}, domainResultInvalid("decode plan control: %v", err)
+	}
+	if err := validateDomainResultPlan(plan); err != nil {
+		return DomainResultPlan{}, err
+	}
+	return plan, nil
+}
+
+// ValidateDomainResultPlanControl validates the bounded self-contained plan
+// without reopening candidate content. It is the restart boundary for the
+// T40.10 runtime; initial construction still requires BuildDomainResultPlan.
+func ValidateDomainResultPlanControl(plan DomainResultPlan) error {
+	return validateDomainResultPlan(plan)
+}
+
 // ValidateDomainResultPlan closes the trusted-plan replay against the same
 // sparse domain without reading candidate members.
 func ValidateDomainResultPlan(plan DomainResultPlan, domain *SparseDomain) error {

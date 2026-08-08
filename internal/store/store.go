@@ -464,6 +464,15 @@ type ExtractionRun struct {
 	StartedAt   time.Time        `json:"started_at"`
 	PublishedAt *time.Time       `json:"published_at,omitempty"`
 	Coverage    CoverageManifest `json:"coverage"`
+	// Partition fields are set only by T40.10's invisible aggregate run.
+	// Legacy extraction retains its unchanged per-run limits and semantics.
+	PartitionActive          bool   `json:"partition_active,omitempty"`
+	PartitionSealed          bool   `json:"partition_sealed,omitempty"`
+	PartitionPlanDigest      string `json:"partition_plan_digest,omitempty"`
+	PartitionCandidateDigest string `json:"partition_candidate_digest,omitempty"`
+	PartitionFactLimit       int64  `json:"partition_fact_limit,omitempty"`
+	PartitionRowLimit        int64  `json:"partition_row_limit,omitempty"`
+	PartitionReferenceLimit  int64  `json:"partition_reference_limit,omitempty"`
 }
 
 // EvidenceSweepProgress reports one bounded retention step. Logical run
@@ -947,6 +956,47 @@ type EvidenceStore interface {
 	// atoms survive while any association references them. The returned
 	// logical-run and physical-row counts are deliberately separate.
 	SweepEvidence(ctx context.Context, now time.Time, staleStagedAfter time.Duration) (EvidenceSweepProgress, error)
+}
+
+// EvidenceChunkAccounting is the immutable physical charge recorded by the
+// T40.7 chunk ledger. Partitioned extraction uses this receipt instead of
+// estimating normalized row/reference growth from submitted facts.
+type EvidenceChunkAccounting struct {
+	RunID          string `json:"run_id"`
+	ChunkID        string `json:"chunk_id"`
+	ContentDigest  string `json:"content_digest"`
+	FactCount      int64  `json:"fact_count"`
+	RowDelta       int64  `json:"row_delta"`
+	ReferenceDelta int64  `json:"reference_delta"`
+}
+
+// EvidenceChunkAccountingStore is deliberately separate from EvidenceStore:
+// ordinary extraction does not pay a receipt read after every append.
+type EvidenceChunkAccountingStore interface {
+	GetEvidenceChunkAccounting(context.Context, string, string) (EvidenceChunkAccounting, error)
+}
+
+// PartitionedExtractionRunLimits are the already-admitted T40.9 aggregate
+// reservations. They apply only to one invisible partition-mode run and do
+// not raise the legacy extraction run limits.
+type PartitionedExtractionRunLimits struct {
+	Facts      int64 `json:"facts"`
+	Rows       int64 `json:"rows"`
+	References int64 `json:"references"`
+}
+
+// PartitionedExtractionRunStore creates an aggregate-capable staged run and
+// pins it against stale-stage maintenance before any partition is scheduled.
+type PartitionedExtractionRunStore interface {
+	BeginPartitionedExtractionRun(
+		context.Context,
+		ExtractionScope,
+		string,
+		string,
+		string,
+		PartitionedExtractionRunLimits,
+	) (*ExtractionRun, error)
+	AbortExtractionRun(context.Context, string) error
 }
 
 // AuthStats drives the public auth status and the one-time setup gate.

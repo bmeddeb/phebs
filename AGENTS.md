@@ -189,9 +189,9 @@ independent derived-plan ownership, and T40.3's source-partition super-root are
 complete, T40.4's hierarchical observation inventory, T40.5's immutable
 search-generation lifecycle, T40.6's observation recovery/lifecycle/archive
 migration plus reverse-audit closure, and T40.7's constant-cost evidence-stage
-accounting, T40.8's sparse candidate/partition contract, and T40.9's bounded
-partition-result/domain-root contract are complete, and T40.10 is the next scale
-ticket;
+accounting, T40.8's sparse candidate/partition contract, T40.9's bounded
+partition-result/domain-root contract, and T40.10's partitioned extraction and
+atomic domain authority are complete, and T40.11 is the next scale ticket;
 Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41
 separately requires at least 8,000 accepted services and measures a target of

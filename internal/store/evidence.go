@@ -227,19 +227,26 @@ func prepareExtractionDomainOutcome(
 }
 
 type extractionRunRec struct {
-	RecID       *models.RecordID `json:"id"`
-	RunID       string           `json:"run_id"`
-	Repo        string           `json:"repo"`
-	Commit      string           `json:"commit"`
-	UnitDigest  string           `json:"unit_digest"`
-	Domain      string           `json:"domain"`
-	Extractor   string           `json:"extractor"`
-	Status      string           `json:"status"`
-	StartedAt   time.Time        `json:"started_at"`
-	PublishedAt *time.Time       `json:"published_at,omitempty"`
-	Coverage    CoverageManifest `json:"coverage"`
-	StoreSchema string           `json:"store_schema_version"`
-	Format      string           `json:"evidence_format_version"`
+	RecID                    *models.RecordID `json:"id"`
+	RunID                    string           `json:"run_id"`
+	Repo                     string           `json:"repo"`
+	Commit                   string           `json:"commit"`
+	UnitDigest               string           `json:"unit_digest"`
+	Domain                   string           `json:"domain"`
+	Extractor                string           `json:"extractor"`
+	Status                   string           `json:"status"`
+	StartedAt                time.Time        `json:"started_at"`
+	PublishedAt              *time.Time       `json:"published_at,omitempty"`
+	Coverage                 CoverageManifest `json:"coverage"`
+	StoreSchema              string           `json:"store_schema_version"`
+	Format                   string           `json:"evidence_format_version"`
+	PartitionActive          bool             `json:"partition_active"`
+	PartitionSealed          bool             `json:"partition_sealed"`
+	PartitionPlanDigest      string           `json:"partition_plan_digest"`
+	PartitionCandidateDigest string           `json:"partition_candidate_digest"`
+	PartitionFactLimit       int64            `json:"partition_fact_limit"`
+	PartitionRowLimit        int64            `json:"partition_row_limit"`
+	PartitionReferenceLimit  int64            `json:"partition_reference_limit"`
 }
 
 func (r extractionRunRec) run() ExtractionRun {
@@ -253,6 +260,11 @@ func (r extractionRunRec) run() ExtractionRun {
 		ID: id, Repo: r.Repo, Commit: r.Commit, Domain: r.Domain,
 		UnitDigest: r.UnitDigest, Extractor: r.Extractor, Status: r.Status,
 		StartedAt: r.StartedAt, PublishedAt: r.PublishedAt, Coverage: r.Coverage,
+		PartitionActive: r.PartitionActive, PartitionSealed: r.PartitionSealed,
+		PartitionPlanDigest:      r.PartitionPlanDigest,
+		PartitionCandidateDigest: r.PartitionCandidateDigest,
+		PartitionFactLimit:       r.PartitionFactLimit, PartitionRowLimit: r.PartitionRowLimit,
+		PartitionReferenceLimit: r.PartitionReferenceLimit,
 	}
 }
 
@@ -301,6 +313,38 @@ func (s *Surreal) BeginExtractionRun(
 	scope ExtractionScope,
 	extractor string,
 ) (*ExtractionRun, error) {
+	return s.beginExtractionRun(ctx, scope, extractor, "", "", PartitionedExtractionRunLimits{
+		Facts: maxEvidenceFactsPerRun, Rows: maxEvidenceRowsPerRun,
+		References: maxEvidenceReferenceEdges,
+	}, false)
+}
+
+// BeginPartitionedExtractionRun creates one invisible aggregate-capable run.
+// Its exact T40.9 plan and reservations are persisted before scheduling, and
+// partition_active protects it from the legacy 24-hour staged sweep.
+func (s *Surreal) BeginPartitionedExtractionRun(
+	ctx context.Context,
+	scope ExtractionScope,
+	extractor,
+	planDigest,
+	candidateDigest string,
+	limits PartitionedExtractionRunLimits,
+) (*ExtractionRun, error) {
+	if !validSHA256Digest(planDigest) || !validSHA256Digest(candidateDigest) || limits.validate() != nil {
+		return nil, errors.New("begin partitioned extraction run: invalid plan, candidate, or limits")
+	}
+	return s.beginExtractionRun(ctx, scope, extractor, planDigest, candidateDigest, limits, true)
+}
+
+func (s *Surreal) beginExtractionRun(
+	ctx context.Context,
+	scope ExtractionScope,
+	extractor,
+	planDigest,
+	candidateDigest string,
+	limits PartitionedExtractionRunLimits,
+	partitionActive bool,
+) (*ExtractionRun, error) {
 	if err := validateExtractionScope(scope); err != nil {
 		return nil, fmt.Errorf("begin extraction run: %w", err)
 	}
@@ -338,6 +382,12 @@ LET $created = IF $writer_ok AND $attempt_ok THEN
 		evidence_format_version = $evidence_format_version,
 		evidence_migration_version = $evidence_migration_version,
 		retention_quarantined = false, retention_phase = NONE,
+		partition_active = $partition_active, partition_sealed = false,
+		partition_plan_digest = $partition_plan_digest,
+		partition_candidate_digest = $partition_candidate_digest,
+		partition_fact_limit = $partition_fact_limit,
+		partition_row_limit = $partition_row_limit,
+		partition_reference_limit = $partition_reference_limit,
 		staged_revision = 0, staged_fact_count = 0,
 		staged_row_count = 0, staged_reference_count = 0,
 		staged_chunk_count = 0, retention_revision = 0 RETURN AFTER)
@@ -357,6 +407,10 @@ COMMIT;`,
 			"repo": scope.Repository, "commit": scope.Commit,
 			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
 			"extractor": extractor, "now": now,
+			"partition_active": partitionActive, "partition_plan_digest": planDigest,
+			"partition_candidate_digest": candidateDigest,
+			"partition_fact_limit":       limits.Facts, "partition_row_limit": limits.Rows,
+			"partition_reference_limit":  limits.References,
 			"attempt_rid":                extractionAttemptID(scope),
 			"migration_rid":              evidenceMigrationStateID(),
 			"store_schema_version":       evidenceStoreSchemaVersion,
@@ -373,6 +427,8 @@ COMMIT;`,
 	run := rows[0].run()
 	return &run, nil
 }
+
+var _ PartitionedExtractionRunStore = (*Surreal)(nil)
 
 // A claimant can retain another run's logical id either directly (an unknown
 // writer that migration must not touch) or through a quarantine marker after
@@ -1089,6 +1145,7 @@ BEGIN;
 LET $eligible = SELECT id, staged_revision, staged_fact_count,
 	staged_row_count, staged_reference_count, staged_chunk_count FROM $run
     WHERE status = 'staged'
+	  AND ((partition_sealed ?? false) = false)
       AND array::len(SELECT id FROM $migration_rid
 	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
@@ -1238,6 +1295,54 @@ func (s *Surreal) AddEvidenceChunk(
 	return s.addEvidenceChunk(ctx, runID, chunkID, factCount, atoms, assocs, asserts)
 }
 
+type evidenceChunkAccountingRec struct {
+	RunID          string `json:"run_id"`
+	ChunkID        string `json:"chunk_id"`
+	ContentDigest  string `json:"content_digest"`
+	FactCount      int64  `json:"fact_count"`
+	RowDelta       int64  `json:"row_delta"`
+	ReferenceDelta int64  `json:"reference_delta"`
+}
+
+// GetEvidenceChunkAccounting reads one point-addressed immutable T40.7
+// receipt. It is used only by the partition executor after a successful
+// append, including exact replay, so its T40.9 result reports physical charges.
+func (s *Surreal) GetEvidenceChunkAccounting(
+	ctx context.Context,
+	runID,
+	chunkID string,
+) (EvidenceChunkAccounting, error) {
+	if strings.TrimSpace(runID) != runID || runID == "" || !validSHA256Digest(chunkID) {
+		return EvidenceChunkAccounting{}, errors.New("get evidence chunk accounting: invalid identity")
+	}
+	results, err := surrealdb.Query[[]evidenceChunkAccountingRec](ctx, s.db,
+		`SELECT run_id, chunk_id, content_digest, fact_count, row_delta, reference_delta
+			FROM $rid LIMIT 1`, map[string]any{"rid": evidenceChunkRecordID(runID, chunkID)})
+	if err != nil {
+		return EvidenceChunkAccounting{}, fmt.Errorf("get evidence chunk accounting: %w", err)
+	}
+	var rows []evidenceChunkAccountingRec
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			rows = result.Result
+			break
+		}
+	}
+	if len(rows) != 1 {
+		return EvidenceChunkAccounting{}, fmt.Errorf("get evidence chunk accounting: %w", ErrNotFound)
+	}
+	record := rows[0]
+	if record.RunID != runID || record.ChunkID != chunkID ||
+		!validSHA256Digest(record.ContentDigest) || record.FactCount <= 0 ||
+		record.RowDelta < 0 || record.ReferenceDelta < 0 ||
+		record.RowDelta > maxEvidenceRowsPerRun || record.ReferenceDelta > maxEvidenceReferenceEdges {
+		return EvidenceChunkAccounting{}, errors.New("get evidence chunk accounting: invalid stored receipt")
+	}
+	return EvidenceChunkAccounting(record), nil
+}
+
+var _ EvidenceChunkAccountingStore = (*Surreal)(nil)
+
 func (s *Surreal) addEvidenceChunk(
 	ctx context.Context,
 	runID string,
@@ -1253,6 +1358,20 @@ func (s *Surreal) addEvidenceChunk(
 	}
 	if run.Status != "staged" {
 		return fmt.Errorf("add evidence: run %s is %s, not staged: %w", runID, run.Status, ErrConflict)
+	}
+	limits := PartitionedExtractionRunLimits{
+		Facts: maxEvidenceFactsPerRun, Rows: maxEvidenceRowsPerRun,
+		References: maxEvidenceReferenceEdges,
+	}
+	if run.PartitionActive {
+		limits = PartitionedExtractionRunLimits{
+			Facts: run.PartitionFactLimit, Rows: run.PartitionRowLimit,
+			References: run.PartitionReferenceLimit,
+		}
+		if !validSHA256Digest(run.PartitionPlanDigest) ||
+			!validSHA256Digest(run.PartitionCandidateDigest) || limits.validate() != nil {
+			return fmt.Errorf("add evidence: run %s has invalid partition authority: %w", runID, ErrConflict)
+		}
 	}
 	now := time.Now().UTC()
 	batch, err := normalizeEvidenceBatch(run, atoms, assocs, asserts, now)
@@ -1272,8 +1391,8 @@ func (s *Surreal) addEvidenceChunk(
 		"assocs": batch.assocs, "asserts": batch.asserts,
 		"chunk_rid": evidenceChunkRecordID(runID, chunkID), "chunk_id": chunkID,
 		"content_digest": contentDigest, "fact_count": factCount, "now": now,
-		"max_run_rows": maxEvidenceRowsPerRun, "max_run_facts": maxEvidenceFactsPerRun,
-		"max_reference_edges":        maxEvidenceReferenceEdges,
+		"max_run_rows": limits.Rows, "max_run_facts": limits.Facts,
+		"max_reference_edges":        limits.References,
 		"migration_rid":              evidenceMigrationStateID(),
 		"store_schema_version":       evidenceStoreSchemaVersion,
 		"evidence_format_version":    evidenceFormatVersion,
@@ -1936,7 +2055,8 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 		addProbeVars(vars, runID)
 		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 			`BEGIN;
-LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE
+LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE,
+				partition_active = false
 				WHERE status = 'staged'
 				  AND array::len(SELECT id FROM $migration_rid
 					  WHERE version = $evidence_migration_version LIMIT 1) = 1
@@ -2631,7 +2751,10 @@ LET $locked = IF $writer_ok THEN
 		  AND run_id = record::id(id)
 		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
+		  AND ((partition_active ?? false) = false)
+		  AND ((partition_sealed ?? false) = false)
 		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		  AND array::len(SELECT id FROM extraction_domain_root WHERE run_id = $run LIMIT 1) = 0
 		RETURN AFTER)
 	ELSE [] END;
 IF array::len($locked) = 1 AND $prior_status = 'staged' {

@@ -2,6 +2,7 @@ package candidate
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -570,6 +571,22 @@ func resultTestDomainShape(t *testing.T, memberCount int, typed bool, availabili
 			DeclaredBytes: 1, Present: true,
 		}
 		typedInputs = []SparseTypedInput{typedInput}
+		typedScopeValues := make([]sparseTypedSource, memberCount)
+		for index := range typedScopeValues {
+			path := "source-" + leftPadResultOrdinal(index) + ".go"
+			typedScopeValues[index] = sparseTypedSource{
+				pathIdentity: sha256.Sum256([]byte(path)), path: path,
+				objectID: strings.Repeat("a", 40), declaredBytes: 1,
+			}
+		}
+		typedScope, err := canonicalTypedScope(typedScopeValues)
+		if err != nil {
+			t.Fatal(err)
+		}
+		typedScopeDescriptor := SparseTypedScopeDescriptor{
+			Name: sparseTypedScopeName(0), Records: memberCount,
+			ContentBytes: int64(len(typedScope)), ContentDigest: sparseContentDigest(typedScope),
+		}
 		ordinal := len(partitions) - 1
 		partitions[ordinal] = ExtractionPartition{
 			Schema: ExtractionPartitionSchema, Repository: repository,
@@ -579,6 +596,7 @@ func resultTestDomainShape(t *testing.T, memberCount int, typed bool, availabili
 			Kind: PartitionKindTypedInput, Ordinal: ordinal,
 			SourceStart: memberCount, SourceEnd: memberCount,
 			ByteKind: "typed_input_declared", TypedInput: &typedInputs[0],
+			TypedScope:            &typedScopeDescriptor,
 			AdmittedDeclaredBytes: 1, Quotas: quotas,
 		}
 		partitions[ordinal].Digest = sparsePartitionDigest(partitions[ordinal])
@@ -599,6 +617,10 @@ func resultTestDomainShape(t *testing.T, memberCount int, typed bool, availabili
 		CandidateMemberReadBytes: int64(memberCount), IndexName: "candidate-domain-000.json",
 		IndexBytes: 1, IndexDigest: index.Digest, IndexContentDigest: testResultDigest(3),
 		DomainScheduleDigest: index.ScheduleDigest,
+	}
+	if typed {
+		typedScope := *partitions[len(partitions)-1].TypedScope
+		descriptor.TypedScope = &typedScope
 	}
 	if availability == "empty" {
 		descriptor.AdmittedRecords = 0

@@ -107,6 +107,7 @@ func coreRetentionComponents() []RetentionComponent {
 	return []RetentionComponent{
 		RetentionExtractionRun,
 		RetentionEvidenceChunk,
+		RetentionExtractionDomainRoot,
 		RetentionSnapshotEvidence,
 		RetentionAssertion,
 		RetentionEvidenceAtom,
@@ -134,9 +135,9 @@ func coreRetentionRequests() []RetentionComponentRequest {
 	components := coreRetentionComponents()
 	requests := make([]RetentionComponentRequest, len(components))
 	for index, component := range components {
-		reported, scanned := 77, 78
-		if index < 15 {
-			reported, scanned = 78, 79
+		reported, scanned := 76, 77
+		if index >= 20 {
+			reported, scanned = 75, 76
 		}
 		requests[index] = RetentionComponentRequest{
 			Component: component, ReportedIdentities: reported,
@@ -180,7 +181,7 @@ func TestCoreRetentionEmptyReadyStoreIsExactZero(t *testing.T) {
 	}
 }
 
-func TestCoreRetentionAllTwentyTwoPlansAndJobStatuses(t *testing.T) {
+func TestCoreRetentionAllTwentyThreePlansAndJobStatuses(t *testing.T) {
 	store := newRetentionTestStore(t)
 	ctx := t.Context()
 	now := time.Now().UTC()
@@ -210,6 +211,10 @@ func TestCoreRetentionAllTwentyTwoPlansAndJobStatuses(t *testing.T) {
 		"run_id": "retention-run-0", "chunk_id": "chunk-one",
 		"payload_digest": "sha256:chunk", "fact_count": 1,
 		"row_count": 2, "reference_count": 1,
+	})
+	seedRetentionRows(t, ctx, store, "extraction_domain_root", "root", 1, map[string]any{
+		"repository": "example.com/retention", "domain": "proto-contract",
+		"run_id": "retention-run-0",
 	})
 	attemptStatuses := []string{"staged", "published", "aborted"}
 	for statusIndex, status := range attemptStatuses {
@@ -318,15 +323,15 @@ func TestCoreRetentionAllTwentyTwoPlansAndJobStatuses(t *testing.T) {
 	})
 
 	requests := coreRetentionRequests()
-	if len(requests) != 22 {
-		t.Fatalf("core requests = %d, want 22", len(requests))
+	if len(requests) != 23 {
+		t.Fatalf("core requests = %d, want 23", len(requests))
 	}
 	totalScans := 0
 	for _, request := range requests {
 		totalScans += request.ScanIdentities
 	}
-	if totalScans != 1_731 {
-		t.Fatalf("core aggregate scan allocation = %d, want 1731", totalScans)
+	if totalScans != 1_768 {
+		t.Fatalf("core aggregate scan allocation = %d, want 1768", totalScans)
 	}
 	results, err := store.CollectCoreRetention(ctx, requests)
 	if err != nil {

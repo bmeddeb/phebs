@@ -1886,11 +1886,12 @@ described above. T30.6m explicitly selects unbounded historical-publication
 retention without changing cleanup. T30.6n bounds job-history reads and
 repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
-unconditional capacity warning. The core collector now populates 22 SurrealDB
+unconditional capacity warning. The core collector now populates 23 SurrealDB
 components, T30.6q now populates the 24 Investigation/Workbench table
 components, and T30.6r now adds the final seven derived filesystem/store
-collectors plus installation capacity. T40.7 adds `evidence_chunk` beneath the
-evidence-publication owner, expanding the declared surface to 53 components.
+collectors plus installation capacity. T40.7 adds `evidence_chunk` and T40.10
+adds `extraction_domain_root` beneath the evidence-publication owner, expanding
+the declared surface to 54 components.
 
 ##### Scope-aware result diagnostics
 
@@ -2355,7 +2356,16 @@ metadata is capped at 1 MiB. Concurrent administrator requests multiply that
 one-at-a-time raw-plus-decoded heap work.
 
 T30.6r completed collector coverage across the original 52-component registry;
-T40.7's `evidence_chunk` collector makes the current surface 53 components.
+T40.7's `evidence_chunk` and T40.10's `extraction_domain_root` collectors make
+the current surface 54 components.
+The current 4,096-report allocation gives registry indices 0–45 76 report
+slots and the remaining eight 75, each with one private sentinel, for 4,150
+aggregate scans. Core owns 1,745/1,768 report/scan identities across 23
+components, Investigation owns 1,824/1,848 across 24, and derived owns 527/534
+across seven. The deterministic empty and maximum-shaped envelopes are 20,565
+and 21,564 bytes, respectively. The core collector performs at most 25 bounded
+row-range queries; the additional query inventories only
+`extraction_domain_root` record identities and adds no lifecycle mutation.
 The derived collector populates filesystem total/available capacity for the
 verified data directory.
 Resolver/caller canonical byte metrics require the supported rooted nonblocking
@@ -3119,6 +3129,51 @@ transition; the lifecycle owner drains the retired bytes later rather than
 performing recursive deletion under the publication fence.
 Republishing the exact current generation returns the unchanged root, including
 its existing rollback floor; a same-generation reference mismatch refuses.
+
+### Partitioned extraction execution
+
+T40.10 registers sparse T40.8 partitions as ordinary durable generation work
+under the dedicated `extraction` resource class. The process runs two class
+workers, but every schedule reserves one repository token because the selected
+Git-object reader holds that repository's exclusive content lock. A worker
+heartbeats before waiting for the source lease; its unchanged five-minute
+execution deadline begins only after that lease and lock are acquired. A lost
+lease or cancellation installs no result. The final attempt may install only a
+source-free exhausted result after the scheduler has atomically settled it.
+
+Each domain owns one invisible partition run with its exact T40.9 plan digest
+and candidate-manifest digest plus admitted aggregate fact, row, and reference
+limits. Active runs are pinned against the legacy 24-hour staged-run sweep. A
+candidate replacement aborts and unpins only an active run bound to the old
+candidate; a sealed historical run stays `staged` and sealed so exact A→B→A
+reactivation remains possible. Successful publication seals the run and swaps
+one atomic `extraction_domain_root`; the prior domain root remains authoritative
+after retryable, terminal, stale, cancelled, or incomplete work.
+T40.11 owns selected/rollback lifecycle and archive policy for these roots and
+runs, so administrators should not delete their private controls manually.
+
+Ordinary completion writes one bit to a private, at-most-4-KiB durable bitmap.
+Only the final bit causes a single ordered read of at most 490 bounded result
+controls and the complete T40.9 root pass. On restart, exact active work or a
+fully current settled generation is recognized from reread candidate and
+observation references plus pointer-sized execution controls before full
+candidate/source/observation validation. This hot reuse performs no Git,
+extractor, candidate-member, sparse-index, or evidence append work. A changed
+reference, missing pointer, or malformed binding falls closed into the strict
+planning path; it never reuses approximate authority.
+
+A present typed input carries one private, digest-bound source-scope control for
+every admitted document. Each sorted entry contains the canonical path, full
+SHA-256 path identity, immutable Git object ID, and declared size. The scope is
+capped at 262,144 entries, 16 MiB of path bytes, 48 MiB per domain, and 256 MiB
+per generation. Its
+worker reads that control once, reads the selected SCIP index exactly once, and
+uses logarithmic lookup to open only SCIP-requested admitted blobs without
+reopening a candidate member. An unsafe, absent, out-of-scope, tampered, or
+oversized document scope refuses. A deterministic extractor or staging refusal
+is first installed as a closed zero-total `terminal_refusal` result and included
+in the nonpublishing terminal root; only then does the worker return terminal
+status to the scheduler. Private error detail never enters that result.
 
 ### Shared source-observation progress and neutral demo
 

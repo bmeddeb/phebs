@@ -9035,3 +9035,78 @@ filesystem, lifecycle/archive, child-process, cache, lock, service-cap,
 topology, supported-scale/SLO, accuracy/completeness, freshness,
 migration/decommission, pilot, release, or private-rerun claim;
 `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
+
+**T40.10 ✅ · Partitioned extraction and atomic domain assembly**
+*(2026-08-07; needs T40.7–T40.9)* — registers the reserved partition path in
+the ordinary extraction workflow and a dedicated generation-scheduler resource
+class. Planning strictly binds the current candidate and joint source/
+observation authority, refuses any over-aggregate reservation before a source
+lease, creates invisible evidence runs, and persists exact run bindings before
+enqueue. Each worker heartbeats before content acquisition, reads one selected
+T40.8 candidate member and only its immutable Git path/OID/size objects, and
+stages bounded 256-fact chunks through T40.7. Exact chunk receipts supply the
+physical row/reference charges used by the T40.9 result rather than a submitted
+row estimate.
+
+Results are private content-addressed controls. Exact retries and restart reuse
+settled siblings without another source lease or append. Exhaustion records a
+closed retryable result only after the scheduler consumes the final attempt;
+terminal/retryable roots remain visible in status but never replace the prior
+domain pointer. Complete success, empty, and unavailable sets are recomputed
+through the sole full T40.9 root pass. The final fence holds the observation
+transition lock across current candidate/source/observation proof, the atomic
+store transition, and the filesystem pointer written last. The store
+independently recounts run rows, references, facts, and chunk receipts, checks
+the current candidate commit/digest, seals the selected staged run against
+later appends, and swaps one `extraction_domain_root`. Exact A→B→A reactivation
+reuses the historical sealed run.
+
+Cancellation and lost/superseded leases install no result. Concurrent domains
+assemble independently; zero-applicable domains schedule no content work.
+Real Protobuf unresolved-declaration and well-formed unsupported Thrift cases
+remain successful classified gaps. Restart, failed publication, exact retry,
+stale authority, exhaustion, small delta, concurrent assembly, store-level
+seal/recount/stale-candidate, and A→B→A cases are executable tests. The new
+root joins retention status, expanding its fixed surface from 53 to 54
+components and core collection from 22 to 23 while retaining the 4,096-report
+aggregate and a 21,564-byte maximum-shaped response.
+
+The reverse-review closure registers `extraction` as a valid scheduler class,
+persists the T40.9 aggregate limits on each partition run, and pins that run
+from creation through sealing so the legacy 24-hour staged sweep cannot delete
+live work. The inherited five-minute execution deadline begins after the
+repository content lease is acquired. One durable 4-KiB-bounded completion
+bitmap replaces repeated prefix scans: an ordinary settlement updates one bit,
+and the last settlement alone reads at most 490 result controls in one linear
+root pass. Exact active and fully current generations are recognized from
+reread candidate/observation references plus pointer-sized execution controls
+before corpus-wide validation. Two class workers can serve different
+repositories, while one repository token preserves the exclusive repository
+content boundary; reconciliation and assembly use 64 deterministic shards
+instead of one process-global mutex. Multi-partition staging beyond the legacy
+single-run fact cap, lifecycle pinning, startup class validation, post-lock
+deadline placement, linear completion, and settled hot reuse are executable
+tests.
+
+The second reverse-review closure gives each typed-input partition an exact,
+digest-bound source-scope control containing sorted canonical paths, their
+SHA-256 identities, immutable Git object IDs, and declared sizes, capped at the
+262,144-record semantic profile, 16 MiB of path bytes, 48 MiB per domain, and
+256 MiB per generation.
+SCIP execution reads that control and its selected index once, then opens only
+requested admitted blobs without reopening sibling candidate members. Exact shallow reuse now
+rereads candidate plus source/observation authority after the lookup. Partition
+runs persist their candidate digest: replacement aborts and unpins only stale
+active runs, while sealed `staged` runs remain available for exact A→B→A
+reactivation and legacy coverage invalidation remains separate. Deterministic
+executor failures produce and install a closed zero-total `terminal_refusal`
+result before returning terminal scheduler status. Exact typed scope/tamper,
+post-lookup authority movement, active-versus-sealed candidate transition, and
+terminal executor/runtime settlement are executable regressions.
+
+T40.11 is next and owns downstream root/run consumers, archive inclusion,
+rollback-floor pins, and the complete filesystem/store lifecycle. T40.10 does
+not establish a supported scale, target SLO, accuracy/completeness, freshness,
+migration/decommission, service-cap, topology, pilot, release, or private-rerun
+claim; `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in
+force.

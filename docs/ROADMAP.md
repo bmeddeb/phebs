@@ -115,7 +115,8 @@ T40.6 installed restart-safe joint v2 observation authority plus bounded
 lifecycle/archive recovery, and T40.7 installed constant-cost evidence-stage
 accounting, T40.8 installed sparse candidate/partition controls, and T40.9
 closed bounded nonproduct partition results and atomic domain roots on
-2026-08-07. T40.10 is next. Epic 41 separately targets 10,000
+2026-08-07, and T40.10 installed partitioned extraction and atomic domain
+authority. T40.11 is next. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -125,7 +126,7 @@ presentation-only track: twelve charter-gated tickets from audit ledger and
 semantic tokens through authority drawers, contract-exact caveats, citation
 objects, scope continuity, keyboard navigation, operator cards, and
 ten-thousand-row density, closing with a motion pass. It touches no scale
-plane, authority, or claim; T40.6 remains the next scale ticket.
+plane, authority, or claim; T40.11 remains the next scale ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -680,13 +681,13 @@ service count × repository bytes
 ### Program sequence
 
 - **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.9 complete, T40.10 next):** exact source-free refusal attribution,
+  T40.1–T40.10 complete, T40.11 next):** exact source-free refusal attribution,
   the frozen neutral envelope, independent generation-scoped planning,
   hierarchical source/observation roots, immutable search lifecycle, joint
   observation recovery/archive ownership, chunk-proportional evidence append,
   sparse candidate/partition controls, and bounded pure partition-result/domain
-  roots are complete. Next execute partitioned extraction behind atomic domain
-  authority, then preserve recovery/lifecycle/archive behavior, replay
+  roots and partitioned extraction behind atomic domain authority are complete.
+  Next preserve recovery/lifecycle/archive behavior, replay
   downstream consumers, and close on a neutral two-million-owner gate.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
   freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
@@ -718,7 +719,7 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T40.10 is the only next scale ticket. Later tickets stay dependency-ordered
+- T40.11 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - Search, derived observations, extraction domains, service state, and

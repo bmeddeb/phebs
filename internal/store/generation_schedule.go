@@ -43,6 +43,10 @@ const (
 	GenerationResourceCPU    GenerationResourceClass = "cpu"
 	GenerationResourceIO     GenerationResourceClass = "io"
 	GenerationResourceMemory GenerationResourceClass = "memory"
+	// Extraction is isolated from the generic CPU queue because handlers are
+	// stage-specific; sharing CPU would let an observation worker claim and
+	// terminally reject a partitioned-extraction chunk.
+	GenerationResourceExtraction GenerationResourceClass = "extraction"
 )
 
 type GenerationScheduleStatus string
@@ -178,7 +182,8 @@ func normalizeGenerationScheduleSpec(spec GenerationScheduleSpec) (GenerationSch
 
 func validGenerationResourceClass(class GenerationResourceClass) bool {
 	switch class {
-	case GenerationResourceCPU, GenerationResourceIO, GenerationResourceMemory:
+	case GenerationResourceCPU, GenerationResourceIO, GenerationResourceMemory,
+		GenerationResourceExtraction:
 		return true
 	default:
 		return false

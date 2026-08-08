@@ -31,6 +31,10 @@ type scopedCorpus struct {
 	inScope map[string]bool
 }
 
+type typedPartitionCorpus struct{ memoryCorpus }
+
+func (typedPartitionCorpus) SCIPTypedPartition() bool { return true }
+
 func (c scopedCorpus) SCIPDocumentInScope(filePath string) bool {
 	return c.inScope[filePath]
 }
@@ -794,10 +798,30 @@ func Shadow(ctx any, client orders.OrdersClient) {
 		)
 	}
 
+	var typedPartitionFacts []sdk.Fact
+	coverage, err := gocaller.NewGRPC().Extract(
+		context.Background(), typedPartitionCorpus{memoryCorpus: corpus},
+		func(fact sdk.Fact) error {
+			typedPartitionFacts = append(typedPartitionFacts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fact := range typedPartitionFacts {
+		if strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) {
+			t.Fatalf("typed partition repeated syntax fallback: %+v", fact)
+		}
+	}
+	if coverage.UnresolvedCount != 0 {
+		t.Fatalf("typed-only coverage = %+v", coverage)
+	}
+
 	withoutIndex := cloneFiles(files)
 	delete(withoutIndex, "index.scip")
 	var fallbackOnly []sdk.Fact
-	coverage, err := gocaller.NewGRPC().Extract(
+	coverage, err = gocaller.NewGRPC().Extract(
 		context.Background(),
 		memoryCorpus{
 			repo: corpus.repo, commit: corpus.commit, files: withoutIndex,

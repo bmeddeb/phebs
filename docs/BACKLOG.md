@@ -30,7 +30,7 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.9 are complete and T40.10 is next,
+explicit scale-convergence program: T40.1–T40.10 are complete and T40.11 is next,
 while Epic 41 separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.9 complete · T40.10 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.10 complete · T40.11 next)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -95,21 +95,6 @@ nonpublishing extraction work.
   catalog cap, select cohorts or P6, authorize a private rerun, or change the
   T39 `DO_NOT_RELEASE` decision. Epic 41 owns service cardinality; Epic 42 owns
   the combined gate.
-
-**T40.10 · Partitioned extraction and atomic domain assembly** — execute
-source-backed domains through the T40.8 schedule, stage each partition through
-T40.7 accounting, and install the T40.9 root only after every declared result
-settles and complete validation passes. AC: workers read only their bounded
-source/observation partition; retries reuse settled siblings; exhaustion keeps
-the prior domain pointer and exposes failed partitions; planning pre-reserves
-every partition's maximum fact/row/reference/byte contribution and refuses an
-over-aggregate schedule before any content lease, while each concurrently
-running worker remains inside its reservation; a file-local unresolved
-Protobuf declaration or well-formed but unsupported Thrift construct produces
-a classified gap when file isolation is sound, while corrupt shared authority
-still refuses; zero-applicable-input publishes honest empty or unavailable per
-pack contract; pointer swap is last; restart, cancellation, stale lease,
-supersession, concurrent assembly, small delta, and A→B→A tests; full merge bar.
 
 **T40.11 · Downstream generation adapters, archive, and lifecycle** — migrate
 resolver namespaces, RPC/Kafka postings, caller-leaf work, and service

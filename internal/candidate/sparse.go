@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,6 +34,8 @@ const (
 	MaxSparseRootBytes           = 1 << 20
 	MaxSparseDomainBytes         = 16 << 20
 	MaxSparseAggregateIndexBytes = 128 << 20
+	MaxSparseTypedScopeBytes     = 48 << 20
+	MaxSparseAggregateScopeBytes = 256 << 20
 	MaxSchedulePageBytes         = 64 << 10
 
 	PartitionKindCandidateMember = "candidate_member"
@@ -42,12 +45,17 @@ const (
 	PartitionMaxCandidateDeclaredBytes = MaxDeclaredBytesPerArtifact
 	PartitionMaxCandidateContentBytes  = int64(maxArtifactBytes)
 	PartitionMaxTypedInputBytes        = MaxDeclaredBytesPerArtifact
+	PartitionMaxTypedScopeRecords      = 262_144
+	PartitionMaxTypedScopePathBytes    = 16 << 20
 	PartitionMaxOpenedSourceBytes      = int64(512 << 20)
 	PartitionMaxRetainedSourceBytes    = int64(512 << 20)
 	PartitionMaxFacts                  = 12_500
 	PartitionMaxRows                   = 25_000
 	PartitionMaxReferences             = 20_000
 	PartitionDeadline                  = 5 * time.Minute
+
+	sparseTypedScopeMagic     = "phebs-typed-source-scope-v1\n"
+	sparseTypedScopeEntryBase = sha256.Size + 2 + 1 + 64 + 8
 )
 
 var (
@@ -93,23 +101,31 @@ type SparseTypedInput struct {
 	Present       bool   `json:"present"`
 }
 
+type SparseTypedScopeDescriptor struct {
+	Name          string `json:"name"`
+	Records       int    `json:"records"`
+	ContentBytes  int64  `json:"content_bytes"`
+	ContentDigest string `json:"content_digest"`
+}
+
 type SparseDomainDescriptor struct {
-	Domain                   string             `json:"domain"`
-	Version                  string             `json:"version"`
-	PolicyOrdinal            int                `json:"policy_ordinal"`
-	Plane                    Plane              `json:"plane"`
-	Availability             string             `json:"availability"`
-	UnavailableReason        string             `json:"unavailable_reason,omitempty"`
-	TypedInputs              []SparseTypedInput `json:"typed_inputs"`
-	PartitionCount           int                `json:"partition_count"`
-	AdmittedRecords          int                `json:"admitted_records"`
-	AdmittedDeclaredBytes    int64              `json:"admitted_declared_bytes"`
-	CandidateMemberReadBytes int64              `json:"candidate_member_read_bytes"`
-	IndexName                string             `json:"index_name"`
-	IndexBytes               int64              `json:"index_bytes"`
-	IndexDigest              string             `json:"index_digest"`
-	IndexContentDigest       string             `json:"index_content_digest"`
-	DomainScheduleDigest     string             `json:"domain_schedule_digest"`
+	Domain                   string                      `json:"domain"`
+	Version                  string                      `json:"version"`
+	PolicyOrdinal            int                         `json:"policy_ordinal"`
+	Plane                    Plane                       `json:"plane"`
+	Availability             string                      `json:"availability"`
+	UnavailableReason        string                      `json:"unavailable_reason,omitempty"`
+	TypedInputs              []SparseTypedInput          `json:"typed_inputs"`
+	PartitionCount           int                         `json:"partition_count"`
+	AdmittedRecords          int                         `json:"admitted_records"`
+	AdmittedDeclaredBytes    int64                       `json:"admitted_declared_bytes"`
+	CandidateMemberReadBytes int64                       `json:"candidate_member_read_bytes"`
+	TypedScope               *SparseTypedScopeDescriptor `json:"typed_scope,omitempty"`
+	IndexName                string                      `json:"index_name"`
+	IndexBytes               int64                       `json:"index_bytes"`
+	IndexDigest              string                      `json:"index_digest"`
+	IndexContentDigest       string                      `json:"index_content_digest"`
+	DomainScheduleDigest     string                      `json:"domain_schedule_digest"`
 }
 
 type SparseRoot struct {
@@ -128,26 +144,27 @@ type SparseRoot struct {
 }
 
 type ExtractionPartition struct {
-	Schema                    string                    `json:"schema"`
-	Repository                string                    `json:"repository"`
-	CandidateManifestDigest   string                    `json:"candidate_manifest_digest"`
-	CandidateGenerationDigest string                    `json:"candidate_generation_digest"`
-	Domain                    string                    `json:"domain"`
-	Version                   string                    `json:"version"`
-	Plane                     Plane                     `json:"plane"`
-	Kind                      string                    `json:"kind"`
-	Ordinal                   int                       `json:"ordinal"`
-	SourceStart               int                       `json:"source_start"`
-	SourceEnd                 int                       `json:"source_end"`
-	ByteKind                  string                    `json:"byte_kind"`
-	Member                    *Artifact                 `json:"member,omitempty"`
-	TypedInput                *SparseTypedInput         `json:"typed_input,omitempty"`
-	CallerPrefix              string                    `json:"caller_prefix,omitempty"`
-	CallerPrefixBits          int                       `json:"caller_prefix_bits,omitempty"`
-	AdmittedRecords           int                       `json:"admitted_records"`
-	AdmittedDeclaredBytes     int64                     `json:"admitted_declared_bytes"`
-	Quotas                    ExtractionPartitionQuotas `json:"quotas"`
-	Digest                    string                    `json:"digest"`
+	Schema                    string                      `json:"schema"`
+	Repository                string                      `json:"repository"`
+	CandidateManifestDigest   string                      `json:"candidate_manifest_digest"`
+	CandidateGenerationDigest string                      `json:"candidate_generation_digest"`
+	Domain                    string                      `json:"domain"`
+	Version                   string                      `json:"version"`
+	Plane                     Plane                       `json:"plane"`
+	Kind                      string                      `json:"kind"`
+	Ordinal                   int                         `json:"ordinal"`
+	SourceStart               int                         `json:"source_start"`
+	SourceEnd                 int                         `json:"source_end"`
+	ByteKind                  string                      `json:"byte_kind"`
+	Member                    *Artifact                   `json:"member,omitempty"`
+	TypedInput                *SparseTypedInput           `json:"typed_input,omitempty"`
+	TypedScope                *SparseTypedScopeDescriptor `json:"typed_scope,omitempty"`
+	CallerPrefix              string                      `json:"caller_prefix,omitempty"`
+	CallerPrefixBits          int                         `json:"caller_prefix_bits,omitempty"`
+	AdmittedRecords           int                         `json:"admitted_records"`
+	AdmittedDeclaredBytes     int64                       `json:"admitted_declared_bytes"`
+	Quotas                    ExtractionPartitionQuotas   `json:"quotas"`
+	Digest                    string                      `json:"digest"`
 }
 
 type SparseDomainIndex struct {
@@ -199,6 +216,8 @@ type SparseBuildMetrics struct {
 	PeakIndexBytes       int64
 	AggregateIndexBytes  int64
 	AggregatePartitions  int
+	TypedScopesWritten   int
+	AggregateScopeBytes  int64
 }
 
 type SparseReadMetrics struct {
@@ -206,6 +225,7 @@ type SparseReadMetrics struct {
 	RootReads              int
 	DomainIndexReads       int
 	CandidateMemberReads   int
+	TypedScopeReads        int
 	ControlBytesRead       int64
 	CandidateBytesRead     int64
 }
@@ -225,6 +245,16 @@ type SparseDomain struct {
 	index       SparseDomainIndex
 }
 
+// Commit returns the immutable Git revision transitively bound by this
+// domain's validated candidate publication. It lets T40.10 source leases read
+// selected object IDs without re-resolving a mutable repository ref.
+func (domain *SparseDomain) Commit() string {
+	if domain == nil || domain.publication == nil {
+		return ""
+	}
+	return domain.publication.manifest.Commit
+}
+
 type sparseSourceMember struct {
 	artifact   Artifact
 	prefix     string
@@ -232,13 +262,33 @@ type sparseSourceMember struct {
 }
 
 type sparseDomainBuilder struct {
-	identity   PolicyIdentity
-	index      SparseDomainIndex
-	descriptor SparseDomainDescriptor
+	identity      PolicyIdentity
+	index         SparseDomainIndex
+	descriptor    SparseDomainDescriptor
+	typedScope    []sparseTypedSource
+	typedScopeRaw []byte
+}
+
+type sparseTypedSource struct {
+	pathIdentity  [sha256.Size]byte
+	path          string
+	objectID      string
+	declaredBytes int64
+}
+
+// SparseTypedSourceScope is one validated, immutable typed-partition source
+// scope. Its compact bytes remain private so callers cannot bypass validation.
+type SparseTypedSourceScope struct {
+	raw     []byte
+	records int
 }
 
 func sparseDomainName(ordinal int) string {
 	return fmt.Sprintf("candidate-partition-domain-%03d.json", ordinal)
+}
+
+func sparseTypedScopeName(ordinal int) string {
+	return fmt.Sprintf("candidate-partition-typed-scope-%03d.bin", ordinal)
 }
 
 func sparseAggregateWithinLimits(partitions int, indexBytes int64) bool {
@@ -299,9 +349,10 @@ func BuildSparseRoot(
 	if err := scanSparseMembers(ctx, publication, builders, metrics, &aggregatePartitions); err != nil {
 		return SparseRoot{}, err
 	}
+	aggregateScopeBytes := int64(0)
 	for index := range builders {
 		if err := addSparseTypedInputPartitions(
-			manifest, &builders[index], &aggregatePartitions,
+			manifest, &builders[index], &aggregatePartitions, &aggregateScopeBytes,
 		); err != nil {
 			return SparseRoot{}, err
 		}
@@ -337,6 +388,17 @@ func BuildSparseRoot(
 		descriptor.IndexBytes = int64(len(indexBytes))
 		descriptor.IndexDigest = index.Digest
 		descriptor.IndexContentDigest = sparseContentDigest(indexBytes)
+		if descriptor.TypedScope != nil {
+			if err := writeSparseControl(
+				filepath.Join(outputDirectory, descriptor.TypedScope.Name), builder.typedScopeRaw,
+			); err != nil {
+				return SparseRoot{}, err
+			}
+			if metrics != nil {
+				metrics.TypedScopesWritten++
+				metrics.AggregateScopeBytes = aggregateScopeBytes
+			}
+		}
 		if err := writeSparseControl(filepath.Join(outputDirectory, indexName), indexBytes); err != nil {
 			return SparseRoot{}, err
 		}
@@ -503,6 +565,19 @@ func scanSparseMember(
 						return sparseInvalid("admitted byte count overflows")
 					}
 					declared[index] += record.DeclaredBytes
+					if sparseTypedInputPresent(target.descriptor.TypedInputs) {
+						if len(target.typedScope) >= PartitionMaxTypedScopeRecords {
+							return sparseInvalid(
+								"typed document scope exceeds %d records",
+								PartitionMaxTypedScopeRecords,
+							)
+						}
+						target.typedScope = append(target.typedScope, sparseTypedSource{
+							pathIdentity: sha256.Sum256([]byte(record.Path)),
+							path:         record.Path,
+							objectID:     record.OID, declaredBytes: record.DeclaredBytes,
+						})
+					}
 				}
 			}
 			return nil
@@ -561,9 +636,27 @@ func addSparseTypedInputPartitions(
 	manifest Manifest,
 	builder *sparseDomainBuilder,
 	aggregatePartitions *int,
+	aggregateScopeBytes *int64,
 ) error {
 	if builder == nil || sparseTypedInputsUnavailable(builder.descriptor.TypedInputs) {
 		return nil
+	}
+	if sparseTypedInputPresent(builder.descriptor.TypedInputs) {
+		typedScope, err := canonicalTypedScope(builder.typedScope)
+		if err != nil {
+			return err
+		}
+		if len(typedScope) > MaxSparseTypedScopeBytes || aggregateScopeBytes == nil ||
+			int64(len(typedScope)) > MaxSparseAggregateScopeBytes-*aggregateScopeBytes {
+			return sparseInvalid("typed source scopes exceed %d/%d bytes", MaxSparseTypedScopeBytes, MaxSparseAggregateScopeBytes)
+		}
+		builder.typedScopeRaw = typedScope
+		builder.descriptor.TypedScope = &SparseTypedScopeDescriptor{
+			Name:    sparseTypedScopeName(builder.descriptor.PolicyOrdinal),
+			Records: len(builder.typedScope), ContentBytes: int64(len(typedScope)),
+			ContentDigest: sparseContentDigest(typedScope),
+		}
+		*aggregateScopeBytes += int64(len(typedScope))
 	}
 	for _, input := range builder.descriptor.TypedInputs {
 		if !input.Present {
@@ -578,6 +671,7 @@ func addSparseTypedInputPartitions(
 		}
 		typedInput := input
 		start := builder.descriptor.AdmittedRecords
+		typedScope := *builder.descriptor.TypedScope
 		partition := ExtractionPartition{
 			Schema:                    ExtractionPartitionSchema,
 			Repository:                manifest.Repository,
@@ -587,6 +681,7 @@ func addSparseTypedInputPartitions(
 			Plane: builder.identity.Plane, Kind: PartitionKindTypedInput,
 			Ordinal: len(builder.index.Partitions), SourceStart: start, SourceEnd: start,
 			ByteKind: "typed_input_declared", TypedInput: &typedInput,
+			TypedScope:            &typedScope,
 			AdmittedDeclaredBytes: input.DeclaredBytes,
 			Quotas:                FrozenExtractionPartitionQuotas(),
 		}
@@ -599,6 +694,66 @@ func addSparseTypedInputPartitions(
 		builder.descriptor.AdmittedDeclaredBytes += input.DeclaredBytes
 	}
 	return nil
+}
+
+func sparseTypedInputPresent(inputs []SparseTypedInput) bool {
+	for _, input := range inputs {
+		if input.Present {
+			return true
+		}
+	}
+	return false
+}
+
+func canonicalTypedScope(values []sparseTypedSource) ([]byte, error) {
+	if len(values) > PartitionMaxTypedScopeRecords {
+		return nil, sparseInvalid("typed document scope exceeds %d records", PartitionMaxTypedScopeRecords)
+	}
+	ordered := slices.Clone(values)
+	slices.SortFunc(ordered, func(left, right sparseTypedSource) int {
+		switch {
+		case left.path < right.path:
+			return -1
+		case left.path > right.path:
+			return 1
+		default:
+			return 0
+		}
+	})
+	headerBytes := len(sparseTypedScopeMagic) + 4 + len(ordered)*4
+	pathBytes := 0
+	for _, value := range ordered {
+		if !safePath(value.path) || len(value.path) > math.MaxUint16 ||
+			value.pathIdentity != sha256.Sum256([]byte(value.path)) ||
+			len(value.path) > PartitionMaxTypedScopePathBytes-pathBytes {
+			return nil, sparseInvalid("typed document scope exceeds its path envelope")
+		}
+		pathBytes += len(value.path)
+	}
+	result := make([]byte, 0, headerBytes+len(ordered)*sparseTypedScopeEntryBase+pathBytes)
+	result = append(result, sparseTypedScopeMagic...)
+	result = binary.BigEndian.AppendUint32(result, uint32(len(ordered)))
+	result = append(result, make([]byte, len(ordered)*4)...)
+	for index, value := range ordered {
+		if index > 0 && value.path == ordered[index-1].path {
+			return nil, sparseInvalid("typed document scope repeats a path identity")
+		}
+		if !gitobj.IsObjectID(value.objectID) || value.declaredBytes < 0 ||
+			value.declaredBytes > PartitionMaxCandidateDeclaredBytes {
+			return nil, sparseInvalid("typed document scope has an invalid source identity")
+		}
+		binary.BigEndian.PutUint32(
+			result[len(sparseTypedScopeMagic)+4+index*4:], uint32(len(result)),
+		)
+		result = append(result, value.pathIdentity[:]...)
+		result = binary.BigEndian.AppendUint16(result, uint16(len(value.path)))
+		result = append(result, value.path...)
+		result = append(result, byte(len(value.objectID)))
+		result = append(result, value.objectID...)
+		result = append(result, make([]byte, 64-len(value.objectID))...)
+		result = binary.BigEndian.AppendUint64(result, uint64(value.declaredBytes))
+	}
+	return result, nil
 }
 
 func finishSparseDomain(builder *sparseDomainBuilder) {
@@ -689,6 +844,14 @@ func ValidateSparseStage(
 			return err
 		}
 		allowed[descriptor.IndexName] = struct{}{}
+		if descriptor.TypedScope != nil {
+			if _, err := readSparseTypedScope(
+				filepath.Join(directory, descriptor.TypedScope.Name), *descriptor.TypedScope,
+			); err != nil {
+				return err
+			}
+			allowed[descriptor.TypedScope.Name] = struct{}{}
+		}
 	}
 	entries, err := os.ReadDir(directory)
 	if err != nil {
@@ -944,6 +1107,61 @@ func (domain *SparseDomain) TypedInputPartition(ordinal int) (SparseTypedInput, 
 	return *partition.TypedInput, nil
 }
 
+// TypedSourceScope reads the one digest-bound source-scope control used by a
+// typed partition. The returned lookup supports exact document admission and
+// immutable Git object acquisition without reopening candidate members.
+func (domain *SparseDomain) TypedSourceScope(
+	ctx context.Context,
+	ordinal int,
+) (SparseTypedSourceScope, error) {
+	if ctx == nil {
+		return SparseTypedSourceScope{}, errors.New("typed source scope requires a context")
+	}
+	if domain == nil || domain.publication == nil || ordinal < 0 || ordinal >= len(domain.index.Partitions) {
+		return SparseTypedSourceScope{}, errors.New("invalid sparse typed source scope read")
+	}
+	partition := domain.index.Partitions[ordinal]
+	if partition.Kind != PartitionKindTypedInput || partition.TypedScope == nil ||
+		domain.descriptor.TypedScope == nil || *partition.TypedScope != *domain.descriptor.TypedScope {
+		return SparseTypedSourceScope{}, errors.New("sparse partition has no typed source scope")
+	}
+	if domain.descriptor.Availability == "unavailable" {
+		return SparseTypedSourceScope{}, ErrSparseUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return SparseTypedSourceScope{}, err
+	}
+	publication := domain.publication
+	if IsPublishing(publication.candidateRoot, publication.state.Repository) {
+		return SparseTypedSourceScope{}, ErrPublishing
+	}
+	scope, err := readSparseTypedScope(
+		filepath.Join(publication.sparseRoot, partition.TypedScope.Name), *partition.TypedScope,
+	)
+	if err != nil {
+		return SparseTypedSourceScope{}, err
+	}
+	if publication.metrics != nil {
+		publication.metrics.TypedScopeReads++
+		publication.metrics.ControlBytesRead += int64(len(scope.raw))
+	}
+	if IsPublishing(publication.candidateRoot, publication.state.Repository) {
+		return SparseTypedSourceScope{}, ErrPublishing
+	}
+	return scope, nil
+}
+
+// Contains reports whether path is in the exact admitted typed source scope.
+func (scope SparseTypedSourceScope) Contains(path string) bool {
+	_, _, ok := scope.source(path)
+	return ok
+}
+
+// Source resolves an admitted path to its immutable object identity and size.
+func (scope SparseTypedSourceScope) Source(path string) (string, int64, bool) {
+	return scope.source(path)
+}
+
 func PartitionResultIdentity(partition ExtractionPartition, resultDigest string) (string, error) {
 	if err := validateSparsePartition(partition, nil, partition.SourceStart); err != nil || !validDigest(resultDigest) {
 		return "", errors.New("partition result identity is invalid")
@@ -991,6 +1209,7 @@ func validateSparseRoot(root SparseRoot, manifest Manifest) error {
 	seenNames := make(map[string]struct{}, len(root.Domains))
 	aggregatePartitions := 0
 	aggregateIndexBytes := int64(0)
+	aggregateScopeBytes := int64(0)
 	for ordinal, descriptor := range root.Domains {
 		identity := manifest.Policies[ordinal]
 		if descriptor.Domain != identity.Domain || descriptor.Version != identity.Version ||
@@ -1014,12 +1233,25 @@ func validateSparseRoot(root SparseRoot, manifest Manifest) error {
 				return sparseInvalid("domain descriptor %d typed input is invalid", ordinal)
 			}
 		}
+		hasTypedInput := sparseTypedInputPresent(descriptor.TypedInputs)
+		if hasTypedInput != (descriptor.TypedScope != nil) ||
+			(descriptor.TypedScope != nil && !validSparseTypedScopeDescriptor(
+				*descriptor.TypedScope, ordinal, descriptor.AdmittedRecords,
+			)) {
+			return sparseInvalid("domain descriptor %d typed scope is invalid", ordinal)
+		}
 		if descriptor.PartitionCount > MaxSparseAggregatePartitions-aggregatePartitions ||
 			descriptor.IndexBytes > MaxSparseAggregateIndexBytes-aggregateIndexBytes {
 			return sparseInvalid("aggregate sparse controls exceed their partition or byte limit")
 		}
 		aggregatePartitions += descriptor.PartitionCount
 		aggregateIndexBytes += descriptor.IndexBytes
+		if descriptor.TypedScope != nil {
+			if descriptor.TypedScope.ContentBytes > MaxSparseAggregateScopeBytes-aggregateScopeBytes {
+				return sparseInvalid("aggregate typed source scopes exceed their byte limit")
+			}
+			aggregateScopeBytes += descriptor.TypedScope.ContentBytes
+		}
 		if !sparseAggregateWithinLimits(aggregatePartitions, aggregateIndexBytes) {
 			return sparseInvalid("aggregate sparse controls exceed their partition or byte limit")
 		}
@@ -1032,6 +1264,12 @@ func validateSparseRoot(root SparseRoot, manifest Manifest) error {
 			return sparseInvalid("duplicate domain index name")
 		}
 		seenNames[descriptor.IndexName] = struct{}{}
+		if descriptor.TypedScope != nil {
+			if _, duplicate := seenNames[descriptor.TypedScope.Name]; duplicate {
+				return sparseInvalid("duplicate typed source scope name")
+			}
+			seenNames[descriptor.TypedScope.Name] = struct{}{}
+		}
 	}
 	return nil
 }
@@ -1111,7 +1349,9 @@ func validateSparseDomain(
 				typedOrdinal++
 			}
 			if typedOrdinal >= len(descriptor.TypedInputs) || partition.TypedInput == nil ||
-				*partition.TypedInput != descriptor.TypedInputs[typedOrdinal] {
+				*partition.TypedInput != descriptor.TypedInputs[typedOrdinal] ||
+				partition.TypedScope == nil || descriptor.TypedScope == nil ||
+				*partition.TypedScope != *descriptor.TypedScope {
 				return sparseInvalid("typed partition is missing, forged, or out of order")
 			}
 			typedOrdinal++
@@ -1195,6 +1435,7 @@ func validateSparsePartition(
 	switch partition.Kind {
 	case PartitionKindCandidateMember:
 		if partition.Member == nil || partition.TypedInput != nil ||
+			partition.TypedScope != nil ||
 			partition.SourceEnd <= partition.SourceStart ||
 			partition.SourceEnd-partition.SourceStart != partition.AdmittedRecords ||
 			partition.AdmittedRecords <= 0 || partition.AdmittedRecords > partition.Member.RecordCount ||
@@ -1222,10 +1463,12 @@ func validateSparsePartition(
 		}
 	case PartitionKindTypedInput:
 		if partition.Member != nil || partition.TypedInput == nil ||
+			partition.TypedScope == nil ||
 			partition.SourceEnd != partition.SourceStart || partition.AdmittedRecords != 0 ||
 			partition.ByteKind != "typed_input_declared" ||
 			partition.CallerPrefix != "" || partition.CallerPrefixBits != 0 ||
 			!validSparseTypedInput(*partition.TypedInput, true) ||
+			!validSparseTypedScopeDescriptor(*partition.TypedScope, -1, -1) ||
 			partition.AdmittedDeclaredBytes != partition.TypedInput.DeclaredBytes ||
 			partition.AdmittedDeclaredBytes > quotas.TypedInputBytes {
 			return sparseInvalid("typed-input partition %d is invalid", partition.Ordinal)
@@ -1234,6 +1477,27 @@ func validateSparsePartition(
 		return sparseInvalid("partition kind is invalid")
 	}
 	return nil
+}
+
+func validSparseTypedScopeDescriptor(
+	descriptor SparseTypedScopeDescriptor,
+	ordinal int,
+	records int,
+) bool {
+	if ordinal >= 0 && descriptor.Name != sparseTypedScopeName(ordinal) {
+		return false
+	}
+	if filepath.Base(descriptor.Name) != descriptor.Name ||
+		descriptor.Records < 0 || descriptor.Records > PartitionMaxTypedScopeRecords ||
+		descriptor.ContentBytes < int64(len(sparseTypedScopeMagic)+4+descriptor.Records*(4+sparseTypedScopeEntryBase+1)) ||
+		descriptor.ContentBytes <= 0 || descriptor.ContentBytes > MaxSparseTypedScopeBytes ||
+		!validDigest(descriptor.ContentDigest) {
+		return false
+	}
+	if descriptor.Records == 0 && descriptor.ContentBytes != int64(len(sparseTypedScopeMagic)+4) {
+		return false
+	}
+	return records < 0 || descriptor.Records == records
 }
 
 func validSparseTypedInput(input SparseTypedInput, requirePresent bool) bool {
@@ -1314,7 +1578,146 @@ func readSparseDomain(filePath string) (SparseDomainIndex, []byte, error) {
 	return index, raw, err
 }
 
-func readSparseJSON(filePath string, limit int64, target any) (_ []byte, resultErr error) {
+func readSparseTypedScope(
+	filePath string,
+	descriptor SparseTypedScopeDescriptor,
+) (SparseTypedSourceScope, error) {
+	if !validSparseTypedScopeDescriptor(descriptor, -1, -1) {
+		return SparseTypedSourceScope{}, sparseInvalid("typed source scope descriptor is invalid")
+	}
+	raw, err := readSparseBytes(filePath, MaxSparseTypedScopeBytes)
+	if err != nil {
+		return SparseTypedSourceScope{}, err
+	}
+	if int64(len(raw)) != descriptor.ContentBytes ||
+		sparseContentDigest(raw) != descriptor.ContentDigest ||
+		!validSparseTypedScope(raw, descriptor.Records) {
+		return SparseTypedSourceScope{}, sparseInvalid("typed source scope differs from its descriptor")
+	}
+	return SparseTypedSourceScope{raw: raw, records: descriptor.Records}, nil
+}
+
+func validSparseTypedScope(raw []byte, records int) bool {
+	headerBytes := len(sparseTypedScopeMagic) + 4 + records*4
+	if records < 0 || records > PartitionMaxTypedScopeRecords ||
+		len(raw) < headerBytes+records*sparseTypedScopeEntryBase ||
+		!bytes.Equal(raw[:len(sparseTypedScopeMagic)], []byte(sparseTypedScopeMagic)) ||
+		binary.BigEndian.Uint32(raw[len(sparseTypedScopeMagic):len(sparseTypedScopeMagic)+4]) != uint32(records) {
+		return false
+	}
+	previousPath := ""
+	pathBytes := 0
+	cursor := headerBytes
+	for ordinal := 0; ordinal < records; ordinal++ {
+		offset := int(binary.BigEndian.Uint32(
+			raw[len(sparseTypedScopeMagic)+4+ordinal*4:],
+		))
+		if offset != cursor || offset+sparseTypedScopeEntryBase > len(raw) {
+			return false
+		}
+		identity := raw[offset : offset+sha256.Size]
+		pathLength := int(binary.BigEndian.Uint16(raw[offset+sha256.Size:]))
+		pathStart := offset + sha256.Size + 2
+		pathEnd := pathStart + pathLength
+		if pathLength == 0 || pathEnd+1+64+8 > len(raw) ||
+			pathLength > PartitionMaxTypedScopePathBytes-pathBytes {
+			return false
+		}
+		path := string(raw[pathStart:pathEnd])
+		pathIdentity := sha256.Sum256([]byte(path))
+		if !safePath(path) || !bytes.Equal(identity, pathIdentity[:]) ||
+			(ordinal > 0 && previousPath >= path) {
+			return false
+		}
+		previousPath = path
+		pathBytes += pathLength
+		oidLength := int(raw[pathEnd])
+		oidStart := pathEnd + 1
+		if oidLength != 40 && oidLength != 64 ||
+			!gitobj.IsObjectID(string(raw[oidStart:oidStart+oidLength])) {
+			return false
+		}
+		for _, padding := range raw[oidStart+oidLength : oidStart+64] {
+			if padding != 0 {
+				return false
+			}
+		}
+		declared := binary.BigEndian.Uint64(raw[oidStart+64 : oidStart+64+8])
+		if declared > uint64(PartitionMaxCandidateDeclaredBytes) {
+			return false
+		}
+		cursor = oidStart + 64 + 8
+	}
+	return cursor == len(raw)
+}
+
+func (scope SparseTypedSourceScope) source(path string) (string, int64, bool) {
+	headerBytes := len(sparseTypedScopeMagic) + 4 + scope.records*4
+	if !safePath(path) || scope.records < 0 || scope.records > PartitionMaxTypedScopeRecords ||
+		len(scope.raw) < headerBytes+scope.records*sparseTypedScopeEntryBase {
+		return "", 0, false
+	}
+	low, high := 0, scope.records
+	for low < high {
+		middle := low + (high-low)/2
+		offset := scope.offset(middle)
+		pathLength := int(binary.BigEndian.Uint16(scope.raw[offset+sha256.Size:]))
+		pathStart := offset + sha256.Size + 2
+		current := string(scope.raw[pathStart : pathStart+pathLength])
+		if current < path {
+			low = middle + 1
+		} else {
+			high = middle
+		}
+	}
+	if low >= scope.records {
+		return "", 0, false
+	}
+	offset := scope.offset(low)
+	pathLength := int(binary.BigEndian.Uint16(scope.raw[offset+sha256.Size:]))
+	pathStart := offset + sha256.Size + 2
+	if string(scope.raw[pathStart:pathStart+pathLength]) != path {
+		return "", 0, false
+	}
+	oidLengthOffset := pathStart + pathLength
+	oidLength := int(scope.raw[oidLengthOffset])
+	oidStart := oidLengthOffset + 1
+	declared := binary.BigEndian.Uint64(scope.raw[oidStart+64 : oidStart+64+8])
+	return string(scope.raw[oidStart : oidStart+oidLength]), int64(declared), true
+}
+
+func (scope SparseTypedSourceScope) offset(ordinal int) int {
+	return int(binary.BigEndian.Uint32(
+		scope.raw[len(sparseTypedScopeMagic)+4+ordinal*4:],
+	))
+}
+
+// Records returns the exact number of admitted typed source identities.
+func (scope SparseTypedSourceScope) Records() int { return scope.records }
+
+// Walk visits every canonical admitted path in path-identity order.
+func (scope SparseTypedSourceScope) Walk(
+	ctx context.Context,
+	visit func(string) error,
+) error {
+	if ctx == nil || visit == nil {
+		return errors.New("typed source scope walk is invalid")
+	}
+	for ordinal := 0; ordinal < scope.records; ordinal++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		offset := scope.offset(ordinal)
+		pathLength := int(binary.BigEndian.Uint16(scope.raw[offset+sha256.Size:]))
+		pathStart := offset + sha256.Size + 2
+		if err := visit(string(scope.raw[pathStart : pathStart+pathLength])); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func readSparseBytes(filePath string, limit int64) (_ []byte, resultErr error) {
 	info, err := os.Lstat(filePath)
 	if err != nil {
 		return nil, err
@@ -1341,6 +1744,14 @@ func readSparseJSON(filePath string, limit int64, target any) (_ []byte, resultE
 	}
 	if int64(len(raw)) > limit {
 		return nil, sparseInvalid("control exceeds %d bytes", limit)
+	}
+	return raw, nil
+}
+
+func readSparseJSON(filePath string, limit int64, target any) (_ []byte, resultErr error) {
+	raw, err := readSparseBytes(filePath, limit)
+	if err != nil {
+		return nil, err
 	}
 	if err := strictDecode(bytes.NewReader(raw), limit, target); err != nil {
 		return nil, sparseInvalid("decode control: %v", err)
@@ -1454,6 +1865,10 @@ func cloneSparseRoot(root SparseRoot) SparseRoot {
 func cloneSparseDescriptor(descriptor SparseDomainDescriptor) SparseDomainDescriptor {
 	result := descriptor
 	result.TypedInputs = slices.Clone(descriptor.TypedInputs)
+	if descriptor.TypedScope != nil {
+		typedScope := *descriptor.TypedScope
+		result.TypedScope = &typedScope
+	}
 	return result
 }
 
@@ -1467,6 +1882,10 @@ func cloneSparsePartitions(partitions []ExtractionPartition) []ExtractionPartiti
 		if result[index].TypedInput != nil {
 			input := *result[index].TypedInput
 			result[index].TypedInput = &input
+		}
+		if result[index].TypedScope != nil {
+			typedScope := *result[index].TypedScope
+			result[index].TypedScope = &typedScope
 		}
 	}
 	return result

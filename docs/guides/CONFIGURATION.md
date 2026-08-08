@@ -128,12 +128,13 @@ job history, and it adds no configuration key. The 100-row response cap,
 caps, 256-row stale-reap batch, and active-row migration refusal are frozen
 safety contracts rather than operator-tunable retention controls. T30.6o
 shipped the authorization-first status shell and its original 52-component
-registry; T40.7 adds `evidence_chunk` beneath `evidence_publications`, making
-the current registry 53 components. The unconditional
+registry; T40.7 adds `evidence_chunk` and T40.10 adds
+`extraction_domain_root` beneath `evidence_publications`, making the current
+registry 54 components. The unconditional
 `unbounded_historical_publication_retention` warning is reported in
 `X-Phebs-Warning-Code` on every endpoint response, including
 authorization and internal errors, while successful bodies also carry
-`warning_code`. The core collector now populates 22 SurrealDB components with
+`warning_code`. The core collector now populates 23 SurrealDB components with
 bounded aggregate per-table or per-pin-namespace row totals. T30.6q now populates one
 aggregate physical-row total for each of the exact 24
 Investigation/Workbench tables. T30.6r completes the remaining seven derived
@@ -157,42 +158,45 @@ exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence;
 the independent evidence sweep may later reclaim newly unpinned superseded
 evidence when otherwise eligible. Owner-specific T35 ages, counts, byte kinds,
 and watermarks are fixed decisions rather than additional configuration keys.
-The fixed 4,096-report/4,149-scan aggregate allocation and
+The fixed 4,096-report/4,150-scan aggregate allocation and
 64-KiB response ceiling are implementation safety contracts, not configuration
-keys. Registry indices 0–14 receive 78 report slots plus one sentinel and all
-later indices receive 77 plus one. The core collector therefore receives
-1,709 report and at most 1,731 scan identities. That placement is an API-shell
+keys. Registry indices 0–45 receive 76 report slots plus one sentinel and all
+later indices receive 75 plus one. The core collector therefore receives
+1,745 report and at most 1,768 scan identities. That placement is an API-shell
 choice: the store accepts report allocations from 1 through 79 only when scan
-is exactly report plus one and separately enforces the 1,709/1,731
-aggregate ceilings. It produces 22 component summaries using at most 24
+is exactly report plus one and separately enforces the 1,745/1,768
+aggregate ceilings. It produces 23 component summaries using at most 25
 bounded row-range queries after four cached writer/migration-marker point
 checks and one pin-index catalog check. Each one-statement query must return
 exactly one result envelope. Failures remain localized as unavailable metrics
 and emit one log event from the closed
 operational class set—`not_ready` or `query_error`—per failed component, at most
-22 per request. These limits are not configuration keys. The retention
+23 per request. These limits are not configuration keys. The retention
 collector reuses the `evidence_chunk` table and indexes required by T40.7's
-accounting writer; inventory adds no further schema, backfill,
+accounting writer and includes T40.10's `extraction_domain_root`; inventory
+adds no further schema, backfill,
 writer-generation bump, index, sync-tick work, writer work, or retention
 lifecycle change. T30.6q preserves the shell's
-non-transferable allocation: all 24 Investigation components receive 77 report
-slots plus one sentinel, for 1,848 reported and at most 1,872 scanned
-identities. One `INFO FOR DB` catalog preflight plus at most 24 direct
+non-transferable allocation: all 24 Investigation components receive 76 report
+slots plus one sentinel, for 1,824 reported and at most 1,848 scanned
+identities. Its store-side safety fence still accepts the earlier larger
+1,848/1,872 aggregate, while the current API never requests it. One
+`INFO FOR DB` catalog preflight plus at most 24 direct
 record-ID-ordered table scans produces those summaries with at most 25 calls
-and 78 selected IDs retained for the active table. The
+and 77 selected IDs retained for the active table. The
 server-side catalog intersection returns at most the 24 fixed allowlisted table
 names.
 Missing tables and failed reads remain unavailable and emit at most 24
-additional events classified as `not_ready` or `query_error`. Together T30.6p
-and T30.6q stay within
-3,557-report, 3,603-scan, 54-call, and 46-event ceilings. The collector adds no
+additional events classified as `not_ready` or `query_error`. Together the
+current core and T30.6q collectors stay within
+3,569-report, 3,616-scan, 55-call, and 47-event ceilings. The collector adds no
 query index, schema backfill, startup reconstruction, configuration, writer,
 or lifecycle work. T30.6r now populates the final seven derived components and,
 where the operating system supports the descriptor-bound filesystem-capacity
 primitive, the installation total/available metrics. Its four authority
 selections use at most nine store client calls; the one batched caller fence
-performs at most 308
-server-internal point reads—four for each of at most 77 authorities—plus its
+performs at most 304
+server-internal point reads—four for each of at most 76 authorities—plus its
 marker check. Incremental filesystem work is fixed at 163,840 entry
 observations, 4,096 charged stats, 64 MiB of manifest metadata, 256 queued
 caller directories, and five simultaneous structural descriptors:
@@ -202,11 +206,11 @@ consumes the observation budget. Names are otherwise names-only; only
 recognized names receive explicit descriptor-rooted `Lstat` checks. These
 limits and the 256-name directory batch are implementation safety contracts,
 not configuration keys. T30.6r localizes at most nine diagnostics,
-bringing the complete status-path event ceiling to 55; neither is configurable.
+bringing the complete status-path event ceiling to 56; neither is configurable.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
-The 77-report/78-scan slots allocate the response envelope rather than promise
+The 76-report/77-scan maximum slots allocate the response envelope rather than promise
 universal exactness. The 4,096-stat ceiling covers the regression-gated lean
 maximum allocation; recognized residue, nested stages, or the independent
 64-MiB metadata limit may still localize a lower-bound or unavailable metric.

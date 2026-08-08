@@ -139,6 +139,10 @@ func (e extractor) Extract(
 	corpus sdk.Corpus,
 	emit sdk.Emit,
 ) (sdk.Coverage, error) {
+	typedPartition := false
+	if typed, ok := corpus.(sdk.SCIPTypedPartition); ok {
+		typedPartition = typed.SCIPTypedPartition()
+	}
 	coverage := sdk.Coverage{Protocols: []string{
 		e.protocol, "generated-from-snapshot-v1", "resolution-scip-v1",
 		"resolution-syntax-v1", "scip",
@@ -237,12 +241,17 @@ func (e extractor) Extract(
 		return coverage, err
 	}
 	coverage.UnresolvedCount += unresolved
-	fallbackUnresolved, err := e.emitSyntaxFallback(
-		ctx, corpus, paths, typedSpans, attribution, attributionDigest, emit,
-	)
-	coverage.UnresolvedCount += fallbackUnresolved
+	if !typedPartition {
+		fallbackUnresolved, fallbackErr := e.emitSyntaxFallback(
+			ctx, corpus, paths, typedSpans, attribution, attributionDigest, emit,
+		)
+		coverage.UnresolvedCount += fallbackUnresolved
+		if fallbackErr != nil {
+			return coverage, fallbackErr
+		}
+	}
 	sort.Strings(coverage.Protocols)
-	return coverage, err
+	return coverage, nil
 }
 
 type generatedFromLookup interface {

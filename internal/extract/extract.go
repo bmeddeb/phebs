@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -1439,30 +1440,39 @@ func (w *Worker) runBecameStale(ctx context.Context, scope store.ExtractionScope
 }
 
 type runSink struct {
-	ctx           context.Context
-	evidence      store.EvidenceStore
-	runID         string
-	repo          string
-	commit        string
-	version       string
-	corpus        *verifiedCorpus
-	operation     *domainOperationRecorder
-	maxStagedRows int
+	ctx            context.Context
+	evidence       store.EvidenceStore
+	accounting     store.EvidenceChunkAccountingStore
+	runID          string
+	repo           string
+	commit         string
+	version        string
+	corpus         *verifiedCorpus
+	operation      *domainOperationRecorder
+	maxStagedRows  int
+	maxFacts       int
+	maxReferences  int64
+	maxCanonical   int64
+	maxEncoded     int64
+	chunkNamespace string
 
-	mu              sync.Mutex
-	closed          bool
-	err             error
-	facts           []sdk.Fact
-	factCount       int
-	chunkSequence   uint64
-	stagedChunkIDs  []string
-	stagedChunks    map[string]struct{}
-	atomIDs         map[string]struct{}
-	assertionIDs    map[string]struct{}
-	atomCount       int
-	assertionCount  int
-	unresolvedCount int
-	stagedRows      int
+	mu               sync.Mutex
+	closed           bool
+	err              error
+	facts            []sdk.Fact
+	factCount        int
+	chunkSequence    uint64
+	stagedChunkIDs   []string
+	stagedChunks     map[string]struct{}
+	atomIDs          map[string]struct{}
+	assertionIDs     map[string]struct{}
+	atomCount        int
+	assertionCount   int
+	unresolvedCount  int
+	stagedRows       int
+	stagedReferences int
+	canonicalBytes   int64
+	encodedBytes     int64
 }
 
 func newRunSink(
@@ -1477,6 +1487,9 @@ func newRunSink(
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
 		operation:      operation,
 		maxStagedRows:  maxStagedRows,
+		maxFacts:       maxFactsPerRun,
+		maxCanonical:   math.MaxInt64,
+		maxEncoded:     math.MaxInt64,
 		facts:          make([]sdk.Fact, 0, evidenceChunkSize),
 		stagedChunks:   make(map[string]struct{}),
 		atomIDs:        make(map[string]struct{}),
@@ -1517,11 +1530,11 @@ func (s *runSink) Emit(fact sdk.Fact) error {
 		s.err = fmt.Errorf("fact %q line span does not match its trusted byte span", fact.Path)
 		return s.err
 	}
-	if s.factCount >= maxFactsPerRun {
+	if s.factCount >= s.maxFacts {
 		s.err = measuredOperationLimitError(
-			fmt.Sprintf("run exceeds %d-fact limit", maxFactsPerRun),
+			fmt.Sprintf("partition exceeds %d-fact reservation", s.maxFacts),
 			pipelinerefusal.DimensionFacts,
-			int64(s.factCount+1), int64(maxFactsPerRun),
+			int64(s.factCount+1), int64(s.maxFacts),
 		)
 		return s.err
 	}
@@ -1567,6 +1580,7 @@ type verifiedCorpus struct {
 	typedInput        treeRecord
 	typedInputKind    string
 	typedInputPresent bool
+	typedPartition    bool
 	manifestBound     bool
 	scoped            bool
 	pathInScope       func(string) bool
@@ -1624,12 +1638,16 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	candidates := make(map[string]struct{})
 	pathBytes := 0
 	unreadable := 0
+	maxInventoryFiles := maxCorpusFiles
+	if c.typedPartition {
+		maxInventoryFiles = candidatepkg.PartitionMaxTypedScopeRecords
+	}
 	visit := func(filePath string, isCandidate bool) error {
-		if len(paths)+unreadable >= maxCorpusFiles {
+		if len(paths)+unreadable >= maxInventoryFiles {
 			return measuredOperationLimitError(
-				fmt.Sprintf("corpus inventory exceeds %d-file limit", maxCorpusFiles),
+				fmt.Sprintf("corpus inventory exceeds %d-file limit", maxInventoryFiles),
 				pipelinerefusal.DimensionInventoryFiles,
-				int64(len(paths)+unreadable+1), int64(maxCorpusFiles),
+				int64(len(paths)+unreadable+1), int64(maxInventoryFiles),
 			)
 		}
 		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
@@ -1965,6 +1983,12 @@ func (c *verifiedCorpus) SCIPDocumentIncluded(filePath string) bool {
 		candidatepkg.SourceLaneForPath(filePath) == candidatepkg.SourceLaneBase
 }
 
+func (c *verifiedCorpus) SCIPTypedPartition() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return !c.closed && c.inventoryComplete && c.typedPartition
+}
+
 func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
 	c.attributionOnce.Do(func() {
 		c.attributionSource, c.attributionErr = loadAttributionSource(ctx, c)
@@ -2061,12 +2085,16 @@ func (c *verifiedCorpus) read(
 		manifestEntry = c.typedInput
 		fromManifest = true
 	}
-	if c.readCount >= maxCorpusFiles*4 {
+	maxReadFiles := maxCorpusFiles
+	if c.typedPartition {
+		maxReadFiles = candidatepkg.PartitionMaxTypedScopeRecords
+	}
+	if c.readCount >= maxReadFiles*4 {
 		c.mu.Unlock()
 		return sdk.Blob{}, measuredOperationLimitError(
-			fmt.Sprintf("corpus exceeds %d-read limit", maxCorpusFiles*4),
+			fmt.Sprintf("corpus exceeds %d-read limit", maxReadFiles*4),
 			pipelinerefusal.DimensionSourceReadAttempts,
-			int64(c.readCount+1), int64(maxCorpusFiles*4),
+			int64(c.readCount+1), int64(maxReadFiles*4),
 		)
 	}
 	c.readCount++
@@ -2121,11 +2149,11 @@ func (c *verifiedCorpus) read(
 	if previous, ok := c.sources[filePath]; ok && previous != record {
 		return sdk.Blob{}, fmt.Errorf("corpus blob %q changed during extraction", filePath)
 	}
-	if _, ok := c.sources[filePath]; !ok && len(c.sources) >= maxCorpusFiles {
+	if _, ok := c.sources[filePath]; !ok && len(c.sources) >= maxReadFiles {
 		return sdk.Blob{}, measuredOperationLimitError(
-			fmt.Sprintf("corpus exceeds %d-read-file limit", maxCorpusFiles),
+			fmt.Sprintf("corpus exceeds %d-read-file limit", maxReadFiles),
 			pipelinerefusal.DimensionSourceReadFiles,
-			int64(len(c.sources)+1), int64(maxCorpusFiles),
+			int64(len(c.sources)+1), int64(maxReadFiles),
 		)
 	}
 	if _, exists := c.sources[filePath]; !exists {
@@ -2370,10 +2398,24 @@ func (s *runSink) flushLocked() error {
 	defer func() {
 		s.operation.addStaging(s.operation.elapsed(stageStarted))
 	}()
-	chunk := buildFactChunk(s.chunkSequence, s.facts)
+	chunk := buildFactChunkForNamespace(s.chunkSequence, s.facts, s.chunkNamespace)
+	raw, err := json.Marshal(chunk)
+	if err != nil {
+		return err
+	}
+	if int64(len(raw)) > s.maxCanonical-s.canonicalBytes ||
+		int64(len(raw)) > s.maxEncoded-s.encodedBytes {
+		return measuredOperationLimitError(
+			"partition exceeds its canonical or encoded byte reservation",
+			pipelinerefusal.DimensionGenerationEncodedBytes,
+			s.encodedBytes+int64(len(raw)), s.maxEncoded,
+		)
+	}
 	if err := s.stageChunkLocked(chunk); err != nil {
 		return err
 	}
+	s.canonicalBytes += int64(len(raw))
+	s.encodedBytes += int64(len(raw))
 	s.facts = s.facts[:0]
 	return nil
 }
@@ -2382,16 +2424,27 @@ func (s *runSink) flushLocked() error {
 // transport unit. The sequence is part of the identity, so equal extractor
 // inputs produce the same ordered IDs while a reordered stream cannot alias.
 func buildFactChunk(sequence uint64, facts []sdk.Fact) sdk.FactChunk {
+	return buildFactChunkForNamespace(sequence, facts, "")
+}
+
+func buildFactChunkForNamespace(sequence uint64, facts []sdk.Fact, namespace string) sdk.FactChunk {
 	chunk := sdk.FactChunk{
 		Schema: evidenceChunkSchema, Sequence: sequence,
 		Facts: append([]sdk.Fact(nil), facts...),
 	}
-	chunk.ID = computeFactChunkID(chunk)
+	chunk.ID = computeFactChunkIDForNamespace(chunk, namespace)
 	return chunk
 }
 
 func computeFactChunkID(chunk sdk.FactChunk) string {
+	return computeFactChunkIDForNamespace(chunk, "")
+}
+
+func computeFactChunkIDForNamespace(chunk sdk.FactChunk, namespace string) string {
 	hash := sha256.New()
+	if namespace != "" {
+		writeChunkField(hash, "partition-v1:"+namespace)
+	}
 	writeChunkField(hash, chunk.Schema)
 	_, _ = fmt.Fprintf(hash, "%d;%d;", chunk.Sequence, len(chunk.Facts))
 	for _, fact := range chunk.Facts {
@@ -2430,7 +2483,7 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 	if len(chunk.Facts) == 0 || len(chunk.Facts) > evidenceChunkSize {
 		return fmt.Errorf("fact chunk has invalid size %d", len(chunk.Facts))
 	}
-	if chunk.ID != computeFactChunkID(chunk) {
+	if chunk.ID != computeFactChunkIDForNamespace(chunk, s.chunkNamespace) {
 		return errors.New("fact chunk has invalid content identity")
 	}
 	if _, staged := s.stagedChunks[chunk.ID]; staged {
@@ -2473,15 +2526,15 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 			Repo: s.repo, Supporting: []string{atom.ID}, Detail: fact.Assertion.Detail,
 		})
 	}
-	chunkStagedRows := len(assocs) + len(asserts)
-	if s.stagedRows+chunkStagedRows > s.maxStagedRows {
+	chunkSubmittedRows := len(assocs) + len(asserts)
+	if s.stagedRows+chunkSubmittedRows > s.maxStagedRows {
 		return pipelinerefusal.Measure(
 			fmt.Errorf(
 				"%w: domain would exceed %d staged rows",
 				errExtractionDomainBudget, s.maxStagedRows,
 			),
 			pipelinerefusal.DimensionStagedRows,
-			int64(s.stagedRows+chunkStagedRows), int64(s.maxStagedRows),
+			int64(s.stagedRows+chunkSubmittedRows), int64(s.maxStagedRows),
 		)
 	}
 	if err := s.evidence.AddEvidenceChunk(
@@ -2489,7 +2542,21 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 	); err != nil {
 		return err
 	}
-	s.stagedRows += chunkStagedRows
+	if s.accounting == nil {
+		s.stagedRows += chunkSubmittedRows
+	} else {
+		receipt, err := s.accounting.GetEvidenceChunkAccounting(s.ctx, s.runID, chunk.ID)
+		if err != nil {
+			return err
+		}
+		if receipt.FactCount != int64(len(chunk.Facts)) ||
+			s.stagedRows+int(receipt.RowDelta) > s.maxStagedRows ||
+			receipt.ReferenceDelta > s.maxReferences-int64(s.stagedReferences) {
+			return errors.New("evidence chunk accounting exceeds its partition reservation")
+		}
+		s.stagedRows += int(receipt.RowDelta)
+		s.stagedReferences += int(receipt.ReferenceDelta)
+	}
 
 	for i, atom := range atoms {
 		if _, exists := s.atomIDs[atom.ID]; !exists {

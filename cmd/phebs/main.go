@@ -47,6 +47,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/indexer"
@@ -388,6 +389,22 @@ func serve(args []string) error {
 			return err
 		}
 		observationRuntime.OnPublished = reconcileRelationship
+	}
+	if len(exs) > 0 {
+		observationAfterPublication := observationRuntime.OnPublished
+		observationRuntime.OnPublished = func(
+			publishedCtx context.Context,
+			repository string,
+		) error {
+			var priorErr error
+			if observationAfterPublication != nil {
+				priorErr = observationAfterPublication(publishedCtx, repository)
+			}
+			_, enqueueErr := st.EnqueuePending(
+				publishedCtx, store.JobExtract, repository, false,
+			)
+			return errors.Join(priorErr, enqueueErr)
+		}
 	}
 	releaseObservationRecovery, recoveryLockErr := acquireObservationTransition(ctx)
 	if recoveryLockErr != nil {
@@ -833,6 +850,94 @@ func serve(args []string) error {
 			Diagnostics:      cfg.Diagnostics.Extraction,
 			ExtractorDetails: cfg.Diagnostics.ExtractorDetails,
 		}
+		openPartitionCandidate := func(
+			openCtx context.Context,
+			repository string,
+		) (*candidate.Publication, error) {
+			var unit *analysisunit.State
+			if scope, configured := analysisUnits[repository]; configured {
+				state, stateErr := scope.State()
+				if stateErr != nil {
+					return nil, stateErr
+				}
+				unit = state
+			}
+			return manifestProvider.OpenCurrentPublication(openCtx, repository, unit)
+		}
+		readPartitionCandidateReference := func(
+			referenceCtx context.Context,
+			repository string,
+		) (candidate.State, error) {
+			var unit *analysisunit.State
+			if scope, configured := analysisUnits[repository]; configured {
+				state, stateErr := scope.State()
+				if stateErr != nil {
+					return candidate.State{}, stateErr
+				}
+				unit = state
+			}
+			return manifestProvider.CurrentPublicationState(referenceCtx, repository, unit)
+		}
+		readPartitionAuthority := func(
+			authorityCtx context.Context,
+			repository string,
+		) (string, string, error) {
+			authority, authorityErr := observationpublication.CurrentInventoryAuthorityV2(
+				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
+			)
+			return authority.SourceGenerationDigest,
+				authority.ObservationGenerationDigest, authorityErr
+		}
+		readPartitionFenceAuthority := func(
+			authorityCtx context.Context,
+			repository string,
+		) (string, string, error) {
+			authority, authorityErr := observationpublication.CurrentInventoryAuthorityReferenceV2(
+				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
+			)
+			return authority.SourceGenerationDigest,
+				authority.ObservationGenerationDigest, authorityErr
+		}
+		partitionRoot := filepath.Join(cfg.Server.DataDir, "extraction-publications")
+		partitionRuntime := &extractionpublication.Runtime{
+			Root: partitionRoot, Store: st,
+			Executor:  &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
+			Publisher: extractionpublication.StorePublisher{Store: st},
+		}
+		partitionReconciler := &extractionpublication.Reconciler{
+			Root: partitionRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
+			Runtime: partitionRuntime, Evidence: st,
+			OpenCandidate: openPartitionCandidate, Authority: readPartitionAuthority,
+			CandidateReference: readPartitionCandidateReference,
+			AuthorityReference: readPartitionFenceAuthority,
+		}
+		partitionRuntime.Source = extractionpublication.GitSparseSource{
+			DataDir: cfg.Server.DataDir, OpenDomain: partitionReconciler.OpenDomain,
+		}
+		partitionRuntime.Fence = extractionpublication.AuthorityFence{
+			Store: st, Acquire: acquireObservationTransition,
+			Current: func(fenceCtx context.Context, plan candidate.DomainResultPlan) error {
+				publication, fenceErr := openPartitionCandidate(fenceCtx, plan.Repository)
+				if fenceErr != nil {
+					return fenceErr
+				}
+				state := publication.State()
+				if state.ManifestDigest != plan.CandidateManifestDigest ||
+					state.GenerationDigest != plan.CandidateGenerationDigest ||
+					state.PolicyDigest != plan.CandidatePolicyDigest {
+					return extractionpublication.ErrStale
+				}
+				source, observation, fenceErr := readPartitionFenceAuthority(fenceCtx, plan.Repository)
+				if fenceErr != nil {
+					return fenceErr
+				}
+				if source != plan.SourceGenerationDigest ||
+					observation != plan.ObservationGenerationDigest {
+					return extractionpublication.ErrStale
+				}
+				return nil
+			},
+		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfill(
 			ctx, st, candidateWorker.PolicyDigest(),
@@ -881,9 +986,44 @@ func serve(args []string) error {
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs,
 		}
 		runBackground(func() { candidateRunner.Run(ctx) })
-		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: worker.Handle,
+		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: func(
+			jobCtx context.Context,
+			job store.Job,
+		) error {
+			_, partitionErr := partitionReconciler.Reconcile(jobCtx, job.Target)
+			legacyErr := worker.Handle(jobCtx, job)
+			return errors.Join(partitionErr, legacyErr)
+		},
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		runBackground(func() { exRunner.Run(ctx) })
+		partitionScheduler := &generationscheduler.Scheduler{
+			Store: st,
+			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
+				store.GenerationResourceExtraction: {
+					Concurrency: extractionpublication.ScheduleClassConcurrency,
+					Budget: generationscheduler.Budget{
+						MaxMemoryBytes: 512 << 20, MaxDescriptors: 8,
+					},
+					Handle: func(
+						workerCtx context.Context,
+						chunk store.GenerationChunk,
+						_ generationscheduler.Budget,
+					) error {
+						return partitionRuntime.Handle(workerCtx, chunk)
+					},
+					OnExhausted: partitionRuntime.OnExhausted,
+				},
+			},
+			PollEvery: time.Second, WorkerPrefix: "extraction-partition-worker",
+			Report: func(err error) {
+				diagnostics.Logf("partitioned extraction scheduler unavailable: %v", err)
+			},
+		}
+		runBackground(func() {
+			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
+				diagnostics.Logf("partitioned extraction scheduler stopped: %v", err)
+			}
+		})
 		if resolverRunner != nil {
 			runBackground(func() { resolverRunner.Run(ctx) })
 		}

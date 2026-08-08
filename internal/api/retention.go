@@ -25,8 +25,8 @@ const (
 	RetentionStatusProofBundlePositiveLifetimeEffect = "deletes the expired bundle and exactly its proof-bundle:<bundle_id> evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
 
 	RetentionStatusOwnerCount                  = 12
-	RetentionStatusComponentCount              = 53
-	RetentionStatusCoreComponentCount          = 22
+	RetentionStatusComponentCount              = 54
+	RetentionStatusCoreComponentCount          = 23
 	RetentionStatusInvestigationComponentCount = 24
 	RetentionStatusDerivedComponentCount       = 7
 
@@ -650,6 +650,7 @@ var retentionStatusRegistry = [...]retentionOwnerDefinition{
 	{id: "evidence_publications", scope: "repository/commit/unit/domain", decisionRelation: "selected_t306m_unbounded_retention", accumulating: true, components: []retentionComponentDefinition{
 		databaseRetentionComponent("extraction_run"),
 		databaseRetentionComponent(string(store.RetentionEvidenceChunk)),
+		databaseRetentionComponent(string(store.RetentionExtractionDomainRoot)),
 		databaseRetentionComponent("snapshot_evidence"),
 		databaseRetentionComponent("assertion"),
 		databaseRetentionComponent("evidence_atom"),

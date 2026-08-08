@@ -23,6 +23,24 @@ type schedulerStore struct {
 	failErrors  []string
 	released    int
 	done        chan struct{}
+	retryErr    error
+}
+
+func TestSchedulerAcceptsExtractionResourceClass(t *testing.T) {
+	scheduler := &Scheduler{
+		Store: &schedulerStore{},
+		Classes: map[store.GenerationResourceClass]Class{
+			store.GenerationResourceExtraction: {
+				Concurrency: 1,
+				Budget:      Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+				Handle:      func(context.Context, store.GenerationChunk, Budget) error { return nil },
+			},
+		},
+	}
+	classes, err := scheduler.validate()
+	if err != nil || len(classes) != 1 || classes[0] != store.GenerationResourceExtraction {
+		t.Fatalf("extraction scheduler validation = %v, %v", classes, err)
+	}
 }
 
 func (scheduler *schedulerStore) EnqueueGenerationSchedule(context.Context, store.GenerationScheduleSpec) (*store.GenerationSchedule, error) {
@@ -77,7 +95,40 @@ func (scheduler *schedulerStore) RetryGenerationChunk(_ context.Context, _ store
 	if scheduler.done != nil && scheduler.completed+scheduler.retried+scheduler.failed == cap(scheduler.done) {
 		close(scheduler.done)
 	}
+	if scheduler.retryErr != nil {
+		return nil, scheduler.retryErr
+	}
 	return &store.GenerationChunk{}, nil
+}
+
+func TestSchedulerReportsExhaustionAfterRetryTransition(t *testing.T) {
+	fake := &schedulerStore{retryErr: store.ErrGenerationExhausted}
+	exhausted := make(chan error, 1)
+	scheduler := &Scheduler{
+		Store: fake, HeartbeatEvery: time.Hour,
+		Backoff: func(int) time.Duration { return time.Millisecond },
+	}
+	configuration := Class{
+		Handle: func(context.Context, store.GenerationChunk, Budget) error {
+			return errors.New("temporary")
+		},
+		OnExhausted: func(_ context.Context, _ store.GenerationChunk, cause error) error {
+			exhausted <- cause
+			return nil
+		},
+	}
+	scheduler.execute(t.Context(), configuration, store.GenerationChunk{
+		ID: "exhausted", ResourceClass: store.GenerationResourceCPU,
+		Status: store.GenerationChunkRunning, LeaseToken: "lease",
+	})
+	select {
+	case cause := <-exhausted:
+		if cause == nil || cause.Error() != "temporary" {
+			t.Fatalf("exhausted cause = %v", cause)
+		}
+	default:
+		t.Fatal("exhaustion callback was not called")
+	}
 }
 
 func TestSchedulerPersistsStructuralDurableErrorText(t *testing.T) {

@@ -53,6 +53,13 @@ type SCIPDocumentScope interface {
 	SCIPDocumentInScope(path string) bool
 }
 
+// SCIPTypedPartition identifies a corpus whose enumeration is the source
+// scope paired with one typed input. Built-in extractors use it to avoid
+// repeating ordinary syntax fallback already owned by member partitions.
+type SCIPTypedPartition interface {
+	SCIPTypedPartition() bool
+}
+
 // SCIPDocumentFilter is the optional focused-evidence lane filter paired with
 // SCIPDocumentScope. Built-in SCIP readers first validate that every canonical
 // document is in scope and globally safety-account its occurrences, then call

@@ -135,6 +135,84 @@ func (provider *Provider) OpenCandidateManifest(
 	}, nil
 }
 
+// OpenCurrentPublication resolves the current strict store pointer into the
+// complete validated candidate publication for T40.10 planning. It is not a
+// product reader: callers still have to bind a derived plan to the returned
+// immutable state and re-fence the pointer before publication.
+func (provider *Provider) OpenCurrentPublication(
+	ctx context.Context,
+	repository string,
+	unit *analysisunit.State,
+) (*candidate.Publication, error) {
+	if provider == nil || provider.open == nil {
+		return nil, errors.New("candidate provider is not initialized")
+	}
+	state, err := provider.CurrentPublicationState(ctx, repository, unit)
+	if err != nil {
+		return nil, err
+	}
+	expected := candidate.Expected{
+		Repository: state.Repository, Commit: state.Commit,
+		Unit:         analysisunit.CloneState(unit),
+		Policies:     slices.Clone(provider.policies.identities),
+		PolicyDigest: state.PolicyDigest, GenerationDigest: state.GenerationDigest,
+		ManifestDigest: state.ManifestDigest,
+	}
+	publication, err := provider.open(ctx, provider.root, expected)
+	if err != nil {
+		return nil, fmt.Errorf("open current candidate publication: %w", err)
+	}
+	confirmed, confirmErr := provider.CurrentPublicationState(ctx, repository, unit)
+	if publication == nil || confirmErr != nil || publication.State() != state || confirmed != state {
+		return nil, errors.Join(confirmErr, errors.New("current candidate publication changed during strict open"))
+	}
+	return publication, nil
+}
+
+// CurrentPublicationState reads only the committed pointer and publication
+// marker. T40.10 uses it to recognize an exact durable execution generation
+// before opening any manifest/member controls.
+func (provider *Provider) CurrentPublicationState(
+	ctx context.Context,
+	repository string,
+	unit *analysisunit.State,
+) (candidate.State, error) {
+	if provider == nil || provider.store == nil || provider.policies == nil {
+		return candidate.State{}, errors.New("candidate provider is not initialized")
+	}
+	if err := ctx.Err(); err != nil {
+		return candidate.State{}, err
+	}
+	if candidate.IsPublishing(provider.root, repository) {
+		return candidate.State{}, candidate.ErrPublishing
+	}
+	pointer, err := provider.store.GetCandidateManifestPublication(ctx, repository)
+	if err != nil {
+		return candidate.State{}, fmt.Errorf("load candidate publication pointer: %w", err)
+	}
+	if pointer == nil {
+		return candidate.State{}, errors.New("candidate publication store returned nil")
+	}
+	state, err := pointerState(*pointer)
+	unitDigest, unitErr := checkedUnitDigest(repository, unit)
+	if err != nil || unitErr != nil || state.PolicyDigest != provider.policies.digest ||
+		state.UnitDigest != unitDigest {
+		return candidate.State{}, fmt.Errorf("candidate publication pointer is stale: %w", extract.ErrCandidateManifestStale)
+	}
+	if candidate.IsPublishing(provider.root, repository) {
+		return candidate.State{}, candidate.ErrPublishing
+	}
+	confirmed, err := provider.store.GetCandidateManifestPublication(ctx, repository)
+	if err != nil || confirmed == nil {
+		return candidate.State{}, errors.Join(err, errors.New("candidate publication pointer changed during state read"))
+	}
+	confirmedState, err := pointerState(*confirmed)
+	if err != nil || confirmedState != state {
+		return candidate.State{}, errors.Join(err, errors.New("candidate publication pointer changed during state read"))
+	}
+	return state, nil
+}
+
 // OpenCandidateCallerPlan resolves the same exact store-bound generation as
 // OpenCandidateManifest, but opens only the canonical manifest and caller leaf
 // envelopes. Individual leaf contents are descriptor-checked and streamed on

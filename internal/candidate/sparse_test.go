@@ -2,6 +2,7 @@ package candidate
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 )
 
 func TestSparseRootIsDeterministicAndReadsOnlySelectedControlsAndMembers(t *testing.T) {
@@ -325,6 +327,10 @@ func TestSparsePresentTypedOnlyInputHasScheduledPartition(t *testing.T) {
 	if err != nil || !input.Present || input.Path != "index.scip" || input.ObjectID == "" {
 		t.Fatalf("typed-only work = %+v, %v", input, err)
 	}
+	scope, err := domain.TypedSourceScope(t.Context(), 0)
+	if err != nil || scope.Records() != 0 || scope.Contains("missing.go") {
+		t.Fatalf("typed-only source scope records = %d, %v", scope.Records(), err)
+	}
 	if err := domain.ReadPartition(t.Context(), 0, func(Record) error { return nil }); !errors.Is(err, ErrSparseTypedInput) {
 		t.Fatalf("typed partition ordinary read error = %v", err)
 	}
@@ -332,6 +338,123 @@ func TestSparsePresentTypedOnlyInputHasScheduledPartition(t *testing.T) {
 		partitions[0], "sha256:"+strings.Repeat("4", 64),
 	); err != nil || !validDigest(identity) {
 		t.Fatalf("typed partition result identity = %q, %v", identity, err)
+	}
+}
+
+func TestSparseTypedPartitionCarriesExactAdmittedDocumentScope(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("service/main.go", "package service\n")
+	fixture.write("service/ignored.txt", "outside policy\n")
+	fixture.write("index.scip", "typed-index")
+	commit := fixture.commit("typed document scope")
+	policies := []Policy{{
+		Domain: "typed-local", Version: "1", EnumerationPolicy: "typed-local-v1",
+		Plane: PlaneLocal, TypedInputs: []string{analysisunit.TypedIndexKindSCIP},
+		Enumerate: func(value string) bool { return strings.HasSuffix(value, ".go") },
+	}}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateRoot := t.TempDir()
+	manifest, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: candidateRoot,
+		Repository: fixture.repository, Commit: commit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Open(candidateRoot, Expected{
+		Repository: fixture.repository, Commit: commit, Policies: identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sparseDirectory := t.TempDir()
+	root, err := BuildSparseRoot(t.Context(), sparseDirectory, publication, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sparse, err := OpenSparse(
+		t.Context(), sparseDirectory, candidateRoot, manifest.State(), root.Digest, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain, err := sparse.OpenDomain(t.Context(), "typed-local", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	partitions := domain.Partitions()
+	typed := partitions[len(partitions)-1]
+	scope, err := domain.TypedSourceScope(t.Context(), len(partitions)-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oid, declaredBytes, admitted := scope.Source("service/main.go")
+	if typed.Kind != PartitionKindTypedInput || typed.TypedScope == nil ||
+		typed.TypedScope.Records != 1 || !admitted || !gitobj.IsObjectID(oid) || declaredBytes <= 0 ||
+		scope.Contains("service/ignored.txt") || scope.Contains("../service/main.go") {
+		t.Fatalf("typed document scope = %+v", typed)
+	}
+	scopePath := filepath.Join(sparseDirectory, typed.TypedScope.Name)
+	raw, err := os.ReadFile(scopePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw[len(raw)-1] ^= 0xff
+	if err := os.WriteFile(scopePath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := domain.TypedSourceScope(t.Context(), len(partitions)-1); err == nil {
+		t.Fatal("tampered typed document scope validated")
+	}
+}
+
+func TestSparseTypedDocumentScopeExactBoundaryAndOneOver(t *testing.T) {
+	sources := make([]sparseTypedSource, PartitionMaxTypedScopeRecords)
+	for index := range PartitionMaxTypedScopeRecords {
+		path := fmt.Sprintf("source/%06d.go", index)
+		sources[index].path = path
+		sources[index].pathIdentity = sha256.Sum256([]byte(path))
+		sources[index].objectID = strings.Repeat("a", 40)
+		sources[index].declaredBytes = 1
+	}
+	scope, err := canonicalTypedScope(sources)
+	if err != nil || !validSparseTypedScope(scope, PartitionMaxTypedScopeRecords) {
+		t.Fatal("exact maximum typed scope was refused")
+	}
+	if len(scope) > MaxSparseTypedScopeBytes {
+		t.Fatalf("maximum typed scope control bytes = %d", len(scope))
+	}
+	oneOver := append(slices.Clone(sources), sparseTypedSource{})
+	if _, err := canonicalTypedScope(oneOver); err == nil {
+		t.Fatal("one-over typed scope was admitted")
+	}
+}
+
+func TestSparseTypedDocumentScopePathBytesExactBoundaryAndOneOver(t *testing.T) {
+	const pathLength = 4096
+	records := PartitionMaxTypedScopePathBytes / pathLength
+	sources := make([]sparseTypedSource, records)
+	for index := range sources {
+		path := strings.Repeat("a", pathLength-8) + fmt.Sprintf("%08d", index)
+		sources[index] = sparseTypedSource{
+			path: path, pathIdentity: sha256.Sum256([]byte(path)),
+			objectID: strings.Repeat("a", 40), declaredBytes: 1,
+		}
+	}
+	raw, err := canonicalTypedScope(sources)
+	if err != nil || !validSparseTypedScope(raw, records) || len(raw) > MaxSparseTypedScopeBytes {
+		t.Fatalf("exact typed path-byte boundary was refused: bytes=%d err=%v", len(raw), err)
+	}
+	extraPath := "z"
+	oneOver := append(slices.Clone(sources), sparseTypedSource{
+		path: extraPath, pathIdentity: sha256.Sum256([]byte(extraPath)),
+		objectID: strings.Repeat("a", 40), declaredBytes: 1,
+	})
+	if _, err := canonicalTypedScope(oneOver); err == nil {
+		t.Fatal("one-over typed path-byte scope was admitted")
 	}
 }
 

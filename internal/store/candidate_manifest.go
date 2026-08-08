@@ -195,7 +195,15 @@ LET $invalidated_runs = (IF array::len($published) = 1 THEN
 			AND evidence_format_version = $evidence_format
 			AND retention_quarantined = false
 			AND run_id = record::id(id)
-			AND (coverage.candidate_manifest_digest ?? '') != $manifest_digest)
+			AND (
+				(((partition_plan_digest ?? '') = '')
+					AND ((partition_active ?? false) = false)
+					AND ((partition_sealed ?? false) = false)
+					AND (coverage.candidate_manifest_digest ?? '') != $manifest_digest)
+				OR (((partition_active ?? false) = true)
+					AND ((partition_sealed ?? false) = false)
+					AND (partition_candidate_digest ?? '') != $manifest_digest)
+			))
 	ELSE [] END) ?? [];
 LET $invalidated_run_rids = $invalidated_runs.map(|$run| $run.id);
 LET $invalidated_run_ids = $invalidated_runs.map(|$run| $run.run_id);
@@ -227,7 +235,8 @@ LET $retired = IF array::len($invalidated_runs) > 0 THEN
 		RETURN AFTER)
 	ELSE [] END;
 LET $aborted = IF array::len($invalidated_runs) > 0 THEN
-	(UPDATE extraction_run SET status = 'aborted', published_key = NONE
+	(UPDATE extraction_run SET status = 'aborted', published_key = NONE,
+			partition_active = false
 		WHERE id IN $invalidated_run_rids
 			AND repo = $repository AND commit = $head_commit
 			AND unit_digest = $unit_digest
