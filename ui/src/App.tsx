@@ -7,7 +7,8 @@ import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
 import { ScopeContextBar } from './components/ScopeContextBar'
-import { scopeFromParams } from './scope'
+import { CommandNavigator, type NavigatorSurface } from './components/CommandNavigator'
+import { rememberScope, scopeFromParams } from './scope'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -54,6 +55,28 @@ export default function App() {
   const [capabilitiesLoaded, setCapabilitiesLoaded] = useState(false)
   const [capabilitiesError, setCapabilitiesError] = useState(false)
   const [capabilitiesAttempt, setCapabilitiesAttempt] = useState(0)
+  const [navigatorOpen, setNavigatorOpen] = useState(false)
+
+  // T43.9: Cmd/Ctrl+K opens the keyboard navigator; the existing '/' search
+  // focus stays untouched.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      event.preventDefault()
+      setNavigatorOpen((open) => !open)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Recently seen scope identities feed the navigator (identity only, never
+  // authority; bounded in rememberScope).
+  useEffect(() => {
+    rememberScope(scope)
+    // Identity fields are the real dependencies; the object is re-derived
+    // every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope?.repository, scope?.serviceKey, scope?.generation])
 
   // "/" focuses search from anywhere (unless already typing)
   useEffect(() => {
@@ -123,6 +146,20 @@ export default function App() {
       render={render}
     />
   )
+  const navigatorSurfaces: NavigatorSurface[] = [
+    { label: 'Search', path: '/', available: true },
+    { label: 'Repositories', path: '/repos', available: true },
+    { label: 'Service directory', path: '/services', available: servicesAvailable },
+    { label: 'Relationship explorer', path: '/relationships', available: serviceRelationshipsAvailable },
+    { label: 'Contract atlas', path: '/contracts', available: contractsAvailable },
+    { label: 'Contract impact', path: '/impact', available: impactAvailable },
+    { label: 'Kafka topics', path: '/topics', available: topicsAvailable },
+    { label: 'Investigations', path: '/investigations', available: investigationsAvailable },
+    { label: 'Change workbench', path: '/workbench', available: workbenchAvailable },
+    { label: 'Audit log', path: '/audit', available: status.user?.is_admin === true },
+    { label: 'Analytics', path: '/analytics', available: status.user?.is_admin === true },
+    { label: 'Settings', path: '/settings', available: true },
+  ]
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
@@ -149,6 +186,13 @@ export default function App() {
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
       <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} workbenchAvailable={workbenchAvailable} onLogout={() => void logout().catch(() => {})} />
       {scope && <ScopeContextBar scope={scope} path={path} params={params} />}
+      {navigatorOpen && (
+        <CommandNavigator
+          surfaces={navigatorSurfaces}
+          scope={scope}
+          onClose={() => setNavigatorOpen(false)}
+        />
+      )}
       <main
         className={css({
           width: '100%',

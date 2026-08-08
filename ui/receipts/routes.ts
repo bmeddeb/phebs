@@ -33,12 +33,17 @@ export interface ReceiptRoute {
   // MUST match — a missing element fails the capture instead of silently
   // producing a baseline of the wrong state.
   click?: string[]
+  // Keyboard chords pressed after readiness (e.g. the command navigator's
+  // Control+k), before capture.
+  press?: string[]
 }
 
 const T323_REPO = 'local/Users/ben/phebs-ux/spike/t323/t323-neutral-corpus.bundle'
 
 export const ROUTES: ReceiptRoute[] = [
   { name: 'search', path: '/' },
+  // T43.9: the keyboard navigator, opened by its own chord.
+  { name: 'command-navigator', path: '/', press: ['Control+k'] },
   // Single-repository query: multi-repo streams render groups in arrival
   // order (nondeterministic — tracked for a stable-ordering fix), so the
   // results + authority-chip surface is pinned on a one-repo result set.

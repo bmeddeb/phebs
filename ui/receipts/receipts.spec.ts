@@ -65,6 +65,12 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
       ).toBe(false)
     }
   }
+  if (route.press) {
+    for (const chord of route.press) {
+      await page.keyboard.press(chord)
+    }
+    await waitForReceiptReady(page)
+  }
   if (route.click) {
     for (const selector of route.click) {
       const target = page.locator(selector).first()

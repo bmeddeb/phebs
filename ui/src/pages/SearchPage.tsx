@@ -342,10 +342,14 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [visible, selected])
 
-  // keep the selected card in view
+  // Keep the selected card in view AND give it real keyboard focus so the
+  // j/k cursor is visible to assistive technology, not only visually
+  // (audit F21). Rows carry tabIndex -1 for this.
   useEffect(() => {
     if (selected < 0 || !visible[selected]) return
-    rowRefs.current.get(fileKey(visible[selected]))?.scrollIntoView({ block: 'nearest' })
+    const row = rowRefs.current.get(fileKey(visible[selected]))
+    row?.scrollIntoView({ block: 'nearest' })
+    row?.focus({ preventScroll: true })
   }, [selected, visible])
 
   const toggleGroup = (repo: string) =>
@@ -929,7 +933,14 @@ function SearchMeta({
           />
         )}
         {phase !== 'idle' && (
-          <span role="status" aria-live="polite" aria-atomic="true" className={css({ fontVariantNumeric: 'tabular-nums' })}>
+          <span
+            role="status"
+            // Streaming batches would re-announce every flush; only settled
+            // states are announced (audit F21).
+            aria-live={phase === 'streaming' ? 'off' : 'polite'}
+            aria-atomic="true"
+            className={css({ fontVariantNumeric: 'tabular-nums' })}
+          >
             <b className={css({ color: tok.textPrimary, fontWeight: 600 })}>{matchCount}</b> {matchCount === 1 ? 'match' : 'matches'} ·{' '}
             <b className={css({ color: tok.textPrimary, fontWeight: 600 })}>{files.length}</b> {files.length === 1 ? 'file' : 'files'}
             {stats ? ` · ${stats.duration_ms}ms · ${repoCount} ${repoCount === 1 ? 'repository' : 'repositories'}` : ''}
@@ -1096,8 +1107,10 @@ function FileBlock({
   return (
     <div
       ref={(el) => registerRef(fileKey(file), el)}
+      tabIndex={-1}
       className={css({
         borderTop: first ? 'none' : `1px solid ${tok.innerSep}`,
+        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
         backgroundColor: tok.pageBg,
         ...(animate ? {
           animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },

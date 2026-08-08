@@ -55,3 +55,42 @@ export const SCOPE_PARAM_KEYS = [
   'source_service',
   'scope',
 ] as const
+
+export interface RecentScope {
+  repository: string
+  serviceKey: string
+  generation: string
+}
+
+const RECENT_KEY = 'phebs-recent-scopes'
+const RECENT_LIMIT = 5
+
+/** Bounded, identity-only recency: repository/key/generation, never authority. */
+export function rememberScope(scope: ActiveScope | null) {
+  if (!scope?.repository) return
+  try {
+    const current: RecentScope[] = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    const next = [
+      { repository: scope.repository, serviceKey: scope.serviceKey, generation: scope.generation },
+      ...current.filter((entry) =>
+        entry.repository !== scope.repository || entry.serviceKey !== scope.serviceKey),
+    ].slice(0, RECENT_LIMIT)
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+  } catch {
+    // Storage may be unavailable; recency is an accelerator, never required.
+  }
+}
+
+export function recentScopes(): RecentScope[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((entry): entry is RecentScope =>
+        typeof entry === 'object' && entry !== null &&
+        typeof (entry as RecentScope).repository === 'string')
+      .slice(0, RECENT_LIMIT)
+  } catch {
+    return []
+  }
+}

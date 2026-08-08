@@ -648,6 +648,24 @@ palette for navigation and scope jumps. AC: every routed surface and
 recent scope is reachable keyboard-only; existing `/` search focus is
 preserved; the palette issues no reads beyond existing authorized
 endpoints; fully accessible with visible focus and announced results.
+*Implementation landed 2026-08-07.* Cmd/Ctrl+K opens CommandNavigator: a
+modal combobox dialog listing only capability-available surfaces, the
+active scope's four jump targets (Workbench in its own param
+vocabulary, generation fence carried), and up to five recently seen
+scope identities (localStorage, identity-only — repository/key/
+generation, never authority; the bar re-verifies on arrival). Zero
+reads: items are navigation hrefs built from capabilities already in
+hand. `/` search focus untouched; Escape closes and returns focus;
+selection moves by aria-activedescendant with a visible accent edge;
+result counts announce via a visually hidden live region, and the empty
+state names itself navigation-only. Riders from the ledger's F21: the
+search j/k cursor now moves real focus (AT-visible, ring on the row)
+and the match-count live region announces settled states only, not
+every streaming batch. Still open on this ticket's ledger routes: F20
+(FilePage keyboard symbol navigation) and F22 (Caller Map row cursor) —
+substantial per-surface keyboard work, not claimed here. Receipts: a
+command-navigator route captures the open palette via the harness's new
+keyboard-press option.
 
 **T43.10 · Operator console presentation** *(needs T43.3)* — present
 lifecycle, capacity, and refusal state as actionable cards. AC: pressure,
