@@ -27,7 +27,7 @@ function makeRows(count: number): SyntheticRow[] {
   return Array.from({ length: count }, (_, index) => ({ id: `row-${index}`, label: `service-${index}` }))
 }
 
-function Harness({ items, onCommit = () => {} }: { items: SyntheticRow[]; onCommit?: (item: SyntheticRow) => void }) {
+function Harness({ items, onCommit = () => {}, selectedIndex = null }: { items: SyntheticRow[]; onCommit?: (item: SyntheticRow) => void; selectedIndex?: number | null }) {
   const [active, setActive] = useState(0)
   return (
     <StyletronProvider value={engine}>
@@ -40,6 +40,7 @@ function Harness({ items, onCommit = () => {} }: { items: SyntheticRow[]; onComm
             ariaLabel="Synthetic rows"
             listboxId="synthetic"
             activeIndex={active}
+            selectedIndex={selectedIndex}
             onActiveChange={setActive}
             onCommit={onCommit}
             getKey={(item) => item.id}
@@ -140,6 +141,48 @@ describe('VirtualList keyboard contract', () => {
     const headers = screen.getAllByTestId('header')
     expect(headers.length).toBe(2)
     expect(headers[0].getAttribute('role')).toBe('presentation')
+  })
+
+  it('reports the committed selection, not keyboard focus', () => {
+    render(<Harness items={makeRows(50)} selectedIndex={3} />)
+    const listbox = screen.getByRole('listbox', { name: 'Synthetic rows' })
+    fireEvent.keyDown(listbox, { key: 'ArrowDown' })
+    // Focus moved to row 1; selection stays reported on row 3.
+    expect(listbox.getAttribute('aria-activedescendant')).toBe('synthetic-row-1')
+    expect(screen.getByText('service-1').getAttribute('aria-selected')).toBe('false')
+    expect(screen.getByText('service-3').getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('keeps the active descendant mounted when pointer scrolling moves the window', () => {
+    render(<Harness items={makeRows(TOTAL_ROWS)} />)
+    const listbox = screen.getByRole('listbox', { name: 'Synthetic rows' })
+    fireEvent.keyDown(listbox, { key: 'End' })
+    expect(listbox.getAttribute('aria-activedescendant')).toBe(`synthetic-row-${TOTAL_ROWS - 1}`)
+    // Simulate a mouse scroll back to the top: the window moves, but the
+    // active option must remain in the DOM — the reference never dangles.
+    listbox.scrollTop = 0
+    fireEvent.scroll(listbox)
+    expect(screen.getByText('service-0')).toBeTruthy()
+    expect(document.getElementById(`synthetic-row-${TOTAL_ROWS - 1}`)).toBeTruthy()
+    // And it stays a single extra row, not a window extension.
+    expect(listbox.querySelectorAll('[role="option"]').length).toBeLessThanOrEqual(25)
+  })
+
+  it('excludes presentation headers from ARIA positions', () => {
+    const items: SyntheticRow[] = [
+      { id: 'h1', label: 'Current', header: true },
+      { id: 'a', label: 'service-a' },
+      { id: 'h2', label: 'Stale', header: true },
+      { id: 'b', label: 'service-b' },
+      { id: 'c', label: 'service-c' },
+    ]
+    render(<Harness items={items} />)
+    expect(screen.getByText('service-a').getAttribute('aria-posinset')).toBe('1')
+    expect(screen.getByText('service-b').getAttribute('aria-posinset')).toBe('2')
+    expect(screen.getByText('service-c').getAttribute('aria-posinset')).toBe('3')
+    for (const label of ['service-a', 'service-b', 'service-c']) {
+      expect(screen.getByText(label).getAttribute('aria-setsize')).toBe('3')
+    }
   })
 
   it('Home and End land on navigable rows, not headers', () => {

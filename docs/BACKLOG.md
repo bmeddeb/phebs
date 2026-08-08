@@ -745,6 +745,21 @@ presentation is pinned by the harness until the instance publishes).
 Settings' lifecycle cards gained reserved fixed-height owner slots so
 live owner churn can never move the page between capture and check —
 the same declared-geometry principle as the list itself.
+*Review follow-up (T43.11f).* The explorer pin is the composite row
+identity — repository and projection digest travel (and clear) as a
+pair, since projection digests carry no repository identity and can
+collide across repositories; a regression test pins the twin-digest
+case. In the list primitive, aria-selected now reports the committed
+selection (Enter/click/URL) while aria-activedescendant alone conveys
+keyboard focus; the active option stays mounted as a single extra row
+when pointer scrolling moves the window (the reference never dangles);
+and ARIA positions exclude presentation headers, so grouped lists
+announce true option ordinals. Directory rows collapse their facts
+into one text run with a single visible ellipsis — under width
+pressure the run truncates with a mark instead of silently clipping
+trailing roles, path counts, or reasons — and the composed accessible
+name (also the hover title) carries every fact: name, key,
+incarnation, state, disposition, roles, paths, reason.
 
 **T43.12 · Motion pass and charter closure** *(needs T43.4–T43.11)* —
 apply the charter's motion language and close the epic. AC: motion exists

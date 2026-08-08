@@ -55,8 +55,10 @@ test('renders exact authority, page summaries, lifecycle states, roles, and sour
   expect(screen.getByText('Unowned files')).toBeTruthy()
   expect(screen.getByText('Shared roles · page')).toBeTruthy()
   // T43.11: rows are options of the windowed listbox — still real links.
-  expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
-  expect(screen.getByRole('option', { name: /Billing control/ })).toBeTruthy()
+  // aria-selected reports the committed (URL) selection, not focus.
+  const ordersRow = screen.getByRole('option', { name: /Orders API/ })
+  expect(ordersRow.getAttribute('aria-selected')).toBe('true')
+  expect(screen.getByRole('option', { name: /Billing control/ }).getAttribute('aria-selected')).toBe('false')
   expect(screen.getByRole('option', { name: /Legacy orders/ })).toBeTruthy()
   expect(screen.getAllByText('Stale').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Conflict').length).toBeGreaterThan(0)
@@ -190,9 +192,14 @@ test('dense mode tightens row geometry without dropping information', async () =
   const row = await screen.findByRole('option', { name: /Orders API/ })
   expect(row.style.height).toBe('48px')
   // Same facts as comfortable: identity, incarnation, disposition, roles,
-  // and the reason, truncated in place.
+  // and the reason, truncated in place with ONE visible ellipsis run —
+  // trailing facts may never silently clip.
   expect(row.textContent).toContain('orders-api · incarnation 2')
-  expect(row.textContent).toContain('accepted')
+  expect(row.textContent).toContain('accepted · primary 1 · shared 1 · 2 paths')
+  // The accessible name carries every fact regardless of visual width.
+  expect(row.getAttribute('aria-label')).toBe(
+    'Orders API · orders-api · incarnation 2 · Stale · accepted · primary 1 · shared 1 · 2 paths',
+  )
 })
 
 test('keyboard navigation moves through windowed rows and commits a selection', async () => {

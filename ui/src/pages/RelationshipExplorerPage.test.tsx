@@ -97,7 +97,7 @@ test('reauthorizes and validates an immutable citation before showing source con
   api.fetchServiceRelationshipCitation.mockResolvedValueOnce(relationshipCitation(page.rows[0]))
   // T43.11: the citation action lives in the selected row's detail region,
   // pinned by projection digest in the URL.
-  const first = renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: page.rows[0].projection_digest }))
+  const first = renderPage(new URLSearchParams({ service_key: 'orders-api', sel_repo: page.rows[0].repository, sel_row: page.rows[0].projection_digest }))
   expect(await screen.findByRole('region', { name: 'Row R-01 detail' })).toBeTruthy()
   // Complete attribution renders in the detail — nothing the old table
   // showed is dropped.
@@ -114,7 +114,7 @@ test('reauthorizes and validates an immutable citation before showing source con
     generation: `sha256:${'9'.repeat(64)}`,
     content: 'forged source',
   })
-  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: page.rows[1].projection_digest }))
+  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_repo: page.rows[1].repository, sel_row: page.rows[1].projection_digest }))
   expect(await screen.findByRole('region', { name: 'Row R-02 detail' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'services/orders/client-1.go:5' }))
   expect(await screen.findByText(/citation response authority differs/)).toBeTruthy()
@@ -125,12 +125,35 @@ test('row selection is URL-borne and a stale pin fails honest', async () => {
   renderPage(new URLSearchParams({ service_key: 'orders-api' }))
   await screen.findByRole('heading', { name: 'Exact source rows' })
   fireEvent.click(screen.getByRole('option', { name: /client-0\.go/ }))
+  // The pin is the composite row identity: repository AND digest.
+  expect(decodeURIComponent(window.location.hash)).toContain(`sel_repo=${repositories[0]}`)
   expect(decodeURIComponent(window.location.hash)).toContain(`sel_row=sha256:${'1'.repeat(64)}`)
   cleanup()
-  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_row: `sha256:${'f'.repeat(64)}` }))
+  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_repo: repositories[0], sel_row: `sha256:${'f'.repeat(64)}` }))
   await screen.findByRole('heading', { name: 'Exact source rows' })
   expect(screen.getByText(/pinned row is not in this page/)).toBeTruthy()
   expect(screen.queryByRole('region', { name: /detail/ })).toBeNull()
+})
+
+test('a pin binds to repository and projection — identical digests across repositories select one row', async () => {
+  const request = defaultRequest()
+  const page = relationshipPage(request)
+  // Same projection digest in both authorized repositories: only the
+  // repository named by the pin may select, detail, or cite.
+  const sharedDigest = `sha256:${'1'.repeat(64)}`
+  const twin = { ...page.rows[0], repository: repositories[1], citation: 'citation-twin' }
+  page.rows = [page.rows[0], twin]
+  page.coverage.returned_rows = 2
+  page.coverage.scanned_references = 2
+  api.fetchServiceRelationships.mockResolvedValueOnce(page)
+  renderPage(new URLSearchParams({ service_key: 'orders-api', sel_repo: repositories[1], sel_row: sharedDigest }))
+  await screen.findByRole('heading', { name: 'Exact source rows' })
+  const options = screen.getAllByRole('option')
+  expect(options.filter((option) => option.getAttribute('aria-selected') === 'true').length).toBe(1)
+  // The detail region belongs to the second (mono-b) row, not the first
+  // row that happens to share the digest.
+  expect(screen.getByRole('region', { name: 'Row R-02 detail' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Row R-02 detail' }).textContent).toContain(repositories[1])
 })
 
 test('narrowing and grouping the loaded rows are instant, URL-borne, and window-scoped', async () => {

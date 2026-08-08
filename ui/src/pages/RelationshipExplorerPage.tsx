@@ -32,8 +32,11 @@ interface ExplorerRoute {
   cursor: string
   diagram: boolean
   // Client-side view state (T43.11): URL-borne, never part of the wire
-  // query. selectedRow pins a row by projection digest; narrow and group
-  // read only the delivered page.
+  // query. A row pin is the composite row identity — repository AND
+  // projection digest, since projection digests carry no repository
+  // identity and can collide across repositories. narrow and group read
+  // only the delivered page.
+  selectedRepo: string
   selectedRow: string
   narrow: string
   group: 'none' | 'class'
@@ -79,6 +82,7 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
     diagram: false,
     // Client-side view state (selection, narrowing, grouping) never
     // re-issues the wire query.
+    selectedRepo: '',
     selectedRow: '',
     narrow: '',
     group: 'none',
@@ -150,7 +154,8 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
       evidence: draft.evidence,
       lookupKey,
       cursor: '',
-      // A digest pin is page-scoped; new filters mean a new page.
+      // A row pin is page-scoped; new filters mean a new page.
+      selectedRepo: '',
       selectedRow: '',
     }))
   }
@@ -380,14 +385,18 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
   const [activeIndex, setActiveIndex] = useState(0)
   useEffect(() => setActiveIndex(0), [items.length, route.cursor])
   const listRef = useRef<VirtualListHandle>(null)
-  const selectedIndex = items.findIndex((item) => item.kind === 'row' && item.row.projection_digest === route.selectedRow)
+  // Composite row identity: repository AND projection digest — digests can
+  // collide across repositories.
+  const pinMatches = (row: ServiceRelationshipRow) =>
+    row.projection_digest === route.selectedRow && row.repository === route.selectedRepo
+  const selectedIndex = items.findIndex((item) => item.kind === 'row' && pinMatches(item.row))
   const selected = selectedIndex >= 0 ? (items[selectedIndex] as { kind: 'row'; row: ServiceRelationshipRow; pageIndex: number }) : null
   useEffect(() => {
     if (selectedIndex >= 0) listRef.current?.scrollToIndex(selectedIndex)
     // Reveal the pinned row whenever the pin or the list shape changes.
-  }, [route.selectedRow, selectedIndex])
+  }, [route.selectedRow, route.selectedRepo, selectedIndex])
   const selectRow = (row: ServiceRelationshipRow) =>
-    navigate('/relationships', explorerParams({ ...route, selectedRow: row.projection_digest }))
+    navigate('/relationships', explorerParams({ ...route, selectedRepo: row.repository, selectedRow: row.projection_digest }))
   if (page.rows_state === 'gap') {
     return <div className={css(statusBox(tok))}>One or more requested relationship roots are gaps. No empty result is inferred.</div>
   }
@@ -446,6 +455,7 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
             ariaLabel="Exact relationship source rows"
             listboxId="relationship-rows"
             activeIndex={activeIndex}
+            selectedIndex={selectedIndex}
             onActiveChange={setActiveIndex}
             onCommit={(item) => { if (item.kind === 'row') selectRow(item.row) }}
             getKey={(item) => item.kind === 'header' ? `header:${item.label}` : `${item.row.repository}:${item.row.projection_digest}`}
@@ -456,7 +466,7 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
                 <span className={css({ fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
               </div>
             ) : (
-              <ExplorerRow item={item} rowProps={rowProps} active={active} selected={item.row.projection_digest === route.selectedRow} columns={columns} cellText={cellText} onSelect={() => selectRow(item.row)} />
+              <ExplorerRow item={item} rowProps={rowProps} active={active} selected={pinMatches(item.row)} columns={columns} cellText={cellText} onSelect={() => selectRow(item.row)} />
             )}
           />
         </>
@@ -532,7 +542,7 @@ function RowDetail({ row, id, route, onCitation }: { row: ServiceRelationshipRow
         </div>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '10px' })}>
           <CitationButton row={row} onCitation={onCitation} />
-          <a href={explorerHref({ ...route, selectedRow: '' })} className={css({ color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'underline', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) })}>Clear selection</a>
+          <a href={explorerHref({ ...route, selectedRepo: '', selectedRow: '' })} className={css({ color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'underline', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) })}>Clear selection</a>
         </div>
       </div>
       <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px 16px', marginTop: '10px', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
@@ -612,7 +622,7 @@ function PageDiagram({ page, route }: { page: ServiceRelationshipPage; route: Ex
                 aria-label={`Select source row ${id}`}
                 // Rows are windowed, so the target may not be in the DOM;
                 // pinning it in the URL reveals and details it instead.
-                onClick={() => navigate('/relationships', explorerParams({ ...route, selectedRow: row.projection_digest }))}
+                onClick={() => navigate('/relationships', explorerParams({ ...route, selectedRepo: row.repository, selectedRow: row.projection_digest }))}
                 className={css({ ...idLink(tok), border: 0, padding: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left' })}
               >{id}</button>
               <DiagramNode>{exact.from}</DiagramNode>
@@ -638,8 +648,8 @@ function PageNavigation({ route, page }: { route: ExplorerRoute; page: ServiceRe
   if (!route.cursor && !page.pagination.next_cursor) return null
   return (
     <nav aria-label="Relationship pages" className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '10px' })}>
-      {route.cursor ? <a href={explorerHref({ ...route, cursor: '', selectedRow: '' })} className={css(secondaryLink(tok))}>First exact page</a> : <span />}
-      {page.pagination.next_cursor && <a href={explorerHref({ ...route, cursor: page.pagination.next_cursor, selectedRow: '' })} className={css(primaryLink(tok))}>Next exact page</a>}
+      {route.cursor ? <a href={explorerHref({ ...route, cursor: '', selectedRepo: '', selectedRow: '' })} className={css(secondaryLink(tok))}>First exact page</a> : <span />}
+      {page.pagination.next_cursor && <a href={explorerHref({ ...route, cursor: page.pagination.next_cursor, selectedRepo: '', selectedRow: '' })} className={css(primaryLink(tok))}>Next exact page</a>}
     </nav>
   )
 }
@@ -655,6 +665,7 @@ function explorerRoute(params: URLSearchParams): ExplorerRoute {
     lookupKey: params.get('lookup_key') ?? '',
     cursor: params.get('cursor') ?? '',
     diagram: params.get('diagram') === '1',
+    selectedRepo: params.get('sel_repo') ?? '',
     selectedRow: params.get('sel_row') ?? '',
     narrow: params.get('narrow') ?? '',
     group: params.get('group') === 'class' ? 'class' : 'none',
@@ -673,7 +684,11 @@ function explorerParams(route: ExplorerRoute): Record<string, string> {
   if (route.lookupKey) values.lookup_key = route.lookupKey
   if (route.cursor) values.cursor = route.cursor
   if (route.diagram) values.diagram = '1'
-  if (route.selectedRow) values.sel_row = route.selectedRow
+  // The pin is composite; both halves travel or neither does.
+  if (route.selectedRow && route.selectedRepo) {
+    values.sel_repo = route.selectedRepo
+    values.sel_row = route.selectedRow
+  }
   if (route.narrow) values.narrow = route.narrow
   if (route.group !== 'none') values.group = route.group
   return values

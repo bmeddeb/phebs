@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { focusRing, usePhebsTokens } from '../theme'
 
@@ -35,11 +35,14 @@ interface VirtualListProps<T> {
   ariaLabel: string
   listboxId: string
   activeIndex: number
+  // Committed selection (Enter/click/URL), distinct from keyboard focus:
+  // aria-selected reports THIS; aria-activedescendant conveys focus.
+  selectedIndex?: number | null
   onActiveChange: (index: number) => void
   onCommit: (item: T, index: number) => void
   getKey: (item: T, index: number) => string
   // Presentation rows (e.g. group headers): rendered, never focusable,
-  // skipped by keyboard navigation.
+  // skipped by keyboard navigation and excluded from ARIA positions.
   isHeader?: (item: T) => boolean
   renderRow: (item: T, index: number, rowProps: VirtualRowProps, active: boolean) => ReactNode
 }
@@ -49,7 +52,7 @@ function rowId(listboxId: string, index: number): string {
 }
 
 export const VirtualList = forwardRef(function VirtualList<T>(
-  { items, rowHeight, height, overscan = 6, ariaLabel, listboxId, activeIndex, onActiveChange, onCommit, getKey, isHeader, renderRow }: VirtualListProps<T>,
+  { items, rowHeight, height, overscan = 6, ariaLabel, listboxId, activeIndex, selectedIndex = null, onActiveChange, onCommit, getKey, isHeader, renderRow }: VirtualListProps<T>,
   ref: React.Ref<VirtualListHandle>,
 ) {
   const [css] = useStyletron()
@@ -58,6 +61,16 @@ export const VirtualList = forwardRef(function VirtualList<T>(
   const viewport = useRef<HTMLDivElement>(null)
 
   const total = items.length
+  // ARIA positions count options only — presentation headers are invisible
+  // to the exact-position claim ("row 3 of 9" means the third option).
+  const positions = useMemo(() => {
+    const ordinals = new Array<number>(items.length)
+    let count = 0
+    for (let index = 0; index < items.length; index++) {
+      ordinals[index] = isHeader?.(items[index]) ? 0 : ++count
+    }
+    return { ordinals, count }
+  }, [items, isHeader])
   const first = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
   const last = Math.min(total - 1, Math.ceil((scrollTop + height) / rowHeight) + overscan)
 
@@ -116,8 +129,7 @@ export const VirtualList = forwardRef(function VirtualList<T>(
     event.preventDefault()
   }
 
-  const window: ReactNode[] = []
-  for (let index = first; index <= last; index++) {
+  const renderIndex = (index: number): ReactNode => {
     const item = items[index]
     const header = isHeader?.(item) ?? false
     const style: CSSProperties = { position: 'absolute', top: index * rowHeight, left: 0, right: 0, height: rowHeight, boxSizing: 'border-box' }
@@ -126,12 +138,21 @@ export const VirtualList = forwardRef(function VirtualList<T>(
       : {
         id: rowId(listboxId, index),
         role: 'option',
-        'aria-selected': index === activeIndex,
-        'aria-setsize': total,
-        'aria-posinset': index + 1,
+        'aria-selected': index === selectedIndex,
+        'aria-setsize': positions.count,
+        'aria-posinset': positions.ordinals[index],
         style,
       }
-    window.push(<div key={getKey(item, index)} style={{ display: 'contents' }}>{renderRow(item, index, rowProps, index === activeIndex)}</div>)
+    return <div key={getKey(item, index)} style={{ display: 'contents' }}>{renderRow(item, index, rowProps, index === activeIndex)}</div>
+  }
+
+  const window: ReactNode[] = []
+  for (let index = first; index <= last; index++) window.push(renderIndex(index))
+  // The active descendant stays mounted even when pointer scrolling has
+  // moved the window elsewhere — aria-activedescendant must never dangle.
+  // It renders at its own offset (out of view), a single extra row.
+  if (activeIndex >= 0 && activeIndex < total && (activeIndex < first || activeIndex > last)) {
+    window.push(renderIndex(activeIndex))
   }
 
   return (

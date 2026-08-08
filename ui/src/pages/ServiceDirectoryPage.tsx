@@ -314,6 +314,12 @@ function ServiceList({ inventory, route, onRoute }: {
   const items = useMemo(() => groupItems(narrowed, route.group), [narrowed, route.group])
   const [activeIndex, setActiveIndex] = useState(0)
   useEffect(() => setActiveIndex(0), [items.length, route.cursor])
+  // Committed selection (the URL's service_key), reported via
+  // aria-selected — distinct from the keyboard focus position.
+  const selectedIndex = useMemo(
+    () => items.findIndex((item) => item.kind === 'service' && item.service.key === route.serviceKey),
+    [items, route.serviceKey],
+  )
   return (
     <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '10px', overflow: 'hidden', minWidth: 0 })}>
       <div className={css({ padding: '11px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg })}>
@@ -407,6 +413,7 @@ function ServiceList({ inventory, route, onRoute }: {
           ariaLabel="Services"
           listboxId="service-directory-list"
           activeIndex={activeIndex}
+          selectedIndex={selectedIndex}
           onActiveChange={setActiveIndex}
           onCommit={(item) => {
             if (item.kind === 'service') onRoute({ serviceKey: item.service.key, relationshipCursor: '' })
@@ -474,17 +481,20 @@ function ServiceListRow({ service, route, rowProps, active, density }: {
   const selected = route.serviceKey === service.key
   const roles = roleEntries(service).filter(([, count]) => count > 0)
   const dense = density === 'dense'
-  const attributes = (
-    <>
-      <SmallTag text={service.disposition} />
-      {roles.map(([role, count]) => <SmallTag key={role} text={`${role} ${count}`} quiet />)}
-      {service.distinct_path_count > 0 && <SmallTag text={`${service.distinct_path_count} paths`} quiet />}
-      {service.reason && (
-        // Basis 0: the reason takes leftover space only — under pressure it
-        // collapses before the identity or the tags do.
-        <span className={css({ minWidth: 0, flex: '1 1 0', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.reason}</span>
-      )}
-    </>
+  // One text run with a single visible ellipsis: under width pressure the
+  // facts truncate with a mark, never by silently clipping trailing items.
+  // The full run is the accessible name and the hover title, and the detail
+  // panel carries every fact on selection — density changes spacing, never
+  // information.
+  const facts = [
+    service.disposition,
+    ...roles.map(([role, count]) => `${role} ${count}`),
+    ...(service.distinct_path_count > 0 ? [`${service.distinct_path_count} paths`] : []),
+    ...(service.reason ? [service.reason] : []),
+  ].join(' · ')
+  const fullName = `${service.display_name} · ${service.key} · incarnation ${service.incarnation} · ${titleCase(service.status)} · ${facts}`
+  const factsRun = (
+    <span className={css({ minWidth: 0, flex: '1 1 0', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{facts}</span>
   )
   return (
     <a
@@ -494,7 +504,8 @@ function ServiceListRow({ service, route, rowProps, active, density }: {
       aria-current={selected ? 'true' : undefined}
       // Explicit composed name: browsers are inconsistent computing
       // name-from-content for options whose children are block elements.
-      aria-label={`${service.display_name} · ${service.key} · ${titleCase(service.status)}${service.reason ? ` · ${service.reason}` : ''}`}
+      aria-label={fullName}
+      title={fullName}
       className={css({
         display: 'flex',
         flexDirection: 'column',
@@ -515,14 +526,14 @@ function ServiceListRow({ service, route, rowProps, active, density }: {
         <StatusBadge service={service} />
       </div>
       {dense ? (
-        <div className={css({ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' })}>
+        <div className={css({ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0, whiteSpace: 'nowrap' })}>
           <code className={css({ flex: '0 1 auto', minWidth: 0, fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis' })}>{service.key} · incarnation {service.incarnation}</code>
-          {attributes}
+          {factsRun}
         </div>
       ) : (
         <>
           <div className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.key} · incarnation {service.incarnation}</div>
-          <div className={css({ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' })}>{attributes}</div>
+          <div className={css({ display: 'flex', minWidth: 0 })}>{factsRun}</div>
         </>
       )}
     </a>
