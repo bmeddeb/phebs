@@ -101,6 +101,7 @@ type Observation struct {
 	MeasuredOn  string                    `json:"measured_on"`
 	Outcome     string                    `json:"outcome"`
 	Environment EnvironmentObservation    `json:"environment"`
+	Toolchain   []ToolchainObservation    `json:"toolchain"`
 	Profiles    []ProfileObservation      `json:"profiles"`
 	BlobReaders []BlobReaderObservation   `json:"blob_readers"`
 	Service     ServiceControlObservation `json:"service_control"`
@@ -110,6 +111,11 @@ type Observation struct {
 	Failures    []FailureObservation      `json:"failures"`
 	Decision    DecisionObservation       `json:"decision"`
 	Teardown    TeardownObservation       `json:"teardown"`
+}
+
+type ToolchainObservation struct {
+	Name   string `json:"name"`
+	SHA256 string `json:"sha256"`
 }
 
 type EnvironmentObservation struct {
@@ -202,8 +208,9 @@ type FailureObservation struct {
 }
 
 type DecisionObservation struct {
-	Selected string `json:"selected"`
-	Reason   string `json:"reason"`
+	Selected      string `json:"selected"`
+	Reason        string `json:"reason"`
+	Substantiated bool   `json:"substantiated"`
 }
 
 type TeardownObservation struct {
@@ -219,6 +226,7 @@ type Receipt struct {
 	MeasuredOn   string                    `json:"measured_on"`
 	Outcome      string                    `json:"outcome"`
 	Environment  EnvironmentObservation    `json:"environment"`
+	Toolchain    []ToolchainObservation    `json:"toolchain"`
 	Profiles     []ProfileObservation      `json:"profiles"`
 	BlobReaders  []BlobReaderObservation   `json:"blob_readers"`
 	Service      ServiceControlObservation `json:"service_control"`
@@ -258,7 +266,8 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 	receipt := Receipt{
 		Schema: ReceiptSchema, PlanDigest: planDigest, SourceCommit: plan.SourceCommit,
 		MeasuredOn: observation.MeasuredOn, Outcome: observation.Outcome,
-		Environment: observation.Environment, Profiles: observation.Profiles,
+		Environment: observation.Environment, Toolchain: observation.Toolchain,
+		Profiles:    observation.Profiles,
 		BlobReaders: observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
 		Failures: observation.Failures, Decision: observation.Decision, Teardown: observation.Teardown,
@@ -370,6 +379,9 @@ func ValidateObservation(value Observation) error {
 		value.Environment.InitialUsedPercent < 0 || value.Environment.InitialUsedPercent > 100 {
 		return errors.New("T40.13 environment observation is invalid")
 	}
+	if err := validateToolchainObservation(value.Toolchain, value.Outcome == "completed"); err != nil {
+		return err
+	}
 	if len(value.Profiles) != 2 || value.Profiles[0].Name != "structural-2m-v1" ||
 		value.Profiles[1].Name != "semantic-262144-v1" {
 		return errors.New("T40.13 profile observation inventory is invalid")
@@ -408,9 +420,13 @@ func ValidateObservation(value Observation) error {
 			return errors.New("T40.13 failure observation is invalid")
 		}
 	}
-	if !slices.Contains([]string{"continue", "reduce", "cohort_experiment", "p6_investigation"}, value.Decision.Selected) ||
+	if !slices.Contains([]string{"continue", "reduce", "cohort_experiment", "p6_investigation", "unclassified"}, value.Decision.Selected) ||
 		value.Decision.Reason == "" || len(value.Decision.Reason) > 256 {
 		return errors.New("T40.13 decision observation is invalid")
+	}
+	if value.Decision.Selected == "unclassified" && value.Decision.Substantiated ||
+		value.Decision.Selected != "unclassified" && !value.Decision.Substantiated {
+		return errors.New("T40.13 decision evidence state is invalid")
 	}
 	return nil
 }
@@ -422,7 +438,8 @@ func ValidateReceipt(value Receipt, plan Plan) error {
 	}
 	observation := Observation{
 		Schema: ObservationSchema, MeasuredOn: value.MeasuredOn, Outcome: value.Outcome,
-		Environment: value.Environment, Profiles: value.Profiles, BlobReaders: value.BlobReaders,
+		Environment: value.Environment, Toolchain: value.Toolchain,
+		Profiles: value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
 	}
@@ -451,15 +468,98 @@ func ValidateReceipt(value Receipt, plan Plan) error {
 		if err := validateCompleted(value, plan); err != nil {
 			return err
 		}
-	} else if len(value.Failures) == 0 || value.Decision.Selected == "continue" || !value.Teardown.Completed ||
-		value.Teardown.DerivedDataRetained || value.Teardown.ScratchSourceRetained {
-		return errors.New("stopped T40.13 receipt lacks a failure, stop decision, or teardown")
+	} else if err := validateStopped(value); err != nil {
+		return err
 	}
 	claims := value.Claims
 	if !claims.MechanicsEvidenceOnly || claims.EstablishesTargetSLO || claims.EstablishesServiceScale ||
 		claims.EstablishesAccuracy || claims.EstablishesCompleteness || claims.AuthorizesRelease ||
 		claims.AuthorizesPrivateRerun || claims.EstablishesMigration || claims.EstablishesDecommissioning {
 		return errors.New("T40.13 receipt claims are invalid")
+	}
+	return nil
+}
+
+func validateToolchainObservation(values []ToolchainObservation, required bool) error {
+	want := []string{"phebs", "zoekt-git-index", "phebs-focused-index", "buf"}
+	if len(values) == 0 && !required {
+		return nil
+	}
+	if len(values) != len(want) {
+		return errors.New("T40.13 toolchain digest inventory is incomplete")
+	}
+	for index, name := range want {
+		if values[index].Name != name || !digestIdentity(values[index].SHA256) {
+			return errors.New("T40.13 toolchain digest identity is invalid")
+		}
+	}
+	return nil
+}
+
+func validateStopped(value Receipt) error {
+	if len(value.Failures) != 1 || value.Decision.Selected == "continue" ||
+		!value.Teardown.Completed || value.Teardown.DerivedDataRetained || value.Teardown.ScratchSourceRetained {
+		return errors.New("stopped T40.13 receipt lacks one failure, a stop decision, or teardown")
+	}
+	failure := value.Failures[0]
+	failed := -1
+	for index, phase := range value.Phases {
+		if phase.Outcome == "failed" {
+			if failed >= 0 {
+				return errors.New("stopped T40.13 receipt has an invalid failed-phase inventory")
+			}
+			failed = index
+		}
+	}
+	if failed < 0 || value.Phases[failed].Name != failure.Phase {
+		return errors.New("stopped T40.13 failure does not bind the failed phase")
+	}
+	for index := 0; index < failed; index++ {
+		if value.Phases[index].Outcome != "succeeded" {
+			return errors.New("stopped T40.13 receipt has an incomplete settled prefix")
+		}
+	}
+	for index := failed + 1; index < len(value.Phases)-1; index++ {
+		if value.Phases[index].Outcome != "not_run" {
+			return errors.New("stopped T40.13 receipt ran work after its failed phase")
+		}
+	}
+	last := len(value.Phases) - 1
+	if failed != last && value.Phases[last].Outcome != "succeeded" ||
+		failed == last && value.Phases[last].Outcome != "failed" {
+		return errors.New("stopped T40.13 receipt lacks successful teardown accounting")
+	}
+	wantDecision, wantReason := "unclassified", "failed_phase_measurement_unavailable"
+	switch failure.Code {
+	case "review_ceiling_crossed":
+		if failure.Class != "environment" {
+			return errors.New("T40.13 review ceiling failure class is invalid")
+		}
+		wantDecision, wantReason = "cohort_experiment", "frozen_review_ceiling_crossed"
+	case "direct_recovery_failed":
+		if failure.Class != "recovery" || failure.Phase != "interruption" && failure.Phase != "archive_restore" {
+			return errors.New("T40.13 recovery failure identity is invalid")
+		}
+		wantDecision, wantReason = "p6_investigation", "direct_recovery_failed"
+	case "production_pressure_gate_refused":
+		if failure.Class != "lifecycle" || failure.Phase != "pressure" {
+			return errors.New("T40.13 pressure failure identity is invalid")
+		}
+		wantDecision, wantReason = "reduce", "production_pressure_gate_refused"
+	case "exact_gate_failed":
+		if failure.Class != "oracle" {
+			return errors.New("T40.13 exact-gate failure identity is invalid")
+		}
+		wantDecision, wantReason = "reduce", "exact_mechanics_oracle_failed"
+	case "failed_phase_measurement_unavailable":
+		if failure.Class != "oracle" {
+			return errors.New("T40.13 unclassified failure identity is invalid")
+		}
+	default:
+		return errors.New("T40.13 stopped failure code is not frozen")
+	}
+	if value.Decision.Selected != wantDecision || value.Decision.Reason != wantReason {
+		return errors.New("T40.13 stopped decision does not match its frozen failure rule")
 	}
 	return nil
 }

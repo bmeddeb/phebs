@@ -23,7 +23,7 @@ func TestRetainedMeasuredStopMatchesFrozenPlan(t *testing.T) {
 	const (
 		executionCommit = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
 		planDigest      = "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0"
-		receiptDigest   = "sha256:7a641e6d8955fd51dc782e3f42437449fd0080ef229843bc38bb406593221b1e"
+		receiptDigest   = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
 	)
 	if plan.SourceCommit != executionCommit || PlanDigest(planBytes) != planDigest {
 		t.Fatalf("retained plan commit/digest = %q / %q", plan.SourceCommit, PlanDigest(planBytes))
@@ -37,7 +37,8 @@ func TestRetainedMeasuredStopMatchesFrozenPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 	if PlanDigest(receiptBytes) != receiptDigest || receipt.SourceCommit != executionCommit ||
-		receipt.Outcome != "stopped" || receipt.Decision.Selected != "reduce" ||
+		receipt.Outcome != "stopped" || receipt.Decision.Selected != "unclassified" ||
+		receipt.Decision.Substantiated ||
 		!receipt.Teardown.Completed || receipt.Teardown.DerivedDataRetained ||
 		receipt.Teardown.ScratchSourceRetained {
 		t.Fatalf("retained stopped receipt = %+v, digest %q", receipt, PlanDigest(receiptBytes))
@@ -164,13 +165,19 @@ func TestStoppedReceiptPreservesFailureAndNotRunAccounting(t *testing.T) {
 	value := completedObservation()
 	value.Outcome = "stopped"
 	value.Environment.FilesystemAvailableBytes = 30 << 30
-	value.Failures = []FailureObservation{{Phase: "preflight", Class: "environment", Code: "disk_prerequisite"}}
-	value.Decision = DecisionObservation{Selected: "reduce", Reason: "frozen_host_prerequisite_refused"}
+	value.Failures = []FailureObservation{{
+		Phase: "cold", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+	}}
+	value.Decision = DecisionObservation{
+		Selected: "unclassified", Reason: "failed_phase_measurement_unavailable",
+	}
 	for index := range value.Phases {
 		value.Phases[index].Outcome = "not_run"
 		value.Phases[index].OracleExact = false
 	}
-	value.Phases[0].Outcome = "failed"
+	value.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	value.Phases[1].Outcome = "failed"
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
 	value.Checks = frozenChecks(false)
 	value.Teardown = TeardownObservation{Completed: true}
 	receipt, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
@@ -180,6 +187,34 @@ func TestStoppedReceiptPreservesFailureAndNotRunAccounting(t *testing.T) {
 	if !bytes.Contains(receipt, []byte(`"outcome": "stopped"`)) ||
 		!bytes.Contains(receipt, []byte(`"outcome": "not_run"`)) {
 		t.Fatal("stopped receipt hid skipped work")
+	}
+	plan, err := DecodePlan(planBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*Receipt)
+	}{
+		{"later phase ran", func(value *Receipt) { value.Phases[2] = succeededPhase("warm_noop", PhaseMetrics{}) }},
+		{"failure phase differs", func(value *Receipt) { value.Failures[0].Phase = "warm_noop" }},
+		{"decision rule differs", func(value *Receipt) {
+			value.Decision = DecisionObservation{
+				Selected: "reduce", Reason: "exact_mechanics_oracle_failed", Substantiated: true,
+			}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var changed Receipt
+			if err := json.Unmarshal(receipt, &changed); err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&changed)
+			if err := ValidateReceipt(changed, plan); err == nil {
+				t.Fatal("incoherent stopped receipt passed")
+			}
+		})
 	}
 }
 
@@ -222,6 +257,12 @@ func completedObservation() Observation {
 			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
 			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30, InitialUsedPercent: 72,
 		},
+		Toolchain: []ToolchainObservation{
+			{Name: "phebs", SHA256: "sha256:" + strings.Repeat("1", 64)},
+			{Name: "zoekt-git-index", SHA256: "sha256:" + strings.Repeat("2", 64)},
+			{Name: "phebs-focused-index", SHA256: "sha256:" + strings.Repeat("3", 64)},
+			{Name: "buf", SHA256: "sha256:" + strings.Repeat("4", 64)},
+		},
 		Profiles: []ProfileObservation{
 			{Name: "structural-2m-v1", RegularFiles: 2_000_002, PhysicalOwners: 2_000_002,
 				EligibleGoFiles: 2_000_000, DeclaredSourceBytes: 9_216_000_076,
@@ -240,7 +281,9 @@ func completedObservation() Observation {
 			UnownedPrefixes: 101, WithinV2PathLimit: true, ExactMembershipOracle: true, ExactUnownedOracle: true},
 		Explicit: ExplicitStateObservation{AbsentTypedInputs: 4, UnavailableDomains: 4,
 			UnsupportedSyntaxFacts: 16_384, GapFacts: 131_072, NoSilentEmpty: true},
-		Phases: phases, Checks: frozenChecks(true), Decision: DecisionObservation{Selected: "continue", Reason: "all_exact_mechanics_passed"},
+		Phases: phases, Checks: frozenChecks(true), Decision: DecisionObservation{
+			Selected: "continue", Reason: "all_exact_mechanics_passed", Substantiated: true,
+		},
 		Teardown: TeardownObservation{Completed: true},
 	}
 }

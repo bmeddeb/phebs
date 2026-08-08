@@ -1,9 +1,13 @@
 package t4013
 
 import (
+	"archive/tar"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,6 +52,10 @@ func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (p
 	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) {
 		return privateToolchain{}, errors.New("T40.13 toolchain scope is invalid")
 	}
+	source := filepath.Join(workspace, "toolchain-source")
+	if err := exportFrozenSource(ctx, moduleRoot, source); err != nil {
+		return privateToolchain{}, err
+	}
 	output := filepath.Join(workspace, "toolchain")
 	if err := os.Mkdir(output, 0o700); err != nil {
 		return privateToolchain{}, err
@@ -72,7 +80,7 @@ func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (p
 			return privateToolchain{}, errors.New("T40.13 toolchain output already exists")
 		}
 		command := exec.CommandContext(ctx, "go", build.args...)
-		command.Dir = moduleRoot
+		command.Dir = source
 		command.Env = append(scrubExecutionEnvironment(), build.env...)
 		if output, err := command.CombinedOutput(); err != nil {
 			_ = output
@@ -80,6 +88,91 @@ func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (p
 		}
 	}
 	return toolchain, nil
+}
+
+func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
+	if err := os.Mkdir(output, 0o700); err != nil {
+		return err
+	}
+	command := exec.CommandContext(ctx, "git", "archive", "--format=tar", "HEAD")
+	command.Dir = moduleRoot
+	command.Env = scrubExecutionEnvironment()
+	stream, err := command.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := command.Start(); err != nil {
+		return err
+	}
+	defer func() {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+	}()
+	reader := tar.NewReader(stream)
+	entries := 0
+	var total int64
+	for {
+		header, readErr := reader.Next()
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+		if readErr != nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return errors.New("T40.13 frozen source archive is invalid")
+		}
+		entries++
+		if entries > 100_000 || header.Size < 0 || header.Size > 2<<30 || total > 2<<30-header.Size {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return errors.New("T40.13 frozen source archive exceeds its bound")
+		}
+		total += header.Size
+		name := filepath.FromSlash(header.Name)
+		if name == "." || filepath.IsAbs(name) || filepath.Clean(name) != name ||
+			name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return errors.New("T40.13 frozen source archive escaped custody")
+		}
+		path := filepath.Join(output, name)
+		if !isWithin(path, output) {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return errors.New("T40.13 frozen source archive path escaped custody")
+		}
+		switch header.Typeflag {
+		case tar.TypeXHeader, tar.TypeXGlobalHeader:
+			continue
+		case tar.TypeDir:
+			if err := os.MkdirAll(path, 0o700); err != nil {
+				return err
+			}
+		case tar.TypeReg, byte(0):
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				return err
+			}
+			mode := os.FileMode(0o600)
+			if header.FileInfo().Mode()&0o111 != 0 {
+				mode = 0o700
+			}
+			file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+			if err != nil {
+				return err
+			}
+			_, copyErr := io.CopyN(file, reader, header.Size)
+			closeErr := file.Close()
+			if copyErr != nil || closeErr != nil {
+				return errors.Join(copyErr, closeErr)
+			}
+		default:
+			return fmt.Errorf("T40.13 frozen source archive contains entry type %d", header.Typeflag)
+		}
+	}
+	if err := command.Wait(); err != nil {
+		return errors.New("T40.13 frozen source export failed")
+	}
+	return nil
 }
 
 func startPrivateServer(
@@ -308,4 +401,40 @@ func validateToolchain(value privateToolchain) error {
 		}
 	}
 	return nil
+}
+
+func observeToolchain(value privateToolchain) ([]ToolchainObservation, error) {
+	if err := validateToolchain(value); err != nil {
+		return nil, err
+	}
+	inputs := []struct {
+		name string
+		path string
+	}{
+		{"phebs", value.Phebs},
+		{"zoekt-git-index", value.Zoekt},
+		{"phebs-focused-index", value.Focused},
+		{"buf", value.Buf},
+	}
+	result := make([]ToolchainObservation, 0, len(inputs))
+	for _, input := range inputs {
+		info, err := os.Lstat(input.path)
+		if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 2<<30 {
+			return nil, errors.New("T40.13 toolchain executable exceeds its digest bound")
+		}
+		file, err := os.Open(input.path)
+		if err != nil {
+			return nil, err
+		}
+		hash := sha256.New()
+		_, copyErr := io.CopyN(hash, file, info.Size())
+		closeErr := file.Close()
+		if copyErr != nil || closeErr != nil {
+			return nil, errors.Join(copyErr, closeErr)
+		}
+		result = append(result, ToolchainObservation{
+			Name: input.name, SHA256: "sha256:" + hex.EncodeToString(hash.Sum(nil)),
+		})
+	}
+	return result, nil
 }

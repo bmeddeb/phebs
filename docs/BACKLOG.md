@@ -134,6 +134,17 @@ case is explicitly `not_run`. Exact teardown removed derived and scratch
 custody. The source-free receipt selects `reduce`, authorizes no rerun or bound
 change, and awaits independent review before any ticket/Epic closure.
 
+Independent-review disposition (2026-08-08): review blocked the stronger
+`reduce` classification because the consumed run retained neither failed-cold
+meters nor executable digests. Its corrected source-free receipt is therefore
+`stopped` with an `unclassified`, unsubstantiated decision; teardown remains
+proved. The harness corrective pass binds clean archived source and executable
+hashes, preserves failed-phase meters before classification, removes synthetic
+reuse, proves a specifically started stale lease is fenced, requires nonempty
+query/citation evidence, and closes stopped-receipt phase/decision validation.
+These fixes authorize no rerun. A new ceremony requires separate review and a
+new plan bound to a new exact execution commit.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

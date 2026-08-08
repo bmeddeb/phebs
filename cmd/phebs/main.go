@@ -1023,7 +1023,8 @@ func serve(args []string) error {
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		runBackground(func() { exRunner.Run(ctx) })
 		partitionScheduler := &generationscheduler.Scheduler{
-			Store: st,
+			Store:       st,
+			Diagnostics: cfg.Diagnostics.Extraction,
 			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 				store.GenerationResourceExtraction: {
 					Concurrency: extractionpublication.ScheduleClassConcurrency,

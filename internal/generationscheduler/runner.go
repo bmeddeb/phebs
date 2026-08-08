@@ -5,12 +5,14 @@ package generationscheduler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -54,6 +56,20 @@ type Scheduler struct {
 	Backoff        func(attempt int) time.Duration
 	WorkerPrefix   string
 	Report         func(error)
+	Diagnostics    bool
+	ChunkReports   func([]byte) error
+}
+
+const ChunkLifecycleSchema = "phebs-generation-chunk-lifecycle-v1"
+
+type ChunkLifecycleReport struct {
+	Schema     string `json:"schema"`
+	Event      string `json:"event"`
+	Identity   string `json:"identity"`
+	Stage      string `json:"stage"`
+	Generation string `json:"generation"`
+	Attempt    int    `json:"attempt"`
+	Outcome    string `json:"outcome"`
 }
 
 var processAdmission struct {
@@ -248,6 +264,9 @@ func (scheduler *Scheduler) work(
 }
 
 func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, chunk store.GenerationChunk) {
+	scheduler.emitChunkLifecycle("started", chunk, "running")
+	outcome := "handler_failed"
+	defer func() { scheduler.emitChunkLifecycle("settled", chunk, outcome) }()
 	handleCtx, cancel := context.WithCancel(ctx)
 	heartbeat := make(chan error, 1)
 	go func() {
@@ -273,12 +292,17 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	writeCtx, writeCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer writeCancel()
 	if heartbeatErr != nil {
+		outcome = "heartbeat_failed"
+		if errors.Is(heartbeatErr, store.ErrGenerationLeaseLost) || errors.Is(heartbeatErr, store.ErrGenerationStale) {
+			outcome = "stale_fenced"
+		}
 		if !errors.Is(heartbeatErr, store.ErrGenerationLeaseLost) {
 			scheduler.report(fmt.Errorf("heartbeat generation chunk: %w", heartbeatErr))
 		}
 		return
 	}
 	if ctx.Err() != nil {
+		outcome = "released"
 		if err := scheduler.Store.ReleaseGenerationChunk(writeCtx, chunk, ctx.Err().Error()); err != nil &&
 			!errors.Is(err, store.ErrGenerationLeaseLost) && !errors.Is(err, store.ErrGenerationStale) {
 			scheduler.report(fmt.Errorf("release generation chunk: %w", err))
@@ -286,26 +310,41 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		return
 	}
 	if handleErr == nil {
+		outcome = "completed"
 		if err := scheduler.Store.CompleteGenerationChunk(writeCtx, chunk); err != nil &&
 			!errors.Is(err, store.ErrGenerationLeaseLost) && !errors.Is(err, store.ErrGenerationStale) {
+			outcome = "completion_failed"
 			scheduler.report(fmt.Errorf("complete generation chunk: %w", err))
+		} else if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+			outcome = "stale_fenced"
 		}
 		return
 	}
 	if store.IsTerminal(handleErr) {
+		outcome = "terminal"
 		if err := scheduler.Store.FailGenerationChunk(
 			writeCtx, chunk, store.DurableErrorText(handleErr),
 		); err != nil &&
 			!errors.Is(err, store.ErrGenerationLeaseLost) &&
 			!errors.Is(err, store.ErrGenerationStale) {
+			outcome = "terminal_record_failed"
 			scheduler.report(fmt.Errorf("fail terminal generation chunk: %w", err))
+		} else if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+			outcome = "stale_fenced"
 		}
 		return
+	}
+	staleHandle := errors.Is(handleErr, store.ErrGenerationLeaseLost) || errors.Is(handleErr, store.ErrGenerationStale)
+	if staleHandle {
+		outcome = "stale_fenced"
 	}
 	notBefore := time.Now().UTC().Add(scheduler.Backoff(chunk.Attempt + 1))
 	if _, err := scheduler.Store.RetryGenerationChunk(
 		writeCtx, chunk, store.DurableErrorText(handleErr), notBefore,
 	); errors.Is(err, store.ErrGenerationExhausted) {
+		if !staleHandle {
+			outcome = "exhausted"
+		}
 		if configuration.OnExhausted != nil {
 			callbackCtx, callbackCancel := context.WithTimeout(
 				context.WithoutCancel(ctx), 5*time.Second,
@@ -317,11 +356,41 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 				scheduler.report(fmt.Errorf("record exhausted generation chunk: %w", callbackErr))
 			}
 		}
+	} else if err == nil {
+		if !staleHandle {
+			outcome = "retried"
+		}
+	} else if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+		outcome = "stale_fenced"
 	} else if err != nil &&
 		!errors.Is(err, store.ErrGenerationLeaseLost) &&
 		!errors.Is(err, store.ErrGenerationStale) {
 		scheduler.report(fmt.Errorf("retry generation chunk: %w", err))
 	}
+}
+
+func (scheduler *Scheduler) emitChunkLifecycle(event string, chunk store.GenerationChunk, outcome string) {
+	if scheduler == nil || (!scheduler.Diagnostics && scheduler.ChunkReports == nil) {
+		return
+	}
+	report, err := json.Marshal(ChunkLifecycleReport{
+		Schema: ChunkLifecycleSchema, Event: event, Identity: chunk.Identity,
+		Stage: chunk.Stage, Generation: chunk.Generation, Attempt: chunk.Attempt, Outcome: outcome,
+	})
+	if err != nil || len(report) > 4096 {
+		return
+	}
+	sink := scheduler.ChunkReports
+	if sink == nil {
+		sink = func(value []byte) error {
+			diagnostics.Logf("generation chunk lifecycle: %s", value)
+			return nil
+		}
+	}
+	func() {
+		defer func() { _ = recover() }()
+		_ = sink(report)
+	}()
 }
 
 func (scheduler *Scheduler) report(err error) {

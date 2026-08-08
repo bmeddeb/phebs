@@ -90,9 +90,8 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return Prepared{}, err
 	}
-	commit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
-	if err != nil || commit != plan.SourceCommit {
-		return Prepared{}, errors.New("T40.13 checkout differs from the frozen source commit")
+	if err := verifyCleanCheckout(ctx, moduleRoot, plan.SourceCommit); err != nil {
+		return Prepared{}, err
 	}
 	if _, err := HostPreflight(ctx, workspaceParent, plan); err != nil {
 		return Prepared{}, err
@@ -415,6 +414,21 @@ func gitOutput(ctx context.Context, directory string, args ...string) (string, e
 		return "", fmt.Errorf("T40.13 git command failed")
 	}
 	return string(bytesTrimSpace(output)), nil
+}
+
+func verifyCleanCheckout(ctx context.Context, moduleRoot, sourceCommit string) error {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !hexIdentity(sourceCommit, 40) {
+		return errors.New("T40.13 checkout identity is invalid")
+	}
+	commit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
+	if err != nil || commit != sourceCommit {
+		return errors.New("T40.13 checkout differs from the frozen source commit")
+	}
+	status, err := gitOutput(ctx, moduleRoot, "status", "--porcelain=v1", "--untracked-files=all")
+	if err != nil || status != "" {
+		return errors.New("T40.13 checkout has modified or untracked files")
+	}
+	return nil
 }
 
 func gitEnvironment() []string {

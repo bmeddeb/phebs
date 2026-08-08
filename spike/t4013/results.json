@@ -405,12 +405,13 @@
     {
       "phase": "cold",
       "class": "oracle",
-      "code": "exact_gate_failed"
+      "code": "failed_phase_measurement_unavailable"
     }
   ],
   "decision": {
-    "selected": "reduce",
-    "reason": "exact_mechanics_oracle_failed"
+    "selected": "unclassified",
+    "reason": "failed_phase_measurement_unavailable",
+    "substantiated": false
   },
   "teardown": {
     "completed": true,

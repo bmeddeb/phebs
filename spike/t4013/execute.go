@@ -1,6 +1,7 @@
 package t4013
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"io"
@@ -15,6 +16,7 @@ import (
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -35,21 +37,25 @@ type ExecuteRequest struct {
 }
 
 type execution struct {
-	ctx         context.Context
-	moduleRoot  string
-	workspace   string
-	plan        Plan
-	planBytes   []byte
-	prepared    Prepared
-	toolchain   privateToolchain
-	observation Observation
-	structural  *privateServer
-	semantic    *privateServer
-	structA     privateProfileSnapshot
-	structB     privateProfileSnapshot
-	structAR    privateProfileSnapshot
-	semanticA   privateProfileSnapshot
-	phase       int
+	ctx            context.Context
+	moduleRoot     string
+	workspace      string
+	plan           Plan
+	planBytes      []byte
+	prepared       Prepared
+	toolchain      privateToolchain
+	observation    Observation
+	structural     *privateServer
+	semantic       *privateServer
+	structA        privateProfileSnapshot
+	structB        privateProfileSnapshot
+	structAR       privateProfileSnapshot
+	semanticA      privateProfileSnapshot
+	phase          int
+	phaseStarted   time.Time
+	activeMeters   map[*phaseMeter]struct{}
+	partialMetrics PhaseMetrics
+	metersTracked  int
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
@@ -116,9 +122,8 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return nil, err
 	}
-	commit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
-	if err != nil || commit != plan.SourceCommit {
-		return nil, errors.New("T40.13 execution checkout differs from the frozen commit")
+	if err := verifyCleanCheckout(ctx, moduleRoot, plan.SourceCommit); err != nil {
+		return nil, err
 	}
 	environment, err := HostPreflight(ctx, filepath.Dir(workspace), plan)
 	if err != nil {
@@ -170,7 +175,7 @@ func validatePreparedFiles(prepared Prepared, workspace string) error {
 }
 
 func (run *execution) execute() error {
-	run.phase = 0
+	run.startPhase(0)
 	if extractionpublication.ScheduleMaxAttempts != run.plan.Safety.MaximumRetriesPerUnit {
 		return errors.New("T40.13 production retry ceiling differs from the frozen plan")
 	}
@@ -183,6 +188,10 @@ func (run *execution) execute() error {
 		return err
 	}
 	run.toolchain = toolchain
+	run.observation.Toolchain, err = observeToolchain(toolchain)
+	if err != nil {
+		return err
+	}
 	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{
 		WallMS: time.Since(preflightStarted).Milliseconds(), OtherChildren: 4,
 	})
@@ -190,46 +199,46 @@ func (run *execution) execute() error {
 		return err
 	}
 
-	run.phase = 1
+	run.startPhase(1)
 	if err := run.cold(); err != nil {
 		return err
 	}
-	run.phase = 2
+	run.startPhase(2)
 	if err := run.warmNoop(); err != nil {
 		return err
 	}
-	run.phase = 3
+	run.startPhase(3)
 	if err := run.deltaAndReturn(); err != nil {
 		return err
 	}
-	run.phase = 5
+	run.startPhase(5)
 	if err := run.interruption(); err != nil {
 		return err
 	}
-	run.phase = 6
+	run.startPhase(6)
 	if err := run.staleWorker(); err != nil {
 		return err
 	}
-	run.phase = 7
+	run.startPhase(7)
 	if err := run.pressure(); err != nil {
 		return err
 	}
-	run.phase = 8
+	run.startPhase(8)
 	if err := run.archiveRestore(); err != nil {
 		return err
 	}
-	run.phase = 9
+	run.startPhase(9)
 	if err := run.collection(); err != nil {
 		return err
 	}
-	run.phase = 10
+	run.startPhase(10)
 	if err := run.authorizedQueries(); err != nil {
 		return err
 	}
 	if err := run.finalizeObservation(); err != nil {
 		return err
 	}
-	run.phase = 11
+	run.startPhase(11)
 	if err := run.teardown(); err != nil {
 		return err
 	}
@@ -238,9 +247,9 @@ func (run *execution) execute() error {
 
 func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	started := time.Now()
-	if err := run.stopServers(); err != nil {
-		return Observation{}, err
-	}
+	stopErr := run.stopServers()
+	measurementErr := run.captureFailedPhase()
+	ceilingErr := run.enforceSafety()
 	info, err := os.Lstat(run.workspace)
 	if errors.Is(err, os.ErrNotExist) && run.observation.Teardown.Completed {
 		// A ceiling crossed only after the successful destructive teardown.
@@ -256,42 +265,110 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 			return Observation{}, errors.New("T40.13 stopped-run teardown left custody behind")
 		}
 	}
-	if run.phase >= 0 && run.phase < len(run.observation.Phases) {
-		failed := run.observation.Phases[run.phase]
-		failed.Name, failed.Outcome, failed.OracleExact = phaseOrder[run.phase], "failed", false
-		run.observation.Phases[run.phase] = failed
-	}
 	if run.phase != len(run.observation.Phases)-1 {
 		run.observation.Phases[len(run.observation.Phases)-1] = succeededPhase("teardown", PhaseMetrics{
 			WallMS: time.Since(started).Milliseconds(),
 		})
 	}
 	run.observation.Outcome = "stopped"
-	failureClass, decision, reason := "oracle", "reduce", "exact_mechanics_oracle_failed"
+	failureClass, failureCode := "oracle", "exact_gate_failed"
+	decision, reason, substantiated := "reduce", "exact_mechanics_oracle_failed", true
 	switch {
-	case errors.Is(cause, errReviewCeiling):
-		failureClass, decision, reason = "environment", "cohort_experiment", "frozen_review_ceiling_crossed"
+	case errors.Is(cause, errReviewCeiling) || errors.Is(ceilingErr, errReviewCeiling):
+		failureClass, failureCode = "environment", "review_ceiling_crossed"
+		decision, reason, substantiated = "cohort_experiment", "frozen_review_ceiling_crossed", true
+	case measurementErr != nil:
+		failureCode = "failed_phase_measurement_unavailable"
+		decision, reason, substantiated = "unclassified", "failed_phase_measurement_unavailable", false
 	case run.phase == 5 || run.phase == 8:
-		failureClass, decision, reason = "recovery", "p6_investigation", "direct_recovery_failed"
-	case run.phase == 7:
-		failureClass, decision, reason = "lifecycle", "reduce", "production_pressure_gate_refused"
-	case run.phase == 9:
-		failureClass, decision, reason = "lifecycle", "reduce", "bounded_collection_oracle_failed"
-	}
-	failureCode := "exact_gate_failed"
-	if errors.Is(cause, errReviewCeiling) {
-		failureCode = "review_ceiling_crossed"
+		failureClass, failureCode = "recovery", "direct_recovery_failed"
+		decision, reason, substantiated = "p6_investigation", "direct_recovery_failed", true
 	}
 	run.observation.Failures = []FailureObservation{{
 		Phase: phaseOrder[run.phase], Class: failureClass, Code: failureCode,
 	}}
-	run.observation.Decision = DecisionObservation{Selected: decision, Reason: reason}
+	run.observation.Decision = DecisionObservation{
+		Selected: decision, Reason: reason, Substantiated: substantiated,
+	}
 	run.observation.Teardown = TeardownObservation{Completed: true}
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
 	if err := ValidateObservation(run.observation); err != nil {
 		return Observation{}, err
 	}
-	return run.observation, nil
+	return run.observation, stopErr
+}
+
+func (run *execution) startPhase(index int) {
+	run.phase = index
+	run.phaseStarted = time.Now()
+	run.activeMeters = make(map[*phaseMeter]struct{})
+	run.partialMetrics = PhaseMetrics{}
+	run.metersTracked = 0
+}
+
+func (run *execution) trackMeter(meter *phaseMeter) {
+	if meter != nil {
+		run.activeMeters[meter] = struct{}{}
+		run.metersTracked++
+	}
+}
+
+func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapshot) (PhaseMetrics, error) {
+	metrics, err := meter.finish(after)
+	delete(run.activeMeters, meter)
+	if err == nil {
+		run.partialMetrics = mergeMetrics(run.partialMetrics, metrics)
+	}
+	return metrics, err
+}
+
+func (run *execution) captureFailedPhase() error {
+	if run.phase < 0 || run.phase >= len(run.observation.Phases) {
+		return errors.New("T40.13 failed phase is invalid")
+	}
+	metrics := run.partialMetrics
+	if run.observation.Phases[run.phase].Outcome != "not_run" {
+		metrics = run.observation.Phases[run.phase].Metrics
+	}
+	var captureErr error
+	if run.metersTracked < expectedPhaseMeters(run.phase) {
+		captureErr = errors.New("T40.13 failed phase lacks its complete meter inventory")
+	}
+	for meter := range run.activeMeters {
+		measured, err := meter.finish(nil)
+		delete(run.activeMeters, meter)
+		captureErr = errors.Join(captureErr, err)
+		if err == nil {
+			metrics = mergeMetrics(metrics, measured)
+		}
+	}
+	if metrics.DataAllocatedBytes == 0 {
+		logical, allocated, err := measureDataBytes(run.workspace)
+		captureErr = errors.Join(captureErr, err)
+		if err == nil {
+			metrics.DataLogicalBytes, metrics.DataAllocatedBytes = logical, allocated
+		}
+	}
+	if !run.phaseStarted.IsZero() {
+		metrics.WallMS = time.Since(run.phaseStarted).Milliseconds()
+	}
+	run.activeMeters = nil
+	run.observation.Phases[run.phase] = PhaseObservation{
+		Name: phaseOrder[run.phase], Outcome: "failed", Metrics: metrics,
+		AuthorityChanged: metrics.PublicationTransactions > 0, OracleExact: false,
+	}
+	return captureErr
+}
+
+func expectedPhaseMeters(phase int) int {
+	switch phase {
+	case 1, 5, 10:
+		return 2
+	case 2, 3, 4, 6, 7, 8, 9:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (run *execution) cold() error {
@@ -306,11 +383,12 @@ func (run *execution) cold() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	run.structA, err = waitSnapshot(run.ctx, structural, "a", 2*time.Hour)
 	if err != nil {
 		return err
 	}
-	structMetrics, err := meter.finish(&run.structA)
+	structMetrics, err := run.finishMeter(meter, &run.structA)
 	if err != nil {
 		return err
 	}
@@ -327,11 +405,12 @@ func (run *execution) cold() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	run.semanticA, err = waitSnapshot(run.ctx, semantic, "a", 2*time.Hour)
 	if err != nil {
 		return err
 	}
-	semanticMetrics, err := meter.finish(&run.semanticA)
+	semanticMetrics, err := run.finishMeter(meter, &run.semanticA)
 	if err != nil {
 		return err
 	}
@@ -362,20 +441,18 @@ func (run *execution) warmNoop() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	after, err := waitSnapshot(run.ctx, profile, "a", 20*time.Minute)
 	if err != nil {
 		return err
 	}
-	metrics, err := meter.finish(&after)
+	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
 	if !privateSnapshotEqual(run.structA, after) || metrics.GitChildren != 0 || metrics.IndexChildren != 0 ||
-		metrics.PublicationWrites != 0 || metrics.PublicationTransactions != 0 {
+		metrics.PublicationWrites != 0 || metrics.PublicationTransactions != 0 || metrics.ReusedControls == 0 {
 		return errors.New("T40.13 warm no-op moved authority or performed content work")
-	}
-	if metrics.ReusedControls == 0 {
-		metrics.ReusedControls = 1
 	}
 	run.observation.Phases[2] = succeededPhase("warm_noop", metrics)
 	return run.enforceSafety()
@@ -387,6 +464,7 @@ func (run *execution) deltaAndReturn() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
@@ -397,7 +475,7 @@ func (run *execution) deltaAndReturn() error {
 	if changedSourceMembers(run.structA, run.structB) != 1 {
 		return errors.New("T40.13 B changed other than one source partition")
 	}
-	metrics, err := meter.finish(&run.structB)
+	metrics, err := run.finishMeter(meter, &run.structB)
 	if err != nil {
 		return err
 	}
@@ -406,11 +484,12 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 
-	run.phase = 4
+	run.startPhase(4)
 	meter, err = beginPhaseMeter(run.structural, run.workspace, &run.structB)
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
 		return err
 	}
@@ -422,7 +501,7 @@ func (run *execution) deltaAndReturn() error {
 		!equalStringSlices(run.structA.SourceMemberDigests, run.structAR.SourceMemberDigests) {
 		return errors.New("T40.13 A return did not reproduce the frozen source partitions")
 	}
-	metrics, err = meter.finish(&run.structAR)
+	metrics, err = run.finishMeter(meter, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -453,6 +532,7 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
 		_ = server.stop(30 * time.Second)
 		return err
@@ -460,7 +540,7 @@ func (run *execution) interruption() error {
 	if err := server.stop(30 * time.Second); err != nil {
 		return err
 	}
-	firstMetrics, err := meter.finish(nil)
+	firstMetrics, err := run.finishMeter(meter, nil)
 	if err != nil {
 		return err
 	}
@@ -473,6 +553,7 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(restartMeter)
 	after, err := waitSnapshot(run.ctx, profile, "a", 2*time.Hour)
 	if err != nil {
 		return err
@@ -480,7 +561,7 @@ func (run *execution) interruption() error {
 	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
 		return errors.New("T40.13 interruption recovery changed exact authority")
 	}
-	restartMetrics, err := restartMeter.finish(&after)
+	restartMetrics, err := run.finishMeter(restartMeter, &after)
 	if err != nil {
 		return err
 	}
@@ -502,10 +583,17 @@ func (run *execution) staleWorker() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
 	if err := waitIndexedCommit(run.ctx, profile, profile.Revisions["b"], 90*time.Minute); err != nil {
+		return err
+	}
+	started, err := waitChunkLifecycle(
+		run.ctx, run.structural.logPath, meter.logOffset, "", "started", 90*time.Minute,
+	)
+	if err != nil {
 		return err
 	}
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
@@ -519,7 +607,17 @@ func (run *execution) staleWorker() error {
 		after.RelationshipGeneration != run.structAR.RelationshipGeneration {
 		return errors.New("T40.13 stale worker moved final authority")
 	}
-	metrics, err := meter.finish(&after)
+	settled, err := waitChunkLifecycle(
+		run.ctx, run.structural.logPath, meter.logOffset, started.Identity, "settled", 20*time.Minute,
+	)
+	if err != nil {
+		return err
+	}
+	if settled.Generation != started.Generation || settled.Attempt != started.Attempt ||
+		settled.Outcome != "stale_fenced" {
+		return errors.New("T40.13 selected worker was not fenced stale after supersession")
+	}
+	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
@@ -528,12 +626,73 @@ func (run *execution) staleWorker() error {
 	return run.enforceSafety()
 }
 
+func waitChunkLifecycle(
+	ctx context.Context,
+	logPath string,
+	offset int64,
+	identity string,
+	event string,
+	limit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		report, found, err := readChunkLifecycle(logPath, offset, identity, event)
+		if err != nil {
+			return generationscheduler.ChunkLifecycleReport{}, err
+		}
+		if found {
+			return report, nil
+		}
+		select {
+		case <-phase.Done():
+			return generationscheduler.ChunkLifecycleReport{}, errors.New("T40.13 chunk lifecycle deadline expired")
+		case <-ticker.C:
+		}
+	}
+}
+
+func readChunkLifecycle(
+	logPath string,
+	offset int64,
+	identity string,
+	event string,
+) (generationscheduler.ChunkLifecycleReport, bool, error) {
+	file, err := os.Open(logPath)
+	if err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, false, err
+	}
+	defer func() { _ = file.Close() }()
+	if _, err := file.Seek(offset, 0); err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, false, err
+	}
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 4096), 1<<20)
+	for scanner.Scan() {
+		var report generationscheduler.ChunkLifecycleReport
+		if decodeLogObject(scanner.Bytes(), "generation chunk lifecycle: ", &report) != nil ||
+			report.Schema != generationscheduler.ChunkLifecycleSchema || report.Event != event ||
+			report.Stage != extractionpublication.ScheduleStage ||
+			identity != "" && report.Identity != identity {
+			continue
+		}
+		if !digestIdentity(report.Identity) || !digestIdentity(report.Generation) || report.Attempt < 0 {
+			return generationscheduler.ChunkLifecycleReport{}, false, errors.New("T40.13 chunk lifecycle report is invalid")
+		}
+		return report, true, nil
+	}
+	return generationscheduler.ChunkLifecycleReport{}, false, scanner.Err()
+}
+
 func (run *execution) pressure() error {
 	profile := run.prepared.Profiles[0]
 	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	status, err := waitLifecycle(run.ctx, profile, false, 10*time.Minute)
 	if err != nil {
 		return err
@@ -548,7 +707,7 @@ func (run *execution) pressure() error {
 	if err != nil {
 		return err
 	}
-	metrics, err := meter.finish(&after)
+	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
@@ -578,6 +737,7 @@ func (run *execution) archiveRestore() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	after, err := waitSnapshot(run.ctx, profile, "a-return", 2*time.Hour)
 	if err != nil {
 		return err
@@ -586,7 +746,7 @@ func (run *execution) archiveRestore() error {
 		after.RelationshipGeneration != run.structAR.RelationshipGeneration {
 		return errors.New("T40.13 archive restore changed precious authority")
 	}
-	metrics, err := meter.finish(&after)
+	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
@@ -607,6 +767,7 @@ func (run *execution) collection() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(meter)
 	if _, err := waitLifecycle(run.ctx, profile, true, 10*time.Minute); err != nil {
 		return err
 	}
@@ -617,7 +778,7 @@ func (run *execution) collection() error {
 	if snapshotAuthority(after) != snapshotAuthority(run.structAR) {
 		return errors.New("T40.13 collection changed protected authority")
 	}
-	metrics, err := meter.finish(&after)
+	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
@@ -631,6 +792,7 @@ func (run *execution) authorizedQueries() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(structMeter)
 	semanticProfile := run.prepared.Profiles[1]
 	semanticServer, err := startPrivateServer(run.ctx, semanticProfile, run.toolchain, "authorized-query")
 	if err != nil {
@@ -641,6 +803,7 @@ func (run *execution) authorizedQueries() error {
 	if err != nil {
 		return err
 	}
+	run.trackMeter(semanticMeter)
 	semanticAfter, err := waitSnapshot(run.ctx, semanticProfile, "a", 20*time.Minute)
 	if err != nil {
 		return err
@@ -648,11 +811,11 @@ func (run *execution) authorizedQueries() error {
 	if snapshotAuthority(semanticAfter) != snapshotAuthority(run.semanticA) {
 		return errors.New("T40.13 authorized-query restart changed semantic authority")
 	}
-	structCount, structExact, err := queryProfile(run.ctx, run.prepared.Profiles[0], "service-000")
+	structCount, structExact, err := queryProfile(run.ctx, run.prepared.Profiles[0], "service-000", false)
 	if err != nil {
 		return err
 	}
-	semanticCount, semanticExact, err := queryProfile(run.ctx, run.prepared.Profiles[1], "semantic")
+	semanticCount, semanticExact, err := queryProfile(run.ctx, run.prepared.Profiles[1], "semantic", true)
 	if err != nil {
 		return err
 	}
@@ -663,11 +826,11 @@ func (run *execution) authorizedQueries() error {
 	if err != nil {
 		return err
 	}
-	structMetrics, err := structMeter.finish(&structAfter)
+	structMetrics, err := run.finishMeter(structMeter, &structAfter)
 	if err != nil {
 		return err
 	}
-	semanticMetrics, err := semanticMeter.finish(&semanticAfter)
+	semanticMetrics, err := run.finishMeter(semanticMeter, &semanticAfter)
 	if err != nil {
 		return err
 	}
@@ -723,7 +886,9 @@ func (run *execution) finalizeObservation() error {
 	for index := range run.observation.Checks {
 		run.observation.Checks[index].Passed = true
 	}
-	run.observation.Decision = DecisionObservation{Selected: "continue", Reason: "all_exact_mechanics_passed"}
+	run.observation.Decision = DecisionObservation{
+		Selected: "continue", Reason: "all_exact_mechanics_passed", Substantiated: true,
+	}
 	return nil
 }
 
@@ -757,7 +922,7 @@ func (run *execution) teardown() error {
 func (run *execution) enforceSafety() error {
 	var totalWall int64
 	for _, phase := range run.observation.Phases {
-		if phase.Outcome != "succeeded" {
+		if phase.Outcome == "not_run" {
 			continue
 		}
 		totalWall += phase.Metrics.WallMS
@@ -933,7 +1098,12 @@ func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bo
 	}
 }
 
-func queryProfile(ctx context.Context, profile PreparedProfile, serviceKey string) (int, bool, error) {
+func queryProfile(
+	ctx context.Context,
+	profile PreparedProfile,
+	serviceKey string,
+	requireCitation bool,
+) (int, bool, error) {
 	inspector, err := newProfileInspector(profile)
 	if err != nil {
 		return 0, false, err
@@ -955,6 +1125,10 @@ func queryProfile(ctx context.Context, profile PreparedProfile, serviceKey strin
 	if err := inspector.get(ctx, profile, "/api/search?q=T401&max_matches=1", &searchResult); err != nil {
 		return 0, false, err
 	}
+	if len(searchResult.Files) == 0 || len(searchResult.Files[0].Chunks) == 0 ||
+		len(searchResult.Files[0].Chunks[0].Ranges) == 0 {
+		return 0, false, errors.New("T40.13 authorized search returned no exact match")
+	}
 	var services apiresponse.ServiceInventory
 	servicePath := "/api/services?repository=" + url.QueryEscape(profile.RepositoryName) + "&page_size=100"
 	if err := inspector.get(ctx, profile, servicePath, &services); err != nil {
@@ -972,13 +1146,21 @@ func queryProfile(ctx context.Context, profile PreparedProfile, serviceKey strin
 	if len(relationships.Roots) != 1 || relationships.Roots[0].Generation == "" || relationships.Roots[0].RootDigest == "" {
 		return 0, false, errors.New("T40.13 relationship response lacks exact root authority")
 	}
+	if requireCitation && len(relationships.Rows) == 0 {
+		return 0, false, errors.New("T40.13 relationship query returned no citable row")
+	}
 	if len(relationships.Rows) > 0 {
+		if relationships.Rows[0].Citation == "" {
+			return 0, false, errors.New("T40.13 relationship row lacks a citation token")
+		}
 		var citation apiresponse.RelationshipCitation
 		path := "/api/service-relationship-citation?citation=" + url.QueryEscape(relationships.Rows[0].Citation)
 		if err := inspector.get(ctx, profile, path, &citation); err != nil {
 			return 0, false, err
 		}
-		if citation.Generation != relationships.Roots[0].Generation || citation.RootDigest != relationships.Roots[0].RootDigest {
+		if citation.Repository != profile.RepositoryName || citation.Generation != relationships.Roots[0].Generation ||
+			citation.RootDigest != relationships.Roots[0].RootDigest || citation.AuthorityDigest == "" ||
+			citation.Content == "" {
 			return 0, false, errors.New("T40.13 citation differs from rendered root authority")
 		}
 	}
@@ -1001,7 +1183,9 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 			{Name: "structural-2m-v1", RegularFiles: 2_000_002, PhysicalOwners: 2_000_002, DeclaredSourceBytes: 9_216_000_076},
 			{Name: "semantic-262144-v1", RegularFiles: 294_914, PhysicalOwners: 294_914, DeclaredSourceBytes: 146_800_716},
 		},
-		Phases: phases, Checks: checks, Decision: DecisionObservation{Selected: "continue", Reason: "execution_in_progress"},
+		Phases: phases, Checks: checks, Decision: DecisionObservation{
+			Selected: "continue", Reason: "execution_in_progress", Substantiated: true,
+		},
 	}
 }
 

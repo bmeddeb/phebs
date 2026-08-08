@@ -2,8 +2,10 @@ package generationscheduler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,6 +14,31 @@ import (
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestChunkLifecycleReportBindsStartedLeaseIdentity(t *testing.T) {
+	var reports [][]byte
+	scheduler := &Scheduler{ChunkReports: func(value []byte) error {
+		reports = append(reports, append([]byte(nil), value...))
+		return nil
+	}}
+	chunk := store.GenerationChunk{
+		Identity: "sha256:" + strings.Repeat("1", 64),
+		Stage:    "extraction-partitions", Generation: "sha256:" + strings.Repeat("2", 64), Attempt: 3,
+	}
+	scheduler.emitChunkLifecycle("started", chunk, "running")
+	if len(reports) != 1 {
+		t.Fatalf("reports = %d", len(reports))
+	}
+	var report ChunkLifecycleReport
+	if err := json.Unmarshal(reports[0], &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.Schema != ChunkLifecycleSchema || report.Event != "started" ||
+		report.Identity != chunk.Identity || report.Generation != chunk.Generation ||
+		report.Attempt != chunk.Attempt || report.Outcome != "running" {
+		t.Fatalf("report = %+v", report)
+	}
+}
 
 type schedulerStore struct {
 	mu          sync.Mutex

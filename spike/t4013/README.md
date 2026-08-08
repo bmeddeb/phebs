@@ -172,12 +172,23 @@ prerequisites. Preflight succeeded, but cold convergence stopped at its exact
 oracle before a successful cold phase fence. Every later phase is `not_run`.
 
 The retained [`results.json`](./results.json)
-(`sha256:7a641e6d8955fd51dc782e3f42437449fd0080ef229843bc38bb406593221b1e`)
-therefore selects `reduce`. Exact teardown removed the external authored
+(`sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85`)
+therefore records an `unclassified`, unsubstantiated decision. Exact teardown removed the external authored
 repositories, data, logs, credentials, and binaries; the receipt retains no
 source or raw diagnostic. The result authorizes no rerun, threshold change,
-cohort/P6 selection, release, or scale claim and remains pending independent
+cohort/P6 selection, release, or scale claim and did not pass independent
 review.
+
+The independent review found that the original executor discarded failed-cold
+meters and did not retain executable identities, so the earlier `reduce`
+classification could not be proved from retained evidence. The corrected
+harness builds from an exact `git archive HEAD`, refuses a modified or untracked
+checkout, retains four executable digests, finalizes failed-phase meters,
+requires diagnostic reuse, binds the stale-worker case to one started and
+terminally fenced scheduler lease, requires real query matches plus a citation,
+and validates stopped phase/decision coherence. Those corrections govern only
+a separately authorized future plan and do not retroactively strengthen this
+consumed run.
 
 ```sh
 go test ./spike/t4013/... -count=1
