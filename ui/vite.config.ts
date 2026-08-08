@@ -14,5 +14,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['src/test-setup.ts'],
+    // receipts/ holds Playwright screenshot specs, not vitest suites.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

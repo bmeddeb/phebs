@@ -42,3 +42,6 @@ __pycache__/
 *.pyc
 
 uber-phebs.yaml
+
+# T43.4 screenshot-receipt run artifacts (baselines ARE committed)
+ui/receipts/.artifacts/

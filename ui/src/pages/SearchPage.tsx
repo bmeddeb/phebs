@@ -12,6 +12,7 @@ import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
 import { isAbortError, relTime, repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
 import RepositoryBrowser from '../RepositoryBrowser'
+import { AuthorityChipButton, AuthorityDrawer } from '../components/AuthorityDrawer'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { analysisScopeFromRepoStatus } from '../components/analysisScope'
 
@@ -568,6 +569,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const allCodeHref = href('/search', { q: query })
   const serviceHref = repository && serviceKey
     ? href('/search', searchRouteParams(query, 'service', repository, serviceKey))
@@ -606,10 +608,18 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
               : 'Search every visible indexed repository.'}
         </span>
       </div>
-      {kind === 'service' && repository && (
-        <div className={css({ marginTop: '6px', fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
-          {repository} · receipt {receipt ? receipt.digest.slice(0, 23) : 'pending'}
+      {(kind === 'service' && repository) || receipt ? (
+        <div className={css({ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexWrap: 'wrap' })}>
+          {receipt && <AuthorityChipButton receipt={receipt} onOpen={() => setDrawerOpen(true)} />}
+          {kind === 'service' && repository && (
+            <span className={css({ minWidth: 0, fontFamily: FONTS.MONO, fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
+              {repository}
+            </span>
+          )}
         </div>
+      ) : null}
+      {receipt && (
+        <AuthorityDrawer receipt={receipt} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       )}
     </fieldset>
   )
