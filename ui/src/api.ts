@@ -41,6 +41,39 @@ export interface SearchScopeRevision {
   commit: string
 }
 
+// Mirrors internal/servicequery.Authority — the exact service authority a
+// service-scoped search executed under.
+export interface ServiceScopeAuthority {
+  schema: string
+  predicate_policy: string
+  topology_policy: string
+  repository: string
+  service_key: string
+  status: string
+  incarnation: number
+  revision_selector: string
+  revision_branch: string
+  revision_commit: string
+  expression_digest: string
+  current_catalog_generation: string
+  catalog_control_revision: number
+  active_catalog_generation: string
+  active_source_generation: string
+  active_desired_generation: string
+  service_state_digest: string
+  service_state_revision: number
+  state_summary_digest: string
+  state_summary_revision: number
+  repository_source_generation: string
+  repository_search_generation: string
+  path_digest: string
+  path_count: number
+  path_bytes: number
+  predicate_atoms: number
+  predicate_bytes: number
+  digest: string
+}
+
 export interface SearchScopeReceipt {
   schema: 'phebs-search-scope-v1'
   kind: 'all_code' | 'service'
@@ -49,7 +82,7 @@ export interface SearchScopeReceipt {
   service_status?: ServiceStatus
   membership_policy: string
   expression_digest: string
-  service_authority?: Record<string, unknown>
+  service_authority?: ServiceScopeAuthority
   revisions: SearchScopeRevision[]
   result_set_digest: string
   result_files: number
@@ -2715,21 +2748,64 @@ function isSearchResult(value: unknown): value is SearchResult {
   )
 }
 
-function isSearchScopeReceipt(value: unknown): value is SearchScopeReceipt {
+// Fail-closed (charter §2): a receipt that cannot carry its own authority is
+// rejected here, so the drawer never renders placeholder identity.
+const isSHA256Digest = (value: unknown): value is string =>
+  typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value)
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0
+
+function isServiceScopeAuthority(value: unknown): value is ServiceScopeAuthority {
   return (
+    isRecord(value) &&
+    isNonEmptyString(value.schema) &&
+    isNonEmptyString(value.repository) &&
+    isNonEmptyString(value.service_key) &&
+    isNonEmptyString(value.status) &&
+    isCount(value.incarnation) &&
+    isNonEmptyString(value.revision_commit) &&
+    isSHA256Digest(value.expression_digest) &&
+    isNonEmptyString(value.current_catalog_generation) &&
+    isNonEmptyString(value.active_catalog_generation) &&
+    isNonEmptyString(value.active_source_generation) &&
+    isNonEmptyString(value.active_desired_generation) &&
+    isSHA256Digest(value.service_state_digest) &&
+    isSHA256Digest(value.state_summary_digest) &&
+    isSHA256Digest(value.path_digest) &&
+    isCount(value.path_count) &&
+    isSHA256Digest(value.digest)
+  )
+}
+
+function isSearchScopeReceipt(value: unknown): value is SearchScopeReceipt {
+  if (!(
     isRecord(value) &&
     value.schema === 'phebs-search-scope-v1' &&
     (value.kind === 'all_code' || value.kind === 'service') &&
     typeof value.membership_policy === 'string' &&
-    typeof value.expression_digest === 'string' &&
+    isSHA256Digest(value.expression_digest) &&
     Array.isArray(value.revisions) &&
     value.revisions.every((revision) =>
       isRecord(revision) &&
-      typeof revision.repository === 'string' &&
-      typeof revision.commit === 'string') &&
-    typeof value.result_set_digest === 'string' &&
-    isFiniteNumber(value.result_files) &&
-    isFiniteNumber(value.result_matches) &&
-    typeof value.digest === 'string'
-  )
+      isNonEmptyString(revision.repository) &&
+      isNonEmptyString(revision.commit)) &&
+    isSHA256Digest(value.result_set_digest) &&
+    isCount(value.result_files) &&
+    isCount(value.result_matches) &&
+    isSHA256Digest(value.digest)
+  )) return false
+  // Cited files without a revision pin are incoherent; an empty pin set is
+  // valid only for an empty result set.
+  if (value.result_files > 0 && value.revisions.length === 0) return false
+  if (value.kind === 'service') {
+    return (
+      isNonEmptyString(value.repository) &&
+      isNonEmptyString(value.service_key) &&
+      isNonEmptyString(value.service_status) &&
+      isServiceScopeAuthority(value.service_authority)
+    )
+  }
+  return true
 }

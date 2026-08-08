@@ -12,7 +12,7 @@ import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
 import { isAbortError, relTime, repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
 import RepositoryBrowser from '../RepositoryBrowser'
-import { AuthorityChipButton, AuthorityDrawer } from '../components/AuthorityDrawer'
+import { AuthorityChipButton, AuthorityDrawer, type ScopeCitation } from '../components/AuthorityDrawer'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { analysisScopeFromRepoStatus } from '../components/analysisScope'
 
@@ -36,6 +36,16 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const [files, setFiles] = useState<FileResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [scopeReceipt, setScopeReceipt] = useState<SearchScopeReceipt | null>(null)
+  // Rendered results as citation objects for the authority drawer; repo is
+  // included in the label only when the result set spans repositories.
+  const scopeCitations = useMemo<ScopeCitation[]>(() => {
+    const multiRepo = new Set(files.map((f) => f.repo)).size > 1
+    return files.map((f) => ({
+      repository: f.repo,
+      label: multiRepo ? `${f.repo} · ${f.path}` : f.path,
+      href: href('/file', { repo: f.repo, path: f.path, ref: f.ref }),
+    }))
+  }, [files])
   const [repositories, setRepositories] = useState<RepoStatus[]>([])
   const [repositoriesLoading, setRepositoriesLoading] = useState(true)
   const [repositoriesError, setRepositoriesError] = useState('')
@@ -442,6 +452,8 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
         serviceKey={serviceKey}
         query={urlQuery || input.trim()}
         receipt={scopeReceipt}
+        drawerOpen={params.get('authority') === 'scope'}
+        citations={scopeCitations}
       />
 
       <SearchMeta
@@ -560,16 +572,22 @@ function searchRouteParams(
   return result
 }
 
-function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
+function SearchScopeSelector({ kind, repository, serviceKey, query, receipt, drawerOpen, citations }: {
   kind: string
   repository: string
   serviceKey: string
   query: string
   receipt: SearchScopeReceipt | null
+  drawerOpen: boolean
+  citations: ScopeCitation[]
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  // Disclosure is URL state (charter §2 deep-link discipline): reload and
+  // back/forward reproduce it, and a new query naturally drops it.
+  const routeParams = searchRouteParams(query, kind, repository, serviceKey)
+  const openDrawer = () => navigate('/search', { ...routeParams, authority: 'scope' })
+  const closeDrawer = () => navigate('/search', routeParams)
   const allCodeHref = href('/search', { q: query })
   const serviceHref = repository && serviceKey
     ? href('/search', searchRouteParams(query, 'service', repository, serviceKey))
@@ -610,7 +628,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
       </div>
       {(kind === 'service' && repository) || receipt ? (
         <div className={css({ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexWrap: 'wrap' })}>
-          {receipt && <AuthorityChipButton receipt={receipt} onOpen={() => setDrawerOpen(true)} />}
+          {receipt && <AuthorityChipButton receipt={receipt} onOpen={openDrawer} />}
           {kind === 'service' && repository && (
             <span className={css({ minWidth: 0, fontFamily: FONTS.MONO, fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
               {repository}
@@ -619,7 +637,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt }: {
         </div>
       ) : null}
       {receipt && (
-        <AuthorityDrawer receipt={receipt} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        <AuthorityDrawer receipt={receipt} citations={citations} open={drawerOpen} onClose={closeDrawer} />
       )}
     </fieldset>
   )

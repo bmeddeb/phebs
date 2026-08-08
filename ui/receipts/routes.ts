@@ -20,7 +20,11 @@ export interface ReceiptRoute {
   // Regions that mutate BECAUSE a receipts run happens (e.g. the audit log
   // records the harness's own login) are masked, never baselined.
   mask?: string[]
+  // Per-route viewport override; default is the project's desktop viewport.
+  viewport?: { width: number; height: number }
 }
+
+const T323_REPO = 'local/Users/ben/phebs-ux/spike/t323/t323-neutral-corpus.bundle'
 
 export const ROUTES: ReceiptRoute[] = [
   { name: 'search', path: '/' },
@@ -28,6 +32,13 @@ export const ROUTES: ReceiptRoute[] = [
   // order (nondeterministic — tracked for a stable-ordering fix), so the
   // results + authority-chip surface is pinned on a one-repo result set.
   { name: 'search-results', path: '/search?q=%22T323_ORDERS_API_PRODUCER%22' },
+  // T43.5 states: the open authority drawer (disclosure is URL state), the
+  // service-scoped receipt chip, the open service drawer with the service
+  // authority generations, and the drawer at 390px.
+  { name: 'search-results-authority', path: '/search?q=%22T323_ORDERS_API_PRODUCER%22&authority=scope' },
+  { name: 'search-service', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment' })}` },
+  { name: 'search-service-authority', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}` },
+  { name: 'search-service-authority-390', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}`, viewport: { width: 390, height: 844 } },
   { name: 'repos', path: '/repos' },
   { name: 'service-directory', path: `/services?${q({ repository: T307_REPO })}` },
   { name: 'relationship-explorer', path: `/relationships?${q({ repository: T307_REPO })}` },

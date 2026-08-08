@@ -491,6 +491,9 @@ completeness, keyboard journeys, motion, and copy. AC: findings ranked
 blocker/major/minor with exact surface and element; each finding names the
 charter rule it violates; the ledger is retained as a source-free record
 with a per-surface rubric table; no production file changes.
+*Shipped 2026-08-07.* Record in `spike/t431/` (38 findings, Nielsen 23/40,
+three adjudications incl. the charter §1 census exception); blocker hotfix
+landed separately (F1, F2, F5, F6, F17), F3→T43.8, F4→T43.2.
 
 **T43.2 · Semantic design tokens** — formalize the design language into one
 token module: the closed five-state status palette in both themes, spacing
@@ -499,6 +502,12 @@ duration/easing tokens with a reduced-motion mapping. AC: every surface
 consumes tokens with no literal status colors or ad-hoc durations left;
 WCAG AA contrast verified in both themes; zero behavior change; UI suite
 and production build green.
+*Shipped 2026-08-07.* Five-state text/solid tone system with AA proven by
+`theme.test.ts` (44 contrast assertions across surfaces, modes, and diff
+backgrounds); ~118 status sites migrated; legacy flat status tokens
+removed so the type system enforces the vocabulary. Sanctioned visual
+deltas: F4 amber text, F24/F25 motion and tone normalization. Semantic
+word re-mappings deferred to T43.10 per-site review.
 
 **T43.3 · Shared evidence component kit** *(needs T43.2)* — extract the
 recurring evidence primitives into one kit: status badge, staleness chip,
@@ -506,6 +515,11 @@ identity/digest display, empty/sparse/filtered/error/retry states, caveat
 collapse, and citation row. AC: one implementation per primitive with the
 per-page copies deleted; every state has a component test; page behavior
 is unchanged; bundle delta recorded.
+*Shipped 2026-08-07.* Nine primitives in `components/kit.tsx`, 18 state
+tests; nine chip dialects and three focusRing clones deleted (~90 call
+sites, page code net-negative); sanctioned riders F7, F8, F23. Bundle delta
++0.35 kB. Deferred: `MountBoundNotice` and remaining bespoke empty states
+adopt with their surfaces' tickets.
 
 **T43.4 · Deterministic screenshot receipts** *(needs T43.3)* — add a
 screenshot harness over the `make dev` neutral cohorts with a dedicated
@@ -514,6 +528,11 @@ themes and both densities; baselines stored and diffed with a bounded
 threshold; drift fails the run with a visual diff; baselines are
 environment-bound engineering records, refreshed only by an explicit
 reviewed update.
+*Shipped 2026-08-07.* `make ui-receipts` / `ui-receipts-update`; frozen
+clock per instance generation; run-caused mutation masked (audit table,
+analytics body) and documented in `ui/receipts/routes.ts`; densities join
+the matrix at T43.11. Zero retries — every failure is a first-class
+signal; transient loads absorbed by navigation timeout.
 
 **T43.5 · Authority drawer and receipt disclosure** *(needs T43.3)* —
 implement chip → drawer → receipt on the search and service-search
@@ -521,6 +540,19 @@ surfaces. AC: scope receipts render as compact authority chips; the drawer
 presents state, generations, scope, and citations; the receipt view exposes
 copyable digests and a verify affordance; digests never lead a surface;
 keyboard and screen-reader complete; screenshot receipts updated.
+*Shipped 2026-08-07, incl. review follow-up.* Chip wears status + exact
+generation; drawer (real `role="dialog"`, focus-trapped, Escape, URL-state
+disclosure per §2) presents state, the full `service_authority`
+generations with catalog-lag marking, scope, revision pins, and citations
+as linked objects; receipt view: seven copyable digests, copy-JSON, and a
+check-against-rendered-results verification (count + pin coverage,
+presentation-level only). Receipts fail closed at the fetch boundary
+(64-hex digests, integer counts, service identity/authority required).
+Clipboard reports success only after the write resolves. Receipt states
+baselined: closed chip, open drawer, service scope, service drawer, and
+390 px — 45 captures, two clean determinism checks. Suite 306/306; bundle
++2.3 kB over pre-drawer; drawer opens on the 260 ms panel token. Keyboard
+beyond the dialog contract remains T43.9's program.
 
 **T43.6 · Caveat and staleness presentation** *(needs T43.3)* — apply the
 collapsing caveat pattern and "as of" staleness chips across every claiming

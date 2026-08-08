@@ -3,6 +3,7 @@ import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './rout
 
 async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], name: string) {
   const { path } = route
+  if (route.viewport) await page.setViewportSize(route.viewport)
   // Fixed Date only — timers, rAF, and CodeMirror layout stay live; age copy
   // stops drifting between capture and check runs.
   await page.clock.setFixedTime(FROZEN_NOW)

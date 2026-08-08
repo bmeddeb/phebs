@@ -560,18 +560,35 @@ test('service deep link preserves query while switching scope and renders receip
   expect(stream.selectors).toEqual([{
     kind: 'service', repository: 'example.invalid/mono', serviceKey: 'orders-api',
   }])
+  const digest64 = (fill: string) => `sha256:${fill.repeat(64).slice(0, 64)}`
   await act(async () => stream.onScope!({
     schema: 'phebs-search-scope-v1', kind: 'service',
     repository: 'example.invalid/mono', service_key: 'orders-api',
     service_status: 'stale',
     membership_policy: 'accepted-roles-union-shared-included-unowned-excluded-v1',
-    expression_digest: 'sha256:expression', revisions: [{ repository: 'example.invalid/mono', commit: 'abc' }],
-    result_set_digest: 'sha256:results', result_files: 1, result_matches: 1,
-    digest: 'sha256:receipt',
+    expression_digest: digest64('a'),
+    service_authority: {
+      schema: 'phebs-service-scope-authority-v1', predicate_policy: 'p', topology_policy: 't',
+      repository: 'example.invalid/mono', service_key: 'orders-api', status: 'stale',
+      incarnation: 1, revision_selector: 'branch', revision_branch: 'main',
+      revision_commit: 'abcdef1234567890abcdef1234567890abcdef12',
+      expression_digest: digest64('a'),
+      current_catalog_generation: 'cat-r2', catalog_control_revision: 2,
+      active_catalog_generation: 'cat-r2', active_source_generation: 'src-r2',
+      active_desired_generation: 'des-r2',
+      service_state_digest: digest64('b'), service_state_revision: 1,
+      state_summary_digest: digest64('c'), state_summary_revision: 1,
+      repository_source_generation: 'repo-src-r2', repository_search_generation: 'repo-search-r2',
+      path_digest: digest64('d'), path_count: 3, path_bytes: 90,
+      predicate_atoms: 1, predicate_bytes: 16, digest: digest64('e'),
+    },
+    revisions: [{ repository: 'example.invalid/mono', commit: 'abcdef1234567890abcdef1234567890abcdef12' }],
+    result_set_digest: digest64('f'), result_files: 1, result_matches: 1,
+    digest: digest64('0'),
   }))
   expect(screen.getByText(/stale · shared paths included · unowned paths excluded/)).toBeTruthy()
   // T43.5: the receipt is a compact authority chip; digests never lead the band.
-  const chip = screen.getByRole('button', { name: 'stale · as of abc' })
+  const chip = screen.getByRole('button', { name: 'stale · as of abcdef1' })
   expect(chip.getAttribute('aria-haspopup')).toBe('dialog')
   expect(screen.queryByText(/sha256:/)).toBeNull()
   expect(decodeURIComponent(

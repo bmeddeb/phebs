@@ -87,15 +87,53 @@ describe('streamSearch', () => {
     expect(last().url).toBe(
       '/api/stream_search?q=needle&scope=service&repository=example.invalid%2Fmono+repo&service_key=orders%2Fapi',
     )
+    const digest64 = (fill: string) => `sha256:${fill.repeat(64).slice(0, 64)}`
     const receipt = {
       schema: 'phebs-search-scope-v1', kind: 'service',
+      repository: 'example.invalid/mono repo', service_key: 'orders/api',
+      service_status: 'current',
       membership_policy: 'accepted-roles-union-shared-included-unowned-excluded-v1',
-      expression_digest: 'sha256:expression', revisions: [{ repository: 'r', commit: 'c' }],
-      result_set_digest: 'sha256:results', result_files: 1, result_matches: 2,
-      digest: 'sha256:receipt',
+      expression_digest: digest64('a'),
+      service_authority: {
+        schema: 'phebs-service-scope-authority-v1', predicate_policy: 'p', topology_policy: 't',
+        repository: 'example.invalid/mono repo', service_key: 'orders/api', status: 'current',
+        incarnation: 1, revision_selector: 'branch', revision_branch: 'main',
+        revision_commit: 'abcdef1234567890abcdef1234567890abcdef12',
+        expression_digest: digest64('a'),
+        current_catalog_generation: 'cat-r1', catalog_control_revision: 1,
+        active_catalog_generation: 'cat-r1', active_source_generation: 'src-r1',
+        active_desired_generation: 'des-r1',
+        service_state_digest: digest64('b'), service_state_revision: 1,
+        state_summary_digest: digest64('c'), state_summary_revision: 1,
+        repository_source_generation: 'rsrc-r1', repository_search_generation: 'rsch-r1',
+        path_digest: digest64('d'), path_count: 2, path_bytes: 40,
+        predicate_atoms: 1, predicate_bytes: 8, digest: digest64('e'),
+      },
+      revisions: [{ repository: 'example.invalid/mono repo', commit: 'abcdef1234567890abcdef1234567890abcdef12' }],
+      result_set_digest: digest64('f'), result_files: 1, result_matches: 2,
+      digest: digest64('0'),
     }
     last().emit('scope', JSON.stringify(receipt))
     expect(onScope).toHaveBeenCalledWith(receipt)
+  })
+
+  it('fails closed on a scope receipt that cannot carry its authority', () => {
+    const onScope = vi.fn()
+    const onError = vi.fn()
+    streamSearch(
+      'needle', vi.fn(), vi.fn(), onError,
+      { kind: 'service', repository: 'example.invalid/mono', serviceKey: 'orders-api' },
+      onScope,
+    )
+    // Service receipt without identity, authority, valid digests, or counts.
+    last().emit('scope', JSON.stringify({
+      schema: 'phebs-search-scope-v1', kind: 'service',
+      membership_policy: 'm', expression_digest: 'sha256:short',
+      revisions: [], result_set_digest: 'sha256:short',
+      result_files: -1, result_matches: 0.5, digest: 'sha256:short',
+    }))
+    expect(onScope).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith('invalid search scope event')
   })
 
   it('delivers parsed results batches to onBatch in order', () => {

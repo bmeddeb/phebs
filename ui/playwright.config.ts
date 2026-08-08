@@ -9,9 +9,11 @@ export default defineConfig({
   outputDir: './receipts/.artifacts',
   fullyParallel: false,
   workers: 1,
-  // One retry absorbs transient page-load hiccups only; real pixel drift
-  // reproduces on the retry and still fails the run.
-  retries: 1,
+  // Zero retries: every failure is a first-class signal (review ruling on
+  // T43.5). Transient slow loads are absorbed by the longer navigation
+  // timeout below instead of a retry that could blur one-frame drift.
+  retries: 0,
+  timeout: 60_000,
   reporter: [['list']],
   snapshotPathTemplate: '{testDir}/baselines/{arg}{ext}',
   expect: {
@@ -31,6 +33,7 @@ export default defineConfig({
     deviceScaleFactor: 1,
     locale: 'en-US',
     timezoneId: 'UTC',
+    navigationTimeout: 30_000,
     contextOptions: { reducedMotion: 'reduce' },
   },
   projects: [
