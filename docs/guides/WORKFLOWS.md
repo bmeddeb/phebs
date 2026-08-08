@@ -1278,6 +1278,25 @@ visible beside a newer durable outcome. Legal null/omitted supporting paths
 render as an empty list, and an explicit gap remains neutral/amber unless it
 is a failure or terminal refusal.
 
+### Keyboard navigation
+
+- **`/`** focuses the search input from anywhere (unless already typing).
+- **`Cmd/Ctrl+K`** opens the global navigator: a modal go-to dialog listing
+  every routed surface the instance advertises (destinations whose
+  capability read is still loading or failed are listed as *capability
+  unknown* rather than hidden — a failed read never establishes absence),
+  the active scope's Search/Directory/Explorer/Workbench jumps, and up to
+  five recently visited scopes. Recents are stored locally per signed-in
+  user, contain only scope identities (repository, service key,
+  generation), and are recorded only after an authorized authority read
+  succeeded. Arrow keys move the selection, Enter navigates, Escape
+  closes. The navigator performs no reads: every entry is a plain
+  navigation.
+- **Search results**: `j`/`k` move the result cursor (focus follows for
+  assistive technology), `Enter` opens the selected file at its first
+  match, `y` copies the selected path, `o` collapses or expands the
+  selected repository group.
+
 - **Search** (`#/search?q=…`) — the repository explorer always lists the
 repositories visible to the signed-in user, even before a search returns
 results. Select a repository, expand folders one level at a time, or open a

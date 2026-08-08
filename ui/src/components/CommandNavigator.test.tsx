@@ -33,12 +33,12 @@ const surfaces: NavigatorSurface[] = [
   { label: 'Contract atlas', path: '/contracts', available: false },
 ]
 
-function mount(scope: { repository: string; serviceKey: string; generation: string } | null = null, onClose = vi.fn()) {
+function mount(scope: { repository: string; serviceKey: string; generation: string } | null = null, onClose = vi.fn(), principal = 'user-a@localhost.test') {
   render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={lightTheme}>
         <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
-          <CommandNavigator surfaces={surfaces} scope={scope} onClose={onClose} />
+          <CommandNavigator surfaces={surfaces} scope={scope} principal={principal} onClose={onClose} />
         </ModeContext.Provider>
       </BaseProvider>
     </StyletronProvider>,
@@ -81,8 +81,8 @@ describe('CommandNavigator', () => {
     expect(decodeURIComponent(window.location.hash)).toContain('scope_generation=gen-r4')
   })
   it('lists recent scopes without duplicating the active one', () => {
-    rememberScope({ repository: 'repo-old', serviceKey: 'billing', generation: 'g1' })
-    rememberScope({ repository: 'repo-x', serviceKey: 'orders-api', generation: 'gen-r4' })
+    rememberScope('user-a@localhost.test', { repository: 'repo-old', serviceKey: 'billing', generation: 'g1' })
+    rememberScope('user-a@localhost.test', { repository: 'repo-x', serviceKey: 'orders-api', generation: 'gen-r4' })
     mount({ repository: 'repo-x', serviceKey: 'orders-api', generation: 'gen-r4' })
     expect(screen.getByRole('option', { name: /Directory · billing/ })).toBeTruthy()
     expect(screen.queryByRole('option', { name: /orders-api.*recent/ })).toBeNull()
@@ -96,13 +96,49 @@ describe('CommandNavigator', () => {
   })
 })
 
+describe('CommandNavigator modal contract', () => {
+  it('traps Tab inside the dialog and closes on Escape from the dialog', () => {
+    const onClose = mount()
+    const input = screen.getByRole('combobox')
+    fireEvent.keyDown(input, { key: 'Tab' })
+    expect(document.activeElement).toBe(input)
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Go to surface or scope' }), { key: 'Escape' })
+    expect(onClose).toHaveBeenCalled()
+  })
+  it('lists unknown-capability surfaces instead of implying absence', () => {
+    render(
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={lightTheme}>
+          <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
+            <CommandNavigator
+              surfaces={[{ label: 'Contract atlas', path: '/contracts', available: 'unknown' }]}
+              scope={null}
+              principal="user-a@localhost.test"
+              onClose={() => {}}
+            />
+          </ModeContext.Provider>
+        </BaseProvider>
+      </StyletronProvider>,
+    )
+    expect(screen.getByRole('option', { name: /Contract atlas.*capability unknown/ })).toBeTruthy()
+  })
+})
+
 describe('recent scopes storage', () => {
+  it('isolates recents by principal and records nothing without one', () => {
+    rememberScope('user-a@localhost.test', { repository: 'repo-a', serviceKey: 'svc', generation: '' })
+    rememberScope('', { repository: 'repo-anon', serviceKey: 'svc', generation: '' })
+    expect(recentScopes('user-b@localhost.test')).toEqual([])
+    expect(recentScopes('')).toEqual([])
+    expect(recentScopes('user-a@localhost.test').map((entry) => entry.repository)).toEqual(['repo-a'])
+  })
+
   it('is bounded, identity-only, and deduplicated', () => {
     for (let index = 0; index < 8; index++) {
-      rememberScope({ repository: `repo-${index}`, serviceKey: 'svc', generation: '' })
+      rememberScope('user-a@localhost.test', { repository: `repo-${index}`, serviceKey: 'svc', generation: '' })
     }
-    rememberScope({ repository: 'repo-7', serviceKey: 'svc', generation: '' })
-    const recents = recentScopes()
+    rememberScope('user-a@localhost.test', { repository: 'repo-7', serviceKey: 'svc', generation: '' })
+    const recents = recentScopes('user-a@localhost.test')
     expect(recents.length).toBe(5)
     expect(recents[0].repository).toBe('repo-7')
     expect(recents.filter((entry) => entry.repository === 'repo-7').length).toBe(1)

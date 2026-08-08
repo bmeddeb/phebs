@@ -342,15 +342,21 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [visible, selected])
 
-  // Keep the selected card in view AND give it real keyboard focus so the
-  // j/k cursor is visible to assistive technology, not only visually
-  // (audit F21). Rows carry tabIndex -1 for this.
+  // Keep the selected card in view as the collection streams…
   useEffect(() => {
     if (selected < 0 || !visible[selected]) return
-    const row = rowRefs.current.get(fileKey(visible[selected]))
-    row?.scrollIntoView({ block: 'nearest' })
-    row?.focus({ preventScroll: true })
+    rowRefs.current.get(fileKey(visible[selected]))?.scrollIntoView({ block: 'nearest' })
   }, [selected, visible])
+  // …but move real keyboard focus ONLY on an explicit cursor change (audit
+  // F21): a streamed batch must never steal focus from a link or button the
+  // user tabbed into. Rows carry tabIndex -1 for this.
+  const visibleRef = useRef(visible)
+  visibleRef.current = visible
+  useEffect(() => {
+    if (selected < 0 || !visibleRef.current[selected]) return
+    rowRefs.current.get(fileKey(visibleRef.current[selected]))?.focus({ preventScroll: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected])
 
   const toggleGroup = (repo: string) =>
     setCollapsed((c) => {

@@ -8,7 +8,7 @@ import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
 import { ScopeContextBar } from './components/ScopeContextBar'
 import { CommandNavigator, type NavigatorSurface } from './components/CommandNavigator'
-import { rememberScope, scopeFromParams } from './scope'
+import { scopeFromParams } from './scope'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -69,14 +69,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Recently seen scope identities feed the navigator (identity only, never
-  // authority; bounded in rememberScope).
-  useEffect(() => {
-    rememberScope(scope)
-    // Identity fields are the real dependencies; the object is re-derived
-    // every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope?.repository, scope?.serviceKey, scope?.generation])
+
 
   // "/" focuses search from anywhere (unless already typing)
   useEffect(() => {
@@ -146,16 +139,22 @@ export default function App() {
       render={render}
     />
   )
+  // A loading or failed capability read cannot establish absence: those
+  // destinations stay listed as 'unknown' (their gate pages explain).
+  const capability = (name: string): boolean | 'unknown' =>
+    !capabilitiesLoaded || capabilitiesError ? 'unknown' : capabilities.includes(name)
   const navigatorSurfaces: NavigatorSurface[] = [
     { label: 'Search', path: '/', available: true },
     { label: 'Repositories', path: '/repos', available: true },
-    { label: 'Service directory', path: '/services', available: servicesAvailable },
-    { label: 'Relationship explorer', path: '/relationships', available: serviceRelationshipsAvailable },
-    { label: 'Contract atlas', path: '/contracts', available: contractsAvailable },
-    { label: 'Contract impact', path: '/impact', available: impactAvailable },
-    { label: 'Kafka topics', path: '/topics', available: topicsAvailable },
-    { label: 'Investigations', path: '/investigations', available: investigationsAvailable },
-    { label: 'Change workbench', path: '/workbench', available: workbenchAvailable },
+    { label: 'Service directory', path: '/services', available: capability('service-catalog-v2') },
+    { label: 'Relationship explorer', path: '/relationships', available: capability('service-relationships-v1') },
+    { label: 'Contract atlas', path: '/contracts', available: capability('contract-atlas') },
+    { label: 'Caller map', path: '/callers', available: capability('contract-caller-map') },
+    { label: 'Caller comparison', path: '/compare-callers', available: capability('contract-caller-comparison') },
+    { label: 'Contract impact', path: '/impact', available: capability('contract-impact-report') },
+    { label: 'Kafka topics', path: '/topics', available: capability('kafka-topic-usage') },
+    { label: 'Investigations', path: '/investigations', available: capability('investigation-core-views') },
+    { label: 'Change workbench', path: '/workbench', available: capability('change-workbench') },
     { label: 'Audit log', path: '/audit', available: status.user?.is_admin === true },
     { label: 'Analytics', path: '/analytics', available: status.user?.is_admin === true },
     { label: 'Settings', path: '/settings', available: true },
@@ -185,11 +184,12 @@ export default function App() {
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
       <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} workbenchAvailable={workbenchAvailable} onLogout={() => void logout().catch(() => {})} />
-      {scope && <ScopeContextBar scope={scope} path={path} params={params} />}
+      {scope && <ScopeContextBar scope={scope} path={path} params={params} principal={status.user?.email ?? ''} />}
       {navigatorOpen && (
         <CommandNavigator
           surfaces={navigatorSurfaces}
           scope={scope}
+          principal={status.user?.email ?? ''}
           onClose={() => setNavigatorOpen(false)}
         />
       )}

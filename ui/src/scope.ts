@@ -62,28 +62,35 @@ export interface RecentScope {
   generation: string
 }
 
-const RECENT_KEY = 'phebs-recent-scopes'
+const RECENT_KEY_PREFIX = 'phebs-recent-scopes:'
 const RECENT_LIMIT = 5
 
+// Recency is keyed by the authenticated principal so one browser's users
+// never see each other's scope identities, and it is recorded only after an
+// authorized read succeeded (the scope bar's authority fetch) — a URL alone
+// proves nothing.
+const recentKey = (principal: string) => `${RECENT_KEY_PREFIX}${principal}`
+
 /** Bounded, identity-only recency: repository/key/generation, never authority. */
-export function rememberScope(scope: ActiveScope | null) {
-  if (!scope?.repository) return
+export function rememberScope(principal: string, scope: ActiveScope | null) {
+  if (!principal || !scope?.repository) return
   try {
-    const current: RecentScope[] = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    const current: RecentScope[] = JSON.parse(localStorage.getItem(recentKey(principal)) ?? '[]')
     const next = [
       { repository: scope.repository, serviceKey: scope.serviceKey, generation: scope.generation },
       ...current.filter((entry) =>
         entry.repository !== scope.repository || entry.serviceKey !== scope.serviceKey),
     ].slice(0, RECENT_LIMIT)
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+    localStorage.setItem(recentKey(principal), JSON.stringify(next))
   } catch {
     // Storage may be unavailable; recency is an accelerator, never required.
   }
 }
 
-export function recentScopes(): RecentScope[] {
+export function recentScopes(principal: string): RecentScope[] {
+  if (!principal) return []
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    const parsed: unknown = JSON.parse(localStorage.getItem(recentKey(principal)) ?? '[]')
     if (!Array.isArray(parsed)) return []
     return parsed
       .filter((entry): entry is RecentScope =>

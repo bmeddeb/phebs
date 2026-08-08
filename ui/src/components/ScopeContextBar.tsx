@@ -5,7 +5,7 @@ import { href, navigate } from '../router'
 import { focusRing, statusToneFor, usePhebsTokens } from '../theme'
 import { isAbortError, relTime } from '../util'
 import { IdentityText, StatusWord } from './kit'
-import { SCOPE_PARAM_KEYS, scopeParams, workbenchScopeParams, type ActiveScope } from '../scope'
+import { SCOPE_PARAM_KEYS, rememberScope, scopeParams, workbenchScopeParams, type ActiveScope } from '../scope'
 
 export type { ActiveScope }
 
@@ -28,10 +28,13 @@ type Authority =
   | { state: 'moved'; pinned: string; current: string; detail: ServiceDetail }
   | { state: 'ready'; detail: ServiceDetail }
 
-export function ScopeContextBar({ scope, path, params }: {
+export function ScopeContextBar({ scope, path, params, principal }: {
   scope: ActiveScope
   path: string
   params: URLSearchParams
+  // Authenticated principal: recency is recorded only for scopes whose
+  // authority read succeeded, keyed per principal.
+  principal: string
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -49,6 +52,9 @@ export function ScopeContextBar({ scope, path, params }: {
           return
         }
         const current = detail.service.active_desired_generation ?? ''
+        // The read was authorized for this principal: only now does the
+        // scope identity enter the recent list.
+        rememberScope(principal, { ...scope, generation: scope.generation || current })
         if (scope.generation && current && current !== scope.generation) {
           setAuthority({ state: 'moved', pinned: scope.generation, current, detail })
           return
@@ -61,7 +67,10 @@ export function ScopeContextBar({ scope, path, params }: {
         }
       })
     return () => controller.abort()
-  }, [scope.repository, scope.serviceKey, scope.generation])
+    // Identity fields and the principal are the real dependencies; the scope
+    // object is re-derived every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope.repository, scope.serviceKey, scope.generation, principal])
 
   const clearScope = () => {
     const next = new URLSearchParams(params)

@@ -6,7 +6,7 @@ import { Client as Styletron } from 'styletron-engine-monolithic'
 import type { ServiceDetail } from '../api'
 import { ModeContext, lightTheme } from '../theme'
 import { ScopeContextBar } from './ScopeContextBar'
-import { scopeParams } from '../scope'
+import { recentScopes, scopeParams } from '../scope'
 
 const api = vi.hoisted(() => ({ fetchServiceDetail: vi.fn() }))
 vi.mock('../api', async (importOriginal) => ({
@@ -15,6 +15,14 @@ vi.mock('../api', async (importOriginal) => ({
 }))
 
 afterEach(cleanup)
+
+const storage = new Map<string, string>()
+vi.stubGlobal('localStorage', {
+  getItem: (key: string) => storage.get(key) ?? null,
+  setItem: (key: string, value: string) => storage.set(key, value),
+  removeItem: (key: string) => storage.delete(key),
+  clear: () => storage.clear(),
+})
 beforeEach(() => {
   window.location.hash = ''
   api.fetchServiceDetail.mockReset()
@@ -45,6 +53,7 @@ function mount(serviceKey = 'orders-api', generation = '') {
             scope={{ repository, serviceKey, generation }}
             path="/services"
             params={new URLSearchParams({ repository, service_key: serviceKey })}
+            principal="user-a@localhost.test"
           />
         </ModeContext.Provider>
       </BaseProvider>
@@ -93,6 +102,18 @@ describe('ScopeContextBar', () => {
     } as unknown as ServiceDetail)
     mount()
     await waitFor(() => expect(screen.getByText('authority mismatch')).toBeTruthy())
+  })
+  it('records the scope as recent only after the authorized read succeeds', async () => {
+    storage.clear()
+    api.fetchServiceDetail.mockRejectedValue(new Error('denied'))
+    mount()
+    await waitFor(() => expect(screen.getByText('authority unavailable')).toBeTruthy())
+    expect(recentScopes('user-a@localhost.test')).toEqual([])
+    cleanup()
+    api.fetchServiceDetail.mockResolvedValue(detail)
+    mount()
+    await waitFor(() => expect(screen.getByText('stale')).toBeTruthy())
+    expect(recentScopes('user-a@localhost.test').map((entry) => entry.repository)).toEqual([repository])
   })
   it('clears scope explicitly, removing only scope params from the URL', async () => {
     api.fetchServiceDetail.mockResolvedValue(detail)

@@ -665,7 +665,17 @@ every streaming batch. Still open on this ticket's ledger routes: F20
 (FilePage keyboard symbol navigation) and F22 (Caller Map row cursor) —
 substantial per-surface keyboard work, not claimed here. Receipts: a
 command-navigator route captures the open palette via the harness's new
-keyboard-press option.
+keyboard-press option. Review follow-up: recents are keyed by the
+authenticated principal and recorded only after the scope bar's
+authorized authority read succeeds (a URL alone proves nothing; no
+pre-auth or cross-user disclosure); the dialog traps Tab and closes on
+Escape from anywhere inside; the search j/k focus moves only on an
+explicit cursor change, never on a streamed batch; the caller map and
+comparison surfaces join the navigator; capability-backed destinations
+render as "capability unknown" while the read is loading or failed
+instead of vanishing; the literal NUL that made the component diff
+binary is gone; and the shortcuts are documented in
+docs/guides/WORKFLOWS.md §Web UI.
 
 **T43.10 · Operator console presentation** *(needs T43.3)* — present
 lifecycle, capacity, and refusal state as actionable cards. AC: pressure,
