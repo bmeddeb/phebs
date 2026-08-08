@@ -197,7 +197,7 @@ export default function ServiceOverview({
             <OverviewState state={snapshot.state} reason={snapshot.reason} />
             {relationshipsAvailable && (
               <>
-                <a href={href('/workbench', { service_repository: detail.repository.repository, source_service: detail.service.key })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Assess change in Workbench</a>
+                <a href={href('/workbench', { service_repository: detail.repository.repository, source_service: detail.service.key, ...(detail.service.active_desired_generation ? { scope_generation: detail.service.active_desired_generation } : {}) })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Assess change in Workbench</a>
                 <a href={href('/relationships', { repository: detail.repository.repository, service_key: detail.service.key })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Explore across repositories</a>
               </>
             )}

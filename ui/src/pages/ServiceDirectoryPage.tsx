@@ -450,6 +450,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
             href={href('/search', {
               q: '', scope: 'service', repository: route.repository,
               service_key: service.key,
+              ...(service.active_desired_generation ? { scope_generation: service.active_desired_generation } : {}),
             })}
             className={css({ ...primaryLink(tok), display: 'inline-flex', marginTop: '12px' })}
           >

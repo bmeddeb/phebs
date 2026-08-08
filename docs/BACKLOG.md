@@ -623,11 +623,25 @@ authorized request, with previous-page stacks kept only as in-memory
 acceleration and the Atlas load-more cursor documented as first-page on
 reload. Every route names itself in document.title (F38); the
 directory's existing "Search this service" action plus the bar close the
-F26 loop. Workbench receives the scope at the navigation level; its
-data-layer consumption of scope params is not implemented and not
-claimed. Note: on Caller Map and Atlas, a `repository` filter/endpoint
-param legitimately lights the bar — the surface is repository-scoped in
-exactly the bar's sense.
+F26 loop. Review follow-up: the scope carries and fences its generation
+— acquisition links pin `scope_generation` from the loaded record's
+active desired generation, the bar validates the authority response
+identity and renders "authority moved" (amber, both generations named)
+when publication has shifted under the URL, and "authority mismatch"
+fails closed on a response that is not the scoped service. The
+Workbench consumes scope under its own param names
+(service_repository/source_service): the bar links translate to that
+vocabulary, App recognizes both spellings as one scope, and Clear
+removes every spelling — the earlier "consumption unimplemented" note
+was wrong and is withdrawn. Atlas selections carry `sel_protocol`
+(protocol is authority, never inferred from filenames; protocol-less
+deep links hide protocol-dependent launches), and the Atlas
+continuation cursor is URL state (in-session continuation appends; a
+fresh deep link renders that bounded page alone). Both pagers truncate
+forward history so Back→Next cannot wedge. A dedicated 390px
+scoped-search receipt records the bar's mobile state. Note: on Caller
+Map and Atlas, a `repository` filter/endpoint param legitimately lights
+the bar — the surface is repository-scoped in exactly the bar's sense.
 
 **T43.9 · Global keyboard navigator** *(needs T43.3)* — add a command
 palette for navigation and scope jumps. AC: every routed surface and

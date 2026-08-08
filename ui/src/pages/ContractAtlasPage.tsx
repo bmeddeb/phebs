@@ -72,10 +72,13 @@ export default function ContractAtlasPage({
   // load-more cursor stays in memory; a reload shows the first page.
   const appliedFilters = useMemo(() => routeFilters(params), [params])
   const filtersKey = JSON.stringify(appliedFilters)
+  const cursorParam = params.get('cursor') ?? ''
+  const loadedChain = useRef({ filtersKey: '', cursors: [''] })
   const selection = useMemo(() => ({
     repository: params.get('sel_repository') ?? '',
     lineage: params.get('sel_lineage') ?? '',
     operation: params.get('sel_operation') ?? '',
+    protocol: params.get('sel_protocol') ?? '',
   }), [params])
   const selectionKey = `${selection.repository}\u0000${selection.lineage}\u0000${selection.operation}`
   const [draftFilters, setDraftFilters] = useState<CatalogFilters>(appliedFilters)
@@ -135,19 +138,32 @@ export default function ContractAtlasPage({
     if (!item.operation) return
     navigate('/contracts', {
       ...catalogParams(appliedFilters),
+      ...(cursorParam ? { cursor: cursorParam } : {}),
       sel_repository: item.repository,
       sel_lineage: item.declaration_lineage,
       sel_operation: item.operation,
+      sel_protocol: item.protocol,
     })
   }
 
-  // Filters are URL truth: a filter change is a navigation, and this effect
-  // performs the authorized read it names.
+  // Filters and the continuation cursor are URL truth: a change is a
+  // navigation, and this effect performs the authorized read it names. A
+  // continuation within the session appends; a fresh deep link renders that
+  // bounded page alone (accumulation is in-memory acceleration only).
   useEffect(() => {
-    loadCatalog(appliedFilters)
+    const continuing = cursorParam !== '' &&
+      loadedChain.current.filtersKey === filtersKey &&
+      !loadedChain.current.cursors.includes(cursorParam)
+    if (loadedChain.current.filtersKey !== filtersKey) {
+      loadedChain.current = { filtersKey, cursors: [''] }
+    }
+    if (cursorParam && !loadedChain.current.cursors.includes(cursorParam)) {
+      loadedChain.current.cursors.push(cursorParam)
+    }
+    loadCatalog(appliedFilters, cursorParam, continuing)
     return () => listRequest.current?.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey])
+  }, [filtersKey, cursorParam])
 
   // The selected operation is fetched from its URL identity, independent of
   // which catalog page the item sits on.
@@ -233,9 +249,11 @@ export default function ContractAtlasPage({
       item.operation === selection.operation) ?? null
   }, [catalog?.items, selection])
   const selectedID = selectedItem ? catalogItemID(selectedItem) : ''
+  // The protocol is authority carried in the selection URL, never inferred
+  // from a filename; without it, protocol-dependent launches are hidden.
   const selectedForDetail = selectedItem ?? (operation ? {
     kind: 'operation' as const,
-    protocol: operation.declaration.sources[0]?.path.endsWith('.thrift') ? 'thrift' : 'protobuf',
+    protocol: selection.protocol,
     repository: operation.repository,
     declaration_lineage: operation.declaration_lineage,
     service_fqn: operation.service_fqn,
@@ -436,7 +454,16 @@ export default function ContractAtlasPage({
                 size={BUTTON_SIZE.compact}
                 kind={BUTTON_KIND.secondary}
                 isLoading={listLoading}
-                onClick={() => loadCatalog(appliedFilters, catalog.pagination.next_cursor, true)}
+                onClick={() => navigate('/contracts', {
+                  ...catalogParams(appliedFilters),
+                  cursor: catalog.pagination.next_cursor ?? '',
+                  ...(selection.operation ? {
+                    sel_repository: selection.repository,
+                    sel_lineage: selection.lineage,
+                    sel_operation: selection.operation,
+                    sel_protocol: selection.protocol,
+                  } : {}),
+                })}
                 overrides={{ BaseButton: { style: { width: '100%' } } }}
               >
                 Load next bounded page
@@ -716,7 +743,7 @@ function OperationDetail({
             </div>
           </div>
           <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
-            {workbenchAvailable && (
+            {workbenchAvailable && selected.protocol && (
               <a
                 href={href('/workbench', {
                   source: 'atlas',
@@ -731,7 +758,7 @@ function OperationDetail({
                 Start Workbench
               </a>
             )}
-            {callerMapAvailable && (
+            {callerMapAvailable && selected.protocol && (
               <a
                 href={href('/callers', {
                   protocol: selected.protocol,

@@ -30,18 +30,19 @@ const detail = {
     key: 'orders-api',
     status: 'stale',
     changed_at: '2026-08-07T10:00:00Z',
+    active_desired_generation: 'gen-r4',
   },
   successors: [],
   memberships: [],
 } as unknown as ServiceDetail
 
-function mount(serviceKey = 'orders-api') {
+function mount(serviceKey = 'orders-api', generation = '') {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={lightTheme}>
         <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
           <ScopeContextBar
-            scope={{ repository, serviceKey }}
+            scope={{ repository, serviceKey, generation }}
             path="/services"
             params={new URLSearchParams({ repository, service_key: serviceKey })}
           />
@@ -65,12 +66,33 @@ describe('ScopeContextBar', () => {
     mount()
     await waitFor(() => expect(screen.getByText('authority unavailable')).toBeTruthy())
   })
-  it('preserves scope on its surface links', async () => {
+  it('preserves scope on its surface links, carrying the verified generation', async () => {
     api.fetchServiceDetail.mockResolvedValue(detail)
     mount()
+    await waitFor(() => expect(screen.getByText('stale')).toBeTruthy())
     const explorer = screen.getByRole('link', { name: 'Explorer' })
-    expect(decodeURIComponent(explorer.getAttribute('href') ?? '')).toContain(`repository=${repository}`)
-    expect(decodeURIComponent(explorer.getAttribute('href') ?? '')).toContain('service_key=orders-api')
+    const explorerHref = decodeURIComponent(explorer.getAttribute('href') ?? '')
+    expect(explorerHref).toContain(`repository=${repository}`)
+    expect(explorerHref).toContain('service_key=orders-api')
+    expect(explorerHref).toContain('scope_generation=gen-r4')
+    // The Workbench consumes scope under its own param names.
+    const workbench = decodeURIComponent(screen.getByRole('link', { name: 'Workbench' }).getAttribute('href') ?? '')
+    expect(workbench).toContain(`service_repository=${repository}`)
+    expect(workbench).toContain('source_service=orders-api')
+  })
+  it('renders authority moved when the pinned generation no longer matches', async () => {
+    api.fetchServiceDetail.mockResolvedValue(detail)
+    mount('orders-api', 'gen-r3')
+    await waitFor(() => expect(screen.getByText('authority moved')).toBeTruthy())
+    expect(screen.getByTitle(/URL pins generation gen-r3; the active identity is now gen-r4/)).toBeTruthy()
+  })
+  it('fails closed on a response that is not the scoped service', async () => {
+    api.fetchServiceDetail.mockResolvedValue({
+      ...detail,
+      service: { ...(detail as { service: object }).service, key: 'other-service' },
+    } as unknown as ServiceDetail)
+    mount()
+    await waitFor(() => expect(screen.getByText('authority mismatch')).toBeTruthy())
   })
   it('clears scope explicitly, removing only scope params from the URL', async () => {
     api.fetchServiceDetail.mockResolvedValue(detail)
@@ -82,7 +104,7 @@ describe('ScopeContextBar', () => {
 
 describe('scopeParams', () => {
   it('appends only present scope fields', () => {
-    expect(scopeParams({ repository: 'r', serviceKey: '' })).toEqual({ repository: 'r' })
+    expect(scopeParams({ repository: 'r', serviceKey: '', generation: '' })).toEqual({ repository: 'r' })
     expect(scopeParams(null)).toEqual({})
   })
 })

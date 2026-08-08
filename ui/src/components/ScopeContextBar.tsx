@@ -5,7 +5,7 @@ import { href, navigate } from '../router'
 import { focusRing, statusToneFor, usePhebsTokens } from '../theme'
 import { isAbortError, relTime } from '../util'
 import { IdentityText, StatusWord } from './kit'
-import { scopeParams, type ActiveScope } from '../scope'
+import { SCOPE_PARAM_KEYS, scopeParams, workbenchScopeParams, type ActiveScope } from '../scope'
 
 export type { ActiveScope }
 
@@ -20,6 +20,12 @@ export type { ActiveScope }
 type Authority =
   | { state: 'loading' }
   | { state: 'unavailable'; reason: string }
+  // Fail-closed identity check: the response must be the scope's own
+  // repository and service, and when the URL pins a generation, the active
+  // identity must still match it — otherwise authority MOVED and the bar
+  // says so instead of silently adopting it.
+  | { state: 'mismatch'; reason: string }
+  | { state: 'moved'; pinned: string; current: string; detail: ServiceDetail }
   | { state: 'ready'; detail: ServiceDetail }
 
 export function ScopeContextBar({ scope, path, params }: {
@@ -37,25 +43,43 @@ export function ScopeContextBar({ scope, path, params }: {
     const controller = new AbortController()
     setAuthority({ state: 'loading' })
     fetchServiceDetail(scope.repository, scope.serviceKey, controller.signal)
-      .then((detail) => setAuthority({ state: 'ready', detail }))
+      .then((detail) => {
+        if (detail.repository.repository !== scope.repository || detail.service.key !== scope.serviceKey) {
+          setAuthority({ state: 'mismatch', reason: 'authority response identity differs from the scoped service' })
+          return
+        }
+        const current = detail.service.active_desired_generation ?? ''
+        if (scope.generation && current && current !== scope.generation) {
+          setAuthority({ state: 'moved', pinned: scope.generation, current, detail })
+          return
+        }
+        setAuthority({ state: 'ready', detail })
+      })
       .catch((cause) => {
         if (!isAbortError(cause)) {
           setAuthority({ state: 'unavailable', reason: cause instanceof Error ? cause.message : String(cause) })
         }
       })
     return () => controller.abort()
-  }, [scope.repository, scope.serviceKey])
+  }, [scope.repository, scope.serviceKey, scope.generation])
 
   const clearScope = () => {
     const next = new URLSearchParams(params)
-    next.delete('repository')
-    next.delete('service_key')
-    next.delete('scope')
+    for (const key of SCOPE_PARAM_KEYS) next.delete(key)
     navigate(path, Object.fromEntries(next.entries()))
   }
 
+  // Once the authority is read, its generation joins the carried scope so
+  // later surfaces inherit the fence the bar verified.
+  const fetchedGeneration = authority.state === 'ready' || authority.state === 'moved'
+    ? authority.detail.service.active_desired_generation ?? ''
+    : ''
+  const carried: ActiveScope = {
+    ...scope,
+    generation: scope.generation || fetchedGeneration,
+  }
   const jump = (target: string, extra: Record<string, string> = {}) =>
-    href(target, { ...scopeParams(scope), ...extra })
+    href(target, { ...scopeParams(carried), ...extra })
 
   return (
     <div
@@ -93,7 +117,7 @@ export function ScopeContextBar({ scope, path, params }: {
         {service && <BarLink href={jump('/search', { scope: 'service', q: '' })}>Search</BarLink>}
         <BarLink href={jump('/services')}>Directory</BarLink>
         {service && <BarLink href={jump('/relationships')}>Explorer</BarLink>}
-        <BarLink href={jump('/workbench')}>Workbench</BarLink>
+        <BarLink href={href('/workbench', workbenchScopeParams(carried))}>Workbench</BarLink>
       </nav>
       <button
         type="button"
@@ -129,6 +153,20 @@ function AuthorityCell({ authority }: { authority: Authority }) {
     return (
       <span title={authority.reason}>
         <StatusWord tone="blue">authority unavailable</StatusWord>
+      </span>
+    )
+  }
+  if (authority.state === 'mismatch') {
+    return (
+      <span title={authority.reason}>
+        <StatusWord tone="red">authority mismatch</StatusWord>
+      </span>
+    )
+  }
+  if (authority.state === 'moved') {
+    return (
+      <span title={`URL pins generation ${authority.pinned}; the active identity is now ${authority.current}`}>
+        <StatusWord tone="amber">authority moved</StatusWord>
       </span>
     )
   }

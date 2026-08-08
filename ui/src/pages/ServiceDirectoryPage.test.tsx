@@ -64,7 +64,7 @@ test('renders exact authority, page summaries, lifecycle states, roles, and sour
   expect(decodeURIComponent(
     screen.getByRole('link', { name: 'Search this service' }).getAttribute('href') ?? '',
   )).toBe(
-    '#/search?q=&scope=service&repository=example.invalid/neutral+mono&service_key=orders-api',
+    '#/search?q=&scope=service&repository=example.invalid/neutral+mono&service_key=orders-api&scope_generation=sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
   )
   expect(screen.getByText(/Paths are authority identities/)).toBeTruthy()
   expect(api.fetchServiceInventory).toHaveBeenCalledWith({
@@ -190,7 +190,7 @@ test('links exact relationship counts to fenced rows and reads immutable citatio
     '#/relationships?repository=example.invalid/neutral+mono&service_key=orders-api',
   )
   expect(decodeURIComponent(screen.getByRole('link', { name: 'Assess change in Workbench' }).getAttribute('href') ?? '')).toBe(
-    '#/workbench?service_repository=example.invalid/neutral+mono&source_service=orders-api',
+    '#/workbench?service_repository=example.invalid/neutral+mono&source_service=orders-api&scope_generation=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
   )
   expect(screen.getAllByText('payments').length).toBeGreaterThan(0)
   expect(screen.getByText('Shared')).toBeTruthy()

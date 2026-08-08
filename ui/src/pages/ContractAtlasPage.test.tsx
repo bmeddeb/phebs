@@ -384,7 +384,7 @@ beforeEach(() => {
 afterEach(cleanup)
 
 test('browses duplicate declarations through stable bounded pages', async () => {
-  page()
+  const view = page()
   await screen.findByText('3 rows')
   expect(screen.getByTestId('contract-atlas-workspace').getAttribute('data-responsive-layout'))
     .toBe('desktop-split-mobile-stack')
@@ -406,6 +406,9 @@ test('browses duplicate declarations through stable bounded pages', async () => 
   expect(screen.getByText('Scope of declared interfaces')).toBeTruthy()
 
   fireEvent.click(screen.getByRole('button', { name: 'Load next bounded page' }))
+  // Continuation is URL state; the in-session chain appends.
+  expect(decodeURIComponent(window.location.hash)).toBe('#/contracts?cursor=cursor-next')
+  rerenderFromHash(view)
   await screen.findByText('5 rows')
   expect(api.fetchContractCatalog).toHaveBeenLastCalledWith(
     { repository: undefined, package: undefined, protocol: undefined, lineage: undefined },
@@ -422,7 +425,7 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   expect(decodeURIComponent(window.location.hash)).toBe(
-    '#/contracts?sel_repository=github.com/acme/contracts&sel_lineage=lineage-a&sel_operation=/demo.Catalog/Get',
+    '#/contracts?sel_repository=github.com/acme/contracts&sel_lineage=lineage-a&sel_operation=/demo.Catalog/Get&sel_protocol=protobuf',
   )
   rerenderFromHash(view, true, true)
   await screen.findByTestId('contract-operation-detail')

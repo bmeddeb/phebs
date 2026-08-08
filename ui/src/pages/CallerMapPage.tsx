@@ -174,14 +174,15 @@ export default function CallerMapPage({
     resetPagination()
     routeTo(next, '')
   }
+  const stackIndex = cursorStack.current.lastIndexOf(cursor)
+  const pageIndex = stackIndex === -1 ? (cursor ? 1 : 0) : stackIndex
   const nextPage = () => {
     const next = page?.pagination.next_cursor
     if (!next || cursorStack.current.length >= maxCursorHistory) return
-    cursorStack.current = [...cursorStack.current, next]
+    // Truncate forward history so Back -> Next never duplicates a cursor.
+    cursorStack.current = [...cursorStack.current.slice(0, pageIndex + 1), next]
     routeTo(appliedFilters, next)
   }
-  const stackIndex = cursorStack.current.lastIndexOf(cursor)
-  const pageIndex = stackIndex === -1 ? (cursor ? 1 : 0) : stackIndex
   const previousPage = () => {
     if (pageIndex <= 0) return
     const previous = cursorStack.current[pageIndex - 1] ?? ''

@@ -6,7 +6,8 @@ import { FONTS, useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
-import { ScopeContextBar, type ActiveScope } from './components/ScopeContextBar'
+import { ScopeContextBar } from './components/ScopeContextBar'
+import { scopeFromParams } from './scope'
 import { useAuth } from './auth'
 import { fetchVersion } from './api'
 import { isAbortError } from './util'
@@ -33,13 +34,11 @@ const KafkaTopicsPage = lazy(() => import('./pages/KafkaTopicsPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
-  // T43.8: one exact scope, read from the URL on every route. The bar
-  // persists it across surfaces; clearing is an explicit bar action.
-  const scopeRepository = params.get('repository') ?? ''
-  const scopeServiceKey = params.get('service_key') ?? ''
-  const scope: ActiveScope | null = scopeRepository
-    ? { repository: scopeRepository, serviceKey: scopeServiceKey }
-    : null
+  // T43.8: one exact scope, read from the URL on every route (including the
+  // Workbench's own param spelling). The bar persists it across surfaces;
+  // clearing is an explicit bar action.
+  const scope = scopeFromParams(params)
+  const scopeServiceKey = scope?.serviceKey ?? ''
 
   // Every route names itself (audit F38); the scoped service joins the title.
   useEffect(() => {

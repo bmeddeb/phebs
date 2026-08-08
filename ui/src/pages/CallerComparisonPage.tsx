@@ -506,7 +506,8 @@ function ComparisonResults({
               onNext={() => {
                 const next = page.pagination.next_cursor
                 if (!next || cursorStack.current.length >= maxCursorHistory) return
-                cursorStack.current = [...cursorStack.current, next]
+                // Truncate forward history so Back -> Next never duplicates.
+                cursorStack.current = [...cursorStack.current.slice(0, pageIndex + 1), next]
                 routeTo(filters, next)
               }}
             />
