@@ -948,15 +948,20 @@ func PartitionResultIdentity(partition ExtractionPartition, resultDigest string)
 	if err := validateSparsePartition(partition, nil, partition.SourceStart); err != nil || !validDigest(resultDigest) {
 		return "", errors.New("partition result identity is invalid")
 	}
-	payload, err := json.Marshal(struct {
+	return partitionResultIdentityFromDigests(partition.Digest, resultDigest), nil
+}
+
+// partitionResultIdentityFromDigests is the established T40.8 nonproduct
+// identity. T40.9 results deliberately retain this v1 envelope: their result
+// digest now binds the stronger plan and authority fields without creating a
+// competing scheduler identity.
+func partitionResultIdentityFromDigests(partitionDigest, resultDigest string) string {
+	payload, _ := json.Marshal(struct {
 		Schema          string `json:"schema"`
 		PartitionDigest string `json:"partition_digest"`
 		ResultDigest    string `json:"result_digest"`
-	}{Schema: "phebs-extraction-partition-result-identity-v1", PartitionDigest: partition.Digest, ResultDigest: resultDigest})
-	if err != nil {
-		return "", err
-	}
-	return digest("phebs-extraction-partition-result-identity-v1\x00", payload), nil
+	}{Schema: "phebs-extraction-partition-result-identity-v1", PartitionDigest: partitionDigest, ResultDigest: resultDigest})
+	return digest("phebs-extraction-partition-result-identity-v1\x00", payload)
 }
 
 func ClosePartitionDeadline(partition ExtractionPartition) (DeadlineClosure, error) {

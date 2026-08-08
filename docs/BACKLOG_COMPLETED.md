@@ -8980,3 +8980,58 @@ authority, recovery/lifecycle/archive owner, service-cap, topology,
 supported-scale, SLO, accuracy/completeness, freshness,
 migration/decommission, pilot, release, or private-rerun claim;
 `GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
+
+**T40.9 ✅ · Extraction partition-result and domain-root contract**
+*(2026-08-07; needs T40.8)* — adds a pure nonproduct
+`phebs-extraction-domain-result-plan-v1`, closed
+`phebs-extraction-partition-result-v1` values, and one recomputed
+`phebs-extraction-domain-result-root-v1`. The plan is derived only from an
+already-opened T40.8 sparse domain and binds its repository, candidate
+manifest/generation/root/policy, source and observation generations, domain,
+plane, extractor version/policy, domain index and schedule, availability,
+ordered partition ranges, inherited quotas, and exact reservations. Each
+result repeats the selected immutable authority, carries its exact content and
+result digests, and has no current pointer, store registration, product reader,
+or independent publication meaning.
+
+T40.1's retained profiles freeze one domain plan at 489 member partitions;
+T40.8 may append one present typed-input partition for 490 total. The plan
+admits 49,152 facts, 98,304 rows, 98,304 reference edges, and 489 members. Canonical,
+encoded, and member bytes each stop at the next established 64-MiB binary
+boundary above the frozen 39,182,336 canonical bytes. Each result remains
+inside T40.8's 12,500-fact, 25,000-row, 20,000-reference, source-read,
+retention-memory, and five-minute quotas. At most 980 submitted controls and
+7,840 KiB of submitted inventory admit one exact replay per expected result
+without allowing retry history to grow indefinitely; the inventory byte fence
+is exactly `980 × 8 KiB`. The plan and atomic root are each at most 4 MiB.
+Every scalar is checked before aggregate growth.
+
+`success`, `empty`, `unavailable_prerequisite`, `terminal_refusal`, and
+`retryable` are disjoint content-addressed states. The unavailable prerequisite
+is root-only because T40.8 establishes absence before scheduling and emits no
+partition. Exact byte-equal retry
+duplicates coalesce; a same-partition different result refuses. Domain
+assembly first validates the complete plan, then accepts every unique result
+once in expected order, recomputes every settled total and the result-set/root
+digests, and refuses missing, extra, reordered, relabeled, or tampered input.
+An empty applicable domain closes as `empty`; a control-proven missing typed
+prerequisite closes as `unavailable_prerequisite`. Result creation checks only
+its one bounded expectation because it is deliberately non-authoritative;
+the sole full-plan/full-set pass remains mandatory before a root can exist.
+Result identity retains T40.8's established v1 partition/result-digest
+envelope; the stronger T40.9 authority is transitively bound by the exact
+result digest rather than introduced as a competing v2 scheduler identity.
+Plan and root decoders fence raw bytes before allocation, and validation checks
+bounded child/scalar envelopes before any full-control canonicalization.
+
+Deterministic two-build, all-state relabel, per-partition reservation,
+exact aggregate/one-over, maximum escaped strings and unique/replayed
+inventory, exact retry/conflicting retry,
+missing/extra/reordered, plan/result/root tamper, and nil/empty/unavailable
+tests close the contract. T40.10 is next and still owns source-backed worker
+execution, durable staging, pointer installation, restart, and runtime
+registration. T40.9 adds no query, sync-tick, startup, retry worker, store,
+filesystem, lifecycle/archive, child-process, cache, lock, service-cap,
+topology, supported-scale/SLO, accuracy/completeness, freshness,
+migration/decommission, pilot, release, or private-rerun claim;
+`GATE2-V2` remains `NOT_ESTABLISHED` and `DO_NOT_RELEASE` remains in force.
