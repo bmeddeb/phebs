@@ -1312,6 +1312,15 @@ is a failure or terminal refusal.
   detail. The lists are windowed: only the visible rows exist in the
   DOM, while assistive technology still announces exact positions
   ("row 4,832 of 10,000").
+- **Markdown preview** (T44.3): a Markdown | Preview control on the file
+  viewer for `.md`/`.markdown` files. Source is the default and the view
+  is URL-borne (`?view=preview`); a line deep-link (`?L=`) forces source,
+  since line numbers are a source concept. Rendering is sanitized —
+  repository markdown is untrusted, so scripts, event handlers, styles,
+  and unsafe link schemes are stripped, surviving links open with
+  `rel="noopener noreferrer nofollow"`, and images are not fetched (the
+  alt text shows as a placeholder). The renderer loads lazily, only on
+  first preview.
 - **Code highlight palette** (T44.2): Settings · Appearance offers four
   curated syntax palettes — Phebs (default), Quiet (near-monochrome
   reading), Classic (traditional editor hues), and High contrast

@@ -47,6 +47,11 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   const path = params.get('path') ?? ''
   const ref = params.get('ref') ?? ''
   const line = Number(params.get('L') ?? '0')
+  // T44.3: markdown files offer a rendered preview. Source is the default;
+  // a line deep-link is a source concept, so ?L= forces source even under
+  // ?view=preview (line numbers have no meaning in rendered prose).
+  const markdown = isMarkdownPath(path)
+  const preview = markdown && params.get('view') === 'preview' && line <= 0
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [content, setContent] = useState<string | null>(null)
@@ -157,14 +162,18 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
           {content !== null && (
             <div className={css({ display: 'flex', alignItems: 'flex-start', gap: '16px', '@media screen and (max-width: 960px)': { flexDirection: 'column' } })}>
               <div className={css({ flex: 1, minWidth: 0, width: '100%', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'clip' })}>
-                <CodeHeader path={path} content={content} line={line} meta={meta} />
-                <CodeViewer
-                  content={content}
-                  path={path}
-                  focusLine={line}
-                  selectedLine={navPosition ? navPosition.line + 1 : 0}
-                  onPosition={selectPosition}
-                />
+                <CodeHeader path={path} content={content} line={line} meta={meta} markdown={markdown} preview={preview} repo={repo} ref={effectiveRef} pinned={Boolean(ref)} />
+                {preview ? (
+                  <MarkdownPreview content={content} />
+                ) : (
+                  <CodeViewer
+                    content={content}
+                    path={path}
+                    focusLine={line}
+                    selectedLine={navPosition ? navPosition.line + 1 : 0}
+                    onPosition={selectPosition}
+                  />
+                )}
               </div>
               {navPosition && (
                 <CodeNavigationPanel
@@ -401,13 +410,26 @@ function btnStyle(tok: ReturnType<typeof usePhebsTokens>) {
   }
 }
 
-function CodeHeader({ path, content, line, meta }: { path: string; content: string; line: number; meta: RepoStatus | null }) {
+function CodeHeader({ path, content, line, meta, markdown, preview, repo, ref, pinned }: {
+  path: string
+  content: string
+  line: number
+  meta: RepoStatus | null
+  markdown: boolean
+  preview: boolean
+  repo: string
+  ref: string
+  pinned: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const slash = path.lastIndexOf('/')
   const name = slash === -1 ? path : path.slice(slash + 1)
   const lineCount = content.split('\n').length
   const bytes = new Blob([content]).size
+  const viewHref = (view: 'source' | 'preview') => href('/file', {
+    repo, path, ...(pinned ? { ref } : {}), ...(view === 'preview' ? { view: 'preview' } : {}),
+  })
   return (
     <div
       className={css({
@@ -437,6 +459,12 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
         {meta?.indexed_at ? <span title={new Date(meta.indexed_at).toLocaleString()} aria-label={`indexed ${relTime(meta.indexed_at)} (${new Date(meta.indexed_at).toLocaleString()})`}>{` · indexed ${relTime(meta.indexed_at)}`}</span> : ''}
       </span>
       <div className={css({ flex: 1 })} />
+      {markdown && (
+        <div role="group" aria-label="Markdown view" className={css({ display: 'inline-flex', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', overflow: 'hidden' })}>
+          <ViewTab href={viewHref('source')} label="Markdown" active={!preview} />
+          <ViewTab href={viewHref('preview')} label="Preview" active={preview} />
+        </div>
+      )}
       {line > 0 && (
         <span className={css({ fontFamily: FONTS.MONO, fontSize: '11px', color: tok.selectedText, backgroundColor: tok.selectedLineBg, borderRadius: '5px', padding: '2px 8px' })}>
           L{line}
@@ -444,6 +472,105 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
       )}
       <CopyInline text={content} title="Copy file contents" size={13} />
     </div>
+  )
+}
+
+function isMarkdownPath(path: string): boolean {
+  return /\.(md|markdown)$/i.test(path)
+}
+
+// Reading-surface prose (charter Read mode): a comfortable measure, clear
+// heading rhythm, and code that stays monospace and tinted. Nested styles
+// are addressed by tag since the HTML is sanitized renderer output.
+function markdownProse(tok: ReturnType<typeof usePhebsTokens>) {
+  return {
+    padding: '20px 22px',
+    maxWidth: '760px',
+    color: tok.textPrimary,
+    fontSize: '14px',
+    lineHeight: '1.65',
+    overflowWrap: 'anywhere' as const,
+    ':first-child': { marginTop: 0 },
+    ' h1': { fontSize: '24px', lineHeight: '1.3', fontWeight: 600, margin: '28px 0 12px', letterSpacing: '-0.02em' },
+    ' h2': { fontSize: '19px', lineHeight: '1.35', fontWeight: 600, margin: '24px 0 10px', paddingBottom: '5px', borderBottom: `1px solid ${tok.innerSep}` },
+    ' h3': { fontSize: '16px', fontWeight: 600, margin: '20px 0 8px' },
+    ' h4': { fontSize: '14px', fontWeight: 600, margin: '18px 0 6px' },
+    ' h5': { fontSize: '13px', fontWeight: 600, margin: '16px 0 6px' },
+    ' h6': { fontSize: '12px', fontWeight: 600, color: tok.textSecondary, margin: '16px 0 6px' },
+    ' p': { margin: '0 0 14px' },
+    ' a': { color: tok.selectedText, textDecoration: 'underline' },
+    ' ul, & ol': { margin: '0 0 14px', paddingLeft: '24px' },
+    ' li': { margin: '3px 0' },
+    ' blockquote': { margin: '0 0 14px', paddingLeft: '14px', borderLeft: `3px solid ${tok.cardBorder}`, color: tok.textSecondary },
+    ' code': { fontFamily: FONTS.MONO, fontSize: '12.5px', backgroundColor: tok.fill, borderRadius: '4px', padding: '1px 5px', color: tok.plainCode },
+    ' pre': { margin: '0 0 14px', padding: '12px 14px', backgroundColor: tok.bandBg, border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto' as const },
+    ' pre code': { backgroundColor: 'transparent', padding: 0, fontSize: '12px', lineHeight: '1.6' },
+    ' hr': { border: 'none', borderTop: `1px solid ${tok.innerSep}`, margin: '20px 0' },
+    ' table': { borderCollapse: 'collapse' as const, margin: '0 0 14px', fontSize: '13px', display: 'block', overflowX: 'auto' as const },
+    ' th, & td': { border: `1px solid ${tok.cardBorder}`, padding: '6px 10px', textAlign: 'left' as const },
+    ' th': { backgroundColor: tok.bandBg, fontWeight: 600 },
+    ' .md-image-deferred': { color: tok.textTertiary, fontStyle: 'italic' },
+  }
+}
+
+function ViewTab({ href, label, active }: { href: string; label: string; active: boolean }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <a
+      href={href}
+      aria-current={active ? 'true' : undefined}
+      className={css({
+        padding: '3px 10px',
+        fontSize: '11px',
+        lineHeight: '18px',
+        fontWeight: active ? 600 : 400,
+        textDecoration: 'none',
+        color: active ? tok.pageBg : tok.textSecondary,
+        backgroundColor: active ? tok.textPrimary : 'transparent',
+        ':hover': active ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+      })}
+    >
+      {label}
+    </a>
+  )
+}
+
+// T44.3: rendered markdown. The renderer (marked + DOMPurify) is the trust
+// boundary and lives in its own lazy chunk — imported only when a preview
+// actually renders, so the initial bundle never carries it. A render
+// failure falls back to a bounded notice, never a blank or raw HTML.
+function MarkdownPreview({ content }: { content: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const [html, setHtml] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    let active = true
+    setHtml(null)
+    setFailed(false)
+    void import('../markdown')
+      .then((mod) => {
+        if (active) setHtml(mod.renderMarkdown(content))
+      })
+      .catch(() => {
+        if (active) setFailed(true)
+      })
+    return () => { active = false }
+  }, [content])
+  if (failed) {
+    return <div role="alert" className={css({ padding: '16px', color: tok.status.conflict.text, fontSize: '12px' })}>The preview could not be rendered. Switch to Markdown to read the source.</div>
+  }
+  if (html === null) {
+    return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px' })}>Rendering preview…</div>
+  }
+  return (
+    <div
+      className={css(markdownProse(tok))}
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
 

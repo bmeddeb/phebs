@@ -1,0 +1,80 @@
+import { describe, expect, it } from 'vitest'
+import { renderMarkdown } from './markdown'
+
+// T44.3: the renderer is the trust boundary over untrusted repository
+// content. These are adversarial: every case asserts the dangerous
+// construct does NOT survive, alongside proof the safe content renders.
+
+describe('renderMarkdown structure', () => {
+  it('renders headings, emphasis, lists, and code', () => {
+    const html = renderMarkdown('# Title\n\nSome **bold** and `code`.\n\n- one\n- two')
+    expect(html).toContain('<h1>Title</h1>')
+    expect(html).toContain('<strong>bold</strong>')
+    expect(html).toContain('<code>code</code>')
+    expect(html).toContain('<li>one</li>')
+  })
+
+  it('renders GFM tables', () => {
+    const html = renderMarkdown('| a | b |\n|---|---|\n| 1 | 2 |')
+    expect(html).toContain('<table>')
+    expect(html).toContain('<td>1</td>')
+  })
+})
+
+describe('renderMarkdown trust boundary', () => {
+  it('strips raw script tags', () => {
+    const html = renderMarkdown('ok\n\n<script>window.__pwned = 1</script>')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('__pwned')
+  })
+
+  it('strips inline event handlers', () => {
+    const html = renderMarkdown('<p onclick="steal()">click</p>')
+    expect(html).not.toContain('onclick')
+    expect(html).not.toContain('steal')
+  })
+
+  it('neutralizes javascript: links', () => {
+    const html = renderMarkdown('[x](javascript:alert(1))')
+    expect(html).not.toContain('javascript:')
+  })
+
+  it('drops data: URI links', () => {
+    const html = renderMarkdown('[x](data:text/html,<script>alert(1)</script>)')
+    expect(html).not.toContain('data:')
+    expect(html).not.toContain('<script')
+  })
+
+  it('forces safe rel/target on surviving links', () => {
+    const html = renderMarkdown('[docs](https://example.com)')
+    expect(html).toContain('href="https://example.com"')
+    expect(html).toContain('rel="noopener noreferrer nofollow"')
+    expect(html).toContain('target="_blank"')
+  })
+
+  it('does not fetch images — keeps alt as a placeholder, drops src', () => {
+    const html = renderMarkdown('![a diagram](./secret-relative.png)')
+    expect(html).not.toContain('src=')
+    expect(html).not.toContain('secret-relative.png')
+    expect(html).toContain('a diagram')
+    expect(html).toContain('md-image-deferred')
+  })
+
+  it('strips style tags and attributes', () => {
+    const html = renderMarkdown('<style>body{display:none}</style>\n\n<p style="position:fixed">x</p>')
+    expect(html).not.toContain('<style')
+    expect(html).not.toContain('position:fixed')
+  })
+
+  it('strips iframes and objects', () => {
+    const html = renderMarkdown('<iframe src="https://evil.example"></iframe>\n\n<object data="x"></object>')
+    expect(html).not.toContain('<iframe')
+    expect(html).not.toContain('<object')
+  })
+
+  it('drops img srcset even if an image tag were allowed', () => {
+    const html = renderMarkdown('<img src="x" srcset="https://evil.example 2x" alt="a">')
+    expect(html).not.toContain('srcset')
+    expect(html).not.toContain('evil.example')
+  })
+})

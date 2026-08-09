@@ -32,6 +32,8 @@
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "baseui": "^18.2.0",
+    "dompurify": "^3.4.13",
+    "marked": "^18.0.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "styletron-engine-monolithic": "^1.0.0",

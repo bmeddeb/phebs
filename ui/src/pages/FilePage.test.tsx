@@ -130,3 +130,45 @@ test('directory rows are buttons and load their children on expansion', async ()
     '#/file?repo=r&path=src%2Fmain.go&ref=abc123',
   )
 })
+
+test('markdown files default to source and offer a preview toggle (T44.3)', async () => {
+  render(view('repo=r&path=docs%2FREADME.md&ref=abc123'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Title\n\ntext', encoding: 'utf8', size: 13 })
+  })
+  // Source is the default: the toggle is present, Markdown active.
+  const markdownTab = screen.getByRole('link', { name: 'Markdown' })
+  const previewTab = screen.getByRole('link', { name: 'Preview' })
+  expect(markdownTab.getAttribute('aria-current')).toBe('true')
+  expect(previewTab.getAttribute('aria-current')).toBeNull()
+  expect(previewTab.getAttribute('href')).toBe('#/file?repo=r&path=docs%2FREADME.md&ref=abc123&view=preview')
+  // Default view shows raw source, not rendered HTML.
+  expect(screen.queryByRole('heading', { name: 'Title' })).toBeNull()
+})
+
+test('preview renders sanitized markdown; non-markdown files get no toggle (T44.3)', async () => {
+  render(view('repo=r&path=docs%2FREADME.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Rendered\n\n[x](javascript:alert(1))', encoding: 'utf8', size: 30 })
+  })
+  expect(await screen.findByRole('heading', { name: 'Rendered' })).toBeTruthy()
+  // The dangerous link did not survive the render boundary.
+  expect(document.body.innerHTML).not.toContain('javascript:')
+  cleanup()
+
+  render(view('repo=r&path=main.go&ref=abc123'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: 'package main', encoding: 'utf8', size: 12 })
+  })
+  expect(screen.queryByRole('link', { name: 'Preview' })).toBeNull()
+})
+
+test('a line deep-link forces source even under view=preview (T44.3)', async () => {
+  render(view('repo=r&path=docs%2FREADME.md&ref=abc123&view=preview&L=3'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Title\n\ntext', encoding: 'utf8', size: 13 })
+  })
+  // ?L= is a source concept; preview is suppressed and Markdown stays active.
+  expect(screen.queryByRole('heading', { name: 'Title' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Markdown' }).getAttribute('aria-current')).toBe('true')
+})

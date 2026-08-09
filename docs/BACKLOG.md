@@ -533,7 +533,21 @@ applied) and `/security-review` passes before merge; repo-relative images
 render as named placeholders in v1 — deferred honestly, never
 half-fetched; the control is keyboard-complete and announced; receipts
 add a markdown-preview fixture route in both themes and densities;
-bundle record names the lazy chunk size with the main chunk unchanged.
+bundle record names the lazy chunk size with the main chunk unchanged. *Implementation landed 2026-08-08; the receipt clause is
+deferred honestly.* Renderer in `ui/src/markdown.ts` (marked 18 +
+DOMPurify 3, own instance, strict allowlists, link/image hardening),
+consumed by FilePage's MarkdownPreview via dangerouslySetInnerHTML only
+after sanitize; source default, `?view=preview` opt-in, `?L=` forces
+source. Independent adversarial security review found no HIGH/MEDIUM
+exploitable issues; the isolated-instance defense-in-depth note was
+applied. 10 adversarial sanitization unit tests + component view-fork
+tests; live-verified against a real README (headings, lists, safe
+links with rel/target, no image fetch). Bundle: 23 kB gzip lazy chunk,
+loaded only on first preview; initial chunk unchanged. Receipt
+deferred: no frozen markdown fixture exists (all corpus .md are in the
+non-baseline-stable upstream zoekt repo) — the receipt route lands when
+a frozen fixture does; behavior is pinned by tests meanwhile. Suite
+565/565.
 
 **T44.4 · Mermaid rendering with ELK** *(needs T44.3)* — mermaid fences
 in preview render as diagrams. AC: mermaid 11 with the ELK layout as the
