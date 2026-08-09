@@ -195,6 +195,26 @@ after teardown. Drift cannot substantiate a decision. Historical v1 plan and
 receipt bytes remain unchanged; a new commit, independent plan review, and
 fresh `t40r1-neutral-02` identifier are required.
 
+Large-host Take 2 disposition and Take 3 correction (2026-08-09): signed
+source-free receipt
+`sha256:27722137720b409348caeaeda0b5d3f8532fe399726fe307c3b98a17cb771d15`
+is a valid `unclassified` preflight stop, not scale evidence. The frozen-source
+extractor treated the trailing slash on ordinary Git directory headers as a
+noncanonical filesystem path; `.claude/`, the first archive entry, therefore
+stopped before any measured binary build or cold work. Teardown destroyed
+custody, and independent verification reproduced the receipt byte-for-byte.
+Take 3 trims only the canonical directory-marker slash before the slash-level
+clean/path-within checks; absolute, parent, doubled-separator, backslash,
+symlink, and entry-type violations remain refused and table-tested. The bundle
+verifier also normalizes BSD/macOS `wc -c` whitespace. `neutral-01` and
+`neutral-02` are permanently non-reusable. Each future ceremony ID receives a
+distinct signing key, and ignore rules cover accidental in-repository custody,
+keys, whole-ceremony ZIPs, and transfer archives. Because the Take 2 private
+key was included in an operator-created whole-root ZIP, it is retired for all
+future evidence; only the generated source-free tarball may cross machines.
+Take 3 requires a new commit, signer, `t40r1-neutral-03` plan, and independent
+review. No rerun, scale, topology, release, or Epic-closure claim is implied.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

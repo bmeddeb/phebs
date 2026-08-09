@@ -18,7 +18,9 @@ readonly EXECUTE_CONFIRM="execute-neutral-t4013-and-destroy-custody"
 readonly CLEANUP_CONFIRM="cleanup-neutral-t4013-custody"
 readonly SIGNATURE_NAMESPACE="phebs-t4013"
 readonly FREEZE_SIGNATURE_NAMESPACE="phebs-t4013-freeze"
-readonly REVIEW_STOPPED_CEREMONY_ID="t40r1-neutral-01"
+readonly REVIEW_STOPPED_CEREMONY_ID_1="t40r1-neutral-01"
+readonly REVIEW_STOPPED_CEREMONY_ID_2="t40r1-neutral-02"
+readonly RETIRED_SIGNER_FINGERPRINT="SHA256:BqFeTpCclBV0Z6Dz/Lc0dmpb75q7lZSAgH5rc6AK2nw"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
 readonly MINIMUM_DISK_BYTES=$((120 * 1024 * 1024 * 1024))
@@ -27,7 +29,8 @@ readonly MAXIMUM_TRANSFER_PACKAGE_BYTES=$((4 * 1024 * 1024))
 REPO_ROOT="${PHEBS_REPO_ROOT:-$SCRIPT_REPO_ROOT}"
 CEREMONY_ROOT="${PHEBS_CEREMONY_ROOT:-${HOME:-}/phebs-t4013-ceremony}"
 BASE_PORT="${PHEBS_T4013_BASE_PORT:-$DEFAULT_BASE_PORT}"
-SIGNING_KEY="${PHEBS_T4013_SIGNING_KEY:-${CEREMONY_ROOT}/signing/t4013_ed25519}"
+SIGNING_KEY=""
+SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
 
@@ -78,8 +81,11 @@ validate_id() {
 
 reject_review_stopped_id() {
   local value="$1"
-  [[ "$value" != "$REVIEW_STOPPED_CEREMONY_ID" ]] ||
-    die "ceremony id $REVIEW_STOPPED_CEREMONY_ID is permanently review-stopped; use a fresh id"
+  case "$value" in
+    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2")
+      die "ceremony id $value is permanently review-stopped; use a fresh id"
+      ;;
+  esac
 }
 
 initialize_repository() {
@@ -89,11 +95,10 @@ initialize_repository() {
 
 initialize_ceremony_root() {
   [[ -n "${HOME:-}" && "$HOME" == /* && "$HOME" != "/" ]] || die "HOME must be an absolute non-root directory"
-  [[ "$CEREMONY_ROOT" == /* && "$SIGNING_KEY" == /* ]] ||
-    die "ceremony and signing-key paths must be absolute"
+  [[ "$CEREMONY_ROOT" == /* ]] || die "ceremony root must be absolute"
   [[ -n "$REPO_REAL" ]] || initialize_repository
-  mkdir -p -m 700 "$CEREMONY_ROOT" "$(dirname "$SIGNING_KEY")"
-  chmod 700 "$CEREMONY_ROOT" "$(dirname "$SIGNING_KEY")"
+  mkdir -p -m 700 "$CEREMONY_ROOT"
+  chmod 700 "$CEREMONY_ROOT"
   CEREMONY_REAL="$(canonical_existing_directory "$CEREMONY_ROOT")"
   case "$CEREMONY_REAL" in
     "/"|"$REPO_REAL"|"$REPO_REAL"/*) die "ceremony root overlaps the phebs checkout" ;;
@@ -101,9 +106,22 @@ initialize_ceremony_root() {
   case "$REPO_REAL" in
     "$CEREMONY_REAL"/*) die "phebs checkout is inside the ceremony root" ;;
   esac
-  SIGNING_KEY="${PHEBS_T4013_SIGNING_KEY:-${CEREMONY_REAL}/signing/t4013_ed25519}"
-  [[ "$SIGNING_KEY" == "$CEREMONY_REAL"/* ]] ||
-    die "signing key must be inside the dedicated ceremony root"
+  SIGNING_ROOT="${CEREMONY_REAL}/signing"
+  if [[ -e "$SIGNING_ROOT" || -L "$SIGNING_ROOT" ]]; then
+    [[ -d "$SIGNING_ROOT" && ! -L "$SIGNING_ROOT" ]] || die "ceremony signing directory is invalid or symlinked"
+  else
+    mkdir -m 700 "$SIGNING_ROOT"
+  fi
+  chmod 700 "$SIGNING_ROOT"
+}
+
+select_signing_key() {
+  local ceremony_id="$1"
+  validate_id "$ceremony_id"
+  [[ -n "$SIGNING_ROOT" ]] || die "ceremony root must be initialized before selecting a signer"
+  SIGNING_KEY="${SIGNING_ROOT}/${ceremony_id}_ed25519"
+  [[ "$SIGNING_KEY" == /* && "$(dirname "$SIGNING_KEY")" == "$SIGNING_ROOT" ]] ||
+    die "signing key must be directly inside the dedicated signing directory"
 }
 
 require_clean_checkout() {
@@ -171,16 +189,21 @@ verification_preflight() {
 }
 
 ensure_signing_key() {
+  local fingerprint
   if [[ -e "$SIGNING_KEY" || -L "$SIGNING_KEY" || -e "${SIGNING_KEY}.pub" || -L "${SIGNING_KEY}.pub" ]]; then
     [[ -f "$SIGNING_KEY" && ! -L "$SIGNING_KEY" && -f "${SIGNING_KEY}.pub" && ! -L "${SIGNING_KEY}.pub" ]] ||
       die "ceremony signing keypair is partial, invalid, or symlinked"
-    return
+  else
+    ssh-keygen -q -t ed25519 -N "" -C "phebs-t4013-ceremony" -f "$SIGNING_KEY"
+    chmod 600 "$SIGNING_KEY"
+    chmod 644 "${SIGNING_KEY}.pub"
+    note "created ceremony signing key: $SIGNING_KEY"
+    note "back up this key separately before relying on its identity"
   fi
-  ssh-keygen -q -t ed25519 -N "" -C "phebs-t4013-ceremony" -f "$SIGNING_KEY"
-  chmod 600 "$SIGNING_KEY"
-  chmod 644 "${SIGNING_KEY}.pub"
-  note "created ceremony signing key: $SIGNING_KEY"
-  note "back up this key separately before relying on its identity"
+  fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk '{ print $2 }')"
+  [[ "$fingerprint" == SHA256:* ]] || die "ceremony signer fingerprint is invalid"
+  [[ "$fingerprint" != "$RETIRED_SIGNER_FINGERPRINT" ]] ||
+    die "the selected ceremony signer is retired and may not sign new evidence"
 }
 
 run_root_for() {
@@ -198,6 +221,7 @@ freeze() {
   local ceremony_id="$1" run_root evidence_root private_root commit digest frozen_at public_key fingerprint
   reject_review_stopped_id "$ceremony_id"
   preflight
+  select_signing_key "$ceremony_id"
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
   [[ ! -e "$run_root" && ! -L "$run_root" ]] || die "ceremony id already exists and may not be overwritten: $ceremony_id"
@@ -354,6 +378,7 @@ execute_ceremony() {
   reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   preflight
+  select_signing_key "$ceremony_id"
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
@@ -423,7 +448,7 @@ verify_run() {
 verify_bundle() {
   local package="$1" temporary_root listing entry evidence_root package_bytes
   [[ "$package" == /* && -f "$package" && ! -L "$package" ]] || die "bundle must be an absolute regular-file path"
-  package_bytes="$(wc -c < "$package")"
+  package_bytes="$(wc -c < "$package" | awk '{ print $1 }')"
   [[ "$package_bytes" =~ ^[0-9]+$ ]] || die "bundle size is invalid"
   (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
     die "bundle exceeds the fixed 4-MiB transfer bound"

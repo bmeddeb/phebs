@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -108,6 +109,21 @@ func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
 		_ = command.Process.Kill()
 		_ = command.Wait()
 	}()
+	if err := extractFrozenSource(stream, output); err != nil {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+		return err
+	}
+	if err := command.Wait(); err != nil {
+		return errors.New("T40.13 frozen source export failed")
+	}
+	return nil
+}
+
+func extractFrozenSource(stream io.Reader, output string) error {
+	if stream == nil || !filepath.IsAbs(output) {
+		return errors.New("T40.13 frozen source extraction scope is invalid")
+	}
 	reader := tar.NewReader(stream)
 	entries := 0
 	var total int64
@@ -117,33 +133,25 @@ func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
 			break
 		}
 		if readErr != nil {
-			_ = command.Process.Kill()
-			_ = command.Wait()
 			return errors.New("T40.13 frozen source archive is invalid")
 		}
 		entries++
 		if entries > 100_000 || header.Size < 0 || header.Size > 2<<30 || total > 2<<30-header.Size {
-			_ = command.Process.Kill()
-			_ = command.Wait()
 			return errors.New("T40.13 frozen source archive exceeds its bound")
 		}
 		total += header.Size
-		name := filepath.FromSlash(header.Name)
-		if name == "." || filepath.IsAbs(name) || filepath.Clean(name) != name ||
-			name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
-			_ = command.Process.Kill()
-			_ = command.Wait()
-			return errors.New("T40.13 frozen source archive escaped custody")
+		if header.Typeflag == tar.TypeXHeader || header.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
+		name, err := frozenArchiveName(header)
+		if err != nil {
+			return err
 		}
 		path := filepath.Join(output, name)
 		if !isWithin(path, output) {
-			_ = command.Process.Kill()
-			_ = command.Wait()
 			return errors.New("T40.13 frozen source archive path escaped custody")
 		}
 		switch header.Typeflag {
-		case tar.TypeXHeader, tar.TypeXGlobalHeader:
-			continue
 		case tar.TypeDir:
 			if err := os.MkdirAll(path, 0o700); err != nil {
 				return err
@@ -169,10 +177,25 @@ func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
 			return fmt.Errorf("T40.13 frozen source archive contains entry type %d", header.Typeflag)
 		}
 	}
-	if err := command.Wait(); err != nil {
-		return errors.New("T40.13 frozen source export failed")
-	}
 	return nil
+}
+
+func frozenArchiveName(header *tar.Header) (string, error) {
+	if header == nil {
+		return "", errors.New("T40.13 frozen source archive header is missing")
+	}
+	name := header.Name
+	if strings.HasSuffix(name, "/") {
+		if header.Typeflag != tar.TypeDir {
+			return "", errors.New("T40.13 frozen source archive entry type is invalid")
+		}
+		name = strings.TrimSuffix(name, "/")
+	}
+	if name == "" || name == "." || name == ".." || strings.Contains(name, "\\") ||
+		pathpkg.IsAbs(name) || pathpkg.Clean(name) != name || strings.HasPrefix(name, "../") {
+		return "", errors.New("T40.13 frozen source archive escaped custody")
+	}
+	return filepath.FromSlash(name), nil
 }
 
 func startPrivateServer(

@@ -26,6 +26,16 @@ spike/t111/out/
 spike/t322/private/
 spike/t322/.private-*
 
+# T40.R1 large-host ceremony custody, transfer archives, and signing keys are
+# retained outside the repository. Reviewed source-free JSON lands explicitly.
+phebs-t4013-ceremony/
+phebs-t4013-ceremony.zip
+t40r1-neutral-*-freeze-review.tgz
+t40r1-neutral-*-source-free.tgz
+t40r1-neutral-*-source-free.tgz.sha256
+t4013_ed25519*
+t40r1-neutral-*_ed25519*
+
 # T11.1 Gate 2: private one-shot ceremony artifacts, never committed
 spike/t111/labeling/g2-v*/
 spike/t111/labeling/.g2-v*.staging-*/

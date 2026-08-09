@@ -236,12 +236,24 @@ was stopped during independent plan review before custody or execution because
 its v1 plan did not bind these host executables. It is permanently retired and
 must not be executed or reused.
 
+The independently reviewed `t40r1-neutral-02` v2 plan
+(`sha256:22c61633dd2fb1ad1bf008975addc9e58894c77db95cdfddf84475921d2d9e08`)
+stopped honestly in preflight before measured binaries or cold work. A normal
+Git archive directory header such as `.claude/` was incorrectly rejected as a
+custody escape because filesystem cleaning removes its trailing slash. Receipt
+`sha256:27722137720b409348caeaeda0b5d3f8532fe399726fe307c3b98a17cb771d15`
+is signed, byte-reproducible, `unclassified`, and retains successful teardown
+with no custody. It is operational evidence only and is also permanently
+retired. Take 3 accepts the canonical directory marker while preserving the
+absolute/parent/noncanonical/symlink refusal boundary, and normalizes BSD/macOS
+`wc -c` output before enforcing the transfer-package byte ceiling.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-02
+CEREMONY_ID=t40r1-neutral-03
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.
@@ -259,8 +271,12 @@ new cleanup command removes the exact custody plus the credential-bearing
 prepared manifest even when execution stops before its ordinary teardown.
 The evidence directory retains only the plan, source-free observation,
 validated receipt, a small transfer manifest, checksum inventory, public
-signer material, and signature. The private signing key stays under the
-ceremony root and is never packaged. The script creates
+signer material, and signature. Each ceremony ID receives a distinct private
+signing key under the ceremony root; it is never packaged and must be preserved
+separately. Transfer only the generated `*-source-free.tgz` and its checksum—do
+not zip or transfer the ceremony root, `signing/`, `private/`, or `custody/`.
+The repository ignore rules are defense in depth, not permission to place
+ceremony material in the checkout. The script creates
 `<ceremony-id>-source-free.tgz` plus its SHA-256 sidecar for transfer back to a
 clean checkout of the exact sealed source commit, where it can be checked with:
 
