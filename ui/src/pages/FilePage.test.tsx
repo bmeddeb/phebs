@@ -194,3 +194,31 @@ test('preview markup is scoped — no global bare-tag styles leak (T44.3f)', asy
   const heading = screen.getByRole('heading', { name: 'Title' })
   expect(heading.closest('.phebs-md')).not.toBeNull()
 })
+
+vi.mock('../mermaid', () => ({
+  renderMermaid: vi.fn(async (source: string) => {
+    if (source.includes('boom')) throw new Error('Parse error on line 1')
+    return '<svg data-testid="rendered-diagram"><g></g></svg>'
+  }),
+}))
+
+test('a mermaid fence renders as a diagram; the source shows while loading (T44.4)', async () => {
+  render(view('repo=r&path=docs%2FD.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# D\n\n```mermaid\ngraph TD\nA-->B\n```', encoding: 'utf8', size: 40 })
+  })
+  const diagram = await screen.findByRole('img', { name: 'Mermaid diagram' })
+  expect(diagram.querySelector('svg')).not.toBeNull()
+  // Prose around the fence rendered too.
+  expect(screen.getByRole('heading', { name: 'D' })).toBeTruthy()
+})
+
+test('a failing fence keeps its source with a one-line error — never a blank (T44.4)', async () => {
+  render(view('repo=r&path=docs%2FE.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '```mermaid\nboom this is not a diagram\n```', encoding: 'utf8', size: 42 })
+  })
+  expect(await screen.findByText(/Diagram not rendered: Parse error on line 1/)).toBeTruthy()
+  expect(screen.getByText(/boom this is not a diagram/)).toBeTruthy()
+  expect(screen.queryByRole('img', { name: 'Mermaid diagram' })).toBeNull()
+})

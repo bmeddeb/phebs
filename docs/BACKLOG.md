@@ -570,6 +570,29 @@ one-line error — never a blank; diagrams stay out of the screenshot
 matrix (SVG output is not render-stable) and are pinned by unit tests
 over structural properties of the rendered SVG; bundle record names the
 lazy chunk size.
+*Shipped 2026-08-08.* Fences are split out at the marked-lexer level
+(`segmentMarkdown`) before the HTML pipeline — the T44.3f sanitizer
+strips class so fences can't be found post-sanitize, and diagram source
+must never ride the HTML path; only top-level fences convert, nested
+ones stay code blocks. Renderer in `ui/src/mermaid.ts` (mermaid 11 +
+@mermaid-js/layout-elk), one async chunk imported only when a rendered
+document has a fence; posture in `ui/src/mermaidConfig.ts` pinned by
+tests without loading mermaid — strict mode, htmlLabels false, ELK
+layout, no auto-start, themed both modes. Verified live: an ELK
+flowchart renders with 0 foreignObjects/scripts/onclicks in light and
+dark; a failing fence keeps its source with a one-line reason.
+Diagrams excluded from the matrix (SVG not pixel-stable), pinned by
+segmentation/config/fence-path tests. No screenshot receipt was
+added: a markdown fixture had to be a real corpus repository to render,
+and adding one to the shared dev instance corrupted unrelated
+cross-repo receipts (repos gained a row; the authored
+search-results-authority query matched the fixture's prose) — the wrong
+trade, so it was withdrawn. T44.3's markdown receipt therefore stays
+deferred until a dedicated isolated-corpus harness exists; the surface
+is pinned by segmentation/config/fence-path tests and verified live
+this session (ELK flowchart in both themes; 0 foreignObjects, scripts,
+or click handlers). Bundle: mermaid+ELK ≈ 16 kB gzip async, fetched
+only for fence-bearing docs.
 
 **T44.5 · Header instance-surface icons** *(last — re-captures the full
 matrix once)* — Audit, Analytics, and Settings are instance surfaces,

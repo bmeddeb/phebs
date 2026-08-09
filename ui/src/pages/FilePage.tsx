@@ -22,6 +22,7 @@ import type {
 import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
 import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
+import type { MarkdownSegment } from '../markdown'
 import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
 import { fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
@@ -555,16 +556,16 @@ function MarkdownPreview({ content }: { content: string }) {
   // The bound is checked before the lazy import, so an oversized document
   // never touches marked/DOMPurify on the main thread.
   const tooLarge = content.length > MARKDOWN_PREVIEW_MAX_UNITS
-  const [html, setHtml] = useState<string | null>(null)
+  const [segments, setSegments] = useState<MarkdownSegment[] | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
     if (tooLarge) return
     let active = true
-    setHtml(null)
+    setSegments(null)
     setFailed(false)
     void import('../markdown')
       .then((mod) => {
-        if (active) setHtml(mod.renderMarkdown(content))
+        if (active) setSegments(mod.segmentMarkdown(content))
       })
       .catch(() => {
         if (active) setFailed(true)
@@ -577,20 +578,75 @@ function MarkdownPreview({ content }: { content: string }) {
   if (failed) {
     return <div role="alert" className={css({ padding: '16px', color: tok.status.conflict.text, fontSize: '12px' })}>The preview could not be rendered. Switch to Markdown to read the source.</div>
   }
-  if (html === null) {
+  if (segments === null) {
     return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px' })}>Rendering preview…</div>
   }
   return (
     <>
-      {/* Scoped, inert stylesheet (see markdownProseCss) — display:none, so
-          it adds no layout; the class scopes every rule to this subtree. */}
+      {/* Scoped, inert stylesheet (see markdownProseCss) — the class scopes
+          every rule to the preview subtree (T44.3f). */}
       <style>{markdownProseCss(tok)}</style>
-      <div
-        className={MARKDOWN_PROSE_CLASS}
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      {segments.map((segment, index) => segment.kind === 'prose' ? (
+        <div
+          key={index}
+          className={MARKDOWN_PROSE_CLASS}
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: segment.html }}
+        />
+      ) : (
+        <MermaidFence key={index} source={segment.source} />
+      ))}
     </>
+  )
+}
+
+// T44.4: one mermaid fence. The fence source shows as a code block first —
+// that is also the loading state — and the diagram replaces it when the
+// lazy renderer (mermaid + ELK, one async chunk fetched only because this
+// fence exists) succeeds. A failing fence keeps the source visible with a
+// one-line error above it: never a blank.
+function MermaidFence({ source }: { source: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const { mode } = useMode()
+  const [svg, setSvg] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let active = true
+    setSvg(null)
+    setError('')
+    void import('../mermaid')
+      .then((mod) => mod.renderMermaid(source, mode, tok))
+      .then((rendered) => {
+        if (active) setSvg(rendered)
+      })
+      .catch((cause) => {
+        if (active) setError(String(cause).replace(/^Error:\s*/, '').split('\n')[0].slice(0, 200) || 'diagram failed to render')
+      })
+    return () => { active = false }
+  }, [source, mode, tok])
+  if (svg !== null && error === '') {
+    return (
+      <div
+        role="img"
+        aria-label="Mermaid diagram"
+        className={css({ margin: '0 0 14px', maxWidth: '760px', padding: '14px', border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto', backgroundColor: tok.pageBg })}
+        // Mermaid strict-mode output (labels escaped, no click bindings,
+        // no HTML labels) — the documented boundary, recorded in PLAN.md.
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    )
+  }
+  return (
+    <div className={css({ margin: '0 0 14px', maxWidth: '760px' })}>
+      {error !== '' && (
+        <div role="alert" className={css({ marginBottom: '6px', fontSize: '11px', lineHeight: '16px', color: tok.status.conflict.text })}>
+          Diagram not rendered: {error}
+        </div>
+      )}
+      <pre className={css({ margin: 0, padding: '12px 14px', backgroundColor: tok.bandBg, border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '1.6', color: tok.plainCode })}>{source}</pre>
+    </div>
   )
 }
 

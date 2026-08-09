@@ -1320,7 +1320,12 @@ is a failure or terminal refusal.
   and unsafe link schemes are stripped, surviving links open with
   `rel="noopener noreferrer nofollow"`, and images are not fetched (the
   alt text shows as a placeholder). The renderer loads lazily, only on
-  first preview.
+  first preview. A ```mermaid fenced block in a rendered document becomes
+  a diagram (ELK layout, themed from the design tokens, mermaid strict
+  mode — labels escaped, no click bindings, no script); mermaid and the
+  ELK engine load as one extra chunk fetched only when a rendered
+  document actually contains a fence, and a fence that fails to parse
+  keeps its source visible with a one-line reason above it.
 - **Code highlight palette** (T44.2): Settings · Appearance offers four
   curated syntax palettes — Phebs (default), Quiet (near-monochrome
   reading), Classic (traditional editor hues), and High contrast

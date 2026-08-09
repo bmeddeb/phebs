@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown } from './markdown'
+import { renderMarkdown, segmentMarkdown } from './markdown'
 
 // T44.3: the renderer is the trust boundary over untrusted repository
 // content. These are adversarial: every case asserts the dangerous
@@ -98,5 +98,38 @@ describe('renderMarkdown trust boundary', () => {
     // With class stripped from the allowlist and the placeholder carrying
     // no attributes, no class survives anywhere in rendered output.
     expect(html).not.toContain('class=')
+  })
+})
+
+describe('segmentMarkdown (T44.4)', () => {
+  it('splits top-level mermaid fences out of the prose', () => {
+    const segments = segmentMarkdown('# Doc\n\nintro\n\n```mermaid\ngraph TD\nA-->B\n```\n\nafter')
+    expect(segments.map((segment) => segment.kind)).toEqual(['prose', 'mermaid', 'prose'])
+    const [before, fence, after] = segments
+    expect(before.kind === 'prose' && before.html).toContain('<h1>Doc</h1>')
+    expect(fence.kind === 'mermaid' && fence.source).toBe('graph TD\nA-->B')
+    expect(after.kind === 'prose' && after.html).toContain('after')
+    // The diagram source never rides the HTML pipeline.
+    expect(before.kind === 'prose' ? before.html : '').not.toContain('graph TD')
+  })
+
+  it('returns one prose segment when no fence exists', () => {
+    const segments = segmentMarkdown('# Just prose\n\ntext')
+    expect(segments.length).toBe(1)
+    expect(segments[0].kind).toBe('prose')
+  })
+
+  it('leaves non-mermaid and nested fences as ordinary code blocks', () => {
+    const segments = segmentMarkdown('```go\nfunc main() {}\n```\n\n> quote\n> ```mermaid\n> graph TD\n> ```')
+    expect(segments.every((segment) => segment.kind === 'prose')).toBe(true)
+    const html = segments.map((segment) => segment.kind === 'prose' ? segment.html : '').join('')
+    expect(html).toContain('func main()')
+  })
+
+  it('sanitizes each prose segment exactly like renderMarkdown', () => {
+    const segments = segmentMarkdown('<script>bad()</script>\n\n```mermaid\ngraph TD\n```\n\n<p onclick="x()">y</p>')
+    const html = segments.filter((segment) => segment.kind === 'prose').map((segment) => segment.kind === 'prose' ? segment.html : '').join('')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('onclick')
   })
 })

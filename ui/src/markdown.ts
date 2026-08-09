@@ -75,3 +75,33 @@ export function renderMarkdown(source: string): string {
   const raw = marked.parse(source, { gfm: true, breaks: false, async: false }) as string
   return purify.sanitize(raw, PURIFY_CONFIG)
 }
+
+// T44.4: mermaid fences are extracted BEFORE the HTML pipeline. The
+// sanitizer strips class attributes (T44.3f), so fences cannot be detected
+// in sanitized output — and they should not be: diagram source goes
+// straight to mermaid's own strict-mode renderer and never rides the HTML
+// path at all. Only top-level fences become diagrams; a fence nested in a
+// list or blockquote stays an ordinary code block inside its prose.
+export type MarkdownSegment =
+  | { kind: 'prose'; html: string }
+  | { kind: 'mermaid'; source: string }
+
+export function segmentMarkdown(source: string): MarkdownSegment[] {
+  const tokens = marked.lexer(source, { gfm: true, breaks: false })
+  const segments: MarkdownSegment[] = []
+  let prose = ''
+  const flush = () => {
+    if (prose.trim() !== '') segments.push({ kind: 'prose', html: renderMarkdown(prose) })
+    prose = ''
+  }
+  for (const token of tokens) {
+    if (token.type === 'code' && (token.lang ?? '').trim().toLowerCase() === 'mermaid') {
+      flush()
+      segments.push({ kind: 'mermaid', source: token.text })
+    } else {
+      prose += token.raw
+    }
+  }
+  flush()
+  return segments
+}
