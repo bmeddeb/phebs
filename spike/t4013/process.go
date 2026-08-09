@@ -262,11 +262,9 @@ func awaitPrivateServerHealth(
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	var attempts int64
-	lastHealthClass := "not_attempted"
 	for {
 		attempts++
 		healthClass, healthErr := inspector.healthClass(ctx, profile)
-		lastHealthClass = healthClass
 		if healthErr == nil {
 			return observeServerStartup(server, profile.Name, label, "healthy", "ok", attempts)
 		}
@@ -275,10 +273,10 @@ func awaitPrivateServerHealth(
 			// Preserve the single wait result for the idempotent stop path, which
 			// owns sampler and log closure even when readiness observes exit first.
 			server.done <- err
-			observation, observeErr := observeServerStartup(server, profile.Name, label, "exited", lastHealthClass, attempts)
+			observation, observeErr := observeServerStartup(server, profile.Name, label, "exited", healthClass, attempts)
 			return observation, errors.Join(err, observeErr, errors.New("T40.13 server exited before health"))
 		case <-deadline.C:
-			observation, observeErr := observeServerStartup(server, profile.Name, label, "deadline", lastHealthClass, attempts)
+			observation, observeErr := observeServerStartup(server, profile.Name, label, "deadline", healthClass, attempts)
 			return observation, errors.Join(observeErr, errors.New("T40.13 server health deadline expired"))
 		case <-ticker.C:
 		case <-ctx.Done():

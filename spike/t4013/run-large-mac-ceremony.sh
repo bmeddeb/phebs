@@ -21,6 +21,7 @@ readonly FREEZE_SIGNATURE_NAMESPACE="phebs-t4013-freeze"
 readonly REVIEW_STOPPED_CEREMONY_ID_1="t40r1-neutral-01"
 readonly REVIEW_STOPPED_CEREMONY_ID_2="t40r1-neutral-02"
 readonly REVIEW_STOPPED_CEREMONY_ID_3="t40r1-neutral-03"
+readonly REVIEW_STOPPED_CEREMONY_ID_4="t40r1-neutral-04"
 readonly RETIRED_SIGNER_FINGERPRINT="SHA256:BqFeTpCclBV0Z6Dz/Lc0dmpb75q7lZSAgH5rc6AK2nw"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
@@ -83,7 +84,7 @@ validate_id() {
 reject_review_stopped_id() {
   local value="$1"
   case "$value" in
-    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2"|"$REVIEW_STOPPED_CEREMONY_ID_3")
+    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2"|"$REVIEW_STOPPED_CEREMONY_ID_3"|"$REVIEW_STOPPED_CEREMONY_ID_4")
       die "ceremony id $value is permanently review-stopped; use a fresh id"
       ;;
   esac

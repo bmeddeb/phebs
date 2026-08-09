@@ -277,18 +277,113 @@ func (inspector *profileInspector) get(
 		_ = response.Body.Close()
 		return fmt.Errorf("T40.13 HTTP request returned status %d", response.StatusCode)
 	}
-	decoder := json.NewDecoder(io.LimitReader(response.Body, MaxObservationBytes+1))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
-		_ = response.Body.Close()
+	raw, readErr := io.ReadAll(io.LimitReader(response.Body, MaxObservationBytes+1))
+	closeErr := response.Body.Close()
+	if readErr != nil || closeErr != nil || len(raw) == 0 || len(raw) > MaxObservationBytes {
+		return errors.New("T40.13 HTTP response exceeds its bound")
+	}
+	if err := decodeHumaResponse(raw, profile.Address, target); err != nil {
 		return errors.New("T40.13 HTTP response is invalid")
+	}
+	return nil
+}
+
+// decodeHumaResponse consumes Huma's transport-owned top-level $schema link
+// without weakening strict decoding of the application body. Huma adds the
+// link to object responses but cannot add it to top-level arrays such as
+// /api/repos. Duplicate keys, unknown application fields, malformed links,
+// and trailing JSON remain fail-closed.
+func decodeHumaResponse(raw []byte, address string, target any) error {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || target == nil {
+		return errors.New("T40.13 Huma response is empty")
+	}
+	if trimmed[0] == '[' {
+		return decodeStrict(trimmed, target)
+	}
+	if trimmed[0] != '{' {
+		return errors.New("T40.13 Huma response is not an object or array")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(trimmed))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		return errors.New("T40.13 Huma response object is invalid")
+	}
+	seen := make(map[string]struct{}, 16)
+	var body bytes.Buffer
+	body.Grow(len(trimmed))
+	body.WriteByte('{')
+	first := true
+	schemaSeen := false
+	for decoder.More() {
+		token, err := decoder.Token()
+		key, ok := token.(string)
+		if err != nil || !ok {
+			return errors.New("T40.13 Huma response key is invalid")
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return errors.New("T40.13 Huma response has a duplicate key")
+		}
+		seen[key] = struct{}{}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return errors.New("T40.13 Huma response value is invalid")
+		}
+		if key == "$schema" {
+			var schema string
+			if err := decodeStrict(value, &schema); err != nil || validateHumaSchemaLink(schema, address) != nil {
+				return errors.New("T40.13 Huma schema link is invalid")
+			}
+			schemaSeen = true
+			continue
+		}
+		encodedKey, err := json.Marshal(key)
+		if err != nil {
+			return err
+		}
+		if !first {
+			body.WriteByte(',')
+		}
+		first = false
+		body.Write(encodedKey)
+		body.WriteByte(':')
+		body.Write(value)
+	}
+	closing, err := decoder.Token()
+	if err != nil || closing != json.Delim('}') || !schemaSeen {
+		return errors.New("T40.13 Huma response lacks its schema link")
 	}
 	var trailing struct{}
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		_ = response.Body.Close()
-		return errors.New("T40.13 HTTP response has trailing data")
+		return errors.New("T40.13 Huma response has trailing data")
 	}
-	return response.Body.Close()
+	body.WriteByte('}')
+	return decodeStrict(body.Bytes(), target)
+}
+
+func validateHumaSchemaLink(value, address string) error {
+	if len(value) == 0 || len(value) > 512 || address == "" {
+		return errors.New("T40.13 Huma schema link is outside its bound")
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme != "http" || parsed.Host != address || parsed.User != nil ||
+		parsed.RawQuery != "" || parsed.Fragment != "" || parsed.RawPath != "" ||
+		!strings.HasPrefix(parsed.Path, "/schemas/") {
+		return errors.New("T40.13 Huma schema link authority is invalid")
+	}
+	name := strings.TrimPrefix(parsed.Path, "/schemas/")
+	if len(name) < len("A.json") || len(name) > 160 || strings.Contains(name, "/") ||
+		!strings.HasSuffix(name, ".json") {
+		return errors.New("T40.13 Huma schema name is invalid")
+	}
+	for _, character := range strings.TrimSuffix(name, ".json") {
+		if character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' ||
+			character >= '0' && character <= '9' || character == '_' || character == '-' {
+			continue
+		}
+		return errors.New("T40.13 Huma schema name is invalid")
+	}
+	return nil
 }
 
 func readSearchReceipt(

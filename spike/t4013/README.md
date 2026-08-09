@@ -274,12 +274,35 @@ content. The plan prospectively freezes a 15-minute readiness deadline inside
 the unchanged eight-hour total wall ceiling. Historical v1/v2 bytes and Take 3
 remain verifiable and unchanged.
 
+The independently verified `t40r1-neutral-04` v3 plan
+(`sha256:4b791e33dc60714d7993a1f71678ded2b650d7eebcf5606d0c049d6dce6bba15`)
+at commit `c2ed1e666f919c9d4d69203e03552f06ddf2dd3c` retained the intended
+startup accounting, but stopped at health readiness because the ceremony's
+strict application decoder rejected Huma's transport-owned `$schema` field.
+Package `sha256:7d241322a814f6bcdd4c14a3d0b69c8b0e490e2ff84444c859b7fb250584415d`
+and receipt
+`sha256:d6532ac1753d093597f897748f7629f46a3d69fa35dbe7217226882ef92223f3`
+verify exactly. The server reached `http_ready`; the stopped cold phase retained
+3,764,600,832 peak RSS bytes, 19,980,775,424 allocated custody bytes, three Git
+children, one index child, 18 other children, 13 orchestration transactions,
+and two retries. Teardown destroyed custody. The result is an `unclassified`
+operational stop, not a scale refusal, and Take 4 is permanently retired.
+
+Take 5 keeps the v3 evidence contract and fixes only the response boundary.
+Object responses must carry exactly one bounded Huma schema link whose scheme,
+loopback authority, and `/schemas/<closed-name>.json` path match the request.
+The decoder consumes that transport field, then applies the unchanged strict
+application decoder. Top-level arrays remain strict without a schema field.
+Missing, duplicate, foreign, malformed, unknown-field, primitive, trailing,
+and oversized responses fail closed. Real Huma health-object and repository-
+array responses plus every ceremony target type are pinned before a fresh plan.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-04
+CEREMONY_ID=t40r1-neutral-05
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

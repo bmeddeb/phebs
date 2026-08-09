@@ -423,19 +423,20 @@ func TestAuthorizedQueryRequiresMatchesAndCitableRelationship(t *testing.T) {
 			return
 		}
 		response.Header().Set("Content-Type", "application/json")
+		schema := `"$schema":"http://` + request.Host + `/schemas/TestResponse.json",`
 		switch request.URL.Path {
 		case "/api/search":
-			_, _ = io.WriteString(response, `{"files":[{"repo":"github.com/example/repo","path":"fixture.go","chunks":[{"content":"T401","start_line":1,"ranges":[{"start_line":1,"start_col":1,"end_line":1,"end_col":5}]}]}],"stats":{}}`)
+			_, _ = io.WriteString(response, `{`+schema+`"files":[{"repo":"github.com/example/repo","path":"fixture.go","chunks":[{"content":"T401","start_line":1,"ranges":[{"start_line":1,"start_col":1,"end_line":1,"end_col":5}]}]}],"stats":{}}`)
 		case "/api/services":
-			_, _ = io.WriteString(response, `{"schema":"test","repository":{"catalog_service_count":1},"filters":{},"services":[{}],"pagination":{"order":"key","page_size":100,"returned":1}}`)
+			_, _ = io.WriteString(response, `{`+schema+`"schema":"test","repository":{"catalog_service_count":1},"filters":{},"services":[{}],"pagination":{"order":"key","page_size":100,"returned":1}}`)
 		case "/api/service-relationships":
 			if rows {
-				_, _ = io.WriteString(response, `{"schema":"test","query":{},"rows_state":"nonempty","roots":[{"generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],"rows":[{"citation":"token"}],"coverage":{},"pagination":{},"caveat":""}`)
+				_, _ = io.WriteString(response, `{`+schema+`"schema":"test","query":{},"rows_state":"nonempty","roots":[{"generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],"rows":[{"citation":"token"}],"coverage":{},"pagination":{},"caveat":""}`)
 			} else {
-				_, _ = io.WriteString(response, `{"schema":"test","query":{},"rows_state":"empty","roots":[{"generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],"rows":[],"coverage":{},"pagination":{},"caveat":""}`)
+				_, _ = io.WriteString(response, `{`+schema+`"schema":"test","query":{},"rows_state":"empty","roots":[{"generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],"rows":[],"coverage":{},"pagination":{},"caveat":""}`)
 			}
 		case "/api/service-relationship-citation":
-			_, _ = io.WriteString(response, `{"schema":"test","repository":"github.com/example/repo","root_schema":"test","generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","authority_digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","projection":{},"evidence":{},"content":"citation"}`)
+			_, _ = io.WriteString(response, `{`+schema+`"schema":"test","repository":"github.com/example/repo","root_schema":"test","generation":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","authority_digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","projection":{},"evidence":{},"content":"citation"}`)
 		default:
 			response.WriteHeader(http.StatusNotFound)
 		}

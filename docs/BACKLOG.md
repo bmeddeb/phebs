@@ -235,6 +235,26 @@ stay byte-verifiable. `neutral-03` is permanently retired; Take 4 requires a
 new commit, signer, `t40r1-neutral-04` plan, and independent review. This is no
 scale, topology, SLO, release, rerun, or Epic-closure result.
 
+Large-host Take 4 disposition and Take 5 correction (2026-08-09): signed v3
+package `sha256:7d241322a814f6bcdd4c14a3d0b69c8b0e490e2ff84444c859b7fb250584415d`
+and receipt
+`sha256:d6532ac1753d093597f897748f7629f46a3d69fa35dbe7217226882ef92223f3`
+pass signatures, checksums, strict validation, and byte reconstruction. The
+structural server reached `http_ready` and the cold meter retained its RSS,
+allocated bytes, children, orchestration transactions, and retries, but all
+3,600 readiness probes were classified `response`: the ceremony decoder
+rejected Huma's legitimate top-level `$schema` transport field before reading
+`status=ok`. The result correctly remains an `unclassified` operational stop;
+it establishes no convergence or resource refusal. Take 5 consumes exactly one
+bounded loopback Huma schema link before applying the unchanged strict
+application decoder; arrays remain schema-free, while missing/duplicate/
+foreign schema links, duplicate or unknown application fields, malformed or
+trailing JSON, primitives, and oversized bodies fail closed. Real Huma object
+and array responses and every ceremony target type are tested. `neutral-04`
+is permanently retired. Take 5 requires a new commit, signer,
+`t40r1-neutral-05` plan, and independent review; no claim or production bound
+changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

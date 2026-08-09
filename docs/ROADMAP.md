@@ -732,6 +732,12 @@ catalog, relationship, or correctness authority.
   freezes the per-server readiness deadline, meters from process launch, and
   retains a closed source-free startup diagnostic. It still requires a new
   signer and independent plan review before execution.
+- T40.R1 Take 4 is a verified `unclassified` response-contract stop, not a
+  convergence result. Take 5 is the only authorized preparation: it consumes
+  Huma's bounded loopback `$schema` transport field before applying unchanged
+  strict application decoding, and pins the real object and array shapes. It
+  still requires a fresh commit, signer, and independent plan review before
+  execution.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
