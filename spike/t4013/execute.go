@@ -32,6 +32,7 @@ var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
 var (
 	errReviewCeiling       = errors.New("T40.13 frozen review ceiling crossed")
+	errTotalWallDeadline   = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
 	errExactOracle         = errors.New("T40.13 exact oracle refused")
 	errDirectRecovery      = errors.New("T40.13 direct recovery refused")
 	errProductionPressure  = errors.New("T40.13 production pressure gate refused")
@@ -83,7 +84,7 @@ func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
 		return Observation{}, err
 	}
 	executionContext, cancel := context.WithTimeoutCause(
-		ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond, errReviewCeiling,
+		ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond, errTotalWallDeadline,
 	)
 	defer cancel()
 	run.ctx = executionContext
@@ -343,6 +344,11 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		decision: "unclassified", reason: "operational_failure",
 	}
 	switch {
+	case errors.Is(cause, errTotalWallDeadline) || errors.Is(ceilingErr, errTotalWallDeadline):
+		result = stoppedClassification{
+			class: "environment", code: "review_ceiling_crossed",
+			decision: "cohort_experiment", reason: "frozen_review_ceiling_crossed", substantiated: true,
+		}
 	case measurementErr != nil:
 		result = stoppedClassification{
 			class: "oracle", code: "failed_phase_measurement_unavailable",
@@ -1181,7 +1187,7 @@ func (run *execution) teardown() error {
 
 func (run *execution) enforceSafety() error {
 	if run.ctx != nil && errors.Is(context.Cause(run.ctx), errReviewCeiling) {
-		return errReviewCeiling
+		return context.Cause(run.ctx)
 	}
 	var totalWall int64
 	for _, phase := range run.observation.Phases {

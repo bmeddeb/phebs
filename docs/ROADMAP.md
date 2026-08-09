@@ -751,6 +751,11 @@ catalog, relationship, or correctness authority.
   typed progress/timing evidence without changing production behavior. It
   still requires a fresh commit, signer, independent plan review, and explicit
   execution approval.
+- T40.R1 `neutral-07` is consumed without execution because it was signed
+  against an earlier source commit. Take 8 is the only authorized preparation:
+  it selects `neutral-08` and makes the frozen eight-hour parent timeout win
+  over a simultaneous meter-finalization failure. The four-hour diagnostic,
+  production behavior, and claim posture remain unchanged.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

@@ -355,12 +355,20 @@ remain private. The ceremony adds no API or filesystem read, and production
 request, sync, scheduler, publication, lifecycle, cache, lock, corpus-read,
 memory, and child-process behavior is unchanged.
 
+`neutral-07` was signed against an earlier source commit and is permanently
+consumed without execution. It cannot authorize the corrected bytes. Take 8
+therefore selects `neutral-08` with a new signing key. The v5 deadlines do not
+change. If the frozen eight-hour parent expires while meter finalization also
+fails, the independently cause-bound `review_ceiling_crossed` stop wins;
+measurement unavailability still wins over non-parent failures, including
+meter-dependent RSS or allocation ceiling claims.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-07
+CEREMONY_ID=t40r1-neutral-08
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

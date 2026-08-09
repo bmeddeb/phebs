@@ -327,7 +327,9 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "direct recovery", cause: directRecovery(errors.New("did not converge")), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
 		{name: "recovery deadline remains recovery", cause: directRecovery(errConvergenceDeadline), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
 		{name: "review ceiling", cause: errReviewCeiling, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
-		{name: "missing measurement overrides exact and ceiling", cause: exactOracle("mismatch"), measurement: errors.New("meter failed"), ceiling: errReviewCeiling, code: "failed_phase_measurement_unavailable", decision: "unclassified"},
+		{name: "parent ceiling overrides missing measurement", cause: context.DeadlineExceeded, measurement: errors.New("meter failed"), ceiling: errTotalWallDeadline, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
+		{name: "missing measurement overrides metered ceiling", cause: errReviewCeiling, measurement: errors.New("meter failed"), code: "failed_phase_measurement_unavailable", decision: "unclassified"},
+		{name: "missing measurement overrides non-ceiling failure", cause: exactOracle("mismatch"), measurement: errors.New("meter failed"), code: "failed_phase_measurement_unavailable", decision: "unclassified"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -400,9 +402,14 @@ func TestExecutionSafetyRecognizesFrozenTotalDeadlineCause(t *testing.T) {
 			},
 		}}},
 	}
-	cancel(errReviewCeiling)
-	if err := run.enforceSafety(); !errors.Is(err, errReviewCeiling) {
-		t.Fatalf("frozen total deadline = %v", err)
+	cancel(errTotalWallDeadline)
+	ceilingErr := run.enforceSafety()
+	if !errors.Is(ceilingErr, errTotalWallDeadline) || !errors.Is(ceilingErr, errReviewCeiling) {
+		t.Fatalf("frozen total deadline = %v", ceilingErr)
+	}
+	got := classifyStoppedFailure(context.DeadlineExceeded, errors.New("meter failed"), ceilingErr)
+	if got.code != "review_ceiling_crossed" || got.decision != "cohort_experiment" || !got.substantiated {
+		t.Fatalf("deadline plus meter failure classification = %+v", got)
 	}
 }
 

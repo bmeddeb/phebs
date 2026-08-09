@@ -307,6 +307,19 @@ signer, `t40r1-neutral-07` plan, independent review, and explicit execution
 approval. No release, SLO, topology, private replay, or Epic-closure claim
 changes.
 
+Large-host Take 7 retirement and Take 8 correction (2026-08-09):
+`neutral-07` was signed against an earlier source commit and is permanently
+consumed without execution. It cannot be reused for corrected bytes. Take 8
+retires that ID in the driver and selects `t40r1-neutral-08` with a new signer.
+The v5 four-hour diagnostic and eight-hour parent ceiling remain unchanged.
+The parent timeout is now an explicit frozen cause, and
+`review_ceiling_crossed` wins over a simultaneous meter-finalization failure;
+measurement unavailability still wins over non-parent failures, including
+meter-dependent RSS or allocation ceiling claims. Take 8
+requires a fresh exact commit, independently reviewed signed plan, and explicit
+execution approval. No production, release, SLO, topology, private replay, or
+Epic-closure claim changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
