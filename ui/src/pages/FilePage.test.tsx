@@ -222,3 +222,20 @@ test('a failing fence keeps its source with a one-line error — never a blank (
   expect(screen.getByText(/boom this is not a diagram/)).toBeTruthy()
   expect(screen.queryByRole('img', { name: 'Mermaid diagram' })).toBeNull()
 })
+
+test('beyond the diagram cap, excess fences stay source and never call the renderer (T44.4f)', async () => {
+  const mermaidMod = await import('../mermaid')
+  const renderSpy = mermaidMod.renderMermaid as unknown as { mock: { calls: unknown[] } }
+  const before = renderSpy.mock.calls.length
+  // 22 distinct fences; only the first MAX_RENDERED_DIAGRAMS (20) may render.
+  const fences = Array.from({ length: 22 }, (_, i) => `\`\`\`mermaid\ngraph TD\nN${i}-->M${i}\n\`\`\``).join('\n\n')
+  render(view('repo=r&path=docs%2FMANY.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: fences, encoding: 'utf8', size: fences.length })
+  })
+  // The 2 excess fences stay source with the cap note (proves the cap fired).
+  await waitFor(() => expect(screen.getAllByText(/preview renders at most 20 diagrams/).length).toBe(2))
+  // Security invariant: the renderer is invoked at most 20 times for this
+  // document — the excess fences never import or call mermaid.
+  expect(renderSpy.mock.calls.length - before).toBeLessThanOrEqual(20)
+})

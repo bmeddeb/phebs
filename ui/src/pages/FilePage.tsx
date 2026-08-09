@@ -522,6 +522,13 @@ function markdownProseCss(tok: ReturnType<typeof usePhebsTokens>): string {
 // instead of freezing the tab.
 const MARKDOWN_PREVIEW_MAX_UNITS = 131_072
 
+// T44.4f: aggregate diagram bound. The 128 KiB document limit still admits
+// thousands of tiny fences, each of which would import the renderer and
+// queue a full ELK render (uncancellable, re-queued on theme change). Only
+// the first N fences render; the rest stay source and never touch mermaid,
+// so an adversarial document cannot wedge the tab.
+const MAX_RENDERED_DIAGRAMS = 20
+
 function ViewTab({ href, label, active }: { href: string; label: string; active: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -586,16 +593,24 @@ function MarkdownPreview({ content }: { content: string }) {
       {/* Scoped, inert stylesheet (see markdownProseCss) — the class scopes
           every rule to the preview subtree (T44.3f). */}
       <style>{markdownProseCss(tok)}</style>
-      {segments.map((segment, index) => segment.kind === 'prose' ? (
-        <div
-          key={index}
-          className={MARKDOWN_PROSE_CLASS}
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: segment.html }}
-        />
-      ) : (
-        <MermaidFence key={index} source={segment.source} />
-      ))}
+      {(() => {
+        let diagram = 0
+        return segments.map((segment, index) => {
+          if (segment.kind === 'prose') {
+            return (
+              <div
+                key={index}
+                className={MARKDOWN_PROSE_CLASS}
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{ __html: segment.html }}
+              />
+            )
+          }
+          const render = diagram < MAX_RENDERED_DIAGRAMS
+          diagram += 1
+          return <MermaidFence key={index} source={segment.source} render={render} />
+        })
+      })()}
     </>
   )
 }
@@ -605,13 +620,19 @@ function MarkdownPreview({ content }: { content: string }) {
 // lazy renderer (mermaid + ELK, one async chunk fetched only because this
 // fence exists) succeeds. A failing fence keeps the source visible with a
 // one-line error above it: never a blank.
-function MermaidFence({ source }: { source: string }) {
+function MermaidFence({ source, render }: { source: string; render: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode } = useMode()
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState('')
   useEffect(() => {
+    // Beyond the aggregate cap the fence stays source and never imports the
+    // renderer (T44.4f) — this is what bounds an adversarial fence flood.
+    if (!render) {
+      setError(`preview renders at most ${MAX_RENDERED_DIAGRAMS} diagrams; this one is shown as source`)
+      return
+    }
     let active = true
     setSvg(null)
     setError('')
@@ -624,7 +645,7 @@ function MermaidFence({ source }: { source: string }) {
         if (active) setError(String(cause).replace(/^Error:\s*/, '').split('\n')[0].slice(0, 200) || 'diagram failed to render')
       })
     return () => { active = false }
-  }, [source, mode, tok])
+  }, [source, mode, tok, render])
   if (svg !== null && error === '') {
     return (
       <div

@@ -591,8 +591,23 @@ trade, so it was withdrawn. T44.3's markdown receipt therefore stays
 deferred until a dedicated isolated-corpus harness exists; the surface
 is pinned by segmentation/config/fence-path tests and verified live
 this session (ELK flowchart in both themes; 0 foreignObjects, scripts,
-or click handlers). Bundle: mermaid+ELK ≈ 16 kB gzip async, fetched
-only for fence-bearing docs.
+or click handlers). Bundle (corrected in T44.4f — the earlier ≈16 kB
+figure was wrong): the mermaid entry chunk is ~12 kB gzip, but
+rendering a fence dynamically pulls the ELK layout engine (~431 kB
+gzip) plus per-diagram and shared chunks — all lazy, fetched only when
+a document actually contains a fence.
+Review follow-up (T44.4f): closed a directive-override bypass —
+untrusted `%%{init}%%` directives and `config:` frontmatter could flip
+layout to dagre and htmlLabels to true (restoring foreignObject HTML),
+defeating the ELK/SVG-text contract. The renderer now refuses
+directive/config-frontmatter fences before rendering (shown as
+source), validates the rendered SVG for no foreignObject/script/event
+handler after, and locks policy keys via mermaid's `secure` list.
+Aggregate work is bounded: at most 20 fences render, the rest stay
+source and never import the engine. Mermaid cannot render in jsdom, so
+the predicates and the wrapper refusal are unit-tested on the exact
+override payloads and verified live (normal fence → ELK diagram, 0
+foreignObjects; hostile fence → refused, source shown).
 
 **T44.5 · Header instance-surface icons** *(last — re-captures the full
 matrix once)* — Audit, Analytics, and Settings are instance surfaces,

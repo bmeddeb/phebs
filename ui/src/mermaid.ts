@@ -1,7 +1,7 @@
 import mermaid from 'mermaid'
 import elkLayouts from '@mermaid-js/layout-elk'
 import type { PhebsTokens } from './theme'
-import { mermaidInitConfig } from './mermaidConfig'
+import { hasRendererDirective, mermaidInitConfig, svgViolatesPolicy } from './mermaidConfig'
 
 // T44.4: the mermaid wrapper — one async chunk carrying mermaid 11 and the
 // ELK layout engine, imported only when a rendered document actually
@@ -22,8 +22,18 @@ function ensureInitialized(mode: 'light' | 'dark', tok: PhebsTokens) {
 let renderSeq = 0
 
 export async function renderMermaid(source: string, mode: 'light' | 'dark', tok: PhebsTokens): Promise<string> {
+  // Refuse renderer-reconfiguring source before touching mermaid (T44.4f):
+  // a directive/config-frontmatter fence cannot flip layout or htmlLabels.
+  if (hasRendererDirective(source)) {
+    throw new Error('diagram configuration directives are not permitted')
+  }
   ensureInitialized(mode, tok)
   const id = `phebs-mermaid-${++renderSeq}`
   const { svg } = await mermaid.render(id, source)
+  // Enforce the output contract regardless of mermaid's config path: no
+  // HTML labels, no script, no event handlers reach the DOM.
+  if (svgViolatesPolicy(svg)) {
+    throw new Error('diagram produced disallowed output')
+  }
   return svg
 }
