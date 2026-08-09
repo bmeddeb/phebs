@@ -177,6 +177,8 @@ the credential-bearing prepared manifest on completed or stopped execution;
 the return bundle allowlists and signs only the plan, source-free observation,
 validated receipt, transfer manifest, checksums, and public signer material.
 The driver authorizes no run by itself and accepts no private target corpus.
+Its focused harness/Buf dependency checksums are sealed before runner use, and
+preflight rechecks checkout cleanliness after hydration and tests.
 The 1.6-million-file/5,000-service repository remains a separate combined-scale
 target replay after the service-cap program, not an Epic 40 neutral substitute.
 

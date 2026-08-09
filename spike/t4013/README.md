@@ -213,7 +213,10 @@ host prerequisites; the frozen production and review ceilings remain
 unchanged. Preflight also requires free loopback ports, SurrealDB on `PATH`,
 and the Go 1.26 toolchain line; it hydrates the checksum-verified module cache
 before all ceremony `go run` and measured toolchain builds switch to
-`GOPROXY=off`.
+`GOPROXY=off`. The committed `go.sum` includes the complete focused-harness
+and Buf-command graph, and preflight repeats the clean-checkout guard after
+hydration and tests so dependency resolution can never silently change the
+frozen source.
 
 The review seam is mandatory: `freeze` creates a new ceremony directory and
 prints its plan digest and signing-key fingerprint, then exits. Record and

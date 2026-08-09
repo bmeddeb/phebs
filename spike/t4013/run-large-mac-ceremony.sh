@@ -148,6 +148,7 @@ preflight() {
   host_preflight
   (cd "$REPO_REAL" && go mod download all)
   (cd "$REPO_REAL" && go test ./spike/t4013/... -count=1)
+  require_clean_checkout
   note "T40.13 harness tests: PASS"
 }
 
