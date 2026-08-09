@@ -200,6 +200,32 @@ func TestV4PlanFreezesConvergenceDeadlines(t *testing.T) {
 	}
 }
 
+func TestV5PlanFreezesCalculatedFourHourDiagnosticDeadline(t *testing.T) {
+	plan, err := frozenV5PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV5 || plan.Safety.ServerHealthDeadlineMS != 15*60*1000 ||
+		plan.Safety.FullConvergenceDeadlineMS != 4*60*60*1000 ||
+		plan.Safety.RevalidationDeadlineMS != 20*60*1000 ||
+		plan.Safety.MaximumTotalWallMS != 8*60*60*1000 {
+		t.Fatalf("v5 plan = %+v", plan)
+	}
+	changed := plan
+	changed.Safety.FullConvergenceDeadlineMS--
+	if _, err := MarshalPlan(changed); err == nil {
+		t.Fatal("changed v5 convergence deadline passed")
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV5 || decoded.Safety != frozenSafetyV5 {
+		t.Fatalf("decoded v5 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -483,9 +509,126 @@ func TestV4CompletedReceiptRequiresExactConvergenceInventory(t *testing.T) {
 	if err != nil || receipt.Schema != ReceiptSchemaV4 || len(receipt.ConvergenceWaits) != 12 {
 		t.Fatalf("v4 completed receipt = %+v, %v", receipt, err)
 	}
+	if bytes.Contains(receiptBytes, []byte(`"first_stage"`)) ||
+		bytes.Contains(receiptBytes, []byte(`"observation_progress"`)) {
+		t.Fatal("historical v4 receipt bytes acquired v5 diagnostics")
+	}
 	value.ConvergenceWaits[3].Label = "return-a"
 	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
 		t.Fatal("completed v4 receipt with a changed convergence identity passed")
+	}
+}
+
+func TestV5StoppedReceiptRetainsBoundedObservationProgress(t *testing.T) {
+	plan, err := frozenV5PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedObservation()
+	value.Schema = ObservationSchemaV5
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	value.Outcome = "stopped"
+	value.ConvergenceWaits = []ConvergenceWaitObservation{{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		FirstStage: "repository_index", LastStage: "observation_publication",
+		Attempts: 2, ProgressChanges: 1, StageChanges: 1,
+		FirstProgressSHA256:       "sha256:" + strings.Repeat("a", 64),
+		LastProgressSHA256:        "sha256:" + strings.Repeat("b", 64),
+		LastProgressChangeWallMS:  plan.Safety.FullConvergenceDeadlineMS - 1,
+		ObservationProgressWallMS: plan.Safety.FullConvergenceDeadlineMS,
+		ObservationProgress: &ObservationProgressObservation{
+			State: "building", PlanningState: "settled", PlanningSucceeded: 1,
+			ScheduleState: "active", ScheduleTotalPartitions: 62, ScheduleMaterialized: 62,
+			SchedulePending: 20, ScheduleRunning: 2, ScheduleSucceeded: 40,
+		},
+		DeadlineMS: plan.Safety.FullConvergenceDeadlineMS,
+		WallMS:     plan.Safety.FullConvergenceDeadlineMS,
+	}}
+	value.Failures = []FailureObservation{{
+		Phase: "cold", Class: "execution", Code: "convergence_deadline_expired",
+	}}
+	value.Decision = DecisionObservation{Selected: "unclassified", Reason: "convergence_deadline_expired"}
+	for index := range value.Phases {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	value.Phases[1] = PhaseObservation{Name: "cold", Outcome: "failed", Metrics: PhaseMetrics{
+		WallMS: plan.Safety.FullConvergenceDeadlineMS, PeakRSSBytes: 1,
+	}}
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Checks = frozenChecks(false)
+	value.Teardown = TeardownObservation{Completed: true}
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV5 ||
+		receipt.ConvergenceWaits[0].ObservationProgress.ScheduleSucceeded != 40 {
+		t.Fatalf("v5 stopped receipt = %+v, %v", receipt, err)
+	}
+	receipt.ConvergenceWaits[0].ObservationProgress.ScheduleSucceeded = 63
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("incoherent v5 observation progress passed")
+	}
+}
+
+func TestV5ConvergenceDiagnosticsRejectContradictoryEvidence(t *testing.T) {
+	base := ConvergenceWaitObservation{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		FirstStage: "observation_publication", LastStage: "observation_publication",
+		Attempts: 2, ProgressChanges: 1,
+		FirstProgressSHA256:      "sha256:" + strings.Repeat("a", 64),
+		LastProgressSHA256:       "sha256:" + strings.Repeat("b", 64),
+		LastProgressChangeWallMS: 5,
+		DeadlineMS:               10, WallMS: 10,
+	}
+	tests := []struct {
+		name   string
+		mutate func(*ConvergenceWaitObservation)
+	}{
+		{name: "changed digest without count", mutate: func(value *ConvergenceWaitObservation) {
+			value.ProgressChanges = 0
+		}},
+		{name: "changed count without time", mutate: func(value *ConvergenceWaitObservation) {
+			value.LastProgressChangeWallMS = 0
+		}},
+		{name: "changed stage without count", mutate: func(value *ConvergenceWaitObservation) {
+			value.ProgressChanges = 0
+			value.LastProgressSHA256 = value.FirstProgressSHA256
+			value.LastStage = "extraction_publication"
+			value.LastProgressChangeWallMS = 0
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			value := base
+			test.mutate(&value)
+			if err := validateConvergenceWaits([]ConvergenceWaitObservation{value}, true); err == nil {
+				t.Fatal("contradictory convergence evidence passed")
+			}
+		})
+	}
+}
+
+func TestV5ObservationProgressRejectsImpossibleProductionStates(t *testing.T) {
+	tests := []ObservationProgressObservation{
+		{State: "current"},
+		{State: "building", PlanningState: "settled", PlanningSucceeded: 1},
+		{State: "failed", ScheduleState: "active", ScheduleTotalPartitions: 1},
+		{State: "unavailable", PublicationState: "current"},
+		{State: "building", ScheduleState: "settled", ScheduleTotalPartitions: 2,
+			SchedulePending: 1, ScheduleSucceeded: 1},
+		{State: "building", PlanningState: "settled", PlanningPending: 1},
+	}
+	for index, value := range tests {
+		if err := validateObservationProgress(value); err == nil {
+			t.Fatalf("impossible progress %d passed: %+v", index, value)
+		}
 	}
 }
 

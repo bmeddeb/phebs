@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -236,12 +237,37 @@ func TestConvergenceDeadlineRetainsClosedLastProgress(t *testing.T) {
 func TestConvergenceProgressTrackerCountsOnlyIdentityChanges(t *testing.T) {
 	first := convergenceProbe("repository_index", "queued")
 	second := convergenceProbe("repository_index", "running")
+	third := convergenceProbe("source_generation", "ready")
 	var tracker convergenceProgressTracker
-	tracker.observe(first)
-	tracker.observe(first)
-	tracker.observe(second)
-	tracker.observe(second)
-	if tracker.attempts != 4 || tracker.progressChanges != 1 || tracker.first != first || tracker.last != second {
+	tracker.observe(first, time.Second)
+	tracker.observe(first, 2*time.Second)
+	tracker.observe(second, 3*time.Second)
+	tracker.observe(second, 4*time.Second)
+	tracker.observe(third, 5*time.Second)
+	if tracker.attempts != 5 || tracker.progressChanges != 2 || tracker.stageChanges != 1 ||
+		tracker.lastProgressChange != 5*time.Second || tracker.first != first || tracker.last != third {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+}
+
+func TestV5ConvergenceTrackerRetainsOnlySourceFreeProgressProjection(t *testing.T) {
+	progress := observationpublication.Progress{
+		State: "building",
+		Planning: &observationpublication.PlanningProgress{
+			State: "settled", Pending: 0, Running: 0, Succeeded: 1,
+		},
+		Schedule: &observationpublication.ScheduleProgress{
+			State: "active", TotalPartitions: 62, Materialized: 62,
+			Pending: 20, Running: 2, Succeeded: 40,
+		},
+	}
+	probe := observationConvergenceProbe(progress)
+	var tracker convergenceProgressTracker
+	tracker.observe(probe, 90*time.Minute)
+	if tracker.observationProgress == nil ||
+		tracker.observationProgress.ScheduleTotalPartitions != 62 ||
+		tracker.observationProgress.ScheduleSucceeded != 40 ||
+		tracker.observationProgressAtWall != 90*time.Minute {
 		t.Fatalf("tracker = %+v", tracker)
 	}
 }
@@ -360,6 +386,23 @@ func TestExecutionSafetyUsesPhaseGaugeMaximaAndTotalWall(t *testing.T) {
 	}
 	if err := run.enforceSafety(); !errors.Is(err, errReviewCeiling) {
 		t.Fatalf("failed-phase RSS overflow = %v", err)
+	}
+}
+
+func TestExecutionSafetyRecognizesFrozenTotalDeadlineCause(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(t.Context())
+	run := &execution{
+		ctx:  ctx,
+		plan: Plan{Safety: frozenSafetyV5},
+		observation: Observation{Phases: []PhaseObservation{{
+			Name: "cold", Outcome: "failed", Metrics: PhaseMetrics{
+				WallMS: frozenSafetyV5.MaximumTotalWallMS - 1,
+			},
+		}}},
+	}
+	cancel(errReviewCeiling)
+	if err := run.enforceSafety(); !errors.Is(err, errReviewCeiling) {
+		t.Fatalf("frozen total deadline = %v", err)
 	}
 }
 

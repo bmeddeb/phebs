@@ -13,6 +13,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const (
@@ -20,14 +23,17 @@ const (
 	PlanSchemaV2               = "t4013-neutral-convergence-plan-v2"
 	PlanSchemaV3               = "t4013-neutral-convergence-plan-v3"
 	PlanSchemaV4               = "t4013-neutral-convergence-plan-v4"
+	PlanSchemaV5               = "t4013-neutral-convergence-plan-v5"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
 	ObservationSchemaV4        = "t4013-neutral-convergence-observation-v4"
+	ObservationSchemaV5        = "t4013-neutral-convergence-observation-v5"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
 	ReceiptSchemaV4            = "t4013-neutral-convergence-receipt-v4"
+	ReceiptSchemaV5            = "t4013-neutral-convergence-receipt-v5"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -155,17 +161,46 @@ type ServerStartupObservation struct {
 // bounded source-free controls. It never retains repository paths, source
 // bytes, HTTP bodies, credentials, or raw process output.
 type ConvergenceWaitObservation struct {
-	Profile             string `json:"profile"`
-	Label               string `json:"label"`
-	Revision            string `json:"revision"`
-	Outcome             string `json:"outcome"`
-	LastStage           string `json:"last_stage"`
-	Attempts            int64  `json:"attempts"`
-	ProgressChanges     int64  `json:"progress_changes"`
-	FirstProgressSHA256 string `json:"first_progress_sha256"`
-	LastProgressSHA256  string `json:"last_progress_sha256"`
-	DeadlineMS          int64  `json:"deadline_ms"`
-	WallMS              int64  `json:"wall_ms"`
+	Profile                   string                          `json:"profile"`
+	Label                     string                          `json:"label"`
+	Revision                  string                          `json:"revision"`
+	Outcome                   string                          `json:"outcome"`
+	FirstStage                string                          `json:"first_stage,omitempty"`
+	LastStage                 string                          `json:"last_stage"`
+	Attempts                  int64                           `json:"attempts"`
+	ProgressChanges           int64                           `json:"progress_changes"`
+	StageChanges              int64                           `json:"stage_changes,omitempty"`
+	FirstProgressSHA256       string                          `json:"first_progress_sha256"`
+	LastProgressSHA256        string                          `json:"last_progress_sha256"`
+	LastProgressChangeWallMS  int64                           `json:"last_progress_change_wall_ms,omitempty"`
+	ObservationProgress       *ObservationProgressObservation `json:"observation_progress,omitempty"`
+	ObservationProgressWallMS int64                           `json:"observation_progress_wall_ms,omitempty"`
+	DeadlineMS                int64                           `json:"deadline_ms"`
+	WallMS                    int64                           `json:"wall_ms"`
+}
+
+// ObservationProgressObservation is a source-free projection of the bounded
+// observation progress response already read by the exact ceremony oracle.
+// Repository identities, generation digests, timestamps, paths, and errors
+// remain private.
+type ObservationProgressObservation struct {
+	State                       string `json:"state"`
+	PlanningState               string `json:"planning_state,omitempty"`
+	PlanningPending             int    `json:"planning_pending,omitempty"`
+	PlanningRunning             int    `json:"planning_running,omitempty"`
+	PlanningSucceeded           int    `json:"planning_succeeded,omitempty"`
+	PlanningFailed              int    `json:"planning_failed,omitempty"`
+	ScheduleState               string `json:"schedule_state,omitempty"`
+	ScheduleTotalPartitions     int    `json:"schedule_total_partitions,omitempty"`
+	ScheduleMaterialized        int    `json:"schedule_materialized,omitempty"`
+	SchedulePending             int    `json:"schedule_pending,omitempty"`
+	ScheduleRunning             int    `json:"schedule_running,omitempty"`
+	ScheduleSucceeded           int    `json:"schedule_succeeded,omitempty"`
+	ScheduleFailed              int    `json:"schedule_failed,omitempty"`
+	PublicationState            string `json:"publication_state,omitempty"`
+	PublicationRecordCount      int    `json:"publication_record_count,omitempty"`
+	PublicationObservedCount    int    `json:"publication_observed_count,omitempty"`
+	PublicationUnsupportedCount int    `json:"publication_unsupported_count,omitempty"`
 }
 
 type ToolchainObservation struct {
@@ -399,7 +434,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -407,7 +442,8 @@ func ValidatePlan(value Plan) error {
 	if value.Schema == PlanSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
 	}
-	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 {
+	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 ||
+		value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -421,6 +457,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV3
 	case PlanSchemaV4:
 		wantSafety = frozenSafetyV4
+	case PlanSchemaV5:
+		wantSafety = frozenSafetyV5
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -434,11 +472,14 @@ func ValidatePlan(value Plan) error {
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
 		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
-		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4) && safety.ServerHealthDeadlineMS <= 0 ||
-		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && safety.ServerHealthDeadlineMS != 0 ||
-		value.Schema == PlanSchemaV4 && (safety.FullConvergenceDeadlineMS <= 0 ||
+		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5) &&
+			safety.ServerHealthDeadlineMS <= 0 ||
+		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 &&
+			safety.ServerHealthDeadlineMS != 0 ||
+		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5) && (safety.FullConvergenceDeadlineMS <= 0 ||
 			safety.RevalidationDeadlineMS <= 0 || safety.RevalidationDeadlineMS > safety.FullConvergenceDeadlineMS) ||
-		value.Schema != PlanSchemaV4 && (safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
+		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 &&
+			(safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
 		return errors.New("T40.13 safety envelope is invalid")
 	}
 	wantDecisions := []string{"continue", "reduce", "cohort_experiment", "p6_investigation"}
@@ -458,7 +499,9 @@ func ValidatePlan(value Plan) error {
 }
 
 func ValidateObservation(value Observation) error {
-	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4}, value.Schema) ||
+	if !slices.Contains([]string{
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5,
+	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 observation identity is invalid")
@@ -466,7 +509,8 @@ func ValidateObservation(value Observation) error {
 	if value.Schema == ObservationSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
 	}
-	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 {
+	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
+		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -480,19 +524,27 @@ func ValidateObservation(value Observation) error {
 	if err := validateToolchainObservation(value.Toolchain, value.Outcome == "completed"); err != nil {
 		return err
 	}
-	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 && len(value.ServerStartups) != 0 {
+	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
+		value.Schema != ObservationSchemaV5 && len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
-	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 {
+	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
+		value.Schema == ObservationSchemaV5 {
 		if err := validateServerStartups(value.ServerStartups); err != nil {
 			return err
 		}
 	}
-	if value.Schema != ObservationSchemaV4 && len(value.ConvergenceWaits) != 0 {
+	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 &&
+		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
 	if value.Schema == ObservationSchemaV4 {
-		if err := validateConvergenceWaits(value.ConvergenceWaits); err != nil {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, false); err != nil {
+			return err
+		}
+	}
+	if value.Schema == ObservationSchemaV5 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, true); err != nil {
 			return err
 		}
 	}
@@ -569,14 +621,14 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		for _, startup := range value.ServerStartups {
 			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
 				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		for _, wait := range value.ConvergenceWaits {
 			if wait.DeadlineMS != plan.Safety.FullConvergenceDeadlineMS &&
 				wait.DeadlineMS != plan.Safety.RevalidationDeadlineMS {
@@ -627,6 +679,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV5 {
+		return ObservationSchemaV5
+	}
 	if plan.Schema == PlanSchemaV4 {
 		return ObservationSchemaV4
 	}
@@ -640,6 +695,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV5 {
+		return ReceiptSchemaV5
+	}
 	if plan.Schema == PlanSchemaV4 {
 		return ReceiptSchemaV4
 	}
@@ -736,7 +794,7 @@ func validateServerStartups(values []ServerStartupObservation) error {
 	return nil
 }
 
-func validateConvergenceWaits(values []ConvergenceWaitObservation) error {
+func validateConvergenceWaits(values []ConvergenceWaitObservation, detailed bool) error {
 	if len(values) > 16 {
 		return errors.New("T40.13 convergence wait inventory exceeds its bound")
 	}
@@ -772,8 +830,133 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation) error {
 			value.Outcome != "converged" && value.LastStage == "complete" {
 			return errors.New("T40.13 convergence wait outcome is incoherent")
 		}
+		if !detailed {
+			if value.FirstStage != "" || value.StageChanges != 0 || value.LastProgressChangeWallMS != 0 ||
+				value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 {
+				return errors.New("T40.13 v4 convergence wait acquired v5 diagnostics")
+			}
+			continue
+		}
+		if !slices.Contains(stages, value.FirstStage) || value.StageChanges < 0 ||
+			value.StageChanges > value.ProgressChanges || value.LastProgressChangeWallMS < 0 ||
+			value.LastProgressChangeWallMS > value.WallMS || value.ObservationProgressWallMS < 0 ||
+			value.ObservationProgressWallMS > value.WallMS {
+			return errors.New("T40.13 detailed convergence timing is invalid")
+		}
+		if value.ProgressChanges == 0 {
+			if value.FirstProgressSHA256 != value.LastProgressSHA256 || value.StageChanges != 0 ||
+				value.FirstStage != value.LastStage || value.LastProgressChangeWallMS != 0 {
+				return errors.New("T40.13 unchanged convergence progress is incoherent")
+			}
+		} else if value.LastProgressChangeWallMS == 0 {
+			return errors.New("T40.13 changed convergence progress lacks its change time")
+		}
+		if value.StageChanges == 0 && value.FirstStage != value.LastStage {
+			return errors.New("T40.13 convergence stage identity changed without accounting")
+		}
+		if value.ObservationProgress == nil {
+			if value.ObservationProgressWallMS != 0 {
+				return errors.New("T40.13 absent observation progress has a wall time")
+			}
+		} else if err := validateObservationProgress(*value.ObservationProgress); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func validateObservationProgress(value ObservationProgressObservation) error {
+	if !slices.Contains([]string{"current", "building", "failed", "stale", "unavailable"}, value.State) ||
+		!optionalProgressState(value.PlanningState) || !optionalProgressState(value.ScheduleState) ||
+		!optionalPublicationState(value.PublicationState) ||
+		value.PlanningPending < 0 || value.PlanningRunning < 0 || value.PlanningSucceeded < 0 ||
+		value.PlanningFailed < 0 || value.ScheduleTotalPartitions < 0 || value.ScheduleMaterialized < 0 ||
+		value.SchedulePending < 0 || value.ScheduleRunning < 0 || value.ScheduleSucceeded < 0 ||
+		value.ScheduleFailed < 0 || value.PublicationRecordCount < 0 ||
+		value.PublicationObservedCount < 0 || value.PublicationUnsupportedCount < 0 {
+		return errors.New("T40.13 observation progress projection is invalid")
+	}
+	if value.PlanningState == "" &&
+		(value.PlanningPending != 0 || value.PlanningRunning != 0 ||
+			value.PlanningSucceeded != 0 || value.PlanningFailed != 0) {
+		return errors.New("T40.13 absent planning progress has counters")
+	}
+	if value.PlanningState != "" &&
+		(value.PlanningPending > 1 || value.PlanningRunning > 1 ||
+			value.PlanningSucceeded > 1 || value.PlanningFailed > 1 ||
+			value.PlanningPending+value.PlanningRunning+
+				value.PlanningSucceeded+value.PlanningFailed > 1) {
+		return errors.New("T40.13 planning progress counters are incoherent")
+	}
+	if value.ScheduleState == "" {
+		if value.ScheduleTotalPartitions != 0 || value.ScheduleMaterialized != 0 ||
+			value.SchedulePending != 0 || value.ScheduleRunning != 0 ||
+			value.ScheduleSucceeded != 0 || value.ScheduleFailed != 0 {
+			return errors.New("T40.13 absent schedule progress has counters")
+		}
+	} else if value.ScheduleTotalPartitions < 1 ||
+		value.ScheduleTotalPartitions > store.MaxGenerationChunks ||
+		value.ScheduleMaterialized > value.ScheduleTotalPartitions*observationpublication.ScheduleMaxAttempts ||
+		value.SchedulePending+value.ScheduleRunning > value.ScheduleMaterialized ||
+		value.ScheduleSucceeded+value.ScheduleFailed > value.ScheduleTotalPartitions {
+		return errors.New("T40.13 schedule progress counters are incoherent")
+	}
+	if value.ScheduleState == "settled" &&
+		(value.SchedulePending != 0 || value.ScheduleRunning != 0 || value.ScheduleFailed != 0 ||
+			value.ScheduleSucceeded != value.ScheduleTotalPartitions) ||
+		value.ScheduleState == "failed" &&
+			(value.SchedulePending != 0 || value.ScheduleRunning != 0 || value.ScheduleFailed == 0 ||
+				value.ScheduleSucceeded+value.ScheduleFailed != value.ScheduleTotalPartitions) {
+		return errors.New("T40.13 schedule progress state is incoherent")
+	}
+	if value.PlanningState == "active" && (value.PlanningSucceeded != 0 || value.PlanningFailed != 0) ||
+		value.PlanningState == "settled" &&
+			(value.PlanningPending != 0 || value.PlanningRunning != 0 ||
+				value.PlanningSucceeded != 1 || value.PlanningFailed != 0) ||
+		value.PlanningState == "failed" &&
+			(value.PlanningPending != 0 || value.PlanningRunning != 0 ||
+				value.PlanningSucceeded != 0 || value.PlanningFailed != 1) {
+		return errors.New("T40.13 planning progress state is incoherent")
+	}
+	if value.PublicationState == "" &&
+		(value.PublicationRecordCount != 0 || value.PublicationObservedCount != 0 ||
+			value.PublicationUnsupportedCount != 0) {
+		return errors.New("T40.13 absent publication progress has counters")
+	}
+	if value.PublicationState != "" &&
+		(value.PublicationRecordCount > observationpublication.MaxGenerationRecords ||
+			value.PublicationObservedCount+value.PublicationUnsupportedCount != value.PublicationRecordCount) {
+		return errors.New("T40.13 publication progress counters are incoherent")
+	}
+	switch value.State {
+	case "current":
+		if value.PublicationState != "current" {
+			return errors.New("T40.13 current observation progress lacks current publication authority")
+		}
+	case "building":
+		if value.PlanningState != "active" && value.ScheduleState != "active" {
+			return errors.New("T40.13 building observation progress lacks active work")
+		}
+	case "failed":
+		if value.PlanningState != "failed" && value.ScheduleState != "failed" {
+			return errors.New("T40.13 failed observation progress lacks failed work")
+		}
+	case "unavailable":
+		if value.PublicationState == "current" ||
+			value.PlanningState == "active" || value.PlanningState == "failed" ||
+			value.ScheduleState == "active" || value.ScheduleState == "failed" {
+			return errors.New("T40.13 unavailable observation progress retains selected work")
+		}
+	}
+	return nil
+}
+
+func optionalProgressState(value string) bool {
+	return value == "" || slices.Contains([]string{"active", "settled", "failed"}, value)
+}
+
+func optionalPublicationState(value string) bool {
+	return value == "" || slices.Contains([]string{"current", "stale"}, value)
 }
 
 func validateStopped(value Receipt) error {
@@ -881,7 +1064,7 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
 			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
@@ -898,7 +1081,7 @@ func validateCompleted(value Receipt, plan Plan) error {
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		want := [][3]string{
 			{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
 			{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},

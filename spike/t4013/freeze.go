@@ -48,6 +48,15 @@ var frozenSafetyV4 = SafetyEnvelope{
 	RevalidationDeadlineMS:    20 * 60 * 1000,
 }
 
+var frozenSafetyV5 = SafetyEnvelope{
+	MinimumMemoryBytes: 24 << 30, MinimumAvailableDiskBytes: 120 << 30,
+	MaximumTotalWallMS: 8 * 60 * 60 * 1000, MaximumPeakRSSBytes: 20 << 30,
+	MaximumDataAllocatedBytes: 96 << 30, MaximumRetriesPerUnit: 5,
+	ServerHealthDeadlineMS:    15 * 60 * 1000,
+	FullConvergenceDeadlineMS: 4 * 60 * 60 * 1000,
+	RevalidationDeadlineMS:    20 * 60 * 1000,
+}
+
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
 		Schema: PlanSchema, FrozenOn: "2026-08-08", SourceCommit: sourceCommit,
@@ -70,7 +79,21 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return frozenV4PlanWithHostToolchain(sourceCommit, hostToolchain)
+	return frozenV5PlanWithHostToolchain(sourceCommit, hostToolchain)
+}
+
+func frozenV5PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := FrozenPlan(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV5
+	value.HostToolchain = slices.Clone(hostToolchain)
+	value.Safety = frozenSafetyV5
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
 }
 
 func frozenV4PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

@@ -314,25 +314,53 @@ ceiling, and its generic operational code identifies neither the last
 convergence stage nor whether its published control identity changed. Take 5
 is permanently retired.
 
-Take 6 introduces v4 plan, observation, and receipt schemas while preserving
-v1-v3 bytes. The signed plan now states the existing two-hour full-convergence
-and 20-minute revalidation deadlines explicitly. Each exact-snapshot wait
-retains at most one closed record: profile/revision/phase label, outcome, last
-closed stage, attempt and progress-change counts, first/last SHA-256 progress
-identities, deadline, and wall time. Progress identities hash bounded controls
-already read by the inspector; no source bytes, paths, credentials, HTTP
-bodies, or logs enter evidence. A non-recovery deadline is now the closed
-`convergence_deadline_expired` operational code and remains unclassified;
-already-authoritative recovery exercises retain their closed recovery result.
-The deadline is not increased: Take 6 diagnoses the existing boundary before
-any decision to change production or review posture.
+The independently verified `t40r1-neutral-06` v4 plan
+(`sha256:3f4111537ee2027d53a774a40d90b14d331cd9ba680c9f2388671560b07495bf`)
+at commit `6490e3e0d41c46662d7ac4d3fef4ab8118000407` reached healthy structural
+startup in 18,825 ms, then stopped exactly at the signed 7,200,000-ms cold
+convergence deadline. Package
+`sha256:f367d8ce9ca26c255c7a086e4bafd4ab35d007a0002a19407676c1d528c7c59c`,
+observation
+`sha256:00941d7f0717e5aa8ce2a9620f4e602b27a929323f51724f3f4c0771f46b9479`,
+and receipt
+`sha256:02ecfff24e47b787c47473e20b3c3d1249871530ce4cc1d6825096265b591b41`
+verify exactly. The 1,440 five-second probes recorded six control-identity
+changes and finished at `observation_publication` with different first and
+last progress digests. Peak RSS was 4,022,009,856 bytes and allocated custody
+was 20,082,331,648 bytes, below the frozen ceilings; teardown destroyed
+custody. The result proves that startup and host resources were not the stop
+and that the closed controls changed during the wait. It does not prove the
+direction or timing of those changes, the exact observation schedule
+completion fraction, or that an unspecified extension would converge. Take 6
+therefore remains `unclassified` and is permanently retired.
+
+Take 7 uses a four-hour full-convergence review deadline. This is the exact
+two-times extension of the right-censored Take 6 interval and consumes at most
+half of the unchanged eight-hour total-wall ceiling. It does not reserve four
+full hours for later gates: preflight, startup, and earlier phases also consume
+the parent ceiling, so later work receives only the actual remaining wall.
+It is a prospective diagnostic fence,
+not an ETA, target SLO, supported-scale claim, or production-constant change.
+The 20-minute revalidation deadline is unchanged. No further extension is
+implied: a four-hour expiry still stops and requires a separate review of the
+direct topology or total ceremony envelope.
+
+V5 plan, observation, and receipt schemas preserve v1-v4 bytes. In addition to
+the v4 digest record, each wait retains its first stage, stage-change count,
+last progress-change wall time, and the last bounded source-free observation
+progress projection already read by the oracle: closed state plus planning,
+schedule, and publication counters. Repository identities, generation
+digests, timestamps, paths, errors, source, responses, credentials, and logs
+remain private. The ceremony adds no API or filesystem read, and production
+request, sync, scheduler, publication, lifecycle, cache, lock, corpus-read,
+memory, and child-process behavior is unchanged.
 
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-06
+CEREMONY_ID=t40r1-neutral-07
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

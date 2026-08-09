@@ -82,8 +82,8 @@ func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
 	if err != nil {
 		return Observation{}, err
 	}
-	executionContext, cancel := context.WithTimeout(
-		ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond,
+	executionContext, cancel := context.WithTimeoutCause(
+		ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond, errReviewCeiling,
 	)
 	defer cancel()
 	run.ctx = executionContext
@@ -115,7 +115,8 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
-	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -319,7 +320,8 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 }
 
 func (run *execution) verifyFrozenHostToolchain() error {
-	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 && run.plan.Schema != PlanSchemaV4 {
+	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
+		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -417,11 +419,12 @@ func (run *execution) startServer(
 	}
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
-	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 {
+	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
-	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4) && startup.Profile != "" {
+	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
+		run.plan.Schema == PlanSchemaV5) && startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
 	return server, meter, healthErr
@@ -1177,6 +1180,9 @@ func (run *execution) teardown() error {
 }
 
 func (run *execution) enforceSafety() error {
+	if run.ctx != nil && errors.Is(context.Cause(run.ctx), errReviewCeiling) {
+		return errReviewCeiling
+	}
 	var totalWall int64
 	for _, phase := range run.observation.Phases {
 		if phase.Outcome == "not_run" {
@@ -1206,18 +1212,31 @@ func (run *execution) stopServers() error {
 }
 
 type convergenceProgressTracker struct {
-	attempts        int64
-	progressChanges int64
-	first           privateConvergenceProbe
-	last            privateConvergenceProbe
+	attempts                  int64
+	progressChanges           int64
+	stageChanges              int64
+	first                     privateConvergenceProbe
+	last                      privateConvergenceProbe
+	lastProgressChange        time.Duration
+	observationProgress       *ObservationProgressObservation
+	observationProgressAtWall time.Duration
 }
 
-func (tracker *convergenceProgressTracker) observe(probe privateConvergenceProbe) {
+func (tracker *convergenceProgressTracker) observe(probe privateConvergenceProbe, elapsed time.Duration) {
 	tracker.attempts++
 	if tracker.first.SHA256 == "" {
 		tracker.first = probe
 	} else if tracker.last.SHA256 != probe.SHA256 {
 		tracker.progressChanges++
+		if tracker.last.Stage != probe.Stage {
+			tracker.stageChanges++
+		}
+		tracker.lastProgressChange = elapsed
+	}
+	if probe.ObservationProgress != nil {
+		progress := *probe.ObservationProgress
+		tracker.observationProgress = &progress
+		tracker.observationProgressAtWall = elapsed
 	}
 	tracker.last = probe
 }
@@ -1242,7 +1261,7 @@ func (run *execution) waitSnapshot(
 	var progress convergenceProgressTracker
 	for {
 		snapshot, probe, inspectErr := inspector.inspectWithProgress(phase, profile, revision)
-		progress.observe(probe)
+		progress.observe(probe, time.Since(started))
 		if inspectErr == nil && phase.Err() == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)
 			return snapshot, nil
@@ -1267,27 +1286,35 @@ func (run *execution) recordConvergenceWait(
 	started time.Time,
 	progress convergenceProgressTracker,
 ) {
-	if run.plan.Schema != PlanSchemaV4 || progress.attempts == 0 {
+	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 || progress.attempts == 0 {
 		return
 	}
-	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, ConvergenceWaitObservation{
+	wait := ConvergenceWaitObservation{
 		Profile: profile.Name, Label: label, Revision: revision, Outcome: outcome,
 		LastStage: progress.last.Stage, Attempts: progress.attempts,
 		ProgressChanges:     progress.progressChanges,
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
-	})
+	}
+	if run.plan.Schema == PlanSchemaV5 {
+		wait.FirstStage = progress.first.Stage
+		wait.StageChanges = progress.stageChanges
+		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
+		wait.ObservationProgress = progress.observationProgress
+		wait.ObservationProgressWallMS = progress.observationProgressAtWall.Milliseconds()
+	}
+	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
 }
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
 }
 
 func (run *execution) revalidationDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1492,7 +1519,8 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 
 func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
 	value := emptyObservation(environment)
-	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
+	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1501,6 +1529,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV3
 	case PlanSchemaV4:
 		value.Schema = ObservationSchemaV4
+	case PlanSchemaV5:
+		value.Schema = ObservationSchemaV5
 	}
 	return value
 }

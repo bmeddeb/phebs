@@ -279,6 +279,34 @@ Take 6 requires a fresh commit, signer, `t40r1-neutral-06` plan, and independent
 review. No scale, topology, SLO, release, private-rerun, or Epic-closure claim
 changes.
 
+Large-host Take 6 disposition and Take 7 calculated deadline (2026-08-09):
+signed v4 plan
+`sha256:3f4111537ee2027d53a774a40d90b14d331cd9ba680c9f2388671560b07495bf`
+at commit `6490e3e0d41c46662d7ac4d3fef4ab8118000407`, package
+`sha256:f367d8ce9ca26c255c7a086e4bafd4ab35d007a0002a19407676c1d528c7c59c`,
+observation
+`sha256:00941d7f0717e5aa8ce2a9620f4e602b27a929323f51724f3f4c0771f46b9479`,
+and receipt
+`sha256:02ecfff24e47b787c47473e20b3c3d1249871530ce4cc1d6825096265b591b41`
+verify exactly. Structural startup was healthy in 18,825 ms. The cold wait then
+reached its exact 7,200,000-ms deadline after 1,440 probes, six progress-control
+changes, different first/last digests, and a last stage of
+`observation_publication`. Peak RSS was 4,022,009,856 bytes and allocated
+custody was 20,082,331,648 bytes; no frozen resource ceiling was crossed and
+teardown destroyed custody. V4 does not retain change timing or typed schedule
+counters, so it cannot calculate remaining work or prove that any unspecified
+extension would pass. Take 7 prospectively selects four hours: exactly twice
+the censored interval and half of the unchanged eight-hour total ceiling.
+It does not reserve the other half: prior work also consumes the parent, and
+later mechanics and teardown receive only the actual remaining wall. V5 retains
+first stage, stage changes, last-change wall, and the final bounded source-free
+observation planning/schedule/publication counters already read by the oracle.
+The 20-minute revalidation deadline and all production behavior remain
+unchanged. `neutral-06` is permanently retired; Take 7 requires a fresh commit,
+signer, `t40r1-neutral-07` plan, independent review, and explicit execution
+approval. No release, SLO, topology, private replay, or Epic-closure claim
+changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

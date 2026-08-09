@@ -63,8 +63,9 @@ type privateProfileSnapshot struct {
 }
 
 type privateConvergenceProbe struct {
-	Stage  string
-	SHA256 string
+	Stage               string
+	SHA256              string
+	ObservationProgress *ObservationProgressObservation
 }
 
 func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
@@ -76,6 +77,35 @@ func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
 		raw = []byte(stage)
 	}
 	return privateConvergenceProbe{Stage: stage, SHA256: digest(raw)}
+}
+
+func observationConvergenceProbe(progress observationpublication.Progress) privateConvergenceProbe {
+	projection := &ObservationProgressObservation{State: progress.State}
+	if progress.Planning != nil {
+		projection.PlanningState = progress.Planning.State
+		projection.PlanningPending = progress.Planning.Pending
+		projection.PlanningRunning = progress.Planning.Running
+		projection.PlanningSucceeded = progress.Planning.Succeeded
+		projection.PlanningFailed = progress.Planning.Failed
+	}
+	if progress.Schedule != nil {
+		projection.ScheduleState = progress.Schedule.State
+		projection.ScheduleTotalPartitions = progress.Schedule.TotalPartitions
+		projection.ScheduleMaterialized = progress.Schedule.Materialized
+		projection.SchedulePending = progress.Schedule.Pending
+		projection.ScheduleRunning = progress.Schedule.Running
+		projection.ScheduleSucceeded = progress.Schedule.Succeeded
+		projection.ScheduleFailed = progress.Schedule.Failed
+	}
+	if progress.Publication != nil {
+		projection.PublicationState = progress.Publication.State
+		projection.PublicationRecordCount = progress.Publication.RecordCount
+		projection.PublicationObservedCount = progress.Publication.ObservedCount
+		projection.PublicationUnsupportedCount = progress.Publication.UnsupportedCount
+	}
+	probe := convergenceProbe("observation_publication", progress)
+	probe.ObservationProgress = projection
+	return probe
 }
 
 type profileInspector struct {
@@ -171,7 +201,7 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
-	probe = convergenceProbe("observation_publication", progress)
+	probe = observationConvergenceProbe(progress)
 	if progress.State != "current" || progress.Publication == nil || progress.Publication.State != "current" ||
 		progress.Publication.SourceGenerationDigest != source.Digest || progress.Schedule == nil ||
 		progress.Schedule.State != "settled" || progress.Schedule.Pending != 0 || progress.Schedule.Running != 0 ||

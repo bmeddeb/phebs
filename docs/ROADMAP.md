@@ -743,6 +743,14 @@ catalog, relationship, or correctness authority.
   preparation: it keeps the same two-hour boundary and adds signed, bounded,
   source-free last-stage and progress-change evidence. It still requires a
   fresh commit, signer, and independent plan review before execution.
+- T40.R1 Take 6 is a verified `unclassified` two-hour convergence-deadline
+  stop at `observation_publication`, with six bounded control changes but no
+  retained schedule fraction or change timing. Take 7 is the only authorized
+  preparation: it uses a four-hour diagnostic deadline—twice the censored
+  interval and half the unchanged eight-hour total ceiling—and adds bounded
+  typed progress/timing evidence without changing production behavior. It
+  still requires a fresh commit, signer, independent plan review, and explicit
+  execution approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
