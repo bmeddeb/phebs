@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 )
 
 func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testing.T) {
@@ -39,7 +41,7 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 	}
 	run.startPhase(5)
 	run.metersTracked = expectedPhaseMeters(5)
-	stopped, err := run.stopAfterFailure(errors.New("injected exact failure"))
+	stopped, err := run.stopAfterFailure(directRecovery(errors.New("injected recovery failure")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +83,83 @@ func TestMissingFailedPhaseMeterCannotSelectFrozenDecision(t *testing.T) {
 	if stopped.Decision.Selected != "unclassified" || stopped.Decision.Substantiated ||
 		stopped.Failures[0].Code != "failed_phase_measurement_unavailable" {
 		t.Fatalf("stopped decision = %+v, failure = %+v", stopped.Decision, stopped.Failures)
+	}
+}
+
+func TestStoppedExecutionResultPreservesObservationWhenShutdownFails(t *testing.T) {
+	observation := Observation{Schema: ObservationSchema, Outcome: "stopped"}
+	got, err := stoppedExecutionResult(
+		observation, errors.New("phase failed"), errors.New("server shutdown failed"),
+	)
+	if got.Schema != ObservationSchema || got.Outcome != "stopped" ||
+		!errors.Is(err, ErrGateStopped) || !strings.Contains(err.Error(), "server shutdown failed") {
+		t.Fatalf("stopped result = %+v, %v", got, err)
+	}
+}
+
+func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := &execution{
+		moduleRoot: module, workspace: workspace, plan: Plan{Safety: frozenSafety},
+		observation: emptyObservation(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}),
+	}
+	run.startPhase(1)
+	meter := &phaseMeter{}
+	run.trackMeter(meter)
+	run.metersTracked = expectedPhaseMeters(1)
+	if _, err := run.finishMeter(meter, nil); err == nil {
+		t.Fatal("invalid meter unexpectedly finalized")
+	}
+	if run.measurementErr == nil {
+		t.Fatal("meter finalization failure was not retained")
+	}
+	if _, present := run.activeMeters[meter]; !present {
+		t.Fatal("failed meter was removed before stopped-phase capture")
+	}
+	stopped, err := run.stopAfterFailure(exactOracle("injected oracle failure"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stopped.Decision.Selected != "unclassified" || stopped.Decision.Substantiated ||
+		stopped.Failures[0].Code != "failed_phase_measurement_unavailable" {
+		t.Fatalf("stopped decision = %+v, failure = %+v", stopped.Decision, stopped.Failures)
+	}
+}
+
+func TestStoppedFailureClassificationIsClosed(t *testing.T) {
+	tests := []struct {
+		name          string
+		cause         error
+		measurement   error
+		ceiling       error
+		code          string
+		decision      string
+		substantiated bool
+	}{
+		{name: "operational", cause: errors.New("build failed"), code: "operational_failure", decision: "unclassified"},
+		{name: "exact oracle", cause: exactOracle("mismatch"), code: "exact_gate_failed", decision: "reduce", substantiated: true},
+		{name: "pressure refusal", cause: errProductionPressure, code: "production_pressure_gate_refused", decision: "reduce", substantiated: true},
+		{name: "direct recovery", cause: directRecovery(errors.New("did not converge")), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
+		{name: "review ceiling", cause: errReviewCeiling, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
+		{name: "missing measurement overrides exact and ceiling", cause: exactOracle("mismatch"), measurement: errors.New("meter failed"), ceiling: errReviewCeiling, code: "failed_phase_measurement_unavailable", decision: "unclassified"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := classifyStoppedFailure(test.cause, test.measurement, test.ceiling)
+			if got.code != test.code || got.decision != test.decision || got.substantiated != test.substantiated {
+				t.Fatalf("classification = %+v", got)
+			}
+		})
 	}
 }
 
@@ -281,15 +360,51 @@ func TestAuthorizedQueryRequiresMatchesAndCitableRelationship(t *testing.T) {
 
 func TestChunkLifecycleReaderBindsOneStartedAttempt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.log")
-	line := `generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"started","identity":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","stage":"extraction-partitions","generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","attempt":2,"outcome":"running"}` + "\n"
-	if err := os.WriteFile(path, []byte(line), 0o600); err != nil {
+	startedLine := `generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"started","identity":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","stage":"extraction-partitions","generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","attempt":2,"outcome":"running"}` + "\n"
+	settledLine := `generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"settled","identity":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","stage":"extraction-partitions","generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","attempt":2,"outcome":"stale_fenced"}` + "\n"
+	if err := os.WriteFile(path, []byte(startedLine), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	report, found, err := readChunkLifecycle(path, 0, "", "started")
-	if err != nil || !found || report.Attempt != 2 || report.Outcome != "running" {
-		t.Fatalf("report = %+v, found=%t, err=%v", report, found, err)
+	cursor, err := newChunkLifecycleCursor(path, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, found, err := readChunkLifecycle(path, 0, report.Identity, "settled"); err != nil || found {
-		t.Fatalf("unexpected settled report found=%t, err=%v", found, err)
+	defer func() { _ = cursor.Close() }()
+	reports, err := cursor.poll()
+	if err != nil || len(reports) != 1 || reports[0].Event != "started" || reports[0].Attempt != 2 {
+		t.Fatalf("initial reports = %+v, err=%v", reports, err)
+	}
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(settledLine); err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reports, err = cursor.poll()
+	if err != nil || len(reports) != 1 || reports[0].Event != "settled" || reports[0].Outcome != "stale_fenced" {
+		t.Fatalf("incremental reports = %+v, err=%v", reports, err)
+	}
+	if reports, err := cursor.poll(); err != nil || len(reports) != 0 {
+		t.Fatalf("cursor rescanned prior reports = %+v, err=%v", reports, err)
+	}
+}
+
+func TestChunkLifecycleActiveSetRejectsAlreadySettledAttempt(t *testing.T) {
+	started := generationscheduler.ChunkLifecycleReport{
+		Schema: generationscheduler.ChunkLifecycleSchema, Event: "started",
+		Identity: "sha256:" + strings.Repeat("a", 64), Stage: "extraction-partitions",
+		Generation: "sha256:" + strings.Repeat("b", 64), Attempt: 2, Outcome: "running",
+	}
+	settled := started
+	settled.Event, settled.Outcome = "settled", "completed"
+	active := make(map[string]generationscheduler.ChunkLifecycleReport)
+	order := updateActiveChunkLifecycles(active, nil, []generationscheduler.ChunkLifecycleReport{started, settled})
+	if len(order) != 1 || len(active) != 0 {
+		t.Fatalf("settled historical attempt remained selectable: order=%v active=%v", order, active)
 	}
 }

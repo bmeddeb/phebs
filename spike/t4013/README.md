@@ -184,11 +184,17 @@ meters and did not retain executable identities, so the earlier `reduce`
 classification could not be proved from retained evidence. The corrected
 harness builds from an exact `git archive HEAD`, refuses a modified or untracked
 checkout, retains four executable digests, finalizes failed-phase meters,
-requires diagnostic reuse, binds the stale-worker case to one started and
-terminally fenced scheduler lease, requires real query matches plus a citation,
-and validates stopped phase/decision coherence. Those corrections govern only
-a separately authorized future plan and do not retroactively strengthen this
-consumed run.
+requires diagnostic reuse, preserves a captured observation through shutdown
+failure, and leaves operational failures unclassified unless a closed typed
+cause selects a frozen rule. Failed meter finalization is sticky. A stopped
+receipt after successful preflight requires the four executable identities;
+the sole exception is the exact retained historical receipt byte digest above.
+The stale-worker case incrementally observes a currently active semantic-B
+lease, proves its extraction plans bind to B's source digest, supersedes it with
+semantic A, and requires that same attempt's terminal stale fence. Real query
+matches plus a citation and exact stopped phase/decision coherence remain
+required. Those corrections govern only a separately authorized future plan
+and do not retroactively strengthen this consumed run.
 
 ```sh
 go test ./spike/t4013/... -count=1

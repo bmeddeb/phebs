@@ -348,6 +348,114 @@ func inspectExtraction(
 	return extractionSnapshot{}, errors.New("T40.13 current extraction generation is unavailable")
 }
 
+type extractionScheduleBinding struct {
+	Schema             string `json:"schema"`
+	Repository         string `json:"repository"`
+	ScheduleGeneration string `json:"schedule_generation"`
+	TargetGeneration   string `json:"target_generation"`
+	PriorSchedule      string `json:"prior_schedule,omitempty"`
+}
+
+// extractionGenerationBindsRevision proves that a currently reported
+// scheduler generation resolves to plans bound to the selected source tree.
+// It reads only bounded generation/plan controls and the current source root.
+func extractionGenerationBindsRevision(
+	profile PreparedProfile,
+	scheduleGeneration string,
+	revision string,
+) (bool, error) {
+	if !digestIdentity(scheduleGeneration) || !hexIdentity(revision, 40) {
+		return false, errors.New("T40.13 live extraction identity is invalid")
+	}
+	source, err := repositoryindex.ReadSourceManifest(
+		filepath.Join(profile.DataDir, "index"), profile.RepositoryName,
+	)
+	if err != nil {
+		return false, err
+	}
+	if len(source.Revisions) != 1 || source.Revisions[0].Commit != revision {
+		return false, nil
+	}
+	repositoryRoot := filepath.Join(
+		profile.DataDir, "extraction-publications", repositoryHash(profile.RepositoryName),
+	)
+	target := scheduleGeneration
+	bindingPath := filepath.Join(
+		repositoryRoot, "schedule-"+strings.TrimPrefix(scheduleGeneration, "sha256:")+".json",
+	)
+	var binding extractionScheduleBinding
+	if err := readBoundedJSON(bindingPath, extractionpublication.MaxPointerBytes, &binding); err == nil {
+		if binding.Schema != extractionpublication.BindingSchema ||
+			binding.Repository != profile.RepositoryName ||
+			binding.ScheduleGeneration != scheduleGeneration || !digestIdentity(binding.TargetGeneration) {
+			return false, errors.New("T40.13 extraction schedule binding is invalid")
+		}
+		target = binding.TargetGeneration
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
+	directory := filepath.Join(repositoryRoot, strings.TrimPrefix(target, "sha256:"))
+	var generation extractionpublication.Generation
+	if err := readBoundedJSON(
+		filepath.Join(directory, "generation.json"),
+		extractionpublication.MaxGenerationControlBytes,
+		&generation,
+	); err != nil {
+		return false, err
+	}
+	if generation.Schema != extractionpublication.GenerationSchema ||
+		generation.Repository != profile.RepositoryName || generation.Digest != target ||
+		len(generation.Domains) == 0 || len(generation.Domains) > extractionpublication.MaxDomains {
+		return false, errors.New("T40.13 extraction generation control is invalid")
+	}
+	for _, descriptor := range generation.Domains {
+		if filepath.Base(descriptor.PlanName) != descriptor.PlanName {
+			return false, errors.New("T40.13 extraction plan name is invalid")
+		}
+		var domain extractionpublication.DomainPlan
+		if err := readBoundedJSON(
+			filepath.Join(directory, descriptor.PlanName),
+			candidate.MaxDomainResultPlanBytes+1024,
+			&domain,
+		); err != nil {
+			return false, err
+		}
+		if domain.Schema != extractionpublication.DomainSchema ||
+			domain.RunID != descriptor.RunID || domain.Plan.Digest != descriptor.PlanDigest ||
+			domain.Plan.Repository != profile.RepositoryName ||
+			domain.Plan.SourceGenerationDigest != source.Digest ||
+			candidate.ValidateDomainResultPlanControl(domain.Plan) != nil {
+			return false, errors.New("T40.13 extraction plan is not bound to the selected source generation")
+		}
+	}
+	return true, nil
+}
+
+func readBoundedJSON(path string, limit int64, target any) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Size() > limit {
+		return errors.New("T40.13 bounded control is special or oversized")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+	decoder := json.NewDecoder(io.LimitReader(file, limit+1))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	var trailing struct{}
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return errors.New("T40.13 bounded control has trailing data")
+	}
+	return nil
+}
+
 func relationshipMatchesExtraction(root relationshippublication.Root, extraction extractionSnapshot) error {
 	if root.Authority.Upstream == nil || len(root.Authority.Upstream.Domains) == 0 ||
 		len(root.Authority.Upstream.Domains) != len(root.Authority.Upstream.Required) {

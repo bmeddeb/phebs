@@ -16,12 +16,15 @@ import (
 )
 
 const (
-	PlanSchema          = "t4013-neutral-convergence-plan-v1"
-	ObservationSchema   = "t4013-neutral-convergence-observation-v1"
-	ReceiptSchema       = "t4013-neutral-convergence-receipt-v1"
-	MaxPlanBytes        = 64 << 10
-	MaxObservationBytes = 256 << 10
-	MaxReceiptBytes     = 256 << 10
+	PlanSchema                 = "t4013-neutral-convergence-plan-v1"
+	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
+	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
+	MaxPlanBytes               = 64 << 10
+	MaxObservationBytes        = 256 << 10
+	MaxReceiptBytes            = 256 << 10
+	legacyStoppedPlanDigest    = "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0"
+	legacyStoppedSourceCommit  = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
+	legacyStoppedReceiptDigest = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
 )
 
 var phaseOrder = []string{
@@ -49,7 +52,7 @@ var checkNames = []string{
 }
 
 var failureClasses = []string{
-	"environment", "admission", "search", "pipeline", "recovery", "lifecycle", "archive_restore", "authorization", "oracle",
+	"environment", "admission", "search", "pipeline", "recovery", "lifecycle", "archive_restore", "authorization", "oracle", "execution",
 }
 
 type Plan struct {
@@ -432,6 +435,10 @@ func ValidateObservation(value Observation) error {
 }
 
 func ValidateReceipt(value Receipt, plan Plan) error {
+	return validateReceipt(value, plan, false)
+}
+
+func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) error {
 	if value.Schema != ReceiptSchema || !digestIdentity(value.PlanDigest) || value.SourceCommit != plan.SourceCommit ||
 		!date(value.MeasuredOn) || (value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 receipt identity is invalid")
@@ -445,6 +452,11 @@ func ValidateReceipt(value Receipt, plan Plan) error {
 	}
 	if err := ValidateObservation(observation); err != nil {
 		return err
+	}
+	if value.Outcome == "stopped" && value.Phases[0].Outcome == "succeeded" &&
+		len(value.Toolchain) == 0 &&
+		(!exactLegacyStoppedReceipt || !isLegacyStoppedReceiptIdentity(value)) {
+		return errors.New("T40.13 stopped receipt lacks the preflight executable identities")
 	}
 	if value.Outcome == "completed" {
 		if value.Environment.MemoryBytes < plan.Safety.MinimumMemoryBytes ||
@@ -555,6 +567,11 @@ func validateStopped(value Receipt) error {
 		if failure.Class != "oracle" {
 			return errors.New("T40.13 unclassified failure identity is invalid")
 		}
+	case "operational_failure":
+		if failure.Class != "execution" {
+			return errors.New("T40.13 operational failure identity is invalid")
+		}
+		wantReason = "operational_failure"
 	default:
 		return errors.New("T40.13 stopped failure code is not frozen")
 	}
@@ -562,6 +579,17 @@ func validateStopped(value Receipt) error {
 		return errors.New("T40.13 stopped decision does not match its frozen failure rule")
 	}
 	return nil
+}
+
+func isLegacyStoppedReceiptIdentity(value Receipt) bool {
+	return value.PlanDigest == legacyStoppedPlanDigest &&
+		value.SourceCommit == legacyStoppedSourceCommit && value.MeasuredOn == "2026-08-08" &&
+		value.Outcome == "stopped" && len(value.Toolchain) == 0 && len(value.Failures) == 1 &&
+		value.Failures[0] == (FailureObservation{
+			Phase: "cold", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+		}) && value.Decision == (DecisionObservation{
+		Selected: "unclassified", Reason: "failed_phase_measurement_unavailable", Substantiated: false,
+	})
 }
 
 func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
@@ -572,7 +600,7 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	if err := decodeStrict(raw, &value); err != nil {
 		return Receipt{}, fmt.Errorf("decode T40.13 receipt: %w", err)
 	}
-	if err := ValidateReceipt(value, plan); err != nil {
+	if err := validateReceipt(value, plan, PlanDigest(raw) == legacyStoppedReceiptDigest); err != nil {
 		return Receipt{}, err
 	}
 	return value, nil

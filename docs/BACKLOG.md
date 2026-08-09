@@ -145,6 +145,18 @@ query/citation evidence, and closes stopped-receipt phase/decision validation.
 These fixes authorize no rerun. A new ceremony requires separate review and a
 new plan bound to a new exact execution commit.
 
+Second review disposition (2026-08-08): the retained stopped receipt remains
+byte-identical and unclassified. Prospective execution now preserves a captured
+observation across server-shutdown errors, retains meter-finalization failures
+as sticky classification blockers, requires executable digests after successful
+preflight with an exact-byte exception only for the historical receipt, and
+maps only typed exact-oracle, pressure, direct-recovery, or review-ceiling
+causes to frozen decisions; other operational failures remain unclassified.
+The stale-worker case uses semantic B, incrementally consumes diagnostics once,
+rejects already-settled attempts, proves the selected live schedule's plans bind
+to B's source digest, then requires that same attempt to settle `stale_fenced`
+after semantic A supersedes it. No rerun or ticket/Epic closure is authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

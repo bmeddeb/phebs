@@ -1,9 +1,10 @@
 package t4013
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,7 +27,18 @@ const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 
 var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
-var errReviewCeiling = errors.New("T40.13 frozen review ceiling crossed")
+var (
+	errReviewCeiling      = errors.New("T40.13 frozen review ceiling crossed")
+	errExactOracle        = errors.New("T40.13 exact oracle refused")
+	errDirectRecovery     = errors.New("T40.13 direct recovery refused")
+	errProductionPressure = errors.New("T40.13 production pressure gate refused")
+)
+
+func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
+
+func directRecovery(cause error) error {
+	return fmt.Errorf("%w: %v", errDirectRecovery, cause)
+}
 
 type ExecuteRequest struct {
 	ModuleRoot  string
@@ -56,6 +68,7 @@ type execution struct {
 	activeMeters   map[*phaseMeter]struct{}
 	partialMetrics PhaseMetrics
 	metersTracked  int
+	measurementErr error
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
@@ -70,12 +83,13 @@ func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
 	run.ctx = executionContext
 	if err := run.execute(); err != nil {
 		observation, cleanupErr := run.stopAfterFailure(err)
-		if cleanupErr != nil {
-			return Observation{}, errors.Join(err, cleanupErr)
-		}
-		return observation, ErrGateStopped
+		return stoppedExecutionResult(observation, err, cleanupErr)
 	}
 	return run.observation, nil
+}
+
+func stoppedExecutionResult(observation Observation, cause, cleanupErr error) (Observation, error) {
+	return observation, errors.Join(ErrGateStopped, cause, cleanupErr)
 }
 
 func newExecution(ctx context.Context, request ExecuteRequest) (*execution, error) {
@@ -177,7 +191,7 @@ func validatePreparedFiles(prepared Prepared, workspace string) error {
 func (run *execution) execute() error {
 	run.startPhase(0)
 	if extractionpublication.ScheduleMaxAttempts != run.plan.Safety.MaximumRetriesPerUnit {
-		return errors.New("T40.13 production retry ceiling differs from the frozen plan")
+		return exactOracle("production retry ceiling differs from the frozen plan")
 	}
 	preflightStarted := time.Now()
 	toolchain, err := buildPrivateToolchain(run.ctx, run.moduleRoot, run.workspace)
@@ -271,24 +285,13 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 		})
 	}
 	run.observation.Outcome = "stopped"
-	failureClass, failureCode := "oracle", "exact_gate_failed"
-	decision, reason, substantiated := "reduce", "exact_mechanics_oracle_failed", true
-	switch {
-	case errors.Is(cause, errReviewCeiling) || errors.Is(ceilingErr, errReviewCeiling):
-		failureClass, failureCode = "environment", "review_ceiling_crossed"
-		decision, reason, substantiated = "cohort_experiment", "frozen_review_ceiling_crossed", true
-	case measurementErr != nil:
-		failureCode = "failed_phase_measurement_unavailable"
-		decision, reason, substantiated = "unclassified", "failed_phase_measurement_unavailable", false
-	case run.phase == 5 || run.phase == 8:
-		failureClass, failureCode = "recovery", "direct_recovery_failed"
-		decision, reason, substantiated = "p6_investigation", "direct_recovery_failed", true
-	}
+	classification := classifyStoppedFailure(cause, measurementErr, ceilingErr)
 	run.observation.Failures = []FailureObservation{{
-		Phase: phaseOrder[run.phase], Class: failureClass, Code: failureCode,
+		Phase: phaseOrder[run.phase], Class: classification.class, Code: classification.code,
 	}}
 	run.observation.Decision = DecisionObservation{
-		Selected: decision, Reason: reason, Substantiated: substantiated,
+		Selected: classification.decision, Reason: classification.reason,
+		Substantiated: classification.substantiated,
 	}
 	run.observation.Teardown = TeardownObservation{Completed: true}
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
@@ -298,12 +301,56 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	return run.observation, stopErr
 }
 
+type stoppedClassification struct {
+	class         string
+	code          string
+	decision      string
+	reason        string
+	substantiated bool
+}
+
+func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClassification {
+	result := stoppedClassification{
+		class: "execution", code: "operational_failure",
+		decision: "unclassified", reason: "operational_failure",
+	}
+	switch {
+	case measurementErr != nil:
+		result = stoppedClassification{
+			class: "oracle", code: "failed_phase_measurement_unavailable",
+			decision: "unclassified", reason: "failed_phase_measurement_unavailable",
+		}
+	case errors.Is(cause, errReviewCeiling) || errors.Is(ceilingErr, errReviewCeiling):
+		result = stoppedClassification{
+			class: "environment", code: "review_ceiling_crossed",
+			decision: "cohort_experiment", reason: "frozen_review_ceiling_crossed", substantiated: true,
+		}
+	case errors.Is(cause, errDirectRecovery):
+		result = stoppedClassification{
+			class: "recovery", code: "direct_recovery_failed",
+			decision: "p6_investigation", reason: "direct_recovery_failed", substantiated: true,
+		}
+	case errors.Is(cause, errProductionPressure):
+		result = stoppedClassification{
+			class: "lifecycle", code: "production_pressure_gate_refused",
+			decision: "reduce", reason: "production_pressure_gate_refused", substantiated: true,
+		}
+	case errors.Is(cause, errExactOracle):
+		result = stoppedClassification{
+			class: "oracle", code: "exact_gate_failed",
+			decision: "reduce", reason: "exact_mechanics_oracle_failed", substantiated: true,
+		}
+	}
+	return result
+}
+
 func (run *execution) startPhase(index int) {
 	run.phase = index
 	run.phaseStarted = time.Now()
 	run.activeMeters = make(map[*phaseMeter]struct{})
 	run.partialMetrics = PhaseMetrics{}
 	run.metersTracked = 0
+	run.measurementErr = nil
 }
 
 func (run *execution) trackMeter(meter *phaseMeter) {
@@ -315,11 +362,13 @@ func (run *execution) trackMeter(meter *phaseMeter) {
 
 func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapshot) (PhaseMetrics, error) {
 	metrics, err := meter.finish(after)
-	delete(run.activeMeters, meter)
-	if err == nil {
-		run.partialMetrics = mergeMetrics(run.partialMetrics, metrics)
+	if err != nil {
+		run.measurementErr = errors.Join(run.measurementErr, err)
+		return metrics, err
 	}
-	return metrics, err
+	delete(run.activeMeters, meter)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, metrics)
+	return metrics, nil
 }
 
 func (run *execution) captureFailedPhase() error {
@@ -330,7 +379,7 @@ func (run *execution) captureFailedPhase() error {
 	if run.observation.Phases[run.phase].Outcome != "not_run" {
 		metrics = run.observation.Phases[run.phase].Metrics
 	}
-	var captureErr error
+	captureErr := run.measurementErr
 	if run.metersTracked < expectedPhaseMeters(run.phase) {
 		captureErr = errors.New("T40.13 failed phase lacks its complete meter inventory")
 	}
@@ -452,7 +501,7 @@ func (run *execution) warmNoop() error {
 	}
 	if !privateSnapshotEqual(run.structA, after) || metrics.GitChildren != 0 || metrics.IndexChildren != 0 ||
 		metrics.PublicationWrites != 0 || metrics.PublicationTransactions != 0 || metrics.ReusedControls == 0 {
-		return errors.New("T40.13 warm no-op moved authority or performed content work")
+		return exactOracle("warm no-op moved authority or performed content work")
 	}
 	run.observation.Phases[2] = succeededPhase("warm_noop", metrics)
 	return run.enforceSafety()
@@ -473,7 +522,7 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 	if changedSourceMembers(run.structA, run.structB) != 1 {
-		return errors.New("T40.13 B changed other than one source partition")
+		return exactOracle("B changed other than one source partition")
 	}
 	metrics, err := run.finishMeter(meter, &run.structB)
 	if err != nil {
@@ -499,7 +548,7 @@ func (run *execution) deltaAndReturn() error {
 	}
 	if changedSourceMembers(run.structB, run.structAR) != 1 ||
 		!equalStringSlices(run.structA.SourceMemberDigests, run.structAR.SourceMemberDigests) {
-		return errors.New("T40.13 A return did not reproduce the frozen source partitions")
+		return exactOracle("A return did not reproduce the frozen source partitions")
 	}
 	metrics, err = run.finishMeter(meter, &run.structAR)
 	if err != nil {
@@ -519,10 +568,10 @@ func (run *execution) interruption() error {
 		run.semantic = nil
 	}
 	if err := backupAndReset(run.ctx, run.toolchain, profile, "interruption"); err != nil {
-		return err
+		return directRecovery(err)
 	}
 	if err := verifyRestoredBoundary(run.ctx, profile, run.semanticA); err != nil {
-		return err
+		return directRecovery(err)
 	}
 	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "interruption-first")
 	if err != nil {
@@ -556,10 +605,10 @@ func (run *execution) interruption() error {
 	run.trackMeter(restartMeter)
 	after, err := waitSnapshot(run.ctx, profile, "a", 2*time.Hour)
 	if err != nil {
-		return err
+		return directRecovery(err)
 	}
 	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
-		return errors.New("T40.13 interruption recovery changed exact authority")
+		return directRecovery(errors.New("interruption recovery changed exact authority"))
 	}
 	restartMetrics, err := run.finishMeter(restartMeter, &after)
 	if err != nil {
@@ -578,112 +627,232 @@ func (run *execution) interruption() error {
 }
 
 func (run *execution) staleWorker() error {
-	profile := run.prepared.Profiles[0]
-	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	profile := run.prepared.Profiles[1]
+	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "stale-worker")
+	if err != nil {
+		return err
+	}
+	run.semantic = server
+	meter, err := beginInitialPhaseMeter(server, run.workspace, &run.semanticA)
 	if err != nil {
 		return err
 	}
 	run.trackMeter(meter)
+	cursor, err := newChunkLifecycleCursor(server.logPath, meter.logOffset)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = cursor.Close() }()
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
-	if err := waitIndexedCommit(run.ctx, profile, profile.Revisions["b"], 90*time.Minute); err != nil {
-		return err
-	}
-	started, err := waitChunkLifecycle(
-		run.ctx, run.structural.logPath, meter.logOffset, "", "started", 90*time.Minute,
+	started, err := waitActiveChunkLifecycle(
+		run.ctx, cursor, profile, profile.Revisions["b"], 90*time.Minute,
 	)
 	if err != nil {
 		return err
 	}
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
+	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
 		return err
 	}
-	after, err := waitSnapshot(run.ctx, profile, "a-return", 2*time.Hour)
+	after, err := waitSnapshot(run.ctx, profile, "a", 2*time.Hour)
 	if err != nil {
 		return err
 	}
-	if after.SourceGeneration != run.structAR.SourceGeneration ||
-		after.RelationshipGeneration != run.structAR.RelationshipGeneration {
-		return errors.New("T40.13 stale worker moved final authority")
+	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
+		return exactOracle("stale worker moved final authority")
 	}
-	settled, err := waitChunkLifecycle(
-		run.ctx, run.structural.logPath, meter.logOffset, started.Identity, "settled", 20*time.Minute,
+	settled, err := waitSettledChunkLifecycle(
+		run.ctx, cursor, started, 20*time.Minute,
 	)
 	if err != nil {
 		return err
 	}
 	if settled.Generation != started.Generation || settled.Attempt != started.Attempt ||
 		settled.Outcome != "stale_fenced" {
-		return errors.New("T40.13 selected worker was not fenced stale after supersession")
+		return exactOracle("selected B worker was not fenced stale after supersession")
 	}
 	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
 		return err
 	}
-	run.structAR = after
+	if err := run.semantic.stop(30 * time.Second); err != nil {
+		return err
+	}
+	run.semantic = nil
+	run.semanticA = after
 	run.observation.Phases[6] = succeededPhase("stale_worker", metrics)
 	return run.enforceSafety()
 }
 
-func waitChunkLifecycle(
+const maxChunkLifecyclePendingBytes = 1 << 20
+
+type chunkLifecycleCursor struct {
+	file    *os.File
+	pending []byte
+}
+
+func newChunkLifecycleCursor(logPath string, offset int64) (*chunkLifecycleCursor, error) {
+	file, err := os.Open(logPath)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	return &chunkLifecycleCursor{file: file}, nil
+}
+
+func (cursor *chunkLifecycleCursor) Close() error {
+	if cursor == nil || cursor.file == nil {
+		return nil
+	}
+	err := cursor.file.Close()
+	cursor.file = nil
+	return err
+}
+
+func (cursor *chunkLifecycleCursor) poll() ([]generationscheduler.ChunkLifecycleReport, error) {
+	if cursor == nil || cursor.file == nil {
+		return nil, errors.New("T40.13 chunk lifecycle cursor is invalid")
+	}
+	buffer := make([]byte, 64<<10)
+	count, err := cursor.file.Read(buffer)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	if count > 0 {
+		cursor.pending = append(cursor.pending, buffer[:count]...)
+		if len(cursor.pending) > maxChunkLifecyclePendingBytes {
+			return nil, errors.New("T40.13 chunk lifecycle line exceeds its bound")
+		}
+	}
+	lastNewline := bytes.LastIndexByte(cursor.pending, '\n')
+	if lastNewline < 0 {
+		return nil, nil
+	}
+	complete := append([]byte(nil), cursor.pending[:lastNewline]...)
+	cursor.pending = append(cursor.pending[:0], cursor.pending[lastNewline+1:]...)
+	lines := bytes.Split(complete, []byte{'\n'})
+	reports := make([]generationscheduler.ChunkLifecycleReport, 0, len(lines))
+	for _, line := range lines {
+		const prefix = "generation chunk lifecycle: "
+		if !bytes.Contains(line, []byte(prefix)) {
+			continue
+		}
+		var report generationscheduler.ChunkLifecycleReport
+		if err := decodeLogObject(line, prefix, &report); err != nil {
+			return nil, errors.New("T40.13 chunk lifecycle report is malformed")
+		}
+		if err := validateChunkLifecycleReport(report); err != nil {
+			return nil, err
+		}
+		reports = append(reports, report)
+	}
+	return reports, nil
+}
+
+func validateChunkLifecycleReport(report generationscheduler.ChunkLifecycleReport) error {
+	if report.Schema != generationscheduler.ChunkLifecycleSchema ||
+		(report.Event != "started" && report.Event != "settled") ||
+		report.Stage != extractionpublication.ScheduleStage ||
+		!digestIdentity(report.Identity) || !digestIdentity(report.Generation) || report.Attempt < 0 {
+		return errors.New("T40.13 chunk lifecycle report is invalid")
+	}
+	return nil
+}
+
+func chunkLifecycleKey(report generationscheduler.ChunkLifecycleReport) string {
+	return fmt.Sprintf("%s\x00%s\x00%d", report.Generation, report.Identity, report.Attempt)
+}
+
+func waitActiveChunkLifecycle(
 	ctx context.Context,
-	logPath string,
-	offset int64,
-	identity string,
-	event string,
+	cursor *chunkLifecycleCursor,
+	profile PreparedProfile,
+	revision string,
 	limit time.Duration,
 ) (generationscheduler.ChunkLifecycleReport, error) {
 	phase, cancel := phaseContext(ctx, limit)
 	defer cancel()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
+	active := make(map[string]generationscheduler.ChunkLifecycleReport)
+	order := make([]string, 0)
 	for {
-		report, found, err := readChunkLifecycle(logPath, offset, identity, event)
+		reports, err := cursor.poll()
 		if err != nil {
 			return generationscheduler.ChunkLifecycleReport{}, err
 		}
-		if found {
-			return report, nil
+		order = updateActiveChunkLifecycles(active, order, reports)
+		for _, key := range order {
+			report, exists := active[key]
+			if !exists {
+				continue
+			}
+			bound, bindErr := extractionGenerationBindsRevision(profile, report.Generation, revision)
+			if bindErr != nil {
+				return generationscheduler.ChunkLifecycleReport{}, bindErr
+			}
+			if bound {
+				return report, nil
+			}
 		}
 		select {
 		case <-phase.Done():
-			return generationscheduler.ChunkLifecycleReport{}, errors.New("T40.13 chunk lifecycle deadline expired")
+			return generationscheduler.ChunkLifecycleReport{}, errors.New("T40.13 live B-bound chunk deadline expired")
 		case <-ticker.C:
 		}
 	}
 }
 
-func readChunkLifecycle(
-	logPath string,
-	offset int64,
-	identity string,
-	event string,
-) (generationscheduler.ChunkLifecycleReport, bool, error) {
-	file, err := os.Open(logPath)
-	if err != nil {
-		return generationscheduler.ChunkLifecycleReport{}, false, err
-	}
-	defer func() { _ = file.Close() }()
-	if _, err := file.Seek(offset, 0); err != nil {
-		return generationscheduler.ChunkLifecycleReport{}, false, err
-	}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 4096), 1<<20)
-	for scanner.Scan() {
-		var report generationscheduler.ChunkLifecycleReport
-		if decodeLogObject(scanner.Bytes(), "generation chunk lifecycle: ", &report) != nil ||
-			report.Schema != generationscheduler.ChunkLifecycleSchema || report.Event != event ||
-			report.Stage != extractionpublication.ScheduleStage ||
-			identity != "" && report.Identity != identity {
-			continue
+func updateActiveChunkLifecycles(
+	active map[string]generationscheduler.ChunkLifecycleReport,
+	order []string,
+	reports []generationscheduler.ChunkLifecycleReport,
+) []string {
+	for _, report := range reports {
+		key := chunkLifecycleKey(report)
+		if report.Event == "started" {
+			if _, exists := active[key]; !exists {
+				order = append(order, key)
+			}
+			active[key] = report
+		} else {
+			delete(active, key)
 		}
-		if !digestIdentity(report.Identity) || !digestIdentity(report.Generation) || report.Attempt < 0 {
-			return generationscheduler.ChunkLifecycleReport{}, false, errors.New("T40.13 chunk lifecycle report is invalid")
-		}
-		return report, true, nil
 	}
-	return generationscheduler.ChunkLifecycleReport{}, false, scanner.Err()
+	return order
+}
+
+func waitSettledChunkLifecycle(
+	ctx context.Context,
+	cursor *chunkLifecycleCursor,
+	started generationscheduler.ChunkLifecycleReport,
+	limit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	want := chunkLifecycleKey(started)
+	for {
+		reports, err := cursor.poll()
+		if err != nil {
+			return generationscheduler.ChunkLifecycleReport{}, err
+		}
+		for _, report := range reports {
+			if report.Event == "settled" && chunkLifecycleKey(report) == want {
+				return report, nil
+			}
+		}
+		select {
+		case <-phase.Done():
+			return generationscheduler.ChunkLifecycleReport{}, errors.New("T40.13 selected chunk settlement deadline expired")
+		case <-ticker.C:
+		}
+	}
 }
 
 func (run *execution) pressure() error {
@@ -698,10 +867,13 @@ func (run *execution) pressure() error {
 		return err
 	}
 	if status.Capacity.Completeness != lifecycle.Exact || status.Capacity.Pressure == lifecycle.PressureUnavailable {
-		return errors.New("T40.13 lifecycle capacity was not exact")
+		return exactOracle("lifecycle capacity was not exact")
 	}
-	if status.Capacity.Pressure != lifecycle.PressureCollect && status.Capacity.Pressure != lifecycle.PressureRefuse {
-		return errors.New("T40.13 frozen run did not reach the pressure exercise")
+	if status.Capacity.Pressure == lifecycle.PressureRefuse {
+		return errProductionPressure
+	}
+	if status.Capacity.Pressure != lifecycle.PressureCollect {
+		return exactOracle("frozen run did not reach the pressure exercise")
 	}
 	after, err := waitSnapshot(run.ctx, profile, "a-return", 20*time.Minute)
 	if err != nil {
@@ -723,10 +895,10 @@ func (run *execution) archiveRestore() error {
 	run.structural = nil
 	started := time.Now()
 	if err := backupAndReset(run.ctx, run.toolchain, profile, "archive-restore"); err != nil {
-		return err
+		return directRecovery(err)
 	}
 	if err := verifyRestoredBoundary(run.ctx, profile, run.structAR); err != nil {
-		return err
+		return directRecovery(err)
 	}
 	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "archive-restore")
 	if err != nil {
@@ -740,11 +912,11 @@ func (run *execution) archiveRestore() error {
 	run.trackMeter(meter)
 	after, err := waitSnapshot(run.ctx, profile, "a-return", 2*time.Hour)
 	if err != nil {
-		return err
+		return directRecovery(err)
 	}
 	if after.ObservationGeneration != run.structAR.ObservationGeneration ||
 		after.RelationshipGeneration != run.structAR.RelationshipGeneration {
-		return errors.New("T40.13 archive restore changed precious authority")
+		return directRecovery(errors.New("archive restore changed precious authority"))
 	}
 	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
@@ -776,7 +948,7 @@ func (run *execution) collection() error {
 		return err
 	}
 	if snapshotAuthority(after) != snapshotAuthority(run.structAR) {
-		return errors.New("T40.13 collection changed protected authority")
+		return exactOracle("collection changed protected authority")
 	}
 	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
@@ -809,7 +981,7 @@ func (run *execution) authorizedQueries() error {
 		return err
 	}
 	if snapshotAuthority(semanticAfter) != snapshotAuthority(run.semanticA) {
-		return errors.New("T40.13 authorized-query restart changed semantic authority")
+		return exactOracle("authorized-query restart changed semantic authority")
 	}
 	structCount, structExact, err := queryProfile(run.ctx, run.prepared.Profiles[0], "service-000", false)
 	if err != nil {
@@ -820,7 +992,7 @@ func (run *execution) authorizedQueries() error {
 		return err
 	}
 	if structCount < 0 || semanticCount < 0 || !structExact || !semanticExact {
-		return errors.New("T40.13 authorized query oracle failed")
+		return exactOracle("authorized query oracle failed")
 	}
 	structAfter, err := waitSnapshot(run.ctx, run.prepared.Profiles[0], "a-return", 20*time.Minute)
 	if err != nil {
@@ -853,7 +1025,7 @@ func (run *execution) finalizeObservation() error {
 	if structural.ObservationRecords != 512 || structural.ObservationUnsupported != 0 ||
 		semantic.ObservationRecords != 262_144 || semantic.ObservationUnsupported != 131_072 ||
 		semantic.ExtractionFacts != 49_152 || semantic.ExtractionRows != 98_304 {
-		return errors.New("T40.13 source-free semantic totals differ from the frozen oracle")
+		return exactOracle("source-free semantic totals differ from the frozen oracle")
 	}
 	run.observation.Profiles = []ProfileObservation{
 		{Name: structural.Name, RegularFiles: structural.RegularFiles, PhysicalOwners: structural.PhysicalOwners,
@@ -966,27 +1138,6 @@ func waitSnapshot(ctx context.Context, profile PreparedProfile, revision string,
 		select {
 		case <-phase.Done():
 			return privateProfileSnapshot{}, errors.New("T40.13 convergence deadline expired")
-		case <-ticker.C:
-		}
-	}
-}
-
-func waitIndexedCommit(ctx context.Context, profile PreparedProfile, commit string, limit time.Duration) error {
-	inspector, err := newProfileInspector(profile)
-	if err != nil {
-		return err
-	}
-	phase, cancel := phaseContext(ctx, limit)
-	defer cancel()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		if repository, currentErr := inspector.currentRepository(phase, profile); currentErr == nil && repository.IndexedCommitHash == commit {
-			return nil
-		}
-		select {
-		case <-phase.Done():
-			return errors.New("T40.13 indexed commit deadline expired")
 		case <-ticker.C:
 		}
 	}
@@ -1119,7 +1270,7 @@ func queryProfile(
 	_, _ = io.CopyN(io.Discard, response.Body, 4096)
 	_ = response.Body.Close()
 	if response.StatusCode != http.StatusUnauthorized {
-		return 0, false, errors.New("T40.13 unauthorized query was not denied")
+		return 0, false, exactOracle("unauthorized query was not denied")
 	}
 	var searchResult search.Result
 	if err := inspector.get(ctx, profile, "/api/search?q=T401&max_matches=1", &searchResult); err != nil {
@@ -1127,7 +1278,7 @@ func queryProfile(
 	}
 	if len(searchResult.Files) == 0 || len(searchResult.Files[0].Chunks) == 0 ||
 		len(searchResult.Files[0].Chunks[0].Ranges) == 0 {
-		return 0, false, errors.New("T40.13 authorized search returned no exact match")
+		return 0, false, exactOracle("authorized search returned no exact match")
 	}
 	var services apiresponse.ServiceInventory
 	servicePath := "/api/services?repository=" + url.QueryEscape(profile.RepositoryName) + "&page_size=100"
@@ -1135,7 +1286,7 @@ func queryProfile(
 		return 0, false, err
 	}
 	if services.Repository.CatalogServiceCount < 1 || services.Pagination.Returned != len(services.Services) {
-		return 0, false, errors.New("T40.13 authorized service inventory is invalid")
+		return 0, false, exactOracle("authorized service inventory is invalid")
 	}
 	var relationships apiresponse.RelationshipPage
 	relationshipPath := "/api/service-relationships?repository=" + url.QueryEscape(profile.RepositoryName) +
@@ -1144,14 +1295,14 @@ func queryProfile(
 		return 0, false, err
 	}
 	if len(relationships.Roots) != 1 || relationships.Roots[0].Generation == "" || relationships.Roots[0].RootDigest == "" {
-		return 0, false, errors.New("T40.13 relationship response lacks exact root authority")
+		return 0, false, exactOracle("relationship response lacks exact root authority")
 	}
 	if requireCitation && len(relationships.Rows) == 0 {
-		return 0, false, errors.New("T40.13 relationship query returned no citable row")
+		return 0, false, exactOracle("relationship query returned no citable row")
 	}
 	if len(relationships.Rows) > 0 {
 		if relationships.Rows[0].Citation == "" {
-			return 0, false, errors.New("T40.13 relationship row lacks a citation token")
+			return 0, false, exactOracle("relationship row lacks a citation token")
 		}
 		var citation apiresponse.RelationshipCitation
 		path := "/api/service-relationship-citation?citation=" + url.QueryEscape(relationships.Rows[0].Citation)
@@ -1161,7 +1312,7 @@ func queryProfile(
 		if citation.Repository != profile.RepositoryName || citation.Generation != relationships.Roots[0].Generation ||
 			citation.RootDigest != relationships.Roots[0].RootDigest || citation.AuthorityDigest == "" ||
 			citation.Content == "" {
-			return 0, false, errors.New("T40.13 citation differs from rendered root authority")
+			return 0, false, exactOracle("citation differs from rendered root authority")
 		}
 	}
 	return len(searchResult.Files) + len(relationships.Rows), true, nil

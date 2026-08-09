@@ -43,6 +43,13 @@ func TestRetainedMeasuredStopMatchesFrozenPlan(t *testing.T) {
 		receipt.Teardown.ScratchSourceRetained {
 		t.Fatalf("retained stopped receipt = %+v, digest %q", receipt, PlanDigest(receiptBytes))
 	}
+	minified, err := json.Marshal(receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeReceipt(minified, plan); err == nil {
+		t.Fatal("non-identical receipt bytes used the historical executable-digest exception")
+	}
 }
 
 func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
@@ -192,6 +199,14 @@ func TestStoppedReceiptPreservesFailureAndNotRunAccounting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var missingToolchain Receipt
+	if err := json.Unmarshal(receipt, &missingToolchain); err != nil {
+		t.Fatal(err)
+	}
+	missingToolchain.Toolchain = nil
+	if err := ValidateReceipt(missingToolchain, plan); err == nil {
+		t.Fatal("prospective stopped receipt omitted successful-preflight executable identities")
+	}
 	tests := []struct {
 		name   string
 		mutate func(*Receipt)
@@ -215,6 +230,31 @@ func TestStoppedReceiptPreservesFailureAndNotRunAccounting(t *testing.T) {
 				t.Fatal("incoherent stopped receipt passed")
 			}
 		})
+	}
+}
+
+func TestStoppedPreflightFailureMayLackExecutableDigests(t *testing.T) {
+	plan, planBytes := testPlan(t)
+	value := completedObservation()
+	value.Outcome = "stopped"
+	value.Toolchain = nil
+	value.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	value.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	for index := range value.Phases {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Phases[0].Outcome = "failed"
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Checks = frozenChecks(false)
+	value.Teardown = TeardownObservation{Completed: true}
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeReceipt(receiptBytes, plan); err != nil {
+		t.Fatal(err)
 	}
 }
 
