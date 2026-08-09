@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
@@ -643,17 +645,26 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	defer func() { _ = cursor.Close() }()
+	leaseReader, err := store.OpenLocalGenerationChunkReader(run.ctx, profile.DataDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = leaseReader.Close(context.Background()) }()
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
 	started, err := waitActiveChunkLifecycle(
-		run.ctx, cursor, profile, profile.Revisions["b"], 90*time.Minute,
+		run.ctx, cursor, leaseReader, profile, profile.Revisions["b"], 90*time.Minute,
 	)
 	if err != nil {
 		return err
 	}
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
 		return err
+	}
+	afterSupersession, err := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
+	if err != nil || !runningLeaseMatchesReport(afterSupersession, started, profile.RepositoryName) {
+		return errors.Join(err, errors.New("T40.13 selected B lease did not remain active across supersession"))
 	}
 	after, err := waitSnapshot(run.ctx, profile, "a", 2*time.Hour)
 	if err != nil {
@@ -670,7 +681,10 @@ func (run *execution) staleWorker() error {
 	}
 	if settled.Generation != started.Generation || settled.Attempt != started.Attempt ||
 		settled.Outcome != "stale_fenced" {
-		return exactOracle("selected B worker was not fenced stale after supersession")
+		return errors.New("T40.13 selected B lease settled before the stale-fence exercise")
+	}
+	if err := leaseReader.Close(run.ctx); err != nil {
+		return err
 	}
 	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
@@ -685,11 +699,15 @@ func (run *execution) staleWorker() error {
 	return run.enforceSafety()
 }
 
-const maxChunkLifecyclePendingBytes = 1 << 20
+const (
+	maxChunkLifecyclePendingBytes   = 1 << 20
+	maxChunkLifecycleReportsPerPoll = 400_000
+)
 
 type chunkLifecycleCursor struct {
 	file    *os.File
 	pending []byte
+	buffer  []byte
 }
 
 func newChunkLifecycleCursor(logPath string, offset int64) (*chunkLifecycleCursor, error) {
@@ -701,7 +719,7 @@ func newChunkLifecycleCursor(logPath string, offset int64) (*chunkLifecycleCurso
 		_ = file.Close()
 		return nil, err
 	}
-	return &chunkLifecycleCursor{file: file}, nil
+	return &chunkLifecycleCursor{file: file, buffer: make([]byte, 64<<10)}, nil
 }
 
 func (cursor *chunkLifecycleCursor) Close() error {
@@ -717,40 +735,68 @@ func (cursor *chunkLifecycleCursor) poll() ([]generationscheduler.ChunkLifecycle
 	if cursor == nil || cursor.file == nil {
 		return nil, errors.New("T40.13 chunk lifecycle cursor is invalid")
 	}
-	buffer := make([]byte, 64<<10)
-	count, err := cursor.file.Read(buffer)
-	if err != nil && !errors.Is(err, io.EOF) {
+	position, err := cursor.file.Seek(0, io.SeekCurrent)
+	if err != nil {
 		return nil, err
 	}
-	if count > 0 {
-		cursor.pending = append(cursor.pending, buffer[:count]...)
-		if len(cursor.pending) > maxChunkLifecyclePendingBytes {
-			return nil, errors.New("T40.13 chunk lifecycle line exceeds its bound")
-		}
+	info, err := cursor.file.Stat()
+	if err != nil || info.Size() < position {
+		return nil, errors.Join(err, errors.New("T40.13 chunk lifecycle log changed identity or shrank"))
 	}
-	lastNewline := bytes.LastIndexByte(cursor.pending, '\n')
-	if lastNewline < 0 {
-		return nil, nil
-	}
-	complete := append([]byte(nil), cursor.pending[:lastNewline]...)
-	cursor.pending = append(cursor.pending[:0], cursor.pending[lastNewline+1:]...)
-	lines := bytes.Split(complete, []byte{'\n'})
-	reports := make([]generationscheduler.ChunkLifecycleReport, 0, len(lines))
-	for _, line := range lines {
-		const prefix = "generation chunk lifecycle: "
-		if !bytes.Contains(line, []byte(prefix)) {
-			continue
+	remaining := info.Size() - position
+	reports := make([]generationscheduler.ChunkLifecycleReport, 0, 8)
+	for remaining > 0 {
+		readSize := min(int64(len(cursor.buffer)), remaining)
+		count, readErr := io.ReadFull(cursor.file, cursor.buffer[:readSize])
+		if readErr != nil {
+			return nil, readErr
 		}
-		var report generationscheduler.ChunkLifecycleReport
-		if err := decodeLogObject(line, prefix, &report); err != nil {
-			return nil, errors.New("T40.13 chunk lifecycle report is malformed")
+		if count > 0 {
+			remaining -= int64(count)
+			cursor.pending = append(cursor.pending, cursor.buffer[:count]...)
+			lastNewline := bytes.LastIndexByte(cursor.pending, '\n')
+			if lastNewline >= 0 {
+				lines := bytes.Split(cursor.pending[:lastNewline], []byte{'\n'})
+				for _, line := range lines {
+					report, found, parseErr := parseChunkLifecycleLine(line)
+					if parseErr != nil {
+						return nil, parseErr
+					}
+					if found {
+						reports = append(reports, report)
+						if len(reports) > maxChunkLifecycleReportsPerPoll {
+							return nil, errors.New("T40.13 chunk lifecycle drain exceeds its report bound")
+						}
+					}
+				}
+				tail := lastNewline + 1
+				copy(cursor.pending, cursor.pending[tail:])
+				cursor.pending = cursor.pending[:len(cursor.pending)-tail]
+			}
+			if len(cursor.pending) > maxChunkLifecyclePendingBytes {
+				return nil, errors.New("T40.13 chunk lifecycle line exceeds its bound")
+			}
 		}
-		if err := validateChunkLifecycleReport(report); err != nil {
-			return nil, err
-		}
-		reports = append(reports, report)
 	}
 	return reports, nil
+}
+
+func parseChunkLifecycleLine(
+	line []byte,
+) (generationscheduler.ChunkLifecycleReport, bool, error) {
+	const prefix = "generation chunk lifecycle: "
+	if !bytes.Contains(line, []byte(prefix)) {
+		return generationscheduler.ChunkLifecycleReport{}, false, nil
+	}
+	var report generationscheduler.ChunkLifecycleReport
+	if err := decodeLogObject(line, prefix, &report); err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, false,
+			errors.New("T40.13 chunk lifecycle report is malformed")
+	}
+	if err := validateChunkLifecycleReport(report); err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, false, err
+	}
+	return report, true, nil
 }
 
 func validateChunkLifecycleReport(report generationscheduler.ChunkLifecycleReport) error {
@@ -770,6 +816,7 @@ func chunkLifecycleKey(report generationscheduler.ChunkLifecycleReport) string {
 func waitActiveChunkLifecycle(
 	ctx context.Context,
 	cursor *chunkLifecycleCursor,
+	leaseReader *store.LocalGenerationChunkReader,
 	profile PreparedProfile,
 	revision string,
 	limit time.Duration,
@@ -779,25 +826,35 @@ func waitActiveChunkLifecycle(
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	active := make(map[string]generationscheduler.ChunkLifecycleReport)
-	order := make([]string, 0)
 	for {
 		reports, err := cursor.poll()
 		if err != nil {
 			return generationscheduler.ChunkLifecycleReport{}, err
 		}
-		order = updateActiveChunkLifecycles(active, order, reports)
-		for _, key := range order {
-			report, exists := active[key]
-			if !exists {
-				continue
-			}
+		updateActiveChunkLifecycles(active, reports)
+		keys := make([]string, 0, len(active))
+		for key := range active {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			report := active[key]
 			bound, bindErr := extractionGenerationBindsRevision(profile, report.Generation, revision)
 			if bindErr != nil {
 				return generationscheduler.ChunkLifecycleReport{}, bindErr
 			}
-			if bound {
-				return report, nil
+			if !bound {
+				continue
 			}
+			state, stateErr := leaseReader.GenerationChunkLeaseState(phase, report.Identity)
+			if stateErr != nil {
+				return generationscheduler.ChunkLifecycleReport{}, stateErr
+			}
+			if !runningLeaseMatchesReport(state, report, profile.RepositoryName) {
+				delete(active, key)
+				continue
+			}
+			return report, nil
 		}
 		select {
 		case <-phase.Done():
@@ -809,21 +866,35 @@ func waitActiveChunkLifecycle(
 
 func updateActiveChunkLifecycles(
 	active map[string]generationscheduler.ChunkLifecycleReport,
-	order []string,
 	reports []generationscheduler.ChunkLifecycleReport,
-) []string {
+) {
 	for _, report := range reports {
 		key := chunkLifecycleKey(report)
 		if report.Event == "started" {
-			if _, exists := active[key]; !exists {
-				order = append(order, key)
-			}
 			active[key] = report
 		} else {
 			delete(active, key)
 		}
 	}
-	return order
+}
+
+func leaseStateMatchesReport(
+	state store.GenerationChunkLeaseState,
+	report generationscheduler.ChunkLifecycleReport,
+	repository string,
+) bool {
+	return state.Identity == report.Identity && state.Repository == repository &&
+		state.Stage == report.Stage &&
+		state.Generation == report.Generation && state.Attempt == report.Attempt
+}
+
+func runningLeaseMatchesReport(
+	state store.GenerationChunkLeaseState,
+	report generationscheduler.ChunkLifecycleReport,
+	repository string,
+) bool {
+	return leaseStateMatchesReport(state, report, repository) &&
+		state.Status == store.GenerationChunkRunning
 }
 
 func waitSettledChunkLifecycle(

@@ -539,6 +539,41 @@ func (runtime *Runtime) scheduleTarget(repository, schedule string) (string, err
 	return schedule, nil
 }
 
+// SchedulePlanningAuthority opens one scheduler generation through the same
+// binding, generation, and domain-plan validators used by Handle. Diagnostics
+// may use the returned source-free authority to identify in-flight work, but
+// it grants no content lease and performs no publication transition.
+func (runtime *Runtime) SchedulePlanningAuthority(
+	repository string,
+	schedule string,
+) (PlanningAuthority, error) {
+	if runtime == nil || !filepath.IsAbs(runtime.Root) ||
+		reponame.Validate(repository) != nil || !validDigest(schedule) {
+		return PlanningAuthority{}, invalid("schedule planning authority")
+	}
+	target, err := runtime.scheduleTarget(repository, schedule)
+	if err != nil {
+		return PlanningAuthority{}, err
+	}
+	directory := runtime.generationDirectory(repository, target)
+	generation, err := runtime.openGeneration(directory, repository, target)
+	if err != nil {
+		return PlanningAuthority{}, err
+	}
+	if len(generation.Domains) == 0 {
+		return PlanningAuthority{}, invalid("empty schedule planning authority")
+	}
+	domains := make([]DomainPlan, 0, len(generation.Domains))
+	for _, descriptor := range generation.Domains {
+		domain, openErr := runtime.openDomainPlan(directory, descriptor)
+		if openErr != nil {
+			return PlanningAuthority{}, openErr
+		}
+		domains = append(domains, domain)
+	}
+	return authorityForPlans(repository, domains)
+}
+
 // Handle executes exactly one scheduler item. An exact settled retry performs
 // no Source acquisition and proceeds directly to the idempotent assembler.
 func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) error {

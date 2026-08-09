@@ -189,9 +189,14 @@ failure, and leaves operational failures unclassified unless a closed typed
 cause selects a frozen rule. Failed meter finalization is sticky. A stopped
 receipt after successful preflight requires the four executable identities;
 the sole exception is the exact retained historical receipt byte digest above.
-The stale-worker case incrementally observes a currently active semantic-B
-lease, proves its extraction plans bind to B's source digest, supersedes it with
-semantic A, and requires that same attempt's terminal stale fence. Real query
+The stale-worker case treats log starts as discovery only. It drains the log to
+current EOF, resolves the candidate through production's complete extraction
+schedule/generation/plan validation, and reads the source-free authoritative
+attempt status from the already supervised local store. The exact semantic-B
+attempt must remain `running` immediately before and after the semantic-A
+source transition before its matching terminal stale fence can pass. A probe
+race or early healthy completion is unclassified, not an exact refusal. The
+cursor reuses one fixed buffer and retains only unmatched attempts. Real query
 matches plus a citation and exact stopped phase/decision coherence remain
 required. Those corrections govern only a separately authorized future plan
 and do not retroactively strengthen this consumed run.

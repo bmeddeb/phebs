@@ -456,6 +456,32 @@ func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testin
 	}
 }
 
+func TestSchedulePlanningAuthorityUsesProductionControlValidation(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("7", 64), true)
+	runtime, _, _, _, _, _, domain := newRuntimeFixture(t, plan)
+	generation, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := runtime.SchedulePlanningAuthority(plan.Repository, generation)
+	if err != nil || authority.SourceGenerationDigest != plan.SourceGenerationDigest ||
+		authority.ObservationGenerationDigest != plan.ObservationGenerationDigest ||
+		authority.CandidateGenerationDigest != plan.CandidateGenerationDigest {
+		t.Fatalf("planning authority = %+v, %v", authority, err)
+	}
+	invalid := scheduleBinding{
+		Schema: BindingSchema, Repository: plan.Repository,
+		ScheduleGeneration: generation, TargetGeneration: generation,
+		PriorSchedule: "sha256:" + strings.Repeat("9", 64),
+	}
+	if err := writeAtomicCanonical(runtime.bindingPath(plan.Repository, generation), invalid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.SchedulePlanningAuthority(plan.Repository, generation); err == nil {
+		t.Fatal("production-invalid schedule binding passed diagnostic authority validation")
+	}
+}
+
 func TestRuntimeStartsPartitionDeadlineAfterSourceLeaseAcquisition(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("a", 64), true)
 	schedules := &testScheduleStore{}

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -128,6 +129,97 @@ type GenerationChunk struct {
 	FinishedAt     *time.Time              `json:"finished_at,omitempty"`
 	Error          string                  `json:"error,omitempty"`
 	LeaseToken     string                  `json:"-" cbor:"lease_token,omitempty"`
+}
+
+// GenerationChunkLeaseState is the source-free authoritative projection used
+// to prove that one exact scheduler attempt is still running. Lease tokens,
+// worker identities, timestamps, and error details never leave the store.
+type GenerationChunkLeaseState struct {
+	Identity   string                `json:"identity"`
+	Repository string                `json:"repository"`
+	Stage      string                `json:"stage"`
+	Generation string                `json:"generation"`
+	Attempt    int                   `json:"attempt"`
+	Status     GenerationChunkStatus `json:"status"`
+}
+
+// LocalGenerationChunkReader connects to the already supervised local store
+// without applying schema or migrations. It exposes only the bounded
+// source-free lease projection and cannot mutate scheduler state.
+type LocalGenerationChunkReader struct {
+	store   *Surreal
+	dataDir string
+	token   string
+}
+
+func OpenLocalGenerationChunkReader(
+	ctx context.Context,
+	dataDir string,
+) (*LocalGenerationChunkReader, error) {
+	if ctx == nil || !filepath.IsAbs(dataDir) {
+		return nil, errors.New("open local generation chunk reader: data directory is invalid")
+	}
+	runtime, err := ReadLocalRuntime(dataDir)
+	if err != nil || !processAlive(runtime.PID) {
+		return nil, errors.Join(err, errors.New("open local generation chunk reader: runtime is unavailable"))
+	}
+	db, err := surrealdb.FromEndpointURLString(ctx, runtime.Endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("open local generation chunk reader: %w", err)
+	}
+	failed := true
+	defer func() {
+		if failed {
+			_ = db.Close(context.Background())
+		}
+	}()
+	if _, err := db.SignIn(ctx, surrealdb.Auth{Username: "root", Password: "root"}); err != nil {
+		return nil, fmt.Errorf("sign in local generation chunk reader: %w", err)
+	}
+	if err := db.Use(ctx, "phebs", "phebs"); err != nil {
+		return nil, fmt.Errorf("select local generation chunk reader database: %w", err)
+	}
+	confirmed, err := ReadLocalRuntime(dataDir)
+	if err != nil || confirmed.Token != runtime.Token || confirmed.PID != runtime.PID ||
+		confirmed.Endpoint != runtime.Endpoint || !processAlive(confirmed.PID) {
+		return nil, errors.Join(err, errors.New("open local generation chunk reader: runtime changed"))
+	}
+	failed = false
+	return &LocalGenerationChunkReader{
+		store: &Surreal{db: db}, dataDir: dataDir, token: runtime.Token,
+	}, nil
+}
+
+func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
+	ctx context.Context,
+	identity string,
+) (GenerationChunkLeaseState, error) {
+	if reader == nil || reader.store == nil || ctx == nil || !validSHA256(identity) {
+		return GenerationChunkLeaseState{}, errors.New("read generation chunk lease state: request is invalid")
+	}
+	chunk, err := reader.store.generationChunkByIdentity(ctx, identity)
+	if err != nil {
+		return GenerationChunkLeaseState{}, err
+	}
+	runtime, runtimeErr := ReadLocalRuntime(reader.dataDir)
+	if runtimeErr != nil || runtime.Token != reader.token || !processAlive(runtime.PID) {
+		return GenerationChunkLeaseState{}, errors.Join(
+			runtimeErr, errors.New("read generation chunk lease state: runtime changed"),
+		)
+	}
+	return GenerationChunkLeaseState{
+		Identity: chunk.Identity, Repository: chunk.Repository, Stage: chunk.Stage,
+		Generation: chunk.Generation, Attempt: chunk.Attempt, Status: chunk.Status,
+	}, nil
+}
+
+func (reader *LocalGenerationChunkReader) Close(ctx context.Context) error {
+	if reader == nil || reader.store == nil {
+		return nil
+	}
+	err := reader.store.Close(ctx)
+	reader.store = nil
+	return err
 }
 
 type GenerationSchedulerStore interface {

@@ -157,6 +157,17 @@ rejects already-settled attempts, proves the selected live schedule's plans bind
 to B's source digest, then requires that same attempt to settle `stale_fenced`
 after semantic A supersedes it. No rerun or ticket/Epic closure is authorized.
 
+Third review disposition (2026-08-08): log reports now discover candidates
+only. B binding is proved by the production extraction validator, including
+recovery schedule identity, generation ranges, descriptors, and domain plans.
+The cursor drains through current EOF with a reused buffer and retains only
+unmatched attempts. A read-only connection to the supervised store then
+requires the exact B attempt to remain `running` on both sides of the semantic-A
+source transition before its terminal `stale_fenced` report can satisfy the
+oracle. Early healthy settlement or a probe race remains an unclassified
+operational stop rather than `reduce`. The retained artifacts are unchanged and
+no rerun or closure is authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1,14 +1,58 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
+
+func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	dataDir := t.TempDir()
+	state, err := OpenLocal(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	spec := generationSpec("example.invalid/lease-probe", "sha256:"+strings.Repeat("7", 64))
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(t.Context(), spec.Repository, spec.Stage, spec.Generation); err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := state.ClaimGenerationChunk(t.Context(), spec.ResourceClass, "probe-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := OpenLocalGenerationChunkReader(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reader.Close(context.Background()) })
+	running, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
+	if err != nil || running.Identity != chunk.Identity || running.Repository != chunk.Repository ||
+		running.Stage != chunk.Stage || running.Generation != chunk.Generation ||
+		running.Attempt != chunk.Attempt || running.Status != GenerationChunkRunning {
+		t.Fatalf("running lease state = %+v, %v", running, err)
+	}
+	if err := state.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
+		t.Fatal(err)
+	}
+	done, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
+	if err != nil || done.Status != GenerationChunkDone {
+		t.Fatalf("settled lease state = %+v, %v", done, err)
+	}
+}
 
 func generationSpec(repository, generation string) GenerationScheduleSpec {
 	return GenerationScheduleSpec{

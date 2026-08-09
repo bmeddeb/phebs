@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testing.T) {
@@ -403,8 +404,59 @@ func TestChunkLifecycleActiveSetRejectsAlreadySettledAttempt(t *testing.T) {
 	settled := started
 	settled.Event, settled.Outcome = "settled", "completed"
 	active := make(map[string]generationscheduler.ChunkLifecycleReport)
-	order := updateActiveChunkLifecycles(active, nil, []generationscheduler.ChunkLifecycleReport{started, settled})
-	if len(order) != 1 || len(active) != 0 {
-		t.Fatalf("settled historical attempt remained selectable: order=%v active=%v", order, active)
+	updateActiveChunkLifecycles(active, []generationscheduler.ChunkLifecycleReport{started, settled})
+	if len(active) != 0 {
+		t.Fatalf("settled historical attempt remained selectable: active=%v", active)
+	}
+}
+
+func TestRunningLeaseMatchRequiresExactAuthoritativeAttempt(t *testing.T) {
+	report := generationscheduler.ChunkLifecycleReport{
+		Schema: generationscheduler.ChunkLifecycleSchema, Event: "started",
+		Identity: "sha256:" + strings.Repeat("a", 64), Stage: "extraction-partitions",
+		Generation: "sha256:" + strings.Repeat("b", 64), Attempt: 2, Outcome: "running",
+	}
+	state := store.GenerationChunkLeaseState{
+		Identity: report.Identity, Repository: "example.invalid/semantic",
+		Stage: report.Stage, Generation: report.Generation, Attempt: report.Attempt,
+		Status: store.GenerationChunkRunning,
+	}
+	if !runningLeaseMatchesReport(state, report, state.Repository) {
+		t.Fatal("exact running lease did not match its discovery report")
+	}
+	state.Status = store.GenerationChunkDone
+	if runningLeaseMatchesReport(state, report, state.Repository) {
+		t.Fatal("settled attempt remained authoritative for supersession")
+	}
+	state.Status, state.Attempt = store.GenerationChunkRunning, report.Attempt+1
+	if runningLeaseMatchesReport(state, report, state.Repository) {
+		t.Fatal("different running attempt matched the discovery report")
+	}
+}
+
+func TestChunkLifecycleCursorDrainsSettledReportThroughCurrentEOF(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	startedLine := `generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"started","identity":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","stage":"extraction-partitions","generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","attempt":2,"outcome":"running"}` + "\n"
+	settledLine := `generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"settled","identity":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","stage":"extraction-partitions","generation":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","attempt":2,"outcome":"completed"}` + "\n"
+	raw := []byte(startedLine + strings.Repeat("ordinary log line\n", 5_000) + settledLine)
+	if len(raw) <= 64<<10 {
+		t.Fatal("test log did not cross the cursor read block")
+	}
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	reports, err := cursor.poll()
+	if err != nil || len(reports) != 2 || reports[0].Event != "started" || reports[1].Event != "settled" {
+		t.Fatalf("drained reports = %+v, %v", reports, err)
+	}
+	active := make(map[string]generationscheduler.ChunkLifecycleReport)
+	updateActiveChunkLifecycles(active, reports)
+	if len(active) != 0 {
+		t.Fatalf("settled report beyond first block left a false live lease: %v", active)
 	}
 }
