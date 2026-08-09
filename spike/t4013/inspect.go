@@ -62,6 +62,22 @@ type privateProfileSnapshot struct {
 	RelationshipPublished    bool
 }
 
+type privateConvergenceProbe struct {
+	Stage  string
+	SHA256 string
+}
+
+func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
+	raw, err := json.Marshal(struct {
+		Stage  string `json:"stage"`
+		Values []any  `json:"values"`
+	}{Stage: stage, Values: values})
+	if err != nil {
+		raw = []byte(stage)
+	}
+	return privateConvergenceProbe{Stage: stage, SHA256: digest(raw)}
+}
+
 type profileInspector struct {
 	client     *http.Client
 	credential string
@@ -115,74 +131,81 @@ func (inspector *profileInspector) healthClass(
 	}
 }
 
-func (inspector *profileInspector) inspect(
+func (inspector *profileInspector) inspectWithProgress(
 	ctx context.Context,
 	profile PreparedProfile,
 	revision string,
-) (privateProfileSnapshot, error) {
+) (privateProfileSnapshot, privateConvergenceProbe, error) {
+	probe := convergenceProbe("repository_visibility")
 	if ctx == nil || !hexIdentity(profile.Revisions[revision], 40) {
-		return privateProfileSnapshot{}, errors.New("T40.13 inspection revision is invalid")
+		return privateProfileSnapshot{}, probe, errors.New("T40.13 inspection revision is invalid")
 	}
 	repository, err := inspector.currentRepository(ctx, profile)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, probe, err
 	}
+	probe = convergenceProbe("repository_index", repository.IndexedCommitHash, repository.LatestJobStatus)
 	if repository.IndexedCommitHash != profile.Revisions[revision] {
-		return privateProfileSnapshot{}, errors.New("T40.13 indexed commit has not converged")
+		return privateProfileSnapshot{}, probe, errors.New("T40.13 indexed commit has not converged")
 	}
 	indexDirectory := filepath.Join(profile.DataDir, "index")
 	source, err := repositoryindex.ReadSourceManifest(indexDirectory, profile.RepositoryName)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("source_generation", repository.IndexedCommitHash), err
 	}
+	probe = convergenceProbe("source_generation", source.Digest, source.OwnerCount, source.RegularOwnerCount)
 	if len(source.Revisions) != 1 || source.Revisions[0].Commit != repository.IndexedCommitHash {
-		return privateProfileSnapshot{}, errors.New("T40.13 source generation is not exact HEAD")
+		return privateProfileSnapshot{}, probe, errors.New("T40.13 source generation is not exact HEAD")
 	}
 	searchRoot, err := focusedindex.ReadSearchGenerationRoot(indexDirectory, profile.RepositoryName)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("search_generation", source.Digest), err
 	}
+	probe = convergenceProbe("search_generation", source.Digest, searchRoot.Current.GenerationDigest)
 	receipt, err := readSearchReceipt(indexDirectory, profile.RepositoryName, searchRoot.Current)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, probe, err
 	}
 	var progress observationpublication.Progress
 	progressPath := "/api/observation-progress?repository=" + url.QueryEscape(profile.RepositoryName)
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
+	probe = convergenceProbe("observation_publication", progress)
 	if progress.State != "current" || progress.Publication == nil || progress.Publication.State != "current" ||
 		progress.Publication.SourceGenerationDigest != source.Digest || progress.Schedule == nil ||
 		progress.Schedule.State != "settled" || progress.Schedule.Pending != 0 || progress.Schedule.Running != 0 ||
 		progress.Schedule.Failed != 0 || progress.Schedule.Materialized != progress.Schedule.TotalPartitions {
-		return privateProfileSnapshot{}, errors.New("T40.13 observation publication has not converged")
+		return privateProfileSnapshot{}, probe, errors.New("T40.13 observation publication has not converged")
 	}
-	extraction, err := inspectExtraction(ctx, profile)
+	extraction, extractionProgress, err := inspectExtraction(ctx, profile)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
 	}
 	publication, err := relationshippublication.OpenCurrent(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
 	}
 	relationshipRoot := publication.Root()
+	probe = convergenceProbe("relationship_publication", relationshipRoot.GenerationDigest, relationshipRoot.Digest,
+		relationshipRoot.CompleteServiceCount, relationshipRoot.EmptyServiceCount, relationshipRoot.FailedServiceCount)
 	if relationshipRoot.Authority.ObservationGenerationDigest != progress.Publication.GenerationDigest ||
 		!relationshipRoot.RepositoryComplete || !relationshipRoot.AllServicesComplete ||
 		relationshipRoot.FailedServiceCount != 0 {
-		return privateProfileSnapshot{}, errors.New("T40.13 relationship root has not converged")
+		return privateProfileSnapshot{}, probe, errors.New("T40.13 relationship root has not converged")
 	}
 	if err := relationshipMatchesExtraction(relationshipRoot, extraction); err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, probe, err
 	}
 	catalogRaw, err := os.ReadFile(profile.Catalog)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
 	}
 	catalog, err := servicecatalog.Decode(catalogRaw)
 	if err != nil {
-		return privateProfileSnapshot{}, err
+		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
 	}
 	result := privateProfileSnapshot{
 		Schema: privateSnapshotSchema, Name: profile.Name,
@@ -208,7 +231,8 @@ func (inspector *profileInspector) inspect(
 	}
 	if relationshipRoot.ServiceCount != result.AcceptedServices ||
 		relationshipRoot.CompleteServiceCount+relationshipRoot.EmptyServiceCount != result.AcceptedServices {
-		return privateProfileSnapshot{}, errors.New("T40.13 relationship service census differs from the catalog")
+		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest,
+			result.AcceptedServices), errors.New("T40.13 relationship service census differs from the catalog")
 	}
 	result.SourceMemberDigests = make([]string, len(source.Members))
 	for index, member := range source.Members {
@@ -227,9 +251,10 @@ func (inspector *profileInspector) inspect(
 	}
 	if result.ApplicablePartitions == 0 || result.SettledPartitions != result.ApplicablePartitions ||
 		result.PublishedDomains != len(extraction.status.Domains) || result.RetryExhaustedPartitions != 0 {
-		return privateProfileSnapshot{}, errors.New("T40.13 extraction partitions have not converged")
+		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress),
+			errors.New("T40.13 extraction partitions have not converged")
 	}
-	return result, nil
+	return result, convergenceProbe("complete", snapshotAuthority(result)), nil
 }
 
 type extractionSnapshot struct {
@@ -417,12 +442,14 @@ func readSearchReceipt(
 func inspectExtraction(
 	ctx context.Context,
 	profile PreparedProfile,
-) (extractionSnapshot, error) {
+) (extractionSnapshot, string, error) {
 	root := filepath.Join(profile.DataDir, "extraction-publications")
 	controls, err := filepath.Glob(filepath.Join(root, "*", "*", "generation.json"))
 	if err != nil || len(controls) > 64 {
-		return extractionSnapshot{}, errors.New("T40.13 extraction inventory is invalid")
+		return extractionSnapshot{}, convergenceProbe("extraction_inventory", len(controls)).SHA256,
+			errors.New("T40.13 extraction inventory is invalid")
 	}
+	progress := convergenceProbe("extraction_inventory", len(controls)).SHA256
 	runtime := &extractionpublication.Runtime{Root: root}
 	for _, control := range controls {
 		raw, readErr := os.ReadFile(control)
@@ -439,6 +466,7 @@ func inspectExtraction(
 		if statusErr != nil {
 			continue
 		}
+		progress = convergenceProbe("extraction_status", generation.Digest, status).SHA256
 		complete := len(status.Domains) > 0
 		for _, domain := range status.Domains {
 			complete = complete && domain.Current && domain.RootDigest != "" && domain.Settled == domain.Expected
@@ -451,17 +479,18 @@ func inspectExtraction(
 			for _, domain := range status.Domains {
 				current, currentErr := runtime.Current(ctx, profile.RepositoryName, domain.Domain)
 				if currentErr != nil || current.Digest != domain.RootDigest || current.PlanDigest != domain.PlanDigest {
-					return extractionSnapshot{}, errors.Join(currentErr, errors.New("T40.13 extraction root differs from current authority"))
+					return extractionSnapshot{}, progress,
+						errors.Join(currentErr, errors.New("T40.13 extraction root differs from current authority"))
 				}
 				result.roots[domain.Domain] = current
 				result.facts += current.Totals.Facts
 				result.rows += current.Totals.Rows
 				result.references += current.Totals.References
 			}
-			return result, nil
+			return result, progress, nil
 		}
 	}
-	return extractionSnapshot{}, errors.New("T40.13 current extraction generation is unavailable")
+	return extractionSnapshot{}, progress, errors.New("T40.13 current extraction generation is unavailable")
 }
 
 // extractionGenerationBindsRevision proves that a currently reported

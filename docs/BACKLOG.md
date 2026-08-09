@@ -255,6 +255,30 @@ is permanently retired. Take 5 requires a new commit, signer,
 `t40r1-neutral-05` plan, and independent review; no claim or production bound
 changes.
 
+Large-host Take 5 disposition and Take 6 diagnostic correction (2026-08-09):
+signed v3 package
+`sha256:35a12c261542f78d9a638cd27e20a65af4630aede3ad46ce471f4b2d02f909a0`,
+observation
+`sha256:da505a4d3ad3c08f5551b811cdf20d9e3d443b5b3a23333f70b4c454f087221d`,
+and receipt
+`sha256:b4fd42257a9695d263ebcd547df0b1c7f149569fe4f0c0a49d436178e989094f`
+pass signatures, checksums, strict validation, and byte reconstruction. The
+Take 5 response correction worked: structural startup became healthy in
+13,826 ms. Cold convergence then stopped after 7,214,033 ms with 3,712,614,400
+peak RSS bytes, 20,080,287,744 allocated bytes, and successful custody
+destruction. Those values cross no signed review ceiling; six aggregate job
+requeue reports do not prove a per-unit attempt breach. The generic
+operational receipt identifies neither the last convergence stage nor whether
+its published control identity changed, and correctly remains `unclassified`.
+Take 6 adds v4 schemas, signs the unchanged
+two-hour full-convergence and 20-minute revalidation deadlines, and retains
+only a bounded closed last-stage/change-count/first-and-last-progress-digest
+record per exact-snapshot wait. It does not extend a deadline, retain corpus
+content, or change production behavior. `neutral-05` is permanently retired;
+Take 6 requires a fresh commit, signer, `t40r1-neutral-06` plan, and independent
+review. No scale, topology, SLO, release, private-rerun, or Epic-closure claim
+changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -19,12 +19,15 @@ const (
 	PlanSchema                 = "t4013-neutral-convergence-plan-v1"
 	PlanSchemaV2               = "t4013-neutral-convergence-plan-v2"
 	PlanSchemaV3               = "t4013-neutral-convergence-plan-v3"
+	PlanSchemaV4               = "t4013-neutral-convergence-plan-v4"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
+	ObservationSchemaV4        = "t4013-neutral-convergence-observation-v4"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
+	ReceiptSchemaV4            = "t4013-neutral-convergence-receipt-v4"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -87,6 +90,8 @@ type SafetyEnvelope struct {
 	MaximumDataAllocatedBytes int64 `json:"maximum_data_allocated_bytes"`
 	MaximumRetriesPerUnit     int   `json:"maximum_retries_per_unit"`
 	ServerHealthDeadlineMS    int64 `json:"server_health_deadline_ms,omitempty"`
+	FullConvergenceDeadlineMS int64 `json:"full_convergence_deadline_ms,omitempty"`
+	RevalidationDeadlineMS    int64 `json:"revalidation_deadline_ms,omitempty"`
 }
 
 type StopRule struct {
@@ -108,22 +113,23 @@ type PlanClaims struct {
 }
 
 type Observation struct {
-	Schema         string                     `json:"schema"`
-	MeasuredOn     string                     `json:"measured_on"`
-	Outcome        string                     `json:"outcome"`
-	Environment    EnvironmentObservation     `json:"environment"`
-	HostToolchain  []HostToolObservation      `json:"host_toolchain,omitempty"`
-	Toolchain      []ToolchainObservation     `json:"toolchain"`
-	ServerStartups []ServerStartupObservation `json:"server_startups,omitempty"`
-	Profiles       []ProfileObservation       `json:"profiles"`
-	BlobReaders    []BlobReaderObservation    `json:"blob_readers"`
-	Service        ServiceControlObservation  `json:"service_control"`
-	Explicit       ExplicitStateObservation   `json:"explicit_states"`
-	Phases         []PhaseObservation         `json:"phases"`
-	Checks         []CheckObservation         `json:"checks"`
-	Failures       []FailureObservation       `json:"failures"`
-	Decision       DecisionObservation        `json:"decision"`
-	Teardown       TeardownObservation        `json:"teardown"`
+	Schema           string                       `json:"schema"`
+	MeasuredOn       string                       `json:"measured_on"`
+	Outcome          string                       `json:"outcome"`
+	Environment      EnvironmentObservation       `json:"environment"`
+	HostToolchain    []HostToolObservation        `json:"host_toolchain,omitempty"`
+	Toolchain        []ToolchainObservation       `json:"toolchain"`
+	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
+	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
+	Profiles         []ProfileObservation         `json:"profiles"`
+	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
+	Service          ServiceControlObservation    `json:"service_control"`
+	Explicit         ExplicitStateObservation     `json:"explicit_states"`
+	Phases           []PhaseObservation           `json:"phases"`
+	Checks           []CheckObservation           `json:"checks"`
+	Failures         []FailureObservation         `json:"failures"`
+	Decision         DecisionObservation          `json:"decision"`
+	Teardown         TeardownObservation          `json:"teardown"`
 }
 
 // ServerStartupObservation retains only bounded, source-free readiness facts.
@@ -143,6 +149,23 @@ type ServerStartupObservation struct {
 	OtherChildren   int64  `json:"other_children"`
 	LogBytes        int64  `json:"log_bytes"`
 	LogSHA256       string `json:"log_sha256"`
+}
+
+// ConvergenceWaitObservation retains only a closed stage and digests of
+// bounded source-free controls. It never retains repository paths, source
+// bytes, HTTP bodies, credentials, or raw process output.
+type ConvergenceWaitObservation struct {
+	Profile             string `json:"profile"`
+	Label               string `json:"label"`
+	Revision            string `json:"revision"`
+	Outcome             string `json:"outcome"`
+	LastStage           string `json:"last_stage"`
+	Attempts            int64  `json:"attempts"`
+	ProgressChanges     int64  `json:"progress_changes"`
+	FirstProgressSHA256 string `json:"first_progress_sha256"`
+	LastProgressSHA256  string `json:"last_progress_sha256"`
+	DeadlineMS          int64  `json:"deadline_ms"`
+	WallMS              int64  `json:"wall_ms"`
 }
 
 type ToolchainObservation struct {
@@ -260,25 +283,26 @@ type TeardownObservation struct {
 }
 
 type Receipt struct {
-	Schema         string                     `json:"schema"`
-	PlanDigest     string                     `json:"plan_digest"`
-	SourceCommit   string                     `json:"source_commit"`
-	MeasuredOn     string                     `json:"measured_on"`
-	Outcome        string                     `json:"outcome"`
-	Environment    EnvironmentObservation     `json:"environment"`
-	HostToolchain  []HostToolObservation      `json:"host_toolchain,omitempty"`
-	Toolchain      []ToolchainObservation     `json:"toolchain"`
-	ServerStartups []ServerStartupObservation `json:"server_startups,omitempty"`
-	Profiles       []ProfileObservation       `json:"profiles"`
-	BlobReaders    []BlobReaderObservation    `json:"blob_readers"`
-	Service        ServiceControlObservation  `json:"service_control"`
-	Explicit       ExplicitStateObservation   `json:"explicit_states"`
-	Phases         []PhaseObservation         `json:"phases"`
-	Checks         []CheckObservation         `json:"checks"`
-	Failures       []FailureObservation       `json:"failures"`
-	Decision       DecisionObservation        `json:"decision"`
-	Teardown       TeardownObservation        `json:"teardown"`
-	Claims         ReceiptClaims              `json:"claims"`
+	Schema           string                       `json:"schema"`
+	PlanDigest       string                       `json:"plan_digest"`
+	SourceCommit     string                       `json:"source_commit"`
+	MeasuredOn       string                       `json:"measured_on"`
+	Outcome          string                       `json:"outcome"`
+	Environment      EnvironmentObservation       `json:"environment"`
+	HostToolchain    []HostToolObservation        `json:"host_toolchain,omitempty"`
+	Toolchain        []ToolchainObservation       `json:"toolchain"`
+	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
+	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
+	Profiles         []ProfileObservation         `json:"profiles"`
+	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
+	Service          ServiceControlObservation    `json:"service_control"`
+	Explicit         ExplicitStateObservation     `json:"explicit_states"`
+	Phases           []PhaseObservation           `json:"phases"`
+	Checks           []CheckObservation           `json:"checks"`
+	Failures         []FailureObservation         `json:"failures"`
+	Decision         DecisionObservation          `json:"decision"`
+	Teardown         TeardownObservation          `json:"teardown"`
+	Claims           ReceiptClaims                `json:"claims"`
 }
 
 type ReceiptClaims struct {
@@ -310,8 +334,9 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		MeasuredOn: observation.MeasuredOn, Outcome: observation.Outcome,
 		Environment: observation.Environment, HostToolchain: observation.HostToolchain,
 		Toolchain: observation.Toolchain, ServerStartups: observation.ServerStartups,
-		Profiles:    observation.Profiles,
-		BlobReaders: observation.BlobReaders, Service: observation.Service,
+		ConvergenceWaits: observation.ConvergenceWaits,
+		Profiles:         observation.Profiles,
+		BlobReaders:      observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
 		Failures: observation.Failures, Decision: observation.Decision, Teardown: observation.Teardown,
 		Claims: ReceiptClaims{MechanicsEvidenceOnly: true},
@@ -374,7 +399,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -382,7 +407,7 @@ func ValidatePlan(value Plan) error {
 	if value.Schema == PlanSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
 	}
-	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 {
+	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -391,8 +416,11 @@ func ValidatePlan(value Plan) error {
 		return errors.New("T40.13 frozen inputs or stop rules changed")
 	}
 	wantSafety := frozenSafety
-	if value.Schema == PlanSchemaV3 {
+	switch value.Schema {
+	case PlanSchemaV3:
 		wantSafety = frozenSafetyV3
+	case PlanSchemaV4:
+		wantSafety = frozenSafetyV4
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -406,8 +434,11 @@ func ValidatePlan(value Plan) error {
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
 		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
-		value.Schema == PlanSchemaV3 && safety.ServerHealthDeadlineMS <= 0 ||
-		value.Schema != PlanSchemaV3 && safety.ServerHealthDeadlineMS != 0 {
+		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4) && safety.ServerHealthDeadlineMS <= 0 ||
+		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && safety.ServerHealthDeadlineMS != 0 ||
+		value.Schema == PlanSchemaV4 && (safety.FullConvergenceDeadlineMS <= 0 ||
+			safety.RevalidationDeadlineMS <= 0 || safety.RevalidationDeadlineMS > safety.FullConvergenceDeadlineMS) ||
+		value.Schema != PlanSchemaV4 && (safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
 		return errors.New("T40.13 safety envelope is invalid")
 	}
 	wantDecisions := []string{"continue", "reduce", "cohort_experiment", "p6_investigation"}
@@ -427,7 +458,7 @@ func ValidatePlan(value Plan) error {
 }
 
 func ValidateObservation(value Observation) error {
-	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2, ObservationSchemaV3}, value.Schema) ||
+	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 observation identity is invalid")
@@ -435,7 +466,7 @@ func ValidateObservation(value Observation) error {
 	if value.Schema == ObservationSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
 	}
-	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 {
+	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -449,11 +480,19 @@ func ValidateObservation(value Observation) error {
 	if err := validateToolchainObservation(value.Toolchain, value.Outcome == "completed"); err != nil {
 		return err
 	}
-	if value.Schema != ObservationSchemaV3 && len(value.ServerStartups) != 0 {
+	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 && len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
-	if value.Schema == ObservationSchemaV3 {
+	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 {
 		if err := validateServerStartups(value.ServerStartups); err != nil {
+			return err
+		}
+	}
+	if value.Schema != ObservationSchemaV4 && len(value.ConvergenceWaits) != 0 {
+		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
+	}
+	if value.Schema == ObservationSchemaV4 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits); err != nil {
 			return err
 		}
 	}
@@ -519,7 +558,8 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 		Schema: observationSchemaForPlan(plan), MeasuredOn: value.MeasuredOn, Outcome: value.Outcome,
 		Environment: value.Environment, HostToolchain: value.HostToolchain,
 		Toolchain: value.Toolchain, ServerStartups: value.ServerStartups,
-		Profiles: value.Profiles, BlobReaders: value.BlobReaders,
+		ConvergenceWaits: value.ConvergenceWaits,
+		Profiles:         value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
 	}
@@ -529,10 +569,21 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
-	if plan.Schema == PlanSchemaV3 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
 		for _, startup := range value.ServerStartups {
 			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
 				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
+			}
+		}
+	}
+	if plan.Schema == PlanSchemaV4 {
+		for _, wait := range value.ConvergenceWaits {
+			if wait.DeadlineMS != plan.Safety.FullConvergenceDeadlineMS &&
+				wait.DeadlineMS != plan.Safety.RevalidationDeadlineMS {
+				return errors.New("T40.13 convergence wait differs from the frozen deadlines")
+			}
+			if wait.Outcome == "deadline" && wait.WallMS < wait.DeadlineMS {
+				return errors.New("T40.13 convergence deadline observation precedes its frozen deadline")
 			}
 		}
 	}
@@ -576,6 +627,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV4 {
+		return ObservationSchemaV4
+	}
 	if plan.Schema == PlanSchemaV3 {
 		return ObservationSchemaV3
 	}
@@ -586,6 +640,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV4 {
+		return ReceiptSchemaV4
+	}
 	if plan.Schema == PlanSchemaV3 {
 		return ReceiptSchemaV3
 	}
@@ -679,6 +736,46 @@ func validateServerStartups(values []ServerStartupObservation) error {
 	return nil
 }
 
+func validateConvergenceWaits(values []ConvergenceWaitObservation) error {
+	if len(values) > 16 {
+		return errors.New("T40.13 convergence wait inventory exceeds its bound")
+	}
+	profiles := []string{"structural-2m-v1", "semantic-262144-v1"}
+	labels := []string{
+		"cold", "warm-noop", "delta-b", "return-a", "interruption-restart",
+		"stale-worker", "pressure", "archive-restore", "collection",
+		"authorized-query-semantic", "authorized-query-structural",
+	}
+	revisions := []string{"a", "b", "a-return"}
+	outcomes := []string{"converged", "deadline", "canceled"}
+	stages := []string{
+		"repository_visibility", "repository_index", "source_generation",
+		"search_generation", "observation_publication", "extraction_publication",
+		"relationship_publication", "service_census", "complete",
+	}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		key := value.Profile + "\x00" + value.Label + "\x00" + value.Revision
+		if !slices.Contains(profiles, value.Profile) || !slices.Contains(labels, value.Label) ||
+			!slices.Contains(revisions, value.Revision) || !slices.Contains(outcomes, value.Outcome) ||
+			!slices.Contains(stages, value.LastStage) || value.Attempts <= 0 || value.Attempts > 1_000_000 ||
+			value.ProgressChanges < 0 || value.ProgressChanges >= value.Attempts ||
+			!digestIdentity(value.FirstProgressSHA256) || !digestIdentity(value.LastProgressSHA256) ||
+			value.DeadlineMS <= 0 || value.WallMS < 0 {
+			return errors.New("T40.13 convergence wait diagnostic is invalid")
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return errors.New("T40.13 convergence wait identity is duplicated")
+		}
+		seen[key] = struct{}{}
+		if value.Outcome == "converged" && value.LastStage != "complete" ||
+			value.Outcome != "converged" && value.LastStage == "complete" {
+			return errors.New("T40.13 convergence wait outcome is incoherent")
+		}
+	}
+	return nil
+}
+
 func validateStopped(value Receipt) error {
 	if len(value.Failures) != 1 || value.Decision.Selected == "continue" ||
 		!value.Teardown.Completed || value.Teardown.DerivedDataRetained || value.Teardown.ScratchSourceRetained {
@@ -743,6 +840,12 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 operational failure identity is invalid")
 		}
 		wantReason = "operational_failure"
+	case "convergence_deadline_expired":
+		if failure.Class != "execution" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "deadline" {
+			return errors.New("T40.13 convergence deadline failure identity is invalid")
+		}
+		wantReason = "convergence_deadline_expired"
 	default:
 		return errors.New("T40.13 stopped failure code is not frozen")
 	}
@@ -778,7 +881,7 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
-	if plan.Schema == PlanSchemaV3 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
 			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
@@ -792,6 +895,27 @@ func validateCompleted(value Receipt, plan Plan) error {
 			startup := value.ServerStartups[index]
 			if startup.Profile != identity[0] || startup.Label != identity[1] || startup.Outcome != "healthy" {
 				return errors.New("T40.13 completed receipt startup inventory is invalid")
+			}
+		}
+	}
+	if plan.Schema == PlanSchemaV4 {
+		want := [][3]string{
+			{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
+			{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},
+			{"structural-2m-v1", "return-a", "a-return"}, {"semantic-262144-v1", "interruption-restart", "a"},
+			{"semantic-262144-v1", "stale-worker", "a"}, {"structural-2m-v1", "pressure", "a-return"},
+			{"structural-2m-v1", "archive-restore", "a-return"}, {"structural-2m-v1", "collection", "a-return"},
+			{"semantic-262144-v1", "authorized-query-semantic", "a"},
+			{"structural-2m-v1", "authorized-query-structural", "a-return"},
+		}
+		if len(value.ConvergenceWaits) != len(want) {
+			return errors.New("T40.13 completed receipt lacks the exact convergence wait inventory")
+		}
+		for index, identity := range want {
+			wait := value.ConvergenceWaits[index]
+			if wait.Profile != identity[0] || wait.Label != identity[1] || wait.Revision != identity[2] ||
+				wait.Outcome != "converged" {
+				return errors.New("T40.13 completed receipt convergence wait inventory is invalid")
 			}
 		}
 	}

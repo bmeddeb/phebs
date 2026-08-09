@@ -164,6 +164,40 @@ func TestV3PlanFreezesServerHealthDeadline(t *testing.T) {
 	if err != nil || decoded.Schema != PlanSchemaV3 || decoded.Safety != frozenSafetyV3 {
 		t.Fatalf("decoded v3 plan = %+v, %v", decoded, err)
 	}
+	if bytes.Contains(encoded, []byte("full_convergence_deadline_ms")) ||
+		bytes.Contains(encoded, []byte("revalidation_deadline_ms")) {
+		t.Fatal("historical v3 plan bytes acquired v4 convergence deadlines")
+	}
+}
+
+func TestV4PlanFreezesConvergenceDeadlines(t *testing.T) {
+	plan, err := frozenV4PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV4 || plan.Safety.ServerHealthDeadlineMS != 15*60*1000 ||
+		plan.Safety.FullConvergenceDeadlineMS != 2*60*60*1000 ||
+		plan.Safety.RevalidationDeadlineMS != 20*60*1000 {
+		t.Fatalf("v4 plan = %+v", plan)
+	}
+	for _, mutate := range []func(*Plan){
+		func(value *Plan) { value.Safety.FullConvergenceDeadlineMS-- },
+		func(value *Plan) { value.Safety.RevalidationDeadlineMS-- },
+	} {
+		changed := plan
+		mutate(&changed)
+		if _, err := MarshalPlan(changed); err == nil {
+			t.Fatal("changed v4 convergence deadline passed")
+		}
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV4 || decoded.Safety != frozenSafetyV4 {
+		t.Fatalf("decoded v4 plan = %+v, %v", decoded, err)
+	}
 }
 
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
@@ -377,6 +411,84 @@ func TestV3StoppedReceiptBindsStartupDeadlineObservation(t *testing.T) {
 	}
 }
 
+func TestV4StoppedReceiptBindsConvergenceDeadlineObservation(t *testing.T) {
+	plan, err := frozenV4PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedObservation()
+	value.Schema = ObservationSchemaV4
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	value.Outcome = "stopped"
+	value.ConvergenceWaits = []ConvergenceWaitObservation{{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		LastStage: "repository_index", Attempts: 1,
+		FirstProgressSHA256: "sha256:" + strings.Repeat("a", 64),
+		LastProgressSHA256:  "sha256:" + strings.Repeat("a", 64),
+		DeadlineMS:          plan.Safety.FullConvergenceDeadlineMS,
+		WallMS:              plan.Safety.FullConvergenceDeadlineMS,
+	}}
+	value.Failures = []FailureObservation{{
+		Phase: "cold", Class: "execution", Code: "convergence_deadline_expired",
+	}}
+	value.Decision = DecisionObservation{Selected: "unclassified", Reason: "convergence_deadline_expired"}
+	for index := range value.Phases {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	value.Phases[1] = PhaseObservation{Name: "cold", Outcome: "failed", Metrics: PhaseMetrics{
+		WallMS: plan.Safety.FullConvergenceDeadlineMS, PeakRSSBytes: 1,
+	}}
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Checks = frozenChecks(false)
+	value.Teardown = TeardownObservation{Completed: true}
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV4 || len(receipt.ConvergenceWaits) != 1 {
+		t.Fatalf("v4 stopped receipt = %+v, %v", receipt, err)
+	}
+	receipt.ConvergenceWaits[0].WallMS--
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("convergence observation preceding the frozen deadline passed")
+	}
+	receipt.ConvergenceWaits[0].WallMS++
+	receipt.ConvergenceWaits = nil
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("convergence deadline failure without its diagnostic passed")
+	}
+}
+
+func TestV4CompletedReceiptRequiresExactConvergenceInventory(t *testing.T) {
+	plan, err := frozenV4PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV4Observation(plan)
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV4 || len(receipt.ConvergenceWaits) != 12 {
+		t.Fatalf("v4 completed receipt = %+v, %v", receipt, err)
+	}
+	value.ConvergenceWaits[3].Label = "return-a"
+	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
+		t.Fatal("completed v4 receipt with a changed convergence identity passed")
+	}
+}
+
 func TestReceiptRefusesWrongPlanDigestAndOversizeInput(t *testing.T) {
 	_, planBytes := testPlan(t)
 	observation := marshal(t, completedObservation())
@@ -445,6 +557,49 @@ func completedObservation() Observation {
 		},
 		Teardown: TeardownObservation{Completed: true},
 	}
+}
+
+func completedV4Observation(plan Plan) Observation {
+	value := completedObservation()
+	value.Schema = ObservationSchemaV4
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	startupIdentities := [][2]string{
+		{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
+		{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
+		{"semantic-262144-v1", "interruption-restart"}, {"semantic-262144-v1", "stale-worker"},
+		{"structural-2m-v1", "archive-restore"}, {"semantic-262144-v1", "authorized-query"},
+	}
+	for _, identity := range startupIdentities {
+		value.ServerStartups = append(value.ServerStartups, ServerStartupObservation{
+			Profile: identity[0], Label: identity[1], Outcome: "healthy", LastStage: "http_ready",
+			LastHealthClass: "ok", HealthAttempts: 1, WallMS: 1, LogBytes: 1,
+			LogSHA256: "sha256:" + strings.Repeat("a", 64),
+		})
+	}
+	waitIdentities := [][3]string{
+		{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
+		{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},
+		{"structural-2m-v1", "return-a", "a-return"}, {"semantic-262144-v1", "interruption-restart", "a"},
+		{"semantic-262144-v1", "stale-worker", "a"}, {"structural-2m-v1", "pressure", "a-return"},
+		{"structural-2m-v1", "archive-restore", "a-return"}, {"structural-2m-v1", "collection", "a-return"},
+		{"semantic-262144-v1", "authorized-query-semantic", "a"},
+		{"structural-2m-v1", "authorized-query-structural", "a-return"},
+	}
+	for _, identity := range waitIdentities {
+		deadline := plan.Safety.FullConvergenceDeadlineMS
+		switch identity[1] {
+		case "warm-noop", "pressure", "collection", "authorized-query-semantic", "authorized-query-structural":
+			deadline = plan.Safety.RevalidationDeadlineMS
+		}
+		value.ConvergenceWaits = append(value.ConvergenceWaits, ConvergenceWaitObservation{
+			Profile: identity[0], Label: identity[1], Revision: identity[2], Outcome: "converged",
+			LastStage: "complete", Attempts: 1,
+			FirstProgressSHA256: "sha256:" + strings.Repeat("b", 64),
+			LastProgressSHA256:  "sha256:" + strings.Repeat("b", 64),
+			DeadlineMS:          deadline, WallMS: 1,
+		})
+	}
+	return value
 }
 
 func fakeHostToolchain() []HostToolObservation {

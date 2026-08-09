@@ -195,6 +195,57 @@ func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T
 	}
 }
 
+func TestConvergenceDeadlineRetainsClosedLastProgress(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(response, `[]`)
+	}))
+	defer server.Close()
+	plan, err := frozenV4PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, plan),
+	}
+	profile := PreparedProfile{
+		Name: "structural-2m-v1", Address: strings.TrimPrefix(server.URL, "http://"),
+		Credential: credential, RepositoryName: "example.invalid/repository",
+		Revisions: map[string]string{"a": testSourceCommit},
+	}
+	_, err = run.waitSnapshot(profile, "a", "cold", 25*time.Millisecond)
+	if !errors.Is(err, errConvergenceDeadline) || len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("deadline = %v, waits=%+v", err, run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.Outcome != "deadline" || wait.LastStage != "repository_visibility" ||
+		wait.Attempts == 0 || wait.ProgressChanges != 0 || !digestIdentity(wait.FirstProgressSHA256) ||
+		wait.FirstProgressSHA256 != wait.LastProgressSHA256 || wait.DeadlineMS != 25 || wait.WallMS < 25 {
+		t.Fatalf("wait = %+v", wait)
+	}
+}
+
+func TestConvergenceProgressTrackerCountsOnlyIdentityChanges(t *testing.T) {
+	first := convergenceProbe("repository_index", "queued")
+	second := convergenceProbe("repository_index", "running")
+	var tracker convergenceProgressTracker
+	tracker.observe(first)
+	tracker.observe(first)
+	tracker.observe(second)
+	tracker.observe(second)
+	if tracker.attempts != 4 || tracker.progressChanges != 1 || tracker.first != first || tracker.last != second {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+}
+
 func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	root := t.TempDir()
 	module := filepath.Join(root, "module")
@@ -244,9 +295,11 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		substantiated bool
 	}{
 		{name: "operational", cause: errors.New("build failed"), code: "operational_failure", decision: "unclassified"},
+		{name: "convergence deadline", cause: errConvergenceDeadline, code: "convergence_deadline_expired", decision: "unclassified"},
 		{name: "exact oracle", cause: exactOracle("mismatch"), code: "exact_gate_failed", decision: "reduce", substantiated: true},
 		{name: "pressure refusal", cause: errProductionPressure, code: "production_pressure_gate_refused", decision: "reduce", substantiated: true},
 		{name: "direct recovery", cause: directRecovery(errors.New("did not converge")), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
+		{name: "recovery deadline remains recovery", cause: directRecovery(errConvergenceDeadline), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
 		{name: "review ceiling", cause: errReviewCeiling, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
 		{name: "missing measurement overrides exact and ceiling", cause: exactOracle("mismatch"), measurement: errors.New("meter failed"), ceiling: errReviewCeiling, code: "failed_phase_measurement_unavailable", decision: "unclassified"},
 	}

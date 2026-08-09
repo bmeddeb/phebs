@@ -297,12 +297,42 @@ Missing, duplicate, foreign, malformed, unknown-field, primitive, trailing,
 and oversized responses fail closed. Real Huma health-object and repository-
 array responses plus every ceremony target type are pinned before a fresh plan.
 
+The independently verified `t40r1-neutral-05` v3 plan
+(`sha256:0fde7999aad6830d6f463458c7d3930cb3feb8bb8428db984731ffb2907dc1fc`)
+at commit `2b32391c38013e7c238706afc0b8ba1f491cecb2` proved that correction:
+the structural server reached `http_ready` and returned exact health in 13,826
+ms. Its first cold convergence wait then stopped after 7,214,033 ms. Source-free
+package `sha256:35a12c261542f78d9a638cd27e20a65af4630aede3ad46ce471f4b2d02f909a0`,
+observation `sha256:da505a4d3ad3c08f5551b811cdf20d9e3d443b5b3a23333f70b4c454f087221d`,
+and receipt `sha256:b4fd42257a9695d263ebcd547df0b1c7f149569fe4f0c0a49d436178e989094f`
+verify exactly. Peak RSS was 3,712,614,400 bytes, allocated custody was
+20,080,287,744 bytes, and teardown destroyed all custody. Six aggregate job
+requeue reports do not establish that any one unit exceeded the frozen
+five-attempt production limit. The receipt correctly remains `unclassified`:
+it crossed neither the 20-GiB RSS, 96-GiB allocation, nor eight-hour total-wall
+ceiling, and its generic operational code identifies neither the last
+convergence stage nor whether its published control identity changed. Take 5
+is permanently retired.
+
+Take 6 introduces v4 plan, observation, and receipt schemas while preserving
+v1-v3 bytes. The signed plan now states the existing two-hour full-convergence
+and 20-minute revalidation deadlines explicitly. Each exact-snapshot wait
+retains at most one closed record: profile/revision/phase label, outcome, last
+closed stage, attempt and progress-change counts, first/last SHA-256 progress
+identities, deadline, and wall time. Progress identities hash bounded controls
+already read by the inspector; no source bytes, paths, credentials, HTTP
+bodies, or logs enter evidence. A non-recovery deadline is now the closed
+`convergence_deadline_expired` operational code and remains unclassified;
+already-authoritative recovery exercises retain their closed recovery result.
+The deadline is not increased: Take 6 diagnoses the existing boundary before
+any decision to change production or review posture.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-05
+CEREMONY_ID=t40r1-neutral-06
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.
