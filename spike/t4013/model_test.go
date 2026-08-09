@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -103,6 +104,56 @@ func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 	first.Safety.MinimumAvailableDiskBytes++
 	if _, err := MarshalPlan(first); err == nil {
 		t.Fatal("changed safety envelope passed")
+	}
+}
+
+func TestV2PlanAndReceiptBindExactHostToolchain(t *testing.T) {
+	hostToolchain := fakeHostToolchain()
+	plan, err := frozenPlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(planBytes)
+	if err != nil || decoded.Schema != PlanSchemaV2 || !slices.Equal(decoded.HostToolchain, hostToolchain) {
+		t.Fatalf("decoded v2 plan = %+v, %v", decoded, err)
+	}
+	observation := completedObservation()
+	observation.Schema = ObservationSchemaV2
+	observation.HostToolchain = slices.Clone(hostToolchain)
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, observation), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV2 || !slices.Equal(receipt.HostToolchain, hostToolchain) {
+		t.Fatalf("decoded v2 receipt = %+v, %v", receipt, err)
+	}
+	receipt.HostToolchain[0].SHA256 = "sha256:" + strings.Repeat("f", 64)
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("receipt with a different host executable digest passed")
+	}
+	receipt.HostToolchain[0] = hostToolchain[0]
+	plan.HostToolchain[1].Version = "go tool compile changed"
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("receipt passed a differently frozen host toolchain")
+	}
+}
+
+func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
+	plan, err := FrozenPlan(testSourceCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(encoded, []byte("host_toolchain")) {
+		t.Fatal("historical v1 plan bytes acquired the prospective host-toolchain field")
 	}
 }
 
@@ -325,6 +376,16 @@ func completedObservation() Observation {
 			Selected: "continue", Reason: "all_exact_mechanics_passed", Substantiated: true,
 		},
 		Teardown: TeardownObservation{Completed: true},
+	}
+}
+
+func fakeHostToolchain() []HostToolObservation {
+	return []HostToolObservation{
+		{Name: "go", Version: "go version go1.26.1 darwin/arm64", SHA256: "sha256:" + strings.Repeat("a", 64)},
+		{Name: "go-compile", Version: "compile version go1.26.1", SHA256: "sha256:" + strings.Repeat("b", 64)},
+		{Name: "go-link", Version: "link version go1.26.1", SHA256: "sha256:" + strings.Repeat("c", 64)},
+		{Name: "git", Version: "git version 2.53.0", SHA256: "sha256:" + strings.Repeat("d", 64)},
+		{Name: "surreal", Version: "3.2.3+20260721.40522d1", SHA256: "sha256:" + strings.Repeat("e", 64)},
 	}
 }
 

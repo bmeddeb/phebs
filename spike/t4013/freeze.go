@@ -1,6 +1,7 @@
 package t4013
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 var expectedInputs = []InputBinding{
@@ -39,6 +41,29 @@ func FrozenPlan(sourceCommit string) (Plan, error) {
 		StopRules:  append([]StopRule(nil), frozenStopRules...),
 		Claims:     PlanClaims{Neutral: true, SourceFreeReceipt: true},
 	}
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+// FrozenHostPlan creates the prospective v2 plan by observing and binding the
+// exact host executables that can influence a ceremony before custody exists.
+func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
+	hostToolchain, err := ObserveHostToolchain(ctx)
+	if err != nil {
+		return Plan{}, err
+	}
+	return frozenPlanWithHostToolchain(sourceCommit, hostToolchain)
+}
+
+func frozenPlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := FrozenPlan(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV2
+	value.HostToolchain = slices.Clone(hostToolchain)
 	if err := ValidatePlan(value); err != nil {
 		return Plan{}, err
 	}

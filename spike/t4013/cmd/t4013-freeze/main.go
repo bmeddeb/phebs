@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ func main() {
 	root := flag.String("root", "", "absolute module root containing the frozen T40.1 inputs")
 	sourceCommit := flag.String("source-commit", "", "exact 40-hex phebs source commit to measure")
 	output := flag.String("output", "", "new output path")
+	bindHostToolchain := flag.Bool("bind-host-toolchain", false, "bind exact Go, Git, and SurrealDB host executables")
 	flag.Parse()
 	if flag.NArg() != 0 || *root == "" || *sourceCommit == "" || *output == "" {
 		fail("-root, -source-commit, and -output are required")
@@ -20,7 +22,13 @@ func main() {
 	if err := t4013.VerifyInputs(*root); err != nil {
 		fail("verify inputs: %v", err)
 	}
-	plan, err := t4013.FrozenPlan(*sourceCommit)
+	var plan t4013.Plan
+	var err error
+	if *bindHostToolchain {
+		plan, err = t4013.FrozenHostPlan(context.Background(), *sourceCommit)
+	} else {
+		plan, err = t4013.FrozenPlan(*sourceCommit)
+	}
 	if err != nil {
 		fail("build plan: %v", err)
 	}

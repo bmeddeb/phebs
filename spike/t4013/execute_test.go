@@ -98,6 +98,25 @@ func TestStoppedExecutionResultPreservesObservationWhenShutdownFails(t *testing.
 	}
 }
 
+func TestV2ObservationStartsWithFrozenHostToolchain(t *testing.T) {
+	plan, err := frozenPlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
+	if observation.Schema != ObservationSchemaV2 ||
+		len(observation.HostToolchain) != len(plan.HostToolchain) {
+		t.Fatalf("v2 observation = %+v", observation)
+	}
+	plan.HostToolchain[0].Version = "mutated after observation creation"
+	if observation.HostToolchain[0].Version == plan.HostToolchain[0].Version {
+		t.Fatal("v2 observation aliases the mutable plan host toolchain")
+	}
+}
+
 func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	root := t.TempDir()
 	module := filepath.Join(root, "module")

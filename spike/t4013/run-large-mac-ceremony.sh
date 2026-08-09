@@ -18,6 +18,7 @@ readonly EXECUTE_CONFIRM="execute-neutral-t4013-and-destroy-custody"
 readonly CLEANUP_CONFIRM="cleanup-neutral-t4013-custody"
 readonly SIGNATURE_NAMESPACE="phebs-t4013"
 readonly FREEZE_SIGNATURE_NAMESPACE="phebs-t4013-freeze"
+readonly REVIEW_STOPPED_CEREMONY_ID="t40r1-neutral-01"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
 readonly MINIMUM_DISK_BYTES=$((120 * 1024 * 1024 * 1024))
@@ -73,6 +74,12 @@ validate_id() {
   local value="$1"
   [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || die "ceremony id is invalid"
   [[ "$value" != "." && "$value" != ".." ]] || die "ceremony id is invalid"
+}
+
+reject_review_stopped_id() {
+  local value="$1"
+  [[ "$value" != "$REVIEW_STOPPED_CEREMONY_ID" ]] ||
+    die "ceremony id $REVIEW_STOPPED_CEREMONY_ID is permanently review-stopped; use a fresh id"
 }
 
 initialize_repository() {
@@ -189,6 +196,7 @@ plan_digest_for() {
 
 freeze() {
   local ceremony_id="$1" run_root evidence_root private_root commit digest frozen_at public_key fingerprint
+  reject_review_stopped_id "$ceremony_id"
   preflight
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
@@ -200,6 +208,7 @@ freeze() {
   (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-freeze \
     -root "$REPO_REAL" \
     -source-commit "$commit" \
+	-bind-host-toolchain \
     -output "${evidence_root}/plan.json") >/dev/null
   digest="$(plan_digest_for "${evidence_root}/plan.json")"
   frozen_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -342,6 +351,7 @@ execute_ceremony() {
   local ceremony_id="$1" approved_digest="$2" approval="$3"
   local run_root evidence_root private_root plan_path prepared_path observation_path results_path custody_path
   local actual_digest execute_status cleanup_pending path
+  reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   preflight
   ensure_signing_key

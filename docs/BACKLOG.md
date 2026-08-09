@@ -182,6 +182,19 @@ preflight rechecks checkout cleanliness after hydration and tests.
 The 1.6-million-file/5,000-service repository remains a separate combined-scale
 target replay after the service-cap program, not an Epic 40 neutral substitute.
 
+Large-host plan-review correction (2026-08-08): the first runner freeze,
+`t40r1-neutral-01` at plan digest
+`sha256:eb8430b97a543182e89c07b117cb7105e13ee4592171aa0992c7989f8c31ab8b`,
+was stopped before custody or execution because the v1 plan retained measured
+binary hashes only prospectively and did not independently freeze the host Go,
+Git, or SurrealDB executables. The prospective v2 plan now binds ordered
+version-plus-SHA-256 identities for the Go driver, compiler, linker, Git, and
+supervised SurrealDB. Preparation verifies them before and after giant
+authoring; execution verifies them before work, before classification, and
+after teardown. Drift cannot substantiate a decision. Historical v1 plan and
+receipt bytes remain unchanged; a new commit, independent plan review, and
+fresh `t40r1-neutral-02` identifier are required.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -88,6 +88,11 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	if err != nil {
 		return Prepared{}, err
 	}
+	if plan.Schema == PlanSchemaV2 {
+		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
+		}
+	}
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return Prepared{}, err
 	}
@@ -169,6 +174,11 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 			Config: configPath, Credential: credentialPath, DataDir: dataDir,
 			Address: address, Catalog: catalogPath, Revisions: revisions,
 		})
+	}
+	if plan.Schema == PlanSchemaV2 {
+		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
+		}
 	}
 	completed = true
 	return prepared, nil

@@ -220,17 +220,28 @@ frozen source.
 
 The review seam is mandatory: `freeze` creates a new ceremony directory and
 prints its plan digest and signing-key fingerprint, then exits. Record and
-review both out of band. `execute` requires that exact reviewed digest, the
-same frozen signer, and the fixed approval phrase. Choose a new identifier for every
-attempt; existing directories, plans, observations, receipts, custody, and
-packages are never overwritten.
+review both out of band. The v2 plan also binds bounded public versions and
+executable SHA-256 identities for the Go driver, Go compiler, Go linker, Git,
+and supervised SurrealDB. Preparation verifies the same inventory before and
+after custody authoring; execution verifies it at admission, before result
+classification, and after teardown. Any drift destroys custody and leaves a
+stopped result unclassified. `execute` requires the exact reviewed digest, the
+same frozen signer, and the fixed approval phrase. Choose a new identifier for
+every attempt; existing directories, plans, observations, receipts, custody,
+and packages are never overwritten.
+
+The `t40r1-neutral-01` freeze (plan
+`sha256:eb8430b97a543182e89c07b117cb7105e13ee4592171aa0992c7989f8c31ab8b`)
+was stopped during independent plan review before custody or execution because
+its v1 plan did not bind these host executables. It is permanently retired and
+must not be executed or reused.
 
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-01
+CEREMONY_ID=t40r1-neutral-02
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

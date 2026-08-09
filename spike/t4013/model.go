@@ -17,8 +17,11 @@ import (
 
 const (
 	PlanSchema                 = "t4013-neutral-convergence-plan-v1"
+	PlanSchemaV2               = "t4013-neutral-convergence-plan-v2"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
+	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
+	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -56,14 +59,15 @@ var failureClasses = []string{
 }
 
 type Plan struct {
-	Schema       string         `json:"schema"`
-	FrozenOn     string         `json:"frozen_on"`
-	SourceCommit string         `json:"source_commit"`
-	Inputs       []InputBinding `json:"inputs"`
-	PhaseOrder   []string       `json:"phase_order"`
-	Safety       SafetyEnvelope `json:"safety_envelope"`
-	StopRules    []StopRule     `json:"stop_rules"`
-	Claims       PlanClaims     `json:"claims"`
+	Schema        string                `json:"schema"`
+	FrozenOn      string                `json:"frozen_on"`
+	SourceCommit  string                `json:"source_commit"`
+	HostToolchain []HostToolObservation `json:"host_toolchain,omitempty"`
+	Inputs        []InputBinding        `json:"inputs"`
+	PhaseOrder    []string              `json:"phase_order"`
+	Safety        SafetyEnvelope        `json:"safety_envelope"`
+	StopRules     []StopRule            `json:"stop_rules"`
+	Claims        PlanClaims            `json:"claims"`
 }
 
 type InputBinding struct {
@@ -100,25 +104,34 @@ type PlanClaims struct {
 }
 
 type Observation struct {
-	Schema      string                    `json:"schema"`
-	MeasuredOn  string                    `json:"measured_on"`
-	Outcome     string                    `json:"outcome"`
-	Environment EnvironmentObservation    `json:"environment"`
-	Toolchain   []ToolchainObservation    `json:"toolchain"`
-	Profiles    []ProfileObservation      `json:"profiles"`
-	BlobReaders []BlobReaderObservation   `json:"blob_readers"`
-	Service     ServiceControlObservation `json:"service_control"`
-	Explicit    ExplicitStateObservation  `json:"explicit_states"`
-	Phases      []PhaseObservation        `json:"phases"`
-	Checks      []CheckObservation        `json:"checks"`
-	Failures    []FailureObservation      `json:"failures"`
-	Decision    DecisionObservation       `json:"decision"`
-	Teardown    TeardownObservation       `json:"teardown"`
+	Schema        string                    `json:"schema"`
+	MeasuredOn    string                    `json:"measured_on"`
+	Outcome       string                    `json:"outcome"`
+	Environment   EnvironmentObservation    `json:"environment"`
+	HostToolchain []HostToolObservation     `json:"host_toolchain,omitempty"`
+	Toolchain     []ToolchainObservation    `json:"toolchain"`
+	Profiles      []ProfileObservation      `json:"profiles"`
+	BlobReaders   []BlobReaderObservation   `json:"blob_readers"`
+	Service       ServiceControlObservation `json:"service_control"`
+	Explicit      ExplicitStateObservation  `json:"explicit_states"`
+	Phases        []PhaseObservation        `json:"phases"`
+	Checks        []CheckObservation        `json:"checks"`
+	Failures      []FailureObservation      `json:"failures"`
+	Decision      DecisionObservation       `json:"decision"`
+	Teardown      TeardownObservation       `json:"teardown"`
 }
 
 type ToolchainObservation struct {
 	Name   string `json:"name"`
 	SHA256 string `json:"sha256"`
+}
+
+// HostToolObservation binds a source-free ceremony to an exact executable and
+// its bounded public version identity without retaining a host filesystem path.
+type HostToolObservation struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256"`
 }
 
 type EnvironmentObservation struct {
@@ -223,23 +236,24 @@ type TeardownObservation struct {
 }
 
 type Receipt struct {
-	Schema       string                    `json:"schema"`
-	PlanDigest   string                    `json:"plan_digest"`
-	SourceCommit string                    `json:"source_commit"`
-	MeasuredOn   string                    `json:"measured_on"`
-	Outcome      string                    `json:"outcome"`
-	Environment  EnvironmentObservation    `json:"environment"`
-	Toolchain    []ToolchainObservation    `json:"toolchain"`
-	Profiles     []ProfileObservation      `json:"profiles"`
-	BlobReaders  []BlobReaderObservation   `json:"blob_readers"`
-	Service      ServiceControlObservation `json:"service_control"`
-	Explicit     ExplicitStateObservation  `json:"explicit_states"`
-	Phases       []PhaseObservation        `json:"phases"`
-	Checks       []CheckObservation        `json:"checks"`
-	Failures     []FailureObservation      `json:"failures"`
-	Decision     DecisionObservation       `json:"decision"`
-	Teardown     TeardownObservation       `json:"teardown"`
-	Claims       ReceiptClaims             `json:"claims"`
+	Schema        string                    `json:"schema"`
+	PlanDigest    string                    `json:"plan_digest"`
+	SourceCommit  string                    `json:"source_commit"`
+	MeasuredOn    string                    `json:"measured_on"`
+	Outcome       string                    `json:"outcome"`
+	Environment   EnvironmentObservation    `json:"environment"`
+	HostToolchain []HostToolObservation     `json:"host_toolchain,omitempty"`
+	Toolchain     []ToolchainObservation    `json:"toolchain"`
+	Profiles      []ProfileObservation      `json:"profiles"`
+	BlobReaders   []BlobReaderObservation   `json:"blob_readers"`
+	Service       ServiceControlObservation `json:"service_control"`
+	Explicit      ExplicitStateObservation  `json:"explicit_states"`
+	Phases        []PhaseObservation        `json:"phases"`
+	Checks        []CheckObservation        `json:"checks"`
+	Failures      []FailureObservation      `json:"failures"`
+	Decision      DecisionObservation       `json:"decision"`
+	Teardown      TeardownObservation       `json:"teardown"`
+	Claims        ReceiptClaims             `json:"claims"`
 }
 
 type ReceiptClaims struct {
@@ -267,9 +281,10 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		return nil, err
 	}
 	receipt := Receipt{
-		Schema: ReceiptSchema, PlanDigest: planDigest, SourceCommit: plan.SourceCommit,
+		Schema: receiptSchemaForPlan(plan), PlanDigest: planDigest, SourceCommit: plan.SourceCommit,
 		MeasuredOn: observation.MeasuredOn, Outcome: observation.Outcome,
-		Environment: observation.Environment, Toolchain: observation.Toolchain,
+		Environment: observation.Environment, HostToolchain: observation.HostToolchain,
+		Toolchain:   observation.Toolchain,
 		Profiles:    observation.Profiles,
 		BlobReaders: observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
@@ -334,9 +349,18 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if value.Schema != PlanSchema || !date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2}, value.Schema) ||
+		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
+	}
+	if value.Schema == PlanSchema && len(value.HostToolchain) != 0 {
+		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
+	}
+	if value.Schema == PlanSchemaV2 {
+		if err := validateHostToolchain(value.HostToolchain); err != nil {
+			return err
+		}
 	}
 	if !slices.Equal(value.Inputs, expectedInputs) || !slices.Equal(value.StopRules, frozenStopRules) {
 		return errors.New("T40.13 frozen inputs or stop rules changed")
@@ -372,9 +396,18 @@ func ValidatePlan(value Plan) error {
 }
 
 func ValidateObservation(value Observation) error {
-	if value.Schema != ObservationSchema || !date(value.MeasuredOn) ||
+	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2}, value.Schema) ||
+		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 observation identity is invalid")
+	}
+	if value.Schema == ObservationSchema && len(value.HostToolchain) != 0 {
+		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
+	}
+	if value.Schema == ObservationSchemaV2 {
+		if err := validateHostToolchain(value.HostToolchain); err != nil {
+			return err
+		}
 	}
 	if value.Environment.OS == "" || value.Environment.Arch == "" || value.Environment.MemoryBytes <= 0 ||
 		value.Environment.FilesystemTotalBytes <= 0 || value.Environment.FilesystemAvailableBytes < 0 ||
@@ -439,19 +472,23 @@ func ValidateReceipt(value Receipt, plan Plan) error {
 }
 
 func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) error {
-	if value.Schema != ReceiptSchema || !digestIdentity(value.PlanDigest) || value.SourceCommit != plan.SourceCommit ||
+	if value.Schema != receiptSchemaForPlan(plan) || !digestIdentity(value.PlanDigest) || value.SourceCommit != plan.SourceCommit ||
 		!date(value.MeasuredOn) || (value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 receipt identity is invalid")
 	}
 	observation := Observation{
-		Schema: ObservationSchema, MeasuredOn: value.MeasuredOn, Outcome: value.Outcome,
-		Environment: value.Environment, Toolchain: value.Toolchain,
-		Profiles: value.Profiles, BlobReaders: value.BlobReaders,
+		Schema: observationSchemaForPlan(plan), MeasuredOn: value.MeasuredOn, Outcome: value.Outcome,
+		Environment: value.Environment, HostToolchain: value.HostToolchain,
+		Toolchain: value.Toolchain,
+		Profiles:  value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
 	}
 	if err := ValidateObservation(observation); err != nil {
 		return err
+	}
+	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
+		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
 	if value.Outcome == "stopped" && value.Phases[0].Outcome == "succeeded" &&
 		len(value.Toolchain) == 0 &&
@@ -490,6 +527,46 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 		return errors.New("T40.13 receipt claims are invalid")
 	}
 	return nil
+}
+
+func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV2 {
+		return ObservationSchemaV2
+	}
+	return ObservationSchema
+}
+
+func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV2 {
+		return ReceiptSchemaV2
+	}
+	return ReceiptSchema
+}
+
+func validateHostToolchain(values []HostToolObservation) error {
+	want := []string{"go", "go-compile", "go-link", "git", "surreal"}
+	if len(values) != len(want) {
+		return errors.New("T40.13 host toolchain identity inventory is incomplete")
+	}
+	for index, name := range want {
+		value := values[index]
+		if value.Name != name || !boundedVersion(value.Version) || !digestIdentity(value.SHA256) {
+			return errors.New("T40.13 host toolchain identity is invalid")
+		}
+	}
+	return nil
+}
+
+func boundedVersion(value string) bool {
+	if len(value) == 0 || len(value) > 192 || strings.TrimSpace(value) != value {
+		return false
+	}
+	for _, character := range value {
+		if character < 0x20 || character > 0x7e {
+			return false
+		}
+	}
+	return true
 }
 
 func validateToolchainObservation(values []ToolchainObservation, required bool) error {

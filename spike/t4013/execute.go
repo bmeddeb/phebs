@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -111,6 +112,11 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
+	if plan.Schema == PlanSchemaV2 {
+		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
+		}
+	}
 	preparedBytes, err := os.ReadFile(request.Prepared)
 	if err != nil {
 		return nil, err
@@ -145,7 +151,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
-	observation := emptyObservation(environment)
+	observation := emptyObservationForPlan(environment, plan)
 	return &execution{
 		ctx: ctx, moduleRoot: moduleRoot, workspace: workspace,
 		plan: plan, planBytes: planBytes, prepared: prepared, observation: observation,
@@ -251,11 +257,17 @@ func (run *execution) execute() error {
 	if err := run.authorizedQueries(); err != nil {
 		return err
 	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
+		return err
+	}
 	if err := run.finalizeObservation(); err != nil {
 		return err
 	}
 	run.startPhase(11)
 	if err := run.teardown(); err != nil {
+		return err
+	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
 		return err
 	}
 	return ValidateObservation(run.observation)
@@ -264,7 +276,7 @@ func (run *execution) execute() error {
 func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	started := time.Now()
 	stopErr := run.stopServers()
-	measurementErr := run.captureFailedPhase()
+	measurementErr := errors.Join(run.captureFailedPhase(), run.verifyFrozenHostToolchain())
 	ceilingErr := run.enforceSafety()
 	info, err := os.Lstat(run.workspace)
 	if errors.Is(err, os.ErrNotExist) && run.observation.Teardown.Completed {
@@ -301,6 +313,15 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 		return Observation{}, err
 	}
 	return run.observation, stopErr
+}
+
+func (run *execution) verifyFrozenHostToolchain() error {
+	if run.plan.Schema != PlanSchemaV2 {
+		return nil
+	}
+	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return VerifyHostToolchain(verificationContext, run.plan.HostToolchain)
 }
 
 type stoppedClassification struct {
@@ -1409,6 +1430,15 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 			Selected: "continue", Reason: "execution_in_progress", Substantiated: true,
 		},
 	}
+}
+
+func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
+	value := emptyObservation(environment)
+	if plan.Schema == PlanSchemaV2 {
+		value.Schema = ObservationSchemaV2
+		value.HostToolchain = slices.Clone(plan.HostToolchain)
+	}
+	return value
 }
 
 func succeededPhase(name string, metrics PhaseMetrics) PhaseObservation {
