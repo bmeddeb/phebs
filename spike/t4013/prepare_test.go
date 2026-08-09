@@ -146,3 +146,81 @@ func TestGitEnvironmentDoesNotOverrideHomeOrInheritGitControls(t *testing.T) {
 		t.Fatal("git environment discarded unrelated process state")
 	}
 }
+
+func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
+	root := t.TempDir()
+	moduleRoot := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	privateRoot := filepath.Join(root, "private")
+	for _, path := range []string{moduleRoot, workspace, privateRoot} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	outside := filepath.Join(root, "outside")
+	if err := os.WriteFile(outside, []byte("retain"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := FrozenPlan(testSourceCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planPath := filepath.Join(privateRoot, "plan.json")
+	if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	profile := func(name, lane, port string) PreparedProfile {
+		laneRoot := filepath.Join(workspace, lane)
+		return PreparedProfile{
+			Name: name, Repository: filepath.Join(laneRoot, "repository.git"),
+			RepositoryName: "local.invalid/neutral-" + lane,
+			Config:         filepath.Join(laneRoot, "phebs.yaml"), Credential: filepath.Join(laneRoot, "api-key"),
+			DataDir: filepath.Join(laneRoot, "data"), Address: "127.0.0.1:" + port,
+			Catalog: filepath.Join(laneRoot, "catalog.json"), Revisions: map[string]string{
+				"a": testSourceCommit, "b": testSourceCommit, "a-return": testSourceCommit,
+			},
+		}
+	}
+	prepared := Prepared{Schema: PreparedSchema, PlanDigest: PlanDigest(planBytes), Profiles: []PreparedProfile{
+		profile("structural-2m-v1", "structural", "41731"),
+		profile("semantic-262144-v1", "semantic", "41732"),
+	}}
+	preparedBytes, err := MarshalPrepared(prepared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preparedPath := filepath.Join(privateRoot, "prepared.json")
+	if err := os.WriteFile(preparedPath, preparedBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, "wrong"); err == nil {
+		t.Fatal("cleanup accepted the wrong confirmation")
+	}
+	if _, err := os.Stat(workspace); err != nil {
+		t.Fatal("failed cleanup changed custody")
+	}
+	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{workspace, preparedPath} {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Fatalf("cleanup retained %s", path)
+		}
+	}
+	if content, err := os.ReadFile(outside); err != nil || string(content) != "retain" {
+		t.Fatal("cleanup crossed its exact custody boundary")
+	}
+	if err := os.WriteFile(preparedPath, preparedBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err != nil {
+		t.Fatalf("cleanup after ordinary custody teardown: %v", err)
+	}
+	if _, err := os.Lstat(preparedPath); !os.IsNotExist(err) {
+		t.Fatal("cleanup retained the post-execution prepared manifest")
+	}
+}

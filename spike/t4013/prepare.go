@@ -29,6 +29,7 @@ import (
 const (
 	PreparedSchema = "t4013-private-prepared-custody-v1"
 	PrepareConfirm = "prepare-neutral-t4013-custody"
+	CleanupConfirm = "cleanup-neutral-t4013-custody"
 )
 
 type PrepareRequest struct {
@@ -294,6 +295,53 @@ func DestroyPrepared(value Prepared, moduleRoot string) error {
 		}
 	}
 	return destroyCustody(workspace, moduleRoot)
+}
+
+// CleanupPrepared removes the exact custody named by a plan-bound prepared
+// manifest, then removes the manifest itself. It is safe to call after Execute
+// has already removed the custody directory.
+func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) error {
+	if confirm != CleanupConfirm || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(planPath) ||
+		!filepath.IsAbs(preparedPath) {
+		return errors.New("T40.13 prepared cleanup request is invalid")
+	}
+	realModuleRoot, err := filepath.EvalSymlinks(moduleRoot)
+	if err != nil {
+		return errors.New("T40.13 prepared cleanup module root is invalid")
+	}
+	for _, path := range []string{planPath, preparedPath} {
+		info, statErr := os.Lstat(path)
+		if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			return errors.New("T40.13 prepared cleanup control is invalid")
+		}
+	}
+	planBytes, err := os.ReadFile(planPath)
+	if err != nil {
+		return fmt.Errorf("read T40.13 cleanup plan: %w", err)
+	}
+	if _, err := DecodePlan(planBytes); err != nil {
+		return err
+	}
+	preparedBytes, err := os.ReadFile(preparedPath)
+	if err != nil {
+		return fmt.Errorf("read T40.13 cleanup custody: %w", err)
+	}
+	prepared, err := DecodePrepared(preparedBytes, PlanDigest(planBytes))
+	if err != nil {
+		return err
+	}
+	workspace := filepath.Dir(filepath.Dir(prepared.Profiles[0].Config))
+	if planPath == workspace || preparedPath == workspace || isWithin(planPath, workspace) ||
+		isWithin(preparedPath, workspace) {
+		return errors.New("T40.13 prepared cleanup controls must remain outside custody")
+	}
+	if err := DestroyPrepared(prepared, realModuleRoot); err != nil {
+		return err
+	}
+	if err := os.Remove(preparedPath); err != nil {
+		return fmt.Errorf("remove T40.13 prepared manifest: %w", err)
+	}
+	return nil
 }
 
 func validatePrepared(value Prepared) error {

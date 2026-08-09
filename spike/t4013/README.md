@@ -201,6 +201,66 @@ matches plus a citation and exact stopped phase/decision coherence remain
 required. Those corrections govern only a separately authorized future plan
 and do not retroactively strengthen this consumed run.
 
+## Large-Mac ceremony driver
+
+[`run-large-mac-ceremony.sh`](./run-large-mac-ceremony.sh) orchestrates a new
+neutral ceremony on a dedicated macOS host. Its defaults are the phebs clone at
+`~/phebs`, isolated state at `~/phebs-t4013-ceremony`, and loopback ports 41731
+and 41732. The driver verifies a clean exact checkout, the frozen 24-GiB memory
+and 120-GiB available-disk prerequisites, and the focused harness tests before
+it authors custody. A 64-GiB Mac with more than 500 GiB available exceeds those
+host prerequisites; the frozen production and review ceilings remain
+unchanged. Preflight also requires free loopback ports, SurrealDB on `PATH`,
+and the Go 1.26 toolchain line; it hydrates the checksum-verified module cache
+before all ceremony `go run` and measured toolchain builds switch to
+`GOPROXY=off`.
+
+The review seam is mandatory: `freeze` creates a new ceremony directory and
+prints its plan digest and signing-key fingerprint, then exits. Record and
+review both out of band. `execute` requires that exact reviewed digest, the
+same frozen signer, and the fixed approval phrase. Choose a new identifier for every
+attempt; existing directories, plans, observations, receipts, custody, and
+packages are never overwritten.
+
+```sh
+cd ~/phebs
+
+./spike/t4013/run-large-mac-ceremony.sh preflight
+
+CEREMONY_ID=t40r1-neutral-01
+./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
+
+# Stop here. Review and record the printed sha256 plan digest.
+APPROVED_PLAN_DIGEST=sha256:<reviewed-plan-digest>
+./spike/t4013/run-large-mac-ceremony.sh execute \
+  "$CEREMONY_ID" \
+  "$APPROVED_PLAN_DIGEST" \
+  execute-reviewed-neutral-t4013-plan
+
+./spike/t4013/run-large-mac-ceremony.sh verify "$CEREMONY_ID"
+```
+
+Execution uses the existing plan-bound preparer and destructive teardown. A
+new cleanup command removes the exact custody plus the credential-bearing
+prepared manifest even when execution stops before its ordinary teardown.
+The evidence directory retains only the plan, source-free observation,
+validated receipt, a small transfer manifest, checksum inventory, public
+signer material, and signature. The private signing key stays under the
+ceremony root and is never packaged. The script creates
+`<ceremony-id>-source-free.tgz` plus its SHA-256 sidecar for transfer back to a
+clean checkout of the exact sealed source commit, where it can be checked with:
+
+```sh
+./spike/t4013/run-large-mac-ceremony.sh verify-bundle \
+  /absolute/path/to/<ceremony-id>-source-free.tgz
+```
+
+This driver deliberately accepts no operator-corpus path. It exercises the
+frozen neutral two-million-owner profiles only. The separate 1.6-million-file,
+5,000-service private-target census/replay remains a later combined-scale
+ceremony after the service-cap program; using this driver does not authorize
+or imply that target replay.
+
 ```sh
 go test ./spike/t4013/... -count=1
 make docs-check

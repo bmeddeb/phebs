@@ -168,6 +168,18 @@ oracle. Early healthy settlement or a probe race remains an unclassified
 operational stop rather than `reduce`. The retained artifacts are unchanged and
 no rerun or closure is authorized.
 
+Large-host runner preparation (2026-08-08): a macOS ceremony driver now binds
+the default `~/phebs` checkout to isolated `~/phebs-t4013-ceremony` custody,
+checks the frozen host prerequisites, and keeps freeze/review separate from
+execution. A reviewed plan digest plus explicit confirmation is required
+before any giant authoring. Exact plan-bound cleanup removes both custody and
+the credential-bearing prepared manifest on completed or stopped execution;
+the return bundle allowlists and signs only the plan, source-free observation,
+validated receipt, transfer manifest, checksums, and public signer material.
+The driver authorizes no run by itself and accepts no private target corpus.
+The 1.6-million-file/5,000-service repository remains a separate combined-scale
+target replay after the service-cap program, not an Epic 40 neutral substitute.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
