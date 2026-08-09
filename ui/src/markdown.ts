@@ -35,14 +35,12 @@ purify.addHook('afterSanitizeAttributes', (node) => {
   }
   if (node.tagName === 'IMG') {
     // Do not resolve or fetch repo-relative (or any) image sources in v1.
-    // Replace with a placeholder built by construction from trusted parts
-    // only — a static class and the alt as textContent (never innerHTML,
-    // never an attacker-derived attribute). Nodes inserted here are NOT
-    // guaranteed to be re-sanitized, so the marker must carry nothing an
-    // attacker controls beyond inert text.
+    // Replace with an inert text placeholder: the 🖼 glyph marks it and the
+    // alt is set as textContent (never innerHTML). No class/attribute is
+    // set — DOMPurify re-cleans hook-inserted nodes against the allowlist
+    // (which now excludes class), so the marker carries only inert text.
     const alt = node.getAttribute('alt') ?? ''
     const marker = document.createElement('span')
-    marker.setAttribute('class', 'md-image-deferred')
     marker.textContent = alt ? `🖼 ${alt}` : '🖼 image'
     node.replaceWith(marker)
   }
@@ -57,12 +55,18 @@ const PURIFY_CONFIG = {
     'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
     'img', 'span',
   ],
-  ALLOWED_ATTR: ['href', 'title', 'alt', 'class', 'align'],
+  // `class` is deliberately NOT allowed: repository HTML must not reuse the
+  // app's classes for UI redressing (T44.3f). The image placeholder keeps
+  // its class because the hook inserts that node after sanitize.
+  ALLOWED_ATTR: ['href', 'title', 'alt', 'align'],
   // No data:/blob: URIs anywhere; only conventional link schemes.
   ALLOWED_URI_REGEXP: /^(?:https?|mailto):/i,
   FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select', 'iframe', 'object', 'embed', 'svg', 'math', 'script'],
   FORBID_ATTR: ['style', 'srcset', 'sizes', 'srcdoc', 'formaction'],
+  // The allowlist is strict: no data-* and no aria-* pass-through (both
+  // default to permissive in DOMPurify).
   ALLOW_DATA_ATTR: false,
+  ALLOW_ARIA_ATTR: false,
 }
 
 export function renderMarkdown(source: string): string {

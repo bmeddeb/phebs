@@ -480,38 +480,46 @@ function isMarkdownPath(path: string): boolean {
 }
 
 // Reading-surface prose (charter Read mode): a comfortable measure, clear
-// heading rhythm, and code that stays monospace and tinted. Nested styles
-// are addressed by tag since the HTML is sanitized renderer output.
-function markdownProse(tok: ReturnType<typeof usePhebsTokens>) {
-  return {
-    padding: '20px 22px',
-    maxWidth: '760px',
-    color: tok.textPrimary,
-    fontSize: '14px',
-    lineHeight: '1.65',
-    overflowWrap: 'anywhere' as const,
-    ':first-child': { marginTop: 0 },
-    ' h1': { fontSize: '24px', lineHeight: '1.3', fontWeight: 600, margin: '28px 0 12px', letterSpacing: '-0.02em' },
-    ' h2': { fontSize: '19px', lineHeight: '1.35', fontWeight: 600, margin: '24px 0 10px', paddingBottom: '5px', borderBottom: `1px solid ${tok.innerSep}` },
-    ' h3': { fontSize: '16px', fontWeight: 600, margin: '20px 0 8px' },
-    ' h4': { fontSize: '14px', fontWeight: 600, margin: '18px 0 6px' },
-    ' h5': { fontSize: '13px', fontWeight: 600, margin: '16px 0 6px' },
-    ' h6': { fontSize: '12px', fontWeight: 600, color: tok.textSecondary, margin: '16px 0 6px' },
-    ' p': { margin: '0 0 14px' },
-    ' a': { color: tok.selectedText, textDecoration: 'underline' },
-    ' ul, & ol': { margin: '0 0 14px', paddingLeft: '24px' },
-    ' li': { margin: '3px 0' },
-    ' blockquote': { margin: '0 0 14px', paddingLeft: '14px', borderLeft: `3px solid ${tok.cardBorder}`, color: tok.textSecondary },
-    ' code': { fontFamily: FONTS.MONO, fontSize: '12.5px', backgroundColor: tok.fill, borderRadius: '4px', padding: '1px 5px', color: tok.plainCode },
-    ' pre': { margin: '0 0 14px', padding: '12px 14px', backgroundColor: tok.bandBg, border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto' as const },
-    ' pre code': { backgroundColor: 'transparent', padding: 0, fontSize: '12px', lineHeight: '1.6' },
-    ' hr': { border: 'none', borderTop: `1px solid ${tok.innerSep}`, margin: '20px 0' },
-    ' table': { borderCollapse: 'collapse' as const, margin: '0 0 14px', fontSize: '13px', display: 'block', overflowX: 'auto' as const },
-    ' th, & td': { border: `1px solid ${tok.cardBorder}`, padding: '6px 10px', textAlign: 'left' as const },
-    ' th': { backgroundColor: tok.bandBg, fontWeight: 600 },
-    ' .md-image-deferred': { color: tok.textTertiary, fontStyle: 'italic' },
-  }
+// heading rhythm, and code that stays monospace and tinted. Emitted as a
+// single stylesheet scoped under a fixed wrapper class and rendered inline
+// with the preview — styletron is an atomic engine that turns descendant
+// keys into GLOBAL bare-tag rules (h1 {…}, a {…}), which would restyle the
+// whole app; a scoped <style> avoids that entirely (T44.3f P1). Every value
+// is a design-token constant, never user input, so the string is inert.
+const MARKDOWN_PROSE_CLASS = 'phebs-md'
+
+function markdownProseCss(tok: ReturnType<typeof usePhebsTokens>): string {
+  const s = MARKDOWN_PROSE_CLASS
+  return [
+    `.${s}{padding:20px 22px;max-width:760px;color:${tok.textPrimary};font-size:14px;line-height:1.65;overflow-wrap:anywhere}`,
+    `.${s}>:first-child{margin-top:0}`,
+    `.${s} h1{font-size:24px;line-height:1.3;font-weight:600;margin:28px 0 12px;letter-spacing:-0.02em}`,
+    `.${s} h2{font-size:19px;line-height:1.35;font-weight:600;margin:24px 0 10px;padding-bottom:5px;border-bottom:1px solid ${tok.innerSep}}`,
+    `.${s} h3{font-size:16px;font-weight:600;margin:20px 0 8px}`,
+    `.${s} h4{font-size:14px;font-weight:600;margin:18px 0 6px}`,
+    `.${s} h5{font-size:13px;font-weight:600;margin:16px 0 6px}`,
+    `.${s} h6{font-size:12px;font-weight:600;color:${tok.textSecondary};margin:16px 0 6px}`,
+    `.${s} p{margin:0 0 14px}`,
+    `.${s} a{color:${tok.selectedText};text-decoration:underline}`,
+    `.${s} ul,.${s} ol{margin:0 0 14px;padding-left:24px}`,
+    `.${s} li{margin:3px 0}`,
+    `.${s} blockquote{margin:0 0 14px;padding-left:14px;border-left:3px solid ${tok.cardBorder};color:${tok.textSecondary}}`,
+    `.${s} code{font-family:${FONTS.MONO};font-size:12.5px;background-color:${tok.fill};border-radius:4px;padding:1px 5px;color:${tok.plainCode}}`,
+    `.${s} pre{margin:0 0 14px;padding:12px 14px;background-color:${tok.bandBg};border:1px solid ${tok.innerSep};border-radius:8px;overflow-x:auto}`,
+    `.${s} pre code{background-color:transparent;padding:0;font-size:12px;line-height:1.6}`,
+    `.${s} hr{border:none;border-top:1px solid ${tok.innerSep};margin:20px 0}`,
+    `.${s} table{border-collapse:collapse;margin:0 0 14px;font-size:13px;display:block;overflow-x:auto}`,
+    `.${s} th,.${s} td{border:1px solid ${tok.cardBorder};padding:6px 10px;text-align:left}`,
+    `.${s} th{background-color:${tok.bandBg};font-weight:600}`,
+  ].join('')
 }
+
+// /api/source admits up to 10 MiB; marked + DOMPurify run synchronously on
+// the main thread, so an adversarial large document is bounded here (T44.3f
+// P1) before any render work — 128K UTF-16 units comfortably covers real
+// docs while capping the worst case. Over the bound, the source is offered
+// instead of freezing the tab.
+const MARKDOWN_PREVIEW_MAX_UNITS = 131_072
 
 function ViewTab({ href, label, active }: { href: string; label: string; active: boolean }) {
   const [css] = useStyletron()
@@ -544,9 +552,13 @@ function ViewTab({ href, label, active }: { href: string; label: string; active:
 function MarkdownPreview({ content }: { content: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  // The bound is checked before the lazy import, so an oversized document
+  // never touches marked/DOMPurify on the main thread.
+  const tooLarge = content.length > MARKDOWN_PREVIEW_MAX_UNITS
   const [html, setHtml] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
+    if (tooLarge) return
     let active = true
     setHtml(null)
     setFailed(false)
@@ -558,7 +570,10 @@ function MarkdownPreview({ content }: { content: string }) {
         if (active) setFailed(true)
       })
     return () => { active = false }
-  }, [content])
+  }, [content, tooLarge])
+  if (tooLarge) {
+    return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px', lineHeight: '18px' })}>This document is {Math.round(content.length / 1024)} KB; the preview is bounded to {MARKDOWN_PREVIEW_MAX_UNITS / 1024} KB. Switch to Markdown to read the full source.</div>
+  }
   if (failed) {
     return <div role="alert" className={css({ padding: '16px', color: tok.status.conflict.text, fontSize: '12px' })}>The preview could not be rendered. Switch to Markdown to read the source.</div>
   }
@@ -566,11 +581,16 @@ function MarkdownPreview({ content }: { content: string }) {
     return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px' })}>Rendering preview…</div>
   }
   return (
-    <div
-      className={css(markdownProse(tok))}
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      {/* Scoped, inert stylesheet (see markdownProseCss) — display:none, so
+          it adds no layout; the class scopes every rule to this subtree. */}
+      <style>{markdownProseCss(tok)}</style>
+      <div
+        className={MARKDOWN_PROSE_CLASS}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </>
   )
 }
 

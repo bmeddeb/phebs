@@ -56,8 +56,7 @@ describe('renderMarkdown trust boundary', () => {
     const html = renderMarkdown('![a diagram](./secret-relative.png)')
     expect(html).not.toContain('src=')
     expect(html).not.toContain('secret-relative.png')
-    expect(html).toContain('a diagram')
-    expect(html).toContain('md-image-deferred')
+    expect(html).toContain('🖼 a diagram')
   })
 
   it('strips style tags and attributes', () => {
@@ -76,5 +75,28 @@ describe('renderMarkdown trust boundary', () => {
     const html = renderMarkdown('<img src="x" srcset="https://evil.example 2x" alt="a">')
     expect(html).not.toContain('srcset')
     expect(html).not.toContain('evil.example')
+  })
+
+  it('strips author class attributes (no UI redressing via app classes) (T44.3f)', () => {
+    const html = renderMarkdown('<p class="css-selectedLineBg spoof">x</p>')
+    expect(html).not.toContain('css-selectedLineBg')
+    expect(html).not.toContain('class="spoof"')
+    expect(html).toContain('x')
+  })
+
+  it('strips aria-* attributes despite DOMPurify defaulting them on (T44.3f)', () => {
+    const html = renderMarkdown('<p aria-label="injected label" aria-hidden="true">visible</p>')
+    expect(html).not.toContain('aria-label')
+    expect(html).not.toContain('aria-hidden')
+    expect(html).toContain('visible')
+  })
+
+  it('renders images as an inert text placeholder with no attributes at all', () => {
+    const html = renderMarkdown('![alt text](x.png)')
+    expect(html).toContain('🖼 alt text')
+    expect(html).not.toContain('src=')
+    // With class stripped from the allowlist and the placeholder carrying
+    // no attributes, no class survives anywhere in rendered output.
+    expect(html).not.toContain('class=')
   })
 })

@@ -548,6 +548,17 @@ deferred: no frozen markdown fixture exists (all corpus .md are in the
 non-baseline-stable upstream zoekt repo) — the receipt route lands when
 a frozen fixture does; behavior is pinned by tests meanwhile. Suite
 565/565.
+Review follow-up (T44.3f): the prose styles were scoped under a fixed
+`.phebs-md` wrapper (they had leaked as global bare-tag rules — 12,
+reproduced live, now zero); the sanitizer dropped `class` and set
+ALLOW_ARIA_ATTR:false (author redressing/aria injection, both pinned by
+adversarial tests); and synchronous rendering is bounded to 128 KiB
+before the lazy import so a large document offers source rather than
+freezing the tab. The image placeholder no longer depends on a
+surviving class (DOMPurify 3.4.13 re-cleans hook-inserted nodes) — it
+is now inert 🖼+alt text. Suite 570/570. The review header cited four
+findings but only three reached the track (the third truncated, the
+fourth absent); any fourth is a separate follow-up.
 
 **T44.4 · Mermaid rendering with ELK** *(needs T44.3)* — mermaid fences
 in preview render as diagrams. AC: mermaid 11 with the ELK layout as the

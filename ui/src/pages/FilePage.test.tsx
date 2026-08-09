@@ -172,3 +172,25 @@ test('a line deep-link forces source even under view=preview (T44.3)', async () 
   expect(screen.queryByRole('heading', { name: 'Title' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Markdown' }).getAttribute('aria-current')).toBe('true')
 })
+
+test('a document over the preview ceiling offers source instead of freezing (T44.3f)', async () => {
+  const huge = '# Heading\n\n' + 'x'.repeat(140_000)
+  render(view('repo=r&path=docs%2FBIG.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: huge, encoding: 'utf8', size: huge.length })
+  })
+  // No rendered heading — the bound short-circuits before marked runs.
+  expect(screen.queryByRole('heading', { name: 'Heading' })).toBeNull()
+  expect(screen.getByText(/preview is bounded to 128 KB/)).toBeTruthy()
+})
+
+test('preview markup is scoped — no global bare-tag styles leak (T44.3f)', async () => {
+  render(view('repo=r&path=docs%2FREADME.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Title\n\ntext', encoding: 'utf8', size: 13 })
+  })
+  await screen.findByRole('heading', { name: 'Title' })
+  // The rendered heading lives under the fixed scoping wrapper class.
+  const heading = screen.getByRole('heading', { name: 'Title' })
+  expect(heading.closest('.phebs-md')).not.toBeNull()
+})
