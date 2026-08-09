@@ -2,6 +2,7 @@ package t4013
 
 import (
 	"archive/tar"
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -29,12 +30,14 @@ type privateToolchain struct {
 }
 
 type privateServer struct {
-	command *exec.Cmd
-	started time.Time
-	done    chan error
-	log     *os.File
-	logPath string
-	sampler *rssSampler
+	command  *exec.Cmd
+	started  time.Time
+	done     chan error
+	log      *os.File
+	logPath  string
+	sampler  *rssSampler
+	stopOnce sync.Once
+	stopErr  error
 }
 
 type rssSampler struct {
@@ -198,7 +201,12 @@ func frozenArchiveName(header *tar.Header) (string, error) {
 	return filepath.FromSlash(name), nil
 }
 
-func startPrivateServer(
+const (
+	maxStartupLogBytes = 64 << 20
+	startupLogPrefix   = "T40.13 startup lifecycle: "
+)
+
+func launchPrivateServer(
 	ctx context.Context,
 	profile PreparedProfile,
 	toolchain privateToolchain,
@@ -219,6 +227,7 @@ func startPrivateServer(
 		"PHEBS_ZOEKT_GIT_INDEX="+toolchain.Zoekt,
 		"PHEBS_FOCUSED_INDEX="+toolchain.Focused,
 		"PHEBS_BUF="+toolchain.Buf,
+		"PHEBS_T4013_STARTUP_DIAGNOSTICS=source-free-v1",
 	)
 	if err := command.Start(); err != nil {
 		_ = logFile.Close()
@@ -230,32 +239,122 @@ func startPrivateServer(
 	}
 	go func() { server.done <- command.Wait() }()
 	go server.sampler.run()
+	return server, nil
+}
+
+func awaitPrivateServerHealth(
+	ctx context.Context,
+	server *privateServer,
+	profile PreparedProfile,
+	label string,
+	deadlineLimit time.Duration,
+) (ServerStartupObservation, error) {
+	if ctx == nil || server == nil || deadlineLimit <= 0 {
+		return ServerStartupObservation{}, errors.New("T40.13 server health wait is invalid")
+	}
 	inspector, err := newProfileInspector(profile)
 	if err != nil {
-		_ = server.stop(15 * time.Second)
-		return nil, err
+		observation, observeErr := observeServerStartup(server, profile.Name, label, "inspector_error", "not_attempted", 0)
+		return observation, errors.Join(err, observeErr)
 	}
-	deadline := time.NewTimer(90 * time.Second)
+	deadline := time.NewTimer(deadlineLimit)
 	defer deadline.Stop()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
+	var attempts int64
+	lastHealthClass := "not_attempted"
 	for {
-		if healthErr := inspector.health(ctx, profile); healthErr == nil {
-			return server, nil
+		attempts++
+		healthClass, healthErr := inspector.healthClass(ctx, profile)
+		lastHealthClass = healthClass
+		if healthErr == nil {
+			return observeServerStartup(server, profile.Name, label, "healthy", "ok", attempts)
 		}
 		select {
 		case err := <-server.done:
-			server.sampler.close()
-			_ = logFile.Close()
-			return nil, errors.Join(err, errors.New("T40.13 server exited before health"))
+			// Preserve the single wait result for the idempotent stop path, which
+			// owns sampler and log closure even when readiness observes exit first.
+			server.done <- err
+			observation, observeErr := observeServerStartup(server, profile.Name, label, "exited", lastHealthClass, attempts)
+			return observation, errors.Join(err, observeErr, errors.New("T40.13 server exited before health"))
 		case <-deadline.C:
-			_ = server.stop(15 * time.Second)
-			return nil, errors.New("T40.13 server health deadline expired")
+			observation, observeErr := observeServerStartup(server, profile.Name, label, "deadline", lastHealthClass, attempts)
+			return observation, errors.Join(observeErr, errors.New("T40.13 server health deadline expired"))
 		case <-ticker.C:
 		case <-ctx.Done():
-			_ = server.stop(15 * time.Second)
-			return nil, ctx.Err()
+			observation, observeErr := observeServerStartup(server, profile.Name, label, "canceled", "context", attempts)
+			return observation, errors.Join(ctx.Err(), observeErr)
 		}
+	}
+}
+
+func observeServerStartup(
+	server *privateServer,
+	profile, label, outcome, healthClass string,
+	attempts int64,
+) (ServerStartupObservation, error) {
+	if server == nil || server.logPath == "" {
+		return ServerStartupObservation{}, errors.New("T40.13 startup observation is invalid")
+	}
+	logBytes, logDigest, stage, err := inspectStartupLog(server.logPath)
+	peakRSS, gitChildren, indexChildren, otherChildren := server.sampler.metrics()
+	if err != nil {
+		return ServerStartupObservation{}, err
+	}
+	return ServerStartupObservation{
+		Profile: profile, Label: label, Outcome: outcome, LastStage: stage,
+		LastHealthClass: healthClass, HealthAttempts: attempts,
+		WallMS: time.Since(server.started).Milliseconds(), PeakRSSBytes: peakRSS,
+		GitChildren: gitChildren, IndexChildren: indexChildren, OtherChildren: otherChildren,
+		LogBytes: logBytes, LogSHA256: logDigest,
+	}, nil
+}
+
+func inspectStartupLog(path string) (int64, string, string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, "", "", err
+	}
+	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > maxStartupLogBytes {
+		return 0, "", "", errors.Join(err, errors.New("T40.13 startup log exceeds its bound"))
+	}
+	hash := sha256.New()
+	tee := io.TeeReader(io.LimitReader(file, info.Size()), hash)
+	scanner := bufio.NewScanner(tee)
+	scanner.Buffer(make([]byte, 4<<10), 64<<10)
+	stage := "unreported"
+	for scanner.Scan() {
+		line := scanner.Text()
+		index := strings.Index(line, startupLogPrefix)
+		if index < 0 {
+			continue
+		}
+		var report struct {
+			Schema string `json:"schema"`
+			Stage  string `json:"stage"`
+		}
+		if err := decodeStrict([]byte(line[index+len(startupLogPrefix):]), &report); err != nil ||
+			report.Schema != "t4013-source-free-startup-v1" || !validStartupStage(report.Stage) {
+			return 0, "", "", errors.New("T40.13 startup lifecycle report is invalid")
+		}
+		stage = report.Stage
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, "", "", err
+	}
+	return info.Size(), "sha256:" + hex.EncodeToString(hash.Sum(nil)), stage, nil
+}
+
+func validStartupStage(stage string) bool {
+	switch stage {
+	case "process_started", "config_loaded", "data_directory_ready", "store_opened",
+		"authority_recovery_complete", "artifact_recovery_complete",
+		"scheduler_recovery_complete", "searcher_ready", "http_ready":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -263,25 +362,29 @@ func (server *privateServer) stop(timeout time.Duration) error {
 	if server == nil || server.command == nil || server.command.Process == nil {
 		return nil
 	}
-	_ = server.command.Process.Signal(os.Interrupt)
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	var waitErr error
-	select {
-	case waitErr = <-server.done:
-	case <-timer.C:
-		_ = server.command.Process.Kill()
-		waitErr = <-server.done
-	}
-	server.sampler.close()
-	closeErr := server.log.Close()
-	if waitErr != nil {
-		var exit *exec.ExitError
-		if !errors.As(waitErr, &exit) || exit.ExitCode() != -1 {
-			return errors.Join(waitErr, closeErr)
+	server.stopOnce.Do(func() {
+		_ = server.command.Process.Signal(os.Interrupt)
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+		var waitErr error
+		select {
+		case waitErr = <-server.done:
+		case <-timer.C:
+			_ = server.command.Process.Kill()
+			waitErr = <-server.done
 		}
-	}
-	return closeErr
+		server.sampler.close()
+		closeErr := server.log.Close()
+		if waitErr != nil {
+			var exit *exec.ExitError
+			if !errors.As(waitErr, &exit) || exit.ExitCode() != -1 {
+				server.stopErr = errors.Join(waitErr, closeErr)
+				return
+			}
+		}
+		server.stopErr = closeErr
+	})
+	return server.stopErr
 }
 
 func newRSSSampler(pid int) *rssSampler {

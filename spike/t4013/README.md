@@ -21,11 +21,12 @@ go run ./spike/t4013/cmd/t4013-freeze \
   -output /absolute/dedicated/t4013/plan.json
 ```
 
-The plan freezes 24 GiB memory and 120 GiB available-disk prerequisites, an
+The v3 plan freezes 24 GiB memory and 120 GiB available-disk prerequisites, an
 eight-hour total safety ceiling, 20 GiB peak RSS, 96 GiB maximum allocated data,
-and the production five-attempt ceiling. These are stop/decision fences for one
-neutral mechanics run, not a target SLO or supported-scale claim. They may not
-be raised after any measurement begins.
+the production five-attempt ceiling, and a 15-minute per-server health-readiness
+deadline. These are stop/decision fences for one neutral mechanics run, not a
+target SLO or supported-scale claim. They may not be raised after any
+measurement begins.
 
 The disk prerequisite reserves the existing filesystem's ten-percent hard
 watermark plus two structural search-generation reservations. That is the
@@ -220,15 +221,16 @@ frozen source.
 
 The review seam is mandatory: `freeze` creates a new ceremony directory and
 prints its plan digest and signing-key fingerprint, then exits. Record and
-review both out of band. The v2 plan also binds bounded public versions and
+review both out of band. The v3 plan also binds bounded public versions and
 executable SHA-256 identities for the Go driver, Go compiler, Go linker, Git,
-and supervised SurrealDB. Preparation verifies the same inventory before and
-after custody authoring; execution verifies it at admission, before result
-classification, and after teardown. Any drift destroys custody and leaves a
-stopped result unclassified. `execute` requires the exact reviewed digest, the
-same frozen signer, and the fixed approval phrase. Choose a new identifier for
-every attempt; existing directories, plans, observations, receipts, custody,
-and packages are never overwritten.
+and supervised SurrealDB. It additionally freezes the health-readiness deadline
+and requires bounded source-free startup observations. Preparation verifies the
+same tool inventory before and after custody authoring; execution verifies it
+at admission, before result classification, and after teardown. Any drift
+destroys custody and leaves a stopped result unclassified. `execute` requires
+the exact reviewed digest, the same frozen signer, and the fixed approval
+phrase. Choose a new identifier for every attempt; existing directories,
+plans, observations, receipts, custody, and packages are never overwritten.
 
 The `t40r1-neutral-01` freeze (plan
 `sha256:eb8430b97a543182e89c07b117cb7105e13ee4592171aa0992c7989f8c31ab8b`)
@@ -244,16 +246,40 @@ custody escape because filesystem cleaning removes its trailing slash. Receipt
 `sha256:27722137720b409348caeaeda0b5d3f8532fe399726fe307c3b98a17cb771d15`
 is signed, byte-reproducible, `unclassified`, and retains successful teardown
 with no custody. It is operational evidence only and is also permanently
-retired. Take 3 accepts the canonical directory marker while preserving the
+retired. Take 3 accepted the canonical directory marker while preserving the
 absolute/parent/noncanonical/symlink refusal boundary, and normalizes BSD/macOS
 `wc -c` output before enforcing the transfer-package byte ceiling.
+
+The independently verified `t40r1-neutral-03` v2 plan
+(`sha256:84b2cc6608ac50e1ebca9e4cc89b7fb7d24317376c1252008706bb3347998ef4`)
+at commit `b8856df15ee599e1eba71aded618cdcab1acb3c3` passed preflight, then the
+first structural server did not become healthy inside the executor's implicit
+90-second wait. The signed source-free package
+`sha256:33f437197e94a93aff578db4e28376d05ebceafa1077e26a72c994c9a1f1642d`
+and receipt
+`sha256:32fd7aacfbfa0c5378568407abae56ea3c95d16d52caa1cef1d70b5bc7446a3c`
+verify exactly. They record successful custody destruction and an
+`unclassified` stop, but the server was destroyed before its launch meter was
+registered, so no retained evidence identifies the stalled startup stage or
+complete process accounting. Take 3 is operational evidence only and is
+permanently retired.
+
+Take 4 uses the v3 plan/observation/receipt contract. Meter admission happens
+immediately after process launch and before health polling. The ordinary server
+emits opt-in closed startup stages; the retained observation contains only the
+profile/phase identity, outcome, last closed stage, health-error class, attempt
+and wall counts, RSS/child counts, and raw-log byte count plus SHA-256. It never
+contains raw logs, paths, configuration, credentials, source, or returned
+content. The plan prospectively freezes a 15-minute readiness deadline inside
+the unchanged eight-hour total wall ceiling. Historical v1/v2 bytes and Take 3
+remain verifiable and unchanged.
 
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-03
+CEREMONY_ID=t40r1-neutral-04
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

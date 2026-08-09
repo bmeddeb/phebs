@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -41,7 +42,6 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 		plan: Plan{Safety: frozenSafety}, phase: 5,
 	}
 	run.startPhase(5)
-	run.metersTracked = expectedPhaseMeters(5)
 	stopped, err := run.stopAfterFailure(directRecovery(errors.New("injected recovery failure")))
 	if err != nil {
 		t.Fatal(err)
@@ -77,6 +77,7 @@ func TestMissingFailedPhaseMeterCannotSelectFrozenDecision(t *testing.T) {
 		plan: Plan{Safety: frozenSafety},
 	}
 	run.startPhase(1)
+	run.metersExpected = 1
 	stopped, err := run.stopAfterFailure(errors.New("injected cold failure"))
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +100,7 @@ func TestStoppedExecutionResultPreservesObservationWhenShutdownFails(t *testing.
 }
 
 func TestV2ObservationStartsWithFrozenHostToolchain(t *testing.T) {
-	plan, err := frozenPlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	plan, err := frozenV2PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,6 +115,83 @@ func TestV2ObservationStartsWithFrozenHostToolchain(t *testing.T) {
 	plan.HostToolchain[0].Version = "mutated after observation creation"
 	if observation.HostToolchain[0].Version == plan.HostToolchain[0].Version {
 		t.Fatal("v2 observation aliases the mutable plan host toolchain")
+	}
+}
+
+func TestV3ObservationStartsWithFrozenHostToolchainAndStartupSchema(t *testing.T) {
+	plan, err := frozenPlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
+	if observation.Schema != ObservationSchemaV3 ||
+		len(observation.HostToolchain) != len(plan.HostToolchain) || len(observation.ServerStartups) != 0 {
+		t.Fatalf("v3 observation = %+v", observation)
+	}
+}
+
+func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	profileRoot := filepath.Join(workspace, "structural")
+	for _, path := range []string{module, workspace, profileRoot} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	serverPath := filepath.Join(root, "fake-phebs")
+	if err := os.WriteFile(serverPath, []byte("#!/bin/sh\ntrap 'exit 0' INT TERM\nwhile :; do :; done\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	credential := filepath.Join(profileRoot, "credential")
+	configPath := filepath.Join(profileRoot, "phebs.yaml")
+	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(configPath, []byte("test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), moduleRoot: module, workspace: workspace,
+		plan:      Plan{Schema: PlanSchemaV3, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
+		toolchain: privateToolchain{Schema: privateToolchainSchema, Phebs: serverPath},
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, Plan{Schema: PlanSchemaV3}),
+	}
+	run.startPhase(1)
+	server, meter, err := run.startServer(PreparedProfile{
+		Name: "structural-2m-v1", Config: configPath, Credential: credential,
+		Address: "127.0.0.1:1",
+	}, "cold", nil)
+	if err == nil || server == nil || meter == nil {
+		t.Fatalf("deadline start = %v, %v, %v", server, meter, err)
+	}
+	if stopErr := run.stopServers(); stopErr != nil {
+		t.Fatal(stopErr)
+	}
+	if _, finishErr := run.finishMeter(meter, nil); finishErr != nil {
+		t.Fatal(finishErr)
+	}
+	if captureErr := run.captureFailedPhase(); captureErr != nil {
+		t.Fatalf("failed startup measurement was not complete: %v", captureErr)
+	}
+	if len(run.observation.ServerStartups) != 1 {
+		t.Fatalf("startup inventory = %+v", run.observation.ServerStartups)
+	}
+	startup := run.observation.ServerStartups[0]
+	if startup.Outcome != "deadline" || startup.LastHealthClass != "transport" ||
+		startup.HealthAttempts == 0 || startup.WallMS < 250 || !digestIdentity(startup.LogSHA256) ||
+		run.observation.Phases[1].Metrics.WallMS < 250 {
+		t.Fatalf("startup = %+v, phase = %+v", startup, run.observation.Phases[1])
+	}
+	if time.Duration(startup.WallMS)*time.Millisecond < 250*time.Millisecond {
+		t.Fatalf("startup wall = %dms", startup.WallMS)
 	}
 }
 
@@ -136,7 +214,6 @@ func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	run.startPhase(1)
 	meter := &phaseMeter{}
 	run.trackMeter(meter)
-	run.metersTracked = expectedPhaseMeters(1)
 	if _, err := run.finishMeter(meter, nil); err == nil {
 		t.Fatal("invalid meter unexpectedly finalized")
 	}

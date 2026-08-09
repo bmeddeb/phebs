@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -183,16 +184,31 @@ func restore(args []string) error {
 	return nil
 }
 
+func reportT4013Startup(stage string) {
+	if os.Getenv("PHEBS_T4013_STARTUP_DIAGNOSTICS") != "source-free-v1" {
+		return
+	}
+	report, err := json.Marshal(struct {
+		Schema string `json:"schema"`
+		Stage  string `json:"stage"`
+	}{Schema: "t4013-source-free-startup-v1", Stage: stage})
+	if err == nil {
+		log.Printf("T40.13 startup lifecycle: %s", report)
+	}
+}
+
 func serve(args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
 	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
 	addr := flags.String("addr", "", "listen address (overrides config)")
 	_ = flags.Parse(args)
+	reportT4013Startup("process_started")
 
 	cfg, rawConfig, err := loadServerConfig(*cfgPath)
 	if err != nil {
 		return err
 	}
+	reportT4013Startup("config_loaded")
 	if fixture := os.Getenv("PHEBS_T307_NEUTRAL_SERVICE_REPO"); fixture != "" {
 		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
 			return err
@@ -266,6 +282,7 @@ func serve(args []string) error {
 	if err := os.MkdirAll(cfg.Server.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)
 	}
+	reportT4013Startup("data_directory_ready")
 	st, err := openStoreAfterRetentionWarning(
 		func(code string) {
 			log.Printf("WARNING: %s", code)
@@ -281,6 +298,7 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	reportT4013Startup("store_opened")
 	defer func() { _ = st.Close(context.Background()) }()
 	var callerReader *callerexecute.PublicationReader
 	if callerRegistry.Enabled() {
@@ -450,6 +468,7 @@ func serve(args []string) error {
 			relationshipRecovery.Unavailable, relationshipRecovery.Invalid,
 		)
 	}
+	reportT4013Startup("authority_recovery_complete")
 	if cfg.Lifecycle.EnabledFor() {
 		lifecycleController, lifecycleErr := lifecycle.NewController(
 			st, lifecycleOwners...,
@@ -625,6 +644,7 @@ func serve(args []string) error {
 			report.InvalidRepos, report.RevisionRepairs, report.LifecycleArtifacts,
 			report.Deleted)
 	}
+	reportT4013Startup("artifact_recovery_complete")
 	analysisUnits := cfg.AnalysisUnitScopes()
 	unitRepositories := make([]string, 0, len(analysisUnits))
 	for repository := range analysisUnits {
@@ -1118,6 +1138,8 @@ func serve(args []string) error {
 		runBackground(func() { ixRunner.Run(ctx) })
 	}
 
+	reportT4013Startup("scheduler_recovery_complete")
+
 	// T10.3: permission-aware visibility. Presence of the permissions block
 	// enables enforcement; the closure resolves one request's predicate (nil
 	// for administrators). Non-admins see public repos, repos their mapped
@@ -1178,6 +1200,7 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	reportT4013Startup("searcher_ready")
 	defer searcher.Close()
 	// Registered after Close so workers stop before the searcher's deferred
 	// close; stopBackground is idempotent and its earlier defer still protects
@@ -1446,11 +1469,16 @@ func serve(args []string) error {
 		_ = srv.Shutdown(shutdownCtx)
 	})
 
-	log.Printf("phebs %s listening on %s (data: %s)", version, cfg.Server.Addr, cfg.Server.DataDir)
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+	listener, err := net.Listen("tcp", cfg.Server.Addr)
+	if err != nil {
 		return err
 	}
-	// ListenAndServe returns as soon as Shutdown STARTS; wait for the drain so
+	log.Printf("phebs %s listening on %s (data: %s)", version, cfg.Server.Addr, cfg.Server.DataDir)
+	reportT4013Startup("http_ready")
+	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	// Serve returns as soon as Shutdown STARTS; wait for the drain so
 	// in-flight handlers (and their audit/usage writes) finish before the
 	// deferred store/searcher Closes run.
 	<-shutdownDone

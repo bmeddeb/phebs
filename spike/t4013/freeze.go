@@ -32,6 +32,13 @@ var frozenSafety = SafetyEnvelope{
 	MaximumDataAllocatedBytes: 96 << 30, MaximumRetriesPerUnit: 5,
 }
 
+var frozenSafetyV3 = SafetyEnvelope{
+	MinimumMemoryBytes: 24 << 30, MinimumAvailableDiskBytes: 120 << 30,
+	MaximumTotalWallMS: 8 * 60 * 60 * 1000, MaximumPeakRSSBytes: 20 << 30,
+	MaximumDataAllocatedBytes: 96 << 30, MaximumRetriesPerUnit: 5,
+	ServerHealthDeadlineMS: 15 * 60 * 1000,
+}
+
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
 		Schema: PlanSchema, FrozenOn: "2026-08-08", SourceCommit: sourceCommit,
@@ -58,6 +65,20 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 }
 
 func frozenPlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := FrozenPlan(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV3
+	value.HostToolchain = slices.Clone(hostToolchain)
+	value.Safety = frozenSafetyV3
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func frozenV2PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
 	value, err := FrozenPlan(sourceCommit)
 	if err != nil {
 		return Plan{}, err

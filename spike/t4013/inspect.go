@@ -94,6 +94,27 @@ func (inspector *profileInspector) health(ctx context.Context, profile PreparedP
 	return nil
 }
 
+func (inspector *profileInspector) healthClass(
+	ctx context.Context,
+	profile PreparedProfile,
+) (string, error) {
+	err := inspector.health(ctx, profile)
+	if err == nil {
+		return "ok", nil
+	}
+	if ctx.Err() != nil {
+		return "context", err
+	}
+	switch message := err.Error(); {
+	case strings.Contains(message, "returned status"):
+		return "status", err
+	case strings.Contains(message, "response") || strings.Contains(message, "health is invalid"):
+		return "response", err
+	default:
+		return "transport", err
+	}
+}
+
 func (inspector *profileInspector) inspect(
 	ctx context.Context,
 	profile PreparedProfile,

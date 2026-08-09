@@ -109,7 +109,7 @@ func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 
 func TestV2PlanAndReceiptBindExactHostToolchain(t *testing.T) {
 	hostToolchain := fakeHostToolchain()
-	plan, err := frozenPlanWithHostToolchain(testSourceCommit, hostToolchain)
+	plan, err := frozenV2PlanWithHostToolchain(testSourceCommit, hostToolchain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +140,29 @@ func TestV2PlanAndReceiptBindExactHostToolchain(t *testing.T) {
 	plan.HostToolchain[1].Version = "go tool compile changed"
 	if err := ValidateReceipt(receipt, plan); err == nil {
 		t.Fatal("receipt passed a differently frozen host toolchain")
+	}
+}
+
+func TestV3PlanFreezesServerHealthDeadline(t *testing.T) {
+	plan, err := frozenPlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV3 || plan.Safety.ServerHealthDeadlineMS != 15*60*1000 {
+		t.Fatalf("v3 plan = %+v", plan)
+	}
+	changed := plan
+	changed.Safety.ServerHealthDeadlineMS--
+	if _, err := MarshalPlan(changed); err == nil {
+		t.Fatal("changed server health deadline passed")
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV3 || decoded.Safety != frozenSafetyV3 {
+		t.Fatalf("decoded v3 plan = %+v, %v", decoded, err)
 	}
 }
 
@@ -306,6 +329,51 @@ func TestStoppedPreflightFailureMayLackExecutableDigests(t *testing.T) {
 	}
 	if _, err := DecodeReceipt(receiptBytes, plan); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestV3StoppedReceiptBindsStartupDeadlineObservation(t *testing.T) {
+	plan, err := frozenPlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedObservation()
+	value.Schema = ObservationSchemaV3
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	value.Outcome = "stopped"
+	value.ServerStartups = []ServerStartupObservation{{
+		Profile: "structural-2m-v1", Label: "cold", Outcome: "deadline",
+		LastStage: "store_opened", LastHealthClass: "transport", HealthAttempts: 100,
+		WallMS: plan.Safety.ServerHealthDeadlineMS, PeakRSSBytes: 1,
+		LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	}}
+	value.Failures = []FailureObservation{{Phase: "cold", Class: "execution", Code: "operational_failure"}}
+	value.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	for index := range value.Phases {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	value.Phases[1] = PhaseObservation{Name: "cold", Outcome: "failed", Metrics: PhaseMetrics{
+		WallMS: plan.Safety.ServerHealthDeadlineMS, PeakRSSBytes: 1,
+	}}
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Checks = frozenChecks(false)
+	value.Teardown = TeardownObservation{Completed: true}
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV3 || len(receipt.ServerStartups) != 1 {
+		t.Fatalf("v3 stopped receipt = %+v, %v", receipt, err)
+	}
+	receipt.ServerStartups[0].WallMS--
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("startup observation preceding the frozen deadline passed")
 	}
 }
 

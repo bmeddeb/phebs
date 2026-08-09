@@ -3,6 +3,8 @@ package t4013
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,6 +33,39 @@ func TestExtractFrozenSourceAcceptsCanonicalGitDirectoryHeaders(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o700 {
 		t.Fatalf("extracted executable mode = %v", info.Mode().Perm())
+	}
+}
+
+func TestInspectStartupLogRetainsOnlyClosedStageAndDigest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	raw := []byte("private startup detail stays in custody\n" +
+		"2026/08/08 00:00:00 T40.13 startup lifecycle: {\"schema\":\"t4013-source-free-startup-v1\",\"stage\":\"store_opened\"}\n" +
+		"more private detail stays in custody\n")
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bytes, digest, stage, err := inspectStartupLog(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(raw)
+	if bytes != int64(len(raw)) || digest != "sha256:"+hex.EncodeToString(sum[:]) || stage != "store_opened" {
+		t.Fatalf("startup log = %d, %q, %q", bytes, digest, stage)
+	}
+	if digest == string(raw) {
+		t.Fatal("startup diagnostic retained raw log content")
+	}
+}
+
+func TestInspectStartupLogRejectsUnknownStage(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, []byte(
+		"T40.13 startup lifecycle: {\"schema\":\"t4013-source-free-startup-v1\",\"stage\":\"private_path\"}\n",
+	), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := inspectStartupLog(path); err == nil {
+		t.Fatal("unknown startup stage passed")
 	}
 }
 

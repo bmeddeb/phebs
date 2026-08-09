@@ -215,6 +215,26 @@ future evidence; only the generated source-free tarball may cross machines.
 Take 3 requires a new commit, signer, `t40r1-neutral-03` plan, and independent
 review. No rerun, scale, topology, release, or Epic-closure claim is implied.
 
+Large-host Take 3 disposition and Take 4 correction (2026-08-08): Take 3 plan
+`sha256:84b2cc6608ac50e1ebca9e4cc89b7fb7d24317376c1252008706bb3347998ef4`
+at commit `b8856df15ee599e1eba71aded618cdcab1acb3c3` passed preflight, then the
+first structural server missed the executor's implicit 90-second health wait.
+The signed source-free package
+`sha256:33f437197e94a93aff578db4e28376d05ebceafa1077e26a72c994c9a1f1642d`
+and receipt
+`sha256:32fd7aacfbfa0c5378568407abae56ea3c95d16d52caa1cef1d70b5bc7446a3c`
+verify exactly, retain successful custody destruction, and correctly remain
+`unclassified`; because the launch meter was registered only after health, the
+retained evidence cannot identify the stalled startup stage or complete
+process accounting. Take 4 advances prospectively to v3 plan/observation/
+receipt schemas, freezes a 15-minute per-server readiness deadline inside the
+unchanged eight-hour total ceiling, registers the meter at process launch, and
+retains only closed source-free startup stage/error/count/digest facts. Raw
+logs and all custody still remain private and are destroyed. V1/v2 artifacts
+stay byte-verifiable. `neutral-03` is permanently retired; Take 4 requires a
+new commit, signer, `t40r1-neutral-04` plan, and independent review. This is no
+scale, topology, SLO, release, rerun, or Epic-closure result.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

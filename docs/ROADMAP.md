@@ -727,6 +727,11 @@ catalog, relationship, or correctness authority.
 - T40.13 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
+- T40.R1 Take 3 is a verified `unclassified` startup-readiness stop, not a
+  convergence result. Take 4 is the only authorized preparation: its v3 plan
+  freezes the per-server readiness deadline, meters from process launch, and
+  retains a closed source-free startup diagnostic. It still requires a new
+  signer and independent plan review before execution.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

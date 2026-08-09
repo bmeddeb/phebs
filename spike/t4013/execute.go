@@ -71,7 +71,9 @@ type execution struct {
 	activeMeters   map[*phaseMeter]struct{}
 	partialMetrics PhaseMetrics
 	metersTracked  int
+	metersExpected int
 	measurementErr error
+	liveServers    []*privateServer
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
@@ -112,7 +114,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
-	if plan.Schema == PlanSchemaV2 {
+	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -316,7 +318,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 }
 
 func (run *execution) verifyFrozenHostToolchain() error {
-	if run.plan.Schema != PlanSchemaV2 {
+	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -373,6 +375,7 @@ func (run *execution) startPhase(index int) {
 	run.activeMeters = make(map[*phaseMeter]struct{})
 	run.partialMetrics = PhaseMetrics{}
 	run.metersTracked = 0
+	run.metersExpected = 0
 	run.measurementErr = nil
 }
 
@@ -380,7 +383,42 @@ func (run *execution) trackMeter(meter *phaseMeter) {
 	if meter != nil {
 		run.activeMeters[meter] = struct{}{}
 		run.metersTracked++
+		run.metersExpected++
 	}
+}
+
+func (run *execution) trackExpectedMeter(meter *phaseMeter) {
+	if meter != nil {
+		run.activeMeters[meter] = struct{}{}
+		run.metersTracked++
+	}
+}
+
+func (run *execution) startServer(
+	profile PreparedProfile,
+	label string,
+	before *privateProfileSnapshot,
+) (*privateServer, *phaseMeter, error) {
+	run.metersExpected++
+	server, err := launchPrivateServer(run.ctx, profile, run.toolchain, label)
+	if err != nil {
+		return nil, nil, err
+	}
+	run.liveServers = append(run.liveServers, server)
+	meter, err := beginInitialPhaseMeter(server, run.workspace, before)
+	if err != nil {
+		return server, nil, err
+	}
+	run.trackExpectedMeter(meter)
+	deadline := 90 * time.Second
+	if run.plan.Schema == PlanSchemaV3 {
+		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
+	}
+	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
+	if run.plan.Schema == PlanSchemaV3 && startup.Profile != "" {
+		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
+	}
+	return server, meter, healthErr
 }
 
 func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapshot) (PhaseMetrics, error) {
@@ -403,7 +441,7 @@ func (run *execution) captureFailedPhase() error {
 		metrics = run.observation.Phases[run.phase].Metrics
 	}
 	captureErr := run.measurementErr
-	if run.metersTracked < expectedPhaseMeters(run.phase) {
+	if run.metersTracked < run.metersExpected {
 		captureErr = errors.New("T40.13 failed phase lacks its complete meter inventory")
 	}
 	for meter := range run.activeMeters {
@@ -432,30 +470,14 @@ func (run *execution) captureFailedPhase() error {
 	return captureErr
 }
 
-func expectedPhaseMeters(phase int) int {
-	switch phase {
-	case 1, 5, 10:
-		return 2
-	case 2, 3, 4, 6, 7, 8, 9:
-		return 1
-	default:
-		return 0
-	}
-}
-
 func (run *execution) cold() error {
 	started := time.Now()
 	structural, semantic := run.prepared.Profiles[0], run.prepared.Profiles[1]
-	server, err := startPrivateServer(run.ctx, structural, run.toolchain, "cold")
+	server, meter, err := run.startServer(structural, "cold", nil)
 	if err != nil {
 		return err
 	}
 	run.structural = server
-	meter, err := beginInitialPhaseMeter(server, run.workspace, nil)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	run.structA, err = waitSnapshot(run.ctx, structural, "a", 2*time.Hour)
 	if err != nil {
 		return err
@@ -468,16 +490,11 @@ func (run *execution) cold() error {
 		return err
 	}
 	run.structural = nil
-	server, err = startPrivateServer(run.ctx, semantic, run.toolchain, "cold")
+	server, meter, err = run.startServer(semantic, "cold", nil)
 	if err != nil {
 		return err
 	}
 	run.semantic = server
-	meter, err = beginInitialPhaseMeter(server, run.workspace, nil)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	run.semanticA, err = waitSnapshot(run.ctx, semantic, "a", 2*time.Hour)
 	if err != nil {
 		return err
@@ -504,16 +521,11 @@ func (run *execution) warmNoop() error {
 		}
 		run.structural = nil
 	}
-	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "warm-noop")
+	server, meter, err := run.startServer(profile, "warm-noop", &run.structA)
 	if err != nil {
 		return err
 	}
 	run.structural = server
-	meter, err := beginInitialPhaseMeter(server, run.workspace, &run.structA)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	after, err := waitSnapshot(run.ctx, profile, "a", 20*time.Minute)
 	if err != nil {
 		return err
@@ -596,15 +608,10 @@ func (run *execution) interruption() error {
 	if err := verifyRestoredBoundary(run.ctx, profile, run.semanticA); err != nil {
 		return directRecovery(err)
 	}
-	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "interruption-first")
+	server, meter, err := run.startServer(profile, "interruption-first", &run.semanticA)
 	if err != nil {
 		return err
 	}
-	meter, err := beginInitialPhaseMeter(server, run.workspace, &run.semanticA)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
 		_ = server.stop(30 * time.Second)
 		return err
@@ -616,16 +623,11 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
-	server, err = startPrivateServer(run.ctx, profile, run.toolchain, "interruption-restart")
+	server, restartMeter, err := run.startServer(profile, "interruption-restart", &run.semanticA)
 	if err != nil {
 		return err
 	}
 	run.semantic = server
-	restartMeter, err := beginInitialPhaseMeter(server, run.workspace, &run.semanticA)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(restartMeter)
 	after, err := waitSnapshot(run.ctx, profile, "a", 2*time.Hour)
 	if err != nil {
 		return directRecovery(err)
@@ -651,16 +653,11 @@ func (run *execution) interruption() error {
 
 func (run *execution) staleWorker() error {
 	profile := run.prepared.Profiles[1]
-	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "stale-worker")
+	server, meter, err := run.startServer(profile, "stale-worker", &run.semanticA)
 	if err != nil {
 		return err
 	}
 	run.semantic = server
-	meter, err := beginInitialPhaseMeter(server, run.workspace, &run.semanticA)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	cursor, err := newChunkLifecycleCursor(server.logPath, meter.logOffset)
 	if err != nil {
 		return err
@@ -992,16 +989,11 @@ func (run *execution) archiveRestore() error {
 	if err := verifyRestoredBoundary(run.ctx, profile, run.structAR); err != nil {
 		return directRecovery(err)
 	}
-	server, err := startPrivateServer(run.ctx, profile, run.toolchain, "archive-restore")
+	server, meter, err := run.startServer(profile, "archive-restore", &run.structAR)
 	if err != nil {
 		return err
 	}
 	run.structural = server
-	meter, err := beginInitialPhaseMeter(server, run.workspace, &run.structAR)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(meter)
 	after, err := waitSnapshot(run.ctx, profile, "a-return", 2*time.Hour)
 	if err != nil {
 		return directRecovery(err)
@@ -1058,16 +1050,11 @@ func (run *execution) authorizedQueries() error {
 	}
 	run.trackMeter(structMeter)
 	semanticProfile := run.prepared.Profiles[1]
-	semanticServer, err := startPrivateServer(run.ctx, semanticProfile, run.toolchain, "authorized-query")
+	semanticServer, semanticMeter, err := run.startServer(semanticProfile, "authorized-query", &run.semanticA)
 	if err != nil {
 		return err
 	}
 	run.semantic = semanticServer
-	semanticMeter, err := beginInitialPhaseMeter(semanticServer, run.workspace, &run.semanticA)
-	if err != nil {
-		return err
-	}
-	run.trackMeter(semanticMeter)
 	semanticAfter, err := waitSnapshot(run.ctx, semanticProfile, "a", 20*time.Minute)
 	if err != nil {
 		return err
@@ -1203,14 +1190,12 @@ func (run *execution) enforceSafety() error {
 
 func (run *execution) stopServers() error {
 	var result error
-	if run.structural != nil {
-		result = errors.Join(result, run.structural.stop(30*time.Second))
-		run.structural = nil
+	for _, server := range run.liveServers {
+		result = errors.Join(result, server.stop(30*time.Second))
 	}
-	if run.semantic != nil {
-		result = errors.Join(result, run.semantic.stop(30*time.Second))
-		run.semantic = nil
-	}
+	run.liveServers = nil
+	run.structural = nil
+	run.semantic = nil
 	return result
 }
 
@@ -1434,9 +1419,12 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 
 func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
 	value := emptyObservation(environment)
-	if plan.Schema == PlanSchemaV2 {
+	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
+	}
+	if plan.Schema == PlanSchemaV3 {
+		value.Schema = ObservationSchemaV3
 	}
 	return value
 }

@@ -18,10 +18,13 @@ import (
 const (
 	PlanSchema                 = "t4013-neutral-convergence-plan-v1"
 	PlanSchemaV2               = "t4013-neutral-convergence-plan-v2"
+	PlanSchemaV3               = "t4013-neutral-convergence-plan-v3"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
+	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
+	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -83,6 +86,7 @@ type SafetyEnvelope struct {
 	MaximumPeakRSSBytes       int64 `json:"maximum_peak_rss_bytes"`
 	MaximumDataAllocatedBytes int64 `json:"maximum_data_allocated_bytes"`
 	MaximumRetriesPerUnit     int   `json:"maximum_retries_per_unit"`
+	ServerHealthDeadlineMS    int64 `json:"server_health_deadline_ms,omitempty"`
 }
 
 type StopRule struct {
@@ -104,21 +108,41 @@ type PlanClaims struct {
 }
 
 type Observation struct {
-	Schema        string                    `json:"schema"`
-	MeasuredOn    string                    `json:"measured_on"`
-	Outcome       string                    `json:"outcome"`
-	Environment   EnvironmentObservation    `json:"environment"`
-	HostToolchain []HostToolObservation     `json:"host_toolchain,omitempty"`
-	Toolchain     []ToolchainObservation    `json:"toolchain"`
-	Profiles      []ProfileObservation      `json:"profiles"`
-	BlobReaders   []BlobReaderObservation   `json:"blob_readers"`
-	Service       ServiceControlObservation `json:"service_control"`
-	Explicit      ExplicitStateObservation  `json:"explicit_states"`
-	Phases        []PhaseObservation        `json:"phases"`
-	Checks        []CheckObservation        `json:"checks"`
-	Failures      []FailureObservation      `json:"failures"`
-	Decision      DecisionObservation       `json:"decision"`
-	Teardown      TeardownObservation       `json:"teardown"`
+	Schema         string                     `json:"schema"`
+	MeasuredOn     string                     `json:"measured_on"`
+	Outcome        string                     `json:"outcome"`
+	Environment    EnvironmentObservation     `json:"environment"`
+	HostToolchain  []HostToolObservation      `json:"host_toolchain,omitempty"`
+	Toolchain      []ToolchainObservation     `json:"toolchain"`
+	ServerStartups []ServerStartupObservation `json:"server_startups,omitempty"`
+	Profiles       []ProfileObservation       `json:"profiles"`
+	BlobReaders    []BlobReaderObservation    `json:"blob_readers"`
+	Service        ServiceControlObservation  `json:"service_control"`
+	Explicit       ExplicitStateObservation   `json:"explicit_states"`
+	Phases         []PhaseObservation         `json:"phases"`
+	Checks         []CheckObservation         `json:"checks"`
+	Failures       []FailureObservation       `json:"failures"`
+	Decision       DecisionObservation        `json:"decision"`
+	Teardown       TeardownObservation        `json:"teardown"`
+}
+
+// ServerStartupObservation retains only bounded, source-free readiness facts.
+// The raw startup log, configuration, paths, credentials, and process output
+// remain in custody and are destroyed after the ceremony.
+type ServerStartupObservation struct {
+	Profile         string `json:"profile"`
+	Label           string `json:"label"`
+	Outcome         string `json:"outcome"`
+	LastStage       string `json:"last_stage"`
+	LastHealthClass string `json:"last_health_class"`
+	HealthAttempts  int64  `json:"health_attempts"`
+	WallMS          int64  `json:"wall_ms"`
+	PeakRSSBytes    int64  `json:"peak_rss_bytes"`
+	GitChildren     int64  `json:"git_children"`
+	IndexChildren   int64  `json:"index_children"`
+	OtherChildren   int64  `json:"other_children"`
+	LogBytes        int64  `json:"log_bytes"`
+	LogSHA256       string `json:"log_sha256"`
 }
 
 type ToolchainObservation struct {
@@ -236,24 +260,25 @@ type TeardownObservation struct {
 }
 
 type Receipt struct {
-	Schema        string                    `json:"schema"`
-	PlanDigest    string                    `json:"plan_digest"`
-	SourceCommit  string                    `json:"source_commit"`
-	MeasuredOn    string                    `json:"measured_on"`
-	Outcome       string                    `json:"outcome"`
-	Environment   EnvironmentObservation    `json:"environment"`
-	HostToolchain []HostToolObservation     `json:"host_toolchain,omitempty"`
-	Toolchain     []ToolchainObservation    `json:"toolchain"`
-	Profiles      []ProfileObservation      `json:"profiles"`
-	BlobReaders   []BlobReaderObservation   `json:"blob_readers"`
-	Service       ServiceControlObservation `json:"service_control"`
-	Explicit      ExplicitStateObservation  `json:"explicit_states"`
-	Phases        []PhaseObservation        `json:"phases"`
-	Checks        []CheckObservation        `json:"checks"`
-	Failures      []FailureObservation      `json:"failures"`
-	Decision      DecisionObservation       `json:"decision"`
-	Teardown      TeardownObservation       `json:"teardown"`
-	Claims        ReceiptClaims             `json:"claims"`
+	Schema         string                     `json:"schema"`
+	PlanDigest     string                     `json:"plan_digest"`
+	SourceCommit   string                     `json:"source_commit"`
+	MeasuredOn     string                     `json:"measured_on"`
+	Outcome        string                     `json:"outcome"`
+	Environment    EnvironmentObservation     `json:"environment"`
+	HostToolchain  []HostToolObservation      `json:"host_toolchain,omitempty"`
+	Toolchain      []ToolchainObservation     `json:"toolchain"`
+	ServerStartups []ServerStartupObservation `json:"server_startups,omitempty"`
+	Profiles       []ProfileObservation       `json:"profiles"`
+	BlobReaders    []BlobReaderObservation    `json:"blob_readers"`
+	Service        ServiceControlObservation  `json:"service_control"`
+	Explicit       ExplicitStateObservation   `json:"explicit_states"`
+	Phases         []PhaseObservation         `json:"phases"`
+	Checks         []CheckObservation         `json:"checks"`
+	Failures       []FailureObservation       `json:"failures"`
+	Decision       DecisionObservation        `json:"decision"`
+	Teardown       TeardownObservation        `json:"teardown"`
+	Claims         ReceiptClaims              `json:"claims"`
 }
 
 type ReceiptClaims struct {
@@ -284,7 +309,7 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		Schema: receiptSchemaForPlan(plan), PlanDigest: planDigest, SourceCommit: plan.SourceCommit,
 		MeasuredOn: observation.MeasuredOn, Outcome: observation.Outcome,
 		Environment: observation.Environment, HostToolchain: observation.HostToolchain,
-		Toolchain:   observation.Toolchain,
+		Toolchain: observation.Toolchain, ServerStartups: observation.ServerStartups,
 		Profiles:    observation.Profiles,
 		BlobReaders: observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
@@ -349,7 +374,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -357,7 +382,7 @@ func ValidatePlan(value Plan) error {
 	if value.Schema == PlanSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
 	}
-	if value.Schema == PlanSchemaV2 {
+	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -365,7 +390,11 @@ func ValidatePlan(value Plan) error {
 	if !slices.Equal(value.Inputs, expectedInputs) || !slices.Equal(value.StopRules, frozenStopRules) {
 		return errors.New("T40.13 frozen inputs or stop rules changed")
 	}
-	if value.Safety != frozenSafety {
+	wantSafety := frozenSafety
+	if value.Schema == PlanSchemaV3 {
+		wantSafety = frozenSafetyV3
+	}
+	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
 	}
 	for _, input := range value.Inputs {
@@ -376,7 +405,9 @@ func ValidatePlan(value Plan) error {
 	safety := value.Safety
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
-		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 {
+		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
+		value.Schema == PlanSchemaV3 && safety.ServerHealthDeadlineMS <= 0 ||
+		value.Schema != PlanSchemaV3 && safety.ServerHealthDeadlineMS != 0 {
 		return errors.New("T40.13 safety envelope is invalid")
 	}
 	wantDecisions := []string{"continue", "reduce", "cohort_experiment", "p6_investigation"}
@@ -396,7 +427,7 @@ func ValidatePlan(value Plan) error {
 }
 
 func ValidateObservation(value Observation) error {
-	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2}, value.Schema) ||
+	if !slices.Contains([]string{ObservationSchema, ObservationSchemaV2, ObservationSchemaV3}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
 		return errors.New("T40.13 observation identity is invalid")
@@ -404,7 +435,7 @@ func ValidateObservation(value Observation) error {
 	if value.Schema == ObservationSchema && len(value.HostToolchain) != 0 {
 		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
 	}
-	if value.Schema == ObservationSchemaV2 {
+	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -417,6 +448,14 @@ func ValidateObservation(value Observation) error {
 	}
 	if err := validateToolchainObservation(value.Toolchain, value.Outcome == "completed"); err != nil {
 		return err
+	}
+	if value.Schema != ObservationSchemaV3 && len(value.ServerStartups) != 0 {
+		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
+	}
+	if value.Schema == ObservationSchemaV3 {
+		if err := validateServerStartups(value.ServerStartups); err != nil {
+			return err
+		}
 	}
 	if len(value.Profiles) != 2 || value.Profiles[0].Name != "structural-2m-v1" ||
 		value.Profiles[1].Name != "semantic-262144-v1" {
@@ -479,8 +518,8 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	observation := Observation{
 		Schema: observationSchemaForPlan(plan), MeasuredOn: value.MeasuredOn, Outcome: value.Outcome,
 		Environment: value.Environment, HostToolchain: value.HostToolchain,
-		Toolchain: value.Toolchain,
-		Profiles:  value.Profiles, BlobReaders: value.BlobReaders,
+		Toolchain: value.Toolchain, ServerStartups: value.ServerStartups,
+		Profiles: value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
 	}
@@ -489,6 +528,13 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	}
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
+	}
+	if plan.Schema == PlanSchemaV3 {
+		for _, startup := range value.ServerStartups {
+			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
+				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
+			}
+		}
 	}
 	if value.Outcome == "stopped" && value.Phases[0].Outcome == "succeeded" &&
 		len(value.Toolchain) == 0 &&
@@ -530,6 +576,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV3 {
+		return ObservationSchemaV3
+	}
 	if plan.Schema == PlanSchemaV2 {
 		return ObservationSchemaV2
 	}
@@ -537,6 +586,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV3 {
+		return ReceiptSchemaV3
+	}
 	if plan.Schema == PlanSchemaV2 {
 		return ReceiptSchemaV2
 	}
@@ -580,6 +632,48 @@ func validateToolchainObservation(values []ToolchainObservation, required bool) 
 	for index, name := range want {
 		if values[index].Name != name || !digestIdentity(values[index].SHA256) {
 			return errors.New("T40.13 toolchain digest identity is invalid")
+		}
+	}
+	return nil
+}
+
+func validateServerStartups(values []ServerStartupObservation) error {
+	if len(values) > 16 {
+		return errors.New("T40.13 startup diagnostic inventory exceeds its bound")
+	}
+	profiles := []string{"structural-2m-v1", "semantic-262144-v1"}
+	labels := []string{
+		"cold", "warm-noop", "interruption-first", "interruption-restart",
+		"stale-worker", "archive-restore", "authorized-query",
+	}
+	outcomes := []string{"healthy", "deadline", "exited", "canceled", "inspector_error"}
+	stages := []string{
+		"process_started", "config_loaded", "data_directory_ready", "store_opened",
+		"authority_recovery_complete", "artifact_recovery_complete",
+		"scheduler_recovery_complete", "searcher_ready", "http_ready", "unreported",
+	}
+	healthClasses := []string{"ok", "transport", "status", "response", "context", "not_attempted"}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		key := value.Profile + "\x00" + value.Label
+		if !slices.Contains(profiles, value.Profile) || !slices.Contains(labels, value.Label) ||
+			!slices.Contains(outcomes, value.Outcome) || !slices.Contains(stages, value.LastStage) ||
+			!slices.Contains(healthClasses, value.LastHealthClass) || value.HealthAttempts < 0 ||
+			value.HealthAttempts > 1_000_000 || value.WallMS < 0 || value.PeakRSSBytes < 0 ||
+			value.GitChildren < 0 || value.IndexChildren < 0 || value.OtherChildren < 0 ||
+			value.LogBytes < 0 || value.LogBytes > maxStartupLogBytes || !digestIdentity(value.LogSHA256) {
+			return errors.New("T40.13 startup diagnostic is invalid")
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return errors.New("T40.13 startup diagnostic identity is duplicated")
+		}
+		seen[key] = struct{}{}
+		if value.Outcome == "healthy" {
+			if value.LastStage != "http_ready" || value.LastHealthClass != "ok" || value.HealthAttempts == 0 {
+				return errors.New("T40.13 healthy startup diagnostic is incoherent")
+			}
+		} else if value.LastHealthClass == "ok" {
+			return errors.New("T40.13 failed startup diagnostic reports healthy")
 		}
 	}
 	return nil
@@ -684,6 +778,23 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
+	if plan.Schema == PlanSchemaV3 {
+		want := [][2]string{
+			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
+			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
+			{"semantic-262144-v1", "interruption-restart"}, {"semantic-262144-v1", "stale-worker"},
+			{"structural-2m-v1", "archive-restore"}, {"semantic-262144-v1", "authorized-query"},
+		}
+		if len(value.ServerStartups) != len(want) {
+			return errors.New("T40.13 completed receipt lacks the exact startup inventory")
+		}
+		for index, identity := range want {
+			startup := value.ServerStartups[index]
+			if startup.Profile != identity[0] || startup.Label != identity[1] || startup.Outcome != "healthy" {
+				return errors.New("T40.13 completed receipt startup inventory is invalid")
+			}
+		}
+	}
 	structural, semantic := value.Profiles[0], value.Profiles[1]
 	if structural.RegularFiles != 2_000_002 || structural.PhysicalOwners != 2_000_002 ||
 		structural.EligibleGoFiles != 2_000_000 || structural.IDLCandidates != 0 ||
