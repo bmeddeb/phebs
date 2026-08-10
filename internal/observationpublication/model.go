@@ -41,6 +41,8 @@ var (
 	ErrStale    = errors.New("observation publication is stale")
 	ErrPinned   = errors.New("observation publication is pinned")
 	ErrComplete = errors.New("observation publication is already complete")
+
+	errArtifactChanged = errors.New("observation publication artifact changed")
 )
 
 func checkPublicationLimit(

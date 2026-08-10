@@ -786,6 +786,16 @@ catalog, relationship, or correctness authority.
   shell-escaped cleanup paths that survive function scope. It still requires a
   fresh exact commit, signer, independent freeze review, and explicit execution
   approval.
+- T40.R1 Take 11 is a verified `unclassified` four-hour cold-convergence stop.
+  The last successful probe reported 64 materialized, 62 succeeded, and two
+  running; seven seconds later progress entered persistent HTTP 500
+  `500_projection`, so underlying partition terminality remains unknown. Take
+  12 is the only prospective preparation: unchanged ceilings and phases,
+  `neutral-12`, retryable mutable-pointer snapshot crossings, context-preserving
+  cold validation, one provisional shared/pinned current cache fill, and v8
+  closed projection substages. It authorizes no execution, release, Epic
+  closure, or progression to Epic 41 without a separately reviewed plan and
+  explicit approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

@@ -3221,8 +3221,17 @@ planning and execution), bounded encoding, and short cache
 bookkeeping. It opens no Git child, reads no source/member/observation bytes,
 parses nothing, and takes neither the lifecycle mutation lock nor the
 publication transition mutex. Cold cache fill performs one complete T36.3
-validation pass. A planning-owned read additionally opens one bounded planning
-binding; a v1 building or failed read additionally opens only the bounded
+validation pass. One provisional current-generation entry pins lifecycle
+identity and shares that pass among concurrent readers. Cancellation or a
+failed open removes the provisional entry so a later request can retry; it is
+never cached as a valid publication. Atomic replacement of a mutable pointer
+and a crossed pointer/cache snapshot return conflict/stale, while stable
+malformed controls and immutable publication corruption remain fail-closed.
+Authorized 500 responses expose only the fixed control, publication, planning,
+schedule, or response projection stage; they never expose a raw cause, path,
+repository/source identity, or publication content. A planning-owned read
+additionally opens one bounded planning binding; a v1 building or failed read
+additionally opens only the bounded
 partition-plan manifest. A current reconcile performs one strict schedule point
 read and removes the bounded derived plan and binding controls only after that
 schedule is durably settled. Search, extraction, scheduler polling, backup, and

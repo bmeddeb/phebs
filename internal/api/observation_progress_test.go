@@ -28,6 +28,11 @@ func TestObservationProgressErrorsExposeOnlyClosedDiagnosticDetails(t *testing.T
 		{name: "stale", cause: observationpublication.ErrStale, status: http.StatusConflict, detail: ObservationProgressDetailStale},
 		{name: "control absent", cause: os.ErrNotExist, status: http.StatusConflict, detail: ObservationProgressDetailControlAbsent},
 		{name: "projection", cause: observationpublication.ErrInvalid, status: http.StatusInternalServerError, detail: ObservationProgressDetailProjection},
+		{name: "control projection", cause: &observationpublication.ProgressReadError{Stage: observationpublication.ProgressReadStageControl, Err: observationpublication.ErrInvalid}, status: http.StatusInternalServerError, detail: ObservationProgressDetailControl},
+		{name: "publication projection", cause: &observationpublication.ProgressReadError{Stage: observationpublication.ProgressReadStagePublication, Err: observationpublication.ErrInvalid}, status: http.StatusInternalServerError, detail: ObservationProgressDetailPublication},
+		{name: "planning projection", cause: &observationpublication.ProgressReadError{Stage: observationpublication.ProgressReadStagePlanning, Err: observationpublication.ErrInvalid}, status: http.StatusInternalServerError, detail: ObservationProgressDetailPlanning},
+		{name: "schedule projection", cause: &observationpublication.ProgressReadError{Stage: observationpublication.ProgressReadStageSchedule, Err: observationpublication.ErrInvalid}, status: http.StatusInternalServerError, detail: ObservationProgressDetailSchedule},
+		{name: "crossed pointer is stale", cause: &observationpublication.ProgressReadError{Stage: observationpublication.ProgressReadStagePublication, Err: errors.Join(observationpublication.ErrInvalid, observationpublication.ErrStale)}, status: http.StatusConflict, detail: ObservationProgressDetailStale},
 		{name: "store", cause: errors.New("private store failure"), status: http.StatusInternalServerError, detail: ObservationProgressDetailStore},
 	}
 	for _, test := range tests {

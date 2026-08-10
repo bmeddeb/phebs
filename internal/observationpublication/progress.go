@@ -3,6 +3,7 @@ package observationpublication
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,6 +17,45 @@ const ProgressSchema = "phebs-observation-progress-v1"
 
 type ProgressStore interface {
 	GetGenerationSchedule(context.Context, string, string) (*store.GenerationSchedule, error)
+}
+
+type ProgressReadStage string
+
+const (
+	ProgressReadStageControl     ProgressReadStage = "control"
+	ProgressReadStagePublication ProgressReadStage = "publication"
+	ProgressReadStagePlanning    ProgressReadStage = "planning"
+	ProgressReadStageSchedule    ProgressReadStage = "schedule"
+	ProgressReadStageProjection  ProgressReadStage = "projection"
+)
+
+// ProgressReadError retains one closed source-free failure stage while
+// preserving the typed cause for boundary classification. It never replaces
+// an ErrStale, context, store, or immutable-corruption cause.
+type ProgressReadError struct {
+	Stage ProgressReadStage
+	Err   error
+}
+
+func (failure *ProgressReadError) Error() string {
+	if failure == nil {
+		return "read observation progress"
+	}
+	return fmt.Sprintf("read observation progress %s: %v", failure.Stage, failure.Err)
+}
+
+func (failure *ProgressReadError) Unwrap() error {
+	if failure == nil {
+		return nil
+	}
+	return failure.Err
+}
+
+func progressReadFailure(stage ProgressReadStage, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &ProgressReadError{Stage: stage, Err: err}
 }
 
 // ProgressReader composes one fully validated cached publication with bounded
@@ -74,49 +114,54 @@ type ScheduleProgress struct {
 func (reader *ProgressReader) Read(ctx context.Context, repository string) (Progress, error) {
 	if reader == nil || !filepath.IsAbs(reader.DataDir) || reader.Store == nil ||
 		reader.Cache == nil || validateRepository(repository) != nil {
-		return Progress{}, invalid("progress reader configuration")
+		return Progress{}, progressReadFailure(
+			ProgressReadStageProjection, invalid("progress reader configuration"),
+		)
 	}
 	source, err := repositoryindex.ReadSourceManifest(filepath.Join(reader.DataDir, "index"), repository)
 	if err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageControl, err)
 	}
 	root := filepath.Join(reader.DataDir, "observations")
 	pointer, pointerPresent, err := readOptionalPointer(root, repository)
 	if err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageControl, err)
 	}
 	var publicationManifest *Manifest
 	if pointerPresent {
 		lease, acquireErr := reader.Cache.Acquire(ctx, root, repository)
 		if acquireErr != nil {
-			return Progress{}, acquireErr
+			return Progress{}, progressReadFailure(ProgressReadStagePublication, acquireErr)
 		}
 		defer lease.Release()
 		manifest := lease.Publication().Manifest()
 		if manifest.GenerationDigest != pointer.GenerationDigest || manifest.Digest != pointer.ManifestDigest {
-			return Progress{}, invalid("progress publication fence")
+			return Progress{}, progressReadFailure(
+				ProgressReadStagePublication,
+				errors.Join(ErrStale, invalid("progress publication fence")),
+			)
 		}
 		publicationManifest = &manifest
 	}
 	marker, markerPresent, err := readMarker(root, repository)
 	if err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageControl, err)
 	}
 	planning, planningPresent, err := reader.readSchedule(ctx, repository, PlanningScheduleStage)
 	if err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStagePlanning, err)
 	}
 	var planningBindingValue planningBinding
 	if planningPresent {
 		runtime := Runtime{DataDir: reader.DataDir}
 		planningBindingValue, err = runtime.readPlanningBinding(repository, planning.Generation)
 		if err != nil {
-			return Progress{}, err
+			return Progress{}, progressReadFailure(ProgressReadStagePlanning, err)
 		}
 	}
 	schedule, schedulePresent, err := reader.readSchedule(ctx, repository, ScheduleStage)
 	if err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageSchedule, err)
 	}
 	var targetGeneration, targetSource string
 	if schedulePresent {
@@ -125,12 +170,18 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 		switch {
 		case markerPresent:
 			if targetErr != nil || scheduleTarget != marker.GenerationDigest {
-				return Progress{}, errors.Join(targetErr, invalid("progress schedule target"))
+				return Progress{}, progressReadFailure(
+					ProgressReadStageSchedule,
+					errors.Join(targetErr, invalid("progress schedule target")),
+				)
 			}
 			targetGeneration = marker.GenerationDigest
 		case schedule.Status == store.GenerationScheduleActive &&
 			(publicationManifest == nil || publicationManifest.SourceGenerationDigest != source.Digest):
-			return Progress{}, invalid("active progress schedule has no publication marker")
+			return Progress{}, progressReadFailure(
+				ProgressReadStageSchedule,
+				invalid("active progress schedule has no publication marker"),
+			)
 		case targetErr == nil && schedule.Status == store.GenerationScheduleSettled &&
 			publicationManifest != nil && scheduleTarget == publicationManifest.GenerationDigest:
 			targetGeneration = scheduleTarget
@@ -141,7 +192,7 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 		targetGeneration = marker.GenerationDigest
 		plan, planErr := reader.readPlan(repository, targetGeneration)
 		if planErr != nil {
-			return Progress{}, planErr
+			return Progress{}, progressReadFailure(ProgressReadStageControl, planErr)
 		}
 		targetSource = plan.SourceGenerationDigest
 	}
@@ -151,13 +202,13 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 		planning, planningBindingValue, schedule, targetGeneration, targetSource,
 	)
 	if err := ValidateProgress(result); err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageProjection, err)
 	}
 	if err := reader.confirm(
 		ctx, repository, source.Digest, pointer, pointerPresent, marker, markerPresent,
 		planning, planningPresent, schedule, schedulePresent,
 	); err != nil {
-		return Progress{}, err
+		return Progress{}, progressReadFailure(ProgressReadStageControl, err)
 	}
 	return result, nil
 }

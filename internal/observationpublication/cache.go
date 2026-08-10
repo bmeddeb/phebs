@@ -9,7 +9,9 @@ import (
 
 type cacheEntry struct {
 	publication *Publication
+	repository  string
 	generation  string
+	manifest    string
 	leases      int
 	retired     bool
 	ready       chan struct{}
@@ -54,7 +56,10 @@ func (cache *Cache) AcquireGeneration(
 		}
 		return lease, nil
 	}
-	entry := &cacheEntry{generation: generation, leases: 1, ready: make(chan struct{})}
+	entry := &cacheEntry{
+		repository: repository, generation: generation,
+		leases: 1, ready: make(chan struct{}),
+	}
 	cache.entries[key] = entry
 	cache.mu.Unlock()
 
@@ -104,27 +109,33 @@ func (cache *Cache) Acquire(ctx context.Context, root, repository string) (*Leas
 		cache.entries = make(map[string]*cacheEntry)
 	}
 	if entry := cache.entries[repository]; entry != nil && !entry.retired &&
-		entry.generation == pointer.GenerationDigest && entry.publication != nil &&
-		entry.publication.manifest.Digest == pointer.ManifestDigest {
+		entry.generation == pointer.GenerationDigest && entry.manifest == pointer.ManifestDigest {
 		entry.leases++
+		lease := &Lease{cache: cache, repository: repository, entry: entry}
+		ready := entry.ready
 		cache.mu.Unlock()
-		return &Lease{cache: cache, repository: repository, entry: entry}, nil
-	}
-	cache.mu.Unlock()
-
-	publication, err := Open(ctx, root, repository)
-	if err != nil {
-		return nil, err
-	}
-	generation := publication.manifest.GenerationDigest
-	entry := &cacheEntry{publication: publication, generation: generation, leases: 1}
-	cache.mu.Lock()
-	if current := cache.entries[repository]; current != nil {
-		if !current.retired && current.generation == generation {
-			current.leases++
-			cache.mu.Unlock()
-			return &Lease{cache: cache, repository: repository, entry: current}, nil
+		if ready != nil {
+			select {
+			case <-ready:
+			case <-ctx.Done():
+				lease.Release()
+				return nil, ctx.Err()
+			}
 		}
+		if entry.openErr != nil || entry.publication == nil {
+			lease.Release()
+			if entry.openErr != nil {
+				return nil, entry.openErr
+			}
+			return nil, errors.New("observation cache open produced no publication")
+		}
+		return lease, nil
+	}
+	entry := &cacheEntry{
+		repository: repository, generation: pointer.GenerationDigest, manifest: pointer.ManifestDigest,
+		leases: 1, ready: make(chan struct{}),
+	}
+	if current := cache.entries[repository]; current != nil {
 		current.retired = true
 		if current.leases > 0 {
 			cache.retired = append(cache.retired, current)
@@ -132,7 +143,37 @@ func (cache *Cache) Acquire(ctx context.Context, root, repository string) (*Leas
 	}
 	cache.entries[repository] = entry
 	cache.mu.Unlock()
-	return &Lease{cache: cache, repository: repository, entry: entry}, nil
+
+	publication, err := openGenerationDigest(
+		ctx, root, repository, pointer.GenerationDigest,
+	)
+	if err == nil && publication.manifest.Digest != pointer.ManifestDigest {
+		err = invalid("cache pointer manifest mismatch")
+	}
+	if err == nil {
+		confirmed, confirmErr := readPointer(root, repository)
+		if confirmErr != nil || confirmed != pointer {
+			err = errors.Join(confirmErr, ErrStale)
+		}
+	}
+	cache.mu.Lock()
+	entry.publication = publication
+	entry.openErr = err
+	close(entry.ready)
+	entry.ready = nil
+	if err != nil {
+		if cache.entries[repository] == entry {
+			delete(cache.entries, repository)
+		}
+		entry.retired = true
+	}
+	cache.mu.Unlock()
+	lease := &Lease{cache: cache, repository: repository, entry: entry}
+	if err != nil {
+		lease.Release()
+		return nil, err
+	}
+	return lease, nil
 }
 
 func (lease *Lease) Publication() *Publication {
@@ -175,6 +216,10 @@ func (cache *Cache) Pinned(repository, generation string) bool {
 	}
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
+	if entry := cache.entries[repository]; entry != nil &&
+		entry.generation == generation && entry.leases > 0 {
+		return true
+	}
 	if entry := cache.entries[repository+"\x00"+generation]; entry != nil &&
 		entry.generation == generation && entry.leases > 0 {
 		return true
@@ -186,8 +231,9 @@ func (cache *Cache) Pinned(repository, generation string) bool {
 		}
 	}
 	for _, entry := range cache.retired {
-		if entry.publication != nil && entry.publication.manifest.Repository == repository &&
-			entry.generation == generation && entry.leases > 0 {
+		if entry.generation == generation && entry.leases > 0 &&
+			(entry.repository == repository || entry.repository == "" && entry.publication != nil &&
+				entry.publication.manifest.Repository == repository) {
 			return true
 		}
 	}

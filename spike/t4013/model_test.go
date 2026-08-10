@@ -262,6 +262,24 @@ func TestV7PlanPreservesTakeTenDeadlines(t *testing.T) {
 	}
 }
 
+func TestV8PlanPreservesTakeElevenDeadlines(t *testing.T) {
+	plan, err := frozenV8PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV8 || plan.Safety != frozenSafetyV7 || plan.Safety != frozenSafetyV8 {
+		t.Fatalf("v8 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV8 || decoded.Safety != frozenSafetyV8 {
+		t.Fatalf("decoded v8 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -767,6 +785,55 @@ func TestV7ReceiptRequiresClosedLastInspectionDiagnostics(t *testing.T) {
 	}
 	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err == nil {
 		t.Fatal("v6 detail contract accepted v7 status diagnostics")
+	}
+}
+
+func TestV8ReceiptRetainsClosedProjectionSubstage(t *testing.T) {
+	plan, err := frozenV8PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV7Observation(plan)
+	value.Schema = ObservationSchemaV8
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV8 {
+		t.Fatalf("v8 completed receipt = %+v, %v", receipt, err)
+	}
+
+	digest := "sha256:" + strings.Repeat("a", 64)
+	wait := ConvergenceWaitObservation{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		FirstStage: "observation_publication", LastStage: "observation_publication",
+		Attempts: 2, FirstProgressSHA256: digest, LastProgressSHA256: digest,
+		InspectionTransitions: []ConvergenceTransitionObservation{
+			{WallMS: 1, Stage: "observation_publication", Class: "pending", ProgressSHA256: digest},
+			{WallMS: 2, Stage: "observation_publication", Class: "status", HTTPStatus: 500,
+				HTTPReason: httpReason500Publication, ProgressSHA256: digest},
+		},
+		LastSuccessfulProbeSHA256: digest, LastSuccessfulProbeWallMS: 1,
+		LastInspectionStage: "observation_publication", LastInspectionClass: "status",
+		LastInspectionHTTPStatus: 500, LastInspectionHTTPReason: httpReason500Publication,
+		LastInspectionSHA256: digest, LastInspectionWallMS: 2,
+		DeadlineMS: 10, WallMS: 10,
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 4); err != nil {
+		t.Fatalf("v8 projection substage failed: %v", err)
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 3); err == nil {
+		t.Fatal("v7 detail contract accepted a v8 projection substage")
+	}
+	wait.InspectionTransitions[1].HTTPReason = httpReason500Projection
+	wait.LastInspectionHTTPReason = httpReason500Projection
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 4); err == nil {
+		t.Fatal("v8 detail contract accepted the legacy undifferentiated projection reason")
 	}
 }
 

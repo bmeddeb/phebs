@@ -483,12 +483,46 @@ lock, corpus-read, memory, disk, or child-process cost. Take 11 still requires
 a fresh exact source commit, unique signer, independent plan review, and
 explicit execution approval.
 
+Take 11 then stopped honestly at the exact four-hour cold-convergence deadline
+with decision `unclassified` and reason `convergence_deadline_expired`.
+Source-free transfer archive
+`sha256:39e9945622ae32387fcfe5c05b81de8a732a8d075bf38f21e07bee06009abb52`
+and its signed inner inventory verified; custody and the prepared manifest were
+destroyed. Startup was healthy in 12,570 ms. The last successful typed probe at
+19m00s reported all 64 observation partitions materialized, 62 succeeded, and
+two running. At 19m07s the progress endpoint changed to HTTP 500
+`500_projection`, which persisted through the final completed inspection at
+3h59m55s. Peak process-tree RSS was 3,584,458,752 bytes and allocated data was
+20,082,884,608 bytes, both below their frozen ceilings. Later gates did not
+run. This proves a persistent progress-projection failure, but not whether the
+two underlying partitions later completed.
+
+The exact-source investigation reproduced two defects without the large
+corpus: an atomic mutable pointer replacement could surface `ErrInvalid`
+instead of retryable `ErrStale`, and cancellation during a cold publication
+open was collapsed into an invalid member mismatch while leaving the cache
+cold. Those defects narrow but do not retrospectively prove the cause of the
+multi-hour Take 11 status because v7 retained no projection substage. Take 12
+therefore retires `neutral-11` and introduces v8 while preserving every Take
+11 input, phase, deadline, ceiling, stop rule, and nonclaim. Mutable pointer
+identity changes and a crossed pointer/cache fence return 409 stale; immutable
+publication corruption remains a fail-closed 500. Member validation preserves
+context cancellation. One provisional current-generation cache entry pins
+lifecycle identity and shares a cold validation among concurrent readers; a
+failed or canceled open is removed and can be retried. V8 retains one of five
+closed 500 substages—`500_projection_control`,
+`500_projection_publication`, `500_projection_planning`,
+`500_projection_schedule`, or `500_projection_response`—without retaining a
+body, raw cause, path, repository/source identity, or process output. This
+branch prepares but does not authorize a Take 12 execution; a new exact commit,
+unique signer, independent plan review, and explicit approval remain required.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-11
+CEREMONY_ID=t40r1-neutral-12
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

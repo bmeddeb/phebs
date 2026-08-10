@@ -67,3 +67,13 @@ func TestCeremonyDriverRetiresTakeTen(t *testing.T) {
 		t.Fatal("neutral-10 is not permanently retired")
 	}
 }
+
+func TestCeremonyDriverRetiresTakeEleven(t *testing.T) {
+	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `REVIEW_STOPPED_CEREMONY_ID_11="t40r1-neutral-11"`) {
+		t.Fatal("neutral-11 is not permanently retired")
+	}
+}

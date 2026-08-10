@@ -227,8 +227,11 @@ func openGeneration(ctx context.Context, root string, manifest Manifest) (*Publi
 	var observationBytes int64
 	for ordinal, expected := range manifest.Members {
 		member, records, err := readMember(ctx, directory, ordinal, len(manifest.Members))
+		if err != nil {
+			return nil, err
+		}
 		member.SourceMemberDigest = expected.SourceMemberDigest
-		if err != nil || member != expected {
+		if member != expected {
 			return nil, invalid("member mismatch")
 		}
 		for _, record := range records {
@@ -574,7 +577,7 @@ func readObservation(
 func readPointer(root, repository string) (Pointer, error) {
 	raw, err := readBoundedRegular(pointerPath(root, repository), MaxManifestBytes)
 	if err != nil {
-		return Pointer{}, err
+		return Pointer{}, staleMutableControl(err)
 	}
 	var pointer Pointer
 	if err := decodeCanonical(raw, &pointer); err != nil || pointer.Schema != PointerSchema ||
@@ -600,7 +603,7 @@ func readBoundedRegular(path string, limit int) ([]byte, error) {
 	opened, err := file.Stat()
 	if err != nil || !os.SameFile(info, opened) || !opened.Mode().IsRegular() {
 		_ = file.Close()
-		return nil, errors.Join(err, invalid("artifact changed while opening"))
+		return nil, errors.Join(err, errArtifactChanged, invalid("artifact changed while opening"))
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(file, int64(limit)+1))
 	after, statErr := file.Stat()
@@ -611,9 +614,19 @@ func readBoundedRegular(path string, limit int) ([]byte, error) {
 		!current.Mode().IsRegular() || after.Size() != info.Size() ||
 		!after.ModTime().Equal(info.ModTime()) || current.Size() != after.Size() ||
 		!current.ModTime().Equal(after.ModTime()) || int64(len(raw)) != info.Size() {
-		return nil, errors.Join(readErr, statErr, closeErr, currentErr, invalid("artifact changed while reading"))
+		return nil, errors.Join(
+			readErr, statErr, closeErr, currentErr, errArtifactChanged,
+			invalid("artifact changed while reading"),
+		)
 	}
 	return raw, nil
+}
+
+func staleMutableControl(err error) error {
+	if errors.Is(err, errArtifactChanged) {
+		return errors.Join(err, ErrStale)
+	}
+	return err
 }
 
 func decodeCanonical(raw []byte, destination any) error {

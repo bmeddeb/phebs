@@ -23,6 +23,10 @@ const (
 	ObservationProgressDetailControlAbsent = "observation progress unavailable"
 	ObservationProgressDetailStore         = "read observation progress"
 	ObservationProgressDetailProjection    = "invalid observation progress"
+	ObservationProgressDetailControl       = "invalid observation progress control"
+	ObservationProgressDetailPublication   = "invalid observation progress publication"
+	ObservationProgressDetailPlanning      = "invalid observation progress planning"
+	ObservationProgressDetailSchedule      = "invalid observation progress schedule"
 	ObservationProgressDetailEncode        = "encode observation progress"
 	ObservationProgressDetailBound         = "observation progress exceeds response bound"
 	ObservationProgressDetailAuthority     = "observation authority changed while building the response; retry"
@@ -126,9 +130,28 @@ func observationProgressError(err error) error {
 	case errors.Is(err, os.ErrNotExist), errors.Is(err, store.ErrNotFound):
 		return huma.Error409Conflict(ObservationProgressDetailControlAbsent)
 	case errors.Is(err, observationpublication.ErrInvalid):
-		return huma.Error500InternalServerError(ObservationProgressDetailProjection, err)
+		return huma.Error500InternalServerError(observationProgressProjectionDetail(err), err)
 	default:
 		return huma.Error500InternalServerError(ObservationProgressDetailStore, err)
+	}
+}
+
+func observationProgressProjectionDetail(err error) string {
+	var failure *observationpublication.ProgressReadError
+	if !errors.As(err, &failure) {
+		return ObservationProgressDetailProjection
+	}
+	switch failure.Stage {
+	case observationpublication.ProgressReadStageControl:
+		return ObservationProgressDetailControl
+	case observationpublication.ProgressReadStagePublication:
+		return ObservationProgressDetailPublication
+	case observationpublication.ProgressReadStagePlanning:
+		return ObservationProgressDetailPlanning
+	case observationpublication.ProgressReadStageSchedule:
+		return ObservationProgressDetailSchedule
+	default:
+		return ObservationProgressDetailProjection
 	}
 }
 

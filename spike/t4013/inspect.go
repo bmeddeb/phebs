@@ -434,7 +434,15 @@ func classifyHTTPStatusReason(status int, address string, raw []byte) string {
 		(problem.Detail == apiresponse.ObservationProgressDetailProjection ||
 			problem.Detail == apiresponse.ObservationProgressDetailEncode ||
 			problem.Detail == apiresponse.ObservationProgressDetailBound):
-		return httpReason500Projection
+		return httpReason500Response
+	case status == http.StatusInternalServerError && problem.Detail == apiresponse.ObservationProgressDetailControl:
+		return httpReason500Control
+	case status == http.StatusInternalServerError && problem.Detail == apiresponse.ObservationProgressDetailPublication:
+		return httpReason500Publication
+	case status == http.StatusInternalServerError && problem.Detail == apiresponse.ObservationProgressDetailPlanning:
+		return httpReason500Planning
+	case status == http.StatusInternalServerError && problem.Detail == apiresponse.ObservationProgressDetailSchedule:
+		return httpReason500Schedule
 	case status == http.StatusUnauthorized:
 		return httpReason401Unauthorized
 	case status == http.StatusForbidden:

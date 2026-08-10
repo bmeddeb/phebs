@@ -772,7 +772,7 @@ func readMarker(root, repository string) (Marker, bool, error) {
 		return Marker{}, false, nil
 	}
 	if err != nil {
-		return Marker{}, false, err
+		return Marker{}, false, staleMutableControl(err)
 	}
 	var marker Marker
 	if decodeCanonical(raw, &marker) != nil || marker.Schema != MarkerSchema ||

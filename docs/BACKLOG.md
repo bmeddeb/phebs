@@ -414,6 +414,32 @@ variables. This is ceremony-only admission/cleanup work with no production
 steady-state cost or claim change. A fresh commit, signer, independently
 reviewed plan, and explicit execution approval remain required.
 
+Large-host Take 11 disposition and Take 12 projection correction
+(2026-08-10): the independently verified v7 execution at exact commit
+`b0f5f67741eb7dc0a64e071fbd94eacd2d87b8a5` stopped `unclassified` at the
+four-hour cold-convergence deadline. Startup was healthy in 12,570 ms; the last
+successful probe at 19m00s reported 64 materialized partitions, 62 succeeded,
+and two running. At 19m07s progress changed to HTTP 500 `500_projection` and
+remained there through the final inspection at 3h59m55s. Peak RSS was
+3,584,458,752 bytes and allocated data was 20,082,884,608 bytes, below the
+frozen ceilings; later gates did not run, and verified teardown destroyed
+custody and the prepared manifest. The evidence proves a persistent projection
+failure but not underlying partition terminality. Exact-source bounded
+reproduction found that mutable pointer identity races could be classified as
+invalid and that cold-open cancellation was collapsed into invalid member
+mismatch; v7 cannot identify whether either sustained the observed status.
+Take 12 retires `neutral-11`, selects `neutral-12`, and introduces v8 without
+changing any input, phase, deadline, ceiling, stop rule, or claim. Its merge
+bar is: mutable pointer replacement and crossed pointer/cache snapshots are
+409 stale while stable malformed controls and immutable corruption remain 500;
+context cancellation survives cold validation; one provisional cache entry
+pins and shares each current-generation cold open; failed opens remain
+retryable; authorized errors expose and the source-free receipt retains only
+the closed control/publication/planning/schedule/response projection substage;
+v1-v7 bytes remain valid; focused tests, docs checks, glossary verification,
+lint, and steady-state-cost review pass. This correction does not itself
+authorize Take 12 execution or close T40.13.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

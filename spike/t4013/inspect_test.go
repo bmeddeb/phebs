@@ -27,7 +27,11 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 		{name: "stale", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailStale, reason: httpReason409Stale},
 		{name: "control absent", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailControlAbsent, reason: httpReason409ControlAbsent},
 		{name: "store", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailStore, reason: httpReason500Store},
-		{name: "projection", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailProjection, reason: httpReason500Projection},
+		{name: "projection response", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailProjection, reason: httpReason500Response},
+		{name: "projection control", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailControl, reason: httpReason500Control},
+		{name: "projection publication", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailPublication, reason: httpReason500Publication},
+		{name: "projection planning", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailPlanning, reason: httpReason500Planning},
+		{name: "projection schedule", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailSchedule, reason: httpReason500Schedule},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

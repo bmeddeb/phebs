@@ -237,6 +237,106 @@ func TestWarmCacheDoesNotRereadMemberAndCorruptColdOpenRefuses(t *testing.T) {
 	}
 }
 
+func TestCanceledCurrentCacheOpenPropagatesContextAndDoesNotStick(t *testing.T) {
+	repository, commit := observationFixture(t, map[string][]byte{"a.go": []byte("package demo\n")})
+	root := filepath.Join(t.TempDir(), "observations")
+	plan := buildObservationPlan(t, repository, commit, "example/cache-cancel", "a")
+	if _, err := Publish(t.Context(), root, repository, plan, nil); err != nil {
+		t.Fatal(err)
+	}
+	cache := &Cache{}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := cache.Acquire(canceled, root, "example/cache-cancel"); !errors.Is(err, context.Canceled) || errors.Is(err, ErrInvalid) {
+		t.Fatalf("canceled cold cache open = %v", err)
+	}
+	cache.mu.Lock()
+	entries := len(cache.entries)
+	cache.mu.Unlock()
+	if entries != 0 {
+		t.Fatalf("canceled cold cache retained %d entries", entries)
+	}
+	lease, err := cache.Acquire(t.Context(), root, "example/cache-cancel")
+	if err != nil {
+		t.Fatalf("healthy retry after cancellation: %v", err)
+	}
+	lease.Release()
+}
+
+func TestCurrentCacheProvisionalLeasePinsAndSharesResult(t *testing.T) {
+	repository, commit := observationFixture(t, map[string][]byte{"a.go": []byte("package demo\n")})
+	root := filepath.Join(t.TempDir(), "observations")
+	plan := buildObservationPlan(t, repository, commit, "example/cache-provisional", "a")
+	publication, err := Publish(t.Context(), root, repository, plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pointer, err := readPointer(root, "example/cache-provisional")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &cacheEntry{
+		repository: "example/cache-provisional",
+		generation: pointer.GenerationDigest, manifest: pointer.ManifestDigest,
+		leases: 1, ready: make(chan struct{}),
+	}
+	cache := &Cache{entries: map[string]*cacheEntry{"example/cache-provisional": entry}}
+	type result struct {
+		lease *Lease
+		err   error
+	}
+	resultChannel := make(chan result, 1)
+	go func() {
+		lease, acquireErr := cache.Acquire(t.Context(), root, "example/cache-provisional")
+		resultChannel <- result{lease: lease, err: acquireErr}
+	}()
+	deadline := time.Now().Add(time.Second)
+	for {
+		cache.mu.Lock()
+		leases := entry.leases
+		cache.mu.Unlock()
+		if leases == 2 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("current cache waiter did not acquire the provisional lease")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !cache.Pinned("example/cache-provisional", pointer.GenerationDigest) {
+		t.Fatal("current cache provisional lease did not pin lifecycle identity")
+	}
+	cache.mu.Lock()
+	entry.retired = true
+	cache.retired = append(cache.retired, entry)
+	cache.entries["example/cache-provisional"] = &cacheEntry{
+		repository: "example/cache-provisional",
+		generation: "sha256:" + strings.Repeat("f", 64),
+	}
+	cache.mu.Unlock()
+	if !cache.Pinned("example/cache-provisional", pointer.GenerationDigest) {
+		t.Fatal("replaced current cache provisional lease lost its lifecycle pin")
+	}
+	cache.mu.Lock()
+	entry.publication = publication
+	close(entry.ready)
+	entry.ready = nil
+	cache.mu.Unlock()
+	got := <-resultChannel
+	if got.err != nil || got.lease == nil || got.lease.Publication().manifest.Digest != pointer.ManifestDigest {
+		t.Fatalf("shared current cache result = %+v, %v", got.lease, got.err)
+	}
+	got.lease.Release()
+	(&Lease{cache: cache, repository: "example/cache-provisional", entry: entry}).Release()
+}
+
+func TestMutableControlArtifactChangeIsRetryableButStillInvalid(t *testing.T) {
+	err := staleMutableControl(errors.Join(errArtifactChanged, invalid("changed control")))
+	if !errors.Is(err, ErrStale) || !errors.Is(err, ErrInvalid) {
+		t.Fatalf("mutable control classification = %v", err)
+	}
+}
+
 func TestArchiveRoundTripPreservesExactCurrentPublication(t *testing.T) {
 	repository, commit := observationFixture(t, map[string][]byte{
 		"a.go":   []byte("package demo\nconst A = 1\n"),
