@@ -762,8 +762,10 @@ catalog, relationship, or correctness authority.
   21m55s. The terminal four-hour stage/change was a canceled inspection, not
   forward progress. Take 9 is the only authorized preparation: unchanged
   deadlines, `neutral-09`, terminal-only cancellation, a distinct convergence
-  server-exit result, and at most 32 wall/stage/class/progress-digest
-  transitions plus the last completed probe. The 33rd transition fails closed.
+  server-exit result with pre/in-flight process monitoring, and at most 32
+  wall/stage/class/progress-digest transitions plus the last successful
+  pending/complete probe. Failed inspections remain timeline-only. The 33rd
+  transition fails closed.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

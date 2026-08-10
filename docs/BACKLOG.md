@@ -339,9 +339,13 @@ canceled terminal inspection recorded before the phase fence, not evidence of
 forward progress. Take 9 keeps all deadlines unchanged, retires `neutral-08`,
 selects `neutral-09`, treats cancellation only as a terminal result, and gives
 post-health process exit the distinct `server_exited_during_convergence`
-result. Each of at most 32 retained transition records binds wall time, closed
-stage, failure class, and progress digest; the wait separately binds its last
-successfully completed probe and timestamp. A 33rd transition stops
+result. The process channel is checked before every inspection and actively
+cancels an in-flight HTTP/control inspection, so known exit starts no probe and
+does not wait for the 30-second client timeout. Each of at most 32 retained
+transition records binds wall time, closed stage, failure class, and progress
+digest. Only `pending` or `complete` inspections advance the separately bound
+last-successful probe and timestamp; transport, status, response, and control
+failures appear only in the timeline. A 33rd transition stops
 unclassified with `convergence_transition_limit_exceeded` instead of
 truncating evidence. These two source-free terminal identities remain named if
 meter finalization also fails; the eight-hour parent still has first

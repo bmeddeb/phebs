@@ -44,6 +44,7 @@ const (
 	legacyStoppedSourceCommit  = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
 	legacyStoppedReceiptDigest = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
 	maxConvergenceTransitions  = 32
+	convergenceNotInspected    = "not_inspected"
 )
 
 var phaseOrder = []string{
@@ -845,14 +846,20 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 		"search_generation", "observation_publication", "extraction_publication",
 		"relationship_publication", "service_census", "complete",
 	}
+	if detailVersion >= 2 {
+		stages = append(stages, convergenceNotInspected)
+	}
 	seen := make(map[string]struct{}, len(values))
 	for _, value := range values {
 		key := value.Profile + "\x00" + value.Label + "\x00" + value.Revision
 		if !slices.Contains(profiles, value.Profile) || !slices.Contains(labels, value.Label) ||
 			!slices.Contains(revisions, value.Revision) || !slices.Contains(outcomes, value.Outcome) ||
-			!slices.Contains(stages, value.LastStage) || value.Attempts <= 0 || value.Attempts > 1_000_000 ||
-			value.ProgressChanges < 0 || value.ProgressChanges >= value.Attempts ||
-			!digestIdentity(value.FirstProgressSHA256) || !digestIdentity(value.LastProgressSHA256) ||
+			!slices.Contains(stages, value.LastStage) || value.Attempts < 0 || value.Attempts > 1_000_000 ||
+			detailVersion < 2 && value.Attempts == 0 || value.ProgressChanges < 0 ||
+			value.Attempts == 0 && value.ProgressChanges != 0 ||
+			value.Attempts > 0 && value.ProgressChanges >= value.Attempts ||
+			value.LastStage != convergenceNotInspected &&
+				(!digestIdentity(value.FirstProgressSHA256) || !digestIdentity(value.LastProgressSHA256)) ||
 			value.DeadlineMS <= 0 || value.WallMS < 0 {
 			return errors.New("T40.13 convergence wait diagnostic is invalid")
 		}
@@ -870,6 +877,12 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 				len(value.InspectionTransitions) != 0 || value.LastSuccessfulProbeSHA256 != "" ||
 				value.LastSuccessfulProbeWallMS != 0 || value.TransitionLimitExceeded {
 				return errors.New("T40.13 v4 convergence wait acquired v5 diagnostics")
+			}
+			continue
+		}
+		if detailVersion >= 2 && value.LastStage == convergenceNotInspected {
+			if err := validateConvergenceWithoutSuccessfulProbe(value, stages); err != nil {
+				return err
 			}
 			continue
 		}
@@ -924,26 +937,75 @@ func validateConvergenceTransitions(value ConvergenceWaitObservation, stages []s
 		return errors.New("T40.13 convergence transition inventory is outside its bound")
 	}
 	var previous ConvergenceTransitionObservation
+	var firstSuccessful, lastSuccessful *ConvergenceTransitionObservation
 	for index, transition := range value.InspectionTransitions {
-		if !slices.Contains(stages, transition.Stage) || !slices.Contains(classes, transition.Class) ||
+		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
+			!slices.Contains(classes, transition.Class) ||
 			!digestIdentity(transition.ProgressSHA256) || transition.WallMS < 0 ||
-			transition.WallMS > value.LastSuccessfulProbeWallMS ||
+			transition.WallMS > value.WallMS ||
 			index > 0 && transition.WallMS < previous.WallMS ||
 			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
 				transition.ProgressSHA256 == previous.ProgressSHA256 {
 			return errors.New("T40.13 convergence transition is invalid")
 		}
+		if transition.Class == "pending" || transition.Class == "complete" {
+			current := transition
+			if firstSuccessful == nil {
+				firstSuccessful = &current
+			}
+			lastSuccessful = &current
+		}
 		previous = transition
 	}
-	first := value.InspectionTransitions[0]
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
-	if first.Stage != value.FirstStage || !value.TransitionLimitExceeded &&
-		(last.Stage != value.LastStage || last.ProgressSHA256 != value.LastSuccessfulProbeSHA256) {
+	if !value.TransitionLimitExceeded && (firstSuccessful == nil || lastSuccessful == nil) ||
+		firstSuccessful != nil && firstSuccessful.Stage != value.FirstStage ||
+		!value.TransitionLimitExceeded &&
+			(lastSuccessful.Stage != value.LastStage ||
+				lastSuccessful.ProgressSHA256 != value.LastSuccessfulProbeSHA256) {
 		return errors.New("T40.13 convergence transition stage fence is invalid")
 	}
 	if value.Outcome == "converged" && last.Class != "complete" ||
 		value.Outcome != "converged" && last.Class == "complete" {
 		return errors.New("T40.13 convergence transition outcome is incoherent")
+	}
+	return nil
+}
+
+func validateConvergenceWithoutSuccessfulProbe(value ConvergenceWaitObservation, stages []string) error {
+	if value.FirstStage != convergenceNotInspected || value.FirstProgressSHA256 != "" ||
+		value.LastProgressSHA256 != "" || value.ProgressChanges != 0 || value.StageChanges != 0 ||
+		value.LastProgressChangeWallMS != 0 || value.ObservationProgress != nil ||
+		value.ObservationProgressWallMS != 0 || value.LastSuccessfulProbeSHA256 != "" ||
+		value.LastSuccessfulProbeWallMS != 0 {
+		return errors.New("T40.13 convergence wait invents a successful probe")
+	}
+	if value.Attempts == 0 {
+		if value.Outcome != "server_exited" || len(value.InspectionTransitions) != 0 ||
+			value.TransitionLimitExceeded {
+			return errors.New("T40.13 uninspected convergence wait is incoherent")
+		}
+		return nil
+	}
+	if len(value.InspectionTransitions) == 0 || len(value.InspectionTransitions) > maxConvergenceTransitions ||
+		int64(len(value.InspectionTransitions)) > value.Attempts ||
+		value.TransitionLimitExceeded != (value.Outcome == "diagnostic_limit") ||
+		value.TransitionLimitExceeded && (len(value.InspectionTransitions) != maxConvergenceTransitions ||
+			value.Attempts <= maxConvergenceTransitions) {
+		return errors.New("T40.13 unsuccessful convergence transition inventory is outside its bound")
+	}
+	classes := []string{"transport", "status", "response", "control"}
+	var previous ConvergenceTransitionObservation
+	for index, transition := range value.InspectionTransitions {
+		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
+			!slices.Contains(classes, transition.Class) || !digestIdentity(transition.ProgressSHA256) ||
+			transition.WallMS < 0 || transition.WallMS > value.WallMS ||
+			index > 0 && transition.WallMS < previous.WallMS ||
+			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
+				transition.ProgressSHA256 == previous.ProgressSHA256 {
+			return errors.New("T40.13 unsuccessful convergence transition is invalid")
+		}
+		previous = transition
 	}
 	return nil
 }

@@ -1236,7 +1236,7 @@ type convergenceProgressTracker struct {
 	first                     privateConvergenceProbe
 	last                      privateConvergenceProbe
 	lastProgressChange        time.Duration
-	lastCompletedAt           time.Duration
+	lastSuccessfulAt          time.Duration
 	observationProgress       *ObservationProgressObservation
 	observationProgressAtWall time.Duration
 	inspectionTransitions     []ConvergenceTransitionObservation
@@ -1251,6 +1251,10 @@ func (tracker *convergenceProgressTracker) observe(
 		elapsed = time.Millisecond
 	}
 	tracker.attempts++
+	transitionLimitExceeded := tracker.observeTransition(probe.Stage, inspectionClass, probe.SHA256, elapsed)
+	if inspectionClass != "pending" && inspectionClass != "complete" {
+		return transitionLimitExceeded
+	}
 	if tracker.first.SHA256 == "" {
 		tracker.first = probe
 	} else if tracker.last.SHA256 != probe.SHA256 {
@@ -1266,8 +1270,8 @@ func (tracker *convergenceProgressTracker) observe(
 		tracker.observationProgressAtWall = elapsed
 	}
 	tracker.last = probe
-	tracker.lastCompletedAt = elapsed
-	return tracker.observeTransition(probe.Stage, inspectionClass, probe.SHA256, elapsed)
+	tracker.lastSuccessfulAt = elapsed
+	return transitionLimitExceeded
 }
 
 func (tracker *convergenceProgressTracker) observeTransition(
@@ -1337,6 +1341,49 @@ func retainServerExit(server *privateServer) (error, bool) {
 	}
 }
 
+func inspectConvergenceAttempt(
+	ctx context.Context,
+	inspector *profileInspector,
+	server *privateServer,
+	profile PreparedProfile,
+	revision string,
+) (privateProfileSnapshot, privateConvergenceProbe, error, error, bool) {
+	if ctx == nil || inspector == nil || server == nil || server.done == nil {
+		return privateProfileSnapshot{}, privateConvergenceProbe{},
+			errors.New("T40.13 convergence inspection is invalid"), nil, false
+	}
+	if exitErr, exited := retainServerExit(server); exited {
+		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
+	}
+	attempt, cancel := context.WithCancel(ctx)
+	attemptFinished := make(chan struct{})
+	monitorStopped := make(chan struct{})
+	exitObserved := make(chan error, 1)
+	go func() {
+		defer close(monitorStopped)
+		select {
+		case exitErr := <-server.done:
+			server.done <- exitErr
+			exitObserved <- exitErr
+			cancel()
+		case <-attemptFinished:
+		}
+	}()
+	snapshot, probe, inspectErr := inspector.inspectWithProgress(attempt, profile, revision)
+	close(attemptFinished)
+	<-monitorStopped
+	cancel()
+	select {
+	case exitErr := <-exitObserved:
+		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
+	default:
+	}
+	if exitErr, exited := retainServerExit(server); exited {
+		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
+	}
+	return snapshot, probe, inspectErr, nil, false
+}
+
 func (run *execution) waitSnapshot(
 	profile PreparedProfile,
 	revision, label string,
@@ -1357,8 +1404,14 @@ func (run *execution) waitSnapshot(
 	started := time.Now()
 	var progress convergenceProgressTracker
 	for {
-		snapshot, probe, inspectErr := inspector.inspectWithProgress(phase, profile, revision)
+		snapshot, probe, inspectErr, exitErr, exited := inspectConvergenceAttempt(
+			phase, inspector, server, profile, revision,
+		)
 		elapsed := time.Since(started)
+		if exited {
+			run.recordConvergenceWait(profile, revision, label, "server_exited", limit, started, progress)
+			return privateProfileSnapshot{}, errors.Join(exitErr, errConvergenceServerExit)
+		}
 		completed, transitionLimitExceeded := observeCompletedConvergenceAttempt(
 			phase, &progress, probe, classifyConvergenceInspection(inspectErr), elapsed,
 		)
@@ -1406,7 +1459,16 @@ func (run *execution) recordConvergenceWait(
 	started time.Time,
 	progress convergenceProgressTracker,
 ) {
-	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 || progress.attempts == 0 {
+	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 ||
+		progress.attempts == 0 && (run.plan.Schema != PlanSchemaV6 || outcome != "server_exited") {
+		return
+	}
+	if progress.attempts == 0 {
+		run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, ConvergenceWaitObservation{
+			Profile: profile.Name, Label: label, Revision: revision, Outcome: outcome,
+			FirstStage: convergenceNotInspected, LastStage: convergenceNotInspected,
+			DeadlineMS: limit.Milliseconds(), WallMS: max(time.Since(started).Milliseconds(), 1),
+		})
 		return
 	}
 	wait := ConvergenceWaitObservation{
@@ -1426,8 +1488,13 @@ func (run *execution) recordConvergenceWait(
 	if run.plan.Schema == PlanSchemaV6 {
 		wait.WallMS = max(wait.WallMS, 1)
 		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
-		wait.LastSuccessfulProbeSHA256 = progress.last.SHA256
-		wait.LastSuccessfulProbeWallMS = progress.lastCompletedAt.Milliseconds()
+		if progress.last.SHA256 == "" {
+			wait.FirstStage = convergenceNotInspected
+			wait.LastStage = convergenceNotInspected
+		} else {
+			wait.LastSuccessfulProbeSHA256 = progress.last.SHA256
+			wait.LastSuccessfulProbeWallMS = progress.lastSuccessfulAt.Milliseconds()
+		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)

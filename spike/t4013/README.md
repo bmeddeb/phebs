@@ -389,11 +389,14 @@ therefore `unclassified` and `neutral-08` is permanently retired.
 Take 9 keeps the four-hour full-convergence, 20-minute revalidation, and
 eight-hour total-wall limits unchanged. V6 makes deadline cancellation a
 terminal result—never a probe or transition—and gives post-health process exit
-the distinct `server_exited_during_convergence` stopped result. Each retained
-transition binds wall time, closed stage, failure class, and progress digest;
-the wait separately binds the digest and wall time of its last successfully
-completed inspection (which does not itself claim convergence). Classes are
-closed (`pending`, `transport`, `status`, `response`, `control`, `complete`).
+the distinct `server_exited_during_convergence` stopped result. The process
+channel is checked before each inspection and monitored while it runs; exit
+cancels the attempt context immediately instead of waiting for the 30-second
+HTTP timeout or local control work. Each retained transition binds wall time,
+closed stage, failure class, and progress digest. Only a `pending` or `complete`
+inspection advances the separately bound last-successful digest and wall time
+(neither alone claims convergence); `transport`, `status`, `response`, and
+`control` failures remain timeline-only. These six classes are closed.
 The first 32 transitions fit the evidence envelope; a 33rd immediately stops
 unclassified as `convergence_transition_limit_exceeded` rather than truncating
 the timeline. Raw errors, process output, repository identities, paths,
@@ -401,8 +404,9 @@ responses, credentials, and source remain in destroyed custody. The two
 unclassified terminal identities remain named through a simultaneous meter
 failure; the eight-hour parent still wins first, while missing measurement
 still governs every other failure. The added work is constant-size local
-accounting over API/control reads the oracle already performs; production
-behavior is unchanged.
+accounting plus one short-lived monitor goroutine and three small channels per
+sequential inspection over API/control reads the oracle already performs. It
+adds no read, and production behavior is unchanged.
 
 ```sh
 cd ~/phebs

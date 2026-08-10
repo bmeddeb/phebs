@@ -272,7 +272,7 @@ func TestV5ConvergenceTrackerRetainsOnlySourceFreeProgressProjection(t *testing.
 	}
 }
 
-func TestCanceledConvergenceAttemptDoesNotReplaceLastCompletedProbe(t *testing.T) {
+func TestCanceledConvergenceAttemptDoesNotReplaceLastSuccessfulProbe(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	tracker := convergenceProgressTracker{}
 	first := convergenceProbe("observation_publication", "running")
@@ -286,6 +286,40 @@ func TestCanceledConvergenceAttemptDoesNotReplaceLastCompletedProbe(t *testing.T
 	if tracker.attempts != 1 || tracker.last != first || tracker.progressChanges != 0 ||
 		len(tracker.inspectionTransitions) != 1 {
 		t.Fatalf("tracker = %+v", tracker)
+	}
+}
+
+func TestFailedInspectionDoesNotReplaceLastSuccessfulProbe(t *testing.T) {
+	tracker := convergenceProgressTracker{}
+	successful := convergenceProbe("observation_publication", "running")
+	failed := convergenceProbe("repository_visibility", "transport-failure")
+	tracker.observe(successful, "pending", time.Second)
+	tracker.observe(failed, "transport", 2*time.Second)
+	if tracker.attempts != 2 || tracker.last != successful || tracker.lastSuccessfulAt != time.Second ||
+		tracker.progressChanges != 0 || len(tracker.inspectionTransitions) != 2 {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+	last := tracker.inspectionTransitions[len(tracker.inspectionTransitions)-1]
+	if last.Class != "transport" || last.ProgressSHA256 != failed.SHA256 || last.WallMS != 2_000 {
+		t.Fatalf("failure transition = %+v", last)
+	}
+	run := &execution{plan: Plan{Schema: PlanSchemaV6}}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "structural-2m-v1"}, "a", "cold", "canceled",
+		time.Minute, time.Now().Add(-3*time.Second), tracker,
+	)
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("waits = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.LastSuccessfulProbeSHA256 != successful.SHA256 ||
+		wait.LastSuccessfulProbeWallMS != 1_000 ||
+		wait.LastProgressSHA256 != successful.SHA256 ||
+		wait.InspectionTransitions[len(wait.InspectionTransitions)-1].Class != "transport" {
+		t.Fatalf("wait = %+v", wait)
+	}
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 2); err != nil {
+		t.Fatalf("pending-then-transport wait failed validation: %v", err)
 	}
 }
 
@@ -338,12 +372,17 @@ func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
 	}
 }
 
-func TestConvergenceWaitStopsAndRetainsPostHealthServerExit(t *testing.T) {
+func TestConvergenceWaitStopsBeforeFirstInspectionWhenServerAlreadyExited(t *testing.T) {
 	credential := filepath.Join(t.TempDir(), "credential")
 	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	requestObserved := make(chan struct{}, 1)
 	httpServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		select {
+		case requestObserved <- struct{}{}:
+		default:
+		}
 		response.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(response, `[]`)
 	}))
@@ -371,16 +410,82 @@ func TestConvergenceWaitStopsAndRetainsPostHealthServerExit(t *testing.T) {
 		t.Fatalf("server exit = %v, waits=%+v", err, run.observation.ConvergenceWaits)
 	}
 	wait := run.observation.ConvergenceWaits[0]
-	last := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
-	if wait.Outcome != "server_exited" || wait.Attempts != 1 || last.Class != "pending" ||
-		last.Stage != "repository_visibility" || last.ProgressSHA256 != wait.LastSuccessfulProbeSHA256 ||
-		wait.LastSuccessfulProbeWallMS <= 0 {
+	if wait.Outcome != "server_exited" || wait.Attempts != 0 ||
+		wait.FirstStage != convergenceNotInspected || wait.LastStage != convergenceNotInspected ||
+		len(wait.InspectionTransitions) != 0 || wait.LastSuccessfulProbeSHA256 != "" ||
+		wait.LastSuccessfulProbeWallMS != 0 {
 		t.Fatalf("wait = %+v", wait)
+	}
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 2); err != nil {
+		t.Fatalf("uninspected server-exit wait failed validation: %v", err)
+	}
+	select {
+	case <-requestObserved:
+		t.Fatal("inspection ran after server exit was already known")
+	default:
 	}
 	select {
 	case <-server.done:
 	default:
 		t.Fatal("server exit result was not preserved for cleanup")
+	}
+}
+
+func TestConvergenceWaitCancelsBlockedInspectionOnServerExit(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	requestStarted := make(chan struct{}, 1)
+	httpServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+		requestStarted <- struct{}{}
+		<-request.Context().Done()
+	}))
+	defer httpServer.Close()
+	plan, err := frozenV6PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, plan),
+	}
+	profile := PreparedProfile{
+		Name: "structural-2m-v1", Address: strings.TrimPrefix(httpServer.URL, "http://"),
+		Credential: credential, RepositoryName: "example.invalid/repository",
+		Revisions: map[string]string{"a": testSourceCommit},
+	}
+	server := &privateServer{done: make(chan error, 1)}
+	result := make(chan error, 1)
+	go func() {
+		_, waitErr := run.waitSnapshot(profile, "a", "cold", time.Minute, server)
+		result <- waitErr
+	}()
+	select {
+	case <-requestStarted:
+	case <-time.After(time.Second):
+		t.Fatal("blocked inspection did not start")
+	}
+	started := time.Now()
+	server.done <- errors.New("synthetic in-flight server exit")
+	select {
+	case waitErr := <-result:
+		if !errors.Is(waitErr, errConvergenceServerExit) {
+			t.Fatalf("blocked inspection result = %v", waitErr)
+		}
+		if elapsed := time.Since(started); elapsed >= time.Second {
+			t.Fatalf("server exit cancellation took %s", elapsed)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server exit did not cancel the blocked inspection")
+	}
+	if len(run.observation.ConvergenceWaits) != 1 ||
+		run.observation.ConvergenceWaits[0].Attempts != 0 ||
+		len(run.observation.ConvergenceWaits[0].InspectionTransitions) != 0 {
+		t.Fatalf("blocked wait = %+v", run.observation.ConvergenceWaits)
 	}
 }
 
