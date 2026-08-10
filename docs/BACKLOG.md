@@ -340,8 +340,11 @@ forward progress. Take 9 keeps all deadlines unchanged, retires `neutral-08`,
 selects `neutral-09`, treats cancellation only as a terminal result, and gives
 post-health process exit the distinct `server_exited_during_convergence`
 result. The process channel is checked before every inspection and actively
-cancels an in-flight HTTP/control inspection, so known exit starts no probe and
-does not wait for the 30-second client timeout. Each of at most 32 retained
+cancels an in-flight inspection, so known exit starts no probe and terminal
+selection does not wait for the 30-second client timeout or an already-started
+bounded synchronous filesystem/control read. HTTP observes cancellation; a
+local read drains behind cancellation fences, and teardown joins that worker
+before custody deletion. Each of at most 32 retained
 transition records binds wall time, closed stage, failure class, and progress
 digest. Only `pending` or `complete` inspections advance the separately bound
 last-successful probe and timestamp; transport, status, response, and control
@@ -351,7 +354,10 @@ truncating evidence. These two source-free terminal identities remain named if
 meter finalization also fails; the eight-hour parent still has first
 precedence, and measurement unavailability still governs all other failures.
 V6 preserves v1-v5 bytes and adds no production read,
-lock, cache, scheduler, publication, corpus, memory, disk, or child work.
+lock, cache, scheduler, publication, corpus, memory, disk, or child work. The
+ceremony adds one inspection worker and buffered result channel per sequential
+probe; exit/cancellation leaves at most one bounded local read to drain before
+teardown.
 A new signer, independently reviewed plan, and explicit execution approval are
 still required; no release, SLO, topology, private replay, or Epic-closure
 claim changes.

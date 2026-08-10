@@ -174,6 +174,9 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return privateProfileSnapshot{}, probe, err
+	}
 	probe = convergenceProbe("repository_index", repository.IndexedCommitHash, repository.LatestJobStatus)
 	if repository.IndexedCommitHash != profile.Revisions[revision] {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 indexed commit has not converged")
@@ -181,6 +184,9 @@ func (inspector *profileInspector) inspectWithProgress(
 	indexDirectory := filepath.Join(profile.DataDir, "index")
 	source, err := repositoryindex.ReadSourceManifest(indexDirectory, profile.RepositoryName)
 	if err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("source_generation", repository.IndexedCommitHash), err
+	}
+	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("source_generation", repository.IndexedCommitHash), err
 	}
 	probe = convergenceProbe("source_generation", source.Digest, source.OwnerCount, source.RegularOwnerCount)
@@ -191,14 +197,23 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("search_generation", source.Digest), err
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("search_generation", source.Digest), err
+	}
 	probe = convergenceProbe("search_generation", source.Digest, searchRoot.Current.GenerationDigest)
 	receipt, err := readSearchReceipt(indexDirectory, profile.RepositoryName, searchRoot.Current)
 	if err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return privateProfileSnapshot{}, probe, err
+	}
 	var progress observationpublication.Progress
 	progressPath := "/api/observation-progress?repository=" + url.QueryEscape(profile.RepositoryName)
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
+	}
+	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
 	probe = observationConvergenceProbe(progress)
@@ -212,10 +227,16 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
+	}
 	publication, err := relationshippublication.OpenCurrent(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
 	if err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
+	}
+	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
 	}
 	relationshipRoot := publication.Root()
@@ -226,15 +247,21 @@ func (inspector *profileInspector) inspectWithProgress(
 		relationshipRoot.FailedServiceCount != 0 {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 relationship root has not converged")
 	}
-	if err := relationshipMatchesExtraction(relationshipRoot, extraction); err != nil {
+	if err := relationshipMatchesExtraction(ctx, relationshipRoot, extraction); err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}
 	catalogRaw, err := os.ReadFile(profile.Catalog)
 	if err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
+	}
 	catalog, err := servicecatalog.Decode(catalogRaw)
 	if err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
+	}
+	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
 	}
 	result := privateProfileSnapshot{
@@ -266,9 +293,15 @@ func (inspector *profileInspector) inspectWithProgress(
 	}
 	result.SourceMemberDigests = make([]string, len(source.Members))
 	for index, member := range source.Members {
+		if err := inspectionContextFence(ctx); err != nil {
+			return privateProfileSnapshot{}, probe, err
+		}
 		result.SourceMemberDigests[index] = member.Digest
 	}
 	for _, domain := range extraction.status.Domains {
+		if err := inspectionContextFence(ctx); err != nil {
+			return privateProfileSnapshot{}, probe, err
+		}
 		result.ApplicablePartitions += domain.Expected
 		result.SettledPartitions += domain.Settled
 		result.RetryExhaustedPartitions += domain.RetryExhausted
@@ -285,6 +318,18 @@ func (inspector *profileInspector) inspectWithProgress(
 			errors.New("T40.13 extraction partitions have not converged")
 	}
 	return result, convergenceProbe("complete", snapshotAuthority(result)), nil
+}
+
+func inspectionContextFence(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("T40.13 inspection context is invalid")
+	}
+	select {
+	case <-ctx.Done():
+		return errors.New("T40.13 inspection was canceled")
+	default:
+		return nil
+	}
 }
 
 type extractionSnapshot struct {
@@ -473,16 +518,28 @@ func inspectExtraction(
 	ctx context.Context,
 	profile PreparedProfile,
 ) (extractionSnapshot, string, error) {
+	if err := inspectionContextFence(ctx); err != nil {
+		return extractionSnapshot{}, convergenceProbe("extraction_inventory").SHA256, err
+	}
 	root := filepath.Join(profile.DataDir, "extraction-publications")
 	controls, err := filepath.Glob(filepath.Join(root, "*", "*", "generation.json"))
 	if err != nil || len(controls) > 64 {
 		return extractionSnapshot{}, convergenceProbe("extraction_inventory", len(controls)).SHA256,
 			errors.New("T40.13 extraction inventory is invalid")
 	}
+	if err := inspectionContextFence(ctx); err != nil {
+		return extractionSnapshot{}, convergenceProbe("extraction_inventory", len(controls)).SHA256, err
+	}
 	progress := convergenceProbe("extraction_inventory", len(controls)).SHA256
 	runtime := &extractionpublication.Runtime{Root: root}
 	for _, control := range controls {
+		if err := inspectionContextFence(ctx); err != nil {
+			return extractionSnapshot{}, progress, err
+		}
 		raw, readErr := os.ReadFile(control)
+		if err := inspectionContextFence(ctx); err != nil {
+			return extractionSnapshot{}, progress, err
+		}
 		if readErr != nil || len(raw) > int(extractionpublication.MaxGenerationControlBytes) {
 			continue
 		}
@@ -493,6 +550,9 @@ func inspectExtraction(
 			continue
 		}
 		status, statusErr := runtime.Status(ctx, profile.RepositoryName, generation.Digest)
+		if err := inspectionContextFence(ctx); err != nil {
+			return extractionSnapshot{}, progress, err
+		}
 		if statusErr != nil {
 			continue
 		}
@@ -507,7 +567,13 @@ func inspectExtraction(
 				roots: make(map[string]candidate.DomainResultRoot, len(status.Domains)),
 			}
 			for _, domain := range status.Domains {
+				if err := inspectionContextFence(ctx); err != nil {
+					return extractionSnapshot{}, progress, err
+				}
 				current, currentErr := runtime.Current(ctx, profile.RepositoryName, domain.Domain)
+				if err := inspectionContextFence(ctx); err != nil {
+					return extractionSnapshot{}, progress, err
+				}
 				if currentErr != nil || current.Digest != domain.RootDigest || current.PlanDigest != domain.PlanDigest {
 					return extractionSnapshot{}, progress,
 						errors.Join(currentErr, errors.New("T40.13 extraction root differs from current authority"))
@@ -553,12 +619,19 @@ func extractionGenerationBindsRevision(
 	return authority.SourceGenerationDigest == source.Digest, nil
 }
 
-func relationshipMatchesExtraction(root relationshippublication.Root, extraction extractionSnapshot) error {
+func relationshipMatchesExtraction(
+	ctx context.Context,
+	root relationshippublication.Root,
+	extraction extractionSnapshot,
+) error {
 	if root.Authority.Upstream == nil || len(root.Authority.Upstream.Domains) == 0 ||
 		len(root.Authority.Upstream.Domains) != len(root.Authority.Upstream.Required) {
 		return errors.New("T40.13 relationship root lacks the complete extraction authority")
 	}
 	for _, domain := range root.Authority.Upstream.Domains {
+		if err := inspectionContextFence(ctx); err != nil {
+			return err
+		}
 		current, ok := extraction.roots[domain.Domain]
 		if !ok || domain.PlanDigest != current.PlanDigest || domain.RootDigest != current.Digest ||
 			domain.Disposition != current.Disposition {

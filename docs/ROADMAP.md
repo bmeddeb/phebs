@@ -762,7 +762,9 @@ catalog, relationship, or correctness authority.
   21m55s. The terminal four-hour stage/change was a canceled inspection, not
   forward progress. Take 9 is the only authorized preparation: unchanged
   deadlines, `neutral-09`, terminal-only cancellation, a distinct convergence
-  server-exit result with pre/in-flight process monitoring, and at most 32
+  server-exit result with pre/in-flight process monitoring, immediate terminal
+  selection independent of an already-started bounded synchronous control read,
+  teardown drainage before custody deletion, and at most 32
   wall/stage/class/progress-digest transitions plus the last successful
   pending/complete probe. Failed inspections remain timeline-only. The 33rd
   transition fails closed.

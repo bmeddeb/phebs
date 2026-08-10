@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
@@ -78,6 +79,7 @@ type execution struct {
 	metersExpected int
 	measurementErr error
 	liveServers    []*privateServer
+	inspectionWork sync.WaitGroup
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
@@ -1223,6 +1225,10 @@ func (run *execution) stopServers() error {
 	for _, server := range run.liveServers {
 		result = errors.Join(result, server.stop(30*time.Second))
 	}
+	// A process exit or deadline selects its terminal result without waiting for
+	// an already-started synchronous control read. Keep custody intact until that
+	// bounded reader has observed cancellation and returned.
+	run.inspectionWork.Wait()
 	run.liveServers = nil
 	run.structural = nil
 	run.semantic = nil
@@ -1341,14 +1347,22 @@ func retainServerExit(server *privateServer) (error, bool) {
 	}
 }
 
-func inspectConvergenceAttempt(
+type convergenceInspection func(
+	context.Context,
+) (privateProfileSnapshot, privateConvergenceProbe, error)
+
+type convergenceInspectionResult struct {
+	snapshot privateProfileSnapshot
+	probe    privateConvergenceProbe
+	err      error
+}
+
+func (run *execution) inspectConvergenceAttempt(
 	ctx context.Context,
-	inspector *profileInspector,
 	server *privateServer,
-	profile PreparedProfile,
-	revision string,
+	inspect convergenceInspection,
 ) (privateProfileSnapshot, privateConvergenceProbe, error, error, bool) {
-	if ctx == nil || inspector == nil || server == nil || server.done == nil {
+	if run == nil || ctx == nil || server == nil || server.done == nil || inspect == nil {
 		return privateProfileSnapshot{}, privateConvergenceProbe{},
 			errors.New("T40.13 convergence inspection is invalid"), nil, false
 	}
@@ -1356,32 +1370,31 @@ func inspectConvergenceAttempt(
 		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
 	}
 	attempt, cancel := context.WithCancel(ctx)
-	attemptFinished := make(chan struct{})
-	monitorStopped := make(chan struct{})
-	exitObserved := make(chan error, 1)
+	result := make(chan convergenceInspectionResult, 1)
+	run.inspectionWork.Add(1)
 	go func() {
-		defer close(monitorStopped)
-		select {
-		case exitErr := <-server.done:
-			server.done <- exitErr
-			exitObserved <- exitErr
-			cancel()
-		case <-attemptFinished:
-		}
+		defer run.inspectionWork.Done()
+		snapshot, probe, inspectErr := inspect(attempt)
+		result <- convergenceInspectionResult{snapshot: snapshot, probe: probe, err: inspectErr}
 	}()
-	snapshot, probe, inspectErr := inspector.inspectWithProgress(attempt, profile, revision)
-	close(attemptFinished)
-	<-monitorStopped
-	cancel()
 	select {
-	case exitErr := <-exitObserved:
+	case inspection := <-result:
+		cancel()
+		if exitErr, exited := retainServerExit(server); exited {
+			return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
+		}
+		return inspection.snapshot, inspection.probe, inspection.err, nil, false
+	case exitErr := <-server.done:
+		server.done <- exitErr
+		cancel()
 		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
-	default:
+	case <-ctx.Done():
+		cancel()
+		if exitErr, exited := retainServerExit(server); exited {
+			return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
+		}
+		return privateProfileSnapshot{}, privateConvergenceProbe{}, ctx.Err(), nil, false
 	}
-	if exitErr, exited := retainServerExit(server); exited {
-		return privateProfileSnapshot{}, privateConvergenceProbe{}, nil, exitErr, true
-	}
-	return snapshot, probe, inspectErr, nil, false
 }
 
 func (run *execution) waitSnapshot(
@@ -1404,8 +1417,12 @@ func (run *execution) waitSnapshot(
 	started := time.Now()
 	var progress convergenceProgressTracker
 	for {
-		snapshot, probe, inspectErr, exitErr, exited := inspectConvergenceAttempt(
-			phase, inspector, server, profile, revision,
+		snapshot, probe, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
+			phase, server, func(attempt context.Context) (
+				privateProfileSnapshot, privateConvergenceProbe, error,
+			) {
+				return inspector.inspectWithProgress(attempt, profile, revision)
+			},
 		)
 		elapsed := time.Since(started)
 		if exited {

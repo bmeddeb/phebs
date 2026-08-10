@@ -489,6 +489,66 @@ func TestConvergenceWaitCancelsBlockedInspectionOnServerExit(t *testing.T) {
 	}
 }
 
+func TestServerExitSelectsTerminalBeforeSynchronousControlReadDrains(t *testing.T) {
+	run := &execution{}
+	server := &privateServer{done: make(chan error, 1)}
+	readStarted := make(chan struct{})
+	releaseRead := make(chan struct{})
+	type attemptResult struct {
+		exitErr error
+		exited  bool
+	}
+	result := make(chan attemptResult, 1)
+	go func() {
+		_, _, _, exitErr, exited := run.inspectConvergenceAttempt(
+			t.Context(), server,
+			func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+				close(readStarted)
+				// Model a synchronous bounded filesystem/control read: its syscall
+				// cannot observe context cancellation until it returns.
+				<-releaseRead
+				return privateProfileSnapshot{}, convergenceProbe("source_generation"), nil
+			},
+		)
+		result <- attemptResult{exitErr: exitErr, exited: exited}
+	}()
+	select {
+	case <-readStarted:
+	case <-time.After(time.Second):
+		t.Fatal("synchronous control read did not start")
+	}
+	started := time.Now()
+	server.done <- errors.New("synthetic in-flight server exit")
+	select {
+	case attempt := <-result:
+		if !attempt.exited || attempt.exitErr == nil {
+			t.Fatalf("attempt = %+v", attempt)
+		}
+		if elapsed := time.Since(started); elapsed >= time.Second {
+			t.Fatalf("terminal selection waited for synchronous read: %s", elapsed)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server exit did not select a terminal result")
+	}
+
+	stopped := make(chan error, 1)
+	go func() { stopped <- run.stopServers() }()
+	select {
+	case err := <-stopped:
+		t.Fatalf("teardown crossed an active control reader: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(releaseRead)
+	select {
+	case err := <-stopped:
+		if err != nil {
+			t.Fatalf("drained teardown = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("teardown did not finish after the control reader drained")
+	}
+}
+
 func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	root := t.TempDir()
 	module := filepath.Join(root, "module")

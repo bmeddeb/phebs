@@ -390,10 +390,14 @@ Take 9 keeps the four-hour full-convergence, 20-minute revalidation, and
 eight-hour total-wall limits unchanged. V6 makes deadline cancellation a
 terminal result—never a probe or transition—and gives post-health process exit
 the distinct `server_exited_during_convergence` stopped result. The process
-channel is checked before each inspection and monitored while it runs; exit
-cancels the attempt context immediately instead of waiting for the 30-second
-HTTP timeout or local control work. Each retained transition binds wall time,
-closed stage, failure class, and progress digest. Only a `pending` or `complete`
+channel is checked before each inspection and selected concurrently with the
+inspection result. Exit cancels HTTP and returns the terminal result without
+waiting for the 30-second client timeout or an already-started bounded
+synchronous filesystem/control read. Such a local read cannot be forcibly
+interrupted; it drains in the inspection worker, cancellation fences prevent
+any later inspection stage, and teardown waits for the worker before destroying
+custody. Each retained transition binds wall time, closed stage, failure class,
+and progress digest. Only a `pending` or `complete`
 inspection advances the separately bound last-successful digest and wall time
 (neither alone claims convergence); `transport`, `status`, `response`, and
 `control` failures remain timeline-only. These six classes are closed.
@@ -404,9 +408,11 @@ responses, credentials, and source remain in destroyed custody. The two
 unclassified terminal identities remain named through a simultaneous meter
 failure; the eight-hour parent still wins first, while missing measurement
 still governs every other failure. The added work is constant-size local
-accounting plus one short-lived monitor goroutine and three small channels per
-sequential inspection over API/control reads the oracle already performs. It
-adds no read, and production behavior is unchanged.
+accounting plus one inspection worker and one buffered result channel per
+sequential inspection over API/control reads the oracle already performs. Exit
+or cancellation can leave at most one bounded local read draining; teardown
+joins it before custody deletion. It adds no read, and production behavior is
+unchanged.
 
 ```sh
 cd ~/phebs
