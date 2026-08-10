@@ -121,7 +121,8 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 		return nil, err
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
+		plan.Schema == PlanSchemaV7 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -326,7 +327,8 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 
 func (run *execution) verifyFrozenHostToolchain() error {
 	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
-		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 {
+		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
+		run.plan.Schema != PlanSchemaV7 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -439,12 +441,14 @@ func (run *execution) startServer(
 	}
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
-	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
+	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 ||
+		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
-		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6) && startup.Profile != "" {
+		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7) &&
+		startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
 	return server, meter, healthErr
@@ -1246,19 +1250,31 @@ type convergenceProgressTracker struct {
 	observationProgress       *ObservationProgressObservation
 	observationProgressAtWall time.Duration
 	inspectionTransitions     []ConvergenceTransitionObservation
+	lastInspection            convergenceInspectionDiagnostic
+	lastInspectionProbe       privateConvergenceProbe
+	lastInspectionAt          time.Duration
+}
+
+type convergenceInspectionDiagnostic struct {
+	class      string
+	httpStatus int
+	httpReason string
 }
 
 func (tracker *convergenceProgressTracker) observe(
 	probe privateConvergenceProbe,
-	inspectionClass string,
+	diagnostic convergenceInspectionDiagnostic,
 	elapsed time.Duration,
 ) bool {
 	if elapsed < time.Millisecond {
 		elapsed = time.Millisecond
 	}
 	tracker.attempts++
-	transitionLimitExceeded := tracker.observeTransition(probe.Stage, inspectionClass, probe.SHA256, elapsed)
-	if inspectionClass != "pending" && inspectionClass != "complete" {
+	tracker.lastInspection = diagnostic
+	tracker.lastInspectionProbe = probe
+	tracker.lastInspectionAt = elapsed
+	transitionLimitExceeded := tracker.observeTransition(probe.Stage, diagnostic, probe.SHA256, elapsed)
+	if diagnostic.class != "pending" && diagnostic.class != "complete" {
 		return transitionLimitExceeded
 	}
 	if tracker.first.SHA256 == "" {
@@ -1281,15 +1297,20 @@ func (tracker *convergenceProgressTracker) observe(
 }
 
 func (tracker *convergenceProgressTracker) observeTransition(
-	stage, class, progressSHA256 string,
+	stage string,
+	diagnostic convergenceInspectionDiagnostic,
+	progressSHA256 string,
 	elapsed time.Duration,
 ) bool {
 	transition := ConvergenceTransitionObservation{
-		WallMS: elapsed.Milliseconds(), Stage: stage, Class: class, ProgressSHA256: progressSHA256,
+		WallMS: elapsed.Milliseconds(), Stage: stage, Class: diagnostic.class,
+		HTTPStatus: diagnostic.httpStatus, HTTPReason: diagnostic.httpReason,
+		ProgressSHA256: progressSHA256,
 	}
 	if count := len(tracker.inspectionTransitions); count > 0 {
 		last := tracker.inspectionTransitions[count-1]
 		if last.Stage == transition.Stage && last.Class == transition.Class &&
+			last.HTTPStatus == transition.HTTPStatus && last.HTTPReason == transition.HTTPReason &&
 			last.ProgressSHA256 == transition.ProgressSHA256 {
 			return false
 		}
@@ -1305,32 +1326,36 @@ func observeCompletedConvergenceAttempt(
 	phase context.Context,
 	tracker *convergenceProgressTracker,
 	probe privateConvergenceProbe,
-	inspectionClass string,
+	diagnostic convergenceInspectionDiagnostic,
 	elapsed time.Duration,
 ) (bool, bool) {
 	if phase == nil || tracker == nil || phase.Err() != nil {
 		return false, false
 	}
-	return true, tracker.observe(probe, inspectionClass, elapsed)
+	return true, tracker.observe(probe, diagnostic, elapsed)
 }
 
-func classifyConvergenceInspection(err error) string {
+func classifyConvergenceInspection(err error) convergenceInspectionDiagnostic {
 	if err == nil {
-		return "complete"
+		return convergenceInspectionDiagnostic{class: "complete"}
+	}
+	var statusErr *privateHTTPStatusError
+	if errors.As(err, &statusErr) {
+		return convergenceInspectionDiagnostic{
+			class: "status", httpStatus: statusErr.Status, httpReason: statusErr.Reason,
+		}
 	}
 	message := err.Error()
 	switch {
 	case strings.Contains(message, "HTTP request failed"):
-		return "transport"
-	case strings.Contains(message, "HTTP request returned status"):
-		return "status"
+		return convergenceInspectionDiagnostic{class: "transport"}
 	case strings.Contains(message, "HTTP response"):
-		return "response"
+		return convergenceInspectionDiagnostic{class: "response"}
 	case errors.Is(err, os.ErrNotExist), strings.Contains(message, "not visible"),
 		strings.Contains(message, "has not converged"), strings.Contains(message, "is not exact"):
-		return "pending"
+		return convergenceInspectionDiagnostic{class: "pending"}
 	default:
-		return "control"
+		return convergenceInspectionDiagnostic{class: "control"}
 	}
 }
 
@@ -1476,8 +1501,10 @@ func (run *execution) recordConvergenceWait(
 	started time.Time,
 	progress convergenceProgressTracker,
 ) {
-	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 ||
-		progress.attempts == 0 && (run.plan.Schema != PlanSchemaV6 || outcome != "server_exited") {
+	if (run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
+		run.plan.Schema != PlanSchemaV7) ||
+		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7) ||
+		(progress.attempts == 0 && outcome != "server_exited") {
 		return
 	}
 	if progress.attempts == 0 {
@@ -1495,7 +1522,7 @@ func (run *execution) recordConvergenceWait(
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
 	}
-	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
+	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 {
 		wait.FirstStage = progress.first.Stage
 		wait.StageChanges = progress.stageChanges
 		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
@@ -1505,6 +1532,10 @@ func (run *execution) recordConvergenceWait(
 	if run.plan.Schema == PlanSchemaV6 {
 		wait.WallMS = max(wait.WallMS, 1)
 		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
+		for index := range wait.InspectionTransitions {
+			wait.InspectionTransitions[index].HTTPStatus = 0
+			wait.InspectionTransitions[index].HTTPReason = ""
+		}
 		if progress.last.SHA256 == "" {
 			wait.FirstStage = convergenceNotInspected
 			wait.LastStage = convergenceNotInspected
@@ -1514,18 +1545,40 @@ func (run *execution) recordConvergenceWait(
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
+	if run.plan.Schema == PlanSchemaV7 {
+		wait.WallMS = max(wait.WallMS, 1)
+		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
+		if progress.last.SHA256 == "" {
+			wait.FirstStage = convergenceNotInspected
+			wait.LastStage = convergenceNotInspected
+		} else {
+			wait.LastSuccessfulProbeSHA256 = progress.last.SHA256
+			wait.LastSuccessfulProbeWallMS = progress.lastSuccessfulAt.Milliseconds()
+		}
+		if progress.attempts > 0 {
+			wait.LastInspectionStage = progress.lastInspectionProbe.Stage
+			wait.LastInspectionClass = progress.lastInspection.class
+			wait.LastInspectionHTTPStatus = progress.lastInspection.httpStatus
+			wait.LastInspectionHTTPReason = progress.lastInspection.httpReason
+			wait.LastInspectionSHA256 = progress.lastInspectionProbe.SHA256
+			wait.LastInspectionWallMS = progress.lastInspectionAt.Milliseconds()
+		}
+		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
+	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
 }
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
+		run.plan.Schema == PlanSchemaV7 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
 }
 
 func (run *execution) revalidationDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
+		run.plan.Schema == PlanSchemaV7 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1731,7 +1784,8 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
 	value := emptyObservation(environment)
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
+		plan.Schema == PlanSchemaV7 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1744,6 +1798,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV5
 	case PlanSchemaV6:
 		value.Schema = ObservationSchemaV6
+	case PlanSchemaV7:
+		value.Schema = ObservationSchemaV7
 	}
 	return value
 }

@@ -362,6 +362,37 @@ A new signer, independently reviewed plan, and explicit execution approval are
 still required; no release, SLO, topology, private replay, or Epic-closure
 claim changes.
 
+Large-host Take 9 disposition and Take 10 progress correction (2026-08-10):
+v6 plan
+`sha256:09f3d7325dbbc1d3e2d6323bd43b0348731f5ad2a34df7b2f33b564d0cf00e28`
+at commit `17cf54b85c45cbf25f01f30d910ffb7eaade40ec`, package
+`sha256:bc8b7cea48d241bb780cf18da5523a677b5c49efe1b3f19931aa07e0040d6139`,
+observation
+`sha256:438c1c71f9677b92fa74d209ff797a8bcd8d6cc2e3c4b3993013aa25b1608c0b`,
+and receipt
+`sha256:4353c49a42204dea6a7f08e1982b66c61a750bcf4bfec1cc27dc4ed9f41b76ae`
+verify exactly. The honest `unclassified` cold stop reached its four-hour
+deadline below all resource ceilings and destroyed custody. Its last successful
+typed progress at 1,345,019 ms reported 63/64 succeeded and one running; at
+1,352,032 ms the endpoint entered one unchanged `status` tuple for the
+remaining 2,880 completed inspections. V6 cannot recover the numeric status,
+so the evidence proves a persistent progress-surface failure but neither its
+409/500 cause nor underlying pipeline nonconvergence. It also exposed a
+deterministic oracle bug: successful publication removes the marker that had
+been the only source of the projected execution target, while the ceremony
+requires that settled schedule. Take 10 retires `neutral-09`, selects
+`neutral-10`, and introduces v7 without changing any deadline or ceiling.
+V7 retains the exact bounded HTTP status, one closed reason (`409_stale`,
+`409_control_absent`, `500_store`, `500_projection`, closed common statuses, or
+`status_other`), and the last completed inspection identity/time; it never
+retains a body or raw cause. Current progress preserves one settled current
+schedule binding after marker removal, including recovery identities, and
+removes it when a new source supersedes it. The hot current progress read adds
+one small binding control read; no member/source read, lock, cache invalidation,
+store transaction, child, poll, production bound, or claim changes. A new
+signer, independently reviewed plan, and explicit execution approval remain
+required.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -2,6 +2,8 @@ package t4013
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +16,46 @@ import (
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		detail string
+		reason string
+	}{
+		{name: "stale", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailStale, reason: httpReason409Stale},
+		{name: "control absent", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailControlAbsent, reason: httpReason409ControlAbsent},
+		{name: "store", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailStore, reason: httpReason500Store},
+		{name: "projection", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailProjection, reason: httpReason500Projection},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+				response.Header().Set("Content-Type", "application/problem+json")
+				response.WriteHeader(test.status)
+				_, _ = fmt.Fprintf(response,
+					`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":%d,"detail":%q}`,
+					request.Host, test.status, test.detail,
+				)
+			}))
+			defer server.Close()
+			inspector := &profileInspector{client: server.Client(), credential: "private-test-token"}
+			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
+			var target struct{}
+			err := inspector.get(t.Context(), profile, "/api/observation-progress", &target)
+			var statusErr *privateHTTPStatusError
+			if !errors.As(err, &statusErr) || statusErr.Status != test.status || statusErr.Reason != test.reason {
+				t.Fatalf("status error = %+v, %v", statusErr, err)
+			}
+			diagnostic := classifyConvergenceInspection(err)
+			if diagnostic.class != "status" || diagnostic.httpStatus != test.status ||
+				diagnostic.httpReason != test.reason {
+				t.Fatalf("diagnostic = %+v", diagnostic)
+			}
+		})
+	}
+}
 
 type humaResponseStore struct {
 	store.Store

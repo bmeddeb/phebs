@@ -67,6 +67,81 @@ func TestProgressReportsCurrentReceiptAndWarmReadsNoMembers(t *testing.T) {
 	}
 }
 
+func TestProgressRetainsSettledRecoveryScheduleAfterMarkerRemoval(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, source := progressFixture(t)
+	planDirectory := filepath.Join(t.TempDir(), "plan")
+	if err := os.Mkdir(planDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	partition, err := sourcepartition.Build(t.Context(), sourcepartition.BuildRequest{
+		SourceDirectory: filepath.Join(dataDirectory, "index"), OutputDirectory: planDirectory,
+		Repository: repository, Source: source,
+		Policy: sourcepartition.Policy{
+			Schema: sourcepartition.PolicySchema, Name: "go-source", Version: "1.0.0",
+			IncludeSuffixes: []string{".go"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := sourcepartition.Open(t.Context(), planDirectory, partition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Publish(
+		t.Context(), filepath.Join(dataDirectory, "observations"), repositoryDirectory, plan, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, present, err := readMarker(filepath.Join(dataDirectory, "observations"), repository); err != nil || present {
+		t.Fatalf("marker after publication: present=%t err=%v", present, err)
+	}
+
+	priorSchedule := "sha256:" + strings.Repeat("d", 64)
+	target := publication.manifest.GenerationDigest
+	scheduleGeneration := recoveryScheduleGeneration(target, priorSchedule)
+	state := &recoveryScheduleCapture{}
+	schedule, err := state.EnqueueGenerationSchedule(t.Context(), store.GenerationScheduleSpec{
+		Repository: repository, Stage: ScheduleStage, Generation: scheduleGeneration,
+		ResourceClass: store.GenerationResourceCPU, TotalItems: int64(len(partition.Members)),
+		ChunkItems: ScheduleChunkItems, MaxAttempts: ScheduleMaxAttempts,
+		RepositoryTokens: ScheduleRepositoryTokens,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.current.NextOffset = state.current.TotalItems
+	state.current.Materialized = state.current.TotalChunks
+	state.current.Succeeded = state.current.TotalChunks
+	state.current.Status = store.GenerationScheduleSettled
+	state.current.UpdatedAt = state.current.UpdatedAt.Add(time.Second)
+	runtime := &Runtime{DataDir: dataDirectory, Store: state}
+	if err := runtime.writeScheduleBinding(scheduleBinding{
+		Schema: BindingSchema, Repository: repository,
+		ScheduleGeneration: scheduleGeneration, PublicationGeneration: target,
+		PriorScheduleDigest: priorSchedule, SourceGenerationDigest: source.Digest,
+		PartitionManifestDigest: partition.Digest,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	runtime.cleanupSettledSchedule(t.Context(), repository, true)
+	if _, err := runtime.readScheduleBinding(repository, schedule.Generation); err != nil {
+		t.Fatalf("current settled binding was removed: %v", err)
+	}
+
+	progress, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{},
+	}).Read(t.Context(), repository)
+	if err != nil || progress.State != "current" || progress.Publication == nil ||
+		progress.Schedule == nil || progress.Schedule.State != "settled" ||
+		progress.Schedule.ScheduleGeneration != scheduleGeneration ||
+		progress.Schedule.PublicationGeneration != target ||
+		progress.Schedule.Succeeded != progress.Schedule.TotalPartitions {
+		t.Fatalf("settled current progress = %+v, %v", progress, err)
+	}
+}
+
 func TestProgressShowsFailedScheduleAndDistinctRecovery(t *testing.T) {
 	dataDirectory, _, repository, _ := progressFixture(t)
 	capture := &recoveryScheduleCapture{}

@@ -239,11 +239,11 @@ func TestConvergenceProgressTrackerCountsOnlyIdentityChanges(t *testing.T) {
 	second := convergenceProbe("repository_index", "running")
 	third := convergenceProbe("source_generation", "ready")
 	var tracker convergenceProgressTracker
-	tracker.observe(first, "pending", time.Second)
-	tracker.observe(first, "pending", 2*time.Second)
-	tracker.observe(second, "pending", 3*time.Second)
-	tracker.observe(second, "pending", 4*time.Second)
-	tracker.observe(third, "pending", 5*time.Second)
+	tracker.observe(first, convergenceInspectionDiagnostic{class: "pending"}, time.Second)
+	tracker.observe(first, convergenceInspectionDiagnostic{class: "pending"}, 2*time.Second)
+	tracker.observe(second, convergenceInspectionDiagnostic{class: "pending"}, 3*time.Second)
+	tracker.observe(second, convergenceInspectionDiagnostic{class: "pending"}, 4*time.Second)
+	tracker.observe(third, convergenceInspectionDiagnostic{class: "pending"}, 5*time.Second)
 	if tracker.attempts != 5 || tracker.progressChanges != 2 || tracker.stageChanges != 1 ||
 		tracker.lastProgressChange != 5*time.Second || tracker.first != first || tracker.last != third {
 		t.Fatalf("tracker = %+v", tracker)
@@ -263,7 +263,7 @@ func TestV5ConvergenceTrackerRetainsOnlySourceFreeProgressProjection(t *testing.
 	}
 	probe := observationConvergenceProbe(progress)
 	var tracker convergenceProgressTracker
-	tracker.observe(probe, "pending", 90*time.Minute)
+	tracker.observe(probe, convergenceInspectionDiagnostic{class: "pending"}, 90*time.Minute)
 	if tracker.observationProgress == nil ||
 		tracker.observationProgress.ScheduleTotalPartitions != 62 ||
 		tracker.observationProgress.ScheduleSucceeded != 40 ||
@@ -276,10 +276,11 @@ func TestCanceledConvergenceAttemptDoesNotReplaceLastSuccessfulProbe(t *testing.
 	ctx, cancel := context.WithCancel(t.Context())
 	tracker := convergenceProgressTracker{}
 	first := convergenceProbe("observation_publication", "running")
-	tracker.observe(first, "pending", time.Second)
+	tracker.observe(first, convergenceInspectionDiagnostic{class: "pending"}, time.Second)
 	cancel()
 	if completed, _ := observeCompletedConvergenceAttempt(
-		ctx, &tracker, convergenceProbe("repository_visibility"), "transport", 2*time.Second,
+		ctx, &tracker, convergenceProbe("repository_visibility"),
+		convergenceInspectionDiagnostic{class: "transport"}, 2*time.Second,
 	); completed {
 		t.Fatal("canceled convergence attempt was retained")
 	}
@@ -293,8 +294,8 @@ func TestFailedInspectionDoesNotReplaceLastSuccessfulProbe(t *testing.T) {
 	tracker := convergenceProgressTracker{}
 	successful := convergenceProbe("observation_publication", "running")
 	failed := convergenceProbe("repository_visibility", "transport-failure")
-	tracker.observe(successful, "pending", time.Second)
-	tracker.observe(failed, "transport", 2*time.Second)
+	tracker.observe(successful, convergenceInspectionDiagnostic{class: "pending"}, time.Second)
+	tracker.observe(failed, convergenceInspectionDiagnostic{class: "transport"}, 2*time.Second)
 	if tracker.attempts != 2 || tracker.last != successful || tracker.lastSuccessfulAt != time.Second ||
 		tracker.progressChanges != 0 || len(tracker.inspectionTransitions) != 2 {
 		t.Fatalf("tracker = %+v", tracker)
@@ -323,15 +324,56 @@ func TestFailedInspectionDoesNotReplaceLastSuccessfulProbe(t *testing.T) {
 	}
 }
 
+func TestV7RepeatedHTTPStatusRetainsClosedLastInspection(t *testing.T) {
+	var tracker convergenceProgressTracker
+	successful := convergenceProbe("observation_publication", "63-of-64")
+	failed := convergenceProbe("observation_publication", "selected-search-generation")
+	status := convergenceInspectionDiagnostic{
+		class: "status", httpStatus: 500, httpReason: httpReason500Projection,
+	}
+	tracker.observe(successful, convergenceInspectionDiagnostic{class: "pending"}, time.Second)
+	tracker.observe(failed, status, 2*time.Second)
+	tracker.observe(failed, status, 3*time.Second)
+	if len(tracker.inspectionTransitions) != 2 {
+		t.Fatalf("transitions = %+v", tracker.inspectionTransitions)
+	}
+	plan, err := frozenV7PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{plan: plan}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "structural-2m-v1"}, "a", "cold", "deadline",
+		time.Minute, time.Now().Add(-4*time.Second), tracker,
+	)
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("waits = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.LastSuccessfulProbeSHA256 != successful.SHA256 ||
+		wait.LastInspectionStage != failed.Stage || wait.LastInspectionClass != "status" ||
+		wait.LastInspectionHTTPStatus != 500 || wait.LastInspectionHTTPReason != httpReason500Projection ||
+		wait.LastInspectionSHA256 != failed.SHA256 || wait.LastInspectionWallMS != 3_000 {
+		t.Fatalf("wait = %+v", wait)
+	}
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 3); err != nil {
+		t.Fatalf("v7 repeated status wait failed: %v", err)
+	}
+}
+
 func TestServerExitWinsOverSimultaneousConvergenceDeadline(t *testing.T) {
 	phase, cancel := context.WithCancel(t.Context())
 	cancel()
 	server := &privateServer{done: make(chan error, 1)}
 	server.done <- errors.New("synthetic server exit")
 	tracker := convergenceProgressTracker{}
-	tracker.observe(convergenceProbe("observation_publication", "running"), "pending", time.Second)
+	tracker.observe(
+		convergenceProbe("observation_publication", "running"),
+		convergenceInspectionDiagnostic{class: "pending"}, time.Second,
+	)
 	if completed, _ := observeCompletedConvergenceAttempt(
-		phase, &tracker, convergenceProbe("repository_visibility"), "transport", 2*time.Second,
+		phase, &tracker, convergenceProbe("repository_visibility"),
+		convergenceInspectionDiagnostic{class: "transport"}, 2*time.Second,
 	); completed {
 		t.Fatal("canceled convergence attempt was retained")
 	}
@@ -359,7 +401,8 @@ func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
 			class = "transport"
 		}
 		exceeded = tracker.observeTransition(
-			"repository_visibility", class, digest, time.Duration(index)*time.Millisecond,
+			"repository_visibility", convergenceInspectionDiagnostic{class: class}, digest,
+			time.Duration(index)*time.Millisecond,
 		)
 		if exceeded != (index == maxConvergenceTransitions) {
 			t.Fatalf("transition %d exceeded=%t", index, exceeded)

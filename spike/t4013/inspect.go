@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -27,6 +28,20 @@ import (
 )
 
 const privateSnapshotSchema = "t4013-private-profile-snapshot-v1"
+
+const maxHTTPStatusResponseBytes = 4 << 10
+
+type privateHTTPStatusError struct {
+	Status int
+	Reason string
+}
+
+func (err *privateHTTPStatusError) Error() string {
+	if err == nil {
+		return "T40.13 HTTP request returned an invalid status"
+	}
+	return fmt.Sprintf("T40.13 HTTP request returned status %d", err.Status)
+}
 
 type privateProfileSnapshot struct {
 	Schema                   string
@@ -373,9 +388,13 @@ func (inspector *profileInspector) get(
 		return errors.New("T40.13 HTTP request failed")
 	}
 	if response.StatusCode != http.StatusOK {
-		_, _ = io.CopyN(io.Discard, response.Body, 4096)
-		_ = response.Body.Close()
-		return fmt.Errorf("T40.13 HTTP request returned status %d", response.StatusCode)
+		raw, readErr := io.ReadAll(io.LimitReader(response.Body, maxHTTPStatusResponseBytes+1))
+		closeErr := response.Body.Close()
+		reason := httpReasonOther
+		if readErr == nil && closeErr == nil && len(raw) > 0 && len(raw) <= maxHTTPStatusResponseBytes {
+			reason = classifyHTTPStatusReason(response.StatusCode, profile.Address, raw)
+		}
+		return &privateHTTPStatusError{Status: response.StatusCode, Reason: reason}
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, MaxObservationBytes+1))
 	closeErr := response.Body.Close()
@@ -386,6 +405,47 @@ func (inspector *profileInspector) get(
 		return errors.New("T40.13 HTTP response is invalid")
 	}
 	return nil
+}
+
+func classifyHTTPStatusReason(status int, address string, raw []byte) string {
+	var problem struct {
+		Type     string            `json:"type,omitempty"`
+		Title    string            `json:"title,omitempty"`
+		Status   int               `json:"status,omitempty"`
+		Detail   string            `json:"detail,omitempty"`
+		Instance string            `json:"instance,omitempty"`
+		Errors   []json.RawMessage `json:"errors,omitempty"`
+	}
+	if decodeHumaResponse(raw, address, &problem) != nil || problem.Status != status {
+		return httpReasonOther
+	}
+	switch {
+	case status == http.StatusConflict &&
+		(problem.Detail == apiresponse.ObservationProgressDetailStale ||
+			problem.Detail == apiresponse.ObservationProgressDetailAuthority):
+		return httpReason409Stale
+	case status == http.StatusConflict && problem.Detail == apiresponse.ObservationProgressDetailControlAbsent:
+		return httpReason409ControlAbsent
+	case status == http.StatusInternalServerError &&
+		(problem.Detail == apiresponse.ObservationProgressDetailStore ||
+			problem.Detail == apiresponse.ObservationProgressDetailAuthorize):
+		return httpReason500Store
+	case status == http.StatusInternalServerError &&
+		(problem.Detail == apiresponse.ObservationProgressDetailProjection ||
+			problem.Detail == apiresponse.ObservationProgressDetailEncode ||
+			problem.Detail == apiresponse.ObservationProgressDetailBound):
+		return httpReason500Projection
+	case status == http.StatusUnauthorized:
+		return httpReason401Unauthorized
+	case status == http.StatusForbidden:
+		return httpReason403Forbidden
+	case status == http.StatusNotFound:
+		return httpReason404NotFound
+	case status == http.StatusServiceUnavailable:
+		return httpReason503Unavailable
+	default:
+		return httpReasonOther
+	}
 }
 
 // decodeHumaResponse consumes Huma's transport-owned top-level $schema link

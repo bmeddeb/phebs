@@ -25,18 +25,21 @@ const (
 	PlanSchemaV4               = "t4013-neutral-convergence-plan-v4"
 	PlanSchemaV5               = "t4013-neutral-convergence-plan-v5"
 	PlanSchemaV6               = "t4013-neutral-convergence-plan-v6"
+	PlanSchemaV7               = "t4013-neutral-convergence-plan-v7"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
 	ObservationSchemaV4        = "t4013-neutral-convergence-observation-v4"
 	ObservationSchemaV5        = "t4013-neutral-convergence-observation-v5"
 	ObservationSchemaV6        = "t4013-neutral-convergence-observation-v6"
+	ObservationSchemaV7        = "t4013-neutral-convergence-observation-v7"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
 	ReceiptSchemaV4            = "t4013-neutral-convergence-receipt-v4"
 	ReceiptSchemaV5            = "t4013-neutral-convergence-receipt-v5"
 	ReceiptSchemaV6            = "t4013-neutral-convergence-receipt-v6"
+	ReceiptSchemaV7            = "t4013-neutral-convergence-receipt-v7"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -45,6 +48,18 @@ const (
 	legacyStoppedReceiptDigest = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
 	maxConvergenceTransitions  = 32
 	convergenceNotInspected    = "not_inspected"
+)
+
+const (
+	httpReason409Stale         = "409_stale"
+	httpReason409ControlAbsent = "409_control_absent"
+	httpReason500Store         = "500_store"
+	httpReason500Projection    = "500_projection"
+	httpReason401Unauthorized  = "401_unauthorized"
+	httpReason403Forbidden     = "403_forbidden"
+	httpReason404NotFound      = "404_not_found"
+	httpReason503Unavailable   = "503_unavailable"
+	httpReasonOther            = "status_other"
 )
 
 var phaseOrder = []string{
@@ -183,6 +198,12 @@ type ConvergenceWaitObservation struct {
 	InspectionTransitions     []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
 	LastSuccessfulProbeSHA256 string                             `json:"last_successful_probe_sha256,omitempty"`
 	LastSuccessfulProbeWallMS int64                              `json:"last_successful_probe_wall_ms,omitempty"`
+	LastInspectionStage       string                             `json:"last_inspection_stage,omitempty"`
+	LastInspectionClass       string                             `json:"last_inspection_class,omitempty"`
+	LastInspectionHTTPStatus  int                                `json:"last_inspection_http_status,omitempty"`
+	LastInspectionHTTPReason  string                             `json:"last_inspection_http_reason,omitempty"`
+	LastInspectionSHA256      string                             `json:"last_inspection_sha256,omitempty"`
+	LastInspectionWallMS      int64                              `json:"last_inspection_wall_ms,omitempty"`
 	TransitionLimitExceeded   bool                               `json:"transition_limit_exceeded,omitempty"`
 	DeadlineMS                int64                              `json:"deadline_ms"`
 	WallMS                    int64                              `json:"wall_ms"`
@@ -195,6 +216,8 @@ type ConvergenceTransitionObservation struct {
 	WallMS         int64  `json:"wall_ms"`
 	Stage          string `json:"stage"`
 	Class          string `json:"class"`
+	HTTPStatus     int    `json:"http_status,omitempty"`
+	HTTPReason     string `json:"http_reason,omitempty"`
 	ProgressSHA256 string `json:"progress_sha256"`
 }
 
@@ -453,7 +476,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -462,7 +485,8 @@ func ValidatePlan(value Plan) error {
 		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
 	}
 	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 ||
-		value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 {
+		value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 ||
+		value.Schema == PlanSchemaV7 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -480,6 +504,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV5
 	case PlanSchemaV6:
 		wantSafety = frozenSafetyV6
+	case PlanSchemaV7:
+		wantSafety = frozenSafetyV7
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -493,13 +519,13 @@ func ValidatePlan(value Plan) error {
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
 		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
-		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6) &&
+		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7) &&
 			safety.ServerHealthDeadlineMS <= 0 ||
-		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 &&
+		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 &&
 			safety.ServerHealthDeadlineMS != 0 ||
-		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6) && (safety.FullConvergenceDeadlineMS <= 0 ||
+		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7) && (safety.FullConvergenceDeadlineMS <= 0 ||
 			safety.RevalidationDeadlineMS <= 0 || safety.RevalidationDeadlineMS > safety.FullConvergenceDeadlineMS) ||
-		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 &&
+		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 &&
 			(safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
 		return errors.New("T40.13 safety envelope is invalid")
 	}
@@ -521,7 +547,7 @@ func ValidatePlan(value Plan) error {
 
 func ValidateObservation(value Observation) error {
 	if !slices.Contains([]string{
-		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6,
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7,
 	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
@@ -531,7 +557,8 @@ func ValidateObservation(value Observation) error {
 		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
 	}
 	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
-		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 {
+		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 ||
+		value.Schema == ObservationSchemaV7 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -546,16 +573,18 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
-		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && len(value.ServerStartups) != 0 {
+		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 &&
+		len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
 	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
-		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 {
+		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 {
 		if err := validateServerStartups(value.ServerStartups); err != nil {
 			return err
 		}
 	}
 	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 &&
+		value.Schema != ObservationSchemaV7 &&
 		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
@@ -571,6 +600,11 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV6 {
 		if err := validateConvergenceWaits(value.ConvergenceWaits, 2); err != nil {
+			return err
+		}
+	}
+	if value.Schema == ObservationSchemaV7 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, 3); err != nil {
 			return err
 		}
 	}
@@ -647,14 +681,14 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 {
 		for _, startup := range value.ServerStartups {
 			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
 				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 {
 		for _, wait := range value.ConvergenceWaits {
 			if wait.DeadlineMS != plan.Safety.FullConvergenceDeadlineMS &&
 				wait.DeadlineMS != plan.Safety.RevalidationDeadlineMS {
@@ -705,6 +739,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV7 {
+		return ObservationSchemaV7
+	}
 	if plan.Schema == PlanSchemaV6 {
 		return ObservationSchemaV6
 	}
@@ -724,6 +761,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV7 {
+		return ReceiptSchemaV7
+	}
 	if plan.Schema == PlanSchemaV6 {
 		return ReceiptSchemaV6
 	}
@@ -875,13 +915,13 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			if value.FirstStage != "" || value.StageChanges != 0 || value.LastProgressChangeWallMS != 0 ||
 				value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 ||
 				len(value.InspectionTransitions) != 0 || value.LastSuccessfulProbeSHA256 != "" ||
-				value.LastSuccessfulProbeWallMS != 0 || value.TransitionLimitExceeded {
+				value.LastSuccessfulProbeWallMS != 0 || hasLastInspection(value) || value.TransitionLimitExceeded {
 				return errors.New("T40.13 v4 convergence wait acquired v5 diagnostics")
 			}
 			continue
 		}
 		if detailVersion >= 2 && value.LastStage == convergenceNotInspected {
-			if err := validateConvergenceWithoutSuccessfulProbe(value, stages); err != nil {
+			if err := validateConvergenceWithoutSuccessfulProbe(value, stages, detailVersion); err != nil {
 				return err
 			}
 			continue
@@ -912,19 +952,23 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 		}
 		if detailVersion < 2 {
 			if len(value.InspectionTransitions) != 0 || value.LastSuccessfulProbeSHA256 != "" ||
-				value.LastSuccessfulProbeWallMS != 0 || value.TransitionLimitExceeded {
+				value.LastSuccessfulProbeWallMS != 0 || hasLastInspection(value) || value.TransitionLimitExceeded {
 				return errors.New("T40.13 v5 convergence wait acquired v6 diagnostics")
 			}
 			continue
 		}
-		if err := validateConvergenceTransitions(value, stages); err != nil {
+		if err := validateConvergenceTransitions(value, stages, detailVersion); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateConvergenceTransitions(value ConvergenceWaitObservation, stages []string) error {
+func validateConvergenceTransitions(
+	value ConvergenceWaitObservation,
+	stages []string,
+	detailVersion int,
+) error {
 	classes := []string{"pending", "transport", "status", "response", "control", "complete"}
 	if len(value.InspectionTransitions) == 0 || len(value.InspectionTransitions) > maxConvergenceTransitions ||
 		int64(len(value.InspectionTransitions)) > value.Attempts ||
@@ -941,10 +985,12 @@ func validateConvergenceTransitions(value ConvergenceWaitObservation, stages []s
 	for index, transition := range value.InspectionTransitions {
 		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
 			!slices.Contains(classes, transition.Class) ||
+			!validTransitionHTTPDiagnostic(transition, detailVersion) ||
 			!digestIdentity(transition.ProgressSHA256) || transition.WallMS < 0 ||
 			transition.WallMS > value.WallMS ||
 			index > 0 && transition.WallMS < previous.WallMS ||
 			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
+				transition.HTTPStatus == previous.HTTPStatus && transition.HTTPReason == previous.HTTPReason &&
 				transition.ProgressSHA256 == previous.ProgressSHA256 {
 			return errors.New("T40.13 convergence transition is invalid")
 		}
@@ -969,10 +1015,17 @@ func validateConvergenceTransitions(value ConvergenceWaitObservation, stages []s
 		value.Outcome != "converged" && last.Class == "complete" {
 		return errors.New("T40.13 convergence transition outcome is incoherent")
 	}
+	if err := validateLastInspection(value, stages, detailVersion, last); err != nil {
+		return err
+	}
 	return nil
 }
 
-func validateConvergenceWithoutSuccessfulProbe(value ConvergenceWaitObservation, stages []string) error {
+func validateConvergenceWithoutSuccessfulProbe(
+	value ConvergenceWaitObservation,
+	stages []string,
+	detailVersion int,
+) error {
 	if value.FirstStage != convergenceNotInspected || value.FirstProgressSHA256 != "" ||
 		value.LastProgressSHA256 != "" || value.ProgressChanges != 0 || value.StageChanges != 0 ||
 		value.LastProgressChangeWallMS != 0 || value.ObservationProgress != nil ||
@@ -982,7 +1035,7 @@ func validateConvergenceWithoutSuccessfulProbe(value ConvergenceWaitObservation,
 	}
 	if value.Attempts == 0 {
 		if value.Outcome != "server_exited" || len(value.InspectionTransitions) != 0 ||
-			value.TransitionLimitExceeded {
+			hasLastInspection(value) || value.TransitionLimitExceeded {
 			return errors.New("T40.13 uninspected convergence wait is incoherent")
 		}
 		return nil
@@ -998,14 +1051,95 @@ func validateConvergenceWithoutSuccessfulProbe(value ConvergenceWaitObservation,
 	var previous ConvergenceTransitionObservation
 	for index, transition := range value.InspectionTransitions {
 		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
-			!slices.Contains(classes, transition.Class) || !digestIdentity(transition.ProgressSHA256) ||
+			!slices.Contains(classes, transition.Class) ||
+			!validTransitionHTTPDiagnostic(transition, detailVersion) || !digestIdentity(transition.ProgressSHA256) ||
 			transition.WallMS < 0 || transition.WallMS > value.WallMS ||
 			index > 0 && transition.WallMS < previous.WallMS ||
 			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
+				transition.HTTPStatus == previous.HTTPStatus && transition.HTTPReason == previous.HTTPReason &&
 				transition.ProgressSHA256 == previous.ProgressSHA256 {
 			return errors.New("T40.13 unsuccessful convergence transition is invalid")
 		}
 		previous = transition
+	}
+	if err := validateLastInspection(
+		value, stages, detailVersion, value.InspectionTransitions[len(value.InspectionTransitions)-1],
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func hasLastInspection(value ConvergenceWaitObservation) bool {
+	return value.LastInspectionStage != "" || value.LastInspectionClass != "" ||
+		value.LastInspectionHTTPStatus != 0 || value.LastInspectionHTTPReason != "" ||
+		value.LastInspectionSHA256 != "" || value.LastInspectionWallMS != 0
+}
+
+func validTransitionHTTPDiagnostic(transition ConvergenceTransitionObservation, detailVersion int) bool {
+	if detailVersion < 3 {
+		return transition.HTTPStatus == 0 && transition.HTTPReason == ""
+	}
+	if transition.Class != "status" {
+		return transition.HTTPStatus == 0 && transition.HTTPReason == ""
+	}
+	return validHTTPDiagnostic(transition.HTTPStatus, transition.HTTPReason)
+}
+
+func validHTTPDiagnostic(status int, reason string) bool {
+	if status < 100 || status > 599 {
+		return false
+	}
+	switch reason {
+	case httpReason409Stale, httpReason409ControlAbsent:
+		return status == 409
+	case httpReason500Store, httpReason500Projection:
+		return status == 500
+	case httpReason401Unauthorized:
+		return status == 401
+	case httpReason403Forbidden:
+		return status == 403
+	case httpReason404NotFound:
+		return status == 404
+	case httpReason503Unavailable:
+		return status == 503
+	case httpReasonOther:
+		return true
+	default:
+		return false
+	}
+}
+
+func validateLastInspection(
+	value ConvergenceWaitObservation,
+	stages []string,
+	detailVersion int,
+	lastTransition ConvergenceTransitionObservation,
+) error {
+	if detailVersion < 3 {
+		if hasLastInspection(value) {
+			return errors.New("T40.13 pre-v7 convergence wait acquired last-inspection diagnostics")
+		}
+		return nil
+	}
+	if !slices.Contains(stages, value.LastInspectionStage) ||
+		value.LastInspectionStage == convergenceNotInspected ||
+		!slices.Contains([]string{"pending", "transport", "status", "response", "control", "complete"},
+			value.LastInspectionClass) ||
+		!digestIdentity(value.LastInspectionSHA256) || value.LastInspectionWallMS <= 0 ||
+		value.LastInspectionWallMS > value.WallMS || value.LastInspectionWallMS < lastTransition.WallMS ||
+		value.LastInspectionStage != lastTransition.Stage || value.LastInspectionClass != lastTransition.Class ||
+		value.LastInspectionHTTPStatus != lastTransition.HTTPStatus ||
+		value.LastInspectionHTTPReason != lastTransition.HTTPReason ||
+		value.LastInspectionSHA256 != lastTransition.ProgressSHA256 {
+		return errors.New("T40.13 last completed inspection is invalid")
+	}
+	if value.LastInspectionClass == "status" {
+		if !validHTTPDiagnostic(value.LastInspectionHTTPStatus, value.LastInspectionHTTPReason) {
+			return errors.New("T40.13 last HTTP inspection diagnostic is invalid")
+		}
+	} else if value.LastInspectionHTTPStatus != 0 || value.LastInspectionHTTPReason != "" {
+		return errors.New("T40.13 non-status inspection retained HTTP diagnostics")
 	}
 	return nil
 }
@@ -1222,7 +1356,7 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
 			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
@@ -1239,7 +1373,7 @@ func validateCompleted(value Receipt, plan Plan) error {
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 {
 		want := [][3]string{
 			{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
 			{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},

@@ -95,11 +95,11 @@ func (runtime *Runtime) reconcileSource(
 		}
 		release()
 		if fence == nil {
-			runtime.cleanupSettledSchedule(ctx, repository)
+			runtime.cleanupSettledSchedule(ctx, repository, true)
 		}
 		return runtime.afterPublish(ctx, repository)
 	}
-	runtime.cleanupSettledSchedule(ctx, repository)
+	runtime.cleanupSettledSchedule(ctx, repository, false)
 	if runtime.Admit != nil {
 		if err := runtime.Admit(ctx); err != nil {
 			return workFailure(err)
@@ -404,7 +404,11 @@ func (runtime *Runtime) afterPublish(ctx context.Context, repository string) err
 	return runtime.OnPublished(ctx, repository)
 }
 
-func (runtime *Runtime) cleanupSettledSchedule(ctx context.Context, repository string) {
+func (runtime *Runtime) cleanupSettledSchedule(
+	ctx context.Context,
+	repository string,
+	preserveCurrentBinding bool,
+) {
 	schedule, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
 	if err != nil || schedule.Status != store.GenerationScheduleSettled || schedule.Failed != 0 {
 		return
@@ -415,7 +419,9 @@ func (runtime *Runtime) cleanupSettledSchedule(ctx context.Context, repository s
 	}
 	runtime.dropPlan(repository, binding.PublicationGeneration)
 	_ = os.RemoveAll(runtime.planDirectory(repository, binding.PublicationGeneration))
-	_ = runtime.removeScheduleBinding(repository, schedule.Generation)
+	if !preserveCurrentBinding {
+		_ = runtime.removeScheduleBinding(repository, schedule.Generation)
+	}
 }
 
 func (runtime *Runtime) scheduleGeneration(

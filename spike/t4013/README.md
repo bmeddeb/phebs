@@ -414,12 +414,48 @@ or cancellation can leave at most one bounded local read draining; teardown
 joins it before custody deletion. It adds no read, and production behavior is
 unchanged.
 
+The independently verified `t40r1-neutral-09` v6 plan
+(`sha256:09f3d7325dbbc1d3e2d6323bd43b0348731f5ad2a34df7b2f33b564d0cf00e28`)
+at commit `17cf54b85c45cbf25f01f30d910ffb7eaade40ec` also stopped honestly at
+the four-hour structural cold deadline. Package
+`sha256:bc8b7cea48d241bb780cf18da5523a677b5c49efe1b3f19931aa07e0040d6139`,
+observation
+`sha256:438c1c71f9677b92fa74d209ff797a8bcd8d6cc2e3c4b3993013aa25b1608c0b`,
+and receipt
+`sha256:4353c49a42204dea6a7f08e1982b66c61a750bcf4bfec1cc27dc4ed9f41b76ae`
+verify exactly. Startup was healthy in 12,813 ms; peak RSS was 3,988,865,024
+bytes and allocated custody was 20,089,499,648 bytes. Teardown destroyed
+custody. The last successful typed snapshot at 1,345,019 ms reported 63 of 64
+partitions succeeded and one running. At 1,352,032 ms the progress endpoint
+entered one unchanged `status`-class tuple for the rest of 2,880 completed
+inspections. V6 did not retain the numeric status or a closed response reason,
+so this proves a persistent progress-surface failure but cannot distinguish
+409 from 500 or prove whether the underlying final partition later completed.
+Take 9 is `unclassified` and `neutral-09` is permanently retired.
+
+Take 10 uses v7 while preserving v1-v6 bytes and every Take 9 deadline and
+ceiling. A non-200 inspection retains its exact 100–599 status plus one closed
+reason: `409_stale`, `409_control_absent`, `500_store`, `500_projection`,
+closed 401/403/404/503 identities, or `status_other`. It also retains the last
+completed stage, class, status/reason, progress digest, and wall time even when
+an unchanged transition is deduplicated. Error bodies remain bounded to 4 KiB,
+are mapped only through Huma's fixed detail strings, and are never retained.
+Separately, current observation progress now projects a settled execution
+schedule after finalization removes its marker. The current schedule's small
+binding survives current-source cleanup, including recovery identities, and
+is removed when a new source supersedes it. This makes the ceremony's
+`current publication + settled schedule` predicate reachable without weakening
+either authority. A current progress request adds one bounded schedule-binding
+control read; it adds no member/source read, lock, child, cache invalidation, or
+store transaction. Ceremony polling adds no request and performs one bounded
+problem-detail decode only on non-200 responses.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-09
+CEREMONY_ID=t40r1-neutral-10
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

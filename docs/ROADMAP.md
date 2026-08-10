@@ -768,6 +768,14 @@ catalog, relationship, or correctness authority.
   wall/stage/class/progress-digest transitions plus the last successful
   pending/complete probe. Failed inspections remain timeline-only. The 33rd
   transition fails closed.
+- T40.R1 Take 9 is a verified `unclassified` four-hour cold stop. It retained
+  63/64 succeeded at 22m25s, then an unchanged observation-progress `status`
+  tuple from 22m32s through the deadline; V6 cannot distinguish 409 from 500.
+  Successful publication also removed the marker required to project its
+  settled schedule, making the final oracle unreachable. Take 10 is the only
+  authorized preparation: unchanged ceilings, `neutral-10`, a marker-independent
+  settled current schedule, exact bounded HTTP status plus closed reason, and
+  the last completed inspection identity/time. It adds no poll or corpus read.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

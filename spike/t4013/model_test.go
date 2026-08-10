@@ -244,6 +244,24 @@ func TestV6PlanPreservesTakeNineDeadlines(t *testing.T) {
 	}
 }
 
+func TestV7PlanPreservesTakeTenDeadlines(t *testing.T) {
+	plan, err := frozenV7PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV7 || plan.Safety != frozenSafetyV6 || plan.Safety != frozenSafetyV7 {
+		t.Fatalf("v7 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV7 || decoded.Safety != frozenSafetyV7 {
+		t.Fatalf("decoded v7 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -694,6 +712,64 @@ func TestV6CompletedReceiptRequiresBoundedConvergenceTransitions(t *testing.T) {
 	}
 }
 
+func TestV7ReceiptRequiresClosedLastInspectionDiagnostics(t *testing.T) {
+	plan, err := frozenV7PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV7Observation(plan)
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV7 || len(receipt.ConvergenceWaits) != 12 {
+		t.Fatalf("v7 completed receipt = %+v, %v", receipt, err)
+	}
+
+	digest := "sha256:" + strings.Repeat("a", 64)
+	wait := ConvergenceWaitObservation{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		FirstStage: "observation_publication", LastStage: "observation_publication",
+		Attempts: 3, FirstProgressSHA256: digest, LastProgressSHA256: digest,
+		InspectionTransitions: []ConvergenceTransitionObservation{
+			{WallMS: 1, Stage: "observation_publication", Class: "pending", ProgressSHA256: digest},
+			{WallMS: 2, Stage: "observation_publication", Class: "status", HTTPStatus: 409,
+				HTTPReason: httpReason409ControlAbsent, ProgressSHA256: digest},
+		},
+		LastSuccessfulProbeSHA256: digest, LastSuccessfulProbeWallMS: 1,
+		LastInspectionStage: "observation_publication", LastInspectionClass: "status",
+		LastInspectionHTTPStatus: 409, LastInspectionHTTPReason: httpReason409ControlAbsent,
+		LastInspectionSHA256: digest, LastInspectionWallMS: 9,
+		DeadlineMS: 10, WallMS: 10,
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 3); err != nil {
+		t.Fatalf("v7 status diagnostic failed: %v", err)
+	}
+	for _, mutate := range []func(*ConvergenceWaitObservation){
+		func(value *ConvergenceWaitObservation) { value.LastInspectionHTTPReason = httpReason500Store },
+		func(value *ConvergenceWaitObservation) { value.LastInspectionWallMS = 1 },
+		func(value *ConvergenceWaitObservation) { value.InspectionTransitions[1].HTTPStatus = 500 },
+		func(value *ConvergenceWaitObservation) {
+			value.LastInspectionSHA256 = "sha256:" + strings.Repeat("b", 64)
+		},
+	} {
+		crossed := wait
+		crossed.InspectionTransitions = slices.Clone(wait.InspectionTransitions)
+		mutate(&crossed)
+		if err := validateConvergenceWaits([]ConvergenceWaitObservation{crossed}, 3); err == nil {
+			t.Fatalf("invalid v7 diagnostic passed: %+v", crossed)
+		}
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err == nil {
+		t.Fatal("v6 detail contract accepted v7 status diagnostics")
+	}
+}
+
 func TestV5ConvergenceDiagnosticsRejectContradictoryEvidence(t *testing.T) {
 	base := ConvergenceWaitObservation{
 		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
@@ -918,6 +994,19 @@ func completedV6Observation(plan Plan) Observation {
 			WallMS: wait.WallMS, Stage: "complete", Class: "complete",
 			ProgressSHA256: wait.LastProgressSHA256,
 		}}
+	}
+	return value
+}
+
+func completedV7Observation(plan Plan) Observation {
+	value := completedV6Observation(plan)
+	value.Schema = ObservationSchemaV7
+	for index := range value.ConvergenceWaits {
+		wait := &value.ConvergenceWaits[index]
+		wait.LastInspectionStage = "complete"
+		wait.LastInspectionClass = "complete"
+		wait.LastInspectionSHA256 = wait.LastProgressSHA256
+		wait.LastInspectionWallMS = wait.WallMS
 	}
 	return value
 }

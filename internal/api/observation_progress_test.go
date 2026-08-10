@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,6 +17,29 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestObservationProgressErrorsExposeOnlyClosedDiagnosticDetails(t *testing.T) {
+	tests := []struct {
+		name   string
+		cause  error
+		status int
+		detail string
+	}{
+		{name: "stale", cause: observationpublication.ErrStale, status: http.StatusConflict, detail: ObservationProgressDetailStale},
+		{name: "control absent", cause: os.ErrNotExist, status: http.StatusConflict, detail: ObservationProgressDetailControlAbsent},
+		{name: "projection", cause: observationpublication.ErrInvalid, status: http.StatusInternalServerError, detail: ObservationProgressDetailProjection},
+		{name: "store", cause: errors.New("private store failure"), status: http.StatusInternalServerError, detail: ObservationProgressDetailStore},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := observationProgressError(test.cause)
+			if humaStatus(err) != test.status || err.Error() != test.detail ||
+				strings.Contains(err.Error(), "private") {
+				t.Fatalf("closed error = %d %q", humaStatus(err), err)
+			}
+		})
+	}
+}
 
 type observationProgressRepoStore struct {
 	store.Store

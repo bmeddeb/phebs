@@ -119,6 +119,24 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 		return Progress{}, err
 	}
 	var targetGeneration, targetSource string
+	if schedulePresent {
+		runtime := Runtime{DataDir: reader.DataDir}
+		scheduleTarget, targetErr := runtime.scheduleTarget(repository, schedule.Generation)
+		switch {
+		case markerPresent:
+			if targetErr != nil || scheduleTarget != marker.GenerationDigest {
+				return Progress{}, errors.Join(targetErr, invalid("progress schedule target"))
+			}
+			targetGeneration = marker.GenerationDigest
+		case schedule.Status == store.GenerationScheduleActive &&
+			(publicationManifest == nil || publicationManifest.SourceGenerationDigest != source.Digest):
+			return Progress{}, invalid("active progress schedule has no publication marker")
+		case targetErr == nil && schedule.Status == store.GenerationScheduleSettled &&
+			publicationManifest != nil && scheduleTarget == publicationManifest.GenerationDigest:
+			targetGeneration = scheduleTarget
+			targetSource = publicationManifest.SourceGenerationDigest
+		}
+	}
 	if markerPresent {
 		targetGeneration = marker.GenerationDigest
 		plan, planErr := reader.readPlan(repository, targetGeneration)
@@ -126,16 +144,6 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 			return Progress{}, planErr
 		}
 		targetSource = plan.SourceGenerationDigest
-		if schedulePresent {
-			runtime := Runtime{DataDir: reader.DataDir}
-			target, targetErr := runtime.scheduleTarget(repository, schedule.Generation)
-			if targetErr != nil || target != targetGeneration {
-				return Progress{}, errors.Join(targetErr, invalid("progress schedule target"))
-			}
-		}
-	} else if schedulePresent && schedule.Status == store.GenerationScheduleActive &&
-		(publicationManifest == nil || publicationManifest.SourceGenerationDigest != source.Digest) {
-		return Progress{}, invalid("active progress schedule has no publication marker")
 	}
 
 	result := projectProgress(

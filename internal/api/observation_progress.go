@@ -18,6 +18,15 @@ import (
 const (
 	ObservationProgressPath          = "/api/observation-progress"
 	ObservationProgressResponseLimit = 64 << 10
+
+	ObservationProgressDetailStale         = "observation progress changed; retry"
+	ObservationProgressDetailControlAbsent = "observation progress unavailable"
+	ObservationProgressDetailStore         = "read observation progress"
+	ObservationProgressDetailProjection    = "invalid observation progress"
+	ObservationProgressDetailEncode        = "encode observation progress"
+	ObservationProgressDetailBound         = "observation progress exceeds response bound"
+	ObservationProgressDetailAuthority     = "observation authority changed while building the response; retry"
+	ObservationProgressDetailAuthorize     = "authorize observation progress"
 )
 
 type ObservationProgressReader interface {
@@ -55,11 +64,11 @@ func (service *ObservationProgressService) Read(
 		return nil, observationProgressError(err)
 	}
 	if err := observationpublication.ValidateProgress(progress); err != nil {
-		return nil, huma.Error500InternalServerError("invalid observation progress", err)
+		return nil, huma.Error500InternalServerError(ObservationProgressDetailProjection, err)
 	}
 	if progress.Repository != repository.Name {
 		return nil, huma.Error500InternalServerError(
-			"invalid observation progress", errors.New("repository projection mismatch"),
+			ObservationProgressDetailProjection, errors.New("repository projection mismatch"),
 		)
 	}
 	confirmed, confirmedAuthorization, err := service.authorize(ctx, repository.Name)
@@ -70,15 +79,15 @@ func (service *ObservationProgressService) Read(
 		confirmed.IndexedCommitHash != repository.IndexedCommitHash ||
 		confirmed.EvidenceRevision != repository.EvidenceRevision ||
 		!equalOptionalTime(confirmed.IndexedAt, repository.IndexedAt) {
-		return nil, huma.Error409Conflict("observation authority changed while building the response; retry")
+		return nil, huma.Error409Conflict(ObservationProgressDetailAuthority)
 	}
 	encoded, err := json.Marshal(progress)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("encode observation progress", err)
+		return nil, huma.Error500InternalServerError(ObservationProgressDetailEncode, err)
 	}
 	if len(encoded) > ObservationProgressResponseLimit {
 		return nil, huma.Error500InternalServerError(
-			"observation progress exceeds response bound", errors.New("encoded response is too large"),
+			ObservationProgressDetailBound, errors.New("encoded response is too large"),
 		)
 	}
 	return &progress, nil
@@ -94,12 +103,12 @@ func (service *ObservationProgressService) authorize(
 	repository, err := service.opts.Store.GetRepo(ctx, repositoryName)
 	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		return store.Repo{}, VisibilityContext{}, huma.Error500InternalServerError(
-			"authorize observation progress", err,
+			ObservationProgressDetailAuthorize, err,
 		)
 	}
 	if err == nil && repository == nil {
 		return store.Repo{}, VisibilityContext{}, huma.Error500InternalServerError(
-			"authorize observation progress", errors.New("repository lookup returned nil"),
+			ObservationProgressDetailAuthorize, errors.New("repository lookup returned nil"),
 		)
 	}
 	if err != nil || repository.Deleting || repository.IndexedCommitHash == "" ||
@@ -113,11 +122,13 @@ func (service *ObservationProgressService) authorize(
 func observationProgressError(err error) error {
 	switch {
 	case errors.Is(err, observationpublication.ErrStale):
-		return huma.Error409Conflict("observation progress changed; retry")
+		return huma.Error409Conflict(ObservationProgressDetailStale)
 	case errors.Is(err, os.ErrNotExist), errors.Is(err, store.ErrNotFound):
-		return huma.Error409Conflict("observation progress unavailable")
+		return huma.Error409Conflict(ObservationProgressDetailControlAbsent)
+	case errors.Is(err, observationpublication.ErrInvalid):
+		return huma.Error500InternalServerError(ObservationProgressDetailProjection, err)
 	default:
-		return huma.Error500InternalServerError("read observation progress", err)
+		return huma.Error500InternalServerError(ObservationProgressDetailStore, err)
 	}
 }
 

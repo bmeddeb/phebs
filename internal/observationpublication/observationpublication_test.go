@@ -658,8 +658,8 @@ func TestRuntimeMintsDistinctRecoveryScheduleAfterExhaustion(t *testing.T) {
 	if len(capture.specs) != 2 {
 		t.Fatalf("current publication rescheduled: %+v", capture.specs)
 	}
-	if _, err := os.Lstat(runtime.scheduleBindingPath(repositoryName, recovery.Generation)); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("settled recovery binding remains: %v", err)
+	if _, err := os.Lstat(runtime.scheduleBindingPath(repositoryName, recovery.Generation)); err != nil {
+		t.Fatalf("settled current recovery binding was removed: %v", err)
 	}
 }
 
