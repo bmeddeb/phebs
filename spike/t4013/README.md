@@ -517,6 +517,59 @@ body, raw cause, path, repository/source identity, or process output. This
 branch prepares but does not authorize a Take 12 execution; a new exact commit,
 unique signer, independent plan review, and explicit approval remain required.
 
+Take 12 was subsequently approved and executed from exact commit
+`d91f3f2e01b6997b30984130aea6a58d33364dc5` with frozen v8 plan
+`sha256:ff289204f3f8fe68b2dd20d7fe36b278f048f2f3d1f0c7e18d8329be93d36afc`.
+It stopped honestly at the exact four-hour cold-convergence deadline with
+decision `unclassified` and reason `convergence_deadline_expired`. Startup was
+healthy in 13,031 ms. All 2,880 completed probes remained at
+`repository_index` with one unchanged progress identity; no observation
+progress request was reached. The cold phase observed three Git children,
+three index children, two retry lifecycle events, 3,244,900,352 bytes peak
+process-tree RSS, and 325,836,800 allocated data bytes. The receipt does not
+establish whether the third index attempt was still running or had failed.
+Source-free transfer archive
+`sha256:91e8dbf962788180774bd7cc655d9507190fe68bb12ee9936c3fe0dbf2ebe3e1`
+and its signed inner inventory verified. Custody and the prepared manifest were
+destroyed; no later gate ran.
+
+The exact-source `repository_index` investigation records the following
+bounded findings. These are deliberately separated into verified facts and
+inferences so a destroyed-custody run is not retrospectively overclassified:
+
+- **Verified:** the ceremony polls `/api/repos` and hashes only the repository's
+  committed `indexed_commit_hash` and legacy `latest_indexing_job_status`.
+  Before a successful index publication, neither field reflects queue
+  `pending`, `claimed`, `running`, `requeued`, `failed`, or `canceled`
+  transitions. The unchanged Take 12 digest is therefore compatible with both
+  live work and an already terminal job.
+- **Verified:** the authenticated, permission-filtered `/api/repo-status`
+  surface already performs one bounded latest-record-link projection per
+  repository. Its `last_index_job_state=exact` projection supplies the current
+  job's closed status and attempt count without scanning retained job history.
+  The ceremony did not consume this existing authority.
+- **Verified:** the ordinary runner permits three index executions by default;
+  retryable failures after attempts one and two produce the two observed
+  lifecycle retry events, and the process sampler counts distinct child PIDs.
+- **Inference only:** Take 12's three observed index children plus two retries
+  are consistent with a third attempt. They do not prove whether that attempt
+  remained active, exhausted, or which child failure class occurred. V8
+  retained neither the latest-job projection nor raw logs/errors, and teardown
+  correctly removed the only material that could have resolved that question.
+
+The smallest prospective correction is ceremony-only: consume the existing
+`/api/repo-status` projection, bind only closed projection state, job status,
+and attempt count into the source-free progress identity, and stop
+`unclassified` when an exact latest index job is terminally failed or canceled.
+It must not retain the job target, worker identity, timestamps, or raw error.
+This adds no history scan, corpus read, child, production mutation, or new API;
+each five-second ceremony probe replaces its existing `/api/repos` request with
+one `/api/repo-status` request whose store work is already bounded by current
+repository cardinality. A separate small neutral reproduction must pin active,
+retry, terminal, unavailable-projection, and successful-publication behavior
+before another large execution is considered. The underlying third-attempt
+cause remains unknown and must not be guessed from Take 12.
+
 ```sh
 cd ~/phebs
 
