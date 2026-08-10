@@ -1127,11 +1127,7 @@ func validateLastInspection(
 		!slices.Contains([]string{"pending", "transport", "status", "response", "control", "complete"},
 			value.LastInspectionClass) ||
 		!digestIdentity(value.LastInspectionSHA256) || value.LastInspectionWallMS <= 0 ||
-		value.LastInspectionWallMS > value.WallMS || value.LastInspectionWallMS < lastTransition.WallMS ||
-		value.LastInspectionStage != lastTransition.Stage || value.LastInspectionClass != lastTransition.Class ||
-		value.LastInspectionHTTPStatus != lastTransition.HTTPStatus ||
-		value.LastInspectionHTTPReason != lastTransition.HTTPReason ||
-		value.LastInspectionSHA256 != lastTransition.ProgressSHA256 {
+		value.LastInspectionWallMS > value.WallMS || value.LastInspectionWallMS < lastTransition.WallMS {
 		return errors.New("T40.13 last completed inspection is invalid")
 	}
 	if value.LastInspectionClass == "status" {
@@ -1140,6 +1136,14 @@ func validateLastInspection(
 		}
 	} else if value.LastInspectionHTTPStatus != 0 || value.LastInspectionHTTPReason != "" {
 		return errors.New("T40.13 non-status inspection retained HTTP diagnostics")
+	}
+	matchesTimelineTail := value.LastInspectionStage == lastTransition.Stage &&
+		value.LastInspectionClass == lastTransition.Class &&
+		value.LastInspectionHTTPStatus == lastTransition.HTTPStatus &&
+		value.LastInspectionHTTPReason == lastTransition.HTTPReason &&
+		value.LastInspectionSHA256 == lastTransition.ProgressSHA256
+	if matchesTimelineTail == value.TransitionLimitExceeded {
+		return errors.New("T40.13 last completed inspection is invalid")
 	}
 	return nil
 }

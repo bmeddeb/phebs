@@ -415,6 +415,62 @@ func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
 	}
 }
 
+func TestV7DiagnosticLimitRetainsBoundedOverflowInspection(t *testing.T) {
+	plan, err := frozenV7PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tracker convergenceProgressTracker
+	first := convergenceProbe("observation_publication", "first-success")
+	if tracker.observe(first, convergenceInspectionDiagnostic{class: "pending"}, time.Millisecond) {
+		t.Fatal("first transition unexpectedly exceeded the bound")
+	}
+	status := convergenceInspectionDiagnostic{
+		class: "status", httpStatus: 500, httpReason: httpReason500Projection,
+	}
+	var overflow privateConvergenceProbe
+	for index := 1; index <= maxConvergenceTransitions; index++ {
+		overflow = convergenceProbe("observation_publication", index)
+		exceeded := tracker.observe(overflow, status, time.Duration(index+1)*time.Millisecond)
+		if exceeded != (index == maxConvergenceTransitions) {
+			t.Fatalf("inspection %d exceeded=%t", index, exceeded)
+		}
+	}
+	if len(tracker.inspectionTransitions) != maxConvergenceTransitions ||
+		tracker.inspectionTransitions[len(tracker.inspectionTransitions)-1].ProgressSHA256 == overflow.SHA256 {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+	run := &execution{plan: plan}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "structural-2m-v1"}, "a", "cold", "diagnostic_limit",
+		time.Minute, time.Now().Add(-time.Second), tracker,
+	)
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("waits = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if !wait.TransitionLimitExceeded || wait.Attempts != maxConvergenceTransitions+1 ||
+		len(wait.InspectionTransitions) != maxConvergenceTransitions ||
+		wait.LastInspectionSHA256 != overflow.SHA256 || wait.LastInspectionClass != "status" ||
+		wait.LastInspectionHTTPStatus != 500 || wait.LastInspectionHTTPReason != httpReason500Projection {
+		t.Fatalf("wait = %+v", wait)
+	}
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 3); err != nil {
+		t.Fatalf("v7 bounded overflow wait failed validation: %v", err)
+	}
+
+	invalid := wait
+	tail := invalid.InspectionTransitions[len(invalid.InspectionTransitions)-1]
+	invalid.LastInspectionStage = tail.Stage
+	invalid.LastInspectionClass = tail.Class
+	invalid.LastInspectionHTTPStatus = tail.HTTPStatus
+	invalid.LastInspectionHTTPReason = tail.HTTPReason
+	invalid.LastInspectionSHA256 = tail.ProgressSHA256
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{invalid}, 3); err == nil {
+		t.Fatal("v7 diagnostic limit accepted the timeline tail as the overflow inspection")
+	}
+}
+
 func TestConvergenceWaitStopsBeforeFirstInspectionWhenServerAlreadyExited(t *testing.T) {
 	credential := filepath.Join(t.TempDir(), "credential")
 	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
