@@ -363,12 +363,53 @@ fails, the independently cause-bound `review_ceiling_crossed` stop wins;
 measurement unavailability still wins over non-parent failures, including
 meter-dependent RSS or allocation ceiling claims.
 
+The independently verified `t40r1-neutral-08` v5 plan
+(`sha256:a5e6867a94c594be4c69e36f1f42b3449e5f4ae139832c2336b04519093804e6`)
+at commit `a019ec3b399d9b0459b1399b0191b6873c99a557` stopped honestly at the
+four-hour structural cold deadline. Package
+`sha256:6b7cc1fb775f10d07145f5b01c4d384ad0a0f141e08817034ba815f0cc3caaf9`,
+observation
+`sha256:b74c8e7f34ee391298bc6b6243814478b6f2839441737d60170c90516d4db2e5`,
+and receipt
+`sha256:607c7b42eb991613a4312af1f36304c2264d24d34fe50d734e040ee3f30ac6d8`
+verify exactly. Startup was healthy in 12,828 ms, peak RSS was 3,874,963,456
+bytes, and allocated custody was 20,081,238,016 bytes. The eight-hour parent
+was not crossed and teardown destroyed custody.
+
+The last typed observation snapshot was retained at 1,315,017 ms (21m55s),
+with 63 of 64 partitions succeeded and one running. No later typed snapshot
+was retained for about 3h38m. This diagnoses a post-21m55 observation gap, not
+a confirmed visibility loss at 21m55s. The apparent last change at 14,400,001
+ms and final `repository_visibility` stage came from observing the
+deadline-canceled
+inspection before checking the phase fence; they are not forward progress and
+do not prove that the partition remained running at four hours. Take 8 is
+therefore `unclassified` and `neutral-08` is permanently retired.
+
+Take 9 keeps the four-hour full-convergence, 20-minute revalidation, and
+eight-hour total-wall limits unchanged. V6 makes deadline cancellation a
+terminal result—never a probe or transition—and gives post-health process exit
+the distinct `server_exited_during_convergence` stopped result. Each retained
+transition binds wall time, closed stage, failure class, and progress digest;
+the wait separately binds the digest and wall time of its last successfully
+completed inspection (which does not itself claim convergence). Classes are
+closed (`pending`, `transport`, `status`, `response`, `control`, `complete`).
+The first 32 transitions fit the evidence envelope; a 33rd immediately stops
+unclassified as `convergence_transition_limit_exceeded` rather than truncating
+the timeline. Raw errors, process output, repository identities, paths,
+responses, credentials, and source remain in destroyed custody. The two
+unclassified terminal identities remain named through a simultaneous meter
+failure; the eight-hour parent still wins first, while missing measurement
+still governs every other failure. The added work is constant-size local
+accounting over API/control reads the oracle already performs; production
+behavior is unchanged.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-08
+CEREMONY_ID=t40r1-neutral-09
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

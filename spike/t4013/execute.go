@@ -31,18 +31,20 @@ const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
 var (
-	errReviewCeiling       = errors.New("T40.13 frozen review ceiling crossed")
-	errTotalWallDeadline   = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
-	errExactOracle         = errors.New("T40.13 exact oracle refused")
-	errDirectRecovery      = errors.New("T40.13 direct recovery refused")
-	errProductionPressure  = errors.New("T40.13 production pressure gate refused")
-	errConvergenceDeadline = errors.New("T40.13 frozen convergence deadline expired")
+	errReviewCeiling         = errors.New("T40.13 frozen review ceiling crossed")
+	errTotalWallDeadline     = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
+	errExactOracle           = errors.New("T40.13 exact oracle refused")
+	errDirectRecovery        = errors.New("T40.13 direct recovery refused")
+	errProductionPressure    = errors.New("T40.13 production pressure gate refused")
+	errConvergenceDeadline   = errors.New("T40.13 frozen convergence deadline expired")
+	errConvergenceServerExit = errors.New("T40.13 server exited during convergence")
+	errConvergenceTimeline   = errors.New("T40.13 convergence transition limit exceeded")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
 
 func directRecovery(cause error) error {
-	return fmt.Errorf("%w: %v", errDirectRecovery, cause)
+	return errors.Join(errDirectRecovery, cause)
 }
 
 type ExecuteRequest struct {
@@ -117,7 +119,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 		return nil, err
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -322,7 +324,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 
 func (run *execution) verifyFrozenHostToolchain() error {
 	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
-		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 {
+		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -348,6 +350,16 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		result = stoppedClassification{
 			class: "environment", code: "review_ceiling_crossed",
 			decision: "cohort_experiment", reason: "frozen_review_ceiling_crossed", substantiated: true,
+		}
+	case errors.Is(cause, errConvergenceServerExit):
+		result = stoppedClassification{
+			class: "execution", code: "server_exited_during_convergence",
+			decision: "unclassified", reason: "server_exited_during_convergence",
+		}
+	case errors.Is(cause, errConvergenceTimeline):
+		result = stoppedClassification{
+			class: "oracle", code: "convergence_transition_limit_exceeded",
+			decision: "unclassified", reason: "convergence_transition_limit_exceeded",
 		}
 	case measurementErr != nil:
 		result = stoppedClassification{
@@ -425,12 +437,12 @@ func (run *execution) startServer(
 	}
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
-	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
+	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
-		run.plan.Schema == PlanSchemaV5) && startup.Profile != "" {
+		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6) && startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
 	return server, meter, healthErr
@@ -493,7 +505,7 @@ func (run *execution) cold() error {
 		return err
 	}
 	run.structural = server
-	run.structA, err = run.waitSnapshot(structural, "a", "cold", run.fullConvergenceDeadline())
+	run.structA, err = run.waitSnapshot(structural, "a", "cold", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return err
 	}
@@ -510,7 +522,7 @@ func (run *execution) cold() error {
 		return err
 	}
 	run.semantic = server
-	run.semanticA, err = run.waitSnapshot(semantic, "a", "cold", run.fullConvergenceDeadline())
+	run.semanticA, err = run.waitSnapshot(semantic, "a", "cold", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return err
 	}
@@ -541,7 +553,7 @@ func (run *execution) warmNoop() error {
 		return err
 	}
 	run.structural = server
-	after, err := run.waitSnapshot(profile, "a", "warm-noop", run.revalidationDeadline())
+	after, err := run.waitSnapshot(profile, "a", "warm-noop", run.revalidationDeadline(), server)
 	if err != nil {
 		return err
 	}
@@ -567,7 +579,7 @@ func (run *execution) deltaAndReturn() error {
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
-	run.structB, err = run.waitSnapshot(profile, "b", "delta-b", run.fullConvergenceDeadline())
+	run.structB, err = run.waitSnapshot(profile, "b", "delta-b", run.fullConvergenceDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
@@ -592,7 +604,7 @@ func (run *execution) deltaAndReturn() error {
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
 		return err
 	}
-	run.structAR, err = run.waitSnapshot(profile, "a-return", "return-a", run.fullConvergenceDeadline())
+	run.structAR, err = run.waitSnapshot(profile, "a-return", "return-a", run.fullConvergenceDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
@@ -643,7 +655,7 @@ func (run *execution) interruption() error {
 		return err
 	}
 	run.semantic = server
-	after, err := run.waitSnapshot(profile, "a", "interruption-restart", run.fullConvergenceDeadline())
+	after, err := run.waitSnapshot(profile, "a", "interruption-restart", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -699,7 +711,7 @@ func (run *execution) staleWorker() error {
 	if err != nil || !runningLeaseMatchesReport(afterSupersession, started, profile.RepositoryName) {
 		return errors.Join(err, errors.New("T40.13 selected B lease did not remain active across supersession"))
 	}
-	after, err := run.waitSnapshot(profile, "a", "stale-worker", run.fullConvergenceDeadline())
+	after, err := run.waitSnapshot(profile, "a", "stale-worker", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return err
 	}
@@ -979,7 +991,7 @@ func (run *execution) pressure() error {
 	if status.Capacity.Pressure != lifecycle.PressureCollect {
 		return exactOracle("frozen run did not reach the pressure exercise")
 	}
-	after, err := run.waitSnapshot(profile, "a-return", "pressure", run.revalidationDeadline())
+	after, err := run.waitSnapshot(profile, "a-return", "pressure", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
@@ -1009,7 +1021,7 @@ func (run *execution) archiveRestore() error {
 		return err
 	}
 	run.structural = server
-	after, err := run.waitSnapshot(profile, "a-return", "archive-restore", run.fullConvergenceDeadline())
+	after, err := run.waitSnapshot(profile, "a-return", "archive-restore", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -1042,7 +1054,7 @@ func (run *execution) collection() error {
 	if _, err := waitLifecycle(run.ctx, profile, true, 10*time.Minute); err != nil {
 		return err
 	}
-	after, err := run.waitSnapshot(profile, "a-return", "collection", run.revalidationDeadline())
+	after, err := run.waitSnapshot(profile, "a-return", "collection", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
@@ -1070,7 +1082,7 @@ func (run *execution) authorizedQueries() error {
 		return err
 	}
 	run.semantic = semanticServer
-	semanticAfter, err := run.waitSnapshot(semanticProfile, "a", "authorized-query-semantic", run.revalidationDeadline())
+	semanticAfter, err := run.waitSnapshot(semanticProfile, "a", "authorized-query-semantic", run.revalidationDeadline(), semanticServer)
 	if err != nil {
 		return err
 	}
@@ -1088,7 +1100,7 @@ func (run *execution) authorizedQueries() error {
 	if structCount < 0 || semanticCount < 0 || !structExact || !semanticExact {
 		return exactOracle("authorized query oracle failed")
 	}
-	structAfter, err := run.waitSnapshot(run.prepared.Profiles[0], "a-return", "authorized-query-structural", run.revalidationDeadline())
+	structAfter, err := run.waitSnapshot(run.prepared.Profiles[0], "a-return", "authorized-query-structural", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
@@ -1224,11 +1236,20 @@ type convergenceProgressTracker struct {
 	first                     privateConvergenceProbe
 	last                      privateConvergenceProbe
 	lastProgressChange        time.Duration
+	lastCompletedAt           time.Duration
 	observationProgress       *ObservationProgressObservation
 	observationProgressAtWall time.Duration
+	inspectionTransitions     []ConvergenceTransitionObservation
 }
 
-func (tracker *convergenceProgressTracker) observe(probe privateConvergenceProbe, elapsed time.Duration) {
+func (tracker *convergenceProgressTracker) observe(
+	probe privateConvergenceProbe,
+	inspectionClass string,
+	elapsed time.Duration,
+) bool {
+	if elapsed < time.Millisecond {
+		elapsed = time.Millisecond
+	}
 	tracker.attempts++
 	if tracker.first.SHA256 == "" {
 		tracker.first = probe
@@ -1245,14 +1266,84 @@ func (tracker *convergenceProgressTracker) observe(probe privateConvergenceProbe
 		tracker.observationProgressAtWall = elapsed
 	}
 	tracker.last = probe
+	tracker.lastCompletedAt = elapsed
+	return tracker.observeTransition(probe.Stage, inspectionClass, probe.SHA256, elapsed)
+}
+
+func (tracker *convergenceProgressTracker) observeTransition(
+	stage, class, progressSHA256 string,
+	elapsed time.Duration,
+) bool {
+	transition := ConvergenceTransitionObservation{
+		WallMS: elapsed.Milliseconds(), Stage: stage, Class: class, ProgressSHA256: progressSHA256,
+	}
+	if count := len(tracker.inspectionTransitions); count > 0 {
+		last := tracker.inspectionTransitions[count-1]
+		if last.Stage == transition.Stage && last.Class == transition.Class &&
+			last.ProgressSHA256 == transition.ProgressSHA256 {
+			return false
+		}
+	}
+	if len(tracker.inspectionTransitions) < maxConvergenceTransitions {
+		tracker.inspectionTransitions = append(tracker.inspectionTransitions, transition)
+		return false
+	}
+	return true
+}
+
+func observeCompletedConvergenceAttempt(
+	phase context.Context,
+	tracker *convergenceProgressTracker,
+	probe privateConvergenceProbe,
+	inspectionClass string,
+	elapsed time.Duration,
+) (bool, bool) {
+	if phase == nil || tracker == nil || phase.Err() != nil {
+		return false, false
+	}
+	return true, tracker.observe(probe, inspectionClass, elapsed)
+}
+
+func classifyConvergenceInspection(err error) string {
+	if err == nil {
+		return "complete"
+	}
+	message := err.Error()
+	switch {
+	case strings.Contains(message, "HTTP request failed"):
+		return "transport"
+	case strings.Contains(message, "HTTP request returned status"):
+		return "status"
+	case strings.Contains(message, "HTTP response"):
+		return "response"
+	case errors.Is(err, os.ErrNotExist), strings.Contains(message, "not visible"),
+		strings.Contains(message, "has not converged"), strings.Contains(message, "is not exact"):
+		return "pending"
+	default:
+		return "control"
+	}
+}
+
+func retainServerExit(server *privateServer) (error, bool) {
+	if server == nil || server.done == nil {
+		return nil, false
+	}
+	select {
+	case exitErr := <-server.done:
+		server.done <- exitErr
+		return exitErr, true
+	default:
+		return nil, false
+	}
 }
 
 func (run *execution) waitSnapshot(
 	profile PreparedProfile,
 	revision, label string,
 	limit time.Duration,
+	server *privateServer,
 ) (privateProfileSnapshot, error) {
-	if run == nil || run.ctx == nil || limit <= 0 {
+	if run == nil || run.ctx == nil || limit <= 0 || server == nil || server.done == nil {
 		return privateProfileSnapshot{}, errors.New("T40.13 convergence wait is invalid")
 	}
 	inspector, err := newProfileInspector(profile)
@@ -1267,12 +1358,35 @@ func (run *execution) waitSnapshot(
 	var progress convergenceProgressTracker
 	for {
 		snapshot, probe, inspectErr := inspector.inspectWithProgress(phase, profile, revision)
-		progress.observe(probe, time.Since(started))
-		if inspectErr == nil && phase.Err() == nil {
+		elapsed := time.Since(started)
+		completed, transitionLimitExceeded := observeCompletedConvergenceAttempt(
+			phase, &progress, probe, classifyConvergenceInspection(inspectErr), elapsed,
+		)
+		if !completed {
+			if exitErr, exited := retainServerExit(server); exited {
+				run.recordConvergenceWait(profile, revision, label, "server_exited", limit, started, progress)
+				return privateProfileSnapshot{}, errors.Join(exitErr, errConvergenceServerExit)
+			}
+			if run.ctx.Err() == nil && errors.Is(phase.Err(), context.DeadlineExceeded) {
+				run.recordConvergenceWait(profile, revision, label, "deadline", limit, started, progress)
+				return privateProfileSnapshot{}, errConvergenceDeadline
+			}
+			run.recordConvergenceWait(profile, revision, label, "canceled", limit, started, progress)
+			return privateProfileSnapshot{}, errors.Join(phase.Err(), errors.New("T40.13 convergence wait canceled"))
+		}
+		if transitionLimitExceeded {
+			run.recordConvergenceWait(profile, revision, label, "diagnostic_limit", limit, started, progress)
+			return privateProfileSnapshot{}, errConvergenceTimeline
+		}
+		if inspectErr == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)
 			return snapshot, nil
 		}
 		select {
+		case exitErr := <-server.done:
+			server.done <- exitErr
+			run.recordConvergenceWait(profile, revision, label, "server_exited", limit, started, progress)
+			return privateProfileSnapshot{}, errors.Join(exitErr, errConvergenceServerExit)
 		case <-phase.Done():
 			if run.ctx.Err() == nil && errors.Is(phase.Err(), context.DeadlineExceeded) {
 				run.recordConvergenceWait(profile, revision, label, "deadline", limit, started, progress)
@@ -1292,7 +1406,7 @@ func (run *execution) recordConvergenceWait(
 	started time.Time,
 	progress convergenceProgressTracker,
 ) {
-	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 || progress.attempts == 0 {
+	if run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 || progress.attempts == 0 {
 		return
 	}
 	wait := ConvergenceWaitObservation{
@@ -1302,25 +1416,32 @@ func (run *execution) recordConvergenceWait(
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
 	}
-	if run.plan.Schema == PlanSchemaV5 {
+	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
 		wait.FirstStage = progress.first.Stage
 		wait.StageChanges = progress.stageChanges
 		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
 		wait.ObservationProgress = progress.observationProgress
 		wait.ObservationProgressWallMS = progress.observationProgressAtWall.Milliseconds()
 	}
+	if run.plan.Schema == PlanSchemaV6 {
+		wait.WallMS = max(wait.WallMS, 1)
+		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
+		wait.LastSuccessfulProbeSHA256 = progress.last.SHA256
+		wait.LastSuccessfulProbeWallMS = progress.lastCompletedAt.Milliseconds()
+		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
+	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
 }
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
 }
 
 func (run *execution) revalidationDeadline() time.Duration {
-	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 {
+	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1526,7 +1647,7 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
 	value := emptyObservation(environment)
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1537,6 +1658,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV4
 	case PlanSchemaV5:
 		value.Schema = ObservationSchemaV5
+	case PlanSchemaV6:
+		value.Schema = ObservationSchemaV6
 	}
 	return value
 }

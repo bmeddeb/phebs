@@ -89,7 +89,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 		return Prepared{}, err
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
@@ -177,7 +177,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 		})
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 {
+		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
 		}

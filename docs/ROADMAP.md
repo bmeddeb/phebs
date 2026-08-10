@@ -756,6 +756,14 @@ catalog, relationship, or correctness authority.
   it selects `neutral-08` and makes the frozen eight-hour parent timeout win
   over a simultaneous meter-finalization failure. The four-hour diagnostic,
   production behavior, and claim posture remain unchanged.
+- T40.R1 Take 8 is a verified `unclassified` four-hour cold stop. Its last
+  typed observation snapshot occurred at 21m55s with 63/64 partitions
+  succeeded; this establishes a later observation gap, not visibility loss at
+  21m55s. The terminal four-hour stage/change was a canceled inspection, not
+  forward progress. Take 9 is the only authorized preparation: unchanged
+  deadlines, `neutral-09`, terminal-only cancellation, a distinct convergence
+  server-exit result, and at most 32 wall/stage/class/progress-digest
+  transitions plus the last completed probe. The 33rd transition fails closed.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

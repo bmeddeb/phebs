@@ -226,6 +226,24 @@ func TestV5PlanFreezesCalculatedFourHourDiagnosticDeadline(t *testing.T) {
 	}
 }
 
+func TestV6PlanPreservesTakeNineDeadlines(t *testing.T) {
+	plan, err := frozenV6PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV6 || plan.Safety != frozenSafetyV5 || plan.Safety != frozenSafetyV6 {
+		t.Fatalf("v6 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV6 || decoded.Safety != frozenSafetyV6 {
+		t.Fatalf("decoded v6 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -510,7 +528,10 @@ func TestV4CompletedReceiptRequiresExactConvergenceInventory(t *testing.T) {
 		t.Fatalf("v4 completed receipt = %+v, %v", receipt, err)
 	}
 	if bytes.Contains(receiptBytes, []byte(`"first_stage"`)) ||
-		bytes.Contains(receiptBytes, []byte(`"observation_progress"`)) {
+		bytes.Contains(receiptBytes, []byte(`"observation_progress"`)) ||
+		bytes.Contains(receiptBytes, []byte(`"inspection_transitions"`)) ||
+		bytes.Contains(receiptBytes, []byte(`"last_successful_probe"`)) ||
+		bytes.Contains(receiptBytes, []byte(`"transition_limit_exceeded"`)) {
 		t.Fatal("historical v4 receipt bytes acquired v5 diagnostics")
 	}
 	value.ConvergenceWaits[3].Label = "return-a"
@@ -519,7 +540,7 @@ func TestV4CompletedReceiptRequiresExactConvergenceInventory(t *testing.T) {
 	}
 }
 
-func TestV5StoppedReceiptRetainsBoundedObservationProgress(t *testing.T) {
+func TestV5AndV6StoppedReceiptsRetainVersionedBoundedProgress(t *testing.T) {
 	plan, err := frozenV5PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
 		t.Fatal(err)
@@ -571,9 +592,105 @@ func TestV5StoppedReceiptRetainsBoundedObservationProgress(t *testing.T) {
 		receipt.ConvergenceWaits[0].ObservationProgress.ScheduleSucceeded != 40 {
 		t.Fatalf("v5 stopped receipt = %+v, %v", receipt, err)
 	}
+	receipt.ConvergenceWaits[0].InspectionTransitions = []ConvergenceTransitionObservation{{
+		WallMS: 1, Stage: "repository_index", Class: "pending",
+	}}
+	if err := ValidateReceipt(receipt, plan); err == nil {
+		t.Fatal("v5 receipt acquired v6 convergence transitions")
+	}
+
+	v6Plan, err := frozenV6PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v6PlanBytes, err := MarshalPlan(v6Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value.Schema = ObservationSchemaV6
+	value.HostToolchain = slices.Clone(v6Plan.HostToolchain)
+	value.ConvergenceWaits[0].LastSuccessfulProbeSHA256 = value.ConvergenceWaits[0].LastProgressSHA256
+	value.ConvergenceWaits[0].LastSuccessfulProbeWallMS = value.ConvergenceWaits[0].DeadlineMS - 1
+	value.ConvergenceWaits[0].InspectionTransitions = []ConvergenceTransitionObservation{
+		{WallMS: 1, Stage: "repository_index", Class: "pending",
+			ProgressSHA256: value.ConvergenceWaits[0].FirstProgressSHA256},
+		{WallMS: value.ConvergenceWaits[0].LastProgressChangeWallMS,
+			Stage: "observation_publication", Class: "pending",
+			ProgressSHA256: value.ConvergenceWaits[0].LastProgressSHA256},
+	}
+	v6ReceiptBytes, err := BuildReceipt(v6PlanBytes, marshal(t, value), PlanDigest(v6PlanBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v6Receipt, err := DecodeReceipt(v6ReceiptBytes, v6Plan)
+	if err != nil || v6Receipt.Schema != ReceiptSchemaV6 ||
+		len(v6Receipt.ConvergenceWaits[0].InspectionTransitions) != 2 {
+		t.Fatalf("v6 stopped receipt = %+v, %v", v6Receipt, err)
+	}
+	serverExitReceipt := v6Receipt
+	serverExitReceipt.ConvergenceWaits = slices.Clone(v6Receipt.ConvergenceWaits)
+	serverExitReceipt.ConvergenceWaits[0].Outcome = "server_exited"
+	serverExitReceipt.Failures = []FailureObservation{{
+		Phase: "cold", Class: "execution", Code: "server_exited_during_convergence",
+	}}
+	serverExitReceipt.Decision = DecisionObservation{
+		Selected: "unclassified", Reason: "server_exited_during_convergence",
+	}
+	if err := ValidateReceipt(serverExitReceipt, v6Plan); err != nil {
+		t.Fatalf("v6 server-exit terminal receipt failed: %v", err)
+	}
+	limitReceipt := v6Receipt
+	limitReceipt.ConvergenceWaits = slices.Clone(v6Receipt.ConvergenceWaits)
+	limitWait := &limitReceipt.ConvergenceWaits[0]
+	limitWait.Outcome = "diagnostic_limit"
+	limitWait.Attempts = maxConvergenceTransitions + 1
+	limitWait.TransitionLimitExceeded = true
+	limitWait.InspectionTransitions = make([]ConvergenceTransitionObservation, maxConvergenceTransitions)
+	for index := range limitWait.InspectionTransitions {
+		limitWait.InspectionTransitions[index] = ConvergenceTransitionObservation{
+			WallMS: int64(index + 1), Stage: limitWait.FirstStage,
+			Class:          []string{"pending", "transport"}[index%2],
+			ProgressSHA256: limitWait.FirstProgressSHA256,
+		}
+	}
+	limitReceipt.Failures = []FailureObservation{{
+		Phase: "cold", Class: "oracle", Code: "convergence_transition_limit_exceeded",
+	}}
+	limitReceipt.Decision = DecisionObservation{
+		Selected: "unclassified", Reason: "convergence_transition_limit_exceeded",
+	}
+	if err := ValidateReceipt(limitReceipt, v6Plan); err != nil {
+		t.Fatalf("v6 fail-closed transition-limit receipt failed: %v", err)
+	}
+
+	receipt.ConvergenceWaits[0].InspectionTransitions = nil
 	receipt.ConvergenceWaits[0].ObservationProgress.ScheduleSucceeded = 63
 	if err := ValidateReceipt(receipt, plan); err == nil {
 		t.Fatal("incoherent v5 observation progress passed")
+	}
+}
+
+func TestV6CompletedReceiptRequiresBoundedConvergenceTransitions(t *testing.T) {
+	plan, err := frozenV6PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV6Observation(plan)
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV6 || len(receipt.ConvergenceWaits) != 12 {
+		t.Fatalf("v6 completed receipt = %+v, %v", receipt, err)
+	}
+	value.ConvergenceWaits[0].InspectionTransitions = nil
+	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
+		t.Fatal("v6 completed receipt without convergence transitions passed")
 	}
 }
 
@@ -608,7 +725,7 @@ func TestV5ConvergenceDiagnosticsRejectContradictoryEvidence(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			value := base
 			test.mutate(&value)
-			if err := validateConvergenceWaits([]ConvergenceWaitObservation{value}, true); err == nil {
+			if err := validateConvergenceWaits([]ConvergenceWaitObservation{value}, 1); err == nil {
 				t.Fatal("contradictory convergence evidence passed")
 			}
 		})
@@ -629,6 +746,49 @@ func TestV5ObservationProgressRejectsImpossibleProductionStates(t *testing.T) {
 		if err := validateObservationProgress(value); err == nil {
 			t.Fatalf("impossible progress %d passed: %+v", index, value)
 		}
+	}
+}
+
+func TestV6ConvergenceTransitionBoundary(t *testing.T) {
+	wait := ConvergenceWaitObservation{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a", Outcome: "deadline",
+		FirstStage: "repository_visibility", LastStage: "repository_visibility",
+		Attempts:                  40,
+		FirstProgressSHA256:       "sha256:" + strings.Repeat("a", 64),
+		LastProgressSHA256:        "sha256:" + strings.Repeat("a", 64),
+		LastSuccessfulProbeSHA256: "sha256:" + strings.Repeat("a", 64),
+		LastSuccessfulProbeWallMS: 40,
+		DeadlineMS:                100, WallMS: 100,
+	}
+	for index := 8; index < 40; index++ {
+		class := "pending"
+		if index%2 == 1 {
+			class = "transport"
+		}
+		wait.InspectionTransitions = append(wait.InspectionTransitions, ConvergenceTransitionObservation{
+			WallMS: int64(index), Stage: "repository_visibility", Class: class,
+			ProgressSHA256: "sha256:" + strings.Repeat("a", 64),
+		})
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err != nil {
+		t.Fatalf("exact transition boundary failed: %v", err)
+	}
+	wait.InspectionTransitions[0].ProgressSHA256 = ""
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err == nil {
+		t.Fatal("transition without a progress digest passed")
+	}
+	wait.InspectionTransitions[0].ProgressSHA256 = wait.FirstProgressSHA256
+	wait.Outcome = "diagnostic_limit"
+	wait.TransitionLimitExceeded = true
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err != nil {
+		t.Fatalf("fail-closed transition boundary failed: %v", err)
+	}
+	wait.InspectionTransitions = append(wait.InspectionTransitions, ConvergenceTransitionObservation{
+		WallMS: 40, Stage: "repository_visibility", Class: "pending",
+		ProgressSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 2); err == nil {
+		t.Fatal("over-bound convergence transition inventory passed")
 	}
 }
 
@@ -741,6 +901,23 @@ func completedV4Observation(plan Plan) Observation {
 			LastProgressSHA256:  "sha256:" + strings.Repeat("b", 64),
 			DeadlineMS:          deadline, WallMS: 1,
 		})
+	}
+	return value
+}
+
+func completedV6Observation(plan Plan) Observation {
+	value := completedV4Observation(plan)
+	value.Schema = ObservationSchemaV6
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	for index := range value.ConvergenceWaits {
+		wait := &value.ConvergenceWaits[index]
+		wait.FirstStage = "complete"
+		wait.LastSuccessfulProbeSHA256 = wait.LastProgressSHA256
+		wait.LastSuccessfulProbeWallMS = wait.WallMS
+		wait.InspectionTransitions = []ConvergenceTransitionObservation{{
+			WallMS: wait.WallMS, Stage: "complete", Class: "complete",
+			ProgressSHA256: wait.LastProgressSHA256,
+		}}
 	}
 	return value
 }

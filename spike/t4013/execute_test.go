@@ -222,7 +222,7 @@ func TestConvergenceDeadlineRetainsClosedLastProgress(t *testing.T) {
 		Credential: credential, RepositoryName: "example.invalid/repository",
 		Revisions: map[string]string{"a": testSourceCommit},
 	}
-	_, err = run.waitSnapshot(profile, "a", "cold", 25*time.Millisecond)
+	_, err = run.waitSnapshot(profile, "a", "cold", 25*time.Millisecond, &privateServer{done: make(chan error, 1)})
 	if !errors.Is(err, errConvergenceDeadline) || len(run.observation.ConvergenceWaits) != 1 {
 		t.Fatalf("deadline = %v, waits=%+v", err, run.observation.ConvergenceWaits)
 	}
@@ -239,11 +239,11 @@ func TestConvergenceProgressTrackerCountsOnlyIdentityChanges(t *testing.T) {
 	second := convergenceProbe("repository_index", "running")
 	third := convergenceProbe("source_generation", "ready")
 	var tracker convergenceProgressTracker
-	tracker.observe(first, time.Second)
-	tracker.observe(first, 2*time.Second)
-	tracker.observe(second, 3*time.Second)
-	tracker.observe(second, 4*time.Second)
-	tracker.observe(third, 5*time.Second)
+	tracker.observe(first, "pending", time.Second)
+	tracker.observe(first, "pending", 2*time.Second)
+	tracker.observe(second, "pending", 3*time.Second)
+	tracker.observe(second, "pending", 4*time.Second)
+	tracker.observe(third, "pending", 5*time.Second)
 	if tracker.attempts != 5 || tracker.progressChanges != 2 || tracker.stageChanges != 1 ||
 		tracker.lastProgressChange != 5*time.Second || tracker.first != first || tracker.last != third {
 		t.Fatalf("tracker = %+v", tracker)
@@ -263,12 +263,124 @@ func TestV5ConvergenceTrackerRetainsOnlySourceFreeProgressProjection(t *testing.
 	}
 	probe := observationConvergenceProbe(progress)
 	var tracker convergenceProgressTracker
-	tracker.observe(probe, 90*time.Minute)
+	tracker.observe(probe, "pending", 90*time.Minute)
 	if tracker.observationProgress == nil ||
 		tracker.observationProgress.ScheduleTotalPartitions != 62 ||
 		tracker.observationProgress.ScheduleSucceeded != 40 ||
 		tracker.observationProgressAtWall != 90*time.Minute {
 		t.Fatalf("tracker = %+v", tracker)
+	}
+}
+
+func TestCanceledConvergenceAttemptDoesNotReplaceLastCompletedProbe(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	tracker := convergenceProgressTracker{}
+	first := convergenceProbe("observation_publication", "running")
+	tracker.observe(first, "pending", time.Second)
+	cancel()
+	if completed, _ := observeCompletedConvergenceAttempt(
+		ctx, &tracker, convergenceProbe("repository_visibility"), "transport", 2*time.Second,
+	); completed {
+		t.Fatal("canceled convergence attempt was retained")
+	}
+	if tracker.attempts != 1 || tracker.last != first || tracker.progressChanges != 0 ||
+		len(tracker.inspectionTransitions) != 1 {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+}
+
+func TestServerExitWinsOverSimultaneousConvergenceDeadline(t *testing.T) {
+	phase, cancel := context.WithCancel(t.Context())
+	cancel()
+	server := &privateServer{done: make(chan error, 1)}
+	server.done <- errors.New("synthetic server exit")
+	tracker := convergenceProgressTracker{}
+	tracker.observe(convergenceProbe("observation_publication", "running"), "pending", time.Second)
+	if completed, _ := observeCompletedConvergenceAttempt(
+		phase, &tracker, convergenceProbe("repository_visibility"), "transport", 2*time.Second,
+	); completed {
+		t.Fatal("canceled convergence attempt was retained")
+	}
+	exitErr, exited := retainServerExit(server)
+	if !exited || exitErr == nil {
+		t.Fatalf("server exit = %v, exited=%t", exitErr, exited)
+	}
+	if tracker.last.Stage != "observation_publication" || tracker.attempts != 1 {
+		t.Fatalf("tracker = %+v", tracker)
+	}
+	select {
+	case <-server.done:
+	default:
+		t.Fatal("server exit result was not preserved for cleanup")
+	}
+}
+
+func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
+	var tracker convergenceProgressTracker
+	digest := "sha256:" + strings.Repeat("a", 64)
+	var exceeded bool
+	for index := 0; index <= maxConvergenceTransitions; index++ {
+		class := "pending"
+		if index%2 == 1 {
+			class = "transport"
+		}
+		exceeded = tracker.observeTransition(
+			"repository_visibility", class, digest, time.Duration(index)*time.Millisecond,
+		)
+		if exceeded != (index == maxConvergenceTransitions) {
+			t.Fatalf("transition %d exceeded=%t", index, exceeded)
+		}
+	}
+	if len(tracker.inspectionTransitions) != maxConvergenceTransitions ||
+		tracker.inspectionTransitions[0].WallMS != 0 ||
+		tracker.inspectionTransitions[len(tracker.inspectionTransitions)-1].WallMS != maxConvergenceTransitions-1 {
+		t.Fatalf("transitions = %+v", tracker.inspectionTransitions)
+	}
+}
+
+func TestConvergenceWaitStopsAndRetainsPostHealthServerExit(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("private-test-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	httpServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(response, `[]`)
+	}))
+	defer httpServer.Close()
+	plan, err := frozenV6PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, plan),
+	}
+	profile := PreparedProfile{
+		Name: "structural-2m-v1", Address: strings.TrimPrefix(httpServer.URL, "http://"),
+		Credential: credential, RepositoryName: "example.invalid/repository",
+		Revisions: map[string]string{"a": testSourceCommit},
+	}
+	server := &privateServer{done: make(chan error, 1)}
+	server.done <- errors.New("synthetic server exit")
+	_, err = run.waitSnapshot(profile, "a", "cold", time.Second, server)
+	if !errors.Is(err, errConvergenceServerExit) || len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("server exit = %v, waits=%+v", err, run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	last := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
+	if wait.Outcome != "server_exited" || wait.Attempts != 1 || last.Class != "pending" ||
+		last.Stage != "repository_visibility" || last.ProgressSHA256 != wait.LastSuccessfulProbeSHA256 ||
+		wait.LastSuccessfulProbeWallMS <= 0 {
+		t.Fatalf("wait = %+v", wait)
+	}
+	select {
+	case <-server.done:
+	default:
+		t.Fatal("server exit result was not preserved for cleanup")
 	}
 }
 
@@ -322,10 +434,15 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 	}{
 		{name: "operational", cause: errors.New("build failed"), code: "operational_failure", decision: "unclassified"},
 		{name: "convergence deadline", cause: errConvergenceDeadline, code: "convergence_deadline_expired", decision: "unclassified"},
+		{name: "convergence server exit", cause: errConvergenceServerExit, code: "server_exited_during_convergence", decision: "unclassified"},
+		{name: "convergence transition limit", cause: errConvergenceTimeline, code: "convergence_transition_limit_exceeded", decision: "unclassified"},
+		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
+		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "exact oracle", cause: exactOracle("mismatch"), code: "exact_gate_failed", decision: "reduce", substantiated: true},
 		{name: "pressure refusal", cause: errProductionPressure, code: "production_pressure_gate_refused", decision: "reduce", substantiated: true},
 		{name: "direct recovery", cause: directRecovery(errors.New("did not converge")), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
 		{name: "recovery deadline remains recovery", cause: directRecovery(errConvergenceDeadline), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},
+		{name: "recovery server exit remains distinct", cause: directRecovery(errConvergenceServerExit), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "review ceiling", cause: errReviewCeiling, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
 		{name: "parent ceiling overrides missing measurement", cause: context.DeadlineExceeded, measurement: errors.New("meter failed"), ceiling: errTotalWallDeadline, code: "review_ceiling_crossed", decision: "cohort_experiment", substantiated: true},
 		{name: "missing measurement overrides metered ceiling", cause: errReviewCeiling, measurement: errors.New("meter failed"), code: "failed_phase_measurement_unavailable", decision: "unclassified"},

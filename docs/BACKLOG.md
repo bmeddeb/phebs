@@ -320,6 +320,38 @@ requires a fresh exact commit, independently reviewed signed plan, and explicit
 execution approval. No production, release, SLO, topology, private replay, or
 Epic-closure claim changes.
 
+Large-host Take 8 disposition and Take 9 observability correction
+(2026-08-09): v5 plan
+`sha256:a5e6867a94c594be4c69e36f1f42b3449e5f4ae139832c2336b04519093804e6`
+at commit `a019ec3b399d9b0459b1399b0191b6873c99a557`, package
+`sha256:6b7cc1fb775f10d07145f5b01c4d384ad0a0f141e08817034ba815f0cc3caaf9`,
+observation
+`sha256:b74c8e7f34ee391298bc6b6243814478b6f2839441737d60170c90516d4db2e5`,
+and receipt
+`sha256:607c7b42eb991613a4312af1f36304c2264d24d34fe50d734e040ee3f30ac6d8`
+verify exactly. The honest `unclassified` cold stop reached its four-hour child
+deadline without crossing the eight-hour parent or resource ceilings. Its last
+typed observation snapshot was at 1,315,017 ms—63 of 64 partitions succeeded,
+one running—and no later typed snapshot was retained for about 3h38m. This is
+a post-21m55 observation gap, not a confirmed 21m55 visibility loss. The
+14,400,001-ms last-change and final `repository_visibility` stage are the
+canceled terminal inspection recorded before the phase fence, not evidence of
+forward progress. Take 9 keeps all deadlines unchanged, retires `neutral-08`,
+selects `neutral-09`, treats cancellation only as a terminal result, and gives
+post-health process exit the distinct `server_exited_during_convergence`
+result. Each of at most 32 retained transition records binds wall time, closed
+stage, failure class, and progress digest; the wait separately binds its last
+successfully completed probe and timestamp. A 33rd transition stops
+unclassified with `convergence_transition_limit_exceeded` instead of
+truncating evidence. These two source-free terminal identities remain named if
+meter finalization also fails; the eight-hour parent still has first
+precedence, and measurement unavailability still governs all other failures.
+V6 preserves v1-v5 bytes and adds no production read,
+lock, cache, scheduler, publication, corpus, memory, disk, or child work.
+A new signer, independently reviewed plan, and explicit execution approval are
+still required; no release, SLO, topology, private replay, or Epic-closure
+claim changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
