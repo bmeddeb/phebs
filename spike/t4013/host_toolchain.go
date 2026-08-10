@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -123,8 +122,24 @@ func VerifyHostToolchain(ctx context.Context, expected []HostToolObservation) er
 	if err != nil {
 		return err
 	}
-	if !slices.Equal(observed, expected) {
-		return errors.New("T40.13 host toolchain differs from the frozen plan")
+	if err := compareHostToolchain(expected, observed); err != nil {
+		return err
+	}
+	return nil
+}
+
+func compareHostToolchain(expected, observed []HostToolObservation) error {
+	if len(expected) != len(observed) {
+		return errors.New("T40.13 host toolchain inventory differs from the frozen plan")
+	}
+	for index := range expected {
+		if expected[index] != observed[index] {
+			name := expected[index].Name
+			if name == "" || observed[index].Name != name {
+				return errors.New("T40.13 host toolchain inventory differs from the frozen plan")
+			}
+			return fmt.Errorf("T40.13 host toolchain differs from the frozen plan: %s", name)
+		}
 	}
 	return nil
 }

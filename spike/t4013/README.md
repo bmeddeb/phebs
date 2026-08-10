@@ -450,12 +450,45 @@ control read; it adds no member/source read, lock, child, cache invalidation, or
 store transaction. Ceremony polling adds no request and performs one bounded
 problem-detail decode only on non-200 responses.
 
+The independently frozen `t40r1-neutral-10` v7 plan
+(`sha256:c236269dcdfc0dbb580476fd9cda024f40ebb3485bd55b5c01a59d8b46ad9951`)
+at commit `dd523dd5da0995c0810c2bfcfbe070119b146038` was consumed by its
+approved manual execute attempt. `t4013-prepare` stopped at its host-toolchain
+verification before custody creation. No prepared manifest, authored neutral
+corpus, server, source-free observation, receipt, or scale/convergence result
+exists. The old closed mismatch did not name the differing tool. Re-observing
+the current host produces the exact signed plan bytes, so the transient
+difference cannot be identified retrospectively.
+
+The failed command then ran an EXIT trap whose `cleanup_pending` variable had
+gone out of function scope under `set -u`. This secondary error did not hide
+custody: preparation had stopped before custody existed. Take 11 permanently
+retires `neutral-10`, uses `neutral-11`, and keeps plan v7 plus every exact Take
+10 input, phase, rule, claim, and ceiling:
+
+- 24 GiB minimum physical memory and 120 GiB minimum available disk;
+- 15 minutes for server health, four hours for full convergence, 20 minutes
+  for revalidation, and eight hours total wall;
+- 20 GiB peak process-tree RSS, 96 GiB allocated data, and at most five
+  attempts per production unit; and
+- the unchanged twelve-phase sequence from preflight through teardown.
+
+A host mismatch now reports only the closed tool name (`go`, `go-compile`,
+`go-link`, `git`, or `surreal`), never a version, digest, executable path, or
+raw cause. The driver installs a shell-escaped literal cleanup command so the
+exact plan and prepared-manifest paths remain available after function scope
+ends. These changes affect ceremony admission and cleanup only; they add no
+production request, startup, sync, retry/no-op, publication, lifecycle, cache,
+lock, corpus-read, memory, disk, or child-process cost. Take 11 still requires
+a fresh exact source commit, unique signer, independent plan review, and
+explicit execution approval.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-10
+CEREMONY_ID=t40r1-neutral-11
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

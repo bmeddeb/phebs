@@ -27,6 +27,7 @@ readonly REVIEW_STOPPED_CEREMONY_ID_6="t40r1-neutral-06"
 readonly REVIEW_STOPPED_CEREMONY_ID_7="t40r1-neutral-07"
 readonly REVIEW_STOPPED_CEREMONY_ID_8="t40r1-neutral-08"
 readonly REVIEW_STOPPED_CEREMONY_ID_9="t40r1-neutral-09"
+readonly REVIEW_STOPPED_CEREMONY_ID_10="t40r1-neutral-10"
 readonly RETIRED_SIGNER_FINGERPRINT="SHA256:BqFeTpCclBV0Z6Dz/Lc0dmpb75q7lZSAgH5rc6AK2nw"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
@@ -89,7 +90,7 @@ validate_id() {
 reject_review_stopped_id() {
   local value="$1"
   case "$value" in
-    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2"|"$REVIEW_STOPPED_CEREMONY_ID_3"|"$REVIEW_STOPPED_CEREMONY_ID_4"|"$REVIEW_STOPPED_CEREMONY_ID_5"|"$REVIEW_STOPPED_CEREMONY_ID_6"|"$REVIEW_STOPPED_CEREMONY_ID_7"|"$REVIEW_STOPPED_CEREMONY_ID_8"|"$REVIEW_STOPPED_CEREMONY_ID_9")
+    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2"|"$REVIEW_STOPPED_CEREMONY_ID_3"|"$REVIEW_STOPPED_CEREMONY_ID_4"|"$REVIEW_STOPPED_CEREMONY_ID_5"|"$REVIEW_STOPPED_CEREMONY_ID_6"|"$REVIEW_STOPPED_CEREMONY_ID_7"|"$REVIEW_STOPPED_CEREMONY_ID_8"|"$REVIEW_STOPPED_CEREMONY_ID_9"|"$REVIEW_STOPPED_CEREMONY_ID_10")
       die "ceremony id $value is permanently review-stopped; use a fresh id"
       ;;
   esac
@@ -272,6 +273,12 @@ cleanup_prepared() {
   fi
 }
 
+cleanup_trap_command() {
+  local command
+  printf -v command 'cleanup_prepared %q %q || true' "$1" "$2"
+  printf '%s' "$command"
+}
+
 manifest_value() {
   local manifest="$1" key="$2"
   awk -F '"' -v wanted="$key" '$2 == wanted { print $4; exit }' "$manifest"
@@ -381,7 +388,7 @@ seal_evidence() {
 execute_ceremony() {
   local ceremony_id="$1" approved_digest="$2" approval="$3"
   local run_root evidence_root private_root plan_path prepared_path observation_path results_path custody_path
-  local actual_digest execute_status cleanup_pending path
+  local actual_digest execute_status cleanup_trap path
   reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   preflight
@@ -406,8 +413,8 @@ execute_ceremony() {
   require_exact_inventory "$evidence_root" allowed_signers freeze.json freeze.json.sig plan.json signer.pub
   cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed after freeze"
   verify_frozen_identity "$evidence_root"
-  cleanup_pending=0
-  trap 'if (( cleanup_pending == 1 )); then cleanup_prepared "$plan_path" "$prepared_path" || true; fi' EXIT
+  cleanup_trap="$(cleanup_trap_command "$plan_path" "$prepared_path")"
+  trap "$cleanup_trap" EXIT
   (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-prepare \
     -root "$REPO_REAL" \
     -workspace "$custody_path" \
@@ -415,7 +422,6 @@ execute_ceremony() {
     -output "$prepared_path" \
     -base-port "$BASE_PORT" \
     -confirm "$PREPARE_CONFIRM")
-  cleanup_pending=1
   execute_status=0
   (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-execute \
     -root "$REPO_REAL" \
@@ -426,7 +432,6 @@ execute_ceremony() {
   if ! cleanup_prepared "$plan_path" "$prepared_path"; then
     die "exact private prepared manifest cleanup failed"
   fi
-  cleanup_pending=0
   trap - EXIT
   [[ ! -e "$custody_path" && ! -e "$prepared_path" ]] || die "private custody survived execution cleanup"
   [[ -f "$observation_path" && ! -L "$observation_path" ]] ||
@@ -513,4 +518,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

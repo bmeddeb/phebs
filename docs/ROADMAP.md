@@ -776,6 +776,16 @@ catalog, relationship, or correctness authority.
   authorized preparation: unchanged ceilings, `neutral-10`, a marker-independent
   settled current schedule, exact bounded HTTP status plus closed reason, and
   the last completed inspection identity/time. It adds no poll or corpus read.
+- T40.R1 Take 10 is consumed without convergence execution. Its approved manual
+  attempt stopped at the pre-custody host-toolchain recheck, then exposed an
+  EXIT-trap scope bug; it produced no observation, receipt, or scale result.
+  The transient differing tool cannot be reconstructed because the old error
+  was generic and current exact observation reproduces the frozen plan. Take 11
+  is the only authorized preparation: unchanged v7 evidence semantics and exact
+  Take 10 ceilings, `neutral-11`, a closed tool-name-only mismatch, and literal
+  shell-escaped cleanup paths that survive function scope. It still requires a
+  fresh exact commit, signer, independent freeze review, and explicit execution
+  approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

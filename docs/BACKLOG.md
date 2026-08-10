@@ -393,6 +393,27 @@ store transaction, child, poll, production bound, or claim changes. A new
 signer, independently reviewed plan, and explicit execution approval remain
 required.
 
+Large-host Take 10 disposition and Take 11 host diagnostic correction
+(2026-08-10): signed v7 plan
+`sha256:c236269dcdfc0dbb580476fd9cda024f40ebb3485bd55b5c01a59d8b46ad9951`
+at commit `dd523dd5da0995c0810c2bfcfbe070119b146038` was consumed by its
+approved manual execute attempt, which stopped in `t4013-prepare` at the
+pre-custody host-toolchain recheck. It produced no prepared manifest, authored
+corpus, server, source-free observation, receipt, or scale/convergence result.
+The original closed error did not identify the differing tool; exact
+re-observation now reproduces the signed plan, so the transient mismatch cannot
+be reconstructed. The following EXIT trap also referenced function-local state
+after scope exit under `set -u`, but no custody existed to leak. Take 11
+retires `neutral-10`, selects `neutral-11`, and preserves v7, the twelve phases,
+all inputs and stop rules, the 24-GiB memory and 120-GiB available-disk
+prerequisites, 15-minute readiness, four-hour convergence, 20-minute
+revalidation, eight-hour parent, 20-GiB peak-RSS, 96-GiB allocated-data, and
+five-attempt ceilings. A mismatch now reports only its closed tool name, and
+the EXIT trap owns shell-escaped literal cleanup paths rather than scoped
+variables. This is ceremony-only admission/cleanup work with no production
+steady-state cost or claim change. A fresh commit, signer, independently
+reviewed plan, and explicit execution approval remain required.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
