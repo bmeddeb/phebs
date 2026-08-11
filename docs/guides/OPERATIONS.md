@@ -3183,6 +3183,8 @@ generation under `$DATA/observations/`. Each complete generation now binds a
 unique admitted blobs, source reads incorporated into successfully published
 members, distinct parsed and prior-generation-reused observations, observed
 and unsupported blob counts, and a sorted closed unsupported-reason census.
+For a complete receipt, `unsupported_reasons` is always an array; a generation
+with zero unsupported blobs returns `[]`, never `null`.
 The receipt contains no paths, object IDs, source samples, or raw errors.
 Failed or interrupted attempts remain visible through scheduler counters and
 are not mislabeled as successful-publication reads.

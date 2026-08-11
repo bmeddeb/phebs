@@ -693,7 +693,12 @@ service count × repository bytes
   sparse candidate/partition controls, and bounded pure partition-result/domain
   roots, partitioned extraction behind atomic domain authority, and downstream
   recovery/lifecycle/archive ownership and authorized product-consumer replay
-  are complete. Next close on a neutral two-million-owner gate.
+  are complete. Take 15 stopped unclassified after a valid empty operation
+  receipt was converted to nil by the production progress projection; the
+  prospective repair preserves the exact empty array and pins the real reader
+  and HTTP paths. Destroyed custody does not prove final scheduler terminality,
+  and no rerun is authorized. Next close on a separately frozen neutral
+  two-million-owner gate.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
   freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
   a v3 root with dual service/path member views, publish immutable precious

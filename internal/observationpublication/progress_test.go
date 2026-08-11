@@ -67,6 +67,58 @@ func TestProgressReportsCurrentReceiptAndWarmReadsNoMembers(t *testing.T) {
 	}
 }
 
+func TestProgressReportsZeroUnsupportedReceipt(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, source := progressFixtureWithFiles(t, map[string][]byte{
+		"main.go": []byte("package main\nfunc main() {}\n"),
+	})
+	planDirectory := filepath.Join(t.TempDir(), "plan")
+	if err := os.Mkdir(planDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	partition, err := sourcepartition.Build(t.Context(), sourcepartition.BuildRequest{
+		SourceDirectory: filepath.Join(dataDirectory, "index"), OutputDirectory: planDirectory,
+		Repository: repository, Source: source,
+		Policy: sourcepartition.Policy{
+			Schema: sourcepartition.PolicySchema, Name: "go-source", Version: "1.0.0",
+			IncludeSuffixes: []string{".go"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := sourcepartition.Open(t.Context(), planDirectory, partition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Publish(
+		t.Context(), filepath.Join(dataDirectory, "observations"), repositoryDirectory, plan, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := publication.Manifest()
+	if manifest.OperationReceipt == nil || manifest.OperationReceipt.UnsupportedBlobs != 0 ||
+		manifest.OperationReceipt.UnsupportedReasons == nil || len(manifest.OperationReceipt.UnsupportedReasons) != 0 {
+		t.Fatalf("zero-unsupported manifest receipt = %+v", manifest.OperationReceipt)
+	}
+	progress, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: &scheduleCapture{}, Cache: &Cache{},
+	}).Read(t.Context(), repository)
+	if err != nil || progress.State != "current" || progress.Publication == nil ||
+		progress.Publication.Receipt == nil || progress.Publication.Receipt.UnsupportedBlobs != 0 ||
+		progress.Publication.Receipt.UnsupportedReasons == nil ||
+		len(progress.Publication.Receipt.UnsupportedReasons) != 0 {
+		t.Fatalf("zero-unsupported progress = %+v, %v", progress, err)
+	}
+	encoded, err := json.Marshal(progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"unsupported_reasons":[]`) {
+		t.Fatalf("zero-unsupported progress JSON = %s", encoded)
+	}
+}
+
 func TestProgressRetainsSettledRecoveryScheduleAfterMarkerRemoval(t *testing.T) {
 	dataDirectory, repositoryDirectory, repository, source := progressFixture(t)
 	planDirectory := filepath.Join(t.TempDir(), "plan")
@@ -282,6 +334,17 @@ func TestProgressAbsentPlanningPreservesLegacyJSONBytes(t *testing.T) {
 
 func progressFixture(t *testing.T) (string, string, string, repositoryindex.SourceManifest) {
 	t.Helper()
+	return progressFixtureWithFiles(t, map[string][]byte{
+		"main.go": []byte("package main\nfunc main() {}\n"),
+		"bad.go":  []byte("not valid Go"),
+	})
+}
+
+func progressFixtureWithFiles(
+	t *testing.T,
+	files map[string][]byte,
+) (string, string, string, repositoryindex.SourceManifest) {
+	t.Helper()
 	dataDirectory := t.TempDir()
 	repository := "github.com/example/observation-progress"
 	repositoryDirectory := filepath.Join(dataDirectory, "repos", filepath.FromSlash(repository)+".git")
@@ -291,10 +354,6 @@ func progressFixture(t *testing.T) (string, string, string, repositoryindex.Sour
 	runObservationGit(t, repositoryDirectory, "init")
 	runObservationGit(t, repositoryDirectory, "config", "user.email", "test@example.com")
 	runObservationGit(t, repositoryDirectory, "config", "user.name", "Test")
-	files := map[string][]byte{
-		"main.go": []byte("package main\nfunc main() {}\n"),
-		"bad.go":  []byte("not valid Go"),
-	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(repositoryDirectory, name), content, 0o600); err != nil {
 			t.Fatal(err)

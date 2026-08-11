@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
@@ -325,7 +326,7 @@ func projectProgress(
 		if manifest.OperationReceipt != nil {
 			receiptState = "complete"
 			value := *manifest.OperationReceipt
-			value.UnsupportedReasons = append([]ReasonCount(nil), value.UnsupportedReasons...)
+			value.UnsupportedReasons = slices.Clone(value.UnsupportedReasons)
 			receipt = &value
 		}
 		result.Publication = &PublicationProgress{
