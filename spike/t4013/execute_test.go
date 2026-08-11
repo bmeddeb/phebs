@@ -680,14 +680,14 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 			return
 		}
 		response.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(response, `[{"name":"example.invalid/repository","last_index_job_state":"exact","last_index_job":{"status":"failed","attempts":3}}]`)
+		_, _ = io.WriteString(response, `[{"name":"example.invalid/repository","last_index_job_state":"exact","last_index_job":{"status":"failed","attempts":3,"error":"heartbeat: context deadline exceeded"}}]`)
 	}))
 	defer httpServer.Close()
 	credentialPath := filepath.Join(t.TempDir(), "credential")
 	if err := os.WriteFile(credentialPath, []byte(credential+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	plan, err := frozenV9PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -718,11 +718,12 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 	wait := run.observation.ConvergenceWaits[0]
 	if wait.Outcome != "repository_index_terminal" || wait.Attempts != 1 ||
 		wait.LastInspectionClass != "terminal" || len(wait.InspectionTransitions) != 1 ||
-		wait.InspectionTransitions[0].Class != "terminal" {
+		wait.InspectionTransitions[0].Class != "terminal" ||
+		wait.RepositoryIndexFailureClass != "lease_heartbeat" {
 		t.Fatalf("terminal wait = %+v", wait)
 	}
-	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 5); err != nil {
-		t.Fatalf("terminal wait does not satisfy v9 receipt contract: %v", err)
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 6); err != nil {
+		t.Fatalf("terminal wait does not satisfy v10 receipt contract: %v", err)
 	}
 }
 
@@ -1017,6 +1018,33 @@ func TestAuthorizedQueryRequiresMatchesAndCitableRelationship(t *testing.T) {
 	rows = false
 	if _, _, err := queryProfile(t.Context(), profile, "semantic", true); err == nil {
 		t.Fatal("citation-required query accepted zero relationship rows")
+	}
+}
+
+func TestDerivedPartialScanReadsOnlyBoundedControlLevel(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := filepath.Join(dataDir, "observations", "repository")
+	deep := filepath.Join(repository, "immutable-generation", "objects")
+	if err := os.MkdirAll(deep, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(deep, ".stage-not-a-control"), []byte("private"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	found, err := derivedPartialPresent(dataDir)
+	if err != nil || found {
+		t.Fatalf("deep immutable member = %t, %v", found, err)
+	}
+	v2 := filepath.Join(repository, observationpublication.InventoryPublicationDirectoryV2)
+	if err := os.Mkdir(v2, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(v2, "publishing.json"), []byte("private"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	found, err = derivedPartialPresent(dataDir)
+	if err != nil || !found {
+		t.Fatalf("bounded v2 publication marker = %t, %v", found, err)
 	}
 }
 

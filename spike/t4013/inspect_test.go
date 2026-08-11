@@ -187,6 +187,20 @@ func TestRepositoryIndexProbeUsesClosedLatestJobProjection(t *testing.T) {
 	if firstProbe.SHA256 != secondProbe.SHA256 {
 		t.Fatal("repository-index probe retained a raw job error")
 	}
+	first.LastIndexJob.Error = "heartbeat: context deadline exceeded"
+	second.LastIndexJob.Error = "heartbeat: private store detail changed"
+	firstProbe, _ = repositoryIndexProbe(first, expected)
+	secondProbe, _ = repositoryIndexProbe(second, expected)
+	if firstProbe.RepositoryIndexFailureClass != "lease_heartbeat" ||
+		secondProbe.RepositoryIndexFailureClass != "lease_heartbeat" ||
+		firstProbe.SHA256 != secondProbe.SHA256 {
+		t.Fatalf("closed heartbeat classes = %+v / %+v", firstProbe, secondProbe)
+	}
+	second.LastIndexJob.Error = "different private child failure"
+	secondProbe, _ = repositoryIndexProbe(second, expected)
+	if secondProbe.RepositoryIndexFailureClass != "other" || firstProbe.SHA256 == secondProbe.SHA256 {
+		t.Fatalf("closed other class = %+v", secondProbe)
+	}
 }
 
 func projectedIndexStatus(status store.JobStatus, attempts int) store.RepoStatus {

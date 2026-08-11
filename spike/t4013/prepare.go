@@ -95,7 +95,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
@@ -184,7 +184,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
 		}
@@ -252,6 +252,16 @@ func HostPreflight(ctx context.Context, dataParent string, plan Plan) (Environme
 		return EnvironmentObservation{}, errors.New("T40.13 frozen host prerequisite is not met")
 	}
 	usedPercent := int((capacity.UsedBytes * 100) / capacity.TotalBytes)
+	if plan.Schema == PlanSchemaV10 {
+		observedCapacity, capacityErr := lifecycle.NewGate(dataParent).Check(ctx, 0)
+		if capacityErr != nil {
+			return EnvironmentObservation{}, fmt.Errorf("gate T40.13 custody capacity: %w", capacityErr)
+		}
+		if validatePressureHostPreflight(observedCapacity, plan.Safety) != nil {
+			return EnvironmentObservation{}, errors.New("T40.13 frozen pressure host prerequisite is not met")
+		}
+		usedPercent = observedCapacity.UsedPercent
+	}
 	return EnvironmentObservation{
 		OS: runtime.GOOS, Arch: runtime.GOARCH, MemoryBytes: memory,
 		FilesystemTotalBytes: capacity.TotalBytes, FilesystemAvailableBytes: capacity.AvailableBytes,

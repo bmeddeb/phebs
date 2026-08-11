@@ -48,3 +48,25 @@ func TestMergeMetricsSumsEventsButKeepsAbsoluteGaugeMaxima(t *testing.T) {
 		t.Fatalf("merged metrics = %+v", got)
 	}
 }
+
+func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
+	root := t.TempDir()
+	sampler, err := newAllocationSampler(root, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sampler.mu.Lock()
+	sampler.minimumAvailable = sampler.baselineAvailable - 8192
+	sampler.mu.Unlock()
+	peak, err := sampler.close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if peak < 4096+8192 {
+		t.Fatalf("peak allocation = %d, want at least %d", peak, 4096+8192)
+	}
+	second, err := sampler.close()
+	if err != nil || second != peak {
+		t.Fatalf("repeated close = %d, %v; want %d", second, err, peak)
+	}
+}

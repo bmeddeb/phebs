@@ -482,6 +482,39 @@ cleanup; docs, glossary, lint, and steady-state-cost review pass. This changes
 no production path and does not authorize Take 14 execution, close T40.13, or
 unblock Epic 41.
 
+Large-host Take 14 disposition and Take 15 harness closure
+(2026-08-11): the independently verified v9 run at exact commit
+`c1232d0a4e797eedbef129c178e5281913f20daf` stopped sealed and unclassified as
+`repository_index_terminal` after all three index attempts. Startup was healthy
+in 11,273 ms; cold stopped at 291,458 ms with three index children, two retries,
+3,479,928,832 bytes peak RSS, no publication, and verified teardown. Exact
+neutral-corpus reproduction proved the pinned child succeeds on all 2,000,002
+files in 78.54 seconds; the ceremony's 250-ms sync poll had also created an
+83-ms job-heartbeat deadline, whose timeout canceled each child. A five-second
+heartbeat completed and published the same index. Review also proved the
+pressure phase authored no pressure or fresh capacity sample, stopped disk
+evidence lost transient allocation, and interruption polling recursively
+rescanned derived members while suppressing traversal errors. Take 15 retires
+`neutral-14` and introduces v10. Its merge bar is: default runner heartbeats are
+`max(interval/3, 5s)` with four-heartbeat stale recovery and explicit overrides
+preserved; the ordinary 15-second default is unchanged; v10 freezes an 82%
+pressure target and 80-GiB custody-ballast bound inside the unchanged 96-GiB
+ceiling; one ordinary-server restart observes a complete real `collect` cycle,
+unchanged authority, ballast removal, and a complete `normal` cycle; a
+constant-cost one-second capacity sampler retains transient allocation with
+direct phase-fence gauges; interruption scans only the three package roots,
+their one frozen repository and known fixed-depth controls, and fails closed
+on errors without descending into immutable generations; pressure targeting
+selects the exact 82%-reporting byte band and its startup label remains v10-only;
+a terminal raw index error reduces only to closed
+`lease_heartbeat` or `other`; v1-v9 bytes remain valid; `neutral-14` is permanently
+retired; focused tests, docs, glossary, lint, and steady-state-cost review pass.
+The runner correction changes no request, sync scan, handler, child,
+publication, cache, lock, memory, disk, or topology asymptotic; fast-poll
+configurations write fewer heartbeats and use a bounded 20-second crash-recovery
+window. All other changes are ceremony-only. This does not authorize Take 15,
+close T40.13, or unblock Epic 41.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

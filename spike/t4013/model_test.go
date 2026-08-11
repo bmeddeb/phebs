@@ -298,6 +298,70 @@ func TestV9PlanPreservesTakeTwelveDeadlines(t *testing.T) {
 	}
 }
 
+func TestV10PlanFreezesDeterministicPressureExercise(t *testing.T) {
+	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV10 || plan.Safety != frozenSafetyV10 ||
+		plan.Safety.PressureTargetUsedPercent != 82 ||
+		plan.Safety.MaximumPressureBallastBytes != 80<<30 {
+		t.Fatalf("v10 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV10 || decoded.Safety != frozenSafetyV10 {
+		t.Fatalf("decoded v10 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV10CompletedReceiptRequiresPressureRestart(t *testing.T) {
+	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV7Observation(plan)
+	value.Schema = ObservationSchemaV10
+	value.ServerStartups = slices.Insert(value.ServerStartups, 6, ServerStartupObservation{
+		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV10 || len(receipt.ServerStartups) != 9 {
+		t.Fatalf("v10 receipt = %+v, %v", receipt, err)
+	}
+	value.ServerStartups = slices.Delete(value.ServerStartups, 6, 7)
+	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
+		t.Fatal("v10 completed receipt omitted the pressure restart")
+	}
+}
+
+func TestHistoricalObservationRejectsPressureRestartDiagnostic(t *testing.T) {
+	values := []ServerStartupObservation{{
+		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	}}
+	if err := validateServerStartups(values, false); err == nil {
+		t.Fatal("v9 observation acquired the v10 pressure restart label")
+	}
+	if err := validateServerStartups(values, true); err != nil {
+		t.Fatalf("v10 pressure restart diagnostic failed: %v", err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -901,6 +965,37 @@ func TestV9ReceiptRetainsRepositoryIndexTerminalStop(t *testing.T) {
 	}
 	if err := validateConvergenceWaits(value.ConvergenceWaits, 4); err == nil {
 		t.Fatal("v8 detail contract accepted a v9 repository-index terminal stop")
+	}
+}
+
+func TestV10TerminalFailureClassIsClosedAndVersioned(t *testing.T) {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	wait := ConvergenceWaitObservation{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a",
+		Outcome: "repository_index_terminal", FirstStage: "repository_index", LastStage: "repository_index",
+		Attempts: 2, FirstProgressSHA256: digest, LastProgressSHA256: digest,
+		InspectionTransitions: []ConvergenceTransitionObservation{
+			{WallMS: 1, Stage: "repository_index", Class: "pending", ProgressSHA256: digest},
+			{WallMS: 2, Stage: "repository_index", Class: "terminal", ProgressSHA256: digest},
+		},
+		LastSuccessfulProbeSHA256: digest, LastSuccessfulProbeWallMS: 1,
+		LastInspectionStage: "repository_index", LastInspectionClass: "terminal",
+		LastInspectionSHA256: digest, LastInspectionWallMS: 2,
+		RepositoryIndexFailureClass: "lease_heartbeat", DeadlineMS: 10, WallMS: 2,
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 6); err != nil {
+		t.Fatalf("v10 heartbeat class failed: %v", err)
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 5); err == nil {
+		t.Fatal("v9 detail contract accepted a v10 terminal class")
+	}
+	wait.RepositoryIndexFailureClass = "other"
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 6); err != nil {
+		t.Fatalf("v10 other class failed: %v", err)
+	}
+	wait.RepositoryIndexFailureClass = "private failure"
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 6); err == nil {
+		t.Fatal("v10 detail contract accepted a raw terminal class")
 	}
 }
 

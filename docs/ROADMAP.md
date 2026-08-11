@@ -815,6 +815,21 @@ catalog, relationship, or correctness authority.
   `ENOTEMPTY`/`EEXIST`, and a stable-absence fence. The unsealed Take 13 signal
   is not an official classification, and Take 14 remains subject to independent
   plan review and explicit execution approval.
+- T40.R1 Take 14 is a verified sealed `unclassified`
+  `repository_index_terminal` stop after all three attempts. Exact frozen-corpus
+  reproduction proved the child succeeds and isolated a production robustness
+  defect: the 250-ms queue poll also derived an 83-ms lease-heartbeat deadline,
+  canceling healthy index children. The harness review separately found that
+  pressure was host-dependent and stale, transient allocated bytes disappeared
+  before the phase fence, and interruption detection recursively rescanned
+  derived members. Take 15 is the only prospective preparation: `neutral-14`
+  is retired; v10 keeps every corpus, phase, deadline, primary ceiling, rule,
+  and nonclaim; runner leases have a five-second heartbeat floor; pressure is a
+  bounded 82% custody exercise with a complete collect/normal recovery cycle;
+  transient allocation uses constant-cost capacity sampling; and interruption
+  reads bounded fixed-depth controls, including observation inventory v2. It
+  still requires a fresh exact commit, signer,
+  independent plan review, and explicit execution approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

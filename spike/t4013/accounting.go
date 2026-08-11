@@ -12,19 +12,101 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+const allocationSampleInterval = time.Second
+
 type phaseMeter struct {
-	started   time.Time
-	server    *privateServer
-	dataDir   string
-	logOffset int64
-	before    *privateProfileSnapshot
+	started    time.Time
+	server     *privateServer
+	dataDir    string
+	logOffset  int64
+	before     *privateProfileSnapshot
+	allocation *allocationSampler
+}
+
+type allocationSampler struct {
+	root              string
+	baselineAllocated int64
+	baselineAvailable int64
+	minimumAvailable  int64
+	stop              chan struct{}
+	done              chan struct{}
+	mu                sync.Mutex
+	err               error
+	closeOnce         sync.Once
+	peak              int64
+	closeErr          error
+}
+
+func newAllocationSampler(root string, baselineAllocated int64) (*allocationSampler, error) {
+	capacity, err := lifecycle.ProbeCapacity(context.Background(), root)
+	if err != nil {
+		return nil, err
+	}
+	sampler := &allocationSampler{
+		root: root, baselineAllocated: baselineAllocated,
+		baselineAvailable: capacity.AvailableBytes, minimumAvailable: capacity.AvailableBytes,
+		stop: make(chan struct{}), done: make(chan struct{}),
+	}
+	go sampler.run()
+	return sampler, nil
+}
+
+func (sampler *allocationSampler) run() {
+	defer close(sampler.done)
+	ticker := time.NewTicker(allocationSampleInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-sampler.stop:
+			return
+		case <-ticker.C:
+			sampler.sample()
+		}
+	}
+}
+
+func (sampler *allocationSampler) sample() {
+	capacity, err := lifecycle.ProbeCapacity(context.Background(), sampler.root)
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	if err != nil {
+		sampler.err = errors.Join(sampler.err, err)
+	} else if capacity.AvailableBytes < sampler.minimumAvailable {
+		sampler.minimumAvailable = capacity.AvailableBytes
+	}
+}
+
+func (sampler *allocationSampler) close() (int64, error) {
+	if sampler == nil {
+		return 0, errors.New("T40.13 allocation sampler is invalid")
+	}
+	sampler.closeOnce.Do(func() {
+		close(sampler.stop)
+		<-sampler.done
+		sampler.sample()
+		sampler.mu.Lock()
+		defer sampler.mu.Unlock()
+		consumed := sampler.baselineAvailable - sampler.minimumAvailable
+		if consumed < 0 {
+			consumed = 0
+		}
+		if consumed > 1<<63-1-sampler.baselineAllocated {
+			sampler.closeErr = errors.New("T40.13 allocation sampler overflowed")
+			return
+		}
+		sampler.peak = sampler.baselineAllocated + consumed
+		sampler.closeErr = sampler.err
+	})
+	return sampler.peak, sampler.closeErr
 }
 
 func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfileSnapshot) (*phaseMeter, error) {
@@ -35,13 +117,18 @@ func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfi
 	if err != nil {
 		return nil, err
 	}
-	if _, _, err := measureDataBytes(dataDir); err != nil {
+	_, allocated, err := measureDataBytes(dataDir)
+	if err != nil {
+		return nil, err
+	}
+	allocation, err := newAllocationSampler(dataDir, allocated)
+	if err != nil {
 		return nil, err
 	}
 	server.sampler.resetWindow()
 	return &phaseMeter{
 		started: time.Now(), server: server, dataDir: dataDir, logOffset: offset,
-		before: before,
+		before: before, allocation: allocation,
 	}, nil
 }
 
@@ -49,11 +136,17 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 	if server == nil || server.log == nil || server.started.IsZero() {
 		return nil, errors.New("T40.13 initial phase meter requires a running server")
 	}
-	if _, _, err := measureDataBytes(dataDir); err != nil {
+	_, allocated, err := measureDataBytes(dataDir)
+	if err != nil {
+		return nil, err
+	}
+	allocation, err := newAllocationSampler(dataDir, allocated)
+	if err != nil {
 		return nil, err
 	}
 	return &phaseMeter{
 		started: server.started, server: server, dataDir: dataDir, logOffset: 0, before: before,
+		allocation: allocation,
 	}, nil
 }
 
@@ -61,10 +154,12 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")
 	}
-	logical, allocated, err := measureDataBytes(meter.dataDir)
-	if err != nil {
-		return PhaseMetrics{}, err
+	logical, allocated, measureErr := measureDataBytes(meter.dataDir)
+	peakAllocated, allocationErr := meter.allocation.close()
+	if measureErr != nil || allocationErr != nil {
+		return PhaseMetrics{}, errors.Join(measureErr, allocationErr)
 	}
+	allocated = max(allocated, peakAllocated)
 	metrics := PhaseMetrics{
 		WallMS:           time.Since(meter.started).Milliseconds(),
 		DataLogicalBytes: logical, DataAllocatedBytes: allocated,

@@ -28,6 +28,7 @@ const (
 	PlanSchemaV7               = "t4013-neutral-convergence-plan-v7"
 	PlanSchemaV8               = "t4013-neutral-convergence-plan-v8"
 	PlanSchemaV9               = "t4013-neutral-convergence-plan-v9"
+	PlanSchemaV10              = "t4013-neutral-convergence-plan-v10"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
@@ -37,6 +38,7 @@ const (
 	ObservationSchemaV7        = "t4013-neutral-convergence-observation-v7"
 	ObservationSchemaV8        = "t4013-neutral-convergence-observation-v8"
 	ObservationSchemaV9        = "t4013-neutral-convergence-observation-v9"
+	ObservationSchemaV10       = "t4013-neutral-convergence-observation-v10"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
@@ -46,6 +48,7 @@ const (
 	ReceiptSchemaV7            = "t4013-neutral-convergence-receipt-v7"
 	ReceiptSchemaV8            = "t4013-neutral-convergence-receipt-v8"
 	ReceiptSchemaV9            = "t4013-neutral-convergence-receipt-v9"
+	ReceiptSchemaV10           = "t4013-neutral-convergence-receipt-v10"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -120,15 +123,17 @@ type InputBinding struct {
 }
 
 type SafetyEnvelope struct {
-	MinimumMemoryBytes        int64 `json:"minimum_memory_bytes"`
-	MinimumAvailableDiskBytes int64 `json:"minimum_available_disk_bytes"`
-	MaximumTotalWallMS        int64 `json:"maximum_total_wall_ms"`
-	MaximumPeakRSSBytes       int64 `json:"maximum_peak_rss_bytes"`
-	MaximumDataAllocatedBytes int64 `json:"maximum_data_allocated_bytes"`
-	MaximumRetriesPerUnit     int   `json:"maximum_retries_per_unit"`
-	ServerHealthDeadlineMS    int64 `json:"server_health_deadline_ms,omitempty"`
-	FullConvergenceDeadlineMS int64 `json:"full_convergence_deadline_ms,omitempty"`
-	RevalidationDeadlineMS    int64 `json:"revalidation_deadline_ms,omitempty"`
+	MinimumMemoryBytes          int64 `json:"minimum_memory_bytes"`
+	MinimumAvailableDiskBytes   int64 `json:"minimum_available_disk_bytes"`
+	MaximumTotalWallMS          int64 `json:"maximum_total_wall_ms"`
+	MaximumPeakRSSBytes         int64 `json:"maximum_peak_rss_bytes"`
+	MaximumDataAllocatedBytes   int64 `json:"maximum_data_allocated_bytes"`
+	MaximumRetriesPerUnit       int   `json:"maximum_retries_per_unit"`
+	ServerHealthDeadlineMS      int64 `json:"server_health_deadline_ms,omitempty"`
+	FullConvergenceDeadlineMS   int64 `json:"full_convergence_deadline_ms,omitempty"`
+	RevalidationDeadlineMS      int64 `json:"revalidation_deadline_ms,omitempty"`
+	PressureTargetUsedPercent   int   `json:"pressure_target_used_percent,omitempty"`
+	MaximumPressureBallastBytes int64 `json:"maximum_pressure_ballast_bytes,omitempty"`
 }
 
 type StopRule struct {
@@ -192,32 +197,33 @@ type ServerStartupObservation struct {
 // bounded source-free controls. It never retains repository paths, source
 // bytes, HTTP bodies, credentials, or raw process output.
 type ConvergenceWaitObservation struct {
-	Profile                   string                             `json:"profile"`
-	Label                     string                             `json:"label"`
-	Revision                  string                             `json:"revision"`
-	Outcome                   string                             `json:"outcome"`
-	FirstStage                string                             `json:"first_stage,omitempty"`
-	LastStage                 string                             `json:"last_stage"`
-	Attempts                  int64                              `json:"attempts"`
-	ProgressChanges           int64                              `json:"progress_changes"`
-	StageChanges              int64                              `json:"stage_changes,omitempty"`
-	FirstProgressSHA256       string                             `json:"first_progress_sha256"`
-	LastProgressSHA256        string                             `json:"last_progress_sha256"`
-	LastProgressChangeWallMS  int64                              `json:"last_progress_change_wall_ms,omitempty"`
-	ObservationProgress       *ObservationProgressObservation    `json:"observation_progress,omitempty"`
-	ObservationProgressWallMS int64                              `json:"observation_progress_wall_ms,omitempty"`
-	InspectionTransitions     []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
-	LastSuccessfulProbeSHA256 string                             `json:"last_successful_probe_sha256,omitempty"`
-	LastSuccessfulProbeWallMS int64                              `json:"last_successful_probe_wall_ms,omitempty"`
-	LastInspectionStage       string                             `json:"last_inspection_stage,omitempty"`
-	LastInspectionClass       string                             `json:"last_inspection_class,omitempty"`
-	LastInspectionHTTPStatus  int                                `json:"last_inspection_http_status,omitempty"`
-	LastInspectionHTTPReason  string                             `json:"last_inspection_http_reason,omitempty"`
-	LastInspectionSHA256      string                             `json:"last_inspection_sha256,omitempty"`
-	LastInspectionWallMS      int64                              `json:"last_inspection_wall_ms,omitempty"`
-	TransitionLimitExceeded   bool                               `json:"transition_limit_exceeded,omitempty"`
-	DeadlineMS                int64                              `json:"deadline_ms"`
-	WallMS                    int64                              `json:"wall_ms"`
+	Profile                     string                             `json:"profile"`
+	Label                       string                             `json:"label"`
+	Revision                    string                             `json:"revision"`
+	Outcome                     string                             `json:"outcome"`
+	FirstStage                  string                             `json:"first_stage,omitempty"`
+	LastStage                   string                             `json:"last_stage"`
+	Attempts                    int64                              `json:"attempts"`
+	ProgressChanges             int64                              `json:"progress_changes"`
+	StageChanges                int64                              `json:"stage_changes,omitempty"`
+	FirstProgressSHA256         string                             `json:"first_progress_sha256"`
+	LastProgressSHA256          string                             `json:"last_progress_sha256"`
+	LastProgressChangeWallMS    int64                              `json:"last_progress_change_wall_ms,omitempty"`
+	ObservationProgress         *ObservationProgressObservation    `json:"observation_progress,omitempty"`
+	ObservationProgressWallMS   int64                              `json:"observation_progress_wall_ms,omitempty"`
+	InspectionTransitions       []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
+	LastSuccessfulProbeSHA256   string                             `json:"last_successful_probe_sha256,omitempty"`
+	LastSuccessfulProbeWallMS   int64                              `json:"last_successful_probe_wall_ms,omitempty"`
+	LastInspectionStage         string                             `json:"last_inspection_stage,omitempty"`
+	LastInspectionClass         string                             `json:"last_inspection_class,omitempty"`
+	LastInspectionHTTPStatus    int                                `json:"last_inspection_http_status,omitempty"`
+	LastInspectionHTTPReason    string                             `json:"last_inspection_http_reason,omitempty"`
+	LastInspectionSHA256        string                             `json:"last_inspection_sha256,omitempty"`
+	LastInspectionWallMS        int64                              `json:"last_inspection_wall_ms,omitempty"`
+	RepositoryIndexFailureClass string                             `json:"repository_index_failure_class,omitempty"`
+	TransitionLimitExceeded     bool                               `json:"transition_limit_exceeded,omitempty"`
+	DeadlineMS                  int64                              `json:"deadline_ms"`
+	WallMS                      int64                              `json:"wall_ms"`
 }
 
 // ConvergenceTransitionObservation retains only changes in the closed
@@ -487,7 +493,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -497,7 +503,7 @@ func ValidatePlan(value Plan) error {
 	}
 	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 ||
 		value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 ||
-		value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 {
+		value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -521,6 +527,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV8
 	case PlanSchemaV9:
 		wantSafety = frozenSafetyV9
+	case PlanSchemaV10:
+		wantSafety = frozenSafetyV10
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -534,15 +542,24 @@ func ValidatePlan(value Plan) error {
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
 		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
-		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9) &&
+		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10) &&
 			safety.ServerHealthDeadlineMS <= 0 ||
-		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 &&
+		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 &&
 			safety.ServerHealthDeadlineMS != 0 ||
-		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9) && (safety.FullConvergenceDeadlineMS <= 0 ||
+		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10) && (safety.FullConvergenceDeadlineMS <= 0 ||
 			safety.RevalidationDeadlineMS <= 0 || safety.RevalidationDeadlineMS > safety.FullConvergenceDeadlineMS) ||
-		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 &&
+		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 &&
 			(safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
 		return errors.New("T40.13 safety envelope is invalid")
+	}
+	if value.Schema == PlanSchemaV10 {
+		if safety.PressureTargetUsedPercent < 80 || safety.PressureTargetUsedPercent >= 90 ||
+			safety.MaximumPressureBallastBytes <= 0 ||
+			safety.MaximumPressureBallastBytes > safety.MaximumDataAllocatedBytes {
+			return errors.New("T40.13 pressure exercise envelope is invalid")
+		}
+	} else if safety.PressureTargetUsedPercent != 0 || safety.MaximumPressureBallastBytes != 0 {
+		return errors.New("T40.13 historical safety envelope acquired pressure controls")
 	}
 	wantDecisions := []string{"continue", "reduce", "cohort_experiment", "p6_investigation"}
 	for index, rule := range value.StopRules {
@@ -562,7 +579,7 @@ func ValidatePlan(value Plan) error {
 
 func ValidateObservation(value Observation) error {
 	if !slices.Contains([]string{
-		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9,
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10,
 	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
@@ -573,7 +590,7 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
 		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 ||
-		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 {
+		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -588,18 +605,18 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
-		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 &&
+		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 &&
 		len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
 	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
-		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 {
-		if err := validateServerStartups(value.ServerStartups); err != nil {
+		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 {
+		if err := validateServerStartups(value.ServerStartups, value.Schema == ObservationSchemaV10); err != nil {
 			return err
 		}
 	}
 	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 &&
-		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 &&
+		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 &&
 		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
@@ -630,6 +647,11 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV9 {
 		if err := validateConvergenceWaits(value.ConvergenceWaits, 5); err != nil {
+			return err
+		}
+	}
+	if value.Schema == ObservationSchemaV10 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, 6); err != nil {
 			return err
 		}
 	}
@@ -706,14 +728,14 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		for _, startup := range value.ServerStartups {
 			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
 				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		for _, wait := range value.ConvergenceWaits {
 			if wait.DeadlineMS != plan.Safety.FullConvergenceDeadlineMS &&
 				wait.DeadlineMS != plan.Safety.RevalidationDeadlineMS {
@@ -764,6 +786,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV10 {
+		return ObservationSchemaV10
+	}
 	if plan.Schema == PlanSchemaV9 {
 		return ObservationSchemaV9
 	}
@@ -792,6 +817,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV10 {
+		return ReceiptSchemaV10
+	}
 	if plan.Schema == PlanSchemaV9 {
 		return ReceiptSchemaV9
 	}
@@ -861,7 +889,7 @@ func validateToolchainObservation(values []ToolchainObservation, required bool) 
 	return nil
 }
 
-func validateServerStartups(values []ServerStartupObservation) error {
+func validateServerStartups(values []ServerStartupObservation, allowPressureRestart bool) error {
 	if len(values) > 16 {
 		return errors.New("T40.13 startup diagnostic inventory exceeds its bound")
 	}
@@ -869,6 +897,9 @@ func validateServerStartups(values []ServerStartupObservation) error {
 	labels := []string{
 		"cold", "warm-noop", "interruption-first", "interruption-restart",
 		"stale-worker", "archive-restore", "authorized-query",
+	}
+	if allowPressureRestart {
+		labels = append(labels, "pressure-restart")
 	}
 	outcomes := []string{"healthy", "deadline", "exited", "canceled", "inspector_error"}
 	stages := []string{
@@ -1062,6 +1093,9 @@ func validateConvergenceTransitions(
 		((value.Outcome == "repository_index_terminal") != (last.Class == "terminal")) {
 		return errors.New("T40.13 repository-index terminal transition is incoherent")
 	}
+	if err := validateRepositoryIndexFailureClass(value, detailVersion); err != nil {
+		return err
+	}
 	if err := validateLastInspection(value, stages, detailVersion, last); err != nil {
 		return err
 	}
@@ -1122,13 +1156,37 @@ func validateConvergenceWithoutSuccessfulProbe(
 		((value.Outcome == "repository_index_terminal") != (last.Class == "terminal")) {
 		return errors.New("T40.13 unsuccessful repository-index terminal transition is incoherent")
 	}
+	if err := validateRepositoryIndexFailureClass(value, detailVersion); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateRepositoryIndexFailureClass(value ConvergenceWaitObservation, detailVersion int) error {
+	if detailVersion < 6 {
+		if value.RepositoryIndexFailureClass != "" {
+			return errors.New("T40.13 historical convergence wait acquired a terminal failure class")
+		}
+		return nil
+	}
+	if value.Outcome == "repository_index_terminal" {
+		if value.RepositoryIndexFailureClass != "lease_heartbeat" &&
+			value.RepositoryIndexFailureClass != "other" {
+			return errors.New("T40.13 repository-index terminal failure class is invalid")
+		}
+		return nil
+	}
+	if value.RepositoryIndexFailureClass != "" {
+		return errors.New("T40.13 nonterminal convergence wait has a terminal failure class")
+	}
 	return nil
 }
 
 func hasLastInspection(value ConvergenceWaitObservation) bool {
 	return value.LastInspectionStage != "" || value.LastInspectionClass != "" ||
 		value.LastInspectionHTTPStatus != 0 || value.LastInspectionHTTPReason != "" ||
-		value.LastInspectionSHA256 != "" || value.LastInspectionWallMS != 0
+		value.LastInspectionSHA256 != "" || value.LastInspectionWallMS != 0 ||
+		value.RepositoryIndexFailureClass != ""
 }
 
 func validTransitionHTTPDiagnostic(transition ConvergenceTransitionObservation, detailVersion int) bool {
@@ -1429,12 +1487,15 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
 			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
 			{"semantic-262144-v1", "interruption-restart"}, {"semantic-262144-v1", "stale-worker"},
 			{"structural-2m-v1", "archive-restore"}, {"semantic-262144-v1", "authorized-query"},
+		}
+		if plan.Schema == PlanSchemaV10 {
+			want = slices.Insert(want, 6, [2]string{"structural-2m-v1", "pressure-restart"})
 		}
 		if len(value.ServerStartups) != len(want) {
 			return errors.New("T40.13 completed receipt lacks the exact startup inventory")
@@ -1446,7 +1507,7 @@ func validateCompleted(value Receipt, plan Plan) error {
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		want := [][3]string{
 			{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
 			{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},

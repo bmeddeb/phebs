@@ -618,12 +618,65 @@ publication, recovery, lifecycle, cache, lock, memory, disk, or child-process
 behavior. It does not retrospectively seal Take 13, identify the index-child
 failure class, authorize Take 14 execution, close T40.13, or unblock Epic 41.
 
+Take 14 was approved and executed from exact commit
+`c1232d0a4e797eedbef129c178e5281913f20daf` with frozen v9 plan
+`sha256:d54f7b63d398a45dbf23ab93bc011dc154d87acfb20b07ffe952d5f50227867e`.
+It stopped with sealed decision `unclassified` and reason
+`repository_index_terminal`. Startup was healthy in 11,273 ms. The exact
+latest-job projection recorded pending attempt 0, running attempt 0, pending
+attempt 1 after the 60-second backoff, running attempt 1, pending attempt 2
+after the 120-second backoff, running attempt 2, then failed attempt 3 at
+280,004 ms. Cold stopped at 291,458 ms with three Git children, three index
+children, two retry reports, 3,479,928,832 bytes peak RSS, no publication or
+authority change, and no later phase. The 325,738,496-byte allocated-data
+value was the post-cleanup phase fence, not a transient peak. Teardown passed
+in 1,033 ms and destroyed custody and the prepared manifest. Observation
+`sha256:55f576e392352490fa7fbdd2a594df6ec959a0b80e587bae2653a21b0faabf88`,
+receipt `sha256:078ade8d03d4023ebc73f448c7ed511ae623642b07624e9a287318c448c9d1fa`,
+and source-free package
+`sha256:ffefa975acbe463bd8c9e99489115f8ccbf2744ea284a57f53f0376aa5973bc0`
+pass their signature, checksum, strict-validation, and byte-reconstruction
+checks. This is not a scale, convergence, resource-refusal, release, or Epic
+closure result.
+
+## Take 14 harness review ledger
+
+The post-stop review used only the frozen neutral corpus and exact source. Its
+temporary authored corpus, indexes, prepared manifest, credentials, logs, and
+custody were destroyed after the bounded reproduction. Findings are retained
+here so a later take does not repeat a multi-hour gate merely to rediscover a
+harness defect.
+
+| Priority | Finding | Evidence | Disposition |
+| --- | --- | --- | --- |
+| Gate blocker | Fast queue polling also shortened every production job lease. | The exact pinned `zoekt-git-index` indexed all 2,000,002 files into 89 shards in 78.54 seconds at 3,315,744,768 bytes max RSS and 18,988,179,456 allocated bytes. Through Phebs with `sync.poll_interval: 250ms`, the same child was canceled when an 83-ms heartbeat request timed out, then requeued on the exact 60/120-second schedule. With a 15-second interval, its third diagnostic attempt published successfully. | Production runner defaults now use `max(interval/3, 5s)` for heartbeats and four times that for stale recovery. The ordinary 15-second default is byte-for-behavior unchanged; fast polls retain claim cadence but no longer create subsecond leases. V10 reduces a terminal raw error to only `lease_heartbeat` or `other`; raw text still never enters a digest or receipt. |
+| Gate blocker | The pressure phase was host-dependent and had no guaranteed fresh capacity observation. | It only read the last in-memory lifecycle status and required `collect`; it created no pressure. On the ceremony filesystem, the retained generations and next reservation remain below the 80% soft watermark, and an idle lifecycle loop may not refresh for an hour. | V10 freezes an 82% target and an 80-GiB ballast maximum inside the existing 96-GiB custody ceiling. Preflight refuses before custody if normal capacity cannot reach that target inside the ceiling. The ceremony stops the ordinary structural server, preallocates one exact custody file, restarts the same production binary, requires a complete real collector cycle at `collect`, proves authority unchanged, removes the file, and requires a complete `normal` cycle. Reaching 90% remains a production refusal. |
+| Evidence blocker | Stopped-run allocated bytes were measured only after child cleanup. | Take 14 retained 325,738,496 bytes although the independently successful child allocated about 18.99 GB before its staging data disappeared. | Each active phase now samples the same filesystem's available capacity once per second and combines the conservative trough with exact phase-fence `du` values. This is constant-cost `statfs` work and retains transient allocation without walking the corpus on every sample. |
+| Cost/reliability defect | The interruption trigger recursively scanned derived artifacts and discarded traversal errors. | The loop could revisit 500,000 paths per root every second while waiting for a publication marker or stage. | It now reads only the three package roots, the one frozen repository directory in each, at most 4,096 direct controls, and the one named observation-inventory v2 control directory. Any read/scope error fails closed; immutable generations are never traversed. |
+| Pre-freeze review defect | A byte target at the upper edge of 82% can report 83% because the lifecycle gate rounds upward, and the first v10 draft admitted `pressure-restart` as a historical startup label. | Both defects were found by boundary/schema review before any Take 15 plan was frozen. | The ballast selects the midpoint of the exact byte interval that reports 82%, leaving filesystem-metadata headroom. The new startup label is accepted only by v10; v1-v9 validation remains closed. Boundary and historical-schema regressions pin both facts. |
+| Known bounded ceremony cost | Direct phase-fence disk gauges invoke `du` over custody metadata at meter boundaries. | These are finite ceremony measurements, not production request/sync/publication work, but they scale with the number of retained custody entries. | Retained because they supply an absolute workspace gauge and cross-check the constant-cost capacity trough. They never hash or read source contents, do not run in the one-second sampling loop, are charged to phase wall time, and remain inside the eight-hour parent gate. |
+| Verification gap | Unit coverage did not execute the exact coordinator, lease/cadence interaction, pressure reachability, or transient-allocation evidence path. | The pre-review package statement coverage was 49.7%; several recovery and exact-reader helpers were at zero. | Table-driven regression tests now pin the lease floor, v10 pressure arithmetic and bounds, pressure-restart receipt inventory, capacity-trough retention, bounded interruption scanning, and permanent retirement of `neutral-14`. A full exact take remains necessary because authoring the two-million-file corpus is intentionally not a unit test. |
+
+Take 15 is the only prospective ceremony. It permanently retires
+`neutral-14`, introduces v10, and preserves the frozen corpus, twelve phase
+order, four-hour full-convergence and 20-minute revalidation deadlines,
+eight-hour parent, 20-GiB RSS, 96-GiB allocated-data, five-attempt ceiling,
+stop rules, and all nonclaims. The production lease correction changes no
+request, startup, sync scan, handler, index child, publication transition,
+cache, lock, memory, or disk asymptotic. At the ordinary 15-second interval it
+is unchanged; below 15 seconds it performs fewer heartbeat writes and extends
+crash/stale recovery to a bounded 20 seconds. All pressure, capacity sampling,
+and shallow interruption scanning are ceremony-only. These corrections do not
+authorize Take 15 execution, release, T40.13 closure, or Epic 41 progression;
+those still require a fresh exact commit, unique signer, independent plan
+review, and explicit approval.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-14
+CEREMONY_ID=t40r1-neutral-15
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

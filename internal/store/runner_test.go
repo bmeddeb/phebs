@@ -43,6 +43,35 @@ func waitFor(t *testing.T, d time.Duration, cond func() bool, msg string) {
 	t.Fatal(msg)
 }
 
+func TestRunnerDefaultsKeepFastPollingLeaseSafe(t *testing.T) {
+	tests := []struct {
+		name           string
+		interval       time.Duration
+		heartbeatEvery time.Duration
+		staleAfter     time.Duration
+		wantHeartbeat  time.Duration
+		wantStale      time.Duration
+	}{
+		{name: "fast poll", interval: 250 * time.Millisecond, wantHeartbeat: 5 * time.Second, wantStale: 20 * time.Second},
+		{name: "ordinary default", wantHeartbeat: 5 * time.Second, wantStale: 20 * time.Second},
+		{name: "slow poll", interval: 60 * time.Second, wantHeartbeat: 20 * time.Second, wantStale: 80 * time.Second},
+		{name: "explicit lease", interval: 250 * time.Millisecond, heartbeatEvery: 2 * time.Second, staleAfter: 30 * time.Second, wantHeartbeat: 2 * time.Second, wantStale: 30 * time.Second},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runner := Runner{
+				Interval: test.interval, HeartbeatEvery: test.heartbeatEvery,
+				StaleAfter: test.staleAfter,
+			}
+			runner.defaults()
+			if runner.HeartbeatEvery != test.wantHeartbeat || runner.StaleAfter != test.wantStale {
+				t.Fatalf("lease defaults = heartbeat %s, stale %s; want %s, %s",
+					runner.HeartbeatEvery, runner.StaleAfter, test.wantHeartbeat, test.wantStale)
+			}
+		})
+	}
+}
+
 // T2.3 AC: no double-execution under 3 concurrent pollers.
 func TestRunnerNoDoubleExecution(t *testing.T) {
 	s := newRunnerStore(t)

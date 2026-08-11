@@ -19,7 +19,7 @@ type Runner struct {
 	Handle func(ctx context.Context, job Job) error
 
 	Interval       time.Duration                               // base poll cadence, jittered to [0.5x, 1.5x); default 15s
-	HeartbeatEvery time.Duration                               // default Interval/3
+	HeartbeatEvery time.Duration                               // default max(Interval/3, 5s)
 	StaleAfter     time.Duration                               // reaper cutoff; default 4x HeartbeatEvery
 	MaxAttempts    int                                         // executions before a job is failed; default 3
 	Backoff        func(err error, attempts int) time.Duration // default DefaultBackoff (per-class)
@@ -52,7 +52,7 @@ func (r *Runner) defaults() {
 		r.Interval = 15 * time.Second
 	}
 	if r.HeartbeatEvery == 0 {
-		r.HeartbeatEvery = r.Interval / 3
+		r.HeartbeatEvery = max(r.Interval/3, 5*time.Second)
 	}
 	if r.StaleAfter == 0 {
 		r.StaleAfter = 4 * r.HeartbeatEvery

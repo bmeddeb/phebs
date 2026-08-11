@@ -79,9 +79,10 @@ type privateProfileSnapshot struct {
 }
 
 type privateConvergenceProbe struct {
-	Stage               string
-	SHA256              string
-	ObservationProgress *ObservationProgressObservation
+	Stage                       string
+	SHA256                      string
+	ObservationProgress         *ObservationProgressObservation
+	RepositoryIndexFailureClass string
 }
 
 func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
@@ -383,10 +384,16 @@ func repositoryIndexProbe(
 				repository.LastIndexJobState), errors.New("T40.13 index job projection is invalid")
 		}
 	}
+	failureClass := ""
+	if repository.IndexedCommitHash != expectedCommit &&
+		(jobStatus == store.StatusFailed || jobStatus == store.StatusCanceled) {
+		failureClass = repositoryIndexFailureClass(repository.LastIndexJob)
+	}
 	probe := convergenceProbe(
 		"repository_index", repository.IndexedCommitHash,
-		repository.LastIndexJobState, jobStatus, attempts,
+		repository.LastIndexJobState, jobStatus, attempts, failureClass,
 	)
+	probe.RepositoryIndexFailureClass = failureClass
 	if repository.IndexedCommitHash == expectedCommit {
 		return probe, nil
 	}
@@ -394,6 +401,13 @@ func repositoryIndexProbe(
 		return probe, errRepositoryIndexTerminal
 	}
 	return probe, errors.New("T40.13 indexed commit has not converged")
+}
+
+func repositoryIndexFailureClass(job *store.Job) string {
+	if job != nil && strings.HasPrefix(job.Error, "heartbeat: ") {
+		return "lease_heartbeat"
+	}
+	return "other"
 }
 
 func (inspector *profileInspector) currentRepositoryStatus(

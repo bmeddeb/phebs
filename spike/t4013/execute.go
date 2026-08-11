@@ -22,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -124,7 +125,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -327,7 +328,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 func (run *execution) verifyFrozenHostToolchain() error {
 	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
 		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 {
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -446,12 +447,12 @@ func (run *execution) startServer(
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
 	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 ||
-		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
+		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
-		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9) &&
+		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10) &&
 		startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
@@ -982,33 +983,70 @@ func waitSettledChunkLifecycle(
 }
 
 func (run *execution) pressure() error {
+	started := time.Now()
 	profile := run.prepared.Profiles[0]
-	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	priorMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
-	run.trackMeter(meter)
-	status, err := waitLifecycle(run.ctx, profile, false, 10*time.Minute)
+	run.trackMeter(priorMeter)
+	if err := run.structural.stop(30 * time.Second); err != nil {
+		return err
+	}
+	run.structural = nil
+	priorMetrics, err := run.finishMeter(priorMeter, &run.structAR)
 	if err != nil {
 		return err
 	}
-	if status.Capacity.Completeness != lifecycle.Exact || status.Capacity.Pressure == lifecycle.PressureUnavailable {
-		return exactOracle("lifecycle capacity was not exact")
+	ballast, pressureLogical, pressureAllocated, err := createPressureBallast(
+		run.ctx, run.workspace, run.plan.Safety,
+	)
+	if err != nil {
+		return err
 	}
-	if status.Capacity.Pressure == lifecycle.PressureRefuse {
-		return errProductionPressure
+	run.partialMetrics.DataLogicalBytes = max(run.partialMetrics.DataLogicalBytes, pressureLogical)
+	run.partialMetrics.DataAllocatedBytes = max(run.partialMetrics.DataAllocatedBytes, pressureAllocated)
+	ballastPresent := true
+	defer func() {
+		if ballastPresent {
+			_ = ballast.remove(run.workspace)
+		}
+	}()
+	server, pressureMeter, err := run.startServer(profile, "pressure-restart", &run.structAR)
+	if err != nil {
+		return err
 	}
-	if status.Capacity.Pressure != lifecycle.PressureCollect {
-		return exactOracle("frozen run did not reach the pressure exercise")
+	run.structural = server
+	if _, err := waitLifecyclePressure(
+		run.ctx, profile, true, lifecycle.PressureCollect, 10*time.Minute,
+	); err != nil {
+		return err
 	}
 	after, err := run.waitSnapshot(profile, "a-return", "pressure", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
-	metrics, err := run.finishMeter(meter, &after)
+	if snapshotAuthority(after) != snapshotAuthority(run.structAR) {
+		return exactOracle("pressure collection changed protected authority")
+	}
+	if err := ballast.remove(run.workspace); err != nil {
+		return err
+	}
+	ballastPresent = false
+	if _, err := waitLifecyclePressure(
+		run.ctx, profile, true, lifecycle.PressureNormal, 10*time.Minute,
+	); err != nil {
+		return err
+	}
+	pressureMetrics, err := run.finishMeter(pressureMeter, &after)
 	if err != nil {
 		return err
 	}
+	metrics := mergeMetrics(priorMetrics, pressureMetrics)
+	metrics.WallMS = time.Since(started).Milliseconds()
+	metrics.DataLogicalBytes = max(metrics.DataLogicalBytes, pressureLogical)
+	metrics.DataAllocatedBytes = max(metrics.DataAllocatedBytes, pressureAllocated)
+	run.structAR = after
 	run.observation.Phases[7] = succeededPhase("pressure", metrics)
 	return run.enforceSafety()
 }
@@ -1512,8 +1550,8 @@ func (run *execution) recordConvergenceWait(
 	progress convergenceProgressTracker,
 ) {
 	if (run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9) ||
-		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9) ||
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10) ||
+		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10) ||
 		(progress.attempts == 0 && outcome != "server_exited") {
 		return
 	}
@@ -1532,7 +1570,7 @@ func (run *execution) recordConvergenceWait(
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
 	}
-	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
+	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
 		wait.FirstStage = progress.first.Stage
 		wait.StageChanges = progress.stageChanges
 		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
@@ -1555,7 +1593,7 @@ func (run *execution) recordConvergenceWait(
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
-	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
+	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
 		wait.WallMS = max(wait.WallMS, 1)
 		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
 		if progress.last.SHA256 == "" {
@@ -1573,6 +1611,9 @@ func (run *execution) recordConvergenceWait(
 			wait.LastInspectionSHA256 = progress.lastInspectionProbe.SHA256
 			wait.LastInspectionWallMS = progress.lastInspectionAt.Milliseconds()
 		}
+		if run.plan.Schema == PlanSchemaV10 && outcome == "repository_index_terminal" {
+			wait.RepositoryIndexFailureClass = progress.lastInspectionProbe.RepositoryIndexFailureClass
+		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
@@ -1580,7 +1621,7 @@ func (run *execution) recordConvergenceWait(
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
@@ -1588,7 +1629,7 @@ func (run *execution) fullConvergenceDeadline() time.Duration {
 
 func (run *execution) revalidationDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1600,26 +1641,12 @@ func waitForDerivedPartial(ctx context.Context, dataDir string, limit time.Durat
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
-		for _, root := range []string{"observations", "extraction-publications", "relationships"} {
-			found := false
-			observed := 0
-			_ = filepath.WalkDir(filepath.Join(dataDir, root), func(path string, entry os.DirEntry, err error) error {
-				if err != nil {
-					return filepath.SkipDir
-				}
-				observed++
-				if observed > 500_000 {
-					return errors.New("inventory limit")
-				}
-				if entry.Name() == "publishing.json" || strings.HasPrefix(entry.Name(), ".stage-") {
-					found = true
-					return errors.New("found")
-				}
-				return nil
-			})
-			if found {
-				return nil
-			}
+		found, err := derivedPartialPresent(dataDir)
+		if err != nil {
+			return err
+		}
+		if found {
+			return nil
 		}
 		select {
 		case <-phase.Done():
@@ -1627,6 +1654,68 @@ func waitForDerivedPartial(ctx context.Context, dataDir string, limit time.Durat
 		case <-ticker.C:
 		}
 	}
+}
+
+func derivedPartialPresent(dataDir string) (bool, error) {
+	if !filepath.IsAbs(dataDir) {
+		return false, errors.New("T40.13 derived interruption scope is invalid")
+	}
+	for _, name := range []string{"observations", "extraction-publications", "relationships"} {
+		root := filepath.Join(dataDir, name)
+		rootInfo, err := os.Lstat(root)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+			return false, errors.Join(err, errors.New("T40.13 derived interruption root is invalid"))
+		}
+		repositories, err := os.ReadDir(root)
+		if err != nil {
+			return false, err
+		}
+		if len(repositories) > 1 {
+			return false, errors.New("T40.13 derived interruption repository inventory exceeds its bound")
+		}
+		for _, repository := range repositories {
+			if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+				return false, errors.New("T40.13 derived interruption repository is invalid")
+			}
+			repositoryPath := filepath.Join(root, repository.Name())
+			if found, err := derivedControlPresent(repositoryPath); err != nil || found {
+				return found, err
+			}
+			if name == "observations" {
+				v2 := filepath.Join(repositoryPath, observationpublication.InventoryPublicationDirectoryV2)
+				info, statErr := os.Lstat(v2)
+				switch {
+				case os.IsNotExist(statErr):
+					continue
+				case statErr != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0:
+					return false, errors.Join(statErr, errors.New("T40.13 derived interruption v2 control is invalid"))
+				}
+				if found, err := derivedControlPresent(v2); err != nil || found {
+					return found, err
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+func derivedControlPresent(directory string) (bool, error) {
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return false, err
+	}
+	if len(entries) > 4096 {
+		return false, errors.New("T40.13 derived interruption control inventory exceeds its bound")
+	}
+	for _, entry := range entries {
+		if entry.Name() == "publishing.json" || strings.HasPrefix(entry.Name(), ".stage-") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func backupAndReset(ctx context.Context, toolchain privateToolchain, profile PreparedProfile, label string) (retErr error) {
@@ -1670,6 +1759,16 @@ func backupAndReset(ctx context.Context, toolchain privateToolchain, profile Pre
 }
 
 func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bool, limit time.Duration) (lifecycle.Status, error) {
+	return waitLifecyclePressure(ctx, profile, requireCycle, "", limit)
+}
+
+func waitLifecyclePressure(
+	ctx context.Context,
+	profile PreparedProfile,
+	requireCycle bool,
+	pressure lifecycle.Pressure,
+	limit time.Duration,
+) (lifecycle.Status, error) {
 	inspector, err := newProfileInspector(profile)
 	if err != nil {
 		return lifecycle.Status{}, err
@@ -1688,7 +1787,7 @@ func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bo
 					break
 				}
 			}
-			if complete {
+			if complete && (pressure == "" || status.Capacity.Pressure == pressure) {
 				return status, nil
 			}
 		}
@@ -1795,7 +1894,7 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 	value := emptyObservation(environment)
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1814,6 +1913,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV8
 	case PlanSchemaV9:
 		value.Schema = ObservationSchemaV9
+	case PlanSchemaV10:
+		value.Schema = ObservationSchemaV10
 	}
 	return value
 }
