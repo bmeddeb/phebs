@@ -280,6 +280,24 @@ func TestV8PlanPreservesTakeElevenDeadlines(t *testing.T) {
 	}
 }
 
+func TestV9PlanPreservesTakeTwelveDeadlines(t *testing.T) {
+	plan, err := frozenV9PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV9 || plan.Safety != frozenSafetyV8 || plan.Safety != frozenSafetyV9 {
+		t.Fatalf("v9 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV9 || decoded.Safety != frozenSafetyV9 {
+		t.Fatalf("decoded v9 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV1PlanBytesDoNotAcquireHostToolchainField(t *testing.T) {
 	plan, err := FrozenPlan(testSourceCommit)
 	if err != nil {
@@ -834,6 +852,55 @@ func TestV8ReceiptRetainsClosedProjectionSubstage(t *testing.T) {
 	wait.LastInspectionHTTPReason = httpReason500Projection
 	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 4); err == nil {
 		t.Fatal("v8 detail contract accepted the legacy undifferentiated projection reason")
+	}
+}
+
+func TestV9ReceiptRetainsRepositoryIndexTerminalStop(t *testing.T) {
+	plan, err := frozenV9PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV7Observation(plan)
+	value.Schema = ObservationSchemaV9
+	value.Outcome = "stopped"
+	digest := "sha256:" + strings.Repeat("a", 64)
+	value.ConvergenceWaits = []ConvergenceWaitObservation{{
+		Profile: "structural-2m-v1", Label: "cold", Revision: "a",
+		Outcome: "repository_index_terminal", FirstStage: "repository_index", LastStage: "repository_index",
+		Attempts: 2, FirstProgressSHA256: digest, LastProgressSHA256: digest,
+		InspectionTransitions: []ConvergenceTransitionObservation{
+			{WallMS: 1, Stage: "repository_index", Class: "pending", ProgressSHA256: digest},
+			{WallMS: 2, Stage: "repository_index", Class: "terminal", ProgressSHA256: digest},
+		},
+		LastSuccessfulProbeSHA256: digest, LastSuccessfulProbeWallMS: 1,
+		LastInspectionStage: "repository_index", LastInspectionClass: "terminal",
+		LastInspectionSHA256: digest, LastInspectionWallMS: 2,
+		DeadlineMS: plan.Safety.FullConvergenceDeadlineMS, WallMS: 2,
+	}}
+	for index := range value.Phases {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	value.Phases[1] = PhaseObservation{Name: "cold", Outcome: "failed", Metrics: PhaseMetrics{WallMS: 2, PeakRSSBytes: 1}}
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Checks = frozenChecks(false)
+	value.Failures = []FailureObservation{{Phase: "cold", Class: "execution", Code: "repository_index_terminal"}}
+	value.Decision = DecisionObservation{Selected: "unclassified", Reason: "repository_index_terminal"}
+	value.Teardown = TeardownObservation{Completed: true}
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV9 {
+		t.Fatalf("v9 terminal receipt = %+v, %v", receipt, err)
+	}
+	if err := validateConvergenceWaits(value.ConvergenceWaits, 4); err == nil {
+		t.Fatal("v8 detail contract accepted a v9 repository-index terminal stop")
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -185,16 +186,16 @@ func (inspector *profileInspector) inspectWithProgress(
 	if ctx == nil || !hexIdentity(profile.Revisions[revision], 40) {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 inspection revision is invalid")
 	}
-	repository, err := inspector.currentRepository(ctx, profile)
+	repository, err := inspector.currentRepositoryStatus(ctx, profile)
 	if err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}
 	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}
-	probe = convergenceProbe("repository_index", repository.IndexedCommitHash, repository.LatestJobStatus)
-	if repository.IndexedCommitHash != profile.Revisions[revision] {
-		return privateProfileSnapshot{}, probe, errors.New("T40.13 indexed commit has not converged")
+	probe, err = repositoryIndexProbe(repository, profile.Revisions[revision])
+	if err != nil {
+		return privateProfileSnapshot{}, probe, err
 	}
 	indexDirectory := filepath.Join(profile.DataDir, "index")
 	source, err := repositoryindex.ReadSourceManifest(indexDirectory, profile.RepositoryName)
@@ -356,20 +357,59 @@ type extractionSnapshot struct {
 	references int64
 }
 
-func (inspector *profileInspector) currentRepository(
+func repositoryIndexProbe(
+	repository store.RepoStatus,
+	expectedCommit string,
+) (privateConvergenceProbe, error) {
+	jobStatus := store.JobStatus("")
+	attempts := 0
+	if repository.LastIndexJobState != store.JobProjectionUnavailable &&
+		repository.LastIndexJobState != store.JobProjectionExact {
+		return convergenceProbe("repository_index", repository.IndexedCommitHash,
+			repository.LastIndexJobState), errors.New("T40.13 index job projection state is invalid")
+	}
+	if repository.LastIndexJobState == store.JobProjectionExact {
+		if repository.LastIndexJob == nil {
+			return convergenceProbe("repository_index", repository.IndexedCommitHash,
+				repository.LastIndexJobState), errors.New("T40.13 exact index job projection is absent")
+		}
+		jobStatus = repository.LastIndexJob.Status
+		attempts = repository.LastIndexJob.Attempts
+		if !slices.Contains([]store.JobStatus{
+			store.StatusPending, store.StatusClaimed, store.StatusRunning,
+			store.StatusDone, store.StatusFailed, store.StatusCanceled,
+		}, jobStatus) || attempts < 0 || attempts > 1_000_000 {
+			return convergenceProbe("repository_index", repository.IndexedCommitHash,
+				repository.LastIndexJobState), errors.New("T40.13 index job projection is invalid")
+		}
+	}
+	probe := convergenceProbe(
+		"repository_index", repository.IndexedCommitHash,
+		repository.LastIndexJobState, jobStatus, attempts,
+	)
+	if repository.IndexedCommitHash == expectedCommit {
+		return probe, nil
+	}
+	if jobStatus == store.StatusFailed || jobStatus == store.StatusCanceled {
+		return probe, errRepositoryIndexTerminal
+	}
+	return probe, errors.New("T40.13 indexed commit has not converged")
+}
+
+func (inspector *profileInspector) currentRepositoryStatus(
 	ctx context.Context,
 	profile PreparedProfile,
-) (store.Repo, error) {
-	var repositories []store.Repo
-	if err := inspector.get(ctx, profile, "/api/repos", &repositories); err != nil {
-		return store.Repo{}, err
+) (store.RepoStatus, error) {
+	var repositories []store.RepoStatus
+	if err := inspector.get(ctx, profile, "/api/repo-status", &repositories); err != nil {
+		return store.RepoStatus{}, err
 	}
 	for _, repository := range repositories {
 		if repository.Name == profile.RepositoryName {
 			return repository, nil
 		}
 	}
-	return store.Repo{}, errors.New("T40.13 repository is not visible")
+	return store.RepoStatus{}, errors.New("T40.13 repository is not visible")
 }
 
 func (inspector *profileInspector) get(

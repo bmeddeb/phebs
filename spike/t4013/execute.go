@@ -32,14 +32,15 @@ const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
 var (
-	errReviewCeiling         = errors.New("T40.13 frozen review ceiling crossed")
-	errTotalWallDeadline     = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
-	errExactOracle           = errors.New("T40.13 exact oracle refused")
-	errDirectRecovery        = errors.New("T40.13 direct recovery refused")
-	errProductionPressure    = errors.New("T40.13 production pressure gate refused")
-	errConvergenceDeadline   = errors.New("T40.13 frozen convergence deadline expired")
-	errConvergenceServerExit = errors.New("T40.13 server exited during convergence")
-	errConvergenceTimeline   = errors.New("T40.13 convergence transition limit exceeded")
+	errReviewCeiling           = errors.New("T40.13 frozen review ceiling crossed")
+	errTotalWallDeadline       = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
+	errExactOracle             = errors.New("T40.13 exact oracle refused")
+	errDirectRecovery          = errors.New("T40.13 direct recovery refused")
+	errProductionPressure      = errors.New("T40.13 production pressure gate refused")
+	errConvergenceDeadline     = errors.New("T40.13 frozen convergence deadline expired")
+	errConvergenceServerExit   = errors.New("T40.13 server exited during convergence")
+	errConvergenceTimeline     = errors.New("T40.13 convergence transition limit exceeded")
+	errRepositoryIndexTerminal = errors.New("T40.13 repository index job terminated before publication")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -122,7 +123,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -328,7 +329,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 func (run *execution) verifyFrozenHostToolchain() error {
 	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
 		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 {
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -364,6 +365,11 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		result = stoppedClassification{
 			class: "oracle", code: "convergence_transition_limit_exceeded",
 			decision: "unclassified", reason: "convergence_transition_limit_exceeded",
+		}
+	case errors.Is(cause, errRepositoryIndexTerminal):
+		result = stoppedClassification{
+			class: "execution", code: "repository_index_terminal",
+			decision: "unclassified", reason: "repository_index_terminal",
 		}
 	case measurementErr != nil:
 		result = stoppedClassification{
@@ -442,12 +448,12 @@ func (run *execution) startServer(
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
 	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 ||
-		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 {
+		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
-		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8) &&
+		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9) &&
 		startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
@@ -1339,6 +1345,9 @@ func classifyConvergenceInspection(err error) convergenceInspectionDiagnostic {
 	if err == nil {
 		return convergenceInspectionDiagnostic{class: "complete"}
 	}
+	if errors.Is(err, errRepositoryIndexTerminal) {
+		return convergenceInspectionDiagnostic{class: "terminal"}
+	}
 	var statusErr *privateHTTPStatusError
 	if errors.As(err, &statusErr) {
 		return convergenceInspectionDiagnostic{
@@ -1473,6 +1482,10 @@ func (run *execution) waitSnapshot(
 			run.recordConvergenceWait(profile, revision, label, "diagnostic_limit", limit, started, progress)
 			return privateProfileSnapshot{}, errConvergenceTimeline
 		}
+		if errors.Is(inspectErr, errRepositoryIndexTerminal) {
+			run.recordConvergenceWait(profile, revision, label, "repository_index_terminal", limit, started, progress)
+			return privateProfileSnapshot{}, errRepositoryIndexTerminal
+		}
 		if inspectErr == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)
 			return snapshot, nil
@@ -1502,8 +1515,8 @@ func (run *execution) recordConvergenceWait(
 	progress convergenceProgressTracker,
 ) {
 	if (run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8) ||
-		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8) ||
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9) ||
+		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9) ||
 		(progress.attempts == 0 && outcome != "server_exited") {
 		return
 	}
@@ -1522,7 +1535,7 @@ func (run *execution) recordConvergenceWait(
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
 	}
-	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 {
+	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
 		wait.FirstStage = progress.first.Stage
 		wait.StageChanges = progress.stageChanges
 		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
@@ -1545,7 +1558,7 @@ func (run *execution) recordConvergenceWait(
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
-	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 {
+	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
 		wait.WallMS = max(wait.WallMS, 1)
 		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
 		if progress.last.SHA256 == "" {
@@ -1570,7 +1583,7 @@ func (run *execution) recordConvergenceWait(
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
@@ -1578,7 +1591,7 @@ func (run *execution) fullConvergenceDeadline() time.Duration {
 
 func (run *execution) revalidationDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1785,7 +1798,7 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 	value := emptyObservation(environment)
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1802,6 +1815,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV7
 	case PlanSchemaV8:
 		value.Schema = ObservationSchemaV8
+	case PlanSchemaV9:
+		value.Schema = ObservationSchemaV9
 	}
 	return value
 }

@@ -76,4 +76,7 @@ func TestCeremonyDriverRetiresTakeEleven(t *testing.T) {
 	if !strings.Contains(string(raw), `REVIEW_STOPPED_CEREMONY_ID_11="t40r1-neutral-11"`) {
 		t.Fatal("neutral-11 is not permanently retired")
 	}
+	if !strings.Contains(string(raw), `REVIEW_STOPPED_CEREMONY_ID_12="t40r1-neutral-12"`) {
+		t.Fatal("neutral-12 is not permanently retired")
+	}
 }

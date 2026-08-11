@@ -796,6 +796,17 @@ catalog, relationship, or correctness authority.
   closed projection substages. It authorizes no execution, release, Epic
   closure, or progression to Epic 41 without a separately reviewed plan and
   explicit approval.
+- T40.R1 Take 12 is a verified `unclassified` four-hour cold-convergence stop.
+  All 2,880 probes remained at `repository_index`; three index children and two
+  retry reports do not establish the third attempt's final state. Investigation
+  proved a ceremony-only blind spot: `/api/repos` cannot expose live or
+  terminal index-job state, while existing bounded `/api/repo-status` can.
+  Take 13 is the only prospective preparation: unchanged ceilings and phases,
+  `neutral-13`, v9 closed projection/status/attempt progress, and immediate
+  unclassified `repository_index_terminal` for failed or canceled latest jobs.
+  It changes no production path and authorizes no execution, release, Epic
+  closure, or progression to Epic 41 without a separately reviewed plan and
+  explicit approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

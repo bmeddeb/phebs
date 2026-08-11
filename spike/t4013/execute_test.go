@@ -648,6 +648,61 @@ func TestServerExitSelectsTerminalBeforeSynchronousControlReadDrains(t *testing.
 	}
 }
 
+func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *testing.T) {
+	const credential = "private-test-token"
+	httpServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/api/repo-status" ||
+			request.Header.Get("Authorization") != "Bearer "+credential {
+			http.Error(response, "unexpected request", http.StatusBadRequest)
+			return
+		}
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(response, `[{"name":"example.invalid/repository","last_index_job_state":"exact","last_index_job":{"status":"failed","attempts":3}}]`)
+	}))
+	defer httpServer.Close()
+	credentialPath := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credentialPath, []byte(credential+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV9PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, plan),
+	}
+	profile := PreparedProfile{
+		Name: "structural-2m-v1", Address: strings.TrimPrefix(httpServer.URL, "http://"),
+		Credential: credentialPath, RepositoryName: "example.invalid/repository",
+		Revisions: map[string]string{"a": testSourceCommit},
+	}
+	server := &privateServer{done: make(chan error, 1)}
+	started := time.Now()
+	_, waitErr := run.waitSnapshot(profile, "a", "cold", time.Minute, server)
+	if !errors.Is(waitErr, errRepositoryIndexTerminal) {
+		t.Fatalf("terminal wait = %v", waitErr)
+	}
+	if elapsed := time.Since(started); elapsed >= time.Second {
+		t.Fatalf("terminal wait took %s", elapsed)
+	}
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.Outcome != "repository_index_terminal" || wait.Attempts != 1 ||
+		wait.LastInspectionClass != "terminal" || len(wait.InspectionTransitions) != 1 ||
+		wait.InspectionTransitions[0].Class != "terminal" {
+		t.Fatalf("terminal wait = %+v", wait)
+	}
+	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 5); err != nil {
+		t.Fatalf("terminal wait does not satisfy v9 receipt contract: %v", err)
+	}
+}
+
 func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	root := t.TempDir()
 	module := filepath.Join(root, "module")
@@ -700,8 +755,10 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "convergence deadline", cause: errConvergenceDeadline, code: "convergence_deadline_expired", decision: "unclassified"},
 		{name: "convergence server exit", cause: errConvergenceServerExit, code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "convergence transition limit", cause: errConvergenceTimeline, code: "convergence_transition_limit_exceeded", decision: "unclassified"},
+		{name: "repository index terminal", cause: errRepositoryIndexTerminal, code: "repository_index_terminal", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
+		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},
 		{name: "exact oracle", cause: exactOracle("mismatch"), code: "exact_gate_failed", decision: "reduce", substantiated: true},
 		{name: "pressure refusal", cause: errProductionPressure, code: "production_pressure_gate_refused", decision: "reduce", substantiated: true},
 		{name: "direct recovery", cause: directRecovery(errors.New("did not converge")), code: "direct_recovery_failed", decision: "p6_investigation", substantiated: true},

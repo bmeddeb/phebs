@@ -557,25 +557,36 @@ inferences so a destroyed-custody run is not retrospectively overclassified:
   retained neither the latest-job projection nor raw logs/errors, and teardown
   correctly removed the only material that could have resolved that question.
 
-The smallest prospective correction is ceremony-only: consume the existing
-`/api/repo-status` projection, bind only closed projection state, job status,
-and attempt count into the source-free progress identity, and stop
-`unclassified` when an exact latest index job is terminally failed or canceled.
-It must not retain the job target, worker identity, timestamps, or raw error.
-This adds no history scan, corpus read, child, production mutation, or new API;
-each five-second ceremony probe replaces its existing `/api/repos` request with
-one `/api/repo-status` request whose store work is already bounded by current
-repository cardinality. A separate small neutral reproduction must pin active,
-retry, terminal, unavailable-projection, and successful-publication behavior
-before another large execution is considered. The underlying third-attempt
-cause remains unknown and must not be guessed from Take 12.
+Take 13 implements the correction in ceremony code only. It permanently
+retires `neutral-12`, selects `neutral-13`, and introduces v9 while preserving
+every Take 12 input, phase, deadline, ceiling, stop rule, and nonclaim. The
+inspector consumes the existing `/api/repo-status` projection and binds only
+closed projection state, job status, and attempt count into the source-free
+progress identity. An exact failed or canceled latest job before expected
+publication stops immediately as unclassified `repository_index_terminal`;
+unavailable, pending, claimed, running, and done-before-expected-publication
+remain pending, while an already-published expected commit proceeds to the
+downstream exact controls. The projection target, worker identity, timestamps,
+and raw error are neither hashed nor retained. Table-driven small-data tests
+pin every state, prove raw errors cannot change the digest, consume a real Huma
+array response, and prove a terminal response ends the wait without reaching
+its deadline.
+
+This adds no history scan, corpus read, child, production mutation, or new API.
+Each five-second ceremony probe replaces its existing `/api/repos` request with
+one `/api/repo-status` request whose store work is bounded by current repository
+cardinality; in the frozen neutral profiles that cardinality is one. Production
+request, sync, startup, retry/no-op, publication, recovery, lifecycle, cache,
+lock, memory, disk, and child-process behavior are unchanged. This correction
+does not identify Take 12's third-attempt cause and does not authorize Take 13
+execution, release, Epic closure, or Epic 41.
 
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-12
+CEREMONY_ID=t40r1-neutral-13
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

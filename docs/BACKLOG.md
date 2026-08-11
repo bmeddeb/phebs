@@ -440,6 +440,29 @@ v1-v7 bytes remain valid; focused tests, docs checks, glossary verification,
 lint, and steady-state-cost review pass. This correction does not itself
 authorize Take 12 execution or close T40.13.
 
+Large-host Take 12 disposition and Take 13 repository-index terminal correction
+(2026-08-10): the independently verified v8 execution at exact commit
+`d91f3f2e01b6997b30984130aea6a58d33364dc5` stopped `unclassified` at the
+four-hour cold-convergence deadline after 2,880 unchanged `repository_index`
+probes. Startup was healthy in 13,031 ms; three Git children, three index
+children, and two retry reports do not establish whether the third attempt
+remained active or failed. Peak RSS was 3,244,900,352 bytes and allocated data
+was 325,836,800 bytes, below the frozen ceilings; later gates did not run, and
+verified teardown destroyed custody and the prepared manifest. Exact-source
+investigation proved the ceremony read `/api/repos`, whose legacy fields cannot
+show queue progress or terminal failure before successful publication, while
+the existing bounded `/api/repo-status` current-record projection already can.
+Take 13 retires `neutral-12`, selects `neutral-13`, and introduces v9 without
+changing any input, phase, deadline, ceiling, stop rule, or claim. Its merge bar
+is: ceremony polling consumes repository status; its digest includes only
+indexed commit, closed projection state/status, and attempts; raw error, target,
+worker, and timestamps are excluded; failed/canceled before publication stop
+unclassified as `repository_index_terminal`; unavailable and active states
+remain pending; exact publication proceeds; v1-v8 bytes remain valid; focused
+tests, docs checks, glossary verification, lint, and steady-state-cost review
+pass. This correction changes no production path and does not authorize Take
+13 execution, close T40.13, or unblock Epic 41.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

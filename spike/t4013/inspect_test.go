@@ -64,16 +64,28 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 type humaResponseStore struct {
 	store.Store
 	repositories []store.Repo
+	statuses     []store.RepoStatus
 }
 
 func (value humaResponseStore) ListRepos(context.Context) ([]store.Repo, error) {
 	return append([]store.Repo(nil), value.repositories...), nil
 }
 
+func (value humaResponseStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
+	return append([]store.RepoStatus(nil), value.statuses...), nil
+}
+
 func TestProfileInspectorConsumesRealHumaObjectAndArrayResponses(t *testing.T) {
 	handler := apiresponse.New(apiresponse.Options{
 		Version: "test", APIKey: "private-test-token",
-		Store: humaResponseStore{repositories: []store.Repo{{Name: "example/repository"}}},
+		Store: humaResponseStore{
+			repositories: []store.Repo{{Name: "example/repository"}},
+			statuses: []store.RepoStatus{{
+				Repo:              store.Repo{Name: "example/repository"},
+				LastIndexJobState: store.JobProjectionExact,
+				LastIndexJob:      &store.Job{Status: store.StatusRunning, Attempts: 2},
+			}},
+		},
 	})
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -110,6 +122,77 @@ func TestProfileInspectorConsumesRealHumaObjectAndArrayResponses(t *testing.T) {
 	}
 	if len(repositories) != 1 || repositories[0].Name != "example/repository" {
 		t.Fatalf("real Huma repositories = %+v", repositories)
+	}
+	status, err := inspector.currentRepositoryStatus(t.Context(), PreparedProfile{
+		Address: address, RepositoryName: "example/repository",
+	})
+	if err != nil || status.LastIndexJobState != store.JobProjectionExact ||
+		status.LastIndexJob == nil || status.LastIndexJob.Status != store.StatusRunning ||
+		status.LastIndexJob.Attempts != 2 {
+		t.Fatalf("real Huma repository status = %+v, %v", status, err)
+	}
+}
+
+func TestRepositoryIndexProbeUsesClosedLatestJobProjection(t *testing.T) {
+	expected := strings.Repeat("a", 40)
+	tests := []struct {
+		name       string
+		status     store.RepoStatus
+		wantClass  string
+		wantClosed bool
+	}{
+		{name: "projection unavailable", status: store.RepoStatus{
+			Repo: store.Repo{}, LastIndexJobState: store.JobProjectionUnavailable,
+		}, wantClass: "pending"},
+		{name: "pending", status: projectedIndexStatus(store.StatusPending, 0), wantClass: "pending"},
+		{name: "claimed", status: projectedIndexStatus(store.StatusClaimed, 1), wantClass: "pending"},
+		{name: "running retry", status: projectedIndexStatus(store.StatusRunning, 2), wantClass: "pending"},
+		{name: "done before expected publication", status: projectedIndexStatus(store.StatusDone, 1), wantClass: "pending"},
+		{name: "failed", status: projectedIndexStatus(store.StatusFailed, 3), wantClass: "terminal", wantClosed: true},
+		{name: "canceled", status: projectedIndexStatus(store.StatusCanceled, 1), wantClass: "terminal", wantClosed: true},
+		{name: "exact projection without job", status: store.RepoStatus{
+			LastIndexJobState: store.JobProjectionExact,
+		}, wantClass: "control"},
+		{name: "unknown projection state", status: store.RepoStatus{
+			LastIndexJobState: store.JobProjectionState("unknown"),
+		}, wantClass: "control"},
+		{name: "published commit wins", status: func() store.RepoStatus {
+			value := projectedIndexStatus(store.StatusFailed, 3)
+			value.IndexedCommitHash = expected
+			return value
+		}(), wantClass: "complete"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			probe, err := repositoryIndexProbe(test.status, expected)
+			if probe.Stage != "repository_index" || !digestIdentity(probe.SHA256) {
+				t.Fatalf("probe = %+v", probe)
+			}
+			if got := classifyConvergenceInspection(err).class; got != test.wantClass {
+				t.Fatalf("class = %q, want %q; err=%v", got, test.wantClass, err)
+			}
+			if errors.Is(err, errRepositoryIndexTerminal) != test.wantClosed {
+				t.Fatalf("terminal = %t, want %t; err=%v",
+					errors.Is(err, errRepositoryIndexTerminal), test.wantClosed, err)
+			}
+		})
+	}
+
+	first := projectedIndexStatus(store.StatusFailed, 3)
+	first.LastIndexJob.Error = "private first failure"
+	second := projectedIndexStatus(store.StatusFailed, 3)
+	second.LastIndexJob.Error = "different private failure"
+	firstProbe, _ := repositoryIndexProbe(first, expected)
+	secondProbe, _ := repositoryIndexProbe(second, expected)
+	if firstProbe.SHA256 != secondProbe.SHA256 {
+		t.Fatal("repository-index probe retained a raw job error")
+	}
+}
+
+func projectedIndexStatus(status store.JobStatus, attempts int) store.RepoStatus {
+	return store.RepoStatus{
+		LastIndexJobState: store.JobProjectionExact,
+		LastIndexJob:      &store.Job{Status: status, Attempts: attempts},
 	}
 }
 
