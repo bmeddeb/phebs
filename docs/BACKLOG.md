@@ -168,6 +168,21 @@ oracle. Early healthy settlement or a probe race remains an unclassified
 operational stop rather than `reduce`. The retained artifacts are unchanged and
 no rerun or closure is authorized.
 
+Take 15 investigation disposition (2026-08-11): the independently verified
+v10 ceremony stopped unclassified at its four-hour cold-convergence deadline.
+Its last successful progress response showed 64 materialized partitions, 62
+succeeded, and two running; seven seconds later the response became persistent
+HTTP 500 `500_projection_response`. Exact-source investigation found a
+production projection defect: defensive copies converted a valid non-nil empty
+`unsupported_reasons` receipt into nil, which the receipt validator correctly
+refused. The fix preserves nil versus empty through both copy boundaries and
+adds an all-valid-Go publication through the real progress reader plus an exact
+HTTP `[]` regression. A valid publication pointer proves complete member and
+observation validation, but not the destroyed schedule's eventual 64/64
+terminal status because pointer installation precedes final chunk settlement.
+This correction authorizes no rerun, ticket/Epic closure, topology or bound
+change, scale/SLO claim, or release.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

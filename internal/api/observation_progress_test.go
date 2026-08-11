@@ -113,6 +113,9 @@ func TestObservationProgressHTTPUsesSharedBoundedProjection(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("HTTP status = %d: %s", recorder.Code, recorder.Body.String())
 	}
+	if !strings.Contains(recorder.Body.String(), `"unsupported_reasons":[]`) {
+		t.Fatalf("HTTP zero-unsupported receipt = %s", recorder.Body.String())
+	}
 	var got observationpublication.Progress
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil ||
 		got.SchemaVersion != observationpublication.ProgressSchema || got.Repository != want.Repository ||

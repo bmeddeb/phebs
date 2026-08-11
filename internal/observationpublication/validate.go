@@ -78,7 +78,7 @@ func (publication *Publication) Manifest() Manifest {
 	value.Members = append([]Member(nil), value.Members...)
 	if value.OperationReceipt != nil {
 		receipt := *value.OperationReceipt
-		receipt.UnsupportedReasons = append([]ReasonCount(nil), receipt.UnsupportedReasons...)
+		receipt.UnsupportedReasons = slices.Clone(receipt.UnsupportedReasons)
 		value.OperationReceipt = &receipt
 	}
 	return value
