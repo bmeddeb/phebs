@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -42,6 +43,25 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 		moduleRoot: module, workspace: workspace, observation: observation,
 		plan: Plan{Safety: frozenSafety}, phase: 5,
 	}
+	var removeCalls int
+	run.custodyDestroy = func(workspace, moduleRoot string) error {
+		return destroyCustodyWith(workspace, moduleRoot, func(path string) error {
+			removeCalls++
+			if removeCalls == 1 {
+				if err := os.RemoveAll(path); err != nil {
+					return err
+				}
+				if err := os.Mkdir(path, 0o700); err != nil {
+					return err
+				}
+				if err := os.WriteFile(filepath.Join(path, "late-writer"), []byte("destroy"), 0o600); err != nil {
+					return err
+				}
+				return &os.PathError{Op: "unlinkat", Path: path, Err: syscall.ENOTEMPTY}
+			}
+			return os.RemoveAll(path)
+		}, func(time.Duration) {})
+	}
 	run.startPhase(5)
 	stopped, err := run.stopAfterFailure(directRecovery(errors.New("injected recovery failure")))
 	if err != nil {
@@ -49,6 +69,9 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 	}
 	if _, err := os.Lstat(workspace); !os.IsNotExist(err) {
 		t.Fatal("exact custody survived stopped-run teardown")
+	}
+	if removeCalls != 2 {
+		t.Fatalf("stopped-run transient cleanup calls = %d, want 2", removeCalls)
 	}
 	if _, err := os.Lstat(filepath.Join(outside, "retained")); err != nil {
 		t.Fatal("stopped-run teardown crossed custody boundary")

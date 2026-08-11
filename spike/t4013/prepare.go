@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
@@ -27,9 +29,12 @@ import (
 )
 
 const (
-	PreparedSchema = "t4013-private-prepared-custody-v1"
-	PrepareConfirm = "prepare-neutral-t4013-custody"
-	CleanupConfirm = "cleanup-neutral-t4013-custody"
+	PreparedSchema           = "t4013-private-prepared-custody-v1"
+	PrepareConfirm           = "prepare-neutral-t4013-custody"
+	CleanupConfirm           = "cleanup-neutral-t4013-custody"
+	custodyRemoveAttempts    = 11
+	custodyRemoveRetryDelay  = 100 * time.Millisecond
+	custodyRemoveSettleDelay = 250 * time.Millisecond
 )
 
 type PrepareRequest struct {
@@ -189,21 +194,46 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 }
 
 func destroyCustody(workspace, moduleRoot string) error {
+	return destroyCustodyWith(workspace, moduleRoot, os.RemoveAll, time.Sleep)
+}
+
+func destroyCustodyWith(
+	workspace, moduleRoot string,
+	removeAll func(string) error,
+	wait func(time.Duration),
+) error {
 	if !filepath.IsAbs(workspace) || !filepath.IsAbs(moduleRoot) || workspace == moduleRoot ||
-		isWithin(moduleRoot, workspace) || isWithin(workspace, moduleRoot) {
+		isWithin(moduleRoot, workspace) || isWithin(workspace, moduleRoot) ||
+		removeAll == nil || wait == nil {
 		return errors.New("T40.13 custody cleanup scope is invalid")
 	}
-	info, err := os.Lstat(workspace)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
+	for attempt := 0; attempt < custodyRemoveAttempts; attempt++ {
+		info, err := os.Lstat(workspace)
+		if errors.Is(err, os.ErrNotExist) {
+			if attempt == 0 {
+				return nil
+			}
+			wait(custodyRemoveSettleDelay)
+			if _, settleErr := os.Lstat(workspace); errors.Is(settleErr, os.ErrNotExist) {
+				return nil
+			} else if settleErr != nil {
+				return errors.New("T40.13 custody cleanup absence check failed")
+			}
+			continue
+		}
+		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return errors.New("T40.13 custody cleanup target is invalid")
+		}
+		removeErr := removeAll(workspace)
+		if removeErr != nil && !errors.Is(removeErr, syscall.ENOTEMPTY) &&
+			!errors.Is(removeErr, syscall.EEXIST) {
+			return removeErr
+		}
+		if attempt+1 < custodyRemoveAttempts {
+			wait(custodyRemoveRetryDelay)
+		}
 	}
-	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("T40.13 custody cleanup target is invalid")
-	}
-	if err := os.RemoveAll(workspace); err != nil {
-		return err
-	}
-	return nil
+	return errors.New("T40.13 custody cleanup did not settle within its retry bound")
 }
 
 func HostPreflight(ctx context.Context, dataParent string, plan Plan) (EnvironmentObservation, error) {

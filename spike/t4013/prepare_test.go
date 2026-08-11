@@ -2,10 +2,13 @@ package t4013
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -222,5 +225,105 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	}
 	if _, err := os.Lstat(preparedPath); !os.IsNotExist(err) {
 		t.Fatal("cleanup retained the post-execution prepared manifest")
+	}
+}
+
+func TestDestroyCustodyRetriesTransientDirectoryNotEmptyAndVerifiesStableAbsence(t *testing.T) {
+	root := t.TempDir()
+	moduleRoot := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{moduleRoot, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "initial"), []byte("private"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var calls int
+	var waits []time.Duration
+	remove := func(path string) error {
+		calls++
+		if calls == 1 {
+			if err := os.RemoveAll(path); err != nil {
+				return err
+			}
+			if err := os.Mkdir(path, 0o700); err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(path, "late-writer"), []byte("private"), 0o600); err != nil {
+				return err
+			}
+			return &os.PathError{Op: "unlinkat", Path: path, Err: syscall.ENOTEMPTY}
+		}
+		return os.RemoveAll(path)
+	}
+	if err := destroyCustodyWith(workspace, moduleRoot, remove, func(delay time.Duration) {
+		waits = append(waits, delay)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatalf("remove calls = %d, want 2", calls)
+	}
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("custody survived transient retry: %v", err)
+	}
+	if len(waits) != 3 || waits[0] != custodyRemoveRetryDelay ||
+		waits[1] != custodyRemoveRetryDelay || waits[2] != custodyRemoveSettleDelay {
+		t.Fatalf("retry waits = %v", waits)
+	}
+}
+
+func TestDestroyCustodyDoesNotRetryNonTransientFailure(t *testing.T) {
+	root := t.TempDir()
+	moduleRoot := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{moduleRoot, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := &os.PathError{Op: "remove", Path: workspace, Err: syscall.EPERM}
+	var calls int
+	err := destroyCustodyWith(workspace, moduleRoot, func(string) error {
+		calls++
+		return want
+	}, func(time.Duration) {
+		t.Fatal("non-transient cleanup waited for a retry")
+	})
+	if !errors.Is(err, syscall.EPERM) || calls != 1 {
+		t.Fatalf("cleanup error/calls = %v/%d", err, calls)
+	}
+	if _, statErr := os.Lstat(workspace); statErr != nil {
+		t.Fatalf("non-transient cleanup changed custody: %v", statErr)
+	}
+}
+
+func TestDestroyCustodyTransientRetryIsHardBounded(t *testing.T) {
+	root := t.TempDir()
+	moduleRoot := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{moduleRoot, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var calls, waits int
+	err := destroyCustodyWith(workspace, moduleRoot, func(path string) error {
+		calls++
+		return &os.PathError{Op: "unlinkat", Path: path, Err: syscall.EEXIST}
+	}, func(delay time.Duration) {
+		if delay != custodyRemoveRetryDelay {
+			t.Fatalf("exhausted retry delay = %s", delay)
+		}
+		waits++
+	})
+	if err == nil || !strings.Contains(err.Error(), "did not settle") ||
+		calls != custodyRemoveAttempts || waits != custodyRemoveAttempts-1 {
+		t.Fatalf("bounded cleanup = %v, calls=%d, waits=%d", err, calls, waits)
+	}
+	if _, statErr := os.Lstat(workspace); statErr != nil {
+		t.Fatalf("exhausted cleanup changed custody: %v", statErr)
 	}
 }

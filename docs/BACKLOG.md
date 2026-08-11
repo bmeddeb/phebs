@@ -463,6 +463,25 @@ tests, docs checks, glossary verification, lint, and steady-state-cost review
 pass. This correction changes no production path and does not authorize Take
 13 execution, close T40.13, or unblock Epic 41.
 
+Large-host Take 13 disposition and Take 14 bounded teardown correction
+(2026-08-11): v9 plan
+`sha256:7aaea5863cc88a34f202bd6226d0b983a1dc47893e9d45e7211c6a091c5d83cf`
+at exact commit `e8a1e7eaa112010f5a7b9115a8a3fbfd2b770217` emitted the operational
+`repository_index_terminal` signal, then its first stopped-run custody removal
+returned wrapped `ENOTEMPTY`. No observation or receipt was sealed. The
+independent plan-bound fallback removed custody and the prepared manifest, but
+the unsealed signal is not an official classification or production failure
+proof. Take 14 retires `neutral-13`, selects `neutral-14`, and preserves v9 and
+all frozen inputs, phases, ceilings, rules, and claims. Its merge bar is: every
+custody teardown uses the same exact-scope helper; only `ENOTEMPTY`/`EEXIST`
+receive at most ten retries after the initial removal with 100-ms spacing; a
+250-ms stable-absence fence is required; scope, symlink, permission, stat,
+unexpected errors, and exhaustion still fail closed; injected late-writer and
+non-transient tests pass; stopped execution remains receiptable after transient
+cleanup; docs, glossary, lint, and steady-state-cost review pass. This changes
+no production path and does not authorize Take 14 execution, close T40.13, or
+unblock Epic 41.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

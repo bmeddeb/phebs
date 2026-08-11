@@ -581,12 +581,49 @@ lock, memory, disk, and child-process behavior are unchanged. This correction
 does not identify Take 12's third-attempt cause and does not authorize Take 13
 execution, release, Epic closure, or Epic 41.
 
+Take 13 was approved and executed from exact commit
+`e8a1e7eaa112010f5a7b9115a8a3fbfd2b770217` with frozen v9 plan
+`sha256:7aaea5863cc88a34f202bd6226d0b983a1dc47893e9d45e7211c6a091c5d83cf`.
+The new oracle detected `repository_index_terminal` before publication, but
+stopped teardown then returned `unlinkat .../custody: directory not empty`.
+The command consequently returned no source-free observation and the driver
+sealed no receipt. Its terminal job signal is useful operational information,
+not independently verifiable ceremony evidence and not an official
+classification. The driver's immediate plan-bound fallback cleanup succeeded;
+subsequent inspection found no ceremony process, custody, or prepared manifest.
+Only the original signed freeze files remained.
+
+Exact-source reproduction established a bounded teardown race: macOS
+`os.RemoveAll` can return transient `ENOTEMPTY` while a late stopped-child write
+recreates an entry; an immediate second exact-path removal succeeds. Take 14
+permanently retires `neutral-13`, selects `neutral-14`, and preserves the v9
+plan/observation/receipt contract and every input, phase, deadline, ceiling,
+stop rule, and nonclaim. All destructive custody paths now share one scoped
+helper. It validates the absolute non-overlapping real-directory target before
+every removal, retries only `ENOTEMPTY` or `EEXIST` at most ten times after the
+initial attempt with 100-ms spacing, and requires a further 250-ms stable
+absence fence. A symlink, scope change, permission failure, unexpected stat
+failure, or exhausted retry bound still returns no observation and leaves the
+driver's independently plan-bound cleanup in control. Tests inject the exact
+late-writer error and prove retry success, stable absence, boundary retention,
+and immediate refusal of non-transient errors.
+
+The ordinary successful path adds one 100-ms post-removal transition plus the
+250-ms absence fence because the loop observes removal on its next iteration;
+a transient Take 13-shaped failure adds one extra removal call and another
+100-ms delay. The hard worst case is eleven exact-path removal calls, one second
+of retry spacing, and one 250-ms absence fence, excluding the filesystem syscall
+duration. This work changes no production request, startup, sync, retry/no-op,
+publication, recovery, lifecycle, cache, lock, memory, disk, or child-process
+behavior. It does not retrospectively seal Take 13, identify the index-child
+failure class, authorize Take 14 execution, close T40.13, or unblock Epic 41.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-13
+CEREMONY_ID=t40r1-neutral-14
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

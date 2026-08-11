@@ -79,6 +79,7 @@ type execution struct {
 	metersTracked  int
 	metersExpected int
 	measurementErr error
+	custodyDestroy func(string, string) error
 	liveServers    []*privateServer
 	inspectionWork sync.WaitGroup
 }
@@ -289,19 +290,16 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	stopErr := run.stopServers()
 	measurementErr := errors.Join(run.captureFailedPhase(), run.verifyFrozenHostToolchain())
 	ceilingErr := run.enforceSafety()
-	info, err := os.Lstat(run.workspace)
+	_, err := os.Lstat(run.workspace)
 	if errors.Is(err, os.ErrNotExist) && run.observation.Teardown.Completed {
 		// A ceiling crossed only after the successful destructive teardown.
 	} else {
-		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
-			run.workspace == run.moduleRoot || isWithin(run.moduleRoot, run.workspace) {
-			return Observation{}, errors.New("T40.13 stopped-run custody changed")
+		destroy := destroyCustody
+		if run.custodyDestroy != nil {
+			destroy = run.custodyDestroy
 		}
-		if err := os.RemoveAll(run.workspace); err != nil {
+		if err := destroy(run.workspace, run.moduleRoot); err != nil {
 			return Observation{}, err
-		}
-		if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
-			return Observation{}, errors.New("T40.13 stopped-run teardown left custody behind")
 		}
 	}
 	if run.phase != len(run.observation.Phases)-1 {
@@ -1191,12 +1189,11 @@ func (run *execution) teardown() error {
 	if err != nil {
 		return err
 	}
-	info, err := os.Lstat(run.workspace)
-	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
-		run.workspace == run.moduleRoot || isWithin(run.moduleRoot, run.workspace) {
-		return errors.New("T40.13 teardown custody changed")
+	destroy := destroyCustody
+	if run.custodyDestroy != nil {
+		destroy = run.custodyDestroy
 	}
-	if err := os.RemoveAll(run.workspace); err != nil {
+	if err := destroy(run.workspace, run.moduleRoot); err != nil {
 		return err
 	}
 	if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {

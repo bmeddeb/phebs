@@ -807,6 +807,14 @@ catalog, relationship, or correctness authority.
   It changes no production path and authorizes no execution, release, Epic
   closure, or progression to Epic 41 without a separately reviewed plan and
   explicit approval.
+- T40.R1 Take 13 is consumed without sealed evidence. Its v9 terminal-index
+  diagnostic fired, but stopped teardown hit transient macOS `ENOTEMPTY`; the
+  fallback removed custody and the prepared manifest after the Go command had
+  already returned no observation. Take 14 is the only prospective preparation:
+  unchanged v9 evidence and ceilings, `neutral-14`, exact-path retries only for
+  `ENOTEMPTY`/`EEXIST`, and a stable-absence fence. The unsealed Take 13 signal
+  is not an official classification, and Take 14 remains subject to independent
+  plan review and explicit execution approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
