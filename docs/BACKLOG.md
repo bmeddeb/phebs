@@ -667,6 +667,28 @@ the distinct defined type `ExtractionProgress`, with both routes registered in
 one regression. Take 16 is permanently retired. Freeze remains a separate
 commit-bound action and execution still requires explicit approval.
 
+Repository-scale correction to that throughput disposition (2026-08-12):
+Take 17 proved the 4,098-file representative extrapolation nonconservative, and
+the subsequent exact 2,000,002-file structural diagnostic closes the question
+against the real shape. Observation reached current at 1,782,660 ms. Thirty-two
+successful, non-reused extraction attempts measured 95,650 ms minimum,
+97,899 ms p50, 101,815 ms p95, and 102,067 ms maximum. Across the actual 1,956
+serialized work items, p50 and p95 project cold completion at 53.687 and 55.815
+hours, exceeding the unchanged four-hour deadline by 49.687 and 51.815 hours.
+Source acquisition accounted for 3,136,191 of 3,149,203 aggregate runtime
+milliseconds (99.587%); extractor execution, result installation, assembly,
+and scheduler settlement are not the wall. Exact-source review binds the cause:
+every `GitSparseSource.AcquirePartition` reopens the current candidate via
+`Provider.OpenCurrentPublication`, which strictly validates the complete
+792,000,000-byte candidate publication before selecting one bounded sparse
+partition. Take 18 must not freeze. A versioned readiness correction must share
+one generation-scoped strict candidate open across attempts while preserving
+current-pointer refencing, stale replacement, cancellation, failure eviction,
+restart/recovery, bounded per-partition reads, and exact old-generation release.
+The diagnostic custody and temporary plan were destroyed. This record changes
+no concurrency, deadline, threshold, topology, claim, release posture, or Epic
+41 sequencing.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

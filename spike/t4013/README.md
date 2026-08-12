@@ -923,6 +923,47 @@ Take 18 is not frozen by this implementation. The versioned correction must
 pass the merge bar, then repository-scale timing must be reviewed against the
 unchanged cold window before a fresh plan and explicit approval.
 
+### Repository-scale timing review
+
+The opt-in exact structural diagnostic at source commit
+`fada9cc8947934cdaac6cd194d4094b7ba95443a` completed its frozen 32-attempt
+sample with zero failed or reused attempts. Observation reached current at
+1,782,660 ms. The extraction schedule contained 1,956 materialized partitions;
+at sample stop it reported 32 succeeded, one running, 1,923 pending, and zero
+failed.
+
+Per-attempt runtime was 95,650 ms minimum, 97,899 ms nearest-rank p50,
+101,815 ms p95, and 102,067 ms maximum. Applying those repository-scale
+measurements to the unchanged serialized 1,956-partition schedule projects
+193,273,104 ms (53.687 hours) p50 cold completion and 200,932,800 ms
+(55.815 hours) p95 cold completion. Those exceed the frozen 14,400,000-ms
+four-hour cold window by 178,873,104 ms (49.687 hours) and 186,532,800 ms
+(51.815 hours), respectively. Take 18 is therefore **not ready to freeze**.
+
+The phase split identifies the wall precisely. Source acquisition consumed
+3,136,191 of 3,149,203 aggregate runtime milliseconds (99.587%); extractor
+execution used 12,115 ms, result build/install 297 ms, assembly 250 ms, and
+scheduler settlement tracked runtime within 154 ms across the sample. Exact
+source review shows `GitSparseSource.AcquirePartition` calls
+`Reconciler.OpenDomain` for every scheduler item; that reopens the current
+candidate through `Provider.OpenCurrentPublication`, whose strict
+`candidate.OpenContext` validates the complete candidate publication before
+the bounded sparse domain/partition is selected. The measured source-acquire
+time therefore includes a repeated full 792,000,000-byte candidate validation
+for each of 1,956 serialized attempts. Git blob reading and extraction are not
+the dominant wall.
+
+The next correction must preserve the strict authority fence while moving the
+complete candidate validation to a generation-scoped cold-open shared across
+partition attempts; each attempt may then perform only bounded immutable
+domain/partition control reads plus its admitted blob reads. It requires
+single-flight/cancellation/failure-eviction, generation replacement and stale
+fencing, restart/recovery, retry/no-op, memory and descriptor accounting, and
+an exact old-generation release test. No concurrency, deadline, limit, or
+topology increase is justified by this result. The diagnostic stopped after
+the planned sample, destroyed all authored source, logs, credentials, derived
+data, and its temporary plan, and restored about 157 GiB available disk.
+
 ```sh
 cd ~/phebs
 
