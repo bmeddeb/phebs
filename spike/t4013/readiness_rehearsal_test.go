@@ -137,6 +137,7 @@ func rehearseProductionPath(
 	}
 	a := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
 	t.Log("cold revision A converged")
+	verifyPartitionTimingDiagnostics(t, server.logPath)
 	if _, err := waitLifecycle(ctx, profile, true, 3*time.Minute); err != nil {
 		t.Fatal(err)
 	}
@@ -208,6 +209,37 @@ func rehearseProductionPath(
 		t.Fatal(err)
 	}
 	running = false
+}
+
+func verifyPartitionTimingDiagnostics(t *testing.T, logPath string) {
+	t.Helper()
+	timing, err := newPartitionTimingCursor(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports, err := timing.poll()
+	_ = timing.Close()
+	if err != nil || len(reports) == 0 {
+		t.Fatalf("partition timing reports = %d, error=%v", len(reports), err)
+	}
+	lifecycle, err := newChunkLifecycleCursor(logPath, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lifecycleReports, err := lifecycle.poll()
+	_ = lifecycle.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settledWithTiming := 0
+	for _, report := range lifecycleReports {
+		if report.Event == "settled" && report.DurationMS > 0 {
+			settledWithTiming++
+		}
+	}
+	if settledWithTiming == 0 {
+		t.Fatal("partition scheduler settlement timing is absent")
+	}
 }
 
 func rehearsalLogTail(path string) string {

@@ -70,6 +70,7 @@ type ChunkLifecycleReport struct {
 	Generation string `json:"generation"`
 	Attempt    int    `json:"attempt"`
 	Outcome    string `json:"outcome"`
+	DurationMS int64  `json:"duration_ms,omitempty"`
 }
 
 var processAdmission struct {
@@ -264,9 +265,18 @@ func (scheduler *Scheduler) work(
 }
 
 func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, chunk store.GenerationChunk) {
+	timingEnabled := scheduler != nil && (scheduler.Diagnostics || scheduler.ChunkReports != nil)
+	var started time.Time
+	if timingEnabled {
+		started = time.Now()
+	}
 	scheduler.emitChunkLifecycle("started", chunk, "running")
 	outcome := "handler_failed"
-	defer func() { scheduler.emitChunkLifecycle("settled", chunk, outcome) }()
+	defer func() {
+		if timingEnabled {
+			scheduler.emitChunkLifecycleDuration("settled", chunk, outcome, time.Since(started).Milliseconds())
+		}
+	}()
 	handleCtx, cancel := context.WithCancel(ctx)
 	heartbeat := make(chan error, 1)
 	go func() {
@@ -370,12 +380,22 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 }
 
 func (scheduler *Scheduler) emitChunkLifecycle(event string, chunk store.GenerationChunk, outcome string) {
+	scheduler.emitChunkLifecycleDuration(event, chunk, outcome, 0)
+}
+
+func (scheduler *Scheduler) emitChunkLifecycleDuration(
+	event string,
+	chunk store.GenerationChunk,
+	outcome string,
+	durationMS int64,
+) {
 	if scheduler == nil || (!scheduler.Diagnostics && scheduler.ChunkReports == nil) {
 		return
 	}
 	report, err := json.Marshal(ChunkLifecycleReport{
 		Schema: ChunkLifecycleSchema, Event: event, Identity: chunk.Identity,
 		Stage: chunk.Stage, Generation: chunk.Generation, Attempt: chunk.Attempt, Outcome: outcome,
+		DurationMS: durationMS,
 	})
 	if err != nil || len(report) > 4096 {
 		return

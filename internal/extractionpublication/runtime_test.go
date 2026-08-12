@@ -2,6 +2,7 @@ package extractionpublication
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,35 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestPartitionTimingReportIsBoundedAndSourceFree(t *testing.T) {
+	var raw []byte
+	runtime := &Runtime{TimingReports: func(value []byte) error {
+		raw = append([]byte(nil), value...)
+		return nil
+	}}
+	report := PartitionTimingReport{
+		Schema:     PartitionTimingSchema,
+		Identity:   "sha256:" + strings.Repeat("a", 64),
+		Generation: "sha256:" + strings.Repeat("b", 64),
+		Attempt:    2, Outcome: "completed",
+		SourceAcquireMS: 10, ExecutorMS: 20, ResultMS: 5, AssemblyMS: 3, TotalMS: 40,
+	}
+	runtime.emitPartitionTiming(report)
+	var decoded PartitionTimingReport
+	if len(raw) == 0 || len(raw) > 4096 || json.Unmarshal(raw, &decoded) != nil || decoded != report {
+		t.Fatalf("timing report = %s", raw)
+	}
+	if strings.Contains(string(raw), "repository") || strings.Contains(string(raw), "path") ||
+		strings.Contains(string(raw), "error") {
+		t.Fatalf("timing report exposed source-bearing fields: %s", raw)
+	}
+	invalid := report
+	invalid.TotalMS = 1
+	if ValidatePartitionTimingReport(invalid) == nil {
+		t.Fatal("phase durations larger than total were accepted")
+	}
+}
 
 type testLease struct{ source *testSource }
 

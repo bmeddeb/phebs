@@ -278,6 +278,20 @@ func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
 	}
 }
 
+func TestExtractionConvergenceProbeRetainsTypedPendingProjection(t *testing.T) {
+	progress := extractionpublication.Progress{
+		State: "active", Total: 489, Materialized: 489,
+		Pending: 460, Running: 4, Succeeded: 25, Domains: 4,
+	}
+	repository := store.RepoStatus{LastExtractionJobState: store.JobProjectionUnavailable}
+	probe, err := extractionConvergenceProbe(progress, repository)
+	if err == nil || classifyConvergenceInspection(err).class != "pending" ||
+		probe.ExtractionProgress == nil || probe.ExtractionProgress.Succeeded != 25 ||
+		probe.ExtractionProgress.Running != 4 || probe.ExtractionProgress.Total != 489 {
+		t.Fatalf("probe = %+v, error=%v", probe, err)
+	}
+}
+
 func TestHumaResponseDecoderKeepsSchemaAndApplicationFieldsFailClosed(t *testing.T) {
 	const address = "127.0.0.1:41731"
 	validSchema := `"$schema":"http://127.0.0.1:41731/schemas/HealthOutBody.json"`

@@ -355,6 +355,25 @@ func TestV12PlanAddsOnlyExtractionAttribution(t *testing.T) {
 	}
 }
 
+func TestV13PlanAddsOnlyBoundedProgressCoalescing(t *testing.T) {
+	plan, err := frozenV13PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV13 || plan.Safety != frozenSafetyV12 ||
+		plan.Safety != frozenSafetyV13 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v13 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV13 || decoded.Safety != frozenSafetyV13 {
+		t.Fatalf("decoded v13 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV10CompletedReceiptRequiresPressureRestart(t *testing.T) {
 	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {

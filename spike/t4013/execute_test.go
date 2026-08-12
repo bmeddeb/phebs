@@ -458,6 +458,59 @@ func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
 	}
 }
 
+func TestV13ConvergenceProgressChurnCoalescesWithoutWeakeningTransitionBound(t *testing.T) {
+	tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
+	first := convergenceProbe("extraction_publication", "progress", 0)
+	for index := 0; index < 100; index++ {
+		probe := convergenceProbe("extraction_publication", "progress", index)
+		if tracker.observe(probe, convergenceInspectionDiagnostic{class: "pending"}, time.Duration(index+1)*time.Second) {
+			t.Fatalf("healthy progress %d exceeded the transition bound", index)
+		}
+	}
+	if len(tracker.inspectionTransitions) != 1 {
+		t.Fatalf("transitions = %+v", tracker.inspectionTransitions)
+	}
+	transition := tracker.inspectionTransitions[0]
+	if transition.FirstProgressSHA256 != first.SHA256 ||
+		transition.ProgressSHA256 != tracker.last.SHA256 ||
+		transition.ProgressChanges != 99 || transition.LastProgressChangeWallMS != 100_000 {
+		t.Fatalf("coalesced transition = %+v", transition)
+	}
+	plan, err := frozenV13PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{plan: plan}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "structural-2m-v1"}, "a", "cold", "canceled",
+		2*time.Minute, time.Now().Add(-101*time.Second), tracker,
+	)
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 9); err != nil {
+		t.Fatalf("v13 coalesced wait failed validation: %v", err)
+	}
+	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, 8); err == nil {
+		t.Fatal("v12 detail contract accepted v13 coalesced transition fields")
+	}
+
+	// Alternating classes are genuine transition diversity and retain the
+	// original fail-closed 33rd-transition behavior.
+	tracker = convergenceProgressTracker{coalesceTransitionProgress: true}
+	for index := 0; index <= maxConvergenceTransitions; index++ {
+		class := "pending"
+		if index%2 == 1 {
+			class = "transport"
+		}
+		exceeded := tracker.observeTransition(
+			"extraction_publication", convergenceInspectionDiagnostic{class: class},
+			convergenceProbe("extraction_publication", index).SHA256,
+			time.Duration(index+1)*time.Millisecond,
+		)
+		if exceeded != (index == maxConvergenceTransitions) {
+			t.Fatalf("transition %d exceeded=%t", index, exceeded)
+		}
+	}
+}
+
 func TestV7DiagnosticLimitRetainsBoundedOverflowInspection(t *testing.T) {
 	plan, err := frozenV7PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {

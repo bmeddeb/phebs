@@ -1094,8 +1094,9 @@ func serve(args []string) error {
 		partitionRoot := filepath.Join(cfg.Server.DataDir, "extraction-publications")
 		partitionRuntime = &extractionpublication.Runtime{
 			Root: partitionRoot, Store: st,
-			Executor:  &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
-			Publisher: extractionpublication.StorePublisher{Store: st},
+			Executor:    &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
+			Publisher:   extractionpublication.StorePublisher{Store: st},
+			Diagnostics: cfg.Diagnostics.Extraction,
 		}
 		partitionDomains := make([]string, len(exs))
 		for index, extractor := range exs {

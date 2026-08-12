@@ -3,6 +3,7 @@ package extractionpublication
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	mathbits "math/bits"
@@ -15,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -23,15 +25,49 @@ import (
 // observation content stays behind Source, and evidence authority stays behind
 // Publisher.
 type Runtime struct {
-	Root      string
-	Store     store.GenerationSchedulerStore
-	Source    Source
-	Executor  Executor
-	Publisher Publisher
-	Fence     Fence
-	OnSettled func(context.Context, string) error
+	Root          string
+	Store         store.GenerationSchedulerStore
+	Source        Source
+	Executor      Executor
+	Publisher     Publisher
+	Fence         Fence
+	OnSettled     func(context.Context, string) error
+	Diagnostics   bool
+	TimingReports func([]byte) error
 
 	assembly [64]sync.Mutex
+}
+
+const PartitionTimingSchema = "phebs-extraction-partition-timing-v1"
+
+// PartitionTimingReport is a source-free diagnostic for one scheduler
+// attempt. It contains bounded phase durations and digest identities only;
+// source paths, repository names, content, and errors are deliberately absent.
+type PartitionTimingReport struct {
+	Schema          string `json:"schema"`
+	Identity        string `json:"identity"`
+	Generation      string `json:"generation"`
+	Attempt         int    `json:"attempt"`
+	Outcome         string `json:"outcome"`
+	Reused          bool   `json:"reused"`
+	SourceAcquireMS int64  `json:"source_acquire_ms"`
+	ExecutorMS      int64  `json:"executor_ms"`
+	ResultMS        int64  `json:"result_ms"`
+	AssemblyMS      int64  `json:"assembly_ms"`
+	TotalMS         int64  `json:"total_ms"`
+}
+
+func ValidatePartitionTimingReport(report PartitionTimingReport) error {
+	if report.Schema != PartitionTimingSchema || !validDigest(report.Identity) ||
+		!validDigest(report.Generation) || report.Attempt < 0 ||
+		(report.Outcome != "completed" && report.Outcome != "failed" &&
+			report.Outcome != "terminal_refusal") ||
+		report.SourceAcquireMS < 0 || report.ExecutorMS < 0 || report.ResultMS < 0 ||
+		report.AssemblyMS < 0 || report.TotalMS < 0 ||
+		report.SourceAcquireMS+report.ExecutorMS+report.ResultMS+report.AssemblyMS > report.TotalMS {
+		return invalid("partition timing report")
+	}
+	return nil
 }
 
 func validatePlanningAuthority(authority PlanningAuthority) error {
@@ -576,11 +612,31 @@ func (runtime *Runtime) SchedulePlanningAuthority(
 
 // Handle executes exactly one scheduler item. An exact settled retry performs
 // no Source acquisition and proceeds directly to the idempotent assembler.
-func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) error {
+func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) (retErr error) {
 	if err := runtime.validate(); err != nil || chunk.Stage != ScheduleStage ||
 		chunk.Length != 1 || chunk.Offset < 0 || !validDigest(chunk.Generation) {
 		return invalid("runtime chunk")
 	}
+	timingEnabled := runtime.Diagnostics || runtime.TimingReports != nil
+	var started time.Time
+	var timing PartitionTimingReport
+	if timingEnabled {
+		started = time.Now()
+		timing = PartitionTimingReport{
+			Schema: PartitionTimingSchema, Identity: chunk.Identity,
+			Generation: chunk.Generation, Attempt: chunk.Attempt, Outcome: "failed",
+		}
+	}
+	defer func() {
+		if !timingEnabled {
+			return
+		}
+		timing.TotalMS = time.Since(started).Milliseconds()
+		if retErr == nil {
+			timing.Outcome = "completed"
+		}
+		runtime.emitPartitionTiming(timing)
+	}()
 	target, err := runtime.scheduleTarget(chunk.Repository, chunk.Generation)
 	if err != nil {
 		return err
@@ -610,7 +666,14 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if err := runtime.Store.HeartbeatGenerationChunk(ctx, chunk); err != nil {
 			return err
 		}
+		var phaseStarted time.Time
+		if timingEnabled {
+			phaseStarted = time.Now()
+		}
 		lease, acquireErr := runtime.Source.AcquirePartition(ctx, domain.Plan, localOrdinal)
+		if timingEnabled {
+			timing.SourceAcquireMS = time.Since(phaseStarted).Milliseconds()
+		}
 		if acquireErr != nil {
 			return acquireErr
 		}
@@ -623,9 +686,15 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		) * time.Millisecond
 		executionCtx, cancelExecution := context.WithTimeout(ctx, deadline)
 		defer cancelExecution()
+		if timingEnabled {
+			phaseStarted = time.Now()
+		}
 		spec, executeErr := runtime.Executor.ExecutePartition(
 			executionCtx, domain.Plan, localOrdinal, lease, domain.RunID,
 		)
+		if timingEnabled {
+			timing.ExecutorMS = time.Since(phaseStarted).Milliseconds()
+		}
 		if executeErr != nil {
 			if spec.Disposition != candidate.PartitionResultTerminalRefusal ||
 				!store.IsTerminal(executeErr) {
@@ -636,6 +705,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		}
 		if spec.Disposition == candidate.PartitionResultRetryable {
 			return invalid("executor returned scheduler-owned retryable disposition")
+		}
+		if timingEnabled {
+			phaseStarted = time.Now()
 		}
 		result, err = candidate.BuildPartitionResult(domain.Plan, localOrdinal, spec)
 		if err != nil {
@@ -650,14 +722,51 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if err := installPartitionResult(resultPath, result); err != nil {
 			return err
 		}
+		if timingEnabled {
+			timing.ResultMS = time.Since(phaseStarted).Milliseconds()
+		}
+	} else {
+		timing.Reused = true
+	}
+	var phaseStarted time.Time
+	if timingEnabled {
+		phaseStarted = time.Now()
 	}
 	if err := runtime.tryAssemble(ctx, chunk, directory, descriptor, domain, localOrdinal); err != nil {
 		return err
 	}
+	if timingEnabled {
+		timing.AssemblyMS = time.Since(phaseStarted).Milliseconds()
+	}
 	if result.Disposition == candidate.PartitionResultTerminalRefusal {
+		timing.Outcome = "terminal_refusal"
 		return store.WithTerminal(errors.New("partition terminal refusal"))
 	}
 	return nil
+}
+
+func (runtime *Runtime) emitPartitionTiming(report PartitionTimingReport) {
+	if runtime == nil || (!runtime.Diagnostics && runtime.TimingReports == nil) {
+		return
+	}
+	if ValidatePartitionTimingReport(report) != nil {
+		return
+	}
+	raw, err := json.Marshal(report)
+	if err != nil || len(raw) > 4096 {
+		return
+	}
+	sink := runtime.TimingReports
+	if sink == nil {
+		sink = func(value []byte) error {
+			diagnostics.Logf("extraction partition timing: %s", value)
+			return nil
+		}
+	}
+	func() {
+		defer func() { _ = recover() }()
+		_ = sink(raw)
+	}()
 }
 
 // OnExhausted is wired to generationscheduler.Class.OnExhausted. It records a

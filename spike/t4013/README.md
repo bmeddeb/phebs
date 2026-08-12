@@ -867,12 +867,69 @@ type `ExtractionProgress`, and a complete route-registration regression pins
 both components. `t40r1-neutral-16` is retired; the next fresh ID is
 `t40r1-neutral-17`, subject to merge-bar review and separate execution approval.
 
+### Take 17 transition-limit investigation
+
+Take 17 stopped honestly as unclassified at 5,240,034 ms with
+`convergence_transition_limit_exceeded`; signatures, checksum inventory, and
+teardown all passed. The stop is a harness observability failure, not a
+production bound or resource-ceiling refusal.
+
+The source-free hashes re-derive two early extraction states exactly. The
+2,021,622-ms transition is the canonical unavailable schedule plus unavailable
+latest-job projection, and the 2,935,011-ms transition is the canonical zero-
+generation-control inventory. The following 23 retained transitions can only
+be produced after a generation control opened and `Runtime.Status` validated;
+their changing hashes therefore bind changing partition-result/domain status.
+The 22 intervals between those status snapshots have a 95,000-ms median,
+89,999-ms minimum, 100,002-ms maximum, and 95,454.318-ms mean. The next changed
+inspection became the unretained 33rd transition and selected the stop.
+
+Four harness mechanisms compose the defect. The 32-transition ceiling was
+introduced for Take 9, before typed extraction progress existed. V12 added the
+typed endpoint without re-deriving that cardinality. While the endpoint is
+valid but not yet current, the inspector falls through into a full
+`Runtime.Status` scan; its expected "current extraction generation is
+unavailable" result is classified as generic `control`; the returned hash-only
+probe overwrites the typed extraction projection; and each changed status
+digest consumes one of the 32 diagnostic entries. Thus ordinary forward
+partition settlement necessarily exhausts an envelope sized for exceptional
+inspection transitions.
+
+Take 17 also invalidates the prior throughput extrapolation. The representative
+fixture preserved a 4,096-record partition, 4,608-byte blobs, and 512 reuse
+classes, but its repository had only 4,098 files rather than the frozen
+2,000,002-file structural tree. On the real tree, one-repository-token,
+one-item chunks produced the near-95-second status cadence above, far slower
+than the small-repository sample. The hashes do not reveal exact counter deltas,
+so Take 17 alone cannot state a final convergence duration, but it establishes
+a serious cold-window throughput risk and disproves calling the earlier
+107.503-minute projection conservative.
+
+The v13 readiness correction now returns typed pending extraction progress
+without scanning all partition-result controls, preserves first/latest digest,
+exact aggregate change count, and last-change wall time without letting
+ordinary progress consume the bounded anomaly timeline, and retains the
+overflow inspection. A diagnostics-enabled execution also emits one bounded
+record per attempt for source acquisition, extractor execution, result
+installation, assembly, runtime, and scheduler settlement. The ceremony reads
+those private records incrementally and seals only source-free counts, totals,
+and maxima; diagnostics-off production work is unchanged. Historical v1-v12
+evidence remains unchanged and validates through its original schema.
+The current real-binary readiness rehearsal passed both semantic and structural
+production paths in 258.192 seconds and required both partition-phase records
+and nonzero scheduler-settlement durations before accepting cold convergence.
+
+Take 18 is not frozen by this implementation. The versioned correction must
+pass the merge bar, then repository-scale timing must be reviewed against the
+unchanged cold window before a fresh plan and explicit approval.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-17
+# Do not continue until readiness review separately authorizes the freeze.
+CEREMONY_ID=t40r1-neutral-18
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

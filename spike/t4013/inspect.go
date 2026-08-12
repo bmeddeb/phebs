@@ -163,7 +163,7 @@ func extractionConvergenceProbe(
 	probe := convergenceProbe("extraction_publication", progress, projection)
 	probe.ExtractionProgress = projection
 	if repository.LastExtractionJobState != store.JobProjectionExact {
-		return probe, errors.New("T40.13 extraction job projection is unavailable")
+		return probe, errors.New("T40.13 extraction job projection has not converged")
 	}
 	if projection.JobState == string(store.StatusFailed) ||
 		projection.JobState == string(store.StatusCanceled) {
@@ -295,6 +295,14 @@ func (inspector *profileInspector) inspectWithProgress(
 	probe, err = extractionConvergenceProbe(extractionSchedule, repository)
 	if err != nil {
 		return privateProfileSnapshot{}, probe, err
+	}
+	// A typed schedule snapshot is already enough to prove ordinary progress.
+	// Do not scan every partition result until the schedule says that the
+	// generation is current; doing so made the inspector's cost grow with the
+	// corpus and replaced the typed snapshot with a generic control digest.
+	if extractionSchedule.State != "current" {
+		return privateProfileSnapshot{}, probe,
+			errors.New("T40.13 extraction publication has not converged")
 	}
 	extraction, extractionProgress, err := inspectExtraction(ctx, profile)
 	if err != nil {
