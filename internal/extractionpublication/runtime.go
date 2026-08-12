@@ -1121,3 +1121,86 @@ func (runtime *Runtime) Status(
 	}
 	return status, nil
 }
+
+// Progress returns a weakly timed but generation-fenced operational snapshot.
+// An absent schedule is an exact unavailable state for the current instant,
+// not proof that no extraction job exists.
+func (runtime *Runtime) Progress(ctx context.Context, repository string) (Progress, error) {
+	if runtime == nil || ctx == nil || reponame.Validate(repository) != nil {
+		return Progress{}, invalid("progress scope")
+	}
+	schedule, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if errors.Is(err, store.ErrNotFound) {
+		return Progress{State: "unavailable"}, nil
+	}
+	if err != nil {
+		return Progress{}, err
+	}
+	if store.ValidateGenerationSchedule(*schedule) != nil || schedule.Repository != repository ||
+		schedule.Stage != ScheduleStage || schedule.ResourceClass != store.GenerationResourceExtraction {
+		return Progress{}, invalid("progress schedule")
+	}
+	target, err := runtime.scheduleTarget(repository, schedule.Generation)
+	if err != nil {
+		return Progress{}, err
+	}
+	generation, err := runtime.openGeneration(
+		runtime.generationDirectory(repository, target), repository, target,
+	)
+	if err != nil {
+		return Progress{}, err
+	}
+	if schedule.TotalItems != int64(generation.WorkItems) {
+		return Progress{}, invalid("progress generation schedule")
+	}
+	progress := Progress{
+		State: string(schedule.Status), Total: schedule.TotalChunks,
+		Materialized: schedule.Materialized, Pending: schedule.Pending,
+		Running: schedule.Running, Succeeded: schedule.Succeeded,
+		Failed: schedule.Failed, Domains: len(generation.Domains),
+	}
+	for _, descriptor := range generation.Domains {
+		pointer, pointerErr := runtime.readCurrentPointer(repository, descriptor.Domain)
+		if errors.Is(pointerErr, os.ErrNotExist) {
+			continue
+		}
+		if pointerErr != nil {
+			return Progress{}, pointerErr
+		}
+		if pointer.GenerationDigest == target && pointer.PlanDigest == descriptor.PlanDigest {
+			progress.CurrentDomains++
+		}
+	}
+	confirmed, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
+	if err != nil || !equalGenerationSchedule(confirmed, schedule) {
+		return Progress{}, errors.Join(err, ErrStale)
+	}
+	if progress.State == string(store.GenerationScheduleSettled) &&
+		progress.Failed == 0 && progress.Succeeded == progress.Total &&
+		progress.CurrentDomains == progress.Domains {
+		progress.State = "current"
+	}
+	return progress, nil
+}
+
+func equalGenerationSchedule(left, right *store.GenerationSchedule) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	if left.Schema != right.Schema || left.Digest != right.Digest ||
+		left.Repository != right.Repository || left.Stage != right.Stage ||
+		left.Generation != right.Generation || left.ResourceClass != right.ResourceClass ||
+		left.TotalItems != right.TotalItems || left.ChunkItems != right.ChunkItems ||
+		left.TotalChunks != right.TotalChunks || left.MaxAttempts != right.MaxAttempts ||
+		left.RepositoryTokens != right.RepositoryTokens || left.NextOffset != right.NextOffset ||
+		left.Materialized != right.Materialized || left.Pending != right.Pending ||
+		left.Running != right.Running || left.Succeeded != right.Succeeded ||
+		left.Failed != right.Failed || left.Status != right.Status ||
+		!left.CreatedAt.Equal(right.CreatedAt) || !left.UpdatedAt.Equal(right.UpdatedAt) {
+		return false
+	}
+	if left.LastClaimedAt == nil || right.LastClaimedAt == nil {
+		return left.LastClaimedAt == right.LastClaimedAt
+	}
+	return left.LastClaimedAt.Equal(*right.LastClaimedAt)
+}

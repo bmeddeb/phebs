@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -2028,11 +2029,14 @@ func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string
 }
 
 const indexingJobProjectionVersion = "t30.6n-indexing-job-latest-v1"
+const extractionJobProjectionVersion = "t40r1-extraction-job-latest-v1"
 
 type repoStatusRec struct {
 	Repo
-	ProjectedJob                    *jobRec `json:"projected_job"`
-	LatestIndexJobProjectionVersion string  `json:"latest_index_job_projection_version"`
+	ProjectedJob                         *jobRec `json:"projected_job"`
+	LatestIndexJobProjectionVersion      string  `json:"latest_index_job_projection_version"`
+	ProjectedExtractionJob               *jobRec `json:"projected_extraction_job"`
+	LatestExtractionJobProjectionVersion string  `json:"latest_extraction_job_projection_version"`
 }
 
 // RepoStatuses joins current repos and membership with one prospective record
@@ -2069,7 +2073,24 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			heartbeat_at: latest_index_job.heartbeat_at,
 			finished_at: latest_index_job.finished_at,
 			force: latest_index_job.force
-		} AS projected_job
+		} AS projected_job, {
+			id: latest_extraction_job,
+			target: IF type::is_string(latest_extraction_job.target)
+				THEN string::slice(latest_extraction_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_extraction_job.target)
+				THEN string::len(latest_extraction_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_extraction_job.status,
+			attempts: latest_extraction_job.attempts,
+			error: IF type::is_string(latest_extraction_job.error)
+				THEN string::slice(latest_extraction_job.error, 0, $max_error_characters)
+				ELSE '' END,
+			error_truncated: IF type::is_string(latest_extraction_job.error)
+				THEN string::len(latest_extraction_job.error) > $max_error_characters
+				ELSE false END,
+			created_at: latest_extraction_job.created_at
+		} AS projected_extraction_job
 		FROM repo ORDER BY name`, map[string]any{
 			"max_target_characters":     MaxJobHistoryTargetCharacters,
 			"max_error_characters":      MaxJobHistoryErrorCharacters,
@@ -2108,13 +2129,28 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 				latest = &job
 			}
 		}
+		extractionState := JobProjectionUnavailable
+		var extraction *ExtractionJobProjection
+		if row.LatestExtractionJobProjectionVersion == extractionJobProjectionVersion &&
+			row.ProjectedExtractionJob != nil {
+			job := row.ProjectedExtractionJob.toJob(JobExtract)
+			if job.ID != "" && job.Target == row.Name && !job.TargetTruncated && !job.ErrorTruncated {
+				extractionState = JobProjectionExact
+				extraction = &ExtractionJobProjection{Status: job.Status, Attempts: job.Attempts}
+				if refusal, ok := pipelinerefusal.ParseDurableErrorText(job.Error); ok {
+					extraction.Refusal = &refusal
+				}
+			}
+		}
 		statuses[i] = RepoStatus{
-			Repo:              row.Repo,
-			Connections:       conns[row.Name],
-			Orphaned:          len(conns[row.Name]) == 0,
-			LastIndexJob:      latest,
-			LastIndexJobState: state,
-			AnalysisUnit:      analysisunit.CloneState(row.IndexedAnalysisUnit),
+			Repo:                   row.Repo,
+			Connections:            conns[row.Name],
+			Orphaned:               len(conns[row.Name]) == 0,
+			LastIndexJob:           latest,
+			LastIndexJobState:      state,
+			LastExtractionJob:      extraction,
+			LastExtractionJobState: extractionState,
+			AnalysisUnit:           analysisunit.CloneState(row.IndexedAnalysisUnit),
 		}
 	}
 	return statuses, nil
@@ -2153,6 +2189,17 @@ IF $table = 'indexing_job' AND $created_job != NONE {
 		OR latest_index_job_created_at < $created_job.created_at
 		OR (latest_index_job_created_at = $created_job.created_at
 			AND latest_index_job < $created_job.id)
+	RETURN NONE;
+};
+IF $table = 'extraction_job' AND $created_job != NONE {
+	UPDATE type::record('repo', $target)
+	SET latest_extraction_job = $created_job.id,
+		latest_extraction_job_created_at = $created_job.created_at,
+		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
+	WHERE latest_extraction_job_created_at = NONE
+		OR latest_extraction_job_created_at < $created_job.created_at
+		OR (latest_extraction_job_created_at = $created_job.created_at
+			AND latest_extraction_job < $created_job.id)
 	RETURN NONE;
 };`
 

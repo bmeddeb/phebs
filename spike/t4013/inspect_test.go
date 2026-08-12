@@ -11,8 +11,10 @@ import (
 	"testing"
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -222,6 +224,7 @@ func TestHumaResponseDecoderCoversEveryCeremonyObjectTarget(t *testing.T) {
 			}{}
 		}},
 		{name: "observation progress", target: func() any { return &observationpublication.Progress{} }},
+		{name: "extraction progress", target: func() any { return &extractionpublication.Progress{} }},
 		{name: "lifecycle status", target: func() any { return &lifecycle.Status{} }},
 		{name: "search", target: func() any { return &search.Result{} }},
 		{name: "service inventory", target: func() any { return &apiresponse.ServiceInventory{} }},
@@ -239,6 +242,39 @@ func TestHumaResponseDecoderCoversEveryCeremonyObjectTarget(t *testing.T) {
 	var repositories []store.Repo
 	if err := decodeHumaResponse([]byte(`[]`), address, &repositories); err != nil {
 		t.Fatalf("top-level repository array: %v", err)
+	}
+}
+
+func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
+	progress := extractionpublication.Progress{
+		State: "unavailable",
+	}
+	refusal := pipelinerefusal.Receipt{
+		Schema:         pipelinerefusal.Schema,
+		Stage:          pipelinerefusal.StageDomainInventory,
+		GenerationKind: pipelinerefusal.GenerationExtractionDomain,
+		Classification: pipelinerefusal.ClassificationLimit,
+		Dimension:      pipelinerefusal.DimensionCandidateMemberBytes,
+		Observed:       792_000_000, Limit: 67_108_864,
+	}
+	repository := store.RepoStatus{
+		LastExtractionJobState: store.JobProjectionExact,
+		LastExtractionJob: &store.ExtractionJobProjection{
+			Status: store.StatusFailed, Attempts: 1, Refusal: &refusal,
+		},
+	}
+	probe, err := extractionConvergenceProbe(progress, repository)
+	if !errors.Is(err, errExtractionBoundRefusal) || probe.ExtractionProgress == nil ||
+		probe.ExtractionProgress.RefusalDimension != "candidate_member_bytes" ||
+		probe.ExtractionProgress.RefusalObserved != 792_000_000 ||
+		probe.ExtractionProgress.RefusalLimit != 67_108_864 ||
+		classifyConvergenceInspection(err).class != "terminal" {
+		t.Fatalf("probe = %+v, error=%v", probe, err)
+	}
+	repository.LastExtractionJob.Refusal = nil
+	_, err = extractionConvergenceProbe(progress, repository)
+	if !errors.Is(err, errExtractionJobTerminal) {
+		t.Fatalf("ordinary terminal error = %v", err)
 	}
 }
 

@@ -993,6 +993,7 @@ func serve(args []string) error {
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
+	var partitionRuntime *extractionpublication.Runtime
 	if len(exs) > 0 {
 		if cfg.Experimental.ProvisionalProtoExtraction {
 			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
@@ -1091,7 +1092,7 @@ func serve(args []string) error {
 				authority.ObservationGenerationDigest, authorityErr
 		}
 		partitionRoot := filepath.Join(cfg.Server.DataDir, "extraction-publications")
-		partitionRuntime := &extractionpublication.Runtime{
+		partitionRuntime = &extractionpublication.Runtime{
 			Root: partitionRoot, Store: st,
 			Executor:  &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
 			Publisher: extractionpublication.StorePublisher{Store: st},
@@ -1587,6 +1588,7 @@ func serve(args []string) error {
 			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
 		},
 	)
+	apiOpts.ExtractionProgress = api.NewExtractionProgressService(apiOpts, partitionRuntime)
 	if relationshipRuntime != nil {
 		apiOpts.Relationships = api.NewRelationshipService(apiOpts, relationshipCache)
 		if apiOpts.Relationships == nil {

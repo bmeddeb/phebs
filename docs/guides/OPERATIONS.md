@@ -3939,3 +3939,18 @@ tickets; T21.4 does not render help or register tools.
 
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite
 serves on :5173 and proxies `/api` to :3070.
+### Extraction progress
+
+`GET /api/extraction-progress?repository=<name>` returns a bounded operational
+view of partitioned extraction for one authorized indexed repository. The
+response reports `unavailable`, an active/settled/superseded schedule state, or
+`current`, together with total, materialized, pending, running, succeeded,
+failed, domain, and current-domain counts. Authorization denial is a 404 and
+precedes extraction-control reads. A schedule or repository-authority change
+during the read returns 409; malformed controls or an invalid projection return
+500.
+
+The endpoint is diagnostic, not historical authority. It reads two exact
+schedule points, one small generation inventory, and at most one current
+pointer per configured domain. It does not read candidate members, source or
+observation content, partition results, domain roots, or evidence payloads.

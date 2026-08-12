@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 var (
@@ -188,11 +189,23 @@ type JobHistoryStore interface {
 // most recent indexing job — the /api/repo-status shape.
 type RepoStatus struct {
 	Repo
-	Orphaned          bool                `json:"orphaned"` // no connection claims this repo
-	Connections       []string            `json:"connections,omitempty"`
-	LastIndexJob      *Job                `json:"last_index_job,omitempty"`
-	LastIndexJobState JobProjectionState  `json:"last_index_job_state"`
-	AnalysisUnit      *analysisunit.State `json:"analysis_unit,omitempty"`
+	Orphaned               bool                     `json:"orphaned"` // no connection claims this repo
+	Connections            []string                 `json:"connections,omitempty"`
+	LastIndexJob           *Job                     `json:"last_index_job,omitempty"`
+	LastIndexJobState      JobProjectionState       `json:"last_index_job_state"`
+	LastExtractionJob      *ExtractionJobProjection `json:"last_extraction_job,omitempty"`
+	LastExtractionJobState JobProjectionState       `json:"last_extraction_job_state"`
+	AnalysisUnit           *analysisunit.State      `json:"analysis_unit,omitempty"`
+}
+
+// ExtractionJobProjection is the closed current-job status exposed through
+// repository status. It deliberately excludes target, row identity, worker,
+// timestamps, and raw error text. Refusal is populated only from the exact
+// canonical pipeline-refusal envelope persisted by the runner.
+type ExtractionJobProjection struct {
+	Status   JobStatus                `json:"status"`
+	Attempts int                      `json:"attempts"`
+	Refusal  *pipelinerefusal.Receipt `json:"refusal,omitempty"`
 }
 
 // User is the shared identity behind local-password and OIDC logins. Secret

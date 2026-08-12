@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -633,6 +634,47 @@ func TestRepoStatusesProjectionTracksCrashRecoverySuccessor(t *testing.T) {
 	if status.LastIndexJobState != JobProjectionExact || status.LastIndexJob == nil ||
 		status.LastIndexJob.ID != successor.ID || status.LastIndexJob.Status != StatusPending {
 		t.Fatalf("successor projection = %+v; want %s", status.LastIndexJob, successor.ID)
+	}
+}
+
+func TestRepoStatusesProjectsOnlyClosedLatestExtractionFailure(t *testing.T) {
+	s := newJobHistoryStore(t)
+	ctx := context.Background()
+	repository := "example.com/projection/extraction"
+	if err := s.UpsertRepo(ctx, Repo{Name: repository, CloneURL: "https://example.com/extraction.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.EnqueuePending(ctx, JobExtract, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := s.ClaimJob(ctx, JobExtract, "extraction-projection-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	refusal := pipelinerefusal.Limit(
+		fmt.Errorf("private repository detail"),
+		pipelinerefusal.StageDomainInventory,
+		pipelinerefusal.GenerationExtractionDomain,
+		pipelinerefusal.DimensionCandidateMemberBytes,
+		792_000_000, 67_108_864,
+	)
+	if err := s.SetJobStatus(ctx, *claimed, StatusFailed, refusal.Error()); err != nil {
+		t.Fatal(err)
+	}
+	status := requireRepoJobStatus(t, ctx, s, repository)
+	if status.LastExtractionJobState != JobProjectionExact || status.LastExtractionJob == nil ||
+		status.LastExtractionJob.Status != StatusFailed || status.LastExtractionJob.Attempts != 0 ||
+		status.LastExtractionJob.Refusal == nil ||
+		status.LastExtractionJob.Refusal.Dimension != pipelinerefusal.DimensionCandidateMemberBytes ||
+		status.LastExtractionJob.Refusal.Observed != 792_000_000 ||
+		status.LastExtractionJob.Refusal.Limit != 67_108_864 {
+		t.Fatalf("extraction projection = %+v", status.LastExtractionJob)
+	}
+	if strings.Contains(fmt.Sprintf("%+v", status.LastExtractionJob), "private") {
+		t.Fatalf("extraction projection leaked raw error: %+v", status.LastExtractionJob)
 	}
 }
 

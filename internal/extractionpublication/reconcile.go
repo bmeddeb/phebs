@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -109,7 +110,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 			ExtractionPolicyDigest:      root.PolicyDigest,
 		})
 		if err != nil {
-			return "", err
+			return "", terminalPlanFailure(err)
 		}
 		plans = append(plans, plan)
 	}
@@ -144,6 +145,19 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		domains = append(domains, DomainPlan{Schema: DomainSchema, RunID: run.ID, Plan: plan})
 	}
 	return reconciler.Runtime.Reconcile(ctx, repository, domains)
+}
+
+func terminalPlanFailure(err error) error {
+	closed := pipelinerefusal.At(
+		err,
+		pipelinerefusal.StageDomainInventory,
+		pipelinerefusal.GenerationExtractionDomain,
+	)
+	if refusal, ok := pipelinerefusal.From(closed); ok &&
+		refusal.Classification == pipelinerefusal.ClassificationLimit {
+		return store.WithTerminal(closed)
+	}
+	return closed
 }
 
 // currentPublishedDomains recognizes an exact store authority after archive

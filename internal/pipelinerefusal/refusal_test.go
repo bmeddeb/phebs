@@ -129,6 +129,27 @@ func TestNonLimitClassificationsCarryNoInventedMeasurement(t *testing.T) {
 	}
 }
 
+func TestParseDurableErrorTextAcceptsOnlyCanonicalClosedReceipt(t *testing.T) {
+	err := Limit(
+		errors.New("private"), StageDomainInventory, GenerationExtractionDomain,
+		DimensionCandidateMemberBytes, 792_000_000, 64<<20,
+	)
+	receipt, ok := ParseDurableErrorText(err.Error())
+	if !ok || receipt.Dimension != DimensionCandidateMemberBytes ||
+		receipt.Observed != 792_000_000 || receipt.Limit != 64<<20 {
+		t.Fatalf("parsed receipt = %+v, present=%t", receipt, ok)
+	}
+	for _, invalid := range []string{
+		"outer: " + err.Error(), err.Error() + " ",
+		strings.Replace(err.Error(), `"limit":67108864`, `"limit":67108864,"private":"x"`, 1),
+		"private raw error",
+	} {
+		if _, present := ParseDurableErrorText(invalid); present {
+			t.Fatalf("accepted noncanonical durable error %q", invalid)
+		}
+	}
+}
+
 func TestInvalidMeasurementStaysSourceFreeUntilUnknownPromotion(t *testing.T) {
 	privateCause := errors.New("private /origin/path object deadbeef")
 	measured := Measure(

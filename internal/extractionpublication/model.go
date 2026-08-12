@@ -193,6 +193,51 @@ type DomainStatus struct {
 	RetryExhausted int    `json:"retry_exhausted"`
 }
 
+// Progress is the bounded operational projection of the current extraction
+// schedule. It reads two schedule rows, one small generation control, and at
+// most MaxDomains current pointers; it never opens partition results, candidate
+// members, source content, or evidence rows.
+type Progress struct {
+	State          string `json:"state"`
+	Total          int    `json:"total_partitions"`
+	Materialized   int    `json:"materialized"`
+	Pending        int    `json:"pending"`
+	Running        int    `json:"running"`
+	Succeeded      int    `json:"succeeded"`
+	Failed         int    `json:"failed"`
+	Domains        int    `json:"domains"`
+	CurrentDomains int    `json:"current_domains"`
+}
+
+func ValidateProgress(value Progress) error {
+	if value.State == "unavailable" {
+		if value != (Progress{State: "unavailable"}) {
+			return invalid("unavailable progress")
+		}
+		return nil
+	}
+	if value.State != string(store.GenerationScheduleActive) &&
+		value.State != string(store.GenerationScheduleSuperseded) &&
+		value.State != string(store.GenerationScheduleSettled) && value.State != "current" {
+		return invalid("progress state")
+	}
+	if value.Total <= 0 || value.Total > MaxDomains*candidate.MaxDomainResultPartitions ||
+		value.Materialized < 0 || value.Materialized > value.Total*ScheduleMaxAttempts || value.Pending < 0 ||
+		value.Running < 0 || value.Succeeded < 0 || value.Failed < 0 ||
+		value.Pending+value.Running > value.Materialized ||
+		value.Succeeded+value.Failed > value.Total ||
+		value.Domains <= 0 || value.Domains > MaxDomains ||
+		value.CurrentDomains < 0 || value.CurrentDomains > value.Domains {
+		return invalid("progress counts")
+	}
+	if value.State == "current" && (value.Materialized != value.Total || value.Pending != 0 ||
+		value.Running != 0 || value.Failed != 0 || value.Succeeded != value.Total ||
+		value.CurrentDomains != value.Domains) {
+		return invalid("current progress")
+	}
+	return nil
+}
+
 // RetryFailureReason is deliberately closed and source-free.
 const RetryFailureReason = "attempts_exhausted"
 

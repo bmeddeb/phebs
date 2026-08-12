@@ -800,6 +800,8 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "convergence server exit", cause: errConvergenceServerExit, code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "convergence transition limit", cause: errConvergenceTimeline, code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal", cause: errRepositoryIndexTerminal, code: "repository_index_terminal", decision: "unclassified"},
+		{name: "extraction bound refusal", cause: errExtractionBoundRefusal, code: "extraction_production_bound_refused", decision: "reduce", substantiated: true},
+		{name: "extraction job terminal", cause: errExtractionJobTerminal, code: "extraction_job_terminal", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},

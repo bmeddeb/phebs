@@ -618,6 +618,29 @@ both tickets pass their merge bars and independent review. This disposition
 authorizes no rerun, bound change, T40.13 or Epic 40 closure, scale/SLO
 claim, release, or Epic 41 progression.
 
+Reduce-first readiness implementation (2026-08-12): the first ticket is
+complete on its scale branch without changing any production bound. Every
+domain-result aggregate refusal now carries one validated closed
+`pipelinerefusal` measurement; candidate-member bytes are pre-summed before
+reservation so the neutral fixture reports the exact 792,000,000 observed
+bytes against 67,108,864. That deterministic planning refusal is terminal on
+its first execution and its durable error can be decoded only when it is the
+exact canonical closed receipt. A post-cutover latest-extraction-job pointer
+projects only status, attempts, and an optional validated refusal. The new
+authorization-first `/api/extraction-progress` response adds bounded schedule
+and current-domain counts; its reader performs two exact schedule point reads,
+one small generation-control read, and at most one current-pointer read per
+domain, with an authority recheck around the response and no candidate member,
+source blob, observation member, result, or evidence-payload read. Take-plan
+v12 preserves v1-v11 validation and retains only that closed progress plus the
+closed job/refusal projection; a terminal limit refusal stops immediately as
+substantiated `reduce`, while another terminal extraction job remains
+`unclassified`. Exact-bound/one-over, 792,000,000-byte, terminal/no-retry,
+authorization-first, real-store projection, HTTP, schema-history, and ceremony
+classification tests pass. The separate split/versioned aggregate-contract
+ticket and measured throughput gate remain open; this implementation alone
+does not authorize a Take 17 freeze or execution.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

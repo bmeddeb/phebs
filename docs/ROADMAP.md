@@ -871,6 +871,14 @@ catalog, relationship, or correctness authority.
   cold-window feasibility before Take 17. This record authorizes neither
   ticket's implementation, a Take 17 freeze or execution, T40.13/Epic 40
   closure, a scale/SLO claim, release, nor Epic 41 progression.
+- The first Take 16 reduce-first readiness ticket is implemented on its scale
+  branch without changing the 64-MiB production bound. Aggregate refusals now
+  retain exact closed measurements, deterministic plan-build limits terminate
+  on the first execution, an authorization-fenced bounded extraction-progress
+  endpoint exposes schedule/current-domain counts, and v12 ceremony evidence
+  can stop immediately with the exact closed refusal. The split/versioned
+  1-GiB aggregate-contract ticket and serialized-throughput measurement remain
+  prerequisites to any Take 17 freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

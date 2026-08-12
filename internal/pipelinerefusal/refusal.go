@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 )
 
 const Schema = "phebs-pipeline-refusal-v1"
@@ -77,6 +79,13 @@ const (
 	DimensionSourceReadFiles         Dimension = "source_read_files"
 	DimensionFacts                   Dimension = "facts"
 	DimensionStagedRows              Dimension = "staged_rows"
+	DimensionDomainResultFacts       Dimension = "domain_result_facts"
+	DimensionDomainResultRows        Dimension = "domain_result_rows"
+	DimensionDomainResultReferences  Dimension = "domain_result_references"
+	DimensionDomainCanonicalBytes    Dimension = "domain_result_canonical_bytes"
+	DimensionDomainEncodedBytes      Dimension = "domain_result_encoded_bytes"
+	DimensionCandidateMemberBytes    Dimension = "candidate_member_bytes"
+	DimensionCandidateMembers        Dimension = "candidate_members"
 )
 
 // Receipt is the complete durable projection of one refusal. Observed and
@@ -148,6 +157,32 @@ func (failure *Error) DurableErrorText() string { return failure.Error() }
 func (failure *Error) Unwrap() error { return failure.cause }
 
 func (failure *Error) Receipt() Receipt { return failure.receipt }
+
+// ParseDurableErrorText accepts only the canonical source-free representation
+// emitted by DurableErrorText. Raw worker errors, wrappers, noncanonical JSON,
+// and trailing data are never interpreted as a refusal.
+func ParseDurableErrorText(value string) (Receipt, bool) {
+	const prefix = "pipeline refusal: "
+	if !strings.HasPrefix(value, prefix) {
+		return Receipt{}, false
+	}
+	payload := strings.TrimPrefix(value, prefix)
+	decoder := json.NewDecoder(strings.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	var receipt Receipt
+	if err := decoder.Decode(&receipt); err != nil {
+		return Receipt{}, false
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) || Validate(receipt) != nil {
+		return Receipt{}, false
+	}
+	canonical, err := json.Marshal(receipt)
+	if err != nil || payload != string(canonical) {
+		return Receipt{}, false
+	}
+	return receipt, true
+}
 
 // Wrap returns nil for a nil cause. Invalid programmer-supplied receipt data
 // degrades to a closed unknown refusal and joins ErrInvalid to the hidden
@@ -328,7 +363,10 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 		case DimensionInventoryFiles, DimensionInventoryPathBytes,
 			DimensionSymlinkDepth, DimensionLookupRecords,
 			DimensionLookupPathBytes, DimensionTreeRecordBytes,
-			DimensionSourceBlobBytes:
+			DimensionSourceBlobBytes, DimensionDomainResultFacts,
+			DimensionDomainResultRows, DimensionDomainResultReferences,
+			DimensionDomainCanonicalBytes, DimensionDomainEncodedBytes,
+			DimensionCandidateMemberBytes, DimensionCandidateMembers:
 			return true
 		}
 	case StageExtractorExecution:
@@ -406,7 +444,11 @@ func validDimension(dimension Dimension) bool {
 		DimensionLookupRecords, DimensionLookupPathBytes,
 		DimensionTreeRecordBytes, DimensionSourceBlobBytes,
 		DimensionSourceReadAttempts, DimensionSourceReadBytes,
-		DimensionSourceReadFiles, DimensionFacts, DimensionStagedRows:
+		DimensionSourceReadFiles, DimensionFacts, DimensionStagedRows,
+		DimensionDomainResultFacts, DimensionDomainResultRows,
+		DimensionDomainResultReferences, DimensionDomainCanonicalBytes,
+		DimensionDomainEncodedBytes, DimensionCandidateMemberBytes,
+		DimensionCandidateMembers:
 		return true
 	default:
 		return false

@@ -85,6 +85,10 @@ type Options struct {
 	// ObservationProgress is T36.4's authorization-first, source-free current
 	// publication and durable schedule projection shared with MCP.
 	ObservationProgress *ObservationProgressService
+	// ExtractionProgress is the authorization-first, source-free current
+	// partition schedule and domain-authority projection used by operators and
+	// the T40.R1 ceremony. Nil leaves the route unregistered.
+	ExtractionProgress *ExtractionProgressService
 	// Relationships is T37.5's shared authorization-first exact relationship
 	// reader. Nil leaves HTTP, MCP, proof annexes, and capability discovery
 	// absent without adding filesystem work to ordinary requests.
@@ -437,6 +441,7 @@ func New(opts Options) http.Handler {
 	registerCallerComparisonAPI(api, opts)
 	registerServiceDirectoryAPI(api, opts)
 	registerObservationProgressAPI(api, opts)
+	registerExtractionProgressAPI(api, opts)
 	registerRelationshipAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)

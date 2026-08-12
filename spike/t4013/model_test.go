@@ -336,6 +336,25 @@ func TestV11PlanPreservesTakeFifteenEnvelope(t *testing.T) {
 	}
 }
 
+func TestV12PlanAddsOnlyExtractionAttribution(t *testing.T) {
+	plan, err := frozenV12PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV12 || plan.Safety != frozenSafetyV11 ||
+		plan.Safety != frozenSafetyV12 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v12 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV12 || decoded.Safety != frozenSafetyV12 {
+		t.Fatalf("decoded v12 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV10CompletedReceiptRequiresPressureRestart(t *testing.T) {
 	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {

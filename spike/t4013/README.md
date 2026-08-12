@@ -819,6 +819,29 @@ ticket that acts on this investigation.
   still say whether extraction remained active, stalled, or failed, with
   exact bounded counts.
 
+### Reduce-first readiness implementation
+
+The first readiness ticket is implemented without changing the frozen
+production limit. Domain-result aggregate failures now retain canonical closed
+measurements, including the exact `candidate_member_bytes` pre-sum. A limit
+refusal from plan construction is terminal on its first extraction-job
+execution. The post-cutover repository projection exposes only the latest
+extraction job's closed status, attempt count, and optional validated refusal;
+raw error text and queue identity remain private.
+
+`/api/extraction-progress` is authorization-first and authority-rechecked. Its
+hot read uses two schedule point reads, one small generation control, and at
+most one current-pointer control per configured domain. It does not open a
+candidate member, source blob, observation member, partition result, domain
+root, or evidence payload. V12 adds that bounded projection to ceremony
+evidence while keeping v1-v11 bytes and validation unchanged. A closed limit
+refusal terminates as substantiated `reduce`; another failed or canceled
+extraction job terminates honestly as `unclassified`.
+
+This closes only the first ticket. The separately reviewed split/versioned
+aggregate contract and the representative serialized-throughput measurement
+remain required before a Take 17 freeze.
+
 ```sh
 cd ~/phebs
 

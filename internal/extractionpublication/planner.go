@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 // BuildReservedPlan assigns every partition an explicit share of the frozen
@@ -36,6 +37,9 @@ func BuildReservedPlan(
 		}
 	}
 	limits := candidate.FrozenDomainResultLimits()
+	if err := measureCandidateMemberBytes(partitions, limits.MemberBytes); err != nil {
+		return candidate.DomainResultPlan{}, err
+	}
 	quotas := candidate.FrozenExtractionPartitionQuotas()
 	assignReserved(weights, int64(quotas.Facts), limits.Facts, func(index int, value int64) {
 		reservations[index].Facts = value
@@ -60,6 +64,30 @@ func BuildReservedPlan(
 		return candidate.DomainResultPlan{}, err
 	}
 	return plan, nil
+}
+
+func measureCandidateMemberBytes(partitions []candidate.ExtractionPartition, limit int64) error {
+	total := int64(0)
+	for _, partition := range partitions {
+		if partition.Member == nil {
+			continue
+		}
+		if partition.Member.ContentBytes < 0 || partition.Member.ContentBytes > math.MaxInt64-total {
+			return errors.Join(ErrLimit, candidate.ErrInvalidDomainResult)
+		}
+		total += partition.Member.ContentBytes
+	}
+	if total > limit {
+		return errors.Join(
+			ErrLimit,
+			pipelinerefusal.Measure(
+				candidate.ErrInvalidDomainResult,
+				pipelinerefusal.DimensionCandidateMemberBytes,
+				total, limit,
+			),
+		)
+	}
+	return nil
 }
 
 type reservedRemainder struct {

@@ -8,6 +8,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 const (
@@ -320,7 +322,9 @@ func BuildDomainResultPlan(
 			return DomainResultPlan{}, domainResultInvalid("partition %d reservation: %v", ordinal, err)
 		}
 		if err := addDomainResultTotals(&plan.Reserved, reservation, limits); err != nil {
-			return DomainResultPlan{}, domainResultInvalid("partition %d reservation: %v", ordinal, err)
+			return DomainResultPlan{}, errors.Join(
+				domainResultInvalid("partition %d reservation", ordinal), err,
+			)
 		}
 		expectation := PartitionResultExpectation{
 			Schema: PartitionExpectationSchema, Ordinal: ordinal, Kind: partition.Kind,
@@ -778,14 +782,27 @@ func validatePartitionResult(
 }
 
 func addDomainResultTotals(current *DomainResultTotals, add DomainResultTotals, limits DomainResultLimits) error {
-	if !domainResultScalarFits(current.Facts, add.Facts, limits.Facts) ||
-		!domainResultScalarFits(current.Rows, add.Rows, limits.Rows) ||
-		!domainResultScalarFits(current.References, add.References, limits.References) ||
-		!domainResultScalarFits(current.CanonicalBytes, add.CanonicalBytes, limits.CanonicalBytes) ||
-		!domainResultScalarFits(current.EncodedBytes, add.EncodedBytes, limits.EncodedBytes) ||
-		!domainResultScalarFits(current.MemberBytes, add.MemberBytes, limits.MemberBytes) ||
-		!domainResultScalarFits(current.Members, add.Members, limits.Members) {
-		return domainResultInvalid("domain result aggregate exceeds its frozen limit")
+	type scalar struct {
+		current   int64
+		add       int64
+		limit     int64
+		dimension pipelinerefusal.Dimension
+	}
+	for _, value := range []scalar{
+		{current.Facts, add.Facts, limits.Facts, pipelinerefusal.DimensionDomainResultFacts},
+		{current.Rows, add.Rows, limits.Rows, pipelinerefusal.DimensionDomainResultRows},
+		{current.References, add.References, limits.References, pipelinerefusal.DimensionDomainResultReferences},
+		{current.CanonicalBytes, add.CanonicalBytes, limits.CanonicalBytes, pipelinerefusal.DimensionDomainCanonicalBytes},
+		{current.EncodedBytes, add.EncodedBytes, limits.EncodedBytes, pipelinerefusal.DimensionDomainEncodedBytes},
+		{current.MemberBytes, add.MemberBytes, limits.MemberBytes, pipelinerefusal.DimensionCandidateMemberBytes},
+		{current.Members, add.Members, limits.Members, pipelinerefusal.DimensionCandidateMembers},
+	} {
+		if !domainResultScalarFits(value.current, value.add, value.limit) {
+			return pipelinerefusal.Measure(
+				domainResultInvalid("domain result aggregate exceeds its frozen limit"),
+				value.dimension, value.current+value.add, value.limit,
+			)
+		}
 	}
 	current.Facts += add.Facts
 	current.Rows += add.Rows

@@ -22,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -82,6 +83,7 @@ type privateConvergenceProbe struct {
 	Stage                       string
 	SHA256                      string
 	ObservationProgress         *ObservationProgressObservation
+	ExtractionProgress          *ExtractionProgressObservation
 	RepositoryIndexFailureClass string
 }
 
@@ -123,6 +125,54 @@ func observationConvergenceProbe(progress observationpublication.Progress) priva
 	probe := convergenceProbe("observation_publication", progress)
 	probe.ObservationProgress = projection
 	return probe
+}
+
+func extractionConvergenceProbe(
+	progress extractionpublication.Progress,
+	repository store.RepoStatus,
+) (privateConvergenceProbe, error) {
+	projection := &ExtractionProgressObservation{
+		State: progress.State, Total: progress.Total, Materialized: progress.Materialized,
+		Pending: progress.Pending, Running: progress.Running, Succeeded: progress.Succeeded,
+		Failed: progress.Failed, Domains: progress.Domains, CurrentDomains: progress.CurrentDomains,
+	}
+	if repository.LastExtractionJobState != store.JobProjectionUnavailable &&
+		repository.LastExtractionJobState != store.JobProjectionExact {
+		return convergenceProbe("extraction_publication", progress),
+			errors.New("T40.13 extraction job projection state is invalid")
+	}
+	if repository.LastExtractionJobState == store.JobProjectionExact {
+		job := repository.LastExtractionJob
+		if job == nil || !slices.Contains([]store.JobStatus{
+			store.StatusPending, store.StatusClaimed, store.StatusRunning,
+			store.StatusDone, store.StatusFailed, store.StatusCanceled,
+		}, job.Status) || job.Attempts < 0 || job.Attempts > 1_000_000 {
+			return convergenceProbe("extraction_publication", progress),
+				errors.New("T40.13 extraction job projection is invalid")
+		}
+		projection.JobState, projection.JobAttempts = string(job.Status), job.Attempts
+		if job.Refusal != nil {
+			projection.RefusalStage = string(job.Refusal.Stage)
+			projection.RefusalGenerationKind = string(job.Refusal.GenerationKind)
+			projection.RefusalClassification = string(job.Refusal.Classification)
+			projection.RefusalDimension = string(job.Refusal.Dimension)
+			projection.RefusalObserved = job.Refusal.Observed
+			projection.RefusalLimit = job.Refusal.Limit
+		}
+	}
+	probe := convergenceProbe("extraction_publication", progress, projection)
+	probe.ExtractionProgress = projection
+	if repository.LastExtractionJobState != store.JobProjectionExact {
+		return probe, errors.New("T40.13 extraction job projection is unavailable")
+	}
+	if projection.JobState == string(store.StatusFailed) ||
+		projection.JobState == string(store.StatusCanceled) {
+		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) {
+			return probe, errExtractionBoundRefusal
+		}
+		return probe, errExtractionJobTerminal
+	}
+	return probe, nil
 }
 
 type profileInspector struct {
@@ -236,6 +286,15 @@ func (inspector *profileInspector) inspectWithProgress(
 	probe = observationConvergenceProbe(progress)
 	if !observationProgressConverged(progress, source.Digest) {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 observation publication has not converged")
+	}
+	var extractionSchedule extractionpublication.Progress
+	extractionPath := "/api/extraction-progress?repository=" + url.QueryEscape(profile.RepositoryName)
+	if err := inspector.get(ctx, profile, extractionPath, &extractionSchedule); err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("extraction_publication"), err
+	}
+	probe, err = extractionConvergenceProbe(extractionSchedule, repository)
+	if err != nil {
+		return privateProfileSnapshot{}, probe, err
 	}
 	extraction, extractionProgress, err := inspectExtraction(ctx, profile)
 	if err != nil {

@@ -334,6 +334,44 @@ func newRuntimeFixture(t *testing.T, plan candidate.DomainResultPlan) (*Runtime,
 	return runtime, state, source, executor, publisher, fence, domain
 }
 
+func TestRuntimeProgressReadsOnlyBoundedScheduleAndCurrentPointers(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("1", 64), true)
+	runtime, state, _, _, _, _, domain := newRuntimeFixture(t, plan)
+	if _, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil {
+		t.Fatal(err)
+	}
+	state.mu.Lock()
+	key := scheduleKey(plan.Repository, ScheduleStage)
+	schedule := state.current[key]
+	schedule.NextOffset = schedule.TotalItems
+	schedule.Materialized = schedule.TotalChunks
+	schedule.Pending = schedule.TotalChunks - 1
+	schedule.Running = 1
+	state.current[key] = schedule
+	state.mu.Unlock()
+
+	progress, err := runtime.Progress(t.Context(), plan.Repository)
+	if err != nil || progress.State != "active" || progress.Total != len(plan.Expected) ||
+		progress.Materialized != len(plan.Expected) || progress.Pending != len(plan.Expected)-1 ||
+		progress.Running != 1 || progress.Domains != 1 || progress.CurrentDomains != 0 {
+		t.Fatalf("progress = %+v, error=%v", progress, err)
+	}
+}
+
+func TestValidateProgressAllowsMaterializedRetryAttempts(t *testing.T) {
+	progress := Progress{
+		State: "active", Total: 2, Materialized: 3,
+		Pending: 1, Succeeded: 1, Domains: 1,
+	}
+	if err := ValidateProgress(progress); err != nil {
+		t.Fatalf("retry-shaped progress: %v", err)
+	}
+	progress.Materialized = 2*ScheduleMaxAttempts + 1
+	if err := ValidateProgress(progress); err == nil {
+		t.Fatal("progress exceeding the frozen attempt allocation passed")
+	}
+}
+
 func currentChunk(t *testing.T, state *testScheduleStore, repository string, offset int) store.GenerationChunk {
 	t.Helper()
 	schedule, err := state.GetGenerationSchedule(t.Context(), repository, ScheduleStage)

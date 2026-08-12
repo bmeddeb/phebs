@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 func TestDomainResultPlanAndRootAreDeterministicAndBindEveryAuthority(t *testing.T) {
@@ -335,19 +337,25 @@ func TestDomainResultExactAggregateBoundsAndOneOverAreClosed(t *testing.T) {
 		t.Fatalf("exact root = %+v, %v", root, err)
 	}
 
-	for name, mutate := range map[string]func([]DomainResultTotals){
-		"facts":        func(values []DomainResultTotals) { values[len(values)-1].Facts++ },
-		"rows":         func(values []DomainResultTotals) { values[len(values)-1].Rows++ },
-		"references":   func(values []DomainResultTotals) { values[len(values)-1].References++ },
-		"canonical":    func(values []DomainResultTotals) { values[len(values)-1].CanonicalBytes++ },
-		"encoded":      func(values []DomainResultTotals) { values[len(values)-1].EncodedBytes++ },
-		"member_bytes": func(values []DomainResultTotals) { values[len(values)-1].MemberBytes++ },
-		"members":      func(values []DomainResultTotals) { values[len(values)-1].Members++ },
+	for name, test := range map[string]struct {
+		mutate    func([]DomainResultTotals)
+		dimension pipelinerefusal.Dimension
+	}{
+		"facts":        {func(values []DomainResultTotals) { values[len(values)-1].Facts++ }, pipelinerefusal.DimensionDomainResultFacts},
+		"rows":         {func(values []DomainResultTotals) { values[len(values)-1].Rows++ }, pipelinerefusal.DimensionDomainResultRows},
+		"references":   {func(values []DomainResultTotals) { values[len(values)-1].References++ }, pipelinerefusal.DimensionDomainResultReferences},
+		"canonical":    {func(values []DomainResultTotals) { values[len(values)-1].CanonicalBytes++ }, pipelinerefusal.DimensionDomainCanonicalBytes},
+		"encoded":      {func(values []DomainResultTotals) { values[len(values)-1].EncodedBytes++ }, pipelinerefusal.DimensionDomainEncodedBytes},
+		"member_bytes": {func(values []DomainResultTotals) { values[len(values)-1].MemberBytes++ }, pipelinerefusal.DimensionCandidateMemberBytes},
+		"members":      {func(values []DomainResultTotals) { values[len(values)-1].Members++ }, pipelinerefusal.DimensionCandidateMembers},
 	} {
 		t.Run(name, func(t *testing.T) {
 			oneOver := slices.Clone(reservations)
-			mutate(oneOver)
-			if _, buildErr := BuildDomainResultPlan(domain, resultTestAuthority(), oneOver); !errors.Is(buildErr, ErrInvalidDomainResult) {
+			test.mutate(oneOver)
+			_, buildErr := BuildDomainResultPlan(domain, resultTestAuthority(), oneOver)
+			var measurement *pipelinerefusal.Measurement
+			if !errors.Is(buildErr, ErrInvalidDomainResult) || !errors.As(buildErr, &measurement) ||
+				measurement.Dimension != test.dimension || measurement.Observed != measurement.Limit+1 {
 				t.Fatalf("one-over error = %v", buildErr)
 			}
 		})
