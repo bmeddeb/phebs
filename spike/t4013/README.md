@@ -674,6 +674,151 @@ required production live-backup contract and is fully measured. The later-phase
 audit and bounded production-path rehearsal are complete. Freeze still waits
 for a clean exact commit, independent plan review, and explicit approval.
 
+Take 16 was subsequently approved and executed from exact commit
+`e9ceb4351c001fd0c09b9db98d5ced9f5d37dac4` with frozen v11 plan
+`sha256:26c4c1c619bb8d1b985bf62fd74f162491df0b839feec53c8ca59572877c3d04`.
+It stopped honestly at the exact four-hour cold-convergence deadline with
+decision `unclassified` and reason `convergence_deadline_expired`. Startup was
+healthy in 11,272 ms. Its last successful progress snapshot at 2,035,015 ms
+reported 64 materialized observation partitions, 62 succeeded, and two
+running. The final inspection was a closed `extraction_publication` control
+failure. Cold peak RSS was 3,451,912,192 bytes and allocated custody was
+25,223,991,296 bytes, both below their frozen ceilings. No later gate ran.
+The source-free package
+`sha256:a1f134cf27679d0f6214562f70a565bdbe3e2fe04be933f595410e059bf66523`
+verified, and teardown destroyed custody and the prepared manifest.
+
+## Take 16 extraction-publication investigation
+
+The signed receipt proves the deadline and closed inspection class, but does
+not retain a raw production error. The supervised live log, observed before
+teardown, reported that extraction reconciliation exhausted three attempts on
+`partitioned extraction publication limit exceeded`; the nested validator
+identified partition 41 and `domain result aggregate exceeds its frozen
+limit`. That operational diagnostic is not promoted into sealed evidence.
+Exact-source inspection independently establishes the following cause:
+
+- `BuildReservedPlan` reserves each admitted candidate-member partition's
+  exact `Artifact.ContentBytes` as `MemberBytes` and one `Members` unit.
+- `BuildDomainResultPlan` accumulates those reservations in ordinal order and
+  rejects the first addition above `MaxDomainResultMemberBytes`, currently
+  64 MiB. Therefore the partition-41 diagnostic is a deterministic planning
+  refusal, not retry accumulation, root assembly, extraction output, memory
+  pressure, or ceremony projection behavior.
+- The retained T40.8 maximum-neutral member measurement is 954,368 bytes.
+  Applying that already-retained measurement to T40.1's frozen 489-member
+  structural shape requires 466,685,952 bytes (about 445.1 MiB), so the
+  64-MiB T40.9 aggregate cannot admit even the previously reviewed structural
+  model. The contract is internally inconsistent before any Take 16-specific
+  path-length or encoding effect is considered.
+- The Take 16 live candidate-operation diagnostic reported exactly 2,000,000
+  repository-plane records in 489 members and 792,000,000 canonical member
+  bytes. Only those source-free aggregate scalars are recorded here; the
+  original diagnostic was custody-bound and is not sealed evidence. The next
+  binary boundary above that exact population is 1 GiB. A 512-MiB correction
+  inferred only from the older T40.8 single-member measurement would still
+  refuse the frozen corpus.
+- The 64-MiB value was selected as the next binary boundary above the semantic
+  profile's 39,182,336 canonical *extractor-output* bytes, then also applied to
+  cumulative candidate-member *input-control* bytes. Those populations have
+  different scale drivers: output bytes follow semantic facts/rows, while
+  member bytes follow candidate record count and path/control encoding.
+- Existing exact-bound tests distribute synthetic member reservations inside
+  64 MiB, and production integration tests build only tiny one-member domains.
+  Both `go test ./internal/candidate ./internal/extractionpublication` packages
+  pass, confirming the missing guard is a frozen structural-shape contract
+  test rather than a broken subtraction-before-growth validator.
+
+The smallest evidence-backed correction is therefore a reviewed 1-GiB
+candidate-member aggregate while leaving the 64-MiB canonical/encoded result
+ceilings unchanged. It must not silently replace the scalar with an unbounded
+value. The production change should keep per-member validation, aggregate
+subtraction-before-growth, immutable plan identity, and all result/output
+ceilings unchanged; retain a source-free control-only measurement of the exact
+792,000,000-byte structural population; add a regression that this exact shape
+is admitted and one byte above 1 GiB is refused; and prove semantic and small
+domains remain byte-for-behavior unchanged. Retries should also classify this
+deterministic admission refusal terminally so an invalid plan is not rebuilt
+three times. None of these findings authorizes a new ceremony, release, T40.13
+closure, or Epic 41 progression.
+
+### Take 16 investigation amendments (2026-08-12)
+
+Independent re-verification of the investigation above confirmed every
+recorded scalar and the mis-derivation finding, and supersedes the correction
+paragraph in two respects and extends it in three. These amendments bind any
+ticket that acts on this investigation.
+
+- **Governance sequencing.** This file's discipline states "No threshold or
+  production constant may be changed to turn a stop into a pass", and the
+  Epic 40 boundary keeps existing per-domain safety limits "fixed unless the
+  owning ticket measures that exact dimension and records a reduce-first
+  decision"; the T40.13 acceptance criteria require stop decisions "without
+  silently raising a bound", and every frozen plan claims
+  `raises_production_bound: false`. A limit change landing directly on the
+  next take's exact commit would therefore be a constant changed to turn a
+  stop into a pass. The conforming sequence is two tickets. The first is a
+  readiness ticket with no production-bound change: record this source-free
+  derivation; record the governing reduce-first decision in `PLAN.md` and the
+  owning ticket; convert aggregate-limit errors to closed `pipelinerefusal`
+  data; classify the deterministic planning refusal terminal; add a bounded
+  extraction status channel carrying generation state,
+  total/pending/running/succeeded/failed partition counts, current-authority
+  state, and the closed terminal-refusal dimension, observed value, and
+  limit; teach the ceremony harness to retain those source-free fields and
+  terminate on a terminal extraction refusal; and preserve raw Take 16
+  evidence and v1–v11 validation unchanged. The second is the separately
+  reviewed contract ticket described below. Reduce-first adjudication and
+  independent review precede the second ticket; nothing in this file
+  authorizes it.
+- **Split the dual-use bound.** `MaxDomainResultMemberBytes` is both the
+  whole-domain aggregate and the single-reservation backstop inside
+  `validateDomainResultReservation`. Raising the shared constant to 1 GiB
+  would silently widen that per-reservation backstop sixteenfold, above the
+  128-MiB `PartitionMaxCandidateContentBytes` cap it backstops. The contract
+  ticket must split the constants: the per-partition reservation bound keeps
+  its existing protected value; the aggregate candidate-member input bound
+  becomes a distinct limit. The earlier claim that per-member validation is
+  kept "unchanged" is unachievable without this split.
+- **Versioned plan compatibility.** `DomainResultLimits` is embedded in every
+  persisted domain plan, digest-bound, and revalidated by exact equality
+  against the current frozen limits, so a changed scalar invalidates every
+  previously persisted plan control at recovery and restart boundaries. The
+  earlier claim that "immutable plan identity" stays unchanged is wrong as
+  scoped. The contract ticket must introduce a versioned v2 plan contract
+  carrying the 1-GiB aggregate; persisted v1 plans continue validating
+  against their original v1 limits; recovery, restart, backup/restore,
+  archive, lifecycle, and downstream validators dispatch by schema version.
+- **Exact derivation.** The corrected aggregate derives from the frozen
+  generator, not from the observed corpus: 489 members × 4,096 records × a
+  512-byte per-record encoding bound = 1,025,507,328 bytes, and the next
+  established binary boundary is 1 GiB. The observed population is itself
+  re-derivable source-free from the frozen generator and record encoder:
+  2,000,000 records × 396 encoded bytes = 792,000,000 exactly; each full
+  member is 4,096 × 396 = 1,622,016 bytes; ordinals 0–40 accumulate
+  66,502,656, within the 67,108,864 allowed, and ordinal 41 reaches
+  68,124,672. The recorded
+  scalars therefore do not depend on the destroyed live log, and the exact
+  792,000,000-byte admission fixture must be pinned from this derivation.
+- **Throughput risk before Take 17.** With admission corrected, the four
+  `.go`-enumerating domains contribute roughly 1,956 chunk work items
+  serialized under `ScheduleRepositoryTokens = 1`; class concurrency cannot
+  help within one repository. Take 16's observation phase left roughly 3.4
+  hours of the cold window, pricing extraction at about 6.3 seconds per
+  partition end to end. Before freeze: measure representative partition
+  latency and compute cold-window feasibility from the measured distribution,
+  not only the mean; confirm job and worker concurrency are exactly what the
+  contract intends; inspect work performed per partition for repeated
+  candidate/member reads and for repository-wide validation or hashing
+  repeated per chunk; and exercise the new extraction status channel through
+  a smaller complete generation, including interruption, retry, terminal
+  failure, and stale-worker projections. Neither concurrency nor the
+  four-hour deadline may be silently increased; if serialization cannot fit,
+  that is a further measured architectural decision. The status channel also
+  keeps an honest deadline informative: a future `unclassified` stop will
+  still say whether extraction remained active, stalled, or failed, with
+  exact bounded counts.
+
 ```sh
 cd ~/phebs
 

@@ -562,6 +562,62 @@ required its citation. Focused production/store packages passed, including the
 This remains readiness, not execution authorization. Freeze still requires a
 clean exact commit, independent plan review, and Ben's explicit approval.
 
+Take 16 measured outcome (2026-08-12): the approved v11 ceremony at exact
+commit `e9ceb4351c001fd0c09b9db98d5ced9f5d37dac4` stopped honestly at the
+exact four-hour cold-convergence deadline as `unclassified`
+`convergence_deadline_expired`. Startup was healthy in 11,272 ms; the last
+successful progress probe at 2,035,015 ms reported 64 materialized
+observation partitions, 62 succeeded, and two running; 6,619 ms later the
+inspection became a closed `extraction_publication` control failure and never
+recovered. Peak RSS and allocated data stayed below their frozen ceilings, no
+authority changed, no later gate ran, teardown destroyed custody and the
+prepared manifest, and the source-free package verified. The custody-bound
+live log, observed before teardown and never sealed, reported three exhausted
+attempts on `partitioned extraction publication limit exceeded` at partition
+41 with `domain result aggregate exceeds its frozen limit`. The cause is
+re-derivable source-free from the frozen generator and record encoder:
+2,000,000 repository-plane records × 396 encoded bytes = 792,000,000
+aggregate candidate-member bytes across 489 members; ordinals 0-40 accumulate
+66,502,656 within the 67,108,864 allowed, and ordinal 41 reaches 68,124,672.
+T40.9 derived its 64-MiB member-byte aggregate as the next binary boundary
+above the semantic profile's 39,182,336 canonical extractor-output bytes and
+applied it to cumulative candidate-member input controls, a population no
+retained artifact measures; the retained T40.8 maximum member times the same
+ticket's frozen 489-member shape already requires 466,685,952 bytes, so the
+contract was unsatisfiable as frozen.
+
+Reduce-first disposition (2026-08-12): the refusal satisfies the frozen
+`reduce` trigger — a frozen production bound refused before complete
+authority — and its correction proceeds reduce-first in two tickets. The
+first is a readiness ticket with no production-bound change: record this
+source-free derivation; convert aggregate-limit errors to closed
+`pipelinerefusal` data; classify the deterministic planning refusal terminal,
+eliminating the two futile rebuilds; add a bounded extraction status channel
+carrying generation state, total/pending/running/succeeded/failed partition
+counts, current-authority state, and the closed terminal-refusal dimension,
+observed value, and limit; teach the ceremony harness to retain those
+source-free fields and terminate on a terminal extraction refusal; and
+preserve raw Take 16 evidence and v1-v11 validation unchanged. The second is
+a separately reviewed contract ticket: split the dual-use bound so the
+per-partition reservation backstop keeps its existing protected value while
+aggregate candidate-member input becomes a distinct limit; derive that limit
+from the frozen generator (489 × 4,096 × 512 = 1,025,507,328; next
+established binary boundary 1 GiB); keep the 64-MiB canonical and encoded
+extractor-output ceilings; introduce a versioned v2 plan contract while
+persisted v1 plans continue validating against their original v1 limits,
+with recovery, restart, backup/restore, archive, lifecycle, and downstream
+validators dispatching by schema version; and pin the 792,000,000-byte
+profile as a source-free regression fixture. Before any Take 17 freeze the
+serialized-extraction throughput risk must be measured: roughly 1,956 chunks
+across the four `.go`-enumerating domains share the single repository token,
+pricing roughly 6.3 seconds per partition inside the remaining cold window;
+feasibility comes from the measured latency distribution, not only the mean,
+and neither concurrency nor the four-hour deadline may be silently increased.
+No production constant changes with this record; Take 17 freezes only after
+both tickets pass their merge bars and independent review. This disposition
+authorizes no rerun, bound change, T40.13 or Epic 40 closure, scale/SLO
+claim, release, or Epic 41 progression.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

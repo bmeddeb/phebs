@@ -693,12 +693,17 @@ service count × repository bytes
   sparse candidate/partition controls, and bounded pure partition-result/domain
   roots, partitioned extraction behind atomic domain authority, and downstream
   recovery/lifecycle/archive ownership and authorized product-consumer replay
-  are complete. Take 15 stopped unclassified after a valid empty operation
-  receipt was converted to nil by the production progress projection; the
-  prospective repair preserves the exact empty array and pins the real reader
-  and HTTP paths. Destroyed custody does not prove final scheduler terminality,
-  and no rerun is authorized. Next close on a separately frozen neutral
-  two-million-owner gate.
+  are complete. Take 16 stopped unclassified after observation convergence
+  reached extraction planning and the frozen 64-MiB aggregate candidate-member
+  input bound refused the exact 792,000,000-byte structural population. The
+  bound was mis-derived from semantic extractor-output bytes and is
+  unsatisfiable for the already-frozen 489-member shape. The recorded
+  reduce-first sequence first adds closed terminal refusal and bounded
+  extraction-progress attribution without changing a production bound, then
+  separately splits the per-partition and aggregate controls and introduces a
+  versioned v2 plan with a measured 1-GiB aggregate while preserving v1 restart
+  validity. Serialized extraction throughput must also be measured before any
+  Take 17 freeze. No rerun or bound change is authorized by this record.
 - **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
   freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
   a v3 root with dual service/path member views, publish immutable precious
@@ -851,6 +856,21 @@ catalog, relationship, or correctness authority.
   retry wakeups, bounded Git batch reads, and exact search/extraction restore.
   Freeze remains gated on a clean exact commit, independent plan review, and
   explicit approval; none is implied by readiness.
+- T40.R1 Take 16 is a verified sealed `unclassified`
+  `convergence_deadline_expired` stop. Its source-free bundle verifies; startup
+  and resource ceilings passed, cold stopped before extraction authority, and
+  no later phase ran. The deterministic cause is independently re-derived from
+  the frozen generator: 2,000,000 records encode to 792,000,000 candidate-member
+  bytes in 489 members, crossing the frozen 67,108,864-byte domain aggregate at
+  partition 41. T40.9 incorrectly applied a ceiling derived from semantic
+  extractor-output bytes to structural candidate-member input. The governing
+  disposition is reduce-first in two separately reviewed tickets: closed
+  terminal refusal plus bounded extraction status with no bound change, then a
+  split and versioned v2 aggregate contract that continues validating prior v1
+  plans. Roughly 1,956 serialized extraction chunks also require measured
+  cold-window feasibility before Take 17. This record authorizes neither
+  ticket's implementation, a Take 17 freeze or execution, T40.13/Epic 40
+  closure, a scale/SLO claim, release, nor Epic 41 progression.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
