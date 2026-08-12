@@ -935,8 +935,9 @@ failed.
 Per-attempt runtime was 95,650 ms minimum, 97,899 ms nearest-rank p50,
 101,815 ms p95, and 102,067 ms maximum. Applying those repository-scale
 measurements to the unchanged serialized 1,956-partition schedule projects
-193,273,104 ms (53.687 hours) p50 cold completion and 200,932,800 ms
-(55.815 hours) p95 cold completion. Those exceed the frozen 14,400,000-ms
+193,273,104 ms (53.687 hours) p50 observation-plus-extraction completion and
+200,932,800 ms (55.815 hours) p95 observation-plus-extraction completion. Those
+exceed the frozen 14,400,000-ms
 four-hour cold window by 178,873,104 ms (49.687 hours) and 186,532,800 ms
 (51.815 hours), respectively. Take 18 is therefore **not ready to freeze**.
 
@@ -1004,7 +1005,8 @@ bounded inspector observed 36 completions between polls while waiting for its
 or reuse. Runtime was 427 ms minimum, 434 ms nearest-rank p50, 442 ms p95, and
 445 ms maximum. Projecting the unchanged serialized schedule gives 848,904 ms
 p50 and 864,552 ms p95 extraction, or 2,661,960 ms (44.366 minutes) and
-2,677,608 ms (44.627 minutes) total cold completion. Headroom inside the frozen
+2,677,608 ms (44.627 minutes) observation-plus-extraction completion. Headroom
+inside the frozen
 14,400,000-ms window is 11,738,040 ms (3h15m38.040s) p50 and 11,722,392 ms
 (3h15m22.392s) p95.
 
@@ -1018,6 +1020,13 @@ authored source, derived data, and the temporary plan were destroyed, and about
 prerequisite for a separately reviewed Take 18 freeze decision; it is not a
 ceremony pass, execution authorization, Epic 40 closure, release, SLO, or
 public scale claim.
+
+That headroom is not an end-to-end ceremony forecast. Resolver, relationship,
+delta/replacement, recovery, authenticated product replay, and every later
+frozen phase remain unmeasured at the two-million-owner shape inside a
+ceremony. Take 18 is the first authorized mechanism capable of testing those
+risks under the total-wall and resource ceilings. The diagnostic establishes
+enough phase-local room to justify a freeze review, not a predicted pass.
 
 ```sh
 cd ~/phebs

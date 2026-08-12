@@ -673,8 +673,9 @@ the subsequent exact 2,000,002-file structural diagnostic closes the question
 against the real shape. Observation reached current at 1,782,660 ms. Thirty-two
 successful, non-reused extraction attempts measured 95,650 ms minimum,
 97,899 ms p50, 101,815 ms p95, and 102,067 ms maximum. Across the actual 1,956
-serialized work items, p50 and p95 project cold completion at 53.687 and 55.815
-hours, exceeding the unchanged four-hour deadline by 49.687 and 51.815 hours.
+serialized work items, p50 and p95 project observation-plus-extraction
+completion at 53.687 and 55.815 hours, exceeding the unchanged four-hour
+deadline by 49.687 and 51.815 hours.
 Source acquisition accounted for 3,136,191 of 3,149,203 aggregate runtime
 milliseconds (99.587%); extractor execution, result installation, assembly,
 and scheduler settlement are not the wall. Exact-source review binds the cause:
@@ -715,8 +716,9 @@ That exact remeasurement passed at committed source
 current at 1,813,056 ms. The exact schedule retained 1,956 total partitions;
 36 attempts completed between bounded status probes with zero failures,
 terminal refusals, or reuse. Runtime was 427 ms minimum, 434 ms p50, 442 ms
-p95, and 445 ms maximum. Projected p50 and p95 cold completion are 2,661,960 ms
-(44.366 minutes) and 2,677,608 ms (44.627 minutes), leaving 11,738,040 ms
+p95, and 445 ms maximum. Projected p50 and p95 observation-plus-extraction
+completion are 2,661,960 ms (44.366 minutes) and 2,677,608 ms (44.627 minutes),
+leaving 11,738,040 ms
 (3h15m38.040s) and 11,722,392 ms (3h15m22.392s) inside the unchanged
 14,400,000-ms window. Across all 36 attempts, source acquisition consumed
 1,026 ms, executor work 13,650 ms, result work 294 ms, assembly 278 ms, and
@@ -726,6 +728,14 @@ disk restored. The correction is ready for independent review and a fresh
 Take 18 freeze decision. This diagnostic is not a ceremony pass and does not
 itself authorize execution, Epic 40 closure, Epic 41 progression, a release,
 or any public scale/SLO claim.
+
+The timing headroom is deliberately phase-local. Resolver publication,
+relationship publication, delta/replacement, recovery, authenticated product
+replay, and the remaining frozen ceremony phases have never executed at the
+two-million-owner shape inside a ceremony and are not included in this
+projection. Take 18 exists to measure those phases end to end under the frozen
+total-wall and resource ceilings. The result therefore supports freezing a
+new attempt; it does not predict that attempt's terminal classification.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
