@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -22,6 +23,82 @@ type Provider struct {
 	domainKeys map[string]struct{}
 	open       func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 	openCaller func(context.Context, string, candidate.Expected) (*candidate.CallerPlan, error)
+
+	current currentPublicationCache
+}
+
+// currentPublicationCache retains at most one strictly validated immutable
+// generation per repository. A replacement drops the cache's only reference
+// to the old generation; callers already using that value remain protected by
+// OpenCurrentPublication's post-open pointer fence.
+type currentPublicationCache struct {
+	mu      sync.Mutex
+	entries map[string]*currentPublicationOpen
+}
+
+type currentPublicationOpen struct {
+	state       candidate.State
+	done        chan struct{}
+	publication *candidate.Publication
+	err         error
+}
+
+func (cache *currentPublicationCache) open(
+	ctx context.Context,
+	state candidate.State,
+	opener func(context.Context) (*candidate.Publication, error),
+) (*candidate.Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	cache.mu.Lock()
+	if cache.entries == nil {
+		cache.entries = make(map[string]*currentPublicationOpen)
+	}
+	entry := cache.entries[state.Repository]
+	if entry != nil && entry.state == state {
+		if entry.publication != nil {
+			publication := entry.publication
+			cache.mu.Unlock()
+			return publication, nil
+		}
+		done := entry.done
+		cache.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-done:
+			return entry.publication, entry.err
+		}
+	}
+	entry = &currentPublicationOpen{state: state, done: make(chan struct{})}
+	cache.entries[state.Repository] = entry
+	cache.mu.Unlock()
+
+	publication, err := opener(ctx)
+	if err == nil && publication == nil {
+		err = errors.New("candidate publication opener returned nil")
+	}
+	cache.mu.Lock()
+	entry.publication, entry.err = publication, err
+	if err != nil && cache.entries[state.Repository] == entry {
+		delete(cache.entries, state.Repository)
+	}
+	close(entry.done)
+	cache.mu.Unlock()
+	return publication, err
+}
+
+func (cache *currentPublicationCache) evict(
+	state candidate.State,
+	publication *candidate.Publication,
+) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	entry := cache.entries[state.Repository]
+	if entry != nil && entry.state == state && entry.publication == publication {
+		delete(cache.entries, state.Repository)
+	}
 }
 
 // NewProvider constructs an adapter from the same PolicySet used by its
@@ -158,12 +235,17 @@ func (provider *Provider) OpenCurrentPublication(
 		PolicyDigest: state.PolicyDigest, GenerationDigest: state.GenerationDigest,
 		ManifestDigest: state.ManifestDigest,
 	}
-	publication, err := provider.open(ctx, provider.root, expected)
+	publication, err := provider.current.open(ctx, state, func(
+		openCtx context.Context,
+	) (*candidate.Publication, error) {
+		return provider.open(openCtx, provider.root, expected)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("open current candidate publication: %w", err)
 	}
 	confirmed, confirmErr := provider.CurrentPublicationState(ctx, repository, unit)
 	if publication == nil || confirmErr != nil || publication.State() != state || confirmed != state {
+		provider.current.evict(state, publication)
 		return nil, errors.Join(confirmErr, errors.New("current candidate publication changed during strict open"))
 	}
 	return publication, nil

@@ -689,6 +689,27 @@ The diagnostic custody and temporary plan were destroyed. This record changes
 no concurrency, deadline, threshold, topology, claim, release posture, or Epic
 41 sequencing.
 
+The generation-scoped strict-open correction is implemented on the Take 17
+disposition lineage (2026-08-12). `Provider.OpenCurrentPublication` retains at
+most one already validated immutable candidate generation per repository and
+single-flights concurrent opens for the same exact `candidate.State`. Every
+caller still reads and confirms the persisted pointer before using the handle
+and repeats that fence after the open/cache lookup; a pointer change during an
+open is rejected and evicted. A generation change replaces the cache entry and
+drops its only retained reference to the old publication. A waiting caller may
+cancel independently; an opener cancellation, nil result, or validation error
+is not cached, so recovery retries from immutable bytes. Restart begins with an
+empty process-local cache and reconstructs the exact current generation. The
+steady-state extraction attempt keeps the existing four bounded pointer reads,
+one short cache-mutex acquisition, bounded sparse root/domain/partition control
+reads, and admitted Git-object reads; it no longer rereads and hashes all 489
+candidate members. Memory retains one already bounded manifest/unit view per
+repository and no candidate-member contents, Git blobs, file descriptors, or
+repository lock. Candidate, sparse, plan, result, and evidence schemas and
+historical bytes remain unchanged. Take 18 remains unauthorized until a fresh
+exact repository-scale timing diagnostic at the committed correction leaves
+credible headroom inside the unchanged four-hour window.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

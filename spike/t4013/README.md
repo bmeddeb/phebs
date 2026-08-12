@@ -964,6 +964,38 @@ topology increase is justified by this result. The diagnostic stopped after
 the planned sample, destroyed all authored source, logs, credentials, derived
 data, and its temporary plan, and restored about 157 GiB available disk.
 
+### Generation-scoped strict candidate open
+
+The readiness correction implements that shape without changing an artifact
+contract. The long-lived candidate provider retains at most one strictly
+validated immutable `candidate.Publication` per repository and coalesces
+concurrent opens for the same exact `candidate.State`. It does not trust the
+cache as current authority: each `OpenCurrentPublication` call performs the
+existing double-read persisted-pointer check before lookup and again after the
+open or hit. If the pointer changes during the strict open, the result is stale,
+is rejected, and its cache entry is evicted.
+
+A successor state atomically replaces the repository entry, dropping the
+cache's only reference to the old publication. Existing callers may finish
+only if their post-open fence still matches. Waiting callers can cancel without
+canceling another caller's open; a canceled/failed opener or nil publication is
+evicted so the next attempt retries strict validation. Process restart owns no
+retained cache state and reconstructs from the database pointer plus immutable
+candidate bytes. Tests pin concurrent single-flight, waiting-caller
+cancellation, opener failure eviction, successor replacement, pointer change
+during open, retry, and restart reconstruction under the race detector.
+
+Per settled attempt the change adds no new database work: it preserves the four
+bounded pointer reads already made by the pre/post double-read fences. The hot
+path adds one brief cache mutex acquisition and retains one bounded manifest and
+analysis-unit view per repository. It retains no candidate-member contents,
+Git blobs, file descriptors, or repository lock. Sparse root/domain/partition
+controls and admitted immutable Git objects remain independently validated and
+bounded per attempt. Candidate, sparse, plan, result, and evidence bytes remain
+unchanged. The correction changes no concurrency, deadline, limit, topology,
+claim, or release posture, and it does not freeze Take 18. A fresh exact
+repository-scale timing diagnostic at its committed source is still required.
+
 ```sh
 cd ~/phebs
 

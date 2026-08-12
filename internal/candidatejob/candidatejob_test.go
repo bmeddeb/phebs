@@ -1448,6 +1448,270 @@ func TestWorkerExactPointerReuseRepairsFanoutWithoutStrictOpen(
 	}
 }
 
+func TestCurrentPublicationCacheSingleFlightsAndReplacesGeneration(t *testing.T) {
+	t.Parallel()
+	cache := &currentPublicationCache{}
+	stateA := candidate.State{
+		Repository: "example.invalid/cache", GenerationDigest: "sha256:" + strings.Repeat("a", 64),
+		ManifestDigest: "sha256:" + strings.Repeat("1", 64),
+	}
+	stateB := stateA
+	stateB.GenerationDigest = "sha256:" + strings.Repeat("b", 64)
+	stateB.ManifestDigest = "sha256:" + strings.Repeat("2", 64)
+	publicationA, publicationB := &candidate.Publication{}, &candidate.Publication{}
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var callsMu sync.Mutex
+	calls := 0
+	opener := func(ctx context.Context) (*candidate.Publication, error) {
+		callsMu.Lock()
+		calls++
+		if calls == 1 {
+			close(started)
+		}
+		callsMu.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-release:
+			return publicationA, nil
+		}
+	}
+
+	const readers = 32
+	results := make(chan *candidate.Publication, readers)
+	errorsSeen := make(chan error, readers)
+	for range readers {
+		go func() {
+			publication, err := cache.open(t.Context(), stateA, opener)
+			results <- publication
+			errorsSeen <- err
+		}()
+	}
+	<-started
+	close(release)
+	for range readers {
+		if err := <-errorsSeen; err != nil {
+			t.Fatal(err)
+		}
+		if publication := <-results; publication != publicationA {
+			t.Fatalf("single-flight publication = %p, want %p", publication, publicationA)
+		}
+	}
+	callsMu.Lock()
+	if calls != 1 {
+		t.Fatalf("strict opens = %d, want 1", calls)
+	}
+	callsMu.Unlock()
+
+	openedB, err := cache.open(t.Context(), stateB, func(context.Context) (*candidate.Publication, error) {
+		return publicationB, nil
+	})
+	if err != nil || openedB != publicationB {
+		t.Fatalf("replacement publication = %p, %v", openedB, err)
+	}
+	cache.mu.Lock()
+	if len(cache.entries) != 1 || cache.entries[stateA.Repository].state != stateB ||
+		cache.entries[stateA.Repository].publication != publicationB {
+		t.Fatalf("retained replacement = %+v", cache.entries[stateA.Repository])
+	}
+	cache.mu.Unlock()
+}
+
+func TestCurrentPublicationCacheCancellationAndFailureEviction(t *testing.T) {
+	t.Parallel()
+	state := candidate.State{
+		Repository:       "example.invalid/cache-failure",
+		GenerationDigest: "sha256:" + strings.Repeat("c", 64),
+	}
+	publication := &candidate.Publication{}
+
+	t.Run("waiting caller cancellation does not cancel shared open", func(t *testing.T) {
+		cache := &currentPublicationCache{}
+		started := make(chan struct{})
+		release := make(chan struct{})
+		first := make(chan error, 1)
+		go func() {
+			_, err := cache.open(t.Context(), state, func(ctx context.Context) (*candidate.Publication, error) {
+				close(started)
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-release:
+					return publication, nil
+				}
+			})
+			first <- err
+		}()
+		<-started
+		waitCtx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if opened, err := cache.open(waitCtx, state, func(context.Context) (*candidate.Publication, error) {
+			t.Fatal("canceled waiter started a second strict open")
+			return nil, nil
+		}); opened != nil || !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled waiter = %p, %v", opened, err)
+		}
+		close(release)
+		if err := <-first; err != nil {
+			t.Fatal(err)
+		}
+		if opened, err := cache.open(t.Context(), state, func(context.Context) (*candidate.Publication, error) {
+			t.Fatal("completed shared open was not retained")
+			return nil, nil
+		}); err != nil || opened != publication {
+			t.Fatalf("retained publication = %p, %v", opened, err)
+		}
+	})
+
+	t.Run("failed opener is evicted", func(t *testing.T) {
+		cache := &currentPublicationCache{}
+		injected := errors.New("injected strict-open failure")
+		if opened, err := cache.open(t.Context(), state, func(context.Context) (*candidate.Publication, error) {
+			return nil, injected
+		}); opened != nil || !errors.Is(err, injected) {
+			t.Fatalf("failed open = %p, %v", opened, err)
+		}
+		cache.mu.Lock()
+		retained := len(cache.entries)
+		cache.mu.Unlock()
+		if retained != 0 {
+			t.Fatalf("failed cache retained %d entries", retained)
+		}
+		if opened, err := cache.open(t.Context(), state, func(context.Context) (*candidate.Publication, error) {
+			return publication, nil
+		}); err != nil || opened != publication {
+			t.Fatalf("retry publication = %p, %v", opened, err)
+		}
+	})
+}
+
+func TestProviderOpenCurrentPublicationSharesValidationAndRefencesPointer(t *testing.T) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+	}}
+	extractors := []extract.Extractor{policyExtractor{
+		domain: "proto-contract", version: "proto-v1", requiredSuffix: ".proto",
+	}}
+	worker, provider, err := New(dataDir, state, extractors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.Handle(t.Context(), store.Job{Kind: store.JobCandidate, Target: repository}); err != nil {
+		t.Fatal(err)
+	}
+	strictOpens := 0
+	strictOpen := provider.open
+	provider.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		return strictOpen(ctx, root, expected)
+	}
+	first, err := provider.OpenCurrentPublication(t.Context(), repository, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := provider.OpenCurrentPublication(t.Context(), repository, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second || strictOpens != 1 {
+		t.Fatalf("shared publications = %p/%p, strict opens = %d", first, second, strictOpens)
+	}
+
+	state.mu.Lock()
+	state.pointerFailure = errors.New("injected pointer fence failure")
+	state.mu.Unlock()
+	if opened, err := provider.OpenCurrentPublication(t.Context(), repository, nil); opened != nil ||
+		err == nil || !strings.Contains(err.Error(), "injected pointer fence failure") {
+		t.Fatalf("failed pointer fence = %p, %v", opened, err)
+	}
+	if strictOpens != 1 {
+		t.Fatalf("failed pointer fence performed %d strict opens", strictOpens)
+	}
+	state.mu.Lock()
+	state.pointerFailure = nil
+	state.mu.Unlock()
+
+	// A restarted provider has no process-local cache and reconstructs it from
+	// the exact persisted pointer and immutable publication.
+	_, restarted, err := New(dataDir, state, extractors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartOpens := 0
+	restartOpen := restarted.open
+	restarted.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		restartOpens++
+		return restartOpen(ctx, root, expected)
+	}
+	if _, err := restarted.OpenCurrentPublication(t.Context(), repository, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := restarted.OpenCurrentPublication(t.Context(), repository, nil); err != nil {
+		t.Fatal(err)
+	}
+	if restartOpens != 1 {
+		t.Fatalf("restart strict opens = %d, want 1", restartOpens)
+	}
+
+	_, staleProvider, err := New(dataDir, state, extractors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.mu.Lock()
+	originalPointer := *state.pointer
+	state.mu.Unlock()
+	staleOpens := 0
+	staleOpen := staleProvider.open
+	staleProvider.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		staleOpens++
+		publication, openErr := staleOpen(ctx, root, expected)
+		if openErr == nil && staleOpens == 1 {
+			replacement := originalPointer
+			replacement.GenerationDigest = "sha256:" + strings.Repeat("d", 64)
+			replacement.ManifestDigest = "sha256:" + strings.Repeat("e", 64)
+			state.mu.Lock()
+			state.pointer = &replacement
+			state.mu.Unlock()
+		}
+		return publication, openErr
+	}
+	if opened, err := staleProvider.OpenCurrentPublication(t.Context(), repository, nil); opened != nil ||
+		err == nil || !strings.Contains(err.Error(), "changed during strict open") {
+		t.Fatalf("stale strict open = %p, %v", opened, err)
+	}
+	staleProvider.current.mu.Lock()
+	retained := len(staleProvider.current.entries)
+	staleProvider.current.mu.Unlock()
+	if retained != 0 {
+		t.Fatalf("stale strict open retained %d cache entries", retained)
+	}
+	state.mu.Lock()
+	state.pointer = &originalPointer
+	state.mu.Unlock()
+	if _, err := staleProvider.OpenCurrentPublication(t.Context(), repository, nil); err != nil {
+		t.Fatal(err)
+	}
+	if staleOpens != 2 {
+		t.Fatalf("stale recovery strict opens = %d, want 2", staleOpens)
+	}
+}
+
 func TestWorkerRepairsMemberChangedAfterControlFingerprint(
 	t *testing.T,
 ) {
