@@ -115,6 +115,7 @@ type testExtractionRunStore struct {
 	aborts     int
 	limits     []store.PartitionedExtractionRunLimits
 	candidates []string
+	published  map[string]store.PartitionedExtractionDomain
 }
 
 func (state *testExtractionRunStore) BeginPartitionedExtractionRun(
@@ -142,6 +143,20 @@ func (state *testExtractionRunStore) AbortExtractionRun(context.Context, string)
 	defer state.mu.Unlock()
 	state.aborts++
 	return nil
+}
+
+func (state *testExtractionRunStore) GetPartitionedExtractionDomain(
+	_ context.Context,
+	_, domain string,
+) (*store.PartitionedExtractionDomain, error) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	publication, ok := state.published[domain]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	copy := publication
+	return &copy, nil
 }
 
 func (state *testExtractionRunStore) counts() (int, int) {
@@ -270,6 +285,107 @@ func TestReconcilerReservesBeforeContentAndReusesRunOnRestart(t *testing.T) {
 	}
 	if fullCandidateReads != 1 || fullAuthorityReads != 1 {
 		t.Fatalf("candidate-stale shallow reuse entered full validation = %d/%d", fullCandidateReads, fullAuthorityReads)
+	}
+}
+
+func TestReconcilerRestoresExcludedControlsFromCurrentStoreAuthority(t *testing.T) {
+	repository := "example.invalid/restore-current"
+	fixture := buildCandidateFixtureAt(
+		t, repository, filepath.Join(t.TempDir(), "repository"), t.TempDir(),
+	)
+	sourceDigest := "sha256:" + strings.Repeat("3", 64)
+	observationDigest := "sha256:" + strings.Repeat("4", 64)
+	testPlan := buildTestPlan(t, sourceDigest, true)
+	runtime, schedules, source, _, publisher, _, _ := newRuntimeFixture(t, testPlan)
+	runtime.Root = t.TempDir()
+	evidence := &testExtractionRunStore{}
+	reconciler := &Reconciler{
+		Root: runtime.Root, CandidateRoot: fixture.candidateDirectory,
+		Runtime: runtime, Evidence: evidence,
+		OpenCandidate: func(context.Context, string) (*candidate.Publication, error) {
+			return fixture.publication, nil
+		},
+		Authority: func(context.Context, string) (string, string, error) {
+			return sourceDigest, observationDigest, nil
+		},
+		CandidateReference: func(context.Context, string) (candidate.State, error) {
+			return fixture.publication.State(), nil
+		},
+		AuthorityReference: func(context.Context, string) (string, string, error) {
+			return sourceDigest, observationDigest, nil
+		},
+	}
+	generation, err := reconciler.Reconcile(t.Context(), repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Handle(t.Context(), currentChunk(t, schedules, repository, 0)); err != nil {
+		t.Fatal(err)
+	}
+	schedules.settle(repository, 0)
+	created, err := runtime.openGeneration(
+		runtime.generationDirectory(repository, generation), repository, generation,
+	)
+	if err != nil || len(created.Domains) != 1 {
+		t.Fatalf("created generation = %+v, %v", created, err)
+	}
+	domain, err := runtime.openDomainPlan(
+		runtime.generationDirectory(repository, generation), created.Domains[0],
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := runtime.Current(t.Context(), repository, domain.Plan.Domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planRaw, err := canonical(domain.Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootRaw, err := canonical(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence.published = map[string]store.PartitionedExtractionDomain{
+		domain.Plan.Domain: {
+			Schema:     store.PartitionedExtractionDomainSchema,
+			Repository: repository, Domain: domain.Plan.Domain, RunID: domain.RunID,
+			PlanDigest: domain.Plan.Digest, RootDigest: root.Digest,
+			CandidateDigest: domain.Plan.CandidateManifestDigest,
+			SourceDigest:    sourceDigest, ObservationDigest: observationDigest,
+			Facts: root.Totals.Facts, Rows: root.Totals.Rows,
+			References: root.Totals.References,
+			Plan:       string(planRaw), Root: string(rootRaw),
+		},
+	}
+	if err := os.RemoveAll(runtime.Root); err != nil {
+		t.Fatal(err)
+	}
+	restarted := &Runtime{
+		Root: runtime.Root, Store: schedules, Source: source,
+		Executor: runtime.Executor, Publisher: publisher, Fence: runtime.Fence,
+	}
+	reconciler.Runtime = restarted
+	restored, err := reconciler.Reconcile(t.Context(), repository)
+	if err != nil || restored != generation {
+		t.Fatalf("restored generation = %q, %v, want %q", restored, err, generation)
+	}
+	if begins, aborts := evidence.counts(); begins != 1 || aborts != 0 {
+		t.Fatalf("restore minted evidence runs = %d begins, %d aborts", begins, aborts)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 {
+		t.Fatalf("restore repeated source work = %d/%d", acquired, released)
+	}
+	status, err := restarted.Status(t.Context(), repository, generation)
+	if err != nil || len(status.Domains) != 1 ||
+		status.Domains[0].Settled != status.Domains[0].Expected ||
+		!status.Domains[0].Current {
+		t.Fatalf("restored status = %+v, %v", status, err)
+	}
+	restoredRoot, err := restarted.Current(t.Context(), repository, domain.Plan.Domain)
+	if err != nil || restoredRoot.Digest != root.Digest {
+		t.Fatalf("restored root = %+v, %v", restoredRoot, err)
 	}
 }
 

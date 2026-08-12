@@ -228,16 +228,18 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	repo = *fresh
 
 	indexDir := filepath.Join(ix.DataDir, "index")
-	if focusedindex.IsPublishing(indexDir, repo.Name) {
-		// A prior attempt may have committed the repository row while losing
-		// the SetRepoIndexedState response and the immediate ambiguity reread.
-		// Resolve an existing whole-search transition against durable store
-		// authority before a retry can build over or roll back its marker.
+	// A prior attempt may have committed the repository row while losing the
+	// SetRepoIndexedState response and the immediate ambiguity reread. Archive
+	// restore also deliberately omits reconstructible search lifecycle controls.
+	// Resolve either case against durable store authority before a retry/no-op
+	// can build over or bypass its selected complete publication.
+	storedRevisions := storedWholeRevisions(repo)
+	if len(storedRevisions) > 0 || focusedindex.IsPublishing(indexDir, repo.Name) {
 		if _, recoverErr := focusedindex.RecoverSearchPublication(
-			ctx, indexDir, repo.Name, storedWholeRevisions(repo),
+			ctx, indexDir, repo.Name, storedRevisions,
 		); recoverErr != nil {
 			return fmt.Errorf(
-				"index %s: recover pending search publication: %w",
+				"index %s: recover search publication: %w",
 				repo.Name, recoverErr,
 			)
 		}

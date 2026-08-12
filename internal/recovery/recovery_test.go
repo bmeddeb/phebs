@@ -651,6 +651,13 @@ connections:
 	); err != nil {
 		t.Fatalf("startup index no-op: %v", err)
 	}
+	restoredRoot, err := focusedindex.ReadSearchGenerationRoot(
+		filepath.Join(dataDir, "index"), names[0],
+	)
+	if err != nil || restoredRoot.Current.GenerationDigest != restoredSearch.Digest ||
+		restoredRoot.Prior != nil {
+		t.Fatalf("restored search lifecycle root = %+v, %v", restoredRoot, err)
+	}
 	afterSearch, err := focusedindex.ValidateRepositorySearchGeneration(
 		ctx, filepath.Join(dataDir, "index"), names[0], revisions,
 	)

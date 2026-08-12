@@ -59,6 +59,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/search"
@@ -83,6 +84,127 @@ const (
 	t344CatalogEncodedBytes      = 3401
 	t344CatalogEncodedSHA256     = "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94"
 )
+
+var errPartitionAuthorityPending = errors.New("partitioned extraction authority pending")
+
+func deferPendingPartitionAuthority(err error) (error, bool) {
+	if errors.Is(err, errPartitionAuthorityPending) {
+		return nil, true
+	}
+	return err, false
+}
+
+func afterResolverPublication(
+	ctx context.Context,
+	repository string,
+	reconcile func(context.Context, string) error,
+	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
+	callerReady bool,
+) error {
+	var reconcileErr error
+	if reconcile != nil {
+		reconcileErr = reconcile(ctx, repository)
+	}
+	if !callerReady {
+		return reconcileErr
+	}
+	_, enqueueErr := enqueue(ctx, store.JobCallerLeaf, repository, false)
+	return errors.Join(reconcileErr, enqueueErr)
+}
+
+func afterServiceCatalogPublication(
+	ctx context.Context,
+	repository string,
+	reconcile func(context.Context, string) error,
+	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
+	candidateReady bool,
+) error {
+	var reconcileErr error
+	if reconcile != nil {
+		reconcileErr = reconcile(ctx, repository)
+	}
+	if !candidateReady {
+		return reconcileErr
+	}
+	_, enqueueErr := enqueue(ctx, store.JobResolverCatalog, repository, false)
+	return errors.Join(reconcileErr, enqueueErr)
+}
+
+func afterPartitionExtractionSettlement(
+	ctx context.Context,
+	repository string,
+	reconcile func(context.Context, string) error,
+	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
+	resolverReady bool,
+	callerReady bool,
+) error {
+	var reconcileErr error
+	if reconcile != nil {
+		reconcileErr = reconcile(ctx, repository)
+	}
+	var resolverErr error
+	if resolverReady {
+		_, resolverErr = enqueue(
+			ctx, store.JobResolverCatalog, repository, false,
+		)
+	}
+	var callerErr error
+	if callerReady {
+		_, callerErr = enqueue(ctx, store.JobCallerLeaf, repository, false)
+	}
+	return errors.Join(reconcileErr, resolverErr, callerErr)
+}
+
+func allPartitionDomainsCurrent(
+	ctx context.Context,
+	domains []string,
+	current func(context.Context, string) error,
+) bool {
+	if current == nil || len(domains) == 0 {
+		return false
+	}
+	for _, domain := range domains {
+		if domain == "" || current(ctx, domain) != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func allPartitionDomainsMatch(
+	ctx context.Context,
+	domains []string,
+	candidateManifest, sourceGeneration, observationGeneration string,
+	current func(context.Context, string) (candidate.DownstreamDomainAuthority, error),
+) bool {
+	if current == nil || len(domains) == 0 || candidateManifest == "" ||
+		sourceGeneration == "" || observationGeneration == "" {
+		return false
+	}
+	return allPartitionDomainsCurrent(ctx, domains, func(
+		domainCtx context.Context, domain string,
+	) error {
+		authority, err := current(domainCtx, domain)
+		if err != nil {
+			return err
+		}
+		if authority.Domain != domain ||
+			authority.CandidateManifestDigest != candidateManifest ||
+			authority.SourceGenerationDigest != sourceGeneration ||
+			authority.ObservationGenerationDigest != observationGeneration {
+			return store.ErrGenerationStale
+		}
+		return nil
+	})
+}
+
+func legacyExtractionRequired(
+	repository string,
+	analysisUnits map[string]analysisunit.Scope,
+) bool {
+	_, configured := analysisUnits[repository]
+	return configured
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -378,6 +500,7 @@ func serve(args []string) error {
 	observationRuntime := &observationpublication.Runtime{
 		DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
 		AcquireTransition: acquireObservationTransition,
+		InventoryV2:       true,
 		Admit: func(admitCtx context.Context) error {
 			capacity, admissionErr := capacityGate.Check(admitCtx, 0)
 			lifecycleStatus.ObserveCapacity(capacity, admissionErr)
@@ -670,7 +793,16 @@ func serve(args []string) error {
 		DataDir: cfg.Server.DataDir, Store: st, Selections: cfg.ServiceCatalogs,
 	}
 	if relationshipRuntime != nil {
-		catalogReconciler.OnPublished = reconcileRelationship
+		catalogReconciler.OnPublished = func(
+			publishedCtx context.Context,
+			repository string,
+		) error {
+			return afterServiceCatalogPublication(
+				publishedCtx, repository, reconcileRelationship,
+				st.EnqueuePending,
+				candidatePublicationPresent(cfg.Server.DataDir, repository),
+			)
+		}
 	}
 	serviceCatalogReport, err := catalogReconciler.Reconcile(ctx)
 	if err != nil {
@@ -803,7 +935,14 @@ func serve(args []string) error {
 					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
 				},
 				Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
-					return observationRuntime.HandlePlanning(workerCtx, chunk)
+					switch chunk.Stage {
+					case observationpublication.PlanningScheduleStage:
+						return observationRuntime.HandlePlanning(workerCtx, chunk)
+					case observationpublication.InventoryScheduleStageV2:
+						return observationRuntime.HandleInventoryV2(workerCtx, chunk)
+					default:
+						return store.WithTerminal(errors.New("unknown observation IO stage"))
+					}
 				},
 			},
 			store.GenerationResourceCPU: {
@@ -937,6 +1076,14 @@ func serve(args []string) error {
 			authorityCtx context.Context,
 			repository string,
 		) (string, string, error) {
+			if _, rootErr := observationpublication.ReadInventoryPublicationRootV2(
+				filepath.Join(cfg.Server.DataDir, "observations"), repository,
+			); rootErr != nil {
+				if errors.Is(rootErr, os.ErrNotExist) {
+					return "", "", fmt.Errorf("%w: %v", errPartitionAuthorityPending, rootErr)
+				}
+				return "", "", rootErr
+			}
 			authority, authorityErr := observationpublication.CurrentInventoryAuthorityReferenceV2(
 				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
 			)
@@ -948,7 +1095,54 @@ func serve(args []string) error {
 			Root: partitionRoot, Store: st,
 			Executor:  &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
 			Publisher: extractionpublication.StorePublisher{Store: st},
-			OnSettled: reconcileRelationship,
+		}
+		partitionDomains := make([]string, len(exs))
+		for index, extractor := range exs {
+			partitionDomains[index] = extractor.Domain()
+		}
+		partitionPublicationsCurrent := func(
+			currentCtx context.Context,
+			repository string,
+		) bool {
+			candidateState, candidateErr := readPartitionCandidateReference(
+				currentCtx, repository,
+			)
+			source, observation, authorityErr := readPartitionFenceAuthority(
+				currentCtx, repository,
+			)
+			if candidateErr != nil || authorityErr != nil {
+				return false
+			}
+			return allPartitionDomainsMatch(
+				currentCtx, partitionDomains, candidateState.ManifestDigest,
+				source, observation,
+				func(
+					domainCtx context.Context, domain string,
+				) (candidate.DownstreamDomainAuthority, error) {
+					// Store publication is the downstream authority for every
+					// settled disposition, including explicit empty, terminal,
+					// and retryable domain roots that intentionally have no
+					// successful filesystem current pointer.
+					return extractionpublication.CurrentDomainAuthority(
+						domainCtx, st, repository, domain,
+					)
+				},
+			)
+		}
+		partitionRuntime.OnSettled = func(
+			settledCtx context.Context,
+			repository string,
+		) error {
+			partitionsCurrent := partitionPublicationsCurrent(
+				settledCtx, repository,
+			)
+			return afterPartitionExtractionSettlement(
+				settledCtx, repository, reconcileRelationship,
+				st.EnqueuePending,
+				resolverRegistry.Enabled() && partitionsCurrent,
+				callerRegistry.Enabled() && partitionsCurrent &&
+					resolverPublicationPresent(cfg.Server.DataDir, repository),
+			)
 		}
 		partitionReconciler := &extractionpublication.Reconciler{
 			Root: partitionRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
@@ -985,8 +1179,10 @@ func serve(args []string) error {
 			},
 		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
-		if err := enqueueCandidateBackfill(
-			ctx, st, candidateWorker.PolicyDigest(),
+		if err := enqueueCandidateBackfillWithReadiness(
+			ctx, st, candidateWorker.PolicyDigest(), func(repository string) bool {
+				return repositoryMirrorPresent(cfg.Server.DataDir, repository)
+			},
 		); err != nil {
 			return err
 		}
@@ -999,14 +1195,31 @@ func serve(args []string) error {
 				return fmt.Errorf("configure resolver materialization: %w", err)
 			}
 			if relationshipRuntime != nil {
-				resolverWorker.OnPublished = reconcileRelationship
-			}
-			if err := resolvermaterialize.EnqueueBackfill(ctx, st); err != nil {
-				return err
+				resolverWorker.OnPublished = func(
+					publishedCtx context.Context,
+					repository string,
+				) error {
+					return afterResolverPublication(
+						publishedCtx, repository, reconcileRelationship,
+						st.EnqueuePending,
+						callerRegistry.Enabled() &&
+							partitionPublicationsCurrent(publishedCtx, repository),
+					)
+				}
 			}
 			resolverRunner = &store.Runner{
 				Store: st, Kind: store.JobResolverCatalog,
-				Handle: resolverWorker.Handle, Interval: cfg.Sync.Interval(),
+				Handle: func(jobCtx context.Context, job store.Job) error {
+					if !candidatePublicationPresent(cfg.Server.DataDir, job.Target) {
+						diagnostics.Logf(
+							"resolver materialization deferred until candidate publication: repository=%q",
+							job.Target,
+						)
+						return nil
+					}
+					return resolverWorker.Handle(jobCtx, job)
+				},
+				Interval:    cfg.Sync.Interval(),
 				Diagnostics: cfg.Diagnostics.Jobs,
 			}
 		}
@@ -1018,12 +1231,21 @@ func serve(args []string) error {
 			if err != nil {
 				return fmt.Errorf("configure caller-leaf execution: %w", err)
 			}
-			if err := callerexecute.EnqueueBackfill(ctx, st); err != nil {
-				return err
-			}
 			callerRunner = &store.Runner{
 				Store: st, Kind: store.JobCallerLeaf,
-				Handle: callerWorker.Handle, Interval: cfg.Sync.Interval(),
+				Handle: func(jobCtx context.Context, job store.Job) error {
+					if !candidatePublicationPresent(cfg.Server.DataDir, job.Target) ||
+						!resolverPublicationPresent(cfg.Server.DataDir, job.Target) ||
+						!partitionPublicationsCurrent(jobCtx, job.Target) {
+						diagnostics.Logf(
+							"caller execution deferred until candidate and resolver publications: repository=%q",
+							job.Target,
+						)
+						return nil
+					}
+					return callerWorker.Handle(jobCtx, job)
+				},
+				Interval:    cfg.Sync.Interval(),
 				Diagnostics: cfg.Diagnostics.Jobs,
 			}
 		}
@@ -1036,9 +1258,36 @@ func serve(args []string) error {
 			jobCtx context.Context,
 			job store.Job,
 		) error {
+			if !candidatePublicationPresent(cfg.Server.DataDir, job.Target) {
+				diagnostics.Logf(
+					"extraction deferred until candidate publication: repository=%q",
+					job.Target,
+				)
+				return nil
+			}
+			// Focused analysis units still publish through the T30 legacy writer.
+			// Whole-repository generations moved to partitioned authority in
+			// T40.10-T40.12; running both writers would make the legacy worker hold
+			// the repository lock across the entire corpus and starve the v2 plan.
+			if legacyExtractionRequired(job.Target, analysisUnits) {
+				return worker.Handle(jobCtx, job)
+			}
 			_, partitionErr := partitionReconciler.Reconcile(jobCtx, job.Target)
-			legacyErr := worker.Handle(jobCtx, job)
-			return errors.Join(partitionErr, legacyErr)
+			var deferred bool
+			partitionErr, deferred = deferPendingPartitionAuthority(partitionErr)
+			if deferred {
+				diagnostics.Logf(
+					"partitioned extraction deferred until observation v2 authority: repository=%q",
+					job.Target,
+				)
+			}
+			if partitionErr != nil {
+				diagnostics.Logf(
+					"partitioned extraction reconcile failed: repository=%q error=%v",
+					job.Target, partitionErr,
+				)
+			}
+			return partitionErr
 		},
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		runBackground(func() { exRunner.Run(ctx) })
@@ -2280,8 +2529,22 @@ func enqueueCandidateBackfill(
 	st candidateBackfillState,
 	currentPolicyDigest string,
 ) error {
+	return enqueueCandidateBackfillWithReadiness(
+		ctx, st, currentPolicyDigest, func(string) bool { return true },
+	)
+}
+
+func enqueueCandidateBackfillWithReadiness(
+	ctx context.Context,
+	st candidateBackfillState,
+	currentPolicyDigest string,
+	ready func(string) bool,
+) error {
 	if currentPolicyDigest == "" {
 		return errors.New("backfill candidate jobs: current policy digest is required")
+	}
+	if ready == nil {
+		return errors.New("backfill candidate jobs: mirror readiness is required")
 	}
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
@@ -2292,6 +2555,9 @@ func enqueueCandidateBackfill(
 			return fmt.Errorf("backfill candidate jobs: %w", err)
 		}
 		if repo.IndexedCommitHash == "" || repo.Deleting {
+			continue
+		}
+		if !ready(repo.Name) {
 			continue
 		}
 		publication, publicationErr :=
@@ -2344,6 +2610,32 @@ func enqueueCandidateBackfill(
 		}
 	}
 	return nil
+}
+
+func repositoryMirrorPresent(dataDir, repository string) bool {
+	directory, err := phebssync.SafeRepoDir(dataDir, repository)
+	if err != nil {
+		return false
+	}
+	info, err := os.Stat(directory)
+	return err == nil && info.IsDir()
+}
+
+func candidatePublicationPresent(dataDir, repository string) bool {
+	return regularFilePresent(filepath.Join(
+		candidatejob.CandidateRoot(dataDir), candidate.ManifestName(repository),
+	))
+}
+
+func resolverPublicationPresent(dataDir, repository string) bool {
+	return regularFilePresent(filepath.Join(
+		dataDir, "resolver-catalogs", resolvercatalogid.ManifestName(repository),
+	))
+}
+
+func regularFilePresent(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.Mode().IsRegular()
 }
 
 // runEvidenceSweepPass reclaims a bounded burst of fixed-size durable steps.

@@ -223,8 +223,14 @@ func validateSearchGenerationRef(ref SearchGenerationRef) error {
 }
 
 func readSearchGenerationReceipt(directory, repository string) (SearchGenerationReceipt, error) {
+	return readSearchGenerationReceiptFile(
+		filepath.Join(directory, searchGenerationReceiptName), repository,
+	)
+}
+
+func readSearchGenerationReceiptFile(path, repository string) (SearchGenerationReceipt, error) {
 	var receipt SearchGenerationReceipt
-	if err := readControlFile(filepath.Join(directory, searchGenerationReceiptName), &receipt); err != nil {
+	if err := readControlFile(path, &receipt); err != nil {
 		return SearchGenerationReceipt{}, err
 	}
 	if receipt.Schema != SearchGenerationReceiptSchema || receipt.Repository != repository ||
@@ -249,6 +255,61 @@ func readSearchGenerationReceipt(directory, repository string) (SearchGeneration
 		return SearchGenerationReceipt{}, errors.New("invalid go-git search reader accounting")
 	}
 	return receipt, nil
+}
+
+func searchGenerationArchiveReceiptName(repository string) string {
+	return "phebs-search-receipt-" + repositoryKey(repository) + ".json"
+}
+
+func validateFlatSearchGenerationReceipt(
+	indexDir, repository string,
+	search repositoryindex.SearchManifest,
+) (SearchGenerationReceipt, error) {
+	receipt, err := readSearchGenerationReceiptFile(
+		filepath.Join(indexDir, searchGenerationArchiveReceiptName(repository)), repository,
+	)
+	if err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	source, err := repositoryindex.ReadSourceManifest(indexDir, repository)
+	if err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	whole, err := ReadWholeManifest(indexDir, repository, search.Revisions)
+	if err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	files := searchGenerationFiles(source, whole)
+	shards := make(map[string]bool, len(whole.Members))
+	for _, member := range whole.Members {
+		shards[member.Name] = true
+	}
+	logical, _, _, err := measureSearchGeneration(indexDir, files, shards)
+	if err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	offered, err := filesOffered(source)
+	if err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	if receipt.SearchDigest != search.Digest || receipt.SourceDigest != source.Digest ||
+		!sameSearchRevisions(receipt.Revisions, search.Revisions) ||
+		receipt.FilesOffered != offered || receipt.LogicalBytes != logical ||
+		receipt.ShardCount != len(whole.Members) || receipt.FileCount != len(files) {
+		return SearchGenerationReceipt{}, errors.New("archived search receipt differs from flat authority")
+	}
+	return receipt, nil
+}
+
+func removeSearchGenerationArchiveReceipt(indexDir, repository string) error {
+	err := os.Remove(filepath.Join(indexDir, searchGenerationArchiveReceiptName(repository)))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return syncDirectory(indexDir)
 }
 
 func searchGenerationFiles(
@@ -704,6 +765,21 @@ func adoptLegacySearchGeneration(
 	if err != nil {
 		return nil, err
 	}
+	var archivedReceipt *SearchGenerationReceipt
+	archiveReceiptPath := filepath.Join(
+		indexDir, searchGenerationArchiveReceiptName(repository),
+	)
+	if _, statErr := os.Lstat(archiveReceiptPath); statErr == nil {
+		receipt, receiptErr := validateFlatSearchGenerationReceipt(
+			indexDir, repository, search,
+		)
+		if receiptErr != nil {
+			return nil, receiptErr
+		}
+		archivedReceipt = &receipt
+	} else if !errors.Is(statErr, os.ErrNotExist) {
+		return nil, statErr
+	}
 	root := SearchGenerationRootDirectory(indexDir)
 	repositoryDirectory := searchGenerationRepositoryDirectory(indexDir, repository)
 	for _, directory := range []string{root, repositoryDirectory} {
@@ -764,12 +840,17 @@ func adoptLegacySearchGeneration(
 	if err != nil {
 		return nil, err
 	}
-	receipt := SearchGenerationReceipt{
-		Schema: SearchGenerationReceiptSchema, Repository: repository,
-		SearchDigest: search.Digest, SourceDigest: source.Digest,
-		Revisions: slices.Clone(search.Revisions), BlobReaderMode: SearchBlobReaderLegacy,
-		FilesOffered: offered, LogicalBytes: logical, AllocatedBytes: allocated,
-		AllocatedState: allocatedState, ShardCount: len(whole.Members), FileCount: len(files),
+	var receipt SearchGenerationReceipt
+	if archivedReceipt != nil {
+		receipt = *archivedReceipt
+	} else {
+		receipt = SearchGenerationReceipt{
+			Schema: SearchGenerationReceiptSchema, Repository: repository,
+			SearchDigest: search.Digest, SourceDigest: source.Digest,
+			Revisions: slices.Clone(search.Revisions), BlobReaderMode: SearchBlobReaderLegacy,
+			FilesOffered: offered, LogicalBytes: logical, AllocatedBytes: allocated,
+			AllocatedState: allocatedState, ShardCount: len(whole.Members), FileCount: len(files),
+		}
 	}
 	if err := WriteControlFile(filepath.Join(stage, searchGenerationReceiptName), receipt); err != nil {
 		return nil, err
@@ -927,7 +1008,43 @@ func RecoverSearchPublication(
 ) (bool, error) {
 	marker, err := readSearchGenerationMarker(indexDir, repository)
 	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
+		root, rootErr := ReadSearchGenerationRoot(indexDir, repository)
+		if rootErr == nil {
+			if !sameSearchRevisions(root.Current.Revisions, revisions) {
+				return false, ErrSearchPublicationRevisionMismatch
+			}
+			return false, removeSearchGenerationArchiveReceipt(indexDir, repository)
+		}
+		if !errors.Is(rootErr, os.ErrNotExist) {
+			return false, rootErr
+		}
+		// Backup deliberately retains only the selected complete flat search
+		// publication. Reconstitute its derived lifecycle root when the durable
+		// repository row selects that exact revision set. An unindexed row owns
+		// no authority and therefore cannot adopt leftover flat bytes.
+		if len(revisions) == 0 {
+			return false, nil
+		}
+		legacy, adoptErr := adoptLegacySearchGeneration(ctx, indexDir, repository)
+		if adoptErr != nil {
+			return false, adoptErr
+		}
+		if legacy == nil {
+			return false, nil
+		}
+		if !sameSearchRevisions(legacy.Revisions, revisions) {
+			return false, ErrSearchPublicationRevisionMismatch
+		}
+		root = SearchGenerationRoot{
+			Schema: SearchGenerationRootSchema, Repository: repository, Current: *legacy,
+		}
+		if err := writeSearchGenerationRoot(indexDir, root); err != nil {
+			return false, err
+		}
+		if err := removeSearchGenerationArchiveReceipt(indexDir, repository); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 	if err != nil {
 		return false, err

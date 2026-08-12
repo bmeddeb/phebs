@@ -38,6 +38,82 @@ var (
 	ErrGenerationExhausted = errors.New("generation chunk attempts exhausted")
 )
 
+const generationResourceClassMigrationVersion = "t40.10-generation-resource-class-v1"
+
+type generationResourceClassMigrationState struct {
+	Version string `json:"version"`
+}
+
+func generationResourceClassMigrationID() models.RecordID {
+	return models.NewRecordID("store_migration", "generation_resource_class")
+}
+
+// migrateGenerationResourceClasses adds the extraction-only worker class to
+// stores created before partition execution was wired into the production
+// scheduler. The completion marker keeps steady-state startup to one point
+// read and prevents an unknown future schema generation from being replaced.
+func (s *Surreal) migrateGenerationResourceClasses(ctx context.Context) error {
+	complete, err := s.generationResourceClassMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate generation resource classes: %w", err)
+	}
+	if complete {
+		return nil
+	}
+	results, err := surrealdb.Query[any](ctx, s.db, `
+DEFINE FIELD OVERWRITE resource_class ON generation_schedule TYPE string
+	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+DEFINE FIELD OVERWRITE resource_class ON generation_schedule_chunk TYPE string
+	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+UPSERT $marker SET version = $version, completed_at = time::now() RETURN NONE;`, map[string]any{
+		"marker":  generationResourceClassMigrationID(),
+		"version": generationResourceClassMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate generation resource classes: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate generation resource classes statement %d: %s",
+				index, result.Error.Message,
+			)
+		}
+	}
+	complete, err = s.generationResourceClassMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate generation resource classes: %w", err)
+	}
+	if !complete {
+		return errors.New("migrate generation resource classes: completion marker missing")
+	}
+	return nil
+}
+
+func (s *Surreal) generationResourceClassMigrationComplete(ctx context.Context) (bool, error) {
+	results, err := surrealdb.Query[[]generationResourceClassMigrationState](
+		ctx, s.db, "SELECT version FROM $marker",
+		map[string]any{"marker": generationResourceClassMigrationID()},
+	)
+	if err != nil {
+		return false, err
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return false, fmt.Errorf("read marker statement %d: %s", index, result.Error.Message)
+		}
+		for _, row := range result.Result {
+			if row.Version == generationResourceClassMigrationVersion {
+				return true, nil
+			}
+			if row.Version != "" {
+				return false, fmt.Errorf("unsupported marker %q", row.Version)
+			}
+		}
+	}
+	return false, nil
+}
+
 type GenerationResourceClass string
 
 const (

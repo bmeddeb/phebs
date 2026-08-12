@@ -347,6 +347,9 @@ func stateFromStore(publication store.ResolverCatalogPublication) State {
 		declarations[index] = DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	packs := make([]ResolverPack, len(publication.ResolverPacks))
@@ -377,6 +380,9 @@ func storeFromState(state State) store.ResolverCatalogPublication {
 		declarations[index] = store.ResolverCatalogDeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	packs := make([]store.ResolverCatalogPack, len(state.ResolverPacks))

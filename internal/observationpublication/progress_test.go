@@ -119,6 +119,66 @@ func TestProgressReportsZeroUnsupportedReceipt(t *testing.T) {
 	}
 }
 
+func TestProgressOmitsArchivedSettledPlanningSidecar(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, source := progressFixture(t)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{},
+		AcquireTransition: func(context.Context) (func(), error) {
+			return func() {}, nil
+		},
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("planning enqueue = %q, %v", disposition, err)
+	}
+
+	planDirectory := filepath.Join(t.TempDir(), "plan")
+	if err := os.Mkdir(planDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	partition, err := sourcepartition.Build(t.Context(), sourcepartition.BuildRequest{
+		SourceDirectory: filepath.Join(dataDirectory, "index"), OutputDirectory: planDirectory,
+		Repository: repository, Source: source,
+		Policy: sourcepartition.Policy{
+			Schema: sourcepartition.PolicySchema, Name: "go-source", Version: "1.0.0",
+			IncludeSuffixes: []string{".go"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := sourcepartition.Open(t.Context(), planDirectory, partition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Publish(
+		t.Context(), filepath.Join(dataDirectory, "observations"), repositoryDirectory, plan, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	state.mu.Lock()
+	planning := state.current[PlanningScheduleStage]
+	planning.NextOffset = planning.TotalItems
+	planning.Materialized = planning.TotalChunks
+	planning.Succeeded = planning.TotalChunks
+	planning.Status = store.GenerationScheduleSettled
+	planning.UpdatedAt = planning.UpdatedAt.Add(time.Nanosecond)
+	state.mu.Unlock()
+	if err := os.RemoveAll(filepath.Join(dataDirectory, "observation-plans")); err != nil {
+		t.Fatal(err)
+	}
+
+	progress, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{},
+	}).Read(t.Context(), repository)
+	if err != nil || progress.State != "current" || progress.Publication == nil ||
+		progress.Planning != nil {
+		t.Fatalf("restored progress = %+v, %v", progress, err)
+	}
+}
+
 func TestProgressRetainsSettledRecoveryScheduleAfterMarkerRemoval(t *testing.T) {
 	dataDirectory, repositoryDirectory, repository, source := progressFixture(t)
 	planDirectory := filepath.Join(t.TempDir(), "plan")

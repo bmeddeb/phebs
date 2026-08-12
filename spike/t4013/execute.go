@@ -125,7 +125,7 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
@@ -328,7 +328,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 func (run *execution) verifyFrozenHostToolchain() error {
 	if run.plan.Schema != PlanSchemaV2 && run.plan.Schema != PlanSchemaV3 &&
 		run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10 {
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10 && run.plan.Schema != PlanSchemaV11 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -447,12 +447,12 @@ func (run *execution) startServer(
 	run.trackExpectedMeter(meter)
 	deadline := 90 * time.Second
 	if run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 ||
-		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
+		run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11 {
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (run.plan.Schema == PlanSchemaV3 || run.plan.Schema == PlanSchemaV4 ||
-		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10) &&
+		run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11) &&
 		startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
@@ -640,7 +640,44 @@ func (run *execution) interruption() error {
 		}
 		run.semantic = nil
 	}
-	if err := backupAndReset(run.ctx, run.toolchain, profile, "interruption"); err != nil {
+	backupServer, backupMeter, err := run.startServer(profile, "interruption-backup", &run.semanticA)
+	if err != nil {
+		return err
+	}
+	run.semantic = backupServer
+	backupSnapshot, err := run.waitSnapshot(
+		profile, "a", "interruption-backup", run.revalidationDeadline(), backupServer,
+	)
+	if err != nil {
+		return err
+	}
+	if snapshotAuthority(backupSnapshot) != snapshotAuthority(run.semanticA) {
+		return directRecovery(errors.New("interruption backup restart changed exact authority"))
+	}
+	backup, backupCommandMetrics, err := createLiveBackup(
+		run.ctx, run.toolchain, profile, run.workspace, "interruption",
+	)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	if err != nil {
+		return directRecovery(err)
+	}
+	backupServerMetrics, err := run.finishMeter(backupMeter, &backupSnapshot)
+	if err != nil {
+		return err
+	}
+	backupMetrics, err := mergeConcurrentMetrics(backupServerMetrics, backupCommandMetrics)
+	if err != nil {
+		return err
+	}
+	if err := run.semantic.stop(30 * time.Second); err != nil {
+		return err
+	}
+	run.semantic = nil
+	restoreMetrics, err := restoreBackup(
+		run.ctx, run.toolchain, profile, run.workspace, backup, "interruption",
+	)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, restoreMetrics)
+	if err != nil {
 		return directRecovery(err)
 	}
 	if err := verifyRestoredBoundary(run.ctx, profile, run.semanticA); err != nil {
@@ -677,8 +714,7 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
-	metrics := mergeMetrics(firstMetrics, restartMetrics)
-	metrics.OtherChildren += 2
+	metrics := mergeMetrics(backupMetrics, restoreMetrics, firstMetrics, restartMetrics)
 	run.semanticA = after
 	if err := run.semantic.stop(30 * time.Second); err != nil {
 		return err
@@ -1053,12 +1089,36 @@ func (run *execution) pressure() error {
 
 func (run *execution) archiveRestore() error {
 	profile := run.prepared.Profiles[0]
+	started := time.Now()
+	backupServerMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	if err != nil {
+		return err
+	}
+	run.trackMeter(backupServerMeter)
+	backup, backupCommandMetrics, err := createLiveBackup(
+		run.ctx, run.toolchain, profile, run.workspace, "archive-restore",
+	)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	if err != nil {
+		return directRecovery(err)
+	}
+	backupServerMetrics, err := run.finishMeter(backupServerMeter, &run.structAR)
+	if err != nil {
+		return err
+	}
+	backupMetrics, err := mergeConcurrentMetrics(backupServerMetrics, backupCommandMetrics)
+	if err != nil {
+		return err
+	}
 	if err := run.structural.stop(30 * time.Second); err != nil {
 		return err
 	}
 	run.structural = nil
-	started := time.Now()
-	if err := backupAndReset(run.ctx, run.toolchain, profile, "archive-restore"); err != nil {
+	restoreMetrics, err := restoreBackup(
+		run.ctx, run.toolchain, profile, run.workspace, backup, "archive-restore",
+	)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, restoreMetrics)
+	if err != nil {
 		return directRecovery(err)
 	}
 	if err := verifyRestoredBoundary(run.ctx, profile, run.structAR); err != nil {
@@ -1081,8 +1141,8 @@ func (run *execution) archiveRestore() error {
 	if err != nil {
 		return err
 	}
+	metrics = mergeMetrics(backupMetrics, restoreMetrics, metrics)
 	metrics.WallMS = time.Since(started).Milliseconds()
-	metrics.OtherChildren += 2
 	metrics.DataLogicalBytes, metrics.DataAllocatedBytes, err = measureDataBytes(run.workspace)
 	if err != nil {
 		return err
@@ -1550,8 +1610,8 @@ func (run *execution) recordConvergenceWait(
 	progress convergenceProgressTracker,
 ) {
 	if (run.plan.Schema != PlanSchemaV4 && run.plan.Schema != PlanSchemaV5 && run.plan.Schema != PlanSchemaV6 &&
-		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10) ||
-		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10) ||
+		run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10 && run.plan.Schema != PlanSchemaV11) ||
+		(progress.attempts == 0 && run.plan.Schema != PlanSchemaV6 && run.plan.Schema != PlanSchemaV7 && run.plan.Schema != PlanSchemaV8 && run.plan.Schema != PlanSchemaV9 && run.plan.Schema != PlanSchemaV10 && run.plan.Schema != PlanSchemaV11) ||
 		(progress.attempts == 0 && outcome != "server_exited") {
 		return
 	}
@@ -1570,7 +1630,7 @@ func (run *execution) recordConvergenceWait(
 		FirstProgressSHA256: progress.first.SHA256, LastProgressSHA256: progress.last.SHA256,
 		DeadlineMS: limit.Milliseconds(), WallMS: time.Since(started).Milliseconds(),
 	}
-	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
+	if run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 || run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11 {
 		wait.FirstStage = progress.first.Stage
 		wait.StageChanges = progress.stageChanges
 		wait.LastProgressChangeWallMS = progress.lastProgressChange.Milliseconds()
@@ -1593,7 +1653,7 @@ func (run *execution) recordConvergenceWait(
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
-	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
+	if run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11 {
 		wait.WallMS = max(wait.WallMS, 1)
 		wait.InspectionTransitions = slices.Clone(progress.inspectionTransitions)
 		if progress.last.SHA256 == "" {
@@ -1611,7 +1671,7 @@ func (run *execution) recordConvergenceWait(
 			wait.LastInspectionSHA256 = progress.lastInspectionProbe.SHA256
 			wait.LastInspectionWallMS = progress.lastInspectionAt.Milliseconds()
 		}
-		if run.plan.Schema == PlanSchemaV10 && outcome == "repository_index_terminal" {
+		if (run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11) && outcome == "repository_index_terminal" {
 			wait.RepositoryIndexFailureClass = progress.lastInspectionProbe.RepositoryIndexFailureClass
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
@@ -1621,7 +1681,7 @@ func (run *execution) recordConvergenceWait(
 
 func (run *execution) fullConvergenceDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11 {
 		return time.Duration(run.plan.Safety.FullConvergenceDeadlineMS) * time.Millisecond
 	}
 	return 2 * time.Hour
@@ -1629,7 +1689,7 @@ func (run *execution) fullConvergenceDeadline() time.Duration {
 
 func (run *execution) revalidationDeadline() time.Duration {
 	if run.plan.Schema == PlanSchemaV4 || run.plan.Schema == PlanSchemaV5 || run.plan.Schema == PlanSchemaV6 ||
-		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 {
+		run.plan.Schema == PlanSchemaV7 || run.plan.Schema == PlanSchemaV8 || run.plan.Schema == PlanSchemaV9 || run.plan.Schema == PlanSchemaV10 || run.plan.Schema == PlanSchemaV11 {
 		return time.Duration(run.plan.Safety.RevalidationDeadlineMS) * time.Millisecond
 	}
 	return 20 * time.Minute
@@ -1718,44 +1778,92 @@ func derivedControlPresent(directory string) (bool, error) {
 	return false, nil
 }
 
-func backupAndReset(ctx context.Context, toolchain privateToolchain, profile PreparedProfile, label string) (retErr error) {
+type privateRecoveryBackup struct {
+	path    string
+	logPath string
+}
+
+func createLiveBackup(
+	ctx context.Context,
+	toolchain privateToolchain,
+	profile PreparedProfile,
+	workspace string,
+	label string,
+) (privateRecoveryBackup, PhaseMetrics, error) {
 	base := filepath.Dir(profile.Config)
 	backup := filepath.Join(base, "backup-"+label)
-	prior := profile.DataDir + ".prior-" + label
 	logPath := filepath.Join(base, "recovery-"+label+".log")
+	if ctx == nil || !filepath.IsAbs(workspace) || !isWithin(backup, workspace) ||
+		!isWithin(logPath, workspace) || label == "" || strings.ContainsAny(label, "/\\: ") {
+		return privateRecoveryBackup{}, PhaseMetrics{}, errors.New("T40.13 live backup scope is invalid")
+	}
 	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
-		return err
+		return privateRecoveryBackup{}, PhaseMetrics{}, err
 	}
-	defer func() { retErr = errors.Join(retErr, logFile.Close()) }()
-	run := func(args ...string) error {
-		command := exec.CommandContext(ctx, toolchain.Phebs, args...)
-		command.Stdout, command.Stderr = logFile, logFile
-		command.Env = scrubExecutionEnvironment()
-		if err := command.Run(); err != nil {
-			return errors.New("T40.13 recovery command failed")
-		}
-		return nil
+	command := exec.CommandContext(ctx, toolchain.Phebs, "backup", "-config", profile.Config, "-output", backup)
+	command.Stdout, command.Stderr = logFile, logFile
+	command.Env = scrubExecutionEnvironment()
+	metrics, commandErr := runMeasuredCommand(command, workspace)
+	closeErr := logFile.Close()
+	if commandErr != nil {
+		commandErr = errors.New("T40.13 live backup command failed")
 	}
-	if err := run("backup", "-config", profile.Config, "-output", backup); err != nil {
-		return err
+	if commandErr != nil || closeErr != nil {
+		return privateRecoveryBackup{}, metrics, errors.Join(commandErr, closeErr)
+	}
+	return privateRecoveryBackup{path: backup, logPath: logPath}, metrics, nil
+}
+
+func restoreBackup(
+	ctx context.Context,
+	toolchain privateToolchain,
+	profile PreparedProfile,
+	workspace string,
+	backup privateRecoveryBackup,
+	label string,
+) (PhaseMetrics, error) {
+	base := filepath.Dir(profile.Config)
+	prior := profile.DataDir + ".prior-" + label
+	if ctx == nil || !filepath.IsAbs(workspace) || !isWithin(prior, workspace) ||
+		!isWithin(backup.path, workspace) || !isWithin(backup.logPath, workspace) ||
+		filepath.Dir(backup.path) != base || filepath.Dir(backup.logPath) != base {
+		return PhaseMetrics{}, errors.New("T40.13 restore scope is invalid")
+	}
+	backupInfo, backupErr := os.Lstat(backup.path)
+	logInfo, logErr := os.Lstat(backup.logPath)
+	if backupErr != nil || logErr != nil || !backupInfo.IsDir() || backupInfo.Mode()&os.ModeSymlink != 0 ||
+		!logInfo.Mode().IsRegular() || logInfo.Mode()&os.ModeSymlink != 0 {
+		return PhaseMetrics{}, errors.Join(backupErr, logErr, errors.New("T40.13 restore controls are invalid"))
 	}
 	if _, err := os.Lstat(prior); err == nil || !os.IsNotExist(err) {
-		return errors.New("T40.13 recovery prior path already exists")
+		return PhaseMetrics{}, errors.New("T40.13 recovery prior path already exists")
 	}
 	if err := os.Rename(profile.DataDir, prior); err != nil {
-		return err
+		return PhaseMetrics{}, err
 	}
-	if err := run("restore", "-config", profile.Config, "-backup", backup); err != nil {
-		return err
+	logFile, err := os.OpenFile(backup.logPath, os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	command := exec.CommandContext(ctx, toolchain.Phebs, "restore", "-config", profile.Config, "-backup", backup.path)
+	command.Stdout, command.Stderr = logFile, logFile
+	command.Env = scrubExecutionEnvironment()
+	metrics, commandErr := runMeasuredCommand(command, workspace)
+	closeErr := logFile.Close()
+	if commandErr != nil {
+		commandErr = errors.New("T40.13 restore command failed")
+	}
+	if commandErr != nil || closeErr != nil {
+		return metrics, errors.Join(commandErr, closeErr)
 	}
 	if !isWithin(prior, base) || filepath.Clean(prior) == filepath.Clean(base) {
-		return errors.New("T40.13 recovery prior path escaped custody")
+		return metrics, errors.New("T40.13 recovery prior path escaped custody")
 	}
 	if err := os.RemoveAll(prior); err != nil {
-		return err
+		return metrics, err
 	}
-	return nil
+	return metrics, nil
 }
 
 func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bool, limit time.Duration) (lifecycle.Status, error) {
@@ -1894,7 +2002,7 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 	value := emptyObservation(environment)
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 {
 		value.Schema = ObservationSchemaV2
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
@@ -1915,6 +2023,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV9
 	case PlanSchemaV10:
 		value.Schema = ObservationSchemaV10
+	case PlanSchemaV11:
+		value.Schema = ObservationSchemaV11
 	}
 	return value
 }
@@ -1946,6 +2056,31 @@ func mergeMetrics(values ...PhaseMetrics) PhaseMetrics {
 		result.ReusedMembers += value.ReusedMembers
 	}
 	return result
+}
+
+// mergeConcurrentMetrics keeps the outer wall interval and conservatively sums
+// process-tree RSS peaks for work that ran underneath it. All other gauges use
+// the same max/add rules as sequential phase merging.
+func mergeConcurrentMetrics(outer, concurrent PhaseMetrics) (PhaseMetrics, error) {
+	if outer.PeakRSSBytes > 1<<63-1-concurrent.PeakRSSBytes {
+		return PhaseMetrics{}, errors.New("T40.13 concurrent RSS accounting overflowed")
+	}
+	result := outer
+	result.PeakRSSBytes += concurrent.PeakRSSBytes
+	result.DataLogicalBytes = max(result.DataLogicalBytes, concurrent.DataLogicalBytes)
+	result.DataAllocatedBytes = max(result.DataAllocatedBytes, concurrent.DataAllocatedBytes)
+	result.GitChildren += concurrent.GitChildren
+	result.IndexChildren += concurrent.IndexChildren
+	result.OtherChildren += concurrent.OtherChildren
+	result.ControlReads += concurrent.ControlReads
+	result.MemberReads += concurrent.MemberReads
+	result.PublicationWrites += concurrent.PublicationWrites
+	result.PublicationTransactions += concurrent.PublicationTransactions
+	result.OrchestrationTransactions += concurrent.OrchestrationTransactions
+	result.Retries += concurrent.Retries
+	result.ReusedControls += concurrent.ReusedControls
+	result.ReusedMembers += concurrent.ReusedMembers
+	return result, nil
 }
 
 func equalStringSlices(left, right []string) bool {

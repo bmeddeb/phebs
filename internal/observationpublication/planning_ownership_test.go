@@ -1039,6 +1039,76 @@ func TestPlanningAPILeavesV1ReconcileAndHandleCompatible(t *testing.T) {
 	}
 }
 
+func TestInventoryV2ReplacesPriorSourceGeneration(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, commitA := planningOwnershipFixture(t)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+	}
+	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commitA)
+
+	publish := func(label string) InventoryAuthorityV2 {
+		t.Helper()
+		if result, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+			(result != PlanningEnqueued && result != PlanningActive) {
+			t.Fatalf("enqueue %s = %q, %v", label, result, err)
+		}
+		planning := state.specsFor(PlanningScheduleStage)
+		if err := runtime.HandlePlanning(
+			t.Context(), planningChunkForSpec(t, planning[len(planning)-1]),
+		); err != nil {
+			t.Fatalf("plan %s: %v", label, err)
+		}
+		execution := state.specsFor(ScheduleStage)
+		executionSpec := execution[len(execution)-1]
+		if err := runtime.Handle(t.Context(), store.GenerationChunk{
+			Repository: repository, Stage: ScheduleStage,
+			Generation: executionSpec.Generation, Offset: 0,
+			Length: int(executionSpec.TotalItems),
+		}); err != nil {
+			t.Fatalf("publish v1 %s: %v", label, err)
+		}
+		inventories := state.specsFor(InventoryScheduleStageV2)
+		inventorySpec := inventories[len(inventories)-1]
+		if err := runtime.HandleInventoryV2(
+			t.Context(), planningChunkForSpec(t, inventorySpec),
+		); err != nil {
+			t.Fatalf("publish v2 %s: %v", label, err)
+		}
+		authority, err := CurrentInventoryAuthorityV2(
+			t.Context(), filepath.Join(dataDirectory, "observations"), repository,
+		)
+		if err != nil {
+			t.Fatalf("read v2 %s: %v", label, err)
+		}
+		return authority
+	}
+
+	a := publish("A")
+	if err := os.WriteFile(
+		filepath.Join(repositoryDirectory, "main.go"),
+		[]byte("package main\nfunc main() { println(2) }\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	runObservationGit(t, repositoryDirectory, "add", "main.go")
+	runObservationGit(t, repositoryDirectory, "commit", "-m", "B")
+	commitB := strings.TrimSpace(runObservationGit(t, repositoryDirectory, "rev-parse", "HEAD"))
+	sourceB := publishPlanningOwnershipSource(
+		t, dataDirectory, repositoryDirectory, repository, commitB,
+	)
+	b := publish("B")
+
+	if a.SourceGenerationDigest == b.SourceGenerationDigest ||
+		b.SourceGenerationDigest != sourceB.Digest ||
+		a.ObservationGenerationDigest == b.ObservationGenerationDigest ||
+		len(state.specsFor(InventoryScheduleStageV2)) != 2 {
+		t.Fatalf("inventory replacement A=%+v B=%+v specs=%+v", a, b,
+			state.specsFor(InventoryScheduleStageV2))
+	}
+}
+
 func planningOwnershipFixture(t *testing.T) (string, string, string, string) {
 	t.Helper()
 	dataDirectory := t.TempDir()

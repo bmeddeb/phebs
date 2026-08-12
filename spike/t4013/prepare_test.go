@@ -86,6 +86,21 @@ func TestPreparedCatalogsAreExactSmallControls(t *testing.T) {
 	if _, err := catalogFor("unknown"); err == nil {
 		t.Fatal("unknown profile kind passed")
 	}
+	projectionRaw, err := catalogForShape("structural", 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection, err := servicecatalog.Decode(projectionRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(projection.Services) != 64 || len(projection.Memberships) != 64 ||
+		len(projection.Unowned) != 2 {
+		t.Fatalf(
+			"structural projection catalog shape = %d/%d/%d, want 64/64/2",
+			len(projection.Services), len(projection.Memberships), len(projection.Unowned),
+		)
+	}
 }
 
 func TestPreparedConfigPassesProductionParser(t *testing.T) {

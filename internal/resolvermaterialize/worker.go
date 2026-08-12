@@ -11,7 +11,9 @@ import (
 	"sync"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
@@ -32,6 +34,9 @@ type Store interface {
 	LatestExtractionDomainOutcome(
 		context.Context, store.ExtractionScope,
 	) (*store.ExtractionDomainOutcome, error)
+	GetPartitionedExtractionDomain(
+		context.Context, string, string,
+	) (*store.PartitionedExtractionDomain, error)
 	ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error)
 	EnsureJobSuccessor(context.Context, store.Job, bool) (*store.Job, error)
 }
@@ -160,16 +165,19 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if pointer.ManifestDigest == "" || pointer.ControlRevision == 0 {
 		return errors.New("candidate generation has no durable control identity")
 	}
-	declarations, err := worker.currentDeclarations(
+	declarations, declarationsSettled, err := worker.currentDeclarations(
 		workCtx, repository, pointer,
 	)
 	if err != nil {
 		return err
 	}
-	if len(declarations) == 0 {
+	if !declarationsSettled {
 		// Candidate fan-out may arrive before declaration extraction. It is a
-		// successful no-op; the declaration outcome transaction creates the
-		// crash-safe successor that can first publish a useful catalog.
+		// successful no-op; the declaration outcome transaction or partitioned
+		// extraction settlement creates the crash-safe successor that can first
+		// publish an exact catalog. A fully settled empty declaration set is
+		// different: it must publish an empty resolver authority so downstream
+		// relationship state can converge without inventing declarations.
 		return nil
 	}
 	identityDeclarations := make(
@@ -179,6 +187,9 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		identityDeclarations[index] = resolvercatalog.DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	identity, err := resolvercatalog.NewIdentity(
@@ -309,9 +320,37 @@ func (worker *Worker) currentDeclarations(
 	ctx context.Context,
 	repository *store.Repo,
 	candidate extract.CandidateManifestPointerIdentity,
-) ([]DeclarationInput, error) {
+) ([]DeclarationInput, bool, error) {
 	result := make([]DeclarationInput, 0, len(worker.registry.adapters))
+	settled := true
 	for _, current := range worker.registry.adapters {
+		partitioned, partitionedErr := extractionpublication.CurrentDomainAuthority(
+			ctx, worker.store, repository.Name, current.declarationDomain,
+		)
+		if partitionedErr == nil {
+			if partitioned.CandidateManifestDigest != candidate.ManifestDigest ||
+				partitioned.CandidatePolicyDigest != candidate.PolicyDigest ||
+				!partitioned.Available() {
+				settled = false
+				continue
+			}
+			if partitioned.Disposition == candidatepkg.PartitionResultSuccess {
+				result = append(result, DeclarationInput{
+					Protocol: current.protocol, Domain: current.declarationDomain,
+					RunID: partitioned.RunID, GenerationDigest: partitioned.RootDigest,
+					AuthoritySchema: store.PartitionedExtractionDomainSchema,
+					PlanDigest:      partitioned.PlanDigest,
+					RootDigest:      partitioned.RootDigest,
+				})
+			}
+			continue
+		}
+		if !errors.Is(partitionedErr, store.ErrNotFound) {
+			return nil, false, fmt.Errorf(
+				"load %s partitioned declaration authority: %w",
+				current.protocol, partitionedErr,
+			)
+		}
 		scope := store.ExtractionScope{
 			Repository: repository.Name,
 			Commit:     repository.IndexedCommitHash,
@@ -320,18 +359,29 @@ func (worker *Worker) currentDeclarations(
 		}
 		outcome, err := worker.store.LatestExtractionDomainOutcome(ctx, scope)
 		if errors.Is(err, store.ErrNotFound) {
+			settled = false
 			continue
 		}
 		if err != nil {
-			return nil, fmt.Errorf(
+			return nil, false, fmt.Errorf(
 				"load %s declaration outcome: %w", current.protocol, err,
 			)
 		}
-		if outcome == nil || outcome.Disposition != store.DomainOutcomePublished ||
-			outcome.RunID == "" ||
+		if outcome == nil ||
 			outcome.Generation.CandidateManifestDigest != candidate.ManifestDigest ||
 			outcome.Generation.CandidatePolicyDigest != candidate.PolicyDigest ||
 			outcome.Generation.CandidateControlRevision != candidate.ControlRevision {
+			settled = false
+			continue
+		}
+		if outcome.Disposition != store.DomainOutcomePublished {
+			if !outcome.Disposition.Settled() {
+				settled = false
+			}
+			continue
+		}
+		if outcome.RunID == "" {
+			settled = false
 			continue
 		}
 		result = append(result, DeclarationInput{
@@ -352,7 +402,7 @@ func (worker *Worker) currentDeclarations(
 		}
 		return 0
 	})
-	return result, nil
+	return result, settled, nil
 }
 
 func (worker *Worker) reconcileMarked(
@@ -526,7 +576,10 @@ func pointerMatchesIdentity(
 	for index, declaration := range identity.Declarations {
 		stored := pointer.Declarations[index]
 		if stored.Domain != declaration.Domain || stored.RunID != declaration.RunID ||
-			stored.GenerationDigest != declaration.GenerationDigest {
+			stored.GenerationDigest != declaration.GenerationDigest ||
+			stored.AuthoritySchema != declaration.AuthoritySchema ||
+			stored.PlanDigest != declaration.PlanDigest ||
+			stored.RootDigest != declaration.RootDigest {
 			return false
 		}
 	}
@@ -550,6 +603,9 @@ func StateFromStore(pointer store.ResolverCatalogPublication) resolvercatalog.St
 		declarations[index] = resolvercatalog.DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	packs := make([]resolvercatalog.ResolverPack, len(pointer.ResolverPacks))
@@ -581,6 +637,9 @@ func storeFromState(state resolvercatalog.State) store.ResolverCatalogPublicatio
 		declarations[index] = store.ResolverCatalogDeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	packs := make([]store.ResolverCatalogPack, len(state.ResolverPacks))

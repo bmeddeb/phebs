@@ -166,7 +166,7 @@ DEFINE FIELD IF NOT EXISTS digest ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS repository ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS stage ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS generation ON generation_schedule TYPE string;
-DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory'];
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
 DEFINE FIELD IF NOT EXISTS total_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 80000000;
 DEFINE FIELD IF NOT EXISTS chunk_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 4096;
 DEFINE FIELD IF NOT EXISTS total_chunks ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 1000000;
@@ -207,7 +207,7 @@ DEFINE FIELD IF NOT EXISTS schedule_digest ON generation_schedule_chunk TYPE str
 DEFINE FIELD IF NOT EXISTS repository ON generation_schedule_chunk TYPE string;
 DEFINE FIELD IF NOT EXISTS stage ON generation_schedule_chunk TYPE string;
 DEFINE FIELD IF NOT EXISTS generation ON generation_schedule_chunk TYPE string;
-DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory'];
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
 DEFINE FIELD IF NOT EXISTS offset ON generation_schedule_chunk TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS length ON generation_schedule_chunk TYPE int ASSERT $value > 0 AND $value <= 4096;
 DEFINE FIELD IF NOT EXISTS attempt ON generation_schedule_chunk TYPE int ASSERT $value >= 0 AND $value < 8;
@@ -294,6 +294,9 @@ DEFINE FIELD IF NOT EXISTS declarations ON resolver_catalog_publication TYPE arr
 DEFINE FIELD IF NOT EXISTS declarations.*.domain ON resolver_catalog_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS declarations.*.run_id ON resolver_catalog_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS declarations.*.generation_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS declarations.*.authority_schema ON resolver_catalog_publication TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS declarations.*.plan_digest ON resolver_catalog_publication TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS declarations.*.root_digest ON resolver_catalog_publication TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS declaration_set_digest ON resolver_catalog_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS candidate_manifest_digest ON resolver_catalog_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS source_lane_policy ON resolver_catalog_publication TYPE string;

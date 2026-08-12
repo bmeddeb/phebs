@@ -30,3 +30,9 @@ SELECT repo, domain, status, assertion_count FROM extraction_run WHERE status = 
 SELECT predicate, count() FROM assertion WHERE predicate CONTAINS 'TOPIC' GROUP BY predicate; SELECT repo, object, tier, count() FROM assertion WHERE predicate = 'PRODUCES_TO_TOPIC' GROUP BY repo, object, tier;
 SELECT repo, predicate, count() FROM assertion WHERE predicate CONTAINS 'KAFKA' OR predicate CONTAINS 'CONSUM' GROUP BY repo, predicate;
 SELECT repo, predicate, count() FROM assertion GROUP BY repo, predicate;
+SELECT repository, stage, generation, digest, status, materialized, pending, running, succeeded, failed, next_offset, total_chunks, updated_at FROM generation_schedule ORDER BY updated_at DESC LIMIT 20;
+SELECT repository, stage, generation, schedule_digest, updated_at FROM generation_schedule_current ORDER BY updated_at DESC LIMIT 20;
+SELECT repository, stage, generation, status, attempt, error, not_before, finished_at FROM generation_schedule_chunk ORDER BY finished_at DESC LIMIT 30;
+SELECT id, status, attempts, error, not_before, finished_at FROM caller_leaf_job;
+SELECT repository,stage,generation,total_chunks,materialized,pending,running,succeeded,failed,status,created_at FROM generation_schedule WHERE stage IN ['go-source-observation-plan','go-source-observation','go-source-observation-inventory-v2'] ORDER BY created_at;
+SELECT stage,generation,offset,attempt,status,error FROM generation_schedule_chunk WHERE stage = 'go-source-observation' ORDER BY generation,offset,attempt;

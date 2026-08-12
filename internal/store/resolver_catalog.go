@@ -30,6 +30,9 @@ type ResolverCatalogDeclarationPublication struct {
 	Domain           string `json:"domain"`
 	RunID            string `json:"run_id"`
 	GenerationDigest string `json:"generation_digest"`
+	AuthoritySchema  string `json:"authority_schema,omitempty"`
+	PlanDigest       string `json:"plan_digest,omitempty"`
+	RootDigest       string `json:"root_digest,omitempty"`
 }
 
 type ResolverCatalogPack struct {
@@ -135,10 +138,23 @@ func validateResolverCatalogPublication(
 	for index, declaration := range publication.Declarations {
 		if !validResolverCatalogToken(declaration.Domain, 128) ||
 			!validResolverCatalogToken(declaration.RunID, 256) ||
-			!validResolverCatalogGenerationDigest(declaration.GenerationDigest) ||
 			index > 0 &&
 				publication.Declarations[index-1].Domain >= declaration.Domain {
 			return fmt.Errorf("declaration %d is invalid or unordered", index)
+		}
+		partitioned := declaration.AuthoritySchema != "" ||
+			declaration.PlanDigest != "" || declaration.RootDigest != ""
+		if partitioned {
+			if declaration.AuthoritySchema != PartitionedExtractionDomainSchema ||
+				!validSHA256Digest(declaration.PlanDigest) ||
+				!validSHA256Digest(declaration.RootDigest) ||
+				declaration.GenerationDigest != declaration.RootDigest {
+				return fmt.Errorf("declaration %d has invalid partitioned authority", index)
+			}
+		} else if !validResolverCatalogGenerationDigest(
+			declaration.GenerationDigest,
+		) {
+			return fmt.Errorf("declaration %d has invalid legacy authority", index)
 		}
 	}
 	declarationDigest, err := resolverCatalogDeclarationSetDigest(
@@ -265,7 +281,7 @@ LET $repo_ok = $repo_state != NONE
 LET $candidate_ok = $candidate != NONE
 	AND $candidate.manifest_digest = $candidate_manifest_digest;
 LET $declaration_domains = $declarations.map(|$declaration| $declaration.domain);
-LET $current_declarations = (SELECT domain, run_id,
+LET $current_legacy_declarations = (SELECT domain, run_id,
 	generation.digest AS generation_digest
 	FROM extraction_domain_outcome
 	WHERE repo = $repository
@@ -280,6 +296,18 @@ LET $current_declarations = (SELECT domain, run_id,
 		AND store_schema_version = $evidence_store_schema
 		AND evidence_migration_version = $evidence_migration_version
 	ORDER BY domain);
+LET $current_partitioned_declarations = (SELECT domain, run_id,
+	root_digest AS generation_digest,
+	$partitioned_schema AS authority_schema, plan_digest, root_digest
+	FROM extraction_domain_root
+	WHERE repository = $repository
+		AND domain IN $declaration_domains
+		AND candidate_digest = $candidate_manifest_digest
+	ORDER BY domain);
+LET $uses_partitioned = array::len($declarations) > 0
+	AND $declarations[0].authority_schema = $partitioned_schema;
+LET $current_declarations = IF $uses_partitioned
+	THEN $current_partitioned_declarations ELSE $current_legacy_declarations END;
 LET $declarations_ok = $current_declarations = $declarations;
 LET $same_generation = $current != NONE
 	AND $current.repository = $repository
@@ -407,6 +435,7 @@ func (s *Surreal) PublishResolverCatalog(
 			"manifest_path":              publication.ManifestPath,
 			"requested_revision":         publication.ControlRevision,
 			"writer_schema":              resolverCatalogWriterSchema,
+			"partitioned_schema":         PartitionedExtractionDomainSchema,
 		},
 	)
 	if err != nil {
@@ -502,7 +531,7 @@ LET $candidate = (SELECT manifest_digest, policy_digest, control_revision
 LET $catalog = (SELECT manifest_digest, control_revision, writer_schema
 	FROM $catalog_rid)[0];
 LET $declaration_domains = $declarations.map(|$declaration| $declaration.domain);
-LET $current_declarations = (SELECT domain, run_id,
+LET $current_legacy_declarations = (SELECT domain, run_id,
 	generation.digest AS generation_digest
 	FROM extraction_domain_outcome
 	WHERE repo = $repository
@@ -517,6 +546,18 @@ LET $current_declarations = (SELECT domain, run_id,
 		AND store_schema_version = $evidence_store_schema
 		AND evidence_migration_version = $evidence_migration_version
 	ORDER BY domain);
+LET $current_partitioned_declarations = (SELECT domain, run_id,
+	root_digest AS generation_digest,
+	$partitioned_schema AS authority_schema, plan_digest, root_digest
+	FROM extraction_domain_root
+	WHERE repository = $repository
+		AND domain IN $declaration_domains
+		AND candidate_digest = $candidate_manifest_digest
+	ORDER BY domain);
+LET $uses_partitioned = array::len($declarations) > 0
+	AND $declarations[0].authority_schema = $partitioned_schema;
+LET $current_declarations = IF $uses_partitioned
+	THEN $current_partitioned_declarations ELSE $current_legacy_declarations END;
 RETURN [{
 	current: $repo != NONE
 		AND ($repo.deleting = NONE OR $repo.deleting = false)
@@ -543,6 +584,7 @@ RETURN [{
 			"declarations":               publication.Declarations,
 			"evidence_store_schema":      evidenceStoreSchemaVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
+			"partitioned_schema":         PartitionedExtractionDomainSchema,
 		},
 	)
 	if err != nil {

@@ -92,10 +92,16 @@ func (source GitSparseSource) AcquirePartition(
 		release()
 		return nil, err
 	}
+	reader, err := gitobj.NewBatchBlobReader(ctx, repositoryDirectory)
+	if err != nil {
+		release()
+		return nil, err
+	}
 	corpus, err := newObjectCorpus(
-		plan.Repository, domain.Commit(), repositoryDirectory, records, typed, typedScope,
+		plan.Repository, domain.Commit(), records, typed, typedScope, reader,
 	)
 	if err != nil {
+		_ = reader.Close()
 		release()
 		return nil, err
 	}
@@ -106,7 +112,11 @@ func (source GitSparseSource) AcquirePartition(
 	return &sparseLease{
 		corpus: corpus, candidateRecords: len(records), typed: typed,
 		typedSourceRecords: typedScopeRecords(typedScope),
-		memberBytes:        memberBytes, members: members, release: release,
+		memberBytes:        memberBytes, members: members,
+		release: func() {
+			_ = reader.Close()
+			release()
+		},
 	}, nil
 }
 
@@ -116,25 +126,28 @@ type selectedObject struct {
 }
 
 type objectCorpus struct {
-	repository, commit, directory string
-	paths                         []string
-	objects                       map[string]selectedObject
-	typed                         *candidate.SparseTypedInput
-	typedScope                    *candidate.SparseTypedSourceScope
+	repository, commit string
+	paths              []string
+	objects            map[string]selectedObject
+	typed              *candidate.SparseTypedInput
+	typedScope         *candidate.SparseTypedSourceScope
+	reader             *gitobj.BatchBlobReader
 }
 
 func newObjectCorpus(
-	repository,
-	commit,
-	directory string,
+	repository, commit string,
 	records []candidate.Record,
 	typed *candidate.SparseTypedInput,
 	typedScope *candidate.SparseTypedSourceScope,
+	reader *gitobj.BatchBlobReader,
 ) (*objectCorpus, error) {
+	if reader == nil {
+		return nil, invalid("git sparse object reader")
+	}
 	corpus := &objectCorpus{
-		repository: repository, commit: commit, directory: directory,
+		repository: repository, commit: commit,
 		paths: make([]string, 0, len(records)), objects: make(map[string]selectedObject, len(records)),
-		typed: typed, typedScope: typedScope,
+		typed: typed, typedScope: typedScope, reader: reader,
 	}
 	if (typed == nil) != (typedScope == nil) {
 		return nil, invalid("git sparse typed source scope")
@@ -186,7 +199,7 @@ func (corpus *objectCorpus) Read(ctx context.Context, path string) (sdk.Blob, er
 	if !present {
 		return sdk.Blob{}, store.ErrNotFound
 	}
-	content, err := gitobj.ReadBlob(ctx, corpus.directory, object.oid, object.bytes)
+	content, err := corpus.reader.ReadBlob(ctx, object.oid, object.bytes)
 	if err != nil {
 		return sdk.Blob{}, fmt.Errorf("read selected immutable object: %w", err)
 	}
@@ -201,9 +214,7 @@ func (corpus *objectCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, e
 	if corpus.typed == nil || !corpus.typed.Present {
 		return sdk.SCIPInput{}, nil
 	}
-	content, err := gitobj.ReadBlob(
-		ctx, corpus.directory, corpus.typed.ObjectID, corpus.typed.DeclaredBytes,
-	)
+	content, err := corpus.reader.ReadBlob(ctx, corpus.typed.ObjectID, corpus.typed.DeclaredBytes)
 	if err != nil {
 		return sdk.SCIPInput{}, fmt.Errorf("read selected typed input: %w", err)
 	}

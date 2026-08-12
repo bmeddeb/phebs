@@ -36,6 +36,10 @@ type Runtime struct {
 	// short final source/schedule re-fence and pointer/ownership transition.
 	AcquireTransition func(context.Context) (func(), error)
 	Admit             func(context.Context) error
+	// InventoryV2 enables the durable source-super-root and observation-inventory
+	// stage. It is explicit so historical/runtime fixtures retain the v1
+	// contract unless they opt into the production pipeline.
+	InventoryV2 bool
 	// OnPublished runs after an exact current observation is present. A
 	// failure keeps the scheduler chunk retryable without rolling back the
 	// already-complete content-addressed observation publication.
@@ -338,18 +342,24 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	defer releaseBuild()
 	root := filepath.Join(runtime.DataDir, "observations")
 	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, targetGeneration); err == nil {
-		runtime.transition.Lock()
-		defer runtime.transition.Unlock()
-		if err := runtime.fenceChunk(ctx, chunk, publication.manifest.SourceGenerationDigest); err != nil {
-			return workFailure(err)
+		publishErr := func() error {
+			runtime.transition.Lock()
+			defer runtime.transition.Unlock()
+			if err := runtime.fenceChunk(ctx, chunk, publication.manifest.SourceGenerationDigest); err != nil {
+				return err
+			}
+			if err := activate(root, publication.manifest); err != nil {
+				return err
+			}
+			if err := clearMarker(root, chunk.Repository, targetGeneration); err != nil {
+				return err
+			}
+			runtime.dropPlan(chunk.Repository, targetGeneration)
+			return nil
+		}()
+		if publishErr != nil {
+			return workFailure(publishErr)
 		}
-		if err := activate(root, publication.manifest); err != nil {
-			return workFailure(err)
-		}
-		if err := clearMarker(root, chunk.Repository, targetGeneration); err != nil {
-			return workFailure(err)
-		}
-		runtime.dropPlan(chunk.Repository, targetGeneration)
 		return runtime.afterPublish(ctx, chunk.Repository)
 	}
 	plan, err := runtime.openPlan(ctx, chunk.Repository, targetGeneration)
@@ -379,25 +389,39 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	} else if err != nil {
 		return workFailure(err)
 	}
-	runtime.transition.Lock()
-	defer runtime.transition.Unlock()
-	if err := runtime.fenceChunk(ctx, chunk, partition.SourceGenerationDigest); err != nil {
-		return workFailure(err)
-	}
-	if publication, err := openGenerationDigest(ctx, root, chunk.Repository, targetGeneration); err == nil {
-		if err := activate(root, publication.manifest); err != nil {
-			return workFailure(err)
+	publishErr := func() error {
+		runtime.transition.Lock()
+		defer runtime.transition.Unlock()
+		if err := runtime.fenceChunk(ctx, chunk, partition.SourceGenerationDigest); err != nil {
+			return err
 		}
-	} else {
-		if _, err := stage.Finalize(ctx); err != nil {
-			return workFailure(err)
+		if publication, err := openGenerationDigest(ctx, root, chunk.Repository, targetGeneration); err == nil {
+			if err := activate(root, publication.manifest); err != nil {
+				return err
+			}
+		} else if _, err := stage.Finalize(ctx); err != nil {
+			return err
 		}
+		runtime.dropPlan(chunk.Repository, targetGeneration)
+		return nil
+	}()
+	if publishErr != nil {
+		return workFailure(publishErr)
 	}
-	runtime.dropPlan(chunk.Repository, targetGeneration)
 	return runtime.afterPublish(ctx, chunk.Repository)
 }
 
 func (runtime *Runtime) afterPublish(ctx context.Context, repository string) error {
+	if runtime.InventoryV2 {
+		current, err := runtime.enqueueInventoryV2(ctx, repository)
+		if err != nil || !current {
+			return err
+		}
+	}
+	return runtime.notifyPublished(ctx, repository)
+}
+
+func (runtime *Runtime) notifyPublished(ctx context.Context, repository string) error {
 	if runtime.OnPublished == nil {
 		return nil
 	}

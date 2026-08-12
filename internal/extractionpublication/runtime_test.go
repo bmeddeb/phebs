@@ -405,6 +405,34 @@ func TestRuntimePointerLastRestartAndSettledRetryReuse(t *testing.T) {
 	}
 }
 
+func TestRuntimeZeroWorkDomainPublishesWithoutSchedulerLease(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("0", 64), false)
+	runtime, _, source, executor, _, fence, domain := newRuntimeFixture(t, plan)
+	runtime.OnSettled = func(context.Context, string) error {
+		if fence.active() {
+			return errors.New("downstream callback retained exclusive publication fence")
+		}
+		return nil
+	}
+
+	generation, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := runtime.Current(t.Context(), plan.Repository, plan.Domain)
+	if err != nil || root.PlanDigest != plan.Digest ||
+		root.Disposition != candidate.PartitionResultEmpty {
+		t.Fatalf("zero-work root = %+v, %v", root, err)
+	}
+	if generation == "" || fence.calls != 1 {
+		t.Fatalf("zero-work generation/fence = %q/%d", generation, fence.calls)
+	}
+	if acquired, released := source.counts(); acquired != 0 || released != 0 ||
+		executor.callCount() != 0 {
+		t.Fatalf("zero-work content work = source %d/%d executor %d", acquired, released, executor.callCount())
+	}
+}
+
 func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("2", 64), true)
 	runtime, state, source, executor, _, _, domain := newRuntimeFixture(t, plan)

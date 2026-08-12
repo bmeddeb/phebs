@@ -152,12 +152,25 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 	if err != nil {
 		return Progress{}, progressReadFailure(ProgressReadStagePlanning, err)
 	}
+	planningProjection := planning
 	var planningBindingValue planningBinding
 	if planningPresent {
 		runtime := Runtime{DataDir: reader.DataDir}
 		planningBindingValue, err = runtime.readPlanningBinding(repository, planning.Generation)
 		if err != nil {
-			return Progress{}, progressReadFailure(ProgressReadStagePlanning, err)
+			// Backup retains the durable settled schedule and current publication,
+			// while observation-plans is an explicitly excluded rebuildable
+			// namespace. Omit only that completed historical planning projection;
+			// active, failed, corrupt, or publication-less states still fail closed.
+			if errors.Is(err, os.ErrNotExist) &&
+				planning.Status == store.GenerationScheduleSettled &&
+				planning.TotalChunks == 1 && planning.Succeeded == 1 &&
+				planning.Failed == 0 && publicationManifest != nil &&
+				publicationManifest.SourceGenerationDigest == source.Digest {
+				planningProjection = nil
+			} else {
+				return Progress{}, progressReadFailure(ProgressReadStagePlanning, err)
+			}
 		}
 	}
 	schedule, schedulePresent, err := reader.readSchedule(ctx, repository, ScheduleStage)
@@ -200,7 +213,7 @@ func (reader *ProgressReader) Read(ctx context.Context, repository string) (Prog
 
 	result := projectProgress(
 		repository, source.Digest, publicationManifest,
-		planning, planningBindingValue, schedule, targetGeneration, targetSource,
+		planningProjection, planningBindingValue, schedule, targetGeneration, targetSource,
 	)
 	if err := ValidateProgress(result); err != nil {
 		return Progress{}, progressReadFailure(ProgressReadStageProjection, err)

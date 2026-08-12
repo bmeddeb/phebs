@@ -656,27 +656,30 @@ harness defect.
 | Pre-freeze review defect | A byte target at the upper edge of 82% can report 83% because the lifecycle gate rounds upward, and the first v10 draft admitted `pressure-restart` as a historical startup label. | Both defects were found by boundary/schema review before any Take 15 plan was frozen. | The ballast selects the midpoint of the exact byte interval that reports 82%, leaving filesystem-metadata headroom. The new startup label is accepted only by v10; v1-v9 validation remains closed. Boundary and historical-schema regressions pin both facts. |
 | Known bounded ceremony cost | Direct phase-fence disk gauges invoke `du` over custody metadata at meter boundaries. | These are finite ceremony measurements, not production request/sync/publication work, but they scale with the number of retained custody entries. | Retained because they supply an absolute workspace gauge and cross-check the constant-cost capacity trough. They never hash or read source contents, do not run in the one-second sampling loop, are charged to phase wall time, and remain inside the eight-hour parent gate. |
 | Verification gap | Unit coverage did not execute the exact coordinator, lease/cadence interaction, pressure reachability, or transient-allocation evidence path. | The pre-review package statement coverage was 49.7%; several recovery and exact-reader helpers were at zero. | Table-driven regression tests now pin the lease floor, v10 pressure arithmetic and bounds, pressure-restart receipt inventory, capacity-trough retention, bounded interruption scanning, and permanent retirement of `neutral-14`. A full exact take remains necessary because authoring the two-million-file corpus is intentionally not a unit test. |
+| Take 15 production blocker | A valid complete zero-unsupported observation receipt became invalid only during progress projection. | The canonical publication retained non-nil `unsupported_reasons: []`; two append-to-nil defensive copies changed it to nil and the validator correctly refused it. Take 15 therefore returned HTTP 500 after its last 62-succeeded/two-running snapshot. | Nil-preserving clones now retain `[]` through the real progress reader and HTTP response. The current pointer does not retrospectively prove final 64/64 schedule settlement. |
+| Take 16 harness blocker | Recovery invoked live backup only after graceful server shutdown. | `recovery.Create` requires `store.ReadLocalRuntime` and the live supervised endpoint; server close removes the descriptor. Both unexecuted recovery phases therefore had an impossible command order. | V11 gives interruption one measured `interruption-backup` restart and exact A revalidation, takes both backups while their servers are live, then stops/resets/restores. Recovery command process trees and transient allocation are measured; concurrent RSS is conservatively summed. V1-v10 inventories remain closed. |
+| Production observation-v2 replacement blocker | After v1 moved to B, the v2 enqueue/worker classified the still-current A inventory as corrupt. | Both B observation chunks exhausted five attempts with `inventory v2 current source authority`; `materialized=10`, `failed=2` was exact retry accounting, not stale schedule carry-over. | A mismatched but valid current inventory is retained only as bounded incremental prior input while B is enqueued and published. A focused A→B authority regression and the structural rehearsal pin the replacement. |
+| Production resolver bridge blocker | Partitioned extraction roots were not declaration authority, and a fully settled empty declaration set remained an indefinite no-op. | The T40 whole-repository lane completed partition roots but resolver materialization still read only legacy focused outcomes. | Resolver identity and store publication accept the exact partition plan/root/run tuple; empty/unavailable terminal roots contribute settled absence and publish an exact empty resolver catalog. Legacy encoded bytes remain unchanged through additive omitted fields. |
+| Production lost-wakeup blocker | Catalog, partition, resolver, and caller work could finish out of order; a fresh event coalesced into a backed-off pending job without making it claimable. | B could complete all internal authorities yet wait until the four-minute retry. A naive wake predicate also accepted a mixture of A and B domain rows. | Publication callbacks create bounded successors, `EnqueuePending` clears only `not_before` on a fresh event while preserving attempts, and readiness requires every configured domain's exact store plan/root to match one candidate/source/observation triple. Terminal/empty roots are included without requiring a success filesystem pointer. |
+| Production recovery/lifecycle blocker | Source-free restore intentionally excludes rebuildable controls, but whole-search and partitioned extraction did not reconstruct all exact ownership required by readiness. | Restored authority could be valid while progress/lifecycle waited on missing sidecars or partition filesystem controls. | Cold restore reconstructs exact controls from store authority, restores whole-search lifecycle and archive receipt, and lets progress omit only a settled observation plan whose publication proves the current source. No reconstruction runs on warm requests. |
+| Readiness result | Unit and inspection fixes alone could still miss cross-runner ordering and restore defects. | A real working-tree binary was run with the ceremony's semantic and structural projection profiles on the ordinary machine. | Semantic cold/live-backup/offline-restore/restored-query passed in 105.98s. Structural cold A→B→A-return/live-backup/offline-restore/restored-query passed in 161.45s. Both passed lifecycle; semantic required its citation. This is not a scale result or execution authorization. |
 
-Take 15 is the only prospective ceremony. It permanently retires
-`neutral-14`, introduces v10, and preserves the frozen corpus, twelve phase
-order, four-hour full-convergence and 20-minute revalidation deadlines,
-eight-hour parent, 20-GiB RSS, 96-GiB allocated-data, five-attempt ceiling,
-stop rules, and all nonclaims. The production lease correction changes no
-request, startup, sync scan, handler, index child, publication transition,
-cache, lock, memory, or disk asymptotic. At the ordinary 15-second interval it
-is unchanged; below 15 seconds it performs fewer heartbeat writes and extends
-crash/stale recovery to a bounded 20 seconds. All pressure, capacity sampling,
-and shallow interruption scanning are ceremony-only. These corrections do not
-authorize Take 15 execution, release, T40.13 closure, or Epic 41 progression;
-those still require a fresh exact commit, unique signer, independent plan
-review, and explicit approval.
+Take 16 is a prospective frozen-plan lineage, not an authorized ceremony. Its
+permanently retires `neutral-15`, introduces v11, and preserves the frozen
+corpus, twelve-phase order, four-hour full-convergence and 20-minute
+revalidation deadlines, eight-hour parent, 20-GiB RSS, 96-GiB allocated-data,
+82% pressure target, 80-GiB ballast, five-attempt ceiling, stop rules, and all
+nonclaims. Its additional semantic restart exists only to satisfy the already
+required production live-backup contract and is fully measured. The later-phase
+audit and bounded production-path rehearsal are complete. Freeze still waits
+for a clean exact commit, independent plan review, and explicit approval.
 
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-15
+CEREMONY_ID=t40r1-neutral-16
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

@@ -143,3 +143,47 @@ func TestResolveAndReadBlob(t *testing.T) {
 		t.Fatal("invalid oid accepted")
 	}
 }
+
+func TestBatchBlobReaderIsExactBoundedAndReusable(t *testing.T) {
+	dir, blobOID, _ := fixtureRepo(t)
+	reader, err := NewBatchBlobReader(t.Context(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := reader.Close(); err != nil {
+			t.Errorf("close batch reader: %v", err)
+		}
+	}()
+	for turn := 0; turn < 2; turn++ {
+		content, err := reader.ReadBlob(t.Context(), blobOID, int64(len("hello object")))
+		if err != nil || string(content) != "hello object" {
+			t.Fatalf("batch read %d = %q, %v", turn, content, err)
+		}
+	}
+	missing := strings.Repeat("0", len(blobOID))
+	if _, err := reader.ReadBlob(t.Context(), missing, 1); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("missing batch blob error = %v, want ErrNotFound", err)
+	}
+	content, err := reader.ReadBlob(t.Context(), blobOID, int64(len("hello object")))
+	if err != nil || string(content) != "hello object" {
+		t.Fatalf("post-missing batch read = %q, %v", content, err)
+	}
+}
+
+func TestBatchBlobReaderPoisonsSizeMismatch(t *testing.T) {
+	dir, blobOID, _ := fixtureRepo(t)
+	reader, err := NewBatchBlobReader(t.Context(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reader.ReadBlob(t.Context(), blobOID, 4); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("bounded batch read error = %v, want ErrTooLarge", err)
+	}
+	if _, err := reader.ReadBlob(t.Context(), blobOID, int64(len("hello object"))); err == nil {
+		t.Fatal("poisoned batch session accepted another read")
+	}
+	if err := reader.Close(); err != nil {
+		t.Fatalf("close poisoned batch reader: %v", err)
+	}
+}

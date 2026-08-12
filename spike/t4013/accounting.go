@@ -150,6 +150,45 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 	}, nil
 }
 
+// runMeasuredCommand accounts for a recovery command rooted outside the
+// measured server process tree. The root command is counted as one other child;
+// descendants retain the same closed Git/index/other classification used by a
+// server meter.
+func runMeasuredCommand(command *exec.Cmd, dataDir string) (PhaseMetrics, error) {
+	if command == nil || !filepath.IsAbs(dataDir) {
+		return PhaseMetrics{}, errors.New("T40.13 measured command is invalid")
+	}
+	_, allocatedBefore, err := measureDataBytes(dataDir)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	allocation, err := newAllocationSampler(dataDir, allocatedBefore)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	started := time.Now()
+	if err := command.Start(); err != nil {
+		_, allocationErr := allocation.close()
+		return PhaseMetrics{}, errors.Join(err, allocationErr)
+	}
+	sampler := newRSSSampler(command.Process.Pid)
+	sampler.sample()
+	go sampler.run()
+	waitErr := command.Wait()
+	sampler.close()
+	logical, allocated, measureErr := measureDataBytes(dataDir)
+	peakAllocated, allocationErr := allocation.close()
+	allocated = max(allocated, peakAllocated)
+	metrics := PhaseMetrics{
+		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical,
+		DataAllocatedBytes: allocated, OtherChildren: 1,
+	}
+	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren =
+		sampler.metrics()
+	metrics.OtherChildren++
+	return metrics, errors.Join(waitErr, measureErr, allocationErr)
+}
+
 func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, error) {
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")

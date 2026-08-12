@@ -835,6 +835,22 @@ catalog, relationship, or correctness authority.
   reads bounded fixed-depth controls, including observation inventory v2. It
   still requires a fresh exact commit, signer,
   independent plan review, and explicit execution approval.
+- T40.R1 Take 15 is a verified sealed `unclassified` four-hour cold stop. A
+  production nil-versus-empty copy defect made the valid zero-unsupported
+  progress receipt fail projection after 62/64 success; that copy path now has
+  real-reader and exact HTTP `[]` regressions. Review of the still-unexecuted
+  phases also found that recovery called the production live-backup command
+  only after stopping its required server. Take 16 is readiness-only: v11 keeps
+  every v10 workload and bound, retires `neutral-15`, takes backups while exact
+  servers remain live, measures the recovery command trees, and only then
+  stops/restores. The later-phase audit and real-binary readiness bar are now
+  complete: semantic cold/backup/restore passed in 105.98s and structural
+  A→B→A-return/backup/restore passed in 161.45s. Their production corrections
+  cover observation-v2 replacement, exact partition-root resolver input,
+  settled-empty authority, generation-exact downstream wakeups, fresh-event
+  retry wakeups, bounded Git batch reads, and exact search/extraction restore.
+  Freeze remains gated on a clean exact commit, independent plan review, and
+  explicit approval; none is implied by readiness.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

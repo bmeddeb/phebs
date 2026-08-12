@@ -81,9 +81,10 @@ func Validate(value Authority) error {
 	return nil
 }
 
-// RequireUsable rejects both failed roots and prerequisite-unavailable roots.
-// A caller may still retain and report the Authority, but it may not leave an
-// older derived generation current as a silent fallback.
+// RequireUsable rejects absent, failed, retryable, and terminal roots. An
+// unavailable-prerequisite root is a complete, explicit gap authority and is
+// therefore safe for downstream projection; it must not be collapsed into an
+// absent generation or an older silent fallback.
 func RequireUsable(value Authority) error {
 	if err := Validate(value); err != nil {
 		return err
@@ -96,7 +97,8 @@ func RequireUsable(value Authority) error {
 			return fmt.Errorf("%w: required domain root is absent", ErrUnavailable)
 		}
 		if domain.Disposition != candidate.PartitionResultSuccess &&
-			domain.Disposition != candidate.PartitionResultEmpty {
+			domain.Disposition != candidate.PartitionResultEmpty &&
+			domain.Disposition != candidate.PartitionResultUnavailablePrerequisite {
 			return fmt.Errorf("%w: %s/%s is %s", ErrUnavailable,
 				domain.Domain, domain.Version, domain.Disposition)
 		}

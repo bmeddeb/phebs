@@ -118,10 +118,11 @@ func (provider *workerTestManifestProvider) OpenCandidateManifest(
 }
 
 type workerTestStore struct {
-	repository *store.Repo
-	pointer    *store.ResolverCatalogPublication
-	outcomes   map[string]*store.ExtractionDomainOutcome
-	assertions []store.Assertion
+	repository  *store.Repo
+	pointer     *store.ResolverCatalogPublication
+	outcomes    map[string]*store.ExtractionDomainOutcome
+	partitioned map[string]*store.PartitionedExtractionDomain
+	assertions  []store.Assertion
 
 	getRepoErr       error
 	pointerErr       error
@@ -260,6 +261,19 @@ func (state *workerTestStore) LatestExtractionDomainOutcome(
 		return nil, store.ErrNotFound
 	}
 	result := *outcome
+	return &result, nil
+}
+
+func (state *workerTestStore) GetPartitionedExtractionDomain(
+	_ context.Context,
+	_ string,
+	domain string,
+) (*store.PartitionedExtractionDomain, error) {
+	publication := state.partitioned[domain]
+	if publication == nil {
+		return nil, store.ErrNotFound
+	}
+	result := *publication
 	return &result, nil
 }
 
@@ -498,6 +512,59 @@ func TestWorkerCandidateBeforeDeclarationIsNoOp(t *testing.T) {
 	}
 	if _, err := os.Lstat(fixture.worker.root); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("candidate-first no-op created catalog root: %v", err)
+	}
+}
+
+func TestWorkerSettledEmptyDeclarationPublishesEmptyAuthority(t *testing.T) {
+	fixture := newWorkerFixture(t)
+	generation := store.ExtractionGenerationIdentity{
+		CandidateManifestDigest:  fixture.digest,
+		CandidatePolicyDigest:    fixture.provider.pointer.PolicyDigest,
+		CandidateControlRevision: fixture.provider.pointer.ControlRevision,
+		Extractor:                "1.0.0",
+		InventoryPolicy:          "candidate-manifest-v4-worker-test",
+		DependencyDigest:         workerTestDigest('4'),
+	}
+	generation.Digest = store.ComputeExtractionGenerationDigest(generation)
+	fixture.state.outcomes["proto-contract"] = &store.ExtractionDomainOutcome{
+		Scope: store.ExtractionScope{
+			Repository: fixture.repository, Commit: workerTestCommit,
+			Domain: "proto-contract",
+		},
+		Disposition: store.DomainOutcomeUnavailablePrerequisite,
+		Generation:  generation,
+	}
+	published := 0
+	fixture.worker.OnPublished = func(
+		_ context.Context, repository string,
+	) error {
+		if repository != fixture.repository {
+			fixture.t.Fatalf("published repository = %q", repository)
+		}
+		published++
+		return nil
+	}
+
+	if err := fixture.handle(false); err != nil {
+		t.Fatal(err)
+	}
+	if fixture.state.pointer == nil || fixture.state.publishCalls != 1 || published != 1 {
+		t.Fatalf(
+			"empty authority: pointer=%+v publish calls=%d callback=%d",
+			fixture.state.pointer, fixture.state.publishCalls, published,
+		)
+	}
+	if len(fixture.state.pointer.Declarations) != 0 {
+		t.Fatalf("empty authority declarations = %+v", fixture.state.pointer.Declarations)
+	}
+	publication, err := resolvercatalog.Open(
+		t.Context(), fixture.worker.root, StateFromStore(*fixture.state.pointer),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(publication.Manifest().Members); got != 2 {
+		t.Fatalf("empty authority members = %d, want module plus grpc", got)
 	}
 }
 

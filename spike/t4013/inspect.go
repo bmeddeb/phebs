@@ -234,10 +234,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
 	probe = observationConvergenceProbe(progress)
-	if progress.State != "current" || progress.Publication == nil || progress.Publication.State != "current" ||
-		progress.Publication.SourceGenerationDigest != source.Digest || progress.Schedule == nil ||
-		progress.Schedule.State != "settled" || progress.Schedule.Pending != 0 || progress.Schedule.Running != 0 ||
-		progress.Schedule.Failed != 0 || progress.Schedule.Materialized != progress.Schedule.TotalPartitions {
+	if !observationProgressConverged(progress, source.Digest) {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 observation publication has not converged")
 	}
 	extraction, extractionProgress, err := inspectExtraction(ctx, profile)
@@ -259,7 +256,10 @@ func (inspector *profileInspector) inspectWithProgress(
 	relationshipRoot := publication.Root()
 	probe = convergenceProbe("relationship_publication", relationshipRoot.GenerationDigest, relationshipRoot.Digest,
 		relationshipRoot.CompleteServiceCount, relationshipRoot.EmptyServiceCount, relationshipRoot.FailedServiceCount)
-	if relationshipRoot.Authority.ObservationGenerationDigest != progress.Publication.GenerationDigest ||
+	if relationshipRoot.Authority.Upstream == nil ||
+		relationshipRoot.Authority.ObservationGenerationDigest !=
+			relationshipRoot.Authority.Upstream.Observation.ObservationGenerationDigest ||
+		relationshipRoot.Authority.Upstream.Observation.SourceGenerationDigest != source.Digest ||
 		!relationshipRoot.RepositoryComplete || !relationshipRoot.AllServicesComplete ||
 		relationshipRoot.FailedServiceCount != 0 {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 relationship root has not converged")
@@ -285,7 +285,8 @@ func (inspector *profileInspector) inspectWithProgress(
 		Schema: privateSnapshotSchema, Name: profile.Name,
 		IndexedCommit: repository.IndexedCommitHash, SourceGeneration: source.Digest,
 		SearchGeneration: searchRoot.Current.GenerationDigest, SearchRootDigest: receipt.SearchDigest,
-		ObservationGeneration: progress.Publication.GenerationDigest, ExtractionGeneration: extraction.generation,
+		ObservationGeneration:  relationshipRoot.Authority.ObservationGenerationDigest,
+		ExtractionGeneration:   extraction.generation,
 		RelationshipGeneration: relationshipRoot.GenerationDigest, RelationshipRootDigest: relationshipRoot.Digest,
 		RegularFiles: uint64(source.RegularOwnerCount), PhysicalOwners: uint64(source.OwnerCount),
 		DeclaredSourceBytes:    uint64(source.RegularDeclaredBytes),
@@ -335,6 +336,17 @@ func (inspector *profileInspector) inspectWithProgress(
 			errors.New("T40.13 extraction partitions have not converged")
 	}
 	return result, convergenceProbe("complete", snapshotAuthority(result)), nil
+}
+
+func observationProgressConverged(progress observationpublication.Progress, sourceDigest string) bool {
+	return progress.State == "current" && progress.Publication != nil &&
+		progress.Publication.State == "current" &&
+		progress.Publication.SourceGenerationDigest == sourceDigest &&
+		progress.Schedule != nil && progress.Schedule.State == "settled" &&
+		progress.Schedule.Pending == 0 && progress.Schedule.Running == 0 &&
+		progress.Schedule.Failed == 0 &&
+		progress.Schedule.Succeeded == progress.Schedule.TotalPartitions &&
+		progress.Schedule.Materialized >= progress.Schedule.TotalPartitions
 }
 
 func inspectionContextFence(ctx context.Context) error {
@@ -773,8 +785,16 @@ func verifyRestoredBoundary(
 	if err != nil || source.Digest != expected.SourceGeneration {
 		return errors.Join(err, errors.New("T40.13 restored source authority differs"))
 	}
-	searchRoot, err := focusedindex.ReadSearchGenerationRoot(indexDirectory, profile.RepositoryName)
-	if err != nil || searchRoot.Current.GenerationDigest != expected.SearchGeneration {
+	if len(source.Revisions) != 1 || source.Revisions[0].Commit != expected.IndexedCommit {
+		return errors.New("T40.13 restored source revision differs")
+	}
+	// Search backups intentionally retain the selected complete flat publication,
+	// not lifecycle-control history. Validate that retained authority directly;
+	// startup adopts it back into the lifecycle root before online inspection.
+	search, err := focusedindex.ValidateRepositorySearchGeneration(
+		ctx, indexDirectory, profile.RepositoryName, source.Revisions,
+	)
+	if err != nil || search.Digest != expected.SearchRootDigest {
 		return errors.Join(err, errors.New("T40.13 restored search authority differs"))
 	}
 	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(

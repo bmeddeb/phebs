@@ -62,6 +62,55 @@ func generationSpec(repository, generation string) GenerationScheduleSpec {
 	}
 }
 
+func TestGenerationResourceClassMigrationAdmitsExtractionSchedules(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	state, err := OpenLocalMemory(t.Context(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	results, err := surrealdb.Query[any](t.Context(), state.db, `
+DELETE $marker;
+DEFINE FIELD OVERWRITE resource_class ON generation_schedule TYPE string
+	ASSERT $value INSIDE ['cpu', 'io', 'memory'];
+DEFINE FIELD OVERWRITE resource_class ON generation_schedule_chunk TYPE string
+	ASSERT $value INSIDE ['cpu', 'io', 'memory'];`, map[string]any{
+		"marker": generationResourceClassMigrationID(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			t.Fatalf("install legacy resource schema statement %d: %s", index, result.Error.Message)
+		}
+	}
+	if err := state.migrateGenerationResourceClasses(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	spec := generationSpec(
+		"example.invalid/extraction-class", "sha256:"+strings.Repeat("e", 64),
+	)
+	spec.ResourceClass = GenerationResourceExtraction
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(
+		t.Context(), spec.Repository, spec.Stage, spec.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := state.ClaimGenerationChunk(
+		t.Context(), GenerationResourceExtraction, "extraction-worker",
+	)
+	if err != nil || chunk.ResourceClass != GenerationResourceExtraction {
+		t.Fatalf("extraction chunk = %+v, %v", chunk, err)
+	}
+}
+
 func TestGenerationScheduleValidationClosesProgressRows(t *testing.T) {
 	spec := generationSpec("github.com/example/progress", "sha256:"+strings.Repeat("a", 64))
 	digest, err := GenerationScheduleDigest(spec)

@@ -465,6 +465,38 @@ func TestEnqueuePendingCollapsesConcurrentSuccessorsAndUpgradesForce(t *testing.
 	})
 }
 
+func TestEnqueuePendingWakesBackedOffJobForFreshEvent(t *testing.T) {
+	s := newTestStore(t)
+	ctx := t.Context()
+	if _, err := s.EnqueuePending(ctx, store.JobResolverCatalog, "github.com/acme/wake", false); err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := s.ClaimJob(ctx, store.JobResolverCatalog, "resolver-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RequeueJob(
+		ctx, *claimed, "authority pending", time.Now().UTC().Add(time.Hour),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.EnqueuePending(
+		ctx, store.JobResolverCatalog, claimed.Target, false,
+	); err != nil {
+		t.Fatal(err)
+	}
+	woken, err := s.ClaimJob(ctx, store.JobResolverCatalog, "resolver-worker-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if woken.ID != claimed.ID || woken.Attempts != 1 || woken.NotBefore != nil {
+		t.Fatalf("woken job = %+v, want same row at attempt 1 without backoff", woken)
+	}
+}
+
 func TestLeaseFencesReapedWorker(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()

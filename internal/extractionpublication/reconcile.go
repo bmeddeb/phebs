@@ -22,6 +22,7 @@ type AuthorityReader func(context.Context, string) (source, observation string, 
 
 type extractionRunStore interface {
 	store.PartitionedExtractionRunStore
+	GetPartitionedExtractionDomain(context.Context, string, string) (*store.PartitionedExtractionDomain, error)
 }
 
 // Reconciler turns the current strict candidate and observation controls into
@@ -117,6 +118,11 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	} else if present {
 		return reconciler.Runtime.Reconcile(ctx, repository, existing)
 	}
+	if published, present, err := reconciler.currentPublishedDomains(ctx, repository, plans); err != nil {
+		return "", err
+	} else if present {
+		return reconciler.Runtime.restorePublished(ctx, repository, published)
+	}
 	publicationState := publication.State()
 	domains := make([]DomainPlan, 0, len(plans))
 	for _, plan := range plans {
@@ -138,6 +144,64 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		domains = append(domains, DomainPlan{Schema: DomainSchema, RunID: run.ID, Plan: plan})
 	}
 	return reconciler.Runtime.Reconcile(ctx, repository, domains)
+}
+
+// currentPublishedDomains recognizes an exact store authority after archive
+// restore removed the reconstructible filesystem controls. The store root
+// contains the canonical plan, every partition result, and the original run
+// identity, so recovery can reconstitute the bounded controls without opening
+// source content or minting replacement evidence authority.
+func (reconciler *Reconciler) currentPublishedDomains(
+	ctx context.Context,
+	repository string,
+	plans []candidate.DomainResultPlan,
+) ([]restoredDomain, bool, error) {
+	result := make([]restoredDomain, 0, len(plans))
+	for _, plan := range plans {
+		publication, err := reconciler.Evidence.GetPartitionedExtractionDomain(
+			ctx, repository, plan.Domain,
+		)
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, false, nil
+		}
+		if err != nil {
+			return nil, false, err
+		}
+		if publication == nil || publication.Repository != repository ||
+			publication.Domain != plan.Domain || publication.PlanDigest != plan.Digest {
+			return nil, false, nil
+		}
+		storedPlan, err := candidate.DecodeDomainResultPlanControl(
+			bytes.NewReader([]byte(publication.Plan)),
+		)
+		if err != nil {
+			return nil, false, err
+		}
+		planRaw, err := canonical(plan)
+		if err != nil {
+			return nil, false, err
+		}
+		if !bytes.Equal(planRaw, []byte(publication.Plan)) || storedPlan.Digest != plan.Digest {
+			return nil, false, nil
+		}
+		root, err := candidate.DecodeDomainResultRoot(
+			bytes.NewReader([]byte(publication.Root)), storedPlan,
+		)
+		if err != nil {
+			return nil, false, err
+		}
+		if root.Digest != publication.RootDigest ||
+			root.Totals.Facts != publication.Facts ||
+			root.Totals.Rows != publication.Rows ||
+			root.Totals.References != publication.References {
+			return nil, false, invalid("stored published domain authority")
+		}
+		result = append(result, restoredDomain{
+			Domain: DomainPlan{Schema: DomainSchema, RunID: publication.RunID, Plan: storedPlan},
+			Root:   root,
+		})
+	}
+	return result, len(result) == len(plans) && len(result) > 0, nil
 }
 
 func (reconciler *Reconciler) abortRuns(domains []DomainPlan) {

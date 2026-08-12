@@ -95,7 +95,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
@@ -184,7 +184,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	}
 	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
 		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 {
+		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
 		}
@@ -252,7 +252,7 @@ func HostPreflight(ctx context.Context, dataParent string, plan Plan) (Environme
 		return EnvironmentObservation{}, errors.New("T40.13 frozen host prerequisite is not met")
 	}
 	usedPercent := int((capacity.UsedBytes * 100) / capacity.TotalBytes)
-	if plan.Schema == PlanSchemaV10 {
+	if plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 {
 		observedCapacity, capacityErr := lifecycle.NewGate(dataParent).Check(ctx, 0)
 		if capacityErr != nil {
 			return EnvironmentObservation{}, fmt.Errorf("gate T40.13 custody capacity: %w", capacityErr)
@@ -436,6 +436,10 @@ func loopbackAddress(value string) bool {
 }
 
 func catalogFor(kind string) ([]byte, error) {
+	return catalogForShape(kind, 10_000)
+}
+
+func catalogForShape(kind string, structuralCells uint64) ([]byte, error) {
 	catalog := servicecatalog.Catalog{
 		Schema:    servicecatalog.Schema,
 		Authority: servicecatalog.Authority{Kind: servicecatalog.AuthorityOperator, ID: "t4013-neutral", Version: "v1"},
@@ -447,7 +451,11 @@ func catalogFor(kind string) ([]byte, error) {
 	}
 	switch kind {
 	case "structural":
-		for ordinal := 0; ordinal < 100; ordinal++ {
+		if structuralCells == 0 || structuralCells > 10_000 {
+			return nil, errors.New("T40.13 structural catalog shape is invalid")
+		}
+		serviceCount := min(100, int(structuralCells))
+		for ordinal := 0; ordinal < serviceCount; ordinal++ {
 			key := fmt.Sprintf("service-%03d", ordinal)
 			catalog.Services = append(catalog.Services, servicecatalog.Service{
 				Key: key, DisplayName: fmt.Sprintf("Neutral service %03d", ordinal),
@@ -458,7 +466,8 @@ func catalogFor(kind string) ([]byte, error) {
 				Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
 			})
 		}
-		for bucket := 1; bucket < 100; bucket++ {
+		bucketCount := (int(structuralCells) + 99) / 100
+		for bucket := 1; bucket < bucketCount; bucket++ {
 			catalog.Unowned = append(catalog.Unowned, servicecatalog.UnownedPlacement{
 				Path: fmt.Sprintf("structural/cells/b%03d", bucket), Origin: servicecatalog.OriginBase,
 			})

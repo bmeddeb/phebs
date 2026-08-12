@@ -76,6 +76,9 @@ type DeclarationPublication struct {
 	Domain           string `json:"domain"`
 	RunID            string `json:"run_id"`
 	GenerationDigest string `json:"generation_digest"`
+	AuthoritySchema  string `json:"authority_schema,omitempty"`
+	PlanDigest       string `json:"plan_digest,omitempty"`
+	RootDigest       string `json:"root_digest,omitempty"`
 }
 
 // ResolverPack identifies one deterministic adapter generation. The empty set
@@ -280,7 +283,7 @@ func validateIdentity(identity Identity) error {
 	for index, declaration := range identity.Declarations {
 		if declaration.Domain == "" || !validToken(declaration.Domain, 128) ||
 			declaration.RunID == "" || !validToken(declaration.RunID, 256) ||
-			!validExtractionGenerationDigest(declaration.GenerationDigest) {
+			!validDeclarationAuthority(declaration) {
 			return fmt.Errorf("%w: declaration %d", ErrInvalidIdentity, index)
 		}
 		if index > 0 && identity.Declarations[index-1].Domain >= declaration.Domain {
@@ -431,6 +434,17 @@ func validExtractionGenerationDigest(value string) bool {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(value, prefix))
 	return err == nil &&
 		hex.EncodeToString(decoded) == strings.TrimPrefix(value, prefix)
+}
+
+func validDeclarationAuthority(value DeclarationPublication) bool {
+	partitioned := value.AuthoritySchema != "" ||
+		value.PlanDigest != "" || value.RootDigest != ""
+	if !partitioned {
+		return validExtractionGenerationDigest(value.GenerationDigest)
+	}
+	return value.AuthoritySchema == "phebs-partitioned-extraction-domain-v1" &&
+		validDigest(value.PlanDigest) && validDigest(value.RootDigest) &&
+		value.GenerationDigest == value.RootDigest
 }
 
 func digestCanonical(value any) (string, error) {

@@ -37,6 +37,9 @@ type DeclarationInput struct {
 	Domain           string
 	RunID            string
 	GenerationDigest string
+	AuthoritySchema  string
+	PlanDigest       string
+	RootDigest       string
 }
 
 type BuildRequest struct {
@@ -279,6 +282,9 @@ func validateBuildRequest(request BuildRequest) error {
 		expectedDeclarations[index] = resolvercatalog.DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	if !slices.Equal(expectedDeclarations, request.Identity.Declarations) {

@@ -9,11 +9,17 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+type DownstreamDomainStore interface {
+	GetPartitionedExtractionDomain(
+		context.Context, string, string,
+	) (*store.PartitionedExtractionDomain, error)
+}
+
 // CurrentDomainAuthority validates the store's exact canonical plan/root pair
 // without opening candidate, source, observation, Git, or evidence content.
 func CurrentDomainAuthority(
 	ctx context.Context,
-	state store.PartitionedEvidenceStore,
+	state DownstreamDomainStore,
 	repository, domain string,
 ) (candidate.DownstreamDomainAuthority, error) {
 	if state == nil {

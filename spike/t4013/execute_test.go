@@ -257,6 +257,26 @@ func TestConvergenceDeadlineRetainsClosedLastProgress(t *testing.T) {
 	}
 }
 
+func TestObservationProgressConvergenceAllowsSuccessfulRetryAttempts(t *testing.T) {
+	const sourceDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	progress := observationpublication.Progress{
+		State: "current",
+		Publication: &observationpublication.PublicationProgress{
+			State: "current", SourceGenerationDigest: sourceDigest,
+		},
+		Schedule: &observationpublication.ScheduleProgress{
+			State: "settled", TotalPartitions: 2, Materialized: 3, Succeeded: 2,
+		},
+	}
+	if !observationProgressConverged(progress, sourceDigest) {
+		t.Fatal("a settled schedule with one successful retry was rejected")
+	}
+	progress.Schedule.Succeeded = 1
+	if observationProgressConverged(progress, sourceDigest) {
+		t.Fatal("an incompletely settled schedule was accepted")
+	}
+}
+
 func TestConvergenceProgressTrackerCountsOnlyIdentityChanges(t *testing.T) {
 	first := convergenceProbe("repository_index", "queued")
 	second := convergenceProbe("repository_index", "running")
@@ -1120,6 +1140,79 @@ func TestRunningLeaseMatchRequiresExactAuthoritativeAttempt(t *testing.T) {
 	state.Status, state.Attempt = store.GenerationChunkRunning, report.Attempt+1
 	if runningLeaseMatchesReport(state, report, state.Repository) {
 		t.Fatal("different running attempt matched the discovery report")
+	}
+}
+
+func TestRecoveryHelpersRequireLiveBackupBeforeOfflineRestore(t *testing.T) {
+	workspace := t.TempDir()
+	profileRoot := filepath.Join(workspace, "semantic")
+	dataDir := filepath.Join(profileRoot, "data")
+	for _, path := range []string{profileRoot, dataDir} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	configPath := filepath.Join(profileRoot, "phebs.yaml")
+	if err := os.WriteFile(configPath, []byte("test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(profileRoot, "live")
+	if err := os.WriteFile(marker, []byte("live\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	script := filepath.Join(workspace, "fake-phebs")
+	scriptBody := `#!/bin/sh
+set -eu
+mode="$1"
+shift
+if [ "$mode" = "backup" ]; then
+  test -f "$T4013_LIVE_MARKER"
+  output=""
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = "-output" ]; then
+      output="$2"
+      break
+    fi
+    shift
+  done
+  test -n "$output"
+  mkdir "$output"
+  printf 'backup\n' > "$output/artifact"
+elif [ "$mode" = "restore" ]; then
+  test ! -f "$T4013_LIVE_MARKER"
+  mkdir "$T4013_DATA_DIR"
+  printf 'restored\n' > "$T4013_DATA_DIR/restored"
+else
+  exit 2
+fi
+`
+	if err := os.WriteFile(script, []byte(scriptBody), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("T4013_LIVE_MARKER", marker)
+	t.Setenv("T4013_DATA_DIR", dataDir)
+	profile := PreparedProfile{Config: configPath, DataDir: dataDir}
+	toolchain := privateToolchain{Phebs: script}
+	backup, backupMetrics, err := createLiveBackup(
+		t.Context(), toolchain, profile, workspace, "test",
+	)
+	if err != nil || backupMetrics.OtherChildren < 1 {
+		t.Fatalf("live backup = %+v, metrics=%+v, err=%v", backup, backupMetrics, err)
+	}
+	if err := os.Remove(marker); err != nil {
+		t.Fatal(err)
+	}
+	restoreMetrics, err := restoreBackup(
+		t.Context(), toolchain, profile, workspace, backup, "test",
+	)
+	if err != nil || restoreMetrics.OtherChildren < 1 {
+		t.Fatalf("offline restore metrics=%+v, err=%v", restoreMetrics, err)
+	}
+	if _, err := os.Lstat(filepath.Join(dataDir, "restored")); err != nil {
+		t.Fatalf("restored data is absent: %v", err)
+	}
+	if _, err := os.Lstat(dataDir + ".prior-test"); !os.IsNotExist(err) {
+		t.Fatalf("prior data survived successful restore: %v", err)
 	}
 }
 

@@ -55,9 +55,116 @@ func testResolverCatalogStoreLifecycle(t *testing.T, s *store.Surreal) {
 	t.Run("exact declarations", func(t *testing.T) {
 		testResolverCatalogAcceptsExactPublishedDeclarationSet(t, s)
 	})
+	t.Run("partitioned declarations", func(t *testing.T) {
+		testResolverCatalogAcceptsExactPartitionedDeclarationSet(t, s)
+	})
 	t.Run("restore clear and queue kind", func(t *testing.T) {
 		testResolverCatalogRestoreClearAndQueueKind(t, s)
 	})
+}
+
+func testResolverCatalogAcceptsExactPartitionedDeclarationSet(
+	t *testing.T, s *store.Surreal,
+) {
+	ctx := context.Background()
+	repository := "github.com/acme/resolver-partitioned-declaration"
+	commit := candidateCommit('9')
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	candidate := candidatePublication(repository, commit, "")
+	if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CancelPendingJobs(
+		ctx, store.JobResolverCatalog, repository,
+	); err != nil {
+		t.Fatal(err)
+	}
+	const domain = "proto-contract"
+	planDigest := candidateDigest('a')
+	rootDigest := candidateDigest('b')
+	run, err := s.BeginPartitionedExtractionRun(
+		ctx, store.ExtractionScope{
+			Repository: repository, Commit: commit, Domain: domain,
+		},
+		"3.0.0", planDigest, candidate.ManifestDigest,
+		store.PartitionedExtractionRunLimits{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishPartitionedExtractionDomain(
+		ctx, store.PartitionedExtractionDomain{
+			Schema:     store.PartitionedExtractionDomainSchema,
+			Repository: repository, Domain: domain, RunID: run.ID,
+			PlanDigest: planDigest, RootDigest: rootDigest,
+			CandidateDigest: candidate.ManifestDigest,
+			SourceDigest:    candidateDigest('c'), ObservationDigest: candidateDigest('d'),
+			Plan: `{}`, Root: `{}`,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	declaration := resolvercatalog.DeclarationPublication{
+		Domain: domain, RunID: run.ID, GenerationDigest: rootDigest,
+		AuthoritySchema: store.PartitionedExtractionDomainSchema,
+		PlanDigest:      planDigest, RootDigest: rootDigest,
+	}
+	identity, err := resolvercatalog.NewIdentity(
+		repository, commit, "", candidate.ManifestDigest,
+		[]resolvercatalog.DeclarationPublication{declaration}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication := resolverPublication(repository, commit, candidate.ManifestDigest)
+	publication.Declarations = []store.ResolverCatalogDeclarationPublication{{
+		Domain: declaration.Domain, RunID: declaration.RunID,
+		GenerationDigest: declaration.GenerationDigest,
+		AuthoritySchema:  declaration.AuthoritySchema,
+		PlanDigest:       declaration.PlanDigest, RootDigest: declaration.RootDigest,
+	}}
+	publication.DeclarationSetDigest = identity.DeclarationSetDigest
+	publication.GenerationDigest = identity.GenerationDigest
+	if err := s.PublishResolverCatalog(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	current, err := s.GetResolverCatalogPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := s.ResolverCatalogPublicationCurrent(ctx, *current); err != nil || !ok {
+		t.Fatalf("partitioned declaration current = %t, %v", ok, err)
+	}
+
+	changed := *current
+	changed.Declarations = append(
+		[]store.ResolverCatalogDeclarationPublication(nil), current.Declarations...,
+	)
+	changed.Declarations[0].RootDigest = candidateDigest('e')
+	changed.Declarations[0].GenerationDigest = changed.Declarations[0].RootDigest
+	changedIdentity, err := resolvercatalog.NewIdentity(
+		repository, commit, "", candidate.ManifestDigest,
+		[]resolvercatalog.DeclarationPublication{{
+			Domain: domain, RunID: run.ID,
+			GenerationDigest: changed.Declarations[0].GenerationDigest,
+			AuthoritySchema:  store.PartitionedExtractionDomainSchema,
+			PlanDigest:       planDigest, RootDigest: changed.Declarations[0].RootDigest,
+		}}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed.DeclarationSetDigest = changedIdentity.DeclarationSetDigest
+	changed.GenerationDigest = changedIdentity.GenerationDigest
+	changed.ManifestDigest = candidateDigest('f')
+	if err := s.PublishResolverCatalog(ctx, changed); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("mismatched partitioned declaration = %v, want conflict", err)
+	}
 }
 
 func testResolverCatalogCandidateFirstPublicationFanout(

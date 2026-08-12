@@ -905,7 +905,7 @@ func revalidateStateDigests(state State) error {
 	for index, declaration := range state.Declarations {
 		if !validToken(declaration.Domain, 128) ||
 			!validToken(declaration.RunID, 256) ||
-			!validExtractionGenerationDigest(declaration.GenerationDigest) ||
+			!validDeclarationAuthority(declaration) ||
 			index > 0 && state.Declarations[index-1].Domain >= declaration.Domain {
 			return errors.New("invalid resolver catalog state declaration identity")
 		}

@@ -118,6 +118,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
 		}
 	}
+	if err := s.migrateGenerationResourceClasses(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilityPreMigrationSchema, nil)
 	if err != nil {
 		return err
@@ -2182,7 +2185,7 @@ LET $pending = (SELECT id, created_at FROM type::table($table)
     ORDER BY created_at LIMIT 1)[0].id;
 LET $job = IF $pending != NONE THEN
     (UPDATE $pending SET force = IF $force THEN true ELSE force END,
-        recovery_lease = NONE RETURN AFTER)
+		recovery_lease = NONE, not_before = NONE RETURN AFTER)
 ELSE
     (CREATE type::table($table) CONTENT {
         target: $target,
@@ -2200,9 +2203,11 @@ COMMIT;`
 
 const maxQueueRetries = 64
 
-// EnqueuePending atomically ensures that target has one pending job. An
-// already-running job is deliberately ignored: the pending row is its single
-// successor, preserving events that arrive after the worker took its snapshot.
+// EnqueuePending atomically ensures that target has one immediately claimable
+// pending job. A fresh event clears an existing retry backoff while preserving
+// its consumed attempt count. An already-running job is deliberately ignored:
+// the pending row is its single successor, preserving events that arrive after
+// the worker took its snapshot.
 func (s *Surreal) EnqueuePending(ctx context.Context, kind JobKind, target string, force bool) (*Job, error) {
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]jobRec](ctx, s.db, enqueuePendingSQL,

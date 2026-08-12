@@ -947,7 +947,6 @@ func (runtime *Runtime) finalizeZeroDomains(ctx context.Context, generation Gene
 		}
 		if err := runtime.tryAssemble(ctx, store.GenerationChunk{
 			Repository: generation.Repository, Stage: ScheduleStage,
-			Generation: generation.Digest,
 		}, directory, descriptor, domain, -1); err != nil {
 			return err
 		}

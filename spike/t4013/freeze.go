@@ -76,6 +76,8 @@ var frozenSafetyV10 = SafetyEnvelope{
 	MaximumPressureBallastBytes: 80 << 30,
 }
 
+var frozenSafetyV11 = frozenSafetyV10
+
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
 		Schema: PlanSchema, FrozenOn: "2026-08-08", SourceCommit: sourceCommit,
@@ -98,7 +100,21 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return frozenV10PlanWithHostToolchain(sourceCommit, hostToolchain)
+	return frozenV11PlanWithHostToolchain(sourceCommit, hostToolchain)
+}
+
+func frozenV11PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := FrozenPlan(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV11
+	value.HostToolchain = slices.Clone(hostToolchain)
+	value.Safety = frozenSafetyV11
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
 }
 
 func frozenV10PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

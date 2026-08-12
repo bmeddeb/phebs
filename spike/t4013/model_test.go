@@ -318,6 +318,24 @@ func TestV10PlanFreezesDeterministicPressureExercise(t *testing.T) {
 	}
 }
 
+func TestV11PlanPreservesTakeFifteenEnvelope(t *testing.T) {
+	plan, err := frozenV11PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV11 || plan.Safety != frozenSafetyV10 || plan.Safety != frozenSafetyV11 {
+		t.Fatalf("v11 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV11 || decoded.Safety != frozenSafetyV11 {
+		t.Fatalf("decoded v11 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV10CompletedReceiptRequiresPressureRestart(t *testing.T) {
 	plan, err := frozenV10PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
@@ -348,17 +366,71 @@ func TestV10CompletedReceiptRequiresPressureRestart(t *testing.T) {
 	}
 }
 
+func TestV11CompletedReceiptRequiresLiveInterruptionBackupRestart(t *testing.T) {
+	plan, err := frozenV11PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV7Observation(plan)
+	value.Schema = ObservationSchemaV11
+	value.ServerStartups = slices.Insert(value.ServerStartups, 6, ServerStartupObservation{
+		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	value.ServerStartups = slices.Insert(value.ServerStartups, 3, ServerStartupObservation{
+		Profile: "semantic-262144-v1", Label: "interruption-backup", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	backupWait := value.ConvergenceWaits[5]
+	backupWait.Label = "interruption-backup"
+	value.ConvergenceWaits = slices.Insert(value.ConvergenceWaits, 5, backupWait)
+	receiptBytes, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV11 || len(receipt.ServerStartups) != 10 ||
+		len(receipt.ConvergenceWaits) != 13 {
+		t.Fatalf("v11 receipt = %+v, %v", receipt, err)
+	}
+	value.ServerStartups = slices.Delete(value.ServerStartups, 3, 4)
+	value.ConvergenceWaits = slices.Delete(value.ConvergenceWaits, 5, 6)
+	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
+		t.Fatal("v11 completed receipt omitted the live interruption backup restart")
+	}
+}
+
 func TestHistoricalObservationRejectsPressureRestartDiagnostic(t *testing.T) {
 	values := []ServerStartupObservation{{
 		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",
 		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
 		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
 	}}
-	if err := validateServerStartups(values, false); err == nil {
+	if err := validateServerStartups(values, false, false); err == nil {
 		t.Fatal("v9 observation acquired the v10 pressure restart label")
 	}
-	if err := validateServerStartups(values, true); err != nil {
+	if err := validateServerStartups(values, true, false); err != nil {
 		t.Fatalf("v10 pressure restart diagnostic failed: %v", err)
+	}
+}
+
+func TestV10ObservationRejectsV11InterruptionBackupDiagnostic(t *testing.T) {
+	values := []ServerStartupObservation{{
+		Profile: "semantic-262144-v1", Label: "interruption-backup", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	}}
+	if err := validateServerStartups(values, true, false); err == nil {
+		t.Fatal("v10 observation acquired the v11 interruption backup label")
+	}
+	if err := validateServerStartups(values, true, true); err != nil {
+		t.Fatalf("v11 interruption backup diagnostic failed: %v", err)
 	}
 }
 

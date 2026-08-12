@@ -530,6 +530,38 @@ terminal status because pointer installation precedes final chunk settlement.
 This correction authorizes no rerun, ticket/Epic closure, topology or bound
 change, scale/SLO claim, or release.
 
+Take 16 readiness investigation (2026-08-11): review of the phases that Take
+15 never reached found a deterministic ceremony-only recovery blocker. Both
+recovery exercises invoked the production live-backup command after graceful
+server shutdown had removed the runtime descriptor and stopped its endpoint.
+Take 16 retires `neutral-15` and introduces v11 without changing the v10
+corpus, phase order, deadlines, pressure target, ceilings, rules, or nonclaims.
+Its merge bar is: interruption starts one explicitly measured semantic backup
+server, revalidates unchanged A authority, creates backup while live, then
+stops, restores, verifies, interrupts, and restarts; archive restore backs up
+the already-running structural server before stop; recovery command roots,
+descendants, and transient allocation are measured; concurrent server/command
+RSS is conservatively summed; v1-v10 startup/wait inventories remain closed;
+`neutral-15` is permanently retired; focused recovery, exact schema, harness,
+production recovery, docs, glossary, lint, and steady-state-cost gates pass.
+The later-phase audit and bounded real-binary rehearsal are now complete. They
+found production integration defects in addition to the harness order: the v2
+observation inventory rejected normal A→B replacement; whole-repository
+partition roots were not a resolver declaration source; settled empty domains
+had no resolver authority; downstream events could be lost behind retry
+backoff; and readiness used filesystem success pointers rather than the exact
+store authority for terminal/empty domain roots. The repaired path also restores
+partition and whole-search lifecycle controls, uses one bounded Git batch child
+per active extraction partition, leaves focused analysis units on their legacy
+lane, and keeps whole repositories on the T40 partitioned lane. A semantic
+real-binary rehearsal passed in 105.98s. A structural cold A→B→A-return
+rehearsal passed in 161.45s. Both included live backup, offline restore, exact
+restored convergence/lifecycle, and authorized query; the semantic query also
+required its citation. Focused production/store packages passed, including the
+21m19s real-Surreal store suite under an explicit 30-minute package bound.
+This remains readiness, not execution authorization. Freeze still requires a
+clean exact commit, independent plan review, and Ben's explicit approval.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -119,7 +119,17 @@ func CreateArchiveWithReportContext(
 			_ = writer.Close()
 			return report, err
 		}
-		path := filepath.Join(indexDir, name)
+		expectation := expectations[name]
+		sourceName := name
+		if expectation.source != "" {
+			sourceName = expectation.source
+		}
+		if filepath.IsAbs(sourceName) || filepath.Clean(sourceName) != sourceName ||
+			sourceName == "." || strings.HasPrefix(sourceName, ".."+string(filepath.Separator)) {
+			_ = writer.Close()
+			return report, fmt.Errorf("focused archive source %q is unsafe", sourceName)
+		}
+		path := filepath.Join(indexDir, sourceName)
 		info, err := os.Lstat(path)
 		if err != nil || !info.Mode().IsRegular() ||
 			info.Size() < 0 || info.Size() > maxArchiveEntryBytes ||
@@ -178,7 +188,6 @@ func CreateArchiveWithReportContext(
 				"focused archive input %q changed while it was copied", name,
 			)
 		}
-		expectation := expectations[name]
 		actualDigest := "sha256:" + hex.EncodeToString(digest.Sum(nil))
 		if actualDigest != expectation.digest {
 			_ = writer.Close()
@@ -215,6 +224,7 @@ func CreateArchiveWithReportContext(
 type archiveExpectation struct {
 	digest string
 	size   int64
+	source string
 }
 
 // verifyCreatedArchive proves that the tar writer emitted exactly the safe,
@@ -662,7 +672,7 @@ func archiveRepositorySearchExpectations(
 	if err != nil {
 		return nil, err
 	}
-	files := make(map[string]archiveExpectation, 3+len(source.Members)+len(whole.Members))
+	files := make(map[string]archiveExpectation, 4+len(source.Members)+len(whole.Members))
 	searchName := repositoryindex.SearchManifestName(search.Repository)
 	var searchSnapshot repositoryindex.SearchManifest
 	expectation, err := archiveControlExpectation(
@@ -695,6 +705,36 @@ func archiveRepositorySearchExpectations(
 	}
 	for _, member := range whole.Members {
 		files[member.Name] = archiveExpectation{digest: member.ContentDigest}
+	}
+	root, rootErr := ReadSearchGenerationRoot(indexDir, search.Repository)
+	if rootErr == nil {
+		if root.Current.GenerationDigest != search.Digest ||
+			!sameSearchRevisions(root.Current.Revisions, search.Revisions) {
+			return nil, errors.New("search lifecycle root differs from selected flat publication")
+		}
+		if _, err := validateImmutableSearchGeneration(
+			context.Background(), indexDir, search.Repository, search.Digest,
+		); err != nil {
+			return nil, err
+		}
+		receiptRelative := filepath.Join(
+			searchGenerationDirectoryName, repositoryKey(search.Repository),
+			root.Current.Directory, searchGenerationReceiptName,
+		)
+		var receipt SearchGenerationReceipt
+		expectation, err := archiveControlExpectation(
+			filepath.Join(indexDir, receiptRelative), &receipt,
+		)
+		if err != nil || receipt.Repository != search.Repository ||
+			receipt.SearchDigest != search.Digest ||
+			receipt.SourceDigest != source.Digest ||
+			!sameSearchRevisions(receipt.Revisions, search.Revisions) {
+			return nil, errors.New("search lifecycle receipt differs from selected flat publication")
+		}
+		expectation.source = receiptRelative
+		files[searchGenerationArchiveReceiptName(search.Repository)] = expectation
+	} else if !errors.Is(rootErr, os.ErrNotExist) {
+		return nil, rootErr
 	}
 	return files, nil
 }
@@ -826,6 +866,17 @@ func validatedPublications(indexDir string) (map[string]string, []string, error)
 		}
 		for _, member := range whole.Members {
 			files[member.Name] = true
+		}
+		receiptName := searchGenerationArchiveReceiptName(search.Repository)
+		if _, statErr := os.Lstat(filepath.Join(indexDir, receiptName)); statErr == nil {
+			if _, err := validateFlatSearchGenerationReceipt(
+				indexDir, search.Repository, search,
+			); err != nil {
+				return nil, nil, err
+			}
+			files[receiptName] = true
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			return nil, nil, statErr
 		}
 	}
 	names := make([]string, 0, len(files))

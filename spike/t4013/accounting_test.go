@@ -49,6 +49,27 @@ func TestMergeMetricsSumsEventsButKeepsAbsoluteGaugeMaxima(t *testing.T) {
 	}
 }
 
+func TestMergeConcurrentMetricsUsesOuterWallAndConservativeRSSSum(t *testing.T) {
+	outer := PhaseMetrics{
+		WallMS: 100, PeakRSSBytes: 8, DataLogicalBytes: 12, DataAllocatedBytes: 6,
+		OtherChildren: 2, ControlReads: 3,
+	}
+	concurrent := PhaseMetrics{
+		WallMS: 30, PeakRSSBytes: 7, DataLogicalBytes: 10, DataAllocatedBytes: 9,
+		OtherChildren: 1, ControlReads: 4,
+	}
+	got, err := mergeConcurrentMetrics(outer, concurrent)
+	if err != nil || got.WallMS != 100 || got.PeakRSSBytes != 15 ||
+		got.DataLogicalBytes != 12 || got.DataAllocatedBytes != 9 ||
+		got.OtherChildren != 3 || got.ControlReads != 7 {
+		t.Fatalf("concurrent metrics = %+v, %v", got, err)
+	}
+	concurrent.PeakRSSBytes = 1<<63 - 1
+	if _, err := mergeConcurrentMetrics(outer, concurrent); err == nil {
+		t.Fatal("concurrent RSS overflow was accepted")
+	}
+}
+
 func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
 	root := t.TempDir()
 	sampler, err := newAllocationSampler(root, 4096)

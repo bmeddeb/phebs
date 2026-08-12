@@ -141,6 +141,78 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 	}
 }
 
+func TestSearchGenerationRecoveryRestoresLifecycleRootFromFlatPublication(t *testing.T) {
+	repositoryDir := t.TempDir()
+	git(t, repositoryDir, "init", "-b", "main")
+	if err := os.WriteFile(
+		filepath.Join(repositoryDir, "main.go"),
+		[]byte("package main\nconst Restored = true\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repositoryDir, "add", "main.go")
+	git(t, repositoryDir, "commit", "-m", "restore fixture")
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD",
+		Commit: git(t, repositoryDir, "rev-parse", "HEAD"),
+	}}
+	const repository = "example.com/acme/restored-search"
+	indexDir := t.TempDir()
+	wholeStage := buildWholeStageFixture(t, repository, revisions, 2)
+	sourceStage := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(
+		t.Context(), repositoryDir, sourceStage, repository, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := PublishWholeGeneration(
+		t.Context(), indexDir, wholeStage, sourceStage, repository, revisions, source,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+	before, err := ReadSearchGenerationRoot(indexDir, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(indexDir, SearchGenerationRootName(repository))); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(SearchGenerationRootDirectory(indexDir)); err != nil {
+		t.Fatal(err)
+	}
+	search, err := ValidateRepositorySearchGeneration(
+		t.Context(), indexDir, repository, revisions,
+	)
+	if err != nil || search.Digest != before.Current.GenerationDigest {
+		t.Fatal(err)
+	}
+	if _, err := ReadSearchGenerationRoot(indexDir, repository); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pre-recovery lifecycle root error = %v, want not-exist", err)
+	}
+
+	recovered, err := RecoverSearchPublication(
+		t.Context(), indexDir, repository, revisions,
+	)
+	if err != nil || !recovered {
+		t.Fatalf("recover flat publication = %t, %v", recovered, err)
+	}
+	root, err := ReadSearchGenerationRoot(indexDir, repository)
+	if err != nil || root.Current.GenerationDigest != search.Digest || root.Prior != nil ||
+		!sameSearchRevisions(root.Current.Revisions, revisions) {
+		t.Fatalf("restored lifecycle root = %+v, %v", root, err)
+	}
+	recovered, err = RecoverSearchPublication(
+		t.Context(), indexDir, repository, revisions,
+	)
+	if err != nil || recovered {
+		t.Fatalf("repeat lifecycle recovery = %t, %v", recovered, err)
+	}
+}
+
 func TestLegacyCommittedPublicationSurvivesUnmatchedSearchTransition(t *testing.T) {
 	repositoryDir := t.TempDir()
 	git(t, repositoryDir, "init", "-b", "main")

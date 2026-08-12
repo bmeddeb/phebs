@@ -55,6 +55,18 @@ func TestRepositorySearchGenerationArchiveIsExactAndFailClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	liveRoot, err := ReadSearchGenerationRoot(indexDir, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	liveReceiptPath := filepath.Join(
+		SearchGenerationRootDirectory(indexDir), repositoryKey(repository),
+		liveRoot.Current.Directory, searchGenerationReceiptName,
+	)
+	liveReceipt, err := os.ReadFile(liveReceiptPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, names, err := validatedPublications(indexDir)
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +91,33 @@ func TestRepositorySearchGenerationArchiveIsExactAndFailClosed(t *testing.T) {
 	}
 	if restoredSearch.Digest != search.Digest {
 		t.Fatalf("restored search digest = %q, want %q", restoredSearch.Digest, search.Digest)
+	}
+	if _, err := os.Lstat(filepath.Join(
+		restored, searchGenerationArchiveReceiptName(repository),
+	)); err != nil {
+		t.Fatalf("restored search archive receipt: %v", err)
+	}
+	recovered, err := RecoverSearchPublication(
+		t.Context(), restored, repository, revisions,
+	)
+	if err != nil || !recovered {
+		t.Fatalf("recover restored search lifecycle = %t, %v", recovered, err)
+	}
+	restoredRoot, err := ReadSearchGenerationRoot(restored, repository)
+	if err != nil || restoredRoot.Current.GenerationDigest != search.Digest {
+		t.Fatalf("restored search root = %+v, %v", restoredRoot, err)
+	}
+	restoredReceipt, err := os.ReadFile(filepath.Join(
+		SearchGenerationRootDirectory(restored), repositoryKey(repository),
+		restoredRoot.Current.Directory, searchGenerationReceiptName,
+	))
+	if err != nil || !bytes.Equal(restoredReceipt, liveReceipt) {
+		t.Fatalf("restored search receipt is not byte-exact: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(
+		restored, searchGenerationArchiveReceiptName(repository),
+	)); !os.IsNotExist(err) {
+		t.Fatalf("archive receipt remained after lifecycle recovery: %v", err)
 	}
 	for _, name := range names {
 		before, err := os.ReadFile(filepath.Join(indexDir, name))

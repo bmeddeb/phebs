@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -26,12 +27,229 @@ import (
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
+
+func TestDeferPendingPartitionAuthorityOnlySuppressesExpectedOrdering(t *testing.T) {
+	pending := fmt.Errorf("current v2 pointer: %w", errPartitionAuthorityPending)
+	if err, deferred := deferPendingPartitionAuthority(pending); err != nil || !deferred {
+		t.Fatalf("pending authority = %v, %t", err, deferred)
+	}
+	corrupt := errors.New("current v2 source root is missing")
+	if err, deferred := deferPendingPartitionAuthority(corrupt); !errors.Is(err, corrupt) || deferred {
+		t.Fatalf("corrupt authority = %v, %t", err, deferred)
+	}
+}
+
+func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
+	repository := "example.com/repository"
+	reconcileErr := errors.New("relationship authority pending")
+	enqueueErr := errors.New("queue unavailable")
+	err := afterResolverPublication(
+		t.Context(), repository,
+		func(_ context.Context, target string) error {
+			if target != repository {
+				t.Fatalf("reconcile target = %q", target)
+			}
+			return reconcileErr
+		},
+		func(
+			_ context.Context, kind store.JobKind, target string, force bool,
+		) (*store.Job, error) {
+			if kind != store.JobCallerLeaf || target != repository || force {
+				t.Fatalf("enqueue = %q, %q, %t", kind, target, force)
+			}
+			return nil, enqueueErr
+		},
+		true,
+	)
+	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) {
+		t.Fatalf("resolver callback error = %v, want both sentinels", err)
+	}
+}
+
+func TestServiceCatalogPublicationRetriggersResolverAfterCandidate(t *testing.T) {
+	repository := "example.com/repository"
+	reconcileErr := errors.New("relationship authority pending")
+	enqueueErr := errors.New("queue unavailable")
+	err := afterServiceCatalogPublication(
+		t.Context(), repository,
+		func(_ context.Context, target string) error {
+			if target != repository {
+				t.Fatalf("reconcile target = %q", target)
+			}
+			return reconcileErr
+		},
+		func(
+			_ context.Context, kind store.JobKind, target string, force bool,
+		) (*store.Job, error) {
+			if kind != store.JobResolverCatalog || target != repository || force {
+				t.Fatalf("enqueue = %q, %q, %t", kind, target, force)
+			}
+			return nil, enqueueErr
+		},
+		true,
+	)
+	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) {
+		t.Fatalf("service catalog callback error = %v, want both sentinels", err)
+	}
+
+	called := false
+	err = afterServiceCatalogPublication(
+		t.Context(), repository, nil,
+		func(
+			context.Context, store.JobKind, string, bool,
+		) (*store.Job, error) {
+			called = true
+			return nil, nil
+		},
+		false,
+	)
+	if err != nil || called {
+		t.Fatalf("candidate-pending callback = %v, enqueue called=%t", err, called)
+	}
+}
+
+func TestPartitionSettlementQueuesResolverBeforeCaller(t *testing.T) {
+	repository := "example.com/repository"
+	reconcileErr := errors.New("relationship pending")
+	resolverErr := errors.New("resolver queue unavailable")
+	callerErr := errors.New("caller queue unavailable")
+	seen := []store.JobKind{}
+	err := afterPartitionExtractionSettlement(
+		t.Context(), repository,
+		func(_ context.Context, target string) error {
+			if target != repository {
+				t.Fatalf("reconcile target = %q", target)
+			}
+			return reconcileErr
+		},
+		func(
+			_ context.Context, kind store.JobKind, target string, force bool,
+		) (*store.Job, error) {
+			if target != repository || force {
+				t.Fatalf("enqueue = %q, %q, %t", kind, target, force)
+			}
+			seen = append(seen, kind)
+			switch kind {
+			case store.JobResolverCatalog:
+				return nil, resolverErr
+			case store.JobCallerLeaf:
+				return nil, callerErr
+			default:
+				t.Fatalf("unexpected job kind %q", kind)
+				return nil, nil
+			}
+		},
+		true, true,
+	)
+	if !slices.Equal(seen, []store.JobKind{
+		store.JobResolverCatalog, store.JobCallerLeaf,
+	}) {
+		t.Fatalf("enqueued jobs = %v", seen)
+	}
+	for _, sentinel := range []error{reconcileErr, resolverErr, callerErr} {
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("settlement callback error = %v, missing %v", err, sentinel)
+		}
+	}
+
+	seen = nil
+	if err := afterPartitionExtractionSettlement(
+		t.Context(), repository, nil,
+		func(
+			_ context.Context, kind store.JobKind, _ string, _ bool,
+		) (*store.Job, error) {
+			seen = append(seen, kind)
+			return nil, nil
+		},
+		false, false,
+	); err != nil || len(seen) != 0 {
+		t.Fatalf("pending partitions callback = %v, enqueued=%v", err, seen)
+	}
+}
+
+func TestAllPartitionDomainsCurrentRequiresEveryDomain(t *testing.T) {
+	seen := []string{}
+	if current := allPartitionDomainsCurrent(
+		t.Context(), []string{"one", "two", "three"},
+		func(_ context.Context, domain string) error {
+			seen = append(seen, domain)
+			if domain == "two" {
+				return errors.New("pending")
+			}
+			return nil
+		},
+	); current || !slices.Equal(seen, []string{"one", "two"}) {
+		t.Fatalf("partial current = %t, seen=%v", current, seen)
+	}
+	if !allPartitionDomainsCurrent(
+		t.Context(), []string{"one", "two"},
+		func(context.Context, string) error { return nil },
+	) {
+		t.Fatal("complete partition domain set reported pending")
+	}
+}
+
+func TestAllPartitionDomainsMatchRequiresOneExactAuthority(t *testing.T) {
+	current := map[string]candidate.DownstreamDomainAuthority{
+		"grpc-caller": {
+			Domain: "grpc-caller", CandidateManifestDigest: "candidate-a",
+			SourceGenerationDigest:      "source-a",
+			ObservationGenerationDigest: "observation-a",
+			Disposition:                 candidate.PartitionResultTerminalRefusal,
+		},
+		"kafka-producer": {
+			Domain: "kafka-producer", CandidateManifestDigest: "candidate-a",
+			SourceGenerationDigest:      "source-a",
+			ObservationGenerationDigest: "observation-a",
+		},
+	}
+	read := func(
+		_ context.Context, domain string,
+	) (candidate.DownstreamDomainAuthority, error) {
+		authority, ok := current[domain]
+		if !ok {
+			return candidate.DownstreamDomainAuthority{}, store.ErrNotFound
+		}
+		return authority, nil
+	}
+	domains := []string{"grpc-caller", "kafka-producer"}
+	if !allPartitionDomainsMatch(
+		t.Context(), domains, "candidate-a", "source-a", "observation-a", read,
+	) {
+		t.Fatal("exact terminal and successful domain authorities were not current")
+	}
+	current["kafka-producer"] = candidate.DownstreamDomainAuthority{
+		Domain: "kafka-producer", CandidateManifestDigest: "candidate-b",
+		SourceGenerationDigest:      "source-a",
+		ObservationGenerationDigest: "observation-a",
+	}
+	if allPartitionDomainsMatch(
+		t.Context(), domains, "candidate-a", "source-a", "observation-a", read,
+	) {
+		t.Fatal("mixed candidate generations were accepted as current")
+	}
+}
+
+func TestLegacyExtractionIsLimitedToConfiguredAnalysisUnits(t *testing.T) {
+	units := map[string]analysisunit.Scope{
+		"example.com/focused": {},
+	}
+	if !legacyExtractionRequired("example.com/focused", units) {
+		t.Fatal("configured analysis unit did not retain legacy extraction")
+	}
+	if legacyExtractionRequired("example.com/whole", units) {
+		t.Fatal("whole-repository generation selected legacy extraction")
+	}
+}
 
 type authenticationWorkbenchFake struct{}
 
@@ -1487,6 +1705,89 @@ func TestEnqueueCandidateBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
 		if _, ok := st.pending[target]; !ok {
 			t.Errorf("missing backfill job for %s", target)
 		}
+	}
+}
+
+func TestEnqueueCandidateBackfillSkipsAbsentMirrorUntilIndexing(t *testing.T) {
+	st := &candidateBackfillStore{repos: []store.Repo{
+		{Name: "example.com/restored", IndexedCommitHash: strings.Repeat("a", 40)},
+		{Name: "example.com/present", IndexedCommitHash: strings.Repeat("b", 40)},
+	}}
+	err := enqueueCandidateBackfillWithReadiness(
+		t.Context(), st, "current",
+		func(repository string) bool { return repository == "example.com/present" },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.created != 1 || st.pending["example.com/present"].Target != "example.com/present" {
+		t.Fatalf("pending = %+v, want only present mirror", st.pending)
+	}
+	if _, exists := st.pending["example.com/restored"]; exists {
+		t.Fatal("absent restored mirror received a premature candidate job")
+	}
+}
+
+func TestRepositoryMirrorPresentRequiresDirectory(t *testing.T) {
+	dataDirectory := t.TempDir()
+	repository := "example.com/acme/repository"
+	if repositoryMirrorPresent(dataDirectory, repository) {
+		t.Fatal("absent mirror reported present")
+	}
+	directory := phebssync.RepoDir(dataDirectory, repository)
+	if err := os.MkdirAll(filepath.Dir(directory), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(directory, []byte("not a mirror"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if repositoryMirrorPresent(dataDirectory, repository) {
+		t.Fatal("regular file reported as a mirror")
+	}
+	if err := os.Remove(directory); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if !repositoryMirrorPresent(dataDirectory, repository) {
+		t.Fatal("mirror directory reported absent")
+	}
+}
+
+func TestDerivedPublicationPresenceRequiresRegularControl(t *testing.T) {
+	dataDirectory := t.TempDir()
+	repository := "example.com/acme/repository"
+	candidatePath := filepath.Join(
+		dataDirectory, "candidates", candidate.ManifestName(repository),
+	)
+	resolverPath := filepath.Join(
+		dataDirectory, "resolver-catalogs", resolvercatalogid.ManifestName(repository),
+	)
+	if candidatePublicationPresent(dataDirectory, repository) ||
+		resolverPublicationPresent(dataDirectory, repository) {
+		t.Fatal("absent derived controls reported present")
+	}
+	for _, path := range []string{candidatePath, resolverPath} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("control"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !candidatePublicationPresent(dataDirectory, repository) ||
+		!resolverPublicationPresent(dataDirectory, repository) {
+		t.Fatal("regular derived controls reported absent")
+	}
+	if err := os.Remove(candidatePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(resolverPath, candidatePath); err != nil {
+		t.Fatal(err)
+	}
+	if candidatePublicationPresent(dataDirectory, repository) {
+		t.Fatal("symlinked candidate control reported present")
 	}
 }
 

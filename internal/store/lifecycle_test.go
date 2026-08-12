@@ -106,6 +106,36 @@ UPDATE generation_schedule_chunk SET status = 'canceled', claimed_by = '',
 	}
 }
 
+func TestGenerationLifecycleCollectsUnexpandedSupersededSchedule(t *testing.T) {
+	state := newRunnerStore(t)
+	repository := "example.invalid/unexpanded-lifecycle"
+	var digests []string
+	for index := range 4 {
+		spec := generationSpec(repository, "sha256:"+fmt.Sprintf("%064d", index+200))
+		spec.TotalItems = 1
+		spec.ChunkItems = 1
+		if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+			t.Fatal(err)
+		}
+		digests = append(digests, generationScheduleDigest(spec))
+	}
+
+	sweep, err := state.SweepGenerationScheduleLifecycle(
+		t.Context(), "", 64, 16, 2,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sweep.Deleted < 1 || generationScheduleExists(t, state, digests[0]) {
+		t.Fatalf("unexpanded sweep = %+v, oldest schedule retained", sweep)
+	}
+	for _, digest := range digests[2:] {
+		if !generationScheduleExists(t, state, digest) {
+			t.Fatalf("rollback/current schedule %s was deleted", digest)
+		}
+	}
+}
+
 func TestJobLifecycleScanAndTerminalDeletionAreBounded(t *testing.T) {
 	store := newRunnerStore(t)
 	now := time.Now().UTC()

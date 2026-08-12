@@ -47,6 +47,15 @@ func TestAuthorityBindsExactRequiredRootsAndFailsClosed(t *testing.T) {
 	if err != nil || RequireUsable(value) != nil {
 		t.Fatalf("exact successful/empty roots = %+v, %v", value, err)
 	}
+
+	failed.Disposition = candidate.PartitionResultUnavailablePrerequisite
+	value, err = BuildRequired(observation, []DomainIdentity{
+		{Domain: available.Domain, Version: available.Version},
+		{Domain: failed.Domain, Version: failed.Version},
+	}, []candidate.DownstreamDomainAuthority{failed, available})
+	if err != nil || RequireUsable(value) != nil {
+		t.Fatalf("explicit prerequisite gap roots = %+v, %v", value, err)
+	}
 }
 
 func TestAuthorityRejectsNonCanonicalControls(t *testing.T) {

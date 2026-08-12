@@ -124,9 +124,10 @@ LET $eligible = $schedule != NONE AND $schedule.digest = $digest AND
 	$schedule.repository = $repository AND $schedule.stage = $stage AND
 	$schedule.status != 'active' AND $current != $digest AND $running = 0 AND
 	$beyond_count;
-LET $chunk_ids = IF $eligible THEN (SELECT VALUE id FROM generation_schedule_chunk
-	WHERE schedule_digest = $digest ORDER BY offset, attempt LIMIT $chunk_limit) ELSE [] END;
-LET $deleted_chunks = IF $eligible THEN (DELETE $chunk_ids RETURN BEFORE) ELSE [] END;
+LET $chunk_ids = (IF $eligible THEN (SELECT VALUE id FROM generation_schedule_chunk
+	WHERE schedule_digest = $digest ORDER BY offset, attempt LIMIT $chunk_limit) ELSE [] END) ?? [];
+LET $deleted_chunks = IF $eligible AND array::len($chunk_ids) > 0 THEN
+	(DELETE $chunk_ids RETURN BEFORE) ELSE [] END;
 LET $remaining = IF $eligible THEN array::len(SELECT id FROM generation_schedule_chunk
 	WHERE schedule_digest = $digest LIMIT 1) ELSE 1 END;
 LET $deleted_schedule = IF $eligible AND $remaining = 0 THEN
