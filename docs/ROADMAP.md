@@ -879,6 +879,15 @@ catalog, relationship, or correctness authority.
   can stop immediately with the exact closed refusal. The split/versioned
   1-GiB aggregate-contract ticket and serialized-throughput measurement remain
   prerequisites to any Take 17 freeze.
+- The second Take 16 disposition ticket is implemented on its scale branch.
+  New domain plans are v2 with the 64-MiB per-partition backstop preserved and
+  a distinct measured 1-GiB aggregate; persisted v1 validation is unchanged.
+  Five full-sized one-partition-per-domain production rehearsals project the
+  slowest complete four-domain sample across 1,956 serialized chunks at
+  107.503 minutes, within the unchanged cold-window budget. A full-server
+  OpenAPI component-name collision found by rehearsal is closed and pinned.
+  After merge-bar review, the next permissible fresh ID is `t40r1-neutral-17`;
+  execution still requires explicit approval.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

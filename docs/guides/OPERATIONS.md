@@ -3954,3 +3954,10 @@ The endpoint is diagnostic, not historical authority. It reads two exact
 schedule points, one small generation inventory, and at most one current
 pointer per configured domain. It does not read candidate members, source or
 observation content, partition results, domain roots, or evidence payloads.
+
+New extraction plans use the version-2 domain-result contract: each partition
+retains the 64-MiB candidate-member reservation ceiling while the cumulative
+domain input is bounded independently at 1 GiB. Existing version-1 plans keep
+their exact serialized identity and 64-MiB aggregate validation during
+restart, recovery, archive, and downstream reads. This transition requires no
+operator migration or configuration change.

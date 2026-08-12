@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	DomainResultPlanSchema     = "phebs-extraction-domain-result-plan-v1"
+	DomainResultPlanSchemaV1   = "phebs-extraction-domain-result-plan-v1"
+	DomainResultPlanSchemaV2   = "phebs-extraction-domain-result-plan-v2"
+	DomainResultPlanSchema     = DomainResultPlanSchemaV1
 	PartitionResultSchema      = "phebs-extraction-partition-result-v1"
 	DomainResultRootSchema     = "phebs-extraction-domain-result-root-v1"
 	PartitionExpectationSchema = "phebs-extraction-partition-result-expectation-v1"
@@ -38,13 +40,16 @@ const (
 	MaxDomainResultReferences       = 98_304
 	MaxDomainResultCanonicalBytes   = int64(64 << 20)
 	MaxDomainResultEncodedBytes     = int64(64 << 20)
-	MaxDomainResultMemberBytes      = int64(64 << 20)
-	MaxDomainResultMembers          = MaxDomainResultMemberPartitions
-	MaxDomainResultInventoryEntries = 2 * MaxDomainResultPartitions
-	MaxPartitionResultBytes         = int64(8 << 10)
-	MaxDomainResultInventoryBytes   = int64(MaxDomainResultInventoryEntries) * MaxPartitionResultBytes
-	MaxDomainResultPlanBytes        = int64(4 << 20)
-	MaxDomainResultRootBytes        = int64(4 << 20)
+	// MemberBytes remains the per-partition reservation backstop. V1 also used
+	// it as the aggregate; v2 binds a distinct aggregate input ceiling.
+	MaxDomainResultMemberBytes            = int64(64 << 20)
+	MaxDomainResultAggregateMemberBytesV2 = int64(1 << 30)
+	MaxDomainResultMembers                = MaxDomainResultMemberPartitions
+	MaxDomainResultInventoryEntries       = 2 * MaxDomainResultPartitions
+	MaxPartitionResultBytes               = int64(8 << 10)
+	MaxDomainResultInventoryBytes         = int64(MaxDomainResultInventoryEntries) * MaxPartitionResultBytes
+	MaxDomainResultPlanBytes              = int64(4 << 20)
+	MaxDomainResultRootBytes              = int64(4 << 20)
 )
 
 // PartitionResultUnavailablePrerequisite is a root-only state. T40.8 proves
@@ -65,20 +70,21 @@ type DomainResultAuthority struct {
 }
 
 type DomainResultLimits struct {
-	Partitions       int   `json:"partitions"`
-	MemberPartitions int   `json:"member_partitions"`
-	TypedPartitions  int   `json:"typed_partitions"`
-	Facts            int64 `json:"facts"`
-	Rows             int64 `json:"rows"`
-	References       int64 `json:"references"`
-	CanonicalBytes   int64 `json:"canonical_bytes"`
-	EncodedBytes     int64 `json:"encoded_bytes"`
-	MemberBytes      int64 `json:"member_bytes"`
-	Members          int64 `json:"members"`
-	InventoryEntries int   `json:"inventory_entries"`
-	InventoryBytes   int64 `json:"inventory_bytes"`
-	PlanBytes        int64 `json:"plan_bytes"`
-	RootBytes        int64 `json:"root_bytes"`
+	Partitions           int   `json:"partitions"`
+	MemberPartitions     int   `json:"member_partitions"`
+	TypedPartitions      int   `json:"typed_partitions"`
+	Facts                int64 `json:"facts"`
+	Rows                 int64 `json:"rows"`
+	References           int64 `json:"references"`
+	CanonicalBytes       int64 `json:"canonical_bytes"`
+	EncodedBytes         int64 `json:"encoded_bytes"`
+	MemberBytes          int64 `json:"member_bytes"`
+	AggregateMemberBytes int64 `json:"aggregate_member_bytes,omitempty"`
+	Members              int64 `json:"members"`
+	InventoryEntries     int   `json:"inventory_entries"`
+	InventoryBytes       int64 `json:"inventory_bytes"`
+	PlanBytes            int64 `json:"plan_bytes"`
+	RootBytes            int64 `json:"root_bytes"`
 }
 
 func FrozenDomainResultLimits() DomainResultLimits {
@@ -97,6 +103,30 @@ func FrozenDomainResultLimits() DomainResultLimits {
 		PlanBytes:        MaxDomainResultPlanBytes,
 		RootBytes:        MaxDomainResultRootBytes,
 	}
+}
+
+func FrozenDomainResultLimitsV2() DomainResultLimits {
+	limits := FrozenDomainResultLimits()
+	limits.AggregateMemberBytes = MaxDomainResultAggregateMemberBytesV2
+	return limits
+}
+
+func domainResultLimitsForSchema(schema string) (DomainResultLimits, bool) {
+	switch schema {
+	case DomainResultPlanSchemaV1:
+		return FrozenDomainResultLimits(), true
+	case DomainResultPlanSchemaV2:
+		return FrozenDomainResultLimitsV2(), true
+	default:
+		return DomainResultLimits{}, false
+	}
+}
+
+func domainResultAggregateMemberBytes(limits DomainResultLimits) int64 {
+	if limits.AggregateMemberBytes != 0 {
+		return limits.AggregateMemberBytes
+	}
+	return limits.MemberBytes
 }
 
 // DomainResultTotals is used for both reservations and settled work. A plan
@@ -268,6 +298,32 @@ func BuildDomainResultPlan(
 	authority DomainResultAuthority,
 	reservations []DomainResultTotals,
 ) (DomainResultPlan, error) {
+	return buildDomainResultPlan(
+		domain, authority, reservations,
+		DomainResultPlanSchemaV1, FrozenDomainResultLimits(),
+	)
+}
+
+// BuildDomainResultPlanV2 preserves the v1 per-partition backstop while using
+// the separately derived aggregate candidate-member input ceiling.
+func BuildDomainResultPlanV2(
+	domain *SparseDomain,
+	authority DomainResultAuthority,
+	reservations []DomainResultTotals,
+) (DomainResultPlan, error) {
+	return buildDomainResultPlan(
+		domain, authority, reservations,
+		DomainResultPlanSchemaV2, FrozenDomainResultLimitsV2(),
+	)
+}
+
+func buildDomainResultPlan(
+	domain *SparseDomain,
+	authority DomainResultAuthority,
+	reservations []DomainResultTotals,
+	schema string,
+	limits DomainResultLimits,
+) (DomainResultPlan, error) {
 	if domain == nil || domain.publication == nil || reservations == nil {
 		return DomainResultPlan{}, domainResultInvalid("plan requires an opened sparse domain and explicit reservations")
 	}
@@ -299,9 +355,8 @@ func BuildDomainResultPlan(
 		!validDigest(authority.ExtractionPolicyDigest) {
 		return DomainResultPlan{}, domainResultInvalid("plan authority is invalid")
 	}
-	limits := FrozenDomainResultLimits()
 	plan := DomainResultPlan{
-		Schema: DomainResultPlanSchema, Repository: index.Repository,
+		Schema: schema, Repository: index.Repository,
 		CandidateManifestDigest:      index.CandidateManifestDigest,
 		CandidateGenerationDigest:    index.CandidateGenerationDigest,
 		CandidatePartitionRootDigest: publicationRoot.Digest,
@@ -425,7 +480,7 @@ func BuildPartitionResult(
 		return PartitionResult{}, domainResultInvalid("partition result ordinal is invalid")
 	}
 	expectation := plan.Expected[ordinal]
-	if err := validatePartitionResultExpectation(expectation, ordinal); err != nil {
+	if err := validatePartitionResultExpectation(expectation, ordinal, plan.Limits); err != nil {
 		return PartitionResult{}, err
 	}
 	if err := validatePartitionResultSpec(spec, expectation.Reservation); err != nil {
@@ -580,7 +635,7 @@ func validateDomainResultPlan(plan DomainResultPlan) error {
 	memberPartitions := 0
 	typedPartitions := 0
 	for ordinal, expectation := range plan.Expected {
-		if err := validatePartitionResultExpectation(expectation, ordinal); err != nil {
+		if err := validatePartitionResultExpectation(expectation, ordinal, plan.Limits); err != nil {
 			return err
 		}
 		if _, duplicate := seenPartitions[expectation.PartitionDigest]; duplicate {
@@ -618,15 +673,15 @@ func validateDomainResultPlan(plan DomainResultPlan) error {
 	if err != nil || int64(len(raw)+len(plan.Digest)+1) > plan.Limits.PlanBytes {
 		return domainResultInvalid("domain result plan exceeds %d bytes", plan.Limits.PlanBytes)
 	}
-	if plan.Digest != digest("phebs-extraction-domain-result-plan-v1\x00", raw) {
+	if plan.Digest != domainResultPlanDigest(plan) {
 		return domainResultInvalid("domain result plan digest is invalid")
 	}
 	return nil
 }
 
 func validateDomainResultPlanEnvelope(plan DomainResultPlan) error {
-	limits := FrozenDomainResultLimits()
-	if plan.Schema != DomainResultPlanSchema || !safeRepository(plan.Repository) ||
+	limits, ok := domainResultLimitsForSchema(plan.Schema)
+	if !ok || !safeRepository(plan.Repository) ||
 		!validDigest(plan.CandidateManifestDigest) ||
 		!validDigest(plan.CandidateGenerationDigest) ||
 		!validDigest(plan.CandidatePartitionRootDigest) ||
@@ -673,7 +728,7 @@ func domainResultTotalsLimit(limits DomainResultLimits) DomainResultTotals {
 	return DomainResultTotals{
 		Facts: limits.Facts, Rows: limits.Rows, References: limits.References,
 		CanonicalBytes: limits.CanonicalBytes, EncodedBytes: limits.EncodedBytes,
-		MemberBytes: limits.MemberBytes, Members: limits.Members,
+		MemberBytes: domainResultAggregateMemberBytes(limits), Members: limits.Members,
 	}
 }
 
@@ -693,7 +748,11 @@ func countDomainResultPartitionKinds(partitions []ExtractionPartition) (int, int
 	return members, typed, nil
 }
 
-func validatePartitionResultExpectation(expectation PartitionResultExpectation, ordinal int) error {
+func validatePartitionResultExpectation(
+	expectation PartitionResultExpectation,
+	ordinal int,
+	limits DomainResultLimits,
+) error {
 	if expectation.Schema != PartitionExpectationSchema || expectation.Ordinal != ordinal ||
 		(expectation.Kind != PartitionKindCandidateMember && expectation.Kind != PartitionKindTypedInput) ||
 		!validDigest(expectation.PartitionDigest) || expectation.SourceStart < 0 ||
@@ -701,7 +760,7 @@ func validatePartitionResultExpectation(expectation PartitionResultExpectation, 
 		expectation.Digest != partitionExpectationDigest(expectation) {
 		return domainResultInvalid("partition expectation %d is invalid", ordinal)
 	}
-	if err := validateDomainResultReservation(expectation.Reservation, expectation.Quotas, FrozenDomainResultLimits()); err != nil {
+	if err := validateDomainResultReservation(expectation.Reservation, expectation.Quotas, limits); err != nil {
 		return domainResultInvalid("partition expectation %d reservation: %v", ordinal, err)
 	}
 	return nil
@@ -794,7 +853,7 @@ func addDomainResultTotals(current *DomainResultTotals, add DomainResultTotals, 
 		{current.References, add.References, limits.References, pipelinerefusal.DimensionDomainResultReferences},
 		{current.CanonicalBytes, add.CanonicalBytes, limits.CanonicalBytes, pipelinerefusal.DimensionDomainCanonicalBytes},
 		{current.EncodedBytes, add.EncodedBytes, limits.EncodedBytes, pipelinerefusal.DimensionDomainEncodedBytes},
-		{current.MemberBytes, add.MemberBytes, limits.MemberBytes, pipelinerefusal.DimensionCandidateMemberBytes},
+		{current.MemberBytes, add.MemberBytes, domainResultAggregateMemberBytes(limits), pipelinerefusal.DimensionCandidateMemberBytes},
 		{current.Members, add.Members, limits.Members, pipelinerefusal.DimensionCandidateMembers},
 	} {
 		if !domainResultScalarFits(value.current, value.add, value.limit) {
@@ -882,7 +941,7 @@ func domainResultPlanDigest(value DomainResultPlan) string {
 	copy := value
 	copy.Digest = ""
 	raw, _ := json.Marshal(copy)
-	return digest("phebs-extraction-domain-result-plan-v1\x00", raw)
+	return digest(value.Schema+"\x00", raw)
 }
 
 func partitionResultDigest(value PartitionResult) string {

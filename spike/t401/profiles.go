@@ -55,6 +55,23 @@ func ProjectionProfile(kind string) (Profile, error) {
 	return profile, nil
 }
 
+// StructuralPartitionProfile is the bounded throughput fixture: exactly one
+// full 4,096-record candidate partition with the frozen structural profile's
+// 4,608-byte Go blobs and 512 reuse classes. It remains a synthetic projection
+// bound to the frozen parent and is not a scale result.
+func StructuralPartitionProfile() (Profile, error) {
+	profile, err := ProjectionProfile("structural")
+	if err != nil {
+		return Profile{}, err
+	}
+	profile.Name = "structural-partition-throughput-v1"
+	profile.Shape.GoFileBytes = 4_608
+	if err := finishProfile(&profile); err != nil {
+		return Profile{}, err
+	}
+	return profile, nil
+}
+
 func BuildEnvelope() (Envelope, error) {
 	profiles, err := FrozenProfiles()
 	if err != nil {

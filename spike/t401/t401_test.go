@@ -90,6 +90,19 @@ func TestFrozenEnvelopeIsExactDeterministicAndSourceFree(t *testing.T) {
 	}
 }
 
+func TestStructuralPartitionProfileIsExactAndParentBound(t *testing.T) {
+	profile, err := StructuralPartitionProfile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.Name != "structural-partition-throughput-v1" ||
+		profile.Scale != "projection" || profile.ParentProfileDigest == "" ||
+		profile.Shape.GoFileBytes != 4_608 || profile.Shape.GoBlobReuseClasses != 512 ||
+		profile.Aggregate.EligibleGoFiles != 4_096 {
+		t.Fatalf("throughput profile = %+v", profile)
+	}
+}
+
 func TestRetainedExplicitArtifactsAreStrictSourceFreeAndValid(t *testing.T) {
 	profiles, err := FrozenProfiles()
 	if err != nil {

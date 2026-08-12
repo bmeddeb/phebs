@@ -403,6 +403,100 @@ func TestDomainResultExactAggregateBoundsAndOneOverAreClosed(t *testing.T) {
 	}
 }
 
+func TestDomainResultPlanV2SplitsAggregateFromPartitionAndPreservesV1(t *testing.T) {
+	domain := resultTestDomain(t, MaxDomainResultMemberPartitions, "admitted")
+	reservations := make([]DomainResultTotals, MaxDomainResultMemberPartitions)
+	remaining := int64(792_000_000)
+	for index := range reservations {
+		amount := min(remaining, int64(4096*396))
+		reservations[index] = DomainResultTotals{MemberBytes: amount, Members: 1}
+		remaining -= amount
+	}
+	if remaining != 0 {
+		t.Fatalf("fixture remainder = %d", remaining)
+	}
+	if _, err := BuildDomainResultPlan(domain, resultTestAuthority(), reservations); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v1 aggregate accepted 792 MB: %v", err)
+	}
+	v2, err := BuildDomainResultPlanV2(domain, resultTestAuthority(), reservations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.Schema != DomainResultPlanSchemaV2 ||
+		v2.Limits.MemberBytes != MaxDomainResultMemberBytes ||
+		v2.Limits.AggregateMemberBytes != MaxDomainResultAggregateMemberBytesV2 ||
+		v2.Reserved.MemberBytes != 792_000_000 {
+		t.Fatalf("v2 plan = %+v", v2)
+	}
+	if err := ValidateDomainResultPlan(v2, domain); err != nil {
+		t.Fatalf("validate v2: %v", err)
+	}
+
+	v1, err := BuildDomainResultPlan(
+		resultTestDomain(t, 1, "admitted"), resultTestAuthority(),
+		[]DomainResultTotals{{MemberBytes: MaxDomainResultMemberBytes, Members: 1}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(v1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(raw, []byte("aggregate_member_bytes")) {
+		t.Fatalf("v1 wire changed: %s", raw)
+	}
+	if _, err := DecodeDomainResultPlanControl(bytes.NewReader(raw)); err != nil {
+		t.Fatalf("decode persisted v1: %v", err)
+	}
+
+	partitionOver := slices.Clone(reservations)
+	partitionOver[0].MemberBytes = MaxDomainResultMemberBytes + 1
+	if _, err := BuildDomainResultPlanV2(domain, resultTestAuthority(), partitionOver); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v2 widened per-partition backstop: %v", err)
+	}
+	tamperedV1 := v1
+	tamperedV1.Limits.AggregateMemberBytes = MaxDomainResultAggregateMemberBytesV2
+	tamperedV1.Digest = domainResultPlanDigest(tamperedV1)
+	if err := ValidateDomainResultPlanControl(tamperedV1); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v1 accepted v2 limits: %v", err)
+	}
+	tamperedV2 := v2
+	tamperedV2.Limits.AggregateMemberBytes = 0
+	tamperedV2.Digest = domainResultPlanDigest(tamperedV2)
+	if err := ValidateDomainResultPlanControl(tamperedV2); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v2 accepted v1 aggregate: %v", err)
+	}
+}
+
+func TestDomainResultPlanV2AggregateExactBoundAndOneOver(t *testing.T) {
+	domain := resultTestDomain(t, MaxDomainResultMemberPartitions, "admitted")
+	limits := FrozenDomainResultLimitsV2()
+	if derived := int64(MaxDomainResultMemberPartitions * 4096 * 512); derived != 1_025_507_328 ||
+		derived > limits.AggregateMemberBytes {
+		t.Fatalf("v2 derivation = %d, limit=%d", derived, limits.AggregateMemberBytes)
+	}
+	reservations := make([]DomainResultTotals, MaxDomainResultMemberPartitions)
+	distributeResultScalar(
+		reservations, limits.AggregateMemberBytes,
+		func(value *DomainResultTotals, amount int64) { value.MemberBytes = amount },
+		MaxDomainResultMemberBytes,
+	)
+	plan, err := BuildDomainResultPlanV2(domain, resultTestAuthority(), reservations)
+	if err != nil || plan.Reserved.MemberBytes != limits.AggregateMemberBytes {
+		t.Fatalf("v2 exact aggregate = %d: %v", plan.Reserved.MemberBytes, err)
+	}
+	reservations[len(reservations)-1].MemberBytes++
+	_, err = BuildDomainResultPlanV2(domain, resultTestAuthority(), reservations)
+	var measurement *pipelinerefusal.Measurement
+	if !errors.As(err, &measurement) ||
+		measurement.Dimension != pipelinerefusal.DimensionCandidateMemberBytes ||
+		measurement.Observed != limits.AggregateMemberBytes+1 ||
+		measurement.Limit != limits.AggregateMemberBytes {
+		t.Fatalf("v2 one-over = %+v: %v", measurement, err)
+	}
+}
+
 func TestDomainResultMaximumStringsAndExactReplayFitInventory(t *testing.T) {
 	domain := resultTestDomainWithTyped(t, MaxDomainResultMemberPartitions)
 	reservations := make([]DomainResultTotals, MaxDomainResultPartitions)

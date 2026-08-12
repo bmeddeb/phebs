@@ -35,13 +35,13 @@ func TestCandidateMemberAggregateExactBoundAndOneOver(t *testing.T) {
 		bytes     int64
 		wantLimit bool
 	}{
-		{name: "exact", bytes: candidate.MaxDomainResultMemberBytes},
-		{name: "one over", bytes: candidate.MaxDomainResultMemberBytes + 1, wantLimit: true},
+		{name: "exact", bytes: candidate.MaxDomainResultAggregateMemberBytesV2},
+		{name: "one over", bytes: candidate.MaxDomainResultAggregateMemberBytesV2 + 1, wantLimit: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			err := measureCandidateMemberBytes([]candidate.ExtractionPartition{{
 				Member: &candidate.Artifact{ContentBytes: test.bytes},
-			}}, candidate.MaxDomainResultMemberBytes)
+			}}, candidate.MaxDomainResultAggregateMemberBytesV2)
 			if errors.Is(err, ErrLimit) != test.wantLimit {
 				t.Fatalf("error = %v, want limit=%t", err, test.wantLimit)
 			}

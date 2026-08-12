@@ -46,6 +46,9 @@ func TestExtractionProgressAuthorizesBeforeReadingAndUsesClosedProjection(t *tes
 
 	opts := Options{Version: "test", Store: state}
 	opts.ExtractionProgress = NewExtractionProgressService(opts, capture)
+	// Register both progress routes: their distinct package types must also
+	// retain distinct Huma/OpenAPI component identities in the complete server.
+	opts.ObservationProgress = NewObservationProgressService(opts, &observationProgressCapture{})
 	handler := New(opts)
 	request := httptest.NewRequest(http.MethodGet, ExtractionProgressPath+"?repository="+repository, nil)
 	recorder := httptest.NewRecorder()

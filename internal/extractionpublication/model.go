@@ -197,7 +197,7 @@ type DomainStatus struct {
 // schedule. It reads two schedule rows, one small generation control, and at
 // most MaxDomains current pointers; it never opens partition results, candidate
 // members, source content, or evidence rows.
-type Progress struct {
+type ExtractionProgress struct {
 	State          string `json:"state"`
 	Total          int    `json:"total_partitions"`
 	Materialized   int    `json:"materialized"`
@@ -208,6 +208,11 @@ type Progress struct {
 	Domains        int    `json:"domains"`
 	CurrentDomains int    `json:"current_domains"`
 }
+
+// Progress keeps the internal reader name concise. The defined wire type is
+// deliberately named ExtractionProgress so Huma gives it a distinct OpenAPI
+// component from observationpublication.Progress.
+type Progress = ExtractionProgress
 
 func ValidateProgress(value Progress) error {
 	if value.State == "unavailable" {

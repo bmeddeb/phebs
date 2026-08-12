@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/spike/t401"
 )
@@ -112,7 +116,24 @@ func rehearseProductionPath(
 		}
 	}()
 	if _, err := awaitPrivateServerHealth(ctx, server, profile, "rehearsal-cold", 2*time.Minute); err != nil {
+		t.Logf("source-free server tail:\n%s", rehearsalLogTail(server.logPath))
 		t.Fatal(err)
+	}
+	if kind == "structural" {
+		measurement := measureProjectionExtraction(t, ctx, profile)
+		t.Logf(
+			"structural extraction after observation current: duration=%s max_completion_gap=%s completion_gaps=%v completion_deltas=%v partitions=%d domains=%d",
+			measurement.Duration, measurement.MaxCompletionGap,
+			measurement.CompletionGaps, measurement.CompletionDeltas,
+			measurement.Progress.Total, measurement.Progress.Domains,
+		)
+		if os.Getenv("PHEBS_T4013_THROUGHPUT_ONLY") == "1" {
+			if err := server.stop(30 * time.Second); err != nil {
+				t.Fatal(err)
+			}
+			running = false
+			return
+		}
 	}
 	a := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
 	t.Log("cold revision A converged")
@@ -189,6 +210,97 @@ func rehearseProductionPath(
 	running = false
 }
 
+func rehearsalLogTail(path string) string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "unavailable"
+	}
+	if len(raw) > 8<<10 {
+		raw = raw[len(raw)-(8<<10):]
+	}
+	lines := strings.Split(string(raw), "\n")
+	kept := lines[:0]
+	for _, line := range lines {
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "token") || strings.Contains(lower, "credential") ||
+			strings.Contains(lower, "api key") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.Join(kept, "\n")
+}
+
+type extractionThroughputMeasurement struct {
+	Duration         time.Duration
+	MaxCompletionGap time.Duration
+	CompletionGaps   []time.Duration
+	CompletionDeltas []int
+	Progress         extractionpublication.Progress
+}
+
+func measureProjectionExtraction(
+	t *testing.T,
+	ctx context.Context,
+	profile PreparedProfile,
+) extractionThroughputMeasurement {
+	t.Helper()
+	inspector, err := newProfileInspector(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(12 * time.Minute)
+	repository := url.QueryEscape(profile.RepositoryName)
+	var observationCurrentAt time.Time
+	var lastCompletionAt time.Time
+	lastSucceeded := 0
+	maxCompletionGap := time.Duration(0)
+	var completionGaps []time.Duration
+	var completionDeltas []int
+	for time.Now().Before(deadline) {
+		var observation observationpublication.Progress
+		if err := inspector.get(
+			ctx, profile, "/api/observation-progress?repository="+repository, &observation,
+		); err == nil && observation.State == "current" && observationCurrentAt.IsZero() {
+			observationCurrentAt = time.Now()
+		}
+		if !observationCurrentAt.IsZero() {
+			var extraction extractionpublication.Progress
+			if err := inspector.get(
+				ctx, profile, "/api/extraction-progress?repository="+repository, &extraction,
+			); err == nil {
+				now := time.Now()
+				if lastCompletionAt.IsZero() {
+					lastCompletionAt = observationCurrentAt
+				}
+				if extraction.Succeeded > lastSucceeded {
+					gap := now.Sub(lastCompletionAt)
+					maxCompletionGap = max(maxCompletionGap, gap)
+					completionGaps = append(completionGaps, gap)
+					completionDeltas = append(completionDeltas, extraction.Succeeded-lastSucceeded)
+					lastCompletionAt = now
+					lastSucceeded = extraction.Succeeded
+				}
+				if extraction.State == "current" {
+					return extractionThroughputMeasurement{
+						Duration:         time.Since(observationCurrentAt),
+						MaxCompletionGap: maxCompletionGap,
+						CompletionGaps:   completionGaps, CompletionDeltas: completionDeltas,
+						Progress: extraction,
+					}
+				}
+			}
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	t.Fatal("structural extraction measurement deadline expired")
+	return extractionThroughputMeasurement{}
+}
+
 func prepareProjectionProfile(
 	ctx context.Context,
 	moduleRoot string,
@@ -196,6 +308,9 @@ func prepareProjectionProfile(
 	kind string,
 ) (PreparedProfile, error) {
 	profile, err := t401.ProjectionProfile(kind)
+	if kind == "structural" {
+		profile, err = t401.StructuralPartitionProfile()
+	}
 	if err != nil {
 		return PreparedProfile{}, err
 	}

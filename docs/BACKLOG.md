@@ -641,6 +641,32 @@ classification tests pass. The separate split/versioned aggregate-contract
 ticket and measured throughput gate remain open; this implementation alone
 does not authorize a Take 17 freeze or execution.
 
+Versioned aggregate-contract disposition (2026-08-12): the second ticket is
+complete. Persisted `phebs-extraction-domain-result-plan-v1` controls retain
+their exact wire, digest domain, and 64-MiB aggregate validation. New plans use
+`phebs-extraction-domain-result-plan-v2`: the per-partition member reservation
+backstop remains 64 MiB, while a distinct aggregate candidate-member input
+limit is 1 GiB, derived from 489 × 4,096 × 512 = 1,025,507,328 bytes and the
+next established binary boundary. The exact 792,000,000-byte neutral profile
+is admitted by v2 and still refused by v1; exact-bound, one-over, cross-version
+tamper, decode, recovery, downstream, and real-binary tests pin dispatch.
+
+The representative throughput gate also closes. Five fresh runs used one exact
+4,096-record partition for each of the four serialized `.go` domains, with the
+frozen 4,608-byte structural blobs and 512 reuse classes. Total extraction
+after observation became current was 13.190564417, 10.275793666,
+10.251969458, 10.122023667, and 10.106630500 seconds. Every poll observed four
+separate one-partition completions. Conservatively repeating the slowest entire
+four-domain sample 489 times prices 1,956 work items at 6,450.185999913 seconds
+(107.503 minutes), below the roughly 3.4-hour extraction budget without raising
+concurrency or the deadline. The complete representative A→B→A-return plus
+backup/restore rehearsal passed. That rehearsal also found and closed a
+full-server OpenAPI startup panic caused by observation and extraction response
+types sharing the Huma component name `Progress`; the extraction wire now has
+the distinct defined type `ExtractionProgress`, with both routes registered in
+one regression. Take 16 is permanently retired. Freeze remains a separate
+commit-bound action and execution still requires explicit approval.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

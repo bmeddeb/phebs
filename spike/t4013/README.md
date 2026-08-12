@@ -842,12 +842,37 @@ This closes only the first ticket. The separately reviewed split/versioned
 aggregate contract and the representative serialized-throughput measurement
 remain required before a Take 17 freeze.
 
+### Versioned aggregate and throughput closure
+
+The second ticket keeps v1 byte-for-byte valid at its original limits and emits
+new plans as `phebs-extraction-domain-result-plan-v2`. V2 separates the 64-MiB
+per-partition member reservation backstop from a 1-GiB aggregate candidate-
+member input ceiling. The latter derives from 489 × 4,096 × 512 =
+1,025,507,328 bytes rounded to the next established binary boundary. The
+792,000,000-byte structural profile passes v2 and remains an exact v1 refusal.
+
+Five fresh real-binary measurements each exercised four independently observed
+serialized completions over exact 4,096-record partitions, frozen 4,608-byte
+structural blobs, and 512 blob reuse classes. Total post-observation extraction
+times were 13.190564417s, 10.275793666s, 10.251969458s, 10.122023667s, and
+10.106630500s. Repeating the slowest whole four-domain sample for all 489
+member ordinals is a conservative 6,450.185999913s (107.503m), within the
+unchanged roughly 3.4-hour extraction allowance. No concurrency or deadline
+changed. The complete representative A→B→A-return and backup/restore rehearsal
+also passed.
+
+The first live rehearsal exposed a Huma startup panic because two response
+types shared the OpenAPI name `Progress`. Extraction now has the defined wire
+type `ExtractionProgress`, and a complete route-registration regression pins
+both components. `t40r1-neutral-16` is retired; the next fresh ID is
+`t40r1-neutral-17`, subject to merge-bar review and separate execution approval.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-CEREMONY_ID=t40r1-neutral-16
+CEREMONY_ID=t40r1-neutral-17
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.
