@@ -996,6 +996,29 @@ unchanged. The correction changes no concurrency, deadline, limit, topology,
 claim, or release posture, and it does not freeze Take 18. A fresh exact
 repository-scale timing diagnostic at its committed source is still required.
 
+The required diagnostic passed at exact source commit
+`cd5dc7fd669b3f5a902995d0bbaebbea58195604`. Observation became current at
+1,813,056 ms and the structural schedule retained 1,956 total partitions. The
+bounded inspector observed 36 completions between polls while waiting for its
+32-sample threshold; all 36 succeeded with zero failures, terminal refusals,
+or reuse. Runtime was 427 ms minimum, 434 ms nearest-rank p50, 442 ms p95, and
+445 ms maximum. Projecting the unchanged serialized schedule gives 848,904 ms
+p50 and 864,552 ms p95 extraction, or 2,661,960 ms (44.366 minutes) and
+2,677,608 ms (44.627 minutes) total cold completion. Headroom inside the frozen
+14,400,000-ms window is 11,738,040 ms (3h15m38.040s) p50 and 11,722,392 ms
+(3h15m22.392s) p95.
+
+The phase accounting confirms the intended mechanism. Across 36 attempts,
+source acquisition consumed 1,026 ms with a 32-ms maximum; executor work used
+13,650 ms with a 388-ms maximum, result work 294/12 ms, assembly 278/12 ms,
+and total runtime 15,633/445 ms. The previous repeated full-candidate source
+acquisition wall did not recur. Diagnostic custody, private logs, credentials,
+authored source, derived data, and the temporary plan were destroyed, and about
+156 GiB free disk was restored. This closes the repository-scale timing
+prerequisite for a separately reviewed Take 18 freeze decision; it is not a
+ceremony pass, execution authorization, Epic 40 closure, release, SLO, or
+public scale claim.
+
 ```sh
 cd ~/phebs
 

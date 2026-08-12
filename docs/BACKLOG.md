@@ -710,6 +710,23 @@ historical bytes remain unchanged. Take 18 remains unauthorized until a fresh
 exact repository-scale timing diagnostic at the committed correction leaves
 credible headroom inside the unchanged four-hour window.
 
+That exact remeasurement passed at committed source
+`cd5dc7fd669b3f5a902995d0bbaebbea58195604` (2026-08-12). Observation became
+current at 1,813,056 ms. The exact schedule retained 1,956 total partitions;
+36 attempts completed between bounded status probes with zero failures,
+terminal refusals, or reuse. Runtime was 427 ms minimum, 434 ms p50, 442 ms
+p95, and 445 ms maximum. Projected p50 and p95 cold completion are 2,661,960 ms
+(44.366 minutes) and 2,677,608 ms (44.627 minutes), leaving 11,738,040 ms
+(3h15m38.040s) and 11,722,392 ms (3h15m22.392s) inside the unchanged
+14,400,000-ms window. Across all 36 attempts, source acquisition consumed
+1,026 ms, executor work 13,650 ms, result work 294 ms, assembly 278 ms, and
+total runtime 15,633 ms; the repeated full-candidate wall is closed. The
+diagnostic custody and temporary plan were destroyed and about 156 GiB free
+disk restored. The correction is ready for independent review and a fresh
+Take 18 freeze decision. This diagnostic is not a ceremony pass and does not
+itself authorize execution, Epic 40 closure, Epic 41 progression, a release,
+or any public scale/SLO claim.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
