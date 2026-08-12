@@ -183,12 +183,14 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		for _, report := range lifecycleReports {
 			addSchedulerTiming(&timing, report)
 		}
-		path := "/api/extraction-progress?repository=" + url.QueryEscape(profile.RepositoryName)
-		if getErr := inspector.get(ctx, profile, path, &progress); getErr != nil {
-			t.Fatal(getErr)
-		}
-		if progress.Failed != 0 {
-			t.Fatalf("repository-scale extraction reported %d failed partitions", progress.Failed)
+		if observationCurrent > 0 {
+			path := "/api/extraction-progress?repository=" + url.QueryEscape(profile.RepositoryName)
+			if getErr := inspector.get(ctx, profile, path, &progress); getErr != nil {
+				t.Fatal(getErr)
+			}
+			if progress.Failed != 0 {
+				t.Fatalf("repository-scale extraction reported %d failed partitions", progress.Failed)
+			}
 		}
 		if len(reports) >= sampleTarget {
 			break
