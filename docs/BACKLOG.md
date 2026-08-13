@@ -800,6 +800,24 @@ exact 262,144-blob semantic profile must be measured at committed source against
 the unchanged four-hour cold, eight-hour total, 20-GiB peak-RSS, and 96-GiB
 allocated-data ceilings. The miniature readiness rehearsal is not that record.
 
+Exact semantic fit result (2026-08-13): do not freeze Take 19. On committed
+source `bcfd01c871a6c37e4dda7d03d8bfdb7bdb3b4b57`, the ordinary binary completed
+repository indexing and the selected-v2 262,144-record observation publication
+without the legacy v1 refusal, entered extraction at about 24 minutes, and
+reached `repository_visibility`; it did not complete before the 14,400,000-ms
+cold deadline and the diagnostic ended at 14,462,200 ms. No typed production
+refusal or resource crossing appeared. The workspace remained around 2.6 GB
+and combined live RSS around 0.15 GB near the end, far below the unchanged
+96-GiB allocation and 20-GiB RSS ceilings. Custody and credentials were
+destroyed and disk returned to baseline.
+
+The retained diagnostic did not seal final extraction counters on its timeout
+path, so no unfinished-partition count or specific production bottleneck is
+claimed. Next readiness work must make that timeout evidence bounded and
+source-free, remeasure the semantic extraction/relationship tail, and reduce
+the measured work without raising the cold deadline, concurrency, production
+bounds, topology, or resource ceilings. Take 19 remains unfrozen.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

@@ -925,6 +925,14 @@ catalog, relationship, or correctness authority.
   committed-source measurement of the exact 262,144-blob semantic route fits
   the unchanged cold/total-wall/RSS/allocation envelope and the corrected
   branch passes independent re-review.
+- The exact committed semantic fit run then refused freeze: selected-v2
+  observation admitted and published all 262,144 records, but semantic cold
+  reached `repository_visibility` only at the four-hour boundary and the
+  diagnostic ended at 14,462,200 ms. Resources stayed far below ceilings and
+  no typed production refusal appeared. Because timeout evidence did not retain
+  final extraction counters, the next step is bounded progress/timing capture
+  and measured reduction of the semantic extraction/relationship tail—not a
+  blind retry or a deadline/concurrency/limit increase.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

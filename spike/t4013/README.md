@@ -1150,6 +1150,22 @@ A passing measurement must fit the unchanged four-hour cold, eight-hour total,
 20-GiB RSS, and 96-GiB allocated-data ceilings. Until that committed-source
 record and independent re-review exist, Take 19 remains not ready to freeze.
 
+That exact committed run failed the fit gate. At
+`bcfd01c871a6c37e4dda7d03d8bfdb7bdb3b4b57`, selected-v2 observation completed
+without the legacy v1 refusal and extraction began at about 24 minutes, but the
+final `repository_visibility` inspection crossed the four-hour context; the
+test ended at 14,462,200 ms. Resource use was not the wall: the workspace was
+about 2.6 GB and combined live RSS about 0.15 GB near the end. Cleanup destroyed
+the exact fixture, derived data, and credentials and restored disk baseline.
+
+The timeout path did not retain final extraction counters or phase timing, so
+the result is intentionally narrow: this commit does not fit the cold window,
+but the retained record cannot identify the unfinished count or justify a
+specific optimization. Do not freeze Take 19. First add bounded timeout
+progress/timing retention, then remeasure and reduce the semantic
+extraction/relationship tail without increasing deadlines, concurrency,
+production limits, topology, or resource ceilings.
+
 ```sh
 cd ~/phebs
 

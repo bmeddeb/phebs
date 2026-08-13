@@ -1,0 +1,41 @@
+{
+  "schema": "t4013-take19-semantic-fit-v1",
+  "source_commit": "bcfd01c871a6c37e4dda7d03d8bfdb7bdb3b4b57",
+  "profile": "semantic-262144-v1",
+  "diagnostic": "TestExactSemanticColdTiming",
+  "outcome": "deadline",
+  "freeze_ready": false,
+  "cold_deadline_ms": 14400000,
+  "test_wall_ms": 14462200,
+  "last_stage": "repository_visibility",
+  "last_error_class": "http_request_failed_after_context_deadline",
+  "observed_phase_sequence": [
+    "repository_index",
+    "observation_publication",
+    "extraction_publication",
+    "repository_visibility"
+  ],
+  "observation_route": {
+    "expected_records": 262144,
+    "selected_v2_admission_limit": 4000000,
+    "legacy_v1_bound_refusal_recurred": false,
+    "selected_v2_publication_completed": true,
+    "approximate_extraction_entry_wall_ms": 1440000
+  },
+  "resource_observation": {
+    "ceiling_crossed": false,
+    "workspace_bytes_approximate_last_sample": 2600222720,
+    "maximum_data_allocated_bytes": 103079215104,
+    "maximum_peak_rss_bytes": 21474836480,
+    "last_sample_combined_live_rss_bytes_approximate": 152000000
+  },
+  "classification_limit": "The diagnostic retained stage transitions and bounded resource samples, but its timeout path did not retain final extraction counters or phase timing. It proves the exact semantic route did not converge inside four hours; it does not identify the unfinished partition count or a production failure class.",
+  "custody": {
+    "prepared_source_destroyed": true,
+    "derived_data_destroyed": true,
+    "credentials_destroyed": true,
+    "server_stopped": true,
+    "disk_returned_to_baseline": true
+  },
+  "decision": "do_not_freeze_take_19"
+}
