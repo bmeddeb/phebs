@@ -1175,11 +1175,10 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			return err
 		}
 		if detailVersion >= 10 {
-			hasObservationRefusal := value.ObservationProgress != nil &&
-				value.ObservationProgress.RefusalClassification != ""
-			if value.Outcome == "observation_bound_refusal" && !hasObservationRefusal ||
-				value.Outcome == "observation_terminal" && hasObservationRefusal &&
-					value.ObservationProgress.RefusalClassification == string(pipelinerefusal.ClassificationLimit) {
+			hasExpectedBound := value.ObservationProgress != nil &&
+				expectedObservationProgressBoundRefusal(*value.ObservationProgress)
+			if (value.Outcome == "observation_bound_refusal") != hasExpectedBound &&
+				(value.Outcome == "observation_bound_refusal" || value.Outcome == "observation_terminal") {
 				return errors.New("T40.13 observation terminal outcome is incoherent")
 			}
 		}
@@ -1197,9 +1196,9 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 				validateExtractionProgress(*value.ExtractionProgress) != nil {
 				return errors.New("T40.13 extraction progress is invalid")
 			}
-			hasRefusal := value.ExtractionProgress.RefusalClassification != ""
-			if value.Outcome == "extraction_bound_refusal" && !hasRefusal ||
-				value.Outcome == "extraction_job_terminal" && hasRefusal {
+			hasExpectedBound := expectedExtractionBoundRefusal(*value.ExtractionProgress)
+			if (value.Outcome == "extraction_bound_refusal") != hasExpectedBound &&
+				(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal") {
 				return errors.New("T40.13 extraction terminal outcome is incoherent")
 			}
 		}
@@ -1333,18 +1332,48 @@ func validateConvergenceWithoutSuccessfulProbe(
 ) error {
 	if value.FirstStage != convergenceNotInspected || value.FirstProgressSHA256 != "" ||
 		value.LastProgressSHA256 != "" || value.ProgressChanges != 0 || value.StageChanges != 0 ||
-		value.LastProgressChangeWallMS != 0 || value.ObservationProgress != nil ||
-		value.ObservationProgressWallMS != 0 || value.ExtractionProgress != nil ||
-		value.ExtractionProgressWallMS != 0 || value.LastSuccessfulProbeSHA256 != "" ||
+		value.LastProgressChangeWallMS != 0 || value.LastSuccessfulProbeSHA256 != "" ||
 		value.LastSuccessfulProbeWallMS != 0 {
 		return errors.New("T40.13 convergence wait invents a successful probe")
 	}
 	if value.Attempts == 0 {
 		if value.Outcome != "server_exited" || len(value.InspectionTransitions) != 0 ||
-			hasLastInspection(value) || value.TransitionLimitExceeded || value.ExtractionTiming != nil {
+			hasLastInspection(value) || value.TransitionLimitExceeded || value.ExtractionTiming != nil ||
+			value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 ||
+			value.ExtractionProgress != nil || value.ExtractionProgressWallMS != 0 {
 			return errors.New("T40.13 uninspected convergence wait is incoherent")
 		}
 		return nil
+	}
+	observationTerminal := detailVersion >= 10 &&
+		(value.Outcome == "observation_bound_refusal" || value.Outcome == "observation_terminal")
+	extractionTerminal := detailVersion >= 8 &&
+		(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal")
+	if observationTerminal {
+		if value.ObservationProgress == nil || value.ObservationProgressWallMS <= 0 ||
+			value.ObservationProgressWallMS > value.WallMS ||
+			validateObservationProgress(*value.ObservationProgress, detailVersion) != nil ||
+			value.ExtractionProgress != nil || value.ExtractionProgressWallMS != 0 {
+			return errors.New("T40.13 unsuccessful observation terminal wait is incoherent")
+		}
+		hasLimit := expectedObservationProgressBoundRefusal(*value.ObservationProgress)
+		if (value.Outcome == "observation_bound_refusal") != hasLimit {
+			return errors.New("T40.13 unsuccessful observation terminal outcome is incoherent")
+		}
+	} else if extractionTerminal {
+		if value.ExtractionProgress == nil || value.ExtractionProgressWallMS <= 0 ||
+			value.ExtractionProgressWallMS > value.WallMS ||
+			validateExtractionProgress(*value.ExtractionProgress) != nil ||
+			value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 {
+			return errors.New("T40.13 unsuccessful extraction terminal wait is incoherent")
+		}
+		hasRefusal := expectedExtractionBoundRefusal(*value.ExtractionProgress)
+		if (value.Outcome == "extraction_bound_refusal") != hasRefusal {
+			return errors.New("T40.13 unsuccessful extraction terminal outcome is incoherent")
+		}
+	} else if value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 ||
+		value.ExtractionProgress != nil || value.ExtractionProgressWallMS != 0 {
+		return errors.New("T40.13 unsuccessful non-terminal wait retained progress")
 	}
 	if detailVersion < 9 && value.ExtractionTiming != nil {
 		return errors.New("T40.13 historical unsuccessful wait acquired extraction timing")
@@ -1386,9 +1415,9 @@ func validateConvergenceWithoutSuccessfulProbe(
 		return err
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
-	if detailVersion >= 5 &&
-		((value.Outcome == "repository_index_terminal") != (last.Class == "terminal")) {
-		return errors.New("T40.13 unsuccessful repository-index terminal transition is incoherent")
+	terminalOutcome := value.Outcome == "repository_index_terminal" || observationTerminal || extractionTerminal
+	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
+		return errors.New("T40.13 unsuccessful terminal transition is incoherent")
 	}
 	if err := validateRepositoryIndexFailureClass(value, detailVersion); err != nil {
 		return err
@@ -1660,6 +1689,16 @@ func validateObservationProgress(value ObservationProgressObservation, detailVer
 	return nil
 }
 
+func expectedObservationProgressBoundRefusal(value ObservationProgressObservation) bool {
+	return expectedObservationBoundRefusal(pipelinerefusal.Receipt{
+		Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.Stage(value.RefusalStage),
+		GenerationKind: pipelinerefusal.GenerationKind(value.RefusalGenerationKind),
+		Classification: pipelinerefusal.Classification(value.RefusalClassification),
+		Dimension:      pipelinerefusal.Dimension(value.RefusalDimension),
+		Observed:       value.RefusalObserved, Limit: value.RefusalLimit,
+	})
+}
+
 func validateExtractionProgress(value ExtractionProgressObservation) error {
 	progress := extractionpublication.Progress{
 		State: value.State, Total: value.Total, Materialized: value.Materialized,
@@ -1791,25 +1830,25 @@ func validateStopped(value Receipt) error {
 		}
 		wantReason = "repository_index_terminal"
 	case "observation_production_bound_refused":
-		if failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "observation_bound_refusal" {
 			return errors.New("T40.13 observation bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "observation_production_bound_refused"
 	case "observation_terminal":
-		if failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "observation_terminal" {
 			return errors.New("T40.13 observation terminal identity is invalid")
 		}
 		wantReason = "observation_terminal"
 	case "extraction_production_bound_refused":
-		if failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_bound_refusal" {
 			return errors.New("T40.13 extraction bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "extraction_production_bound_refused"
 	case "extraction_job_terminal":
-		if failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_job_terminal" {
 			return errors.New("T40.13 extraction terminal identity is invalid")
 		}

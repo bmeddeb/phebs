@@ -1404,6 +1404,20 @@ func (tracker *convergenceProgressTracker) observe(
 	tracker.lastInspectionProbe = probe
 	tracker.lastInspectionAt = elapsed
 	transitionLimitExceeded := tracker.observeTransition(probe.Stage, diagnostic, probe.SHA256, elapsed)
+	// Terminal probes are not successful convergence progress, but their typed
+	// projections are the evidence needed to classify and validate the stop.
+	// Retain them before excluding terminal/error classes from the monotonic
+	// successful-progress counters below.
+	if probe.ObservationProgress != nil {
+		progress := *probe.ObservationProgress
+		tracker.observationProgress = &progress
+		tracker.observationProgressAtWall = elapsed
+	}
+	if probe.ExtractionProgress != nil {
+		progress := *probe.ExtractionProgress
+		tracker.extractionProgress = &progress
+		tracker.extractionProgressAtWall = elapsed
+	}
 	if diagnostic.class != "pending" && diagnostic.class != "complete" {
 		return transitionLimitExceeded
 	}
@@ -1415,16 +1429,6 @@ func (tracker *convergenceProgressTracker) observe(
 			tracker.stageChanges++
 		}
 		tracker.lastProgressChange = elapsed
-	}
-	if probe.ObservationProgress != nil {
-		progress := *probe.ObservationProgress
-		tracker.observationProgress = &progress
-		tracker.observationProgressAtWall = elapsed
-	}
-	if probe.ExtractionProgress != nil {
-		progress := *probe.ExtractionProgress
-		tracker.extractionProgress = &progress
-		tracker.extractionProgressAtWall = elapsed
 	}
 	tracker.last = probe
 	tracker.lastSuccessfulAt = elapsed
@@ -1587,6 +1591,25 @@ func (run *execution) waitSnapshot(
 	if err != nil {
 		return privateProfileSnapshot{}, err
 	}
+	return run.waitSnapshotWithInspection(
+		profile, revision, label, limit, server,
+		func(attempt context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			return inspector.inspectWithProgress(attempt, profile, revision)
+		},
+	)
+}
+
+func (run *execution) waitSnapshotWithInspection(
+	profile PreparedProfile,
+	revision, label string,
+	limit time.Duration,
+	server *privateServer,
+	inspect convergenceInspection,
+) (privateProfileSnapshot, error) {
+	if run == nil || run.ctx == nil || limit <= 0 || server == nil || server.done == nil || inspect == nil {
+		return privateProfileSnapshot{}, errors.New("T40.13 convergence wait is invalid")
+	}
+	var err error
 	var timingCursor *partitionTimingCursor
 	var lifecycleTimingCursor *chunkLifecycleCursor
 	if run.plan.Schema == PlanSchemaV13 || run.plan.Schema == PlanSchemaV14 {
@@ -1611,11 +1634,7 @@ func (run *execution) waitSnapshot(
 	}
 	for {
 		snapshot, probe, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
-			phase, server, func(attempt context.Context) (
-				privateProfileSnapshot, privateConvergenceProbe, error,
-			) {
-				return inspector.inspectWithProgress(attempt, profile, revision)
-			},
+			phase, server, inspect,
 		)
 		elapsed := time.Since(started)
 		if timingCursor != nil {

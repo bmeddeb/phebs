@@ -1118,6 +1118,38 @@ structural extraction timing sample completed in 3.80 seconds for four
 partitions and nine domains. This rehearsal changes no production threshold or
 ceremony deadline and does not substitute for Take 19.
 
+The first independent review therefore refused freeze. It found that terminal
+observation and extraction probes were decoded but discarded before their
+typed projections could enter evidence, while v14 validation required those
+same projections. The tracker now retains the bounded terminal projection
+without counting it as successful convergence progress, and an end-to-end
+wait/stop/validate test pins both closed-bound and other-terminal observation
+outcomes. `reduce` additionally requires a canonical refusal on the exact
+selected stage, generation, and dimension; malformed or unrelated limit-shaped
+receipts remain unclassified. The four new stop codes are v14-only, and freeze
+preparation checks that every required frozen observation profile fits selected
+v2 admission.
+
+Production review also narrowed terminal invalid handling to deterministic
+immutable-input boundaries. Pointer/publication/collection race windows remain
+retryable, a selected-v2 worker that already claimed a legacy schedule settles
+it without opening source or rebuilding v1, and v2 binding/enqueue now shares
+the collection mutation fence. Race CI includes observation publication and
+the stale progress fences and publication callback have direct coverage.
+
+The exact-shape fit blocker remains deliberately separate. Run the committed
+262,144-blob semantic profile through the ordinary binary and retain only its
+cold wall, peak RSS, and logical/allocated data scalars:
+
+```sh
+PHEBS_T4013_EXACT_SEMANTIC_TIMING=1 \
+  go test ./spike/t4013 -run '^TestExactSemanticColdTiming$' -count=1 -v
+```
+
+A passing measurement must fit the unchanged four-hour cold, eight-hour total,
+20-GiB RSS, and 96-GiB allocated-data ceilings. Until that committed-source
+record and independent re-review exist, Take 19 remains not ready to freeze.
+
 ```sh
 cd ~/phebs
 

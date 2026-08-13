@@ -10,6 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+
+	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/spike/t401"
 )
 
 var expectedInputs = []InputBinding{
@@ -99,11 +102,29 @@ func FrozenPlan(sourceCommit string) (Plan, error) {
 // FrozenHostPlan creates the current plan by observing and binding the exact
 // host executables that can influence a ceremony before custody exists.
 func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
+	if err := validateV14ConvergenceRoutes(); err != nil {
+		return Plan{}, err
+	}
 	hostToolchain, err := ObserveHostToolchain(ctx)
 	if err != nil {
 		return Plan{}, err
 	}
 	return frozenV14PlanWithHostToolchain(sourceCommit, hostToolchain)
+}
+
+func validateV14ConvergenceRoutes() error {
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range profiles {
+		// V14 requires the selected segmented observation route. A frozen input
+		// that expects refusal on that required convergence lane is not freezeable.
+		if profile.Aggregate.UniqueGoBlobs > observationpublication.MaxInventoryRecordsV2 {
+			return errors.New("T40.13 selected observation route is expected to refuse")
+		}
+	}
+	return nil
 }
 
 func frozenV14PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

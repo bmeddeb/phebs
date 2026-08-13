@@ -147,6 +147,16 @@ func (runtime *Runtime) HandlePlanning(ctx context.Context, chunk store.Generati
 	if err := runtime.checkPlanningFence(ctx, chunk, binding, false); err != nil {
 		return planningFailure(err)
 	}
+	if runtime.InventoryV2 {
+		// A worker claimed this legacy one-item schedule before the selected v2
+		// cutover. Establish v2 ownership from the same current source, then let
+		// the scheduler settle the obsolete v1 row without opening a source
+		// member, Git object, or v1 census stage.
+		if _, err := runtime.enqueueInventoryV2(ctx, chunk.Repository); err != nil {
+			return planningFailure(err)
+		}
+		return nil
+	}
 	// Collection precedes any admission of larger aggregate bytes: superseded
 	// plan directories and bindings are removed under this chunk's lease before
 	// the census can stage new work. A collector refusal keeps the turn retryable

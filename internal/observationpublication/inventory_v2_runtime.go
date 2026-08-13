@@ -102,6 +102,11 @@ func (runtime *Runtime) enqueueInventoryScheduleV2(
 	binding planningBinding,
 	disposition PlanningEnqueue,
 ) (PlanningEnqueue, error) {
+	// Keep the v2 binding protected by the same short mutation fence used by
+	// collection until its durable schedule owns the binding or the competing
+	// schedule has been classified.
+	runtime.planMutation.Lock()
+	defer runtime.planMutation.Unlock()
 	if err := runtime.writePlanningBinding(binding); err != nil {
 		return "", planningFailure(err)
 	}
@@ -145,7 +150,7 @@ func (runtime *Runtime) HandleInventoryV2(ctx context.Context, chunk store.Gener
 	if runtime == nil || !runtime.InventoryV2 || chunk.Stage != InventoryScheduleStageV2 ||
 		chunk.Offset != 0 || chunk.Length != 1 || !validDigest(chunk.Generation) ||
 		!validDigest(chunk.ScheduleDigest) {
-		return terminalInventoryFailure(invalid("inventory v2 runtime chunk"))
+		return terminalDeterministicInventoryFailure(invalid("inventory v2 runtime chunk"))
 	}
 	hash := sha256.Sum256([]byte(chunk.Repository))
 	stripe := &inventoryRuntimeStripes[int(hash[0])%len(inventoryRuntimeStripes)]
@@ -203,17 +208,25 @@ func (runtime *Runtime) HandleInventoryV2(ctx context.Context, chunk store.Gener
 	return runtime.notifyPublished(ctx, chunk.Repository)
 }
 
-// terminalInventoryFailure stops only closed deterministic v2 refusals on the
-// first attempt. Stale leases, crossed source generations, context failures,
-// store unavailability, and downstream notification errors remain retryable.
+// terminalInventoryFailure stops only a validated limit refusal. Invalid
+// errors from mutable publication, pointer, or collection windows remain
+// retryable unless the caller owns a deterministic immutable-input boundary.
 func terminalInventoryFailure(err error) error {
 	if err == nil {
 		return nil
 	}
 	closed := workFailure(err)
 	receipt, ok := pipelinerefusal.From(closed)
-	if ok && (receipt.Classification == pipelinerefusal.ClassificationLimit ||
-		receipt.Classification == pipelinerefusal.ClassificationInvalid) {
+	if ok && receipt.Classification == pipelinerefusal.ClassificationLimit {
+		return store.WithTerminal(closed)
+	}
+	return closed
+}
+
+func terminalDeterministicInventoryFailure(err error) error {
+	closed := terminalInventoryFailure(err)
+	receipt, ok := pipelinerefusal.From(closed)
+	if ok && receipt.Classification == pipelinerefusal.ClassificationInvalid {
 		return store.WithTerminal(closed)
 	}
 	return closed

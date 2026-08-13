@@ -83,6 +83,24 @@ func TestObservationProgressTerminalClassificationIsImmediateAndClosed(t *testin
 		{name: "closed limit", progress: observationpublication.Progress{
 			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed", Refusal: &limit},
 		}, want: errObservationBoundRefusal},
+		{name: "unrelated limit remains unclassified", progress: observationpublication.Progress{
+			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed", Refusal: &pipelinerefusal.Receipt{
+				Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.StageObservationPublication,
+				GenerationKind: pipelinerefusal.GenerationObservation,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionGenerationEncodedBytes,
+				Observed:       2, Limit: 1,
+			}},
+		}, want: errObservationTerminal},
+		{name: "wrong frozen limit remains unclassified", progress: observationpublication.Progress{
+			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed", Refusal: &pipelinerefusal.Receipt{
+				Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.StageObservationPublication,
+				GenerationKind: pipelinerefusal.GenerationObservation,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionGenerationRecords,
+				Observed:       262_144, Limit: 249_999,
+			}},
+		}, want: errObservationTerminal},
 		{name: "terminal without limit", progress: observationpublication.Progress{
 			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed"},
 		}, want: errObservationTerminal},
@@ -316,6 +334,16 @@ func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
 	_, err = extractionConvergenceProbe(progress, repository)
 	if !errors.Is(err, errExtractionJobTerminal) {
 		t.Fatalf("ordinary terminal error = %v", err)
+	}
+	repository.LastExtractionJob.Refusal = &pipelinerefusal.Receipt{
+		Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.StageObservationPublication,
+		GenerationKind: pipelinerefusal.GenerationObservation,
+		Classification: pipelinerefusal.ClassificationLimit,
+		Dimension:      pipelinerefusal.DimensionGenerationRecords, Observed: 2, Limit: 1,
+	}
+	_, err = extractionConvergenceProbe(progress, repository)
+	if !errors.Is(err, errExtractionJobTerminal) {
+		t.Fatalf("unrelated limit error = %v", err)
 	}
 }
 

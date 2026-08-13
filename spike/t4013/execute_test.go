@@ -16,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -797,6 +798,105 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 	}
 	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 6); err != nil {
 		t.Fatalf("terminal wait does not satisfy v10 receipt contract: %v", err)
+	}
+}
+
+func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
+	hostToolchain, err := ObserveHostToolchain(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV14PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	tests := []struct {
+		name       string
+		cause      error
+		outcome    string
+		projection privateConvergenceProbe
+	}{
+		{
+			name: "observation bound refusal", cause: errObservationBoundRefusal,
+			outcome: "observation_bound_refusal",
+			projection: privateConvergenceProbe{
+				Stage: "observation_publication", SHA256: digest,
+				ObservationProgress: &ObservationProgressObservation{
+					State: "failed", SelectedVersion: "v2", PlanningState: "failed", PlanningFailed: 1,
+					RefusalStage:          string(pipelinerefusal.StageObservationPublication),
+					RefusalGenerationKind: string(pipelinerefusal.GenerationObservation),
+					RefusalClassification: string(pipelinerefusal.ClassificationLimit),
+					RefusalDimension:      string(pipelinerefusal.DimensionGenerationRecords),
+					RefusalObserved:       262_144, RefusalLimit: observationpublication.MaxGenerationRecords,
+				},
+			},
+		},
+		{
+			name: "extraction bound refusal", cause: errExtractionBoundRefusal,
+			outcome: "extraction_bound_refusal",
+			projection: privateConvergenceProbe{
+				Stage: "extraction_publication", SHA256: digest,
+				ExtractionProgress: &ExtractionProgressObservation{
+					State: "unavailable", JobState: "failed", JobAttempts: 1,
+					RefusalStage:          string(pipelinerefusal.StageDomainInventory),
+					RefusalGenerationKind: string(pipelinerefusal.GenerationExtractionDomain),
+					RefusalClassification: string(pipelinerefusal.ClassificationLimit),
+					RefusalDimension:      string(pipelinerefusal.DimensionCandidateMemberBytes),
+					RefusalObserved:       792_000_000, RefusalLimit: 67_108_864,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			module, workspace := filepath.Join(root, "module"), filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			logPath := filepath.Join(workspace, "server.log")
+			if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			run := &execution{
+				ctx: t.Context(), moduleRoot: module, workspace: workspace, plan: plan,
+				observation: emptyObservationForPlan(EnvironmentObservation{
+					OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+					FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+				}, plan),
+			}
+			run.observation.Toolchain = []ToolchainObservation{
+				{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
+				{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
+			}
+			run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+			run.startPhase(1)
+			profile := PreparedProfile{Name: "semantic-262144-v1"}
+			server := &privateServer{done: make(chan error, 1), logPath: logPath}
+			_, waitErr := run.waitSnapshotWithInspection(
+				profile, "a", "cold", time.Minute, server,
+				func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+					return privateProfileSnapshot{}, test.projection, test.cause
+				},
+			)
+			if !errors.Is(waitErr, test.cause) {
+				t.Fatalf("terminal wait = %v", waitErr)
+			}
+			if len(run.observation.ConvergenceWaits) != 1 ||
+				run.observation.ConvergenceWaits[0].Outcome != test.outcome {
+				t.Fatalf("terminal waits = %+v", run.observation.ConvergenceWaits)
+			}
+			stopped, stopErr := run.stopAfterFailure(waitErr)
+			if stopErr != nil {
+				t.Fatal(stopErr)
+			}
+			if err := ValidateObservation(stopped); err != nil {
+				t.Fatalf("stopped observation did not seal: %v", err)
+			}
+		})
 	}
 }
 

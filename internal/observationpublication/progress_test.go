@@ -3,6 +3,7 @@ package observationpublication
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -114,6 +115,23 @@ type inventoryFailureProgressStore struct {
 	failure store.GenerationScheduleFailure
 }
 
+type inventoryConfirmMutationStore struct {
+	*planningOwnershipStore
+	mutate func(*planningOwnershipStore)
+	reads  int
+}
+
+func (state *inventoryConfirmMutationStore) GetGenerationSchedule(
+	ctx context.Context, repository, stage string,
+) (*store.GenerationSchedule, error) {
+	value, err := state.planningOwnershipStore.GetGenerationSchedule(ctx, repository, stage)
+	state.reads++
+	if state.reads == 1 && state.mutate != nil {
+		state.mutate(state.planningOwnershipStore)
+	}
+	return value, err
+}
+
 func (state *inventoryFailureProgressStore) GetGenerationScheduleFailure(
 	_ context.Context, _, _, _ string,
 ) (*store.GenerationScheduleFailure, error) {
@@ -164,6 +182,53 @@ func TestInventoryV2ProgressSealsTerminalRefusal(t *testing.T) {
 		progress.Planning.State != "failed" || progress.Planning.Refusal == nil ||
 		progress.Planning.Refusal.Classification != pipelinerefusal.ClassificationInvalid {
 		t.Fatalf("terminal inventory v2 progress = %+v, %v", progress, err)
+	}
+}
+
+func TestInventoryV2ProgressRefusesEveryStaleScheduleFence(t *testing.T) {
+	mutations := map[string]func(*store.GenerationSchedule){
+		"identity": func(schedule *store.GenerationSchedule) {
+			schedule.Digest = "sha256:" + strings.Repeat("f", 64)
+		},
+		"status": func(schedule *store.GenerationSchedule) {
+			schedule.Status = store.GenerationScheduleSettled
+			schedule.NextOffset = schedule.TotalItems
+			schedule.Materialized = schedule.TotalChunks
+			schedule.Succeeded = schedule.TotalChunks
+		},
+		"progress": func(schedule *store.GenerationSchedule) {
+			schedule.Pending++
+		},
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			dataDirectory, _, repository, _ := progressFixture(t)
+			base := &planningOwnershipStore{}
+			runtime := &Runtime{
+				DataDir: dataDirectory, Store: base, Cache: &Cache{}, InventoryV2: true,
+				AcquireTransition: noopPlanningTransition,
+			}
+			if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+				disposition != PlanningEnqueued {
+				t.Fatalf("enqueue = %q, %v", disposition, err)
+			}
+			state := &inventoryConfirmMutationStore{
+				planningOwnershipStore: base,
+				mutate: func(inner *planningOwnershipStore) {
+					inner.mu.Lock()
+					defer inner.mu.Unlock()
+					mutate(inner.current[InventoryScheduleStageV2])
+					inner.current[InventoryScheduleStageV2].UpdatedAt =
+						inner.current[InventoryScheduleStageV2].UpdatedAt.Add(time.Nanosecond)
+				},
+			}
+			_, err := (&ProgressReader{
+				DataDir: dataDirectory, Store: state, InventoryV2: true,
+			}).Read(t.Context(), repository)
+			if !errors.Is(err, ErrStale) {
+				t.Fatalf("stale %s progress = %v", name, err)
+			}
+		})
 	}
 }
 

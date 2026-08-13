@@ -21,12 +21,23 @@
   },
   "semantic_cold": {
     "outcome": "deadline",
+    "inspection_attempts": 2880,
     "wall_ms": 14400003,
     "last_successful_probe_wall_ms": 14395007,
     "last_progress_change_wall_ms": 115006,
     "observation_state": "failed",
     "planning_state": "failed",
     "planning_failed": 1
+  },
+  "independent_exact_source_refusal": {
+    "stage": "observation_publication",
+    "generation_kind": "observation",
+    "classification": "limit",
+    "dimension": "generation_records",
+    "observed": 262144,
+    "limit": 250000,
+    "worker_attempts": 1,
+    "scope": "independent_exact_source_reproduction_not_sealed_take18_failure_evidence"
   },
   "cold_resources": {
     "wall_ms": 18332714,

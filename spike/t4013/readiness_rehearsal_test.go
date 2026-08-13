@@ -20,6 +20,91 @@ import (
 )
 
 const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
+const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
+
+// TestExactSemanticColdTiming measures the frozen 262,144-blob semantic shape
+// through the ordinary production binary before a Take 19 freeze. It retains
+// no authored source or derived custody and reports only cold wall/RSS/disk
+// scalars against the unchanged v14 ceilings.
+func TestExactSemanticColdTiming(t *testing.T) {
+	if os.Getenv(exactSemanticTimingEnvironment) != "1" {
+		t.Skip("set " + exactSemanticTimingEnvironment + "=1 to run the exact semantic timing gate")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Hour)
+	defer cancel()
+	moduleRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	moduleRoot, err = filepath.EvalSymlinks(moduleRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace := t.TempDir()
+	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var semantic t401.Profile
+	for _, profile := range profiles {
+		if profile.Kind == "semantic" {
+			semantic = profile
+			break
+		}
+	}
+	if semantic.Name != "semantic-262144-v1" || semantic.Aggregate.UniqueGoBlobs != 262_144 {
+		t.Fatalf("exact semantic profile = %+v", semantic)
+	}
+	profile, err := prepareTimingProfile(ctx, moduleRoot, workspace, semantic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := launchPrivateServer(ctx, profile, toolchain, "exact-semantic-cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	running := true
+	defer func() {
+		if running {
+			_ = server.stop(30 * time.Second)
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(ctx, server, profile, "exact-semantic-cold", 15*time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	snapshot := awaitReadinessSnapshot(t, ctx, profile, "a", 4*time.Hour)
+	wall := time.Since(started)
+	peakRSS, _, _, _ := server.sampler.metrics()
+	logical, allocated, err := measureDataBytes(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.stop(30 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	running = false
+	if snapshot.ObservationRecords != 262_144 || wall >= 4*time.Hour ||
+		peakRSS > frozenSafetyV14.MaximumPeakRSSBytes ||
+		allocated > frozenSafetyV14.MaximumDataAllocatedBytes {
+		t.Fatalf(
+			"exact semantic timing refused: wall_ms=%d records=%d peak_rss_bytes=%d logical_bytes=%d allocated_bytes=%d",
+			wall.Milliseconds(), snapshot.ObservationRecords, peakRSS, logical, allocated,
+		)
+	}
+	t.Logf(
+		"exact semantic cold: wall_ms=%d records=%d peak_rss_bytes=%d logical_bytes=%d allocated_bytes=%d cold_headroom_ms=%d total_headroom_ms=%d rss_headroom_bytes=%d allocation_headroom_bytes=%d",
+		wall.Milliseconds(), snapshot.ObservationRecords, peakRSS, logical, allocated,
+		(4*time.Hour - wall).Milliseconds(),
+		(time.Duration(frozenSafetyV14.MaximumTotalWallMS)*time.Millisecond - wall).Milliseconds(),
+		frozenSafetyV14.MaximumPeakRSSBytes-peakRSS,
+		frozenSafetyV14.MaximumDataAllocatedBytes-allocated,
+	)
+}
 
 // TestProductionPathReadinessRehearsal is an opt-in, bounded rehearsal of the
 // production paths and recovery boundaries that failed Takes 11-18. It
@@ -423,6 +508,74 @@ func prepareProjectionProfile(
 		Address:        address,
 		Catalog:        catalogPath,
 		Revisions:      revisions,
+	}, nil
+}
+
+func prepareTimingProfile(
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	profile t401.Profile,
+) (PreparedProfile, error) {
+	profileRoot := filepath.Join(workspace, "exact-semantic")
+	if err := os.Mkdir(profileRoot, 0o700); err != nil {
+		return PreparedProfile{}, err
+	}
+	authored := filepath.Join(profileRoot, "authored")
+	receipt, err := t401.Author(ctx, t401.AuthorRequest{
+		ModuleRoot: moduleRoot, Output: authored, Profile: profile, ConfirmFrozen: true,
+	})
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	revisions := make(map[string]string, len(receipt.Revisions))
+	for _, revision := range receipt.Revisions {
+		revisions[revision.Revision] = revision.Commit
+	}
+	repository := filepath.Join(authored, "repository.git")
+	if err := updateSourceRevision(ctx, repository, revisions["a"]); err != nil {
+		return PreparedProfile{}, err
+	}
+	repositoryName, err := phebssync.RepoName(repository)
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	catalogPath := filepath.Join(profileRoot, "service-catalog.json")
+	catalog, err := catalogForShape(profile.Kind, profile.Shape.Cells)
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	if err := writePrivateNew(catalogPath, catalog); err != nil {
+		return PreparedProfile{}, err
+	}
+	credential, err := randomCredential()
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	credentialPath := filepath.Join(profileRoot, "api-key")
+	if err := writePrivateNew(credentialPath, []byte(credential+"\n")); err != nil {
+		return PreparedProfile{}, err
+	}
+	dataDir := filepath.Join(profileRoot, "data")
+	if err := os.Mkdir(dataDir, 0o700); err != nil {
+		return PreparedProfile{}, err
+	}
+	address, err := reserveLoopbackAddress()
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	configPath := filepath.Join(profileRoot, "phebs.yaml")
+	config, err := configFor(repository, repositoryName, catalogPath, dataDir, address, credential)
+	if err != nil {
+		return PreparedProfile{}, err
+	}
+	if err := writePrivateNew(configPath, config); err != nil {
+		return PreparedProfile{}, err
+	}
+	return PreparedProfile{
+		Name: profile.Name, Repository: repository, RepositoryName: repositoryName,
+		Config: configPath, Credential: credentialPath, DataDir: dataDir, Address: address,
+		Catalog: catalogPath, Revisions: revisions,
 	}, nil
 }
 

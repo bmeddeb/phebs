@@ -146,11 +146,20 @@ func observationTerminal(progress observationpublication.Progress) error {
 		progress.Planning.State != "failed" {
 		return nil
 	}
-	if progress.Planning.Refusal != nil &&
-		progress.Planning.Refusal.Classification == pipelinerefusal.ClassificationLimit {
+	if progress.Planning.Refusal != nil && expectedObservationBoundRefusal(*progress.Planning.Refusal) {
 		return errObservationBoundRefusal
 	}
 	return errObservationTerminal
+}
+
+func expectedObservationBoundRefusal(receipt pipelinerefusal.Receipt) bool {
+	return pipelinerefusal.Validate(receipt) == nil &&
+		receipt.Stage == pipelinerefusal.StageObservationPublication &&
+		receipt.GenerationKind == pipelinerefusal.GenerationObservation &&
+		receipt.Classification == pipelinerefusal.ClassificationLimit &&
+		receipt.Dimension == pipelinerefusal.DimensionGenerationRecords &&
+		receipt.Observed > receipt.Limit &&
+		receipt.Limit == observationpublication.MaxGenerationRecords
 }
 
 func extractionConvergenceProbe(
@@ -200,12 +209,36 @@ func extractionConvergenceProbe(
 	}
 	if projection.JobState == string(store.StatusFailed) ||
 		projection.JobState == string(store.StatusCanceled) {
-		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) {
+		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) &&
+			expectedExtractionBoundRefusal(*projection) {
 			return probe, errExtractionBoundRefusal
 		}
 		return probe, errExtractionJobTerminal
 	}
 	return probe, nil
+}
+
+func expectedExtractionBoundRefusal(value ExtractionProgressObservation) bool {
+	receipt := pipelinerefusal.Receipt{
+		Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.Stage(value.RefusalStage),
+		GenerationKind: pipelinerefusal.GenerationKind(value.RefusalGenerationKind),
+		Classification: pipelinerefusal.Classification(value.RefusalClassification),
+		Dimension:      pipelinerefusal.Dimension(value.RefusalDimension),
+		Observed:       value.RefusalObserved, Limit: value.RefusalLimit,
+	}
+	if pipelinerefusal.Validate(receipt) != nil || receipt.Classification != pipelinerefusal.ClassificationLimit ||
+		receipt.Observed <= receipt.Limit {
+		return false
+	}
+	switch receipt.Stage {
+	case pipelinerefusal.StageCandidateStrictOpen:
+		return receipt.GenerationKind == pipelinerefusal.GenerationCandidate
+	case pipelinerefusal.StageDomainInventory, pipelinerefusal.StageExtractorExecution,
+		pipelinerefusal.StageEvidenceStaging, pipelinerefusal.StageFinalPublication:
+		return receipt.GenerationKind == pipelinerefusal.GenerationExtractionDomain
+	default:
+		return false
+	}
 }
 
 type profileInspector struct {

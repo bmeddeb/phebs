@@ -1133,6 +1133,68 @@ func TestSelectedInventoryV2DoesNotWaitForLegacyPlanning(t *testing.T) {
 	}
 }
 
+func TestSelectedInventoryV2SettlesClaimedLegacyPlanningWithoutCensus(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{},
+		AcquireTransition: noopPlanningTransition,
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("legacy enqueue = %q, %v", disposition, err)
+	}
+	legacy := state.specsFor(PlanningScheduleStage)[0]
+	runtime.InventoryV2 = true
+	if err := runtime.HandlePlanning(t.Context(), planningChunkForSpec(t, legacy)); err != nil {
+		t.Fatal(err)
+	}
+	if specs := state.specsFor(InventoryScheduleStageV2); len(specs) != 1 {
+		t.Fatalf("selected v2 specs = %+v", specs)
+	}
+	namespace := filepath.Dir(runtime.planningBindingPath(repository, legacy.Generation))
+	entries, err := os.ReadDir(namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".planning-") || strings.HasPrefix(entry.Name(), "plan-") {
+			t.Fatalf("selected v2 reran legacy census: %q", entry.Name())
+		}
+	}
+}
+
+func TestInventoryV2BindingPublicationWaitsForCollectionFence(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: &planningOwnershipStore{}, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+	}
+	runtime.planMutation.Lock()
+	result := make(chan error, 1)
+	go func() {
+		_, err := runtime.EnqueuePlanning(t.Context(), repository)
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		runtime.planMutation.Unlock()
+		t.Fatalf("v2 binding crossed collection fence: %v", err)
+	case <-time.After(25 * time.Millisecond):
+	}
+	runtime.planMutation.Unlock()
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("v2 binding did not resume after collection fence")
+	}
+}
+
 func TestInventoryV2MintsRecoveryAfterSettledWorkerLostPublication(t *testing.T) {
 	dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
 	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
@@ -1174,6 +1236,32 @@ func TestInventoryV2MintsRecoveryAfterSettledWorkerLostPublication(t *testing.T)
 	}
 }
 
+func TestInventoryV2PublicationInvokesDownstreamCallback(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+	state := &planningOwnershipStore{}
+	var published []string
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+		OnPublished: func(_ context.Context, got string) error {
+			published = append(published, got)
+			return nil
+		},
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("inventory enqueue = %q, %v", disposition, err)
+	}
+	spec := state.specsFor(InventoryScheduleStageV2)[0]
+	if err := runtime.HandleInventoryV2(t.Context(), planningChunkForSpec(t, spec)); err != nil {
+		t.Fatal(err)
+	}
+	if len(published) != 1 || published[0] != repository {
+		t.Fatalf("v2 publication callbacks = %+v", published)
+	}
+}
+
 func TestHandleInventoryV2ClosesDeterministicRefusalAsTerminal(t *testing.T) {
 	err := (&Runtime{InventoryV2: true}).HandleInventoryV2(
 		t.Context(), store.GenerationChunk{},
@@ -1186,6 +1274,17 @@ func TestHandleInventoryV2ClosesDeterministicRefusalAsTerminal(t *testing.T) {
 		receipt.GenerationKind != pipelinerefusal.GenerationObservation ||
 		receipt.Classification != pipelinerefusal.ClassificationInvalid {
 		t.Fatalf("invalid inventory v2 refusal = %+v, present=%t", receipt, ok)
+	}
+}
+
+func TestInventoryV2MutableInvalidRemainsRetryable(t *testing.T) {
+	err := terminalInventoryFailure(invalid("mutable pointer changed"))
+	if store.IsTerminal(err) {
+		t.Fatalf("mutable invalid was terminal: %v", err)
+	}
+	closed := terminalDeterministicInventoryFailure(invalid("immutable worker input"))
+	if !store.IsTerminal(closed) {
+		t.Fatalf("deterministic invalid was retryable: %v", closed)
 	}
 }
 

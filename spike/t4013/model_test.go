@@ -395,6 +395,12 @@ func TestV14PlanBindsSelectedObservationV2Diagnostics(t *testing.T) {
 	}
 }
 
+func TestV14FreezeRequiresConvergentSelectedObservationRoute(t *testing.T) {
+	if err := validateV14ConvergenceRoutes(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestV14ObservationProgressRequiresSelectedV2AndSealsRefusal(t *testing.T) {
 	base := ObservationProgressObservation{
 		State: "failed", SelectedVersion: "v2",

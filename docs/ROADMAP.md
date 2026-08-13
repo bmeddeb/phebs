@@ -915,6 +915,16 @@ catalog, relationship, or correctness authority.
   cold/restore and structural A/B/A-return cold/restore with lifecycle and
   authorized queries in 283.90 seconds. This completes implementation
   readiness only; independent review, freeze, and execution remain distinct.
+- The first Take 19 independent review refused freeze on terminal-evidence loss,
+  overly broad refusal classification, three production cutover/retry races,
+  missing schema/freeze guards, and absent exact semantic fit evidence. The
+  code-side remediation now seals typed terminal observation/extraction state,
+  pins exact validated refusal identities, preserves retryability across
+  mutable windows, settles claimed legacy schedules without a v1 census, and
+  guards v2 enqueue against collection. Take 19 remains not freeze-ready until
+  committed-source measurement of the exact 262,144-blob semantic route fits
+  the unchanged cold/total-wall/RSS/allocation envelope and the corrected
+  branch passes independent re-review.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

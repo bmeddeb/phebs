@@ -775,6 +775,31 @@ cap, lifecycle policy, or release posture changes. The full merge bar and an
 independent review remain mandatory before a separately approved Take 19
 freeze; neither T40.13 nor Epic 40 is closed by this readiness work.
 
+Independent-review remediation (2026-08-13): the first review refused a Take
+19 freeze. V14 terminal observation and extraction probes now retain their
+typed bounded projections before terminal/error probes are excluded from
+successful convergence counters, and an end-to-end stopped-observation test
+pins sealing plus receipt validation for both terminal classes. `reduce` now
+requires a canonical validated refusal on the exact selected route; malformed,
+wrong-stage, wrong-dimension, and wrong-limit receipts remain unclassified.
+The four new stop codes are v14-only, and freeze preparation rejects a frozen
+profile expected to refuse the required selected-v2 observation route.
+
+Production now terminalizes invalid v2 inventory failures only where the caller
+owns a deterministic immutable-input boundary. Invalid states from mutable
+pointer, publication, or collection windows remain retryable. A selected-v2
+runtime that claims a pre-cutover v1 schedule establishes v2 ownership and
+settles the obsolete row without reopening source or running a v1 census, and
+v2 binding/enqueue uses the same mutation fence as collection. CI race coverage
+includes observation publication; stale progress-fence and downstream callback
+tests are retained. The Take 18 findings record now carries the exact closed
+refusal tuple and explicit attempt counts.
+
+This closes the code/evidence blockers only. Before Take 19 may freeze, the
+exact 262,144-blob semantic profile must be measured at committed source against
+the unchanged four-hour cold, eight-hour total, 20-GiB peak-RSS, and 96-GiB
+allocated-data ceilings. The miniature readiness rehearsal is not that record.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted
