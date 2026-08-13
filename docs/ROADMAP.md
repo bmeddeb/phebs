@@ -933,6 +933,15 @@ catalog, relationship, or correctness authority.
   final extraction counters, the next step is bounded progress/timing capture
   and measured reduction of the semantic extraction/relationship tail—not a
   blind retry or a deadline/concurrency/limit increase.
+- The bounded rerun at `5d776ef5` proved the semantic wall is terminal
+  extraction, not an unfinished long tail: at the four-hour boundary the
+  264-partition schedule was settled with 226 successes and 38 failures, and
+  relationship publication had not begun. Of 290 attempt reports, 32 were
+  terminal refusals; executor maximum was 300,002 ms, aligned with the frozen
+  five-minute partition deadline. Resources remained far below ceilings. The
+  retained record lacks the closed refusal tuple, so the next work is typed
+  refusal retention and independent reduce-or-correct review—not a deadline,
+  concurrency, bound, or topology change. Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

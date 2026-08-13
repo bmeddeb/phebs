@@ -1166,6 +1166,28 @@ progress/timing retention, then remeasure and reduce the semantic
 extraction/relationship tail without increasing deadlines, concurrency,
 production limits, topology, or resource ceilings.
 
+The bounded timeout capture was then rerun at exact committed source
+`5d776ef5a982a11987789ea24cf914506d4fd2bc`. It retained the real terminal
+extraction state at 14,400,019 ms: the 264-partition schedule had settled with
+226 succeeded, 38 failed, zero pending, and zero running; relationship
+publication never began. Across 290 materialized attempt reports, 226 completed,
+32 failed retryably, and 32 were terminal refusals. Executor work dominated
+the retained timing (3,495,321 ms total), with a 300,002-ms maximum; source
+acquisition totaled only 5,526 ms and result installation plus assembly totaled
+4,075 ms. The maximum aligns with the frozen five-minute partition deadline,
+but the source-free fit record does not retain a closed refusal dimension,
+observed value, and limit. It therefore proves a terminal extraction wall but
+does not yet govern whether the correction is corpus reduction or production
+work, and it does not authorize changing the deadline, concurrency, or bounds.
+
+Resources again were not the wall: peak RSS was 1,674,674,176 bytes and
+allocated data was 2,618,982,400 bytes, below the unchanged 20-GiB and 96-GiB
+ceilings. The exact fixture, derived data, and credentials were destroyed and
+the temporary directory was removed. Take 19 remains not ready to freeze. The
+next readiness change must retain and validate the closed per-partition refusal
+tuple in the ordinary typed extraction projection and the source-free timing
+record, then independently review the resulting reduce-or-correct decision.
+
 ```sh
 cd ~/phebs
 

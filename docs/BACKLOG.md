@@ -818,6 +818,23 @@ source-free, remeasure the semantic extraction/relationship tail, and reduce
 the measured work without raising the cold deadline, concurrency, production
 bounds, topology, or resource ceilings. Take 19 remains unfrozen.
 
+The corrected bounded capture at committed source
+`5d776ef5a982a11987789ea24cf914506d4fd2bc` closes that evidence gap but still
+refuses freeze. At the exact cold deadline, extraction was settled: 226 of 264
+partitions succeeded, 38 failed, and none remained pending or running;
+relationship publication never started. The 290 retained attempt reports
+contained 226 completions, 32 retryable failures, and 32 terminal refusals.
+Executor work dominated at 3,495,321 ms total and 300,002 ms maximum, while
+source acquisition totaled 5,526 ms. The maximum aligns with the frozen
+five-minute partition deadline, but the source-free record lacks the closed
+refusal dimension/observed/limit tuple required to select a governed decision.
+Peak RSS was 1,674,674,176 bytes and allocated data 2,618,982,400 bytes, both
+below ceilings; cleanup destroyed custody and removed the temporary tree.
+Before another fit run or Take 19 freeze, retain and validate the per-partition
+closed refusal tuple and independently review whether it requires corpus
+reduction or a production correction. No deadline, concurrency, limit, or
+topology change is authorized.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted
