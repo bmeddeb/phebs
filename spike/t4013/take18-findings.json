@@ -1,0 +1,50 @@
+{
+  "schema": "t4013-take18-findings-v1",
+  "ceremony_id": "t40r1-neutral-18",
+  "source_commit": "8d8da8b905b80e0a1103d14e3da75d8d32b65be0",
+  "plan_digest": "sha256:edb26b4a01a6d4cf232b7a14e4d6f1b759451c58bc3ba5cdd4e7611496190b2f",
+  "source_free_package_sha256": "55806721e91b5d46ed6544cc8db49a94b0e3b3bcc61237233c37c11f62e150b7",
+  "outcome": "stopped",
+  "decision": "unclassified",
+  "reason": "convergence_deadline_expired",
+  "structural_cold": {
+    "outcome": "converged",
+    "wall_ms": 3910284,
+    "extraction_attempts": 1956,
+    "extraction_completed": 1956,
+    "extraction_failed": 0,
+    "extraction_terminal_refusals": 0,
+    "extraction_runtime_max_ms": 1326,
+    "scheduler_settled": 1956,
+    "scheduler_max_ms": 1333,
+    "relationship_published": true
+  },
+  "semantic_cold": {
+    "outcome": "deadline",
+    "wall_ms": 14400003,
+    "last_successful_probe_wall_ms": 14395007,
+    "last_progress_change_wall_ms": 115006,
+    "observation_state": "failed",
+    "planning_state": "failed",
+    "planning_failed": 1
+  },
+  "cold_resources": {
+    "wall_ms": 18332714,
+    "peak_rss_bytes": 3353821184,
+    "data_logical_bytes": 22596233216,
+    "data_allocated_bytes": 25439391744
+  },
+  "classification_limit": "The sealed v13 evidence proves terminal semantic observation planning but contains no closed planning-failure class, so it cannot identify the underlying refusal.",
+  "independent_exact_source_finding": {
+    "semantic_unique_blobs": 262144,
+    "legacy_v1_max_generation_records": 250000,
+    "selected_v2_max_inventory_records": 4000000,
+    "cause": "The selected v2 runtime still required a fresh legacy v1 publication, so v1 refused before the admitted v2 inventory could be scheduled."
+  },
+  "custody": {
+    "evidence_verified": true,
+    "teardown_completed": true,
+    "derived_data_retained": false,
+    "scratch_source_retained": false
+  }
+}

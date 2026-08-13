@@ -99,13 +99,23 @@ func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
 }
 
 func observationConvergenceProbe(progress observationpublication.Progress) privateConvergenceProbe {
-	projection := &ObservationProgressObservation{State: progress.State}
+	projection := &ObservationProgressObservation{
+		State: progress.State, SelectedVersion: progress.SelectedVersion,
+	}
 	if progress.Planning != nil {
 		projection.PlanningState = progress.Planning.State
 		projection.PlanningPending = progress.Planning.Pending
 		projection.PlanningRunning = progress.Planning.Running
 		projection.PlanningSucceeded = progress.Planning.Succeeded
 		projection.PlanningFailed = progress.Planning.Failed
+		if progress.Planning.Refusal != nil {
+			projection.RefusalStage = string(progress.Planning.Refusal.Stage)
+			projection.RefusalGenerationKind = string(progress.Planning.Refusal.GenerationKind)
+			projection.RefusalClassification = string(progress.Planning.Refusal.Classification)
+			projection.RefusalDimension = string(progress.Planning.Refusal.Dimension)
+			projection.RefusalObserved = progress.Planning.Refusal.Observed
+			projection.RefusalLimit = progress.Planning.Refusal.Limit
+		}
 	}
 	if progress.Schedule != nil {
 		projection.ScheduleState = progress.Schedule.State
@@ -121,10 +131,26 @@ func observationConvergenceProbe(progress observationpublication.Progress) priva
 		projection.PublicationRecordCount = progress.Publication.RecordCount
 		projection.PublicationObservedCount = progress.Publication.ObservedCount
 		projection.PublicationUnsupportedCount = progress.Publication.UnsupportedCount
+		projection.PublicationSourceSegments = progress.Publication.SourceSegments
+		projection.PublicationInventorySegments = progress.Publication.InventorySegments
+		projection.PublicationEncodedBytes = progress.Publication.EncodedMemberBytes
+		projection.PublicationObservationBytes = progress.Publication.ObservationBytes
 	}
 	probe := convergenceProbe("observation_publication", progress)
 	probe.ObservationProgress = projection
 	return probe
+}
+
+func observationTerminal(progress observationpublication.Progress) error {
+	if progress.State != "failed" || progress.Planning == nil ||
+		progress.Planning.State != "failed" {
+		return nil
+	}
+	if progress.Planning.Refusal != nil &&
+		progress.Planning.Refusal.Classification == pipelinerefusal.ClassificationLimit {
+		return errObservationBoundRefusal
+	}
+	return errObservationTerminal
 }
 
 func extractionConvergenceProbe(
@@ -163,6 +189,13 @@ func extractionConvergenceProbe(
 	probe := convergenceProbe("extraction_publication", progress, projection)
 	probe.ExtractionProgress = projection
 	if repository.LastExtractionJobState != store.JobProjectionExact {
+		// Durable current extraction authority supersedes its ordinary completed
+		// queue row. Lifecycle may collect that row before a later probe; absence
+		// remains pending while authority is non-current so terminal jobs cannot
+		// be laundered into progress.
+		if progress.State == "current" {
+			return probe, nil
+		}
 		return probe, errors.New("T40.13 extraction job projection has not converged")
 	}
 	if projection.JobState == string(store.StatusFailed) ||
@@ -176,11 +209,12 @@ func extractionConvergenceProbe(
 }
 
 type profileInspector struct {
-	client     *http.Client
-	credential string
+	client               *http.Client
+	credential           string
+	requireObservationV2 bool
 }
 
-func newProfileInspector(profile PreparedProfile) (*profileInspector, error) {
+func newProfileInspector(profile PreparedProfile, requireObservationV2 ...bool) (*profileInspector, error) {
 	raw, err := os.ReadFile(profile.Credential)
 	if err != nil {
 		return nil, errors.New("T40.13 credential is unavailable")
@@ -189,8 +223,10 @@ func newProfileInspector(profile PreparedProfile) (*profileInspector, error) {
 	if credential == "" || len(credential) > 256 {
 		return nil, errors.New("T40.13 credential is invalid")
 	}
+	requireV2 := len(requireObservationV2) > 0 && requireObservationV2[0]
 	return &profileInspector{
 		client: &http.Client{Timeout: 30 * time.Second}, credential: credential,
+		requireObservationV2: requireV2,
 	}, nil
 }
 
@@ -280,10 +316,19 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
+	if inspector.requireObservationV2 &&
+		(progress.SchemaVersion != observationpublication.ProgressSchemaV2 ||
+			progress.SelectedVersion != "v2") {
+		return privateProfileSnapshot{}, observationConvergenceProbe(progress),
+			errors.New("T40.13 selected observation v2 route is absent")
+	}
 	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
 	probe = observationConvergenceProbe(progress)
+	if terminal := observationTerminal(progress); terminal != nil {
+		return privateProfileSnapshot{}, probe, terminal
+	}
 	if !observationProgressConverged(progress, source.Digest) {
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 observation publication has not converged")
 	}
@@ -406,10 +451,18 @@ func (inspector *profileInspector) inspectWithProgress(
 }
 
 func observationProgressConverged(progress observationpublication.Progress, sourceDigest string) bool {
-	return progress.State == "current" && progress.Publication != nil &&
-		progress.Publication.State == "current" &&
-		progress.Publication.SourceGenerationDigest == sourceDigest &&
-		progress.Schedule != nil && progress.Schedule.State == "settled" &&
+	if progress.State != "current" || progress.Publication == nil ||
+		progress.Publication.State != "current" ||
+		progress.Publication.SourceGenerationDigest != sourceDigest {
+		return false
+	}
+	if progress.SchemaVersion == observationpublication.ProgressSchemaV2 {
+		return progress.SelectedVersion == "v2" && progress.Planning != nil &&
+			progress.Planning.State == "settled" && progress.Planning.Pending == 0 &&
+			progress.Planning.Running == 0 && progress.Planning.Failed == 0 &&
+			progress.Planning.Succeeded == 1
+	}
+	return progress.Schedule != nil && progress.Schedule.State == "settled" &&
 		progress.Schedule.Pending == 0 && progress.Schedule.Running == 0 &&
 		progress.Schedule.Failed == 0 &&
 		progress.Schedule.Succeeded == progress.Schedule.TotalPartitions &&

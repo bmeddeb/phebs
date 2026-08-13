@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -64,6 +65,105 @@ func TestProgressReportsCurrentReceiptAndWarmReadsNoMembers(t *testing.T) {
 	cold := &ProgressReader{DataDir: dataDirectory, Store: &scheduleCapture{}, Cache: &Cache{}}
 	if _, err := cold.Read(t.Context(), repository); err == nil {
 		t.Fatal("cold progress accepted corrupt publication member")
+	}
+}
+
+func TestInventoryV2ProgressReportsSelectedCurrentAuthority(t *testing.T) {
+	dataDirectory, _, repository, _ := progressFixture(t)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("enqueue inventory v2 = %q, %v", disposition, err)
+	}
+	spec := state.specsFor(InventoryScheduleStageV2)[0]
+	if err := runtime.HandleInventoryV2(
+		t.Context(), planningChunkForSpec(t, spec),
+	); err != nil {
+		t.Fatal(err)
+	}
+	progress, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: state, InventoryV2: true,
+	}).Read(t.Context(), repository)
+	if err != nil || progress.SchemaVersion != ProgressSchemaV2 ||
+		progress.SelectedVersion != "v2" || progress.State != "current" ||
+		progress.Publication == nil || progress.Publication.RecordCount != 2 ||
+		progress.Publication.SourceGenerationDigest != progress.SourceGenerationDigest ||
+		progress.Publication.InventorySegments < 1 || progress.Publication.Receipt == nil {
+		t.Fatalf("inventory v2 progress = %+v, %v", progress, err)
+	}
+	state.mu.Lock()
+	delete(state.current, InventoryScheduleStageV2)
+	state.mu.Unlock()
+	collected, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: state, InventoryV2: true,
+	}).Read(t.Context(), repository)
+	if err != nil || collected.State != "current" || collected.Planning == nil ||
+		collected.Planning.State != "settled" || collected.Planning.Succeeded != 1 ||
+		collected.Planning.ScheduleGeneration != "" ||
+		collected.Planning.SourceGenerationDigest != collected.SourceGenerationDigest {
+		t.Fatalf("inventory v2 progress after schedule collection = %+v, %v", collected, err)
+	}
+}
+
+type inventoryFailureProgressStore struct {
+	*planningOwnershipStore
+	failure store.GenerationScheduleFailure
+}
+
+func (state *inventoryFailureProgressStore) GetGenerationScheduleFailure(
+	_ context.Context, _, _, _ string,
+) (*store.GenerationScheduleFailure, error) {
+	value := state.failure
+	if value.Refusal != nil {
+		refusal := *value.Refusal
+		value.Refusal = &refusal
+	}
+	return &value, nil
+}
+
+func TestInventoryV2ProgressSealsTerminalRefusal(t *testing.T) {
+	dataDirectory, _, repository, _ := progressFixture(t)
+	base := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: base, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("enqueue inventory v2 = %q, %v", disposition, err)
+	}
+	base.mu.Lock()
+	schedule := base.current[InventoryScheduleStageV2]
+	schedule.NextOffset = schedule.TotalItems
+	schedule.Materialized = schedule.TotalChunks
+	schedule.Failed = 1
+	schedule.Status = store.GenerationScheduleSettled
+	digest, generation := schedule.Digest, schedule.Generation
+	base.mu.Unlock()
+	receipt := pipelinerefusal.Receipt{
+		Schema:         pipelinerefusal.Schema,
+		Stage:          pipelinerefusal.StageObservationPublication,
+		GenerationKind: pipelinerefusal.GenerationObservation,
+		Classification: pipelinerefusal.ClassificationInvalid,
+		Dimension:      pipelinerefusal.DimensionUnknown,
+	}
+	state := &inventoryFailureProgressStore{
+		planningOwnershipStore: base,
+		failure: store.GenerationScheduleFailure{
+			ScheduleDigest: digest, Generation: generation, Refusal: &receipt,
+		},
+	}
+	progress, err := (&ProgressReader{
+		DataDir: dataDirectory, Store: state, InventoryV2: true,
+	}).Read(t.Context(), repository)
+	if err != nil || progress.State != "failed" || progress.Planning == nil ||
+		progress.Planning.State != "failed" || progress.Planning.Refusal == nil ||
+		progress.Planning.Refusal.Classification != pipelinerefusal.ClassificationInvalid {
+		t.Fatalf("terminal inventory v2 progress = %+v, %v", progress, err)
 	}
 }
 

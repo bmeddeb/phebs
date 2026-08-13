@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 const testSourceCommit = "3c4e22e1a907a663367fb29e1a2af998eb2d7729"
@@ -371,6 +373,48 @@ func TestV13PlanAddsOnlyBoundedProgressCoalescing(t *testing.T) {
 	decoded, err := DecodePlan(encoded)
 	if err != nil || decoded.Schema != PlanSchemaV13 || decoded.Safety != frozenSafetyV13 {
 		t.Fatalf("decoded v13 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV14PlanBindsSelectedObservationV2Diagnostics(t *testing.T) {
+	plan, err := frozenV14PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV14 || plan.Safety != frozenSafetyV13 ||
+		plan.Safety != frozenSafetyV14 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v14 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV14 || decoded.Safety != frozenSafetyV14 {
+		t.Fatalf("decoded v14 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV14ObservationProgressRequiresSelectedV2AndSealsRefusal(t *testing.T) {
+	base := ObservationProgressObservation{
+		State: "failed", SelectedVersion: "v2",
+		PlanningState: "failed", PlanningFailed: 1,
+		RefusalStage:          string(pipelinerefusal.StageObservationPublication),
+		RefusalGenerationKind: string(pipelinerefusal.GenerationObservation),
+		RefusalClassification: string(pipelinerefusal.ClassificationLimit),
+		RefusalDimension:      string(pipelinerefusal.DimensionGenerationRecords),
+		RefusalObserved:       262_144, RefusalLimit: 250_000,
+	}
+	if err := validateObservationProgress(base, 10); err != nil {
+		t.Fatalf("v14 refusal progress = %v", err)
+	}
+	legacy := base
+	legacy.SelectedVersion = ""
+	if err := validateObservationProgress(legacy, 10); err == nil {
+		t.Fatal("v14 progress accepted an absent selected route")
+	}
+	if err := validateObservationProgress(base, 9); err == nil {
+		t.Fatal("historical progress accepted v14 fields")
 	}
 }
 
@@ -1158,7 +1202,7 @@ func TestV5ObservationProgressRejectsImpossibleProductionStates(t *testing.T) {
 		{State: "building", PlanningState: "settled", PlanningPending: 1},
 	}
 	for index, value := range tests {
-		if err := validateObservationProgress(value); err == nil {
+		if err := validateObservationProgress(value, 1); err == nil {
 			t.Fatalf("impossible progress %d passed: %+v", index, value)
 		}
 	}

@@ -22,9 +22,10 @@ import (
 const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
 
 // TestProductionPathReadinessRehearsal is an opt-in, bounded rehearsal of the
-// production paths that failed Takes 11-15. It deliberately builds the current
-// working tree rather than HEAD so a correction can cross this bar before its
-// readiness commit. The frozen ceremony still builds only its committed source.
+// production paths and recovery boundaries that failed Takes 11-18. It
+// deliberately builds the current working tree rather than HEAD so a correction
+// can cross this bar before its readiness commit. The frozen ceremony still
+// builds only its committed source.
 func TestProductionPathReadinessRehearsal(t *testing.T) {
 	if os.Getenv(readinessRehearsalEnvironment) != "1" {
 		t.Skip("set " + readinessRehearsalEnvironment + "=1 to run the real-binary readiness rehearsal")
@@ -277,7 +278,7 @@ func measureProjectionExtraction(
 	profile PreparedProfile,
 ) extractionThroughputMeasurement {
 	t.Helper()
-	inspector, err := newProfileInspector(profile)
+	inspector, err := newProfileInspector(profile, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,8 +294,17 @@ func measureProjectionExtraction(
 		var observation observationpublication.Progress
 		if err := inspector.get(
 			ctx, profile, "/api/observation-progress?repository="+repository, &observation,
-		); err == nil && observation.State == "current" && observationCurrentAt.IsZero() {
-			observationCurrentAt = time.Now()
+		); err == nil {
+			if observation.SchemaVersion != observationpublication.ProgressSchemaV2 ||
+				observation.SelectedVersion != "v2" {
+				t.Fatalf("readiness observation route = %q/%q", observation.SchemaVersion, observation.SelectedVersion)
+			}
+			if terminal := observationTerminal(observation); terminal != nil {
+				t.Fatalf("readiness observation planning terminated: %v", terminal)
+			}
+			if observation.State == "current" && observationCurrentAt.IsZero() {
+				observationCurrentAt = time.Now()
+			}
 		}
 		if !observationCurrentAt.IsZero() {
 			var extraction extractionpublication.Progress
@@ -436,7 +446,7 @@ func awaitReadinessSnapshot(
 	limit time.Duration,
 ) privateProfileSnapshot {
 	t.Helper()
-	inspector, err := newProfileInspector(profile)
+	inspector, err := newProfileInspector(profile, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,8 +469,15 @@ func awaitReadinessSnapshot(
 			t.Logf("readiness pending at %s: %v", probe.Stage, inspectErr)
 			lastDiagnostic = diagnostic
 		}
-		if errors.Is(inspectErr, errRepositoryIndexTerminal) {
-			t.Fatalf("repository index terminated at %s (%s)", probe.Stage, probe.RepositoryIndexFailureClass)
+		if errors.Is(inspectErr, errRepositoryIndexTerminal) ||
+			errors.Is(inspectErr, errObservationBoundRefusal) ||
+			errors.Is(inspectErr, errObservationTerminal) ||
+			errors.Is(inspectErr, errExtractionBoundRefusal) ||
+			errors.Is(inspectErr, errExtractionJobTerminal) {
+			t.Fatalf(
+				"production path terminated at %s (repository_index_class=%s): %v",
+				probe.Stage, probe.RepositoryIndexFailureClass, inspectErr,
+			)
 		}
 		select {
 		case <-wait.Done():

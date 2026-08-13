@@ -1592,6 +1592,9 @@ func resolverState(pointer store.ResolverCatalogPublication) resolvercatalog.Sta
 		declarations[index] = resolvercatalog.DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest,
+			RootDigest:       declaration.RootDigest,
 		}
 	}
 	packs := make([]resolvercatalog.ResolverPack, len(pointer.ResolverPacks))

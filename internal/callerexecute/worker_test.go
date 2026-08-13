@@ -1534,3 +1534,26 @@ func TestWorkerRestartReusesDurableOutcomesWithoutReplay(t *testing.T) {
 		)
 	}
 }
+
+func TestResolverStatePreservesPartitionedDeclarationAuthority(t *testing.T) {
+	pointer := store.ResolverCatalogPublication{
+		Repository: "example.com/acme/mono",
+		Declarations: []store.ResolverCatalogDeclarationPublication{{
+			Domain: "grpc-contract", RunID: "run-1",
+			GenerationDigest: "sha256:" + strings.Repeat("1", 64),
+			AuthoritySchema:  store.PartitionedExtractionDomainSchema,
+			PlanDigest:       "sha256:" + strings.Repeat("2", 64),
+			RootDigest:       "sha256:" + strings.Repeat("1", 64),
+		}},
+	}
+	state := resolverState(pointer)
+	if len(state.Declarations) != 1 ||
+		state.Declarations[0].Domain != pointer.Declarations[0].Domain ||
+		state.Declarations[0].RunID != pointer.Declarations[0].RunID ||
+		state.Declarations[0].GenerationDigest != pointer.Declarations[0].GenerationDigest ||
+		state.Declarations[0].AuthoritySchema != pointer.Declarations[0].AuthoritySchema ||
+		state.Declarations[0].PlanDigest != pointer.Declarations[0].PlanDigest ||
+		state.Declarations[0].RootDigest != pointer.Declarations[0].RootDigest {
+		t.Fatalf("resolver state lost partitioned authority: %+v", state.Declarations)
+	}
+}

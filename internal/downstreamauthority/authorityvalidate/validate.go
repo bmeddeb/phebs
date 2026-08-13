@@ -113,7 +113,8 @@ func Canonical(raw []byte) (Result, error) {
 		usable = usable && domain.Domain == value.Required[index].Domain &&
 			domain.Version == value.Required[index].Version &&
 			(domain.Disposition == candidate.PartitionResultSuccess ||
-				domain.Disposition == candidate.PartitionResultEmpty)
+				domain.Disposition == candidate.PartitionResultEmpty ||
+				domain.Disposition == candidate.PartitionResultUnavailablePrerequisite)
 	}
 	return Result{Repository: value.Repository, Digest: value.Digest, Usable: usable}, nil
 }

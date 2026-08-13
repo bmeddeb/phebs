@@ -9,15 +9,25 @@ import (
 	"slices"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-const ProgressSchema = "phebs-observation-progress-v1"
+const (
+	ProgressSchema   = "phebs-observation-progress-v1"
+	ProgressSchemaV2 = "phebs-observation-progress-v2"
+)
 
 type ProgressStore interface {
 	GetGenerationSchedule(context.Context, string, string) (*store.GenerationSchedule, error)
+}
+
+type ProgressFailureStore interface {
+	GetGenerationScheduleFailure(
+		context.Context, string, string, string,
+	) (*store.GenerationScheduleFailure, error)
 }
 
 type ProgressReadStage string
@@ -63,13 +73,15 @@ func progressReadFailure(stage ProgressReadStage, err error) error {
 // source, marker, plan, and schedule controls. It never reads source blobs or
 // observation members on a warm cache hit.
 type ProgressReader struct {
-	DataDir string
-	Store   ProgressStore
-	Cache   *Cache
+	DataDir     string
+	Store       ProgressStore
+	Cache       *Cache
+	InventoryV2 bool
 }
 
 type Progress struct {
 	SchemaVersion          string               `json:"schema"`
+	SelectedVersion        string               `json:"selected_version,omitempty"`
 	Repository             string               `json:"repository"`
 	State                  string               `json:"state"` // current | building | failed | stale | unavailable
 	SourceGenerationDigest string               `json:"source_generation_digest"`
@@ -79,14 +91,15 @@ type Progress struct {
 }
 
 type PlanningProgress struct {
-	State                  string `json:"state"` // active | settled | failed
-	ScheduleGeneration     string `json:"schedule_generation"`
-	TargetGeneration       string `json:"target_generation"`
-	SourceGenerationDigest string `json:"source_generation_digest"`
-	Pending                int    `json:"pending"`
-	Running                int    `json:"running"`
-	Succeeded              int    `json:"succeeded"`
-	Failed                 int    `json:"failed"`
+	State                  string                   `json:"state"` // active | settled | failed
+	ScheduleGeneration     string                   `json:"schedule_generation"`
+	TargetGeneration       string                   `json:"target_generation"`
+	SourceGenerationDigest string                   `json:"source_generation_digest"`
+	Pending                int                      `json:"pending"`
+	Running                int                      `json:"running"`
+	Succeeded              int                      `json:"succeeded"`
+	Failed                 int                      `json:"failed"`
+	Refusal                *pipelinerefusal.Receipt `json:"refusal,omitempty"`
 }
 
 type PublicationProgress struct {
@@ -98,6 +111,10 @@ type PublicationProgress struct {
 	UnsupportedCount       int               `json:"unsupported_count"`
 	ReceiptState           string            `json:"receipt_state"` // complete | legacy_unavailable
 	Receipt                *OperationReceipt `json:"receipt,omitempty"`
+	SourceSegments         int               `json:"source_segments,omitempty"`
+	InventorySegments      int               `json:"inventory_segments,omitempty"`
+	EncodedMemberBytes     int64             `json:"encoded_member_bytes,omitempty"`
+	ObservationBytes       int64             `json:"observation_bytes,omitempty"`
 }
 
 type ScheduleProgress struct {
@@ -113,6 +130,9 @@ type ScheduleProgress struct {
 }
 
 func (reader *ProgressReader) Read(ctx context.Context, repository string) (Progress, error) {
+	if reader != nil && reader.InventoryV2 {
+		return reader.readInventoryV2(ctx, repository)
+	}
 	if reader == nil || !filepath.IsAbs(reader.DataDir) || reader.Store == nil ||
 		reader.Cache == nil || validateRepository(repository) != nil {
 		return Progress{}, progressReadFailure(
@@ -383,9 +403,15 @@ func projectProgress(
 }
 
 func ValidateProgress(progress Progress) error {
-	if progress.SchemaVersion != ProgressSchema || validateRepository(progress.Repository) != nil ||
+	if (progress.SchemaVersion != ProgressSchema && progress.SchemaVersion != ProgressSchemaV2) ||
+		validateRepository(progress.Repository) != nil ||
 		!validDigest(progress.SourceGenerationDigest) {
 		return invalid("progress identity")
+	}
+	selectedV2 := progress.SchemaVersion == ProgressSchemaV2
+	if selectedV2 && progress.SelectedVersion != "v2" ||
+		!selectedV2 && progress.SelectedVersion != "" {
+		return invalid("progress selected version")
 	}
 	switch progress.State {
 	case "current", "building", "failed", "stale", "unavailable":
@@ -394,12 +420,27 @@ func ValidateProgress(progress Progress) error {
 	}
 	if progress.Publication != nil {
 		publication := progress.Publication
+		maxRecords := MaxGenerationRecords
+		if selectedV2 {
+			maxRecords = MaxInventoryRecordsV2
+		}
 		if publication.State != "current" && publication.State != "stale" ||
 			!validDigest(publication.GenerationDigest) || !validDigest(publication.SourceGenerationDigest) ||
-			publication.RecordCount < 0 || publication.RecordCount > MaxGenerationRecords ||
+			publication.RecordCount < 0 || publication.RecordCount > maxRecords ||
 			publication.ObservedCount < 0 || publication.UnsupportedCount < 0 ||
 			publication.RecordCount != publication.ObservedCount+publication.UnsupportedCount {
 			return invalid("progress publication")
+		}
+		if selectedV2 {
+			if publication.SourceSegments < 0 || publication.SourceSegments > sourcepartition.MaxSegments ||
+				publication.InventorySegments < 0 || publication.InventorySegments > MaxInventorySegmentsV2 ||
+				publication.EncodedMemberBytes < 0 || publication.EncodedMemberBytes > MaxGenerationBytes ||
+				publication.ObservationBytes < 0 || publication.ObservationBytes > MaxGenerationBytes {
+				return invalid("progress v2 publication")
+			}
+		} else if publication.SourceSegments != 0 || publication.InventorySegments != 0 ||
+			publication.EncodedMemberBytes != 0 || publication.ObservationBytes != 0 {
+			return invalid("legacy progress publication")
 		}
 		switch publication.ReceiptState {
 		case "complete":
@@ -423,8 +464,13 @@ func ValidateProgress(progress Progress) error {
 		target, _, targetErr := planningTarget(
 			progress.Repository, planning.SourceGenerationDigest,
 		)
+		retainedCurrentPlanning := selectedV2 && planning.State == "settled" &&
+			planning.ScheduleGeneration == "" && progress.State == "current" &&
+			progress.Publication != nil && progress.Publication.State == "current" &&
+			progress.Publication.SourceGenerationDigest == planning.SourceGenerationDigest
 		if planning.State != "active" && planning.State != "settled" && planning.State != "failed" ||
-			!validDigest(planning.ScheduleGeneration) || !validDigest(planning.TargetGeneration) ||
+			(!validDigest(planning.ScheduleGeneration) && !retainedCurrentPlanning) ||
+			!validDigest(planning.TargetGeneration) ||
 			!validDigest(planning.SourceGenerationDigest) ||
 			targetErr != nil || planning.TargetGeneration != target ||
 			planning.Pending < 0 || planning.Pending > 1 || planning.Running < 0 || planning.Running > 1 ||
@@ -439,6 +485,17 @@ func ValidateProgress(progress Progress) error {
 				planning.Succeeded != 0 || planning.Failed != 1) {
 			return invalid("progress planning state")
 		}
+		if planning.Refusal != nil {
+			if !selectedV2 || planning.State != "failed" ||
+				pipelinerefusal.Validate(*planning.Refusal) != nil ||
+				planning.Refusal.Stage != pipelinerefusal.StageObservationPublication ||
+				planning.Refusal.GenerationKind != pipelinerefusal.GenerationObservation {
+				return invalid("progress planning refusal")
+			}
+		}
+	}
+	if selectedV2 && progress.Schedule != nil {
+		return invalid("progress v2 legacy schedule")
 	}
 	if progress.Schedule != nil {
 		schedule := progress.Schedule

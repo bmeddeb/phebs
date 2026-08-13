@@ -63,6 +63,47 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 	}
 }
 
+func TestObservationProgressTerminalClassificationIsImmediateAndClosed(t *testing.T) {
+	limit := pipelinerefusal.Receipt{
+		Schema:         pipelinerefusal.Schema,
+		Stage:          pipelinerefusal.StageObservationPublication,
+		GenerationKind: pipelinerefusal.GenerationObservation,
+		Classification: pipelinerefusal.ClassificationLimit,
+		Dimension:      pipelinerefusal.DimensionGenerationRecords,
+		Observed:       262_144, Limit: 250_000,
+	}
+	tests := []struct {
+		name     string
+		progress observationpublication.Progress
+		want     error
+	}{
+		{name: "building", progress: observationpublication.Progress{
+			State: "building", Planning: &observationpublication.PlanningProgress{State: "active"},
+		}},
+		{name: "closed limit", progress: observationpublication.Progress{
+			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed", Refusal: &limit},
+		}, want: errObservationBoundRefusal},
+		{name: "terminal without limit", progress: observationpublication.Progress{
+			State: "failed", Planning: &observationpublication.PlanningProgress{State: "failed"},
+		}, want: errObservationTerminal},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := observationTerminal(test.progress)
+			if !errors.Is(err, test.want) {
+				t.Fatalf("terminal = %v, want %v", err, test.want)
+			}
+			wantClass := "complete"
+			if test.want != nil {
+				wantClass = "terminal"
+			}
+			if got := classifyConvergenceInspection(err).class; got != wantClass {
+				t.Fatalf("class = %q, want %q", got, wantClass)
+			}
+		})
+	}
+}
+
 type humaResponseStore struct {
 	store.Store
 	repositories []store.Repo
@@ -288,6 +329,20 @@ func TestExtractionConvergenceProbeRetainsTypedPendingProjection(t *testing.T) {
 	if err == nil || classifyConvergenceInspection(err).class != "pending" ||
 		probe.ExtractionProgress == nil || probe.ExtractionProgress.Succeeded != 25 ||
 		probe.ExtractionProgress.Running != 4 || probe.ExtractionProgress.Total != 489 {
+		t.Fatalf("probe = %+v, error=%v", probe, err)
+	}
+}
+
+func TestExtractionConvergenceProbeAcceptsCurrentAuthorityAfterJobCollection(t *testing.T) {
+	progress := extractionpublication.Progress{
+		State: "current", Total: 489, Materialized: 489,
+		Succeeded: 489, Domains: 4, CurrentDomains: 4,
+	}
+	repository := store.RepoStatus{LastExtractionJobState: store.JobProjectionUnavailable}
+	probe, err := extractionConvergenceProbe(progress, repository)
+	if err != nil || probe.ExtractionProgress == nil ||
+		probe.ExtractionProgress.State != "current" ||
+		probe.ExtractionProgress.Succeeded != 489 {
 		t.Fatalf("probe = %+v, error=%v", probe, err)
 	}
 }

@@ -139,6 +139,27 @@ func TestGenerationV2BindsCanonicalUsableUpstreamAuthority(t *testing.T) {
 		t.Fatalf("v2 digest = %q, want store-compatible %q", v2.Digest, want)
 	}
 
+	// A complete unavailable-prerequisite root is explicit gap authority. The
+	// typed downstream contract accepts it, so the dependency-low canonical
+	// validator used by caller artifacts must make the same decision.
+	upstream.Domains[0].Disposition = candidate.PartitionResultUnavailablePrerequisite
+	upstream.Digest = ""
+	unsigned, err = json.Marshal(upstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum = sha256.Sum256(append([]byte("phebs-downstream-upstream-authority-v1\x00"), unsigned...))
+	upstream.Digest = "sha256:" + hex.EncodeToString(sum[:])
+	generation.Upstream, err = json.Marshal(upstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation.UpstreamDigest = upstream.Digest
+	if gap, gapErr := NewGenerationIdentity(generation); gapErr != nil ||
+		gap.Schema != GenerationSchemaV2 || ValidateGenerationIdentity(gap) != nil {
+		t.Fatalf("explicit-gap v2 generation = %+v, %v", gap, gapErr)
+	}
+
 	detached := generation
 	detached.UpstreamDigest = digest("0")
 	if _, err := NewGenerationIdentity(detached); err == nil {

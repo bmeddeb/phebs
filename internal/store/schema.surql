@@ -389,6 +389,7 @@ DEFINE FIELD IF NOT EXISTS generation.resolver_writer_schema ON caller_generatio
 DEFINE FIELD IF NOT EXISTS generation.source_lane_policy ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS generation.caller_policy_digest ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS generation.extractor_set_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.upstream_digest ON caller_generation_publication TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS generation.digest ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS generation_digest ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS pairs ON caller_generation_publication TYPE array<object>

@@ -888,6 +888,33 @@ catalog, relationship, or correctness authority.
   OpenAPI component-name collision found by rehearsal is closed and pinned.
   After merge-bar review, the next permissible fresh ID is `t40r1-neutral-17`;
   execution still requires explicit approval.
+- Take 17 stopped honestly on the ceremony's 32-transition evidence envelope:
+  healthy typed extraction digest churn consumed the v6-era anomaly inventory.
+  V13 coalesces digest-only progress, keeps the fail-closed diversity guard,
+  and adds source-free partition timing. Repository-scale measurement then
+  found and corrected repeated full-candidate validation per partition; the
+  corrected diagnostic projected structural observation plus extraction at
+  about 44.6 minutes p95 inside the unchanged four-hour window.
+- Take 18 is a verified `unclassified` deadline stop, but its structural cold
+  profile is the first sealed two-million-owner end-to-end convergence:
+  1,956/1,956 extraction partitions completed with no failure/refusal and
+  relationship publication in 3,910,284 ms. Semantic observation planning was
+  visibly failed from 115,006 ms through the last successful four-hour probe;
+  v13 lacked the terminal classification. Exact-source reproduction separately
+  proves selected v2 was still gated by legacy v1's 250,000-record generation,
+  which cannot admit the semantic profile's 262,144 unique blobs although v2's
+  4,000,000-record contract can. Take 19 readiness removes that hidden v1
+  prerequisite, adds bounded v2 planning/refusal progress, and makes failed
+  planning terminal without changing a limit, deadline, concurrency, or
+  topology. A Take 19 freeze still requires the full merge bar, independent
+  review, and separate explicit approval; T40.13 and Epic 40 remain open.
+- The Take 19 production-binary rehearsal closed three restore compatibility
+  defects (explicit-gap usability, partitioned resolver-authority field
+  preservation, and the optional v2 caller upstream schema field) plus two
+  post-lifecycle projection false negatives. It then passed semantic
+  cold/restore and structural A/B/A-return cold/restore with lifecycle and
+  authorized queries in 283.90 seconds. This completes implementation
+  readiness only; independent review, freeze, and execution remain distinct.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

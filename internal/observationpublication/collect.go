@@ -35,6 +35,10 @@ type collectSnapshot struct {
 	planningGeneration  string
 	planningDigest      string
 	planningStatus      store.GenerationScheduleStatus
+	inventoryPresent    bool
+	inventoryGeneration string
+	inventoryDigest     string
+	inventoryStatus     store.GenerationScheduleStatus
 	executionPresent    bool
 	executionGeneration string
 	executionDigest     string
@@ -70,7 +74,8 @@ func (runtime *Runtime) CollectSupersededPlans(
 	repository := chunk.Repository
 	if runtime == nil || !filepath.IsAbs(runtime.DataDir) || runtime.Store == nil ||
 		validateRepository(repository) != nil || limit < 1 ||
-		chunk.Stage != PlanningScheduleStage || chunk.Offset != 0 || chunk.Length != 1 ||
+		(chunk.Stage != PlanningScheduleStage && chunk.Stage != InventoryScheduleStageV2) ||
+		chunk.Offset != 0 || chunk.Length != 1 ||
 		!validDigest(chunk.Generation) || !validDigest(chunk.ScheduleDigest) {
 		return CollectResult{}, invalid("collector configuration")
 	}
@@ -290,6 +295,16 @@ func (runtime *Runtime) collectProtection(
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return snapshot, protection, err
 	}
+	inventory, err := runtime.Store.GetGenerationSchedule(ctx, repository, InventoryScheduleStageV2)
+	if err == nil {
+		snapshot.inventoryPresent = true
+		snapshot.inventoryGeneration = inventory.Generation
+		snapshot.inventoryDigest = inventory.Digest
+		snapshot.inventoryStatus = inventory.Status
+		protect(protection.planningBindings, inventory.Generation)
+	} else if !errors.Is(err, store.ErrNotFound) {
+		return snapshot, protection, err
+	}
 	execution, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
 	if err == nil {
 		snapshot.executionPresent = true
@@ -317,6 +332,11 @@ func (runtime *Runtime) collectProtection(
 			if snapshot.planningPresent {
 				protect(protection.planningBindings, recoveryPlanningGeneration(
 					target, snapshot.planningDigest,
+				))
+			}
+			if snapshot.inventoryPresent {
+				protect(protection.planningBindings, recoveryPlanningGeneration(
+					target, snapshot.inventoryDigest,
 				))
 			}
 		}

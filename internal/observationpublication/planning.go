@@ -52,6 +52,9 @@ type planningBinding struct {
 func (runtime *Runtime) EnqueuePlanning(
 	ctx context.Context, repository string,
 ) (PlanningEnqueue, error) {
+	if runtime != nil && runtime.InventoryV2 {
+		return runtime.enqueueInventoryV2(ctx, repository)
+	}
 	if err := runtime.validatePlanningRuntime(repository); err != nil {
 		return "", planningFailure(err)
 	}

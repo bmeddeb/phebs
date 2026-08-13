@@ -79,6 +79,7 @@ var frozenSafetyV10 = SafetyEnvelope{
 var frozenSafetyV11 = frozenSafetyV10
 var frozenSafetyV12 = frozenSafetyV11
 var frozenSafetyV13 = frozenSafetyV12
+var frozenSafetyV14 = frozenSafetyV13
 
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
@@ -102,7 +103,21 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return frozenV13PlanWithHostToolchain(sourceCommit, hostToolchain)
+	return frozenV14PlanWithHostToolchain(sourceCommit, hostToolchain)
+}
+
+func frozenV14PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := FrozenPlan(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV14
+	value.HostToolchain = slices.Clone(hostToolchain)
+	value.Safety = frozenSafetyV14
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

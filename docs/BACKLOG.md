@@ -737,6 +737,62 @@ projection. Take 18 exists to measure those phases end to end under the frozen
 total-wall and resource ceilings. The result therefore supports freezing a
 new attempt; it does not predict that attempt's terminal classification.
 
+Take 18 disposition and Take 19 readiness (2026-08-12): the verified v13
+source-free result stopped `unclassified` at the cold convergence deadline.
+Its structural profile nevertheless converged end to end in 3,910,284 ms with
+1,956/1,956 extraction attempts complete, zero failure or terminal refusal,
+and complete relationship publication. The semantic profile entered failed
+observation planning at 115,006 ms and remained observably failed through the
+last successful probe at 14,395,007 ms; the harness lacked a terminal rule for
+that lane and waited to 14,400,003 ms. Peak RSS and allocation remained below
+the frozen ceilings, all later phases were skipped, verification passed, and
+custody was destroyed. The sealed evidence has no closed planning-failure
+class, so the retained record does not speculate about cause.
+
+Exact-source reproduction independently establishes the correction: the
+semantic profile's 262,144 unique blobs exceed the legacy v1 observation
+generation's 250,000-record limit but fit selected v2's 4,000,000-record limit;
+despite v2 selection, production still required a fresh v1 publication before
+v2 could be scheduled. Take 19 readiness removes that hidden prerequisite.
+Selected v2 now plans directly from current source authority, leaves v1 as
+historical authority, recovers a settled-lost-completion schedule with a new
+immutable identity, and marks only closed deterministic v2 limit/invalid
+refusals terminal. Stale generations, cancellation, transient store failure,
+and downstream notification remain retryable.
+
+The selected v2 progress contract performs bounded source, pointer/root, and
+one-item schedule reads, with one exact failed-chunk projection only after
+terminal settlement; only a canonical closed `pipelinerefusal` may escape and
+raw durable error text is excluded. It rechecks source, pointer, and schedule
+around the response and scans no members. Ceremony schema v14 requires this
+route, retains its bounded last decoded status/refusal, and terminates within
+one probe: a closed limit selects substantiated `reduce`, while another
+terminal result remains `unclassified`. Historical v1-v13 bytes and validation
+remain closed. Startup avoids the obsolete v1 generation and adds no new work
+beyond the already selected v2 one-item schedule; request cost remains constant
+in corpus size. No production bound, deadline, concurrency, topology, service
+cap, lifecycle policy, or release posture changes. The full merge bar and an
+independent review remain mandatory before a separately approved Take 19
+freeze; neither T40.13 nor Epic 40 is closed by this readiness work.
+
+The required production-binary rehearsal then found and closed three recovery
+compatibility gaps before freeze: dependency-low validation now accepts the
+canonical `unavailable_prerequisite` explicit-gap authority already accepted
+by downstream consumers; the caller resolver adapter preserves partitioned
+declaration authority schema, plan digest, and root digest; and the schema-full
+caller publication table declares the v2 generation's optional
+`upstream_digest` while retaining legacy rows. It also proved that lifecycle
+may collect successful planning and ordinary extraction-job rows before a
+later probe. A current immutable v2 observation publication now retains its
+settled one-item planning proof, and the ceremony accepts a collected ordinary
+job only after typed extraction authority is current. Non-current extraction
+without an exact job projection remains pending and exact terminal jobs remain
+fail-closed. The complete rehearsal passed semantic cold/restore and structural
+A/B/A-return cold/restore, lifecycle, and authorized queries in 283.90 seconds
+(91.50 seconds semantic; 180.45 seconds structural). These fixes add no corpus
+scan, limit, concurrency, deadline, topology, or lifecycle-policy change. The
+next action is independent review; freeze and execution remain separate.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1587,6 +1587,7 @@ func serve(args []string) error {
 		apiOpts,
 		&observationpublication.ProgressReader{
 			DataDir: cfg.Server.DataDir, Store: st, Cache: observationCache,
+			InventoryV2: true,
 		},
 	)
 	apiOpts.ExtractionProgress = api.NewExtractionProgressService(apiOpts, partitionRuntime)

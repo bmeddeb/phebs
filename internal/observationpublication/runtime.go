@@ -413,8 +413,8 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 
 func (runtime *Runtime) afterPublish(ctx context.Context, repository string) error {
 	if runtime.InventoryV2 {
-		current, err := runtime.enqueueInventoryV2(ctx, repository)
-		if err != nil || !current {
+		disposition, err := runtime.enqueueInventoryV2(ctx, repository)
+		if err != nil || disposition != PlanningCurrent {
 			return err
 		}
 	}

@@ -1054,21 +1054,6 @@ func TestInventoryV2ReplacesPriorSourceGeneration(t *testing.T) {
 			(result != PlanningEnqueued && result != PlanningActive) {
 			t.Fatalf("enqueue %s = %q, %v", label, result, err)
 		}
-		planning := state.specsFor(PlanningScheduleStage)
-		if err := runtime.HandlePlanning(
-			t.Context(), planningChunkForSpec(t, planning[len(planning)-1]),
-		); err != nil {
-			t.Fatalf("plan %s: %v", label, err)
-		}
-		execution := state.specsFor(ScheduleStage)
-		executionSpec := execution[len(execution)-1]
-		if err := runtime.Handle(t.Context(), store.GenerationChunk{
-			Repository: repository, Stage: ScheduleStage,
-			Generation: executionSpec.Generation, Offset: 0,
-			Length: int(executionSpec.TotalItems),
-		}); err != nil {
-			t.Fatalf("publish v1 %s: %v", label, err)
-		}
 		inventories := state.specsFor(InventoryScheduleStageV2)
 		inventorySpec := inventories[len(inventories)-1]
 		if err := runtime.HandleInventoryV2(
@@ -1086,6 +1071,14 @@ func TestInventoryV2ReplacesPriorSourceGeneration(t *testing.T) {
 	}
 
 	a := publish("A")
+	if planning := state.specsFor(PlanningScheduleStage); len(planning) != 0 {
+		t.Fatalf("selected v2 path enqueued legacy planning: %+v", planning)
+	}
+	if _, err := CurrentGeneration(
+		filepath.Join(dataDirectory, "observations"), repository,
+	); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("selected v2 path published legacy authority: %v", err)
+	}
 	if err := os.WriteFile(
 		filepath.Join(repositoryDirectory, "main.go"),
 		[]byte("package main\nfunc main() { println(2) }\n"), 0o600,
@@ -1106,6 +1099,93 @@ func TestInventoryV2ReplacesPriorSourceGeneration(t *testing.T) {
 		len(state.specsFor(InventoryScheduleStageV2)) != 2 {
 		t.Fatalf("inventory replacement A=%+v B=%+v specs=%+v", a, b,
 			state.specsFor(InventoryScheduleStageV2))
+	}
+}
+
+func TestSelectedInventoryV2DoesNotWaitForLegacyPlanning(t *testing.T) {
+	for _, legacyState := range []string{"active", "failed"} {
+		t.Run(legacyState, func(t *testing.T) {
+			dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+			publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+			state := &planningOwnershipStore{}
+			legacy := &Runtime{
+				DataDir: dataDirectory, Store: state, Cache: &Cache{},
+				AcquireTransition: noopPlanningTransition,
+			}
+			if disposition, err := legacy.EnqueuePlanning(t.Context(), repository); err != nil ||
+				disposition != PlanningEnqueued {
+				t.Fatalf("legacy enqueue = %q, %v", disposition, err)
+			}
+			if legacyState == "failed" {
+				state.settlePlanningFailure(t)
+			}
+			selected := &Runtime{
+				DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+				AcquireTransition: noopPlanningTransition,
+			}
+			disposition, err := selected.EnqueuePlanning(t.Context(), repository)
+			if err != nil || disposition != PlanningEnqueued ||
+				len(state.specsFor(InventoryScheduleStageV2)) != 1 {
+				t.Fatalf("selected v2 enqueue after %s v1 = %q, %v, specs=%+v",
+					legacyState, disposition, err, state.specsFor(InventoryScheduleStageV2))
+			}
+		})
+	}
+}
+
+func TestInventoryV2MintsRecoveryAfterSettledWorkerLostPublication(t *testing.T) {
+	dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+	publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+	state := &planningOwnershipStore{}
+	runtime := &Runtime{
+		DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+		AcquireTransition: noopPlanningTransition,
+	}
+	if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+		disposition != PlanningEnqueued {
+		t.Fatalf("initial enqueue = %q, %v", disposition, err)
+	}
+	state.mu.Lock()
+	initial := *state.current[InventoryScheduleStageV2]
+	state.current[InventoryScheduleStageV2].NextOffset = initial.TotalItems
+	state.current[InventoryScheduleStageV2].Materialized = initial.TotalChunks
+	state.current[InventoryScheduleStageV2].Succeeded = 1
+	state.current[InventoryScheduleStageV2].Status = store.GenerationScheduleSettled
+	state.mu.Unlock()
+	disposition, err := runtime.EnqueuePlanning(t.Context(), repository)
+	if err != nil || disposition != PlanningEnqueued {
+		t.Fatalf("recovery enqueue = %q, %v", disposition, err)
+	}
+	specs := state.specsFor(InventoryScheduleStageV2)
+	if len(specs) != 2 || specs[1].Generation == specs[0].Generation ||
+		specs[1].Generation != recoveryPlanningGeneration(specs[0].Generation, initial.Digest) {
+		t.Fatalf("inventory recovery specs = %+v", specs)
+	}
+	if err := runtime.HandleInventoryV2(
+		t.Context(), planningChunkForSpec(t, specs[1]),
+	); err != nil {
+		t.Fatal(err)
+	}
+	authority, err := CurrentInventoryDownstreamAuthorityV2(
+		t.Context(), filepath.Join(dataDirectory, "observations"), repository,
+	)
+	if err != nil || authority.SourceGenerationDigest == "" {
+		t.Fatalf("recovered authority = %+v, %v", authority, err)
+	}
+}
+
+func TestHandleInventoryV2ClosesDeterministicRefusalAsTerminal(t *testing.T) {
+	err := (&Runtime{InventoryV2: true}).HandleInventoryV2(
+		t.Context(), store.GenerationChunk{},
+	)
+	if !store.IsTerminal(err) {
+		t.Fatalf("invalid inventory v2 chunk is not terminal: %v", err)
+	}
+	receipt, ok := pipelinerefusal.From(err)
+	if !ok || receipt.Stage != pipelinerefusal.StageObservationPublication ||
+		receipt.GenerationKind != pipelinerefusal.GenerationObservation ||
+		receipt.Classification != pipelinerefusal.ClassificationInvalid {
+		t.Fatalf("invalid inventory v2 refusal = %+v, present=%t", receipt, ok)
 	}
 }
 

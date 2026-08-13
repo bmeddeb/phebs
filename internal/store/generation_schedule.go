@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -217,6 +218,16 @@ type GenerationChunkLeaseState struct {
 	Generation string                `json:"generation"`
 	Attempt    int                   `json:"attempt"`
 	Status     GenerationChunkStatus `json:"status"`
+}
+
+// GenerationScheduleFailure is the bounded source-free projection of the
+// final failed attempt for one exact settled schedule. Raw durable error text,
+// repository paths, worker identity, and lease state never leave the store.
+type GenerationScheduleFailure struct {
+	ScheduleDigest string                   `json:"schedule_digest"`
+	Generation     string                   `json:"generation"`
+	Attempt        int                      `json:"attempt"`
+	Refusal        *pipelinerefusal.Receipt `json:"refusal,omitempty"`
 }
 
 // LocalGenerationChunkReader connects to the already supervised local store
@@ -618,6 +629,53 @@ RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[s
 		return nil, fmt.Errorf("get generation schedule: %w", err)
 	}
 	return &schedule, nil
+}
+
+// GetGenerationScheduleFailure returns only the final failed attempt for an
+// exact current settled schedule. The caller must still re-read the schedule
+// after composing a larger projection to close the ordinary read fence.
+func (s *Surreal) GetGenerationScheduleFailure(
+	ctx context.Context,
+	repository, stage, scheduleDigest string,
+) (*GenerationScheduleFailure, error) {
+	schedule, err := s.GetGenerationSchedule(ctx, repository, stage)
+	if err != nil {
+		return nil, err
+	}
+	if schedule.Digest != scheduleDigest || schedule.Status != GenerationScheduleSettled ||
+		schedule.Failed < 1 {
+		return nil, ErrGenerationStale
+	}
+	results, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+SELECT * FROM generation_schedule_chunk
+	WHERE schedule_digest = $digest AND status = 'failed'
+	ORDER BY attempt DESC LIMIT 1`, map[string]any{"digest": scheduleDigest})
+	if err != nil {
+		return nil, fmt.Errorf("read generation schedule failure: %w", err)
+	}
+	rows := generationChunkRows(results)
+	if len(rows) != 1 {
+		return nil, fmt.Errorf("read generation schedule failure: %w", ErrNotFound)
+	}
+	chunk, err := rows[0].chunk()
+	if err != nil {
+		return nil, err
+	}
+	if chunk.ScheduleDigest != schedule.Digest || chunk.Repository != repository ||
+		chunk.Stage != stage || chunk.Generation != schedule.Generation ||
+		chunk.Status != GenerationChunkFailed || chunk.Attempt < 0 ||
+		chunk.Attempt >= schedule.MaxAttempts {
+		return nil, errors.New("read generation schedule failure: invalid failed chunk")
+	}
+	projection := &GenerationScheduleFailure{
+		ScheduleDigest: chunk.ScheduleDigest,
+		Generation:     chunk.Generation,
+		Attempt:        chunk.Attempt,
+	}
+	if receipt, ok := pipelinerefusal.ParseDurableErrorText(chunk.Error); ok {
+		projection.Refusal = &receipt
+	}
+	return projection, nil
 }
 
 const expandGenerationScheduleSQL = `

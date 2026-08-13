@@ -1028,13 +1028,103 @@ ceremony. Take 18 is the first authorized mechanism capable of testing those
 risks under the total-wall and resource ceilings. The diagnostic establishes
 enough phase-local room to justify a freeze review, not a predicted pass.
 
+### Take 18 disposition and Take 19 readiness
+
+Take 18 is a verified, source-free `unclassified` stop at the unchanged cold
+deadline, not a scale pass. Its retained record is summarized in
+`take18-findings.json`. The structural profile nevertheless completed its cold
+convergence for the first time: 1,956 of 1,956 extraction partitions completed,
+none failed or refused, relationship authority published, and the complete
+profile converged in 3,910,284 ms. The corrected generation-scoped candidate
+open held: source acquisition totaled 55,100 ms with a 46-ms maximum and the
+maximum complete partition runtime was 1,326 ms. The v13 evidence coalescer
+also retained the 65-minute run in five transition entries while counting 165
+ordinary extraction progress changes.
+
+The semantic profile reached a different terminal state. Observation planning
+changed to `failed` by 115,006 ms, with one failed one-item planning schedule,
+and every successful probe through 14,395,007 ms decoded that same state. The
+v13 inspector did not treat failed observation planning as terminal, so the
+harness waited until 14,400,003 ms and recorded the generic deadline. The
+sealed record carries no closed planning refusal and therefore cannot say why
+the job failed. Peak process-tree RSS was 3,353,821,184 bytes and allocated
+data was 25,439,391,744 bytes, below the frozen ceilings. Later gates did not
+run; evidence verification and teardown passed and custody was destroyed.
+
+Exact-source reproduction supplies the missing mechanism without claiming it
+came from the sealed failure record. The semantic profile freezes 262,144
+unique Go blobs. The legacy v1 observation generation admits at most 250,000
+records, while the selected segmented v2 inventory admits 4,000,000. At the
+Take 18 source, enabling v2 still enqueued and required a fresh v1 publication
+before v2 planning. The legacy bound therefore refused the semantic profile
+before the admitted selected route could run. This is a production cutover bug,
+not a reason to increase either bound or change the corpus.
+
+Take 19 readiness removes that hidden prerequisite. A selected v2 runtime now
+binds its one-item inventory schedule directly to the current immutable source
+generation and the v2 pointer. Existing v1 publications remain valid historical
+authority but are neither rebuilt nor required for current v2 work. Active and
+failed legacy schedules cannot block the selected lane; a settled v2 worker
+whose store completion response was lost is recovered through a new immutable
+schedule identity. Deterministic closed v2 limit/invalid refusals settle on the
+first attempt, while stale authority, cancellation, store availability, and
+notification failures retain ordinary retry behavior.
+
+The selected `/api/observation-progress` v2 response reads one source manifest,
+one current v2 pointer and bounded inventory root, and one one-item schedule.
+Only a terminal failed schedule adds one failed-chunk point read, from which
+only an exact canonical `pipelinerefusal` receipt may escape; raw durable error
+text never enters the API or ceremony evidence. The reader rechecks source,
+pointer, and schedule before returning and never scans source or observation
+members. Take-plan v14 requires this selected route, seals the last decoded v2
+planning/publication counters and optional closed refusal, and stops within one
+probe when planning is terminal. A closed limit refusal selects substantiated
+`reduce`; any other terminal planning state stays honestly `unclassified`.
+Historical v1-v13 plans, observations, and receipts retain their original
+validation.
+
+Steady-state cost contracts rather than expands. Startup/source publication
+enqueues one one-item v2 schedule and avoids the obsolete full v1 generation.
+Progress requests remain constant in corpus size and add no member reads,
+child process, cache, or new lock. Successful v2 publication uses the existing
+filesystem/store fences and callback; deterministic failed retries contract to
+one attempt. The immutable v2 generation has the same existing disk and memory
+limits, while skipping v1 removes duplicate generation work. No production
+limit, deadline, concurrency, topology, service cap, lifecycle policy, or
+release posture changes.
+
+Take 19 is not frozen by this correction. The exact branch must pass the full
+merge bar and independent review before a fresh commit-bound plan is prepared;
+execution still requires separate explicit approval.
+
+The opt-in production-binary readiness rehearsal was treated as a merge gate,
+not a smoke test. Its first restore cycles found three compatibility gaps:
+canonical explicit-gap downstream authority was rejected by a dependency-low
+validator, the caller resolver adapter discarded the partitioned declaration's
+authority schema/plan/root fields, and the schema-full caller publication table
+did not declare the v2 generation's optional `upstream_digest`. The rehearsal
+also showed lifecycle legitimately collecting a successful observation
+planning schedule and an ordinary completed extraction job before a later
+probe. Current immutable v2 observation authority now retains the settled
+one-item planning proof; current typed extraction authority survives ordinary
+job collection, while non-current work and exact terminal jobs remain
+fail-closed.
+
+After those corrections, the same production-binary test passed in 283.90
+seconds: semantic cold plus restore in 91.50 seconds, and structural cold
+A-to-B-to-A-return plus restore in 180.45 seconds. Both profiles passed
+lifecycle and authorized query replay on cold and restored instances. The
+structural extraction timing sample completed in 3.80 seconds for four
+partitions and nine domains. This rehearsal changes no production threshold or
+ceremony deadline and does not substitute for Take 19.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
 # Do not continue until readiness review separately authorizes the freeze.
-CEREMONY_ID=t40r1-neutral-18
+CEREMONY_ID=t40r1-neutral-19
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.

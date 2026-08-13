@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
@@ -399,6 +400,51 @@ func TestFailGenerationChunkFencesImmediateTerminalSettlement(t *testing.T) {
 				t.Fatalf("current schedule = %+v", current)
 			}
 		})
+	}
+}
+
+func TestGenerationScheduleFailureExposesOnlyClosedRefusal(t *testing.T) {
+	state := newRunnerStore(t)
+	spec := generationSpec(
+		"example.invalid/failure-projection",
+		"sha256:"+strings.Repeat("a", 64),
+	)
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	schedule, err := state.EnqueueGenerationSchedule(t.Context(), spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(
+		t.Context(), spec.Repository, spec.Stage, spec.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := state.ClaimGenerationChunk(
+		t.Context(), spec.ResourceClass, "failure-projection-worker",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := pipelinerefusal.Classified(
+		errors.New("private planning detail"),
+		pipelinerefusal.StageObservationPublication,
+		pipelinerefusal.GenerationObservation,
+		pipelinerefusal.ClassificationInvalid,
+		pipelinerefusal.DimensionUnknown,
+	)
+	if err := state.FailGenerationChunk(
+		t.Context(), *chunk, DurableErrorText(closed),
+	); err != nil {
+		t.Fatal(err)
+	}
+	failure, err := state.GetGenerationScheduleFailure(
+		t.Context(), spec.Repository, spec.Stage, schedule.Digest,
+	)
+	if err != nil || failure.ScheduleDigest != schedule.Digest ||
+		failure.Generation != spec.Generation || failure.Attempt != 0 ||
+		failure.Refusal == nil ||
+		failure.Refusal.Classification != pipelinerefusal.ClassificationInvalid {
+		t.Fatalf("failure projection = %+v, %v", failure, err)
 	}
 }
 
