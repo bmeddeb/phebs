@@ -2,6 +2,7 @@ package t4013
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -38,6 +39,13 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	}
 	moduleRoot, err = filepath.EvalSymlinks(moduleRoot)
 	if err != nil {
+		t.Fatal(err)
+	}
+	sourceCommit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCleanCheckout(ctx, moduleRoot, sourceCommit); err != nil {
 		t.Fatal(err)
 	}
 	workspace := t.TempDir()
@@ -77,8 +85,9 @@ func TestExactSemanticColdTiming(t *testing.T) {
 		t.Fatal(err)
 	}
 	started := time.Now()
-	snapshot := awaitReadinessSnapshot(t, ctx, profile, "a", 4*time.Hour)
-	wall := time.Since(started)
+	result := captureSemanticColdConvergence(t, ctx, profile, server, "a", 4*time.Hour)
+	captureWall := time.Since(started)
+	coldWall := time.Duration(result.coldWallMS) * time.Millisecond
 	peakRSS, _, _, _ := server.sampler.metrics()
 	logical, allocated, err := measureDataBytes(workspace)
 	if err != nil {
@@ -88,22 +97,297 @@ func TestExactSemanticColdTiming(t *testing.T) {
 		t.Fatal(err)
 	}
 	running = false
-	if snapshot.ObservationRecords != 262_144 || wall >= 4*time.Hour ||
-		peakRSS > frozenSafetyV14.MaximumPeakRSSBytes ||
-		allocated > frozenSafetyV14.MaximumDataAllocatedBytes {
+
+	freezeReady := result.converged && coldWall < 4*time.Hour && result.tail.TimingCaptureOK &&
+		result.snapshot.ObservationRecords == 262_144 &&
+		peakRSS <= frozenSafetyV14.MaximumPeakRSSBytes &&
+		allocated <= frozenSafetyV14.MaximumDataAllocatedBytes
+	fit := semanticColdTimingFit{
+		Schema:                         "t4013-take19-semantic-fit-v2",
+		SourceCommit:                   sourceCommit,
+		Profile:                        profile.Name,
+		Diagnostic:                     "TestExactSemanticColdTiming",
+		Converged:                      result.converged,
+		FreezeReady:                    freezeReady,
+		TerminalClass:                  result.terminal,
+		ColdDeadlineMS:                 (4 * time.Hour).Milliseconds(),
+		WallMS:                         result.coldWallMS,
+		CaptureWallMS:                  captureWall.Milliseconds(),
+		ColdHeadroomMS:                 (4*time.Hour - coldWall).Milliseconds(),
+		LastStage:                      result.tail.LastStage,
+		LastErrorClass:                 result.tail.LastErrorClass,
+		FinalCaptureState:              result.tail.FinalCaptureState,
+		TimingCaptureOK:                result.tail.TimingCaptureOK,
+		TimingSemantics:                "validated_report_floor",
+		TimingErrorClass:               result.tail.TimingErrorClass,
+		StageEntryMS:                   result.tail.StageEntryMS,
+		ExtractionEntryMS:              result.tail.StageEntryMS["extraction_publication"],
+		RelationshipEntryMS:            result.tail.StageEntryMS["relationship_publication"],
+		ExpectedRecords:                262_144,
+		ObservationRecords:             result.snapshot.ObservationRecords,
+		SelectedV2PublicationCompleted: result.tail.StageEntryMS["extraction_publication"] != 0,
+		LastExtractionWallMS:           result.tail.LastExtractionWall,
+		LastExtraction:                 result.tail.LastExtraction,
+		ExtractionTiming:               result.tail.Timing,
+		PeakRSSBytes:                   peakRSS,
+		LogicalBytes:                   logical,
+		AllocatedBytes:                 allocated,
+		RSSCeilingBytes:                frozenSafetyV14.MaximumPeakRSSBytes,
+		AllocationCeilingBytes:         frozenSafetyV14.MaximumDataAllocatedBytes,
+	}
+	raw, marshalErr := json.Marshal(fit)
+	if marshalErr != nil || len(raw) > MaxObservationBytes {
+		t.Fatalf("semantic cold timing fit encoding: error=%v bytes=%d", marshalErr, len(raw))
+	}
+	// The operator seals this logged line as the source-free fit record; it
+	// carries only counts, enum states, and millisecond timings.
+	t.Logf("SEMANTIC_COLD_TIMING_FIT %s", raw)
+
+	if !freezeReady {
 		t.Fatalf(
-			"exact semantic timing refused: wall_ms=%d records=%d peak_rss_bytes=%d logical_bytes=%d allocated_bytes=%d",
-			wall.Milliseconds(), snapshot.ObservationRecords, peakRSS, logical, allocated,
+			"exact semantic timing refused: converged=%t wall_ms=%d records=%d last_stage=%s extraction_entry_ms=%d terminal=%q peak_rss_bytes=%d allocated_bytes=%d",
+			result.converged, result.coldWallMS, result.snapshot.ObservationRecords,
+			result.tail.LastStage, result.tail.StageEntryMS["extraction_publication"], result.terminal,
+			peakRSS, allocated,
 		)
 	}
-	t.Logf(
-		"exact semantic cold: wall_ms=%d records=%d peak_rss_bytes=%d logical_bytes=%d allocated_bytes=%d cold_headroom_ms=%d total_headroom_ms=%d rss_headroom_bytes=%d allocation_headroom_bytes=%d",
-		wall.Milliseconds(), snapshot.ObservationRecords, peakRSS, logical, allocated,
-		(4*time.Hour - wall).Milliseconds(),
-		(time.Duration(frozenSafetyV14.MaximumTotalWallMS)*time.Millisecond - wall).Milliseconds(),
-		frozenSafetyV14.MaximumPeakRSSBytes-peakRSS,
-		frozenSafetyV14.MaximumDataAllocatedBytes-allocated,
-	)
+}
+
+// semanticColdTimingFit is the source-free record the exact-semantic cold
+// diagnostic logs on both convergence and deadline. Other than the exact
+// source commit binding, every field is a count, enum state, or millisecond
+// duration; it names no path, repository, or raw error.
+type semanticColdTimingFit struct {
+	Schema                         string                         `json:"schema"`
+	SourceCommit                   string                         `json:"source_commit"`
+	Profile                        string                         `json:"profile"`
+	Diagnostic                     string                         `json:"diagnostic"`
+	Converged                      bool                           `json:"converged"`
+	FreezeReady                    bool                           `json:"freeze_ready"`
+	TerminalClass                  string                         `json:"terminal_class,omitempty"`
+	ColdDeadlineMS                 int64                          `json:"cold_deadline_ms"`
+	WallMS                         int64                          `json:"wall_ms"`
+	CaptureWallMS                  int64                          `json:"capture_wall_ms"`
+	ColdHeadroomMS                 int64                          `json:"cold_headroom_ms"`
+	LastStage                      string                         `json:"last_stage"`
+	LastErrorClass                 string                         `json:"last_error_class,omitempty"`
+	FinalCaptureState              string                         `json:"final_capture_state"`
+	TimingCaptureOK                bool                           `json:"timing_capture_ok"`
+	TimingSemantics                string                         `json:"timing_semantics"`
+	TimingErrorClass               string                         `json:"timing_error_class,omitempty"`
+	StageEntryMS                   map[string]int64               `json:"stage_entry_ms"`
+	ExtractionEntryMS              int64                          `json:"extraction_entry_ms"`
+	RelationshipEntryMS            int64                          `json:"relationship_entry_ms"`
+	ExpectedRecords                int                            `json:"expected_records"`
+	ObservationRecords             uint64                         `json:"observation_records"`
+	SelectedV2PublicationCompleted bool                           `json:"selected_v2_publication_completed"`
+	LastExtractionWallMS           int64                          `json:"last_extraction_wall_ms"`
+	LastExtraction                 *ExtractionProgressObservation `json:"last_extraction,omitempty"`
+	ExtractionTiming               ExtractionTimingObservation    `json:"extraction_timing"`
+	PeakRSSBytes                   int64                          `json:"peak_rss_bytes"`
+	LogicalBytes                   int64                          `json:"logical_bytes"`
+	AllocatedBytes                 int64                          `json:"allocated_bytes"`
+	RSSCeilingBytes                int64                          `json:"rss_ceiling_bytes"`
+	AllocationCeilingBytes         int64                          `json:"allocation_ceiling_bytes"`
+}
+
+// semanticColdTail is the source-free tail evidence the plain timeout path
+// discarded: per-stage first-entry walls, the last decoded extraction schedule
+// counters, and the v13 partition/scheduler timing aggregate. It never retains
+// a path, repository name, digest, or raw error string.
+type semanticColdTail struct {
+	StageEntryMS       map[string]int64
+	LastExtraction     *ExtractionProgressObservation
+	LastExtractionWall int64
+	Timing             ExtractionTimingObservation
+	LastStage          string
+	LastErrorClass     string
+	FinalCaptureState  string
+	TimingCaptureOK    bool
+	TimingErrorClass   string
+}
+
+type semanticColdResult struct {
+	snapshot   privateProfileSnapshot
+	converged  bool
+	terminal   string
+	coldWallMS int64
+	tail       semanticColdTail
+}
+
+func semanticColdTerminalClass(err error) string {
+	switch {
+	case errors.Is(err, errRepositoryIndexTerminal):
+		return "repository_index_terminal"
+	case errors.Is(err, errObservationBoundRefusal):
+		return "observation_bound_refusal"
+	case errors.Is(err, errObservationTerminal):
+		return "observation_terminal"
+	case errors.Is(err, errExtractionBoundRefusal):
+		return "extraction_bound_refusal"
+	case errors.Is(err, errExtractionJobTerminal):
+		return "extraction_job_terminal"
+	default:
+		return ""
+	}
+}
+
+// captureSemanticColdConvergence polls the ordinary convergence ladder like
+// awaitReadinessSnapshot, but additionally retains the tail evidence the plain
+// timeout path drops: per-stage first-entry walls, the last decoded extraction
+// schedule counters (from the ordinary probe, already source-free), and the
+// v13 partition/scheduler timing aggregate drained from the server log. On the
+// convergence deadline it takes one final bounded capture under a fresh short
+// context — the main wait context is already expired, which is exactly why the
+// last ordinary probe is severed at its first request and mislabels its stage —
+// before returning. It never calls Fatalf: the caller seals the record and
+// decides pass/fail.
+func captureSemanticColdConvergence(
+	t *testing.T,
+	ctx context.Context,
+	profile PreparedProfile,
+	server *privateServer,
+	revision string,
+	limit time.Duration,
+) semanticColdResult {
+	t.Helper()
+	inspector, err := newProfileInspector(profile, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tail := semanticColdTail{
+		StageEntryMS:      map[string]int64{},
+		FinalCaptureState: "not_needed",
+		TimingCaptureOK:   true,
+	}
+
+	// Diagnostics{Extraction:true} in the timing config emits per-partition and
+	// chunk-lifecycle timing to the server log; drain both as the run advances.
+	partitionCursor, partitionErr := newPartitionTimingCursor(server.logPath)
+	if partitionErr != nil {
+		tail.TimingCaptureOK = false
+		tail.TimingErrorClass = "partition_timing_cursor_initialization_failed"
+	} else {
+		defer func() { _ = partitionCursor.Close() }()
+	}
+	lifecycleCursor, lifecycleErr := newChunkLifecycleCursor(server.logPath, 0)
+	if lifecycleErr != nil {
+		tail.TimingCaptureOK = false
+		if tail.TimingErrorClass == "" {
+			tail.TimingErrorClass = "scheduler_timing_cursor_initialization_failed"
+		}
+	} else {
+		defer func() { _ = lifecycleCursor.Close() }()
+	}
+	started := time.Now()
+	if !tail.TimingCaptureOK {
+		tail.LastErrorClass = tail.TimingErrorClass
+		return semanticColdResult{coldWallMS: time.Since(started).Milliseconds(), tail: tail}
+	}
+	drain := func() bool {
+		if partitionErr == nil {
+			if reports, pollErr := partitionCursor.poll(); pollErr != nil {
+				tail.TimingCaptureOK = false
+				if tail.TimingErrorClass == "" {
+					tail.TimingErrorClass = "partition_timing_poll_failed"
+				}
+				partitionErr = pollErr
+			} else {
+				for _, report := range reports {
+					addPartitionTiming(&tail.Timing, report)
+				}
+			}
+		}
+		if lifecycleErr == nil {
+			if reports, pollErr := lifecycleCursor.poll(); pollErr != nil {
+				tail.TimingCaptureOK = false
+				if tail.TimingErrorClass == "" {
+					tail.TimingErrorClass = "scheduler_timing_poll_failed"
+				}
+				lifecycleErr = pollErr
+			} else {
+				for _, report := range reports {
+					addSchedulerTiming(&tail.Timing, report)
+				}
+			}
+		}
+		return tail.TimingCaptureOK
+	}
+
+	observe := func(probe privateConvergenceProbe) {
+		if probe.Stage != "" {
+			if _, seen := tail.StageEntryMS[probe.Stage]; !seen {
+				tail.StageEntryMS[probe.Stage] = time.Since(started).Milliseconds()
+			}
+			tail.LastStage = probe.Stage
+		}
+		if probe.ExtractionProgress != nil {
+			progress := *probe.ExtractionProgress
+			tail.LastExtraction = &progress
+			tail.LastExtractionWall = time.Since(started).Milliseconds()
+		}
+	}
+
+	wait, cancel := context.WithTimeout(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		snapshot, probe, inspectErr := inspector.inspectWithProgress(wait, profile, revision)
+		observe(probe)
+		if !drain() {
+			tail.LastErrorClass = tail.TimingErrorClass
+			return semanticColdResult{coldWallMS: time.Since(started).Milliseconds(), tail: tail}
+		}
+		if inspectErr == nil {
+			return semanticColdResult{
+				snapshot: snapshot, converged: true,
+				coldWallMS: time.Since(started).Milliseconds(), tail: tail,
+			}
+		}
+		if terminal := semanticColdTerminalClass(inspectErr); terminal != "" {
+			tail.LastErrorClass = terminal
+			return semanticColdResult{
+				terminal: terminal, coldWallMS: time.Since(started).Milliseconds(), tail: tail,
+			}
+		}
+		select {
+		case <-wait.Done():
+			coldWallMS := time.Since(started).Milliseconds()
+			tail.LastErrorClass = "http_request_failed_after_context_deadline"
+			// The main window closed. Take one final bounded capture under a
+			// fresh short deadline before teardown: refresh the extraction
+			// counters and flush any timing lines written since the last poll.
+			final, finalCancel := context.WithTimeout(ctx, 30*time.Second)
+			finalSnapshot, finalProbe, finalErr := inspector.inspectWithProgress(final, profile, revision)
+			observe(finalProbe)
+			if finalErr == nil {
+				tail.FinalCaptureState = "converged_after_deadline"
+				if !drain() {
+					tail.LastErrorClass = tail.TimingErrorClass
+				}
+				finalCancel()
+				return semanticColdResult{snapshot: finalSnapshot, coldWallMS: coldWallMS, tail: tail}
+			}
+			finalTerminal := semanticColdTerminalClass(finalErr)
+			if finalTerminal != "" {
+				tail.FinalCaptureState = finalTerminal
+			}
+			if finalProbe.ExtractionProgress != nil {
+				if finalTerminal == "" {
+					tail.FinalCaptureState = "extraction_progress_captured"
+				}
+			} else if finalTerminal == "" {
+				tail.FinalCaptureState = "inspection_incomplete"
+			}
+			if !drain() {
+				tail.LastErrorClass = tail.TimingErrorClass
+			}
+			finalCancel()
+			return semanticColdResult{terminal: finalTerminal, coldWallMS: coldWallMS, tail: tail}
+		case <-ticker.C:
+		}
+	}
 }
 
 // TestProductionPathReadinessRehearsal is an opt-in, bounded rehearsal of the
