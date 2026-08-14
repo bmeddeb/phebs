@@ -384,6 +384,12 @@ func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) 
 	if _, err := extractionConvergenceProbe(active, repository); errors.Is(err, errExtractionScheduleTerminal) {
 		t.Fatalf("active schedule stopped terminally: %v", err)
 	}
+	short := settled
+	short.Failed = 31
+	if probe, err := extractionConvergenceProbe(short, repository); err != nil ||
+		probe.ExtractionProgress == nil || probe.ExtractionProgress.Failed != 31 {
+		t.Fatalf("incomplete settled counters = %+v, error=%v", probe, err)
+	}
 	repository.LastExtractionJob.Status = store.StatusFailed
 	if _, err := extractionConvergenceProbe(settled, repository); !errors.Is(err, errExtractionJobTerminal) {
 		t.Fatalf("job terminal did not retain precedence: %v", err)

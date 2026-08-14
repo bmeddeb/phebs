@@ -205,8 +205,14 @@ func extractionConvergenceProbe(
 		}
 		return probe, errExtractionJobTerminal
 	}
+	// The terminal predicate must equal expectedExtractionScheduleTerminal.
+	// Runtime.Progress currently proves complete settled store counters before
+	// serving them, but the public progress validator deliberately admits the
+	// weaker shape. Keep that shape pending rather than raising a terminal whose
+	// stopped observation could not seal if the projection boundary evolves.
 	if progress.State == string(store.GenerationScheduleSettled) && progress.Failed > 0 &&
-		progress.Pending == 0 && progress.Running == 0 {
+		progress.Pending == 0 && progress.Running == 0 &&
+		progress.Succeeded+progress.Failed == progress.Total {
 		return probe, errExtractionScheduleTerminal
 	}
 	if repository.LastExtractionJobState != store.JobProjectionExact {
