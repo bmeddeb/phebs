@@ -849,6 +849,18 @@ topology, resource ceiling, oracle, lifecycle policy, or release posture moved.
 The next prerequisite is a fresh committed-source semantic fit diagnostic and
 independent reduce-or-correct review; Take 19 remains unfrozen.
 
+Complete-domain oracle correction (2026-08-13): pre-freeze review found that
+the ceremony inspector sums all nine enabled extraction-domain roots while the
+final oracle still compared the result with the frozen IDL-only 49,152-fact,
+98,304-row aggregate. The two 65,536-input Kafka producer families add exactly
+131,072 facts, so a complete semantic publication is 180,224 facts and 360,448
+rows. Ceremony finalization now pins those totals, all nine published domains
+for both profiles, and zero structural facts/rows; tests reject the stale
+IDL-only value, missing domains, and unexpected structural evidence. No
+production behavior, limit, deadline, concurrency, topology, resource ceiling,
+or claim changed. The exact semantic fit rerun and independent review remain
+mandatory before Take 19 freeze.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

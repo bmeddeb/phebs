@@ -18,7 +18,88 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/spike/t401"
 )
+
+func TestFinalizeObservationPinsEveryEnabledExtractionDomain(t *testing.T) {
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var semantic t401.Profile
+	for _, profile := range profiles {
+		if profile.Kind == "semantic" {
+			semantic = profile
+		}
+	}
+	if semantic.Name == "" {
+		t.Fatal("frozen semantic profile is absent")
+	}
+	wantFacts := int64(semantic.Aggregate.ExtractorFacts)
+	for _, family := range semantic.Families {
+		switch family.Name {
+		case "go_kafka_literal", "go_dynamic_topic":
+			wantFacts += int64(family.Inputs * family.RecordsPerInput)
+		}
+	}
+	if wantFacts != frozenSemanticExtractionFacts || 2*wantFacts != frozenSemanticExtractionRows {
+		t.Fatalf("derived extraction oracle = %d/%d, constants = %d/%d",
+			wantFacts, 2*wantFacts, frozenSemanticExtractionFacts, frozenSemanticExtractionRows)
+	}
+
+	validRun := func() *execution {
+		return &execution{
+			structAR: privateProfileSnapshot{
+				Name: "structural-2m-v1", ObservationRecords: 512,
+				PublishedDomains: frozenExtractorDomainCount,
+			},
+			semanticA: privateProfileSnapshot{
+				Name: "semantic-262144-v1", ObservationRecords: 262_144,
+				ObservationUnsupported: 131_072, PublishedDomains: frozenExtractorDomainCount,
+				ExtractionFacts: frozenSemanticExtractionFacts, ExtractionRows: frozenSemanticExtractionRows,
+			},
+			observation: Observation{Checks: make([]CheckObservation, 1)},
+		}
+	}
+	if err := validRun().finalizeObservation(); err != nil {
+		t.Fatalf("complete-domain oracle refused: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*execution)
+	}{
+		{
+			name: "stale IDL-only totals",
+			mutate: func(run *execution) {
+				run.semanticA.ExtractionFacts = int64(semantic.Aggregate.ExtractorFacts)
+				run.semanticA.ExtractionRows = int64(semantic.Aggregate.ExtractorStagingRows)
+			},
+		},
+		{
+			name: "missing enabled domain",
+			mutate: func(run *execution) {
+				run.semanticA.PublishedDomains--
+			},
+		},
+		{
+			name: "unexpected structural fact",
+			mutate: func(run *execution) {
+				run.structAR.ExtractionFacts = 1
+				run.structAR.ExtractionRows = 2
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			run := validRun()
+			test.mutate(run)
+			if err := run.finalizeObservation(); !errors.Is(err, errExactOracle) {
+				t.Fatalf("oracle error = %v, want %v", err, errExactOracle)
+			}
+		})
+	}
+}
 
 func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testing.T) {
 	root := t.TempDir()

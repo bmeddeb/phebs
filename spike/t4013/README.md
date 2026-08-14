@@ -1208,6 +1208,20 @@ freeze: the next action is one fresh exact semantic fit diagnostic at committed
 source, followed by independent review of the closed refusal summary and a
 governed reduce-or-correct decision.
 
+The pre-freeze audit then found one later ceremony-only blocker. The frozen
+configuration enables nine extractor domains and `inspectExtraction` sums all
+nine current roots, but the final exact oracle still expected the T40.1
+IDL-only aggregate: 49,152 facts and 98,304 rows. The semantic Go corpus also
+freezes 65,536 literal Kafka producer inputs and 65,536 dynamic-topic producer
+gaps. Complete publication therefore means exactly 180,224 facts and 360,448
+rows. Finalization now pins those totals, all nine domains for both profiles,
+and zero structural facts/rows. Focused tests derive the Kafka addition from
+the frozen families and reject the stale IDL-only total, a missing domain, and
+unexpected structural evidence. This is a ceremony comparison correction only;
+it changes no production behavior or bound. It also does not satisfy the
+remaining exact-fit and independent-review prerequisites, so Take 19 stays
+unfrozen.
+
 ```sh
 cd ~/phebs
 

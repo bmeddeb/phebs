@@ -951,6 +951,13 @@ catalog, relationship, or correctness authority.
   preserving exact job-terminal precedence and active-work retryability. The
   next step is a fresh committed-source semantic fit diagnostic followed by
   independent reduce-or-correct review—not a Take 19 freeze.
+- A subsequent pre-freeze audit closed a ceremony-only final-oracle mismatch:
+  inspection summed all nine enabled domain roots but compared them with the
+  IDL-only 49,152-fact/98,304-row aggregate. The complete frozen semantic
+  oracle is 180,224 facts and 360,448 rows after its two Kafka producer
+  families; finalization also requires all nine domains and zero structural
+  evidence. No production behavior or bound moved. Take 19 still requires the
+  fresh exact semantic fit diagnostic and independent review before freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

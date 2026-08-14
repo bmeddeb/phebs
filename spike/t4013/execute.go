@@ -30,6 +30,20 @@ import (
 
 const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 
+const (
+	// The frozen ceremony enables nine extractor domains: four protobuf,
+	// three Thrift, and two Kafka domains. The T40.1 extractor aggregate
+	// covers only the four IDL template families. The production Kafka
+	// producer domain additionally emits one fact for each of the two
+	// 65,536-input Kafka Go families (literal and dynamic-topic); the Kafka
+	// consumer and the typed-input domains emit no facts for this corpus.
+	frozenExtractorDomainCount         = 9
+	frozenSemanticIDLExtractionFacts   = int64(49_152)
+	frozenSemanticKafkaExtractionFacts = int64(2 * 65_536)
+	frozenSemanticExtractionFacts      = frozenSemanticIDLExtractionFacts + frozenSemanticKafkaExtractionFacts
+	frozenSemanticExtractionRows       = 2 * frozenSemanticExtractionFacts
+)
+
 var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
 var (
@@ -1268,8 +1282,12 @@ func (run *execution) finalizeObservation() error {
 	structural := run.structAR
 	semantic := run.semanticA
 	if structural.ObservationRecords != 512 || structural.ObservationUnsupported != 0 ||
+		structural.ExtractionFacts != 0 || structural.ExtractionRows != 0 ||
+		structural.PublishedDomains != frozenExtractorDomainCount ||
 		semantic.ObservationRecords != 262_144 || semantic.ObservationUnsupported != 131_072 ||
-		semantic.ExtractionFacts != 49_152 || semantic.ExtractionRows != 98_304 {
+		semantic.PublishedDomains != frozenExtractorDomainCount ||
+		semantic.ExtractionFacts != frozenSemanticExtractionFacts ||
+		semantic.ExtractionRows != frozenSemanticExtractionRows {
 		return exactOracle("source-free semantic totals differ from the frozen oracle")
 	}
 	run.observation.Profiles = []ProfileObservation{
