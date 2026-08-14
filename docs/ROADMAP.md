@@ -958,6 +958,15 @@ catalog, relationship, or correctness authority.
   families; finalization also requires all nine domains and zero structural
   evidence. No production behavior or bound moved. Take 19 still requires the
   fresh exact semantic fit diagnostic and independent review before freeze.
+- The fresh exact fit at `43052335` stopped early and classified the semantic
+  wall: 32 terminal partitions each reached the first one-over facts refusal,
+  observed 769 against a 768 reservation. T40.9's 49,152-fact domain envelope
+  was derived from the combined IDL population and distributes to 768 across
+  the Kafka plane's 64 partitions, while the frozen two Kafka-producer families
+  occupy 32 dense partitions. Resources remained below ceilings and cleanup
+  completed. Take 19 is not freeze-ready; the next step is a T40.9-owned
+  all-dimension result-envelope measurement and independently reviewed
+  reduce-or-correct decision, not an isolated fact-limit increase.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

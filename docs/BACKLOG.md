@@ -861,6 +861,23 @@ production behavior, limit, deadline, concurrency, topology, resource ceiling,
 or claim changed. The exact semantic fit rerun and independent review remain
 mandatory before Take 19 freeze.
 
+Exact semantic fact-limit result (2026-08-14): do not freeze Take 19. At exact
+commit `430523356c821facc63746635f1821784b1ec870`, selected-v2 observation
+completed and extraction settled after 5,262,005 ms with 225 of 264 partitions
+succeeded, 39 failed, and none pending or running. The validated 293-attempt
+timing floor contains 225 completions, 36 retry failures, and 32 terminal
+refusals. Every terminal refusal is the same closed tuple:
+`evidence_staging` / `extraction_domain` / `limit` / `facts`, limit 768,
+maximum observed 769. T40.9's 49,152-fact per-domain aggregate distributes to
+768 across 64 Kafka partitions, while the frozen corpus has two 65,536-input
+Kafka-producer families occupying 32 full partitions. Peak RSS and allocated
+data remained below ceilings; relationship publication did not start and
+cleanup destroyed custody. This selects a governed reduce-or-correct review,
+not a one-dimensional bound bump. The owning correction must first measure the
+complete Kafka result's facts, rows, references, canonical bytes, and encoded
+bytes, preserve historical v1/v2 validation, and pass independent review.
+Take 19 remains unfrozen and Epic 41 remains blocked.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

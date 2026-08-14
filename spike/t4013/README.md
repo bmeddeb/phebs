@@ -1222,6 +1222,31 @@ it changes no production behavior or bound. It also does not satisfy the
 remaining exact-fit and independent-review prerequisites, so Take 19 stays
 unfrozen.
 
+The fresh exact diagnostic at commit
+`430523356c821facc63746635f1821784b1ec870` then stopped at 5,262,005 ms with
+`extraction_schedule_terminal`. Selected-v2 observation completed and
+extraction entered at 1,459,006 ms. The settled 264-partition schedule retained
+225 successes, 39 failures, and no pending or running work. Its validated
+timing floor accounts for 293 attempts: 225 completed, 36 retry failures, and
+32 terminal refusals. All 32 terminal attempts share one closed refusal:
+`evidence_staging`, `extraction_domain`, `limit`, `facts`, with limit 768 and
+maximum observed 769. Peak RSS was 1,637,482,496 bytes and allocated data was
+2,628,976,640 bytes, both below the frozen ceilings; relationship publication
+never began. Cleanup destroyed the exact fixture, data, and credentials, left
+no process, and returned disk to baseline.
+
+The exact-source derivation explains the 32-way shape. T40.9 freezes 49,152
+facts per domain; distributing that aggregate across the Kafka domain's 64
+candidate partitions reserves 768 facts per partition. The semantic corpus
+contains two contiguous 65,536-input Kafka-producer families, or 16 full
+4,096-record partitions each. Every dense partition therefore reaches the
+first one-over reservation at fact 769. This is a measured production-contract
+refusal, not a cold-window or resource failure. Do not raise only the fact
+limit: the owning T40.9 correction must first measure facts, rows, references,
+canonical bytes, and encoded bytes for the complete Kafka result, preserve
+historical v1/v2 plan validation, record a reduce-first decision, and pass
+independent review. Take 19 remains unfrozen.
+
 ```sh
 cd ~/phebs
 
