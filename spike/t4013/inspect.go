@@ -197,6 +197,18 @@ func extractionConvergenceProbe(
 	}
 	probe := convergenceProbe("extraction_publication", progress, projection)
 	probe.ExtractionProgress = projection
+	if projection.JobState == string(store.StatusFailed) ||
+		projection.JobState == string(store.StatusCanceled) {
+		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) &&
+			expectedExtractionBoundRefusal(*projection) {
+			return probe, errExtractionBoundRefusal
+		}
+		return probe, errExtractionJobTerminal
+	}
+	if progress.State == string(store.GenerationScheduleSettled) && progress.Failed > 0 &&
+		progress.Pending == 0 && progress.Running == 0 {
+		return probe, errExtractionScheduleTerminal
+	}
 	if repository.LastExtractionJobState != store.JobProjectionExact {
 		// Durable current extraction authority supersedes its ordinary completed
 		// queue row. Lifecycle may collect that row before a later probe; absence
@@ -206,14 +218,6 @@ func extractionConvergenceProbe(
 			return probe, nil
 		}
 		return probe, errors.New("T40.13 extraction job projection has not converged")
-	}
-	if projection.JobState == string(store.StatusFailed) ||
-		projection.JobState == string(store.StatusCanceled) {
-		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) &&
-			expectedExtractionBoundRefusal(*projection) {
-			return probe, errExtractionBoundRefusal
-		}
-		return probe, errExtractionJobTerminal
 	}
 	return probe, nil
 }

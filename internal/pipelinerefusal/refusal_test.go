@@ -197,6 +197,18 @@ func TestValidateFrozenSets(t *testing.T) {
 	}
 }
 
+func TestEvidenceStagingOwnsEncodedByteLimit(t *testing.T) {
+	receipt := Receipt{
+		Schema: Schema, Stage: StageEvidenceStaging,
+		GenerationKind: GenerationExtractionDomain,
+		Classification: ClassificationLimit,
+		Dimension:      DimensionGenerationEncodedBytes, Observed: 2, Limit: 1,
+	}
+	if err := Validate(receipt); err != nil {
+		t.Fatalf("encoded staging receipt = %v", err)
+	}
+}
+
 func TestValidateRejectsCrossedBoundaryAuthority(t *testing.T) {
 	tests := []Receipt{
 		{

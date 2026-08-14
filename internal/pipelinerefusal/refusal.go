@@ -378,7 +378,8 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 			return true
 		}
 	case StageEvidenceStaging:
-		return dimension == DimensionFacts || dimension == DimensionStagedRows
+		return dimension == DimensionFacts || dimension == DimensionStagedRows ||
+			dimension == DimensionGenerationEncodedBytes
 	}
 	return false
 }

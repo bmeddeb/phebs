@@ -6,9 +6,11 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sort"
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 const maxPartitionTimingLineBytes = 64 << 10
@@ -105,12 +107,20 @@ func addPartitionTiming(
 	if observation == nil {
 		return
 	}
+	if report.Schema == extractionpublication.PartitionTimingSchemaV2 &&
+		observation.Schema == "" {
+		// A mixed-version log remains exact: any earlier v1 terminal attempts
+		// become explicitly unknown when the first v2 report appears.
+		observation.Schema = extractionTimingSchemaV2
+		observation.UnknownRefusals = observation.TerminalRefusals
+	}
 	observation.Attempts++
 	switch report.Outcome {
 	case "completed":
 		observation.Completed++
 	case "terminal_refusal":
 		observation.TerminalRefusals++
+		addPartitionRefusal(observation, report)
 	default:
 		observation.Failed++
 	}
@@ -127,4 +137,53 @@ func addPartitionTiming(
 	observation.AssemblyMaxMS = max(observation.AssemblyMaxMS, report.AssemblyMS)
 	observation.RuntimeTotalMS += report.TotalMS
 	observation.RuntimeMaxMS = max(observation.RuntimeMaxMS, report.TotalMS)
+}
+
+func addPartitionRefusal(
+	observation *ExtractionTimingObservation,
+	report extractionpublication.PartitionTimingReport,
+) {
+	if observation == nil || report.Schema != extractionpublication.PartitionTimingSchemaV2 {
+		if observation != nil && observation.Schema == extractionTimingSchemaV2 {
+			observation.UnknownRefusals++
+		}
+		return
+	}
+	receipt := pipelinerefusal.Receipt{
+		Schema: pipelinerefusal.Schema, Stage: report.RefusalStage,
+		GenerationKind: report.RefusalGenerationKind,
+		Classification: report.RefusalClassification,
+		Dimension:      report.RefusalDimension, Observed: report.RefusalObserved,
+		Limit: report.RefusalLimit,
+	}
+	if pipelinerefusal.Validate(receipt) != nil ||
+		receipt.Classification == pipelinerefusal.ClassificationUnknown {
+		observation.UnknownRefusals++
+		return
+	}
+	summary := ExtractionRefusalSummary{
+		Stage: string(receipt.Stage), GenerationKind: string(receipt.GenerationKind),
+		Classification: string(receipt.Classification), Dimension: string(receipt.Dimension),
+		Limit: receipt.Limit, MaxObserved: receipt.Observed, Count: 1,
+	}
+	key := extractionRefusalSummaryKey(summary)
+	for index := range observation.Refusals {
+		if extractionRefusalSummaryKey(observation.Refusals[index]) != key {
+			continue
+		}
+		observation.Refusals[index].Count++
+		observation.Refusals[index].MaxObserved = max(
+			observation.Refusals[index].MaxObserved, summary.MaxObserved,
+		)
+		return
+	}
+	if len(observation.Refusals) >= maxExtractionRefusalSummaries {
+		observation.UnknownRefusals++
+		return
+	}
+	observation.Refusals = append(observation.Refusals, summary)
+	sort.Slice(observation.Refusals, func(left, right int) bool {
+		return extractionRefusalSummaryKey(observation.Refusals[left]) <
+			extractionRefusalSummaryKey(observation.Refusals[right])
+	})
 }

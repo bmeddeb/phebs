@@ -847,6 +847,17 @@ func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "extraction schedule terminal", cause: errExtractionScheduleTerminal,
+			outcome: "extraction_schedule_terminal",
+			projection: privateConvergenceProbe{
+				Stage: "extraction_publication", SHA256: digest,
+				ExtractionProgress: &ExtractionProgressObservation{
+					State: string(store.GenerationScheduleSettled), Total: 32, Materialized: 32,
+					Failed: 32, Domains: 4, JobState: string(store.StatusDone), JobAttempts: 1,
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -957,6 +968,7 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "observation terminal", cause: errObservationTerminal, code: "observation_terminal", decision: "unclassified"},
 		{name: "extraction bound refusal", cause: errExtractionBoundRefusal, code: "extraction_production_bound_refused", decision: "reduce", substantiated: true},
 		{name: "extraction job terminal", cause: errExtractionJobTerminal, code: "extraction_job_terminal", decision: "unclassified"},
+		{name: "extraction schedule terminal", cause: errExtractionScheduleTerminal, code: "extraction_schedule_terminal", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},

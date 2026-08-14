@@ -17,6 +17,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/diagnostics"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -38,27 +39,38 @@ type Runtime struct {
 	assembly [64]sync.Mutex
 }
 
-const PartitionTimingSchema = "phebs-extraction-partition-timing-v1"
+const (
+	PartitionTimingSchemaV1 = "phebs-extraction-partition-timing-v1"
+	PartitionTimingSchemaV2 = "phebs-extraction-partition-timing-v2"
+	PartitionTimingSchema   = PartitionTimingSchemaV2
+)
 
 // PartitionTimingReport is a source-free diagnostic for one scheduler
 // attempt. It contains bounded phase durations and digest identities only;
 // source paths, repository names, content, and errors are deliberately absent.
 type PartitionTimingReport struct {
-	Schema          string `json:"schema"`
-	Identity        string `json:"identity"`
-	Generation      string `json:"generation"`
-	Attempt         int    `json:"attempt"`
-	Outcome         string `json:"outcome"`
-	Reused          bool   `json:"reused"`
-	SourceAcquireMS int64  `json:"source_acquire_ms"`
-	ExecutorMS      int64  `json:"executor_ms"`
-	ResultMS        int64  `json:"result_ms"`
-	AssemblyMS      int64  `json:"assembly_ms"`
-	TotalMS         int64  `json:"total_ms"`
+	Schema                string                         `json:"schema"`
+	Identity              string                         `json:"identity"`
+	Generation            string                         `json:"generation"`
+	Attempt               int                            `json:"attempt"`
+	Outcome               string                         `json:"outcome"`
+	Reused                bool                           `json:"reused"`
+	SourceAcquireMS       int64                          `json:"source_acquire_ms"`
+	ExecutorMS            int64                          `json:"executor_ms"`
+	ResultMS              int64                          `json:"result_ms"`
+	AssemblyMS            int64                          `json:"assembly_ms"`
+	TotalMS               int64                          `json:"total_ms"`
+	RefusalStage          pipelinerefusal.Stage          `json:"refusal_stage,omitempty"`
+	RefusalGenerationKind pipelinerefusal.GenerationKind `json:"refusal_generation_kind,omitempty"`
+	RefusalClassification pipelinerefusal.Classification `json:"refusal_classification,omitempty"`
+	RefusalDimension      pipelinerefusal.Dimension      `json:"refusal_dimension,omitempty"`
+	RefusalObserved       int64                          `json:"refusal_observed,omitempty"`
+	RefusalLimit          int64                          `json:"refusal_limit,omitempty"`
 }
 
 func ValidatePartitionTimingReport(report PartitionTimingReport) error {
-	if report.Schema != PartitionTimingSchema || !validDigest(report.Identity) ||
+	if (report.Schema != PartitionTimingSchemaV1 && report.Schema != PartitionTimingSchemaV2) ||
+		!validDigest(report.Identity) ||
 		!validDigest(report.Generation) || report.Attempt < 0 ||
 		(report.Outcome != "completed" && report.Outcome != "failed" &&
 			report.Outcome != "terminal_refusal") ||
@@ -67,7 +79,58 @@ func ValidatePartitionTimingReport(report PartitionTimingReport) error {
 		report.SourceAcquireMS+report.ExecutorMS+report.ResultMS+report.AssemblyMS > report.TotalMS {
 		return invalid("partition timing report")
 	}
+	hasRefusal := report.RefusalStage != "" || report.RefusalGenerationKind != "" ||
+		report.RefusalClassification != "" || report.RefusalDimension != "" ||
+		report.RefusalObserved != 0 || report.RefusalLimit != 0
+	if report.Schema == PartitionTimingSchemaV1 {
+		if hasRefusal {
+			return invalid("v1 partition timing refusal")
+		}
+		return nil
+	}
+	if report.Outcome != "terminal_refusal" {
+		if hasRefusal {
+			return invalid("non-terminal partition timing refusal")
+		}
+		return nil
+	}
+	receipt := report.refusalReceipt()
+	if pipelinerefusal.Validate(receipt) != nil {
+		return invalid("terminal partition timing refusal")
+	}
 	return nil
+}
+
+func (report PartitionTimingReport) refusalReceipt() pipelinerefusal.Receipt {
+	return pipelinerefusal.Receipt{
+		Schema: pipelinerefusal.Schema, Stage: report.RefusalStage,
+		GenerationKind: report.RefusalGenerationKind,
+		Classification: report.RefusalClassification,
+		Dimension:      report.RefusalDimension,
+		Observed:       report.RefusalObserved,
+		Limit:          report.RefusalLimit,
+	}
+}
+
+func (report *PartitionTimingReport) setRefusal(err error) {
+	if report == nil {
+		return
+	}
+	receipt, ok := pipelinerefusal.From(err)
+	if !ok || pipelinerefusal.Validate(receipt) != nil {
+		receipt = pipelinerefusal.Receipt{
+			Schema: pipelinerefusal.Schema, Stage: pipelinerefusal.StageUnknown,
+			GenerationKind: pipelinerefusal.GenerationUnknown,
+			Classification: pipelinerefusal.ClassificationUnknown,
+			Dimension:      pipelinerefusal.DimensionUnknown,
+		}
+	}
+	report.RefusalStage = receipt.Stage
+	report.RefusalGenerationKind = receipt.GenerationKind
+	report.RefusalClassification = receipt.Classification
+	report.RefusalDimension = receipt.Dimension
+	report.RefusalObserved = receipt.Observed
+	report.RefusalLimit = receipt.Limit
 }
 
 func validatePlanningAuthority(authority PlanningAuthority) error {
@@ -620,6 +683,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	timingEnabled := runtime.Diagnostics || runtime.TimingReports != nil
 	var started time.Time
 	var timing PartitionTimingReport
+	var timingRefusal error
 	if timingEnabled {
 		started = time.Now()
 		timing = PartitionTimingReport{
@@ -634,6 +698,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		timing.TotalMS = time.Since(started).Milliseconds()
 		if retErr == nil {
 			timing.Outcome = "completed"
+		}
+		if timing.Outcome == "terminal_refusal" {
+			timing.setRefusal(timingRefusal)
 		}
 		runtime.emitPartitionTiming(timing)
 	}()
@@ -700,6 +767,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 				!store.IsTerminal(executeErr) {
 				return executeErr
 			}
+			timingRefusal = executeErr
 		} else if spec.Disposition == candidate.PartitionResultTerminalRefusal {
 			return invalid("executor returned an unmarked terminal refusal")
 		}

@@ -361,6 +361,41 @@ func TestExtractionConvergenceProbeRetainsTypedPendingProjection(t *testing.T) {
 	}
 }
 
+func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) {
+	repository := store.RepoStatus{
+		LastExtractionJobState: store.JobProjectionExact,
+		LastExtractionJob: &store.ExtractionJobProjection{
+			Status: store.StatusDone, Attempts: 1,
+		},
+	}
+	settled := extractionpublication.Progress{
+		State: string(store.GenerationScheduleSettled), Total: 32, Materialized: 32,
+		Succeeded: 0, Failed: 32, Domains: 4,
+	}
+	probe, err := extractionConvergenceProbe(settled, repository)
+	if !errors.Is(err, errExtractionScheduleTerminal) ||
+		classifyConvergenceInspection(err).class != "terminal" ||
+		probe.ExtractionProgress == nil || probe.ExtractionProgress.Failed != 32 {
+		t.Fatalf("settled probe = %+v, error=%v", probe, err)
+	}
+	active := settled
+	active.State, active.Pending = "active", 1
+	active.Failed, active.Total = 31, 32
+	if _, err := extractionConvergenceProbe(active, repository); errors.Is(err, errExtractionScheduleTerminal) {
+		t.Fatalf("active schedule stopped terminally: %v", err)
+	}
+	repository.LastExtractionJob.Status = store.StatusFailed
+	if _, err := extractionConvergenceProbe(settled, repository); !errors.Is(err, errExtractionJobTerminal) {
+		t.Fatalf("job terminal did not retain precedence: %v", err)
+	}
+	repository.LastExtractionJobState, repository.LastExtractionJob = store.JobProjectionUnavailable, nil
+	probe, err = extractionConvergenceProbe(settled, repository)
+	if !errors.Is(err, errExtractionScheduleTerminal) || probe.ExtractionProgress.JobState != "" ||
+		validateExtractionProgress(*probe.ExtractionProgress) != nil {
+		t.Fatalf("collected-job settled probe = %+v, error=%v", probe, err)
+	}
+}
+
 func TestExtractionConvergenceProbeAcceptsCurrentAuthorityAfterJobCollection(t *testing.T) {
 	progress := extractionpublication.Progress{
 		State: "current", Total: 489, Materialized: 489,

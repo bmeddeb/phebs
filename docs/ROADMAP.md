@@ -942,6 +942,15 @@ catalog, relationship, or correctness authority.
   retained record lacks the closed refusal tuple, so the next work is typed
   refusal retention and independent reduce-or-correct review—not a deadline,
   concurrency, bound, or topology change. Take 19 remains unfrozen.
+- The partition-refusal attribution prerequisite is now code-complete without
+  moving a production bound. Terminal partition execution closes its owning
+  stage and diagnostics timing v2 retains a bounded closed refusal projection;
+  historical v1 reports remain valid, unknown terminals remain explicit, and
+  the aggregate requires exact accounting across at most 32 summaries. The
+  ceremony now stops a settled failed extraction schedule immediately while
+  preserving exact job-terminal precedence and active-work retryability. The
+  next step is a fresh committed-source semantic fit diagnostic followed by
+  independent reduce-or-correct review—not a Take 19 freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

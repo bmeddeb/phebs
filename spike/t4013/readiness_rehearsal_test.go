@@ -227,6 +227,8 @@ func semanticColdTerminalClass(err error) string {
 		return "extraction_bound_refusal"
 	case errors.Is(err, errExtractionJobTerminal):
 		return "extraction_job_terminal"
+	case errors.Is(err, errExtractionScheduleTerminal):
+		return "extraction_schedule_terminal"
 	default:
 		return ""
 	}
@@ -910,7 +912,8 @@ func awaitReadinessSnapshot(
 			errors.Is(inspectErr, errObservationBoundRefusal) ||
 			errors.Is(inspectErr, errObservationTerminal) ||
 			errors.Is(inspectErr, errExtractionBoundRefusal) ||
-			errors.Is(inspectErr, errExtractionJobTerminal) {
+			errors.Is(inspectErr, errExtractionJobTerminal) ||
+			errors.Is(inspectErr, errExtractionScheduleTerminal) {
 			t.Fatalf(
 				"production path terminated at %s (repository_index_class=%s): %v",
 				probe.Stage, probe.RepositoryIndexFailureClass, inspectErr,

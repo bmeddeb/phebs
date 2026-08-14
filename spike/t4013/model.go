@@ -248,24 +248,51 @@ type ConvergenceWaitObservation struct {
 // timings. It intentionally retains no repository, path, content, error, or
 // per-partition identity.
 type ExtractionTimingObservation struct {
-	Attempts             int64 `json:"attempts"`
-	Completed            int64 `json:"completed"`
-	Failed               int64 `json:"failed"`
-	TerminalRefusals     int64 `json:"terminal_refusals"`
-	Reused               int64 `json:"reused"`
-	SourceAcquireTotalMS int64 `json:"source_acquire_total_ms"`
-	SourceAcquireMaxMS   int64 `json:"source_acquire_max_ms"`
-	ExecutorTotalMS      int64 `json:"executor_total_ms"`
-	ExecutorMaxMS        int64 `json:"executor_max_ms"`
-	ResultTotalMS        int64 `json:"result_total_ms"`
-	ResultMaxMS          int64 `json:"result_max_ms"`
-	AssemblyTotalMS      int64 `json:"assembly_total_ms"`
-	AssemblyMaxMS        int64 `json:"assembly_max_ms"`
-	RuntimeTotalMS       int64 `json:"runtime_total_ms"`
-	RuntimeMaxMS         int64 `json:"runtime_max_ms"`
-	SchedulerSettled     int64 `json:"scheduler_settled"`
-	SchedulerTotalMS     int64 `json:"scheduler_total_ms"`
-	SchedulerMaxMS       int64 `json:"scheduler_max_ms"`
+	Schema               string                     `json:"schema,omitempty"`
+	Attempts             int64                      `json:"attempts"`
+	Completed            int64                      `json:"completed"`
+	Failed               int64                      `json:"failed"`
+	TerminalRefusals     int64                      `json:"terminal_refusals"`
+	Reused               int64                      `json:"reused"`
+	SourceAcquireTotalMS int64                      `json:"source_acquire_total_ms"`
+	SourceAcquireMaxMS   int64                      `json:"source_acquire_max_ms"`
+	ExecutorTotalMS      int64                      `json:"executor_total_ms"`
+	ExecutorMaxMS        int64                      `json:"executor_max_ms"`
+	ResultTotalMS        int64                      `json:"result_total_ms"`
+	ResultMaxMS          int64                      `json:"result_max_ms"`
+	AssemblyTotalMS      int64                      `json:"assembly_total_ms"`
+	AssemblyMaxMS        int64                      `json:"assembly_max_ms"`
+	RuntimeTotalMS       int64                      `json:"runtime_total_ms"`
+	RuntimeMaxMS         int64                      `json:"runtime_max_ms"`
+	SchedulerSettled     int64                      `json:"scheduler_settled"`
+	SchedulerTotalMS     int64                      `json:"scheduler_total_ms"`
+	SchedulerMaxMS       int64                      `json:"scheduler_max_ms"`
+	Refusals             []ExtractionRefusalSummary `json:"refusals,omitempty"`
+	UnknownRefusals      int64                      `json:"unknown_refusals,omitempty"`
+}
+
+const (
+	extractionTimingSchemaV2      = "t4013-extraction-timing-v2"
+	maxExtractionRefusalSummaries = 32
+)
+
+// ExtractionRefusalSummary is a bounded, source-free rollup of terminal
+// partition refusals. Identity and raw error text remain excluded.
+type ExtractionRefusalSummary struct {
+	Stage          string `json:"stage"`
+	GenerationKind string `json:"generation_kind"`
+	Classification string `json:"classification"`
+	Dimension      string `json:"dimension"`
+	Limit          int64  `json:"limit"`
+	MaxObserved    int64  `json:"max_observed"`
+	Count          int64  `json:"count"`
+}
+
+func extractionRefusalSummaryKey(value ExtractionRefusalSummary) string {
+	return fmt.Sprintf(
+		"%s\x00%s\x00%s\x00%s\x00%020d",
+		value.Stage, value.GenerationKind, value.Classification, value.Dimension, value.Limit,
+	)
 }
 
 // ConvergenceTransitionObservation retains only changes in the closed
@@ -1102,7 +1129,8 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 		outcomes = append(outcomes, "extraction_bound_refusal", "extraction_job_terminal")
 	}
 	if detailVersion >= 10 {
-		outcomes = append(outcomes, "observation_bound_refusal", "observation_terminal")
+		outcomes = append(outcomes, "observation_bound_refusal", "observation_terminal",
+			"extraction_schedule_terminal")
 	}
 	stages := []string{
 		"repository_visibility", "repository_index", "source_generation",
@@ -1188,7 +1216,8 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			}
 		} else if value.ExtractionProgress == nil {
 			if value.ExtractionProgressWallMS != 0 ||
-				value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal" {
+				value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal" ||
+				value.Outcome == "extraction_schedule_terminal" {
 				return errors.New("T40.13 extraction terminal outcome lacks progress")
 			}
 		} else {
@@ -1200,6 +1229,10 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			if (value.Outcome == "extraction_bound_refusal") != hasExpectedBound &&
 				(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal") {
 				return errors.New("T40.13 extraction terminal outcome is incoherent")
+			}
+			if detailVersion >= 10 && (value.Outcome == "extraction_schedule_terminal") !=
+				expectedExtractionScheduleTerminal(*value.ExtractionProgress) {
+				return errors.New("T40.13 extraction schedule terminal outcome is incoherent")
 			}
 		}
 		if detailVersion < 9 {
@@ -1245,6 +1278,41 @@ func validateExtractionTiming(value ExtractionTimingObservation) error {
 		value.SourceAcquireTotalMS+value.ExecutorTotalMS+value.ResultTotalMS+
 			value.AssemblyTotalMS > value.RuntimeTotalMS {
 		return errors.New("T40.13 extraction timing aggregate is invalid")
+	}
+	if value.Schema == "" {
+		if len(value.Refusals) != 0 || value.UnknownRefusals != 0 {
+			return errors.New("T40.13 legacy extraction timing acquired refusal details")
+		}
+		return nil
+	}
+	if value.Schema != extractionTimingSchemaV2 || value.UnknownRefusals < 0 ||
+		len(value.Refusals) > maxExtractionRefusalSummaries {
+		return errors.New("T40.13 extraction refusal aggregate is invalid")
+	}
+	refusalCount := value.UnknownRefusals
+	lastKey, lastLimitKey := "", ""
+	for _, refusal := range value.Refusals {
+		receipt := pipelinerefusal.Receipt{
+			Schema:         pipelinerefusal.Schema,
+			Stage:          pipelinerefusal.Stage(refusal.Stage),
+			GenerationKind: pipelinerefusal.GenerationKind(refusal.GenerationKind),
+			Classification: pipelinerefusal.Classification(refusal.Classification),
+			Dimension:      pipelinerefusal.Dimension(refusal.Dimension),
+			Observed:       refusal.MaxObserved, Limit: refusal.Limit,
+		}
+		key := extractionRefusalSummaryKey(refusal)
+		limitKey := refusal.Stage + "\x00" + refusal.GenerationKind + "\x00" +
+			refusal.Classification + "\x00" + refusal.Dimension
+		if refusal.Count <= 0 || refusal.Classification == string(pipelinerefusal.ClassificationUnknown) ||
+			pipelinerefusal.Validate(receipt) != nil || (lastKey != "" && key <= lastKey) ||
+			(lastLimitKey == limitKey) {
+			return errors.New("T40.13 extraction refusal summary is invalid")
+		}
+		lastKey, lastLimitKey = key, limitKey
+		refusalCount += refusal.Count
+	}
+	if refusalCount != value.TerminalRefusals {
+		return errors.New("T40.13 extraction refusal aggregate is incomplete")
 	}
 	return nil
 }
@@ -1311,7 +1379,7 @@ func validateConvergenceTransitions(
 	}
 	if detailVersion >= 10 {
 		terminalOutcome = terminalOutcome || value.Outcome == "observation_bound_refusal" ||
-			value.Outcome == "observation_terminal"
+			value.Outcome == "observation_terminal" || value.Outcome == "extraction_schedule_terminal"
 	}
 	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
 		return errors.New("T40.13 terminal transition is incoherent")
@@ -1348,7 +1416,8 @@ func validateConvergenceWithoutSuccessfulProbe(
 	observationTerminal := detailVersion >= 10 &&
 		(value.Outcome == "observation_bound_refusal" || value.Outcome == "observation_terminal")
 	extractionTerminal := detailVersion >= 8 &&
-		(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal")
+		(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal") ||
+		detailVersion >= 10 && value.Outcome == "extraction_schedule_terminal"
 	if observationTerminal {
 		if value.ObservationProgress == nil || value.ObservationProgressWallMS <= 0 ||
 			value.ObservationProgressWallMS > value.WallMS ||
@@ -1368,7 +1437,11 @@ func validateConvergenceWithoutSuccessfulProbe(
 			return errors.New("T40.13 unsuccessful extraction terminal wait is incoherent")
 		}
 		hasRefusal := expectedExtractionBoundRefusal(*value.ExtractionProgress)
-		if (value.Outcome == "extraction_bound_refusal") != hasRefusal {
+		if value.Outcome == "extraction_schedule_terminal" {
+			if !expectedExtractionScheduleTerminal(*value.ExtractionProgress) {
+				return errors.New("T40.13 unsuccessful extraction schedule terminal outcome is incoherent")
+			}
+		} else if (value.Outcome == "extraction_bound_refusal") != hasRefusal {
 			return errors.New("T40.13 unsuccessful extraction terminal outcome is incoherent")
 		}
 	} else if value.ObservationProgress != nil || value.ObservationProgressWallMS != 0 ||
@@ -1706,7 +1779,8 @@ func validateExtractionProgress(value ExtractionProgressObservation) error {
 		Failed: value.Failed, Domains: value.Domains, CurrentDomains: value.CurrentDomains,
 	}
 	if extractionpublication.ValidateProgress(progress) != nil ||
-		!slices.Contains([]string{"pending", "claimed", "running", "done", "failed", "canceled"}, value.JobState) ||
+		!slices.Contains([]string{"", "pending", "claimed", "running", "done", "failed", "canceled"}, value.JobState) ||
+		value.JobState == "" && value.State != string(store.GenerationScheduleSettled) && value.State != "current" ||
 		value.JobAttempts < 0 || value.JobAttempts > 1_000_000 {
 		return errors.New("T40.13 extraction progress projection is invalid")
 	}
@@ -1730,6 +1804,12 @@ func validateExtractionProgress(value ExtractionProgressObservation) error {
 		return errors.New("T40.13 extraction refusal projection is invalid")
 	}
 	return nil
+}
+
+func expectedExtractionScheduleTerminal(value ExtractionProgressObservation) bool {
+	return value.State == string(store.GenerationScheduleSettled) && value.Failed > 0 &&
+		value.Pending == 0 && value.Running == 0 && value.Succeeded+value.Failed == value.Total &&
+		value.JobState != string(store.StatusFailed) && value.JobState != string(store.StatusCanceled)
 }
 
 func optionalProgressState(value string) bool {
@@ -1853,6 +1933,12 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 extraction terminal identity is invalid")
 		}
 		wantReason = "extraction_job_terminal"
+	case "extraction_schedule_terminal":
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_schedule_terminal" {
+			return errors.New("T40.13 extraction schedule terminal identity is invalid")
+		}
+		wantReason = "extraction_schedule_terminal"
 	default:
 		return errors.New("T40.13 stopped failure code is not frozen")
 	}

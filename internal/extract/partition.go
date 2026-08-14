@@ -12,6 +12,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -89,14 +90,17 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		candidatePredicate = func(string) bool { return false }
 	}
 	if err := verified.Inventory(ctx, candidatePredicate); err != nil {
-		return candidate.PartitionResultSpec{}, deterministicPartitionFailure(ctx, err)
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, err, pipelinerefusal.StageDomainInventory,
+		)
 	}
 	if typed != nil {
 		documentScope, ok := corpus.(sdk.SCIPDocumentScope)
 		if !ok {
-			return candidate.PartitionResultSpec{}, store.WithTerminal(errors.New(
-				"typed partition corpus has no admitted document scope",
-			))
+			return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+				ctx, errors.New("typed partition corpus has no admitted document scope"),
+				pipelinerefusal.StageDomainInventory,
+			)
 		}
 		verified.mu.Lock()
 		verified.typedInput = treeRecord{
@@ -110,7 +114,10 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		verified.mu.Unlock()
 	}
 	if verified.corpusFileCount != lease.CandidateRecords()+lease.TypedSourceRecords() {
-		return candidate.PartitionResultSpec{}, errors.New("partition corpus inventory disagrees with its source range")
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, errors.New("partition corpus inventory disagrees with its source range"),
+			pipelinerefusal.StageDomainInventory,
+		)
 	}
 	maxFacts := minInt64(
 		reservation.Facts,
@@ -135,23 +142,32 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 	coverage, extractErr := callExtractor(ctx, extractor.extractor, verified, sink.Emit)
 	if extractErr != nil {
 		if sinkErr := sink.failure(); sinkErr != nil {
-			return candidate.PartitionResultSpec{}, errors.Join(extractErr, sinkErr)
+			return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+				ctx, errors.Join(extractErr, sinkErr), pipelinerefusal.StageEvidenceStaging,
+			)
 		}
-		return candidate.PartitionResultSpec{}, deterministicPartitionFailure(ctx, extractErr)
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, extractErr, pipelinerefusal.StageExtractorExecution,
+		)
 	}
 	if err := sink.Finish(); err != nil {
-		return candidate.PartitionResultSpec{}, err
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, err, pipelinerefusal.StageEvidenceStaging,
+		)
 	}
 	stats, err := verified.Stats()
 	if err != nil {
-		return candidate.PartitionResultSpec{}, deterministicPartitionFailure(ctx, err)
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, err, pipelinerefusal.StageExtractorExecution,
+		)
 	}
 	if len(coverage.Failures) != 0 || coverage.UnresolvedCount != sink.unresolvedCount ||
 		(typed == nil && stats.readFileCount != lease.CandidateRecords()) ||
 		(typed != nil && (stats.readFileCount < 1 ||
 			stats.readFileCount > lease.TypedSourceRecords()+1)) {
-		return candidate.PartitionResultSpec{}, store.WithTerminal(
-			errors.New("partition extractor returned incomplete coverage"),
+		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
+			ctx, errors.New("partition extractor returned incomplete coverage"),
+			pipelinerefusal.StageExtractorExecution,
 		)
 	}
 	totals := candidate.DomainResultTotals{
@@ -176,6 +192,22 @@ func deterministicPartitionFailure(ctx context.Context, err error) error {
 		return err
 	}
 	return store.WithTerminal(err)
+}
+
+// partitionBoundaryFailure closes deterministic partition failures at the
+// production stage that owns them. Context cancellation remains scheduler-
+// retryable and deliberately carries no terminal refusal receipt.
+func partitionBoundaryFailure(
+	ctx context.Context,
+	err error,
+	stage pipelinerefusal.Stage,
+) error {
+	failure := deterministicPartitionFailure(ctx, err)
+	if failure == nil || ctx.Err() != nil || errors.Is(failure, context.Canceled) ||
+		errors.Is(failure, context.DeadlineExceeded) {
+		return failure
+	}
+	return extractionBoundaryFailure(failure, stage)
 }
 
 func (executor *EvidencePartitionExecutor) extractor(domain, version string) (registeredExtractor, error) {

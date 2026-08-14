@@ -15,6 +15,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -44,6 +45,34 @@ func TestPartitionTimingReportIsBoundedAndSourceFree(t *testing.T) {
 	invalid.TotalMS = 1
 	if ValidatePartitionTimingReport(invalid) == nil {
 		t.Fatal("phase durations larger than total were accepted")
+	}
+}
+
+func TestPartitionTimingReportV1CompatibilityAndV2TerminalReceipt(t *testing.T) {
+	base := PartitionTimingReport{
+		Schema:     PartitionTimingSchemaV1,
+		Identity:   "sha256:" + strings.Repeat("a", 64),
+		Generation: "sha256:" + strings.Repeat("b", 64),
+		Outcome:    "terminal_refusal", TotalMS: 1,
+	}
+	if err := ValidatePartitionTimingReport(base); err != nil {
+		t.Fatalf("historical v1 report = %v", err)
+	}
+	base.Schema = PartitionTimingSchemaV2
+	if ValidatePartitionTimingReport(base) == nil {
+		t.Fatal("v2 terminal report without a refusal was accepted")
+	}
+	base.RefusalStage = pipelinerefusal.StageEvidenceStaging
+	base.RefusalGenerationKind = pipelinerefusal.GenerationExtractionDomain
+	base.RefusalClassification = pipelinerefusal.ClassificationLimit
+	base.RefusalDimension = pipelinerefusal.DimensionFacts
+	base.RefusalObserved, base.RefusalLimit = 2, 1
+	if err := ValidatePartitionTimingReport(base); err != nil {
+		t.Fatalf("v2 terminal report = %v", err)
+	}
+	base.Outcome = "failed"
+	if ValidatePartitionTimingReport(base) == nil {
+		t.Fatal("non-terminal report with refusal fields was accepted")
 	}
 }
 
@@ -532,12 +561,16 @@ func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("8", 64), true)
 	runtime, state, _, _, publisher, _, domain := newRuntimeFixture(t, plan)
+	var timing PartitionTimingReport
+	runtime.TimingReports = func(raw []byte) error { return json.Unmarshal(raw, &timing) }
 	runtime.Executor = terminalExecutor{}
 	generation, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = runtime.Handle(t.Context(), currentChunk(t, state, plan.Repository, 0))
+	chunk := currentChunk(t, state, plan.Repository, 0)
+	chunk.Identity = "sha256:" + strings.Repeat("c", 64)
+	err = runtime.Handle(t.Context(), chunk)
 	if !store.IsTerminal(err) {
 		t.Fatalf("terminal handle = %v", err)
 	}
@@ -549,6 +582,19 @@ func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testin
 	}
 	if publisher.calls != 0 {
 		t.Fatalf("terminal root publication calls = %d", publisher.calls)
+	}
+	for range 50 {
+		if timing.Outcome != "" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if timing.Outcome != "terminal_refusal" || timing.Schema != PartitionTimingSchemaV2 ||
+		timing.RefusalStage != pipelinerefusal.StageUnknown ||
+		timing.RefusalGenerationKind != pipelinerefusal.GenerationUnknown ||
+		timing.RefusalClassification != pipelinerefusal.ClassificationUnknown ||
+		timing.RefusalDimension != pipelinerefusal.DimensionUnknown {
+		t.Fatalf("terminal timing = %+v", timing)
 	}
 }
 

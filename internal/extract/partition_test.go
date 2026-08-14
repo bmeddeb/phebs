@@ -16,6 +16,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -168,8 +169,13 @@ func TestEvidencePartitionExecutorStagesOnlyBoundedT407Chunks(t *testing.T) {
 	}
 	if _, err := inflatedExecutor.ExecutePartition(
 		t.Context(), plan, 0, lease, inflatedRun.ID,
-	); err == nil || !strings.Contains(err.Error(), "exceeds its partition reservation") {
+	); err == nil {
 		t.Fatalf("inflated reference accounting error = %v", err)
+	} else if receipt, ok := pipelinerefusal.From(err); !ok ||
+		receipt.Stage != pipelinerefusal.StageEvidenceStaging ||
+		receipt.GenerationKind != pipelinerefusal.GenerationExtractionDomain ||
+		receipt.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("inflated reference refusal = %+v, found=%t", receipt, ok)
 	}
 }
 
@@ -202,8 +208,36 @@ func TestEvidencePartitionExecutorReturnsClosedTerminalResult(t *testing.T) {
 		result.Reason != "deterministic_refusal" || result.Totals != (candidate.DomainResultTotals{}) {
 		t.Fatalf("terminal executor result = %+v, %v", result, err)
 	}
+	if receipt, ok := pipelinerefusal.From(err); !ok ||
+		receipt.Stage != pipelinerefusal.StageExtractorExecution ||
+		receipt.GenerationKind != pipelinerefusal.GenerationExtractionDomain ||
+		receipt.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("terminal executor refusal = %+v, found=%t", receipt, ok)
+	}
 	if _, err := candidate.BuildPartitionResult(plan, 0, result); err != nil {
 		t.Fatalf("terminal result does not close under T40.9: %v", err)
+	}
+}
+
+func TestPartitionBoundaryFailurePreservesMeasuredStagingLimits(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		dimension pipelinerefusal.Dimension
+	}{
+		{name: "facts", dimension: pipelinerefusal.DimensionFacts},
+		{name: "encoded bytes", dimension: pipelinerefusal.DimensionGenerationEncodedBytes},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			measured := pipelinerefusal.Measure(errors.New("private"), test.dimension, 2, 1)
+			err := partitionBoundaryFailure(t.Context(), measured, pipelinerefusal.StageEvidenceStaging)
+			receipt, ok := pipelinerefusal.From(err)
+			if !store.IsTerminal(err) || !ok || receipt.Stage != pipelinerefusal.StageEvidenceStaging ||
+				receipt.GenerationKind != pipelinerefusal.GenerationExtractionDomain ||
+				receipt.Classification != pipelinerefusal.ClassificationLimit ||
+				receipt.Dimension != test.dimension || receipt.Observed != 2 || receipt.Limit != 1 {
+				t.Fatalf("partition refusal = %+v, found=%t error=%v", receipt, ok, err)
+			}
+		})
 	}
 }
 

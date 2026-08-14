@@ -835,6 +835,20 @@ closed refusal tuple and independently review whether it requires corpus
 reduction or a production correction. No deadline, concurrency, limit, or
 topology change is authorized.
 
+Partition-refusal attribution readiness (2026-08-13): the production executor
+now closes deterministic partition failures at domain inventory, extractor
+execution, or evidence staging, including the existing encoded-byte staging
+reservation. Diagnostics-enabled partition timing v2 projects the six closed
+refusal scalars only on terminal attempts while accepting retained v1 reports;
+the source-free aggregate retains at most 32 canonical summaries plus an
+explicit unknown count and proves complete terminal-attempt accounting. A
+settled schedule with failed partitions stops immediately as unclassified even
+after ordinary-job collection, while exact failed/canceled jobs retain
+precedence and active work remains pending. No limit, deadline, concurrency,
+topology, resource ceiling, oracle, lifecycle policy, or release posture moved.
+The next prerequisite is a fresh committed-source semantic fit diagnostic and
+independent reduce-or-correct review; Take 19 remains unfrozen.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

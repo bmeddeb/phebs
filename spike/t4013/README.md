@@ -1188,6 +1188,26 @@ next readiness change must retain and validate the closed per-partition refusal
 tuple in the ordinary typed extraction projection and the source-free timing
 record, then independently review the resulting reduce-or-correct decision.
 
+That attribution prerequisite is now implemented without changing a bound.
+The production partition executor closes deterministic failures at domain
+inventory, extractor execution, or evidence staging before returning a
+terminal partition result. Diagnostics-enabled partition timing v2 carries the
+six closed refusal scalars only on terminal attempts, while historical v1
+reports remain valid and contribute to an explicit unknown count. The retained
+source-free aggregate has at most 32 canonical refusal summaries and must prove
+that summarized plus unknown refusals equal every terminal attempt; malformed,
+duplicate, mixed-limit, and partial summaries fail validation. The inspector
+also stops immediately when an extraction schedule is settled with failures,
+even if lifecycle already collected the ordinary job row, while a failed or
+canceled exact job retains precedence and an active schedule remains pending.
+
+The change adds no inspection request or corpus read and does not alter the
+five-minute partition deadline, worker concurrency, production limits,
+topology, resource ceilings, or gate oracle. Take 19 is still not ready to
+freeze: the next action is one fresh exact semantic fit diagnostic at committed
+source, followed by independent review of the closed refusal summary and a
+governed reduce-or-correct decision.
+
 ```sh
 cd ~/phebs
 
