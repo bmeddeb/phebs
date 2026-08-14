@@ -994,6 +994,18 @@ must preserve historical/recovery behavior, pass steady-state-cost and
 independent review, and change no deadline, timeout, concurrency, topology, or
 production bound. Take 19 remains unfrozen and Epic 41 remains blocked.
 
+Focused iteration ladder (2026-08-14): use two opt-in diagnostics before
+paying for another exact semantic fit. The whole-repository shape diagnostic
+reduces the failure to five source-free Proto records in one shared member and
+currently returns `[5]` instead of the intended `[2,2,1]` in 0.18 seconds. The
+writer diagnostic uses the production disk-backed store, exact Kafka v3
+reservations and actual 131,072-fact/262,144-row/131,072-reference population,
+512 production-sized chunks, and two workers; it attributes append versus
+accounting requests and stops at the first failure. Ordinary CI skips both.
+These are edit-loop gates, not scale evidence: after they pass, historical,
+recovery, maximum-shape, steady-state-cost, integrated exact-fit, and
+independent-review gates remain required. No freeze or rerun is authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

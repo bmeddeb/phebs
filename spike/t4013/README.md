@@ -1388,6 +1388,47 @@ review that correction together with the writer correction before one new
 exact fit. Take 19 remains unfrozen and no ceremony command below is
 authorized.
 
+### Focused failure-point iteration
+
+Use these opt-in gates while implementing the two corrections; ordinary CI
+skips them. The whole-repository shape check uses five source-free Proto
+records in one shared candidate member, so it isolates the missing execution
+subrange contract without authoring the ceremony corpus:
+
+```sh
+T40R1_PARTITION_SHAPE_DIAGNOSTIC=1 \
+  go test ./internal/candidate \
+  -run '^TestT40R1WholeRepositoryPartitionShapeDiagnostic$' \
+  -count=1 -v
+```
+
+The current baseline fails in about 0.18 seconds with one `[5]` partition
+instead of `[2,2,1]`. The focused gate should become green only through the
+separately versioned whole-repository execution-subrange contract; do not
+globally repack candidate members or broaden the focused-local identity.
+
+The writer check opens the production disk-backed supervised store and stages
+the measured Kafka actual population—32 emitting partitions, 131,072 facts,
+262,144 rows, and 131,072 references—as 512 production-sized chunks under two
+workers. It records bounded append/accounting phase counts and duration
+buckets, exact completed charges, first request failure class, Go allocation,
+and SurrealDB identity/RSS, then cancels at the first request failure:
+
+```sh
+T40R1_KAFKA_WRITER_DIAGNOSTIC=1 \
+  go test ./internal/store \
+  -run '^TestT40R1KafkaWriterFailurePointDiagnostic$' \
+  -count=1 -v -timeout=90m
+```
+
+Set `T40R1_KAFKA_WRITER_RESULTS_PATH` to an absolute path only when retaining
+the source-free JSON summary for review. This test bypasses repository
+authoring, indexing, observation, unrelated extraction domains, scheduler
+retries, relationship publication, backup, and product replay; it does not
+replace historical/recovery/maximum-shape tests or the integrated exact
+semantic fit. Run that full fit only after both focused gates and their
+steady-state-cost review pass.
+
 ```sh
 cd ~/phebs
 

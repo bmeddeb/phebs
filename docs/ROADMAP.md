@@ -1024,6 +1024,14 @@ catalog, relationship, or correctness authority.
   whole-repository execution-partition subrange. Preserve deadlines,
   concurrency, global candidate packing, topology, and historical authority;
   independently review both corrections before a new exact fit.
+- The correction loop now has two opt-in failure-point gates. A five-record
+  whole-repository Proto fixture reproduces the missing execution subranges in
+  0.18 seconds, while a store-only Kafka diagnostic retains the exact actual
+  131,072-fact population, 512 production chunks, v3 reservations, and two
+  workers but stops on the first append/accounting request failure. Ordinary
+  CI skips both. They remove unrelated setup and downstream work from local
+  iteration; they do not replace historical/recovery/maximum-shape checks, the
+  integrated exact semantic fit, independent review, or a separate freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
