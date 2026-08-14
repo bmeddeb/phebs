@@ -924,6 +924,20 @@ A/B/A-return cold/restore, lifecycle, and authorized queries in 283.90 seconds
 scan, limit, concurrency, deadline, topology, or lifecycle-policy change. The
 next action is independent review; freeze and execution remain separate.
 
+Corrected semantic fit result (2026-08-14): do not freeze Take 19. At exact
+commit `1dcf8daf179eff17bd9e74e8b8a0eb65d60bcbae`, observation completed and
+extraction entered at 1,455,004 ms, but the extraction job failed after two
+identical attempts before any of the expected 272 partitions materialized.
+Source inspection closes the mechanism: result-plan v3 admits Kafka
+reservations of 262,144 facts, 524,288 rows, and 262,144 references, while
+the store-side partitioned-run and published-domain envelopes still reject
+anything above the original v2 maxima of 49,152, 98,304, and 98,304. Peak RSS
+and allocation remained below ceilings and cleanup destroyed private custody.
+The store envelope must become contract/domain-versioned so only
+`kafka-producer` v3 can use the measured maxima and historical v1/v2 controls
+remain exact. Independent review and a new complete semantic fit are required;
+Take 19 remains unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1322,6 +1322,32 @@ fresh committed-source exact semantic diagnostic proves complete extraction
 and relationship convergence with no refusal or deadline exhaustion. Take 19
 is still not ready to freeze.
 
+The corrected semantic fit at exact commit
+`1dcf8daf179eff17bd9e74e8b8a0eb65d60bcbae` stopped before partition
+scheduling at 1,717,012 ms with `extraction_job_terminal`. Observation
+completed, extraction entered at 1,455,004 ms, the extraction job exhausted
+two attempts, and no partition or timing report materialized. Peak RSS was
+1,608,663,040 bytes and allocated data was 2,224,709,632 bytes, below the
+unchanged ceilings. Cleanup removed the exact fixture, derived data,
+credentials, and children.
+
+Exact-source inspection closes the pre-schedule cause. The reconciler passes
+the admitted v3 Kafka reservations to `BeginPartitionedExtractionRun`, but the
+store's opaque partition-run and published-domain envelopes still accept only
+the original v2 maxima: 49,152 facts, 98,304 rows, and 98,304 references. The
+v3 Kafka request is therefore rejected before a run identity or schedule can
+exist; its retry is bit-identical. This is an incomplete propagation of the
+already measured versioned contract, not an executor, deadline, or resource
+failure.
+
+Do not freeze Take 19. The correction must version the store-side partitioned
+run/publication envelope for `kafka-producer` v3 while retaining the original
+v1/v2 maxima for every historical plan and all other domains. Focused tests
+must reject v3-sized limits outside that exact domain/contract and preserve
+historical persisted controls. After independent review, rerun the exact
+semantic fit; only complete extraction and relationship convergence can
+authorize the freeze.
+
 ```sh
 cd ~/phebs
 

@@ -986,6 +986,14 @@ catalog, relationship, or correctness authority.
   controlled diagnostic that combines the measured Kafka output contract and
   domain-specific smaller IDL member packing. Do not raise the five-minute
   deadline or repack every domain globally. Take 19 remains unfrozen.
+- The first corrected-contract semantic fit at `1dcf8daf` stopped before
+  scheduling: observation completed, extraction entered at 1,455,004 ms, the
+  exact job failed twice, and zero of the expected 272 partitions materialized.
+  Result-plan v3 reached the store with measured Kafka reservations, but the
+  store partitioned-run/publication envelope still enforces v2's
+  49,152-fact/98,304-row/98,304-reference maxima. Version that envelope only
+  for Kafka v3, preserve historical v1/v2 controls, independently review it,
+  and rerun the exact fit. Take 19 and Epic 41 remain blocked.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
