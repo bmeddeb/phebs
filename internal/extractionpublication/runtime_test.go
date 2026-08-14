@@ -29,6 +29,7 @@ func TestPartitionTimingReportIsBoundedAndSourceFree(t *testing.T) {
 		Schema:     PartitionTimingSchema,
 		Identity:   "sha256:" + strings.Repeat("a", 64),
 		Generation: "sha256:" + strings.Repeat("b", 64),
+		Domain:     "kafka-producer",
 		Attempt:    2, Outcome: "completed",
 		SourceAcquireMS: 10, ExecutorMS: 20, ResultMS: 5, AssemblyMS: 3, TotalMS: 40,
 	}
@@ -73,6 +74,40 @@ func TestPartitionTimingReportV1CompatibilityAndV2TerminalReceipt(t *testing.T) 
 	base.Outcome = "failed"
 	if ValidatePartitionTimingReport(base) == nil {
 		t.Fatal("non-terminal report with refusal fields was accepted")
+	}
+
+	v3 := PartitionTimingReport{
+		Schema: PartitionTimingSchemaV3, Identity: base.Identity, Generation: base.Generation,
+		Domain: "grpc-caller", Outcome: "failed", FailureClass: PartitionFailureDeadline,
+		TotalMS: 300_000, ExecutorMS: 300_000,
+	}
+	if err := ValidatePartitionTimingReport(v3); err != nil {
+		t.Fatalf("v3 deadline report = %v", err)
+	}
+	v3.FailureClass = "private-error"
+	if ValidatePartitionTimingReport(v3) == nil {
+		t.Fatal("v3 arbitrary failure class was accepted")
+	}
+	v3.FailureClass = PartitionFailureOther
+	v3.Domain = "private/path"
+	if ValidatePartitionTimingReport(v3) == nil {
+		t.Fatal("v3 source-shaped domain was accepted")
+	}
+}
+
+func TestPartitionTimingFailureClassificationIsClosed(t *testing.T) {
+	for _, test := range []struct {
+		err  error
+		want string
+	}{
+		{context.DeadlineExceeded, PartitionFailureDeadline},
+		{fmt.Errorf("wrapped: %w", context.DeadlineExceeded), PartitionFailureDeadline},
+		{context.Canceled, PartitionFailureCanceled},
+		{errors.New("private detail"), PartitionFailureOther},
+	} {
+		if got := classifyPartitionTimingFailure(test.err); got != test.want {
+			t.Fatalf("failure class = %q, want %q", got, test.want)
+		}
 	}
 }
 
@@ -533,6 +568,15 @@ func TestRuntimeZeroWorkDomainPublishesWithoutSchedulerLease(t *testing.T) {
 func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("2", 64), true)
 	runtime, state, source, executor, _, _, domain := newRuntimeFixture(t, plan)
+	var timings []PartitionTimingReport
+	runtime.TimingReports = func(raw []byte) error {
+		var timing PartitionTimingReport
+		if err := json.Unmarshal(raw, &timing); err != nil {
+			return err
+		}
+		timings = append(timings, timing)
+		return nil
+	}
 	_, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
 	if err != nil {
 		t.Fatal(err)
@@ -540,7 +584,9 @@ func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 	executor.wait = true
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if err := runtime.Handle(ctx, currentChunk(t, state, plan.Repository, 0)); !errors.Is(err, context.Canceled) {
+	canceledChunk := currentChunk(t, state, plan.Repository, 0)
+	canceledChunk.Identity = "sha256:" + strings.Repeat("c", 64)
+	if err := runtime.Handle(ctx, canceledChunk); !errors.Is(err, context.Canceled) {
 		t.Fatalf("canceled handle error = %v", err)
 	}
 	status, err := runtime.Status(t.Context(), plan.Repository, digestForPlanSet(plan.Repository, plan.Digest))
@@ -549,12 +595,18 @@ func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 	}
 	executor.wait = false
 	chunk := currentChunk(t, state, plan.Repository, 0)
+	chunk.Identity = "sha256:" + strings.Repeat("d", 64)
 	chunk.LeaseToken = "lost"
 	if err := runtime.Handle(t.Context(), chunk); !errors.Is(err, store.ErrGenerationLeaseLost) {
 		t.Fatalf("lost lease error = %v", err)
 	}
 	if acquired, released := source.counts(); acquired != 1 || released != 1 {
 		t.Fatalf("lease cleanup = %d/%d", acquired, released)
+	}
+	if len(timings) != 2 || timings[0].Domain != plan.Domain ||
+		timings[0].FailureClass != PartitionFailureCanceled ||
+		timings[1].FailureClass != PartitionFailureOther {
+		t.Fatalf("closed failure timings = %+v", timings)
 	}
 }
 
@@ -589,7 +641,8 @@ func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testin
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if timing.Outcome != "terminal_refusal" || timing.Schema != PartitionTimingSchemaV2 ||
+	if timing.Outcome != "terminal_refusal" || timing.Schema != PartitionTimingSchemaV3 ||
+		timing.Domain != plan.Domain ||
 		timing.RefusalStage != pipelinerefusal.StageUnknown ||
 		timing.RefusalGenerationKind != pipelinerefusal.GenerationUnknown ||
 		timing.RefusalClassification != pipelinerefusal.ClassificationUnknown ||

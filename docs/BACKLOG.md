@@ -878,6 +878,22 @@ complete Kafka result's facts, rows, references, canonical bytes, and encoded
 bytes, preserve historical v1/v2 validation, and pass independent review.
 Take 19 remains unfrozen and Epic 41 remains blocked.
 
+All-dimension and deadline-attribution prerequisite (2026-08-14): the retained
+source-free Kafka replay now binds the frozen author to the real producer
+extractor and production chunk encoder. Exact output is 131,072 facts, 262,144
+rows, 131,072 references, and 101,386,432 canonical/encoded bytes; emitting
+partitions carry 4,096 facts, 8,192 rows, 4,096 references, and
+2,873,414–3,463,238 bytes. Because the unchanged allocator reserves across all
+64 candidate partitions, the measured minimum equal reservations are 262,144
+facts, 524,288 rows, 262,144 references, and 256 MiB canonical/encoded, with a
+separate unchanged 64-MiB per-partition backstop. No limit changed. The prior
+fit also leaves seven exhausted nonterminal partitions after subtracting its
+32 closed refusals, with a 300,002-ms executor maximum at the five-minute
+deadline. Timing v3 now retains only domain, closed deadline/canceled/other
+class, and fixed duration buckets while preserving v1/v2. A fresh exact
+committed-source diagnostic must seal that distribution before any output
+contract or partition-shape correction; Take 19 remains unfrozen.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

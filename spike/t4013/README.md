@@ -1247,6 +1247,32 @@ canonical bytes, and encoded bytes for the complete Kafka result, preserve
 historical v1/v2 plan validation, record a reduce-first decision, and pass
 independent review. Take 19 remains unfrozen.
 
+The follow-up all-dimension replay is retained in
+`take19-kafka-result-measurement.json`. It uses the frozen baseline-A author,
+the real `kafka-producer` extractor, and the production 256-fact chunk encoder.
+Across the 32 emitting partitions it measures exactly 131,072 facts, 262,144
+rows, 131,072 references, and 101,386,432 canonical/encoded bytes. Each
+emitting partition carries 4,096 facts, 8,192 rows, 4,096 references, and
+2,873,414–3,463,238 bytes. Since reservations are currently spread over all
+64 Kafka candidate partitions, an equal allocator needs 262,144 facts,
+524,288 rows, 262,144 references, and 256 MiB canonical/encoded to admit that
+shape, while the 64-MiB per-partition byte backstop can remain separate and
+unchanged. These numbers do not change a production bound or authorize a
+freeze.
+
+The prior fit also proves a distinct unresolved population: 39 settled failed
+partitions minus 32 terminal refusals leaves seven exhausted nonterminal
+partitions, and the maximum executor wall was 300,002 ms against the exact
+five-minute context. The aggregate cannot prove which domain failed or whether
+every one was a deadline. Timing v3 therefore retains only domain, a closed
+`deadline`/`canceled`/`other` class, and six fixed executor-duration buckets;
+it carries no repository, path, content, partition identity, or raw error.
+V1/v2 reports remain valid, and mixed history is assigned to an explicit
+unknown bucket. Run one fresh exact committed-source semantic diagnostic with
+these diagnostics before selecting a v3 output contract, optimization, or
+partition-specific re-shard. Do not lower the shared candidate-v4 4,096-record
+packing limit without that attribution. Take 19 remains unfrozen.
+
 ```sh
 cd ~/phebs
 

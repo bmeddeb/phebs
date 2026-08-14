@@ -761,6 +761,38 @@ func goContent(profile Profile, family string, ordinal uint64, changed bool) ([]
 	return padded(prefix, profile.Shape.GoFileBytes)
 }
 
+// FrozenSemanticGoFixture returns one exact baseline-A Go input from the
+// retained semantic author. It is intentionally narrow: readiness diagnostics
+// can measure real extractor output without copying the frozen templates or
+// materializing the complete Git repository.
+func FrozenSemanticGoFixture(profile Profile, family string, ordinal uint64) (string, []byte, error) {
+	if profile.Name != SemanticProfileName || profile.Kind != "semantic" || profile.Scale != "frozen" {
+		return "", nil, errors.New("T40.1 semantic Go fixture requires the frozen semantic profile")
+	}
+	start := uint64(0)
+	for _, candidate := range profile.Families {
+		if candidate.Plane != "go" {
+			continue
+		}
+		end, addErr := add(start, candidate.Inputs)
+		if addErr != nil {
+			return "", nil, addErr
+		}
+		if candidate.Name == family {
+			if ordinal < start || ordinal >= end {
+				return "", nil, errors.New("T40.1 semantic Go fixture ordinal is outside its family")
+			}
+			content, contentErr := goContent(profile, family, ordinal, false)
+			if contentErr != nil {
+				return "", nil, contentErr
+			}
+			return fmt.Sprintf("semantic/go/b%03d/f%06d.go", ordinal/1_024, ordinal), content, nil
+		}
+		start = end
+	}
+	return "", nil, errors.New("T40.1 semantic Go fixture family is unknown")
+}
+
 func idlContent(profile Profile, family TemplateFamily, ordinal uint64) ([]byte, error) {
 	var prefix string
 	switch family.Name {

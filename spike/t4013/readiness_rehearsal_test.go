@@ -103,7 +103,7 @@ func TestExactSemanticColdTiming(t *testing.T) {
 		peakRSS <= frozenSafetyV14.MaximumPeakRSSBytes &&
 		allocated <= frozenSafetyV14.MaximumDataAllocatedBytes
 	fit := semanticColdTimingFit{
-		Schema:                         "t4013-take19-semantic-fit-v2",
+		Schema:                         "t4013-take19-semantic-fit-v3",
 		SourceCommit:                   sourceCommit,
 		Profile:                        profile.Name,
 		Diagnostic:                     "TestExactSemanticColdTiming",

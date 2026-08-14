@@ -42,7 +42,12 @@ type Runtime struct {
 const (
 	PartitionTimingSchemaV1 = "phebs-extraction-partition-timing-v1"
 	PartitionTimingSchemaV2 = "phebs-extraction-partition-timing-v2"
-	PartitionTimingSchema   = PartitionTimingSchemaV2
+	PartitionTimingSchemaV3 = "phebs-extraction-partition-timing-v3"
+	PartitionTimingSchema   = PartitionTimingSchemaV3
+
+	PartitionFailureDeadline = "deadline"
+	PartitionFailureCanceled = "canceled"
+	PartitionFailureOther    = "other"
 )
 
 // PartitionTimingReport is a source-free diagnostic for one scheduler
@@ -52,8 +57,10 @@ type PartitionTimingReport struct {
 	Schema                string                         `json:"schema"`
 	Identity              string                         `json:"identity"`
 	Generation            string                         `json:"generation"`
+	Domain                string                         `json:"domain,omitempty"`
 	Attempt               int                            `json:"attempt"`
 	Outcome               string                         `json:"outcome"`
+	FailureClass          string                         `json:"failure_class,omitempty"`
 	Reused                bool                           `json:"reused"`
 	SourceAcquireMS       int64                          `json:"source_acquire_ms"`
 	ExecutorMS            int64                          `json:"executor_ms"`
@@ -69,7 +76,8 @@ type PartitionTimingReport struct {
 }
 
 func ValidatePartitionTimingReport(report PartitionTimingReport) error {
-	if (report.Schema != PartitionTimingSchemaV1 && report.Schema != PartitionTimingSchemaV2) ||
+	if (report.Schema != PartitionTimingSchemaV1 && report.Schema != PartitionTimingSchemaV2 &&
+		report.Schema != PartitionTimingSchemaV3) ||
 		!validDigest(report.Identity) ||
 		!validDigest(report.Generation) || report.Attempt < 0 ||
 		(report.Outcome != "completed" && report.Outcome != "failed" &&
@@ -82,11 +90,18 @@ func ValidatePartitionTimingReport(report PartitionTimingReport) error {
 	hasRefusal := report.RefusalStage != "" || report.RefusalGenerationKind != "" ||
 		report.RefusalClassification != "" || report.RefusalDimension != "" ||
 		report.RefusalObserved != 0 || report.RefusalLimit != 0
-	if report.Schema == PartitionTimingSchemaV1 {
-		if hasRefusal {
+	if report.Schema == PartitionTimingSchemaV1 || report.Schema == PartitionTimingSchemaV2 {
+		if report.Domain != "" || report.FailureClass != "" ||
+			report.Schema == PartitionTimingSchemaV1 && hasRefusal {
 			return invalid("v1 partition timing refusal")
 		}
-		return nil
+		if report.Schema == PartitionTimingSchemaV1 {
+			return nil
+		}
+	} else if !validTimingDomain(report.Domain) ||
+		report.Outcome == "failed" && !validPartitionFailureClass(report.FailureClass) ||
+		report.Outcome != "failed" && report.FailureClass != "" {
+		return invalid("v3 partition timing classification")
 	}
 	if report.Outcome != "terminal_refusal" {
 		if hasRefusal {
@@ -99,6 +114,34 @@ func ValidatePartitionTimingReport(report PartitionTimingReport) error {
 		return invalid("terminal partition timing refusal")
 	}
 	return nil
+}
+
+func validTimingDomain(value string) bool {
+	if value == "" || len(value) > 128 {
+		return false
+	}
+	for _, current := range value {
+		if (current >= 'a' && current <= 'z') || (current >= '0' && current <= '9') || current == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func validPartitionFailureClass(value string) bool {
+	return value == PartitionFailureDeadline || value == PartitionFailureCanceled || value == PartitionFailureOther
+}
+
+func classifyPartitionTimingFailure(err error) string {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return PartitionFailureDeadline
+	case errors.Is(err, context.Canceled):
+		return PartitionFailureCanceled
+	default:
+		return PartitionFailureOther
+	}
 }
 
 func (report PartitionTimingReport) refusalReceipt() pipelinerefusal.Receipt {
@@ -688,7 +731,8 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		started = time.Now()
 		timing = PartitionTimingReport{
 			Schema: PartitionTimingSchema, Identity: chunk.Identity,
-			Generation: chunk.Generation, Attempt: chunk.Attempt, Outcome: "failed",
+			Generation: chunk.Generation, Domain: "unknown",
+			Attempt: chunk.Attempt, Outcome: "failed",
 		}
 	}
 	defer func() {
@@ -698,6 +742,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		timing.TotalMS = time.Since(started).Milliseconds()
 		if retErr == nil {
 			timing.Outcome = "completed"
+		}
+		if timing.Outcome == "failed" {
+			timing.FailureClass = classifyPartitionTimingFailure(retErr)
 		}
 		if timing.Outcome == "terminal_refusal" {
 			timing.setRefusal(timingRefusal)
@@ -716,6 +763,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	descriptor, localOrdinal, err := domainForOffset(generation, int(chunk.Offset))
 	if err != nil {
 		return err
+	}
+	if timingEnabled {
+		timing.Domain = descriptor.Domain
 	}
 	domain, err := runtime.openDomainPlan(directory, descriptor)
 	if err != nil {

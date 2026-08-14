@@ -1,0 +1,58 @@
+{
+  "schema": "t4013-take19-kafka-result-measurement-v1",
+  "profile": "semantic-262144-v1",
+  "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+  "domain": "kafka-producer",
+  "extractor_version": "1.2.0",
+  "candidate_partitions": 64,
+  "emitting_partitions": 32,
+  "records_per_partition": 4096,
+  "minimum_partition": {
+    "facts": 4096,
+    "rows": 8192,
+    "references": 4096,
+    "canonical_bytes": 2873414,
+    "encoded_bytes": 2873414
+  },
+  "maximum_partition": {
+    "facts": 4096,
+    "rows": 8192,
+    "references": 4096,
+    "canonical_bytes": 3463238,
+    "encoded_bytes": 3463238
+  },
+  "exact_output": {
+    "facts": 131072,
+    "rows": 262144,
+    "references": 131072,
+    "canonical_bytes": 101386432,
+    "encoded_bytes": 101386432
+  },
+  "current_limits": {
+    "partitions": 490,
+    "member_partitions": 489,
+    "typed_partitions": 1,
+    "facts": 49152,
+    "rows": 98304,
+    "references": 98304,
+    "canonical_bytes": 67108864,
+    "encoded_bytes": 67108864,
+    "member_bytes": 67108864,
+    "aggregate_member_bytes": 1073741824,
+    "members": 489,
+    "inventory_entries": 980,
+    "inventory_bytes": 8028160,
+    "plan_bytes": 4194304,
+    "root_bytes": 4194304
+  },
+  "required_equal_reservation": {
+    "facts": 262144,
+    "rows": 524288,
+    "references": 262144,
+    "canonical_bytes": 268435456,
+    "encoded_bytes": 268435456
+  },
+  "per_partition_byte_backstop": 67108864,
+  "establishes_scale_pass": false,
+  "authorizes_freeze": false
+}

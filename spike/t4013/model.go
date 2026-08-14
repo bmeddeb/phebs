@@ -269,11 +269,14 @@ type ExtractionTimingObservation struct {
 	SchedulerMaxMS       int64                      `json:"scheduler_max_ms"`
 	Refusals             []ExtractionRefusalSummary `json:"refusals,omitempty"`
 	UnknownRefusals      int64                      `json:"unknown_refusals,omitempty"`
+	DomainTimings        []ExtractionDomainTiming   `json:"domain_timings,omitempty"`
 }
 
 const (
 	extractionTimingSchemaV2      = "t4013-extraction-timing-v2"
+	extractionTimingSchemaV3      = "t4013-extraction-timing-v3"
 	maxExtractionRefusalSummaries = 32
+	maxExtractionTimingDomains    = 65 // 64 production domains plus one historical unknown bucket.
 )
 
 // ExtractionRefusalSummary is a bounded, source-free rollup of terminal
@@ -286,6 +289,31 @@ type ExtractionRefusalSummary struct {
 	Limit          int64  `json:"limit"`
 	MaxObserved    int64  `json:"max_observed"`
 	Count          int64  `json:"count"`
+}
+
+// ExtractionDomainTiming retains a bounded per-domain attempt distribution.
+// Fixed wall buckets and closed failure classes make a deadline population
+// distinguishable without retaining partition identity or raw errors.
+type ExtractionDomainTiming struct {
+	Domain             string `json:"domain"`
+	Attempts           int64  `json:"attempts"`
+	Completed          int64  `json:"completed"`
+	Failed             int64  `json:"failed"`
+	TerminalRefusals   int64  `json:"terminal_refusals"`
+	Reused             int64  `json:"reused"`
+	DeadlineFailures   int64  `json:"deadline_failures"`
+	CanceledFailures   int64  `json:"canceled_failures"`
+	OtherFailures      int64  `json:"other_failures"`
+	UnknownFailures    int64  `json:"unknown_failures"`
+	ExecutorLT1S       int64  `json:"executor_lt_1s"`
+	ExecutorLT10S      int64  `json:"executor_lt_10s"`
+	ExecutorLT60S      int64  `json:"executor_lt_60s"`
+	ExecutorLT240S     int64  `json:"executor_lt_240s"`
+	ExecutorLT300S     int64  `json:"executor_lt_300s"`
+	ExecutorGE300S     int64  `json:"executor_ge_300s"`
+	ExecutorUnbucketed int64  `json:"executor_unbucketed"`
+	ExecutorTotalMS    int64  `json:"executor_total_ms"`
+	ExecutorMaxMS      int64  `json:"executor_max_ms"`
 }
 
 func extractionRefusalSummaryKey(value ExtractionRefusalSummary) string {
@@ -1280,12 +1308,13 @@ func validateExtractionTiming(value ExtractionTimingObservation) error {
 		return errors.New("T40.13 extraction timing aggregate is invalid")
 	}
 	if value.Schema == "" {
-		if len(value.Refusals) != 0 || value.UnknownRefusals != 0 {
+		if len(value.Refusals) != 0 || value.UnknownRefusals != 0 || len(value.DomainTimings) != 0 {
 			return errors.New("T40.13 legacy extraction timing acquired refusal details")
 		}
 		return nil
 	}
-	if value.Schema != extractionTimingSchemaV2 || value.UnknownRefusals < 0 ||
+	if (value.Schema != extractionTimingSchemaV2 && value.Schema != extractionTimingSchemaV3) ||
+		value.UnknownRefusals < 0 ||
 		len(value.Refusals) > maxExtractionRefusalSummaries {
 		return errors.New("T40.13 extraction refusal aggregate is invalid")
 	}
@@ -1314,7 +1343,71 @@ func validateExtractionTiming(value ExtractionTimingObservation) error {
 	if refusalCount != value.TerminalRefusals {
 		return errors.New("T40.13 extraction refusal aggregate is incomplete")
 	}
+	if value.Schema == extractionTimingSchemaV2 {
+		if len(value.DomainTimings) != 0 {
+			return errors.New("T40.13 v2 extraction timing acquired domain attribution")
+		}
+		return nil
+	}
+	return validateExtractionDomainTimings(value)
+}
+
+func validateExtractionDomainTimings(value ExtractionTimingObservation) error {
+	if len(value.DomainTimings) == 0 || len(value.DomainTimings) > maxExtractionTimingDomains {
+		return errors.New("T40.13 v3 extraction timing lacks bounded domain attribution")
+	}
+	var attempts, completed, failed, terminal, reused, executorTotal int64
+	executorMax := int64(0)
+	lastDomain := ""
+	for _, domain := range value.DomainTimings {
+		if !validExtractionTimingDomain(domain.Domain) ||
+			(lastDomain != "" && domain.Domain <= lastDomain) ||
+			domain.Attempts <= 0 || domain.Completed < 0 || domain.Failed < 0 ||
+			domain.TerminalRefusals < 0 || domain.Reused < 0 ||
+			domain.Completed+domain.Failed+domain.TerminalRefusals != domain.Attempts ||
+			domain.Reused > domain.Attempts ||
+			domain.DeadlineFailures < 0 || domain.CanceledFailures < 0 ||
+			domain.OtherFailures < 0 || domain.UnknownFailures < 0 ||
+			domain.DeadlineFailures+domain.CanceledFailures+domain.OtherFailures+
+				domain.UnknownFailures != domain.Failed ||
+			domain.ExecutorLT1S < 0 || domain.ExecutorLT10S < 0 || domain.ExecutorLT60S < 0 ||
+			domain.ExecutorLT240S < 0 || domain.ExecutorLT300S < 0 || domain.ExecutorGE300S < 0 ||
+			domain.ExecutorUnbucketed < 0 ||
+			domain.ExecutorLT1S+domain.ExecutorLT10S+domain.ExecutorLT60S+
+				domain.ExecutorLT240S+domain.ExecutorLT300S+domain.ExecutorGE300S+
+				domain.ExecutorUnbucketed != domain.Attempts ||
+			domain.ExecutorTotalMS < 0 || domain.ExecutorMaxMS < 0 ||
+			domain.ExecutorMaxMS > domain.ExecutorTotalMS {
+			return errors.New("T40.13 extraction domain timing is invalid")
+		}
+		lastDomain = domain.Domain
+		attempts += domain.Attempts
+		completed += domain.Completed
+		failed += domain.Failed
+		terminal += domain.TerminalRefusals
+		reused += domain.Reused
+		executorTotal += domain.ExecutorTotalMS
+		executorMax = max(executorMax, domain.ExecutorMaxMS)
+	}
+	if attempts != value.Attempts || completed != value.Completed || failed != value.Failed ||
+		terminal != value.TerminalRefusals || reused != value.Reused ||
+		executorTotal != value.ExecutorTotalMS || executorMax != value.ExecutorMaxMS {
+		return errors.New("T40.13 extraction domain timing does not reconcile")
+	}
 	return nil
+}
+
+func validExtractionTimingDomain(value string) bool {
+	if value == "" || len(value) > 128 {
+		return false
+	}
+	for _, current := range value {
+		if (current >= 'a' && current <= 'z') || (current >= '0' && current <= '9') || current == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func validateConvergenceTransitions(

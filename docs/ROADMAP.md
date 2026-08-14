@@ -967,6 +967,16 @@ catalog, relationship, or correctness authority.
   completed. Take 19 is not freeze-ready; the next step is a T40.9-owned
   all-dimension result-envelope measurement and independently reviewed
   reduce-or-correct decision, not an isolated fact-limit increase.
+- The all-dimension replay is now exact and retained: Kafka producer output is
+  131,072 facts, 262,144 rows, 131,072 references, and 101,386,432 encoded
+  bytes, with a 3,463,238-byte maximum partition. Equal reservation across all
+  64 candidate partitions requires 262,144 facts, 524,288 rows, 262,144
+  references, and 256 MiB bytes; these are measurements, not enacted bounds.
+  Seven exhausted nonterminal partitions remain independently unresolved.
+  Timing v3 closes their domain and deadline/canceled/other attribution with
+  fixed duration buckets while preserving v1/v2. Rerun that diagnostic before
+  selecting any output-contract or partition-shape change; Take 19 stays
+  unfrozen and Epic 41 stays blocked.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

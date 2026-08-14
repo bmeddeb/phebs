@@ -107,7 +107,10 @@ func addPartitionTiming(
 	if observation == nil {
 		return
 	}
-	if report.Schema == extractionpublication.PartitionTimingSchemaV2 &&
+	if report.Schema == extractionpublication.PartitionTimingSchemaV3 &&
+		observation.Schema != extractionTimingSchemaV3 {
+		upgradeExtractionTimingV3(observation)
+	} else if report.Schema == extractionpublication.PartitionTimingSchemaV2 &&
 		observation.Schema == "" {
 		// A mixed-version log remains exact: any earlier v1 terminal attempts
 		// become explicitly unknown when the first v2 report appears.
@@ -137,14 +140,115 @@ func addPartitionTiming(
 	observation.AssemblyMaxMS = max(observation.AssemblyMaxMS, report.AssemblyMS)
 	observation.RuntimeTotalMS += report.TotalMS
 	observation.RuntimeMaxMS = max(observation.RuntimeMaxMS, report.TotalMS)
+	if observation.Schema == extractionTimingSchemaV3 {
+		addExtractionDomainTiming(observation, report)
+	}
+}
+
+func upgradeExtractionTimingV3(observation *ExtractionTimingObservation) {
+	if observation == nil || observation.Schema == extractionTimingSchemaV3 {
+		return
+	}
+	if observation.Attempts > 0 {
+		observation.DomainTimings = []ExtractionDomainTiming{{
+			Domain: "unknown", Attempts: observation.Attempts,
+			Completed: observation.Completed, Failed: observation.Failed,
+			TerminalRefusals: observation.TerminalRefusals, Reused: observation.Reused,
+			UnknownFailures: observation.Failed, ExecutorUnbucketed: observation.Attempts,
+			ExecutorTotalMS: observation.ExecutorTotalMS, ExecutorMaxMS: observation.ExecutorMaxMS,
+		}}
+	}
+	if observation.Schema == "" {
+		observation.UnknownRefusals = observation.TerminalRefusals
+	}
+	observation.Schema = extractionTimingSchemaV3
+}
+
+func addExtractionDomainTiming(
+	observation *ExtractionTimingObservation,
+	report extractionpublication.PartitionTimingReport,
+) {
+	if observation == nil {
+		return
+	}
+	domain := report.Domain
+	if report.Schema != extractionpublication.PartitionTimingSchemaV3 {
+		domain = "unknown"
+	}
+	index := -1
+	for current := range observation.DomainTimings {
+		if observation.DomainTimings[current].Domain == domain {
+			index = current
+			break
+		}
+	}
+	if index < 0 {
+		if len(observation.DomainTimings) >= maxExtractionTimingDomains {
+			domain = "unknown"
+			for current := range observation.DomainTimings {
+				if observation.DomainTimings[current].Domain == domain {
+					index = current
+					break
+				}
+			}
+		}
+		if index < 0 {
+			observation.DomainTimings = append(observation.DomainTimings, ExtractionDomainTiming{Domain: domain})
+			index = len(observation.DomainTimings) - 1
+		}
+	}
+	current := &observation.DomainTimings[index]
+	current.Attempts++
+	switch report.Outcome {
+	case "completed":
+		current.Completed++
+	case "terminal_refusal":
+		current.TerminalRefusals++
+	default:
+		current.Failed++
+		switch report.FailureClass {
+		case extractionpublication.PartitionFailureDeadline:
+			current.DeadlineFailures++
+		case extractionpublication.PartitionFailureCanceled:
+			current.CanceledFailures++
+		case extractionpublication.PartitionFailureOther:
+			current.OtherFailures++
+		default:
+			current.UnknownFailures++
+		}
+	}
+	if report.Reused {
+		current.Reused++
+	}
+	switch {
+	case report.ExecutorMS < 1_000:
+		current.ExecutorLT1S++
+	case report.ExecutorMS < 10_000:
+		current.ExecutorLT10S++
+	case report.ExecutorMS < 60_000:
+		current.ExecutorLT60S++
+	case report.ExecutorMS < 240_000:
+		current.ExecutorLT240S++
+	case report.ExecutorMS < 300_000:
+		current.ExecutorLT300S++
+	default:
+		current.ExecutorGE300S++
+	}
+	current.ExecutorTotalMS += report.ExecutorMS
+	current.ExecutorMaxMS = max(current.ExecutorMaxMS, report.ExecutorMS)
+	sort.Slice(observation.DomainTimings, func(left, right int) bool {
+		return observation.DomainTimings[left].Domain < observation.DomainTimings[right].Domain
+	})
 }
 
 func addPartitionRefusal(
 	observation *ExtractionTimingObservation,
 	report extractionpublication.PartitionTimingReport,
 ) {
-	if observation == nil || report.Schema != extractionpublication.PartitionTimingSchemaV2 {
-		if observation != nil && observation.Schema == extractionTimingSchemaV2 {
+	if observation == nil || (report.Schema != extractionpublication.PartitionTimingSchemaV2 &&
+		report.Schema != extractionpublication.PartitionTimingSchemaV3) {
+		if observation != nil && (observation.Schema == extractionTimingSchemaV2 ||
+			observation.Schema == extractionTimingSchemaV3) {
 			observation.UnknownRefusals++
 		}
 		return

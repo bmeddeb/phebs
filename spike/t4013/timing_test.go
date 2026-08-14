@@ -107,3 +107,81 @@ func TestPartitionTimingAggregatesMeasuredAndUnknownRefusals(t *testing.T) {
 		t.Fatalf("mixed-version refusal aggregate = %+v", mixedVersion)
 	}
 }
+
+func TestPartitionTimingV3AttributesClosedFailuresAndWallBuckets(t *testing.T) {
+	digestA := "sha256:" + strings.Repeat("a", 64)
+	digestB := "sha256:" + strings.Repeat("b", 64)
+	reports := []extractionpublication.PartitionTimingReport{
+		{
+			Schema:   extractionpublication.PartitionTimingSchemaV3,
+			Identity: digestA, Generation: digestB, Domain: "grpc-caller",
+			Outcome: "failed", FailureClass: extractionpublication.PartitionFailureDeadline,
+			ExecutorMS: 300_002, TotalMS: 300_010,
+		},
+		{
+			Schema:   extractionpublication.PartitionTimingSchemaV3,
+			Identity: digestB, Generation: digestA, Domain: "grpc-caller",
+			Outcome: "completed", ExecutorMS: 12_000, TotalMS: 12_010,
+		},
+		{
+			Schema:   extractionpublication.PartitionTimingSchemaV3,
+			Identity: digestA, Generation: digestB, Domain: "kafka-producer",
+			Outcome: "terminal_refusal", ExecutorMS: 2_000, TotalMS: 2_010,
+			RefusalStage:          pipelinerefusal.StageEvidenceStaging,
+			RefusalGenerationKind: pipelinerefusal.GenerationExtractionDomain,
+			RefusalClassification: pipelinerefusal.ClassificationLimit,
+			RefusalDimension:      pipelinerefusal.DimensionFacts,
+			RefusalObserved:       769, RefusalLimit: 768,
+		},
+	}
+	var observation ExtractionTimingObservation
+	for _, report := range reports {
+		if err := extractionpublication.ValidatePartitionTimingReport(report); err != nil {
+			t.Fatal(err)
+		}
+		addPartitionTiming(&observation, report)
+	}
+	if observation.Schema != extractionTimingSchemaV3 || len(observation.DomainTimings) != 2 ||
+		validateExtractionTiming(observation) != nil {
+		t.Fatalf("v3 timing aggregate = %+v", observation)
+	}
+	grpc := observation.DomainTimings[0]
+	if grpc.Domain != "grpc-caller" || grpc.Attempts != 2 || grpc.Failed != 1 ||
+		grpc.DeadlineFailures != 1 || grpc.ExecutorLT60S != 1 || grpc.ExecutorGE300S != 1 {
+		t.Fatalf("gRPC timing = %+v", grpc)
+	}
+	kafka := observation.DomainTimings[1]
+	if kafka.Domain != "kafka-producer" || kafka.TerminalRefusals != 1 ||
+		kafka.ExecutorLT10S != 1 {
+		t.Fatalf("Kafka timing = %+v", kafka)
+	}
+
+	corrupt := observation
+	corrupt.DomainTimings = append([]ExtractionDomainTiming(nil), observation.DomainTimings...)
+	corrupt.DomainTimings[0].DeadlineFailures = 0
+	if validateExtractionTiming(corrupt) == nil {
+		t.Fatal("unreconciled v3 failure class was accepted")
+	}
+}
+
+func TestPartitionTimingV3UpgradeRetainsHistoricalAttemptsAsUnknown(t *testing.T) {
+	digestA := "sha256:" + strings.Repeat("a", 64)
+	digestB := "sha256:" + strings.Repeat("b", 64)
+	var observation ExtractionTimingObservation
+	addPartitionTiming(&observation, extractionpublication.PartitionTimingReport{
+		Schema:   extractionpublication.PartitionTimingSchemaV2,
+		Identity: digestA, Generation: digestB, Outcome: "failed", ExecutorMS: 20, TotalMS: 25,
+	})
+	addPartitionTiming(&observation, extractionpublication.PartitionTimingReport{
+		Schema:   extractionpublication.PartitionTimingSchemaV3,
+		Identity: digestB, Generation: digestA, Domain: "grpc-caller",
+		Outcome: "completed", ExecutorMS: 30, TotalMS: 35,
+	})
+	if observation.Schema != extractionTimingSchemaV3 || len(observation.DomainTimings) != 2 ||
+		observation.DomainTimings[1].Domain != "unknown" ||
+		observation.DomainTimings[1].UnknownFailures != 1 ||
+		observation.DomainTimings[1].ExecutorUnbucketed != 1 ||
+		validateExtractionTiming(observation) != nil {
+		t.Fatalf("mixed v2/v3 timing = %+v", observation)
+	}
+}
