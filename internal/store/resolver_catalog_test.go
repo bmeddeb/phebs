@@ -91,7 +91,7 @@ func testResolverCatalogAcceptsExactPartitionedDeclarationSet(
 		ctx, store.ExtractionScope{
 			Repository: repository, Commit: commit, Domain: domain,
 		},
-		"3.0.0", planDigest, candidate.ManifestDigest,
+		"3.0.0", planDigest, candidate.ManifestDigest, "",
 		store.PartitionedExtractionRunLimits{},
 	)
 	if err != nil {

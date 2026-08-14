@@ -38,7 +38,7 @@ func TestPartitionedEvidenceRunStagesBeyondLegacyFactCap(t *testing.T) {
 	planDigest := "sha256:" + strings.Repeat("8", 64)
 	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
-	}, "t40.10-aggregate-v1", planDigest, "sha256:"+strings.Repeat("7", 64),
+	}, "t40.10-aggregate-v1", planDigest, "sha256:"+strings.Repeat("7", 64), "",
 		PartitionedExtractionRunLimits{
 			Facts:      maxEvidenceFactsPerRun + 1,
 			Rows:       maxEvidenceRowsPerRun + 2,
@@ -67,7 +67,7 @@ func TestAbortedPartitionedEvidenceRunReleasesLifecyclePin(t *testing.T) {
 		Commit:     "dddddddddddddddddddddddddddddddddddddddd",
 		Domain:     "proto-contract",
 	}, "t40.10-abort-v1", "sha256:"+strings.Repeat("a", 64),
-		"sha256:"+strings.Repeat("b", 64), PartitionedExtractionRunLimits{
+		"sha256:"+strings.Repeat("b", 64), "", PartitionedExtractionRunLimits{
 			Facts: 1, Rows: 2, References: 1,
 		})
 	if err != nil {
@@ -115,7 +115,7 @@ func TestCandidateTransitionAbortsOnlyActivePartitionRun(t *testing.T) {
 	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
 	}, "t40.10-transition-v1", "sha256:"+strings.Repeat("4", 64),
-		candidateA.ManifestDigest, PartitionedExtractionRunLimits{Facts: 1, Rows: 2, References: 1})
+		candidateA.ManifestDigest, "", PartitionedExtractionRunLimits{Facts: 1, Rows: 2, References: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	}
 	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
-	}, "t40.7-test-v1", planDigest, candidateDigest, PartitionedExtractionRunLimits{
+	}, "t40.7-test-v1", planDigest, candidateDigest, "", PartitionedExtractionRunLimits{
 		Facts: MaxPartitionedFacts, Rows: MaxPartitionedRows,
 		References: MaxPartitionedReferences,
 	})
@@ -221,7 +221,7 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	planDigestB := "sha256:" + strings.Repeat("c", 64)
 	runB, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
-	}, "t40.7-test-v1", planDigestB, candidateDigest, PartitionedExtractionRunLimits{
+	}, "t40.7-test-v1", planDigestB, candidateDigest, "", PartitionedExtractionRunLimits{
 		Facts: MaxPartitionedFacts, Rows: MaxPartitionedRows,
 		References: MaxPartitionedReferences,
 	})
@@ -288,7 +288,7 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	runC, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
 	}, "t40.11-lifecycle-v1", planDigestC, replacement.ManifestDigest,
-		PartitionedExtractionRunLimits{})
+		"", PartitionedExtractionRunLimits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +351,7 @@ func TestPartitionedEvidencePublicationAcceptsExactZeroRun(t *testing.T) {
 	planDigest := "sha256:" + strings.Repeat("4", 64)
 	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
 		Repository: repository, Commit: commit, Domain: domain,
-	}, "t40.10-empty-v1", planDigest, candidateDigest, PartitionedExtractionRunLimits{})
+	}, "t40.10-empty-v1", planDigest, candidateDigest, "", PartitionedExtractionRunLimits{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,5 +371,167 @@ func TestPartitionedEvidencePublicationAcceptsExactZeroRun(t *testing.T) {
 	stored, err := s.GetPartitionedExtractionDomain(ctx, repository, domain)
 	if err != nil || !samePartitionedDomain(*stored, publication) {
 		t.Fatalf("empty publication = %+v, %v", stored, err)
+	}
+}
+
+// TestPartitionedRunLimitsContractBindingDispatch is a pure unit guard on the
+// store envelope's (domain, plan-schema) dispatch: the measured T40.R1
+// kafka-producer v3 aggregate is admitted only with its exact binding, every
+// other pair — including a v3 schema on another domain and a v3-sized
+// reservation on a historical pair — keeps the v1/v2 maxima, and even the
+// exact binding never exceeds the v3 ceilings.
+func TestPartitionedRunLimitsContractBindingDispatch(t *testing.T) {
+	v3 := PartitionedExtractionRunLimits{
+		Facts: MaxPartitionedFactsV3, Rows: MaxPartitionedRowsV3, References: MaxPartitionedReferencesV3,
+	}
+	if err := v3.validate(PartitionedV3Domain, PartitionedPlanSchemaV3); err != nil {
+		t.Fatalf("v3 reservation with exact binding rejected: %v", err)
+	}
+	historical := PartitionedExtractionRunLimits{
+		Facts: MaxPartitionedFacts, Rows: MaxPartitionedRows, References: MaxPartitionedReferences,
+	}
+	if err := historical.validate("proto-contract", ""); err != nil {
+		t.Fatalf("historical v1/v2 reservation rejected: %v", err)
+	}
+	cases := []struct {
+		name           string
+		domain, schema string
+		limits         PartitionedExtractionRunLimits
+	}{
+		{"v3-sized without schema", PartitionedV3Domain, "", v3},
+		{"v3-sized with historical schema", PartitionedV3Domain, "phebs-extraction-domain-result-plan-v2", v3},
+		{"v3 binding on another domain", "proto-contract", PartitionedPlanSchemaV3, v3},
+		{"one fact above historical", "proto-contract", "",
+			PartitionedExtractionRunLimits{Facts: MaxPartitionedFacts + 1, Rows: MaxPartitionedRows, References: MaxPartitionedReferences}},
+		{"one fact above v3", PartitionedV3Domain, PartitionedPlanSchemaV3,
+			PartitionedExtractionRunLimits{Facts: MaxPartitionedFactsV3 + 1, Rows: MaxPartitionedRowsV3, References: MaxPartitionedReferencesV3}},
+		{"one row above v3", PartitionedV3Domain, PartitionedPlanSchemaV3,
+			PartitionedExtractionRunLimits{Facts: MaxPartitionedFactsV3, Rows: MaxPartitionedRowsV3 + 1, References: MaxPartitionedReferencesV3}},
+		{"one reference above v3", PartitionedV3Domain, PartitionedPlanSchemaV3,
+			PartitionedExtractionRunLimits{Facts: MaxPartitionedFactsV3, Rows: MaxPartitionedRowsV3, References: MaxPartitionedReferencesV3 + 1}},
+	}
+	for _, test := range cases {
+		if err := test.limits.validate(test.domain, test.schema); err == nil {
+			t.Fatalf("%s: invalid reservation accepted", test.name)
+		}
+	}
+}
+
+// TestPartitionedPublicationEnvelopeRequiresExactV3Binding pins the published
+// domain envelope: totals above the historical v1/v2 maxima are admitted only
+// when the retained canonical plan bytes themselves carry the exact
+// kafka-producer v3 schema. Persisted historical controls within the v1/v2
+// maxima never pay or need that proof.
+func TestPartitionedPublicationEnvelopeRequiresExactV3Binding(t *testing.T) {
+	base := PartitionedExtractionDomain{
+		Schema:            PartitionedExtractionDomainSchema,
+		Repository:        "synthetic.invalid/t40r1-binding",
+		Domain:            PartitionedV3Domain,
+		RunID:             "run-binding",
+		PlanDigest:        "sha256:" + strings.Repeat("1", 64),
+		RootDigest:        "sha256:" + strings.Repeat("2", 64),
+		CandidateDigest:   "sha256:" + strings.Repeat("3", 64),
+		SourceDigest:      "sha256:" + strings.Repeat("4", 64),
+		ObservationDigest: "sha256:" + strings.Repeat("5", 64),
+		Facts:             MaxPartitionedFactsV3,
+		Rows:              MaxPartitionedRowsV3,
+		References:        MaxPartitionedReferencesV3,
+		Plan:              `{"schema":"` + PartitionedPlanSchemaV3 + `","limits":{}}`,
+		Root:              `{}`,
+	}
+	if err := base.Validate(); err != nil {
+		t.Fatalf("v3 publication with exact plan-byte binding rejected: %v", err)
+	}
+	historical := base
+	historical.Domain = "proto-contract"
+	historical.Facts, historical.Rows, historical.References =
+		MaxPartitionedFacts, MaxPartitionedRows, MaxPartitionedReferences
+	historical.Plan = `{}`
+	if err := historical.Validate(); err != nil {
+		t.Fatalf("historical v1/v2-sized control rejected: %v", err)
+	}
+	cases := []struct {
+		name   string
+		mutate func(*PartitionedExtractionDomain)
+	}{
+		{"v3 totals on another domain", func(p *PartitionedExtractionDomain) {
+			p.Domain = "proto-contract"
+		}},
+		{"v3 totals with historical plan schema bytes", func(p *PartitionedExtractionDomain) {
+			p.Plan = `{"schema":"phebs-extraction-domain-result-plan-v2","limits":{}}`
+		}},
+		{"v3 totals with schema-less plan bytes", func(p *PartitionedExtractionDomain) {
+			p.Plan = `{}`
+		}},
+		{"one fact above v3 with exact binding", func(p *PartitionedExtractionDomain) {
+			p.Facts = MaxPartitionedFactsV3 + 1
+		}},
+		{"one row above v3 with exact binding", func(p *PartitionedExtractionDomain) {
+			p.Rows = MaxPartitionedRowsV3 + 1
+		}},
+		{"one reference above v3 with exact binding", func(p *PartitionedExtractionDomain) {
+			p.References = MaxPartitionedReferencesV3 + 1
+		}},
+	}
+	for _, test := range cases {
+		mutated := base
+		test.mutate(&mutated)
+		if err := mutated.Validate(); err == nil {
+			t.Fatalf("%s: invalid publication accepted", test.name)
+		}
+	}
+}
+
+// TestPartitionedV3BoundRunStagesThroughExactBinding proves the whole run
+// path on the real store: a v3-sized reservation begins only with the exact
+// (kafka-producer, v3) pair, the persisted schema round-trips, and staged
+// chunks pass the second-line authority check under the raised ceilings.
+func TestPartitionedV3BoundRunStagesThroughExactBinding(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	const (
+		repository = "synthetic.invalid/t40r1-v3-binding"
+		commit     = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	)
+	v3Limits := PartitionedExtractionRunLimits{
+		Facts: MaxPartitionedFactsV3, Rows: MaxPartitionedRowsV3, References: MaxPartitionedReferencesV3,
+	}
+	if _, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
+		Repository: repository, Commit: commit, Domain: PartitionedV3Domain,
+	}, "t40.r1-v3-v1", "sha256:"+strings.Repeat("1", 64),
+		"sha256:"+strings.Repeat("2", 64), "", v3Limits); err == nil {
+		t.Fatal("v3-sized reservation without the plan schema was admitted")
+	}
+	if _, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
+		Repository: repository, Commit: commit, Domain: "proto-contract",
+	}, "t40.r1-v3-v1", "sha256:"+strings.Repeat("1", 64),
+		"sha256:"+strings.Repeat("2", 64), PartitionedPlanSchemaV3, v3Limits); err == nil {
+		t.Fatal("v3-sized reservation on another domain was admitted")
+	}
+	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
+		Repository: repository, Commit: commit, Domain: PartitionedV3Domain,
+	}, "t40.r1-v3-v1", "sha256:"+strings.Repeat("1", 64),
+		"sha256:"+strings.Repeat("2", 64), PartitionedPlanSchemaV3, v3Limits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.PartitionPlanSchema != PartitionedPlanSchemaV3 ||
+		run.PartitionFactLimit != MaxPartitionedFactsV3 ||
+		run.PartitionRowLimit != MaxPartitionedRowsV3 ||
+		run.PartitionReferenceLimit != MaxPartitionedReferencesV3 {
+		t.Fatalf("v3 partition run authority = %+v", run)
+	}
+	reread, err := s.getRun(ctx, run.ID)
+	if err != nil || reread.PartitionPlanSchema != PartitionedPlanSchemaV3 {
+		t.Fatalf("persisted v3 schema = %+v, %v", reread, err)
+	}
+	atoms, associations, assertions := t407Batch(repository, commit, 0)
+	chunk := "sha256:" + strings.Repeat("9", 64)
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunk, 1, atoms, associations, assertions); err != nil {
+		t.Fatalf("v3-bound run staging: %v", err)
+	}
+	receipt, err := s.GetEvidenceChunkAccounting(ctx, run.ID, chunk)
+	if err != nil || receipt.FactCount != 1 || receipt.RowDelta != 2 || receipt.ReferenceDelta != 1 {
+		t.Fatalf("v3-bound chunk accounting = %+v, %v", receipt, err)
 	}
 }

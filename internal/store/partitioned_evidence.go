@@ -12,13 +12,37 @@ import (
 )
 
 const (
-	PartitionedExtractionDomainSchema       = "phebs-partitioned-extraction-domain-v1"
-	MaxPartitionedPlanBytes                 = 4 << 20
-	MaxPartitionedRootBytes                 = 4 << 20
-	MaxPartitionedFacts               int64 = 49_152
-	MaxPartitionedRows                int64 = 98_304
-	MaxPartitionedReferences          int64 = 98_304
+	PartitionedExtractionDomainSchema = "phebs-partitioned-extraction-domain-v1"
+	MaxPartitionedPlanBytes           = 4 << 20
+	MaxPartitionedRootBytes           = 4 << 20
+	// Historical v1/v2 store maxima: the T40.9 per-domain aggregate contract
+	// every extraction domain shares. The store deliberately does not import
+	// internal/candidate; these mirror candidate.MaxDomainResultFacts/Rows/
+	// References and a candidate contract bump must move them together.
+	MaxPartitionedFacts      int64 = 49_152
+	MaxPartitionedRows       int64 = 98_304
+	MaxPartitionedReferences int64 = 98_304
+	// T40.R1's measured all-dimension kafka-producer correction is the only
+	// (domain, plan-schema) binding admitted above the historical maxima.
+	// These mirror candidate.DomainResultPlanSchemaV3, DomainResultPlanV3Domain,
+	// and MaxDomainResult{Facts,Rows,References}V3.
+	PartitionedPlanSchemaV3          = "phebs-extraction-domain-result-plan-v3"
+	PartitionedV3Domain              = "kafka-producer"
+	MaxPartitionedFactsV3      int64 = 262_144
+	MaxPartitionedRowsV3       int64 = 524_288
+	MaxPartitionedReferencesV3 int64 = 262_144
 )
+
+// partitionedRunMaxima dispatches the store envelope on the exact
+// (domain, plan-schema) binding: only the measured T40.R1 kafka-producer v3
+// contract may use the raised aggregate ceilings; every other domain and any
+// absent or historical schema keeps the v1/v2 maxima.
+func partitionedRunMaxima(domain, planSchema string) (facts, rows, references int64) {
+	if domain == PartitionedV3Domain && planSchema == PartitionedPlanSchemaV3 {
+		return MaxPartitionedFactsV3, MaxPartitionedRowsV3, MaxPartitionedReferencesV3
+	}
+	return MaxPartitionedFacts, MaxPartitionedRows, MaxPartitionedReferences
+}
 
 // PartitionedExtractionDomain is the store's opaque atomic binding between a
 // completely validated T40.9 plan/root and the T40.7-accounted evidence run.
@@ -146,8 +170,6 @@ func (publication PartitionedExtractionDomain) Validate() error {
 		!validSHA256Digest(publication.CandidateDigest) || !validSHA256Digest(publication.SourceDigest) ||
 		!validSHA256Digest(publication.ObservationDigest) ||
 		publication.Facts < 0 || publication.Rows < 0 || publication.References < 0 ||
-		publication.Facts > MaxPartitionedFacts || publication.Rows > MaxPartitionedRows ||
-		publication.References > MaxPartitionedReferences ||
 		len(publication.Plan) > MaxPartitionedPlanBytes || len(publication.Root) > MaxPartitionedRootBytes ||
 		!json.Valid([]byte(publication.Plan)) || !json.Valid([]byte(publication.Root)) ||
 		((publication.PriorRunID == "") != (publication.PriorPlanDigest == "") ||
@@ -156,14 +178,43 @@ func (publication PartitionedExtractionDomain) Validate() error {
 			!validSHA256Digest(publication.PriorPlanDigest) || !validSHA256Digest(publication.PriorRootDigest))) {
 		return errors.New("partitioned extraction domain is incomplete or unbounded")
 	}
+	facts, rows, references := partitionedPublicationMaxima(publication)
+	if publication.Facts > facts || publication.Rows > rows || publication.References > references {
+		return errors.New("partitioned extraction domain exceeds its exact contract envelope")
+	}
 	return nil
 }
 
-func (limits PartitionedExtractionRunLimits) validate() error {
-	if limits.Facts < 0 || limits.Facts > MaxPartitionedFacts ||
-		limits.Rows < 0 || limits.Rows > MaxPartitionedRows ||
-		limits.References < 0 || limits.References > MaxPartitionedReferences {
-		return errors.New("partitioned extraction run limits are invalid")
+// partitionedPublicationMaxima keeps every historical control on the v1/v2
+// store maxima without inspecting plan bytes. A publication whose totals
+// exceed them must prove the exact kafka-producer v3 binding from its own
+// retained canonical plan bytes — never from a caller claim — so the raise
+// stays exact to the measured T40.R1 contract and no other domain or schema
+// can use it.
+func partitionedPublicationMaxima(publication PartitionedExtractionDomain) (facts, rows, references int64) {
+	facts, rows, references = MaxPartitionedFacts, MaxPartitionedRows, MaxPartitionedReferences
+	if publication.Facts <= facts && publication.Rows <= rows && publication.References <= references {
+		return facts, rows, references
+	}
+	if publication.Domain != PartitionedV3Domain {
+		return facts, rows, references
+	}
+	var plan struct {
+		Schema string `json:"schema"`
+	}
+	if err := json.Unmarshal([]byte(publication.Plan), &plan); err != nil ||
+		plan.Schema != PartitionedPlanSchemaV3 {
+		return facts, rows, references
+	}
+	return MaxPartitionedFactsV3, MaxPartitionedRowsV3, MaxPartitionedReferencesV3
+}
+
+func (limits PartitionedExtractionRunLimits) validate(domain, planSchema string) error {
+	facts, rows, references := partitionedRunMaxima(domain, planSchema)
+	if limits.Facts < 0 || limits.Facts > facts ||
+		limits.Rows < 0 || limits.Rows > rows ||
+		limits.References < 0 || limits.References > references {
+		return errors.New("partitioned extraction run limits exceed their exact contract binding")
 	}
 	return nil
 }

@@ -483,6 +483,7 @@ type ExtractionRun struct {
 	PartitionSealed          bool   `json:"partition_sealed,omitempty"`
 	PartitionPlanDigest      string `json:"partition_plan_digest,omitempty"`
 	PartitionCandidateDigest string `json:"partition_candidate_digest,omitempty"`
+	PartitionPlanSchema      string `json:"partition_plan_schema,omitempty"`
 	PartitionFactLimit       int64  `json:"partition_fact_limit,omitempty"`
 	PartitionRowLimit        int64  `json:"partition_row_limit,omitempty"`
 	PartitionReferenceLimit  int64  `json:"partition_reference_limit,omitempty"`
@@ -1000,10 +1001,13 @@ type PartitionedExtractionRunLimits struct {
 
 // PartitionedExtractionRunStore creates an aggregate-capable staged run and
 // pins it against stale-stage maintenance before any partition is scheduled.
+// The plan schema token binds the store envelope: only the exact
+// kafka-producer v3 pair may use the raised T40.R1 aggregate ceilings.
 type PartitionedExtractionRunStore interface {
 	BeginPartitionedExtractionRun(
 		context.Context,
 		ExtractionScope,
+		string,
 		string,
 		string,
 		string,

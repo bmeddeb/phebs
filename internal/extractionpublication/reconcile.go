@@ -130,7 +130,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		run, err := reconciler.Evidence.BeginPartitionedExtractionRun(ctx, store.ExtractionScope{
 			Repository: repository, Commit: publicationState.Commit, UnitDigest: publicationState.UnitDigest,
 			Domain: plan.Domain,
-		}, plan.ExtractorVersion, plan.Digest, plan.CandidateManifestDigest,
+		}, plan.ExtractorVersion, plan.Digest, plan.CandidateManifestDigest, plan.Schema,
 			store.PartitionedExtractionRunLimits{
 				Facts: plan.Reserved.Facts, Rows: plan.Reserved.Rows,
 				References: plan.Reserved.References,

@@ -938,6 +938,21 @@ The store envelope must become contract/domain-versioned so only
 remain exact. Independent review and a new complete semantic fit are required;
 Take 19 remains unfrozen and Epic 41 remains blocked.
 
+Store-envelope contract binding (2026-08-14): the correction is implemented.
+The store run and published-domain envelopes now dispatch on the exact
+(`kafka-producer`, `phebs-extraction-domain-result-plan-v3`) binding: only
+that pair admits the measured 262,144-fact, 524,288-row, and
+262,144-reference aggregate, and every other domain or an absent/historical
+schema keeps the v1/v2 maxima of 49,152, 98,304, and 98,304. Run creation
+validates the binding before an identity exists and persists the plan schema;
+the add-evidence second-line check dispatches on the persisted pair; a
+published domain above the historical maxima must prove the binding from its
+retained canonical plan bytes. Tests reject v3-sized controls without the
+exact binding, reject one-over-v3 with it, cover persisted historical
+controls, and stage a v3-bound run end to end. Historical reads pay no new
+decode. This authorizes no freeze: independent review and one fresh complete
+exact semantic fit remain mandatory; Take 19 and Epic 41 remain blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

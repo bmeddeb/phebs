@@ -244,6 +244,7 @@ type extractionRunRec struct {
 	PartitionSealed          bool             `json:"partition_sealed"`
 	PartitionPlanDigest      string           `json:"partition_plan_digest"`
 	PartitionCandidateDigest string           `json:"partition_candidate_digest"`
+	PartitionPlanSchema      string           `json:"partition_plan_schema"`
 	PartitionFactLimit       int64            `json:"partition_fact_limit"`
 	PartitionRowLimit        int64            `json:"partition_row_limit"`
 	PartitionReferenceLimit  int64            `json:"partition_reference_limit"`
@@ -263,6 +264,7 @@ func (r extractionRunRec) run() ExtractionRun {
 		PartitionActive: r.PartitionActive, PartitionSealed: r.PartitionSealed,
 		PartitionPlanDigest:      r.PartitionPlanDigest,
 		PartitionCandidateDigest: r.PartitionCandidateDigest,
+		PartitionPlanSchema:      r.PartitionPlanSchema,
 		PartitionFactLimit:       r.PartitionFactLimit, PartitionRowLimit: r.PartitionRowLimit,
 		PartitionReferenceLimit: r.PartitionReferenceLimit,
 	}
@@ -313,7 +315,7 @@ func (s *Surreal) BeginExtractionRun(
 	scope ExtractionScope,
 	extractor string,
 ) (*ExtractionRun, error) {
-	return s.beginExtractionRun(ctx, scope, extractor, "", "", PartitionedExtractionRunLimits{
+	return s.beginExtractionRun(ctx, scope, extractor, "", "", "", PartitionedExtractionRunLimits{
 		Facts: maxEvidenceFactsPerRun, Rows: maxEvidenceRowsPerRun,
 		References: maxEvidenceReferenceEdges,
 	}, false)
@@ -321,19 +323,33 @@ func (s *Surreal) BeginExtractionRun(
 
 // BeginPartitionedExtractionRun creates one invisible aggregate-capable run.
 // Its exact T40.9 plan and reservations are persisted before scheduling, and
-// partition_active protects it from the legacy 24-hour staged sweep.
+// partition_active protects it from the legacy 24-hour staged sweep. The
+// plan schema binds the store envelope: only the exact kafka-producer v3 pair
+// may begin with the raised T40.R1 aggregate ceilings, and the retained plan
+// bytes must prove the same binding again at publication.
 func (s *Surreal) BeginPartitionedExtractionRun(
 	ctx context.Context,
 	scope ExtractionScope,
 	extractor,
 	planDigest,
-	candidateDigest string,
+	candidateDigest,
+	planSchema string,
 	limits PartitionedExtractionRunLimits,
 ) (*ExtractionRun, error) {
-	if !validSHA256Digest(planDigest) || !validSHA256Digest(candidateDigest) || limits.validate() != nil {
-		return nil, errors.New("begin partitioned extraction run: invalid plan, candidate, or limits")
+	if !validSHA256Digest(planDigest) || !validSHA256Digest(candidateDigest) ||
+		!validPartitionedPlanSchema(planSchema) || limits.validate(scope.Domain, planSchema) != nil {
+		return nil, errors.New("begin partitioned extraction run: invalid plan, candidate, contract, or limits")
 	}
-	return s.beginExtractionRun(ctx, scope, extractor, planDigest, candidateDigest, limits, true)
+	return s.beginExtractionRun(ctx, scope, extractor, planDigest, candidateDigest, planSchema, limits, true)
+}
+
+// validPartitionedPlanSchema admits the absent historical schema or one
+// bounded UTF-8 token; the (domain, schema) dispatch in partitionedRunMaxima
+// alone decides which store maxima the pair may use.
+func validPartitionedPlanSchema(planSchema string) bool {
+	return planSchema == "" ||
+		(strings.TrimSpace(planSchema) == planSchema && utf8.ValidString(planSchema) &&
+			len(planSchema) <= maxEvidenceIdentityBytes)
 }
 
 func (s *Surreal) beginExtractionRun(
@@ -341,7 +357,8 @@ func (s *Surreal) beginExtractionRun(
 	scope ExtractionScope,
 	extractor,
 	planDigest,
-	candidateDigest string,
+	candidateDigest,
+	planSchema string,
 	limits PartitionedExtractionRunLimits,
 	partitionActive bool,
 ) (*ExtractionRun, error) {
@@ -385,6 +402,7 @@ LET $created = IF $writer_ok AND $attempt_ok THEN
 		partition_active = $partition_active, partition_sealed = false,
 		partition_plan_digest = $partition_plan_digest,
 		partition_candidate_digest = $partition_candidate_digest,
+		partition_plan_schema = $partition_plan_schema,
 		partition_fact_limit = $partition_fact_limit,
 		partition_row_limit = $partition_row_limit,
 		partition_reference_limit = $partition_reference_limit,
@@ -409,6 +427,7 @@ COMMIT;`,
 			"extractor": extractor, "now": now,
 			"partition_active": partitionActive, "partition_plan_digest": planDigest,
 			"partition_candidate_digest": candidateDigest,
+			"partition_plan_schema":      planSchema,
 			"partition_fact_limit":       limits.Facts, "partition_row_limit": limits.Rows,
 			"partition_reference_limit":  limits.References,
 			"attempt_rid":                extractionAttemptID(scope),
@@ -1369,7 +1388,8 @@ func (s *Surreal) addEvidenceChunk(
 			References: run.PartitionReferenceLimit,
 		}
 		if !validSHA256Digest(run.PartitionPlanDigest) ||
-			!validSHA256Digest(run.PartitionCandidateDigest) || limits.validate() != nil {
+			!validSHA256Digest(run.PartitionCandidateDigest) ||
+			limits.validate(run.Domain, run.PartitionPlanSchema) != nil {
 			return fmt.Errorf("add evidence: run %s has invalid partition authority: %w", runID, ErrConflict)
 		}
 	}

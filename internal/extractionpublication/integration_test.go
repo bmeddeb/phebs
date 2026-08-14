@@ -124,6 +124,7 @@ func (state *testExtractionRunStore) BeginPartitionedExtractionRun(
 	extractor,
 	_ string,
 	candidateDigest string,
+	_ string,
 	limits store.PartitionedExtractionRunLimits,
 ) (*store.ExtractionRun, error) {
 	state.mu.Lock()

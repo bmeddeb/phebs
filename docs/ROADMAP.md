@@ -994,6 +994,13 @@ catalog, relationship, or correctness authority.
   49,152-fact/98,304-row/98,304-reference maxima. Version that envelope only
   for Kafka v3, preserve historical v1/v2 controls, independently review it,
   and rerun the exact fit. Take 19 and Epic 41 remain blocked.
+- The store envelope now dispatches on the exact (`kafka-producer`, v3 plan
+  schema) binding: the measured 262,144/524,288/262,144 aggregate is admitted
+  only for that pair, every other domain and any absent or historical schema
+  keeps v2's maxima, and an oversized publication must prove the binding from
+  its retained canonical plan bytes. Historical controls and reads pay no new
+  work. Independent review and one fresh complete exact semantic fit remain
+  mandatory before any Take 19 freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
