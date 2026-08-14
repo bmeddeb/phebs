@@ -967,6 +967,33 @@ green and does not absorb those failures into T40.R1. After integration, one
 fresh complete committed-source semantic fit and independent evidence review
 remain mandatory before a separate Take 19 freeze decision.
 
+Post-envelope exact semantic result (2026-08-14): do not freeze Take 19. At
+exact commit `7632918dff47a09f465c8b328c0555ccfc53e10d`, observation completed,
+extraction entered at 1,440,504 ms, and the schedule settled unsuccessfully at
+9,009,505 ms with 232 of 264 partitions succeeded and 32 failed; relationship
+publication never began. The 394-report timing floor contains 232 completions,
+162 deadline failures, zero terminal refusals, and zero reuse. Kafka producer
+completed 40 attempts and failed 122; Proto and Thrift contract each failed 20.
+Only five Kafka failures reached 300 seconds; Kafka's other 117 and all 40 IDL
+failures ended below 60 seconds, aligning with the pinned client's 30-second
+WebSocket request boundary. The retained production writer measurement covers
+only a sequential 12,500-fact run, not Kafka v3's actual 131,072-fact run under
+two-worker contention. The predicted 272-partition re-shard also did not occur:
+the 2,048-record policy is focused-local only, while this exact route uses the
+selected shared whole-repository physical generation and therefore retained
+264 work items. Resource ceilings passed and cleanup destroyed custody.
+
+Before another exact fit, add a source-free current-schema writer measurement
+at the exact Kafka actual shape and production contention, retain bounded
+append/accounting phase attribution, and reduce the chunk transaction's
+serialized per-row run-counter work beneath the existing request timeout.
+Separately version a whole-repository execution-partition subrange contract so
+domain-specific packing reaches the shared-shard route without changing the
+global candidate pack or repurposing focused-local identity. Both corrections
+must preserve historical/recovery behavior, pass steady-state-cost and
+independent review, and change no deadline, timeout, concurrency, topology, or
+production bound. Take 19 remains unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

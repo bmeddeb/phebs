@@ -1143,7 +1143,8 @@ cold wall, peak RSS, and logical/allocated data scalars:
 
 ```sh
 PHEBS_T4013_EXACT_SEMANTIC_TIMING=1 \
-  go test ./spike/t4013 -run '^TestExactSemanticColdTiming$' -count=1 -v
+  go test ./spike/t4013 -run '^TestExactSemanticColdTiming$' \
+    -count=1 -v -timeout=5h30m
 ```
 
 A passing measurement must fit the unchanged four-hour cold, eight-hour total,
@@ -1347,6 +1348,45 @@ must reject v3-sized limits outside that exact domain/contract and preserve
 historical persisted controls. After independent review, rerun the exact
 semantic fit; only complete extraction and relationship convergence can
 authorize the freeze.
+
+The reviewed store-envelope correction was integrated at exact commit
+`7632918dff47a09f465c8b328c0555ccfc53e10d`, and the required fresh diagnostic
+is retained as `take19-post-store-envelope-fit.json`. It stopped at
+9,009,505 ms with a settled 264-partition schedule: 232 succeeded, 32 failed,
+and relationship publication never began. The 394 timing reports reconcile as
+232 completed, 162 deadline failures, zero terminal refusals, and zero reuse.
+Kafka producer completed 40 attempts and failed 122; Proto and Thrift contract
+each failed 20. Only five Kafka failures reached the full 300-second partition
+deadline. Kafka's other 117 failures and every Proto/Thrift failure ended below
+60 seconds. Peak RSS was 1,749,188,608 bytes and allocated data was
+2,773,061,632 bytes, both below the unchanged ceilings. The temporary source,
+derived data, credentials, and children were removed.
+
+This result corrects two readiness assumptions. First, the pinned SurrealDB Go
+client applies a 30-second WebSocket request timeout. The production executor
+stages 256-fact chunks and reads their accounting inside its measured executor
+phase; the retained T40.7 writer receipt covers only one sequential
+12,500-fact/25,000-row run in 202,272 ms. Kafka v3 now admits an actual
+131,072-fact/262,144-row run shared by the production two-worker scheduler.
+The sub-60-second deadline population therefore requires an exact-shape,
+current-schema writer measurement and bounded append-versus-accounting phase
+attribution before selecting an optimization. Do not raise either the client
+request timeout or the five-minute partition deadline. Reduce the append
+transaction's repeated serialized run-counter work so every bounded chunk and
+accounting read completes inside the existing request boundary.
+
+Second, the expected 272 work items never existed on this route. The optional
+2,048-record policy controls only focused local projections. The exact v2
+service profile intentionally keeps a shared whole-repository physical
+candidate generation, so sparse execution continued to map one work item to
+each 4,096-record repository member and retained 264 partitions. Do not
+repurpose focused-local identity or globally repack candidate artifacts.
+Version a whole-repository execution-partition subrange contract, preserve
+bounded source authority and historical sparse/result controls, and account
+for any repeated candidate-member reads or new derived bytes. Independently
+review that correction together with the writer correction before one new
+exact fit. Take 19 remains unfrozen and no ceremony command below is
+authorized.
 
 ```sh
 cd ~/phebs

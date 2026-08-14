@@ -1009,6 +1009,21 @@ catalog, relationship, or correctness authority.
   `main@8ca176e`; this baseline-qualified result is not a wholly green CI
   claim. A fresh complete committed-source semantic fit and independent
   evidence review remain required before a separate Take 19 freeze decision.
+- The post-envelope exact fit at `7632918d` removed the old terminal refusal
+  but still stopped extraction at 9,009,505 ms: 232 of 264 partitions
+  succeeded, 32 failed, and relationship publication never began. All 162
+  failed attempts were deadlines; 117 Kafka failures and every Proto/Thrift
+  failure ended below 60 seconds, while the pinned client has a 30-second
+  WebSocket request boundary. The retained writer evidence covers only one
+  sequential 12,500-fact run, not Kafka v3's actual 131,072-fact run under the
+  production two-worker contention. The expected 272 work items also did not
+  materialize because the 2,048-record policy is focused-local and this route
+  deliberately uses the shared whole-repository candidate generation. Do not
+  rerun or freeze. First measure and reduce current-schema evidence-writer
+  transaction cost at the exact Kafka shape, and separately version a bounded
+  whole-repository execution-partition subrange. Preserve deadlines,
+  concurrency, global candidate packing, topology, and historical authority;
+  independently review both corrections before a new exact fit.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
