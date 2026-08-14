@@ -1579,6 +1579,13 @@ bounded external merge rather than retaining the path set in memory. Its
 package-owned validation scratch is context-cancellable, removed before exact
 publication membership is checked, and cleaned after a crash at startup.
 
+The 4,096-record value remains the repository, caller, typed-input, and default
+local maximum. A focused-local policy may commit a smaller bound as part of its
+policy and generation identity; strict replay then enforces the same packing.
+The provisional scale correction uses 2,048 only for `proto-contract` and
+`thrift-contract`. Historical identities omit the optional field and retain
+their exact 4,096-record packing.
+
 The retained
 [T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
 regular files into five repository rows and six caller rows. It produced three
@@ -3955,9 +3962,13 @@ schedule points, one small generation inventory, and at most one current
 pointer per configured domain. It does not read candidate members, source or
 observation content, partition results, domain roots, or evidence payloads.
 
-New extraction plans use the version-2 domain-result contract: each partition
-retains the 64-MiB candidate-member reservation ceiling while the cumulative
-domain input is bounded independently at 1 GiB. Existing version-1 plans keep
-their exact serialized identity and 64-MiB aggregate validation during
-restart, recovery, archive, and downstream reads. This transition requires no
-operator migration or configuration change.
+New non-Kafka extraction plans use the version-2 domain-result contract: each
+partition retains the 64-MiB candidate-member reservation ceiling while the
+cumulative domain input is bounded independently at 1 GiB. New
+`kafka-producer` plans use version 3 with measured aggregate reservations of
+262,144 facts, 524,288 rows, 262,144 references, and 256 MiB each of canonical
+and encoded output. Version 3 separately retains 64-MiB per-partition canonical
+and encoded backstops. Existing version-1 and version-2 plans keep their exact
+serialized identities and original validation during restart, recovery,
+archive, and downstream reads. This transition requires no operator migration
+or configuration change.

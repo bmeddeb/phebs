@@ -20,6 +20,7 @@ const (
 	goCallerEnumeration       = "go-caller-paths-v3"
 	kafkaGoEnumeration        = "kafka-go-paths-v2"
 	fixedRootSymlinkPolicy    = "fixed-root-regular-v1"
+	contractMaxRecords        = 2048
 )
 
 // CandidatePolicies is the shared, versioned path-policy registry for the
@@ -56,12 +57,14 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 		switch domain {
 		case "proto-contract":
 			policy.EnumerationPolicy = protoContractEnumeration
+			policy.MaxRecords = contractMaxRecords
 			policy.Enumerate = hasSuffix(".proto")
 		case "grpc-consumer":
 			policy.EnumerationPolicy = grpcConsumerEnumeration
 			policy.Enumerate = hasSuffix(".go")
 		case "thrift-contract":
 			policy.EnumerationPolicy = thriftContractEnumeration
+			policy.MaxRecords = contractMaxRecords
 			policy.Enumerate = hasSuffix(".thrift")
 		case "thrift-consumer":
 			policy.EnumerationPolicy = thriftConsumerEnumeration

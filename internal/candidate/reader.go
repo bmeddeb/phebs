@@ -252,6 +252,7 @@ func (view *DomainView) ForEachRepositoryRecord(
 
 type localProjectionVerifier struct {
 	projection  LocalProjection
+	maxRecords  int
 	memberIndex int
 	active      bool
 	count       int
@@ -322,6 +323,12 @@ func prepareLocalProjectionVerifiers(
 			); err != nil {
 				return nil, nil, err
 			}
+			if member.RecordCount > policyMaxRecords(wanted.identity) {
+				return nil, nil, fmt.Errorf(
+					"%w: local projection member exceeds its policy record bound",
+					ErrInvalidManifest,
+				)
+			}
 			if member.ContentBytes >
 				MaxLocalProjectionContentBytes-totalBytes {
 				return nil, nil, fmt.Errorf(
@@ -338,7 +345,10 @@ func prepareLocalProjectionVerifiers(
 			}
 			allowed[member.Name] = true
 		}
-		verifier := &localProjectionVerifier{projection: projection}
+		verifier := &localProjectionVerifier{
+			projection: projection,
+			maxRecords: policyMaxRecords(wanted.identity),
+		}
 		verifiers = append(verifiers, verifier)
 		byDomain[projection.Domain] = verifier
 	}
@@ -350,7 +360,7 @@ func (verifier *localProjectionVerifier) add(record Record) error {
 		return fmt.Errorf("%w: local projection verifier is nil", ErrInvalidManifest)
 	}
 	if verifier.active &&
-		(verifier.count >= MaxRecordsPerArtifact ||
+		(verifier.count >= verifier.maxRecords ||
 			record.DeclaredBytes >
 				MaxDeclaredBytesPerArtifact-verifier.declared) {
 		if err := verifier.finishMember(); err != nil {

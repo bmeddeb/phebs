@@ -165,6 +165,7 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 				request.OutputDir, request.Repository, generationDigest,
 				fmt.Sprintf("local-%03d", policyOrdinal),
 			)
+			writer.maxRecords = policyMaxRecords(identity)
 			writer.budget = localProjectionBudget
 			localProjectionWriters[identity.Domain] = writer
 			localProjections = append(localProjections, LocalProjection{
@@ -907,6 +908,7 @@ type artifactPacker struct {
 	outputDir, repository, generation, plane string
 	members                                  []Artifact
 	nextOrdinal                              int
+	maxRecords                               int
 	file                                     *os.File
 	hash                                     hash.Hash
 	current                                  Artifact
@@ -949,6 +951,7 @@ func (budget *artifactBudget) reserveBytes(count int64) error {
 func newArtifactPacker(outputDir, repository, generation, plane string) *artifactPacker {
 	return &artifactPacker{
 		outputDir: outputDir, repository: repository, generation: generation, plane: plane,
+		maxRecords: MaxRecordsPerArtifact,
 	}
 }
 
@@ -965,7 +968,7 @@ func (packer *artifactPacker) add(record Record) error {
 		return errors.New("candidate record exceeds its canonical byte limit")
 	}
 	if packer.file != nil &&
-		(packer.current.RecordCount >= MaxRecordsPerArtifact ||
+		(packer.current.RecordCount >= packer.maxRecords ||
 			record.DeclaredBytes >
 				MaxDeclaredBytesPerArtifact-packer.current.DeclaredBytes) {
 		if err := packer.flush(); err != nil {

@@ -1298,6 +1298,30 @@ first IDL packing with the separately measured versioned Kafka all-dimension
 output contract, preserve historical candidate/result-plan validation, and
 pass independent review. It is not a ceremony and does not authorize Take 19.
 
+The coupled provisional implementation now exists for that controlled
+diagnostic. New `kafka-producer` result plans use v3 aggregate reservations of
+262,144 facts, 524,288 rows, 262,144 references, and 256 MiB each of canonical
+and encoded bytes. Canonical and encoded bytes retain separate 64-MiB
+per-partition backstops; every non-Kafka domain continues to emit v2, and
+persisted v1/v2 plans retain their original exact limits and validation. The
+candidate policy identity also carries an optional focused-local record bound.
+Its absent value preserves historical 4,096-record policy JSON and packing;
+only `proto-contract` and `thrift-contract` select 2,048. This doubles those
+two semantic local projections from four to eight members each without
+changing repository, caller, Go-plane, typed-input, or structural packing.
+
+Focused tests pin exact V3 dimensions, per-partition one-over rejection,
+Kafka-only V3 selection, historical V1/V2 acceptance, omitted historical
+candidate identity, strict local-projection replay, and the unchanged default
+packer. Candidate construction still scans the tree once and writes eight
+additional bounded local artifacts for this profile; the resulting semantic
+schedule is expected to rise from 264 to 272 work items. No deadline,
+concurrency, retry policy, global record pack, partition quota, topology,
+resource ceiling, or lifecycle rule changed. This remains provisional until a
+fresh committed-source exact semantic diagnostic proves complete extraction
+and relationship convergence with no refusal or deadline exhaustion. Take 19
+is still not ready to freeze.
+
 ```sh
 cd ~/phebs
 

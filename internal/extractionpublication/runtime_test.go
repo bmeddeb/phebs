@@ -925,6 +925,22 @@ func buildTestPlan(t *testing.T, sourceDigest string, admitted bool) candidate.D
 	return buildTestPlanForDomain(t, sourceDigest, admitted, "proto-contract", ".proto")
 }
 
+func TestReservedPlanSelectsV3OnlyForKafkaProducer(t *testing.T) {
+	sourceDigest := "sha256:" + strings.Repeat("9", 64)
+	kafka := buildTestPlanForDomain(
+		t, sourceDigest, true, candidate.DomainResultPlanV3Domain, ".go",
+	)
+	if kafka.Schema != candidate.DomainResultPlanSchemaV3 ||
+		kafka.Limits != candidate.FrozenDomainResultLimitsV3() {
+		t.Fatalf("kafka result contract = %s %+v", kafka.Schema, kafka.Limits)
+	}
+	proto := buildTestPlan(t, sourceDigest, true)
+	if proto.Schema != candidate.DomainResultPlanSchemaV2 ||
+		proto.Limits != candidate.FrozenDomainResultLimitsV2() {
+		t.Fatalf("historical result contract = %s %+v", proto.Schema, proto.Limits)
+	}
+}
+
 func buildTestPlanForDomain(
 	t *testing.T,
 	sourceDigest string,

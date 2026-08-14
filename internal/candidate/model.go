@@ -69,9 +69,13 @@ type Policy struct {
 	EnumerationPolicy string
 	SymlinkPolicy     string
 	Plane             Plane
-	Enumerate         func(string) bool
-	Required          func(string) bool
-	RejectSymlink     func(string) bool
+	// MaxRecords optionally reduces focused-local artifact cardinality below
+	// the repository-wide frozen maximum. Zero preserves the historical
+	// MaxRecordsPerArtifact contract. Only PlaneLocal may reduce this value.
+	MaxRecords    int
+	Enumerate     func(string) bool
+	Required      func(string) bool
+	RejectSymlink func(string) bool
 	// TypedInputs names parser inputs consumed outside the ordinary source
 	// replay. T30.5 supports only "scip"; the selected path is supplied by
 	// the analysis-unit state (or the whole-repository legacy default).
@@ -85,6 +89,7 @@ type PolicyIdentity struct {
 	EnumerationPolicy string   `json:"enumeration_policy"`
 	SymlinkPolicy     string   `json:"symlink_policy"`
 	Plane             Plane    `json:"plane"`
+	MaxRecords        int      `json:"max_records,omitempty"`
 	TypedInputs       []string `json:"typed_inputs,omitempty"`
 }
 
@@ -283,6 +288,7 @@ func PolicyIdentities(policies []Policy) ([]PolicyIdentity, error) {
 			Domain: policy.Domain, Version: policy.Version,
 			EnumerationPolicy: policy.EnumerationPolicy,
 			SymlinkPolicy:     policy.SymlinkPolicy, Plane: policy.Plane,
+			MaxRecords:  policy.MaxRecords,
 			TypedInputs: slices.Clone(policy.TypedInputs),
 		}
 		if identity.SymlinkPolicy == "" && policy.RejectSymlink == nil {
@@ -346,6 +352,7 @@ func EqualPolicyIdentities(left, right []PolicyIdentity) bool {
 			left[index].EnumerationPolicy != right[index].EnumerationPolicy ||
 			left[index].SymlinkPolicy != right[index].SymlinkPolicy ||
 			left[index].Plane != right[index].Plane ||
+			left[index].MaxRecords != right[index].MaxRecords ||
 			!slices.Equal(left[index].TypedInputs, right[index].TypedInputs) {
 			return false
 		}
@@ -490,6 +497,10 @@ func validatePolicyIdentity(identity PolicyIdentity) error {
 		(identity.Plane != PlaneLocal && identity.Plane != PlaneRepository && identity.Plane != PlaneCaller) {
 		return fmt.Errorf("%w: malformed identity", ErrInvalidPolicy)
 	}
+	if identity.MaxRecords < 0 || identity.MaxRecords >= MaxRecordsPerArtifact ||
+		(identity.MaxRecords != 0 && identity.Plane != PlaneLocal) {
+		return fmt.Errorf("%w: malformed focused-local record bound", ErrInvalidPolicy)
+	}
 	if !sortedUniqueStrings(identity.TypedInputs) {
 		return fmt.Errorf("%w: malformed typed-input identity", ErrInvalidPolicy)
 	}
@@ -499,6 +510,13 @@ func validatePolicyIdentity(identity PolicyIdentity) error {
 		}
 	}
 	return nil
+}
+
+func policyMaxRecords(identity PolicyIdentity) int {
+	if identity.MaxRecords > 0 {
+		return identity.MaxRecords
+	}
+	return MaxRecordsPerArtifact
 }
 
 func typedIndexSelection(

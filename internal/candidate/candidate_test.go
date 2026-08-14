@@ -2014,6 +2014,72 @@ func TestOversizedSingletonRefused(t *testing.T) {
 	}
 }
 
+func TestFocusedLocalRecordBoundIsIdentityBoundAndPreservesDefault(t *testing.T) {
+	identity := PolicyIdentity{
+		Domain: "contract", Version: "v1", EnumerationPolicy: "contract-paths-v1",
+		SymlinkPolicy: "none", Plane: PlaneLocal, MaxRecords: 2,
+	}
+	if err := validatePolicyIdentity(identity); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(PolicyIdentity{
+		Domain: "historical", Version: "v1", EnumerationPolicy: "historical-v1",
+		SymlinkPolicy: "none", Plane: PlaneLocal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(raw, []byte("max_records")) {
+		t.Fatalf("historical policy wire changed: %s", raw)
+	}
+	for _, invalid := range []PolicyIdentity{
+		{
+			Domain: "repository", Version: "v1", EnumerationPolicy: "repository-v1",
+			SymlinkPolicy: "none", Plane: PlaneRepository, MaxRecords: 2,
+		},
+		{
+			Domain: "local", Version: "v1", EnumerationPolicy: "local-v1",
+			SymlinkPolicy: "none", Plane: PlaneLocal, MaxRecords: MaxRecordsPerArtifact,
+		},
+	} {
+		if err := validatePolicyIdentity(invalid); !errors.Is(err, ErrInvalidPolicy) {
+			t.Fatalf("invalid policy accepted: %+v, error=%v", invalid, err)
+		}
+	}
+
+	pack := func(t *testing.T, maxRecords int) []Artifact {
+		t.Helper()
+		packer := newArtifactPacker(
+			t.TempDir(), "example.invalid/repo",
+			"sha256:"+strings.Repeat("a", 64), "local-000",
+		)
+		packer.maxRecords = maxRecords
+		for index := 0; index < 5; index++ {
+			if err := packer.add(Record{
+				Schema: RecordSchema, Path: fmt.Sprintf("unit/%d.proto", index),
+				OID: strings.Repeat("a", 40), SourceLane: SourceLaneBase,
+				Domains: []string{"contract"}, InUnit: true,
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		members, err := packer.finish()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return members
+	}
+	reduced := pack(t, policyMaxRecords(identity))
+	if len(reduced) != 3 || reduced[0].RecordCount != 2 ||
+		reduced[1].RecordCount != 2 || reduced[2].RecordCount != 1 {
+		t.Fatalf("reduced members = %+v", reduced)
+	}
+	defaults := pack(t, policyMaxRecords(PolicyIdentity{}))
+	if len(defaults) != 1 || defaults[0].RecordCount != 5 {
+		t.Fatalf("default members = %+v", defaults)
+	}
+}
+
 func TestArtifactPackerAbortClosesPartialMemberAndIsIdempotent(t *testing.T) {
 	packer := newArtifactPacker(
 		t.TempDir(), "example.invalid/repo",
@@ -2485,7 +2551,8 @@ func TestFocusedLocalProjectionReadsRepositoryMembersOnce(t *testing.T) {
 		{
 			Domain: "local-a", Version: "1",
 			EnumerationPolicy: "go-a-v1", Plane: PlaneLocal,
-			Enumerate: goFiles,
+			MaxRecords: 1,
+			Enumerate:  goFiles,
 		},
 		{
 			Domain: "local-b", Version: "1",
@@ -2529,6 +2596,12 @@ func TestFocusedLocalProjectionReadsRepositoryMembersOnce(t *testing.T) {
 		if projection.Domain == "empty-local" &&
 			len(projection.Members) != 0 {
 			t.Fatalf("empty projection has members: %+v", projection.Members)
+		}
+		if projection.Domain == "local-a" && len(projection.Members) != 2 {
+			t.Fatalf("reduced local projection members = %+v", projection.Members)
+		}
+		if projection.Domain == "local-b" && len(projection.Members) != 1 {
+			t.Fatalf("default local projection members = %+v", projection.Members)
 		}
 	}
 

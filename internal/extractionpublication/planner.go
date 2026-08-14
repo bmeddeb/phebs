@@ -37,6 +37,11 @@ func BuildReservedPlan(
 		}
 	}
 	limits := candidate.FrozenDomainResultLimitsV2()
+	buildPlan := candidate.BuildDomainResultPlanV2
+	if domain.Domain() == candidate.DomainResultPlanV3Domain {
+		limits = candidate.FrozenDomainResultLimitsV3()
+		buildPlan = candidate.BuildDomainResultPlanV3
+	}
 	if err := measureCandidateMemberBytes(partitions, limits.AggregateMemberBytes); err != nil {
 		return candidate.DomainResultPlan{}, err
 	}
@@ -50,13 +55,21 @@ func BuildReservedPlan(
 	assignReserved(weights, int64(quotas.References), limits.References, func(index int, value int64) {
 		reservations[index].References = value
 	})
-	assignReserved(weights, limits.CanonicalBytes, limits.CanonicalBytes, func(index int, value int64) {
+	partitionCanonicalBytes := limits.CanonicalBytes
+	if limits.PartitionCanonicalBytes != 0 {
+		partitionCanonicalBytes = limits.PartitionCanonicalBytes
+	}
+	assignReserved(weights, partitionCanonicalBytes, limits.CanonicalBytes, func(index int, value int64) {
 		reservations[index].CanonicalBytes = value
 	})
-	assignReserved(weights, limits.EncodedBytes, limits.EncodedBytes, func(index int, value int64) {
+	partitionEncodedBytes := limits.EncodedBytes
+	if limits.PartitionEncodedBytes != 0 {
+		partitionEncodedBytes = limits.PartitionEncodedBytes
+	}
+	assignReserved(weights, partitionEncodedBytes, limits.EncodedBytes, func(index int, value int64) {
 		reservations[index].EncodedBytes = value
 	})
-	plan, err := candidate.BuildDomainResultPlanV2(domain, authority, reservations)
+	plan, err := buildPlan(domain, authority, reservations)
 	if err != nil {
 		if errors.Is(err, candidate.ErrInvalidDomainResult) {
 			return candidate.DomainResultPlan{}, errors.Join(ErrLimit, err)

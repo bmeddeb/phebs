@@ -431,6 +431,17 @@ func TestDomainResultPlanV2SplitsAggregateFromPartitionAndPreservesV1(t *testing
 	if err := ValidateDomainResultPlan(v2, domain); err != nil {
 		t.Fatalf("validate v2: %v", err)
 	}
+	v2Raw, err := json.Marshal(v2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(v2Raw, []byte("partition_canonical_bytes")) ||
+		bytes.Contains(v2Raw, []byte("partition_encoded_bytes")) {
+		t.Fatalf("v2 wire changed: %s", v2Raw)
+	}
+	if _, err := DecodeDomainResultPlanControl(bytes.NewReader(v2Raw)); err != nil {
+		t.Fatalf("decode persisted v2: %v", err)
+	}
 
 	v1, err := BuildDomainResultPlan(
 		resultTestDomain(t, 1, "admitted"), resultTestAuthority(),
@@ -494,6 +505,64 @@ func TestDomainResultPlanV2AggregateExactBoundAndOneOver(t *testing.T) {
 		measurement.Observed != limits.AggregateMemberBytes+1 ||
 		measurement.Limit != limits.AggregateMemberBytes {
 		t.Fatalf("v2 one-over = %+v: %v", measurement, err)
+	}
+}
+
+func TestDomainResultPlanV3BindsMeasuredKafkaDimensionsAndPartitionByteBackstops(t *testing.T) {
+	domain := resultTestDomainNamed(t, DomainResultPlanV3Domain, 64)
+	limits := FrozenDomainResultLimitsV3()
+	if limits.Facts != 262_144 || limits.Rows != 524_288 ||
+		limits.References != 262_144 || limits.CanonicalBytes != 256<<20 ||
+		limits.EncodedBytes != 256<<20 ||
+		limits.PartitionCanonicalBytes != 64<<20 ||
+		limits.PartitionEncodedBytes != 64<<20 {
+		t.Fatalf("v3 limits = %+v", limits)
+	}
+	reservations := make([]DomainResultTotals, 64)
+	for index := range reservations {
+		reservations[index] = DomainResultTotals{
+			Facts: 4096, Rows: 8192, References: 4096,
+			CanonicalBytes: 4 << 20, EncodedBytes: 4 << 20,
+			MemberBytes: 1, Members: 1,
+		}
+	}
+	plan, err := BuildDomainResultPlanV3(domain, resultTestAuthority(), reservations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != DomainResultPlanSchemaV3 || plan.Limits != limits ||
+		plan.Reserved.Facts != limits.Facts || plan.Reserved.Rows != limits.Rows ||
+		plan.Reserved.References != limits.References ||
+		plan.Reserved.CanonicalBytes != limits.CanonicalBytes ||
+		plan.Reserved.EncodedBytes != limits.EncodedBytes {
+		t.Fatalf("v3 plan = %+v", plan)
+	}
+	if err := ValidateDomainResultPlan(plan, domain); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(raw, []byte(`"partition_canonical_bytes":67108864`)) ||
+		!bytes.Contains(raw, []byte(`"partition_encoded_bytes":67108864`)) {
+		t.Fatalf("v3 partition backstops missing from wire: %s", raw)
+	}
+	if _, err := BuildDomainResultPlanV3(
+		resultTestDomain(t, 1, "admitted"), resultTestAuthority(),
+		[]DomainResultTotals{{}},
+	); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v3 non-kafka error = %v", err)
+	}
+	partitionOver := slices.Clone(reservations)
+	partitionOver[0].CanonicalBytes = (64 << 20) + 1
+	if _, err := BuildDomainResultPlanV3(domain, resultTestAuthority(), partitionOver); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v3 widened canonical partition backstop: %v", err)
+	}
+	partitionOver = slices.Clone(reservations)
+	partitionOver[0].EncodedBytes = (64 << 20) + 1
+	if _, err := BuildDomainResultPlanV3(domain, resultTestAuthority(), partitionOver); !errors.Is(err, ErrInvalidDomainResult) {
+		t.Fatalf("v3 widened encoded partition backstop: %v", err)
 	}
 }
 
@@ -630,6 +699,24 @@ func TestDomainResultNilAndZeroPartitionStatesAreExact(t *testing.T) {
 func resultTestDomain(t *testing.T, partitionCount int, availability string) *SparseDomain {
 	t.Helper()
 	return resultTestDomainShape(t, partitionCount, false, availability)
+}
+
+func resultTestDomainNamed(t *testing.T, name string, partitionCount int) *SparseDomain {
+	t.Helper()
+	domain := resultTestDomain(t, partitionCount, "admitted")
+	for ordinal := range domain.index.Partitions {
+		domain.index.Partitions[ordinal].Domain = name
+		domain.index.Partitions[ordinal].Digest = sparsePartitionDigest(
+			domain.index.Partitions[ordinal],
+		)
+	}
+	domain.index.Domain = name
+	domain.index.ScheduleDigest = sparseDomainScheduleDigest(domain.index)
+	domain.index.Digest = sparseDomainDigest(domain.index)
+	domain.descriptor.Domain = name
+	domain.descriptor.DomainScheduleDigest = domain.index.ScheduleDigest
+	domain.descriptor.IndexDigest = domain.index.Digest
+	return domain
 }
 
 func resultTestDomainWithTyped(t *testing.T, memberCount int) *SparseDomain {

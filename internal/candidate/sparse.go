@@ -255,6 +255,16 @@ func (domain *SparseDomain) Commit() string {
 	return domain.publication.manifest.Commit
 }
 
+// Domain returns the validated extraction-domain identity bound by this sparse
+// authority. It is used to select domain-specific versioned result contracts
+// without inferring identity from a possibly empty partition set.
+func (domain *SparseDomain) Domain() string {
+	if domain == nil {
+		return ""
+	}
+	return domain.index.Domain
+}
+
 type sparseSourceMember struct {
 	artifact   Artifact
 	prefix     string

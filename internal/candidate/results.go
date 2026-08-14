@@ -15,7 +15,9 @@ import (
 const (
 	DomainResultPlanSchemaV1   = "phebs-extraction-domain-result-plan-v1"
 	DomainResultPlanSchemaV2   = "phebs-extraction-domain-result-plan-v2"
+	DomainResultPlanSchemaV3   = "phebs-extraction-domain-result-plan-v3"
 	DomainResultPlanSchema     = DomainResultPlanSchemaV1
+	DomainResultPlanV3Domain   = "kafka-producer"
 	PartitionResultSchema      = "phebs-extraction-partition-result-v1"
 	DomainResultRootSchema     = "phebs-extraction-domain-result-root-v1"
 	PartitionExpectationSchema = "phebs-extraction-partition-result-expectation-v1"
@@ -40,6 +42,14 @@ const (
 	MaxDomainResultReferences       = 98_304
 	MaxDomainResultCanonicalBytes   = int64(64 << 20)
 	MaxDomainResultEncodedBytes     = int64(64 << 20)
+	// V3 is the Kafka-producer all-dimension correction measured from the exact
+	// T40.R1 semantic corpus. Aggregate reservations retain the allocator's
+	// 64-partition shape; per-partition byte backstops remain 64 MiB.
+	MaxDomainResultFactsV3          = 262_144
+	MaxDomainResultRowsV3           = 524_288
+	MaxDomainResultReferencesV3     = 262_144
+	MaxDomainResultCanonicalBytesV3 = int64(256 << 20)
+	MaxDomainResultEncodedBytesV3   = int64(256 << 20)
 	// MemberBytes remains the per-partition reservation backstop. V1 also used
 	// it as the aggregate; v2 binds a distinct aggregate input ceiling.
 	MaxDomainResultMemberBytes            = int64(64 << 20)
@@ -70,21 +80,23 @@ type DomainResultAuthority struct {
 }
 
 type DomainResultLimits struct {
-	Partitions           int   `json:"partitions"`
-	MemberPartitions     int   `json:"member_partitions"`
-	TypedPartitions      int   `json:"typed_partitions"`
-	Facts                int64 `json:"facts"`
-	Rows                 int64 `json:"rows"`
-	References           int64 `json:"references"`
-	CanonicalBytes       int64 `json:"canonical_bytes"`
-	EncodedBytes         int64 `json:"encoded_bytes"`
-	MemberBytes          int64 `json:"member_bytes"`
-	AggregateMemberBytes int64 `json:"aggregate_member_bytes,omitempty"`
-	Members              int64 `json:"members"`
-	InventoryEntries     int   `json:"inventory_entries"`
-	InventoryBytes       int64 `json:"inventory_bytes"`
-	PlanBytes            int64 `json:"plan_bytes"`
-	RootBytes            int64 `json:"root_bytes"`
+	Partitions              int   `json:"partitions"`
+	MemberPartitions        int   `json:"member_partitions"`
+	TypedPartitions         int   `json:"typed_partitions"`
+	Facts                   int64 `json:"facts"`
+	Rows                    int64 `json:"rows"`
+	References              int64 `json:"references"`
+	CanonicalBytes          int64 `json:"canonical_bytes"`
+	EncodedBytes            int64 `json:"encoded_bytes"`
+	PartitionCanonicalBytes int64 `json:"partition_canonical_bytes,omitempty"`
+	PartitionEncodedBytes   int64 `json:"partition_encoded_bytes,omitempty"`
+	MemberBytes             int64 `json:"member_bytes"`
+	AggregateMemberBytes    int64 `json:"aggregate_member_bytes,omitempty"`
+	Members                 int64 `json:"members"`
+	InventoryEntries        int   `json:"inventory_entries"`
+	InventoryBytes          int64 `json:"inventory_bytes"`
+	PlanBytes               int64 `json:"plan_bytes"`
+	RootBytes               int64 `json:"root_bytes"`
 }
 
 func FrozenDomainResultLimits() DomainResultLimits {
@@ -111,12 +123,26 @@ func FrozenDomainResultLimitsV2() DomainResultLimits {
 	return limits
 }
 
+func FrozenDomainResultLimitsV3() DomainResultLimits {
+	limits := FrozenDomainResultLimitsV2()
+	limits.Facts = MaxDomainResultFactsV3
+	limits.Rows = MaxDomainResultRowsV3
+	limits.References = MaxDomainResultReferencesV3
+	limits.CanonicalBytes = MaxDomainResultCanonicalBytesV3
+	limits.EncodedBytes = MaxDomainResultEncodedBytesV3
+	limits.PartitionCanonicalBytes = MaxDomainResultCanonicalBytes
+	limits.PartitionEncodedBytes = MaxDomainResultEncodedBytes
+	return limits
+}
+
 func domainResultLimitsForSchema(schema string) (DomainResultLimits, bool) {
 	switch schema {
 	case DomainResultPlanSchemaV1:
 		return FrozenDomainResultLimits(), true
 	case DomainResultPlanSchemaV2:
 		return FrozenDomainResultLimitsV2(), true
+	case DomainResultPlanSchemaV3:
+		return FrozenDomainResultLimitsV3(), true
 	default:
 		return DomainResultLimits{}, false
 	}
@@ -127,6 +153,20 @@ func domainResultAggregateMemberBytes(limits DomainResultLimits) int64 {
 		return limits.AggregateMemberBytes
 	}
 	return limits.MemberBytes
+}
+
+func domainResultPartitionCanonicalBytes(limits DomainResultLimits) int64 {
+	if limits.PartitionCanonicalBytes != 0 {
+		return limits.PartitionCanonicalBytes
+	}
+	return limits.CanonicalBytes
+}
+
+func domainResultPartitionEncodedBytes(limits DomainResultLimits) int64 {
+	if limits.PartitionEncodedBytes != 0 {
+		return limits.PartitionEncodedBytes
+	}
+	return limits.EncodedBytes
 }
 
 // DomainResultTotals is used for both reservations and settled work. A plan
@@ -314,6 +354,25 @@ func BuildDomainResultPlanV2(
 	return buildDomainResultPlan(
 		domain, authority, reservations,
 		DomainResultPlanSchemaV2, FrozenDomainResultLimitsV2(),
+	)
+}
+
+// BuildDomainResultPlanV3 applies the measured Kafka-producer all-dimension
+// aggregate contract while preserving every historical V1/V2 plan and the
+// original per-partition quota/backstop envelope.
+func BuildDomainResultPlanV3(
+	domain *SparseDomain,
+	authority DomainResultAuthority,
+	reservations []DomainResultTotals,
+) (DomainResultPlan, error) {
+	if domain == nil || domain.Domain() != DomainResultPlanV3Domain {
+		return DomainResultPlan{}, domainResultInvalid(
+			"v3 result contract requires domain %q", DomainResultPlanV3Domain,
+		)
+	}
+	return buildDomainResultPlan(
+		domain, authority, reservations,
+		DomainResultPlanSchemaV3, FrozenDomainResultLimitsV3(),
 	)
 }
 
@@ -699,6 +758,10 @@ func validateDomainResultPlanEnvelope(plan DomainResultPlan) error {
 		!domainResultTotalsWithin(plan.Reserved, domainResultTotalsLimit(limits)) {
 		return domainResultInvalid("domain result plan envelope is invalid")
 	}
+	if plan.Schema == DomainResultPlanSchemaV3 &&
+		plan.Domain != DomainResultPlanV3Domain {
+		return domainResultInvalid("v3 domain result plan is not kafka-producer")
+	}
 	if (plan.Availability == "unavailable" || plan.Availability == "empty") && len(plan.Expected) != 0 ||
 		plan.Availability == "admitted" && len(plan.Expected) == 0 {
 		return domainResultInvalid("plan availability disagrees with its expected set")
@@ -773,8 +836,8 @@ func validateDomainResultReservation(
 ) error {
 	if !validDomainResultTotals(reservation) || reservation.Facts > int64(quotas.Facts) ||
 		reservation.Rows > int64(quotas.Rows) || reservation.References > int64(quotas.References) ||
-		reservation.CanonicalBytes > limits.CanonicalBytes ||
-		reservation.EncodedBytes > limits.EncodedBytes ||
+		reservation.CanonicalBytes > domainResultPartitionCanonicalBytes(limits) ||
+		reservation.EncodedBytes > domainResultPartitionEncodedBytes(limits) ||
 		reservation.MemberBytes > limits.MemberBytes || reservation.Members > 1 {
 		return errors.New("reservation exceeds its partition quota")
 	}
