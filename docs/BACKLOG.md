@@ -953,6 +953,20 @@ controls, and stage a v3-bound run end to end. Historical reads pay no new
 decode. This authorizes no freeze: independent review and one fresh complete
 exact semantic fit remain mandatory; Take 19 and Epic 41 remain blocked.
 
+Independent review and integration disposition (2026-08-14): the store
+envelope correction is accepted. Review added regression guards that prove the
+reconciler forwards the candidate plan schema and that the duplicated
+store/candidate v3 schema, domain, and fact/row/reference maxima remain exact.
+It also preserved T30.4's historical zero-override candidate identity after
+the later 2,048-record Proto/Thrift policy addition. Focused, static, vet,
+lint, race, exact-Node UI, documentation, glossary, and shell gates pass. The
+full Go run retains only three failures reproduced unchanged at `main@8ca176e`:
+the pre-existing T30.6 retention-budget drift and T32.3/T32.4 bundle-identity
+drift. This baseline-qualified acceptance does not call repository CI wholly
+green and does not absorb those failures into T40.R1. After integration, one
+fresh complete committed-source semantic fit and independent evidence review
+remain mandatory before a separate Take 19 freeze decision.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

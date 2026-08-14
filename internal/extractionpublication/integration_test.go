@@ -21,6 +21,28 @@ type candidateFixture struct {
 	publication         *candidate.Publication
 }
 
+func TestStorePartitionedV3EnvelopeMatchesCandidateContract(t *testing.T) {
+	if store.PartitionedPlanSchemaV3 != candidate.DomainResultPlanSchemaV3 ||
+		store.PartitionedV3Domain != candidate.DomainResultPlanV3Domain ||
+		store.MaxPartitionedFactsV3 != candidate.MaxDomainResultFactsV3 ||
+		store.MaxPartitionedRowsV3 != candidate.MaxDomainResultRowsV3 ||
+		store.MaxPartitionedReferencesV3 != candidate.MaxDomainResultReferencesV3 {
+		t.Fatalf(
+			"store v3 envelope = (%q, %q, %d, %d, %d), candidate = (%q, %q, %d, %d, %d)",
+			store.PartitionedV3Domain,
+			store.PartitionedPlanSchemaV3,
+			store.MaxPartitionedFactsV3,
+			store.MaxPartitionedRowsV3,
+			store.MaxPartitionedReferencesV3,
+			candidate.DomainResultPlanV3Domain,
+			candidate.DomainResultPlanSchemaV3,
+			candidate.MaxDomainResultFactsV3,
+			candidate.MaxDomainResultRowsV3,
+			candidate.MaxDomainResultReferencesV3,
+		)
+	}
+}
+
 func buildCandidateFixtureAt(
 	t *testing.T,
 	repository,
@@ -115,6 +137,7 @@ type testExtractionRunStore struct {
 	aborts     int
 	limits     []store.PartitionedExtractionRunLimits
 	candidates []string
+	schemas    []string
 	published  map[string]store.PartitionedExtractionDomain
 }
 
@@ -124,7 +147,7 @@ func (state *testExtractionRunStore) BeginPartitionedExtractionRun(
 	extractor,
 	_ string,
 	candidateDigest string,
-	_ string,
+	planSchema string,
 	limits store.PartitionedExtractionRunLimits,
 ) (*store.ExtractionRun, error) {
 	state.mu.Lock()
@@ -132,6 +155,7 @@ func (state *testExtractionRunStore) BeginPartitionedExtractionRun(
 	state.begins++
 	state.limits = append(state.limits, limits)
 	state.candidates = append(state.candidates, candidateDigest)
+	state.schemas = append(state.schemas, planSchema)
 	return &store.ExtractionRun{
 		ID: "run-" + scope.Domain, Repo: scope.Repository, Commit: scope.Commit,
 		UnitDigest: scope.UnitDigest, Domain: scope.Domain, Extractor: extractor,
@@ -248,6 +272,9 @@ func TestReconcilerReservesBeforeContentAndReusesRunOnRestart(t *testing.T) {
 	if len(evidence.candidates) != 1 ||
 		evidence.candidates[0] != createdDomain.Plan.CandidateManifestDigest {
 		t.Fatalf("partition run candidate authority = %+v", evidence.candidates)
+	}
+	if len(evidence.schemas) != 1 || evidence.schemas[0] != createdDomain.Plan.Schema {
+		t.Fatalf("partition run plan schema = %+v", evidence.schemas)
 	}
 	if err := runtime.Handle(t.Context(), currentChunk(t, schedules, repository, 0)); err != nil {
 		t.Fatal(err)

@@ -1001,6 +1001,14 @@ catalog, relationship, or correctness authority.
   its retained canonical plan bytes. Historical controls and reads pay no new
   work. Independent review and one fresh complete exact semantic fit remain
   mandatory before any Take 19 freeze.
+- Independent review accepts that correction for integration after adding
+  schema-forwarding and cross-package v3-contract drift guards and preserving
+  T30.4's historical zero-override policy identity. Focused, static, race,
+  exact-Node UI, documentation, glossary, and shell gates pass. The full Go
+  run retains only the T30.6 and T32.3/T32.4 failures reproduced unchanged at
+  `main@8ca176e`; this baseline-qualified result is not a wholly green CI
+  claim. A fresh complete committed-source semantic fit and independent
+  evidence review remain required before a separate Take 19 freeze decision.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

@@ -206,6 +206,7 @@ func equalPolicyIdentities(
 				left.EnumerationPolicy == right.EnumerationPolicy &&
 				left.SymlinkPolicy == right.SymlinkPolicy &&
 				left.Plane == right.Plane &&
+				left.MaxRecords == right.MaxRecords &&
 				slices.Equal(left.TypedInputs, right.TypedInputs)
 		},
 	)
@@ -282,9 +283,10 @@ func measurementUnit(t *testing.T, repository string) *analysisunit.State {
 
 func measurementPolicies(t *testing.T) []candidate.Policy {
 	t.Helper()
-	// This is the production registry with every independent dark gate enabled.
-	// Keeping the constructors here makes the prospective evidence independent
-	// of command wiring while still exercising the exact extractor contracts.
+	// This reconstructs the production registry as frozen by T30.4, with every
+	// independent dark gate enabled. T40.R1 later added an optional focused-local
+	// record bound to the shared registry; zero it here so this historical
+	// measurement continues proving its original candidate identity and bytes.
 	extractors := []extract.Extractor{
 		protodecl.New(), grpcgo.New(), scipfield.New(), gocaller.NewGRPC(),
 		thriftdecl.New(), thriftgo.New(), gocaller.NewThrift(),
@@ -293,6 +295,11 @@ func measurementPolicies(t *testing.T) []candidate.Policy {
 	policies, err := extract.CandidatePolicies(extractors)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for index := range policies {
+		if policies[index].Domain == "proto-contract" || policies[index].Domain == "thrift-contract" {
+			policies[index].MaxRecords = 0
+		}
 	}
 	return policies
 }
