@@ -977,6 +977,15 @@ catalog, relationship, or correctness authority.
   fixed duration buckets while preserving v1/v2. Rerun that diagnostic before
   selecting any output-contract or partition-shape change; Take 19 stays
   unfrozen and Epic 41 stays blocked.
+- The fresh timing-v3 fit closes that attribution. The schedule settled after
+  5,088,005 ms with 226 successes and 38 failures. All 32 nonterminal attempt
+  failures were deadlines: 12 in proto-contract and 20 in thrift-contract;
+  canceled, other, and unknown were zero. That represents two exhausted proto
+  and four exhausted thrift ordinary member partitions after five attempts,
+  alongside the unchanged 32 Kafka fact refusals. Proceed only with a reviewed
+  controlled diagnostic that combines the measured Kafka output contract and
+  domain-specific smaller IDL member packing. Do not raise the five-minute
+  deadline or repack every domain globally. Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

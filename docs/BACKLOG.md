@@ -894,6 +894,18 @@ class, and fixed duration buckets while preserving v1/v2. A fresh exact
 committed-source diagnostic must seal that distribution before any output
 contract or partition-shape correction; Take 19 remains unfrozen.
 
+Exact deadline attribution (2026-08-14): the committed-source v3 diagnostic at
+`9acf808cc8cc86e06184ae92e7cca578f450a05d` settled in 5,088,005 ms with
+226 of 264 partitions succeeded and 38 failed. Its 290 timing reports reconcile
+as 226 completions, 32 retryable failures, and the same 32 Kafka-producer fact
+refusals. All retryable failures are deadlines: 12 proto-contract attempts and
+20 thrift-contract attempts, with zero canceled, other, or unknown failures.
+The six exhausted nonterminal partitions are therefore two proto and four
+thrift ordinary IDL member partitions, not typed-input work. The next governed
+step is a controlled, versioned diagnostic combining the measured Kafka output
+contract with domain-specific smaller IDL member packing. The five-minute
+deadline and shared 4,096-record pack remain unchanged; Take 19 is unfrozen.
+
 The required production-binary rehearsal then found and closed three recovery
 compatibility gaps before freeze: dependency-low validation now accepts the
 canonical `unavailable_prerequisite` explicit-gap authority already accepted

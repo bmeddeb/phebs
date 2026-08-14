@@ -1273,6 +1273,31 @@ these diagnostics before selecting a v3 output contract, optimization, or
 partition-specific re-shard. Do not lower the shared candidate-v4 4,096-record
 packing limit without that attribution. Take 19 remains unfrozen.
 
+The fresh current-bound attribution fit is retained in
+`take19-semantic-attribution-fit.json` at exact commit
+`9acf808cc8cc86e06184ae92e7cca578f450a05d`. It stopped honestly at
+5,088,005 ms with a settled 264-partition schedule: 226 succeeded, 38 failed,
+and no pending or running work. The 290-report timing floor reconciles exactly
+as 226 completed, 32 retryable failures, and 32 terminal refusals. The refusal
+population is unchanged: every terminal refusal is a Kafka-producer facts
+limit at 769 over 768. The newly closed population is entirely deadline class:
+proto-contract has 12 failed attempts and thrift-contract has 20, with no
+canceled, other, or unknown failure. Schedule arithmetic closes those attempts
+as two exhausted proto and four exhausted thrift partitions after five tries;
+the two completed proto partitions account for the remaining two retry failures.
+Proto reached 300,002 ms and thrift 300,001 ms. Peak RSS was 1,576,796,160
+bytes and allocated data was 2,631,065,600 bytes, below the frozen ceilings.
+The diagnostic destroyed its private fixture, data, credentials, and children.
+
+This attribution rules out a typed-input-specific correction for the measured
+wall. `proto-contract` and `thrift-contract` use ordinary IDL candidate members;
+their failures select domain-specific smaller packing, measured against the
+unchanged five-minute deadline. Do not lower the shared 4,096-record pack or
+raise the deadline. The next controlled diagnostic must combine that reduce-
+first IDL packing with the separately measured versioned Kafka all-dimension
+output contract, preserve historical candidate/result-plan validation, and
+pass independent review. It is not a ceremony and does not authorize Take 19.
+
 ```sh
 cd ~/phebs
 
