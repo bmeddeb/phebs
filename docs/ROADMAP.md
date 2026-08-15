@@ -1233,6 +1233,24 @@ catalog, relationship, or correctness authority.
   state, scale, or ceremony readiness. Move next through that descriptor-
   present pair-execution seam; do not start another ceremony. No rerun,
   release, Epic closure, or Epic 41 progression follows.
+- The descriptor-present physical-pair diagnostic now builds a real seven-file
+  Git commit into four candidate-v4 leaves, materializes a current one-
+  descriptor gRPC catalog from exact declaration/generated authority, selects
+  the one-record consumer leaf through the production provider, and runs
+  `ExecutePair` with its default Git reader. The pair reads exactly one
+  121-byte consumer blob, emits and rereads one exact `CALLS_OPERATION`, and
+  records zero abstentions, compact coverage, or out-of-leaf reads. The
+  source-free receipt is `descriptor-present-git-blob-pair.json`
+  (`sha256:1952ebce6ed4b0b3dcafa35962b1375a65565b625525ac70551c4f8555d7288e`).
+  The retained rerun measured 66.0ms candidate build, 66.8ms resolver build,
+  0.426ms resolver open, and 18.0ms pair execute/seal as observations, not an
+  SLO. This clears only descriptor materialization, physical leaf selection,
+  bounded Git read, direct scan, artifact install, and reread. It does not
+  prove worker outcome/admission/publication/product parity, multi-descriptor
+  or Thrift behavior, Take 20's destroyed state, scale, or ceremony readiness.
+  If diagnosis continues, compose this exact pair through those downstream
+  production boundaries; do not start another ceremony. No rerun, release,
+  Epic closure, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

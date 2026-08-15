@@ -1843,6 +1843,55 @@ next to descriptor-present resolver/Git-blob pair execution; do not launch
 another ceremony. No rerun, scale/SLO, release, Epic closure, or Epic 41
 progression follows.
 
+The next opt-in diagnostic crosses that descriptor-present physical-pair seam.
+Set `T40R1_DESCRIPTOR_GIT_BLOB_DIAGNOSTIC=1` and run
+`TestT40R1DescriptorPresentGitBlobPairDiagnostic`:
+
+```sh
+cd ~/phebs
+
+T40R1_DESCRIPTOR_GIT_BLOB_DIAGNOSTIC=1 \
+  go test ./spike/t4013 \
+  -run '^TestT40R1DescriptorPresentGitBlobPairDiagnostic$' \
+  -count=1 -timeout=10m -v
+```
+
+The harness authors a real seven-file neutral Git commit, builds and
+store-publishes candidate-v4, and reopens its six caller records in four
+immutable leaves through `candidatejob.Provider`. It publishes one exact
+protobuf declaration assertion and materializes the committed module, layout,
+generated-attribution, and generated-client inputs into a current two-member
+resolver catalog. The resulting descriptor binds
+`example.invalid/root/gen/grpc.OrdersClient.Get` to `/orders.Orders/Get`, the
+exact declaration lineage, and the exact generated Git object.
+
+The selected physical `10` leaf contains only `consumer/call.go`. The harness
+passes no `ReadBlob` override to `ExecutePair`, so production's default bounded
+`gitobj.ReadBlob` reads exactly that 121-byte object. Direct syntax resolution
+emits one `CALLS_OPERATION`; the pair seals, installs, and rereads the exact
+result with zero abstentions, compact coverage records, or out-of-leaf reads.
+The retained source-free receipt is `descriptor-present-git-blob-pair.json`
+(`sha256:1952ebce6ed4b0b3dcafa35962b1375a65565b625525ac70551c4f8555d7288e`).
+
+On the retained rerun, candidate build took 66.0ms, resolver materialization
+66.8ms, resolver open 0.426ms, and pair execute/seal 18.0ms. Resolver
+materialization made four bounded Git reads totaling 713 bytes; pair execution
+made one bounded read totaling 121 bytes. Candidate, resolver, installed caller
+artifact, and bare-repository disk were 7,394, 8,050, 1,369, and 27,812 bytes.
+These are diagnostic observations, not production ceilings or an SLO.
+
+The opt-in test changes no production behavior or steady-state cost. It
+exercises the existing bounded candidate passes, named resolver-input reads,
+selected-leaf validation, OID-bound Git read and SHA-256, one Go parse, one
+artifact write, and one artifact reread. It does not run the caller worker
+queue, outcome/admission/complete publication, product reader/Caller Map,
+startup/recovery/lifecycle, multi-descriptor ambiguity, Thrift, Take 20's
+destroyed state, or the 96-leaf scale shape. If diagnosis continues, compose
+this descriptor-present pair through production worker outcome, admission,
+complete publication, and exact product parity; do not launch another
+ceremony. No rerun, scale/SLO, release, Epic closure, or Epic 41 progression
+follows.
+
 ```sh
 cd ~/phebs
 

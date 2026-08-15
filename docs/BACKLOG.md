@@ -1319,6 +1319,29 @@ next to the descriptor-present resolver/Git-blob pair-execution boundary; do
 not start another ceremony. No rerun, scale/SLO, release, Epic closure, or
 Epic 41 progression follows.
 
+The descriptor-present physical-pair diagnostic now carries one neutral gRPC
+call across the next boundary. A real seven-file Git commit produces six
+caller records in four candidate-v4 leaves. Production resolver
+materialization reads four named immutable inputs totaling 713 bytes and
+publishes a current two-member catalog with one exact descriptor binding
+`example.invalid/root/gen/grpc.OrdersClient.Get` to `/orders.Orders/Get`, its
+declaration lineage, and the generated object. The production provider selects
+the one-record `10` leaf, and `ExecutePair` uses its default `gitobj.ReadBlob`
+path to read only the 121-byte consumer source, emit one `CALLS_OPERATION`,
+seal/install the artifact, and reread that exact result. Abstentions, compact
+coverage, and out-of-leaf reads are zero. The source-free receipt is
+`spike/t4013/descriptor-present-git-blob-pair.json`
+(`sha256:1952ebce6ed4b0b3dcafa35962b1375a65565b625525ac70551c4f8555d7288e`).
+The retained rerun measured 66.0ms candidate build, 66.8ms resolver build,
+0.426ms resolver open, and 18.0ms pair execute/seal; these are observations,
+not ceilings or an SLO. The opt-in diagnostic changes no production path. It
+does not drive the caller worker queue, outcome/admission/complete publication,
+product reads, startup/recovery/lifecycle, Thrift, ambiguity, Take 20's
+destroyed state, or the 96-leaf scale shape. Move next by composing this
+descriptor-present pair through production worker outcome, admission,
+publication, and exact product parity; do not start another ceremony. No
+rerun, scale/SLO, release, Epic closure, or Epic 41 progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
