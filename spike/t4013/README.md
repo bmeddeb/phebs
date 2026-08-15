@@ -1685,6 +1685,33 @@ publication rejection in that consumed run. Classify and retain that actual
 closed origin before another full ceremony. This source-free boundary witness
 is not a scale pass and authorizes no rerun or freeze.
 
+The next opt-in step moves exactly one boundary upstream. Set
+`T40R1_CALLER_UPSTREAM_WITNESS=1` and run
+`TestT40R1CallerTerminalUpstreamWitness`. Instead of injecting empty direct
+resolvers, it publishes one real protobuf declaration evidence run, executes
+production resolver materialization over the retained 262,145-record candidate
+projection, and seals/installs/publishes the canonical three-member catalog.
+The production caller worker opens that exact catalog for gRPC and Thrift; both
+views contain zero descriptors. The same 192 pairs settle and admit, and the
+shared publication registry carries the result directly into an authorized
+exact Caller Map request.
+
+The retained `caller-terminal-upstream-witness.json` has SHA-256
+`8409977bd830fe69880b870719e2b1a4cbb6c9648555c4d1b88a668ce2cec5db`.
+It records current resolver, caller-publication, and reader authority plus a
+`caller-map-v2` response with exact declaration authority, current generation,
+exact matching-row state, zero rows, and pair/candidate/coverage parity with
+the durable publication. The diagnostic adds two 262,145-record resolver-input
+passes, 524,290 caller candidate callbacks, one declaration publication, one
+resolver publication, 192 compact artifact/outcome writes, one caller
+admission/publication, one diagnostic resolver reopen, and one exact zero-row
+request. It adds no production steady-state work. This clears resolver
+materialization and exact product projection for the closed empty-resolver
+state; it still deliberately starts before partitioned observation/extraction
+authority and cannot recover Take 20's destroyed resolver population or failed
+read. Move that exact authority/origin boundary next. This is not a scale pass
+and authorizes no rerun or freeze.
+
 ```sh
 cd ~/phebs
 

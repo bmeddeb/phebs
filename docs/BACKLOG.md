@@ -1209,6 +1209,24 @@ ceremony, classify that actual product-read origin and retain the closed
 progress/refusal scalars. No production fix, rerun, freeze, scale/SLO, release,
 or Epic 41 progression follows from this scoped pass.
 
+The next one-boundary-upstream witness replaces that supplied resolver with a
+production-built, sealed, installed, store-published, and strict-opened
+resolver catalog. It publishes one real protobuf declaration evidence run,
+materializes the canonical three resolver members over the same 262,145-record
+candidate projection, and proves both protocol views contain zero descriptors.
+The unchanged 192-pair worker run again admits and publishes current authority;
+the shared exact reader and authorized Caller Map then return a current,
+declaration-backed, exact zero-row page whose pair, candidate, and coverage
+scalars equal the durable publication. The retained source-free record is
+`spike/t4013/caller-terminal-upstream-witness.json`
+(`sha256:8409977bd830fe69880b870719e2b1a4cbb6c9648555c4d1b88a668ce2cec5db`).
+This clears resolver materialization and product projection only for the
+closed zero-descriptor state. It deliberately still begins before production
+partitioned observation/extraction authority and cannot reconstruct Take 20's
+destroyed resolver population or failed read. Move that exact authority/origin
+boundary next; do not infer a production fix, rerun, freeze, scale/SLO,
+release, Epic closure, or Epic 41 progression.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

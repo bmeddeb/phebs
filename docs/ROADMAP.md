@@ -1167,6 +1167,20 @@ catalog, relationship, or correctness authority.
   deterministic authority/publication rejection. Classify that actual origin
   and retain its closed scalars before another full ceremony. No production
   fix, rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
+- The one-boundary-upstream witness now builds and publishes the real canonical
+  three-member resolver catalog from a disk-backed declaration run and the
+  retained candidate projection, then lets production caller resolution open
+  both zero-descriptor protocol views. All 192 pairs still admit and publish;
+  the shared reader and authorized exact Caller Map return a current,
+  declaration-backed, exact zero-row page with durable pair/candidate/coverage
+  parity. The source-free record is
+  `caller-terminal-upstream-witness.json`
+  (`sha256:8409977bd830fe69880b870719e2b1a4cbb6c9648555c4d1b88a668ce2cec5db`).
+  Resolver materialization and exact product projection are therefore not the
+  failing boundary for this closed empty-resolver state. Production
+  partitioned observation/extraction authority and the destroyed Take 20
+  failed-read origin remain unproved; move that boundary next. No production
+  fix, rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
