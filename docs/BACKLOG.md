@@ -1006,6 +1006,19 @@ These are edit-loop gates, not scale evidence: after they pass, historical,
 recovery, maximum-shape, steady-state-cost, integrated exact-fit, and
 independent-review gates remain required. No freeze or rerun is authorized.
 
+Scoped writer result (2026-08-14): the exact production-store diagnostic is
+retained at `spike/t4013/take19-kafka-writer-failure-point.json`. It stopped
+after 2,169,379 ms with 145 append attempts, 143 completed chunks, 36,608
+facts, 73,216 rows, and 36,608 references. The first closed failure was an
+append deadline at 30,007 ms; the sibling append canceled. Forty append phases
+were at or above 30 seconds and the maximum was 348,077 ms. All 143 accounting
+reads completed in at most 3 ms with no failure. Peak SurrealDB RSS was
+456,048,640 bytes and cleanup left no child. This selects a chunk-bounded exact
+run-counter charge in place of the per-row shared-run updates, with atomic
+rollback, replay/conflict, exact accounting, concurrency, maximum-shape,
+publication, recovery, and historical checks. Re-run this focused gate after
+the correction; do not raise a timeout, deadline, concurrency, or bound.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

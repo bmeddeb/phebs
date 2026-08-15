@@ -1429,6 +1429,29 @@ replace historical/recovery/maximum-shape tests or the integrated exact
 semantic fit. Run that full fit only after both focused gates and their
 steady-state-cost review pass.
 
+The first exact writer-only run is retained as
+`take19-kafka-writer-failure-point.json`, SHA-256
+`2da127865732aa1f8b84b3d17a8f295c85299009f03e9d7488d9f06e29ab55ff`.
+It used the production disk-backed store and stopped after 2,169,379 ms with
+145 append attempts and 143 completed chunks: 36,608 facts, 73,216 rows, and
+36,608 references. The first closed failure was `append` / `deadline` at
+30,007 ms and the sibling append canceled. The append histogram contains four
+phases below one second, 39 below ten seconds, 62 below thirty seconds, and 40
+at or above thirty seconds, with a 348,077-ms maximum. The histogram is not
+paired to individual outcomes, so it does not claim every long append failed.
+All 143 accounting reads completed below one second, with a 3-ms maximum and
+zero failures. Peak SurrealDB RSS was 456,048,640 bytes, its measured delta was
+346,636,288 bytes, Go allocation was 2,272,171,560 bytes, and cleanup left no
+child.
+
+This assigns the correction to `AddEvidenceChunk`: replace the repeated
+per-association and per-assertion updates of the shared extraction-run counters
+with a chunk-bounded exact charge while preserving transaction rollback,
+new-versus-replay behavior, conflict refusal, exact row/reference accounting,
+two-worker concurrency, maximum-shape admission, publication reconciliation,
+recovery, and historical controls. Re-run this same command after the change.
+Do not raise the SDK request timeout or the partition deadline.
+
 ```sh
 cd ~/phebs
 

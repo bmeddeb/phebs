@@ -1032,6 +1032,15 @@ catalog, relationship, or correctness authority.
   CI skips both. They remove unrelated setup and downstream work from local
   iteration; they do not replace historical/recovery/maximum-shape checks, the
   integrated exact semantic fit, independent review, or a separate freeze.
+- The exact scoped Kafka writer run now closes its failure point: after
+  2,169,379 ms, 143 of 145 attempted chunks completed before append returned
+  one 30,007-ms deadline and one sibling cancellation. All 143 accounting
+  reads completed in at most 3 ms; append had 40 at-or-above-30-second phases
+  and a 348,077-ms maximum. Peak SurrealDB RSS was 456,048,640 bytes and
+  cleanup completed. Optimize the append transaction's per-row shared-run
+  counter updates into one chunk-bounded exact charge, preserve atomic replay,
+  accounting, publication, recovery, and historical behavior, then rerun the
+  same focused gate. Do not raise timeout, deadline, concurrency, or bounds.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
