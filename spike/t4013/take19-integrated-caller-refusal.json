@@ -1,0 +1,61 @@
+{
+  "schema": "t4013-take19-integrated-caller-refusal-v1",
+  "source_commit": "1da4ada790bdf56ffcc4f8a03c4ce8c4c9fa00bf",
+  "diagnostic": "TestExactSemanticColdTiming",
+  "profile": "semantic-262144-v1",
+  "outcome": "stopped_after_durable_terminal_refusal",
+  "go_test_wall_ms": 3573161,
+  "observation_records": 262144,
+  "extraction": {
+    "state": "current",
+    "total_partitions": 272,
+    "materialized": 272,
+    "pending": 0,
+    "running": 0,
+    "succeeded": 272,
+    "failed": 0,
+    "domains": 9,
+    "current_domains": 9
+  },
+  "caller_generation": {
+    "disposition": "terminal_generation_refusal",
+    "pair_count": 192,
+    "artifact_count": 38,
+    "succeeded_outcomes": 38,
+    "terminal_refusal_outcomes": 154,
+    "result_count": 0,
+    "abstention_count": 100306,
+    "canonical_bytes": 20261812,
+    "staging_bytes": 20261812,
+    "peak_open_files": 5,
+    "maximum_successful_pair_abstentions": 4094,
+    "per_pair_abstention_limit": 4096,
+    "aggregate_abstention_limit": 100000,
+    "aggregate_abstention_overage": 306,
+    "per_pair_refusal_dimension": "not_retained"
+  },
+  "caller_domains": [
+    {
+      "domain": "grpc-caller",
+      "succeeded_outcomes": 38,
+      "terminal_refusal_outcomes": 58,
+      "successful_abstentions": 100306,
+      "maximum_successful_pair_abstentions": 4094
+    },
+    {
+      "domain": "thrift-caller",
+      "succeeded_outcomes": 0,
+      "terminal_refusal_outcomes": 96,
+      "successful_abstentions": 0,
+      "maximum_successful_pair_abstentions": 0
+    }
+  ],
+  "relationship_published": false,
+  "exact_fit_record_emitted": false,
+  "resource_capture_state": "not_retained_after_early_stop",
+  "cleanup": {
+    "children_remaining": 0,
+    "exact_custody_trashed": true,
+    "temporary_clone_trashed": true
+  }
+}

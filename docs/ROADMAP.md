@@ -1077,6 +1077,19 @@ catalog, relationship, or correctness authority.
   cannot pass even if downstream authority converges. This authorizes only the
   integrated diagnostic and separate evidence review, not a ceremony or
   freeze; Take 19 remains unfrozen.
+- The integrated exact diagnostic at `1da4ada7` proves the two corrections:
+  selected-v2 observation reached 262,144 records and extraction became current
+  with exact 272/272 success, zero failures, and 9/9 current domains. It then
+  exposed a new downstream stop. Forty caller-leaf jobs durably settled 192
+  outcomes, but only 38 succeeded; 154 are terminal generation refusals (58
+  gRPC, 96 Thrift), and relationship authority did not publish. The successful
+  artifacts alone contain 100,306 abstentions, 306 over the frozen 100,000
+  aggregate cap, while the current schema retains no typed reason for the 154
+  refused pairs. The run was stopped at 3,573,161 ms once convergence was
+  impossible; no v4 fit/resource record was emitted. Next add typed caller
+  refusal retention plus terminal diagnostic projection, then run a scoped
+  caller-lane attribution gate before selecting reduction or correction. Do
+  not raise either caller limit in isolation; Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

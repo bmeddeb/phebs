@@ -1516,6 +1516,32 @@ This review authorizes the exact diagnostic only. Its source-free result still
 requires separate evidence review before any Take 19 freeze decision. No
 ceremony command below is authorized yet.
 
+That integrated diagnostic is now retained as
+`take19-integrated-caller-refusal.json`, SHA-256
+`c8134b908665f22c385a7483c99661800d19c6db82f3195434e6018729131f02`, at
+exact source commit `1da4ada790bdf56ffcc4f8a03c4ce8c4c9fa00bf`. It proves
+the corrected extraction route: selected-v2 observation reached 262,144
+records, the schedule materialized exactly 272 partitions, all 272 succeeded,
+zero failed, and all nine domains became current. Relationship publication did
+not follow. Forty first-attempt-success caller-leaf jobs durably settled 192
+pair outcomes, but only 38 outcomes succeeded; 154 are terminal generation
+refusals, split as 58 `grpc-caller` and 96 `thrift-caller`. The successful gRPC
+artifacts alone contain 100,306 abstentions, 306 above the frozen 100,000
+aggregate maximum. Their largest successful pair contains 4,094 abstentions
+against the 4,096 per-pair maximum.
+
+Do not infer that all 154 pairs exceeded the abstention limit. The current
+caller outcome stores no refusal dimension, observed value, or limit. The
+exact harness also does not recognize terminal caller admission and would wait
+until the four-hour deadline even though immutable convergence is impossible;
+the diagnostic was stopped after 3,573,161 ms and therefore emitted no v4
+fit/resource record. Before choosing reduction or correction, add a bounded
+typed caller-refusal projection, stop the diagnostic on terminal caller
+admission, and run a scoped exact caller-lane gate that classifies every refusal
+and remeasures aggregate results, abstentions, canonical bytes, and staging
+bytes. Do not raise the per-pair or aggregate limit in isolation. Take 19 is
+still unfrozen, and no ceremony command below is authorized.
+
 ```sh
 cd ~/phebs
 

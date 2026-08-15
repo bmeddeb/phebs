@@ -1077,6 +1077,28 @@ integrated exact fit, not a ceremony; its result still needs separate evidence
 review before any freeze decision. Take 19 remains unfrozen and Epic 41 remains
 blocked.
 
+Integrated caller-generation refusal (2026-08-14): the committed-source exact
+diagnostic at `1da4ada7` proves the merged corrections reached production.
+Observation reached 262,144 records and extraction became current at exact
+272/272 materialized and succeeded partitions, zero failures, and 9/9 current
+domains. Relationship publication then stopped behind a durable terminal
+caller admission: 40 successful queue jobs settled 192 pair outcomes, of which
+38 succeeded and 154 were `terminal_generation_refusal` (58 `grpc-caller`, 96
+`thrift-caller`). The 38 successful gRPC artifacts independently total 100,306
+abstentions, 306 over the frozen 100,000 aggregate maximum; the largest
+successful pair is 4,094 against the 4,096 per-pair maximum. The outcome schema
+does not retain a typed dimension/observed/limit tuple for refused pairs, so it
+cannot prove why the other 154 pairs refused. The exact harness also does not
+surface terminal caller admission; the run was stopped after 3,573,161 ms
+rather than wait irrecoverably for four hours. Receipt
+`spike/t4013/take19-integrated-caller-refusal.json` has SHA-256
+`c8134b908665f22c385a7483c99661800d19c6db82f3195434e6018729131f02`.
+Before selecting a fix, retain a bounded typed caller refusal, make the
+diagnostic terminal on refused admission, and add a scoped exact caller-lane
+gate that classifies all refused pairs and remeasures every aggregate
+dimension. Do not raise caller limits in isolation. Take 19 remains unfrozen
+and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
