@@ -1452,6 +1452,32 @@ two-worker concurrency, maximum-shape admission, publication reconciliation,
 recovery, and historical controls. Re-run this same command after the change.
 Do not raise the SDK request timeout or the partition deadline.
 
+The corrected writer result is retained as
+`take19-kafka-writer-aggregate-fix.json`, SHA-256
+`c6041cf5ff599cff9b01281286a3324845c578254b5851161fef888e3199963d`.
+It completed all 512 chunks and the exact 131,072 facts, 262,144 rows, and
+131,072 references in 41,625 ms under the same two workers. All 512 appends
+were below one second with a 262-ms maximum; all 512 accounting reads were
+below one second with a 3-ms maximum; deadline, canceled, and other failures
+were zero. Peak SurrealDB RSS was 932,823,040 bytes, its measured delta was
+841,908,224 bytes, and Go allocation was 4,265,987,176 bytes while retaining
+the full population.
+
+The production transaction retains its first extraction-run update as the
+serialization lock and exact fact/chunk reservation. It now point-reads only
+the at-most-256 submitted association/assertion IDs, computes exact row and
+reference-union deltas transaction-locally, applies three bulk atom/
+association/assertion writes and one final guarded aggregate run charge, then
+creates the chunk receipt before the same commit. A full chunk therefore uses
+exactly two shared run-row updates instead of as many as 513 and three bulk
+writes instead of 768 per-record write statements. Exact replay writes
+nothing. Regression coverage proves overlap union, replay, attribute/direction
+conflict rollback, one-over-limit rollback, the 256-fact boundary, concurrent
+accounting, publication reconciliation, recovery, and historical controls.
+The full store suite passed. This clears the focused writer lane only: the
+whole-repository execution-subrange correction and independent combined review
+remain required before one new integrated exact fit. Take 19 remains unfrozen.
+
 ```sh
 cd ~/phebs
 

@@ -1019,6 +1019,26 @@ rollback, replay/conflict, exact accounting, concurrency, maximum-shape,
 publication, recovery, and historical checks. Re-run this focused gate after
 the correction; do not raise a timeout, deadline, concurrency, or bound.
 
+Writer correction result (2026-08-14): the append transaction now retains one
+initial extraction-run serialization/fact/chunk update, computes exact bounded
+row/reference deltas from only the submitted record IDs, performs three bulk
+atom/association/assertion writes, applies one final guarded aggregate run
+charge, and creates the chunk receipt under the same commit. A 256-fact chunk
+uses exactly two shared run-row updates instead of as many as 513 and three
+bulk writes instead of 768 per-record write statements. Overlap, replay,
+conflict, one-over-limit rollback, maximum chunk, concurrency, publication,
+recovery, and historical coverage pass, as does the full store suite. The
+retained after-fix receipt
+`spike/t4013/take19-kafka-writer-aggregate-fix.json` has SHA-256
+`c6041cf5ff599cff9b01281286a3324845c578254b5851161fef888e3199963d`:
+all 512 two-worker chunks completed in 41,625 ms with exact 131,072 facts,
+262,144 rows, and 131,072 references. All appends were below one second (262-ms
+maximum), all accounting reads were below one second (3-ms maximum), and every
+failure class was zero. This clears the focused writer correction only. The
+whole-repository execution-subrange correction, combined independent review,
+and one integrated exact semantic fit remain required; Take 19 remains
+unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

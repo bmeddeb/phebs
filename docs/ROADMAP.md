@@ -1041,6 +1041,18 @@ catalog, relationship, or correctness authority.
   counter updates into one chunk-bounded exact charge, preserve atomic replay,
   accounting, publication, recovery, and historical behavior, then rerun the
   same focused gate. Do not raise timeout, deadline, concurrency, or bounds.
+- The focused writer correction is now green. `AddEvidenceChunk` preserves its
+  transaction and initial extraction-run serialization lock, but replaces up
+  to 513 shared counter updates and 768 per-record writes per full chunk with
+  exactly two run-row updates, two bounded submitted-ID reads, and three bulk
+  writes. Overlap/replay/conflict/one-over/concurrency/publication/recovery/
+  historical coverage and the full store suite pass. The retained exact
+  after-fix receipt completed 512/512 two-worker chunks and exact 131,072 facts,
+  262,144 rows, and 131,072 references in 41,625 ms; every append was below one
+  second (262-ms maximum), every accounting read was below one second (3-ms
+  maximum), and no request failed. The whole-repository execution-subrange
+  correction and combined independent review remain required before one new
+  integrated fit; Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

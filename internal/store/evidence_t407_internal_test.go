@@ -18,20 +18,37 @@ func TestT407AppendStatementHasNoWholeRunProofScan(t *testing.T) {
 		"FROM assertion WHERE run_id = $run_id",
 		"flatten(SELECT VALUE supporting",
 		"flatten(SELECT VALUE contradicting",
+		"FOR $a IN $safe_atoms",
+		"FOR $prepared IN $prepared_assocs",
+		"FOR $prepared IN $prepared_asserts",
 	} {
 		if strings.Contains(addEvidenceSQL, forbidden) {
-			t.Fatalf("append statement regained whole-run scan %q", forbidden)
+			t.Fatalf("append statement regained unbounded or per-row primitive %q", forbidden)
 		}
 	}
 	for _, required := range []string{
 		"FROM $chunk_rid LIMIT 1",
 		"staged_fact_count += $fact_count",
-		"staged_row_count += 1",
+		"$safe_assocs.map(",
+		"$safe_asserts.map(",
+		"INSERT INTO evidence_atom $atom_rows",
+		"INSERT INTO snapshot_evidence $assoc_rows",
+		"INSERT INTO assertion $prepared_asserts.value",
+		"staged_row_count += $row_delta",
 		"staged_reference_count += $reference_delta",
 	} {
 		if !strings.Contains(addEvidenceSQL, required) {
 			t.Fatalf("append statement lost bounded accounting primitive %q", required)
 		}
+	}
+	if got := strings.Count(addEvidenceSQL, "UPDATE $run SET"); got != 2 {
+		t.Fatalf("append statement has %d shared run-row updates, want exactly 2", got)
+	}
+	if strings.Contains(addEvidenceSQL, "staged_row_count += 1") {
+		t.Fatal("append statement regained per-row shared counter update")
+	}
+	if got := strings.Count(addEvidenceSQL, "INSERT INTO"); got != 3 {
+		t.Fatalf("append statement has %d bulk inserts, want exactly 3", got)
 	}
 }
 
@@ -166,6 +183,147 @@ func TestT407ChunkReplayAccountingAndPublicationDrift(t *testing.T) {
 	}
 	if err := s.PublishExtractionRun(ctx, ledgerRun.ID, coverage); !errors.Is(err, ErrConflict) {
 		t.Fatalf("publish with tampered chunk ledger = %v, want ErrConflict", err)
+	}
+}
+
+func TestT407ChunkAggregateAccountingPreservesOverlapAndReplay(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	const (
+		repo   = "synthetic.invalid/t407-overlap"
+		commit = "1212121212121212121212121212121212121212"
+		chunkA = "sha256:1212121212121212121212121212121212121212121212121212121212121212"
+		chunkB = "sha256:3434343434343434343434343434343434343434343434343434343434343434"
+	)
+	run := t407Run(t, ctx, s, repo, commit, "t407-overlap")
+	atomsA, assocsA, assertionsA := t407Batch(repo, commit, 0)
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunkA, 1, atomsA, assocsA, assertionsA); err != nil {
+		t.Fatal(err)
+	}
+	atomsB, assocsB, _ := t407Batch(repo, commit, 1)
+	assertionsB := []Assertion{assertionsA[0]}
+	assertionsB[0].Supporting = []string{atomsB[0].ID}
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunkB, 1, atomsB, assocsB, assertionsB); err != nil {
+		t.Fatal(err)
+	}
+	want := t407AccountingRec{
+		StagedRevision: 2, StagedFactCount: 2, StagedRowCount: 3,
+		StagedReferenceCount: 2, StagedChunkCount: 2,
+	}
+	if got := t407Accounting(t, ctx, s, run.ID); got != want {
+		t.Fatalf("overlap accounting = %+v, want %+v", got, want)
+	}
+	receipt, err := s.GetEvidenceChunkAccounting(ctx, run.ID, chunkB)
+	if err != nil || receipt.RowDelta != 1 || receipt.ReferenceDelta != 1 {
+		t.Fatalf("overlap receipt = %+v, %v", receipt, err)
+	}
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunkB, 1, atomsB, assocsB, assertionsB); err != nil {
+		t.Fatalf("overlap replay: %v", err)
+	}
+	if got := t407Accounting(t, ctx, s, run.ID); got != want {
+		t.Fatalf("overlap replay changed counters: %+v", got)
+	}
+	if err := s.PublishExtractionRun(ctx, run.ID, CoverageManifest{
+		AssertionCount: 1, AtomCount: 2, CorpusFileCount: 2,
+		CandidateFileCount: 2, ReadFileCount: 2, ReadBytes: 2,
+		SourceScopeDigest: "sha256:" + strings.Repeat("0", 64),
+	}); err != nil {
+		t.Fatalf("publish exact overlap accounting: %v", err)
+	}
+}
+
+func TestT407ChunkAggregateAccountingRollsBackDirectionConflict(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	const (
+		repo     = "synthetic.invalid/t407-direction-conflict"
+		commit   = "5656565656565656565656565656565656565656"
+		chunkA   = "sha256:5656565656565656565656565656565656565656565656565656565656565656"
+		conflict = "sha256:7878787878787878787878787878787878787878787878787878787878787878"
+	)
+	run := t407Run(t, ctx, s, repo, commit, "t407-direction-conflict")
+	atoms, assocs, assertions := t407Batch(repo, commit, 0)
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunkA, 1, atoms, assocs, assertions); err != nil {
+		t.Fatal(err)
+	}
+	before := t407Accounting(t, ctx, s, run.ID)
+	contradicting := []Assertion{assertions[0]}
+	contradicting[0].Supporting = nil
+	contradicting[0].Contradicting = []string{atoms[0].ID}
+	if err := s.AddEvidenceChunk(ctx, run.ID, conflict, 1, atoms, assocs, contradicting); !errors.Is(err, ErrConflict) {
+		t.Fatalf("direction conflict = %v, want ErrConflict", err)
+	}
+	if got := t407Accounting(t, ctx, s, run.ID); got != before {
+		t.Fatalf("direction conflict changed counters: before=%+v after=%+v", before, got)
+	}
+	if _, err := s.GetEvidenceChunkAccounting(ctx, run.ID, conflict); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("direction-conflict receipt = %v, want ErrNotFound", err)
+	}
+}
+
+func TestT407ChunkAggregateAccountingRollsBackOneOverLimit(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	const (
+		repo   = "synthetic.invalid/t407-one-over"
+		commit = "9090909090909090909090909090909090909090"
+		chunkA = "sha256:9090909090909090909090909090909090909090909090909090909090909090"
+		chunkB = "sha256:abababababababababababababababababababababababababababababababab"
+	)
+	run, err := s.BeginPartitionedExtractionRun(ctx, ExtractionScope{
+		Repository: repo, Commit: commit, Domain: "t407-one-over",
+	}, "t40.7-test-v1", "sha256:"+strings.Repeat("c", 64),
+		"sha256:"+strings.Repeat("d", 64), "", PartitionedExtractionRunLimits{
+			Facts: 2, Rows: 2, References: 2,
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	atomsA, assocsA, assertionsA := t407Batch(repo, commit, 0)
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunkA, 1, atomsA, assocsA, assertionsA); err != nil {
+		t.Fatal(err)
+	}
+	before := t407Accounting(t, ctx, s, run.ID)
+	atomsB, assocsB, assertionsB := t407Batch(repo, commit, 1)
+	err = s.AddEvidenceChunk(ctx, run.ID, chunkB, 1, atomsB, assocsB, assertionsB)
+	if err == nil || !strings.Contains(err.Error(), "exceeds a bounded storage limit") {
+		t.Fatalf("one-over append = %v, want bounded storage-limit failure", err)
+	}
+	if got := t407Accounting(t, ctx, s, run.ID); got != before {
+		t.Fatalf("one-over append changed counters: before=%+v after=%+v", before, got)
+	}
+	if _, err := s.GetEvidenceChunkAccounting(ctx, run.ID, chunkB); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("one-over receipt = %v, want ErrNotFound", err)
+	}
+}
+
+func TestT407ChunkAggregateAccountingAtChunkBoundary(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	const (
+		repo   = "synthetic.invalid/t407-chunk-boundary"
+		commit = "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+		chunk  = "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+	)
+	run := t407Run(t, ctx, s, repo, commit, "t407-chunk-boundary")
+	atoms := make([]EvidenceAtom, 0, maxEvidenceFactsPerChunk)
+	assocs := make([]SnapshotEvidence, 0, maxEvidenceFactsPerChunk)
+	assertions := make([]Assertion, 0, maxEvidenceFactsPerChunk)
+	for index := range maxEvidenceFactsPerChunk {
+		batchAtoms, batchAssocs, batchAssertions := t407Batch(repo, commit, index)
+		atoms = append(atoms, batchAtoms...)
+		assocs = append(assocs, batchAssocs...)
+		assertions = append(assertions, batchAssertions...)
+	}
+	if err := s.AddEvidenceChunk(ctx, run.ID, chunk, maxEvidenceFactsPerChunk,
+		atoms, assocs, assertions); err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := s.GetEvidenceChunkAccounting(ctx, run.ID, chunk)
+	if err != nil || receipt.FactCount != maxEvidenceFactsPerChunk ||
+		receipt.RowDelta != 2*maxEvidenceFactsPerChunk ||
+		receipt.ReferenceDelta != maxEvidenceFactsPerChunk {
+		t.Fatalf("boundary receipt = %+v, %v", receipt, err)
 	}
 }
 

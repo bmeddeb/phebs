@@ -1196,49 +1196,52 @@ LET $locked = IF $is_new THEN
 IF $is_new AND array::len($locked) != 1 {
 	THROW 'phebs-permanent: evidence run exceeds the fact limit'
 };
-LET $row_count_before = IF array::len($locked) = 1
-	THEN $locked[0].staged_row_count ELSE 0 END;
-LET $reference_count_before = IF array::len($locked) = 1
-	THEN $locked[0].staged_reference_count ELSE 0 END;
 LET $safe_atoms = IF array::len($locked) = 1 THEN $atoms ELSE [] END;
-FOR $a IN $safe_atoms {
-    UPSERT $a.rid SET atom_id = $a.atom_id, schema_version = $a.schema_version,
-        blob_digest = $a.blob_digest, start_byte = $a.start_byte, end_byte = $a.end_byte,
-        rule_id = $a.rule_id, extractor_version = $a.extractor_version,
-        adapter_config_digest = $a.adapter_config_digest, fact_fingerprint = $a.fact_fingerprint,
-        first_seen = IF first_seen = NONE THEN $a.first_seen ELSE first_seen END,
-        retention_revision = (retention_revision ?? 0) + 1 RETURN NONE
-};
+LET $atom_rows = $safe_atoms.map(|$a| {
+	RETURN {
+		id: $a.rid, atom_id: $a.atom_id, schema_version: $a.schema_version,
+		blob_digest: $a.blob_digest, start_byte: $a.start_byte, end_byte: $a.end_byte,
+		rule_id: $a.rule_id, extractor_version: $a.extractor_version,
+		adapter_config_digest: $a.adapter_config_digest,
+		fact_fingerprint: $a.fact_fingerprint, first_seen: $a.first_seen,
+		retention_revision: 1
+	}
+});
+INSERT INTO evidence_atom $atom_rows ON DUPLICATE KEY UPDATE
+	atom_id = $input.atom_id, schema_version = $input.schema_version,
+	blob_digest = $input.blob_digest, start_byte = $input.start_byte,
+	end_byte = $input.end_byte, rule_id = $input.rule_id,
+	extractor_version = $input.extractor_version,
+	adapter_config_digest = $input.adapter_config_digest,
+	fact_fingerprint = $input.fact_fingerprint,
+	first_seen = IF first_seen = NONE THEN $input.first_seen ELSE first_seen END,
+	retention_revision = (retention_revision ?? 0) + 1 RETURN NONE;
 LET $safe_assocs = IF array::len($locked) = 1 THEN $assocs ELSE [] END;
-FOR $e IN $safe_assocs {
-	LET $existing = (SELECT id FROM $e.rid LIMIT 1)[0];
-	IF $existing = NONE {
-		LET $charged = UPDATE $run SET staged_row_count += 1
-			WHERE staged_row_count + 1 <= $max_run_rows RETURN AFTER;
-		IF array::len($charged) != 1 {
-			THROW 'phebs-permanent: evidence run exceeds the row limit'
-		}
-	};
-    UPSERT $e.rid SET occurrence_id = $e.occurrence_id, association_key = $e.association_key,
-        atom_id = $e.atom_id, atom_record = $e.atom_record,
-        repo = $e.repo, commit = $e.commit, path = $e.path,
-        start_line = $e.start_line, end_line = $e.end_line,
-        visibility_scope = $e.visibility_scope, run_id = $e.run_id,
-        observed_at = IF observed_at = NONE THEN $e.observed_at ELSE observed_at END RETURN NONE
-};
+LET $existing_assocs = SELECT VALUE id FROM $safe_assocs.rid;
+LET $assoc_row_delta = array::len($safe_assocs) - array::len($existing_assocs);
+LET $assoc_rows = $safe_assocs.map(|$e| {
+	RETURN {
+		id: $e.rid, occurrence_id: $e.occurrence_id,
+		association_key: $e.association_key, atom_id: $e.atom_id,
+		atom_record: $e.atom_record, repo: $e.repo, commit: $e.commit,
+		path: $e.path, start_line: $e.start_line, end_line: $e.end_line,
+		visibility_scope: $e.visibility_scope, run_id: $e.run_id,
+		observed_at: $e.observed_at
+	}
+});
+INSERT INTO snapshot_evidence $assoc_rows ON DUPLICATE KEY UPDATE
+	occurrence_id = $input.occurrence_id, association_key = $input.association_key,
+	atom_id = $input.atom_id, atom_record = $input.atom_record,
+	repo = $input.repo, commit = $input.commit, path = $input.path,
+	start_line = $input.start_line, end_line = $input.end_line,
+	visibility_scope = $input.visibility_scope, run_id = $input.run_id,
+	observed_at = IF observed_at = NONE THEN $input.observed_at ELSE observed_at END
+	RETURN NONE;
 LET $safe_asserts = IF array::len($locked) = 1 THEN $asserts ELSE [] END;
-FOR $x IN $safe_asserts {
-    LET $existing = (SELECT attribute_key, supporting, contradicting
-        FROM assertion WHERE id = $x.rid LIMIT 1)[0];
-    IF $existing != NONE AND
-       ($existing.attribute_key = NONE OR $existing.attribute_key != $x.attribute_key) {
-        THROW 'phebs-permanent: duplicate semantic assertion has conflicting attributes'
-    };
-    IF $existing != NONE AND
-       (array::len(array::intersect($existing.supporting ?? [], $x.contradicting)) > 0 OR
-        array::len(array::intersect($existing.contradicting ?? [], $x.supporting)) > 0) {
-        THROW 'phebs-permanent: assertion evidence cannot both support and contradict'
-    };
+LET $existing_asserts = SELECT id, attribute_key, supporting, contradicting
+	FROM $safe_asserts.rid;
+LET $prepared_asserts = $safe_asserts.map(|$x| {
+	LET $existing = $existing_asserts[WHERE id = $x.rid][0];
 	LET $prior_supporting = $existing.supporting ?? [];
 	LET $prior_contradicting = $existing.contradicting ?? [];
 	LET $next_supporting = array::union($prior_supporting, $x.supporting ?? []);
@@ -1246,36 +1249,69 @@ FOR $x IN $safe_asserts {
 	LET $row_delta = IF $existing = NONE THEN 1 ELSE 0 END;
 	LET $reference_delta = array::len($next_supporting) + array::len($next_contradicting)
 		- array::len($prior_supporting) - array::len($prior_contradicting);
-	IF $row_delta > 0 OR $reference_delta > 0 {
-		LET $charged = UPDATE $run SET
-			staged_row_count += $row_delta,
-			staged_reference_count += $reference_delta
-			WHERE staged_row_count + $row_delta <= $max_run_rows
-			  AND staged_reference_count + $reference_delta <= $max_reference_edges
-			RETURN AFTER;
-		IF array::len($charged) != 1 {
-			THROW 'phebs-permanent: evidence run exceeds a bounded storage limit'
-		}
-	};
-    UPSERT $x.rid SET assertion_id = $x.assertion_id, assertion_key = $x.assertion_key,
-        attribute_key = $x.attribute_key,
-        predicate = $x.predicate, subject = $x.subject, object = $x.object,
-        lineage = $x.lineage, tier = $x.tier, code_role = $x.code_role, repo = $x.repo,
-        supporting = $next_supporting,
-        contradicting = $next_contradicting,
-        run_id = $x.run_id, detail = $x.detail RETURN NONE
+	RETURN {
+		value: {
+			id: $x.rid, assertion_id: $x.assertion_id,
+			assertion_key: $x.assertion_key, attribute_key: $x.attribute_key,
+			predicate: $x.predicate, subject: $x.subject, object: $x.object,
+			lineage: $x.lineage, tier: $x.tier, code_role: $x.code_role,
+			repo: $x.repo, supporting: $next_supporting,
+			contradicting: $next_contradicting, run_id: $x.run_id,
+			detail: $x.detail
+		},
+		attribute_conflict: $existing != NONE AND
+			($existing.attribute_key = NONE OR $existing.attribute_key != $x.attribute_key),
+		direction_conflict: $existing != NONE AND
+			(array::len(array::intersect($prior_supporting, $x.contradicting)) > 0 OR
+			 array::len(array::intersect($prior_contradicting, $x.supporting)) > 0),
+		row_delta: $row_delta,
+		reference_delta: $reference_delta
+	}
+});
+IF array::len($prepared_asserts[WHERE attribute_conflict = true]) > 0 {
+	THROW 'phebs-permanent: duplicate semantic assertion has conflicting attributes'
 };
-LET $accounting = IF array::len($locked) = 1 THEN
-	(SELECT staged_row_count, staged_reference_count FROM $run)[0]
-	ELSE NONE END;
+IF array::len($prepared_asserts[WHERE direction_conflict = true]) > 0 {
+	THROW 'phebs-permanent: assertion evidence cannot both support and contradict'
+};
+LET $assert_charge = $prepared_asserts.fold(
+	{ rows: 0, references: 0 },
+	|$total, $prepared| {
+		RETURN {
+			rows: $total.rows + $prepared.row_delta,
+			references: $total.references + $prepared.reference_delta
+		}
+	}
+);
+INSERT INTO assertion $prepared_asserts.value ON DUPLICATE KEY UPDATE
+	assertion_id = $input.assertion_id, assertion_key = $input.assertion_key,
+	attribute_key = $input.attribute_key, predicate = $input.predicate,
+	subject = $input.subject, object = $input.object, lineage = $input.lineage,
+	tier = $input.tier, code_role = $input.code_role, repo = $input.repo,
+	supporting = $input.supporting, contradicting = $input.contradicting,
+	run_id = $input.run_id, detail = $input.detail RETURN NONE;
+LET $row_delta = $assoc_row_delta + $assert_charge.rows;
+LET $reference_delta = $assert_charge.references;
+LET $charged = IF array::len($locked) = 1 AND
+	($row_delta > 0 OR $reference_delta > 0) THEN
+	(UPDATE $run SET
+		staged_row_count += $row_delta,
+		staged_reference_count += $reference_delta
+		WHERE staged_row_count + $row_delta <= $max_run_rows
+		  AND staged_reference_count + $reference_delta <= $max_reference_edges
+		RETURN AFTER)
+	ELSE $locked END;
+IF array::len($locked) = 1 AND array::len($charged) != 1 {
+	THROW 'phebs-permanent: evidence run exceeds a bounded storage limit'
+};
 IF array::len($locked) = 1 {
 	CREATE $chunk_rid CONTENT {
 		run_id: $run_id,
 		chunk_id: $chunk_id,
 		content_digest: $content_digest,
 		fact_count: $fact_count,
-		row_delta: $accounting.staged_row_count - $row_count_before,
-		reference_delta: $accounting.staged_reference_count - $reference_count_before,
+		row_delta: $row_delta,
+		reference_delta: $reference_delta,
 		created_at: $now
 	} RETURN NONE
 };
