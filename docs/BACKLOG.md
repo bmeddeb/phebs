@@ -1191,6 +1191,24 @@ the verifier requires the clean exact frozen source commit. A fresh reviewed
 plan and separately authorized execution remain required; Take 19 is unfrozen
 and Epic 41 remains blocked.
 
+The focused caller-terminal witness now clears the caller-owned boundary
+without repeating the ceremony. At the retained semantic cardinality of
+262,145 candidates, 96 candidate leaves, two protocols, and 192 pairs, the
+zero-descriptor V2 path completed 194 production worker turns against a
+supervised disk-backed SurrealDB store. All 192 outcomes succeeded; admission
+and complete publication were current with 192 coverage records, 524,290
+covered candidates, zero results/abstentions/refusals, and 106,856 canonical
+bytes, and the shared product reader reopened the generation as `current`.
+The source-free witness is `spike/t4013/caller-terminal-witness.json`
+(`sha256:b6d0b265e6b3e2a80698fe54ea2f8a0fab43a0b3ccca871777d674349cfe7be3`).
+It rules out the compact executor, artifact/store admission, publication, and
+reader only after empty resolver authority is supplied. It does not recover
+Take 20's destroyed resolver population or distinguish its terminal admission
+from a deterministic authority/publication rejection. Before another full
+ceremony, classify that actual product-read origin and retain the closed
+progress/refusal scalars. No production fix, rerun, freeze, scale/SLO, release,
+or Epic 41 progression follows from this scoped pass.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1,0 +1,56 @@
+{
+  "schema": "t4013-caller-terminal-witness-v1",
+  "method": "the exact retained 96-leaf/192-pair semantic caller cardinality is replayed through production compact pair execution, caller artifact installation, a supervised disk-backed SurrealDB store, complete publication, and the shared product reader after upstream authority is prevalidated",
+  "profile": "semantic-262144-v1",
+  "leaf_adapter": "direct-syntax-compact-coverage-v2",
+  "policy": "phebs-direct-caller-leaf-policy-v2",
+  "candidate_records": 262145,
+  "candidate_leaves": 96,
+  "protocols": 2,
+  "expected_pairs": 192,
+  "resolver_descriptors": {
+    "grpc": 0,
+    "thrift": 0
+  },
+  "worker_turns": 194,
+  "candidate_plan_opens": 193,
+  "progress": {
+    "settled": 192,
+    "succeeded": 192,
+    "refused": 0
+  },
+  "admission": {
+    "disposition": "admitted",
+    "pair_count": 192,
+    "artifact_count": 192,
+    "result_records": 0,
+    "abstention_records": 0,
+    "coverage_records": 192,
+    "covered_candidates": 524290,
+    "canonical_bytes": 106856,
+    "staging_bytes": 106856,
+    "refusal_summaries": 0
+  },
+  "publication": {
+    "present": true,
+    "authority_current": true,
+    "pair_count": 192,
+    "result_records": 0,
+    "abstention_records": 0,
+    "coverage_records": 192,
+    "covered_candidates": 524290
+  },
+  "reader": {
+    "availability": "current",
+    "origin": "current_publication",
+    "progress": {
+      "settled": 192,
+      "succeeded": 192,
+      "refused": 0
+    }
+  },
+  "boundary": "current_publication",
+  "clears_caller_boundary": true,
+  "establishes_scale_pass": false,
+  "authorizes_freeze": false
+}

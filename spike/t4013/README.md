@@ -1659,6 +1659,32 @@ validation, receipt construction, and receipt decode. The exact-checkout rule
 means corrected code cannot retroactively seal Take 20; use a fresh identifier,
 plan, independent review, and separate execution authorization.
 
+The next focused diagnostic stops short of another full ceremony and begins at
+the caller boundary Take 20 had reached. Set
+`T40R1_CALLER_TERMINAL_WITNESS=1` and run
+`TestT40R1CallerTerminalDiskWitness`. It preserves the retained source-free
+semantic cardinality—262,145 candidates, 96 leaves, two protocols, and 192
+pairs—while prevalidating upstream observation/extraction authority and
+supplying the frozen fixture's expected zero-descriptor resolvers. The
+production worker then executes one pair per turn through caller artifact
+installation, the supervised disk-backed SurrealDB store, admission, complete
+publication, and the shared product reader, followed by a final no-op turn.
+
+The retained `caller-terminal-witness.json` has SHA-256
+`b6d0b265e6b3e2a80698fe54ea2f8a0fab43a0b3ccca871777d674349cfe7be3`.
+All 192 outcomes succeeded; admission retained 192 coverage records, 524,290
+covered candidates, zero results, abstentions, or refusal summaries, and
+106,856 canonical/staging bytes. Publication authority and the product reader
+were both `current`. This rules out compact pair execution, artifact
+installation, caller outcome/admission persistence, complete publication, and
+reader validation when resolver authority is actually empty. It does not
+reconstruct Take 20's destroyed resolver descriptors, exact candidate-member
+bytes/distribution, or upstream partitioned-authority state, and therefore
+cannot distinguish a terminal admission from deterministic authority or
+publication rejection in that consumed run. Classify and retain that actual
+closed origin before another full ceremony. This source-free boundary witness
+is not a scale pass and authorizes no rerun or freeze.
+
 ```sh
 cd ~/phebs
 

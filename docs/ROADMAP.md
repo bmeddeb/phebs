@@ -1152,6 +1152,21 @@ catalog, relationship, or correctness authority.
   retroactive sealing of this consumed run. A fresh reviewed plan and explicit
   authorization remain required; Take 19 is unfrozen and Epic 41 remains
   blocked.
+- A focused disk-backed caller-terminal witness now replays the retained
+  semantic cardinality—262,145 candidates, 96 leaves, two protocols, and 192
+  pairs—after prevalidating upstream authority and supplying the frozen
+  fixture's expected empty resolvers. All 192 V2 compact outcomes succeeded;
+  admission and publication were current with 192 coverage records, 524,290
+  covered candidates, zero results/abstentions/refusals, and 106,856 bytes,
+  and the shared reader returned `current`. The source-free record is
+  `caller-terminal-witness.json`
+  (`sha256:b6d0b265e6b3e2a80698fe54ea2f8a0fab43a0b3ccca871777d674349cfe7be3`).
+  This clears the caller executor/artifact/store/publication/reader boundary
+  only for an actually empty resolver; it cannot reconstruct Take 20's
+  destroyed resolver state or distinguish terminal admission from a
+  deterministic authority/publication rejection. Classify that actual origin
+  and retain its closed scalars before another full ceremony. No production
+  fix, rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
