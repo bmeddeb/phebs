@@ -3,6 +3,7 @@ package extractionpublication
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -520,6 +521,135 @@ func TestGitSparseSourceReadsOnlySelectedImmutableObjects(t *testing.T) {
 	}
 	if blob.Content != "syntax = \"proto3\";\nmessage Original {}\n" {
 		t.Fatalf("selected immutable content = %q", blob.Content)
+	}
+}
+
+func TestGitSparseSourcePreservesWholeRepositoryExecutionSubranges(t *testing.T) {
+	dataDirectory := t.TempDir()
+	repository := "example.invalid/git-subrange-source"
+	repositoryDirectory := filepath.Join(dataDirectory, "repos", "example.invalid", "git-subrange-source.git")
+	if err := os.MkdirAll(repositoryDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repositoryDirectory, "init", "-q")
+	runGit(t, repositoryDirectory, "config", "user.email", "partition@example.invalid")
+	runGit(t, repositoryDirectory, "config", "user.name", "Partition Test")
+	paths := make([]string, 0, 6)
+	for index := range 5 {
+		path := fmt.Sprintf("schema-%02d.proto", index)
+		if err := os.WriteFile(
+			filepath.Join(repositoryDirectory, path),
+			[]byte("syntax = \"proto3\";\nmessage Original {}\n"),
+			0o600,
+		); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, path)
+	}
+	if err := os.WriteFile(
+		filepath.Join(repositoryDirectory, "README.md"), []byte("not selected\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	paths = append(paths, "README.md")
+	runGit(t, repositoryDirectory, append([]string{"add", "--"}, paths...)...)
+	runGit(t, repositoryDirectory, "commit", "-q", "-m", "execution subranges")
+	commit := strings.TrimSpace(runGit(t, repositoryDirectory, "rev-parse", "HEAD"))
+	policies := []candidate.Policy{{
+		Domain: "proto-contract", Version: "3.0.0",
+		EnumerationPolicy: "proto-contract-paths-v1", Plane: candidate.PlaneLocal,
+		MaxRecords: 2, ExecutionPartitionPolicy: candidate.WholeRepositoryExecutionSubrangePolicy,
+		ExecutionMaxRecords: 2,
+		Enumerate:           func(path string) bool { return strings.HasSuffix(path, ".proto") },
+		Required:            func(path string) bool { return strings.HasSuffix(path, ".proto") },
+	}}
+	identities, err := candidate.PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateDirectory := t.TempDir()
+	manifest, err := candidate.Build(t.Context(), candidate.Request{
+		RepoDir: repositoryDirectory, OutputDir: candidateDirectory,
+		Repository: repository, Commit: commit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.UnitDigest != "" || len(manifest.RepositoryMembers) != 1 ||
+		len(manifest.LocalProjections) != 0 {
+		t.Fatalf("whole-repository candidate route = %+v", manifest)
+	}
+	publication, err := candidate.Open(candidateDirectory, candidate.Expected{
+		Repository: repository, Commit: commit, Policies: identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sparseDirectory := t.TempDir()
+	root, err := candidate.BuildSparseRoot(t.Context(), sparseDirectory, publication, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reads candidate.SparseReadMetrics
+	sparse, err := candidate.OpenSparse(
+		t.Context(), sparseDirectory, candidateDirectory, manifest.State(), root.Digest, &reads,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain, err := sparse.OpenDomain(t.Context(), "proto-contract", "3.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := BuildReservedPlan(domain, candidate.DomainResultAuthority{
+		SourceGenerationDigest:      "sha256:" + strings.Repeat("4", 64),
+		ObservationGenerationDigest: "sha256:" + strings.Repeat("5", 64),
+		ExtractorVersion:            "3.0.0",
+		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("6", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	partitions := domain.Partitions()
+	wantCounts := []int{2, 2, 1}
+	memberBytes := manifest.RepositoryMembers[0].ContentBytes
+	if len(partitions) != len(wantCounts) || plan.Reserved.MemberBytes != memberBytes*3 {
+		t.Fatalf("subrange plan = partitions %+v reserved %+v", partitions, plan.Reserved)
+	}
+	source := GitSparseSource{
+		DataDir: dataDirectory,
+		OpenDomain: func(context.Context, candidate.DomainResultPlan) (*candidate.SparseDomain, error) {
+			return domain, nil
+		},
+	}
+	seen := make(map[string]struct{}, 5)
+	for ordinal, wantCount := range wantCounts {
+		lease, err := source.AcquirePartition(t.Context(), plan, ordinal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if lease.CandidateRecords() != wantCount || lease.MemberBytes() != memberBytes || lease.Members() != 1 {
+			lease.Release()
+			t.Fatalf("subrange lease %d = records %d bytes %d members %d",
+				ordinal, lease.CandidateRecords(), lease.MemberBytes(), lease.Members())
+		}
+		visited := 0
+		err = lease.Corpus().WalkFiles(t.Context(), func(path string) error {
+			if _, duplicate := seen[path]; duplicate {
+				return fmt.Errorf("path %q crossed execution subranges", path)
+			}
+			seen[path] = struct{}{}
+			visited++
+			return nil
+		})
+		lease.Release()
+		if err != nil || visited != wantCount {
+			t.Fatalf("subrange lease %d visited %d: %v", ordinal, visited, err)
+		}
+	}
+	if len(seen) != 5 || reads.CandidateMemberReads != 3 ||
+		reads.CandidateBytesRead != memberBytes*3 {
+		t.Fatalf("subrange source coverage = paths %d reads %+v", len(seen), reads)
 	}
 }
 

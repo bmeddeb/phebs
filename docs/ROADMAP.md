@@ -1066,6 +1066,17 @@ catalog, relationship, or correctness authority.
   derived payload or changed aggregate ceiling. Both focused corrections are
   now complete; combined independent review remains mandatory before one new
   integrated fit, and Take 19 remains unfrozen.
+- The combined post-integration review accepts both corrections for one exact
+  committed-source diagnostic. It adds a production `GitSparseSource` proof
+  for exact `[2,2,1]` once-only path coverage and three explicitly charged
+  shared-member reads. A fresh scoped Kafka rerun completed all 512 chunks and
+  exact 131,072 facts, 262,144 rows, and 131,072 references in 41,375 ms with a
+  292-ms maximum append, 3-ms maximum accounting read, and zero failures. The
+  exact fit now emits schema v4 and requires exactly 272 applicable and settled
+  partitions with zero retry exhaustion, so the historical 264-partition shape
+  cannot pass even if downstream authority converges. This authorizes only the
+  integrated diagnostic and separate evidence review, not a ceremony or
+  freeze; Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

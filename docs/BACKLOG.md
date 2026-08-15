@@ -1059,6 +1059,24 @@ partition/index ceilings unchanged. This clears the focused shape correction
 only. Combined independent review and one integrated exact semantic fit remain
 required; Take 19 stays unfrozen and Epic 41 remains blocked.
 
+Combined post-integration review (2026-08-14): the two corrections are
+accepted for one committed-source exact semantic diagnostic. The review adds a
+production `GitSparseSource` proof that five selected Git paths cross exact
+`[2,2,1]` leases once while the one shared immutable member is read and charged
+three times at execution. The exact fit record advances to v4 and refuses
+readiness unless its final authoritative snapshot contains exactly 272
+applicable and 272 settled extraction partitions with zero retry exhaustion;
+the old converged 264 shape cannot pass. A fresh focused Kafka run completed
+512/512 chunks and exact 131,072 facts, 262,144 rows, and 131,072 references in
+41,375 ms; maximum append was 292 ms, maximum accounting was 3 ms, and every
+failure class was zero. Package, store-T40.7, race, vet, lint, documentation,
+glossary, historical, recovery, and maximum-shape gates remain green, subject
+to the already named T30.6 and T32.3/T32.4 repository-baseline failures. The
+new tests and diagnostic oracle add no production work. The next action is the
+integrated exact fit, not a ceremony; its result still needs separate evidence
+review before any freeze decision. Take 19 remains unfrozen and Epic 41 remains
+blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1498,7 +1498,23 @@ produces exactly two 2,048-record partitions from one 4,096-record candidate
 member while construction still reads that member once. This completes both
 focused corrections, not Take 19: independent combined review and one new
 integrated exact semantic fit remain required before any freeze decision.
-No ceremony command below is authorized yet.
+
+The combined post-integration audit accepts the corrected writer and execution
+shape for one committed-source integrated diagnostic. It adds a production
+`GitSparseSource` proof: five selected Git paths are visited exactly once over
+`[2,2,1]`, three leases bind the same immutable candidate member, and all three
+full-member reads are charged. The scoped Kafka diagnostic was rerun from the
+merged correction and completed 512/512 chunks, 131,072 facts, 262,144 rows,
+and 131,072 references in 41,375 ms; maximum append was 292 ms, maximum
+accounting was 3 ms, and every failure class was zero. The exact semantic fit
+now emits `t4013-take19-semantic-fit-v4` and requires the final authoritative
+snapshot to report exactly 272 applicable and 272 settled extraction
+partitions with zero retry exhaustion. A converged historical 264-partition
+route therefore fails the gate explicitly.
+
+This review authorizes the exact diagnostic only. Its source-free result still
+requires separate evidence review before any Take 19 freeze decision. No
+ceremony command below is authorized yet.
 
 ```sh
 cd ~/phebs

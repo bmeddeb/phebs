@@ -23,6 +23,11 @@ import (
 const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
 const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
 
+// The exact semantic profile has 264 partitions under the historical shared
+// whole-repository shape. The versioned Proto and Thrift execution-subrange
+// policies add four partitions apiece without changing candidate ownership.
+const exactSemanticExtractionPartitions = 272
+
 // TestExactSemanticColdTiming measures the frozen 262,144-blob semantic shape
 // through the ordinary production binary before a Take 19 freeze. It retains
 // no authored source or derived custody and reports only cold wall/RSS/disk
@@ -100,10 +105,11 @@ func TestExactSemanticColdTiming(t *testing.T) {
 
 	freezeReady := result.converged && coldWall < 4*time.Hour && result.tail.TimingCaptureOK &&
 		result.snapshot.ObservationRecords == 262_144 &&
+		exactSemanticScheduleReady(result.snapshot) &&
 		peakRSS <= frozenSafetyV14.MaximumPeakRSSBytes &&
 		allocated <= frozenSafetyV14.MaximumDataAllocatedBytes
 	fit := semanticColdTimingFit{
-		Schema:                         "t4013-take19-semantic-fit-v3",
+		Schema:                         "t4013-take19-semantic-fit-v4",
 		SourceCommit:                   sourceCommit,
 		Profile:                        profile.Name,
 		Diagnostic:                     "TestExactSemanticColdTiming",
@@ -125,6 +131,9 @@ func TestExactSemanticColdTiming(t *testing.T) {
 		RelationshipEntryMS:            result.tail.StageEntryMS["relationship_publication"],
 		ExpectedRecords:                262_144,
 		ObservationRecords:             result.snapshot.ObservationRecords,
+		ExpectedExtractionPartitions:   exactSemanticExtractionPartitions,
+		ApplicableExtractionPartitions: result.snapshot.ApplicablePartitions,
+		SettledExtractionPartitions:    result.snapshot.SettledPartitions,
 		SelectedV2PublicationCompleted: result.tail.StageEntryMS["extraction_publication"] != 0,
 		LastExtractionWallMS:           result.tail.LastExtractionWall,
 		LastExtraction:                 result.tail.LastExtraction,
@@ -145,11 +154,39 @@ func TestExactSemanticColdTiming(t *testing.T) {
 
 	if !freezeReady {
 		t.Fatalf(
-			"exact semantic timing refused: converged=%t wall_ms=%d records=%d last_stage=%s extraction_entry_ms=%d terminal=%q peak_rss_bytes=%d allocated_bytes=%d",
+			"exact semantic timing refused: converged=%t wall_ms=%d records=%d applicable_partitions=%d settled_partitions=%d last_stage=%s extraction_entry_ms=%d terminal=%q peak_rss_bytes=%d allocated_bytes=%d",
 			result.converged, result.coldWallMS, result.snapshot.ObservationRecords,
+			result.snapshot.ApplicablePartitions, result.snapshot.SettledPartitions,
 			result.tail.LastStage, result.tail.StageEntryMS["extraction_publication"], result.terminal,
 			peakRSS, allocated,
 		)
+	}
+}
+
+func exactSemanticScheduleReady(snapshot privateProfileSnapshot) bool {
+	return snapshot.ApplicablePartitions == exactSemanticExtractionPartitions &&
+		snapshot.SettledPartitions == exactSemanticExtractionPartitions &&
+		snapshot.RetryExhaustedPartitions == 0
+}
+
+func TestExactSemanticScheduleReady(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name     string
+		snapshot privateProfileSnapshot
+		want     bool
+	}{
+		{name: "exact", snapshot: privateProfileSnapshot{ApplicablePartitions: 272, SettledPartitions: 272}, want: true},
+		{name: "historical-shape", snapshot: privateProfileSnapshot{ApplicablePartitions: 264, SettledPartitions: 264}},
+		{name: "not-settled", snapshot: privateProfileSnapshot{ApplicablePartitions: 272, SettledPartitions: 271}},
+		{name: "retry-exhausted", snapshot: privateProfileSnapshot{ApplicablePartitions: 272, SettledPartitions: 272, RetryExhaustedPartitions: 1}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := exactSemanticScheduleReady(test.snapshot); got != test.want {
+				t.Fatalf("exactSemanticScheduleReady() = %t, want %t", got, test.want)
+			}
+		})
 	}
 }
 
@@ -180,6 +217,9 @@ type semanticColdTimingFit struct {
 	RelationshipEntryMS            int64                          `json:"relationship_entry_ms"`
 	ExpectedRecords                int                            `json:"expected_records"`
 	ObservationRecords             uint64                         `json:"observation_records"`
+	ExpectedExtractionPartitions   int                            `json:"expected_extraction_partitions"`
+	ApplicableExtractionPartitions int                            `json:"applicable_extraction_partitions"`
+	SettledExtractionPartitions    int                            `json:"settled_extraction_partitions"`
 	SelectedV2PublicationCompleted bool                           `json:"selected_v2_publication_completed"`
 	LastExtractionWallMS           int64                          `json:"last_extraction_wall_ms"`
 	LastExtraction                 *ExtractionProgressObservation `json:"last_extraction,omitempty"`
