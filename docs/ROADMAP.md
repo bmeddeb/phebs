@@ -1200,6 +1200,22 @@ catalog, relationship, or correctness authority.
   failed page, scale, or ceremony readiness. The next boundary is production
   physical candidate-plan/provider membership. No rerun, freeze, scale/SLO,
   release, or Epic 41 progression follows.
+- The physical-provider witness now installs one real Git-backed candidate-v4
+  generation under the production candidate root and replaces the synthetic
+  caller plan with `candidatejob.Provider` plus
+  `candidate.OpenCallerPlanContext`. The first missing-root refusal was a
+  fixture setup omission, not a product defect. The corrected run binds the
+  store pointer's manifest digest and control revision, exposes one immutable
+  one-record caller leaf, replays it for both protocols, settles both pairs,
+  and preserves current exact Caller Map parity. The source-free record is
+  `caller-terminal-physical-provider-witness.json`
+  (`sha256:e1b73fcc2d783d4d0c90158f7562bb672f1c5726c962b84d2b0c22a77dbd6bd0`).
+  It clears the small zero-descriptor physical-provider/member seam, not the
+  retained 96-leaf physical distribution, descriptor-present Git-blob path,
+  Take 20's destroyed state, scale, or ceremony readiness. Production behavior
+  is unchanged. If diagnosis continues, use a provider-only 96-leaf control or
+  the descriptor-present execution seam; do not start another ceremony. No
+  rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

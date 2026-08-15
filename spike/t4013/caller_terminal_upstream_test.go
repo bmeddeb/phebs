@@ -21,6 +21,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidateid"
+	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
@@ -239,6 +240,11 @@ type t40r1CallerUpstreamProvider struct {
 	opens int
 }
 
+type t40r1CallerPlanProvider interface {
+	extract.CandidateCallerPlanProvider
+	OpenCount() int
+}
+
 func (provider *t40r1CallerUpstreamProvider) OpenCandidateCallerPlan(
 	context.Context,
 	extract.CandidateManifestRequest,
@@ -246,6 +252,8 @@ func (provider *t40r1CallerUpstreamProvider) OpenCandidateCallerPlan(
 	provider.opens++
 	return provider.plan, nil
 }
+
+func (provider *t40r1CallerUpstreamProvider) OpenCount() int { return provider.opens }
 
 func TestT40R1CallerTerminalUpstreamWitness(t *testing.T) {
 	if os.Getenv(t40r1CallerUpstreamEnv) != "1" {
@@ -323,6 +331,7 @@ func runT40R1CallerTerminalUpstreamWitness(
 
 type t40r1CallerUpstreamRunOptions struct {
 	partitionedAuthority bool
+	physicalCallerPlan   bool
 }
 
 func runT40R1CallerTerminalUpstreamWitnessWithOptions(
@@ -352,7 +361,7 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 		t.Fatal(err)
 	}
 	plan := newT40R1CallerUpstreamPlan(t, callerRegistry)
-	provider := &t40r1CallerUpstreamProvider{plan: plan}
+	var provider t40r1CallerPlanProvider = &t40r1CallerUpstreamProvider{plan: plan}
 	headCommit := t40r1CallerUpstreamCommit
 	candidatePointer := store.CandidateManifestPublication{
 		Repository:       t40r1CallerUpstreamRepository,
@@ -365,7 +374,7 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 	var partitioned *t40r1CallerPartitionedRun
 	if options.partitionedAuthority {
 		partitioned = prepareT40R1CallerPartitionedRun(
-			t, ctx, dataDir, state, callerRegistry,
+			t, ctx, dataDir, state, callerRegistry, options.physicalCallerPlan,
 		)
 		headCommit = partitioned.commit
 		plan.digest = partitioned.manifest.Digest
@@ -395,6 +404,16 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 	plan.control = persistedCandidate.ControlRevision
 	if partitioned != nil {
 		partitioned.publish(t, ctx, state)
+	}
+	if options.physicalCallerPlan {
+		physicalProvider := newT40R1CallerPhysicalProvider(
+			t, dataDir, state, partitioned, callerRegistry,
+		)
+		provider = physicalProvider
+		partitioned.physicalProvider = physicalProvider
+		if _, err := os.Stat(candidatejob.CandidateRoot(dataDir)); err != nil {
+			t.Fatalf("physical candidate root before resolver build: %v", err)
+		}
 	}
 
 	declarationRun, declarationGeneration :=
@@ -572,7 +591,7 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 			ManifestMembers:    len(resolverPublication.Manifest().Members),
 			Descriptors:        resolverDescriptors,
 		},
-		WorkerTurns: turns, CandidatePlanOpens: provider.opens,
+		WorkerTurns: turns, CandidatePlanOpens: provider.OpenCount(),
 		Progress: t40r1CallerUpstreamProgress{
 			Settled: progress.SettledCount, Succeeded: progress.SucceededCount,
 			Refused: progress.RefusedCount,
@@ -614,18 +633,27 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 		},
 		Boundary: "exact_product_projection",
 	}
+	if options.physicalCallerPlan {
+		witness.Method = "the exact physical candidate caller plan is opened through the production store-bound provider and its immutable leaf members are replayed through the partitioned authority, resolver, caller worker, durable publication, shared reader, and exact Caller Map"
+		witness.Profile = "physical-provider-control-v1"
+		witness.CandidateRecords = partitioned.callerRecordCount()
+		witness.CandidateLeaves = len(partitioned.manifest.CallerLeaves)
+		witness.ExpectedPairs = len(callerRegistry.Adapters()) * witness.CandidateLeaves
+		witness.Boundary = "physical_candidate_plan_provider_membership"
+	}
 	witness.ClearsUpstreamBoundary =
 		witness.Resolver.PublicationCurrent && witness.Resolver.ManifestMembers == 3 &&
 			witness.Resolver.Descriptors["grpc"] == 0 &&
 			witness.Resolver.Descriptors["thrift"] == 0 &&
 			witness.Progress == (t40r1CallerUpstreamProgress{
-				Settled: t40r1CallerUpstreamPairs, Succeeded: t40r1CallerUpstreamPairs,
+				Settled: witness.ExpectedPairs, Succeeded: witness.ExpectedPairs,
 			}) && witness.Admission.Disposition == string(store.CallerGenerationAdmitted) &&
-			witness.Admission.PairCount == t40r1CallerUpstreamPairs &&
+			witness.Admission.PairCount == witness.ExpectedPairs &&
 			witness.Admission.RefusalSummaries == 0 &&
 			witness.Admission.ResultRecords == 0 && witness.Admission.AbstentionRecords == 0 &&
-			witness.Admission.CoverageRecords == t40r1CallerUpstreamPairs &&
-			witness.Admission.CoveredCandidates == 2*t40r1CallerUpstreamCandidates &&
+			witness.Admission.CoverageRecords == witness.ExpectedPairs &&
+			witness.Admission.CoveredCandidates ==
+				witness.Protocols*witness.CandidateRecords &&
 			witness.Publication.Present && witness.Publication.AuthorityCurrent &&
 			read.Availability == callerexecute.PublicationCurrent &&
 			witness.Reader.Origin == "current_publication" &&
@@ -635,7 +663,7 @@ func runT40R1CallerTerminalUpstreamWitnessWithOptions(
 			witness.CallerMap.DeclarationExact && witness.CallerMap.Rows == 0 &&
 			witness.CallerMap.TotalMatchingRows == 0 &&
 			witness.CallerMap.PairCount == witness.Publication.PairCount &&
-			witness.CallerMap.CandidateRecords == t40r1CallerUpstreamCandidates &&
+			witness.CallerMap.CandidateRecords == witness.CandidateRecords &&
 			witness.CallerMap.CoverageRecords == witness.Publication.CoverageRecords &&
 			witness.CallerMap.CoveredCandidates == witness.Publication.CoveredCandidates
 	if !witness.ClearsUpstreamBoundary {

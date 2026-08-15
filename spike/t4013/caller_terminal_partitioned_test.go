@@ -13,6 +13,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
@@ -70,14 +71,17 @@ type t40r1CallerPartitionedPlan struct {
 }
 
 type t40r1CallerPartitionedRun struct {
-	commit      string
-	manifest    candidate.Manifest
-	observation observationpublication.DownstreamAuthority
-	plans       []t40r1CallerPartitionedPlan
-	authorities []candidate.DownstreamDomainAuthority
-	required    []downstreamauthority.DomainIdentity
-	upstream    downstreamauthority.Authority
-	report      t40r1CallerPartitionedAuthority
+	state            *store.Surreal
+	commit           string
+	manifest         candidate.Manifest
+	observation      observationpublication.DownstreamAuthority
+	plans            []t40r1CallerPartitionedPlan
+	authorities      []candidate.DownstreamDomainAuthority
+	required         []downstreamauthority.DomainIdentity
+	upstream         downstreamauthority.Authority
+	policies         *candidatejob.PolicySet
+	physicalProvider *t40r1CallerPhysicalProvider
+	report           t40r1CallerPartitionedAuthority
 }
 
 func TestT40R1CallerTerminalPartitionedAuthorityWitness(t *testing.T) {
@@ -178,6 +182,7 @@ func prepareT40R1CallerPartitionedRun(
 	dataDir string,
 	state *store.Surreal,
 	registry *callerexecute.Registry,
+	physicalCallerPlan bool,
 ) *t40r1CallerPartitionedRun {
 	t.Helper()
 	repositoryDirectory, commit := t40r1CallerPartitionedRepository(t, ctx)
@@ -192,6 +197,12 @@ func prepareT40R1CallerPartitionedRun(
 		t.Fatal(err)
 	}
 	candidateDirectory := t.TempDir()
+	if physicalCallerPlan {
+		candidateDirectory = candidatejob.CandidateRoot(dataDir)
+		if err := os.MkdirAll(candidateDirectory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	manifest, err := candidate.Build(ctx, candidate.Request{
 		RepoDir: repositoryDirectory, OutputDir: candidateDirectory,
 		Repository: t40r1CallerUpstreamRepository, Commit: commit, Policies: policies,
@@ -221,7 +232,7 @@ func prepareT40R1CallerPartitionedRun(
 		t, ctx, dataDir, repositoryDirectory, commit,
 	)
 	run := &t40r1CallerPartitionedRun{
-		commit: commit, manifest: manifest, observation: observation,
+		state: state, commit: commit, manifest: manifest, observation: observation,
 		required: make([]downstreamauthority.DomainIdentity, len(registry.Adapters())),
 		report: t40r1CallerPartitionedAuthority{
 			ObservationVersion: observation.Version, ObservationCurrent: true,
@@ -230,6 +241,14 @@ func prepareT40R1CallerPartitionedRun(
 			CandidateControlRecords: manifest.Corpus.RegularCount,
 			RequiredDomains:         len(registry.Adapters()),
 		},
+	}
+	if physicalCallerPlan {
+		run.policies, err = candidatejob.CompilePolicies([]extract.Extractor{
+			gocaller.NewGRPC(), gocaller.NewThrift(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	for index, adapter := range registry.Adapters() {
 		run.required[index] = downstreamauthority.DomainIdentity{
@@ -274,6 +293,14 @@ func prepareT40R1CallerPartitionedRun(
 		})
 	}
 	return run
+}
+
+func (run *t40r1CallerPartitionedRun) callerRecordCount() int {
+	total := 0
+	for _, leaf := range run.manifest.CallerLeaves {
+		total += leaf.RecordCount
+	}
+	return total
 }
 
 func (run *t40r1CallerPartitionedRun) publish(
@@ -464,6 +491,7 @@ func t40r1CallerPartitionedGit(
 		return strings.HasPrefix(value, "GIT_")
 	}),
 		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_AUTHOR_NAME=T40R1 Authority Witness",
 		"GIT_AUTHOR_EMAIL=t40r1-authority@example.invalid",
 		"GIT_AUTHOR_DATE=2000-01-01T00:00:00Z",

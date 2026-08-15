@@ -1757,6 +1757,44 @@ adds at most one payload per already-bounded current publication, 64 MiB at the
 are unchanged. The next scoped boundary is the production physical candidate
 plan/provider over exact member distribution, not another ceremony.
 
+The next opt-in witness crosses that physical provider seam. Set
+`T40R1_CALLER_PHYSICAL_PROVIDER_WITNESS=1` and run
+`TestT40R1CallerTerminalPhysicalProviderWitness`. It builds the small real Git
+control directly into the production candidate root, publishes the exact
+candidate pointer, replaces the synthetic caller plan with
+`candidatejob.Provider`, and opens the narrow physical plan through
+`candidate.OpenCallerPlanContext`. The first diagnostic attempt stopped before
+provider opening because the fixture omitted the empty candidate-root
+directory required by `candidate.Build`; the fixture now creates it explicitly.
+No production defect or correction was needed.
+
+The retained `caller-terminal-physical-provider-witness.json` has SHA-256
+`e1b73fcc2d783d4d0c90158f7562bb672f1c5726c962b84d2b0c22a77dbd6bd0`.
+It binds one immutable 344-byte leaf containing one caller record, including
+its exact name, ordinal, prefix, declared bytes, and content digest. Production
+membership replay visits that record once for gRPC and once for Thrift. The
+worker performs three plan opens across the two pair turns and admission,
+settles both pairs, and completes four turns including the final no-op.
+Admission and publication retain two coverage records, two covered candidates,
+and 1,338 canonical/staging bytes; the shared reader and authorized Caller Map
+are current and exact with zero rows.
+
+This source-free control clears the production physical candidate-plan,
+store-pointer, leaf-envelope, selected-member replay, and downstream parity
+seam. It does not materialize the retained semantic 96-leaf/262,145-record
+shape, exercise descriptor-present resolver or Git-blob reads, reconstruct
+Take 20's destroyed resolver/response, establish scale, or authorize ceremony.
+Production behavior and cost are unchanged. Existing active job turns each
+read and parse the bounded candidate manifest and validate all caller leaf
+envelopes without opening their contents. Each unsettled pair then reads and
+hashes its selected bounded leaf under the existing repository work lock; the
+admission turn repeats the plan open without member replay, and the final
+empty-queue turn opens neither. Retry repeats the same bounded control/member
+work. No query/request, sync/startup, publication/lifecycle, cache, child, new
+lock, source/shard scan, or bound changes. A further scoped diagnostic should
+either retain a provider-only 96-leaf physical distribution or move to the
+descriptor-present Git-blob seam, not launch another ceremony.
+
 ```sh
 cd ~/phebs
 

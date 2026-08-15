@@ -1,0 +1,110 @@
+{
+  "schema": "t4013-caller-terminal-physical-provider-witness-v1",
+  "method": "build and store-publish one exact physical candidate generation, open it through candidatejob.Provider and candidate.OpenCallerPlanContext, replay every immutable caller leaf for both domains, and require worker/publication/Caller Map parity",
+  "caller_path": {
+    "schema": "t4013-caller-terminal-upstream-witness-v1",
+    "method": "the exact physical candidate caller plan is opened through the production store-bound provider and its immutable leaf members are replayed through the partitioned authority, resolver, caller worker, durable publication, shared reader, and exact Caller Map",
+    "profile": "physical-provider-control-v1",
+    "leaf_adapter": "direct-syntax-compact-coverage-v2",
+    "policy": "phebs-direct-caller-leaf-policy-v2",
+    "candidate_records": 1,
+    "candidate_leaves": 1,
+    "protocols": 2,
+    "expected_pairs": 2,
+    "resolver": {
+      "publication_current": true,
+      "manifest_members": 3,
+      "descriptors": {
+        "grpc": 0,
+        "thrift": 0
+      }
+    },
+    "worker_turns": 4,
+    "candidate_plan_opens": 3,
+    "progress": {
+      "settled": 2,
+      "succeeded": 2,
+      "refused": 0
+    },
+    "admission": {
+      "disposition": "admitted",
+      "pair_count": 2,
+      "artifact_count": 2,
+      "result_records": 0,
+      "abstention_records": 0,
+      "coverage_records": 2,
+      "covered_candidates": 2,
+      "canonical_bytes": 1338,
+      "staging_bytes": 1338,
+      "refusal_summaries": 0
+    },
+    "publication": {
+      "present": true,
+      "authority_current": true,
+      "pair_count": 2,
+      "result_records": 0,
+      "abstention_records": 0,
+      "coverage_records": 2,
+      "covered_candidates": 2
+    },
+    "reader": {
+      "availability": "current",
+      "origin": "current_publication"
+    },
+    "caller_map": {
+      "schema_version": "caller-map-v2",
+      "matching_rows_state": "exact",
+      "generation_state": "current",
+      "declaration_exact": true,
+      "rows": 0,
+      "total_matching_rows": 0,
+      "pair_count": 2,
+      "candidate_records": 1,
+      "coverage_records": 2,
+      "covered_candidates": 2
+    },
+    "boundary": "physical_candidate_plan_provider_membership",
+    "clears_upstream_boundary": true,
+    "establishes_scale_pass": false,
+    "authorizes_freeze": false
+  },
+  "provider": {
+    "production_provider": true,
+    "manifest_digest_exact": true,
+    "control_revision_exact": true,
+    "worker_plan_opens": 3,
+    "expected_worker_plan_opens": 3,
+    "leaf_members": [
+      {
+        "name": "phebs-candidate-6680af724d3146666248b9af3652ca3e1700a0131ef89f6780fe99b0d535f6ca-v4-10519f56a338df4237863a39fdbc9d4ec3614510f96ca1860fef85db15f30602-caller-000000.ndjson",
+        "ordinal": 0,
+        "prefix": "01",
+        "prefix_bits": 2,
+        "record_count": 1,
+        "declared_bytes": 32,
+        "content_bytes": 344,
+        "content_digest": "sha256:7265914bbf0b27937b09e8e35c7c6ef822188cd299586023acc45d8fba946039"
+      }
+    ],
+    "domains": [
+      {
+        "domain": "grpc-caller",
+        "version": "1.5.0",
+        "leaf_replays": 1,
+        "visited_records": 1
+      },
+      {
+        "domain": "thrift-caller",
+        "version": "1.5.0",
+        "leaf_replays": 1,
+        "visited_records": 1
+      }
+    ],
+    "physical_candidate_records": 1,
+    "all_leaf_digests_bound": true
+  },
+  "boundary": "physical_candidate_plan_provider_membership",
+  "clears_boundary": true,
+  "establishes_scale_pass": false,
+  "authorizes_ceremony": false
+}

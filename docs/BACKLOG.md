@@ -1263,6 +1263,38 @@ production physical candidate-plan/provider membership boundary; do not start
 a new ceremony. No rerun, freeze, scale/SLO, release, Epic closure, or Epic 41
 progression follows.
 
+The physical-provider witness now replaces the synthetic caller plan with one
+real Git-backed candidate-v4 publication installed under the production
+candidate root. Its first attempt correctly failed because the diagnostic had
+not created the empty output directory required by `candidate.Build`; creating
+that fixture-owned directory was sufficient, and no production change was
+needed. `candidatejob.Provider` then bound the exact store pointer, manifest
+digest, and control revision and `candidate.OpenCallerPlanContext` exposed one
+immutable caller leaf containing one physical record. Both gRPC and Thrift
+replayed that exact leaf. The worker completed four turns, including the final
+no-op, with three plan opens; both pairs succeeded and admission/publication/
+reader/authorized Caller Map stayed exact and current with one candidate, two
+coverage records, and 1,338 canonical/staging bytes.
+
+The retained source-free record is
+`spike/t4013/caller-terminal-physical-provider-witness.json`
+(`sha256:e1b73fcc2d783d4d0c90158f7562bb672f1c5726c962b84d2b0c22a77dbd6bd0`).
+It binds the leaf name, ordinal, prefix, record/byte counts, content digest,
+per-domain replays, and store/product parity. This clears the production
+physical provider/member seam only for the small zero-descriptor control. It
+does not prove a physical 96-leaf/262,145-record distribution,
+descriptor-present resolver or Git-blob execution, Take 20's destroyed state,
+a scale pass, or ceremony readiness. Production cost is unchanged: each
+active job turn reads/parses the bounded manifest and validates its leaf
+envelopes; each unsettled pair reads and hashes exactly one selected bounded
+leaf under the existing repository work lock. Admission repeats the plan open
+without a leaf replay, and an empty-queue turn opens neither. Retry repeats the
+same bounded work. No query/request, sync/startup, publication/lifecycle,
+cache, child, new lock, source/shard scan, or ceiling changes. If diagnosis
+continues, use a provider-only retained 96-leaf physical distribution or move
+to descriptor-present Git-blob execution; do not start another ceremony. No
+rerun, freeze, scale/SLO, release, Epic closure, or Epic 41 progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
