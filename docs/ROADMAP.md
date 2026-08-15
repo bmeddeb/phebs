@@ -1216,6 +1216,23 @@ catalog, relationship, or correctness authority.
   is unchanged. If diagnosis continues, use a provider-only 96-leaf control or
   the descriptor-present execution seam; do not start another ceremony. No
   rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
+- The provider-only physical-distribution diagnostic now builds 261,769
+  deterministic Git paths through production candidate-v4 and reopens the
+  exact store pointer through the narrow production provider. It retains 96
+  immutable leaves—32 at six prefix bits and 64 at seven—then replays all 96
+  once for gRPC and once for Thrift: 192 leaf reads and 523,538 exact record
+  visits with matching replay digests. The source-free receipt is
+  `caller-provider-96leaf-physical-distribution.json`
+  (`sha256:48e1b1928cb167611577017f155c4b6ced5d858787e3fc58441c877db024cdc4`).
+  The earlier 262,145-record synthetic shape does not establish a physical
+  leaf count; this deterministic physical path family produces 98 leaves at
+  that cardinality. The retained exact 96-leaf rerun measured 47.725s build,
+  0.680ms provider open, and 1.879s for both replays, as observations rather
+  than ceilings or an SLO. This clears only provider multi-leaf distribution,
+  not descriptor-present resolver/Git-blob execution, Take 20's destroyed
+  state, scale, or ceremony readiness. Move next through that descriptor-
+  present pair-execution seam; do not start another ceremony. No rerun,
+  release, Epic closure, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

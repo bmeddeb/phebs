@@ -1795,6 +1795,54 @@ lock, source/shard scan, or bound changes. A further scoped diagnostic should
 either retain a provider-only 96-leaf physical distribution or move to the
 descriptor-present Git-blob seam, not launch another ceremony.
 
+The provider-only multi-leaf diagnostic now supplies that retained physical
+distribution without entering caller execution. Set
+`T40R1_CALLER_PROVIDER_96LEAF_DIAGNOSTIC=1` and run
+`TestT40R1CallerProvider96LeafPhysicalDistributionDiagnostic`:
+
+```sh
+cd ~/phebs
+
+T40R1_CALLER_PROVIDER_96LEAF_DIAGNOSTIC=1 \
+  go test ./spike/t4013 \
+  -run '^TestT40R1CallerProvider96LeafPhysicalDistributionDiagnostic$' \
+  -count=1 -timeout=20m -v
+```
+
+The test authors 261,769 deterministic regular paths in a real bare Git
+repository while sharing one 32-byte blob and builds candidate-v4 through the
+production enumerator/hash/splitter, publishes the exact store pointer, opens
+`candidatejob.Provider`, and resolves the narrow plan through
+`candidate.OpenCallerPlanContext`. The retained production shape is 96 leaves:
+32 six-bit leaves carrying 129,114 records and 64 seven-bit leaves carrying
+132,655 records, with 1,953–4,096 records per leaf. Both gRPC and Thrift replay
+every leaf and all 261,769 records with equal digests. Manifest digest, control
+revision, and provider leaf envelopes are exact.
+
+The retained source-free receipt is
+`caller-provider-96leaf-physical-distribution.json`
+(`sha256:48e1b1928cb167611577017f155c4b6ced5d858787e3fc58441c877db024cdc4`).
+It binds 8,376,608 declared corpus bytes, 93,975,071 physical leaf-content
+bytes, 117,543,780 peak spool bytes, 192 leaf replays, 523,538 record visits,
+and 187,950,142 member-read bytes. The retained rerun measured 47.725s and
+11,725,784,832 allocated bytes for build, 0.680ms and 676,256 bytes for provider
+open, and 1.879s and 1,844,617,040 bytes for the two full replays. Candidate
+artifacts occupied 94,015,507 bytes; the shared-blob bare repository occupied
+686,208 bytes. These values describe this diagnostic run, not production
+ceilings or an SLO.
+
+The exact production splitter also demonstrates why the logical 262,145-record,
+96-leaf witness cannot be treated as a physical distribution promise: leaf
+count depends on the path hashes, and this deterministic physical family has
+98 leaves at 262,145 records while the retained 261,769-path control has 96. This
+diagnostic invokes no resolver materialization, descriptor-present resolution,
+Git blob read, pair execution, outcome/admission/publication, product request,
+sync/startup/retry/lifecycle transition, or ceremony. It changes no production
+cost. It clears only the provider multi-leaf physical distribution seam. Move
+next to descriptor-present resolver/Git-blob pair execution; do not launch
+another ceremony. No rerun, scale/SLO, release, Epic closure, or Epic 41
+progression follows.
+
 ```sh
 cd ~/phebs
 

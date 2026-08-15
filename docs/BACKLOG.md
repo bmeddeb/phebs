@@ -1295,6 +1295,30 @@ continues, use a provider-only retained 96-leaf physical distribution or move
 to descriptor-present Git-blob execution; do not start another ceremony. No
 rerun, freeze, scale/SLO, release, Epic closure, or Epic 41 progression follows.
 
+The provider-only 96-leaf physical-distribution diagnostic now authors 261,769
+deterministic regular Git paths over one shared 32-byte blob and runs the exact
+production candidate-v4 build, store-pointer publication, `candidatejob.Provider`
+open, and caller-plan replay. It retains exactly 96 immutable leaves: 32 at six
+prefix bits and 64 at seven, with 1,953–4,096 records per leaf. Both gRPC and
+Thrift replay all leaves and all records with equal digests; manifest digest,
+control revision, and provider leaf envelopes match exactly. The source-free
+receipt is `spike/t4013/caller-provider-96leaf-physical-distribution.json`
+(`sha256:48e1b1928cb167611577017f155c4b6ced5d858787e3fc58441c877db024cdc4`).
+It records 192 leaf replays, 523,538 visits, 187,950,142 member-read bytes, and
+117,543,780 peak spool bytes. The retained rerun measured 47.725s for build,
+0.680ms for provider open, and 1.879s for both replays; those values are
+observations, not ceilings or an SLO. The earlier 262,145-record synthetic
+shape is not a physical-distribution promise: this exact path family produces
+98 leaves at that cardinality, while the retained 261,769-path control produces
+exactly 96.
+The opt-in diagnostic changes no production path or cost and invokes no
+resolver materialization, descriptor-present/Git-blob execution, caller
+outcome/publication, product request, startup/sync/retry/lifecycle work, or
+ceremony. This clears only the provider multi-leaf distribution seam. Move
+next to the descriptor-present resolver/Git-blob pair-execution boundary; do
+not start another ceremony. No rerun, scale/SLO, release, Epic closure, or
+Epic 41 progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

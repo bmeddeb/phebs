@@ -1,0 +1,63 @@
+{
+  "schema": "t4013-caller-provider-96leaf-physical-distribution-v1",
+  "method": "author 261,769 deterministic Git paths over one shared blob, build the production candidate-v4 generation, publish its exact store pointer, open the narrow production provider, and replay all 96 immutable physical leaves once for each caller domain",
+  "profile": "physical-261769-96leaf-v1",
+  "regular_files": 261769,
+  "unique_git_blobs": 1,
+  "shared_blob_declared_bytes": 32,
+  "corpus_declared_bytes": 8376608,
+  "candidate_records": 261769,
+  "caller_leaves": 96,
+  "leaf_set_digest": "sha256:3e71323ee770e46b01dd7e8f175224fb059f825f2e3b5b46304e73aa88d69ea3",
+  "leaf_content_bytes": 93975071,
+  "leaf_declared_bytes": 8376608,
+  "min_leaf_records": 1953,
+  "max_leaf_records": 4096,
+  "prefix_distribution": [
+    {
+      "bits": 6,
+      "leaves": 32,
+      "records": 129114,
+      "min_records": 3946,
+      "max_records": 4096
+    },
+    {
+      "bits": 7,
+      "leaves": 64,
+      "records": 132655,
+      "min_records": 1953,
+      "max_records": 2166
+    }
+  ],
+  "peak_spool_bytes": 117543780,
+  "manifest_digest_bound": true,
+  "control_revision_bound": true,
+  "provider_leaves_exact": true,
+  "domains": [
+    {
+      "domain": "grpc-caller",
+      "version": "1.5.0",
+      "leaf_replays": 96,
+      "visited_records": 261769,
+      "declared_bytes": 8376608,
+      "member_read_bytes": 93975071,
+      "replay_digest": "sha256:8e0931bbe3a25a87466fa3550b35f227afba29e04f11120217fc6ee8583d8027"
+    },
+    {
+      "domain": "thrift-caller",
+      "version": "1.5.0",
+      "leaf_replays": 96,
+      "visited_records": 261769,
+      "declared_bytes": 8376608,
+      "member_read_bytes": 93975071,
+      "replay_digest": "sha256:8e0931bbe3a25a87466fa3550b35f227afba29e04f11120217fc6ee8583d8027"
+    }
+  ],
+  "total_leaf_replays": 192,
+  "total_visited_records": 523538,
+  "total_member_read_bytes": 187950142,
+  "boundary": "provider_only_96_leaf_physical_distribution",
+  "clears_boundary": true,
+  "establishes_scale_pass": false,
+  "authorizes_ceremony": false
+}
