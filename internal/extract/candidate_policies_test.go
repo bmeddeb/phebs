@@ -11,19 +11,21 @@ import (
 
 func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 	tests := []struct {
-		domain      string
-		enumeration string
-		plane       candidate.Plane
-		maxRecords  int
-		typed       bool
-		yes         []string
-		no          []string
+		domain              string
+		enumeration         string
+		plane               candidate.Plane
+		maxRecords          int
+		executionMaxRecords int
+		typed               bool
+		yes                 []string
+		no                  []string
 	}{
 		{
 			domain: "proto-contract", enumeration: protoContractEnumeration,
-			plane:      candidate.PlaneLocal,
-			maxRecords: contractMaxRecords,
-			yes:        []string{"api.proto"}, no: []string{"api.go"},
+			plane:               candidate.PlaneLocal,
+			maxRecords:          contractMaxRecords,
+			executionMaxRecords: contractMaxRecords,
+			yes:                 []string{"api.proto"}, no: []string{"api.go"},
 		},
 		{
 			domain: "grpc-consumer", enumeration: grpcConsumerEnumeration,
@@ -32,9 +34,10 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 		},
 		{
 			domain: "thrift-contract", enumeration: thriftContractEnumeration,
-			plane:      candidate.PlaneLocal,
-			maxRecords: contractMaxRecords,
-			yes:        []string{"api.thrift"}, no: []string{"api.go"},
+			plane:               candidate.PlaneLocal,
+			maxRecords:          contractMaxRecords,
+			executionMaxRecords: contractMaxRecords,
+			yes:                 []string{"api.thrift"}, no: []string{"api.go"},
 		},
 		{
 			domain: "thrift-consumer", enumeration: thriftConsumerEnumeration,
@@ -105,6 +108,9 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			if len(policies) != 1 ||
 				policies[0].Plane != testCase.plane ||
 				policies[0].MaxRecords != testCase.maxRecords ||
+				policies[0].ExecutionMaxRecords != testCase.executionMaxRecords ||
+				((testCase.executionMaxRecords > 0) !=
+					(policies[0].ExecutionPartitionPolicy == candidate.WholeRepositoryExecutionSubrangePolicy)) ||
 				policies[0].EnumerationPolicy != testCase.enumeration ||
 				policies[0].SymlinkPolicy != fixedRootSymlinkPolicy ||
 				policies[0].RejectSymlink == nil {

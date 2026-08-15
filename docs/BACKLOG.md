@@ -1039,6 +1039,26 @@ whole-repository execution-subrange correction, combined independent review,
 and one integrated exact semantic fit remain required; Take 19 remains
 unfrozen and Epic 41 remains blocked.
 
+Execution-subrange correction result (2026-08-14): the shared candidate-v4
+repository members remain physically packed at the unchanged 4,096-record
+ceiling. Proto and Thrift local-domain identities now separately bind
+`whole-repository-execution-subrange-v1` and a 2,048-record execution maximum.
+Only the unitless shared-repository sparse route uses that authority: one
+construction scan emits contiguous domain-relative subranges, and each
+digest-bound partition records its exact policy, bound, start, and end.
+Focused local publications retain their physical `MaxRecords` packing and do
+not acquire subrange fields. Historical policy/partition JSON omits the new
+optional fields byte-for-byte. The ordinary five-record proof produces exact
+`[2,2,1]` coverage, rejects overlap/gap/wrong-bound/missing-authority forgeries,
+survives result-plan binding, and accounts for one build read versus three
+execution reads; a maximum 4,096-record member produces exactly two 2,048
+subranges. No new candidate or source artifact is retained. Runtime
+deliberately rereads the immutable shared member once per subrange, with that
+full-byte cost reserved in the sparse descriptor and all existing aggregate
+partition/index ceilings unchanged. This clears the focused shape correction
+only. Combined independent review and one integrated exact semantic fit remain
+required; Take 19 stays unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

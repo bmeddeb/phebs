@@ -58,6 +58,8 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 		case "proto-contract":
 			policy.EnumerationPolicy = protoContractEnumeration
 			policy.MaxRecords = contractMaxRecords
+			policy.ExecutionPartitionPolicy = candidate.WholeRepositoryExecutionSubrangePolicy
+			policy.ExecutionMaxRecords = contractMaxRecords
 			policy.Enumerate = hasSuffix(".proto")
 		case "grpc-consumer":
 			policy.EnumerationPolicy = grpcConsumerEnumeration
@@ -65,6 +67,8 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 		case "thrift-contract":
 			policy.EnumerationPolicy = thriftContractEnumeration
 			policy.MaxRecords = contractMaxRecords
+			policy.ExecutionPartitionPolicy = candidate.WholeRepositoryExecutionSubrangePolicy
+			policy.ExecutionMaxRecords = contractMaxRecords
 			policy.Enumerate = hasSuffix(".thrift")
 		case "thrift-consumer":
 			policy.EnumerationPolicy = thriftConsumerEnumeration

@@ -25,16 +25,17 @@ const (
 	RecordSchema   = "phebs-candidate-record-v2"
 	StateSchema    = "phebs-candidate-state-v4"
 
-	EnumerationPolicyVersion             = "phebs-candidate-enumeration-v3"
-	CallerHashPolicy                     = "phebs-caller-path-v1"
-	LocalProjectionPolicy                = "focused-domain-source-lane-v2"
-	InitialCallerPrefixBits              = 2
-	MaxPolicies                          = 64
-	MaxCorpusEntries                     = 10_000_000
-	MaxRecordsPerArtifact                = 4096
-	MaxDeclaredBytesPerArtifact    int64 = 64 << 20
-	MaxLocalProjectionArtifacts          = 16_384
-	MaxLocalProjectionContentBytes       = int64(4 << 30)
+	EnumerationPolicyVersion                     = "phebs-candidate-enumeration-v3"
+	CallerHashPolicy                             = "phebs-caller-path-v1"
+	LocalProjectionPolicy                        = "focused-domain-source-lane-v2"
+	WholeRepositoryExecutionSubrangePolicy       = "whole-repository-execution-subrange-v1"
+	InitialCallerPrefixBits                      = 2
+	MaxPolicies                                  = 64
+	MaxCorpusEntries                             = 10_000_000
+	MaxRecordsPerArtifact                        = 4096
+	MaxDeclaredBytesPerArtifact            int64 = 64 << 20
+	MaxLocalProjectionArtifacts                  = 16_384
+	MaxLocalProjectionContentBytes               = int64(4 << 30)
 
 	maxManifestBytes = 8 << 20
 	maxArtifactBytes = 128 << 20
@@ -72,10 +73,18 @@ type Policy struct {
 	// MaxRecords optionally reduces focused-local artifact cardinality below
 	// the repository-wide frozen maximum. Zero preserves the historical
 	// MaxRecordsPerArtifact contract. Only PlaneLocal may reduce this value.
-	MaxRecords    int
-	Enumerate     func(string) bool
-	Required      func(string) bool
-	RejectSymlink func(string) bool
+	MaxRecords int
+	// ExecutionMaxRecords is a separate whole-repository execution bound. It
+	// never repacks the shared candidate member or changes focused-local
+	// projection identity; the exact version token binds how sparse execution
+	// partitions cover one member in contiguous subranges. Only PlaneLocal may
+	// opt in because this contract exists for local domains consuming the
+	// unitless shared-repository route.
+	ExecutionPartitionPolicy string
+	ExecutionMaxRecords      int
+	Enumerate                func(string) bool
+	Required                 func(string) bool
+	RejectSymlink            func(string) bool
 	// TypedInputs names parser inputs consumed outside the ordinary source
 	// replay. T30.5 supports only "scip"; the selected path is supplied by
 	// the analysis-unit state (or the whole-repository legacy default).
@@ -84,13 +93,15 @@ type Policy struct {
 
 // PolicyIdentity is the serializable, content-addressed policy contract.
 type PolicyIdentity struct {
-	Domain            string   `json:"domain"`
-	Version           string   `json:"version"`
-	EnumerationPolicy string   `json:"enumeration_policy"`
-	SymlinkPolicy     string   `json:"symlink_policy"`
-	Plane             Plane    `json:"plane"`
-	MaxRecords        int      `json:"max_records,omitempty"`
-	TypedInputs       []string `json:"typed_inputs,omitempty"`
+	Domain                   string   `json:"domain"`
+	Version                  string   `json:"version"`
+	EnumerationPolicy        string   `json:"enumeration_policy"`
+	SymlinkPolicy            string   `json:"symlink_policy"`
+	Plane                    Plane    `json:"plane"`
+	MaxRecords               int      `json:"max_records,omitempty"`
+	ExecutionPartitionPolicy string   `json:"execution_partition_policy,omitempty"`
+	ExecutionMaxRecords      int      `json:"execution_max_records,omitempty"`
+	TypedInputs              []string `json:"typed_inputs,omitempty"`
 }
 
 // TypedIndexSelection is the generation-bound designation of one typed input.
@@ -288,8 +299,10 @@ func PolicyIdentities(policies []Policy) ([]PolicyIdentity, error) {
 			Domain: policy.Domain, Version: policy.Version,
 			EnumerationPolicy: policy.EnumerationPolicy,
 			SymlinkPolicy:     policy.SymlinkPolicy, Plane: policy.Plane,
-			MaxRecords:  policy.MaxRecords,
-			TypedInputs: slices.Clone(policy.TypedInputs),
+			MaxRecords:               policy.MaxRecords,
+			ExecutionPartitionPolicy: policy.ExecutionPartitionPolicy,
+			ExecutionMaxRecords:      policy.ExecutionMaxRecords,
+			TypedInputs:              slices.Clone(policy.TypedInputs),
 		}
 		if identity.SymlinkPolicy == "" && policy.RejectSymlink == nil {
 			identity.SymlinkPolicy = "none"
@@ -353,6 +366,8 @@ func EqualPolicyIdentities(left, right []PolicyIdentity) bool {
 			left[index].SymlinkPolicy != right[index].SymlinkPolicy ||
 			left[index].Plane != right[index].Plane ||
 			left[index].MaxRecords != right[index].MaxRecords ||
+			left[index].ExecutionPartitionPolicy != right[index].ExecutionPartitionPolicy ||
+			left[index].ExecutionMaxRecords != right[index].ExecutionMaxRecords ||
 			!slices.Equal(left[index].TypedInputs, right[index].TypedInputs) {
 			return false
 		}
@@ -501,6 +516,16 @@ func validatePolicyIdentity(identity PolicyIdentity) error {
 		(identity.MaxRecords != 0 && identity.Plane != PlaneLocal) {
 		return fmt.Errorf("%w: malformed focused-local record bound", ErrInvalidPolicy)
 	}
+	if identity.ExecutionPartitionPolicy == "" {
+		if identity.ExecutionMaxRecords != 0 {
+			return fmt.Errorf("%w: execution record bound has no policy", ErrInvalidPolicy)
+		}
+	} else if identity.ExecutionPartitionPolicy != WholeRepositoryExecutionSubrangePolicy ||
+		identity.ExecutionMaxRecords <= 0 ||
+		identity.ExecutionMaxRecords >= MaxRecordsPerArtifact ||
+		identity.Plane != PlaneLocal {
+		return fmt.Errorf("%w: malformed whole-repository execution bound", ErrInvalidPolicy)
+	}
 	if !sortedUniqueStrings(identity.TypedInputs) {
 		return fmt.Errorf("%w: malformed typed-input identity", ErrInvalidPolicy)
 	}
@@ -517,6 +542,13 @@ func policyMaxRecords(identity PolicyIdentity) int {
 		return identity.MaxRecords
 	}
 	return MaxRecordsPerArtifact
+}
+
+func policyExecutionMaxRecords(identity PolicyIdentity) int {
+	if identity.ExecutionPartitionPolicy == WholeRepositoryExecutionSubrangePolicy {
+		return identity.ExecutionMaxRecords
+	}
+	return 0
 }
 
 func typedIndexSelection(

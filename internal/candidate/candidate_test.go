@@ -2032,6 +2032,10 @@ func TestFocusedLocalRecordBoundIsIdentityBoundAndPreservesDefault(t *testing.T)
 	if bytes.Contains(raw, []byte("max_records")) {
 		t.Fatalf("historical policy wire changed: %s", raw)
 	}
+	if bytes.Contains(raw, []byte("execution_partition_policy")) ||
+		bytes.Contains(raw, []byte("execution_max_records")) {
+		t.Fatalf("historical policy gained execution-subrange fields: %s", raw)
+	}
 	for _, invalid := range []PolicyIdentity{
 		{
 			Domain: "repository", Version: "v1", EnumerationPolicy: "repository-v1",
@@ -2041,10 +2045,43 @@ func TestFocusedLocalRecordBoundIsIdentityBoundAndPreservesDefault(t *testing.T)
 			Domain: "local", Version: "v1", EnumerationPolicy: "local-v1",
 			SymlinkPolicy: "none", Plane: PlaneLocal, MaxRecords: MaxRecordsPerArtifact,
 		},
+		{
+			Domain: "execution-no-policy", Version: "v1", EnumerationPolicy: "local-v1",
+			SymlinkPolicy: "none", Plane: PlaneLocal, ExecutionMaxRecords: 2,
+		},
+		{
+			Domain: "execution-no-bound", Version: "v1", EnumerationPolicy: "local-v1",
+			SymlinkPolicy: "none", Plane: PlaneLocal,
+			ExecutionPartitionPolicy: WholeRepositoryExecutionSubrangePolicy,
+		},
+		{
+			Domain: "execution-repository", Version: "v1", EnumerationPolicy: "repository-v1",
+			SymlinkPolicy: "none", Plane: PlaneRepository,
+			ExecutionPartitionPolicy: WholeRepositoryExecutionSubrangePolicy,
+			ExecutionMaxRecords:      2,
+		},
+		{
+			Domain: "execution-unknown", Version: "v1", EnumerationPolicy: "local-v1",
+			SymlinkPolicy: "none", Plane: PlaneLocal,
+			ExecutionPartitionPolicy: "unknown-v1", ExecutionMaxRecords: 2,
+		},
+		{
+			Domain: "execution-unbounded", Version: "v1", EnumerationPolicy: "local-v1",
+			SymlinkPolicy: "none", Plane: PlaneLocal,
+			ExecutionPartitionPolicy: WholeRepositoryExecutionSubrangePolicy,
+			ExecutionMaxRecords:      MaxRecordsPerArtifact,
+		},
 	} {
 		if err := validatePolicyIdentity(invalid); !errors.Is(err, ErrInvalidPolicy) {
 			t.Fatalf("invalid policy accepted: %+v, error=%v", invalid, err)
 		}
+	}
+	execution := identity
+	execution.ExecutionPartitionPolicy = WholeRepositoryExecutionSubrangePolicy
+	execution.ExecutionMaxRecords = 2
+	if err := validatePolicyIdentity(execution); err != nil ||
+		policyExecutionMaxRecords(execution) != 2 || policyExecutionMaxRecords(identity) != 0 {
+		t.Fatalf("execution subrange identity = %+v, error=%v", execution, err)
 	}
 
 	pack := func(t *testing.T, maxRecords int) []Artifact {

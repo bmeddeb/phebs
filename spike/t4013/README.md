@@ -1402,10 +1402,10 @@ T40R1_PARTITION_SHAPE_DIAGNOSTIC=1 \
   -count=1 -v
 ```
 
-The current baseline fails in about 0.18 seconds with one `[5]` partition
-instead of `[2,2,1]`. The focused gate should become green only through the
-separately versioned whole-repository execution-subrange contract; do not
-globally repack candidate members or broaden the focused-local identity.
+The pre-correction baseline failed in about 0.18 seconds with one `[5]`
+partition instead of `[2,2,1]`. The corrected focused gate is green through
+the separately versioned whole-repository execution-subrange contract; it does
+not globally repack candidate members or broaden the focused-local identity.
 
 The writer check opens the production disk-backed supervised store and stages
 the measured Kafka actual population—32 emitting partitions, 131,072 facts,
@@ -1477,6 +1477,28 @@ accounting, publication reconciliation, recovery, and historical controls.
 The full store suite passed. This clears the focused writer lane only: the
 whole-repository execution-subrange correction and independent combined review
 remain required before one new integrated exact fit. Take 19 remains unfrozen.
+
+The execution-shape gate is now corrected as well. Proto and Thrift local
+policies separately bind `whole-repository-execution-subrange-v1` with a
+2,048-record execution maximum. On the unitless shared-repository route, the
+sparse builder scans an immutable candidate member once and emits contiguous
+domain-relative ranges; each partition digest carries the policy, bound,
+start, and end. The reader deliberately reopens the same member for every
+range, and the descriptor reserves the full repeated bytes. It authors no new
+candidate member or derived source payload. Focused local publications still
+use physical `MaxRecords` projection packing and carry none of the new range
+fields; historical policy and partition JSON therefore retains its omitted
+field bytes.
+
+The ordinary and opt-in five-record proofs both produce `[2,2,1]` with exact
+once-only coverage, one construction read, three execution reads, and
+result-plan preservation. Rebased overlap, gap, wrong-bound, and
+missing-authority shapes fail validation. An ordinary maximum-member test
+produces exactly two 2,048-record partitions from one 4,096-record candidate
+member while construction still reads that member once. This completes both
+focused corrections, not Take 19: independent combined review and one new
+integrated exact semantic fit remain required before any freeze decision.
+No ceremony command below is authorized yet.
 
 ```sh
 cd ~/phebs

@@ -207,6 +207,8 @@ func equalPolicyIdentities(
 				left.SymlinkPolicy == right.SymlinkPolicy &&
 				left.Plane == right.Plane &&
 				left.MaxRecords == right.MaxRecords &&
+				left.ExecutionPartitionPolicy == right.ExecutionPartitionPolicy &&
+				left.ExecutionMaxRecords == right.ExecutionMaxRecords &&
 				slices.Equal(left.TypedInputs, right.TypedInputs)
 		},
 	)
@@ -284,9 +286,10 @@ func measurementUnit(t *testing.T, repository string) *analysisunit.State {
 func measurementPolicies(t *testing.T) []candidate.Policy {
 	t.Helper()
 	// This reconstructs the production registry as frozen by T30.4, with every
-	// independent dark gate enabled. T40.R1 later added an optional focused-local
-	// record bound to the shared registry; zero it here so this historical
-	// measurement continues proving its original candidate identity and bytes.
+	// independent dark gate enabled. T40.R1 later added optional focused-local
+	// physical and whole-repository execution bounds to the shared registry;
+	// zero both here so this historical measurement continues proving its
+	// original candidate identity and bytes.
 	extractors := []extract.Extractor{
 		protodecl.New(), grpcgo.New(), scipfield.New(), gocaller.NewGRPC(),
 		thriftdecl.New(), thriftgo.New(), gocaller.NewThrift(),
@@ -299,6 +302,8 @@ func measurementPolicies(t *testing.T) []candidate.Policy {
 	for index := range policies {
 		if policies[index].Domain == "proto-contract" || policies[index].Domain == "thrift-contract" {
 			policies[index].MaxRecords = 0
+			policies[index].ExecutionPartitionPolicy = ""
+			policies[index].ExecutionMaxRecords = 0
 		}
 	}
 	return policies

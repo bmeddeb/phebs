@@ -641,6 +641,18 @@ func TestSparsePartitionQuotasAndSchedulePagingAreFrozen(t *testing.T) {
 	if err := validateSparsePartition(base, nil, 0); err != nil {
 		t.Fatalf("exact quota partition: %v", err)
 	}
+	historicalBytes, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range [][]byte{
+		[]byte("execution_partition_policy"), []byte("execution_max_records"),
+		[]byte("member_record_start"), []byte("member_record_end"),
+	} {
+		if bytes.Contains(historicalBytes, field) {
+			t.Fatalf("historical partition bytes gained optional field %q: %s", field, historicalBytes)
+		}
+	}
 	for _, mutate := range []func(*ExtractionPartition){
 		func(partition *ExtractionPartition) { partition.AdmittedRecords++ },
 		func(partition *ExtractionPartition) { partition.Member.RecordCount++ },

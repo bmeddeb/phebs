@@ -397,9 +397,12 @@ func buildDomainResultPlan(
 		typedPartitions > MaxDomainResultTypedPartitions {
 		return DomainResultPlan{}, domainResultInvalid("member or typed partition inventory exceeds its frozen limit")
 	}
-	manifest := Manifest{
-		Repository: index.Repository, Digest: index.CandidateManifestDigest,
-		GenerationDigest: index.CandidateGenerationDigest,
+	manifest := domain.publication.manifest
+	if manifest.Repository == "" {
+		manifest = Manifest{
+			Repository: index.Repository, Digest: index.CandidateManifestDigest,
+			GenerationDigest: index.CandidateGenerationDigest,
+		}
 	}
 	if err := validateSparseDomain(index, descriptor, manifest, false); err != nil {
 		return DomainResultPlan{}, domainResultInvalid("sparse domain: %v", err)

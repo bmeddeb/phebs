@@ -1053,6 +1053,19 @@ catalog, relationship, or correctness authority.
   maximum), and no request failed. The whole-repository execution-subrange
   correction and combined independent review remain required before one new
   integrated fit; Take 19 remains unfrozen.
+- The whole-repository shape correction is now green without repacking the
+  shared candidate generation. Proto and Thrift bind the separate
+  `whole-repository-execution-subrange-v1` identity at 2,048 records; only
+  unitless local sparse execution emits contiguous domain-relative ranges over
+  a shared 4,096-record member. Focused local projection packing and historical
+  omitted-field bytes remain unchanged. The five-record proof is exactly
+  `[2,2,1]`, malformed range authority fails closed, result-plan binding passes,
+  and a maximum member becomes two 2,048-record work items. Sparse construction
+  scans the member once; execution intentionally rereads the full immutable
+  member once per subrange and reserves those bytes explicitly, with no new
+  derived payload or changed aggregate ceiling. Both focused corrections are
+  now complete; combined independent review remains mandatory before one new
+  integrated fit, and Take 19 remains unfrozen.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

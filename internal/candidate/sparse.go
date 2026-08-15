@@ -161,6 +161,10 @@ type ExtractionPartition struct {
 	TypedScope                *SparseTypedScopeDescriptor `json:"typed_scope,omitempty"`
 	CallerPrefix              string                      `json:"caller_prefix,omitempty"`
 	CallerPrefixBits          int                         `json:"caller_prefix_bits,omitempty"`
+	ExecutionPartitionPolicy  string                      `json:"execution_partition_policy,omitempty"`
+	ExecutionMaxRecords       int                         `json:"execution_max_records,omitempty"`
+	MemberRecordStart         int                         `json:"member_record_start,omitempty"`
+	MemberRecordEnd           int                         `json:"member_record_end,omitempty"`
 	AdmittedRecords           int                         `json:"admitted_records"`
 	AdmittedDeclaredBytes     int64                       `json:"admitted_declared_bytes"`
 	Quotas                    ExtractionPartitionQuotas   `json:"quotas"`
@@ -283,6 +287,11 @@ type sparseTypedSource struct {
 	pathIdentity  [sha256.Size]byte
 	path          string
 	objectID      string
+	declaredBytes int64
+}
+
+type sparseMemberSubrange struct {
+	records       int
 	declaredBytes int64
 }
 
@@ -552,11 +561,14 @@ func scanSparseMember(
 	if len(targets) == 0 {
 		return nil
 	}
-	counts := make([]int, len(targets))
-	declared := make([]int64, len(targets))
+	subranges := make([][]sparseMemberSubrange, len(targets))
+	executionLimits := make([]int, len(targets))
 	targetsByDomain := make(map[string][]int, len(targets))
 	for index, target := range targets {
 		targetsByDomain[target.identity.Domain] = append(targetsByDomain[target.identity.Domain], index)
+		if publication.manifest.UnitDigest == "" && target.identity.Plane == PlaneLocal {
+			executionLimits[index] = policyExecutionMaxRecords(target.identity)
+		}
 	}
 	err := validateArtifactFile(
 		ctx, filepath.Join(publication.root, source.artifact.Name), source.artifact,
@@ -570,11 +582,17 @@ func scanSparseMember(
 					if target.identity.Plane == PlaneCaller && !hashHasPrefix(record.Hash, source.prefix) {
 						return sparseInvalid("caller partition contains an out-of-prefix record")
 					}
-					counts[index]++
-					if record.DeclaredBytes > math.MaxInt64-declared[index] {
+					limit := executionLimits[index]
+					if len(subranges[index]) == 0 ||
+						(limit > 0 && subranges[index][len(subranges[index])-1].records == limit) {
+						subranges[index] = append(subranges[index], sparseMemberSubrange{})
+					}
+					current := &subranges[index][len(subranges[index])-1]
+					current.records++
+					if record.DeclaredBytes > math.MaxInt64-current.declaredBytes {
 						return sparseInvalid("admitted byte count overflows")
 					}
-					declared[index] += record.DeclaredBytes
+					current.declaredBytes += record.DeclaredBytes
 					if sparseTypedInputPresent(target.descriptor.TypedInputs) {
 						if len(target.typedScope) >= PartitionMaxTypedScopeRecords {
 							return sparseInvalid(
@@ -601,43 +619,58 @@ func scanSparseMember(
 		metrics.CandidateBytesRead += source.artifact.ContentBytes
 	}
 	for index, target := range targets {
-		if counts[index] == 0 {
+		if len(subranges[index]) == 0 {
 			continue
 		}
-		if len(target.index.Partitions) >= MaxDomainPartitions ||
-			aggregatePartitions == nil || *aggregatePartitions >= MaxSparseAggregatePartitions {
-			return sparseInvalid(
-				"domain or generation partition count exceeds %d/%d",
-				MaxDomainPartitions, MaxSparseAggregatePartitions,
-			)
+		memberOffset := 0
+		for _, subrange := range subranges[index] {
+			if len(target.index.Partitions) >= MaxDomainPartitions ||
+				aggregatePartitions == nil || *aggregatePartitions >= MaxSparseAggregatePartitions {
+				return sparseInvalid(
+					"domain or generation partition count exceeds %d/%d",
+					MaxDomainPartitions, MaxSparseAggregatePartitions,
+				)
+			}
+			start := target.descriptor.AdmittedRecords
+			member := source.artifact
+			partition := ExtractionPartition{
+				Schema:                    ExtractionPartitionSchema,
+				Repository:                publication.manifest.Repository,
+				CandidateManifestDigest:   publication.manifest.Digest,
+				CandidateGenerationDigest: publication.manifest.GenerationDigest,
+				Domain:                    target.identity.Domain,
+				Version:                   target.identity.Version,
+				Plane:                     target.identity.Plane,
+				Kind:                      PartitionKindCandidateMember,
+				Ordinal:                   len(target.index.Partitions),
+				SourceStart:               start,
+				SourceEnd:                 start + subrange.records,
+				ByteKind:                  sparseByteKind(target.identity.Plane),
+				Member:                    &member,
+				CallerPrefix:              source.prefix,
+				CallerPrefixBits:          source.prefixBits,
+				AdmittedRecords:           subrange.records,
+				AdmittedDeclaredBytes:     subrange.declaredBytes,
+				Quotas:                    FrozenExtractionPartitionQuotas(),
+			}
+			if executionLimits[index] > 0 {
+				partition.ExecutionPartitionPolicy = target.identity.ExecutionPartitionPolicy
+				partition.ExecutionMaxRecords = executionLimits[index]
+				partition.MemberRecordStart = memberOffset
+				partition.MemberRecordEnd = memberOffset + subrange.records
+			}
+			partition.Digest = sparsePartitionDigest(partition)
+			target.index.Partitions = append(target.index.Partitions, partition)
+			*aggregatePartitions = *aggregatePartitions + 1
+			target.descriptor.AdmittedRecords += subrange.records
+			if subrange.declaredBytes > math.MaxInt64-target.descriptor.AdmittedDeclaredBytes ||
+				source.artifact.ContentBytes > math.MaxInt64-target.descriptor.CandidateMemberReadBytes {
+				return sparseInvalid("domain totals overflow")
+			}
+			target.descriptor.AdmittedDeclaredBytes += subrange.declaredBytes
+			target.descriptor.CandidateMemberReadBytes += source.artifact.ContentBytes
+			memberOffset += subrange.records
 		}
-		start := target.descriptor.AdmittedRecords
-		member := source.artifact
-		partition := ExtractionPartition{
-			Schema:                    ExtractionPartitionSchema,
-			Repository:                publication.manifest.Repository,
-			CandidateManifestDigest:   publication.manifest.Digest,
-			CandidateGenerationDigest: publication.manifest.GenerationDigest,
-			Domain:                    target.identity.Domain, Version: target.identity.Version, Plane: target.identity.Plane,
-			Kind:    PartitionKindCandidateMember,
-			Ordinal: len(target.index.Partitions), SourceStart: start,
-			SourceEnd: start + counts[index], ByteKind: sparseByteKind(target.identity.Plane),
-			Member: &member, CallerPrefix: source.prefix,
-			CallerPrefixBits:      source.prefixBits,
-			AdmittedRecords:       counts[index],
-			AdmittedDeclaredBytes: declared[index],
-			Quotas:                FrozenExtractionPartitionQuotas(),
-		}
-		partition.Digest = sparsePartitionDigest(partition)
-		target.index.Partitions = append(target.index.Partitions, partition)
-		*aggregatePartitions = *aggregatePartitions + 1
-		target.descriptor.AdmittedRecords += counts[index]
-		if declared[index] > math.MaxInt64-target.descriptor.AdmittedDeclaredBytes ||
-			source.artifact.ContentBytes > math.MaxInt64-target.descriptor.CandidateMemberReadBytes {
-			return sparseInvalid("domain totals overflow")
-		}
-		target.descriptor.AdmittedDeclaredBytes += declared[index]
-		target.descriptor.CandidateMemberReadBytes += source.artifact.ContentBytes
 	}
 	return nil
 }
@@ -1065,7 +1098,7 @@ func (domain *SparseDomain) ReadPartition(
 	if partition.Member == nil {
 		return sparseInvalid("candidate partition has no member")
 	}
-	count, declared := 0, int64(0)
+	count, memberRecords, declared := 0, 0, int64(0)
 	err := validateArtifactFile(
 		ctx, filepath.Join(publication.candidateRoot, partition.Member.Name), *partition.Member,
 		func(record Record) error {
@@ -1078,6 +1111,12 @@ func (domain *SparseDomain) ReadPartition(
 			if partition.Plane == PlaneCaller && !hashHasPrefix(record.Hash, partition.CallerPrefix) {
 				return sparseInvalid("caller sparse read found an out-of-prefix record")
 			}
+			memberOrdinal := memberRecords
+			memberRecords++
+			if partition.ExecutionPartitionPolicy != "" &&
+				(memberOrdinal < partition.MemberRecordStart || memberOrdinal >= partition.MemberRecordEnd) {
+				return nil
+			}
 			count++
 			if record.DeclaredBytes > math.MaxInt64-declared {
 				return sparseInvalid("partition declared bytes overflow")
@@ -1089,6 +1128,15 @@ func (domain *SparseDomain) ReadPartition(
 	)
 	if err != nil {
 		return fmt.Errorf("read sparse candidate member %q: %w", partition.Member.Name, err)
+	}
+	if partition.ExecutionPartitionPolicy != "" {
+		lastSubrange := ordinal+1 == len(domain.index.Partitions) ||
+			domain.index.Partitions[ordinal+1].Member == nil ||
+			domain.index.Partitions[ordinal+1].Member.Name != partition.Member.Name
+		if memberRecords < partition.MemberRecordEnd ||
+			(lastSubrange && memberRecords != partition.MemberRecordEnd) {
+			return sparseInvalid("execution subrange no longer covers its exact member records")
+		}
 	}
 	if count != partition.AdmittedRecords || declared != partition.AdmittedDeclaredBytes {
 		return sparseInvalid("selected member no longer matches admitted partition totals")
@@ -1319,6 +1367,16 @@ func validateSparseDomain(
 		}
 	}
 	lastSourceOrdinal := -1
+	lastMemberName := ""
+	lastMemberEnd := 0
+	lastMemberSubrange := false
+	var identity PolicyIdentity
+	identityBound := index.PolicyOrdinal >= 0 && index.PolicyOrdinal < len(manifest.Policies)
+	if identityBound {
+		identity = manifest.Policies[index.PolicyOrdinal]
+	} else if len(manifest.Policies) != 0 {
+		return sparseInvalid("domain policy ordinal is invalid")
+	}
 	typedOrdinal := 0
 	typedPhase := false
 	for ordinal, partition := range index.Partitions {
@@ -1333,13 +1391,39 @@ func validateSparseDomain(
 			if typedPhase || partition.Member == nil {
 				return sparseInvalid("candidate partition follows typed work or has no member")
 			}
-			if _, duplicate := seenMembers[partition.Member.Name]; duplicate {
-				return sparseInvalid("partition member is duplicated")
+			sameMember := partition.Member.Name == lastMemberName
+			if sameMember {
+				if !lastMemberSubrange || partition.ExecutionPartitionPolicy == "" ||
+					partition.MemberRecordStart != lastMemberEnd {
+					return sparseInvalid("partition member subranges overlap, gap, or lack authority")
+				}
+			} else {
+				if _, duplicate := seenMembers[partition.Member.Name]; duplicate {
+					return sparseInvalid("partition member is duplicated out of order")
+				}
+				seenMembers[partition.Member.Name] = struct{}{}
+				if partition.ExecutionPartitionPolicy != "" && partition.MemberRecordStart != 0 {
+					return sparseInvalid("first partition member subrange does not start at zero")
+				}
 			}
-			seenMembers[partition.Member.Name] = struct{}{}
+			wantExecutionMax := 0
+			if identityBound && manifest.UnitDigest == "" && identity.Plane == PlaneLocal {
+				wantExecutionMax = policyExecutionMaxRecords(identity)
+			}
+			if wantExecutionMax == 0 {
+				if partition.ExecutionPartitionPolicy != "" || partition.ExecutionMaxRecords != 0 ||
+					partition.MemberRecordStart != 0 || partition.MemberRecordEnd != 0 {
+					return sparseInvalid("partition carries unexpected execution-subrange authority")
+				}
+			} else if !identityBound ||
+				partition.ExecutionPartitionPolicy != identity.ExecutionPartitionPolicy ||
+				partition.ExecutionMaxRecords != wantExecutionMax {
+				return sparseInvalid("partition execution-subrange authority differs from policy")
+			}
 			if validateMembership {
 				sourceOrdinal, ok := sourceOrdinals[partition.Member.Name]
-				if !ok || sourceOrdinal <= lastSourceOrdinal ||
+				if !ok || (!sameMember && sourceOrdinal <= lastSourceOrdinal) ||
+					(sameMember && sourceOrdinal != lastSourceOrdinal) ||
 					*partition.Member != sources[sourceOrdinal].artifact ||
 					partition.CallerPrefix != sources[sourceOrdinal].prefix ||
 					partition.CallerPrefixBits != sources[sourceOrdinal].prefixBits {
@@ -1347,6 +1431,9 @@ func validateSparseDomain(
 				}
 				lastSourceOrdinal = sourceOrdinal
 			}
+			lastMemberName = partition.Member.Name
+			lastMemberEnd = partition.MemberRecordEnd
+			lastMemberSubrange = partition.ExecutionPartitionPolicy != ""
 			records = partition.SourceEnd
 			if partition.Member.ContentBytes > math.MaxInt64-memberBytes {
 				return sparseInvalid("domain totals overflow")
@@ -1459,7 +1546,8 @@ func validateSparsePartition(
 			partition.Member.ContentBytes <= 0 ||
 			partition.Member.ContentBytes > quotas.CandidateContentBytes ||
 			!validDigest(partition.Member.ContentDigest) ||
-			partition.ByteKind != sparseByteKind(partition.Plane) {
+			partition.ByteKind != sparseByteKind(partition.Plane) ||
+			!validExecutionSubrange(partition) {
 			return sparseInvalid("candidate partition %d is invalid", partition.Ordinal)
 		}
 		if partition.Plane == PlaneCaller {
@@ -1477,6 +1565,8 @@ func validateSparsePartition(
 			partition.SourceEnd != partition.SourceStart || partition.AdmittedRecords != 0 ||
 			partition.ByteKind != "typed_input_declared" ||
 			partition.CallerPrefix != "" || partition.CallerPrefixBits != 0 ||
+			partition.ExecutionPartitionPolicy != "" || partition.ExecutionMaxRecords != 0 ||
+			partition.MemberRecordStart != 0 || partition.MemberRecordEnd != 0 ||
 			!validSparseTypedInput(*partition.TypedInput, true) ||
 			!validSparseTypedScopeDescriptor(*partition.TypedScope, -1, -1) ||
 			partition.AdmittedDeclaredBytes != partition.TypedInput.DeclaredBytes ||
@@ -1487,6 +1577,21 @@ func validateSparsePartition(
 		return sparseInvalid("partition kind is invalid")
 	}
 	return nil
+}
+
+func validExecutionSubrange(partition ExtractionPartition) bool {
+	if partition.ExecutionPartitionPolicy == "" {
+		return partition.ExecutionMaxRecords == 0 && partition.MemberRecordStart == 0 &&
+			partition.MemberRecordEnd == 0
+	}
+	return partition.ExecutionPartitionPolicy == WholeRepositoryExecutionSubrangePolicy &&
+		partition.Plane == PlaneLocal && partition.ExecutionMaxRecords > 0 &&
+		partition.ExecutionMaxRecords < MaxRecordsPerArtifact &&
+		partition.AdmittedRecords <= partition.ExecutionMaxRecords &&
+		partition.MemberRecordStart >= 0 &&
+		partition.MemberRecordEnd > partition.MemberRecordStart &&
+		partition.MemberRecordEnd-partition.MemberRecordStart == partition.AdmittedRecords &&
+		partition.Member != nil && partition.MemberRecordEnd <= partition.Member.RecordCount
 }
 
 func validSparseTypedScopeDescriptor(
