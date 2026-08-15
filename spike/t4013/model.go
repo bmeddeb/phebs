@@ -1158,7 +1158,8 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 	}
 	if detailVersion >= 10 {
 		outcomes = append(outcomes, "observation_bound_refusal", "observation_terminal",
-			"extraction_schedule_terminal")
+			"extraction_schedule_terminal", "caller_generation_bound_refusal",
+			"caller_generation_terminal")
 	}
 	stages := []string{
 		"repository_visibility", "repository_index", "source_generation",
@@ -1167,6 +1168,9 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 	}
 	if detailVersion >= 2 {
 		stages = append(stages, convergenceNotInspected)
+	}
+	if detailVersion >= 10 {
+		stages = append(stages, "caller_generation")
 	}
 	seen := make(map[string]struct{}, len(values))
 	for _, value := range values {
@@ -1472,7 +1476,9 @@ func validateConvergenceTransitions(
 	}
 	if detailVersion >= 10 {
 		terminalOutcome = terminalOutcome || value.Outcome == "observation_bound_refusal" ||
-			value.Outcome == "observation_terminal" || value.Outcome == "extraction_schedule_terminal"
+			value.Outcome == "observation_terminal" || value.Outcome == "extraction_schedule_terminal" ||
+			value.Outcome == "caller_generation_bound_refusal" ||
+			value.Outcome == "caller_generation_terminal"
 	}
 	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
 		return errors.New("T40.13 terminal transition is incoherent")
@@ -1582,6 +1588,10 @@ func validateConvergenceWithoutSuccessfulProbe(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	terminalOutcome := value.Outcome == "repository_index_terminal" || observationTerminal || extractionTerminal
+	if detailVersion >= 10 {
+		terminalOutcome = terminalOutcome || value.Outcome == "caller_generation_bound_refusal" ||
+			value.Outcome == "caller_generation_terminal"
+	}
 	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
 		return errors.New("T40.13 unsuccessful terminal transition is incoherent")
 	}

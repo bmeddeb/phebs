@@ -1616,6 +1616,28 @@ diagnostic. It does not authorize the ceremony commands below, freeze Take 19,
 advance Epic 41, or establish a scale, SLO, release, migration, or
 decommission-safety claim.
 
+The separately authorized `t40r1-neutral-19` run then bound exact source commit
+`6f02dc2ae6c15b400d6d9f358f558e358d3025ea` and reviewed plan
+`sha256:e392bacb787c27f5032874831fab35426cd6412f04aab115e695a33f90ff281e`.
+Its outer process sequence advanced from structural server execution to
+semantic cold convergence before exact Caller Map authority reported a
+terminal caller generation without publication. The executor recorded stage
+`caller_generation` and outcome `caller_generation_terminal`; the v14
+source-free validator had not enumerated that stage, either caller terminal
+outcome, or their terminal-transition coherence. Observation validation failed,
+so the driver sealed no receipt and exact teardown destroyed custody, the
+prepared manifest, credentials, logs, and processes. This consumed run cannot
+establish structural completion, classify the caller cause, or validate the
+compact correction.
+
+The harness correction admits `caller_generation` plus
+`caller_generation_bound_refusal` and `caller_generation_terminal` only for the
+v14 detail contract and requires their last transition to be terminal. Earlier
+receipt contracts remain closed. Focused regression coverage drives both states
+through the actual convergence recorder, stopped classification, and complete
+observation validation. A fresh identifier, exact plan, independent review, and
+separate rerun authorization are required; do not reuse `t40r1-neutral-19`.
+
 ```sh
 cd ~/phebs
 

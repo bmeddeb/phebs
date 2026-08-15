@@ -1123,6 +1123,20 @@ catalog, relationship, or correctness authority.
   Full validation and independent review remain prerequisites to any
   separately authorized integrated exact diagnostic; Take 19 is unfrozen and
   Epic 41 remains blocked.
+- The authorized `t40r1-neutral-19` exact run at source commit
+  `6f02dc2ae6c15b400d6d9f358f558e358d3025ea` and plan
+  `sha256:e392bacb787c27f5032874831fab35426cd6412f04aab115e695a33f90ff281e`
+  advanced in the outer process sequence from structural server execution to
+  semantic cold convergence, then stopped on a terminal caller generation
+  before publication. Its v14
+  executor recorded `caller_generation` / `caller_generation_terminal`, but
+  the source-free validator omitted those newly introduced values and rejected
+  the stopped observation. No receipt was sealed; teardown destroyed custody
+  and private material. The harness-only correction closes the v14 stage,
+  outcome, and terminal-transition contract while keeping historical versions
+  closed. The consumed run cannot classify the caller cause or validate the
+  compact correction or establish structural completion. A fresh reviewed plan and separately authorized rerun
+  remain required; Take 19 is unfrozen and Epic 41 remains blocked.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
