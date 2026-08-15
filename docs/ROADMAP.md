@@ -1137,6 +1137,21 @@ catalog, relationship, or correctness authority.
   closed. The consumed run cannot classify the caller cause or validate the
   compact correction or establish structural completion. A fresh reviewed plan and separately authorized rerun
   remain required; Take 19 is unfrozen and Epic 41 remains blocked.
+- The authorized `t40r1-neutral-20` exact run at source commit
+  `9a9052e74a18abf0bb47f54b08f208a6d4769742` and plan
+  `sha256:2813a57a862ed0f498a5522eeb25d4ea616c8e0456cbb4cf13c8da6889e24dad`
+  completed structural cold convergence and stopped during semantic cold
+  convergence on a terminal caller generation before publication. Its v14
+  source-free stopped observation validated and retained the unclassified
+  `pipeline/caller_generation_terminal` identity plus successful teardown, but
+  receipt construction failed because the stopped-receipt validator omitted
+  both caller classifier codes. No receipt, signed inventory, or transfer
+  bundle was sealed. The parity closure admits those two codes only for v14 and
+  drives the actual terminal recorder through classification, observation,
+  receipt construction, and decode. Exact-checkout verification prevents
+  retroactive sealing of this consumed run. A fresh reviewed plan and explicit
+  authorization remain required; Take 19 is unfrozen and Epic 41 remains
+  blocked.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

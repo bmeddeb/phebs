@@ -2042,6 +2042,18 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 extraction schedule terminal identity is invalid")
 		}
 		wantReason = "extraction_schedule_terminal"
+	case "caller_generation_production_bound_refused":
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "caller_generation_bound_refusal" {
+			return errors.New("T40.13 caller generation bound-refusal identity is invalid")
+		}
+		wantDecision, wantReason = "reduce", "caller_generation_production_bound_refused"
+	case "caller_generation_terminal":
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "caller_generation_terminal" {
+			return errors.New("T40.13 caller generation terminal identity is invalid")
+		}
+		wantReason = "caller_generation_terminal"
 	default:
 		return errors.New("T40.13 stopped failure code is not frozen")
 	}

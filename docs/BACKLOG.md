@@ -1174,6 +1174,23 @@ closed, and regression-tests complete stopped-observation sealing. A fresh
 reviewed plan and separately authorized rerun are required; Take 19 remains
 unfrozen and Epic 41 remains blocked.
 
+The next authorized `t40r1-neutral-20` run used exact source commit
+`9a9052e74a18abf0bb47f54b08f208a6d4769742` and reviewed plan
+`sha256:2813a57a862ed0f498a5522eeb25d4ea616c8e0456cbb4cf13c8da6889e24dad`.
+Structural cold convergence completed, and semantic execution stopped when
+exact Caller Map authority reported a terminal caller generation before
+publication. The v14 observation now sealed correctly as an unclassified
+`pipeline/caller_generation_terminal` stop with successful teardown, but
+receipt construction rejected it because the stopped-receipt switch omitted
+both caller classifier codes. No receipt, signed inventory, or transfer bundle
+was sealed; custody and private material were destroyed. The harness closure
+adds the two v14 receipt identities and drives terminal probing through
+classification, observation validation, receipt construction, and receipt
+decode as one parity regression. Take 20 cannot be retroactively sealed because
+the verifier requires the clean exact frozen source commit. A fresh reviewed
+plan and separately authorized execution remain required; Take 19 is unfrozen
+and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

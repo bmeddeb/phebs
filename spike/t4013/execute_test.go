@@ -882,12 +882,16 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 	}
 }
 
-func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
+func TestV14TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	hostToolchain, err := ObserveHostToolchain(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
 	plan, err := frozenV14PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -983,7 +987,7 @@ func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
 			profile := PreparedProfile{Name: "semantic-262144-v1"}
 			server := &privateServer{done: make(chan error, 1), logPath: logPath}
 			_, waitErr := run.waitSnapshotWithInspection(
-				profile, "a", "cold", time.Minute, server,
+				profile, "a", "cold", time.Duration(plan.Safety.FullConvergenceDeadlineMS)*time.Millisecond, server,
 				func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
 					return privateProfileSnapshot{}, test.projection, test.cause
 				},
@@ -1001,6 +1005,19 @@ func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
 			}
 			if err := ValidateObservation(stopped); err != nil {
 				t.Fatalf("stopped observation did not seal: %v", err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, marshal(t, stopped), PlanDigest(planBytes))
+			if err != nil {
+				t.Fatalf("stopped receipt did not seal: %v", err)
+			}
+			receipt, err := DecodeReceipt(receiptBytes, plan)
+			if err != nil {
+				t.Fatalf("stopped receipt did not decode: %v", err)
+			}
+			if receipt.Outcome != stopped.Outcome || len(receipt.Failures) != 1 ||
+				receipt.Failures[0] != stopped.Failures[0] || receipt.Decision != stopped.Decision ||
+				len(receipt.ConvergenceWaits) != 1 || receipt.ConvergenceWaits[0].Outcome != test.outcome {
+				t.Fatalf("stopped receipt parity = %+v", receipt)
 			}
 			if test.projection.Stage == "caller_generation" {
 				if err := validateConvergenceWaits(
@@ -1071,6 +1088,8 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "extraction bound refusal", cause: errExtractionBoundRefusal, code: "extraction_production_bound_refused", decision: "reduce", substantiated: true},
 		{name: "extraction job terminal", cause: errExtractionJobTerminal, code: "extraction_job_terminal", decision: "unclassified"},
 		{name: "extraction schedule terminal", cause: errExtractionScheduleTerminal, code: "extraction_schedule_terminal", decision: "unclassified"},
+		{name: "caller generation bound refusal", cause: errCallerGenerationBoundRefusal, code: "caller_generation_production_bound_refused", decision: "reduce", substantiated: true},
+		{name: "caller generation terminal", cause: errCallerGenerationTerminal, code: "caller_generation_terminal", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},

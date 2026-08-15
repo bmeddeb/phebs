@@ -1638,13 +1638,34 @@ through the actual convergence recorder, stopped classification, and complete
 observation validation. A fresh identifier, exact plan, independent review, and
 separate rerun authorization are required; do not reuse `t40r1-neutral-19`.
 
+The separately authorized `t40r1-neutral-20` run then bound exact source commit
+`9a9052e74a18abf0bb47f54b08f208a6d4769742` and reviewed plan
+`sha256:2813a57a862ed0f498a5522eeb25d4ea616c8e0456cbb4cf13c8da6889e24dad`.
+Structural cold convergence completed; semantic cold convergence stopped when
+exact Caller Map authority reported a terminal caller generation before
+publication. The corrected v14 observation validator sealed the source-free
+`pipeline/caller_generation_terminal` stopped observation with successful
+teardown. Receipt construction then rejected the observation because its
+separate stopped-failure switch omitted both caller classifier codes. No
+receipt, signed inventory, or transfer bundle was sealed, and exact teardown
+destroyed custody and private material.
+
+The second harness closure binds
+`caller_generation_production_bound_refused` to final wait outcome
+`caller_generation_bound_refusal` and binds `caller_generation_terminal` to
+its matching final wait outcome, both only in v14. The regression now drives
+the real terminal probe through stopped classification, observation
+validation, receipt construction, and receipt decode. The exact-checkout rule
+means corrected code cannot retroactively seal Take 20; use a fresh identifier,
+plan, independent review, and separate execution authorization.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-# Do not continue until readiness review separately authorizes the freeze.
-CEREMONY_ID=t40r1-neutral-19
+# Illustrative next unused identifier only; this document does not authorize it.
+CEREMONY_ID=t40r1-neutral-21
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 
 # Stop here. Review and record the printed sha256 plan digest.
