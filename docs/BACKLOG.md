@@ -1342,6 +1342,28 @@ descriptor-present pair through production worker outcome, admission,
 publication, and exact product parity; do not start another ceremony. No
 rerun, scale/SLO, release, Epic closure, or Epic 41 progression follows.
 
+That composed descriptor-present boundary now passes. The opt-in diagnostic
+publishes current observation-v2 authority and the exact required gRPC domain
+root, retaining its zero sparse partitions as the explicit usable
+`unavailable_prerequisite` gap. It clones the exact neutral commit into the
+managed mirror and lets the production worker settle all four physical pairs:
+four successful outcomes/artifacts, admitted and current complete publication,
+one resolved caller result, five abstentions, and no refusal or compact
+coverage. The shared reader rederives the same canonical upstream payload and
+authorized exact Caller Map returns one current exact row whose classification,
+operation, lineage, path, object, blob, tier, and code role all match. The
+source-free receipt is
+`spike/t4013/descriptor-present-product-parity.json`
+(`sha256:a11683cf3a3ab77800de66fec23970182e34df6edd54763c2c683b1588b67ede`).
+The declaration fixture uses the catalog's canonical no-leading-slash object
+while retaining the slash-prefixed resolver/caller transport operation; the
+earlier direct receipt remains byte-identical. This changes no production path
+or cost and does not compose descriptor-present execution with the retained
+96-leaf physical distribution, reproduce Take 20, exercise Thrift/ambiguity,
+pass scale, or authorize ceremony/release/Epic closure/Epic 41. If diagnosis
+continues, the next scoped boundary is a descriptor-present physical
+multi-leaf worker/product run, not another ceremony.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

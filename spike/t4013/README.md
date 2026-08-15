@@ -1892,6 +1892,68 @@ complete publication, and exact product parity; do not launch another
 ceremony. No rerun, scale/SLO, release, Epic closure, or Epic 41 progression
 follows.
 
+The composed opt-in diagnostic crosses those worker and product boundaries.
+Set `T40R1_DESCRIPTOR_PRODUCT_PARITY=1` and run
+`TestT40R1DescriptorPresentProductParity`:
+
+```sh
+cd ~/phebs
+
+T40R1_DESCRIPTOR_PRODUCT_PARITY=1 \
+  go test ./spike/t4013 \
+  -run '^TestT40R1DescriptorPresentProductParity$' \
+  -count=1 -timeout=10m -v
+```
+
+It adds a real current two-record observation-v2 inventory and the required
+current gRPC extraction-domain authority to the same seven-file fixture. The
+sparse domain has zero partitions, so its complete root is retained honestly
+as `unavailable_prerequisite`; this is an explicit usable gap authority, not an
+absent generation or fallback. The exact commit is cloned into the managed Git
+mirror. Production caller execution then opens and settles all four physical
+pairs in six worker turns including the final no-op. All four outcomes succeed,
+admission accepts four installed artifacts, and the aggregate is one resolved
+result plus five abstentions with zero refusals, compact coverage records, or
+covered-candidate substitutions.
+
+The complete caller pointer binds the same canonical observation/extraction
+payload and digest that the shared product reader independently rederives.
+Authorized exact Caller Map returns one current `caller-map-v2` row for
+`consumer/call.go`, classified `resolved_caller` with `syntax` resolution and
+the `protobuf` protocol. The operation, declaration lineage, Git object, source
+blob digest, heuristic tier, and production code role are exact, while every
+generation count matches admission and publication. The declaration fixture
+stores the catalog's canonical no-leading-slash object; resolver and caller
+facts retain `/orders.Orders/Get`, as required by the exact query contract. The
+standalone pair receipt remains byte-identical.
+
+The retained source-free receipt is `descriptor-present-product-parity.json`
+(`sha256:a11683cf3a3ab77800de66fec23970182e34df6edd54763c2c683b1588b67ede`).
+The retained rerun measured 258.6ms for the six worker turns and 13.0ms for the
+reader plus exact product request; caller and observation artifacts occupied
+12,152 and 11,298 bytes. These are observations, not production ceilings or an
+SLO.
+
+This diagnostic changes no production behavior or steady-state cost. Its
+opt-in setup performs one small source census/observation publication, one
+zero-partition extraction-root publication, and one managed bare clone. The
+existing worker performs one bounded provider/leaf replay and Git blob read per
+unsettled pair, four outcome/artifact writes, and one admission/publication
+transition; its final no-op only rechecks the bounded current authority.
+The exact request performs the existing compact authority derivation, complete
+publication validation/lease, bounded record scan, and final authority fence.
+It adds no ordinary query, sync, startup, recovery/lifecycle, lock, cache,
+child, corpus/shard scan, or bound. Retry repeats the same bounded selected-pair
+work.
+
+This clears the small descriptor-present worker outcome/admission/publication
+and exact product-parity seam. It does not combine descriptor-present execution
+with the retained 96-leaf physical distribution, reconstruct Take 20's
+destroyed state, exercise Thrift or ambiguity, establish scale/SLO, or
+authorize a ceremony. If diagnosis continues, the next scoped boundary is a
+descriptor-present physical multi-leaf worker/product run; do not start another
+ceremony. No rerun, release, Epic closure, or Epic 41 progression follows.
+
 ```sh
 cd ~/phebs
 

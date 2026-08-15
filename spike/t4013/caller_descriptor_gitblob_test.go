@@ -144,6 +144,19 @@ type t40r1DescriptorGitBlobMeasurement struct {
 	RepositoryDisk  int64
 }
 
+type t40r1DescriptorGitBlobRuntime struct {
+	Context        context.Context
+	DataDir        string
+	State          *store.Surreal
+	RepositoryDir  string
+	Commit         string
+	CandidateRoot  string
+	Manifest       candidate.Manifest
+	Policies       []candidate.Policy
+	Provider       *candidatejob.Provider
+	CallerRegistry *callerexecute.Registry
+}
+
 func TestT40R1DescriptorPresentGitBlobPairDiagnostic(t *testing.T) {
 	if os.Getenv(t40r1DescriptorGitBlobEnv) != "1" {
 		t.Skip("set " + t40r1DescriptorGitBlobEnv + "=1 to run the descriptor/Git-blob diagnostic")
@@ -231,6 +244,13 @@ func TestT40R1RetainedDescriptorPresentGitBlobPairIsClosed(t *testing.T) {
 
 func runT40R1DescriptorGitBlobDiagnostic(
 	t *testing.T,
+) (t40r1DescriptorGitBlobWitness, t40r1DescriptorGitBlobMeasurement) {
+	return runT40R1DescriptorGitBlobDiagnosticWithHook(t, nil)
+}
+
+func runT40R1DescriptorGitBlobDiagnosticWithHook(
+	t *testing.T,
+	beforePair func(t40r1DescriptorGitBlobRuntime),
 ) (t40r1DescriptorGitBlobWitness, t40r1DescriptorGitBlobMeasurement) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Minute)
@@ -393,6 +413,15 @@ func runT40R1DescriptorGitBlobDiagnostic(
 	)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if beforePair != nil {
+		beforePair(t40r1DescriptorGitBlobRuntime{
+			Context: ctx, DataDir: dataDir, State: state,
+			RepositoryDir: repositoryDir, Commit: commit,
+			CandidateRoot: candidateRoot, Manifest: manifest,
+			Policies: slices.Clone(policies), Provider: provider,
+			CallerRegistry: callerRegistry,
+		})
 	}
 
 	repository, err := state.GetRepo(ctx, t40r1DescriptorGitBlobRepo)
@@ -614,7 +643,7 @@ func t40r1PublishDescriptorDeclaration(
 		BlobDigest:    t40r1CallerUpstreamDigest("descriptor-declaration-source"),
 		StartByte:     0, EndByte: declarationBytes, RuleID: "t40r1-descriptor-declaration-v1",
 		ExtractorVersion: "1.0.0", AdapterConfigDigest: "none",
-		FactFingerprint: t40r1DescriptorOperation,
+		FactFingerprint: strings.TrimPrefix(t40r1DescriptorOperation, "/"),
 	}
 	atom.ID = store.ComputeAtomID(atom)
 	association := store.SnapshotEvidence{
@@ -624,8 +653,9 @@ func t40r1PublishDescriptorDeclaration(
 	}
 	assertion := store.Assertion{
 		Predicate: "DECLARES_OPERATION", Subject: t40r1DescriptorDeclaration,
-		Object: t40r1DescriptorOperation, Lineage: t40r1DescriptorLineage,
-		Tier: store.TierExact, CodeRole: "production",
+		Object:  strings.TrimPrefix(t40r1DescriptorOperation, "/"),
+		Lineage: t40r1DescriptorLineage,
+		Tier:    store.TierExact, CodeRole: "production",
 		Repo: t40r1DescriptorGitBlobRepo, Supporting: []string{atom.ID},
 		Detail: `{"schema":"proto-operation-detail-v1"}`,
 	}

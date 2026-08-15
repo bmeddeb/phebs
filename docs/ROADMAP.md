@@ -1251,6 +1251,26 @@ catalog, relationship, or correctness authority.
   If diagnosis continues, compose this exact pair through those downstream
   production boundaries; do not start another ceremony. No rerun, release,
   Epic closure, or Epic 41 progression follows.
+- The composed descriptor-present diagnostic now publishes current
+  observation-v2 plus the exact required gRPC domain root, retains its
+  zero-partition `unavailable_prerequisite` state as an explicit usable gap,
+  and drives the real managed Git mirror and all four physical caller pairs
+  through the production worker. Six turns including the no-op leave four
+  successful outcomes, four artifacts, admitted/current complete authority,
+  one resolved result, five abstentions, and no refusal or compact coverage.
+  The shared reader independently rederives the same canonical upstream
+  authority, and authorized exact Caller Map returns one current
+  `resolved_caller` row with exact operation, lineage, object, and blob
+  identity. The source-free receipt is
+  `descriptor-present-product-parity.json`
+  (`sha256:a11683cf3a3ab77800de66fec23970182e34df6edd54763c2c683b1588b67ede`).
+  This clears the small descriptor-present worker/outcome/admission/
+  publication/product seam, not its composition with the retained 96-leaf
+  physical distribution, Take 20's destroyed state, Thrift/ambiguity, scale,
+  or ceremony readiness. No production path or cost changed. If diagnosis
+  continues, combine descriptor-present execution with the retained physical
+  multi-leaf shape before any fresh ceremony decision. No rerun, release,
+  Epic closure, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.
