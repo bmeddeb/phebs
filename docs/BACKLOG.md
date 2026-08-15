@@ -1227,6 +1227,42 @@ destroyed resolver population or failed read. Move that exact authority/origin
 boundary next; do not infer a production fix, rerun, freeze, scale/SLO,
 release, Epic closure, or Epic 41 progression.
 
+The partitioned-authority witness moves that boundary through one real current
+observation-v2 generation and the exact current two-partition empty result
+roots for both required caller domains. Its first red run found a product
+parity defect rather than a caller-execution failure: the worker bound the
+canonical aggregate upstream authority, all 192 pairs settled, and publication
+completed, but the publication summary retained only the upstream digest.
+Product reconstruction consequently built a historical no-upstream semantic
+generation and exact Caller Map classified the valid filesystem generation as
+failed. The correction shares worker/reader authority derivation, retains the
+canonical upstream payload once on the complete publication and summary while
+keeping only its digest in outcome/admission identities, reconstructs and
+validates the exact semantic generation, and repeats compact upstream checks at
+acquire and result fences. A transitional digest-only pointer is admitted only
+to startup inventory so existing queue-before-clear replacement can retire it.
+
+The retained source-free record is
+`spike/t4013/caller-terminal-partitioned-authority-witness.json`
+(`sha256:e2f222bb799e0d10fdbec223e78c75840f64bf41877b90dbe385d1a43fc9790e`).
+It records one observed record, two candidate control records, two current
+partitions for each of gRPC and Thrift, exact upstream digest binding, and
+current zero-row Caller Map parity over the retained 262,145-record, 96-leaf,
+192-pair semantic replay. The physical control population is deliberately not
+the semantic population, so this does not prove exact candidate-member bytes
+or distribution, Take 20's destroyed resolver descriptors/failed read, a scale
+pass, or ceremony readiness. Publication writes one at-most-64-KiB canonical
+control instead of copying it to as many as 16,384 outcomes. An ordinary open
+performs compact observation/domain authority reads before selection and after
+lease acquisition; reopen and result fences perform one, and paired reads
+deduplicate identical authority. Those reads are pointer/root/pointer plus one
+small control per required caller domain, with no corpus/source/shard scan,
+new child, lock, cache, or unbounded hash. Startup remains bounded by 1,024
+summaries (64 MiB worst-case added control bytes). Move next through the
+production physical candidate-plan/provider membership boundary; do not start
+a new ceremony. No rerun, freeze, scale/SLO, release, Epic closure, or Epic 41
+progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

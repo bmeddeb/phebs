@@ -2,6 +2,7 @@ package callerexecute
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -199,6 +200,10 @@ func callerPublicationStateFromStore(
 	pointer store.CallerGenerationPublicationSummary,
 	extractors []callerleaf.ExtractorIdentity,
 ) (callerpublication.State, error) {
+	var upstream json.RawMessage
+	if pointer.Upstream != "" {
+		upstream = json.RawMessage(pointer.Upstream)
+	}
 	semantic, err := callerleaf.NewGenerationIdentity(callerleaf.GenerationIdentity{
 		Repository:               pointer.Generation.Repository,
 		HeadCommit:               pointer.Generation.HeadCommit,
@@ -209,6 +214,8 @@ func callerPublicationStateFromStore(
 		ResolverGenerationDigest: pointer.Generation.ResolverGenerationDigest,
 		ResolverManifestDigest:   pointer.Generation.ResolverManifestDigest,
 		Extractors:               slices.Clone(extractors),
+		Upstream:                 upstream,
+		UpstreamDigest:           pointer.Generation.UpstreamDigest,
 	})
 	if err != nil || semantic.Digest != pointer.Generation.Digest ||
 		semantic.CallerPolicyDigest != pointer.Generation.CallerPolicyDigest ||
@@ -246,6 +253,7 @@ func callerPublicationSummary(
 ) store.CallerGenerationPublicationSummary {
 	return store.CallerGenerationPublicationSummary{
 		Generation:        pointer.Generation,
+		Upstream:          pointer.Upstream,
 		PairPayloadDigest: pointer.PairPayloadDigest,
 		PairSetDigest:     pointer.PairSetDigest,
 		PairCount:         pointer.PairCount, ArtifactCount: pointer.ArtifactCount,

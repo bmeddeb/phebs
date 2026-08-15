@@ -597,7 +597,7 @@ func newExactCallerAPIFixtureConfigured(
 	fixture.publications = callerpublication.NewRegistry(root)
 	t.Cleanup(func() { _ = fixture.publications.Close() })
 	reader, err := callerexecute.NewPublicationReader(
-		fixture.store, adapters, fixture.publications,
+		fixture.dataDir, fixture.store, adapters, fixture.publications,
 	)
 	if err != nil {
 		t.Fatal(err)

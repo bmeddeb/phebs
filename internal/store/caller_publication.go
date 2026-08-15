@@ -1,9 +1,12 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -29,6 +32,7 @@ const (
 	MaxCallerPublicationRepositoryPage = 512
 	maxCallerPublicationReferences     = callerpublicationid.InstallationPublicationRefs
 	maxCallerPublicationCanonical      = callerpublicationid.InstallationCanonicalBytes
+	maxCallerPublicationUpstreamBytes  = 64 << 10
 )
 
 // CallerGenerationPairPublication is the exact ordered artifact receipt for
@@ -45,8 +49,12 @@ type CallerGenerationPairPublication struct {
 // the admitted immutable outcome set. PublicationRevision, WriterSchema, and
 // PublishedAt belong exclusively to the store.
 type CallerGenerationPublication struct {
-	Generation CallerGenerationIdentity          `json:"generation"`
-	Pairs      []CallerGenerationPairPublication `json:"pairs"`
+	Generation CallerGenerationIdentity `json:"generation"`
+	// Upstream retains the canonical compact authority needed to reconstruct a
+	// v2 generation. It lives once on the publication rather than being copied
+	// into every per-pair outcome and admission row.
+	Upstream string                            `json:"upstream,omitempty"`
+	Pairs    []CallerGenerationPairPublication `json:"pairs"`
 	// PairPayloadDigest is store-owned integrity metadata over Pairs. Callers
 	// carry it between exact reads and current checks but never compute it.
 	PairPayloadDigest     string `json:"pair_payload_digest"`
@@ -79,6 +87,7 @@ type CallerGenerationPublication struct {
 // the full pointer.
 type CallerGenerationPublicationSummary struct {
 	Generation             CallerGenerationIdentity `json:"generation"`
+	Upstream               string                   `json:"upstream,omitempty"`
 	PairPayloadDigest      string                   `json:"pair_payload_digest"`
 	PairSetDigest          string                   `json:"pair_set_digest"`
 	PairCount              int                      `json:"pair_count"`
@@ -96,6 +105,58 @@ type CallerGenerationPublicationSummary struct {
 	PublicationIncarnation string                   `json:"publication_incarnation"`
 	WriterSchema           string                   `json:"writer_schema"`
 	PublishedAt            time.Time                `json:"published_at"`
+}
+
+func validCallerPublicationUpstream(
+	generation CallerGenerationIdentity,
+	upstream string,
+) bool {
+	if generation.UpstreamDigest == "" {
+		return upstream == ""
+	}
+	if upstream == "" || len(upstream) > maxCallerPublicationUpstreamBytes {
+		return false
+	}
+	const schema = "phebs-downstream-upstream-authority-v1"
+	type envelope struct {
+		Schema      string          `json:"schema"`
+		Repository  string          `json:"repository"`
+		Observation json.RawMessage `json:"observation"`
+		Required    json.RawMessage `json:"required"`
+		Domains     json.RawMessage `json:"domains"`
+		Digest      string          `json:"digest"`
+	}
+	raw := []byte(upstream)
+	var value envelope
+	if json.Unmarshal(raw, &value) != nil || value.Schema != schema ||
+		value.Repository != generation.Repository ||
+		value.Digest != generation.UpstreamDigest ||
+		len(value.Observation) == 0 || len(value.Required) == 0 || len(value.Domains) == 0 {
+		return false
+	}
+	canonical, err := json.Marshal(value)
+	if err != nil || !bytes.Equal(canonical, raw) {
+		return false
+	}
+	value.Digest = ""
+	identity, err := json.Marshal(value)
+	if err != nil {
+		return false
+	}
+	sum := sha256.Sum256(append([]byte(schema+"\x00"), identity...))
+	return generation.UpstreamDigest == "sha256:"+hex.EncodeToString(sum[:])
+}
+
+// repairableCallerPublicationUpstream admits the short-lived digest-only v2
+// pointer shape solely through scalar summary reads. Product reconstruction
+// rejects it, allowing startup to queue its replacement before clearing it.
+// Full-pointer validation and all writes remain strict.
+func repairableCallerPublicationUpstream(
+	generation CallerGenerationIdentity,
+	upstream string,
+) bool {
+	return validCallerPublicationUpstream(generation, upstream) ||
+		generation.UpstreamDigest != "" && upstream == ""
 }
 
 type CallerGenerationPublicationStore interface {
@@ -168,7 +229,7 @@ const callerGenerationPairPayloadDigestSQL = `'sha256:' + crypto::sha256(type::s
 const callerGenerationBoundPairPayloadDigestSQL = `'sha256:' + crypto::sha256(type::string($pairs))`
 
 const callerGenerationPublicationSummaryProjection = `id, repository,
-	generation, generation_digest, pair_set_digest, pair_count, artifact_count,
+	generation, upstream, generation_digest, pair_set_digest, pair_count, artifact_count,
 	result_count, abstention_count,
 	(coverage_record_count ?? 0) AS coverage_record_count,
 	(covered_candidate_count ?? 0) AS covered_candidate_count,
@@ -216,6 +277,7 @@ func validateCallerGenerationPublicationSummary(
 	if err != nil || originalDigest != generation.Digest ||
 		row.GenerationDigest != generation.Digest ||
 		row.Repository != generation.Repository ||
+		!repairableCallerPublicationUpstream(generation, summary.Upstream) ||
 		!validCallerGenerationPublicationSummaryRecordID(row) ||
 		!validSHA256Digest(summary.PairPayloadDigest) ||
 		!validSHA256Digest(summary.PairSetDigest) ||
@@ -422,6 +484,11 @@ func prepareCallerGenerationPublication(
 	if !validSHA256Digest(publication.ManifestDigest) {
 		return publication, nil, errors.New("manifest_digest must be canonical sha256")
 	}
+	if !validCallerPublicationUpstream(preparedGeneration, publication.Upstream) {
+		return publication, nil, errors.New(
+			"canonical upstream authority is absent or unbounded",
+		)
+	}
 	if publication.ManifestPath != callerpublicationid.ManifestName(
 		preparedGeneration.Digest, publication.ManifestDigest,
 	) {
@@ -492,6 +559,7 @@ func validateCallerGenerationPublication(
 	prepared, _, err := prepareCallerGenerationPublication(input, admission, outcomes)
 	if err != nil || !slices.Equal(prepared.Pairs, publication.Pairs) ||
 		prepared.Generation != publication.Generation ||
+		prepared.Upstream != publication.Upstream ||
 		prepared.PairSetDigest != publication.PairSetDigest ||
 		prepared.PairCount != publication.PairCount ||
 		prepared.ArtifactCount != publication.ArtifactCount ||
@@ -649,6 +717,7 @@ LET $same_generation = $current != NONE
 	AND $current.generation_digest = $generation_digest;
 LET $same_publication = $same_generation
 	AND $current.generation = $generation
+	AND ($current.upstream ?? '') = $upstream
 	AND $current.pairs = $pairs
 	AND $current.pair_payload_digest = $pair_payload_digest
 	AND $current_pair_payload_valid
@@ -683,6 +752,7 @@ LET $published = IF $acceptable = false THEN []
 		(UPSERT $publication_rid SET
 			repository = $repository,
 			generation = $generation,
+			upstream = $upstream,
 			generation_digest = $generation_digest,
 			pairs = $pairs,
 			pair_payload_digest = $pair_payload_digest,
@@ -766,6 +836,7 @@ func (s *Surreal) PublishCallerGeneration(
 		"resolver_control_revision":    prepared.Generation.ResolverControlRevision,
 		"resolver_writer_schema":       prepared.Generation.ResolverWriterSchema,
 		"generation":                   prepared.Generation,
+		"upstream":                     prepared.Upstream,
 		"generation_digest":            prepared.Generation.Digest,
 		"pairs":                        prepared.Pairs,
 		"expected_outcomes":            projections,
@@ -1053,6 +1124,7 @@ LET $scalar_current = $writer_ok AND $repo != NONE
 		AND $current != NONE
 		AND $current.repository = $repository
 		AND $current.generation = $generation
+		AND ($current.upstream ?? '') = $upstream
 		AND $current.generation_digest = $generation_digest
 		AND $current.pair_set_digest = $pair_set_digest
 		AND $current.pair_count = $pair_count
@@ -1170,6 +1242,8 @@ LET $checks = $authorities.map(|$authority|
 			$authority.expected.generation.repository
 		AND $authority.publication.generation =
 			$authority.expected.generation
+		AND ($authority.publication.upstream ?? '') =
+			($authority.expected.upstream ?? '')
 		AND $authority.publication.generation_digest =
 			$authority.expected.generation.digest
 		AND $authority.publication.pair_payload_count =
@@ -1316,6 +1390,7 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 			"resolver_control_revision":  validated.Generation.ResolverControlRevision,
 			"resolver_writer_schema":     validated.Generation.ResolverWriterSchema,
 			"generation":                 validated.Generation,
+			"upstream":                   validated.Upstream,
 			"generation_digest":          validated.Generation.Digest,
 			"pair_payload_digest":        validated.PairPayloadDigest,
 			"pair_set_digest":            validated.PairSetDigest,
@@ -1394,6 +1469,7 @@ RETURN [{
 		AND $current != NONE
 		AND $current.repository = $repository
 		AND $current.generation = $generation
+		AND ($current.upstream ?? '') = $upstream
 		AND $current.generation_digest = $generation_digest
 		AND $current.pairs = $pairs
 		AND $expected_pair_payload_digest = $pair_payload_digest
@@ -1450,6 +1526,7 @@ func (s *Surreal) CallerGenerationPublicationCurrent(
 			"resolver_control_revision":  validated.Generation.ResolverControlRevision,
 			"resolver_writer_schema":     validated.Generation.ResolverWriterSchema,
 			"generation":                 validated.Generation,
+			"upstream":                   validated.Upstream,
 			"generation_digest":          validated.Generation.Digest,
 			"pairs":                      validated.Pairs,
 			"pair_payload_digest":        validated.PairPayloadDigest,

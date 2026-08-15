@@ -161,7 +161,7 @@ func newHarnessPublicationReader(
 ) *PublicationReader {
 	t.Helper()
 	reader, err := NewPublicationReader(
-		state, harness.worker.registry, harness.worker.publications,
+		harness.worker.dataDir, state, harness.worker.registry, harness.worker.publications,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -748,7 +748,7 @@ func TestPublicationReaderNegativeCachesColdFilesystemFailure(t *testing.T) {
 
 	publications := callerpublication.NewRegistry(harness.worker.root)
 	reader, err := NewPublicationReader(
-		harness.state, harness.worker.registry, publications,
+		harness.worker.dataDir, harness.state, harness.worker.registry, publications,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -861,7 +861,7 @@ func TestPublicationReaderRechecksFailureAfterRegisteringNewFlight(t *testing.T)
 	publications := callerpublication.NewRegistry(harness.worker.root)
 	t.Cleanup(func() { _ = publications.Close() })
 	reader, err := NewPublicationReader(
-		harness.state, harness.worker.registry, publications,
+		harness.worker.dataDir, harness.state, harness.worker.registry, publications,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -917,7 +917,7 @@ func TestPublicationReaderConstructorRefusesIncompleteConfiguration(t *testing.T
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if reader, err := NewPublicationReader(
-				test.state, test.adapters, test.publications,
+				harness.worker.dataDir, test.state, test.adapters, test.publications,
 			); err == nil || reader != nil {
 				t.Fatalf("reader = %+v, %v", reader, err)
 			}

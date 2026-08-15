@@ -1181,6 +1181,25 @@ catalog, relationship, or correctness authority.
   partitioned observation/extraction authority and the destroyed Take 20
   failed-read origin remain unproved; move that boundary next. No production
   fix, rerun, freeze, scale/SLO, release, or Epic 41 progression follows.
+- The partitioned-authority witness now publishes a real current one-record
+  observation-v2 inventory and exact current two-partition empty roots for both
+  required caller domains, then replays the retained 262,145-record, 96-leaf,
+  192-pair caller shape. Its first run exposed the actual product defect: the
+  worker bound canonical upstream authority and published all 192 successful
+  outcomes, but the summary retained only the digest, so exact Caller Map
+  reconstructed a different historical generation and reported failure. The
+  fix shares worker/reader derivation, stores the at-most-64-KiB canonical
+  payload once on the publication/summary, keeps only its digest in leaf and
+  admission identities, validates exact reconstruction, and repeats compact
+  upstream checks at acquire/result fences. Digest-only transitional pointers
+  use existing queue-before-clear startup repair. The source-free record is
+  `caller-terminal-partitioned-authority-witness.json`
+  (`sha256:e2f222bb799e0d10fdbec223e78c75840f64bf41877b90dbe385d1a43fc9790e`).
+  It proves authority/classification/receipt parity for its closed controls,
+  not physical semantic candidate membership, Take 20's destroyed resolver or
+  failed page, scale, or ceremony readiness. The next boundary is production
+  physical candidate-plan/provider membership. No rerun, freeze, scale/SLO,
+  release, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

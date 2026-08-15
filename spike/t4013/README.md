@@ -1712,6 +1712,51 @@ authority and cannot recover Take 20's destroyed resolver population or failed
 read. Move that exact authority/origin boundary next. This is not a scale pass
 and authorizes no rerun or freeze.
 
+The next scoped step crosses that authority boundary. Set
+`T40R1_CALLER_PARTITIONED_AUTHORITY_WITNESS=1` and run
+`TestT40R1CallerTerminalPartitionedAuthorityWitness`. It creates a small real
+Git control repository, publishes its current observation-v2 generation, and
+publishes exact current two-partition empty gRPC and Thrift plan/result roots.
+The production caller worker must bind their usable aggregate digest before it
+can replay the retained semantic 262,145-record, 96-leaf, 192-pair path through
+the resolver, durable outcomes/admission/publication, shared reader, and exact
+Caller Map.
+
+The first red run isolated a real defect: all 192 outcomes and complete
+publication succeeded, but exact Caller Map returned a failed generation. The
+worker's caller identity included canonical upstream bytes and their digest;
+the store summary kept only the digest, so the reader reconstructed a
+historical no-upstream generation and rejected the exact filesystem state. The
+fix stores the canonical payload once on the complete publication/summary,
+keeps only the digest in each outcome and admission identity, shares exact
+worker/reader derivation, validates reconstruction, and rechecks compact
+upstream authority after lease acquisition and at result serialization. A
+digest-only transitional pointer is available only to startup reconciliation,
+which queues replacement before clearing it.
+
+The retained `caller-terminal-partitioned-authority-witness.json` has SHA-256
+`e2f222bb799e0d10fdbec223e78c75840f64bf41877b90dbe385d1a43fc9790e`.
+It records one observed record, two candidate control records, two current
+partitions per required caller domain, exact aggregate digest binding, all 192
+successful pairs, and exact current zero-row product parity. The candidate
+control contains only two real records while the caller plan deliberately
+replays the prior semantic cardinality; this therefore does not prove the
+exact physical member bytes/distribution, Take 20's destroyed resolver
+population or failed response, a scale pass, or ceremony readiness.
+
+The production cost is bounded control-plane work. Publication stores one
+canonical digest-bound at-most-64-KiB payload, not one copy per
+as-many-as-16,384 outcomes.
+Open derives compact authority once before selection and once after acquiring
+the lease; reopen and result fences derive it once, and identical paired reads
+are deduplicated. A derivation reads the observation pointer/root/pointer and
+one small current-root control for each required caller domain, with no source,
+corpus, or shard scan, new child, new lock/cache, or unbounded hashing. Startup
+adds at most one payload per already-bounded current publication, 64 MiB at the
+1,024-publication maximum. Retry/no-op, sync, and unrelated publication paths
+are unchanged. The next scoped boundary is the production physical candidate
+plan/provider over exact member distribution, not another ceremony.
+
 ```sh
 cd ~/phebs
 

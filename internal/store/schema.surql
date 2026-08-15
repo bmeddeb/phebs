@@ -397,6 +397,7 @@ DEFINE FIELD IF NOT EXISTS generation.caller_policy_digest ON caller_generation_
 DEFINE FIELD IF NOT EXISTS generation.extractor_set_digest ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS generation.upstream_digest ON caller_generation_publication TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS generation.digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS upstream ON caller_generation_publication TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS generation_digest ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS pairs ON caller_generation_publication TYPE array<object>
     ASSERT array::len($value) <= 16384;

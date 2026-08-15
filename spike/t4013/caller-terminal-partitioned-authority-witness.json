@@ -1,0 +1,105 @@
+{
+  "schema": "t4013-caller-terminal-partitioned-authority-witness-v1",
+  "method": "publish a real current observation-inventory v2 generation and exact current gRPC/Thrift partitioned extraction plan/root controls, then require the caller worker to derive and bind their usable aggregate digest before replaying the already-cleared resolver/product path",
+  "profile": "semantic-262144-v1",
+  "caller_path": {
+    "schema": "t4013-caller-terminal-upstream-witness-v1",
+    "method": "the retained semantic caller cardinality is replayed through the production partitioned-authority projection, resolver catalog, caller worker, durable admission/publication, shared reader, and exact Caller Map",
+    "profile": "semantic-262144-v1",
+    "leaf_adapter": "direct-syntax-compact-coverage-v2",
+    "policy": "phebs-direct-caller-leaf-policy-v2",
+    "candidate_records": 262145,
+    "candidate_leaves": 96,
+    "protocols": 2,
+    "expected_pairs": 192,
+    "resolver": {
+      "publication_current": true,
+      "manifest_members": 3,
+      "descriptors": {
+        "grpc": 0,
+        "thrift": 0
+      }
+    },
+    "worker_turns": 194,
+    "candidate_plan_opens": 193,
+    "progress": {
+      "settled": 192,
+      "succeeded": 192,
+      "refused": 0
+    },
+    "admission": {
+      "disposition": "admitted",
+      "pair_count": 192,
+      "artifact_count": 192,
+      "result_records": 0,
+      "abstention_records": 0,
+      "coverage_records": 192,
+      "covered_candidates": 524290,
+      "canonical_bytes": 106752,
+      "staging_bytes": 106752,
+      "refusal_summaries": 0
+    },
+    "publication": {
+      "present": true,
+      "authority_current": true,
+      "pair_count": 192,
+      "result_records": 0,
+      "abstention_records": 0,
+      "coverage_records": 192,
+      "covered_candidates": 524290
+    },
+    "reader": {
+      "availability": "current",
+      "origin": "current_publication"
+    },
+    "caller_map": {
+      "schema_version": "caller-map-v2",
+      "matching_rows_state": "exact",
+      "generation_state": "current",
+      "declaration_exact": true,
+      "rows": 0,
+      "total_matching_rows": 0,
+      "pair_count": 192,
+      "candidate_records": 262145,
+      "coverage_records": 192,
+      "covered_candidates": 524290
+    },
+    "boundary": "partitioned_observation_extraction_authority",
+    "clears_upstream_boundary": true,
+    "establishes_scale_pass": false,
+    "authorizes_freeze": false
+  },
+  "authority": {
+    "observation_version": "observation-v2",
+    "observation_current": true,
+    "observation_records": 1,
+    "observed_records": 1,
+    "candidate_control_records": 2,
+    "required_domains": 2,
+    "domains": [
+      {
+        "domain": "grpc-caller",
+        "version": "1.5.0",
+        "disposition": "empty",
+        "candidate_partitions": 2,
+        "plan_root_current": true
+      },
+      {
+        "domain": "thrift-caller",
+        "version": "1.5.0",
+        "disposition": "empty",
+        "candidate_partitions": 2,
+        "plan_root_current": true
+      }
+    ],
+    "upstream_usable": true,
+    "caller_upstream_digest_bound": true,
+    "caller_upstream_digest_exact": true,
+    "caller_upstream_canonical_exact": true,
+    "caller_generation_rederived": true
+  },
+  "boundary": "partitioned_observation_extraction_authority",
+  "clears_boundary": true,
+  "establishes_scale_pass": false,
+  "authorizes_ceremony": false
+}

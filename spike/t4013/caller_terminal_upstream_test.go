@@ -315,6 +315,20 @@ func TestT40R1RetainedCallerTerminalUpstreamWitnessIsClosed(t *testing.T) {
 func runT40R1CallerTerminalUpstreamWitness(
 	t *testing.T,
 ) t40r1CallerUpstreamWitness {
+	witness, _ := runT40R1CallerTerminalUpstreamWitnessWithOptions(
+		t, t40r1CallerUpstreamRunOptions{},
+	)
+	return witness
+}
+
+type t40r1CallerUpstreamRunOptions struct {
+	partitionedAuthority bool
+}
+
+func runT40R1CallerTerminalUpstreamWitnessWithOptions(
+	t *testing.T,
+	options t40r1CallerUpstreamRunOptions,
+) (t40r1CallerUpstreamWitness, *t40r1CallerPartitionedRun) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Minute)
 	defer cancel()
@@ -331,13 +345,6 @@ func runT40R1CallerTerminalUpstreamWitness(
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.SetRepoIndexed(
-		ctx, t40r1CallerUpstreamRepository, t40r1CallerUpstreamCommit,
-		time.Now().UTC(),
-	); err != nil {
-		t.Fatal(err)
-	}
-
 	callerRegistry, err := callerexecute.NewRegistry([]extract.Extractor{
 		gocaller.NewGRPC(), gocaller.NewThrift(),
 	})
@@ -346,13 +353,35 @@ func runT40R1CallerTerminalUpstreamWitness(
 	}
 	plan := newT40R1CallerUpstreamPlan(t, callerRegistry)
 	provider := &t40r1CallerUpstreamProvider{plan: plan}
+	headCommit := t40r1CallerUpstreamCommit
 	candidatePointer := store.CandidateManifestPublication{
 		Repository:       t40r1CallerUpstreamRepository,
-		HeadCommit:       t40r1CallerUpstreamCommit,
+		HeadCommit:       headCommit,
 		PolicyDigest:     t40r1CallerUpstreamDigest("candidate-policy"),
 		ManifestDigest:   plan.digest,
 		GenerationDigest: t40r1CallerUpstreamDigest("candidate-generation"),
 		ManifestPath:     candidateid.ManifestName(t40r1CallerUpstreamRepository),
+	}
+	var partitioned *t40r1CallerPartitionedRun
+	if options.partitionedAuthority {
+		partitioned = prepareT40R1CallerPartitionedRun(
+			t, ctx, dataDir, state, callerRegistry,
+		)
+		headCommit = partitioned.commit
+		plan.digest = partitioned.manifest.Digest
+		candidatePointer = store.CandidateManifestPublication{
+			Repository:       t40r1CallerUpstreamRepository,
+			HeadCommit:       headCommit,
+			PolicyDigest:     partitioned.manifest.PolicyDigest,
+			ManifestDigest:   partitioned.manifest.Digest,
+			GenerationDigest: partitioned.manifest.GenerationDigest,
+			ManifestPath:     candidateid.ManifestName(t40r1CallerUpstreamRepository),
+		}
+	}
+	if err := state.SetRepoIndexed(
+		ctx, t40r1CallerUpstreamRepository, headCommit, time.Now().UTC(),
+	); err != nil {
+		t.Fatal(err)
 	}
 	if err := state.PublishCandidateManifest(ctx, candidatePointer); err != nil {
 		t.Fatal(err)
@@ -364,9 +393,12 @@ func runT40R1CallerTerminalUpstreamWitness(
 		t.Fatal(err)
 	}
 	plan.control = persistedCandidate.ControlRevision
+	if partitioned != nil {
+		partitioned.publish(t, ctx, state)
+	}
 
 	declarationRun, declarationGeneration :=
-		publishT40R1CallerUpstreamDeclaration(t, ctx, state)
+		publishT40R1CallerUpstreamDeclaration(t, ctx, state, headCommit)
 	resolverExtractors := []extract.Extractor{
 		gocaller.NewGRPC(), gocaller.NewThrift(),
 		protodecl.New(), thriftdecl.New(),
@@ -380,7 +412,7 @@ func runT40R1CallerTerminalUpstreamWitness(
 		GenerationDigest: declarationGeneration,
 	}}
 	resolverIdentity, err := resolvercatalog.NewIdentity(
-		t40r1CallerUpstreamRepository, t40r1CallerUpstreamCommit, "",
+		t40r1CallerUpstreamRepository, headCommit, "",
 		persistedCandidate.ManifestDigest, identityDeclarations,
 		resolverRegistry.Packs(),
 	)
@@ -431,7 +463,10 @@ func runT40R1CallerTerminalUpstreamWitness(
 
 	publications := callerpublication.NewRegistry(callerexecute.Root(dataDir))
 	t.Cleanup(func() { _ = publications.Close() })
-	boundaryStore := &t40r1CallerUpstreamStore{Store: state}
+	var boundaryStore callerexecute.Store = &t40r1CallerUpstreamStore{Store: state}
+	if partitioned != nil {
+		boundaryStore = state
+	}
 	worker, err := callerexecute.NewWorkerWithPublicationRegistry(
 		dataDir, boundaryStore, provider, callerRegistry, publications,
 	)
@@ -483,7 +518,9 @@ func runT40R1CallerTerminalUpstreamWitness(
 		"thrift": len(resolverViews[resolvermaterialize.ProtocolThrift].Descriptors()),
 	}
 
-	reader, err := callerexecute.NewPublicationReader(state, callerRegistry, publications)
+	reader, err := callerexecute.NewPublicationReader(
+		dataDir, boundaryStore, callerRegistry, publications,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,18 +641,22 @@ func runT40R1CallerTerminalUpstreamWitness(
 	if !witness.ClearsUpstreamBoundary {
 		t.Fatalf("caller upstream witness did not clear: %+v", witness)
 	}
-	return witness
+	if partitioned != nil {
+		partitioned.close(t, pointer)
+	}
+	return witness, partitioned
 }
 
 func publishT40R1CallerUpstreamDeclaration(
 	t *testing.T,
 	ctx context.Context,
 	state *store.Surreal,
+	commit string,
 ) (*store.ExtractionRun, string) {
 	t.Helper()
 	run, err := state.BeginExtractionRun(ctx, store.ExtractionScope{
 		Repository: t40r1CallerUpstreamRepository,
-		Commit:     t40r1CallerUpstreamCommit,
+		Commit:     commit,
 		Domain:     "proto-contract",
 	}, "t40r1-witness-proto-declaration-v1")
 	if err != nil {
@@ -631,7 +672,7 @@ func publishT40R1CallerUpstreamDeclaration(
 	atom.ID = store.ComputeAtomID(atom)
 	association := store.SnapshotEvidence{
 		AtomID: atom.ID, Repo: t40r1CallerUpstreamRepository,
-		Commit: t40r1CallerUpstreamCommit, Path: "idl/orders.proto",
+		Commit: commit, Path: "idl/orders.proto",
 		StartLine: 1, EndLine: 1,
 		VisibilityScope: "repo:" + t40r1CallerUpstreamRepository,
 	}
@@ -682,7 +723,7 @@ func publishT40R1CallerUpstreamDeclaration(
 	outcome := store.ExtractionDomainOutcome{
 		Scope: store.ExtractionScope{
 			Repository: t40r1CallerUpstreamRepository,
-			Commit:     t40r1CallerUpstreamCommit,
+			Commit:     commit,
 			Domain:     "proto-contract",
 		},
 		Disposition:   store.DomainOutcomePublished,

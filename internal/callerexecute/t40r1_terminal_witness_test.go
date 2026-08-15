@@ -356,7 +356,7 @@ func runT40R1CallerTerminalWitness(t *testing.T) t40r1CallerTerminalWitness {
 		t.Fatal(err)
 	}
 	reader, err := NewPublicationReader(
-		boundaryStore, registry, worker.publications,
+		dataDir, boundaryStore, registry, worker.publications,
 	)
 	if err != nil {
 		t.Fatal(err)

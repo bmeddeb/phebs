@@ -391,6 +391,7 @@ func TestCallerMapMCPAcceptsProductionExactGapEnvelope(t *testing.T) {
 	publications := callerpublication.NewRegistry(t.TempDir())
 	t.Cleanup(func() { _ = publications.Close() })
 	reader, err := callerexecute.NewPublicationReader(
+		t.TempDir(),
 		&exactGapCallerReadStore{callerToolStore: evidence},
 		registry,
 		publications,

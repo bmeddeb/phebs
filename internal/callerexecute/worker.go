@@ -957,39 +957,35 @@ func (worker *Worker) currentAuthority(
 	ctx context.Context,
 	repository string,
 ) (*authority, error) {
-	current, err := currentAuthority(ctx, worker.store, worker.registry, repository)
+	return currentAuthorityWithPartitioned(
+		ctx, worker.dataDir, worker.store, worker.registry, repository,
+	)
+}
+
+// currentAuthorityWithPartitioned is the common worker/product identity
+// boundary. Once the store supports partitioned evidence, both writers and
+// readers must derive the caller generation from the same exact observation
+// and extraction roots; otherwise a successfully published generation is
+// deterministically misclassified as failed by the product reader.
+func currentAuthorityWithPartitioned(
+	ctx context.Context,
+	dataDir string,
+	state authorityStore,
+	registry *Registry,
+	repository string,
+) (*authority, error) {
+	current, err := currentAuthority(ctx, state, registry, repository)
 	if err != nil || current == nil {
 		return current, err
 	}
-	partitioned, ok := any(worker.store).(store.PartitionedEvidenceStore)
-	if !ok {
-		return current, nil
-	}
-	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
-		ctx, filepath.Join(worker.dataDir, "observations"), repository,
+	upstream, partitioned, err := currentPartitionedAuthority(
+		ctx, dataDir, state, registry, repository,
 	)
 	if err != nil {
-		return nil, errors.Join(ErrPartitionedCallerUnavailable, err)
+		return nil, err
 	}
-	adapters := worker.registry.Adapters()
-	required := make([]downstreamauthority.DomainIdentity, len(adapters))
-	domains := make([]candidate.DownstreamDomainAuthority, 0, len(adapters))
-	for index, adapter := range adapters {
-		required[index] = downstreamauthority.DomainIdentity{Domain: adapter.Domain, Version: adapter.Version}
-		domain, domainErr := extractionpublication.CurrentDomainAuthority(
-			ctx, partitioned, repository, adapter.Domain,
-		)
-		if errors.Is(domainErr, store.ErrNotFound) {
-			continue
-		}
-		if domainErr != nil || domain.Version != adapter.Version {
-			return nil, errors.Join(ErrPartitionedCallerUnavailable, domainErr)
-		}
-		domains = append(domains, domain)
-	}
-	upstream, err := downstreamauthority.BuildRequired(observation, required, domains)
-	if err != nil || downstreamauthority.RequireUsable(upstream) != nil {
-		return nil, errors.Join(ErrPartitionedCallerUnavailable, err)
+	if !partitioned {
+		return current, nil
 	}
 	semantic := current.semantic
 	semantic.Upstream, err = json.Marshal(upstream)
@@ -1008,6 +1004,53 @@ func (worker *Worker) currentAuthority(
 		return nil, errors.New("partitioned caller identity differs across artifact and store writers")
 	}
 	return current, nil
+}
+
+func currentPartitionedAuthority(
+	ctx context.Context,
+	dataDir string,
+	state authorityStore,
+	registry *Registry,
+	repository string,
+) (downstreamauthority.Authority, bool, error) {
+	partitioned, ok := any(state).(store.PartitionedEvidenceStore)
+	if !ok {
+		return downstreamauthority.Authority{}, false, nil
+	}
+	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
+		ctx, filepath.Join(dataDir, "observations"), repository,
+	)
+	if err != nil {
+		return downstreamauthority.Authority{}, true,
+			errors.Join(ErrPartitionedCallerUnavailable, err)
+	}
+	adapters := registry.Adapters()
+	required := make([]downstreamauthority.DomainIdentity, len(adapters))
+	domains := make([]candidate.DownstreamDomainAuthority, 0, len(adapters))
+	for index, adapter := range adapters {
+		required[index] = downstreamauthority.DomainIdentity{Domain: adapter.Domain, Version: adapter.Version}
+		domain, domainErr := extractionpublication.CurrentDomainAuthority(
+			ctx, partitioned, repository, adapter.Domain,
+		)
+		if errors.Is(domainErr, store.ErrNotFound) {
+			continue
+		}
+		if domainErr != nil || domain.Version != adapter.Version {
+			return downstreamauthority.Authority{}, true,
+				errors.Join(ErrPartitionedCallerUnavailable, domainErr)
+		}
+		domains = append(domains, domain)
+	}
+	upstream, err := downstreamauthority.BuildRequired(observation, required, domains)
+	if err != nil {
+		return downstreamauthority.Authority{}, true,
+			errors.Join(ErrPartitionedCallerUnavailable, err)
+	}
+	if err := downstreamauthority.RequireUsable(upstream); err != nil {
+		return downstreamauthority.Authority{}, true,
+			errors.Join(ErrPartitionedCallerUnavailable, err)
+	}
+	return upstream, true, nil
 }
 
 // authorityStore is the read-only subset needed to reconstruct the exact
@@ -1200,7 +1243,7 @@ func storePublication(
 		}
 	}
 	return store.CallerGenerationPublication{
-		Generation: generation, Pairs: pairs,
+		Generation: generation, Upstream: string(manifest.Generation.Upstream), Pairs: pairs,
 		PairSetDigest:         manifest.PairSetDigest,
 		PairCount:             manifest.Aggregate.PairCount,
 		ArtifactCount:         manifest.Aggregate.ArtifactCount,

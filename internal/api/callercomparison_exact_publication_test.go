@@ -550,7 +550,9 @@ func TestExactCallerComparisonFencesIndependentSidesAndAuthorizesBothFirst(
 	}
 	publications := callerpublication.NewRegistry(callerexecute.Root(dataDir))
 	t.Cleanup(func() { _ = publications.Close() })
-	reader, err := callerexecute.NewPublicationReader(state, adapters, publications)
+	reader, err := callerexecute.NewPublicationReader(
+		dataDir, state, adapters, publications,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

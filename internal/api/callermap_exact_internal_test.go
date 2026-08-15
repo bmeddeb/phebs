@@ -246,7 +246,7 @@ func newExactAuthorityGapServices(
 	publications := callerpublication.NewRegistry(t.TempDir())
 	t.Cleanup(func() { _ = publications.Close() })
 	reader, err := callerexecute.NewPublicationReader(
-		state, adapters, publications,
+		t.TempDir(), state, adapters, publications,
 	)
 	if err != nil {
 		t.Fatal(err)

@@ -425,7 +425,7 @@ func serve(args []string) error {
 	var callerReader *callerexecute.PublicationReader
 	if callerRegistry.Enabled() {
 		callerReader, err = callerexecute.NewPublicationReader(
-			st, callerRegistry, callerPublications,
+			cfg.Server.DataDir, st, callerRegistry, callerPublications,
 		)
 		if err != nil {
 			return fmt.Errorf("configure caller publication reader: %w", err)

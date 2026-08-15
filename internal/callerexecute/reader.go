@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -232,6 +233,7 @@ func (read *PublicationRead) Release() (resultErr error) {
 // PublicationReader opens complete caller generations through the same
 // runtime extractor identity and process-wide lease registry as the worker.
 type PublicationReader struct {
+	dataDir      string
 	state        PublicationReadStore
 	adapters     *Registry
 	publications *callerpublication.Registry
@@ -253,10 +255,14 @@ type publicationAdmissionFlight struct {
 }
 
 func NewPublicationReader(
+	dataDir string,
 	state PublicationReadStore,
 	adapters *Registry,
 	publications *callerpublication.Registry,
 ) (*PublicationReader, error) {
+	if dataDir == "" || !filepath.IsAbs(dataDir) {
+		return nil, errors.New("caller publication reader data directory must be absolute")
+	}
 	if state == nil || publications == nil {
 		return nil, errors.New("caller publication reader is not configured")
 	}
@@ -264,7 +270,7 @@ func NewPublicationReader(
 		return nil, err
 	}
 	return &PublicationReader{
-		state: state, adapters: adapters, publications: publications,
+		dataDir: dataDir, state: state, adapters: adapters, publications: publications,
 		failures: make(map[string]struct{}), admissions: make(map[string]*publicationAdmissionFlight),
 	}, nil
 }
@@ -288,7 +294,9 @@ func (reader *PublicationReader) Open(
 		Availability:       PublicationMissing,
 		ExpectedGeneration: store.CallerGenerationIdentity{Repository: repository},
 	}
-	current, err := currentAuthority(ctx, reader.state, reader.adapters, repository)
+	current, err := currentAuthorityWithPartitioned(
+		ctx, reader.dataDir, reader.state, reader.adapters, repository,
+	)
 	if err != nil {
 		if deterministicPublicationReadFailure(err) {
 			result.Availability = PublicationFailed
@@ -323,6 +331,10 @@ func (reader *PublicationReader) Open(
 	result.Summary = &summary
 	result.Revision = ownedPointer.PublicationRevision
 	if !authorityAvailable {
+		result.Availability = PublicationStale
+		return result, nil
+	}
+	if summary.Generation != result.ExpectedGeneration {
 		result.Availability = PublicationStale
 		return result, nil
 	}
@@ -474,6 +486,28 @@ var errPublicationReadTransition = errors.New(
 	"caller publication authority transitioned",
 )
 
+func (reader *PublicationReader) partitionedGenerationCurrent(
+	ctx context.Context,
+	generation store.CallerGenerationIdentity,
+	canonicalUpstream string,
+) (bool, error) {
+	upstream, partitioned, err := currentPartitionedAuthority(
+		ctx, reader.dataDir, reader.state, reader.adapters, generation.Repository,
+	)
+	if err != nil {
+		return false, err
+	}
+	if !partitioned {
+		return canonicalUpstream == "" && generation.UpstreamDigest == "", nil
+	}
+	raw, err := json.Marshal(upstream)
+	if err != nil {
+		return false, err
+	}
+	return canonicalUpstream == string(raw) &&
+		generation.UpstreamDigest == upstream.Digest, nil
+}
+
 func (reader *PublicationReader) boundResolver(
 	ctx context.Context,
 	generation store.CallerGenerationIdentity,
@@ -605,17 +639,26 @@ func (reader *PublicationReader) acquire(
 		storeCurrent, err = reader.state.
 			CallerGenerationPublicationSummaryAuthorityCurrent(ctx, *result.Summary)
 	}
+	upstreamCurrent, upstreamErr := reader.partitionedGenerationCurrent(
+		ctx, result.Summary.Generation, result.Summary.Upstream,
+	)
 	publicationCurrent := false
 	var publicationErr error
 	if lease.Publication() != nil {
 		publicationCurrent, publicationErr = lease.Publication().CurrentResult()
 	}
-	if err != nil || publicationErr != nil || !storeCurrent ||
+	if err != nil || upstreamErr != nil || publicationErr != nil || !storeCurrent ||
+		!upstreamCurrent ||
 		!publicationCurrent ||
 		!reflect.DeepEqual(lease.State(), publicationState) {
 		releaseErr := result.Release()
 		if err != nil && !deterministicPublicationReadFailure(err) {
 			return nil, errors.Join(err, wrapCallerReleaseError(releaseErr))
+		}
+		if upstreamErr != nil {
+			return nil, errors.Join(
+				upstreamErr, wrapCallerReleaseError(releaseErr),
+			)
 		}
 		if publicationErr != nil {
 			return nil, errors.Join(
@@ -735,6 +778,12 @@ func (reader *PublicationReader) Current(
 	if err != nil || !current {
 		return false, err
 	}
+	current, err = reader.partitionedGenerationCurrent(
+		ctx, read.Summary.Generation, read.Summary.Upstream,
+	)
+	if err != nil || !current {
+		return false, err
+	}
 	publication := read.lease.Publication()
 	if publication == nil {
 		return false, nil
@@ -788,6 +837,29 @@ func (reader *PublicationReader) CurrentPair(
 	if err != nil || !current {
 		return false, err
 	}
+	type upstreamIdentity struct {
+		repository string
+		digest     string
+		canonical  string
+	}
+	seenUpstreams := make(map[upstreamIdentity]struct{}, len(reads))
+	for _, read := range reads {
+		identity := upstreamIdentity{
+			repository: read.Summary.Generation.Repository,
+			digest:     read.Summary.Generation.UpstreamDigest,
+			canonical:  read.Summary.Upstream,
+		}
+		if _, duplicate := seenUpstreams[identity]; duplicate {
+			continue
+		}
+		seenUpstreams[identity] = struct{}{}
+		current, err = reader.partitionedGenerationCurrent(
+			ctx, read.Summary.Generation, read.Summary.Upstream,
+		)
+		if err != nil || !current {
+			return false, err
+		}
+	}
 	for _, publication := range filesystems {
 		current, err = publication.CurrentResult()
 		if err != nil || !current {
@@ -821,7 +893,12 @@ func (reader *PublicationReader) UnavailableCurrent(
 		if err != nil {
 			return false, err
 		}
-		return current, nil
+		if !current {
+			return false, nil
+		}
+		return reader.partitionedGenerationCurrent(
+			ctx, read.Summary.Generation, read.Summary.Upstream,
+		)
 	}
 	confirmed, err := reader.Open(ctx, read.ExpectedGeneration.Repository)
 	if err != nil {

@@ -203,7 +203,7 @@ func TestCallerPublicationInstallationFenceUsesReplacementProjection(t *testing.
 	}
 }
 
-func TestCallerGenerationPublicationSchemaAcceptsUpstreamDigest(t *testing.T) {
+func TestCallerGenerationPublicationSchemaAcceptsUpstreamAuthority(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
@@ -217,9 +217,11 @@ func TestCallerGenerationPublicationSchemaAcceptsUpstreamDigest(t *testing.T) {
 		repository: repository,
 	})
 	requireCandidateRawQuery(t, t.Context(), s, `
-		UPDATE $rid SET generation.upstream_digest = $upstream_digest RETURN NONE;
+		UPDATE $rid SET upstream = $upstream,
+			generation.upstream_digest = $upstream_digest RETURN NONE;
 	`, map[string]any{
 		"rid":             callerGenerationPublicationID(repository),
+		"upstream":        `{"schema":"test"}`,
 		"upstream_digest": internalCallerDigest('1'),
 	})
 }
