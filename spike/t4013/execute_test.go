@@ -939,6 +939,20 @@ func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "caller generation bound refusal", cause: errCallerGenerationBoundRefusal,
+			outcome: "caller_generation_bound_refusal",
+			projection: privateConvergenceProbe{
+				Stage: "caller_generation", SHA256: digest,
+			},
+		},
+		{
+			name: "caller generation terminal", cause: errCallerGenerationTerminal,
+			outcome: "caller_generation_terminal",
+			projection: privateConvergenceProbe{
+				Stage: "caller_generation", SHA256: digest,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -987,6 +1001,13 @@ func TestV14TerminalProgressSealsThroughStoppedObservation(t *testing.T) {
 			}
 			if err := ValidateObservation(stopped); err != nil {
 				t.Fatalf("stopped observation did not seal: %v", err)
+			}
+			if test.projection.Stage == "caller_generation" {
+				if err := validateConvergenceWaits(
+					run.observation.ConvergenceWaits, 9,
+				); err == nil {
+					t.Fatal("pre-v14 convergence contract accepted caller terminal state")
+				}
 			}
 		})
 	}

@@ -1157,6 +1157,23 @@ caller gate only. Full validation and independent review are required before a
 separately authorized integrated exact diagnostic; Take 19 remains unfrozen
 and Epic 41 remains blocked.
 
+The subsequently authorized `t40r1-neutral-19` run used exact source commit
+`6f02dc2ae6c15b400d6d9f358f558e358d3025ea` and reviewed plan
+`sha256:e392bacb787c27f5032874831fab35426cd6412f04aab115e695a33f90ff281e`.
+Its outer process sequence advanced from structural server execution to
+semantic cold convergence and stopped on a terminal caller generation before publication. The executor
+recorded bounded stage `caller_generation` and outcome
+`caller_generation_terminal`, but the v14 source-free validator had not
+enumerated those new values or their terminal-transition coherence. It rejected
+the observation, sealed no receipt, and teardown destroyed all custody and
+private material. The run therefore establishes no structural completion,
+does not classify the caller cause, and does not validate the compact
+correction. The harness-only closure admits the two
+already-produced caller terminal outcomes for v14, keeps earlier contracts
+closed, and regression-tests complete stopped-observation sealing. A fresh
+reviewed plan and separately authorized rerun are required; Take 19 remains
+unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
