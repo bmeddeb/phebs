@@ -22,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -424,6 +425,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	outcomeByDigest := make(map[string]store.CallerLeafOutcome, len(outcomes))
 	aggregate := callerleaf.AggregateReceipt{}
 	aggregateExceeded := false
+	var aggregateRefusal *pipelinerefusal.Receipt
 	for _, outcome := range outcomes {
 		outcomeByDigest[outcome.Pair.PairDigest] = outcome
 		if outcome.Disposition != store.CallerLeafSucceeded {
@@ -437,6 +439,9 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 				return addErr
 			}
 			aggregateExceeded = true
+			aggregateRefusal = callerRefusal(
+				addErr, pipelinerefusal.StageCallerGenerationAdmission,
+			)
 		}
 	}
 	var inventory *callerleaf.ArtifactInventory
@@ -459,7 +464,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		}
 		if contentRefused {
 			outcome, queued, recordErr := worker.recordTerminalRefusal(
-				workCtx, job, current, *next,
+				workCtx, job, current, *next, aggregateRefusal,
 			)
 			successorQueued = successorQueued || queued
 			if recordErr != nil {
@@ -739,10 +744,18 @@ func (worker *Worker) recordTerminalRefusal(
 	job store.Job,
 	current *authority,
 	pair ExpectedPair,
+	refusal *pipelinerefusal.Receipt,
 ) (store.CallerLeafOutcome, bool, error) {
+	if refusal == nil || pipelinerefusal.Validate(*refusal) != nil ||
+		refusal.GenerationKind != pipelinerefusal.GenerationCaller {
+		return store.CallerLeafOutcome{}, false, errors.New(
+			"terminal caller refusal is not classified",
+		)
+	}
 	outcome := store.CallerLeafOutcome{
 		Generation: current.stored, Pair: storePair(pair),
 		Disposition: store.CallerLeafTerminalGenerationRefusal,
+		Refusal:     refusal,
 	}
 	if err := worker.ensureJobSuccessor(ctx, job, false); err != nil {
 		return outcome, false, fmt.Errorf("enqueue terminal caller refusal: %w", err)
@@ -778,6 +791,10 @@ func (worker *Worker) executeAndRecordPair(
 		Resolver:              resolver, ReadBlob: worker.readBlob, Stage: stage,
 	})
 	terminal := errors.Is(err, callerleaf.ErrLimit)
+	var refusal *pipelinerefusal.Receipt
+	if terminal {
+		refusal = callerRefusal(err, pipelinerefusal.StageCallerPairExecution)
+	}
 	if err != nil && !terminal {
 		return outcome, false, false, err
 	}
@@ -786,6 +803,7 @@ func (worker *Worker) executeAndRecordPair(
 		prepared, err = stage.Seal()
 		if errors.Is(err, callerleaf.ErrLimit) {
 			terminal = true
+			refusal = callerRefusal(err, pipelinerefusal.StageCallerArtifactSeal)
 		} else if err != nil {
 			return outcome, false, false, err
 		}
@@ -850,6 +868,10 @@ func (worker *Worker) executeAndRecordPair(
 				outcome = store.CallerLeafOutcome{
 					Generation: current.stored, Pair: storePair(pair),
 					Disposition: store.CallerLeafTerminalGenerationRefusal,
+					Refusal: callerClassifiedRefusal(
+						err, pipelinerefusal.StageCallerArtifactInstall,
+						pipelinerefusal.ClassificationInvalid,
+					),
 				}
 				if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 					return outcome, true, false, err
@@ -860,6 +882,9 @@ func (worker *Worker) executeAndRecordPair(
 				outcome = store.CallerLeafOutcome{
 					Generation: current.stored, Pair: storePair(pair),
 					Disposition: store.CallerLeafTerminalGenerationRefusal,
+					Refusal: callerRefusal(
+						err, pipelinerefusal.StageCallerArtifactInstall,
+					),
 				}
 				if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 					return outcome, true, false, err
@@ -892,11 +917,40 @@ func (worker *Worker) executeAndRecordPair(
 	outcome = store.CallerLeafOutcome{
 		Generation: current.stored, Pair: storePair(pair),
 		Disposition: store.CallerLeafTerminalGenerationRefusal,
+		Refusal:     refusal,
 	}
 	if err = worker.store.RecordCallerLeafOutcome(durableCtx, job, outcome); err != nil {
 		return outcome, true, false, err
 	}
 	return outcome, true, false, nil
+}
+
+func callerRefusal(
+	cause error,
+	stage pipelinerefusal.Stage,
+) *pipelinerefusal.Receipt {
+	closed := pipelinerefusal.At(cause, stage, pipelinerefusal.GenerationCaller)
+	receipt, present := pipelinerefusal.From(closed)
+	if !present {
+		return nil
+	}
+	return &receipt
+}
+
+func callerClassifiedRefusal(
+	cause error,
+	stage pipelinerefusal.Stage,
+	classification pipelinerefusal.Classification,
+) *pipelinerefusal.Receipt {
+	closed := pipelinerefusal.Classified(
+		cause, stage, pipelinerefusal.GenerationCaller,
+		classification, pipelinerefusal.DimensionUnknown,
+	)
+	receipt, present := pipelinerefusal.From(closed)
+	if !present {
+		return nil
+	}
+	return &receipt
 }
 
 func (worker *Worker) currentAuthority(

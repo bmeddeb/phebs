@@ -19,6 +19,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -222,12 +223,18 @@ func (stage *Stage) Add(record Record) error {
 	switch record.Kind {
 	case RecordResult:
 		if stage.receipt.ResultCount >= MaxResultRecordsPerPair {
-			return fmt.Errorf("%w: results exceed %d", ErrLimit, MaxResultRecordsPerPair)
+			return callerLimit(
+				pipelinerefusal.DimensionCallerPairResults,
+				int64(stage.receipt.ResultCount)+1, MaxResultRecordsPerPair,
+			)
 		}
 		stage.receipt.ResultCount++
 	case RecordAbstention:
 		if stage.receipt.AbstentionCount >= MaxAbstentionRecordsPerPair {
-			return fmt.Errorf("%w: abstentions exceed %d", ErrLimit, MaxAbstentionRecordsPerPair)
+			return callerLimit(
+				pipelinerefusal.DimensionCallerPairAbstentions,
+				int64(stage.receipt.AbstentionCount)+1, MaxAbstentionRecordsPerPair,
+			)
 		}
 		stage.receipt.AbstentionCount++
 	}
@@ -236,11 +243,17 @@ func (stage *Stage) Add(record Record) error {
 		return err
 	}
 	if len(raw) > MaxRecordBytes {
-		return fmt.Errorf("%w: record exceeds %d bytes", ErrLimit, MaxRecordBytes)
+		return callerLimit(
+			pipelinerefusal.DimensionCallerRecordBytes,
+			int64(len(raw)), MaxRecordBytes,
+		)
 	}
 	raw = append(raw, '\n')
 	if int64(len(raw)) > MaxCanonicalBytesPerPair-stage.receipt.ContentBytes {
-		return fmt.Errorf("%w: content exceeds %d bytes", ErrLimit, MaxCanonicalBytesPerPair)
+		return callerByteLimit(
+			pipelinerefusal.DimensionCallerPairCanonicalBytes,
+			stage.receipt.ContentBytes+int64(len(raw)), MaxCanonicalBytesPerPair,
+		)
 	}
 	if _, err := stage.file.Write(raw); err != nil {
 		return err
@@ -262,7 +275,10 @@ func (stage *Stage) ObserveSourceBlob(bytes int64) error {
 		return errors.New("caller leaf source observation is invalid")
 	}
 	if bytes > MaxSourceBlobBytesPerPair-stage.receipt.SourceBlobBytes {
-		return fmt.Errorf("%w: observed source bytes overflow", ErrLimit)
+		return callerByteLimit(
+			pipelinerefusal.DimensionCallerPairSourceBytes,
+			stage.receipt.SourceBlobBytes+bytes, MaxSourceBlobBytesPerPair,
+		)
 	}
 	stage.receipt.SourceBlobReads++
 	stage.receipt.SourceBlobBytes += bytes
@@ -276,7 +292,10 @@ func (stage *Stage) Seal() (*Prepared, error) {
 	stage.sealed = true
 	if stage.receipt.ContentBytes > MaxStagingBytesPerPair {
 		_ = stage.file.Close()
-		return nil, fmt.Errorf("%w: stage exceeds %d bytes", ErrLimit, MaxStagingBytesPerPair)
+		return nil, callerByteLimit(
+			pipelinerefusal.DimensionCallerPairStagingBytes,
+			stage.receipt.ContentBytes, MaxStagingBytesPerPair,
+		)
 	}
 	if err := stage.file.Sync(); err != nil {
 		_ = stage.file.Close()

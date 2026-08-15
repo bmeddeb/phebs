@@ -19,14 +19,18 @@ var ErrInvalid = errors.New("invalid pipeline refusal")
 type Stage string
 
 const (
-	StageUnknown                 Stage = "unknown"
-	StageSourcePartitionPlanning Stage = "source_partition_planning"
-	StageObservationPublication  Stage = "observation_publication"
-	StageCandidateStrictOpen     Stage = "candidate_strict_open"
-	StageDomainInventory         Stage = "domain_inventory"
-	StageExtractorExecution      Stage = "extractor_execution"
-	StageEvidenceStaging         Stage = "evidence_staging"
-	StageFinalPublication        Stage = "final_publication"
+	StageUnknown                   Stage = "unknown"
+	StageSourcePartitionPlanning   Stage = "source_partition_planning"
+	StageObservationPublication    Stage = "observation_publication"
+	StageCandidateStrictOpen       Stage = "candidate_strict_open"
+	StageDomainInventory           Stage = "domain_inventory"
+	StageExtractorExecution        Stage = "extractor_execution"
+	StageEvidenceStaging           Stage = "evidence_staging"
+	StageFinalPublication          Stage = "final_publication"
+	StageCallerPairExecution       Stage = "caller_pair_execution"
+	StageCallerArtifactSeal        Stage = "caller_artifact_seal"
+	StageCallerArtifactInstall     Stage = "caller_artifact_install"
+	StageCallerGenerationAdmission Stage = "caller_generation_admission"
 )
 
 type GenerationKind string
@@ -37,6 +41,7 @@ const (
 	GenerationObservation      GenerationKind = "observation"
 	GenerationCandidate        GenerationKind = "candidate"
 	GenerationExtractionDomain GenerationKind = "extraction_domain"
+	GenerationCaller           GenerationKind = "caller"
 )
 
 type Classification string
@@ -50,42 +55,54 @@ const (
 type Dimension string
 
 const (
-	DimensionUnknown                 Dimension = "unknown"
-	DimensionBlobBytes               Dimension = "blob_bytes"
-	DimensionBlobPlacements          Dimension = "blob_placements"
-	DimensionPartitionCount          Dimension = "partition_count"
-	DimensionAggregateSegments       Dimension = "aggregate_segments"
-	DimensionObservationMemberBytes  Dimension = "observation_member_bytes"
-	DimensionGenerationBlobBytes     Dimension = "generation_blob_bytes"
-	DimensionGenerationEncodedBytes  Dimension = "generation_encoded_bytes"
-	DimensionGenerationArtifactBytes Dimension = "generation_artifact_bytes"
-	DimensionGenerationControlBytes  Dimension = "generation_control_bytes"
-	DimensionRepositoryGenerations   Dimension = "repository_generations"
-	DimensionRepositoryEntries       Dimension = "repository_entries"
-	DimensionGenerationEntries       Dimension = "generation_entries"
-	DimensionPlanningSpoolBytes      Dimension = "planning_spool_bytes"
-	DimensionBatchHeaderBytes        Dimension = "batch_header_bytes"
-	DimensionBatchOutputBytes        Dimension = "batch_output_bytes"
-	DimensionGenerationRecords       Dimension = "generation_records"
-	DimensionInventoryFiles          Dimension = "inventory_files"
-	DimensionInventoryPathBytes      Dimension = "inventory_path_bytes"
-	DimensionSymlinkDepth            Dimension = "symlink_depth"
-	DimensionLookupRecords           Dimension = "lookup_records"
-	DimensionLookupPathBytes         Dimension = "lookup_path_bytes"
-	DimensionTreeRecordBytes         Dimension = "tree_record_bytes"
-	DimensionSourceBlobBytes         Dimension = "source_blob_bytes"
-	DimensionSourceReadAttempts      Dimension = "source_read_attempts"
-	DimensionSourceReadBytes         Dimension = "source_read_bytes"
-	DimensionSourceReadFiles         Dimension = "source_read_files"
-	DimensionFacts                   Dimension = "facts"
-	DimensionStagedRows              Dimension = "staged_rows"
-	DimensionDomainResultFacts       Dimension = "domain_result_facts"
-	DimensionDomainResultRows        Dimension = "domain_result_rows"
-	DimensionDomainResultReferences  Dimension = "domain_result_references"
-	DimensionDomainCanonicalBytes    Dimension = "domain_result_canonical_bytes"
-	DimensionDomainEncodedBytes      Dimension = "domain_result_encoded_bytes"
-	DimensionCandidateMemberBytes    Dimension = "candidate_member_bytes"
-	DimensionCandidateMembers        Dimension = "candidate_members"
+	DimensionUnknown                        Dimension = "unknown"
+	DimensionBlobBytes                      Dimension = "blob_bytes"
+	DimensionBlobPlacements                 Dimension = "blob_placements"
+	DimensionPartitionCount                 Dimension = "partition_count"
+	DimensionAggregateSegments              Dimension = "aggregate_segments"
+	DimensionObservationMemberBytes         Dimension = "observation_member_bytes"
+	DimensionGenerationBlobBytes            Dimension = "generation_blob_bytes"
+	DimensionGenerationEncodedBytes         Dimension = "generation_encoded_bytes"
+	DimensionGenerationArtifactBytes        Dimension = "generation_artifact_bytes"
+	DimensionGenerationControlBytes         Dimension = "generation_control_bytes"
+	DimensionRepositoryGenerations          Dimension = "repository_generations"
+	DimensionRepositoryEntries              Dimension = "repository_entries"
+	DimensionGenerationEntries              Dimension = "generation_entries"
+	DimensionPlanningSpoolBytes             Dimension = "planning_spool_bytes"
+	DimensionBatchHeaderBytes               Dimension = "batch_header_bytes"
+	DimensionBatchOutputBytes               Dimension = "batch_output_bytes"
+	DimensionGenerationRecords              Dimension = "generation_records"
+	DimensionInventoryFiles                 Dimension = "inventory_files"
+	DimensionInventoryPathBytes             Dimension = "inventory_path_bytes"
+	DimensionSymlinkDepth                   Dimension = "symlink_depth"
+	DimensionLookupRecords                  Dimension = "lookup_records"
+	DimensionLookupPathBytes                Dimension = "lookup_path_bytes"
+	DimensionTreeRecordBytes                Dimension = "tree_record_bytes"
+	DimensionSourceBlobBytes                Dimension = "source_blob_bytes"
+	DimensionSourceReadAttempts             Dimension = "source_read_attempts"
+	DimensionSourceReadBytes                Dimension = "source_read_bytes"
+	DimensionSourceReadFiles                Dimension = "source_read_files"
+	DimensionFacts                          Dimension = "facts"
+	DimensionStagedRows                     Dimension = "staged_rows"
+	DimensionDomainResultFacts              Dimension = "domain_result_facts"
+	DimensionDomainResultRows               Dimension = "domain_result_rows"
+	DimensionDomainResultReferences         Dimension = "domain_result_references"
+	DimensionDomainCanonicalBytes           Dimension = "domain_result_canonical_bytes"
+	DimensionDomainEncodedBytes             Dimension = "domain_result_encoded_bytes"
+	DimensionCandidateMemberBytes           Dimension = "candidate_member_bytes"
+	DimensionCandidateMembers               Dimension = "candidate_members"
+	DimensionCallerPairResults              Dimension = "caller_pair_results"
+	DimensionCallerPairAbstentions          Dimension = "caller_pair_abstentions"
+	DimensionCallerRecordBytes              Dimension = "caller_record_bytes"
+	DimensionCallerPairCanonicalBytes       Dimension = "caller_pair_canonical_bytes"
+	DimensionCallerPairStagingBytes         Dimension = "caller_pair_staging_bytes"
+	DimensionCallerPairSourceBytes          Dimension = "caller_pair_source_bytes"
+	DimensionCallerGenerationPairs          Dimension = "caller_generation_pairs"
+	DimensionCallerGenerationArtifacts      Dimension = "caller_generation_artifacts"
+	DimensionCallerGenerationResults        Dimension = "caller_generation_results"
+	DimensionCallerGenerationAbstentions    Dimension = "caller_generation_abstentions"
+	DimensionCallerGenerationCanonicalBytes Dimension = "caller_generation_canonical_bytes"
+	DimensionCallerGenerationStagingBytes   Dimension = "caller_generation_staging_bytes"
 )
 
 // Receipt is the complete durable projection of one refusal. Observed and
@@ -333,6 +350,9 @@ func validStageGeneration(stage Stage, generation GenerationKind) bool {
 	case StageDomainInventory, StageExtractorExecution,
 		StageEvidenceStaging, StageFinalPublication:
 		return generation == GenerationExtractionDomain
+	case StageCallerPairExecution, StageCallerArtifactSeal,
+		StageCallerArtifactInstall, StageCallerGenerationAdmission:
+		return generation == GenerationCaller
 	default:
 		return false
 	}
@@ -380,6 +400,28 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 	case StageEvidenceStaging:
 		return dimension == DimensionFacts || dimension == DimensionStagedRows ||
 			dimension == DimensionGenerationEncodedBytes
+	case StageCallerPairExecution:
+		switch dimension {
+		case DimensionCallerPairResults, DimensionCallerPairAbstentions,
+			DimensionCallerRecordBytes, DimensionCallerPairCanonicalBytes,
+			DimensionCallerPairSourceBytes:
+			return true
+		}
+	case StageCallerArtifactSeal:
+		return dimension == DimensionCallerPairStagingBytes
+	case StageCallerArtifactInstall:
+		return dimension == DimensionCallerPairCanonicalBytes ||
+			dimension == DimensionCallerPairStagingBytes
+	case StageCallerGenerationAdmission:
+		switch dimension {
+		case DimensionCallerGenerationPairs,
+			DimensionCallerGenerationArtifacts,
+			DimensionCallerGenerationResults,
+			DimensionCallerGenerationAbstentions,
+			DimensionCallerGenerationCanonicalBytes,
+			DimensionCallerGenerationStagingBytes:
+			return true
+		}
 	}
 	return false
 }
@@ -402,7 +444,9 @@ func validStage(stage Stage) bool {
 	switch stage {
 	case StageUnknown, StageSourcePartitionPlanning, StageObservationPublication,
 		StageCandidateStrictOpen, StageDomainInventory,
-		StageExtractorExecution, StageEvidenceStaging, StageFinalPublication:
+		StageExtractorExecution, StageEvidenceStaging, StageFinalPublication,
+		StageCallerPairExecution, StageCallerArtifactSeal,
+		StageCallerArtifactInstall, StageCallerGenerationAdmission:
 		return true
 	default:
 		return false
@@ -413,7 +457,7 @@ func validGeneration(generation GenerationKind) bool {
 	switch generation {
 	case GenerationUnknown, GenerationSourcePartition,
 		GenerationObservation, GenerationCandidate,
-		GenerationExtractionDomain:
+		GenerationExtractionDomain, GenerationCaller:
 		return true
 	default:
 		return false
@@ -449,7 +493,14 @@ func validDimension(dimension Dimension) bool {
 		DimensionDomainResultFacts, DimensionDomainResultRows,
 		DimensionDomainResultReferences, DimensionDomainCanonicalBytes,
 		DimensionDomainEncodedBytes, DimensionCandidateMemberBytes,
-		DimensionCandidateMembers:
+		DimensionCandidateMembers, DimensionCallerPairResults,
+		DimensionCallerPairAbstentions, DimensionCallerRecordBytes,
+		DimensionCallerPairCanonicalBytes, DimensionCallerPairStagingBytes,
+		DimensionCallerPairSourceBytes, DimensionCallerGenerationPairs,
+		DimensionCallerGenerationArtifacts, DimensionCallerGenerationResults,
+		DimensionCallerGenerationAbstentions,
+		DimensionCallerGenerationCanonicalBytes,
+		DimensionCallerGenerationStagingBytes:
 		return true
 	default:
 		return false

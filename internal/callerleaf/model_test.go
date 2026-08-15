@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 func TestAggregateReceiptCapAndCapPlusOne(t *testing.T) {
@@ -32,15 +33,22 @@ func TestAggregateReceiptCapAndCapPlusOne(t *testing.T) {
 		name      string
 		aggregate AggregateReceipt
 		receipt   Receipt
+		dimension pipelinerefusal.Dimension
+		observed  int64
+		limit     int64
 	}{
-		{"pair", AggregateReceipt{PairCount: MaxExpectedPairs}, Receipt{}},
-		{"result", AggregateReceipt{ResultCount: MaxAggregateResultRecords}, Receipt{ResultCount: 1}},
-		{"abstention", AggregateReceipt{AbstentionCount: MaxAggregateAbstentionRecords}, Receipt{AbstentionCount: 1}},
-		{"content", AggregateReceipt{CanonicalBytes: MaxAggregateCanonicalBytes}, Receipt{ContentBytes: 1}},
-		{"stage", AggregateReceipt{StagingBytes: MaxAggregateStagingBytes}, Receipt{StagingBytes: 1}},
+		{"pair", AggregateReceipt{PairCount: MaxExpectedPairs}, Receipt{}, pipelinerefusal.DimensionCallerGenerationPairs, MaxExpectedPairs + 1, MaxExpectedPairs},
+		{"result", AggregateReceipt{ResultCount: MaxAggregateResultRecords}, Receipt{ResultCount: 1}, pipelinerefusal.DimensionCallerGenerationResults, MaxAggregateResultRecords + 1, MaxAggregateResultRecords},
+		{"abstention", AggregateReceipt{AbstentionCount: MaxAggregateAbstentionRecords}, Receipt{AbstentionCount: 1}, pipelinerefusal.DimensionCallerGenerationAbstentions, MaxAggregateAbstentionRecords + 1, MaxAggregateAbstentionRecords},
+		{"content", AggregateReceipt{CanonicalBytes: MaxAggregateCanonicalBytes}, Receipt{ContentBytes: 1}, pipelinerefusal.DimensionCallerGenerationCanonicalBytes, MaxAggregateCanonicalBytes + 1, MaxAggregateCanonicalBytes},
+		{"stage", AggregateReceipt{StagingBytes: MaxAggregateStagingBytes}, Receipt{StagingBytes: 1}, pipelinerefusal.DimensionCallerGenerationStagingBytes, MaxAggregateStagingBytes + 1, MaxAggregateStagingBytes},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if err := test.aggregate.Add(test.receipt); !errors.Is(err, ErrLimit) {
+			err := test.aggregate.Add(test.receipt)
+			var measurement *pipelinerefusal.Measurement
+			if !errors.Is(err, ErrLimit) || !errors.As(err, &measurement) ||
+				measurement.Dimension != test.dimension ||
+				measurement.Observed != test.observed || measurement.Limit != test.limit {
 				t.Fatalf("Add = %v, want ErrLimit", err)
 			}
 		})

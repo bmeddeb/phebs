@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -18,6 +19,45 @@ import (
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T) {
+	total := 192
+	bound := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "failed", GenerationDigest: "sha256:caller",
+		PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: total, SucceededPairCount: 38,
+			RefusedPairCount: 154, TotalPairCount: &total,
+			Refusals: []apiresponse.CallerMapRefusalSummary{{
+				Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+				Observed:       100_306, Limit: callerleaf.MaxAggregateAbstentionRecords,
+				OutcomeCount: 154,
+			}},
+		},
+	}}
+	probe, err := classifyCallerGeneration(bound)
+	if probe.Stage != "caller_generation" || !errors.Is(err, errCallerGenerationBoundRefusal) {
+		t.Fatalf("typed caller refusal = %+v, %v", probe, err)
+	}
+
+	unknown := bound
+	unknown.Generation = &apiresponse.CallerMapGeneration{
+		State: "failed", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: total, SucceededPairCount: 38,
+			RefusedPairCount: 154, TotalPairCount: &total,
+		},
+	}
+	if _, err := classifyCallerGeneration(unknown); !errors.Is(err, errCallerGenerationTerminal) {
+		t.Fatalf("untyped caller refusal = %v", err)
+	}
+
+	pending := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{State: "pending"}}
+	if _, err := classifyCallerGeneration(pending); err != nil {
+		t.Fatalf("pending caller generation terminalized: %v", err)
+	}
+}
 
 func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.T) {
 	tests := []struct {

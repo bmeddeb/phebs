@@ -185,6 +185,10 @@ func TestValidateFrozenSets(t *testing.T) {
 		{StageExtractorExecution, GenerationExtractionDomain},
 		{StageEvidenceStaging, GenerationExtractionDomain},
 		{StageFinalPublication, GenerationExtractionDomain},
+		{StageCallerPairExecution, GenerationCaller},
+		{StageCallerArtifactSeal, GenerationCaller},
+		{StageCallerArtifactInstall, GenerationCaller},
+		{StageCallerGenerationAdmission, GenerationCaller},
 	} {
 		receipt := Receipt{
 			Schema: Schema, Stage: boundary.stage,
@@ -194,6 +198,36 @@ func TestValidateFrozenSets(t *testing.T) {
 		if err := Validate(receipt); err != nil {
 			t.Fatalf("stage %q: %v", boundary.stage, err)
 		}
+	}
+}
+
+func TestCallerStagesOwnOnlyTheirExactLimitDimensions(t *testing.T) {
+	tests := []struct {
+		stage     Stage
+		dimension Dimension
+	}{
+		{StageCallerPairExecution, DimensionCallerPairAbstentions},
+		{StageCallerArtifactSeal, DimensionCallerPairStagingBytes},
+		{StageCallerArtifactInstall, DimensionCallerPairCanonicalBytes},
+		{StageCallerGenerationAdmission, DimensionCallerGenerationAbstentions},
+	}
+	for _, test := range tests {
+		receipt := Receipt{
+			Schema: Schema, Stage: test.stage, GenerationKind: GenerationCaller,
+			Classification: ClassificationLimit, Dimension: test.dimension,
+			Observed: 2, Limit: 1,
+		}
+		if err := Validate(receipt); err != nil {
+			t.Fatalf("caller stage %q dimension %q: %v", test.stage, test.dimension, err)
+		}
+	}
+	crossed := Receipt{
+		Schema: Schema, Stage: StageCallerPairExecution, GenerationKind: GenerationCaller,
+		Classification: ClassificationLimit,
+		Dimension:      DimensionCallerGenerationAbstentions, Observed: 2, Limit: 1,
+	}
+	if err := Validate(crossed); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("crossed caller dimension validated: %v", err)
 	}
 }
 

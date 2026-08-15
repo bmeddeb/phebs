@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -1234,15 +1235,33 @@ func TestUnavailableCallerPartitionProgressAlwaysValidates(t *testing.T) {
 	admission := func(pairs int) *store.CallerGenerationAdmission {
 		return &store.CallerGenerationAdmission{PairCount: pairs}
 	}
+	refusedAdmission := func(pairs, refused int) *store.CallerGenerationAdmission {
+		return &store.CallerGenerationAdmission{
+			PairCount: pairs,
+			Refusals: []store.CallerGenerationRefusalSummary{{
+				Refusal: pipelinerefusal.Receipt{
+					Schema:         pipelinerefusal.Schema,
+					Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+					GenerationKind: pipelinerefusal.GenerationCaller,
+					Classification: pipelinerefusal.ClassificationLimit,
+					Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+					Observed:       100_001,
+					Limit:          callerleaf.MaxAggregateAbstentionRecords,
+				},
+				OutcomeCount: refused,
+			}},
+		}
+	}
 	progress := func(settled, succeeded, refused int) *store.CallerLeafOutcomeProgress {
 		return &store.CallerLeafOutcomeProgress{
 			SettledCount: settled, SucceededCount: succeeded, RefusedCount: refused,
 		}
 	}
 	tests := []struct {
-		name      string
-		read      *callerexecute.PublicationRead
-		wantState string
+		name        string
+		read        *callerexecute.PublicationRead
+		wantState   string
+		wantRefusal bool
 	}{
 		{name: "nil read", read: nil, wantState: "unavailable"},
 		{
@@ -1269,9 +1288,9 @@ func TestUnavailableCallerPartitionProgressAlwaysValidates(t *testing.T) {
 		{
 			name: "admitted fully settled",
 			read: &callerexecute.PublicationRead{
-				Progress: progress(3, 2, 1), Admission: admission(3),
+				Progress: progress(3, 2, 1), Admission: refusedAdmission(3, 1),
 			},
-			wantState: "complete",
+			wantState: "complete", wantRefusal: true,
 		},
 		{
 			name: "settled without admission",
@@ -1307,6 +1326,16 @@ func TestUnavailableCallerPartitionProgressAlwaysValidates(t *testing.T) {
 					result,
 				)
 			}
+			if (len(result.Refusals) != 0) != test.wantRefusal {
+				t.Fatalf("emitted refusal summaries = %+v", result.Refusals)
+			}
 		})
+	}
+	overflow := &CallerMapPartitionProgress{
+		State: "complete", TotalPairCount: new(int),
+		Refusals: make([]CallerMapRefusalSummary, callerMapMaxRefusals+1),
+	}
+	if validCallerPartitionProgress(overflow) {
+		t.Fatal("caller progress accepted more than 32 refusal summaries")
 	}
 }

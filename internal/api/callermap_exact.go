@@ -1658,6 +1658,18 @@ func unavailableCallerPartitionProgress(
 	result.SucceededPairCount = progress.SucceededCount
 	result.RefusedPairCount = progress.RefusedCount
 	if read.Admission != nil && read.Admission.PairCount >= progress.SettledCount {
+		result.Refusals = make([]CallerMapRefusalSummary, len(read.Admission.Refusals))
+		for index, summary := range read.Admission.Refusals {
+			result.Refusals[index] = CallerMapRefusalSummary{
+				Stage:          summary.Refusal.Stage,
+				GenerationKind: summary.Refusal.GenerationKind,
+				Classification: summary.Refusal.Classification,
+				Dimension:      summary.Refusal.Dimension,
+				Observed:       summary.Refusal.Observed,
+				Limit:          summary.Refusal.Limit,
+				OutcomeCount:   summary.OutcomeCount,
+			}
+		}
 		total := read.Admission.PairCount
 		result.TotalPairCount = &total
 		if progress.SettledCount == total {

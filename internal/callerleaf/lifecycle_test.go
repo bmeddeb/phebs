@@ -15,6 +15,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 func testIdentity(t *testing.T) (GenerationIdentity, PairIdentity) {
@@ -512,7 +513,12 @@ func TestSourceBlobBudgetIsIndependentAndPreReadBounded(t *testing.T) {
 	if err := stage.ObserveSourceBlob(MaxSourceBlobBytesPerPair); err != nil {
 		t.Fatalf("exact source-byte cap: %v", err)
 	}
-	if err := stage.ObserveSourceBlob(1); !errors.Is(err, ErrLimit) {
+	err = stage.ObserveSourceBlob(1)
+	var measurement *pipelinerefusal.Measurement
+	if !errors.Is(err, ErrLimit) || !errors.As(err, &measurement) ||
+		measurement.Dimension != pipelinerefusal.DimensionCallerPairSourceBytes ||
+		measurement.Observed != MaxSourceBlobBytesPerPair+1 ||
+		measurement.Limit != MaxSourceBlobBytesPerPair {
 		t.Fatalf("source-byte cap+1 = %v, want ErrLimit", err)
 	}
 }

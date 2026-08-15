@@ -16,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -29,6 +30,7 @@ const (
 	callerMapCursorLimit      = 16 << 10
 	callerMapBuildAttempts    = 3
 	callerMapExtractorVersion = "1.3.0"
+	callerMapMaxRefusals      = 32
 )
 
 // CallerMapService is the shared, transport-neutral exact-caller read engine.
@@ -162,11 +164,24 @@ type CallerMapRecordCounts struct {
 // prove partial progress before admission has durably fixed the denominator,
 // but must not be presented as a complete generation.
 type CallerMapPartitionProgress struct {
-	State              string `json:"state" enum:"complete,partial,unavailable"`
-	SettledPairCount   int    `json:"settled_pair_count"`
-	SucceededPairCount int    `json:"succeeded_pair_count"`
-	RefusedPairCount   int    `json:"refused_pair_count"`
-	TotalPairCount     *int   `json:"total_pair_count,omitempty"`
+	State              string                    `json:"state" enum:"complete,partial,unavailable"`
+	SettledPairCount   int                       `json:"settled_pair_count"`
+	SucceededPairCount int                       `json:"succeeded_pair_count"`
+	RefusedPairCount   int                       `json:"refused_pair_count"`
+	TotalPairCount     *int                      `json:"total_pair_count,omitempty"`
+	Refusals           []CallerMapRefusalSummary `json:"refusals,omitempty" maxItems:"32"`
+}
+
+// CallerMapRefusalSummary exposes only the closed source-free refusal scalar
+// and the number of immutable pair outcomes represented by it.
+type CallerMapRefusalSummary struct {
+	Stage          pipelinerefusal.Stage          `json:"stage"`
+	GenerationKind pipelinerefusal.GenerationKind `json:"generation_kind"`
+	Classification pipelinerefusal.Classification `json:"classification"`
+	Dimension      pipelinerefusal.Dimension      `json:"dimension"`
+	Observed       int64                          `json:"observed"`
+	Limit          int64                          `json:"limit"`
+	OutcomeCount   int                            `json:"outcome_count"`
 }
 
 // AnalysisScopeProjection names the repository search/local-evidence scope
@@ -239,9 +254,29 @@ func validAnalysisScopeProjection(scope AnalysisScopeProjection) bool {
 func validCallerPartitionProgress(progress *CallerMapPartitionProgress) bool {
 	if progress == nil || progress.SettledPairCount < 0 ||
 		progress.SucceededPairCount < 0 || progress.RefusedPairCount < 0 ||
+		len(progress.Refusals) > callerMapMaxRefusals ||
 		progress.SucceededPairCount > progress.SettledPairCount ||
 		progress.RefusedPairCount !=
 			progress.SettledPairCount-progress.SucceededPairCount {
+		return false
+	}
+	refusalOutcomes := 0
+	for _, summary := range progress.Refusals {
+		receipt := pipelinerefusal.Receipt{
+			Schema: pipelinerefusal.Schema, Stage: summary.Stage,
+			GenerationKind: summary.GenerationKind,
+			Classification: summary.Classification, Dimension: summary.Dimension,
+			Observed: summary.Observed, Limit: summary.Limit,
+		}
+		if pipelinerefusal.Validate(receipt) != nil ||
+			receipt.GenerationKind != pipelinerefusal.GenerationCaller ||
+			summary.OutcomeCount < 0 ||
+			summary.OutcomeCount > progress.RefusedPairCount-refusalOutcomes {
+			return false
+		}
+		refusalOutcomes += summary.OutcomeCount
+	}
+	if len(progress.Refusals) > 0 && refusalOutcomes != progress.RefusedPairCount {
 		return false
 	}
 	switch progress.State {

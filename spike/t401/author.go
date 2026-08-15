@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -791,6 +792,42 @@ func FrozenSemanticGoFixture(profile Profile, family string, ordinal uint64) (st
 		start = end
 	}
 	return "", nil, errors.New("T40.1 semantic Go fixture family is unknown")
+}
+
+// FrozenStructuralGoFixture returns one exact baseline-A structural Go input
+// without authoring the two-million-owner repository.
+func FrozenStructuralGoFixture(profile Profile, ordinal uint64) (string, []byte, error) {
+	if profile.Name != StructuralProfileName || profile.Kind != "structural" || profile.Scale != "frozen" {
+		return "", nil, errors.New("T40.1 structural Go fixture requires the frozen structural profile")
+	}
+	inputs := profile.Shape.Cells * profile.Shape.EligibleGoPathsPerCell
+	if ordinal >= inputs {
+		return "", nil, errors.New("T40.1 structural Go fixture ordinal is outside its family")
+	}
+	content, err := goContent(profile, "metadata_reused_go", ordinal, false)
+	if err != nil {
+		return "", nil, err
+	}
+	cell := ordinal / profile.Shape.EligibleGoPathsPerCell
+	offset := ordinal % profile.Shape.EligibleGoPathsPerCell
+	return fmt.Sprintf(
+		"structural/cells/b%03d/c%05d/f%03d.go", cell/100, cell, offset,
+	), content, nil
+}
+
+// FrozenCallerControlFixture returns the exact committed go.mod selected by
+// the caller candidate policy for either frozen profile.
+func FrozenCallerControlFixture(profile Profile) (string, []byte, error) {
+	if profile.Scale != "frozen" ||
+		(profile.Kind != "structural" && profile.Kind != "semantic") {
+		return "", nil, errors.New("T40.1 caller control fixture requires a frozen profile")
+	}
+	for _, control := range frozenControls {
+		if control.Path == "go.mod" {
+			return control.Path, slices.Clone(control.Content), nil
+		}
+	}
+	return "", nil, errors.New("T40.1 frozen caller control fixture is absent")
 }
 
 func idlContent(profile Profile, family TemplateFamily, ordinal uint64) ([]byte, error) {

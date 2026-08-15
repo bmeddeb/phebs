@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -144,7 +145,10 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 	outcomes, err := s.ListCallerLeafOutcomes(ctx, generation)
 	if err != nil || len(outcomes) != 2 ||
 		outcomes[0].Disposition != store.CallerLeafSucceeded ||
-		outcomes[1].Disposition != store.CallerLeafTerminalGenerationRefusal {
+		outcomes[1].Disposition != store.CallerLeafTerminalGenerationRefusal ||
+		outcomes[1].Refusal == nil ||
+		outcomes[1].Refusal.GenerationKind != pipelinerefusal.GenerationCaller ||
+		outcomes[1].Refusal.Classification != pipelinerefusal.ClassificationUnknown {
 		t.Fatalf("outcomes = %+v, %v", outcomes, err)
 	}
 	progress, err = s.GetCallerLeafOutcomeProgress(ctx, generation)
@@ -187,7 +191,9 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 	admission, err := s.GetCallerGenerationAdmission(ctx, generation)
 	if err != nil || admission.PairCount != 2 || admission.ArtifactCount != 1 ||
 		admission.ResultCount != 1 || admission.AbstentionCount != 1 ||
-		admission.CanonicalBytes != 256 || admission.StagingBytes != 256 {
+		admission.CanonicalBytes != 256 || admission.StagingBytes != 256 ||
+		len(admission.Refusals) != 1 || admission.Refusals[0].OutcomeCount != 1 ||
+		admission.Refusals[0].Refusal.Classification != pipelinerefusal.ClassificationUnknown {
 		t.Fatalf("admission = %+v, %v", admission, err)
 	}
 

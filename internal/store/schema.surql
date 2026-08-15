@@ -336,6 +336,7 @@ DEFINE FIELD OVERWRITE leaf_prefix ON caller_leaf_outcome TYPE string;
 DEFINE FIELD OVERWRITE disposition ON caller_leaf_outcome TYPE string
     ASSERT $value INSIDE ['succeeded', 'terminal_generation_refusal'];
 DEFINE FIELD OVERWRITE receipt ON caller_leaf_outcome TYPE option<object>;
+DEFINE FIELD OVERWRITE refusal ON caller_leaf_outcome TYPE option<object>;
 DEFINE FIELD OVERWRITE writer_schema ON caller_leaf_outcome TYPE string
     ASSERT $value = 'phebs-caller-leaf-store-v1';
 DEFINE FIELD OVERWRITE recorded_at ON caller_leaf_outcome TYPE datetime;
@@ -363,6 +364,7 @@ DEFINE FIELD OVERWRITE staging_bytes ON caller_generation_admission TYPE int
     ASSERT $value >= 0;
 DEFINE FIELD OVERWRITE peak_open_files ON caller_generation_admission TYPE int
     ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE refusals ON caller_generation_admission TYPE option<array<object>>;
 DEFINE FIELD OVERWRITE writer_schema ON caller_generation_admission TYPE string
     ASSERT $value = 'phebs-caller-leaf-store-v1';
 DEFINE FIELD OVERWRITE recorded_at ON caller_generation_admission TYPE datetime;

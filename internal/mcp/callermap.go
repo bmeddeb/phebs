@@ -314,6 +314,25 @@ func callerMapPartitionProgressOutputSchema() map[string]any {
 			"succeeded_pair_count": map[string]any{"type": "integer"},
 			"refused_pair_count":   map[string]any{"type": "integer"},
 			"total_pair_count":     map[string]any{"type": "integer"},
+			"refusals": map[string]any{
+				"type": "array", "maxItems": 32,
+				"items": map[string]any{
+					"type": "object", "additionalProperties": false,
+					"required": []string{
+						"stage", "generation_kind", "classification", "dimension",
+						"observed", "limit", "outcome_count",
+					},
+					"properties": map[string]any{
+						"stage":           map[string]any{"type": "string"},
+						"generation_kind": map[string]any{"type": "string"},
+						"classification":  map[string]any{"type": "string"},
+						"dimension":       map[string]any{"type": "string"},
+						"observed":        map[string]any{"type": "integer"},
+						"limit":           map[string]any{"type": "integer"},
+						"outcome_count":   map[string]any{"type": "integer"},
+					},
+				},
+			},
 		},
 	}
 }

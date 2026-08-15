@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -1357,7 +1358,12 @@ func TestWorkerStopsContentWorkAfterFirstAggregateCrossing(t *testing.T) {
 	}
 	if len(harness.state.outcomes) != 3 ||
 		harness.state.outcomes[1].Disposition != store.CallerLeafSucceeded ||
-		harness.state.outcomes[2].Disposition != store.CallerLeafTerminalGenerationRefusal {
+		harness.state.outcomes[2].Disposition != store.CallerLeafTerminalGenerationRefusal ||
+		harness.state.outcomes[2].Refusal == nil ||
+		harness.state.outcomes[2].Refusal.Stage != pipelinerefusal.StageCallerGenerationAdmission ||
+		harness.state.outcomes[2].Refusal.Dimension != pipelinerefusal.DimensionCallerGenerationResults ||
+		harness.state.outcomes[2].Refusal.Observed != callerleaf.MaxAggregateResultRecords+1 ||
+		harness.state.outcomes[2].Refusal.Limit != callerleaf.MaxAggregateResultRecords {
 		t.Fatalf("bounded aggregate outcomes = %+v", harness.state.outcomes)
 	}
 	if harness.state.admission == nil ||

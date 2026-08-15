@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -43,6 +45,7 @@ const (
 	maxCallerGenerationCanonical    = int64(512 << 20)
 	maxCallerGenerationStaging      = int64(520 << 20)
 	maxCallerPeakOpenFiles          = 5
+	maxCallerRefusalSummaries       = 32
 )
 
 var ErrInvalidCallerLeafState = errors.New("invalid caller-leaf state")
@@ -200,8 +203,20 @@ type CallerLeafOutcome struct {
 	Pair         CallerLeafPair             `json:"pair"`
 	Disposition  CallerLeafDisposition      `json:"disposition"`
 	Receipt      *CallerLeafArtifactReceipt `json:"receipt,omitempty"`
+	Refusal      *pipelinerefusal.Receipt   `json:"refusal,omitempty"`
 	WriterSchema string                     `json:"writer_schema"`
 	RecordedAt   time.Time                  `json:"recorded_at"`
+}
+
+// CallerGenerationRefusalSummary is a bounded aggregation over exact typed
+// pair refusals. OutcomeCount normally counts pair outcomes carrying the same
+// closed receipt. When more than 32 distinct receipts exist, the last slot is
+// an explicit generation-admission unknown that counts the omitted groups;
+// zero is reserved for a generation-wide aggregate refusal reached by the
+// final successful pair.
+type CallerGenerationRefusalSummary struct {
+	Refusal      pipelinerefusal.Receipt `json:"refusal"`
+	OutcomeCount int                     `json:"outcome_count"`
 }
 
 // CallerLeafOutcomeProgress is the bounded scalar projection of all durable
@@ -236,6 +251,7 @@ type CallerGenerationAdmission struct {
 	CanonicalBytes  int64                                `json:"canonical_bytes"`
 	StagingBytes    int64                                `json:"staging_bytes"`
 	PeakOpenFiles   int                                  `json:"peak_open_files"`
+	Refusals        []CallerGenerationRefusalSummary     `json:"refusals"`
 	WriterSchema    string                               `json:"writer_schema"`
 	RecordedAt      time.Time                            `json:"recorded_at"`
 }
@@ -465,7 +481,7 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 	}
 	switch outcome.Disposition {
 	case CallerLeafSucceeded:
-		if outcome.Receipt == nil {
+		if outcome.Receipt == nil || outcome.Refusal != nil {
 			return outcome, errors.New("successful caller leaf requires an artifact receipt")
 		}
 		if err := validateCallerReceipt(*outcome.Receipt); err != nil {
@@ -487,6 +503,22 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 		if outcome.Receipt != nil {
 			return outcome, errors.New("terminal caller leaf cannot carry an artifact receipt")
 		}
+		if outcome.Refusal == nil {
+			unknown := pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageCallerPairExecution,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationUnknown,
+				Dimension:      pipelinerefusal.DimensionUnknown,
+			}
+			outcome.Refusal = &unknown
+		}
+		if pipelinerefusal.Validate(*outcome.Refusal) != nil ||
+			outcome.Refusal.GenerationKind != pipelinerefusal.GenerationCaller {
+			return outcome, errors.New("terminal caller leaf has an invalid refusal")
+		}
+		owned := *outcome.Refusal
+		outcome.Refusal = &owned
 	default:
 		return outcome, errors.New("caller leaf disposition is not in the frozen set")
 	}
@@ -532,6 +564,7 @@ LET $owned = (SELECT id FROM type::record($job_id)
 		AND lease_token = $lease AND claimed_by = $claimed_by LIMIT 1)[0].id;
 LET $current = (SELECT * FROM $outcome_rid)[0];
 LET $normalized_receipt = IF $receipt = NULL THEN NONE ELSE $receipt END;
+LET $normalized_refusal = IF $refusal = NULL THEN NONE ELSE $refusal END;
 LET $authority_ok = $writer_ok AND $owned != NONE AND $repo != NONE
 	AND ($repo.deleting = NONE OR $repo.deleting = false)
 	AND $repo.indexed_commit_hash = $head_commit
@@ -559,6 +592,7 @@ LET $same = $current != NONE
 	AND $current.leaf_prefix = $leaf_prefix
 	AND $current.disposition = $disposition
 	AND $current.receipt = $normalized_receipt
+	AND $current.refusal = $normalized_refusal
 	AND $current.writer_schema = $writer_schema;
 LET $written = IF $authority_ok = false THEN []
 	ELSE IF $current != NONE AND $same = false THEN []
@@ -572,6 +606,7 @@ LET $written = IF $authority_ok = false THEN []
 		leaf_prefix: $leaf_prefix,
 		disposition: $disposition,
 		receipt: $normalized_receipt,
+		refusal: $normalized_refusal,
 		writer_schema: $writer_schema,
 		recorded_at: time::now()
 	} RETURN AFTER) END;
@@ -630,6 +665,7 @@ func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome 
 		"leaf_prefix":                prepared.Pair.LeafPrefix,
 		"disposition":                prepared.Disposition,
 		"receipt":                    prepared.Receipt,
+		"refusal":                    prepared.Refusal,
 		"writer_schema":              CallerLeafWriterSchema,
 	})
 	if err != nil {
@@ -648,6 +684,7 @@ func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome 
 func validatePersistedCallerLeafOutcome(row callerLeafOutcomeRec) (CallerLeafOutcome, error) {
 	originalGenerationDigest := row.Generation.Digest
 	originalPairDigest := row.Pair.PairDigest
+	originalRefusal := row.Refusal
 	prepared, err := prepareCallerLeafOutcome(row.CallerLeafOutcome)
 	if err != nil {
 		return CallerLeafOutcome{}, err
@@ -657,6 +694,7 @@ func validatePersistedCallerLeafOutcome(row callerLeafOutcomeRec) (CallerLeafOut
 		row.GenerationDigest != prepared.Generation.Digest ||
 		row.Repository != prepared.Generation.Repository ||
 		row.Domain != prepared.Pair.Domain || row.LeafPrefix != prepared.Pair.LeafPrefix ||
+		prepared.Disposition == CallerLeafTerminalGenerationRefusal && originalRefusal == nil ||
 		row.WriterSchema != CallerLeafWriterSchema || row.RecordedAt.IsZero() {
 		return CallerLeafOutcome{}, ErrInvalidCallerLeafState
 	}
@@ -814,7 +852,9 @@ func prepareCallerGenerationAdmission(
 	if admission.PeakOpenFiles < 0 || admission.PeakOpenFiles > maxCallerPeakOpenFiles {
 		return admission, nil, errors.New("peak open files is outside its bound")
 	}
+	admission.Refusals = nil
 	summaries := make([]callerLeafOutcomeSummary, len(outcomes))
+	refusals := make(map[string]CallerGenerationRefusalSummary)
 	allSucceeded := true
 	for index := range outcomes {
 		if outcomes[index].Generation != admission.Generation || outcomes[index].Pair != preparedPairs[index] {
@@ -827,6 +867,12 @@ func prepareCallerGenerationAdmission(
 			Disposition: outcomes[index].Disposition,
 		}
 		if outcomes[index].Disposition != CallerLeafSucceeded {
+			if outcomes[index].Refusal == nil ||
+				pipelinerefusal.Validate(*outcomes[index].Refusal) != nil ||
+				outcomes[index].Refusal.GenerationKind != pipelinerefusal.GenerationCaller {
+				return admission, nil, fmt.Errorf("outcome %d has no valid caller refusal", index)
+			}
+			addCallerRefusalSummary(refusals, *outcomes[index].Refusal, 1)
 			allSucceeded = false
 			continue
 		}
@@ -872,6 +918,17 @@ func prepareCallerGenerationAdmission(
 		admission.AbstentionCount > maxCallerGenerationAbstentions ||
 		admission.CanonicalBytes > maxCallerGenerationCanonical ||
 		admission.StagingBytes > maxCallerGenerationStaging
+	if allSucceeded && aggregateExceeded {
+		refusal := callerAggregateRefusal(admission)
+		if refusal == nil {
+			return admission, nil, errors.New("caller aggregate refusal has no dimension")
+		}
+		addCallerRefusalSummary(refusals, *refusal, 0)
+	}
+	admission.Refusals = callerRefusalSummaries(refusals)
+	if len(admission.Refusals) > maxCallerRefusalSummaries {
+		return admission, nil, errors.New("caller refusal summary exceeds its bound")
+	}
 	switch admission.Disposition {
 	case CallerGenerationAdmitted:
 		if !allSucceeded {
@@ -880,11 +937,17 @@ func prepareCallerGenerationAdmission(
 		if aggregateExceeded {
 			return admission, nil, errors.New("admitted caller generation exceeds an aggregate bound")
 		}
+		if len(admission.Refusals) != 0 {
+			return admission, nil, errors.New("admitted caller generation carries a refusal")
+		}
 	case CallerGenerationTerminalGenerationRefusal:
 		if allSucceeded && !aggregateExceeded {
 			return admission, nil, errors.New(
 				"terminal caller generation has neither a terminal pair nor an aggregate refusal",
 			)
+		}
+		if len(admission.Refusals) == 0 {
+			return admission, nil, errors.New("terminal caller generation lacks a typed refusal")
 		}
 	default:
 		return admission, nil, errors.New("caller generation admission disposition is not in the frozen set")
@@ -900,6 +963,88 @@ func prepareCallerGenerationAdmission(
 	admission.WriterSchema = CallerLeafWriterSchema
 	admission.RecordedAt = time.Time{}
 	return admission, summaries, nil
+}
+
+func addCallerRefusalSummary(
+	values map[string]CallerGenerationRefusalSummary,
+	refusal pipelinerefusal.Receipt,
+	outcomes int,
+) {
+	key := fmt.Sprintf("%s\x00%s\x00%s\x00%s\x00%d\x00%d",
+		refusal.Stage, refusal.GenerationKind, refusal.Classification,
+		refusal.Dimension, refusal.Observed, refusal.Limit)
+	current := values[key]
+	current.Refusal = refusal
+	current.OutcomeCount += outcomes
+	values[key] = current
+}
+
+func callerRefusalSummaries(
+	values map[string]CallerGenerationRefusalSummary,
+) []CallerGenerationRefusalSummary {
+	result := make([]CallerGenerationRefusalSummary, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	slices.SortFunc(result, func(left, right CallerGenerationRefusalSummary) int {
+		return strings.Compare(callerRefusalSortKey(left), callerRefusalSortKey(right))
+	})
+	if len(result) > maxCallerRefusalSummaries {
+		overflowOutcomes := 0
+		for _, value := range result[maxCallerRefusalSummaries-1:] {
+			overflowOutcomes += value.OutcomeCount
+		}
+		result = append(result[:maxCallerRefusalSummaries-1], CallerGenerationRefusalSummary{
+			Refusal: pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationUnknown,
+				Dimension:      pipelinerefusal.DimensionUnknown,
+			},
+			OutcomeCount: overflowOutcomes,
+		})
+		slices.SortFunc(result, func(left, right CallerGenerationRefusalSummary) int {
+			return strings.Compare(callerRefusalSortKey(left), callerRefusalSortKey(right))
+		})
+	}
+	return result
+}
+
+func callerRefusalSortKey(value CallerGenerationRefusalSummary) string {
+	return fmt.Sprintf("%s\x00%s\x00%s\x00%s\x00%020d\x00%020d",
+		value.Refusal.Stage, value.Refusal.GenerationKind,
+		value.Refusal.Classification, value.Refusal.Dimension,
+		value.Refusal.Observed, value.Refusal.Limit)
+}
+
+func callerAggregateRefusal(
+	admission CallerGenerationAdmission,
+) *pipelinerefusal.Receipt {
+	values := []struct {
+		dimension pipelinerefusal.Dimension
+		observed  int64
+		limit     int64
+	}{
+		{pipelinerefusal.DimensionCallerGenerationResults, int64(admission.ResultCount), maxCallerGenerationResults},
+		{pipelinerefusal.DimensionCallerGenerationAbstentions, int64(admission.AbstentionCount), maxCallerGenerationAbstentions},
+		{pipelinerefusal.DimensionCallerGenerationCanonicalBytes, admission.CanonicalBytes, maxCallerGenerationCanonical},
+		{pipelinerefusal.DimensionCallerGenerationStagingBytes, admission.StagingBytes, maxCallerGenerationStaging},
+	}
+	for _, value := range values {
+		if value.observed > value.limit {
+			result := pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      value.dimension,
+				Observed:       value.observed, Limit: value.limit,
+			}
+			return &result
+		}
+	}
+	return nil
 }
 
 // ValidateCallerGenerationAdmission recomputes every immutable aggregate field
@@ -918,6 +1063,7 @@ func ValidateCallerGenerationAdmission(
 	input.AbstentionCount = 0
 	input.CanonicalBytes = 0
 	input.StagingBytes = 0
+	input.Refusals = nil
 	input.WriterSchema = ""
 	input.RecordedAt = time.Time{}
 	expected, _, err := prepareCallerGenerationAdmission(input, pairs, outcomes)
@@ -934,6 +1080,7 @@ func ValidateCallerGenerationAdmission(
 		admission.CanonicalBytes != expected.CanonicalBytes ||
 		admission.StagingBytes != expected.StagingBytes ||
 		admission.PeakOpenFiles != expected.PeakOpenFiles ||
+		!slices.Equal(admission.Refusals, expected.Refusals) ||
 		admission.WriterSchema != expected.WriterSchema {
 		return ErrInvalidCallerLeafState
 	}
@@ -1015,6 +1162,7 @@ LET $same = $current != NONE
 	AND $current.canonical_bytes = $canonical_bytes
 	AND $current.staging_bytes = $staging_bytes
 	AND $current.peak_open_files = $peak_open_files
+	AND $current.refusals = $refusals
 	AND $current.writer_schema = $writer_schema;
 LET $written = IF $authority_ok = false THEN []
 	ELSE IF $current != NONE AND $same = false THEN []
@@ -1032,6 +1180,7 @@ LET $written = IF $authority_ok = false THEN []
 		canonical_bytes: $canonical_bytes,
 		staging_bytes: $staging_bytes,
 		peak_open_files: $peak_open_files,
+		refusals: $refusals,
 		writer_schema: $writer_schema,
 		recorded_at: time::now()
 	} RETURN AFTER) END;
@@ -1060,6 +1209,7 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 	admission.AbstentionCount = 0
 	admission.CanonicalBytes = 0
 	admission.StagingBytes = 0
+	admission.Refusals = nil
 	prepared, summaries, err := prepareCallerGenerationAdmission(admission, pairs, outcomes)
 	if err != nil {
 		return fmt.Errorf("record caller generation admission: %w: %v", ErrInvalidCallerLeafState, err)
@@ -1099,6 +1249,7 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 			"canonical_bytes":            prepared.CanonicalBytes,
 			"staging_bytes":              prepared.StagingBytes,
 			"peak_open_files":            prepared.PeakOpenFiles,
+			"refusals":                   prepared.Refusals,
 			"writer_schema":              CallerLeafWriterSchema,
 		})
 	if err != nil {
@@ -1136,6 +1287,23 @@ func validatePersistedCallerGenerationAdmission(row callerGenerationAdmissionRec
 		row.Disposition != CallerGenerationTerminalGenerationRefusal {
 		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
 	}
+	refusalOutcomes := 0
+	if len(row.Refusals) > maxCallerRefusalSummaries {
+		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+	}
+	for index, summary := range row.Refusals {
+		if pipelinerefusal.Validate(summary.Refusal) != nil ||
+			summary.Refusal.GenerationKind != pipelinerefusal.GenerationCaller ||
+			summary.OutcomeCount < 0 || summary.OutcomeCount > row.PairCount-refusalOutcomes ||
+			index > 0 && !callerRefusalSummaryLess(row.Refusals[index-1], summary) {
+			return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+		}
+		refusalOutcomes += summary.OutcomeCount
+	}
+	if row.Disposition == CallerGenerationAdmitted && len(row.Refusals) != 0 ||
+		row.Disposition == CallerGenerationTerminalGenerationRefusal && len(row.Refusals) == 0 {
+		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+	}
 	if row.Disposition == CallerGenerationAdmitted &&
 		(row.ResultCount > maxCallerGenerationResults ||
 			row.AbstentionCount > maxCallerGenerationAbstentions ||
@@ -1146,6 +1314,13 @@ func validatePersistedCallerGenerationAdmission(row callerGenerationAdmissionRec
 	row.Generation = preparedGeneration
 	row.RecordedAt = row.RecordedAt.UTC()
 	return row.CallerGenerationAdmission, nil
+}
+
+func callerRefusalSummaryLess(
+	left,
+	right CallerGenerationRefusalSummary,
+) bool {
+	return callerRefusalSortKey(left) < callerRefusalSortKey(right)
 }
 
 func (s *Surreal) GetCallerGenerationAdmission(ctx context.Context, generation CallerGenerationIdentity) (*CallerGenerationAdmission, error) {

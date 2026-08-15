@@ -18,6 +18,7 @@ import (
 	"time"
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -399,6 +400,10 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
 	}
+	callerProbe, callerErr := inspector.callerGenerationTerminal(ctx, profile)
+	if callerErr != nil {
+		return privateProfileSnapshot{}, callerProbe, callerErr
+	}
 	publication, err := relationshippublication.OpenCurrent(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
@@ -491,6 +496,66 @@ func (inspector *profileInspector) inspectWithProgress(
 			errors.New("T40.13 extraction partitions have not converged")
 	}
 	return result, convergenceProbe("complete", snapshotAuthority(result)), nil
+}
+
+func (inspector *profileInspector) callerGenerationTerminal(
+	ctx context.Context,
+	profile PreparedProfile,
+) (privateConvergenceProbe, error) {
+	query := url.Values{
+		"protocol": {"protobuf"}, "repository": {profile.RepositoryName},
+		"lineage": {"t401-neutral"}, "operation": {"/neutral.Service/Ping"},
+		"page_size": {"1"},
+	}
+	var page apiresponse.CallerMapPage
+	if err := inspector.get(ctx, profile, "/api/contract_callers?"+query.Encode(), &page); err != nil {
+		return convergenceProbe("caller_generation"), err
+	}
+	return classifyCallerGeneration(page)
+}
+
+func classifyCallerGeneration(
+	page apiresponse.CallerMapPage,
+) (privateConvergenceProbe, error) {
+	if page.Generation == nil {
+		return convergenceProbe("caller_generation"), nil
+	}
+	generation := page.Generation
+	probe := convergenceProbe(
+		"caller_generation", generation.State, generation.GenerationDigest,
+		generation.PartitionProgress,
+	)
+	if generation.State != "failed" {
+		return probe, nil
+	}
+	progress := generation.PartitionProgress
+	if progress == nil || progress.State != "complete" ||
+		progress.TotalPairCount == nil ||
+		*progress.TotalPairCount != progress.SettledPairCount ||
+		progress.RefusedPairCount <= 0 ||
+		progress.SucceededPairCount+progress.RefusedPairCount != progress.SettledPairCount {
+		return probe, errCallerGenerationTerminal
+	}
+	refused := 0
+	for _, refusal := range progress.Refusals {
+		refused += refusal.OutcomeCount
+		if refusal.Stage == pipelinerefusal.StageCallerGenerationAdmission &&
+			refusal.GenerationKind == pipelinerefusal.GenerationCaller &&
+			refusal.Classification == pipelinerefusal.ClassificationLimit &&
+			refusal.Dimension == pipelinerefusal.DimensionCallerGenerationAbstentions &&
+			refusal.Observed > refusal.Limit &&
+			refusal.Limit == callerleaf.MaxAggregateAbstentionRecords {
+			if refused > progress.RefusedPairCount {
+				return probe, errCallerGenerationTerminal
+			}
+			continue
+		}
+		return probe, errCallerGenerationTerminal
+	}
+	if len(progress.Refusals) == 0 || refused != progress.RefusedPairCount {
+		return probe, errCallerGenerationTerminal
+	}
+	return probe, errCallerGenerationBoundRefusal
 }
 
 func observationProgressConverged(progress observationpublication.Progress, sourceDigest string) bool {

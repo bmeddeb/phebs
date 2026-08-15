@@ -169,7 +169,7 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:e2b2b80c7ebb5eeece8c6179b0e21a1b5676dee1ec3a481487f1984c93fbefc2",
 		"get_contract_operation":     "sha256:3a8bfc0a42ac27ffbfbd3e546892924a6cd8ec4ef6ab1fe7bb44a95ae4881af9",
-		"list_operation_callers":     "sha256:a9e05e3f4b02e4710bf02b37f568a6cb07cabe697d99ec71f9a3e9985eff5b74",
+		"list_operation_callers":     "sha256:3d021eb5c2c3c1ff7b513bcd3c65bc63d5d104229fce211bf0a27959989e1f45",
 		"compare_operation_callers":  "sha256:a6df9c83577b74080b819b88ee6c271fa7a3277cd16324cd8e025542a6edc22d",
 	}
 	for _, test := range []struct {

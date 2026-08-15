@@ -47,20 +47,22 @@ const (
 var ErrGateStopped = errors.New("T40.13 exact mechanics gate stopped")
 
 var (
-	errReviewCeiling              = errors.New("T40.13 frozen review ceiling crossed")
-	errTotalWallDeadline          = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
-	errExactOracle                = errors.New("T40.13 exact oracle refused")
-	errDirectRecovery             = errors.New("T40.13 direct recovery refused")
-	errProductionPressure         = errors.New("T40.13 production pressure gate refused")
-	errConvergenceDeadline        = errors.New("T40.13 frozen convergence deadline expired")
-	errConvergenceServerExit      = errors.New("T40.13 server exited during convergence")
-	errConvergenceTimeline        = errors.New("T40.13 convergence transition limit exceeded")
-	errRepositoryIndexTerminal    = errors.New("T40.13 repository index job terminated before publication")
-	errObservationBoundRefusal    = errors.New("T40.13 observation planning refused a frozen production bound")
-	errObservationTerminal        = errors.New("T40.13 observation planning terminated before publication")
-	errExtractionBoundRefusal     = errors.New("T40.13 extraction planning refused a frozen production bound")
-	errExtractionJobTerminal      = errors.New("T40.13 extraction job terminated before publication")
-	errExtractionScheduleTerminal = errors.New("T40.13 extraction schedule settled with failed partitions")
+	errReviewCeiling                = errors.New("T40.13 frozen review ceiling crossed")
+	errTotalWallDeadline            = fmt.Errorf("T40.13 frozen total-wall deadline crossed: %w", errReviewCeiling)
+	errExactOracle                  = errors.New("T40.13 exact oracle refused")
+	errDirectRecovery               = errors.New("T40.13 direct recovery refused")
+	errProductionPressure           = errors.New("T40.13 production pressure gate refused")
+	errConvergenceDeadline          = errors.New("T40.13 frozen convergence deadline expired")
+	errConvergenceServerExit        = errors.New("T40.13 server exited during convergence")
+	errConvergenceTimeline          = errors.New("T40.13 convergence transition limit exceeded")
+	errRepositoryIndexTerminal      = errors.New("T40.13 repository index job terminated before publication")
+	errObservationBoundRefusal      = errors.New("T40.13 observation planning refused a frozen production bound")
+	errObservationTerminal          = errors.New("T40.13 observation planning terminated before publication")
+	errExtractionBoundRefusal       = errors.New("T40.13 extraction planning refused a frozen production bound")
+	errExtractionJobTerminal        = errors.New("T40.13 extraction job terminated before publication")
+	errExtractionScheduleTerminal   = errors.New("T40.13 extraction schedule settled with failed partitions")
+	errCallerGenerationBoundRefusal = errors.New("T40.13 caller generation refused a frozen production bound")
+	errCallerGenerationTerminal     = errors.New("T40.13 caller generation terminated before publication")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -413,6 +415,16 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		result = stoppedClassification{
 			class: "pipeline", code: "extraction_schedule_terminal",
 			decision: "unclassified", reason: "extraction_schedule_terminal",
+		}
+	case errors.Is(cause, errCallerGenerationBoundRefusal):
+		result = stoppedClassification{
+			class: "pipeline", code: "caller_generation_production_bound_refused",
+			decision: "reduce", reason: "caller_generation_production_bound_refused", substantiated: true,
+		}
+	case errors.Is(cause, errCallerGenerationTerminal):
+		result = stoppedClassification{
+			class: "pipeline", code: "caller_generation_terminal",
+			decision: "unclassified", reason: "caller_generation_terminal",
 		}
 	case measurementErr != nil:
 		result = stoppedClassification{
@@ -1517,7 +1529,9 @@ func classifyConvergenceInspection(err error) convergenceInspectionDiagnostic {
 		return convergenceInspectionDiagnostic{class: "terminal"}
 	}
 	if errors.Is(err, errExtractionBoundRefusal) || errors.Is(err, errExtractionJobTerminal) ||
-		errors.Is(err, errExtractionScheduleTerminal) {
+		errors.Is(err, errExtractionScheduleTerminal) ||
+		errors.Is(err, errCallerGenerationBoundRefusal) ||
+		errors.Is(err, errCallerGenerationTerminal) {
 		return convergenceInspectionDiagnostic{class: "terminal"}
 	}
 	var statusErr *privateHTTPStatusError
@@ -1726,6 +1740,14 @@ func (run *execution) waitSnapshotWithInspection(
 		if errors.Is(inspectErr, errExtractionScheduleTerminal) {
 			run.recordConvergenceWait(profile, revision, label, "extraction_schedule_terminal", limit, started, progress)
 			return privateProfileSnapshot{}, errExtractionScheduleTerminal
+		}
+		if errors.Is(inspectErr, errCallerGenerationBoundRefusal) {
+			run.recordConvergenceWait(profile, revision, label, "caller_generation_bound_refusal", limit, started, progress)
+			return privateProfileSnapshot{}, errCallerGenerationBoundRefusal
+		}
+		if errors.Is(inspectErr, errCallerGenerationTerminal) {
+			run.recordConvergenceWait(profile, revision, label, "caller_generation_terminal", limit, started, progress)
+			return privateProfileSnapshot{}, errCallerGenerationTerminal
 		}
 		if inspectErr == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)

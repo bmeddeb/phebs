@@ -1090,6 +1090,22 @@ catalog, relationship, or correctness authority.
   refusal retention plus terminal diagnostic projection, then run a scoped
   caller-lane attribution gate before selecting reduction or correction. Do
   not raise either caller limit in isolation; Take 19 remains unfrozen.
+- Typed caller refusal retention and terminal diagnostic projection are now
+  implemented. Failed exact Caller Map HTTP/MCP responses expose at most 32
+  source-free summaries over exact pair outcomes; summary overflow becomes an
+  explicit unknown and historical untyped terminal state rebuilds through the
+  existing generation recovery. The scoped production-`ExecutePair` gate runs
+  in about one second and retains
+  `take19-caller-failure-point.json` (`sha256:f320e8f588a4e20e8f553373ae0891d52d2c280c7b13aa10327a1b62cd629304`).
+  Zero resolver descriptors yield one abstention per candidate/protocol:
+  semantic exact output fails only aggregate abstention count at 524,290,
+  while structural exact output has 4,000,002 abstentions and 844,000,368
+  canonical/staging bytes, crossing all three aggregate limits. Per-pair
+  bounds already fit, so neither a count-only increase nor smaller leaves is a
+  valid correction. The next ticket is a versioned compact aggregate
+  no-resolver/no-direct coverage representation with explicit coverage/gaps
+  and complete publication/recovery/lifecycle review. Take 19 remains
+  unfrozen; no exact rerun, freeze, release, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

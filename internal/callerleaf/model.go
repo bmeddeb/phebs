@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
 )
@@ -414,13 +415,45 @@ func (aggregate *AggregateReceipt) Add(receipt Receipt) error {
 	if aggregate == nil {
 		return errors.New("caller aggregate receipt is nil")
 	}
-	if aggregate.PairCount >= MaxExpectedPairs ||
-		aggregate.ArtifactCount >= MaxExpectedPairs ||
-		receipt.ResultCount > MaxAggregateResultRecords-aggregate.ResultCount ||
-		receipt.AbstentionCount > MaxAggregateAbstentionRecords-aggregate.AbstentionCount ||
-		receipt.ContentBytes > MaxAggregateCanonicalBytes-aggregate.CanonicalBytes ||
-		receipt.StagingBytes > MaxAggregateStagingBytes-aggregate.StagingBytes {
-		return ErrLimit
+	if aggregate.PairCount >= MaxExpectedPairs {
+		return callerLimit(
+			pipelinerefusal.DimensionCallerGenerationPairs,
+			int64(aggregate.PairCount)+1, MaxExpectedPairs,
+		)
+	}
+	if aggregate.ArtifactCount >= MaxExpectedPairs {
+		return callerLimit(
+			pipelinerefusal.DimensionCallerGenerationArtifacts,
+			int64(aggregate.ArtifactCount)+1, MaxExpectedPairs,
+		)
+	}
+	if receipt.ResultCount > MaxAggregateResultRecords-aggregate.ResultCount {
+		return callerLimit(
+			pipelinerefusal.DimensionCallerGenerationResults,
+			int64(aggregate.ResultCount)+int64(receipt.ResultCount),
+			MaxAggregateResultRecords,
+		)
+	}
+	if receipt.AbstentionCount > MaxAggregateAbstentionRecords-aggregate.AbstentionCount {
+		return callerLimit(
+			pipelinerefusal.DimensionCallerGenerationAbstentions,
+			int64(aggregate.AbstentionCount)+int64(receipt.AbstentionCount),
+			MaxAggregateAbstentionRecords,
+		)
+	}
+	if receipt.ContentBytes > MaxAggregateCanonicalBytes-aggregate.CanonicalBytes {
+		return callerByteLimit(
+			pipelinerefusal.DimensionCallerGenerationCanonicalBytes,
+			aggregate.CanonicalBytes+receipt.ContentBytes,
+			MaxAggregateCanonicalBytes,
+		)
+	}
+	if receipt.StagingBytes > MaxAggregateStagingBytes-aggregate.StagingBytes {
+		return callerByteLimit(
+			pipelinerefusal.DimensionCallerGenerationStagingBytes,
+			aggregate.StagingBytes+receipt.StagingBytes,
+			MaxAggregateStagingBytes,
+		)
 	}
 	aggregate.PairCount++
 	aggregate.ArtifactCount++
@@ -432,6 +465,22 @@ func (aggregate *AggregateReceipt) Add(receipt Receipt) error {
 		aggregate.PeakOpenFiles = MaxOpenFiles
 	}
 	return nil
+}
+
+func callerLimit(
+	dimension pipelinerefusal.Dimension,
+	observed int64,
+	limit int,
+) error {
+	return pipelinerefusal.Measure(ErrLimit, dimension, observed, int64(limit))
+}
+
+func callerByteLimit(
+	dimension pipelinerefusal.Dimension,
+	observed,
+	limit int64,
+) error {
+	return pipelinerefusal.Measure(ErrLimit, dimension, observed, limit)
 }
 
 func generationDigest(input GenerationIdentity) (string, error) {

@@ -1099,6 +1099,36 @@ gate that classifies all refused pairs and remeasures every aggregate
 dimension. Do not raise caller limits in isolation. Take 19 remains unfrozen
 and Epic 41 remains blocked.
 
+Typed caller attribution and scoped result (2026-08-14): the prerequisite is
+implemented without moving a production bound. Caller pair execution,
+artifact sealing/install, and generation admission now close exact typed
+refusals. Terminal outcomes retain those receipts; terminal admissions expose
+at most 32 canonical source-free summaries through the authorization-first
+exact Caller Map HTTP/MCP progress object. More than 32 distinct measurements
+collapse only the excess summary population into an explicit typed `unknown`;
+exact outcome authority remains intact. Historical admitted rows remain valid,
+while untyped historical terminal state is rejected and rebuilt through the
+existing exact-generation recovery path. The T40.13 inspector now stops as
+soon as complete failed caller progress proves the frozen aggregate-abstention
+refusal and leaves every other terminal shape unclassified.
+
+The retained scoped receipt
+`spike/t4013/take19-caller-failure-point.json` has SHA-256
+`f320e8f588a4e20e8f553373ae0891d52d2c280c7b13aa10327a1b62cd629304`.
+Production `ExecutePair` replay at the first and last input of each frozen
+source family plus every control and both protocols proves equal endpoint
+receipts and that zero resolver descriptors produce one abstention per
+candidate/protocol. Semantic exact output is 524,290 abstentions and
+105,906,544 canonical/staging bytes, failing only the 100,000 aggregate count.
+Structural exact output is 4,000,002 abstentions and 844,000,368
+canonical/staging bytes, failing count by 3,900,002, canonical bytes by
+307,129,456, and staging bytes by 298,740,848. All per-pair bounds fit. This
+rules out both a count-only increase and smaller caller leaves. The next ticket
+must design a versioned compact aggregate no-resolver/no-direct coverage
+representation that preserves candidate coverage and explicit gaps, including
+publication, recovery, lifecycle, and historical compatibility. Take 19
+remains unfrozen and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

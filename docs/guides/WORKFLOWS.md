@@ -176,6 +176,17 @@ total rather than serializing a zero-caller claim. Unknown, hidden, and
 deleting repositories all return `404` before
 caller authority, filesystem bytes, or repository-specific caches are read.
 
+When a `failed` generation has durably completed its caller partitions, its
+partition progress may also include up to 32 source-free refusal summaries.
+Each summary names the closed stage, caller generation kind, classification,
+dimension, observed value, limit, and number of refused pair outcomes it
+represents. An explicit `unknown` summary means the exact outcome receipts were
+more diverse than the bounded projection or a compatibility caller submitted
+a terminal outcome without a typed reason; it must not be interpreted as a
+measured limit. Refusal
+summaries explain unavailable caller authority only. They do not turn partial
+rows into evidence, establish zero callers, or relax any production bound.
+
 Caller Map cursors are opaque, HMAC-authenticated, process-local, and
 snapshot-bound. They bind the normalized query and page size, authorization
 projection, complete generation, manifest, pair set, and monotonic publication

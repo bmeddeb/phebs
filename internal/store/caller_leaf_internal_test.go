@@ -11,6 +11,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 func internalCallerDigest(fill byte) string {
@@ -112,13 +113,49 @@ func TestCallerGenerationAdmissionRetainsTerminalCapPlusOne(t *testing.T) {
 		t.Fatalf("terminal cap+1 receipt: %v", err)
 	}
 	if terminal.ResultCount != maxCallerGenerationResults+1 ||
-		terminal.PairCount != len(pairs) || terminal.ArtifactCount != len(pairs) {
+		terminal.PairCount != len(pairs) || terminal.ArtifactCount != len(pairs) ||
+		len(terminal.Refusals) != 1 || terminal.Refusals[0].OutcomeCount != 0 ||
+		terminal.Refusals[0].Refusal.Stage != pipelinerefusal.StageCallerGenerationAdmission ||
+		terminal.Refusals[0].Refusal.Dimension != pipelinerefusal.DimensionCallerGenerationResults ||
+		terminal.Refusals[0].Refusal.Observed != maxCallerGenerationResults+1 ||
+		terminal.Refusals[0].Refusal.Limit != maxCallerGenerationResults {
 		t.Fatalf("terminal cap+1 aggregate = %+v", terminal)
 	}
 	forged := terminal
 	forged.PairSetDigest = internalCallerDigest('f')
 	if err := ValidateCallerGenerationAdmission(forged, pairs, outcomes); err == nil {
 		t.Fatal("canonical-but-forged admission aggregate was accepted")
+	}
+}
+
+func TestCallerRefusalSummariesBoundDistinctMeasurements(t *testing.T) {
+	values := make(map[string]CallerGenerationRefusalSummary)
+	for index := 0; index < maxCallerRefusalSummaries+5; index++ {
+		addCallerRefusalSummary(values, pipelinerefusal.Receipt{
+			Schema:         pipelinerefusal.Schema,
+			Stage:          pipelinerefusal.StageCallerPairExecution,
+			GenerationKind: pipelinerefusal.GenerationCaller,
+			Classification: pipelinerefusal.ClassificationLimit,
+			Dimension:      pipelinerefusal.DimensionCallerPairAbstentions,
+			Observed:       int64(maxCallerPairAbstentions + 1 + index),
+			Limit:          maxCallerPairAbstentions,
+		}, 1)
+	}
+	summaries := callerRefusalSummaries(values)
+	if len(summaries) != maxCallerRefusalSummaries {
+		t.Fatalf("bounded summaries = %d, want %d", len(summaries), maxCallerRefusalSummaries)
+	}
+	total := 0
+	overflow := 0
+	for _, summary := range summaries {
+		total += summary.OutcomeCount
+		if summary.Refusal.Stage == pipelinerefusal.StageCallerGenerationAdmission &&
+			summary.Refusal.Classification == pipelinerefusal.ClassificationUnknown {
+			overflow += summary.OutcomeCount
+		}
+	}
+	if total != maxCallerRefusalSummaries+5 || overflow != 6 {
+		t.Fatalf("summary population = total %d overflow %d: %+v", total, overflow, summaries)
 	}
 }
 

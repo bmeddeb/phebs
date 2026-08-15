@@ -1542,6 +1542,49 @@ and remeasures aggregate results, abstentions, canonical bytes, and staging
 bytes. Do not raise the per-pair or aggregate limit in isolation. Take 19 is
 still unfrozen, and no ceremony command below is authorized.
 
+That prerequisite is now complete. Caller terminal outcomes retain exact
+closed pair-execution, artifact-seal/install, or generation-admission receipts.
+The terminal admission derives at most 32 source-free summaries from exact
+outcomes; excess distinct measurements become one explicit generation-level
+unknown summary rather than blocking durable settlement. Failed exact Caller
+Map HTTP/MCP pages project the bounded summaries, and the T40.13 inspector now
+stops immediately only when complete failed progress proves the frozen caller
+generation aggregate-abstention refusal. Untyped or differently typed terminal
+state remains unclassified.
+
+Use this focused source-free failure-point diagnostic for caller correction
+iterations. Ordinary tests validate the retained receipt without logging it;
+the environment flag prints the complete source-free projection:
+
+```sh
+T40R1_CALLER_FAILURE_POINT_DIAGNOSTIC=1 \
+  go test ./internal/callerexecute \
+  -run '^TestT40R1ExactCallerFailurePointMeasurement$' \
+  -count=1 -v
+```
+
+It invokes production `ExecutePair` at the first and last input of every frozen
+source family plus each control for both direct protocols, requires equal
+endpoint receipts, then applies the exact frozen cardinalities. It bypasses
+repository authoring, indexing, observation,
+scheduling, store writes, relationship publication, backup, and product
+replay. The retained result is `take19-caller-failure-point.json`, SHA-256
+`f320e8f588a4e20e8f553373ae0891d52d2c280c7b13aa10327a1b62cd629304`.
+
+Both frozen profiles have zero resolver descriptors, so every candidate emits
+one no-direct-match abstention for each of the two protocols. Semantic exact
+output is 0 results, 524,290 abstentions, and 105,906,544 canonical/staging
+bytes; only aggregate abstention count crosses, by 424,290. Structural exact
+output is 0 results, 4,000,002 abstentions, and 844,000,368 canonical/staging
+bytes; abstentions cross by 3,900,002, canonical bytes by 307,129,456, and
+staging bytes by 298,740,848. Every per-pair result, abstention, canonical,
+record, staging, and source-byte bound fits. Therefore a count-only
+increase is invalid, and smaller caller leaves cannot repair generation
+aggregates. The next correction must separately version a compact aggregate
+no-resolver/no-direct coverage representation while preserving exact candidate
+coverage, explicit gaps, publication, recovery, lifecycle, and historical
+authority. This diagnostic establishes no scale pass or freeze authority.
+
 ```sh
 cd ~/phebs
 

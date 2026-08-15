@@ -1,0 +1,171 @@
+{
+  "schema": "t4013-take19-caller-failure-point-v2",
+  "method": "production ExecutePair replays the first and last input of each frozen source family plus each control for both caller protocols; equal endpoint receipts and frozen cardinalities provide the exact projection",
+  "profiles": [
+    {
+      "profile": "structural-2m-v1",
+      "profile_digest": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430",
+      "resolver_descriptors": {
+        "grpc": 0,
+        "thrift": 0
+      },
+      "families": [
+        {
+          "family": "metadata_reused_go",
+          "inputs": 2000000,
+          "result_records": 0,
+          "abstention_records": 4000000,
+          "canonical_bytes": 844000000
+        },
+        {
+          "family": "go_mod_control",
+          "inputs": 1,
+          "result_records": 0,
+          "abstention_records": 2,
+          "canonical_bytes": 368
+        }
+      ],
+      "exact_output": {
+        "candidate_inputs": 2000001,
+        "protocols": 2,
+        "result_records": 0,
+        "abstention_records": 4000002,
+        "canonical_bytes": 844000368,
+        "staging_bytes": 844000368
+      },
+      "current_limits": {
+        "candidate_records_per_leaf": 4096,
+        "result_records_per_pair": 12500,
+        "abstention_records_per_pair": 4096,
+        "record_bytes": 1048576,
+        "canonical_bytes_per_pair": 67108864,
+        "staging_bytes_per_pair": 68157440,
+        "source_blob_bytes_per_pair": 67108864,
+        "aggregate_result_records": 100000,
+        "aggregate_abstention_records": 100000,
+        "aggregate_canonical_bytes": 536870912,
+        "aggregate_staging_bytes": 545259520
+      },
+      "conservative_pair_maximum": {
+        "result_records": 0,
+        "abstention_records": 4096,
+        "record_bytes": 211,
+        "canonical_bytes": 864256,
+        "staging_bytes": 864256,
+        "source_blob_bytes": 18874368
+      },
+      "per_pair_bounds_fit": true,
+      "failure_dimensions": [
+        "aggregate_abstention_records",
+        "aggregate_canonical_bytes",
+        "aggregate_staging_bytes"
+      ],
+      "aggregate_overage": {
+        "abstention_records": 3900002,
+        "canonical_bytes": 307129456,
+        "staging_bytes": 298740848
+      },
+      "required_aggregate_minimum": {
+        "candidate_inputs": 2000001,
+        "protocols": 2,
+        "result_records": 0,
+        "abstention_records": 4000002,
+        "canonical_bytes": 844000368,
+        "staging_bytes": 844000368
+      }
+    },
+    {
+      "profile": "semantic-262144-v1",
+      "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+      "resolver_descriptors": {
+        "grpc": 0,
+        "thrift": 0
+      },
+      "families": [
+        {
+          "family": "go_rpc_resolved",
+          "inputs": 65536,
+          "result_records": 0,
+          "abstention_records": 131072,
+          "canonical_bytes": 26476544
+        },
+        {
+          "family": "go_kafka_literal",
+          "inputs": 65536,
+          "result_records": 0,
+          "abstention_records": 131072,
+          "canonical_bytes": 26476544
+        },
+        {
+          "family": "go_dynamic_call",
+          "inputs": 65536,
+          "result_records": 0,
+          "abstention_records": 131072,
+          "canonical_bytes": 26476544
+        },
+        {
+          "family": "go_dynamic_topic",
+          "inputs": 65536,
+          "result_records": 0,
+          "abstention_records": 131072,
+          "canonical_bytes": 26476544
+        },
+        {
+          "family": "go_mod_control",
+          "inputs": 1,
+          "result_records": 0,
+          "abstention_records": 2,
+          "canonical_bytes": 368
+        }
+      ],
+      "exact_output": {
+        "candidate_inputs": 262145,
+        "protocols": 2,
+        "result_records": 0,
+        "abstention_records": 524290,
+        "canonical_bytes": 105906544,
+        "staging_bytes": 105906544
+      },
+      "current_limits": {
+        "candidate_records_per_leaf": 4096,
+        "result_records_per_pair": 12500,
+        "abstention_records_per_pair": 4096,
+        "record_bytes": 1048576,
+        "canonical_bytes_per_pair": 67108864,
+        "staging_bytes_per_pair": 68157440,
+        "source_blob_bytes_per_pair": 67108864,
+        "aggregate_result_records": 100000,
+        "aggregate_abstention_records": 100000,
+        "aggregate_canonical_bytes": 536870912,
+        "aggregate_staging_bytes": 545259520
+      },
+      "conservative_pair_maximum": {
+        "result_records": 0,
+        "abstention_records": 4096,
+        "record_bytes": 202,
+        "canonical_bytes": 827392,
+        "staging_bytes": 827392,
+        "source_blob_bytes": 2097152
+      },
+      "per_pair_bounds_fit": true,
+      "failure_dimensions": [
+        "aggregate_abstention_records"
+      ],
+      "aggregate_overage": {
+        "abstention_records": 424290,
+        "canonical_bytes": 0,
+        "staging_bytes": 0
+      },
+      "required_aggregate_minimum": {
+        "candidate_inputs": 262145,
+        "protocols": 2,
+        "result_records": 0,
+        "abstention_records": 524290,
+        "canonical_bytes": 105906544,
+        "staging_bytes": 105906544
+      }
+    }
+  ],
+  "establishes_scale_pass": false,
+  "authorizes_freeze": false
+}
