@@ -49,6 +49,13 @@ func (plan *executeTestPlan) ForEachCallerLeafFile(
 }
 
 func executeTestGeneration(t *testing.T) callerleaf.GenerationIdentity {
+	return executeTestGenerationWithAdapter(t, callerleaf.LeafAdapterV1)
+}
+
+func executeTestGenerationWithAdapter(
+	t *testing.T,
+	adapter string,
+) callerleaf.GenerationIdentity {
 	t.Helper()
 	a := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	b := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -60,7 +67,7 @@ func executeTestGeneration(t *testing.T) callerleaf.GenerationIdentity {
 		ResolverManifestDigest: a,
 		Extractors: []callerleaf.ExtractorIdentity{{
 			Domain: "grpc-caller", Version: "1.5.0",
-			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+			LeafAdapterVersion: adapter,
 		}},
 	})
 	if err != nil {
@@ -69,8 +76,93 @@ func executeTestGeneration(t *testing.T) callerleaf.GenerationIdentity {
 	return identity
 }
 
+func TestExecutePairCompactsExactEmptyResolverCoverage(t *testing.T) {
+	generation := executeTestGenerationWithAdapter(t, callerleaf.LeafAdapterV2)
+	leaf := extract.CandidateCallerLeaf{
+		Name: "caller.ndjson", Ordinal: 0, Prefix: "00", PrefixBits: 2,
+		RecordCount: 5, DeclaredBytes: 640, ContentBytes: 500,
+		ContentDigest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+	}
+	files := []extract.CandidateManifestFile{
+		{Path: "consumer/a.go", ObjectID: "1111111111111111111111111111111111111111", DeclaredBytes: 100, SourceLane: candidate.SourceLaneBase},
+		{Path: "consumer/b.go", ObjectID: "2222222222222222222222222222222222222222", DeclaredBytes: 100, SourceLane: candidate.SourceLaneBase},
+		{Path: "consumer/a_test.go", ObjectID: "3333333333333333333333333333333333333333", DeclaredBytes: 100, SourceLane: candidate.SourceLaneGoTest},
+		{Path: "go.mod", ObjectID: "4444444444444444444444444444444444444444", DeclaredBytes: 40, SourceLane: candidate.SourceLaneBase},
+		{Path: "gen/other.pb.go", ObjectID: "5555555555555555555555555555555555555555", DeclaredBytes: 100, SourceLane: candidate.SourceLaneBase},
+	}
+	plan := &executeTestPlan{
+		digest:  generation.CandidateManifestDigest,
+		domains: []extract.CandidateManifestDomain{{Domain: "grpc-caller", Version: "1.5.0"}},
+		leaf:    leaf, files: files,
+	}
+	pairs, _, err := ExpectedPairs(plan, generation, &Registry{
+		adapters:         []Adapter{{Domain: "grpc-caller", Version: "1.5.0", Protocol: "grpc"}},
+		candidateDomains: plan.domains,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	stage, err := callerleaf.NewStage(root, generation, pairs[0].Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver, err := gocaller.NewDirectResolverWithGeneratedSources(
+		t.Context(), "grpc", nil, []gocaller.GeneratedSourceIdentity{{
+			Path: files[4].Path, ObjectID: files[4].ObjectID,
+		}},
+	)
+	if err != nil || resolver.DescriptorCount() != 0 {
+		t.Fatalf("empty resolver = %v, descriptors %d", err, resolver.DescriptorCount())
+	}
+	if err := ExecutePair(t.Context(), ExecuteRequest{
+		RepositoryDir: "/unused", Plan: plan, Pair: pairs[0], Protocol: "grpc",
+		ResolverCatalogDigest: generation.ResolverManifestDigest, Resolver: resolver,
+		ReadBlob: func(context.Context, string, string, int64) ([]byte, error) {
+			t.Fatal("compact empty-resolver coverage read a source blob")
+			return nil, nil
+		}, Stage: stage,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := prepared.Receipt()
+	if receipt.RecordCount != 1 || receipt.ResultCount != 0 ||
+		receipt.AbstentionCount != 0 || receipt.CoverageRecordCount != 1 ||
+		receipt.CoveredCandidateCount != 5 || receipt.ExcludedGoTestRecords != 1 ||
+		receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 {
+		t.Fatalf("compact receipt = %+v", receipt)
+	}
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var records []callerleaf.Record
+	if err := publication.ScanRecords(
+		t.Context(), generation, pairs[0].Identity,
+		func(_ callerleaf.RecordReference, record callerleaf.Record) error {
+			records = append(records, record)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 || records[0].Coverage == nil ||
+		records[0].Coverage.NoDirectCandidateCount != 2 ||
+		!slices.Equal(records[0].Coverage.Gaps, []callerleaf.CoverageGap{
+			{Reason: callerleaf.CoverageGapCatalogOwnedInput, Count: 1},
+			{Reason: callerleaf.CoverageGapExcludedGoTest, Count: 1},
+			{Reason: callerleaf.CoverageGapResolverGeneratedInput, Count: 1},
+		}) {
+		t.Fatalf("compact records = %+v", records)
+	}
+}
+
 func TestExecutePairReadsOnlySelectedBaseGoBlobs(t *testing.T) {
-	generation := executeTestGeneration(t)
+	generation := executeTestGenerationWithAdapter(t, callerleaf.LeafAdapterV2)
 	leaf := extract.CandidateCallerLeaf{
 		Name: "caller.ndjson", Ordinal: 0, Prefix: "00", PrefixBits: 2,
 		RecordCount: 5, DeclaredBytes: 640, ContentBytes: 500,

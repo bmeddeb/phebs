@@ -28,24 +28,29 @@ const (
 	// Retained go_test candidate records require a separately authorized future
 	// generation and cannot alias this identity.
 	CallerBaseSourceLanePolicy = "candidate-source-lane-base-v1"
+	callerLeafAdapterV2        = "direct-syntax-compact-coverage-v2"
 
 	callerLeafWriterMigrationVersion = "t30.6h-caller-leaf-writer-v1"
 
-	maxCallerCandidateRecords       = 4096
-	maxCallerCandidateDeclaredBytes = int64(64 << 20)
-	maxCallerCandidateContentBytes  = int64(128 << 20)
-	maxCallerPairResults            = 12_500
-	maxCallerPairAbstentions        = 4096
-	maxCallerPairCanonicalBytes     = int64(64 << 20)
-	maxCallerPairStagingBytes       = int64(65 << 20)
-	maxCallerPairSourceBytes        = int64(64 << 20)
-	maxCallerGenerationPairs        = 16_384
-	maxCallerGenerationResults      = 100_000
-	maxCallerGenerationAbstentions  = 100_000
-	maxCallerGenerationCanonical    = int64(512 << 20)
-	maxCallerGenerationStaging      = int64(520 << 20)
-	maxCallerPeakOpenFiles          = 5
-	maxCallerRefusalSummaries       = 32
+	maxCallerCandidateRecords            = 4096
+	maxCallerCandidateDeclaredBytes      = int64(64 << 20)
+	maxCallerCandidateContentBytes       = int64(128 << 20)
+	maxCallerPairResults                 = 12_500
+	maxCallerPairAbstentions             = 4096
+	maxCallerPairCanonicalBytes          = int64(64 << 20)
+	maxCallerPairStagingBytes            = int64(65 << 20)
+	maxCallerPairSourceBytes             = int64(64 << 20)
+	maxCallerPairCoverageRecords         = 1
+	maxCallerPairCoveredCandidates       = maxCallerCandidateRecords
+	maxCallerGenerationPairs             = 16_384
+	maxCallerGenerationResults           = 100_000
+	maxCallerGenerationAbstentions       = 100_000
+	maxCallerGenerationCanonical         = int64(512 << 20)
+	maxCallerGenerationStaging           = int64(520 << 20)
+	maxCallerGenerationCoverageRecords   = maxCallerGenerationPairs
+	maxCallerGenerationCoveredCandidates = maxCallerGenerationPairs * maxCallerCandidateRecords
+	maxCallerPeakOpenFiles               = 5
+	maxCallerRefusalSummaries            = 32
 )
 
 var ErrInvalidCallerLeafState = errors.New("invalid caller-leaf state")
@@ -194,6 +199,8 @@ type CallerLeafArtifactReceipt struct {
 	SourceBlobReads       int    `json:"source_blob_reads"`
 	SourceBlobBytes       int64  `json:"source_blob_bytes"`
 	OutOfLeafReads        int    `json:"out_of_leaf_reads"`
+	CoverageRecordCount   int    `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int    `json:"covered_candidate_count,omitempty"`
 }
 
 // CallerLeafOutcome is immutable multi-generation execution state. RecordedAt
@@ -241,19 +248,21 @@ const (
 // the frozen structural worker maximum, not an operating-system FD meter. It
 // creates no caller publication pointer.
 type CallerGenerationAdmission struct {
-	Generation      CallerGenerationIdentity             `json:"generation"`
-	Disposition     CallerGenerationAdmissionDisposition `json:"disposition"`
-	PairSetDigest   string                               `json:"pair_set_digest"`
-	PairCount       int                                  `json:"pair_count"`
-	ArtifactCount   int                                  `json:"artifact_count"`
-	ResultCount     int                                  `json:"result_count"`
-	AbstentionCount int                                  `json:"abstention_count"`
-	CanonicalBytes  int64                                `json:"canonical_bytes"`
-	StagingBytes    int64                                `json:"staging_bytes"`
-	PeakOpenFiles   int                                  `json:"peak_open_files"`
-	Refusals        []CallerGenerationRefusalSummary     `json:"refusals"`
-	WriterSchema    string                               `json:"writer_schema"`
-	RecordedAt      time.Time                            `json:"recorded_at"`
+	Generation            CallerGenerationIdentity             `json:"generation"`
+	Disposition           CallerGenerationAdmissionDisposition `json:"disposition"`
+	PairSetDigest         string                               `json:"pair_set_digest"`
+	PairCount             int                                  `json:"pair_count"`
+	ArtifactCount         int                                  `json:"artifact_count"`
+	ResultCount           int                                  `json:"result_count"`
+	AbstentionCount       int                                  `json:"abstention_count"`
+	CanonicalBytes        int64                                `json:"canonical_bytes"`
+	StagingBytes          int64                                `json:"staging_bytes"`
+	PeakOpenFiles         int                                  `json:"peak_open_files"`
+	CoverageRecordCount   int                                  `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int                                  `json:"covered_candidate_count,omitempty"`
+	Refusals              []CallerGenerationRefusalSummary     `json:"refusals"`
+	WriterSchema          string                               `json:"writer_schema"`
+	RecordedAt            time.Time                            `json:"recorded_at"`
 }
 
 type CallerLeafStore interface {
@@ -450,7 +459,11 @@ func validateCallerReceipt(receipt CallerLeafArtifactReceipt) error {
 		return errors.New("a successful pair must name exactly one artifact")
 	}
 	if receipt.ResultCount < 0 || receipt.ResultCount > maxCallerPairResults ||
-		receipt.AbstentionCount < 0 || receipt.AbstentionCount > maxCallerPairAbstentions {
+		receipt.AbstentionCount < 0 || receipt.AbstentionCount > maxCallerPairAbstentions ||
+		receipt.CoverageRecordCount < 0 ||
+		receipt.CoverageRecordCount > maxCallerPairCoverageRecords ||
+		receipt.CoveredCandidateCount < 0 ||
+		receipt.CoveredCandidateCount > maxCallerPairCoveredCandidates {
 		return errors.New("result or abstention count is outside its bound")
 	}
 	if receipt.CanonicalBytes < 0 || receipt.CanonicalBytes > maxCallerPairCanonicalBytes ||
@@ -498,6 +511,17 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 				outcome.Pair.CandidateRecordCount-outcome.Receipt.SourceBlobReads ||
 			outcome.Receipt.SourceBlobBytes > outcome.Pair.CandidateDeclaredBytes {
 			return outcome, errors.New("source-read receipt exceeds its candidate leaf")
+		}
+		if outcome.Receipt.CoverageRecordCount == 0 {
+			if outcome.Receipt.CoveredCandidateCount != 0 {
+				return outcome, errors.New("success receipt has detached coverage")
+			}
+		} else if outcome.Pair.LeafAdapterVersion != callerLeafAdapterV2 ||
+			outcome.Receipt.CoverageRecordCount != 1 ||
+			outcome.Receipt.CoveredCandidateCount != outcome.Pair.CandidateRecordCount ||
+			outcome.Receipt.ResultCount != 0 || outcome.Receipt.AbstentionCount != 0 ||
+			outcome.Receipt.SourceBlobReads != 0 || outcome.Receipt.SourceBlobBytes != 0 {
+			return outcome, errors.New("success receipt has invalid compact coverage")
 		}
 	case CallerLeafTerminalGenerationRefusal:
 		if outcome.Receipt != nil {
@@ -899,6 +923,18 @@ func prepareCallerGenerationAdmission(
 		); err != nil {
 			return admission, nil, err
 		}
+		if err := addCallerCount(
+			&admission.CoverageRecordCount, receipt.CoverageRecordCount,
+			maxCallerGenerationCoverageRecords, "coverage record",
+		); err != nil {
+			return admission, nil, err
+		}
+		if err := addCallerCount(
+			&admission.CoveredCandidateCount, receipt.CoveredCandidateCount,
+			maxCallerGenerationCoveredCandidates, "covered candidate",
+		); err != nil {
+			return admission, nil, err
+		}
 		if err := addCallerBytes(
 			&admission.CanonicalBytes, receipt.CanonicalBytes,
 			maxCallerGenerationCanonical+maxCallerPairCanonicalBytes,
@@ -1061,6 +1097,8 @@ func ValidateCallerGenerationAdmission(
 	input.ArtifactCount = 0
 	input.ResultCount = 0
 	input.AbstentionCount = 0
+	input.CoverageRecordCount = 0
+	input.CoveredCandidateCount = 0
 	input.CanonicalBytes = 0
 	input.StagingBytes = 0
 	input.Refusals = nil
@@ -1077,6 +1115,8 @@ func ValidateCallerGenerationAdmission(
 		admission.ArtifactCount != expected.ArtifactCount ||
 		admission.ResultCount != expected.ResultCount ||
 		admission.AbstentionCount != expected.AbstentionCount ||
+		admission.CoverageRecordCount != expected.CoverageRecordCount ||
+		admission.CoveredCandidateCount != expected.CoveredCandidateCount ||
 		admission.CanonicalBytes != expected.CanonicalBytes ||
 		admission.StagingBytes != expected.StagingBytes ||
 		admission.PeakOpenFiles != expected.PeakOpenFiles ||
@@ -1159,6 +1199,8 @@ LET $same = $current != NONE
 	AND $current.artifact_count = $artifact_count
 	AND $current.result_count = $result_count
 	AND $current.abstention_count = $abstention_count
+	AND ($current.coverage_record_count ?? 0) = $coverage_record_count
+	AND ($current.covered_candidate_count ?? 0) = $covered_candidate_count
 	AND $current.canonical_bytes = $canonical_bytes
 	AND $current.staging_bytes = $staging_bytes
 	AND $current.peak_open_files = $peak_open_files
@@ -1177,6 +1219,8 @@ LET $written = IF $authority_ok = false THEN []
 		artifact_count: $artifact_count,
 		result_count: $result_count,
 		abstention_count: $abstention_count,
+		coverage_record_count: $coverage_record_count,
+		covered_candidate_count: $covered_candidate_count,
 		canonical_bytes: $canonical_bytes,
 		staging_bytes: $staging_bytes,
 		peak_open_files: $peak_open_files,
@@ -1207,6 +1251,8 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 	admission.ArtifactCount = 0
 	admission.ResultCount = 0
 	admission.AbstentionCount = 0
+	admission.CoverageRecordCount = 0
+	admission.CoveredCandidateCount = 0
 	admission.CanonicalBytes = 0
 	admission.StagingBytes = 0
 	admission.Refusals = nil
@@ -1246,6 +1292,8 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 			"artifact_count":             prepared.ArtifactCount,
 			"result_count":               prepared.ResultCount,
 			"abstention_count":           prepared.AbstentionCount,
+			"coverage_record_count":      prepared.CoverageRecordCount,
+			"covered_candidate_count":    prepared.CoveredCandidateCount,
 			"canonical_bytes":            prepared.CanonicalBytes,
 			"staging_bytes":              prepared.StagingBytes,
 			"peak_open_files":            prepared.PeakOpenFiles,
@@ -1277,6 +1325,11 @@ func validatePersistedCallerGenerationAdmission(row callerGenerationAdmissionRec
 		row.ArtifactCount < 0 || row.ArtifactCount > row.PairCount ||
 		row.ResultCount < 0 || row.ResultCount > maxCallerGenerationResults+maxCallerPairResults ||
 		row.AbstentionCount < 0 || row.AbstentionCount > maxCallerGenerationAbstentions+maxCallerPairAbstentions ||
+		row.CoverageRecordCount < 0 || row.CoverageRecordCount > maxCallerGenerationCoverageRecords ||
+		row.CoverageRecordCount > row.PairCount ||
+		row.CoveredCandidateCount < 0 || row.CoveredCandidateCount > maxCallerGenerationCoveredCandidates ||
+		row.CoveredCandidateCount > row.PairCount*maxCallerCandidateRecords ||
+		(row.CoverageRecordCount == 0) != (row.CoveredCandidateCount == 0) ||
 		row.CanonicalBytes < 0 || row.CanonicalBytes > maxCallerGenerationCanonical+maxCallerPairCanonicalBytes ||
 		row.StagingBytes < 0 || row.StagingBytes > maxCallerGenerationStaging+maxCallerPairStagingBytes ||
 		row.PeakOpenFiles < 0 || row.PeakOpenFiles > maxCallerPeakOpenFiles ||

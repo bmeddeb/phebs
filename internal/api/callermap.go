@@ -144,6 +144,8 @@ type CallerMapGeneration struct {
 	PairCount             int                         `json:"pair_count,omitempty"`
 	ResultCount           int                         `json:"result_count,omitempty"`
 	AbstentionCount       int                         `json:"abstention_count,omitempty"`
+	CoverageRecordCount   int                         `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int                         `json:"covered_candidate_count,omitempty"`
 	CanonicalBytes        int64                       `json:"canonical_bytes,omitempty"`
 	ExcludedGoTestRecords int                         `json:"excluded_go_test_records,omitempty"`
 	RecordCounts          *CallerMapRecordCounts      `json:"record_counts,omitempty"`

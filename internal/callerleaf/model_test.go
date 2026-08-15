@@ -55,6 +55,28 @@ func TestAggregateReceiptCapAndCapPlusOne(t *testing.T) {
 	}
 }
 
+func TestLeafAdapterV2PreservesHistoricalPolicyEncoding(t *testing.T) {
+	legacy, err := json.Marshal(FrozenPolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(legacy), "coverage") ||
+		FrozenPolicy().Name != PolicyName || FrozenPolicy().LeafAdapter != LeafAdapterV1 {
+		t.Fatalf("historical policy encoding changed: %s", legacy)
+	}
+	current := CurrentPolicy()
+	if current.Name != PolicyNameV2 || current.LeafAdapter != LeafAdapterV2 ||
+		current.MaxCoverageRecordsPerPair != 1 ||
+		current.MaxAggregateCoverageRecords != MaxExpectedPairs ||
+		current.MaxAggregateCoveredCandidates != MaxAggregateCoveredCandidates {
+		t.Fatalf("current policy = %+v", current)
+	}
+	legacyGeneration, _ := testIdentity(t)
+	if err := ValidateGenerationIdentity(legacyGeneration); err != nil {
+		t.Fatalf("historical V1 generation no longer validates: %v", err)
+	}
+}
+
 func TestGenerationValidationRejectsNoncanonicalPolicyEnvelope(t *testing.T) {
 	generation, _ := testIdentity(t)
 	for _, mutate := range []func(*GenerationIdentity){

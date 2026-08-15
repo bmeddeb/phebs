@@ -222,6 +222,9 @@ func (stage *Stage) Add(record Record) error {
 	}
 	switch record.Kind {
 	case RecordResult:
+		if stage.receipt.CoverageRecordCount != 0 {
+			return errors.New("caller leaf coverage cannot mix with result records")
+		}
 		if stage.receipt.ResultCount >= MaxResultRecordsPerPair {
 			return callerLimit(
 				pipelinerefusal.DimensionCallerPairResults,
@@ -230,6 +233,9 @@ func (stage *Stage) Add(record Record) error {
 		}
 		stage.receipt.ResultCount++
 	case RecordAbstention:
+		if stage.receipt.CoverageRecordCount != 0 {
+			return errors.New("caller leaf coverage cannot mix with abstention records")
+		}
 		if stage.receipt.AbstentionCount >= MaxAbstentionRecordsPerPair {
 			return callerLimit(
 				pipelinerefusal.DimensionCallerPairAbstentions,
@@ -237,6 +243,19 @@ func (stage *Stage) Add(record Record) error {
 			)
 		}
 		stage.receipt.AbstentionCount++
+	case RecordCoverage:
+		if record.Coverage == nil || validateCoverageForPair(*record.Coverage, stage.pair) != nil ||
+			stage.receipt.RecordCount != 0 || stage.receipt.ResultCount != 0 ||
+			stage.receipt.AbstentionCount != 0 || stage.receipt.CoverageRecordCount != 0 ||
+			stage.receipt.SourceBlobReads != 0 || stage.receipt.SourceBlobBytes != 0 ||
+			stage.receipt.ExcludedGoTestRecords != 0 {
+			return errors.New("caller leaf compact coverage is invalid or duplicated")
+		}
+		stage.receipt.CoverageRecordCount = 1
+		stage.receipt.CoveredCandidateCount = record.Coverage.CoveredCandidateCount
+		stage.receipt.ExcludedGoTestRecords = coverageGapCount(
+			*record.Coverage, CoverageGapExcludedGoTest,
+		)
 	}
 	raw, err := json.Marshal(record)
 	if err != nil {
@@ -262,6 +281,33 @@ func (stage *Stage) Add(record Record) error {
 	stage.receipt.RecordCount++
 	stage.receipt.ContentBytes += int64(len(raw))
 	return nil
+}
+
+// AddNoResolverCoverage emits one exact certificate over the complete pair
+// member. It is available only to the V2 adapter and deliberately accepts
+// scalar counts rather than paths or source bytes: the candidate reader has
+// already descriptor-validated every applicable record, while the pair binds
+// the immutable member and the certificate names every explicit gap.
+func (stage *Stage) AddNoResolverCoverage(
+	noDirect int,
+	gaps []CoverageGap,
+) error {
+	if stage == nil {
+		return errors.New("caller leaf stage is unavailable")
+	}
+	return stage.Add(Record{
+		Schema: CoverageRecordSchema, Kind: RecordCoverage,
+		Coverage: &Coverage{
+			Schema: CoverageSchema, PairDigest: stage.pair.Digest,
+			CandidateMemberName:    stage.pair.Leaf.Name,
+			CandidateContentDigest: stage.pair.Leaf.ContentDigest,
+			CandidateRecordCount:   stage.pair.Leaf.RecordCount,
+			CoveredCandidateCount:  stage.pair.Leaf.RecordCount,
+			NoDirectCandidateCount: noDirect,
+			Gaps:                   slices.Clone(gaps),
+			Reason:                 CoverageReasonNoResolverDescriptors,
+		},
+	})
 }
 
 func (stage *Stage) ObserveExcludedGoTest() {
@@ -518,20 +564,21 @@ func VerifyReader(
 	if err := ValidateReceipt(generation, pair, receipt); err != nil {
 		return err
 	}
-	return verifyReader(ctx, reader, receipt, visit)
+	return verifyReader(ctx, reader, pair, receipt, visit)
 }
 
 func verifyReader(
 	ctx context.Context,
 	reader io.Reader,
+	pair PairIdentity,
 	receipt Receipt,
 	visit func(Record) error,
 ) error {
 	if visit == nil {
-		return verifyReaderAt(ctx, reader, receipt, nil)
+		return verifyReaderAt(ctx, reader, pair, receipt, nil)
 	}
 	return verifyReaderAt(
-		ctx, reader, receipt,
+		ctx, reader, pair, receipt,
 		func(_ RecordReference, record Record) error { return visit(record) },
 	)
 }
@@ -539,6 +586,7 @@ func verifyReader(
 func verifyReaderAt(
 	ctx context.Context,
 	reader io.Reader,
+	pair PairIdentity,
 	receipt Receipt,
 	visit func(RecordReference, Record) error,
 ) error {
@@ -573,10 +621,21 @@ func verifyReaderAt(
 				return err
 			}
 			counts.RecordCount++
-			if record.Kind == RecordResult {
+			switch record.Kind {
+			case RecordResult:
 				counts.ResultCount++
-			} else {
+			case RecordAbstention:
 				counts.AbstentionCount++
+			case RecordCoverage:
+				if record.Coverage == nil ||
+					validateCoverageForPair(*record.Coverage, pair) != nil {
+					return fmt.Errorf("%w: coverage record differs from its pair", ErrInvalidArtifact)
+				}
+				counts.CoverageRecordCount++
+				counts.CoveredCandidateCount += record.Coverage.CoveredCandidateCount
+				counts.ExcludedGoTestRecords += coverageGapCount(
+					*record.Coverage, CoverageGapExcludedGoTest,
+				)
 			}
 			if visit != nil {
 				reference := RecordReference{
@@ -599,7 +658,11 @@ func verifyReaderAt(
 	if consumed != receipt.ContentBytes || digest != receipt.ContentDigest ||
 		counts.RecordCount != receipt.RecordCount ||
 		counts.ResultCount != receipt.ResultCount ||
-		counts.AbstentionCount != receipt.AbstentionCount {
+		counts.AbstentionCount != receipt.AbstentionCount ||
+		counts.CoverageRecordCount != receipt.CoverageRecordCount ||
+		counts.CoveredCandidateCount != receipt.CoveredCandidateCount ||
+		receipt.CoverageRecordCount != 0 &&
+			counts.ExcludedGoTestRecords != receipt.ExcludedGoTestRecords {
 		return fmt.Errorf("%w: artifact receipt mismatch", ErrInvalidArtifact)
 	}
 	return nil
@@ -653,7 +716,7 @@ func openArtifactAt(
 	if !sameFile(before, opened) {
 		return nil, fmt.Errorf("%w: artifact changed while opening", ErrInvalidArtifact)
 	}
-	if err := verifyReader(ctx, file, receipt, visit); err != nil {
+	if err := verifyReader(ctx, file, pair, receipt, visit); err != nil {
 		return nil, err
 	}
 	after, err := file.Stat()
@@ -741,7 +804,7 @@ func (publication *Publication) ScanRecords(
 	if !sameFile(before, opened) {
 		return fmt.Errorf("%w: caller leaf changed while opening", ErrInvalidArtifact)
 	}
-	if err := verifyReaderAt(ctx, file, publication.receipt, visit); err != nil {
+	if err := verifyReaderAt(ctx, file, pair, publication.receipt, visit); err != nil {
 		return err
 	}
 	after, err := file.Stat()

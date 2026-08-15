@@ -94,6 +94,20 @@ func newPublicationFixture(
 	}
 }
 
+func TestPublicationStateRejectsCoverageOnHistoricalAdapter(t *testing.T) {
+	fixture := newPublicationFixture(
+		t, filepath.Join(t.TempDir(), "caller-leaves"),
+		"github.com/acme/historical-coverage",
+		'1',
+	)
+	state := fixture.manifest.State()
+	state.Aggregate.CoverageRecordCount = 1
+	state.Aggregate.CoveredCandidateCount = 1
+	if err := ValidateState(state); err == nil {
+		t.Fatal("historical V1 publication accepted compact coverage counters")
+	}
+}
+
 func publishFixture(
 	t *testing.T,
 	fixture publicationFixture,

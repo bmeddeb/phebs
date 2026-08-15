@@ -1129,6 +1129,34 @@ representation that preserves candidate coverage and explicit gaps, including
 publication, recovery, lifecycle, and historical compatibility. Take 19
 remains unfrozen and Epic 41 remains blocked.
 
+Compact caller-coverage correction (2026-08-15): the selected versioned repair
+is implemented without raising the result, abstention, canonical/staging,
+source-byte, timeout, concurrency, or candidate-packing limits. New caller
+generations bind `direct-syntax-compact-coverage-v2`. Only an exact
+zero-descriptor protocol resolver may replace per-candidate abstentions with
+one pair/member-bound coverage certificate. Its no-direct count and sorted
+catalog-owned, domain-unselected, excluded-`go_test`, and resolver-generated
+gap counts must partition the complete immutable member; it cannot mix with
+result or abstention rows and performs no Git blob read. Descriptor-present
+execution is unchanged. Historical V1 policy/receipt/manifest bytes omit the
+new optional fields and remain readable; normal successor/reconciliation owns
+the transition to current V2 authority. Coverage counts are preserved through
+outcome, admission, complete publication, recovery, HTTP, and MCP.
+
+The retained scoped receipt
+`spike/t4013/take19-caller-compact-coverage.json` has SHA-256
+`b0486178f8d4af6fd2be03e72ffa49c1075bbd4cb2fe0043d4c90a6a983e2799`.
+Production `ExecutePair` over one maximal 4,096-record member for each direct
+protocol, using the maximum legal member-name length and all four gap kinds,
+emits one 955-byte coverage record, zero results/abstentions, and zero source or
+out-of-leaf reads. The unchanged 16,384-pair ceiling conservatively bounds
+generation content at 15,646,720 bytes. Exact logical coverage is
+4,000,002 for structural-2m-v1 and 524,290 for semantic-262144-v1, both within
+the V2 policy's 67,108,864 covered-candidate maximum. This clears the scoped
+caller gate only. Full validation and independent review are required before a
+separately authorized integrated exact diagnostic; Take 19 remains unfrozen
+and Epic 41 remains blocked.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

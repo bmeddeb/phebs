@@ -213,6 +213,8 @@ func (state *workerTestStore) RecordCallerGenerationAdmission(
 		admission.ArtifactCount += outcome.Receipt.ArtifactCount
 		admission.ResultCount += outcome.Receipt.ResultCount
 		admission.AbstentionCount += outcome.Receipt.AbstentionCount
+		admission.CoverageRecordCount += outcome.Receipt.CoverageRecordCount
+		admission.CoveredCandidateCount += outcome.Receipt.CoveredCandidateCount
 		admission.CanonicalBytes += outcome.Receipt.CanonicalBytes
 		admission.StagingBytes += outcome.Receipt.StagingBytes
 	}

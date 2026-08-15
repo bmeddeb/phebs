@@ -1106,6 +1106,23 @@ catalog, relationship, or correctness authority.
   no-resolver/no-direct coverage representation with explicit coverage/gaps
   and complete publication/recovery/lifecycle review. Take 19 remains
   unfrozen; no exact rerun, freeze, release, or Epic 41 progression follows.
+- The compact caller correction now versions new generations as
+  `direct-syntax-compact-coverage-v2`. An exact zero-descriptor resolver emits
+  one pair/member-bound certificate whose no-direct and explicit gap counts
+  partition the complete candidate member; it emits no per-candidate
+  abstentions and reads no Git blobs. Descriptor-present execution is
+  unchanged, and V1 bytes remain readable while existing reconciliation
+  schedules the V2 successor. The scoped maximal-member gate retains
+  `take19-caller-compact-coverage.json`
+  (`sha256:b0486178f8d4af6fd2be03e72ffa49c1075bbd4cb2fe0043d4c90a6a983e2799`):
+  with the maximum legal member name and all four gap kinds, both protocols
+  emit one 955-byte record for 4,096 candidates with zero results, abstentions,
+  source reads, or out-of-leaf reads; the conservative 16,384-pair generation
+  ceiling is 15,646,720 bytes, and both frozen profiles
+  fit the new logical-coverage bound. This clears only the scoped caller gate.
+  Full validation and independent review remain prerequisites to any
+  separately authorized integrated exact diagnostic; Take 19 is unfrozen and
+  Epic 41 remains blocked.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

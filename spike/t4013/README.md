@@ -1585,6 +1585,37 @@ no-resolver/no-direct coverage representation while preserving exact candidate
 coverage, explicit gaps, publication, recovery, lifecycle, and historical
 authority. This diagnostic establishes no scale pass or freeze authority.
 
+That correction is now implemented as
+`direct-syntax-compact-coverage-v2`. When and only when the exact protocol
+resolver contains zero descriptors, production `ExecutePair` replays the
+immutable candidate member without opening Git blobs and emits one certificate
+binding the pair/member plus no-direct and explicit gap counts. Use this fast
+scoped gate for correction iterations:
+
+```sh
+T40R1_CALLER_COMPACT_COVERAGE_DIAGNOSTIC=1 \
+  go test ./internal/callerexecute \
+  -run '^TestT40R1CompactCallerCoverageMeasurement$' \
+  -count=1 -v
+```
+
+The retained result is `take19-caller-compact-coverage.json`, SHA-256
+`b0486178f8d4af6fd2be03e72ffa49c1075bbd4cb2fe0043d4c90a6a983e2799`.
+For both gRPC and Thrift, a maximal 4,096-record member with the maximum legal
+member-name length and all four gap kinds produces one 955-byte coverage
+record, zero result/abstention rows, zero source reads/bytes, and zero
+out-of-leaf reads. At the unchanged 16,384-pair ceiling, conservative
+canonical/staging content is 15,646,720 bytes. Exact logical coverage is
+4,000,002 for structural-2m-v1 and 524,290 for semantic-262144-v1, both below
+the V2 policy's 67,108,864 maximum. The old failure-point receipt remains
+historical evidence of V1 behavior.
+
+This clears only the scoped caller gate. Run the full merge bar and obtain an
+independent review before separately authorizing a new integrated exact
+diagnostic. It does not authorize the ceremony commands below, freeze Take 19,
+advance Epic 41, or establish a scale, SLO, release, migration, or
+decommission-safety claim.
+
 ```sh
 cd ~/phebs
 

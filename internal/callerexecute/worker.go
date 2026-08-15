@@ -1150,13 +1150,15 @@ func storeReceipt(receipt callerleaf.Receipt) *store.CallerLeafArtifactReceipt {
 		SourceBlobReads:       receipt.SourceBlobReads,
 		SourceBlobBytes:       receipt.SourceBlobBytes,
 		OutOfLeafReads:        receipt.OutOfLeafReads,
+		CoverageRecordCount:   receipt.CoverageRecordCount,
+		CoveredCandidateCount: receipt.CoveredCandidateCount,
 	}
 }
 
 func artifactReceipt(receipt store.CallerLeafArtifactReceipt) callerleaf.Receipt {
 	return callerleaf.Receipt{
 		Name:            receipt.ArtifactName,
-		RecordCount:     receipt.ResultCount + receipt.AbstentionCount,
+		RecordCount:     receipt.ResultCount + receipt.AbstentionCount + receipt.CoverageRecordCount,
 		ResultCount:     receipt.ResultCount,
 		AbstentionCount: receipt.AbstentionCount,
 		ContentBytes:    receipt.CanonicalBytes, ContentDigest: receipt.ContentDigest,
@@ -1165,6 +1167,8 @@ func artifactReceipt(receipt store.CallerLeafArtifactReceipt) callerleaf.Receipt
 		SourceBlobReads:       receipt.SourceBlobReads,
 		SourceBlobBytes:       receipt.SourceBlobBytes,
 		OutOfLeafReads:        receipt.OutOfLeafReads,
+		CoverageRecordCount:   receipt.CoverageRecordCount,
+		CoveredCandidateCount: receipt.CoveredCandidateCount,
 	}
 }
 
@@ -1197,16 +1201,18 @@ func storePublication(
 	}
 	return store.CallerGenerationPublication{
 		Generation: generation, Pairs: pairs,
-		PairSetDigest:   manifest.PairSetDigest,
-		PairCount:       manifest.Aggregate.PairCount,
-		ArtifactCount:   manifest.Aggregate.ArtifactCount,
-		ResultCount:     manifest.Aggregate.ResultCount,
-		AbstentionCount: manifest.Aggregate.AbstentionCount,
-		CanonicalBytes:  manifest.Aggregate.CanonicalBytes,
-		StagingBytes:    manifest.Aggregate.StagingBytes,
-		PeakOpenFiles:   manifest.Aggregate.PeakOpenFiles,
-		ManifestDigest:  manifest.Digest,
-		ManifestPath:    manifest.State().Manifest,
+		PairSetDigest:         manifest.PairSetDigest,
+		PairCount:             manifest.Aggregate.PairCount,
+		ArtifactCount:         manifest.Aggregate.ArtifactCount,
+		ResultCount:           manifest.Aggregate.ResultCount,
+		AbstentionCount:       manifest.Aggregate.AbstentionCount,
+		CoverageRecordCount:   manifest.Aggregate.CoverageRecordCount,
+		CoveredCandidateCount: manifest.Aggregate.CoveredCandidateCount,
+		CanonicalBytes:        manifest.Aggregate.CanonicalBytes,
+		StagingBytes:          manifest.Aggregate.StagingBytes,
+		PeakOpenFiles:         manifest.Aggregate.PeakOpenFiles,
+		ManifestDigest:        manifest.Digest,
+		ManifestPath:          manifest.State().Manifest,
 	}
 }
 
@@ -1231,11 +1237,13 @@ func publicationStateFromSummary(
 		PairSetDigest: pointer.PairSetDigest,
 		Aggregate: callerleaf.AggregateReceipt{
 			PairCount: pointer.PairCount, ArtifactCount: pointer.ArtifactCount,
-			ResultCount:     pointer.ResultCount,
-			AbstentionCount: pointer.AbstentionCount,
-			CanonicalBytes:  pointer.CanonicalBytes,
-			StagingBytes:    pointer.StagingBytes,
-			PeakOpenFiles:   pointer.PeakOpenFiles,
+			ResultCount:           pointer.ResultCount,
+			AbstentionCount:       pointer.AbstentionCount,
+			CoverageRecordCount:   pointer.CoverageRecordCount,
+			CoveredCandidateCount: pointer.CoveredCandidateCount,
+			CanonicalBytes:        pointer.CanonicalBytes,
+			StagingBytes:          pointer.StagingBytes,
+			PeakOpenFiles:         pointer.PeakOpenFiles,
 		},
 		ManifestDigest: pointer.ManifestDigest, Manifest: pointer.ManifestPath,
 	}
@@ -1265,6 +1273,8 @@ func publicationMatchesSummary(
 		aggregate.ArtifactCount == pointer.ArtifactCount &&
 		aggregate.ResultCount == pointer.ResultCount &&
 		aggregate.AbstentionCount == pointer.AbstentionCount &&
+		aggregate.CoverageRecordCount == pointer.CoverageRecordCount &&
+		aggregate.CoveredCandidateCount == pointer.CoveredCandidateCount &&
 		aggregate.CanonicalBytes == pointer.CanonicalBytes &&
 		aggregate.StagingBytes == pointer.StagingBytes &&
 		aggregate.PeakOpenFiles == pointer.PeakOpenFiles &&

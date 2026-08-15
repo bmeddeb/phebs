@@ -277,6 +277,8 @@ func callerMapGenerationOutputSchema() map[string]any {
 			"pair_count":                integerProperty,
 			"result_count":              integerProperty,
 			"abstention_count":          integerProperty,
+			"coverage_record_count":     integerProperty,
+			"covered_candidate_count":   integerProperty,
 			"canonical_bytes":           integerProperty,
 			"excluded_go_test_records":  integerProperty,
 			"record_counts":             callerMapRecordCountsOutputSchema(),

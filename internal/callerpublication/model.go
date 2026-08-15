@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/candidate"
 )
 
 const (
@@ -182,6 +183,17 @@ func ValidateState(state State) error {
 		state.Aggregate.ResultCount > callerleaf.MaxAggregateResultRecords ||
 		state.Aggregate.AbstentionCount < 0 ||
 		state.Aggregate.AbstentionCount > callerleaf.MaxAggregateAbstentionRecords ||
+		state.Aggregate.CoverageRecordCount < 0 ||
+		state.Aggregate.CoverageRecordCount > callerleaf.MaxAggregateCoverageRecords ||
+		state.Aggregate.CoverageRecordCount > state.Aggregate.PairCount ||
+		state.Aggregate.CoveredCandidateCount < 0 ||
+		state.Aggregate.CoveredCandidateCount > callerleaf.MaxAggregateCoveredCandidates ||
+		state.Aggregate.CoveredCandidateCount >
+			state.Aggregate.PairCount*candidate.MaxRecordsPerArtifact ||
+		(state.Aggregate.CoverageRecordCount == 0) !=
+			(state.Aggregate.CoveredCandidateCount == 0) ||
+		state.Generation.CallerPolicy.LeafAdapter != callerleaf.LeafAdapterV2 &&
+			state.Aggregate.CoverageRecordCount != 0 ||
 		state.Aggregate.CanonicalBytes < 0 ||
 		state.Aggregate.CanonicalBytes > callerleaf.MaxAggregateCanonicalBytes ||
 		state.Aggregate.StagingBytes != state.Aggregate.CanonicalBytes ||

@@ -26,16 +26,28 @@ import (
 )
 
 const (
-	GenerationSchema   = "phebs-caller-generation-v1"
-	GenerationSchemaV2 = "phebs-caller-generation-v2"
-	PairSchema         = "phebs-caller-leaf-pair-v1"
-	RecordSchema       = "phebs-caller-leaf-record-v1"
-	MetadataSchema     = "phebs-caller-leaf-metadata-v1"
-	PolicyName         = "phebs-direct-caller-leaf-policy-v1"
-	LeafAdapterV1      = "direct-syntax-base-v1"
+	GenerationSchema     = "phebs-caller-generation-v1"
+	GenerationSchemaV2   = "phebs-caller-generation-v2"
+	PairSchema           = "phebs-caller-leaf-pair-v1"
+	RecordSchema         = "phebs-caller-leaf-record-v1"
+	CoverageRecordSchema = "phebs-caller-leaf-coverage-record-v1"
+	CoverageSchema       = "phebs-caller-leaf-coverage-v1"
+	MetadataSchema       = "phebs-caller-leaf-metadata-v1"
+	PolicyName           = "phebs-direct-caller-leaf-policy-v1"
+	PolicyNameV2         = "phebs-direct-caller-leaf-policy-v2"
+	LeafAdapterV1        = "direct-syntax-base-v1"
+	LeafAdapterV2        = "direct-syntax-compact-coverage-v2"
+	CurrentLeafAdapter   = LeafAdapterV2
 
 	RecordResult     = "result"
 	RecordAbstention = "abstention"
+	RecordCoverage   = "coverage"
+
+	CoverageReasonNoResolverDescriptors = "no_resolver_descriptors"
+	CoverageGapCatalogOwnedInput        = "catalog_owned_input"
+	CoverageGapDomainUnselected         = "domain_unselected"
+	CoverageGapExcludedGoTest           = "excluded_go_test"
+	CoverageGapResolverGeneratedInput   = "resolver_generated_input"
 
 	MaxCallerDomains              = 16
 	MaxExpectedPairs              = 16_384
@@ -49,6 +61,9 @@ const (
 	MaxAggregateAbstentionRecords = 100_000
 	MaxAggregateCanonicalBytes    = int64(512 << 20)
 	MaxAggregateStagingBytes      = int64(520 << 20)
+	MaxCoverageRecordsPerPair     = 1
+	MaxAggregateCoverageRecords   = MaxExpectedPairs
+	MaxAggregateCoveredCandidates = MaxExpectedPairs * candidate.MaxRecordsPerArtifact
 	MaxRepositoryDirectoryEntries = 65_536
 	MaxDirectSourceBytes          = int64(4 << 20)
 	MaxSourceBlobBytesPerPair     = int64(64 << 20)
@@ -88,11 +103,32 @@ type Policy struct {
 	PublicationMemoryDesignBytes  int64  `json:"publication_memory_design_bytes"`
 	MaxOpenFiles                  int    `json:"max_open_files"`
 	WorkerTimeoutMilliseconds     int64  `json:"worker_timeout_milliseconds"`
+	MaxCoverageRecordsPerPair     int    `json:"max_coverage_records_per_pair,omitempty"`
+	MaxAggregateCoverageRecords   int    `json:"max_aggregate_coverage_records,omitempty"`
+	MaxAggregateCoveredCandidates int    `json:"max_aggregate_covered_candidates,omitempty"`
 }
 
 func FrozenPolicy() Policy {
+	return frozenPolicy(LeafAdapterV1)
+}
+
+func CurrentPolicy() Policy {
+	return frozenPolicy(CurrentLeafAdapter)
+}
+
+func frozenPolicy(adapter string) Policy {
+	name := PolicyName
+	coveragePerPair := 0
+	aggregateCoverage := 0
+	aggregateCandidates := 0
+	if adapter == LeafAdapterV2 {
+		name = PolicyNameV2
+		coveragePerPair = MaxCoverageRecordsPerPair
+		aggregateCoverage = MaxAggregateCoverageRecords
+		aggregateCandidates = MaxAggregateCoveredCandidates
+	}
 	return Policy{
-		Name: PolicyName, LeafAdapter: LeafAdapterV1,
+		Name: name, LeafAdapter: adapter,
 		SourceLanePolicy: callerleafid.SourceLanePolicy,
 		MaxCallerDomains: MaxCallerDomains, MaxExpectedPairs: MaxExpectedPairs,
 		MaxResultRecordsPerPair:       MaxResultRecordsPerPair,
@@ -111,6 +147,9 @@ func FrozenPolicy() Policy {
 		PublicationMemoryDesignBytes:  PublicationMemoryDesignBytes,
 		MaxOpenFiles:                  MaxOpenFiles,
 		WorkerTimeoutMilliseconds:     WorkerTimeout.Milliseconds(),
+		MaxCoverageRecordsPerPair:     coveragePerPair,
+		MaxAggregateCoverageRecords:   aggregateCoverage,
+		MaxAggregateCoveredCandidates: aggregateCandidates,
 	}
 }
 
@@ -181,18 +220,22 @@ type Receipt struct {
 	SourceBlobReads       int    `json:"source_blob_reads"`
 	SourceBlobBytes       int64  `json:"source_blob_bytes"`
 	OutOfLeafReads        int    `json:"out_of_leaf_reads"`
+	CoverageRecordCount   int    `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int    `json:"covered_candidate_count,omitempty"`
 }
 
 // AggregateReceipt is the complete-generation admission input handed to
 // T30.6i. It is not a visibility pointer and names no consumer surface.
 type AggregateReceipt struct {
-	PairCount       int   `json:"pair_count"`
-	ArtifactCount   int   `json:"artifact_count"`
-	ResultCount     int   `json:"result_count"`
-	AbstentionCount int   `json:"abstention_count"`
-	CanonicalBytes  int64 `json:"canonical_bytes"`
-	StagingBytes    int64 `json:"staging_bytes"`
-	PeakOpenFiles   int   `json:"peak_open_files"`
+	PairCount             int   `json:"pair_count"`
+	ArtifactCount         int   `json:"artifact_count"`
+	ResultCount           int   `json:"result_count"`
+	AbstentionCount       int   `json:"abstention_count"`
+	CanonicalBytes        int64 `json:"canonical_bytes"`
+	StagingBytes          int64 `json:"staging_bytes"`
+	PeakOpenFiles         int   `json:"peak_open_files"`
+	CoverageRecordCount   int   `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int   `json:"covered_candidate_count,omitempty"`
 }
 
 type Record struct {
@@ -203,6 +246,29 @@ type Record struct {
 	SourceLane candidate.SourceLane `json:"source_lane"`
 	Fact       *sdk.Fact            `json:"fact,omitempty"`
 	Reason     string               `json:"reason,omitempty"`
+	Coverage   *Coverage            `json:"coverage,omitempty"`
+}
+
+// Coverage is the exact compact replacement for per-candidate abstentions
+// when a protocol resolver has no descriptors. Pair and candidate-member
+// commitments prevent a certificate from being replayed across immutable
+// leaves. Covered, excluded, and unselected counts partition the complete
+// candidate member so an empty result cannot be mistaken for missing work.
+type Coverage struct {
+	Schema                 string        `json:"schema"`
+	PairDigest             string        `json:"pair_digest"`
+	CandidateMemberName    string        `json:"candidate_member_name"`
+	CandidateContentDigest string        `json:"candidate_content_digest"`
+	CandidateRecordCount   int           `json:"candidate_record_count"`
+	CoveredCandidateCount  int           `json:"covered_candidate_count"`
+	NoDirectCandidateCount int           `json:"no_direct_candidate_count"`
+	Gaps                   []CoverageGap `json:"gaps,omitempty"`
+	Reason                 string        `json:"reason"`
+}
+
+type CoverageGap struct {
+	Reason string `json:"reason"`
+	Count  int    `json:"count"`
 }
 
 func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error) {
@@ -222,7 +288,6 @@ func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error)
 		return GenerationIdentity{}, errors.New("caller generation has detached upstream digest")
 	}
 	input.SourceLanePolicy = callerleafid.SourceLanePolicy
-	input.CallerPolicy = FrozenPolicy()
 	input.Digest = ""
 	if reponame.Validate(input.Repository) != nil ||
 		!gitobj.IsObjectID(input.HeadCommit) ||
@@ -238,13 +303,21 @@ func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error)
 		return GenerationIdentity{}, errors.New("caller generation extractor set is empty or unbounded")
 	}
 	input.Extractors = slices.Clone(input.Extractors)
+	adapter := ""
 	for index, current := range input.Extractors {
 		if !validToken(current.Domain, 128) || !validToken(current.Version, 64) ||
-			current.LeafAdapterVersion != LeafAdapterV1 ||
+			(current.LeafAdapterVersion != LeafAdapterV1 &&
+				current.LeafAdapterVersion != LeafAdapterV2) ||
 			index > 0 && input.Extractors[index-1].Domain >= current.Domain {
 			return GenerationIdentity{}, errors.New("caller generation extractor set is invalid or unordered")
 		}
+		if adapter == "" {
+			adapter = current.LeafAdapterVersion
+		} else if adapter != current.LeafAdapterVersion {
+			return GenerationIdentity{}, errors.New("caller generation mixes leaf adapter versions")
+		}
 	}
+	input.CallerPolicy = frozenPolicy(adapter)
 	policyDigest, err := digestJSON("phebs-caller-leaf-policy-v1\x00", input.CallerPolicy)
 	if err != nil {
 		return GenerationIdentity{}, err
@@ -267,20 +340,20 @@ func NewPairIdentity(
 	if err := ValidateGenerationIdentity(generation); err != nil {
 		return PairIdentity{}, err
 	}
-	found := false
+	adapter := ""
 	for _, current := range generation.Extractors {
 		if current.Domain == domain && current.Version == version {
-			found = true
+			adapter = current.LeafAdapterVersion
 			break
 		}
 	}
-	if !found || !validLeafDescriptor(leaf) {
+	if adapter == "" || !validLeafDescriptor(leaf) {
 		return PairIdentity{}, errors.New("caller pair is outside its generation")
 	}
 	pair := PairIdentity{
 		Schema: PairSchema, GenerationDigest: generation.Digest,
 		Domain: domain, ExtractorVersion: version,
-		LeafAdapterVersion: LeafAdapterV1, Leaf: leaf,
+		LeafAdapterVersion: adapter, Leaf: leaf,
 	}
 	pair.Digest = digestFields(
 		"phebs-caller-leaf-pair-v1\x00",
@@ -358,13 +431,12 @@ func MetadataFor(generation GenerationIdentity, pair PairIdentity) (Metadata, st
 }
 
 func ValidateRecord(record Record) error {
-	if record.Schema != RecordSchema || repopath.Validate(record.Path) != nil ||
-		!gitobj.IsObjectID(record.ObjectID) || record.SourceLane != candidate.SourceLaneBase {
-		return fmt.Errorf("%w: malformed record envelope", ErrInvalidArtifact)
-	}
 	switch record.Kind {
 	case RecordResult:
-		if record.Fact == nil || record.Reason != "" || record.Fact.Path != record.Path ||
+		if record.Schema != RecordSchema || repopath.Validate(record.Path) != nil ||
+			!gitobj.IsObjectID(record.ObjectID) ||
+			record.SourceLane != candidate.SourceLaneBase || record.Coverage != nil ||
+			record.Fact == nil || record.Reason != "" || record.Fact.Path != record.Path ||
 			record.Fact.Atom.BlobDigest == "" ||
 			!validDigest(record.Fact.Atom.BlobDigest) ||
 			record.Fact.Atom.StartByte < 0 ||
@@ -373,7 +445,10 @@ func ValidateRecord(record Record) error {
 			return fmt.Errorf("%w: malformed result record", ErrInvalidArtifact)
 		}
 	case RecordAbstention:
-		if !validToken(record.Reason, 256) ||
+		if record.Schema != RecordSchema || repopath.Validate(record.Path) != nil ||
+			!gitobj.IsObjectID(record.ObjectID) ||
+			record.SourceLane != candidate.SourceLaneBase || record.Coverage != nil ||
+			!validToken(record.Reason, 256) ||
 			record.Fact != nil && (record.Fact.Path != record.Path ||
 				record.Fact.Assertion.Predicate != "UNRESOLVED_CALLER" ||
 				!validDigest(record.Fact.Atom.BlobDigest) ||
@@ -381,8 +456,74 @@ func ValidateRecord(record Record) error {
 				record.Fact.Atom.EndByte <= record.Fact.Atom.StartByte) {
 			return fmt.Errorf("%w: malformed abstention record", ErrInvalidArtifact)
 		}
+	case RecordCoverage:
+		if record.Schema != CoverageRecordSchema || record.Path != "" ||
+			record.ObjectID != "" || record.SourceLane != "" || record.Fact != nil ||
+			record.Reason != "" || record.Coverage == nil ||
+			validateCoverage(*record.Coverage) != nil {
+			return fmt.Errorf("%w: malformed coverage record", ErrInvalidArtifact)
+		}
 	default:
 		return fmt.Errorf("%w: unknown record kind", ErrInvalidArtifact)
+	}
+	return nil
+}
+
+func validateCoverage(coverage Coverage) error {
+	if coverage.Schema != CoverageSchema || !validDigest(coverage.PairDigest) ||
+		coverage.CandidateMemberName == "" || len(coverage.CandidateMemberName) > 255 ||
+		strings.ContainsAny(coverage.CandidateMemberName, "/\\") ||
+		!validDigest(coverage.CandidateContentDigest) ||
+		coverage.CandidateRecordCount <= 0 ||
+		coverage.CandidateRecordCount > candidate.MaxRecordsPerArtifact ||
+		coverage.CoveredCandidateCount != coverage.CandidateRecordCount ||
+		coverage.NoDirectCandidateCount < 0 ||
+		coverage.NoDirectCandidateCount > coverage.CandidateRecordCount ||
+		len(coverage.Gaps) > 4 ||
+		coverage.Reason != CoverageReasonNoResolverDescriptors {
+		return ErrInvalidArtifact
+	}
+	accounted := coverage.NoDirectCandidateCount
+	for index, gap := range coverage.Gaps {
+		if gap.Count <= 0 || !validCoverageGapReason(gap.Reason) ||
+			index > 0 && coverage.Gaps[index-1].Reason >= gap.Reason ||
+			gap.Count > coverage.CandidateRecordCount-accounted {
+			return ErrInvalidArtifact
+		}
+		accounted += gap.Count
+	}
+	if accounted != coverage.CandidateRecordCount {
+		return ErrInvalidArtifact
+	}
+	return nil
+}
+
+func validCoverageGapReason(reason string) bool {
+	switch reason {
+	case CoverageGapCatalogOwnedInput, CoverageGapDomainUnselected,
+		CoverageGapExcludedGoTest, CoverageGapResolverGeneratedInput:
+		return true
+	default:
+		return false
+	}
+}
+
+func coverageGapCount(coverage Coverage, reason string) int {
+	for _, gap := range coverage.Gaps {
+		if gap.Reason == reason {
+			return gap.Count
+		}
+	}
+	return 0
+}
+
+func validateCoverageForPair(coverage Coverage, pair PairIdentity) error {
+	if validateCoverage(coverage) != nil || pair.LeafAdapterVersion != LeafAdapterV2 ||
+		coverage.PairDigest != pair.Digest ||
+		coverage.CandidateMemberName != pair.Leaf.Name ||
+		coverage.CandidateContentDigest != pair.Leaf.ContentDigest ||
+		coverage.CandidateRecordCount != pair.Leaf.RecordCount {
+		return fmt.Errorf("%w: coverage record differs from its pair", ErrInvalidArtifact)
 	}
 	return nil
 }
@@ -393,9 +534,14 @@ func ValidateReceipt(generation GenerationIdentity, pair PairIdentity, receipt R
 		return err
 	}
 	if receipt.Name != callerleafid.ArtifactName(pair.Digest, receipt.ContentDigest) ||
-		receipt.RecordCount != receipt.ResultCount+receipt.AbstentionCount ||
+		receipt.RecordCount != receipt.ResultCount+receipt.AbstentionCount+
+			receipt.CoverageRecordCount ||
 		receipt.ResultCount < 0 || receipt.ResultCount > MaxResultRecordsPerPair ||
 		receipt.AbstentionCount < 0 || receipt.AbstentionCount > MaxAbstentionRecordsPerPair ||
+		receipt.CoverageRecordCount < 0 ||
+		receipt.CoverageRecordCount > MaxCoverageRecordsPerPair ||
+		receipt.CoveredCandidateCount < 0 ||
+		receipt.CoveredCandidateCount > pair.Leaf.RecordCount ||
 		receipt.ContentBytes < 0 || receipt.ContentBytes > MaxCanonicalBytesPerPair ||
 		receipt.StagingBytes != receipt.ContentBytes ||
 		!validDigest(receipt.ContentDigest) || receipt.MetadataDigest != metadataDigest ||
@@ -407,6 +553,18 @@ func ValidateReceipt(generation GenerationIdentity, pair PairIdentity, receipt R
 		receipt.SourceBlobBytes > MaxSourceBlobBytesPerPair ||
 		receipt.SourceBlobBytes > pair.Leaf.DeclaredBytes {
 		return fmt.Errorf("%w: malformed receipt", ErrInvalidArtifact)
+	}
+	if receipt.CoverageRecordCount == 0 {
+		if receipt.CoveredCandidateCount != 0 {
+			return fmt.Errorf("%w: detached coverage receipt", ErrInvalidArtifact)
+		}
+		return nil
+	}
+	if pair.LeafAdapterVersion != LeafAdapterV2 || receipt.CoverageRecordCount != 1 ||
+		receipt.ResultCount != 0 || receipt.AbstentionCount != 0 ||
+		receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 ||
+		receipt.CoveredCandidateCount != pair.Leaf.RecordCount {
+		return fmt.Errorf("%w: malformed compact coverage receipt", ErrInvalidArtifact)
 	}
 	return nil
 }
@@ -441,6 +599,12 @@ func (aggregate *AggregateReceipt) Add(receipt Receipt) error {
 			MaxAggregateAbstentionRecords,
 		)
 	}
+	if receipt.CoverageRecordCount >
+		MaxAggregateCoverageRecords-aggregate.CoverageRecordCount ||
+		receipt.CoveredCandidateCount >
+			MaxAggregateCoveredCandidates-aggregate.CoveredCandidateCount {
+		return ErrLimit
+	}
 	if receipt.ContentBytes > MaxAggregateCanonicalBytes-aggregate.CanonicalBytes {
 		return callerByteLimit(
 			pipelinerefusal.DimensionCallerGenerationCanonicalBytes,
@@ -459,6 +623,8 @@ func (aggregate *AggregateReceipt) Add(receipt Receipt) error {
 	aggregate.ArtifactCount++
 	aggregate.ResultCount += receipt.ResultCount
 	aggregate.AbstentionCount += receipt.AbstentionCount
+	aggregate.CoverageRecordCount += receipt.CoverageRecordCount
+	aggregate.CoveredCandidateCount += receipt.CoveredCandidateCount
 	aggregate.CanonicalBytes += receipt.ContentBytes
 	aggregate.StagingBytes += receipt.StagingBytes
 	if aggregate.PeakOpenFiles < MaxOpenFiles {

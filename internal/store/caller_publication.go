@@ -49,18 +49,20 @@ type CallerGenerationPublication struct {
 	Pairs      []CallerGenerationPairPublication `json:"pairs"`
 	// PairPayloadDigest is store-owned integrity metadata over Pairs. Callers
 	// carry it between exact reads and current checks but never compute it.
-	PairPayloadDigest   string `json:"pair_payload_digest"`
-	PairSetDigest       string `json:"pair_set_digest"`
-	PairCount           int    `json:"pair_count"`
-	ArtifactCount       int    `json:"artifact_count"`
-	ResultCount         int    `json:"result_count"`
-	AbstentionCount     int    `json:"abstention_count"`
-	CanonicalBytes      int64  `json:"canonical_bytes"`
-	StagingBytes        int64  `json:"staging_bytes"`
-	PeakOpenFiles       int    `json:"peak_open_files"`
-	ManifestDigest      string `json:"manifest_digest"`
-	ManifestPath        string `json:"manifest_path"`
-	PublicationRevision uint64 `json:"publication_revision"`
+	PairPayloadDigest     string `json:"pair_payload_digest"`
+	PairSetDigest         string `json:"pair_set_digest"`
+	PairCount             int    `json:"pair_count"`
+	ArtifactCount         int    `json:"artifact_count"`
+	ResultCount           int    `json:"result_count"`
+	AbstentionCount       int    `json:"abstention_count"`
+	CoverageRecordCount   int    `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount int    `json:"covered_candidate_count,omitempty"`
+	CanonicalBytes        int64  `json:"canonical_bytes"`
+	StagingBytes          int64  `json:"staging_bytes"`
+	PeakOpenFiles         int    `json:"peak_open_files"`
+	ManifestDigest        string `json:"manifest_digest"`
+	ManifestPath          string `json:"manifest_path"`
+	PublicationRevision   uint64 `json:"publication_revision"`
 	// PublicationIncarnation is a store-owned digest of the exact owned writer
 	// claim plus a fresh publication nonce. Unlike repository-local revision or
 	// second-precision time, it cannot repeat across delete/recreate of the same
@@ -83,6 +85,8 @@ type CallerGenerationPublicationSummary struct {
 	ArtifactCount          int                      `json:"artifact_count"`
 	ResultCount            int                      `json:"result_count"`
 	AbstentionCount        int                      `json:"abstention_count"`
+	CoverageRecordCount    int                      `json:"coverage_record_count,omitempty"`
+	CoveredCandidateCount  int                      `json:"covered_candidate_count,omitempty"`
 	CanonicalBytes         int64                    `json:"canonical_bytes"`
 	StagingBytes           int64                    `json:"staging_bytes"`
 	PeakOpenFiles          int                      `json:"peak_open_files"`
@@ -165,7 +169,10 @@ const callerGenerationBoundPairPayloadDigestSQL = `'sha256:' + crypto::sha256(ty
 
 const callerGenerationPublicationSummaryProjection = `id, repository,
 	generation, generation_digest, pair_set_digest, pair_count, artifact_count,
-	result_count, abstention_count, canonical_bytes, staging_bytes,
+	result_count, abstention_count,
+	(coverage_record_count ?? 0) AS coverage_record_count,
+	(covered_candidate_count ?? 0) AS covered_candidate_count,
+	canonical_bytes, staging_bytes,
 	peak_open_files, manifest_digest, manifest_path, publication_revision,
 	publication_incarnation, writer_schema, published_at, pair_payload_digest,
 	array::len(pairs) AS pair_payload_count`
@@ -217,6 +224,15 @@ func validateCallerGenerationPublicationSummary(
 		summary.ResultCount < 0 || summary.ResultCount > maxCallerGenerationResults ||
 		summary.AbstentionCount < 0 ||
 		summary.AbstentionCount > maxCallerGenerationAbstentions ||
+		summary.CoverageRecordCount < 0 ||
+		summary.CoverageRecordCount > maxCallerGenerationCoverageRecords ||
+		summary.CoverageRecordCount > summary.PairCount ||
+		summary.CoveredCandidateCount < 0 ||
+		summary.CoveredCandidateCount > maxCallerGenerationCoveredCandidates ||
+		summary.CoveredCandidateCount >
+			summary.PairCount*maxCallerCandidateRecords ||
+		(summary.CoverageRecordCount == 0) !=
+			(summary.CoveredCandidateCount == 0) ||
 		summary.CanonicalBytes < 0 ||
 		summary.CanonicalBytes > maxCallerGenerationCanonical ||
 		summary.StagingBytes != summary.CanonicalBytes ||
@@ -370,7 +386,15 @@ func prepareCallerGenerationPublication(
 		recordCount := preparedOutcome.Receipt.ResultCount
 		if err := addCallerCount(
 			&recordCount, preparedOutcome.Receipt.AbstentionCount,
-			maxCallerPairResults+maxCallerPairAbstentions, "pair record",
+			maxCallerPairResults+maxCallerPairAbstentions+maxCallerPairCoverageRecords,
+			"pair record",
+		); err != nil {
+			return publication, nil, err
+		}
+		if err := addCallerCount(
+			&recordCount, preparedOutcome.Receipt.CoverageRecordCount,
+			maxCallerPairResults+maxCallerPairAbstentions+maxCallerPairCoverageRecords,
+			"pair coverage record",
 		); err != nil {
 			return publication, nil, err
 		}
@@ -413,6 +437,8 @@ func prepareCallerGenerationPublication(
 	publication.ArtifactCount = admission.ArtifactCount
 	publication.ResultCount = admission.ResultCount
 	publication.AbstentionCount = admission.AbstentionCount
+	publication.CoverageRecordCount = admission.CoverageRecordCount
+	publication.CoveredCandidateCount = admission.CoveredCandidateCount
 	publication.CanonicalBytes = admission.CanonicalBytes
 	publication.StagingBytes = admission.StagingBytes
 	publication.PeakOpenFiles = admission.PeakOpenFiles
@@ -448,17 +474,19 @@ func validateCallerGenerationPublication(
 		pairs[index] = prepared.Pair
 	}
 	admission := CallerGenerationAdmission{
-		Generation:      publication.Generation,
-		Disposition:     CallerGenerationAdmitted,
-		PairSetDigest:   publication.PairSetDigest,
-		PairCount:       publication.PairCount,
-		ArtifactCount:   publication.ArtifactCount,
-		ResultCount:     publication.ResultCount,
-		AbstentionCount: publication.AbstentionCount,
-		CanonicalBytes:  publication.CanonicalBytes,
-		StagingBytes:    publication.StagingBytes,
-		PeakOpenFiles:   publication.PeakOpenFiles,
-		WriterSchema:    CallerLeafWriterSchema,
+		Generation:            publication.Generation,
+		Disposition:           CallerGenerationAdmitted,
+		PairSetDigest:         publication.PairSetDigest,
+		PairCount:             publication.PairCount,
+		ArtifactCount:         publication.ArtifactCount,
+		ResultCount:           publication.ResultCount,
+		AbstentionCount:       publication.AbstentionCount,
+		CoverageRecordCount:   publication.CoverageRecordCount,
+		CoveredCandidateCount: publication.CoveredCandidateCount,
+		CanonicalBytes:        publication.CanonicalBytes,
+		StagingBytes:          publication.StagingBytes,
+		PeakOpenFiles:         publication.PeakOpenFiles,
+		WriterSchema:          CallerLeafWriterSchema,
 	}
 	input := publication
 	prepared, _, err := prepareCallerGenerationPublication(input, admission, outcomes)
@@ -469,6 +497,8 @@ func validateCallerGenerationPublication(
 		prepared.ArtifactCount != publication.ArtifactCount ||
 		prepared.ResultCount != publication.ResultCount ||
 		prepared.AbstentionCount != publication.AbstentionCount ||
+		prepared.CoverageRecordCount != publication.CoverageRecordCount ||
+		prepared.CoveredCandidateCount != publication.CoveredCandidateCount ||
 		prepared.CanonicalBytes != publication.CanonicalBytes ||
 		prepared.StagingBytes != publication.StagingBytes ||
 		prepared.PeakOpenFiles != publication.PeakOpenFiles ||
@@ -607,6 +637,8 @@ LET $authority_ok = $writer_ok AND $leaf_writer_ok AND $owned != NONE
 	AND $admission.artifact_count = $artifact_count
 	AND $admission.result_count = $result_count
 	AND $admission.abstention_count = $abstention_count
+	AND ($admission.coverage_record_count ?? 0) = $coverage_record_count
+	AND ($admission.covered_candidate_count ?? 0) = $covered_candidate_count
 	AND $admission.canonical_bytes = $canonical_bytes
 	AND $admission.staging_bytes = $staging_bytes
 	AND $admission.peak_open_files = $peak_open_files
@@ -625,6 +657,8 @@ LET $same_publication = $same_generation
 	AND $current.artifact_count = $artifact_count
 	AND $current.result_count = $result_count
 	AND $current.abstention_count = $abstention_count
+	AND ($current.coverage_record_count ?? 0) = $coverage_record_count
+	AND ($current.covered_candidate_count ?? 0) = $covered_candidate_count
 	AND $current.canonical_bytes = $canonical_bytes
 	AND $current.staging_bytes = $staging_bytes
 	AND $current.peak_open_files = $peak_open_files
@@ -657,6 +691,8 @@ LET $published = IF $acceptable = false THEN []
 			artifact_count = $artifact_count,
 			result_count = $result_count,
 			abstention_count = $abstention_count,
+			coverage_record_count = $coverage_record_count,
+			covered_candidate_count = $covered_candidate_count,
 			canonical_bytes = $canonical_bytes,
 			staging_bytes = $staging_bytes,
 			peak_open_files = $peak_open_files,
@@ -738,6 +774,8 @@ func (s *Surreal) PublishCallerGeneration(
 		"artifact_count":               prepared.ArtifactCount,
 		"result_count":                 prepared.ResultCount,
 		"abstention_count":             prepared.AbstentionCount,
+		"coverage_record_count":        prepared.CoverageRecordCount,
+		"covered_candidate_count":      prepared.CoveredCandidateCount,
 		"canonical_bytes":              prepared.CanonicalBytes,
 		"staging_bytes":                prepared.StagingBytes,
 		"peak_open_files":              prepared.PeakOpenFiles,
@@ -1021,6 +1059,8 @@ LET $scalar_current = $writer_ok AND $repo != NONE
 		AND $current.artifact_count = $artifact_count
 		AND $current.result_count = $result_count
 		AND $current.abstention_count = $abstention_count
+		AND ($current.coverage_record_count ?? 0) = $coverage_record_count
+		AND ($current.covered_candidate_count ?? 0) = $covered_candidate_count
 		AND $current.canonical_bytes = $canonical_bytes
 		AND $current.staging_bytes = $staging_bytes
 		AND $current.peak_open_files = $peak_open_files
@@ -1146,6 +1186,10 @@ LET $checks = $authorities.map(|$authority|
 			$authority.expected.result_count
 		AND $authority.publication.abstention_count =
 			$authority.expected.abstention_count
+		AND ($authority.publication.coverage_record_count ?? 0) =
+			($authority.expected.coverage_record_count ?? 0)
+		AND ($authority.publication.covered_candidate_count ?? 0) =
+			($authority.expected.covered_candidate_count ?? 0)
 		AND $authority.publication.canonical_bytes =
 			$authority.expected.canonical_bytes
 		AND $authority.publication.staging_bytes =
@@ -1279,6 +1323,8 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 			"artifact_count":             validated.ArtifactCount,
 			"result_count":               validated.ResultCount,
 			"abstention_count":           validated.AbstentionCount,
+			"coverage_record_count":      validated.CoverageRecordCount,
+			"covered_candidate_count":    validated.CoveredCandidateCount,
 			"canonical_bytes":            validated.CanonicalBytes,
 			"staging_bytes":              validated.StagingBytes,
 			"peak_open_files":            validated.PeakOpenFiles,
@@ -1358,6 +1404,8 @@ RETURN [{
 		AND $current.artifact_count = $artifact_count
 		AND $current.result_count = $result_count
 		AND $current.abstention_count = $abstention_count
+		AND ($current.coverage_record_count ?? 0) = $coverage_record_count
+		AND ($current.covered_candidate_count ?? 0) = $covered_candidate_count
 		AND $current.canonical_bytes = $canonical_bytes
 		AND $current.staging_bytes = $staging_bytes
 		AND $current.peak_open_files = $peak_open_files
@@ -1410,6 +1458,8 @@ func (s *Surreal) CallerGenerationPublicationCurrent(
 			"artifact_count":             validated.ArtifactCount,
 			"result_count":               validated.ResultCount,
 			"abstention_count":           validated.AbstentionCount,
+			"coverage_record_count":      validated.CoverageRecordCount,
+			"covered_candidate_count":    validated.CoveredCandidateCount,
 			"canonical_bytes":            validated.CanonicalBytes,
 			"staging_bytes":              validated.StagingBytes,
 			"peak_open_files":            validated.PeakOpenFiles,

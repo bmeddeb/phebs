@@ -19,6 +19,13 @@ import (
 )
 
 func testIdentity(t *testing.T) (GenerationIdentity, PairIdentity) {
+	return testIdentityWithAdapter(t, LeafAdapterV1)
+}
+
+func testIdentityWithAdapter(
+	t *testing.T,
+	adapter string,
+) (GenerationIdentity, PairIdentity) {
 	t.Helper()
 	digestA := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	digestB := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -32,7 +39,7 @@ func testIdentity(t *testing.T) (GenerationIdentity, PairIdentity) {
 		ResolverManifestDigest:   digestA,
 		Extractors: []ExtractorIdentity{{
 			Domain: "grpc-caller", Version: "1.5.0",
-			LeafAdapterVersion: LeafAdapterV1,
+			LeafAdapterVersion: adapter,
 		}},
 	})
 	if err != nil {
@@ -47,6 +54,66 @@ func testIdentity(t *testing.T) (GenerationIdentity, PairIdentity) {
 		t.Fatal(err)
 	}
 	return generation, pair
+}
+
+func TestCompactCoverageArtifactLifecycleAndPairBinding(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentityWithAdapter(t, LeafAdapterV2)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stage.Discard() })
+	if err := stage.AddNoResolverCoverage(1, []CoverageGap{
+		{Reason: CoverageGapCatalogOwnedInput, Count: 1},
+		{Reason: CoverageGapExcludedGoTest, Count: 1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Add(testResultRecord()); err == nil {
+		t.Fatal("compact coverage mixed with an ordinary result")
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = prepared.Discard() })
+	receipt := prepared.Receipt()
+	if receipt.RecordCount != 1 || receipt.CoverageRecordCount != 1 ||
+		receipt.CoveredCandidateCount != pair.Leaf.RecordCount ||
+		receipt.ExcludedGoTestRecords != 1 || receipt.ResultCount != 0 ||
+		receipt.AbstentionCount != 0 || receipt.SourceBlobReads != 0 {
+		t.Fatalf("compact receipt = %+v", receipt)
+	}
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var records []Record
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(_ RecordReference, record Record) error {
+			records = append(records, record)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 || records[0].Coverage == nil ||
+		records[0].Coverage.PairDigest != pair.Digest {
+		t.Fatalf("compact records = %+v", records)
+	}
+
+	forgedStage, err := NewStage(filepath.Join(t.TempDir(), "forged"), generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = forgedStage.Discard() })
+	forged := records[0]
+	forged.Coverage.PairDigest = "sha256:" + strings.Repeat("0", 64)
+	if err := forgedStage.Add(forged); err == nil {
+		t.Fatal("coverage certificate detached from its pair was accepted")
+	}
 }
 
 func testResultRecord() Record {

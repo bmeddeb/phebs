@@ -176,6 +176,17 @@ total rather than serializing a zero-caller claim. Unknown, hidden, and
 deleting repositories all return `404` before
 caller authority, filesystem bytes, or repository-specific caches are read.
 
+A current V2 generation may also report `coverage_record_count` and
+`covered_candidate_count`. When an exact protocol resolver has no descriptors,
+one compact record accounts for a complete immutable candidate member instead
+of materializing one `no_direct_caller` abstention per candidate. The record
+binds the pair and member and partitions candidates into no-direct inputs plus
+explicit catalog-owned, domain-unselected, excluded-`go_test`, and
+resolver-generated gaps. These counts explain why the generation contains no
+matching rows without inventing per-source evidence. They do not establish
+runtime non-use, extraction completeness/accuracy, or a semantic zero-caller
+claim. Historical V1 generations omit both fields.
+
 When a `failed` generation has durably completed its caller partitions, its
 partition progress may also include up to 32 source-free refusal summaries.
 Each summary names the closed stage, caller generation kind, classification,

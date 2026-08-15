@@ -62,6 +62,7 @@ type GeneratedSourceIdentity struct {
 // a caller leaf avoids rebuilding a repository-wide descriptor index per blob.
 type DirectResolver struct {
 	protocol         string
+	descriptorCount  int
 	index            generatedSyntaxIndex
 	generatedSources map[string]string
 }
@@ -335,8 +336,19 @@ func NewDirectResolverWithGeneratedSources(
 		index.constructors[key] = values
 	}
 	return &DirectResolver{
-		protocol: protocol, index: index, generatedSources: generatedSources,
+		protocol: protocol, descriptorCount: len(descriptors),
+		index: index, generatedSources: generatedSources,
 	}, nil
+}
+
+// DescriptorCount is the exact bounded catalog population compiled into this
+// protocol resolver. A zero count authorizes the V2 caller-leaf adapter's
+// compact coverage path; callers must not infer emptiness from index internals.
+func (resolver *DirectResolver) DescriptorCount() int {
+	if resolver == nil {
+		return -1
+	}
+	return resolver.descriptorCount
 }
 
 // GeneratedSource reports whether one exact candidate record is catalog-owned

@@ -417,6 +417,26 @@ func exactAuthorityTestEndpoint(repository string) CallerMapEndpoint {
 	}
 }
 
+func TestExactCallerGenerationProjectsCompactCoverage(t *testing.T) {
+	read := &callerexecute.PublicationRead{
+		Availability: callerexecute.PublicationCurrent,
+		Summary: &store.CallerGenerationPublicationSummary{
+			Generation: store.CallerGenerationIdentity{
+				Repository: "github.com/acme/compact-coverage",
+				HeadCommit: strings.Repeat("1", 40),
+			},
+			PairCount: 3, CoverageRecordCount: 3,
+			CoveredCandidateCount: 12_288,
+		},
+	}
+	generation := (&exactCallerMapService{}).generation(read)
+	if generation.CoverageRecordCount != 3 ||
+		generation.CoveredCandidateCount != 12_288 ||
+		generation.ResultCount != 0 || generation.AbstentionCount != 0 {
+		t.Fatalf("compact coverage generation = %+v", generation)
+	}
+}
+
 func requireExactAuthorityStatus(t *testing.T, err error, want int) {
 	t.Helper()
 	var statusError interface{ GetStatus() int }

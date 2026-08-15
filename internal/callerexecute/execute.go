@@ -46,6 +46,10 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 	if request.Resolver == nil {
 		return errors.New("caller pair execution has no compiled resolver")
 	}
+	if request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV2 &&
+		request.Resolver.DescriptorCount() == 0 {
+		return executeNoResolverCoverage(ctx, request)
+	}
 	return request.Plan.ForEachCallerLeafFile(
 		ctx, request.Pair.Adapter.Domain, request.Pair.Adapter.Version,
 		request.Pair.Candidate,
@@ -134,6 +138,67 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 			return nil
 		},
 	)
+}
+
+func executeNoResolverCoverage(ctx context.Context, request ExecuteRequest) error {
+	seen := 0
+	noDirect := 0
+	gapCounts := map[string]int{}
+	err := request.Plan.ForEachCallerLeafFile(
+		ctx, request.Pair.Adapter.Domain, request.Pair.Adapter.Version,
+		request.Pair.Candidate,
+		func(file extract.CandidateManifestFile) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			seen++
+			switch file.SourceLane {
+			case candidate.SourceLaneGoTest:
+				gapCounts[callerleaf.CoverageGapExcludedGoTest]++
+				return nil
+			case candidate.SourceLaneBase:
+			default:
+				return fmt.Errorf("%w: unsupported source lane", ErrImmutableLeafInput)
+			}
+			generated, generatedErr := request.Resolver.GeneratedSource(
+				file.Path, file.ObjectID,
+			)
+			if generatedErr != nil {
+				return fmt.Errorf("%w: %v", ErrImmutableLeafInput, generatedErr)
+			}
+			if generated {
+				gapCounts[callerleaf.CoverageGapResolverGeneratedInput]++
+				return nil
+			}
+			if !strings.HasSuffix(file.Path, ".go") {
+				gapCounts[callerleaf.CoverageGapCatalogOwnedInput]++
+				return nil
+			}
+			noDirect++
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if seen > request.Pair.Identity.Leaf.RecordCount {
+		return fmt.Errorf("%w: compact coverage exceeded the pair member", ErrImmutableLeafInput)
+	}
+	if unselected := request.Pair.Identity.Leaf.RecordCount - seen; unselected > 0 {
+		gapCounts[callerleaf.CoverageGapDomainUnselected] = unselected
+	}
+	gaps := make([]callerleaf.CoverageGap, 0, len(gapCounts))
+	for _, reason := range []string{
+		callerleaf.CoverageGapCatalogOwnedInput,
+		callerleaf.CoverageGapDomainUnselected,
+		callerleaf.CoverageGapExcludedGoTest,
+		callerleaf.CoverageGapResolverGeneratedInput,
+	} {
+		if count := gapCounts[reason]; count > 0 {
+			gaps = append(gaps, callerleaf.CoverageGap{Reason: reason, Count: count})
+		}
+	}
+	return request.Stage.AddNoResolverCoverage(noDirect, gaps)
 }
 
 func addInputAbstention(

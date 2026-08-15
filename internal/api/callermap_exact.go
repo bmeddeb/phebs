@@ -1548,6 +1548,8 @@ func (service *exactCallerMapService) generation(
 	result.PairCount = read.Summary.PairCount
 	result.ResultCount = read.Summary.ResultCount
 	result.AbstentionCount = read.Summary.AbstentionCount
+	result.CoverageRecordCount = read.Summary.CoverageRecordCount
+	result.CoveredCandidateCount = read.Summary.CoveredCandidateCount
 	result.CanonicalBytes = read.Summary.CanonicalBytes
 	total := read.Summary.PairCount
 	result.PartitionProgress = &CallerMapPartitionProgress{

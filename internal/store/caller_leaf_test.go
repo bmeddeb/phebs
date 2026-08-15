@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/callerpublicationid"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -280,6 +281,112 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 	if err != nil || progress.SettledCount != 1 ||
 		progress.SucceededCount != 0 || progress.RefusedCount != 1 {
 		t.Fatalf("progress after clear = %+v, %v", progress, err)
+	}
+}
+
+func TestCompactCallerCoverageStoreAndPublicationLifecycle(t *testing.T) {
+	s := newTestStore(t)
+	ctx := t.Context()
+	repository := "github.com/acme/caller-compact-coverage"
+	commit := candidateCommit('1')
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	if err := s.PublishCandidateManifest(
+		ctx, candidatePublication(repository, commit, ""),
+	); err != nil {
+		t.Fatal(err)
+	}
+	candidatePublication, err := s.GetCandidateManifestPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishResolverCatalog(
+		ctx, resolverPublication(repository, commit, candidatePublication.ManifestDigest),
+	); err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := s.GetResolverCatalogPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation := callerGeneration(repository, commit, candidatePublication, catalog)
+	if _, err := s.EnqueuePending(ctx, store.JobCallerLeaf, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	job, err := s.ClaimJob(ctx, store.JobCallerLeaf, "caller-coverage-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *job, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	job.Status = store.StatusRunning
+	pair := callerPair("grpc-caller", "00", 0)
+	pair.LeafAdapterVersion = "direct-syntax-compact-coverage-v2"
+	receipt := callerReceipt(generation, pair, candidateDigest('1'), 0, 0)
+	receipt.CoverageRecordCount = 1
+	receipt.CoveredCandidateCount = pair.CandidateRecordCount
+	outcome := store.CallerLeafOutcome{
+		Generation: generation, Pair: pair,
+		Disposition: store.CallerLeafSucceeded, Receipt: receipt,
+	}
+	if err := s.RecordCallerLeafOutcome(ctx, *job, outcome); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RecordCallerGenerationAdmission(
+		ctx, *job, store.CallerGenerationAdmission{
+			Generation: generation, Disposition: store.CallerGenerationAdmitted,
+			PeakOpenFiles: 5,
+		}, []store.CallerLeafPair{pair},
+	); err != nil {
+		t.Fatal(err)
+	}
+	admission, err := s.GetCallerGenerationAdmission(ctx, generation)
+	if err != nil || admission.CoverageRecordCount != 1 ||
+		admission.CoveredCandidateCount != pair.CandidateRecordCount {
+		t.Fatalf("compact admission = %+v, %v", admission, err)
+	}
+	manifestDigest := candidateDigest('9')
+	publication := store.CallerGenerationPublication{
+		Generation:     generation,
+		Pairs:          []store.CallerGenerationPairPublication{{Pair: pair, Receipt: *receipt}},
+		ManifestDigest: manifestDigest,
+		ManifestPath: callerpublicationid.ManifestName(
+			store.ComputeCallerGenerationDigest(generation), manifestDigest,
+		),
+	}
+	if err := s.PublishCallerGeneration(ctx, *job, publication); err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := s.GetCallerGenerationPublication(ctx, repository)
+	if err != nil || persisted.CoverageRecordCount != 1 ||
+		persisted.CoveredCandidateCount != pair.CandidateRecordCount ||
+		len(persisted.Pairs) != 1 || persisted.Pairs[0].Receipt.CoverageRecordCount != 1 {
+		t.Fatalf("compact publication = %+v, %v", persisted, err)
+	}
+	if current, err := s.CallerGenerationPublicationCurrent(
+		ctx, *persisted,
+	); err != nil || !current {
+		t.Fatalf("compact publication current = %t, %v", current, err)
+	}
+	summary, err := s.GetCallerGenerationPublicationSummary(ctx, repository)
+	if err != nil || summary.CoverageRecordCount != 1 ||
+		summary.CoveredCandidateCount != pair.CandidateRecordCount {
+		t.Fatalf("compact summary = %+v, %v", summary, err)
+	}
+	if current, err := s.CallerGenerationPublicationSummaryCurrent(
+		ctx, *summary,
+	); err != nil || !current {
+		t.Fatalf("compact summary current = %t, %v", current, err)
+	}
+	if current, err := s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary},
+	); err != nil || !current {
+		t.Fatalf("compact joint summary current = %t, %v", current, err)
 	}
 }
 

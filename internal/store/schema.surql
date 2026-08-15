@@ -358,6 +358,10 @@ DEFINE FIELD OVERWRITE result_count ON caller_generation_admission TYPE int
     ASSERT $value >= 0;
 DEFINE FIELD OVERWRITE abstention_count ON caller_generation_admission TYPE int
     ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE coverage_record_count ON caller_generation_admission TYPE option<int>
+    ASSERT $value = NONE OR $value >= 0;
+DEFINE FIELD OVERWRITE covered_candidate_count ON caller_generation_admission TYPE option<int>
+    ASSERT $value = NONE OR $value >= 0;
 DEFINE FIELD OVERWRITE canonical_bytes ON caller_generation_admission TYPE int
     ASSERT $value >= 0;
 DEFINE FIELD OVERWRITE staging_bytes ON caller_generation_admission TYPE int
@@ -414,6 +418,8 @@ DEFINE FIELD IF NOT EXISTS pairs.*.receipt.artifact_name ON caller_generation_pu
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.artifact_count ON caller_generation_publication TYPE int;
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.result_count ON caller_generation_publication TYPE int;
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.abstention_count ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.coverage_record_count ON caller_generation_publication TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.covered_candidate_count ON caller_generation_publication TYPE option<int>;
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.canonical_bytes ON caller_generation_publication TYPE int;
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.staging_bytes ON caller_generation_publication TYPE int;
 DEFINE FIELD IF NOT EXISTS pairs.*.receipt.content_digest ON caller_generation_publication TYPE string;
@@ -430,6 +436,10 @@ DEFINE FIELD IF NOT EXISTS pair_count ON caller_generation_publication TYPE int 
 DEFINE FIELD IF NOT EXISTS artifact_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS result_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS abstention_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS coverage_record_count ON caller_generation_publication TYPE option<int>
+    ASSERT $value = NONE OR $value >= 0;
+DEFINE FIELD IF NOT EXISTS covered_candidate_count ON caller_generation_publication TYPE option<int>
+    ASSERT $value = NONE OR $value >= 0;
 DEFINE FIELD IF NOT EXISTS canonical_bytes ON caller_generation_publication TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS staging_bytes ON caller_generation_publication TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS peak_open_files ON caller_generation_publication TYPE int ASSERT $value >= 0;

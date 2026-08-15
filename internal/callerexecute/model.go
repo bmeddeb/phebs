@@ -103,7 +103,7 @@ func (registry *Registry) ExtractorIdentities() []callerleaf.ExtractorIdentity {
 	for index, adapter := range registry.adapters {
 		identities[index] = callerleaf.ExtractorIdentity{
 			Domain: adapter.Domain, Version: adapter.Version,
-			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+			LeafAdapterVersion: callerleaf.CurrentLeafAdapter,
 		}
 	}
 	return identities
@@ -156,7 +156,7 @@ func GenerationIdentity(
 	for index, adapter := range registry.adapters {
 		extractors[index] = callerleaf.ExtractorIdentity{
 			Domain: adapter.Domain, Version: adapter.Version,
-			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+			LeafAdapterVersion: callerleaf.CurrentLeafAdapter,
 		}
 	}
 	return callerleaf.NewGenerationIdentity(callerleaf.GenerationIdentity{

@@ -1,0 +1,69 @@
+{
+  "schema": "t4013-take19-caller-compact-coverage-v1",
+  "method": "production ExecutePair replays one exact maximal 4,096-record candidate member with the maximum legal member-name length and all four gap kinds for each caller protocol under an exact zero-descriptor resolver; the unchanged 16,384-pair ceiling then provides the conservative physical-record and byte upper bound while frozen profile cardinalities provide exact logical coverage",
+  "leaf_adapter": "direct-syntax-compact-coverage-v2",
+  "policy": "phebs-direct-caller-leaf-policy-v2",
+  "pair_samples": [
+    {
+      "protocol": "grpc",
+      "candidate_records": 4096,
+      "coverage_records": 1,
+      "covered_candidates": 4096,
+      "coverage_gap_kinds": 4,
+      "result_records": 0,
+      "abstention_records": 0,
+      "canonical_bytes": 955,
+      "staging_bytes": 955,
+      "source_blob_reads": 0,
+      "source_blob_bytes": 0,
+      "out_of_leaf_reads": 0
+    },
+    {
+      "protocol": "thrift",
+      "candidate_records": 4096,
+      "coverage_records": 1,
+      "covered_candidates": 4096,
+      "coverage_gap_kinds": 4,
+      "result_records": 0,
+      "abstention_records": 0,
+      "canonical_bytes": 955,
+      "staging_bytes": 955,
+      "source_blob_reads": 0,
+      "source_blob_bytes": 0,
+      "out_of_leaf_reads": 0
+    }
+  ],
+  "worst_case_generation": {
+    "coverage_records": 16384,
+    "covered_candidates": 67108864,
+    "canonical_bytes": 15646720,
+    "staging_bytes": 15646720
+  },
+  "profiles": [
+    {
+      "profile": "structural-2m-v1",
+      "profile_digest": "sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430",
+      "candidate_inputs": 2000001,
+      "protocols": 2,
+      "exact_covered_candidate_count": 4000002,
+      "physical_coverage_record_upper": 16384,
+      "aggregate_coverage_bounds_fit": true,
+      "aggregate_canonical_bounds_fit": true,
+      "aggregate_staging_bounds_fit": true
+    },
+    {
+      "profile": "semantic-262144-v1",
+      "profile_digest": "sha256:fe5ed2da2e449057756c07b570da733b2f38993160f807e7f03c60394d5ff28b",
+      "candidate_inputs": 262145,
+      "protocols": 2,
+      "exact_covered_candidate_count": 524290,
+      "physical_coverage_record_upper": 16384,
+      "aggregate_coverage_bounds_fit": true,
+      "aggregate_canonical_bounds_fit": true,
+      "aggregate_staging_bounds_fit": true
+    }
+  ],
+  "clears_scoped_caller_gate": true,
+  "establishes_scale_pass": false,
+  "authorizes_freeze": false
+}
