@@ -1271,6 +1271,25 @@ catalog, relationship, or correctness authority.
   continues, combine descriptor-present execution with the retained physical
   multi-leaf shape before any fresh ceremony decision. No rerun, release,
   Epic closure, or Epic 41 progression follows.
+- The descriptor-present physical multi-leaf diagnostic now carries 261,769
+  caller records through exactly 96 production-built leaves. One real resolved
+  consumer lands in leaf 0. Descriptor presence disables the empty-resolver
+  compact path, and the production worker then reaches 100,245 exact
+  abstentions against the 100,000 generation limit after 38 successful pair
+  artifacts. The remaining 58 pairs receive one closed
+  `caller_generation_admission` / `caller` / `limit` /
+  `caller_generation_abstentions` refusal; terminal admission creates no
+  complete pointer. The shared reader and authorized exact Caller Map expose
+  the same failed generation, complete 96/38/58 progress, and refusal scalars.
+  The source-free receipt is `descriptor-present-96leaf-product.json`
+  (`sha256:17512e7d9c8f46c312051bcfaf27a57d08a10df8662e7f70755475f1d596736d`).
+  This classifies the scoped caller terminal and selects a reduce-first
+  correction, not a higher bound: compact only descriptor-present pairs that
+  complete their scan with zero caller or unresolved facts into count-bearing
+  coverage; retain result/unresolved pairs in full. Historical schema,
+  candidate/gap counts, recovery, publication/product parity, maximum-shape,
+  and cost tests must pass before a fresh scoped rerun. No ceremony, scale/SLO,
+  release, Epic closure, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

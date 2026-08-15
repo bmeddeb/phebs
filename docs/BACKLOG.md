@@ -1364,6 +1364,32 @@ pass scale, or authorize ceremony/release/Epic closure/Epic 41. If diagnosis
 continues, the next scoped boundary is a descriptor-present physical
 multi-leaf worker/product run, not another ceremony.
 
+That exact physical multi-leaf run now reproduces and classifies the terminal
+boundary. The neutral corpus has 261,770 regular files over 72 Git blobs and
+production candidate-v4 yields 261,769 caller records in exactly 96 leaves,
+with the same 32 six-bit/64 seven-bit distribution as the retained provider
+control. One descriptor-backed consumer in leaf 0 resolves exactly. The worker
+then performs the descriptor-present direct path and reaches 100,245
+abstentions against the frozen 100,000 aggregate after 38 successful artifacts;
+the remaining 58 outcomes carry one exact `caller_generation_admission` /
+`caller` / `limit` / `caller_generation_abstentions` refusal. Terminal admission
+publishes no complete generation. The shared reader and authorized exact
+Caller Map return the same failed generation, unavailable totals, complete
+96/38/58 progress, and refusal tuple. The source-free receipt is
+`spike/t4013/descriptor-present-96leaf-product.json`
+(`sha256:17512e7d9c8f46c312051bcfaf27a57d08a10df8662e7f70755475f1d596736d`).
+
+Do not raise the abstention limit or start another ceremony. The selected
+reduce-first correction is to compact a descriptor-present pair only after its
+exact scan emits no caller or unresolved fact, retaining one count-bearing
+coverage record; any pair with a resolved or unresolved fact remains fully
+materialized. Preserve exact candidate/gap accounting and historical bytes.
+Before another scoped run, require schema/backward-compatibility, mixed
+result/unresolved, maximum-shape, terminal recovery, complete publication,
+reader/Caller Map parity, and steady-state-cost coverage. This diagnostic
+changes no production behavior, is not a scale pass or Take 20 reconstruction,
+and authorizes no ceremony, release, Epic closure, or Epic 41 progression.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

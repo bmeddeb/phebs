@@ -420,6 +420,16 @@ func t40r1CallerProvider96LeafSummary(
 	t *testing.T,
 	leaves []candidate.CallerLeaf,
 ) (string, []t40r1CallerProvider96Prefix, int64, int64, int, int) {
+	return t40r1CallerLeafSummaryForSchema(
+		t, t40r1CallerProvider96Schema, leaves,
+	)
+}
+
+func t40r1CallerLeafSummaryForSchema(
+	t *testing.T,
+	schema string,
+	leaves []candidate.CallerLeaf,
+) (string, []t40r1CallerProvider96Prefix, int64, int64, int, int) {
 	t.Helper()
 	type identity struct {
 		Name          string `json:"name"`
@@ -477,7 +487,7 @@ func t40r1CallerProvider96LeafSummary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	sum := sha256.Sum256(append([]byte(t40r1CallerProvider96Schema+"\x00"), raw...))
+	sum := sha256.Sum256(append([]byte(schema+"\x00"), raw...))
 	return "sha256:" + hex.EncodeToString(sum[:]), distribution,
 		contentBytes, declaredBytes, minRecords, maxRecords
 }

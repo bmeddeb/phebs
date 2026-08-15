@@ -1954,6 +1954,85 @@ authorize a ceremony. If diagnosis continues, the next scoped boundary is a
 descriptor-present physical multi-leaf worker/product run; do not start another
 ceremony. No rerun, release, Epic closure, or Epic 41 progression follows.
 
+The next opt-in diagnostic composes descriptor presence with the exact
+multi-leaf physical shape. Set `T40R1_DESCRIPTOR_96LEAF_PRODUCT=1` and run
+`TestT40R1DescriptorPresent96LeafPhysicalWorkerProductDiagnostic`:
+
+```sh
+cd ~/phebs
+
+T40R1_DESCRIPTOR_96LEAF_PRODUCT=1 \
+  go test ./spike/t4013 \
+  -run '^TestT40R1DescriptorPresent96LeafPhysicalWorkerProductDiagnostic$' \
+  -count=1 -timeout=60m -v
+```
+
+The final fixture authors 261,770 regular files over 72 real Git blobs. Its 64
+neutral blobs each have at most 4,096 placements, preserving the observation
+plane's per-blob bound. Candidate-v4 contains 261,769 caller records in exactly
+96 leaves: 32 six-bit leaves with 129,114 records and 64 seven-bit leaves with
+132,655 records. One deterministic split-control path restores that exact
+shape after substituting the descriptor inputs; it changes no production
+policy. The first fixture attempt used one shared neutral blob and correctly
+stopped at 261,762 placements against the 4,096 observation limit. A later
+one-path adjustment also stopped at 4,097. Both were fixture refusals; the
+retained 72-blob run is within the existing authority envelope.
+
+The real consumer path hashes into physical leaf 0. It follows 1,522 earlier
+members in that leaf, then resolves to the exact `/orders.Orders/Get`
+operation, lineage, Git object, and generated descriptor. Resolver
+materialization makes the same four bounded reads totaling 713 bytes. Current
+observation-v2 contains 67 observed physical blobs, the required gRPC domain
+root retains its complete zero-partition `unavailable_prerequisite` state, and
+worker and product derivations bind the same upstream digest.
+
+The run reproduces the terminal caller boundary. Descriptor presence disables
+the empty-resolver compact path, so nonmatching candidates become individual
+`no_direct_caller` abstention records after their exact source scans. The
+worker completes 38 artifacts, including the real caller result, then reaches
+100,245 aggregate abstentions against the frozen 100,000 limit. It records the
+remaining 58 pairs with one exact `caller_generation_admission` / `caller` /
+`limit` / `caller_generation_abstentions` refusal and settles terminal
+admission after 40 turns including the final no-op. There is no complete
+publication pointer. The shared reader returns `failed` from
+`terminal_admission`, and authorized exact Caller Map returns a failed,
+unavailable, zero-row page with complete 96/38/58 progress and the identical
+refusal tuple. The product does not silently report zero callers.
+
+The retained source-free receipt is `descriptor-present-96leaf-product.json`
+(`sha256:17512e7d9c8f46c312051bcfaf27a57d08a10df8662e7f70755475f1d596736d`).
+The final run made 100,243 bounded Git reads totaling 9,222,381 bytes and zero
+out-of-leaf reads. Candidate build took 45.28s, resolver build 1.51s,
+observation build 34.96s, worker convergence 19m50.43s, and product projection
+13.54ms. Build and worker allocated 11,025,801,744 and 5,756,329,744 bytes.
+Candidate, observation, and caller artifacts occupied 85,639,602, 34,689,060,
+and 19,749,671 bytes. These are diagnostic observations, not ceilings or an
+SLO.
+
+No production behavior or steady-state cost changes in this diagnostic. The
+existing descriptor-present path performs one bounded immutable Git read,
+SHA-256, Go parse, and direct scan per eligible source candidate until an
+aggregate refusal is known. Each successful turn rereads the bounded manifest,
+validates its 96 leaf envelopes, opens one selected member, writes one artifact
+and outcome, and holds the existing repository work lock. The terminal turn
+derives the aggregate once and records the remaining bounded refusal outcomes;
+the no-op rechecks compact authority. Product failure projection performs only
+the existing bounded authority, admission, progress, and refusal reads. No new
+query, sync, startup, retry, recovery/lifecycle, cache, lock, child, or bound is
+introduced by the test.
+
+Do not raise the 100,000 abstention bound and do not start another ceremony.
+The reduce-first correction is to finish the exact descriptor-present scan but
+compact a pair that emits no resolved or unresolved caller fact into one
+count-bearing coverage record. Any pair containing a resolved or unresolved
+fact remains fully materialized, so evidence and uncertainty are not hidden.
+The correction must preserve exact candidate/gap accounting and historical
+bytes, and add schema/backward-compatibility, mixed result/unresolved,
+maximum-shape, terminal recovery, complete publication, exact reader/Caller
+Map parity, and steady-state-cost tests. Only then should this scoped diagnostic
+be rerun. The current receipt is not a scale pass, Take 20 reconstruction,
+ceremony authorization, release, Epic closure, or Epic 41 progression.
+
 ```sh
 cd ~/phebs
 

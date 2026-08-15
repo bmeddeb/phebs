@@ -584,17 +584,30 @@ func t40r1PublishDescriptorObservation(
 	repositoryDirectory,
 	commit string,
 ) observationpublication.DownstreamAuthority {
+	return t40r1PublishObservationForRepository(
+		t, ctx, dataDir, t40r1DescriptorGitBlobRepo, repositoryDirectory, commit,
+	)
+}
+
+func t40r1PublishObservationForRepository(
+	t *testing.T,
+	ctx context.Context,
+	dataDir,
+	repository,
+	repositoryDirectory,
+	commit string,
+) observationpublication.DownstreamAuthority {
 	t.Helper()
 	root := filepath.Join(dataDir, "observations")
 	transition, err := observationpublication.BeginInventoryPublicationV2(
-		root, t40r1DescriptorGitBlobRepo,
+		root, repository,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	sourceDirectory := filepath.Join(t.TempDir(), "source")
 	source, err := repositoryindex.BuildSourceGeneration(
-		ctx, repositoryDirectory, sourceDirectory, t40r1DescriptorGitBlobRepo,
+		ctx, repositoryDirectory, sourceDirectory, repository,
 		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}},
 	)
 	if err != nil {
@@ -602,7 +615,7 @@ func t40r1PublishDescriptorObservation(
 	}
 	sourceRoot, err := sourcepartition.BuildSuperRoot(ctx, sourcepartition.BuildRequest{
 		SourceDirectory: sourceDirectory, OutputDirectory: transition.SourceDirectory,
-		Repository: t40r1DescriptorGitBlobRepo, Source: source,
+		Repository: repository, Source: source,
 		Policy: sourcepartition.Policy{
 			Schema: sourcepartition.PolicySchema, Name: "go-source", Version: "1.0.0",
 			IncludeSuffixes: []string{".go"},
@@ -627,12 +640,12 @@ func t40r1PublishDescriptorObservation(
 		t.Fatal(err)
 	}
 	if _, err := observationpublication.CompleteInventoryPublicationV2(
-		ctx, root, t40r1DescriptorGitBlobRepo, transition.TransitionID, nil,
+		ctx, root, repository, transition.TransitionID, nil,
 	); err != nil {
 		t.Fatal(err)
 	}
 	authority, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
-		ctx, root, t40r1DescriptorGitBlobRepo,
+		ctx, root, repository,
 	)
 	if err != nil {
 		t.Fatal(err)

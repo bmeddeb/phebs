@@ -1,0 +1,117 @@
+{
+  "schema": "t4013-descriptor-present-96leaf-product-v1",
+  "method": "author an exact 96-leaf physical caller generation with one descriptor-backed consumer in the first hash leaf, publish current observation/extraction and resolver authority, execute the production worker until terminal admission/no-op, and require the shared reader and exact Caller Map to project the same closed refusal",
+  "profile": "physical-261770-96leaf-grpc-product-v1",
+  "physical": {
+    "regular_files": 261770,
+    "unique_git_blobs": 72,
+    "candidate_records": 261769,
+    "caller_leaves": 96,
+    "leaf_set_digest": "sha256:d8854d25ad69f3ad5510f2400813ebbb2f62c19fd4c8803924b503c0a669c37b",
+    "leaf_content_bytes": 85598421,
+    "min_leaf_records": 1953,
+    "max_leaf_records": 4096,
+    "prefix_distribution": [
+      {
+        "bits": 6,
+        "leaves": 32,
+        "records": 129114,
+        "min_records": 3946,
+        "max_records": 4096
+      },
+      {
+        "bits": 7,
+        "leaves": 64,
+        "records": 132655,
+        "min_records": 1953,
+        "max_records": 2166
+      }
+    ],
+    "peak_spool_bytes": 107066282,
+    "manifest_digest_bound": true,
+    "control_revision_bound": true,
+    "provider_leaves_exact": true,
+    "consumer_path": "consumer/early000111.go",
+    "consumer_leaf_ordinal": 0,
+    "consumer_leaf_prefix": "000000",
+    "consumer_object_exact": true,
+    "consumer_visited_before": 1522
+  },
+  "resolver": {
+    "publication_current": true,
+    "manifest_members": 2,
+    "materialization_blob_reads": 4,
+    "materialization_blob_bytes": 713,
+    "descriptors": 1,
+    "operation_exact": true,
+    "lineage_exact": true,
+    "generated_object_exact": true
+  },
+  "authority": {
+    "observation_version": "observation-v2",
+    "observation_records": 67,
+    "observed_records": 67,
+    "candidate_partitions": 0,
+    "domain_disposition": "unavailable_prerequisite",
+    "plan_root_current": true,
+    "upstream_usable": true,
+    "worker_upstream_digest_exact": true,
+    "product_upstream_digest_exact": true
+  },
+  "pipeline": {
+    "worker_turns": 40,
+    "expected_pairs": 96,
+    "settled_pairs": 96,
+    "succeeded_pairs": 38,
+    "refused_pairs": 58,
+    "disposition": "terminal_generation_refusal",
+    "artifacts": 38,
+    "result_records": 1,
+    "abstention_records": 100245,
+    "source_blob_reads": 100243,
+    "source_blob_bytes": 9222381,
+    "out_of_leaf_reads": 0,
+    "refusals": [
+      {
+        "stage": "caller_generation_admission",
+        "generation_kind": "caller",
+        "classification": "limit",
+        "dimension": "caller_generation_abstentions",
+        "observed": 100245,
+        "limit": 100000,
+        "outcome_count": 58
+      }
+    ],
+    "publication_absent": true
+  },
+  "product": {
+    "reader_availability": "failed",
+    "reader_origin": "terminal_admission",
+    "schema_version": "caller-map-v2",
+    "matching_rows_state": "unavailable",
+    "generation_state": "failed",
+    "rows": 0,
+    "totals_unavailable": true,
+    "progress_state": "complete",
+    "settled_pairs": 96,
+    "succeeded_pairs": 38,
+    "refused_pairs": 58,
+    "total_pairs": 96,
+    "refusals": [
+      {
+        "stage": "caller_generation_admission",
+        "generation_kind": "caller",
+        "classification": "limit",
+        "dimension": "caller_generation_abstentions",
+        "observed": 100245,
+        "limit": 100000,
+        "outcome_count": 58
+      }
+    ],
+    "progress_refusal_parity": true
+  },
+  "boundary": "descriptor_present_96_leaf_worker_product_refusal",
+  "reproduces_refusal": true,
+  "establishes_scale_pass": false,
+  "authorizes_ceremony": false
+}
