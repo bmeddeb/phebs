@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -109,7 +110,7 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return frozenV14PlanWithHostToolchain(sourceCommit, hostToolchain)
+	return freshV14PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
 }
 
 func validateV14ConvergenceRoutes() error {
@@ -135,6 +136,25 @@ func frozenV14PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	value.Schema = PlanSchemaV14
 	value.HostToolchain = slices.Clone(hostToolchain)
 	value.Safety = frozenSafetyV14
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func freshV14PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	if frozenAt.IsZero() {
+		return Plan{}, errors.New("T40.13 fresh freeze time is required")
+	}
+	value, err := frozenV14PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.FrozenOn = frozenAt.UTC().Format(time.DateOnly)
 	if err := ValidatePlan(value); err != nil {
 		return Plan{}, err
 	}

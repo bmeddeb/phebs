@@ -1331,6 +1331,18 @@ catalog, relationship, or correctness authority.
   the 96-leaf shape or a charter decision changing the 100,000 abstention
   ceiling invalidates the freeze and requires re-review; no release, scale/SLO
   claim, T40.13/Epic 40 closure, or Epic 41 progression follows.
+- `t40r1-neutral-21` executed and stopped at the exact semantic four-hour
+  deadline with 266 pending, one running, five succeeded, and zero failed of
+  272 materialized extraction partitions. All six observed handlers completed;
+  the sixth settlement and concurrent expansion hit SurrealDB write conflicts,
+  after which the single repository token never recovered. The correction
+  gives every schedule transaction bounded conflict retry, separates reaping
+  from expansion, bounds scheduler store calls, reconciles ambiguous
+  completion, and stamps fresh V14 freeze dates. A real surrealkv diagnostic
+  settled the exact 272/272 one-token shape with zero leaked token or surfaced
+  error while recovering 21 expansion conflicts. Independent review plus a
+  fresh exact semantic production-path diagnostic are next; another ceremony
+  is not authorized.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

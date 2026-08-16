@@ -1472,6 +1472,26 @@ charter decision changing the 100,000 caller-abstention ceiling invalidates
 the freeze and requires re-review. This is no scale/SLO pass, release,
 T40.13/Epic 40 closure, or Epic 41 progression.
 
+`t40r1-neutral-21` subsequently executed and stopped honestly at the exact
+four-hour semantic deadline. Its signed source-free package is
+`sha256:93b54e57c071e2341a3f50f6a62a859b9af9d41c76010ae9f55dfd28eb4806be`.
+The final schedule held 266 pending, one running, five succeeded, and zero
+failed of 272 materialized partitions after all six observed handlers had
+completed; the custody-bound log recorded concurrent SurrealDB expansion and
+completion conflicts. The single repository token remained consumed and stale
+reaping never restored progress. The correction gives expansion and every
+lease transition the existing 64-attempt explicit-conflict retry bound,
+reconciles ambiguous completion, separates reaping from expansion, and gives
+scheduler store calls a five-second context. Fresh V14 freezes now stamp their
+actual UTC date while historical bytes remain unchanged. The retained physical
+schedule diagnostic `spike/t4013/generation-schedule-recovery.json`
+(`sha256:def6cd63f0bc7a7b97af753922812da90110787db4da0c5deccade66adab5f7c`)
+settled the exact 272/272 one-token shape in 1,887 ms with no leaked token or
+surfaced store error and 21 recovered expansion conflicts. Independent review
+and a fresh exact semantic production-path diagnostic remain required before
+another ceremony; no scale/SLO, release, T40.13/Epic 40 closure, or Epic 41
+progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

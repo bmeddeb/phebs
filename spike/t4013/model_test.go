@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
@@ -106,6 +107,31 @@ func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 	first.Safety.MinimumAvailableDiskBytes++
 	if _, err := MarshalPlan(first); err == nil {
 		t.Fatal("changed safety envelope passed")
+	}
+}
+
+func TestFreshV14PlanStampsFreezeDateWithoutChangingHistoricalPlan(t *testing.T) {
+	historical, err := frozenV14PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if historical.FrozenOn != "2026-08-08" {
+		t.Fatalf("historical freeze date = %q", historical.FrozenOn)
+	}
+	frozenAt := time.Date(2026, 8, 16, 23, 30, 0, 0, time.FixedZone("PDT", -7*60*60))
+	fresh, err := freshV14PlanWithHostToolchain(
+		testSourceCommit, fakeHostToolchain(), frozenAt,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.FrozenOn != "2026-08-17" {
+		t.Fatalf("fresh UTC freeze date = %q", fresh.FrozenOn)
+	}
+	if _, err := freshV14PlanWithHostToolchain(
+		testSourceCommit, fakeHostToolchain(), time.Time{},
+	); err == nil {
+		t.Fatal("fresh plan accepted an absent freeze time")
 	}
 }
 

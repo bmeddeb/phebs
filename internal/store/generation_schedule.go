@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -604,6 +605,32 @@ func generationScheduleRows(results *[]surrealdb.QueryResult[[]generationSchedul
 	return nil
 }
 
+// queryGenerationSchedule retries only SurrealDB's explicit transient
+// conflict class. Generation transactions bind immutable digests, exact
+// offsets, and exact worker leases, so replay after an aborted conflict cannot
+// duplicate fanout or settle a lease twice.
+func queryGenerationSchedule[T any](
+	ctx context.Context,
+	db *surrealdb.DB,
+	operation string,
+	statement string,
+	variables map[string]any,
+) (*[]surrealdb.QueryResult[T], error) {
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[T](ctx, db, statement, variables)
+		if err == nil {
+			return results, nil
+		}
+		if !isRetryable(err) || ctx.Err() != nil || attempt+1 >= maxQueueRetries {
+			return nil, err
+		}
+		diagnostics.Logf(
+			"generation schedule store retry: operation=%s attempt=%d",
+			operation, attempt+1,
+		)
+	}
+}
+
 func (s *Surreal) GetGenerationSchedule(
 	ctx context.Context,
 	repository, stage string,
@@ -727,7 +754,9 @@ func (s *Surreal) ExpandGenerationSchedule(
 		"digest":   schedule.Digest, "next_offset": schedule.NextOffset,
 		"new_offset": newOffset, "chunk_count": len(chunks), "chunks": chunks,
 	}
-	results, err := surrealdb.Query[[]generationScheduleRec](ctx, s.db, expandGenerationScheduleSQL, variables)
+	results, err := queryGenerationSchedule[[]generationScheduleRec](
+		ctx, s.db, "expand", expandGenerationScheduleSQL, variables,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("expand generation schedule: %w", err)
 	}
@@ -749,7 +778,7 @@ func (s *Surreal) ExpandNextGenerationSchedule(
 	if !validGenerationResourceClass(class) {
 		return nil, errors.New("expand next generation schedule: invalid resource class")
 	}
-	results, err := surrealdb.Query[[]generationScheduleRec](ctx, s.db, `
+	results, err := queryGenerationSchedule[[]generationScheduleRec](ctx, s.db, "select_expand", `
 SELECT * FROM generation_schedule WHERE resource_class = $class
 	AND status = 'active' AND next_offset < total_items
 	ORDER BY updated_at, repository, stage LIMIT 1`, map[string]any{"class": class})
@@ -868,7 +897,7 @@ func (s *Surreal) HeartbeatGenerationChunk(ctx context.Context, chunk Generation
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+	results, err := queryGenerationSchedule[[]generationChunkRec](ctx, s.db, "heartbeat", `
 UPDATE $chunk SET heartbeat_at = time::now()
 	WHERE status = 'running' AND lease_token = $lease AND claimed_by = $worker
 	RETURN AFTER`, map[string]any{
@@ -924,7 +953,7 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[[]generationTransitionRec](ctx, s.db, completeGenerationChunkSQL, map[string]any{
+	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.db, "complete", completeGenerationChunkSQL, map[string]any{
 		"chunk":            generationChunkRecordID(chunk),
 		"schedule":         models.NewRecordID("generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:")),
 		"current":          models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:")),
@@ -932,6 +961,12 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 		"digest":           chunk.ScheduleDigest, "lease": chunk.LeaseToken, "worker": chunk.ClaimedBy,
 	})
 	if err != nil {
+		if applied, reconcileErr := s.reconcileGenerationCompletion(ctx, chunk); applied {
+			return nil
+		} else if errors.Is(reconcileErr, ErrGenerationStale) ||
+			errors.Is(reconcileErr, ErrGenerationLeaseLost) {
+			return reconcileErr
+		}
 		return fmt.Errorf("complete generation chunk: %w", err)
 	}
 	rows := generationTransitionRows(results)
@@ -942,6 +977,49 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 		return ErrGenerationStale
 	}
 	return nil
+}
+
+// reconcileGenerationCompletion closes an ambiguous client response without
+// replaying accounting. A done chunk proves that its schedule and repository
+// counters advanced in the same committed transaction; the current pointer is
+// re-read so a superseded completion remains stale rather than successful.
+func (s *Surreal) reconcileGenerationCompletion(
+	ctx context.Context,
+	claimed GenerationChunk,
+) (bool, error) {
+	current, err := s.generationChunkByIdentity(ctx, claimed.Identity)
+	if err != nil {
+		return false, err
+	}
+	if current.ID != claimed.ID || current.ScheduleDigest != claimed.ScheduleDigest ||
+		current.Repository != claimed.Repository || current.Stage != claimed.Stage ||
+		current.Generation != claimed.Generation || current.Offset != claimed.Offset ||
+		current.Attempt != claimed.Attempt {
+		return false, ErrGenerationLeaseLost
+	}
+	switch current.Status {
+	case GenerationChunkDone:
+		schedule, scheduleErr := s.GetGenerationSchedule(
+			ctx, claimed.Repository, claimed.Stage,
+		)
+		if scheduleErr != nil {
+			return false, scheduleErr
+		}
+		if schedule.Digest != claimed.ScheduleDigest ||
+			schedule.Generation != claimed.Generation {
+			return false, ErrGenerationStale
+		}
+		return true, nil
+	case GenerationChunkCanceled:
+		return false, ErrGenerationStale
+	case GenerationChunkRunning:
+		if current.LeaseToken != claimed.LeaseToken || current.ClaimedBy != claimed.ClaimedBy {
+			return false, ErrGenerationLeaseLost
+		}
+		return false, nil
+	default:
+		return false, ErrGenerationLeaseLost
+	}
 }
 
 const failGenerationChunkSQL = `
@@ -977,8 +1055,8 @@ func (s *Surreal) FailGenerationChunk(
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[[]generationTransitionRec](
-		ctx, s.db, failGenerationChunkSQL, map[string]any{
+	results, err := queryGenerationSchedule[[]generationTransitionRec](
+		ctx, s.db, "fail", failGenerationChunkSQL, map[string]any{
 			"chunk": generationChunkRecordID(chunk),
 			"schedule": models.NewRecordID(
 				"generation_schedule",
@@ -1075,7 +1153,9 @@ func (s *Surreal) RetryGenerationChunk(
 		"stage": chunk.Stage, "generation": chunk.Generation,
 		"resource_class": chunk.ResourceClass, "offset": chunk.Offset, "length": chunk.Length,
 	}
-	results, err := surrealdb.Query[[]generationTransitionRec](ctx, s.db, retryGenerationChunkSQL, variables)
+	results, err := queryGenerationSchedule[[]generationTransitionRec](
+		ctx, s.db, "retry", retryGenerationChunkSQL, variables,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("retry generation chunk: %w", err)
 	}
@@ -1116,7 +1196,7 @@ func (s *Surreal) ReleaseGenerationChunk(ctx context.Context, chunk GenerationCh
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[[]generationTransitionRec](ctx, s.db, releaseGenerationChunkSQL, map[string]any{
+	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.db, "release", releaseGenerationChunkSQL, map[string]any{
 		"chunk":            generationChunkRecordID(chunk),
 		"schedule":         models.NewRecordID("generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:")),
 		"current":          models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:")),
@@ -1173,8 +1253,8 @@ func (s *Surreal) releaseStaleGenerationChunk(
 	if chunk.HeartbeatAt == nil || !chunk.HeartbeatAt.Before(cutoff) {
 		return ErrGenerationLeaseLost
 	}
-	results, err := surrealdb.Query[[]generationTransitionRec](
-		ctx, s.db, reapGenerationChunkSQL, map[string]any{
+	results, err := queryGenerationSchedule[[]generationTransitionRec](
+		ctx, s.db, "reap", reapGenerationChunkSQL, map[string]any{
 			"chunk": generationChunkRecordID(chunk),
 			"schedule": models.NewRecordID(
 				"generation_schedule",
@@ -1218,7 +1298,7 @@ func (s *Surreal) ReapStaleGenerationChunks(
 		return 0, errors.New("reap generation chunks: invalid class or cutoff")
 	}
 	cutoff := time.Now().UTC().Add(-staleAfter)
-	results, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+	results, err := queryGenerationSchedule[[]generationChunkRec](ctx, s.db, "select_reap", `
 SELECT * FROM generation_schedule_chunk WITH INDEX generation_schedule_chunk_stale
 	WHERE resource_class = $class AND status = 'running'
 	AND heartbeat_at != NONE AND heartbeat_at < $cutoff

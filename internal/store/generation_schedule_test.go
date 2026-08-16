@@ -195,6 +195,9 @@ func TestGenerationSchedulePagedFanoutAndLeaseLifecycle(t *testing.T) {
 	if err := store.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
 		t.Fatal(err)
 	}
+	if applied, err := store.reconcileGenerationCompletion(t.Context(), *chunk); err != nil || !applied {
+		t.Fatalf("committed completion reconciliation = %v, %v", applied, err)
+	}
 	if err := store.CompleteGenerationChunk(t.Context(), *chunk); !errors.Is(err, ErrGenerationLeaseLost) {
 		t.Fatalf("replayed completion = %v", err)
 	}

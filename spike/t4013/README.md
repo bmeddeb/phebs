@@ -2190,3 +2190,53 @@ go test ./spike/t4013/... -count=1
 make docs-check
 make verify-glossary
 ```
+
+### Neutral-21 scheduler wedge and scoped recovery
+
+`t40r1-neutral-21` stopped honestly at the exact four-hour semantic cold
+deadline. Its verified signed source-free package has SHA-256
+`93b54e57c071e2341a3f50f6a62a859b9af9d41c76010ae9f55dfd28eb4806be`.
+Structural cold converged. Semantic extraction materialized all 272 scheduled
+partitions, executed six gRPC handlers in 942 ms total runtime, and then held
+266 pending, one running, five succeeded, and zero failed for roughly 3.6
+hours. The custody-bound server log recorded concurrent SurrealDB transaction
+conflicts in schedule expansion and the sixth completion; that handler settled
+as `completion_failed`. Because handler completion cancels its heartbeat before
+the settlement write, the remaining lease was stale rather than alive.
+
+The schedule implementation had two compounding defects. Expansion and lease
+transition transactions did not share claim's bounded conflict retry, and one
+sequential scheduler loop performed expansion before stale reaping with the
+server-lifetime context. A blocked expansion call could therefore prevent the
+reaper from returning the repository's single token, starving every pending
+chunk. Generation expansion, heartbeat, completion, failure, retry, release,
+and stale reaping now reuse the existing 64-attempt explicit-conflict bound.
+Completion reconciles an ambiguous response through exact chunk and current
+schedule reads without incrementing counters again. Expansion and reaping run
+independently, and scheduler store calls have a five-second boundary. A
+deterministic regression holds expansion blocked after a failed completion and
+requires the reaper to release, reclaim, and settle the exact chunk.
+
+The scoped physical diagnostic uses a real supervised SurrealDB 3.2.0
+surrealkv child, two workers, one repository token, and the exact 272 one-item
+schedule. It settled in 1,887 ms with 272 handler executions, 272 successes,
+zero pending/running/failed rows, no surfaced store error, and 21 internally
+recovered expansion conflicts. Its source-free receipt is
+`generation-schedule-recovery.json`
+(`sha256:def6cd63f0bc7a7b97af753922812da90110787db4da0c5deccade66adab5f7c`).
+
+Fresh V14 plan emission also stamps the actual UTC freeze date. Historical
+plan constructors and retained bytes preserve their original `2026-08-08`
+value; the signed neutral-21 package is not mutated or relabeled.
+
+```sh
+T40R1_GENERATION_SCHEDULE_DIAGNOSTIC=1 \
+T40R1_GENERATION_SCHEDULE_RESULTS_PATH="$PWD/spike/t4013/generation-schedule-recovery.json" \
+go test ./internal/generationscheduler \
+  -run '^TestT40R1GenerationScheduleRecoveryDiagnostic$' -count=1 -v
+```
+
+This closes the reproduced schedule wedge only. The structural run's transient
+409 remains separately unclassified, and the ceremony's later checks and ten
+not-run phases remain unestablished. A fresh exact semantic production-path
+diagnostic plus independent review are required before another ceremony.

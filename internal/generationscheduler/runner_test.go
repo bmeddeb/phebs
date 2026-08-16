@@ -53,6 +53,174 @@ type schedulerStore struct {
 	retryErr    error
 }
 
+type blockedExpansionRecoveryStore struct {
+	mu               sync.Mutex
+	chunk            store.GenerationChunk
+	available        bool
+	claimed          bool
+	completionFailed chan struct{}
+	done             chan struct{}
+	reaped           int
+	completed        int
+}
+
+func newBlockedExpansionRecoveryStore() *blockedExpansionRecoveryStore {
+	return &blockedExpansionRecoveryStore{
+		chunk: store.GenerationChunk{
+			ID: "wedged", Identity: "sha256:" + strings.Repeat("1", 64),
+			ScheduleDigest: "sha256:" + strings.Repeat("2", 64),
+			Repository:     "example.invalid/wedged", Stage: "extraction-partitions",
+			Generation:    "sha256:" + strings.Repeat("3", 64),
+			ResourceClass: store.GenerationResourceExtraction,
+			Offset:        0, Length: 1, Status: store.GenerationChunkRunning,
+			LeaseToken: "first-lease",
+		},
+		available: true, completionFailed: make(chan struct{}), done: make(chan struct{}),
+	}
+}
+
+func (*blockedExpansionRecoveryStore) EnqueueGenerationSchedule(
+	context.Context, store.GenerationScheduleSpec,
+) (*store.GenerationSchedule, error) {
+	return nil, errors.New("unused")
+}
+
+func (*blockedExpansionRecoveryStore) ExpandGenerationSchedule(
+	context.Context, string, string, string,
+) (*store.GenerationSchedule, error) {
+	return nil, errors.New("unused")
+}
+
+func (*blockedExpansionRecoveryStore) ExpandNextGenerationSchedule(
+	ctx context.Context, _ store.GenerationResourceClass,
+) (*store.GenerationSchedule, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func (state *blockedExpansionRecoveryStore) ClaimGenerationChunk(
+	_ context.Context, _ store.GenerationResourceClass, worker string,
+) (*store.GenerationChunk, error) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if !state.available || state.claimed {
+		return nil, store.ErrNotFound
+	}
+	state.available = false
+	state.claimed = true
+	chunk := state.chunk
+	chunk.ClaimedBy = worker
+	if state.reaped > 0 {
+		chunk.LeaseToken = "recovered-lease"
+	}
+	state.chunk = chunk
+	return &chunk, nil
+}
+
+func (*blockedExpansionRecoveryStore) HeartbeatGenerationChunk(
+	context.Context, store.GenerationChunk,
+) error {
+	return nil
+}
+
+func (state *blockedExpansionRecoveryStore) CompleteGenerationChunk(
+	_ context.Context, chunk store.GenerationChunk,
+) error {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.completed == 0 {
+		state.completed++
+		close(state.completionFailed)
+		return errors.New("transaction conflict: completion can be retried")
+	}
+	if chunk.LeaseToken != "recovered-lease" {
+		return store.ErrGenerationLeaseLost
+	}
+	state.completed++
+	close(state.done)
+	return nil
+}
+
+func (*blockedExpansionRecoveryStore) FailGenerationChunk(
+	context.Context, store.GenerationChunk, string,
+) error {
+	return errors.New("unused")
+}
+
+func (*blockedExpansionRecoveryStore) RetryGenerationChunk(
+	context.Context, store.GenerationChunk, string, time.Time,
+) (*store.GenerationChunk, error) {
+	return nil, errors.New("unused")
+}
+
+func (*blockedExpansionRecoveryStore) ReleaseGenerationChunk(
+	context.Context, store.GenerationChunk, string,
+) error {
+	return errors.New("unused")
+}
+
+func (state *blockedExpansionRecoveryStore) ReapStaleGenerationChunks(
+	ctx context.Context, _ store.GenerationResourceClass, _ time.Duration,
+) (int, error) {
+	select {
+	case <-state.completionFailed:
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.reaped > 0 {
+		return 0, nil
+	}
+	state.reaped++
+	state.available = true
+	state.claimed = false
+	return 1, nil
+}
+
+func (*blockedExpansionRecoveryStore) GetGenerationSchedule(
+	context.Context, string, string,
+) (*store.GenerationSchedule, error) {
+	return nil, store.ErrNotFound
+}
+
+func TestSchedulerReaperProgressIsIndependentOfBlockedExpansion(t *testing.T) {
+	state := newBlockedExpansionRecoveryStore()
+	ctx, cancel := context.WithCancel(t.Context())
+	scheduler := &Scheduler{
+		Store: state,
+		Classes: map[store.GenerationResourceClass]Class{
+			store.GenerationResourceExtraction: {
+				Concurrency: 1,
+				Budget:      Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+				Handle: func(context.Context, store.GenerationChunk, Budget) error {
+					return nil
+				},
+			},
+		},
+		PollEvery: time.Millisecond, HeartbeatEvery: time.Second,
+		StaleAfter: 5 * time.Second,
+	}
+	runDone := make(chan error, 1)
+	go func() { runDone <- scheduler.Run(ctx) }()
+	select {
+	case <-state.done:
+		cancel()
+	case <-time.After(2 * time.Second):
+		cancel()
+		<-runDone
+		t.Fatal("blocked expansion starved stale-lease recovery")
+	}
+	if err := <-runDone; err != nil {
+		t.Fatal(err)
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.reaped != 1 || state.completed != 2 {
+		t.Fatalf("reaped/completion attempts = %d/%d, want 1/2", state.reaped, state.completed)
+	}
+}
+
 func TestSchedulerAcceptsExtractionResourceClass(t *testing.T) {
 	scheduler := &Scheduler{
 		Store: &schedulerStore{},

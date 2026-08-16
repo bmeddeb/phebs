@@ -45,19 +45,20 @@ type Class struct {
 }
 
 type Scheduler struct {
-	Store          store.GenerationSchedulerStore
-	Classes        map[store.GenerationResourceClass]Class
-	MaxConcurrency int
-	MaxMemoryBytes int64
-	MaxDescriptors int
-	PollEvery      time.Duration
-	HeartbeatEvery time.Duration
-	StaleAfter     time.Duration
-	Backoff        func(attempt int) time.Duration
-	WorkerPrefix   string
-	Report         func(error)
-	Diagnostics    bool
-	ChunkReports   func([]byte) error
+	Store            store.GenerationSchedulerStore
+	Classes          map[store.GenerationResourceClass]Class
+	MaxConcurrency   int
+	MaxMemoryBytes   int64
+	MaxDescriptors   int
+	PollEvery        time.Duration
+	HeartbeatEvery   time.Duration
+	StaleAfter       time.Duration
+	StoreCallTimeout time.Duration
+	Backoff          func(attempt int) time.Duration
+	WorkerPrefix     string
+	Report           func(error)
+	Diagnostics      bool
+	ChunkReports     func([]byte) error
 }
 
 const ChunkLifecycleSchema = "phebs-generation-chunk-lifecycle-v1"
@@ -93,10 +94,14 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 	var workers sync.WaitGroup
 	for _, class := range classes {
 		configuration := scheduler.Classes[class]
-		workers.Add(1)
+		workers.Add(2)
 		go func() {
 			defer workers.Done()
-			scheduler.planAndReap(ctx, class)
+			scheduler.plan(ctx, class)
+		}()
+		go func() {
+			defer workers.Done()
+			scheduler.reap(ctx, class)
 		}()
 		for index := range configuration.Concurrency {
 			workers.Add(1)
@@ -167,6 +172,9 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 	if scheduler.StaleAfter == 0 {
 		scheduler.StaleAfter = 4 * scheduler.HeartbeatEvery
 	}
+	if scheduler.StoreCallTimeout == 0 {
+		scheduler.StoreCallTimeout = 5 * time.Second
+	}
 	if scheduler.Backoff == nil {
 		scheduler.Backoff = deterministicBackoff
 	}
@@ -177,7 +185,7 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 		scheduler.MaxMemoryBytes < 1 || scheduler.MaxMemoryBytes > MaxProcessMemoryBytes ||
 		scheduler.MaxDescriptors < 1 || scheduler.MaxDescriptors > MaxProcessDescriptors ||
 		scheduler.PollEvery <= 0 || scheduler.HeartbeatEvery <= 0 ||
-		scheduler.StaleAfter <= scheduler.HeartbeatEvery {
+		scheduler.StaleAfter <= scheduler.HeartbeatEvery || scheduler.StoreCallTimeout <= 0 {
 		return nil, errors.New("generation scheduler process bounds are invalid")
 	}
 	classes := make([]store.GenerationResourceClass, 0, len(scheduler.Classes))
@@ -218,15 +226,40 @@ func deterministicBackoff(attempt int) time.Duration {
 	return time.Second << shift
 }
 
-func (scheduler *Scheduler) planAndReap(ctx context.Context, class store.GenerationResourceClass) {
+func (scheduler *Scheduler) storeCallTimeout() time.Duration {
+	if scheduler.StoreCallTimeout > 0 {
+		return scheduler.StoreCallTimeout
+	}
+	return 5 * time.Second
+}
+
+func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationResourceClass) {
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
 	for {
-		if _, err := scheduler.Store.ExpandNextGenerationSchedule(ctx, class); err != nil &&
+		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
+		_, err := scheduler.Store.ExpandNextGenerationSchedule(callCtx, class)
+		cancel()
+		if err != nil &&
 			!errors.Is(err, store.ErrNotFound) && ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("expand %s generation page: %w", class, err))
 		}
-		if _, err := scheduler.Store.ReapStaleGenerationChunks(ctx, class, scheduler.StaleAfter); err != nil &&
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (scheduler *Scheduler) reap(ctx context.Context, class store.GenerationResourceClass) {
+	ticker := time.NewTicker(scheduler.PollEvery)
+	defer ticker.Stop()
+	for {
+		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
+		_, err := scheduler.Store.ReapStaleGenerationChunks(callCtx, class, scheduler.StaleAfter)
+		cancel()
+		if err != nil &&
 			ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("reap %s generation chunks: %w", class, err))
 		}
@@ -248,7 +281,9 @@ func (scheduler *Scheduler) work(
 	defer ticker.Stop()
 	worker := fmt.Sprintf("%s-%s-%d", scheduler.WorkerPrefix, class, index)
 	for {
-		chunk, err := scheduler.Store.ClaimGenerationChunk(ctx, class, worker)
+		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
+		chunk, err := scheduler.Store.ClaimGenerationChunk(callCtx, class, worker)
+		cancel()
 		if err == nil {
 			scheduler.execute(ctx, configuration, *chunk)
 			continue
@@ -288,7 +323,12 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 				heartbeat <- nil
 				return
 			case <-ticker.C:
-				if err := scheduler.Store.HeartbeatGenerationChunk(handleCtx, chunk); err != nil {
+				callCtx, callCancel := context.WithTimeout(
+					handleCtx, scheduler.storeCallTimeout(),
+				)
+				err := scheduler.Store.HeartbeatGenerationChunk(callCtx, chunk)
+				callCancel()
+				if err != nil {
 					cancel()
 					heartbeat <- err
 					return
@@ -299,7 +339,9 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	handleErr := configuration.Handle(handleCtx, chunk, configuration.Budget)
 	cancel()
 	heartbeatErr := <-heartbeat
-	writeCtx, writeCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	writeCtx, writeCancel := context.WithTimeout(
+		context.WithoutCancel(ctx), scheduler.storeCallTimeout(),
+	)
 	defer writeCancel()
 	if heartbeatErr != nil {
 		outcome = "heartbeat_failed"
@@ -357,7 +399,7 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		}
 		if configuration.OnExhausted != nil {
 			callbackCtx, callbackCancel := context.WithTimeout(
-				context.WithoutCancel(ctx), 5*time.Second,
+				context.WithoutCancel(ctx), scheduler.storeCallTimeout(),
 			)
 			defer callbackCancel()
 			if callbackErr := configuration.OnExhausted(

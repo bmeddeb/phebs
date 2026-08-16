@@ -1,0 +1,28 @@
+{
+  "schema": "phebs-t40r1-generation-schedule-recovery-v1",
+  "go_version": "go1.26.5",
+  "surreal_version": "3.2.0",
+  "physical_store": "surrealkv",
+  "chunks": 272,
+  "chunk_items": 1,
+  "repository_tokens": 1,
+  "workers": 2,
+  "handler_executions": 272,
+  "materialized": 272,
+  "pending": 0,
+  "running": 0,
+  "succeeded": 272,
+  "failed": 0,
+  "store_errors": 0,
+  "conflict_retries": {
+    "expand": 21,
+    "complete": 0,
+    "heartbeat": 0,
+    "reap": 0,
+    "other": 0
+  },
+  "wall_ms": 1887,
+  "settled": true,
+  "exact_counters": true,
+  "repository_token_clear": true
+}
