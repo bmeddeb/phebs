@@ -26,8 +26,10 @@ import (
 )
 
 const (
-	t40r1DescriptorProductSchema = "t4013-descriptor-present-product-parity-v1"
-	t40r1DescriptorProductEnv    = "T40R1_DESCRIPTOR_PRODUCT_PARITY"
+	t40r1DescriptorProductSchemaV1 = "t4013-descriptor-present-product-parity-v1"
+	t40r1DescriptorProductSchema   = "t4013-descriptor-present-product-parity-v2"
+	t40r1DescriptorProductEnv      = "T40R1_DESCRIPTOR_PRODUCT_PARITY"
+	t40r1DescriptorProductReceipt  = "descriptor-present-product-parity-v2.json"
 )
 
 type t40r1DescriptorProductAuthority struct {
@@ -133,7 +135,7 @@ func TestT40R1DescriptorPresentProductParity(t *testing.T) {
 		measurement.WorkerDuration, measurement.ProductDuration,
 		measurement.CallerDisk, measurement.ObservationDisk,
 	)
-	raw, err := os.ReadFile("descriptor-present-product-parity.json")
+	raw, err := os.ReadFile(t40r1DescriptorProductReceipt)
 	if err != nil {
 		t.Fatalf("retained descriptor product-parity witness unavailable: %v\n%s", err, encoded)
 	}
@@ -153,7 +155,7 @@ func TestT40R1RetainedDescriptorPresentProductParityIsClosed(t *testing.T) {
 	if err := json.Unmarshal(raw, &witness); err != nil {
 		t.Fatal(err)
 	}
-	if witness.Schema != t40r1DescriptorProductSchema ||
+	if witness.Schema != t40r1DescriptorProductSchemaV1 ||
 		witness.Profile != "physical-grpc-descriptor-product-v1" ||
 		witness.Authority.ObservationVersion != observationpublication.DownstreamAuthorityV2 ||
 		!witness.Authority.ObservationCurrent || witness.Authority.ObservationRecords != 2 ||
@@ -195,6 +197,41 @@ func TestT40R1RetainedDescriptorPresentProductParityIsClosed(t *testing.T) {
 		witness.Boundary != "descriptor_present_worker_product_parity" ||
 		!witness.ClearsBoundary || witness.EstablishesScalePass || witness.AuthorizesCeremony {
 		t.Fatalf("retained descriptor product-parity witness is not closed: %+v", witness)
+	}
+}
+
+func TestT40R1RetainedDescriptorPresentProductParityV2IsClosed(t *testing.T) {
+	raw, err := os.ReadFile(t40r1DescriptorProductReceipt)
+	if err != nil {
+		t.Skip("retained descriptor product-parity V2 witness is not authored yet")
+	}
+	var witness t40r1DescriptorProductWitness
+	if err := json.Unmarshal(raw, &witness); err != nil {
+		t.Fatal(err)
+	}
+	if witness.Schema != t40r1DescriptorProductSchema ||
+		witness.Pipeline.WorkerTurns != 6 || witness.Pipeline.ExpectedPairs != 4 ||
+		witness.Pipeline.SettledPairs != 4 || witness.Pipeline.SucceededPairs != 4 ||
+		witness.Pipeline.RefusedPairs != 0 ||
+		witness.Pipeline.Disposition != string(store.CallerGenerationAdmitted) ||
+		witness.Pipeline.ResultRecords != 1 || witness.Pipeline.AbstentionRecords != 0 ||
+		witness.Pipeline.CoverageRecords != 3 || witness.Pipeline.CoveredCandidates != 5 ||
+		!witness.Pipeline.PublicationPresent || !witness.Pipeline.PublicationCurrent ||
+		!witness.Pipeline.PublicationParity ||
+		witness.Projection.ReaderAvailability != string(callerexecute.PublicationCurrent) ||
+		witness.Projection.ReaderOrigin != "current_publication" ||
+		witness.Projection.MatchingRowsState != "exact" ||
+		witness.Projection.GenerationState != "current" ||
+		witness.Projection.Rows != 1 || witness.Projection.TotalMatchingRows != 1 ||
+		witness.Projection.ResultRecords != witness.Pipeline.ResultRecords ||
+		witness.Projection.AbstentionRecords != witness.Pipeline.AbstentionRecords ||
+		witness.Projection.CoverageRecords != witness.Pipeline.CoverageRecords ||
+		witness.Projection.CoveredCandidates != witness.Pipeline.CoveredCandidates ||
+		witness.Projection.Row.Operation != t40r1DescriptorOperation ||
+		witness.Projection.Row.Lineage != t40r1DescriptorLineage ||
+		witness.Projection.Row.Path != t40r1DescriptorGitBlobPath ||
+		!witness.ClearsBoundary || witness.EstablishesScalePass || witness.AuthorizesCeremony {
+		t.Fatalf("retained descriptor product-parity V2 witness is not closed: %+v", witness)
 	}
 }
 
@@ -417,7 +454,7 @@ func executeT40R1DescriptorProductParity(
 	row := page.Rows[0]
 	witness := t40r1DescriptorProductWitness{
 		Schema:  t40r1DescriptorProductSchema,
-		Method:  "publish current observation and partitioned gRPC extraction authority, execute all four descriptor-present physical caller pairs through the production worker and real Git mirror, then require terminal outcome/admission/publication parity with the shared reader and one exact authorized Caller Map row",
+		Method:  "publish current observation and partitioned gRPC extraction authority, execute all four descriptor-present physical caller pairs through the production V3 zero-fact coverage worker and real Git mirror, then require admitted outcome/publication parity with the shared reader and one exact authorized Caller Map row",
 		Profile: "physical-grpc-descriptor-product-v1",
 		Authority: t40r1DescriptorProductAuthority{
 			ObservationVersion: observation.Version, ObservationCurrent: true,
@@ -488,8 +525,8 @@ func executeT40R1DescriptorProductParity(
 			witness.Pipeline.SucceededPairs == 4 && witness.Pipeline.RefusedPairs == 0 &&
 			witness.Pipeline.Disposition == string(store.CallerGenerationAdmitted) &&
 			witness.Pipeline.AdmissionPairs == 4 && witness.Pipeline.Artifacts == 4 &&
-			witness.Pipeline.ResultRecords == 1 && witness.Pipeline.AbstentionRecords == 5 &&
-			witness.Pipeline.CoverageRecords == 0 && witness.Pipeline.CoveredCandidates == 0 &&
+			witness.Pipeline.ResultRecords == 1 && witness.Pipeline.AbstentionRecords == 0 &&
+			witness.Pipeline.CoverageRecords == 3 && witness.Pipeline.CoveredCandidates == 5 &&
 			witness.Pipeline.RefusalSummaries == 0 && witness.Pipeline.PublicationPresent &&
 			witness.Pipeline.PublicationCurrent && witness.Pipeline.PublicationParity &&
 			witness.Projection.ReaderAvailability == string(callerexecute.PublicationCurrent) &&
@@ -500,8 +537,8 @@ func executeT40R1DescriptorProductParity(
 			witness.Projection.DeclarationExact && witness.Projection.Rows == 1 &&
 			witness.Projection.TotalMatchingRows == 1 && witness.Projection.PairCount == 4 &&
 			witness.Projection.CandidateRecords == 6 && witness.Projection.ResultRecords == 1 &&
-			witness.Projection.AbstentionRecords == 5 && witness.Projection.CoverageRecords == 0 &&
-			witness.Projection.CoveredCandidates == 0 &&
+			witness.Projection.AbstentionRecords == 0 && witness.Projection.CoverageRecords == 3 &&
+			witness.Projection.CoveredCandidates == 5 &&
 			witness.Projection.Row.Classification == "resolved_caller" &&
 			witness.Projection.Row.Resolution == "syntax" &&
 			witness.Projection.Row.Protocol == "protobuf" &&

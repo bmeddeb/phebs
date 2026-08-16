@@ -178,6 +178,9 @@ func TestT40R1CallerTerminalDiskWitness(t *testing.T) {
 	if os.Getenv(t40r1CallerTerminalWitnessEnv) != "1" {
 		t.Skip("set " + t40r1CallerTerminalWitnessEnv + "=1 to run the disk-backed caller witness")
 	}
+	if callerleaf.CurrentLeafAdapter != callerleaf.LeafAdapterV2 {
+		t.Skip("the retained caller terminal witness is historical V2 evidence")
+	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary is not installed")
 	}
@@ -213,8 +216,8 @@ func TestT40R1RetainedCallerTerminalWitnessIsClosed(t *testing.T) {
 	}
 	if witness.Schema != t40r1CallerTerminalWitnessSchema ||
 		witness.Profile != "semantic-262144-v1" ||
-		witness.LeafAdapter != callerleaf.CurrentLeafAdapter ||
-		witness.Policy != callerleaf.CurrentPolicy().Name ||
+		witness.LeafAdapter != callerleaf.LeafAdapterV2 ||
+		witness.Policy != callerleaf.PolicyNameV2 ||
 		witness.CandidateRecords != t40r1CallerTerminalCandidates ||
 		witness.CandidateLeaves != t40r1CallerTerminalLeafCount ||
 		witness.Protocols != 2 || witness.ExpectedPairs != t40r1CallerTerminalPairCount ||

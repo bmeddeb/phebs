@@ -1390,6 +1390,41 @@ reader/Caller Map parity, and steady-state-cost coverage. This diagnostic
 changes no production behavior, is not a scale pass or Take 20 reconstruction,
 and authorizes no ceremony, release, Epic closure, or Epic 41 progression.
 
+The reduce-first correction and scoped rerun now pass. New caller generations
+bind `direct-syntax-zero-fact-coverage-v3` and
+`phebs-direct-caller-leaf-policy-v3`; V1/V2 identities and bytes remain
+readable and exact. After the unchanged descriptor-present source scan, a pair
+with no resolved or unresolved caller fact replaces only its input-abstention
+rows with one `phebs-caller-leaf-coverage-v2` record. The record binds the
+immutable pair/member, partitions all candidates across the closed V3 count
+vocabulary, and retains exact source-read count/bytes. A result or unresolved
+fact prevents compaction and retains the full artifact. Existing startup
+reconciliation queues a V3 replacement before clearing a V2 current pointer.
+
+Focused schema, historical reconstruction, all-gap, mixed result/unresolved,
+4,096-record maximum-shape, store receipt, recovery/replacement, complete
+publication, and exact product-parity tests pass. The physical rerun kept the
+same 261,770-file/261,769-candidate/96-leaf distribution and settled all 96
+pairs successfully in 98 turns. Admission and publication contain one result,
+4,055 abstentions, and 95 coverage records covering 257,713 candidates;
+receipts retain 261,764 Git reads totaling 24,082,313 bytes and zero
+out-of-leaf reads. Exact Caller Map returns the one current resolved row and
+the same pair/result/abstention/coverage scalars. The retained V2 receipt is
+`spike/t4013/descriptor-present-96leaf-product-v2.json`
+(`sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`);
+the failed V1 receipt remains byte-exact.
+
+Steady-state cost remains source-bound: a descriptor-present pair performs the
+same bounded Git reads, hashes, parses, direct scan, repository lock, and
+temporary staging writes. A zero-fact completion adds constant counters and
+one truncate/seek/coverage write; result/unresolved pairs add a constant final
+check. No bound, retry cadence, query, sync tick, startup scan cardinality,
+publication/lifecycle ceiling, cache, child, or topology changes. This closes
+the scoped caller refusal only. It is not T40.13 or Epic 40 closure, a scale/SLO
+pass, Take 20 reconstruction, ceremony authorization, release, or Epic 41
+progression. The next action is independent evidence/code review before any
+separate fresh-ceremony freeze decision.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

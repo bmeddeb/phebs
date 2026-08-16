@@ -103,8 +103,8 @@ func measureT40R1CompactCallerCoverage(
 	measurement := t40r1CompactCoverageMeasurement{
 		Schema:      t40r1CompactCoverageSchema,
 		Method:      "production ExecutePair replays one exact maximal 4,096-record candidate member with the maximum legal member-name length and all four gap kinds for each caller protocol under an exact zero-descriptor resolver; the unchanged 16,384-pair ceiling then provides the conservative physical-record and byte upper bound while frozen profile cardinalities provide exact logical coverage",
-		LeafAdapter: callerleaf.CurrentLeafAdapter,
-		Policy:      callerleaf.CurrentPolicy().Name,
+		LeafAdapter: callerleaf.LeafAdapterV2,
+		Policy:      callerleaf.PolicyNameV2,
 	}
 	maxCanonical := int64(0)
 	maxStaging := int64(0)
@@ -198,7 +198,7 @@ func executeT40R1CompactMaxPair(
 		ResolverManifestDigest: digestA,
 		Extractors: []callerleaf.ExtractorIdentity{{
 			Domain: domain, Version: version,
-			LeafAdapterVersion: callerleaf.CurrentLeafAdapter,
+			LeafAdapterVersion: callerleaf.LeafAdapterV2,
 		}},
 	})
 	if err != nil {

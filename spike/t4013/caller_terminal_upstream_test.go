@@ -259,6 +259,9 @@ func TestT40R1CallerTerminalUpstreamWitness(t *testing.T) {
 	if os.Getenv(t40r1CallerUpstreamEnv) != "1" {
 		t.Skip("set " + t40r1CallerUpstreamEnv + "=1 to run the disk-backed upstream witness")
 	}
+	if callerleaf.CurrentLeafAdapter != callerleaf.LeafAdapterV2 {
+		t.Skip("the retained caller upstream witness is historical V2 evidence")
+	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary is not installed")
 	}
@@ -290,8 +293,8 @@ func TestT40R1RetainedCallerTerminalUpstreamWitnessIsClosed(t *testing.T) {
 	}
 	if witness.Schema != t40r1CallerUpstreamSchema ||
 		witness.Profile != "semantic-262144-v1" ||
-		witness.LeafAdapter != callerleaf.CurrentLeafAdapter ||
-		witness.Policy != callerleaf.CurrentPolicy().Name ||
+		witness.LeafAdapter != callerleaf.LeafAdapterV2 ||
+		witness.Policy != callerleaf.PolicyNameV2 ||
 		witness.CandidateRecords != t40r1CallerUpstreamCandidates ||
 		witness.CandidateLeaves != t40r1CallerUpstreamLeaves ||
 		witness.Protocols != 2 || witness.ExpectedPairs != t40r1CallerUpstreamPairs ||

@@ -26,28 +26,35 @@ import (
 )
 
 const (
-	GenerationSchema     = "phebs-caller-generation-v1"
-	GenerationSchemaV2   = "phebs-caller-generation-v2"
-	PairSchema           = "phebs-caller-leaf-pair-v1"
-	RecordSchema         = "phebs-caller-leaf-record-v1"
-	CoverageRecordSchema = "phebs-caller-leaf-coverage-record-v1"
-	CoverageSchema       = "phebs-caller-leaf-coverage-v1"
-	MetadataSchema       = "phebs-caller-leaf-metadata-v1"
-	PolicyName           = "phebs-direct-caller-leaf-policy-v1"
-	PolicyNameV2         = "phebs-direct-caller-leaf-policy-v2"
-	LeafAdapterV1        = "direct-syntax-base-v1"
-	LeafAdapterV2        = "direct-syntax-compact-coverage-v2"
-	CurrentLeafAdapter   = LeafAdapterV2
+	GenerationSchema       = "phebs-caller-generation-v1"
+	GenerationSchemaV2     = "phebs-caller-generation-v2"
+	PairSchema             = "phebs-caller-leaf-pair-v1"
+	RecordSchema           = "phebs-caller-leaf-record-v1"
+	CoverageRecordSchema   = "phebs-caller-leaf-coverage-record-v1"
+	CoverageRecordSchemaV2 = "phebs-caller-leaf-coverage-record-v2"
+	CoverageSchema         = "phebs-caller-leaf-coverage-v1"
+	CoverageSchemaV2       = "phebs-caller-leaf-coverage-v2"
+	MetadataSchema         = "phebs-caller-leaf-metadata-v1"
+	PolicyName             = "phebs-direct-caller-leaf-policy-v1"
+	PolicyNameV2           = "phebs-direct-caller-leaf-policy-v2"
+	PolicyNameV3           = "phebs-direct-caller-leaf-policy-v3"
+	LeafAdapterV1          = "direct-syntax-base-v1"
+	LeafAdapterV2          = "direct-syntax-compact-coverage-v2"
+	LeafAdapterV3          = "direct-syntax-zero-fact-coverage-v3"
+	CurrentLeafAdapter     = LeafAdapterV3
 
 	RecordResult     = "result"
 	RecordAbstention = "abstention"
 	RecordCoverage   = "coverage"
 
 	CoverageReasonNoResolverDescriptors = "no_resolver_descriptors"
+	CoverageReasonZeroCallerFacts       = "zero_caller_facts"
 	CoverageGapCatalogOwnedInput        = "catalog_owned_input"
 	CoverageGapDomainUnselected         = "domain_unselected"
 	CoverageGapExcludedGoTest           = "excluded_go_test"
+	CoverageGapInvalidUTF8              = "invalid_utf8"
 	CoverageGapResolverGeneratedInput   = "resolver_generated_input"
+	CoverageGapSourceTooLarge           = "source_too_large"
 
 	MaxCallerDomains              = 16
 	MaxExpectedPairs              = 16_384
@@ -121,8 +128,11 @@ func frozenPolicy(adapter string) Policy {
 	coveragePerPair := 0
 	aggregateCoverage := 0
 	aggregateCandidates := 0
-	if adapter == LeafAdapterV2 {
+	if adapter == LeafAdapterV2 || adapter == LeafAdapterV3 {
 		name = PolicyNameV2
+		if adapter == LeafAdapterV3 {
+			name = PolicyNameV3
+		}
 		coveragePerPair = MaxCoverageRecordsPerPair
 		aggregateCoverage = MaxAggregateCoverageRecords
 		aggregateCandidates = MaxAggregateCoveredCandidates
@@ -307,7 +317,8 @@ func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error)
 	for index, current := range input.Extractors {
 		if !validToken(current.Domain, 128) || !validToken(current.Version, 64) ||
 			(current.LeafAdapterVersion != LeafAdapterV1 &&
-				current.LeafAdapterVersion != LeafAdapterV2) ||
+				current.LeafAdapterVersion != LeafAdapterV2 &&
+				current.LeafAdapterVersion != LeafAdapterV3) ||
 			index > 0 && input.Extractors[index-1].Domain >= current.Domain {
 			return GenerationIdentity{}, errors.New("caller generation extractor set is invalid or unordered")
 		}
@@ -457,10 +468,15 @@ func ValidateRecord(record Record) error {
 			return fmt.Errorf("%w: malformed abstention record", ErrInvalidArtifact)
 		}
 	case RecordCoverage:
-		if record.Schema != CoverageRecordSchema || record.Path != "" ||
+		if (record.Schema != CoverageRecordSchema &&
+			record.Schema != CoverageRecordSchemaV2) || record.Path != "" ||
 			record.ObjectID != "" || record.SourceLane != "" || record.Fact != nil ||
 			record.Reason != "" || record.Coverage == nil ||
-			validateCoverage(*record.Coverage) != nil {
+			validateCoverage(*record.Coverage) != nil ||
+			record.Schema == CoverageRecordSchema &&
+				record.Coverage.Schema != CoverageSchema ||
+			record.Schema == CoverageRecordSchemaV2 &&
+				record.Coverage.Schema != CoverageSchemaV2 {
 			return fmt.Errorf("%w: malformed coverage record", ErrInvalidArtifact)
 		}
 	default:
@@ -470,7 +486,8 @@ func ValidateRecord(record Record) error {
 }
 
 func validateCoverage(coverage Coverage) error {
-	if coverage.Schema != CoverageSchema || !validDigest(coverage.PairDigest) ||
+	if (coverage.Schema != CoverageSchema && coverage.Schema != CoverageSchemaV2) ||
+		!validDigest(coverage.PairDigest) ||
 		coverage.CandidateMemberName == "" || len(coverage.CandidateMemberName) > 255 ||
 		strings.ContainsAny(coverage.CandidateMemberName, "/\\") ||
 		!validDigest(coverage.CandidateContentDigest) ||
@@ -479,13 +496,16 @@ func validateCoverage(coverage Coverage) error {
 		coverage.CoveredCandidateCount != coverage.CandidateRecordCount ||
 		coverage.NoDirectCandidateCount < 0 ||
 		coverage.NoDirectCandidateCount > coverage.CandidateRecordCount ||
-		len(coverage.Gaps) > 4 ||
-		coverage.Reason != CoverageReasonNoResolverDescriptors {
+		len(coverage.Gaps) > 6 ||
+		(coverage.Reason != CoverageReasonNoResolverDescriptors &&
+			coverage.Reason != CoverageReasonZeroCallerFacts) ||
+		coverage.Schema == CoverageSchema &&
+			coverage.Reason != CoverageReasonNoResolverDescriptors {
 		return ErrInvalidArtifact
 	}
 	accounted := coverage.NoDirectCandidateCount
 	for index, gap := range coverage.Gaps {
-		if gap.Count <= 0 || !validCoverageGapReason(gap.Reason) ||
+		if gap.Count <= 0 || !validCoverageGapReason(coverage, gap.Reason) ||
 			index > 0 && coverage.Gaps[index-1].Reason >= gap.Reason ||
 			gap.Count > coverage.CandidateRecordCount-accounted {
 			return ErrInvalidArtifact
@@ -498,11 +518,14 @@ func validateCoverage(coverage Coverage) error {
 	return nil
 }
 
-func validCoverageGapReason(reason string) bool {
+func validCoverageGapReason(coverage Coverage, reason string) bool {
 	switch reason {
 	case CoverageGapCatalogOwnedInput, CoverageGapDomainUnselected,
 		CoverageGapExcludedGoTest, CoverageGapResolverGeneratedInput:
 		return true
+	case CoverageGapInvalidUTF8, CoverageGapSourceTooLarge:
+		return coverage.Schema == CoverageSchemaV2 &&
+			coverage.Reason == CoverageReasonZeroCallerFacts
 	default:
 		return false
 	}
@@ -518,7 +541,11 @@ func coverageGapCount(coverage Coverage, reason string) int {
 }
 
 func validateCoverageForPair(coverage Coverage, pair PairIdentity) error {
-	if validateCoverage(coverage) != nil || pair.LeafAdapterVersion != LeafAdapterV2 ||
+	adapterMatches := coverage.Schema == CoverageSchema &&
+		pair.LeafAdapterVersion == LeafAdapterV2 ||
+		coverage.Schema == CoverageSchemaV2 &&
+			pair.LeafAdapterVersion == LeafAdapterV3
+	if validateCoverage(coverage) != nil || !adapterMatches ||
 		coverage.PairDigest != pair.Digest ||
 		coverage.CandidateMemberName != pair.Leaf.Name ||
 		coverage.CandidateContentDigest != pair.Leaf.ContentDigest ||
@@ -560,11 +587,16 @@ func ValidateReceipt(generation GenerationIdentity, pair PairIdentity, receipt R
 		}
 		return nil
 	}
-	if pair.LeafAdapterVersion != LeafAdapterV2 || receipt.CoverageRecordCount != 1 ||
+	if (pair.LeafAdapterVersion != LeafAdapterV2 &&
+		pair.LeafAdapterVersion != LeafAdapterV3) ||
+		receipt.CoverageRecordCount != 1 ||
 		receipt.ResultCount != 0 || receipt.AbstentionCount != 0 ||
-		receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 ||
 		receipt.CoveredCandidateCount != pair.Leaf.RecordCount {
 		return fmt.Errorf("%w: malformed compact coverage receipt", ErrInvalidArtifact)
+	}
+	if pair.LeafAdapterVersion == LeafAdapterV2 &&
+		(receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0) {
+		return fmt.Errorf("%w: historical compact coverage read source blobs", ErrInvalidArtifact)
 	}
 	return nil
 }

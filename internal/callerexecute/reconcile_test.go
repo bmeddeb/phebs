@@ -88,6 +88,40 @@ func TestCallerPublicationStateReconstructsPartitionedUpstreamAuthority(t *testi
 	}
 }
 
+func TestCallerPublicationStateRejectsHistoricalV2AdapterForV3Runtime(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	current, err := currentAuthority(
+		t.Context(), harness.state, harness.worker.registry, harness.state.repo.Name,
+	)
+	if err != nil || current == nil {
+		t.Fatalf("current authority = %+v, %v", current, err)
+	}
+	v2Extractors := harness.worker.registry.ExtractorIdentities()
+	for index := range v2Extractors {
+		v2Extractors[index].LeafAdapterVersion = callerleaf.LeafAdapterV2
+	}
+	v2Semantic := current.semantic
+	v2Semantic.Extractors = slices.Clone(v2Extractors)
+	v2Semantic, err = callerleaf.NewGenerationIdentity(v2Semantic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary := callerPublicationSummary(*harness.state.publication)
+	summary.Generation = storeGeneration(v2Semantic, *current.candidate, *current.resolver)
+	summary.ManifestPath = callerpublicationid.ManifestName(
+		summary.Generation.Digest, summary.ManifestDigest,
+	)
+	if _, err := callerPublicationStateFromStore(summary, v2Extractors); err != nil {
+		t.Fatalf("historical V2 summary no longer reconstructs with V2 semantics: %v", err)
+	}
+	if _, err := callerPublicationStateFromStore(
+		summary, harness.worker.registry.ExtractorIdentities(),
+	); !errors.Is(err, store.ErrInvalidCallerGenerationPublication) {
+		t.Fatalf("V3 runtime accepted historical V2 generation: %v", err)
+	}
+}
+
 func (state *publicationReconcileTestStore) ListCallerPublicationRepositoriesPage(
 	_ context.Context,
 	after string,

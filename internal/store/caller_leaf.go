@@ -29,6 +29,7 @@ const (
 	// generation and cannot alias this identity.
 	CallerBaseSourceLanePolicy = "candidate-source-lane-base-v1"
 	callerLeafAdapterV2        = "direct-syntax-compact-coverage-v2"
+	callerLeafAdapterV3        = "direct-syntax-zero-fact-coverage-v3"
 
 	callerLeafWriterMigrationVersion = "t30.6h-caller-leaf-writer-v1"
 
@@ -516,11 +517,13 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 			if outcome.Receipt.CoveredCandidateCount != 0 {
 				return outcome, errors.New("success receipt has detached coverage")
 			}
-		} else if outcome.Pair.LeafAdapterVersion != callerLeafAdapterV2 ||
+		} else if (outcome.Pair.LeafAdapterVersion != callerLeafAdapterV2 &&
+			outcome.Pair.LeafAdapterVersion != callerLeafAdapterV3) ||
 			outcome.Receipt.CoverageRecordCount != 1 ||
 			outcome.Receipt.CoveredCandidateCount != outcome.Pair.CandidateRecordCount ||
 			outcome.Receipt.ResultCount != 0 || outcome.Receipt.AbstentionCount != 0 ||
-			outcome.Receipt.SourceBlobReads != 0 || outcome.Receipt.SourceBlobBytes != 0 {
+			outcome.Pair.LeafAdapterVersion == callerLeafAdapterV2 &&
+				(outcome.Receipt.SourceBlobReads != 0 || outcome.Receipt.SourceBlobBytes != 0) {
 			return outcome, errors.New("success receipt has invalid compact coverage")
 		}
 	case CallerLeafTerminalGenerationRefusal:

@@ -46,17 +46,20 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 	if request.Resolver == nil {
 		return errors.New("caller pair execution has no compiled resolver")
 	}
-	if request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV2 &&
+	if (request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV2 ||
+		request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV3) &&
 		request.Resolver.DescriptorCount() == 0 {
 		return executeNoResolverCoverage(ctx, request)
 	}
-	return request.Plan.ForEachCallerLeafFile(
+	seenCandidates := 0
+	err := request.Plan.ForEachCallerLeafFile(
 		ctx, request.Pair.Adapter.Domain, request.Pair.Adapter.Version,
 		request.Pair.Candidate,
 		func(file extract.CandidateManifestFile) error {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
+			seenCandidates++
 			switch file.SourceLane {
 			case candidate.SourceLaneGoTest:
 				request.Stage.ObserveExcludedGoTest()
@@ -138,6 +141,13 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 			return nil
 		},
 	)
+	if err != nil {
+		return err
+	}
+	if request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV3 {
+		_, err = request.Stage.CompactZeroFactCoverage(seenCandidates)
+	}
+	return err
 }
 
 func executeNoResolverCoverage(ctx context.Context, request ExecuteRequest) error {

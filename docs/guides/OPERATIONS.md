@@ -498,6 +498,18 @@ capability cannot enumerate a
 tree, open another candidate leaf, read generated source, consult SCIP, run a
 build, or use the network. Its receipt must report zero out-of-leaf reads.
 
+Current V3 caller execution keeps descriptor-present source work and its
+receipt accounting unchanged, but compacts a completed pair when it emitted no
+caller facts. During the scan it retains only constant-size counters for the
+bounded abstention reasons. After exact candidate accounting succeeds, it
+truncates the temporary per-candidate abstention stream and writes one
+`zero_caller_facts` coverage record that preserves candidate partitions,
+source-read count, source bytes, and excluded-`go_test` count. Any result or
+fact-bearing unresolved occurrence disables compaction for that pair. A crash
+before install exposes no artifact, and a V2 current publication is replaced
+through the ordinary queue-before-clear generation transition; retained V1/V2
+artifacts and receipts remain readable under their historical identities.
+
 Pair output is capped at 12,500 results, 4,096 abstentions, 1 MiB per record,
 64 MiB canonical content, 65 MiB stage, one serial 4 MiB source blob, 64 MiB
 of source bytes per pair, five structurally owned descriptors/pipes, and five

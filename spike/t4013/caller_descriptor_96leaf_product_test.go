@@ -3,6 +3,7 @@ package t4013
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +28,6 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
-	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -35,15 +35,17 @@ import (
 )
 
 const (
-	t40r1Descriptor96Schema       = "t4013-descriptor-present-96leaf-product-v1"
-	t40r1Descriptor96Env          = "T40R1_DESCRIPTOR_96LEAF_PRODUCT"
-	t40r1Descriptor96Repo         = "github.com/phebs/t40r1-descriptor-96leaf-product"
-	t40r1Descriptor96Files        = t40r1CallerProvider96Files + 1
-	t40r1Descriptor96Leaves       = t40r1CallerProvider96Leaves
-	t40r1Descriptor96ConsumerPath = "consumer/early000111.go"
-	t40r1Descriptor96ExtraPath    = "semantic/go/extra000015.go"
-	t40r1Descriptor96Profile      = "physical-261770-96leaf-grpc-product-v1"
-	t40r1Descriptor96BlobGroup    = 4_096
+	t40r1Descriptor96Schema         = "t4013-descriptor-present-96leaf-product-v2"
+	t40r1Descriptor96PhysicalSchema = "t4013-descriptor-present-96leaf-product-v1"
+	t40r1Descriptor96Env            = "T40R1_DESCRIPTOR_96LEAF_PRODUCT"
+	t40r1Descriptor96Receipt        = "descriptor-present-96leaf-product-v2.json"
+	t40r1Descriptor96Repo           = "github.com/phebs/t40r1-descriptor-96leaf-product"
+	t40r1Descriptor96Files          = t40r1CallerProvider96Files + 1
+	t40r1Descriptor96Leaves         = t40r1CallerProvider96Leaves
+	t40r1Descriptor96ConsumerPath   = "consumer/early000111.go"
+	t40r1Descriptor96ExtraPath      = "semantic/go/extra000015.go"
+	t40r1Descriptor96Profile        = "physical-261770-96leaf-grpc-product-v1"
+	t40r1Descriptor96BlobGroup      = 4_096
 )
 
 type t40r1Descriptor96Physical struct {
@@ -101,20 +103,24 @@ type t40r1Descriptor96Refusal struct {
 }
 
 type t40r1Descriptor96Pipeline struct {
-	WorkerTurns       int                        `json:"worker_turns"`
-	ExpectedPairs     int                        `json:"expected_pairs"`
-	SettledPairs      int                        `json:"settled_pairs"`
-	SucceededPairs    int                        `json:"succeeded_pairs"`
-	RefusedPairs      int                        `json:"refused_pairs"`
-	Disposition       string                     `json:"disposition"`
-	Artifacts         int                        `json:"artifacts"`
-	ResultRecords     int                        `json:"result_records"`
-	AbstentionRecords int                        `json:"abstention_records"`
-	SourceBlobReads   int                        `json:"source_blob_reads"`
-	SourceBlobBytes   int64                      `json:"source_blob_bytes"`
-	OutOfLeafReads    int                        `json:"out_of_leaf_reads"`
-	Refusals          []t40r1Descriptor96Refusal `json:"refusals"`
-	PublicationAbsent bool                       `json:"publication_absent"`
+	WorkerTurns        int                        `json:"worker_turns"`
+	ExpectedPairs      int                        `json:"expected_pairs"`
+	SettledPairs       int                        `json:"settled_pairs"`
+	SucceededPairs     int                        `json:"succeeded_pairs"`
+	RefusedPairs       int                        `json:"refused_pairs"`
+	Disposition        string                     `json:"disposition"`
+	Artifacts          int                        `json:"artifacts"`
+	ResultRecords      int                        `json:"result_records"`
+	AbstentionRecords  int                        `json:"abstention_records"`
+	CoverageRecords    int                        `json:"coverage_records"`
+	CoveredCandidates  int                        `json:"covered_candidates"`
+	SourceBlobReads    int                        `json:"source_blob_reads"`
+	SourceBlobBytes    int64                      `json:"source_blob_bytes"`
+	OutOfLeafReads     int                        `json:"out_of_leaf_reads"`
+	Refusals           []t40r1Descriptor96Refusal `json:"refusals"`
+	PublicationPresent bool                       `json:"publication_present"`
+	PublicationCurrent bool                       `json:"publication_current"`
+	PublicationParity  bool                       `json:"publication_parity"`
 }
 
 type t40r1Descriptor96Product struct {
@@ -123,8 +129,16 @@ type t40r1Descriptor96Product struct {
 	SchemaVersion         string                     `json:"schema_version"`
 	MatchingRowsState     string                     `json:"matching_rows_state"`
 	GenerationState       string                     `json:"generation_state"`
+	DeclarationExact      bool                       `json:"declaration_exact"`
 	Rows                  int                        `json:"rows"`
-	TotalsUnavailable     bool                       `json:"totals_unavailable"`
+	TotalMatchingRows     int                        `json:"total_matching_rows"`
+	PairCount             int                        `json:"pair_count"`
+	CandidateRecords      int                        `json:"candidate_records"`
+	ResultRecords         int                        `json:"result_records"`
+	AbstentionRecords     int                        `json:"abstention_records"`
+	CoverageRecords       int                        `json:"coverage_records"`
+	CoveredCandidates     int                        `json:"covered_candidates"`
+	Row                   t40r1DescriptorProductRow  `json:"row"`
 	ProgressState         string                     `json:"progress_state"`
 	SettledPairs          int                        `json:"settled_pairs"`
 	SucceededPairs        int                        `json:"succeeded_pairs"`
@@ -144,7 +158,7 @@ type t40r1Descriptor96Witness struct {
 	Pipeline             t40r1Descriptor96Pipeline  `json:"pipeline"`
 	Product              t40r1Descriptor96Product   `json:"product"`
 	Boundary             string                     `json:"boundary"`
-	ReproducesRefusal    bool                       `json:"reproduces_refusal"`
+	ClearsRefusal        bool                       `json:"clears_refusal"`
 	EstablishesScalePass bool                       `json:"establishes_scale_pass"`
 	AuthorizesCeremony   bool                       `json:"authorizes_ceremony"`
 }
@@ -181,7 +195,7 @@ func TestT40R1DescriptorPresent96LeafPhysicalWorkerProductDiagnostic(t *testing.
 		measurement.BuildAllocated, measurement.WorkerAllocated,
 		measurement.CandidateDiskBytes, measurement.ObservationDisk, measurement.CallerDisk,
 	)
-	raw, err := os.ReadFile("descriptor-present-96leaf-product.json")
+	raw, err := os.ReadFile(t40r1Descriptor96Receipt)
 	if err != nil {
 		t.Fatalf("retained descriptor-present 96-leaf witness unavailable: %v\n%s", err, encoded)
 	}
@@ -193,7 +207,7 @@ func TestT40R1DescriptorPresent96LeafPhysicalWorkerProductDiagnostic(t *testing.
 }
 
 func TestT40R1RetainedDescriptorPresent96LeafPhysicalWorkerProductIsClosed(t *testing.T) {
-	raw, err := os.ReadFile("descriptor-present-96leaf-product.json")
+	raw, err := os.ReadFile(t40r1Descriptor96Receipt)
 	if err != nil {
 		t.Skip("retained descriptor-present 96-leaf witness is not authored yet")
 	}
@@ -234,38 +248,63 @@ func TestT40R1RetainedDescriptorPresent96LeafPhysicalWorkerProductIsClosed(t *te
 		!witness.Authority.PlanRootCurrent || !witness.Authority.UpstreamUsable ||
 		!witness.Authority.WorkerUpstreamDigestExact ||
 		!witness.Authority.ProductUpstreamDigestExact ||
-		witness.Pipeline.WorkerTurns != 40 ||
+		witness.Pipeline.WorkerTurns != t40r1Descriptor96Leaves+2 ||
 		witness.Pipeline.ExpectedPairs != t40r1Descriptor96Leaves ||
 		witness.Pipeline.SettledPairs != t40r1Descriptor96Leaves ||
-		witness.Pipeline.SucceededPairs != 38 || witness.Pipeline.RefusedPairs != 58 ||
-		witness.Pipeline.Disposition != string(store.CallerGenerationTerminalGenerationRefusal) ||
-		witness.Pipeline.Artifacts != 38 || witness.Pipeline.ResultRecords != 1 ||
-		witness.Pipeline.AbstentionRecords != 100_245 ||
-		witness.Pipeline.SourceBlobReads != 100_243 ||
-		witness.Pipeline.SourceBlobBytes != 9_222_381 ||
-		witness.Pipeline.OutOfLeafReads != 0 || len(witness.Pipeline.Refusals) != 1 ||
-		witness.Pipeline.Refusals[0].Stage != string(pipelinerefusal.StageCallerGenerationAdmission) ||
-		witness.Pipeline.Refusals[0].GenerationKind != string(pipelinerefusal.GenerationCaller) ||
-		witness.Pipeline.Refusals[0].Classification != string(pipelinerefusal.ClassificationLimit) ||
-		witness.Pipeline.Refusals[0].Dimension != string(pipelinerefusal.DimensionCallerGenerationAbstentions) ||
-		witness.Pipeline.Refusals[0].Observed != 100_245 ||
-		witness.Pipeline.Refusals[0].Limit != 100_000 ||
-		witness.Pipeline.Refusals[0].OutcomeCount != 58 ||
-		!witness.Pipeline.PublicationAbsent ||
-		witness.Product.ReaderAvailability != string(callerexecute.PublicationFailed) ||
-		witness.Product.ReaderOrigin != "terminal_admission" ||
+		witness.Pipeline.SucceededPairs != t40r1Descriptor96Leaves ||
+		witness.Pipeline.RefusedPairs != 0 ||
+		witness.Pipeline.Disposition != string(store.CallerGenerationAdmitted) ||
+		witness.Pipeline.Artifacts != t40r1Descriptor96Leaves ||
+		witness.Pipeline.ResultRecords != 1 ||
+		witness.Pipeline.AbstentionRecords != 4_055 ||
+		witness.Pipeline.CoverageRecords != t40r1Descriptor96Leaves-1 ||
+		witness.Pipeline.CoveredCandidates != 257_713 ||
+		witness.Pipeline.SourceBlobReads != 261_764 ||
+		witness.Pipeline.SourceBlobBytes != 24_082_313 ||
+		witness.Pipeline.OutOfLeafReads != 0 || len(witness.Pipeline.Refusals) != 0 ||
+		!witness.Pipeline.PublicationPresent || !witness.Pipeline.PublicationCurrent ||
+		!witness.Pipeline.PublicationParity ||
+		witness.Product.ReaderAvailability != string(callerexecute.PublicationCurrent) ||
+		witness.Product.ReaderOrigin != "current_publication" ||
 		witness.Product.SchemaVersion != "caller-map-v2" ||
-		witness.Product.MatchingRowsState != "unavailable" ||
-		witness.Product.GenerationState != "failed" || witness.Product.Rows != 0 ||
-		!witness.Product.TotalsUnavailable || witness.Product.ProgressState != "complete" ||
+		witness.Product.MatchingRowsState != "exact" ||
+		witness.Product.GenerationState != "current" || !witness.Product.DeclarationExact ||
+		witness.Product.Rows != 1 || witness.Product.TotalMatchingRows != 1 ||
+		witness.Product.PairCount != witness.Pipeline.ExpectedPairs ||
+		witness.Product.CandidateRecords != witness.Physical.CandidateRecords ||
+		witness.Product.ResultRecords != witness.Pipeline.ResultRecords ||
+		witness.Product.AbstentionRecords != witness.Pipeline.AbstentionRecords ||
+		witness.Product.CoverageRecords != witness.Pipeline.CoverageRecords ||
+		witness.Product.CoveredCandidates != witness.Pipeline.CoveredCandidates ||
+		witness.Product.Row.Classification != "resolved_caller" ||
+		witness.Product.Row.Resolution != "syntax" ||
+		witness.Product.Row.Protocol != "protobuf" ||
+		witness.Product.Row.Operation != t40r1DescriptorOperation ||
+		witness.Product.Row.Lineage != t40r1DescriptorLineage ||
+		witness.Product.Row.Path != t40r1Descriptor96ConsumerPath ||
+		!witness.Product.Row.ObjectPresent || !witness.Product.Row.BlobExact ||
+		witness.Product.Row.Tier != "heuristic" || witness.Product.Row.CodeRole != "production" ||
+		witness.Product.ProgressState != "complete" ||
 		witness.Product.SettledPairs != witness.Pipeline.SettledPairs ||
 		witness.Product.SucceededPairs != witness.Pipeline.SucceededPairs ||
 		witness.Product.RefusedPairs != witness.Pipeline.RefusedPairs ||
 		witness.Product.TotalPairs != witness.Pipeline.ExpectedPairs ||
 		!witness.Product.ProgressRefusalParity ||
-		witness.Boundary != "descriptor_present_96_leaf_worker_product_refusal" ||
-		!witness.ReproducesRefusal || witness.EstablishesScalePass || witness.AuthorizesCeremony {
+		witness.Boundary != "descriptor_present_96_leaf_worker_product_parity" ||
+		!witness.ClearsRefusal || witness.EstablishesScalePass || witness.AuthorizesCeremony {
 		t.Fatalf("retained descriptor-present 96-leaf witness is not closed: %+v", witness)
+	}
+}
+
+func TestT40R1RetainedDescriptorPresent96LeafRefusalV1RemainsByteExact(t *testing.T) {
+	raw, err := os.ReadFile("descriptor-present-96leaf-product.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(raw)
+	if got, want := fmt.Sprintf("sha256:%x", digest),
+		"sha256:17512e7d9c8f46c312051bcfaf27a57d08a10df8662e7f70755475f1d596736d"; got != want {
+		t.Fatalf("historical descriptor-present refusal receipt digest = %s, want %s", got, want)
 	}
 }
 
@@ -273,7 +312,7 @@ func runT40R1Descriptor96Diagnostic(
 	t *testing.T,
 ) (t40r1Descriptor96Witness, t40r1Descriptor96Measurement) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 65*time.Minute)
 	defer cancel()
 	dataDir := t.TempDir()
 	state, err := store.OpenLocal(ctx, dataDir)
@@ -358,7 +397,7 @@ func runT40R1Descriptor96Diagnostic(
 		t.Fatal(err)
 	}
 	leafDigest, prefixDistribution, leafContentBytes, _, minLeaf, maxLeaf :=
-		t40r1CallerLeafSummaryForSchema(t, t40r1Descriptor96Schema, manifest.CallerLeaves)
+		t40r1CallerLeafSummaryForSchema(t, t40r1Descriptor96PhysicalSchema, manifest.CallerLeaves)
 	consumerLeaf, consumerBefore := t40r1Descriptor96ConsumerLeaf(
 		t, ctx, callerPlan, objects[t40r1Descriptor96ConsumerPath],
 	)
@@ -489,7 +528,14 @@ func runT40R1Descriptor96Diagnostic(
 	}
 	sourceReads, sourceBytes, outOfLeafReads := t40r1Descriptor96SourceTotals(outcomes)
 	refusals := t40r1Descriptor96Refusals(admission.Refusals)
-	_, publicationErr := state.GetCallerGenerationPublication(ctx, t40r1Descriptor96Repo)
+	pointer, err := state.GetCallerGenerationPublication(ctx, t40r1Descriptor96Repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pointerCurrent, err := state.CallerGenerationPublicationCurrent(ctx, *pointer)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	started = time.Now()
 	reader, err := callerexecute.NewPublicationReader(dataDir, state, callerRegistry, publications)
@@ -524,15 +570,17 @@ func runT40R1Descriptor96Diagnostic(
 		t.Fatal(err)
 	}
 	if page == nil || page.Generation == nil || page.Generation.PartitionProgress == nil ||
-		page.Generation.PartitionProgress.TotalPairCount == nil {
+		page.Generation.PartitionProgress.TotalPairCount == nil ||
+		page.TotalMatchingRows == nil || len(page.Rows) != 1 {
 		t.Fatalf("descriptor-present 96-leaf product gap is incomplete: %+v", page)
 	}
+	row := page.Rows[0]
 	productProgress := page.Generation.PartitionProgress
 	productRefusals := t40r1Descriptor96APIRefusals(productProgress.Refusals)
 
 	witness := t40r1Descriptor96Witness{
 		Schema:  t40r1Descriptor96Schema,
-		Method:  "author an exact 96-leaf physical caller generation with one descriptor-backed consumer in the first hash leaf, publish current observation/extraction and resolver authority, execute the production worker until terminal admission/no-op, and require the shared reader and exact Caller Map to project the same closed refusal",
+		Method:  "author an exact 96-leaf physical caller generation with one descriptor-backed consumer in the first hash leaf, publish current observation/extraction and resolver authority, execute the production V3 zero-fact coverage worker through admitted publication/no-op, and require the shared reader and exact Caller Map to project the same current result and coverage counts",
 		Profile: t40r1Descriptor96Profile,
 		Physical: t40r1Descriptor96Physical{
 			RegularFiles: manifest.Corpus.RegularCount, UniqueGitBlobs: len(objects),
@@ -572,7 +620,8 @@ func runT40R1Descriptor96Diagnostic(
 			UpstreamUsable:            true,
 			WorkerUpstreamDigestExact: admission.Generation.UpstreamDigest == upstream.Digest,
 			ProductUpstreamDigestExact: admission.Generation.UpstreamDigest != "" &&
-				read.ExpectedGeneration.UpstreamDigest == upstream.Digest && read.Admission != nil,
+				read.ExpectedGeneration.UpstreamDigest == upstream.Digest &&
+				pointer.Generation.UpstreamDigest == upstream.Digest && pointer.Upstream != "",
 		},
 		Pipeline: t40r1Descriptor96Pipeline{
 			WorkerTurns: turns, ExpectedPairs: len(manifest.CallerLeaves),
@@ -580,16 +629,42 @@ func runT40R1Descriptor96Diagnostic(
 			RefusedPairs: progress.RefusedCount, Disposition: string(admission.Disposition),
 			Artifacts: admission.ArtifactCount, ResultRecords: admission.ResultCount,
 			AbstentionRecords: admission.AbstentionCount,
+			CoverageRecords:   admission.CoverageRecordCount,
+			CoveredCandidates: admission.CoveredCandidateCount,
 			SourceBlobReads:   sourceReads, SourceBlobBytes: sourceBytes,
 			OutOfLeafReads: outOfLeafReads, Refusals: refusals,
-			PublicationAbsent: errors.Is(publicationErr, store.ErrNotFound),
+			PublicationPresent: true, PublicationCurrent: pointerCurrent,
+			PublicationParity: pointer.PairCount == admission.PairCount &&
+				pointer.ResultCount == admission.ResultCount &&
+				pointer.AbstentionCount == admission.AbstentionCount &&
+				pointer.CoverageRecordCount == admission.CoverageRecordCount &&
+				pointer.CoveredCandidateCount == admission.CoveredCandidateCount,
 		},
 		Product: t40r1Descriptor96Product{
 			ReaderAvailability: string(read.Availability),
 			ReaderOrigin:       t40r1CallerUpstreamReadOrigin(read),
 			SchemaVersion:      page.SchemaVersion, MatchingRowsState: page.MatchingRowsState,
-			GenerationState: page.Generation.State, Rows: len(page.Rows),
-			TotalsUnavailable:     page.TotalMatchingRows == nil,
+			GenerationState: page.Generation.State,
+			DeclarationExact: page.Declaration != nil &&
+				page.Declaration.Predicate == "DECLARES_OPERATION" &&
+				page.Declaration.Object == strings.TrimPrefix(t40r1DescriptorOperation, "/"),
+			Rows: len(page.Rows), TotalMatchingRows: *page.TotalMatchingRows,
+			PairCount:         page.Generation.PairCount,
+			CandidateRecords:  page.Generation.RecordCounts.CandidateRecords,
+			ResultRecords:     page.Generation.ResultCount,
+			AbstentionRecords: page.Generation.AbstentionCount,
+			CoverageRecords:   page.Generation.CoverageRecordCount,
+			CoveredCandidates: page.Generation.CoveredCandidateCount,
+			Row: t40r1DescriptorProductRow{
+				Classification: row.Classification, Resolution: row.Resolution,
+				Protocol: row.Protocol, Operation: row.Operation,
+				Lineage: row.DeclarationLineage, Path: row.Source.Path,
+				ObjectPresent: row.Source.ObjectID != "",
+				BlobExact: row.Source.BlobDigest == t40r1CallerUpstreamDigest(
+					t40r1DescriptorGitBlobFiles[t40r1DescriptorGitBlobPath],
+				),
+				Tier: row.Tier, CodeRole: row.CodeRole,
+			},
 			ProgressState:         productProgress.State,
 			SettledPairs:          productProgress.SettledPairCount,
 			SucceededPairs:        productProgress.SucceededPairCount,
@@ -598,9 +673,9 @@ func runT40R1Descriptor96Diagnostic(
 			Refusals:              productRefusals,
 			ProgressRefusalParity: reflect.DeepEqual(productRefusals, refusals),
 		},
-		Boundary: "descriptor_present_96_leaf_worker_product_refusal",
+		Boundary: "descriptor_present_96_leaf_worker_product_parity",
 	}
-	witness.ReproducesRefusal =
+	witness.ClearsRefusal =
 		witness.Physical.RegularFiles == t40r1Descriptor96Files &&
 			witness.Physical.CallerLeaves == t40r1Descriptor96Leaves &&
 			witness.Physical.ConsumerLeafOrdinal == 0 &&
@@ -612,22 +687,38 @@ func runT40R1Descriptor96Diagnostic(
 			witness.Authority.ProductUpstreamDigestExact &&
 			witness.Pipeline.ExpectedPairs == t40r1Descriptor96Leaves &&
 			witness.Pipeline.SettledPairs == t40r1Descriptor96Leaves &&
-			witness.Pipeline.Disposition == string(store.CallerGenerationTerminalGenerationRefusal) &&
-			witness.Pipeline.ResultRecords == 1 && len(witness.Pipeline.Refusals) == 1 &&
-			witness.Pipeline.Refusals[0].Stage == string(pipelinerefusal.StageCallerGenerationAdmission) &&
-			witness.Pipeline.Refusals[0].Classification == string(pipelinerefusal.ClassificationLimit) &&
-			witness.Pipeline.Refusals[0].Dimension == string(pipelinerefusal.DimensionCallerGenerationAbstentions) &&
-			witness.Pipeline.Refusals[0].Observed > witness.Pipeline.Refusals[0].Limit &&
-			witness.Pipeline.PublicationAbsent &&
-			witness.Product.ReaderAvailability == string(callerexecute.PublicationFailed) &&
-			witness.Product.ReaderOrigin == "terminal_admission" &&
+			witness.Pipeline.SucceededPairs == t40r1Descriptor96Leaves &&
+			witness.Pipeline.RefusedPairs == 0 &&
+			witness.Pipeline.Disposition == string(store.CallerGenerationAdmitted) &&
+			witness.Pipeline.ResultRecords == 1 &&
+			witness.Pipeline.AbstentionRecords == 4_055 &&
+			witness.Pipeline.CoverageRecords == t40r1Descriptor96Leaves-1 &&
+			witness.Pipeline.CoveredCandidates == 257_713 &&
+			witness.Pipeline.SourceBlobReads == 261_764 &&
+			witness.Pipeline.SourceBlobBytes == 24_082_313 &&
+			len(witness.Pipeline.Refusals) == 0 &&
+			witness.Pipeline.PublicationPresent && witness.Pipeline.PublicationCurrent &&
+			witness.Pipeline.PublicationParity &&
+			witness.Product.ReaderAvailability == string(callerexecute.PublicationCurrent) &&
+			witness.Product.ReaderOrigin == "current_publication" &&
 			witness.Product.SchemaVersion == "caller-map-v2" &&
-			witness.Product.MatchingRowsState == "unavailable" &&
-			witness.Product.GenerationState == "failed" && witness.Product.Rows == 0 &&
-			witness.Product.TotalsUnavailable && witness.Product.ProgressState == "complete" &&
+			witness.Product.MatchingRowsState == "exact" &&
+			witness.Product.GenerationState == "current" &&
+			witness.Product.DeclarationExact && witness.Product.Rows == 1 &&
+			witness.Product.TotalMatchingRows == 1 &&
+			witness.Product.PairCount == witness.Pipeline.ExpectedPairs &&
+			witness.Product.CandidateRecords == witness.Physical.CandidateRecords &&
+			witness.Product.ResultRecords == witness.Pipeline.ResultRecords &&
+			witness.Product.AbstentionRecords == witness.Pipeline.AbstentionRecords &&
+			witness.Product.CoverageRecords == witness.Pipeline.CoverageRecords &&
+			witness.Product.CoveredCandidates == witness.Pipeline.CoveredCandidates &&
+			witness.Product.Row.Operation == t40r1DescriptorOperation &&
+			witness.Product.Row.Lineage == t40r1DescriptorLineage &&
+			witness.Product.Row.Path == t40r1Descriptor96ConsumerPath &&
+			witness.Product.ProgressState == "complete" &&
 			witness.Product.ProgressRefusalParity
-	if !witness.ReproducesRefusal {
-		t.Fatalf("descriptor-present 96-leaf diagnostic did not reproduce the closed refusal: %+v", witness)
+	if !witness.ClearsRefusal {
+		t.Fatalf("descriptor-present 96-leaf diagnostic did not clear the closed refusal: %+v", witness)
 	}
 	measurement.CandidateDiskBytes = t40r1CallerProvider96DirectoryBytes(t, candidateRoot)
 	measurement.ObservationDisk = t40r1CallerProvider96DirectoryBytes(
@@ -955,7 +1046,7 @@ func driveT40R1Descriptor96Worker(
 	worker *callerexecute.Worker,
 ) (int, *store.CallerGenerationAdmission) {
 	t.Helper()
-	terminalSeen := false
+	admissionSeen := false
 	for turn := 1; turn <= t40r1Descriptor96Leaves+4; turn++ {
 		job, err := state.ClaimJob(ctx, store.JobCallerLeaf, "t40r1-descriptor-96leaf")
 		if err != nil {
@@ -980,16 +1071,16 @@ func driveT40R1Descriptor96Worker(
 		}
 		if len(admissions) == 1 {
 			admission := admissions[0]
-			if admission.Disposition != store.CallerGenerationTerminalGenerationRefusal {
+			if admission.Disposition != store.CallerGenerationAdmitted {
 				t.Fatalf("descriptor-present 96-leaf admission = %s", admission.Disposition)
 			}
-			if terminalSeen {
+			if admissionSeen {
 				return turn, &admission
 			}
-			terminalSeen = true
+			admissionSeen = true
 		}
 	}
-	t.Fatal("descriptor-present 96-leaf worker did not reach terminal admission and no-op")
+	t.Fatal("descriptor-present 96-leaf worker did not reach admitted publication and no-op")
 	return 0, nil
 }
 

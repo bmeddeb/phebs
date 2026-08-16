@@ -50,6 +50,49 @@ func TestValidateCallerJobRejectsRelabeledForeignQueueLease(t *testing.T) {
 	}
 }
 
+func TestCallerCoverageReceiptVersionedSourceReadCompatibility(t *testing.T) {
+	generation, err := prepareCallerGeneration(internalCallerGeneration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name    string
+		adapter string
+		wantErr bool
+	}{
+		{name: "historical v2 rejects source reads", adapter: callerLeafAdapterV2, wantErr: true},
+		{name: "zero-fact v3 retains source reads", adapter: callerLeafAdapterV3},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			pair, pairErr := prepareCallerLeafPair(generation, CallerLeafPair{
+				Domain: "grpc-caller", ExtractorVersion: "1.5.0",
+				LeafAdapterVersion: test.adapter, LeafOrdinal: 0,
+				LeafPrefix: "00", LeafPrefixBits: 2,
+				CandidateMemberName: "candidate.ndjson", CandidateRecordCount: 3,
+				CandidateDeclaredBytes: 128, CandidateContentBytes: 100,
+				CandidateContentDigest: internalCallerDigest('8'),
+			})
+			if pairErr != nil {
+				t.Fatal(pairErr)
+			}
+			contentDigest := internalCallerDigest('9')
+			_, outcomeErr := prepareCallerLeafOutcome(CallerLeafOutcome{
+				Generation: generation, Pair: pair, Disposition: CallerLeafSucceeded,
+				Receipt: &CallerLeafArtifactReceipt{
+					ArtifactName:  callerleafid.ArtifactName(pair.PairDigest, contentDigest),
+					ArtifactCount: 1, CoverageRecordCount: 1, CoveredCandidateCount: 3,
+					CanonicalBytes: 100, StagingBytes: 100,
+					ContentDigest: contentDigest, MetadataDigest: internalCallerDigest('a'),
+					SourceBlobReads: 2, SourceBlobBytes: 64,
+				},
+			})
+			if (outcomeErr != nil) != test.wantErr {
+				t.Fatalf("prepareCallerLeafOutcome error = %v, wantErr %v", outcomeErr, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestCallerGenerationAdmissionRetainsTerminalCapPlusOne(t *testing.T) {
 	generation, err := prepareCallerGeneration(internalCallerGeneration())
 	if err != nil {

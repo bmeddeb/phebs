@@ -2033,6 +2033,66 @@ Map parity, and steady-state-cost tests. Only then should this scoped diagnostic
 be rerun. The current receipt is not a scale pass, Take 20 reconstruction,
 ceremony authorization, release, Epic closure, or Epic 41 progression.
 
+The versioned reduce-first correction is now implemented as
+`direct-syntax-zero-fact-coverage-v3`. Descriptor-present execution still
+finishes the exact bounded member scan. Only when that scan emits neither a
+resolved caller nor an `UNRESOLVED_CALLER` fact does the stage replace its
+input-only abstention stream with one `phebs-caller-leaf-coverage-v2` record.
+That record binds the pair and candidate member, retains source-read
+count/bytes on the receipt, and partitions every candidate among no-direct,
+catalog-owned, domain-unselected, excluded-`go_test`, invalid-UTF-8,
+resolver-generated, and source-too-large counts. A resolved or unresolved
+fact keeps every record in the pair artifact. Historical V1/V2 generation,
+policy, artifact, and receipt bytes remain readable; the adapter digest keeps
+V3 output distinct and startup queues replacement before clearing a V2
+current pointer.
+
+The scoped physical rerun completed the unchanged 261,770-file,
+261,769-candidate, 96-leaf shape. All 96 pairs succeeded and admitted/published
+after 98 turns including the no-op. The result-bearing first leaf retained one
+resolved result plus 4,055 abstentions. The other 95 zero-fact leaves became
+95 coverage records covering 257,713 candidates. Durable receipts retained
+261,764 source reads totaling 24,082,313 bytes and zero out-of-leaf reads.
+The shared reader returned `current`, and authorized exact Caller Map returned
+the one `resolved_caller` row plus pair/result/abstention/coverage counts equal
+to admission and publication. The retained receipt is
+`descriptor-present-96leaf-product-v2.json`
+(`sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`).
+The historical refusal receipt remains byte-exact at
+`sha256:17512e7d9c8f46c312051bcfaf27a57d08a10df8662e7f70755475f1d596736d`.
+
+The first successful full execution exposed two diagnostic-oracle defects
+after product projection: the success check required a terminal-only reader
+admission field, and its leaf-set summary used the new receipt schema as a
+salt even though physical membership was unchanged. Correcting those test
+oracles changed no production state or retained physical identity.
+
+A subsequent exact reproduction reached worker turn 96 but crossed the
+opt-in diagnostic's 60-minute whole-run parent context by 0.33 seconds while
+reading one selected blob. The earlier successful execution completed in
+59m12s, so this was a diagnostic-envelope edge rather than the production
+five-minute per-worker deadline or an output refusal. The opt-in parent context
+is now 65 minutes inside the existing 70-minute Go-test ceiling. This changes
+no production context, timeout, retry, candidate, Git-read, or output bound.
+With that harness-only correction, the exact reproduction passed in
+3,482.55 seconds (54m6.58s in worker convergence) and matched the retained V3
+receipt byte-for-byte; no evidence value changed.
+
+Steady-state cost remains deliberately source-bound. Each descriptor-present
+pair performs the same selected-member read, bounded Git blob reads, hashes,
+Go parses, direct scans, staging writes, and repository work lock. V3 adds
+constant counters; a zero-fact completion performs one truncate, seek, and
+coverage-record write. It holds no per-candidate memory and introduces no new
+Git/corpus/shard read, child, lock, cache, retry, query, sync/startup work,
+publication transition, bound, or lifecycle ceiling. Result/unresolved pairs
+add only a constant final check. The successful measurements are diagnostic
+observations, not ceilings or an SLO.
+
+This closes the scoped caller refusal, not T40.13 or Epic 40. It does not
+reconstruct Take 20, establish a scale/SLO pass, authorize a ceremony or
+release, or unblock Epic 41. Independent review is required before a separate
+fresh-ceremony freeze decision.
+
 ```sh
 cd ~/phebs
 

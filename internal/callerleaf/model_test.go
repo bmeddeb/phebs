@@ -55,7 +55,7 @@ func TestAggregateReceiptCapAndCapPlusOne(t *testing.T) {
 	}
 }
 
-func TestLeafAdapterV2PreservesHistoricalPolicyEncoding(t *testing.T) {
+func TestLeafAdapterV3PreservesHistoricalPolicyEncodings(t *testing.T) {
 	legacy, err := json.Marshal(FrozenPolicy())
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +65,7 @@ func TestLeafAdapterV2PreservesHistoricalPolicyEncoding(t *testing.T) {
 		t.Fatalf("historical policy encoding changed: %s", legacy)
 	}
 	current := CurrentPolicy()
-	if current.Name != PolicyNameV2 || current.LeafAdapter != LeafAdapterV2 ||
+	if current.Name != PolicyNameV3 || current.LeafAdapter != LeafAdapterV3 ||
 		current.MaxCoverageRecordsPerPair != 1 ||
 		current.MaxAggregateCoverageRecords != MaxExpectedPairs ||
 		current.MaxAggregateCoveredCandidates != MaxAggregateCoveredCandidates {
@@ -74,6 +74,11 @@ func TestLeafAdapterV2PreservesHistoricalPolicyEncoding(t *testing.T) {
 	legacyGeneration, _ := testIdentity(t)
 	if err := ValidateGenerationIdentity(legacyGeneration); err != nil {
 		t.Fatalf("historical V1 generation no longer validates: %v", err)
+	}
+	v2Generation, _ := testIdentityWithAdapter(t, LeafAdapterV2)
+	if err := ValidateGenerationIdentity(v2Generation); err != nil ||
+		v2Generation.CallerPolicy.Name != PolicyNameV2 {
+		t.Fatalf("historical V2 generation no longer validates: %+v, %v", v2Generation, err)
 	}
 }
 

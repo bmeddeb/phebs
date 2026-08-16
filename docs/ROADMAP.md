@@ -1290,6 +1290,22 @@ catalog, relationship, or correctness authority.
   candidate/gap counts, recovery, publication/product parity, maximum-shape,
   and cost tests must pass before a fresh scoped rerun. No ceremony, scale/SLO,
   release, Epic closure, or Epic 41 progression follows.
+- The versioned reduce-first correction and scoped rerun now pass. V3 compacts
+  only a descriptor-present pair whose complete exact scan emits zero resolved
+  or unresolved caller facts; it emits one pair/member-bound coverage-v2
+  record with exact no-direct/gap counts and retains source-read count/bytes.
+  Result-bearing and unresolved pairs remain fully materialized. Historical
+  V1/V2 bytes remain exact, and existing startup reconciliation queues a V3
+  successor before retiring a V2 current pointer. The unchanged 96-leaf
+  physical run settled and succeeded 96/96 pairs, admitted/published one
+  result, 4,055 abstentions, and 95 coverage records covering 257,713
+  candidates, then returned the one exact current Caller Map row with matching
+  progress and aggregate scalars. The source-free receipt is
+  `descriptor-present-96leaf-product-v2.json`
+  (`sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`).
+  The scoped refusal is closed; T40.13/Epic 40, scale/SLO, Take 20, ceremony,
+  release, and Epic 41 remain unclosed. Independent review is next before any
+  separately authorized fresh-ceremony freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

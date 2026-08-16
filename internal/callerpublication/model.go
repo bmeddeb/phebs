@@ -193,6 +193,7 @@ func ValidateState(state State) error {
 		(state.Aggregate.CoverageRecordCount == 0) !=
 			(state.Aggregate.CoveredCandidateCount == 0) ||
 		state.Generation.CallerPolicy.LeafAdapter != callerleaf.LeafAdapterV2 &&
+			state.Generation.CallerPolicy.LeafAdapter != callerleaf.LeafAdapterV3 &&
 			state.Aggregate.CoverageRecordCount != 0 ||
 		state.Aggregate.CanonicalBytes < 0 ||
 		state.Aggregate.CanonicalBytes > callerleaf.MaxAggregateCanonicalBytes ||
