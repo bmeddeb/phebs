@@ -1340,9 +1340,13 @@ catalog, relationship, or correctness authority.
   from expansion, bounds scheduler store calls, reconciles ambiguous
   completion, and stamps fresh V14 freeze dates. A real surrealkv diagnostic
   settled the exact 272/272 one-token shape with zero leaked token or surfaced
-  error while recovering 21 expansion conflicts. Independent review plus a
-  fresh exact semantic production-path diagnostic are next; another ceremony
-  is not authorized.
+  error while recovering 21 expansion conflicts. The fresh exact semantic
+  production-path diagnostic at source `abbd218` then completed all 272
+  extraction schedules and 272 partition timings, recovered one store
+  conflict internally, and emitted no `completion_failed`; it was deliberately
+  stopped after that scoped boundary while downstream Caller publication
+  inspection continued, so it is not a full-fit pass. Independent review is
+  next; another ceremony is not authorized.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

@@ -1,0 +1,18 @@
+{
+  "schema": "phebs-t40r1-generation-schedule-production-replay-v1",
+  "source_commit": "abbd218712015cc9802b5d9b1c1e8168641f5732",
+  "test": "TestExactSemanticColdTiming",
+  "scope": "production_physical_extraction_schedule",
+  "expected_partitions": 272,
+  "scheduler_completed": 272,
+  "partition_timings_completed": 272,
+  "completion_failed": 0,
+  "store_conflict_retries": 1,
+  "extraction_boundary_passed": true,
+  "downstream_stage_observed": "caller_publication_inspection",
+  "full_fit_completed": false,
+  "stopped_after_scoped_boundary": true,
+  "test_wall_ms_at_interrupt": 8092284,
+  "source_custody_destroyed": true,
+  "derived_custody_destroyed": true
+}

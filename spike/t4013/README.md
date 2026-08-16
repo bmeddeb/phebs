@@ -2225,6 +2225,17 @@ recovered expansion conflicts. Its source-free receipt is
 `generation-schedule-recovery.json`
 (`sha256:def6cd63f0bc7a7b97af753922812da90110787db4da0c5deccade66adab5f7c`).
 
+The fresh production physical replay at exact corrected source
+`abbd218712015cc9802b5d9b1c1e8168641f5732` then completed all 272 extraction
+schedules and all 272 partition timings, surfaced zero `completion_failed`
+events, and internally recovered one schedule-store conflict. The exact
+semantic test was intentionally interrupted after that requested boundary
+while downstream Caller publication inspection continued; it is not a
+full-fit or ceremony pass. Interrupted source and derived custody were
+destroyed. The retained source-free observation is
+`generation-schedule-production-replay.json`
+(`sha256:b562f032d9737b246e456e1d0682e002ff2245cdd5f6e4c230a72971912885d0`).
+
 Fresh V14 plan emission also stamps the actual UTC freeze date. Historical
 plan constructors and retained bytes preserve their original `2026-08-08`
 value; the signed neutral-21 package is not mutated or relabeled.
@@ -2236,7 +2247,8 @@ go test ./internal/generationscheduler \
   -run '^TestT40R1GenerationScheduleRecoveryDiagnostic$' -count=1 -v
 ```
 
-This closes the reproduced schedule wedge only. The structural run's transient
-409 remains separately unclassified, and the ceremony's later checks and ten
-not-run phases remain unestablished. A fresh exact semantic production-path
-diagnostic plus independent review are required before another ceremony.
+This closes the reproduced schedule wedge and its scoped production extraction
+replay only. The structural run's transient 409 remains separately
+unclassified, the downstream full-fit replay was not completed, and the
+ceremony's later checks and ten not-run phases remain unestablished.
+Independent review is required before another ceremony.

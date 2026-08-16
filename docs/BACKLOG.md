@@ -1488,9 +1488,18 @@ schedule diagnostic `spike/t4013/generation-schedule-recovery.json`
 (`sha256:def6cd63f0bc7a7b97af753922812da90110787db4da0c5deccade66adab5f7c`)
 settled the exact 272/272 one-token shape in 1,887 ms with no leaked token or
 surfaced store error and 21 recovered expansion conflicts. Independent review
-and a fresh exact semantic production-path diagnostic remain required before
-another ceremony; no scale/SLO, release, T40.13/Epic 40 closure, or Epic 41
-progression follows.
+remains required before another ceremony. The fresh exact semantic
+production-path diagnostic at corrected source
+`abbd218712015cc9802b5d9b1c1e8168641f5732` completed all 272 extraction
+schedules and 272 partition timings with zero `completion_failed` events and
+one internally recovered schedule-store conflict. It was intentionally
+interrupted after that scoped boundary while downstream Caller publication
+inspection continued, so it is not a full-fit or ceremony pass. The retained
+source-free receipt is
+`spike/t4013/generation-schedule-production-replay.json`
+(`sha256:b562f032d9737b246e456e1d0682e002ff2245cdd5f6e4c230a72971912885d0`);
+interrupted custody was destroyed. No scale/SLO, release, T40.13/Epic 40
+closure, or Epic 41 progression follows.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
