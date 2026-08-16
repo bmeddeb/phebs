@@ -64,9 +64,9 @@ func TestCompactCoverageArtifactLifecycleAndPairBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = stage.Discard() })
-	if err := stage.AddNoResolverCoverage(1, []CoverageGap{
-		{Reason: CoverageGapCatalogOwnedInput, Count: 1},
-		{Reason: CoverageGapExcludedGoTest, Count: 1},
+	if err := stage.AddNoResolverCoverage(1, map[string]int{
+		CoverageGapCatalogOwnedInput: 1,
+		CoverageGapExcludedGoTest:    1,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -113,6 +113,121 @@ func TestCompactCoverageArtifactLifecycleAndPairBinding(t *testing.T) {
 	forged.Coverage.PairDigest = "sha256:" + strings.Repeat("0", 64)
 	if err := forgedStage.Add(forged); err == nil {
 		t.Fatal("coverage certificate detached from its pair was accepted")
+	}
+}
+
+func TestV3NoResolverCoverageReceiptRejectsClaimedSourceReads(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentityWithAdapter(t, LeafAdapterV3)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stage.Discard() })
+	if err := stage.AddNoResolverCoverage(3, nil); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = prepared.Discard() })
+	receipt := prepared.Receipt()
+	if receipt.CoverageReason != CoverageReasonNoResolverDescriptors ||
+		receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 {
+		t.Fatalf("no-resolver receipt = %+v", receipt)
+	}
+	missingReason := receipt
+	missingReason.CoverageReason = ""
+	if err := ValidateReceipt(generation, pair, missingReason); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("no-resolver receipt without reason = %v, want ErrInvalidArtifact", err)
+	}
+	receipt.SourceBlobReads = 1
+	receipt.SourceBlobBytes = 1
+	if err := ValidateReceipt(generation, pair, receipt); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("no-resolver receipt with source reads = %v, want ErrInvalidArtifact", err)
+	}
+}
+
+func TestV3ZeroFactCoverageBindsExactSourceBytes(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentityWithAdapter(t, LeafAdapterV3)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stage.Discard() })
+	if err := stage.ObserveSourceBlob(10); err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Add(Record{
+		Schema: CoverageRecordSchemaV2, Kind: RecordCoverage,
+		Coverage: &Coverage{
+			Schema: CoverageSchemaV2, PairDigest: pair.Digest,
+			CandidateMemberName:    pair.Leaf.Name,
+			CandidateContentDigest: pair.Leaf.ContentDigest,
+			CandidateRecordCount:   pair.Leaf.RecordCount,
+			CoveredCandidateCount:  pair.Leaf.RecordCount,
+			NoDirectCandidateCount: 1,
+			Gaps:                   []CoverageGap{{Reason: CoverageGapCatalogOwnedInput, Count: 2}},
+			Reason:                 CoverageReasonZeroCallerFacts, SourceBlobBytes: 10,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = prepared.Discard() })
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged := *publication
+	forged.receipt.SourceBlobBytes = 9
+	if err := forged.ScanRecords(
+		t.Context(), generation, pair,
+		func(RecordReference, Record) error { return nil },
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("zero-fact receipt with changed source bytes = %v, want ErrInvalidArtifact", err)
+	}
+}
+
+func TestV3UnknownInputReasonKeepsMaterializedArtifact(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentityWithAdapter(t, LeafAdapterV3)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stage.Discard() })
+	for index, reason := range []string{
+		AbstentionReasonNoDirectCaller,
+		CoverageGapCatalogOwnedInput,
+		"future_input_gap",
+	} {
+		if err := stage.Add(Record{
+			Schema: RecordSchema, Kind: RecordAbstention,
+			Path:       fmt.Sprintf("service/input%d.go", index),
+			ObjectID:   fmt.Sprintf("%040x", index+1),
+			SourceLane: candidate.SourceLaneBase, Reason: reason,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	compacted, err := stage.CompactZeroFactCoverage()
+	if err != nil || compacted {
+		t.Fatalf("unknown input reason compacted = %t, err %v", compacted, err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := prepared.Receipt()
+	if receipt.RecordCount != 3 || receipt.AbstentionCount != 3 ||
+		receipt.CoverageRecordCount != 0 || receipt.CoverageReason != "" {
+		t.Fatalf("materialized fallback receipt = %+v", receipt)
 	}
 }
 

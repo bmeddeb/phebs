@@ -184,8 +184,10 @@ descriptor-present pair has scanned its complete member, V3 also replaces a
 fact-free artifact with one compact `zero_caller_facts` record. That record
 partitions every candidate into no-direct inputs plus explicit catalog-owned,
 domain-unselected, excluded-`go_test`, invalid-UTF-8, oversized-source, and
-resolver-generated gaps while its receipt retains the exact source-read count
-and bytes. A pair containing any result or fact-bearing unresolved occurrence
+resolver-generated gaps and embeds the exact source-byte total. Its receipt
+names the compact reason and must agree with the record's exact source-read
+count and bytes; a `no_resolver_descriptors` receipt is valid only with zero
+reads and bytes. A pair containing any result or fact-bearing unresolved occurrence
 remains fully materialized. These counts explain why the generation contains
 no matching rows without inventing per-source evidence. They do not establish
 runtime non-use, extraction completeness/accuracy, or a semantic zero-caller

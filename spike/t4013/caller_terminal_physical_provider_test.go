@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -162,6 +163,9 @@ func (provider *t40r1CallerPhysicalProvider) report(
 func TestT40R1CallerTerminalPhysicalProviderWitness(t *testing.T) {
 	if os.Getenv(t40r1CallerPhysicalProviderEnv) != "1" {
 		t.Skip("set " + t40r1CallerPhysicalProviderEnv + "=1 to run the physical-provider witness")
+	}
+	if callerleaf.CurrentLeafAdapter != callerleaf.LeafAdapterV2 {
+		t.Skip("the retained caller physical-provider witness is historical V2 evidence")
 	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary is not installed")

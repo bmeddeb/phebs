@@ -43,9 +43,11 @@ const (
 	LeafAdapterV3          = "direct-syntax-zero-fact-coverage-v3"
 	CurrentLeafAdapter     = LeafAdapterV3
 
-	RecordResult     = "result"
-	RecordAbstention = "abstention"
-	RecordCoverage   = "coverage"
+	RecordResult                     = "result"
+	RecordAbstention                 = "abstention"
+	RecordCoverage                   = "coverage"
+	AbstentionReasonNoDirectCaller   = "no_direct_caller"
+	AbstentionReasonUnresolvedCaller = "unresolved_caller"
 
 	CoverageReasonNoResolverDescriptors = "no_resolver_descriptors"
 	CoverageReasonZeroCallerFacts       = "zero_caller_facts"
@@ -232,6 +234,7 @@ type Receipt struct {
 	OutOfLeafReads        int    `json:"out_of_leaf_reads"`
 	CoverageRecordCount   int    `json:"coverage_record_count,omitempty"`
 	CoveredCandidateCount int    `json:"covered_candidate_count,omitempty"`
+	CoverageReason        string `json:"coverage_reason,omitempty"`
 }
 
 // AggregateReceipt is the complete-generation admission input handed to
@@ -259,11 +262,12 @@ type Record struct {
 	Coverage   *Coverage            `json:"coverage,omitempty"`
 }
 
-// Coverage is the exact compact replacement for per-candidate abstentions
-// when a protocol resolver has no descriptors. Pair and candidate-member
-// commitments prevent a certificate from being replayed across immutable
-// leaves. Covered, excluded, and unselected counts partition the complete
-// candidate member so an empty result cannot be mistaken for missing work.
+// Coverage is the exact compact replacement for per-candidate abstentions.
+// Pair and candidate-member commitments prevent a certificate from being
+// replayed across immutable leaves. Covered, excluded, and unselected counts
+// partition the complete candidate member so an empty result cannot be
+// mistaken for missing work. V2 zero-fact coverage additionally binds the
+// exact source-byte receipt retained after the complete descriptor scan.
 type Coverage struct {
 	Schema                 string        `json:"schema"`
 	PairDigest             string        `json:"pair_digest"`
@@ -274,6 +278,7 @@ type Coverage struct {
 	NoDirectCandidateCount int           `json:"no_direct_candidate_count"`
 	Gaps                   []CoverageGap `json:"gaps,omitempty"`
 	Reason                 string        `json:"reason"`
+	SourceBlobBytes        int64         `json:"source_blob_bytes,omitempty"`
 }
 
 type CoverageGap struct {
@@ -496,11 +501,15 @@ func validateCoverage(coverage Coverage) error {
 		coverage.CoveredCandidateCount != coverage.CandidateRecordCount ||
 		coverage.NoDirectCandidateCount < 0 ||
 		coverage.NoDirectCandidateCount > coverage.CandidateRecordCount ||
+		coverage.SourceBlobBytes < 0 ||
+		coverage.SourceBlobBytes > MaxSourceBlobBytesPerPair ||
 		len(coverage.Gaps) > 6 ||
 		(coverage.Reason != CoverageReasonNoResolverDescriptors &&
 			coverage.Reason != CoverageReasonZeroCallerFacts) ||
 		coverage.Schema == CoverageSchema &&
-			coverage.Reason != CoverageReasonNoResolverDescriptors {
+			coverage.Reason != CoverageReasonNoResolverDescriptors ||
+		coverage.Reason == CoverageReasonNoResolverDescriptors &&
+			coverage.SourceBlobBytes != 0 {
 		return ErrInvalidArtifact
 	}
 	accounted := coverage.NoDirectCandidateCount
@@ -549,7 +558,8 @@ func validateCoverageForPair(coverage Coverage, pair PairIdentity) error {
 		coverage.PairDigest != pair.Digest ||
 		coverage.CandidateMemberName != pair.Leaf.Name ||
 		coverage.CandidateContentDigest != pair.Leaf.ContentDigest ||
-		coverage.CandidateRecordCount != pair.Leaf.RecordCount {
+		coverage.CandidateRecordCount != pair.Leaf.RecordCount ||
+		coverage.SourceBlobBytes > pair.Leaf.DeclaredBytes {
 		return fmt.Errorf("%w: coverage record differs from its pair", ErrInvalidArtifact)
 	}
 	return nil
@@ -582,7 +592,7 @@ func ValidateReceipt(generation GenerationIdentity, pair PairIdentity, receipt R
 		return fmt.Errorf("%w: malformed receipt", ErrInvalidArtifact)
 	}
 	if receipt.CoverageRecordCount == 0 {
-		if receipt.CoveredCandidateCount != 0 {
+		if receipt.CoveredCandidateCount != 0 || receipt.CoverageReason != "" {
 			return fmt.Errorf("%w: detached coverage receipt", ErrInvalidArtifact)
 		}
 		return nil
@@ -594,9 +604,64 @@ func ValidateReceipt(generation GenerationIdentity, pair PairIdentity, receipt R
 		receipt.CoveredCandidateCount != pair.Leaf.RecordCount {
 		return fmt.Errorf("%w: malformed compact coverage receipt", ErrInvalidArtifact)
 	}
-	if pair.LeafAdapterVersion == LeafAdapterV2 &&
-		(receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0) {
-		return fmt.Errorf("%w: historical compact coverage read source blobs", ErrInvalidArtifact)
+	if err := validateCompactReceiptMode(pair, receipt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateCompactReceiptMode(pair PairIdentity, receipt Receipt) error {
+	switch pair.LeafAdapterVersion {
+	case LeafAdapterV2:
+		if receipt.CoverageReason != "" || receipt.SourceBlobReads != 0 ||
+			receipt.SourceBlobBytes != 0 {
+			return fmt.Errorf("%w: historical compact coverage has invalid source receipt", ErrInvalidArtifact)
+		}
+	case LeafAdapterV3:
+		switch receipt.CoverageReason {
+		case CoverageReasonNoResolverDescriptors:
+			if receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 {
+				return fmt.Errorf("%w: no-resolver coverage read source blobs", ErrInvalidArtifact)
+			}
+		case CoverageReasonZeroCallerFacts:
+		default:
+			return fmt.Errorf("%w: V3 compact coverage reason is invalid", ErrInvalidArtifact)
+		}
+	default:
+		return fmt.Errorf("%w: compact coverage adapter is invalid", ErrInvalidArtifact)
+	}
+	return nil
+}
+
+func validateCoverageReceipt(
+	coverage Coverage,
+	pair PairIdentity,
+	receipt Receipt,
+) error {
+	if err := validateCoverageForPair(coverage, pair); err != nil {
+		return err
+	}
+	wantReason := ""
+	if pair.LeafAdapterVersion == LeafAdapterV3 {
+		wantReason = coverage.Reason
+	}
+	if receipt.CoverageReason != wantReason {
+		return fmt.Errorf("%w: compact coverage reason differs from its receipt", ErrInvalidArtifact)
+	}
+	switch coverage.Reason {
+	case CoverageReasonNoResolverDescriptors:
+		if receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 ||
+			coverage.SourceBlobBytes != 0 {
+			return fmt.Errorf("%w: no-resolver coverage read source blobs", ErrInvalidArtifact)
+		}
+	case CoverageReasonZeroCallerFacts:
+		if receipt.SourceBlobReads != coverage.NoDirectCandidateCount+
+			coverageGapCount(coverage, CoverageGapInvalidUTF8) ||
+			receipt.SourceBlobBytes != coverage.SourceBlobBytes {
+			return fmt.Errorf("%w: zero-fact coverage source receipt differs", ErrInvalidArtifact)
+		}
+	default:
+		return fmt.Errorf("%w: unknown compact coverage reason", ErrInvalidArtifact)
 	}
 	return nil
 }

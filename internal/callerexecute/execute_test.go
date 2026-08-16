@@ -231,7 +231,8 @@ func TestExecutePairCompactsDescriptorPresentZeroFactCoverage(t *testing.T) {
 	if receipt.RecordCount != 1 || receipt.ResultCount != 0 || receipt.AbstentionCount != 0 ||
 		receipt.CoverageRecordCount != 1 || receipt.CoveredCandidateCount != 7 ||
 		receipt.ExcludedGoTestRecords != 1 || receipt.SourceBlobReads != 2 ||
-		receipt.SourceBlobBytes != int64(len(valid)+len(invalid)) {
+		receipt.SourceBlobBytes != int64(len(valid)+len(invalid)) ||
+		receipt.CoverageReason != callerleaf.CoverageReasonZeroCallerFacts {
 		t.Fatalf("zero-fact receipt = %+v", receipt)
 	}
 	publication, err := prepared.Install(t.Context())
@@ -251,6 +252,7 @@ func TestExecutePairCompactsDescriptorPresentZeroFactCoverage(t *testing.T) {
 	if record.Schema != callerleaf.CoverageRecordSchemaV2 || record.Coverage == nil ||
 		record.Coverage.Schema != callerleaf.CoverageSchemaV2 ||
 		record.Coverage.Reason != callerleaf.CoverageReasonZeroCallerFacts ||
+		record.Coverage.SourceBlobBytes != receipt.SourceBlobBytes ||
 		record.Coverage.NoDirectCandidateCount != 1 ||
 		!slices.Equal(record.Coverage.Gaps, []callerleaf.CoverageGap{
 			{Reason: callerleaf.CoverageGapCatalogOwnedInput, Count: 1},
@@ -334,6 +336,7 @@ func TestExecutePairCompactsMaximumDescriptorPresentZeroFactShape(t *testing.T) 
 		receipt.ResultCount != 0 || receipt.AbstentionCount != 0 ||
 		receipt.SourceBlobReads != candidate.MaxRecordsPerArtifact ||
 		receipt.SourceBlobBytes != leaf.DeclaredBytes ||
+		receipt.CoverageReason != callerleaf.CoverageReasonZeroCallerFacts ||
 		receipt.ContentBytes*int64(callerleaf.MaxExpectedPairs) > callerleaf.MaxAggregateCanonicalBytes {
 		t.Fatalf("maximum zero-fact receipt = %+v", receipt)
 	}

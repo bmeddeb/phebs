@@ -253,19 +253,20 @@ func (stage *Stage) Add(record Record) error {
 			stage.abstentionReasons[record.Reason]++
 		}
 	case RecordCoverage:
-		if record.Coverage == nil || validateCoverageForPair(*record.Coverage, stage.pair) != nil ||
+		prospective := stage.receipt
+		if stage.pair.LeafAdapterVersion == LeafAdapterV3 && record.Coverage != nil {
+			prospective.CoverageReason = record.Coverage.Reason
+		}
+		if record.Coverage == nil ||
+			validateCoverageReceipt(*record.Coverage, stage.pair, prospective) != nil ||
 			stage.receipt.RecordCount != 0 || stage.receipt.ResultCount != 0 ||
 			stage.receipt.AbstentionCount != 0 || stage.receipt.CoverageRecordCount != 0 ||
-			stage.receipt.ExcludedGoTestRecords != 0 ||
-			record.Coverage.Reason == CoverageReasonNoResolverDescriptors &&
-				(stage.receipt.SourceBlobReads != 0 || stage.receipt.SourceBlobBytes != 0) ||
-			record.Coverage.Reason == CoverageReasonZeroCallerFacts &&
-				stage.receipt.SourceBlobReads != record.Coverage.NoDirectCandidateCount+
-					coverageGapCount(*record.Coverage, CoverageGapInvalidUTF8) {
+			stage.receipt.ExcludedGoTestRecords != 0 {
 			return errors.New("caller leaf compact coverage is invalid or duplicated")
 		}
 		stage.receipt.CoverageRecordCount = 1
 		stage.receipt.CoveredCandidateCount = record.Coverage.CoveredCandidateCount
+		stage.receipt.CoverageReason = prospective.CoverageReason
 		stage.receipt.ExcludedGoTestRecords = coverageGapCount(
 			*record.Coverage, CoverageGapExcludedGoTest,
 		)
@@ -304,35 +305,21 @@ func (stage *Stage) Add(record Record) error {
 // gap. V2 retains its historical schema; V3 emits coverage V2.
 func (stage *Stage) AddNoResolverCoverage(
 	noDirect int,
-	gaps []CoverageGap,
+	gapCounts map[string]int,
 ) error {
 	if stage == nil {
 		return errors.New("caller leaf stage is unavailable")
 	}
-	recordSchema, coverageSchema := CoverageRecordSchema, CoverageSchema
-	if stage.pair.LeafAdapterVersion == LeafAdapterV3 {
-		recordSchema, coverageSchema = CoverageRecordSchemaV2, CoverageSchemaV2
-	}
-	return stage.Add(Record{
-		Schema: recordSchema, Kind: RecordCoverage,
-		Coverage: &Coverage{
-			Schema: coverageSchema, PairDigest: stage.pair.Digest,
-			CandidateMemberName:    stage.pair.Leaf.Name,
-			CandidateContentDigest: stage.pair.Leaf.ContentDigest,
-			CandidateRecordCount:   stage.pair.Leaf.RecordCount,
-			CoveredCandidateCount:  stage.pair.Leaf.RecordCount,
-			NoDirectCandidateCount: noDirect,
-			Gaps:                   slices.Clone(gaps),
-			Reason:                 CoverageReasonNoResolverDescriptors,
-		},
-	})
+	return stage.Add(stage.compactCoverageRecord(
+		CoverageReasonNoResolverDescriptors, noDirect, gapCounts, 0,
+	))
 }
 
 // CompactZeroFactCoverage replaces the fully scanned input-only abstention
 // stream with one count-bearing V3 coverage record. Resolved results and
 // unresolved caller facts are never compacted. Source-read receipts remain
 // exact even though their per-path no-match rows are removed.
-func (stage *Stage) CompactZeroFactCoverage(seenCandidates int) (bool, error) {
+func (stage *Stage) CompactZeroFactCoverage() (bool, error) {
 	if stage == nil || stage.file == nil || stage.hash == nil || stage.sealed {
 		return false, errors.New("caller leaf stage is not writable")
 	}
@@ -340,12 +327,11 @@ func (stage *Stage) CompactZeroFactCoverage(seenCandidates int) (bool, error) {
 		stage.receipt.CoverageRecordCount != 0 || stage.factRecordCount != 0 {
 		return false, nil
 	}
-	if seenCandidates < 0 || seenCandidates > stage.pair.Leaf.RecordCount ||
-		stage.receipt.ResultCount != 0 ||
-		stage.receipt.AbstentionCount+stage.receipt.ExcludedGoTestRecords != seenCandidates {
+	seenCandidates := stage.receipt.AbstentionCount + stage.receipt.ExcludedGoTestRecords
+	if seenCandidates > stage.pair.Leaf.RecordCount {
 		return false, fmt.Errorf("%w: zero-fact coverage accounting is incomplete", ErrInvalidArtifact)
 	}
-	noDirect := stage.abstentionReasons["no_direct_caller"]
+	noDirect := stage.abstentionReasons[AbstentionReasonNoDirectCaller]
 	gapCounts := map[string]int{
 		CoverageGapCatalogOwnedInput:      stage.abstentionReasons[CoverageGapCatalogOwnedInput],
 		CoverageGapExcludedGoTest:         stage.receipt.ExcludedGoTestRecords,
@@ -354,26 +340,16 @@ func (stage *Stage) CompactZeroFactCoverage(seenCandidates int) (bool, error) {
 		CoverageGapSourceTooLarge:         stage.abstentionReasons[CoverageGapSourceTooLarge],
 		CoverageGapDomainUnselected:       stage.pair.Leaf.RecordCount - seenCandidates,
 	}
-	accounted := noDirect
-	for _, count := range gapCounts {
-		accounted += count
+	knownAbstentions := noDirect +
+		gapCounts[CoverageGapCatalogOwnedInput] +
+		gapCounts[CoverageGapInvalidUTF8] +
+		gapCounts[CoverageGapResolverGeneratedInput] +
+		gapCounts[CoverageGapSourceTooLarge]
+	if knownAbstentions != stage.receipt.AbstentionCount {
+		return false, nil
 	}
-	if accounted != stage.pair.Leaf.RecordCount ||
-		stage.receipt.SourceBlobReads != noDirect+gapCounts[CoverageGapInvalidUTF8] {
+	if stage.receipt.SourceBlobReads != noDirect+gapCounts[CoverageGapInvalidUTF8] {
 		return false, fmt.Errorf("%w: zero-fact coverage counts differ from the pair", ErrInvalidArtifact)
-	}
-	gaps := make([]CoverageGap, 0, len(gapCounts))
-	for _, reason := range []string{
-		CoverageGapCatalogOwnedInput,
-		CoverageGapDomainUnselected,
-		CoverageGapExcludedGoTest,
-		CoverageGapInvalidUTF8,
-		CoverageGapResolverGeneratedInput,
-		CoverageGapSourceTooLarge,
-	} {
-		if count := gapCounts[reason]; count > 0 {
-			gaps = append(gaps, CoverageGap{Reason: reason, Count: count})
-		}
 	}
 	if err := stage.file.Truncate(0); err != nil {
 		return false, err
@@ -385,19 +361,46 @@ func (stage *Stage) CompactZeroFactCoverage(seenCandidates int) (bool, error) {
 	stage.hash = sha256.New()
 	stage.receipt = Receipt{SourceBlobReads: reads, SourceBlobBytes: sourceBytes}
 	stage.abstentionReasons = make(map[string]int)
-	return true, stage.Add(Record{
-		Schema: CoverageRecordSchemaV2, Kind: RecordCoverage,
+	return true, stage.Add(stage.compactCoverageRecord(
+		CoverageReasonZeroCallerFacts, noDirect, gapCounts, sourceBytes,
+	))
+}
+
+func (stage *Stage) compactCoverageRecord(
+	reason string,
+	noDirect int,
+	gapCounts map[string]int,
+	sourceBlobBytes int64,
+) Record {
+	recordSchema, coverageSchema := CoverageRecordSchema, CoverageSchema
+	if stage.pair.LeafAdapterVersion == LeafAdapterV3 {
+		recordSchema, coverageSchema = CoverageRecordSchemaV2, CoverageSchemaV2
+	}
+	keys := make([]string, 0, len(gapCounts))
+	for current, count := range gapCounts {
+		if count > 0 {
+			keys = append(keys, current)
+		}
+	}
+	slices.Sort(keys)
+	gaps := make([]CoverageGap, 0, len(keys))
+	for _, current := range keys {
+		gaps = append(gaps, CoverageGap{Reason: current, Count: gapCounts[current]})
+	}
+	return Record{
+		Schema: recordSchema, Kind: RecordCoverage,
 		Coverage: &Coverage{
-			Schema: CoverageSchemaV2, PairDigest: stage.pair.Digest,
+			Schema: coverageSchema, PairDigest: stage.pair.Digest,
 			CandidateMemberName:    stage.pair.Leaf.Name,
 			CandidateContentDigest: stage.pair.Leaf.ContentDigest,
 			CandidateRecordCount:   stage.pair.Leaf.RecordCount,
 			CoveredCandidateCount:  stage.pair.Leaf.RecordCount,
 			NoDirectCandidateCount: noDirect,
 			Gaps:                   gaps,
-			Reason:                 CoverageReasonZeroCallerFacts,
+			Reason:                 reason,
+			SourceBlobBytes:        sourceBlobBytes,
 		},
-	})
+	}
 }
 
 func (stage *Stage) ObserveExcludedGoTest() {
@@ -760,18 +763,8 @@ func verifyReaderAt(
 		return fmt.Errorf("%w: artifact receipt mismatch", ErrInvalidArtifact)
 	}
 	if compactCoverage != nil {
-		switch compactCoverage.Reason {
-		case CoverageReasonNoResolverDescriptors:
-			if receipt.SourceBlobReads != 0 || receipt.SourceBlobBytes != 0 {
-				return fmt.Errorf("%w: no-resolver coverage read source blobs", ErrInvalidArtifact)
-			}
-		case CoverageReasonZeroCallerFacts:
-			if receipt.SourceBlobReads != compactCoverage.NoDirectCandidateCount+
-				coverageGapCount(*compactCoverage, CoverageGapInvalidUTF8) {
-				return fmt.Errorf("%w: zero-fact coverage source reads differ", ErrInvalidArtifact)
-			}
-		default:
-			return fmt.Errorf("%w: unknown compact coverage reason", ErrInvalidArtifact)
+		if err := validateCoverageReceipt(*compactCoverage, pair, receipt); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -30,6 +30,8 @@ const (
 	CallerBaseSourceLanePolicy = "candidate-source-lane-base-v1"
 	callerLeafAdapterV2        = "direct-syntax-compact-coverage-v2"
 	callerLeafAdapterV3        = "direct-syntax-zero-fact-coverage-v3"
+	callerCoverageNoResolver   = "no_resolver_descriptors"
+	callerCoverageZeroFacts    = "zero_caller_facts"
 
 	callerLeafWriterMigrationVersion = "t30.6h-caller-leaf-writer-v1"
 
@@ -202,6 +204,7 @@ type CallerLeafArtifactReceipt struct {
 	OutOfLeafReads        int    `json:"out_of_leaf_reads"`
 	CoverageRecordCount   int    `json:"coverage_record_count,omitempty"`
 	CoveredCandidateCount int    `json:"covered_candidate_count,omitempty"`
+	CoverageReason        string `json:"coverage_reason,omitempty"`
 }
 
 // CallerLeafOutcome is immutable multi-generation execution state. RecordedAt
@@ -477,7 +480,10 @@ func validateCallerReceipt(receipt CallerLeafArtifactReceipt) error {
 	}
 	if receipt.ExcludedGoTestRecords < 0 || receipt.SourceBlobReads < 0 ||
 		receipt.SourceBlobBytes < 0 || receipt.SourceBlobBytes > maxCallerPairSourceBytes ||
-		receipt.OutOfLeafReads != 0 {
+		receipt.OutOfLeafReads != 0 ||
+		(receipt.CoverageReason != "" &&
+			receipt.CoverageReason != callerCoverageNoResolver &&
+			receipt.CoverageReason != callerCoverageZeroFacts) {
 		return errors.New("source-read receipt is invalid or contains an out-of-leaf read")
 	}
 	return nil
@@ -514,17 +520,37 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 			return outcome, errors.New("source-read receipt exceeds its candidate leaf")
 		}
 		if outcome.Receipt.CoverageRecordCount == 0 {
-			if outcome.Receipt.CoveredCandidateCount != 0 {
+			if outcome.Receipt.CoveredCandidateCount != 0 ||
+				outcome.Receipt.CoverageReason != "" {
 				return outcome, errors.New("success receipt has detached coverage")
 			}
 		} else if (outcome.Pair.LeafAdapterVersion != callerLeafAdapterV2 &&
 			outcome.Pair.LeafAdapterVersion != callerLeafAdapterV3) ||
 			outcome.Receipt.CoverageRecordCount != 1 ||
 			outcome.Receipt.CoveredCandidateCount != outcome.Pair.CandidateRecordCount ||
-			outcome.Receipt.ResultCount != 0 || outcome.Receipt.AbstentionCount != 0 ||
-			outcome.Pair.LeafAdapterVersion == callerLeafAdapterV2 &&
-				(outcome.Receipt.SourceBlobReads != 0 || outcome.Receipt.SourceBlobBytes != 0) {
+			outcome.Receipt.ResultCount != 0 || outcome.Receipt.AbstentionCount != 0 {
 			return outcome, errors.New("success receipt has invalid compact coverage")
+		}
+		if outcome.Receipt.CoverageRecordCount != 0 {
+			switch outcome.Pair.LeafAdapterVersion {
+			case callerLeafAdapterV2:
+				if outcome.Receipt.CoverageReason != "" ||
+					outcome.Receipt.SourceBlobReads != 0 ||
+					outcome.Receipt.SourceBlobBytes != 0 {
+					return outcome, errors.New("historical compact coverage has invalid source receipt")
+				}
+			case callerLeafAdapterV3:
+				switch outcome.Receipt.CoverageReason {
+				case callerCoverageNoResolver:
+					if outcome.Receipt.SourceBlobReads != 0 ||
+						outcome.Receipt.SourceBlobBytes != 0 {
+						return outcome, errors.New("no-resolver compact coverage read source blobs")
+					}
+				case callerCoverageZeroFacts:
+				default:
+					return outcome, errors.New("V3 compact coverage reason is invalid")
+				}
+			}
 		}
 	case CallerLeafTerminalGenerationRefusal:
 		if outcome.Receipt != nil {

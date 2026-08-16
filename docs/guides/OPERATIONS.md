@@ -504,7 +504,12 @@ caller facts. During the scan it retains only constant-size counters for the
 bounded abstention reasons. After exact candidate accounting succeeds, it
 truncates the temporary per-candidate abstention stream and writes one
 `zero_caller_facts` coverage record that preserves candidate partitions,
-source-read count, source bytes, and excluded-`go_test` count. Any result or
+source-read count, source bytes, and excluded-`go_test` count. The V3 receipt
+also names that reason; artifact verification requires its source bytes to
+equal the embedded coverage value, while `no_resolver_descriptors` requires
+zero reads and bytes at both the filesystem and durable-store boundaries. Any
+unrecognized future fact-free abstention reason disables compaction and keeps
+the already valid materialized artifact instead of failing the pair. Any result or
 fact-bearing unresolved occurrence disables compaction for that pair. A crash
 before install exposes no artifact, and a V2 current publication is replaced
 through the ordinary queue-before-clear generation transition; retained V1/V2

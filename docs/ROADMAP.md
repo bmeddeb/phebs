@@ -1306,6 +1306,18 @@ catalog, relationship, or correctness authority.
   The scoped refusal is closed; T40.13/Epic 40, scale/SLO, Take 20, ceremony,
   release, and Epic 41 remain unclosed. Independent review is next before any
   separately authorized fresh-ceremony freeze.
+- Independent review then found two V3 receipt-consistency holes and two stale
+  V2 witness generators. The correction makes every current compact receipt
+  name its reason, rejects source reads/bytes for no-resolver coverage at the
+  receipt and store boundaries, embeds zero-fact source bytes in coverage-v2,
+  and verifies exact artifact/receipt byte agreement. The partitioned and
+  physical-provider opt-in generators now skip as retained V2 evidence;
+  unknown future input-only abstention reasons preserve materialized output.
+  The documented 96-leaf command now explicitly uses a 70-minute outer test
+  timeout around its 65-minute diagnostic parent. No production bound or
+  authority claim changes, and no ceremony/release/Epic progression follows.
+  The corrected exact 96-leaf rerun subsequently passed 96/96 with unchanged
+  current publication/product scalars and byte-identical source-free receipt.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

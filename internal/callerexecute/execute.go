@@ -51,7 +51,6 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 		request.Resolver.DescriptorCount() == 0 {
 		return executeNoResolverCoverage(ctx, request)
 	}
-	seenCandidates := 0
 	err := request.Plan.ForEachCallerLeafFile(
 		ctx, request.Pair.Adapter.Domain, request.Pair.Adapter.Version,
 		request.Pair.Candidate,
@@ -59,7 +58,6 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			seenCandidates++
 			switch file.SourceLane {
 			case candidate.SourceLaneGoTest:
 				request.Stage.ObserveExcludedGoTest()
@@ -75,13 +73,19 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 				return fmt.Errorf("%w: %v", ErrImmutableLeafInput, generatedErr)
 			}
 			if generated {
-				return addInputAbstention(request.Stage, file, "resolver_generated_input")
+				return addInputAbstention(
+					request.Stage, file, callerleaf.CoverageGapResolverGeneratedInput,
+				)
 			}
 			if !strings.HasSuffix(file.Path, ".go") {
-				return addInputAbstention(request.Stage, file, "catalog_owned_input")
+				return addInputAbstention(
+					request.Stage, file, callerleaf.CoverageGapCatalogOwnedInput,
+				)
 			}
 			if file.DeclaredBytes > callerleaf.MaxDirectSourceBytes {
-				return addInputAbstention(request.Stage, file, "source_too_large")
+				return addInputAbstention(
+					request.Stage, file, callerleaf.CoverageGapSourceTooLarge,
+				)
 			}
 			if err := request.Stage.ObserveSourceBlob(file.DeclaredBytes); err != nil {
 				return err
@@ -100,7 +104,9 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 				)
 			}
 			if !utf8.Valid(content) {
-				return addInputAbstention(request.Stage, file, "invalid_utf8")
+				return addInputAbstention(
+					request.Stage, file, callerleaf.CoverageGapInvalidUTF8,
+				)
 			}
 			sum := sha256.Sum256(content)
 			blob := sdk.Blob{
@@ -121,7 +127,8 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 					}
 					kind, reason := callerleaf.RecordResult, ""
 					if fact.Assertion.Predicate == "UNRESOLVED_CALLER" {
-						kind, reason = callerleaf.RecordAbstention, "unresolved_caller"
+						kind, reason = callerleaf.RecordAbstention,
+							callerleaf.AbstentionReasonUnresolvedCaller
 					}
 					emitted++
 					return request.Stage.Add(callerleaf.Record{
@@ -136,7 +143,9 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 				return err
 			}
 			if emitted == 0 {
-				return addInputAbstention(request.Stage, file, "no_direct_caller")
+				return addInputAbstention(
+					request.Stage, file, callerleaf.AbstentionReasonNoDirectCaller,
+				)
 			}
 			return nil
 		},
@@ -145,7 +154,7 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 		return err
 	}
 	if request.Pair.Identity.LeafAdapterVersion == callerleaf.LeafAdapterV3 {
-		_, err = request.Stage.CompactZeroFactCoverage(seenCandidates)
+		_, err = request.Stage.CompactZeroFactCoverage()
 	}
 	return err
 }
@@ -197,18 +206,7 @@ func executeNoResolverCoverage(ctx context.Context, request ExecuteRequest) erro
 	if unselected := request.Pair.Identity.Leaf.RecordCount - seen; unselected > 0 {
 		gapCounts[callerleaf.CoverageGapDomainUnselected] = unselected
 	}
-	gaps := make([]callerleaf.CoverageGap, 0, len(gapCounts))
-	for _, reason := range []string{
-		callerleaf.CoverageGapCatalogOwnedInput,
-		callerleaf.CoverageGapDomainUnselected,
-		callerleaf.CoverageGapExcludedGoTest,
-		callerleaf.CoverageGapResolverGeneratedInput,
-	} {
-		if count := gapCounts[reason]; count > 0 {
-			gaps = append(gaps, callerleaf.CoverageGap{Reason: reason, Count: count})
-		}
-	}
-	return request.Stage.AddNoResolverCoverage(noDirect, gaps)
+	return request.Stage.AddNoResolverCoverage(noDirect, gapCounts)
 }
 
 func addInputAbstention(

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
@@ -87,6 +88,9 @@ type t40r1CallerPartitionedRun struct {
 func TestT40R1CallerTerminalPartitionedAuthorityWitness(t *testing.T) {
 	if os.Getenv(t40r1CallerPartitionedEnv) != "1" {
 		t.Skip("set " + t40r1CallerPartitionedEnv + "=1 to run the disk-backed partitioned-authority witness")
+	}
+	if callerleaf.CurrentLeafAdapter != callerleaf.LeafAdapterV2 {
+		t.Skip("the retained caller partitioned-authority witness is historical V2 evidence")
 	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary is not installed")

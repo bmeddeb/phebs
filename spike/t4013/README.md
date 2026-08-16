@@ -1964,7 +1964,7 @@ cd ~/phebs
 T40R1_DESCRIPTOR_96LEAF_PRODUCT=1 \
   go test ./spike/t4013 \
   -run '^TestT40R1DescriptorPresent96LeafPhysicalWorkerProductDiagnostic$' \
-  -count=1 -timeout=60m -v
+  -count=1 -timeout=70m -v
 ```
 
 The final fixture authors 261,770 regular files over 72 real Git blobs. Its 64
@@ -2072,11 +2072,34 @@ opt-in diagnostic's 60-minute whole-run parent context by 0.33 seconds while
 reading one selected blob. The earlier successful execution completed in
 59m12s, so this was a diagnostic-envelope edge rather than the production
 five-minute per-worker deadline or an output refusal. The opt-in parent context
-is now 65 minutes inside the existing 70-minute Go-test ceiling. This changes
+is now 65 minutes, and the documented command explicitly invokes `go test`
+with `-timeout=70m` to retain a five-minute outer cleanup window. This changes
 no production context, timeout, retry, candidate, Git-read, or output bound.
 With that harness-only correction, the exact reproduction passed in
 3,482.55 seconds (54m6.58s in worker convergence) and matched the retained V3
 receipt byte-for-byte; no evidence value changed.
+
+Independent review then found that receipt-only and durable-store validation
+could not distinguish V3 no-resolver coverage from descriptor-present
+zero-fact coverage, and that the artifact did not independently bind the
+reported source-byte total. V3 receipts now carry the compact reason;
+`no_resolver_descriptors` rejects any claimed source read or byte at both
+boundaries. Coverage-v2 zero-fact records embed `source_blob_bytes`, and the
+artifact reader requires exact agreement with the receipt as well as the
+derived read-count identity. Historical V1/V2 encodings remain unchanged.
+Focused corruption tests cover both defects. The two remaining V2-era opt-in
+witness generators now skip under the V3 runtime, and an unknown future
+fact-free abstention reason keeps the valid materialized artifact instead of
+turning compaction vocabulary drift into a pair failure.
+
+The exact corrected 96-leaf reproduction passed in 3,569.10 seconds, including
+55m27.89s of worker convergence. It again settled and succeeded 96/96 pairs,
+published the same one result, 4,055 abstentions, and 95 coverage records over
+257,713 candidates, retained 261,764 reads/24,082,313 bytes with zero
+out-of-leaf reads, and matched the retained source-free V3 receipt exactly.
+Caller artifact disk measured 1,003,478 bytes (6,175 bytes above the earlier
+997,303-byte corrected-oracle run), the bounded cost of embedding the source
+byte scalar and receipt reason; this is an observation, not a ceiling or SLO.
 
 Steady-state cost remains deliberately source-bound. Each descriptor-present
 pair performs the same selected-member read, bounded Git blob reads, hashes,

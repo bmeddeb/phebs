@@ -1425,6 +1425,31 @@ pass, Take 20 reconstruction, ceremony authorization, release, or Epic 41
 progression. The next action is independent evidence/code review before any
 separate fresh-ceremony freeze decision.
 
+Independent review found and the follow-up correction closes two receipt
+validation holes before any ceremony decision. Current V3 compact receipts now
+carry their exact `no_resolver_descriptors` or `zero_caller_facts` reason.
+Receipt-only and durable-store validation reject a no-resolver receipt that
+claims any source read or byte. Coverage-v2 zero-fact records now embed the
+exact source-byte total, and artifact verification requires byte-for-byte
+agreement with the receipt in addition to the existing derived read-count
+identity. Historical V1/V2 JSON remains unchanged through omitted fields.
+
+The same review correction pins the retained partitioned-authority and
+physical-provider opt-in generators to historical V2, makes an unrecognized
+future input-only abstention reason retain the materialized artifact rather
+than fail compaction, derives the selected-candidate count from stage-owned
+accounting, centralizes ordered gap construction, and documents an explicit
+70-minute Go-test timeout around the 65-minute diagnostic parent. It changes no
+production timeout, bound, topology, query, source read, or authority claim.
+The scoped refusal remains closed, but ceremony, scale/SLO, release, T40.13,
+Epic 40, and Epic 41 remain unapproved.
+
+The corrected exact 96-leaf run then passed in 3,569.10 seconds with unchanged
+96/96 success, publication/product parity, result/abstention/coverage/source
+scalars, and retained source-free receipt bytes. Caller artifact disk measured
+1,003,478 bytes, 6,175 bytes above the prior corrected-oracle run; that bounded
+constant-record increase is an observation, not a ceiling or SLO.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

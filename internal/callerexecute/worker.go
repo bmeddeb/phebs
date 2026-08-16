@@ -1195,6 +1195,7 @@ func storeReceipt(receipt callerleaf.Receipt) *store.CallerLeafArtifactReceipt {
 		OutOfLeafReads:        receipt.OutOfLeafReads,
 		CoverageRecordCount:   receipt.CoverageRecordCount,
 		CoveredCandidateCount: receipt.CoveredCandidateCount,
+		CoverageReason:        receipt.CoverageReason,
 	}
 }
 
@@ -1212,6 +1213,7 @@ func artifactReceipt(receipt store.CallerLeafArtifactReceipt) callerleaf.Receipt
 		OutOfLeafReads:        receipt.OutOfLeafReads,
 		CoverageRecordCount:   receipt.CoverageRecordCount,
 		CoveredCandidateCount: receipt.CoveredCandidateCount,
+		CoverageReason:        receipt.CoverageReason,
 	}
 }
 

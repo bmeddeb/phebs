@@ -58,10 +58,16 @@ func TestCallerCoverageReceiptVersionedSourceReadCompatibility(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		adapter string
+		reason  string
+		reads   int
+		bytes   int64
 		wantErr bool
 	}{
-		{name: "historical v2 rejects source reads", adapter: callerLeafAdapterV2, wantErr: true},
-		{name: "zero-fact v3 retains source reads", adapter: callerLeafAdapterV3},
+		{name: "historical v2 rejects source reads", adapter: callerLeafAdapterV2, reads: 2, bytes: 64, wantErr: true},
+		{name: "v3 requires reason", adapter: callerLeafAdapterV3, reads: 2, bytes: 64, wantErr: true},
+		{name: "v3 no-resolver rejects source reads", adapter: callerLeafAdapterV3, reason: callerCoverageNoResolver, reads: 2, bytes: 64, wantErr: true},
+		{name: "v3 no-resolver accepts zero reads", adapter: callerLeafAdapterV3, reason: callerCoverageNoResolver},
+		{name: "zero-fact v3 retains source reads", adapter: callerLeafAdapterV3, reason: callerCoverageZeroFacts, reads: 2, bytes: 64},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			pair, pairErr := prepareCallerLeafPair(generation, CallerLeafPair{
@@ -83,7 +89,8 @@ func TestCallerCoverageReceiptVersionedSourceReadCompatibility(t *testing.T) {
 					ArtifactCount: 1, CoverageRecordCount: 1, CoveredCandidateCount: 3,
 					CanonicalBytes: 100, StagingBytes: 100,
 					ContentDigest: contentDigest, MetadataDigest: internalCallerDigest('a'),
-					SourceBlobReads: 2, SourceBlobBytes: 64,
+					CoverageReason:  test.reason,
+					SourceBlobReads: test.reads, SourceBlobBytes: test.bytes,
 				},
 			})
 			if (outcomeErr != nil) != test.wantErr {
