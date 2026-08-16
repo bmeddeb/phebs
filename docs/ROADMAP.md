@@ -1318,6 +1318,19 @@ catalog, relationship, or correctness authority.
   authority claim changes, and no ceremony/release/Epic progression follows.
   The corrected exact 96-leaf rerun subsequently passed 96/96 with unchanged
   current publication/product scalars and byte-identical source-free receipt.
+- Independent re-review authorizes one fresh `t40r1-neutral-21` freeze after a
+  custody correction. Pre-correction V3 commit `ab5f28f` was exposed through
+  pushed `main` from 2026-08-15 18:12:14 to 20:12:06 -0700, superseding the
+  earlier “unpushed” statement, but project custody records no deployment,
+  startup, ceremony, or durable execution in that interval. Unknown custody
+  is fail-closed pending a separately reviewed purge/rebuild; the ceremony's
+  creation-exclusive isolated directory is eligible. After this ledger lands,
+  freeze must bind the exact resulting `main` commit and corrected 96/96
+  receipt `sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`.
+  Execution remains separately approval-gated. Pilot/design-partner need for
+  the 96-leaf shape or a charter decision changing the 100,000 abstention
+  ceiling invalidates the freeze and requires re-review; no release, scale/SLO
+  claim, T40.13/Epic 40 closure, or Epic 41 progression follows.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

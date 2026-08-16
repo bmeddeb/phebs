@@ -2116,12 +2116,37 @@ reconstruct Take 20, establish a scale/SLO pass, authorize a ceremony or
 release, or unblock Epic 41. Independent review is required before a separate
 fresh-ceremony freeze decision.
 
+### Corrected-V3 custody fence and neutral-21 freeze authorization
+
+Independent re-review authorizes one fresh freeze after correcting the custody
+record. Pre-correction V3 commit `ab5f28f` entered pushed `main` through
+`c911586`; `origin/main` exposed it from 2026-08-15 18:12:14 -0700 until
+corrected `45f473a` replaced it at 20:12:06 -0700. Project custody records no
+deployment, service startup, ceremony, or durable execution against that
+interval. A custody whose provenance cannot exclude `ab5f28f` must stop for a
+separately reviewed purge/rebuild decision: corrected V3 validation is not
+compatible with V3 caller state written by that intermediate commit. Merely
+bumping `callerLeafWriterMigrationVersion` is not a purge; the current
+migration rejects a nonempty version mismatch and stops startup.
+
+The large-Mac ceremony uses a creation-exclusive isolated custody directory,
+so it satisfies this fence. Once this ledger change is fast-forwarded to
+`main`, `t40r1-neutral-21` freeze is authorized from that exact resulting
+`main` commit. The freeze evidence must retain the corrected 96/96 receipt
+`descriptor-present-96leaf-product-v2.json`
+(`sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`).
+This authorization stops after `freeze`: review the emitted plan digest and
+obtain separate explicit execution approval. Invalidate and re-review the
+freeze if either a pilot/design-partner requirement changes the 96-leaf scale
+need or an explicit charter decision changes the 100,000 aggregate
+caller-abstention ceiling.
+
 ```sh
 cd ~/phebs
 
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
-# Illustrative next unused identifier only; this document does not authorize it.
+# Authorized only after this custody ledger is fast-forwarded to main.
 CEREMONY_ID=t40r1-neutral-21
 ./spike/t4013/run-large-mac-ceremony.sh freeze "$CEREMONY_ID"
 

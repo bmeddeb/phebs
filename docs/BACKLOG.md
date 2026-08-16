@@ -1450,6 +1450,28 @@ scalars, and retained source-free receipt bytes. Caller artifact disk measured
 1,003,478 bytes, 6,175 bytes above the prior corrected-oracle run; that bounded
 constant-record increase is an observation, not a ceiling or SLO.
 
+Independent re-review authorizes a fresh freeze after one custody fence. The
+pre-correction V3 commit `ab5f28f` was present in pushed `main` through
+`c911586` for the recorded 2026-08-15 18:12:14–20:12:06 -0700 interval, so the
+earlier “unpushed” statement is superseded. Project custody records no
+deployment, startup, ceremony, or durable execution from that interval. Any
+other data-directory custody that cannot prove the same absence is ineligible
+for corrected V3 pending a separately reviewed purge/rebuild; a one-line
+writer-version bump is not such a purge because the existing guard refuses a
+nonempty version mismatch. The fresh ceremony's creation-exclusive isolated
+directory satisfies the fence.
+
+After this ledger change is fast-forwarded to `main`, Ben authorizes the
+`t40r1-neutral-21` freeze step only. It must bind the exact resulting `main`
+commit and the corrected 96/96 receipt
+`spike/t4013/descriptor-present-96leaf-product-v2.json`
+(`sha256:43e3a82e1c3897bd62f14150a1c0d9352d396030cc4f0bd1a1959f1f282b029b`).
+Execution remains separately approval-gated after plan-digest review. A
+pilot/design-partner requirement for the 96-leaf scale shape or an explicit
+charter decision changing the 100,000 caller-abstention ceiling invalidates
+the freeze and requires re-review. This is no scale/SLO pass, release,
+T40.13/Epic 40 closure, or Epic 41 progression.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
