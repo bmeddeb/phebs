@@ -118,7 +118,10 @@ func TestT40R1GenerationScheduleRecoveryDiagnostic(t *testing.T) {
 		},
 		MaxConcurrency: 2, MaxMemoryBytes: 2 << 20, MaxDescriptors: 8,
 		PollEvery: time.Millisecond, HeartbeatEvery: 50 * time.Millisecond,
-		StaleAfter: 200 * time.Millisecond, StoreCallTimeout: 5 * time.Second,
+		// StaleAfter must clear the worst-case live settlement stall (the
+		// five-second store-call bound plus reconciliation) with margin, or
+		// the reaper re-runs a live chunk and breaks the exact counters.
+		StaleAfter: 30 * time.Second, StoreCallTimeout: 5 * time.Second,
 		WorkerPrefix: "t40r1-schedule-diagnostic",
 		Report: func(err error) {
 			errorMu.Lock()

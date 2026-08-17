@@ -41,16 +41,17 @@ func TestChunkLifecycleReportBindsStartedLeaseIdentity(t *testing.T) {
 }
 
 type schedulerStore struct {
-	mu          sync.Mutex
-	chunks      []store.GenerationChunk
-	completed   int
-	retried     int
-	retryErrors []string
-	failed      int
-	failErrors  []string
-	released    int
-	done        chan struct{}
-	retryErr    error
+	mu           sync.Mutex
+	chunks       []store.GenerationChunk
+	completed    int
+	retried      int
+	retryErrors  []string
+	failed       int
+	failErrors   []string
+	released     int
+	done         chan struct{}
+	retryErr     error
+	heartbeatErr error
 }
 
 type blockedExpansionRecoveryStore struct {
@@ -261,7 +262,9 @@ func (scheduler *schedulerStore) ClaimGenerationChunk(_ context.Context, class s
 	return nil, store.ErrNotFound
 }
 func (scheduler *schedulerStore) HeartbeatGenerationChunk(context.Context, store.GenerationChunk) error {
-	return nil
+	scheduler.mu.Lock()
+	defer scheduler.mu.Unlock()
+	return scheduler.heartbeatErr
 }
 func (scheduler *schedulerStore) CompleteGenerationChunk(_ context.Context, _ store.GenerationChunk) error {
 	scheduler.mu.Lock()
@@ -323,6 +326,34 @@ func TestSchedulerReportsExhaustionAfterRetryTransition(t *testing.T) {
 		}
 	default:
 		t.Fatal("exhaustion callback was not called")
+	}
+}
+
+func TestSchedulerHeartbeatFailureUsesDurableLeaseAge(t *testing.T) {
+	fake := &schedulerStore{heartbeatErr: errors.New("transient heartbeat failure")}
+	scheduler := &Scheduler{
+		Store: fake, HeartbeatEvery: 5 * time.Millisecond,
+		StaleAfter: 500 * time.Millisecond,
+	}
+	heartbeatAt := time.Now().Add(-time.Second)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		scheduler.execute(t.Context(), Class{
+			Handle: func(ctx context.Context, _ store.GenerationChunk, _ Budget) error {
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		}, store.GenerationChunk{
+			ID: "stale-heartbeat", ResourceClass: store.GenerationResourceCPU,
+			Status: store.GenerationChunkRunning, LeaseToken: "lease",
+			HeartbeatAt: &heartbeatAt,
+		})
+	}()
+	select {
+	case <-done:
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("transient heartbeat outlived the durable lease stale cutoff")
 	}
 }
 

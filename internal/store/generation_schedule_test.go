@@ -198,8 +198,15 @@ func TestGenerationSchedulePagedFanoutAndLeaseLifecycle(t *testing.T) {
 	if applied, err := store.reconcileGenerationCompletion(t.Context(), *chunk); err != nil || !applied {
 		t.Fatalf("committed completion reconciliation = %v, %v", applied, err)
 	}
-	if err := store.CompleteGenerationChunk(t.Context(), *chunk); !errors.Is(err, ErrGenerationLeaseLost) {
+	// A replayed completion reconciles against the durable done row under the
+	// same claimant: idempotent success, with no accounting replay.
+	if err := store.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
 		t.Fatalf("replayed completion = %v", err)
+	}
+	canceledCtx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := store.CompleteGenerationChunk(canceledCtx, *chunk); err != nil {
+		t.Fatalf("canceled replayed completion = %v", err)
 	}
 	for index := 1; index < MaxGenerationActiveStagesPerRepository; index++ {
 		additional := spec
@@ -306,6 +313,62 @@ func TestGenerationScheduleReleaseAndAttemptExhaustionPreserveSiblings(t *testin
 	}
 	if settled.Status != GenerationScheduleSettled || settled.Succeeded != 1 || settled.Failed != 1 {
 		t.Fatalf("settled siblings = %+v", settled)
+	}
+}
+
+func TestGenerationExhaustionReconciliationFencesReclaimedWorker(t *testing.T) {
+	state := newRunnerStore(t)
+	spec := generationSpec(
+		"example.invalid/exhaustion-reclaim",
+		"sha256:"+strings.Repeat("8", 64),
+	)
+	spec.TotalItems, spec.ChunkItems, spec.MaxAttempts = 1, 1, 1
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(
+		t.Context(), spec.Repository, spec.Stage, spec.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	original, err := state.ClaimGenerationChunk(
+		t.Context(), spec.ResourceClass, "worker-a",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](t.Context(), state.db,
+		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*original),
+			"old":   time.Now().UTC().Add(-time.Hour),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := state.ReapStaleGenerationChunks(
+		t.Context(), spec.ResourceClass, time.Minute,
+	); err != nil || count != 1 {
+		t.Fatalf("reap original worker = %d, %v", count, err)
+	}
+	reclaimed, err := state.ClaimGenerationChunk(
+		t.Context(), spec.ResourceClass, "worker-b",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.RetryGenerationChunk(
+		t.Context(), *reclaimed, "same failure", time.Now().UTC(),
+	); !errors.Is(err, ErrGenerationExhausted) {
+		t.Fatalf("reclaimed exhaustion = %v", err)
+	}
+	if state.reconcileGenerationExhaustion(
+		t.Context(), *original, spec.MaxAttempts, "same failure",
+	) {
+		t.Fatal("original worker adopted reclaimed worker exhaustion")
+	}
+	if !state.reconcileGenerationExhaustion(
+		t.Context(), *reclaimed, spec.MaxAttempts, "same failure",
+	) {
+		t.Fatal("reclaimed worker did not reconcile its exhaustion")
 	}
 }
 

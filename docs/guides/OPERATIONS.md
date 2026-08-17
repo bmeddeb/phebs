@@ -2766,6 +2766,24 @@ Retries create fresh attempt rows, cancellation consumes no attempt, and stale
 leases return with lower deterministic priority than never-run and retryable
 work. Attempt exhaustion affects only that chunk.
 
+T40.R1 hardens this boundary after the neutral-21 wedge. Planner expansion,
+stale-lease reaping, and worker claim/execution run as independent loops per
+resource class, so one blocked store call cannot starve lease recovery.
+Reap, claim, heartbeat, settlement, and exhaustion-callback store calls are
+bounded by a per-call five-second context; the atomic expansion transaction
+runs under the scheduler lifetime instead, so a slow fanout page is never
+aborted and restarted from the same offset. An explicit SurrealDB conflict
+abort replays the same fenced transaction at most 64 times and emits one
+source-free operation/attempt diagnostic per replay. An ambiguous completion
+or final-attempt retry response is reconciled against the durable chunk row
+on a fresh bounded context: a chunk completed under the caller's own
+claimant reports success, a chunk settled by another claimant stays fenced,
+and a durably committed final-attempt failure reports exhaustion only for its
+exact preserved claimant, so its terminal record is neither lost nor adopted
+by a reaped worker. A transient heartbeat error is tolerated only until the
+last durably confirmed heartbeat reaches the stale cutoff; only a definitive
+lease fence cancels a running handler earlier.
+
 The hard admission ceilings are 4,096 ordinals per chunk, 64 chunks per fan-out
 page, 80,000,000 items and 1,000,000 logical chunks per schedule, eight active
 stages and eight tokens per repository, and eight attempts. Process pools admit

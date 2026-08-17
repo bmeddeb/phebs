@@ -605,6 +605,12 @@ func generationScheduleRows(results *[]surrealdb.QueryResult[[]generationSchedul
 	return nil
 }
 
+// generationReconcileTimeout bounds the reconciliation reads that follow an
+// ambiguous transaction response. Reconciliation must not inherit the caller
+// context: the ambiguous class includes exactly the case where that context
+// already expired while the server committed.
+const generationReconcileTimeout = 5 * time.Second
+
 // queryGenerationSchedule retries only SurrealDB's explicit transient
 // conflict class. Generation transactions bind immutable digests, exact
 // offsets, and exact worker leases, so replay after an aborted conflict cannot
@@ -639,7 +645,7 @@ func (s *Surreal) GetGenerationSchedule(
 		!validGenerationToken(stage) || stage == "" {
 		return nil, errors.New("get generation schedule: invalid scope")
 	}
-	results, err := surrealdb.Query[[]generationScheduleRec](ctx, s.db, `
+	results, err := queryGenerationSchedule[[]generationScheduleRec](ctx, s.db, "get_schedule", `
 LET $digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
 RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[string]any{
 		"current": models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(repository, stage), "sha256:")),
@@ -960,8 +966,15 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 		"repository_state": models.NewRecordID("generation_schedule_repository", strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:")),
 		"digest":           chunk.ScheduleDigest, "lease": chunk.LeaseToken, "worker": chunk.ClaimedBy,
 	})
+	reconcile := func() (bool, error) {
+		reconcileCtx, reconcileCancel := context.WithTimeout(
+			context.WithoutCancel(ctx), generationReconcileTimeout,
+		)
+		defer reconcileCancel()
+		return s.reconcileGenerationCompletion(reconcileCtx, chunk)
+	}
 	if err != nil {
-		if applied, reconcileErr := s.reconcileGenerationCompletion(ctx, chunk); applied {
+		if applied, reconcileErr := reconcile(); applied {
 			return nil
 		} else if errors.Is(reconcileErr, ErrGenerationStale) ||
 			errors.Is(reconcileErr, ErrGenerationLeaseLost) {
@@ -971,6 +984,14 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 	}
 	rows := generationTransitionRows(results)
 	if len(rows) != 1 || !rows[0].Owned {
+		// A conflict replay of an invisibly committed completion also lands
+		// here: the committed attempt already cleared the lease.
+		if applied, reconcileErr := reconcile(); applied {
+			return nil
+		} else if errors.Is(reconcileErr, ErrGenerationStale) ||
+			errors.Is(reconcileErr, ErrGenerationLeaseLost) {
+			return reconcileErr
+		}
 		return ErrGenerationLeaseLost
 	}
 	if !rows[0].Current {
@@ -999,6 +1020,12 @@ func (s *Surreal) reconcileGenerationCompletion(
 	}
 	switch current.Status {
 	case GenerationChunkDone:
+		// Completion clears the lease token but preserves claimed_by, so the
+		// claimant is the only surviving ownership evidence: a chunk reaped,
+		// reclaimed, and completed by another worker must stay fenced.
+		if current.ClaimedBy != claimed.ClaimedBy {
+			return false, ErrGenerationLeaseLost
+		}
 		schedule, scheduleErr := s.GetGenerationSchedule(
 			ctx, claimed.Repository, claimed.Stage,
 		)
@@ -1157,10 +1184,16 @@ func (s *Surreal) RetryGenerationChunk(
 		ctx, s.db, "retry", retryGenerationChunkSQL, variables,
 	)
 	if err != nil {
+		if s.reconcileGenerationExhaustion(ctx, chunk, schedule.MaxAttempts, errMessage) {
+			return nil, ErrGenerationExhausted
+		}
 		return nil, fmt.Errorf("retry generation chunk: %w", err)
 	}
 	rows := generationTransitionRows(results)
 	if len(rows) != 1 || !rows[0].Owned {
+		if s.reconcileGenerationExhaustion(ctx, chunk, schedule.MaxAttempts, errMessage) {
+			return nil, ErrGenerationExhausted
+		}
 		return nil, ErrGenerationLeaseLost
 	}
 	if !rows[0].Current {
@@ -1170,6 +1203,34 @@ func (s *Surreal) RetryGenerationChunk(
 		return nil, ErrGenerationExhausted
 	}
 	return s.generationChunkByIdentity(ctx, successorIdentity)
+}
+
+// reconcileGenerationExhaustion detects a final-attempt retry whose
+// transaction committed while the client response was lost: the chunk row is
+// durably failed at the caller's exact attempt with the caller's error text.
+// Retry clears the lease but preserves claimed_by, so exact claimant matching
+// both recovers the caller's committed result and fences a reaped worker from
+// adopting another claimant's exhaustion.
+func (s *Surreal) reconcileGenerationExhaustion(
+	ctx context.Context,
+	claimed GenerationChunk,
+	maxAttempts int,
+	errMessage string,
+) bool {
+	if claimed.Attempt+1 < maxAttempts {
+		return false
+	}
+	reconcileCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(ctx), generationReconcileTimeout,
+	)
+	defer cancel()
+	current, err := s.generationChunkByIdentity(reconcileCtx, claimed.Identity)
+	return err == nil && current.ID == claimed.ID &&
+		current.ScheduleDigest == claimed.ScheduleDigest &&
+		current.Offset == claimed.Offset && current.Attempt == claimed.Attempt &&
+		current.ClaimedBy == claimed.ClaimedBy &&
+		current.Status == GenerationChunkFailed &&
+		current.Error == boundedGenerationError(errMessage)
 }
 
 const releaseGenerationChunkSQL = `
@@ -1349,7 +1410,7 @@ func (s *Surreal) generationScheduleByDigest(ctx context.Context, digest string)
 }
 
 func (s *Surreal) generationChunkByIdentity(ctx context.Context, identity string) (*GenerationChunk, error) {
-	results, err := surrealdb.Query[[]generationChunkRec](ctx, s.db,
+	results, err := queryGenerationSchedule[[]generationChunkRec](ctx, s.db, "chunk_by_identity",
 		"SELECT * FROM generation_schedule_chunk WHERE identity = $identity LIMIT 1",
 		map[string]any{"identity": identity})
 	if err != nil {

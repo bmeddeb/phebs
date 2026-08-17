@@ -237,9 +237,12 @@ func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationReso
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
 	for {
-		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
-		_, err := scheduler.Store.ExpandNextGenerationSchedule(callCtx, class)
-		cancel()
+		// Expansion is one atomic fanout transaction: a per-call deadline
+		// would abort a slow-but-progressing page and restart the identical
+		// work from the same offset every tick. It runs under the scheduler
+		// lifetime; the independent reap loop keeps lease recovery alive
+		// while an expansion call blocks.
+		_, err := scheduler.Store.ExpandNextGenerationSchedule(ctx, class)
 		if err != nil &&
 			!errors.Is(err, store.ErrNotFound) && ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("expand %s generation page: %w", class, err))
@@ -317,18 +320,43 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	go func() {
 		ticker := time.NewTicker(scheduler.HeartbeatEvery)
 		defer ticker.Stop()
+		// The claimed row carries the store's durable heartbeat time. Keep a
+		// conservative lower bound after each successful beat so a sequence of
+		// client-side errors can never outlive the reaper's stale cutoff.
+		lastConfirmed := time.Now()
+		if chunk.HeartbeatAt != nil && chunk.HeartbeatAt.Before(lastConfirmed) {
+			lastConfirmed = *chunk.HeartbeatAt
+		}
 		for {
 			select {
 			case <-handleCtx.Done():
 				heartbeat <- nil
 				return
 			case <-ticker.C:
+				beatStarted := time.Now()
 				callCtx, callCancel := context.WithTimeout(
 					handleCtx, scheduler.storeCallTimeout(),
 				)
 				err := scheduler.Store.HeartbeatGenerationChunk(callCtx, chunk)
 				callCancel()
-				if err != nil {
+				if err == nil {
+					// The durable write occurred no earlier than beatStarted.
+					lastConfirmed = beatStarted
+					continue
+				}
+				if handleCtx.Err() != nil {
+					// The handler finished (or the scheduler stopped) while
+					// this beat was in flight; not a heartbeat failure.
+					heartbeat <- nil
+					return
+				}
+				// A lease fence is definitive. A transient store error is
+				// tolerated until the lease could actually have gone stale;
+				// killing a healthy handler for one slow beat wastes the
+				// whole chunk.
+				if errors.Is(err, store.ErrGenerationLeaseLost) ||
+					errors.Is(err, store.ErrGenerationStale) ||
+					time.Since(lastConfirmed) >= scheduler.StaleAfter {
 					cancel()
 					heartbeat <- err
 					return
