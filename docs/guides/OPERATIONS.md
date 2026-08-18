@@ -4066,16 +4066,27 @@ observation content, partition results, domain roots, or evidence payloads.
 
 The repository-status extraction job is also diagnostic orchestration state,
 not extraction-generation authority: its projection intentionally contains no
-candidate, source, observation, plan, schedule, or generation identity. A
-failed or canceled latest job is conclusive only while the schedule is
-`unavailable`, unless it carries an exact validated terminal refusal. If a
-generation-bound schedule is active, keep waiting; if it is settled with
-failed partitions, use that schedule terminal; and if it is fully `current`,
-validate the exact extraction and downstream caller/relationship authorities
-instead of letting the unbound job row poison them. The job status and attempt
-count remain in operational evidence. Fresh ceremony plans, observations, and
-receipts use V15 for this rule; V14 retains its historical job-first predicate
-and validation. Safety, admission, and production bounds are unchanged.
+candidate, source, observation, plan, schedule, or generation identity. Under
+V15, if a generation-bound schedule is active, keep waiting — live scheduler
+actors can still settle and publish without the job; if it is settled with
+failed partitions and complete counters, use that schedule terminal; and if it
+is fully `current`, validate the exact extraction and downstream
+caller/relationship authorities instead of letting the unbound job row poison
+them. In every other schedule state — `unavailable`, settled successful
+awaiting promotion, superseded, or incomplete settled counters — no actor
+remains to finish the pipeline, so the failed or canceled latest job is
+conclusive and stops the ceremony with a typed terminal rather than pending to
+the four-hour deadline. The job row's exact validated terminal refusal follows
+the same rule: it substantiates a bound-refused stop only in those conclusive
+states. A V15 job-plane stop additionally confirms on a second identical
+five-second probe, so a poll that races the schedule enqueuer or the final
+promotion write converges instead of sealing a spurious terminal. The job
+status and attempt count remain in operational evidence. Fresh ceremony plans,
+observations, and receipts use V15 for this rule; V14 retains its historical
+job-first predicate and validation, and receipt coherence checks are
+outcome-restricted, so waits stopped for other reasons (diagnostic limit,
+deadline, server exit) retain a terminal-shaped final projection as evidence
+without failing to seal.
 
 The ordinary path adds no operation kind or work. On the exceptional V15 edge
 where a failed/canceled job accompanies a current schedule, the inspector now
@@ -4086,11 +4097,13 @@ at most 490 expected partition-result records per domain, and reads domain-root
 and current authority, stopping at the first complete generation (about
 2,007,040 result checks at the full envelope). It then makes one caller-
 generation progress request and the applicable relationship-root and service-
-catalog authority checks. That existing bounded validation can repeat on the
-five-second poll while downstream authority remains pending. It
-adds no source/content, candidate-member, corpus, shard, or Git read, and no
-write, transaction, child, goroutine, lock, cache, retry, startup, sync, no-op,
-or publication-transition work.
+catalog authority checks. The full extraction scan is memoized on the
+extraction probe digest for the life of one convergence wait, so while the
+schedule and job projection are unchanged the five-second poll re-reads one
+digest instead of repeating the scan; the scan re-runs only when the probe
+digest changes. It adds no source/content, candidate-member, corpus, shard, or
+Git read, and no write, transaction, child, goroutine, lock, retry, startup,
+sync, no-op, or publication-transition work.
 
 New non-Kafka extraction plans use the version-2 domain-result contract: each
 partition retains the 64-MiB candidate-member reservation ceiling while the

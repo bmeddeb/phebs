@@ -615,7 +615,7 @@ func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
 			Status: store.StatusFailed, Attempts: 1, Refusal: &refusal,
 		},
 	}
-	probe, err := extractionConvergenceProbe(progress, repository)
+	probe, err := extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if !errors.Is(err, errExtractionBoundRefusal) || probe.ExtractionProgress == nil ||
 		probe.ExtractionProgress.RefusalDimension != "candidate_member_bytes" ||
 		probe.ExtractionProgress.RefusalObserved != 792_000_000 ||
@@ -624,7 +624,7 @@ func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
 		t.Fatalf("probe = %+v, error=%v", probe, err)
 	}
 	repository.LastExtractionJob.Refusal = nil
-	_, err = extractionConvergenceProbe(progress, repository)
+	_, err = extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if !errors.Is(err, errExtractionJobTerminal) {
 		t.Fatalf("ordinary terminal error = %v", err)
 	}
@@ -634,7 +634,7 @@ func TestExtractionConvergenceProbeClosesTerminalRefusal(t *testing.T) {
 		Classification: pipelinerefusal.ClassificationLimit,
 		Dimension:      pipelinerefusal.DimensionGenerationRecords, Observed: 2, Limit: 1,
 	}
-	_, err = extractionConvergenceProbe(progress, repository)
+	_, err = extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if !errors.Is(err, errExtractionJobTerminal) {
 		t.Fatalf("unrelated limit error = %v", err)
 	}
@@ -646,7 +646,7 @@ func TestExtractionConvergenceProbeRetainsTypedPendingProjection(t *testing.T) {
 		Pending: 460, Running: 4, Succeeded: 25, Domains: 4,
 	}
 	repository := store.RepoStatus{LastExtractionJobState: store.JobProjectionUnavailable}
-	probe, err := extractionConvergenceProbe(progress, repository)
+	probe, err := extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if err == nil || classifyConvergenceInspection(err).class != "pending" ||
 		probe.ExtractionProgress == nil || probe.ExtractionProgress.Succeeded != 25 ||
 		probe.ExtractionProgress.Running != 4 || probe.ExtractionProgress.Total != 489 {
@@ -665,7 +665,7 @@ func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) 
 		State: string(store.GenerationScheduleSettled), Total: 32, Materialized: 32,
 		Succeeded: 0, Failed: 32, Domains: 4,
 	}
-	probe, err := extractionConvergenceProbe(settled, repository)
+	probe, err := extractionConvergenceProbe(settled, repository, profileInspectionLegacy)
 	if !errors.Is(err, errExtractionScheduleTerminal) ||
 		classifyConvergenceInspection(err).class != "terminal" ||
 		probe.ExtractionProgress == nil || probe.ExtractionProgress.Failed != 32 {
@@ -674,17 +674,17 @@ func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) 
 	active := settled
 	active.State, active.Pending = "active", 1
 	active.Failed, active.Total = 31, 32
-	if _, err := extractionConvergenceProbe(active, repository); errors.Is(err, errExtractionScheduleTerminal) {
+	if _, err := extractionConvergenceProbe(active, repository, profileInspectionLegacy); errors.Is(err, errExtractionScheduleTerminal) {
 		t.Fatalf("active schedule stopped terminally: %v", err)
 	}
 	short := settled
 	short.Failed = 31
-	if probe, err := extractionConvergenceProbe(short, repository); err != nil ||
+	if probe, err := extractionConvergenceProbe(short, repository, profileInspectionLegacy); err != nil ||
 		probe.ExtractionProgress == nil || probe.ExtractionProgress.Failed != 31 {
 		t.Fatalf("incomplete settled counters = %+v, error=%v", probe, err)
 	}
 	repository.LastExtractionJob.Status = store.StatusFailed
-	if _, err := extractionConvergenceProbe(settled, repository); !errors.Is(err, errExtractionJobTerminal) {
+	if _, err := extractionConvergenceProbe(settled, repository, profileInspectionLegacy); !errors.Is(err, errExtractionJobTerminal) {
 		t.Fatalf("v14 job terminal did not retain historical precedence: %v", err)
 	}
 	if _, err := extractionConvergenceProbe(settled, repository, profileInspectionV15); !errors.Is(
@@ -693,7 +693,7 @@ func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) 
 		t.Fatalf("v15 generation-bound schedule did not retain precedence: %v", err)
 	}
 	repository.LastExtractionJobState, repository.LastExtractionJob = store.JobProjectionUnavailable, nil
-	probe, err = extractionConvergenceProbe(settled, repository)
+	probe, err = extractionConvergenceProbe(settled, repository, profileInspectionLegacy)
 	if !errors.Is(err, errExtractionScheduleTerminal) || probe.ExtractionProgress.JobState != "" ||
 		validateExtractionProgress(*probe.ExtractionProgress) != nil {
 		t.Fatalf("collected-job settled probe = %+v, error=%v", probe, err)
@@ -706,7 +706,7 @@ func TestExtractionConvergenceProbeAcceptsCurrentAuthorityAfterJobCollection(t *
 		Succeeded: 489, Domains: 4, CurrentDomains: 4,
 	}
 	repository := store.RepoStatus{LastExtractionJobState: store.JobProjectionUnavailable}
-	probe, err := extractionConvergenceProbe(progress, repository)
+	probe, err := extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if err != nil || probe.ExtractionProgress == nil ||
 		probe.ExtractionProgress.State != "current" ||
 		probe.ExtractionProgress.Succeeded != 489 {
@@ -725,7 +725,7 @@ func TestExtractionConvergenceProbeDoesNotLetUnboundFailedJobPoisonCurrentSchedu
 			Status: store.StatusFailed, Attempts: 2,
 		},
 	}
-	historicalProbe, historicalErr := extractionConvergenceProbe(progress, repository)
+	historicalProbe, historicalErr := extractionConvergenceProbe(progress, repository, profileInspectionLegacy)
 	if !errors.Is(historicalErr, errExtractionJobTerminal) ||
 		historicalProbe.SHA256 != "sha256:d4703c2d327d13d0116fb2795774cb3caf21c8d98ac8c91ab163777bf7c05600" {
 		t.Fatalf("v14 historical probe = %+v, error=%v", historicalProbe, historicalErr)
@@ -746,8 +746,51 @@ func TestExtractionConvergenceProbeDoesNotLetUnboundFailedJobPoisonCurrentSchedu
 		t.Fatalf("active schedule with unbound failed job = %v, want pending", err)
 	}
 
+	// V15: with no live actor left (settled successful awaiting promotion,
+	// superseded, or no schedule at all) the terminal job row is conclusive
+	// rather than pending to the ceremony deadline.
+	for _, state := range []string{
+		string(store.GenerationScheduleSettled),
+		string(store.GenerationScheduleSuperseded),
+		"unavailable",
+	} {
+		dead := progress
+		dead.State, dead.CurrentDomains = state, 0
+		if _, err := extractionConvergenceProbe(dead, repository, profileInspectionV15); !errors.Is(
+			err, errExtractionJobTerminal,
+		) {
+			t.Fatalf("%s schedule beside a terminal job = %v, want job terminal", state, err)
+		}
+	}
+
+	// The job row's refusal payload follows the same rule as its failure:
+	// conclusive only when no live or converged schedule contradicts it.
+	refusalRepository := store.RepoStatus{
+		LastExtractionJobState: store.JobProjectionExact,
+		LastExtractionJob: &store.ExtractionJobProjection{
+			Status: store.StatusFailed, Attempts: 2,
+			Refusal: &pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageDomainInventory,
+				GenerationKind: pipelinerefusal.GenerationExtractionDomain,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionCandidateMemberBytes,
+				Observed:       2, Limit: 1,
+			},
+		},
+	}
+	if _, err := extractionConvergenceProbe(progress, refusalRepository, profileInspectionV15); err != nil {
+		t.Fatalf("typed refusal beside a current schedule = %v, want convergence", err)
+	}
+	deadRefusal := extractionpublication.Progress{State: "unavailable"}
+	if _, err := extractionConvergenceProbe(deadRefusal, refusalRepository, profileInspectionV15); !errors.Is(
+		err, errExtractionBoundRefusal,
+	) {
+		t.Fatalf("conclusive typed refusal = %v, want bound refusal", err)
+	}
+
 	unavailable := extractionpublication.Progress{State: "unavailable"}
-	if _, err := extractionConvergenceProbe(unavailable, repository); !errors.Is(
+	if _, err := extractionConvergenceProbe(unavailable, repository, profileInspectionLegacy); !errors.Is(
 		err, errExtractionJobTerminal,
 	) {
 		t.Fatalf("failed job without schedule = %v, want extraction terminal", err)

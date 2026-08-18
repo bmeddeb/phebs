@@ -93,9 +93,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	if err != nil {
 		return Prepared{}, err
 	}
-	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
+	if planSchemaVersion(plan.Schema) >= 2 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
@@ -182,9 +180,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 			Address: address, Catalog: catalogPath, Revisions: revisions,
 		})
 	}
-	if plan.Schema == PlanSchemaV2 || plan.Schema == PlanSchemaV3 ||
-		plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 ||
-		plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
+	if planSchemaVersion(plan.Schema) >= 2 {
 		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
 		}
@@ -252,7 +248,7 @@ func HostPreflight(ctx context.Context, dataParent string, plan Plan) (Environme
 		return EnvironmentObservation{}, errors.New("T40.13 frozen host prerequisite is not met")
 	}
 	usedPercent := int((capacity.UsedBytes * 100) / capacity.TotalBytes)
-	if plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
+	if planSchemaVersion(plan.Schema) >= 10 {
 		observedCapacity, capacityErr := lifecycle.NewGate(dataParent).Check(ctx, 0)
 		if capacityErr != nil {
 			return EnvironmentObservation{}, fmt.Errorf("gate T40.13 custody capacity: %w", capacityErr)

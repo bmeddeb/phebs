@@ -252,7 +252,7 @@ func awaitPrivateServerHealth(
 	if ctx == nil || server == nil || deadlineLimit <= 0 {
 		return ServerStartupObservation{}, errors.New("T40.13 server health wait is invalid")
 	}
-	inspector, err := newProfileInspector(profile)
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
 	if err != nil {
 		observation, observeErr := observeServerStartup(server, profile.Name, label, "inspector_error", "not_attempted", 0)
 		return observation, errors.Join(err, observeErr)

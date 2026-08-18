@@ -3,6 +3,7 @@ package t4013
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -956,6 +957,23 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 			},
 		},
 		{
+			name: "historical v14 bound refusal supersedes current schedule", cause: errExtractionBoundRefusal,
+			outcome: "extraction_bound_refusal", historicalV14: true,
+			projection: privateConvergenceProbe{
+				Stage: "extraction_publication", SHA256: digest,
+				ExtractionProgress: &ExtractionProgressObservation{
+					State: "current", Total: 32, Materialized: 32, Succeeded: 32,
+					Domains: 4, CurrentDomains: 4,
+					JobState: string(store.StatusFailed), JobAttempts: 2,
+					RefusalStage:          string(pipelinerefusal.StageDomainInventory),
+					RefusalGenerationKind: string(pipelinerefusal.GenerationExtractionDomain),
+					RefusalClassification: string(pipelinerefusal.ClassificationLimit),
+					RefusalDimension:      string(pipelinerefusal.DimensionCandidateMemberBytes),
+					RefusalObserved:       2, RefusalLimit: 1,
+				},
+			},
+		},
+		{
 			name:  "extraction bound refusal supersedes failed schedule",
 			cause: errExtractionBoundRefusal, outcome: "extraction_bound_refusal",
 			projection: privateConvergenceProbe{
@@ -1075,22 +1093,20 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				t.Fatalf("terminal waits = %+v", run.observation.ConvergenceWaits)
 			}
 			if test.outcome == "extraction_job_terminal" && !test.historicalV14 {
-				for _, progress := range []ExtractionProgressObservation{
-					{
-						State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
-						Pending: 1, Domains: 1,
-						JobState: string(store.StatusFailed), JobAttempts: 2,
-					},
-					{
-						State: "current", Total: 1, Materialized: 1, Succeeded: 1,
-						Domains: 1, CurrentDomains: 1,
-						JobState: string(store.StatusFailed), JobAttempts: 2,
-					},
-				} {
+				for _, progress := range v15InconclusiveTerminalJobProgress() {
 					invalid := run.observation.ConvergenceWaits[0]
 					invalid.ExtractionProgress = &progress
 					if err := validateConvergenceWaits([]ConvergenceWaitObservation{invalid}, 11); err == nil {
 						t.Fatalf("V15 job terminal accepted schedule state %q", progress.State)
+					}
+				}
+			}
+			if test.outcome == "extraction_bound_refusal" && !test.historicalV14 {
+				for _, progress := range v15InconclusiveExtractionBoundProgress() {
+					invalid := run.observation.ConvergenceWaits[0]
+					invalid.ExtractionProgress = &progress
+					if err := validateConvergenceWaits([]ConvergenceWaitObservation{invalid}, 11); err == nil {
+						t.Fatalf("V15 bound refusal accepted schedule state %q", progress.State)
 					}
 				}
 			}
@@ -1127,48 +1143,12 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	}
 }
 
-func TestV15ExtractionJobTerminalRequiresUnavailableScheduleAfterSuccessfulProbe(t *testing.T) {
-	digestA := "sha256:" + strings.Repeat("a", 64)
-	digestB := "sha256:" + strings.Repeat("b", 64)
-	active := ExtractionProgressObservation{
-		State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
-		Pending: 1, Domains: 1, JobState: string(store.StatusRunning), JobAttempts: 1,
-	}
-	unavailable := ExtractionProgressObservation{
-		State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
-	}
-	tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
-	tracker.observe(
-		privateConvergenceProbe{
-			Stage: "extraction_publication", SHA256: digestA, ExtractionProgress: &active,
-		},
-		convergenceInspectionDiagnostic{class: "pending"},
-		time.Millisecond,
-	)
-	tracker.observe(
-		privateConvergenceProbe{
-			Stage: "extraction_publication", SHA256: digestB, ExtractionProgress: &unavailable,
-		},
-		convergenceInspectionDiagnostic{class: "terminal"},
-		2*time.Millisecond,
-	)
-	run := &execution{plan: Plan{Schema: PlanSchemaV15}}
-	run.recordConvergenceWait(
-		PreparedProfile{Name: "semantic-262144-v1"}, "a", "cold",
-		"extraction_job_terminal", time.Minute, time.Now().Add(-3*time.Millisecond), tracker,
-	)
-	if len(run.observation.ConvergenceWaits) != 1 {
-		t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
-	}
-	wait := run.observation.ConvergenceWaits[0]
-	if wait.LastStage != "extraction_publication" || wait.LastInspectionClass != "terminal" ||
-		wait.ExtractionProgress == nil || wait.ExtractionProgress.State != "unavailable" {
-		t.Fatalf("successful-probe terminal wait = %+v", wait)
-	}
-	if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 11); err != nil {
-		t.Fatalf("V15 unavailable-schedule terminal wait = %v", err)
-	}
-	for _, progress := range []ExtractionProgressObservation{
+// v15InconclusiveTerminalJobProgress enumerates the schedule states beside
+// which a terminal job row must NOT classify extraction_job_terminal under
+// the V15 contract. Shared so the runtime, seal, and predicate assertions
+// exercise one fixture.
+func v15InconclusiveTerminalJobProgress() []ExtractionProgressObservation {
+	return []ExtractionProgressObservation{
 		{
 			State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
 			Pending: 1, Domains: 1,
@@ -1179,12 +1159,146 @@ func TestV15ExtractionJobTerminalRequiresUnavailableScheduleAfterSuccessfulProbe
 			Domains: 1, CurrentDomains: 1,
 			JobState: string(store.StatusFailed), JobAttempts: 2,
 		},
-	} {
-		invalid := wait
-		invalid.ExtractionProgress = &progress
-		if err := validateConvergenceWaits([]ConvergenceWaitObservation{invalid}, 11); err == nil {
-			t.Fatalf("V15 successful-probe job terminal accepted schedule state %q", progress.State)
+	}
+}
+
+func v15InconclusiveExtractionBoundProgress() []ExtractionProgressObservation {
+	progress := v15InconclusiveTerminalJobProgress()
+	for index := range progress {
+		progress[index].RefusalStage = string(pipelinerefusal.StageDomainInventory)
+		progress[index].RefusalGenerationKind = string(pipelinerefusal.GenerationExtractionDomain)
+		progress[index].RefusalClassification = string(pipelinerefusal.ClassificationLimit)
+		progress[index].RefusalDimension = string(pipelinerefusal.DimensionCandidateMemberBytes)
+		progress[index].RefusalObserved = 2
+		progress[index].RefusalLimit = 1
+	}
+	return progress
+}
+
+func TestDiagnosticLimitRetainsTerminalJobProjectionAndSeals(t *testing.T) {
+	tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
+	for index := range maxConvergenceTransitions {
+		stage := "observation_publication"
+		if index%2 == 1 {
+			stage = "extraction_publication"
 		}
+		tracker.observe(
+			privateConvergenceProbe{Stage: stage, SHA256: fmt.Sprintf("sha256:%064d", index)},
+			convergenceInspectionDiagnostic{class: "pending"},
+			time.Duration(index+1)*time.Millisecond,
+		)
+	}
+	terminal := ExtractionProgressObservation{
+		State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
+	}
+	if !tracker.observe(
+		privateConvergenceProbe{
+			Stage: "extraction_publication", SHA256: "sha256:" + strings.Repeat("f", 64),
+			ExtractionProgress: &terminal,
+		},
+		convergenceInspectionDiagnostic{class: "terminal"},
+		time.Duration(maxConvergenceTransitions+2)*time.Millisecond,
+	) {
+		t.Fatal("transition limit was not exceeded")
+	}
+	run := &execution{plan: Plan{Schema: PlanSchemaV15}}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "semantic-262144-v1"}, "a", "cold",
+		"diagnostic_limit", time.Minute, time.Now().Add(-time.Second), tracker,
+	)
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.ExtractionProgress == nil ||
+		wait.ExtractionProgress.JobState != string(store.StatusFailed) {
+		t.Fatalf("diagnostic-limit wait dropped the terminal projection: %+v", wait)
+	}
+	// A terminal-shaped final projection is evidence, not an outcome claim:
+	// coherence checks are outcome-restricted, and historical V12-V14
+	// receipts keep their pre-V15 validation.
+	for _, detail := range []int{10, observationDetailV15} {
+		if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, detail); err != nil {
+			t.Fatalf("diagnostic-limit wait with terminal job projection (detail %d) = %v", detail, err)
+		}
+	}
+}
+
+func TestV15ExtractionJobPlaneTerminalRequiresConclusiveScheduleAfterSuccessfulProbe(t *testing.T) {
+	digestA := "sha256:" + strings.Repeat("a", 64)
+	digestB := "sha256:" + strings.Repeat("b", 64)
+	active := ExtractionProgressObservation{
+		State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
+		Pending: 1, Domains: 1, JobState: string(store.StatusRunning), JobAttempts: 1,
+	}
+	tests := []struct {
+		name         string
+		outcome      string
+		terminal     ExtractionProgressObservation
+		inconclusive []ExtractionProgressObservation
+	}{
+		{
+			name: "job terminal", outcome: "extraction_job_terminal",
+			terminal: ExtractionProgressObservation{
+				State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
+			},
+			inconclusive: v15InconclusiveTerminalJobProgress(),
+		},
+		{
+			name: "bound refusal", outcome: "extraction_bound_refusal",
+			terminal: ExtractionProgressObservation{
+				State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
+				RefusalStage:          string(pipelinerefusal.StageDomainInventory),
+				RefusalGenerationKind: string(pipelinerefusal.GenerationExtractionDomain),
+				RefusalClassification: string(pipelinerefusal.ClassificationLimit),
+				RefusalDimension:      string(pipelinerefusal.DimensionCandidateMemberBytes),
+				RefusalObserved:       2, RefusalLimit: 1,
+			},
+			inconclusive: v15InconclusiveExtractionBoundProgress(),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
+			tracker.observe(
+				privateConvergenceProbe{
+					Stage: "extraction_publication", SHA256: digestA, ExtractionProgress: &active,
+				},
+				convergenceInspectionDiagnostic{class: "pending"},
+				time.Millisecond,
+			)
+			tracker.observe(
+				privateConvergenceProbe{
+					Stage: "extraction_publication", SHA256: digestB,
+					ExtractionProgress: &test.terminal,
+				},
+				convergenceInspectionDiagnostic{class: "terminal"},
+				2*time.Millisecond,
+			)
+			run := &execution{plan: Plan{Schema: PlanSchemaV15}}
+			run.recordConvergenceWait(
+				PreparedProfile{Name: "semantic-262144-v1"}, "a", "cold",
+				test.outcome, time.Minute, time.Now().Add(-3*time.Millisecond), tracker,
+			)
+			if len(run.observation.ConvergenceWaits) != 1 {
+				t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
+			}
+			wait := run.observation.ConvergenceWaits[0]
+			if wait.LastStage != "extraction_publication" || wait.LastInspectionClass != "terminal" ||
+				wait.ExtractionProgress == nil || wait.ExtractionProgress.State != "unavailable" {
+				t.Fatalf("successful-probe terminal wait = %+v", wait)
+			}
+			if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, 11); err != nil {
+				t.Fatalf("V15 unavailable-schedule terminal wait = %v", err)
+			}
+			for _, progress := range test.inconclusive {
+				invalid := wait
+				invalid.ExtractionProgress = &progress
+				if err := validateConvergenceWaits([]ConvergenceWaitObservation{invalid}, 11); err == nil {
+					t.Fatalf("V15 successful-probe %s accepted schedule state %q", test.outcome, progress.State)
+				}
+			}
+		})
 	}
 }
 

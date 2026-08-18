@@ -464,23 +464,33 @@ func TestV15PlanVersionsExtractionScheduleAuthorityPrecedence(t *testing.T) {
 	if !expectedExtractionJobTerminal(unavailable, 11) {
 		t.Fatal("v15 contract rejected a failed job with no schedule")
 	}
-	active := ExtractionProgressObservation{
-		State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
-		Pending: 1, Domains: 1, JobState: string(store.StatusFailed), JobAttempts: 2,
-	}
-	if expectedExtractionJobTerminal(active, 11) {
-		t.Fatal("v15 contract accepted job precedence over an active schedule")
+	for _, inconclusive := range v15InconclusiveTerminalJobProgress() {
+		if expectedExtractionJobTerminal(inconclusive, observationDetailV15) {
+			t.Fatalf("v15 contract accepted job precedence over schedule state %q", inconclusive.State)
+		}
 	}
 	progress.RefusalStage = string(pipelinerefusal.StageDomainInventory)
 	progress.RefusalGenerationKind = string(pipelinerefusal.GenerationExtractionDomain)
 	progress.RefusalClassification = string(pipelinerefusal.ClassificationLimit)
 	progress.RefusalDimension = string(pipelinerefusal.DimensionCandidateMemberBytes)
 	progress.RefusalObserved, progress.RefusalLimit = 2, 1
+	if !expectedExtractionBoundTerminal(progress, 10) ||
+		!expectedExtractionBoundTerminal(progress, observationDetailV15) {
+		t.Fatal("conclusive typed bound refusal lost terminal authority")
+	}
 	if expectedExtractionScheduleTerminal(progress, 11) {
 		t.Fatal("v15 schedule terminal absorbed a typed bound refusal")
 	}
 	if expectedExtractionJobTerminal(progress, 10) || expectedExtractionJobTerminal(progress, 11) {
 		t.Fatal("extraction job terminal absorbed a typed bound refusal")
+	}
+	for _, inconclusive := range v15InconclusiveExtractionBoundProgress() {
+		if !expectedExtractionBoundTerminal(inconclusive, 10) {
+			t.Fatalf("historical v14 contract rejected bound refusal beside schedule state %q", inconclusive.State)
+		}
+		if expectedExtractionBoundTerminal(inconclusive, observationDetailV15) {
+			t.Fatalf("v15 contract accepted bound refusal beside schedule state %q", inconclusive.State)
+		}
 	}
 }
 

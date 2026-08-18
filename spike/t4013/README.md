@@ -2377,12 +2377,20 @@ generation identity. It therefore cannot disprove a later generation-bound
 current schedule. The destroyed raw job error is neither required nor guessed.
 
 The prospective correction retains exact typed limit refusals and settled
-failed schedules as terminal. An ordinary failed/canceled job remains terminal
-when progress is unavailable, remains pending beside active/noncurrent schedule
-authority, and cannot poison a fully current schedule. Current progress still
-has to pass the existing exact extraction scan, caller-generation check, and
-relationship source/extraction authority parity before the inspector can
-complete. The job state and attempts remain in the source-free receipt.
+failed schedules as terminal. An ordinary failed/canceled job remains pending
+only beside an active schedule, whose scheduler actors can still settle and
+publish without the job, and cannot poison a fully current schedule. In every
+other state — unavailable, settled successful awaiting promotion, superseded,
+or incomplete settled counters — no actor remains, so the job row is
+conclusive and stops with a typed terminal instead of pending to the ceremony
+deadline; the job row's typed refusal follows the same conclusiveness rule. A
+V15 job-plane stop confirms on a second identical five-second probe so a poll
+racing the enqueuer or the final promotion write converges instead of sealing
+a spurious terminal. Current progress still has to pass the existing exact
+extraction scan (memoized on the unchanged probe digest across polls),
+caller-generation check, and relationship source/extraction authority parity
+before the inspector can complete. The job state and attempts remain in the
+source-free receipt.
 
 Fresh freezes advance the plan, observation, and receipt contracts to V15 for
 this precedence. V14 keeps its historical job-first predicate, validation, and

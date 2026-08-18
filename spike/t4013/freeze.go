@@ -143,7 +143,10 @@ func frozenV14PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
-func freshV14PlanWithHostToolchain(
+// freshPlan stamps the actual freeze date onto a frozen plan constructor's
+// output. The fresh-freeze stamping rules live once for every plan version.
+func freshPlan(
+	frozen func(string, []HostToolObservation) (Plan, error),
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
 	frozenAt time.Time,
@@ -151,7 +154,7 @@ func freshV14PlanWithHostToolchain(
 	if frozenAt.IsZero() {
 		return Plan{}, errors.New("T40.13 fresh freeze time is required")
 	}
-	value, err := frozenV14PlanWithHostToolchain(sourceCommit, hostToolchain)
+	value, err := frozen(sourceCommit, hostToolchain)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -160,6 +163,14 @@ func freshV14PlanWithHostToolchain(
 		return Plan{}, err
 	}
 	return value, nil
+}
+
+func freshV14PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	return freshPlan(frozenV14PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV15PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
@@ -180,18 +191,7 @@ func freshV15PlanWithHostToolchain(
 	hostToolchain []HostToolObservation,
 	frozenAt time.Time,
 ) (Plan, error) {
-	if frozenAt.IsZero() {
-		return Plan{}, errors.New("T40.13 fresh freeze time is required")
-	}
-	value, err := frozenV15PlanWithHostToolchain(sourceCommit, hostToolchain)
-	if err != nil {
-		return Plan{}, err
-	}
-	value.FrozenOn = frozenAt.UTC().Format(time.DateOnly)
-	if err := ValidatePlan(value); err != nil {
-		return Plan{}, err
-	}
-	return value, nil
+	return freshPlan(frozenV15PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

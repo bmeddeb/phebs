@@ -149,7 +149,7 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = lifecycleCursor.Close() }()
-	inspector, err := newProfileInspector(profile)
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
 	if err != nil {
 		t.Fatal(err)
 	}

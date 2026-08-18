@@ -1389,11 +1389,14 @@ catalog, relationship, or correctness authority.
   schedule. The signed tuple reproduces the exact terminal probe digest
   `sha256:d4703c2d327d13d0116fb2795774cb3caf21c8d98ac8c91ab163777bf7c05600`.
   Typed refusals and settled failed schedules remain terminal; an ordinary
-  failed job is terminal only without a schedule, pending beside active work,
-  and non-authoritative once the schedule is fully current and the existing
-  exact downstream authority checks can run. Fresh plans, observations, and
+  failed job is pending only beside active work, non-authoritative once the
+  schedule is fully current and the existing exact downstream authority checks
+  can run, and conclusive (typed terminal, confirmed on a second identical
+  probe) in every other schedule state so a dead pipeline stops in seconds
+  instead of pending to the ceremony deadline. Fresh plans, observations, and
   receipts advance to V15 for that precedence; V14 retains its historical
-  job-first classification and validation, so neutral-25 and every earlier
+  job-first classification and validation, receipt coherence checks are
+  outcome-restricted, so neutral-25 and every earlier
   signed receipt remain byte- and semantics-compatible. Safety and production
   bounds are unchanged. Neutral-25 remains immutable and does not pass
   retroactively; independent review precedes integration and any fresh
