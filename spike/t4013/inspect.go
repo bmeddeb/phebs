@@ -502,16 +502,15 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	ctx context.Context,
 	profile PreparedProfile,
 ) (privateConvergenceProbe, error) {
-	query := url.Values{
-		"protocol": {"protobuf"}, "repository": {profile.RepositoryName},
-		"lineage": {"t401-neutral"}, "operation": {"/neutral.Service/Ping"},
-		"page_size": {"1"},
-	}
-	var page apiresponse.CallerMapPage
-	if err := inspector.get(ctx, profile, "/api/contract_callers?"+query.Encode(), &page); err != nil {
+	path := apiresponse.CallerGenerationProgressPath + "?repository=" +
+		url.QueryEscape(profile.RepositoryName)
+	var progress apiresponse.CallerGenerationProgress
+	if err := inspector.get(ctx, profile, path, &progress); err != nil {
 		return convergenceProbe("caller_generation"), err
 	}
-	return classifyCallerGeneration(page)
+	return classifyCallerGeneration(apiresponse.CallerMapPage{
+		Generation: &progress.Generation,
+	})
 }
 
 func classifyCallerGeneration(

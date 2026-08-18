@@ -59,6 +59,39 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 	}
 }
 
+func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != apiresponse.CallerGenerationProgressPath ||
+			request.URL.Query().Get("repository") != "example.invalid/neutral" ||
+			request.Header.Get("Authorization") != "Bearer private-test-token" {
+			http.NotFound(response, request)
+			return
+		}
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(response,
+			`{"$schema":"http://%s/schemas/CallerGenerationProgress.json",`+
+				`"schema_version":"caller-generation-progress-v1","generation":{`+
+				`"state":"current","plane":"repository-overlay",`+
+				`"repository":"example.invalid/neutral",`+
+				`"generation_digest":"sha256:caller",`+
+				`"partition_progress":{"state":"complete","settled_pair_count":1,`+
+				`"succeeded_pair_count":1,"refused_pair_count":0,"total_pair_count":1}},`+
+				`"scope":{"repository":"example.invalid/neutral",`+
+				`"scope_posture":"whole-repository"}}`, request.Host,
+		)
+	}))
+	defer server.Close()
+	inspector := &profileInspector{
+		client: server.Client(), credential: "private-test-token",
+	}
+	probe, err := inspector.callerGenerationTerminal(t.Context(), PreparedProfile{
+		Address: server.Listener.Addr().String(), RepositoryName: "example.invalid/neutral",
+	})
+	if err != nil || probe.Stage != "caller_generation" || probe.SHA256 == "" {
+		t.Fatalf("caller generation progress probe = %+v, %v", probe, err)
+	}
+}
+
 func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.T) {
 	tests := []struct {
 		name   string

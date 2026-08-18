@@ -393,6 +393,115 @@ func (service *exactCallerMapService) list(
 	return page, nil
 }
 
+func (service *exactCallerMapService) generationProgress(
+	ctx context.Context,
+	repositoryName string,
+) (*CallerGenerationProgress, error) {
+	if service == nil || service.opts.CallerReader == nil {
+		return nil, huma.Error503ServiceUnavailable("caller generation progress unavailable")
+	}
+	if !catalogAuthenticated(ctx, service.opts) {
+		return nil, huma.Error404NotFound("caller generation progress not found")
+	}
+	repository, visibility, err := service.authorize(ctx, repositoryName)
+	if err != nil {
+		return nil, err
+	}
+	revision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return nil, err
+	}
+	finishExactRead, err := service.beginExactRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer finishExactRead()
+
+	read, err := service.opts.CallerReader.Open(ctx, repository.Name)
+	if err != nil {
+		return nil, exactCallerReaderError("open caller generation progress", err)
+	}
+	if read == nil {
+		return nil, huma.Error500InternalServerError(
+			"open caller generation progress",
+			errors.New("caller reader returned no state"),
+		)
+	}
+	defer func() { _ = read.Release() }()
+
+	generation := service.generation(read)
+	if read.Availability == callerexecute.PublicationCurrent {
+		confirmed, confirmErr := service.confirmWithRepository(
+			ctx, read, repository.Name, visibility,
+		)
+		if confirmErr != nil {
+			return nil, confirmErr
+		}
+		confirmedRevision, revisionErr := exactCallerRepositoryRevision(confirmed)
+		if revisionErr != nil {
+			return nil, revisionErr
+		}
+		if confirmedRevision != revision ||
+			analysisScopeDigest(callerAnalysisScope(confirmed)) !=
+				analysisScopeDigest(callerAnalysisScope(repository)) {
+			return nil, exactCallerAuthorityConflict()
+		}
+	} else {
+		generation = service.unavailableGeneration(read)
+		current, currentErr := service.opts.CallerReader.UnavailableCurrent(ctx, read)
+		if currentErr != nil {
+			return nil, huma.Error500InternalServerError(
+				"confirm caller generation progress", currentErr,
+			)
+		}
+		if !current {
+			return nil, huma.Error409Conflict(
+				"caller generation changed while building the response",
+			)
+		}
+		confirmed, confirmErr := service.confirmAuthorization(
+			ctx, repository.Name, visibility,
+		)
+		if confirmErr != nil {
+			return nil, confirmErr
+		}
+		confirmedRevision, revisionErr := exactCallerRepositoryRevision(confirmed)
+		if revisionErr != nil {
+			return nil, revisionErr
+		}
+		if confirmedRevision != revision ||
+			analysisScopeDigest(callerAnalysisScope(confirmed)) !=
+				analysisScopeDigest(callerAnalysisScope(repository)) {
+			return nil, exactCallerAuthorityConflict()
+		}
+	}
+
+	progress := &CallerGenerationProgress{
+		SchemaVersion: callerProgressSchema,
+		Generation:    generation,
+		Scope:         callerAnalysisScope(repository),
+	}
+	encoded, err := json.Marshal(progress)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation progress", err,
+		)
+	}
+	if len(encoded) > callerProgressLimit {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation progress",
+			errors.New("caller generation progress exceeds its response bound"),
+		)
+	}
+	if !validCallerPartitionProgress(progress.Generation.PartitionProgress) {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation progress",
+			errors.New("caller generation progress is invalid"),
+		)
+	}
+	return progress, nil
+}
+
 func (service *exactCallerMapService) continuePage(
 	ctx context.Context,
 	query CallerMapQuery,

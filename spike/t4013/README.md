@@ -2252,3 +2252,42 @@ replay only. The structural run's transient 409 remains separately
 unclassified, the downstream full-fit replay was not completed, and the
 ceremony's later checks and ten not-run phases remain unestablished.
 Independent review is required before another ceremony.
+
+### Neutral-23 caller-generation observer stop
+
+`t40r1-neutral-23` is a verified signed `unclassified`
+`convergence_deadline_expired` stop at exact source
+`75647ac37d495514a74418563180711419a29239`. Its plan digest is
+`sha256:f788c6ac989494fed24d324be48fb097bd5ee82d5560550a801ff79b90069999`;
+the source-free observation, receipt, and package SHA-256 values are
+`1a36664dff85ade81cd94b596cb4d26d0334f5d8f3135a46447d843f53b2e952`,
+`830691df1cd0bfe0a39aa098cc43a952a091a9ea5292e65e7c6290d0e3c4a3b0`,
+and `e498c4cc9bac8bccc25c76b1dc04f7ab79e7d5cbbdbd642217eb8a5fc90abebc`.
+Structural cold converged in 3,045,291 ms. Semantic extraction completed and
+scheduler-settled all 272 partitions, with zero failed or terminal-refused
+executions, before the inspector retained an unchanged caller-generation 404
+for the remainder of the four-hour deadline.
+
+The stop is a ceremony-observer defect. The probe added at `2fb09a0` queried
+the hard-coded `t401-neutral` `/neutral.Service/Ping` endpoint. The frozen Go
+fixture calls that operation, but the frozen protobuf templates contain only
+messages and never declare the operation. Exact Caller Map correctly returns
+404 for a missing declaration after a current publication is open; missing,
+stale, and failed generations return typed gap pages before declaration lookup.
+The observer therefore converted a current caller generation into permanent
+pending status.
+
+The prospective correction preserves Caller Map's 404 contract and changes
+the inspector to `/api/caller-generation-progress?repository=...`. That
+authorization-first projection uses the same exact publication reader,
+eight-read semaphore, current/unavailable fence, repository revision,
+visibility, and analysis-scope confirmation, but it does not select or read an
+endpoint declaration. Its 8-KiB response retains only source-free generation
+identity/state, aggregate counts, bounded partition progress/refusals, and
+scope. Focused tests prove that exact Caller Map remains 404 with declarations
+removed while progress reports the current complete generation and performs no
+assertion/resolution read.
+
+Neutral-23 remains immutable stopped evidence; this correction does not
+retroactively pass it or authorize another freeze/execution, release, scale or
+SLO claim, topology change, T40.13/Epic 40 closure, or Epic 41 progression.

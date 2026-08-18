@@ -25,6 +25,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -758,6 +759,92 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	fixture.store.progress = baseProgress
 }
 
+func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testing.T) {
+	fixture := newExactCallerAPIFixture(t, 1)
+	fixture.store.assertions[fixture.repository] = nil
+
+	_, err := fixture.service.List(t.Context(), fixture.query, 1, "")
+	requireCatalogStatus(t, err, http.StatusNotFound)
+
+	fixture.store.calls = nil
+	progress, err := fixture.service.GenerationProgress(
+		t.Context(), fixture.repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.SchemaVersion != "caller-generation-progress-v1" ||
+		progress.Generation.State != "current" ||
+		progress.Generation.GenerationDigest != fixture.store.publication.Generation.Digest ||
+		progress.Generation.PartitionProgress == nil ||
+		progress.Generation.PartitionProgress.State != "complete" ||
+		progress.Generation.PartitionProgress.TotalPairCount == nil ||
+		*progress.Generation.PartitionProgress.TotalPairCount != 1 ||
+		progress.Scope.Repository != fixture.repository ||
+		progress.Scope.Commit != fixture.commit {
+		t.Fatalf("declaration-independent caller progress = %+v", progress)
+	}
+	for _, call := range fixture.store.calls {
+		if strings.HasPrefix(call, "assertions:") ||
+			strings.HasPrefix(call, "resolve:") {
+			t.Fatalf("caller progress consulted endpoint evidence: %v", fixture.store.calls)
+		}
+	}
+}
+
+func TestExactCallerGenerationProgressPreservesTypedTerminalAndAuthorization(t *testing.T) {
+	fixture := newExactCallerAPIFixture(t, 1)
+	generation := fixture.store.publication.Generation
+	fixture.store.publication = nil
+	fixture.store.admission = &store.CallerGenerationAdmission{
+		Generation:  generation,
+		Disposition: store.CallerGenerationTerminalGenerationRefusal,
+		PairCount:   1,
+		Refusals: []store.CallerGenerationRefusalSummary{{
+			Refusal: pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+				Observed:       callerleaf.MaxAggregateAbstentionRecords + 1,
+				Limit:          callerleaf.MaxAggregateAbstentionRecords,
+			},
+			OutcomeCount: 1,
+		}},
+	}
+	fixture.store.progress = store.CallerLeafOutcomeProgress{
+		SettledCount: 1, RefusedCount: 1,
+	}
+	progress, err := fixture.service.GenerationProgress(t.Context(), fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	partition := progress.Generation.PartitionProgress
+	if progress.Generation.State != "failed" || partition == nil ||
+		partition.State != "complete" || partition.TotalPairCount == nil ||
+		*partition.TotalPairCount != 1 || partition.RefusedPairCount != 1 ||
+		len(partition.Refusals) != 1 ||
+		partition.Refusals[0].Dimension !=
+			pipelinerefusal.DimensionCallerGenerationAbstentions {
+		t.Fatalf("typed terminal caller progress = %+v", progress)
+	}
+
+	publicationReads := fixture.store.publicationReads
+	authorityReads := fixture.store.authorityReads
+	fixture.visible[fixture.repository] = false
+	_, err = fixture.service.GenerationProgress(t.Context(), fixture.repository)
+	requireCatalogStatus(t, err, http.StatusNotFound)
+	if fixture.store.publicationReads != publicationReads ||
+		fixture.store.authorityReads != authorityReads {
+		t.Fatalf(
+			"unauthorized caller progress reached publication I/O: publication=%d/%d authority=%d/%d",
+			fixture.store.publicationReads, publicationReads,
+			fixture.store.authorityReads, authorityReads,
+		)
+	}
+}
+
 func TestExactCallerMapRejectsGapTransitionAtResultFence(t *testing.T) {
 	fixture := newExactCallerAPIFixture(t, 1)
 	generation := fixture.store.publication.Generation
@@ -1243,7 +1330,7 @@ func TestExactCallerMapCitationReadsOnlyBoundImmutableRange(t *testing.T) {
 	}
 }
 
-func TestExactCallerMapHTTPExposesOnlyExactCitationRoute(t *testing.T) {
+func TestExactCallerMapHTTPExposesExactProgressAndCitationRoutes(t *testing.T) {
 	fixture := newExactCallerAPIFixture(t, 2)
 	options := fixture.serviceOptions()
 	options.CallerMap = fixture.service
@@ -1259,6 +1346,15 @@ func TestExactCallerMapHTTPExposesOnlyExactCitationRoute(t *testing.T) {
 	)
 	if code != http.StatusOK || len(page.Rows) != 1 {
 		t.Fatalf("HTTP exact page = %d %s / %+v", code, body, page)
+	}
+	var progress api.CallerGenerationProgress
+	code, body = catalogHTTP(
+		t, handler, api.CallerGenerationProgressPath+"?repository="+
+			url.QueryEscape(fixture.repository), &progress,
+	)
+	if code != http.StatusOK || progress.Generation.State != "current" ||
+		progress.Generation.GenerationDigest != page.Generation.GenerationDigest {
+		t.Fatalf("HTTP caller generation progress = %d %s / %+v", code, body, progress)
 	}
 	var citation api.CallerMapCitation
 	code, body = catalogHTTP(

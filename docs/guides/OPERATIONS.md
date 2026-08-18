@@ -1991,6 +1991,20 @@ one scalar row; a progress or admission transition produces `409`. Exact unit
 paths are not copied into signed authorities: tokens carry a fixed scope
 digest and the final authorization read recomputes it.
 
+`GET /api/caller-generation-progress?repository=...` exposes the same exact
+generation control without selecting a contract endpoint. Use it for
+operational convergence checks when a repository legitimately has no matching
+operation declaration; the declaration-bound Caller Map continues to return
+404 for that endpoint. The progress response is capped at 8 KiB and carries
+only generation identity/state, aggregate scalars, bounded partition
+progress/refusals, and analysis scope. It authorizes before publication I/O,
+shares Caller Map's eight-read semaphore, and rechecks current or unavailable
+publication state plus repository visibility, revision, and scope before
+returning. A poll performs the same bounded publication open and authority
+reads as an exact Caller Map first page while avoiding its declaration
+assertion/resolution lookup. It performs no write, queue operation, corpus or
+Git read, child process, cache fill, or startup/sync work.
+
 The complete publication repeats every candidate leaf once per enabled caller
 domain. Product record counts therefore census each immutable leaf ordinal
 once, verify that the repeated leaf envelope and candidate/excluded-`go_test`

@@ -1347,6 +1347,18 @@ catalog, relationship, or correctness authority.
   stopped after that scoped boundary while downstream Caller publication
   inspection continued, so it is not a full-fit pass. Independent review is
   next; another ceremony is not authorized.
+- `t40r1-neutral-23` moved the production boundary upstream of the repaired
+  scheduler: semantic extraction completed and scheduler-settled all 272
+  partitions with no failed or terminal-refused execution. It then retained
+  one caller-generation 404 for roughly 3.5 hours. The frozen corpus has Go
+  calls to `/neutral.Service/Ping` but no matching operation declaration, so
+  the exact Caller Map probe added at `2fb09a0` correctly returned endpoint
+  404 only after publication became current and the ceremony misread that as
+  pending. An authorization-fenced, declaration-independent, 8-KiB caller
+  generation progress route now supplies the exact state and bounded partition
+  projection while Caller Map keeps its 404 contract. Focused route/observer
+  tests pass. Neutral-23 remains immutable `unclassified` evidence; another
+  ceremony still requires separate freeze review and execution authorization.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

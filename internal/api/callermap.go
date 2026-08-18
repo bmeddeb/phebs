@@ -22,16 +22,20 @@ import (
 
 const (
 	callerMapSchemaVersion    = "caller-map-v1"
+	callerProgressSchema      = "caller-generation-progress-v1"
 	callerMapCursorVersion    = "caller-map-cursor-v1"
 	callerMapCapability       = "contract-caller-map"
 	callerMapDefaultPage      = 50
 	callerMapMaxPage          = 100
 	callerMapScanLimit        = 50_000
 	callerMapCursorLimit      = 16 << 10
+	callerProgressLimit       = 8 << 10
 	callerMapBuildAttempts    = 3
 	callerMapExtractorVersion = "1.3.0"
 	callerMapMaxRefusals      = 32
 )
+
+const CallerGenerationProgressPath = "/api/caller-generation-progress"
 
 // CallerMapService is the shared, transport-neutral exact-caller read engine.
 // Huma is only an adapter; T20.11 binds MCP to these same methods.
@@ -377,6 +381,16 @@ type CallerMapPage struct {
 	exactAuthority string
 }
 
+// CallerGenerationProgress is the declaration-independent operational view
+// of one authorized repository's exact caller-generation state. Caller Map
+// endpoint reads remain declaration-bound; this projection exists so a
+// missing endpoint cannot hide a current or terminal generation.
+type CallerGenerationProgress struct {
+	SchemaVersion string                  `json:"schema_version"`
+	Generation    CallerMapGeneration     `json:"generation"`
+	Scope         AnalysisScopeProjection `json:"scope"`
+}
+
 // exactCallerSnapshotConfirmation is the small authoritative projection a
 // composed reader may retain after the exact service has reauthorized and
 // re-fenced the token-bound publication. It intentionally contains no rows,
@@ -450,6 +464,18 @@ func (s *CallerMapService) ReadCitation(
 
 func (s *CallerMapService) CitationAvailable() bool {
 	return s != nil && s.exact != nil
+}
+
+// GenerationProgress returns the bounded caller-generation control without
+// requiring a contract declaration to exist for an endpoint query.
+func (s *CallerMapService) GenerationProgress(
+	ctx context.Context,
+	repository string,
+) (*CallerGenerationProgress, error) {
+	if s == nil || s.exact == nil {
+		return nil, huma.Error503ServiceUnavailable("caller generation progress unavailable")
+	}
+	return s.exact.generationProgress(ctx, repository)
 }
 
 func (s *CallerMapService) listLegacy(
@@ -1179,6 +1205,22 @@ func registerCallerMapAPI(api huma.API, opts Options) {
 		return &callerMapOut{Body: *result}, nil
 	})
 	if service.exact != nil {
+		type callerProgressIn struct {
+			Repository string `query:"repository" required:"true" maxLength:"1024"`
+		}
+		type callerProgressOut struct {
+			Body CallerGenerationProgress
+		}
+		huma.Get(api, CallerGenerationProgressPath, func(
+			ctx context.Context,
+			in *callerProgressIn,
+		) (*callerProgressOut, error) {
+			result, err := service.GenerationProgress(ctx, in.Repository)
+			if err != nil {
+				return nil, err
+			}
+			return &callerProgressOut{Body: *result}, nil
+		})
 		type callerCitationIn struct {
 			Citation string `query:"citation" required:"true" maxLength:"16384"`
 		}
