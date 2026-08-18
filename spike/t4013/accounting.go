@@ -230,11 +230,13 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 func authorityChanges(before, after privateProfileSnapshot) int64 {
 	left := []string{
 		before.SourceGeneration, before.SearchGeneration, before.ObservationGeneration,
-		before.ExtractionGeneration, before.RelationshipGeneration, before.RelationshipRootDigest,
+		before.ExtractionGeneration, before.CallerGeneration,
+		before.RelationshipGeneration, before.RelationshipRootDigest,
 	}
 	right := []string{
 		after.SourceGeneration, after.SearchGeneration, after.ObservationGeneration,
-		after.ExtractionGeneration, after.RelationshipGeneration, after.RelationshipRootDigest,
+		after.ExtractionGeneration, after.CallerGeneration,
+		after.RelationshipGeneration, after.RelationshipRootDigest,
 	}
 	var changed int64
 	for index := range left {

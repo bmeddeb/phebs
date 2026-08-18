@@ -53,42 +53,106 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 		t.Fatalf("untyped caller refusal = %v", err)
 	}
 
-	pending := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{State: "pending"}}
-	if _, err := classifyCallerGeneration(pending); err != nil {
-		t.Fatalf("pending caller generation terminalized: %v", err)
+	currentTotal := 1
+	current := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "current", GenerationDigest: "sha256:" + strings.Repeat("c", 64), PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: 1, SucceededPairCount: 1,
+			TotalPairCount: &currentTotal,
+		},
+	}}
+	currentProbe, err := classifyCallerGeneration(current)
+	if err != nil {
+		t.Fatalf("current caller generation rejected: %v", err)
+	}
+	if currentProbe.callerGenerationDigest != current.Generation.GenerationDigest {
+		t.Fatalf("current caller authority = %q", currentProbe.callerGenerationDigest)
+	}
+	for _, state := range []string{"missing", "stale"} {
+		t.Run(state, func(t *testing.T) {
+			page := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+				State: state, PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+					State: "unavailable",
+				},
+			}}
+			_, err := classifyCallerGeneration(page)
+			if err == nil || classifyConvergenceInspection(err).class != "pending" {
+				t.Fatalf("%s caller generation = %v", state, err)
+			}
+		})
+	}
+	invalidCurrent := current
+	invalidCurrent.Generation = &apiresponse.CallerMapGeneration{State: "current"}
+	if _, err := classifyCallerGeneration(invalidCurrent); !errors.Is(err, errCallerGenerationTerminal) {
+		t.Fatalf("invalid current caller generation = %v", err)
+	}
+}
+
+func TestSnapshotAuthorityIncludesCallerGeneration(t *testing.T) {
+	left := privateProfileSnapshot{CallerGeneration: "sha256:caller-a"}
+	right := left
+	right.CallerGeneration = "sha256:caller-b"
+	if snapshotAuthority(left) == snapshotAuthority(right) ||
+		privateSnapshotEqual(left, right) {
+		t.Fatal("caller generation change escaped snapshot revalidation")
 	}
 }
 
 func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != apiresponse.CallerGenerationProgressPath ||
-			request.URL.Query().Get("repository") != "example.invalid/neutral" ||
-			request.Header.Get("Authorization") != "Bearer private-test-token" {
-			http.NotFound(response, request)
-			return
-		}
-		response.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintf(response,
-			`{"$schema":"http://%s/schemas/CallerGenerationProgress.json",`+
-				`"schema_version":"caller-generation-progress-v1","generation":{`+
-				`"state":"current","plane":"repository-overlay",`+
-				`"repository":"example.invalid/neutral",`+
-				`"generation_digest":"sha256:caller",`+
-				`"partition_progress":{"state":"complete","settled_pair_count":1,`+
-				`"succeeded_pair_count":1,"refused_pair_count":0,"total_pair_count":1}},`+
-				`"scope":{"repository":"example.invalid/neutral",`+
-				`"scope_posture":"whole-repository"}}`, request.Host,
-		)
-	}))
-	defer server.Close()
-	inspector := &profileInspector{
-		client: server.Client(), credential: "private-test-token",
-	}
-	probe, err := inspector.callerGenerationTerminal(t.Context(), PreparedProfile{
-		Address: server.Listener.Addr().String(), RepositoryName: "example.invalid/neutral",
-	})
-	if err != nil || probe.Stage != "caller_generation" || probe.SHA256 == "" {
-		t.Fatalf("caller generation progress probe = %+v, %v", probe, err)
+	for _, test := range []struct {
+		state     string
+		progress  string
+		wantClass string
+	}{
+		{
+			state: "current", wantClass: "complete",
+			progress: `{"state":"complete","settled_pair_count":1,` +
+				`"succeeded_pair_count":1,"refused_pair_count":0,"total_pair_count":1}`,
+		},
+		{
+			state: "missing", wantClass: "pending",
+			progress: `{"state":"unavailable","settled_pair_count":0,` +
+				`"succeeded_pair_count":0,"refused_pair_count":0}`,
+		},
+		{
+			state: "stale", wantClass: "pending",
+			progress: `{"state":"unavailable","settled_pair_count":0,` +
+				`"succeeded_pair_count":0,"refused_pair_count":0}`,
+		},
+	} {
+		t.Run(test.state, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+				if request.URL.Path != apiresponse.CallerGenerationProgressPath ||
+					request.URL.Query().Get("repository") != "example.invalid/neutral" ||
+					request.Header.Get("Authorization") != "Bearer private-test-token" {
+					http.NotFound(response, request)
+					return
+				}
+				response.Header().Set("Content-Type", "application/json")
+				_, _ = fmt.Fprintf(response,
+					`{"$schema":"http://%s/schemas/CallerGenerationProgress.json",`+
+						`"schema_version":"caller-generation-progress-v1","generation":{`+
+						`"state":%q,"plane":"repository-overlay",`+
+						`"repository":"example.invalid/neutral",`+
+						`"generation_digest":"sha256:%s",`+
+						`"partition_progress":%s},`+
+						`"scope":{"repository":"example.invalid/neutral",`+
+						`"commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",`+
+						`"scope_posture":"whole-repository"}}`,
+					request.Host, test.state, strings.Repeat("c", 64), test.progress,
+				)
+			}))
+			defer server.Close()
+			inspector := &profileInspector{
+				client: server.Client(), credential: "private-test-token",
+			}
+			probe, err := inspector.callerGenerationTerminal(t.Context(), PreparedProfile{
+				Address: server.Listener.Addr().String(), RepositoryName: "example.invalid/neutral",
+			})
+			if probe.Stage != "caller_generation" || probe.SHA256 == "" ||
+				classifyConvergenceInspection(err).class != test.wantClass {
+				t.Fatalf("caller generation progress probe = %+v, %v", probe, err)
+			}
+		})
 	}
 }
 

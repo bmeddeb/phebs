@@ -1995,14 +1995,17 @@ digest and the final authorization read recomputes it.
 generation control without selecting a contract endpoint. Use it for
 operational convergence checks when a repository legitimately has no matching
 operation declaration; the declaration-bound Caller Map continues to return
-404 for that endpoint. The progress response is capped at 8 KiB and carries
+404 for that endpoint. The progress response is capped at 32 KiB and carries
 only generation identity/state, aggregate scalars, bounded partition
-progress/refusals, and analysis scope. It authorizes before publication I/O,
+progress/refusals, and digest/count analysis-scope authority; it never repeats
+the focused unit's selected paths. It authorizes before publication I/O,
 shares Caller Map's eight-read semaphore, and rechecks current or unavailable
 publication state plus repository visibility, revision, and scope before
-returning. A poll performs the same bounded publication open and authority
-reads as an exact Caller Map first page while avoiding its declaration
-assertion/resolution lookup. It performs no write, queue operation, corpus or
+returning. Compared with the replaced missing-declaration probe, a poll keeps
+the same bounded publication open and avoids declaration assertion/resolution
+lookup, while deliberately adding the final `CallerReader.Current` check and
+repository visibility, revision, and scope reauthorization that the early 404
+never reached. It performs no write, queue operation, corpus or
 Git read, child process, cache fill, or startup/sync work.
 
 The complete publication repeats every candidate leaf once per enabled caller

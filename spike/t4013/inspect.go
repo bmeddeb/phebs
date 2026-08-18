@@ -55,6 +55,7 @@ type privateProfileSnapshot struct {
 	SearchRootDigest         string
 	ObservationGeneration    string
 	ExtractionGeneration     string
+	CallerGeneration         string
 	RelationshipGeneration   string
 	RelationshipRootDigest   string
 	RegularFiles             uint64
@@ -86,6 +87,7 @@ type privateConvergenceProbe struct {
 	ObservationProgress         *ObservationProgressObservation
 	ExtractionProgress          *ExtractionProgressObservation
 	RepositoryIndexFailureClass string
+	callerGenerationDigest      string
 }
 
 func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
@@ -447,6 +449,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		SearchGeneration: searchRoot.Current.GenerationDigest, SearchRootDigest: receipt.SearchDigest,
 		ObservationGeneration:  relationshipRoot.Authority.ObservationGenerationDigest,
 		ExtractionGeneration:   extraction.generation,
+		CallerGeneration:       callerProbe.callerGenerationDigest,
 		RelationshipGeneration: relationshipRoot.GenerationDigest, RelationshipRootDigest: relationshipRoot.Digest,
 		RegularFiles: uint64(source.RegularOwnerCount), PhysicalOwners: uint64(source.OwnerCount),
 		DeclaredSourceBytes:    uint64(source.RegularDeclaredBytes),
@@ -517,15 +520,34 @@ func classifyCallerGeneration(
 	page apiresponse.CallerMapPage,
 ) (privateConvergenceProbe, error) {
 	if page.Generation == nil {
-		return convergenceProbe("caller_generation"), nil
+		return convergenceProbe("caller_generation"),
+			errors.New("T40.13 caller generation has not converged")
 	}
 	generation := page.Generation
 	probe := convergenceProbe(
 		"caller_generation", generation.State, generation.GenerationDigest,
 		generation.PartitionProgress,
 	)
-	if generation.State != "failed" {
+	probe.callerGenerationDigest = generation.GenerationDigest
+	switch generation.State {
+	case "current":
+		progress := generation.PartitionProgress
+		if !digestIdentity(generation.GenerationDigest) ||
+			progress == nil || progress.State != "complete" ||
+			progress.TotalPairCount == nil ||
+			*progress.TotalPairCount != progress.SettledPairCount ||
+			progress.SucceededPairCount != progress.SettledPairCount ||
+			progress.RefusedPairCount != 0 {
+			return probe, errCallerGenerationTerminal
+		}
 		return probe, nil
+	case "missing", "stale":
+		return probe, errors.New("T40.13 caller generation has not converged")
+	case "failed":
+		// Continue below to distinguish the one frozen aggregate-bound refusal
+		// from every other terminal caller-generation state.
+	default:
+		return probe, errCallerGenerationTerminal
 	}
 	progress := generation.PartitionProgress
 	if progress == nil || progress.State != "complete" ||
@@ -1085,7 +1107,8 @@ func changedSourceMembers(left, right privateProfileSnapshot) int {
 func snapshotAuthority(snapshot privateProfileSnapshot) string {
 	values := []string{
 		snapshot.SourceGeneration, snapshot.SearchGeneration, snapshot.ObservationGeneration,
-		snapshot.ExtractionGeneration, snapshot.RelationshipGeneration, snapshot.RelationshipRootDigest,
+		snapshot.ExtractionGeneration, snapshot.CallerGeneration,
+		snapshot.RelationshipGeneration, snapshot.RelationshipRootDigest,
 	}
 	return strings.Join(values, "\x00")
 }

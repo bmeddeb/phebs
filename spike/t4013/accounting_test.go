@@ -28,12 +28,14 @@ func TestLogAccountingUsesOnlyClosedDiagnosticReceipts(t *testing.T) {
 func TestAuthorityChangeAccountingIsPlaneExact(t *testing.T) {
 	before := privateProfileSnapshot{
 		SourceGeneration: "source-a", SearchGeneration: "search-a", ObservationGeneration: "observation-a",
-		ExtractionGeneration: "extract-a", RelationshipGeneration: "relationship-a", RelationshipRootDigest: "root-a",
+		ExtractionGeneration: "extract-a", CallerGeneration: "caller-a",
+		RelationshipGeneration: "relationship-a", RelationshipRootDigest: "root-a",
 	}
 	after := before
 	after.SearchGeneration = "search-b"
 	after.ObservationGeneration = "observation-b"
-	if got := authorityChanges(before, after); got != 2 {
+	after.CallerGeneration = "caller-b"
+	if got := authorityChanges(before, after); got != 3 {
 		t.Fatalf("authority changes = %d", got)
 	}
 }

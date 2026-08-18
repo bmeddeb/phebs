@@ -29,7 +29,7 @@ const (
 	callerMapMaxPage          = 100
 	callerMapScanLimit        = 50_000
 	callerMapCursorLimit      = 16 << 10
-	callerProgressLimit       = 8 << 10
+	callerProgressLimit       = 32 << 10
 	callerMapBuildAttempts    = 3
 	callerMapExtractorVersion = "1.3.0"
 	callerMapMaxRefusals      = 32
@@ -386,9 +386,20 @@ type CallerMapPage struct {
 // endpoint reads remain declaration-bound; this projection exists so a
 // missing endpoint cannot hide a current or terminal generation.
 type CallerGenerationProgress struct {
-	SchemaVersion string                  `json:"schema_version"`
-	Generation    CallerMapGeneration     `json:"generation"`
-	Scope         AnalysisScopeProjection `json:"scope"`
+	SchemaVersion string                        `json:"schema_version"`
+	Generation    CallerMapGeneration           `json:"generation"`
+	Scope         CallerGenerationProgressScope `json:"scope"`
+}
+
+// CallerGenerationProgressScope retains the exact analysis authority without
+// copying a focused unit's bounded-but-large path inventory into each poll.
+type CallerGenerationProgressScope struct {
+	Repository          string `json:"repository"`
+	Commit              string `json:"commit"`
+	ScopePosture        string `json:"scope_posture"`
+	AnalysisUnitDigest  string `json:"analysis_unit_digest,omitempty"`
+	PrimaryPathCount    int    `json:"primary_path_count,omitempty"`
+	SupportingPathCount int    `json:"supporting_path_count,omitempty"`
 }
 
 // exactCallerSnapshotConfirmation is the small authoritative projection a

@@ -1510,12 +1510,14 @@ observer added at `2fb09a0`: it queried `t401-neutral` `/neutral.Service/Ping`,
 but the frozen semantic protobuf templates declare messages only. Once a
 caller generation is current, exact Caller Map correctly reaches endpoint
 declaration lookup and returns 404; missing/stale/failed generations instead
-return typed gap pages first. A new authorization-first, 8-KiB
+return typed gap pages first. A new authorization-first, 32-KiB
 `/api/caller-generation-progress` read exposes the exact generation and bounded
-partition state without endpoint evidence, shares the exact reader and all
+partition state plus digest/count scope authority without endpoint evidence or
+selected paths, shares the exact reader and all
 publication/authorization fences, and replaces only the ceremony probe. Tests
-pin current progress with declarations absent alongside the unchanged Caller
-Map 404. The signed neutral-23 receipt and package remain immutable
+pin current, missing, stale, failed, and refused classification; caller-digest
+revalidation; maximum response shape; current progress with declarations absent;
+and the unchanged Caller Map 404. The signed neutral-23 receipt and package remain immutable
 `unclassified` evidence. A new freeze/execution still requires separate review
 and authorization; no scale/SLO, release, T40.13/Epic 40 closure, or Epic 41
 progression follows.

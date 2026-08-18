@@ -631,6 +631,96 @@ func TestCallerAnalysisScopeProjectionClonesExactFocusedPaths(t *testing.T) {
 	}
 }
 
+func TestCallerGenerationProgressScopeOmitsMaximumFocusedPaths(t *testing.T) {
+	repository := "github.com/acme/monorepo"
+	primary := make([]string, analysisunit.MaxSelectedPaths)
+	for index := range primary {
+		primary[index] = fmt.Sprintf(
+			"services/%03d/%s", index, strings.Repeat("p", 490),
+		)
+	}
+	state, err := (analysisunit.Scope{
+		Repository: repository, Name: "maximum", Primary: primary,
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := callerGenerationProgressScope(store.Repo{
+		Name: repository, IndexedCommitHash: strings.Repeat("a", 40),
+		IndexedAnalysisUnit: state,
+	})
+	encoded, err := json.Marshal(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scope.AnalysisUnitDigest != state.Digest ||
+		scope.PrimaryPathCount != analysisunit.MaxSelectedPaths ||
+		scope.SupportingPathCount != 0 ||
+		strings.Contains(string(encoded), "primary_paths") || len(encoded) > 2<<10 {
+		t.Fatalf("maximum focused progress scope = %s", encoded)
+	}
+}
+
+func TestCallerGenerationProgressMaximumResponseFitsBound(t *testing.T) {
+	refusals := make([]CallerMapRefusalSummary, callerMapMaxRefusals)
+	for index := range refusals {
+		refusals[index] = CallerMapRefusalSummary{
+			Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+			GenerationKind: pipelinerefusal.GenerationCaller,
+			Classification: pipelinerefusal.ClassificationLimit,
+			Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+			Observed:       1<<63 - 1,
+			Limit:          1<<63 - 2,
+			OutcomeCount:   1,
+		}
+	}
+	total := callerMapMaxRefusals
+	digest := "sha256:" + strings.Repeat("f", 64)
+	maximumInt := int(^uint(0) >> 1)
+	progress := CallerGenerationProgress{
+		SchemaVersion: callerProgressSchema,
+		Generation: CallerMapGeneration{
+			State: "failed", Reason: "complete caller generation terminal_refusal",
+			Plane: "repository-overlay", Repository: strings.Repeat("r", analysisunit.MaxRepositoryBytes),
+			Commit: strings.Repeat("a", 40), UnitDigest: digest,
+			GenerationDigest: digest, DeclarationSetDigest: digest,
+			CandidateManifest: digest, ResolverManifest: digest,
+			PairSetDigest: digest, ManifestDigest: digest,
+			PublicationRevision: ^uint64(0), PairCount: maximumInt,
+			ResultCount: maximumInt, AbstentionCount: maximumInt,
+			CoverageRecordCount: maximumInt, CoveredCandidateCount: maximumInt,
+			CanonicalBytes: 1<<63 - 1, ExcludedGoTestRecords: maximumInt,
+			RecordCounts: &CallerMapRecordCounts{
+				CandidateRecords: maximumInt, BaseRecords: maximumInt,
+				ExcludedGoTestRecords: maximumInt,
+			},
+			PartitionProgress: &CallerMapPartitionProgress{
+				State: "complete", SettledPairCount: total,
+				RefusedPairCount: total, TotalPairCount: &total,
+				Refusals: refusals,
+			},
+		},
+		Scope: CallerGenerationProgressScope{
+			Repository: strings.Repeat("r", analysisunit.MaxRepositoryBytes),
+			Commit:     strings.Repeat("a", 40), ScopePosture: analysisunit.SearchIndexFocused,
+			AnalysisUnitDigest: digest, PrimaryPathCount: analysisunit.MaxSelectedPaths,
+		},
+	}
+	if !validCallerPartitionProgress(progress.Generation.PartitionProgress) {
+		t.Fatal("maximum response progress is invalid")
+	}
+	encoded, err := json.Marshal(progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) > callerProgressLimit {
+		t.Fatalf(
+			"maximum caller-generation progress bytes = %d, limit = %d",
+			len(encoded), callerProgressLimit,
+		)
+	}
+}
+
 func TestExactCallerNegativeIndexesReuseTheEightSlotCache(t *testing.T) {
 	for _, test := range []struct {
 		name    string

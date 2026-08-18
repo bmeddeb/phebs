@@ -1354,10 +1354,12 @@ catalog, relationship, or correctness authority.
   calls to `/neutral.Service/Ping` but no matching operation declaration, so
   the exact Caller Map probe added at `2fb09a0` correctly returned endpoint
   404 only after publication became current and the ceremony misread that as
-  pending. An authorization-fenced, declaration-independent, 8-KiB caller
+  pending. An authorization-fenced, declaration-independent, 32-KiB caller
   generation progress route now supplies the exact state and bounded partition
-  projection while Caller Map keeps its 404 contract. Focused route/observer
-  tests pass. Neutral-23 remains immutable `unclassified` evidence; another
+  projection plus digest/count scope authority while Caller Map keeps its 404
+  contract. The observer accepts only current all-success authority, retains
+  its digest across revalidation, and tests the admitted maximum response shape.
+  Neutral-23 remains immutable `unclassified` evidence; another
   ceremony still requires separate freeze review and execution authorization.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one

@@ -19,6 +19,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
@@ -479,7 +480,7 @@ func (service *exactCallerMapService) generationProgress(
 	progress := &CallerGenerationProgress{
 		SchemaVersion: callerProgressSchema,
 		Generation:    generation,
-		Scope:         callerAnalysisScope(repository),
+		Scope:         callerGenerationProgressScope(repository),
 	}
 	encoded, err := json.Marshal(progress)
 	if err != nil {
@@ -500,6 +501,23 @@ func (service *exactCallerMapService) generationProgress(
 		)
 	}
 	return progress, nil
+}
+
+func callerGenerationProgressScope(
+	repository store.Repo,
+) CallerGenerationProgressScope {
+	result := CallerGenerationProgressScope{
+		Repository: repository.Name, Commit: repository.IndexedCommitHash,
+		ScopePosture: analysisunit.SearchIndexWholeRepository,
+	}
+	if repository.IndexedAnalysisUnit == nil {
+		return result
+	}
+	result.ScopePosture = repository.IndexedAnalysisUnit.SearchIndexPosture
+	result.AnalysisUnitDigest = repository.IndexedAnalysisUnit.Digest
+	result.PrimaryPathCount = repository.IndexedAnalysisUnit.PrimaryPathCount
+	result.SupportingPathCount = repository.IndexedAnalysisUnit.SupportingPathCount
+	return result
 }
 
 func (service *exactCallerMapService) continuePage(
