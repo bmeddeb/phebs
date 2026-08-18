@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 func TestCatalogDeterministicSparseLookupAndClosedStates(t *testing.T) {
@@ -258,6 +259,24 @@ func TestConflictCandidateBoundCheckedBeforeGrowth(t *testing.T) {
 	})
 	if !errors.Is(err, ErrLimit) {
 		t.Fatalf("conflict bound error = %v", err)
+	}
+}
+
+func TestResidentLimitCarriesExactMeasurement(t *testing.T) {
+	_, err := Build(t.Context(), BuildRequest{
+		Root: t.TempDir(), Repository: "github.com/acme/repo", Commit: strings.Repeat("f", 40),
+		ResolverGenerationDigest: "sha256:" + strings.Repeat("1", 64),
+		ResolverManifestDigest:   "sha256:" + strings.Repeat("2", 64),
+		Descriptors: []gocaller.DirectDescriptor{
+			descriptor("grpc", "example.test/a", "AClient", "Read", "a.Service/Read", "a"),
+		},
+		ResidentLimitBytes: 1,
+	})
+	var measurement *pipelinerefusal.Measurement
+	if !errors.As(err, &measurement) || !errors.Is(err, ErrLimit) ||
+		measurement.Dimension != pipelinerefusal.DimensionResidentBytes ||
+		measurement.Observed <= measurement.Limit || measurement.Limit != 1 {
+		t.Fatalf("resident refusal = %+v, %v", measurement, err)
 	}
 }
 

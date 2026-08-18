@@ -32,6 +32,9 @@ const (
 	StageCallerArtifactInstall       Stage = "caller_artifact_install"
 	StageCallerGenerationAdmission   Stage = "caller_generation_admission"
 	StageRelationshipKafkaProjection Stage = "relationship_kafka_projection"
+
+	StageRelationshipResolverNamespaces Stage = "relationship_resolver_namespaces"
+	StageRelationshipRPCPostings        Stage = "relationship_rpc_postings"
 )
 
 type GenerationKind string
@@ -356,7 +359,8 @@ func validStageGeneration(stage Stage, generation GenerationKind) bool {
 	case StageCallerPairExecution, StageCallerArtifactSeal,
 		StageCallerArtifactInstall, StageCallerGenerationAdmission:
 		return generation == GenerationCaller
-	case StageRelationshipKafkaProjection:
+	case StageRelationshipKafkaProjection, StageRelationshipResolverNamespaces,
+		StageRelationshipRPCPostings:
 		return generation == GenerationRelationship
 	default:
 		return false
@@ -427,7 +431,8 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 			DimensionCallerGenerationStagingBytes:
 			return true
 		}
-	case StageRelationshipKafkaProjection:
+	case StageRelationshipKafkaProjection, StageRelationshipResolverNamespaces,
+		StageRelationshipRPCPostings:
 		return dimension == DimensionResidentBytes
 	}
 	return false
@@ -454,7 +459,8 @@ func validStage(stage Stage) bool {
 		StageExtractorExecution, StageEvidenceStaging, StageFinalPublication,
 		StageCallerPairExecution, StageCallerArtifactSeal,
 		StageCallerArtifactInstall, StageCallerGenerationAdmission,
-		StageRelationshipKafkaProjection:
+		StageRelationshipKafkaProjection, StageRelationshipResolverNamespaces,
+		StageRelationshipRPCPostings:
 		return true
 	default:
 		return false

@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 type BuildRequest struct {
@@ -96,7 +97,10 @@ func build(
 		const recordOverhead = 512
 		charge := int64(len(raw) + recordOverhead)
 		if charge > residentLimit-residentCharge {
-			return nil, ErrLimit
+			return nil, pipelinerefusal.Measure(
+				ErrLimit, pipelinerefusal.DimensionResidentBytes,
+				residentCharge+charge, residentLimit,
+			)
 		}
 		residentCharge += charge
 	}

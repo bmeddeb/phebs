@@ -15,6 +15,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 )
@@ -250,7 +251,10 @@ func buildObservedBounded(
 							const postingOverhead = 512
 							charge := int64(len(raw) + postingOverhead)
 							if charge > residentLimit-residentCharge {
-								return ErrLimit
+								return pipelinerefusal.Measure(
+									ErrLimit, pipelinerefusal.DimensionResidentBytes,
+									residentCharge+charge, residentLimit,
+								)
 							}
 							if postingCount >= MaxPostings {
 								return ErrLimit

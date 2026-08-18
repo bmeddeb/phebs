@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
@@ -48,20 +49,6 @@ var (
 	ErrLimit    = errors.New("kafka topic posting bound exceeded")
 	ErrNotFound = errors.New("kafka topic posting publication not found")
 )
-
-// ResidentLimitError retains only the source-free byte measurement needed by
-// the relationship scheduler to close a deterministic operational refusal.
-// Posting contents and repository identities stay behind the package boundary.
-type ResidentLimitError struct {
-	ObservedBytes int64
-	LimitBytes    int64
-}
-
-func (*ResidentLimitError) Error() string {
-	return "kafka topic posting resident bound exceeded"
-}
-
-func (err *ResidentLimitError) Unwrap() error { return ErrLimit }
 
 type Policy struct {
 	Schema                  string `json:"schema"`
@@ -101,6 +88,13 @@ func historicalPolicy() Policy {
 func admittedPolicy(value Policy) bool {
 	return value == FrozenPolicy() || value == historicalPolicy()
 }
+
+// The admitted policies are process constants; their digests are computed once
+// so per-request root validation performs no marshal/hash work.
+var (
+	frozenPolicyDigest     = sync.OnceValues(func() (string, error) { return digestValue(FrozenPolicy()) })
+	historicalPolicyDigest = sync.OnceValues(func() (string, error) { return digestValue(historicalPolicy()) })
+)
 
 type Authority struct {
 	Repository                  string                                      `json:"repository"`
@@ -281,7 +275,10 @@ func validateRoot(value Root) error {
 	if count != value.PostingCount || encoded != value.EncodedMemberBytes {
 		return fmt.Errorf("%w: root totals", ErrInvalid)
 	}
-	policyDigest, err := digestValue(value.Policy)
+	policyDigest, err := frozenPolicyDigest()
+	if value.Policy == historicalPolicy() {
+		policyDigest, err = historicalPolicyDigest()
+	}
 	if err != nil || value.Authority.PolicyDigest != policyDigest {
 		return fmt.Errorf("%w: policy authority", ErrInvalid)
 	}
@@ -331,8 +328,8 @@ func validateAuthority(schema string, value Authority) error {
 			return fmt.Errorf("%w: v2 observation authority", ErrInvalid)
 		}
 	}
-	want, err := digestValue(FrozenPolicy())
-	historical, historicalErr := digestValue(historicalPolicy())
+	want, err := frozenPolicyDigest()
+	historical, historicalErr := historicalPolicyDigest()
 	if err != nil || historicalErr != nil ||
 		value.PolicyDigest != want && value.PolicyDigest != historical {
 		return fmt.Errorf("%w: policy authority", ErrInvalid)

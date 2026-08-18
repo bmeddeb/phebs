@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 )
 
@@ -202,10 +203,12 @@ func addPosting(
 	const postingOverhead = 512
 	charge := int64(len(raw) + postingOverhead)
 	if charge > residentLimit-*residentCharge {
-		return &ResidentLimitError{
-			ObservedBytes: *residentCharge + charge,
-			LimitBytes:    residentLimit,
-		}
+		// Measure keeps only the source-free byte scalars; the relationship
+		// scheduler promotes it to a closed stage refusal with At.
+		return pipelinerefusal.Measure(
+			ErrLimit, pipelinerefusal.DimensionResidentBytes,
+			*residentCharge+charge, residentLimit,
+		)
 	}
 	seen[posting.Digest] = struct{}{}
 	(*postingCount)++

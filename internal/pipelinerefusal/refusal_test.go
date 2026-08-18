@@ -232,19 +232,27 @@ func TestCallerStagesOwnOnlyTheirExactLimitDimensions(t *testing.T) {
 	}
 }
 
-func TestRelationshipKafkaProjectionOwnsResidentBytes(t *testing.T) {
-	receipt := Receipt{
-		Schema: Schema, Stage: StageRelationshipKafkaProjection,
-		GenerationKind: GenerationRelationship,
-		Classification: ClassificationLimit, Dimension: DimensionResidentBytes,
-		Observed: 128<<20 + 1, Limit: 128 << 20,
-	}
-	if err := Validate(receipt); err != nil {
-		t.Fatal(err)
-	}
-	receipt.Dimension = DimensionGenerationEncodedBytes
-	if err := Validate(receipt); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("relationship Kafka projection accepted foreign dimension: %v", err)
+func TestRelationshipComponentStagesOwnResidentBytes(t *testing.T) {
+	for _, stage := range []Stage{
+		StageRelationshipResolverNamespaces,
+		StageRelationshipRPCPostings,
+		StageRelationshipKafkaProjection,
+	} {
+		t.Run(string(stage), func(t *testing.T) {
+			receipt := Receipt{
+				Schema: Schema, Stage: stage,
+				GenerationKind: GenerationRelationship,
+				Classification: ClassificationLimit, Dimension: DimensionResidentBytes,
+				Observed: 128<<20 + 1, Limit: 128 << 20,
+			}
+			if err := Validate(receipt); err != nil {
+				t.Fatal(err)
+			}
+			receipt.Dimension = DimensionGenerationEncodedBytes
+			if err := Validate(receipt); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("relationship component accepted foreign dimension: %v", err)
+			}
+		})
 	}
 }
 

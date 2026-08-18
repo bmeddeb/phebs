@@ -129,6 +129,23 @@ func TestRelationshipGenerationTerminalClassificationIsImmediateAndTyped(t *test
 		classifyConvergenceInspection(err).class != "terminal" {
 		t.Fatalf("settled relationship refusal = %+v, %v", probe, err)
 	}
+	for _, stage := range []pipelinerefusal.Stage{
+		pipelinerefusal.StageRelationshipResolverNamespaces,
+		pipelinerefusal.StageRelationshipRPCPostings,
+	} {
+		sibling := settled
+		siblingRefusal := refusal
+		siblingRefusal.Stage = stage
+		siblingRefusal.Observed, siblingRefusal.Limit = 9, 8
+		sibling.Failure = &store.GenerationScheduleFailure{
+			ScheduleDigest: scheduleDigest, Generation: generationDigest,
+			Attempt: relationshippublication.ScheduleMaxAttempts - 1,
+			Refusal: &siblingRefusal,
+		}
+		if _, err := classifyRelationshipGeneration(sibling); !errors.Is(err, errRelationshipBoundRefusal) {
+			t.Fatalf("%s refusal = %v", stage, err)
+		}
+	}
 
 	ordinary := settled
 	ordinary.Failure = &store.GenerationScheduleFailure{
@@ -138,10 +155,15 @@ func TestRelationshipGenerationTerminalClassificationIsImmediateAndTyped(t *test
 	if _, err := classifyRelationshipGeneration(ordinary); !errors.Is(err, errRelationshipTerminal) {
 		t.Fatalf("untyped relationship failure = %v", err)
 	}
+	// Settled successful while the root read still saw nothing is the
+	// publish/settle race: the worker publishes before completion settles, so
+	// the classification stays pending and the next poll observes the root.
 	succeeded := active
 	succeeded.Status, succeeded.Running, succeeded.Succeeded = store.GenerationScheduleSettled, 0, 1
-	if _, err := classifyRelationshipGeneration(succeeded); !errors.Is(err, errRelationshipTerminal) {
-		t.Fatalf("missing root after successful relationship schedule = %v", err)
+	probe, err = classifyRelationshipGeneration(succeeded)
+	if probe.Stage != "relationship_publication" ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("settled-successful publish race = %+v, %v", probe, err)
 	}
 }
 
@@ -161,6 +183,63 @@ func TestRelationshipPublicationAbsenceUsesScheduleAuthority(t *testing.T) {
 	wrapped := fmt.Errorf("open relationship publication: %w", relationshippublication.ErrNotFound)
 	if classifyConvergenceInspection(wrapped).class != "pending" {
 		t.Fatalf("relationship publication absence = %v", wrapped)
+	}
+}
+
+func TestSettledRelationshipSuccessRechecksPublicationRoot(t *testing.T) {
+	progress := store.GenerationScheduleProgress{
+		Schema:         store.GenerationScheduleProgressSchema,
+		ScheduleDigest: "sha256:" + strings.Repeat("a", 64),
+		Generation:     "sha256:" + strings.Repeat("b", 64),
+		Status:         store.GenerationScheduleSettled,
+		Total:          1,
+		Materialized:   1,
+		Succeeded:      1,
+		MaxAttempts:    relationshippublication.ScheduleMaxAttempts,
+	}
+	for _, test := range []struct {
+		name      string
+		rootError error
+		wantClass string
+	}{
+		{name: "publish-settle race", wantClass: "pending"},
+		{name: "settled root absent", rootError: relationshippublication.ErrNotFound, wantClass: "terminal"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			inspector := &profileInspector{
+				readRelationshipScheduleFunc: func(
+					context.Context, PreparedProfile,
+				) (store.GenerationScheduleProgress, error) {
+					return progress, nil
+				},
+				readRelationshipRootFunc: func(context.Context, PreparedProfile) error {
+					return test.rootError
+				},
+			}
+			probe, err := inspector.relationshipGenerationTerminal(t.Context(), PreparedProfile{})
+			if probe.Stage != "relationship_publication" ||
+				classifyConvergenceInspection(err).class != test.wantClass {
+				t.Fatalf("root recheck = %+v, %v", probe, err)
+			}
+		})
+	}
+	malformed := progress
+	malformed.Pending = 1
+	inspector := &profileInspector{
+		readRelationshipScheduleFunc: func(
+			context.Context, PreparedProfile,
+		) (store.GenerationScheduleProgress, error) {
+			return malformed, nil
+		},
+		readRelationshipRootFunc: func(context.Context, PreparedProfile) error {
+			t.Fatal("malformed settled schedule rechecked the root")
+			return nil
+		},
+	}
+	if _, err := inspector.relationshipGenerationTerminal(
+		t.Context(), PreparedProfile{},
+	); !errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("malformed settled schedule = %v", err)
 	}
 }
 

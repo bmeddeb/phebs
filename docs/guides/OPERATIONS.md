@@ -2015,16 +2015,24 @@ policy; the root's embedded policy and authority digest must agree, so the
 larger current policy does not rewrite or relabel older generations. The
 current component envelopes total 992 MiB within the unchanged one-GiB
 relationship worker class: 128 MiB resolver, 192 MiB RPC, 160 MiB Kafka, and
-512 MiB final relationship projection. A resident-limit overrun is durably
-classified as `relationship_kafka_projection` / `relationship` /
-`resident_bytes`; another deterministic Kafka bound remains a closed unknown
-refusal. Both are terminal schedule results and do not consume the remaining
-five-attempt allowance. New partitioned relationship schedule bindings include
+512 MiB final relationship projection. A resident-limit overrun in the
+resolver, RPC, or Kafka component build is durably classified under its owning
+stage (`relationship_resolver_namespaces`, `relationship_rpc_postings`, or
+`relationship_kafka_projection`) with `relationship` / `resident_bytes`
+scalars; another deterministic component bound remains a closed unknown
+refusal at the same stage. All are terminal schedule results and do not
+consume the remaining five-attempt allowance. New partitioned relationship
+schedule bindings include
 one digest over the resolver, RPC, Kafka, and final relationship policies plus
 their three resident fences. A repeated reconcile for the same authority and
-same build policy retains a closed terminal schedule instead of enqueuing it
-again; changing any bound or frozen builder policy changes the target and
-creates the ordinary recovery schedule. Historical v2 bindings remain valid.
+same build policy retains a closed terminal schedule only under a v3 binding,
+whose target embeds the build-policy digest; older bindings keep the ordinary
+recovery path so a raised bound can still rebuild them. Changing any bound or
+frozen builder policy changes the v3 target and creates the ordinary recovery
+schedule. Historical v2 bindings remain valid, an active pre-upgrade v2
+schedule is allowed to finish rather than being superseded mid-flight, and a
+v3 binding recorded under a prior build policy stays readable — recovery flows
+through the target mismatch instead of invalidating in-flight work.
 The terminal no-op performs two current-schedule reads, one binding-file read,
 and one final source-free failure-row read only when a publication-triggered reconcile
 revisits that exact failed target; it adds no periodic scan or member read.
@@ -2036,9 +2044,13 @@ no source, member, shard, or store scan and retains no cache.
 When the ceremony sees no current relationship root, it consults only the
 current `service-relationship` schedule through a read-only connection to the
 already supervised local store. No schedule or an active schedule remains
-pending. A settled failed schedule becomes an immediate typed terminal result;
-a settled successful schedule with no root is terminal rather than being
-polled for four hours. The projection excludes repository identity, stage,
+pending. A settled failed schedule becomes an immediate typed terminal result.
+A settled successful schedule triggers one immediate confirming root open: a
+now-readable root is the harmless publish/settle read race and stays pending
+for the next full inspection, while a still-missing root is terminal rather
+than polling to the ceremony deadline. The recorded refusal's own
+observed/limit scalars substantiate a bound classification even when the
+compiled-in fence has since changed. The projection excludes repository identity, stage,
 timestamps, worker/lease state, and raw error text; a closed final refusal is
 the only failure detail. Each missing-root poll opens and closes one local
 connection, reads one current schedule, and confirms the runtime. Every settled

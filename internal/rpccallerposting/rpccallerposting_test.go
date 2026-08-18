@@ -15,6 +15,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -305,6 +306,31 @@ func TestProjectionCandidateAndDigestBoundsBeforeGrowth(t *testing.T) {
 	}
 	if _, err := projectionFromRecords(values); !errors.Is(err, ErrLimit) {
 		t.Fatalf("candidate limit error = %v", err)
+	}
+}
+
+func TestResidentLimitCarriesExactMeasurement(t *testing.T) {
+	root := t.TempDir()
+	descriptor := grpcDescriptor(
+		"example.test/payments/v1", "PaymentsClient", "Charge",
+		"payments.v1.Payments/Charge", "resident",
+	)
+	resolver := resolverPublication(t, root, []gocaller.DirectDescriptor{descriptor})
+	sourceText := `package app
+import pb "example.test/payments/v1"
+func charge(client pb.PaymentsClient) { client.Charge(nil) }
+`
+	fixture := observationFixture(t, "cmd/charge.go", sourceText, []sourcepartition.Placement{{
+		Path: "cmd/charge.go", Mode: "100644", Revisions: []int{0},
+	}})
+	_, err := buildSourcesBounded(
+		t.Context(), root, fakeSource(t, []observedFixture{fixture}), resolver, 1,
+	)
+	var measurement *pipelinerefusal.Measurement
+	if !errors.As(err, &measurement) || !errors.Is(err, ErrLimit) ||
+		measurement.Dimension != pipelinerefusal.DimensionResidentBytes ||
+		measurement.Observed <= measurement.Limit || measurement.Limit != 1 {
+		t.Fatalf("resident refusal = %+v, %v", measurement, err)
 	}
 }
 

@@ -339,14 +339,12 @@ func (reader *LocalGenerationChunkReader) GenerationScheduleProgress(
 	if err != nil {
 		return GenerationScheduleProgress{}, err
 	}
-	progress := GenerationScheduleProgress{
-		Schema:         GenerationScheduleProgressSchema,
-		ScheduleDigest: schedule.Digest, Generation: schedule.Generation,
-		Status: schedule.Status, Total: schedule.TotalChunks,
-		Materialized: schedule.Materialized, Pending: schedule.Pending,
-		Running: schedule.Running, Succeeded: schedule.Succeeded,
-		Failed: schedule.Failed, MaxAttempts: schedule.MaxAttempts,
+	if schedule == nil {
+		return GenerationScheduleProgress{}, errors.New(
+			"read generation schedule progress: nil schedule",
+		)
 	}
+	progress := scheduleProgress(schedule)
 	if schedule.Status == GenerationScheduleSettled {
 		if schedule.Failed > 0 {
 			failure, failureErr := reader.store.GetGenerationScheduleFailure(
@@ -358,7 +356,8 @@ func (reader *LocalGenerationChunkReader) GenerationScheduleProgress(
 			progress.Failure = failure
 		}
 		confirmed, confirmErr := reader.store.GetGenerationSchedule(ctx, repository, stage)
-		if confirmErr != nil || !sameGenerationScheduleProgress(schedule, confirmed) {
+		if confirmErr != nil || confirmed == nil ||
+			scheduleProgress(confirmed) != scheduleProgress(schedule) {
 			return GenerationScheduleProgress{}, errors.Join(
 				confirmErr, ErrGenerationStale,
 			)
@@ -372,13 +371,18 @@ func (reader *LocalGenerationChunkReader) GenerationScheduleProgress(
 	return progress, nil
 }
 
-func sameGenerationScheduleProgress(left, right *GenerationSchedule) bool {
-	return left != nil && right != nil && left.Digest == right.Digest &&
-		left.Generation == right.Generation && left.Status == right.Status &&
-		left.TotalChunks == right.TotalChunks && left.Materialized == right.Materialized &&
-		left.Pending == right.Pending && left.Running == right.Running &&
-		left.Succeeded == right.Succeeded && left.Failed == right.Failed &&
-		left.MaxAttempts == right.MaxAttempts
+// scheduleProgress is both the projection and the settled-recheck fence: the
+// confirm read compares fresh projections, so a field added here participates
+// in both automatically.
+func scheduleProgress(schedule *GenerationSchedule) GenerationScheduleProgress {
+	return GenerationScheduleProgress{
+		Schema:         GenerationScheduleProgressSchema,
+		ScheduleDigest: schedule.Digest, Generation: schedule.Generation,
+		Status: schedule.Status, Total: schedule.TotalChunks,
+		Materialized: schedule.Materialized, Pending: schedule.Pending,
+		Running: schedule.Running, Succeeded: schedule.Succeeded,
+		Failed: schedule.Failed, MaxAttempts: schedule.MaxAttempts,
+	}
 }
 
 func (reader *LocalGenerationChunkReader) confirmRuntime() error {

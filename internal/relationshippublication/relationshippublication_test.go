@@ -31,7 +31,7 @@ import (
 
 type fakeResolver struct{ root resolvernamespace.Root }
 
-func TestKafkaResidentEnvelopeAndClosedFailure(t *testing.T) {
+func TestRelationshipComponentResidentEnvelopesAndClosedFailures(t *testing.T) {
 	const semanticCharge = int64(147_324_928)
 	if KafkaResidentLimit != 160<<20 || semanticCharge > KafkaResidentLimit {
 		t.Fatalf("Kafka resident envelope = %d, semantic charge = %d",
@@ -40,31 +40,60 @@ func TestKafkaResidentEnvelopeAndClosedFailure(t *testing.T) {
 	if ResolverResidentLimit+RPCResidentLimit+KafkaResidentLimit+MaxResidentChargeBytes > 1<<30 {
 		t.Fatal("relationship component envelopes exceed the declared one-GiB worker class")
 	}
-	limitErr := &kafkatopicposting.ResidentLimitError{
-		ObservedBytes: KafkaResidentLimit + 1,
-		LimitBytes:    KafkaResidentLimit,
-	}
-	err := relationshipKafkaBuildFailure(limitErr)
-	receipt, present := pipelinerefusal.From(err)
-	if !store.IsTerminal(err) || !errors.Is(err, kafkatopicposting.ErrLimit) ||
-		!present || receipt.Stage != pipelinerefusal.StageRelationshipKafkaProjection ||
-		receipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
-		receipt.Classification != pipelinerefusal.ClassificationLimit ||
-		receipt.Dimension != pipelinerefusal.DimensionResidentBytes ||
-		receipt.Observed != KafkaResidentLimit+1 || receipt.Limit != KafkaResidentLimit {
-		t.Fatalf("relationship Kafka refusal = %+v, present=%t, err=%v", receipt, present, err)
-	}
-	bound := relationshipKafkaBuildFailure(kafkatopicposting.ErrLimit)
-	boundReceipt, boundPresent := pipelinerefusal.From(bound)
-	if !store.IsTerminal(bound) || !boundPresent ||
-		boundReceipt.Stage != pipelinerefusal.StageRelationshipKafkaProjection ||
-		boundReceipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
-		boundReceipt.Classification != pipelinerefusal.ClassificationUnknown {
-		t.Fatalf("unmeasured Kafka bound = %+v, present=%t, err=%v",
-			boundReceipt, boundPresent, bound)
+	for _, test := range []struct {
+		name   string
+		limit  error
+		bytes  int64
+		stage  pipelinerefusal.Stage
+		action string
+	}{
+		{
+			name: "resolver", limit: resolvernamespace.ErrLimit, bytes: ResolverResidentLimit,
+			stage:  pipelinerefusal.StageRelationshipResolverNamespaces,
+			action: "build relationship resolver namespaces",
+		},
+		{
+			name: "rpc", limit: rpccallerposting.ErrLimit, bytes: RPCResidentLimit,
+			stage:  pipelinerefusal.StageRelationshipRPCPostings,
+			action: "build relationship RPC postings",
+		},
+		{
+			name: "kafka", limit: kafkatopicposting.ErrLimit, bytes: KafkaResidentLimit,
+			stage:  pipelinerefusal.StageRelationshipKafkaProjection,
+			action: "build relationship Kafka postings",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			limitErr := pipelinerefusal.Measure(
+				test.limit, pipelinerefusal.DimensionResidentBytes,
+				test.bytes+1, test.bytes,
+			)
+			err := relationshipBuildFailure(limitErr, test.action, test.limit, test.stage)
+			receipt, present := pipelinerefusal.From(err)
+			if !store.IsTerminal(err) || !errors.Is(err, test.limit) || !present ||
+				receipt.Stage != test.stage ||
+				receipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
+				receipt.Classification != pipelinerefusal.ClassificationLimit ||
+				receipt.Dimension != pipelinerefusal.DimensionResidentBytes ||
+				receipt.Observed != test.bytes+1 || receipt.Limit != test.bytes {
+				t.Fatalf("measured refusal = %+v, present=%t, err=%v", receipt, present, err)
+			}
+			bound := relationshipBuildFailure(test.limit, test.action, test.limit, test.stage)
+			boundReceipt, boundPresent := pipelinerefusal.From(bound)
+			if !store.IsTerminal(bound) || !boundPresent ||
+				boundReceipt.Stage != test.stage ||
+				boundReceipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
+				boundReceipt.Classification != pipelinerefusal.ClassificationUnknown {
+				t.Fatalf("unmeasured bound = %+v, present=%t, err=%v",
+					boundReceipt, boundPresent, bound)
+			}
+		})
 	}
 	ordinary := errors.New("transient Kafka read")
-	if wrapped := relationshipKafkaBuildFailure(ordinary); store.IsTerminal(wrapped) || !errors.Is(wrapped, ordinary) {
+	if wrapped := relationshipBuildFailure(
+		ordinary, "build relationship Kafka postings",
+		kafkatopicposting.ErrLimit, pipelinerefusal.StageRelationshipKafkaProjection,
+	); store.IsTerminal(wrapped) || !errors.Is(wrapped, ordinary) {
 		t.Fatalf("ordinary Kafka failure was reclassified: %v", wrapped)
 	}
 }
@@ -656,16 +685,16 @@ func TestScheduleIdentityReusesActiveTargetAndDistinguishesABA(t *testing.T) {
 	if err := runtime.writeBinding(binding); err != nil {
 		t.Fatal(err)
 	}
-	generation, prior, terminal, err := runtime.scheduleIdentity(t.Context(), repository, target)
+	generation, prior, terminal, err := runtime.scheduleIdentity(t.Context(), repository, target, "")
 	if err != nil || terminal || generation != currentGeneration || prior != "" {
 		t.Fatalf("active identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
 	}
 	runtime.Store.(*scheduleIdentityStore).schedule.Status = store.GenerationScheduleSettled
-	generation, prior, terminal, err = runtime.scheduleIdentity(t.Context(), repository, target)
+	generation, prior, terminal, err = runtime.scheduleIdentity(t.Context(), repository, target, "")
 	if err != nil || terminal || generation == target || generation == currentGeneration || prior != currentDigest {
 		t.Fatalf("recovery identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
 	}
-	repeated, repeatedPrior, repeatedTerminal, err := runtime.scheduleIdentity(t.Context(), repository, target)
+	repeated, repeatedPrior, repeatedTerminal, err := runtime.scheduleIdentity(t.Context(), repository, target, "")
 	if err != nil || repeatedTerminal || repeated != generation || repeatedPrior != prior {
 		t.Fatalf("deterministic recovery = %q, %q, terminal %t, %v", repeated, repeatedPrior, repeatedTerminal, err)
 	}
@@ -741,7 +770,7 @@ func TestScheduleIdentityRetainsSamePolicyClosedRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	generation, prior, terminal, err := runtime.scheduleIdentity(
-		t.Context(), repository, binding.TargetGeneration,
+		t.Context(), repository, binding.TargetGeneration, "",
 	)
 	if err != nil || !terminal || generation != binding.TargetGeneration || prior != "" {
 		t.Fatalf("terminal identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
@@ -755,7 +784,7 @@ func TestScheduleIdentityRetainsSamePolicyClosedRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	generation, prior, terminal, err = runtime.scheduleIdentity(
-		t.Context(), repository, changedTarget,
+		t.Context(), repository, changedTarget, "",
 	)
 	if err != nil || terminal || generation == binding.TargetGeneration ||
 		generation == changedTarget || prior != currentDigest {
@@ -777,12 +806,96 @@ func TestScheduleIdentityRetainsSamePolicyClosedRefusal(t *testing.T) {
 	if err := setBindingDigest(&historical); err != nil {
 		t.Fatalf("historical v2 binding was not retained: %v", err)
 	}
-	wrongPolicy := binding
-	wrongPolicy.BuildPolicyDigest = fixedDigest("9")
-	wrongPolicy.TargetGeneration = changedTarget
-	wrongPolicy.ScheduleGeneration = changedTarget
-	if err := setBindingDigest(&wrongPolicy); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("v3 binding accepted a noncurrent build policy: %v", err)
+	// A settled v2 refusal is not retained forever: its target did not bind a
+	// build policy, so even an equal legacy target must take recovery.
+	if err := runtime.writeBinding(historical); err != nil {
+		t.Fatal(err)
+	}
+	state.schedule = &store.GenerationSchedule{
+		Repository: repository, Stage: ScheduleStage,
+		Generation: historical.ScheduleGeneration, Digest: fixedDigest("6"),
+		Status: store.GenerationScheduleSettled, Failed: 1,
+	}
+	state.failure.ScheduleDigest = state.schedule.Digest
+	state.failure.Generation = state.schedule.Generation
+	generation, prior, terminal, err = runtime.scheduleIdentity(
+		t.Context(), repository, historical.TargetGeneration, "",
+	)
+	if err != nil || terminal || generation == historical.ScheduleGeneration || prior != state.schedule.Digest {
+		t.Fatalf("historical v2 recovery = %q, %q, terminal %t, %v",
+			generation, prior, terminal, err)
+	}
+	// An active pre-upgrade v2-bound schedule is grandfathered: the legacy
+	// target matches, the identity reports no-work, and the in-flight build
+	// is not superseded by the first post-upgrade reconcile.
+	if err := runtime.writeBinding(historical); err != nil {
+		t.Fatal(err)
+	}
+	state.schedule = &store.GenerationSchedule{
+		Repository: repository, Stage: ScheduleStage,
+		Generation: historical.ScheduleGeneration, Digest: fixedDigest("6"),
+		Status: store.GenerationScheduleActive,
+	}
+	generation, prior, terminal, err = runtime.scheduleIdentity(
+		t.Context(), repository, changedTarget, historical.TargetGeneration,
+	)
+	if err != nil || !terminal || generation != historical.ScheduleGeneration || prior != "" {
+		t.Fatalf("grandfathered v2 identity = %q, %q, terminal %t, %v",
+			generation, prior, terminal, err)
+	}
+	// A binding recording a different (e.g. pre-deploy) build policy stays
+	// readable: it validates against its own recorded digest, and recovery
+	// flows through the target mismatch instead of an ErrInvalid retry burn.
+	priorPolicy := binding
+	priorPolicy.BuildPolicyDigest = fixedDigest("9")
+	priorPolicy.TargetGeneration = changedTarget
+	priorPolicy.ScheduleGeneration = changedTarget
+	if err := setBindingDigest(&priorPolicy); err != nil {
+		t.Fatalf("v3 binding with a prior build policy was not retained: %v", err)
+	}
+}
+
+func TestScheduleIdentityDoesNotRetainV1ClosedRefusal(t *testing.T) {
+	repository := "example.com/acme/legacy-terminal"
+	target, err := runtimeTarget(
+		repository, fixedDigest("1"), fixedDigest("2"), fixedDigest("3"), fixedDigest("4"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scheduleDigest := fixedDigest("5")
+	state := &scheduleIdentityStore{
+		schedule: &store.GenerationSchedule{
+			Repository: repository, Stage: ScheduleStage, Generation: target,
+			Digest: scheduleDigest, Status: store.GenerationScheduleSettled, Failed: 1,
+		},
+		failure: &store.GenerationScheduleFailure{
+			ScheduleDigest: scheduleDigest, Generation: target,
+			Refusal: &pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageRelationshipResolverNamespaces,
+				GenerationKind: pipelinerefusal.GenerationRelationship,
+				Classification: pipelinerefusal.ClassificationUnknown,
+				Dimension:      pipelinerefusal.DimensionUnknown,
+			},
+		},
+	}
+	runtime := &Runtime{DataDir: t.TempDir(), Store: state}
+	binding := scheduleBinding{
+		Schema: BindingSchema, Repository: repository,
+		ScheduleGeneration: target, TargetGeneration: target,
+		ObservationGeneration: fixedDigest("1"), CatalogGeneration: fixedDigest("2"),
+		ServiceStateSet: fixedDigest("3"), ResolverGeneration: fixedDigest("4"),
+	}
+	if err := setBindingDigest(&binding); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.writeBinding(binding); err != nil {
+		t.Fatal(err)
+	}
+	generation, prior, terminal, err := runtime.scheduleIdentity(t.Context(), repository, target, "")
+	if err != nil || terminal || generation == target || prior != scheduleDigest {
+		t.Fatalf("v1 recovery = %q, %q, terminal %t, %v", generation, prior, terminal, err)
 	}
 }
 

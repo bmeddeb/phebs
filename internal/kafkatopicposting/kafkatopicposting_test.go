@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -544,9 +545,10 @@ func TestResidentLimitErrorCarriesOnlyExactByteScalars(t *testing.T) {
 		make(map[string][]Posting), make(map[string]struct{}), &count, &identityBytes,
 		&residentCharge, limit, posting,
 	)
-	var resident *ResidentLimitError
+	var resident *pipelinerefusal.Measurement
 	if !errors.As(err, &resident) || !errors.Is(err, ErrLimit) ||
-		resident.ObservedBytes != limit+1 || resident.LimitBytes != limit {
+		resident.Dimension != pipelinerefusal.DimensionResidentBytes ||
+		resident.Observed != limit+1 || resident.Limit != limit {
 		t.Fatalf("resident refusal = %+v, %v", resident, err)
 	}
 }

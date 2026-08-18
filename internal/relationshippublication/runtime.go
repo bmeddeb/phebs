@@ -156,7 +156,7 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 			return err
 		}
 	}
-	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target)
+	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target, "")
 	if err != nil {
 		return err
 	}
@@ -283,12 +283,19 @@ func (runtime *Runtime) reconcileV2(ctx context.Context, repository string) erro
 	if err != nil {
 		return err
 	}
+	legacyTarget, err := runtimeTargetV2(
+		repository, upstream.Digest, snapshot.catalog.GenerationDigest,
+		stateSet, resolver.GenerationDigest, summary.SummaryDigest, summary.ControlRevision,
+	)
+	if err != nil {
+		return err
+	}
 	if runtime.Admit != nil {
 		if err := runtime.Admit(ctx); err != nil {
 			return err
 		}
 	}
-	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target)
+	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target, legacyTarget)
 	if err != nil {
 		return err
 	}
@@ -443,7 +450,11 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		resolverStage, err = resolvernamespace.Build(ctx, resolverRequest)
 	}
 	if err != nil {
-		return fmt.Errorf("build relationship resolver namespaces: %w", err)
+		return relationshipBuildFailure(
+			err, "build relationship resolver namespaces",
+			resolvernamespace.ErrLimit,
+			pipelinerefusal.StageRelationshipResolverNamespaces,
+		)
 	}
 	resolverPublication, err := resolverStage.Publish(ctx)
 	if err != nil {
@@ -462,7 +473,11 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		})
 	}
 	if err != nil {
-		return fmt.Errorf("build relationship RPC postings: %w", err)
+		return relationshipBuildFailure(
+			err, "build relationship RPC postings",
+			rpccallerposting.ErrLimit,
+			pipelinerefusal.StageRelationshipRPCPostings,
+		)
 	}
 	rpcPublication, err := rpcStage.Publish(ctx)
 	if err != nil {
@@ -481,7 +496,11 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		})
 	}
 	if err != nil {
-		return relationshipKafkaBuildFailure(err)
+		return relationshipBuildFailure(
+			err, "build relationship Kafka postings",
+			kafkatopicposting.ErrLimit,
+			pipelinerefusal.StageRelationshipKafkaProjection,
+		)
 	}
 	kafkaPublication, err := kafkaStage.Publish(ctx)
 	if err != nil {
@@ -552,28 +571,23 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	return nil
 }
 
-func relationshipKafkaBuildFailure(err error) error {
+// relationshipBuildFailure closes a deterministic component bound overrun as a
+// terminal typed refusal so it cannot burn retry attempts or chain recovery
+// schedules. A measured limit (pipelinerefusal.Measurement in the chain)
+// retains its exact scalars through At; a bare limit closes as unknown.
+func relationshipBuildFailure(
+	err error,
+	action string,
+	limit error,
+	stage pipelinerefusal.Stage,
+) error {
 	if err == nil {
 		return nil
 	}
-	cause := fmt.Errorf("build relationship Kafka postings: %w", err)
-	var resident *kafkatopicposting.ResidentLimitError
-	if errors.As(err, &resident) && resident != nil {
-		measured := pipelinerefusal.Measure(
-			cause, pipelinerefusal.DimensionResidentBytes,
-			resident.ObservedBytes, resident.LimitBytes,
-		)
+	cause := fmt.Errorf("%s: %w", action, err)
+	if errors.Is(err, limit) {
 		return store.WithTerminal(pipelinerefusal.At(
-			measured,
-			pipelinerefusal.StageRelationshipKafkaProjection,
-			pipelinerefusal.GenerationRelationship,
-		))
-	}
-	if errors.Is(err, kafkatopicposting.ErrLimit) {
-		return store.WithTerminal(pipelinerefusal.At(
-			cause,
-			pipelinerefusal.StageRelationshipKafkaProjection,
-			pipelinerefusal.GenerationRelationship,
+			cause, stage, pipelinerefusal.GenerationRelationship,
 		))
 	}
 	return cause
@@ -827,8 +841,9 @@ func runtimeTargetV2(
 // runtimeBuildPolicyDigest binds the schedule target to every frozen builder
 // policy and to the three operational resident fences applied by Handle. A
 // policy-only change therefore supersedes a settled terminal schedule without
-// pretending that unchanged source authority is a new generation.
-func runtimeBuildPolicyDigest() (string, error) {
+// pretending that unchanged source authority is a new generation. Every input
+// is a process constant, so the digest is computed once.
+var runtimeBuildPolicyDigest = sync.OnceValues(func() (string, error) {
 	return digestValue(struct {
 		Domain           string                   `json:"domain"`
 		Resolver         resolvernamespace.Policy `json:"resolver"`
@@ -845,7 +860,7 @@ func runtimeBuildPolicyDigest() (string, error) {
 		ResolverResident: ResolverResidentLimit, RPCResident: RPCResidentLimit,
 		KafkaResident: KafkaResidentLimit,
 	})
-}
+})
 
 func runtimeTargetV3(
 	repository, upstream, catalog, serviceStateSet, resolver, serviceSummary string,
@@ -876,7 +891,7 @@ func runtimeTargetV3(
 }
 
 func (runtime *Runtime) scheduleIdentity(
-	ctx context.Context, repository, target string,
+	ctx context.Context, repository, target, legacyTarget string,
 ) (string, string, bool, error) {
 	current, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
 	if errors.Is(err, store.ErrNotFound) {
@@ -888,12 +903,26 @@ func (runtime *Runtime) scheduleIdentity(
 	if current == nil {
 		return "", "", false, fmt.Errorf("%w: nil relationship schedule", ErrInvalid)
 	}
-	if binding, bindingErr := runtime.readBinding(repository, current.Generation); bindingErr == nil &&
-		binding.TargetGeneration == target {
-		if current.Status == store.GenerationScheduleActive {
+	if binding, bindingErr := runtime.readBinding(repository, current.Generation); bindingErr == nil {
+		if current.Status == store.GenerationScheduleActive &&
+			binding.TargetGeneration == target {
 			return current.Generation, binding.PriorScheduleDigest, false, nil
 		}
-		if current.Status == store.GenerationScheduleSettled && current.Failed > 0 {
+		// An active pre-upgrade schedule whose binding matches the legacy
+		// (V2) target is allowed to finish; superseding it would restart an
+		// in-flight build whose authority inputs did not change. It reports
+		// no-work (like a retained terminal) so the caller does not rewrite
+		// the existing binding under the new schema mid-flight.
+		if current.Status == store.GenerationScheduleActive &&
+			legacyTarget != "" && binding.TargetGeneration == legacyTarget {
+			return current.Generation, binding.PriorScheduleDigest, true, nil
+		}
+		// Terminal retention requires a V3 binding: only the V3 target embeds
+		// the build-policy digest, so only there does a policy or bound raise
+		// mint a distinct recovery target. Older bindings keep the recovery
+		// path so a raised bound can still rebuild them.
+		if binding.TargetGeneration == target && binding.Schema == BindingSchemaV3 &&
+			current.Status == store.GenerationScheduleSettled && current.Failed > 0 {
 			failure, failureErr := runtime.Store.GetGenerationScheduleFailure(
 				ctx, repository, ScheduleStage, current.Digest,
 			)
@@ -921,8 +950,9 @@ func closedRelationshipFailure(failure *store.GenerationScheduleFailure) bool {
 		pipelinerefusal.Validate(*failure.Refusal) != nil {
 		return false
 	}
-	return failure.Refusal.Stage == pipelinerefusal.StageRelationshipKafkaProjection &&
-		failure.Refusal.GenerationKind == pipelinerefusal.GenerationRelationship
+	// Validate already pins every relationship-kind refusal to a relationship
+	// stage, so the generation kind alone identifies a closed build refusal.
+	return failure.Refusal.GenerationKind == pipelinerefusal.GenerationRelationship
 }
 
 func setBindingDigest(value *scheduleBinding) error {
@@ -965,10 +995,11 @@ func validateBinding(value scheduleBinding) error {
 			return fmt.Errorf("%w: schedule v2 upstream", ErrInvalid)
 		}
 		if value.Schema == BindingSchemaV3 {
-			currentPolicy, policyErr := runtimeBuildPolicyDigest()
-			if policyErr != nil || currentPolicy != value.BuildPolicyDigest {
-				return fmt.Errorf("%w: schedule build policy", ErrInvalid)
-			}
+			// The binding validates against its own recorded policy digest
+			// (the target recomputation below fences tampering); pinning to
+			// the current process policy would make every in-flight binding
+			// unreadable across a policy-changing deploy, burning attempts on
+			// ErrInvalid instead of superseding cleanly by target mismatch.
 			want, err = runtimeTargetV3(
 				value.Repository, value.Upstream.Digest,
 				value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,

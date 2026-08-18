@@ -259,6 +259,7 @@ type profileInspector struct {
 	credential                   string
 	requireObservationV2         bool
 	readRelationshipScheduleFunc func(context.Context, PreparedProfile) (store.GenerationScheduleProgress, error)
+	readRelationshipRootFunc     func(context.Context, PreparedProfile) error
 }
 
 func newProfileInspector(profile PreparedProfile, requireObservationV2 ...bool) (*profileInspector, error) {
@@ -537,7 +538,33 @@ func (inspector *profileInspector) relationshipGenerationTerminal(
 		}
 		return probe, err
 	}
-	return classifyRelationshipGeneration(progress)
+	probe, classifyErr := classifyRelationshipGeneration(progress)
+	if progress.Status != store.GenerationScheduleSettled || progress.Failed != 0 ||
+		errors.Is(classifyErr, errRelationshipTerminal) {
+		return probe, classifyErr
+	}
+	// Publication completes before schedule settlement. Once the schedule read
+	// observes successful settlement, a second local root open distinguishes
+	// the harmless root-open/schedule-read race from a genuinely lost root.
+	readRoot := inspector.readRelationshipRootFunc
+	if readRoot == nil {
+		readRoot = readRelationshipRoot
+	}
+	rootErr := readRoot(ctx, profile)
+	if rootErr == nil {
+		return probe, errors.New("T40.13 relationship publication has not converged")
+	}
+	if errors.Is(rootErr, relationshippublication.ErrNotFound) {
+		return probe, errRelationshipTerminal
+	}
+	return probe, rootErr
+}
+
+func readRelationshipRoot(ctx context.Context, profile PreparedProfile) error {
+	_, err := relationshippublication.OpenCurrent(
+		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
+	)
+	return err
 }
 
 func readRelationshipScheduleProgress(
@@ -584,8 +611,15 @@ func classifyRelationshipGeneration(
 		return probe, errors.New("T40.13 relationship publication has not converged")
 	case store.GenerationScheduleSettled:
 		if progress.Pending != 0 || progress.Running != 0 ||
-			progress.Succeeded+progress.Failed != progress.Total || progress.Failed < 1 {
+			progress.Succeeded+progress.Failed != progress.Total {
 			return probe, errRelationshipTerminal
+		}
+		if progress.Failed < 1 {
+			// Settled successful while the root read still saw nothing: the
+			// worker publishes the root before completion settles, so this is
+			// the publish/settle race, not a terminal state. The next poll
+			// observes the root.
+			return probe, errors.New("T40.13 relationship publication has not converged")
 		}
 	default:
 		return probe, errRelationshipTerminal
@@ -597,13 +631,17 @@ func classifyRelationshipGeneration(
 		return probe, errRelationshipTerminal
 	}
 	refusal := *failure.Refusal
-	if pipelinerefusal.Validate(refusal) == nil &&
-		refusal.Stage == pipelinerefusal.StageRelationshipKafkaProjection &&
+	relationshipStage := refusal.Stage == pipelinerefusal.StageRelationshipKafkaProjection ||
+		refusal.Stage == pipelinerefusal.StageRelationshipResolverNamespaces ||
+		refusal.Stage == pipelinerefusal.StageRelationshipRPCPostings
+	// The durable receipt already carries the fence that was violated;
+	// requiring equality with the current compiled-in limit would misclassify
+	// refusals recorded under an earlier or later fence as unclassified.
+	if pipelinerefusal.Validate(refusal) == nil && relationshipStage &&
 		refusal.GenerationKind == pipelinerefusal.GenerationRelationship &&
 		refusal.Classification == pipelinerefusal.ClassificationLimit &&
 		refusal.Dimension == pipelinerefusal.DimensionResidentBytes &&
-		refusal.Observed > refusal.Limit &&
-		refusal.Limit == relationshippublication.KafkaResidentLimit {
+		refusal.Observed > refusal.Limit {
 		return probe, errRelationshipBoundRefusal
 	}
 	return probe, errRelationshipTerminal
