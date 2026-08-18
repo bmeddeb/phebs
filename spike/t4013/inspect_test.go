@@ -685,7 +685,12 @@ func TestExtractionConvergenceProbeStopsOnlySettledFailedSchedule(t *testing.T) 
 	}
 	repository.LastExtractionJob.Status = store.StatusFailed
 	if _, err := extractionConvergenceProbe(settled, repository); !errors.Is(err, errExtractionJobTerminal) {
-		t.Fatalf("job terminal did not retain precedence: %v", err)
+		t.Fatalf("v14 job terminal did not retain historical precedence: %v", err)
+	}
+	if _, err := extractionConvergenceProbe(settled, repository, profileInspectionV15); !errors.Is(
+		err, errExtractionScheduleTerminal,
+	) {
+		t.Fatalf("v15 generation-bound schedule did not retain precedence: %v", err)
 	}
 	repository.LastExtractionJobState, repository.LastExtractionJob = store.JobProjectionUnavailable, nil
 	probe, err = extractionConvergenceProbe(settled, repository)
@@ -706,6 +711,46 @@ func TestExtractionConvergenceProbeAcceptsCurrentAuthorityAfterJobCollection(t *
 		probe.ExtractionProgress.State != "current" ||
 		probe.ExtractionProgress.Succeeded != 489 {
 		t.Fatalf("probe = %+v, error=%v", probe, err)
+	}
+}
+
+func TestExtractionConvergenceProbeDoesNotLetUnboundFailedJobPoisonCurrentSchedule(t *testing.T) {
+	progress := extractionpublication.Progress{
+		State: "current", Total: 1956, Materialized: 1956,
+		Succeeded: 1956, Domains: 9, CurrentDomains: 9,
+	}
+	repository := store.RepoStatus{
+		LastExtractionJobState: store.JobProjectionExact,
+		LastExtractionJob: &store.ExtractionJobProjection{
+			Status: store.StatusFailed, Attempts: 2,
+		},
+	}
+	historicalProbe, historicalErr := extractionConvergenceProbe(progress, repository)
+	if !errors.Is(historicalErr, errExtractionJobTerminal) ||
+		historicalProbe.SHA256 != "sha256:d4703c2d327d13d0116fb2795774cb3caf21c8d98ac8c91ab163777bf7c05600" {
+		t.Fatalf("v14 historical probe = %+v, error=%v", historicalProbe, historicalErr)
+	}
+	probe, err := extractionConvergenceProbe(progress, repository, profileInspectionV15)
+	if err != nil || probe.ExtractionProgress == nil ||
+		probe.SHA256 != "sha256:d4703c2d327d13d0116fb2795774cb3caf21c8d98ac8c91ab163777bf7c05600" ||
+		probe.ExtractionProgress.State != "current" ||
+		probe.ExtractionProgress.JobState != string(store.StatusFailed) ||
+		probe.ExtractionProgress.Succeeded != 1956 {
+		t.Fatalf("current schedule probe = %+v, error=%v", probe, err)
+	}
+
+	active := progress
+	active.State, active.Pending, active.Succeeded = "active", 1, 1955
+	if _, err := extractionConvergenceProbe(active, repository, profileInspectionV15); err == nil ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("active schedule with unbound failed job = %v, want pending", err)
+	}
+
+	unavailable := extractionpublication.Progress{State: "unavailable"}
+	if _, err := extractionConvergenceProbe(unavailable, repository); !errors.Is(
+		err, errExtractionJobTerminal,
+	) {
+		t.Fatalf("failed job without schedule = %v, want extraction terminal", err)
 	}
 }
 

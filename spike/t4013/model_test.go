@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const testSourceCommit = "3c4e22e1a907a663367fb29e1a2af998eb2d7729"
@@ -418,6 +419,68 @@ func TestV14PlanBindsSelectedObservationV2Diagnostics(t *testing.T) {
 	decoded, err := DecodePlan(encoded)
 	if err != nil || decoded.Schema != PlanSchemaV14 || decoded.Safety != frozenSafetyV14 {
 		t.Fatalf("decoded v14 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV15PlanVersionsExtractionScheduleAuthorityPrecedence(t *testing.T) {
+	plan, err := frozenV15PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV15 || plan.Safety != frozenSafetyV14 ||
+		plan.Safety != frozenSafetyV15 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v15 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV15 || decoded.Safety != frozenSafetyV15 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV15 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV15 {
+		t.Fatalf("decoded v15 plan = %+v, %v", decoded, err)
+	}
+
+	progress := ExtractionProgressObservation{
+		State: string(store.GenerationScheduleSettled), Total: 32, Materialized: 32,
+		Failed: 32, Domains: 4, JobState: string(store.StatusFailed), JobAttempts: 2,
+	}
+	if expectedExtractionScheduleTerminal(progress, 10) {
+		t.Fatal("historical v14 contract accepted schedule precedence over a failed job")
+	}
+	if !expectedExtractionScheduleTerminal(progress, 11) {
+		t.Fatal("v15 contract rejected generation-bound schedule precedence")
+	}
+	if !expectedExtractionJobTerminal(progress, 10) {
+		t.Fatal("historical v14 contract rejected job precedence")
+	}
+	if expectedExtractionJobTerminal(progress, 11) {
+		t.Fatal("v15 contract accepted job precedence over a settled schedule")
+	}
+	unavailable := ExtractionProgressObservation{
+		State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
+	}
+	if !expectedExtractionJobTerminal(unavailable, 11) {
+		t.Fatal("v15 contract rejected a failed job with no schedule")
+	}
+	active := ExtractionProgressObservation{
+		State: string(store.GenerationScheduleActive), Total: 1, Materialized: 1,
+		Pending: 1, Domains: 1, JobState: string(store.StatusFailed), JobAttempts: 2,
+	}
+	if expectedExtractionJobTerminal(active, 11) {
+		t.Fatal("v15 contract accepted job precedence over an active schedule")
+	}
+	progress.RefusalStage = string(pipelinerefusal.StageDomainInventory)
+	progress.RefusalGenerationKind = string(pipelinerefusal.GenerationExtractionDomain)
+	progress.RefusalClassification = string(pipelinerefusal.ClassificationLimit)
+	progress.RefusalDimension = string(pipelinerefusal.DimensionCandidateMemberBytes)
+	progress.RefusalObserved, progress.RefusalLimit = 2, 1
+	if expectedExtractionScheduleTerminal(progress, 11) {
+		t.Fatal("v15 schedule terminal absorbed a typed bound refusal")
+	}
+	if expectedExtractionJobTerminal(progress, 10) || expectedExtractionJobTerminal(progress, 11) {
+		t.Fatal("extraction job terminal absorbed a typed bound refusal")
 	}
 }
 

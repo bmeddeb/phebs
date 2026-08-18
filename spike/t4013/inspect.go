@@ -165,10 +165,24 @@ func expectedObservationBoundRefusal(receipt pipelinerefusal.Receipt) bool {
 		receipt.Limit == observationpublication.MaxGenerationRecords
 }
 
+type profileInspectionContract uint8
+
+const (
+	profileInspectionLegacy profileInspectionContract = iota
+	profileInspectionV14
+	profileInspectionV15
+)
+
 func extractionConvergenceProbe(
 	progress extractionpublication.Progress,
 	repository store.RepoStatus,
+	contracts ...profileInspectionContract,
 ) (privateConvergenceProbe, error) {
+	contract := profileInspectionLegacy
+	if len(contracts) > 0 {
+		contract = contracts[0]
+	}
+	preferSchedule := contract == profileInspectionV15
 	projection := &ExtractionProgressObservation{
 		State: progress.State, Total: progress.Total, Materialized: progress.Materialized,
 		Pending: progress.Pending, Running: progress.Running, Succeeded: progress.Succeeded,
@@ -200,22 +214,44 @@ func extractionConvergenceProbe(
 	}
 	probe := convergenceProbe("extraction_publication", progress, projection)
 	probe.ExtractionProgress = projection
-	if projection.JobState == string(store.StatusFailed) ||
-		projection.JobState == string(store.StatusCanceled) {
+	jobTerminal := projection.JobState == string(store.StatusFailed) ||
+		projection.JobState == string(store.StatusCanceled)
+	if jobTerminal {
 		if projection.RefusalClassification == string(pipelinerefusal.ClassificationLimit) &&
 			expectedExtractionBoundRefusal(*projection) {
 			return probe, errExtractionBoundRefusal
 		}
-		return probe, errExtractionJobTerminal
 	}
 	// The terminal predicate must equal expectedExtractionScheduleTerminal.
 	// Runtime.Progress currently proves complete settled store counters before
 	// serving them, but the public progress validator deliberately admits the
 	// weaker shape. Keep that shape pending rather than raising a terminal whose
 	// stopped observation could not seal if the projection boundary evolves.
-	if progress.State == string(store.GenerationScheduleSettled) && progress.Failed > 0 &&
+	scheduleTerminal := progress.State == string(store.GenerationScheduleSettled) && progress.Failed > 0 &&
 		progress.Pending == 0 && progress.Running == 0 &&
-		progress.Succeeded+progress.Failed == progress.Total {
+		progress.Succeeded+progress.Failed == progress.Total
+	if preferSchedule && scheduleTerminal {
+		return probe, errExtractionScheduleTerminal
+	}
+	if jobTerminal {
+		if !preferSchedule {
+			return probe, errExtractionJobTerminal
+		}
+		// JobExtract is a repository-keyed orchestration trigger, not
+		// generation authority. A later generation-bound schedule can remain
+		// active or become exactly current after an older trigger exhausts.
+		// Preserve the job projection in the receipt, but let the schedule and
+		// the downstream source/extraction authority checks decide convergence.
+		if progress.State == "unavailable" {
+			return probe, errExtractionJobTerminal
+		}
+		if progress.State != "current" {
+			return probe, errors.New(
+				"T40.13 extraction schedule has not converged beyond the terminal job projection",
+			)
+		}
+	}
+	if scheduleTerminal {
 		return probe, errExtractionScheduleTerminal
 	}
 	if repository.LastExtractionJobState != store.JobProjectionExact {
@@ -257,12 +293,15 @@ func expectedExtractionBoundRefusal(value ExtractionProgressObservation) bool {
 type profileInspector struct {
 	client                       *http.Client
 	credential                   string
-	requireObservationV2         bool
+	contract                     profileInspectionContract
 	readRelationshipScheduleFunc func(context.Context, PreparedProfile) (store.GenerationScheduleProgress, error)
 	readRelationshipRootFunc     func(context.Context, PreparedProfile) error
 }
 
-func newProfileInspector(profile PreparedProfile, requireObservationV2 ...bool) (*profileInspector, error) {
+func newProfileInspector(
+	profile PreparedProfile,
+	contracts ...profileInspectionContract,
+) (*profileInspector, error) {
 	raw, err := os.ReadFile(profile.Credential)
 	if err != nil {
 		return nil, errors.New("T40.13 credential is unavailable")
@@ -271,10 +310,13 @@ func newProfileInspector(profile PreparedProfile, requireObservationV2 ...bool) 
 	if credential == "" || len(credential) > 256 {
 		return nil, errors.New("T40.13 credential is invalid")
 	}
-	requireV2 := len(requireObservationV2) > 0 && requireObservationV2[0]
+	contract := profileInspectionLegacy
+	if len(contracts) > 0 {
+		contract = contracts[0]
+	}
 	return &profileInspector{
 		client: &http.Client{Timeout: 30 * time.Second}, credential: credential,
-		requireObservationV2: requireV2,
+		contract: contract,
 	}, nil
 }
 
@@ -364,7 +406,7 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
-	if inspector.requireObservationV2 &&
+	if (inspector.contract == profileInspectionV14 || inspector.contract == profileInspectionV15) &&
 		(progress.SchemaVersion != observationpublication.ProgressSchemaV2 ||
 			progress.SelectedVersion != "v2") {
 		return privateProfileSnapshot{}, observationConvergenceProbe(progress),
@@ -385,7 +427,9 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, extractionPath, &extractionSchedule); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("extraction_publication"), err
 	}
-	probe, err = extractionConvergenceProbe(extractionSchedule, repository)
+	probe, err = extractionConvergenceProbe(
+		extractionSchedule, repository, inspector.contract,
+	)
 	if err != nil {
 		return privateProfileSnapshot{}, probe, err
 	}

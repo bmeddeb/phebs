@@ -293,7 +293,7 @@ func captureSemanticColdConvergence(
 	limit time.Duration,
 ) semanticColdResult {
 	t.Helper()
-	inspector, err := newProfileInspector(profile, true)
+	inspector, err := newProfileInspector(profile, profileInspectionV14)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -689,7 +689,7 @@ func measureProjectionExtraction(
 	profile PreparedProfile,
 ) extractionThroughputMeasurement {
 	t.Helper()
-	inspector, err := newProfileInspector(profile, true)
+	inspector, err := newProfileInspector(profile, profileInspectionV14)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -925,7 +925,7 @@ func awaitReadinessSnapshot(
 	limit time.Duration,
 ) privateProfileSnapshot {
 	t.Helper()
-	inspector, err := newProfileInspector(profile, true)
+	inspector, err := newProfileInspector(profile, profileInspectionV14)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -36,6 +36,7 @@ const (
 	PlanSchemaV12              = "t4013-neutral-convergence-plan-v12"
 	PlanSchemaV13              = "t4013-neutral-convergence-plan-v13"
 	PlanSchemaV14              = "t4013-neutral-convergence-plan-v14"
+	PlanSchemaV15              = "t4013-neutral-convergence-plan-v15"
 	ObservationSchema          = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2        = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3        = "t4013-neutral-convergence-observation-v3"
@@ -50,6 +51,7 @@ const (
 	ObservationSchemaV12       = "t4013-neutral-convergence-observation-v12"
 	ObservationSchemaV13       = "t4013-neutral-convergence-observation-v13"
 	ObservationSchemaV14       = "t4013-neutral-convergence-observation-v14"
+	ObservationSchemaV15       = "t4013-neutral-convergence-observation-v15"
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
@@ -64,6 +66,7 @@ const (
 	ReceiptSchemaV12           = "t4013-neutral-convergence-receipt-v12"
 	ReceiptSchemaV13           = "t4013-neutral-convergence-receipt-v13"
 	ReceiptSchemaV14           = "t4013-neutral-convergence-receipt-v14"
+	ReceiptSchemaV15           = "t4013-neutral-convergence-receipt-v15"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -628,7 +631,7 @@ func MarshalObservation(value Observation) ([]byte, error) {
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14, PlanSchemaV15}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -638,7 +641,7 @@ func ValidatePlan(value Plan) error {
 	}
 	if value.Schema == PlanSchemaV2 || value.Schema == PlanSchemaV3 ||
 		value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 ||
-		value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 {
+		value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 || value.Schema == PlanSchemaV15 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -672,6 +675,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV13
 	case PlanSchemaV14:
 		wantSafety = frozenSafetyV14
+	case PlanSchemaV15:
+		wantSafety = frozenSafetyV15
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -685,17 +690,17 @@ func ValidatePlan(value Plan) error {
 	if safety.MinimumMemoryBytes < 16<<30 || safety.MinimumAvailableDiskBytes < 32<<30 ||
 		safety.MaximumTotalWallMS <= 0 || safety.MaximumPeakRSSBytes <= 0 ||
 		safety.MaximumDataAllocatedBytes <= 0 || safety.MaximumRetriesPerUnit < 1 || safety.MaximumRetriesPerUnit > 5 ||
-		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14) &&
+		(value.Schema == PlanSchemaV3 || value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 || value.Schema == PlanSchemaV15) &&
 			safety.ServerHealthDeadlineMS <= 0 ||
-		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 && value.Schema != PlanSchemaV11 && value.Schema != PlanSchemaV12 && value.Schema != PlanSchemaV13 && value.Schema != PlanSchemaV14 &&
+		value.Schema != PlanSchemaV3 && value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 && value.Schema != PlanSchemaV11 && value.Schema != PlanSchemaV12 && value.Schema != PlanSchemaV13 && value.Schema != PlanSchemaV14 && value.Schema != PlanSchemaV15 &&
 			safety.ServerHealthDeadlineMS != 0 ||
-		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14) && (safety.FullConvergenceDeadlineMS <= 0 ||
+		(value.Schema == PlanSchemaV4 || value.Schema == PlanSchemaV5 || value.Schema == PlanSchemaV6 || value.Schema == PlanSchemaV7 || value.Schema == PlanSchemaV8 || value.Schema == PlanSchemaV9 || value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 || value.Schema == PlanSchemaV15) && (safety.FullConvergenceDeadlineMS <= 0 ||
 			safety.RevalidationDeadlineMS <= 0 || safety.RevalidationDeadlineMS > safety.FullConvergenceDeadlineMS) ||
-		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 && value.Schema != PlanSchemaV11 && value.Schema != PlanSchemaV12 && value.Schema != PlanSchemaV13 && value.Schema != PlanSchemaV14 &&
+		value.Schema != PlanSchemaV4 && value.Schema != PlanSchemaV5 && value.Schema != PlanSchemaV6 && value.Schema != PlanSchemaV7 && value.Schema != PlanSchemaV8 && value.Schema != PlanSchemaV9 && value.Schema != PlanSchemaV10 && value.Schema != PlanSchemaV11 && value.Schema != PlanSchemaV12 && value.Schema != PlanSchemaV13 && value.Schema != PlanSchemaV14 && value.Schema != PlanSchemaV15 &&
 			(safety.FullConvergenceDeadlineMS != 0 || safety.RevalidationDeadlineMS != 0) {
 		return errors.New("T40.13 safety envelope is invalid")
 	}
-	if value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 {
+	if value.Schema == PlanSchemaV10 || value.Schema == PlanSchemaV11 || value.Schema == PlanSchemaV12 || value.Schema == PlanSchemaV13 || value.Schema == PlanSchemaV14 || value.Schema == PlanSchemaV15 {
 		if safety.PressureTargetUsedPercent < 80 || safety.PressureTargetUsedPercent >= 90 ||
 			safety.MaximumPressureBallastBytes <= 0 ||
 			safety.MaximumPressureBallastBytes > safety.MaximumDataAllocatedBytes {
@@ -722,7 +727,7 @@ func ValidatePlan(value Plan) error {
 
 func ValidateObservation(value Observation) error {
 	if !slices.Contains([]string{
-		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14,
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14, ObservationSchemaV15,
 	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
@@ -733,7 +738,7 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
 		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 ||
-		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 {
+		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -748,22 +753,22 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
-		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 &&
+		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 &&
 		len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
 	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
-		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 {
+		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 {
 		if err := validateServerStartups(
 			value.ServerStartups,
-			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14,
-			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14,
+			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15,
+			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15,
 		); err != nil {
 			return err
 		}
 	}
 	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 &&
-		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 &&
+		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 &&
 		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
@@ -819,6 +824,11 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV14 {
 		if err := validateConvergenceWaits(value.ConvergenceWaits, 10); err != nil {
+			return err
+		}
+	}
+	if value.Schema == ObservationSchemaV15 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, 11); err != nil {
 			return err
 		}
 	}
@@ -895,14 +905,14 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	if !slices.Equal(value.HostToolchain, plan.HostToolchain) {
 		return errors.New("T40.13 receipt host toolchain differs from the frozen plan")
 	}
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 		for _, startup := range value.ServerStartups {
 			if startup.Outcome == "deadline" && startup.WallMS < plan.Safety.ServerHealthDeadlineMS {
 				return errors.New("T40.13 startup deadline observation precedes the frozen deadline")
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 		for _, wait := range value.ConvergenceWaits {
 			if wait.DeadlineMS != plan.Safety.FullConvergenceDeadlineMS &&
 				wait.DeadlineMS != plan.Safety.RevalidationDeadlineMS {
@@ -953,6 +963,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV15 {
+		return ObservationSchemaV15
+	}
 	if plan.Schema == PlanSchemaV14 {
 		return ObservationSchemaV14
 	}
@@ -996,6 +1009,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV15 {
+		return ReceiptSchemaV15
+	}
 	if plan.Schema == PlanSchemaV14 {
 		return ReceiptSchemaV14
 	}
@@ -1263,8 +1279,12 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 				(value.Outcome == "extraction_bound_refusal" || value.Outcome == "extraction_job_terminal") {
 				return errors.New("T40.13 extraction terminal outcome is incoherent")
 			}
+			if (value.Outcome == "extraction_job_terminal") !=
+				expectedExtractionJobTerminal(*value.ExtractionProgress, detailVersion) {
+				return errors.New("T40.13 extraction job terminal outcome is incoherent")
+			}
 			if detailVersion >= 10 && (value.Outcome == "extraction_schedule_terminal") !=
-				expectedExtractionScheduleTerminal(*value.ExtractionProgress) {
+				expectedExtractionScheduleTerminal(*value.ExtractionProgress, detailVersion) {
 				return errors.New("T40.13 extraction schedule terminal outcome is incoherent")
 			}
 		}
@@ -1540,8 +1560,12 @@ func validateConvergenceWithoutSuccessfulProbe(
 		}
 		hasRefusal := expectedExtractionBoundRefusal(*value.ExtractionProgress)
 		if value.Outcome == "extraction_schedule_terminal" {
-			if !expectedExtractionScheduleTerminal(*value.ExtractionProgress) {
+			if !expectedExtractionScheduleTerminal(*value.ExtractionProgress, detailVersion) {
 				return errors.New("T40.13 unsuccessful extraction schedule terminal outcome is incoherent")
+			}
+		} else if value.Outcome == "extraction_job_terminal" {
+			if !expectedExtractionJobTerminal(*value.ExtractionProgress, detailVersion) {
+				return errors.New("T40.13 unsuccessful extraction job terminal outcome is incoherent")
 			}
 		} else if (value.Outcome == "extraction_bound_refusal") != hasRefusal {
 			return errors.New("T40.13 unsuccessful extraction terminal outcome is incoherent")
@@ -1914,10 +1938,34 @@ func validateExtractionProgress(value ExtractionProgressObservation) error {
 	return nil
 }
 
-func expectedExtractionScheduleTerminal(value ExtractionProgressObservation) bool {
-	return value.State == string(store.GenerationScheduleSettled) && value.Failed > 0 &&
-		value.Pending == 0 && value.Running == 0 && value.Succeeded+value.Failed == value.Total &&
-		value.JobState != string(store.StatusFailed) && value.JobState != string(store.StatusCanceled)
+func expectedExtractionScheduleTerminal(
+	value ExtractionProgressObservation,
+	detailVersion int,
+) bool {
+	if value.State != string(store.GenerationScheduleSettled) || value.Failed <= 0 ||
+		value.Pending != 0 || value.Running != 0 ||
+		value.Succeeded+value.Failed != value.Total {
+		return false
+	}
+	if detailVersion < 11 {
+		return value.JobState != string(store.StatusFailed) &&
+			value.JobState != string(store.StatusCanceled)
+	}
+	return !expectedExtractionBoundRefusal(value)
+}
+
+func expectedExtractionJobTerminal(
+	value ExtractionProgressObservation,
+	detailVersion int,
+) bool {
+	if value.JobState != string(store.StatusFailed) && value.JobState != string(store.StatusCanceled) ||
+		expectedExtractionBoundRefusal(value) {
+		return false
+	}
+	if detailVersion < 11 {
+		return !expectedExtractionScheduleTerminal(value, detailVersion)
+	}
+	return value.State == "unavailable"
 }
 
 func optionalProgressState(value string) bool {
@@ -2018,55 +2066,55 @@ func validateStopped(value Receipt) error {
 		}
 		wantReason = "repository_index_terminal"
 	case "observation_production_bound_refused":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "observation_bound_refusal" {
 			return errors.New("T40.13 observation bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "observation_production_bound_refused"
 	case "observation_terminal":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "observation_terminal" {
 			return errors.New("T40.13 observation terminal identity is invalid")
 		}
 		wantReason = "observation_terminal"
 	case "extraction_production_bound_refused":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_bound_refusal" {
 			return errors.New("T40.13 extraction bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "extraction_production_bound_refused"
 	case "extraction_job_terminal":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_job_terminal" {
 			return errors.New("T40.13 extraction terminal identity is invalid")
 		}
 		wantReason = "extraction_job_terminal"
 	case "extraction_schedule_terminal":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "extraction_schedule_terminal" {
 			return errors.New("T40.13 extraction schedule terminal identity is invalid")
 		}
 		wantReason = "extraction_schedule_terminal"
 	case "caller_generation_production_bound_refused":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "caller_generation_bound_refusal" {
 			return errors.New("T40.13 caller generation bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "caller_generation_production_bound_refused"
 	case "caller_generation_terminal":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "caller_generation_terminal" {
 			return errors.New("T40.13 caller generation terminal identity is invalid")
 		}
 		wantReason = "caller_generation_terminal"
 	case "relationship_production_bound_refused":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "relationship_bound_refusal" {
 			return errors.New("T40.13 relationship bound-refusal identity is invalid")
 		}
 		wantDecision, wantReason = "reduce", "relationship_production_bound_refused"
 	case "relationship_terminal":
-		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+		if value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "relationship_terminal" {
 			return errors.New("T40.13 relationship terminal identity is invalid")
 		}
@@ -2106,17 +2154,17 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
-	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+	if plan.Schema == PlanSchemaV3 || plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},
 			{"structural-2m-v1", "warm-noop"}, {"semantic-262144-v1", "interruption-first"},
 			{"semantic-262144-v1", "interruption-restart"}, {"semantic-262144-v1", "stale-worker"},
 			{"structural-2m-v1", "archive-restore"}, {"semantic-262144-v1", "authorized-query"},
 		}
-		if plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+		if plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 			want = slices.Insert(want, 6, [2]string{"structural-2m-v1", "pressure-restart"})
 		}
-		if plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+		if plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 			want = slices.Insert(want, 3, [2]string{"semantic-262144-v1", "interruption-backup"})
 		}
 		if len(value.ServerStartups) != len(want) {
@@ -2129,7 +2177,7 @@ func validateCompleted(value Receipt, plan Plan) error {
 			}
 		}
 	}
-	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+	if plan.Schema == PlanSchemaV4 || plan.Schema == PlanSchemaV5 || plan.Schema == PlanSchemaV6 || plan.Schema == PlanSchemaV7 || plan.Schema == PlanSchemaV8 || plan.Schema == PlanSchemaV9 || plan.Schema == PlanSchemaV10 || plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 		want := [][3]string{
 			{"structural-2m-v1", "cold", "a"}, {"semantic-262144-v1", "cold", "a"},
 			{"structural-2m-v1", "warm-noop", "a"}, {"structural-2m-v1", "delta-b", "b"},
@@ -2139,7 +2187,7 @@ func validateCompleted(value Receipt, plan Plan) error {
 			{"semantic-262144-v1", "authorized-query-semantic", "a"},
 			{"structural-2m-v1", "authorized-query-structural", "a-return"},
 		}
-		if plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 {
+		if plan.Schema == PlanSchemaV11 || plan.Schema == PlanSchemaV12 || plan.Schema == PlanSchemaV13 || plan.Schema == PlanSchemaV14 || plan.Schema == PlanSchemaV15 {
 			want = slices.Insert(want, 5, [3]string{"semantic-262144-v1", "interruption-backup", "a"})
 		}
 		if len(value.ConvergenceWaits) != len(want) {

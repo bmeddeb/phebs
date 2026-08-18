@@ -2350,3 +2350,58 @@ omits repository, stage, timestamp, worker, lease, and raw-error fields. A
 present relationship root adds no schedule read. Neutral-24 remains immutable
 stopped evidence. A fresh ceremony still requires focused and race gates,
 independent review, explicit integration/freeze approval, and a new identifier.
+
+### Neutral-25 extraction-job projection stop
+
+`t40r1-neutral-25` is a verified signed `unclassified`
+`extraction_job_terminal` stop at exact source
+`00bdec2f9af381f90c66f1af7214826d8576ef94`. Its plan, observation, receipt,
+and source-free package SHA-256 values are
+`7bb8be9411be8034c796f6c3653db56f44047af3cf1014aff66bfc6890c294b7`,
+`568d0011dfd4741b324851224f3b79350d5b947333ff8c9af8b39a0ce22ccc60`,
+`9fa9b50b484c380430dfa69ba431b739bb3ba0e79b2694c6a9409cfe2cb6b63c`,
+and `f42aaf34e569bacd2146bf27496ac0edbd89e22508920e72d6c8a77403ae1692`.
+Both cold profiles converged and structural warm-noop passed. Structural delta
+B then stopped after 1,687,039 ms even though its final extraction projection
+was fully current: 1,956 total/materialized/succeeded partitions, zero
+pending/running/failed, and nine of nine current domains. The latest extraction
+job projection was failed at attempt two with no typed refusal.
+
+The source-free tuple itself pins the observer defect. Replaying those exact
+scalars through `extractionConvergenceProbe` produces the signed terminal probe
+digest
+`sha256:d4703c2d327d13d0116fb2795774cb3caf21c8d98ac8c91ab163777bf7c05600`.
+The repository-status job is only a repository-keyed orchestration trigger; it
+carries no candidate, source, observation, plan, schedule, or extraction-
+generation identity. It therefore cannot disprove a later generation-bound
+current schedule. The destroyed raw job error is neither required nor guessed.
+
+The prospective correction retains exact typed limit refusals and settled
+failed schedules as terminal. An ordinary failed/canceled job remains terminal
+when progress is unavailable, remains pending beside active/noncurrent schedule
+authority, and cannot poison a fully current schedule. Current progress still
+has to pass the existing exact extraction scan, caller-generation check, and
+relationship source/extraction authority parity before the inspector can
+complete. The job state and attempts remain in the source-free receipt.
+
+Fresh freezes advance the plan, observation, and receipt contracts to V15 for
+this precedence. V14 keeps its historical job-first predicate, validation, and
+exact serialized bytes; rebuilding the retained neutral-25 receipt remains
+byte-identical. V15 changes no safety ceiling, admission limit, production
+bound, topology, or concurrency. On its failed/canceled-job plus current-
+schedule edge, it newly reaches only the existing bounded downstream checks
+that V14 skipped: exact extraction-authority validation globs at most 64
+retained generation controls; each matching generation status opens up to 64
+domain plans, checks at most 490 expected partition-result records per domain,
+and reads domain-root/current authority, stopping at the first complete
+generation (about 2,007,040 result checks at the full envelope). One caller-
+generation progress request and the applicable relationship-root and service-
+catalog authority checks follow. The scan can repeat on the five-second poll
+while downstream authority remains pending; it reads no source/content,
+candidate members, corpus, shards, or Git objects.
+
+Neutral-25 remains immutable stopped evidence. This correction does not
+retroactively pass it or authorize integration, freeze/execution, release,
+scale/SLO, topology, T40.13/Epic 40 closure, or Epic 41 progression. A fresh
+ceremony requires focused/race/docs gates, independent review, explicit
+integration/freeze approval, and a new identifier.
