@@ -2282,11 +2282,12 @@ the inspector to `/api/caller-generation-progress?repository=...`. That
 authorization-first projection uses the same exact publication reader,
 eight-read semaphore, current/unavailable fence, repository revision,
 visibility, and analysis-scope confirmation, but it does not select or read an
-endpoint declaration. Its 8-KiB response retains only source-free generation
+endpoint declaration. Its 32-KiB response retains only source-free generation
 identity/state, aggregate counts, bounded partition progress/refusals, and
-scope. Focused tests prove that exact Caller Map remains 404 with declarations
-removed while progress reports the current complete generation and performs no
-assertion/resolution read.
+digest/count scope authority without selected paths. Focused tests prove that
+exact Caller Map remains 404 with declarations removed while progress reports
+the current complete generation and performs no assertion/resolution read;
+maximum-shape coverage proves the admitted response fits its bound.
 
 Neutral-23 remains immutable stopped evidence; this correction does not
 retroactively pass it or authorize another freeze/execution, release, scale or
