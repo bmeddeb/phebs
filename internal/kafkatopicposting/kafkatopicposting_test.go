@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
+	"github.com/bmeddeb/phebs/spike/t401"
 )
 
 type observedFixture struct {
@@ -28,6 +30,12 @@ type observedFixture struct {
 type fakeObservationSource struct {
 	manifest observationpublication.Manifest
 	values   []observedFixture
+}
+
+type frozenSemanticKafkaSource struct {
+	manifest observationpublication.Manifest
+	literal  sourceobservation.Observation
+	dynamic  sourceobservation.Observation
 }
 
 func (source fakeObservationSource) Manifest() observationpublication.Manifest {
@@ -44,6 +52,48 @@ func (source fakeObservationSource) WalkObserved(
 		}
 		if err := visit(value.record, value.observation); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func (source frozenSemanticKafkaSource) Manifest() observationpublication.Manifest {
+	return source.manifest
+}
+
+func (source frozenSemanticKafkaSource) WalkObserved(
+	ctx context.Context,
+	visit func(observationpublication.Record, sourceobservation.Observation) error,
+) error {
+	const familyInputs = 65_536
+	families := []struct {
+		start       int
+		observation sourceobservation.Observation
+	}{
+		{start: familyInputs, observation: source.literal},
+		{start: 3 * familyInputs, observation: source.dynamic},
+	}
+	for _, family := range families {
+		for offset := 0; offset < familyInputs; offset++ {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			ordinal := family.start + offset
+			path := fmt.Sprintf("semantic/go/b%03d/f%06d.go", ordinal/1_024, ordinal)
+			identity := sha256.Sum256([]byte(fmt.Sprintf("t40r1-kafka-%06d", ordinal)))
+			record := observationpublication.Record{
+				Schema:   observationpublication.RecordSchema,
+				ObjectID: hex.EncodeToString(identity[:])[:40], DeclaredBytes: 4_608,
+				Placements: []sourcepartition.Placement{{
+					Path: path, Mode: "100644", Revisions: []int{0},
+				}},
+				State: "observed", ContentDigest: family.observation.ContentDigest,
+				ObservationDigest: "sha256:" + strings.Repeat("3", 64),
+				ObservationName:   "objects/generated.json", ObservationOrigin: "parsed",
+			}
+			if err := visit(record, family.observation); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -303,6 +353,204 @@ func TestMemberLimitCheckedBeforeGrowth(t *testing.T) {
 	}
 }
 
+func TestFrozenSemanticPostingChargeFitsRelationshipEnvelope(t *testing.T) {
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var semantic t401.Profile
+	for _, profile := range profiles {
+		if profile.Kind == "semantic" {
+			semantic = profile
+			break
+		}
+	}
+	if semantic.Name != t401.SemanticProfileName {
+		t.Fatalf("semantic profile = %+v", semantic)
+	}
+	tests := []struct {
+		name       string
+		family     string
+		ordinals   []uint64
+		wantJSON   int
+		wantCharge int64
+	}{
+		{
+			name: "literal", family: "go_kafka_literal",
+			ordinals: []uint64{65_536, 131_071}, wantJSON: 606, wantCharge: 1_118,
+		},
+		{
+			name: "dynamic", family: "go_dynamic_topic",
+			ordinals: []uint64{196_608, 262_143}, wantJSON: 618, wantCharge: 1_130,
+		},
+	}
+	var perFamily []int64
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, ordinal := range test.ordinals {
+				path, content, fixtureErr := t401.FrozenSemanticGoFixture(
+					semantic, test.family, ordinal,
+				)
+				if fixtureErr != nil {
+					t.Fatal(fixtureErr)
+				}
+				fixture := observationFixture(t, path, string(content), []sourcepartition.Placement{{
+					Path: path, Mode: "100644", Revisions: []int{0},
+				}})
+				if len(fixture.observation.TopicSites) != 1 {
+					t.Fatalf("topic sites = %d", len(fixture.observation.TopicSites))
+				}
+				posting := postingFromSite(
+					fixture.record, path, "100644", []int{0}, fixture.observation.TopicSites[0],
+				)
+				if err := setPostingDigest(&posting); err != nil {
+					t.Fatal(err)
+				}
+				raw, err := json.Marshal(posting)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(raw) != test.wantJSON || int64(len(raw)+512) != test.wantCharge {
+					t.Fatalf("ordinal %d charge = %d + 512, want %d + 512",
+						ordinal, len(raw), test.wantJSON)
+				}
+			}
+		})
+		perFamily = append(perFamily, test.wantCharge)
+	}
+	const familyInputs = int64(65_536)
+	total := familyInputs * (perFamily[0] + perFamily[1])
+	if total != 147_324_928 || total <= 128<<20 || total > 160<<20 ||
+		MaxPostingsPerMember != int(familyInputs) ||
+		historicalMaxPostingsPerMember != 50_000 ||
+		historicalMaxPostingsPerMember >= MaxPostingsPerMember {
+		t.Fatalf("semantic Kafka resident charge = %d", total)
+	}
+}
+
+func TestHistoricalPostingPolicyRemainsAdmitted(t *testing.T) {
+	prepared, err := buildSource(
+		t.Context(), t.TempDir(), fakeSource(t, []observedFixture{
+			observationFixture(t, "cmd/kafka.go", kafkaFixture, []sourcepartition.Placement{{
+				Path: "cmd/kafka.go", Mode: "100644", Revisions: []int{0},
+			}}),
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := prepared.rootValue
+	root.Policy = historicalPolicy()
+	policyDigest, err := digestValue(root.Policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Authority.PolicyDigest = policyDigest
+	if err := setRootDigests(&root); err != nil {
+		t.Fatalf("historical root policy rejected: %v", err)
+	}
+	tampered := root
+	tampered.Policy.MaxPostingsPerMember--
+	if ValidateRoot(tampered) == nil {
+		t.Fatal("unfrozen historical posting policy was admitted")
+	}
+}
+
+func TestFrozenSemanticPostingBuildDiagnostic(t *testing.T) {
+	if os.Getenv("T40R1_RELATIONSHIP_KAFKA_DIAGNOSTIC") != "1" {
+		t.Skip("set T40R1_RELATIONSHIP_KAFKA_DIAGNOSTIC=1 to run the exact Kafka posting build")
+	}
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var semantic t401.Profile
+	for _, profile := range profiles {
+		if profile.Name == t401.SemanticProfileName {
+			semantic = profile
+			break
+		}
+	}
+	fixtures := make([]sourceobservation.Observation, 0, 2)
+	for _, family := range []struct {
+		name    string
+		ordinal uint64
+	}{
+		{name: "go_kafka_literal", ordinal: 65_536},
+		{name: "go_dynamic_topic", ordinal: 196_608},
+	} {
+		path, content, fixtureErr := t401.FrozenSemanticGoFixture(
+			semantic, family.name, family.ordinal,
+		)
+		if fixtureErr != nil {
+			t.Fatal(fixtureErr)
+		}
+		observation, parseErr := sourceobservation.Parse(
+			t.Context(), sourceobservation.Input{Path: path, Content: string(content)},
+		)
+		if parseErr != nil {
+			t.Fatal(parseErr)
+		}
+		fixtures = append(fixtures, observation)
+	}
+	const observed = 2 * 65_536
+	source := frozenSemanticKafkaSource{
+		manifest: fakeManifest(t, observed), literal: fixtures[0], dynamic: fixtures[1],
+	}
+	prepared, err := buildSourceBounded(t.Context(), t.TempDir(), source, 160<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := prepared.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := publication.Root()
+	if root.PostingCount != observed || root.ProducerCount != observed ||
+		root.LiteralCount != 65_536 || root.UnresolvedCount != 65_536 ||
+		len(root.Members) != 2 {
+		t.Fatalf("semantic Kafka root = %+v", root)
+	}
+	for _, member := range root.Members {
+		if member.PostingCount != 65_536 {
+			t.Fatalf("semantic Kafka member = %+v", member)
+		}
+	}
+	t.Logf(
+		"semantic Kafka posting build: postings=%d members=%d encoded_bytes=%d generation=%s root=%s",
+		root.PostingCount, len(root.Members), root.EncodedMemberBytes,
+		root.GenerationDigest, root.Digest,
+	)
+}
+
+func TestResidentLimitErrorCarriesOnlyExactByteScalars(t *testing.T) {
+	fixture := observationFixture(t, "cmd/kafka.go", kafkaFixture, []sourcepartition.Placement{{
+		Path: "cmd/kafka.go", Mode: "100644", Revisions: []int{0},
+	}})
+	posting := postingFromSite(
+		fixture.record, "cmd/kafka.go", "100644", []int{0}, fixture.observation.TopicSites[0],
+	)
+	if err := setPostingDigest(&posting); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(posting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	limit := int64(len(raw) + 511)
+	var count int
+	var identityBytes, residentCharge int64
+	err = addPosting(
+		make(map[string][]Posting), make(map[string]struct{}), &count, &identityBytes,
+		&residentCharge, limit, posting,
+	)
+	var resident *ResidentLimitError
+	if !errors.As(err, &resident) || !errors.Is(err, ErrLimit) ||
+		resident.ObservedBytes != limit+1 || resident.LimitBytes != limit {
+		t.Fatalf("resident refusal = %+v, %v", resident, err)
+	}
+}
+
 type memoryCorpus map[string]string
 
 func (m memoryCorpus) RepoName() string { return "github.com/acme/repo" }
@@ -353,6 +601,26 @@ func observationFixture(
 
 func fakeSource(t *testing.T, values []observedFixture) fakeObservationSource {
 	t.Helper()
+	return fakeObservationSource{manifest: fakeManifest(t, len(values)), values: values}
+}
+
+func fakeManifest(t *testing.T, records int) observationpublication.Manifest {
+	t.Helper()
+	memberCount := (records + sourcepartition.MaxBlobsPerPartition - 1) /
+		sourcepartition.MaxBlobsPerPartition
+	members := make([]observationpublication.Member, memberCount)
+	remaining := records
+	for ordinal := range members {
+		count := min(remaining, sourcepartition.MaxBlobsPerPartition)
+		members[ordinal] = observationpublication.Member{
+			Ordinal: ordinal, Count: memberCount,
+			Name:               fmt.Sprintf("member-%05d.jsonl", ordinal),
+			SourceMemberDigest: "sha256:" + strings.Repeat("8", 64),
+			RecordCount:        count, ObservedCount: count, ContentBytes: 1,
+			Digest: "sha256:" + strings.Repeat("9", 64),
+		}
+		remaining -= count
+	}
 	manifest := observationpublication.Manifest{
 		Schema: observationpublication.ManifestSchema, Repository: "github.com/acme/repo",
 		Language:                  observationpublication.LanguagePack,
@@ -361,14 +629,9 @@ func fakeSource(t *testing.T, values []observedFixture) fakeObservationSource {
 		PartitionManifestDigest:   "sha256:" + strings.Repeat("6", 64),
 		PartitionPolicyDigest:     "sha256:" + strings.Repeat("7", 64),
 		ObservationPolicyDigest:   sourceobservation.PolicyDigest(),
-		Members: []observationpublication.Member{{
-			Ordinal: 0, Count: 1, Name: "member-00000.jsonl",
-			SourceMemberDigest: "sha256:" + strings.Repeat("8", 64),
-			RecordCount:        len(values), ObservedCount: len(values), ContentBytes: 1,
-			Digest: "sha256:" + strings.Repeat("9", 64),
-		}},
-		RecordCount: len(values), ObservedCount: len(values),
-		EncodedMemberBytes: 1, ObservationBytes: int64(len(values)),
+		Members:                   members,
+		RecordCount:               records, ObservedCount: records,
+		EncodedMemberBytes: int64(memberCount), ObservationBytes: int64(records),
 	}
 	manifest.GenerationDigest = observationGeneration(manifest)
 	digest, err := observationpublication.ManifestDigest(manifest)
@@ -379,7 +642,7 @@ func fakeSource(t *testing.T, values []observedFixture) fakeObservationSource {
 	if err := observationpublication.ValidateManifest(manifest); err != nil {
 		t.Fatal(err)
 	}
-	return fakeObservationSource{manifest: manifest, values: values}
+	return manifest
 }
 
 func observationGeneration(value observationpublication.Manifest) string {

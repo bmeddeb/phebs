@@ -2008,6 +2008,44 @@ repository visibility, revision, and scope reauthorization that the early 404
 never reached. It performs no write, queue operation, corpus or
 Git read, child process, cache fill, or startup/sync work.
 
+The relationship worker admits one current Kafka topic-posting member with at
+most 65,536 postings and charges at most 160 MiB while retaining Kafka
+postings. The historical 50,000-posting policy remains a valid exact read
+policy; the root's embedded policy and authority digest must agree, so the
+larger current policy does not rewrite or relabel older generations. The
+current component envelopes total 992 MiB within the unchanged one-GiB
+relationship worker class: 128 MiB resolver, 192 MiB RPC, 160 MiB Kafka, and
+512 MiB final relationship projection. A resident-limit overrun is durably
+classified as `relationship_kafka_projection` / `relationship` /
+`resident_bytes`; another deterministic Kafka bound remains a closed unknown
+refusal. Both are terminal schedule results and do not consume the remaining
+five-attempt allowance. New partitioned relationship schedule bindings include
+one digest over the resolver, RPC, Kafka, and final relationship policies plus
+their three resident fences. A repeated reconcile for the same authority and
+same build policy retains a closed terminal schedule instead of enqueuing it
+again; changing any bound or frozen builder policy changes the target and
+creates the ordinary recovery schedule. Historical v2 bindings remain valid.
+The terminal no-op performs two current-schedule reads, one binding-file read,
+and one final source-free failure-row read only when a publication-triggered reconcile
+revisits that exact failed target; it adds no periodic scan or member read.
+A noncurrent relationship-plan transition and each v3 binding validation hash
+one bounded in-memory object containing four frozen policies and three resident
+scalars. A current-root no-op returns before that hash. The operation performs
+no source, member, shard, or store scan and retains no cache.
+
+When the ceremony sees no current relationship root, it consults only the
+current `service-relationship` schedule through a read-only connection to the
+already supervised local store. No schedule or an active schedule remains
+pending. A settled failed schedule becomes an immediate typed terminal result;
+a settled successful schedule with no root is terminal rather than being
+polled for four hours. The projection excludes repository identity, stage,
+timestamps, worker/lease state, and raw error text; a closed final refusal is
+the only failure detail. Each missing-root poll opens and closes one local
+connection, reads one current schedule, and confirms the runtime. Every settled
+schedule adds one current-schedule recheck; a failed settled schedule also
+reads one bounded final failure. A present relationship root performs none of
+this schedule work.
+
 The complete publication repeats every candidate leaf once per enabled caller
 domain. Product record counts therefore census each immutable leaf ordinal
 once, verify that the repeated leaf envelope and candidate/excluded-`go_test`

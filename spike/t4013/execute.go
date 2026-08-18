@@ -23,6 +23,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -63,6 +64,8 @@ var (
 	errExtractionScheduleTerminal   = errors.New("T40.13 extraction schedule settled with failed partitions")
 	errCallerGenerationBoundRefusal = errors.New("T40.13 caller generation refused a frozen production bound")
 	errCallerGenerationTerminal     = errors.New("T40.13 caller generation terminated before publication")
+	errRelationshipBoundRefusal     = errors.New("T40.13 relationship generation refused a frozen production bound")
+	errRelationshipTerminal         = errors.New("T40.13 relationship generation terminated before publication")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -425,6 +428,16 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		result = stoppedClassification{
 			class: "pipeline", code: "caller_generation_terminal",
 			decision: "unclassified", reason: "caller_generation_terminal",
+		}
+	case errors.Is(cause, errRelationshipBoundRefusal):
+		result = stoppedClassification{
+			class: "pipeline", code: "relationship_production_bound_refused",
+			decision: "reduce", reason: "relationship_production_bound_refused", substantiated: true,
+		}
+	case errors.Is(cause, errRelationshipTerminal):
+		result = stoppedClassification{
+			class: "pipeline", code: "relationship_terminal",
+			decision: "unclassified", reason: "relationship_terminal",
 		}
 	case measurementErr != nil:
 		result = stoppedClassification{
@@ -1531,7 +1544,9 @@ func classifyConvergenceInspection(err error) convergenceInspectionDiagnostic {
 	if errors.Is(err, errExtractionBoundRefusal) || errors.Is(err, errExtractionJobTerminal) ||
 		errors.Is(err, errExtractionScheduleTerminal) ||
 		errors.Is(err, errCallerGenerationBoundRefusal) ||
-		errors.Is(err, errCallerGenerationTerminal) {
+		errors.Is(err, errCallerGenerationTerminal) ||
+		errors.Is(err, errRelationshipBoundRefusal) ||
+		errors.Is(err, errRelationshipTerminal) {
 		return convergenceInspectionDiagnostic{class: "terminal"}
 	}
 	var statusErr *privateHTTPStatusError
@@ -1546,7 +1561,8 @@ func classifyConvergenceInspection(err error) convergenceInspectionDiagnostic {
 		return convergenceInspectionDiagnostic{class: "transport"}
 	case strings.Contains(message, "HTTP response"):
 		return convergenceInspectionDiagnostic{class: "response"}
-	case errors.Is(err, os.ErrNotExist), strings.Contains(message, "not visible"),
+	case errors.Is(err, os.ErrNotExist), errors.Is(err, relationshippublication.ErrNotFound),
+		strings.Contains(message, "not visible"),
 		strings.Contains(message, "has not converged"), strings.Contains(message, "is not exact"):
 		return convergenceInspectionDiagnostic{class: "pending"}
 	default:
@@ -1748,6 +1764,14 @@ func (run *execution) waitSnapshotWithInspection(
 		if errors.Is(inspectErr, errCallerGenerationTerminal) {
 			run.recordConvergenceWait(profile, revision, label, "caller_generation_terminal", limit, started, progress)
 			return privateProfileSnapshot{}, errCallerGenerationTerminal
+		}
+		if errors.Is(inspectErr, errRelationshipBoundRefusal) {
+			run.recordConvergenceWait(profile, revision, label, "relationship_bound_refusal", limit, started, progress)
+			return privateProfileSnapshot{}, errRelationshipBoundRefusal
+		}
+		if errors.Is(inspectErr, errRelationshipTerminal) {
+			run.recordConvergenceWait(profile, revision, label, "relationship_terminal", limit, started, progress)
+			return privateProfileSnapshot{}, errRelationshipTerminal
 		}
 		if inspectErr == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)

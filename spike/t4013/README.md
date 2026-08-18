@@ -2292,3 +2292,61 @@ maximum-shape coverage proves the admitted response fits its bound.
 Neutral-23 remains immutable stopped evidence; this correction does not
 retroactively pass it or authorize another freeze/execution, release, scale or
 SLO claim, topology change, T40.13/Epic 40 closure, or Epic 41 progression.
+
+### Neutral-24 relationship Kafka-envelope stop
+
+`t40r1-neutral-24` is a verified signed `unclassified`
+`convergence_deadline_expired` stop at exact source
+`38f32061702d3e1712dec75afd1766f2d4bc6d0b`. Its plan, observation, receipt,
+and source-free package SHA-256 values are
+`5f54755e0f334322e7406efc50805c1a44426d0cf934f34c4d136b5e29ac9dfa`,
+`f2571b4befbbad6fc3949701441d532f8cc03de7395290cb7e74d9bbaa515a69`,
+`ed0ccb59eca51e05c3108e7e9bd06979760eee47a7dd84edbed4a7d9a03a1c0a`,
+and `adc4755266b9d4294cfe8594733db6e2f5a3c88c1846a3b92c44dd1c1aa3df1a`.
+Structural cold converged. Semantic extraction executed and scheduler-settled
+272/272 partitions with no failure or terminal refusal; caller generation was
+current. The last inspection was a stable missing relationship publication,
+which the old observer classified as a generic control error until the
+four-hour deadline.
+
+The source-free package cannot distinguish the builder's untyped limit return;
+exact production replay pins two independent deterministic fences. The
+65,536 literal postings share `t401-events`, and the 65,536 dynamic postings
+share the unresolved bucket, so each family needs one 65,536-posting member
+instead of the old 50,000 maximum. Their production JSON plus conservative
+overhead charge is exactly 147,324,928 bytes (140.5 MiB), above the old
+128-MiB relationship Kafka resident limit. The correction admits exactly
+65,536 postings per current member, retains the historical 50,000 policy as an
+exact readable policy, and raises only the Kafka operational resident fence to
+160 MiB. Exact parser/model tests pin the 1,118-byte literal and 1,130-byte
+dynamic charges. Deterministic Kafka bounds now settle the one-chunk schedule
+terminally; the exact resident case carries a closed source-free refusal. New
+partitioned schedule bindings also bind the exact builder-policy digest. A
+duplicate reconcile retains a same-policy closed failure without another
+attempt, while a later policy or bound change creates a distinct recovery
+target; historical v2 bindings remain readable.
+
+Run the scoped component and end-to-end diagnostics with:
+
+```sh
+T40R1_RELATIONSHIP_KAFKA_DIAGNOSTIC=1 \
+go test ./internal/kafkatopicposting ./internal/relationshippublication \
+  -run 'Test(FrozenSemanticPostingBuild|ExactKafkaToRelationship)Diagnostic' \
+  -count=1 -v -timeout=20m
+```
+
+The scoped run built 131,072 Kafka postings in two exact members with
+80,347,488 encoded bytes, then published 131,072 relationship projections with
+60,358,802 encoded repository bytes and complete relationship authority. The
+component and end-to-end process maximum RSS values were 566,460,416 and
+740,720,640 bytes; the end-to-end run completed in 9.13 seconds. These are
+source-free diagnostic observations, not an SLO or supported-scale claim.
+
+When a relationship root is absent, the ceremony now reads only the current
+local `service-relationship` schedule. Missing or active remains pending; a
+settled failure is terminal and typed, while a successful settled schedule
+with no root is terminal rather than indefinitely pending. The projection
+omits repository, stage, timestamp, worker, lease, and raw-error fields. A
+present relationship root adds no schedule read. Neutral-24 remains immutable
+stopped evidence. A fresh ceremony still requires focused and race gates,
+independent review, explicit integration/freeze approval, and a new identifier.

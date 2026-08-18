@@ -202,7 +202,10 @@ func addPosting(
 	const postingOverhead = 512
 	charge := int64(len(raw) + postingOverhead)
 	if charge > residentLimit-*residentCharge {
-		return ErrLimit
+		return &ResidentLimitError{
+			ObservedBytes: *residentCharge + charge,
+			LimitBytes:    residentLimit,
+		}
 	}
 	seen[posting.Digest] = struct{}{}
 	(*postingCount)++

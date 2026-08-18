@@ -189,6 +189,7 @@ func TestValidateFrozenSets(t *testing.T) {
 		{StageCallerArtifactSeal, GenerationCaller},
 		{StageCallerArtifactInstall, GenerationCaller},
 		{StageCallerGenerationAdmission, GenerationCaller},
+		{StageRelationshipKafkaProjection, GenerationRelationship},
 	} {
 		receipt := Receipt{
 			Schema: Schema, Stage: boundary.stage,
@@ -228,6 +229,22 @@ func TestCallerStagesOwnOnlyTheirExactLimitDimensions(t *testing.T) {
 	}
 	if err := Validate(crossed); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("crossed caller dimension validated: %v", err)
+	}
+}
+
+func TestRelationshipKafkaProjectionOwnsResidentBytes(t *testing.T) {
+	receipt := Receipt{
+		Schema: Schema, Stage: StageRelationshipKafkaProjection,
+		GenerationKind: GenerationRelationship,
+		Classification: ClassificationLimit, Dimension: DimensionResidentBytes,
+		Observed: 128<<20 + 1, Limit: 128 << 20,
+	}
+	if err := Validate(receipt); err != nil {
+		t.Fatal(err)
+	}
+	receipt.Dimension = DimensionGenerationEncodedBytes
+	if err := Validate(receipt); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("relationship Kafka projection accepted foreign dimension: %v", err)
 	}
 }
 

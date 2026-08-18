@@ -19,18 +19,19 @@ var ErrInvalid = errors.New("invalid pipeline refusal")
 type Stage string
 
 const (
-	StageUnknown                   Stage = "unknown"
-	StageSourcePartitionPlanning   Stage = "source_partition_planning"
-	StageObservationPublication    Stage = "observation_publication"
-	StageCandidateStrictOpen       Stage = "candidate_strict_open"
-	StageDomainInventory           Stage = "domain_inventory"
-	StageExtractorExecution        Stage = "extractor_execution"
-	StageEvidenceStaging           Stage = "evidence_staging"
-	StageFinalPublication          Stage = "final_publication"
-	StageCallerPairExecution       Stage = "caller_pair_execution"
-	StageCallerArtifactSeal        Stage = "caller_artifact_seal"
-	StageCallerArtifactInstall     Stage = "caller_artifact_install"
-	StageCallerGenerationAdmission Stage = "caller_generation_admission"
+	StageUnknown                     Stage = "unknown"
+	StageSourcePartitionPlanning     Stage = "source_partition_planning"
+	StageObservationPublication      Stage = "observation_publication"
+	StageCandidateStrictOpen         Stage = "candidate_strict_open"
+	StageDomainInventory             Stage = "domain_inventory"
+	StageExtractorExecution          Stage = "extractor_execution"
+	StageEvidenceStaging             Stage = "evidence_staging"
+	StageFinalPublication            Stage = "final_publication"
+	StageCallerPairExecution         Stage = "caller_pair_execution"
+	StageCallerArtifactSeal          Stage = "caller_artifact_seal"
+	StageCallerArtifactInstall       Stage = "caller_artifact_install"
+	StageCallerGenerationAdmission   Stage = "caller_generation_admission"
+	StageRelationshipKafkaProjection Stage = "relationship_kafka_projection"
 )
 
 type GenerationKind string
@@ -42,6 +43,7 @@ const (
 	GenerationCandidate        GenerationKind = "candidate"
 	GenerationExtractionDomain GenerationKind = "extraction_domain"
 	GenerationCaller           GenerationKind = "caller"
+	GenerationRelationship     GenerationKind = "relationship"
 )
 
 type Classification string
@@ -103,6 +105,7 @@ const (
 	DimensionCallerGenerationAbstentions    Dimension = "caller_generation_abstentions"
 	DimensionCallerGenerationCanonicalBytes Dimension = "caller_generation_canonical_bytes"
 	DimensionCallerGenerationStagingBytes   Dimension = "caller_generation_staging_bytes"
+	DimensionResidentBytes                  Dimension = "resident_bytes"
 )
 
 // Receipt is the complete durable projection of one refusal. Observed and
@@ -353,6 +356,8 @@ func validStageGeneration(stage Stage, generation GenerationKind) bool {
 	case StageCallerPairExecution, StageCallerArtifactSeal,
 		StageCallerArtifactInstall, StageCallerGenerationAdmission:
 		return generation == GenerationCaller
+	case StageRelationshipKafkaProjection:
+		return generation == GenerationRelationship
 	default:
 		return false
 	}
@@ -422,6 +427,8 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 			DimensionCallerGenerationStagingBytes:
 			return true
 		}
+	case StageRelationshipKafkaProjection:
+		return dimension == DimensionResidentBytes
 	}
 	return false
 }
@@ -446,7 +453,8 @@ func validStage(stage Stage) bool {
 		StageCandidateStrictOpen, StageDomainInventory,
 		StageExtractorExecution, StageEvidenceStaging, StageFinalPublication,
 		StageCallerPairExecution, StageCallerArtifactSeal,
-		StageCallerArtifactInstall, StageCallerGenerationAdmission:
+		StageCallerArtifactInstall, StageCallerGenerationAdmission,
+		StageRelationshipKafkaProjection:
 		return true
 	default:
 		return false
@@ -457,7 +465,8 @@ func validGeneration(generation GenerationKind) bool {
 	switch generation {
 	case GenerationUnknown, GenerationSourcePartition,
 		GenerationObservation, GenerationCandidate,
-		GenerationExtractionDomain, GenerationCaller:
+		GenerationExtractionDomain, GenerationCaller,
+		GenerationRelationship:
 		return true
 	default:
 		return false
@@ -500,7 +509,8 @@ func validDimension(dimension Dimension) bool {
 		DimensionCallerGenerationArtifacts, DimensionCallerGenerationResults,
 		DimensionCallerGenerationAbstentions,
 		DimensionCallerGenerationCanonicalBytes,
-		DimensionCallerGenerationStagingBytes:
+		DimensionCallerGenerationStagingBytes,
+		DimensionResidentBytes:
 		return true
 	default:
 		return false

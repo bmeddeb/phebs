@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -35,15 +36,19 @@ const (
 	ScheduleRepositoryTokens = 1
 	BindingSchema            = "phebs-relationship-schedule-binding-v1"
 	BindingSchemaV2          = "phebs-relationship-schedule-binding-v2"
+	BindingSchemaV3          = "phebs-relationship-schedule-binding-v3"
 	ResolverResidentLimit    = 128 << 20
 	RPCResidentLimit         = 192 << 20
-	KafkaResidentLimit       = 128 << 20
+	KafkaResidentLimit       = 160 << 20
 )
 
 // RuntimeStore is the exact durable control surface used by the relationship
 // worker. It deliberately excludes evidence and historical-generation scans.
 type RuntimeStore interface {
 	store.GenerationSchedulerStore
+	GetGenerationScheduleFailure(
+		context.Context, string, string, string,
+	) (*store.GenerationScheduleFailure, error)
 	store.ServiceCatalogPublicationStore
 	store.ServiceStateStore
 	store.ResolverCatalogPublicationStore
@@ -74,6 +79,7 @@ type scheduleBinding struct {
 	ServiceStateSummary   string                         `json:"service_state_summary,omitempty"`
 	ServiceStateRevision  uint64                         `json:"service_state_revision,omitempty"`
 	ResolverGeneration    string                         `json:"resolver_generation"`
+	BuildPolicyDigest     string                         `json:"build_policy_digest,omitempty"`
 	Digest                string                         `json:"digest"`
 	Upstream              *downstreamauthority.Authority `json:"upstream,omitempty"`
 }
@@ -150,9 +156,12 @@ func (runtime *Runtime) Reconcile(ctx context.Context, repository string) error 
 			return err
 		}
 	}
-	scheduleGeneration, priorDigest, err := runtime.scheduleIdentity(ctx, repository, target)
+	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target)
 	if err != nil {
 		return err
+	}
+	if terminal {
+		return nil
 	}
 	binding := scheduleBinding{
 		Schema: BindingSchema, Repository: repository,
@@ -262,9 +271,14 @@ func (runtime *Runtime) reconcileV2(ctx context.Context, repository string) erro
 	if err != nil {
 		return err
 	}
-	target, err := runtimeTargetV2(
+	buildPolicy, err := runtimeBuildPolicyDigest()
+	if err != nil {
+		return err
+	}
+	target, err := runtimeTargetV3(
 		repository, upstream.Digest, snapshot.catalog.GenerationDigest,
 		stateSet, resolver.GenerationDigest, summary.SummaryDigest, summary.ControlRevision,
+		buildPolicy,
 	)
 	if err != nil {
 		return err
@@ -274,18 +288,22 @@ func (runtime *Runtime) reconcileV2(ctx context.Context, repository string) erro
 			return err
 		}
 	}
-	scheduleGeneration, priorDigest, err := runtime.scheduleIdentity(ctx, repository, target)
+	scheduleGeneration, priorDigest, terminal, err := runtime.scheduleIdentity(ctx, repository, target)
 	if err != nil {
 		return err
 	}
+	if terminal {
+		return nil
+	}
 	binding := scheduleBinding{
-		Schema: BindingSchemaV2, Repository: repository,
+		Schema: BindingSchemaV3, Repository: repository,
 		ScheduleGeneration: scheduleGeneration, TargetGeneration: target,
 		PriorScheduleDigest:   priorDigest,
 		ObservationGeneration: observation.ObservationGenerationDigest,
 		CatalogGeneration:     snapshot.catalog.GenerationDigest, ServiceStateSet: stateSet,
 		ServiceStateSummary: summary.SummaryDigest, ServiceStateRevision: summary.ControlRevision,
 		ResolverGeneration: resolver.GenerationDigest, Upstream: &upstream,
+		BuildPolicyDigest: buildPolicy,
 	}
 	if err := setBindingDigest(&binding); err != nil {
 		return err
@@ -340,7 +358,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	defer release()
 	var observationsV1 *observationpublication.Publication
 	var observationsV2 observationpublication.DownstreamSource
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		if binding.Upstream == nil || runtime.InventoryCache == nil {
 			return fmt.Errorf("%w: relationship v2 observation configuration", ErrInvalid)
 		}
@@ -417,7 +435,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		ResidentLimitBytes: ResolverResidentLimit,
 	}
 	var resolverStage *resolvernamespace.Prepared
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		resolverStage, err = resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
 			BuildRequest: resolverRequest, Upstream: *binding.Upstream,
 		})
@@ -432,7 +450,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship resolver namespaces: %w", err)
 	}
 	var rpcStage *rpccallerposting.Prepared
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		rpcStage, err = rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
 			Root: runtime.rpcRoot(), Observations: observationsV2, Resolver: resolverPublication,
 			Upstream: *binding.Upstream, Prior: priorRPC, ResidentLimitBytes: RPCResidentLimit,
@@ -451,7 +469,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship RPC postings: %w", err)
 	}
 	var kafkaStage *kafkatopicposting.Prepared
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		kafkaStage, err = kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
 			Root: runtime.kafkaRoot(), Observations: observationsV2,
 			Upstream: *binding.Upstream, Prior: priorKafka, ResidentLimitBytes: KafkaResidentLimit,
@@ -463,7 +481,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		})
 	}
 	if err != nil {
-		return fmt.Errorf("build relationship Kafka postings: %w", err)
+		return relationshipKafkaBuildFailure(err)
 	}
 	kafkaPublication, err := kafkaStage.Publish(ctx)
 	if err != nil {
@@ -481,7 +499,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil || stateSet != binding.ServiceStateSet {
 		return fmt.Errorf("%w: service-state set changed", ErrPublishing)
 	}
-	if binding.Schema == BindingSchemaV2 &&
+	if isPartitionedBinding(binding.Schema) &&
 		(snapshot.summary.SummaryDigest != binding.ServiceStateSummary ||
 			snapshot.summary.ControlRevision != binding.ServiceStateRevision) {
 		return fmt.Errorf("%w: service-state summary changed", ErrPublishing)
@@ -491,7 +509,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		Resolver: resolverPublication, RPC: rpcPublication, Kafka: kafkaPublication,
 	}
 	var stage *Prepared
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		stage, err = BuildV2(ctx, BuildRequestV2{
 			BuildRequest: buildRequest, Upstream: *binding.Upstream,
 			ServiceSummary: snapshot.summary, Prior: priorRelationship,
@@ -508,7 +526,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err := runtime.fence(ctx, binding, snapshot.summary); err != nil {
 		return err
 	}
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		owner := "relationship:" + stage.Root().GenerationDigest
 		pinned := make([]string, 0, len(binding.Upstream.Domains))
 		for _, domain := range binding.Upstream.Domains {
@@ -532,6 +550,33 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship root: %w", err)
 	}
 	return nil
+}
+
+func relationshipKafkaBuildFailure(err error) error {
+	if err == nil {
+		return nil
+	}
+	cause := fmt.Errorf("build relationship Kafka postings: %w", err)
+	var resident *kafkatopicposting.ResidentLimitError
+	if errors.As(err, &resident) && resident != nil {
+		measured := pipelinerefusal.Measure(
+			cause, pipelinerefusal.DimensionResidentBytes,
+			resident.ObservedBytes, resident.LimitBytes,
+		)
+		return store.WithTerminal(pipelinerefusal.At(
+			measured,
+			pipelinerefusal.StageRelationshipKafkaProjection,
+			pipelinerefusal.GenerationRelationship,
+		))
+	}
+	if errors.Is(err, kafkatopicposting.ErrLimit) {
+		return store.WithTerminal(pipelinerefusal.At(
+			cause,
+			pipelinerefusal.StageRelationshipKafkaProjection,
+			pipelinerefusal.GenerationRelationship,
+		))
+	}
+	return cause
 }
 
 func (runtime *Runtime) validate(repository string) error {
@@ -658,7 +703,7 @@ func sameSummaryFence(left, right servicecatalog.RepositoryState) bool {
 func (runtime *Runtime) fence(
 	ctx context.Context, binding scheduleBinding, summary servicecatalog.RepositoryState,
 ) error {
-	if binding.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(binding.Schema) {
 		if summary.SummaryDigest != binding.ServiceStateSummary ||
 			summary.ControlRevision != binding.ServiceStateRevision {
 			return fmt.Errorf("%w: service-state summary fence", ErrPublishing)
@@ -779,22 +824,86 @@ func runtimeTargetV2(
 	})
 }
 
+// runtimeBuildPolicyDigest binds the schedule target to every frozen builder
+// policy and to the three operational resident fences applied by Handle. A
+// policy-only change therefore supersedes a settled terminal schedule without
+// pretending that unchanged source authority is a new generation.
+func runtimeBuildPolicyDigest() (string, error) {
+	return digestValue(struct {
+		Domain           string                   `json:"domain"`
+		Resolver         resolvernamespace.Policy `json:"resolver"`
+		RPC              rpccallerposting.Policy  `json:"rpc"`
+		Kafka            kafkatopicposting.Policy `json:"kafka"`
+		Relationship     Policy                   `json:"relationship"`
+		ResolverResident int64                    `json:"resolver_resident_bytes"`
+		RPCResident      int64                    `json:"rpc_resident_bytes"`
+		KafkaResident    int64                    `json:"kafka_resident_bytes"`
+	}{
+		Domain:   "phebs-relationship-build-policy-v1",
+		Resolver: resolvernamespace.FrozenPolicy(), RPC: rpccallerposting.FrozenPolicy(),
+		Kafka: kafkatopicposting.FrozenPolicy(), Relationship: FrozenPolicy(),
+		ResolverResident: ResolverResidentLimit, RPCResident: RPCResidentLimit,
+		KafkaResident: KafkaResidentLimit,
+	})
+}
+
+func runtimeTargetV3(
+	repository, upstream, catalog, serviceStateSet, resolver, serviceSummary string,
+	serviceRevision uint64,
+	buildPolicy string,
+) (string, error) {
+	if reponame.Validate(repository) != nil || !validDigest(upstream) ||
+		!validDigest(catalog) || !validDigest(serviceStateSet) || !validDigest(resolver) ||
+		!validDigest(serviceSummary) || serviceRevision == 0 || !validDigest(buildPolicy) {
+		return "", fmt.Errorf("%w: relationship v3 schedule authority", ErrInvalid)
+	}
+	return digestValue(struct {
+		Domain      string `json:"domain"`
+		Repository  string `json:"repository"`
+		Upstream    string `json:"upstream"`
+		Catalog     string `json:"catalog"`
+		ServiceSet  string `json:"service_state_set"`
+		Summary     string `json:"service_state_summary"`
+		Revision    uint64 `json:"service_state_revision"`
+		Resolver    string `json:"resolver"`
+		BuildPolicy string `json:"build_policy_digest"`
+	}{
+		Domain: "phebs-relationship-schedule-target-v3", Repository: repository,
+		Upstream: upstream, Catalog: catalog, ServiceSet: serviceStateSet,
+		Summary: serviceSummary, Revision: serviceRevision, Resolver: resolver,
+		BuildPolicy: buildPolicy,
+	})
+}
+
 func (runtime *Runtime) scheduleIdentity(
 	ctx context.Context, repository, target string,
-) (string, string, error) {
+) (string, string, bool, error) {
 	current, err := runtime.Store.GetGenerationSchedule(ctx, repository, ScheduleStage)
 	if errors.Is(err, store.ErrNotFound) {
-		return target, "", nil
+		return target, "", false, nil
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
 	if current == nil {
-		return "", "", fmt.Errorf("%w: nil relationship schedule", ErrInvalid)
+		return "", "", false, fmt.Errorf("%w: nil relationship schedule", ErrInvalid)
 	}
 	if binding, bindingErr := runtime.readBinding(repository, current.Generation); bindingErr == nil &&
-		binding.TargetGeneration == target && current.Status == store.GenerationScheduleActive {
-		return current.Generation, binding.PriorScheduleDigest, nil
+		binding.TargetGeneration == target {
+		if current.Status == store.GenerationScheduleActive {
+			return current.Generation, binding.PriorScheduleDigest, false, nil
+		}
+		if current.Status == store.GenerationScheduleSettled && current.Failed > 0 {
+			failure, failureErr := runtime.Store.GetGenerationScheduleFailure(
+				ctx, repository, ScheduleStage, current.Digest,
+			)
+			if failureErr != nil {
+				return "", "", false, failureErr
+			}
+			if closedRelationshipFailure(failure) {
+				return current.Generation, binding.PriorScheduleDigest, true, nil
+			}
+		}
 	}
 	recovery, err := digestValue(struct {
 		Domain string `json:"domain"`
@@ -804,7 +913,16 @@ func (runtime *Runtime) scheduleIdentity(
 		Domain: "phebs-relationship-recovery-schedule-v1",
 		Target: target, Prior: current.Digest,
 	})
-	return recovery, current.Digest, err
+	return recovery, current.Digest, false, err
+}
+
+func closedRelationshipFailure(failure *store.GenerationScheduleFailure) bool {
+	if failure == nil || failure.Refusal == nil ||
+		pipelinerefusal.Validate(*failure.Refusal) != nil {
+		return false
+	}
+	return failure.Refusal.Stage == pipelinerefusal.StageRelationshipKafkaProjection &&
+		failure.Refusal.GenerationKind == pipelinerefusal.GenerationRelationship
 }
 
 func setBindingDigest(value *scheduleBinding) error {
@@ -821,29 +939,49 @@ func setBindingDigest(value *scheduleBinding) error {
 	return validateBinding(*value)
 }
 
+func isPartitionedBinding(schema string) bool {
+	return schema == BindingSchemaV2 || schema == BindingSchemaV3
+}
+
 func validateBinding(value scheduleBinding) error {
-	if (value.Schema != BindingSchema && value.Schema != BindingSchemaV2) ||
+	if (value.Schema != BindingSchema && value.Schema != BindingSchemaV2 &&
+		value.Schema != BindingSchemaV3) ||
 		reponame.Validate(value.Repository) != nil ||
 		!validDigest(value.ScheduleGeneration) || !validDigest(value.TargetGeneration) ||
 		!validDigest(value.ObservationGeneration) || !validDigest(value.CatalogGeneration) ||
 		!validDigest(value.ServiceStateSet) ||
 		!validDigest(value.ResolverGeneration) ||
+		(value.Schema == BindingSchemaV3 && !validDigest(value.BuildPolicyDigest)) ||
+		(value.Schema != BindingSchemaV3 && value.BuildPolicyDigest != "") ||
 		(value.PriorScheduleDigest != "" && !validDigest(value.PriorScheduleDigest)) {
 		return fmt.Errorf("%w: schedule binding", ErrInvalid)
 	}
 	var want string
 	var err error
-	if value.Schema == BindingSchemaV2 {
+	if isPartitionedBinding(value.Schema) {
 		if value.Upstream == nil || downstreamauthority.RequireUsable(*value.Upstream) != nil ||
 			value.Upstream.Repository != value.Repository ||
 			value.Upstream.Observation.ObservationGenerationDigest != value.ObservationGeneration {
 			return fmt.Errorf("%w: schedule v2 upstream", ErrInvalid)
 		}
-		want, err = runtimeTargetV2(
-			value.Repository, value.Upstream.Digest,
-			value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
-			value.ServiceStateSummary, value.ServiceStateRevision,
-		)
+		if value.Schema == BindingSchemaV3 {
+			currentPolicy, policyErr := runtimeBuildPolicyDigest()
+			if policyErr != nil || currentPolicy != value.BuildPolicyDigest {
+				return fmt.Errorf("%w: schedule build policy", ErrInvalid)
+			}
+			want, err = runtimeTargetV3(
+				value.Repository, value.Upstream.Digest,
+				value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
+				value.ServiceStateSummary, value.ServiceStateRevision,
+				value.BuildPolicyDigest,
+			)
+		} else {
+			want, err = runtimeTargetV2(
+				value.Repository, value.Upstream.Digest,
+				value.CatalogGeneration, value.ServiceStateSet, value.ResolverGeneration,
+				value.ServiceStateSummary, value.ServiceStateRevision,
+			)
+		}
 	} else {
 		if value.Upstream != nil || value.ServiceStateSummary != "" || value.ServiceStateRevision != 0 {
 			return fmt.Errorf("%w: schedule v1 upstream", ErrInvalid)

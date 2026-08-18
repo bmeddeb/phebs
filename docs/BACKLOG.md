@@ -1522,6 +1522,29 @@ and the unchanged Caller Map 404. The signed neutral-23 receipt and package rema
 and authorization; no scale/SLO, release, T40.13/Epic 40 closure, or Epic 41
 progression follows.
 
+`t40r1-neutral-24` subsequently completed and scheduler-settled all 272
+semantic extraction partitions, reached exact current caller authority, and
+then retained a missing relationship root through the four-hour deadline. The
+source-free package remains immutable `unclassified` evidence. Exact
+production-model replay pins two Kafka projection fences hidden behind that
+absence: each frozen logical bucket contains 65,536 postings against the old
+50,000-member policy, and their exact 147,324,928-byte resident charge exceeds
+the old 128-MiB Kafka fence. The correction admits exactly 65,536 postings for
+the current policy while continuing to validate the historical 50,000 policy,
+raises the relationship Kafka operational charge to 160 MiB inside the
+unchanged one-GiB worker class, and terminalizes deterministic Kafka bounds.
+The partitioned relationship schedule now binds the exact builder-policy
+digest: a duplicate same-policy reconcile retains its closed refusal without
+another attempt, while a policy or bound change produces a recovery target;
+historical v2 bindings remain valid.
+The scoped end-to-end diagnostic published 131,072 Kafka postings and 131,072
+relationship projections with complete authority. While a relationship root
+is absent, the ceremony now reads a bounded source-free current schedule:
+missing/active remains pending and settled failure terminates immediately.
+Focused/race/docs gates and independent review remain mandatory before a later
+integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
+Epic 41 progression follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

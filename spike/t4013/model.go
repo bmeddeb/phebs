@@ -1159,7 +1159,8 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 	if detailVersion >= 10 {
 		outcomes = append(outcomes, "observation_bound_refusal", "observation_terminal",
 			"extraction_schedule_terminal", "caller_generation_bound_refusal",
-			"caller_generation_terminal")
+			"caller_generation_terminal", "relationship_bound_refusal",
+			"relationship_terminal")
 	}
 	stages := []string{
 		"repository_visibility", "repository_index", "source_generation",
@@ -1478,7 +1479,9 @@ func validateConvergenceTransitions(
 		terminalOutcome = terminalOutcome || value.Outcome == "observation_bound_refusal" ||
 			value.Outcome == "observation_terminal" || value.Outcome == "extraction_schedule_terminal" ||
 			value.Outcome == "caller_generation_bound_refusal" ||
-			value.Outcome == "caller_generation_terminal"
+			value.Outcome == "caller_generation_terminal" ||
+			value.Outcome == "relationship_bound_refusal" ||
+			value.Outcome == "relationship_terminal"
 	}
 	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
 		return errors.New("T40.13 terminal transition is incoherent")
@@ -1590,7 +1593,9 @@ func validateConvergenceWithoutSuccessfulProbe(
 	terminalOutcome := value.Outcome == "repository_index_terminal" || observationTerminal || extractionTerminal
 	if detailVersion >= 10 {
 		terminalOutcome = terminalOutcome || value.Outcome == "caller_generation_bound_refusal" ||
-			value.Outcome == "caller_generation_terminal"
+			value.Outcome == "caller_generation_terminal" ||
+			value.Outcome == "relationship_bound_refusal" ||
+			value.Outcome == "relationship_terminal"
 	}
 	if detailVersion >= 5 && terminalOutcome != (last.Class == "terminal") {
 		return errors.New("T40.13 unsuccessful terminal transition is incoherent")
@@ -2054,6 +2059,18 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 caller generation terminal identity is invalid")
 		}
 		wantReason = "caller_generation_terminal"
+	case "relationship_production_bound_refused":
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "relationship_bound_refusal" {
+			return errors.New("T40.13 relationship bound-refusal identity is invalid")
+		}
+		wantDecision, wantReason = "reduce", "relationship_production_bound_refused"
+	case "relationship_terminal":
+		if value.Schema != ReceiptSchemaV14 || failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
+			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "relationship_terminal" {
+			return errors.New("T40.13 relationship terminal identity is invalid")
+		}
+		wantReason = "relationship_terminal"
 	default:
 		return errors.New("T40.13 stopped failure code is not frozen")
 	}

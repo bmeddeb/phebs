@@ -231,6 +231,26 @@ type GenerationScheduleFailure struct {
 	Refusal        *pipelinerefusal.Receipt `json:"refusal,omitempty"`
 }
 
+const GenerationScheduleProgressSchema = "phebs-generation-schedule-progress-v1"
+
+// GenerationScheduleProgress is the bounded, source-free current-schedule
+// projection used by local ceremony diagnostics. It excludes repository,
+// stage, timestamps, worker identity, lease state, and raw durable errors.
+type GenerationScheduleProgress struct {
+	Schema         string                     `json:"schema"`
+	ScheduleDigest string                     `json:"schedule_digest"`
+	Generation     string                     `json:"generation"`
+	Status         GenerationScheduleStatus   `json:"status"`
+	Total          int                        `json:"total"`
+	Materialized   int                        `json:"materialized"`
+	Pending        int                        `json:"pending"`
+	Running        int                        `json:"running"`
+	Succeeded      int                        `json:"succeeded"`
+	Failed         int                        `json:"failed"`
+	MaxAttempts    int                        `json:"max_attempts"`
+	Failure        *GenerationScheduleFailure `json:"failure,omitempty"`
+}
+
 // LocalGenerationChunkReader connects to the already supervised local store
 // without applying schema or migrations. It exposes only the bounded
 // source-free lease projection and cannot mutate scheduler state.
@@ -289,16 +309,84 @@ func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
 	if err != nil {
 		return GenerationChunkLeaseState{}, err
 	}
-	runtime, runtimeErr := ReadLocalRuntime(reader.dataDir)
-	if runtimeErr != nil || runtime.Token != reader.token || !processAlive(runtime.PID) {
+	if err := reader.confirmRuntime(); err != nil {
 		return GenerationChunkLeaseState{}, errors.Join(
-			runtimeErr, errors.New("read generation chunk lease state: runtime changed"),
+			err, errors.New("read generation chunk lease state: runtime changed"),
 		)
 	}
 	return GenerationChunkLeaseState{
 		Identity: chunk.Identity, Repository: chunk.Repository, Stage: chunk.Stage,
 		Generation: chunk.Generation, Attempt: chunk.Attempt, Status: chunk.Status,
 	}, nil
+}
+
+// GenerationScheduleProgress returns one current schedule snapshot. A failed
+// settled schedule includes only its closed refusal, when one was durably
+// recorded. Every settled result is re-read before return to fence a
+// concurrent replacement before a ceremony treats it as terminal.
+func (reader *LocalGenerationChunkReader) GenerationScheduleProgress(
+	ctx context.Context,
+	repository, stage string,
+) (GenerationScheduleProgress, error) {
+	if reader == nil || reader.store == nil || ctx == nil ||
+		strings.TrimSpace(repository) != repository || repository == "" ||
+		!validGenerationToken(stage) || stage == "" {
+		return GenerationScheduleProgress{}, errors.New(
+			"read generation schedule progress: request is invalid",
+		)
+	}
+	schedule, err := reader.store.GetGenerationSchedule(ctx, repository, stage)
+	if err != nil {
+		return GenerationScheduleProgress{}, err
+	}
+	progress := GenerationScheduleProgress{
+		Schema:         GenerationScheduleProgressSchema,
+		ScheduleDigest: schedule.Digest, Generation: schedule.Generation,
+		Status: schedule.Status, Total: schedule.TotalChunks,
+		Materialized: schedule.Materialized, Pending: schedule.Pending,
+		Running: schedule.Running, Succeeded: schedule.Succeeded,
+		Failed: schedule.Failed, MaxAttempts: schedule.MaxAttempts,
+	}
+	if schedule.Status == GenerationScheduleSettled {
+		if schedule.Failed > 0 {
+			failure, failureErr := reader.store.GetGenerationScheduleFailure(
+				ctx, repository, stage, schedule.Digest,
+			)
+			if failureErr != nil {
+				return GenerationScheduleProgress{}, failureErr
+			}
+			progress.Failure = failure
+		}
+		confirmed, confirmErr := reader.store.GetGenerationSchedule(ctx, repository, stage)
+		if confirmErr != nil || !sameGenerationScheduleProgress(schedule, confirmed) {
+			return GenerationScheduleProgress{}, errors.Join(
+				confirmErr, ErrGenerationStale,
+			)
+		}
+	}
+	if err := reader.confirmRuntime(); err != nil {
+		return GenerationScheduleProgress{}, errors.Join(
+			err, errors.New("read generation schedule progress: runtime changed"),
+		)
+	}
+	return progress, nil
+}
+
+func sameGenerationScheduleProgress(left, right *GenerationSchedule) bool {
+	return left != nil && right != nil && left.Digest == right.Digest &&
+		left.Generation == right.Generation && left.Status == right.Status &&
+		left.TotalChunks == right.TotalChunks && left.Materialized == right.Materialized &&
+		left.Pending == right.Pending && left.Running == right.Running &&
+		left.Succeeded == right.Succeeded && left.Failed == right.Failed &&
+		left.MaxAttempts == right.MaxAttempts
+}
+
+func (reader *LocalGenerationChunkReader) confirmRuntime() error {
+	runtime, err := ReadLocalRuntime(reader.dataDir)
+	if err != nil || runtime.Token != reader.token || !processAlive(runtime.PID) {
+		return errors.Join(err, errors.New("local generation reader runtime changed"))
+	}
+	return nil
 }
 
 func (reader *LocalGenerationChunkReader) Close(ctx context.Context) error {

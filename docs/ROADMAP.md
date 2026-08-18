@@ -1361,6 +1361,24 @@ catalog, relationship, or correctness authority.
   its digest across revalidation, and tests the admitted maximum response shape.
   Neutral-23 remains immutable `unclassified` evidence; another
   ceremony still requires separate freeze review and execution authorization.
+- `t40r1-neutral-24` completed all 272 semantic extraction schedules and
+  reached current caller authority, then retained a missing relationship root
+  until the four-hour deadline. Exact production projection pins two earlier
+  deterministic Kafka fences: both fixed logical buckets contain 65,536
+  postings against the old 50,000-member limit, and their 147,324,928-byte
+  resident charge exceeds the old 128-MiB Kafka fence. The current member
+  policy now admits exactly 65,536 while the historical 50,000 policy remains
+  readable, and the relationship Kafka charge is 160 MiB within the unchanged
+  one-GiB worker class. The scoped Kafka-to-relationship diagnostic published
+  all 131,072 postings/projections and complete relationship authority.
+  The partitioned schedule binds the exact builder policy so a duplicate
+  same-policy reconcile retains a closed refusal while a policy change creates
+  a recovery target; historical v2 bindings remain valid. Deterministic Kafka
+  limits settle terminally, and an absent relationship root
+  now consults bounded source-free schedule progress so active remains pending
+  while exhaustion stops immediately. Neutral-24 remains immutable stopped
+  evidence; focused/race/docs gates and independent review precede any request
+  to integrate and authorize a fresh ceremony.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

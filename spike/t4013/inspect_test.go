@@ -16,6 +16,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -84,6 +85,82 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 	invalidCurrent.Generation = &apiresponse.CallerMapGeneration{State: "current"}
 	if _, err := classifyCallerGeneration(invalidCurrent); !errors.Is(err, errCallerGenerationTerminal) {
 		t.Fatalf("invalid current caller generation = %v", err)
+	}
+}
+
+func TestRelationshipGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T) {
+	scheduleDigest := "sha256:" + strings.Repeat("a", 64)
+	generationDigest := "sha256:" + strings.Repeat("b", 64)
+	active := store.GenerationScheduleProgress{
+		Schema:         store.GenerationScheduleProgressSchema,
+		ScheduleDigest: scheduleDigest, Generation: generationDigest,
+		Status: store.GenerationScheduleActive, Total: 1, Materialized: 1,
+		Running: 1, MaxAttempts: relationshippublication.ScheduleMaxAttempts,
+	}
+	probe, err := classifyRelationshipGeneration(active)
+	if probe.Stage != "relationship_publication" ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("active relationship generation = %+v, %v", probe, err)
+	}
+	malformedActive := active
+	malformedActive.Failure = &store.GenerationScheduleFailure{}
+	if _, err := classifyRelationshipGeneration(malformedActive); !errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("active relationship generation carried a failure: %v", err)
+	}
+
+	refusal := pipelinerefusal.Receipt{
+		Schema:         pipelinerefusal.Schema,
+		Stage:          pipelinerefusal.StageRelationshipKafkaProjection,
+		GenerationKind: pipelinerefusal.GenerationRelationship,
+		Classification: pipelinerefusal.ClassificationLimit,
+		Dimension:      pipelinerefusal.DimensionResidentBytes,
+		Observed:       relationshippublication.KafkaResidentLimit + 1,
+		Limit:          relationshippublication.KafkaResidentLimit,
+	}
+	settled := active
+	settled.Status, settled.Running, settled.Failed = store.GenerationScheduleSettled, 0, 1
+	settled.Failure = &store.GenerationScheduleFailure{
+		ScheduleDigest: scheduleDigest, Generation: generationDigest,
+		Attempt: relationshippublication.ScheduleMaxAttempts - 1, Refusal: &refusal,
+	}
+	probe, err = classifyRelationshipGeneration(settled)
+	if probe.Stage != "relationship_publication" ||
+		!errors.Is(err, errRelationshipBoundRefusal) ||
+		classifyConvergenceInspection(err).class != "terminal" {
+		t.Fatalf("settled relationship refusal = %+v, %v", probe, err)
+	}
+
+	ordinary := settled
+	ordinary.Failure = &store.GenerationScheduleFailure{
+		ScheduleDigest: scheduleDigest, Generation: generationDigest,
+		Attempt: 0,
+	}
+	if _, err := classifyRelationshipGeneration(ordinary); !errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("untyped relationship failure = %v", err)
+	}
+	succeeded := active
+	succeeded.Status, succeeded.Running, succeeded.Succeeded = store.GenerationScheduleSettled, 0, 1
+	if _, err := classifyRelationshipGeneration(succeeded); !errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("missing root after successful relationship schedule = %v", err)
+	}
+}
+
+func TestRelationshipPublicationAbsenceUsesScheduleAuthority(t *testing.T) {
+	inspector := &profileInspector{
+		readRelationshipScheduleFunc: func(
+			context.Context, PreparedProfile,
+		) (store.GenerationScheduleProgress, error) {
+			return store.GenerationScheduleProgress{}, store.ErrNotFound
+		},
+	}
+	probe, err := inspector.relationshipGenerationTerminal(t.Context(), PreparedProfile{})
+	if probe.Stage != "relationship_publication" ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("missing relationship schedule = %+v, %v", probe, err)
+	}
+	wrapped := fmt.Errorf("open relationship publication: %w", relationshippublication.ErrNotFound)
+	if classifyConvergenceInspection(wrapped).class != "pending" {
+		t.Fatalf("relationship publication absence = %v", wrapped)
 	}
 }
 

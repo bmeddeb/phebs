@@ -53,6 +53,69 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	if err != nil || done.Status != GenerationChunkDone {
 		t.Fatalf("settled lease state = %+v, %v", done, err)
 	}
+	settledProgress, err := reader.GenerationScheduleProgress(
+		t.Context(), spec.Repository, spec.Stage,
+	)
+	if err != nil || settledProgress.Status != GenerationScheduleSettled ||
+		settledProgress.Succeeded != 1 || settledProgress.Failed != 0 ||
+		settledProgress.Failure != nil {
+		t.Fatalf("settled success progress = %+v, %v", settledProgress, err)
+	}
+
+	failureSpec := generationSpec(
+		"example.invalid/relationship-progress", "sha256:"+strings.Repeat("8", 64),
+	)
+	failureSpec.Stage = "service-relationship"
+	failureSpec.TotalItems, failureSpec.ChunkItems = 1, 1
+	failureSchedule, err := state.EnqueueGenerationSchedule(t.Context(), failureSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(
+		t.Context(), failureSpec.Repository, failureSpec.Stage, failureSpec.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	failureChunk, err := state.ClaimGenerationChunk(
+		t.Context(), failureSpec.ResourceClass, "relationship-worker",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeProgress, err := reader.GenerationScheduleProgress(
+		t.Context(), failureSpec.Repository, failureSpec.Stage,
+	)
+	if err != nil || activeProgress.Status != GenerationScheduleActive ||
+		activeProgress.Running != 1 || activeProgress.Failure != nil {
+		t.Fatalf("active relationship progress = %+v, %v", activeProgress, err)
+	}
+	closed := pipelinerefusal.Limit(
+		errors.New("private relationship failure"),
+		pipelinerefusal.StageRelationshipKafkaProjection,
+		pipelinerefusal.GenerationRelationship,
+		pipelinerefusal.DimensionResidentBytes,
+		(160<<20)+1, 160<<20,
+	)
+	if err := state.FailGenerationChunk(
+		t.Context(), *failureChunk, DurableErrorText(closed),
+	); err != nil {
+		t.Fatal(err)
+	}
+	progress, err := reader.GenerationScheduleProgress(
+		t.Context(), failureSpec.Repository, failureSpec.Stage,
+	)
+	if err != nil || progress.Schema != GenerationScheduleProgressSchema ||
+		progress.ScheduleDigest != failureSchedule.Digest ||
+		progress.Generation != failureSpec.Generation ||
+		progress.Status != GenerationScheduleSettled || progress.Total != 1 ||
+		progress.Pending != 0 || progress.Running != 0 || progress.Succeeded != 0 ||
+		progress.Failed != 1 || progress.Failure == nil ||
+		progress.Failure.ScheduleDigest != failureSchedule.Digest ||
+		progress.Failure.Refusal == nil ||
+		progress.Failure.Refusal.Stage != pipelinerefusal.StageRelationshipKafkaProjection ||
+		progress.Failure.Refusal.Dimension != pipelinerefusal.DimensionResidentBytes {
+		t.Fatalf("settled relationship progress = %+v, %v", progress, err)
+	}
 }
 
 func generationSpec(repository, generation string) GenerationScheduleSpec {

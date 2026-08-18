@@ -957,6 +957,20 @@ func TestV14TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				Stage: "caller_generation", SHA256: digest,
 			},
 		},
+		{
+			name: "relationship bound refusal", cause: errRelationshipBoundRefusal,
+			outcome: "relationship_bound_refusal",
+			projection: privateConvergenceProbe{
+				Stage: "relationship_publication", SHA256: digest,
+			},
+		},
+		{
+			name: "relationship terminal", cause: errRelationshipTerminal,
+			outcome: "relationship_terminal",
+			projection: privateConvergenceProbe{
+				Stage: "relationship_publication", SHA256: digest,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1090,6 +1104,8 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "extraction schedule terminal", cause: errExtractionScheduleTerminal, code: "extraction_schedule_terminal", decision: "unclassified"},
 		{name: "caller generation bound refusal", cause: errCallerGenerationBoundRefusal, code: "caller_generation_production_bound_refused", decision: "reduce", substantiated: true},
 		{name: "caller generation terminal", cause: errCallerGenerationTerminal, code: "caller_generation_terminal", decision: "unclassified"},
+		{name: "relationship bound refusal", cause: errRelationshipBoundRefusal, code: "relationship_production_bound_refused", decision: "reduce", substantiated: true},
+		{name: "relationship terminal", cause: errRelationshipTerminal, code: "relationship_terminal", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},

@@ -255,9 +255,10 @@ func expectedExtractionBoundRefusal(value ExtractionProgressObservation) bool {
 }
 
 type profileInspector struct {
-	client               *http.Client
-	credential           string
-	requireObservationV2 bool
+	client                       *http.Client
+	credential                   string
+	requireObservationV2         bool
+	readRelationshipScheduleFunc func(context.Context, PreparedProfile) (store.GenerationScheduleProgress, error)
 }
 
 func newProfileInspector(profile PreparedProfile, requireObservationV2 ...bool) (*profileInspector, error) {
@@ -410,6 +411,10 @@ func (inspector *profileInspector) inspectWithProgress(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
 	if err != nil {
+		if errors.Is(err, relationshippublication.ErrNotFound) {
+			probe, terminalErr := inspector.relationshipGenerationTerminal(ctx, profile)
+			return privateProfileSnapshot{}, probe, terminalErr
+		}
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
 	}
 	if err := inspectionContextFence(ctx); err != nil {
@@ -514,6 +519,94 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	return classifyCallerGeneration(apiresponse.CallerMapPage{
 		Generation: &progress.Generation,
 	})
+}
+
+func (inspector *profileInspector) relationshipGenerationTerminal(
+	ctx context.Context,
+	profile PreparedProfile,
+) (privateConvergenceProbe, error) {
+	read := inspector.readRelationshipScheduleFunc
+	if read == nil {
+		read = readRelationshipScheduleProgress
+	}
+	progress, err := read(ctx, profile)
+	if err != nil {
+		probe := convergenceProbe("relationship_publication")
+		if errors.Is(err, store.ErrNotFound) {
+			return probe, errors.New("T40.13 relationship publication has not converged")
+		}
+		return probe, err
+	}
+	return classifyRelationshipGeneration(progress)
+}
+
+func readRelationshipScheduleProgress(
+	ctx context.Context,
+	profile PreparedProfile,
+) (store.GenerationScheduleProgress, error) {
+	reader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		return store.GenerationScheduleProgress{}, err
+	}
+	progress, readErr := reader.GenerationScheduleProgress(
+		ctx, profile.RepositoryName, relationshippublication.ScheduleStage,
+	)
+	closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	closeErr := reader.Close(closeCtx)
+	if closeErr != nil {
+		return store.GenerationScheduleProgress{}, closeErr
+	}
+	return progress, readErr
+}
+
+func classifyRelationshipGeneration(
+	progress store.GenerationScheduleProgress,
+) (privateConvergenceProbe, error) {
+	probe := convergenceProbe("relationship_publication", progress)
+	if progress.Schema != store.GenerationScheduleProgressSchema ||
+		!digestIdentity(progress.ScheduleDigest) || !digestIdentity(progress.Generation) ||
+		progress.Total != 1 ||
+		progress.MaxAttempts != relationshippublication.ScheduleMaxAttempts ||
+		progress.Materialized < 0 ||
+		progress.Materialized > progress.Total*progress.MaxAttempts || progress.Pending < 0 ||
+		progress.Running < 0 || progress.Succeeded < 0 || progress.Failed < 0 ||
+		progress.Materialized < progress.Pending+progress.Running ||
+		progress.Pending+progress.Running > progress.Total ||
+		progress.Succeeded+progress.Failed > progress.Total {
+		return probe, errRelationshipTerminal
+	}
+	switch progress.Status {
+	case store.GenerationScheduleActive:
+		if progress.Failure != nil || progress.Succeeded != 0 || progress.Failed != 0 {
+			return probe, errRelationshipTerminal
+		}
+		return probe, errors.New("T40.13 relationship publication has not converged")
+	case store.GenerationScheduleSettled:
+		if progress.Pending != 0 || progress.Running != 0 ||
+			progress.Succeeded+progress.Failed != progress.Total || progress.Failed < 1 {
+			return probe, errRelationshipTerminal
+		}
+	default:
+		return probe, errRelationshipTerminal
+	}
+	failure := progress.Failure
+	if failure == nil || failure.ScheduleDigest != progress.ScheduleDigest ||
+		failure.Generation != progress.Generation || failure.Attempt < 0 ||
+		failure.Attempt >= progress.MaxAttempts || failure.Refusal == nil {
+		return probe, errRelationshipTerminal
+	}
+	refusal := *failure.Refusal
+	if pipelinerefusal.Validate(refusal) == nil &&
+		refusal.Stage == pipelinerefusal.StageRelationshipKafkaProjection &&
+		refusal.GenerationKind == pipelinerefusal.GenerationRelationship &&
+		refusal.Classification == pipelinerefusal.ClassificationLimit &&
+		refusal.Dimension == pipelinerefusal.DimensionResidentBytes &&
+		refusal.Observed > refusal.Limit &&
+		refusal.Limit == relationshippublication.KafkaResidentLimit {
+		return probe, errRelationshipBoundRefusal
+	}
+	return probe, errRelationshipTerminal
 }
 
 func classifyCallerGeneration(

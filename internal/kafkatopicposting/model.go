@@ -31,7 +31,7 @@ const (
 	PartitionBuckets        = 256
 	MaxMembers              = 2 * PartitionBuckets
 	MaxPostings             = 1_000_000
-	MaxPostingsPerMember    = 50_000
+	MaxPostingsPerMember    = 65_536
 	MaxTextBytes            = 4_096
 	MaxTopicBytes           = 249
 	MaxPostingBytes         = 1 << 20
@@ -41,11 +41,27 @@ const (
 	MaxGenerationBytes      = int64(20 << 30)
 )
 
+const historicalMaxPostingsPerMember = 50_000
+
 var (
 	ErrInvalid  = errors.New("invalid Kafka topic posting publication")
 	ErrLimit    = errors.New("kafka topic posting bound exceeded")
 	ErrNotFound = errors.New("kafka topic posting publication not found")
 )
+
+// ResidentLimitError retains only the source-free byte measurement needed by
+// the relationship scheduler to close a deterministic operational refusal.
+// Posting contents and repository identities stay behind the package boundary.
+type ResidentLimitError struct {
+	ObservedBytes int64
+	LimitBytes    int64
+}
+
+func (*ResidentLimitError) Error() string {
+	return "kafka topic posting resident bound exceeded"
+}
+
+func (err *ResidentLimitError) Unwrap() error { return ErrLimit }
 
 type Policy struct {
 	Schema                  string `json:"schema"`
@@ -74,6 +90,16 @@ func FrozenPolicy() Policy {
 		MaxGenerationBytes:      MaxGenerationBytes,
 		SourceRoleRule:          "vendor-then-go-test-then-production-v1",
 	}
+}
+
+func historicalPolicy() Policy {
+	value := FrozenPolicy()
+	value.MaxPostingsPerMember = historicalMaxPostingsPerMember
+	return value
+}
+
+func admittedPolicy(value Policy) bool {
+	return value == FrozenPolicy() || value == historicalPolicy()
 }
 
 type Authority struct {
@@ -223,7 +249,7 @@ func validateMember(value Member) error {
 func validateRoot(value Root) error {
 	if (value.Schema != RootSchema && value.Schema != RootSchemaV2) ||
 		validateAuthority(value.Schema, value.Authority) != nil ||
-		value.Policy != FrozenPolicy() || len(value.Members) > MaxMembers ||
+		!admittedPolicy(value.Policy) || len(value.Members) > MaxMembers ||
 		value.PostingCount < 0 || value.PostingCount > MaxPostings ||
 		value.ProducerCount < 0 || value.ConsumerCount < 0 ||
 		value.LiteralCount < 0 || value.UnresolvedCount < 0 ||
@@ -240,7 +266,7 @@ func validateRoot(value Root) error {
 		key := memberKey(receipt.Plane, receipt.Bucket)
 		if !validPlane(receipt.Plane) || receipt.Bucket < 0 || receipt.Bucket >= PartitionBuckets ||
 			prior >= key || receipt.Name != memberName(receipt.Plane, receipt.Bucket) ||
-			receipt.PostingCount < 1 || receipt.PostingCount > MaxPostingsPerMember ||
+			receipt.PostingCount < 1 || receipt.PostingCount > value.Policy.MaxPostingsPerMember ||
 			receipt.ContentBytes < 1 || receipt.ContentBytes > MaxMemberBytes ||
 			!validDigest(receipt.ContentDigest) {
 			return fmt.Errorf("%w: member receipt", ErrInvalid)
@@ -254,6 +280,10 @@ func validateRoot(value Root) error {
 	}
 	if count != value.PostingCount || encoded != value.EncodedMemberBytes {
 		return fmt.Errorf("%w: root totals", ErrInvalid)
+	}
+	policyDigest, err := digestValue(value.Policy)
+	if err != nil || value.Authority.PolicyDigest != policyDigest {
+		return fmt.Errorf("%w: policy authority", ErrInvalid)
 	}
 	copyValue := value
 	copyValue.GenerationDigest, copyValue.Digest = "", ""
@@ -302,7 +332,9 @@ func validateAuthority(schema string, value Authority) error {
 		}
 	}
 	want, err := digestValue(FrozenPolicy())
-	if err != nil || value.PolicyDigest != want {
+	historical, historicalErr := digestValue(historicalPolicy())
+	if err != nil || historicalErr != nil ||
+		value.PolicyDigest != want && value.PolicyDigest != historical {
 		return fmt.Errorf("%w: policy authority", ErrInvalid)
 	}
 	return nil

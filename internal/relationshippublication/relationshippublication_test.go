@@ -19,14 +19,198 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
+	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/spike/t401"
 )
 
 type fakeResolver struct{ root resolvernamespace.Root }
+
+func TestKafkaResidentEnvelopeAndClosedFailure(t *testing.T) {
+	const semanticCharge = int64(147_324_928)
+	if KafkaResidentLimit != 160<<20 || semanticCharge > KafkaResidentLimit {
+		t.Fatalf("Kafka resident envelope = %d, semantic charge = %d",
+			KafkaResidentLimit, semanticCharge)
+	}
+	if ResolverResidentLimit+RPCResidentLimit+KafkaResidentLimit+MaxResidentChargeBytes > 1<<30 {
+		t.Fatal("relationship component envelopes exceed the declared one-GiB worker class")
+	}
+	limitErr := &kafkatopicposting.ResidentLimitError{
+		ObservedBytes: KafkaResidentLimit + 1,
+		LimitBytes:    KafkaResidentLimit,
+	}
+	err := relationshipKafkaBuildFailure(limitErr)
+	receipt, present := pipelinerefusal.From(err)
+	if !store.IsTerminal(err) || !errors.Is(err, kafkatopicposting.ErrLimit) ||
+		!present || receipt.Stage != pipelinerefusal.StageRelationshipKafkaProjection ||
+		receipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
+		receipt.Classification != pipelinerefusal.ClassificationLimit ||
+		receipt.Dimension != pipelinerefusal.DimensionResidentBytes ||
+		receipt.Observed != KafkaResidentLimit+1 || receipt.Limit != KafkaResidentLimit {
+		t.Fatalf("relationship Kafka refusal = %+v, present=%t, err=%v", receipt, present, err)
+	}
+	bound := relationshipKafkaBuildFailure(kafkatopicposting.ErrLimit)
+	boundReceipt, boundPresent := pipelinerefusal.From(bound)
+	if !store.IsTerminal(bound) || !boundPresent ||
+		boundReceipt.Stage != pipelinerefusal.StageRelationshipKafkaProjection ||
+		boundReceipt.GenerationKind != pipelinerefusal.GenerationRelationship ||
+		boundReceipt.Classification != pipelinerefusal.ClassificationUnknown {
+		t.Fatalf("unmeasured Kafka bound = %+v, present=%t, err=%v",
+			boundReceipt, boundPresent, bound)
+	}
+	ordinary := errors.New("transient Kafka read")
+	if wrapped := relationshipKafkaBuildFailure(ordinary); store.IsTerminal(wrapped) || !errors.Is(wrapped, ordinary) {
+		t.Fatalf("ordinary Kafka failure was reclassified: %v", wrapped)
+	}
+}
+
+func TestExactKafkaToRelationshipDiagnostic(t *testing.T) {
+	if os.Getenv("T40R1_RELATIONSHIP_KAFKA_DIAGNOSTIC") != "1" {
+		t.Skip("set T40R1_RELATIONSHIP_KAFKA_DIAGNOSTIC=1 to run the exact relationship projection")
+	}
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var semantic t401.Profile
+	for _, profile := range profiles {
+		if profile.Name == t401.SemanticProfileName {
+			semantic = profile
+			break
+		}
+	}
+	fixtures := make([]sourceobservation.Observation, 0, 2)
+	for _, family := range []struct {
+		name    string
+		ordinal uint64
+	}{
+		{name: "go_kafka_literal", ordinal: 65_536},
+		{name: "go_dynamic_topic", ordinal: 196_608},
+	} {
+		path, content, fixtureErr := t401.FrozenSemanticGoFixture(
+			semantic, family.name, family.ordinal,
+		)
+		if fixtureErr != nil {
+			t.Fatal(fixtureErr)
+		}
+		observation, parseErr := sourceobservation.Parse(
+			t.Context(), sourceobservation.Input{Path: path, Content: string(content)},
+		)
+		if parseErr != nil {
+			t.Fatal(parseErr)
+		}
+		fixtures = append(fixtures, observation)
+	}
+	const observed = 2 * 65_536
+	observationAuthority := observationpublication.DownstreamAuthority{
+		Version:                observationpublication.DownstreamAuthorityV2,
+		Repository:             "example.com/acme/mono",
+		SourceGenerationDigest: fixedDigest("1"), SourceRootDigest: fixedDigest("2"),
+		ObservationGenerationDigest: fixedDigest("3"), ObservationRootDigest: fixedDigest("4"),
+		PartitionPolicyDigest:   fixedDigest("5"),
+		ObservationPolicyDigest: sourceobservation.PolicyDigest(),
+		InventoryPolicyDigest:   fixedDigest("7"), RecordCount: observed, ObservedCount: observed,
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: "proto-contract", Version: "v1", PlanDigest: fixedDigest("8"),
+		RootDigest: fixedDigest("9"), RunID: "partition-run",
+		Disposition:             candidate.PartitionResultEmpty,
+		CandidateManifestDigest: fixedDigest("a"), CandidatePartitionRootDigest: fixedDigest("b"),
+		CandidatePolicyDigest:       fixedDigest("c"),
+		SourceGenerationDigest:      observationAuthority.SourceGenerationDigest,
+		ObservationGenerationDigest: observationAuthority.ObservationGenerationDigest,
+		ExtractionPolicyDigest:      fixedDigest("d"), DomainIndexDigest: fixedDigest("e"),
+		DomainScheduleDigest: fixedDigest("f"),
+	}
+	upstream, err := downstreamauthority.Build(
+		observationAuthority, []candidate.DownstreamDomainAuthority{domain},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := exactKafkaDownstreamSource{
+		authority: observationAuthority, literal: fixtures[0], dynamic: fixtures[1],
+	}
+	dataDir := t.TempDir()
+	for _, name := range []string{
+		"relationships", "relationship-resolver-namespaces",
+		"relationship-rpc-postings", "relationship-kafka-postings",
+	} {
+		if err := os.Mkdir(filepath.Join(dataDir, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resolverStage, err := resolvernamespace.BuildV2(t.Context(), resolvernamespace.BuildRequestV2{
+		BuildRequest: resolvernamespace.BuildRequest{
+			Root:       filepath.Join(dataDir, "relationship-resolver-namespaces"),
+			Repository: observationAuthority.Repository, Commit: strings.Repeat("a", 40),
+			ResolverGenerationDigest: fixedDigest("1"), ResolverManifestDigest: fixedDigest("2"),
+			Descriptors: []gocaller.DirectDescriptor{},
+		},
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver, err := resolverStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpcStage, err := rpccallerposting.BuildV2(t.Context(), rpccallerposting.BuildRequestV2{
+		Root:         filepath.Join(dataDir, "relationship-rpc-postings"),
+		Observations: source, Resolver: resolver, Upstream: upstream,
+		ResidentLimitBytes: RPCResidentLimit,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpc, err := rpcStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafkaStage, err := kafkatopicposting.BuildV2(t.Context(), kafkatopicposting.BuildRequestV2{
+		Root:         filepath.Join(dataDir, "relationship-kafka-postings"),
+		Observations: source, Upstream: upstream, ResidentLimitBytes: KafkaResidentLimit,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafka, err := kafkaStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, states := relationshipCatalogWithSemanticComplement(t)
+	summary := relationshipSummary(t, catalog, states)
+	relationshipStage, err := BuildV2(t.Context(), BuildRequestV2{
+		BuildRequest: BuildRequest{
+			Root: filepath.Join(dataDir, "relationships"), Catalog: catalog, States: states,
+			Resolver: resolver, RPC: rpc, Kafka: kafka,
+		},
+		Upstream: upstream, ServiceSummary: summary,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := relationshipStage.Publish(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := publication.Root()
+	if kafka.Root().PostingCount != observed || root.ProjectionCount != observed ||
+		!root.RepositoryComplete || !root.AllServicesComplete || root.FailedServiceCount != 0 {
+		t.Fatalf("exact Kafka relationship root = %+v", root)
+	}
+	t.Logf(
+		"Kafka-to-relationship diagnostic: postings=%d projections=%d repository_bytes=%d generation=%s root=%s",
+		kafka.Root().PostingCount, root.ProjectionCount, root.EncodedRepositoryBytes,
+		root.GenerationDigest, root.Digest,
+	)
+}
 
 func (value fakeResolver) Root() resolvernamespace.Root { return value.root }
 
@@ -57,8 +241,56 @@ type fakeDownstreamSource struct {
 	authority observationpublication.DownstreamAuthority
 }
 
+type exactKafkaDownstreamSource struct {
+	authority observationpublication.DownstreamAuthority
+	literal   sourceobservation.Observation
+	dynamic   sourceobservation.Observation
+}
+
 func (value fakeDownstreamSource) DownstreamAuthority() observationpublication.DownstreamAuthority {
 	return value.authority
+}
+
+func (value exactKafkaDownstreamSource) DownstreamAuthority() observationpublication.DownstreamAuthority {
+	return value.authority
+}
+
+func (value exactKafkaDownstreamSource) WalkObserved(
+	ctx context.Context,
+	visit func(observationpublication.Record, sourceobservation.Observation) error,
+) error {
+	const familyInputs = 65_536
+	families := []struct {
+		start       int
+		observation sourceobservation.Observation
+	}{
+		{start: familyInputs, observation: value.literal},
+		{start: 3 * familyInputs, observation: value.dynamic},
+	}
+	for _, family := range families {
+		for offset := 0; offset < familyInputs; offset++ {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			ordinal := family.start + offset
+			path := fmt.Sprintf("semantic/go/b%03d/f%06d.go", ordinal/1_024, ordinal)
+			identity := sha256.Sum256([]byte(fmt.Sprintf("t40r1-kafka-%06d", ordinal)))
+			record := observationpublication.Record{
+				Schema:   observationpublication.RecordSchema,
+				ObjectID: hex.EncodeToString(identity[:])[:40], DeclaredBytes: 4_608,
+				Placements: []sourcepartition.Placement{{
+					Path: path, Mode: "100644", Revisions: []int{0},
+				}},
+				State: "observed", ContentDigest: family.observation.ContentDigest,
+				ObservationDigest: fixedDigest("3"), ObservationName: "objects/generated.json",
+				ObservationOrigin: "parsed",
+			}
+			if err := visit(record, family.observation); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (fakeDownstreamSource) WalkObserved(
@@ -424,18 +656,133 @@ func TestScheduleIdentityReusesActiveTargetAndDistinguishesABA(t *testing.T) {
 	if err := runtime.writeBinding(binding); err != nil {
 		t.Fatal(err)
 	}
-	generation, prior, err := runtime.scheduleIdentity(t.Context(), repository, target)
-	if err != nil || generation != currentGeneration || prior != "" {
-		t.Fatalf("active identity = %q, %q, %v", generation, prior, err)
+	generation, prior, terminal, err := runtime.scheduleIdentity(t.Context(), repository, target)
+	if err != nil || terminal || generation != currentGeneration || prior != "" {
+		t.Fatalf("active identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
 	}
 	runtime.Store.(*scheduleIdentityStore).schedule.Status = store.GenerationScheduleSettled
-	generation, prior, err = runtime.scheduleIdentity(t.Context(), repository, target)
-	if err != nil || generation == target || generation == currentGeneration || prior != currentDigest {
-		t.Fatalf("recovery identity = %q, %q, %v", generation, prior, err)
+	generation, prior, terminal, err = runtime.scheduleIdentity(t.Context(), repository, target)
+	if err != nil || terminal || generation == target || generation == currentGeneration || prior != currentDigest {
+		t.Fatalf("recovery identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
 	}
-	repeated, repeatedPrior, err := runtime.scheduleIdentity(t.Context(), repository, target)
-	if err != nil || repeated != generation || repeatedPrior != prior {
-		t.Fatalf("deterministic recovery = %q, %q, %v", repeated, repeatedPrior, err)
+	repeated, repeatedPrior, repeatedTerminal, err := runtime.scheduleIdentity(t.Context(), repository, target)
+	if err != nil || repeatedTerminal || repeated != generation || repeatedPrior != prior {
+		t.Fatalf("deterministic recovery = %q, %q, terminal %t, %v", repeated, repeatedPrior, repeatedTerminal, err)
+	}
+}
+
+func TestScheduleIdentityRetainsSamePolicyClosedRefusal(t *testing.T) {
+	repository := "example.com/acme/terminal"
+	buildPolicy, err := runtimeBuildPolicyDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: repository,
+		SourceGenerationDigest: fixedDigest("1"), SourceRootDigest: fixedDigest("2"),
+		ObservationGenerationDigest: fixedDigest("8"), ObservationRootDigest: fixedDigest("4"),
+		PartitionPolicyDigest: fixedDigest("5"), ObservationPolicyDigest: fixedDigest("6"),
+		InventoryPolicyDigest: fixedDigest("7"), RecordCount: 1, ObservedCount: 1,
+	}
+	upstream, err := downstreamauthority.BuildRequired(observation, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := runtimeTargetV3(
+		repository, upstream.Digest, fixedDigest("2"), fixedDigest("3"),
+		fixedDigest("4"), fixedDigest("5"), 1, buildPolicy,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentDigest := fixedDigest("7")
+	state := &scheduleIdentityStore{
+		schedule: &store.GenerationSchedule{
+			Repository: repository, Stage: ScheduleStage, Generation: target,
+			Digest: currentDigest, Status: store.GenerationScheduleSettled, Failed: 1,
+		},
+		failure: &store.GenerationScheduleFailure{
+			ScheduleDigest: currentDigest, Generation: target,
+			Refusal: &pipelinerefusal.Receipt{
+				Schema:         pipelinerefusal.Schema,
+				Stage:          pipelinerefusal.StageRelationshipKafkaProjection,
+				GenerationKind: pipelinerefusal.GenerationRelationship,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionResidentBytes,
+				Observed:       KafkaResidentLimit + 1, Limit: KafkaResidentLimit,
+			},
+		},
+	}
+	runtime := &Runtime{DataDir: t.TempDir(), Store: state}
+	binding := scheduleBinding{
+		Schema: BindingSchemaV3, Repository: repository,
+		ScheduleGeneration: target, TargetGeneration: target,
+		ObservationGeneration: fixedDigest("8"), CatalogGeneration: fixedDigest("2"),
+		ServiceStateSet: fixedDigest("3"), ServiceStateSummary: fixedDigest("5"),
+		ServiceStateRevision: 1, ResolverGeneration: fixedDigest("4"),
+		BuildPolicyDigest: buildPolicy,
+		Upstream:          &upstream,
+	}
+	binding.TargetGeneration, err = runtimeTargetV3(
+		repository, binding.Upstream.Digest, binding.CatalogGeneration,
+		binding.ServiceStateSet, binding.ResolverGeneration,
+		binding.ServiceStateSummary, binding.ServiceStateRevision, buildPolicy,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding.ScheduleGeneration = binding.TargetGeneration
+	state.schedule.Generation = binding.TargetGeneration
+	state.failure.Generation = binding.TargetGeneration
+	if err := setBindingDigest(&binding); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.writeBinding(binding); err != nil {
+		t.Fatal(err)
+	}
+	generation, prior, terminal, err := runtime.scheduleIdentity(
+		t.Context(), repository, binding.TargetGeneration,
+	)
+	if err != nil || !terminal || generation != binding.TargetGeneration || prior != "" {
+		t.Fatalf("terminal identity = %q, %q, terminal %t, %v", generation, prior, terminal, err)
+	}
+	changedTarget, err := runtimeTargetV3(
+		repository, binding.Upstream.Digest, binding.CatalogGeneration,
+		binding.ServiceStateSet, binding.ResolverGeneration,
+		binding.ServiceStateSummary, binding.ServiceStateRevision, fixedDigest("9"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation, prior, terminal, err = runtime.scheduleIdentity(
+		t.Context(), repository, changedTarget,
+	)
+	if err != nil || terminal || generation == binding.TargetGeneration ||
+		generation == changedTarget || prior != currentDigest {
+		t.Fatalf("changed-policy recovery = %q, %q, terminal %t, %v",
+			generation, prior, terminal, err)
+	}
+
+	historical := binding
+	historical.Schema, historical.BuildPolicyDigest = BindingSchemaV2, ""
+	historical.TargetGeneration, err = runtimeTargetV2(
+		repository, historical.Upstream.Digest, historical.CatalogGeneration,
+		historical.ServiceStateSet, historical.ResolverGeneration,
+		historical.ServiceStateSummary, historical.ServiceStateRevision,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical.ScheduleGeneration = historical.TargetGeneration
+	if err := setBindingDigest(&historical); err != nil {
+		t.Fatalf("historical v2 binding was not retained: %v", err)
+	}
+	wrongPolicy := binding
+	wrongPolicy.BuildPolicyDigest = fixedDigest("9")
+	wrongPolicy.TargetGeneration = changedTarget
+	wrongPolicy.ScheduleGeneration = changedTarget
+	if err := setBindingDigest(&wrongPolicy); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("v3 binding accepted a noncurrent build policy: %v", err)
 	}
 }
 
@@ -460,6 +807,17 @@ func TestDomainAuthorityFromPriorObservationIsAbsentFromNewAggregate(t *testing.
 type scheduleIdentityStore struct {
 	RuntimeStore
 	schedule *store.GenerationSchedule
+	failure  *store.GenerationScheduleFailure
+}
+
+func (state *scheduleIdentityStore) GetGenerationScheduleFailure(
+	_ context.Context, _, _, _ string,
+) (*store.GenerationScheduleFailure, error) {
+	if state.failure == nil {
+		return nil, store.ErrNotFound
+	}
+	value := *state.failure
+	return &value, nil
 }
 
 func (state *scheduleIdentityStore) GetGenerationSchedule(
@@ -1249,6 +1607,65 @@ func relationshipCatalog(t *testing.T) (servicecatalog.Publication, []servicecat
 		desired, err := servicecatalog.ServiceDesiredGeneration(projection, 1)
 		if err != nil {
 			t.Fatal(err)
+		}
+		state := servicecatalog.ServiceState{
+			Schema: servicecatalog.ServiceStateSchema, Repository: publication.Repository,
+			ServiceKey: projection.Service.Key, DisplayName: projection.Service.DisplayName,
+			Disposition: projection.Service.Disposition, Origin: projection.Service.Origin,
+			Successors: []string{}, Incarnation: 1, DesiredGeneration: desired,
+			DesiredSourceGeneration:  projection.SourceGeneration,
+			DesiredCatalogGeneration: projection.CatalogGeneration,
+			Status:                   servicecatalog.StatusUnavailable, ControlRevision: 1,
+			ChangedAt: time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC),
+		}
+		if err := servicecatalog.SetServiceStateDigest(&state); err != nil {
+			t.Fatal(err)
+		}
+		states = append(states, state)
+	}
+	return publication, states
+}
+
+func relationshipCatalogWithSemanticComplement(
+	t *testing.T,
+) (servicecatalog.Publication, []servicecatalog.ServiceState) {
+	t.Helper()
+	publication, _ := relationshipCatalog(t)
+	catalog, err := servicecatalog.Decode(publication.Canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+		ServiceKey: "orders", Path: "semantic", Role: servicecatalog.RoleSupporting,
+		Origin: servicecatalog.OriginBase,
+	})
+	publication.Canonical, err = servicecatalog.Canonical(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication.CatalogDigest, err = servicecatalog.Digest(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication.GenerationDigest, err = servicecatalog.PublicationGenerationDigest(publication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := servicecatalog.ValidatePublication(publication, true); err != nil {
+		t.Fatal(err)
+	}
+	projections, err := servicecatalog.ProjectServices(publication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	states := make([]servicecatalog.ServiceState, 0, 2)
+	for _, projection := range projections {
+		if projection.Service.Disposition != servicecatalog.DispositionAccepted {
+			continue
+		}
+		desired, desiredErr := servicecatalog.ServiceDesiredGeneration(projection, 1)
+		if desiredErr != nil {
+			t.Fatal(desiredErr)
 		}
 		state := servicecatalog.ServiceState{
 			Schema: servicecatalog.ServiceStateSchema, Repository: publication.Repository,
