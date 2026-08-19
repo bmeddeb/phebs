@@ -312,7 +312,10 @@ func TestScrubMirrorCredentialsAuditsKnownNestedLegacyMirror(t *testing.T) {
 		t.Fatalf("git remote add: %v\n%s", err, out)
 	}
 	report := ReconcileReport{}
-	if err := scrubMirrorCredentials(t.Context(), dataDir, []store.Repo{{Name: outerName}, {Name: nestedName}}, &report); err != nil {
+	if err := scrubMirrorCredentials(
+		t.Context(), dataDir, []store.Repo{{Name: outerName}, {Name: nestedName}},
+		newReconcileRepositoryLocks(reconcileRepositoryLockWait), &report,
+	); err != nil {
 		t.Fatal(err)
 	}
 	configBytes, err := os.ReadFile(filepath.Join(nested, "config"))
@@ -588,7 +591,10 @@ func TestReconcileRevisionRepairWaitsForRepositoryLock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 	defer cancel()
 	report := ReconcileReport{}
-	err := reconcileIndexedRevisions(ctx, st, dataDir, []store.Repo{repo}, &report)
+	err := reconcileIndexedRevisions(
+		ctx, st, dataDir, []store.Repo{repo},
+		newReconcileRepositoryLocks(reconcileRepositoryLockWait), &report,
+	)
 	unlock()
 
 	if !errors.Is(err, context.DeadlineExceeded) {
@@ -597,6 +603,45 @@ func TestReconcileRevisionRepairWaitsForRepositoryLock(t *testing.T) {
 	if st.cleared != 0 || report.RevisionRepairs != 0 {
 		t.Fatalf("state cleared without repository lock: report=%+v cleared=%d", report, st.cleared)
 	}
+}
+
+func TestReconcileArtifactsBoundsOppositeOrderRepositoryLockWait(t *testing.T) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	repo := store.Repo{
+		Name:     "example.com/lock-order/repository",
+		CloneURL: "https://example.com/lock-order/repository.git",
+	}
+	repositoryDir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(filepath.Dir(repositoryDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("git", "init", "--bare", repositoryDir).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	releaseRepository := repowork.Lock(repositoryDir)
+	started := time.Now()
+	_, err := ReconcileArtifacts(t.Context(), &reconcileStore{repo: repo}, dataDir, false)
+	if !errors.Is(err, context.DeadlineExceeded) ||
+		!errors.Is(err, errReconcileRepositoryLockBusy) || time.Since(started) > time.Second {
+		t.Fatalf("bounded artifact audit = elapsed %s error %v", time.Since(started), err)
+	}
+	releaseRepository()
+
+	exclusiveCtx, cancelExclusive := context.WithTimeout(t.Context(), time.Second)
+	defer cancelExclusive()
+	releaseExclusive, err := focusedindex.AcquireExclusiveMutationLock(exclusiveCtx, indexDir)
+	if err != nil {
+		t.Fatalf("exclusive lock remained pinned after bounded audit wait: %v", err)
+	}
+	releaseExclusive()
+
+	locks := newReconcileRepositoryLocks(50 * time.Millisecond)
+	second, err := locks.Lock(t.Context(), filepath.Join(dataDir, "other.git"))
+	if err != nil {
+		t.Fatalf("uncontended repository lock after bounded wait: %v", err)
+	}
+	second()
 }
 
 func TestReconcilePreReceiptPublicationClearsAndQueuesReplacement(t *testing.T) {

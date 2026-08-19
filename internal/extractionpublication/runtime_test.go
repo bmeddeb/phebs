@@ -287,12 +287,16 @@ type testFence struct {
 	stale   bool
 	current string
 	held    bool
+	before  func()
 }
 
 func (fence *testFence) FenceDomain(_ context.Context, request FenceRequest) (func(), error) {
 	fence.mu.Lock()
 	defer fence.mu.Unlock()
 	fence.calls++
+	if fence.before != nil {
+		fence.before()
+	}
 	if fence.stale || fence.current != "" && fence.current != request.Plan.SourceGenerationDigest {
 		return nil, store.ErrGenerationStale
 	}
@@ -534,6 +538,26 @@ func TestRuntimePointerLastRestartAndSettledRetryReuse(t *testing.T) {
 	}
 	if acquired, _ := source.counts(); acquired != 1 {
 		t.Fatalf("restart reopened source %d times", acquired)
+	}
+}
+
+func TestRuntimeReleasesSourceLeaseBeforePublicationFence(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("f", 64), true)
+	runtime, state, source, _, _, fence, domain := newRuntimeFixture(t, plan)
+	fence.before = func() {
+		acquired, released := source.counts()
+		if acquired != 1 || released != 1 {
+			t.Fatalf("source lease at publication fence = %d/%d, want released", acquired, released)
+		}
+	}
+	if _, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Handle(t.Context(), currentChunk(t, state, plan.Repository, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if fence.calls != 1 {
+		t.Fatalf("publication fence calls = %d, want 1", fence.calls)
 	}
 }
 

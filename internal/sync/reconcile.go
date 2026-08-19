@@ -41,6 +41,47 @@ type ReconcileReport struct {
 // credential-bearing legacy URL persisted in the database or mirror config.
 var ErrCredentialAudit = errors.New("credential artifact audit failed")
 
+const reconcileRepositoryLockWait = 250 * time.Millisecond
+
+var errReconcileRepositoryLockBusy = errors.New("repository reconciliation lock is busy")
+
+// reconcileRepositoryLocks bounds every repository-lock probe made while an
+// artifact audit holds the shared mutation fence. The first busy lock aborts
+// the audit, releasing the fence instead of forming the opposite-order cycle.
+type reconcileRepositoryLocks struct {
+	wait time.Duration
+}
+
+func newReconcileRepositoryLocks(wait time.Duration) *reconcileRepositoryLocks {
+	return &reconcileRepositoryLocks{wait: wait}
+}
+
+func (locks *reconcileRepositoryLocks) Lock(
+	ctx context.Context,
+	path string,
+) (func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if locks == nil || locks.wait <= 0 {
+		return nil, fmt.Errorf("repository reconciliation lock wait: %w", ErrBadInput)
+	}
+	lockCtx, cancel := context.WithTimeout(ctx, locks.wait)
+	unlock, err := repowork.LockContext(lockCtx, path)
+	lockCtxErr := lockCtx.Err()
+	cancel()
+	if err != nil {
+		if ctx.Err() == nil && lockCtxErr != nil {
+			return nil, errors.Join(
+				errReconcileRepositoryLockBusy,
+				fmt.Errorf("repository reconciliation lock %q: %w", path, err),
+			)
+		}
+		return nil, fmt.Errorf("repository reconciliation lock %q: %w", path, err)
+	}
+	return unlock, nil
+}
+
 // CallerPublicationLifecycle is the live process boundary that delays caller
 // artifact removal until every exact reader lease has released.
 type CallerPublicationLifecycle interface {
@@ -79,6 +120,7 @@ func ReconcileArtifactsWithCallerLifecycle(
 		return report, fmt.Errorf("acquire index reconciliation lock: %w", err)
 	}
 	defer releaseMutation()
+	repositoryLocks := newReconcileRepositoryLocks(reconcileRepositoryLockWait)
 
 	lifecycle, err := focusedindex.CleanupAbandonedLifecycle(
 		filepath.Join(dataDir, "index"),
@@ -116,8 +158,8 @@ func ReconcileArtifactsWithCallerLifecycle(
 			report.CredentialsFixed++
 		}
 	}
-	if err := scrubMirrorCredentials(ctx, dataDir, repos, &report); err != nil {
-		errs = append(errs, fmt.Errorf("%w: %v", ErrCredentialAudit, err))
+	if err := scrubMirrorCredentials(ctx, dataDir, repos, repositoryLocks, &report); err != nil {
+		errs = append(errs, fmt.Errorf("%w: %w", ErrCredentialAudit, err))
 	}
 	if len(errs) > 0 {
 		return report, errors.Join(errs...)
@@ -141,11 +183,14 @@ func ReconcileArtifactsWithCallerLifecycle(
 		if invalidNames[status.Name] {
 			continue // quarantined legacy collisions are never touched automatically
 		}
-		deleted, err := deleteRepoArtifactsWithCallerLifecycle(
-			ctx, st, dataDir, status.Name, callerLifecycle,
+		deleted, err := deleteRepoArtifactsWithCallerLifecycleAndLocks(
+			ctx, st, dataDir, status.Name, callerLifecycle, repositoryLocks,
 		)
 		if err != nil {
 			errs = append(errs, err)
+			if errors.Is(err, errReconcileRepositoryLockBusy) {
+				return report, errors.Join(errs...)
+			}
 			continue
 		}
 		if deleted {
@@ -188,11 +233,19 @@ func ReconcileArtifactsWithCallerLifecycle(
 	); err != nil {
 		errs = append(errs, err)
 	}
-	if err := reconcileUntrackedMirrors(ctx, dataDir, liveMirrors, cleanupEnabled, &report); err != nil {
+	if err := reconcileUntrackedMirrors(
+		ctx, dataDir, liveMirrors, cleanupEnabled, repositoryLocks, &report,
+	); err != nil {
 		errs = append(errs, err)
+		if errors.Is(err, errReconcileRepositoryLockBusy) {
+			return report, errors.Join(errs...)
+		}
 	}
-	if err := reconcileIndexedRevisions(ctx, st, dataDir, repos, &report); err != nil {
+	if err := reconcileIndexedRevisions(ctx, st, dataDir, repos, repositoryLocks, &report); err != nil {
 		errs = append(errs, err)
+		if errors.Is(err, errReconcileRepositoryLockBusy) {
+			return report, errors.Join(errs...)
+		}
 	}
 	return report, errors.Join(errs...)
 }
@@ -493,6 +546,19 @@ func deleteRepoArtifactsWithCallerLifecycle(
 	dataDir, name string,
 	callerLifecycle CallerPublicationLifecycle,
 ) (bool, error) {
+	return deleteRepoArtifactsWithCallerLifecycleAndLocks(
+		ctx, st, dataDir, name, callerLifecycle,
+		newReconcileRepositoryLocks(reconcileRepositoryLockWait),
+	)
+}
+
+func deleteRepoArtifactsWithCallerLifecycleAndLocks(
+	ctx context.Context,
+	st store.Store,
+	dataDir, name string,
+	callerLifecycle CallerPublicationLifecycle,
+	repositoryLocks *reconcileRepositoryLocks,
+) (bool, error) {
 	dir, err := SafeRepoDir(dataDir, name)
 	if err != nil {
 		return false, fmt.Errorf("refuse cleanup of %q: %w", name, err)
@@ -517,7 +583,7 @@ func deleteRepoArtifactsWithCallerLifecycle(
 		}
 	}
 
-	unlock, err := repowork.LockContext(ctx, dir)
+	unlock, err := repositoryLocks.Lock(ctx, dir)
 	if err != nil {
 		return rollback(err)
 	}
@@ -714,7 +780,14 @@ func reconcileUntrackedShards(ctx context.Context, dataDir string, live map[stri
 	return errors.Join(errs...)
 }
 
-func reconcileUntrackedMirrors(ctx context.Context, dataDir string, liveArtifacts map[string]bool, remove bool, report *ReconcileReport) error {
+func reconcileUntrackedMirrors(
+	ctx context.Context,
+	dataDir string,
+	liveArtifacts map[string]bool,
+	remove bool,
+	repositoryLocks *reconcileRepositoryLocks,
+	report *ReconcileReport,
+) error {
 	root := filepath.Join(dataDir, "repos")
 	return walkMirrorDirs(ctx, root, func(path string) error {
 		rel, err := filepath.Rel(root, path)
@@ -729,7 +802,7 @@ func reconcileUntrackedMirrors(ctx context.Context, dataDir string, liveArtifact
 				if err := ctx.Err(); err != nil {
 					return err
 				}
-				unlock, lockErr := repowork.LockContext(ctx, path)
+				unlock, lockErr := repositoryLocks.Lock(ctx, path)
 				if lockErr != nil {
 					return lockErr
 				}
@@ -749,7 +822,14 @@ func reconcileUntrackedMirrors(ctx context.Context, dataDir string, liveArtifact
 	})
 }
 
-func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir string, repos []store.Repo, report *ReconcileReport) error {
+func reconcileIndexedRevisions(
+	ctx context.Context,
+	st store.Store,
+	dataDir string,
+	repos []store.Repo,
+	repositoryLocks *reconcileRepositoryLocks,
+	report *ReconcileReport,
+) error {
 	versions, complete, err := indexedVersions(ctx, dataDir)
 	if err != nil {
 		return err
@@ -779,8 +859,11 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 		// The indexer owns this same lock from before the child starts through
 		// shard publication and SetRepoIndexed. Re-read both sides while holding
 		// it so a mid-swap snapshot can never clear a newly committed revision.
-		unlock, lockErr := repowork.LockContext(ctx, dir)
+		unlock, lockErr := repositoryLocks.Lock(ctx, dir)
 		if lockErr != nil {
+			if errors.Is(lockErr, errReconcileRepositoryLockBusy) {
+				return errors.Join(append(errs, lockErr)...)
+			}
 			errs = append(errs, lockErr)
 			continue
 		}
@@ -978,7 +1061,13 @@ func scrubRepoCredentials(ctx context.Context, st store.Store, repo store.Repo) 
 	return true, nil
 }
 
-func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.Repo, report *ReconcileReport) error {
+func scrubMirrorCredentials(
+	ctx context.Context,
+	dataDir string,
+	repos []store.Repo,
+	repositoryLocks *reconcileRepositoryLocks,
+	report *ReconcileReport,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -1003,7 +1092,7 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 		if !isBareMirrorDir(path) {
 			continue
 		}
-		changed, scrubErr := scrubMirrorAt(ctx, path)
+		changed, scrubErr := scrubMirrorAt(ctx, path, repositoryLocks)
 		if scrubErr != nil {
 			return scrubErr
 		}
@@ -1015,7 +1104,7 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 
 	return walkMirrorDirs(ctx, root, func(path string) error {
 		if !seen[repowork.CanonicalKey(path)] {
-			changed, err := scrubMirrorAt(ctx, path)
+			changed, err := scrubMirrorAt(ctx, path, repositoryLocks)
 			if err != nil {
 				return err
 			}
@@ -1027,8 +1116,12 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 	})
 }
 
-func scrubMirrorAt(ctx context.Context, path string) (bool, error) {
-	unlock, err := repowork.LockContext(ctx, path)
+func scrubMirrorAt(
+	ctx context.Context,
+	path string,
+	repositoryLocks *reconcileRepositoryLocks,
+) (bool, error) {
+	unlock, err := repositoryLocks.Lock(ctx, path)
 	if err != nil {
 		return false, err
 	}

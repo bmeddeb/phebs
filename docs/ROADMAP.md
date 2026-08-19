@@ -1415,6 +1415,17 @@ catalog, relationship, or correctness authority.
   safety and production bounds are unchanged. Neutral-27 remains immutable
   `unclassified` evidence. Focused/race/docs gates and independent review
   precede any request to integrate and authorize a fresh freeze.
+- A stacked production liveness correction closes three lock-wait exposures
+  before that fresh request: extraction releases its repository/source lease
+  after durable result installation and before publication fencing; artifact
+  reconciliation aborts its shared-fence audit after one 250-ms busy
+  repository-lock probe; and relationship mutation acquisition uses 25-ms
+  probes under a five-second overall deadline so the scheduler can retry and
+  return the repository-wide token to another ready stage. Deterministic tests
+  cover the exact lock order and relationship-to-extraction token yield. This
+  is prospective hardening, not a retroactive diagnosis or gate pass;
+  independent review and explicit integration/freeze authorization still
+  precede a new ceremony identifier.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

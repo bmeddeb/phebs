@@ -4198,6 +4198,50 @@ a prospective classification/revalidation correction; it does not
 retroactively pass or diagnose neutral-27's destroyed private state. V15 and
 earlier receipt validation and serialized bytes remain unchanged.
 
+### Derived-publication lock liveness
+
+Extraction source leases include the repository work lock. For a newly
+executed partition, that lease now ends immediately after the immutable result
+file and its directory sync are durable. Domain assembly, the exclusive
+derived-publication fence, current-pointer publication, and downstream
+settlement therefore run without the repository lock. Replayed installed
+results still open no source lease. This preserves exact result and authority
+validation while removing the repository-lock-to-publication-fence wait edge.
+
+Artifact reconciliation still holds the shared backup/mutation fence across
+its audit, but a repository lock is now only a 250-ms probe. The first busy
+repository stops the audit and releases the shared fence. Startup treats that
+as a failed trust-boundary audit; a runtime cleanup job follows its existing
+retry path. Reconciliation never mutates filesystem artifacts for a repository
+whose lock was not acquired. If an orphan-deletion branch reaches the busy
+lock, it has already performed its existing mark-deleting write and six
+bounded pending-job cancellations; rollback reactivates the row and may enqueue
+the existing forced recovery successor. Uncontended audits perform the same
+inventory and mutations, with one immediately canceled timeout context per
+repository-lock acquisition.
+
+Relationship unavailable transitions and relationship build chunks acquire
+their shared mutation fence through 25-ms probes with 10-ms retry delays and a
+five-second total deadline. Immediate acquisition remains one lock call. Under
+continuous contention the operation makes at most about 143 probes and returns
+a retryable deadline. An unavailable-authority reconcile returns that error to
+its owning job runner. A relationship build returns it to the generation
+scheduler, which durably retries the chunk and releases the repository-wide
+generation token before another ready stage claims it; the relationship
+successor remains behind its existing backoff. The token stays intentionally
+repository-wide, and attempt/backoff, memory, descriptor, and concurrency
+ceilings are unchanged.
+
+The extraction path adds no read, write, hash, allocation, or child process and
+shortens one held lock. Uncontended reconciliation adds no scan or write and
+bounds its opposite-order wait; the busy orphan branch pays the bounded
+control writes and rollback above. Relationship contention adds bounded lock
+syscalls; an unavailable transition uses the existing owning-job retry, while
+a build uses one existing scheduler retry transaction. No goroutine, lease
+heartbeat, or repository token remains pinned by build-lock acquisition.
+These are production liveness fences, not evidence that neutral-27 encountered
+a particular private lock state.
+
 New non-Kafka extraction plans use the version-2 domain-result contract: each
 partition retains the 64-MiB candidate-member reservation ceiling while the
 cumulative domain input is bounded independently at 1 GiB. New

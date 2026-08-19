@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
@@ -40,6 +41,10 @@ const (
 	ResolverResidentLimit    = 128 << 20
 	RPCResidentLimit         = 192 << 20
 	KafkaResidentLimit       = 160 << 20
+
+	mutationAcquireTimeout = 5 * time.Second
+	mutationProbeTimeout   = 25 * time.Millisecond
+	mutationRetryDelay     = 10 * time.Millisecond
 )
 
 // RuntimeStore is the exact durable control surface used by the relationship
@@ -65,6 +70,19 @@ type Runtime struct {
 	Acquire        func(context.Context) (func(), error)
 
 	transition sync.Mutex
+}
+
+type mutationAcquirePolicy struct {
+	timeout    time.Duration
+	probe      time.Duration
+	retryDelay time.Duration
+}
+
+func defaultMutationAcquirePolicy() mutationAcquirePolicy {
+	return mutationAcquirePolicy{
+		timeout: mutationAcquireTimeout, probe: mutationProbeTimeout,
+		retryDelay: mutationRetryDelay,
+	}
 }
 
 type scheduleBinding struct {
@@ -222,7 +240,7 @@ func (runtime *Runtime) reconcileV2(ctx context.Context, repository string) erro
 		return err
 	}
 	if err := downstreamauthority.RequireUsable(upstream); err != nil {
-		release, acquireErr := runtime.Acquire(ctx)
+		release, acquireErr := runtime.acquireMutation(ctx)
 		if acquireErr != nil {
 			return acquireErr
 		}
@@ -358,7 +376,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if runtime.Acquire == nil {
 		return fmt.Errorf("%w: relationship mutation lock", ErrInvalid)
 	}
-	release, err := runtime.Acquire(ctx)
+	release, err := runtime.acquireMutation(ctx)
 	if err != nil {
 		return err
 	}
@@ -599,6 +617,53 @@ func (runtime *Runtime) validate(repository string) error {
 		return fmt.Errorf("%w: relationship runtime configuration", ErrInvalid)
 	}
 	return nil
+}
+
+func (runtime *Runtime) acquireMutation(ctx context.Context) (func(), error) {
+	return acquireMutationWithPolicy(ctx, runtime.Acquire, defaultMutationAcquirePolicy())
+}
+
+func acquireMutationWithPolicy(
+	ctx context.Context,
+	acquire func(context.Context) (func(), error),
+	policy mutationAcquirePolicy,
+) (func(), error) {
+	if ctx == nil || acquire == nil || policy.timeout <= 0 || policy.probe <= 0 ||
+		policy.probe > policy.timeout || policy.retryDelay <= 0 {
+		return nil, fmt.Errorf("%w: relationship mutation acquisition", ErrInvalid)
+	}
+	acquireCtx, cancelAcquire := context.WithTimeout(ctx, policy.timeout)
+	defer cancelAcquire()
+	for {
+		probeCtx, cancelProbe := context.WithTimeout(acquireCtx, policy.probe)
+		release, err := acquire(probeCtx)
+		probeErr := probeCtx.Err()
+		cancelProbe()
+		if err == nil {
+			if release == nil {
+				return nil, fmt.Errorf("%w: relationship mutation lock returned no release", ErrInvalid)
+			}
+			return release, nil
+		}
+		if release != nil {
+			release()
+			return nil, fmt.Errorf("%w: relationship mutation lock returned release with error", ErrInvalid)
+		}
+		if acquireCtx.Err() != nil {
+			return nil, fmt.Errorf("acquire relationship mutation lock: %w", acquireCtx.Err())
+		}
+		if probeErr == nil && !errors.Is(err, context.DeadlineExceeded) &&
+			!errors.Is(err, context.Canceled) {
+			return nil, fmt.Errorf("acquire relationship mutation lock: %w", err)
+		}
+		retry := time.NewTimer(policy.retryDelay)
+		select {
+		case <-acquireCtx.Done():
+			retry.Stop()
+			return nil, fmt.Errorf("acquire relationship mutation lock: %w", acquireCtx.Err())
+		case <-retry.C:
+		}
+	}
 }
 
 func (runtime *Runtime) relationshipRoot() string {

@@ -289,6 +289,56 @@ func TestGenerationSchedulePagedFanoutAndLeaseLifecycle(t *testing.T) {
 	}
 }
 
+func TestGenerationRepositoryTokenYieldsAcrossStagesAfterRetry(t *testing.T) {
+	state := newRunnerStore(t)
+	repository := "example.invalid/cross-stage-yield"
+	relationship := generationSpec(repository, "sha256:"+strings.Repeat("a", 64))
+	relationship.Stage = "service-relationship"
+	relationship.ResourceClass = GenerationResourceMemory
+	relationship.TotalItems, relationship.ChunkItems = 1, 1
+	extraction := generationSpec(repository, "sha256:"+strings.Repeat("b", 64))
+	extraction.Stage = "extraction-partitions"
+	extraction.ResourceClass = GenerationResourceExtraction
+	extraction.TotalItems, extraction.ChunkItems = 1, 1
+	for _, spec := range []GenerationScheduleSpec{relationship, extraction} {
+		if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := state.ExpandGenerationSchedule(
+			t.Context(), spec.Repository, spec.Stage, spec.Generation,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	blocked, err := state.ClaimGenerationChunk(
+		t.Context(), GenerationResourceMemory, "relationship-worker",
+	)
+	if err != nil || blocked == nil || blocked.Stage != relationship.Stage {
+		t.Fatalf("relationship claim = %+v, %v", blocked, err)
+	}
+	if _, err := state.ClaimGenerationChunk(
+		t.Context(), GenerationResourceExtraction, "extraction-worker",
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("repository token admitted extraction beside relationship = %v", err)
+	}
+	retryAt := time.Now().UTC().Add(time.Hour)
+	successor, err := state.RetryGenerationChunk(
+		t.Context(), *blocked, "bounded mutation lock wait", retryAt,
+	)
+	if err != nil || successor == nil || successor.Stage != relationship.Stage ||
+		successor.Attempt != 1 || successor.NotBefore == nil ||
+		successor.NotBefore.Before(retryAt.Add(-time.Second)) {
+		t.Fatalf("relationship retry successor = %+v, %v", successor, err)
+	}
+	claimed, err := state.ClaimGenerationChunk(
+		t.Context(), GenerationResourceExtraction, "extraction-worker",
+	)
+	if err != nil || claimed == nil || claimed.Stage != extraction.Stage ||
+		claimed.Repository != repository {
+		t.Fatalf("cross-stage claim after bounded yield = %+v, %v", claimed, err)
+	}
+}
+
 func TestGenerationScheduleRetryCoalescingAndStaleFence(t *testing.T) {
 	store := newRunnerStore(t)
 	firstSpec := generationSpec("example.invalid/mono", "sha256:"+fmt.Sprintf("%064d", 2))

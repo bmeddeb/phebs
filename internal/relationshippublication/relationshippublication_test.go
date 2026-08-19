@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
@@ -30,6 +31,78 @@ import (
 )
 
 type fakeResolver struct{ root resolvernamespace.Root }
+
+func TestMutationAcquireRetriesBoundedProbesUntilAvailable(t *testing.T) {
+	attempts := 0
+	releases := 0
+	release, err := acquireMutationWithPolicy(
+		t.Context(),
+		func(ctx context.Context) (func(), error) {
+			attempts++
+			if attempts < 3 {
+				<-ctx.Done()
+				return nil, ctx.Err()
+			}
+			return func() { releases++ }, nil
+		},
+		mutationAcquirePolicy{
+			timeout: 200 * time.Millisecond, probe: 10 * time.Millisecond,
+			retryDelay: time.Millisecond,
+		},
+	)
+	if err != nil || release == nil || attempts != 3 {
+		t.Fatalf("bounded mutation acquisition = attempts %d release %t error %v", attempts, release != nil, err)
+	}
+	release()
+	if releases != 1 {
+		t.Fatalf("mutation release calls = %d, want 1", releases)
+	}
+}
+
+func TestMutationAcquireReturnsAfterOverallDeadline(t *testing.T) {
+	attempts := 0
+	started := time.Now()
+	_, err := acquireMutationWithPolicy(
+		t.Context(),
+		func(ctx context.Context) (func(), error) {
+			attempts++
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+		mutationAcquirePolicy{
+			timeout: 50 * time.Millisecond, probe: 10 * time.Millisecond,
+			retryDelay: time.Millisecond,
+		},
+	)
+	if !errors.Is(err, context.DeadlineExceeded) || attempts < 2 || time.Since(started) > time.Second {
+		t.Fatalf("bounded mutation deadline = attempts %d elapsed %s error %v", attempts, time.Since(started), err)
+	}
+}
+
+func TestMutationAcquireBoundsFocusedIndexContention(t *testing.T) {
+	indexDir := t.TempDir()
+	releaseExclusive, err := focusedindex.AcquireExclusiveMutationLock(t.Context(), indexDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer releaseExclusive()
+	attempts := 0
+	started := time.Now()
+	_, err = acquireMutationWithPolicy(
+		t.Context(),
+		func(ctx context.Context) (func(), error) {
+			attempts++
+			return focusedindex.AcquireMutationLock(ctx, indexDir)
+		},
+		mutationAcquirePolicy{
+			timeout: 75 * time.Millisecond, probe: 15 * time.Millisecond,
+			retryDelay: 2 * time.Millisecond,
+		},
+	)
+	if !errors.Is(err, context.DeadlineExceeded) || attempts < 2 || time.Since(started) > time.Second {
+		t.Fatalf("focused-index contention = attempts %d elapsed %s error %v", attempts, time.Since(started), err)
+	}
+}
 
 func TestRelationshipComponentResidentEnvelopesAndClosedFailures(t *testing.T) {
 	const semanticCharge = int64(147_324_928)

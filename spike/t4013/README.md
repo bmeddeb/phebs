@@ -2464,3 +2464,15 @@ Neutral-27 remains stopped and does not pass retroactively. V15 and earlier
 receipt bytes and semantics remain exact. Focused/race/docs gates and
 independent review precede any request to integrate, freeze, or execute a fresh
 identifier.
+
+The V16 observer correction has a separate stacked production prerequisite.
+Extraction now releases its Git source/repository lease after durable partition
+result installation and before domain assembly or publication fencing.
+Artifact reconciliation stops and releases its shared mutation fence after one
+250-ms busy repository-lock probe. Relationship mutation-lock acquisition uses
+25-ms probes under a five-second total deadline, allowing the scheduler to
+retry the relationship chunk and return the repository-wide token to a ready
+extraction stage. Deterministic tests reproduce the lock-order edge and the
+cross-stage token handoff. These changes do not assert that either private lock
+state occurred in neutral-27; they are prospective liveness hardening required
+before independent review and a fresh V16 freeze request.

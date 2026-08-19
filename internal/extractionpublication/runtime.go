@@ -777,9 +777,13 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return err
 	}
 	if !present {
-		// The source lease is the expensive/content-bearing boundary. Re-fence
-		// the exact scheduler lease immediately before acquiring it; a
-		// superseded or reaped worker must stop control-only.
+		// The source lease owns the repository work lock. Keep it scoped to
+		// content execution and durable result installation: assembly may need
+		// the global publication fence, whose opposite lock order is used by
+		// lifecycle reconciliation. Once the immutable result is installed,
+		// assembly needs no corpus handle or repository lock.
+		// Re-fence the exact scheduler lease immediately before acquiring
+		// source content; a superseded or reaped worker must stop control-only.
 		if err := runtime.Store.HeartbeatGenerationChunk(ctx, chunk); err != nil {
 			return err
 		}
@@ -797,7 +801,8 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if lease == nil {
 			return invalid("source returned no partition lease")
 		}
-		defer lease.Release()
+		releaseLease := sync.OnceFunc(lease.Release)
+		defer releaseLease()
 		deadline := time.Duration(
 			domain.Plan.Expected[localOrdinal].Quotas.DeadlineMilliseconds,
 		) * time.Millisecond
@@ -840,8 +845,13 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if err := installPartitionResult(resultPath, result); err != nil {
 			return err
 		}
+		var resultMS int64
 		if timingEnabled {
-			timing.ResultMS = time.Since(phaseStarted).Milliseconds()
+			resultMS = time.Since(phaseStarted).Milliseconds()
+		}
+		releaseLease()
+		if timingEnabled {
+			timing.ResultMS = resultMS
 		}
 	} else {
 		timing.Reused = true
