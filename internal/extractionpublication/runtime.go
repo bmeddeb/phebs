@@ -801,8 +801,12 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if lease == nil {
 			return invalid("source returned no partition lease")
 		}
-		releaseLease := sync.OnceFunc(lease.Release)
-		defer releaseLease()
+		leaseReleased := false
+		defer func() {
+			if !leaseReleased {
+				lease.Release()
+			}
+		}()
 		deadline := time.Duration(
 			domain.Plan.Expected[localOrdinal].Quotas.DeadlineMilliseconds,
 		) * time.Millisecond
@@ -849,7 +853,8 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		if timingEnabled {
 			resultMS = time.Since(phaseStarted).Milliseconds()
 		}
-		releaseLease()
+		leaseReleased = true
+		lease.Release()
 		if timingEnabled {
 			timing.ResultMS = resultMS
 		}

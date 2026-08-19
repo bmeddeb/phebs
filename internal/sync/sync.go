@@ -473,6 +473,9 @@ func HandlerWithCallerLifecycle(
 			_, err := ReconcileArtifactsWithCallerLifecycle(
 				ctx, st, cfg.Server.DataDir, true, callerLifecycle,
 			)
+			if errors.Is(err, errReconcileRepositoryLockBusy) {
+				return store.WithDeferral(err)
+			}
 			return err
 		}
 		return nil

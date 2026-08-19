@@ -85,9 +85,10 @@ func IsYield(err error) bool {
 	return errors.As(err, &yield)
 }
 
-// Deferral marks a job whose upstream authority is not ready yet. Unlike a
-// Yield, a deferral returns the same lease-fenced job to delayed pending state
-// without consuming an attempt; the runner may keep draining ready siblings.
+// Deferral marks work whose required authority or shared mutation boundary is
+// temporarily unavailable. Unlike a Yield, a deferral returns the same
+// lease-fenced job or generation chunk to delayed pending state without
+// consuming an attempt; the runner may keep draining ready siblings.
 type Deferral struct {
 	Err error
 }
@@ -95,8 +96,8 @@ type Deferral struct {
 func (d *Deferral) Error() string { return "deferred: " + d.Err.Error() }
 func (d *Deferral) Unwrap() error { return d.Err }
 
-// WithDeferral marks an upstream-readiness wait. A nil error has no reason to
-// defer and therefore remains nil.
+// WithDeferral marks a temporary prerequisite wait. A nil error has no reason
+// to defer and therefore remains nil.
 func WithDeferral(err error) error {
 	if err == nil {
 		return nil

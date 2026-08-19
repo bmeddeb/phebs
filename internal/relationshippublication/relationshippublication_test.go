@@ -74,8 +74,28 @@ func TestMutationAcquireReturnsAfterOverallDeadline(t *testing.T) {
 			retryDelay: time.Millisecond,
 		},
 	)
-	if !errors.Is(err, context.DeadlineExceeded) || attempts < 2 || time.Since(started) > time.Second {
+	if !errors.Is(err, context.DeadlineExceeded) || !errors.Is(err, errMutationLockBusy) ||
+		!store.IsDeferral(err) || attempts < 2 || time.Since(started) > time.Second {
 		t.Fatalf("bounded mutation deadline = attempts %d elapsed %s error %v", attempts, time.Since(started), err)
+	}
+}
+
+func TestMutationAcquirePreservesCallerCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := acquireMutationWithPolicy(
+		ctx,
+		func(ctx context.Context) (func(), error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+		mutationAcquirePolicy{
+			timeout: 50 * time.Millisecond, probe: 10 * time.Millisecond,
+			retryDelay: time.Millisecond,
+		},
+	)
+	if !errors.Is(err, context.Canceled) || store.IsDeferral(err) {
+		t.Fatalf("caller cancellation = %v, want ordinary context cancellation", err)
 	}
 }
 
@@ -99,7 +119,8 @@ func TestMutationAcquireBoundsFocusedIndexContention(t *testing.T) {
 			retryDelay: 2 * time.Millisecond,
 		},
 	)
-	if !errors.Is(err, context.DeadlineExceeded) || attempts < 2 || time.Since(started) > time.Second {
+	if !errors.Is(err, context.DeadlineExceeded) || !errors.Is(err, errMutationLockBusy) ||
+		!store.IsDeferral(err) || attempts < 2 || time.Since(started) > time.Second {
 		t.Fatalf("focused-index contention = attempts %d elapsed %s error %v", attempts, time.Since(started), err)
 	}
 }

@@ -1420,9 +1420,12 @@ catalog, relationship, or correctness authority.
   after durable result installation and before publication fencing; artifact
   reconciliation aborts its shared-fence audit after one 250-ms busy
   repository-lock probe; and relationship mutation acquisition uses 25-ms
-  probes under a five-second overall deadline so the scheduler can retry and
-  return the repository-wide token to another ready stage. Deterministic tests
-  cover the exact lock order and relationship-to-extraction token yield. This
+  probes under a five-second overall deadline so the scheduler can defer the
+  same chunk without consuming an attempt and return the repository-wide token
+  to another ready stage. Runtime sync cleanup uses the same non-consuming
+  ordinary-job deferral on a busy repository probe, while direct startup audits
+  remain fail-closed. Deterministic tests cover the exact lock order and
+  relationship-to-extraction token yield. This
   is prospective hardening, not a retroactive diagnosis or gate pass;
   independent review and explicit integration/freeze authorization still
   precede a new ceremony identifier.

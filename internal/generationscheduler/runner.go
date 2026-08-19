@@ -233,6 +233,21 @@ func (scheduler *Scheduler) storeCallTimeout() time.Duration {
 	return 5 * time.Second
 }
 
+func (scheduler *Scheduler) pollEvery() time.Duration {
+	if scheduler.PollEvery > 0 {
+		return scheduler.PollEvery
+	}
+	return 250 * time.Millisecond
+}
+
+func (scheduler *Scheduler) deferralDelay() time.Duration {
+	// The store call can consume its whole client timeout after computing the
+	// persisted fence. Keep one complete poll interval after any successful
+	// response so a different resource-class worker gets a deterministic
+	// opportunity to claim the released repository token.
+	return scheduler.storeCallTimeout() + scheduler.pollEvery()
+}
+
 func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationResourceClass) {
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
@@ -410,6 +425,23 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 			outcome = "terminal_record_failed"
 			scheduler.report(fmt.Errorf("fail terminal generation chunk: %w", err))
 		} else if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+			outcome = "stale_fenced"
+		}
+		return
+	}
+	if store.IsDeferral(handleErr) {
+		outcome = "deferred"
+		if err := scheduler.Store.DeferGenerationChunk(
+			writeCtx,
+			chunk,
+			store.DurableErrorText(handleErr),
+			scheduler.deferralDelay(),
+		); err != nil && !errors.Is(err, store.ErrGenerationLeaseLost) &&
+			!errors.Is(err, store.ErrGenerationStale) {
+			outcome = "deferral_failed"
+			scheduler.report(fmt.Errorf("defer generation chunk: %w", err))
+		} else if errors.Is(err, store.ErrGenerationLeaseLost) ||
+			errors.Is(err, store.ErrGenerationStale) {
 			outcome = "stale_fenced"
 		}
 		return

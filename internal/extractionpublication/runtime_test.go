@@ -410,6 +410,11 @@ func (*testScheduleStore) FailGenerationChunk(context.Context, store.GenerationC
 func (*testScheduleStore) RetryGenerationChunk(context.Context, store.GenerationChunk, string, time.Time) (*store.GenerationChunk, error) {
 	return nil, store.ErrGenerationExhausted
 }
+func (*testScheduleStore) DeferGenerationChunk(
+	context.Context, store.GenerationChunk, string, time.Duration,
+) error {
+	return nil
+}
 func (*testScheduleStore) ReleaseGenerationChunk(context.Context, store.GenerationChunk, string) error {
 	return nil
 }

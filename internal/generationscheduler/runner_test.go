@@ -49,6 +49,9 @@ type schedulerStore struct {
 	failed       int
 	failErrors   []string
 	released     int
+	deferred     int
+	deferDelay   time.Duration
+	deferErrors  []string
 	done         chan struct{}
 	retryErr     error
 	heartbeatErr error
@@ -152,6 +155,12 @@ func (*blockedExpansionRecoveryStore) RetryGenerationChunk(
 	context.Context, store.GenerationChunk, string, time.Time,
 ) (*store.GenerationChunk, error) {
 	return nil, errors.New("unused")
+}
+
+func (*blockedExpansionRecoveryStore) DeferGenerationChunk(
+	context.Context, store.GenerationChunk, string, time.Duration,
+) error {
+	return errors.New("unused")
 }
 
 func (*blockedExpansionRecoveryStore) ReleaseGenerationChunk(
@@ -299,6 +308,20 @@ func (scheduler *schedulerStore) RetryGenerationChunk(_ context.Context, _ store
 	return &store.GenerationChunk{}, nil
 }
 
+func (scheduler *schedulerStore) DeferGenerationChunk(
+	_ context.Context,
+	_ store.GenerationChunk,
+	message string,
+	delay time.Duration,
+) error {
+	scheduler.mu.Lock()
+	defer scheduler.mu.Unlock()
+	scheduler.deferred++
+	scheduler.deferDelay = delay
+	scheduler.deferErrors = append(scheduler.deferErrors, message)
+	return nil
+}
+
 func TestSchedulerReportsExhaustionAfterRetryTransition(t *testing.T) {
 	fake := &schedulerStore{retryErr: store.ErrGenerationExhausted}
 	exhausted := make(chan error, 1)
@@ -326,6 +349,37 @@ func TestSchedulerReportsExhaustionAfterRetryTransition(t *testing.T) {
 		}
 	default:
 		t.Fatal("exhaustion callback was not called")
+	}
+}
+
+func TestSchedulerDefersWithoutConsumingAttempt(t *testing.T) {
+	fake := &schedulerStore{}
+	scheduler := &Scheduler{
+		Store: fake, PollEvery: 37 * time.Millisecond, HeartbeatEvery: time.Hour,
+		Backoff: func(int) time.Duration { return time.Millisecond },
+	}
+	cause := errors.New("mutation lock busy")
+	scheduler.execute(t.Context(), Class{
+		Budget: Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+		Handle: func(context.Context, store.GenerationChunk, Budget) error {
+			return store.WithDeferral(cause)
+		},
+	}, store.GenerationChunk{
+		ID: "chunk", ResourceClass: store.GenerationResourceMemory,
+		Status: store.GenerationChunkRunning, LeaseToken: "lease",
+	})
+
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	if fake.deferred != 1 || fake.retried != 0 || fake.failed != 0 ||
+		fake.deferDelay != scheduler.storeCallTimeout()+scheduler.PollEvery ||
+		len(fake.deferErrors) != 1 ||
+		!strings.Contains(fake.deferErrors[0], cause.Error()) {
+		t.Fatalf(
+			"deferred/retried/failed/delay/errors = %d/%d/%d/%s/%q",
+			fake.deferred, fake.retried, fake.failed,
+			fake.deferDelay, fake.deferErrors,
+		)
 	}
 }
 

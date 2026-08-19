@@ -623,6 +623,19 @@ func (runtime *Runtime) acquireMutation(ctx context.Context) (func(), error) {
 	return acquireMutationWithPolicy(ctx, runtime.Acquire, defaultMutationAcquirePolicy())
 }
 
+var errMutationLockBusy = errors.New("relationship mutation lock is busy")
+
+func mutationAcquireDeadline(ctx context.Context, cause error) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("acquire relationship mutation lock: %w", err)
+	}
+	return store.WithDeferral(fmt.Errorf(
+		"%w: acquire relationship mutation lock: %w",
+		errMutationLockBusy,
+		cause,
+	))
+}
+
 func acquireMutationWithPolicy(
 	ctx context.Context,
 	acquire func(context.Context) (func(), error),
@@ -650,7 +663,7 @@ func acquireMutationWithPolicy(
 			return nil, fmt.Errorf("%w: relationship mutation lock returned release with error", ErrInvalid)
 		}
 		if acquireCtx.Err() != nil {
-			return nil, fmt.Errorf("acquire relationship mutation lock: %w", acquireCtx.Err())
+			return nil, mutationAcquireDeadline(ctx, acquireCtx.Err())
 		}
 		if probeErr == nil && !errors.Is(err, context.DeadlineExceeded) &&
 			!errors.Is(err, context.Canceled) {
@@ -660,7 +673,7 @@ func acquireMutationWithPolicy(
 		select {
 		case <-acquireCtx.Done():
 			retry.Stop()
-			return nil, fmt.Errorf("acquire relationship mutation lock: %w", acquireCtx.Err())
+			return nil, mutationAcquireDeadline(ctx, acquireCtx.Err())
 		case <-retry.C:
 		}
 	}

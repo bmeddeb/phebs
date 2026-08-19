@@ -411,6 +411,7 @@ type GenerationSchedulerStore interface {
 	CompleteGenerationChunk(context.Context, GenerationChunk) error
 	FailGenerationChunk(context.Context, GenerationChunk, string) error
 	RetryGenerationChunk(context.Context, GenerationChunk, string, time.Time) (*GenerationChunk, error)
+	DeferGenerationChunk(context.Context, GenerationChunk, string, time.Duration) error
 	ReleaseGenerationChunk(context.Context, GenerationChunk, string) error
 	ReapStaleGenerationChunks(context.Context, GenerationResourceClass, time.Duration) (int, error)
 	GetGenerationSchedule(context.Context, string, string) (*GenerationSchedule, error)
@@ -1344,6 +1345,90 @@ IF $owned != NONE {
 };
 RETURN [{ owned: $owned != NONE, current: $is_current, exhausted: false }];
 COMMIT;`
+
+const deferGenerationChunkSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM $chunk WHERE status = 'running'
+	AND lease_token = $lease AND claimed_by = $worker LIMIT 1)[0].id;
+LET $current_digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
+LET $is_current = $current_digest = $digest;
+IF $owned != NONE {
+	UPDATE $chunk SET status = IF $is_current THEN 'pending' ELSE 'canceled' END,
+		priority = IF $is_current THEN 2 ELSE priority END,
+		not_before = IF $is_current THEN $not_before ELSE NONE END,
+		error = $error, claimed_by = '', claimed_at = NONE,
+		heartbeat_at = NONE, lease_token = '' RETURN NONE;
+	UPDATE $schedule SET running -= 1,
+		pending += IF $is_current THEN 1 ELSE 0 END,
+		updated_at = time::now() RETURN NONE;
+	UPDATE $repository_state SET running -= 1, updated_at = time::now() RETURN NONE;
+};
+RETURN [{ owned: $owned != NONE, current: $is_current, exhausted: false }];
+COMMIT;`
+
+// DeferGenerationChunk returns the same exact leased chunk to delayed pending
+// state without consuming an attempt or materializing a successor. The delay
+// is recomputed for each store-level conflict retry so the committed fence
+// never inherits elapsed time from an earlier conflicted transaction attempt.
+func (s *Surreal) DeferGenerationChunk(
+	ctx context.Context,
+	chunk GenerationChunk,
+	reason string,
+	delay time.Duration,
+) error {
+	if err := validGenerationChunkLease(chunk); err != nil {
+		return err
+	}
+	if delay <= 0 {
+		return errors.New("defer generation chunk: delay is required")
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]generationTransitionRec](
+			ctx,
+			s.db,
+			deferGenerationChunkSQL,
+			map[string]any{
+				"chunk": generationChunkRecordID(chunk),
+				"schedule": models.NewRecordID(
+					"generation_schedule",
+					strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
+				),
+				"current": models.NewRecordID(
+					"generation_schedule_current",
+					strings.TrimPrefix(
+						generationCurrentID(chunk.Repository, chunk.Stage),
+						"sha256:",
+					),
+				),
+				"repository_state": models.NewRecordID(
+					"generation_schedule_repository",
+					strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:"),
+				),
+				"digest": chunk.ScheduleDigest, "lease": chunk.LeaseToken,
+				"worker": chunk.ClaimedBy, "error": boundedGenerationError(reason),
+				"not_before": time.Now().UTC().Add(delay),
+			},
+		)
+		if err != nil {
+			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				diagnostics.Logf(
+					"generation schedule store retry: operation=defer attempt=%d",
+					attempt+1,
+				)
+				continue
+			}
+			return fmt.Errorf("defer generation chunk: %w", err)
+		}
+		rows := generationTransitionRows(results)
+		if len(rows) != 1 || !rows[0].Owned {
+			return ErrGenerationLeaseLost
+		}
+		if !rows[0].Current {
+			return ErrGenerationStale
+		}
+		return nil
+	}
+}
 
 func (s *Surreal) ReleaseGenerationChunk(ctx context.Context, chunk GenerationChunk, reason string) error {
 	if err := validGenerationChunkLease(chunk); err != nil {

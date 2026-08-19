@@ -2471,8 +2471,11 @@ result installation and before domain assembly or publication fencing.
 Artifact reconciliation stops and releases its shared mutation fence after one
 250-ms busy repository-lock probe. Relationship mutation-lock acquisition uses
 25-ms probes under a five-second total deadline, allowing the scheduler to
-retry the relationship chunk and return the repository-wide token to a ready
-extraction stage. Deterministic tests reproduce the lock-order edge and the
-cross-stage token handoff. These changes do not assert that either private lock
-state occurred in neutral-27; they are prospective liveness hardening required
-before independent review and a fresh V16 freeze request.
+return the same relationship chunk to delayed pending without consuming an
+attempt and release the repository-wide token to a ready extraction stage.
+Runtime sync cleanup likewise defers its exact owning job after a busy audit
+probe, while a direct startup audit remains fail-closed. Deterministic tests
+reproduce the lock-order edge, non-consuming deferral, and cross-stage token
+handoff. These changes do not assert that either private lock state occurred in
+neutral-27; they are prospective liveness hardening required before independent
+review and a fresh V16 freeze request.

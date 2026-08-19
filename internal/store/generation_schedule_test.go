@@ -289,7 +289,7 @@ func TestGenerationSchedulePagedFanoutAndLeaseLifecycle(t *testing.T) {
 	}
 }
 
-func TestGenerationRepositoryTokenYieldsAcrossStagesAfterRetry(t *testing.T) {
+func TestGenerationRepositoryTokenYieldsAcrossStagesAfterDeferral(t *testing.T) {
 	state := newRunnerStore(t)
 	repository := "example.invalid/cross-stage-yield"
 	relationship := generationSpec(repository, "sha256:"+strings.Repeat("a", 64))
@@ -321,21 +321,34 @@ func TestGenerationRepositoryTokenYieldsAcrossStagesAfterRetry(t *testing.T) {
 	); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("repository token admitted extraction beside relationship = %v", err)
 	}
-	retryAt := time.Now().UTC().Add(time.Hour)
-	successor, err := state.RetryGenerationChunk(
-		t.Context(), *blocked, "bounded mutation lock wait", retryAt,
+	if err := state.DeferGenerationChunk(
+		t.Context(), *blocked, "bounded mutation lock wait", time.Hour,
+	); err != nil {
+		t.Fatalf("defer relationship chunk: %v", err)
+	}
+	if err := state.DeferGenerationChunk(
+		t.Context(), *blocked, "replayed deferral", time.Hour,
+	); !errors.Is(err, ErrGenerationLeaseLost) {
+		t.Fatalf("replayed deferral = %v, want lease fence", err)
+	}
+	deferred, err := state.generationChunkByIdentity(t.Context(), blocked.Identity)
+	if err != nil || deferred == nil || deferred.Status != GenerationChunkPending || deferred.Attempt != 0 ||
+		deferred.NotBefore == nil || deferred.NotBefore.Before(time.Now().Add(59*time.Minute)) {
+		t.Fatalf("deferred relationship chunk = %+v, %v", deferred, err)
+	}
+	progress, err := state.GetGenerationSchedule(
+		t.Context(), repository, relationship.Stage,
 	)
-	if err != nil || successor == nil || successor.Stage != relationship.Stage ||
-		successor.Attempt != 1 || successor.NotBefore == nil ||
-		successor.NotBefore.Before(retryAt.Add(-time.Second)) {
-		t.Fatalf("relationship retry successor = %+v, %v", successor, err)
+	if err != nil || progress == nil || progress.Pending != 1 || progress.Running != 0 ||
+		progress.Materialized != 1 || progress.Failed != 0 {
+		t.Fatalf("relationship after deferral = %+v, %v", progress, err)
 	}
 	claimed, err := state.ClaimGenerationChunk(
 		t.Context(), GenerationResourceExtraction, "extraction-worker",
 	)
 	if err != nil || claimed == nil || claimed.Stage != extraction.Stage ||
 		claimed.Repository != repository {
-		t.Fatalf("cross-stage claim after bounded yield = %+v, %v", claimed, err)
+		t.Fatalf("cross-stage claim after bounded deferral = %+v, %v", claimed, err)
 	}
 }
 

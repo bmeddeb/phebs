@@ -4211,34 +4211,69 @@ validation while removing the repository-lock-to-publication-fence wait edge.
 Artifact reconciliation still holds the shared backup/mutation fence across
 its audit, but a repository lock is now only a 250-ms probe. The first busy
 repository stops the audit and releases the shared fence. Startup treats that
-as a failed trust-boundary audit; a runtime cleanup job follows its existing
-retry path. Reconciliation never mutates filesystem artifacts for a repository
-whose lock was not acquired. If an orphan-deletion branch reaches the busy
-lock, it has already performed its existing mark-deleting write and six
-bounded pending-job cancellations; rollback reactivates the row and may enqueue
-the existing forced recovery successor. Uncontended audits perform the same
-inventory and mutations, with one immediately canceled timeout context per
-repository-lock acquisition.
+as a failed trust-boundary audit. A runtime sync job classifies the same busy
+edge as a delayed, non-attempt-consuming deferral: the exact leased job returns
+to pending behind its base interval and already-ready siblings retain the
+runner's bounded drain opportunity. Reconciliation never mutates filesystem
+artifacts for a repository whose lock was not acquired. If an orphan-deletion
+branch reaches the busy lock, it has already performed its existing
+mark-deleting write and six bounded pending-job cancellations; rollback
+reactivates the row and may enqueue the existing forced recovery successor.
+Uncontended audits perform the same inventory and mutations, with one
+immediately canceled timeout context per repository-lock acquisition.
+
+A late runtime cleanup collision occurs after the sync handler has already run
+the existing connection sync/fetch, index-job enqueue, and connection-membership
+write, as well as every audit scan and mutation preceding the busy repository.
+Each eligible deferred execution can repeat all of that bounded work until the
+lock clears; the deferral does not consume the three-attempt failure budget, so
+the repetition count is controlled by lock lifetime and the configured sync
+cadence rather than an attempt ceiling. This path adds no new operation kind,
+but operators should not interpret the 250-ms probe as the total cost of a
+deferred sync turn.
 
 Relationship unavailable transitions and relationship build chunks acquire
 their shared mutation fence through 25-ms probes with 10-ms retry delays and a
 five-second total deadline. Immediate acquisition remains one lock call. Under
 continuous contention the operation makes at most about 143 probes and returns
-a retryable deadline. An unavailable-authority reconcile returns that error to
-its owning job runner. A relationship build returns it to the generation
-scheduler, which durably retries the chunk and releases the repository-wide
-generation token before another ready stage claims it; the relationship
-successor remains behind its existing backoff. The token stays intentionally
+a typed deferral. An unavailable-authority reconcile returns that outcome to
+whichever lease-owning runner invoked the publication callback: resolver and
+caller callbacks defer their ordinary job, while observation and extraction
+callbacks defer their generation chunk, all without consuming an attempt. A
+direct startup reconcile remains a reported failure because no runner or
+scheduler lease owns it. A relationship build returns the same outcome to the
+generation scheduler. The scheduler moves the exact chunk from running to
+delayed pending, decrements the repository-wide running token, and leaves its
+attempt and materialized counters unchanged. The chunk is ineligible while `not_before` is
+in the future, and another ready stage may claim the released token. The delay
+is the scheduler store-call timeout plus one poll interval, leaving one full
+poll interval after any successful response even when the store call consumed
+its timeout envelope; its absolute fence is recomputed inside every Surreal
+conflict retry. The token stays intentionally
 repository-wide, and attempt/backoff, memory, descriptor, and concurrency
 ceilings are unchanged.
 
-The extraction path adds no read, write, hash, allocation, or child process and
-shortens one held lock. Uncontended reconciliation adds no scan or write and
+Startup service-catalog reconciliation visits the installation repository
+list serially and invokes relationship reconciliation for each current,
+published, or legacy-imported selected repository. That existing list has no
+installation-wide cardinality cap. A current matching relationship root still
+returns before mutation-lock acquisition. An unavailable transition under a
+persistent exclusive fence may now spend up to five seconds per eligible
+repository before recording that repository's failure and continuing, so the
+startup edge is O(repositories) and can add up to five seconds times the
+eligible repository count. Startup retains no waiting goroutine or repository
+token after each bounded failure.
+
+The extraction path adds no read, write, hash, heap allocation, or child process
+and shortens one held lock. Uncontended reconciliation adds no scan or write and
 bounds its opposite-order wait; the busy orphan branch pays the bounded
 control writes and rollback above. Relationship contention adds bounded lock
-syscalls; an unavailable transition uses the existing owning-job retry, while
-a build uses one existing scheduler retry transaction. No goroutine, lease
-heartbeat, or repository token remains pinned by build-lock acquisition.
+syscalls plus one same-row deferral transaction under a scheduler or ordinary
+job owner. A deferred upstream publication callback may repeat that owning
+handler's existing bounded work at its runner or scheduler cadence; direct
+startup pays the serial bound above. No goroutine, lease heartbeat, retry
+successor, failed attempt, or repository token remains pinned by build-lock
+acquisition.
 These are production liveness fences, not evidence that neutral-27 encountered
 a particular private lock state.
 

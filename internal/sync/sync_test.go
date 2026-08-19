@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
 )
@@ -309,6 +310,62 @@ func TestOrchestration(t *testing.T) {
 	}
 	if _, err := os.Stat(sync.RepoDir(dataDir, name)); !os.IsNotExist(err) {
 		t.Errorf("mirror still on disk after cleanup: %v", err)
+	}
+}
+
+func TestHandlerClassifiesBusyArtifactAuditAsDeferral(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	newOrigin := func(name string) string {
+		t.Helper()
+		origin := t.TempDir()
+		gitc(t, origin, "init", "-b", "main")
+		if err := os.WriteFile(filepath.Join(origin, name+".txt"), []byte("x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		gitc(t, origin, "add", ".")
+		gitc(t, origin, "commit", "-m", "init")
+		return origin
+	}
+	fixtureOrigin := newOrigin("fixture")
+	blockedOrigin := newOrigin("blocked")
+
+	dataDir := t.TempDir()
+	state, err := store.OpenLocalMemory(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	configuration := &config.Config{
+		Server: config.Server{DataDir: dataDir},
+		Sync:   config.Sync{CleanupOrphans: true},
+		Connections: []config.Connection{
+			{Name: "fixture", Type: "git", URL: "file://" + fixtureOrigin},
+			{Name: "blocked", Type: "git", URL: "file://" + blockedOrigin},
+		},
+	}
+	handler := sync.Handler(configuration, state)
+	job := store.Job{Target: "fixture"}
+	if err := handler(ctx, job); err != nil {
+		t.Fatalf("initial handler: %v", err)
+	}
+	if err := handler(ctx, store.Job{Target: "blocked"}); err != nil {
+		t.Fatalf("blocked-repository setup: %v", err)
+	}
+	repository, err := sync.RepoName(configuration.Connections[1].URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := repowork.Lock(sync.RepoDir(dataDir, repository))
+	started := time.Now()
+	err = handler(ctx, job)
+	release()
+	if !store.IsDeferral(err) || time.Since(started) > 2*time.Second {
+		t.Fatalf("busy cleanup handler = elapsed %s error %v", time.Since(started), err)
 	}
 }
 
