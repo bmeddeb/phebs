@@ -4,10 +4,12 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -116,6 +118,246 @@ func TestRunnerNoDoubleExecution(t *testing.T) {
 		if n != 1 {
 			t.Errorf("%s executed %d times, want exactly 1", target, n)
 		}
+	}
+}
+
+func TestRunnerDependencyDeferralWaitsBeforeReexecution(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	job, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executions := make(chan Job, 1)
+	var runs atomic.Int32
+	runner := &Runner{
+		Store: s, Kind: JobCallerLeaf,
+		Handle: func(_ context.Context, current Job) error {
+			executions <- current
+			if runs.Add(1) == 1 {
+				return WithDeferral(errors.New("resolver is not current"))
+			}
+			return nil
+		},
+		Interval: 2 * time.Second, HeartbeatEvery: 5 * time.Second,
+		StaleAfter: 20 * time.Second, Who: "deferral-runner",
+	}
+	go runner.Run(ctx)
+
+	first := <-executions
+	if first.ID != job.ID || first.Attempts != 0 {
+		t.Fatalf("first execution = %+v, want original job at attempt zero", first)
+	}
+	waitFor(t, 5*time.Second, func() bool {
+		pending, listErr := s.ListJobs(ctx, JobCallerLeaf, StatusPending)
+		return listErr == nil && len(pending) == 1 &&
+			pending[0].ID == job.ID && pending[0].Attempts == 0 &&
+			pending[0].NotBefore != nil
+	}, "dependency deferral was not persisted with a claim delay")
+
+	select {
+	case repeated := <-executions:
+		t.Fatalf("deferred job re-executed before its delay: %+v", repeated)
+	case <-time.After(900 * time.Millisecond):
+	}
+
+	var second Job
+	select {
+	case second = <-executions:
+	case <-time.After(6 * time.Second):
+		t.Fatal("deferred job did not execute after its delay")
+	}
+	if second.ID != job.ID || second.Attempts != 0 {
+		t.Fatalf("second execution = %+v, want same job and attempt count", second)
+	}
+	waitFor(t, 5*time.Second, func() bool {
+		done, listErr := s.ListJobs(ctx, JobCallerLeaf, StatusDone)
+		return listErr == nil && len(done) == 1 && done[0].ID == job.ID
+	}, "recovered deferred job did not complete")
+	cancel()
+}
+
+func TestRunnerDependencyDeferralDoesNotStarveReadySibling(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "blocked", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "ready", false); err != nil {
+		t.Fatal(err)
+	}
+	blocked := make(chan struct{}, 1)
+	ready := make(chan struct{}, 1)
+	runner := &Runner{
+		Store: s, Kind: JobCallerLeaf,
+		Handle: func(_ context.Context, job Job) error {
+			switch job.Target {
+			case "blocked":
+				blocked <- struct{}{}
+				return WithDeferral(errors.New("resolver is not current"))
+			case "ready":
+				ready <- struct{}{}
+				return nil
+			default:
+				return fmt.Errorf("unexpected target %q", job.Target)
+			}
+		},
+		Interval: 2 * time.Second, HeartbeatEvery: 5 * time.Second,
+		StaleAfter: 20 * time.Second, Who: "fair-deferral-runner",
+	}
+	go runner.Run(ctx)
+
+	select {
+	case <-blocked:
+	case <-time.After(5 * time.Second):
+		t.Fatal("oldest blocked job did not execute")
+	}
+	select {
+	case <-ready:
+	case <-time.After(900 * time.Millisecond):
+		t.Fatal("ready sibling waited for another jittered runner poll")
+	}
+	waitFor(t, 5*time.Second, func() bool {
+		done, listErr := s.ListJobs(ctx, JobCallerLeaf, StatusDone)
+		return listErr == nil && len(done) == 1 && done[0].Target == "ready"
+	}, "ready sibling did not complete in the deferral drain turn")
+	cancel()
+}
+
+type delayedDeferStore struct {
+	Store
+	delay time.Duration
+}
+
+func (state delayedDeferStore) DeferJob(
+	ctx context.Context,
+	job Job,
+	errMsg string,
+	delay time.Duration,
+) (time.Time, error) {
+	fence, err := state.Store.DeferJob(ctx, job, errMsg, delay)
+	if err == nil {
+		time.Sleep(state.delay)
+	}
+	return fence, err
+}
+
+func TestRunnerDependencyDeferralResponseLatencyDoesNotStarveSibling(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "blocked-a", false); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "blocked-b", false); err != nil {
+		t.Fatal(err)
+	}
+	// Unbuffered delivery anchors the assertion window to the exact handler
+	// start even when the host scheduler is contended.
+	started := make(chan string)
+	runner := &Runner{
+		Store: delayedDeferStore{Store: s, delay: 700 * time.Millisecond},
+		Kind:  JobCallerLeaf,
+		Handle: func(_ context.Context, job Job) error {
+			started <- job.Target
+			return WithDeferral(errors.New("resolver is not current"))
+		},
+		Interval: 600 * time.Millisecond, HeartbeatEvery: 2 * time.Second,
+		StaleAfter: 8 * time.Second, Who: "bounded-deferral-drain-runner",
+	}
+	runnerDone := make(chan struct{})
+	go func() {
+		defer close(runnerDone)
+		runner.Run(ctx)
+	}()
+	first := <-started
+	second := <-started
+	cancel()
+	select {
+	case <-runnerDone:
+	case <-time.After(10 * time.Second):
+		t.Fatal("runner did not stop after response-latency assertion")
+	}
+	if first != "blocked-a" || second != "blocked-b" {
+		t.Fatalf("delayed-response fairness starts = %q, %q, want blocked-a then blocked-b", first, second)
+	}
+}
+
+func TestDeferJobPreservesImmediatelyPendingFreshnessEvent(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", true); err != nil {
+		t.Fatal(err)
+	}
+	active, err := s.ClaimJob(ctx, JobCallerLeaf, "worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DeferJob(
+		ctx, *active, "resolver is not current", time.Hour,
+	); err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := s.ClaimJob(ctx, JobCallerLeaf, "fresh-worker")
+	if err != nil {
+		t.Fatalf("freshness successor was delayed: %v", err)
+	}
+	if claimed.ID != fresh.ID || !claimed.Force || claimed.Attempts != 0 {
+		t.Fatalf("claimed freshness successor = %+v, want %+v", claimed, fresh)
+	}
+}
+
+func TestDeferJobFencesLeaseAndFreshEventWakesDeferredRow(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	queued, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	active, err := s.ClaimJob(ctx, JobCallerLeaf, "worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	wrongOwner := *active
+	wrongOwner.ClaimedBy = "other-worker"
+	if _, err := s.DeferJob(
+		ctx, wrongOwner, "pending", time.Hour,
+	); !errors.Is(err, ErrLeaseLost) {
+		t.Fatalf("wrong-owner deferral = %v, want ErrLeaseLost", err)
+	}
+	if _, err := s.DeferJob(
+		ctx, *active, "pending", time.Hour,
+	); err != nil {
+		t.Fatal(err)
+	}
+	woken, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if woken.ID != queued.ID || woken.NotBefore != nil || !woken.Force {
+		t.Fatalf("woken deferred row = %+v, want same immediate forced row", woken)
+	}
+	claimed, err := s.ClaimJob(ctx, JobCallerLeaf, "next-worker")
+	if err != nil {
+		t.Fatalf("fresh event did not wake deferred row: %v", err)
+	}
+	if claimed.ID != queued.ID || claimed.Attempts != 0 || !claimed.Force {
+		t.Fatalf("claimed woken row = %+v", claimed)
 	}
 }
 
@@ -509,6 +751,8 @@ type flakyRunnerStore struct {
 	statuses           []JobStatus
 	statusErrors       []string
 	releases           []Job
+	deferrals          []Job
+	deferredUntil      time.Time
 	successorFailures  []Job
 	heartbeatErr       error
 	heartbeatLeaseLost bool
@@ -553,6 +797,19 @@ func (s *flakyRunnerStore) ReleaseJob(
 	defer s.mu.Unlock()
 	s.releases = append(s.releases, job)
 	return nil
+}
+
+func (s *flakyRunnerStore) DeferJob(
+	_ context.Context,
+	job Job,
+	_ string,
+	_ time.Duration,
+) (time.Time, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.deferrals = append(s.deferrals, job)
+	s.deferredUntil = time.Now().UTC().Add(time.Second)
+	return s.deferredUntil, nil
 }
 
 func TestRunnerPersistsStructuralDurableErrorText(t *testing.T) {
@@ -709,6 +966,46 @@ func TestRunnerYieldReleasesWithoutConsumingAttempt(t *testing.T) {
 		len(st.releases) != 1 || st.releases[0].Attempts != job.Attempts {
 		t.Fatalf("yield transitions = %v releases=%+v",
 			st.statuses, st.releases)
+	}
+}
+
+func TestRunnerDependencyDeferralPreservesAttempt(t *testing.T) {
+	st := &flakyRunnerStore{}
+	var reports []JobLifecycleReport
+	r := &Runner{
+		Store: st,
+		Kind:  JobCallerLeaf,
+		Handle: func(context.Context, Job) error {
+			return WithDeferral(errors.New("resolver is not current"))
+		},
+		Interval:       time.Second,
+		HeartbeatEvery: time.Second,
+		MaxAttempts:    3,
+		Who:            "dependency-worker",
+		LifecycleReports: func(raw []byte) error {
+			var report JobLifecycleReport
+			if err := json.Unmarshal(raw, &report); err != nil {
+				return err
+			}
+			reports = append(reports, report)
+			return nil
+		},
+	}
+	job := Job{
+		ID: "caller_leaf_job:deferred", Kind: JobCallerLeaf, Target: "repo",
+		Attempts: 2, ClaimedBy: "dependency-worker", LeaseToken: "lease",
+	}
+	r.execute(context.Background(), job)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning ||
+		len(st.deferrals) != 1 || st.deferrals[0].Attempts != job.Attempts {
+		t.Fatalf("deferral transitions = %v deferrals=%+v", st.statuses, st.deferrals)
+	}
+	if len(reports) != 2 || reports[1].Event != "deferred" ||
+		reports[1].NextNotBefore != st.deferredUntil.Format(time.RFC3339Nano) {
+		t.Fatalf("deferral lifecycle = %+v, fence=%s", reports, st.deferredUntil)
 	}
 }
 

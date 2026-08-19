@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,9 +17,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
@@ -95,6 +98,8 @@ type workerTestStore struct {
 	summaryPayloadInvalid bool
 	clearFailures         int
 	ensureErr             error
+	resolverStale         atomic.Bool
+	resolverChecks        atomic.Int32
 }
 
 func (state *workerTestStore) GetRepo(context.Context, string) (*store.Repo, error) {
@@ -115,11 +120,12 @@ func (state *workerTestStore) GetResolverCatalogPublication(
 	value := state.resolver
 	return &value, nil
 }
-func (*workerTestStore) ResolverCatalogPublicationCurrent(
+func (state *workerTestStore) ResolverCatalogPublicationCurrent(
 	context.Context,
 	store.ResolverCatalogPublication,
 ) (bool, error) {
-	return true, nil
+	state.resolverChecks.Add(1)
+	return !state.resolverStale.Load(), nil
 }
 func (state *workerTestStore) EnsureJobSuccessor(
 	_ context.Context,
@@ -533,6 +539,14 @@ func (harness workerHarness) settle(t *testing.T) {
 
 func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
+	published := 0
+	harness.worker.OnPublished = func(_ context.Context, repository string) error {
+		if repository != harness.state.repo.Name {
+			t.Fatalf("published repository = %q", repository)
+		}
+		published++
+		return nil
+	}
 	// Turn one replays the pair and returns; turn two admits and publishes.
 	// The accumulated mutation order across both turns is unchanged.
 	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
@@ -559,12 +573,18 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 		harness.state.admission.Disposition != store.CallerGenerationAdmitted {
 		t.Fatalf("admission = %+v", harness.state.admission)
 	}
+	if published != 1 {
+		t.Fatalf("publication callbacks = %d, want 1", published)
+	}
 	opens := harness.provider.opens
 	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
 		t.Fatal(err)
 	}
 	if harness.provider.opens != opens {
 		t.Fatalf("warm admission reopened candidate content: %d -> %d", opens, harness.provider.opens)
+	}
+	if published != 2 {
+		t.Fatalf("warm publication callbacks = %d, want 2", published)
 	}
 
 	// Control-only repairs retain the semantic generation and remain a warm
@@ -577,6 +597,98 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	}
 	if harness.provider.opens != opens {
 		t.Fatalf("control-only reuse reopened candidate content: %d -> %d", opens, harness.provider.opens)
+	}
+	if published != 3 {
+		t.Fatalf("control-reuse publication callbacks = %d, want 3", published)
+	}
+}
+
+func TestWorkerCurrentPublicationCallbackFailureIsRetryable(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	want := errors.New("relationship reconcile unavailable")
+	harness.worker.OnPublished = func(context.Context, string) error { return want }
+	if err := harness.worker.Handle(t.Context(), harness.job); !errors.Is(err, want) ||
+		store.IsTerminal(err) {
+		t.Fatalf("current-publication callback error = %v, want retryable %v", err, want)
+	}
+}
+
+func TestWorkerDefersWhileResolverCatalogIsStale(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.state.resolverStale.Store(true)
+	// A stale resolver catalog (a delta whose resolver has not republished
+	// yet) must not consume the only pending caller job as a silent success:
+	// the dependency deferral mutates nothing and lets the runner preserve the
+	// attempt while pacing another check.
+	if err := harness.worker.Handle(t.Context(), harness.job); !store.IsDeferral(err) {
+		t.Fatalf("stale-resolver result = %v, want dependency deferral", err)
+	}
+	if len(harness.state.events) != 0 {
+		t.Fatalf("stale-resolver deferral events = %v, want none", harness.state.events)
+	}
+	// Once the resolver republishes, the deferred job converges normally.
+	harness.state.resolverStale.Store(false)
+	harness.settle(t)
+	if harness.state.publication == nil ||
+		harness.state.admission == nil ||
+		harness.state.admission.Disposition != store.CallerGenerationAdmitted {
+		t.Fatalf(
+			"post-recovery publication = %+v, admission = %+v",
+			harness.state.publication, harness.state.admission,
+		)
+	}
+}
+
+func TestWorkerDefersWhenResolverChangesAcrossMirrorLock(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	repoDir, err := reposync.SafeRepoDir(
+		harness.worker.dataDir, harness.state.repo.Name,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := repowork.Lock(repoDir)
+	result := make(chan error, 1)
+	go func() {
+		result <- harness.worker.Handle(t.Context(), harness.job)
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for harness.state.resolverChecks.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if harness.state.resolverChecks.Load() == 0 {
+		release()
+		t.Fatal("worker did not complete its preflight authority check")
+	}
+	harness.state.resolverStale.Store(true)
+	release()
+	if err := <-result; !store.IsDeferral(err) {
+		t.Fatalf("post-lock authority change = %v, want dependency deferral", err)
+	}
+	if len(harness.state.events) != 0 {
+		t.Fatalf("post-lock deferral events = %v, want none", harness.state.events)
+	}
+}
+
+func TestWorkerInactiveRepositoryCompletesWithoutDeferral(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		configure func(*store.Repo)
+	}{
+		{name: "deleting", configure: func(repo *store.Repo) { repo.Deleting = true }},
+		{name: "unindexed", configure: func(repo *store.Repo) { repo.IndexedCommitHash = "" }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			harness := newWorkerHarness(t, 1)
+			test.configure(&harness.state.repo)
+			if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+				t.Fatalf("inactive repository result = %v, want successful retirement", err)
+			}
+			if len(harness.state.events) != 0 {
+				t.Fatalf("inactive repository events = %v, want none", harness.state.events)
+			}
+		})
 	}
 }
 
@@ -1398,6 +1510,111 @@ func TestAdmissionDispositionAggregateCapAndCapPlusOne(t *testing.T) {
 	capPlusOne := append(slices.Clone(atCap), makeOutcomes(1)...)
 	if got := admissionDisposition(capPlusOne); got != store.CallerGenerationTerminalGenerationRefusal {
 		t.Fatalf("cap+1 disposition = %q", got)
+	}
+}
+
+func TestPartitionedCandidateAuthorityMustMatchCurrentCandidate(t *testing.T) {
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	candidatePublication := store.CandidateManifestPublication{
+		ManifestDigest: digest("a"), PolicyDigest: digest("b"),
+	}
+	authority := downstreamauthority.Authority{Domains: []candidate.DownstreamDomainAuthority{{
+		CandidateManifestDigest: candidatePublication.ManifestDigest,
+		CandidatePolicyDigest:   candidatePublication.PolicyDigest,
+	}}}
+	if !partitionedCandidateCurrent(authority, candidatePublication) {
+		t.Fatal("exact current candidate authority was rejected")
+	}
+	for _, mutate := range []func(*candidate.DownstreamDomainAuthority){
+		func(domain *candidate.DownstreamDomainAuthority) {
+			domain.CandidateManifestDigest = digest("c")
+		},
+		func(domain *candidate.DownstreamDomainAuthority) {
+			domain.CandidatePolicyDigest = digest("d")
+		},
+	} {
+		stale := authority
+		stale.Domains = slices.Clone(authority.Domains)
+		mutate(&stale.Domains[0])
+		if partitionedCandidateCurrent(stale, candidatePublication) {
+			t.Fatal("stale partitioned candidate authority was accepted")
+		}
+	}
+}
+
+func TestPartitionedAuthorityClassifiesDependencyState(t *testing.T) {
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: "example/repo",
+		SourceGenerationDigest: digest("1"), SourceRootDigest: digest("2"),
+		ObservationGenerationDigest: digest("3"), ObservationRootDigest: digest("4"),
+		PartitionPolicyDigest: digest("5"), ObservationPolicyDigest: digest("6"),
+		InventoryPolicyDigest: digest("7"), RecordCount: 1, ObservedCount: 1,
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: "grpc-caller", Version: "1.5.0", PlanDigest: digest("8"),
+		RootDigest: digest("9"), RunID: "run", Disposition: candidate.PartitionResultSuccess,
+		CandidateManifestDigest: digest("a"), CandidatePartitionRootDigest: digest("b"),
+		CandidatePolicyDigest: digest("c"), SourceGenerationDigest: observation.SourceGenerationDigest,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ExtractionPolicyDigest:      digest("d"), DomainIndexDigest: digest("e"),
+		DomainScheduleDigest: digest("f"),
+	}
+	expectedCandidate := store.CandidateManifestPublication{
+		ManifestDigest: domain.CandidateManifestDigest,
+		PolicyDigest:   domain.CandidatePolicyDigest,
+	}
+	adapter := []Adapter{{Domain: domain.Domain, Version: domain.Version}}
+	operational := errors.New("store unavailable")
+	tests := []struct {
+		name       string
+		load       func(context.Context, string) (candidate.DownstreamDomainAuthority, error)
+		want       error
+		wantUsable bool
+	}{
+		{name: "missing", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			return candidate.DownstreamDomainAuthority{}, store.ErrNotFound
+		}, want: ErrPartitionedCallerPending},
+		{name: "operational", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			return candidate.DownstreamDomainAuthority{}, operational
+		}, want: operational},
+		{name: "version-stale", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			stale := domain
+			stale.Version = "1.4.0"
+			return stale, nil
+		}, want: ErrPartitionedCallerPending},
+		{name: "observation-stale", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			stale := domain
+			stale.ObservationGenerationDigest = digest("0")
+			return stale, nil
+		}, want: ErrPartitionedCallerPending},
+		{name: "candidate-stale-unusable", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			stale := domain
+			stale.CandidateManifestDigest = digest("0")
+			stale.Disposition = candidate.PartitionResultRetryable
+			return stale, nil
+		}, want: ErrPartitionedCallerPending},
+		{name: "settled-unusable", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			failed := domain
+			failed.Disposition = candidate.PartitionResultRetryable
+			return failed, nil
+		}, want: ErrPartitionedCallerUnavailable},
+		{name: "usable", load: func(context.Context, string) (candidate.DownstreamDomainAuthority, error) {
+			return domain, nil
+		}, wantUsable: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			upstream, partitioned, err := buildPartitionedAuthority(
+				t.Context(), observation, adapter, &expectedCandidate, test.load,
+			)
+			if !partitioned || !errors.Is(err, test.want) {
+				t.Fatalf("authority = %+v, partitioned=%t, err=%v, want=%v", upstream, partitioned, err, test.want)
+			}
+			if test.wantUsable && (err != nil || upstream.Digest == "") {
+				t.Fatalf("usable authority = %+v, err=%v", upstream, err)
+			}
+		})
 	}
 }
 

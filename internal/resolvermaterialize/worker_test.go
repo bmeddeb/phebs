@@ -489,10 +489,10 @@ func TestRegistryOrdersIdentitiesAndRequiresDeclarationDependency(t *testing.T) 
 	}
 }
 
-func TestWorkerCandidateBeforeDeclarationIsNoOp(t *testing.T) {
+func TestWorkerCandidateBeforeDeclarationDefers(t *testing.T) {
 	fixture := newWorkerFixture(t)
-	if err := fixture.handle(false); err != nil {
-		t.Fatal(err)
+	if err := fixture.handle(false); !store.IsDeferral(err) {
+		t.Fatalf("candidate-first result = %v, want dependency deferral", err)
 	}
 	if fixture.provider.generationCalls != 1 || fixture.state.outcomeCalls != 1 {
 		t.Fatalf(
@@ -512,6 +512,66 @@ func TestWorkerCandidateBeforeDeclarationIsNoOp(t *testing.T) {
 	}
 	if _, err := os.Lstat(fixture.worker.root); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("candidate-first no-op created catalog root: %v", err)
+	}
+	// The worker leaves queue state to the runner's lease-fenced delayed
+	// transition; no crash-recovery successor is created in the handler.
+	if fixture.state.enqueueCalls != 0 {
+		t.Fatalf("deferred worker successor calls = %d, want 0", fixture.state.enqueueCalls)
+	}
+}
+
+func TestWorkerClassifiesCandidatePublicationReadiness(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		generationErr error
+		wantDeferral  bool
+	}{
+		{name: "missing", generationErr: store.ErrNotFound, wantDeferral: true},
+		{name: "publishing", generationErr: candidate.ErrPublishing, wantDeferral: true},
+		{name: "stale", generationErr: extract.ErrCandidateManifestStale, wantDeferral: true},
+		{name: "malformed", generationErr: candidate.ErrInvalidManifest},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newWorkerFixture(t)
+			fixture.provider.generationErr = test.generationErr
+			err := fixture.handle(false)
+			if test.wantDeferral != store.IsDeferral(err) {
+				t.Fatalf("candidate result = %v, want deferral %t", err, test.wantDeferral)
+			}
+			if !test.wantDeferral && !errors.Is(err, test.generationErr) {
+				t.Fatalf("candidate result = %v, want %v", err, test.generationErr)
+			}
+			if fixture.state.enqueueCalls != 0 || fixture.provider.openCalls != 0 {
+				t.Fatalf(
+					"candidate readiness work = successor %d opens %d, want none",
+					fixture.state.enqueueCalls, fixture.provider.openCalls,
+				)
+			}
+		})
+	}
+}
+
+func TestWorkerInactiveRepositoryCompletesWithoutDeferral(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		configure func(*store.Repo)
+	}{
+		{name: "deleting", configure: func(repo *store.Repo) { repo.Deleting = true }},
+		{name: "unindexed", configure: func(repo *store.Repo) { repo.IndexedCommitHash = "" }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newWorkerFixture(t)
+			test.configure(fixture.state.repository)
+			if err := fixture.handle(false); err != nil {
+				t.Fatalf("inactive repository result = %v, want successful retirement", err)
+			}
+			if fixture.provider.generationCalls != 0 || fixture.state.enqueueCalls != 0 {
+				t.Fatalf(
+					"inactive work = generation %d successor %d, want none",
+					fixture.provider.generationCalls, fixture.state.enqueueCalls,
+				)
+			}
+		})
 	}
 }
 
@@ -1104,10 +1164,11 @@ func TestWorkerFinalAttemptQueuesRecoveryBeforeClearingInvalidPointer(t *testing
 
 func TestWorkerStaleInputsAndStoreConflictPreservePriorAuthority(t *testing.T) {
 	for _, test := range []struct {
-		name       string
-		configure  func(*workerFixture)
-		wantErr    error
-		wantMarker bool
+		name         string
+		configure    func(*workerFixture)
+		wantErr      error
+		wantMarker   bool
+		wantDeferral bool
 	}{
 		{
 			name: "stale candidate",
@@ -1121,6 +1182,7 @@ func TestWorkerStaleInputsAndStoreConflictPreservePriorAuthority(t *testing.T) {
 			configure: func(fixture *workerFixture) {
 				fixture.publishDeclaration(workerTestDigest('7'))
 			},
+			wantDeferral: true,
 		},
 		{
 			name: "stale declaration control revision",
@@ -1128,6 +1190,7 @@ func TestWorkerStaleInputsAndStoreConflictPreservePriorAuthority(t *testing.T) {
 				fixture.publishDeclaration(fixture.digest)
 				fixture.provider.pointer.ControlRevision++
 			},
+			wantDeferral: true,
 		},
 		{
 			name: "store conflict",
@@ -1148,7 +1211,10 @@ func TestWorkerStaleInputsAndStoreConflictPreservePriorAuthority(t *testing.T) {
 			before := cloneWorkerTestPublication(*fixture.state.pointer)
 
 			err := fixture.handle(false)
-			if test.wantErr == nil && err != nil {
+			if test.wantDeferral && !store.IsDeferral(err) {
+				t.Fatalf("Handle error = %v; want dependency deferral", err)
+			}
+			if test.wantErr == nil && !test.wantDeferral && err != nil {
 				t.Fatal(err)
 			}
 			if test.wantErr != nil && !errors.Is(err, test.wantErr) {
@@ -1195,6 +1261,38 @@ func (state *workerBackfillStore) EnqueuePending(
 	job := store.Job{Kind: kind, Target: target, Force: force}
 	state.enqueued = append(state.enqueued, job)
 	return &job, nil
+}
+
+func TestPartitionedDeclarationTerminalRootsAreSettled(t *testing.T) {
+	pointer := extract.CandidateManifestPointerIdentity{
+		ManifestDigest: "sha256:" + strings.Repeat("a", 64),
+		PolicyDigest:   "sha256:" + strings.Repeat("b", 64),
+	}
+	for _, disposition := range []string{
+		candidate.PartitionResultSuccess,
+		candidate.PartitionResultEmpty,
+		candidate.PartitionResultUnavailablePrerequisite,
+		candidate.PartitionResultTerminalRefusal,
+		candidate.PartitionResultRetryable,
+	} {
+		authority := candidate.DownstreamDomainAuthority{
+			Disposition:             disposition,
+			CandidateManifestDigest: pointer.ManifestDigest,
+			CandidatePolicyDigest:   pointer.PolicyDigest,
+		}
+		settled, include := partitionedDeclarationState(authority, pointer)
+		if !settled || include != (disposition == candidate.PartitionResultSuccess) {
+			t.Fatalf("disposition %q = settled %t include %t", disposition, settled, include)
+		}
+	}
+	stale := candidate.DownstreamDomainAuthority{
+		Disposition:             candidate.PartitionResultSuccess,
+		CandidateManifestDigest: "sha256:" + strings.Repeat("c", 64),
+		CandidatePolicyDigest:   pointer.PolicyDigest,
+	}
+	if settled, _ := partitionedDeclarationState(stale, pointer); settled {
+		t.Fatal("stale partitioned declaration authority was settled")
+	}
 }
 
 func TestEnqueueBackfillSkipsUnindexedAndDeletingRepositories(t *testing.T) {

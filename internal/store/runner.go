@@ -86,6 +86,7 @@ func (r *Runner) Run(ctx context.Context) {
 			log.Printf("runner %s: reaped %d stale %s", r.Who, n, r.Kind)
 			jobsTotal.WithLabelValues(string(r.Kind), "reaped").Add(float64(n))
 		}
+		var dependencyDrainDeadline time.Time
 		for ctx.Err() == nil {
 			job, err := r.Store.ClaimJob(ctx, r.Kind, r.Who)
 			if err != nil {
@@ -95,24 +96,35 @@ func (r *Runner) Run(ctx context.Context) {
 				break // drained, canceled, or store error; next poll retries
 			}
 			r.emitLifecycle("claimed", *job, 0, "claimed", nil)
-			r.execute(ctx, *job)
+			deferredUntil := r.execute(ctx, *job)
+			if !deferredUntil.IsZero() && dependencyDrainDeadline.IsZero() {
+				// Continue long enough to drain ready siblings, but return to the
+				// outer jitter/reap loop before an earlier deferred row can cycle
+				// indefinitely behind slow blocked siblings.
+				dependencyDrainDeadline = deferredUntil
+			}
+			if !dependencyDrainDeadline.IsZero() &&
+				!time.Now().Before(dependencyDrainDeadline) {
+				break
+			}
 		}
 	}
 }
 
-func (r *Runner) execute(ctx context.Context, job Job) {
+func (r *Runner) execute(ctx context.Context, job Job) time.Time {
+	deferredUntil := time.Time{}
 	if ctx.Err() != nil {
 		if r.persist(job, "release claimed job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, "runner shutting down")
 		}) {
 			r.emitLifecycle("released", job, 0, "canceled", nil)
 		}
-		return
+		return time.Time{}
 	}
 	if !r.persist(job, "start job", func(writeCtx context.Context) error {
 		return r.Store.SetJobStatus(writeCtx, job, StatusRunning, "")
 	}) {
-		return
+		return time.Time{}
 	}
 	r.emitLifecycle("started", job, 0, "running", nil)
 	if ctx.Err() != nil {
@@ -121,7 +133,7 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}) {
 			r.emitLifecycle("released", job, 0, "canceled", nil)
 		}
-		return
+		return time.Time{}
 	}
 
 	handleCtx, stopHandle := context.WithCancel(ctx)
@@ -165,7 +177,7 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 	if hbErr != nil {
 		if errors.Is(hbErr, ErrLeaseLost) {
 			log.Printf("runner %s: lease lost for %s %s", r.Who, job.Kind, job.Target)
-			return
+			return time.Time{}
 		}
 		log.Printf("runner %s: heartbeat %s %s: %v", r.Who, job.Kind, job.Target, hbErr)
 		if err == nil || errors.Is(err, context.Canceled) {
@@ -209,6 +221,21 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 			recordJobError(r.Kind, err)
 			r.emitLifecycle("failed", job, handleDuration, "terminal", nil)
 		}
+	case IsDeferral(err):
+		if r.persist(job, "defer job", func(writeCtx context.Context) error {
+			var deferErr error
+			deferredUntil, deferErr = r.Store.DeferJob(
+				writeCtx, job, DurableErrorText(err), r.Interval,
+			)
+			return deferErr
+		}) {
+			recordJob(r.Kind, "deferred")
+			var next *time.Time
+			if !deferredUntil.IsZero() {
+				next = &deferredUntil
+			}
+			r.emitLifecycle("deferred", job, handleDuration, "dependency", next)
+		}
 	case IsYield(err):
 		if r.persist(job, "yield job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, DurableErrorText(err))
@@ -245,6 +272,7 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 			r.emitLifecycle("requeued", job, handleDuration, "retryable", &nextNotBefore)
 		}
 	}
+	return deferredUntil
 }
 
 // persist retries state writes on a context detached from shutdown. Lease loss

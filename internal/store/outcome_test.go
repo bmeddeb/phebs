@@ -241,6 +241,26 @@ func TestYieldMarkerComposesWithClass(t *testing.T) {
 	}
 }
 
+func TestDeferralMarkerComposesWithClass(t *testing.T) {
+	base := errors.New("upstream authority pending")
+	if WithDeferral(nil) != nil {
+		t.Error("WithDeferral(nil) must stay nil")
+	}
+	if IsDeferral(nil) || IsDeferral(base) {
+		t.Error("an unmarked error must not read as deferral")
+	}
+	for _, marked := range []error{
+		WithClass(ClassExtract, WithDeferral(base)),
+		WithDeferral(WithClass(ClassExtract, base)),
+		fmt.Errorf("worker: %w", WithDeferral(WithClass(ClassExtract, base))),
+	} {
+		if !IsDeferral(marked) || Classify(marked) != ClassExtract ||
+			!errors.Is(marked, base) {
+			t.Fatalf("deferral marker did not compose: %v", marked)
+		}
+	}
+}
+
 func TestExtractionGenerationIdentityInvalidatesEveryInput(t *testing.T) {
 	base := validOutcome().Generation
 	base.TypedInputKind = "scip"

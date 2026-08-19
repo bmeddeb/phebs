@@ -492,7 +492,7 @@ func (reader *PublicationReader) partitionedGenerationCurrent(
 	canonicalUpstream string,
 ) (bool, error) {
 	upstream, partitioned, err := currentPartitionedAuthority(
-		ctx, reader.dataDir, reader.state, reader.adapters, generation.Repository,
+		ctx, reader.dataDir, reader.state, reader.adapters, generation.Repository, nil,
 	)
 	if err != nil {
 		return false, err

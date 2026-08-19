@@ -159,6 +159,10 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		Domains:      worker.registry.CandidateDomains(),
 	}
 	pointer, err := worker.manifests.CandidateManifestGeneration(workCtx, request)
+	if errors.Is(err, store.ErrNotFound) || errors.Is(err, candidatepkg.ErrPublishing) ||
+		errors.Is(err, extract.ErrCandidateManifestStale) {
+		return store.WithDeferral(errors.New("candidate publication is not ready"))
+	}
 	if err != nil {
 		return fmt.Errorf("candidate generation: %w", err)
 	}
@@ -172,13 +176,15 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return err
 	}
 	if !declarationsSettled {
-		// Candidate fan-out may arrive before declaration extraction. It is a
-		// successful no-op; the declaration outcome transaction or partitioned
-		// extraction settlement creates the crash-safe successor that can first
-		// publish an exact catalog. A fully settled empty declaration set is
+		// Candidate fan-out may arrive before declaration extraction. The
+		// upstream events that enqueue resolver work have already fired, so a
+		// silent success here would orphan the resolver (and the caller chain
+		// behind it) until a process restart. Return a dependency deferral so
+		// the runner preserves the attempt and paces the next check. A fully
+		// settled empty declaration set is
 		// different: it must publish an empty resolver authority so downstream
 		// relationship state can converge without inventing declarations.
-		return nil
+		return store.WithDeferral(errors.New("declaration extraction is not settled"))
 	}
 	identityDeclarations := make(
 		[]resolvercatalog.DeclarationPublication, len(declarations),
@@ -328,13 +334,14 @@ func (worker *Worker) currentDeclarations(
 			ctx, worker.store, repository.Name, current.declarationDomain,
 		)
 		if partitionedErr == nil {
-			if partitioned.CandidateManifestDigest != candidate.ManifestDigest ||
-				partitioned.CandidatePolicyDigest != candidate.PolicyDigest ||
-				!partitioned.Available() {
+			partitionedSettled, include := partitionedDeclarationState(
+				partitioned, candidate,
+			)
+			if !partitionedSettled {
 				settled = false
 				continue
 			}
-			if partitioned.Disposition == candidatepkg.PartitionResultSuccess {
+			if include {
 				result = append(result, DeclarationInput{
 					Protocol: current.protocol, Domain: current.declarationDomain,
 					RunID: partitioned.RunID, GenerationDigest: partitioned.RootDigest,
@@ -403,6 +410,17 @@ func (worker *Worker) currentDeclarations(
 		return 0
 	})
 	return result, settled, nil
+}
+
+func partitionedDeclarationState(
+	partitioned candidatepkg.DownstreamDomainAuthority,
+	candidate extract.CandidateManifestPointerIdentity,
+) (settled, include bool) {
+	if partitioned.CandidateManifestDigest != candidate.ManifestDigest ||
+		partitioned.CandidatePolicyDigest != candidate.PolicyDigest {
+		return false, false
+	}
+	return true, partitioned.Disposition == candidatepkg.PartitionResultSuccess
 }
 
 func (worker *Worker) reconcileMarked(

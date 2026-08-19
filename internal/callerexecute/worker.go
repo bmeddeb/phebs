@@ -30,7 +30,10 @@ import (
 	reposync "github.com/bmeddeb/phebs/internal/sync"
 )
 
-var ErrPartitionedCallerUnavailable = errors.New("partitioned caller upstream is unavailable")
+var (
+	ErrPartitionedCallerPending     = errors.New("partitioned caller upstream is pending")
+	ErrPartitionedCallerUnavailable = errors.New("partitioned caller upstream is unavailable")
+)
 
 // Store is the exact state boundary used by the direct caller-leaf worker.
 type Store interface {
@@ -110,6 +113,10 @@ type Worker struct {
 	execute      pairExecute
 	install      pairInstall
 	publications *callerpublication.Registry
+	// OnPublished runs only after an exact current caller generation is
+	// confirmed. A failure keeps the durable caller job retryable while leaving
+	// the already-complete caller authority intact.
+	OnPublished func(context.Context, string) error
 
 	cacheMu     sync.Mutex
 	resolvers   cachedResolvers
@@ -228,7 +235,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	preflightCtx, cancelPreflight := context.WithTimeout(ctx, worker.timeout)
 	defer cancelPreflight()
 
-	current, err := worker.currentAuthority(preflightCtx, job.Target)
+	current, inactive, err := worker.jobAuthority(preflightCtx, job.Target)
+	if inactive {
+		return nil
+	}
+	if errors.Is(err, ErrPartitionedCallerPending) {
+		return store.WithDeferral(err)
+	}
 	if errors.Is(err, ErrPartitionedCallerUnavailable) {
 		if clearErr := worker.store.ClearCallerGenerationPublication(preflightCtx, job.Target); clearErr != nil &&
 			!errors.Is(clearErr, store.ErrNotFound) {
@@ -236,8 +249,19 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		}
 		return worker.publications.Retire(preflightCtx, job.Target)
 	}
-	if err != nil || current == nil {
+	if err != nil {
 		return err
+	}
+	if current == nil {
+		// The candidate manifest or a current resolver catalog has not
+		// converged yet. The trigger event that enqueued this job already
+		// fired, so a silent success would leave the caller generation stale
+		// until a process restart. Return a dependency deferral: the runner
+		// preserves the attempt, paces the next check, and a fresh resolver
+		// publication can still wake the job immediately.
+		return store.WithDeferral(errors.New(
+			"candidate manifest or current resolver catalog is not ready",
+		))
 	}
 	if err := worker.publications.ActivateRepository(
 		preflightCtx, job.Target,
@@ -262,7 +286,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 				return publicationErr
 			}
 			if currentPublication {
-				return nil
+				return worker.afterPublish(preflightCtx, current.semantic.Repository)
 			}
 			if cached := worker.cachedGenerationPublication(
 				current.semantic.Digest,
@@ -298,7 +322,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	workCtx, cancelWork := context.WithTimeout(ctx, worker.timeout)
 	defer cancelWork()
 
-	current, err = worker.currentAuthority(workCtx, job.Target)
+	current, inactive, err = worker.jobAuthority(workCtx, job.Target)
+	if inactive {
+		return nil
+	}
+	if errors.Is(err, ErrPartitionedCallerPending) {
+		return store.WithDeferral(err)
+	}
 	if errors.Is(err, ErrPartitionedCallerUnavailable) {
 		if clearErr := worker.store.ClearCallerGenerationPublication(workCtx, job.Target); clearErr != nil &&
 			!errors.Is(clearErr, store.ErrNotFound) {
@@ -306,8 +336,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		}
 		return worker.publications.Retire(workCtx, job.Target)
 	}
-	if err != nil || current == nil {
+	if err != nil {
 		return err
+	}
+	if current == nil {
+		return store.WithDeferral(errors.New(
+			"caller upstream changed while waiting for the mirror lock",
+		))
 	}
 	if err := gitobj.RejectAlternates(repoDir); err != nil {
 		return fmt.Errorf("caller mirror object boundary: %w", err)
@@ -643,7 +678,7 @@ func (worker *Worker) publishAdmittedGeneration(
 			"complete caller publication lost authority after commit",
 		))
 	}
-	return nil
+	return worker.afterPublish(ctx, current.semantic.Repository)
 }
 
 func (worker *Worker) recoverMarkedAdmittedGeneration(
@@ -699,7 +734,7 @@ func (worker *Worker) recoverMarkedAdmittedGeneration(
 			"recovered caller publication lost authority after commit",
 		))
 	}
-	return nil
+	return worker.afterPublish(ctx, current.semantic.Repository)
 }
 
 func (worker *Worker) republishCachedGeneration(
@@ -736,7 +771,14 @@ func (worker *Worker) republishCachedGeneration(
 			"cached caller publication lost authority after commit",
 		))
 	}
-	return nil
+	return worker.afterPublish(ctx, current.semantic.Repository)
+}
+
+func (worker *Worker) afterPublish(ctx context.Context, repository string) error {
+	if worker.OnPublished == nil {
+		return nil
+	}
+	return worker.OnPublished(ctx, repository)
 }
 
 func (worker *Worker) recordTerminalRefusal(
@@ -962,6 +1004,22 @@ func (worker *Worker) currentAuthority(
 	)
 }
 
+func (worker *Worker) jobAuthority(
+	ctx context.Context,
+	repository string,
+) (*authority, bool, error) {
+	current, inactive, err := currentJobAuthority(
+		ctx, worker.store, worker.registry, repository,
+	)
+	if err != nil || current == nil {
+		return current, inactive, err
+	}
+	current, err = bindPartitionedAuthority(
+		ctx, worker.dataDir, worker.store, worker.registry, repository, current,
+	)
+	return current, false, err
+}
+
 // currentAuthorityWithPartitioned is the common worker/product identity
 // boundary. Once the store supports partitioned evidence, both writers and
 // readers must derive the caller generation from the same exact observation
@@ -978,14 +1036,33 @@ func currentAuthorityWithPartitioned(
 	if err != nil || current == nil {
 		return current, err
 	}
+	return bindPartitionedAuthority(
+		ctx, dataDir, state, registry, repository, current,
+	)
+}
+
+func bindPartitionedAuthority(
+	ctx context.Context,
+	dataDir string,
+	state authorityStore,
+	registry *Registry,
+	repository string,
+	current *authority,
+) (*authority, error) {
 	upstream, partitioned, err := currentPartitionedAuthority(
-		ctx, dataDir, state, registry, repository,
+		ctx, dataDir, state, registry, repository, current.candidate,
 	)
 	if err != nil {
 		return nil, err
 	}
 	if !partitioned {
 		return current, nil
+	}
+	if !partitionedCandidateCurrent(upstream, *current.candidate) {
+		return nil, errors.Join(
+			ErrPartitionedCallerPending,
+			errors.New("partitioned extraction candidate authority is stale"),
+		)
 	}
 	semantic := current.semantic
 	semantic.Upstream, err = json.Marshal(upstream)
@@ -1006,12 +1083,26 @@ func currentAuthorityWithPartitioned(
 	return current, nil
 }
 
+func partitionedCandidateCurrent(
+	upstream downstreamauthority.Authority,
+	current store.CandidateManifestPublication,
+) bool {
+	for _, domain := range upstream.Domains {
+		if domain.CandidateManifestDigest != current.ManifestDigest ||
+			domain.CandidatePolicyDigest != current.PolicyDigest {
+			return false
+		}
+	}
+	return true
+}
+
 func currentPartitionedAuthority(
 	ctx context.Context,
 	dataDir string,
 	state authorityStore,
 	registry *Registry,
 	repository string,
+	expectedCandidate *store.CandidateManifestPublication,
 ) (downstreamauthority.Authority, bool, error) {
 	partitioned, ok := any(state).(store.PartitionedEvidenceStore)
 	if !ok {
@@ -1020,31 +1111,60 @@ func currentPartitionedAuthority(
 	observation, err := observationpublication.CurrentInventoryDownstreamAuthorityV2(
 		ctx, filepath.Join(dataDir, "observations"), repository,
 	)
-	if err != nil {
+	if errors.Is(err, os.ErrNotExist) {
 		return downstreamauthority.Authority{}, true,
-			errors.Join(ErrPartitionedCallerUnavailable, err)
+			errors.Join(ErrPartitionedCallerPending, err)
 	}
-	adapters := registry.Adapters()
+	if err != nil {
+		return downstreamauthority.Authority{}, true, err
+	}
+	return buildPartitionedAuthority(
+		ctx, observation, registry.Adapters(), expectedCandidate, func(
+			domainCtx context.Context, domain string,
+		) (candidate.DownstreamDomainAuthority, error) {
+			return extractionpublication.CurrentDomainAuthority(
+				domainCtx, partitioned, repository, domain,
+			)
+		},
+	)
+}
+
+func buildPartitionedAuthority(
+	ctx context.Context,
+	observation observationpublication.DownstreamAuthority,
+	adapters []Adapter,
+	expectedCandidate *store.CandidateManifestPublication,
+	current func(context.Context, string) (candidate.DownstreamDomainAuthority, error),
+) (downstreamauthority.Authority, bool, error) {
 	required := make([]downstreamauthority.DomainIdentity, len(adapters))
 	domains := make([]candidate.DownstreamDomainAuthority, 0, len(adapters))
 	for index, adapter := range adapters {
 		required[index] = downstreamauthority.DomainIdentity{Domain: adapter.Domain, Version: adapter.Version}
-		domain, domainErr := extractionpublication.CurrentDomainAuthority(
-			ctx, partitioned, repository, adapter.Domain,
-		)
+		domain, domainErr := current(ctx, adapter.Domain)
 		if errors.Is(domainErr, store.ErrNotFound) {
-			continue
-		}
-		if domainErr != nil || domain.Version != adapter.Version {
 			return downstreamauthority.Authority{}, true,
-				errors.Join(ErrPartitionedCallerUnavailable, domainErr)
+				errors.Join(ErrPartitionedCallerPending, domainErr)
+		}
+		if domainErr != nil {
+			return downstreamauthority.Authority{}, true, domainErr
+		}
+		if domain.Version != adapter.Version {
+			return downstreamauthority.Authority{}, true,
+				errors.Join(ErrPartitionedCallerPending, errors.New("domain version is stale"))
+		}
+		if expectedCandidate != nil &&
+			(domain.SourceGenerationDigest != observation.SourceGenerationDigest ||
+				domain.ObservationGenerationDigest != observation.ObservationGenerationDigest ||
+				domain.CandidateManifestDigest != expectedCandidate.ManifestDigest ||
+				domain.CandidatePolicyDigest != expectedCandidate.PolicyDigest) {
+			return downstreamauthority.Authority{}, true,
+				errors.Join(ErrPartitionedCallerPending, errors.New("domain authority is stale"))
 		}
 		domains = append(domains, domain)
 	}
 	upstream, err := downstreamauthority.BuildRequired(observation, required, domains)
 	if err != nil {
-		return downstreamauthority.Authority{}, true,
-			errors.Join(ErrPartitionedCallerUnavailable, err)
+		return downstreamauthority.Authority{}, true, err
 	}
 	if err := downstreamauthority.RequireUsable(upstream); err != nil {
 		return downstreamauthority.Authority{}, true,
@@ -1076,60 +1196,73 @@ func currentAuthority(
 	registry *Registry,
 	repository string,
 ) (*authority, error) {
+	current, _, err := currentJobAuthority(ctx, state, registry, repository)
+	return current, err
+}
+
+// currentJobAuthority distinguishes an inactive repository, which completes a
+// queued lifecycle race, from an active repository whose upstream authority is
+// merely pending and must be deferred.
+func currentJobAuthority(
+	ctx context.Context,
+	state authorityStore,
+	registry *Registry,
+	repository string,
+) (*authority, bool, error) {
 	if state == nil || registry == nil {
-		return nil, errors.New("caller generation authority is not configured")
+		return nil, false, errors.New("caller generation authority is not configured")
 	}
 	repo, err := state.GetRepo(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
-		return nil, nil
+		return nil, true, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if repo == nil || repo.Name != repository {
-		return nil, errors.New("caller store returned a mismatched repository")
+		return nil, false, errors.New("caller store returned a mismatched repository")
 	}
 	if repo.Deleting || repo.IndexedCommitHash == "" {
-		return nil, nil
+		return nil, true, nil
 	}
 	if repo.IndexedAnalysisUnit != nil {
 		if err := repo.IndexedAnalysisUnit.Validate(repo.Name); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 	candidatePointer, err := state.GetCandidateManifestPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	resolverPointer, err := state.GetResolverCatalogPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	resolverCurrent, err := state.ResolverCatalogPublicationCurrent(
 		ctx, *resolverPointer,
 	)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !resolverCurrent {
-		return nil, nil
+		return nil, false, nil
 	}
 	semantic, err := GenerationIdentity(GenerationAuthority{
 		Repository: repo, Candidate: candidatePointer, Resolver: resolverPointer,
 	}, registry)
 	if err != nil {
-		return nil, nil
+		return nil, false, nil
 	}
 	stored := storeGeneration(semantic, *candidatePointer, *resolverPointer)
 	if stored.Digest != semantic.Digest ||
 		store.ComputeCallerGenerationDigest(stored) != semantic.Digest {
-		return nil, errors.New("caller generation identity differs across artifact and store writers")
+		return nil, false, errors.New("caller generation identity differs across artifact and store writers")
 	}
 	return &authority{
 		repository: repo, candidate: candidatePointer, resolver: resolverPointer,
@@ -1139,7 +1272,7 @@ func currentAuthority(
 			AnalysisUnit: analysisunit.CloneState(repo.IndexedAnalysisUnit),
 			Domains:      registry.CandidateDomains(),
 		},
-	}, nil
+	}, false, nil
 }
 
 func storeGeneration(

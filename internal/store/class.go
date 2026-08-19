@@ -85,6 +85,32 @@ func IsYield(err error) bool {
 	return errors.As(err, &yield)
 }
 
+// Deferral marks a job whose upstream authority is not ready yet. Unlike a
+// Yield, a deferral returns the same lease-fenced job to delayed pending state
+// without consuming an attempt; the runner may keep draining ready siblings.
+type Deferral struct {
+	Err error
+}
+
+func (d *Deferral) Error() string { return "deferred: " + d.Err.Error() }
+func (d *Deferral) Unwrap() error { return d.Err }
+
+// WithDeferral marks an upstream-readiness wait. A nil error has no reason to
+// defer and therefore remains nil.
+func WithDeferral(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Deferral{Err: err}
+}
+
+// IsDeferral reports whether an upstream-readiness marker appears in the
+// error chain.
+func IsDeferral(err error) bool {
+	var deferral *Deferral
+	return errors.As(err, &deferral)
+}
+
 // SuccessorRetry marks a retryable failure after the handler invoked the
 // durable successor transaction for the same target. The transaction either
 // committed or may have committed before its response failed. Ordinary retries

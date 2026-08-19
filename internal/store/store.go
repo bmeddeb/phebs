@@ -1084,6 +1084,12 @@ type Store interface {
 	SetJobStatus(ctx context.Context, job Job, status JobStatus, errMsg string) error
 	HeartbeatJob(ctx context.Context, job Job) error
 	RequeueJob(ctx context.Context, job Job, errMsg string, notBefore time.Time) error // attempts+1, back to pending
+	// DeferJob returns this exact active lease to pending after at least delay
+	// without consuming an attempt. A separately pending freshness event wins
+	// and remains immediately claimable. The returned time is the exact
+	// persisted not_before fence; zero means the freshness successor won. A
+	// deferred row moves behind siblings that were already ready.
+	DeferJob(ctx context.Context, job Job, errMsg string, delay time.Duration) (time.Time, error)
 	// EnsureJobSuccessor records that this exact active lease created its pending
 	// crash-recovery successor. Any ordinary enqueue clears that provenance. Its
 	// errors carry SuccessorRetry because transaction commit may be ambiguous;

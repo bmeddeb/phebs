@@ -99,13 +99,13 @@ func afterResolverPublication(
 	repository string,
 	reconcile func(context.Context, string) error,
 	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
-	callerReady bool,
+	callerEnabled bool,
 ) error {
 	var reconcileErr error
 	if reconcile != nil {
 		reconcileErr = reconcile(ctx, repository)
 	}
-	if !callerReady {
+	if !callerEnabled {
 		return reconcileErr
 	}
 	_, enqueueErr := enqueue(ctx, store.JobCallerLeaf, repository, false)
@@ -1203,22 +1203,13 @@ func serve(args []string) error {
 				) error {
 					return afterResolverPublication(
 						publishedCtx, repository, reconcileRelationship,
-						st.EnqueuePending,
-						callerRegistry.Enabled() &&
-							partitionPublicationsCurrent(publishedCtx, repository),
+						st.EnqueuePending, callerRegistry.Enabled(),
 					)
 				}
 			}
 			resolverRunner = &store.Runner{
 				Store: st, Kind: store.JobResolverCatalog,
 				Handle: func(jobCtx context.Context, job store.Job) error {
-					if !candidatePublicationPresent(cfg.Server.DataDir, job.Target) {
-						diagnostics.Logf(
-							"resolver materialization deferred until candidate publication: repository=%q",
-							job.Target,
-						)
-						return nil
-					}
 					return resolverWorker.Handle(jobCtx, job)
 				},
 				Interval:    cfg.Sync.Interval(),
@@ -1233,18 +1224,12 @@ func serve(args []string) error {
 			if err != nil {
 				return fmt.Errorf("configure caller-leaf execution: %w", err)
 			}
+			if relationshipRuntime != nil {
+				callerWorker.OnPublished = reconcileRelationship
+			}
 			callerRunner = &store.Runner{
 				Store: st, Kind: store.JobCallerLeaf,
 				Handle: func(jobCtx context.Context, job store.Job) error {
-					if !candidatePublicationPresent(cfg.Server.DataDir, job.Target) ||
-						!resolverPublicationPresent(cfg.Server.DataDir, job.Target) ||
-						!partitionPublicationsCurrent(jobCtx, job.Target) {
-						diagnostics.Logf(
-							"caller execution deferred until candidate and resolver publications: repository=%q",
-							job.Target,
-						)
-						return nil
-					}
 					return callerWorker.Handle(jobCtx, job)
 				},
 				Interval:    cfg.Sync.Interval(),

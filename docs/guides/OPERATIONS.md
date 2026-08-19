@@ -456,6 +456,32 @@ admission plus complete publication run in their own fresh turn after the
 last pair. The pair remains expected when that leaf contains no record for
 the domain and publishes a canonical empty artifact.
 
+A claimed resolver or caller job whose upstream has not converged — candidate
+publication absent/publishing/stale, declarations unsettled, the resolver
+catalog not yet current, observation absent, or a required partition domain
+absent/stale for the new generation — returns a typed dependency deferral. The
+runner atomically returns that exact lease to pending with its attempt count
+unchanged and a `not_before` fence at the base poll interval. It continues
+claiming ready siblings until the exact committed fence returned by the store
+expires; once a sibling returns after that deadline, it exits to the
+jitter/reap loop. Lifecycle diagnostics retain that exact fence, or omit it
+when a separate immediately claimable freshness event wins. The same fenced
+transaction moves the deferred row to the pending queue tail, so a fence that
+expires during store response latency still cannot outrank siblings that were
+already ready.
+Extraction settlement enqueues the resolver and
+caller jobs together, so on a delta the caller job can legitimately be claimed
+before the resolver republishes. A publication arriving during the deferral
+wins as an immediately claimable freshness event; otherwise the same job
+re-checks on an eligible later poll and terminates when upstream converges.
+The deferral mechanism adds no work to a ready turn. A blocked repository pays
+one claim and one bounded readiness check per eligible poll, without a tight
+drain loop, attempt consumption, or one completed history row per check.
+Exact-current caller turns separately pay the relationship-reconcile tail cost
+documented below. Before this repair a deferral reported success without
+preserving work, and downstream authority could stay stale until restart or an
+unrelated later event.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or
@@ -470,11 +496,33 @@ Startup stage cleanup performs one bounded sorted read of the caller root
 (at most 65,536 entries) and one bounded sorted read of each package-shaped
 repository directory (at most 65,536 entries each), for `O(R + ΣE_r)` names;
 it opens or hashes no artifact content and runs even after caller adapters are
-disabled so prior-process stages remain reclaimable. When an adapter is
-enabled, backfill separately lists repositories once, checks the current
-resolver pointer for each indexed non-deleting repository, and idempotently
-enqueues caller work. Neither startup path takes a mirror lock or reads Git
-source.
+disabled so prior-process stages remain reclaimable. No new caller-wide
+repository backfill runs at startup. The existing candidate startup backfill
+re-drives live repositories, candidate publication transactionally fans out
+resolver work, and each exact resolver publication enqueues the caller job
+when the caller adapter is enabled. If partition authority is not
+yet current, that caller turn performs the bounded repository, candidate,
+resolver, observation, and configured-domain control reads before deferring;
+it does not read Git source or artifact members.
+
+Every exact-current caller turn invokes relationship reconciliation after the
+caller publication is confirmed, including new publication, recovery, cached
+republish, and warm-current paths. The v2 no-op reads the current observation,
+the bounded configured-domain authorities, the service summary, resolver
+current authority (at most 16 declaration rows), and the local relationship
+root. A stale relationship target may additionally load the bounded service
+snapshot, validate policy/target/schedule controls, and write one binding or
+enqueue one schedule. It performs no source, Git, or relationship-member read
+on the no-op path. Callback failure remains an ordinary retryable caller-job
+error, so a published caller generation cannot silently lose this tail step.
+
+A blocked resolver turn acquires the repository mirror lock before checking
+repository lifecycle, candidate publication, and the bounded declaration
+authorities; it therefore may repeat that bounded lock wait and control work
+once per eligible deferral poll. Caller readiness normally defers during its
+preflight before taking the lock. Only a candidate/resolver/partition change
+while the caller waits for the mirror lock causes the second authority fence
+to defer after lock acquisition.
 
 One cold turn allocates the `D × L` expected pair/outcome envelopes and scans
 the caller artifact-name directory once, capped at 65,536 entries. Candidate

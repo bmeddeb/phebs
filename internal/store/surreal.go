@@ -2701,6 +2701,95 @@ func (s *Surreal) ReleaseJob(ctx context.Context, job Job, errMsg string) error 
 	return s.returnToPending(ctx, job, errMsg, time.Time{}, false, nil)
 }
 
+const deferJobSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $successor = (SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending'
+    ORDER BY created_at LIMIT 1)[0].id;
+LET $preserved_successor = IF $owned != NONE AND $successor != NONE THEN
+    (UPDATE $successor SET force = IF $force THEN true ELSE force END RETURN AFTER)
+ELSE [] END;
+RETURN IF $owned = NONE THEN []
+ELSE IF $successor != NONE THEN
+    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+        finished_at = time::now(), lease_token = NONE, pending_key = NONE
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER)
+ELSE
+	(UPDATE type::record($id) SET status = 'pending', error = $err,
+		not_before = $nb, created_at = time::now(), claimed_by = NONE, claimed_at = NONE,
+        heartbeat_at = NONE, lease_token = NONE, recovery_lease = NONE,
+        finished_at = NONE, pending_key = $target
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER)
+END;
+COMMIT;`
+
+// DeferJob returns an upstream-blocked active lease to pending without
+// consuming an attempt. If a real freshness event arrived while the handler
+// was running, its separate pending successor wins unchanged and immediately;
+// the stale active row is only canceled. The returned time is the exact
+// persisted not_before fence; zero means that successor won. A deferred row
+// moves to the pending queue tail so an older blocked target cannot starve
+// siblings that were already ready.
+func (s *Surreal) DeferJob(
+	ctx context.Context,
+	job Job,
+	errMsg string,
+	delay time.Duration,
+) (time.Time, error) {
+	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" ||
+		job.Kind == "" || job.Target == "" || delay <= 0 {
+		return time.Time{}, fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+	}
+	for attempt := 0; ; attempt++ {
+		notBefore := time.Now().UTC().Add(delay)
+		vars := map[string]any{
+			"id": job.ID, "table": string(job.Kind), "target": job.Target,
+			"lease": job.LeaseToken, "who": job.ClaimedBy, "force": job.Force,
+			"err": errMsg, "nb": notBefore,
+			"superseded": "superseded by pending freshness event: " + errMsg,
+		}
+		results, err := surrealdb.Query[[]jobRec](ctx, s.db, deferJobSQL, vars)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil &&
+				attempt+1 < maxQueueRetries {
+				continue
+			}
+			return time.Time{}, err
+		}
+		persisted, found := queryJobByID(results, job.ID, job.Kind)
+		if !found {
+			return time.Time{}, fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+		}
+		if persisted.Status == StatusCanceled {
+			return time.Time{}, nil
+		}
+		if persisted.Status != StatusPending || persisted.NotBefore == nil {
+			return time.Time{}, fmt.Errorf("job %q: invalid deferred state", job.ID)
+		}
+		return *persisted.NotBefore, nil
+	}
+}
+
+func queryJobByID(
+	results *[]surrealdb.QueryResult[[]jobRec],
+	id string,
+	kind JobKind,
+) (Job, bool) {
+	for _, result := range *results {
+		for _, row := range result.Result {
+			if row.RecID != nil && row.RecID.String() == id &&
+				(row.Status == StatusPending || row.Status == StatusCanceled) {
+				return row.toJob(kind), true
+			}
+		}
+	}
+	return Job{}, false
+}
+
 type heartbeatFence struct {
 	observed time.Time
 	cutoff   time.Time
