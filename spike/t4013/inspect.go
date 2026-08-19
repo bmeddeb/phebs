@@ -87,8 +87,17 @@ type privateConvergenceProbe struct {
 	ObservationProgress         *ObservationProgressObservation
 	ExtractionProgress          *ExtractionProgressObservation
 	RepositoryIndexFailureClass string
+	RelationshipFailureClass    string
 	callerGenerationDigest      string
 }
+
+const (
+	relationshipFailureCurrentControl  = "current_control"
+	relationshipFailureAuthorityGap    = "authority_incomplete"
+	relationshipFailureAuthorityDrift  = "authority_mismatch"
+	relationshipFailureSuccessorAbsent = "successor_absent"
+	relationshipFailureSuccessorLost   = "successor_settled_without_current"
+)
 
 func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
 	raw, err := json.Marshal(struct {
@@ -99,6 +108,15 @@ func convergenceProbe(stage string, values ...any) privateConvergenceProbe {
 		raw = []byte(stage)
 	}
 	return privateConvergenceProbe{Stage: stage, SHA256: digest(raw)}
+}
+
+func relationshipConvergenceProbe(failureClass string, values ...any) privateConvergenceProbe {
+	digestValues := make([]any, 0, len(values)+1)
+	digestValues = append(digestValues, failureClass)
+	digestValues = append(digestValues, values...)
+	probe := convergenceProbe("relationship_publication", digestValues...)
+	probe.RelationshipFailureClass = failureClass
+	return probe
 }
 
 func observationConvergenceProbe(progress observationpublication.Progress) privateConvergenceProbe {
@@ -171,6 +189,7 @@ const (
 	profileInspectionLegacy profileInspectionContract = iota
 	profileInspectionV14
 	profileInspectionV15
+	profileInspectionV16
 )
 
 func extractionConvergenceProbe(
@@ -211,8 +230,8 @@ func extractionConvergenceProbe(
 	probe.ExtractionProgress = projection
 	jobTerminal := projection.JobState == string(store.StatusFailed) ||
 		projection.JobState == string(store.StatusCanceled)
-	if contract == profileInspectionV15 {
-		// V15 derives every terminal from the shared expectedExtraction*
+	if contract == profileInspectionV15 || contract == profileInspectionV16 {
+		// V15+ derives every terminal from the shared expectedExtraction*
 		// predicates that validateConvergenceWaits enforces, so the probe and
 		// the receipt validator cannot drift. JobExtract is a
 		// repository-keyed orchestration trigger, not generation authority: a
@@ -309,13 +328,15 @@ type profileInspector struct {
 	contract                     profileInspectionContract
 	readRelationshipScheduleFunc func(context.Context, PreparedProfile) (store.GenerationScheduleProgress, error)
 	readRelationshipRootFunc     func(context.Context, PreparedProfile) error
+	inspectExtractionFunc        func(context.Context, PreparedProfile) (extractionSnapshot, string, error)
 	// The full extraction authority scan is memoized on the extraction probe
-	// digest: an unchanged schedule and job projection cannot change the
-	// current generation, so a poll loop stuck behind pending downstream
-	// authority re-reads one digest instead of every partition result.
-	extractionScanProbeSHA string
-	extractionScan         *extractionSnapshot
-	extractionScanProgress string
+	// digest and the relationship generation against which it was checked.
+	// A newly published relationship root forces one fresh scan; later polls
+	// over the same exact pair reuse it instead of rereading every partition.
+	extractionScanProbeSHA               string
+	extractionScanRelationshipGeneration string
+	extractionScan                       *extractionSnapshot
+	extractionScanProgress               string
 }
 
 // newProfileInspector requires an explicit inspection contract: a defaulted
@@ -425,7 +446,8 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
-	if (inspector.contract == profileInspectionV14 || inspector.contract == profileInspectionV15) &&
+	if (inspector.contract == profileInspectionV14 || inspector.contract == profileInspectionV15 ||
+		inspector.contract == profileInspectionV16) &&
 		(progress.SchemaVersion != observationpublication.ProgressSchemaV2 ||
 			progress.SelectedVersion != "v2") {
 		return privateProfileSnapshot{}, observationConvergenceProbe(progress),
@@ -460,19 +482,11 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, probe,
 			errors.New("T40.13 extraction publication has not converged")
 	}
-	var extraction extractionSnapshot
-	var extractionProgress string
-	if inspector.extractionScan != nil && inspector.extractionScanProbeSHA == probe.SHA256 {
-		extraction, extractionProgress = *inspector.extractionScan, inspector.extractionScanProgress
-	} else {
-		extraction, extractionProgress, err = inspectExtraction(ctx, profile)
-		if err != nil {
-			return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
-		}
-		scan := extraction
-		inspector.extractionScan = &scan
-		inspector.extractionScanProgress = extractionProgress
-		inspector.extractionScanProbeSHA = probe.SHA256
+	extraction, extractionProgress, err := inspector.extractionForRelationship(
+		ctx, profile, probe.SHA256, inspector.extractionScanRelationshipGeneration,
+	)
+	if err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
 	}
 	if err := inspectionContextFence(ctx); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
@@ -485,6 +499,10 @@ func (inspector *profileInspector) inspectWithProgress(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
 	if err != nil {
+		if inspector.contract == profileInspectionV16 {
+			probe, classifyErr := inspector.classifyRelationshipOpenFailure(ctx, profile, err)
+			return privateProfileSnapshot{}, probe, classifyErr
+		}
 		if errors.Is(err, relationshippublication.ErrNotFound) {
 			probe, terminalErr := inspector.relationshipGenerationTerminal(ctx, profile)
 			return privateProfileSnapshot{}, probe, terminalErr
@@ -495,6 +513,19 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
 	}
 	relationshipRoot := publication.Root()
+	if inspector.contract == profileInspectionV16 &&
+		inspector.extractionScanRelationshipGeneration != relationshipRoot.GenerationDigest {
+		extraction, extractionProgress, err = inspector.extractionForRelationship(
+			ctx, profile, probe.SHA256, relationshipRoot.GenerationDigest,
+		)
+		if err != nil {
+			probe, classifyErr := inspector.classifyRelationshipMismatch(
+				ctx, profile, relationshipRoot.GenerationDigest,
+				relationshipFailureAuthorityDrift,
+			)
+			return privateProfileSnapshot{}, probe, classifyErr
+		}
+	}
 	probe = convergenceProbe("relationship_publication", relationshipRoot.GenerationDigest, relationshipRoot.Digest,
 		relationshipRoot.CompleteServiceCount, relationshipRoot.EmptyServiceCount, relationshipRoot.FailedServiceCount)
 	if relationshipRoot.Authority.Upstream == nil ||
@@ -503,9 +534,23 @@ func (inspector *profileInspector) inspectWithProgress(
 		relationshipRoot.Authority.Upstream.Observation.SourceGenerationDigest != source.Digest ||
 		!relationshipRoot.RepositoryComplete || !relationshipRoot.AllServicesComplete ||
 		relationshipRoot.FailedServiceCount != 0 {
+		if inspector.contract == profileInspectionV16 {
+			probe, classifyErr := inspector.classifyRelationshipMismatch(
+				ctx, profile, relationshipRoot.GenerationDigest,
+				relationshipFailureAuthorityGap,
+			)
+			return privateProfileSnapshot{}, probe, classifyErr
+		}
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 relationship root has not converged")
 	}
 	if err := relationshipMatchesExtraction(ctx, relationshipRoot, extraction); err != nil {
+		if inspector.contract == profileInspectionV16 {
+			probe, classifyErr := inspector.classifyRelationshipMismatch(
+				ctx, profile, relationshipRoot.GenerationDigest,
+				relationshipFailureAuthorityDrift,
+			)
+			return privateProfileSnapshot{}, probe, classifyErr
+		}
 		return privateProfileSnapshot{}, probe, err
 	}
 	catalogRaw, err := os.ReadFile(profile.Catalog)
@@ -595,15 +640,133 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	})
 }
 
-func (inspector *profileInspector) relationshipGenerationTerminal(
+func (inspector *profileInspector) extractionForRelationship(
+	ctx context.Context,
+	profile PreparedProfile,
+	extractionProbeSHA string,
+	relationshipGeneration string,
+) (extractionSnapshot, string, error) {
+	if inspector.extractionScan != nil &&
+		inspector.extractionScanProbeSHA == extractionProbeSHA &&
+		inspector.extractionScanRelationshipGeneration == relationshipGeneration {
+		return *inspector.extractionScan, inspector.extractionScanProgress, nil
+	}
+	inspect := inspector.inspectExtractionFunc
+	if inspect == nil {
+		inspect = inspectExtraction
+	}
+	snapshot, progress, err := inspect(ctx, profile)
+	if err != nil {
+		return extractionSnapshot{}, progress, err
+	}
+	retained := snapshot
+	inspector.extractionScan = &retained
+	inspector.extractionScanProbeSHA = extractionProbeSHA
+	inspector.extractionScanRelationshipGeneration = relationshipGeneration
+	inspector.extractionScanProgress = progress
+	return snapshot, progress, nil
+}
+
+func (inspector *profileInspector) classifyRelationshipOpenFailure(
+	ctx context.Context,
+	profile PreparedProfile,
+	openErr error,
+) (privateConvergenceProbe, error) {
+	if errors.Is(openErr, relationshippublication.ErrNotFound) {
+		return inspector.classifyRelationshipAbsent(ctx, profile)
+	}
+	if errors.Is(openErr, relationshippublication.ErrPublishing) {
+		return relationshipConvergenceProbe(relationshipFailureCurrentControl),
+			errors.New("T40.13 relationship current control has not converged while changing")
+	}
+	return relationshipConvergenceProbe(relationshipFailureCurrentControl),
+		errors.Join(openErr, errRelationshipTerminal)
+}
+
+func (inspector *profileInspector) classifyRelationshipAbsent(
 	ctx context.Context,
 	profile PreparedProfile,
 ) (privateConvergenceProbe, error) {
+	progress, err := inspector.readRelationshipSchedule(ctx, profile)
+	if err != nil {
+		probe := relationshipConvergenceProbe(relationshipFailureSuccessorAbsent)
+		if errors.Is(err, store.ErrNotFound) {
+			return probe, errRelationshipTerminal
+		}
+		return probe, errors.Join(err, errRelationshipTerminal)
+	}
+	probe, classifyErr := classifyRelationshipGeneration(progress)
+	probe.RelationshipFailureClass = relationshipFailureSuccessorAbsent
+	probe.SHA256 = relationshipConvergenceProbe(
+		relationshipFailureSuccessorAbsent, progress,
+	).SHA256
+	if progress.Status == store.GenerationScheduleActive {
+		return probe, classifyErr
+	}
+	if progress.Status == store.GenerationScheduleSettled && progress.Failed > 0 {
+		return probe, classifyErr
+	}
+	if classifyErr != nil && !errors.Is(classifyErr, errRelationshipTerminal) {
+		readRoot := inspector.readRelationshipRootFunc
+		if readRoot == nil {
+			readRoot = readRelationshipRoot
+		}
+		rootErr := readRoot(ctx, profile)
+		if rootErr == nil {
+			return relationshipConvergenceProbe(relationshipFailureCurrentControl, progress),
+				errors.New("T40.13 relationship current control has not converged after appearing")
+		}
+		if errors.Is(rootErr, relationshippublication.ErrNotFound) {
+			probe.RelationshipFailureClass = relationshipFailureSuccessorLost
+			probe.SHA256 = relationshipConvergenceProbe(
+				relationshipFailureSuccessorLost, progress,
+			).SHA256
+			return probe, errRelationshipTerminal
+		}
+		return relationshipConvergenceProbe(relationshipFailureCurrentControl, progress),
+			errors.Join(rootErr, errRelationshipTerminal)
+	}
+	return probe, classifyErr
+}
+
+func (inspector *profileInspector) classifyRelationshipMismatch(
+	ctx context.Context,
+	profile PreparedProfile,
+	rootGeneration string,
+	failureClass string,
+) (privateConvergenceProbe, error) {
+	progress, err := inspector.readRelationshipSchedule(ctx, profile)
+	if err != nil {
+		probe := relationshipConvergenceProbe(failureClass, rootGeneration)
+		return probe, errors.Join(err, errRelationshipTerminal)
+	}
+	probe := relationshipConvergenceProbe(failureClass, rootGeneration, progress)
+	_, classifyErr := classifyRelationshipGeneration(progress)
+	if progress.Status == store.GenerationScheduleActive {
+		return probe, classifyErr
+	}
+	if progress.Status == store.GenerationScheduleSettled && progress.Failed > 0 {
+		return probe, classifyErr
+	}
+	return probe, errRelationshipTerminal
+}
+
+func (inspector *profileInspector) readRelationshipSchedule(
+	ctx context.Context,
+	profile PreparedProfile,
+) (store.GenerationScheduleProgress, error) {
 	read := inspector.readRelationshipScheduleFunc
 	if read == nil {
 		read = readRelationshipScheduleProgress
 	}
-	progress, err := read(ctx, profile)
+	return read(ctx, profile)
+}
+
+func (inspector *profileInspector) relationshipGenerationTerminal(
+	ctx context.Context,
+	profile PreparedProfile,
+) (privateConvergenceProbe, error) {
+	progress, err := inspector.readRelationshipSchedule(ctx, profile)
 	if err != nil {
 		probe := convergenceProbe("relationship_publication")
 		if errors.Is(err, store.ErrNotFound) {

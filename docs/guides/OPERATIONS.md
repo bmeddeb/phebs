@@ -4153,6 +4153,51 @@ digest changes. It adds no source/content, candidate-member, corpus, shard, or
 Git read, and no write, transaction, child, goroutine, lock, retry, startup,
 sync, no-op, or publication-transition work.
 
+### Relationship convergence classification
+
+Fresh T40.13 ceremony plans use the V16 relationship observer contract. After
+caller authority is current, the inspector no longer treats every
+relationship-root error as an undifferentiated control failure. It records one
+source-free boundary: `current_control`, `authority_incomplete`,
+`authority_mismatch`, `successor_absent`, or
+`successor_settled_without_current`. The class is part of the probe digest and
+is retained in the convergence transition, observation, and receipt.
+
+An absent or mismatching root is paired with the current bounded
+`service-relationship` schedule. Active schedule authority stays pending. An
+exact settled failure retains its typed refusal or terminal outcome. Settled
+success without matching current authority, malformed schedule/control state,
+or an absent successor is terminal. A non-refusal terminal is accepted only
+after the same exact class/root/schedule probe repeats on the next five-second
+poll; the V16 receipt records exactly two confirmations. This distinguishes a
+real stranded pair from the enqueuer, current-pointer, and final-settlement
+races without waiting for the four-hour deadline.
+
+The exact extraction scan is cached on both the extraction probe digest and the
+relationship generation against which it was checked. A newly appearing or
+changed relationship root forces one fresh extraction/root parity scan; later
+polls over the same pair reuse it. That scan has the existing worst-case
+envelope: at most 64 retained generation controls, each with up to 64 domain
+plans and 490 partition-result records per domain plus domain-root/current
+authority, stopping at the first complete generation (about 2,007,040 result
+checks at the full envelope). A missing/mismatching root adds one bounded
+current-schedule projection per poll. A stable valid root adds no schedule read
+and no repeated scan. There are no new production requests or writes, source,
+candidate-member, corpus, shard, Git, or content reads, child processes,
+goroutines, locks, retries, startup/sync/no-op transitions, or storage.
+
+`t40r1-neutral-27` remains immutable V15 stopped evidence. Its source-free
+package is
+`sha256:291336d632150b1c0101da65ab2621f7c410d218a08ef53da1d065c5c2a1a758`.
+Both cold profiles and structural warm-noop converged; structural delta B moved
+from relationship `pending` at 3,250,113 ms to generic `control` 4,974 ms later
+and retained that unclassified shape through the deadline. Its retained
+extraction counters are the last extraction-stage projection, not proof that
+the pipeline remained at extraction after inspection moved downstream. V16 is
+a prospective classification/revalidation correction; it does not
+retroactively pass or diagnose neutral-27's destroyed private state. V15 and
+earlier receipt validation and serialized bytes remain unchanged.
+
 New non-Kafka extraction plans use the version-2 domain-result contract: each
 partition retains the 64-MiB candidate-member reservation ceiling while the
 cumulative domain input is bounded independently at 1 GiB. New

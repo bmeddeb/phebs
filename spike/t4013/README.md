@@ -2413,3 +2413,54 @@ retroactively pass it or authorize integration, freeze/execution, release,
 scale/SLO, topology, T40.13/Epic 40 closure, or Epic 41 progression. A fresh
 ceremony requires focused/race/docs gates, independent review, explicit
 integration/freeze approval, and a new identifier.
+
+### Neutral-27 relationship pair stop
+
+`t40r1-neutral-27` is a verified signed V15 `unclassified`
+`convergence_deadline_expired` stop at source
+`566a0ecd5232b4b041f5d824e9150b0c80665da2`. Its plan, observation, receipt,
+and source-free package SHA-256 values are
+`4a68a03fb15c84bf56945b1ee5032003aeae6f303f333f9d57e1e4af7f0f4cb6`,
+`c7ba44081a315c586f0fa63fadf73753ce23ec04de2f1d51e85929466f4ed6e7`,
+`107e9315c6c5ca5b2e817bbd0d4a05f106b6f46ef769c97e9fecef778edaf570`,
+and `291336d632150b1c0101da65ab2621f7c410d218a08ef53da1d065c5c2a1a758`.
+Both cold profiles and structural warm-noop converged. Structural delta B
+entered `relationship_publication` as pending at 3,250,113 ms, changed to the
+generic `control` class 4,974 ms later, and retained the same control digest
+through the 14,395,102-ms final inspection. The retained extraction projection
+(1,954 succeeded, one pending, one running) is the last extraction-stage
+projection; it does not show that extraction stayed active after inspection
+advanced to relationship publication.
+
+The V15 observer reads the current relationship schedule only while the root
+is absent. Once a root appears, a malformed current control, incomplete root,
+or root/extraction mismatch becomes the same untyped control error. The full
+extraction-authority scan is cached only by the extraction probe, so a newly
+published relationship root does not itself force parity revalidation. The
+source-free package selects that classification/revalidation gap but cannot
+identify which private root/schedule condition occurred; custody was destroyed
+and the correction does not guess it.
+
+Fresh freezes use V16. Relationship probes now retain a closed boundary class:
+`current_control`, `authority_incomplete`, `authority_mismatch`,
+`successor_absent`, or `successor_settled_without_current`. Missing or
+mismatching root authority is paired with the bounded current schedule: active
+stays pending, an exact failed schedule keeps its typed refusal/terminal, and
+settled-success without matching current authority or malformed/absent control
+stops terminally. A non-refusal terminal must repeat as the same exact pair on
+the next five-second probe, and the observation/receipt contract requires
+exactly two confirmations plus transition/class/outcome parity.
+
+The extraction scan is now cached by extraction-probe and relationship-root
+generation. A root transition performs one fresh exact extraction/root check;
+later polls over the same pair reuse it. At the full existing envelope that
+single scan can check up to 64 generation controls × 64 domain plans × 490
+partition-result records plus root/current authority, stopping at the first
+complete generation. A missing/mismatching root adds one bounded schedule
+projection per poll; a stable valid root adds no schedule read. No production
+path, endpoint, bound, timeout, authority, or release posture changes.
+
+Neutral-27 remains stopped and does not pass retroactively. V15 and earlier
+receipt bytes and semantics remain exact. Focused/race/docs gates and
+independent review precede any request to integrate, freeze, or execute a fresh
+identifier.

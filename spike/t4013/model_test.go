@@ -494,6 +494,27 @@ func TestV15PlanVersionsExtractionScheduleAuthorityPrecedence(t *testing.T) {
 	}
 }
 
+func TestV16PlanVersionsRelationshipPairClassification(t *testing.T) {
+	plan, err := frozenV16PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV16 || plan.Safety != frozenSafetyV15 ||
+		plan.Safety != frozenSafetyV16 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v16 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV16 || decoded.Safety != frozenSafetyV16 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV16 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV16 {
+		t.Fatalf("decoded v16 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV14FreezeRequiresConvergentSelectedObservationRoute(t *testing.T) {
 	if err := validateV14ConvergenceRoutes(); err != nil {
 		t.Fatal(err)

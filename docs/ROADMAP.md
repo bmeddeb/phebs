@@ -1401,6 +1401,20 @@ catalog, relationship, or correctness authority.
   bounds are unchanged. Neutral-25 remains immutable and does not pass
   retroactively; independent review precedes integration and any fresh
   freeze/execution request.
+- `t40r1-neutral-27` again passed both cold profiles and structural warm-noop.
+  Structural delta B then advanced from relationship pending to a stable
+  generic relationship-control error and stopped at the four-hour deadline.
+  The signed V15 package
+  `sha256:291336d632150b1c0101da65ab2621f7c410d218a08ef53da1d065c5c2a1a758`
+  proves the boundary but cannot select the destroyed private root/schedule
+  condition. V16 closes the evidence gap prospectively: relationship probes
+  retain a closed current-control/authority/successor class, pair absent or
+  mismatching roots with bounded schedule state, invalidate the extraction
+  scan once per new root generation, and require two identical samples before
+  sealing a non-refusal terminal. V15 and earlier receipt bytes remain exact;
+  safety and production bounds are unchanged. Neutral-27 remains immutable
+  `unclassified` evidence. Focused/race/docs gates and independent review
+  precede any request to integrate and authorize a fresh freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

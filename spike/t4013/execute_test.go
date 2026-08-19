@@ -527,8 +527,8 @@ func TestConvergenceTransitionInventoryFailsClosedAtBound(t *testing.T) {
 			class = "transport"
 		}
 		exceeded = tracker.observeTransition(
-			"repository_visibility", convergenceInspectionDiagnostic{class: class}, digest,
-			time.Duration(index)*time.Millisecond,
+			privateConvergenceProbe{Stage: "repository_visibility", SHA256: digest},
+			convergenceInspectionDiagnostic{class: class}, time.Duration(index)*time.Millisecond,
 		)
 		if exceeded != (index == maxConvergenceTransitions) {
 			t.Fatalf("transition %d exceeded=%t", index, exceeded)
@@ -584,9 +584,8 @@ func TestV13ConvergenceProgressChurnCoalescesWithoutWeakeningTransitionBound(t *
 			class = "transport"
 		}
 		exceeded := tracker.observeTransition(
-			"extraction_publication", convergenceInspectionDiagnostic{class: class},
-			convergenceProbe("extraction_publication", index).SHA256,
-			time.Duration(index+1)*time.Millisecond,
+			convergenceProbe("extraction_publication", index),
+			convergenceInspectionDiagnostic{class: class}, time.Duration(index+1)*time.Millisecond,
 		)
 		if exceeded != (index == maxConvergenceTransitions) {
 			t.Fatalf("transition %d exceeded=%t", index, exceeded)
@@ -883,7 +882,7 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 	}
 }
 
-func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
+func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	hostToolchain, err := ObserveHostToolchain(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -896,12 +895,24 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	v16Plan, err := frozenV16PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v16PlanBytes, err := MarshalPlan(v16Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	digest := "sha256:" + strings.Repeat("a", 64)
 	tests := []struct {
 		name          string
 		cause         error
 		outcome       string
 		historicalV14 bool
+		v16           bool
+		failureClass  string
+		confirmations int64
+		attempts      int64
 		projection    privateConvergenceProbe
 	}{
 		{
@@ -1039,11 +1050,31 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				Stage: "relationship_publication", SHA256: digest,
 			},
 		},
+		{
+			name: "v16 relationship pair terminal", cause: errRelationshipTerminal,
+			outcome: "relationship_terminal", v16: true,
+			failureClass: relationshipFailureAuthorityDrift, confirmations: 2, attempts: 2,
+			projection: privateConvergenceProbe{
+				Stage: "relationship_publication", SHA256: digest,
+				RelationshipFailureClass: relationshipFailureAuthorityDrift,
+			},
+		},
+		{
+			name: "v16 relationship pair bound refusal", cause: errRelationshipBoundRefusal,
+			outcome: "relationship_bound_refusal", v16: true,
+			failureClass: relationshipFailureSuccessorAbsent, attempts: 1,
+			projection: privateConvergenceProbe{
+				Stage: "relationship_publication", SHA256: digest,
+				RelationshipFailureClass: relationshipFailureSuccessorAbsent,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			selectedPlan, selectedPlanBytes := plan, planBytes
-			if test.historicalV14 {
+			if test.v16 {
+				selectedPlan, selectedPlanBytes = v16Plan, v16PlanBytes
+			} else if test.historicalV14 {
 				selectedPlan, err = frozenV14PlanWithHostToolchain(testSourceCommit, hostToolchain)
 				if err != nil {
 					t.Fatal(err)
@@ -1092,6 +1123,17 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				run.observation.ConvergenceWaits[0].Outcome != test.outcome {
 				t.Fatalf("terminal waits = %+v", run.observation.ConvergenceWaits)
 			}
+			if test.v16 &&
+				(run.observation.ConvergenceWaits[0].RelationshipFailureClass != test.failureClass ||
+					run.observation.ConvergenceWaits[0].RelationshipTerminalConfirmations != test.confirmations ||
+					run.observation.ConvergenceWaits[0].Attempts != test.attempts) {
+				t.Fatalf("v16 relationship confirmation = %+v", run.observation.ConvergenceWaits[0])
+			}
+			if test.v16 && validateConvergenceWaits(
+				run.observation.ConvergenceWaits, observationDetailV15,
+			) == nil {
+				t.Fatal("v15 contract accepted v16 relationship evidence")
+			}
 			if test.outcome == "extraction_job_terminal" && !test.historicalV14 {
 				for _, progress := range v15InconclusiveTerminalJobProgress() {
 					invalid := run.observation.ConvergenceWaits[0]
@@ -1131,6 +1173,25 @@ func TestV15TerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				receipt.Failures[0] != stopped.Failures[0] || receipt.Decision != stopped.Decision ||
 				len(receipt.ConvergenceWaits) != 1 || receipt.ConvergenceWaits[0].Outcome != test.outcome {
 				t.Fatalf("stopped receipt parity = %+v", receipt)
+			}
+			if test.v16 {
+				wait := receipt.ConvergenceWaits[0]
+				if wait.RelationshipFailureClass != test.failureClass ||
+					wait.RelationshipTerminalConfirmations != test.confirmations {
+					t.Fatalf("v16 relationship receipt parity = %+v", wait)
+				}
+				if test.outcome == "relationship_terminal" {
+					invalid := stopped
+					invalid.ConvergenceWaits = append(
+						[]ConvergenceWaitObservation(nil), stopped.ConvergenceWaits...,
+					)
+					invalid.ConvergenceWaits[0].RelationshipTerminalConfirmations = 1
+					if _, err := BuildReceipt(
+						selectedPlanBytes, marshal(t, invalid), PlanDigest(selectedPlanBytes),
+					); err == nil {
+						t.Fatal("v16 receipt accepted an unconfirmed relationship terminal")
+					}
+				}
 			}
 			if test.projection.Stage == "caller_generation" {
 				if err := validateConvergenceWaits(

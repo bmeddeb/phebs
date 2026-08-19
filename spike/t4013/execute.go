@@ -1409,23 +1409,24 @@ func (run *execution) stopServers() error {
 }
 
 type convergenceProgressTracker struct {
-	coalesceTransitionProgress bool
-	attempts                   int64
-	progressChanges            int64
-	stageChanges               int64
-	first                      privateConvergenceProbe
-	last                       privateConvergenceProbe
-	lastProgressChange         time.Duration
-	lastSuccessfulAt           time.Duration
-	observationProgress        *ObservationProgressObservation
-	observationProgressAtWall  time.Duration
-	extractionProgress         *ExtractionProgressObservation
-	extractionProgressAtWall   time.Duration
-	extractionTiming           ExtractionTimingObservation
-	inspectionTransitions      []ConvergenceTransitionObservation
-	lastInspection             convergenceInspectionDiagnostic
-	lastInspectionProbe        privateConvergenceProbe
-	lastInspectionAt           time.Duration
+	coalesceTransitionProgress        bool
+	attempts                          int64
+	progressChanges                   int64
+	stageChanges                      int64
+	first                             privateConvergenceProbe
+	last                              privateConvergenceProbe
+	lastProgressChange                time.Duration
+	lastSuccessfulAt                  time.Duration
+	observationProgress               *ObservationProgressObservation
+	observationProgressAtWall         time.Duration
+	extractionProgress                *ExtractionProgressObservation
+	extractionProgressAtWall          time.Duration
+	extractionTiming                  ExtractionTimingObservation
+	inspectionTransitions             []ConvergenceTransitionObservation
+	lastInspection                    convergenceInspectionDiagnostic
+	lastInspectionProbe               privateConvergenceProbe
+	lastInspectionAt                  time.Duration
+	relationshipTerminalConfirmations int64
 }
 
 type convergenceInspectionDiagnostic struct {
@@ -1443,10 +1444,22 @@ func (tracker *convergenceProgressTracker) observe(
 		elapsed = time.Millisecond
 	}
 	tracker.attempts++
+	if diagnostic.class == "terminal" && probe.Stage == "relationship_publication" &&
+		probe.RelationshipFailureClass != "" {
+		if tracker.lastInspection.class == diagnostic.class &&
+			tracker.lastInspectionProbe.SHA256 == probe.SHA256 &&
+			tracker.lastInspectionProbe.RelationshipFailureClass == probe.RelationshipFailureClass {
+			tracker.relationshipTerminalConfirmations++
+		} else {
+			tracker.relationshipTerminalConfirmations = 1
+		}
+	} else {
+		tracker.relationshipTerminalConfirmations = 0
+	}
 	tracker.lastInspection = diagnostic
 	tracker.lastInspectionProbe = probe
 	tracker.lastInspectionAt = elapsed
-	transitionLimitExceeded := tracker.observeTransition(probe.Stage, diagnostic, probe.SHA256, elapsed)
+	transitionLimitExceeded := tracker.observeTransition(probe, diagnostic, elapsed)
 	// Terminal probes are not successful convergence progress, but their typed
 	// projections are the evidence needed to classify and validate the stop.
 	// Retain them before excluding terminal/error classes from the monotonic
@@ -1479,23 +1492,24 @@ func (tracker *convergenceProgressTracker) observe(
 }
 
 func (tracker *convergenceProgressTracker) observeTransition(
-	stage string,
+	probe privateConvergenceProbe,
 	diagnostic convergenceInspectionDiagnostic,
-	progressSHA256 string,
 	elapsed time.Duration,
 ) bool {
 	transition := ConvergenceTransitionObservation{
-		WallMS: elapsed.Milliseconds(), Stage: stage, Class: diagnostic.class,
+		WallMS: elapsed.Milliseconds(), Stage: probe.Stage, Class: diagnostic.class,
 		HTTPStatus: diagnostic.httpStatus, HTTPReason: diagnostic.httpReason,
-		ProgressSHA256: progressSHA256,
+		RelationshipFailureClass: probe.RelationshipFailureClass,
+		ProgressSHA256:           probe.SHA256,
 	}
 	if tracker.coalesceTransitionProgress {
-		transition.FirstProgressSHA256 = progressSHA256
+		transition.FirstProgressSHA256 = probe.SHA256
 	}
 	if count := len(tracker.inspectionTransitions); count > 0 {
 		last := &tracker.inspectionTransitions[count-1]
 		if last.Stage == transition.Stage && last.Class == transition.Class &&
-			last.HTTPStatus == transition.HTTPStatus && last.HTTPReason == transition.HTTPReason {
+			last.HTTPStatus == transition.HTTPStatus && last.HTTPReason == transition.HTTPReason &&
+			last.RelationshipFailureClass == transition.RelationshipFailureClass {
 			if last.ProgressSHA256 == transition.ProgressSHA256 {
 				return false
 			}
@@ -1642,6 +1656,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV14
 	case PlanSchemaV15:
 		contract = profileInspectionV15
+	case PlanSchemaV16:
+		contract = profileInspectionV16
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -1753,7 +1769,7 @@ func (run *execution) waitSnapshotWithInspection(
 			// the schedule enqueuer or the final promotion write; a
 			// converging pipeline changes the probe digest within one tick,
 			// a dead one repeats it five seconds later.
-			if run.plan.Schema != PlanSchemaV15 || probe.SHA256 == priorProbeSHA {
+			if planSchemaVersion(run.plan.Schema) < 15 || probe.SHA256 == priorProbeSHA {
 				if errors.Is(inspectErr, errExtractionBoundRefusal) {
 					run.recordConvergenceWait(profile, revision, label, "extraction_bound_refusal", limit, started, progress)
 					return privateProfileSnapshot{}, errExtractionBoundRefusal
@@ -1779,8 +1795,13 @@ func (run *execution) waitSnapshotWithInspection(
 			return privateProfileSnapshot{}, errRelationshipBoundRefusal
 		}
 		if errors.Is(inspectErr, errRelationshipTerminal) {
-			run.recordConvergenceWait(profile, revision, label, "relationship_terminal", limit, started, progress)
-			return privateProfileSnapshot{}, errRelationshipTerminal
+			// V16 confirms relationship integrity stops on a second identical
+			// source-free probe. A schedule enqueuer, current-pointer swap, or
+			// final settlement changes the probe; a stranded pair repeats it.
+			if run.plan.Schema != PlanSchemaV16 || probe.SHA256 == priorProbeSHA {
+				run.recordConvergenceWait(profile, revision, label, "relationship_terminal", limit, started, progress)
+				return privateProfileSnapshot{}, errRelationshipTerminal
+			}
 		}
 		if inspectErr == nil {
 			run.recordConvergenceWait(profile, revision, label, "converged", limit, started, progress)
@@ -1881,6 +1902,12 @@ func (run *execution) recordConvergenceWait(
 		}
 		if (planSchemaVersion(run.plan.Schema) >= 10) && outcome == "repository_index_terminal" {
 			wait.RepositoryIndexFailureClass = progress.lastInspectionProbe.RepositoryIndexFailureClass
+		}
+		if planSchemaVersion(run.plan.Schema) >= 16 {
+			wait.RelationshipFailureClass = progress.lastInspectionProbe.RelationshipFailureClass
+			if outcome == "relationship_terminal" {
+				wait.RelationshipTerminalConfirmations = progress.relationshipTerminalConfirmations
+			}
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
@@ -2237,6 +2264,8 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV14
 	case PlanSchemaV15:
 		value.Schema = ObservationSchemaV15
+	case PlanSchemaV16:
+		value.Schema = ObservationSchemaV16
 	}
 	return value
 }

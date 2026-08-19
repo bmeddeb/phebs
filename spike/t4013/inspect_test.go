@@ -243,6 +243,119 @@ func TestSettledRelationshipSuccessRechecksPublicationRoot(t *testing.T) {
 	}
 }
 
+func TestV16RelationshipCurrentAndSchedulePairClassification(t *testing.T) {
+	scheduleDigest := "sha256:" + strings.Repeat("a", 64)
+	generationDigest := "sha256:" + strings.Repeat("b", 64)
+	active := store.GenerationScheduleProgress{
+		Schema:         store.GenerationScheduleProgressSchema,
+		ScheduleDigest: scheduleDigest, Generation: generationDigest,
+		Status: store.GenerationScheduleActive, Total: 1, Materialized: 1,
+		Running: 1, MaxAttempts: relationshippublication.ScheduleMaxAttempts,
+	}
+	inspector := &profileInspector{
+		contract: profileInspectionV16,
+		readRelationshipScheduleFunc: func(
+			context.Context, PreparedProfile,
+		) (store.GenerationScheduleProgress, error) {
+			return active, nil
+		},
+	}
+
+	probe, err := inspector.classifyRelationshipOpenFailure(
+		t.Context(), PreparedProfile{}, relationshippublication.ErrPublishing,
+	)
+	if probe.RelationshipFailureClass != relationshipFailureCurrentControl ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("changing current control = %+v, %v", probe, err)
+	}
+	probe, err = inspector.classifyRelationshipOpenFailure(
+		t.Context(), PreparedProfile{}, relationshippublication.ErrInvalid,
+	)
+	if probe.RelationshipFailureClass != relationshipFailureCurrentControl ||
+		!errors.Is(err, errRelationshipTerminal) ||
+		classifyConvergenceInspection(err).class != "terminal" {
+		t.Fatalf("invalid current control = %+v, %v", probe, err)
+	}
+
+	probe, err = inspector.classifyRelationshipMismatch(
+		t.Context(), PreparedProfile{}, generationDigest,
+		relationshipFailureAuthorityDrift,
+	)
+	if probe.RelationshipFailureClass != relationshipFailureAuthorityDrift ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("active successor mismatch = %+v, %v", probe, err)
+	}
+	probe, err = inspector.classifyRelationshipMismatch(
+		t.Context(), PreparedProfile{}, generationDigest,
+		relationshipFailureAuthorityGap,
+	)
+	if probe.RelationshipFailureClass != relationshipFailureAuthorityGap ||
+		classifyConvergenceInspection(err).class != "pending" {
+		t.Fatalf("active successor authority gap = %+v, %v", probe, err)
+	}
+
+	settled := active
+	settled.Status, settled.Running, settled.Succeeded = store.GenerationScheduleSettled, 0, 1
+	inspector.readRelationshipScheduleFunc = func(
+		context.Context, PreparedProfile,
+	) (store.GenerationScheduleProgress, error) {
+		return settled, nil
+	}
+	probe, err = inspector.classifyRelationshipMismatch(
+		t.Context(), PreparedProfile{}, generationDigest,
+		relationshipFailureAuthorityDrift,
+	)
+	if probe.RelationshipFailureClass != relationshipFailureAuthorityDrift ||
+		!errors.Is(err, errRelationshipTerminal) ||
+		classifyConvergenceInspection(err).class != "terminal" {
+		t.Fatalf("settled successor mismatch = %+v, %v", probe, err)
+	}
+	inspector.readRelationshipRootFunc = func(context.Context, PreparedProfile) error {
+		return relationshippublication.ErrNotFound
+	}
+	probe, err = inspector.classifyRelationshipAbsent(t.Context(), PreparedProfile{})
+	if probe.RelationshipFailureClass != relationshipFailureSuccessorLost ||
+		!errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("settled successor without current root = %+v, %v", probe, err)
+	}
+
+	inspector.readRelationshipScheduleFunc = func(
+		context.Context, PreparedProfile,
+	) (store.GenerationScheduleProgress, error) {
+		return store.GenerationScheduleProgress{}, store.ErrNotFound
+	}
+	probe, err = inspector.classifyRelationshipAbsent(t.Context(), PreparedProfile{})
+	if probe.RelationshipFailureClass != relationshipFailureSuccessorAbsent ||
+		!errors.Is(err, errRelationshipTerminal) {
+		t.Fatalf("absent root and successor = %+v, %v", probe, err)
+	}
+}
+
+func TestV16RelationshipRootChangeRefreshesExtractionAuthorityOnce(t *testing.T) {
+	reads := 0
+	inspector := &profileInspector{
+		contract: profileInspectionV16,
+		inspectExtractionFunc: func(
+			context.Context, PreparedProfile,
+		) (extractionSnapshot, string, error) {
+			reads++
+			return extractionSnapshot{generation: fmt.Sprintf("generation-%d", reads)},
+				fmt.Sprintf("progress-%d", reads), nil
+		},
+	}
+	probeSHA := "sha256:" + strings.Repeat("c", 64)
+	for _, relationshipGeneration := range []string{"", "", "root-a", "root-a", "root-b"} {
+		if _, _, err := inspector.extractionForRelationship(
+			t.Context(), PreparedProfile{}, probeSHA, relationshipGeneration,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if reads != 3 {
+		t.Fatalf("extraction scans = %d, want initial plus two relationship-root transitions", reads)
+	}
+}
+
 func TestSnapshotAuthorityIncludesCallerGeneration(t *testing.T) {
 	left := privateProfileSnapshot{CallerGeneration: "sha256:caller-a"}
 	right := left
@@ -737,6 +850,11 @@ func TestExtractionConvergenceProbeDoesNotLetUnboundFailedJobPoisonCurrentSchedu
 		probe.ExtractionProgress.JobState != string(store.StatusFailed) ||
 		probe.ExtractionProgress.Succeeded != 1956 {
 		t.Fatalf("current schedule probe = %+v, error=%v", probe, err)
+	}
+	v16Probe, v16Err := extractionConvergenceProbe(progress, repository, profileInspectionV16)
+	if v16Err != nil || v16Probe.SHA256 != probe.SHA256 ||
+		v16Probe.ExtractionProgress == nil || v16Probe.ExtractionProgress.Succeeded != 1956 {
+		t.Fatalf("v16 did not inherit current extraction authority = %+v, %v", v16Probe, v16Err)
 	}
 
 	active := progress

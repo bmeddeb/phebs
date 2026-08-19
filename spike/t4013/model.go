@@ -37,6 +37,7 @@ const (
 	PlanSchemaV13        = "t4013-neutral-convergence-plan-v13"
 	PlanSchemaV14        = "t4013-neutral-convergence-plan-v14"
 	PlanSchemaV15        = "t4013-neutral-convergence-plan-v15"
+	PlanSchemaV16        = "t4013-neutral-convergence-plan-v16"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -52,12 +53,16 @@ const (
 	ObservationSchemaV13 = "t4013-neutral-convergence-observation-v13"
 	ObservationSchemaV14 = "t4013-neutral-convergence-observation-v14"
 	ObservationSchemaV15 = "t4013-neutral-convergence-observation-v15"
+	ObservationSchemaV16 = "t4013-neutral-convergence-observation-v16"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
 	// the repository-keyed job projection. Keep every "detailVersion >= 11"
 	// comparison on this name so the next version bumps one constant.
-	observationDetailV15       = 11
+	observationDetailV15 = 11
+	// observationDetailV16 records the closed relationship failure boundary
+	// and the repeated source-free terminal-pair confirmation.
+	observationDetailV16       = 12
 	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
@@ -73,6 +78,7 @@ const (
 	ReceiptSchemaV13           = "t4013-neutral-convergence-receipt-v13"
 	ReceiptSchemaV14           = "t4013-neutral-convergence-receipt-v14"
 	ReceiptSchemaV15           = "t4013-neutral-convergence-receipt-v15"
+	ReceiptSchemaV16           = "t4013-neutral-convergence-receipt-v16"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -221,36 +227,38 @@ type ServerStartupObservation struct {
 // bounded source-free controls. It never retains repository paths, source
 // bytes, HTTP bodies, credentials, or raw process output.
 type ConvergenceWaitObservation struct {
-	Profile                     string                             `json:"profile"`
-	Label                       string                             `json:"label"`
-	Revision                    string                             `json:"revision"`
-	Outcome                     string                             `json:"outcome"`
-	FirstStage                  string                             `json:"first_stage,omitempty"`
-	LastStage                   string                             `json:"last_stage"`
-	Attempts                    int64                              `json:"attempts"`
-	ProgressChanges             int64                              `json:"progress_changes"`
-	StageChanges                int64                              `json:"stage_changes,omitempty"`
-	FirstProgressSHA256         string                             `json:"first_progress_sha256"`
-	LastProgressSHA256          string                             `json:"last_progress_sha256"`
-	LastProgressChangeWallMS    int64                              `json:"last_progress_change_wall_ms,omitempty"`
-	ObservationProgress         *ObservationProgressObservation    `json:"observation_progress,omitempty"`
-	ObservationProgressWallMS   int64                              `json:"observation_progress_wall_ms,omitempty"`
-	ExtractionProgress          *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
-	ExtractionProgressWallMS    int64                              `json:"extraction_progress_wall_ms,omitempty"`
-	ExtractionTiming            *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
-	InspectionTransitions       []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
-	LastSuccessfulProbeSHA256   string                             `json:"last_successful_probe_sha256,omitempty"`
-	LastSuccessfulProbeWallMS   int64                              `json:"last_successful_probe_wall_ms,omitempty"`
-	LastInspectionStage         string                             `json:"last_inspection_stage,omitempty"`
-	LastInspectionClass         string                             `json:"last_inspection_class,omitempty"`
-	LastInspectionHTTPStatus    int                                `json:"last_inspection_http_status,omitempty"`
-	LastInspectionHTTPReason    string                             `json:"last_inspection_http_reason,omitempty"`
-	LastInspectionSHA256        string                             `json:"last_inspection_sha256,omitempty"`
-	LastInspectionWallMS        int64                              `json:"last_inspection_wall_ms,omitempty"`
-	RepositoryIndexFailureClass string                             `json:"repository_index_failure_class,omitempty"`
-	TransitionLimitExceeded     bool                               `json:"transition_limit_exceeded,omitempty"`
-	DeadlineMS                  int64                              `json:"deadline_ms"`
-	WallMS                      int64                              `json:"wall_ms"`
+	Profile                           string                             `json:"profile"`
+	Label                             string                             `json:"label"`
+	Revision                          string                             `json:"revision"`
+	Outcome                           string                             `json:"outcome"`
+	FirstStage                        string                             `json:"first_stage,omitempty"`
+	LastStage                         string                             `json:"last_stage"`
+	Attempts                          int64                              `json:"attempts"`
+	ProgressChanges                   int64                              `json:"progress_changes"`
+	StageChanges                      int64                              `json:"stage_changes,omitempty"`
+	FirstProgressSHA256               string                             `json:"first_progress_sha256"`
+	LastProgressSHA256                string                             `json:"last_progress_sha256"`
+	LastProgressChangeWallMS          int64                              `json:"last_progress_change_wall_ms,omitempty"`
+	ObservationProgress               *ObservationProgressObservation    `json:"observation_progress,omitempty"`
+	ObservationProgressWallMS         int64                              `json:"observation_progress_wall_ms,omitempty"`
+	ExtractionProgress                *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
+	ExtractionProgressWallMS          int64                              `json:"extraction_progress_wall_ms,omitempty"`
+	ExtractionTiming                  *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
+	InspectionTransitions             []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
+	LastSuccessfulProbeSHA256         string                             `json:"last_successful_probe_sha256,omitempty"`
+	LastSuccessfulProbeWallMS         int64                              `json:"last_successful_probe_wall_ms,omitempty"`
+	LastInspectionStage               string                             `json:"last_inspection_stage,omitempty"`
+	LastInspectionClass               string                             `json:"last_inspection_class,omitempty"`
+	LastInspectionHTTPStatus          int                                `json:"last_inspection_http_status,omitempty"`
+	LastInspectionHTTPReason          string                             `json:"last_inspection_http_reason,omitempty"`
+	LastInspectionSHA256              string                             `json:"last_inspection_sha256,omitempty"`
+	LastInspectionWallMS              int64                              `json:"last_inspection_wall_ms,omitempty"`
+	RepositoryIndexFailureClass       string                             `json:"repository_index_failure_class,omitempty"`
+	RelationshipFailureClass          string                             `json:"relationship_failure_class,omitempty"`
+	RelationshipTerminalConfirmations int64                              `json:"relationship_terminal_confirmations,omitempty"`
+	TransitionLimitExceeded           bool                               `json:"transition_limit_exceeded,omitempty"`
+	DeadlineMS                        int64                              `json:"deadline_ms"`
+	WallMS                            int64                              `json:"wall_ms"`
 }
 
 // ExtractionTimingObservation aggregates source-free per-attempt phase
@@ -341,6 +349,7 @@ type ConvergenceTransitionObservation struct {
 	Class                    string `json:"class"`
 	HTTPStatus               int    `json:"http_status,omitempty"`
 	HTTPReason               string `json:"http_reason,omitempty"`
+	RelationshipFailureClass string `json:"relationship_failure_class,omitempty"`
 	ProgressSHA256           string `json:"progress_sha256"`
 	FirstProgressSHA256      string `json:"first_progress_sha256,omitempty"`
 	ProgressChanges          int64  `json:"progress_changes,omitempty"`
@@ -671,12 +680,14 @@ func planSchemaVersion(schema string) int {
 		return 14
 	case PlanSchemaV15:
 		return 15
+	case PlanSchemaV16:
+		return 16
 	}
 	return 0
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14, PlanSchemaV15}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14, PlanSchemaV15, PlanSchemaV16}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -720,6 +731,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV14
 	case PlanSchemaV15:
 		wantSafety = frozenSafetyV15
+	case PlanSchemaV16:
+		wantSafety = frozenSafetyV16
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -770,7 +783,7 @@ func ValidatePlan(value Plan) error {
 
 func ValidateObservation(value Observation) error {
 	if !slices.Contains([]string{
-		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14, ObservationSchemaV15,
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14, ObservationSchemaV15, ObservationSchemaV16,
 	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
@@ -781,7 +794,7 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
 		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 ||
-		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 {
+		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -796,22 +809,22 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
-		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 &&
+		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 &&
 		len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
 	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
-		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 {
+		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 {
 		if err := validateServerStartups(
 			value.ServerStartups,
-			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15,
-			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15,
+			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16,
+			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16,
 		); err != nil {
 			return err
 		}
 	}
 	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 &&
-		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 &&
+		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 &&
 		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
@@ -872,6 +885,11 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV15 {
 		if err := validateConvergenceWaits(value.ConvergenceWaits, observationDetailV15); err != nil {
+			return err
+		}
+	}
+	if value.Schema == ObservationSchemaV16 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, observationDetailV16); err != nil {
 			return err
 		}
 	}
@@ -1006,6 +1024,9 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 }
 
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV16 {
+		return ObservationSchemaV16
+	}
 	if plan.Schema == PlanSchemaV15 {
 		return ObservationSchemaV15
 	}
@@ -1052,6 +1073,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV16 {
+		return ReceiptSchemaV16
+	}
 	if plan.Schema == PlanSchemaV15 {
 		return ReceiptSchemaV15
 	}
@@ -1250,6 +1274,9 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			return errors.New("T40.13 convergence wait identity is duplicated")
 		}
 		seen[key] = struct{}{}
+		if err := validateRelationshipFailure(value, detailVersion); err != nil {
+			return err
+		}
 		if value.Outcome == "converged" && value.LastStage != "complete" ||
 			value.Outcome != "converged" && value.LastStage == "complete" {
 			return errors.New("T40.13 convergence wait outcome is incoherent")
@@ -1509,12 +1536,17 @@ func validateConvergenceTransitions(
 	for index, transition := range value.InspectionTransitions {
 		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
 			!slices.Contains(classes, transition.Class) ||
+			(detailVersion < observationDetailV16 && transition.RelationshipFailureClass != "") ||
+			(detailVersion >= observationDetailV16 && transition.RelationshipFailureClass != "" &&
+				(transition.Stage != "relationship_publication" ||
+					!validRelationshipFailureClass(transition.RelationshipFailureClass))) ||
 			!validTransitionHTTPDiagnostic(transition, detailVersion) ||
 			!digestIdentity(transition.ProgressSHA256) || transition.WallMS < 0 ||
 			transition.WallMS > value.WallMS ||
 			index > 0 && transition.WallMS < previous.WallMS ||
 			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
 				transition.HTTPStatus == previous.HTTPStatus && transition.HTTPReason == previous.HTTPReason &&
+				transition.RelationshipFailureClass == previous.RelationshipFailureClass &&
 				(detailVersion >= 9 || transition.ProgressSHA256 == previous.ProgressSHA256) ||
 			validateTransitionProgress(transition, value.WallMS, detailVersion) != nil {
 			return errors.New("T40.13 convergence transition is invalid")
@@ -1529,6 +1561,10 @@ func validateConvergenceTransitions(
 		previous = transition
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
+	if detailVersion >= observationDetailV16 &&
+		last.RelationshipFailureClass != value.RelationshipFailureClass {
+		return errors.New("T40.13 relationship failure transition fence is invalid")
+	}
 	if !value.TransitionLimitExceeded && (firstSuccessful == nil || lastSuccessful == nil) ||
 		firstSuccessful != nil && firstSuccessful.Stage != value.FirstStage ||
 		!value.TransitionLimitExceeded &&
@@ -1647,11 +1683,16 @@ func validateConvergenceWithoutSuccessfulProbe(
 	for index, transition := range value.InspectionTransitions {
 		if transition.Stage == convergenceNotInspected || !slices.Contains(stages, transition.Stage) ||
 			!slices.Contains(classes, transition.Class) ||
+			(detailVersion < observationDetailV16 && transition.RelationshipFailureClass != "") ||
+			(detailVersion >= observationDetailV16 && transition.RelationshipFailureClass != "" &&
+				(transition.Stage != "relationship_publication" ||
+					!validRelationshipFailureClass(transition.RelationshipFailureClass))) ||
 			!validTransitionHTTPDiagnostic(transition, detailVersion) || !digestIdentity(transition.ProgressSHA256) ||
 			transition.WallMS < 0 || transition.WallMS > value.WallMS ||
 			index > 0 && transition.WallMS < previous.WallMS ||
 			index > 0 && transition.Stage == previous.Stage && transition.Class == previous.Class &&
 				transition.HTTPStatus == previous.HTTPStatus && transition.HTTPReason == previous.HTTPReason &&
+				transition.RelationshipFailureClass == previous.RelationshipFailureClass &&
 				(detailVersion >= 9 || transition.ProgressSHA256 == previous.ProgressSHA256) ||
 			validateTransitionProgress(transition, value.WallMS, detailVersion) != nil {
 			return errors.New("T40.13 unsuccessful convergence transition is invalid")
@@ -1664,6 +1705,10 @@ func validateConvergenceWithoutSuccessfulProbe(
 		return err
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
+	if detailVersion >= observationDetailV16 &&
+		last.RelationshipFailureClass != value.RelationshipFailureClass {
+		return errors.New("T40.13 unsuccessful relationship failure transition fence is invalid")
+	}
 	terminalOutcome := value.Outcome == "repository_index_terminal" || observationTerminal || extractionTerminal
 	if detailVersion >= 10 {
 		terminalOutcome = terminalOutcome || value.Outcome == "caller_generation_bound_refusal" ||
@@ -1705,6 +1750,45 @@ func validateTransitionProgress(
 	if transition.LastProgressChangeWallMS < transition.WallMS ||
 		transition.LastProgressChangeWallMS > waitWallMS {
 		return errors.New("T40.13 coalesced transition change time is invalid")
+	}
+	return nil
+}
+
+func validRelationshipFailureClass(value string) bool {
+	return slices.Contains([]string{
+		relationshipFailureCurrentControl,
+		relationshipFailureAuthorityGap,
+		relationshipFailureAuthorityDrift,
+		relationshipFailureSuccessorAbsent,
+		relationshipFailureSuccessorLost,
+	}, value)
+}
+
+func validateRelationshipFailure(value ConvergenceWaitObservation, detailVersion int) error {
+	if detailVersion < observationDetailV16 {
+		if value.RelationshipFailureClass != "" || value.RelationshipTerminalConfirmations != 0 {
+			return errors.New("T40.13 historical convergence wait acquired relationship failure detail")
+		}
+		return nil
+	}
+	if value.RelationshipFailureClass != "" &&
+		(value.LastInspectionStage != "relationship_publication" ||
+			!validRelationshipFailureClass(value.RelationshipFailureClass)) {
+		return errors.New("T40.13 relationship failure classification is invalid")
+	}
+	terminal := value.Outcome == "relationship_terminal"
+	if (terminal || value.Outcome == "relationship_bound_refusal") &&
+		value.RelationshipFailureClass == "" {
+		return errors.New("T40.13 relationship terminal classification is absent")
+	}
+	if terminal {
+		if value.RelationshipTerminalConfirmations != 2 || value.Attempts < 2 {
+			return errors.New("T40.13 relationship terminal confirmation is invalid")
+		}
+		return nil
+	}
+	if value.RelationshipTerminalConfirmations != 0 {
+		return errors.New("T40.13 non-terminal relationship wait acquired terminal confirmation")
 	}
 	return nil
 }
@@ -2040,7 +2124,8 @@ func optionalPublicationState(value string) bool {
 // pipeline stop reason: one site to change on the next receipt version
 // instead of one hand-edited guard per case arm.
 func modernPipelineStopMismatch(value Receipt, failure FailureObservation, waitOutcome string) bool {
-	return value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 ||
+	return value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 &&
+		value.Schema != ReceiptSchemaV16 ||
 		failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 		value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != waitOutcome
 }
