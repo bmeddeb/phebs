@@ -1447,6 +1447,16 @@ catalog, relationship, or correctness authority.
   V16 relationship classification, every safety ceiling, and every production
   bound remain unchanged. Focused/race/docs gates and independent review
   precede any request to integrate or authorize a fresh freeze.
+- `t40r1-neutral-29` is immutable V17 `unclassified` evidence: its verified
+  package `sha256:4ba484f9b22902edda41179d0b790cec018c2ecc12fa7baaed66049c8315fcd8`
+  stopped at `interruption/active_lease_wait` without selecting a trigger, so
+  it cannot distinguish an upstream B stall, an absent extraction schedule,
+  or a lifecycle timing gap. V18 keeps V17 historical semantics closed, makes
+  the exact current extraction schedule the read-only discovery authority,
+  and seals a bounded last exact stage/class/digest when no lease is selected.
+  Terminal, deadline, and completed/settled-no-lease outcomes are distinct.
+  This is harness-only evidence work with no production behavior or bound
+  change; merge, freeze, and execution remain separately authorized steps.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

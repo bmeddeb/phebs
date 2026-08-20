@@ -46,8 +46,19 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 		running.Attempt != chunk.Attempt || running.Status != GenerationChunkRunning {
 		t.Fatalf("running lease state = %+v, %v", running, err)
 	}
+	selected, err := reader.CurrentGenerationRunningChunk(
+		t.Context(), spec.Repository, spec.Stage,
+	)
+	if err != nil || selected != running {
+		t.Fatalf("selected current running chunk = %+v, %v", selected, err)
+	}
 	if err := state.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := reader.CurrentGenerationRunningChunk(
+		t.Context(), spec.Repository, spec.Stage,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("settled schedule retained a running chunk: %v", err)
 	}
 	done, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
 	if err != nil || done.Status != GenerationChunkDone {

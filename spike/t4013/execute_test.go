@@ -1808,6 +1808,16 @@ func lifecycleTestLine(t *testing.T, event, stage, outcome string) []byte {
 type fixedGenerationChunkLeaseReader struct {
 	states   map[string]store.GenerationChunkLeaseState
 	progress *store.GenerationScheduleProgress
+	running  *store.GenerationChunkLeaseState
+}
+
+func (reader *fixedGenerationChunkLeaseReader) CurrentGenerationRunningChunk(
+	context.Context, string, string,
+) (store.GenerationChunkLeaseState, error) {
+	if reader.running != nil {
+		return *reader.running, nil
+	}
+	return store.GenerationChunkLeaseState{}, store.ErrNotFound
 }
 
 func (reader *fixedGenerationChunkLeaseReader) GenerationScheduleProgress(
@@ -1950,6 +1960,119 @@ func TestInterruptionTriggerWaitRetriesTransientReads(t *testing.T) {
 	if err == nil || !errors.Is(err, transient) ||
 		!strings.Contains(err.Error(), "deadline expired") {
 		t.Fatalf("transient binder failure aborted the trigger wait: %v", err)
+	}
+}
+
+func TestV18InterruptionTriggerUsesStoreAuthorityAcrossLifecycleStartAndSettle(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	// A same-drain started/settled pair leaves no active lifecycle candidate.
+	// V18 still discovers the independently running current-schedule chunk
+	// from the store instead of treating log timing as authority.
+	started := lifecycleTestLine(t, "started", extractionpublication.ScheduleStage, "running")
+	settled := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "completed")
+	lines := append(append(append([]byte{}, started...), '\n'), settled...)
+	lines = append(lines, '\n')
+	if err := os.WriteFile(path, lines, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	state := store.GenerationChunkLeaseState{
+		Identity: "sha256:" + strings.Repeat("c", 64), Repository: profile.RepositoryName,
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("d", 64), Attempt: 2,
+		Status: store.GenerationChunkRunning,
+	}
+	run := &execution{
+		ctx: t.Context(), plan: Plan{Schema: PlanSchemaV18},
+		observation: emptyObservationForPlan(EnvironmentObservation{}, Plan{Schema: PlanSchemaV18}),
+	}
+	server := &privateServer{done: make(chan error, 1)}
+	report, err := run.waitInterruptionTriggerV18WithReader(
+		server, cursor, &fixedGenerationChunkLeaseReader{running: &state}, profile,
+		"revision-b", time.Second,
+		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			t.Fatal("exact inspector ran after an immediately selectable store lease")
+			return privateProfileSnapshot{}, privateConvergenceProbe{}, nil
+		},
+		func(PreparedProfile, string, string) (bool, error) { return true, nil },
+	)
+	if err != nil || report.Identity != state.Identity || report.Attempt != state.Attempt ||
+		report.Outcome != "running" {
+		t.Fatalf("store-selected V18 trigger = %+v, %v", report, err)
+	}
+}
+
+func TestV18InterruptionTriggerSealsLastUpstreamProgress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	plan := Plan{Schema: PlanSchemaV18}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	probe := convergenceProbe("observation_publication", "pending")
+	_, err = run.waitInterruptionTriggerV18WithReader(
+		&privateServer{done: make(chan error, 1)}, cursor,
+		&fixedGenerationChunkLeaseReader{},
+		PreparedProfile{RepositoryName: "example.invalid/semantic"},
+		"revision-b", 300*time.Millisecond,
+		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			return privateProfileSnapshot{}, probe,
+				errors.New("T40.13 observation publication has not converged")
+		},
+		func(PreparedProfile, string, string) (bool, error) { return false, nil },
+	)
+	if !errors.Is(err, errInterruptionTriggerDeadline) {
+		t.Fatalf("V18 upstream wait = %v, want typed trigger deadline", err)
+	}
+	got := run.observation.Interruption
+	if got.LastProgressStage != probe.Stage || got.LastProgressClass != "pending" ||
+		got.LastProgressSHA256 != probe.SHA256 || got.LastProgressWallMS <= 0 {
+		t.Fatalf("V18 retained progress = %+v", got)
+	}
+}
+
+func TestV18InterruptionTriggerStopsOnTerminalProgress(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	plan := Plan{Schema: PlanSchemaV18}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	probe := convergenceProbe("extraction_publication", "failed")
+	_, err = run.waitInterruptionTriggerV18WithReader(
+		&privateServer{done: make(chan error, 1)}, cursor,
+		&fixedGenerationChunkLeaseReader{},
+		PreparedProfile{RepositoryName: "example.invalid/semantic"},
+		"revision-b", time.Second,
+		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			return privateProfileSnapshot{}, probe, errExtractionScheduleTerminal
+		},
+		func(PreparedProfile, string, string) (bool, error) { return false, nil },
+	)
+	if !errors.Is(err, errInterruptionProgressTerminal) ||
+		run.observation.Interruption.LastProgressClass != "terminal" {
+		t.Fatalf("V18 terminal progress = %+v, %v", run.observation.Interruption, err)
 	}
 }
 

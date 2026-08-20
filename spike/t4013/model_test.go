@@ -537,6 +537,27 @@ func TestV17PlanAddsOnlyInterruptionLifecycleEvidence(t *testing.T) {
 	}
 }
 
+func TestV18PlanAddsBoundedInterruptionProgressEvidence(t *testing.T) {
+	plan, err := frozenV18PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV18 || plan.Safety != frozenSafetyV17 ||
+		plan.Safety != frozenSafetyV18 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v18 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV18 || decoded.Safety != frozenSafetyV18 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV18 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV18 {
+		t.Fatalf("decoded v18 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV17InterruptionEvidencePreservesHistoricalBytesAndAttemptZero(t *testing.T) {
 	historical := completedObservation()
 	historicalBytes := marshal(t, historical)
@@ -707,6 +728,73 @@ func TestV17StoppedReceiptSealsUnsatisfiableInterruptionTrigger(t *testing.T) {
 	receipt.Interruption.LastSubstage = "first_stop"
 	if err := ValidateReceipt(receipt, plan); err == nil {
 		t.Fatal("unsatisfiable trigger receipt accepted an incoherent substage")
+	}
+}
+
+func TestV18StoppedReceiptSealsTypedNoLeaseProgress(t *testing.T) {
+	plan, err := frozenV18PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name, class, code, progressClass string
+	}{
+		{name: "deadline", class: "execution", code: "interruption_trigger_deadline", progressClass: "pending"},
+		{name: "terminal", class: "pipeline", code: "interruption_progress_terminal", progressClass: "terminal"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			value := completedObservation()
+			value.Schema = ObservationSchemaV18
+			value.HostToolchain = slices.Clone(plan.HostToolchain)
+			value.Outcome = "stopped"
+			value.Interruption = &InterruptionObservation{
+				Schema: interruptionSchemaV1, LastSubstage: "active_lease_wait",
+				LastProgressStage: "observation_publication", LastProgressClass: test.progressClass,
+				LastProgressSHA256: "sha256:" + strings.Repeat("c", 64),
+				LastProgressWallMS: 5, ProgressChanges: 1,
+			}
+			value.Phases[5] = PhaseObservation{
+				Name: "interruption", Outcome: "failed", Metrics: PhaseMetrics{WallMS: 6},
+			}
+			for index := 6; index < len(value.Phases)-1; index++ {
+				value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+			}
+			value.Checks = frozenChecks(false)
+			value.Failures = []FailureObservation{{
+				Phase: "interruption", Class: test.class, Code: test.code,
+			}}
+			value.Decision = DecisionObservation{Selected: "unclassified", Reason: test.code}
+			receiptBytes, buildErr := BuildReceipt(
+				planBytes, marshal(t, value), PlanDigest(planBytes),
+			)
+			if buildErr != nil {
+				t.Fatal(buildErr)
+			}
+			receipt, decodeErr := DecodeReceipt(receiptBytes, plan)
+			if decodeErr != nil {
+				t.Fatal(decodeErr)
+			}
+			if receipt.Schema != ReceiptSchemaV18 || receipt.Interruption == nil ||
+				receipt.Interruption.LastProgressClass != test.progressClass {
+				t.Fatalf("V18 interruption receipt = %+v", receipt.Interruption)
+			}
+		})
+	}
+
+	legacy := completedObservation()
+	legacy.Schema = ObservationSchemaV17
+	legacy.Interruption = &InterruptionObservation{
+		Schema: interruptionSchemaV1, LastSubstage: "active_lease_wait",
+		LastProgressStage: "observation_publication", LastProgressClass: "pending",
+		LastProgressSHA256: "sha256:" + strings.Repeat("d", 64), LastProgressWallMS: 1,
+	}
+	legacy.Phases[5] = PhaseObservation{Name: "interruption", Outcome: "failed"}
+	if err := validateInterruptionObservation(legacy); err == nil {
+		t.Fatal("V17 observation accepted V18 progress fields")
 	}
 }
 

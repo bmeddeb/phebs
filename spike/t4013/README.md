@@ -2560,3 +2560,37 @@ lock, cache, memory/disk ceiling, or release posture changes.
 Neutral-28 does not pass retroactively. V17 requires focused/race/docs gates,
 independent review, explicit integration, a new signed freeze, and a new
 ceremony identifier before execution.
+
+### Neutral-29 no-trigger stop and V18 store-authoritative discovery
+
+`t40r1-neutral-29` is immutable V17 `unclassified` evidence. Package
+`sha256:4ba484f9b22902edda41179d0b790cec018c2ecc12fa7baaed66049c8315fcd8`
+binds source `5707856b2ce72404fff7eca34a384e69b9e1169b`, plan
+`sha256:c18621ef92664c042103592dfbfd12918a7eb4e974fa0f6a9041168b60ba22b7`,
+observation
+`sha256:d44420f7e179c54d76bb125a1396b90aaf3ac3ce60a59b36279d8d544ce0c825`,
+and receipt
+`sha256:3049b7a452f1932bfcf21d734cb7afb8c4a61a4a9f3ab202aa26eb9af8cfdd51`.
+It stopped at `interruption/active_lease_wait` with no selected trigger. The
+record does not establish whether B lacked an extraction schedule, remained
+upstream, or crossed a lifecycle start/settle boundary between polls.
+
+V18 makes the exact current schedule authoritative. At one-second cadence it
+selects at most one running extraction chunk, rechecks the current schedule,
+identity, generation, and local runtime, and accepts it only when the immutable
+generation binds revision B. Lifecycle lines continue to receive bounded
+structural validation but cannot hide or create the selected lease. Every five
+seconds the existing V16 exact inspector also records a fixed-size last
+stage/class/probe digest/wall/change projection. A terminal projection, a
+no-trigger deadline, and a completed or settled-without-selectable-lease
+pipeline therefore produce distinct sealable stopped receipts.
+
+The selector performs bounded current-pointer, one-row, schedule, identity,
+and runtime-fence reads and exposes no lease token or private store detail. The
+inspector keeps its 30-second call bound and existing authority/inventory
+limits, including at most 64 generation controls × 64 domains × 490 partition
+results at its worst extraction envelope. Log reads retain the V17 250-ms,
+64-KiB, 1-MiB-line, and 400,000-report bounds. No production behavior, schema,
+API, retry, worker, authority, lock, cache, limit, or release claim changes;
+V1–V17 bytes and validation remain exact. Neutral-29 does not pass
+retroactively, and this branch authorizes no freeze or execution.

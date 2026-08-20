@@ -320,6 +320,70 @@ func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
 	}, nil
 }
 
+// CurrentGenerationRunningChunk returns one running chunk from the exact
+// current repository/stage schedule. The result is re-read by identity and
+// fenced against the current schedule before return; lease tokens, workers,
+// timestamps, offsets, and errors never leave the store boundary.
+func (reader *LocalGenerationChunkReader) CurrentGenerationRunningChunk(
+	ctx context.Context,
+	repository, stage string,
+) (GenerationChunkLeaseState, error) {
+	if reader == nil || reader.store == nil || ctx == nil ||
+		strings.TrimSpace(repository) != repository || repository == "" ||
+		!validGenerationToken(stage) || stage == "" {
+		return GenerationChunkLeaseState{}, errors.New(
+			"read current running generation chunk: request is invalid",
+		)
+	}
+	results, err := queryGenerationSchedule[[]generationChunkRec](
+		ctx, reader.store.db, "current_running_chunk", `
+LET $digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
+RETURN SELECT * FROM generation_schedule_chunk
+	WHERE schedule_digest = $digest AND status = 'running'
+	ORDER BY offset, attempt LIMIT 1;`, map[string]any{
+			"current": models.NewRecordID(
+				"generation_schedule_current",
+				strings.TrimPrefix(generationCurrentID(repository, stage), "sha256:"),
+			),
+		},
+	)
+	if err != nil {
+		return GenerationChunkLeaseState{}, fmt.Errorf(
+			"read current running generation chunk: %w", err,
+		)
+	}
+	rows := generationChunkRows(results)
+	if len(rows) != 1 {
+		return GenerationChunkLeaseState{}, fmt.Errorf(
+			"read current running generation chunk: %w", ErrNotFound,
+		)
+	}
+	chunk, err := rows[0].chunk()
+	if err != nil || validGenerationChunkLease(chunk) != nil ||
+		chunk.Repository != repository || chunk.Stage != stage {
+		return GenerationChunkLeaseState{}, errors.Join(
+			err, errors.New("read current running generation chunk: projection is invalid"),
+		)
+	}
+	schedule, err := reader.store.GetGenerationSchedule(ctx, repository, stage)
+	if err != nil || schedule == nil || schedule.Digest != chunk.ScheduleDigest ||
+		schedule.Generation != chunk.Generation {
+		return GenerationChunkLeaseState{}, errors.Join(err, ErrGenerationStale)
+	}
+	state, err := reader.GenerationChunkLeaseState(ctx, chunk.Identity)
+	if err != nil || state.Status != GenerationChunkRunning ||
+		state.Repository != repository || state.Stage != stage ||
+		state.Generation != chunk.Generation || state.Attempt != chunk.Attempt {
+		return GenerationChunkLeaseState{}, errors.Join(err, ErrGenerationLeaseLost)
+	}
+	confirmed, err := reader.store.GetGenerationSchedule(ctx, repository, stage)
+	if err != nil || confirmed == nil || confirmed.Digest != chunk.ScheduleDigest ||
+		confirmed.Generation != chunk.Generation {
+		return GenerationChunkLeaseState{}, errors.Join(err, ErrGenerationStale)
+	}
+	return state, nil
+}
+
 // GenerationScheduleProgress returns one current schedule snapshot. A failed
 // settled schedule includes only its closed refusal, when one was durably
 // recorded. Every settled result is re-read before return to fence a

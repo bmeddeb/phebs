@@ -4368,3 +4368,49 @@ version-gated: V16 execution keeps its frozen extraction-only fatal contract,
 while V17 checks structure fatally and validates-then-discards vocabulary
 drift, because the store lease projection — not the log — is the selection
 authority. Neutral-28 remains `unclassified` and cannot pass retroactively.
+
+### T40.13 V18 authoritative interruption trigger diagnostic
+
+`t40r1-neutral-29` remains immutable V17 `unclassified` evidence. Its verified
+source-free package is
+`sha256:4ba484f9b22902edda41179d0b790cec018c2ecc12fa7baaed66049c8315fcd8`;
+it binds source `5707856b2ce72404fff7eca34a384e69b9e1169b`, plan
+`sha256:c18621ef92664c042103592dfbfd12918a7eb4e974fa0f6a9041168b60ba22b7`,
+observation
+`sha256:d44420f7e179c54d76bb125a1396b90aaf3ac3ce60a59b36279d8d544ce0c825`,
+and receipt
+`sha256:3049b7a452f1932bfcf21d734cb7afb8c4a61a4a9f3ab202aa26eb9af8cfdd51`.
+The interruption stopped at `active_lease_wait` without trigger fields. That
+record proves only that V17 did not select a lifecycle-discovered B extraction
+lease within 90 minutes; it does not prove that such a schedule existed or
+identify an upstream boundary.
+
+Fresh plans use V18. The trigger reads one running chunk directly from the
+exact current `extraction-partitions` schedule, then rechecks the current
+schedule, exact chunk identity, and local runtime before accepting it. The
+generation must still bind revision B. Lifecycle logs remain incrementally
+parsed for closed structural corroboration, but their start/settle timing is no
+longer discovery authority. Alongside lease selection, the existing exact V16
+inspector records the last source-free stage, closed class, probe digest,
+phase-relative wall time, and digest-change count. A terminal projection seals
+`interruption_progress_terminal`; a no-trigger deadline with retained progress
+seals `interruption_trigger_deadline`; complete convergence or an exact
+B-bound settled extraction schedule seals `interruption_trigger_unsatisfiable`.
+No raw error, response, path, worker, token, timestamp, log, credential, or
+source is retained. V1–V17 validation and bytes remain unchanged.
+
+This is ceremony-only read/evidence work. The log keeps its 250-ms cadence and
+64-KiB read, 1-MiB partial-line, and 400,000-report-per-poll bounds. The exact
+current-running selector runs at most once per second and performs bounded
+current-pointer, one-row, current-schedule, identity, and runtime-fence reads.
+The exact inspector runs at most every five seconds with a 30-second call
+bound. Before extraction it performs the existing bounded authority reads and
+requests. At the extraction boundary its existing worst envelope is at most 64
+generation controls × 64 domains × 490 partition-result slots, stopping at the
+first complete generation and retaining the relationship-pair memo for the
+life of the inspector. It adds no source/content/candidate-member/corpus/shard
+or Git read and no write. Five fixed-size scalar/digest fields are added to the
+V18 observation/receipt. Production request, sync, startup, retry/no-op,
+publication, worker, authority, schema, API, cache, lock, concurrency, bound,
+memory/disk ceiling, and release behavior are unchanged. Neutral-29 cannot
+pass retroactively; a fresh freeze and execution require separate approval.

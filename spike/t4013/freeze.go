@@ -87,6 +87,7 @@ var frozenSafetyV14 = frozenSafetyV13
 var frozenSafetyV15 = frozenSafetyV14
 var frozenSafetyV16 = frozenSafetyV15
 var frozenSafetyV17 = frozenSafetyV16
+var frozenSafetyV18 = frozenSafetyV17
 
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
@@ -113,7 +114,7 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return freshV17PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
+	return freshV18PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
 }
 
 func validateV14ConvergenceRoutes() error {
@@ -236,6 +237,27 @@ func freshV17PlanWithHostToolchain(
 	frozenAt time.Time,
 ) (Plan, error) {
 	return freshPlan(frozenV17PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
+}
+
+func frozenV18PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := frozenV17PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV18
+	value.Safety = frozenSafetyV18
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func freshV18PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	return freshPlan(frozenV18PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
