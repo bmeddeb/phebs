@@ -353,33 +353,43 @@ func TestSchedulerReportsExhaustionAfterRetryTransition(t *testing.T) {
 }
 
 func TestSchedulerDefersWithoutConsumingAttempt(t *testing.T) {
-	fake := &schedulerStore{}
-	scheduler := &Scheduler{
-		Store: fake, PollEvery: 37 * time.Millisecond, HeartbeatEvery: time.Hour,
-		Backoff: func(int) time.Duration { return time.Millisecond },
+	tests := []struct {
+		name  string
+		cause error
+	}{
+		{name: "typed contention", cause: store.WithDeferral(errors.New("mutation lock busy"))},
+		{name: "stale authority", cause: fmt.Errorf("authority changed: %w", store.ErrGenerationStale)},
 	}
-	cause := errors.New("mutation lock busy")
-	scheduler.execute(t.Context(), Class{
-		Budget: Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
-		Handle: func(context.Context, store.GenerationChunk, Budget) error {
-			return store.WithDeferral(cause)
-		},
-	}, store.GenerationChunk{
-		ID: "chunk", ResourceClass: store.GenerationResourceMemory,
-		Status: store.GenerationChunkRunning, LeaseToken: "lease",
-	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fake := &schedulerStore{}
+			scheduler := &Scheduler{
+				Store: fake, PollEvery: 37 * time.Millisecond, HeartbeatEvery: time.Hour,
+				Backoff: func(int) time.Duration { return time.Millisecond },
+			}
+			scheduler.execute(t.Context(), Class{
+				Budget: Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+				Handle: func(context.Context, store.GenerationChunk, Budget) error {
+					return test.cause
+				},
+			}, store.GenerationChunk{
+				ID: "chunk", ResourceClass: store.GenerationResourceMemory,
+				Status: store.GenerationChunkRunning, LeaseToken: "lease",
+			})
 
-	fake.mu.Lock()
-	defer fake.mu.Unlock()
-	if fake.deferred != 1 || fake.retried != 0 || fake.failed != 0 ||
-		fake.deferDelay != scheduler.storeCallTimeout()+scheduler.PollEvery ||
-		len(fake.deferErrors) != 1 ||
-		!strings.Contains(fake.deferErrors[0], cause.Error()) {
-		t.Fatalf(
-			"deferred/retried/failed/delay/errors = %d/%d/%d/%s/%q",
-			fake.deferred, fake.retried, fake.failed,
-			fake.deferDelay, fake.deferErrors,
-		)
+			fake.mu.Lock()
+			defer fake.mu.Unlock()
+			if fake.deferred != 1 || fake.retried != 0 || fake.failed != 0 ||
+				fake.deferDelay != scheduler.storeCallTimeout()+scheduler.PollEvery ||
+				len(fake.deferErrors) != 1 ||
+				!strings.Contains(fake.deferErrors[0], test.cause.Error()) {
+				t.Fatalf(
+					"deferred/retried/failed/delay/errors = %d/%d/%d/%s/%q",
+					fake.deferred, fake.retried, fake.failed,
+					fake.deferDelay, fake.deferErrors,
+				)
+			}
+		})
 	}
 }
 

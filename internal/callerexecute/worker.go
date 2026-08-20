@@ -1480,6 +1480,13 @@ func (worker *Worker) completePublicationCurrent(
 	if err != nil {
 		return false, err
 	}
+	// A retained publication for another generation is ordinary delta/return
+	// ordering, not corruption in the current generation. Let the caller's
+	// normal cached-republication or reconstruction path replace it instead of
+	// spending the owning job's attempt budget on the stale pointer.
+	if pointer.Generation != current.stored {
+		return false, nil
+	}
 	storeCurrent, err := worker.store.
 		CallerGenerationPublicationSummaryAuthorityCurrent(ctx, *pointer)
 	if err != nil || !storeCurrent {

@@ -274,9 +274,11 @@ func (runtime *Runtime) ReuseAuthority(
 	if err != nil {
 		return "", false, err
 	}
+	var current *store.GenerationSchedule
 	if schedule, scheduleErr := runtime.Store.GetGenerationSchedule(
 		ctx, authority.Repository, ScheduleStage,
 	); scheduleErr == nil && schedule.Status == store.GenerationScheduleActive {
+		current = schedule
 		target, targetErr := runtime.scheduleTarget(authority.Repository, schedule.Generation)
 		if targetErr == nil && target == binding.Target {
 			return binding.Target, true, nil
@@ -289,6 +291,11 @@ func (runtime *Runtime) ReuseAuthority(
 		if pointerErr != nil || pointer.GenerationDigest != binding.Target ||
 			pointer.PlanDigest != descriptor.PlanDigest {
 			return "", false, nil
+		}
+	}
+	if current != nil {
+		if err := runtime.enqueueRecovery(ctx, generation, *current); err != nil {
+			return "", false, err
 		}
 	}
 	return binding.Target, true, nil
@@ -405,7 +412,7 @@ func (runtime *Runtime) Reconcile(
 			return "", err
 		}
 		if runtime.generationSettled(generation, directory) {
-			return target, nil
+			return target, runtime.ensureCompleteSchedule(ctx, generation)
 		}
 		return target, runtime.enqueue(ctx, generation)
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -622,6 +629,52 @@ func (runtime *Runtime) enqueue(ctx context.Context, generation Generation) erro
 		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
 	})
 	return err
+}
+
+// enqueueRecovery gives an already-complete historical authority a fresh
+// schedule identity when a different incomplete schedule is still current.
+// Reusing immutable roots alone is insufficient: the stale schedule would
+// otherwise remain claimable and keep the operational projection non-current.
+func (runtime *Runtime) enqueueRecovery(
+	ctx context.Context,
+	generation Generation,
+	current store.GenerationSchedule,
+) error {
+	if current.Repository != generation.Repository || current.Stage != ScheduleStage ||
+		current.Status != store.GenerationScheduleActive || !validDigest(current.Digest) {
+		return invalid("recovery schedule predecessor")
+	}
+	scheduleGeneration := recoveryGeneration(generation.Digest, current.Digest)
+	binding := scheduleBinding{
+		Schema: BindingSchema, Repository: generation.Repository,
+		ScheduleGeneration: scheduleGeneration, TargetGeneration: generation.Digest,
+		PriorSchedule: current.Digest,
+	}
+	if err := runtime.writeBinding(binding); err != nil {
+		return err
+	}
+	_, err := runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
+		Repository: generation.Repository, Stage: ScheduleStage,
+		Generation: scheduleGeneration, ResourceClass: store.GenerationResourceExtraction,
+		TotalItems: int64(generation.WorkItems), ChunkItems: ScheduleChunkItems,
+		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
+	})
+	return err
+}
+
+func (runtime *Runtime) ensureCompleteSchedule(ctx context.Context, generation Generation) error {
+	current, err := runtime.Store.GetGenerationSchedule(ctx, generation.Repository, ScheduleStage)
+	if errors.Is(err, store.ErrNotFound) || err == nil && current.Status != store.GenerationScheduleActive {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	target, err := runtime.scheduleTarget(generation.Repository, current.Generation)
+	if err != nil || target == generation.Digest {
+		return err
+	}
+	return runtime.enqueueRecovery(ctx, generation, *current)
 }
 
 func (runtime *Runtime) writeBinding(binding scheduleBinding) error {
@@ -1143,7 +1196,7 @@ func (runtime *Runtime) publishRoot(
 	}
 	releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Chunk: chunk, Plan: domain.Plan})
 	if err != nil {
-		return errors.Join(ErrStale, err)
+		return classifyAuthorityFenceError(ctx, err)
 	}
 	if releaseFence == nil {
 		return invalid("publication fence returned no release")
@@ -1212,7 +1265,7 @@ func (runtime *Runtime) reactivateComplete(ctx context.Context, generation Gener
 		}
 		releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Plan: domain.Plan})
 		if err != nil {
-			return errors.Join(ErrStale, err)
+			return classifyAuthorityFenceError(ctx, err)
 		}
 		if releaseFence == nil {
 			return invalid("publication fence returned no release")
@@ -1237,6 +1290,15 @@ func (runtime *Runtime) reactivateComplete(ctx context.Context, generation Gener
 		return runtime.OnSettled(ctx, generation.Repository)
 	}
 	return nil
+}
+
+func classifyAuthorityFenceError(ctx context.Context, err error) error {
+	cause := errors.Join(ErrStale, err)
+	if ctx != nil && ctx.Err() == nil && (store.IsDeferral(err) ||
+		errors.Is(err, ErrStale) || errors.Is(err, store.ErrGenerationStale)) {
+		return store.WithDeferral(cause)
+	}
+	return cause
 }
 
 func readDomainRoot(path string, plan candidate.DomainResultPlan) (candidate.DomainResultRoot, bool, error) {

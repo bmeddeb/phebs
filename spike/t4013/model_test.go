@@ -558,6 +558,27 @@ func TestV18PlanAddsBoundedInterruptionProgressEvidence(t *testing.T) {
 	}
 }
 
+func TestV19PlanFencesRecoveryAndRestoreSemantics(t *testing.T) {
+	plan, err := frozenV19PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV19 || plan.Safety != frozenSafetyV18 ||
+		plan.Safety != frozenSafetyV19 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v19 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV19 || decoded.Safety != frozenSafetyV19 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV19 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV19 {
+		t.Fatalf("decoded v19 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV17InterruptionEvidencePreservesHistoricalBytesAndAttemptZero(t *testing.T) {
 	historical := completedObservation()
 	historicalBytes := marshal(t, historical)

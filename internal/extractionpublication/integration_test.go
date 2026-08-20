@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
@@ -452,6 +453,73 @@ func TestAuthorityFenceHoldsLockUntilReleaseAndReleasesOnError(t *testing.T) {
 		t.Fatal("failed authority check leaked publication lock")
 	}
 	publicationLock.Unlock()
+}
+
+func TestAuthorityFenceAcquisitionClassifiesContentionAndCancellation(t *testing.T) {
+	tests := []struct {
+		name         string
+		parent       func(*testing.T) context.Context
+		wantDeferred bool
+		wantCanceled bool
+	}{
+		{
+			name: "contention",
+			parent: func(t *testing.T) context.Context {
+				return t.Context()
+			},
+			wantDeferred: true,
+		},
+		{
+			name: "caller cancellation",
+			parent: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				return ctx
+			},
+			wantCanceled: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := acquireAuthorityFence(
+				test.parent(t),
+				func(ctx context.Context) (func(), error) {
+					<-ctx.Done()
+					return nil, ctx.Err()
+				},
+				20*time.Millisecond, 5*time.Millisecond, time.Millisecond,
+			)
+			if store.IsDeferral(err) != test.wantDeferred ||
+				errors.Is(err, context.Canceled) != test.wantCanceled {
+				t.Fatalf("acquisition error = %v, deferred=%t canceled=%t", err,
+					store.IsDeferral(err), errors.Is(err, context.Canceled))
+			}
+		})
+	}
+}
+
+func TestAuthorityFenceAcquisitionRetriesBoundedProbes(t *testing.T) {
+	calls := 0
+	released := false
+	release, err := acquireAuthorityFence(
+		t.Context(),
+		func(ctx context.Context) (func(), error) {
+			calls++
+			if calls < 3 {
+				<-ctx.Done()
+				return nil, ctx.Err()
+			}
+			return func() { released = true }, nil
+		},
+		100*time.Millisecond, 5*time.Millisecond, time.Millisecond,
+	)
+	if err != nil || release == nil || calls != 3 {
+		t.Fatalf("acquisition release/calls/error = %t/%d/%v", release != nil, calls, err)
+	}
+	release()
+	if !released {
+		t.Fatal("successful acquisition did not return the release")
+	}
 }
 
 func TestGitSparseSourceReadsOnlySelectedImmutableObjects(t *testing.T) {

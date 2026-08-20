@@ -116,6 +116,35 @@ func (s *Surreal) generationResourceClassMigrationComplete(ctx context.Context) 
 	return false, nil
 }
 
+// ClearAllGenerationScheduleStateForRestore discards imported restartable
+// scheduler controls and extraction-domain roots without decoding them. Backup
+// archives intentionally omit the filesystem generations and bindings those
+// rows address, so retaining the rows would let an active schedule or current
+// domain pointer permanently mask the required rebuild. Immutable outcomes
+// remain available for exact reuse by the successor schedule.
+func (s *Surreal) ClearAllGenerationScheduleStateForRestore(ctx context.Context) error {
+	results, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+DELETE generation_schedule_chunk RETURN NONE;
+DELETE generation_schedule_current RETURN NONE;
+DELETE generation_schedule_repository RETURN NONE;
+DELETE generation_schedule RETURN NONE;
+DELETE extraction_domain_root RETURN NONE;
+COMMIT;`, nil)
+	if err != nil {
+		return fmt.Errorf("clear generation schedules for restore: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"clear generation schedules for restore statement %d: %s",
+				index, result.Error.Message,
+			)
+		}
+	}
+	return nil
+}
+
 type GenerationResourceClass string
 
 const (
@@ -260,6 +289,10 @@ type LocalGenerationChunkReader struct {
 	token   string
 }
 
+type generationDiagnosticFenceRec struct {
+	Fenced bool `json:"fenced"`
+}
+
 func OpenLocalGenerationChunkReader(
 	ctx context.Context,
 	dataDir string,
@@ -318,6 +351,59 @@ func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
 		Identity: chunk.Identity, Repository: chunk.Repository, Stage: chunk.Stage,
 		Generation: chunk.Generation, Attempt: chunk.Attempt, Status: chunk.Status,
 	}, nil
+}
+
+// FenceCurrentGenerationScheduleForDiagnostic removes the exact current
+// pointer beneath one observed running chunk while leaving its lease intact.
+// It exists only for the source-free stale-worker ceremony: the worker's
+// ordinary completion transaction must subsequently observe the missing
+// current pointer and settle the selected lease as stale. Repository recovery
+// then installs the real successor through normal production reconciliation.
+func (reader *LocalGenerationChunkReader) FenceCurrentGenerationScheduleForDiagnostic(
+	ctx context.Context,
+	selected GenerationChunkLeaseState,
+) error {
+	if reader == nil || reader.store == nil || ctx == nil ||
+		!validSHA256(selected.Identity) || selected.Repository == "" ||
+		!validGenerationToken(selected.Stage) || !validSHA256(selected.Generation) ||
+		selected.Attempt < 0 || selected.Status != GenerationChunkRunning {
+		return errors.New("fence current generation schedule for diagnostic: request is invalid")
+	}
+	results, err := queryGenerationSchedule[[]generationDiagnosticFenceRec](
+		ctx, reader.store.db, "diagnostic_fence", `
+BEGIN;
+LET $chunk = (SELECT schedule_digest FROM generation_schedule_chunk
+	WHERE identity = $identity AND repository = $repository AND stage = $stage
+		AND generation = $generation AND attempt = $attempt AND status = 'running'
+	LIMIT 1)[0];
+LET $current_digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
+LET $fenced = $chunk != NONE AND $chunk.schedule_digest = $current_digest;
+IF $fenced {
+	UPDATE generation_schedule SET status = 'superseded', updated_at = time::now()
+		WHERE digest = $current_digest RETURN NONE;
+	DELETE $current RETURN NONE;
+};
+RETURN [{ fenced: $fenced }];
+COMMIT;`, map[string]any{
+			"identity": selected.Identity, "repository": selected.Repository,
+			"stage": selected.Stage, "generation": selected.Generation,
+			"attempt": selected.Attempt,
+			"current": models.NewRecordID(
+				"generation_schedule_current",
+				strings.TrimPrefix(generationCurrentID(selected.Repository, selected.Stage), "sha256:"),
+			),
+		})
+	if err != nil {
+		return fmt.Errorf("fence current generation schedule for diagnostic: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 || !rows[0].Fenced {
+		return ErrGenerationStale
+	}
+	if err := reader.confirmRuntime(); err != nil {
+		return errors.Join(err, errors.New("fence current generation schedule for diagnostic: runtime changed"))
+	}
+	return nil
 }
 
 // CurrentGenerationRunningChunk returns one running chunk from the exact

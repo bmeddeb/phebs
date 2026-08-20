@@ -766,7 +766,9 @@ func (run *execution) interruption() error {
 		return directRecovery(err)
 	}
 	run.setInterruptionSubstage("restored_boundary")
-	if err := verifyRestoredBoundary(run.ctx, profile, run.semanticA); err != nil {
+	if err := verifyRestoredBoundary(
+		run.ctx, profile, run.semanticA, planSchemaVersion(run.plan.Schema) >= 19,
+	); err != nil {
 		return directRecovery(err)
 	}
 	run.setInterruptionSubstage("first_start")
@@ -837,7 +839,7 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return directRecovery(err)
 	}
-	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
+	if recoveryAuthorityForPlan(run.plan, after) != recoveryAuthorityForPlan(run.plan, run.semanticA) {
 		return directRecovery(errors.New("interruption recovery changed exact authority"))
 	}
 	if planSchemaVersion(run.plan.Schema) >= 17 {
@@ -856,17 +858,23 @@ func (run *execution) interruption() error {
 		if run.observation.Interruption != nil {
 			run.observation.Interruption.TriggerRecoveredState = recovered
 		}
-		partial, partialErr := derivedPartialPresent(profile.DataDir)
-		if partialErr == nil && !partial {
-			partial, partialErr = relationshipPartialPresent(profile.DataDir)
-		}
-		if partialErr != nil {
-			return directRecovery(partialErr)
-		}
-		if partial {
-			return directRecovery(errors.New(
-				"T40.13 interruption restart retained partial derived publication state",
-			))
+		if planSchemaVersion(run.plan.Schema) >= 19 {
+			if partialErr := waitForDerivedPartialClear(run.ctx, profile.DataDir, 5*time.Minute); partialErr != nil {
+				return directRecovery(partialErr)
+			}
+		} else {
+			partial, partialErr := derivedPartialPresentV18(profile.DataDir)
+			if partialErr == nil && !partial {
+				partial, partialErr = relationshipPartialPresent(profile.DataDir)
+			}
+			if partialErr != nil {
+				return directRecovery(partialErr)
+			}
+			if partial {
+				return directRecovery(errors.New(
+					"T40.13 interruption restart retained partial derived publication state",
+				))
+			}
 		}
 	}
 	run.setInterruptionSubstage("teardown")
@@ -1333,7 +1341,7 @@ func (run *execution) staleWorker() error {
 	if err != nil {
 		return err
 	}
-	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
+	if recoveryAuthorityForPlan(run.plan, after) != recoveryAuthorityForPlan(run.plan, run.semanticA) {
 		return exactOracle("stale worker moved final authority")
 	}
 	settled, err := waitSettledChunkLifecycle(
@@ -1908,7 +1916,9 @@ func (run *execution) archiveRestore() error {
 	if err != nil {
 		return directRecovery(err)
 	}
-	if err := verifyRestoredBoundary(run.ctx, profile, run.structAR); err != nil {
+	if err := verifyRestoredBoundary(
+		run.ctx, profile, run.structAR, planSchemaVersion(run.plan.Schema) >= 19,
+	); err != nil {
 		return directRecovery(err)
 	}
 	server, meter, err := run.startServer(profile, "archive-restore", &run.structAR)
@@ -1920,8 +1930,13 @@ func (run *execution) archiveRestore() error {
 	if err != nil {
 		return directRecovery(err)
 	}
-	if after.ObservationGeneration != run.structAR.ObservationGeneration ||
-		after.RelationshipGeneration != run.structAR.RelationshipGeneration {
+	restoredEqual := after.ObservationGeneration == run.structAR.ObservationGeneration &&
+		after.RelationshipGeneration == run.structAR.RelationshipGeneration
+	if planSchemaVersion(run.plan.Schema) >= 19 {
+		restoredEqual = after.ObservationGeneration == run.structAR.ObservationGeneration &&
+			privateRestoreProductEqual(after, run.structAR)
+	}
+	if !restoredEqual {
 		return directRecovery(errors.New("archive restore changed precious authority"))
 	}
 	metrics, err := run.finishMeter(meter, &after)
@@ -2388,6 +2403,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV16
 	case PlanSchemaV18:
 		contract = profileInspectionV16
+	case PlanSchemaV19:
+		contract = profileInspectionV16
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -2681,7 +2698,41 @@ func waitForDerivedPartial(ctx context.Context, dataDir string, limit time.Durat
 	}
 }
 
-func derivedPartialPresent(dataDir string) (bool, error) {
+func waitForDerivedPartialClear(ctx context.Context, dataDir string, limit time.Duration) error {
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		partial, err := derivedPartialPresent(dataDir)
+		if err == nil && !partial {
+			partial, err = relationshipPartialPresent(dataDir)
+		}
+		if err != nil {
+			return err
+		}
+		if !partial {
+			return nil
+		}
+		select {
+		case <-phase.Done():
+			return errors.New("T40.13 interruption restart retained partial derived publication state")
+		case <-ticker.C:
+		}
+	}
+}
+
+func recoveryAuthorityForPlan(plan Plan, snapshot privateProfileSnapshot) string {
+	if planSchemaVersion(plan.Schema) >= 19 {
+		return snapshotRecoveryAuthority(snapshot)
+	}
+	return snapshotAuthority(snapshot)
+}
+
+// derivedPartialPresentV18 preserves the historical shallow scanner used by
+// retained V17/V18 execution contracts. V19 owns the corrected fixed candidate
+// namespace and hashed relationship-publication traversal.
+func derivedPartialPresentV18(dataDir string) (bool, error) {
 	if !filepath.IsAbs(dataDir) {
 		return false, errors.New("T40.13 derived interruption scope is invalid")
 	}
@@ -2725,6 +2776,57 @@ func derivedPartialPresent(dataDir string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func derivedPartialPresent(dataDir string) (bool, error) {
+	if !filepath.IsAbs(dataDir) {
+		return false, errors.New("T40.13 derived interruption scope is invalid")
+	}
+	for _, name := range []string{"observations", "extraction-publications"} {
+		root := filepath.Join(dataDir, name)
+		rootInfo, err := os.Lstat(root)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+			return false, errors.Join(err, errors.New("T40.13 derived interruption root is invalid"))
+		}
+		repositories, err := os.ReadDir(root)
+		if err != nil {
+			return false, err
+		}
+		if name == "extraction-publications" {
+			repositories = slices.DeleteFunc(repositories, func(entry os.DirEntry) bool {
+				return entry.Name() == "candidates"
+			})
+		}
+		if len(repositories) > 1 {
+			return false, errors.New("T40.13 derived interruption repository inventory exceeds its bound")
+		}
+		for _, repository := range repositories {
+			if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+				return false, errors.New("T40.13 derived interruption repository is invalid")
+			}
+			repositoryPath := filepath.Join(root, repository.Name())
+			if found, err := derivedControlPresent(repositoryPath); err != nil || found {
+				return found, err
+			}
+			if name == "observations" {
+				v2 := filepath.Join(repositoryPath, observationpublication.InventoryPublicationDirectoryV2)
+				info, statErr := os.Lstat(v2)
+				switch {
+				case os.IsNotExist(statErr):
+					continue
+				case statErr != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0:
+					return false, errors.Join(statErr, errors.New("T40.13 derived interruption v2 control is invalid"))
+				}
+				if found, err := derivedControlPresent(v2); err != nil || found {
+					return found, err
+				}
+			}
+		}
+	}
+	return relationshipPartialPresent(dataDir)
 }
 
 func derivedControlPresent(directory string) (bool, error) {
@@ -3005,6 +3107,11 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		}
 	case PlanSchemaV18:
 		value.Schema = ObservationSchemaV18
+		value.Interruption = &InterruptionObservation{
+			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+		}
+	case PlanSchemaV19:
+		value.Schema = ObservationSchemaV19
 		value.Interruption = &InterruptionObservation{
 			Schema: interruptionSchemaV1, LastSubstage: "not_started",
 		}

@@ -595,6 +595,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("validate restored store: %w", err)
 	}
+	if err := clearGenerationScheduleState(ctx, st); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf(
+			"clear restartable generation schedules after restore: %w", err,
+		)
+	}
 	// Clear imported caller authority first. Candidate and resolver bulk clears
 	// also invalidate caller authority; this dedicated raw transition must own
 	// the sole restore-time revision advance while the pointer still exists.
@@ -620,6 +626,15 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)
 	}
 	return manifest, nil
+}
+
+func clearGenerationScheduleState(
+	ctx context.Context,
+	state interface {
+		ClearAllGenerationScheduleStateForRestore(context.Context) error
+	},
+) error {
+	return state.ClearAllGenerationScheduleStateForRestore(ctx)
 }
 
 func clearCandidateManifestPublications(

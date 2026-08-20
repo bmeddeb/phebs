@@ -614,6 +614,20 @@ func TestWorkerCurrentPublicationCallbackFailureIsRetryable(t *testing.T) {
 	}
 }
 
+func TestWorkerReplacesPublicationForAnotherGenerationWithoutRetry(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	want := harness.state.publication.Generation
+	harness.state.publication.Generation.Digest = "sha256:" + strings.Repeat("9", 64)
+
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatalf("replace stale publication: %v", err)
+	}
+	if harness.state.publication == nil || harness.state.publication.Generation != want {
+		t.Fatalf("publication generation = %+v, want %+v", harness.state.publication, want)
+	}
+}
+
 func TestWorkerDefersWhileResolverCatalogIsStale(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.state.resolverStale.Store(true)

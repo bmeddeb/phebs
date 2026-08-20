@@ -129,6 +129,80 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	}
 }
 
+func TestClearAllGenerationScheduleStateForRestore(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	state, err := OpenLocal(t.Context(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	spec := generationSpec("example.invalid/restore", "sha256:"+strings.Repeat("9", 64))
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(t.Context(), spec.Repository, spec.Stage, spec.Generation); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ClaimGenerationChunk(t.Context(), spec.ResourceClass, "restore-worker"); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.ClearAllGenerationScheduleStateForRestore(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.GetGenerationSchedule(t.Context(), spec.Repository, spec.Stage); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("restored current schedule survived clear: %v", err)
+	}
+	if _, err := state.ClaimGenerationChunk(t.Context(), spec.ResourceClass, "restore-worker"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("restored chunk survived clear: %v", err)
+	}
+}
+
+func TestLocalGenerationDiagnosticFenceMakesRunningCompletionStale(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	dataDir := t.TempDir()
+	state, err := OpenLocal(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	spec := generationSpec("example.invalid/diagnostic-fence", "sha256:"+strings.Repeat("6", 64))
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(t.Context(), spec.Repository, spec.Stage, spec.Generation); err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := state.ClaimGenerationChunk(t.Context(), spec.ResourceClass, "diagnostic-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := OpenLocalGenerationChunkReader(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reader.Close(context.Background()) })
+	selected, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.FenceCurrentGenerationScheduleForDiagnostic(t.Context(), selected); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.CompleteGenerationChunk(t.Context(), *chunk); !errors.Is(err, ErrGenerationStale) {
+		t.Fatalf("diagnostically superseded completion = %v, want stale", err)
+	}
+	settled, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
+	if err != nil || settled.Status != GenerationChunkCanceled {
+		t.Fatalf("diagnostically superseded lease = %+v, %v", settled, err)
+	}
+}
+
 func generationSpec(repository, generation string) GenerationScheduleSpec {
 	return GenerationScheduleSpec{
 		Repository: repository, Stage: "source-observation", Generation: generation,

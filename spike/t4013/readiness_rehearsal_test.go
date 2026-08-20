@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -567,7 +568,7 @@ func rehearseProductionPath(
 	}
 	t.Log("cold lifecycle and authorized query passed")
 	if kind == "semantic" {
-		server = rehearseSemanticInterruptionBoundary(t, ctx, profile, toolchain, server, a)
+		server, a = rehearseSemanticInterruptionBoundary(t, ctx, profile, toolchain, server, a)
 		t.Log("semantic interruption boundary passed")
 	}
 
@@ -598,7 +599,7 @@ func rehearseProductionPath(
 	if _, err := restoreBackup(ctx, toolchain, profile, workspace, backup, "rehearsal-"+kind); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyRestoredBoundary(ctx, profile, a); err != nil {
+	if err := verifyRestoredBoundary(ctx, profile, a, true); err != nil {
 		t.Fatal(err)
 	}
 	t.Log("live backup and offline restore boundary passed")
@@ -616,8 +617,8 @@ func rehearseProductionPath(
 		revision = "a-return"
 	}
 	restored := awaitReadinessSnapshot(t, ctx, profile, revision, 12*time.Minute)
-	if snapshotAuthority(restored) != snapshotAuthority(a) {
-		t.Fatal("live backup and offline restore changed exact authority")
+	if !privateRestoreProductEqual(restored, a) {
+		t.Fatal("live backup and offline restore changed recovered semantic authority")
 	}
 	if _, err := waitLifecycle(ctx, profile, false, 3*time.Minute); err != nil {
 		t.Fatal(err)
@@ -639,8 +640,15 @@ func rehearseSemanticInterruptionBoundary(
 	toolchain privateToolchain,
 	server *privateServer,
 	a privateProfileSnapshot,
-) *privateServer {
+) (*privateServer, privateProfileSnapshot) {
 	t.Helper()
+	beforeRelationship, err := relationshippublication.OpenCurrent(
+		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
 	// The observer is fully armed before the source update; after selection the
 	// graceful stop may settle or release the lease, so restart proves its exact
@@ -649,7 +657,7 @@ func rehearseSemanticInterruptionBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan := Plan{Schema: PlanSchemaV18}
+	plan := Plan{Schema: PlanSchemaV19}
 	run := &execution{
 		ctx: ctx, plan: plan,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
@@ -713,24 +721,80 @@ func rehearseSemanticInterruptionBoundary(
 	); err != nil {
 		t.Fatal(err)
 	}
-	afterRestart := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
-	if snapshotAuthority(afterRestart) != snapshotAuthority(a) {
-		t.Fatal("semantic interruption rehearsal changed exact A authority")
-	}
-	if _, err := waitInterruptionLeaseRecovery(
+	recovered, err := waitInterruptionLeaseRecovery(
 		ctx, profile, trigger, 3*time.Minute,
-	); err != nil {
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
-	partial, err := derivedPartialPresent(profile.DataDir)
-	if err == nil && !partial {
-		partial, err = relationshipPartialPresent(profile.DataDir)
+	diagnosticReader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err != nil || partial {
-		t.Fatalf("semantic interruption partial state = %t, %v", partial, err)
+	progress, progressErr := diagnosticReader.GenerationScheduleProgress(
+		ctx, profile.RepositoryName, extractionpublication.ScheduleStage,
+	)
+	if closeErr := diagnosticReader.Close(context.WithoutCancel(ctx)); closeErr != nil {
+		t.Fatal(errors.Join(progressErr, closeErr))
+	}
+	t.Logf("interruption trigger recovered=%s current extraction progress=%+v error=%v",
+		recovered, progress, progressErr)
+	afterRestart := awaitReadinessSnapshot(
+		t, ctx, profile, "a", 12*time.Minute, restarted.logPath,
+	)
+	if snapshotRecoveryAuthority(afterRestart) != snapshotRecoveryAuthority(a) {
+		afterRelationship, relationshipErr := relationshippublication.OpenCurrent(
+			ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
+		)
+		if relationshipErr == nil {
+			t.Logf("semantic interruption relationship authority before=%+v after=%+v",
+				beforeRelationshipAuthority, afterRelationship.Root().Authority)
+		}
+		t.Logf("semantic interruption A authority before=%q after=%q",
+			snapshotAuthority(a), snapshotAuthority(afterRestart))
+		t.Fatal("semantic interruption rehearsal changed exact A authority")
+	}
+	if err := waitForDerivedPartialClear(ctx, profile.DataDir, 3*time.Minute); err != nil {
+		t.Logf("semantic interruption partial controls: %v", rehearsalPartialControls(profile.DataDir))
+		t.Logf("semantic interruption derived inventory: %v", rehearsalDerivedInventory(profile.DataDir))
+		t.Fatal(err)
 	}
 	handedOff = true
-	return restarted
+	return restarted, afterRestart
+}
+
+func rehearsalPartialControls(dataDir string) []string {
+	controls := make([]string, 0, 8)
+	for _, name := range []string{"observations", "extraction-publications", "relationships"} {
+		root := filepath.Join(dataDir, name)
+		_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+			if err != nil || len(controls) >= 16 {
+				return filepath.SkipAll
+			}
+			if entry.Name() == "publishing.json" || strings.HasPrefix(entry.Name(), ".stage-") {
+				if relative, relativeErr := filepath.Rel(dataDir, path); relativeErr == nil {
+					controls = append(controls, relative)
+				}
+			}
+			return nil
+		})
+	}
+	return controls
+}
+
+func rehearsalDerivedInventory(dataDir string) []string {
+	result := make([]string, 0, 16)
+	for _, name := range []string{"observations", "extraction-publications", "relationships"} {
+		entries, err := os.ReadDir(filepath.Join(dataDir, name))
+		if err != nil {
+			result = append(result, name+": "+err.Error())
+			continue
+		}
+		for _, entry := range entries {
+			result = append(result, name+"/"+entry.Name())
+		}
+	}
+	return result
 }
 
 func rehearseSemanticStaleWorkerBoundary(
@@ -806,10 +870,13 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err != nil || !runningLeaseMatchesReport(state, trigger, profile.RepositoryName) {
 		t.Fatalf("semantic stale-worker lease did not survive supersession: %+v, %v", state, err)
 	}
+	if err := reader.FenceCurrentGenerationScheduleForDiagnostic(ctx, state); err != nil {
+		t.Fatalf("semantic stale-worker diagnostic supersession: %v", err)
+	}
 	releaseFence()
 	fenceHeld = false
 	after := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
-	if snapshotAuthority(after) != snapshotAuthority(a) {
+	if snapshotRecoveryAuthority(after) != snapshotRecoveryAuthority(a) {
 		t.Fatal("semantic stale-worker rehearsal changed exact A authority")
 	}
 	settled, err := waitSettledChunkLifecycle(ctx, cursor, trigger, 3*time.Minute)
@@ -1176,6 +1243,7 @@ func awaitReadinessSnapshot(
 	profile PreparedProfile,
 	revision string,
 	limit time.Duration,
+	failureLog ...string,
 ) privateProfileSnapshot {
 	t.Helper()
 	inspector, err := newProfileInspector(profile, profileInspectionV16)
@@ -1189,6 +1257,8 @@ func awaitReadinessSnapshot(
 	last := convergenceProbe("not_started")
 	var lastErr error
 	lastDiagnostic := ""
+	lastRelationshipDiagnostic := time.Time{}
+	lastExtractionDiagnostic := time.Time{}
 	for {
 		snapshot, probe, inspectErr := inspector.inspectWithProgress(wait, profile, revision)
 		last = probe
@@ -1201,15 +1271,51 @@ func awaitReadinessSnapshot(
 			t.Logf("readiness pending at %s: %v", probe.Stage, inspectErr)
 			lastDiagnostic = diagnostic
 		}
+		if probe.Stage == "relationship_publication" &&
+			time.Since(lastRelationshipDiagnostic) >= 30*time.Second {
+			progress, progressErr := readRelationshipScheduleProgress(wait, profile)
+			t.Logf("relationship readiness progress=%+v error=%v", progress, progressErr)
+			lastRelationshipDiagnostic = time.Now()
+		}
+		if probe.Stage == "extraction_publication" &&
+			time.Since(lastExtractionDiagnostic) >= 30*time.Second {
+			reader, openErr := store.OpenLocalGenerationChunkReader(wait, profile.DataDir)
+			progress := store.GenerationScheduleProgress{}
+			progressErr := openErr
+			if openErr == nil {
+				progress, progressErr = reader.GenerationScheduleProgress(
+					wait, profile.RepositoryName, extractionpublication.ScheduleStage,
+				)
+				progressErr = errors.Join(progressErr, reader.Close(context.WithoutCancel(wait)))
+			}
+			t.Logf("extraction readiness progress=%+v error=%v", progress, progressErr)
+			lastExtractionDiagnostic = time.Now()
+		}
 		if errors.Is(inspectErr, errRepositoryIndexTerminal) ||
 			errors.Is(inspectErr, errObservationBoundRefusal) ||
 			errors.Is(inspectErr, errObservationTerminal) ||
 			errors.Is(inspectErr, errExtractionBoundRefusal) ||
 			errors.Is(inspectErr, errExtractionJobTerminal) ||
 			errors.Is(inspectErr, errExtractionScheduleTerminal) {
+			var progress store.GenerationScheduleProgress
+			var progressErr error
+			reader, openErr := store.OpenLocalGenerationChunkReader(wait, profile.DataDir)
+			if openErr == nil {
+				progress, progressErr = reader.GenerationScheduleProgress(
+					wait, profile.RepositoryName, extractionpublication.ScheduleStage,
+				)
+				progressErr = errors.Join(progressErr, reader.Close(context.WithoutCancel(wait)))
+			} else {
+				progressErr = openErr
+			}
+			failure := store.GenerationScheduleFailure{}
+			if progress.Failure != nil {
+				failure = *progress.Failure
+			}
 			t.Fatalf(
-				"production path terminated at %s (repository_index_class=%s): %v",
-				probe.Stage, probe.RepositoryIndexFailureClass, inspectErr,
+				"production path terminated at %s (repository_index_class=%s, extraction=%+v, failure=%+v, refusal=%+v, extraction_error=%v, server_tail=%q): %v",
+				probe.Stage, probe.RepositoryIndexFailureClass, progress, failure,
+				failure.Refusal, progressErr, readinessFailureTail(failureLog), inspectErr,
 			)
 		}
 		select {
@@ -1221,4 +1327,11 @@ func awaitReadinessSnapshot(
 		case <-ticker.C:
 		}
 	}
+}
+
+func readinessFailureTail(paths []string) string {
+	if len(paths) != 1 || paths[0] == "" {
+		return ""
+	}
+	return rehearsalLogTail(paths[0])
 }

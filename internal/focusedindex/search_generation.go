@@ -943,6 +943,47 @@ func prepareSearchGenerationTransition(
 	return marker, nil
 }
 
+// ReactivatePriorSearchGeneration selects the one retained prior generation
+// when its immutable revision identity exactly matches the requested source.
+// Whole-search shard bytes include builder timestamps, so rebuilding the same
+// Git authority would create a different physical generation and defeat exact
+// A-to-B-to-A recovery even though the retained bytes are already complete.
+func ReactivatePriorSearchGeneration(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (bool, error) {
+	root, err := ReadSearchGenerationRoot(indexDir, repository)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if root.Prior == nil || !sameSearchRevisions(root.Prior.Revisions, revisions) {
+		return false, nil
+	}
+	if _, err := validateImmutableSearchGeneration(
+		ctx, indexDir, repository, root.Prior.GenerationDigest,
+	); err != nil {
+		return false, err
+	}
+	marker := searchGenerationMarker{
+		Schema: SearchGenerationMarkerSchema, Repository: repository,
+		Candidate: *root.Prior, Previous: &root,
+	}
+	if _, err := prospectiveSearchGenerationRoot(marker); err != nil {
+		return false, err
+	}
+	if err := writeSearchGenerationMarker(indexDir, marker); err != nil {
+		return false, err
+	}
+	if err := completeSearchGenerationTransition(ctx, indexDir, marker); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func prospectiveSearchGenerationRoot(marker searchGenerationMarker) (SearchGenerationRoot, error) {
 	root := SearchGenerationRoot{
 		Schema: SearchGenerationRootSchema, Repository: marker.Repository,

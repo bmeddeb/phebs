@@ -235,7 +235,7 @@ func ValidateProgress(value Progress) error {
 		value.CurrentDomains < 0 || value.CurrentDomains > value.Domains {
 		return invalid("progress counts")
 	}
-	if value.State == "current" && (value.Materialized != value.Total || value.Pending != 0 ||
+	if value.State == "current" && (value.Materialized < value.Total || value.Pending != 0 ||
 		value.Running != 0 || value.Failed != 0 || value.Succeeded != value.Total ||
 		value.CurrentDomains != value.Domains) {
 		return invalid("current progress")

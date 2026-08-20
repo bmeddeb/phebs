@@ -2607,3 +2607,27 @@ first corrected run exposed a production stale-authority retry failure during
 the interruption return-to-A restart; that stacked production blocker must be
 closed before the rehearsal, integration, or freeze gate can pass. The small
 rehearsal establishes no pressure or scale claim.
+
+### V19 prior-gate recovery closure
+
+The stacked correction revisited the earlier semantic, structural, restore, and
+stale-worker gates before another giant run. Extraction fence contention now
+defers without consuming an attempt; stale active schedules are superseded even
+beside exact prior domain authority; whole-search return-to-A reactivates the
+retained validated generation; stale caller pointers repair normally; and
+restore clears restartable schedule/token/domain-root state before ordinary
+reconciliation. Offline restore verification proves exact archived caller and
+relationship bytes, while online parity compares reminted product semantics.
+Current extraction progress accepts bounded retry materialization above the
+logical total without weakening success, current-domain, or attempt limits.
+
+The stale-worker rehearsal uses an exact store diagnostic fence after selecting
+the running chunk, making stale completion deterministic. A stable relationship
+semantic digest excludes only the monotonic service-summary transition fence
+for A→B→A recovery comparison. Partial derived controls receive a bounded
+asynchronous-clear window rather than an immediate race-prone assertion. Fresh
+plan/observation/receipt schemas advance to V19; earlier schemas and retained
+bytes remain valid. The combined real production-binary rehearsal passed all
+three profiles in one process. It remains small-corpus readiness evidence and
+does not establish pressure, scale, SLO, accuracy/completeness, release,
+migration, decommissioning, or a retroactive ceremony pass.

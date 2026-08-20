@@ -1694,6 +1694,51 @@ func TestDerivedPartialScanReadsOnlyBoundedControlLevel(t *testing.T) {
 	if err != nil || !found {
 		t.Fatalf("bounded v2 publication marker = %t, %v", found, err)
 	}
+	removed := make(chan error, 1)
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		removed <- os.Remove(filepath.Join(v2, "publishing.json"))
+	}()
+	if err := waitForDerivedPartialClear(t.Context(), dataDir, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-removed; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDerivedPartialScanIgnoresCandidateNamespace(t *testing.T) {
+	dataDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dataDir, "extraction-publications", "candidates"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	repository := filepath.Join(dataDir, "extraction-publications", strings.Repeat("a", 64))
+	if err := os.Mkdir(repository, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	found, err := derivedPartialPresent(dataDir)
+	if err != nil || found {
+		t.Fatalf("candidate namespace plus one repository = %t, %v", found, err)
+	}
+}
+
+func TestRecoveryAuthorityIsVersionFenced(t *testing.T) {
+	left := privateProfileSnapshot{
+		SourceGeneration: "source", SearchGeneration: "search",
+		ObservationGeneration: "observation", ExtractionGeneration: "extraction",
+		CallerGeneration: "caller", RelationshipGeneration: "relationship-a",
+		RelationshipSemanticDigest: "semantic",
+	}
+	right := left
+	right.RelationshipGeneration = "relationship-b"
+	if recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV18}, left) ==
+		recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV18}, right) {
+		t.Fatal("V18 recovery accepted reminted relationship authority")
+	}
+	if recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV19}, left) !=
+		recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV19}, right) {
+		t.Fatal("V19 recovery rejected stable relationship semantics")
+	}
 }
 
 func TestChunkLifecycleReaderBindsOneStartedAttempt(t *testing.T) {

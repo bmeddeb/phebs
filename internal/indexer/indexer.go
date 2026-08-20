@@ -269,6 +269,18 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			return fmt.Errorf("index %s: derived-artifact admission: %w", repo.Name, err)
 		}
 	}
+	if unit == nil {
+		reactivated, reactivateErr := focusedindex.ReactivatePriorSearchGeneration(
+			ctx, indexDir, repo.Name, revisions,
+		)
+		if reactivateErr != nil {
+			return fmt.Errorf("index %s: reactivate prior search generation: %w", repo.Name, reactivateErr)
+		}
+		if reactivated {
+			ix.verbosef("index %s: reactivated retained prior search generation", repo.Name)
+			return ix.commitPublishedIndex(ctx, repo, head, revisions, unit, indexDir)
+		}
+	}
 
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("index %s: %w", repo.Name, err)
@@ -460,6 +472,17 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		"index %s: %s complete duration=%s total_shard_bytes=%.0f",
 		repo.Name, childName, duration.Round(time.Millisecond), totalShardBytes,
 	)
+	return ix.commitPublishedIndex(ctx, repo, head, revisions, unit, indexDir)
+}
+
+func (ix *Indexer) commitPublishedIndex(
+	ctx context.Context,
+	repo store.Repo,
+	head string,
+	revisions []store.IndexedRevision,
+	unit *analysisunit.State,
+	indexDir string,
+) error {
 	if err := ix.Store.SetRepoIndexedState(
 		ctx, repo.Name, head, revisions, unit, time.Now().UTC(),
 	); err != nil {

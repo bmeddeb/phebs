@@ -19,6 +19,7 @@ import (
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -47,38 +48,39 @@ func (err *privateHTTPStatusError) Error() string {
 }
 
 type privateProfileSnapshot struct {
-	Schema                   string
-	Name                     string
-	IndexedCommit            string
-	SourceGeneration         string
-	SearchGeneration         string
-	SearchRootDigest         string
-	ObservationGeneration    string
-	ExtractionGeneration     string
-	CallerGeneration         string
-	RelationshipGeneration   string
-	RelationshipRootDigest   string
-	RegularFiles             uint64
-	PhysicalOwners           uint64
-	DeclaredSourceBytes      uint64
-	ObservationRecords       uint64
-	ObservationUnsupported   uint64
-	ExtractionFacts          int64
-	ExtractionRows           int64
-	ExtractionReferences     int64
-	ApplicablePartitions     int
-	SettledPartitions        int
-	PublishedDomains         int
-	UnavailableDomains       int
-	RetryExhaustedPartitions int
-	SearchLogicalBytes       int64
-	SearchAllocatedBytes     int64
-	SourceMemberDigests      []string
-	BlobReader               BlobReaderObservation
-	AcceptedServices         int
-	Memberships              int
-	UnownedPrefixes          int
-	RelationshipPublished    bool
+	Schema                     string
+	Name                       string
+	IndexedCommit              string
+	SourceGeneration           string
+	SearchGeneration           string
+	SearchRootDigest           string
+	ObservationGeneration      string
+	ExtractionGeneration       string
+	CallerGeneration           string
+	RelationshipGeneration     string
+	RelationshipRootDigest     string
+	RelationshipSemanticDigest string
+	RegularFiles               uint64
+	PhysicalOwners             uint64
+	DeclaredSourceBytes        uint64
+	ObservationRecords         uint64
+	ObservationUnsupported     uint64
+	ExtractionFacts            int64
+	ExtractionRows             int64
+	ExtractionReferences       int64
+	ApplicablePartitions       int
+	SettledPartitions          int
+	PublishedDomains           int
+	UnavailableDomains         int
+	RetryExhaustedPartitions   int
+	SearchLogicalBytes         int64
+	SearchAllocatedBytes       int64
+	SourceMemberDigests        []string
+	BlobReader                 BlobReaderObservation
+	AcceptedServices           int
+	Memberships                int
+	UnownedPrefixes            int
+	RelationshipPublished      bool
 }
 
 type privateConvergenceProbe struct {
@@ -590,6 +592,10 @@ func (inspector *profileInspector) inspectWithProgress(
 		},
 		AcceptedServices: acceptedServiceCount(catalog), Memberships: len(catalog.Memberships),
 		UnownedPrefixes: len(catalog.Unowned), RelationshipPublished: true,
+	}
+	result.RelationshipSemanticDigest, err = relationshipSemanticDigest(relationshipRoot)
+	if err != nil {
+		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", relationshipRoot.Digest), err
 	}
 	if relationshipRoot.ServiceCount != result.AcceptedServices ||
 		relationshipRoot.CompleteServiceCount+relationshipRoot.EmptyServiceCount != result.AcceptedServices {
@@ -1395,6 +1401,7 @@ func verifyRestoredBoundary(
 	ctx context.Context,
 	profile PreparedProfile,
 	expected privateProfileSnapshot,
+	includeCaller bool,
 ) error {
 	indexDirectory := filepath.Join(profile.DataDir, "index")
 	source, err := repositoryindex.ReadSourceManifest(indexDirectory, profile.RepositoryName)
@@ -1425,6 +1432,16 @@ func verifyRestoredBoundary(
 	if err != nil || relationship.Root().GenerationDigest != expected.RelationshipGeneration ||
 		relationship.Root().Digest != expected.RelationshipRootDigest {
 		return errors.Join(err, errors.New("T40.13 restored relationship authority differs"))
+	}
+	if includeCaller {
+		callerPublications, _, err := callerpublication.Discover(
+			ctx, filepath.Join(profile.DataDir, "caller-leaves"),
+		)
+		if err != nil || len(callerPublications) != 1 ||
+			callerPublications[0].Manifest().Generation.Repository != profile.RepositoryName ||
+			callerPublications[0].Manifest().Generation.Digest != expected.CallerGeneration {
+			return errors.Join(err, errors.New("T40.13 restored caller publication differs"))
+		}
 	}
 	for _, name := range []string{"candidates", "observation-plans", "extraction-publications", "relationship-schedules"} {
 		if _, err := os.Lstat(filepath.Join(profile.DataDir, name)); !errors.Is(err, os.ErrNotExist) {
@@ -1458,6 +1475,15 @@ func privateSnapshotEqual(left, right privateProfileSnapshot) bool {
 	return reflect.DeepEqual(left, right)
 }
 
+func privateRestoreProductEqual(left, right privateProfileSnapshot) bool {
+	left.IndexedCommit, right.IndexedCommit = "", ""
+	left.CallerGeneration, right.CallerGeneration = "", ""
+	left.RelationshipGeneration, right.RelationshipGeneration = "", ""
+	left.RelationshipRootDigest, right.RelationshipRootDigest = "", ""
+	left.RelationshipSemanticDigest, right.RelationshipSemanticDigest = "", ""
+	return reflect.DeepEqual(left, right)
+}
+
 func changedSourceMembers(left, right privateProfileSnapshot) int {
 	if len(left.SourceMemberDigests) != len(right.SourceMemberDigests) {
 		return -1
@@ -1478,4 +1504,32 @@ func snapshotAuthority(snapshot privateProfileSnapshot) string {
 		snapshot.RelationshipGeneration, snapshot.RelationshipRootDigest,
 	}
 	return strings.Join(values, "\x00")
+}
+
+// snapshotRecoveryAuthority compares the durable semantic authority restored by
+// A -> B -> A recovery. Relationship publication generation and root digests
+// also bind the monotonic service-summary control fence, so recovery compares a
+// projection that retains all relationship content while excluding only that
+// transition identity.
+func snapshotRecoveryAuthority(snapshot privateProfileSnapshot) string {
+	values := []string{
+		snapshot.SourceGeneration, snapshot.SearchGeneration, snapshot.ObservationGeneration,
+		snapshot.ExtractionGeneration, snapshot.CallerGeneration,
+		snapshot.RelationshipSemanticDigest,
+	}
+	return strings.Join(values, "\x00")
+}
+
+func relationshipSemanticDigest(root relationshippublication.Root) (string, error) {
+	root.Authority.ServiceStateSummaryDigest = ""
+	root.Authority.ServiceStateControlRevision = 0
+	root.AuthorityDigest = ""
+	root.GenerationDigest = ""
+	root.Digest = ""
+	raw, err := json.Marshal(root)
+	if err != nil {
+		return "", fmt.Errorf("encode T40.13 relationship semantic authority: %w", err)
+	}
+	sum := sha256.Sum256(append([]byte("t4013-relationship-semantic-authority-v1\x00"), raw...))
+	return fmt.Sprintf("sha256:%x", sum), nil
 }

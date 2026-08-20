@@ -1462,6 +1462,14 @@ catalog, relationship, or correctness authority.
   interruption return-to-A; that production stale-authority retry defect is the
   next stacked blocker. Merge, freeze, and execution remain separately
   authorized steps.
+- The stacked prior-gate closure now passes the opt-in real production-binary
+  rehearsal across semantic interruption/restore, structural A→B→A/restore,
+  and deterministic stale-worker fencing in one process. It closes stale
+  extraction schedule ownership, retained whole-search reactivation, stale
+  caller pointers, restore-time restartable schedule/root residue, and retry-
+  shaped current progress validation. Fresh ceremony contracts advance to V19;
+  the result is rehearsal evidence only until an exact integrated V19 freeze
+  and fresh ceremony pass.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

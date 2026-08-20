@@ -429,7 +429,7 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		}
 		return
 	}
-	if store.IsDeferral(handleErr) {
+	if store.IsDeferral(handleErr) || errors.Is(handleErr, store.ErrGenerationStale) {
 		outcome = "deferred"
 		if err := scheduler.Store.DeferGenerationChunk(
 			writeCtx,

@@ -298,7 +298,7 @@ func (fence *testFence) FenceDomain(_ context.Context, request FenceRequest) (fu
 		fence.before()
 	}
 	if fence.stale || fence.current != "" && fence.current != request.Plan.SourceGenerationDigest {
-		return nil, store.ErrGenerationStale
+		return nil, ErrStale
 	}
 	fence.held = true
 	return func() {
@@ -462,16 +462,49 @@ func TestRuntimeProgressReadsOnlyBoundedScheduleAndCurrentPointers(t *testing.T)
 }
 
 func TestValidateProgressAllowsMaterializedRetryAttempts(t *testing.T) {
-	progress := Progress{
-		State: "active", Total: 2, Materialized: 3,
-		Pending: 1, Succeeded: 1, Domains: 1,
+	tests := []struct {
+		name     string
+		progress Progress
+		wantErr  bool
+	}{
+		{
+			name: "active retry",
+			progress: Progress{
+				State: "active", Total: 2, Materialized: 3,
+				Pending: 1, Succeeded: 1, Domains: 1,
+			},
+		},
+		{
+			name: "current retry",
+			progress: Progress{
+				State: "current", Total: 2, Materialized: 3,
+				Succeeded: 2, Domains: 1, CurrentDomains: 1,
+			},
+		},
+		{
+			name: "current below total",
+			progress: Progress{
+				State: "current", Total: 2, Materialized: 1,
+				Succeeded: 2, Domains: 1, CurrentDomains: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "above frozen allocation",
+			progress: Progress{
+				State: "active", Total: 2, Materialized: 2*ScheduleMaxAttempts + 1,
+				Pending: 1, Succeeded: 1, Domains: 1,
+			},
+			wantErr: true,
+		},
 	}
-	if err := ValidateProgress(progress); err != nil {
-		t.Fatalf("retry-shaped progress: %v", err)
-	}
-	progress.Materialized = 2*ScheduleMaxAttempts + 1
-	if err := ValidateProgress(progress); err == nil {
-		t.Fatal("progress exceeding the frozen attempt allocation passed")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateProgress(test.progress)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("ValidateProgress(%+v) error = %v, want error %t", test.progress, err, test.wantErr)
+			}
+		})
 	}
 }
 
@@ -796,6 +829,70 @@ func TestRuntimeSupersededLeaseStopsBeforeSourceAcquisition(t *testing.T) {
 	}
 }
 
+func TestAuthorityFenceErrorDefersStaleAuthorityButNotCancellationOrOperationalFailure(t *testing.T) {
+	tests := []struct {
+		name         string
+		ctx          func(*testing.T) context.Context
+		cause        error
+		wantDeferred bool
+	}{
+		{
+			name: "stale authority", ctx: func(t *testing.T) context.Context { return t.Context() },
+			cause: ErrStale, wantDeferred: true,
+		},
+		{
+			name: "store stale", ctx: func(t *testing.T) context.Context { return t.Context() },
+			cause: store.ErrGenerationStale, wantDeferred: true,
+		},
+		{
+			name: "typed contention", ctx: func(t *testing.T) context.Context { return t.Context() },
+			cause: store.WithDeferral(errors.New("busy")), wantDeferred: true,
+		},
+		{
+			name: "operational", ctx: func(t *testing.T) context.Context { return t.Context() },
+			cause: errors.New("read failed"),
+		},
+		{
+			name: "caller cancellation",
+			ctx: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				return ctx
+			},
+			cause: context.Canceled,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := classifyAuthorityFenceError(test.ctx(t), test.cause)
+			if store.IsDeferral(err) != test.wantDeferred || !errors.Is(err, ErrStale) {
+				t.Fatalf("classified error = %v, deferred=%t", err, store.IsDeferral(err))
+			}
+		})
+	}
+}
+
+func TestRuntimeStalePublicationFenceDefersWithoutRepeatingContent(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("7", 64), true)
+	runtime, state, source, executor, _, fence, domain := newRuntimeFixture(t, plan)
+	if _, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil {
+		t.Fatal(err)
+	}
+	fence.stale = true
+	chunk := currentChunk(t, state, plan.Repository, 0)
+	if err := runtime.Handle(t.Context(), chunk); !store.IsDeferral(err) || !errors.Is(err, ErrStale) {
+		t.Fatalf("stale publication error = %v", err)
+	}
+	fence.stale = false
+	if err := runtime.Handle(t.Context(), chunk); err != nil {
+		t.Fatal(err)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 || executor.callCount() != 1 {
+		t.Fatalf("stale publication repeated content = source %d/%d executor %d",
+			acquired, released, executor.callCount())
+	}
+}
+
 func TestRuntimeSmallDeltaAndAToBToAReactivation(t *testing.T) {
 	planA := buildTestPlan(t, "sha256:"+strings.Repeat("5", 64), true)
 	runtime, state, source, executor, _, fence, domainA := newRuntimeFixture(t, planA)
@@ -829,6 +926,14 @@ func TestRuntimeSmallDeltaAndAToBToAReactivation(t *testing.T) {
 	current, err := runtime.Current(t.Context(), planA.Repository, planA.Domain)
 	if err != nil || current.PlanDigest != planA.Digest {
 		t.Fatalf("reactivated current = %+v, %v", current, err)
+	}
+	schedule, err := state.GetGenerationSchedule(t.Context(), planA.Repository, ScheduleStage)
+	if err != nil || schedule.Generation == generationA {
+		t.Fatalf("reactivated schedule = %+v, %v", schedule, err)
+	}
+	binding, err := runtime.readBinding(planA.Repository, schedule.Generation)
+	if err != nil || binding.TargetGeneration != generationA {
+		t.Fatalf("reactivated schedule target = %+v, %v", binding, err)
 	}
 }
 

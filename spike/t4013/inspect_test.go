@@ -366,6 +366,84 @@ func TestSnapshotAuthorityIncludesCallerGeneration(t *testing.T) {
 	}
 }
 
+func TestSnapshotRecoveryAuthorityUsesStableRelationshipSemantics(t *testing.T) {
+	root := relationshippublication.Root{
+		Schema: "relationship-root",
+		Authority: relationshippublication.Authority{
+			Repository:                  "github.com/acme/repo",
+			ServiceStateSetDigest:       "sha256:service-set",
+			ServiceStateSummaryDigest:   "sha256:summary-a",
+			ServiceStateControlRevision: 2,
+		},
+		AuthorityDigest:  "sha256:authority-a",
+		GenerationDigest: "sha256:generation-a",
+		Digest:           "sha256:root-a",
+		ServiceCount:     1,
+	}
+	first, err := relationshipSemanticDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Authority.ServiceStateSummaryDigest = "sha256:summary-b"
+	root.Authority.ServiceStateControlRevision = 6
+	root.AuthorityDigest = "sha256:authority-b"
+	root.GenerationDigest = "sha256:generation-b"
+	root.Digest = "sha256:root-b"
+	second, err := relationshipSemanticDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Fatal("service-summary transition fence changed relationship semantic identity")
+	}
+	root.Authority.ServiceStateSetDigest = "sha256:service-set-b"
+	changed, err := relationshipSemanticDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed == first {
+		t.Fatal("relationship content change escaped semantic identity")
+	}
+
+	left := privateProfileSnapshot{
+		RelationshipGeneration:     "sha256:generation-a",
+		RelationshipRootDigest:     "sha256:root-a",
+		RelationshipSemanticDigest: first,
+	}
+	right := left
+	right.RelationshipGeneration = "sha256:generation-b"
+	right.RelationshipRootDigest = "sha256:root-b"
+	if snapshotRecoveryAuthority(left) != snapshotRecoveryAuthority(right) {
+		t.Fatal("relationship transition identity changed recovery authority")
+	}
+	right.RelationshipSemanticDigest = changed
+	if snapshotRecoveryAuthority(left) == snapshotRecoveryAuthority(right) {
+		t.Fatal("relationship semantic change escaped recovery authority")
+	}
+}
+
+func TestRestoreProductParityExcludesRebuiltControlIdentities(t *testing.T) {
+	left := privateProfileSnapshot{
+		SourceGeneration: "source", SearchGeneration: "search",
+		ObservationGeneration: "observation", ExtractionGeneration: "extraction",
+		CallerGeneration: "caller-a", RelationshipGeneration: "relationship-a",
+		RelationshipRootDigest: "root-a", RelationshipSemanticDigest: "semantic-a",
+		ExtractionFacts: 3, RelationshipPublished: true,
+	}
+	right := left
+	right.CallerGeneration = "caller-b"
+	right.RelationshipGeneration = "relationship-b"
+	right.RelationshipRootDigest = "root-b"
+	right.RelationshipSemanticDigest = "semantic-b"
+	if !privateRestoreProductEqual(left, right) {
+		t.Fatal("restore product parity rejected rebuilt control identities")
+	}
+	right.ExtractionFacts++
+	if privateRestoreProductEqual(left, right) {
+		t.Fatal("restore product parity accepted changed product content")
+	}
+}
+
 func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T) {
 	for _, test := range []struct {
 		state     string

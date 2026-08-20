@@ -4430,3 +4430,39 @@ a failed B extraction schedule during the return-to-A restart. That is a
 production stale-authority retry blocker to correct on a stacked branch; do not
 weaken the rehearsal or freeze while it fails. Pressure and scale remain
 outside this small-corpus rehearsal and receive no claim from it.
+
+### T40.13 V19 prior-gate recovery closure
+
+Fresh freezes use V19 after the combined production-binary rehearsal closed
+the earlier-gate defects. Extraction authority-fence contention is bounded to
+five seconds using 25-ms probes and 10-ms waits; it returns the exact generation
+chunk to delayed pending without consuming an attempt. Reconciliation replaces
+a stale active extraction schedule even when exact prior domain authority is
+already current. Whole-search return-to-A reactivates validated retained A
+authority instead of rebuilding it, and a caller publication pointer for a
+different generation enters normal repair rather than completing the job.
+
+Restore treats schedules, current-schedule pointers, repository generation
+tokens, and extraction-domain roots as restartable state. After database import
+it clears those tables and lets ordinary recovery remint them; immutable
+outcomes remain retained. Offline verification still proves the exact archived
+source, search, observation, caller, and relationship bytes. Online validation
+then compares product semantics while allowing caller and relationship control
+identities to be reminted. Current extraction progress permits bounded retry
+materialization above the logical partition total, but still requires zero
+pending/running/failed, exact successes and current domains, and the frozen
+attempt ceiling.
+
+The ordinary uncontended/no-op path adds no query. Contention adds only the
+bounded probes and one non-consuming deferral. Search reactivation performs one
+retained-generation validation and pointer transition under the existing
+mutation lock, with no Git/source read, zoekt child, or shard rebuild. Restore-
+only cleanup performs bounded full deletes over four generation-schedule tables
+and extraction-domain roots. The ceremony-only stale-worker diagnostic performs
+one exact current-schedule supersession write. While the opt-in rehearsal is
+pending, source-free schedule diagnostics read one bounded progress projection
+at most every 30 seconds; asynchronous partial controls are allowed five minutes
+to clear at 250-ms cadence before failure. The combined semantic, structural,
+and stale-worker rehearsal passed in one process. This establishes readiness
+mechanics only—not pressure, scale, SLO, accuracy, release, migration, or
+decommissioning—and does not pass any prior ceremony retroactively.

@@ -139,6 +139,26 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 		recoveryRoot.Prior == nil || recoveryRoot.Prior.GenerationDigest != rootB.Current.GenerationDigest {
 		t.Fatalf("recovery root = %+v, %v", recoveryRoot, err)
 	}
+	reactivated, err := ReactivatePriorSearchGeneration(
+		t.Context(), indexDir, repository, revisionsB,
+	)
+	if err != nil || !reactivated || !IsPublishing(indexDir, repository) {
+		t.Fatalf("reactivate retained B = %t/%t, %v", reactivated, IsPublishing(indexDir, repository), err)
+	}
+	reactivatedRoot, err := ReadSearchGenerationRoot(indexDir, repository)
+	if err != nil || reactivatedRoot.Current.GenerationDigest != rootB.Current.GenerationDigest ||
+		reactivatedRoot.Prior == nil ||
+		reactivatedRoot.Prior.GenerationDigest != pendingD.Current.GenerationDigest {
+		t.Fatalf("reactivated root = %+v, %v", reactivatedRoot, err)
+	}
+	if err := FinishPublication(indexDir, repository); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateRepositorySearchGeneration(
+		t.Context(), indexDir, repository, revisionsB,
+	); err != nil {
+		t.Fatalf("validate reactivated B: %v", err)
+	}
 }
 
 func TestSearchGenerationRecoveryRestoresLifecycleRootFromFlatPublication(t *testing.T) {
