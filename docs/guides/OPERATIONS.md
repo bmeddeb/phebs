@@ -4385,7 +4385,9 @@ record proves only that V17 did not select a lifecycle-discovered B extraction
 lease within 90 minutes; it does not prove that such a schedule existed or
 identify an upstream boundary.
 
-Fresh plans use V18. The trigger reads one running chunk directly from the
+Fresh plans use V18. Both local-store readers, the lifecycle cursor, and the
+exact inspector are opened before the A→B source transition. The trigger reads
+one running chunk directly from the
 exact current `extraction-partitions` schedule, then rechecks the current
 schedule, exact chunk identity, and local runtime before accepting it. The
 generation must still bind revision B. Lifecycle logs remain incrementally
@@ -4399,9 +4401,14 @@ B-bound settled extraction schedule seals `interruption_trigger_unsatisfiable`.
 No raw error, response, path, worker, token, timestamp, log, credential, or
 source is retained. V1–V17 validation and bytes remain unchanged.
 
-This is ceremony-only read/evidence work. The log keeps its 250-ms cadence and
+Lease selection is independent of the exact inspector: one inspector and one
+schedule-progress projection may run on their own local-store connection while
+the selector continues sampling. The goroutine is canceled and joined before
+either connection closes. Stale-worker uses the same exact-current selector
+instead of lifecycle timing. This is ceremony-only read/evidence work. The log keeps its 250-ms cadence and
 64-KiB read, 1-MiB partial-line, and 400,000-report-per-poll bounds. The exact
-current-running selector runs at most once per second and performs bounded
+current-running selector runs at most four times per second, with a two-second
+call bound, and performs bounded
 current-pointer, one-row, current-schedule, identity, and runtime-fence reads.
 The exact inspector runs at most every five seconds with a 30-second call
 bound. Before extraction it performs the existing bounded authority reads and
@@ -4414,3 +4421,12 @@ V18 observation/receipt. Production request, sync, startup, retry/no-op,
 publication, worker, authority, schema, API, cache, lock, concurrency, bound,
 memory/disk ceiling, and release behavior are unchanged. Neutral-29 cannot
 pass retroactively; a fresh freeze and execution require separate approval.
+
+The opt-in production-binary readiness rehearsal uses distinct fresh semantic
+repositories for interruption and stale-worker, then retains the structural
+delta/return, live-backup/offline-restore, lifecycle, and authorized-query
+checks. Its first run after this correction selected the lease but then exposed
+a failed B extraction schedule during the return-to-A restart. That is a
+production stale-authority retry blocker to correct on a stacked branch; do not
+weaken the rehearsal or freeze while it fails. Pressure and scale remain
+outside this small-corpus rehearsal and receive no claim from it.

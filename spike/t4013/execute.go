@@ -777,16 +777,27 @@ func (run *execution) interruption() error {
 	run.semantic = server
 	var trigger generationscheduler.ChunkLifecycleReport
 	if planSchemaVersion(run.plan.Schema) >= 17 {
+		var triggerObserver *interruptionTriggerV18Observer
+		if planSchemaVersion(run.plan.Schema) >= 18 {
+			triggerObserver, err = run.newInterruptionTriggerV18Observer(
+				server, meter, profile, profile.Revisions["b"],
+			)
+			if err != nil {
+				return err
+			}
+		}
 		run.setInterruptionSubstage("delta_trigger")
 		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+			if triggerObserver != nil {
+				return errors.Join(err, triggerObserver.Close())
+			}
 			return err
 		}
 		run.setInterruptionSubstage("active_lease_wait")
 		var triggerErr error
-		if planSchemaVersion(run.plan.Schema) >= 18 {
-			trigger, triggerErr = run.waitInterruptionTriggerV18(
-				server, meter, profile, profile.Revisions["b"], 90*time.Minute,
-			)
+		if triggerObserver != nil {
+			trigger, triggerErr = triggerObserver.Wait(profile.Revisions["b"], 90*time.Minute)
+			triggerErr = errors.Join(triggerErr, triggerObserver.Close())
 		} else {
 			trigger, triggerErr = waitInterruptionChunkLifecycle(
 				run.ctx, server, meter, profile, profile.Revisions["b"], 90*time.Minute,
@@ -1031,62 +1042,116 @@ type currentRunningGenerationChunkReader interface {
 	) (store.GenerationChunkLeaseState, error)
 }
 
+type interruptionTriggerV18Observer struct {
+	run            *execution
+	server         *privateServer
+	cursor         *chunkLifecycleCursor
+	leaseReader    *store.LocalGenerationChunkReader
+	progressReader *store.LocalGenerationChunkReader
+	profile        PreparedProfile
+	inspect        convergenceInspection
+}
+
 // waitInterruptionTriggerV18 uses the exact current schedule as discovery
 // authority. Lifecycle reports are still parsed on every short poll, but only
 // to preserve structural corroboration; a start and settlement in one log
 // drain cannot hide a lease that is running in the store. The exact inspector
 // separately attributes an upstream/no-lease stop without retaining private
 // responses or raw errors.
-func (run *execution) waitInterruptionTriggerV18(
+func (run *execution) newInterruptionTriggerV18Observer(
 	server *privateServer,
 	meter *phaseMeter,
 	profile PreparedProfile,
 	revision string,
-	limit time.Duration,
-) (generationscheduler.ChunkLifecycleReport, error) {
-	if run == nil || run.ctx == nil || server == nil || meter == nil || limit <= 0 {
-		return generationscheduler.ChunkLifecycleReport{},
+) (*interruptionTriggerV18Observer, error) {
+	if run == nil || run.ctx == nil || server == nil || meter == nil {
+		return nil,
 			errors.New("T40.13 V18 interruption trigger reader is invalid")
 	}
 	cursor, err := newChunkLifecycleCursor(
 		server.logPath, meter.logOffset, chunkLifecycleValidationV17,
 	)
 	if err != nil {
-		return generationscheduler.ChunkLifecycleReport{}, err
+		return nil, err
 	}
-	reader, err := store.OpenLocalGenerationChunkReader(run.ctx, profile.DataDir)
+	leaseReader, err := store.OpenLocalGenerationChunkReader(run.ctx, profile.DataDir)
 	if err != nil {
-		return generationscheduler.ChunkLifecycleReport{}, errors.Join(err, cursor.Close())
+		return nil, errors.Join(err, cursor.Close())
+	}
+	progressReader, err := store.OpenLocalGenerationChunkReader(run.ctx, profile.DataDir)
+	if err != nil {
+		return nil, errors.Join(
+			err, cursor.Close(), leaseReader.Close(context.WithoutCancel(run.ctx)),
+		)
 	}
 	inspector, err := newProfileInspector(profile, profileInspectionV16)
 	if err != nil {
-		return generationscheduler.ChunkLifecycleReport{}, errors.Join(
-			err, cursor.Close(), reader.Close(context.WithoutCancel(run.ctx)),
+		return nil, errors.Join(
+			err, cursor.Close(), leaseReader.Close(context.WithoutCancel(run.ctx)),
+			progressReader.Close(context.WithoutCancel(run.ctx)),
 		)
 	}
-	report, waitErr := run.waitInterruptionTriggerV18WithReader(
-		server, cursor, reader, profile, revision, limit,
-		func(attempt context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+	return &interruptionTriggerV18Observer{
+		run: run, server: server, cursor: cursor,
+		leaseReader: leaseReader, progressReader: progressReader, profile: profile,
+		inspect: func(attempt context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
 			return inspector.inspectWithProgress(attempt, profile, revision)
 		},
-		extractionGenerationBindsRevision,
+	}, nil
+}
+
+func (observer *interruptionTriggerV18Observer) Wait(
+	revision string,
+	limit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	if observer == nil {
+		return generationscheduler.ChunkLifecycleReport{},
+			errors.New("T40.13 V18 interruption trigger observer is invalid")
+	}
+	return observer.run.waitInterruptionTriggerV18WithReader(
+		observer.server, observer.cursor, observer.leaseReader, observer.progressReader,
+		observer.profile, revision, limit, observer.inspect, extractionGenerationBindsRevision,
 	)
-	closeErr := errors.Join(cursor.Close(), reader.Close(context.WithoutCancel(run.ctx)))
-	return report, errors.Join(waitErr, closeErr)
+}
+
+func (observer *interruptionTriggerV18Observer) Close() error {
+	if observer == nil {
+		return nil
+	}
+	closeCtx := context.Background()
+	if observer.run != nil && observer.run.ctx != nil {
+		closeCtx = context.WithoutCancel(observer.run.ctx)
+	}
+	err := errors.Join(
+		observer.cursor.Close(), observer.leaseReader.Close(closeCtx),
+		observer.progressReader.Close(closeCtx),
+	)
+	observer.cursor = nil
+	observer.leaseReader = nil
+	observer.progressReader = nil
+	return err
+}
+
+type interruptionInspectionResult struct {
+	probe       privateConvergenceProbe
+	err         error
+	progress    store.GenerationScheduleProgress
+	progressErr error
 }
 
 func (run *execution) waitInterruptionTriggerV18WithReader(
 	server *privateServer,
 	cursor *chunkLifecycleCursor,
-	reader currentRunningGenerationChunkReader,
+	leaseReader currentRunningGenerationChunkReader,
+	progressReader generationChunkLeaseReader,
 	profile PreparedProfile,
 	revision string,
 	limit time.Duration,
 	inspect convergenceInspection,
 	binder extractionGenerationBinder,
 ) (generationscheduler.ChunkLifecycleReport, error) {
-	if run == nil || run.ctx == nil || server == nil || cursor == nil || reader == nil ||
-		inspect == nil || binder == nil || limit <= 0 {
+	if run == nil || run.ctx == nil || server == nil || cursor == nil || leaseReader == nil ||
+		progressReader == nil || inspect == nil || binder == nil || limit <= 0 {
 		return generationscheduler.ChunkLifecycleReport{},
 			errors.New("T40.13 V18 interruption trigger authority is invalid")
 	}
@@ -1095,79 +1160,102 @@ func (run *execution) waitInterruptionTriggerV18WithReader(
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	started := time.Now()
-	leaseProbe := started.Add(-time.Second)
-	progressProbe := started.Add(-5 * time.Second)
+	nextInspection := started
 	var lastErr error
+	inspectionResult := make(chan interruptionInspectionResult, 1)
+	var (
+		inspectionCancel  context.CancelFunc
+		inspectionRunning bool
+		inspectionWork    sync.WaitGroup
+	)
+	defer func() {
+		if inspectionCancel != nil {
+			inspectionCancel()
+		}
+		inspectionWork.Wait()
+	}()
 	for {
+		if exitErr, exited := retainServerExit(server); exited {
+			return generationscheduler.ChunkLifecycleReport{},
+				errors.Join(exitErr, errConvergenceServerExit)
+		}
 		// The log is deliberately non-authoritative in V18, but parsing it
 		// keeps the frozen structural/vocabulary checks exercised.
 		if _, err := cursor.poll(); err != nil {
 			return generationscheduler.ChunkLifecycleReport{}, err
 		}
-		if time.Since(leaseProbe) >= time.Second {
-			leaseProbe = time.Now()
-			callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
-			state, stateErr := reader.CurrentGenerationRunningChunk(
-				callCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
-			)
-			callCancel()
-			switch {
-			case stateErr == nil:
-				bound, bindErr := binder(profile, state.Generation, revision)
-				if bindErr != nil {
-					lastErr = bindErr
-				} else if bound && state.Status == store.GenerationChunkRunning {
-					return generationscheduler.ChunkLifecycleReport{
-						Schema: generationscheduler.ChunkLifecycleSchema,
-						Event:  "started", Identity: state.Identity, Stage: state.Stage,
-						Generation: state.Generation, Attempt: state.Attempt, Outcome: "running",
-					}, nil
-				}
-			case errors.Is(stateErr, store.ErrNotFound),
-				errors.Is(stateErr, store.ErrGenerationStale),
-				errors.Is(stateErr, store.ErrGenerationLeaseLost):
-				// The exact current schedule has no selectable running chunk yet.
-			default:
-				lastErr = stateErr
+		callCtx, callCancel := context.WithTimeout(phase, 2*time.Second)
+		state, stateErr := leaseReader.CurrentGenerationRunningChunk(
+			callCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
+		)
+		callCancel()
+		switch {
+		case stateErr == nil:
+			bound, bindErr := binder(profile, state.Generation, revision)
+			if bindErr != nil {
+				lastErr = bindErr
+			} else if bound && state.Status == store.GenerationChunkRunning {
+				return generationscheduler.ChunkLifecycleReport{
+					Schema: generationscheduler.ChunkLifecycleSchema,
+					Event:  "started", Identity: state.Identity, Stage: state.Stage,
+					Generation: state.Generation, Attempt: state.Attempt, Outcome: "running",
+				}, nil
 			}
+		case errors.Is(stateErr, store.ErrNotFound),
+			errors.Is(stateErr, store.ErrGenerationStale),
+			errors.Is(stateErr, store.ErrGenerationLeaseLost):
+			// The exact current schedule has no selectable running chunk yet.
+		default:
+			lastErr = stateErr
 		}
-		if time.Since(progressProbe) >= 5*time.Second {
-			progressProbe = time.Now()
-			callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
-			_, probe, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
-				callCtx, server, inspect,
-			)
-			callCancel()
-			if exited {
-				return generationscheduler.ChunkLifecycleReport{},
-					errors.Join(exitErr, errConvergenceServerExit)
-			}
-			diagnostic := classifyConvergenceInspection(inspectErr)
+		if !inspectionRunning && !time.Now().Before(nextInspection) {
+			inspectionRunning = true
+			inspectionCtx, cancelInspection := context.WithTimeout(phase, 30*time.Second)
+			inspectionCancel = cancelInspection
+			inspectionWork.Add(1)
+			run.inspectionWork.Add(1)
+			go func() {
+				defer inspectionWork.Done()
+				defer run.inspectionWork.Done()
+				_, probe, inspectErr := inspect(inspectionCtx)
+				progress, progressErr := progressReader.GenerationScheduleProgress(
+					inspectionCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
+				)
+				inspectionResult <- interruptionInspectionResult{
+					probe: probe, err: inspectErr, progress: progress, progressErr: progressErr,
+				}
+			}()
+		}
+		select {
+		case inspected := <-inspectionResult:
+			inspectionCancel()
+			inspectionCancel = nil
+			inspectionRunning = false
+			nextInspection = time.Now().Add(5 * time.Second)
+			diagnostic := classifyConvergenceInspection(inspected.err)
+			probe := inspected.probe
 			run.recordInterruptionProgress(probe, diagnostic, time.Since(started))
 			if diagnostic.class == "terminal" {
 				return generationscheduler.ChunkLifecycleReport{}, errInterruptionProgressTerminal
 			}
-			if inspectErr == nil {
+			if inspected.err == nil {
 				return generationscheduler.ChunkLifecycleReport{}, errInterruptionTriggerUnsatisfiable
 			}
-			lastErr = inspectErr
+			lastErr = inspected.err
 
 			// Retain V17's exact fast-fail fence for the narrow case in which
 			// extraction settled between the store selector and inspection.
-			progressCtx, progressCancel := context.WithTimeout(phase, 30*time.Second)
-			progress, progressErr := reader.GenerationScheduleProgress(
-				progressCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
-			)
-			progressCancel()
-			if progressErr == nil && progress.Status == store.GenerationScheduleSettled {
+			if inspected.progressErr == nil &&
+				inspected.progress.Status == store.GenerationScheduleSettled {
 				bound, bindErr := binder(
-					profile, progress.Generation, revision,
+					profile, inspected.progress.Generation, revision,
 				)
 				if bindErr == nil && bound {
 					return generationscheduler.ChunkLifecycleReport{},
 						errInterruptionTriggerUnsatisfiable
 				}
 			}
+		default:
 		}
 		select {
 		case <-phase.Done():
@@ -1220,9 +1308,17 @@ func (run *execution) staleWorker() error {
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
-	started, err := waitActiveChunkLifecycle(
-		run.ctx, cursor, leaseReader, profile, profile.Revisions["b"], 90*time.Minute,
-	)
+	var started generationscheduler.ChunkLifecycleReport
+	if planSchemaVersion(run.plan.Schema) >= 18 {
+		started, err = waitCurrentRunningGenerationChunk(
+			run.ctx, cursor, leaseReader, profile, profile.Revisions["b"],
+			90*time.Minute, extractionGenerationBindsRevision,
+		)
+	} else {
+		started, err = waitActiveChunkLifecycle(
+			run.ctx, cursor, leaseReader, profile, profile.Revisions["b"], 90*time.Minute,
+		)
+	}
 	if err != nil {
 		return err
 	}
@@ -1567,6 +1663,77 @@ func waitActiveChunkLifecycleWithBinder(
 		case <-phase.Done():
 			return generationscheduler.ChunkLifecycleReport{}, errors.Join(
 				lastErr, errors.New("T40.13 live B-bound chunk deadline expired"),
+			)
+		case <-ticker.C:
+		}
+	}
+}
+
+func waitCurrentRunningGenerationChunk(
+	ctx context.Context,
+	cursor *chunkLifecycleCursor,
+	reader currentRunningGenerationChunkReader,
+	profile PreparedProfile,
+	revision string,
+	limit time.Duration,
+	binder extractionGenerationBinder,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	if ctx == nil || cursor == nil || reader == nil || binder == nil || limit <= 0 {
+		return generationscheduler.ChunkLifecycleReport{},
+			errors.New("T40.13 current generation chunk authority is invalid")
+	}
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	settledProbe := time.Now().Add(-5 * time.Second)
+	var lastErr error
+	for {
+		if _, err := cursor.poll(); err != nil {
+			return generationscheduler.ChunkLifecycleReport{}, err
+		}
+		callCtx, callCancel := context.WithTimeout(phase, 2*time.Second)
+		state, stateErr := reader.CurrentGenerationRunningChunk(
+			callCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
+		)
+		callCancel()
+		switch {
+		case stateErr == nil:
+			bound, bindErr := binder(profile, state.Generation, revision)
+			if bindErr != nil {
+				lastErr = bindErr
+			} else if bound && state.Status == store.GenerationChunkRunning {
+				return generationscheduler.ChunkLifecycleReport{
+					Schema: generationscheduler.ChunkLifecycleSchema,
+					Event:  "started", Identity: state.Identity, Stage: state.Stage,
+					Generation: state.Generation, Attempt: state.Attempt, Outcome: "running",
+				}, nil
+			}
+		case errors.Is(stateErr, store.ErrNotFound),
+			errors.Is(stateErr, store.ErrGenerationStale),
+			errors.Is(stateErr, store.ErrGenerationLeaseLost):
+		default:
+			lastErr = stateErr
+		}
+		if time.Since(settledProbe) >= 5*time.Second {
+			settledProbe = time.Now()
+			progressCtx, progressCancel := context.WithTimeout(phase, 2*time.Second)
+			progress, progressErr := reader.GenerationScheduleProgress(
+				progressCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
+			)
+			progressCancel()
+			if progressErr == nil && progress.Status == store.GenerationScheduleSettled {
+				bound, bindErr := binder(profile, progress.Generation, revision)
+				if bindErr == nil && bound {
+					return generationscheduler.ChunkLifecycleReport{},
+						errors.New("T40.13 current B-bound schedule settled before lease selection")
+				}
+			}
+		}
+		select {
+		case <-phase.Done():
+			return generationscheduler.ChunkLifecycleReport{}, errors.Join(
+				lastErr, errors.New("T40.13 current B-bound chunk deadline expired"),
 			)
 		case <-ticker.C:
 		}

@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/spike/t401"
 )
@@ -462,6 +464,9 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 			rehearseProductionPath(t, ctx, moduleRoot, workspace, toolchain, kind)
 		})
 	}
+	t.Run("semantic-stale-worker", func(t *testing.T) {
+		rehearseSemanticStaleWorkerBoundary(t, ctx, moduleRoot, workspace, toolchain)
+	})
 }
 
 func buildWorkingTreeToolchain(
@@ -561,6 +566,10 @@ func rehearseProductionPath(
 		t.Fatalf("cold authorized query exact=%t: %v", exact, err)
 	}
 	t.Log("cold lifecycle and authorized query passed")
+	if kind == "semantic" {
+		server = rehearseSemanticInterruptionBoundary(t, ctx, profile, toolchain, server, a)
+		t.Log("semantic interruption boundary passed")
+	}
 
 	if kind == "structural" {
 		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
@@ -621,6 +630,240 @@ func rehearseProductionPath(
 		t.Fatal(err)
 	}
 	running = false
+}
+
+func rehearseSemanticInterruptionBoundary(
+	t *testing.T,
+	ctx context.Context,
+	profile PreparedProfile,
+	toolchain privateToolchain,
+	server *privateServer,
+	a privateProfileSnapshot,
+) *privateServer {
+	t.Helper()
+
+	// The observer is fully armed before the source update; after selection the
+	// graceful stop may settle or release the lease, so restart proves its exact
+	// non-running fate and unchanged A authority.
+	meter, err := beginPhaseMeter(server, profile.DataDir, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := Plan{Schema: PlanSchemaV18}
+	run := &execution{
+		ctx: ctx, plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	observer, err := run.newInterruptionTriggerV18Observer(
+		server, meter, profile, profile.Revisions["b"],
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+		t.Fatal(errors.Join(err, observer.Close()))
+	}
+	if err := waitExactActiveGenerationSchedule(
+		ctx, observer.progressReader, profile, profile.Revisions["b"], 3*time.Minute,
+	); err != nil {
+		t.Fatal(errors.Join(err, observer.Close()))
+	}
+	releaseFence, err := focusedindex.AcquireExclusiveMutationLock(
+		ctx, filepath.Join(profile.DataDir, "index"),
+	)
+	if err != nil {
+		t.Fatal(errors.Join(err, observer.Close()))
+	}
+	fenceHeld := true
+	defer func() {
+		if fenceHeld {
+			releaseFence()
+		}
+	}()
+	trigger, err := observer.Wait(profile.Revisions["b"], 3*time.Minute)
+	if err != nil {
+		t.Fatal(errors.Join(err, observer.Close()))
+	}
+	if err := observer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := meter.finish(nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.stop(30 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	releaseFence()
+	fenceHeld = false
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+		t.Fatal(err)
+	}
+	restarted, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-semantic-interruption")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			_ = restarted.stop(30 * time.Second)
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(
+		ctx, restarted, profile, "rehearsal-semantic-interruption", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	afterRestart := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
+	if snapshotAuthority(afterRestart) != snapshotAuthority(a) {
+		t.Fatal("semantic interruption rehearsal changed exact A authority")
+	}
+	if _, err := waitInterruptionLeaseRecovery(
+		ctx, profile, trigger, 3*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	partial, err := derivedPartialPresent(profile.DataDir)
+	if err == nil && !partial {
+		partial, err = relationshipPartialPresent(profile.DataDir)
+	}
+	if err != nil || partial {
+		t.Fatalf("semantic interruption partial state = %t, %v", partial, err)
+	}
+	handedOff = true
+	return restarted
+}
+
+func rehearseSemanticStaleWorkerBoundary(
+	t *testing.T,
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	toolchain privateToolchain,
+) {
+	t.Helper()
+	profile, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "semantic", "semantic-stale-worker",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-stale-cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = server.stop(30 * time.Second) }()
+	if _, err := awaitPrivateServerHealth(
+		ctx, server, profile, "rehearsal-stale-cold", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	a := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
+	meter, err := beginPhaseMeter(server, profile.DataDir, &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(
+		server.logPath, meter.logOffset, chunkLifecycleValidationV17,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		t.Fatal(errors.Join(err, cursor.Close()))
+	}
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+		t.Fatal(err)
+	}
+	if err := waitExactActiveGenerationSchedule(
+		ctx, reader, profile, profile.Revisions["b"], 3*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	releaseFence, err := focusedindex.AcquireExclusiveMutationLock(
+		ctx, filepath.Join(profile.DataDir, "index"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fenceHeld := true
+	defer func() {
+		if fenceHeld {
+			releaseFence()
+		}
+	}()
+	trigger, err := waitCurrentRunningGenerationChunk(
+		ctx, cursor, reader, profile, profile.Revisions["b"],
+		3*time.Minute, extractionGenerationBindsRevision,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+		t.Fatal(err)
+	}
+	state, err := reader.GenerationChunkLeaseState(ctx, trigger.Identity)
+	if err != nil || !runningLeaseMatchesReport(state, trigger, profile.RepositoryName) {
+		t.Fatalf("semantic stale-worker lease did not survive supersession: %+v, %v", state, err)
+	}
+	releaseFence()
+	fenceHeld = false
+	after := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
+	if snapshotAuthority(after) != snapshotAuthority(a) {
+		t.Fatal("semantic stale-worker rehearsal changed exact A authority")
+	}
+	settled, err := waitSettledChunkLifecycle(ctx, cursor, trigger, 3*time.Minute)
+	if err != nil || settled.Outcome != "stale_fenced" {
+		t.Fatalf("semantic stale-worker settlement = %+v, %v", settled, err)
+	}
+	if err := errors.Join(cursor.Close(), reader.Close(context.WithoutCancel(ctx))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := meter.finish(&after); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("semantic stale-worker boundary passed")
+}
+
+func waitExactActiveGenerationSchedule(
+	ctx context.Context,
+	reader generationChunkLeaseReader,
+	profile PreparedProfile,
+	revision string,
+	limit time.Duration,
+) error {
+	wait, cancel := context.WithTimeout(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		call, callCancel := context.WithTimeout(wait, 2*time.Second)
+		progress, err := reader.GenerationScheduleProgress(
+			call, profile.RepositoryName, extractionpublication.ScheduleStage,
+		)
+		callCancel()
+		if err == nil {
+			bound, bindErr := extractionGenerationBindsRevision(
+				profile, progress.Generation, revision,
+			)
+			switch {
+			case bindErr != nil:
+				lastErr = bindErr
+			case bound && progress.Status == store.GenerationScheduleActive:
+				return nil
+			case bound && progress.Status == store.GenerationScheduleSettled:
+				return errors.New("semantic rehearsal schedule settled before contention was armed")
+			}
+		} else if !errors.Is(err, store.ErrNotFound) {
+			lastErr = err
+		}
+		select {
+		case <-wait.Done():
+			return errors.Join(lastErr, errors.New("semantic rehearsal active schedule deadline expired"))
+		case <-ticker.C:
+		}
+	}
 }
 
 func verifyPartitionTimingDiagnostics(t *testing.T, logPath string) {
@@ -760,6 +1003,16 @@ func prepareProjectionProfile(
 	workspace string,
 	kind string,
 ) (PreparedProfile, error) {
+	return prepareProjectionProfileNamed(ctx, moduleRoot, workspace, kind, kind)
+}
+
+func prepareProjectionProfileNamed(
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	kind string,
+	name string,
+) (PreparedProfile, error) {
 	profile, err := t401.ProjectionProfile(kind)
 	if kind == "structural" {
 		profile, err = t401.StructuralPartitionProfile()
@@ -767,7 +1020,7 @@ func prepareProjectionProfile(
 	if err != nil {
 		return PreparedProfile{}, err
 	}
-	profileRoot := filepath.Join(workspace, kind)
+	profileRoot := filepath.Join(workspace, name)
 	if err := os.Mkdir(profileRoot, 0o700); err != nil {
 		return PreparedProfile{}, err
 	}

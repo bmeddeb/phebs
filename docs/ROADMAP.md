@@ -1455,8 +1455,13 @@ catalog, relationship, or correctness authority.
   the exact current extraction schedule the read-only discovery authority,
   and seals a bounded last exact stage/class/digest when no lease is selected.
   Terminal, deadline, and completed/settled-no-lease outcomes are distinct.
-  This is harness-only evidence work with no production behavior or bound
-  change; merge, freeze, and execution remain separately authorized steps.
+  The readers/cursor/inspector are now pre-armed before A→B, the 250-ms exact
+  selector continues while one inspector runs independently, and stale-worker
+  uses the same store authority. A fresh-repository production-binary rehearsal
+  selected the lease and then exposed a failed B extraction schedule during
+  interruption return-to-A; that production stale-authority retry defect is the
+  next stacked blocker. Merge, freeze, and execution remain separately
+  authorized steps.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

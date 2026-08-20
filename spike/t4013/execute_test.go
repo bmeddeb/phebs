@@ -1809,11 +1809,15 @@ type fixedGenerationChunkLeaseReader struct {
 	states   map[string]store.GenerationChunkLeaseState
 	progress *store.GenerationScheduleProgress
 	running  *store.GenerationChunkLeaseState
+	current  func() (store.GenerationChunkLeaseState, error)
 }
 
 func (reader *fixedGenerationChunkLeaseReader) CurrentGenerationRunningChunk(
 	context.Context, string, string,
 ) (store.GenerationChunkLeaseState, error) {
+	if reader.current != nil {
+		return reader.current()
+	}
 	if reader.running != nil {
 		return *reader.running, nil
 	}
@@ -1993,7 +1997,8 @@ func TestV18InterruptionTriggerUsesStoreAuthorityAcrossLifecycleStartAndSettle(t
 	}
 	server := &privateServer{done: make(chan error, 1)}
 	report, err := run.waitInterruptionTriggerV18WithReader(
-		server, cursor, &fixedGenerationChunkLeaseReader{running: &state}, profile,
+		server, cursor, &fixedGenerationChunkLeaseReader{running: &state},
+		&fixedGenerationChunkLeaseReader{}, profile,
 		"revision-b", time.Second,
 		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
 			t.Fatal("exact inspector ran after an immediately selectable store lease")
@@ -2025,7 +2030,7 @@ func TestV18InterruptionTriggerSealsLastUpstreamProgress(t *testing.T) {
 	probe := convergenceProbe("observation_publication", "pending")
 	_, err = run.waitInterruptionTriggerV18WithReader(
 		&privateServer{done: make(chan error, 1)}, cursor,
-		&fixedGenerationChunkLeaseReader{},
+		&fixedGenerationChunkLeaseReader{}, &fixedGenerationChunkLeaseReader{},
 		PreparedProfile{RepositoryName: "example.invalid/semantic"},
 		"revision-b", 300*time.Millisecond,
 		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
@@ -2041,6 +2046,50 @@ func TestV18InterruptionTriggerSealsLastUpstreamProgress(t *testing.T) {
 	if got.LastProgressStage != probe.Stage || got.LastProgressClass != "pending" ||
 		got.LastProgressSHA256 != probe.SHA256 || got.LastProgressWallMS <= 0 {
 		t.Fatalf("V18 retained progress = %+v", got)
+	}
+}
+
+func TestV18InterruptionTriggerSamplesLeaseWhileInspectionIsBlocked(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	state := store.GenerationChunkLeaseState{
+		Identity: "sha256:" + strings.Repeat("e", 64), Repository: profile.RepositoryName,
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("f", 64), Attempt: 1,
+		Status: store.GenerationChunkRunning,
+	}
+	calls := 0
+	leaseReader := &fixedGenerationChunkLeaseReader{current: func() (store.GenerationChunkLeaseState, error) {
+		calls++
+		if calls == 1 {
+			return store.GenerationChunkLeaseState{}, store.ErrNotFound
+		}
+		return state, nil
+	}}
+	plan := Plan{Schema: PlanSchemaV18}
+	run := &execution{
+		ctx: t.Context(), plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	report, err := run.waitInterruptionTriggerV18WithReader(
+		&privateServer{done: make(chan error, 1)}, cursor, leaseReader,
+		&fixedGenerationChunkLeaseReader{}, profile, "revision-b", 3*time.Second,
+		func(ctx context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			<-ctx.Done()
+			return privateProfileSnapshot{}, convergenceProbe("observation_publication"), ctx.Err()
+		},
+		func(PreparedProfile, string, string) (bool, error) { return true, nil },
+	)
+	if err != nil || report.Identity != state.Identity || calls < 2 {
+		t.Fatalf("lease during blocked inspection = %+v, calls=%d, err=%v", report, calls, err)
 	}
 }
 
@@ -2062,7 +2111,7 @@ func TestV18InterruptionTriggerStopsOnTerminalProgress(t *testing.T) {
 	probe := convergenceProbe("extraction_publication", "failed")
 	_, err = run.waitInterruptionTriggerV18WithReader(
 		&privateServer{done: make(chan error, 1)}, cursor,
-		&fixedGenerationChunkLeaseReader{},
+		&fixedGenerationChunkLeaseReader{}, &fixedGenerationChunkLeaseReader{},
 		PreparedProfile{RepositoryName: "example.invalid/semantic"},
 		"revision-b", time.Second,
 		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
@@ -2073,6 +2122,33 @@ func TestV18InterruptionTriggerStopsOnTerminalProgress(t *testing.T) {
 	if !errors.Is(err, errInterruptionProgressTerminal) ||
 		run.observation.Interruption.LastProgressClass != "terminal" {
 		t.Fatalf("V18 terminal progress = %+v, %v", run.observation.Interruption, err)
+	}
+}
+
+func TestV18StaleWorkerSelectsCurrentStoreLeaseWithoutLifecycleStart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	state := store.GenerationChunkLeaseState{
+		Identity: "sha256:" + strings.Repeat("1", 64), Repository: profile.RepositoryName,
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("2", 64), Attempt: 1,
+		Status: store.GenerationChunkRunning,
+	}
+	report, err := waitCurrentRunningGenerationChunk(
+		t.Context(), cursor, &fixedGenerationChunkLeaseReader{running: &state}, profile,
+		"revision-b", time.Second,
+		func(PreparedProfile, string, string) (bool, error) { return true, nil },
+	)
+	if err != nil || report.Identity != state.Identity || report.Outcome != "running" {
+		t.Fatalf("V18 stale-worker store trigger = %+v, %v", report, err)
 	}
 }
 

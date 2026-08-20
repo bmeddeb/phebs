@@ -2575,7 +2575,8 @@ It stopped at `interruption/active_lease_wait` with no selected trigger. The
 record does not establish whether B lacked an extraction schedule, remained
 upstream, or crossed a lifecycle start/settle boundary between polls.
 
-V18 makes the exact current schedule authoritative. At one-second cadence it
+V18 makes the exact current schedule authoritative. Its two local-store readers,
+lifecycle cursor, and exact inspector are opened before A→B. At 250-ms cadence it
 selects at most one running extraction chunk, rechecks the current schedule,
 identity, generation, and local runtime, and accepts it only when the immutable
 generation binds revision B. Lifecycle lines continue to receive bounded
@@ -2583,7 +2584,10 @@ structural validation but cannot hide or create the selected lease. Every five
 seconds the existing V16 exact inspector also records a fixed-size last
 stage/class/probe digest/wall/change projection. A terminal projection, a
 no-trigger deadline, and a completed or settled-without-selectable-lease
-pipeline therefore produce distinct sealable stopped receipts.
+pipeline therefore produce distinct sealable stopped receipts. The exact
+inspector runs single-flight on the second connection, so its 30-second bound
+cannot pause lease sampling; exit cancels and joins it before closing readers.
+Stale-worker uses the same store-authoritative selector.
 
 The selector performs bounded current-pointer, one-row, schedule, identity,
 and runtime-fence reads and exposes no lease token or private store detail. The
@@ -2594,3 +2598,12 @@ results at its worst extraction envelope. Log reads retain the V17 250-ms,
 API, retry, worker, authority, lock, cache, limit, or release claim changes;
 V1–V17 bytes and validation remain exact. Neutral-29 does not pass
 retroactively, and this branch authorizes no freeze or execution.
+
+The opt-in real-binary rehearsal uses separate fresh semantic repositories for
+interruption and stale-worker, avoiding a vacuous second transition through an
+already-materialized B generation. It retains structural delta/return,
+live-backup/offline-restore, lifecycle, and authorized-query coverage. The
+first corrected run exposed a production stale-authority retry failure during
+the interruption return-to-A restart; that stacked production blocker must be
+closed before the rehearsal, integration, or freeze gate can pass. The small
+rehearsal establishes no pressure or scale claim.
