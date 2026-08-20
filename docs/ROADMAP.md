@@ -1429,6 +1429,24 @@ catalog, relationship, or correctness authority.
   is prospective hardening, not a retroactive diagnosis or gate pass;
   independent review and explicit integration/freeze authorization still
   precede a new ceremony identifier.
+- `t40r1-neutral-28` passed cold, warm-noop, delta B, and return A on exact
+  V16 source `26ca6d7e0375eb82be8731a4a6779a88107b8d86`, then stopped
+  `unclassified` during interruption. Its signed source-free package is
+  `sha256:ba1a583b08494d932ee1e769161e1e4ee9343720b72d8fc30b26245f98597f5b`.
+  V16 retained no interruption substage and its passive ephemeral-control scan
+  did not itself trigger new work or prove an active durable worker, so the
+  evidence cannot choose a backup, restore, discovery, stop, or restart cause.
+  V17 prospectively replaces that ambiguity: after exact-A restore it commands
+  A→B, selects one exact B-bound extraction lifecycle start whose current store
+  lease is still running, stops there, returns B→A offline, and requires exact A
+  after restart. The receipt retains only the closed substage and source-free
+  stage/generation/chunk/attempt/wall trigger plus its verified non-running
+  post-restart fate. A settled exact-B schedule with no selectable lease seals
+  `interruption_trigger_unsatisfiable` without a 90-minute wait, even beside a
+  stale prior-revision lifecycle start. V1–V16 bytes and validation,
+  V16 relationship classification, every safety ceiling, and every production
+  bound remain unchanged. Focused/race/docs gates and independent review
+  precede any request to integrate or authorize a fresh freeze.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

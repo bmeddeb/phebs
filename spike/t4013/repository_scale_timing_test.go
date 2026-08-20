@@ -144,7 +144,7 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = timingCursor.Close() }()
-	lifecycleCursor, err := newChunkLifecycleCursor(server.logPath, 0)
+	lifecycleCursor, err := newChunkLifecycleCursor(server.logPath, 0, chunkLifecycleValidationV17)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -312,7 +312,7 @@ func captureSemanticColdConvergence(
 	} else {
 		defer func() { _ = partitionCursor.Close() }()
 	}
-	lifecycleCursor, lifecycleErr := newChunkLifecycleCursor(server.logPath, 0)
+	lifecycleCursor, lifecycleErr := newChunkLifecycleCursor(server.logPath, 0, chunkLifecycleValidationV17)
 	if lifecycleErr != nil {
 		tail.TimingCaptureOK = false
 		if tail.TimingErrorClass == "" {
@@ -634,7 +634,7 @@ func verifyPartitionTimingDiagnostics(t *testing.T, logPath string) {
 	if err != nil || len(reports) == 0 {
 		t.Fatalf("partition timing reports = %d, error=%v", len(reports), err)
 	}
-	lifecycle, err := newChunkLifecycleCursor(logPath, 0)
+	lifecycle, err := newChunkLifecycleCursor(logPath, 0, chunkLifecycleValidationV17)
 	if err != nil {
 		t.Fatal(err)
 	}

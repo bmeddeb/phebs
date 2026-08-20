@@ -15,9 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/spike/t401"
 )
@@ -1425,6 +1427,7 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 		{name: "caller generation terminal", cause: errCallerGenerationTerminal, code: "caller_generation_terminal", decision: "unclassified"},
 		{name: "relationship bound refusal", cause: errRelationshipBoundRefusal, code: "relationship_production_bound_refused", decision: "reduce", substantiated: true},
 		{name: "relationship terminal", cause: errRelationshipTerminal, code: "relationship_terminal", decision: "unclassified"},
+		{name: "interruption trigger unsatisfiable", cause: errInterruptionTriggerUnsatisfiable, code: "interruption_trigger_unsatisfiable", decision: "unclassified"},
 		{name: "server exit overrides missing measurement", cause: errConvergenceServerExit, measurement: errors.New("meter failed"), code: "server_exited_during_convergence", decision: "unclassified"},
 		{name: "transition limit overrides missing measurement", cause: errConvergenceTimeline, measurement: errors.New("meter failed"), code: "convergence_transition_limit_exceeded", decision: "unclassified"},
 		{name: "repository index terminal overrides missing measurement", cause: errRepositoryIndexTerminal, measurement: errors.New("meter failed"), code: "repository_index_terminal", decision: "unclassified"},
@@ -1700,7 +1703,7 @@ func TestChunkLifecycleReaderBindsOneStartedAttempt(t *testing.T) {
 	if err := os.WriteFile(path, []byte(startedLine), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cursor, err := newChunkLifecycleCursor(path, 0)
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1726,6 +1729,309 @@ func TestChunkLifecycleReaderBindsOneStartedAttempt(t *testing.T) {
 	}
 	if reports, err := cursor.poll(); err != nil || len(reports) != 0 {
 		t.Fatalf("cursor rescanned prior reports = %+v, err=%v", reports, err)
+	}
+}
+
+func TestV17ObservationStartsWithClosedInterruptionState(t *testing.T) {
+	plan, err := frozenV17PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := emptyObservationForPlan(EnvironmentObservation{}, plan)
+	if value.Schema != ObservationSchemaV17 || value.Interruption == nil ||
+		value.Interruption.Schema != interruptionSchemaV1 ||
+		value.Interruption.LastSubstage != "not_started" {
+		t.Fatalf("V17 empty interruption state = %+v", value.Interruption)
+	}
+	run := &execution{plan: plan, observation: value}
+	run.setInterruptionSubstage("backup_start")
+	run.setInterruptionSubstage("misspelled-substage")
+	if run.observation.Interruption.LastSubstage != "backup_start" {
+		t.Fatalf("unknown substage replaced closed evidence: %+v", run.observation.Interruption)
+	}
+}
+
+func TestChunkLifecycleReaderAcceptsOnlyPipelineStages(t *testing.T) {
+	for _, stage := range []string{
+		observationpublication.PlanningScheduleStage,
+		observationpublication.InventoryScheduleStageV2,
+		observationpublication.ScheduleStage,
+		extractionpublication.ScheduleStage,
+		relationshippublication.ScheduleStage,
+	} {
+		t.Run(stage, func(t *testing.T) {
+			line := lifecycleTestLine(t, "started", stage, "running")
+			_, found, err := parseChunkLifecycleLine(line, chunkLifecycleValidationV17)
+			if err != nil || !found {
+				t.Fatalf("valid stage refused: found=%t, %v", found, err)
+			}
+		})
+	}
+	// Vocabulary drift is validated then discarded under V17 — an unknown
+	// stage, a started report without 'running', or a future settled outcome
+	// must never abort a poll.
+	for name, line := range map[string][]byte{
+		"unknown stage":       lifecycleTestLine(t, "started", "unbounded-stage", "running"),
+		"non-running started": lifecycleTestLine(t, "started", extractionpublication.ScheduleStage, "completed"),
+		"open settled":        lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "future-outcome"),
+	} {
+		if _, found, err := parseChunkLifecycleLine(line, chunkLifecycleValidationV17); err != nil || found {
+			t.Fatalf("%s was not discarded: found=%t, %v", name, found, err)
+		}
+	}
+	// Structural breakage stays fatal in both contracts.
+	malformed := []byte(`generation chunk lifecycle: {"schema":"phebs-generation-chunk-lifecycle-v1","event":"started","identity":"bad","stage":"extraction-partitions","generation":"bad","attempt":0,"outcome":"running"}`)
+	if _, _, err := parseChunkLifecycleLine(malformed, chunkLifecycleValidationV17); err == nil {
+		t.Fatal("structural breakage passed the V17 contract")
+	}
+	// Frozen V16 execution semantics: extraction stage only, violations
+	// fatal, no outcome inspection.
+	planningLine := lifecycleTestLine(t, "started", observationpublication.PlanningScheduleStage, "running")
+	if _, _, err := parseChunkLifecycleLine(planningLine, chunkLifecycleValidationV16); err == nil {
+		t.Fatal("V16 contract accepted a non-extraction stage")
+	}
+	openOutcome := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "future-outcome")
+	if _, found, err := parseChunkLifecycleLine(openOutcome, chunkLifecycleValidationV16); err != nil || !found {
+		t.Fatalf("V16 contract inspected settled outcomes: found=%t, %v", found, err)
+	}
+}
+
+func lifecycleTestLine(t *testing.T, event, stage, outcome string) []byte {
+	t.Helper()
+	return fmt.Appendf(nil,
+		`generation chunk lifecycle: {"schema":%q,"event":%q,"identity":"sha256:%s","stage":%q,"generation":"sha256:%s","attempt":0,"outcome":%q}`,
+		generationscheduler.ChunkLifecycleSchema, event,
+		strings.Repeat("a", 64), stage, strings.Repeat("b", 64), outcome,
+	)
+}
+
+type fixedGenerationChunkLeaseReader struct {
+	states   map[string]store.GenerationChunkLeaseState
+	progress *store.GenerationScheduleProgress
+}
+
+func (reader *fixedGenerationChunkLeaseReader) GenerationScheduleProgress(
+	context.Context, string, string,
+) (store.GenerationScheduleProgress, error) {
+	if reader.progress != nil {
+		return *reader.progress, nil
+	}
+	return store.GenerationScheduleProgress{}, store.ErrNotFound
+}
+
+func (reader *fixedGenerationChunkLeaseReader) GenerationChunkLeaseState(
+	_ context.Context,
+	identity string,
+) (store.GenerationChunkLeaseState, error) {
+	state, ok := reader.states[identity]
+	if !ok {
+		return store.GenerationChunkLeaseState{}, store.ErrNotFound
+	}
+	return state, nil
+}
+
+func TestInterruptionLifecycleSelectsExactLiveExtractionLease(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	observationIdentity := "sha256:" + strings.Repeat("a", 64)
+	extractionIdentity := "sha256:" + strings.Repeat("b", 64)
+	observationGeneration := "sha256:" + strings.Repeat("c", 64)
+	extractionGeneration := "sha256:" + strings.Repeat("d", 64)
+	lines := fmt.Sprintf(
+		"generation chunk lifecycle: {\"schema\":%q,\"event\":\"started\",\"identity\":%q,\"stage\":%q,\"generation\":%q,\"attempt\":0,\"outcome\":\"running\"}\n"+
+			"generation chunk lifecycle: {\"schema\":%q,\"event\":\"started\",\"identity\":%q,\"stage\":%q,\"generation\":%q,\"attempt\":1,\"outcome\":\"running\"}\n",
+		generationscheduler.ChunkLifecycleSchema, observationIdentity,
+		observationpublication.PlanningScheduleStage, observationGeneration,
+		generationscheduler.ChunkLifecycleSchema, extractionIdentity,
+		extractionpublication.ScheduleStage, extractionGeneration,
+	)
+	if err := os.WriteFile(path, []byte(lines), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	reader := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+		extractionIdentity: {
+			Identity: extractionIdentity, Repository: profile.RepositoryName,
+			Stage: extractionpublication.ScheduleStage, Generation: extractionGeneration,
+			Attempt: 1, Status: store.GenerationChunkRunning,
+		},
+	}}
+	binderCalls := 0
+	selected, err := waitActiveChunkLifecycleWithBinder(
+		t.Context(), cursor, reader, profile, "revision-b", time.Second,
+		func(_ PreparedProfile, generation, revision string) (bool, error) {
+			binderCalls++
+			return generation == extractionGeneration && revision == "revision-b", nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if selected.Identity != extractionIdentity || selected.Attempt != 1 || binderCalls != 1 {
+		t.Fatalf("selected lifecycle = %+v, binder calls = %d", selected, binderCalls)
+	}
+}
+
+func TestInterruptionTriggerWaitFastFailsOnSettledCommandedSchedule(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	// A stale prior-revision start must not suppress the authoritative
+	// settled-commanded-schedule probe. Its settled lifecycle line may be
+	// absent or vocabulary-discarded, so the store remains load-bearing.
+	staleLine := lifecycleTestLine(t, "started", extractionpublication.ScheduleStage, "running")
+	if err := os.WriteFile(path, append(staleLine, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	settledGeneration := "sha256:" + strings.Repeat("e", 64)
+	reader := &fixedGenerationChunkLeaseReader{progress: &store.GenerationScheduleProgress{
+		Generation: settledGeneration, Status: store.GenerationScheduleSettled,
+	}}
+	_, err = waitActiveChunkLifecycleWithBinder(
+		t.Context(), cursor, reader, profile, "revision-b", 30*time.Second,
+		func(_ PreparedProfile, generation, revision string) (bool, error) {
+			return generation == settledGeneration && revision == "revision-b", nil
+		},
+	)
+	if !errors.Is(err, errInterruptionTriggerUnsatisfiable) {
+		t.Fatalf("settled commanded schedule did not fast-fail: %v", err)
+	}
+	// A schedule settled for a prior revision does not satisfy the fast-fail:
+	// the wait keeps polling for the commanded pipeline until its deadline.
+	staleReader := &fixedGenerationChunkLeaseReader{progress: &store.GenerationScheduleProgress{
+		Generation: "sha256:" + strings.Repeat("f", 64), Status: store.GenerationScheduleSettled,
+	}}
+	staleCursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = staleCursor.Close() }()
+	_, err = waitActiveChunkLifecycleWithBinder(
+		t.Context(), staleCursor, staleReader, profile, "revision-b", 300*time.Millisecond,
+		func(_ PreparedProfile, generation, revision string) (bool, error) {
+			return generation == settledGeneration, nil
+		},
+	)
+	if err == nil || errors.Is(err, errInterruptionTriggerUnsatisfiable) {
+		t.Fatalf("prior-revision settled schedule tripped the fast-fail: %v", err)
+	}
+}
+
+func TestInterruptionTriggerWaitRetriesTransientReads(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	line := lifecycleTestLine(t, "started", extractionpublication.ScheduleStage, "running")
+	if err := os.WriteFile(path, append(line, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	reader := &fixedGenerationChunkLeaseReader{}
+	transient := errors.New("injected transient binder failure")
+	_, err = waitActiveChunkLifecycleWithBinder(
+		t.Context(), cursor, reader, profile, "revision-b", 300*time.Millisecond,
+		func(PreparedProfile, string, string) (bool, error) {
+			return false, transient
+		},
+	)
+	// The transient error is retained for the deadline report instead of
+	// aborting the wait on its first occurrence.
+	if err == nil || !errors.Is(err, transient) ||
+		!strings.Contains(err.Error(), "deadline expired") {
+		t.Fatalf("transient binder failure aborted the trigger wait: %v", err)
+	}
+}
+
+func TestInterruptionLeaseRecoveryRequiresNonRunningFate(t *testing.T) {
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	trigger := generationscheduler.ChunkLifecycleReport{
+		Identity:   "sha256:" + strings.Repeat("a", 64),
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("b", 64), Attempt: 1,
+	}
+	recovered := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+		trigger.Identity: {
+			Identity: trigger.Identity, Repository: profile.RepositoryName,
+			Stage: trigger.Stage, Generation: trigger.Generation, Attempt: trigger.Attempt,
+			Status: store.GenerationChunkPending,
+		},
+	}}
+	fate, err := waitLeaseRecoveryWithReader(t.Context(), recovered, profile, trigger, time.Second)
+	if err != nil || fate != string(store.GenerationChunkPending) {
+		t.Fatalf("recovered lease fate = %q, %v", fate, err)
+	}
+	stranded := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+		trigger.Identity: {
+			Identity: trigger.Identity, Repository: profile.RepositoryName,
+			Stage: trigger.Stage, Generation: trigger.Generation, Attempt: trigger.Attempt,
+			Status: store.GenerationChunkRunning,
+		},
+	}}
+	if _, err := waitLeaseRecoveryWithReader(
+		t.Context(), stranded, profile, trigger, 300*time.Millisecond,
+	); err == nil || !strings.Contains(err.Error(), "was not recovered") {
+		t.Fatalf("stranded running lease passed recovery verification: %v", err)
+	}
+	foreign := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+		trigger.Identity: {
+			Identity: trigger.Identity, Repository: "example.invalid/other",
+			Stage: trigger.Stage, Generation: trigger.Generation, Attempt: trigger.Attempt,
+			Status: store.GenerationChunkPending,
+		},
+	}}
+	if _, err := waitLeaseRecoveryWithReader(
+		t.Context(), foreign, profile, trigger, time.Second,
+	); err == nil {
+		t.Fatal("foreign-repository lease passed recovery verification")
+	}
+	drifted := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+		trigger.Identity: {
+			Identity: trigger.Identity, Repository: profile.RepositoryName,
+			Stage: trigger.Stage, Generation: "sha256:" + strings.Repeat("c", 64),
+			Attempt: trigger.Attempt, Status: store.GenerationChunkPending,
+		},
+	}}
+	if _, err := waitLeaseRecoveryWithReader(
+		t.Context(), drifted, profile, trigger, time.Second,
+	); err == nil {
+		t.Fatal("changed-generation lease passed recovery verification")
+	}
+}
+
+func TestRelationshipPartialPresentFollowsOneHashedRepository(t *testing.T) {
+	dataDir := t.TempDir()
+	publication := filepath.Join(
+		dataDir, "relationships", "relationship-publications", strings.Repeat("a", 64),
+	)
+	if err := os.MkdirAll(publication, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(publication, ".stage-test"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	found, err := relationshipPartialPresent(dataDir)
+	if err != nil || !found {
+		t.Fatalf("hashed relationship partial = %t, %v", found, err)
+	}
+	if err := os.MkdirAll(
+		filepath.Join(dataDir, "relationships", "relationship-publications", strings.Repeat("b", 64)),
+		0o700,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := relationshipPartialPresent(dataDir); err == nil {
+		t.Fatal("multi-repository relationship partial inventory passed its bound")
 	}
 }
 
@@ -1852,7 +2158,7 @@ func TestChunkLifecycleCursorDrainsSettledReportThroughCurrentEOF(t *testing.T) 
 	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cursor, err := newChunkLifecycleCursor(path, 0)
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
 	if err != nil {
 		t.Fatal(err)
 	}

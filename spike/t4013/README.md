@@ -2441,7 +2441,8 @@ source-free package selects that classification/revalidation gap but cannot
 identify which private root/schedule condition occurred; custody was destroyed
 and the correction does not guess it.
 
-Fresh freezes use V16. Relationship probes now retain a closed boundary class:
+V16 introduced the relationship observer contract that V17 retains unchanged.
+Relationship probes retain a closed boundary class:
 `current_control`, `authority_incomplete`, `authority_mismatch`,
 `successor_absent`, or `successor_settled_without_current`. Missing or
 mismatching root authority is paired with the bounded current schedule: active
@@ -2478,4 +2479,84 @@ probe, while a direct startup audit remains fail-closed. Deterministic tests
 reproduce the lock-order edge, non-consuming deferral, and cross-stage token
 handoff. These changes do not assert that either private lock state occurred in
 neutral-27; they are prospective liveness hardening required before independent
-review and a fresh V16 freeze request.
+review and a fresh post-V16 freeze request.
+
+### Neutral-28 interruption stop and V17 durable trigger
+
+`t40r1-neutral-28` is immutable V16 `unclassified` evidence. The verified
+source-free package
+`sha256:ba1a583b08494d932ee1e769161e1e4ee9343720b72d8fc30b26245f98597f5b`
+binds source `26ca6d7e0375eb82be8731a4a6779a88107b8d86`, plan
+`sha256:95727097f715ad639aec35ba6738f5ec82bd797dce05a2046e65f359fcf4b429`,
+observation
+`sha256:c6acb78fbb9036f09e64af86bfd169e52a07ea51190b818949f1024b78af6a4`,
+and receipt
+`sha256:c8760b5a0416973124d632b9fc2eb43f933f8f4b41fb224cc8c88d097271b89c`.
+Cold, warm-noop, delta B, and return A converged. Interruption then stopped as
+generic `operational_failure`; teardown destroyed derived and scratch custody.
+V16 did not retain an interruption substage, so this package cannot distinguish
+backup, restore, ephemeral-control discovery, first stop, or restart failure.
+
+The historical interruption trigger was passive. After starting the restored
+server it polled shallow `publishing.json` and `.stage-*` controls once per
+second. It did not command a source transition, did not prove a worker lease
+was active, and its relationship traversal did not reach the hashed
+`relationship-publications` generation layout. A timeout therefore proved only
+that this scanner did not observe its marker.
+
+Fresh plans use V17. After live backup, restore, and exact-A verification, the
+harness starts the semantic server and advances its local source from A to B.
+It incrementally consumes the closed generation-lifecycle stream beginning at
+that server's measured log offset. Observation planning, inventory, execution,
+extraction, and relationship lifecycle reports are accepted; only extraction
+starts are candidates. The generation artifact must bind the exact B revision,
+and a local source-free store projection must still match the exact chunk
+identity, repository, stage, generation, attempt, and `running` status. Only
+then does the harness stop the server, return B to A while offline, restart,
+and require exact A authority. The graceful stop drain can settle or release
+the selected lease before process exit, so the receipt does not assert an
+interrupted lease: after restart the harness re-projects the trigger chunk and
+requires a recovered, non-running fate within a bounded window (recorded as
+the trigger's recovered state), requires the `interruption-restart` startup
+observation once the substage reaches restart convergence, and requires that
+no partial derived publication state — including the hashed
+`relationship-publications` layout the old scanner missed — survived the
+restart. A B-bound schedule that settles before any lease is selectable stops
+the wait immediately as a typed unsatisfiable result, and a transient store or
+authority read retries on the next poll instead of aborting the ceremony.
+
+V17 observations and receipts retain the last closed interruption substage and
+the selected trigger's stage, generation digest, chunk digest, explicit attempt
+(including zero), phase-relative wall time, and recovered post-restart state.
+They do not retain paths,
+source content, worker identity, lease tokens, durable timestamps, raw errors,
+logs, credentials, or responses. V17 deliberately reuses V16 relationship
+classification; the change is limited to interruption control and evidence.
+The diagnostic is pointer-backed and omitted from V1–V16, whose validation and
+serialized bytes remain exact.
+
+The V17 harness removes the old shallow marker scan. It adds one semantic A→B
+update and one offline B→A update, each through one bounded `git update-ref`
+child, and runs the existing bounded pipeline only until the first authoritative
+B extraction lease, not through complete B publication. Log reads are
+incremental in 64-KiB chunks, with a 1-MiB partial
+line and 400,000-report per-poll ceiling. Lifecycle validation is
+version-gated: V16 execution keeps its frozen extraction-only fatal contract,
+while V17 checks structure fatally and validates-then-discards vocabulary
+drift, because the store lease projection — not the log — is the selection
+authority. Non-extraction reports are validated
+and discarded. At 250-ms cadence the harness examines only active extraction
+reports, revalidates each immutable generation-to-revision binding, and reads
+one bounded lease projection per candidate until selection. At most once per
+five seconds it also reads current schedule progress even when stale lifecycle
+starts remain active, so an exact B-bound settled schedule seals the typed
+unsatisfiable stop. Post-restart recovery opens one local reader, polls the
+trigger lease at one-second cadence for at most five minutes with a 30-second
+per-call bound, closes the reader, and performs one bounded single-repository
+partial-control scan across the derived and hashed relationship layouts. No
+production request, sync/restart owner, handler, retry, authority, API, schema, bound,
+lock, cache, memory/disk ceiling, or release posture changes.
+
+Neutral-28 does not pass retroactively. V17 requires focused/race/docs gates,
+independent review, explicit integration, a new signed freeze, and a new
+ceremony identifier before execution.

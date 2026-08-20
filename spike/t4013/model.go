@@ -38,6 +38,7 @@ const (
 	PlanSchemaV14        = "t4013-neutral-convergence-plan-v14"
 	PlanSchemaV15        = "t4013-neutral-convergence-plan-v15"
 	PlanSchemaV16        = "t4013-neutral-convergence-plan-v16"
+	PlanSchemaV17        = "t4013-neutral-convergence-plan-v17"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -54,6 +55,7 @@ const (
 	ObservationSchemaV14 = "t4013-neutral-convergence-observation-v14"
 	ObservationSchemaV15 = "t4013-neutral-convergence-observation-v15"
 	ObservationSchemaV16 = "t4013-neutral-convergence-observation-v16"
+	ObservationSchemaV17 = "t4013-neutral-convergence-observation-v17"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -79,6 +81,7 @@ const (
 	ReceiptSchemaV14           = "t4013-neutral-convergence-receipt-v14"
 	ReceiptSchemaV15           = "t4013-neutral-convergence-receipt-v15"
 	ReceiptSchemaV16           = "t4013-neutral-convergence-receipt-v16"
+	ReceiptSchemaV17           = "t4013-neutral-convergence-receipt-v17"
 	MaxPlanBytes               = 64 << 10
 	MaxObservationBytes        = 256 << 10
 	MaxReceiptBytes            = 256 << 10
@@ -193,6 +196,7 @@ type Observation struct {
 	Toolchain        []ToolchainObservation       `json:"toolchain"`
 	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
 	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
+	Interruption     *InterruptionObservation     `json:"interruption,omitempty"`
 	Profiles         []ProfileObservation         `json:"profiles"`
 	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
 	Service          ServiceControlObservation    `json:"service_control"`
@@ -202,6 +206,43 @@ type Observation struct {
 	Failures         []FailureObservation         `json:"failures"`
 	Decision         DecisionObservation          `json:"decision"`
 	Teardown         TeardownObservation          `json:"teardown"`
+}
+
+const interruptionSchemaV1 = "t4013-interruption-v1"
+
+// InterruptionObservation retains the exact source-free lifecycle lease used
+// to stop the first restored server and the last closed harness substage. Raw
+// process output, repository/source identities, paths, and lease ownership
+// remain private and are destroyed with custody.
+type InterruptionObservation struct {
+	Schema                  string `json:"schema,omitempty"`
+	LastSubstage            string `json:"last_substage,omitempty"`
+	TriggerStage            string `json:"trigger_stage,omitempty"`
+	TriggerGenerationSHA256 string `json:"trigger_generation_sha256,omitempty"`
+	TriggerChunkSHA256      string `json:"trigger_chunk_sha256,omitempty"`
+	TriggerAttempt          *int   `json:"trigger_attempt,omitempty"`
+	TriggerWallMS           int64  `json:"trigger_wall_ms,omitempty"`
+	// TriggerRecoveredState is the trigger chunk's observed post-restart
+	// status. The graceful stop drain may settle or release the selected
+	// lease before process exit, so the receipt records what the restart
+	// actually recovered instead of asserting an interrupted lease.
+	TriggerRecoveredState string `json:"trigger_recovered_state,omitempty"`
+}
+
+// interruptionSubstages is the single closed, ordered substage vocabulary:
+// setInterruptionSubstage refuses names outside it and
+// validateInterruptionObservation validates against it, so a call-site typo
+// can cost precision but can never make a stopped observation unsealable.
+var interruptionSubstages = []string{
+	"not_started", "backup_start", "backup_revalidation", "backup_create",
+	"backup_stop", "restore", "restored_boundary", "first_start",
+	"delta_trigger", "active_lease_wait", "first_stop", "source_return",
+	"restart_start", "restart_convergence", "recovery_verification",
+	"teardown", "complete",
+}
+
+func interruptionSubstageIndex(name string) int {
+	return slices.Index(interruptionSubstages, name)
 }
 
 // ServerStartupObservation retains only bounded, source-free readiness facts.
@@ -540,6 +581,7 @@ type Receipt struct {
 	Toolchain        []ToolchainObservation       `json:"toolchain"`
 	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
 	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
+	Interruption     *InterruptionObservation     `json:"interruption,omitempty"`
 	Profiles         []ProfileObservation         `json:"profiles"`
 	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
 	Service          ServiceControlObservation    `json:"service_control"`
@@ -582,6 +624,7 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		Environment: observation.Environment, HostToolchain: observation.HostToolchain,
 		Toolchain: observation.Toolchain, ServerStartups: observation.ServerStartups,
 		ConvergenceWaits: observation.ConvergenceWaits,
+		Interruption:     cloneInterruptionObservation(observation.Interruption),
 		Profiles:         observation.Profiles,
 		BlobReaders:      observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
@@ -682,12 +725,14 @@ func planSchemaVersion(schema string) int {
 		return 15
 	case PlanSchemaV16:
 		return 16
+	case PlanSchemaV17:
+		return 17
 	}
 	return 0
 }
 
 func ValidatePlan(value Plan) error {
-	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14, PlanSchemaV15, PlanSchemaV16}, value.Schema) ||
+	if !slices.Contains([]string{PlanSchema, PlanSchemaV2, PlanSchemaV3, PlanSchemaV4, PlanSchemaV5, PlanSchemaV6, PlanSchemaV7, PlanSchemaV8, PlanSchemaV9, PlanSchemaV10, PlanSchemaV11, PlanSchemaV12, PlanSchemaV13, PlanSchemaV14, PlanSchemaV15, PlanSchemaV16, PlanSchemaV17}, value.Schema) ||
 		!date(value.FrozenOn) || !hexIdentity(value.SourceCommit, 40) ||
 		!slices.Equal(value.PhaseOrder, phaseOrder) || len(value.Inputs) != 4 || len(value.StopRules) != 4 {
 		return errors.New("T40.13 plan identity or fixed inventory is invalid")
@@ -733,6 +778,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV15
 	case PlanSchemaV16:
 		wantSafety = frozenSafetyV16
+	case PlanSchemaV17:
+		wantSafety = frozenSafetyV17
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -783,7 +830,7 @@ func ValidatePlan(value Plan) error {
 
 func ValidateObservation(value Observation) error {
 	if !slices.Contains([]string{
-		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14, ObservationSchemaV15, ObservationSchemaV16,
+		ObservationSchema, ObservationSchemaV2, ObservationSchemaV3, ObservationSchemaV4, ObservationSchemaV5, ObservationSchemaV6, ObservationSchemaV7, ObservationSchemaV8, ObservationSchemaV9, ObservationSchemaV10, ObservationSchemaV11, ObservationSchemaV12, ObservationSchemaV13, ObservationSchemaV14, ObservationSchemaV15, ObservationSchemaV16, ObservationSchemaV17,
 	}, value.Schema) ||
 		!date(value.MeasuredOn) ||
 		(value.Outcome != "completed" && value.Outcome != "stopped") {
@@ -794,7 +841,7 @@ func ValidateObservation(value Observation) error {
 	}
 	if value.Schema == ObservationSchemaV2 || value.Schema == ObservationSchemaV3 ||
 		value.Schema == ObservationSchemaV4 || value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 ||
-		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 {
+		value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 || value.Schema == ObservationSchemaV17 {
 		if err := validateHostToolchain(value.HostToolchain); err != nil {
 			return err
 		}
@@ -809,22 +856,22 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if value.Schema != ObservationSchemaV3 && value.Schema != ObservationSchemaV4 &&
-		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 &&
+		value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 && value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 && value.Schema != ObservationSchemaV17 &&
 		len(value.ServerStartups) != 0 {
 		return errors.New("T40.13 pre-v3 observation unexpectedly retains startup diagnostics")
 	}
 	if value.Schema == ObservationSchemaV3 || value.Schema == ObservationSchemaV4 ||
-		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 {
+		value.Schema == ObservationSchemaV5 || value.Schema == ObservationSchemaV6 || value.Schema == ObservationSchemaV7 || value.Schema == ObservationSchemaV8 || value.Schema == ObservationSchemaV9 || value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 || value.Schema == ObservationSchemaV17 {
 		if err := validateServerStartups(
 			value.ServerStartups,
-			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16,
-			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16,
+			value.Schema == ObservationSchemaV10 || value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 || value.Schema == ObservationSchemaV17,
+			value.Schema == ObservationSchemaV11 || value.Schema == ObservationSchemaV12 || value.Schema == ObservationSchemaV13 || value.Schema == ObservationSchemaV14 || value.Schema == ObservationSchemaV15 || value.Schema == ObservationSchemaV16 || value.Schema == ObservationSchemaV17,
 		); err != nil {
 			return err
 		}
 	}
 	if value.Schema != ObservationSchemaV4 && value.Schema != ObservationSchemaV5 && value.Schema != ObservationSchemaV6 &&
-		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 &&
+		value.Schema != ObservationSchemaV7 && value.Schema != ObservationSchemaV8 && value.Schema != ObservationSchemaV9 && value.Schema != ObservationSchemaV10 && value.Schema != ObservationSchemaV11 && value.Schema != ObservationSchemaV12 && value.Schema != ObservationSchemaV13 && value.Schema != ObservationSchemaV14 && value.Schema != ObservationSchemaV15 && value.Schema != ObservationSchemaV16 && value.Schema != ObservationSchemaV17 &&
 		len(value.ConvergenceWaits) != 0 {
 		return errors.New("T40.13 pre-v4 observation unexpectedly retains convergence waits")
 	}
@@ -893,6 +940,14 @@ func ValidateObservation(value Observation) error {
 			return err
 		}
 	}
+	if value.Schema == ObservationSchemaV17 {
+		if err := validateConvergenceWaits(value.ConvergenceWaits, observationDetailV16); err != nil {
+			return err
+		}
+	}
+	if err := validateInterruptionObservation(value); err != nil {
+		return err
+	}
 	if len(value.Profiles) != 2 || value.Profiles[0].Name != "structural-2m-v1" ||
 		value.Profiles[1].Name != "semantic-262144-v1" {
 		return errors.New("T40.13 profile observation inventory is invalid")
@@ -956,6 +1011,7 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 		Environment: value.Environment, HostToolchain: value.HostToolchain,
 		Toolchain: value.Toolchain, ServerStartups: value.ServerStartups,
 		ConvergenceWaits: value.ConvergenceWaits,
+		Interruption:     cloneInterruptionObservation(value.Interruption),
 		Profiles:         value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
@@ -1023,7 +1079,108 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 	return nil
 }
 
+func cloneInterruptionObservation(value *InterruptionObservation) *InterruptionObservation {
+	if value == nil {
+		return nil
+	}
+	result := *value
+	if value.TriggerAttempt != nil {
+		attempt := *value.TriggerAttempt
+		result.TriggerAttempt = &attempt
+	}
+	return &result
+}
+
+func validateInterruptionObservation(value Observation) error {
+	if value.Schema != ObservationSchemaV17 {
+		if value.Interruption != nil {
+			return errors.New("T40.13 historical observation acquired interruption diagnostics")
+		}
+		return nil
+	}
+	if len(value.Phases) != len(phaseOrder) {
+		return errors.New("T40.13 interruption phase inventory is incomplete")
+	}
+	interruption := value.Interruption
+	if interruption == nil || interruption.Schema != interruptionSchemaV1 ||
+		interruptionSubstageIndex(interruption.LastSubstage) < 0 {
+		return errors.New("T40.13 interruption diagnostic identity is invalid")
+	}
+	substageIndex := interruptionSubstageIndex(interruption.LastSubstage)
+	hasTrigger := interruption.TriggerGenerationSHA256 != ""
+	wantTrigger := substageIndex >= interruptionSubstageIndex("first_stop")
+	if hasTrigger != wantTrigger {
+		return errors.New("T40.13 interruption trigger differs from its terminal substage")
+	}
+	if hasTrigger {
+		if interruption.TriggerStage != extractionpublication.ScheduleStage ||
+			!digestIdentity(interruption.TriggerGenerationSHA256) ||
+			!digestIdentity(interruption.TriggerChunkSHA256) || interruption.TriggerAttempt == nil ||
+			*interruption.TriggerAttempt < 0 ||
+			*interruption.TriggerAttempt >= extractionpublication.ScheduleMaxAttempts ||
+			interruption.TriggerWallMS <= 0 {
+			return errors.New("T40.13 interruption trigger evidence is invalid")
+		}
+	} else if interruption.TriggerStage != "" || interruption.TriggerChunkSHA256 != "" ||
+		interruption.TriggerAttempt != nil || interruption.TriggerWallMS != 0 {
+		return errors.New("T40.13 interruption trigger evidence is incomplete")
+	}
+	// The recovered state exists exactly from the recovery-verification
+	// boundary on, and must be a settled-or-recovered (never running) status:
+	// the restart is only proven when the interrupted lease's fate was
+	// observed.
+	recoveredIndex := interruptionSubstageIndex("recovery_verification")
+	switch {
+	case substageIndex < recoveredIndex:
+		if interruption.TriggerRecoveredState != "" {
+			return errors.New("T40.13 interruption recovery evidence precedes its substage")
+		}
+	case substageIndex > recoveredIndex || interruption.TriggerRecoveredState != "":
+		if !slices.Contains([]string{
+			string(store.GenerationChunkPending), string(store.GenerationChunkDone),
+			string(store.GenerationChunkFailed), string(store.GenerationChunkCanceled),
+		}, interruption.TriggerRecoveredState) {
+			return errors.New("T40.13 interruption recovery evidence is invalid")
+		}
+	}
+	// A substage at or past restart convergence proves the restart happened,
+	// so its startup observation must have been recorded — the neutral-28
+	// receipt could not establish this.
+	if substageIndex >= interruptionSubstageIndex("restart_convergence") {
+		restartObserved := false
+		for _, startup := range value.ServerStartups {
+			if startup.Label == "interruption-restart" {
+				restartObserved = true
+				break
+			}
+		}
+		if !restartObserved {
+			return errors.New("T40.13 interruption restart startup observation is absent")
+		}
+	}
+	phase := value.Phases[5]
+	switch phase.Outcome {
+	case "not_run":
+		if interruption.LastSubstage != "not_started" || hasTrigger {
+			return errors.New("T40.13 unrun interruption retained execution evidence")
+		}
+	case "failed":
+		if interruption.LastSubstage == "not_started" || interruption.LastSubstage == "complete" {
+			return errors.New("T40.13 failed interruption lacks its terminal substage")
+		}
+	case "succeeded":
+		if interruption.LastSubstage != "complete" || !hasTrigger ||
+			interruption.TriggerWallMS > phase.Metrics.WallMS {
+			return errors.New("T40.13 completed interruption lacks exact trigger evidence")
+		}
+	}
+	return nil
+}
+
 func observationSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV17 {
+		return ObservationSchemaV17
+	}
 	if plan.Schema == PlanSchemaV16 {
 		return ObservationSchemaV16
 	}
@@ -1073,6 +1230,9 @@ func observationSchemaForPlan(plan Plan) string {
 }
 
 func receiptSchemaForPlan(plan Plan) string {
+	if plan.Schema == PlanSchemaV17 {
+		return ReceiptSchemaV17
+	}
 	if plan.Schema == PlanSchemaV16 {
 		return ReceiptSchemaV16
 	}
@@ -2125,7 +2285,7 @@ func optionalPublicationState(value string) bool {
 // instead of one hand-edited guard per case arm.
 func modernPipelineStopMismatch(value Receipt, failure FailureObservation, waitOutcome string) bool {
 	return value.Schema != ReceiptSchemaV14 && value.Schema != ReceiptSchemaV15 &&
-		value.Schema != ReceiptSchemaV16 ||
+		value.Schema != ReceiptSchemaV16 && value.Schema != ReceiptSchemaV17 ||
 		failure.Class != "pipeline" || len(value.ConvergenceWaits) == 0 ||
 		value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != waitOutcome
 }
@@ -2194,6 +2354,13 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 operational failure identity is invalid")
 		}
 		wantReason = "operational_failure"
+	case "interruption_trigger_unsatisfiable":
+		if value.Schema != ReceiptSchemaV17 || failure.Class != "execution" ||
+			failure.Phase != "interruption" || value.Interruption == nil ||
+			value.Interruption.LastSubstage != "active_lease_wait" {
+			return errors.New("T40.13 interruption-trigger failure identity is invalid")
+		}
+		wantReason = "interruption_trigger_unsatisfiable"
 	case "convergence_deadline_expired":
 		if failure.Class != "execution" || len(value.ConvergenceWaits) == 0 ||
 			value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Outcome != "deadline" {

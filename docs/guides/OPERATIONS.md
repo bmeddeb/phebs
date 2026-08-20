@@ -4155,7 +4155,7 @@ sync, no-op, or publication-transition work.
 
 ### Relationship convergence classification
 
-Fresh T40.13 ceremony plans use the V16 relationship observer contract. After
+T40.13 V16 and later plans use the V16 relationship observer contract. After
 caller authority is current, the inspector no longer treats every
 relationship-root error as an undifferentiated control failure. It records one
 source-free boundary: `current_control`, `authority_incomplete`,
@@ -4287,3 +4287,84 @@ and encoded backstops. Existing version-1 and version-2 plans keep their exact
 serialized identities and original validation during restart, recovery,
 archive, and downstream reads. This transition requires no operator migration
 or configuration change.
+
+### T40.13 V17 interruption lifecycle evidence
+
+The retained `t40r1-neutral-28` source-free package is immutable V16 stopped
+evidence, not a gate pass. Its package digest is
+`sha256:ba1a583b08494d932ee1e769161e1e4ee9343720b72d8fc30b26245f98597f5b`
+and its exact source is `26ca6d7e0375eb82be8731a4a6779a88107b8d86`.
+Cold, warm-noop, delta B, and return A converged; interruption stopped as
+generic `operational_failure`. V16 did not retain an interruption substage, so
+operators must not infer whether backup, restore, ephemeral-control discovery,
+first stop, or restart failed.
+
+Fresh T40.13 freezes use V17. After the live interruption backup is restored
+and exact A is verified, the harness deliberately advances the local semantic
+source A→B. It consumes generation lifecycle reports incrementally from the
+measured start offset of that server log. The trigger is satisfied only by an
+`extraction-partitions` start whose immutable generation binds exact revision B
+and whose current local-store projection still matches identity, repository,
+stage, generation, attempt, and `running` status. The stop is commanded at
+that durable lease boundary; because the graceful drain may settle or release
+the selected lease before process exit, the receipt does not assert an
+interrupted lease. Instead, after the offline B→A return and restart, the
+harness re-projects the trigger chunk and requires a recovered, non-running
+fate within a bounded window, recording it as `trigger_recovered_state` —
+a lease still running after restart fails the phase as a recovery regression.
+The restart must also recover exact A authority, retain no partial derived
+publication state (including the hashed `relationship-publications` layout),
+and carry its `interruption-restart` startup observation: a substage at or
+past restart convergence refuses to validate without it, closing the
+neutral-28 missing-startup gap. A B-bound schedule that settles before any
+lease is selectable stops the wait immediately with a typed unsatisfiable
+result instead of idling to the trigger deadline, and one transient store or
+authority read failure retries on the next poll rather than aborting the
+ceremony.
+
+The V17 observation and receipt record the last closed interruption substage
+and the trigger's source-free stage, generation digest, chunk digest, explicit
+attempt, phase-relative wall time, and recovered post-restart state. They
+exclude repository paths, source
+content, worker identity, lease tokens, store timestamps, raw errors, logs,
+credentials, and responses. V17 reuses the V16 relationship inspection
+contract. The pointer-backed diagnostic is absent from V1–V16, preserving
+their validation and serialized bytes.
+
+This is ceremony-only work. It removes the V16 once-per-second shallow
+filesystem marker scan and adds one local semantic A→B update plus one offline
+B→A update, each through one bounded `git update-ref` child. The existing
+production pipeline runs only until the first exact
+running B extraction lease. Log input is read in 64-KiB increments, with a
+1-MiB partial-line and 400,000-report per-poll ceiling. Lifecycle stages are a
+closed set; non-extraction reports are validated and discarded. Every 250-ms
+poll examines only still-active extraction reports, revalidates each exact
+generation/revision binding, and performs one bounded source-free lease read
+per candidate until selection. Settled reports and authoritative non-running
+states remove candidates. Independently of stale prior-revision lifecycle
+entries, one current-schedule progress projection runs at most every five
+seconds; an exact B-bound settled schedule seals
+`interruption_trigger_unsatisfiable` immediately. After restart, recovery opens
+one local source-free reader and performs at most one 30-second-bounded trigger
+lease projection per second for five minutes before closing it. A successful
+projection is followed by one bounded filesystem pass over the three derived
+roots (at most one repository and 4,096 controls per directory, including the
+observation-v2 directory) and the one-repository/4,096-control hashed
+relationship-publication directory. The receipt adds one fixed-size diagnostic
+object.
+
+There is no new production request, sync tick, startup/restart owner, retry or
+no-op path, publication transition, authority, API/store schema, cache, lock,
+worker concurrency, admission or safety bound, child process, disk allocation,
+or release claim. A failed V17 run should be classified from its retained last
+substage; it must not be relabeled from the previous phase's last progress
+snapshot. The substage vocabulary is one closed ordered list shared by the
+recorder and the validator, so a mismatch can cost precision but never an
+unsealable observation; `recovery_verification` covers the post-restart lease
+and partial-state checks and `teardown` covers final metering, the last server
+stop, and safety enforcement, so a post-convergence failure is never
+misattributed to restart convergence. Lifecycle log validation is
+version-gated: V16 execution keeps its frozen extraction-only fatal contract,
+while V17 checks structure fatally and validates-then-discards vocabulary
+drift, because the store lease projection — not the log — is the selection
+authority. Neutral-28 remains `unclassified` and cannot pass retroactively.

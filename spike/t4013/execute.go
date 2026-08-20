@@ -435,6 +435,11 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 			class: "pipeline", code: "relationship_terminal",
 			decision: "unclassified", reason: "relationship_terminal",
 		}
+	case errors.Is(cause, errInterruptionTriggerUnsatisfiable):
+		result = stoppedClassification{
+			class: "execution", code: "interruption_trigger_unsatisfiable",
+			decision: "unclassified", reason: "interruption_trigger_unsatisfiable",
+		}
 	case measurementErr != nil:
 		result = stoppedClassification{
 			class: "oracle", code: "failed_phase_measurement_unavailable",
@@ -697,6 +702,7 @@ func (run *execution) deltaAndReturn() error {
 func (run *execution) interruption() error {
 	started := time.Now()
 	profile := run.prepared.Profiles[1]
+	run.setInterruptionSubstage("backup_start")
 	if run.semantic != nil {
 		if err := run.semantic.stop(30 * time.Second); err != nil {
 			return err
@@ -708,6 +714,7 @@ func (run *execution) interruption() error {
 		return err
 	}
 	run.semantic = backupServer
+	run.setInterruptionSubstage("backup_revalidation")
 	backupSnapshot, err := run.waitSnapshot(
 		profile, "a", "interruption-backup", run.revalidationDeadline(), backupServer,
 	)
@@ -717,6 +724,7 @@ func (run *execution) interruption() error {
 	if snapshotAuthority(backupSnapshot) != snapshotAuthority(run.semanticA) {
 		return directRecovery(errors.New("interruption backup restart changed exact authority"))
 	}
+	run.setInterruptionSubstage("backup_create")
 	backup, backupCommandMetrics, err := createLiveBackup(
 		run.ctx, run.toolchain, profile, run.workspace, "interruption",
 	)
@@ -732,10 +740,12 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
+	run.setInterruptionSubstage("backup_stop")
 	if err := run.semantic.stop(30 * time.Second); err != nil {
 		return err
 	}
 	run.semantic = nil
+	run.setInterruptionSubstage("restore")
 	restoreMetrics, err := restoreBackup(
 		run.ctx, run.toolchain, profile, run.workspace, backup, "interruption",
 	)
@@ -743,29 +753,57 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return directRecovery(err)
 	}
+	run.setInterruptionSubstage("restored_boundary")
 	if err := verifyRestoredBoundary(run.ctx, profile, run.semanticA); err != nil {
 		return directRecovery(err)
 	}
+	run.setInterruptionSubstage("first_start")
 	server, meter, err := run.startServer(profile, "interruption-first", &run.semanticA)
 	if err != nil {
 		return err
 	}
-	if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
+	run.semantic = server
+	var trigger generationscheduler.ChunkLifecycleReport
+	if planSchemaVersion(run.plan.Schema) >= 17 {
+		run.setInterruptionSubstage("delta_trigger")
+		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+			return err
+		}
+		run.setInterruptionSubstage("active_lease_wait")
+		var triggerErr error
+		trigger, triggerErr = waitInterruptionChunkLifecycle(
+			run.ctx, server, meter, profile, profile.Revisions["b"], 90*time.Minute,
+		)
+		if triggerErr != nil {
+			return triggerErr
+		}
+		run.recordInterruptionTrigger(trigger, time.Since(started))
+	} else if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
 		_ = server.stop(30 * time.Second)
 		return err
 	}
+	run.setInterruptionSubstage("first_stop")
 	if err := server.stop(30 * time.Second); err != nil {
 		return err
+	}
+	run.semantic = nil
+	if planSchemaVersion(run.plan.Schema) >= 17 {
+		run.setInterruptionSubstage("source_return")
+		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+			return err
+		}
 	}
 	firstMetrics, err := run.finishMeter(meter, nil)
 	if err != nil {
 		return err
 	}
+	run.setInterruptionSubstage("restart_start")
 	server, restartMeter, err := run.startServer(profile, "interruption-restart", &run.semanticA)
 	if err != nil {
 		return err
 	}
 	run.semantic = server
+	run.setInterruptionSubstage("restart_convergence")
 	after, err := run.waitSnapshot(profile, "a", "interruption-restart", run.fullConvergenceDeadline(), server)
 	if err != nil {
 		return directRecovery(err)
@@ -773,6 +811,36 @@ func (run *execution) interruption() error {
 	if snapshotAuthority(after) != snapshotAuthority(run.semanticA) {
 		return directRecovery(errors.New("interruption recovery changed exact authority"))
 	}
+	if planSchemaVersion(run.plan.Schema) >= 17 {
+		// The graceful stop drain may have settled or released the selected
+		// lease before process exit, so exact-A convergence alone proves
+		// nothing about the trigger chunk. Re-project it and require a
+		// recovered (non-running) fate, then require that no partial derived
+		// publication state survived the restart.
+		run.setInterruptionSubstage("recovery_verification")
+		recovered, recoverErr := waitInterruptionLeaseRecovery(
+			run.ctx, profile, trigger, 5*time.Minute,
+		)
+		if recoverErr != nil {
+			return directRecovery(recoverErr)
+		}
+		if run.observation.Interruption != nil {
+			run.observation.Interruption.TriggerRecoveredState = recovered
+		}
+		partial, partialErr := derivedPartialPresent(profile.DataDir)
+		if partialErr == nil && !partial {
+			partial, partialErr = relationshipPartialPresent(profile.DataDir)
+		}
+		if partialErr != nil {
+			return directRecovery(partialErr)
+		}
+		if partial {
+			return directRecovery(errors.New(
+				"T40.13 interruption restart retained partial derived publication state",
+			))
+		}
+	}
+	run.setInterruptionSubstage("teardown")
 	restartMetrics, err := run.finishMeter(restartMeter, &after)
 	if err != nil {
 		return err
@@ -785,7 +853,157 @@ func (run *execution) interruption() error {
 	run.semantic = nil
 	metrics.WallMS = time.Since(started).Milliseconds()
 	run.observation.Phases[5] = succeededPhase("interruption", metrics)
-	return run.enforceSafety()
+	if err := run.enforceSafety(); err != nil {
+		return err
+	}
+	run.setInterruptionSubstage("complete")
+	return nil
+}
+
+// waitInterruptionLeaseRecovery re-projects the interruption trigger chunk
+// after restart until it leaves the running state. A healthy restart releases,
+// reaps, cancels, or completes the interrupted lease within the stale window;
+// a lease still running at the deadline is a recovery regression the exact-A
+// snapshot cannot see.
+func waitInterruptionLeaseRecovery(
+	ctx context.Context,
+	profile PreparedProfile,
+	trigger generationscheduler.ChunkLifecycleReport,
+	limit time.Duration,
+) (string, error) {
+	reader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = reader.Close(context.WithoutCancel(ctx)) }()
+	return waitLeaseRecoveryWithReader(ctx, reader, profile, trigger, limit)
+}
+
+func waitLeaseRecoveryWithReader(
+	ctx context.Context,
+	reader generationChunkLeaseReader,
+	profile PreparedProfile,
+	trigger generationscheduler.ChunkLifecycleReport,
+	limit time.Duration,
+) (string, error) {
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
+		state, stateErr := reader.GenerationChunkLeaseState(callCtx, trigger.Identity)
+		callCancel()
+		switch {
+		case stateErr != nil:
+			// Transient projection errors retry until the recovery deadline.
+			lastErr = stateErr
+		case state.Identity != trigger.Identity ||
+			state.Repository != profile.RepositoryName ||
+			state.Stage != trigger.Stage ||
+			state.Generation != trigger.Generation ||
+			state.Attempt < trigger.Attempt:
+			return "", errors.New("T40.13 interruption trigger chunk identity changed")
+		case state.Status != store.GenerationChunkRunning:
+			return string(state.Status), nil
+		}
+		select {
+		case <-phase.Done():
+			return "", errors.Join(lastErr, errors.New(
+				"T40.13 interrupted lease was not recovered after restart",
+			))
+		case <-ticker.C:
+		}
+	}
+}
+
+// relationshipPartialPresent checks the hashed relationship-publications
+// layout the historical scanner missed (its traversal predated the
+// repository-hash directory level).
+func relationshipPartialPresent(dataDir string) (bool, error) {
+	root := filepath.Join(dataDir, "relationships", "relationship-publications")
+	rootInfo, err := os.Lstat(root)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+		return false, errors.Join(err, errors.New("T40.13 relationship publication root is invalid"))
+	}
+	repositories, err := os.ReadDir(root)
+	if err != nil {
+		return false, err
+	}
+	if len(repositories) > 1 {
+		return false, errors.New("T40.13 relationship publication repository inventory exceeds its bound")
+	}
+	for _, repository := range repositories {
+		if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+			return false, errors.New("T40.13 relationship publication repository is invalid")
+		}
+		if found, err := derivedControlPresent(filepath.Join(root, repository.Name())); err != nil || found {
+			return found, err
+		}
+	}
+	return false, nil
+}
+
+func (run *execution) setInterruptionSubstage(substage string) {
+	if run == nil || planSchemaVersion(run.plan.Schema) < 17 || run.observation.Interruption == nil {
+		return
+	}
+	// The closed vocabulary lives in interruptionSubstages, shared with the
+	// validator. An unknown name keeps the prior substage: less precise, but
+	// the stopped observation stays sealable — a mismatch must never destroy
+	// evidence after custody teardown.
+	if interruptionSubstageIndex(substage) < 0 {
+		return
+	}
+	run.observation.Interruption.LastSubstage = substage
+}
+
+func (run *execution) recordInterruptionTrigger(
+	report generationscheduler.ChunkLifecycleReport,
+	elapsed time.Duration,
+) {
+	if run == nil || run.observation.Interruption == nil {
+		return
+	}
+	attempt := report.Attempt
+	run.observation.Interruption.TriggerStage = report.Stage
+	run.observation.Interruption.TriggerGenerationSHA256 = report.Generation
+	run.observation.Interruption.TriggerChunkSHA256 = report.Identity
+	run.observation.Interruption.TriggerAttempt = &attempt
+	run.observation.Interruption.TriggerWallMS = max(elapsed.Milliseconds(), 1)
+}
+
+func waitInterruptionChunkLifecycle(
+	ctx context.Context,
+	server *privateServer,
+	meter *phaseMeter,
+	profile PreparedProfile,
+	revision string,
+	limit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	if server == nil || meter == nil {
+		return generationscheduler.ChunkLifecycleReport{},
+			errors.New("T40.13 interruption lifecycle reader is invalid")
+	}
+	cursor, err := newChunkLifecycleCursor(
+		server.logPath, meter.logOffset, chunkLifecycleValidationV17,
+	)
+	if err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, err
+	}
+	leaseReader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		return generationscheduler.ChunkLifecycleReport{}, errors.Join(err, cursor.Close())
+	}
+	report, waitErr := waitActiveChunkLifecycle(
+		ctx, cursor, leaseReader, profile, revision, limit,
+	)
+	closeErr := errors.Join(cursor.Close(), leaseReader.Close(context.WithoutCancel(ctx)))
+	return report, errors.Join(waitErr, closeErr)
 }
 
 func (run *execution) staleWorker() error {
@@ -795,7 +1013,9 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	run.semantic = server
-	cursor, err := newChunkLifecycleCursor(server.logPath, meter.logOffset)
+	cursor, err := newChunkLifecycleCursor(
+		server.logPath, meter.logOffset, lifecycleValidationForPlan(run.plan.Schema),
+	)
 	if err != nil {
 		return err
 	}
@@ -859,13 +1079,38 @@ const (
 	maxChunkLifecycleReportsPerPoll = 400_000
 )
 
-type chunkLifecycleCursor struct {
-	file    *os.File
-	pending []byte
-	buffer  []byte
+// chunkLifecycleValidation selects the frozen validation contract for one
+// cursor. V16 keeps the exact historical behavior (extraction stage only,
+// no outcome inspection, violations fatal); V17 checks structure fatally but
+// treats vocabulary drift — an unknown stage, event pairing, or settled
+// outcome — as validated-then-discarded, so a future scheduler outcome cannot
+// abort a healthy ceremony.
+type chunkLifecycleValidation uint8
+
+const (
+	chunkLifecycleValidationV16 chunkLifecycleValidation = iota
+	chunkLifecycleValidationV17
+)
+
+func lifecycleValidationForPlan(schema string) chunkLifecycleValidation {
+	if planSchemaVersion(schema) >= 17 {
+		return chunkLifecycleValidationV17
+	}
+	return chunkLifecycleValidationV16
 }
 
-func newChunkLifecycleCursor(logPath string, offset int64) (*chunkLifecycleCursor, error) {
+type chunkLifecycleCursor struct {
+	file       *os.File
+	pending    []byte
+	buffer     []byte
+	validation chunkLifecycleValidation
+}
+
+func newChunkLifecycleCursor(
+	logPath string,
+	offset int64,
+	validation chunkLifecycleValidation,
+) (*chunkLifecycleCursor, error) {
 	file, err := os.Open(logPath)
 	if err != nil {
 		return nil, err
@@ -874,7 +1119,9 @@ func newChunkLifecycleCursor(logPath string, offset int64) (*chunkLifecycleCurso
 		_ = file.Close()
 		return nil, err
 	}
-	return &chunkLifecycleCursor{file: file, buffer: make([]byte, 64<<10)}, nil
+	return &chunkLifecycleCursor{
+		file: file, buffer: make([]byte, 64<<10), validation: validation,
+	}, nil
 }
 
 func (cursor *chunkLifecycleCursor) Close() error {
@@ -913,7 +1160,7 @@ func (cursor *chunkLifecycleCursor) poll() ([]generationscheduler.ChunkLifecycle
 			if lastNewline >= 0 {
 				lines := bytes.Split(cursor.pending[:lastNewline], []byte{'\n'})
 				for _, line := range lines {
-					report, found, parseErr := parseChunkLifecycleLine(line)
+					report, found, parseErr := parseChunkLifecycleLine(line, cursor.validation)
 					if parseErr != nil {
 						return nil, parseErr
 					}
@@ -938,6 +1185,7 @@ func (cursor *chunkLifecycleCursor) poll() ([]generationscheduler.ChunkLifecycle
 
 func parseChunkLifecycleLine(
 	line []byte,
+	validation chunkLifecycleValidation,
 ) (generationscheduler.ChunkLifecycleReport, bool, error) {
 	const prefix = "generation chunk lifecycle: "
 	if !bytes.Contains(line, []byte(prefix)) {
@@ -948,16 +1196,35 @@ func parseChunkLifecycleLine(
 		return generationscheduler.ChunkLifecycleReport{}, false,
 			errors.New("T40.13 chunk lifecycle report is malformed")
 	}
-	if err := validateChunkLifecycleReport(report); err != nil {
+	if validation == chunkLifecycleValidationV16 {
+		// Frozen V16 execution semantics: extraction stage only, no outcome
+		// inspection, every violation fatal.
+		if report.Stage != extractionpublication.ScheduleStage ||
+			validateChunkLifecycleShape(report) != nil {
+			return generationscheduler.ChunkLifecycleReport{}, false,
+				errors.New("T40.13 chunk lifecycle report is invalid")
+		}
+		return report, true, nil
+	}
+	if err := validateChunkLifecycleShape(report); err != nil {
 		return generationscheduler.ChunkLifecycleReport{}, false, err
+	}
+	// Vocabulary outside the known closed sets is validated then discarded:
+	// the store lease projection, not the log, is the load-bearing authority,
+	// so drift in the scheduler's outcome strings must not abort a ceremony.
+	if !validChunkLifecycleStage(report.Stage) ||
+		report.Event == "started" && report.Outcome != "running" ||
+		report.Event == "settled" && !validSettledChunkLifecycleOutcome(report.Outcome) {
+		return generationscheduler.ChunkLifecycleReport{}, false, nil
 	}
 	return report, true, nil
 }
 
-func validateChunkLifecycleReport(report generationscheduler.ChunkLifecycleReport) error {
+// validateChunkLifecycleShape is the structural (vocabulary-free) validation
+// shared by both contracts: schema, event, digests, and scalar bounds.
+func validateChunkLifecycleShape(report generationscheduler.ChunkLifecycleReport) error {
 	if report.Schema != generationscheduler.ChunkLifecycleSchema ||
 		(report.Event != "started" && report.Event != "settled") ||
-		report.Stage != extractionpublication.ScheduleStage ||
 		!digestIdentity(report.Identity) || !digestIdentity(report.Generation) || report.Attempt < 0 ||
 		report.DurationMS < 0 || report.Event == "started" && report.DurationMS != 0 {
 		return errors.New("T40.13 chunk lifecycle report is invalid")
@@ -965,23 +1232,91 @@ func validateChunkLifecycleReport(report generationscheduler.ChunkLifecycleRepor
 	return nil
 }
 
+// validSettledChunkLifecycleOutcome mirrors the outcome literals emitted by
+// internal/generationscheduler/runner.go's execute(). An outcome added there
+// and missed here is discarded (never fatal) under the V17 contract, and the
+// store lease projection still governs candidate selection.
+func validSettledChunkLifecycleOutcome(outcome string) bool {
+	switch outcome {
+	case "handler_failed", "heartbeat_failed", "stale_fenced", "released",
+		"completed", "completion_failed", "terminal", "terminal_record_failed",
+		"deferred", "deferral_failed", "retried", "exhausted":
+		return true
+	default:
+		return false
+	}
+}
+
+func validChunkLifecycleStage(stage string) bool {
+	switch stage {
+	case observationpublication.PlanningScheduleStage,
+		observationpublication.InventoryScheduleStageV2,
+		observationpublication.ScheduleStage,
+		extractionpublication.ScheduleStage,
+		relationshippublication.ScheduleStage:
+		return true
+	default:
+		return false
+	}
+}
+
 func chunkLifecycleKey(report generationscheduler.ChunkLifecycleReport) string {
 	return fmt.Sprintf("%s\x00%s\x00%d", report.Generation, report.Identity, report.Attempt)
 }
 
+type generationChunkLeaseReader interface {
+	GenerationChunkLeaseState(context.Context, string) (store.GenerationChunkLeaseState, error)
+	GenerationScheduleProgress(context.Context, string, string) (store.GenerationScheduleProgress, error)
+}
+
+// errInterruptionTriggerUnsatisfiable is the typed fast-fail for a B pipeline
+// that settled before any lease was selectable: waiting longer cannot succeed,
+// so the phase stops immediately instead of idling to its deadline.
+var errInterruptionTriggerUnsatisfiable = errors.New(
+	"T40.13 B extraction settled before a live lease was selectable",
+)
+
+type extractionGenerationBinder func(PreparedProfile, string, string) (bool, error)
+
 func waitActiveChunkLifecycle(
 	ctx context.Context,
 	cursor *chunkLifecycleCursor,
-	leaseReader *store.LocalGenerationChunkReader,
+	leaseReader generationChunkLeaseReader,
 	profile PreparedProfile,
 	revision string,
 	limit time.Duration,
 ) (generationscheduler.ChunkLifecycleReport, error) {
+	return waitActiveChunkLifecycleWithBinder(
+		ctx, cursor, leaseReader, profile, revision, limit, extractionGenerationBindsRevision,
+	)
+}
+
+func waitActiveChunkLifecycleWithBinder(
+	ctx context.Context,
+	cursor *chunkLifecycleCursor,
+	leaseReader generationChunkLeaseReader,
+	profile PreparedProfile,
+	revision string,
+	limit time.Duration,
+	binder extractionGenerationBinder,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	if ctx == nil || cursor == nil || leaseReader == nil || binder == nil || limit <= 0 {
+		return generationscheduler.ChunkLifecycleReport{},
+			errors.New("T40.13 chunk lifecycle authority is invalid")
+	}
 	phase, cancel := phaseContext(ctx, limit)
 	defer cancel()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	active := make(map[string]generationscheduler.ChunkLifecycleReport)
+	// Transient binder or lease-projection failures retry on later ticks: one
+	// store hiccup while the live pipeline mutates state must not abort a
+	// multi-hour ceremony. Only the deadline surfaces the retained error.
+	var lastErr error
+	// The first settled probe runs on the first pass: a schedule settled for
+	// a prior revision does not bind the commanded one, so an early read is
+	// harmless and an already-settled commanded pipeline fails fast.
+	settledProbe := time.Now().Add(-5 * time.Second)
 	for {
 		reports, err := cursor.poll()
 		if err != nil {
@@ -995,16 +1330,23 @@ func waitActiveChunkLifecycle(
 		sort.Strings(keys)
 		for _, key := range keys {
 			report := active[key]
-			bound, bindErr := extractionGenerationBindsRevision(profile, report.Generation, revision)
+			if report.Stage != extractionpublication.ScheduleStage {
+				continue
+			}
+			bound, bindErr := binder(profile, report.Generation, revision)
 			if bindErr != nil {
-				return generationscheduler.ChunkLifecycleReport{}, bindErr
+				lastErr = bindErr
+				break
 			}
 			if !bound {
 				continue
 			}
-			state, stateErr := leaseReader.GenerationChunkLeaseState(phase, report.Identity)
+			callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
+			state, stateErr := leaseReader.GenerationChunkLeaseState(callCtx, report.Identity)
+			callCancel()
 			if stateErr != nil {
-				return generationscheduler.ChunkLifecycleReport{}, stateErr
+				lastErr = stateErr
+				break
 			}
 			if !runningLeaseMatchesReport(state, report, profile.RepositoryName) {
 				delete(active, key)
@@ -1012,9 +1354,28 @@ func waitActiveChunkLifecycle(
 			}
 			return report, nil
 		}
+		if time.Since(settledProbe) >= 5*time.Second {
+			settledProbe = time.Now()
+			callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
+			progress, progressErr := leaseReader.GenerationScheduleProgress(
+				callCtx, profile.RepositoryName, extractionpublication.ScheduleStage,
+			)
+			callCancel()
+			// A settled schedule that binds the commanded revision cannot
+			// produce another selectable lease: stop with a typed error
+			// instead of idling to the deadline. A settled schedule for a
+			// prior revision keeps waiting for the commanded pipeline.
+			if progressErr == nil && progress.Status == store.GenerationScheduleSettled {
+				if bound, bindErr := binder(profile, progress.Generation, revision); bindErr == nil && bound {
+					return generationscheduler.ChunkLifecycleReport{}, errInterruptionTriggerUnsatisfiable
+				}
+			}
+		}
 		select {
 		case <-phase.Done():
-			return generationscheduler.ChunkLifecycleReport{}, errors.New("T40.13 live B-bound chunk deadline expired")
+			return generationscheduler.ChunkLifecycleReport{}, errors.Join(
+				lastErr, errors.New("T40.13 live B-bound chunk deadline expired"),
+			)
 		case <-ticker.C:
 		}
 	}
@@ -1025,6 +1386,9 @@ func updateActiveChunkLifecycles(
 	reports []generationscheduler.ChunkLifecycleReport,
 ) {
 	for _, report := range reports {
+		if report.Stage != extractionpublication.ScheduleStage {
+			continue
+		}
 		key := chunkLifecycleKey(report)
 		if report.Event == "started" {
 			active[key] = report
@@ -1658,6 +2022,11 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV15
 	case PlanSchemaV16:
 		contract = profileInspectionV16
+	case PlanSchemaV17:
+		// V17 changes only the interruption evidence/trigger contract. Exact
+		// convergence classification remains the independently reviewed V16
+		// relationship-pair contract.
+		contract = profileInspectionV16
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -1690,7 +2059,9 @@ func (run *execution) waitSnapshotWithInspection(
 			return privateProfileSnapshot{}, err
 		}
 		defer func() { _ = timingCursor.Close() }()
-		lifecycleTimingCursor, err = newChunkLifecycleCursor(server.logPath, 0)
+		lifecycleTimingCursor, err = newChunkLifecycleCursor(
+			server.logPath, 0, lifecycleValidationForPlan(run.plan.Schema),
+		)
 		if err != nil {
 			return privateProfileSnapshot{}, err
 		}
@@ -1798,7 +2169,7 @@ func (run *execution) waitSnapshotWithInspection(
 			// V16 confirms relationship integrity stops on a second identical
 			// source-free probe. A schedule enqueuer, current-pointer swap, or
 			// final settlement changes the probe; a stranded pair repeats it.
-			if run.plan.Schema != PlanSchemaV16 || probe.SHA256 == priorProbeSHA {
+			if planSchemaVersion(run.plan.Schema) < 16 || probe.SHA256 == priorProbeSHA {
 				run.recordConvergenceWait(profile, revision, label, "relationship_terminal", limit, started, progress)
 				return privateProfileSnapshot{}, errRelationshipTerminal
 			}
@@ -2266,6 +2637,11 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV15
 	case PlanSchemaV16:
 		value.Schema = ObservationSchemaV16
+	case PlanSchemaV17:
+		value.Schema = ObservationSchemaV17
+		value.Interruption = &InterruptionObservation{
+			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+		}
 	}
 	return value
 }
