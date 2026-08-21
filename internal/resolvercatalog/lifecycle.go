@@ -270,9 +270,12 @@ func (stage *Stage) Seal(ctx context.Context) (*Prepared, error) {
 		Schema: ManifestSchema, Identity: stage.identity,
 		Members: append([]MemberReceipt{}, stage.members...),
 	}
-	unsigned := manifest
-	unsigned.Digest = ""
-	digest, err := digestCanonical(unsigned)
+	authorityDigest, err := manifestAuthorityDigest(manifest)
+	if err != nil {
+		return nil, err
+	}
+	manifest.AuthorityDigest = authorityDigest
+	digest, err := manifestIntegrityDigest(manifest)
 	if err != nil {
 		return nil, err
 	}
@@ -874,7 +877,7 @@ func (publication *Publication) Current() bool {
 }
 
 func validateState(state State) error {
-	if state.Schema != StateSchema {
+	if state.Schema != StateSchema && state.Schema != StateSchemaV1 {
 		return errors.New("unsupported resolver catalog state schema")
 	}
 	if err := revalidateStateDigests(state); err != nil {
@@ -898,6 +901,18 @@ func revalidateStateDigests(state State) error {
 		!validDigest(state.ManifestDigest) {
 		return errors.New("invalid resolver catalog state identity")
 	}
+	legacy := state.Schema == StateSchemaV1
+	if legacy && state.AuthorityDigest != "" || !legacy && !validDigest(state.AuthorityDigest) {
+		return errors.New("invalid resolver catalog state authority digest")
+	}
+	policy := FrozenPolicy()
+	if legacy {
+		policy = frozenPolicyV1()
+	}
+	policyDigest, err := digestCanonical(policy)
+	if err != nil || policyDigest != state.CatalogPolicyDigest {
+		return errors.New("invalid resolver catalog state policy digest")
+	}
 	if state.Declarations == nil ||
 		len(state.Declarations) > MaxDeclarationPublications {
 		return errors.New("invalid resolver catalog state declaration set")
@@ -910,7 +925,11 @@ func revalidateStateDigests(state State) error {
 			return errors.New("invalid resolver catalog state declaration identity")
 		}
 	}
-	declarationDigest, err := digestCanonical(state.Declarations)
+	declarations := state.Declarations
+	if !legacy {
+		declarations = semanticDeclarations(declarations)
+	}
+	declarationDigest, err := digestCanonical(declarations)
 	if err != nil || declarationDigest != state.DeclarationSetDigest {
 		return errors.New("invalid resolver catalog state declaration digest")
 	}

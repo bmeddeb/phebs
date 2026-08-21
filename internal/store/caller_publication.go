@@ -645,7 +645,7 @@ LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting,
 LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
 	policy_digest, control_revision FROM $candidate_rid)[0];
 LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
-	declaration_set_digest, generation_digest, manifest_digest,
+	declaration_set_digest, generation_digest, authority_digest,
 	control_revision, writer_schema FROM $resolver_rid)[0];
 LET $owned = (SELECT id FROM type::record($job_id)
 	WHERE target = $repository AND status IN ['claimed', 'running']
@@ -693,7 +693,7 @@ LET $authority_ok = $writer_ok AND $leaf_writer_ok AND $owned != NONE
 	AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
 	AND $resolver.declaration_set_digest = $declaration_set_digest
 	AND $resolver.generation_digest = $resolver_generation_digest
-	AND $resolver.manifest_digest = $resolver_manifest_digest
+	AND $resolver.authority_digest = $resolver_manifest_digest
 	AND $resolver.control_revision = $resolver_control_revision
 	AND $resolver.writer_schema = $resolver_writer_schema
 		AND $admission != NONE
@@ -1097,7 +1097,7 @@ LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting,
 LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
 	policy_digest, control_revision FROM $candidate_rid)[0];
 LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
-	declaration_set_digest, generation_digest, manifest_digest,
+	declaration_set_digest, generation_digest, authority_digest,
 	control_revision, writer_schema FROM $resolver_rid)[0];
 LET $current = (SELECT ` + callerGenerationPublicationSummaryProjection + `
 	FROM $publication_rid)[0];
@@ -1118,7 +1118,7 @@ LET $scalar_current = $writer_ok AND $repo != NONE
 		AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
 		AND $resolver.declaration_set_digest = $declaration_set_digest
 		AND $resolver.generation_digest = $resolver_generation_digest
-		AND $resolver.manifest_digest = $resolver_manifest_digest
+		AND $resolver.authority_digest = $resolver_manifest_digest
 		AND $resolver.control_revision = $resolver_control_revision
 		AND $resolver.writer_schema = $resolver_writer_schema
 		AND $current != NONE
@@ -1194,7 +1194,7 @@ LET $authorities = $bindings.map(|$binding| {
 	candidate: (SELECT head_commit, unit_digest, manifest_digest,
 		policy_digest, control_revision FROM $binding.candidate_rid)[0],
 	resolver: (SELECT head_commit, unit_digest, candidate_manifest_digest,
-		declaration_set_digest, generation_digest, manifest_digest,
+		declaration_set_digest, generation_digest, authority_digest,
 		control_revision, writer_schema FROM $binding.resolver_rid)[0],
 	publication: (SELECT ` + callerGenerationPublicationSummaryProjection + `
 		FROM $binding.publication_rid)[0]
@@ -1231,7 +1231,7 @@ LET $checks = $authorities.map(|$authority|
 			$authority.expected.generation.declaration_set_digest
 		AND $authority.resolver.generation_digest =
 			$authority.expected.generation.resolver_generation_digest
-		AND $authority.resolver.manifest_digest =
+		AND $authority.resolver.authority_digest =
 			$authority.expected.generation.resolver_manifest_digest
 		AND $authority.resolver.control_revision =
 			$authority.expected.generation.resolver_control_revision
@@ -1439,7 +1439,7 @@ LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting,
 LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
 	policy_digest, control_revision FROM $candidate_rid)[0];
 LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
-	declaration_set_digest, generation_digest, manifest_digest,
+	declaration_set_digest, generation_digest, authority_digest,
 	control_revision, writer_schema FROM $resolver_rid)[0];
 LET $expected_pair_payload_digest = (` +
 	callerGenerationBoundPairPayloadDigestSQL + `);
@@ -1463,7 +1463,7 @@ RETURN [{
 		AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
 		AND $resolver.declaration_set_digest = $declaration_set_digest
 		AND $resolver.generation_digest = $resolver_generation_digest
-		AND $resolver.manifest_digest = $resolver_manifest_digest
+		AND $resolver.authority_digest = $resolver_manifest_digest
 		AND $resolver.control_revision = $resolver_control_revision
 		AND $resolver.writer_schema = $resolver_writer_schema
 		AND $current != NONE

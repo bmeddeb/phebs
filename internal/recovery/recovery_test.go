@@ -168,6 +168,7 @@ connections:
 		CatalogPolicyDigest:     catalogState.CatalogPolicyDigest,
 		GenerationDigest:        catalogState.GenerationDigest,
 		ManifestDigest:          catalogState.ManifestDigest,
+		AuthorityDigest:         catalogState.AuthorityDigest,
 		ManifestPath:            catalogState.Manifest,
 	}); err != nil {
 		t.Fatalf("publish pre-backup resolver catalog pointer: %v", err)
@@ -187,7 +188,7 @@ connections:
 			CandidateManifestDigest:  publishedPointer.ManifestDigest,
 			CandidatePolicyDigest:    publishedPointer.PolicyDigest,
 			ResolverGenerationDigest: publishedCatalog.GenerationDigest,
-			ResolverManifestDigest:   publishedCatalog.ManifestDigest,
+			ResolverManifestDigest:   publishedCatalog.AuthorityDigest,
 			Extractors: []callerleaf.ExtractorIdentity{{
 				Domain: "grpc-caller", Version: "1.0.0",
 				LeafAdapterVersion: callerleaf.LeafAdapterV1,

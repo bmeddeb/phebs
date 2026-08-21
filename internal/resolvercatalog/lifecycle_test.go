@@ -41,6 +41,143 @@ func testIdentity(t *testing.T, repository string) Identity {
 	return identity
 }
 
+func TestRunIDIsProvenanceOutsideV2Authority(t *testing.T) {
+	t.Parallel()
+	declaration := DeclarationPublication{
+		Domain: "proto-contract", RunID: "run-a",
+		GenerationDigest: testDigest('4'),
+		AuthoritySchema:  store.PartitionedExtractionDomainSchema,
+		PlanDigest:       testDigest('3'), RootDigest: testDigest('4'),
+	}
+	identityA, err := NewIdentity(
+		"github.com/acme/run-id-authority", strings.Repeat("1", 40), "",
+		testDigest('2'), []DeclarationPublication{declaration}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declaration.RunID = "run-b"
+	identityB, err := NewIdentity(
+		identityA.Repository, identityA.Commit, identityA.UnitDigest,
+		identityA.CandidateManifestDigest,
+		[]DeclarationPublication{declaration}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identityA.DeclarationSetDigest != identityB.DeclarationSetDigest ||
+		identityA.GenerationDigest != identityB.GenerationDigest {
+		t.Fatalf("run ID changed semantic identity: A=%+v B=%+v", identityA, identityB)
+	}
+
+	seal := func(identity Identity) Manifest {
+		stage, stageErr := NewStage(t.TempDir(), identity)
+		if stageErr != nil {
+			t.Fatal(stageErr)
+		}
+		prepared, sealErr := stage.Seal(t.Context())
+		if sealErr != nil {
+			t.Fatal(sealErr)
+		}
+		return prepared.manifest
+	}
+	manifestA := seal(identityA)
+	manifestB := seal(identityB)
+	if manifestA.AuthorityDigest != manifestB.AuthorityDigest {
+		t.Fatalf("run ID changed manifest authority: %q != %q", manifestA.AuthorityDigest, manifestB.AuthorityDigest)
+	}
+	if manifestA.Digest == manifestB.Digest {
+		t.Fatal("exact manifest integrity digest ignored run ID provenance")
+	}
+	sharedRoot := t.TempDir()
+	install := func(identity Identity) State {
+		stage, stageErr := NewStage(sharedRoot, identity)
+		if stageErr != nil {
+			t.Fatal(stageErr)
+		}
+		prepared, sealErr := stage.Seal(t.Context())
+		if sealErr != nil {
+			t.Fatal(sealErr)
+		}
+		state, installErr := prepared.Install(t.Context())
+		if installErr != nil {
+			t.Fatal(installErr)
+		}
+		if clearErr := ClearPublishing(sharedRoot, identity.Repository); clearErr != nil {
+			t.Fatal(clearErr)
+		}
+		return state
+	}
+	installedA := install(identityA)
+	installedB := install(identityB)
+	if installedA.GenerationDigest != installedB.GenerationDigest ||
+		installedA.AuthorityDigest != installedB.AuthorityDigest ||
+		installedA.ManifestDigest == installedB.ManifestDigest {
+		t.Fatalf("shared-root run replay = %+v / %+v", installedA, installedB)
+	}
+
+	changed := declaration
+	changed.RootDigest = testDigest('5')
+	changed.GenerationDigest = changed.RootDigest
+	identityChanged, err := NewIdentity(
+		identityA.Repository, identityA.Commit, identityA.UnitDigest,
+		identityA.CandidateManifestDigest,
+		[]DeclarationPublication{changed}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identityChanged.GenerationDigest == identityA.GenerationDigest {
+		t.Fatal("semantic declaration change preserved generation authority")
+	}
+}
+
+func TestHistoricalV1IdentityAndManifestRemainValid(t *testing.T) {
+	t.Parallel()
+	declaration := DeclarationPublication{
+		Domain: "proto-contract", RunID: "historical-run",
+		GenerationDigest: testDigest('4'),
+		AuthoritySchema:  store.PartitionedExtractionDomainSchema,
+		PlanDigest:       testDigest('3'), RootDigest: testDigest('4'),
+	}
+	identity := Identity{
+		Repository: "github.com/acme/historical-resolver", Commit: strings.Repeat("1", 40),
+		Declarations:            []DeclarationPublication{declaration},
+		CandidateManifestDigest: testDigest('2'), SourceLanePolicy: SourceLanePolicy,
+		ResolverPacks: []ResolverPack{}, CatalogPolicy: frozenPolicyV1(),
+	}
+	var err error
+	identity.DeclarationSetDigest, err = digestCanonical(identity.Declarations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity.ResolverPackSetDigest, err = digestCanonical(identity.ResolverPacks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity.CatalogPolicyDigest, err = digestCanonical(identity.CatalogPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation := identity
+	identity.GenerationDigest, err = digestCanonical(generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := Manifest{Schema: ManifestSchemaV1, Identity: identity, Members: []MemberReceipt{}}
+	manifest.Digest, err = manifestIntegrityDigest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateManifest(manifest); err != nil {
+		t.Fatalf("historical v1 manifest rejected: %v", err)
+	}
+	manifest.AuthorityDigest = testDigest('9')
+	if err := validateManifest(manifest); !errors.Is(err, ErrInvalidManifest) {
+		t.Fatalf("v1 manifest accepted v2 authority digest: %v", err)
+	}
+}
+
 func testPrepared(
 	t *testing.T,
 	root, repository string,
@@ -719,6 +856,69 @@ func TestCleanupStagesAndReconcileCrashBoundaries(t *testing.T) {
 		}
 		if report.MarkersRecovered != 1 || report.ReplacementsQueued != 0 {
 			t.Fatalf("report = %+v", report)
+		}
+	})
+	t.Run("historical pointerless marker queues v2 replacement", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/historical-pointerless"
+		if err := ensureRealDirectory(root); err != nil {
+			t.Fatal(err)
+		}
+		identity := Identity{
+			Repository: repository, Commit: strings.Repeat("1", 40),
+			Declarations:            []DeclarationPublication{},
+			CandidateManifestDigest: testDigest('2'), SourceLanePolicy: SourceLanePolicy,
+			ResolverPacks: []ResolverPack{}, CatalogPolicy: frozenPolicyV1(),
+		}
+		var err error
+		identity.DeclarationSetDigest, err = digestCanonical(identity.Declarations)
+		if err != nil {
+			t.Fatal(err)
+		}
+		identity.ResolverPackSetDigest, err = digestCanonical(identity.ResolverPacks)
+		if err != nil {
+			t.Fatal(err)
+		}
+		identity.CatalogPolicyDigest, err = digestCanonical(identity.CatalogPolicy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		generation := identity
+		identity.GenerationDigest, err = digestCanonical(generation)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manifest := Manifest{
+			Schema: ManifestSchemaV1, Identity: identity, Members: []MemberReceipt{},
+		}
+		manifest.Digest, err = manifestIntegrityDigest(manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw = append(raw, '\n')
+		if err := os.WriteFile(
+			filepath.Join(root, resolvercatalogid.ManifestName(repository)), raw, 0o600,
+		); err != nil {
+			t.Fatal(err)
+		}
+		if err := installMarker(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.ReplacementsQueued != 1 || report.OrphansObserved != 1 ||
+			!slices.Equal(fake.operations, []string{"queue:" + repository}) {
+			t.Fatalf("historical reconcile = %+v operations=%v", report, fake.operations)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("historical publication marker survived v2 replacement queue")
 		}
 	})
 	t.Run("replacement manifest durable before store", func(t *testing.T) {
@@ -1404,9 +1604,12 @@ func readTestManifest(t *testing.T, root string, state State) Manifest {
 func testIdentityManifest(t *testing.T, repository string) Manifest {
 	t.Helper()
 	manifest := Manifest{Schema: ManifestSchema, Identity: testIdentity(t, repository)}
-	unsigned := manifest
-	unsigned.Digest = ""
-	digest, err := digestCanonical(unsigned)
+	authorityDigest, err := manifestAuthorityDigest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest.AuthorityDigest = authorityDigest
+	digest, err := manifestIntegrityDigest(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1516,7 +1719,7 @@ func (fake *fakeReconcileStore) PublishResolverCatalog(
 		return fake.publishErr
 	}
 	publication.ControlRevision = 1
-	publication.WriterSchema = "phebs-resolver-catalog-store-v1"
+	publication.WriterSchema = resolvercatalogid.WriterSchema
 	publication.PublishedAt = time.Now().UTC()
 	fake.publications[publication.Repository] = publication
 	fake.operations = append(fake.operations, "publish:"+publication.Repository)

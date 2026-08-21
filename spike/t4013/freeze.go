@@ -190,6 +190,7 @@ func frozenV15PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V15 plan reconstruction.
 func freshV15PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
@@ -211,6 +212,7 @@ func frozenV16PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V16 plan reconstruction.
 func freshV16PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
@@ -232,6 +234,7 @@ func frozenV17PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V17 plan reconstruction.
 func freshV17PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
@@ -253,6 +256,7 @@ func frozenV18PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V18 plan reconstruction.
 func freshV18PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,

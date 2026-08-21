@@ -12,7 +12,8 @@ const artifactNamespace = "v1"
 
 const (
 	SourceLanePolicy = "candidate-source-lane-base-v1"
-	WriterSchema     = "phebs-resolver-catalog-store-v1"
+	WriterSchemaV1   = "phebs-resolver-catalog-store-v1"
+	WriterSchema     = "phebs-resolver-catalog-store-v2"
 )
 
 func ArtifactBase(repository string) string {

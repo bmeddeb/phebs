@@ -34,6 +34,7 @@ func resolverPublication(
 		CatalogPolicyDigest:     identity.CatalogPolicyDigest,
 		GenerationDigest:        identity.GenerationDigest,
 		ManifestDigest:          candidateDigest('2'),
+		AuthorityDigest:         candidateDigest('3'),
 		ManifestPath:            resolvercatalogid.ManifestName(repository),
 	}
 }
@@ -638,7 +639,8 @@ func testResolverCatalogGuardedPublicationLifecycle(
 		t.Fatal(err)
 	}
 	if first.ControlRevision != 1 ||
-		first.WriterSchema != "phebs-resolver-catalog-store-v1" ||
+		first.WriterSchema != resolvercatalogid.WriterSchema ||
+		first.AuthorityDigest != catalog.AuthorityDigest ||
 		first.PublishedAt.IsZero() {
 		t.Fatalf("published pointer = %+v", first)
 	}

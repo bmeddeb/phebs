@@ -107,7 +107,8 @@ const derivedRetentionResolverSQL = `SELECT id, repository, head_commit,
 	unit_digest, declarations, declaration_set_digest,
 	candidate_manifest_digest, source_lane_policy, resolver_packs,
 	resolver_pack_set_digest, catalog_policy_digest, generation_digest,
-	manifest_digest, manifest_path, control_revision, writer_schema, published_at
+	manifest_digest, authority_digest, manifest_path, control_revision,
+	writer_schema, published_at
 	FROM resolver_catalog_publication ORDER BY id LIMIT $scan_limit`
 
 const derivedRetentionCallerSQL = `SELECT ` + callerGenerationPublicationSummaryProjection + `
@@ -132,7 +133,7 @@ RETURN [{
 					FROM $binding.candidate_rid)[0],
 				resolver: (SELECT head_commit, unit_digest,
 					candidate_manifest_digest, declaration_set_digest,
-					generation_digest, manifest_digest, control_revision,
+					generation_digest, authority_digest, control_revision,
 					writer_schema FROM $binding.resolver_rid)[0],
 				publication: (SELECT ` + callerGenerationPublicationSummaryProjection + `
 					FROM $binding.publication_rid)[0]
@@ -168,7 +169,7 @@ RETURN [{
 						$authority.expected.generation.declaration_set_digest
 					AND $authority.resolver.generation_digest =
 						$authority.expected.generation.resolver_generation_digest
-					AND $authority.resolver.manifest_digest =
+					AND $authority.resolver.authority_digest =
 						$authority.expected.generation.resolver_manifest_digest
 					AND $authority.resolver.control_revision =
 						$authority.expected.generation.resolver_control_revision

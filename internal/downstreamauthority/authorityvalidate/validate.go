@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -17,7 +18,8 @@ import (
 )
 
 const (
-	Schema               = "phebs-downstream-upstream-authority-v1"
+	SchemaV1             = "phebs-downstream-upstream-authority-v1"
+	Schema               = "phebs-downstream-upstream-authority-v2"
 	ObservationVersionV2 = "observation-v2"
 )
 
@@ -30,12 +32,13 @@ type Result struct {
 }
 
 type authority struct {
-	Schema      string                                `json:"schema"`
-	Repository  string                                `json:"repository"`
-	Observation observation                           `json:"observation"`
-	Required    []domainIdentity                      `json:"required"`
-	Domains     []candidate.DownstreamDomainAuthority `json:"domains"`
-	Digest      string                                `json:"digest"`
+	Schema           string                                `json:"schema"`
+	Repository       string                                `json:"repository"`
+	Observation      observation                           `json:"observation"`
+	Required         []domainIdentity                      `json:"required"`
+	Domains          []candidate.DownstreamDomainAuthority `json:"domains"`
+	ProvenanceDigest string                                `json:"provenance_digest,omitempty"`
+	Digest           string                                `json:"digest"`
 }
 
 type observation struct {
@@ -67,7 +70,7 @@ func Canonical(raw []byte) (Result, error) {
 		return Result{}, ErrInvalid
 	}
 	observation := value.Observation
-	if value.Schema != Schema || reponame.Validate(value.Repository) != nil ||
+	if (value.Schema != Schema && value.Schema != SchemaV1) || reponame.Validate(value.Repository) != nil ||
 		observation.Version != ObservationVersionV2 || observation.Repository != value.Repository ||
 		!validDigest(observation.SourceGenerationDigest) || !validDigest(observation.SourceRootDigest) ||
 		!validDigest(observation.ObservationGenerationDigest) || !validDigest(observation.ObservationRootDigest) ||
@@ -75,6 +78,21 @@ func Canonical(raw []byte) (Result, error) {
 		!validDigest(observation.InventoryPolicyDigest) || observation.RecordCount < 0 ||
 		observation.ObservedCount < 0 || observation.ObservedCount > observation.RecordCount ||
 		len(value.Required) > 64 || len(value.Domains) > len(value.Required) || !validDigest(value.Digest) {
+		return Result{}, ErrInvalid
+	}
+	if value.Schema == Schema {
+		provenance := value
+		provenance.ProvenanceDigest = ""
+		provenance.Digest = ""
+		provenanceRaw, provenanceErr := json.Marshal(provenance)
+		if provenanceErr != nil {
+			return Result{}, ErrInvalid
+		}
+		sum := sha256.Sum256(append([]byte(value.Schema+"-provenance\x00"), provenanceRaw...))
+		if "sha256:"+hex.EncodeToString(sum[:]) != value.ProvenanceDigest {
+			return Result{}, ErrInvalid
+		}
+	} else if value.ProvenanceDigest != "" {
 		return Result{}, ErrInvalid
 	}
 	prior := ""
@@ -100,11 +118,18 @@ func Canonical(raw []byte) (Result, error) {
 	}
 	want := value
 	want.Digest = ""
+	if value.Schema == Schema {
+		want.ProvenanceDigest = ""
+		want.Domains = slices.Clone(value.Domains)
+		for index := range want.Domains {
+			want.Domains[index].RunID = ""
+		}
+	}
 	wantRaw, err := json.Marshal(want)
 	if err != nil {
 		return Result{}, ErrInvalid
 	}
-	sum := sha256.Sum256(append([]byte(Schema+"\x00"), wantRaw...))
+	sum := sha256.Sum256(append([]byte(value.Schema+"\x00"), wantRaw...))
 	if "sha256:"+hex.EncodeToString(sum[:]) != value.Digest {
 		return Result{}, ErrInvalid
 	}

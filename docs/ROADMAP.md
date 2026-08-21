@@ -1470,6 +1470,20 @@ catalog, relationship, or correctness authority.
   shaped current progress validation. Fresh ceremony contracts advance to V19;
   the result is rehearsal evidence only until an exact integrated V19 freeze
   and fresh ceremony pass.
+- `t40r1-neutral-30` then passed cold, warm-noop, delta-B, and return-A before
+  stopping after interruption restart convergence: extraction `RunID`
+  provenance was hashed into resolver declaration-set, generation, and
+  manifest authority, rekeying caller and relationship authority for
+  byte-equivalent A content. The resolver v2 correction keeps exact RunID
+  provenance integrity while exposing a separate RunID-independent semantic
+  authority digest to caller and relationship consumers; downstream authority
+  v2 closes the independent RunID-sensitive upstream-digest path found by the
+  same audit. Its supported resolver v1→v2
+  migration retires current resolver/caller pointers and rebuilds through the
+  existing candidate startup fan-out; retained v1 evidence stays historically
+  valid. Neutral-30 remains immutable stopped evidence. Integration, a fresh
+  freeze, and execution remain separately authorized; T40.13 and Epic 40 are
+  not closed.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

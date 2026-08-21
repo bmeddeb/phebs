@@ -450,6 +450,7 @@ func workerTestPriorPointer(
 		CatalogPolicyDigest:   identity.CatalogPolicyDigest,
 		GenerationDigest:      identity.GenerationDigest,
 		ManifestDigest:        workerTestDigest('8'),
+		AuthorityDigest:       workerTestDigest('7'),
 		ManifestPath:          resolvercatalogid.ManifestName(repository),
 	}
 }

@@ -26,7 +26,7 @@ func callerGeneration(
 		CandidatePolicyDigest:    candidate.PolicyDigest,
 		CandidateControlRevision: candidate.ControlRevision,
 		ResolverGenerationDigest: catalog.GenerationDigest,
-		ResolverManifestDigest:   catalog.ManifestDigest,
+		ResolverManifestDigest:   catalog.AuthorityDigest,
 		ResolverControlRevision:  catalog.ControlRevision,
 		ResolverWriterSchema:     catalog.WriterSchema,
 		SourceLanePolicy:         store.CallerBaseSourceLanePolicy,

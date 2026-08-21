@@ -24,6 +24,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/repowork"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 	reposync "github.com/bmeddeb/phebs/internal/sync"
@@ -487,6 +488,7 @@ func newWorkerHarness(t *testing.T, leafCount int) workerHarness {
 			HeadCommit:           "0123456789012345678901234567890123456789",
 			DeclarationSetDigest: digest('e'), CandidateManifestDigest: plan.digest,
 			GenerationDigest: digest('f'), ManifestDigest: digest('1'),
+			AuthorityDigest: digest('2'),
 			ControlRevision: 1, WriterSchema: resolvercatalogid.WriterSchema,
 		},
 	}
@@ -515,6 +517,98 @@ func newWorkerHarness(t *testing.T, leafCount int) workerHarness {
 	return workerHarness{
 		worker: worker, state: state, plan: plan, provider: provider,
 		job: store.Job{Kind: store.JobCallerLeaf, Target: repository},
+	}
+}
+
+func TestCallerGenerationBindsResolverSemanticAuthorityNotRunProvenance(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	first, err := harness.worker.currentAuthority(t.Context(), harness.state.repo.Name)
+	if err != nil || first == nil {
+		t.Fatalf("first authority = %+v, %v", first, err)
+	}
+	harness.state.resolver.ManifestDigest = "sha256:" + strings.Repeat("3", 64)
+	harness.state.resolver.ControlRevision++
+	second, err := harness.worker.currentAuthority(t.Context(), harness.state.repo.Name)
+	if err != nil || second == nil {
+		t.Fatalf("second authority = %+v, %v", second, err)
+	}
+	if first.semantic.Digest != second.semantic.Digest ||
+		first.semantic.ResolverManifestDigest != second.semantic.ResolverManifestDigest {
+		t.Fatalf("provenance-sensitive manifest rekeyed caller: first=%+v second=%+v", first.semantic, second.semantic)
+	}
+	if first.stored.ResolverControlRevision == second.stored.ResolverControlRevision {
+		t.Fatal("operational resolver revision did not advance in stored request binding")
+	}
+}
+
+func TestNonemptyResolverAuthorityReturnsAAfterFreshRun(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	manifestDigest := harness.state.candidate.ManifestDigest
+	build := func(runID, rootFill string) (store.ResolverCatalogPublication, error) {
+		rootDigest := "sha256:" + strings.Repeat(rootFill, 64)
+		identity, err := resolvercatalog.NewIdentity(
+			harness.state.repo.Name, harness.state.repo.IndexedCommitHash, "",
+			manifestDigest, []resolvercatalog.DeclarationPublication{{
+				Domain: "proto-contract", RunID: runID,
+				GenerationDigest: rootDigest,
+				AuthoritySchema:  store.PartitionedExtractionDomainSchema,
+				PlanDigest:       "sha256:" + strings.Repeat("4", 64),
+				RootDigest:       rootDigest,
+			}}, nil,
+		)
+		if err != nil {
+			return store.ResolverCatalogPublication{}, err
+		}
+		stage, err := resolvercatalog.NewStage(t.TempDir(), identity)
+		if err != nil {
+			return store.ResolverCatalogPublication{}, err
+		}
+		prepared, err := stage.Seal(t.Context())
+		if err != nil {
+			return store.ResolverCatalogPublication{}, err
+		}
+		state, err := prepared.Install(t.Context())
+		if err != nil {
+			return store.ResolverCatalogPublication{}, err
+		}
+		return store.ResolverCatalogPublication{
+			Repository: state.Repository, HeadCommit: state.Commit,
+			DeclarationSetDigest:    state.DeclarationSetDigest,
+			CandidateManifestDigest: state.CandidateManifestDigest,
+			GenerationDigest:        state.GenerationDigest,
+			ManifestDigest:          state.ManifestDigest,
+			AuthorityDigest:         state.AuthorityDigest,
+		}, nil
+	}
+	resolverA, err := build("run-a", "5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolverB, err := build("run-b", "6")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolverA2, err := build("run-a-reminted", "5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	caller := func(resolver store.ResolverCatalogPublication) string {
+		identity, identityErr := GenerationIdentity(GenerationAuthority{
+			Repository: &harness.state.repo, Candidate: &harness.state.candidate,
+			Resolver: &resolver,
+		}, harness.worker.registry)
+		if identityErr != nil {
+			t.Fatal(identityErr)
+		}
+		return identity.Digest
+	}
+	callerA, callerB, callerA2 := caller(resolverA), caller(resolverB), caller(resolverA2)
+	if callerA == callerB || callerA != callerA2 {
+		t.Fatalf("A/B/A caller authority = %q / %q / %q", callerA, callerB, callerA2)
+	}
+	if resolverA.ManifestDigest == resolverA2.ManifestDigest ||
+		resolverA.AuthorityDigest != resolverA2.AuthorityDigest {
+		t.Fatalf("A provenance/authority = %+v / %+v", resolverA, resolverA2)
 	}
 }
 
@@ -1776,7 +1870,8 @@ func TestWorkerRestartReusesDurableOutcomesWithoutReplay(t *testing.T) {
 
 func TestResolverStatePreservesPartitionedDeclarationAuthority(t *testing.T) {
 	pointer := store.ResolverCatalogPublication{
-		Repository: "example.com/acme/mono",
+		Repository:      "example.com/acme/mono",
+		AuthorityDigest: "sha256:" + strings.Repeat("3", 64),
 		Declarations: []store.ResolverCatalogDeclarationPublication{{
 			Domain: "grpc-contract", RunID: "run-1",
 			GenerationDigest: "sha256:" + strings.Repeat("1", 64),
@@ -1786,7 +1881,7 @@ func TestResolverStatePreservesPartitionedDeclarationAuthority(t *testing.T) {
 		}},
 	}
 	state := resolverState(pointer)
-	if len(state.Declarations) != 1 ||
+	if state.AuthorityDigest != pointer.AuthorityDigest || len(state.Declarations) != 1 ||
 		state.Declarations[0].Domain != pointer.Declarations[0].Domain ||
 		state.Declarations[0].RunID != pointer.Declarations[0].RunID ||
 		state.Declarations[0].GenerationDigest != pointer.Declarations[0].GenerationDigest ||

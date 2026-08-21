@@ -528,7 +528,7 @@ func (reader *PublicationReader) boundResolver(
 		pointer.CandidateManifestDigest != generation.CandidateManifestDigest ||
 		pointer.SourceLanePolicy != generation.SourceLanePolicy ||
 		pointer.GenerationDigest != generation.ResolverGenerationDigest ||
-		pointer.ManifestDigest != generation.ResolverManifestDigest ||
+		pointer.AuthorityDigest != generation.ResolverManifestDigest ||
 		pointer.ControlRevision != generation.ResolverControlRevision ||
 		pointer.WriterSchema != generation.ResolverWriterSchema {
 		return nil, errPublicationReadTransition

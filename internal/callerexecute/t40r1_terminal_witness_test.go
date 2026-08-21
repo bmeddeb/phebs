@@ -298,6 +298,7 @@ func runT40R1CallerTerminalWitness(t *testing.T) t40r1CallerTerminalWitness {
 		CatalogPolicyDigest:     resolverIdentity.CatalogPolicyDigest,
 		GenerationDigest:        resolverIdentity.GenerationDigest,
 		ManifestDigest:          t40r1TerminalDigest("resolver-manifest"),
+		AuthorityDigest:         t40r1TerminalDigest("resolver-authority"),
 		ManifestPath:            resolvercatalogid.ManifestName(repository),
 	}
 	if err := state.PublishResolverCatalog(ctx, resolverPublication); err != nil {

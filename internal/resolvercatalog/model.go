@@ -24,12 +24,15 @@ import (
 )
 
 const (
-	ManifestSchema = "phebs-resolver-catalog-manifest-v1"
-	RecordSchema   = "phebs-resolver-catalog-record-v1"
-	StateSchema    = "phebs-resolver-catalog-state-v1"
+	ManifestSchemaV1 = "phebs-resolver-catalog-manifest-v1"
+	ManifestSchema   = "phebs-resolver-catalog-manifest-v2"
+	RecordSchema     = "phebs-resolver-catalog-record-v1"
+	StateSchemaV1    = "phebs-resolver-catalog-state-v1"
+	StateSchema      = "phebs-resolver-catalog-state-v2"
 
-	SourceLanePolicy  = resolvercatalogid.SourceLanePolicy
-	CatalogPolicyName = "phebs-resolver-catalog-policy-v1"
+	SourceLanePolicy    = resolvercatalogid.SourceLanePolicy
+	CatalogPolicyNameV1 = "phebs-resolver-catalog-policy-v1"
+	CatalogPolicyName   = "phebs-resolver-catalog-policy-v2"
 
 	MaxDeclarationPublications = 16
 	MaxResolverPacks           = 16
@@ -133,6 +136,12 @@ func FrozenPolicy() Policy {
 	}
 }
 
+func frozenPolicyV1() Policy {
+	policy := FrozenPolicy()
+	policy.Name = CatalogPolicyNameV1
+	return policy
+}
+
 // Identity binds every immutable input independently of member bytes.
 type Identity struct {
 	Repository              string                   `json:"repository"`
@@ -161,10 +170,11 @@ type MemberReceipt struct {
 
 // Manifest is the sole filesystem visibility authority.
 type Manifest struct {
-	Schema   string          `json:"schema"`
-	Identity Identity        `json:"identity"`
-	Members  []MemberReceipt `json:"members"`
-	Digest   string          `json:"digest"`
+	Schema          string          `json:"schema"`
+	Identity        Identity        `json:"identity"`
+	Members         []MemberReceipt `json:"members"`
+	AuthorityDigest string          `json:"authority_digest,omitempty"`
+	Digest          string          `json:"digest"`
 }
 
 // State is the primitive database publication pointer.
@@ -182,12 +192,17 @@ type State struct {
 	CatalogPolicyDigest     string                   `json:"catalog_policy_digest"`
 	GenerationDigest        string                   `json:"generation_digest"`
 	ManifestDigest          string                   `json:"manifest_digest"`
+	AuthorityDigest         string                   `json:"authority_digest,omitempty"`
 	Manifest                string                   `json:"manifest"`
 }
 
 func (manifest Manifest) State() State {
+	schema := StateSchema
+	if manifest.Schema == ManifestSchemaV1 {
+		schema = StateSchemaV1
+	}
 	return State{
-		Schema:                  StateSchema,
+		Schema:                  schema,
 		Repository:              manifest.Identity.Repository,
 		Commit:                  manifest.Identity.Commit,
 		UnitDigest:              manifest.Identity.UnitDigest,
@@ -200,6 +215,7 @@ func (manifest Manifest) State() State {
 		CatalogPolicyDigest:     manifest.Identity.CatalogPolicyDigest,
 		GenerationDigest:        manifest.Identity.GenerationDigest,
 		ManifestDigest:          manifest.Digest,
+		AuthorityDigest:         manifest.AuthorityDigest,
 		Manifest:                resolvercatalogid.ManifestName(manifest.Identity.Repository),
 	}
 }
@@ -234,7 +250,7 @@ func NewIdentity(
 		CatalogPolicy:           FrozenPolicy(),
 	}
 	var err error
-	identity.DeclarationSetDigest, err = digestCanonical(identity.Declarations)
+	identity.DeclarationSetDigest, err = digestCanonical(semanticDeclarations(identity.Declarations))
 	if err != nil {
 		return Identity{}, err
 	}
@@ -246,7 +262,7 @@ func NewIdentity(
 	if err != nil {
 		return Identity{}, err
 	}
-	generation := identity
+	generation := semanticIdentity(identity)
 	generation.GenerationDigest = ""
 	identity.GenerationDigest, err = digestCanonical(generation)
 	if err != nil {
@@ -256,6 +272,19 @@ func NewIdentity(
 		return Identity{}, err
 	}
 	return identity, nil
+}
+
+func semanticDeclarations(values []DeclarationPublication) []DeclarationPublication {
+	result := append([]DeclarationPublication{}, values...)
+	for index := range result {
+		result[index].RunID = ""
+	}
+	return result
+}
+
+func semanticIdentity(identity Identity) Identity {
+	identity.Declarations = semanticDeclarations(identity.Declarations)
+	return identity
 }
 
 func validateIdentity(identity Identity) error {
@@ -304,10 +333,20 @@ func validateIdentity(identity Identity) error {
 			return fmt.Errorf("%w: resolver packs are not uniquely ordered", ErrInvalidIdentity)
 		}
 	}
-	if identity.CatalogPolicy != FrozenPolicy() {
+	policy := FrozenPolicy()
+	semantic := true
+	if identity.CatalogPolicy.Name == CatalogPolicyNameV1 {
+		policy = frozenPolicyV1()
+		semantic = false
+	}
+	if identity.CatalogPolicy != policy {
 		return fmt.Errorf("%w: catalog policy", ErrInvalidIdentity)
 	}
-	declarationDigest, err := digestCanonical(identity.Declarations)
+	declarations := identity.Declarations
+	if semantic {
+		declarations = semanticDeclarations(declarations)
+	}
+	declarationDigest, err := digestCanonical(declarations)
 	if err != nil || declarationDigest != identity.DeclarationSetDigest {
 		return fmt.Errorf("%w: declaration-set digest", ErrInvalidIdentity)
 	}
@@ -320,6 +359,9 @@ func validateIdentity(identity Identity) error {
 		return fmt.Errorf("%w: catalog-policy digest", ErrInvalidIdentity)
 	}
 	generation := identity
+	if semantic {
+		generation = semanticIdentity(generation)
+	}
 	generation.GenerationDigest = ""
 	generationDigest, err := digestCanonical(generation)
 	if err != nil || generationDigest != identity.GenerationDigest {
@@ -329,11 +371,15 @@ func validateIdentity(identity Identity) error {
 }
 
 func validateManifest(manifest Manifest) error {
-	if manifest.Schema != ManifestSchema {
+	if manifest.Schema != ManifestSchema && manifest.Schema != ManifestSchemaV1 {
 		return fmt.Errorf("%w: schema", ErrInvalidManifest)
 	}
 	if err := validateIdentity(manifest.Identity); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidManifest, err)
+	}
+	legacy := manifest.Schema == ManifestSchemaV1
+	if legacy != (manifest.Identity.CatalogPolicy.Name == CatalogPolicyNameV1) {
+		return fmt.Errorf("%w: schema and policy disagree", ErrInvalidManifest)
 	}
 	if len(manifest.Members) > MaxMembers {
 		return fmt.Errorf("%w: members: %w", ErrInvalidManifest, ErrLimit)
@@ -377,13 +423,33 @@ func validateManifest(manifest Manifest) error {
 			return fmt.Errorf("%w: aggregate member bounds: %w", ErrInvalidManifest, ErrLimit)
 		}
 	}
-	unsigned := manifest
-	unsigned.Digest = ""
-	digest, err := digestCanonical(unsigned)
+	if legacy {
+		if manifest.AuthorityDigest != "" {
+			return fmt.Errorf("%w: historical authority digest", ErrInvalidManifest)
+		}
+	} else {
+		authorityDigest, err := manifestAuthorityDigest(manifest)
+		if err != nil || authorityDigest != manifest.AuthorityDigest {
+			return fmt.Errorf("%w: authority digest", ErrInvalidManifest)
+		}
+	}
+	digest, err := manifestIntegrityDigest(manifest)
 	if err != nil || digest != manifest.Digest {
 		return fmt.Errorf("%w: self digest", ErrInvalidManifest)
 	}
 	return nil
+}
+
+func manifestAuthorityDigest(manifest Manifest) (string, error) {
+	manifest.Identity = semanticIdentity(manifest.Identity)
+	manifest.AuthorityDigest = ""
+	manifest.Digest = ""
+	return digestCanonical(manifest)
+}
+
+func manifestIntegrityDigest(manifest Manifest) (string, error) {
+	manifest.Digest = ""
+	return digestCanonical(manifest)
 }
 
 func validMemberName(value string) bool {

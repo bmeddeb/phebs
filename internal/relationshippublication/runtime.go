@@ -453,12 +453,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	); openErr == nil {
 		prior = current
 	}
-	resolverRequest := resolvernamespace.BuildRequest{
-		Root: runtime.resolverNamespaceRoot(), Repository: chunk.Repository,
-		Commit: resolverState.Commit, ResolverGenerationDigest: resolverState.GenerationDigest,
-		ResolverManifestDigest: resolverState.ManifestDigest, Descriptors: descriptors, Prior: prior,
-		ResidentLimitBytes: ResolverResidentLimit,
-	}
+	resolverRequest := resolverNamespaceBuildRequest(
+		runtime.resolverNamespaceRoot(), resolverState, descriptors, prior,
+	)
 	var resolverStage *resolvernamespace.Prepared
 	if isPartitionedBinding(binding.Schema) {
 		resolverStage, err = resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
@@ -587,6 +584,22 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship root: %w", err)
 	}
 	return nil
+}
+
+func resolverNamespaceBuildRequest(
+	root string,
+	state resolvercatalog.State,
+	descriptors []gocaller.DirectDescriptor,
+	prior *resolvernamespace.Publication,
+) resolvernamespace.BuildRequest {
+	return resolvernamespace.BuildRequest{
+		Root: root, Repository: state.Repository, Commit: state.Commit,
+		ResolverGenerationDigest: state.GenerationDigest,
+		ResolverManifestDigest:   state.AuthorityDigest,
+		Descriptors:              descriptors,
+		Prior:                    prior,
+		ResidentLimitBytes:       ResolverResidentLimit,
+	}
 }
 
 // relationshipBuildFailure closes a deterministic component bound overrun as a

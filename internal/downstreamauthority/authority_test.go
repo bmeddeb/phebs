@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 )
 
@@ -78,6 +79,62 @@ func TestAuthorityRejectsNonCanonicalControls(t *testing.T) {
 	badToken.Digest = digest(badToken)
 	if err := Validate(badToken); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("control token validation = %v", err)
+	}
+}
+
+func TestRunIDIsProvenanceOutsideV2DownstreamAuthority(t *testing.T) {
+	observation := testObservationAuthority()
+	domain := testDomainAuthority("proto-contract", candidate.PartitionResultSuccess, observation)
+	first, err := Build(observation, []candidate.DownstreamDomainAuthority{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain.RunID = "reminted-run"
+	second, err := Build(observation, []candidate.DownstreamDomainAuthority{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Digest != second.Digest {
+		t.Fatalf("run ID changed v2 downstream authority: %q != %q", first.Digest, second.Digest)
+	}
+	if first.ProvenanceDigest == second.ProvenanceDigest {
+		t.Fatal("run ID did not change exact downstream provenance digest")
+	}
+	tampered := first
+	tampered.Domains = append([]candidate.DownstreamDomainAuthority{}, first.Domains...)
+	tampered.Domains[0].RunID = "tampered-run"
+	if err := Validate(tampered); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("tampered run provenance = %v, want invalid", err)
+	}
+	domain.RootDigest = digestFor("0")
+	changed, err := Build(observation, []candidate.DownstreamDomainAuthority{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed.Digest == first.Digest {
+		t.Fatal("semantic domain root change preserved downstream authority")
+	}
+}
+
+func TestHistoricalV1DownstreamAuthorityRemainsValid(t *testing.T) {
+	observation := testObservationAuthority()
+	domain := testDomainAuthority("proto-contract", candidate.PartitionResultSuccess, observation)
+	value := Authority{
+		Schema: authorityvalidate.SchemaV1, Repository: observation.Repository,
+		Observation: observation,
+		Required:    []DomainIdentity{{Domain: domain.Domain, Version: domain.Version}},
+		Domains:     []candidate.DownstreamDomainAuthority{domain},
+	}
+	value.Digest = digest(value)
+	if err := Validate(value); err != nil {
+		t.Fatalf("historical v1 downstream authority rejected: %v", err)
+	}
+	domain.RunID = "different-run"
+	changed := value
+	changed.Domains = []candidate.DownstreamDomainAuthority{domain}
+	changed.Digest = digest(changed)
+	if changed.Digest == value.Digest {
+		t.Fatal("historical v1 authority stopped binding run provenance")
 	}
 }
 

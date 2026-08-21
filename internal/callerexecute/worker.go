@@ -1860,7 +1860,9 @@ func resolverState(pointer store.ResolverCatalogPublication) resolvercatalog.Sta
 		ResolverPackSetDigest: pointer.ResolverPackSetDigest,
 		CatalogPolicyDigest:   pointer.CatalogPolicyDigest,
 		GenerationDigest:      pointer.GenerationDigest,
-		ManifestDigest:        pointer.ManifestDigest, Manifest: pointer.ManifestPath,
+		ManifestDigest:        pointer.ManifestDigest,
+		AuthorityDigest:       pointer.AuthorityDigest,
+		Manifest:              pointer.ManifestPath,
 	}
 }
 

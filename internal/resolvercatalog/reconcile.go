@@ -187,6 +187,15 @@ func Reconcile(
 		if markedErr != nil {
 			return report, markedErr
 		}
+		if state.Schema != StateSchema {
+			if err := queueReplacement(ctx, st, state.Repository); err != nil {
+				return report, err
+			}
+			report.ReplacementsQueued++
+			report.OrphansObserved++
+			cleanup.remove(state.Repository)
+			continue
+		}
 		if marked && slices.Equal(
 			state.ResolverPacks, expectedPacks,
 		) {
@@ -368,6 +377,7 @@ func stateFromStore(publication store.ResolverCatalogPublication) State {
 		CatalogPolicyDigest:     publication.CatalogPolicyDigest,
 		GenerationDigest:        publication.GenerationDigest,
 		ManifestDigest:          publication.ManifestDigest,
+		AuthorityDigest:         publication.AuthorityDigest,
 		Manifest:                publication.ManifestPath,
 	}
 }
@@ -403,6 +413,7 @@ func storeFromState(state State) store.ResolverCatalogPublication {
 		CatalogPolicyDigest:     state.CatalogPolicyDigest,
 		GenerationDigest:        state.GenerationDigest,
 		ManifestDigest:          state.ManifestDigest,
+		AuthorityDigest:         state.AuthorityDigest,
 		ManifestPath:            state.Manifest,
 	}
 }

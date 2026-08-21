@@ -403,6 +403,7 @@ func newExactCallerAPIFixtureConfigured(
 		CatalogPolicyDigest:     digest('1'),
 		GenerationDigest:        digest('2'),
 		ManifestDigest:          digest('3'),
+		AuthorityDigest:         digest('4'),
 		ManifestPath:            "resolver-catalog-manifest.json",
 		ControlRevision:         1,
 		WriterSchema:            resolvercatalogid.WriterSchema,
@@ -445,7 +446,7 @@ func newExactCallerAPIFixtureConfigured(
 	t.Cleanup(func() { _ = stage.Discard() })
 	detailInput := map[string]any{
 		"schema": "go-caller-detail-v1", "resolution": "direct-syntax",
-		"protocol": "grpc", "resolver_catalog_digest": resolverPointer.ManifestDigest,
+		"protocol": "grpc", "resolver_catalog_digest": resolverPointer.AuthorityDigest,
 		"unit_state": "resolved",
 		"unit_candidates": []map[string]any{{
 			"id":               "au_" + strings.Repeat("a", 64),

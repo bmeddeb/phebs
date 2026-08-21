@@ -20,8 +20,10 @@ import (
 
 const (
 	resolverCatalogWriterSchema           = resolvercatalogid.WriterSchema
+	resolverCatalogPriorWriterSchema      = resolvercatalogid.WriterSchemaV1
 	resolverCatalogSourceLanePolicy       = resolvercatalogid.SourceLanePolicy
-	resolverCatalogWriterMigrationVersion = "t30.6f-resolver-catalog-writer-v1"
+	resolverCatalogPriorMigration         = "t30.6f-resolver-catalog-writer-v1"
+	resolverCatalogWriterMigrationVersion = "t40r1-resolver-catalog-writer-v2"
 )
 
 const maxResolverCatalogDeclarations = 16
@@ -53,6 +55,7 @@ type ResolverCatalogPublication struct {
 	CatalogPolicyDigest     string                                  `json:"catalog_policy_digest"`
 	GenerationDigest        string                                  `json:"generation_digest"`
 	ManifestDigest          string                                  `json:"manifest_digest"`
+	AuthorityDigest         string                                  `json:"authority_digest"`
 	ManifestPath            string                                  `json:"manifest_path"`
 	ControlRevision         uint64                                  `json:"control_revision"`
 	WriterSchema            string                                  `json:"writer_schema"`
@@ -91,18 +94,46 @@ func (s *Surreal) migrateResolverCatalogWriter(ctx context.Context) error {
 	results, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
-IF $current != NONE AND $current != $wanted {
+IF $current != NONE AND $current != $wanted AND $current != $prior {
 	THROW 'phebs-permanent: unsupported resolver catalog writer generation'
 };
+LET $prior_rows = SELECT id FROM resolver_catalog_publication
+	WHERE writer_schema = $prior_writer_schema LIMIT 1;
+LET $wanted_rows = SELECT id FROM resolver_catalog_publication
+	WHERE writer_schema = $writer_schema LIMIT 1;
+LET $unsupported = SELECT id FROM resolver_catalog_publication
+	WHERE writer_schema NOT IN [$prior_writer_schema, $writer_schema] LIMIT 1;
+IF array::len($unsupported) != 0 {
+	THROW 'phebs-permanent: unsupported resolver catalog publication generation'
+};
+IF ($current = $prior AND array::len($wanted_rows) != 0)
+	OR ($current = $wanted AND array::len($prior_rows) != 0)
+	OR ($current = NONE AND array::len($prior_rows) != 0
+		AND array::len($wanted_rows) != 0) {
+	THROW 'phebs-permanent: mixed resolver catalog publication generations'
+};
+LET $retired_repositories = SELECT VALUE repository
+	FROM resolver_catalog_publication
+	WHERE ($current = $prior OR $current = NONE)
+		AND writer_schema = $prior_writer_schema;
+DELETE caller_generation_publication
+	WHERE repository IN $retired_repositories RETURN NONE;
+UPDATE repo SET caller_publication_revision =
+	(caller_publication_revision ?? 0) + 1
+	WHERE name IN $retired_repositories RETURN NONE;
 DELETE resolver_catalog_publication
-	WHERE $current = NONE AND writer_schema != $writer_schema RETURN NONE;
+	WHERE ($current = NONE OR $current = $prior)
+		AND writer_schema = $prior_writer_schema
+	RETURN NONE;
 UPSERT $marker SET
-	version = IF $current = NONE THEN $wanted ELSE $current END,
-	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END
+	version = IF $current = $wanted THEN $current ELSE $wanted END,
+	completed_at = IF $current = $wanted THEN completed_at ELSE time::now() END
 	RETURN NONE;
 COMMIT;`, map[string]any{
-		"marker": marker, "wanted": resolverCatalogWriterMigrationVersion,
-		"writer_schema": resolverCatalogWriterSchema,
+		"marker": marker, "prior": resolverCatalogPriorMigration,
+		"wanted":              resolverCatalogWriterMigrationVersion,
+		"writer_schema":       resolverCatalogWriterSchema,
+		"prior_writer_schema": resolverCatalogPriorWriterSchema,
 	})
 	if err != nil {
 		return fmt.Errorf("migrate resolver catalog writer: %w", err)
@@ -173,6 +204,7 @@ func validateResolverCatalogPublication(
 		"catalog_policy_digest":     publication.CatalogPolicyDigest,
 		"generation_digest":         publication.GenerationDigest,
 		"manifest_digest":           publication.ManifestDigest,
+		"authority_digest":          publication.AuthorityDigest,
 	} {
 		if !validSHA256Digest(digest) {
 			return fmt.Errorf("%s must be canonical sha256", name)
@@ -219,7 +251,11 @@ func validateResolverCatalogPublication(
 func resolverCatalogDeclarationSetDigest(
 	declarations []ResolverCatalogDeclarationPublication,
 ) (string, error) {
-	raw, err := json.Marshal(declarations)
+	semantic := append([]ResolverCatalogDeclarationPublication{}, declarations...)
+	for index := range semantic {
+		semantic[index].RunID = ""
+	}
+	raw, err := json.Marshal(semantic)
 	if err != nil {
 		return "", err
 	}
@@ -323,6 +359,7 @@ LET $same_generation = $current != NONE
 	AND $current.generation_digest = $generation_digest;
 LET $same_publication = $same_generation
 	AND $current.manifest_digest = $manifest_digest
+	AND $current.authority_digest = $authority_digest
 	AND $current.manifest_path = $manifest_path
 	AND $current.writer_schema = $writer_schema;
 LET $current_revision = $current.control_revision ?? 0;
@@ -354,6 +391,7 @@ LET $published = IF $acceptable = false THEN []
 		catalog_policy_digest = $catalog_policy_digest,
 		generation_digest = $generation_digest,
 		manifest_digest = $manifest_digest,
+		authority_digest = $authority_digest,
 		manifest_path = $manifest_path,
 		control_revision = $next_revision,
 		writer_schema = $writer_schema,
@@ -432,6 +470,7 @@ func (s *Surreal) PublishResolverCatalog(
 			"catalog_policy_digest":      publication.CatalogPolicyDigest,
 			"generation_digest":          publication.GenerationDigest,
 			"manifest_digest":            publication.ManifestDigest,
+			"authority_digest":           publication.AuthorityDigest,
 			"manifest_path":              publication.ManifestPath,
 			"requested_revision":         publication.ControlRevision,
 			"writer_schema":              resolverCatalogWriterSchema,

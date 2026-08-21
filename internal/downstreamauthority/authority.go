@@ -24,12 +24,13 @@ var (
 )
 
 type Authority struct {
-	Schema      string                                     `json:"schema"`
-	Repository  string                                     `json:"repository"`
-	Observation observationpublication.DownstreamAuthority `json:"observation"`
-	Required    []DomainIdentity                           `json:"required"`
-	Domains     []candidate.DownstreamDomainAuthority      `json:"domains"`
-	Digest      string                                     `json:"digest"`
+	Schema           string                                     `json:"schema"`
+	Repository       string                                     `json:"repository"`
+	Observation      observationpublication.DownstreamAuthority `json:"observation"`
+	Required         []DomainIdentity                           `json:"required"`
+	Domains          []candidate.DownstreamDomainAuthority      `json:"domains"`
+	ProvenanceDigest string                                     `json:"provenance_digest,omitempty"`
+	Digest           string                                     `json:"digest"`
 }
 
 type DomainIdentity struct {
@@ -63,6 +64,7 @@ func BuildRequired(
 	slices.SortFunc(value.Domains, func(left, right candidate.DownstreamDomainAuthority) int {
 		return strings.Compare(left.Domain+"\x00"+left.Version, right.Domain+"\x00"+right.Version)
 	})
+	value.ProvenanceDigest = provenanceDigest(value)
 	value.Digest = digest(value)
 	if err := Validate(value); err != nil {
 		return Authority{}, err
@@ -108,7 +110,22 @@ func RequireUsable(value Authority) error {
 
 func digest(value Authority) string {
 	value.Digest = ""
+	if value.Schema == Schema {
+		value.ProvenanceDigest = ""
+		value.Domains = slices.Clone(value.Domains)
+		for index := range value.Domains {
+			value.Domains[index].RunID = ""
+		}
+	}
 	raw, _ := json.Marshal(value)
-	sum := sha256.Sum256(append([]byte("phebs-downstream-upstream-authority-v1\x00"), raw...))
+	sum := sha256.Sum256(append([]byte(value.Schema+"\x00"), raw...))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+func provenanceDigest(value Authority) string {
+	value.ProvenanceDigest = ""
+	value.Digest = ""
+	raw, _ := json.Marshal(value)
+	sum := sha256.Sum256(append([]byte(value.Schema+"-provenance\x00"), raw...))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }

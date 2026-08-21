@@ -21,6 +21,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -31,6 +32,28 @@ import (
 )
 
 type fakeResolver struct{ root resolvernamespace.Root }
+
+func TestResolverNamespaceRequestUsesSemanticResolverAuthority(t *testing.T) {
+	state := resolvercatalog.State{
+		Repository:       "example.com/acme/semantic-resolver",
+		Commit:           strings.Repeat("1", 40),
+		GenerationDigest: fixedDigest("1"),
+		ManifestDigest:   fixedDigest("2"),
+		AuthorityDigest:  fixedDigest("3"),
+	}
+	first := resolverNamespaceBuildRequest(t.TempDir(), state, nil, nil)
+	state.ManifestDigest = fixedDigest("4")
+	second := resolverNamespaceBuildRequest(t.TempDir(), state, nil, nil)
+	if first.ResolverManifestDigest != state.AuthorityDigest ||
+		first.ResolverManifestDigest != second.ResolverManifestDigest {
+		t.Fatalf("exact resolver provenance rekeyed namespace: first=%+v second=%+v", first, second)
+	}
+	state.AuthorityDigest = fixedDigest("5")
+	changed := resolverNamespaceBuildRequest(t.TempDir(), state, nil, nil)
+	if changed.ResolverManifestDigest == first.ResolverManifestDigest {
+		t.Fatal("semantic resolver authority change preserved namespace input")
+	}
+}
 
 func TestMutationAcquireRetriesBoundedProbesUntilAvailable(t *testing.T) {
 	attempts := 0

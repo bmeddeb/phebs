@@ -1120,6 +1120,7 @@ func installResolverFixtureForRepository(
 		CatalogPolicyDigest:     state.CatalogPolicyDigest,
 		GenerationDigest:        state.GenerationDigest,
 		ManifestDigest:          state.ManifestDigest,
+		AuthorityDigest:         state.AuthorityDigest,
 		ManifestPath:            state.Manifest,
 	}
 	for _, declaration := range state.Declarations {

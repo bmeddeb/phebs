@@ -166,7 +166,7 @@ func GenerationIdentity(
 		CandidateManifestDigest:  candidate.ManifestDigest,
 		CandidatePolicyDigest:    candidate.PolicyDigest,
 		ResolverGenerationDigest: resolver.GenerationDigest,
-		ResolverManifestDigest:   resolver.ManifestDigest,
+		ResolverManifestDigest:   resolver.AuthorityDigest,
 		Extractors:               extractors,
 	})
 }

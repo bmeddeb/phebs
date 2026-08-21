@@ -311,8 +311,9 @@ DEFINE FIELD IF NOT EXISTS manifest_digest ON resolver_catalog_publication TYPE 
 DEFINE FIELD IF NOT EXISTS manifest_path ON resolver_catalog_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS control_revision ON resolver_catalog_publication TYPE int
     DEFAULT 1 ASSERT $value >= 1;
-DEFINE FIELD IF NOT EXISTS writer_schema ON resolver_catalog_publication TYPE string
-    ASSERT $value = 'phebs-resolver-catalog-store-v1';
+DEFINE FIELD OVERWRITE writer_schema ON resolver_catalog_publication TYPE string
+    ASSERT $value IN ['phebs-resolver-catalog-store-v1', 'phebs-resolver-catalog-store-v2'];
+DEFINE FIELD IF NOT EXISTS authority_digest ON resolver_catalog_publication TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS published_at ON resolver_catalog_publication TYPE datetime;
 DEFINE INDEX IF NOT EXISTS resolver_catalog_publication_repository
     ON resolver_catalog_publication FIELDS repository UNIQUE;

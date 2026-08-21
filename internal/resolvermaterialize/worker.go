@@ -643,7 +643,9 @@ func StateFromStore(pointer store.ResolverCatalogPublication) resolvercatalog.St
 		ResolverPackSetDigest:   pointer.ResolverPackSetDigest,
 		CatalogPolicyDigest:     pointer.CatalogPolicyDigest,
 		GenerationDigest:        pointer.GenerationDigest,
-		ManifestDigest:          pointer.ManifestDigest, Manifest: pointer.ManifestPath,
+		ManifestDigest:          pointer.ManifestDigest,
+		AuthorityDigest:         pointer.AuthorityDigest,
+		Manifest:                pointer.ManifestPath,
 	}
 }
 
@@ -675,7 +677,9 @@ func storeFromState(state resolvercatalog.State) store.ResolverCatalogPublicatio
 		ResolverPackSetDigest: state.ResolverPackSetDigest,
 		CatalogPolicyDigest:   state.CatalogPolicyDigest,
 		GenerationDigest:      state.GenerationDigest,
-		ManifestDigest:        state.ManifestDigest, ManifestPath: state.Manifest,
+		ManifestDigest:        state.ManifestDigest,
+		AuthorityDigest:       state.AuthorityDigest,
+		ManifestPath:          state.Manifest,
 	}
 }
 

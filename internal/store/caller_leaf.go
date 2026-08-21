@@ -610,7 +610,7 @@ LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
 	policy_digest, control_revision
 	FROM $candidate_rid)[0];
 LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
-	declaration_set_digest, generation_digest, manifest_digest,
+	declaration_set_digest, generation_digest, authority_digest,
 	control_revision, writer_schema FROM $resolver_rid)[0];
 LET $owned = (SELECT id FROM type::record($job_id)
 	WHERE target = $repository AND status IN ['claimed', 'running']
@@ -634,7 +634,7 @@ LET $authority_ok = $writer_ok AND $owned != NONE AND $repo != NONE
 	AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
 	AND $resolver.declaration_set_digest = $declaration_set_digest
 	AND $resolver.generation_digest = $resolver_generation_digest
-	AND $resolver.manifest_digest = $resolver_manifest_digest
+	AND $resolver.authority_digest = $resolver_manifest_digest
 	AND $resolver.control_revision = $resolver_control_revision
 	AND $resolver.writer_schema = $resolver_writer_schema;
 LET $same = $current != NONE
@@ -1189,7 +1189,7 @@ LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
 	policy_digest, control_revision
 	FROM $candidate_rid)[0];
 LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
-	declaration_set_digest, generation_digest, manifest_digest,
+	declaration_set_digest, generation_digest, authority_digest,
 	control_revision, writer_schema FROM $resolver_rid)[0];
 LET $owned = (SELECT id FROM type::record($job_id)
 	WHERE target = $repository AND status IN ['claimed', 'running']
@@ -1215,7 +1215,7 @@ LET $authority_ok = $writer_ok AND $owned != NONE AND $repo != NONE
 	AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
 	AND $resolver.declaration_set_digest = $declaration_set_digest
 	AND $resolver.generation_digest = $resolver_generation_digest
-	AND $resolver.manifest_digest = $resolver_manifest_digest
+	AND $resolver.authority_digest = $resolver_manifest_digest
 	AND $resolver.control_revision = $resolver_control_revision
 	AND $resolver.writer_schema = $resolver_writer_schema
 	AND $outcomes = $expected_outcomes;

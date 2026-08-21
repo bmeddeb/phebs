@@ -320,7 +320,8 @@ func seedCallerPublicationPayloadIntegrity(
 			resolver_pack_set_digest: $resolver_generation_digest,
 			catalog_policy_digest: $resolver_generation_digest,
 			generation_digest: $resolver_generation_digest,
-			manifest_digest: $resolver_manifest_digest,
+			manifest_digest: $resolver_integrity_digest,
+			authority_digest: $resolver_manifest_digest,
 			manifest_path: 'resolver.json', control_revision: 1,
 			writer_schema: $resolver_writer_schema,
 			published_at: time::now()
@@ -336,6 +337,7 @@ func seedCallerPublicationPayloadIntegrity(
 		"source_lane_policy":         generation.SourceLanePolicy,
 		"resolver_generation_digest": generation.ResolverGenerationDigest,
 		"resolver_manifest_digest":   generation.ResolverManifestDigest,
+		"resolver_integrity_digest":  internalCallerDigest('7'),
 		"resolver_writer_schema":     generation.ResolverWriterSchema,
 	})
 	if _, err := s.EnqueuePending(

@@ -2631,3 +2631,29 @@ bytes remain valid. The combined real production-binary rehearsal passed all
 three profiles in one process. It remains small-corpus readiness evidence and
 does not establish pressure, scale, SLO, accuracy/completeness, release,
 migration, decommissioning, or a retroactive ceremony pass.
+
+### Neutral-30 stopped recovery and resolver v2
+
+Neutral-30 passed cold, warm-noop, delta-B, and return-A. Its interruption
+restart also converged through the exact extraction boundary, then the strict
+V19 authority oracle stopped because caller generation changed. The verified
+source-free package is
+`sha256:145eb7a7125a86b1af76bc1785c9997e411696fda0cf46250b9a9cae5dc9fa8a`;
+it binds source `2b32ceea709bf47eacf0a5ce2f62f3bb83cf9711`, plan
+`sha256:5ed41ebb4c23f1c2944f7dbfd6691f7f43297d558e19c41b998814c6084cbeaf`,
+and observation
+`sha256:ed05de9d98d8290f7d0ca2abff18622c5fe09b6764bdd4008a01657bdcf2f550`.
+
+The production defect was extraction `RunID` provenance entering all three
+resolver authority hashes: declaration set, generation, and manifest. The
+follow-through audit found the same lineage field independently entering the
+partitioned downstream-upstream digest bound by caller. A fresh run over
+byte-equivalent A content could therefore rekey caller and relationship
+authority through either path. Resolver v2 keeps `RunID` inside the exact
+manifest integrity hash but excludes it from a separate semantic authority
+projection consumed by caller; downstream authority v2 retains the serialized
+provenance while excluding it from its digest. V1 bytes retain historical
+validation, and a supported fail-closed writer migration retires v1 current
+resolver/caller pointers before the existing startup fan-out rebuilds v2. The
+strict V19 recovery oracle is not weakened. Neutral-30 remains immutable
+stopped evidence and does not authorize another freeze or execution.

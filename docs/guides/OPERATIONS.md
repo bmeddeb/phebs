@@ -3911,6 +3911,45 @@ unsupported, unavailable, and conflicting resolution remain explicit records;
 operators must never repair these derived bytes or choose a conflict candidate
 by editing a member.
 
+Resolver-catalog v2 also separates extraction-run provenance from semantic
+authority. Each declaration publication retains its validated `run_id`, and
+the exact manifest integrity digest continues to cover that value. The
+declaration-set, resolver-generation, and manifest-authority digests instead
+canonicalize the same bounded declaration list with only `run_id` cleared.
+Caller and relationship generations bind the manifest-authority digest; they
+must not bind the exact provenance manifest digest. Repeating identical
+extraction content under a fresh run therefore advances the resolver control
+and exact manifest receipt without rekeying downstream semantic authority.
+The partitioned downstream-upstream envelope follows the same v2 rule: its
+serialized domains retain validated `run_id` provenance, while its semantic
+digest clears only that field. Historical v1 envelopes continue to validate
+with their original run-sensitive digest and are never rewritten as v2.
+
+The supported resolver writer v1→v2 startup migration is destructive only to
+derived current pointers: one transaction retires every v1 resolver pointer,
+retires its current caller pointer, increments the affected caller revision,
+and advances the writer marker. Existing candidate startup backfill then
+drives candidate→resolver→caller→relationship rebuilding. Unknown marker or
+mixed writer generations refuse startup permanently; do not edit the marker.
+Historical v1 filesystem/archive bytes retain their v1 validation algorithm
+and remain evidence, while normal lifecycle cleanup reclaims unreferenced v1
+artifacts after v2 becomes current.
+
+The cutover is O(indexed repositories) through the existing uncapped startup
+backfill and can pay one bounded resolver materialization plus caller and
+relationship recovery chain for every affected repository. At steady state,
+v2 hashes at most 16 small declaration headers for each semantic identity and
+performs one extra at-most-1-MiB manifest canonicalization when sealing. It
+adds no source, Git, corpus, shard, or member reread and no new request, lock,
+goroutine, child, or concurrency. Exact-current and bounded retention reads
+project one additional fixed SHA-256 field. A run-ID-only replay may replace
+the exact resolver provenance manifest and advance its control revision; that
+can replay the existing bounded caller job and relationship callback, but the
+resulting caller-generation and relationship semantic authorities remain
+unchanged. Downstream v2 performs one exact provenance hash and one semantic
+hash over at most 64 domain headers; only the latter clones and clears the
+copied run strings.
+
 When the registered relationship owner invokes the builder, unchanged namespace
 members are revalidated and hard-linked, while only changed namespaces receive
 new bytes. A complete validation pass precedes the atomic current-pointer swap.
