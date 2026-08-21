@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -905,13 +906,35 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	v20Plan, err := frozenV20PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v20PlanBytes, err := MarshalPlan(v20Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	digest := "sha256:" + strings.Repeat("a", 64)
+	v20CallerTotal := 8
+	v20CallerProbe, v20CallerErr := classifyCallerGeneration(
+		apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+			State: "missing", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+				State: "complete", SettledPairCount: v20CallerTotal,
+				SucceededPairCount: v20CallerTotal, TotalPairCount: &v20CallerTotal,
+			},
+		}},
+		profileInspectionV20,
+	)
+	if !errors.Is(v20CallerErr, errCallerPublicationMissing) {
+		t.Fatalf("v20 missing caller publication = %v, want terminal", v20CallerErr)
+	}
 	tests := []struct {
 		name          string
 		cause         error
 		outcome       string
 		historicalV14 bool
 		v16           bool
+		v20           bool
 		failureClass  string
 		confirmations int64
 		attempts      int64
@@ -1039,6 +1062,11 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 			},
 		},
 		{
+			name: "v20 confirmed missing caller publication", cause: v20CallerErr,
+			outcome: "caller_generation_terminal", v20: true, attempts: 2,
+			projection: v20CallerProbe,
+		},
+		{
 			name: "relationship bound refusal", cause: errRelationshipBoundRefusal,
 			outcome: "relationship_bound_refusal",
 			projection: privateConvergenceProbe{
@@ -1074,7 +1102,9 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			selectedPlan, selectedPlanBytes := plan, planBytes
-			if test.v16 {
+			if test.v20 {
+				selectedPlan, selectedPlanBytes = v20Plan, v20PlanBytes
+			} else if test.v16 {
 				selectedPlan, selectedPlanBytes = v16Plan, v16PlanBytes
 			} else if test.historicalV14 {
 				selectedPlan, err = frozenV14PlanWithHostToolchain(testSourceCommit, hostToolchain)
@@ -1118,12 +1148,19 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 					return privateProfileSnapshot{}, test.projection, test.cause
 				},
 			)
-			if !errors.Is(waitErr, test.cause) {
+			wantWaitErr := test.cause
+			if test.v20 {
+				wantWaitErr = errCallerGenerationTerminal
+			}
+			if !errors.Is(waitErr, wantWaitErr) {
 				t.Fatalf("terminal wait = %v", waitErr)
 			}
 			if len(run.observation.ConvergenceWaits) != 1 ||
 				run.observation.ConvergenceWaits[0].Outcome != test.outcome {
 				t.Fatalf("terminal waits = %+v", run.observation.ConvergenceWaits)
+			}
+			if test.v20 && run.observation.ConvergenceWaits[0].Attempts != test.attempts {
+				t.Fatalf("v20 caller confirmation = %+v", run.observation.ConvergenceWaits[0])
 			}
 			if test.v16 &&
 				(run.observation.ConvergenceWaits[0].RelationshipFailureClass != test.failureClass ||

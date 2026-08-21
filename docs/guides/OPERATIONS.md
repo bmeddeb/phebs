@@ -4505,3 +4505,44 @@ to clear at 250-ms cadence before failure. The combined semantic, structural,
 and stale-worker rehearsal passed in one process. This establishes readiness
 mechanics only—not pressure, scale, SLO, accuracy, release, migration, or
 decommissioning—and does not pass any prior ceremony retroactively.
+
+### T40.13 neutral-31 caller publication repair and V20 terminal fence
+
+Neutral-31 is immutable V19 stopped evidence. Its verified source-free package
+is `sha256:7e6301197b505dfd07718e97caf2565ead7037d70fb65a5d3098f5b91ab72543`
+at source `5434bb382182251f356040eee15ac8766e2292d2`. Structural cold settled
+extraction, reached caller generation, and then retained one unchanged caller
+projection until the four-hour convergence deadline. A synthetic
+production-binary rehearsal localized the stop without retaining private
+source: all eight caller pairs and admission were complete, but the publication
+transaction rejected the canonical downstream-authority V2 envelope because
+its store-side validator still understood only V1.
+
+Caller publication now uses the shared canonical V1/V2 validator and requires
+the decoded authority to be usable and to match the generation repository and
+upstream digest exactly. A V2 publication therefore commits through the same
+transaction and ownership fences as V1; malformed provenance, unknown schemas,
+repository drift, digest drift, unusable roots, noncanonical bytes, and
+envelopes above 64 KiB still fail closed. Historical V1 authorities remain
+valid. This is a validator compatibility repair, not a new authority or
+migration.
+
+Fresh ceremony schemas advance to V20. If caller progress is `missing` or
+`stale` while its exact pair projection is complete, all settled pairs
+succeeded, and none were refused, V20 treats the absent publication as a
+terminal candidate. It seals `caller_generation_terminal` only after the same
+source-free probe repeats five seconds later. A publisher that wins the race
+changes the probe and convergence continues. V19 and earlier retain their
+historical pending classification and receipt validation.
+
+Publication attempts already validate the at-most-64-KiB upstream envelope.
+V2 performs a canonical decode/marshal plus one provenance and one semantic
+SHA-256 over at most 64 bounded domain headers before the existing transaction;
+V1 retains its semantic hash. There is no new query, lock, transaction, retry,
+startup scan, sync tick, child, source/Git/content/candidate/corpus/shard read,
+cache invalidation, or concurrency. Ordinary convergence polling is unchanged.
+Only the complete/all-success-but-unpublished V20 edge adds one caller-progress
+request after five seconds. Safety ceilings and production bounds are
+unchanged. Neutral-31 does not pass retroactively, and this correction alone
+does not authorize integration, freeze, execution, release, or any scale/SLO
+claim.

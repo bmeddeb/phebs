@@ -1484,6 +1484,18 @@ catalog, relationship, or correctness authority.
   valid. Neutral-30 remains immutable stopped evidence. Integration, a fresh
   freeze, and execution remain separately authorized; T40.13 and Epic 40 are
   not closed.
+- `t40r1-neutral-31` is immutable V19 stopped evidence at exact source
+  `5434bb382182251f356040eee15ac8766e2292d2`. Structural cold settled
+  extraction but remained at caller generation until the four-hour deadline.
+  A production-binary rehearsal proved the caller pairs and admission were
+  complete while the store's private V1-only upstream validator rejected the
+  canonical downstream-authority V2 envelope. Caller publication now uses the
+  shared V1/V2 validator, and a real store test proves a non-empty V2 authority
+  commits and reopens. Fresh schemas advance to V20, whose complete/all-success
+  but missing/stale caller projection stops only after an identical second
+  five-second probe. Earlier schemas remain historical. Neutral-31 does not
+  pass retroactively; integration, freeze, and execution remain separately
+  authorized, and T40.13/Epic 40 are not closed.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

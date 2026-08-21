@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"slices"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -66,9 +70,26 @@ func finishCallerPublicationFixture(
 	candidate *store.CandidateManifestPublication,
 	catalog *store.ResolverCatalogPublication,
 ) callerPublicationFixture {
+	return finishCallerPublicationFixtureWithUpstream(
+		t, s, repository, commit, candidate, catalog, "", "",
+	)
+}
+
+func finishCallerPublicationFixtureWithUpstream(
+	t *testing.T,
+	s *store.Surreal,
+	repository,
+	commit string,
+	candidate *store.CandidateManifestPublication,
+	catalog *store.ResolverCatalogPublication,
+	upstream,
+	upstreamDigest string,
+) callerPublicationFixture {
 	t.Helper()
 	ctx := context.Background()
 	generation := callerGeneration(repository, commit, candidate, catalog)
+	generation.UpstreamDigest = upstreamDigest
+	generation.Digest = store.ComputeCallerGenerationDigest(generation)
 	if _, err := s.EnqueuePending(ctx, store.JobCallerLeaf, repository, false); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +131,7 @@ func finishCallerPublicationFixture(
 	}
 	manifestDigest := candidateDigest('9')
 	publication := store.CallerGenerationPublication{
-		Generation: generation,
+		Generation: generation, Upstream: upstream,
 		Pairs: []store.CallerGenerationPairPublication{
 			{Pair: grpc, Receipt: *outcomes[0].Receipt},
 			{Pair: thrift, Receipt: *outcomes[1].Receipt},
@@ -124,6 +145,43 @@ func finishCallerPublicationFixture(
 		repository: repository, commit: commit, generation: generation,
 		job: job, publication: publication,
 	}
+}
+
+func callerPublicationV2Upstream(
+	t *testing.T,
+	repository,
+	candidateManifestDigest,
+	candidatePolicyDigest string,
+) (string, string) {
+	t.Helper()
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: repository,
+		SourceGenerationDigest: digest("1"), SourceRootDigest: digest("2"),
+		ObservationGenerationDigest: digest("3"), ObservationRootDigest: digest("4"),
+		PartitionPolicyDigest: digest("5"), ObservationPolicyDigest: digest("6"),
+		InventoryPolicyDigest: digest("7"), RecordCount: 1, ObservedCount: 1,
+	}
+	domain := candidate.DownstreamDomainAuthority{
+		Domain: "grpc-caller", Version: "1.0.0", PlanDigest: digest("8"),
+		RootDigest: digest("9"), RunID: "run-v2", Disposition: candidate.PartitionResultEmpty,
+		CandidateManifestDigest: candidateManifestDigest, CandidatePartitionRootDigest: digest("b"),
+		CandidatePolicyDigest: candidatePolicyDigest, SourceGenerationDigest: observation.SourceGenerationDigest,
+		ObservationGenerationDigest: observation.ObservationGenerationDigest,
+		ExtractionPolicyDigest:      digest("d"), DomainIndexDigest: digest("e"),
+		DomainScheduleDigest: digest("f"),
+	}
+	value, err := downstreamauthority.Build(
+		observation, []candidate.DownstreamDomainAuthority{domain},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw), value.Digest
 }
 
 func newCallerPublicationFixtureWithDeclaration(
@@ -315,6 +373,54 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 		ctx, *fixture.job, fixture.publication,
 	); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("lost lease publication = %v, want conflict", err)
+	}
+}
+
+func TestCallerGenerationPublicationAcceptsCanonicalV2UpstreamAuthority(t *testing.T) {
+	s := newTestStore(t)
+	ctx := t.Context()
+	repository := "github.com/acme/caller-publication-v2-upstream"
+	commit := candidateCommit('1')
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	if err := s.PublishCandidateManifest(
+		ctx, candidatePublication(repository, commit, ""),
+	); err != nil {
+		t.Fatal(err)
+	}
+	candidatePublication, err := s.GetCandidateManifestPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishResolverCatalog(
+		ctx, resolverPublication(repository, commit, candidatePublication.ManifestDigest),
+	); err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := s.GetResolverCatalogPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstream, upstreamDigest := callerPublicationV2Upstream(
+		t, repository, candidatePublication.ManifestDigest, candidatePublication.PolicyDigest,
+	)
+	fixture := finishCallerPublicationFixtureWithUpstream(
+		t, s, repository, commit, candidatePublication, catalog, upstream, upstreamDigest,
+	)
+	if err := s.PublishCallerGeneration(ctx, *fixture.job, fixture.publication); err != nil {
+		t.Fatalf("publish canonical v2 upstream authority: %v", err)
+	}
+	published, err := s.GetCallerGenerationPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if published.Upstream != upstream || published.Generation.UpstreamDigest != upstreamDigest {
+		t.Fatalf("published upstream authority = (%q, %q), want (%q, %q)",
+			published.Upstream, published.Generation.UpstreamDigest, upstream, upstreamDigest)
 	}
 }
 

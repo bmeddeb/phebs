@@ -1,12 +1,9 @@
 package store
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -17,6 +14,7 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -117,34 +115,10 @@ func validCallerPublicationUpstream(
 	if upstream == "" || len(upstream) > maxCallerPublicationUpstreamBytes {
 		return false
 	}
-	const schema = "phebs-downstream-upstream-authority-v1"
-	type envelope struct {
-		Schema      string          `json:"schema"`
-		Repository  string          `json:"repository"`
-		Observation json.RawMessage `json:"observation"`
-		Required    json.RawMessage `json:"required"`
-		Domains     json.RawMessage `json:"domains"`
-		Digest      string          `json:"digest"`
-	}
-	raw := []byte(upstream)
-	var value envelope
-	if json.Unmarshal(raw, &value) != nil || value.Schema != schema ||
-		value.Repository != generation.Repository ||
-		value.Digest != generation.UpstreamDigest ||
-		len(value.Observation) == 0 || len(value.Required) == 0 || len(value.Domains) == 0 {
-		return false
-	}
-	canonical, err := json.Marshal(value)
-	if err != nil || !bytes.Equal(canonical, raw) {
-		return false
-	}
-	value.Digest = ""
-	identity, err := json.Marshal(value)
-	if err != nil {
-		return false
-	}
-	sum := sha256.Sum256(append([]byte(schema+"\x00"), identity...))
-	return generation.UpstreamDigest == "sha256:"+hex.EncodeToString(sum[:])
+	value, err := authorityvalidate.Canonical([]byte(upstream))
+	return err == nil && value.Usable &&
+		value.Repository == generation.Repository &&
+		value.Digest == generation.UpstreamDigest
 }
 
 // repairableCallerPublicationUpstream admits the short-lived digest-only v2

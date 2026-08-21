@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
@@ -271,22 +272,7 @@ type DomainResultRoot struct {
 // DownstreamDomainAuthority is the bounded exact plan/root identity retained
 // by T40.11 component roots. It deliberately repeats the upstream policy and
 // generation digests needed to reject a root detached from its admitted plan.
-type DownstreamDomainAuthority struct {
-	Domain                       string `json:"domain"`
-	Version                      string `json:"version"`
-	PlanDigest                   string `json:"plan_digest"`
-	RootDigest                   string `json:"root_digest"`
-	RunID                        string `json:"run_id"`
-	Disposition                  string `json:"disposition"`
-	CandidateManifestDigest      string `json:"candidate_manifest_digest"`
-	CandidatePartitionRootDigest string `json:"candidate_partition_root_digest"`
-	CandidatePolicyDigest        string `json:"candidate_policy_digest"`
-	SourceGenerationDigest       string `json:"source_generation_digest"`
-	ObservationGenerationDigest  string `json:"observation_generation_digest"`
-	ExtractionPolicyDigest       string `json:"extraction_policy_digest"`
-	DomainIndexDigest            string `json:"domain_index_digest"`
-	DomainScheduleDigest         string `json:"domain_schedule_digest"`
-}
+type DownstreamDomainAuthority authorityvalidate.DomainAuthority
 
 func NewDownstreamDomainAuthority(
 	plan DomainResultPlan, root DomainResultRoot, runID string,
@@ -312,14 +298,7 @@ func NewDownstreamDomainAuthority(
 }
 
 func ValidateDownstreamDomainAuthority(value DownstreamDomainAuthority) error {
-	if !validToken(value.Domain, 128) || !validToken(value.Version, 128) ||
-		!validDigest(value.PlanDigest) || !validDigest(value.RootDigest) ||
-		strings.TrimSpace(value.RunID) != value.RunID || value.RunID == "" || len(value.RunID) > 512 ||
-		!validDomainResultRootDisposition(value.Disposition) ||
-		!validDigest(value.CandidateManifestDigest) || !validDigest(value.CandidatePartitionRootDigest) ||
-		!validDigest(value.CandidatePolicyDigest) || !validDigest(value.SourceGenerationDigest) ||
-		!validDigest(value.ObservationGenerationDigest) || !validDigest(value.ExtractionPolicyDigest) ||
-		!validDigest(value.DomainIndexDigest) || !validDigest(value.DomainScheduleDigest) {
+	if !authorityvalidate.ValidDomainAuthority(authorityvalidate.DomainAuthority(value)) {
 		return domainResultInvalid("downstream domain authority")
 	}
 	return nil

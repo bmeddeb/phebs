@@ -192,6 +192,7 @@ const (
 	profileInspectionV14
 	profileInspectionV15
 	profileInspectionV16
+	profileInspectionV20
 )
 
 func extractionConvergenceProbe(
@@ -232,7 +233,7 @@ func extractionConvergenceProbe(
 	probe.ExtractionProgress = projection
 	jobTerminal := projection.JobState == string(store.StatusFailed) ||
 		projection.JobState == string(store.StatusCanceled)
-	if contract == profileInspectionV15 || contract == profileInspectionV16 {
+	if contract >= profileInspectionV15 {
 		// V15+ derives every terminal from the shared expectedExtraction*
 		// predicates that validateConvergenceWaits enforces, so the probe and
 		// the receipt validator cannot drift. JobExtract is a
@@ -448,8 +449,7 @@ func (inspector *profileInspector) inspectWithProgress(
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
-	if (inspector.contract == profileInspectionV14 || inspector.contract == profileInspectionV15 ||
-		inspector.contract == profileInspectionV16) &&
+	if inspector.contract >= profileInspectionV14 &&
 		(progress.SchemaVersion != observationpublication.ProgressSchemaV2 ||
 			progress.SelectedVersion != "v2") {
 		return privateProfileSnapshot{}, observationConvergenceProbe(progress),
@@ -501,7 +501,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		ctx, filepath.Join(profile.DataDir, "relationships"), profile.RepositoryName,
 	)
 	if err != nil {
-		if inspector.contract == profileInspectionV16 {
+		if inspector.contract >= profileInspectionV16 {
 			probe, classifyErr := inspector.classifyRelationshipOpenFailure(ctx, profile, err)
 			return privateProfileSnapshot{}, probe, classifyErr
 		}
@@ -515,7 +515,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", extractionProgress), err
 	}
 	relationshipRoot := publication.Root()
-	if inspector.contract == profileInspectionV16 &&
+	if inspector.contract >= profileInspectionV16 &&
 		inspector.extractionScanRelationshipGeneration != relationshipRoot.GenerationDigest {
 		extraction, extractionProgress, err = inspector.extractionForRelationship(
 			ctx, profile, probe.SHA256, relationshipRoot.GenerationDigest,
@@ -536,7 +536,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		relationshipRoot.Authority.Upstream.Observation.SourceGenerationDigest != source.Digest ||
 		!relationshipRoot.RepositoryComplete || !relationshipRoot.AllServicesComplete ||
 		relationshipRoot.FailedServiceCount != 0 {
-		if inspector.contract == profileInspectionV16 {
+		if inspector.contract >= profileInspectionV16 {
 			probe, classifyErr := inspector.classifyRelationshipMismatch(
 				ctx, profile, relationshipRoot.GenerationDigest,
 				relationshipFailureAuthorityGap,
@@ -546,7 +546,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 relationship root has not converged")
 	}
 	if err := relationshipMatchesExtraction(ctx, relationshipRoot, extraction); err != nil {
-		if inspector.contract == profileInspectionV16 {
+		if inspector.contract >= profileInspectionV16 {
 			probe, classifyErr := inspector.classifyRelationshipMismatch(
 				ctx, profile, relationshipRoot.GenerationDigest,
 				relationshipFailureAuthorityDrift,
@@ -643,7 +643,7 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	}
 	return classifyCallerGeneration(apiresponse.CallerMapPage{
 		Generation: &progress.Generation,
-	})
+	}, inspector.contract)
 }
 
 func (inspector *profileInspector) extractionForRelationship(
@@ -891,6 +891,7 @@ func classifyRelationshipGeneration(
 
 func classifyCallerGeneration(
 	page apiresponse.CallerMapPage,
+	contract profileInspectionContract,
 ) (privateConvergenceProbe, error) {
 	if page.Generation == nil {
 		return convergenceProbe("caller_generation"),
@@ -915,6 +916,12 @@ func classifyCallerGeneration(
 		}
 		return probe, nil
 	case "missing", "stale":
+		progress := generation.PartitionProgress
+		if contract >= profileInspectionV20 && progress != nil && progress.State == "complete" &&
+			progress.TotalPairCount != nil && *progress.TotalPairCount == progress.SettledPairCount &&
+			progress.SucceededPairCount == progress.SettledPairCount && progress.RefusedPairCount == 0 {
+			return probe, errCallerPublicationMissing
+		}
 		return probe, errors.New("T40.13 caller generation has not converged")
 	case "failed":
 		// Continue below to distinguish the one frozen aggregate-bound refusal

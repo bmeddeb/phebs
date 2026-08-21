@@ -38,7 +38,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			}},
 		},
 	}}
-	probe, err := classifyCallerGeneration(bound)
+	probe, err := classifyCallerGeneration(bound, profileInspectionLegacy)
 	if probe.Stage != "caller_generation" || !errors.Is(err, errCallerGenerationBoundRefusal) {
 		t.Fatalf("typed caller refusal = %+v, %v", probe, err)
 	}
@@ -50,7 +50,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			RefusedPairCount: 154, TotalPairCount: &total,
 		},
 	}
-	if _, err := classifyCallerGeneration(unknown); !errors.Is(err, errCallerGenerationTerminal) {
+	if _, err := classifyCallerGeneration(unknown, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
 		t.Fatalf("untyped caller refusal = %v", err)
 	}
 
@@ -61,7 +61,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			TotalPairCount: &currentTotal,
 		},
 	}}
-	currentProbe, err := classifyCallerGeneration(current)
+	currentProbe, err := classifyCallerGeneration(current, profileInspectionLegacy)
 	if err != nil {
 		t.Fatalf("current caller generation rejected: %v", err)
 	}
@@ -75,15 +75,35 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 					State: "unavailable",
 				},
 			}}
-			_, err := classifyCallerGeneration(page)
+			_, err := classifyCallerGeneration(page, profileInspectionLegacy)
 			if err == nil || classifyConvergenceInspection(err).class != "pending" {
 				t.Fatalf("%s caller generation = %v", state, err)
 			}
 		})
 	}
+	settledTotal := 8
+	for _, state := range []string{"missing", "stale"} {
+		t.Run(state+" complete work", func(t *testing.T) {
+			page := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+				State: state, PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+					State: "complete", SettledPairCount: settledTotal,
+					SucceededPairCount: settledTotal, TotalPairCount: &settledTotal,
+				},
+			}}
+			if _, err := classifyCallerGeneration(page, profileInspectionV16); err == nil ||
+				classifyConvergenceInspection(err).class != "pending" {
+				t.Fatalf("v19-compatible %s complete work = %v", state, err)
+			}
+			if _, err := classifyCallerGeneration(page, profileInspectionV20); !errors.Is(
+				err, errCallerPublicationMissing,
+			) {
+				t.Fatalf("v20 %s complete work = %v, want terminal", state, err)
+			}
+		})
+	}
 	invalidCurrent := current
 	invalidCurrent.Generation = &apiresponse.CallerMapGeneration{State: "current"}
-	if _, err := classifyCallerGeneration(invalidCurrent); !errors.Is(err, errCallerGenerationTerminal) {
+	if _, err := classifyCallerGeneration(invalidCurrent, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
 		t.Fatalf("invalid current caller generation = %v", err)
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -32,13 +31,13 @@ type Result struct {
 }
 
 type authority struct {
-	Schema           string                                `json:"schema"`
-	Repository       string                                `json:"repository"`
-	Observation      observation                           `json:"observation"`
-	Required         []domainIdentity                      `json:"required"`
-	Domains          []candidate.DownstreamDomainAuthority `json:"domains"`
-	ProvenanceDigest string                                `json:"provenance_digest,omitempty"`
-	Digest           string                                `json:"digest"`
+	Schema           string            `json:"schema"`
+	Repository       string            `json:"repository"`
+	Observation      observation       `json:"observation"`
+	Required         []domainIdentity  `json:"required"`
+	Domains          []DomainAuthority `json:"domains"`
+	ProvenanceDigest string            `json:"provenance_digest,omitempty"`
+	Digest           string            `json:"digest"`
 }
 
 type observation struct {
@@ -58,6 +57,27 @@ type observation struct {
 type domainIdentity struct {
 	Domain  string `json:"domain"`
 	Version string `json:"version"`
+}
+
+// DomainAuthority is the exact wire projection owned by the validation seam.
+// Keeping it here prevents this dependency-low package from importing the
+// higher-level candidate package, which reaches the store through Git object
+// construction. The typed downstreamauthority package remains the producer.
+type DomainAuthority struct {
+	Domain                       string `json:"domain"`
+	Version                      string `json:"version"`
+	PlanDigest                   string `json:"plan_digest"`
+	RootDigest                   string `json:"root_digest"`
+	RunID                        string `json:"run_id"`
+	Disposition                  string `json:"disposition"`
+	CandidateManifestDigest      string `json:"candidate_manifest_digest"`
+	CandidatePartitionRootDigest string `json:"candidate_partition_root_digest"`
+	CandidatePolicyDigest        string `json:"candidate_policy_digest"`
+	SourceGenerationDigest       string `json:"source_generation_digest"`
+	ObservationGenerationDigest  string `json:"observation_generation_digest"`
+	ExtractionPolicyDigest       string `json:"extraction_policy_digest"`
+	DomainIndexDigest            string `json:"domain_index_digest"`
+	DomainScheduleDigest         string `json:"domain_schedule_digest"`
 }
 
 func Canonical(raw []byte) (Result, error) {
@@ -109,7 +129,7 @@ func Canonical(raw []byte) (Result, error) {
 	for _, domain := range value.Domains {
 		key := domain.Domain + "\x00" + domain.Version
 		_, isRequired := required[key]
-		if key <= prior || candidate.ValidateDownstreamDomainAuthority(domain) != nil || !isRequired ||
+		if key <= prior || !ValidDomainAuthority(domain) || !isRequired ||
 			domain.SourceGenerationDigest != observation.SourceGenerationDigest ||
 			domain.ObservationGenerationDigest != observation.ObservationGenerationDigest {
 			return Result{}, ErrInvalid
@@ -137,11 +157,27 @@ func Canonical(raw []byte) (Result, error) {
 	for index, domain := range value.Domains {
 		usable = usable && domain.Domain == value.Required[index].Domain &&
 			domain.Version == value.Required[index].Version &&
-			(domain.Disposition == candidate.PartitionResultSuccess ||
-				domain.Disposition == candidate.PartitionResultEmpty ||
-				domain.Disposition == candidate.PartitionResultUnavailablePrerequisite)
+			(domain.Disposition == "success" || domain.Disposition == "empty" ||
+				domain.Disposition == "unavailable_prerequisite")
 	}
 	return Result{Repository: value.Repository, Digest: value.Digest, Usable: usable}, nil
+}
+
+// ValidDomainAuthority applies the same bounded wire checks used while
+// validating a complete authority envelope.
+func ValidDomainAuthority(value DomainAuthority) bool {
+	switch value.Disposition {
+	case "success", "empty", "unavailable_prerequisite", "terminal_refusal", "retryable":
+	default:
+		return false
+	}
+	return validToken(value.Domain, 128) && validToken(value.Version, 128) &&
+		validDigest(value.PlanDigest) && validDigest(value.RootDigest) &&
+		strings.TrimSpace(value.RunID) == value.RunID && value.RunID != "" && len(value.RunID) <= 512 &&
+		validDigest(value.CandidateManifestDigest) && validDigest(value.CandidatePartitionRootDigest) &&
+		validDigest(value.CandidatePolicyDigest) && validDigest(value.SourceGenerationDigest) &&
+		validDigest(value.ObservationGenerationDigest) && validDigest(value.ExtractionPolicyDigest) &&
+		validDigest(value.DomainIndexDigest) && validDigest(value.DomainScheduleDigest)
 }
 
 func validDigest(value string) bool {

@@ -64,6 +64,7 @@ var (
 	errExtractionScheduleTerminal   = errors.New("T40.13 extraction schedule settled with failed partitions")
 	errCallerGenerationBoundRefusal = errors.New("T40.13 caller generation refused a frozen production bound")
 	errCallerGenerationTerminal     = errors.New("T40.13 caller generation terminated before publication")
+	errCallerPublicationMissing     = fmt.Errorf("T40.13 caller work completed without publication: %w", errCallerGenerationTerminal)
 	errRelationshipBoundRefusal     = errors.New("T40.13 relationship generation refused a frozen production bound")
 	errRelationshipTerminal         = errors.New("T40.13 relationship generation terminated before publication")
 	errInterruptionTriggerDeadline  = errors.New("T40.13 B-bound interruption trigger deadline expired")
@@ -2405,6 +2406,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV16
 	case PlanSchemaV19:
 		contract = profileInspectionV16
+	case PlanSchemaV20:
+		contract = profileInspectionV20
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -2536,8 +2539,15 @@ func (run *execution) waitSnapshotWithInspection(
 			return privateProfileSnapshot{}, errCallerGenerationBoundRefusal
 		}
 		if errors.Is(inspectErr, errCallerGenerationTerminal) {
-			run.recordConvergenceWait(profile, revision, label, "caller_generation_terminal", limit, started, progress)
-			return privateProfileSnapshot{}, errCallerGenerationTerminal
+			// V20 confirms caller terminal projections on a second identical
+			// source-free probe. In particular, all pairs can settle immediately
+			// before the publication transaction commits; a live publisher changes
+			// the probe on the next tick, while a rejected transaction repeats it.
+			if !errors.Is(inspectErr, errCallerPublicationMissing) ||
+				planSchemaVersion(run.plan.Schema) < 20 || probe.SHA256 == priorProbeSHA {
+				run.recordConvergenceWait(profile, revision, label, "caller_generation_terminal", limit, started, progress)
+				return privateProfileSnapshot{}, errCallerGenerationTerminal
+			}
 		}
 		if errors.Is(inspectErr, errRelationshipBoundRefusal) {
 			run.recordConvergenceWait(profile, revision, label, "relationship_bound_refusal", limit, started, progress)
@@ -3112,6 +3122,11 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		}
 	case PlanSchemaV19:
 		value.Schema = ObservationSchemaV19
+		value.Interruption = &InterruptionObservation{
+			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+		}
+	case PlanSchemaV20:
+		value.Schema = ObservationSchemaV20
 		value.Interruption = &InterruptionObservation{
 			Schema: interruptionSchemaV1, LastSubstage: "not_started",
 		}

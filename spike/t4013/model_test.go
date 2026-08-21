@@ -579,6 +579,27 @@ func TestV19PlanFencesRecoveryAndRestoreSemantics(t *testing.T) {
 	}
 }
 
+func TestV20PlanFencesCallerPublicationTerminalConfirmation(t *testing.T) {
+	plan, err := frozenV20PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV20 || plan.Safety != frozenSafetyV19 ||
+		plan.Safety != frozenSafetyV20 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v20 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV20 || decoded.Safety != frozenSafetyV20 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV20 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV20 {
+		t.Fatalf("decoded v20 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV17InterruptionEvidencePreservesHistoricalBytesAndAttemptZero(t *testing.T) {
 	historical := completedObservation()
 	historicalBytes := marshal(t, historical)

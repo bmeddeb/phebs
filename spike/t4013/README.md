@@ -2657,3 +2657,37 @@ validation, and a supported fail-closed writer migration retires v1 current
 resolver/caller pointers before the existing startup fan-out rebuilds v2. The
 strict V19 recovery oracle is not weakened. Neutral-30 remains immutable
 stopped evidence and does not authorize another freeze or execution.
+
+### Neutral-31 caller publication stop and V20 fence
+
+Neutral-31 is immutable V19 stopped evidence. Its verified source-free package
+`sha256:7e6301197b505dfd07718e97caf2565ead7037d70fb65a5d3098f5b91ab72543`
+binds source `5434bb382182251f356040eee15ac8766e2292d2`, plan
+`sha256:dc61a3cdab6eb44ffc43f9cac9e69ff28d2ab2445d023d127ba19d6bc818ad82`,
+observation
+`sha256:6f2312000780f7f6b6a7b94892c2b3a7af5f6c0a7f4cd7bc07254d6dcd3c9c6d`,
+and results
+`sha256:9f348b0d00cd97148fe6d88e0cb8df1a475f8f513a79f3af555e05e1f976dcec`.
+Structural cold settled extraction and then retained one unchanged caller
+projection through the four-hour deadline.
+
+The production defect was a private V1-only upstream-authority decoder in the
+caller publication store. Neutral-30 had correctly advanced downstream
+authority to V2, and every caller pair plus admission could settle, but the
+final publication transaction rejected that canonical V2 envelope. The store
+now delegates to the shared dependency-low V1/V2 validator, including exact
+provenance, semantic digest, usability, repository, byte-canonicality, and
+64-KiB checks. A real Surreal test commits and reopens a non-empty V2 caller
+publication. V1 validation and retained evidence remain unchanged.
+
+Fresh plan, observation, and receipt schemas advance to V20. A missing or stale
+caller pointer accompanied by complete, all-success, zero-refusal pair
+accounting becomes a terminal candidate only in V20. The convergence wait
+requires the same source-free probe twice, five seconds apart, before sealing
+`caller_generation_terminal`; an ordinary publish/settle race changes the
+probe and continues. The normal request cadence and safety envelope are
+unchanged. The publication validation performs bounded canonical work over at
+most 64 small domain headers and adds no query, lock, child, source/content
+read, startup scan, retry, or production bound. Neutral-31 cannot pass
+retroactively, and the correction authorizes no integration, freeze,
+execution, release, SLO, or scale claim.
