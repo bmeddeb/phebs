@@ -21,6 +21,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -88,6 +89,7 @@ type privateConvergenceProbe struct {
 	SHA256                      string
 	ObservationProgress         *ObservationProgressObservation
 	ExtractionProgress          *ExtractionProgressObservation
+	CallerProgress              *CallerProgressObservation
 	RepositoryIndexFailureClass string
 	RelationshipFailureClass    string
 	callerGenerationDigest      string
@@ -193,6 +195,7 @@ const (
 	profileInspectionV15
 	profileInspectionV16
 	profileInspectionV20
+	profileInspectionV21
 )
 
 func extractionConvergenceProbe(
@@ -593,7 +596,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		AcceptedServices: acceptedServiceCount(catalog), Memberships: len(catalog.Memberships),
 		UnownedPrefixes: len(catalog.Unowned), RelationshipPublished: true,
 	}
-	result.RelationshipSemanticDigest, err = relationshipSemanticDigest(relationshipRoot)
+	result.RelationshipSemanticDigest, err = relationshipSemanticDigest(relationshipRoot, inspector.contract)
 	if err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", relationshipRoot.Digest), err
 	}
@@ -641,9 +644,17 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	if err := inspector.get(ctx, profile, path, &progress); err != nil {
 		return convergenceProbe("caller_generation"), err
 	}
+	job := callerJobProbe{}
+	if inspector.contract >= profileInspectionV21 {
+		repository, err := inspector.currentRepositoryStatus(ctx, profile)
+		if err != nil {
+			return convergenceProbe("caller_generation"), err
+		}
+		job = callerJobProbe{State: repository.LastCallerJobState, Job: repository.LastCallerJob}
+	}
 	return classifyCallerGeneration(apiresponse.CallerMapPage{
 		Generation: &progress.Generation,
-	}, inspector.contract)
+	}, job, inspector.contract)
 }
 
 func (inspector *profileInspector) extractionForRelationship(
@@ -889,8 +900,51 @@ func classifyRelationshipGeneration(
 	return probe, errRelationshipTerminal
 }
 
+// callerJobProbe carries the repository-keyed caller-leaf job projection into
+// caller-generation classification. V21 reads it beside the progress page so
+// a live requeued publisher holds a terminal stop and a dead caller pipeline
+// classifies in seconds instead of pending to the wall deadline.
+type callerJobProbe struct {
+	State store.JobProjectionState
+	Job   *store.CallerJobProjection
+}
+
+func (job callerJobProbe) active() bool {
+	return job.Job != nil && slices.Contains([]store.JobStatus{
+		store.StatusPending, store.StatusClaimed, store.StatusRunning,
+	}, job.Job.Status)
+}
+
+func (job callerJobProbe) dead() bool {
+	return job.Job != nil && (job.Job.Status == store.StatusFailed ||
+		job.Job.Status == store.StatusCanceled)
+}
+
+// classifyCallerGeneration applies the V21 live-job hold over the shape
+// classification: the admission commits before the publication transaction,
+// so every caller terminal shape is also reachable by a live publisher in a
+// requeue backoff window (or a transiently failing read). An active
+// caller-leaf job row holds any caller terminal as pending — the frozen
+// aggregate-bound refusal stays immediate, being durable typed evidence —
+// keeping the classifier in lockstep with the detail-V17 receipt fence.
 func classifyCallerGeneration(
 	page apiresponse.CallerMapPage,
+	job callerJobProbe,
+	contract profileInspectionContract,
+) (privateConvergenceProbe, error) {
+	probe, err := classifyCallerGenerationShape(page, job, contract)
+	if contract >= profileInspectionV21 && err != nil && job.active() &&
+		errors.Is(err, errCallerGenerationTerminal) {
+		return probe, errors.New(
+			"T40.13 caller generation has not converged behind a live caller job",
+		)
+	}
+	return probe, err
+}
+
+func classifyCallerGenerationShape(
+	page apiresponse.CallerMapPage,
+	job callerJobProbe,
 	contract profileInspectionContract,
 ) (privateConvergenceProbe, error) {
 	if page.Generation == nil {
@@ -902,6 +956,42 @@ func classifyCallerGeneration(
 		"caller_generation", generation.State, generation.GenerationDigest,
 		generation.PartitionProgress,
 	)
+	if contract >= profileInspectionV21 {
+		if job.State != store.JobProjectionUnavailable &&
+			job.State != store.JobProjectionExact {
+			return probe, errors.New("T40.13 caller job projection state is invalid")
+		}
+		if job.State == store.JobProjectionExact {
+			if job.Job == nil || !slices.Contains([]store.JobStatus{
+				store.StatusPending, store.StatusClaimed, store.StatusRunning,
+				store.StatusDone, store.StatusFailed, store.StatusCanceled,
+			}, job.Job.Status) || job.Job.Attempts < 0 || job.Job.Attempts > 1_000_000 {
+				return probe, errors.New("T40.13 caller job projection is invalid")
+			}
+		} else {
+			job.Job = nil
+		}
+		projection := &CallerProgressObservation{State: generation.State}
+		if progress := generation.PartitionProgress; progress != nil {
+			projection.PartitionState = progress.State
+			projection.SettledPairCount = progress.SettledPairCount
+			projection.SucceededPairCount = progress.SucceededPairCount
+			projection.RefusedPairCount = progress.RefusedPairCount
+			if progress.TotalPairCount != nil {
+				total := *progress.TotalPairCount
+				projection.TotalPairCount = &total
+			}
+		}
+		if job.Job != nil {
+			projection.JobState = string(job.Job.Status)
+			projection.JobAttempts = job.Job.Attempts
+		}
+		probe = convergenceProbe(
+			"caller_generation", generation.State, generation.GenerationDigest,
+			generation.PartitionProgress, projection,
+		)
+		probe.CallerProgress = projection
+	}
 	probe.callerGenerationDigest = generation.GenerationDigest
 	switch generation.State {
 	case "current":
@@ -920,6 +1010,12 @@ func classifyCallerGeneration(
 		if contract >= profileInspectionV20 && progress != nil && progress.State == "complete" &&
 			progress.TotalPairCount != nil && *progress.TotalPairCount == progress.SettledPairCount &&
 			progress.SucceededPairCount == progress.SettledPairCount && progress.RefusedPairCount == 0 {
+			return probe, errCallerPublicationMissing
+		}
+		if contract >= profileInspectionV21 && job.dead() {
+			// No publication pointer, incomplete pair progress, and the
+			// repository-keyed caller-leaf job settled failed with no pending
+			// successor row: the caller pipeline is dead, not slow.
 			return probe, errCallerPublicationMissing
 		}
 		return probe, errors.New("T40.13 caller generation has not converged")
@@ -1527,16 +1623,49 @@ func snapshotRecoveryAuthority(snapshot privateProfileSnapshot) string {
 	return strings.Join(values, "\x00")
 }
 
-func relationshipSemanticDigest(root relationshippublication.Root) (string, error) {
+func relationshipSemanticDigest(
+	root relationshippublication.Root,
+	contract profileInspectionContract,
+) (string, error) {
 	root.Authority.ServiceStateSummaryDigest = ""
 	root.Authority.ServiceStateControlRevision = 0
 	root.AuthorityDigest = ""
 	root.GenerationDigest = ""
 	root.Digest = ""
+	label := "t4013-relationship-semantic-authority-v1"
+	if contract >= profileInspectionV21 {
+		// V21: extraction run identity and its provenance digest are exact
+		// provenance, not authority (the n30 correction); interruption
+		// restart legitimately re-mints RunIDs for byte-equivalent content.
+		// The re-minted RunIDs also flow into the resolver/RPC/Kafka
+		// component roots, whose generation/root digests hash the embedded
+		// upstream authority whole, so those transition identities are
+		// excluded too — semantic sensitivity to relationship content is
+		// retained through the catalog, service-set, observation, policy,
+		// and RunID-cleared upstream digests plus every non-authority root
+		// field. Historical V19/V20 frozen contracts keep the derivation
+		// they froze.
+		label = "t4013-relationship-semantic-authority-v2"
+		root.Authority.ResolverGenerationDigest = ""
+		root.Authority.ResolverRootDigest = ""
+		root.Authority.RPCGenerationDigest = ""
+		root.Authority.RPCRootDigest = ""
+		root.Authority.KafkaGenerationDigest = ""
+		root.Authority.KafkaRootDigest = ""
+		if root.Authority.Upstream != nil && root.Authority.Upstream.Schema == downstreamauthority.Schema {
+			upstream := *root.Authority.Upstream
+			upstream.ProvenanceDigest = ""
+			upstream.Domains = slices.Clone(upstream.Domains)
+			for index := range upstream.Domains {
+				upstream.Domains[index].RunID = ""
+			}
+			root.Authority.Upstream = &upstream
+		}
+	}
 	raw, err := json.Marshal(root)
 	if err != nil {
 		return "", fmt.Errorf("encode T40.13 relationship semantic authority: %w", err)
 	}
-	sum := sha256.Sum256(append([]byte("t4013-relationship-semantic-authority-v1\x00"), raw...))
+	sum := sha256.Sum256(append([]byte(label+"\x00"), raw...))
 	return fmt.Sprintf("sha256:%x", sum), nil
 }

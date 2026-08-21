@@ -4582,3 +4582,27 @@ installation envelope. Ordinary nine-domain publications remain far below the
 new ceiling and add no query, lock, write, retry, worker, source/Git/content
 read, or concurrency. No wire schema, digest, API/OpenAPI field, retry policy,
 or ceremony claim changes.
+
+### T40.R1 pre-ceremony readiness closure
+
+The post-neutral-31 readiness review closed two production defects before the
+next ceremony. First, the generic job runner (indexing, extraction,
+caller-leaf, resolver, and sibling queues) no longer kills a healthy handler
+on its first transient heartbeat error: a confirmed-beat lower bound tolerates
+client-side store errors until the existing `StaleAfter` cutoff, exactly as
+the generation scheduler has done since the ceremony-21 correction, while a
+lease fence remains definitive. This removes the path where one slow
+surrealkv beat consumed a retry attempt mid-turn and a short degradation
+window chained into permanent job failure in a frozen corpus. The reaper's
+durable cutoff is unchanged; a row reaped during a tolerated error window
+still surfaces as definitive lease loss on the next successful beat.
+
+Second, the repo row now carries a caller-leaf job projection beside the
+indexing and extraction ones: job creation links `latest_caller_job` inside
+the existing queue transactions, and `/api/repo-status` serves `last_caller_job`
+(status, attempts) under the same unavailable/exact discipline. Evidence and
+operators can now distinguish a dead caller pipeline (settled failed job, no
+pending successor) from a live slow one without reading queue tables. The
+projection adds one bounded repo-row link write per caller job creation and
+one bounded sub-projection to the existing repo-status query; no new query,
+lock, retry, or concurrency.

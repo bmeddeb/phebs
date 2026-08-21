@@ -141,20 +141,42 @@ func (r *Runner) execute(ctx context.Context, job Job) time.Time {
 	go func() {
 		t := time.NewTicker(r.HeartbeatEvery)
 		defer t.Stop()
+		// The claimed row carries the store's durable heartbeat time. Keep a
+		// conservative lower bound after each successful beat so a sequence of
+		// client-side errors can never outlive the reaper's stale cutoff.
+		lastConfirmed := time.Now()
+		if job.HeartbeatAt != nil && job.HeartbeatAt.Before(lastConfirmed) {
+			lastConfirmed = *job.HeartbeatAt
+		}
 		for {
 			select {
 			case <-handleCtx.Done():
 				hbDone <- nil
 				return
 			case <-t.C:
+				beatStarted := time.Now()
 				hbCtx, cancel := context.WithTimeout(handleCtx, r.HeartbeatEvery)
 				err := r.Store.HeartbeatJob(hbCtx, job)
 				cancel()
-				if err != nil {
-					if handleCtx.Err() != nil {
-						hbDone <- nil
-						return
-					}
+				if err == nil {
+					// The durable write occurred no earlier than beatStarted.
+					lastConfirmed = beatStarted
+					continue
+				}
+				if handleCtx.Err() != nil {
+					hbDone <- nil
+					return
+				}
+				// A lease fence is definitive. A transient store error is
+				// tolerated until the lease could actually go stale; killing
+				// a healthy handler for one slow beat wastes the whole turn
+				// and consumes an attempt. The one-beat margin keeps the
+				// handler inside the reaper's durable cutoff even when the
+				// next beat blocks for its full timeout, so a sibling runner
+				// can never reap and re-execute the target while this
+				// handler still runs.
+				if errors.Is(err, ErrLeaseLost) ||
+					time.Since(lastConfirmed)+r.HeartbeatEvery >= r.StaleAfter {
 					stopHandle()
 					hbDone <- err
 					return

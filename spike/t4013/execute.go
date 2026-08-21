@@ -20,6 +20,7 @@ import (
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -176,6 +177,17 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("T40.13 execution custody is not a real directory")
 	}
+	// Custody retained by an unsealable stop still carries the executed
+	// marker: re-running against dirty, previously-executed state would seal
+	// evidence with false cold/warm provenance. The marker is created below,
+	// lives inside custody, and is destroyed with it.
+	marker := filepath.Join(workspace, executedMarkerName)
+	if _, err := os.Lstat(marker); err == nil || !os.IsNotExist(err) {
+		return nil, errors.New("T40.13 execution custody was already executed; a reviewed purge and fresh preparation are required")
+	}
+	if err := os.WriteFile(marker, []byte(PlanDigest(planBytes)+"\n"), 0o600); err != nil {
+		return nil, err
+	}
 	if _, err := os.Lstat(request.Observation); err == nil || !os.IsNotExist(err) {
 		return nil, errors.New("T40.13 observation output must not exist")
 	}
@@ -195,6 +207,9 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 		plan: plan, planBytes: planBytes, prepared: prepared, observation: observation,
 	}, nil
 }
+
+// executedMarkerName marks custody that an execution has already started on.
+const executedMarkerName = ".t4013-executed"
 
 func validatePreparedFiles(prepared Prepared, workspace string) error {
 	for _, profile := range prepared.Profiles {
@@ -316,18 +331,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	stopErr := run.stopServers()
 	measurementErr := errors.Join(run.captureFailedPhase(), run.verifyFrozenHostToolchain())
 	ceilingErr := run.enforceSafety()
-	_, err := os.Lstat(run.workspace)
-	if errors.Is(err, os.ErrNotExist) && run.observation.Teardown.Completed {
-		// A ceiling crossed only after the successful destructive teardown.
-	} else {
-		destroy := destroyCustody
-		if run.custodyDestroy != nil {
-			destroy = run.custodyDestroy
-		}
-		if err := destroy(run.workspace, run.moduleRoot); err != nil {
-			return Observation{}, err
-		}
-	}
+	teardownAlreadyCompleted := run.observation.Teardown.Completed
 	if run.phase != len(run.observation.Phases)-1 {
 		run.observation.Phases[len(run.observation.Phases)-1] = succeededPhase("teardown", PhaseMetrics{
 			WallMS: time.Since(started).Milliseconds(),
@@ -344,8 +348,24 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	}
 	run.observation.Teardown = TeardownObservation{Completed: true}
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
+	// Validate the stopped observation BEFORE destroying custody: an
+	// unsealable observation must fail closed with custody retained for the
+	// separately reviewed purge, never destroy hours of evidence first.
 	if err := ValidateObservation(run.observation); err != nil {
-		return Observation{}, err
+		return Observation{}, fmt.Errorf(
+			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
+	}
+	_, err := os.Lstat(run.workspace)
+	if errors.Is(err, os.ErrNotExist) && teardownAlreadyCompleted {
+		// A ceiling crossed only after the successful destructive teardown.
+	} else {
+		destroy := destroyCustody
+		if run.custodyDestroy != nil {
+			destroy = run.custodyDestroy
+		}
+		if err := destroy(run.workspace, run.moduleRoot); err != nil {
+			return Observation{}, err
+		}
 	}
 	return run.observation, stopErr
 }
@@ -1318,7 +1338,31 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	var started generationscheduler.ChunkLifecycleReport
+	var releaseFence func()
+	defer func() {
+		if releaseFence != nil {
+			releaseFence()
+		}
+	}()
 	if planSchemaVersion(run.plan.Schema) >= 18 {
+		// Arm the stale-fence contention in the readiness rehearsal's verified
+		// order BEFORE selecting a chunk: the exclusive index mutation lock
+		// freezes the A re-index across the fence window, and the diagnostic
+		// fence below removes the current pointer beneath the selected worker
+		// so its ordinary completion settles stale_fenced, the outcome this
+		// phase's oracle requires. Without the arming the selected ~1-second
+		// chunk settles completed against a still-current pointer.
+		if err := waitExactActiveGenerationSchedule(
+			run.ctx, leaseReader, profile, profile.Revisions["b"], 90*time.Minute,
+		); err != nil {
+			return err
+		}
+		releaseFence, err = focusedindex.AcquireExclusiveMutationLock(
+			run.ctx, filepath.Join(profile.DataDir, "index"),
+		)
+		if err != nil {
+			return err
+		}
 		started, err = waitCurrentRunningGenerationChunk(
 			run.ctx, cursor, leaseReader, profile, profile.Revisions["b"],
 			90*time.Minute, extractionGenerationBindsRevision,
@@ -1334,9 +1378,44 @@ func (run *execution) staleWorker() error {
 	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
 		return err
 	}
-	afterSupersession, err := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
-	if err != nil || !runningLeaseMatchesReport(afterSupersession, started, profile.RepositoryName) {
-		return errors.Join(err, errors.New("T40.13 selected B lease did not remain active across supersession"))
+	if planSchemaVersion(run.plan.Schema) >= 18 {
+		// The selected chunk can settle or defer inside the small selection-
+		// to-fence window (production chunks settle in about a second, and
+		// non-domain-final completions never touch the index lock). With the
+		// exclusive lock held the B schedule keeps issuing running chunks, so
+		// re-select and fence again instead of aborting the four-hour run.
+		const staleFenceSelectionAttempts = 8
+		for attempt := 0; ; attempt++ {
+			state, stateErr := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
+			if stateErr == nil && runningLeaseMatchesReport(state, started, profile.RepositoryName) {
+				fenceErr := leaseReader.FenceCurrentGenerationScheduleForDiagnostic(run.ctx, state)
+				if fenceErr == nil {
+					break
+				}
+				if !errors.Is(fenceErr, store.ErrGenerationStale) {
+					return fenceErr
+				}
+			} else if stateErr != nil && !errors.Is(stateErr, store.ErrNotFound) {
+				return stateErr
+			}
+			if attempt+1 >= staleFenceSelectionAttempts {
+				return errors.New("T40.13 selected B lease did not remain active across supersession")
+			}
+			started, err = waitCurrentRunningGenerationChunk(
+				run.ctx, cursor, leaseReader, profile, profile.Revisions["b"],
+				10*time.Minute, extractionGenerationBindsRevision,
+			)
+			if err != nil {
+				return err
+			}
+		}
+		releaseFence()
+		releaseFence = nil
+	} else {
+		afterSupersession, err := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
+		if err != nil || !runningLeaseMatchesReport(afterSupersession, started, profile.RepositoryName) {
+			return errors.Join(err, errors.New("T40.13 selected B lease did not remain active across supersession"))
+		}
 	}
 	after, err := run.waitSnapshot(profile, "a", "stale-worker", run.fullConvergenceDeadline(), server)
 	if err != nil {
@@ -1673,6 +1752,50 @@ func waitActiveChunkLifecycleWithBinder(
 			return generationscheduler.ChunkLifecycleReport{}, errors.Join(
 				lastErr, errors.New("T40.13 live B-bound chunk deadline expired"),
 			)
+		case <-ticker.C:
+		}
+	}
+}
+
+// waitExactActiveGenerationSchedule waits until the exact current extraction
+// schedule is active and bound to the requested revision, so the stale-fence
+// contention can be armed before a chunk is selected.
+func waitExactActiveGenerationSchedule(
+	ctx context.Context,
+	reader generationChunkLeaseReader,
+	profile PreparedProfile,
+	revision string,
+	limit time.Duration,
+) error {
+	wait, cancel := context.WithTimeout(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		call, callCancel := context.WithTimeout(wait, 2*time.Second)
+		progress, err := reader.GenerationScheduleProgress(
+			call, profile.RepositoryName, extractionpublication.ScheduleStage,
+		)
+		callCancel()
+		if err == nil {
+			bound, bindErr := extractionGenerationBindsRevision(
+				profile, progress.Generation, revision,
+			)
+			switch {
+			case bindErr != nil:
+				lastErr = bindErr
+			case bound && progress.Status == store.GenerationScheduleActive:
+				return nil
+			case bound && progress.Status == store.GenerationScheduleSettled:
+				return errors.New("T40.13 schedule settled before contention was armed")
+			}
+		} else if !errors.Is(err, store.ErrNotFound) {
+			lastErr = err
+		}
+		select {
+		case <-wait.Done():
+			return errors.Join(lastErr, errors.New("T40.13 active schedule deadline expired"))
 		case <-ticker.C:
 		}
 	}
@@ -2159,6 +2282,8 @@ type convergenceProgressTracker struct {
 	observationProgress               *ObservationProgressObservation
 	observationProgressAtWall         time.Duration
 	extractionProgress                *ExtractionProgressObservation
+	callerProgress                    *CallerProgressObservation
+	callerProgressAtWall              time.Duration
 	extractionProgressAtWall          time.Duration
 	extractionTiming                  ExtractionTimingObservation
 	inspectionTransitions             []ConvergenceTransitionObservation
@@ -2212,6 +2337,11 @@ func (tracker *convergenceProgressTracker) observe(
 		progress := *probe.ExtractionProgress
 		tracker.extractionProgress = &progress
 		tracker.extractionProgressAtWall = elapsed
+	}
+	if probe.CallerProgress != nil {
+		progress := *probe.CallerProgress
+		tracker.callerProgress = &progress
+		tracker.callerProgressAtWall = elapsed
 	}
 	if diagnostic.class != "pending" && diagnostic.class != "complete" {
 		return transitionLimitExceeded
@@ -2408,6 +2538,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV16
 	case PlanSchemaV20:
 		contract = profileInspectionV20
+	case PlanSchemaV21:
+		contract = profileInspectionV21
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -2619,6 +2751,10 @@ func (run *execution) recordConvergenceWait(
 		if planSchemaVersion(run.plan.Schema) >= 12 {
 			wait.ExtractionProgress = progress.extractionProgress
 			wait.ExtractionProgressWallMS = progress.extractionProgressAtWall.Milliseconds()
+		}
+		if planSchemaVersion(run.plan.Schema) >= 21 {
+			wait.CallerProgress = progress.callerProgress
+			wait.CallerProgressWallMS = progress.callerProgressAtWall.Milliseconds()
 		}
 		if (planSchemaVersion(run.plan.Schema) >= 13) && progress.extractionTiming.Attempts > 0 {
 			timing := progress.extractionTiming
@@ -3127,6 +3263,11 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		}
 	case PlanSchemaV20:
 		value.Schema = ObservationSchemaV20
+		value.Interruption = &InterruptionObservation{
+			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+		}
+	case PlanSchemaV21:
+		value.Schema = ObservationSchemaV21
 		value.Interruption = &InterruptionObservation{
 			Schema: interruptionSchemaV1, LastSubstage: "not_started",
 		}

@@ -90,6 +90,7 @@ var frozenSafetyV17 = frozenSafetyV16
 var frozenSafetyV18 = frozenSafetyV17
 var frozenSafetyV19 = frozenSafetyV18
 var frozenSafetyV20 = frozenSafetyV19
+var frozenSafetyV21 = frozenSafetyV20
 
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
@@ -116,7 +117,7 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return freshV20PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
+	return freshV21PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
 }
 
 func validateV14ConvergenceRoutes() error {
@@ -279,14 +280,6 @@ func frozenV19PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
-func freshV19PlanWithHostToolchain(
-	sourceCommit string,
-	hostToolchain []HostToolObservation,
-	frozenAt time.Time,
-) (Plan, error) {
-	return freshPlan(frozenV19PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
-}
-
 func frozenV20PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
 	value, err := frozenV19PlanWithHostToolchain(sourceCommit, hostToolchain)
 	if err != nil {
@@ -300,12 +293,25 @@ func frozenV20PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
-func freshV20PlanWithHostToolchain(
+func frozenV21PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := frozenV20PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV21
+	value.Safety = frozenSafetyV21
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func freshV21PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
 	frozenAt time.Time,
 ) (Plan, error) {
-	return freshPlan(frozenV20PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
+	return freshPlan(frozenV21PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

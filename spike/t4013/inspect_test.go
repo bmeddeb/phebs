@@ -12,6 +12,8 @@ import (
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -38,7 +40,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			}},
 		},
 	}}
-	probe, err := classifyCallerGeneration(bound, profileInspectionLegacy)
+	probe, err := classifyCallerGeneration(bound, callerJobProbe{}, profileInspectionLegacy)
 	if probe.Stage != "caller_generation" || !errors.Is(err, errCallerGenerationBoundRefusal) {
 		t.Fatalf("typed caller refusal = %+v, %v", probe, err)
 	}
@@ -50,7 +52,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			RefusedPairCount: 154, TotalPairCount: &total,
 		},
 	}
-	if _, err := classifyCallerGeneration(unknown, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
+	if _, err := classifyCallerGeneration(unknown, callerJobProbe{}, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
 		t.Fatalf("untyped caller refusal = %v", err)
 	}
 
@@ -61,7 +63,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 			TotalPairCount: &currentTotal,
 		},
 	}}
-	currentProbe, err := classifyCallerGeneration(current, profileInspectionLegacy)
+	currentProbe, err := classifyCallerGeneration(current, callerJobProbe{}, profileInspectionLegacy)
 	if err != nil {
 		t.Fatalf("current caller generation rejected: %v", err)
 	}
@@ -75,7 +77,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 					State: "unavailable",
 				},
 			}}
-			_, err := classifyCallerGeneration(page, profileInspectionLegacy)
+			_, err := classifyCallerGeneration(page, callerJobProbe{}, profileInspectionLegacy)
 			if err == nil || classifyConvergenceInspection(err).class != "pending" {
 				t.Fatalf("%s caller generation = %v", state, err)
 			}
@@ -90,11 +92,11 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 					SucceededPairCount: settledTotal, TotalPairCount: &settledTotal,
 				},
 			}}
-			if _, err := classifyCallerGeneration(page, profileInspectionV16); err == nil ||
+			if _, err := classifyCallerGeneration(page, callerJobProbe{}, profileInspectionV16); err == nil ||
 				classifyConvergenceInspection(err).class != "pending" {
 				t.Fatalf("v19-compatible %s complete work = %v", state, err)
 			}
-			if _, err := classifyCallerGeneration(page, profileInspectionV20); !errors.Is(
+			if _, err := classifyCallerGeneration(page, callerJobProbe{}, profileInspectionV20); !errors.Is(
 				err, errCallerPublicationMissing,
 			) {
 				t.Fatalf("v20 %s complete work = %v, want terminal", state, err)
@@ -103,7 +105,7 @@ func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T)
 	}
 	invalidCurrent := current
 	invalidCurrent.Generation = &apiresponse.CallerMapGeneration{State: "current"}
-	if _, err := classifyCallerGeneration(invalidCurrent, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
+	if _, err := classifyCallerGeneration(invalidCurrent, callerJobProbe{}, profileInspectionLegacy); !errors.Is(err, errCallerGenerationTerminal) {
 		t.Fatalf("invalid current caller generation = %v", err)
 	}
 }
@@ -400,7 +402,7 @@ func TestSnapshotRecoveryAuthorityUsesStableRelationshipSemantics(t *testing.T) 
 		Digest:           "sha256:root-a",
 		ServiceCount:     1,
 	}
-	first, err := relationshipSemanticDigest(root)
+	first, err := relationshipSemanticDigest(root, profileInspectionV21)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,7 +411,7 @@ func TestSnapshotRecoveryAuthorityUsesStableRelationshipSemantics(t *testing.T) 
 	root.AuthorityDigest = "sha256:authority-b"
 	root.GenerationDigest = "sha256:generation-b"
 	root.Digest = "sha256:root-b"
-	second, err := relationshipSemanticDigest(root)
+	second, err := relationshipSemanticDigest(root, profileInspectionV21)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,13 +419,90 @@ func TestSnapshotRecoveryAuthorityUsesStableRelationshipSemantics(t *testing.T) 
 		t.Fatal("service-summary transition fence changed relationship semantic identity")
 	}
 	root.Authority.ServiceStateSetDigest = "sha256:service-set-b"
-	changed, err := relationshipSemanticDigest(root)
+	changed, err := relationshipSemanticDigest(root, profileInspectionV21)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if changed == first {
 		t.Fatal("relationship content change escaped semantic identity")
 	}
+
+	// V2 roots embed the full upstream authority. Extraction run identity and
+	// its provenance digest are exact provenance, not authority: interruption
+	// restart re-mints RunIDs for byte-equivalent content (the n30 class), and
+	// the recovery comparator must not re-key on them.
+	root.Authority.Upstream = &downstreamauthority.Authority{
+		Schema:     downstreamauthority.Schema,
+		Repository: "github.com/acme/repo",
+		Domains: []candidate.DownstreamDomainAuthority{{
+			Domain: "go", Version: "v1", RootDigest: "sha256:domain-root-a",
+			RunID: "run-a",
+		}},
+		ProvenanceDigest: "sha256:provenance-a",
+		Digest:           "sha256:upstream-semantic",
+	}
+	withUpstream, err := relationshipSemanticDigest(root, profileInspectionV21)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Authority.Upstream.Domains[0].RunID = "run-b"
+	root.Authority.Upstream.ProvenanceDigest = "sha256:provenance-b"
+	reminted, err := relationshipSemanticDigest(root, profileInspectionV21)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reminted != withUpstream {
+		t.Fatal("upstream run provenance re-keyed relationship semantic identity")
+	}
+	if root.Authority.Upstream.Domains[0].RunID != "run-b" ||
+		root.Authority.Upstream.ProvenanceDigest != "sha256:provenance-b" {
+		t.Fatal("relationshipSemanticDigest mutated the caller's upstream authority")
+	}
+	root.Authority.Upstream.Domains[0].RootDigest = "sha256:domain-root-b"
+	upstreamChanged, err := relationshipSemanticDigest(root, profileInspectionV21)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if upstreamChanged == withUpstream {
+		t.Fatal("upstream content change escaped semantic identity")
+	}
+	// Component transition digests hash the embedded upstream whole, so they
+	// re-key on the same restart re-mints; V21 excludes them from semantic
+	// identity while V20 keeps the frozen historical derivation.
+	root.Authority.ResolverGenerationDigest = "sha256:resolver-generation-b"
+	root.Authority.ResolverRootDigest = "sha256:resolver-root-b"
+	root.Authority.RPCGenerationDigest = "sha256:rpc-generation-b"
+	root.Authority.RPCRootDigest = "sha256:rpc-root-b"
+	root.Authority.KafkaGenerationDigest = "sha256:kafka-generation-b"
+	root.Authority.KafkaRootDigest = "sha256:kafka-root-b"
+	componentShift, err := relationshipSemanticDigest(root, profileInspectionV21)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if componentShift != upstreamChanged {
+		t.Fatal("component transition digests re-keyed v21 relationship semantic identity")
+	}
+	v20First, err := relationshipSemanticDigest(root, profileInspectionV20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Authority.ResolverRootDigest = "sha256:resolver-root-c"
+	v20Shift, err := relationshipSemanticDigest(root, profileInspectionV20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v20Shift == v20First {
+		t.Fatal("v20 historical derivation lost component-digest sensitivity")
+	}
+	root.Authority.Upstream.Domains[0].RunID = "run-c"
+	v20RunShift, err := relationshipSemanticDigest(root, profileInspectionV20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v20RunShift == v20Shift {
+		t.Fatal("v20 historical derivation stopped hashing upstream run identity")
+	}
+	root.Authority.Upstream = nil
 
 	left := privateProfileSnapshot{
 		RelationshipGeneration:     "sha256:generation-a",
@@ -1039,5 +1118,80 @@ func TestHumaResponseDecoderKeepsSchemaAndApplicationFieldsFailClosed(t *testing
 				t.Fatal("invalid Huma response passed")
 			}
 		})
+	}
+}
+
+// V21 reads the repository-keyed caller-leaf job beside the caller progress
+// page: an active job holds the missing-publication terminal (the publisher
+// is in a requeue backoff window), and a settled-failed job makes a partial
+// caller generation a typed terminal instead of pending to the wall deadline.
+func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
+	total := 8
+	complete := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "missing", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: total,
+			SucceededPairCount: total, TotalPairCount: &total,
+		},
+	}}
+	partial := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "missing", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "partial", SettledPairCount: 3,
+			SucceededPairCount: 3, TotalPairCount: &total,
+		},
+	}}
+	running := callerJobProbe{State: store.JobProjectionExact,
+		Job: &store.CallerJobProjection{Status: store.StatusRunning, Attempts: 1}}
+	dead := callerJobProbe{State: store.JobProjectionExact,
+		Job: &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3}}
+	absent := callerJobProbe{State: store.JobProjectionUnavailable}
+
+	tests := []struct {
+		name     string
+		page     apiresponse.CallerMapPage
+		job      callerJobProbe
+		terminal bool
+		jobState string
+	}{
+		{name: "complete with live job holds terminal", page: complete, job: running, jobState: "running"},
+		{name: "complete with absent job is terminal", page: complete, job: absent, terminal: true},
+		{name: "complete with dead job is terminal", page: complete, job: dead, terminal: true, jobState: "failed"},
+		{name: "partial with dead job is terminal", page: partial, job: dead, terminal: true, jobState: "failed"},
+		{name: "partial with live job is pending", page: partial, job: running, jobState: "running"},
+		{name: "partial with absent job is pending", page: partial, job: absent},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			probe, err := classifyCallerGeneration(test.page, test.job, profileInspectionV21)
+			if got := errors.Is(err, errCallerPublicationMissing); got != test.terminal {
+				t.Fatalf("terminal = %v (%v), want %v", got, err, test.terminal)
+			}
+			if probe.CallerProgress == nil || probe.CallerProgress.JobState != test.jobState {
+				t.Fatalf("caller progress = %+v, want job state %q", probe.CallerProgress, test.jobState)
+			}
+		})
+	}
+
+	// V20 stays byte-exact: the job projection is ignored and the probe digest
+	// matches a job-less classification, so sealed V20 evidence cannot drift.
+	v20WithJob, err := classifyCallerGeneration(complete, running, profileInspectionV20)
+	if !errors.Is(err, errCallerPublicationMissing) {
+		t.Fatalf("v20 with job = %v, want terminal", err)
+	}
+	v20WithoutJob, err := classifyCallerGeneration(complete, callerJobProbe{}, profileInspectionV20)
+	if !errors.Is(err, errCallerPublicationMissing) {
+		t.Fatalf("v20 without job = %v, want terminal", err)
+	}
+	if v20WithJob.SHA256 != v20WithoutJob.SHA256 || v20WithJob.CallerProgress != nil {
+		t.Fatal("v20 caller probe drifted under the job projection")
+	}
+	// A V21 job transition perturbs the probe digest, so a requeued publisher
+	// can never satisfy the identical-second-probe confirmation.
+	v21Running, err := classifyCallerGeneration(complete, running, profileInspectionV21)
+	if err == nil || errors.Is(err, errCallerGenerationTerminal) {
+		t.Fatalf("v21 live-job probe = %v, want pending", err)
+	}
+	v21Dead, _ := classifyCallerGeneration(complete, dead, profileInspectionV21)
+	if v21Running.SHA256 == v21Dead.SHA256 {
+		t.Fatal("v21 probe digest ignores the caller job transition")
 	}
 }

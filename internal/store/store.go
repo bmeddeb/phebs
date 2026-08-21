@@ -195,6 +195,8 @@ type RepoStatus struct {
 	LastIndexJobState      JobProjectionState       `json:"last_index_job_state"`
 	LastExtractionJob      *ExtractionJobProjection `json:"last_extraction_job,omitempty"`
 	LastExtractionJobState JobProjectionState       `json:"last_extraction_job_state"`
+	LastCallerJob          *CallerJobProjection     `json:"last_caller_job,omitempty"`
+	LastCallerJobState     JobProjectionState       `json:"last_caller_job_state"`
 	AnalysisUnit           *analysisunit.State      `json:"analysis_unit,omitempty"`
 }
 
@@ -206,6 +208,15 @@ type ExtractionJobProjection struct {
 	Status   JobStatus                `json:"status"`
 	Attempts int                      `json:"attempts"`
 	Refusal  *pipelinerefusal.Receipt `json:"refusal,omitempty"`
+}
+
+// CallerJobProjection is the caller-leaf orchestration job reduced to the
+// fields evidence needs: whether the repository-keyed caller pipeline is
+// alive, settled, or dead. Pair refusals are durable in caller progress, so
+// the job row carries no refusal payload.
+type CallerJobProjection struct {
+	Status   JobStatus `json:"status"`
+	Attempts int       `json:"attempts"`
 }
 
 // User is the shared identity behind local-password and OIDC logins. Secret

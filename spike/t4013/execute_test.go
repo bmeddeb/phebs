@@ -923,6 +923,7 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 				SucceededPairCount: v20CallerTotal, TotalPairCount: &v20CallerTotal,
 			},
 		}},
+		callerJobProbe{},
 		profileInspectionV20,
 	)
 	if !errors.Is(v20CallerErr, errCallerPublicationMissing) {
@@ -2452,5 +2453,267 @@ func TestChunkLifecycleCursorDrainsSettledReportThroughCurrentEOF(t *testing.T) 
 	updateActiveChunkLifecycles(active, reports)
 	if len(active) != 0 {
 		t.Fatalf("settled report beyond first block left a false live lease: %v", active)
+	}
+}
+
+// A V20 terminal probe deliberately waits for its identical confirming
+// re-probe; the wall deadline landing inside that window must seal as a
+// deadline stop retaining the terminal-shaped final transition — and a
+// stopped observation that cannot seal must fail closed BEFORE custody is
+// destroyed, never after.
+func TestUnconfirmedTerminalDeadlineSealsAndRetainsCustodyOnUnsealable(t *testing.T) {
+	hostToolchain, err := ObserveHostToolchain(t.Context())
+	if err != nil {
+		t.Skipf("host toolchain unavailable: %v", err)
+	}
+	v21Plan, err := frozenV21PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	total := 8
+	probe, cause := classifyCallerGeneration(
+		apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+			State: "missing", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+				State: "complete", SettledPairCount: total,
+				SucceededPairCount: total, TotalPairCount: &total,
+			},
+		}},
+		callerJobProbe{State: store.JobProjectionUnavailable},
+		profileInspectionV21,
+	)
+	if !errors.Is(cause, errCallerPublicationMissing) {
+		t.Fatalf("v21 missing caller publication = %v, want terminal", cause)
+	}
+
+	newRun := func(t *testing.T) *execution {
+		t.Helper()
+		root := t.TempDir()
+		module, workspace := filepath.Join(root, "module"), filepath.Join(root, "custody")
+		for _, path := range []string{module, workspace} {
+			if err := os.Mkdir(path, 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		logPath := filepath.Join(workspace, "server.log")
+		if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		run := &execution{
+			ctx: t.Context(), moduleRoot: module, workspace: workspace, plan: v21Plan,
+			observation: emptyObservationForPlan(EnvironmentObservation{
+				OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+				FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+			}, v21Plan),
+		}
+		run.observation.Toolchain = []ToolchainObservation{
+			{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
+			{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
+		}
+		run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+		run.startPhase(1)
+		return run
+	}
+
+	t.Run("deadline inside confirmation window seals", func(t *testing.T) {
+		run := newRun(t)
+		server := &privateServer{done: make(chan error, 1), logPath: filepath.Join(run.workspace, "server.log")}
+		profile := PreparedProfile{Name: "semantic-262144-v1"}
+		_, waitErr := run.waitSnapshotWithInspection(
+			profile, "a", "cold", 100*time.Millisecond, server,
+			func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+				return privateProfileSnapshot{}, probe, cause
+			},
+		)
+		if !errors.Is(waitErr, errConvergenceDeadline) {
+			t.Fatalf("unconfirmed terminal deadline wait = %v", waitErr)
+		}
+		if len(run.observation.ConvergenceWaits) != 1 {
+			t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
+		}
+		wait := run.observation.ConvergenceWaits[0]
+		transitions := wait.InspectionTransitions
+		if wait.Outcome != "deadline" || len(transitions) == 0 ||
+			transitions[len(transitions)-1].Class != "terminal" {
+			t.Fatalf("torn terminal wait = %+v", wait)
+		}
+		if err := validateConvergenceWaits(
+			run.observation.ConvergenceWaits, observationDetailV17,
+		); err != nil {
+			t.Fatalf("unconfirmed terminal deadline wait did not validate: %v", err)
+		}
+		// V15..V20 keep their sealed historical semantics: the old executor's
+		// seal-time validation refused this shape, so its rejection remains a
+		// fence proving any such earlier artifact inauthentic.
+		if err := validateConvergenceWaits(
+			run.observation.ConvergenceWaits, observationDetailV16,
+		); err == nil {
+			t.Fatal("historical contract accepted the torn terminal shape")
+		}
+		claimed := wait
+		claimed.Outcome = "caller_generation_terminal"
+		if err := validateConvergenceWaits(
+			[]ConvergenceWaitObservation{claimed}, observationDetailV17,
+		); err != nil {
+			// The claimed-terminal direction of the fence must stay closed;
+			// only the deadline exemption is new. (A claimed terminal with a
+			// terminal-shaped last transition remains valid.)
+			t.Fatalf("claimed terminal with terminal transition = %v", err)
+		}
+		claimedTorn := wait
+		claimedTorn.InspectionTransitions = append(
+			[]ConvergenceTransitionObservation(nil), wait.InspectionTransitions...,
+		)
+		claimedTorn.InspectionTransitions[len(claimedTorn.InspectionTransitions)-1].Class = "pending"
+		claimedTorn.LastInspectionClass = "pending"
+		claimedTorn.Outcome = "caller_generation_terminal"
+		if err := validateConvergenceWaits(
+			[]ConvergenceWaitObservation{claimedTorn}, observationDetailV17,
+		); err == nil {
+			t.Fatal("claimed terminal without terminal transition escaped the fence")
+		}
+		stopped, stopErr := run.stopAfterFailure(waitErr)
+		if stopErr != nil {
+			t.Fatal(stopErr)
+		}
+		if err := ValidateObservation(stopped); err != nil {
+			t.Fatalf("stopped observation did not seal: %v", err)
+		}
+		// Receipt sealing additionally cross-checks DeadlineMS against the
+		// plan's frozen four-hour deadline, which a fast wait cannot carry;
+		// the frozen-deadline parity fence has its own coverage.
+	})
+
+	t.Run("unsealable stop retains custody", func(t *testing.T) {
+		run := newRun(t)
+		destroyed := false
+		run.custodyDestroy = func(workspace, moduleRoot string) error {
+			destroyed = true
+			return nil
+		}
+		// An invalid wait makes the stopped observation unsealable.
+		run.observation.ConvergenceWaits = []ConvergenceWaitObservation{{
+			Profile: "semantic-262144-v1", Label: "cold", Revision: "a",
+			Outcome: "bogus_outcome",
+		}}
+		_, stopErr := run.stopAfterFailure(errors.New("injected failure"))
+		if stopErr == nil {
+			t.Fatal("unsealable stopped observation did not fail")
+		}
+		if destroyed {
+			t.Fatal("custody destroyed before the stopped observation sealed")
+		}
+	})
+}
+
+// A V21 caller wait seals the dead-job terminal with the caller job
+// projection recorded, and the V17 detail fence refutes a terminal whose
+// recorded job row is still active.
+func TestV21CallerTerminalRecordsJobProjectionAndSeals(t *testing.T) {
+	hostToolchain, err := ObserveHostToolchain(t.Context())
+	if err != nil {
+		t.Skipf("host toolchain unavailable: %v", err)
+	}
+	v21Plan, err := frozenV21PlanWithHostToolchain(testSourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	total := 8
+	probe, cause := classifyCallerGeneration(
+		apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+			State: "missing", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+				State: "partial", SettledPairCount: 3,
+				SucceededPairCount: 3, TotalPairCount: &total,
+			},
+		}},
+		callerJobProbe{State: store.JobProjectionExact,
+			Job: &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3}},
+		profileInspectionV21,
+	)
+	if !errors.Is(cause, errCallerPublicationMissing) {
+		t.Fatalf("v21 dead-job classification = %v, want terminal", cause)
+	}
+	root := t.TempDir()
+	module, workspace := filepath.Join(root, "module"), filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logPath := filepath.Join(workspace, "server.log")
+	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), moduleRoot: module, workspace: workspace, plan: v21Plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, v21Plan),
+	}
+	run.observation.Toolchain = []ToolchainObservation{
+		{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
+		{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
+	}
+	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
+	run.startPhase(1)
+	server := &privateServer{done: make(chan error, 1), logPath: logPath}
+	profile := PreparedProfile{Name: "semantic-262144-v1"}
+	_, waitErr := run.waitSnapshotWithInspection(
+		profile, "a", "cold", time.Duration(v21Plan.Safety.FullConvergenceDeadlineMS)*time.Millisecond, server,
+		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			return privateProfileSnapshot{}, probe, cause
+		},
+	)
+	if !errors.Is(waitErr, errCallerGenerationTerminal) {
+		t.Fatalf("v21 dead-job wait = %v, want terminal", waitErr)
+	}
+	if len(run.observation.ConvergenceWaits) != 1 {
+		t.Fatalf("wait inventory = %+v", run.observation.ConvergenceWaits)
+	}
+	wait := run.observation.ConvergenceWaits[0]
+	if wait.Outcome != "caller_generation_terminal" || wait.Attempts != 2 ||
+		wait.CallerProgress == nil || wait.CallerProgress.JobState != "failed" ||
+		wait.CallerProgress.JobAttempts != 3 || wait.CallerProgress.PartitionState != "partial" {
+		t.Fatalf("v21 caller terminal wait = %+v (progress %+v)", wait, wait.CallerProgress)
+	}
+	if err := validateConvergenceWaits(
+		run.observation.ConvergenceWaits, observationDetailV17,
+	); err != nil {
+		t.Fatalf("v21 caller terminal did not validate: %v", err)
+	}
+	// The V16 detail must refuse the new projection so historical schemas
+	// cannot silently acquire it.
+	if err := validateConvergenceWaits(
+		run.observation.ConvergenceWaits, observationDetailV16,
+	); err == nil {
+		t.Fatal("v16 contract accepted v17 caller diagnostics")
+	}
+	// An active recorded job row refutes the claimed terminal.
+	refuted := wait
+	refuted.CallerProgress = &CallerProgressObservation{
+		State: "missing", PartitionState: "partial",
+		SettledPairCount: 3, SucceededPairCount: 3, JobState: "running", JobAttempts: 1,
+	}
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{refuted}, observationDetailV17,
+	); err == nil {
+		t.Fatal("active caller job escaped the terminal coherence fence")
+	}
+	missingProjection := wait
+	missingProjection.CallerProgress = nil
+	missingProjection.CallerProgressWallMS = 0
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{missingProjection}, observationDetailV17,
+	); err == nil {
+		t.Fatal("v17 caller terminal sealed without its job projection")
+	}
+	stopped, stopErr := run.stopAfterFailure(waitErr)
+	if stopErr != nil {
+		t.Fatal(stopErr)
+	}
+	if err := ValidateObservation(stopped); err != nil {
+		t.Fatalf("stopped v21 observation did not seal: %v", err)
 	}
 }

@@ -1126,3 +1126,88 @@ func TestSuccessorAfterDoneTurnStartsWithFreshAttemptBudget(t *testing.T) {
 	}
 	claim(1)
 }
+
+type flakyHeartbeatStore struct {
+	Store
+	failBeats atomic.Int32 // remaining heartbeats to fail with a transient error
+}
+
+func (f *flakyHeartbeatStore) HeartbeatJob(ctx context.Context, job Job) error {
+	if f.failBeats.Add(-1) >= 0 {
+		return errors.New("transient store error")
+	}
+	return f.Store.HeartbeatJob(ctx, job)
+}
+
+// A transient heartbeat failure must not kill a healthy handler or consume an
+// attempt; only a lease fence or a beat gap reaching StaleAfter is definitive
+// (the generation scheduler's post-c21 tolerance, applied to the job queue).
+func TestRunnerToleratesTransientHeartbeatFailures(t *testing.T) {
+	s := newRunnerStore(t)
+
+	t.Run("transient beats tolerated", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		flaky := &flakyHeartbeatStore{Store: s}
+		flaky.failBeats.Store(3)
+		release := make(chan struct{})
+		var runs atomic.Int32
+		r := &Runner{Store: flaky, Kind: JobSync,
+			Handle: func(context.Context, Job) error {
+				runs.Add(1)
+				<-release
+				return nil
+			},
+			Interval: 20 * time.Millisecond, HeartbeatEvery: 30 * time.Millisecond,
+			StaleAfter: 10 * time.Second, MaxAttempts: 3,
+			Who: "tolerant-worker",
+		}
+		if _, err := s.CreateJob(ctx, JobSync, "flaky-beats"); err != nil {
+			t.Fatal(err)
+		}
+		go r.Run(ctx)
+		waitFor(t, 15*time.Second, func() bool {
+			return flaky.failBeats.Load() < 0 // all injected failures consumed
+		}, "handler never survived the transient beats")
+		close(release)
+		waitFor(t, 15*time.Second, func() bool {
+			done, err := s.ListJobs(ctx, JobSync, StatusDone)
+			return err == nil && len(done) == 1
+		}, "job never completed after tolerated beats")
+		if got := runs.Load(); got != 1 {
+			t.Fatalf("handler ran %d times, want 1 (no attempt consumed)", got)
+		}
+	})
+
+	t.Run("stale window kills", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		flaky := &flakyHeartbeatStore{Store: s}
+		flaky.failBeats.Store(1 << 30) // every beat fails
+		handlerDone := make(chan error, 1)
+		r := &Runner{Store: flaky, Kind: JobSync,
+			Handle: func(handleCtx context.Context, _ Job) error {
+				<-handleCtx.Done() // wait to be killed by the heartbeat loop
+				handlerDone <- handleCtx.Err()
+				return handleCtx.Err()
+			},
+			Interval: 20 * time.Millisecond, HeartbeatEvery: 30 * time.Millisecond,
+			StaleAfter: 150 * time.Millisecond, MaxAttempts: 1,
+			Backoff: func(error, int) time.Duration { return time.Millisecond },
+			Who:     "stale-worker",
+		}
+		if _, err := s.CreateJob(ctx, JobSync, "dead-beats"); err != nil {
+			t.Fatal(err)
+		}
+		go r.Run(ctx)
+		select {
+		case <-handlerDone:
+		case <-time.After(15 * time.Second):
+			t.Fatal("handler never killed after the stale window")
+		}
+		waitFor(t, 15*time.Second, func() bool {
+			failed, err := s.ListJobs(ctx, JobSync, StatusFailed)
+			return err == nil && len(failed) == 1 && failed[0].Attempts == 1
+		}, "killed job never failed after the stale window with exactly its consumed attempt")
+	})
+}

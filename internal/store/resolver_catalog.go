@@ -427,6 +427,8 @@ LET $caller_fanout = IF array::len($published) != 1 THEN []
 		pending_key: $repository,
 		force: $caller_force
 	} RETURN AFTER) END;
+LET $caller_created = IF array::len($published) = 1 AND $pending_caller = NONE
+	THEN $caller_fanout[0] ELSE NONE END;` + projectCreatedCallerJobSQL + `
 RETURN IF array::len($caller_fanout) = 1
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)

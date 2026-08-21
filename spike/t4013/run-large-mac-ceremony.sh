@@ -435,6 +435,14 @@ execute_ceremony() {
     -prepared "$prepared_path" \
     -observation "$observation_path" \
     -confirm "$EXECUTE_CONFIRM") || execute_status=$?
+  if (( execute_status != 0 )) && [[ ! -e "$observation_path" ]]; then
+    # An unsealable stop deliberately fails closed with custody retained:
+    # destroying it here would erase hours of evidence with nothing sealed.
+    # The executed marker inside custody refuses re-execution; only the
+    # separately reviewed purge may remove it.
+    trap - EXIT
+    die "execution stopped (status ${execute_status}) and sealed no observation; private custody is RETAINED at ${custody_path} for the separately reviewed purge — do not re-execute against it"
+  fi
   if ! cleanup_prepared "$plan_path" "$prepared_path"; then
     die "exact private prepared manifest cleanup failed"
   fi

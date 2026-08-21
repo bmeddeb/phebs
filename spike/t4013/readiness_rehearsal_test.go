@@ -892,47 +892,6 @@ func rehearseSemanticStaleWorkerBoundary(
 	t.Log("semantic stale-worker boundary passed")
 }
 
-func waitExactActiveGenerationSchedule(
-	ctx context.Context,
-	reader generationChunkLeaseReader,
-	profile PreparedProfile,
-	revision string,
-	limit time.Duration,
-) error {
-	wait, cancel := context.WithTimeout(ctx, limit)
-	defer cancel()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-	var lastErr error
-	for {
-		call, callCancel := context.WithTimeout(wait, 2*time.Second)
-		progress, err := reader.GenerationScheduleProgress(
-			call, profile.RepositoryName, extractionpublication.ScheduleStage,
-		)
-		callCancel()
-		if err == nil {
-			bound, bindErr := extractionGenerationBindsRevision(
-				profile, progress.Generation, revision,
-			)
-			switch {
-			case bindErr != nil:
-				lastErr = bindErr
-			case bound && progress.Status == store.GenerationScheduleActive:
-				return nil
-			case bound && progress.Status == store.GenerationScheduleSettled:
-				return errors.New("semantic rehearsal schedule settled before contention was armed")
-			}
-		} else if !errors.Is(err, store.ErrNotFound) {
-			lastErr = err
-		}
-		select {
-		case <-wait.Done():
-			return errors.Join(lastErr, errors.New("semantic rehearsal active schedule deadline expired"))
-		case <-ticker.C:
-		}
-	}
-}
-
 func verifyPartitionTimingDiagnostics(t *testing.T, logPath string) {
 	t.Helper()
 	timing, err := newPartitionTimingCursor(logPath)

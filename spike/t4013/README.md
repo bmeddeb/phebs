@@ -2691,3 +2691,40 @@ most 64 small domain headers and adds no query, lock, child, source/content
 read, startup scan, retry, or production bound. Neutral-31 cannot pass
 retroactively, and the correction authorizes no integration, freeze,
 execution, release, SLO, or scale claim.
+
+### Pre-ceremony readiness closure and V21
+
+A multi-agent readiness review of the integrated tree, shaped by the c21 and
+neutral-25…31 failure classes, adversarially confirmed six blockers before any
+fresh freeze. Five lived in this harness: the relationship semantic digest
+hashed upstream `RunID`/`ProvenanceDigest` and would have re-killed the
+interruption exact-authority gate for byte-equivalent content; the
+stale_worker phase never armed the exclusive mutation lock and diagnostic
+schedule fence its `stale_fenced` oracle requires; the V20 caller terminal
+could seal while a live publisher sat in its ≥60-second requeue backoff (the
+admission commits before the publication transaction, so the probe freezes);
+a caller-leaf job that died with partial pair progress was unclassifiable and
+pended to the wall; and a deadline landing inside a terminal-confirmation
+window produced a stopped observation the validator rejected after custody was
+already destroyed. The sixth was production: the generic job runner killed a
+healthy handler on its first transient heartbeat error.
+
+V21 closes the caller evidence gap with a repository-keyed caller-leaf job
+projection, written by every creation path (generic queue and the three
+domain transactions) and read beside the caller progress page: an active job
+holds every caller terminal, a settled-failed job with incomplete pairs
+seals `caller_generation_terminal` in seconds, and the recorded wait carries
+the bounded caller progress/job projection under detail-V17 coherence in
+both wait validators. The V21 harness digest (v2 label) clears upstream run
+provenance and the six component transition digests while frozen V19/V20
+contracts keep their derivation; stale_worker arms the rehearsal's verified
+fence order with bounded re-selection against the ~1-second chunk settle
+race; the terminal-coherence fences exempt unconfirmed-terminal external
+stops on V21 evidence only, at the three confirmation-window stages; and
+`stopAfterFailure` validates the stopped observation before destroying
+custody — an unsealable stop fails closed with custody retained, the
+executed marker refuses re-execution against it, and the ceremony wrapper
+preserves it for the reviewed purge. A recorded follow-up stays open: death
+upstream of caller-job creation still pends the caller wait. V20 and earlier
+receipts remain byte- and semantics-exact; nothing here authorizes
+integration, a freeze, or execution.

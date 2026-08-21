@@ -1507,6 +1507,32 @@ catalog, relationship, or correctness authority.
   materialize all pointer summaries at once, so its theoretical 16-GiB
   all-maximum authority envelope is recorded as a separate capacity follow-up,
   not evidence established by the one-repository T40.13 ceremony.
+- The pre-ceremony readiness review swept every historical failure class and
+  closed six verified blockers before any fresh freeze. Production: the job
+  runner's heartbeat now tolerates transient store errors until `StaleAfter`
+  (the post-c21 scheduler policy applied to the generic queue), and the repo
+  row carries a caller-leaf job projection on `/api/repo-status`. Fresh
+  ceremony schemas advance to V21: an active caller job holds every caller
+  terminal (a live publisher's requeue window repeats the probe exactly; the
+  projection is written by every creation path including the domain
+  transactions), a settled-failed caller job with partial pairs is a typed
+  terminal instead of a four-hour pend, and the wait records the caller job
+  projection under detail-V17 coherence in both wait validators. Harness:
+  the V21 relationship semantic digest (v2 label) clears upstream
+  RunID/provenance and the six component transition digests so
+  interruption-restart re-mints cannot re-key the exact-authority gate,
+  while frozen V19/V20 contracts keep their derivation; stale_worker arms
+  the rehearsal's mutation-lock + diagnostic-fence order with bounded
+  re-selection so `stale_fenced` is reachable; V21 deadline/cancel/
+  server-exit stops may retain an unconfirmed terminal probe at the three
+  confirmation-window stages (V15..V20 semantics stay closed); and a stopped
+  observation validates before custody is destroyed — unsealable stops fail
+  closed with custody retained, an executed marker refuses re-execution
+  against retained custody, and the ceremony wrapper preserves it for the
+  reviewed purge. Recorded follow-up: death upstream of caller-job creation
+  (a dead resolver-catalog job) still pends the caller wait. V20 and
+  earlier bytes remain exact. Integration, freeze, and execution remain
+  separately authorized; T40.13 and Epic 40 are not closed.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

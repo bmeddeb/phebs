@@ -716,3 +716,57 @@ func TestRepoStatusesDoesNotDecodeTerminalHistory(t *testing.T) {
 		t.Fatalf("legacy projection = %+v", legacyStatus)
 	}
 }
+
+// The caller-leaf orchestration job projection mirrors the extraction one:
+// unavailable without a post-cutover row, exact and live through the pending
+// -> claimed -> running -> failed lifecycle, so evidence can distinguish a
+// dead caller pipeline from a live slow one.
+func TestRepoStatusesProjectsCallerJobLifecycle(t *testing.T) {
+	s := newJobHistoryStore(t)
+	ctx := context.Background()
+	repository := "example.com/projection/caller"
+	if err := s.UpsertRepo(ctx, Repo{Name: repository, CloneURL: "https://example.com/caller.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if status := requireRepoJobStatus(t, ctx, s, repository); status.LastCallerJobState != JobProjectionUnavailable ||
+		status.LastCallerJob != nil {
+		t.Fatalf("pre-creation caller projection = %+v", status.LastCallerJob)
+	}
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	if status := requireRepoJobStatus(t, ctx, s, repository); status.LastCallerJobState != JobProjectionExact ||
+		status.LastCallerJob == nil || status.LastCallerJob.Status != StatusPending {
+		t.Fatalf("pending caller projection = %+v", status.LastCallerJob)
+	}
+	claimed, err := s.ClaimJob(ctx, JobCallerLeaf, "caller-projection-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, StatusFailed, "pair execution died"); err != nil {
+		t.Fatal(err)
+	}
+	status := requireRepoJobStatus(t, ctx, s, repository)
+	if status.LastCallerJobState != JobProjectionExact || status.LastCallerJob == nil ||
+		status.LastCallerJob.Status != StatusFailed || status.LastCallerJob.Attempts != 0 {
+		t.Fatalf("failed caller projection = %+v", status.LastCallerJob)
+	}
+	// Domain transactions create caller successors outside the generic queue;
+	// the projection must follow them too, or a stale done/failed row would
+	// masquerade as the pipeline's current state (repo reactivation exercises
+	// the shared projectCreatedCallerJobSQL fragment).
+	if err := s.SetRepoDeleting(ctx, repository, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoDeleting(ctx, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	status = requireRepoJobStatus(t, ctx, s, repository)
+	if status.LastCallerJobState != JobProjectionExact || status.LastCallerJob == nil ||
+		status.LastCallerJob.Status != StatusPending {
+		t.Fatalf("reactivation caller projection = %+v", status.LastCallerJob)
+	}
+}

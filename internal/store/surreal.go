@@ -1663,6 +1663,8 @@ LET $caller_fanout = IF $reactivated = false THEN []
 			force: true
 		} RETURN AFTER)
 	END;
+LET $caller_created = IF $reactivated AND $pending_caller = NONE
+	THEN $caller_fanout[0] ELSE NONE END;` + projectCreatedCallerJobSQL + `
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)
@@ -2030,6 +2032,7 @@ func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string
 
 const indexingJobProjectionVersion = "t30.6n-indexing-job-latest-v1"
 const extractionJobProjectionVersion = "t40r1-extraction-job-latest-v1"
+const callerJobProjectionVersion = "t40r1-caller-job-latest-v1"
 
 type repoStatusRec struct {
 	Repo
@@ -2037,6 +2040,8 @@ type repoStatusRec struct {
 	LatestIndexJobProjectionVersion      string  `json:"latest_index_job_projection_version"`
 	ProjectedExtractionJob               *jobRec `json:"projected_extraction_job"`
 	LatestExtractionJobProjectionVersion string  `json:"latest_extraction_job_projection_version"`
+	ProjectedCallerJob                   *jobRec `json:"projected_caller_job"`
+	LatestCallerJobProjectionVersion     string  `json:"latest_caller_job_projection_version"`
 }
 
 // RepoStatuses joins current repos and membership with one prospective record
@@ -2090,7 +2095,18 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 				THEN string::len(latest_extraction_job.error) > $max_error_characters
 				ELSE false END,
 			created_at: latest_extraction_job.created_at
-		} AS projected_extraction_job
+		} AS projected_extraction_job, {
+			id: latest_caller_job,
+			target: IF type::is_string(latest_caller_job.target)
+				THEN string::slice(latest_caller_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_caller_job.target)
+				THEN string::len(latest_caller_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_caller_job.status,
+			attempts: latest_caller_job.attempts,
+			created_at: latest_caller_job.created_at
+		} AS projected_caller_job
 		FROM repo ORDER BY name`, map[string]any{
 			"max_target_characters":     MaxJobHistoryTargetCharacters,
 			"max_error_characters":      MaxJobHistoryErrorCharacters,
@@ -2142,6 +2158,16 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 				}
 			}
 		}
+		callerState := JobProjectionUnavailable
+		var caller *CallerJobProjection
+		if row.LatestCallerJobProjectionVersion == callerJobProjectionVersion &&
+			row.ProjectedCallerJob != nil {
+			job := row.ProjectedCallerJob.toJob(JobCallerLeaf)
+			if job.ID != "" && job.Target == row.Name && !job.TargetTruncated {
+				callerState = JobProjectionExact
+				caller = &CallerJobProjection{Status: job.Status, Attempts: job.Attempts}
+			}
+		}
 		statuses[i] = RepoStatus{
 			Repo:                   row.Repo,
 			Connections:            conns[row.Name],
@@ -2150,6 +2176,8 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			LastIndexJobState:      state,
 			LastExtractionJob:      extraction,
 			LastExtractionJobState: extractionState,
+			LastCallerJob:          caller,
+			LastCallerJobState:     callerState,
 			AnalysisUnit:           analysisunit.CloneState(row.IndexedAnalysisUnit),
 		}
 	}
@@ -2200,6 +2228,35 @@ IF $table = 'extraction_job' AND $created_job != NONE {
 		OR latest_extraction_job_created_at < $created_job.created_at
 		OR (latest_extraction_job_created_at = $created_job.created_at
 			AND latest_extraction_job < $created_job.id)
+	RETURN NONE;
+};
+IF $table = 'caller_leaf_job' AND $created_job != NONE {
+	UPDATE type::record('repo', $target)
+	SET latest_caller_job = $created_job.id,
+		latest_caller_job_created_at = $created_job.created_at,
+		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
+	WHERE latest_caller_job_created_at = NONE
+		OR latest_caller_job_created_at < $created_job.created_at
+		OR (latest_caller_job_created_at = $created_job.created_at
+			AND latest_caller_job < $created_job.id)
+	RETURN NONE;
+};`
+
+// projectCreatedCallerJobSQL mirrors the caller_leaf_job arm of
+// projectLatestIndexJobSQL for the domain transactions that create caller
+// successors outside the generic queue (caller-leaf outcome recording,
+// resolver-catalog fan-out, repo reactivation). The embedding transaction
+// sets $caller_created to the newly created caller_leaf_job row or NONE.
+const projectCreatedCallerJobSQL = `
+IF $caller_created != NONE {
+	UPDATE type::record('repo', $repository)
+	SET latest_caller_job = $caller_created.id,
+		latest_caller_job_created_at = $caller_created.created_at,
+		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
+	WHERE latest_caller_job_created_at = NONE
+		OR latest_caller_job_created_at < $caller_created.created_at
+		OR (latest_caller_job_created_at = $caller_created.created_at
+			AND latest_caller_job < $caller_created.id)
 	RETURN NONE;
 };`
 
