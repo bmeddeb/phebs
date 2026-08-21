@@ -2749,3 +2749,25 @@ created atomically only after read-only preflight succeeds, so a prerequisite
 failure remains retryable without permitting a second state-mutating run.
 Historical V1–V20 receipt semantics remain exact. Integration, freeze, and
 execution remain separate decisions.
+
+### Resolver-plane projection closes the upstream caller-death gap
+
+The V21 caller evidence could hold or seal on the caller-leaf job, but a
+pipeline killed upstream of caller-job creation — a resolver-catalog job that
+died before its fan-out minted the successor — left the caller projection on
+a settled predecessor and pended the wait to the four-hour deadline. The repo
+row now carries a creation-linked resolver-catalog job projection written by
+every resolver-job creation path (generic queue plus all seven domain fan-out
+transactions through one shared fragment; coalescing repairs pre-cutover
+rows). Caller-generation progress v3 returns it beside the caller projection
+in the same bounded authorization-first request, and V21 classification treats
+the resolver job as the pipeline's immediate upstream: an active resolver job
+holds every caller terminal, a settled dead resolver job beside a missing
+pointer and incomplete pairs seals `caller_generation_terminal` through the
+existing second-probe confirmation, an active sibling job always outranks a
+dead one, and both detail-V17 wait validators refute a claimed caller
+terminal whose recorded resolver job is still active. Death upstream of the
+resolver job itself remains visible through the extraction plane's existing
+job projection and is the recorded residual boundary. V20 and earlier
+receipts remain byte- and semantics-exact; nothing here authorizes
+integration, a freeze, or execution.

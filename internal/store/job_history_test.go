@@ -825,3 +825,75 @@ func TestCallerJobProjectionRepairsCoalescedPreCutoverPending(t *testing.T) {
 		t.Fatalf("coalesced jobs = %+v, %v", jobs, err)
 	}
 }
+
+// The resolver-catalog job projection mirrors the caller one across the
+// generic queue lifecycle, the one-repository operational read, and a domain
+// transaction (candidate-manifest publication fans out the resolver
+// successor), so evidence can distinguish a caller successor that will never
+// be minted from one that is merely late.
+func TestRepoStatusesProjectsResolverJobLifecycle(t *testing.T) {
+	s := newJobHistoryStore(t)
+	ctx := context.Background()
+	repository := "example.com/projection/resolver"
+	if err := s.UpsertRepo(ctx, Repo{Name: repository, CloneURL: "https://example.com/resolver.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if status := requireRepoJobStatus(t, ctx, s, repository); status.LastResolverJobState != JobProjectionUnavailable ||
+		status.LastResolverJob != nil {
+		t.Fatalf("pre-creation resolver projection = %+v", status.LastResolverJob)
+	}
+	if state, projection, err := s.GetResolverJobProjection(ctx, repository); err != nil ||
+		state != JobProjectionUnavailable || projection != nil {
+		t.Fatalf("pre-creation resolver read = %v %+v %v", state, projection, err)
+	}
+	if _, err := s.EnqueuePending(ctx, JobResolverCatalog, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	if status := requireRepoJobStatus(t, ctx, s, repository); status.LastResolverJobState != JobProjectionExact ||
+		status.LastResolverJob == nil || status.LastResolverJob.Status != StatusPending {
+		t.Fatalf("pending resolver projection = %+v", status.LastResolverJob)
+	}
+	claimed, err := s.ClaimJob(ctx, JobResolverCatalog, "resolver-projection-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *claimed, StatusFailed, "caller successor was never minted"); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err := s.GetResolverJobProjection(ctx, repository)
+	if err != nil || state != JobProjectionExact || projection == nil ||
+		projection.Status != StatusFailed || projection.Attempts != 0 {
+		t.Fatalf("failed resolver read = %v %+v %v", state, projection, err)
+	}
+	// Simulate a pre-projection pending row at the generic queue boundary: an
+	// exact enqueue must repair the coalesced row rather than wait for a new
+	// job. Domain fan-out creation and dead-pipeline repair are covered by the
+	// candidate-manifest integration test.
+	if _, err := s.EnqueuePending(ctx, JobResolverCatalog, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	requireJobHistoryQuery(t, ctx, s, `UPDATE $repository UNSET
+		latest_resolver_job, latest_resolver_job_created_at,
+		latest_resolver_job_projection_version RETURN NONE`, map[string]any{
+		"repository": repoID(repository),
+	})
+	if state, projection, err := s.GetResolverJobProjection(ctx, repository); err != nil ||
+		state != JobProjectionUnavailable || projection != nil {
+		t.Fatalf("unset resolver read = %v %+v %v", state, projection, err)
+	}
+	if _, err := s.EnqueuePending(ctx, JobResolverCatalog, repository, true); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err = s.GetResolverJobProjection(ctx, repository)
+	if err != nil || state != JobProjectionExact || projection == nil ||
+		projection.Status != StatusPending || projection.Attempts != 0 {
+		t.Fatalf("repaired resolver read = %v %+v %v", state, projection, err)
+	}
+	jobs, err := s.ListJobs(ctx, JobResolverCatalog, StatusPending)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("coalesced pending resolver jobs = %+v, %v", jobs, err)
+	}
+}

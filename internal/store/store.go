@@ -197,6 +197,8 @@ type RepoStatus struct {
 	LastExtractionJobState JobProjectionState       `json:"last_extraction_job_state"`
 	LastCallerJob          *CallerJobProjection     `json:"last_caller_job,omitempty"`
 	LastCallerJobState     JobProjectionState       `json:"last_caller_job_state"`
+	LastResolverJob        *ResolverJobProjection   `json:"last_resolver_job,omitempty"`
+	LastResolverJobState   JobProjectionState       `json:"last_resolver_job_state"`
 	AnalysisUnit           *analysisunit.State      `json:"analysis_unit,omitempty"`
 }
 
@@ -219,6 +221,15 @@ type CallerJobProjection struct {
 	Attempts int       `json:"attempts"`
 }
 
+// ResolverJobProjection is the resolver-catalog orchestration job reduced the
+// same way: it is the caller pipeline's immediate upstream, so evidence can
+// distinguish a caller successor that will never be minted (dead resolver
+// job) from one that is merely late.
+type ResolverJobProjection struct {
+	Status   JobStatus `json:"status"`
+	Attempts int       `json:"attempts"`
+}
+
 // CallerJobProjectionStore is the one-repository operational read used by
 // caller-generation progress. Keeping it separate from Store lets unrelated
 // queue consumers avoid acquiring a new diagnostic capability.
@@ -226,6 +237,9 @@ type CallerJobProjectionStore interface {
 	GetCallerJobProjection(
 		context.Context, string,
 	) (JobProjectionState, *CallerJobProjection, error)
+	GetResolverJobProjection(
+		context.Context, string,
+	) (JobProjectionState, *ResolverJobProjection, error)
 }
 
 // User is the shared identity behind local-password and OIDC logins. Secret

@@ -646,7 +646,10 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	}
 	job := callerJobProbe{}
 	if inspector.contract >= profileInspectionV21 {
-		job = callerJobProbe{State: progress.CallerJobState, Job: progress.CallerJob}
+		job = callerJobProbe{
+			State: progress.CallerJobState, Job: progress.CallerJob,
+			ResolverState: progress.ResolverJobState, ResolverJob: progress.ResolverJob,
+		}
 	}
 	return classifyCallerGeneration(apiresponse.CallerMapPage{
 		Generation: &progress.Generation,
@@ -896,24 +899,38 @@ func classifyRelationshipGeneration(
 	return probe, errRelationshipTerminal
 }
 
-// callerJobProbe carries the repository-keyed caller-leaf job projection into
-// caller-generation classification. V21 reads it from the progress page so
-// a live requeued publisher holds a terminal stop and a dead caller pipeline
-// classifies in seconds instead of pending to the wall deadline.
+// callerJobProbe carries the repository-keyed caller-leaf job projection —
+// and its immediate upstream, the resolver-catalog job — into
+// caller-generation classification. V21 reads both from the progress page so
+// a live requeued publisher (or a resolver still minting the successor) holds
+// a terminal stop, and a dead caller pipeline classifies in seconds instead
+// of pending to the wall deadline whether it died at the caller job or
+// upstream of the caller job's creation.
 type callerJobProbe struct {
-	State store.JobProjectionState
-	Job   *store.CallerJobProjection
+	State         store.JobProjectionState
+	Job           *store.CallerJobProjection
+	ResolverState store.JobProjectionState
+	ResolverJob   *store.ResolverJobProjection
+}
+
+func activeJobStatus(status store.JobStatus) bool {
+	return slices.Contains([]store.JobStatus{
+		store.StatusPending, store.StatusClaimed, store.StatusRunning,
+	}, status)
+}
+
+func deadJobStatus(status store.JobStatus) bool {
+	return status == store.StatusFailed || status == store.StatusCanceled
 }
 
 func (job callerJobProbe) active() bool {
-	return job.Job != nil && slices.Contains([]store.JobStatus{
-		store.StatusPending, store.StatusClaimed, store.StatusRunning,
-	}, job.Job.Status)
+	return (job.Job != nil && activeJobStatus(job.Job.Status)) ||
+		(job.ResolverJob != nil && activeJobStatus(job.ResolverJob.Status))
 }
 
 func (job callerJobProbe) dead() bool {
-	return job.Job != nil && (job.Job.Status == store.StatusFailed ||
-		job.Job.Status == store.StatusCanceled)
+	return (job.Job != nil && deadJobStatus(job.Job.Status)) ||
+		(job.ResolverJob != nil && deadJobStatus(job.ResolverJob.Status))
 }
 
 // classifyCallerGeneration applies the V21 live-job hold over the shape
@@ -967,6 +984,21 @@ func classifyCallerGenerationShape(
 		} else {
 			job.Job = nil
 		}
+		if job.ResolverState != store.JobProjectionUnavailable &&
+			job.ResolverState != store.JobProjectionExact {
+			return probe, errors.New("T40.13 resolver job projection state is invalid")
+		}
+		if job.ResolverState == store.JobProjectionExact {
+			if job.ResolverJob == nil || !slices.Contains([]store.JobStatus{
+				store.StatusPending, store.StatusClaimed, store.StatusRunning,
+				store.StatusDone, store.StatusFailed, store.StatusCanceled,
+			}, job.ResolverJob.Status) || job.ResolverJob.Attempts < 0 ||
+				job.ResolverJob.Attempts > 1_000_000 {
+				return probe, errors.New("T40.13 resolver job projection is invalid")
+			}
+		} else {
+			job.ResolverJob = nil
+		}
 		projection := &CallerProgressObservation{
 			State: generation.State, GenerationDigestValid: digestIdentity(generation.GenerationDigest),
 		}
@@ -992,6 +1024,10 @@ func classifyCallerGenerationShape(
 		if job.Job != nil {
 			projection.JobState = string(job.Job.Status)
 			projection.JobAttempts = job.Job.Attempts
+		}
+		if job.ResolverJob != nil {
+			projection.ResolverJobState = string(job.ResolverJob.Status)
+			projection.ResolverJobAttempts = job.ResolverJob.Attempts
 		}
 		probe = convergenceProbe(
 			"caller_generation", generation.State, generation.GenerationDigest,
@@ -1021,8 +1057,10 @@ func classifyCallerGenerationShape(
 		}
 		if contract >= profileInspectionV21 && job.dead() {
 			// No publication pointer, incomplete pair progress, and the
-			// repository-keyed caller-leaf job settled failed with no pending
-			// successor row: the caller pipeline is dead, not slow.
+			// repository-keyed caller-leaf job — or the resolver-catalog job
+			// that must mint the caller successor — settled failed with no
+			// pending row: the caller pipeline is dead, not slow. An active
+			// sibling job holds this terminal through the wrapper above.
 			return probe, errCallerPublicationMissing
 		}
 		return probe, errors.New("T40.13 caller generation has not converged")

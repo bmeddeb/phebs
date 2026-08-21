@@ -325,7 +325,7 @@ LET $catalog_fanout = IF array::len($published) != 1 THEN []
 			pending_key: $repository,
 			force: $catalog_force
 		} RETURN AFTER)
-	END;
+	END;` + projectResolverJobSQL + `
 RETURN IF array::len($fanout) = 1
 	AND array::len($catalog_fanout) = 1
 	AND (array::len($retired_caller) = 0
@@ -517,7 +517,7 @@ func (s *Surreal) ClearCandidateManifestPublication(
 					pending_key: $repository,
 					force: true
 				} RETURN AFTER)
-			END;
+			END;`+projectResolverJobSQL+`
 		IF array::len($retired_catalog) = 1
 			AND array::len($catalog_fanout) != 1 {
 			THROW 'phebs-retryable: resolver catalog successor was not persisted'

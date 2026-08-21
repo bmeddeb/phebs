@@ -1787,7 +1787,7 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 			pending_key: $name,
 			force: true
 		} RETURN AFTER)
-	END;
+	END;` + projectResolverJobSQL + `
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
@@ -1888,7 +1888,7 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 			pending_key: $name,
 			force: true
 		} RETURN AFTER)
-	END;
+	END;` + projectResolverJobSQL + `
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
@@ -1970,7 +1970,7 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 			pending_key: $name,
 			force: true
 		} RETURN AFTER)
-	END;
+	END;`+projectResolverJobSQL+`
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
@@ -2033,6 +2033,7 @@ func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string
 const indexingJobProjectionVersion = "t30.6n-indexing-job-latest-v1"
 const extractionJobProjectionVersion = "t40r1-extraction-job-latest-v1"
 const callerJobProjectionVersion = "t40r1-caller-job-latest-v1"
+const resolverJobProjectionVersion = "t40r1-resolver-job-latest-v1"
 
 type repoStatusRec struct {
 	Repo
@@ -2042,6 +2043,8 @@ type repoStatusRec struct {
 	LatestExtractionJobProjectionVersion string  `json:"latest_extraction_job_projection_version"`
 	ProjectedCallerJob                   *jobRec `json:"projected_caller_job"`
 	LatestCallerJobProjectionVersion     string  `json:"latest_caller_job_projection_version"`
+	ProjectedResolverJob                 *jobRec `json:"projected_resolver_job"`
+	LatestResolverJobProjectionVersion   string  `json:"latest_resolver_job_projection_version"`
 }
 
 var _ CallerJobProjectionStore = (*Surreal)(nil)
@@ -2058,6 +2061,63 @@ func callerJobProjection(row repoStatusRec) (JobProjectionState, *CallerJobProje
 	return JobProjectionExact, &CallerJobProjection{
 		Status: job.Status, Attempts: job.Attempts,
 	}
+}
+
+func resolverJobProjection(row repoStatusRec) (JobProjectionState, *ResolverJobProjection) {
+	if row.LatestResolverJobProjectionVersion != resolverJobProjectionVersion ||
+		row.ProjectedResolverJob == nil {
+		return JobProjectionUnavailable, nil
+	}
+	job := row.ProjectedResolverJob.toJob(JobResolverCatalog)
+	if job.ID == "" || job.Target != row.Name || job.TargetTruncated {
+		return JobProjectionUnavailable, nil
+	}
+	return JobProjectionExact, &ResolverJobProjection{
+		Status: job.Status, Attempts: job.Attempts,
+	}
+}
+
+// GetResolverJobProjection reads only one repository's creation-linked
+// resolver-catalog job — the caller pipeline's immediate upstream — with the
+// same single-record discipline as the caller read.
+func (s *Surreal) GetResolverJobProjection(
+	ctx context.Context,
+	repository string,
+) (JobProjectionState, *ResolverJobProjection, error) {
+	results, err := surrealdb.Query[[]repoStatusRec](ctx, s.db, `
+		SELECT name, latest_resolver_job_projection_version, {
+			id: latest_resolver_job,
+			target: IF type::is_string(latest_resolver_job.target)
+				THEN string::slice(latest_resolver_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_resolver_job.target)
+				THEN string::len(latest_resolver_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_resolver_job.status,
+			attempts: latest_resolver_job.attempts,
+			created_at: latest_resolver_job.created_at
+		} AS projected_resolver_job FROM $repository`, map[string]any{
+		"repository":            repoID(repository),
+		"max_target_characters": MaxJobHistoryTargetCharacters,
+	})
+	if err != nil {
+		return JobProjectionUnavailable, nil, fmt.Errorf(
+			"get resolver job projection: %w", err,
+		)
+	}
+	if results == nil || len(*results) != 1 {
+		return JobProjectionUnavailable, nil, errors.New(
+			"get resolver job projection: invalid query result",
+		)
+	}
+	rows := (*results)[0].Result
+	if len(rows) == 0 {
+		return JobProjectionUnavailable, nil, fmt.Errorf(
+			"repo %q: %w", repository, ErrNotFound,
+		)
+	}
+	state, projection := resolverJobProjection(rows[0])
+	return state, projection, nil
 }
 
 // GetCallerJobProjection reads only one repository's creation-linked caller
@@ -2164,7 +2224,18 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			status: latest_caller_job.status,
 			attempts: latest_caller_job.attempts,
 			created_at: latest_caller_job.created_at
-		} AS projected_caller_job
+		} AS projected_caller_job, {
+			id: latest_resolver_job,
+			target: IF type::is_string(latest_resolver_job.target)
+				THEN string::slice(latest_resolver_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_resolver_job.target)
+				THEN string::len(latest_resolver_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_resolver_job.status,
+			attempts: latest_resolver_job.attempts,
+			created_at: latest_resolver_job.created_at
+		} AS projected_resolver_job
 		FROM repo ORDER BY name`, map[string]any{
 			"max_target_characters":     MaxJobHistoryTargetCharacters,
 			"max_error_characters":      MaxJobHistoryErrorCharacters,
@@ -2217,6 +2288,7 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			}
 		}
 		callerState, caller := callerJobProjection(row)
+		resolverState, resolver := resolverJobProjection(row)
 		statuses[i] = RepoStatus{
 			Repo:                   row.Repo,
 			Connections:            conns[row.Name],
@@ -2227,6 +2299,8 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			LastExtractionJobState: extractionState,
 			LastCallerJob:          caller,
 			LastCallerJobState:     callerState,
+			LastResolverJob:        resolver,
+			LastResolverJobState:   resolverState,
 			AnalysisUnit:           analysisunit.CloneState(row.IndexedAnalysisUnit),
 		}
 	}
@@ -2289,6 +2363,17 @@ IF $table = 'caller_leaf_job' AND $created_job != NONE {
 		OR (latest_caller_job_created_at = $created_job.created_at
 			AND latest_caller_job < $created_job.id)
 	RETURN NONE;
+};
+IF $table = 'resolver_catalog_job' AND $created_job != NONE {
+	UPDATE type::record('repo', $target)
+	SET latest_resolver_job = $created_job.id,
+		latest_resolver_job_created_at = $created_job.created_at,
+		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
+	WHERE latest_resolver_job_created_at = NONE
+		OR latest_resolver_job_created_at < $created_job.created_at
+		OR (latest_resolver_job_created_at = $created_job.created_at
+			AND latest_resolver_job < $created_job.id)
+	RETURN NONE;
 };`
 
 // projectCallerJobSQL mirrors the caller_leaf_job arm of
@@ -2308,11 +2393,11 @@ IF $caller_projected != NONE {
 	RETURN NONE;
 };`
 
-// projectExistingCallerJobSQL is appended only where $job may be a coalesced
-// pending row. Newly created jobs are already handled by
-// projectLatestIndexJobSQL; this arm establishes the current writer marker for
-// an exact pre-cutover pending row without scanning caller history.
-const projectExistingCallerJobSQL = `
+// projectExistingJobProjectionSQL is appended only where $job may be a
+// coalesced pending caller or resolver row. Newly created jobs are already
+// handled by projectLatestIndexJobSQL; these arms establish the current writer
+// marker for an exact pre-cutover pending row without scanning job history.
+const projectExistingJobProjectionSQL = `
 IF $table = 'caller_leaf_job' AND $created_job = NONE AND array::len($job) = 1 {
 	UPDATE type::record('repo', $target)
 	SET latest_caller_job = $job[0].id,
@@ -2322,6 +2407,39 @@ IF $table = 'caller_leaf_job' AND $created_job = NONE AND array::len($job) = 1 {
 		OR latest_caller_job_created_at < $job[0].created_at
 		OR (latest_caller_job_created_at = $job[0].created_at
 			AND latest_caller_job < $job[0].id)
+	RETURN NONE;
+};
+IF $table = 'resolver_catalog_job' AND $created_job = NONE AND array::len($job) = 1 {
+	UPDATE type::record('repo', $target)
+	SET latest_resolver_job = $job[0].id,
+		latest_resolver_job_created_at = $job[0].created_at,
+		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
+	WHERE latest_resolver_job_created_at = NONE
+		OR latest_resolver_job_created_at < $job[0].created_at
+		OR (latest_resolver_job_created_at = $job[0].created_at
+			AND latest_resolver_job < $job[0].id)
+	RETURN NONE;
+};`
+
+// projectResolverJobSQL mirrors projectCallerJobSQL for the seven domain
+// transactions that mint or coalesce resolver-catalog successors through the
+// shared $pending_catalog/$catalog_fanout shape (candidate manifest
+// publication and retirement, indexed-state transitions and clearing,
+// evidence chunks, extraction-run publication). It is site-agnostic: the
+// fan-out row's own target names the repository, and projecting the coalesced
+// row also repairs an exact pre-cutover pending successor.
+const projectResolverJobSQL = `
+LET $resolver_projected = IF array::len($catalog_fanout) = 1
+	THEN $catalog_fanout[0] ELSE NONE END;
+IF $resolver_projected != NONE {
+	UPDATE type::record('repo', $resolver_projected.target)
+	SET latest_resolver_job = $resolver_projected.id,
+		latest_resolver_job_created_at = $resolver_projected.created_at,
+		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
+	WHERE latest_resolver_job_created_at = NONE
+		OR latest_resolver_job_created_at < $resolver_projected.created_at
+		OR (latest_resolver_job_created_at = $resolver_projected.created_at
+			AND latest_resolver_job < $resolver_projected.id)
 	RETURN NONE;
 };`
 
@@ -2366,7 +2484,7 @@ ELSE
     } RETURN AFTER)
 END;
 LET $created_job = IF $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + projectExistingCallerJobSQL + `
+	projectLatestIndexJobSQL + projectExistingJobProjectionSQL + `
 RETURN $job;
 COMMIT;`
 
@@ -2418,7 +2536,7 @@ ELSE
     } RETURN AFTER)
 END;
 LET $created_job = IF $owned != NONE AND $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + projectExistingCallerJobSQL + `
+	projectLatestIndexJobSQL + projectExistingJobProjectionSQL + `
 RETURN $job;
 COMMIT;`
 

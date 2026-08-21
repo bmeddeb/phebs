@@ -4647,3 +4647,20 @@ scan changes. Finally, the custody execution marker is created with an
 exclusive atomic write only after read-only preflight succeeds. A failed
 prerequisite is retryable; successful preflight still permits exactly one
 state-mutating execution.
+
+### T40.R1 resolver job projection
+
+The repo row now links its latest resolver-catalog job
+(`latest_resolver_job`) beside the indexing, extraction, and caller-leaf
+projections, written by every creation path including the seven domain
+fan-out transactions; coalescing into an exact pre-cutover pending row
+repairs the marker. `/api/repo-status` serves it as `last_resolver_job`, and
+caller-generation progress v3 returns it beside the caller projection through
+the same bounded single-repository request. Operators and evidence can now
+distinguish a caller successor that will never be minted (settled dead
+resolver job) from one that is merely late (active resolver job), without
+reading queue tables. Each creation adds one bounded repo-row link write
+inside its existing transaction; the progress request gains one single-record
+query and no installation-wide scan, new lock, retry, or concurrency.
+Historical
+caller-generation-progress v2 responses remain valid.

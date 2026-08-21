@@ -678,9 +678,13 @@ func TestCallerGenerationProgressMaximumResponseFitsBound(t *testing.T) {
 	digest := "sha256:" + strings.Repeat("f", 64)
 	maximumInt := int(^uint(0) >> 1)
 	progress := CallerGenerationProgress{
-		SchemaVersion:  callerProgressSchema,
-		CallerJobState: store.JobProjectionExact,
+		SchemaVersion:    callerProgressSchema,
+		CallerJobState:   store.JobProjectionExact,
+		ResolverJobState: store.JobProjectionExact,
 		CallerJob: &store.CallerJobProjection{
+			Status: store.StatusFailed, Attempts: 1_000_000,
+		},
+		ResolverJob: &store.ResolverJobProjection{
 			Status: store.StatusFailed, Attempts: 1_000_000,
 		},
 		Generation: CallerMapGeneration{
@@ -715,6 +719,9 @@ func TestCallerGenerationProgressMaximumResponseFitsBound(t *testing.T) {
 	}
 	if !validCallerJobProjection(progress.CallerJobState, progress.CallerJob) {
 		t.Fatal("maximum response caller job is invalid")
+	}
+	if !validResolverJobProjection(progress.ResolverJobState, progress.ResolverJob) {
+		t.Fatal("maximum response resolver job is invalid")
 	}
 	encoded, err := json.Marshal(progress)
 	if err != nil {
@@ -751,6 +758,34 @@ func TestCallerGenerationProgressValidatesJobProjectionShape(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := validCallerJobProjection(test.state, test.job); got != test.valid {
 				t.Fatalf("validCallerJobProjection() = %v, want %v", got, test.valid)
+			}
+		})
+	}
+}
+
+func TestCallerGenerationProgressValidatesResolverJobProjectionShape(t *testing.T) {
+	tests := []struct {
+		name  string
+		state store.JobProjectionState
+		job   *store.ResolverJobProjection
+		valid bool
+	}{
+		{name: "unavailable", state: store.JobProjectionUnavailable, valid: true},
+		{name: "exact", state: store.JobProjectionExact,
+			job: &store.ResolverJobProjection{Status: store.StatusRunning, Attempts: 1}, valid: true},
+		{name: "unavailable with job", state: store.JobProjectionUnavailable,
+			job: &store.ResolverJobProjection{Status: store.StatusPending}},
+		{name: "exact without job", state: store.JobProjectionExact},
+		{name: "unknown state", state: store.JobProjectionState("unknown")},
+		{name: "unknown status", state: store.JobProjectionExact,
+			job: &store.ResolverJobProjection{Status: store.JobStatus("unknown")}},
+		{name: "attempt over bound", state: store.JobProjectionExact,
+			job: &store.ResolverJobProjection{Status: store.StatusFailed, Attempts: 1_000_001}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := validResolverJobProjection(test.state, test.job); got != test.valid {
+				t.Fatalf("validResolverJobProjection() = %v, want %v", got, test.valid)
 			}
 		})
 	}

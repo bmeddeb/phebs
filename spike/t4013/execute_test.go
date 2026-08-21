@@ -2480,7 +2480,10 @@ func TestUnconfirmedTerminalDeadlineSealsAndRetainsCustodyOnUnsealable(t *testin
 				SucceededPairCount: total, TotalPairCount: &total,
 			},
 		}},
-		callerJobProbe{State: store.JobProjectionUnavailable},
+		callerJobProbe{
+			State:         store.JobProjectionUnavailable,
+			ResolverState: store.JobProjectionUnavailable,
+		},
 		profileInspectionV21,
 	)
 	if !errors.Is(cause, errCallerPublicationMissing) {
@@ -2629,7 +2632,8 @@ func TestV21CallerTerminalRecordsJobProjectionAndSeals(t *testing.T) {
 			},
 		}},
 		callerJobProbe{State: store.JobProjectionExact,
-			Job: &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3}},
+			Job:           &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3},
+			ResolverState: store.JobProjectionUnavailable},
 		profileInspectionV21,
 	)
 	if !errors.Is(cause, errCallerPublicationMissing) {

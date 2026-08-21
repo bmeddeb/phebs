@@ -1533,6 +1533,19 @@ catalog, relationship, or correctness authority.
   (a dead resolver-catalog job) still pends the caller wait. V20 and
   earlier bytes remain exact. Integration, freeze, and execution remain
   separately authorized; T40.13 and Epic 40 are not closed.
+- The resolver-plane projection closes that recorded follow-up before any
+  freeze: the repo row carries a creation-linked resolver-catalog job
+  projection written by the generic queue and all seven domain fan-out
+  transactions (coalesce repairs pre-cutover rows), caller-generation
+  progress v3 returns it beside the caller projection in the same bounded
+  read, and V21 caller classification holds every caller terminal behind an
+  active resolver job while sealing `caller_generation_terminal` in seconds
+  when the resolver job settled dead before minting the successor — with the
+  same active-over-dead precedence and detail-V17 receipt-fence lockstep in
+  both wait validators. Death upstream of the resolver job itself remains
+  visible through the extraction plane's existing job projection and is the
+  recorded residual boundary. V20 and earlier bytes remain exact; nothing
+  here authorizes integration, a freeze, or execution.
 - The V21 freeze-readiness correction makes the caller stop evidence exact.
   Caller progress v2 includes the repository-keyed live caller-job projection,
   so the harness no longer performs an additional installation-wide

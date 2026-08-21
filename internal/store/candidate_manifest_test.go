@@ -481,3 +481,56 @@ func TestCandidateManifestPublicationRejectsInvalidPrimitiveIdentity(t *testing.
 		t.Fatalf("invalid inputs created jobs: %+v, %v", jobs, err)
 	}
 }
+
+// Candidate-manifest publication mints the resolver-catalog successor inside
+// its own domain transaction; the resolver job projection must follow that
+// fan-out — creation and repair — so caller-generation evidence never
+// classifies from a stale resolver row.
+func TestCandidateFanoutMaintainsResolverJobProjection(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "github.com/acme/candidate-resolver-projection"
+	commit := candidateCommit('9')
+	publication := candidatePublication(repository, commit, "")
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name:     repository,
+		CloneURL: "https://github.com/acme/candidate-resolver-projection.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err := s.GetResolverJobProjection(ctx, repository)
+	if err != nil || state != store.JobProjectionExact || projection == nil ||
+		projection.Status != store.StatusPending {
+		t.Fatalf("fanout resolver projection = %v %+v %v", state, projection, err)
+	}
+	active, err := s.ClaimJob(ctx, store.JobResolverCatalog, "resolver-projection-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, store.StatusFailed, "died before minting the caller successor"); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err = s.GetResolverJobProjection(ctx, repository)
+	if err != nil || state != store.JobProjectionExact || projection == nil ||
+		projection.Status != store.StatusFailed {
+		t.Fatalf("failed resolver projection = %v %+v %v", state, projection, err)
+	}
+	// An exact candidate retry repairs the dead pipeline with a fresh pending
+	// successor through the same domain transaction; the projection must move
+	// with it instead of continuing to present the settled failure.
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err = s.GetResolverJobProjection(ctx, repository)
+	if err != nil || state != store.JobProjectionExact || projection == nil ||
+		projection.Status != store.StatusPending {
+		t.Fatalf("repaired resolver projection = %v %+v %v", state, projection, err)
+	}
+}

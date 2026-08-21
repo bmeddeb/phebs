@@ -1687,7 +1687,8 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 
 // CallerProgressObservation is the caller-generation probe reduced to its
 // source-free projection: publication state, settled-pair summary, and the
-// repository-keyed caller-leaf job beside them.
+// repository-keyed caller-leaf job and its resolver-catalog predecessor beside
+// them.
 type CallerProgressObservation struct {
 	State                 string                     `json:"state"`
 	GenerationDigestValid bool                       `json:"generation_digest_valid"`
@@ -1699,6 +1700,8 @@ type CallerProgressObservation struct {
 	Refusals              []CallerRefusalObservation `json:"refusals,omitempty"`
 	JobState              string                     `json:"job_state,omitempty"`
 	JobAttempts           int                        `json:"job_attempts,omitempty"`
+	ResolverJobState      string                     `json:"resolver_job_state,omitempty"`
+	ResolverJobAttempts   int                        `json:"resolver_job_attempts,omitempty"`
 }
 
 type CallerRefusalObservation struct {
@@ -1720,6 +1723,9 @@ func validateCallerProgress(value CallerProgressObservation) error {
 		!slices.Contains([]string{"", "pending", "claimed", "running", "done", "failed", "canceled"}, value.JobState) ||
 		value.JobAttempts < 0 || value.JobAttempts > 1_000_000 ||
 		(value.JobState == "" && value.JobAttempts != 0) ||
+		!slices.Contains([]string{"", "pending", "claimed", "running", "done", "failed", "canceled"}, value.ResolverJobState) ||
+		value.ResolverJobAttempts < 0 || value.ResolverJobAttempts > 1_000_000 ||
+		(value.ResolverJobState == "" && value.ResolverJobAttempts != 0) ||
 		len(value.Refusals) > maxCallerRefusalObservations {
 		return errors.New("T40.13 caller progress projection is invalid")
 	}
@@ -1796,12 +1802,19 @@ func callerProgressAllSucceeded(progress CallerProgressObservation) bool {
 		progress.RefusedPairCount == 0
 }
 
+// The resolver-catalog job is the caller pipeline's immediate upstream: an
+// active resolver holds a caller terminal exactly like an active caller job
+// (the successor may not be minted yet), and a dead resolver is a dead caller
+// pipeline even though no caller job for the awaited generation ever existed.
 func callerProgressJobActive(progress CallerProgressObservation) bool {
-	return slices.Contains([]string{"pending", "claimed", "running"}, progress.JobState)
+	active := []string{"pending", "claimed", "running"}
+	return slices.Contains(active, progress.JobState) ||
+		slices.Contains(active, progress.ResolverJobState)
 }
 
 func callerProgressJobDead(progress CallerProgressObservation) bool {
-	return progress.JobState == "failed" || progress.JobState == "canceled"
+	return progress.JobState == "failed" || progress.JobState == "canceled" ||
+		progress.ResolverJobState == "failed" || progress.ResolverJobState == "canceled"
 }
 
 func validateExtractionTiming(value ExtractionTimingObservation) error {

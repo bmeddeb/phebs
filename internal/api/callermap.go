@@ -22,7 +22,7 @@ import (
 
 const (
 	callerMapSchemaVersion    = "caller-map-v1"
-	callerProgressSchema      = "caller-generation-progress-v2"
+	callerProgressSchema      = "caller-generation-progress-v3"
 	callerMapCursorVersion    = "caller-map-cursor-v1"
 	callerMapCapability       = "contract-caller-map"
 	callerMapDefaultPage      = 50
@@ -386,11 +386,13 @@ type CallerMapPage struct {
 // endpoint reads remain declaration-bound; this projection exists so a
 // missing endpoint cannot hide a current or terminal generation.
 type CallerGenerationProgress struct {
-	SchemaVersion  string                        `json:"schema_version"`
-	Generation     CallerMapGeneration           `json:"generation"`
-	Scope          CallerGenerationProgressScope `json:"scope"`
-	CallerJobState store.JobProjectionState      `json:"caller_job_state"`
-	CallerJob      *store.CallerJobProjection    `json:"caller_job,omitempty"`
+	SchemaVersion    string                        `json:"schema_version"`
+	Generation       CallerMapGeneration           `json:"generation"`
+	Scope            CallerGenerationProgressScope `json:"scope"`
+	CallerJobState   store.JobProjectionState      `json:"caller_job_state"`
+	CallerJob        *store.CallerJobProjection    `json:"caller_job,omitempty"`
+	ResolverJobState store.JobProjectionState      `json:"resolver_job_state"`
+	ResolverJob      *store.ResolverJobProjection  `json:"resolver_job,omitempty"`
 }
 
 // CallerGenerationProgressScope retains the exact analysis authority without

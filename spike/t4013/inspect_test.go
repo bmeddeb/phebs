@@ -576,7 +576,7 @@ func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T)
 				response.Header().Set("Content-Type", "application/json")
 				_, _ = fmt.Fprintf(response,
 					`{"$schema":"http://%s/schemas/CallerGenerationProgress.json",`+
-						`"schema_version":"caller-generation-progress-v2","generation":{`+
+						`"schema_version":"caller-generation-progress-v3","generation":{`+
 						`"state":%q,"plane":"repository-overlay",`+
 						`"repository":"example.invalid/neutral",`+
 						`"generation_digest":"sha256:%s",`+
@@ -584,7 +584,8 @@ func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T)
 						`"scope":{"repository":"example.invalid/neutral",`+
 						`"commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",`+
 						`"scope_posture":"whole-repository"},`+
-						`"caller_job_state":"unavailable"}`,
+						`"caller_job_state":"unavailable",`+
+						`"resolver_job_state":"unavailable"}`,
 					request.Host, test.state, strings.Repeat("c", 64), test.progress,
 				)
 			}))
@@ -1142,17 +1143,38 @@ func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
 		},
 	}}
 	running := callerJobProbe{State: store.JobProjectionExact,
-		Job: &store.CallerJobProjection{Status: store.StatusRunning, Attempts: 1}}
+		Job:           &store.CallerJobProjection{Status: store.StatusRunning, Attempts: 1},
+		ResolverState: store.JobProjectionUnavailable}
 	dead := callerJobProbe{State: store.JobProjectionExact,
-		Job: &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3}}
-	absent := callerJobProbe{State: store.JobProjectionUnavailable}
+		Job:           &store.CallerJobProjection{Status: store.StatusFailed, Attempts: 3},
+		ResolverState: store.JobProjectionUnavailable}
+	absent := callerJobProbe{
+		State: store.JobProjectionUnavailable, ResolverState: store.JobProjectionUnavailable,
+	}
+	resolverRunning := callerJobProbe{
+		State: store.JobProjectionUnavailable, ResolverState: store.JobProjectionExact,
+		ResolverJob: &store.ResolverJobProjection{Status: store.StatusRunning, Attempts: 1},
+	}
+	resolverDead := callerJobProbe{
+		State:         store.JobProjectionExact,
+		Job:           &store.CallerJobProjection{Status: store.StatusDone, Attempts: 1},
+		ResolverState: store.JobProjectionExact,
+		ResolverJob:   &store.ResolverJobProjection{Status: store.StatusFailed, Attempts: 3},
+	}
+	resolverDeadCallerRunning := callerJobProbe{
+		State:         store.JobProjectionExact,
+		Job:           &store.CallerJobProjection{Status: store.StatusRunning, Attempts: 1},
+		ResolverState: store.JobProjectionExact,
+		ResolverJob:   &store.ResolverJobProjection{Status: store.StatusFailed, Attempts: 3},
+	}
 
 	tests := []struct {
-		name     string
-		page     apiresponse.CallerMapPage
-		job      callerJobProbe
-		terminal bool
-		jobState string
+		name             string
+		page             apiresponse.CallerMapPage
+		job              callerJobProbe
+		terminal         bool
+		jobState         string
+		resolverJobState string
 	}{
 		{name: "complete with live job holds terminal", page: complete, job: running, jobState: "running"},
 		{name: "complete with absent job is terminal", page: complete, job: absent, terminal: true},
@@ -1160,6 +1182,14 @@ func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
 		{name: "partial with dead job is terminal", page: partial, job: dead, terminal: true, jobState: "failed"},
 		{name: "partial with live job is pending", page: partial, job: running, jobState: "running"},
 		{name: "partial with absent job is pending", page: partial, job: absent},
+		{name: "complete with live resolver holds terminal", page: complete, job: resolverRunning,
+			resolverJobState: "running"},
+		{name: "partial with dead resolver is terminal", page: partial, job: resolverDead,
+			terminal: true, jobState: "done", resolverJobState: "failed"},
+		{name: "partial with live resolver is pending", page: partial, job: resolverRunning,
+			resolverJobState: "running"},
+		{name: "dead resolver behind live caller job is held", page: partial,
+			job: resolverDeadCallerRunning, jobState: "running", resolverJobState: "failed"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1167,8 +1197,10 @@ func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
 			if got := errors.Is(err, errCallerPublicationMissing); got != test.terminal {
 				t.Fatalf("terminal = %v (%v), want %v", got, err, test.terminal)
 			}
-			if probe.CallerProgress == nil || probe.CallerProgress.JobState != test.jobState {
-				t.Fatalf("caller progress = %+v, want job state %q", probe.CallerProgress, test.jobState)
+			if probe.CallerProgress == nil || probe.CallerProgress.JobState != test.jobState ||
+				probe.CallerProgress.ResolverJobState != test.resolverJobState {
+				t.Fatalf("caller progress = %+v, want job state %q / resolver %q",
+					probe.CallerProgress, test.jobState, test.resolverJobState)
 			}
 			if got := expectedCallerGenerationTerminal(probe.CallerProgress); got != test.terminal {
 				t.Fatalf("receipt terminal = %v, runtime terminal = %v", got, test.terminal)
@@ -1187,8 +1219,9 @@ func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
 		},
 	}}
 	currentProbe, err := classifyCallerGeneration(current, callerJobProbe{
-		State: store.JobProjectionExact,
-		Job:   &store.CallerJobProjection{Status: store.StatusDone, Attempts: 1},
+		State:         store.JobProjectionExact,
+		Job:           &store.CallerJobProjection{Status: store.StatusDone, Attempts: 1},
+		ResolverState: store.JobProjectionUnavailable,
 	}, profileInspectionV21)
 	if err != nil || expectedCallerGenerationTerminal(currentProbe.CallerProgress) ||
 		expectedCallerGenerationBoundRefusal(currentProbe.CallerProgress) {

@@ -1642,7 +1642,7 @@ LET $catalog_fanout = IF array::len($outcome) != 1
 			pending_key: $repo,
 			force: true
 		} RETURN AFTER)
-	END;
+	END;` + projectResolverJobSQL + `
 RETURN IF array::len($outcome) = 1
 	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)
 	AND (array::len($retired_caller) = 0
@@ -1907,7 +1907,7 @@ LET $catalog_fanout = IF array::len($recorded) != 1
 			pending_key: $repo,
 			force: true
 		} RETURN AFTER)
-	END;
+	END;` + projectResolverJobSQL + `
 RETURN IF array::len($recorded) = 1
 	AND ($candidate_control_failure = false OR array::len($repair) = 1)
 	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)

@@ -57,6 +57,9 @@ type exactCallerAPIStore struct {
 	callerJobState      store.JobProjectionState
 	callerJob           *store.CallerJobProjection
 	callerJobReads      int
+	resolverJobState    store.JobProjectionState
+	resolverJob         *store.ResolverJobProjection
+	resolverJobReads    int
 
 	currentRevision         uint64
 	resolverCurrent         bool
@@ -85,6 +88,26 @@ func (state *exactCallerAPIStore) GetCallerJobProjection(
 		return projectionState, nil, nil
 	}
 	job := *state.callerJob
+	return projectionState, &job, nil
+}
+
+func (state *exactCallerAPIStore) GetResolverJobProjection(
+	ctx context.Context,
+	repository string,
+) (store.JobProjectionState, *store.ResolverJobProjection, error) {
+	state.resolverJobReads++
+	repo, err := state.proofAPIStore.GetRepo(ctx, repository)
+	if err != nil || repo == nil {
+		return store.JobProjectionUnavailable, nil, err
+	}
+	projectionState := state.resolverJobState
+	if projectionState == "" {
+		projectionState = store.JobProjectionUnavailable
+	}
+	if state.resolverJob == nil {
+		return projectionState, nil, nil
+	}
+	job := *state.resolverJob
 	return projectionState, &job, nil
 }
 
@@ -801,7 +824,7 @@ func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if progress.SchemaVersion != "caller-generation-progress-v2" ||
+	if progress.SchemaVersion != "caller-generation-progress-v3" ||
 		progress.Generation.State != "current" ||
 		progress.Generation.GenerationDigest != fixture.store.publication.Generation.Digest ||
 		progress.Generation.PartitionProgress == nil ||
@@ -812,7 +835,9 @@ func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testi
 		progress.Scope.Commit != fixture.commit ||
 		progress.CallerJobState != store.JobProjectionExact ||
 		progress.CallerJob == nil || progress.CallerJob.Status != store.StatusRunning ||
-		progress.CallerJob.Attempts != 1 || fixture.store.callerJobReads != 1 {
+		progress.CallerJob.Attempts != 1 || fixture.store.callerJobReads != 1 ||
+		progress.ResolverJobState != store.JobProjectionUnavailable ||
+		progress.ResolverJob != nil || fixture.store.resolverJobReads != 1 {
 		t.Fatalf("declaration-independent caller progress = %+v", progress)
 	}
 	for _, call := range fixture.store.calls {

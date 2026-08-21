@@ -500,13 +500,32 @@ func (service *exactCallerMapService) generationProgress(
 			errors.New("caller job projection is invalid"),
 		)
 	}
+	resolverJobState, resolverJob, err := projectionStore.GetResolverJobProjection(
+		ctx, repository.Name,
+	)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, exactCallerAuthorityConflict()
+	}
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"read resolver job projection", err,
+		)
+	}
+	if !validResolverJobProjection(resolverJobState, resolverJob) {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation progress",
+			errors.New("resolver job projection is invalid"),
+		)
+	}
 
 	progress := &CallerGenerationProgress{
-		SchemaVersion:  callerProgressSchema,
-		Generation:     generation,
-		Scope:          callerGenerationProgressScope(repository),
-		CallerJobState: callerJobState,
-		CallerJob:      callerJob,
+		SchemaVersion:    callerProgressSchema,
+		Generation:       generation,
+		Scope:            callerGenerationProgressScope(repository),
+		CallerJobState:   callerJobState,
+		CallerJob:        callerJob,
+		ResolverJobState: resolverJobState,
+		ResolverJob:      resolverJob,
 	}
 	encoded, err := json.Marshal(progress)
 	if err != nil {
@@ -532,6 +551,23 @@ func (service *exactCallerMapService) generationProgress(
 func validCallerJobProjection(
 	state store.JobProjectionState,
 	job *store.CallerJobProjection,
+) bool {
+	switch state {
+	case store.JobProjectionUnavailable:
+		return job == nil
+	case store.JobProjectionExact:
+		return job != nil && slices.Contains([]store.JobStatus{
+			store.StatusPending, store.StatusClaimed, store.StatusRunning,
+			store.StatusDone, store.StatusFailed, store.StatusCanceled,
+		}, job.Status) && job.Attempts >= 0 && job.Attempts <= 1_000_000
+	default:
+		return false
+	}
+}
+
+func validResolverJobProjection(
+	state store.JobProjectionState,
+	job *store.ResolverJobProjection,
 ) bool {
 	switch state {
 	case store.JobProjectionUnavailable:
