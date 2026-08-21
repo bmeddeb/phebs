@@ -646,11 +646,7 @@ func (inspector *profileInspector) callerGenerationTerminal(
 	}
 	job := callerJobProbe{}
 	if inspector.contract >= profileInspectionV21 {
-		repository, err := inspector.currentRepositoryStatus(ctx, profile)
-		if err != nil {
-			return convergenceProbe("caller_generation"), err
-		}
-		job = callerJobProbe{State: repository.LastCallerJobState, Job: repository.LastCallerJob}
+		job = callerJobProbe{State: progress.CallerJobState, Job: progress.CallerJob}
 	}
 	return classifyCallerGeneration(apiresponse.CallerMapPage{
 		Generation: &progress.Generation,
@@ -901,7 +897,7 @@ func classifyRelationshipGeneration(
 }
 
 // callerJobProbe carries the repository-keyed caller-leaf job projection into
-// caller-generation classification. V21 reads it beside the progress page so
+// caller-generation classification. V21 reads it from the progress page so
 // a live requeued publisher holds a terminal stop and a dead caller pipeline
 // classifies in seconds instead of pending to the wall deadline.
 type callerJobProbe struct {
@@ -971,7 +967,9 @@ func classifyCallerGenerationShape(
 		} else {
 			job.Job = nil
 		}
-		projection := &CallerProgressObservation{State: generation.State}
+		projection := &CallerProgressObservation{
+			State: generation.State, GenerationDigestValid: digestIdentity(generation.GenerationDigest),
+		}
 		if progress := generation.PartitionProgress; progress != nil {
 			projection.PartitionState = progress.State
 			projection.SettledPairCount = progress.SettledPairCount
@@ -980,6 +978,15 @@ func classifyCallerGenerationShape(
 			if progress.TotalPairCount != nil {
 				total := *progress.TotalPairCount
 				projection.TotalPairCount = &total
+			}
+			projection.Refusals = make([]CallerRefusalObservation, len(progress.Refusals))
+			for index, refusal := range progress.Refusals {
+				projection.Refusals[index] = CallerRefusalObservation{
+					Stage: refusal.Stage, GenerationKind: refusal.GenerationKind,
+					Classification: refusal.Classification, Dimension: refusal.Dimension,
+					Observed: refusal.Observed, Limit: refusal.Limit,
+					OutcomeCount: refusal.OutcomeCount,
+				}
 			}
 		}
 		if job.Job != nil {

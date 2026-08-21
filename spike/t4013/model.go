@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
@@ -76,36 +77,37 @@ const (
 	// observationDetailV17 records the caller-leaf job projection beside the
 	// caller-generation probe: a dead caller pipeline is a typed terminal and
 	// a live requeued publisher holds the terminal stop.
-	observationDetailV17       = 13
-	ReceiptSchema              = "t4013-neutral-convergence-receipt-v1"
-	ReceiptSchemaV2            = "t4013-neutral-convergence-receipt-v2"
-	ReceiptSchemaV3            = "t4013-neutral-convergence-receipt-v3"
-	ReceiptSchemaV4            = "t4013-neutral-convergence-receipt-v4"
-	ReceiptSchemaV5            = "t4013-neutral-convergence-receipt-v5"
-	ReceiptSchemaV6            = "t4013-neutral-convergence-receipt-v6"
-	ReceiptSchemaV7            = "t4013-neutral-convergence-receipt-v7"
-	ReceiptSchemaV8            = "t4013-neutral-convergence-receipt-v8"
-	ReceiptSchemaV9            = "t4013-neutral-convergence-receipt-v9"
-	ReceiptSchemaV10           = "t4013-neutral-convergence-receipt-v10"
-	ReceiptSchemaV11           = "t4013-neutral-convergence-receipt-v11"
-	ReceiptSchemaV12           = "t4013-neutral-convergence-receipt-v12"
-	ReceiptSchemaV13           = "t4013-neutral-convergence-receipt-v13"
-	ReceiptSchemaV14           = "t4013-neutral-convergence-receipt-v14"
-	ReceiptSchemaV15           = "t4013-neutral-convergence-receipt-v15"
-	ReceiptSchemaV16           = "t4013-neutral-convergence-receipt-v16"
-	ReceiptSchemaV17           = "t4013-neutral-convergence-receipt-v17"
-	ReceiptSchemaV18           = "t4013-neutral-convergence-receipt-v18"
-	ReceiptSchemaV19           = "t4013-neutral-convergence-receipt-v19"
-	ReceiptSchemaV20           = "t4013-neutral-convergence-receipt-v20"
-	ReceiptSchemaV21           = "t4013-neutral-convergence-receipt-v21"
-	MaxPlanBytes               = 64 << 10
-	MaxObservationBytes        = 256 << 10
-	MaxReceiptBytes            = 256 << 10
-	legacyStoppedPlanDigest    = "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0"
-	legacyStoppedSourceCommit  = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
-	legacyStoppedReceiptDigest = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
-	maxConvergenceTransitions  = 32
-	convergenceNotInspected    = "not_inspected"
+	observationDetailV17         = 13
+	ReceiptSchema                = "t4013-neutral-convergence-receipt-v1"
+	ReceiptSchemaV2              = "t4013-neutral-convergence-receipt-v2"
+	ReceiptSchemaV3              = "t4013-neutral-convergence-receipt-v3"
+	ReceiptSchemaV4              = "t4013-neutral-convergence-receipt-v4"
+	ReceiptSchemaV5              = "t4013-neutral-convergence-receipt-v5"
+	ReceiptSchemaV6              = "t4013-neutral-convergence-receipt-v6"
+	ReceiptSchemaV7              = "t4013-neutral-convergence-receipt-v7"
+	ReceiptSchemaV8              = "t4013-neutral-convergence-receipt-v8"
+	ReceiptSchemaV9              = "t4013-neutral-convergence-receipt-v9"
+	ReceiptSchemaV10             = "t4013-neutral-convergence-receipt-v10"
+	ReceiptSchemaV11             = "t4013-neutral-convergence-receipt-v11"
+	ReceiptSchemaV12             = "t4013-neutral-convergence-receipt-v12"
+	ReceiptSchemaV13             = "t4013-neutral-convergence-receipt-v13"
+	ReceiptSchemaV14             = "t4013-neutral-convergence-receipt-v14"
+	ReceiptSchemaV15             = "t4013-neutral-convergence-receipt-v15"
+	ReceiptSchemaV16             = "t4013-neutral-convergence-receipt-v16"
+	ReceiptSchemaV17             = "t4013-neutral-convergence-receipt-v17"
+	ReceiptSchemaV18             = "t4013-neutral-convergence-receipt-v18"
+	ReceiptSchemaV19             = "t4013-neutral-convergence-receipt-v19"
+	ReceiptSchemaV20             = "t4013-neutral-convergence-receipt-v20"
+	ReceiptSchemaV21             = "t4013-neutral-convergence-receipt-v21"
+	MaxPlanBytes                 = 64 << 10
+	MaxObservationBytes          = 256 << 10
+	MaxReceiptBytes              = 256 << 10
+	legacyStoppedPlanDigest      = "sha256:13863ed6e0e19e3edf5cbaa2e6d2f79eef645341661a5d61c0066f7f009974a0"
+	legacyStoppedSourceCommit    = "b1b4e808e1987b3bf28e4afac21cc83b72aa27f2"
+	legacyStoppedReceiptDigest   = "sha256:873c373353c540d05e61b243b63befd781e7280b4ec52c0ddd4ef074661e4c85"
+	maxConvergenceTransitions    = 32
+	maxCallerRefusalObservations = 32
+	convergenceNotInspected      = "not_inspected"
 )
 
 const (
@@ -1664,6 +1666,10 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 				!expectedCallerGenerationTerminal(value.CallerProgress) {
 				return errors.New("T40.13 caller generation terminal outcome is incoherent")
 			}
+			if value.Outcome == "caller_generation_bound_refusal" &&
+				!expectedCallerGenerationBoundRefusal(value.CallerProgress) {
+				return errors.New("T40.13 caller generation bound-refusal outcome is incoherent")
+			}
 		}
 		if detailVersion < 2 {
 			if len(value.InspectionTransitions) != 0 || value.LastSuccessfulProbeSHA256 != "" ||
@@ -1683,14 +1689,26 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 // source-free projection: publication state, settled-pair summary, and the
 // repository-keyed caller-leaf job beside them.
 type CallerProgressObservation struct {
-	State              string `json:"state"`
-	PartitionState     string `json:"partition_state,omitempty"`
-	SettledPairCount   int    `json:"settled_pair_count"`
-	SucceededPairCount int    `json:"succeeded_pair_count"`
-	RefusedPairCount   int    `json:"refused_pair_count"`
-	TotalPairCount     *int   `json:"total_pair_count,omitempty"`
-	JobState           string `json:"job_state,omitempty"`
-	JobAttempts        int    `json:"job_attempts,omitempty"`
+	State                 string                     `json:"state"`
+	GenerationDigestValid bool                       `json:"generation_digest_valid"`
+	PartitionState        string                     `json:"partition_state,omitempty"`
+	SettledPairCount      int                        `json:"settled_pair_count"`
+	SucceededPairCount    int                        `json:"succeeded_pair_count"`
+	RefusedPairCount      int                        `json:"refused_pair_count"`
+	TotalPairCount        *int                       `json:"total_pair_count,omitempty"`
+	Refusals              []CallerRefusalObservation `json:"refusals,omitempty"`
+	JobState              string                     `json:"job_state,omitempty"`
+	JobAttempts           int                        `json:"job_attempts,omitempty"`
+}
+
+type CallerRefusalObservation struct {
+	Stage          pipelinerefusal.Stage          `json:"stage"`
+	GenerationKind pipelinerefusal.GenerationKind `json:"generation_kind"`
+	Classification pipelinerefusal.Classification `json:"classification"`
+	Dimension      pipelinerefusal.Dimension      `json:"dimension"`
+	Observed       int64                          `json:"observed"`
+	Limit          int64                          `json:"limit"`
+	OutcomeCount   int                            `json:"outcome_count"`
 }
 
 func validateCallerProgress(value CallerProgressObservation) error {
@@ -1700,8 +1718,29 @@ func validateCallerProgress(value CallerProgressObservation) error {
 		value.SucceededPairCount+value.RefusedPairCount > value.SettledPairCount ||
 		(value.TotalPairCount != nil && *value.TotalPairCount < value.SettledPairCount) ||
 		!slices.Contains([]string{"", "pending", "claimed", "running", "done", "failed", "canceled"}, value.JobState) ||
-		value.JobAttempts < 0 || value.JobAttempts > 1_000_000 {
+		value.JobAttempts < 0 || value.JobAttempts > 1_000_000 ||
+		(value.JobState == "" && value.JobAttempts != 0) ||
+		len(value.Refusals) > maxCallerRefusalObservations {
 		return errors.New("T40.13 caller progress projection is invalid")
+	}
+	refused := 0
+	for _, summary := range value.Refusals {
+		receipt := pipelinerefusal.Receipt{
+			Schema: pipelinerefusal.Schema, Stage: summary.Stage,
+			GenerationKind: summary.GenerationKind,
+			Classification: summary.Classification, Dimension: summary.Dimension,
+			Observed: summary.Observed, Limit: summary.Limit,
+		}
+		if pipelinerefusal.Validate(receipt) != nil ||
+			receipt.GenerationKind != pipelinerefusal.GenerationCaller ||
+			summary.OutcomeCount < 0 ||
+			summary.OutcomeCount > value.RefusedPairCount-refused {
+			return errors.New("T40.13 caller refusal projection is invalid")
+		}
+		refused += summary.OutcomeCount
+	}
+	if len(value.Refusals) > 0 && refused != value.RefusedPairCount {
+		return errors.New("T40.13 caller refusal inventory is incomplete")
 	}
 	return nil
 }
@@ -1711,12 +1750,58 @@ func validateCallerProgress(value CallerProgressObservation) error {
 // (pending/claimed/running) refutes a caller terminal — the publisher is in a
 // requeue backoff window, not dead.
 func expectedCallerGenerationTerminal(progress *CallerProgressObservation) bool {
-	if progress == nil {
+	if progress == nil || callerProgressJobActive(*progress) {
 		return false
 	}
-	return !slices.Contains(
-		[]string{"pending", "claimed", "running"}, progress.JobState,
-	)
+	switch progress.State {
+	case "current":
+		return !progress.GenerationDigestValid || !callerProgressAllSucceeded(*progress)
+	case "missing", "stale":
+		return callerProgressAllSucceeded(*progress) || callerProgressJobDead(*progress)
+	case "failed":
+		return !expectedCallerGenerationBoundRefusal(progress)
+	default:
+		return true
+	}
+}
+
+func expectedCallerGenerationBoundRefusal(progress *CallerProgressObservation) bool {
+	if progress == nil || progress.State != "failed" || progress.PartitionState != "complete" ||
+		progress.TotalPairCount == nil || *progress.TotalPairCount != progress.SettledPairCount ||
+		progress.RefusedPairCount <= 0 ||
+		progress.SucceededPairCount+progress.RefusedPairCount != progress.SettledPairCount ||
+		len(progress.Refusals) == 0 {
+		return false
+	}
+	refused := 0
+	for _, refusal := range progress.Refusals {
+		refused += refusal.OutcomeCount
+		if refusal.Stage != pipelinerefusal.StageCallerGenerationAdmission ||
+			refusal.GenerationKind != pipelinerefusal.GenerationCaller ||
+			refusal.Classification != pipelinerefusal.ClassificationLimit ||
+			refusal.Dimension != pipelinerefusal.DimensionCallerGenerationAbstentions ||
+			refusal.Observed <= refusal.Limit ||
+			refusal.Limit != callerleaf.MaxAggregateAbstentionRecords ||
+			refused > progress.RefusedPairCount {
+			return false
+		}
+	}
+	return refused == progress.RefusedPairCount
+}
+
+func callerProgressAllSucceeded(progress CallerProgressObservation) bool {
+	return progress.PartitionState == "complete" && progress.TotalPairCount != nil &&
+		*progress.TotalPairCount == progress.SettledPairCount &&
+		progress.SucceededPairCount == progress.SettledPairCount &&
+		progress.RefusedPairCount == 0
+}
+
+func callerProgressJobActive(progress CallerProgressObservation) bool {
+	return slices.Contains([]string{"pending", "claimed", "running"}, progress.JobState)
+}
+
+func callerProgressJobDead(progress CallerProgressObservation) bool {
+	return progress.JobState == "failed" || progress.JobState == "canceled"
 }
 
 func validateExtractionTiming(value ExtractionTimingObservation) error {
@@ -2040,6 +2125,10 @@ func validateConvergenceWithoutSuccessfulProbe(
 		if value.Outcome == "caller_generation_terminal" &&
 			!expectedCallerGenerationTerminal(value.CallerProgress) {
 			return errors.New("T40.13 caller generation terminal outcome is incoherent")
+		}
+		if value.Outcome == "caller_generation_bound_refusal" &&
+			!expectedCallerGenerationBoundRefusal(value.CallerProgress) {
+			return errors.New("T40.13 caller generation bound-refusal outcome is incoherent")
 		}
 	}
 	if len(value.InspectionTransitions) == 0 || len(value.InspectionTransitions) > maxConvergenceTransitions ||

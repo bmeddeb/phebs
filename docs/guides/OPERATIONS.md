@@ -4606,3 +4606,44 @@ pending successor) from a live slow one without reading queue tables. The
 projection adds one bounded repo-row link write per caller job creation and
 one bounded sub-projection to the existing repo-status query; no new query,
 lock, retry, or concurrency.
+
+
+### V21 caller evidence freeze-readiness correction
+
+The declaration-independent caller progress route now serves schema
+`caller-generation-progress-v2`. After repository authorization, it reads one
+repository-keyed caller-job projection and returns `caller_job_state` plus the
+live linked job's status and attempts beside the existing bounded caller
+generation progress. The ceremony consumes that one response; it does not add
+an installation-wide `/api/repo-status` request to each caller-generation
+poll. The separate repository-index inspection retains its older status read.
+
+The targeted store read selects one repository and its linked live caller job.
+It performs no repository inventory, connection expansion, job-history scan,
+source/Git/content/candidate/corpus/shard read, or write. It is one bounded
+query inside the already rate-limited caller-progress request and replaces the
+former second HTTP request and its installation-wide status materialization.
+The response remains capped at 32 KiB and retains at most 32 typed refusal
+summaries.
+
+Fresh V21 receipts record generation-digest validity, the complete pair
+counters, those bounded refusal summaries, and the caller-job projection.
+Receipt validation derives caller terminal and exact bound-refusal outcomes
+from the same mutually exclusive predicates as the inspector. Active work
+holds non-refusal terminals, current complete/all-success authority is not
+terminal, missing/stale incomplete authority without a settled dead job stays
+pending, and an exact admission refusal cannot be relabeled as a generic
+terminal.
+
+During upgrade, enqueue transactions also repair `latest_caller_job` when a
+pre-cutover pending caller row is coalesced. That is one repo-row update inside
+the existing enqueue transaction, with no new job, history scan, attempt, or
+startup migration. Every generic enqueue/successor transaction evaluates one
+constant-time caller-kind/existing-row conditional, and each domain caller
+transaction evaluates one projection conditional; a non-caller enqueue or an
+already-current projection reads or writes no additional row. No lock,
+concurrency, cache, source read, child-process, memory/disk ceiling, or startup
+scan changes. Finally, the custody execution marker is created with an
+exclusive atomic write only after read-only preflight succeeds. A failed
+prerequisite is retryable; successful preflight still permits exactly one
+state-mutating execution.

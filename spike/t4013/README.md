@@ -2728,3 +2728,24 @@ preserves it for the reviewed purge. A recorded follow-up stays open: death
 upstream of caller-job creation still pends the caller wait. V20 and earlier
 receipts remain byte- and semantics-exact; nothing here authorizes
 integration, a freeze, or execution.
+
+
+### V21 freeze-readiness correction
+
+The final V21 audit made the live caller classifier and sealed evidence use one
+complete projection. `caller-generation-progress-v2` includes the exact
+repository-keyed live caller job beside digest validity, aggregate pair
+counters, and at most 32 typed refusal summaries. The harness consumes that
+single response instead of issuing a second installation-wide repo-status
+request on every caller tick. Terminal and bound-refusal receipt predicates
+are the same mutually exclusive predicates used at runtime: current
+all-success authority cannot be forged terminal, missing/stale partial
+authority without a dead exact caller job remains pending, active work holds
+non-refusal terminals, and the typed admission refusal cannot be relabeled.
+
+Generic and domain enqueue transactions repair the repo projection when they
+coalesce a pre-cutover pending caller job. The custody execution marker is
+created atomically only after read-only preflight succeeds, so a prerequisite
+failure remains retryable without permitting a second state-mutating run.
+Historical V1–V20 receipt semantics remain exact. Integration, freeze, and
+execution remain separate decisions.

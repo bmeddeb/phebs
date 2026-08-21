@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -757,7 +758,7 @@ func TestRepoStatusesProjectsCallerJobLifecycle(t *testing.T) {
 	// Domain transactions create caller successors outside the generic queue;
 	// the projection must follow them too, or a stale done/failed row would
 	// masquerade as the pipeline's current state (repo reactivation exercises
-	// the shared projectCreatedCallerJobSQL fragment).
+	// the shared projectCallerJobSQL fragment).
 	if err := s.SetRepoDeleting(ctx, repository, true); err != nil {
 		t.Fatal(err)
 	}
@@ -768,5 +769,59 @@ func TestRepoStatusesProjectsCallerJobLifecycle(t *testing.T) {
 	if status.LastCallerJobState != JobProjectionExact || status.LastCallerJob == nil ||
 		status.LastCallerJob.Status != StatusPending {
 		t.Fatalf("reactivation caller projection = %+v", status.LastCallerJob)
+	}
+	// Simulate a pre-projection pending row at the domain-transaction boundary:
+	// reactivation must repair the exact coalesced row, not wait for a new job.
+	requireJobHistoryQuery(t, ctx, s, `UPDATE $repository UNSET
+		latest_caller_job, latest_caller_job_created_at,
+		latest_caller_job_projection_version RETURN NONE`, map[string]any{
+		"repository": repoID(repository),
+	})
+	if err := s.SetRepoDeleting(ctx, repository, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoDeleting(ctx, repository, false); err != nil {
+		t.Fatal(err)
+	}
+	status = requireRepoJobStatus(t, ctx, s, repository)
+	if status.LastCallerJobState != JobProjectionExact || status.LastCallerJob == nil ||
+		status.LastCallerJob.Status != StatusPending {
+		t.Fatalf("coalesced reactivation projection = %+v", status.LastCallerJob)
+	}
+}
+
+func TestCallerJobProjectionRepairsCoalescedPreCutoverPending(t *testing.T) {
+	s := newJobHistoryStore(t)
+	ctx := context.Background()
+	repository := "example.com/projection/caller-upgrade"
+	if state, projection, err := s.GetCallerJobProjection(ctx, repository); state != JobProjectionUnavailable ||
+		projection != nil || !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing repository projection = %s, %+v, %v", state, projection, err)
+	}
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: repository, CloneURL: "https://example.com/caller-upgrade.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	requireJobHistoryQuery(t, ctx, s, `
+		CREATE caller_leaf_job CONTENT {
+			target: $repository, status: 'pending', attempts: 0,
+			created_at: time::now(), pending_key: $repository, force: false
+		} RETURN NONE`, map[string]any{"repository": repository})
+	state, projection, err := s.GetCallerJobProjection(ctx, repository)
+	if err != nil || state != JobProjectionUnavailable || projection != nil {
+		t.Fatalf("pre-cutover projection = %s, %+v, %v", state, projection, err)
+	}
+	if _, err := s.EnqueuePending(ctx, JobCallerLeaf, repository, true); err != nil {
+		t.Fatal(err)
+	}
+	state, projection, err = s.GetCallerJobProjection(ctx, repository)
+	if err != nil || state != JobProjectionExact || projection == nil ||
+		projection.Status != StatusPending || projection.Attempts != 0 {
+		t.Fatalf("repaired projection = %s, %+v, %v", state, projection, err)
+	}
+	jobs, err := s.ListJobs(ctx, JobCallerLeaf, "")
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("coalesced jobs = %+v, %v", jobs, err)
 	}
 }

@@ -1533,6 +1533,17 @@ catalog, relationship, or correctness authority.
   (a dead resolver-catalog job) still pends the caller wait. V20 and
   earlier bytes remain exact. Integration, freeze, and execution remain
   separately authorized; T40.13 and Epic 40 are not closed.
+- The V21 freeze-readiness correction makes the caller stop evidence exact.
+  Caller progress v2 includes the repository-keyed live caller-job projection,
+  so the harness no longer performs an additional installation-wide
+  `/api/repo-status` request on every caller tick. The receipt records digest
+  validity, complete pair scalars, at most 32 typed refusals, and job state;
+  its terminal/refusal validators use the same mutually exclusive predicates
+  as the live classifier. Existing pre-cutover pending caller jobs repair the
+  repo projection transactionally when coalesced, and the custody execution
+  marker is written atomically only after read-only preflight passes. V1–V20
+  receipt semantics remain historical; integration, freeze, and execution
+  remain separately authorized.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

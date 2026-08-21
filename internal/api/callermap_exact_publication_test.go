@@ -54,6 +54,9 @@ type exactCallerAPIStore struct {
 	progressAfterFirst  *store.CallerLeafOutcomeProgress
 	progressReads       int
 	repoError           error
+	callerJobState      store.JobProjectionState
+	callerJob           *store.CallerJobProjection
+	callerJobReads      int
 
 	currentRevision         uint64
 	resolverCurrent         bool
@@ -63,6 +66,26 @@ type exactCallerAPIStore struct {
 	currentChecks           int
 	authorityCurrentChecks  int
 	afterAuthorityCurrent   func(int)
+}
+
+func (state *exactCallerAPIStore) GetCallerJobProjection(
+	ctx context.Context,
+	repository string,
+) (store.JobProjectionState, *store.CallerJobProjection, error) {
+	state.callerJobReads++
+	repo, err := state.proofAPIStore.GetRepo(ctx, repository)
+	if err != nil || repo == nil {
+		return store.JobProjectionUnavailable, nil, err
+	}
+	projectionState := state.callerJobState
+	if projectionState == "" {
+		projectionState = store.JobProjectionUnavailable
+	}
+	if state.callerJob == nil {
+		return projectionState, nil, nil
+	}
+	job := *state.callerJob
+	return projectionState, &job, nil
 }
 
 func (state *exactCallerAPIStore) GetRepo(
@@ -763,6 +786,10 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testing.T) {
 	fixture := newExactCallerAPIFixture(t, 1)
 	fixture.store.assertions[fixture.repository] = nil
+	fixture.store.callerJobState = store.JobProjectionExact
+	fixture.store.callerJob = &store.CallerJobProjection{
+		Status: store.StatusRunning, Attempts: 1,
+	}
 
 	_, err := fixture.service.List(t.Context(), fixture.query, 1, "")
 	requireCatalogStatus(t, err, http.StatusNotFound)
@@ -774,7 +801,7 @@ func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if progress.SchemaVersion != "caller-generation-progress-v1" ||
+	if progress.SchemaVersion != "caller-generation-progress-v2" ||
 		progress.Generation.State != "current" ||
 		progress.Generation.GenerationDigest != fixture.store.publication.Generation.Digest ||
 		progress.Generation.PartitionProgress == nil ||
@@ -782,7 +809,10 @@ func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testi
 		progress.Generation.PartitionProgress.TotalPairCount == nil ||
 		*progress.Generation.PartitionProgress.TotalPairCount != 1 ||
 		progress.Scope.Repository != fixture.repository ||
-		progress.Scope.Commit != fixture.commit {
+		progress.Scope.Commit != fixture.commit ||
+		progress.CallerJobState != store.JobProjectionExact ||
+		progress.CallerJob == nil || progress.CallerJob.Status != store.StatusRunning ||
+		progress.CallerJob.Attempts != 1 || fixture.store.callerJobReads != 1 {
 		t.Fatalf("declaration-independent caller progress = %+v", progress)
 	}
 	for _, call := range fixture.store.calls {

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	apiresponse "github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -2709,11 +2710,77 @@ func TestV21CallerTerminalRecordsJobProjectionAndSeals(t *testing.T) {
 	); err == nil {
 		t.Fatal("v17 caller terminal sealed without its job projection")
 	}
+	boundTotal := 1
+	boundRefusal := wait
+	boundRefusal.Outcome = "caller_generation_bound_refusal"
+	boundRefusal.CallerProgress = &CallerProgressObservation{
+		State: "failed", PartitionState: "complete", SettledPairCount: 1,
+		RefusedPairCount: 1, TotalPairCount: &boundTotal,
+		Refusals: []CallerRefusalObservation{{
+			Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+			GenerationKind: pipelinerefusal.GenerationCaller,
+			Classification: pipelinerefusal.ClassificationLimit,
+			Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+			Observed:       callerleaf.MaxAggregateAbstentionRecords + 1,
+			Limit:          callerleaf.MaxAggregateAbstentionRecords, OutcomeCount: 1,
+		}},
+		JobState: "done", JobAttempts: 1,
+	}
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{boundRefusal}, observationDetailV17,
+	); err != nil {
+		t.Fatalf("exact caller bound refusal did not seal: %v", err)
+	}
+	currentTotal := 3
+	forgedCurrent := wait
+	forgedCurrent.CallerProgress = &CallerProgressObservation{
+		State: "current", GenerationDigestValid: true, PartitionState: "complete",
+		SettledPairCount: 3, SucceededPairCount: 3, TotalPairCount: &currentTotal,
+		JobState: "done", JobAttempts: 1,
+	}
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{forgedCurrent}, observationDetailV17,
+	); err == nil {
+		t.Fatal("successful current caller projection sealed as terminal")
+	}
+	partialTotal := 8
+	forgedPartial := wait
+	forgedPartial.CallerProgress = &CallerProgressObservation{
+		State: "missing", PartitionState: "partial", SettledPairCount: 3,
+		SucceededPairCount: 3, TotalPairCount: &partialTotal,
+	}
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{forgedPartial}, observationDetailV17,
+	); err == nil {
+		t.Fatal("partial caller progress without a dead job sealed as terminal")
+	}
+	forgedRefusal := wait
+	forgedRefusal.Outcome = "caller_generation_bound_refusal"
+	if err := validateConvergenceWaits(
+		[]ConvergenceWaitObservation{forgedRefusal}, observationDetailV17,
+	); err == nil {
+		t.Fatal("untyped caller terminal sealed as a bound refusal")
+	}
 	stopped, stopErr := run.stopAfterFailure(waitErr)
 	if stopErr != nil {
 		t.Fatal(stopErr)
 	}
 	if err := ValidateObservation(stopped); err != nil {
 		t.Fatalf("stopped v21 observation did not seal: %v", err)
+	}
+}
+
+func TestExecutionMarkerIsAtomicAndRefusesReuse(t *testing.T) {
+	workspace := t.TempDir()
+	digest := "sha256:" + strings.Repeat("a", 64)
+	if err := writeExecutionMarker(workspace, digest); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(workspace, executedMarkerName))
+	if err != nil || string(raw) != digest+"\n" {
+		t.Fatalf("execution marker = %q, %v", raw, err)
+	}
+	if err := writeExecutionMarker(workspace, digest); err == nil {
+		t.Fatal("existing execution marker was overwritten")
 	}
 }

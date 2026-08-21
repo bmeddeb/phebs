@@ -177,17 +177,6 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("T40.13 execution custody is not a real directory")
 	}
-	// Custody retained by an unsealable stop still carries the executed
-	// marker: re-running against dirty, previously-executed state would seal
-	// evidence with false cold/warm provenance. The marker is created below,
-	// lives inside custody, and is destroyed with it.
-	marker := filepath.Join(workspace, executedMarkerName)
-	if _, err := os.Lstat(marker); err == nil || !os.IsNotExist(err) {
-		return nil, errors.New("T40.13 execution custody was already executed; a reviewed purge and fresh preparation are required")
-	}
-	if err := os.WriteFile(marker, []byte(PlanDigest(planBytes)+"\n"), 0o600); err != nil {
-		return nil, err
-	}
 	if _, err := os.Lstat(request.Observation); err == nil || !os.IsNotExist(err) {
 		return nil, errors.New("T40.13 observation output must not exist")
 	}
@@ -201,6 +190,14 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
+	// Custody retained by an unsealable stop still carries the executed marker:
+	// re-running against dirty, previously-executed state would seal evidence
+	// with false cold/warm provenance. Create it atomically only after every
+	// read-only input, checkout, output, and host preflight has passed; a
+	// refused preflight therefore remains safely retryable.
+	if err := writeExecutionMarker(workspace, PlanDigest(planBytes)); err != nil {
+		return nil, err
+	}
 	observation := emptyObservationForPlan(environment, plan)
 	return &execution{
 		ctx: ctx, moduleRoot: moduleRoot, workspace: workspace,
@@ -210,6 +207,27 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 
 // executedMarkerName marks custody that an execution has already started on.
 const executedMarkerName = ".t4013-executed"
+
+func writeExecutionMarker(workspace, planDigest string) error {
+	marker := filepath.Join(workspace, executedMarkerName)
+	file, err := os.OpenFile(marker, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if errors.Is(err, os.ErrExist) {
+		return errors.New("T40.13 execution custody was already executed; a reviewed purge and fresh preparation are required")
+	}
+	if err != nil {
+		return fmt.Errorf("create T40.13 execution marker: %w", err)
+	}
+	_, writeErr := io.WriteString(file, planDigest+"\n")
+	closeErr := file.Close()
+	if writeErr == nil && closeErr == nil {
+		return nil
+	}
+	removeErr := os.Remove(marker)
+	return fmt.Errorf(
+		"write T40.13 execution marker: %w",
+		errors.Join(writeErr, closeErr, removeErr),
+	)
+}
 
 func validatePreparedFiles(prepared Prepared, workspace string) error {
 	for _, profile := range prepared.Profiles {

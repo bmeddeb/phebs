@@ -680,8 +680,8 @@ LET $successor = IF array::len($written) != 1 THEN []
 		force: false,
 		recovery_lease: $lease
 	} RETURN AFTER) END;
-LET $caller_created = IF array::len($written) = 1 AND $pending = NONE
-	THEN $successor[0] ELSE NONE END;` + projectCreatedCallerJobSQL + `
+LET $caller_projected = IF array::len($written) = 1 AND array::len($successor) = 1
+	THEN $successor[0] ELSE NONE END;` + projectCallerJobSQL + `
 RETURN IF array::len($written) = 1 AND array::len($successor) = 1
 	THEN $written ELSE [] END;
 COMMIT;`

@@ -576,20 +576,22 @@ func TestProfileInspectorReadsDeclarationIndependentCallerProgress(t *testing.T)
 				response.Header().Set("Content-Type", "application/json")
 				_, _ = fmt.Fprintf(response,
 					`{"$schema":"http://%s/schemas/CallerGenerationProgress.json",`+
-						`"schema_version":"caller-generation-progress-v1","generation":{`+
+						`"schema_version":"caller-generation-progress-v2","generation":{`+
 						`"state":%q,"plane":"repository-overlay",`+
 						`"repository":"example.invalid/neutral",`+
 						`"generation_digest":"sha256:%s",`+
 						`"partition_progress":%s},`+
 						`"scope":{"repository":"example.invalid/neutral",`+
 						`"commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",`+
-						`"scope_posture":"whole-repository"}}`,
+						`"scope_posture":"whole-repository"},`+
+						`"caller_job_state":"unavailable"}`,
 					request.Host, test.state, strings.Repeat("c", 64), test.progress,
 				)
 			}))
 			defer server.Close()
 			inspector := &profileInspector{
 				client: server.Client(), credential: "private-test-token",
+				contract: profileInspectionV21,
 			}
 			probe, err := inspector.callerGenerationTerminal(t.Context(), PreparedProfile{
 				Address: server.Listener.Addr().String(), RepositoryName: "example.invalid/neutral",
@@ -1168,7 +1170,49 @@ func TestClassifyCallerGenerationV21JobProjection(t *testing.T) {
 			if probe.CallerProgress == nil || probe.CallerProgress.JobState != test.jobState {
 				t.Fatalf("caller progress = %+v, want job state %q", probe.CallerProgress, test.jobState)
 			}
+			if got := expectedCallerGenerationTerminal(probe.CallerProgress); got != test.terminal {
+				t.Fatalf("receipt terminal = %v, runtime terminal = %v", got, test.terminal)
+			}
+			if expectedCallerGenerationBoundRefusal(probe.CallerProgress) {
+				t.Fatal("non-refusal caller probe validated as a bound refusal")
+			}
 		})
+	}
+
+	current := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "current", GenerationDigest: "sha256:" + strings.Repeat("d", 64),
+		PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: total,
+			SucceededPairCount: total, TotalPairCount: &total,
+		},
+	}}
+	currentProbe, err := classifyCallerGeneration(current, callerJobProbe{
+		State: store.JobProjectionExact,
+		Job:   &store.CallerJobProjection{Status: store.StatusDone, Attempts: 1},
+	}, profileInspectionV21)
+	if err != nil || expectedCallerGenerationTerminal(currentProbe.CallerProgress) ||
+		expectedCallerGenerationBoundRefusal(currentProbe.CallerProgress) {
+		t.Fatalf("current caller classifier/receipt mismatch = %+v, %v", currentProbe.CallerProgress, err)
+	}
+
+	bound := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{
+		State: "failed", PartitionProgress: &apiresponse.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: total, RefusedPairCount: total,
+			TotalPairCount: &total, Refusals: []apiresponse.CallerMapRefusalSummary{{
+				Stage:          pipelinerefusal.StageCallerGenerationAdmission,
+				GenerationKind: pipelinerefusal.GenerationCaller,
+				Classification: pipelinerefusal.ClassificationLimit,
+				Dimension:      pipelinerefusal.DimensionCallerGenerationAbstentions,
+				Observed:       callerleaf.MaxAggregateAbstentionRecords + 1,
+				Limit:          callerleaf.MaxAggregateAbstentionRecords, OutcomeCount: total,
+			}},
+		},
+	}}
+	boundProbe, err := classifyCallerGeneration(bound, running, profileInspectionV21)
+	if !errors.Is(err, errCallerGenerationBoundRefusal) ||
+		!expectedCallerGenerationBoundRefusal(boundProbe.CallerProgress) ||
+		expectedCallerGenerationTerminal(boundProbe.CallerProgress) {
+		t.Fatalf("bound caller classifier/receipt mismatch = %+v, %v", boundProbe.CallerProgress, err)
 	}
 
 	// V20 stays byte-exact: the job projection is ignored and the probe digest

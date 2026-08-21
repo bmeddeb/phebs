@@ -219,6 +219,15 @@ type CallerJobProjection struct {
 	Attempts int       `json:"attempts"`
 }
 
+// CallerJobProjectionStore is the one-repository operational read used by
+// caller-generation progress. Keeping it separate from Store lets unrelated
+// queue consumers avoid acquiring a new diagnostic capability.
+type CallerJobProjectionStore interface {
+	GetCallerJobProjection(
+		context.Context, string,
+	) (JobProjectionState, *CallerJobProjection, error)
+}
+
 // User is the shared identity behind local-password and OIDC logins. Secret
 // material is represented only by a one-way password hash.
 type User struct {

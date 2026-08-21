@@ -1663,8 +1663,8 @@ LET $caller_fanout = IF $reactivated = false THEN []
 			force: true
 		} RETURN AFTER)
 	END;
-LET $caller_created = IF $reactivated AND $pending_caller = NONE
-	THEN $caller_fanout[0] ELSE NONE END;` + projectCreatedCallerJobSQL + `
+LET $caller_projected = IF $reactivated AND array::len($caller_fanout) = 1
+	THEN $caller_fanout[0] ELSE NONE END;`+projectCallerJobSQL+`
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)
@@ -2044,6 +2044,64 @@ type repoStatusRec struct {
 	LatestCallerJobProjectionVersion     string  `json:"latest_caller_job_projection_version"`
 }
 
+var _ CallerJobProjectionStore = (*Surreal)(nil)
+
+func callerJobProjection(row repoStatusRec) (JobProjectionState, *CallerJobProjection) {
+	if row.LatestCallerJobProjectionVersion != callerJobProjectionVersion ||
+		row.ProjectedCallerJob == nil {
+		return JobProjectionUnavailable, nil
+	}
+	job := row.ProjectedCallerJob.toJob(JobCallerLeaf)
+	if job.ID == "" || job.Target != row.Name || job.TargetTruncated {
+		return JobProjectionUnavailable, nil
+	}
+	return JobProjectionExact, &CallerJobProjection{
+		Status: job.Status, Attempts: job.Attempts,
+	}
+}
+
+// GetCallerJobProjection reads only one repository's creation-linked caller
+// job. It never scans caller history or materializes unrelated repositories.
+func (s *Surreal) GetCallerJobProjection(
+	ctx context.Context,
+	repository string,
+) (JobProjectionState, *CallerJobProjection, error) {
+	results, err := surrealdb.Query[[]repoStatusRec](ctx, s.db, `
+		SELECT name, latest_caller_job_projection_version, {
+			id: latest_caller_job,
+			target: IF type::is_string(latest_caller_job.target)
+				THEN string::slice(latest_caller_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_caller_job.target)
+				THEN string::len(latest_caller_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_caller_job.status,
+			attempts: latest_caller_job.attempts,
+			created_at: latest_caller_job.created_at
+		} AS projected_caller_job FROM $repository`, map[string]any{
+		"repository":            repoID(repository),
+		"max_target_characters": MaxJobHistoryTargetCharacters,
+	})
+	if err != nil {
+		return JobProjectionUnavailable, nil, fmt.Errorf(
+			"get caller job projection: %w", err,
+		)
+	}
+	if results == nil || len(*results) != 1 {
+		return JobProjectionUnavailable, nil, errors.New(
+			"get caller job projection: invalid query result",
+		)
+	}
+	rows := (*results)[0].Result
+	if len(rows) == 0 {
+		return JobProjectionUnavailable, nil, fmt.Errorf(
+			"repo %q: %w", repository, ErrNotFound,
+		)
+	}
+	state, projection := callerJobProjection(rows[0])
+	return state, projection, nil
+}
+
 // RepoStatuses joins current repos and membership with one prospective record
 // link per repo. It never reads the indexing-job table as history. A repository
 // without this writer generation's CREATE projection is explicitly unavailable
@@ -2158,16 +2216,7 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 				}
 			}
 		}
-		callerState := JobProjectionUnavailable
-		var caller *CallerJobProjection
-		if row.LatestCallerJobProjectionVersion == callerJobProjectionVersion &&
-			row.ProjectedCallerJob != nil {
-			job := row.ProjectedCallerJob.toJob(JobCallerLeaf)
-			if job.ID != "" && job.Target == row.Name && !job.TargetTruncated {
-				callerState = JobProjectionExact
-				caller = &CallerJobProjection{Status: job.Status, Attempts: job.Attempts}
-			}
-		}
+		callerState, caller := callerJobProjection(row)
 		statuses[i] = RepoStatus{
 			Repo:                   row.Repo,
 			Connections:            conns[row.Name],
@@ -2242,21 +2291,37 @@ IF $table = 'caller_leaf_job' AND $created_job != NONE {
 	RETURN NONE;
 };`
 
-// projectCreatedCallerJobSQL mirrors the caller_leaf_job arm of
-// projectLatestIndexJobSQL for the domain transactions that create caller
-// successors outside the generic queue (caller-leaf outcome recording,
-// resolver-catalog fan-out, repo reactivation). The embedding transaction
-// sets $caller_created to the newly created caller_leaf_job row or NONE.
-const projectCreatedCallerJobSQL = `
-IF $caller_created != NONE {
+// projectCallerJobSQL mirrors the caller_leaf_job arm of
+// projectLatestIndexJobSQL for domain transactions that create or coalesce a
+// caller successor outside the generic queue. Projecting the exact returned
+// pending row also repairs a pre-projection job after an upgrade.
+const projectCallerJobSQL = `
+IF $caller_projected != NONE {
 	UPDATE type::record('repo', $repository)
-	SET latest_caller_job = $caller_created.id,
-		latest_caller_job_created_at = $caller_created.created_at,
+	SET latest_caller_job = $caller_projected.id,
+		latest_caller_job_created_at = $caller_projected.created_at,
 		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
 	WHERE latest_caller_job_created_at = NONE
-		OR latest_caller_job_created_at < $caller_created.created_at
-		OR (latest_caller_job_created_at = $caller_created.created_at
-			AND latest_caller_job < $caller_created.id)
+		OR latest_caller_job_created_at < $caller_projected.created_at
+		OR (latest_caller_job_created_at = $caller_projected.created_at
+			AND latest_caller_job < $caller_projected.id)
+	RETURN NONE;
+};`
+
+// projectExistingCallerJobSQL is appended only where $job may be a coalesced
+// pending row. Newly created jobs are already handled by
+// projectLatestIndexJobSQL; this arm establishes the current writer marker for
+// an exact pre-cutover pending row without scanning caller history.
+const projectExistingCallerJobSQL = `
+IF $table = 'caller_leaf_job' AND $created_job = NONE AND array::len($job) = 1 {
+	UPDATE type::record('repo', $target)
+	SET latest_caller_job = $job[0].id,
+		latest_caller_job_created_at = $job[0].created_at,
+		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
+	WHERE latest_caller_job_created_at = NONE
+		OR latest_caller_job_created_at < $job[0].created_at
+		OR (latest_caller_job_created_at = $job[0].created_at
+			AND latest_caller_job < $job[0].id)
 	RETURN NONE;
 };`
 
@@ -2301,7 +2366,7 @@ ELSE
     } RETURN AFTER)
 END;
 LET $created_job = IF $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + `
+	projectLatestIndexJobSQL + projectExistingCallerJobSQL + `
 RETURN $job;
 COMMIT;`
 
@@ -2353,7 +2418,7 @@ ELSE
     } RETURN AFTER)
 END;
 LET $created_job = IF $owned != NONE AND $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + `
+	projectLatestIndexJobSQL + projectExistingCallerJobSQL + `
 RETURN $job;
 COMMIT;`
 
