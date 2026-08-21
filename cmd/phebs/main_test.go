@@ -32,6 +32,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -72,6 +73,158 @@ func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
 	)
 	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) {
 		t.Fatalf("resolver callback error = %v, want both sentinels", err)
+	}
+}
+
+func TestCandidateStartupRepairRequeuesPointerlessFailedCallerThroughResolver(
+	t *testing.T,
+) {
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	defer cancel()
+	state, err := store.OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+
+	digest := func(value string) string {
+		sum := sha256.Sum256([]byte(value))
+		return "sha256:" + hex.EncodeToString(sum[:])
+	}
+	const (
+		repository = "example.com/acme/pointerless-caller-recovery"
+		commit     = "0123456789012345678901234567890123456789"
+	)
+	if err := state.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	candidatePublication := store.CandidateManifestPublication{
+		Repository: repository, HeadCommit: commit,
+		PolicyDigest: digest("candidate-policy"), ManifestDigest: digest("candidate-manifest"),
+		GenerationDigest: digest("candidate-generation"), ManifestPath: candidate.ManifestName(repository),
+	}
+	if err := state.PublishCandidateManifest(ctx, candidatePublication); err != nil {
+		t.Fatal(err)
+	}
+	persistedCandidate, err := state.GetCandidateManifestPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := resolvercatalog.NewIdentity(
+		repository, commit, "", persistedCandidate.ManifestDigest, nil, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.PublishResolverCatalog(ctx, store.ResolverCatalogPublication{
+		Repository: repository, HeadCommit: commit,
+		Declarations:            []store.ResolverCatalogDeclarationPublication{},
+		DeclarationSetDigest:    identity.DeclarationSetDigest,
+		CandidateManifestDigest: persistedCandidate.ManifestDigest,
+		SourceLanePolicy:        resolvercatalog.SourceLanePolicy,
+		ResolverPacks:           []store.ResolverCatalogPack{},
+		ResolverPackSetDigest:   identity.ResolverPackSetDigest,
+		CatalogPolicyDigest:     identity.CatalogPolicyDigest,
+		GenerationDigest:        identity.GenerationDigest,
+		ManifestDigest:          digest("resolver-manifest"), AuthorityDigest: digest("resolver-authority"),
+		ManifestPath: resolvercatalogid.ManifestName(repository),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	failedJob, err := state.ClaimJob(ctx, store.JobCallerLeaf, "failed-caller-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := state.SetJobStatus(ctx, *failedJob, store.StatusRunning, ""); err != nil {
+			t.Fatal(err)
+		}
+		failedJob.Status = store.StatusRunning
+		if err := state.RequeueJob(
+			ctx, *failedJob, "historical v1-only publication rejection", time.Now().UTC(),
+		); err != nil {
+			t.Fatal(err)
+		}
+		failedJob, err = state.ClaimJob(ctx, store.JobCallerLeaf, "failed-caller-worker")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if failedJob.Attempts != 2 {
+		t.Fatalf("caller attempts before terminal failure = %d, want 2", failedJob.Attempts)
+	}
+	if err := state.SetJobStatus(ctx, *failedJob, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	failedJob.Status = store.StatusRunning
+	if err := state.SetJobStatus(
+		ctx, *failedJob, store.StatusFailed, "historical v1-only publication rejection",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.GetCallerGenerationPublication(ctx, repository); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("pointerless caller publication = %v, want not found", err)
+	}
+	if canceled, err := state.CancelPendingJobs(
+		ctx, store.JobResolverCatalog, repository,
+	); err != nil || canceled != 1 {
+		t.Fatalf("clear preexisting resolver successor = %d, %v", canceled, err)
+	}
+
+	if err := enqueueCandidateBackfillWithReadiness(
+		ctx, state, persistedCandidate.PolicyDigest, func(string) bool { return true },
+	); err != nil {
+		t.Fatal(err)
+	}
+	candidateJob, err := state.ClaimJob(ctx, store.JobCandidate, "startup-candidate-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetJobStatus(ctx, *candidateJob, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	candidateJob.Status = store.StatusRunning
+	if err := state.PublishCandidateManifest(ctx, *persistedCandidate); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetJobStatus(ctx, *candidateJob, store.StatusDone, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	resolverJob, err := state.ClaimJob(ctx, store.JobResolverCatalog, "startup-resolver-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolverJob.Force {
+		t.Fatal("exact candidate retry forced resolver replacement")
+	}
+	if err := state.SetJobStatus(ctx, *resolverJob, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	resolverJob.Status = store.StatusRunning
+	if err := afterResolverPublication(
+		ctx, repository, nil, state.EnqueuePending, true,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetJobStatus(ctx, *resolverJob, store.StatusDone, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	pending, err := state.ListJobs(ctx, store.JobCallerLeaf, store.StatusPending)
+	if err != nil || len(pending) != 1 || pending[0].Target != repository ||
+		pending[0].Attempts != 0 || pending[0].Force {
+		t.Fatalf("recovered caller successor = %+v, %v", pending, err)
+	}
+	failed, err := state.ListJobs(ctx, store.JobCallerLeaf, store.StatusFailed)
+	if err != nil || len(failed) != 1 || failed[0].ID != failedJob.ID || failed[0].Attempts != 2 {
+		t.Fatalf("historical caller failure = %+v, %v", failed, err)
 	}
 }
 

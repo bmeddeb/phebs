@@ -290,7 +290,8 @@ func NewGenerationIdentity(input GenerationIdentity) (GenerationIdentity, error)
 	input.Schema = GenerationSchema
 	if len(input.Upstream) != 0 {
 		input.Schema = GenerationSchemaV2
-		if len(input.Upstream) > 1<<20 || !json.Valid(input.Upstream) || !validDigest(input.UpstreamDigest) {
+		if len(input.Upstream) > authorityvalidate.MaxCanonicalBytes ||
+			!json.Valid(input.Upstream) || !validDigest(input.UpstreamDigest) {
 			return GenerationIdentity{}, errors.New("caller generation has invalid upstream authority")
 		}
 		upstream, validateErr := authorityvalidate.Canonical(input.Upstream)

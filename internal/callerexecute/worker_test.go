@@ -701,10 +701,23 @@ func TestWorkerCurrentPublicationCallbackFailureIsRetryable(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.settle(t)
 	want := errors.New("relationship reconcile unavailable")
-	harness.worker.OnPublished = func(context.Context, string) error { return want }
+	attempts := 0
+	harness.worker.OnPublished = func(context.Context, string) error {
+		attempts++
+		if attempts == 1 {
+			return want
+		}
+		return nil
+	}
 	if err := harness.worker.Handle(t.Context(), harness.job); !errors.Is(err, want) ||
 		store.IsTerminal(err) {
 		t.Fatalf("current-publication callback error = %v, want retryable %v", err, want)
+	}
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatalf("current-publication callback retry = %v", err)
+	}
+	if attempts != 2 {
+		t.Fatalf("current-publication callback attempts = %d, want 2", attempts)
 	}
 }
 

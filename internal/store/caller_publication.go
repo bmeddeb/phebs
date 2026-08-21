@@ -30,7 +30,7 @@ const (
 	MaxCallerPublicationRepositoryPage = 512
 	maxCallerPublicationReferences     = callerpublicationid.InstallationPublicationRefs
 	maxCallerPublicationCanonical      = callerpublicationid.InstallationCanonicalBytes
-	maxCallerPublicationUpstreamBytes  = 64 << 10
+	maxCallerPublicationUpstreamBytes  = authorityvalidate.MaxCanonicalBytes
 )
 
 // CallerGenerationPairPublication is the exact ordered artifact receipt for

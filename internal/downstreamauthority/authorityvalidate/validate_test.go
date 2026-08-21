@@ -49,6 +49,16 @@ func TestCanonicalRejectsMalformedCurrentAuthority(t *testing.T) {
 	}
 }
 
+func TestCanonicalRejectsOversizedInputBeforeDecode(t *testing.T) {
+	raw := make([]byte, MaxCanonicalBytes+1)
+	for index := range raw {
+		raw[index] = ' '
+	}
+	if _, err := Canonical(raw); err == nil {
+		t.Fatal("oversized authority was accepted")
+	}
+}
+
 func sealedTestAuthority(schema string) authority {
 	value := authority{
 		Schema: schema, Repository: "github.com/acme/authority-validation",

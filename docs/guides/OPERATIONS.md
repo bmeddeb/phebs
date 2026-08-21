@@ -4523,7 +4523,7 @@ the decoded authority to be usable and to match the generation repository and
 upstream digest exactly. A V2 publication therefore commits through the same
 transaction and ownership fences as V1; malformed provenance, unknown schemas,
 repository drift, digest drift, unusable roots, noncanonical bytes, and
-envelopes above 64 KiB still fail closed. Historical V1 authorities remain
+envelopes above the shared 256-KiB ceiling still fail closed. Historical V1 authorities remain
 valid. This is a validator compatibility repair, not a new authority or
 migration.
 
@@ -4535,14 +4535,50 @@ source-free probe repeats five seconds later. A publisher that wins the race
 changes the probe and convergence continues. V19 and earlier retain their
 historical pending classification and receipt validation.
 
-Publication attempts already validate the at-most-64-KiB upstream envelope.
+Publication attempts validate the at-most-256-KiB upstream envelope.
 V2 performs a canonical decode/marshal plus one provenance and one semantic
 SHA-256 over at most 64 bounded domain headers before the existing transaction;
 V1 retains its semantic hash. There is no new query, lock, transaction, retry,
 startup scan, sync tick, child, source/Git/content/candidate/corpus/shard read,
 cache invalidation, or concurrency. Ordinary convergence polling is unchanged.
 Only the complete/all-success-but-unpublished V20 edge adds one caller-progress
-request after five seconds. Safety ceilings and production bounds are
+request after five seconds. The upstream ceiling is the one production bound
+changed by the subsequent maximum-shape audit; all other safety ceilings remain
 unchanged. Neutral-31 does not pass retroactively, and this correction alone
 does not authorize integration, freeze, execution, release, or any scale/SLO
 claim.
+
+### T40.13 caller maximum-shape and restart-repair audit
+
+The post-neutral-31 production audit found that the downstream-authority model
+admits a canonical 64-domain envelope larger than the store's former 64-KiB
+limit. The exact maximum-shaped model fixture is 138,832 bytes. Authority
+validation, caller-generation construction, and caller publication now share a
+256-KiB ceiling, so every structurally valid V1/V2 authority fits while an
+unrelated opaque payload remains bounded. A real Surreal publication test
+commits and reopens the 64-domain V2 envelope, and a historical V1 envelope
+passes the same transaction and current-pointer path.
+
+The same audit seeded the durable neutral-31-shaped restart state: one failed
+caller job at its final attempt, complete upstream candidate and resolver
+authority, and no caller pointer or publication marker. The existing candidate
+startup backfill exact-republishes its current pointer, the candidate
+transaction repairs the resolver successor, and the resolver current/no-op
+callback creates a fresh zero-attempt caller successor while retaining the
+failed history row. No second caller-wide startup scan is added. A caller
+current-pointer callback failure remains retryable, and its next warm turn
+replays relationship reconciliation before the caller job can finish.
+
+V2 validation can decode and canonically marshal at most 256 KiB twice around
+the existing store transaction and performs the existing provenance and
+semantic SHA-256 passes; V1 performs its historical semantic pass. The raw
+authority is retained in the caller pointer and scalar startup summary, so the
+existing installation-wide pointer-summary query can carry up to the product
+of its 65,536-pointer ceiling and this per-authority ceiling (16 GiB before
+JSON/SDK overhead) in the theoretical all-maximum shape. That pre-existing
+all-pointer startup design is now explicitly recorded as a follow-up capacity
+boundary; the T40.13 ceremony uses one repository and does not establish that
+installation envelope. Ordinary nine-domain publications remain far below the
+new ceiling and add no query, lock, write, retry, worker, source/Git/content
+read, or concurrency. No wire schema, digest, API/OpenAPI field, retry policy,
+or ceremony claim changes.

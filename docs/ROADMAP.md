@@ -1496,6 +1496,17 @@ catalog, relationship, or correctness authority.
   five-second probe. Earlier schemas remain historical. Neutral-31 does not
   pass retroactively; integration, freeze, and execution remain separately
   authorized, and T40.13/Epic 40 are not closed.
+- The pre-freeze caller audit proved the existing candidate→resolver→caller
+  startup chain repairs the exact pointerless failed neutral-31 shape and that
+  current caller callbacks replay relationship reconciliation after a transient
+  failure. It also found a production maximum-shape mismatch: a valid
+  64-domain downstream authority is 138,832 bytes, above the former 64-KiB
+  caller-store ceiling. Authority validation, caller identity, and publication
+  now share a 256-KiB limit; real-store tests cover maximum V2 and historical
+  V1 publication. The installation-wide scalar startup inventory can still
+  materialize all pointer summaries at once, so its theoretical 16-GiB
+  all-maximum authority envelope is recorded as a separate capacity follow-up,
+  not evidence established by the one-repository T40.13 ceremony.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

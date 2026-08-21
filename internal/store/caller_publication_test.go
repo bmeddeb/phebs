@@ -2,8 +2,11 @@ package store_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -14,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -152,6 +156,7 @@ func callerPublicationV2Upstream(
 	repository,
 	candidateManifestDigest,
 	candidatePolicyDigest string,
+	maximum bool,
 ) (string, string) {
 	t.Helper()
 	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
@@ -162,18 +167,31 @@ func callerPublicationV2Upstream(
 		PartitionPolicyDigest: digest("5"), ObservationPolicyDigest: digest("6"),
 		InventoryPolicyDigest: digest("7"), RecordCount: 1, ObservedCount: 1,
 	}
-	domain := candidate.DownstreamDomainAuthority{
-		Domain: "grpc-caller", Version: "1.0.0", PlanDigest: digest("8"),
-		RootDigest: digest("9"), RunID: "run-v2", Disposition: candidate.PartitionResultEmpty,
-		CandidateManifestDigest: candidateManifestDigest, CandidatePartitionRootDigest: digest("b"),
-		CandidatePolicyDigest: candidatePolicyDigest, SourceGenerationDigest: observation.SourceGenerationDigest,
-		ObservationGenerationDigest: observation.ObservationGenerationDigest,
-		ExtractionPolicyDigest:      digest("d"), DomainIndexDigest: digest("e"),
-		DomainScheduleDigest: digest("f"),
+	domainCount := 1
+	if maximum {
+		domainCount = 64
 	}
-	value, err := downstreamauthority.Build(
-		observation, []candidate.DownstreamDomainAuthority{domain},
-	)
+	required := make([]downstreamauthority.DomainIdentity, domainCount)
+	domains := make([]candidate.DownstreamDomainAuthority, domainCount)
+	for index := range domains {
+		domain, version, runID := "grpc-caller", "1.0.0", "run-v2"
+		if maximum {
+			domain = fmt.Sprintf("%03d%s", index, strings.Repeat("d", 125))
+			version = strings.Repeat("v", 128)
+			runID = strings.Repeat("r", 512)
+		}
+		required[index] = downstreamauthority.DomainIdentity{Domain: domain, Version: version}
+		domains[index] = candidate.DownstreamDomainAuthority{
+			Domain: domain, Version: version, PlanDigest: digest("8"),
+			RootDigest: digest("9"), RunID: runID, Disposition: candidate.PartitionResultEmpty,
+			CandidateManifestDigest: candidateManifestDigest, CandidatePartitionRootDigest: digest("b"),
+			CandidatePolicyDigest: candidatePolicyDigest, SourceGenerationDigest: observation.SourceGenerationDigest,
+			ObservationGenerationDigest: observation.ObservationGenerationDigest,
+			ExtractionPolicyDigest:      digest("d"), DomainIndexDigest: digest("e"),
+			DomainScheduleDigest: digest("f"),
+		}
+	}
+	value, err := downstreamauthority.BuildRequired(observation, required, domains)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,6 +200,36 @@ func callerPublicationV2Upstream(
 		t.Fatal(err)
 	}
 	return string(raw), value.Digest
+}
+
+func callerPublicationV1Upstream(
+	t *testing.T,
+	repository,
+	candidateManifestDigest,
+	candidatePolicyDigest string,
+) (string, string) {
+	t.Helper()
+	raw, _ := callerPublicationV2Upstream(
+		t, repository, candidateManifestDigest, candidatePolicyDigest, false,
+	)
+	var value downstreamauthority.Authority
+	if err := json.Unmarshal([]byte(raw), &value); err != nil {
+		t.Fatal(err)
+	}
+	value.Schema = authorityvalidate.SchemaV1
+	value.ProvenanceDigest = ""
+	value.Digest = ""
+	identity, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(append([]byte(value.Schema+"\x00"), identity...))
+	value.Digest = "sha256:" + hex.EncodeToString(sum[:])
+	sealed, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(sealed), value.Digest
 }
 
 func newCallerPublicationFixtureWithDeclaration(
@@ -377,9 +425,32 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 }
 
 func TestCallerGenerationPublicationAcceptsCanonicalV2UpstreamAuthority(t *testing.T) {
+	testCallerGenerationPublicationAcceptsUpstreamAuthority(t, authorityvalidate.Schema, false)
+}
+
+func TestCallerGenerationPublicationAcceptsMaximumV2UpstreamAuthority(t *testing.T) {
+	testCallerGenerationPublicationAcceptsUpstreamAuthority(t, authorityvalidate.Schema, true)
+}
+
+func TestCallerGenerationPublicationAcceptsHistoricalV1UpstreamAuthority(t *testing.T) {
+	testCallerGenerationPublicationAcceptsUpstreamAuthority(t, authorityvalidate.SchemaV1, false)
+}
+
+func testCallerGenerationPublicationAcceptsUpstreamAuthority(
+	t *testing.T,
+	schema string,
+	maximum bool,
+) {
+	t.Helper()
 	s := newTestStore(t)
 	ctx := t.Context()
 	repository := "github.com/acme/caller-publication-v2-upstream"
+	if schema == authorityvalidate.SchemaV1 {
+		repository = "github.com/acme/caller-publication-v1-upstream"
+	}
+	if maximum {
+		repository += "-maximum"
+	}
 	commit := candidateCommit('1')
 	if err := s.UpsertRepo(ctx, store.Repo{
 		Name: repository, CloneURL: "https://" + repository + ".git",
@@ -405,9 +476,17 @@ func TestCallerGenerationPublicationAcceptsCanonicalV2UpstreamAuthority(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	upstream, upstreamDigest := callerPublicationV2Upstream(
-		t, repository, candidatePublication.ManifestDigest, candidatePublication.PolicyDigest,
-	)
+	var upstream, upstreamDigest string
+	if schema == authorityvalidate.SchemaV1 {
+		upstream, upstreamDigest = callerPublicationV1Upstream(
+			t, repository, candidatePublication.ManifestDigest, candidatePublication.PolicyDigest,
+		)
+	} else {
+		upstream, upstreamDigest = callerPublicationV2Upstream(
+			t, repository, candidatePublication.ManifestDigest, candidatePublication.PolicyDigest,
+			maximum,
+		)
+	}
 	fixture := finishCallerPublicationFixtureWithUpstream(
 		t, s, repository, commit, candidatePublication, catalog, upstream, upstreamDigest,
 	)

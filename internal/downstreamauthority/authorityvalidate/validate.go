@@ -20,6 +20,11 @@ const (
 	SchemaV1             = "phebs-downstream-upstream-authority-v1"
 	Schema               = "phebs-downstream-upstream-authority-v2"
 	ObservationVersionV2 = "observation-v2"
+	// MaxCanonicalBytes is the shared caller/store admission ceiling for one
+	// exact downstream authority. The closed 64-domain wire maximum is smaller;
+	// this ceiling leaves deterministic headroom without admitting an unrelated
+	// megabyte-scale opaque payload.
+	MaxCanonicalBytes = 256 << 10
 )
 
 var ErrInvalid = errors.New("invalid downstream upstream authority")
@@ -82,7 +87,8 @@ type DomainAuthority struct {
 
 func Canonical(raw []byte) (Result, error) {
 	var value authority
-	if !json.Valid(raw) || json.Unmarshal(raw, &value) != nil {
+	if len(raw) == 0 || len(raw) > MaxCanonicalBytes ||
+		!json.Valid(raw) || json.Unmarshal(raw, &value) != nil {
 		return Result{}, ErrInvalid
 	}
 	canonical, err := json.Marshal(value)

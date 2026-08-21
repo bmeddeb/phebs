@@ -1,7 +1,9 @@
 package downstreamauthority
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -9,6 +11,47 @@ import (
 	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 )
+
+func TestMaximumAuthorityFitsSharedCanonicalBound(t *testing.T) {
+	observation := testObservationAuthority()
+	observation.Repository = "r/" + strings.Repeat("x", 1022)
+	observation.RecordCount = int(^uint(0) >> 1)
+	observation.ObservedCount = observation.RecordCount
+	required := make([]DomainIdentity, 64)
+	domains := make([]candidate.DownstreamDomainAuthority, 64)
+	for index := range domains {
+		domain := fmt.Sprintf("%03d%s", index, strings.Repeat("d", 125))
+		version := strings.Repeat("v", 128)
+		required[index] = DomainIdentity{Domain: domain, Version: version}
+		domains[index] = testDomainAuthority(
+			domain, candidate.PartitionResultUnavailablePrerequisite, observation,
+		)
+		domains[index].Version = version
+		domains[index].RunID = strings.Repeat("r", 512)
+	}
+	authority, err := BuildRequired(observation, required, domains)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const historicalCallerPublicationBound = 64 << 10
+	if len(raw) <= historicalCallerPublicationBound {
+		t.Fatalf(
+			"maximum authority = %d bytes, want proof it crosses historical %d-byte bound",
+			len(raw), historicalCallerPublicationBound,
+		)
+	}
+	if len(raw) > authorityvalidate.MaxCanonicalBytes {
+		t.Fatalf(
+			"maximum authority = %d bytes, shared bound = %d",
+			len(raw), authorityvalidate.MaxCanonicalBytes,
+		)
+	}
+	t.Logf("maximum canonical authority bytes = %d", len(raw))
+}
 
 func TestAuthorityBindsExactRequiredRootsAndFailsClosed(t *testing.T) {
 	observation := testObservationAuthority()
