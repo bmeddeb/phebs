@@ -34,6 +34,23 @@ func (prepared *Prepared) Root() Root {
 	return cloneRoot(prepared.rootValue)
 }
 
+// abort durably removes an unpublished stage. Published stages are already
+// closed and remain immutable authority.
+func (prepared *Prepared) abort() error {
+	if prepared == nil || prepared.closed {
+		return nil
+	}
+	base := repositoryRoot(prepared.root, prepared.repository)
+	if err := os.RemoveAll(prepared.directory); err != nil {
+		return err
+	}
+	if err := syncDirectory(base); err != nil {
+		return err
+	}
+	prepared.closed = true
+	return nil
+}
+
 func cloneRoot(value Root) Root {
 	value.RepositoryMembers = slices.Clone(value.RepositoryMembers)
 	value.Services = slices.Clone(value.Services)

@@ -4846,3 +4846,13 @@ plan-bound receipt in memory. The driver also supports:
 Use `seal` only after execution produced `observation.json` and private custody
 is absent. It rebuilds a missing receipt, resumes an incomplete derived seal,
 verifies a complete seal/package, and never rewrites a complete invalid seal.
+
+## T40.R1 neutral-34 relationship-stage cleanup
+
+A relationship root build owns its `.stage-*` directory until publish closes
+it. If the late schedule fence, extraction pin, or pre-commit publish step
+fails, the runtime now removes and durably syncs that unpublished stage before
+returning. Successful publication remains immutable; startup repair and the
+relationship lifecycle sweep remain fallback cleanup rather than the normal
+failure path. This adds no healthy-path filesystem work beyond one closed-state
+check and changes no operator command, schema, authority, or gate deadline.

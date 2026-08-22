@@ -2904,3 +2904,28 @@ failures receive two bounded retries. The ceremony wrapper's `seal` command can
 resume missing receipt, incomplete seal, or package work while refusing to
 rewrite a complete invalid seal. Historical V1-V24 schemas remain exact. V25
 does not establish an SLO, scale result, release, freeze, or execution approval.
+
+### Neutral-34 relationship-stage abort closure
+
+Neutral-34's verified source-free package
+`sha256:eac7ae816cfad54b27bda6ad86a2683374af5c468c268cd0848d00543b44da05`
+binds source `26bd526` and plan
+`sha256:9a0a0701bb5215ea0312aa0a16035ec0a35f3d8b86a0d97916f1ea74ff6c95ee`.
+V24's corroborated `requeued` fate passed and exact A authority converged.
+Interruption then stopped at `partial_verification`: a relationship build lost
+a late fence after creating its `.stage-*` root, while startup repair had
+already run and the lifecycle sweep was inside its one-hour idle interval.
+
+Relationship publication now defers an idempotent stage abort after every
+successful build. Publish closes the stage, making the defer a no-op; any late
+fence, pin, or pre-commit publish error removes and syncs the unpublished
+directory. The five-minute cleanliness gate and V25 evidence contract are
+unchanged.
+
+| Gate | Scanner-visible writer | Immediate cleanup | Fallback cleaner | Gate clock |
+|---|---|---|---|---|
+| interruption `partial_verification` | relationship root build | deferred abort on every unpublished return | startup repair or relationship lifecycle sweep (up to one-hour idle) | 300 seconds |
+
+Any future change that widens an accepted recovery fate must re-derive this
+downstream row against its writers, immediate cleaners, fallback cadence, and
+gate clock before another ceremony is authorized.

@@ -1634,6 +1634,14 @@ makes source-free sealing resumable. These are feasibility and evidence
 integrity corrections, not a scale pass, SLO, production-bound increase,
 freeze, execution, release, or Epic-40 closure authorization.
 
+Neutral-34 then advanced through V24 requeue recovery and exact return-to-A,
+but stopped at interruption partial verification on an orphan relationship
+`.stage-*` directory. Late relationship fence, extraction-pin, and pre-commit
+publish failures now abort their unpublished stage immediately; successful
+publish remains immutable and the one-hour lifecycle sweep remains only a
+fallback. This closes a production artifact-hygiene defect without changing
+the V25 schema, gate clock, authority, scheduler, or release posture.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an

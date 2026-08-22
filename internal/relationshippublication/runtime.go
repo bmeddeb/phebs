@@ -361,7 +361,7 @@ func matchesCurrentV2Authority(
 
 // Handle builds all repository-shared components and publishes the one atomic
 // relationship root only after rechecking every precious authority fence.
-func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) error {
+func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk) (retErr error) {
 	if err := runtime.validate(chunk.Repository); err != nil || chunk.Stage != ScheduleStage ||
 		chunk.Offset != 0 || chunk.Length != 1 || !validDigest(chunk.Generation) {
 		return fmt.Errorf("%w: relationship runtime chunk", ErrInvalid)
@@ -554,6 +554,9 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	if err != nil {
 		return fmt.Errorf("build relationship root: %w", err)
 	}
+	// Late fence, pin, and pre-commit publish failures must not strand the
+	// scanner-visible stage. Publish closes it before this defer runs.
+	defer func() { retErr = errors.Join(retErr, stage.abort()) }()
 
 	runtime.transition.Lock()
 	defer runtime.transition.Unlock()

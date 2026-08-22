@@ -772,6 +772,28 @@ func TestAuthorizationPrecedesRepositoryValidationAndFilesystem(t *testing.T) {
 	}
 }
 
+func TestPreparedAbortRemovesUnpublishedStage(t *testing.T) {
+	root := t.TempDir()
+	repository := "example.com/acme/aborted-stage"
+	directory, err := stageDirectory(root, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "root.json"), []byte("staged"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	prepared := &Prepared{root: root, repository: repository, directory: directory}
+	if err := prepared.abort(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(directory); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("aborted stage remains: %v", err)
+	}
+	if err := prepared.abort(); err != nil {
+		t.Fatalf("repeated abort = %v", err)
+	}
+}
+
 func TestScheduleIdentityReusesActiveTargetAndDistinguishesABA(t *testing.T) {
 	repository := "example.com/acme/schedule"
 	target, err := runtimeTarget(
