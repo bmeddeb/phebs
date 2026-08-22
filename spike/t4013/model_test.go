@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -597,6 +598,98 @@ func TestV20PlanFencesCallerPublicationTerminalConfirmation(t *testing.T) {
 		observationSchemaForPlan(decoded) != ObservationSchemaV20 ||
 		receiptSchemaForPlan(decoded) != ReceiptSchemaV20 {
 		t.Fatalf("decoded v20 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV22PlanFencesImmediateInterruptionRecovery(t *testing.T) {
+	plan, err := frozenV22PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV22 || plan.Safety != frozenSafetyV21 ||
+		plan.Safety != frozenSafetyV22 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v22 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV22 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV22 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV22 {
+		t.Fatalf("decoded v22 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV22InterruptionEvidenceFencesCollectionAndLifecycle(t *testing.T) {
+	if interruptionSubstageIndex(ObservationSchemaV22, "recovery_verification") >=
+		interruptionSubstageIndex(ObservationSchemaV22, "restart_convergence") {
+		t.Fatal("V22 recovery verification does not precede restart convergence")
+	}
+	if interruptionSubstageIndex(ObservationSchemaV21, "restart_convergence") >=
+		interruptionSubstageIndex(ObservationSchemaV21, "recovery_verification") {
+		t.Fatal("historical interruption substage order changed")
+	}
+	attempt := 0
+	lifecycleObservation := &InterruptionLifecycleObservation{
+		State: "ok", Completeness: lifecycle.LowerBound,
+		Scanned: 1,
+		Deleted: lifecycle.MaxDeletesPerTick, Backlog: true,
+	}
+	value := Observation{
+		Schema: ObservationSchemaV22,
+		Phases: make([]PhaseObservation, len(phaseOrder)),
+		Interruption: &InterruptionObservation{
+			Schema: interruptionSchemaV2, LastSubstage: "complete",
+			TriggerStage:            extractionpublication.ScheduleStage,
+			TriggerGenerationSHA256: "sha256:" + strings.Repeat("a", 64),
+			TriggerChunkSHA256:      "sha256:" + strings.Repeat("b", 64),
+			TriggerScheduleSHA256:   "sha256:" + strings.Repeat("c", 64),
+			TriggerAttempt:          &attempt, TriggerWallMS: 2,
+			TriggerRecoveredState: interruptionFateCollected,
+			RecoveryLifecycle:     lifecycleObservation,
+			ConvergenceLifecycle:  lifecycleObservation,
+		},
+		ServerStartups: []ServerStartupObservation{{Label: "interruption-restart"}},
+	}
+	value.Phases[5] = PhaseObservation{
+		Name: "interruption", Outcome: "succeeded", Metrics: PhaseMetrics{WallMS: 3},
+	}
+	if err := validateInterruptionObservation(value); err != nil {
+		t.Fatalf("valid V22 interruption evidence refused: %v", err)
+	}
+	overBound := value
+	overBound.Interruption = cloneInterruptionObservation(value.Interruption)
+	overBound.Interruption.ConvergenceLifecycle.Deleted = lifecycle.MaxDeletesPerTick + 1
+	if err := validateInterruptionObservation(overBound); err == nil {
+		t.Fatal("V22 interruption accepted over-bound lifecycle evidence")
+	}
+
+	withoutRecoveryCycle := value
+	withoutRecoveryCycle.Interruption = cloneInterruptionObservation(value.Interruption)
+	withoutRecoveryCycle.Interruption.RecoveryLifecycle = nil
+	if err := validateInterruptionObservation(withoutRecoveryCycle); err == nil {
+		t.Fatal("V22 completed interruption accepted absent recovery lifecycle evidence")
+	}
+
+	currentBeforeRecovery := value
+	currentBeforeRecovery.Phases[5].Outcome = "failed"
+	currentBeforeRecovery.Interruption = cloneInterruptionObservation(value.Interruption)
+	currentBeforeRecovery.Interruption.LastSubstage = "recovery_verification"
+	currentBeforeRecovery.Interruption.TriggerRecoveredState = ""
+	currentBeforeRecovery.Interruption.RecoveryLifecycle = nil
+	currentBeforeRecovery.Interruption.ConvergenceLifecycle = nil
+	if err := validateInterruptionObservation(currentBeforeRecovery); err != nil {
+		t.Fatalf("V22 recovery failure lost sealability: %v", err)
+	}
+
+	historical := value
+	historical.Schema = ObservationSchemaV21
+	historical.Interruption = cloneInterruptionObservation(value.Interruption)
+	historical.Interruption.Schema = interruptionSchemaV1
+	if err := validateInterruptionObservation(historical); err == nil {
+		t.Fatal("historical observation accepted V22 interruption evidence")
 	}
 }
 

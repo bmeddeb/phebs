@@ -242,12 +242,25 @@ type GenerationChunk struct {
 // to prove that one exact scheduler attempt is still running. Lease tokens,
 // worker identities, timestamps, and error details never leave the store.
 type GenerationChunkLeaseState struct {
-	Identity   string                `json:"identity"`
-	Repository string                `json:"repository"`
-	Stage      string                `json:"stage"`
-	Generation string                `json:"generation"`
-	Attempt    int                   `json:"attempt"`
-	Status     GenerationChunkStatus `json:"status"`
+	Identity       string                `json:"identity"`
+	ScheduleDigest string                `json:"schedule_digest"`
+	Repository     string                `json:"repository"`
+	Stage          string                `json:"stage"`
+	Generation     string                `json:"generation"`
+	Attempt        int                   `json:"attempt"`
+	Status         GenerationChunkStatus `json:"status"`
+}
+
+// GenerationScheduleRetentionState is the bounded source-free projection used
+// to distinguish a collected historical schedule from a still-current one.
+// A missing exact schedule is reported with Present false; Current is fenced
+// by identical current-pointer reads around the exact-digest lookup.
+type GenerationScheduleRetentionState struct {
+	ScheduleDigest string                   `json:"schedule_digest"`
+	Present        bool                     `json:"present"`
+	CurrentPresent bool                     `json:"current_present"`
+	Current        bool                     `json:"current"`
+	Status         GenerationScheduleStatus `json:"status,omitempty"`
 }
 
 // GenerationScheduleFailure is the bounded source-free projection of the
@@ -281,8 +294,8 @@ type GenerationScheduleProgress struct {
 }
 
 // LocalGenerationChunkReader connects to the already supervised local store
-// without applying schema or migrations. It exposes only the bounded
-// source-free lease projection and cannot mutate scheduler state.
+// without applying schema or migrations. It exposes only bounded source-free
+// lease/schedule diagnostic projections and cannot mutate scheduler state.
 type LocalGenerationChunkReader struct {
 	store   *Surreal
 	dataDir string
@@ -348,9 +361,79 @@ func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
 		)
 	}
 	return GenerationChunkLeaseState{
-		Identity: chunk.Identity, Repository: chunk.Repository, Stage: chunk.Stage,
-		Generation: chunk.Generation, Attempt: chunk.Attempt, Status: chunk.Status,
+		Identity: chunk.Identity, ScheduleDigest: chunk.ScheduleDigest,
+		Repository: chunk.Repository, Stage: chunk.Stage, Generation: chunk.Generation,
+		Attempt: chunk.Attempt, Status: chunk.Status,
 	}, nil
+}
+
+// GenerationScheduleRetentionState reports whether one exact selected
+// schedule is still retained and whether it remains current. The current
+// pointer is read before and after the exact-digest lookup so a concurrent
+// supersession or promotion cannot be mistaken for collection.
+func (reader *LocalGenerationChunkReader) GenerationScheduleRetentionState(
+	ctx context.Context,
+	repository, stage, scheduleDigest string,
+) (GenerationScheduleRetentionState, error) {
+	if reader == nil || reader.store == nil || ctx == nil ||
+		strings.TrimSpace(repository) != repository || repository == "" ||
+		!validGenerationToken(stage) || stage == "" || !validSHA256(scheduleDigest) {
+		return GenerationScheduleRetentionState{}, errors.New(
+			"read generation schedule retention state: request is invalid",
+		)
+	}
+	currentDigest, err := reader.currentGenerationScheduleDigest(ctx, repository, stage)
+	if err != nil {
+		return GenerationScheduleRetentionState{}, err
+	}
+	result := GenerationScheduleRetentionState{ScheduleDigest: scheduleDigest}
+	schedule, scheduleErr := reader.store.generationScheduleByDigest(ctx, scheduleDigest)
+	switch {
+	case scheduleErr == nil:
+		if err := ValidateGenerationSchedule(*schedule); err != nil ||
+			schedule.Repository != repository || schedule.Stage != stage {
+			return GenerationScheduleRetentionState{}, errors.Join(
+				err, errors.New("read generation schedule retention state: projection is invalid"),
+			)
+		}
+		result.Present = true
+		result.Status = schedule.Status
+	case errors.Is(scheduleErr, ErrNotFound):
+	default:
+		return GenerationScheduleRetentionState{}, scheduleErr
+	}
+	confirmedDigest, err := reader.currentGenerationScheduleDigest(ctx, repository, stage)
+	if err != nil {
+		return GenerationScheduleRetentionState{}, err
+	}
+	if confirmedDigest != currentDigest {
+		return GenerationScheduleRetentionState{}, ErrGenerationStale
+	}
+	result.Current = currentDigest == scheduleDigest
+	result.CurrentPresent = currentDigest != ""
+	if err := reader.confirmRuntime(); err != nil {
+		return GenerationScheduleRetentionState{}, errors.Join(
+			err, errors.New("read generation schedule retention state: runtime changed"),
+		)
+	}
+	return result, nil
+}
+
+func (reader *LocalGenerationChunkReader) currentGenerationScheduleDigest(
+	ctx context.Context,
+	repository, stage string,
+) (string, error) {
+	schedule, err := reader.store.GetGenerationSchedule(ctx, repository, stage)
+	if errors.Is(err, ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if schedule == nil {
+		return "", errors.New("read current generation schedule digest: nil schedule")
+	}
+	return schedule.Digest, nil
 }
 
 // FenceCurrentGenerationScheduleForDiagnostic removes the exact current
@@ -458,6 +541,7 @@ RETURN SELECT * FROM generation_schedule_chunk
 	}
 	state, err := reader.GenerationChunkLeaseState(ctx, chunk.Identity)
 	if err != nil || state.Status != GenerationChunkRunning ||
+		state.ScheduleDigest != chunk.ScheduleDigest ||
 		state.Repository != repository || state.Stage != stage ||
 		state.Generation != chunk.Generation || state.Attempt != chunk.Attempt {
 		return GenerationChunkLeaseState{}, errors.Join(err, ErrGenerationLeaseLost)

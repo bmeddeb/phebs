@@ -4664,3 +4664,48 @@ inside its existing transaction; the progress request gains one single-record
 query and no installation-wide scan, new lock, retry, or concurrency.
 Historical
 caller-generation-progress v2 responses remain valid.
+
+### T40.R1 V22 interruption recovery and lifecycle retention
+
+Neutral-32 stopped honestly at `interruption/recovery_verification`, but its
+five-minute row-presence proof ran after roughly eighteen minutes of restart-A
+convergence. The restarted server had already reaped the selected B extraction
+lease. Two later extraction incarnations then placed that retired schedule
+beyond the retained-two generation policy, and the enabled five-second
+pressure lifecycle sweep deleted the schedule and chunks before the proof
+opened its reader. Repeated `not found` therefore proved neither a running
+lease nor failed recovery.
+
+Fresh V22 execution records the selected chunk's exact schedule digest and
+runs recovery verification immediately after the restart reaches HTTP ready,
+before restart-A convergence. A present exact chunk must leave `running`.
+When the chunk is absent, the reader fences the current schedule pointer around
+an exact-digest lookup. Only two consecutive, one-second-separated projections
+of a digest that is non-current beside a distinct current successor and either
+absent or retained as settled/superseded seal the typed `collected` fate.
+Missing-current or current/active selected
+authority, pointer movement, digest/scope mismatch, store error, or a
+still-running chunk keeps polling and fails at the fixed five-minute bound.
+Restart-A convergence follows this proof; the existing partial-derived-state
+clear oracle then runs under a separate `partial_verification` substage.
+
+The V22 observation also records the generation-schedule lifecycle owner's
+latest bounded status immediately after recovery and after A convergence:
+state, completeness, at most 64 scanned candidates, at most 16 deletions, and
+the backlog bit. These are point-in-time last-cycle counters, not cumulative
+deletion totals. V17–V21 keep their historical substage order and validation.
+
+Cost reuses the existing exact chunk selection at trigger capture and moves
+the one-second recovery poll. Each chunk/current-schedule store read inherits
+the existing at-most-64 retryable-query loop. Only after `not found`, one poll
+adds current schedule, one direct exact-digest lookup, and current confirmation
+(at most 129 physical store queries if both current reads exhaust their retry
+allowance); the outer loop can begin at most 300 polls inside five minutes,
+while 30-second per-call deadlines reduce that count under slow failures. Each
+of the two `/api/lifecycle-status` requests serializes the monitor's at-most-32
+in-memory owner summaries and retains one; it performs no store or disk read.
+There are no
+new production writes, lifecycle mutations, source/Git/content/candidate/
+corpus/shard scans, locks, job attempts, child processes, authority changes,
+or admission/concurrency limits. Neutral-32 remains stopped; use a separately
+reviewed V22 freeze for any future execution.

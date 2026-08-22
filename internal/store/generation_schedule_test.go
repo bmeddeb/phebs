@@ -25,7 +25,8 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	t.Cleanup(func() { _ = state.Close(context.Background()) })
 	spec := generationSpec("example.invalid/lease-probe", "sha256:"+strings.Repeat("7", 64))
 	spec.TotalItems, spec.ChunkItems = 1, 1
-	if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+	schedule, err := state.EnqueueGenerationSchedule(t.Context(), spec)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := state.ExpandGenerationSchedule(t.Context(), spec.Repository, spec.Stage, spec.Generation); err != nil {
@@ -41,7 +42,8 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	}
 	t.Cleanup(func() { _ = reader.Close(context.Background()) })
 	running, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
-	if err != nil || running.Identity != chunk.Identity || running.Repository != chunk.Repository ||
+	if err != nil || running.Identity != chunk.Identity ||
+		running.ScheduleDigest != schedule.Digest || running.Repository != chunk.Repository ||
 		running.Stage != chunk.Stage || running.Generation != chunk.Generation ||
 		running.Attempt != chunk.Attempt || running.Status != GenerationChunkRunning {
 		t.Fatalf("running lease state = %+v, %v", running, err)
@@ -71,6 +73,67 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 		settledProgress.Succeeded != 1 || settledProgress.Failed != 0 ||
 		settledProgress.Failure != nil {
 		t.Fatalf("settled success progress = %+v, %v", settledProgress, err)
+	}
+	retained, err := reader.GenerationScheduleRetentionState(
+		t.Context(), spec.Repository, spec.Stage, schedule.Digest,
+	)
+	if err != nil || !retained.Present || !retained.CurrentPresent || !retained.Current ||
+		retained.Status != GenerationScheduleSettled {
+		t.Fatalf("current retained schedule = %+v, %v", retained, err)
+	}
+	successor := spec
+	successor.Generation = "sha256:" + strings.Repeat("6", 64)
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), successor); err != nil {
+		t.Fatal(err)
+	}
+	retired, err := reader.GenerationScheduleRetentionState(
+		t.Context(), spec.Repository, spec.Stage, schedule.Digest,
+	)
+	if err != nil || !retired.Present || !retired.CurrentPresent || retired.Current ||
+		retired.Status != GenerationScheduleSettled {
+		t.Fatalf("superseded retained schedule = %+v, %v", retired, err)
+	}
+	settle := func(spec GenerationScheduleSpec) {
+		t.Helper()
+		if _, err := state.ExpandGenerationSchedule(
+			t.Context(), spec.Repository, spec.Stage, spec.Generation,
+		); err != nil {
+			t.Fatal(err)
+		}
+		chunk, err := state.ClaimGenerationChunk(
+			t.Context(), spec.ResourceClass, "retention-worker",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := state.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
+			t.Fatal(err)
+		}
+	}
+	settle(successor)
+	secondSuccessor := successor
+	secondSuccessor.Generation = "sha256:" + strings.Repeat("5", 64)
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), secondSuccessor); err != nil {
+		t.Fatal(err)
+	}
+	settle(secondSuccessor)
+	current := secondSuccessor
+	current.Generation = "sha256:" + strings.Repeat("4", 64)
+	if _, err := state.EnqueueGenerationSchedule(t.Context(), current); err != nil {
+		t.Fatal(err)
+	}
+	sweep, err := state.SweepGenerationScheduleLifecycle(
+		t.Context(), "", 64, 16, 2,
+	)
+	if err != nil || sweep.Deleted < 2 {
+		t.Fatalf("generation lifecycle sweep = %+v, %v", sweep, err)
+	}
+	collected, err := reader.GenerationScheduleRetentionState(
+		t.Context(), spec.Repository, spec.Stage, schedule.Digest,
+	)
+	if err != nil || collected.Present || !collected.CurrentPresent || collected.Current ||
+		collected.ScheduleDigest != schedule.Digest {
+		t.Fatalf("collected schedule = %+v, %v", collected, err)
 	}
 
 	failureSpec := generationSpec(

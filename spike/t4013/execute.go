@@ -836,8 +836,10 @@ func (run *execution) interruption() error {
 		}
 		run.setInterruptionSubstage("active_lease_wait")
 		var triggerErr error
+		var triggerScheduleDigest string
 		if triggerObserver != nil {
 			trigger, triggerErr = triggerObserver.Wait(profile.Revisions["b"], 90*time.Minute)
+			triggerScheduleDigest = triggerObserver.scheduleDigest
 			triggerErr = errors.Join(triggerErr, triggerObserver.Close())
 		} else {
 			trigger, triggerErr = waitInterruptionChunkLifecycle(
@@ -847,7 +849,7 @@ func (run *execution) interruption() error {
 		if triggerErr != nil {
 			return triggerErr
 		}
-		run.recordInterruptionTrigger(trigger, time.Since(started))
+		run.recordInterruptionTrigger(trigger, triggerScheduleDigest, time.Since(started))
 	} else if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
 		_ = server.stop(30 * time.Second)
 		return err
@@ -873,6 +875,24 @@ func (run *execution) interruption() error {
 		return err
 	}
 	run.semantic = server
+	if planSchemaVersion(run.plan.Schema) >= 22 {
+		run.setInterruptionSubstage("recovery_verification")
+		recovered, recoverErr := waitInterruptionLeaseRecoveryV22(
+			run.ctx, profile, trigger, run.observation.Interruption.TriggerScheduleSHA256,
+			5*time.Minute,
+		)
+		if recoverErr != nil {
+			return directRecovery(recoverErr)
+		}
+		run.observation.Interruption.TriggerRecoveredState = recovered
+		recoveryLifecycle, lifecycleErr := readGenerationLifecycleObservation(
+			run.ctx, profile, 30*time.Second,
+		)
+		if lifecycleErr != nil {
+			return directRecovery(lifecycleErr)
+		}
+		run.observation.Interruption.RecoveryLifecycle = recoveryLifecycle
+	}
 	run.setInterruptionSubstage("restart_convergence")
 	after, err := run.waitSnapshot(profile, "a", "interruption-restart", run.fullConvergenceDeadline(), server)
 	if err != nil {
@@ -881,7 +901,19 @@ func (run *execution) interruption() error {
 	if recoveryAuthorityForPlan(run.plan, after) != recoveryAuthorityForPlan(run.plan, run.semanticA) {
 		return directRecovery(errors.New("interruption recovery changed exact authority"))
 	}
-	if planSchemaVersion(run.plan.Schema) >= 17 {
+	if planSchemaVersion(run.plan.Schema) >= 22 {
+		convergenceLifecycle, lifecycleErr := readGenerationLifecycleObservation(
+			run.ctx, profile, 30*time.Second,
+		)
+		if lifecycleErr != nil {
+			return directRecovery(lifecycleErr)
+		}
+		run.observation.Interruption.ConvergenceLifecycle = convergenceLifecycle
+		run.setInterruptionSubstage("partial_verification")
+		if partialErr := waitForDerivedPartialClear(run.ctx, profile.DataDir, 5*time.Minute); partialErr != nil {
+			return directRecovery(partialErr)
+		}
+	} else if planSchemaVersion(run.plan.Schema) >= 17 {
 		// The graceful stop drain may have settled or released the selected
 		// lease before process exit, so exact-A convergence alone proves
 		// nothing about the trigger chunk. Re-project it and require a
@@ -994,6 +1026,140 @@ func waitLeaseRecoveryWithReader(
 	}
 }
 
+// waitInterruptionLeaseRecoveryV22 runs immediately after restart readiness,
+// before a new extraction incarnation can make the selected historical row
+// eligible for collection. If collection nevertheless wins, the absence is
+// accepted only after the exact selected schedule digest is independently
+// fenced as non-current and retired.
+func waitInterruptionLeaseRecoveryV22(
+	ctx context.Context,
+	profile PreparedProfile,
+	trigger generationscheduler.ChunkLifecycleReport,
+	scheduleDigest string,
+	limit time.Duration,
+) (string, error) {
+	reader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = reader.Close(context.WithoutCancel(ctx)) }()
+	return waitLeaseRecoveryV22WithReader(
+		ctx, reader, profile, trigger, scheduleDigest, limit,
+	)
+}
+
+func waitLeaseRecoveryV22WithReader(
+	ctx context.Context,
+	reader generationScheduleRetentionReader,
+	profile PreparedProfile,
+	trigger generationscheduler.ChunkLifecycleReport,
+	scheduleDigest string,
+	limit time.Duration,
+) (string, error) {
+	if reader == nil || !digestIdentity(scheduleDigest) {
+		return "", errors.New("T40.13 interruption recovery request is invalid")
+	}
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	var lastErr error
+	collectedConfirmations := 0
+	for {
+		if phase.Err() != nil {
+			return "", errors.Join(lastErr, errors.New(
+				"T40.13 interrupted lease was not recovered after restart",
+			))
+		}
+		callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
+		state, stateErr := reader.GenerationChunkLeaseState(callCtx, trigger.Identity)
+		callCancel()
+		switch {
+		case stateErr == nil:
+			collectedConfirmations = 0
+			if state.Identity != trigger.Identity || state.ScheduleDigest != scheduleDigest ||
+				state.Repository != profile.RepositoryName || state.Stage != trigger.Stage ||
+				state.Generation != trigger.Generation || state.Attempt < trigger.Attempt {
+				return "", errors.New("T40.13 interruption trigger chunk identity changed")
+			}
+			if state.Status != store.GenerationChunkRunning {
+				return string(state.Status), nil
+			}
+			lastErr = nil
+		case errors.Is(stateErr, store.ErrNotFound):
+			retentionCtx, retentionCancel := context.WithTimeout(phase, 30*time.Second)
+			retention, retentionErr := reader.GenerationScheduleRetentionState(
+				retentionCtx, profile.RepositoryName, trigger.Stage, scheduleDigest,
+			)
+			retentionCancel()
+			switch {
+			case retentionErr != nil:
+				collectedConfirmations = 0
+				lastErr = retentionErr
+			case retention.ScheduleDigest != scheduleDigest:
+				return "", errors.New("T40.13 interruption schedule identity changed")
+			case retention.Current && !retention.CurrentPresent ||
+				retention.Present && retention.Status != store.GenerationScheduleActive &&
+					retention.Status != store.GenerationScheduleSuperseded &&
+					retention.Status != store.GenerationScheduleSettled ||
+				!retention.Present && retention.Status != "":
+				return "", errors.New("T40.13 interruption schedule retention projection is invalid")
+			case retention.CurrentPresent && !retention.Current && (!retention.Present ||
+				retention.Status == store.GenerationScheduleSuperseded ||
+				retention.Status == store.GenerationScheduleSettled):
+				collectedConfirmations++
+				if collectedConfirmations >= 2 {
+					return interruptionFateCollected, nil
+				}
+				lastErr = stateErr
+			default:
+				collectedConfirmations = 0
+				lastErr = stateErr
+			}
+		default:
+			collectedConfirmations = 0
+			lastErr = stateErr
+		}
+		select {
+		case <-phase.Done():
+			return "", errors.Join(lastErr, errors.New(
+				"T40.13 interrupted lease was not recovered after restart",
+			))
+		case <-ticker.C:
+		}
+	}
+}
+
+func readGenerationLifecycleObservation(
+	ctx context.Context,
+	profile PreparedProfile,
+	limit time.Duration,
+) (*InterruptionLifecycleObservation, error) {
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
+	if err != nil {
+		return nil, err
+	}
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	var status lifecycle.Status
+	if err := inspector.get(phase, profile, "/api/lifecycle-status", &status); err != nil {
+		return nil, err
+	}
+	if err := lifecycle.ValidateStatus(status); err != nil {
+		return nil, err
+	}
+	for _, owner := range status.Owners {
+		if owner.Name != lifecycle.GenerationScheduleOwner {
+			continue
+		}
+		return &InterruptionLifecycleObservation{
+			State: owner.State, Completeness: owner.Completeness,
+			Scanned: owner.Scanned, Deleted: owner.Deleted, Backlog: owner.Backlog,
+		}, nil
+	}
+	return nil, errors.New("T40.13 generation lifecycle owner is absent")
+}
+
 // relationshipPartialPresent checks the hashed relationship-publications
 // layout the historical scanner missed (its traversal predated the
 // repository-hash directory level).
@@ -1032,7 +1198,7 @@ func (run *execution) setInterruptionSubstage(substage string) {
 	// validator. An unknown name keeps the prior substage: less precise, but
 	// the stopped observation stays sealable — a mismatch must never destroy
 	// evidence after custody teardown.
-	if interruptionSubstageIndex(substage) < 0 {
+	if interruptionSubstageIndex(run.observation.Schema, substage) < 0 {
 		return
 	}
 	run.observation.Interruption.LastSubstage = substage
@@ -1040,6 +1206,7 @@ func (run *execution) setInterruptionSubstage(substage string) {
 
 func (run *execution) recordInterruptionTrigger(
 	report generationscheduler.ChunkLifecycleReport,
+	scheduleDigest string,
 	elapsed time.Duration,
 ) {
 	if run == nil || run.observation.Interruption == nil {
@@ -1049,6 +1216,7 @@ func (run *execution) recordInterruptionTrigger(
 	run.observation.Interruption.TriggerStage = report.Stage
 	run.observation.Interruption.TriggerGenerationSHA256 = report.Generation
 	run.observation.Interruption.TriggerChunkSHA256 = report.Identity
+	run.observation.Interruption.TriggerScheduleSHA256 = scheduleDigest
 	run.observation.Interruption.TriggerAttempt = &attempt
 	run.observation.Interruption.TriggerWallMS = max(elapsed.Milliseconds(), 1)
 }
@@ -1097,6 +1265,7 @@ type interruptionTriggerV18Observer struct {
 	progressReader *store.LocalGenerationChunkReader
 	profile        PreparedProfile
 	inspect        convergenceInspection
+	scheduleDigest string
 }
 
 // waitInterruptionTriggerV18 uses the exact current schedule as discovery
@@ -1155,9 +1324,20 @@ func (observer *interruptionTriggerV18Observer) Wait(
 		return generationscheduler.ChunkLifecycleReport{},
 			errors.New("T40.13 V18 interruption trigger observer is invalid")
 	}
+	var selected func(store.GenerationChunkLeaseState) error
+	if planSchemaVersion(observer.run.plan.Schema) >= 22 {
+		selected = func(state store.GenerationChunkLeaseState) error {
+			if !digestIdentity(state.ScheduleDigest) {
+				return errors.New("T40.13 interruption trigger schedule identity is invalid")
+			}
+			observer.scheduleDigest = state.ScheduleDigest
+			return nil
+		}
+	}
 	return observer.run.waitInterruptionTriggerV18WithReader(
 		observer.server, observer.cursor, observer.leaseReader, observer.progressReader,
 		observer.profile, revision, limit, observer.inspect, extractionGenerationBindsRevision,
+		selected,
 	)
 }
 
@@ -1196,6 +1376,7 @@ func (run *execution) waitInterruptionTriggerV18WithReader(
 	limit time.Duration,
 	inspect convergenceInspection,
 	binder extractionGenerationBinder,
+	selected func(store.GenerationChunkLeaseState) error,
 ) (generationscheduler.ChunkLifecycleReport, error) {
 	if run == nil || run.ctx == nil || server == nil || cursor == nil || leaseReader == nil ||
 		progressReader == nil || inspect == nil || binder == nil || limit <= 0 {
@@ -1242,6 +1423,11 @@ func (run *execution) waitInterruptionTriggerV18WithReader(
 			if bindErr != nil {
 				lastErr = bindErr
 			} else if bound && state.Status == store.GenerationChunkRunning {
+				if selected != nil {
+					if selectedErr := selected(state); selectedErr != nil {
+						return generationscheduler.ChunkLifecycleReport{}, selectedErr
+					}
+				}
 				return generationscheduler.ChunkLifecycleReport{
 					Schema: generationscheduler.ChunkLifecycleSchema,
 					Event:  "started", Identity: state.Identity, Stage: state.Stage,
@@ -1661,6 +1847,13 @@ func chunkLifecycleKey(report generationscheduler.ChunkLifecycleReport) string {
 type generationChunkLeaseReader interface {
 	GenerationChunkLeaseState(context.Context, string) (store.GenerationChunkLeaseState, error)
 	GenerationScheduleProgress(context.Context, string, string) (store.GenerationScheduleProgress, error)
+}
+
+type generationScheduleRetentionReader interface {
+	generationChunkLeaseReader
+	GenerationScheduleRetentionState(
+		context.Context, string, string, string,
+	) (store.GenerationScheduleRetentionState, error)
 }
 
 // errInterruptionTriggerUnsatisfiable is the typed fast-fail for a B pipeline
@@ -2558,6 +2751,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV20
 	case PlanSchemaV21:
 		contract = profileInspectionV21
+	case PlanSchemaV22:
+		contract = profileInspectionV21
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -3288,6 +3483,11 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		value.Schema = ObservationSchemaV21
 		value.Interruption = &InterruptionObservation{
 			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+		}
+	case PlanSchemaV22:
+		value.Schema = ObservationSchemaV22
+		value.Interruption = &InterruptionObservation{
+			Schema: interruptionSchemaV2, LastSubstage: "not_started",
 		}
 	}
 	return value

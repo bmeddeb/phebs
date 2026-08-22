@@ -1891,9 +1891,21 @@ func lifecycleTestLine(t *testing.T, event, stage, outcome string) []byte {
 
 type fixedGenerationChunkLeaseReader struct {
 	states   map[string]store.GenerationChunkLeaseState
+	retained map[string]store.GenerationScheduleRetentionState
 	progress *store.GenerationScheduleProgress
 	running  *store.GenerationChunkLeaseState
 	current  func() (store.GenerationChunkLeaseState, error)
+}
+
+func (reader *fixedGenerationChunkLeaseReader) GenerationScheduleRetentionState(
+	_ context.Context,
+	_, _, scheduleDigest string,
+) (store.GenerationScheduleRetentionState, error) {
+	state, ok := reader.retained[scheduleDigest]
+	if !ok {
+		return store.GenerationScheduleRetentionState{}, store.ErrNotFound
+	}
+	return state, nil
 }
 
 func (reader *fixedGenerationChunkLeaseReader) CurrentGenerationRunningChunk(
@@ -2051,7 +2063,7 @@ func TestInterruptionTriggerWaitRetriesTransientReads(t *testing.T) {
 	}
 }
 
-func TestV18InterruptionTriggerUsesStoreAuthorityAcrossLifecycleStartAndSettle(t *testing.T) {
+func TestV22InterruptionTriggerRetainsStoreScheduleAcrossLifecycleStartAndSettle(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.log")
 	// A same-drain started/settled pair leaves no active lifecycle candidate.
 	// V18 still discovers the independently running current-schedule chunk
@@ -2070,16 +2082,18 @@ func TestV18InterruptionTriggerUsesStoreAuthorityAcrossLifecycleStartAndSettle(t
 	defer func() { _ = cursor.Close() }()
 	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
 	state := store.GenerationChunkLeaseState{
-		Identity: "sha256:" + strings.Repeat("c", 64), Repository: profile.RepositoryName,
+		Identity:       "sha256:" + strings.Repeat("c", 64),
+		ScheduleDigest: "sha256:" + strings.Repeat("e", 64), Repository: profile.RepositoryName,
 		Stage:      extractionpublication.ScheduleStage,
 		Generation: "sha256:" + strings.Repeat("d", 64), Attempt: 2,
 		Status: store.GenerationChunkRunning,
 	}
 	run := &execution{
-		ctx: t.Context(), plan: Plan{Schema: PlanSchemaV18},
-		observation: emptyObservationForPlan(EnvironmentObservation{}, Plan{Schema: PlanSchemaV18}),
+		ctx: t.Context(), plan: Plan{Schema: PlanSchemaV22},
+		observation: emptyObservationForPlan(EnvironmentObservation{}, Plan{Schema: PlanSchemaV22}),
 	}
 	server := &privateServer{done: make(chan error, 1)}
+	var selectedSchedule string
 	report, err := run.waitInterruptionTriggerV18WithReader(
 		server, cursor, &fixedGenerationChunkLeaseReader{running: &state},
 		&fixedGenerationChunkLeaseReader{}, profile,
@@ -2089,9 +2103,13 @@ func TestV18InterruptionTriggerUsesStoreAuthorityAcrossLifecycleStartAndSettle(t
 			return privateProfileSnapshot{}, privateConvergenceProbe{}, nil
 		},
 		func(PreparedProfile, string, string) (bool, error) { return true, nil },
+		func(selected store.GenerationChunkLeaseState) error {
+			selectedSchedule = selected.ScheduleDigest
+			return nil
+		},
 	)
 	if err != nil || report.Identity != state.Identity || report.Attempt != state.Attempt ||
-		report.Outcome != "running" {
+		report.Outcome != "running" || selectedSchedule != state.ScheduleDigest {
 		t.Fatalf("store-selected V18 trigger = %+v, %v", report, err)
 	}
 }
@@ -2122,6 +2140,7 @@ func TestV18InterruptionTriggerSealsLastUpstreamProgress(t *testing.T) {
 				errors.New("T40.13 observation publication has not converged")
 		},
 		func(PreparedProfile, string, string) (bool, error) { return false, nil },
+		nil,
 	)
 	if !errors.Is(err, errInterruptionTriggerDeadline) {
 		t.Fatalf("V18 upstream wait = %v, want typed trigger deadline", err)
@@ -2171,6 +2190,7 @@ func TestV18InterruptionTriggerSamplesLeaseWhileInspectionIsBlocked(t *testing.T
 			return privateProfileSnapshot{}, convergenceProbe("observation_publication"), ctx.Err()
 		},
 		func(PreparedProfile, string, string) (bool, error) { return true, nil },
+		nil,
 	)
 	if err != nil || report.Identity != state.Identity || calls < 2 {
 		t.Fatalf("lease during blocked inspection = %+v, calls=%d, err=%v", report, calls, err)
@@ -2202,6 +2222,7 @@ func TestV18InterruptionTriggerStopsOnTerminalProgress(t *testing.T) {
 			return privateProfileSnapshot{}, probe, errExtractionScheduleTerminal
 		},
 		func(PreparedProfile, string, string) (bool, error) { return false, nil },
+		nil,
 	)
 	if !errors.Is(err, errInterruptionProgressTerminal) ||
 		run.observation.Interruption.LastProgressClass != "terminal" {
@@ -2289,6 +2310,127 @@ func TestInterruptionLeaseRecoveryRequiresNonRunningFate(t *testing.T) {
 		t.Context(), drifted, profile, trigger, time.Second,
 	); err == nil {
 		t.Fatal("changed-generation lease passed recovery verification")
+	}
+}
+
+func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
+	profile := PreparedProfile{RepositoryName: "example.invalid/semantic"}
+	trigger := generationscheduler.ChunkLifecycleReport{
+		Identity:   "sha256:" + strings.Repeat("a", 64),
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("b", 64), Attempt: 1,
+	}
+	scheduleDigest := "sha256:" + strings.Repeat("c", 64)
+	singleCollection := &fixedGenerationChunkLeaseReader{
+		states: map[string]store.GenerationChunkLeaseState{},
+		retained: map[string]store.GenerationScheduleRetentionState{
+			scheduleDigest: {
+				ScheduleDigest: scheduleDigest, CurrentPresent: true,
+			},
+		},
+	}
+	if fate, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), singleCollection, profile, trigger, scheduleDigest, 100*time.Millisecond,
+	); err == nil {
+		t.Fatalf("one collected projection passed recovery verification with fate %q", fate)
+	}
+	for _, test := range []struct {
+		name      string
+		retention store.GenerationScheduleRetentionState
+		want      string
+		wantErr   bool
+	}{
+		{
+			name: "absent retired schedule",
+			retention: store.GenerationScheduleRetentionState{
+				ScheduleDigest: scheduleDigest, CurrentPresent: true,
+			},
+			want: interruptionFateCollected,
+		},
+		{
+			name: "retained superseded schedule",
+			retention: store.GenerationScheduleRetentionState{
+				ScheduleDigest: scheduleDigest, Present: true, CurrentPresent: true,
+				Status: store.GenerationScheduleSuperseded,
+			},
+			want: interruptionFateCollected,
+		},
+		{
+			name: "current schedule",
+			retention: store.GenerationScheduleRetentionState{
+				ScheduleDigest: scheduleDigest, Present: true, CurrentPresent: true, Current: true,
+				Status: store.GenerationScheduleActive,
+			},
+			wantErr: true,
+		},
+		{
+			name: "noncurrent active schedule",
+			retention: store.GenerationScheduleRetentionState{
+				ScheduleDigest: scheduleDigest, Present: true, CurrentPresent: true,
+				Status: store.GenerationScheduleActive,
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing current authority",
+			retention: store.GenerationScheduleRetentionState{
+				ScheduleDigest: scheduleDigest,
+			},
+			wantErr: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader := &fixedGenerationChunkLeaseReader{
+				states: map[string]store.GenerationChunkLeaseState{},
+				retained: map[string]store.GenerationScheduleRetentionState{
+					scheduleDigest: test.retention,
+				},
+			}
+			limit := 100 * time.Millisecond
+			if !test.wantErr {
+				limit = 1500 * time.Millisecond
+			}
+			fate, err := waitLeaseRecoveryV22WithReader(
+				t.Context(), reader, profile, trigger, scheduleDigest, limit,
+			)
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("uncorroborated collection passed with fate %q", fate)
+				}
+				return
+			}
+			if err != nil || fate != test.want {
+				t.Fatalf("collection fate = %q, %v", fate, err)
+			}
+		})
+	}
+
+	pending := &fixedGenerationChunkLeaseReader{
+		states: map[string]store.GenerationChunkLeaseState{
+			trigger.Identity: {
+				Identity: trigger.Identity, ScheduleDigest: scheduleDigest,
+				Repository: profile.RepositoryName, Stage: trigger.Stage,
+				Generation: trigger.Generation, Attempt: trigger.Attempt,
+				Status: store.GenerationChunkPending,
+			},
+		},
+	}
+	fate, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), pending, profile, trigger, scheduleDigest, time.Second,
+	)
+	if err != nil || fate != string(store.GenerationChunkPending) {
+		t.Fatalf("retained recovered fate = %q, %v", fate, err)
+	}
+	pending.states[trigger.Identity] = store.GenerationChunkLeaseState{
+		Identity: trigger.Identity, ScheduleDigest: "sha256:" + strings.Repeat("d", 64),
+		Repository: profile.RepositoryName, Stage: trigger.Stage,
+		Generation: trigger.Generation, Attempt: trigger.Attempt,
+		Status: store.GenerationChunkPending,
+	}
+	if _, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), pending, profile, trigger, scheduleDigest, time.Second,
+	); err == nil {
+		t.Fatal("changed schedule digest passed recovery verification")
 	}
 }
 

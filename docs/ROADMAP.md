@@ -1557,6 +1557,24 @@ catalog, relationship, or correctness authority.
   marker is written atomically only after read-only preflight passes. V1–V20
   receipt semantics remain historical; integration, freeze, and execution
   remain separately authorized.
+- Neutral-32 reached interruption recovery verification for the first time and
+  exposed a harness/lifecycle retention race, not an unrecovered production
+  lease. The restarted server reaped the exact B-bound chunk, then two A
+  extraction incarnations and the five-second pressure lifecycle sweep moved
+  its retired schedule beyond the retained-two window before the harness
+  looked for the row after full convergence. Fresh schemas advance to V22:
+  the selected row contributes its exact schedule digest, recovery is verified
+  immediately after restart readiness, and an absent chunk is `collected` only
+  after two consecutive one-second-separated fenced exact-schedule reads prove
+  that digest non-current beside a distinct current successor, and absent or
+  closed. Missing-current,
+  current/active, moving, mismatched, unreadable, or still-running
+  authority continues to fail closed. Restart convergence and the partial-state
+  oracle follow recovery; two bounded generation-lifecycle owner snapshots
+  retain latest-cycle scanned/deleted/backlog facts without a cumulative claim.
+  V17–V21 ordering and receipt semantics remain exact. Neutral-32 stays stopped
+  and cannot pass retroactively; integration, freeze, and execution remain
+  separately authorized.
 - Search, derived observations, extraction domains, service state, and
   relationship roots remain separately visible authorities. A failure in one
   cannot erase or relabel a valid sibling plane.

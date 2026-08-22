@@ -2729,7 +2729,6 @@ upstream of caller-job creation still pends the caller wait. V20 and earlier
 receipts remain byte- and semantics-exact; nothing here authorizes
 integration, a freeze, or execution.
 
-
 ### V21 freeze-readiness correction
 
 The final V21 audit made the live caller classifier and sealed evidence use one
@@ -2771,3 +2770,41 @@ resolver job itself remains visible through the extraction plane's existing
 job projection and is the recorded residual boundary. V20 and earlier
 receipts remain byte- and semantics-exact; nothing here authorizes
 integration, a freeze, or execution.
+
+### Neutral-32 recovery-retention race and V22
+
+Neutral-32 was the first ceremony to reach `recovery_verification`. Its
+source-free evidence showed a harness false negative: restart correctly reaped
+the selected B-bound extraction chunk, but the proof waited until restart-A
+had fully converged. Two extraction incarnations and the enabled pressure
+lifecycle sweep then legitimately collected the retired B schedule under the
+retained-two policy. The late exact-row lookup saw only `not found` and stopped
+after five minutes, even though the lease had recovered before collection.
+The immutable neutral-32 source-free package is
+`sha256:fb21fc83643134c45bf8efce78def76e432b51549a77793c6e60c41855c562d`;
+it remains stopped and establishes no gate pass.
+
+Fresh plan, observation, and receipt schemas advance to V22. The trigger now
+records the exact schedule digest read from its authoritative running chunk.
+Immediately after restart HTTP readiness—before any A-convergence work—the
+harness re-projects that row. A present chunk must be non-running. An absent
+chunk seals `collected` only after two consecutive one-second-separated
+current-pointer/exact-digest/current-pointer fences prove the selected schedule
+non-current beside a distinct current successor, and absent or closed
+(settled/superseded). Missing-current,
+current/active authority, a moving pointer, identity drift, read failure, or a
+running chunk cannot pass. Restart-A convergence and
+the partial-publication-clear oracle follow that proof.
+
+V22 separately records the generation-schedule lifecycle owner's bounded
+latest-cycle state/completeness/scanned/deleted/backlog projection after
+recovery and after convergence. The counters expose collection without
+claiming a cumulative total. V17–V21 retain their frozen ordering and evidence
+rules. The new diagnostic work reuses the exact trigger selection and moves
+the bounded recovery poll. Store reads retain their existing at-most-64 retry
+bound; a missing-row poll adds two such current reads around one direct digest
+read, within at most 300 outer polls/five minutes and 30-second call deadlines.
+Two lifecycle-status requests serialize at most 32 in-memory owner summaries
+and retain one each, with no store/disk read. The change adds no source/content
+scan, production write, lock, job attempt, child process, authority, or scale
+claim.
