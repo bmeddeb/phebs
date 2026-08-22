@@ -324,6 +324,40 @@ func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	}
 }
 
+func TestRunnerRetriesFailedCycleEndWithoutIdle(t *testing.T) {
+	store := newMemoryCursorStore()
+	var calls []string
+	owners := []Owner{
+		recordingOwner{name: "alpha", calls: &calls},
+		recordingOwner{name: "bravo", calls: &calls, fail: true},
+	}
+	controller, err := NewController(store, owners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	results := make(chan OwnerResult, 3)
+	reported := 0
+	go Run(ctx, controller, nil, time.Hour, time.Millisecond, func(result OwnerResult) {
+		reported++
+		results <- result
+		if reported == cap(results) {
+			cancel()
+		}
+	}, nil)
+	for range cap(results) {
+		select {
+		case <-results:
+		case <-time.After(time.Second):
+			t.Fatal("runner idled after the cycle-ending owner failed")
+		}
+	}
+	if want := []string{"alpha:", "bravo:", "alpha:x"}; !reflect.DeepEqual(calls, want) {
+		t.Fatalf("owner calls = %v, want %v", calls, want)
+	}
+}
+
 type advancingFailureOwner struct{}
 
 func (advancingFailureOwner) Name() string { return "advancing-failure" }

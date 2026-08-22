@@ -1622,21 +1622,42 @@ func TestObservationWriterIsExclusiveAndAbsolute(t *testing.T) {
 }
 
 func TestCompletedObservationIsPrevalidatedBeforeCustodyDeletion(t *testing.T) {
+	plan, err := FrozenPlan(strings.Repeat("f", 40))
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes := marshal(t, plan)
 	observation := completedObservation()
 	observation.Phases[len(observation.Phases)-1] = PhaseObservation{
 		Name: "teardown", Outcome: "not_run",
 	}
 	observation.Teardown = TeardownObservation{}
-	run := &execution{observation: observation}
+	run := &execution{plan: plan, planBytes: planBytes, observation: observation}
 	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
 		t.Fatalf("valid completed shape refused before teardown: %v", err)
 	}
-	run.observation.AuthorizedQuery = &AuthorizedQueryObservation{
-		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",
-		Query: "search", Class: "status", Status: 503, Attempts: 1,
+	// Observation validation accepts this shape, but the completed receipt's
+	// exact blob-reader oracle does not.
+	run.observation.BlobReaders[0].FilesOffered--
+	run.observation.BlobReaders[0].FallbackReads--
+	if err := ValidateObservation(run.observation); err != nil {
+		t.Fatalf("receipt-only drift changed observation validity: %v", err)
 	}
 	if err := run.validateCompletedObservationBeforeTeardown(); err == nil {
-		t.Fatal("unsealable completed shape reached destructive teardown")
+		t.Fatal("receipt-only drift reached destructive teardown")
+	}
+}
+
+func TestDataMeasurementRetriesTransientDUFailure(t *testing.T) {
+	bin := t.TempDir()
+	marker := filepath.Join(bin, "attempted")
+	script := fmt.Sprintf("#!/bin/sh\nif [ ! -e %q ]; then : > %q; exit 1; fi\nprintf '1  %%s\\n' \"$2\"\n", marker, marker)
+	if err := os.WriteFile(filepath.Join(bin, "du"), []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	if got, err := duKilobytes(t.TempDir(), false); err != nil || got != 1 {
+		t.Fatalf("retried du = %d, %v", got, err)
 	}
 }
 
@@ -2250,6 +2271,46 @@ func TestV23StaleWorkerWaitsForReaperAfterCompletionPersistenceFailure(t *testin
 	}
 }
 
+func TestV23StaleWorkerWaitsForReaperAfterHeartbeatFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	line := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "heartbeat_failed")
+	if err := os.WriteFile(path, append(line, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV23)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	started := generationscheduler.ChunkLifecycleReport{
+		Schema: generationscheduler.ChunkLifecycleSchema,
+		Event:  "started", Identity: "sha256:" + strings.Repeat("a", 64),
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("b", 64), Outcome: "running",
+	}
+	repository := "example.invalid/semantic"
+	scheduleDigest := "sha256:" + strings.Repeat("c", 64)
+	reads := 0
+	reader := &fixedGenerationChunkLeaseReader{state: func(string) (store.GenerationChunkLeaseState, error) {
+		reads++
+		status := store.GenerationChunkRunning
+		if reads > 1 {
+			status = store.GenerationChunkCanceled
+		}
+		return store.GenerationChunkLeaseState{
+			Identity: started.Identity, ScheduleDigest: scheduleDigest,
+			Repository: repository, Stage: started.Stage,
+			Generation: started.Generation, Status: status,
+		}, nil
+	}}
+	settled, err := waitStaleChunkFence(
+		t.Context(), cursor, reader, started, repository, scheduleDigest, time.Second,
+	)
+	if err != nil || settled.Outcome != "stale_fenced" || reads < 2 {
+		t.Fatalf("settled = %+v, reads = %d, err = %v", settled, reads, err)
+	}
+}
+
 func TestV23LifecycleVocabularyDriftStopsPromptly(t *testing.T) {
 	line := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "future-outcome")
 	if _, found, err := parseChunkLifecycleLine(line, chunkLifecycleValidationV17); err != nil || found {
@@ -2548,6 +2609,39 @@ func TestV18InterruptionTriggerStopsOnTerminalProgress(t *testing.T) {
 	if !errors.Is(err, errInterruptionProgressTerminal) ||
 		run.observation.Interruption.LastProgressClass != "terminal" {
 		t.Fatalf("V18 terminal progress = %+v, %v", run.observation.Interruption, err)
+	}
+}
+
+func TestInterruptionTriggerPreservesParentCancellation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	plan := Plan{Schema: PlanSchemaV24}
+	run := &execution{
+		ctx: ctx, plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	_, err = run.waitInterruptionTriggerV18WithReader(
+		&privateServer{done: make(chan error, 1)}, cursor,
+		&fixedGenerationChunkLeaseReader{}, &fixedGenerationChunkLeaseReader{},
+		PreparedProfile{RepositoryName: "example.invalid/semantic"},
+		"revision-b", time.Second,
+		func(context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			return privateProfileSnapshot{}, privateConvergenceProbe{}, context.Canceled
+		},
+		func(PreparedProfile, string, string) (bool, error) { return false, nil },
+		nil,
+	)
+	if !errors.Is(err, context.Canceled) || errors.Is(err, errInterruptionTriggerDeadline) {
+		t.Fatalf("parent cancellation = %v", err)
 	}
 }
 

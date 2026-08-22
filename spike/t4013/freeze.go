@@ -95,6 +95,18 @@ var frozenSafetyV22 = frozenSafetyV21
 var frozenSafetyV23 = frozenSafetyV22
 var frozenSafetyV24 = frozenSafetyV23
 
+var frozenSafetyV25 = SafetyEnvelope{
+	MinimumMemoryBytes: 24 << 30, MinimumAvailableDiskBytes: 120 << 30,
+	MaximumTotalWallMS: 12 * 60 * 60 * 1000, MaximumPeakRSSBytes: 20 << 30,
+	MaximumDataAllocatedBytes: 96 << 30, MaximumRetriesPerUnit: 5,
+	ServerHealthDeadlineMS:      15 * 60 * 1000,
+	FullConvergenceDeadlineMS:   4 * 60 * 60 * 1000,
+	RevalidationDeadlineMS:      20 * 60 * 1000,
+	PressureTargetUsedPercent:   82,
+	MaximumPressureBallastBytes: 80 << 30,
+	MaximumPrePressureBytes:     72 << 30,
+}
+
 func FrozenPlan(sourceCommit string) (Plan, error) {
 	value := Plan{
 		Schema: PlanSchema, FrozenOn: "2026-08-08", SourceCommit: sourceCommit,
@@ -120,7 +132,7 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return freshV24PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
+	return freshV25PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
 }
 
 func validateV14ConvergenceRoutes() error {
@@ -375,12 +387,34 @@ func frozenV24PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V24 plan reconstruction.
 func freshV24PlanWithHostToolchain(
 	sourceCommit string,
 	hostToolchain []HostToolObservation,
 	frozenAt time.Time,
 ) (Plan, error) {
 	return freshPlan(frozenV24PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
+}
+
+func frozenV25PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := frozenV24PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV25
+	value.Safety = frozenSafetyV25
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func freshV25PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	return freshPlan(frozenV25PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

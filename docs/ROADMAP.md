@@ -1622,6 +1622,18 @@ the exact trigger attempt; priority-zero, leased, running, or single-sample
 rows still fail closed. V22 and V23 remain historical. No freeze, execution,
 release, or scale claim is authorized by this correction.
 
+The subsequent full-ceremony audit found that V24's eight-hour review wall
+cannot fund all twelve measured phases and that content-addressed extraction
+schedule reuse makes stale-worker's A→B→A transition unschedulable. Fresh V25
+uses a twelve-hour ceremony-only review ceiling, predecessor-bound operational
+schedule identities, and a measured 72-GiB pre-pressure custody projection
+that refuses an unsuitable host before execution. It also validates the full
+receipt before custody destruction, retries transient lifecycle/metering
+failures inside existing bounds, corroborates heartbeat-loss recovery, and
+makes source-free sealing resumable. These are feasibility and evidence
+integrity corrections, not a scale pass, SLO, production-bound increase,
+freeze, execution, release, or Epic-40 closure authorization.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an

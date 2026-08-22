@@ -61,7 +61,7 @@ func Run(
 			pressureAccelerated = capacity.Pressure == PressureCollect ||
 				capacity.Pressure == PressureRefuse
 		}
-		if result.More || !result.CycleComplete || !cycleStarted || pressureAccelerated {
+		if result.Err != nil || result.More || !result.CycleComplete || !cycleStarted || pressureAccelerated {
 			delay = backlogDelay
 		} else {
 			delay = idleInterval

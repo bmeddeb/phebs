@@ -48,6 +48,7 @@ const (
 	PlanSchemaV22        = "t4013-neutral-convergence-plan-v22"
 	PlanSchemaV23        = "t4013-neutral-convergence-plan-v23"
 	PlanSchemaV24        = "t4013-neutral-convergence-plan-v24"
+	PlanSchemaV25        = "t4013-neutral-convergence-plan-v25"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -72,6 +73,7 @@ const (
 	ObservationSchemaV22 = "t4013-neutral-convergence-observation-v22"
 	ObservationSchemaV23 = "t4013-neutral-convergence-observation-v23"
 	ObservationSchemaV24 = "t4013-neutral-convergence-observation-v24"
+	ObservationSchemaV25 = "t4013-neutral-convergence-observation-v25"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -109,6 +111,7 @@ const (
 	ReceiptSchemaV22             = "t4013-neutral-convergence-receipt-v22"
 	ReceiptSchemaV23             = "t4013-neutral-convergence-receipt-v23"
 	ReceiptSchemaV24             = "t4013-neutral-convergence-receipt-v24"
+	ReceiptSchemaV25             = "t4013-neutral-convergence-receipt-v25"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -155,6 +158,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV22, ObservationSchemaV22, ReceiptSchemaV22},
 	{PlanSchemaV23, ObservationSchemaV23, ReceiptSchemaV23},
 	{PlanSchemaV24, ObservationSchemaV24, ReceiptSchemaV24},
+	{PlanSchemaV25, ObservationSchemaV25, ReceiptSchemaV25},
 }
 
 const (
@@ -232,6 +236,7 @@ type SafetyEnvelope struct {
 	RevalidationDeadlineMS      int64 `json:"revalidation_deadline_ms,omitempty"`
 	PressureTargetUsedPercent   int   `json:"pressure_target_used_percent,omitempty"`
 	MaximumPressureBallastBytes int64 `json:"maximum_pressure_ballast_bytes,omitempty"`
+	MaximumPrePressureBytes     int64 `json:"maximum_pre_pressure_allocated_bytes,omitempty"`
 }
 
 type StopRule struct {
@@ -919,6 +924,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV23
 	case PlanSchemaV24:
 		wantSafety = frozenSafetyV24
+	case PlanSchemaV25:
+		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -950,6 +957,14 @@ func ValidatePlan(value Plan) error {
 		}
 	} else if safety.PressureTargetUsedPercent != 0 || safety.MaximumPressureBallastBytes != 0 {
 		return errors.New("T40.13 historical safety envelope acquired pressure controls")
+	}
+	if planSchemaVersion(value.Schema) >= 25 {
+		if safety.MaximumPrePressureBytes <= 0 ||
+			safety.MaximumPrePressureBytes > safety.MaximumDataAllocatedBytes {
+			return errors.New("T40.13 pre-pressure allocation envelope is invalid")
+		}
+	} else if safety.MaximumPrePressureBytes != 0 {
+		return errors.New("T40.13 historical safety envelope acquired a pre-pressure allocation ceiling")
 	}
 	wantDecisions := []string{"continue", "reduce", "cohort_experiment", "p6_investigation"}
 	for index, rule := range value.StopRules {

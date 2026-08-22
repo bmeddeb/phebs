@@ -909,6 +909,10 @@ func TestRuntimeSmallDeltaAndAToBToAReactivation(t *testing.T) {
 	if err != nil || generationB == generationA {
 		t.Fatalf("B reconcile = %q, %v", generationB, err)
 	}
+	bSchedule, err := state.GetGenerationSchedule(t.Context(), planB.Repository, ScheduleStage)
+	if err != nil || bSchedule.Generation == generationB {
+		t.Fatalf("B transition reused content authority as schedule identity: %+v, %v", bSchedule, err)
+	}
 	if err := runtime.Handle(t.Context(), currentChunk(t, state, planB.Repository, 0)); err != nil {
 		t.Fatal(err)
 	}
@@ -934,6 +938,36 @@ func TestRuntimeSmallDeltaAndAToBToAReactivation(t *testing.T) {
 	binding, err := runtime.readBinding(planA.Repository, schedule.Generation)
 	if err != nil || binding.TargetGeneration != generationA {
 		t.Fatalf("reactivated schedule target = %+v, %v", binding, err)
+	}
+}
+
+func TestRuntimeSettledSuccessorStillGetsFreshTransitionSchedule(t *testing.T) {
+	planA := buildTestPlan(t, "sha256:"+strings.Repeat("5", 64), true)
+	runtime, state, _, _, _, _, domainA := newRuntimeFixture(t, planA)
+	generationA, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{domainA})
+	if err != nil {
+		t.Fatal(err)
+	}
+	planB := buildTestPlan(t, "sha256:"+strings.Repeat("6", 64), true)
+	generationB, err := runtime.Reconcile(t.Context(), planB.Repository, []DomainPlan{{
+		Schema: DomainSchema, RunID: "run-b", Plan: planB,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.settle(planB.Repository, 0)
+	if _, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{{
+		Schema: DomainSchema, RunID: "run-a-return", Plan: planA,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	schedule, err := state.GetGenerationSchedule(t.Context(), planA.Repository, ScheduleStage)
+	if err != nil || schedule.Generation == generationA || schedule.Generation == generationB {
+		t.Fatalf("settled B to A transition schedule = %+v, %v", schedule, err)
+	}
+	binding, err := runtime.readBinding(planA.Repository, schedule.Generation)
+	if err != nil || binding.TargetGeneration != generationA || binding.PriorSchedule == "" {
+		t.Fatalf("settled B to A transition binding = %+v, %v", binding, err)
 	}
 }
 

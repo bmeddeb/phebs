@@ -21,13 +21,43 @@ type pressureBallastContract uint8
 const (
 	pressureBallastV22 pressureBallastContract = iota
 	pressureBallastV23
+	pressureBallastV25
 )
 
 func pressureBallastContractForPlan(plan Plan) pressureBallastContract {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		return pressureBallastV25
+	}
 	if planSchemaVersion(plan.Schema) >= 23 {
 		return pressureBallastV23
 	}
 	return pressureBallastV22
+}
+
+func validatePressureHostPreflightV25(
+	capacity lifecycle.Capacity,
+	workspaceAllocated int64,
+	safety SafetyEnvelope,
+) error {
+	if workspaceAllocated < 0 || workspaceAllocated > safety.MaximumPrePressureBytes {
+		return errors.New("T40.13 prepared custody exceeds the frozen pre-pressure allocation ceiling")
+	}
+	growth := safety.MaximumPrePressureBytes - workspaceAllocated
+	if growth > capacity.AvailableBytes || capacity.UsedBytes > capacity.TotalBytes-growth {
+		return errors.New("T40.13 host cannot retain normal pressure through the pre-pressure phases")
+	}
+	projected := capacity
+	projected.UsedBytes += growth
+	projected.AvailableBytes -= growth
+	if projected.UsedBytes > percentFloor(projected.TotalBytes, lifecycle.SoftWatermarkPercent-1) {
+		return errors.New("T40.13 host cannot retain normal pressure through the pre-pressure phases")
+	}
+	projected.Pressure = lifecycle.PressureNormal
+	_, err := requiredPressureBallast(projected, safety.MaximumPrePressureBytes, safety)
+	if err != nil {
+		return errors.Join(err, errors.New("T40.13 host cannot reach the frozen pressure target after pre-pressure growth"))
+	}
+	return nil
 }
 
 func validatePressureHostPreflight(capacity lifecycle.Capacity, safety SafetyEnvelope) error {
@@ -117,6 +147,9 @@ func createPressureBallast(
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	if contract >= pressureBallastV25 && allocatedBefore > safety.MaximumPrePressureBytes {
+		return nil, 0, 0, errReviewCeiling
+	}
 	ballastBytes, err := requiredPressureBallast(before, allocatedBefore, safety)
 	if err != nil {
 		return nil, 0, 0, err
@@ -159,7 +192,7 @@ func pressureTargetObserved(
 	if capacity.Pressure != lifecycle.PressureCollect {
 		return false
 	}
-	if contract == pressureBallastV23 {
+	if contract >= pressureBallastV23 {
 		return capacity.UsedPercent >= target-1 && capacity.UsedPercent <= target+1
 	}
 	return capacity.UsedPercent == target

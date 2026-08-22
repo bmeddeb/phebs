@@ -4816,3 +4816,33 @@ two scalar copies, not another query. There is no production write, retry,
 lock, worker, queue, authority, API/OpenAPI, persistent-schema, source/Git, or
 corpus-read change. V22 still accepts its historical pending fate, V23 still
 refuses it, and V1-V23 evidence remains frozen.
+
+## T40.R1 V25 ceremony feasibility and evidence firewall
+
+Fresh V25 freezes a twelve-hour total ceremony review ceiling. This value is
+derived from the retained neutral-33 phase timings and applies only to the
+source-free mechanics ceremony; it is not a production timeout or SLO. The
+pressure preflight also projects a frozen 72-GiB pre-pressure custody peak onto
+the current filesystem. The projected host must remain below the 80% lifecycle
+soft watermark and retain enough of the existing 96-GiB custody envelope to
+reach the ballast target. Refusal happens before the executed marker, so free
+host space and rerun preflight rather than starting a doomed ceremony.
+
+Extraction transitions from an existing schedule use a predecessor-bound
+operational schedule identity while retaining the exact content generation as
+the binding target. This makes A→B→A and settled-successor recovery legal under
+immutable scheduler rows. Lifecycle owner errors retry at the existing
+five-second backlog cadence. A stale-worker `heartbeat_failed` report waits for
+the same exact canceled/retired store proof as `completion_failed`, and parent
+cancellation remains cancellation rather than a fabricated trigger deadline.
+
+Before custody deletion the executor now rebuilds and validates the complete
+plan-bound receipt in memory. The driver also supports:
+
+```sh
+./spike/t4013/run-large-mac-ceremony.sh seal <ceremony-id>
+```
+
+Use `seal` only after execution produced `observation.json` and private custody
+is absent. It rebuilds a missing receipt, resumes an incomplete derived seal,
+verifies a complete seal/package, and never rewrites a complete invalid seal.

@@ -2883,3 +2883,24 @@ projection adds only priority and lease presence; no lease token or private
 worker detail is retained. The poll/query/deadline bounds and all production
 behavior are unchanged. V1-V23 schemas remain historical, and this authorizes
 no freeze, execution, release, or gate claim.
+
+### V25 complete-run feasibility
+
+Neutral-33's signed phase durations prove the former eight-hour total wall
+cannot fund the remaining stale-worker, pressure, archive/restore, collection,
+and authorized-query phases after a successful interruption. Fresh V25 freezes
+a twelve-hour ceremony-only review ceiling and a measured 72-GiB pre-pressure
+custody ceiling. Preflight projects that growth, requires the filesystem to
+remain below lifecycle collection pressure, and proves the ballast still fits
+inside the unchanged 96-GiB custody maximum.
+
+V25 also makes extraction schedule identity transition-scoped after the first
+schedule, so repeated A→B→A content authority never attempts to resurrect an
+immutable superseded row. Full receipt validation now precedes destructive
+teardown for both completed and stopped outcomes; lifecycle owner errors retry
+without the one-hour park; heartbeat-loss stale fences use the exact store
+proof; parent cancellation stays typed as cancellation; and transient `du`
+failures receive two bounded retries. The ceremony wrapper's `seal` command can
+resume missing receipt, incomplete seal, or package work while refusing to
+rewrite a complete invalid seal. Historical V1-V24 schemas remain exact. V25
+does not establish an SLO, scale result, release, freeze, or execution approval.

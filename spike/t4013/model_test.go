@@ -713,6 +713,34 @@ func TestV24PlanFencesCorroboratedInterruptionRequeue(t *testing.T) {
 	}
 }
 
+func TestV25PlanFundsMeasuredCeremonyAndPrePressureGrowth(t *testing.T) {
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV25 || plan.Safety != frozenSafetyV25 ||
+		plan.Safety.MaximumTotalWallMS != 12*60*60*1000 ||
+		plan.Safety.MaximumPrePressureBytes != 72<<30 ||
+		plan.Claims.RaisesProductionBound || plan.Claims.EstablishesTargetSLO {
+		t.Fatalf("v25 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV25 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV25 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV25 {
+		t.Fatalf("decoded v25 plan = %+v, %v", decoded, err)
+	}
+	historical := plan
+	historical.Schema = PlanSchemaV24
+	if ValidatePlan(historical) == nil {
+		t.Fatal("historical plan acquired the V25 safety decision")
+	}
+}
+
 func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
 	projection := &AuthorizedQueryObservation{
 		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",

@@ -604,13 +604,17 @@ func (runtime *Runtime) enqueue(ctx context.Context, generation Generation) erro
 	current, err := runtime.Store.GetGenerationSchedule(ctx, generation.Repository, ScheduleStage)
 	if err == nil {
 		bindingTarget, targetErr := runtime.scheduleTarget(generation.Repository, current.Generation)
-		if targetErr == nil && bindingTarget == generation.Digest && current.Status == store.GenerationScheduleActive {
+		if targetErr != nil {
+			return targetErr
+		}
+		if bindingTarget == generation.Digest && current.Status == store.GenerationScheduleActive {
 			return nil
 		}
-		if targetErr == nil && bindingTarget == generation.Digest || current.Generation == generation.Digest {
-			scheduleGeneration = recoveryGeneration(generation.Digest, current.Digest)
-			prior = current.Digest
-		}
+		// A schedule row is immutable after supersession. Every transition from
+		// an existing schedule therefore needs an operational identity derived
+		// from its predecessor, including ordinary A→B→A revisits.
+		scheduleGeneration = recoveryGeneration(generation.Digest, current.Digest)
+		prior = current.Digest
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return err
 	}

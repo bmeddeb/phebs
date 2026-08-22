@@ -63,6 +63,7 @@ Usage:
   $SCRIPT_NAME preflight
   $SCRIPT_NAME freeze <ceremony-id>
   $SCRIPT_NAME execute <ceremony-id> <approved-plan-digest> $EXECUTE_APPROVAL
+  $SCRIPT_NAME seal <ceremony-id>
   $SCRIPT_NAME verify <ceremony-id>
   $SCRIPT_NAME verify-bundle </absolute/path/to/source-free.tgz>
 
@@ -356,31 +357,70 @@ verify_evidence_directory() {
 seal_evidence() {
   local ceremony_id="$1" run_root evidence_root source_commit plan_digest generated_at
   local package package_tmp package_digest package_sidecar
+  local seal_count=0 seal_name
+  local -a expected
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
   source_commit="$(git -C "$REPO_REAL" rev-parse HEAD)"
   plan_digest="$(plan_digest_for "${evidence_root}/plan.json")"
   generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  require_exact_inventory "$evidence_root" \
-    allowed_signers freeze.json freeze.json.sig observation.json plan.json results.json signer.pub
   cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed after freeze"
   verify_frozen_identity "$evidence_root"
-  [[ ! -e "${evidence_root}/manifest.json" && ! -L "${evidence_root}/manifest.json" &&
-     ! -e "${evidence_root}/SHA256SUMS" && ! -L "${evidence_root}/SHA256SUMS" &&
-     ! -e "${evidence_root}/SHA256SUMS.sig" && ! -L "${evidence_root}/SHA256SUMS.sig" ]] ||
-    die "source-free evidence was already sealed"
-  printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
-    "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "${evidence_root}/manifest.json"
-  (cd "$evidence_root" && shasum -a 256 \
-    allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > SHA256SUMS)
-  ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "${evidence_root}/SHA256SUMS" >/dev/null
-  verify_evidence_directory "$evidence_root"
+  for seal_name in manifest.json SHA256SUMS SHA256SUMS.sig; do
+    if [[ -e "${evidence_root}/${seal_name}" || -L "${evidence_root}/${seal_name}" ]]; then
+      [[ -f "${evidence_root}/${seal_name}" && ! -L "${evidence_root}/${seal_name}" ]] ||
+        die "partial source-free seal is invalid: $seal_name"
+      seal_count=$((seal_count + 1))
+    fi
+  done
+  if (( seal_count == 3 )); then
+    verify_evidence_directory "$evidence_root"
+  else
+    expected=(allowed_signers freeze.json freeze.json.sig observation.json plan.json results.json signer.pub)
+    for seal_name in manifest.json SHA256SUMS SHA256SUMS.sig; do
+      [[ -e "${evidence_root}/${seal_name}" ]] && expected+=("$seal_name")
+    done
+    require_exact_inventory "$evidence_root" "${expected[@]}"
+    # An incomplete three-file seal cannot authenticate anything. Remove only
+    # that closed derived set and rebuild it; a complete but invalid seal above
+    # always fails closed instead of being rewritten.
+    if (( seal_count > 0 )); then
+      rm -f -- "${evidence_root}/manifest.json" "${evidence_root}/SHA256SUMS" "${evidence_root}/SHA256SUMS.sig"
+    fi
+    printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
+      "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "${evidence_root}/manifest.json"
+    (cd "$evidence_root" && shasum -a 256 \
+      allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > SHA256SUMS)
+    ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "${evidence_root}/SHA256SUMS" >/dev/null
+    verify_evidence_directory "$evidence_root"
+  fi
   package="${run_root}/${ceremony_id}-source-free.tgz"
   package_tmp="${package}.tmp"
   package_sidecar="${package}.sha256"
-  [[ ! -e "$package" && ! -L "$package" && ! -e "$package_tmp" && ! -L "$package_tmp" &&
-     ! -e "$package_sidecar" && ! -L "$package_sidecar" ]] ||
-    die "source-free package already exists"
+  if [[ -e "$package" || -L "$package" ]]; then
+    [[ -f "$package" && ! -L "$package" && ! -e "$package_tmp" && ! -L "$package_tmp" ]] ||
+      die "source-free package is partial or invalid"
+    verify_bundle "$package"
+    package_digest="$(shasum -a 256 "$package" | awk '{print $1}')"
+    if [[ -e "$package_sidecar" || -L "$package_sidecar" ]]; then
+      [[ -f "$package_sidecar" && ! -L "$package_sidecar" ]] || die "source-free package sidecar is invalid"
+      [[ "$(awk 'NR == 1 { print $1, $2 }' "$package_sidecar")" == "$package_digest $(basename "$package")" ]] ||
+        die "source-free package sidecar differs"
+    else
+      printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar"
+    fi
+    note "sealed source-free package: $package"
+    note "package sha256: $package_digest"
+    return
+  fi
+  if [[ -e "$package_tmp" || -L "$package_tmp" ]]; then
+    [[ -f "$package_tmp" && ! -L "$package_tmp" ]] || die "source-free package temporary file is invalid"
+    rm -- "$package_tmp"
+  fi
+  if [[ -e "$package_sidecar" || -L "$package_sidecar" ]]; then
+    [[ -f "$package_sidecar" && ! -L "$package_sidecar" ]] || die "source-free package sidecar is invalid"
+    rm -- "$package_sidecar"
+  fi
   COPYFILE_DISABLE=1 tar -C "$run_root" -czf "$package_tmp" evidence
   mv "$package_tmp" "$package"
   (( $(wc -c < "$package") <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
@@ -389,6 +429,31 @@ seal_evidence() {
   printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar"
   note "sealed source-free package: $package"
   note "package sha256: $package_digest"
+}
+
+seal_run() {
+  local ceremony_id="$1" run_root evidence_root private_root plan_digest
+  verification_preflight
+  select_signing_key "$ceremony_id"
+  ensure_signing_key
+  run_root="$(run_root_for "$ceremony_id")"
+  evidence_root="${run_root}/evidence"
+  private_root="${run_root}/private"
+  [[ -d "$evidence_root" && ! -L "$evidence_root" && -d "$private_root" && ! -L "$private_root" ]] ||
+    die "ceremony evidence or private directory is invalid"
+  [[ ! -e "${run_root}/custody" && ! -L "${run_root}/custody" ]] || die "private custody remains"
+  [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "private ceremony state remains"
+  [[ -f "${evidence_root}/observation.json" && ! -L "${evidence_root}/observation.json" ]] ||
+    die "source-free observation is absent"
+  plan_digest="$(plan_digest_for "${evidence_root}/plan.json")"
+  if [[ ! -e "${evidence_root}/results.json" && ! -L "${evidence_root}/results.json" ]]; then
+    (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-receipt \
+      -plan "${evidence_root}/plan.json" \
+      -plan-digest "$plan_digest" \
+      -observation "${evidence_root}/observation.json" \
+      -output "${evidence_root}/results.json")
+  fi
+  seal_evidence "$ceremony_id"
 }
 
 execute_ceremony() {
@@ -513,6 +578,10 @@ main() {
     execute)
       [[ $# -eq 4 ]] || { usage; exit 2; }
       execute_ceremony "$2" "$3" "$4"
+      ;;
+    seal)
+      [[ $# -eq 2 ]] || { usage; exit 2; }
+      seal_run "$2"
       ;;
     verify)
       [[ $# -eq 2 ]] || { usage; exit 2; }

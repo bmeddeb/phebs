@@ -78,6 +78,33 @@ func TestPressureHostPreflightRequiresReachableTarget(t *testing.T) {
 	}
 }
 
+func TestV25PressurePreflightFundsGrowthAndBallast(t *testing.T) {
+	tests := []struct {
+		name      string
+		used      int64
+		allocated int64
+		wantErr   bool
+	}{
+		{name: "reachable after growth", used: 285 << 30},
+		{name: "growth reaches collect pressure", used: 300 << 30, wantErr: true},
+		{name: "ballast exceeds remaining custody", used: 260 << 30, wantErr: true},
+		{name: "prepared custody already exceeds bound", used: 285 << 30, allocated: 73 << 30, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			capacity := lifecycle.Capacity{
+				TotalBytes: 460 << 30, UsedBytes: test.used,
+				AvailableBytes: 460<<30 - test.used,
+				Pressure:       lifecycle.PressureNormal,
+			}
+			err := validatePressureHostPreflightV25(capacity, test.allocated, frozenSafetyV25)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("error = %v, wantErr %t", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestPressureTargetObservationV23AllowsOnePercentFilesystemDrift(t *testing.T) {
 	for _, test := range []struct {
 		name     string

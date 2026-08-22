@@ -3,6 +3,7 @@ package t4013
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -382,7 +383,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	// Validate the stopped observation BEFORE destroying custody: an
 	// unsealable observation must fail closed with custody retained for the
 	// separately reviewed purge, never destroy hours of evidence first.
-	if err := ValidateObservation(run.observation); err != nil {
+	if err := run.validateReceiptBeforeTeardown(run.observation); err != nil {
 		return Observation{}, fmt.Errorf(
 			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
 	}
@@ -1645,6 +1646,11 @@ func (run *execution) waitInterruptionTriggerV18WithReader(
 		}
 		select {
 		case <-phase.Done():
+			if run.ctx.Err() != nil {
+				return generationscheduler.ChunkLifecycleReport{}, errors.Join(
+					lastErr, context.Cause(run.ctx),
+				)
+			}
 			return generationscheduler.ChunkLifecycleReport{}, errors.Join(
 				lastErr, errInterruptionTriggerDeadline,
 			)
@@ -2354,7 +2360,7 @@ func waitStaleChunkFence(
 			switch report.Outcome {
 			case "stale_fenced":
 				return report, nil
-			case "completion_failed":
+			case "completion_failed", "heartbeat_failed":
 				// The chunk is still store-authoritative; the reaper may close
 				// the stale lease in place after this persistence failure.
 				storeFallback = true
@@ -2734,7 +2740,25 @@ func (run *execution) validateCompletedObservationBeforeTeardown() error {
 	value.Phases = slices.Clone(run.observation.Phases)
 	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
 	value.Teardown = TeardownObservation{Completed: true}
-	return ValidateObservation(value)
+	return run.validateReceiptBeforeTeardown(value)
+}
+
+func (run *execution) validateReceiptBeforeTeardown(value Observation) error {
+	if run == nil {
+		return errors.New("T40.13 execution is unavailable")
+	}
+	// Production executions always retain the exact frozen bytes. The shape
+	// fallback preserves historical unit fixtures that construct an execution
+	// directly without passing through newExecution.
+	if len(run.planBytes) == 0 {
+		return ValidateObservation(value)
+	}
+	observationBytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	_, err = BuildReceipt(run.planBytes, observationBytes, PlanDigest(run.planBytes))
+	return err
 }
 
 func (run *execution) teardown() error {
@@ -3074,6 +3098,8 @@ func (run *execution) waitSnapshot(
 	case PlanSchemaV23:
 		contract = profileInspectionV21
 	case PlanSchemaV24:
+		contract = profileInspectionV21
+	case PlanSchemaV25:
 		contract = profileInspectionV21
 	}
 	inspector, err := newProfileInspector(profile, contract)

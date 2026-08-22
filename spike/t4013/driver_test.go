@@ -89,3 +89,19 @@ func TestCeremonyDriverRetiresTakeEleven(t *testing.T) {
 		t.Fatal("neutral-15 is not permanently retired")
 	}
 }
+
+func TestCeremonyDriverExposesResumableSealCommand(t *testing.T) {
+	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, marker := range []string{
+		`$SCRIPT_NAME seal <ceremony-id>`,
+		`seal_run "$2"`,
+		`if (( seal_count == 3 )); then`,
+	} {
+		if !strings.Contains(string(raw), marker) {
+			t.Fatalf("resumable seal marker is absent: %s", marker)
+		}
+	}
+}

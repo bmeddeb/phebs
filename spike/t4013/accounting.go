@@ -275,8 +275,17 @@ func duKilobytes(path string, apparent bool) (int64, error) {
 		}
 	}
 	args = append(args, path)
-	command := exec.Command("du", args...)
-	output, err := command.Output()
+	var output []byte
+	var err error
+	for attempt := range 3 {
+		output, err = exec.Command("du", args...).Output()
+		if err == nil {
+			break
+		}
+		if attempt < 2 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 	if err != nil {
 		return 0, errors.New("T40.13 data-byte measurement failed")
 	}

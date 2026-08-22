@@ -268,6 +268,11 @@ func hostPreflight(
 				observedCapacity, workspaceAllocated, plan.Safety,
 			)
 		}
+		if planSchemaVersion(plan.Schema) >= 25 {
+			pressureErr = validatePressureHostPreflightV25(
+				observedCapacity, workspaceAllocated, plan.Safety,
+			)
+		}
 		if pressureErr != nil {
 			return EnvironmentObservation{}, errors.New("T40.13 frozen pressure host prerequisite is not met")
 		}
