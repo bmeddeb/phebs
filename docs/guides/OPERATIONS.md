@@ -4792,3 +4792,27 @@ outer store polls/20 minutes; a missing row adds its exact retention read.
 These are harness-only reads and validation. They add no production work,
 source/Git/content/corpus read, persistent schema, authority, lock, write,
 attempt, allocation, or release authorization.
+
+## T40.R1 V24 interruption requeue evidence
+
+Neutral-33 passed cold, warm-noop, delta-B, and return-A, then stopped at the
+immediate interruption recovery check. V23 could not pass that check on the
+normal recovery path: before B-schedule supersession, release, deferral, or
+reaping returns the interrupted current chunk to pending stale priority with
+its lease cleared. V23 rejected every pending row, while done/failed needed the
+row to run and canceled/collected needed later supersession.
+
+Fresh V24 records `requeued` only after two consecutive one-second projections
+bind the exact trigger identity, schedule, repository, stage, generation, and
+attempt to `pending`, stale priority, and no lease. A never-run priority-zero
+row, any leased row, `running`, identity drift, a single sample, or a read
+failure cannot pass. Closed fates and the twice-corroborated collected proof
+are unchanged. The projection exports priority and a lease-presence boolean;
+it never exports the lease token, worker, timestamps, or errors.
+
+The recovery loop keeps the same one row read per second, 300-start/five-minute
+ceiling, and 30-second call deadline. Requeue adds one confirmation second and
+two scalar copies, not another query. There is no production write, retry,
+lock, worker, queue, authority, API/OpenAPI, persistent-schema, source/Git, or
+corpus-read change. V22 still accepts its historical pending fate, V23 still
+refuses it, and V1-V23 evidence remains frozen.

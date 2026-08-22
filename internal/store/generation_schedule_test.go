@@ -45,7 +45,8 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	if err != nil || running.Identity != chunk.Identity ||
 		running.ScheduleDigest != schedule.Digest || running.Repository != chunk.Repository ||
 		running.Stage != chunk.Stage || running.Generation != chunk.Generation ||
-		running.Attempt != chunk.Attempt || running.Status != GenerationChunkRunning {
+		running.Attempt != chunk.Attempt || running.Priority != GenerationPriorityNeverRun ||
+		running.Status != GenerationChunkRunning || !running.Leased {
 		t.Fatalf("running lease state = %+v, %v", running, err)
 	}
 	selected, err := reader.CurrentGenerationRunningChunk(
@@ -53,6 +54,18 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	)
 	if err != nil || selected != running {
 		t.Fatalf("selected current running chunk = %+v, %v", selected, err)
+	}
+	if err := state.ReleaseGenerationChunk(t.Context(), *chunk, "restart"); err != nil {
+		t.Fatal(err)
+	}
+	requeued, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
+	if err != nil || requeued.Status != GenerationChunkPending ||
+		requeued.Priority != GenerationPriorityStale || requeued.Leased {
+		t.Fatalf("requeued lease state = %+v, %v", requeued, err)
+	}
+	chunk, err = state.ClaimGenerationChunk(t.Context(), spec.ResourceClass, "probe-worker")
+	if err != nil || chunk.Identity != requeued.Identity || chunk.Attempt != requeued.Attempt {
+		t.Fatalf("reclaimed lease = %+v, %v", chunk, err)
 	}
 	if err := state.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
 		t.Fatal(err)
@@ -63,7 +76,7 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 		t.Fatalf("settled schedule retained a running chunk: %v", err)
 	}
 	done, err := reader.GenerationChunkLeaseState(t.Context(), chunk.Identity)
-	if err != nil || done.Status != GenerationChunkDone {
+	if err != nil || done.Status != GenerationChunkDone || done.Leased {
 		t.Fatalf("settled lease state = %+v, %v", done, err)
 	}
 	settledProgress, err := reader.GenerationScheduleProgress(

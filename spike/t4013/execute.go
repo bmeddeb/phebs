@@ -1114,9 +1114,13 @@ type interruptionRecoveryContract uint8
 const (
 	interruptionRecoveryV22 interruptionRecoveryContract = iota + 1
 	interruptionRecoveryV23
+	interruptionRecoveryV24
 )
 
 func interruptionRecoveryContractForPlan(plan Plan) interruptionRecoveryContract {
+	if planSchemaVersion(plan.Schema) >= 24 {
+		return interruptionRecoveryV24
+	}
 	if planSchemaVersion(plan.Schema) >= 23 {
 		return interruptionRecoveryV23
 	}
@@ -1133,7 +1137,7 @@ func waitLeaseRecoveryV22WithReader(
 	limit time.Duration,
 ) (string, error) {
 	if reader == nil || !digestIdentity(scheduleDigest) ||
-		contract < interruptionRecoveryV22 || contract > interruptionRecoveryV23 {
+		contract < interruptionRecoveryV22 || contract > interruptionRecoveryV24 {
 		return "", errors.New("T40.13 interruption recovery request is invalid")
 	}
 	phase, cancel := phaseContext(ctx, limit)
@@ -1142,6 +1146,7 @@ func waitLeaseRecoveryV22WithReader(
 	defer ticker.Stop()
 	var lastErr error
 	collectedConfirmations := 0
+	requeuedConfirmations := 0
 	for {
 		if phase.Err() != nil {
 			return "", errors.Join(lastErr, errors.New(
@@ -1166,8 +1171,17 @@ func waitLeaseRecoveryV22WithReader(
 				if contract == interruptionRecoveryV22 {
 					return string(state.Status), nil
 				}
+				if contract == interruptionRecoveryV24 && state.Attempt == trigger.Attempt &&
+					state.Priority == store.GenerationPriorityStale && !state.Leased {
+					requeuedConfirmations++
+					if requeuedConfirmations >= 2 {
+						return interruptionFateRequeued, nil
+					}
+					break
+				}
 				fallthrough
 			case store.GenerationChunkRunning:
+				requeuedConfirmations = 0
 				// Pending on a still-current schedule is reclaimable and therefore
 				// is not proof that the interrupted lease recovered. Wait for a
 				// closed fate or corroborated retirement/collection.
@@ -1176,6 +1190,7 @@ func waitLeaseRecoveryV22WithReader(
 			}
 			lastErr = nil
 		case errors.Is(stateErr, store.ErrNotFound):
+			requeuedConfirmations = 0
 			retentionCtx, retentionCancel := context.WithTimeout(phase, 30*time.Second)
 			retention, retentionErr := reader.GenerationScheduleRetentionState(
 				retentionCtx, profile.RepositoryName, trigger.Stage, scheduleDigest,
@@ -1207,6 +1222,7 @@ func waitLeaseRecoveryV22WithReader(
 			}
 		default:
 			collectedConfirmations = 0
+			requeuedConfirmations = 0
 			lastErr = stateErr
 		}
 		select {
@@ -3056,6 +3072,8 @@ func (run *execution) waitSnapshot(
 	case PlanSchemaV22:
 		contract = profileInspectionV21
 	case PlanSchemaV23:
+		contract = profileInspectionV21
+	case PlanSchemaV24:
 		contract = profileInspectionV21
 	}
 	inspector, err := newProfileInspector(profile, contract)

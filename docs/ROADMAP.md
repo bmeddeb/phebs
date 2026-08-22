@@ -1614,6 +1614,14 @@ corroborated-collected interruption fate rather than accepting reclaimable
 `completion_failed`, and V1-V22 evidence semantics remain unchanged. A fresh
 freeze still requires the complete corrected gate; this row authorizes none.
 
+Neutral-33 proved those V23 seal and decision fixes, but exposed an
+unsatisfiable interruption proof: it checked before B-schedule supersession
+while refusing the scheduler's correct pending-stale, unleased recovery shape.
+Fresh V24 accepts that shape only as twice-observed `requeued` evidence bound to
+the exact trigger attempt; priority-zero, leased, running, or single-sample
+rows still fail closed. V22 and V23 remain historical. No freeze, execution,
+release, or scale claim is authorized by this correction.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an

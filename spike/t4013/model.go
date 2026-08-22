@@ -47,6 +47,7 @@ const (
 	PlanSchemaV21        = "t4013-neutral-convergence-plan-v21"
 	PlanSchemaV22        = "t4013-neutral-convergence-plan-v22"
 	PlanSchemaV23        = "t4013-neutral-convergence-plan-v23"
+	PlanSchemaV24        = "t4013-neutral-convergence-plan-v24"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -70,6 +71,7 @@ const (
 	ObservationSchemaV21 = "t4013-neutral-convergence-observation-v21"
 	ObservationSchemaV22 = "t4013-neutral-convergence-observation-v22"
 	ObservationSchemaV23 = "t4013-neutral-convergence-observation-v23"
+	ObservationSchemaV24 = "t4013-neutral-convergence-observation-v24"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -106,6 +108,7 @@ const (
 	ReceiptSchemaV21             = "t4013-neutral-convergence-receipt-v21"
 	ReceiptSchemaV22             = "t4013-neutral-convergence-receipt-v22"
 	ReceiptSchemaV23             = "t4013-neutral-convergence-receipt-v23"
+	ReceiptSchemaV24             = "t4013-neutral-convergence-receipt-v24"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -151,6 +154,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV21, ObservationSchemaV21, ReceiptSchemaV21},
 	{PlanSchemaV22, ObservationSchemaV22, ReceiptSchemaV22},
 	{PlanSchemaV23, ObservationSchemaV23, ReceiptSchemaV23},
+	{PlanSchemaV24, ObservationSchemaV24, ReceiptSchemaV24},
 }
 
 const (
@@ -288,6 +292,7 @@ const (
 	interruptionSchemaV1      = "t4013-interruption-v1"
 	interruptionSchemaV2      = "t4013-interruption-v2"
 	interruptionFateCollected = "collected"
+	interruptionFateRequeued  = "requeued"
 )
 
 // InterruptionObservation retains the exact source-free lifecycle lease used
@@ -912,6 +917,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV22
 	case PlanSchemaV23:
 		wantSafety = frozenSafetyV23
+	case PlanSchemaV24:
+		wantSafety = frozenSafetyV24
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -1306,11 +1313,16 @@ func validateInterruptionObservation(value Observation) error {
 			return errors.New("T40.13 interruption recovery evidence precedes its substage")
 		}
 	case substageIndex > recoveredIndex || interruption.TriggerRecoveredState != "":
-		if !slices.Contains([]string{
-			string(store.GenerationChunkPending), string(store.GenerationChunkDone),
-			string(store.GenerationChunkFailed), string(store.GenerationChunkCanceled),
-			interruptionFateCollected,
-		}, interruption.TriggerRecoveredState) {
+		validStates := []string{
+			string(store.GenerationChunkDone), string(store.GenerationChunkFailed),
+			string(store.GenerationChunkCanceled), interruptionFateCollected,
+		}
+		if version < 24 {
+			validStates = append(validStates, string(store.GenerationChunkPending))
+		} else {
+			validStates = append(validStates, interruptionFateRequeued)
+		}
+		if !slices.Contains(validStates, interruption.TriggerRecoveredState) {
 			return errors.New("T40.13 interruption recovery evidence is invalid")
 		}
 		if version < 22 && interruption.TriggerRecoveredState == interruptionFateCollected {
@@ -2678,17 +2690,17 @@ func validateStopped(value Receipt) error {
 		}
 		wantDecision, wantReason = "reduce", "production_pressure_gate_refused"
 	case "lifecycle_cycle_deadline_expired":
-		if value.Schema != ReceiptSchemaV23 || failure.Class != "lifecycle" || failure.Phase != "collection" {
+		if receiptSchemaVersion(value.Schema) < 23 || failure.Class != "lifecycle" || failure.Phase != "collection" {
 			return errors.New("T40.13 lifecycle deadline failure identity is invalid")
 		}
 		wantDecision, wantReason = "cohort_experiment", "frozen_collection_review_ceiling_crossed"
 	case "pressure_recovery_deadline_expired":
-		if value.Schema != ReceiptSchemaV23 || failure.Class != "environment" || failure.Phase != "pressure" {
+		if receiptSchemaVersion(value.Schema) < 23 || failure.Class != "environment" || failure.Phase != "pressure" {
 			return errors.New("T40.13 pressure recovery deadline failure identity is invalid")
 		}
 		wantReason = "pressure_recovery_deadline_expired"
 	case "authorized_query_failed":
-		if value.Schema != ReceiptSchemaV23 || failure.Class != "authorization" ||
+		if receiptSchemaVersion(value.Schema) < 23 || failure.Class != "authorization" ||
 			failure.Phase != "authorized_query" || value.AuthorizedQuery == nil {
 			return errors.New("T40.13 authorized-query failure identity is invalid")
 		}

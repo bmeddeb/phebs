@@ -2862,3 +2862,24 @@ no store polling. Transient lifecycle-status reads retry inside the two fixed
 30-second evidence windows. All store and HTTP calls keep their existing
 deadlines, V1-V22 bytes remain historical, and this changes no production API,
 authority, queue, attempt, or release posture.
+
+### Neutral-33 and V24 corroborated requeue
+
+Neutral-33's verified source-free package
+`sha256:2c995686612db0a78d11e6f4dc216a8d337ddeb56d01070d225ac001f457ab2b`
+binds source `29b727df789120ca86dc84f8c202868d5e94353f` and plan
+`sha256:e494b38c27c9c23c66cc79ea859c2850e36a471f00344e5c5f326aeb6f96105d`.
+Cold, warm-noop, delta-B, and return-A passed; interruption stopped at
+`recovery_verification`. The early V22/V23 placement correctly beats lifecycle
+collection, but V23 rejected the only immediate normal recovery shape:
+pending at stale priority with ownership cleared.
+
+Fresh V24 retains that placement and accepts `requeued` only after the exact
+trigger row repeats on two one-second polls with the same schedule, scope,
+generation, and attempt, `priority == GenerationPriorityStale`, and no lease.
+Priority-zero pending, leased pending, running, or one observation does not
+pass. Closed and corroborated-collected fates are unchanged. The source-free
+projection adds only priority and lease presence; no lease token or private
+worker detail is retained. The poll/query/deadline bounds and all production
+behavior are unchanged. V1-V23 schemas remain historical, and this authorizes
+no freeze, execution, release, or gate claim.

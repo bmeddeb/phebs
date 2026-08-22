@@ -692,6 +692,27 @@ func TestV23PlanFencesCeremonyOracleRecovery(t *testing.T) {
 	}
 }
 
+func TestV24PlanFencesCorroboratedInterruptionRequeue(t *testing.T) {
+	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV24 || plan.Safety != frozenSafetyV23 ||
+		plan.Safety != frozenSafetyV24 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v24 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV24 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV24 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV24 {
+		t.Fatalf("decoded v24 plan = %+v, %v", decoded, err)
+	}
+}
+
 func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
 	projection := &AuthorizedQueryObservation{
 		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",
@@ -784,6 +805,11 @@ func TestV23StoppedReceiptRequiresAuthorizedQueryDiagnostic(t *testing.T) {
 	if err := validateStopped(receipt); err != nil {
 		t.Fatalf("V23 authorized-query stop refused: %v", err)
 	}
+	v24 := receipt
+	v24.Schema = ReceiptSchemaV24
+	if err := validateStopped(v24); err != nil {
+		t.Fatalf("V24 authorized-query stop refused: %v", err)
+	}
 	correlated := receipt
 	correlated.Failures = []FailureObservation{{
 		Phase: "authorized_query", Class: "oracle", Code: "failed_phase_measurement_unavailable",
@@ -824,6 +850,11 @@ func TestV23StoppedReceiptAcceptsTypedCollectionDeadline(t *testing.T) {
 	if err := validateStopped(receipt); err != nil {
 		t.Fatalf("V23 collection deadline refused: %v", err)
 	}
+	v24 := receipt
+	v24.Schema = ReceiptSchemaV24
+	if err := validateStopped(v24); err != nil {
+		t.Fatalf("V24 collection deadline refused: %v", err)
+	}
 	receipt.Schema = ReceiptSchemaV22
 	if err := validateStopped(receipt); err == nil {
 		t.Fatal("V22 receipt accepted V23 lifecycle deadline")
@@ -852,6 +883,10 @@ func TestV23StoppedReceiptAcceptsPressureRecoveryDeadline(t *testing.T) {
 	}
 	if err := validateStopped(receipt); err != nil {
 		t.Fatalf("V23 pressure recovery deadline refused: %v", err)
+	}
+	receipt.Schema = ReceiptSchemaV24
+	if err := validateStopped(receipt); err != nil {
+		t.Fatalf("V24 pressure recovery deadline refused: %v", err)
 	}
 }
 
@@ -908,6 +943,25 @@ func TestV22InterruptionEvidenceFencesCollectionAndLifecycle(t *testing.T) {
 	v23Error.Interruption.ConvergenceLifecycle = v23Error.Interruption.RecoveryLifecycle
 	if err := validateInterruptionObservation(v23Error); err != nil {
 		t.Fatalf("V23 interruption refused bounded lifecycle error progress: %v", err)
+	}
+	v24Requeued := v23Error
+	v24Requeued.Schema = ObservationSchemaV24
+	v24Requeued.Interruption = cloneInterruptionObservation(v23Error.Interruption)
+	v24Requeued.Interruption.TriggerRecoveredState = interruptionFateRequeued
+	if err := validateInterruptionObservation(v24Requeued); err != nil {
+		t.Fatalf("V24 interruption refused corroborated requeue: %v", err)
+	}
+	v23Requeued := v23Error
+	v23Requeued.Interruption = cloneInterruptionObservation(v23Error.Interruption)
+	v23Requeued.Interruption.TriggerRecoveredState = interruptionFateRequeued
+	if err := validateInterruptionObservation(v23Requeued); err == nil {
+		t.Fatal("V23 interruption acquired V24 requeue evidence")
+	}
+	v24Pending := v24Requeued
+	v24Pending.Interruption = cloneInterruptionObservation(v24Requeued.Interruption)
+	v24Pending.Interruption.TriggerRecoveredState = string(store.GenerationChunkPending)
+	if err := validateInterruptionObservation(v24Pending); err == nil {
+		t.Fatal("V24 interruption accepted an uncorroborated pending fate")
 	}
 	historicalError := v23Error
 	historicalError.Schema = ObservationSchemaV22

@@ -239,7 +239,9 @@ type GenerationChunk struct {
 }
 
 // GenerationChunkLeaseState is the source-free authoritative projection used
-// to prove that one exact scheduler attempt is still running. Lease tokens,
+// to prove one exact scheduler attempt's lease state. Priority plus the
+// presence of a lease distinguish an untouched/reclaimed row from the stale
+// pending shape written by release, deferral, or reaping. Lease tokens,
 // worker identities, timestamps, and error details never leave the store.
 type GenerationChunkLeaseState struct {
 	Identity       string                `json:"identity"`
@@ -248,7 +250,9 @@ type GenerationChunkLeaseState struct {
 	Stage          string                `json:"stage"`
 	Generation     string                `json:"generation"`
 	Attempt        int                   `json:"attempt"`
+	Priority       int                   `json:"priority"`
 	Status         GenerationChunkStatus `json:"status"`
+	Leased         bool                  `json:"leased"`
 }
 
 // GenerationScheduleRetentionState is the bounded source-free projection used
@@ -363,7 +367,8 @@ func (reader *LocalGenerationChunkReader) GenerationChunkLeaseState(
 	return GenerationChunkLeaseState{
 		Identity: chunk.Identity, ScheduleDigest: chunk.ScheduleDigest,
 		Repository: chunk.Repository, Stage: chunk.Stage, Generation: chunk.Generation,
-		Attempt: chunk.Attempt, Status: chunk.Status,
+		Attempt: chunk.Attempt, Priority: chunk.Priority, Status: chunk.Status,
+		Leased: chunk.LeaseToken != "",
 	}, nil
 }
 

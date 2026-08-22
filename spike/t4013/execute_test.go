@@ -2749,6 +2749,47 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 	); err == nil {
 		t.Fatalf("reclaimable pending fate passed recovery verification as %q", fate)
 	}
+	requeueReads := 0
+	requeued := &fixedGenerationChunkLeaseReader{state: func(string) (store.GenerationChunkLeaseState, error) {
+		requeueReads++
+		return store.GenerationChunkLeaseState{
+			Identity: trigger.Identity, ScheduleDigest: scheduleDigest,
+			Repository: profile.RepositoryName, Stage: trigger.Stage,
+			Generation: trigger.Generation, Attempt: trigger.Attempt,
+			Priority: store.GenerationPriorityStale, Status: store.GenerationChunkPending,
+		}, nil
+	}}
+	if fate, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), requeued, profile, trigger, scheduleDigest,
+		interruptionRecoveryV24, 1500*time.Millisecond,
+	); err != nil || fate != interruptionFateRequeued || requeueReads < 2 {
+		t.Fatalf("corroborated requeue fate = %q, reads=%d, %v", fate, requeueReads, err)
+	}
+	for _, test := range []struct {
+		name     string
+		priority int
+		leased   bool
+	}{
+		{name: "never-run priority", priority: store.GenerationPriorityNeverRun},
+		{name: "leased stale row", priority: store.GenerationPriorityStale, leased: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			unproven := &fixedGenerationChunkLeaseReader{states: map[string]store.GenerationChunkLeaseState{
+				trigger.Identity: {
+					Identity: trigger.Identity, ScheduleDigest: scheduleDigest,
+					Repository: profile.RepositoryName, Stage: trigger.Stage,
+					Generation: trigger.Generation, Attempt: trigger.Attempt,
+					Priority: test.priority, Status: store.GenerationChunkPending, Leased: test.leased,
+				},
+			}}
+			if fate, err := waitLeaseRecoveryV22WithReader(
+				t.Context(), unproven, profile, trigger, scheduleDigest,
+				interruptionRecoveryV24, 100*time.Millisecond,
+			); err == nil {
+				t.Fatalf("unproven pending row passed as %q", fate)
+			}
+		})
+	}
 	reads := 0
 	recovered := &fixedGenerationChunkLeaseReader{state: func(string) (store.GenerationChunkLeaseState, error) {
 		reads++
