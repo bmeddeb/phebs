@@ -69,6 +69,7 @@ func (controller *Controller) Tick(ctx context.Context) OwnerResult {
 	}
 	result := owner.owner.Sweep(ctx, controller.now().UTC(), cursor, controller.limits)
 	result.Owner = owner.name
+	result.CycleStart = owner.name == controller.owners[0].name
 	result.CycleComplete = owner.name == controller.owners[len(controller.owners)-1].name
 	if result.Err == nil {
 		if result.Completeness == "" {

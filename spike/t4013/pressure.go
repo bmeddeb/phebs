@@ -16,12 +16,38 @@ type pressureBallast struct {
 	path string
 }
 
+type pressureBallastContract uint8
+
+const (
+	pressureBallastV22 pressureBallastContract = iota
+	pressureBallastV23
+)
+
+func pressureBallastContractForPlan(plan Plan) pressureBallastContract {
+	if planSchemaVersion(plan.Schema) >= 23 {
+		return pressureBallastV23
+	}
+	return pressureBallastV22
+}
+
 func validatePressureHostPreflight(capacity lifecycle.Capacity, safety SafetyEnvelope) error {
 	target, err := pressureTargetBytes(capacity.TotalBytes, safety.PressureTargetUsedPercent)
 	if err != nil || capacity.UsedBytes < 0 || capacity.UsedBytes > capacity.TotalBytes ||
 		capacity.AvailableBytes < 0 || capacity.AvailableBytes > capacity.TotalBytes ||
 		capacity.Pressure != lifecycle.PressureNormal || target <= capacity.UsedBytes ||
 		target-capacity.UsedBytes > safety.MaximumDataAllocatedBytes {
+		return errors.Join(err, errors.New("T40.13 host cannot reach the frozen pressure target inside its custody ceiling"))
+	}
+	return nil
+}
+
+func validatePressureHostPreflightV23(
+	capacity lifecycle.Capacity,
+	workspaceAllocated int64,
+	safety SafetyEnvelope,
+) error {
+	_, err := requiredPressureBallast(capacity, workspaceAllocated, safety)
+	if err != nil || capacity.Pressure != lifecycle.PressureNormal {
 		return errors.Join(err, errors.New("T40.13 host cannot reach the frozen pressure target inside its custody ceiling"))
 	}
 	return nil
@@ -72,6 +98,7 @@ func createPressureBallast(
 	ctx context.Context,
 	workspace string,
 	safety SafetyEnvelope,
+	contract pressureBallastContract,
 ) (*pressureBallast, int64, int64, error) {
 	if ctx == nil || !filepath.IsAbs(workspace) {
 		return nil, 0, 0, errors.New("T40.13 pressure ballast scope is invalid")
@@ -117,12 +144,25 @@ func createPressureBallast(
 		return nil, 0, 0, err
 	}
 	after, gateErr := lifecycle.NewGate(workspace).Check(ctx, 0)
-	if gateErr != nil || after.Pressure != lifecycle.PressureCollect ||
-		after.UsedPercent != safety.PressureTargetUsedPercent {
+	if gateErr != nil || !pressureTargetObserved(after, safety.PressureTargetUsedPercent, contract) {
 		_ = os.Remove(path)
 		return nil, 0, 0, errors.Join(gateErr, errors.New("T40.13 pressure ballast missed its frozen collect target"))
 	}
 	return &pressureBallast{path: path}, logical, allocated, nil
+}
+
+func pressureTargetObserved(
+	capacity lifecycle.Capacity,
+	target int,
+	contract pressureBallastContract,
+) bool {
+	if capacity.Pressure != lifecycle.PressureCollect {
+		return false
+	}
+	if contract == pressureBallastV23 {
+		return capacity.UsedPercent >= target-1 && capacity.UsedPercent <= target+1
+	}
+	return capacity.UsedPercent == target
 }
 
 func (ballast *pressureBallast) remove(workspace string) error {

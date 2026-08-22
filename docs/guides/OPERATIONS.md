@@ -4709,3 +4709,86 @@ new production writes, lifecycle mutations, source/Git/content/candidate/
 corpus/shard scans, locks, job attempts, child processes, authority changes,
 or admission/concurrency limits. Neutral-32 remains stopped; use a separately
 reviewed V22 freeze for any future execution.
+
+## T40.R1 V23 ceremony-oracle operations
+
+Fresh V23 ceremonies require one complete process-observed lifecycle owner
+cycle before the runner may take its one-hour idle interval. If the durable
+rotation cursor resumes in the middle, startup can run the suffix and then one
+full cycle—fewer than 64 turns for the at-most-32-owner controller—at the
+existing five-second backlog cadence. Healthy steady state and pressure-
+accelerated cadence are unchanged; every owner keeps its existing scan,
+delete, query, lock, and cursor bounds.
+
+Execution preflight runs `du` twice over prepared custody (allocated and
+apparent bytes) before writing the executed marker. This is a full filesystem
+namespace/metadata scan with no file-content read. It ensures the 82% pressure
+target can still be reached inside both the 80-GiB ballast limit and the
+remaining 96-GiB total custody allocation. The ballast phase remains the sole
+writer and requires lifecycle `collect`; an observed 81–83% is accepted for
+shared-filesystem snapshot movement. A deadline while entering `collect` is a
+typed production-pressure `reduce`; collection-cycle deadline is a typed
+frozen collection-review `cohort_experiment`. Post-removal pressure recovery
+is classified separately below.
+
+After a stale-worker lifecycle `completion_failed`, the harness reads the exact
+selected chunk every 250 ms until it is canceled by the reaper, is proven
+collected under the exact retired schedule, or the existing 20-minute bound
+expires (at most 4,800 outer reads). Any different settled state or unknown
+settled vocabulary fails immediately. Normal `stale_fenced` completion adds no
+store-read tail. Collection and authorized-query refresh
+their stable semantic baselines after successful re-projection; this hashes
+already-open bounded fields and adds no request.
+
+Each authorized endpoint has at most three attempts. Transport failures and
+HTTP 409 wait one second between attempts; the HTTP client keeps its existing
+30-second request timeout. The complete two-profile suite has nine endpoint
+checks and therefore at most 27 requests and 18 seconds of retry delay if each
+check succeeds only on attempt three; the first terminal failure stops later
+queries. Evidence retains only the frozen profile, query name, failure class,
+numeric status when applicable, and attempts. It never retains URL, response,
+credential, or raw error text. V1–V22 validation remains historical, and this
+operational hardening changes no product API, authority, admission, or release
+posture.
+
+Post-review V23 corrections keep that evidence sealable under correlated
+faults. A lifecycle owner may report `error/unavailable` while retaining the
+bounded counters from a successful sweep that lost its final CAS; V23 records
+those counters, while V22 keeps its zero-only contract. Authorized-query
+diagnostics survive a simultaneous meter-finalization failure or review/total-
+wall ceiling, but a local inspector/setup failure is not attributed to an
+endpoint. The historical one-attempt unauthorized probe still treats every
+non-401 response as its frozen exact oracle.
+
+Before destructive teardown, a completed run validates its entire known
+evidence shape against a synthetic successful teardown record. The real
+teardown metrics are recorded and validated again afterward. Schema drift now
+retains custody on both stopped and otherwise-successful paths.
+
+Pressure entry and pressure recovery are distinct decisions. Failure to enter
+production `collect` remains the frozen substantiated `reduce`; delayed disk
+reclaim after ballast removal is the unsubstantiated
+`pressure_recovery_deadline_expired`. The pressure restart snapshot uses the
+same stable semantic authority as collection and authorized-query, so a valid
+relationship re-mint does not become drift.
+
+For fresh V23 interruption evidence, `pending` is reclaimable rather than
+recovered: it waits beside `running` for a closed chunk fate or the existing
+twice-corroborated collection proof. V22 preserves its historical pending
+acceptance. stale-worker remains log-only unless it sees
+`completion_failed`; only then does it poll the exact row at 250-ms cadence.
+If the row has already been collected, one exact retention projection must
+bind its selected schedule digest, prove a distinct current successor, and
+show the selected schedule absent or settled/superseded before the harness
+records the stale fence. Current, active, malformed, moving, or unreadable
+authority fails closed. Each recovery store call is bounded by 30 seconds.
+
+The two lifecycle evidence snapshots retry transient HTTP/status/shape errors
+inside their existing 30-second windows: at most one five-second request per
+one-second loop, so immediate failures start at most 30 requests per snapshot.
+Interruption can use its existing 300 one-second outer polls when a selected
+row remains pending. After `completion_failed`, stale-worker adds at most 4,800
+outer store polls/20 minutes; a missing row adds its exact retention read.
+These are harness-only reads and validation. They add no production work,
+source/Git/content/corpus read, persistent schema, authority, lock, write,
+attempt, allocation, or release authorization.

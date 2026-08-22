@@ -649,6 +649,35 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 	}
 }
 
+func TestProfileInspectorPreservesHistoricalResponseErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		wantText string
+	}{
+		{
+			name: "oversized", body: strings.Repeat("x", MaxObservationBytes+1),
+			wantText: "T40.13 HTTP response exceeds its bound",
+		},
+		{name: "invalid", body: "{", wantText: "T40.13 HTTP response is invalid"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+				_, _ = io.WriteString(response, test.body)
+			}))
+			defer server.Close()
+			inspector := &profileInspector{client: server.Client(), credential: "private-test-token"}
+			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
+			var target struct{}
+			err := inspector.get(t.Context(), profile, "/bounded", &target)
+			if err == nil || err.Error() != test.wantText || !errors.Is(err, errHTTPResponse) {
+				t.Fatalf("response error = %v, want %q wrapping response sentinel", err, test.wantText)
+			}
+		})
+	}
+}
+
 func TestObservationProgressTerminalClassificationIsImmediateAndClosed(t *testing.T) {
 	limit := pipelinerefusal.Receipt{
 		Schema:         pipelinerefusal.Schema,

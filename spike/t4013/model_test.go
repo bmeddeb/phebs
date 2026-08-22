@@ -113,6 +113,55 @@ func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 	}
 }
 
+func TestCeremonySchemaLadderIsCompleteAndCoupled(t *testing.T) {
+	for version := 1; version < len(ceremonySchemaLadder); version++ {
+		version := version
+		t.Run(ceremonySchemaLadder[version].plan, func(t *testing.T) {
+			entry := ceremonySchemaLadder[version]
+			if planSchemaVersion(entry.plan) != version ||
+				observationSchemaVersion(entry.observation) != version ||
+				receiptSchemaVersion(entry.receipt) != version {
+				t.Fatalf("schema version %d is not coupled: %+v", version, entry)
+			}
+			plan := Plan{Schema: entry.plan}
+			if observationSchemaForPlan(plan) != entry.observation ||
+				receiptSchemaForPlan(plan) != entry.receipt {
+				t.Fatalf("plan schema %q maps to the wrong serialized contracts", entry.plan)
+			}
+			observation := emptyObservationForPlan(EnvironmentObservation{}, plan)
+			if observation.Schema != entry.observation {
+				t.Fatalf("empty observation schema = %q", observation.Schema)
+			}
+			switch {
+			case version < 17 && observation.Interruption != nil:
+				t.Fatal("pre-v17 observation acquired interruption evidence")
+			case version >= 17 && version < 22 &&
+				(observation.Interruption == nil || observation.Interruption.Schema != interruptionSchemaV1):
+				t.Fatal("v17-v21 observation lost its interruption-v1 contract")
+			case version >= 22 &&
+				(observation.Interruption == nil || observation.Interruption.Schema != interruptionSchemaV2):
+				t.Fatal("v22+ observation lost its interruption-v2 contract")
+			}
+			wantDetail := -1
+			switch {
+			case version >= 21:
+				wantDetail = observationDetailV17
+			case version >= 16:
+				wantDetail = observationDetailV16
+			case version >= 4:
+				wantDetail = version - 4
+			}
+			if got := convergenceDetailVersion(version); got != wantDetail {
+				t.Fatalf("convergence detail version = %d, want %d", got, wantDetail)
+			}
+		})
+	}
+	if planSchemaVersion("unknown") != 0 || observationSchemaVersion("unknown") != 0 ||
+		receiptSchemaVersion("unknown") != 0 {
+		t.Fatal("unknown schema entered the ceremony ladder")
+	}
+}
+
 func TestFreshV14PlanStampsFreezeDateWithoutChangingHistoricalPlan(t *testing.T) {
 	historical, err := frozenV14PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
@@ -622,6 +671,190 @@ func TestV22PlanFencesImmediateInterruptionRecovery(t *testing.T) {
 	}
 }
 
+func TestV23PlanFencesCeremonyOracleRecovery(t *testing.T) {
+	plan, err := frozenV23PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV23 || plan.Safety != frozenSafetyV22 ||
+		plan.Safety != frozenSafetyV23 || plan.Claims.RaisesProductionBound {
+		t.Fatalf("v23 plan = %+v", plan)
+	}
+	encoded, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePlan(encoded)
+	if err != nil || decoded.Schema != PlanSchemaV23 ||
+		observationSchemaForPlan(decoded) != ObservationSchemaV23 ||
+		receiptSchemaForPlan(decoded) != ReceiptSchemaV23 {
+		t.Fatalf("decoded v23 plan = %+v, %v", decoded, err)
+	}
+}
+
+func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
+	projection := &AuthorizedQueryObservation{
+		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",
+		Query: "relationships", Class: "status", Status: 409, Attempts: 3,
+	}
+	value := Observation{
+		Schema: ObservationSchemaV23, Outcome: "stopped",
+		Failures: []FailureObservation{{
+			Phase: "authorized_query", Class: "authorization", Code: "authorized_query_failed",
+		}},
+		AuthorizedQuery: projection,
+	}
+	if err := validateAuthorizedQueryObservation(value); err != nil {
+		t.Fatalf("V23 failure projection refused: %v", err)
+	}
+	historical := value
+	historical.Schema = ObservationSchemaV22
+	if err := validateAuthorizedQueryObservation(historical); err == nil {
+		t.Fatal("V22 observation accepted V23 authorized-query diagnostics")
+	}
+	completed := value
+	completed.Outcome = "completed"
+	completed.Failures = nil
+	if err := validateAuthorizedQueryObservation(completed); err == nil {
+		t.Fatal("completed observation retained failure diagnostics")
+	}
+	correlated := value
+	correlated.Failures = []FailureObservation{{
+		Phase: "authorized_query", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+	}}
+	if err := validateAuthorizedQueryObservation(correlated); err != nil {
+		t.Fatalf("correlated meter failure refused query diagnostics: %v", err)
+	}
+	correlated.Failures = []FailureObservation{{
+		Phase: "authorized_query", Class: "environment", Code: "review_ceiling_crossed",
+	}}
+	if err := validateAuthorizedQueryObservation(correlated); err != nil {
+		t.Fatalf("correlated ceiling refused query diagnostics: %v", err)
+	}
+	forged := value
+	forged.Failures = []FailureObservation{{
+		Phase: "authorized_query", Class: "oracle", Code: "exact_gate_failed",
+	}}
+	if err := validateAuthorizedQueryObservation(forged); err == nil {
+		t.Fatal("exact-gate stop accepted unrelated authorized-query diagnostics")
+	}
+}
+
+func TestInterruptionLifecycleAcceptsBoundedErrorProgress(t *testing.T) {
+	progress := InterruptionLifecycleObservation{
+		State: "error", Completeness: lifecycle.Unavailable,
+		Scanned: 17, Deleted: 3, Backlog: true,
+	}
+	if err := validateInterruptionLifecycle(progress, true); err != nil {
+		t.Fatalf("bounded error progress refused: %v", err)
+	}
+	if err := validateInterruptionLifecycle(progress, false); err == nil {
+		t.Fatal("historical lifecycle contract accepted error progress")
+	}
+	progress.State = "not_run"
+	if err := validateInterruptionLifecycle(progress, true); err == nil {
+		t.Fatal("not-run lifecycle projection accepted sweep progress")
+	}
+}
+
+func TestV23StoppedReceiptRequiresAuthorizedQueryDiagnostic(t *testing.T) {
+	phases := make([]PhaseObservation, len(phaseOrder))
+	for index, name := range phaseOrder {
+		phases[index] = PhaseObservation{Name: name, Outcome: "not_run"}
+	}
+	for index := 0; index < 10; index++ {
+		phases[index] = succeededPhase(phaseOrder[index], PhaseMetrics{})
+	}
+	phases[10].Outcome = "failed"
+	phases[11] = succeededPhase("teardown", PhaseMetrics{})
+	receipt := Receipt{
+		Schema: ReceiptSchemaV23, Outcome: "stopped", Phases: phases,
+		Failures: []FailureObservation{{
+			Phase: "authorized_query", Class: "authorization", Code: "authorized_query_failed",
+		}},
+		Decision: DecisionObservation{
+			Selected: "unclassified", Reason: "authorized_query_failed",
+		},
+		Teardown: TeardownObservation{Completed: true},
+		AuthorizedQuery: &AuthorizedQueryObservation{
+			Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",
+			Query: "relationships", Class: "status", Status: 409, Attempts: 3,
+		},
+	}
+	if err := validateStopped(receipt); err != nil {
+		t.Fatalf("V23 authorized-query stop refused: %v", err)
+	}
+	correlated := receipt
+	correlated.Failures = []FailureObservation{{
+		Phase: "authorized_query", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+	}}
+	correlated.Decision = DecisionObservation{
+		Selected: "unclassified", Reason: "failed_phase_measurement_unavailable",
+	}
+	if err := validateStopped(correlated); err != nil {
+		t.Fatalf("correlated query and meter stop refused: %v", err)
+	}
+	receipt.AuthorizedQuery = nil
+	if err := validateStopped(receipt); err == nil {
+		t.Fatal("V23 authorized-query stop sealed without its diagnostic")
+	}
+}
+
+func TestV23StoppedReceiptAcceptsTypedCollectionDeadline(t *testing.T) {
+	phases := make([]PhaseObservation, len(phaseOrder))
+	for index, name := range phaseOrder {
+		phases[index] = PhaseObservation{Name: name, Outcome: "not_run"}
+	}
+	for index := 0; index < 9; index++ {
+		phases[index] = succeededPhase(phaseOrder[index], PhaseMetrics{})
+	}
+	phases[9].Outcome = "failed"
+	phases[11] = succeededPhase("teardown", PhaseMetrics{})
+	receipt := Receipt{
+		Schema: ReceiptSchemaV23, Outcome: "stopped", Phases: phases,
+		Failures: []FailureObservation{{
+			Phase: "collection", Class: "lifecycle", Code: "lifecycle_cycle_deadline_expired",
+		}},
+		Decision: DecisionObservation{
+			Selected: "cohort_experiment", Reason: "frozen_collection_review_ceiling_crossed",
+			Substantiated: true,
+		},
+		Teardown: TeardownObservation{Completed: true},
+	}
+	if err := validateStopped(receipt); err != nil {
+		t.Fatalf("V23 collection deadline refused: %v", err)
+	}
+	receipt.Schema = ReceiptSchemaV22
+	if err := validateStopped(receipt); err == nil {
+		t.Fatal("V22 receipt accepted V23 lifecycle deadline")
+	}
+}
+
+func TestV23StoppedReceiptAcceptsPressureRecoveryDeadline(t *testing.T) {
+	phases := make([]PhaseObservation, len(phaseOrder))
+	for index, name := range phaseOrder {
+		phases[index] = PhaseObservation{Name: name, Outcome: "not_run"}
+	}
+	for index := 0; index < 7; index++ {
+		phases[index] = succeededPhase(phaseOrder[index], PhaseMetrics{})
+	}
+	phases[7].Outcome = "failed"
+	phases[11] = succeededPhase("teardown", PhaseMetrics{})
+	receipt := Receipt{
+		Schema: ReceiptSchemaV23, Outcome: "stopped", Phases: phases,
+		Failures: []FailureObservation{{
+			Phase: "pressure", Class: "environment", Code: "pressure_recovery_deadline_expired",
+		}},
+		Decision: DecisionObservation{
+			Selected: "unclassified", Reason: "pressure_recovery_deadline_expired",
+		},
+		Teardown: TeardownObservation{Completed: true},
+	}
+	if err := validateStopped(receipt); err != nil {
+		t.Fatalf("V23 pressure recovery deadline refused: %v", err)
+	}
+}
+
 func TestV22InterruptionEvidenceFencesCollectionAndLifecycle(t *testing.T) {
 	if interruptionSubstageIndex(ObservationSchemaV22, "recovery_verification") >=
 		interruptionSubstageIndex(ObservationSchemaV22, "restart_convergence") {
@@ -664,6 +897,22 @@ func TestV22InterruptionEvidenceFencesCollectionAndLifecycle(t *testing.T) {
 	overBound.Interruption.ConvergenceLifecycle.Deleted = lifecycle.MaxDeletesPerTick + 1
 	if err := validateInterruptionObservation(overBound); err == nil {
 		t.Fatal("V22 interruption accepted over-bound lifecycle evidence")
+	}
+	v23Error := value
+	v23Error.Schema = ObservationSchemaV23
+	v23Error.Interruption = cloneInterruptionObservation(value.Interruption)
+	v23Error.Interruption.RecoveryLifecycle = &InterruptionLifecycleObservation{
+		State: "error", Completeness: lifecycle.Unavailable,
+		Scanned: 17, Deleted: 3, Backlog: true,
+	}
+	v23Error.Interruption.ConvergenceLifecycle = v23Error.Interruption.RecoveryLifecycle
+	if err := validateInterruptionObservation(v23Error); err != nil {
+		t.Fatalf("V23 interruption refused bounded lifecycle error progress: %v", err)
+	}
+	historicalError := v23Error
+	historicalError.Schema = ObservationSchemaV22
+	if err := validateInterruptionObservation(historicalError); err == nil {
+		t.Fatal("V22 interruption acquired V23 lifecycle error semantics")
 	}
 
 	withoutRecoveryCycle := value

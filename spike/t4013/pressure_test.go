@@ -42,9 +42,10 @@ func reportedCapacityPercent(capacity lifecycle.Capacity) int {
 
 func TestPressureHostPreflightRequiresReachableTarget(t *testing.T) {
 	tests := []struct {
-		name     string
-		capacity lifecycle.Capacity
-		wantErr  bool
+		name      string
+		capacity  lifecycle.Capacity
+		allocated int64
+		wantErr   bool
 	}{
 		{name: "reachable", capacity: lifecycle.Capacity{
 			TotalBytes: 460 << 30, UsedBytes: 300 << 30, AvailableBytes: 160 << 30,
@@ -58,12 +59,46 @@ func TestPressureHostPreflightRequiresReachableTarget(t *testing.T) {
 			TotalBytes: 1_000 << 30, UsedBytes: 500 << 30, AvailableBytes: 500 << 30,
 			UsedPercent: 50, Pressure: lifecycle.PressureNormal,
 		}, wantErr: true},
+		{name: "prepared workspace consumes remaining allocation", capacity: lifecycle.Capacity{
+			TotalBytes: 460 << 30, UsedBytes: 300 << 30, AvailableBytes: 160 << 30,
+			UsedPercent: 66, Pressure: lifecycle.PressureNormal,
+		}, allocated: 24 << 30, wantErr: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePressureHostPreflight(test.capacity, frozenSafetyV10)
+			err := validatePressureHostPreflightV23(test.capacity, test.allocated, frozenSafetyV10)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("error = %v, wantErr %t", err, test.wantErr)
+			}
+		})
+	}
+	legacy := tests[len(tests)-1]
+	if err := validatePressureHostPreflight(legacy.capacity, frozenSafetyV10); err != nil {
+		t.Fatalf("historical preflight acquired V23 workspace charging: %v", err)
+	}
+}
+
+func TestPressureTargetObservationV23AllowsOnePercentFilesystemDrift(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		percent  int
+		contract pressureBallastContract
+		want     bool
+	}{
+		{name: "v22 exact", percent: 82, contract: pressureBallastV22, want: true},
+		{name: "v22 rejects drift", percent: 81, contract: pressureBallastV22},
+		{name: "v23 lower drift", percent: 81, contract: pressureBallastV23, want: true},
+		{name: "v23 exact", percent: 82, contract: pressureBallastV23, want: true},
+		{name: "v23 upper drift", percent: 83, contract: pressureBallastV23, want: true},
+		{name: "v23 rejects low", percent: 80, contract: pressureBallastV23},
+		{name: "v23 rejects high", percent: 84, contract: pressureBallastV23},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			capacity := lifecycle.Capacity{
+				Pressure: lifecycle.PressureCollect, UsedPercent: test.percent,
+			}
+			if got := pressureTargetObserved(capacity, 82, test.contract); got != test.want {
+				t.Fatalf("observed = %t, want %t", got, test.want)
 			}
 		})
 	}

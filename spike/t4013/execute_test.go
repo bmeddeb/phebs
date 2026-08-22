@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
@@ -1490,6 +1491,122 @@ func TestStoppedFailureClassificationIsClosed(t *testing.T) {
 	}
 }
 
+func TestV23StoppedFailureClassificationPreservesRecoveryAndDiagnostics(t *testing.T) {
+	plan := Plan{Schema: PlanSchemaV23}
+	for _, test := range []struct {
+		name     string
+		cause    error
+		code     string
+		decision string
+	}{
+		{
+			name:  "direct recovery outranks pipeline terminal",
+			cause: directRecovery(errRelationshipTerminal),
+			code:  "direct_recovery_failed", decision: "p6_investigation",
+		},
+		{
+			name:  "direct recovery recognizes interruption pipeline terminal",
+			cause: directRecovery(errInterruptionProgressTerminal),
+			code:  "direct_recovery_failed", decision: "p6_investigation",
+		},
+		{
+			name:  "direct recovery outranks a V23 lifecycle sentinel",
+			cause: directRecovery(errLifecycleCycleDeadline),
+			code:  "direct_recovery_failed", decision: "p6_investigation",
+		},
+		{
+			name:  "direct recovery outranks a V23 query sentinel",
+			cause: directRecovery(errAuthorizedQuery),
+			code:  "direct_recovery_failed", decision: "p6_investigation",
+		},
+		{
+			name: "collection lifecycle deadline", cause: errLifecycleCycleDeadline,
+			code: "lifecycle_cycle_deadline_expired", decision: "cohort_experiment",
+		},
+		{
+			name:  "pressure lifecycle deadline",
+			cause: errors.Join(errLifecycleCycleDeadline, errProductionPressure),
+			code:  "production_pressure_gate_refused", decision: "reduce",
+		},
+		{
+			name: "pressure recovery deadline", cause: errPressureRecoveryDeadline,
+			code: "pressure_recovery_deadline_expired", decision: "unclassified",
+		},
+		{
+			name: "authorized query", cause: errAuthorizedQuery,
+			code: "authorized_query_failed", decision: "unclassified",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := classifyStoppedFailureForPlan(plan, test.cause, nil, nil)
+			if got.code != test.code || got.decision != test.decision {
+				t.Fatalf("classification = %+v", got)
+			}
+		})
+	}
+	historical := classifyStoppedFailureForPlan(
+		Plan{Schema: PlanSchemaV22}, directRecovery(errRelationshipTerminal), nil, nil,
+	)
+	if historical.code != "relationship_terminal" {
+		t.Fatalf("V22 classification changed: %+v", historical)
+	}
+	unmeasured := classifyStoppedFailureForPlan(
+		plan, errAuthorizedQuery, errors.New("meter failed"), nil,
+	)
+	if unmeasured.code != "failed_phase_measurement_unavailable" {
+		t.Fatalf("V23 diagnostics overrode missing measurement: %+v", unmeasured)
+	}
+	ceiling := classifyStoppedFailureForPlan(
+		plan, directRecovery(errRelationshipTerminal), nil, errTotalWallDeadline,
+	)
+	if ceiling.code != "review_ceiling_crossed" {
+		t.Fatalf("V23 recovery overrode the total ceiling: %+v", ceiling)
+	}
+	queryCeiling := classifyStoppedFailureForPlan(
+		plan, errAuthorizedQuery, nil, errReviewCeiling,
+	)
+	if queryCeiling.code != "review_ceiling_crossed" {
+		t.Fatalf("V23 query diagnostics overrode the review ceiling: %+v", queryCeiling)
+	}
+}
+
+func TestV23LifecycleWaitTypesOnlyItsOwnDeadline(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	profile := PreparedProfile{
+		Credential: credential, Address: strings.TrimPrefix(server.URL, "http://"),
+	}
+	if _, err := waitLifecycleForPlan(
+		t.Context(), Plan{Schema: PlanSchemaV23}, profile, true, 20*time.Millisecond,
+	); !errors.Is(err, errLifecycleCycleDeadline) {
+		t.Fatalf("V23 lifecycle deadline = %v", err)
+	}
+	if _, err := waitLifecycleForPlan(
+		t.Context(), Plan{Schema: PlanSchemaV22}, profile, true, 20*time.Millisecond,
+	); errors.Is(err, errLifecycleCycleDeadline) {
+		t.Fatalf("V22 lifecycle wait acquired V23 sentinel: %v", err)
+	}
+	if _, err := waitLifecyclePressureForPlan(
+		t.Context(), Plan{Schema: PlanSchemaV23}, profile, true, lifecycle.PressureNormal,
+		pressureWaitRecover, 20*time.Millisecond,
+	); !errors.Is(err, errPressureRecoveryDeadline) || errors.Is(err, errProductionPressure) {
+		t.Fatalf("V23 pressure recovery deadline = %v", err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := waitLifecycleForPlan(
+		canceled, Plan{Schema: PlanSchemaV23}, profile, true, time.Second,
+	); !errors.Is(err, context.Canceled) || errors.Is(err, errLifecycleCycleDeadline) {
+		t.Fatalf("canceled V23 lifecycle wait = %v", err)
+	}
+}
+
 func TestObservationWriterIsExclusiveAndAbsolute(t *testing.T) {
 	value := completedObservation()
 	path := filepath.Join(t.TempDir(), "observation.json")
@@ -1501,6 +1618,25 @@ func TestObservationWriterIsExclusiveAndAbsolute(t *testing.T) {
 	}
 	if err := WriteObservation("relative.json", value); err == nil {
 		t.Fatal("observation writer accepted a relative path")
+	}
+}
+
+func TestCompletedObservationIsPrevalidatedBeforeCustodyDeletion(t *testing.T) {
+	observation := completedObservation()
+	observation.Phases[len(observation.Phases)-1] = PhaseObservation{
+		Name: "teardown", Outcome: "not_run",
+	}
+	observation.Teardown = TeardownObservation{}
+	run := &execution{observation: observation}
+	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
+		t.Fatalf("valid completed shape refused before teardown: %v", err)
+	}
+	run.observation.AuthorizedQuery = &AuthorizedQueryObservation{
+		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",
+		Query: "search", Class: "status", Status: 503, Attempts: 1,
+	}
+	if err := run.validateCompletedObservationBeforeTeardown(); err == nil {
+		t.Fatal("unsealable completed shape reached destructive teardown")
 	}
 }
 
@@ -1708,6 +1844,92 @@ func TestAuthorizedQueryRequiresMatchesAndCitableRelationship(t *testing.T) {
 	}
 }
 
+func TestV23AuthorizedQueryRetriesAndRetainsSourceFreeFailure(t *testing.T) {
+	missingProfile := PreparedProfile{
+		Name: "semantic-262144-v1", RepositoryName: "github.com/example/repo",
+		Credential: filepath.Join(t.TempDir(), "absent"), Address: "127.0.0.1:1",
+	}
+	if _, _, failure, err := queryProfileV23(
+		t.Context(), missingProfile, "semantic", true,
+	); err == nil || failure != nil || errors.Is(err, errAuthorizedQuery) {
+		t.Fatalf("local setup failure was mislabeled as a query: failure=%+v err=%v", failure, err)
+	}
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	searchCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.Header.Get("Authorization") == "" {
+			response.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		searchCalls++
+		response.WriteHeader(http.StatusConflict)
+	}))
+	defer server.Close()
+	profile := PreparedProfile{
+		Name: "semantic-262144-v1", RepositoryName: "github.com/example/repo",
+		Credential: credential, Address: strings.TrimPrefix(server.URL, "http://"),
+	}
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := &authorizedQueryRunner{
+		inspector: inspector, profile: profile, maxAttempts: 3,
+		retryDelay: time.Millisecond, retainFailure: true,
+	}
+	_, _, err = queryProfileWithRunner(t.Context(), runner, "semantic", true)
+	if !errors.Is(err, errAuthorizedQuery) || searchCalls != 3 || runner.failure == nil ||
+		runner.failure.Query != "search" || runner.failure.Class != "status" ||
+		runner.failure.Status != http.StatusConflict || runner.failure.Attempts != 3 {
+		t.Fatalf("calls=%d failure=%+v err=%v", searchCalls, runner.failure, err)
+	}
+
+	terminalCalls := 0
+	terminal := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.Header.Get("Authorization") == "" {
+			response.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		terminalCalls++
+		response.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer terminal.Close()
+	profile.Address = strings.TrimPrefix(terminal.URL, "http://")
+	inspector, err = newProfileInspector(profile, profileInspectionLegacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner = &authorizedQueryRunner{
+		inspector: inspector, profile: profile, maxAttempts: 3,
+		retryDelay: time.Millisecond, retainFailure: true,
+	}
+	_, _, err = queryProfileWithRunner(t.Context(), runner, "semantic", true)
+	if !errors.Is(err, errAuthorizedQuery) || terminalCalls != 1 || runner.failure == nil ||
+		runner.failure.Query != "search" || runner.failure.Class != "status" ||
+		runner.failure.Status != http.StatusServiceUnavailable || runner.failure.Attempts != 1 {
+		t.Fatalf("terminal calls=%d failure=%+v err=%v", terminalCalls, runner.failure, err)
+	}
+	unauthorizedCalls := 0
+	unauthorizedFailure := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		unauthorizedCalls++
+		response.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer unauthorizedFailure.Close()
+	profile.Address = strings.TrimPrefix(unauthorizedFailure.URL, "http://")
+	inspector, err = newProfileInspector(profile, profileInspectionLegacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := &authorizedQueryRunner{inspector: inspector, profile: profile, maxAttempts: 1}
+	_, _, err = queryProfileWithRunner(t.Context(), legacy, "semantic", true)
+	if !errors.Is(err, errExactOracle) || unauthorizedCalls != 1 || legacy.failure != nil {
+		t.Fatalf("legacy unauthorized calls=%d failure=%+v err=%v", unauthorizedCalls, legacy.failure, err)
+	}
+}
+
 func TestDerivedPartialScanReadsOnlyBoundedControlLevel(t *testing.T) {
 	dataDir := t.TempDir()
 	repository := filepath.Join(dataDir, "observations", "repository")
@@ -1777,6 +1999,31 @@ func TestRecoveryAuthorityIsVersionFenced(t *testing.T) {
 	if recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV19}, left) !=
 		recoveryAuthorityForPlan(Plan{Schema: PlanSchemaV19}, right) {
 		t.Fatal("V19 recovery rejected stable relationship semantics")
+	}
+}
+
+func TestStablePhaseAuthorityIsVersionFenced(t *testing.T) {
+	left := privateProfileSnapshot{
+		SourceGeneration: "source", SearchGeneration: "search",
+		ObservationGeneration: "observation", ExtractionGeneration: "extraction",
+		CallerGeneration: "caller", RelationshipGeneration: "relationship-a",
+		RelationshipRootDigest: "root-a", RelationshipSemanticDigest: "semantic",
+	}
+	right := left
+	right.RelationshipGeneration = "relationship-b"
+	right.RelationshipRootDigest = "root-b"
+	if stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV22}, left) ==
+		stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV22}, right) {
+		t.Fatal("V22 phase oracle accepted reminted relationship authority")
+	}
+	if stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, left) !=
+		stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, right) {
+		t.Fatal("V23 phase oracle rejected stable relationship semantics")
+	}
+	right.CallerGeneration = "caller-b"
+	if stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, left) ==
+		stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, right) {
+		t.Fatal("V23 phase oracle accepted caller authority drift")
 	}
 }
 
@@ -1895,6 +2142,7 @@ type fixedGenerationChunkLeaseReader struct {
 	progress *store.GenerationScheduleProgress
 	running  *store.GenerationChunkLeaseState
 	current  func() (store.GenerationChunkLeaseState, error)
+	state    func(string) (store.GenerationChunkLeaseState, error)
 }
 
 func (reader *fixedGenerationChunkLeaseReader) GenerationScheduleRetentionState(
@@ -1933,11 +2181,84 @@ func (reader *fixedGenerationChunkLeaseReader) GenerationChunkLeaseState(
 	_ context.Context,
 	identity string,
 ) (store.GenerationChunkLeaseState, error) {
+	if reader.state != nil {
+		return reader.state(identity)
+	}
 	state, ok := reader.states[identity]
 	if !ok {
 		return store.GenerationChunkLeaseState{}, store.ErrNotFound
 	}
 	return state, nil
+}
+
+func TestV23StaleWorkerWaitsForReaperAfterCompletionPersistenceFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	line := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "completion_failed")
+	if err := os.WriteFile(path, append(line, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV23)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	started := generationscheduler.ChunkLifecycleReport{
+		Schema: generationscheduler.ChunkLifecycleSchema,
+		Event:  "started", Identity: "sha256:" + strings.Repeat("a", 64),
+		Stage:      extractionpublication.ScheduleStage,
+		Generation: "sha256:" + strings.Repeat("b", 64), Attempt: 0, Outcome: "running",
+	}
+	repository := "example.invalid/semantic"
+	scheduleDigest := "sha256:" + strings.Repeat("c", 64)
+	reads := 0
+	reader := &fixedGenerationChunkLeaseReader{state: func(string) (store.GenerationChunkLeaseState, error) {
+		reads++
+		status := store.GenerationChunkRunning
+		if reads > 1 {
+			status = store.GenerationChunkCanceled
+		}
+		return store.GenerationChunkLeaseState{
+			Identity: started.Identity, ScheduleDigest: scheduleDigest,
+			Repository: repository, Stage: started.Stage,
+			Generation: started.Generation, Attempt: started.Attempt, Status: status,
+		}, nil
+	}}
+	settled, err := waitStaleChunkFence(
+		t.Context(), cursor, reader, started, repository, scheduleDigest, time.Second,
+	)
+	if err != nil || settled.Outcome != "stale_fenced" || reads < 2 {
+		t.Fatalf("settled = %+v, reads = %d, err = %v", settled, reads, err)
+	}
+	collected := &fixedGenerationChunkLeaseReader{
+		states: map[string]store.GenerationChunkLeaseState{},
+		retained: map[string]store.GenerationScheduleRetentionState{
+			scheduleDigest: {
+				ScheduleDigest: scheduleDigest, CurrentPresent: true,
+			},
+		},
+	}
+	collectedCursor, err := newChunkLifecycleCursor(path, 0, chunkLifecycleValidationV23)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = collectedCursor.Close() }()
+	settled, err = waitStaleChunkFence(
+		t.Context(), collectedCursor, collected, started, repository, scheduleDigest, time.Second,
+	)
+	if err != nil || settled.Outcome != "stale_fenced" {
+		t.Fatalf("collected settled = %+v, err = %v", settled, err)
+	}
+}
+
+func TestV23LifecycleVocabularyDriftStopsPromptly(t *testing.T) {
+	line := lifecycleTestLine(t, "settled", extractionpublication.ScheduleStage, "future-outcome")
+	if _, found, err := parseChunkLifecycleLine(line, chunkLifecycleValidationV17); err != nil || found {
+		t.Fatalf("V17 drift contract changed: found=%t err=%v", found, err)
+	}
+	report, found, err := parseChunkLifecycleLine(line, chunkLifecycleValidationV23)
+	if err != nil || !found || report.Outcome != chunkLifecycleOutcomeUnknown {
+		t.Fatalf("V23 drift projection = %+v, found=%t err=%v", report, found, err)
+	}
 }
 
 func TestInterruptionLifecycleSelectsExactLiveExtractionLease(t *testing.T) {
@@ -2330,7 +2651,8 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 		},
 	}
 	if fate, err := waitLeaseRecoveryV22WithReader(
-		t.Context(), singleCollection, profile, trigger, scheduleDigest, 100*time.Millisecond,
+		t.Context(), singleCollection, profile, trigger, scheduleDigest,
+		interruptionRecoveryV23, 100*time.Millisecond,
 	); err == nil {
 		t.Fatalf("one collected projection passed recovery verification with fate %q", fate)
 	}
@@ -2391,7 +2713,7 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 				limit = 1500 * time.Millisecond
 			}
 			fate, err := waitLeaseRecoveryV22WithReader(
-				t.Context(), reader, profile, trigger, scheduleDigest, limit,
+				t.Context(), reader, profile, trigger, scheduleDigest, interruptionRecoveryV23, limit,
 			)
 			if test.wantErr {
 				if err == nil {
@@ -2415,11 +2737,37 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 			},
 		},
 	}
+	if fate, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), pending, profile, trigger, scheduleDigest,
+		interruptionRecoveryV22, 100*time.Millisecond,
+	); err != nil || fate != string(store.GenerationChunkPending) {
+		t.Fatalf("historical pending fate = %q, %v", fate, err)
+	}
+	if fate, err := waitLeaseRecoveryV22WithReader(
+		t.Context(), pending, profile, trigger, scheduleDigest,
+		interruptionRecoveryV23, 100*time.Millisecond,
+	); err == nil {
+		t.Fatalf("reclaimable pending fate passed recovery verification as %q", fate)
+	}
+	reads := 0
+	recovered := &fixedGenerationChunkLeaseReader{state: func(string) (store.GenerationChunkLeaseState, error) {
+		reads++
+		status := store.GenerationChunkPending
+		if reads > 1 {
+			status = store.GenerationChunkCanceled
+		}
+		return store.GenerationChunkLeaseState{
+			Identity: trigger.Identity, ScheduleDigest: scheduleDigest,
+			Repository: profile.RepositoryName, Stage: trigger.Stage,
+			Generation: trigger.Generation, Attempt: trigger.Attempt, Status: status,
+		}, nil
+	}}
 	fate, err := waitLeaseRecoveryV22WithReader(
-		t.Context(), pending, profile, trigger, scheduleDigest, time.Second,
+		t.Context(), recovered, profile, trigger, scheduleDigest,
+		interruptionRecoveryV23, 1500*time.Millisecond,
 	)
-	if err != nil || fate != string(store.GenerationChunkPending) {
-		t.Fatalf("retained recovered fate = %q, %v", fate, err)
+	if err != nil || fate != string(store.GenerationChunkCanceled) || reads < 2 {
+		t.Fatalf("closed recovered fate = %q, reads=%d, %v", fate, reads, err)
 	}
 	pending.states[trigger.Identity] = store.GenerationChunkLeaseState{
 		Identity: trigger.Identity, ScheduleDigest: "sha256:" + strings.Repeat("d", 64),
@@ -2428,7 +2776,8 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 		Status: store.GenerationChunkPending,
 	}
 	if _, err := waitLeaseRecoveryV22WithReader(
-		t.Context(), pending, profile, trigger, scheduleDigest, time.Second,
+		t.Context(), pending, profile, trigger, scheduleDigest,
+		interruptionRecoveryV23, time.Second,
 	); err == nil {
 		t.Fatal("changed schedule digest passed recovery verification")
 	}

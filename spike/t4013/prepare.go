@@ -233,6 +233,15 @@ func destroyCustodyWith(
 }
 
 func HostPreflight(ctx context.Context, dataParent string, plan Plan) (EnvironmentObservation, error) {
+	return hostPreflight(ctx, dataParent, 0, plan)
+}
+
+func hostPreflight(
+	ctx context.Context,
+	dataParent string,
+	workspaceAllocated int64,
+	plan Plan,
+) (EnvironmentObservation, error) {
 	if ctx == nil || !filepath.IsAbs(dataParent) {
 		return EnvironmentObservation{}, errors.New("T40.13 host preflight scope is invalid")
 	}
@@ -253,7 +262,13 @@ func HostPreflight(ctx context.Context, dataParent string, plan Plan) (Environme
 		if capacityErr != nil {
 			return EnvironmentObservation{}, fmt.Errorf("gate T40.13 custody capacity: %w", capacityErr)
 		}
-		if validatePressureHostPreflight(observedCapacity, plan.Safety) != nil {
+		pressureErr := validatePressureHostPreflight(observedCapacity, plan.Safety)
+		if planSchemaVersion(plan.Schema) >= 23 {
+			pressureErr = validatePressureHostPreflightV23(
+				observedCapacity, workspaceAllocated, plan.Safety,
+			)
+		}
+		if pressureErr != nil {
 			return EnvironmentObservation{}, errors.New("T40.13 frozen pressure host prerequisite is not met")
 		}
 		usedPercent = observedCapacity.UsedPercent

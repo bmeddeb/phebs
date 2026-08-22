@@ -1592,6 +1592,28 @@ catalog, relationship, or correctness authority.
 
 ## Gated product work
 
+The next T40.R1 freeze is fenced by fresh V23 ceremony semantics. A restarted
+lifecycle runner completes a process-observed owner cycle before its one-hour
+idle; late relationship re-mints are compared through stable semantic
+authority and adopted; prepared workspace allocation is charged before the
+pressure phase; collection and pressure-entry deadlines are typed; stale-worker
+can observe reaper recovery or exact retired collection after a failed
+completion write; lifecycle vocabulary
+drift fails promptly; authorized-query operational failures retry inside a
+closed bound and retain source-free endpoint diagnostics; and archive direct
+recovery keeps precedence over every inner cause. V1–V22 execution and
+receipt semantics remain frozen. This hardening does not authorize a freeze,
+ceremony, release, or scale/SLO/accuracy/completeness claim.
+
+The V23 post-review fence additionally preserves bounded lifecycle progress on
+an error owner, seals correlated authorized-query/measurement failures,
+restores frozen unauthorized-probe classification, separates substantiated
+pressure entry from unclassified pressure recovery, and requires a closed or
+corroborated-collected interruption fate rather than accepting reclaimable
+`pending`. stale-worker consults exact retention only after
+`completion_failed`, and V1-V22 evidence semantics remain unchanged. A fresh
+freeze still requires the complete corrected gate; this row authorizes none.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an

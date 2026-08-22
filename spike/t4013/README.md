@@ -2808,3 +2808,57 @@ Two lifecycle-status requests serialize at most 32 in-memory owner summaries
 and retain one each, with no store/disk read. The change adds no source/content
 scan, production write, lock, job attempt, child process, authority, or scale
 claim.
+
+### V23 never-executed phase hardening
+
+Fresh V23 execution closes the collection, pressure, stale-worker, and
+authorized-query edges found by enumerating every writer that can move their
+oracles. A restarted lifecycle runner cannot sleep after only the suffix of a
+persisted rotation; it observes a full local owner cycle first. Collection and
+authorized-query restart use stable source/extraction/caller/relationship
+semantic authority and refresh their baseline after a successful projection,
+so a legitimate late relationship re-mint is not mislabeled drift.
+
+Pressure still proves production `collect`, but the final shared-filesystem
+reading may be 81–83% around frozen 82%. Before the executed marker, two `du`
+passes charge the actual prepared workspace against the remaining 96-GiB
+custody allocation and the 80-GiB ballast cap. Pressure and collection
+lifecycle-entry deadlines now map to their frozen decisions rather than an
+unclassified operational stop; delayed post-removal pressure recovery is the
+separate unclassified environment result described below.
+
+V23 stale-worker follows exact authority after `completion_failed` until the
+reaper records `canceled` or the exact retired schedule proves the row was
+collected; other settled fates fail immediately. Unknown settled lifecycle
+vocabulary is reduced to closed `unknown` and fails promptly.
+Authorized-query transport and 409 responses receive at most three
+30-second-bounded attempts separated by one second; a terminal failure retains
+only profile, endpoint name, class, status, and attempt count. Archive restore
+keeps its outer direct-recovery P6 classification for every inner cause.
+Historical V1–V22 bytes and validators do not inherit
+these semantics, and no freeze, execution, release, or scale claim is
+authorized by this change.
+
+The V23 post-review closure makes the first cut sealable without weakening its
+oracles. Error-state lifecycle evidence may retain bounded sweep counters only
+in V23; correlated authorized-query plus meter/ceiling failures keep the
+source-free query projection, while local setup failures do not fabricate one.
+Historical unauthorized-probe response classification is restored exactly.
+Pressure entry remains the substantiated production gate, but slow reclaim
+after ballast removal is an unclassified environment recovery deadline, and
+the pressure restart uses stable semantic authority.
+
+Completed observations are prevalidated with a synthetic successful teardown
+record before custody deletion, then validated again with real teardown
+metrics. A future serializer/validator drift therefore retains custody instead
+of destroying the only diagnostic state.
+
+V23 also requires a closed interruption fate: `pending` is still reclaimable
+and cannot pass as recovery. V22 retains its frozen pending behavior. After a
+stale-worker `completion_failed`, the harness consults the store; a missing row
+can pass only when its selected schedule digest is non-current beside a
+distinct successor and is absent or closed. Normal stale-fence completion does
+no store polling. Transient lifecycle-status reads retry inside the two fixed
+30-second evidence windows. All store and HTTP calls keep their existing
+deadlines, V1-V22 bytes remain historical, and this changes no production API,
+authority, queue, attempt, or release posture.

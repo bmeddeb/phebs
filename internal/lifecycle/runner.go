@@ -26,6 +26,7 @@ func Run(
 		return
 	}
 	delay := time.Duration(0)
+	cycleStarted := false
 	for {
 		if delay > 0 {
 			timer := time.NewTimer(delay)
@@ -48,6 +49,9 @@ func Run(
 		} else if result.Err != nil {
 			log.Printf("lifecycle owner %q: %v", result.Owner, result.Err)
 		}
+		if result.CycleStart {
+			cycleStarted = true
+		}
 		pressureAccelerated := false
 		if gate != nil {
 			capacity, capacityErr := gate.Check(ctx, 0)
@@ -57,10 +61,11 @@ func Run(
 			pressureAccelerated = capacity.Pressure == PressureCollect ||
 				capacity.Pressure == PressureRefuse
 		}
-		if result.More || !result.CycleComplete || pressureAccelerated {
+		if result.More || !result.CycleComplete || !cycleStarted || pressureAccelerated {
 			delay = backlogDelay
 		} else {
 			delay = idleInterval
+			cycleStarted = false
 		}
 	}
 }

@@ -70,6 +70,9 @@ var (
 	errRelationshipTerminal         = errors.New("T40.13 relationship generation terminated before publication")
 	errInterruptionTriggerDeadline  = errors.New("T40.13 B-bound interruption trigger deadline expired")
 	errInterruptionProgressTerminal = errors.New("T40.13 B pipeline reached a terminal state before interruption trigger")
+	errLifecycleCycleDeadline       = errors.New("T40.13 lifecycle cycle deadline expired")
+	errPressureRecoveryDeadline     = errors.New("T40.13 pressure recovery deadline expired")
+	errAuthorizedQuery              = errors.New("T40.13 authorized query failed")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -186,7 +189,14 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err := verifyCleanCheckout(ctx, moduleRoot, plan.SourceCommit); err != nil {
 		return nil, err
 	}
-	environment, err := HostPreflight(ctx, filepath.Dir(workspace), plan)
+	workspaceAllocated := int64(0)
+	if planSchemaVersion(plan.Schema) >= 23 {
+		_, workspaceAllocated, err = measureDataBytes(workspace)
+		if err != nil {
+			return nil, err
+		}
+	}
+	environment, err := hostPreflight(ctx, filepath.Dir(workspace), workspaceAllocated, plan)
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +344,9 @@ func (run *execution) execute() error {
 	if err := run.finalizeObservation(); err != nil {
 		return err
 	}
+	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
+		return fmt.Errorf("T40.13 completed observation is unsealable; custody retained: %w", err)
+	}
 	run.startPhase(11)
 	if err := run.teardown(); err != nil {
 		return err
@@ -356,7 +369,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 		})
 	}
 	run.observation.Outcome = "stopped"
-	classification := classifyStoppedFailure(cause, measurementErr, ceilingErr)
+	classification := classifyStoppedFailureForPlan(run.plan, cause, measurementErr, ceilingErr)
 	run.observation.Failures = []FailureObservation{{
 		Phase: phaseOrder[run.phase], Class: classification.class, Code: classification.code,
 	}}
@@ -523,6 +536,53 @@ func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClas
 		}
 	}
 	return result
+}
+
+func classifyStoppedFailureForPlan(
+	plan Plan,
+	cause, measurementErr, ceilingErr error,
+) stoppedClassification {
+	if planSchemaVersion(plan.Schema) < 23 {
+		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
+	}
+	if measurementErr != nil || errors.Is(cause, errTotalWallDeadline) ||
+		errors.Is(ceilingErr, errTotalWallDeadline) || errors.Is(ceilingErr, errReviewCeiling) {
+		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
+	}
+	// V23 preserves P6 attribution for every inner archive-recovery failure.
+	// Historical classifiers inspected several inner sentinels first and could
+	// otherwise let each newly added classification steal the outer decision.
+	if errors.Is(cause, errDirectRecovery) {
+		return stoppedClassification{
+			class: "recovery", code: "direct_recovery_failed",
+			decision: "p6_investigation", reason: "direct_recovery_failed", substantiated: true,
+		}
+	}
+	if errors.Is(cause, errLifecycleCycleDeadline) {
+		if errors.Is(cause, errProductionPressure) {
+			return stoppedClassification{
+				class: "lifecycle", code: "production_pressure_gate_refused",
+				decision: "reduce", reason: "production_pressure_gate_refused", substantiated: true,
+			}
+		}
+		return stoppedClassification{
+			class: "lifecycle", code: "lifecycle_cycle_deadline_expired",
+			decision: "cohort_experiment", reason: "frozen_collection_review_ceiling_crossed", substantiated: true,
+		}
+	}
+	if errors.Is(cause, errPressureRecoveryDeadline) {
+		return stoppedClassification{
+			class: "environment", code: "pressure_recovery_deadline_expired",
+			decision: "unclassified", reason: "pressure_recovery_deadline_expired",
+		}
+	}
+	if errors.Is(cause, errAuthorizedQuery) {
+		return stoppedClassification{
+			class: "authorization", code: "authorized_query_failed",
+			decision: "unclassified", reason: "authorized_query_failed",
+		}
+	}
+	return classifyStoppedFailure(cause, measurementErr, ceilingErr)
 }
 
 func (run *execution) startPhase(index int) {
@@ -879,14 +939,14 @@ func (run *execution) interruption() error {
 		run.setInterruptionSubstage("recovery_verification")
 		recovered, recoverErr := waitInterruptionLeaseRecoveryV22(
 			run.ctx, profile, trigger, run.observation.Interruption.TriggerScheduleSHA256,
-			5*time.Minute,
+			interruptionRecoveryContractForPlan(run.plan), 5*time.Minute,
 		)
 		if recoverErr != nil {
 			return directRecovery(recoverErr)
 		}
 		run.observation.Interruption.TriggerRecoveredState = recovered
-		recoveryLifecycle, lifecycleErr := readGenerationLifecycleObservation(
-			run.ctx, profile, 30*time.Second,
+		recoveryLifecycle, lifecycleErr := readGenerationLifecycleObservationForPlan(
+			run.ctx, run.plan, profile, 30*time.Second,
 		)
 		if lifecycleErr != nil {
 			return directRecovery(lifecycleErr)
@@ -902,8 +962,8 @@ func (run *execution) interruption() error {
 		return directRecovery(errors.New("interruption recovery changed exact authority"))
 	}
 	if planSchemaVersion(run.plan.Schema) >= 22 {
-		convergenceLifecycle, lifecycleErr := readGenerationLifecycleObservation(
-			run.ctx, profile, 30*time.Second,
+		convergenceLifecycle, lifecycleErr := readGenerationLifecycleObservationForPlan(
+			run.ctx, run.plan, profile, 30*time.Second,
 		)
 		if lifecycleErr != nil {
 			return directRecovery(lifecycleErr)
@@ -1036,6 +1096,7 @@ func waitInterruptionLeaseRecoveryV22(
 	profile PreparedProfile,
 	trigger generationscheduler.ChunkLifecycleReport,
 	scheduleDigest string,
+	contract interruptionRecoveryContract,
 	limit time.Duration,
 ) (string, error) {
 	reader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
@@ -1044,8 +1105,22 @@ func waitInterruptionLeaseRecoveryV22(
 	}
 	defer func() { _ = reader.Close(context.WithoutCancel(ctx)) }()
 	return waitLeaseRecoveryV22WithReader(
-		ctx, reader, profile, trigger, scheduleDigest, limit,
+		ctx, reader, profile, trigger, scheduleDigest, contract, limit,
 	)
+}
+
+type interruptionRecoveryContract uint8
+
+const (
+	interruptionRecoveryV22 interruptionRecoveryContract = iota + 1
+	interruptionRecoveryV23
+)
+
+func interruptionRecoveryContractForPlan(plan Plan) interruptionRecoveryContract {
+	if planSchemaVersion(plan.Schema) >= 23 {
+		return interruptionRecoveryV23
+	}
+	return interruptionRecoveryV22
 }
 
 func waitLeaseRecoveryV22WithReader(
@@ -1054,9 +1129,11 @@ func waitLeaseRecoveryV22WithReader(
 	profile PreparedProfile,
 	trigger generationscheduler.ChunkLifecycleReport,
 	scheduleDigest string,
+	contract interruptionRecoveryContract,
 	limit time.Duration,
 ) (string, error) {
-	if reader == nil || !digestIdentity(scheduleDigest) {
+	if reader == nil || !digestIdentity(scheduleDigest) ||
+		contract < interruptionRecoveryV22 || contract > interruptionRecoveryV23 {
 		return "", errors.New("T40.13 interruption recovery request is invalid")
 	}
 	phase, cancel := phaseContext(ctx, limit)
@@ -1082,8 +1159,20 @@ func waitLeaseRecoveryV22WithReader(
 				state.Generation != trigger.Generation || state.Attempt < trigger.Attempt {
 				return "", errors.New("T40.13 interruption trigger chunk identity changed")
 			}
-			if state.Status != store.GenerationChunkRunning {
+			switch state.Status {
+			case store.GenerationChunkDone, store.GenerationChunkFailed, store.GenerationChunkCanceled:
 				return string(state.Status), nil
+			case store.GenerationChunkPending:
+				if contract == interruptionRecoveryV22 {
+					return string(state.Status), nil
+				}
+				fallthrough
+			case store.GenerationChunkRunning:
+				// Pending on a still-current schedule is reclaimable and therefore
+				// is not proof that the interrupted lease recovered. Wait for a
+				// closed fate or corroborated retirement/collection.
+			default:
+				return "", errors.New("T40.13 interruption trigger chunk state is invalid")
 			}
 			lastErr = nil
 		case errors.Is(stateErr, store.ErrNotFound):
@@ -1148,6 +1237,54 @@ func readGenerationLifecycleObservation(
 	if err := lifecycle.ValidateStatus(status); err != nil {
 		return nil, err
 	}
+	return generationLifecycleObservation(status)
+}
+
+func readGenerationLifecycleObservationForPlan(
+	ctx context.Context,
+	plan Plan,
+	profile PreparedProfile,
+	limit time.Duration,
+) (*InterruptionLifecycleObservation, error) {
+	if planSchemaVersion(plan.Schema) < 23 {
+		return readGenerationLifecycleObservation(ctx, profile, limit)
+	}
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
+	if err != nil {
+		return nil, err
+	}
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		if phase.Err() != nil {
+			return nil, errors.Join(lastErr, errors.New("T40.13 generation lifecycle projection deadline expired"))
+		}
+		attempt, attemptCancel := context.WithTimeout(phase, 5*time.Second)
+		var status lifecycle.Status
+		lastErr = inspector.get(attempt, profile, "/api/lifecycle-status", &status)
+		attemptCancel()
+		if lastErr == nil {
+			lastErr = lifecycle.ValidateStatus(status)
+		}
+		if lastErr == nil {
+			observation, observationErr := generationLifecycleObservation(status)
+			if observationErr == nil {
+				return observation, nil
+			}
+			lastErr = observationErr
+		}
+		select {
+		case <-phase.Done():
+			return nil, errors.Join(lastErr, errors.New("T40.13 generation lifecycle projection deadline expired"))
+		case <-ticker.C:
+		}
+	}
+}
+
+func generationLifecycleObservation(status lifecycle.Status) (*InterruptionLifecycleObservation, error) {
 	for _, owner := range status.Owners {
 		if owner.Name != lifecycle.GenerationScheduleOwner {
 			continue
@@ -1542,6 +1679,7 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	var started generationscheduler.ChunkLifecycleReport
+	var selectedScheduleDigest string
 	var releaseFence func()
 	defer func() {
 		if releaseFence != nil {
@@ -1591,9 +1729,11 @@ func (run *execution) staleWorker() error {
 		const staleFenceSelectionAttempts = 8
 		for attempt := 0; ; attempt++ {
 			state, stateErr := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
-			if stateErr == nil && runningLeaseMatchesReport(state, started, profile.RepositoryName) {
+			if stateErr == nil && runningLeaseMatchesReport(state, started, profile.RepositoryName) &&
+				digestIdentity(state.ScheduleDigest) {
 				fenceErr := leaseReader.FenceCurrentGenerationScheduleForDiagnostic(run.ctx, state)
 				if fenceErr == nil {
+					selectedScheduleDigest = state.ScheduleDigest
 					break
 				}
 				if !errors.Is(fenceErr, store.ErrGenerationStale) {
@@ -1628,9 +1768,17 @@ func (run *execution) staleWorker() error {
 	if recoveryAuthorityForPlan(run.plan, after) != recoveryAuthorityForPlan(run.plan, run.semanticA) {
 		return exactOracle("stale worker moved final authority")
 	}
-	settled, err := waitSettledChunkLifecycle(
-		run.ctx, cursor, started, 20*time.Minute,
-	)
+	var settled generationscheduler.ChunkLifecycleReport
+	if planSchemaVersion(run.plan.Schema) >= 23 {
+		settled, err = waitStaleChunkFence(
+			run.ctx, cursor, leaseReader, started, profile.RepositoryName,
+			selectedScheduleDigest, 20*time.Minute,
+		)
+	} else {
+		settled, err = waitSettledChunkLifecycle(
+			run.ctx, cursor, started, 20*time.Minute,
+		)
+	}
 	if err != nil {
 		return err
 	}
@@ -1670,9 +1818,13 @@ type chunkLifecycleValidation uint8
 const (
 	chunkLifecycleValidationV16 chunkLifecycleValidation = iota
 	chunkLifecycleValidationV17
+	chunkLifecycleValidationV23
 )
 
 func lifecycleValidationForPlan(schema string) chunkLifecycleValidation {
+	if planSchemaVersion(schema) >= 23 {
+		return chunkLifecycleValidationV23
+	}
 	if planSchemaVersion(schema) >= 17 {
 		return chunkLifecycleValidationV17
 	}
@@ -1789,16 +1941,23 @@ func parseChunkLifecycleLine(
 	if err := validateChunkLifecycleShape(report); err != nil {
 		return generationscheduler.ChunkLifecycleReport{}, false, err
 	}
-	// Vocabulary outside the known closed sets is validated then discarded:
-	// the store lease projection, not the log, is the load-bearing authority,
-	// so drift in the scheduler's outcome strings must not abort a ceremony.
+	// V17-V22 validate vocabulary drift and then discard it because the store
+	// lease projection is their load-bearing authority. V23 closes a settled
+	// unknown into an internal outcome so its stale-worker wait fails promptly.
 	if !validChunkLifecycleStage(report.Stage) ||
 		report.Event == "started" && report.Outcome != "running" ||
 		report.Event == "settled" && !validSettledChunkLifecycleOutcome(report.Outcome) {
+		if validation == chunkLifecycleValidationV23 &&
+			validChunkLifecycleStage(report.Stage) && report.Event == "settled" {
+			report.Outcome = chunkLifecycleOutcomeUnknown
+			return report, true, nil
+		}
 		return generationscheduler.ChunkLifecycleReport{}, false, nil
 	}
 	return report, true, nil
 }
+
+const chunkLifecycleOutcomeUnknown = "unknown"
 
 // validateChunkLifecycleShape is the structural (vocabulary-free) validation
 // shared by both contracts: schema, event, digests, and scalar bounds.
@@ -2148,6 +2307,105 @@ func waitSettledChunkLifecycle(
 	}
 }
 
+func waitStaleChunkFence(
+	ctx context.Context,
+	cursor *chunkLifecycleCursor,
+	leaseReader generationScheduleRetentionReader,
+	started generationscheduler.ChunkLifecycleReport,
+	repository string,
+	scheduleDigest string,
+	limit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, error) {
+	if !digestIdentity(scheduleDigest) {
+		return generationscheduler.ChunkLifecycleReport{},
+			errors.New("T40.13 selected chunk schedule identity is invalid")
+	}
+	phase, cancel := phaseContext(ctx, limit)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	want := chunkLifecycleKey(started)
+	storeFallback := false
+	for {
+		reports, err := cursor.poll()
+		if err != nil {
+			return generationscheduler.ChunkLifecycleReport{}, err
+		}
+		for _, report := range reports {
+			if report.Event != "settled" || chunkLifecycleKey(report) != want {
+				continue
+			}
+			switch report.Outcome {
+			case "stale_fenced":
+				return report, nil
+			case "completion_failed":
+				// The chunk is still store-authoritative; the reaper may close
+				// the stale lease in place after this persistence failure.
+				storeFallback = true
+			case chunkLifecycleOutcomeUnknown:
+				return generationscheduler.ChunkLifecycleReport{},
+					errors.New("T40.13 selected chunk settled with an unknown lifecycle outcome")
+			default:
+				return generationscheduler.ChunkLifecycleReport{},
+					errors.New("T40.13 selected B lease settled before the stale-fence exercise")
+			}
+		}
+		if !storeFallback {
+			select {
+			case <-phase.Done():
+				return generationscheduler.ChunkLifecycleReport{},
+					errors.New("T40.13 selected chunk settlement deadline expired")
+			case <-ticker.C:
+				continue
+			}
+		}
+		callCtx, callCancel := context.WithTimeout(phase, 30*time.Second)
+		state, stateErr := leaseReader.GenerationChunkLeaseState(callCtx, started.Identity)
+		callCancel()
+		switch {
+		case stateErr == nil && !leaseStateMatchesReport(state, started, repository):
+			return generationscheduler.ChunkLifecycleReport{},
+				errors.New("T40.13 selected chunk store identity changed")
+		case stateErr == nil && state.Status == store.GenerationChunkCanceled:
+			settled := started
+			settled.Event = "settled"
+			settled.Outcome = "stale_fenced"
+			return settled, nil
+		case stateErr == nil && state.Status != store.GenerationChunkRunning:
+			return generationscheduler.ChunkLifecycleReport{},
+				errors.New("T40.13 selected B lease settled before the stale-fence exercise")
+		case errors.Is(stateErr, store.ErrNotFound):
+			retentionCtx, retentionCancel := context.WithTimeout(phase, 30*time.Second)
+			retention, retentionErr := leaseReader.GenerationScheduleRetentionState(
+				retentionCtx, repository, started.Stage, scheduleDigest,
+			)
+			retentionCancel()
+			if retentionErr != nil {
+				return generationscheduler.ChunkLifecycleReport{}, retentionErr
+			}
+			if retention.ScheduleDigest != scheduleDigest || !retention.CurrentPresent || retention.Current ||
+				retention.Present && retention.Status != store.GenerationScheduleSuperseded &&
+					retention.Status != store.GenerationScheduleSettled ||
+				!retention.Present && retention.Status != "" {
+				return generationscheduler.ChunkLifecycleReport{},
+					errors.New("T40.13 selected chunk disappeared before stale-fence proof")
+			}
+			settled := started
+			settled.Event = "settled"
+			settled.Outcome = "stale_fenced"
+			return settled, nil
+		case stateErr != nil:
+			return generationscheduler.ChunkLifecycleReport{}, stateErr
+		}
+		select {
+		case <-phase.Done():
+			return generationscheduler.ChunkLifecycleReport{},
+				errors.New("T40.13 selected chunk settlement deadline expired")
+		case <-ticker.C:
+		}
+	}
+}
+
 func (run *execution) pressure() error {
 	started := time.Now()
 	profile := run.prepared.Profiles[0]
@@ -2165,7 +2423,7 @@ func (run *execution) pressure() error {
 		return err
 	}
 	ballast, pressureLogical, pressureAllocated, err := createPressureBallast(
-		run.ctx, run.workspace, run.plan.Safety,
+		run.ctx, run.workspace, run.plan.Safety, pressureBallastContractForPlan(run.plan),
 	)
 	if err != nil {
 		return err
@@ -2183,8 +2441,9 @@ func (run *execution) pressure() error {
 		return err
 	}
 	run.structural = server
-	if _, err := waitLifecyclePressure(
-		run.ctx, profile, true, lifecycle.PressureCollect, 10*time.Minute,
+	if _, err := waitLifecyclePressureForPlan(
+		run.ctx, run.plan, profile, true, lifecycle.PressureCollect,
+		pressureWaitEnter, 10*time.Minute,
 	); err != nil {
 		return err
 	}
@@ -2192,15 +2451,16 @@ func (run *execution) pressure() error {
 	if err != nil {
 		return err
 	}
-	if snapshotAuthority(after) != snapshotAuthority(run.structAR) {
+	if stablePhaseAuthorityForPlan(run.plan, after) != stablePhaseAuthorityForPlan(run.plan, run.structAR) {
 		return exactOracle("pressure collection changed protected authority")
 	}
 	if err := ballast.remove(run.workspace); err != nil {
 		return err
 	}
 	ballastPresent = false
-	if _, err := waitLifecyclePressure(
-		run.ctx, profile, true, lifecycle.PressureNormal, 10*time.Minute,
+	if _, err := waitLifecyclePressureForPlan(
+		run.ctx, run.plan, profile, true, lifecycle.PressureNormal,
+		pressureWaitRecover, 10*time.Minute,
 	); err != nil {
 		return err
 	}
@@ -2296,14 +2556,14 @@ func (run *execution) collection() error {
 		return err
 	}
 	run.trackMeter(meter)
-	if _, err := waitLifecycle(run.ctx, profile, true, 10*time.Minute); err != nil {
+	if _, err := waitLifecycleForPlan(run.ctx, run.plan, profile, true, 10*time.Minute); err != nil {
 		return err
 	}
 	after, err := run.waitSnapshot(profile, "a-return", "collection", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
 	}
-	if snapshotAuthority(after) != snapshotAuthority(run.structAR) {
+	if stablePhaseAuthorityForPlan(run.plan, after) != stablePhaseAuthorityForPlan(run.plan, run.structAR) {
 		return exactOracle("collection changed protected authority")
 	}
 	metrics, err := run.finishMeter(meter, &after)
@@ -2311,6 +2571,9 @@ func (run *execution) collection() error {
 		return err
 	}
 	run.observation.Phases[9] = succeededPhase("collection", metrics)
+	if planSchemaVersion(run.plan.Schema) >= 23 {
+		run.structAR = after
+	}
 	return run.enforceSafety()
 }
 
@@ -2331,14 +2594,31 @@ func (run *execution) authorizedQueries() error {
 	if err != nil {
 		return err
 	}
-	if snapshotAuthority(semanticAfter) != snapshotAuthority(run.semanticA) {
+	if stablePhaseAuthorityForPlan(run.plan, semanticAfter) != stablePhaseAuthorityForPlan(run.plan, run.semanticA) {
 		return exactOracle("authorized-query restart changed semantic authority")
 	}
-	structCount, structExact, err := queryProfile(run.ctx, run.prepared.Profiles[0], "service-000", false)
+	query := queryProfile
+	if planSchemaVersion(run.plan.Schema) >= 23 {
+		query = func(
+			ctx context.Context,
+			profile PreparedProfile,
+			serviceKey string,
+			requireCitation bool,
+		) (int, bool, error) {
+			count, exact, failure, queryErr := queryProfileV23(
+				ctx, profile, serviceKey, requireCitation,
+			)
+			if queryErr != nil {
+				run.observation.AuthorizedQuery = failure
+			}
+			return count, exact, queryErr
+		}
+	}
+	structCount, structExact, err := query(run.ctx, run.prepared.Profiles[0], "service-000", false)
 	if err != nil {
 		return err
 	}
-	semanticCount, semanticExact, err := queryProfile(run.ctx, run.prepared.Profiles[1], "semantic", true)
+	semanticCount, semanticExact, err := query(run.ctx, run.prepared.Profiles[1], "semantic", true)
 	if err != nil {
 		return err
 	}
@@ -2348,6 +2628,10 @@ func (run *execution) authorizedQueries() error {
 	structAfter, err := run.waitSnapshot(run.prepared.Profiles[0], "a-return", "authorized-query-structural", run.revalidationDeadline(), run.structural)
 	if err != nil {
 		return err
+	}
+	if planSchemaVersion(run.plan.Schema) >= 23 &&
+		stablePhaseAuthorityForPlan(run.plan, structAfter) != stablePhaseAuthorityForPlan(run.plan, run.structAR) {
+		return exactOracle("authorized-query changed structural authority")
 	}
 	structMetrics, err := run.finishMeter(structMeter, &structAfter)
 	if err != nil {
@@ -2361,6 +2645,9 @@ func (run *execution) authorizedQueries() error {
 	metrics.ControlReads += 8
 	metrics.MemberReads += int64(structCount + semanticCount)
 	run.semanticA = semanticAfter
+	if planSchemaVersion(run.plan.Schema) >= 23 {
+		run.structAR = structAfter
+	}
 	if err := run.semantic.stop(30 * time.Second); err != nil {
 		return err
 	}
@@ -2417,6 +2704,21 @@ func (run *execution) finalizeObservation() error {
 		Selected: "continue", Reason: "all_exact_mechanics_passed", Substantiated: true,
 	}
 	return nil
+}
+
+// validateCompletedObservationBeforeTeardown checks every completed-run field
+// that is already known before destructive custody removal. The real teardown
+// metrics are still recorded and revalidated afterward, but a schema/validator
+// drift can no longer destroy the only state that explains the failure.
+func (run *execution) validateCompletedObservationBeforeTeardown() error {
+	if run == nil || len(run.observation.Phases) != len(phaseOrder) {
+		return errors.New("T40.13 completed observation phase inventory is invalid")
+	}
+	value := run.observation
+	value.Phases = slices.Clone(run.observation.Phases)
+	value.Phases[len(value.Phases)-1] = succeededPhase("teardown", PhaseMetrics{WallMS: 1})
+	value.Teardown = TeardownObservation{Completed: true}
+	return ValidateObservation(value)
 }
 
 func (run *execution) teardown() error {
@@ -2753,6 +3055,8 @@ func (run *execution) waitSnapshot(
 		contract = profileInspectionV21
 	case PlanSchemaV22:
 		contract = profileInspectionV21
+	case PlanSchemaV23:
+		contract = profileInspectionV21
 	}
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
@@ -3088,6 +3392,17 @@ func recoveryAuthorityForPlan(plan Plan, snapshot privateProfileSnapshot) string
 	return snapshotAuthority(snapshot)
 }
 
+// stablePhaseAuthorityForPlan preserves the exact historical phase oracles.
+// V23 compares semantic authority so a relationship transition re-minted by a
+// cascade between phases can be adopted without weakening source, extraction,
+// caller, or relationship-content equality.
+func stablePhaseAuthorityForPlan(plan Plan, snapshot privateProfileSnapshot) string {
+	if planSchemaVersion(plan.Schema) >= 23 {
+		return recoveryAuthorityForPlan(plan, snapshot)
+	}
+	return snapshotAuthority(snapshot)
+}
+
 // derivedPartialPresentV18 preserves the historical shallow scanner used by
 // retained V17/V18 execution contracts. V19 owns the corrected fixed candidate
 // namespace and hashed relationship-publication traversal.
@@ -3293,15 +3608,68 @@ func restoreBackup(
 }
 
 func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bool, limit time.Duration) (lifecycle.Status, error) {
-	return waitLifecyclePressure(ctx, profile, requireCycle, "", limit)
+	return waitLifecycleWithContract(ctx, profile, requireCycle, "", limit, lifecycleWaitLegacy)
 }
 
-func waitLifecyclePressure(
+type lifecycleWaitContract uint8
+
+const (
+	lifecycleWaitLegacy lifecycleWaitContract = iota
+	lifecycleWaitV23
+	lifecycleWaitV23PressureRecovery
+)
+
+type pressureWaitPurpose uint8
+
+const (
+	pressureWaitEnter pressureWaitPurpose = iota + 1
+	pressureWaitRecover
+)
+
+func lifecycleWaitContractForPlan(plan Plan) lifecycleWaitContract {
+	if planSchemaVersion(plan.Schema) >= 23 {
+		return lifecycleWaitV23
+	}
+	return lifecycleWaitLegacy
+}
+
+func waitLifecycleForPlan(
+	ctx context.Context,
+	plan Plan,
+	profile PreparedProfile,
+	requireCycle bool,
+	limit time.Duration,
+) (lifecycle.Status, error) {
+	return waitLifecycleWithContract(
+		ctx, profile, requireCycle, "", limit, lifecycleWaitContractForPlan(plan),
+	)
+}
+
+func waitLifecyclePressureForPlan(
+	ctx context.Context,
+	plan Plan,
+	profile PreparedProfile,
+	requireCycle bool,
+	pressure lifecycle.Pressure,
+	purpose pressureWaitPurpose,
+	limit time.Duration,
+) (lifecycle.Status, error) {
+	contract := lifecycleWaitContractForPlan(plan)
+	if contract == lifecycleWaitV23 && purpose == pressureWaitRecover {
+		contract = lifecycleWaitV23PressureRecovery
+	}
+	return waitLifecycleWithContract(
+		ctx, profile, requireCycle, pressure, limit, contract,
+	)
+}
+
+func waitLifecycleWithContract(
 	ctx context.Context,
 	profile PreparedProfile,
 	requireCycle bool,
 	pressure lifecycle.Pressure,
 	limit time.Duration,
+	contract lifecycleWaitContract,
 ) (lifecycle.Status, error) {
 	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
 	if err != nil {
@@ -3327,6 +3695,18 @@ func waitLifecyclePressure(
 		}
 		select {
 		case <-phase.Done():
+			if contract >= lifecycleWaitV23 && ctx.Err() != nil {
+				return lifecycle.Status{}, ctx.Err()
+			}
+			if contract == lifecycleWaitV23PressureRecovery {
+				return lifecycle.Status{}, errPressureRecoveryDeadline
+			}
+			if contract == lifecycleWaitV23 && pressure != "" {
+				return lifecycle.Status{}, errors.Join(errLifecycleCycleDeadline, errProductionPressure)
+			}
+			if contract == lifecycleWaitV23 {
+				return lifecycle.Status{}, errLifecycleCycleDeadline
+			}
 			return lifecycle.Status{}, errors.New("T40.13 lifecycle cycle deadline expired")
 		case <-ticker.C:
 		}
@@ -3343,21 +3723,149 @@ func queryProfile(
 	if err != nil {
 		return 0, false, err
 	}
-	unauthorized, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+profile.Address+"/api/repos", nil)
+	runner := &authorizedQueryRunner{inspector: inspector, profile: profile, maxAttempts: 1}
+	return queryProfileWithRunner(ctx, runner, serviceKey, requireCitation)
+}
+
+func queryProfileV23(
+	ctx context.Context,
+	profile PreparedProfile,
+	serviceKey string,
+	requireCitation bool,
+) (int, bool, *AuthorizedQueryObservation, error) {
+	inspector, err := newProfileInspector(profile, profileInspectionLegacy)
 	if err != nil {
-		return 0, false, err
+		return 0, false, nil, err
 	}
-	response, err := inspector.client.Do(unauthorized)
-	if err != nil {
-		return 0, false, err
+	runner := &authorizedQueryRunner{
+		inspector: inspector, profile: profile, maxAttempts: 3,
+		retryDelay: time.Second, retainFailure: true,
 	}
-	_, _ = io.CopyN(io.Discard, response.Body, 4096)
-	_ = response.Body.Close()
-	if response.StatusCode != http.StatusUnauthorized {
-		return 0, false, exactOracle("unauthorized query was not denied")
+	count, exact, err := queryProfileWithRunner(ctx, runner, serviceKey, requireCitation)
+	return count, exact, runner.failure, err
+}
+
+type authorizedQueryRunner struct {
+	inspector     *profileInspector
+	profile       PreparedProfile
+	maxAttempts   int
+	retryDelay    time.Duration
+	retainFailure bool
+	failure       *AuthorizedQueryObservation
+}
+
+func (runner *authorizedQueryRunner) fail(query string, attempt int, cause error) error {
+	if !runner.retainFailure {
+		return cause
+	}
+	projection := &AuthorizedQueryObservation{
+		Schema: authorizedQuerySchemaV1, Profile: runner.profile.Name,
+		Query: query, Class: "response", Attempts: attempt,
+	}
+	var status *privateHTTPStatusError
+	switch {
+	case errors.As(cause, &status):
+		projection.Class = "status"
+		projection.Status = status.Status
+	case errors.Is(cause, errHTTPTransport):
+		projection.Class = "transport"
+	}
+	runner.failure = projection
+	return errors.Join(errAuthorizedQuery, cause)
+}
+
+func (runner *authorizedQueryRunner) retryable(cause error) bool {
+	if errors.Is(cause, errHTTPTransport) {
+		return true
+	}
+	var status *privateHTTPStatusError
+	return errors.As(cause, &status) && status.Status == http.StatusConflict
+}
+
+func (runner *authorizedQueryRunner) waitRetry(ctx context.Context) error {
+	if runner.retryDelay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(runner.retryDelay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return errHTTPTransport
+	case <-timer.C:
+		return nil
+	}
+}
+
+func (runner *authorizedQueryRunner) get(
+	ctx context.Context,
+	query, path string,
+	target any,
+) error {
+	for attempt := 1; attempt <= runner.maxAttempts; attempt++ {
+		err := runner.inspector.get(ctx, runner.profile, path, target)
+		if err == nil {
+			return nil
+		}
+		if attempt < runner.maxAttempts && runner.retryable(err) {
+			if waitErr := runner.waitRetry(ctx); waitErr == nil {
+				continue
+			}
+		}
+		return runner.fail(query, attempt, err)
+	}
+	return runner.fail(query, runner.maxAttempts, errHTTPTransport)
+}
+
+func (runner *authorizedQueryRunner) unauthorized(ctx context.Context) error {
+	for attempt := 1; attempt <= runner.maxAttempts; attempt++ {
+		request, err := http.NewRequestWithContext(
+			ctx, http.MethodGet, "http://"+runner.profile.Address+"/api/repos", nil,
+		)
+		if err != nil {
+			return runner.fail("unauthorized_repositories", attempt, errHTTPResponse)
+		}
+		response, err := runner.inspector.client.Do(request)
+		if err != nil {
+			err = errHTTPTransport
+		} else {
+			_, _ = io.CopyN(io.Discard, response.Body, 4096)
+			_ = response.Body.Close()
+			if !runner.retainFailure && response.StatusCode != http.StatusUnauthorized {
+				return exactOracle("unauthorized query was not denied")
+			}
+			switch response.StatusCode {
+			case http.StatusUnauthorized:
+				return nil
+			case http.StatusConflict:
+				err = &privateHTTPStatusError{Status: response.StatusCode, Reason: httpReason409Stale}
+			default:
+				if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+					return exactOracle("unauthorized query was not denied")
+				}
+				err = &privateHTTPStatusError{Status: response.StatusCode, Reason: httpReasonOther}
+			}
+		}
+		if attempt < runner.maxAttempts && runner.retryable(err) {
+			if waitErr := runner.waitRetry(ctx); waitErr == nil {
+				continue
+			}
+		}
+		return runner.fail("unauthorized_repositories", attempt, err)
+	}
+	return runner.fail("unauthorized_repositories", runner.maxAttempts, errHTTPTransport)
+}
+
+func queryProfileWithRunner(
+	ctx context.Context,
+	runner *authorizedQueryRunner,
+	serviceKey string,
+	requireCitation bool,
+) (int, bool, error) {
+	if err := runner.unauthorized(ctx); err != nil {
+		return 0, false, err
 	}
 	var searchResult search.Result
-	if err := inspector.get(ctx, profile, "/api/search?q=T401&max_matches=1", &searchResult); err != nil {
+	if err := runner.get(ctx, "search", "/api/search?q=T401&max_matches=1", &searchResult); err != nil {
 		return 0, false, err
 	}
 	if len(searchResult.Files) == 0 || len(searchResult.Files[0].Chunks) == 0 ||
@@ -3365,17 +3873,17 @@ func queryProfile(
 		return 0, false, exactOracle("authorized search returned no exact match")
 	}
 	var services apiresponse.ServiceInventory
-	servicePath := "/api/services?repository=" + url.QueryEscape(profile.RepositoryName) + "&page_size=100"
-	if err := inspector.get(ctx, profile, servicePath, &services); err != nil {
+	servicePath := "/api/services?repository=" + url.QueryEscape(runner.profile.RepositoryName) + "&page_size=100"
+	if err := runner.get(ctx, "services", servicePath, &services); err != nil {
 		return 0, false, err
 	}
 	if services.Repository.CatalogServiceCount < 1 || services.Pagination.Returned != len(services.Services) {
 		return 0, false, exactOracle("authorized service inventory is invalid")
 	}
 	var relationships apiresponse.RelationshipPage
-	relationshipPath := "/api/service-relationships?repository=" + url.QueryEscape(profile.RepositoryName) +
+	relationshipPath := "/api/service-relationships?repository=" + url.QueryEscape(runner.profile.RepositoryName) +
 		"&service_key=" + url.QueryEscape(serviceKey) + "&page_size=100"
-	if err := inspector.get(ctx, profile, relationshipPath, &relationships); err != nil {
+	if err := runner.get(ctx, "relationships", relationshipPath, &relationships); err != nil {
 		return 0, false, err
 	}
 	if len(relationships.Roots) != 1 || relationships.Roots[0].Generation == "" || relationships.Roots[0].RootDigest == "" {
@@ -3390,10 +3898,10 @@ func queryProfile(
 		}
 		var citation apiresponse.RelationshipCitation
 		path := "/api/service-relationship-citation?citation=" + url.QueryEscape(relationships.Rows[0].Citation)
-		if err := inspector.get(ctx, profile, path, &citation); err != nil {
+		if err := runner.get(ctx, "citation", path, &citation); err != nil {
 			return 0, false, err
 		}
-		if citation.Repository != profile.RepositoryName || citation.Generation != relationships.Roots[0].Generation ||
+		if citation.Repository != runner.profile.RepositoryName || citation.Generation != relationships.Roots[0].Generation ||
 			citation.RootDigest != relationships.Roots[0].RootDigest || citation.AuthorityDigest == "" ||
 			citation.Content == "" {
 			return 0, false, exactOracle("citation differs from rendered root authority")
@@ -3426,68 +3934,20 @@ func emptyObservation(environment EnvironmentObservation) Observation {
 
 func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Observation {
 	value := emptyObservation(environment)
-	if planSchemaVersion(plan.Schema) >= 2 {
-		value.Schema = ObservationSchemaV2
+	version := planSchemaVersion(plan.Schema)
+	if version > 0 {
+		value.Schema = ceremonySchemaLadder[version].observation
+	}
+	if version >= 2 {
 		value.HostToolchain = slices.Clone(plan.HostToolchain)
 	}
-	switch plan.Schema {
-	case PlanSchemaV3:
-		value.Schema = ObservationSchemaV3
-	case PlanSchemaV4:
-		value.Schema = ObservationSchemaV4
-	case PlanSchemaV5:
-		value.Schema = ObservationSchemaV5
-	case PlanSchemaV6:
-		value.Schema = ObservationSchemaV6
-	case PlanSchemaV7:
-		value.Schema = ObservationSchemaV7
-	case PlanSchemaV8:
-		value.Schema = ObservationSchemaV8
-	case PlanSchemaV9:
-		value.Schema = ObservationSchemaV9
-	case PlanSchemaV10:
-		value.Schema = ObservationSchemaV10
-	case PlanSchemaV11:
-		value.Schema = ObservationSchemaV11
-	case PlanSchemaV12:
-		value.Schema = ObservationSchemaV12
-	case PlanSchemaV13:
-		value.Schema = ObservationSchemaV13
-	case PlanSchemaV14:
-		value.Schema = ObservationSchemaV14
-	case PlanSchemaV15:
-		value.Schema = ObservationSchemaV15
-	case PlanSchemaV16:
-		value.Schema = ObservationSchemaV16
-	case PlanSchemaV17:
-		value.Schema = ObservationSchemaV17
-		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV1, LastSubstage: "not_started",
+	if version >= 17 {
+		interruptionSchema := interruptionSchemaV1
+		if version >= 22 {
+			interruptionSchema = interruptionSchemaV2
 		}
-	case PlanSchemaV18:
-		value.Schema = ObservationSchemaV18
 		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV1, LastSubstage: "not_started",
-		}
-	case PlanSchemaV19:
-		value.Schema = ObservationSchemaV19
-		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV1, LastSubstage: "not_started",
-		}
-	case PlanSchemaV20:
-		value.Schema = ObservationSchemaV20
-		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV1, LastSubstage: "not_started",
-		}
-	case PlanSchemaV21:
-		value.Schema = ObservationSchemaV21
-		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV1, LastSubstage: "not_started",
-		}
-	case PlanSchemaV22:
-		value.Schema = ObservationSchemaV22
-		value.Interruption = &InterruptionObservation{
-			Schema: interruptionSchemaV2, LastSubstage: "not_started",
+			Schema: interruptionSchema, LastSubstage: "not_started",
 		}
 	}
 	return value

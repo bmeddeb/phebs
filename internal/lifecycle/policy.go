@@ -86,11 +86,15 @@ const (
 )
 
 type OwnerResult struct {
-	Owner         string
-	Cursor        string
-	Scanned       int
-	Deleted       int
-	More          bool
+	Owner   string
+	Cursor  string
+	Scanned int
+	Deleted int
+	More    bool
+	// CycleStart identifies the first owner in the controller's stable sorted
+	// order. It lets a newly started runner distinguish the end of a durable
+	// rotation suffix from the end of one complete process-observed cycle.
+	CycleStart    bool
 	CycleComplete bool
 	// AdvanceOnError is reserved for owners that have isolated a malformed
 	// namespace after selecting its exact durable cursor. It prevents one bad

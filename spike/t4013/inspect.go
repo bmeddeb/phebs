@@ -36,6 +36,18 @@ const privateSnapshotSchema = "t4013-private-profile-snapshot-v1"
 
 const maxHTTPStatusResponseBytes = 4 << 10
 
+var (
+	errHTTPTransport = errors.New("T40.13 HTTP request failed")
+	errHTTPResponse  = errors.New("T40.13 HTTP response is invalid")
+)
+
+type privateHTTPResponseError struct {
+	message string
+}
+
+func (err *privateHTTPResponseError) Error() string { return err.message }
+func (err *privateHTTPResponseError) Unwrap() error { return errHTTPResponse }
+
 type privateHTTPStatusError struct {
 	Status int
 	Reason string
@@ -1221,7 +1233,7 @@ func (inspector *profileInspector) get(
 	request.Header.Set("Authorization", "Bearer "+inspector.credential)
 	response, err := inspector.client.Do(request)
 	if err != nil {
-		return errors.New("T40.13 HTTP request failed")
+		return errHTTPTransport
 	}
 	if response.StatusCode != http.StatusOK {
 		raw, readErr := io.ReadAll(io.LimitReader(response.Body, maxHTTPStatusResponseBytes+1))
@@ -1235,10 +1247,10 @@ func (inspector *profileInspector) get(
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, MaxObservationBytes+1))
 	closeErr := response.Body.Close()
 	if readErr != nil || closeErr != nil || len(raw) == 0 || len(raw) > MaxObservationBytes {
-		return errors.New("T40.13 HTTP response exceeds its bound")
+		return &privateHTTPResponseError{message: "T40.13 HTTP response exceeds its bound"}
 	}
 	if err := decodeHumaResponse(raw, profile.Address, target); err != nil {
-		return errors.New("T40.13 HTTP response is invalid")
+		return errHTTPResponse
 	}
 	return nil
 }
