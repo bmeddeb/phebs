@@ -1545,6 +1545,171 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13a next)*
+
+The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
+found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
+failures after the host module, process, and capacity refusals were cleared.
+T40.13 remains the final neutral convergence gate. The following prerequisites
+are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
+as their test.
+
+**T40.13a · Fail-closed process sampling** *(critical · only next ticket)* —
+make the V25 250-ms process sampler contain every probe/parse failure without
+panicking or growing retained state with phase duration. AC: timeout,
+byte-limit, malformed-row, duplicate-PID, parent-cycle, and short/nil traversal
+tests return one typed sampler failure and never slice an
+empty result; repeated failures retain one bounded first cause plus a bounded
+count rather than an error chain; a missing root fails only while that root is
+still expected live, while an already-observed clean exit may close with a zero
+final sample; Git/index/other child accounting has one explicit cumulative
+ceiling or an equivalent constant-space representation
+and fails closed when exact counting is unavailable; PID reuse cannot silently
+substantiate a lower child count; the healthy path remains one at-most-128-KiB
+`ps` snapshot per tick with at most 128 descendants and V1–V24 sampling remains
+unchanged.
+
+**T40.13b · Cooperative cancellation and shutdown truth** *(high · needs
+T40.13a)* — preserve custody whenever an ordinary command, server, Prepare, or
+Execute cannot prove every descendant stopped. AC: every measured-command
+wrapper preserves `errPrivateServerShutdownUnproven`; V25 stopped execution
+checks both its original cause and server-stop result before checkpoint or
+deletion; INT/TERM/HUP during Prepare or Execute retains the operation lock,
+controls, logs, and custody while publishing no false terminal result;
+cooperative or known-process shutdown that remains uncertain retains custody
+for T40.13c's durable proof instead of treating a session poll as authority;
+opt-in real-binary tests treat a failed stop as a retained diagnostic failure
+and never allow `t.TempDir` or `DestroyPrepared` to remove that state; cheap
+injected-signal and failed-stop
+tests cover every deletion path without starting the giant corpus.
+
+**T40.13c · Durable hard-death descendant supervision** *(high · needs
+T40.13b)* — replace in-memory session identity and one-shot absence inference
+with a stable reviewed supervisor/sentinel or equivalent external proof. AC:
+the durable control exists and registers the ownership boundary before every
+server, Go/Git/archive, authoring, backup/restore, SurrealDB, and child-indexer
+start; it survives executor SIGKILL/OOM, reaps or observes the complete
+descendant boundary, and is retired last; PID reuse, session escape, fork/exit
+churn, and supervisor crash cannot authorize deletion; supervisor crash means
+indeterminate retained custody, never deletion through "crash release";
+restart inspection distinguishes live, drained, and indeterminate custody
+without scanning unrelated processes; indeterminate
+state stays retained for a separately reviewed purge; polling alone is not
+accepted as the proof; bounded synthetic cross-process tests cover executor
+death and supervisor recovery.
+
+**T40.13d · Custody mutation serialization and immutable admission** *(high ·
+needs T40.13c)* — put every V25 Prepare, Cleanup, Destroy, Execute, and Resume
+mutation under one crash-released run-root lock and bind admission inputs once.
+AC: the lock is acquired before output/custody precondition reads and those
+conditions are rechecked under the lock; direct APIs and the supported shell
+share the same exclusion rather than independent locks; one bounded exact
+plan/prepared byte identity is read and revalidated under that lock by Prepare,
+Cleanup, Destroy, Execute, and Resume; a prepared output cannot be written
+inside custody or the reviewed module checkout; the prepare CLI and library
+consume that identity instead of a schema double-read; competing-process,
+stale-lock, output-race, and crash-release tests prove that one operation
+cannot delete or overwrite another operation's
+authority; historical V1–V24 entry points remain byte-compatible.
+
+**T40.13e · Executed-tool identity closure** *(high · needs T40.13d)* — make
+the executable identities verified at freeze be the identities used at every
+later launch and restart. AC: canonical Go, Git, SurrealDB, and private-tool
+paths are retained and invoked directly rather than re-resolved; every private
+binary is rehashed before each first launch or relaunch unless an immutable
+custody copy makes replacement impossible; replacement, symlink, and
+path-search drift refuse before mutation; tests
+replace each identity at every verification-to-launch boundary; provenance
+hashing has a fixed per-immutable-snapshot bound and never rehashes a full tool
+tree per poll or phase; no ordinary query, worker, or production
+startup path gains work.
+
+**T40.13f · Hermetic execution controls** *(high · needs T40.13e)* — remove
+ambient state that can change V25 Git/Go/source behavior after identity review.
+AC: HOME, module, build, temporary, Git, and shell control paths are
+custody-local and digest-bound or explicitly absent; frozen-source export and
+private builds invoke only that closed environment; poisoned ambient config,
+HOME, module cache, and temporary controls cannot affect output; restarts reopen
+and revalidate the same controls; cleanup owns every private cache without
+touching shared host state; cache identity work has one fixed bound per
+immutable snapshot and never rehashes a full cache per poll, phase, or restart;
+V1–V24 environment behavior remains unchanged.
+
+**T40.13g · Authenticated returned-evidence firewall** *(high · needs
+T40.13f)* — make an untrusted returned bundle safe to inspect and impossible to
+self-authorize. AC: archive headers, exact allowlisted basenames, file types,
+link absence, per-file sizes, and aggregate expanded bytes are checked before
+extraction; the archive contains exactly one entry for each expected basename
+and rejects duplicates; the checksum manifest is authenticated before any
+referenced path is opened and contains exactly the expected files; verification
+requires a reviewed signer fingerprint or package digest supplied out of band,
+not by the bundle or its sidecar, and confirms the frozen plan identity rather
+than trusting bundled keys; temporary extraction is cleaned on every exit;
+small adversarial archives cover traversal, links,
+special files, expansion, unexpected checksum paths, and wholesale re-signing.
+
+**T40.13h · Resumable seal and keypair integrity** *(medium · needs
+T40.13g)* — make sealing one recoverable authenticated transaction rather than
+three independently promoted files. AC: an existing private/public signing
+pair is proved matched before freeze or seal; crashes after zero, one, two, or
+three final promotions resume to the same exact bytes or deterministically
+retain the last valid result; partial final state cannot be mistaken for a
+completed seal or permanently strand a resumable one; parent-directory
+durability is proved at each authority transition; cheap fault injection covers
+every crash shape and mismatched pair without giant preparation.
+
+**T40.13i · Bounded exact-control inspection** *(medium · needs T40.13h)* —
+make malformed private controls refuse within their declared byte and entry
+budgets. AC: every exact reader opens a no-follow regular descriptor, limit-reads
+at most its maximum plus one byte before allocation, confirms file identity,
+requires one canonical value followed by EOF, and uses bounded directory
+enumeration instead of unbounded glob/read patterns; symlink, replacement,
+trailing-data, maximum-plus-one-byte, and maximum-plus-one-entry cases refuse;
+file identity is stable across the read; valid maximum controls preserve
+existing semantics and V1–V24 retained evidence remains readable.
+
+**T40.13j · Overflow-safe ceremony arithmetic** *(medium · needs T40.13i)* —
+make every phase, total-wall, byte, count, and resource aggregation refuse
+before signed integer overflow can create a false pass. AC: shared checked-add
+and checked-multiply paths cover observation construction and receipt
+validation; `math.MaxInt64` boundary tables fail closed before comparison;
+ordinary values and historical receipts remain exact; no arbitrary saturation
+or wider unbounded representation enters a wire contract; the cost is constant
+per already-visited scalar.
+
+**T40.13k · Complete executor-admission accounting** *(medium · needs
+T40.13j)* — make V25's completeness claim cover the work performed before phase
+one. AC: checkout/toolchain verification, filesystem probes, and other
+admission children contribute wall, child, and peak-RSS facts to an explicit
+phase-zero meter; a failed or unavailable meter makes
+`phase_accounting_complete` false and refuses completed evidence; one tiny
+injected admission child tree is visible in the receipt; probe/meter failure
+retains custody and cannot be classified as a complete
+measurement; the meter remains bounded and starts no extra corpus read or
+production child.
+
+**T40.13l · Cost-first operator gates** *(low operational risk · needs
+T40.13k)* — reject immutable bad inputs before running the bounded but costly
+package/toolchain gate. AC: duplicate freeze IDs, missing runs, surviving seal
+custody, malformed archive inventories, missing trust anchors, and mismatched
+keys, wrong confirmation or plan digest, occupied run locks or ports,
+insufficient disk, and a dirty checkout refuse before Go tests or full tool
+hashing wherever that fact is already immutable and available; seal/verify
+still run every required semantic gate after cheap admission succeeds;
+repeated host hashing
+is removed only under T40.13e's fixed immutable-snapshot bound and never changes
+identity correctness; shell tests record call order and prove
+expensive commands were not invoked on each refusal; no timeout, bound,
+authentication, cleanup, or evidence predicate is weakened.
+
+After T40.13l, the original T40.13 gate still requires one clean exact commit,
+all bounded package and real-binary rehearsals, independent code and plan
+review with complete coverage or a reviewed manual equivalent for all seven
+OCR timeouts, a passing bounded full `internal/store` package gate rather than
+only its isolated formerly timed-out test, a fresh unconsumed ceremony
+identifier, and Ben's separate freeze and execution authorizations. A green
+prerequisite stack is readiness evidence, not Epic 40 closure.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -1670,6 +1670,20 @@ structural gaps are direct refusals, not bypass candidates.
 No freeze, ceremony, release, T40.13/Epic-40 closure, bound/topology change, or
 scale/SLO claim is authorized.
 
+The post-commit review of `03422ddd` now makes T40.13a the only next scale
+ticket inside the still-open T40.13 gate. Critical/high prerequisites run first:
+T40.13a fail-closed process sampling; T40.13b cooperative cancellation and
+shutdown truth; T40.13c durable hard-death descendant supervision; T40.13d one
+shared custody-mutation/admission lock; T40.13e exact executed-tool identity;
+T40.13f hermetic execution controls; and T40.13g an authenticated bounded
+returned-evidence firewall. Medium tickets then close resumable seal/keypair
+integrity (T40.13h), bounded exact-control inspection (T40.13i), overflow-safe
+arithmetic (T40.13j), and complete admission accounting (T40.13k). T40.13l last
+closes low-risk cost-first refusal ordering. The original T40.13 neutral
+convergence gate follows only after the complete stack, bounded regressions,
+independent review, and separate authorization. No ticket may use a freeze,
+rehearsal, or giant authoring run as its regression test.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an
