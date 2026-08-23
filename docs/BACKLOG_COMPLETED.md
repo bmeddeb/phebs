@@ -24,6 +24,12 @@ wall, peak-RSS, and child-lifetime facts merged into `preflight`. Meter failure
 keeps phase accounting incomplete and refuses completed evidence before custody
 destruction; V1–V24 behavior remains unchanged.
 
+**T40.13l · Cost-first operator gates** ✅ 2026-08-23 — Immutable duplicate-ID,
+signer/key, custody-marker, missing-run, and dirty-checkout refusals now precede
+bounded verifier, toolchain, cache, and host gates where facts are already
+available. Required semantic verification remains intact after admission;
+call-order tests prove expensive commands are skipped on refusal.
+
 ---
 
 ## EPIC 0 — Bootstrap

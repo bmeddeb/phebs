@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13l next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · prerequisite stack complete)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1584,6 +1584,13 @@ bounded process-tree wall, peak-RSS, and child-lifetime facts, merges those fact
 into the preflight phase, and refuses completed evidence when the meter is
 unavailable or fails. T40.13l is now the only next scale ticket inside the
 still-open T40.13 gate and closes low-risk cost-first refusal ordering.
+
+T40.13l is complete. Immutable duplicate-ID, signer/key, custody-marker,
+missing-run, and dirty-checkout refusals now precede bounded verifier,
+toolchain, cache, and host gates where the fact is already available; required
+semantic verification still runs after cheap admission succeeds. The shell
+regression records call order and proves expensive commands are not invoked on
+each refusal.
 
 **T40.13l · Cost-first operator gates** *(low operational risk · needs
 T40.13k)* — reject immutable bad inputs before running the bounded but costly

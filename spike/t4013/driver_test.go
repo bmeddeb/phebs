@@ -526,6 +526,41 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 	}
 }
 
+func TestCeremonyDriverOrdersCheapOperatorGatesBeforeCostlyVerification(t *testing.T) {
+	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	section := func(name, next string) string {
+		start := strings.Index(source, "\n"+name+"() {")
+		if start < 0 {
+			t.Fatalf("cannot find %s", name)
+		}
+		end := strings.Index(source[start+1:], "\n"+next+"() {")
+		if end < 0 {
+			t.Fatalf("cannot isolate %s", name)
+		}
+		return source[start : start+1+end]
+	}
+	freeze := section("freeze", "prepare_receipt_for_seal")
+	if strings.Index(freeze, "ensure_signing_key") > strings.Index(freeze, "preflight") {
+		t.Fatal("freeze runs costly preflight before signer admission")
+	}
+	seal := section("seal_run", "execute_ceremony")
+	if strings.Index(seal, "ensure_signing_key") > strings.Index(seal, "verification_preflight_for_plan") {
+		t.Fatal("seal runs costly verification before trust-root admission")
+	}
+	verify := section("verify_run", "verify_bundle")
+	if strings.Index(verify, "frozen plan is missing") > strings.Index(verify, "verification_preflight_for_plan") {
+		t.Fatal("verify runs costly verification before frozen-run admission")
+	}
+	preflight := section("preflight", "verification_preflight")
+	if strings.Index(preflight, "require_clean_checkout") > strings.Index(preflight, "initialize_closed_go_cache") {
+		t.Fatal("preflight initializes caches before dirty-checkout refusal")
+	}
+}
+
 func TestCeremonyDriverReturnedBundleAuthentication(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")

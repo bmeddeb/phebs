@@ -118,7 +118,7 @@ closed bounded nonproduct partition results and atomic domain roots on
 2026-08-07, T40.10 installed partitioned extraction and atomic domain
 authority, T40.11 migrated downstream generations plus their recovery,
 archive, rollback, pin, and lifecycle ownership, and T40.12 replayed authorized
-product consumers across retained v1 and current v2 roots. T40.13 remains open, with T40.13l next. Epic 41 separately targets 10,000
+product consumers across retained v1 and current v2 roots. T40.13 remains open after T40.13l; the original gate still requires review and authorization. Epic 41 separately targets 10,000
 accepted services with an 8,000 accepted-service floor; Epic 42 composes both
 dimensions. No private rerun is authorized.
 
@@ -1789,10 +1789,10 @@ checksum, shell-control, and directory decisions, while live extraction and
 custody scans use bounded descriptor enumeration instead of glob/full reads.
 Historical V1–V24 plan/evidence bytes retain their prior decoder behavior.
 
-T40.13j's overflow-safe ceremony arithmetic and T40.13k's complete
-executor-admission accounting are complete. T40.13l is now the only next scale
-ticket inside the still-open T40.13 gate and closes low-risk cost-first refusal
-ordering.
+T40.13j's overflow-safe ceremony arithmetic, T40.13k's complete
+executor-admission accounting, and T40.13l's cost-first operator gates are
+complete. The original T40.13 gate remains open for its clean exact commit,
+bounded regressions, independent review, and separate authorization.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

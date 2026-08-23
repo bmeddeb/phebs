@@ -3308,4 +3308,15 @@ toolchain-build metrics. A sampler or metric failure leaves phase accounting
 incomplete and stops before completed evidence can be published or custody
 destroyed. Historical V1–V24 accounting remains unchanged. The meter adds only
 one bounded admission interval and no corpus read, production child, or wire
-field; T40.13l remains next.
+field; T40.13 remains open and no freeze or ceremony is authorized.
+
+### T40.13l cost-first operator gates
+
+The shell driver now checks immutable refusal facts before costly gates: freeze
+rejects duplicate IDs and signer admission before host preflight; seal checks
+run-root, frozen-plan, signer, and marker-bearing custody state before verifier
+command construction; verify checks the run and plan before building verifier
+custody; and preflight checks checkout cleanliness before cache or command
+construction. Required semantic verification still runs after cheap admission
+succeeds. Call-order regression tests prove the expensive gates are skipped on
+these refusals. T40.13 remains open; no freeze or ceremony is authorized.

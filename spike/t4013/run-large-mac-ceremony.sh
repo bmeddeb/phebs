@@ -980,9 +980,9 @@ preflight() {
     require_command "$command_name"
   done
   initialize_repository
+  require_clean_checkout
   initialize_ceremony_root
   initialize_closed_go_cache
-  require_clean_checkout
   host_preflight
   initialize_v25_custody_commands
   commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
@@ -1009,9 +1009,9 @@ verification_preflight() {
     require_command "$command_name"
   done
   initialize_repository
+  require_clean_checkout
   initialize_ceremony_root
   initialize_closed_go_cache
-  require_clean_checkout
   initialize_v25_custody_commands
   note "source-free verifier checkout: PASS"
 }
@@ -1146,11 +1146,13 @@ freeze() {
   local ceremony_id="$1" run_root evidence_root private_root commit digest frozen_at public_key fingerprint
   local signer_tmp allowed_tmp freeze_tmp freeze_signature_tmp
   reject_review_stopped_id "$ceremony_id"
-  preflight
+  initialize_repository
+  initialize_ceremony_root
   select_signing_key "$ceremony_id"
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
   [[ ! -e "$run_root" && ! -L "$run_root" ]] || die "ceremony id already exists and may not be overwritten: $ceremony_id"
+  preflight
   evidence_root="${run_root}/evidence"
   private_root="${run_root}/private"
   mkdir -m 700 "$run_root" "$evidence_root" "$private_root"
@@ -1545,6 +1547,13 @@ seal_run() {
   custody_path="${run_root}/custody"
   [[ -d "$run_root" && ! -L "$run_root" ]] || die "ceremony run directory is invalid"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
+  select_signing_key "$ceremony_id"
+  ensure_signing_key
+  if [[ -e "$custody_path" || -L "$custody_path" ]]; then
+    [[ -d "$custody_path" && ! -L "$custody_path" ]] || die "private custody is invalid"
+    [[ ! -e "${custody_path}/.t4013-executed" && ! -L "${custody_path}/.t4013-executed" ]] ||
+      die "marker-bearing executed custody remains for separately reviewed purge"
+  fi
   if ! is_v25_plan "$plan_path"; then
     initialize_historical_go_cache
   fi
@@ -1553,17 +1562,9 @@ seal_run() {
   if is_v25_plan "$plan_path"; then
     initialize_v25_custody_commands
   fi
-  select_signing_key "$ceremony_id"
-  ensure_signing_key
   [[ -d "$evidence_root" && ! -L "$evidence_root" && -d "$private_root" && ! -L "$private_root" ]] ||
     die "ceremony evidence or private directory is invalid"
   plan_digest="$(plan_digest_for "$plan_path")"
-  if [[ -e "$custody_path" || -L "$custody_path" ]]; then
-    [[ -d "$custody_path" && ! -L "$custody_path" ]] || die "private custody is invalid"
-    if [[ -e "${custody_path}/.t4013-executed" || -L "${custody_path}/.t4013-executed" ]]; then
-      die "marker-bearing executed custody remains for separately reviewed purge"
-    fi
-  fi
   if is_v25_plan "$plan_path" &&
     [[ -e "${evidence_root}/observation.json.teardown" || -L "${evidence_root}/observation.json.teardown" ||
       -e "${evidence_root}/observation.json.teardown.tmp" || -L "${evidence_root}/observation.json.teardown.tmp" ]]; then
@@ -1758,9 +1759,12 @@ execute_ceremony() {
 
 verify_run() {
   local ceremony_id="$1" run_root
-  verification_preflight
   initialize_ceremony_root
   run_root="$(run_root_for "$ceremony_id")"
+  [[ -d "$run_root" && ! -L "$run_root" ]] || die "ceremony run directory is invalid"
+  [[ -f "${run_root}/evidence/plan.json" && ! -L "${run_root}/evidence/plan.json" ]] ||
+    die "frozen plan is missing or symlinked"
+  verification_preflight_for_plan "${run_root}/evidence/plan.json"
   verify_evidence_directory "${run_root}/evidence"
 }
 
