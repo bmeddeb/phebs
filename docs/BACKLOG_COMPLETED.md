@@ -12,6 +12,12 @@ appended to PLAN.md as dated ADR bullets — no new architecture docs.
 
 Conventions: `T<epic>.<n>` · deps listed only where they cross epics or gate.
 
+**T40.13j · Overflow-safe ceremony arithmetic** ✅ 2026-08-23 — Shared
+checked signed addition and multiplication now guard phase, total-wall, byte,
+count, resource, timing, construction, and receipt aggregation. MaxInt64
+boundary tests fail closed before comparison; ordinary values and historical
+receipts remain exact, with no wire widening or saturation.
+
 ---
 
 ## EPIC 0 — Bootstrap

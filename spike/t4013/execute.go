@@ -533,7 +533,11 @@ func (run *execution) execute() error {
 		run.ctx, run.moduleRoot, run.workspace, run.prepared.ExecutionControlsSHA256,
 		run.plan, run.hostTools,
 	)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, preflightMetrics)
+	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, preflightMetrics)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	if err != nil {
 		return err
 	}
@@ -639,7 +643,10 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	// Validate the stopped observation BEFORE destroying custody: an
 	// unsealable observation must fail closed with custody retained for the
 	// separately reviewed purge, never destroy hours of evidence first.
-	projected := run.projectedTeardownObservation(started, 0, 0)
+	projected, projectionErr := run.projectedTeardownObservation(started, 0, 0)
+	if projectionErr != nil {
+		return Observation{}, projectionErr
+	}
 	if err := run.validateReceiptBeforeTeardown(projected); err != nil {
 		return Observation{}, fmt.Errorf(
 			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
@@ -739,32 +746,49 @@ type teardownCheckpoint struct {
 func (run *execution) projectedTeardownObservation(
 	started time.Time,
 	logical, allocated int64,
-) Observation {
+) (Observation, error) {
 	value := run.observation
 	value.Phases = slices.Clone(run.observation.Phases)
 	last := len(value.Phases) - 1
 	metrics := PhaseMetrics{
-		WallMS:             conservativeTeardownWallMS(started, time.Now()),
+		WallMS:             0,
 		DataLogicalBytes:   logical,
 		DataAllocatedBytes: allocated,
 	}
 	if value.Outcome == "stopped" && value.Phases[last].Outcome == "failed" {
-		metrics = mergeMetrics(value.Phases[last].Metrics, metrics)
+		mergedMetrics, err := mergeMetrics(value.Phases[last].Metrics, metrics)
+		if err != nil {
+			return Observation{}, err
+		}
+		metrics = mergedMetrics
 		value.Phases[last] = PhaseObservation{Name: "teardown", Outcome: "failed", Metrics: metrics}
 	} else {
 		value.Phases[last] = succeededPhase("teardown", metrics)
 	}
 	value.Teardown = TeardownObservation{Completed: true}
-	return value
+	wallMS, err := conservativeTeardownWallMS(started, time.Now())
+	if err != nil {
+		return Observation{}, err
+	}
+	value.Phases[last].Metrics.WallMS = wallMS
+	return value, nil
 }
 
-func conservativeTeardownWallMS(started, finished time.Time) int64 {
+func conservativeTeardownWallMS(started, finished time.Time) (int64, error) {
 	elapsed := finished.Sub(started)
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	elapsed += teardownPersistenceReserve + teardownRetirementReserve
-	return max(int64(1), int64((elapsed+time.Millisecond-1)/time.Millisecond))
+	var err error
+	elapsedMS, err := checkedAddInt64(int64(elapsed), int64(teardownPersistenceReserve+teardownRetirementReserve))
+	if err != nil {
+		return 0, err
+	}
+	elapsedMS, err = checkedAddInt64(elapsedMS, int64(time.Millisecond-1))
+	if err != nil {
+		return 0, err
+	}
+	return max(int64(1), elapsedMS/int64(time.Millisecond)), nil
 }
 
 func (run *execution) persistTeardownCheckpoint(
@@ -823,13 +847,18 @@ func (run *execution) completeTeardown(
 	logical, allocated int64,
 	cleanupErr error,
 ) error {
-	run.observation = run.projectedTeardownObservation(started, logical, allocated)
+	var projectionErr error
+	run.observation, projectionErr = run.projectedTeardownObservation(started, logical, allocated)
+	if projectionErr != nil {
+		return projectionErr
+	}
 	toolchainErr := run.verifyFrozenHostToolchain()
 	last := len(run.observation.Phases) - 1
-	run.observation.Phases[last].Metrics.WallMS = max(
-		run.observation.Phases[last].Metrics.WallMS,
-		conservativeTeardownWallMS(started, time.Now()),
-	)
+	wallMS, err := conservativeTeardownWallMS(started, time.Now())
+	if err != nil {
+		return err
+	}
+	run.observation.Phases[last].Metrics.WallMS = max(run.observation.Phases[last].Metrics.WallMS, wallMS)
 	ceilingErr := errors.Join(
 		run.teardownDeadlineError(teardownPersistenceReserve+teardownRetirementReserve),
 		run.enforceSafety(),
@@ -930,10 +959,11 @@ func (run *execution) persistFinalTeardown(started time.Time) error {
 			}
 		}
 		last := len(run.observation.Phases) - 1
-		run.observation.Phases[last].Metrics.WallMS = max(
-			run.observation.Phases[last].Metrics.WallMS,
-			conservativeTeardownWallMS(started, time.Now()),
-		)
+		wallMS, wallErr := conservativeTeardownWallMS(started, time.Now())
+		if wallErr != nil {
+			return wallErr
+		}
+		run.observation.Phases[last].Metrics.WallMS = max(run.observation.Phases[last].Metrics.WallMS, wallMS)
 	}
 	return errors.Join(observedErr,
 		fmt.Errorf("%w: final observation persistence exceeded its conservative reserve", errObservationPersistence))
@@ -1341,7 +1371,12 @@ func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapsh
 		return metrics, err
 	}
 	delete(run.activeMeters, meter)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, metrics)
+	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, metrics)
+	if mergeErr != nil {
+		run.measurementErr = errors.Join(run.measurementErr, mergeErr)
+		return metrics, mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	return metrics, nil
 }
 
@@ -1362,7 +1397,12 @@ func (run *execution) captureFailedPhase() error {
 		delete(run.activeMeters, meter)
 		captureErr = errors.Join(captureErr, err)
 		if err == nil {
-			metrics = mergeMetrics(metrics, measured)
+			mergedMetrics, mergeErr := mergeMetrics(metrics, measured)
+			if mergeErr != nil {
+				captureErr = errors.Join(captureErr, mergeErr)
+			} else {
+				metrics = mergedMetrics
+			}
 		}
 	}
 	if metrics.DataAllocatedBytes == 0 {
@@ -1420,7 +1460,10 @@ func (run *execution) cold() error {
 		return err
 	}
 	run.semantic = nil
-	metrics := mergeMetrics(structMetrics, semanticMetrics)
+	metrics, err := mergeMetrics(structMetrics, semanticMetrics)
+	if err != nil {
+		return err
+	}
 	metrics.WallMS = time.Since(started).Milliseconds()
 	run.observation.Phases[1] = succeededPhase("cold", metrics)
 	return run.enforceSafety()
@@ -1535,7 +1578,11 @@ func (run *execution) interruption() error {
 	backup, backupCommandMetrics, err := createLiveBackup(
 		run.ctx, run.toolchain, profile, run.workspace, "interruption",
 	)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -1556,7 +1603,11 @@ func (run *execution) interruption() error {
 	restoreMetrics, err := restoreBackup(
 		run.ctx, run.toolchain, profile, run.workspace, backup, "interruption",
 	)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, restoreMetrics)
+	mergedMetrics, mergeErr = mergeMetrics(run.partialMetrics, restoreMetrics)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -1709,7 +1760,10 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
-	metrics := mergeMetrics(backupMetrics, restoreMetrics, firstMetrics, restartMetrics)
+	metrics, err := mergeMetrics(backupMetrics, restoreMetrics, firstMetrics, restartMetrics)
+	if err != nil {
+		return err
+	}
 	run.semanticA = after
 	if err := run.semantic.stop(30 * time.Second); err != nil {
 		return err
@@ -3251,7 +3305,10 @@ func (run *execution) pressure() error {
 	if err != nil {
 		return err
 	}
-	metrics := mergeMetrics(priorMetrics, pressureMetrics)
+	metrics, err := mergeMetrics(priorMetrics, pressureMetrics)
+	if err != nil {
+		return err
+	}
 	metrics.WallMS = time.Since(started).Milliseconds()
 	metrics.DataLogicalBytes = max(metrics.DataLogicalBytes, pressureLogical)
 	metrics.DataAllocatedBytes = max(metrics.DataAllocatedBytes, pressureAllocated)
@@ -3271,7 +3328,11 @@ func (run *execution) archiveRestore() error {
 	backup, backupCommandMetrics, err := createLiveBackup(
 		run.ctx, run.toolchain, profile, run.workspace, "archive-restore",
 	)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, backupCommandMetrics)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -3290,7 +3351,11 @@ func (run *execution) archiveRestore() error {
 	restoreMetrics, err := restoreBackup(
 		run.ctx, run.toolchain, profile, run.workspace, backup, "archive-restore",
 	)
-	run.partialMetrics = mergeMetrics(run.partialMetrics, restoreMetrics)
+	mergedMetrics, mergeErr = mergeMetrics(run.partialMetrics, restoreMetrics)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	run.partialMetrics = mergedMetrics
 	if err != nil {
 		return directRecovery(err)
 	}
@@ -3321,7 +3386,10 @@ func (run *execution) archiveRestore() error {
 	if err != nil {
 		return err
 	}
-	metrics = mergeMetrics(backupMetrics, restoreMetrics, metrics)
+	metrics, err = mergeMetrics(backupMetrics, restoreMetrics, metrics)
+	if err != nil {
+		return err
+	}
 	metrics.WallMS = time.Since(started).Milliseconds()
 	metrics.DataLogicalBytes, metrics.DataAllocatedBytes, err = measureDataBytesForPlan(run.plan, run.workspace)
 	if err != nil {
@@ -3424,9 +3492,22 @@ func (run *execution) authorizedQueries() error {
 	if err != nil {
 		return err
 	}
-	metrics := mergeMetrics(structMetrics, semanticMetrics)
-	metrics.ControlReads += 8
-	metrics.MemberReads += int64(structCount + semanticCount)
+	metrics, err := mergeMetrics(structMetrics, semanticMetrics)
+	if err != nil {
+		return err
+	}
+	metrics.ControlReads, err = checkedAddInt64(metrics.ControlReads, 8)
+	if err != nil {
+		return errors.New("T40.13 authorized-query control accounting overflowed")
+	}
+	queryMembers, err := checkedAddInt64(int64(structCount), int64(semanticCount))
+	if err != nil {
+		return errors.New("T40.13 authorized-query member accounting overflowed")
+	}
+	metrics.MemberReads, err = checkedAddInt64(metrics.MemberReads, queryMembers)
+	if err != nil {
+		return errors.New("T40.13 authorized-query member accounting overflowed")
+	}
 	run.semanticA = semanticAfter
 	if planSchemaVersion(run.plan.Schema) >= 23 {
 		run.structAR = structAfter
@@ -3537,7 +3618,10 @@ func (run *execution) teardown() error {
 	if err := run.completedCancellationError(); err != nil {
 		return err
 	}
-	projected := run.projectedTeardownObservation(started, logical, allocated)
+	projected, projectionErr := run.projectedTeardownObservation(started, logical, allocated)
+	if projectionErr != nil {
+		return projectionErr
+	}
 	if err := run.validateReceiptBeforeTeardown(projected); err != nil {
 		return fmt.Errorf("T40.13 completed observation is unsealable; custody retained: %w", err)
 	}
@@ -3964,7 +4048,9 @@ func (run *execution) waitSnapshotWithInspection(
 				return privateProfileSnapshot{}, timingErr
 			}
 			for _, report := range reports {
-				addPartitionTiming(&progress.extractionTiming, report)
+				if err := addPartitionTiming(&progress.extractionTiming, report); err != nil {
+					return privateProfileSnapshot{}, err
+				}
 			}
 		}
 		if lifecycleTimingCursor != nil {
@@ -3973,7 +4059,9 @@ func (run *execution) waitSnapshotWithInspection(
 				return privateProfileSnapshot{}, lifecycleErr
 			}
 			for _, report := range reports {
-				addSchedulerTiming(&progress.extractionTiming, report)
+				if err := addSchedulerTiming(&progress.extractionTiming, report); err != nil {
+					return privateProfileSnapshot{}, err
+				}
 			}
 		}
 		if exited {
@@ -4938,51 +5026,81 @@ func succeededPhase(name string, metrics PhaseMetrics) PhaseObservation {
 	}
 }
 
-func mergeMetrics(values ...PhaseMetrics) PhaseMetrics {
+func mergeMetrics(values ...PhaseMetrics) (PhaseMetrics, error) {
 	var result PhaseMetrics
 	for _, value := range values {
-		result.WallMS += value.WallMS
+		var err error
+		result.WallMS, err = checkedAddInt64(result.WallMS, value.WallMS)
+		if err != nil {
+			return PhaseMetrics{}, errors.New("T40.13 phase wall aggregation overflowed")
+		}
 		result.PeakRSSBytes = max(result.PeakRSSBytes, value.PeakRSSBytes)
 		result.DataLogicalBytes = max(result.DataLogicalBytes, value.DataLogicalBytes)
 		result.DataAllocatedBytes = max(result.DataAllocatedBytes, value.DataAllocatedBytes)
-		result.GitChildren += value.GitChildren
-		result.IndexChildren += value.IndexChildren
-		result.OtherChildren += value.OtherChildren
-		result.ControlReads += value.ControlReads
-		result.MemberReads += value.MemberReads
-		result.PublicationWrites += value.PublicationWrites
-		result.PublicationTransactions += value.PublicationTransactions
-		result.OrchestrationTransactions += value.OrchestrationTransactions
-		result.Retries += value.Retries
-		result.ReusedControls += value.ReusedControls
-		result.ReusedMembers += value.ReusedMembers
+		if err := addMetricScalars(&result, value); err != nil {
+			return PhaseMetrics{}, err
+		}
 	}
-	return result
+	return result, nil
 }
 
 // mergeConcurrentMetrics keeps the outer wall interval and conservatively sums
 // process-tree RSS peaks for work that ran underneath it. All other gauges use
 // the same max/add rules as sequential phase merging.
 func mergeConcurrentMetrics(outer, concurrent PhaseMetrics) (PhaseMetrics, error) {
-	if outer.PeakRSSBytes > 1<<63-1-concurrent.PeakRSSBytes {
+	var err error
+	result := outer
+	result.PeakRSSBytes, err = checkedAddInt64(outer.PeakRSSBytes, concurrent.PeakRSSBytes)
+	if err != nil {
 		return PhaseMetrics{}, errors.New("T40.13 concurrent RSS accounting overflowed")
 	}
-	result := outer
-	result.PeakRSSBytes += concurrent.PeakRSSBytes
 	result.DataLogicalBytes = max(result.DataLogicalBytes, concurrent.DataLogicalBytes)
 	result.DataAllocatedBytes = max(result.DataAllocatedBytes, concurrent.DataAllocatedBytes)
-	result.GitChildren += concurrent.GitChildren
-	result.IndexChildren += concurrent.IndexChildren
-	result.OtherChildren += concurrent.OtherChildren
-	result.ControlReads += concurrent.ControlReads
-	result.MemberReads += concurrent.MemberReads
-	result.PublicationWrites += concurrent.PublicationWrites
-	result.PublicationTransactions += concurrent.PublicationTransactions
-	result.OrchestrationTransactions += concurrent.OrchestrationTransactions
-	result.Retries += concurrent.Retries
-	result.ReusedControls += concurrent.ReusedControls
-	result.ReusedMembers += concurrent.ReusedMembers
+	if err := addMetricScalars(&result, concurrent); err != nil {
+		return PhaseMetrics{}, err
+	}
 	return result, nil
+}
+
+func addMetricScalars(result *PhaseMetrics, value PhaseMetrics) error {
+	if result == nil {
+		return errors.New("T40.13 phase metric destination is invalid")
+	}
+	var err error
+	if result.GitChildren, err = checkedAddInt64(result.GitChildren, value.GitChildren); err != nil {
+		return err
+	}
+	if result.IndexChildren, err = checkedAddInt64(result.IndexChildren, value.IndexChildren); err != nil {
+		return err
+	}
+	if result.OtherChildren, err = checkedAddInt64(result.OtherChildren, value.OtherChildren); err != nil {
+		return err
+	}
+	if result.ControlReads, err = checkedAddInt64(result.ControlReads, value.ControlReads); err != nil {
+		return err
+	}
+	if result.MemberReads, err = checkedAddInt64(result.MemberReads, value.MemberReads); err != nil {
+		return err
+	}
+	if result.PublicationWrites, err = checkedAddInt64(result.PublicationWrites, value.PublicationWrites); err != nil {
+		return err
+	}
+	if result.PublicationTransactions, err = checkedAddInt64(result.PublicationTransactions, value.PublicationTransactions); err != nil {
+		return err
+	}
+	if result.OrchestrationTransactions, err = checkedAddInt64(result.OrchestrationTransactions, value.OrchestrationTransactions); err != nil {
+		return err
+	}
+	if result.Retries, err = checkedAddInt64(result.Retries, value.Retries); err != nil {
+		return err
+	}
+	if result.ReusedControls, err = checkedAddInt64(result.ReusedControls, value.ReusedControls); err != nil {
+		return err
+	}
+	if result.ReusedMembers, err = checkedAddInt64(result.ReusedMembers, value.ReusedMembers); err != nil {
+		return err
+	}
+	return nil
 }
 
 func equalStringSlices(left, right []string) bool {

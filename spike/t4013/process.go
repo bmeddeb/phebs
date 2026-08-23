@@ -170,7 +170,10 @@ func buildPrivateToolchain(
 		exportMetrics, err := exportReviewedSourceMeasuredWithBoundGit(
 			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore, controls,
 		)
-		metrics = mergeMetrics(metrics, exportMetrics)
+		metrics, err = mergeMetrics(metrics, exportMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
@@ -199,7 +202,10 @@ func buildPrivateToolchain(
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, err := runMeasuredCommand(command, workspace, true)
-		metrics = mergeMetrics(metrics, commandMetrics)
+		metrics, err = mergeMetrics(metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
 		if err != nil {
 			return privateToolchain{}, metrics,
 				sanitizeMeasuredCommandFailure("T40.13 private module download failed", err)
@@ -213,7 +219,10 @@ func buildPrivateToolchain(
 		command.Env = executionEnvironmentForControls(controls, false)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, err = runMeasuredCommand(command, workspace, true)
-		metrics = mergeMetrics(metrics, commandMetrics)
+		metrics, err = mergeMetrics(metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
 		if err != nil {
 			return privateToolchain{}, metrics,
 				sanitizeMeasuredCommandFailure("T40.13 private module verification failed", err)
@@ -265,7 +274,10 @@ func buildPrivateToolchain(
 		if v25 {
 			command.Stdout, command.Stderr = io.Discard, io.Discard
 			commandMetrics, err := runMeasuredCommand(command, workspace, true)
-			metrics = mergeMetrics(metrics, commandMetrics)
+			metrics, err = mergeMetrics(metrics, commandMetrics)
+			if err != nil {
+				return privateToolchain{}, metrics, err
+			}
 			if err != nil {
 				return privateToolchain{}, metrics,
 					sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", err)
@@ -451,7 +463,10 @@ func extractFrozenSourceCommandMeasured(
 	var descendantGit int64
 	var samplerErr error
 	metrics.PeakRSSBytes, descendantGit, metrics.IndexChildren, metrics.OtherChildren, samplerErr = sampler.metrics()
-	metrics.GitChildren += descendantGit
+	metrics.GitChildren, samplerErr = checkedAddInt64(metrics.GitChildren, descendantGit)
+	if samplerErr != nil {
+		return metrics, errors.Join(extractErr, samplerErr)
+	}
 	return metrics, errors.Join(
 		extractErr, waitErr, signaledCommandShutdownUnproven(waitErr),
 		sessionErr, samplerErr, measureErr, allocationErr,
@@ -1145,7 +1160,11 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 	sampler.mu.Unlock()
 
 	nextActive := make(map[int]sampledProcess, len(pids)-1)
-	totalChildren := gitChildren + indexChildren + otherChildren
+	totalChildren, err := checkedSumInt64(gitChildren, indexChildren, otherChildren)
+	if err != nil {
+		sampler.recordFailure(err)
+		return
+	}
 	for _, pid := range pids[1:] {
 		process := processes[pid]
 		previous, previouslyActive := previousChildren[pid]
@@ -1193,7 +1212,12 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 			sampler.recordFailure(errors.New("T40.13 process RSS observation overflowed"))
 			return
 		}
-		total += process.rssBytes
+		var addErr error
+		total, addErr = checkedAddInt64(total, process.rssBytes)
+		if addErr != nil {
+			sampler.recordFailure(addErr)
+			return
+		}
 	}
 
 	sampler.mu.Lock()
@@ -1320,8 +1344,16 @@ func (sampler *rssSampler) sampleLegacy() {
 			continue
 		}
 		kilobytes, err := strconv.ParseInt(string(bytesTrimSpace(output)), 10, 64)
-		if err == nil && kilobytes >= 0 && kilobytes <= (1<<63-1)/1024 {
-			total += kilobytes * 1024
+		if err == nil && kilobytes >= 0 {
+			bytes, mulErr := checkedMulInt64(kilobytes, 1024)
+			if mulErr == nil {
+				var addErr error
+				total, addErr = checkedAddInt64(total, bytes)
+				if addErr != nil {
+					sampler.recordFailure(addErr)
+					return
+				}
+			}
 		}
 	}
 	sampler.mu.Lock()

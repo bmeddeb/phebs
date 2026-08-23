@@ -297,8 +297,18 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 	metrics.ReusedControls = logMetrics.ReusedControls
 	metrics.ReusedMembers = logMetrics.ReusedMembers
 	if after != nil {
-		metrics.ControlReads = int64(7 + after.PublishedDomains*3 + after.ApplicablePartitions)
-		metrics.MemberReads = int64(after.BlobReader.FallbackReads) + int64(after.SettledPartitions)
+		published, err := checkedMulInt64(int64(after.PublishedDomains), 3)
+		if err != nil {
+			return PhaseMetrics{}, err
+		}
+		metrics.ControlReads, err = checkedSumInt64(7, published, int64(after.ApplicablePartitions))
+		if err != nil {
+			return PhaseMetrics{}, err
+		}
+		metrics.MemberReads, err = checkedSumInt64(int64(after.BlobReader.FallbackReads), int64(after.SettledPartitions))
+		if err != nil {
+			return PhaseMetrics{}, err
+		}
 	}
 	if after != nil {
 		before := privateProfileSnapshot{}
@@ -343,7 +353,15 @@ func measureDataBytes(path string) (logical, allocated int64, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	return logical * 1024, allocated * 1024, nil
+	logical, err = checkedMulInt64(logical, 1024)
+	if err != nil {
+		return 0, 0, err
+	}
+	allocated, err = checkedMulInt64(allocated, 1024)
+	if err != nil {
+		return 0, 0, err
+	}
+	return logical, allocated, nil
 }
 
 func measureDataBytesForPlan(plan Plan, path string) (logical, allocated int64, err error) {
@@ -369,7 +387,15 @@ func measureDataBytesContext(ctx context.Context, path string) (logical, allocat
 	if err != nil {
 		return 0, 0, err
 	}
-	return logical * 1024, allocated * 1024, nil
+	logical, err = checkedMulInt64(logical, 1024)
+	if err != nil {
+		return 0, 0, err
+	}
+	allocated, err = checkedMulInt64(allocated, 1024)
+	if err != nil {
+		return 0, 0, err
+	}
+	return logical, allocated, nil
 }
 
 func duKilobytesWithin(parent context.Context, path string, apparent bool) (int64, error) {
@@ -490,7 +516,14 @@ func parseLogMetrics(path string, offset int64) (PhaseMetrics, error) {
 					result.ReusedControls++
 				case "cold_reuse", "marker_recovery":
 					result.ReusedControls++
-					result.ReusedMembers += int64(report.Planes.Repository.Members + report.Planes.Local.Members + report.Planes.Caller.Members)
+					members, addErr := checkedSumInt64(int64(report.Planes.Repository.Members), int64(report.Planes.Local.Members), int64(report.Planes.Caller.Members))
+					if addErr != nil {
+						return result, addErr
+					}
+					result.ReusedMembers, addErr = checkedAddInt64(result.ReusedMembers, members)
+					if addErr != nil {
+						return result, addErr
+					}
 				}
 			}
 		case bytes.Contains(line, []byte("extraction operation: ")):

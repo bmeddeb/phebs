@@ -631,7 +631,10 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, convergenceProbe("relationship_publication", relationshipRoot.Digest), err
 	}
 	if relationshipRoot.ServiceCount != result.AcceptedServices ||
-		relationshipRoot.CompleteServiceCount+relationshipRoot.EmptyServiceCount != result.AcceptedServices {
+		!checkedEqualIntSum(
+			int64(relationshipRoot.CompleteServiceCount), int64(relationshipRoot.EmptyServiceCount),
+			int64(result.AcceptedServices),
+		) {
 		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest,
 			result.AcceptedServices), errors.New("T40.13 relationship service census differs from the catalog")
 	}
@@ -646,9 +649,19 @@ func (inspector *profileInspector) inspectWithProgress(
 		if err := inspectionContextFence(ctx); err != nil {
 			return privateProfileSnapshot{}, probe, err
 		}
-		result.ApplicablePartitions += domain.Expected
-		result.SettledPartitions += domain.Settled
-		result.RetryExhaustedPartitions += domain.RetryExhausted
+		var err error
+		result.ApplicablePartitions, err = checkedAddInt(result.ApplicablePartitions, domain.Expected)
+		if err != nil {
+			return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
+		}
+		result.SettledPartitions, err = checkedAddInt(result.SettledPartitions, domain.Settled)
+		if err != nil {
+			return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
+		}
+		result.RetryExhaustedPartitions, err = checkedAddInt(result.RetryExhaustedPartitions, domain.RetryExhausted)
+		if err != nil {
+			return privateProfileSnapshot{}, convergenceProbe("extraction_publication", extractionProgress), err
+		}
 		if domain.Current && domain.RootDigest != "" {
 			result.PublishedDomains++
 		}
@@ -873,16 +886,18 @@ func classifyRelationshipGeneration(
 	progress store.GenerationScheduleProgress,
 ) (privateConvergenceProbe, error) {
 	probe := convergenceProbe("relationship_publication", progress)
+	materializedBound, boundErr := checkedMulInt(progress.Total, progress.MaxAttempts)
+	pendingRunning, pendingErr := checkedAddInt(progress.Pending, progress.Running)
+	succeededFailed, settledErr := checkedAddInt(progress.Succeeded, progress.Failed)
 	if progress.Schema != store.GenerationScheduleProgressSchema ||
 		!digestIdentity(progress.ScheduleDigest) || !digestIdentity(progress.Generation) ||
 		progress.Total != 1 ||
 		progress.MaxAttempts != relationshippublication.ScheduleMaxAttempts ||
 		progress.Materialized < 0 ||
-		progress.Materialized > progress.Total*progress.MaxAttempts || progress.Pending < 0 ||
+		boundErr != nil || pendingErr != nil || settledErr != nil || progress.Materialized > materializedBound || progress.Pending < 0 ||
 		progress.Running < 0 || progress.Succeeded < 0 || progress.Failed < 0 ||
-		progress.Materialized < progress.Pending+progress.Running ||
-		progress.Pending+progress.Running > progress.Total ||
-		progress.Succeeded+progress.Failed > progress.Total {
+		progress.Materialized < pendingRunning || pendingRunning > progress.Total ||
+		succeededFailed > progress.Total {
 		return probe, errRelationshipTerminal
 	}
 	switch progress.Status {
@@ -893,7 +908,7 @@ func classifyRelationshipGeneration(
 		return probe, errors.New("T40.13 relationship publication has not converged")
 	case store.GenerationScheduleSettled:
 		if progress.Pending != 0 || progress.Running != 0 ||
-			progress.Succeeded+progress.Failed != progress.Total {
+			settledErr != nil || succeededFailed != progress.Total {
 			return probe, errRelationshipTerminal
 		}
 		if progress.Failed < 1 {
@@ -1105,12 +1120,16 @@ func classifyCallerGenerationShape(
 		progress.TotalPairCount == nil ||
 		*progress.TotalPairCount != progress.SettledPairCount ||
 		progress.RefusedPairCount <= 0 ||
-		progress.SucceededPairCount+progress.RefusedPairCount != progress.SettledPairCount {
+		!checkedEqualIntSum(int64(progress.SucceededPairCount), int64(progress.RefusedPairCount), int64(progress.SettledPairCount)) {
 		return probe, errCallerGenerationTerminal
 	}
 	refused := 0
 	for _, refusal := range progress.Refusals {
-		refused += refusal.OutcomeCount
+		var addErr error
+		refused, addErr = checkedAddInt(refused, refusal.OutcomeCount)
+		if addErr != nil {
+			return probe, errCallerGenerationTerminal
+		}
 		if refusal.Stage == pipelinerefusal.StageCallerGenerationAdmission &&
 			refusal.GenerationKind == pipelinerefusal.GenerationCaller &&
 			refusal.Classification == pipelinerefusal.ClassificationLimit &&
@@ -1516,9 +1535,19 @@ func inspectExtraction(
 						errors.Join(currentErr, errors.New("T40.13 extraction root differs from current authority"))
 				}
 				result.roots[domain.Domain] = current
-				result.facts += current.Totals.Facts
-				result.rows += current.Totals.Rows
-				result.references += current.Totals.References
+				var addErr error
+				result.facts, addErr = checkedAddInt64(result.facts, current.Totals.Facts)
+				if addErr != nil {
+					return extractionSnapshot{}, progress, errors.New("T40.13 extraction fact aggregate overflowed")
+				}
+				result.rows, addErr = checkedAddInt64(result.rows, current.Totals.Rows)
+				if addErr != nil {
+					return extractionSnapshot{}, progress, errors.New("T40.13 extraction row aggregate overflowed")
+				}
+				result.references, addErr = checkedAddInt64(result.references, current.Totals.References)
+				if addErr != nil {
+					return extractionSnapshot{}, progress, errors.New("T40.13 extraction reference aggregate overflowed")
+				}
 			}
 			return result, progress, nil
 		}

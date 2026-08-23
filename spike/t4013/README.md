@@ -3289,4 +3289,12 @@ already bounded reads, one binary to the existing batch build, and no new
 cache, poll, production request/query, publication write, corpus/shard read, or
 service child. Cheap tests cover symlink, replacement, trailing data,
 maximum-plus-one byte/entry refusal, valid maxima, and retained V24 decoding.
-T40.13j remains next; no freeze or ceremony is authorized.
+### T40.13j overflow-safe ceremony arithmetic
+
+All T40.13 phase, wall, byte, count, resource, timing, construction, and
+receipt aggregations now use shared checked signed addition/multiplication and
+refuse on overflow before any terminal comparison. MaxInt64 boundary tests cover
+the arithmetic and metric merge paths; ordinary values and historical receipt
+decoders remain exact. The checks add constant work per already-visited scalar,
+with no wider wire representation or saturation. T40.13k remains next; no
+freeze or ceremony is authorized.

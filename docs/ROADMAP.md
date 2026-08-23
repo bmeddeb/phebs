@@ -1789,8 +1789,11 @@ checksum, shell-control, and directory decisions, while live extraction and
 custody scans use bounded descriptor enumeration instead of glob/full reads.
 Historical V1–V24 plan/evidence bytes retain their prior decoder behavior.
 
-T40.13j's overflow-safe ceremony arithmetic is now the only next scale ticket
-inside the still-open T40.13 gate. T40.13k then closes complete admission accounting. T40.13l last
+T40.13j's overflow-safe ceremony arithmetic is complete: shared checked
+addition/multiplication now guards phase, wall, byte, count, resource, timing,
+construction, and receipt aggregation, with MaxInt64 boundary tests and exact
+historical decoding. T40.13k is now the only next scale ticket inside the
+still-open T40.13 gate; it closes complete admission accounting. T40.13l last
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

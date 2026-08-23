@@ -47,13 +47,24 @@ func validatePressureHostPreflightV25(
 		return errors.New("T40.13 host cannot retain normal pressure through the pre-pressure phases")
 	}
 	projected := capacity
-	projected.UsedBytes += growth
-	projected.AvailableBytes -= growth
-	if projected.UsedBytes > percentFloor(projected.TotalBytes, lifecycle.SoftWatermarkPercent-1) {
+	var err error
+	projected.UsedBytes, err = checkedAddInt64(projected.UsedBytes, growth)
+	if err != nil {
+		return err
+	}
+	projected.AvailableBytes, err = checkedAddInt64(projected.AvailableBytes, -growth)
+	if err != nil {
+		return err
+	}
+	watermark, err := percentFloor(projected.TotalBytes, lifecycle.SoftWatermarkPercent-1)
+	if err != nil {
+		return err
+	}
+	if projected.UsedBytes > watermark {
 		return errors.New("T40.13 host cannot retain normal pressure through the pre-pressure phases")
 	}
 	projected.Pressure = lifecycle.PressureNormal
-	_, err := requiredPressureBallast(projected, safety.MaximumPrePressureBytes, safety)
+	_, err = requiredPressureBallast(projected, safety.MaximumPrePressureBytes, safety)
 	if err != nil {
 		return errors.Join(err, errors.New("T40.13 host cannot reach the frozen pressure target after pre-pressure growth"))
 	}
@@ -90,16 +101,42 @@ func pressureTargetBytes(total int64, percent int) (int64, error) {
 	// Capacity reports ceil(used * 100 / total). Select the midpoint of the
 	// complete byte interval that reports the frozen percentage. This leaves
 	// headroom for filesystem metadata while remaining deterministic.
-	lower := percentFloor(total, percent-1) + 1
-	upper := percentFloor(total, percent)
+	lowerFloor, err := percentFloor(total, percent-1)
+	if err != nil {
+		return 0, err
+	}
+	lower, err := checkedAddInt64(lowerFloor, 1)
+	if err != nil {
+		return 0, err
+	}
+	upper, err := percentFloor(total, percent)
+	if err != nil {
+		return 0, err
+	}
 	if lower > upper {
 		return 0, errors.New("T40.13 pressure target cannot be represented")
 	}
-	return lower + (upper-lower)/2, nil
+	span, err := checkedAddInt64(upper, -lower)
+	if err != nil {
+		return 0, err
+	}
+	middle, err := checkedAddInt64(lower, span/2)
+	if err != nil {
+		return 0, err
+	}
+	return middle, nil
 }
 
-func percentFloor(total int64, percent int) int64 {
-	return (total/100)*int64(percent) + ((total%100)*int64(percent))/100
+func percentFloor(total int64, percent int) (int64, error) {
+	whole, err := checkedMulInt64(total/100, int64(percent))
+	if err != nil {
+		return 0, err
+	}
+	remainder, err := checkedMulInt64(total%100, int64(percent))
+	if err != nil {
+		return 0, err
+	}
+	return checkedAddInt64(whole, remainder/100)
 }
 
 func requiredPressureBallast(

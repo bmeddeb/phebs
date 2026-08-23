@@ -24,13 +24,21 @@ type partitionTimingCursor struct {
 func addSchedulerTiming(
 	observation *ExtractionTimingObservation,
 	report generationscheduler.ChunkLifecycleReport,
-) {
+) error {
 	if observation == nil || report.Event != "settled" {
-		return
+		return nil
 	}
-	observation.SchedulerSettled++
-	observation.SchedulerTotalMS += report.DurationMS
+	var err error
+	observation.SchedulerSettled, err = checkedAddInt64(observation.SchedulerSettled, 1)
+	if err != nil {
+		return errors.New("T40.13 scheduler timing count overflowed")
+	}
+	observation.SchedulerTotalMS, err = checkedAddInt64(observation.SchedulerTotalMS, report.DurationMS)
+	if err != nil {
+		return errors.New("T40.13 scheduler timing aggregate overflowed")
+	}
 	observation.SchedulerMaxMS = max(observation.SchedulerMaxMS, report.DurationMS)
+	return nil
 }
 
 func newPartitionTimingCursor(logPath string) (*partitionTimingCursor, error) {
@@ -103,9 +111,9 @@ func parsePartitionTimingLine(
 func addPartitionTiming(
 	observation *ExtractionTimingObservation,
 	report extractionpublication.PartitionTimingReport,
-) {
+) error {
 	if observation == nil {
-		return
+		return nil
 	}
 	if report.Schema == extractionpublication.PartitionTimingSchemaV3 &&
 		observation.Schema != extractionTimingSchemaV3 {
@@ -117,32 +125,62 @@ func addPartitionTiming(
 		observation.Schema = extractionTimingSchemaV2
 		observation.UnknownRefusals = observation.TerminalRefusals
 	}
-	observation.Attempts++
+	var err error
+	observation.Attempts, err = checkedAddInt64(observation.Attempts, 1)
+	if err != nil {
+		return errors.New("T40.13 extraction timing attempt count overflowed")
+	}
 	switch report.Outcome {
 	case "completed":
-		observation.Completed++
+		observation.Completed, err = checkedAddInt64(observation.Completed, 1)
 	case "terminal_refusal":
-		observation.TerminalRefusals++
-		addPartitionRefusal(observation, report)
+		observation.TerminalRefusals, err = checkedAddInt64(observation.TerminalRefusals, 1)
+		if err == nil {
+			err = addPartitionRefusal(observation, report)
+		}
 	default:
-		observation.Failed++
+		observation.Failed, err = checkedAddInt64(observation.Failed, 1)
+	}
+	if err != nil {
+		return errors.New("T40.13 extraction timing count overflowed")
 	}
 	if report.Reused {
-		observation.Reused++
+		observation.Reused, err = checkedAddInt64(observation.Reused, 1)
+		if err != nil {
+			return errors.New("T40.13 extraction timing reuse count overflowed")
+		}
 	}
-	observation.SourceAcquireTotalMS += report.SourceAcquireMS
+	observation.SourceAcquireTotalMS, err = checkedAddInt64(observation.SourceAcquireTotalMS, report.SourceAcquireMS)
+	if err != nil {
+		return errors.New("T40.13 extraction timing aggregate overflowed")
+	}
 	observation.SourceAcquireMaxMS = max(observation.SourceAcquireMaxMS, report.SourceAcquireMS)
-	observation.ExecutorTotalMS += report.ExecutorMS
+	observation.ExecutorTotalMS, err = checkedAddInt64(observation.ExecutorTotalMS, report.ExecutorMS)
+	if err != nil {
+		return errors.New("T40.13 extraction timing aggregate overflowed")
+	}
 	observation.ExecutorMaxMS = max(observation.ExecutorMaxMS, report.ExecutorMS)
-	observation.ResultTotalMS += report.ResultMS
+	observation.ResultTotalMS, err = checkedAddInt64(observation.ResultTotalMS, report.ResultMS)
+	if err != nil {
+		return errors.New("T40.13 extraction timing aggregate overflowed")
+	}
 	observation.ResultMaxMS = max(observation.ResultMaxMS, report.ResultMS)
-	observation.AssemblyTotalMS += report.AssemblyMS
+	observation.AssemblyTotalMS, err = checkedAddInt64(observation.AssemblyTotalMS, report.AssemblyMS)
+	if err != nil {
+		return errors.New("T40.13 extraction timing aggregate overflowed")
+	}
 	observation.AssemblyMaxMS = max(observation.AssemblyMaxMS, report.AssemblyMS)
-	observation.RuntimeTotalMS += report.TotalMS
+	observation.RuntimeTotalMS, err = checkedAddInt64(observation.RuntimeTotalMS, report.TotalMS)
+	if err != nil {
+		return errors.New("T40.13 extraction timing aggregate overflowed")
+	}
 	observation.RuntimeMaxMS = max(observation.RuntimeMaxMS, report.TotalMS)
 	if observation.Schema == extractionTimingSchemaV3 {
-		addExtractionDomainTiming(observation, report)
+		if err := addExtractionDomainTiming(observation, report); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func upgradeExtractionTimingV3(observation *ExtractionTimingObservation) {
@@ -167,9 +205,9 @@ func upgradeExtractionTimingV3(observation *ExtractionTimingObservation) {
 func addExtractionDomainTiming(
 	observation *ExtractionTimingObservation,
 	report extractionpublication.PartitionTimingReport,
-) {
+) error {
 	if observation == nil {
-		return
+		return nil
 	}
 	domain := report.Domain
 	if report.Schema != extractionpublication.PartitionTimingSchemaV3 {
@@ -198,27 +236,40 @@ func addExtractionDomainTiming(
 		}
 	}
 	current := &observation.DomainTimings[index]
-	current.Attempts++
+	var err error
+	current.Attempts, err = checkedAddInt64(current.Attempts, 1)
+	if err != nil {
+		return errors.New("T40.13 extraction domain attempt count overflowed")
+	}
 	switch report.Outcome {
 	case "completed":
-		current.Completed++
+		current.Completed, err = checkedAddInt64(current.Completed, 1)
 	case "terminal_refusal":
-		current.TerminalRefusals++
+		current.TerminalRefusals, err = checkedAddInt64(current.TerminalRefusals, 1)
 	default:
-		current.Failed++
+		current.Failed, err = checkedAddInt64(current.Failed, 1)
+		if err != nil {
+			return errors.New("T40.13 extraction domain count overflowed")
+		}
 		switch report.FailureClass {
 		case extractionpublication.PartitionFailureDeadline:
-			current.DeadlineFailures++
+			current.DeadlineFailures, err = checkedAddInt64(current.DeadlineFailures, 1)
 		case extractionpublication.PartitionFailureCanceled:
-			current.CanceledFailures++
+			current.CanceledFailures, err = checkedAddInt64(current.CanceledFailures, 1)
 		case extractionpublication.PartitionFailureOther:
-			current.OtherFailures++
+			current.OtherFailures, err = checkedAddInt64(current.OtherFailures, 1)
 		default:
-			current.UnknownFailures++
+			current.UnknownFailures, err = checkedAddInt64(current.UnknownFailures, 1)
 		}
 	}
+	if err != nil {
+		return errors.New("T40.13 extraction domain count overflowed")
+	}
 	if report.Reused {
-		current.Reused++
+		current.Reused, err = checkedAddInt64(current.Reused, 1)
+		if err != nil {
+			return errors.New("T40.13 extraction domain reuse count overflowed")
+		}
 	}
 	switch {
 	case report.ExecutorMS < 1_000:
@@ -234,24 +285,32 @@ func addExtractionDomainTiming(
 	default:
 		current.ExecutorGE300S++
 	}
-	current.ExecutorTotalMS += report.ExecutorMS
+	current.ExecutorTotalMS, err = checkedAddInt64(current.ExecutorTotalMS, report.ExecutorMS)
+	if err != nil {
+		return errors.New("T40.13 extraction domain timing aggregate overflowed")
+	}
 	current.ExecutorMaxMS = max(current.ExecutorMaxMS, report.ExecutorMS)
 	sort.Slice(observation.DomainTimings, func(left, right int) bool {
 		return observation.DomainTimings[left].Domain < observation.DomainTimings[right].Domain
 	})
+	return nil
 }
 
 func addPartitionRefusal(
 	observation *ExtractionTimingObservation,
 	report extractionpublication.PartitionTimingReport,
-) {
+) error {
 	if observation == nil || (report.Schema != extractionpublication.PartitionTimingSchemaV2 &&
 		report.Schema != extractionpublication.PartitionTimingSchemaV3) {
 		if observation != nil && (observation.Schema == extractionTimingSchemaV2 ||
 			observation.Schema == extractionTimingSchemaV3) {
-			observation.UnknownRefusals++
+			updated, err := checkedAddInt64(observation.UnknownRefusals, 1)
+			if err != nil {
+				return errors.New("T40.13 unknown refusal count overflowed")
+			}
+			observation.UnknownRefusals = updated
 		}
-		return
+		return nil
 	}
 	receipt := pipelinerefusal.Receipt{
 		Schema: pipelinerefusal.Schema, Stage: report.RefusalStage,
@@ -262,8 +321,12 @@ func addPartitionRefusal(
 	}
 	if pipelinerefusal.Validate(receipt) != nil ||
 		receipt.Classification == pipelinerefusal.ClassificationUnknown {
-		observation.UnknownRefusals++
-		return
+		updated, err := checkedAddInt64(observation.UnknownRefusals, 1)
+		if err != nil {
+			return errors.New("T40.13 unknown refusal count overflowed")
+		}
+		observation.UnknownRefusals = updated
+		return nil
 	}
 	summary := ExtractionRefusalSummary{
 		Stage: string(receipt.Stage), GenerationKind: string(receipt.GenerationKind),
@@ -275,19 +338,28 @@ func addPartitionRefusal(
 		if extractionRefusalSummaryKey(observation.Refusals[index]) != key {
 			continue
 		}
-		observation.Refusals[index].Count++
+		updated, err := checkedAddInt64(observation.Refusals[index].Count, 1)
+		if err != nil {
+			return errors.New("T40.13 refusal count overflowed")
+		}
+		observation.Refusals[index].Count = updated
 		observation.Refusals[index].MaxObserved = max(
 			observation.Refusals[index].MaxObserved, summary.MaxObserved,
 		)
-		return
+		return nil
 	}
 	if len(observation.Refusals) >= maxExtractionRefusalSummaries {
-		observation.UnknownRefusals++
-		return
+		updated, err := checkedAddInt64(observation.UnknownRefusals, 1)
+		if err != nil {
+			return errors.New("T40.13 unknown refusal count overflowed")
+		}
+		observation.UnknownRefusals = updated
+		return nil
 	}
 	observation.Refusals = append(observation.Refusals, summary)
 	sort.Slice(observation.Refusals, func(left, right int) bool {
 		return extractionRefusalSummaryKey(observation.Refusals[left]) <
 			extractionRefusalSummaryKey(observation.Refusals[right])
 	})
+	return nil
 }

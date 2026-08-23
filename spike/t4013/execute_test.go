@@ -2740,7 +2740,10 @@ func TestTeardownCheckpointRefusesIndeterminateProcessDeath(t *testing.T) {
 	if err := run.supervision.Close(); err != nil {
 		t.Fatal(err)
 	}
-	provisional := run.projectedTeardownObservation(started, 7, 8)
+	provisional, err := run.projectedTeardownObservation(started, 7, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := WriteObservation(run.observationPath, provisional); err != nil {
 		t.Fatal(err)
 	}

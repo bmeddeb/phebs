@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13j next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13k next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1562,6 +1562,11 @@ validation; `math.MaxInt64` boundary tables fail closed before comparison;
 ordinary values and historical receipts remain exact; no arbitrary saturation
 or wider unbounded representation enters a wire contract; the cost is constant
 per already-visited scalar.
+
+T40.13j is complete. Shared checked arithmetic now guards every T40.13 phase,
+wall, byte, count, resource, timing, construction, and receipt aggregation;
+MaxInt64 boundary tests fail closed before comparison, while ordinary values and
+historical receipts remain exact. No wire widening or saturation was added.
 
 **T40.13k · Complete executor-admission accounting** *(medium · needs
 T40.13j)* — make V25's completeness claim cover the work performed before phase

@@ -1778,10 +1778,16 @@ type CallerRefusalObservation struct {
 }
 
 func validateCallerProgress(value CallerProgressObservation) error {
+	succeededAndRefused, err := checkedAddInt64(
+		int64(value.SucceededPairCount), int64(value.RefusedPairCount),
+	)
+	if err != nil {
+		return errors.New("T40.13 caller progress counters overflowed")
+	}
 	if !slices.Contains([]string{"current", "missing", "stale", "failed", ""}, value.State) ||
 		!slices.Contains([]string{"", "complete", "partial", "unavailable"}, value.PartitionState) ||
 		value.SettledPairCount < 0 || value.SucceededPairCount < 0 || value.RefusedPairCount < 0 ||
-		value.SucceededPairCount+value.RefusedPairCount > value.SettledPairCount ||
+		succeededAndRefused > int64(value.SettledPairCount) ||
 		(value.TotalPairCount != nil && *value.TotalPairCount < value.SettledPairCount) ||
 		!slices.Contains([]string{"", "pending", "claimed", "running", "done", "failed", "canceled"}, value.JobState) ||
 		value.JobAttempts < 0 || value.JobAttempts > 1_000_000 ||
@@ -1792,7 +1798,7 @@ func validateCallerProgress(value CallerProgressObservation) error {
 		len(value.Refusals) > maxCallerRefusalObservations {
 		return errors.New("T40.13 caller progress projection is invalid")
 	}
-	refused := 0
+	var refused int64
 	for _, summary := range value.Refusals {
 		receipt := pipelinerefusal.Receipt{
 			Schema: pipelinerefusal.Schema, Stage: summary.Stage,
@@ -1803,12 +1809,15 @@ func validateCallerProgress(value CallerProgressObservation) error {
 		if pipelinerefusal.Validate(receipt) != nil ||
 			receipt.GenerationKind != pipelinerefusal.GenerationCaller ||
 			summary.OutcomeCount < 0 ||
-			summary.OutcomeCount > value.RefusedPairCount-refused {
+			int64(summary.OutcomeCount) > int64(value.RefusedPairCount)-refused {
 			return errors.New("T40.13 caller refusal projection is invalid")
 		}
-		refused += summary.OutcomeCount
+		refused, err = checkedAddInt64(refused, int64(summary.OutcomeCount))
+		if err != nil {
+			return errors.New("T40.13 caller refusal aggregate overflowed")
+		}
 	}
-	if len(value.Refusals) > 0 && refused != value.RefusedPairCount {
+	if len(value.Refusals) > 0 && refused != int64(value.RefusedPairCount) {
 		return errors.New("T40.13 caller refusal inventory is incomplete")
 	}
 	return nil
@@ -1838,13 +1847,22 @@ func expectedCallerGenerationBoundRefusal(progress *CallerProgressObservation) b
 	if progress == nil || progress.State != "failed" || progress.PartitionState != "complete" ||
 		progress.TotalPairCount == nil || *progress.TotalPairCount != progress.SettledPairCount ||
 		progress.RefusedPairCount <= 0 ||
-		progress.SucceededPairCount+progress.RefusedPairCount != progress.SettledPairCount ||
 		len(progress.Refusals) == 0 {
+		return false
+	}
+	succeededAndRefused, err := checkedAddInt64(
+		int64(progress.SucceededPairCount), int64(progress.RefusedPairCount),
+	)
+	if err != nil || succeededAndRefused != int64(progress.SettledPairCount) {
 		return false
 	}
 	refused := 0
 	for _, refusal := range progress.Refusals {
-		refused += refusal.OutcomeCount
+		updated, err := checkedAddInt64(int64(refused), int64(refusal.OutcomeCount))
+		if err != nil {
+			return false
+		}
+		refused = int(updated)
 		if refusal.Stage != pipelinerefusal.StageCallerGenerationAdmission ||
 			refusal.GenerationKind != pipelinerefusal.GenerationCaller ||
 			refusal.Classification != pipelinerefusal.ClassificationLimit ||
@@ -1881,9 +1899,20 @@ func callerProgressJobDead(progress CallerProgressObservation) bool {
 }
 
 func validateExtractionTiming(value ExtractionTimingObservation) error {
+	attempts, err := checkedSumInt64(value.Completed, value.Failed, value.TerminalRefusals)
+	if err != nil {
+		return errors.New("T40.13 extraction timing count overflowed")
+	}
+	runtimeParts, err := checkedSumInt64(
+		value.SourceAcquireTotalMS, value.ExecutorTotalMS, value.ResultTotalMS,
+		value.AssemblyTotalMS,
+	)
+	if err != nil {
+		return errors.New("T40.13 extraction timing wall aggregate overflowed")
+	}
 	if value.Attempts <= 0 || value.Completed < 0 || value.Failed < 0 ||
 		value.TerminalRefusals < 0 || value.Reused < 0 ||
-		value.Completed+value.Failed+value.TerminalRefusals != value.Attempts ||
+		attempts != value.Attempts ||
 		value.Reused > value.Attempts ||
 		value.SourceAcquireTotalMS < 0 || value.SourceAcquireMaxMS < 0 ||
 		value.ExecutorTotalMS < 0 || value.ExecutorMaxMS < 0 ||
@@ -1897,8 +1926,7 @@ func validateExtractionTiming(value ExtractionTimingObservation) error {
 		value.AssemblyMaxMS > value.AssemblyTotalMS ||
 		value.RuntimeMaxMS > value.RuntimeTotalMS ||
 		value.SchedulerSettled > value.Attempts || value.SchedulerMaxMS > value.SchedulerTotalMS ||
-		value.SourceAcquireTotalMS+value.ExecutorTotalMS+value.ResultTotalMS+
-			value.AssemblyTotalMS > value.RuntimeTotalMS {
+		runtimeParts > value.RuntimeTotalMS {
 		return errors.New("T40.13 extraction timing aggregate is invalid")
 	}
 	if value.Schema == "" {
@@ -1932,7 +1960,10 @@ func validateExtractionTiming(value ExtractionTimingObservation) error {
 			return errors.New("T40.13 extraction refusal summary is invalid")
 		}
 		lastKey, lastLimitKey = key, limitKey
-		refusalCount += refusal.Count
+		refusalCount, err = checkedAddInt64(refusalCount, refusal.Count)
+		if err != nil {
+			return errors.New("T40.13 extraction refusal aggregate overflowed")
+		}
 	}
 	if refusalCount != value.TerminalRefusals {
 		return errors.New("T40.13 extraction refusal aggregate is incomplete")
@@ -1954,33 +1985,61 @@ func validateExtractionDomainTimings(value ExtractionTimingObservation) error {
 	executorMax := int64(0)
 	lastDomain := ""
 	for _, domain := range value.DomainTimings {
+		domainAttempts, err := checkedSumInt64(domain.Completed, domain.Failed, domain.TerminalRefusals)
+		failureClasses, failureErr := checkedSumInt64(
+			domain.DeadlineFailures, domain.CanceledFailures,
+			domain.OtherFailures, domain.UnknownFailures,
+		)
+		buckets, bucketErr := checkedSumInt64(
+			domain.ExecutorLT1S, domain.ExecutorLT10S, domain.ExecutorLT60S,
+			domain.ExecutorLT240S, domain.ExecutorLT300S, domain.ExecutorGE300S,
+			domain.ExecutorUnbucketed,
+		)
+		if err != nil || failureErr != nil || bucketErr != nil {
+			return errors.New("T40.13 extraction domain aggregate overflowed")
+		}
 		if !validExtractionTimingDomain(domain.Domain) ||
 			(lastDomain != "" && domain.Domain <= lastDomain) ||
 			domain.Attempts <= 0 || domain.Completed < 0 || domain.Failed < 0 ||
 			domain.TerminalRefusals < 0 || domain.Reused < 0 ||
-			domain.Completed+domain.Failed+domain.TerminalRefusals != domain.Attempts ||
+			domainAttempts != domain.Attempts ||
 			domain.Reused > domain.Attempts ||
 			domain.DeadlineFailures < 0 || domain.CanceledFailures < 0 ||
 			domain.OtherFailures < 0 || domain.UnknownFailures < 0 ||
-			domain.DeadlineFailures+domain.CanceledFailures+domain.OtherFailures+
-				domain.UnknownFailures != domain.Failed ||
+			failureClasses != domain.Failed ||
 			domain.ExecutorLT1S < 0 || domain.ExecutorLT10S < 0 || domain.ExecutorLT60S < 0 ||
 			domain.ExecutorLT240S < 0 || domain.ExecutorLT300S < 0 || domain.ExecutorGE300S < 0 ||
 			domain.ExecutorUnbucketed < 0 ||
-			domain.ExecutorLT1S+domain.ExecutorLT10S+domain.ExecutorLT60S+
-				domain.ExecutorLT240S+domain.ExecutorLT300S+domain.ExecutorGE300S+
-				domain.ExecutorUnbucketed != domain.Attempts ||
+			buckets != domain.Attempts ||
 			domain.ExecutorTotalMS < 0 || domain.ExecutorMaxMS < 0 ||
 			domain.ExecutorMaxMS > domain.ExecutorTotalMS {
 			return errors.New("T40.13 extraction domain timing is invalid")
 		}
 		lastDomain = domain.Domain
-		attempts += domain.Attempts
-		completed += domain.Completed
-		failed += domain.Failed
-		terminal += domain.TerminalRefusals
-		reused += domain.Reused
-		executorTotal += domain.ExecutorTotalMS
+		attempts, err = checkedAddInt64(attempts, domain.Attempts)
+		if err != nil {
+			return errors.New("T40.13 extraction domain attempt aggregate overflowed")
+		}
+		completed, err = checkedAddInt64(completed, domain.Completed)
+		if err != nil {
+			return errors.New("T40.13 extraction domain completed aggregate overflowed")
+		}
+		failed, err = checkedAddInt64(failed, domain.Failed)
+		if err != nil {
+			return errors.New("T40.13 extraction domain failure aggregate overflowed")
+		}
+		terminal, err = checkedAddInt64(terminal, domain.TerminalRefusals)
+		if err != nil {
+			return errors.New("T40.13 extraction domain terminal aggregate overflowed")
+		}
+		reused, err = checkedAddInt64(reused, domain.Reused)
+		if err != nil {
+			return errors.New("T40.13 extraction domain reuse aggregate overflowed")
+		}
+		executorTotal, err = checkedAddInt64(executorTotal, domain.ExecutorTotalMS)
+		if err != nil {
+			return errors.New("T40.13 extraction domain timing aggregate overflowed")
+		}
 		executorMax = max(executorMax, domain.ExecutorMaxMS)
 	}
 	if attempts != value.Attempts || completed != value.Completed || failed != value.Failed ||
@@ -2441,6 +2500,37 @@ func validateLastInspection(
 }
 
 func validateObservationProgress(value ObservationProgressObservation, detailVersion int) error {
+	planningTotal, err := checkedSumInt64(
+		int64(value.PlanningPending), int64(value.PlanningRunning),
+		int64(value.PlanningSucceeded), int64(value.PlanningFailed),
+	)
+	if err != nil {
+		return errors.New("T40.13 planning progress aggregate overflowed")
+	}
+	scheduleAttemptBound, err := checkedMulInt64(
+		int64(value.ScheduleTotalPartitions), int64(observationpublication.ScheduleMaxAttempts),
+	)
+	if err != nil {
+		return errors.New("T40.13 schedule progress aggregate overflowed")
+	}
+	schedulePendingRunning, err := checkedAddInt64(
+		int64(value.SchedulePending), int64(value.ScheduleRunning),
+	)
+	if err != nil {
+		return errors.New("T40.13 schedule progress aggregate overflowed")
+	}
+	scheduleSucceededFailed, err := checkedAddInt64(
+		int64(value.ScheduleSucceeded), int64(value.ScheduleFailed),
+	)
+	if err != nil {
+		return errors.New("T40.13 schedule progress aggregate overflowed")
+	}
+	publicationObservedUnsupported, err := checkedAddInt64(
+		int64(value.PublicationObservedCount), int64(value.PublicationUnsupportedCount),
+	)
+	if err != nil {
+		return errors.New("T40.13 publication progress aggregate overflowed")
+	}
 	hasV2Fields := value.SelectedVersion != "" || value.RefusalStage != "" ||
 		value.RefusalGenerationKind != "" || value.RefusalClassification != "" ||
 		value.RefusalDimension != "" || value.RefusalObserved != 0 || value.RefusalLimit != 0 ||
@@ -2478,8 +2568,7 @@ func validateObservationProgress(value ObservationProgressObservation, detailVer
 	if value.PlanningState != "" &&
 		(value.PlanningPending > 1 || value.PlanningRunning > 1 ||
 			value.PlanningSucceeded > 1 || value.PlanningFailed > 1 ||
-			value.PlanningPending+value.PlanningRunning+
-				value.PlanningSucceeded+value.PlanningFailed > 1) {
+			planningTotal > 1) {
 		return errors.New("T40.13 planning progress counters are incoherent")
 	}
 	if value.ScheduleState == "" {
@@ -2490,9 +2579,9 @@ func validateObservationProgress(value ObservationProgressObservation, detailVer
 		}
 	} else if value.ScheduleTotalPartitions < 1 ||
 		value.ScheduleTotalPartitions > store.MaxGenerationChunks ||
-		value.ScheduleMaterialized > value.ScheduleTotalPartitions*observationpublication.ScheduleMaxAttempts ||
-		value.SchedulePending+value.ScheduleRunning > value.ScheduleMaterialized ||
-		value.ScheduleSucceeded+value.ScheduleFailed > value.ScheduleTotalPartitions {
+		int64(value.ScheduleMaterialized) > scheduleAttemptBound ||
+		schedulePendingRunning > int64(value.ScheduleMaterialized) ||
+		scheduleSucceededFailed > int64(value.ScheduleTotalPartitions) {
 		return errors.New("T40.13 schedule progress counters are incoherent")
 	}
 	if value.ScheduleState == "settled" &&
@@ -2500,7 +2589,7 @@ func validateObservationProgress(value ObservationProgressObservation, detailVer
 			value.ScheduleSucceeded != value.ScheduleTotalPartitions) ||
 		value.ScheduleState == "failed" &&
 			(value.SchedulePending != 0 || value.ScheduleRunning != 0 || value.ScheduleFailed == 0 ||
-				value.ScheduleSucceeded+value.ScheduleFailed != value.ScheduleTotalPartitions) {
+				scheduleSucceededFailed != int64(value.ScheduleTotalPartitions)) {
 		return errors.New("T40.13 schedule progress state is incoherent")
 	}
 	if value.PlanningState == "active" && (value.PlanningSucceeded != 0 || value.PlanningFailed != 0) ||
@@ -2523,7 +2612,7 @@ func validateObservationProgress(value ObservationProgressObservation, detailVer
 	}
 	if value.PublicationState != "" &&
 		(value.PublicationRecordCount > maxRecords ||
-			value.PublicationObservedCount+value.PublicationUnsupportedCount != value.PublicationRecordCount) {
+			publicationObservedUnsupported != int64(value.PublicationRecordCount)) {
 		return errors.New("T40.13 publication progress counters are incoherent")
 	}
 	hasRefusal := value.RefusalStage != "" || value.RefusalGenerationKind != "" ||
@@ -2616,9 +2705,13 @@ func expectedExtractionScheduleTerminal(
 	value ExtractionProgressObservation,
 	detailVersion int,
 ) bool {
+	succeededFailed, err := checkedAddInt64(int64(value.Succeeded), int64(value.Failed))
+	if err != nil {
+		return false
+	}
 	if value.State != string(store.GenerationScheduleSettled) || value.Failed <= 0 ||
 		value.Pending != 0 || value.Running != 0 ||
-		value.Succeeded+value.Failed != value.Total {
+		succeededFailed != int64(value.Total) {
 		return false
 	}
 	if detailVersion < 11 {
@@ -2973,7 +3066,11 @@ func validateCompleted(value Receipt, plan Plan) error {
 	}
 	var peakRSS, maxAllocated, totalWall int64
 	for _, phase := range value.Phases {
-		totalWall += phase.Metrics.WallMS
+		var err error
+		totalWall, err = checkedAddInt64(totalWall, phase.Metrics.WallMS)
+		if err != nil {
+			return errors.New("T40.13 completed receipt wall aggregation overflowed")
+		}
 		peakRSS = max(peakRSS, phase.Metrics.PeakRSSBytes)
 		maxAllocated = max(maxAllocated, phase.Metrics.DataAllocatedBytes)
 	}
