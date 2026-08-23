@@ -4948,9 +4948,10 @@ executable immediately before each ceremony launch. The four custody-built
 binaries are rehashed as one bounded snapshot before every serve, backup, or
 restore start; Phebs also rechecks exact SurrealDB immediately before start and
 exact zoekt, focused-index, and Buf immediately before each child launch. The
-shell retains and rehashes all seven
-prebuilt V25 commands across its lock re-exec. A changed file, symlink, or PATH
-selection is a hard refusal; do not replace a tool or hand-edit its digest.
+shell retains and rehashes all eight prebuilt V25 commands across its lock
+re-exec, including the bounded returned-bundle inspector. A changed file,
+symlink, or PATH selection is a hard refusal; do not replace a tool or hand-edit
+its digest.
 Full Go/Git tree hashing is limited to fixed admission and terminal snapshots.
 
 V25 Prepare also writes `.t4013-execution-controls.json` inside custody and
@@ -4972,8 +4973,38 @@ removes only that exact private root; an unproven child exit retains the whole
 root with custody for review. Never point a `CLOSED_*` variable at a shared
 host cache, and never delete retained controls independently.
 
-Do not request a freeze yet. T40.13g and later prerequisites must close the
-returned-evidence and remaining medium/low gates. `go mod verify`, the exact
+Treat every transferred `*-source-free.tgz` as hostile until verification
+passes. `verify-bundle` requires exactly one identity recorded through a
+separate reviewed channel; the package's `.sha256` sidecar, `signer.pub`, and
+`allowed_signers` files are transfer material, not authority:
+
+```sh
+REVIEWED_SIGNER_FINGERPRINT='SHA256:<reviewed-freeze-fingerprint>'
+./spike/t4013/run-large-mac-ceremony.sh verify-bundle \
+  /absolute/path/to/<ceremony-id>-source-free.tgz \
+  --reviewed-signer-fingerprint "$REVIEWED_SIGNER_FINGERPRINT"
+
+# Alternative when the exact package digest itself was reviewed out of band.
+REVIEWED_PACKAGE_DIGEST='sha256:<64-lowercase-hex-digits>'
+./spike/t4013/run-large-mac-ceremony.sh verify-bundle \
+  /absolute/path/to/<ceremony-id>-source-free.tgz \
+  --reviewed-package-digest "$REVIEWED_PACKAGE_DIGEST"
+```
+
+The verifier reads at most 4 MiB of package bytes and consumes at most 1 MiB
+of expanded tar bytes. It accepts only one `evidence/` directory and exactly
+one regular non-link entry for each fixed evidence basename. The existing
+64-KiB plan and 256-KiB observation/receipt limits apply; signer material is
+capped at 1 KiB and the remaining small envelopes, manifests, and signatures
+at 4 KiB each. It creates no extraction output until every header, duplicate,
+type, link, per-file, aggregate, and trailing-stream check passes. It then
+authenticates the checksum manifest before hashing its exact eight listed files
+and verifies the frozen plan with the same trust root. Its private temporary
+root is removed on success, error, INT, TERM, or HUP. Do not inspect a rejected
+temporary tree or retry with an identity copied from the rejected bundle.
+
+Do not request a freeze yet. T40.13h and later prerequisites must close the
+remaining medium/low gates. `go mod verify`, the exact
 filesystem projection, bounded package/race/docs gates, focused real-tool
 proof, and both real-binary rehearsals must pass from one clean commit in their
 designated branch-gate or preflight boundary. Passing those gates is readiness

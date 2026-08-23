@@ -2183,9 +2183,15 @@ ceremony material in the checkout. The script creates
 clean checkout of the exact sealed source commit, where it can be checked with:
 
 ```sh
+REVIEWED_SIGNER_FINGERPRINT='SHA256:<recorded-through-a-separate-channel>'
 ./spike/t4013/run-large-mac-ceremony.sh verify-bundle \
-  /absolute/path/to/<ceremony-id>-source-free.tgz
+  /absolute/path/to/<ceremony-id>-source-free.tgz \
+  --reviewed-signer-fingerprint "$REVIEWED_SIGNER_FINGERPRINT"
 ```
+
+The package sidecar is a transfer-integrity convenience, not authentication.
+The alternate `--reviewed-package-digest sha256:<64-lowercase-hex-digits>` mode
+is valid only when that exact digest was itself reviewed out of band.
 
 This driver deliberately accepts no operator-corpus path. It exercises the
 frozen neutral two-million-owner profiles only. The separate 1.6-million-file,
@@ -3203,3 +3209,38 @@ expected-digest settings add no production file hashing or child work. T40.13f
 hermetic execution controls remains next. This ticket authorizes no freeze,
 ceremony, release, T40.13/Epic-40 closure, topology/bound change, or scale/SLO
 claim.
+
+### T40.13f hermetic execution controls
+
+Fresh V25 Prepare binds one at-most-4-KiB execution-control manifest inside
+custody. Authoring, source export, private module/build work, server/recovery
+launches, and restarts use its custody-local HOME, XDG, temporary, module, and
+build paths plus the reviewed Git exec directory. A fresh module cache is
+checksum-verified and hashed under the 100,000-entry/2-GiB tree bound, compared
+after offline builds, and removed with the build cache before runtime. Execute
+reopens the exact manifest and cache-absence state before mutation and every
+private launch. The supported shell mirrors the controls beneath the ceremony
+root; historical V1–V24 execution remains unchanged.
+
+### T40.13g authenticated returned-evidence firewall
+
+`verify-bundle` requires an out-of-band reviewed signer fingerprint or exact
+package SHA-256 digest. The package sidecar, bundled public key, and bundled
+allowlist cannot authorize themselves. Signer mode matches the bounded
+in-memory key to the reviewed fingerprint and creates a private allowlist;
+package-digest mode authenticates the complete package before archive
+inspection. The checksum-manifest signature is verified with that trust root
+before its exact
+eight canonical basenames are parsed or hashed. The frozen envelope signature,
+plan digest, and exact checkout commit then use the same trust root.
+
+The digest-bound `t4013-bundle` command reads at most 4 MiB of compressed input
+and one MiB of expanded tar bytes. Before writing output it requires one
+`evidence/` directory plus exactly one regular, non-link header for each of ten
+fixed basenames, rejects duplicates and trailing streams, and applies 1-KiB
+signer, 4-KiB control, 64-KiB plan, and 256-KiB observation/receipt limits. It
+writes only 0600 files beneath one fresh 0700 temporary root. The shell now
+builds and rehashes this eighth hermetic command and removes the root on every
+exit. Small tests cover traversal, links, devices, expansion, unexpected
+checksum paths, package-digest mismatch, and wholesale re-signing without a
+ceremony run. T40.13h remains next; no freeze or ceremony is authorized.

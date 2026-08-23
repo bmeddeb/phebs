@@ -55,6 +55,8 @@ CLOSED_SURREAL_PATH="${CLOSED_SURREAL_PATH:-}"
 CLOSED_SURREAL_SHA256="${CLOSED_SURREAL_SHA256:-}"
 V25_CLEANUP_COMMAND="${V25_CLEANUP_COMMAND:-}"
 V25_CLEANUP_SHA256="${V25_CLEANUP_SHA256:-}"
+V25_BUNDLE_COMMAND="${V25_BUNDLE_COMMAND:-}"
+V25_BUNDLE_SHA256="${V25_BUNDLE_SHA256:-}"
 V25_EXECUTE_COMMAND="${V25_EXECUTE_COMMAND:-}"
 V25_EXECUTE_SHA256="${V25_EXECUTE_SHA256:-}"
 V25_FREEZE_COMMAND="${V25_FREEZE_COMMAND:-}"
@@ -88,6 +90,8 @@ if [[ -z "${T4013_RUN_LOCK_FD:-}" ]]; then
   CLOSED_SURREAL_SHA256=""
   V25_CLEANUP_COMMAND=""
   V25_CLEANUP_SHA256=""
+  V25_BUNDLE_COMMAND=""
+  V25_BUNDLE_SHA256=""
   V25_EXECUTE_COMMAND=""
   V25_EXECUTE_SHA256=""
   V25_FREEZE_COMMAND=""
@@ -109,6 +113,7 @@ RUN_LOCK_TOKEN=""
 RUN_LOCK_INHERITED=0
 EXIT_UNPROVEN_REASON=""
 ACTIVE_CHILD_PID=""
+RETURNED_BUNDLE_TEMPORARY_ROOT=""
 
 die() {
   printf '%s: %s\n' "$SCRIPT_NAME" "$*" >&2
@@ -398,7 +403,8 @@ initialize_v25_custody_commands() {
   local command_root command_path
   [[ -n "$REPO_REAL" ]] || die "repository must be initialized before building custody commands"
   initialize_closed_go_cache
-  if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_CLEANUP_SHA256" &&
+  if [[ -n "$V25_BUNDLE_COMMAND" && -n "$V25_BUNDLE_SHA256" &&
+    -n "$V25_CLEANUP_COMMAND" && -n "$V25_CLEANUP_SHA256" &&
     -n "$V25_EXECUTE_COMMAND" && -n "$V25_EXECUTE_SHA256" &&
     -n "$V25_FREEZE_COMMAND" && -n "$V25_FREEZE_SHA256" &&
     -n "$V25_LOCK_COMMAND" && -n "$V25_LOCK_SHA256" &&
@@ -407,14 +413,15 @@ initialize_v25_custody_commands() {
     -n "$V25_RECEIPT_COMMAND" && -n "$V25_RECEIPT_SHA256" ]]; then
     validate_closed_controls
     [[ "$CLOSED_CACHES_ABSENT" == 1 ]] || die "prebuilt V25 commands retained mutable Go caches"
-    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+    for command_path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
       "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
       require_v25_custody_command "$command_path" ||
         die "prebuilt V25 custody command became invalid: $command_path"
     done
     return 0
   fi
-  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_CLEANUP_SHA256" &&
+  [[ -z "$V25_BUNDLE_COMMAND" && -z "$V25_BUNDLE_SHA256" &&
+    -z "$V25_CLEANUP_COMMAND" && -z "$V25_CLEANUP_SHA256" &&
     -z "$V25_EXECUTE_COMMAND" && -z "$V25_EXECUTE_SHA256" &&
     -z "$V25_FREEZE_COMMAND" && -z "$V25_FREEZE_SHA256" &&
     -z "$V25_LOCK_COMMAND" && -z "$V25_LOCK_SHA256" &&
@@ -431,6 +438,7 @@ initialize_v25_custody_commands() {
   mkdir -m 700 "$command_root"
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
     go build -o "${command_root}/" \
+    ./spike/t4013/cmd/t4013-bundle \
     ./spike/t4013/cmd/t4013-cleanup \
     ./spike/t4013/cmd/t4013-execute \
     ./spike/t4013/cmd/t4013-freeze \
@@ -439,6 +447,8 @@ initialize_v25_custody_commands() {
     ./spike/t4013/cmd/t4013-promote \
     ./spike/t4013/cmd/t4013-receipt)
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  V25_BUNDLE_COMMAND="${command_root}/t4013-bundle"
+  V25_BUNDLE_SHA256="$(executable_digest "$V25_BUNDLE_COMMAND")"
   V25_CLEANUP_COMMAND="${command_root}/t4013-cleanup"
   V25_CLEANUP_SHA256="$(executable_digest "$V25_CLEANUP_COMMAND")"
   V25_EXECUTE_COMMAND="${command_root}/t4013-execute"
@@ -453,7 +463,7 @@ initialize_v25_custody_commands() {
   V25_PROMOTE_SHA256="$(executable_digest "$V25_PROMOTE_COMMAND")"
   V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
   V25_RECEIPT_SHA256="$(executable_digest "$V25_RECEIPT_COMMAND")"
-  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+  for command_path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
     "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
     [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
       die "prebuilt V25 custody command is invalid: $command_path"
@@ -478,6 +488,7 @@ run_v25_custody_command_in_repo_active() {
 require_v25_custody_command() {
   local command_path="$1" expected=""
   case "$command_path" in
+    "$V25_BUNDLE_COMMAND") expected="$V25_BUNDLE_SHA256" ;;
     "$V25_CLEANUP_COMMAND") expected="$V25_CLEANUP_SHA256" ;;
     "$V25_EXECUTE_COMMAND") expected="$V25_EXECUTE_SHA256" ;;
     "$V25_FREEZE_COMMAND") expected="$V25_FREEZE_SHA256" ;;
@@ -498,6 +509,10 @@ require_v25_custody_command() {
 cleanup_on_exit() {
   local status=$?
   trap - EXIT
+  if [[ -n "$RETURNED_BUNDLE_TEMPORARY_ROOT" ]]; then
+    rm -rf -- "$RETURNED_BUNDLE_TEMPORARY_ROOT" || status=1
+    RETURNED_BUNDLE_TEMPORARY_ROOT=""
+  fi
   if [[ -z "$EXIT_UNPROVEN_REASON" &&
     -n "$EXIT_PREPARED_PLAN" && -n "$EXIT_PREPARED_MANIFEST" &&
     -n "$EXIT_PREPARED_WORKSPACE" &&
@@ -647,6 +662,7 @@ enter_v25_run_lock() {
     CLOSED_GIT_CORE_PATH="$CLOSED_GIT_CORE_PATH" CLOSED_GIT_CORE_SHA256="$CLOSED_GIT_CORE_SHA256" \
     CLOSED_GIT_EXEC_PATH="$CLOSED_GIT_EXEC_PATH" \
     CLOSED_SURREAL_PATH="$CLOSED_SURREAL_PATH" CLOSED_SURREAL_SHA256="$CLOSED_SURREAL_SHA256" \
+    V25_BUNDLE_COMMAND="$V25_BUNDLE_COMMAND" V25_BUNDLE_SHA256="$V25_BUNDLE_SHA256" \
     V25_CLEANUP_COMMAND="$V25_CLEANUP_COMMAND" V25_CLEANUP_SHA256="$V25_CLEANUP_SHA256" \
     V25_EXECUTE_COMMAND="$V25_EXECUTE_COMMAND" V25_EXECUTE_SHA256="$V25_EXECUTE_SHA256" \
     V25_FREEZE_COMMAND="$V25_FREEZE_COMMAND" V25_FREEZE_SHA256="$V25_FREEZE_SHA256" \
@@ -745,7 +761,10 @@ Usage:
   $SCRIPT_NAME execute <ceremony-id> <approved-plan-digest> $EXECUTE_APPROVAL
   $SCRIPT_NAME seal <ceremony-id>
   $SCRIPT_NAME verify <ceremony-id>
-  $SCRIPT_NAME verify-bundle </absolute/path/to/source-free.tgz>
+  $SCRIPT_NAME verify-bundle </absolute/path/to/source-free.tgz> \
+    --reviewed-signer-fingerprint <SHA256:...>
+  $SCRIPT_NAME verify-bundle </absolute/path/to/source-free.tgz> \
+    --reviewed-package-digest <sha256:...>
 
 Defaults:
   phebs checkout:  ~/phebs
@@ -1134,22 +1153,49 @@ require_exact_inventory() {
 }
 
 verify_frozen_identity() {
-  local evidence_root="$1" plan_path source_commit plan_digest
+  local evidence_root="$1" trusted_allowed_signers="${2:-${1}/allowed_signers}"
+  local plan_path source_commit plan_digest
   plan_path="${evidence_root}/plan.json"
+  ssh-keygen -Y verify \
+    -f "$trusted_allowed_signers" \
+    -I "$SIGNER_IDENTITY" \
+    -n "$FREEZE_SIGNATURE_NAMESPACE" \
+    -s "${evidence_root}/freeze.json.sig" < "${evidence_root}/freeze.json" ||
+    die "frozen plan identity signature is not authentic"
   source_commit="$(manifest_value "${evidence_root}/freeze.json" source_commit)"
   plan_digest="$(manifest_value "${evidence_root}/freeze.json" plan_digest)"
   [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(plan_git "$plan_path" -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the frozen execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "frozen plan digest differs"
+}
+
+verify_checksum_inventory() {
+  local evidence_root="$1" trusted_allowed_signers="$2"
+  local checksum_line checksum_pattern checksum_names="" expected_names
+  checksum_pattern='^([0-9a-f]{64})  ([A-Za-z0-9._-]+)$'
   ssh-keygen -Y verify \
-    -f "${evidence_root}/allowed_signers" \
+    -f "$trusted_allowed_signers" \
     -I "$SIGNER_IDENTITY" \
-    -n "$FREEZE_SIGNATURE_NAMESPACE" \
-    -s "${evidence_root}/freeze.json.sig" < "${evidence_root}/freeze.json"
+    -n "$SIGNATURE_NAMESPACE" \
+    -s "${evidence_root}/SHA256SUMS.sig" < "${evidence_root}/SHA256SUMS" ||
+    die "returned checksum inventory signature is not authentic"
+  while IFS= read -r checksum_line || [[ -n "$checksum_line" ]]; do
+    [[ "$checksum_line" =~ $checksum_pattern ]] ||
+      die "checksum inventory contains a noncanonical entry"
+    checksum_names+="${BASH_REMATCH[2]}"$'\n'
+  done < "${evidence_root}/SHA256SUMS"
+  expected_names="$(printf '%s\n' \
+    allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub |
+    LC_ALL=C sort)"$'\n'
+  [[ "$(printf '%s' "$checksum_names" | LC_ALL=C sort)"$'\n' == "$expected_names" ]] ||
+    die "checksum inventory does not contain exactly the expected evidence files"
+  (cd "$evidence_root" && shasum -a 256 -c SHA256SUMS) ||
+    die "returned evidence checksum differs"
 }
 
 verify_evidence_directory() {
-  local evidence_root="$1" manifest source_commit plan_digest temporary_root rebuilt temporary_parent
+  local evidence_root="$1" trusted_allowed_signers="${2:-${1}/allowed_signers}"
+  local manifest source_commit plan_digest temporary_root rebuilt temporary_parent
   local required
   require_exact_inventory "$evidence_root" \
     allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json \
@@ -1159,18 +1205,15 @@ verify_evidence_directory() {
       die "source-free evidence is missing or symlinked: $required"
   done
   manifest="${evidence_root}/manifest.json"
-  verify_frozen_identity "$evidence_root"
+  verify_checksum_inventory "$evidence_root" "$trusted_allowed_signers"
+  cmp -s "$trusted_allowed_signers" "${evidence_root}/allowed_signers" ||
+    die "bundled allowed signer identity differs from the authenticated signer"
+  verify_frozen_identity "$evidence_root" "$trusted_allowed_signers"
   source_commit="$(manifest_value "$manifest" source_commit)"
   plan_digest="$(manifest_value "$manifest" plan_digest)"
   [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(plan_git "${evidence_root}/plan.json" -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the sealed execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "sealed plan digest differs"
-  (cd "$evidence_root" && shasum -a 256 -c SHA256SUMS)
-  ssh-keygen -Y verify \
-    -f "${evidence_root}/allowed_signers" \
-    -I "$SIGNER_IDENTITY" \
-    -n "$SIGNATURE_NAMESPACE" \
-    -s "${evidence_root}/SHA256SUMS.sig" < "${evidence_root}/SHA256SUMS"
   temporary_parent="${TMPDIR:-/tmp}"
   if is_v25_plan "${evidence_root}/plan.json"; then
     temporary_parent="$CLOSED_TMP"
@@ -1207,6 +1250,7 @@ seal_evidence() {
   local ceremony_id="$1" run_root evidence_root plan_path source_commit plan_digest generated_at
   local package package_tmp package_digest package_sidecar package_sidecar_tmp package_bytes
   local manifest_tmp checksums_tmp signature_tmp
+  local reviewed_signer_fingerprint
   local seal_count=0 seal_name
   local -a expected
   run_root="$(run_root_for "$ceremony_id")"
@@ -1254,6 +1298,9 @@ seal_evidence() {
     durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root" "$plan_path"
     verify_evidence_directory "$evidence_root"
   fi
+  reviewed_signer_fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk 'NR == 1 { print $2 }')"
+  [[ "$reviewed_signer_fingerprint" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] ||
+    die "ceremony signer fingerprint is invalid before package verification"
   package="${run_root}/${ceremony_id}-source-free.tgz"
   package_tmp="${package}.tmp"
   package_sidecar="${package}.sha256"
@@ -1266,7 +1313,7 @@ seal_evidence() {
   if [[ -e "$package" || -L "$package" ]]; then
     [[ -f "$package" && ! -L "$package" && ! -e "$package_tmp" && ! -L "$package_tmp" ]] ||
       die "source-free package is partial or invalid"
-    verify_bundle "$package"
+    verify_bundle "$package" --reviewed-signer-fingerprint "$reviewed_signer_fingerprint"
     package_digest="$(shasum -a 256 "$package" | awk '{print $1}')"
     if [[ -e "$package_sidecar" || -L "$package_sidecar" ]]; then
       [[ -f "$package_sidecar" && ! -L "$package_sidecar" ]] || die "source-free package sidecar is invalid"
@@ -1293,6 +1340,7 @@ seal_evidence() {
   (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
     die "source-free package exceeds its fixed 4-MiB transfer bound"
   durable_promote "$package_tmp" "$package" "$run_root" "$plan_path"
+  verify_bundle "$package" --reviewed-signer-fingerprint "$reviewed_signer_fingerprint"
   package_digest="$(shasum -a 256 "$package" | awk '{print $1}')"
   printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar_tmp"
   durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root" "$plan_path"
@@ -1551,30 +1599,38 @@ verify_run() {
 }
 
 verify_bundle() {
-  local package="$1" temporary_root listing entry evidence_root package_bytes
+  local package="$1" authentication="$2" reviewed_identity="$3"
+  local evidence_root trusted_allowed_signers
+  local -a bundle_arguments
   [[ "$package" == /* && -f "$package" && ! -L "$package" ]] || die "bundle must be an absolute regular-file path"
-  package_bytes="$(wc -c < "$package" | awk '{ print $1 }')"
-  [[ "$package_bytes" =~ ^[0-9]+$ ]] || die "bundle size is invalid"
-  (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
-    die "bundle exceeds the fixed 4-MiB transfer bound"
+  case "$authentication" in
+    --reviewed-signer-fingerprint)
+      [[ "$reviewed_identity" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] ||
+        die "reviewed signer fingerprint is invalid"
+      ;;
+    --reviewed-package-digest)
+      [[ "$reviewed_identity" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+        die "reviewed package digest is invalid"
+      ;;
+    *) die "returned bundle requires one explicit out-of-band authentication mode" ;;
+  esac
   verification_preflight
-  temporary_root="$(mktemp -d "$CLOSED_TMP/phebs-t4013-bundle.XXXXXX")"
-  listing="${temporary_root}/listing"
-  COPYFILE_DISABLE=1 tar -tzf "$package" > "$listing"
-  while IFS= read -r entry; do
-    case "$entry" in
-      evidence/|evidence/allowed_signers|evidence/freeze.json|evidence/freeze.json.sig|evidence/manifest.json|evidence/observation.json|evidence/plan.json|evidence/results.json|evidence/SHA256SUMS|evidence/SHA256SUMS.sig|evidence/signer.pub) ;;
-      *) rm -rf -- "$temporary_root"; die "bundle contains an unexpected path: $entry" ;;
-    esac
-  done < "$listing"
-  [[ -z "$(LC_ALL=C sort "$listing" | uniq -d)" ]] || {
-    rm -rf -- "$temporary_root"
-    die "bundle contains duplicate paths"
-  }
-  COPYFILE_DISABLE=1 tar -xzf "$package" -C "$temporary_root"
-  evidence_root="${temporary_root}/evidence"
-  verify_evidence_directory "$evidence_root"
-  rm -rf -- "$temporary_root"
+  require_v25_custody_command "$V25_BUNDLE_COMMAND" ||
+    die "bounded returned-bundle command is unavailable"
+  RETURNED_BUNDLE_TEMPORARY_ROOT="$(mktemp -d "$CLOSED_TMP/phebs-t4013-bundle.XXXXXX")"
+  bundle_arguments=(-package "$package" -output "$RETURNED_BUNDLE_TEMPORARY_ROOT")
+  if [[ "$authentication" == --reviewed-signer-fingerprint ]]; then
+    bundle_arguments+=(-signer-fingerprint "$reviewed_identity")
+  else
+    bundle_arguments+=(-package-digest "$reviewed_identity")
+  fi
+  run_v25_custody_command_in_repo_active "$V25_BUNDLE_COMMAND" "${bundle_arguments[@]}" ||
+    die "returned bundle failed bounded archive inspection"
+  evidence_root="${RETURNED_BUNDLE_TEMPORARY_ROOT}/evidence"
+  trusted_allowed_signers="${RETURNED_BUNDLE_TEMPORARY_ROOT}/reviewed_allowed_signers"
+  verify_evidence_directory "$evidence_root" "$trusted_allowed_signers"
+  rm -rf -- "$RETURNED_BUNDLE_TEMPORARY_ROOT"
+  RETURNED_BUNDLE_TEMPORARY_ROOT=""
   note "returned bundle verification: PASS"
 }
 
@@ -1607,8 +1663,8 @@ main() {
       verify_run "$2"
       ;;
     verify-bundle)
-      [[ $# -eq 2 ]] || { usage; exit 2; }
-      verify_bundle "$2"
+      [[ $# -eq 4 ]] || { usage; exit 2; }
+      verify_bundle "$2" "$3" "$4"
       ;;
     -h|--help|help|"")
       usage

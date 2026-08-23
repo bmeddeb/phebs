@@ -1755,16 +1755,26 @@ private HOME/XDG/temp/cache paths and reviewed Git exec path; ambient Go, Git,
 HOME, module, temp, PATH, and shell controls are absent. A fresh module cache
 is verified and hashed under the existing 100,000-entry/2-GiB tree bound,
 compared once after offline builds, and removed with the un-hashed build cache
-before runtime. The shell likewise builds seven exact commands from fresh
-private caches, removes both caches, reopens one small digest-bound control
-across lock re-exec, and cleans only its owned ceremony-root directory.
+before runtime. The shell now builds eight exact commands from fresh private
+caches, including the returned-bundle inspector added by T40.13g, removes both
+caches, reopens one small digest-bound control across lock re-exec, and cleans
+only its owned ceremony-root directory.
 Historical V1–V24 execution behavior remains unchanged.
 
-T40.13g's authenticated bounded returned-evidence firewall is now the only
-next scale ticket inside the still-open T40.13 gate. Medium tickets close
-resumable seal/keypair integrity (T40.13h), bounded exact-control inspection
-(T40.13i), overflow-safe arithmetic (T40.13j), and complete admission
-accounting (T40.13k). T40.13l last closes low-risk cost-first refusal ordering.
+T40.13g is complete. A returned package is parsed as untrusted input within
+fixed compressed, expanded, entry, type, and per-file bounds before any output
+is created. Verification requires a reviewed signer fingerprint or package
+digest supplied out of band; the bundled allowlist and sidecar cannot authorize
+the package. The authenticated checksum manifest must name exactly its eight
+canonical evidence files before they are opened, and the same trust root binds
+the frozen plan identity. One owned temporary extraction root is removed on
+success, error, or signal.
+
+T40.13h's resumable seal/keypair integrity is now the only next scale ticket
+inside the still-open T40.13 gate. Later medium tickets close bounded
+exact-control inspection (T40.13i), overflow-safe arithmetic (T40.13j), and
+complete admission accounting (T40.13k). T40.13l last closes low-risk
+cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
 ticket may use a freeze, rehearsal, or giant authoring run as its regression

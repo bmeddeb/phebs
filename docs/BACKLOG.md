@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13g next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13h next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,19 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13g · Authenticated returned-evidence firewall** *(high · needs
-T40.13f)* — make an untrusted returned bundle safe to inspect and impossible to
-self-authorize. AC: archive headers, exact allowlisted basenames, file types,
-link absence, per-file sizes, and aggregate expanded bytes are checked before
-extraction; the archive contains exactly one entry for each expected basename
-and rejects duplicates; the checksum manifest is authenticated before any
-referenced path is opened and contains exactly the expected files; verification
-requires a reviewed signer fingerprint or package digest supplied out of band,
-not by the bundle or its sidecar, and confirms the frozen plan identity rather
-than trusting bundled keys; temporary extraction is cleaned on every exit;
-small adversarial archives cover traversal, links,
-special files, expansion, unexpected checksum paths, and wholesale re-signing.
 
 **T40.13h · Resumable seal and keypair integrity** *(medium · needs
 T40.13g)* — make sealing one recoverable authenticated transaction rather than

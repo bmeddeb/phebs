@@ -1,7 +1,10 @@
 package t4013
 
 import (
+	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"os/exec"
@@ -272,12 +275,13 @@ func TestCeremonyDriverRehashesEveryPrebuiltV25Command(t *testing.T) {
 source "$1"
 CLOSED_COMMAND_ROOT="$2"
 mkdir -p "$CLOSED_COMMAND_ROOT"
-for name in cleanup execute freeze lock prepare promote receipt; do
+for name in bundle cleanup execute freeze lock prepare promote receipt; do
   path="$CLOSED_COMMAND_ROOT/t4013-$name"
   printf '#!/bin/sh\nexit 0\n' > "$path"
   chmod 700 "$path"
   digest="$(executable_digest "$path")"
   case "$name" in
+    bundle) V25_BUNDLE_COMMAND="$path"; V25_BUNDLE_SHA256="$digest" ;;
     cleanup) V25_CLEANUP_COMMAND="$path"; V25_CLEANUP_SHA256="$digest" ;;
     execute) V25_EXECUTE_COMMAND="$path"; V25_EXECUTE_SHA256="$digest" ;;
     freeze) V25_FREEZE_COMMAND="$path"; V25_FREEZE_SHA256="$digest" ;;
@@ -287,7 +291,7 @@ for name in cleanup execute freeze lock prepare promote receipt; do
     receipt) V25_RECEIPT_COMMAND="$path"; V25_RECEIPT_SHA256="$digest" ;;
   esac
 done
-for path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+for path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
   "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
   require_v25_custody_command "$path"
   printf '#!/bin/sh\nexit 1\n' >| "$path"
@@ -301,8 +305,8 @@ done
 	if err != nil {
 		t.Fatalf("private command identity check failed: %v: %s", err, output)
 	}
-	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 7 {
-		t.Fatalf("private command refusals = %d, want 7: %s", count, output)
+	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 8 {
+		t.Fatalf("private command refusals = %d, want 8: %s", count, output)
 	}
 }
 
@@ -334,7 +338,7 @@ case "$1 $2" in
   "mod verify") test -f "$GOMODCACHE/downloaded" ;;
   "clean -modcache") /bin/rm -rf "$GOMODCACHE" ;;
   "build -o")
-    for name in cleanup execute freeze lock prepare promote receipt; do
+	    for name in bundle cleanup execute freeze lock prepare promote receipt; do
       printf '#!/bin/sh\nexit 0\n' > "$3/t4013-$name"
       /bin/chmod 700 "$3/t4013-$name"
     done
@@ -361,7 +365,7 @@ initialize_v25_custody_commands
 [[ "$CLOSED_CACHES_ABSENT" == 1 ]]
 [[ ! -e "$CLOSED_GO_MODULE_CACHE" && ! -e "$CLOSED_GO_CACHE" ]]
 [[ -f "$5/retain" && ! -e "$5/downloaded" ]]
-for name in cleanup execute freeze lock prepare promote receipt; do
+for name in bundle cleanup execute freeze lock prepare promote receipt; do
   [[ -x "$CLOSED_COMMAND_ROOT/t4013-$name" ]]
 done
 validate_closed_controls
@@ -489,6 +493,7 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 	}
 	for _, marker := range []string{
 		"go build -o \"${command_root}/\"",
+		"./spike/t4013/cmd/t4013-bundle",
 		"./spike/t4013/cmd/t4013-cleanup",
 		"./spike/t4013/cmd/t4013-execute",
 		"./spike/t4013/cmd/t4013-freeze",
@@ -511,6 +516,263 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 	if strings.Contains(direct, "plan_go") || strings.Contains(direct, "go mod verify") {
 		t.Fatal("direct V25 operation wrapper starts an unsupervised Go verification process")
 	}
+}
+
+func TestCeremonyDriverReturnedBundleAuthentication(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen is unavailable")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	bundleCommand := filepath.Join(root, "t4013-bundle")
+	if output, err := exec.Command(
+		"go", "build", "-o", bundleCommand, "./cmd/t4013-bundle",
+	).CombinedOutput(); err != nil {
+		t.Fatalf("build returned-bundle verifier: %v: %s", err, output)
+	}
+	reviewerKey, reviewerFingerprint := newReturnedBundleTestSigner(t, root, "reviewer")
+	attackerKey, _ := newReturnedBundleTestSigner(t, root, "attacker")
+	for _, test := range []struct {
+		name        string
+		packagePath string
+		want        string
+	}{
+		{
+			name: "wholesale re-signing",
+			packagePath: writeSignedReturnedBundleTestPackage(
+				t, root, "resigned", attackerKey, "",
+			),
+			want: "differs from the reviewed fingerprint",
+		},
+		{
+			name: "authenticated unexpected checksum path",
+			packagePath: writeSignedReturnedBundleTestPackage(
+				t,
+				root,
+				"checksum-path",
+				reviewerKey,
+				strings.Repeat("0", 64)+"  ../outside\n",
+			),
+			want: "checksum inventory contains a noncanonical entry",
+		},
+		{
+			name: "authenticated checksums precede frozen plan identity",
+			packagePath: writeSignedReturnedBundleTestPackage(
+				t, root, "checksum-valid", reviewerKey, "",
+			),
+			want: "frozen plan identity signature is not authentic",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			closedTemporary := t.TempDir()
+			script := `
+source "$1"
+CLOSED_TMP="$2"
+CLOSED_COMMAND_ROOT="${3%/*}"
+V25_BUNDLE_COMMAND="$3"
+V25_BUNDLE_SHA256="$(executable_digest "$3")"
+verification_preflight() { :; }
+run_v25_custody_command_in_repo_active() { "$@"; }
+trap cleanup_on_exit EXIT
+verify_bundle "$4" --reviewed-signer-fingerprint "$5"
+`
+			output, runErr := exec.Command(
+				"bash",
+				"-c",
+				script,
+				"returned-auth-test",
+				driver,
+				closedTemporary,
+				bundleCommand,
+				test.packagePath,
+				reviewerFingerprint,
+			).CombinedOutput()
+			if runErr == nil || !bytes.Contains(output, []byte(test.want)) {
+				t.Fatalf("returned authentication error = %v, want %q: %s", runErr, test.want, output)
+			}
+			entries, readErr := os.ReadDir(closedTemporary)
+			if readErr != nil || len(entries) != 0 {
+				t.Fatalf("returned verification temporary paths survived: entries=%v err=%v", entries, readErr)
+			}
+		})
+	}
+	reviewedPackage := writeSignedReturnedBundleTestPackage(
+		t, root, "package-digest", reviewerKey, "",
+	)
+	packageBytes, err := os.ReadFile(reviewedPackage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packageDigest := sha256.Sum256(packageBytes)
+	closedTemporary := t.TempDir()
+	marker := filepath.Join(t.TempDir(), "verified")
+	script := `
+source "$1"
+CLOSED_TMP="$2"
+CLOSED_COMMAND_ROOT="${3%/*}"
+V25_BUNDLE_COMMAND="$3"
+V25_BUNDLE_SHA256="$(executable_digest "$3")"
+verification_preflight() { :; }
+run_v25_custody_command_in_repo_active() { "$@"; }
+verify_evidence_directory() { : > "$MARKER"; }
+trap cleanup_on_exit EXIT
+verify_bundle "$4" --reviewed-package-digest "$5"
+`
+	command := exec.Command(
+		"bash",
+		"-c",
+		script,
+		"returned-package-digest-test",
+		driver,
+		closedTemporary,
+		bundleCommand,
+		reviewedPackage,
+		"sha256:"+hex.EncodeToString(packageDigest[:]),
+	)
+	command.Env = append(os.Environ(), "MARKER="+marker)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("reviewed package digest verification failed: %v: %s", err, output)
+	}
+	if _, err := os.Lstat(marker); err != nil {
+		t.Fatalf("reviewed package digest did not reach evidence verification: %v", err)
+	}
+	entries, err := os.ReadDir(closedTemporary)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("successful verification temporary paths survived: entries=%v err=%v", entries, err)
+	}
+}
+
+func TestCeremonyDriverSignalRemovesReturnedBundleTemporaryRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	temporaryRoot := filepath.Join(t.TempDir(), "returned-extraction")
+	if err := os.Mkdir(temporaryRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	script := `
+source "$1"
+RETURNED_BUNDLE_TEMPORARY_ROOT="$2"
+trap cleanup_on_exit EXIT
+retain_on_signal TERM 143
+`
+	output, runErr := exec.Command(
+		"bash", "-c", script, "returned-signal-test", driver, temporaryRoot,
+	).CombinedOutput()
+	var exitErr *exec.ExitError
+	if !errors.As(runErr, &exitErr) || exitErr.ExitCode() != 143 {
+		t.Fatalf("signal cleanup status = %v: %s", runErr, output)
+	}
+	if _, err := os.Lstat(temporaryRoot); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("signal retained returned extraction root: %v", err)
+	}
+}
+
+func newReturnedBundleTestSigner(t *testing.T, root, name string) (string, string) {
+	t.Helper()
+	key := filepath.Join(root, name)
+	if output, err := exec.Command(
+		"ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", name, "-f", key,
+	).CombinedOutput(); err != nil {
+		t.Fatalf("create %s signer: %v: %s", name, err, output)
+	}
+	output, err := exec.Command("ssh-keygen", "-lf", key+".pub", "-E", "sha256").CombinedOutput()
+	if err != nil {
+		t.Fatalf("fingerprint %s signer: %v: %s", name, err, output)
+	}
+	fields := strings.Fields(string(output))
+	if len(fields) < 2 || !strings.HasPrefix(fields[1], "SHA256:") {
+		t.Fatalf("%s signer fingerprint = %q", name, output)
+	}
+	return key, fields[1]
+}
+
+func writeSignedReturnedBundleTestPackage(
+	t *testing.T,
+	root string,
+	name string,
+	key string,
+	checksumOverride string,
+) string {
+	t.Helper()
+	publicRaw, err := os.ReadFile(key + ".pub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicFields := strings.Fields(string(publicRaw))
+	if len(publicFields) < 2 {
+		t.Fatalf("signer public key = %q", publicRaw)
+	}
+	files := map[string][]byte{
+		"allowed_signers":  []byte("phebs-ceremony " + publicFields[0] + " " + publicFields[1] + "\n"),
+		"freeze.json":      []byte("freeze\n"),
+		"freeze.json.sig":  []byte("freeze signature\n"),
+		"manifest.json":    []byte("manifest\n"),
+		"observation.json": []byte("observation\n"),
+		"plan.json":        []byte("plan\n"),
+		"results.json":     []byte("results\n"),
+		"signer.pub":       publicRaw,
+	}
+	checksumNames := []string{
+		"allowed_signers",
+		"freeze.json",
+		"freeze.json.sig",
+		"manifest.json",
+		"observation.json",
+		"plan.json",
+		"results.json",
+		"signer.pub",
+	}
+	var checksums strings.Builder
+	for _, checksumName := range checksumNames {
+		digest := sha256.Sum256(files[checksumName])
+		checksums.WriteString(hex.EncodeToString(digest[:]))
+		checksums.WriteString("  ")
+		checksums.WriteString(checksumName)
+		checksums.WriteByte('\n')
+	}
+	if checksumOverride != "" {
+		checksums.Reset()
+		checksums.WriteString(checksumOverride)
+	}
+	files["SHA256SUMS"] = []byte(checksums.String())
+	checksumPath := filepath.Join(root, name+"-SHA256SUMS")
+	if err := os.WriteFile(checksumPath, files["SHA256SUMS"], 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command(
+		"ssh-keygen", "-Y", "sign", "-f", key, "-n", "phebs-t4013", checksumPath,
+	).CombinedOutput(); err != nil {
+		t.Fatalf("sign checksum inventory: %v: %s", err, output)
+	}
+	files["SHA256SUMS.sig"], err = os.ReadFile(checksumPath + ".sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := make([]returnedArchiveTestEntry, 0, len(_returnedBundleEntries)+1)
+	entries = append(entries, returnedArchiveTestEntry{name: "evidence/", typeflag: tar.TypeDir})
+	for _, entry := range _returnedBundleEntries {
+		entries = append(entries, returnedArchiveTestEntry{
+			name:     "evidence/" + entry.name,
+			typeflag: tar.TypeReg,
+			content:  files[entry.name],
+		})
+	}
+	packagePath := filepath.Join(root, name+".tgz")
+	if err := os.WriteFile(packagePath, writeReturnedArchiveTestPackage(t, entries, 0), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return packagePath
 }
 
 func TestCeremonyDriverSharesInheritedV25RunRootLock(t *testing.T) {

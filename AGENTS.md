@@ -197,8 +197,8 @@ compatibility replay are complete; T40.13a's fail-closed process sampling and
 T40.13b's cooperative cancellation/shutdown truth and T40.13c's durable
 hard-death descendant supervision and T40.13d's shared custody-mutation and
 immutable-admission lock and T40.13e's exact executed-tool identity closure are
-also complete; T40.13f's hermetic execution controls are complete, and T40.13g
-is the next
+also complete; T40.13f's hermetic execution controls and T40.13g's
+authenticated returned-evidence firewall are complete, and T40.13h is the next
 prerequisite inside the T40.13 gate; Epic 40 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services

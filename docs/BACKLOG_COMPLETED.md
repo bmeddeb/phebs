@@ -9897,3 +9897,50 @@ publication transition; reopening reads one at-most-4-KiB manifest and a fixed
 directory set. Ordinary production paths gain no work. T40.13g is next. No
 freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
 scale/SLO claim is authorized.
+
+**T40.13g ✅ · Authenticated returned-evidence firewall** *(2026-08-23;
+high)* — `verify-bundle` now requires exactly one reviewed signer fingerprint
+or exact package SHA-256 digest supplied on the command line. A sidecar and the
+bundle's own signer allowlist carry no trust. Signer mode compares the bounded
+in-memory public key to the reviewed fingerprint and creates a private verifier
+allowlist; package-digest mode authenticates the complete input before archive
+inspection. Both modes verify the checksum-manifest signature with that trust
+root, require its exact eight canonical basenames before checksum-listed files
+are hashed, and use the same trust root to verify the frozen plan envelope,
+plan digest, and exact checkout commit.
+
+The digest-bound `t4013-bundle` command reads at most 4 MiB into memory, parses
+the gzip/tar stream with the Go standard library, and admits one `evidence/`
+directory plus exactly one regular, non-link entry for each of ten fixed
+basenames. Signer files are capped at 1 KiB, small envelopes/signatures at
+4 KiB, and plan, observation, and receipt bytes at their existing 64/256/256
+KiB limits. Duplicate, missing, traversal, link, special-file, per-file,
+one-MiB expanded-stream, trailing-stream, and nonzero-tail shapes refuse before
+the command creates its fresh 0700 evidence directory and 0600 files. The
+supported shell now builds and rehashes this eighth hermetic command. It owns
+one temporary extraction root and removes it on success, ordinary error, and
+INT/TERM/HUP before any other retention policy can return.
+
+Small table-driven archives cover valid system-tar output, traversal, symlink,
+hard-link, device, duplicate, missing, per-file expansion, aggregate expansion,
+and package-digest mismatch. Shell regressions prove that wholesale re-signing
+cannot replace the reviewed signer, an authenticated `../outside` checksum path
+is never opened, authenticated exact checksums precede frozen-plan signature
+validation, and every refusal removes extraction state.
+
+OCR grouped the implementation into three review items. One completed with
+zero comments; the Go inspector and shell items reached the 12-minute limit and
+returned no review rather than a pass. The manual line-by-line equivalent moved
+signer-fingerprint comparison into the bounded in-memory inspector so the shell
+opens no checksum-listed path before authenticating the manifest, and found no
+remaining critical, high, or medium issue.
+
+All new work is offline returned-evidence verification. One invocation performs
+one at-most-4-MiB package read, at most one package hash, one at-most-1-MiB
+expanded archive read, two small signature checks, eight small checksums, and
+one existing bounded receipt rebuild. There is no polling, persistent cache,
+held lock, corpus/shard scan, production request/query, sync tick,
+startup/restart, retry/no-op, or publication-transition cost. Historical
+evidence bytes remain readable when accompanied by separately reviewed trust.
+T40.13h is next. No freeze, ceremony, release, T40.13/Epic-40 closure,
+topology/bound change, or scale/SLO claim is authorized.
