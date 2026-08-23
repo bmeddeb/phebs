@@ -36,6 +36,7 @@ const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 
 const (
 	teardownCheckpointSchema       = "t4013-teardown-checkpoint-v1"
+	teardownCheckpointSchemaV2     = "t4013-teardown-checkpoint-v2"
 	maximumTeardownCheckpointBytes = MaxObservationBytes + 4<<10
 	teardownPersistenceReserve     = 30 * time.Second
 	teardownRetirementReserve      = 30 * time.Second
@@ -102,6 +103,7 @@ type execution struct {
 	ctx                  context.Context
 	moduleRoot           string
 	workspace            string
+	preparedPath         string
 	plan                 Plan
 	planBytes            []byte
 	prepared             Prepared
@@ -121,6 +123,7 @@ type execution struct {
 	metersExpected       int
 	measurementErr       error
 	custodyDestroy       func(string, string) error
+	terminalDrain        func() error
 	observationPath      string
 	checkpointPersist    func(string, teardownCheckpoint) error
 	observationStage     func(string, Observation) error
@@ -136,6 +139,8 @@ type execution struct {
 	serverShutdownErr    error
 	portReservations     map[string]net.Listener
 	inspectionWork       sync.WaitGroup
+	supervision          *custodySupervision
+	checkpointDigest     string
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (observation Observation, retErr error) {
@@ -147,6 +152,11 @@ func Execute(ctx context.Context, request ExecuteRequest) (observation Observati
 	if run.observationLock != nil {
 		defer func() {
 			retErr = errors.Join(retErr, unlockObservationOutput(run.observationLock))
+		}()
+	}
+	if run.supervision != nil {
+		defer func() {
+			retErr = errors.Join(retErr, run.supervision.Close())
 		}()
 	}
 	executionContext := run.ctx
@@ -196,18 +206,30 @@ func newExecution(
 	if err != nil {
 		return nil, err
 	}
+	version := planSchemaVersion(plan.Schema)
 	ctx, executionCancel := executionAdmissionContext(ctx, plan, executionStarted)
 	defer func() {
 		if retErr != nil && executionCancel != nil {
 			executionCancel()
 		}
 	}()
-	if planSchemaVersion(plan.Schema) >= 2 {
+	if version >= 2 && version < 25 {
 		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
 	}
-	preparedBytes, err := os.ReadFile(request.Prepared)
+	preparedPath := request.Prepared
+	if version >= 25 {
+		preparedPath, err = canonicalNewOutputPath(request.Prepared)
+		if err != nil || preparedPath != filepath.Clean(request.Prepared) {
+			return nil, errors.New("T40.13 prepared custody path is not canonical")
+		}
+		info, statErr := os.Lstat(preparedPath)
+		if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			return nil, errors.New("T40.13 prepared custody is not a regular file")
+		}
+	}
+	preparedBytes, err := os.ReadFile(preparedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -215,14 +237,19 @@ func newExecution(
 	if err != nil {
 		return nil, err
 	}
+	if version >= 25 && prepared.Schema != PreparedSchemaV2 ||
+		version < 25 && prepared.Schema != PreparedSchema {
+		return nil, errors.New("T40.13 prepared custody schema differs from the plan")
+	}
 	workspace := filepath.Dir(filepath.Dir(prepared.Profiles[0].Config))
 	boundaryWorkspace := workspace
 	observationPath := request.Observation
 	if planSchemaVersion(plan.Schema) >= 25 {
 		boundaryWorkspace, err = filepath.EvalSymlinks(workspace)
-		if err != nil {
+		if err != nil || boundaryWorkspace != filepath.Clean(workspace) {
 			return nil, errors.New("T40.13 execution custody is invalid")
 		}
+		workspace = boundaryWorkspace
 		observationPath, err = canonicalNewOutputPath(request.Observation)
 		if err != nil {
 			return nil, fmt.Errorf("T40.13 observation output is invalid: %w", err)
@@ -248,6 +275,34 @@ func newExecution(
 	for _, path := range outputPaths {
 		if _, err := os.Lstat(path); err == nil || !os.IsNotExist(err) {
 			return nil, errors.New("T40.13 observation output or durable stage must not exist")
+		}
+	}
+	var supervision *custodySupervision
+	restorePreparedCustody := false
+	if planSchemaVersion(plan.Schema) >= 25 {
+		if !hexIdentity(prepared.SupervisionToken, 64) {
+			return nil, errors.New("T40.13 prepared custody lacks durable supervision")
+		}
+		supervision, err = beginExecuteCustody(
+			boundaryWorkspace, PlanDigest(planBytes), prepared.SupervisionToken,
+		)
+		if err != nil {
+			return nil, err
+		}
+		restorePreparedCustody = true
+		defer func() {
+			if retErr == nil || supervision == nil {
+				return
+			}
+			if restorePreparedCustody {
+				retErr = errors.Join(retErr, supervision.AbortExecuteAdmission())
+			}
+			retErr = errors.Join(retErr, supervision.Close())
+		}()
+	}
+	if version >= 25 {
+		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
+			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
@@ -304,13 +359,15 @@ func newExecution(
 	if err := writeExecutionMarkerForPlan(workspace, PlanDigest(planBytes), plan); err != nil {
 		return nil, errors.Join(err, unlockObservationOutput(observationLock))
 	}
+	restorePreparedCustody = false
 	observation := emptyObservationForPlan(environment, plan)
 	result = &execution{
 		ctx: ctx, moduleRoot: moduleRoot, workspace: workspace,
 		plan: plan, planBytes: planBytes, prepared: prepared, observation: observation,
 		observationPath: observationPath, observationLock: observationLock,
 		portReservations: portReservations, executionStarted: executionStarted,
-		executionCancel: executionCancel,
+		executionCancel: executionCancel, supervision: supervision,
+		preparedPath: preparedPath,
 	}
 	portReservations = nil
 	return result, nil
@@ -554,6 +611,11 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	if retentionErr := custodyRetentionCause(run.ctx, cause); retentionErr != nil {
 		return Observation{}, errors.Join(cause, retentionErr)
 	}
+	if err := run.beginCustodyFinalization(); err != nil {
+		return run.observation, fmt.Errorf(
+			"T40.13 stopped custody descendants are not durably drained; teardown checkpoint retained: %w", err,
+		)
+	}
 	destroy := destroyCustody
 	if run.custodyDestroy != nil {
 		destroy = run.custodyDestroy
@@ -620,7 +682,10 @@ func (run *execution) stopAfterFailureLegacy(cause error) (Observation, error) {
 type teardownCheckpoint struct {
 	Schema             string      `json:"schema"`
 	PlanDigest         string      `json:"plan_digest"`
+	ModuleRoot         string      `json:"module_root,omitempty"`
 	Workspace          string      `json:"workspace"`
+	PreparedPath       string      `json:"prepared_path,omitempty"`
+	SupervisionToken   string      `json:"supervision_token,omitempty"`
 	StartedAt          string      `json:"started_at"`
 	DeadlineAt         string      `json:"deadline_at,omitempty"`
 	DataLogicalBytes   int64       `json:"data_logical_bytes"`
@@ -663,16 +728,30 @@ func (run *execution) persistTeardownCheckpoint(
 	started time.Time,
 	logical, allocated int64,
 ) error {
+	wantSupervision := planSchemaVersion(run.plan.Schema) >= 25
+	if wantSupervision != (run.supervision != nil) {
+		return fmt.Errorf("%w: teardown checkpoint supervision differs from the plan", errObservationPersistence)
+	}
 	checkpoint := teardownCheckpoint{
-		Schema: teardownCheckpointSchema, PlanDigest: PlanDigest(run.planBytes),
+		Schema: teardownCheckpointSchemaForPlan(run.plan), PlanDigest: PlanDigest(run.planBytes),
 		Workspace: run.workspace, StartedAt: started.UTC().Format(time.RFC3339Nano),
 		DataLogicalBytes: logical, DataAllocatedBytes: allocated,
 		Observation: run.observation,
+	}
+	if run.supervision != nil {
+		checkpoint.Schema = teardownCheckpointSchemaV2
+		checkpoint.ModuleRoot = run.moduleRoot
+		checkpoint.PreparedPath = run.preparedPath
+		checkpoint.SupervisionToken = run.supervision.Token()
 	}
 	if run.ctx != nil {
 		if deadline, ok := run.ctx.Deadline(); ok {
 			checkpoint.DeadlineAt = deadline.UTC().Format(time.RFC3339Nano)
 		}
+	}
+	checkpointRaw, err := marshalTeardownCheckpoint(checkpoint)
+	if err != nil {
+		return fmt.Errorf("%w: bind teardown checkpoint: %w", errObservationPersistence, err)
 	}
 	persist := writeTeardownCheckpoint
 	if run.checkpointPersist != nil {
@@ -681,6 +760,7 @@ func (run *execution) persistTeardownCheckpoint(
 	if err := persist(run.observationPath, checkpoint); err != nil {
 		return fmt.Errorf("%w: teardown checkpoint: %w", errObservationPersistence, err)
 	}
+	run.checkpointDigest = digest(checkpointRaw)
 	run.checkpointPersisted = true
 	return nil
 }
@@ -723,7 +803,11 @@ func (run *execution) completeTeardown(
 		}
 	}
 	publicationErr := run.persistFinalTeardown(started)
-	return errors.Join(postDeleteErr, publicationErr)
+	var terminalErr error
+	if publicationErr == nil && run.observationPersisted {
+		terminalErr = run.commitTerminalTeardown()
+	}
+	return errors.Join(postDeleteErr, publicationErr, terminalErr)
 }
 
 func (run *execution) persistFinalTeardown(started time.Time) error {
@@ -770,10 +854,6 @@ func (run *execution) persistFinalTeardown(started time.Time) error {
 				run.observationPersisted = false
 				return fmt.Errorf("T40.13 execution canceled before terminal retirement; teardown checkpoint retained: %w", retentionErr)
 			}
-			if err := removeTeardownCheckpoint(run.observationPath); err != nil {
-				return fmt.Errorf("%w: retire teardown checkpoint: %w", errObservationPersistence, err)
-			}
-			run.checkpointPersisted = false
 			return observedErr
 		}
 		observedErr = errors.Join(observedErr, postErr)
@@ -804,6 +884,46 @@ func (run *execution) persistFinalTeardown(started time.Time) error {
 	}
 	return errors.Join(observedErr,
 		fmt.Errorf("%w: final observation persistence exceeded its conservative reserve", errObservationPersistence))
+}
+
+func (run *execution) commitTerminalTeardown() error {
+	if run == nil || !run.observationPersisted || !run.checkpointPersisted {
+		return fmt.Errorf("%w: terminal teardown authority is incomplete", errObservationPersistence)
+	}
+	if run.supervision == nil {
+		if err := removeTeardownCheckpoint(run.observationPath); err != nil {
+			return fmt.Errorf("%w: retire teardown checkpoint: %w", errObservationPersistence, err)
+		}
+		run.checkpointPersisted = false
+		return nil
+	}
+	drainTerminal := run.supervision.DrainTerminal
+	if run.terminalDrain != nil {
+		drainTerminal = run.terminalDrain
+	}
+	if err := drainTerminal(); err != nil {
+		return fmt.Errorf(
+			"T40.13 finalizer descendants are not durably drained; teardown checkpoint retained: %w",
+			err,
+		)
+	}
+	if err := run.supervision.Retire(); err != nil {
+		if retiredErr := confirmCustodySupervisionRetired(
+			run.workspace, PlanDigest(run.planBytes), run.supervision.Token(),
+			custodyOperationExecute, run.checkpointDigest,
+		); retiredErr != nil {
+			return fmt.Errorf("retire T40.13 terminal custody supervision: %w",
+				errors.Join(err, retiredErr))
+		}
+	}
+	if err := removePreparedPublication(run.preparedPath); err != nil {
+		return fmt.Errorf("retire T40.13 private prepared publication: %w", err)
+	}
+	if err := removeTeardownCheckpoint(run.observationPath); err != nil {
+		return fmt.Errorf("%w: retire teardown checkpoint: %w", errObservationPersistence, err)
+	}
+	run.checkpointPersisted = false
+	return nil
 }
 
 func (run *execution) postPublicationValidation(started time.Time) (error, error) {
@@ -3360,6 +3480,11 @@ func (run *execution) teardown() error {
 	if err := run.completedCancellationError(); err != nil {
 		return err
 	}
+	if err := run.beginCustodyFinalization(); err != nil {
+		return fmt.Errorf(
+			"T40.13 custody descendants are not durably drained; teardown checkpoint retained: %w", err,
+		)
+	}
 	destroy := destroyCustody
 	if run.custodyDestroy != nil {
 		destroy = run.custodyDestroy
@@ -3375,6 +3500,19 @@ func (run *execution) teardown() error {
 		return fmt.Errorf("T40.13 execution canceled across custody deletion; teardown checkpoint retained: %w", retentionErr)
 	}
 	return run.completeTeardown(started, logical, allocated, nil)
+}
+
+func (run *execution) beginCustodyFinalization() error {
+	if run == nil || run.supervision == nil {
+		return nil
+	}
+	if !digestIdentity(run.checkpointDigest) {
+		return errors.New("T40.13 teardown checkpoint identity is unavailable")
+	}
+	if err := run.supervision.Drain(run.checkpointDigest); err != nil {
+		return err
+	}
+	return run.supervision.BeginFinalization(run.checkpointDigest)
 }
 
 func (run *execution) teardownLegacy() error {
@@ -4838,6 +4976,15 @@ func WriteReceipt(path string, raw []byte) error {
 // ResumeObservation validates a final or staged source-free observation
 // against the frozen plan, then completes an interrupted atomic publication.
 func ResumeObservation(path string, planBytes []byte, planDigest string) (raw []byte, retErr error) {
+	return resumeObservation(path, planBytes, planDigest, nil)
+}
+
+func resumeObservation(
+	path string,
+	planBytes []byte,
+	planDigest string,
+	hostToolchainVerify func() error,
+) (raw []byte, retErr error) {
 	finalPath, err := canonicalNewOutputPath(path)
 	if err != nil {
 		return nil, err
@@ -4860,16 +5007,90 @@ func ResumeObservation(path string, planBytes []byte, planDigest string) (raw []
 		if checkpoint.PlanDigest != planDigest {
 			return nil, errors.New("T40.13 teardown checkpoint plan digest differs")
 		}
-		if err := confirmCustodyDeletionDurable(checkpoint.Workspace); err != nil {
-			return nil, fmt.Errorf("T40.13 teardown checkpoint lacks durable custody deletion: %w", err)
+		if checkpoint.Schema != teardownCheckpointSchemaForPlan(plan) {
+			return nil, errors.New("T40.13 teardown checkpoint schema differs from the plan")
 		}
+		if checkpoint.Schema == teardownCheckpointSchema {
+			if err := confirmCustodyDeletionDurable(checkpoint.Workspace); err != nil {
+				return nil, fmt.Errorf("T40.13 teardown checkpoint lacks durable custody deletion: %w", err)
+			}
+			if err := removeProvisionalObservation(finalPath); err != nil {
+				return nil, fmt.Errorf("retire provisional T40.13 observation: %w", err)
+			}
+			return resumeTeardownCheckpoint(
+				finalPath, planBytes, plan, checkpoint, "", nil, hostToolchainVerify,
+			)
+		}
+		checkpointRaw, err := marshalTeardownCheckpoint(checkpoint)
+		if err != nil {
+			return nil, err
+		}
+		checkpointDigest := digest(checkpointRaw)
+		if !hexIdentity(checkpoint.SupervisionToken, 64) || checkpoint.ModuleRoot == "" ||
+			checkpoint.PreparedPath == "" {
+			return nil, errors.New("T40.13 teardown checkpoint lacks durable custody supervision")
+		}
+		status, supervision, err := inspectCustodySupervision(
+			checkpoint.Workspace, planDigest, checkpoint.SupervisionToken,
+			custodyOperationExecute, checkpointDigest,
+		)
+		if err != nil {
+			if retiredErr := confirmCustodySupervisionRetired(
+				checkpoint.Workspace, planDigest, checkpoint.SupervisionToken,
+				custodyOperationExecute, checkpointDigest,
+			); retiredErr == nil {
+				return completeRetiredTeardownCheckpoint(
+					finalPath, planBytes, checkpoint, checkpointDigest,
+				)
+			}
+			return nil, fmt.Errorf(
+				"T40.13 teardown custody is indeterminate and retained for reviewed purge: %w", err,
+			)
+		}
+		if status == custodyStatusLive {
+			return nil, errors.New("T40.13 teardown custody remains live")
+		}
+		if status == custodyStatusIndeterminate || supervision == nil {
+			return nil, errors.New("T40.13 teardown custody is indeterminate and retained for reviewed purge")
+		}
+		defer func() {
+			retErr = errors.Join(retErr, supervision.Close())
+		}()
 		// The checkpoint is the authority until it is durably retired. Any
 		// observation beside it is only a provisional publication that may
 		// precede the final wall/toolchain check.
+		if status == custodyStatusTerminal {
+			raw, err := readTerminalTeardownCheckpoint(finalPath, planBytes, checkpoint)
+			if err != nil {
+				return nil, err
+			}
+			if err := supervision.Retire(); err != nil {
+				if retiredErr := confirmCustodySupervisionRetired(
+					checkpoint.Workspace, planDigest, checkpoint.SupervisionToken,
+					custodyOperationExecute, checkpointDigest,
+				); retiredErr != nil {
+					return nil, fmt.Errorf("retire terminal T40.13 custody supervision: %w",
+						errors.Join(err, retiredErr))
+				}
+			}
+			if err := removePreparedPublication(checkpoint.PreparedPath); err != nil {
+				return nil, fmt.Errorf("retire terminal T40.13 prepared publication: %w", err)
+			}
+			if err := removeTeardownCheckpoint(finalPath); err != nil {
+				return nil, fmt.Errorf("retire terminal T40.13 teardown checkpoint: %w", err)
+			}
+			return raw, nil
+		}
+		if status != custodyStatusDrained {
+			return nil, errors.New("T40.13 teardown custody state is invalid")
+		}
 		if err := removeProvisionalObservation(finalPath); err != nil {
 			return nil, fmt.Errorf("retire provisional T40.13 observation: %w", err)
 		}
-		return resumeTeardownCheckpoint(finalPath, planBytes, plan, checkpoint)
+		return resumeTeardownCheckpoint(
+			finalPath, planBytes, plan, checkpoint, checkpointDigest, supervision,
+			hostToolchainVerify,
+		)
 	} else if !errors.Is(checkpointErr, os.ErrNotExist) {
 		return nil, checkpointErr
 	}
@@ -4896,15 +5117,56 @@ func ResumeObservation(path string, planBytes []byte, planDigest string) (raw []
 	return nil, fmt.Errorf("read T40.13 observation for resume: %w", os.ErrNotExist)
 }
 
-func writeTeardownCheckpoint(path string, value teardownCheckpoint) error {
-	if err := validateTeardownCheckpoint(value); err != nil {
-		return err
+func teardownCheckpointSchemaForPlan(plan Plan) string {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		return teardownCheckpointSchemaV2
 	}
-	raw, err := json.Marshal(value)
+	return teardownCheckpointSchema
+}
+
+func completeRetiredTeardownCheckpoint(
+	path string, planBytes []byte, checkpoint teardownCheckpoint, checkpointDigest string,
+) ([]byte, error) {
+	if err := confirmCustodySupervisionRetired(
+		checkpoint.Workspace, checkpoint.PlanDigest, checkpoint.SupervisionToken,
+		custodyOperationExecute, checkpointDigest,
+	); err != nil {
+		return nil, err
+	}
+	raw, err := readTerminalTeardownCheckpoint(path, planBytes, checkpoint)
+	if err != nil {
+		return nil, err
+	}
+	if err := removePreparedPublication(checkpoint.PreparedPath); err != nil {
+		return nil, fmt.Errorf("retire terminal T40.13 prepared publication: %w", err)
+	}
+	if err := removeTeardownCheckpoint(path); err != nil {
+		return nil, fmt.Errorf("retire terminal T40.13 teardown checkpoint: %w", err)
+	}
+	return raw, nil
+}
+
+func readTerminalTeardownCheckpoint(
+	path string, planBytes []byte, checkpoint teardownCheckpoint,
+) ([]byte, error) {
+	raw, err := readAtomicRegular(path, MaxObservationBytes)
+	if err != nil {
+		return nil, fmt.Errorf("read terminal T40.13 observation: %w", err)
+	}
+	if _, err := BuildReceipt(planBytes, raw, checkpoint.PlanDigest); err != nil {
+		return nil, fmt.Errorf("validate terminal T40.13 observation: %w", err)
+	}
+	if err := confirmCustodyDeletionDurable(checkpoint.Workspace); err != nil {
+		return nil, fmt.Errorf("terminal T40.13 custody deletion is not durable: %w", err)
+	}
+	return raw, nil
+}
+
+func writeTeardownCheckpoint(path string, value teardownCheckpoint) error {
+	raw, err := marshalTeardownCheckpoint(value)
 	if err != nil {
 		return err
 	}
-	raw = append(raw, '\n')
 	checkpointPath := path + ".teardown"
 	if err := stageAtomicOutput(
 		checkpointPath, raw, maximumTeardownCheckpointBytes, false,
@@ -4912,6 +5174,18 @@ func writeTeardownCheckpoint(path string, value teardownCheckpoint) error {
 		return err
 	}
 	return publishAtomicOutput(checkpointPath, raw, maximumTeardownCheckpointBytes, true)
+}
+
+func marshalTeardownCheckpoint(value teardownCheckpoint) ([]byte, error) {
+	if err := validateTeardownCheckpoint(value); err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	raw = append(raw, '\n')
+	return raw, nil
 }
 
 func readTeardownCheckpoint(path string) (teardownCheckpoint, error) {
@@ -4935,8 +5209,11 @@ func readTeardownCheckpoint(path string) (teardownCheckpoint, error) {
 
 func validateTeardownCheckpoint(value teardownCheckpoint) error {
 	_, err := time.Parse(time.RFC3339Nano, value.StartedAt)
-	if err != nil || value.Schema != teardownCheckpointSchema || !digestIdentity(value.PlanDigest) ||
+	if err != nil ||
+		value.Schema != teardownCheckpointSchema && value.Schema != teardownCheckpointSchemaV2 ||
+		!digestIdentity(value.PlanDigest) ||
 		!filepath.IsAbs(value.Workspace) || filepath.Clean(value.Workspace) == string(filepath.Separator) ||
+		value.SupervisionToken != "" && !hexIdentity(value.SupervisionToken, 64) ||
 		value.DataLogicalBytes < 0 || value.DataAllocatedBytes < 0 ||
 		value.Observation.Teardown.Completed ||
 		len(value.Observation.Phases) != len(phaseOrder) ||
@@ -4944,6 +5221,18 @@ func validateTeardownCheckpoint(value teardownCheckpoint) error {
 			(value.Observation.Outcome != "stopped" ||
 				value.Observation.Phases[len(phaseOrder)-1].Outcome != "failed") {
 		return errors.New("T40.13 teardown checkpoint is invalid")
+	}
+	if value.Schema == teardownCheckpointSchema {
+		if value.SupervisionToken != "" || value.ModuleRoot != "" || value.PreparedPath != "" {
+			return errors.New("T40.13 historical teardown checkpoint acquired supervision")
+		}
+	} else if !hexIdentity(value.SupervisionToken, 64) ||
+		!filepath.IsAbs(value.ModuleRoot) || filepath.Clean(value.ModuleRoot) == string(filepath.Separator) ||
+		!filepath.IsAbs(value.PreparedPath) || filepath.Clean(value.PreparedPath) == string(filepath.Separator) ||
+		value.ModuleRoot == value.Workspace || isWithin(value.ModuleRoot, value.Workspace) ||
+		isWithin(value.Workspace, value.ModuleRoot) || value.PreparedPath == value.Workspace ||
+		isWithin(value.PreparedPath, value.Workspace) {
+		return errors.New("T40.13 teardown checkpoint custody boundary is invalid")
 	}
 	if value.DeadlineAt != "" {
 		_, deadlineErr := time.Parse(time.RFC3339Nano, value.DeadlineAt)
@@ -4959,6 +5248,9 @@ func resumeTeardownCheckpoint(
 	planBytes []byte,
 	plan Plan,
 	checkpoint teardownCheckpoint,
+	checkpointDigest string,
+	supervision *custodySupervision,
+	hostToolchainVerify func() error,
 ) ([]byte, error) {
 	started, _ := time.Parse(time.RFC3339Nano, checkpoint.StartedAt)
 	ctx := context.Background()
@@ -4969,8 +5261,25 @@ func resumeTeardownCheckpoint(
 		defer cancel()
 	}
 	run := &execution{
-		ctx: ctx, plan: plan, planBytes: planBytes, workspace: checkpoint.Workspace,
+		ctx: ctx, moduleRoot: checkpoint.ModuleRoot, preparedPath: checkpoint.PreparedPath,
+		plan: plan, planBytes: planBytes, workspace: checkpoint.Workspace,
 		observation: checkpoint.Observation, observationPath: path, checkpointPersisted: true,
+		supervision: supervision, checkpointDigest: checkpointDigest,
+		hostToolchainVerify: hostToolchainVerify,
+	}
+	if supervision != nil {
+		if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+			return nil, fmt.Errorf("resume T40.13 teardown before deletion: %w", retentionErr)
+		}
+		if err := supervision.BeginFinalization(checkpointDigest); err != nil {
+			return nil, fmt.Errorf("resume T40.13 drained custody: %w", err)
+		}
+		if err := destroyCustody(run.workspace, run.moduleRoot); err != nil {
+			return nil, fmt.Errorf("resume T40.13 custody deletion: %w", err)
+		}
+		if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
+			return nil, fmt.Errorf("resume T40.13 custody deletion: %w", err)
+		}
 	}
 	var recoveryErr error
 	if run.observation.Outcome == "completed" {

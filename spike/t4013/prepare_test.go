@@ -16,6 +16,25 @@ import (
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
+func drainedPrepareSupervision(t *testing.T, workspace, planDigest string) string {
+	t.Helper()
+	token, err := newCustodyToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	supervision, err := beginPrepareCustody(workspace, planDigest, token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := supervision.Drain(""); err != nil {
+		t.Fatal(err)
+	}
+	if err := supervision.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+
 func TestV25AtomicEvidenceFilesystemPreflight(t *testing.T) {
 	parent := t.TempDir()
 	if err := preflightAtomicEvidenceProtocol(parent, Plan{Schema: PlanSchemaV25}); err != nil {
@@ -85,9 +104,20 @@ func TestPreparedCleanupRetainsCrashIndeterminateCustody(t *testing.T) {
 	if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	token, err := newCustodyToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	supervision, err := beginPrepareCustody(workspace, PlanDigest(planBytes), token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := supervision.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err := writePreparedCleanupControl(preparedPath+".preparing", preparedCleanupControl{
-		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
-		ModuleRoot: module, Workspace: workspace,
+		Schema: preparedCleanupSchemaV2, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: module, Workspace: workspace, SupervisionToken: token,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +125,7 @@ func TestPreparedCleanupRetainsCrashIndeterminateCustody(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := CleanupPrepared(module, planPath, preparedPath, CleanupConfirm); err == nil ||
-		!strings.Contains(err.Error(), "external process-absence proof") {
+		!strings.Contains(err.Error(), "not durably drained") {
 		t.Fatalf("crash-indeterminate cleanup = %v", err)
 	}
 	for _, path := range []string{workspace, preparedPath + ".tmp", preparedPath + ".preparing"} {
@@ -254,10 +284,11 @@ func TestV25CleanupPreparedRefusesExecutedCustody(t *testing.T) {
 			if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
 				t.Fatal(err)
 			}
+			token := drainedPrepareSupervision(t, workspace, PlanDigest(planBytes))
 			controlPath := preparedPath + ".preparing"
 			if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
-				Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
-				ModuleRoot: module, Workspace: workspace,
+				Schema: preparedCleanupSchemaV2, PlanDigest: PlanDigest(planBytes),
+				ModuleRoot: module, Workspace: workspace, SupervisionToken: token,
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -315,6 +346,30 @@ func TestPreparedCustodyIsStrictAndPlanBound(t *testing.T) {
 	changed, _ := json.Marshal(object)
 	if _, err := DecodePrepared(changed, value.PlanDigest); err == nil {
 		t.Fatal("prepared custody with unknown field passed")
+	}
+	value.SupervisionToken = strings.Repeat("a", 64)
+	if _, err := MarshalPrepared(value); err == nil {
+		t.Fatal("historical prepared schema accepted a supervision token")
+	}
+	value.Schema = PreparedSchemaV2
+	if _, err := MarshalPrepared(value); err != nil {
+		t.Fatalf("supervised prepared schema rejected its token: %v", err)
+	}
+}
+
+func TestPreparedCleanupControlRefusesUnreadableOversizeAuthority(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "prepared.json.preparing")
+	longPath := string(filepath.Separator) + strings.Repeat("a", preparedCleanupMaxBytes)
+	err := writePreparedCleanupControl(path, preparedCleanupControl{
+		Schema: preparedCleanupSchemaV2, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		ModuleRoot: longPath, Workspace: longPath + "-workspace",
+		SupervisionToken: strings.Repeat("b", 64),
+	})
+	if err == nil || !strings.Contains(err.Error(), "byte bound") {
+		t.Fatalf("oversize prepared cleanup authority = %v", err)
+	}
+	if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("oversize prepared cleanup authority left residue: %v", err)
 	}
 }
 
@@ -472,10 +527,13 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 			},
 		}
 	}
-	prepared := Prepared{Schema: PreparedSchema, PlanDigest: PlanDigest(planBytes), Profiles: []PreparedProfile{
-		profile("structural-2m-v1", "structural", "41731"),
-		profile("semantic-262144-v1", "semantic", "41732"),
-	}}
+	token := drainedPrepareSupervision(t, workspace, PlanDigest(planBytes))
+	prepared := Prepared{
+		Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes), SupervisionToken: token,
+		Profiles: []PreparedProfile{
+			profile("structural-2m-v1", "structural", "41731"),
+			profile("semantic-262144-v1", "semantic", "41732"),
+		}}
 	preparedBytes, err := MarshalPrepared(prepared)
 	if err != nil {
 		t.Fatal(err)
@@ -490,21 +548,9 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	}
 	controlPath := preparedPath + ".preparing"
 	if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
-		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
-		ModuleRoot: realModuleRoot, Workspace: workspace,
+		Schema: preparedCleanupSchemaV2, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: realModuleRoot, Workspace: workspace, SupervisionToken: token,
 	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err == nil ||
-		!strings.Contains(err.Error(), "external process-absence proof") {
-		t.Fatalf("preexisting preparation fence cleanup = %v", err)
-	}
-	for _, path := range []string{workspace, preparedPath, controlPath} {
-		if _, err := os.Lstat(path); err != nil {
-			t.Fatalf("preexisting preparation fence changed %s: %v", path, err)
-		}
-	}
-	if err := removePreparedCleanupControl(controlPath); err != nil {
 		t.Fatal(err)
 	}
 	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, "wrong"); err == nil {
@@ -524,22 +570,97 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	if content, err := os.ReadFile(outside); err != nil || string(content) != "retain" {
 		t.Fatal("cleanup crossed its exact custody boundary")
 	}
-	if err := os.WriteFile(preparedPath, preparedBytes, 0o600); err != nil {
+}
+
+func TestDestroyPreparedCanonicalizesModuleRootBeforeDeletion(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "custody")
+	module := filepath.Join(workspace, "module")
+	if err := os.MkdirAll(module, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
-		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
-		ModuleRoot: realModuleRoot, Workspace: workspace,
-	}); err != nil {
+	moduleLink := filepath.Join(root, "module-link")
+	if err := os.Symlink(module, moduleLink); err != nil {
 		t.Fatal(err)
 	}
-	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err != nil {
-		t.Fatalf("cleanup after ordinary custody teardown: %v", err)
-	}
-	for _, path := range []string{preparedPath, controlPath} {
-		if _, err := os.Lstat(path); !os.IsNotExist(err) {
-			t.Fatalf("cleanup retained post-execution control %s", path)
+	profile := func(name, lane, port string) PreparedProfile {
+		laneRoot := filepath.Join(workspace, lane)
+		return PreparedProfile{
+			Name: name, Repository: filepath.Join(laneRoot, "repository.git"),
+			RepositoryName: "local.invalid/" + lane,
+			Config:         filepath.Join(laneRoot, "phebs.yaml"), Credential: filepath.Join(laneRoot, "api-key"),
+			DataDir: filepath.Join(laneRoot, "data"), Address: "127.0.0.1:" + port,
+			Catalog: filepath.Join(laneRoot, "catalog.json"), Revisions: map[string]string{
+				"a": testSourceCommit, "b": testSourceCommit, "a-return": testSourceCommit,
+			},
 		}
+	}
+	prepared := Prepared{
+		Schema: PreparedSchema, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		Profiles: []PreparedProfile{
+			profile("structural-2m-v1", "structural", "41731"),
+			profile("semantic-262144-v1", "semantic", "41732"),
+		},
+	}
+	if err := DestroyPrepared(prepared, moduleLink); err == nil {
+		t.Fatal("DestroyPrepared accepted a module symlink into custody")
+	}
+	if _, err := os.Lstat(workspace); err != nil {
+		t.Fatalf("refused DestroyPrepared removed custody: %v", err)
+	}
+}
+
+func TestDestroyPreparedRefusesLegacyDowngradeOverSupervisedCustody(t *testing.T) {
+	for _, suffix := range []string{"", custodyRetiringSuffix, custodyRetiredSuffix} {
+		t.Run(suffix, func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			digest := "sha256:" + strings.Repeat("a", 64)
+			_, directory, err := custodyControlDirectory(workspace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if suffix == "" {
+				supervision, err := beginPrepareCustody(workspace, digest, mustCustodyToken(t))
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = supervision.Close() })
+			} else if err := os.Mkdir(directory+suffix, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			profile := func(name, lane, port string) PreparedProfile {
+				root := filepath.Join(workspace, lane)
+				return PreparedProfile{
+					Name: name, Repository: filepath.Join(root, "repository.git"),
+					RepositoryName: "local.invalid/" + lane,
+					Config:         filepath.Join(root, "phebs.yaml"), Credential: filepath.Join(root, "api-key"),
+					DataDir: filepath.Join(root, "data"), Address: "127.0.0.1:" + port,
+					Catalog: filepath.Join(root, "catalog.json"), Revisions: map[string]string{
+						"a": testSourceCommit, "b": testSourceCommit, "a-return": testSourceCommit,
+					},
+				}
+			}
+			prepared := Prepared{
+				Schema: PreparedSchema, PlanDigest: digest,
+				Profiles: []PreparedProfile{
+					profile("structural-2m-v1", "structural", "41731"),
+					profile("semantic-262144-v1", "semantic", "41732"),
+				},
+			}
+			if err := DestroyPrepared(prepared, module); err == nil {
+				t.Fatal("DestroyPrepared accepted a legacy manifest over supervised custody")
+			}
+			if _, err := os.Lstat(workspace); err != nil {
+				t.Fatalf("refused legacy downgrade removed custody: %v", err)
+			}
+		})
 	}
 }
 

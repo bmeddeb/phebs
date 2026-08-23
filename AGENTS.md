@@ -194,8 +194,9 @@ partition-result/domain-root contract, T40.10's partitioned extraction and
 atomic domain authority, T40.11's downstream adapters plus complete
 recovery/lifecycle/archive ownership, and T40.12's authorized product-consumer
 compatibility replay are complete; T40.13a's fail-closed process sampling and
-T40.13b's cooperative cancellation/shutdown truth are also complete, and
-T40.13c is the next prerequisite inside the T40.13 gate; Epic 40 targets
+T40.13b's cooperative cancellation/shutdown truth and T40.13c's durable
+hard-death descendant supervision are also complete, and T40.13d is the next
+prerequisite inside the T40.13 gate; Epic 40 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services
 and measures a target of 10,000 accepted services; Epic 42 composes both

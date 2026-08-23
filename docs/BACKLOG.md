@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13c next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13d next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,21 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13c · Durable hard-death descendant supervision** *(high · needs
-T40.13b)* — replace in-memory session identity and one-shot absence inference
-with a stable reviewed supervisor/sentinel or equivalent external proof. AC:
-the durable control exists and registers the ownership boundary before every
-server, Go/Git/archive, authoring, backup/restore, SurrealDB, and child-indexer
-start; it survives executor SIGKILL/OOM, reaps or observes the complete
-descendant boundary, and is retired last; PID reuse, session escape, fork/exit
-churn, and supervisor crash cannot authorize deletion; supervisor crash means
-indeterminate retained custody, never deletion through "crash release";
-restart inspection distinguishes live, drained, and indeterminate custody
-without scanning unrelated processes; indeterminate
-state stays retained for a separately reviewed purge; polling alone is not
-accepted as the proof; bounded synthetic cross-process tests cover executor
-death and supervisor recovery.
 
 **T40.13d · Custody mutation serialization and immutable admission** *(high ·
 needs T40.13c)* — put every V25 Prepare, Cleanup, Destroy, Execute, and Resume

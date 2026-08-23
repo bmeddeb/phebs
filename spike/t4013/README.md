@@ -214,16 +214,18 @@ and do not retroactively strengthen this consumed run.
 neutral ceremony on a dedicated macOS host. Its defaults are the phebs clone at
 `~/phebs`, isolated state at `~/phebs-t4013-ceremony`, and loopback ports 41731
 and 41732. The driver verifies a clean exact checkout, the frozen 24-GiB memory
-and 120-GiB available-disk prerequisites, and the focused harness tests before
-it authors custody. A 64-GiB Mac with more than 500 GiB available exceeds those
-host prerequisites; the frozen production and review ceilings remain
-unchanged. Preflight also requires free loopback ports, SurrealDB on `PATH`,
-and the Go 1.26 toolchain line; it hydrates the checksum-verified module cache
-before all ceremony `go run` and measured toolchain builds switch to
-`GOPROXY=off`. The committed `go.sum` includes the complete focused-harness
-and Buf-command graph, and preflight repeats the clean-checkout guard after
-hydration and tests so dependency resolution can never silently change the
-frozen source.
+and 120-GiB available-disk prerequisites, closed module graph, and direct V25
+operation-command build before it authors custody. The focused process-launching
+harness and rehearsal suites remain branch gates on the exact reviewed commit;
+the ceremony preflight does not rerun them. A 64-GiB Mac with more than 500 GiB
+available exceeds those host prerequisites; the frozen production and review
+ceilings remain unchanged. Preflight also requires free loopback ports,
+SurrealDB on `PATH`, and the Go 1.26 toolchain line; it hydrates the
+checksum-verified module cache before remaining non-custody Go commands and
+measured toolchain builds switch to `GOPROXY=off`. The committed `go.sum`
+includes the complete focused-harness and Buf-command graph, and preflight
+repeats the clean-checkout guard after hydration and prebuild checks so
+dependency resolution can never silently change the frozen source.
 
 The review seam is mandatory: `freeze` creates a new ceremony directory and
 prints its plan digest and signing-key fingerprint, then exits. Record and
@@ -2942,9 +2944,13 @@ A fresh freeze must start with `run-large-mac-ceremony.sh preflight`. Before it
 creates a ceremony identity or signing key, that command builds the prospective
 V25 host-bound plan in a temporary directory and checks the exact ceremony
 filesystem against the full 72-GiB pre-pressure projection and the required
-fsync, hard-link, rename, and directory-sync protocol. It then runs the bounded
-production/harness packages and real-binary semantic plus stale-worker
-rehearsals. Freeze repeats the host check to close the preflight/freeze gap.
+fsync, hard-link, rename, and directory-sync protocol. It verifies the closed
+module graph and prebuilds direct V25 Prepare, Execute, Cleanup, and receipt
+commands. The process-launching production/harness packages, focused real-tool
+proof, and semantic plus stale-worker rehearsals remain branch gates on the
+exact reviewed commit; the expensive ceremony preflight does not rerun them
+outside durable custody. Freeze repeats the host check to close the
+preflight/freeze gap.
 
 V25 builds from `plan.source_commit`, not the checkout's later `HEAD`, through
 an isolated Git namespace that excludes ambient config, replacement refs, and
@@ -3074,3 +3080,70 @@ separately reviewed purge. SIGKILL/OOM of the executor, PID reuse, session
 escape, fork/exit churn, and registration of every child start still require
 T40.13c's durable external supervisor/proof. No freeze, ceremony, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
+
+### T40.13c durable hard-death descendant supervision
+
+V25 now uses `<workspace>.t4013-supervision` as its external descendant-absence
+authority on Darwin and Linux. Prepare durably writes one random 256-bit token
+to `prepared.json.preparing`, builds a token-named `.creating.*` directory with
+strict `controller.lock`, `descendants.lock`, and bounded `state.json` files,
+then atomically publishes and syncs the stable control before launching any
+host-tool, Git/archive, authoring, server, backup/restore, SurrealDB, or indexer
+child. A crash before publication can be completed only with that exact token;
+an unrelated, malformed, or ambiguous stage refuses.
+
+The controller holds the controller lock with close-on-exec. While state is
+`live` or `finalizing`, it also holds a lease descriptor reserved at 64 or
+higher with close-on-exec disabled, so every supported child and grandchild
+inherits the same kernel lease even after reparenting, `setsid`, or an
+intermediate process exit. To record `drained` or `terminal`, the controller
+closes its lease copy and must acquire a new exclusive nonblocking lock. Any
+remaining descendant prevents that acquisition. Executor SIGKILL/OOM releases
+only its own copies: a surviving child still reports live, and once the last
+child exits the unchanged active state reports indeterminate. Restart never
+converts an active state to drained merely because its locks became free, and
+it does not scan unrelated host processes.
+
+The strict state binds token, plan digest, canonical workspace, Prepare versus
+Execute ownership, phase, and the exact teardown-checkpoint digest. Prepare
+hands Execute only an exact drained control. Cleanup, Destroy, and resume may
+act only on the matching created/drained/terminal authority; live,
+indeterminate, malformed, or mismatched state retains custody. Execute drains
+before finalization, reopens inheritance for post-delete verifier children,
+deletes custody, and drains again to terminal. It then retires supervision while
+the external prepared/checkpoint controls remain authoritative, confirms exact
+retirement durably, and only then removes those controls. Retirement first
+renames the directory to `.retiring`, moves the exact terminal state to
+`.retired` while locks and the directory are removed, and syncs each parent
+transition. An exact restart can finish any committed retirement boundary; a
+different identity cannot.
+
+The supported driver prebuilds direct V25 Prepare, Execute, Cleanup, and
+receipt binaries once before admission and starts them in its closed active
+environment. There is no outer `go run` or immediately preceding Go/module
+verification process around those operation roots. The full process-launching
+test/rehearsal suites remain branch gates, not ceremony-runtime work. Receipt
+resume may finish only exact drained/terminal supervision; any path remaining
+after that recovery refuses further publication and seal. Abnormal command
+state retains the operation lock, closed Go cache, controls, and custody for
+review. Historical V1–V24 bytes and supported CLI flow remain unchanged;
+direct legacy Destroy intentionally tightens symlink and
+stable/retiring/retired V25-supervision refusal.
+
+Each active controller holds two locks/two descriptors, and each descendant
+inherits one descriptor. State is at most 2 KiB; transition and recovery work
+is a fixed number of small reads, lock attempts, renames, and directory syncs.
+There is no production request/query, sync, startup/restart, retry/no-op,
+publication, source/corpus/shard, cache, or child-process cost. Tests cover
+atomic create/retire recovery, controller death, escaped and intermediate-exit
+descendants, finalizer drain, exact resume/cleanup, direct shell roots, residue
+refusal, real Git/archive, and controlled server/backup/restore inheritance
+with exact lease-inode checks. On Darwin, four isolated opt-in gates passed for
+Go-run transitive inheritance, direct `zoekt-git-index`, Phebs-to-Surreal
+hard-death inheritance after sampler shutdown, and direct Phebs backup/restore
+roots. These are branch evidence, not independent proof of every
+compiler/linker/indexer/restore descendant and not a rehearsal or ceremony
+pass. T40.13d's shared V25 custody-mutation/admission lock remains next. No
+preflight result, test, branch, or this closure authorizes freeze, ceremony
+execution, release, T40.13/Epic-40 closure, topology/bound change, or a
+scale/SLO claim.

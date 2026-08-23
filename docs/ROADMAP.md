@@ -1698,10 +1698,33 @@ uncertainty is observed; if cancellation first becomes visible after deletion
 starts, the durable checkpoint and shell operation state remain authoritative.
 V1–V24 remain historical, and no production path or public schema changes.
 
-T40.13c durable hard-death descendant supervision is now the only next scale
-ticket inside the still-open T40.13 gate. Critical/high prerequisites then
-continue through T40.13d one
-shared custody-mutation/admission lock, T40.13e exact executed-tool identity,
+T40.13c now closes durable hard-death descendant supervision for V25 on Darwin
+and Linux. A token-bound sibling control is atomically created before the first
+operation child; its crash-released controller lock and inherited kernel lease
+make descendant drain independent of PID, session, and intermediate lifetime.
+Only the owning controller may record drained/terminal state, so a hard-dead
+controller becomes live while a descendant holds the lease and indeterminate
+afterward, never falsely absent. Exact restart inspection is O(1), finalizer
+children stay inside the lease, and teardown deletes custody and proves terminal
+drain before retiring supervision. The external prepared/checkpoint controls
+remain authoritative until exact retirement is durably confirmed, then are
+removed. The supported shell prebuilds direct V25 Prepare, Execute, Cleanup,
+and receipt roots; full process-launching regression/rehearsal suites remain
+branch gates rather than ceremony-preflight work. On Darwin, four isolated
+opt-in gates passed for Go-run transitive inheritance, direct
+`zoekt-git-index`, Phebs-to-Surreal hard-death inheritance after sampler
+shutdown, and direct Phebs backup/restore roots. These are branch evidence, not
+independent proof of every compiler/linker/indexer/restore descendant and not a
+rehearsal or ceremony pass. Exact receipt resume may finish terminal retirement,
+but any supervision residue after that recovery blocks further publication and
+seal. V1–V24 retained bytes and supported CLI flow remain historical; direct
+legacy Destroy has stricter symlink and stable/retiring/retired
+V25-supervision refusal. Production paths gain no work, and no freeze or
+ceremony is authorized.
+
+T40.13d's shared custody-mutation/admission lock is now the only next scale
+ticket inside the still-open T40.13 gate. Critical/high prerequisites continue
+through T40.13e exact executed-tool identity,
 T40.13f hermetic execution controls, and T40.13g an authenticated bounded
 returned-evidence firewall. Medium tickets close resumable seal/keypair
 integrity (T40.13h), bounded exact-control inspection (T40.13i), overflow-safe

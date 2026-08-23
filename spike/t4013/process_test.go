@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const privateServerShutdownHelperEnvironment = "PHEBS_T4013_SHUTDOWN_HELPER"
@@ -278,7 +280,7 @@ func TestCustodyCommandCancellationTerminatesProcessSession(t *testing.T) {
 		done <- err
 	}()
 	childPID := awaitPrivateServerShutdownHelper(t, childPIDPath)
-	sessionID, err := syscall.Getsid(childPID)
+	sessionID, err := unix.Getsid(childPID)
 	if err != nil {
 		t.Fatal(err)
 	}

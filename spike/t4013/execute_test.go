@@ -48,7 +48,7 @@ func newV25FailureExecution(t *testing.T, module, workspace string) *execution {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &execution{
+	run := &execution{
 		ctx: t.Context(), moduleRoot: module, workspace: workspace,
 		plan: plan, planBytes: planBytes,
 		observation: emptyObservationForPlan(EnvironmentObservation{
@@ -57,6 +57,34 @@ func newV25FailureExecution(t *testing.T, module, workspace string) *execution {
 		}, plan),
 		hostToolchainVerify: func() error { return nil },
 	}
+	attachV25TestSupervision(t, run)
+	return run
+}
+
+func attachV25TestSupervision(t *testing.T, run *execution) {
+	t.Helper()
+	if run.preparedPath == "" {
+		run.preparedPath = filepath.Join(filepath.Dir(run.workspace), "prepared.json")
+	}
+	token, err := newCustodyToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepare, err := beginPrepareCustody(run.workspace, PlanDigest(run.planBytes), token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepare.Drain(""); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepare.Close(); err != nil {
+		t.Fatal(err)
+	}
+	run.supervision, err = beginExecuteCustody(run.workspace, PlanDigest(run.planBytes), token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = run.supervision.Close() })
 }
 
 func TestFinalizeObservationPinsEveryEnabledExtractionDomain(t *testing.T) {
@@ -397,15 +425,8 @@ func TestExpiredExecutionDeadlineStillPublishesStoppedTeardown(t *testing.T) {
 		context.Background(), time.Now().Add(-time.Second), errTotalWallDeadline,
 	)
 	defer cancel()
-	run := &execution{
-		ctx: ctx, moduleRoot: module, workspace: workspace,
-		plan: Plan{Schema: PlanSchemaV25, Safety: frozenSafetyV25},
-		observation: emptyObservation(EnvironmentObservation{
-			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
-			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
-		}),
-		hostToolchainVerify: func() error { return nil },
-	}
+	run := newV25FailureExecution(t, module, workspace)
+	run.ctx = ctx
 	setExecutionObservationPath(t, run)
 	run.startPhase(0)
 	stopped, err := run.stopAfterFailure(errTotalWallDeadline)
@@ -421,6 +442,92 @@ func TestExpiredExecutionDeadlineStillPublishesStoppedTeardown(t *testing.T) {
 	}
 	if _, err := os.Lstat(run.observationPath); err != nil {
 		t.Fatalf("expired deadline lost stopped observation: %v", err)
+	}
+}
+
+func TestV25ExecutionRefusesAliasedDestructivePaths(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	module := filepath.Join(root, "module")
+	realParent := filepath.Join(root, "real")
+	workspace := filepath.Join(realParent, "custody")
+	controlParent := filepath.Join(root, "controls")
+	for _, path := range []string{module, realParent, workspace, controlParent} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	aliasParent := filepath.Join(root, "alias")
+	if err := os.Symlink(realParent, aliasParent); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planPath := filepath.Join(root, "plan.json")
+	if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	preparedFor := func(parent string) Prepared {
+		profile := func(name, lane, port string) PreparedProfile {
+			laneRoot := filepath.Join(parent, "custody", lane)
+			return PreparedProfile{
+				Name: name, Repository: filepath.Join(laneRoot, "repository.git"),
+				RepositoryName: "local.invalid/" + lane,
+				Config:         filepath.Join(laneRoot, "phebs.yaml"), Credential: filepath.Join(laneRoot, "api-key"),
+				DataDir: filepath.Join(laneRoot, "data"), Address: "127.0.0.1:" + port,
+				Catalog: filepath.Join(laneRoot, "catalog.json"), Revisions: map[string]string{
+					"a": testSourceCommit, "b": testSourceCommit, "a-return": testSourceCommit,
+				},
+			}
+		}
+		return Prepared{
+			Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes),
+			SupervisionToken: strings.Repeat("a", 64),
+			Profiles: []PreparedProfile{
+				profile("structural-2m-v1", "structural", "41731"),
+				profile("semantic-262144-v1", "semantic", "41732"),
+			},
+		}
+	}
+	writePrepared := func(name string, value Prepared) string {
+		raw, err := MarshalPrepared(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(controlParent, name)
+		if err := os.WriteFile(path, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	request := ExecuteRequest{
+		ModuleRoot: module, PlanPath: planPath,
+		Observation: filepath.Join(root, "observation.json"), Confirm: ExecuteConfirm,
+	}
+
+	preparedPath := writePrepared("prepared.json", preparedFor(realParent))
+	controlAlias := filepath.Join(root, "control-alias")
+	if err := os.Symlink(controlParent, controlAlias); err != nil {
+		t.Fatal(err)
+	}
+	request.Prepared = filepath.Join(controlAlias, filepath.Base(preparedPath))
+	if _, err := newExecution(t.Context(), request, time.Now()); err == nil ||
+		!strings.Contains(err.Error(), "path is not canonical") {
+		t.Fatalf("aliased prepared path error = %v", err)
+	}
+
+	request.Prepared = writePrepared("workspace-alias.json", preparedFor(aliasParent))
+	if _, err := newExecution(t.Context(), request, time.Now()); err == nil ||
+		!strings.Contains(err.Error(), "execution custody is invalid") {
+		t.Fatalf("aliased workspace error = %v", err)
 	}
 }
 
@@ -2016,26 +2123,67 @@ func newCompletedTeardownExecution(t *testing.T) *execution {
 	if err := os.WriteFile(filepath.Join(workspace, "private"), []byte("custody"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	plan, err := FrozenPlan(strings.Repeat("f", 40))
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation := completedObservation()
+	observation := completedV25TeardownObservation(plan)
 	observation.Phases[len(observation.Phases)-1] = PhaseObservation{
 		Name: "teardown", Outcome: "not_run",
 	}
 	observation.Teardown = TeardownObservation{}
 	planBytes := marshal(t, plan)
-	plan.Schema = PlanSchemaV25
-	plan.Safety = frozenSafetyV25
 	run := &execution{
 		ctx: t.Context(), moduleRoot: module, workspace: workspace,
 		plan: plan, planBytes: planBytes, observation: observation,
 		observationPath:     filepath.Join(evidence, "observation.json"),
 		hostToolchainVerify: func() error { return nil },
 	}
+	attachV25TestSupervision(t, run)
 	run.startPhase(11)
 	return run
+}
+
+func completedV25TeardownObservation(plan Plan) Observation {
+	value := completedV7Observation(plan)
+	value.Schema = ObservationSchemaV25
+	value.HostToolchain = slices.Clone(plan.HostToolchain)
+	value.ServerStartups = slices.Insert(value.ServerStartups, 6, ServerStartupObservation{
+		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	value.ServerStartups = slices.Insert(value.ServerStartups, 3, ServerStartupObservation{
+		Profile: "semantic-262144-v1", Label: "interruption-backup", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+	})
+	backupWait := value.ConvergenceWaits[5]
+	backupWait.Label = "interruption-backup"
+	value.ConvergenceWaits = slices.Insert(value.ConvergenceWaits, 5, backupWait)
+	for index := range value.ConvergenceWaits {
+		for transition := range value.ConvergenceWaits[index].InspectionTransitions {
+			current := &value.ConvergenceWaits[index].InspectionTransitions[transition]
+			current.FirstProgressSHA256 = current.ProgressSHA256
+		}
+	}
+	attempt := 0
+	value.Interruption = &InterruptionObservation{
+		Schema: interruptionSchemaV2, LastSubstage: "complete",
+		TriggerStage:            extractionpublication.ScheduleStage,
+		TriggerGenerationSHA256: "sha256:" + strings.Repeat("a", 64),
+		TriggerChunkSHA256:      "sha256:" + strings.Repeat("b", 64),
+		TriggerScheduleSHA256:   "sha256:" + strings.Repeat("c", 64),
+		TriggerAttempt:          &attempt, TriggerWallMS: 1,
+		TriggerRecoveredState: string(store.GenerationChunkDone),
+		RecoveryLifecycle: &InterruptionLifecycleObservation{
+			State: "ok", Completeness: lifecycle.Exact,
+		},
+		ConvergenceLifecycle: &InterruptionLifecycleObservation{
+			State: "ok", Completeness: lifecycle.Exact,
+		},
+	}
+	return value
 }
 
 func TestV25StoppedTeardownPublishesReceiptValidEvidence(t *testing.T) {
@@ -2077,6 +2225,7 @@ func TestV25StoppedTeardownPublishesReceiptValidEvidence(t *testing.T) {
 		observationPath:     filepath.Join(evidence, "observation.json"),
 		hostToolchainVerify: func() error { return nil },
 	}
+	attachV25TestSupervision(t, run)
 	run.startPhase(11)
 	if err := run.teardown(); err != nil {
 		t.Fatal(err)
@@ -2373,7 +2522,7 @@ func TestPersistentPostPublicationToolchainDriftLeavesCheckpointAuthority(t *tes
 	}
 }
 
-func TestCompletedTeardownCleanupFailureRetainsCheckpointUntilResume(t *testing.T) {
+func TestCompletedTeardownCleanupFailureRetainsIndeterminateCheckpoint(t *testing.T) {
 	run := newCompletedTeardownExecution(t)
 	injected := errors.New("injected cleanup result")
 	run.custodyDestroy = func(workspace, _ string) error {
@@ -2389,11 +2538,13 @@ func TestCompletedTeardownCleanupFailureRetainsCheckpointUntilResume(t *testing.
 	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
 		t.Fatalf("cleanup failure lost teardown checkpoint: %v", err)
 	}
-	raw, resumeErr := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
-	value, decodeErr := DecodeObservation(raw)
-	if resumeErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
-		value.Failures[0].Phase != "teardown" || value.Failures[0].Code != "operational_failure" {
-		t.Fatalf("cleanup-failure resume = %+v, resume=%v, decode=%v", value, resumeErr, decodeErr)
+	if _, resumeErr := ResumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes),
+	); resumeErr == nil || !strings.Contains(resumeErr.Error(), "custody remains live") {
+		t.Fatalf("cleanup-failure resume = %v", resumeErr)
+	}
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("cleanup failure lost checkpoint authority: %v", err)
 	}
 }
 
@@ -2441,7 +2592,7 @@ func TestCompletedTeardownDestroyFailureDoesNotPublishCompletion(t *testing.T) {
 	}
 }
 
-func TestCompletedObservationPublicationFailureResumesAsStopped(t *testing.T) {
+func TestCompletedObservationPublicationFailureRetainsIndeterminateStage(t *testing.T) {
 	run := newCompletedTeardownExecution(t)
 	injected := errors.New("injected final-link failure")
 	run.custodyDestroy = func(workspace, moduleRoot string) error { return os.RemoveAll(workspace) }
@@ -2459,46 +2610,107 @@ func TestCompletedObservationPublicationFailureResumesAsStopped(t *testing.T) {
 	if _, err := os.Lstat(run.observationPath + ".tmp"); err != nil {
 		t.Fatalf("failed publication did not retain its durable stage: %v", err)
 	}
-	raw, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
-	if err != nil {
-		t.Fatalf("resume staged observation: %v", err)
+	if _, resumeErr := ResumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes),
+	); resumeErr == nil || !strings.Contains(resumeErr.Error(), "custody remains live") {
+		t.Fatalf("publication-failure resume = %v", resumeErr)
 	}
-	if value, err := DecodeObservation(raw); err != nil || value.Outcome != "stopped" ||
-		value.Failures[0].Phase != "teardown" {
-		t.Fatalf("resumed observation = %+v, %v", value, err)
-	}
-	if _, err := os.Lstat(run.observationPath + ".tmp"); !os.IsNotExist(err) {
-		t.Fatal("resumed observation retained its stage")
-	}
-	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
-		t.Fatal("resumed observation retained its teardown checkpoint")
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("publication failure lost checkpoint authority: %v", err)
 	}
 }
 
-func TestTeardownCheckpointTakesPrecedenceAfterProcessDeath(t *testing.T) {
+func TestTerminalDrainUncertaintyRetainsObservationForExactResume(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected terminal directory-sync uncertainty")
+	run.terminalDrain = func() error {
+		if err := run.supervision.DrainTerminal(); err != nil {
+			return err
+		}
+		return injected
+	}
+	if err := run.teardown(); !errors.Is(err, injected) {
+		t.Fatalf("terminal drain uncertainty = %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); err != nil {
+		t.Fatalf("terminal drain uncertainty lost its provisional observation: %v", err)
+	}
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("terminal drain uncertainty lost checkpoint authority: %v", err)
+	}
+	if run.supervision.state.Phase != custodyPhaseTerminal {
+		t.Fatalf("terminal drain uncertainty state = %q", run.supervision.state.Phase)
+	}
+	if err := run.supervision.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := resumeTeardownForTest(run); err != nil {
+		t.Fatalf("resume committed terminal drain: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("terminal resume retained checkpoint: %v", err)
+	}
+}
+
+func TestTeardownCheckpointRefusesIndeterminateProcessDeath(t *testing.T) {
 	run := newCompletedTeardownExecution(t)
 	started := time.Now()
 	if err := run.persistTeardownCheckpoint(started, 7, 8); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(run.workspace); err != nil {
+	if err := run.supervision.Close(); err != nil {
 		t.Fatal(err)
 	}
 	provisional := run.projectedTeardownObservation(started, 7, 8)
 	if err := WriteObservation(run.observationPath, provisional); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
-	if err != nil {
+	if _, err := ResumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes),
+	); err == nil || !strings.Contains(err.Error(), "indeterminate") {
+		t.Fatalf("indeterminate checkpoint recovery = %v", err)
+	}
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("indeterminate process death lost checkpoint authority: %v", err)
+	}
+}
+
+func TestTeardownCheckpointSchemasSeparateHistoricalAndSupervisedAuthority(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
 		t.Fatal(err)
 	}
-	value, err := DecodeObservation(raw)
-	if err != nil || value.Outcome != "stopped" || value.Failures[0].Phase != "teardown" ||
-		value.Phases[11].Metrics.WallMS < (teardownPersistenceReserve+teardownRetirementReserve).Milliseconds() {
-		t.Fatalf("checkpoint recovery = %+v, %v", value, err)
+	supervised, err := readTeardownCheckpoint(run.observationPath)
+	if err != nil || supervised.Schema != teardownCheckpointSchemaV2 {
+		t.Fatalf("supervised checkpoint = %#v, %v", supervised, err)
 	}
-	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
-		t.Fatal("checkpoint recovery did not retire checkpoint authority")
+	historical := supervised
+	historical.Schema = teardownCheckpointSchema
+	historical.ModuleRoot = ""
+	historical.PreparedPath = ""
+	historical.SupervisionToken = ""
+	raw, err := marshalTeardownCheckpoint(historical)
+	if err != nil || bytes.Contains(raw, []byte(`"supervision_token"`)) {
+		t.Fatalf("historical checkpoint bytes acquired supervision: %s, %v", raw, err)
+	}
+	if err := os.Remove(run.observationPath + ".teardown"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeTeardownCheckpoint(run.observationPath, historical); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes),
+	); err == nil || !strings.Contains(err.Error(), "checkpoint schema differs from the plan") {
+		t.Fatalf("V25 resume accepted a historical checkpoint: %v", err)
+	}
+	historical.SupervisionToken = supervised.SupervisionToken
+	if err := validateTeardownCheckpoint(historical); err == nil {
+		t.Fatal("historical checkpoint accepted supervised authority")
+	}
+	supervised.SupervisionToken = ""
+	if err := validateTeardownCheckpoint(supervised); err == nil {
+		t.Fatal("supervised checkpoint accepted missing authority")
 	}
 }
 
@@ -2507,14 +2719,17 @@ func TestTeardownCheckpointTemporaryResumesAndRetires(t *testing.T) {
 	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
 		t.Fatal(err)
 	}
+	if err := run.supervision.Drain(run.checkpointDigest); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.supervision.Close(); err != nil {
+		t.Fatal(err)
+	}
 	checkpointPath := run.observationPath + ".teardown"
 	if err := os.Rename(checkpointPath, checkpointPath+".tmp"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(run.workspace); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err != nil {
+	if _, err := resumeTeardownForTest(run); err != nil {
 		t.Fatal(err)
 	}
 	for _, path := range []string{checkpointPath, checkpointPath + ".tmp"} {
@@ -2529,14 +2744,17 @@ func TestTeardownCheckpointRetirementFailureMustRetryBeforeReceipt(t *testing.T)
 	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(run.workspace); err != nil {
+	if err := run.supervision.Drain(run.checkpointDigest); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.supervision.Close(); err != nil {
 		t.Fatal(err)
 	}
 	checkpointTemporary := run.observationPath + ".teardown.tmp"
 	if err := os.Mkdir(checkpointTemporary, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err == nil ||
+	if _, err := resumeTeardownForTest(run); err == nil ||
 		!strings.Contains(err.Error(), "checkpoint remains authoritative") {
 		t.Fatalf("checkpoint retirement failure = %v", err)
 	}
@@ -2546,12 +2764,18 @@ func TestTeardownCheckpointRetirementFailureMustRetryBeforeReceipt(t *testing.T)
 	if err := os.Remove(checkpointTemporary); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err != nil {
+	if _, err := resumeTeardownForTest(run); err != nil {
 		t.Fatalf("retry checkpoint retirement: %v", err)
 	}
 	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
 		t.Fatalf("checkpoint survived successful retry: %v", err)
 	}
+}
+
+func resumeTeardownForTest(run *execution) ([]byte, error) {
+	return resumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes), func() error { return nil },
+	)
 }
 
 func TestTeardownCheckpointRejectsWrongPlanWithoutPublishing(t *testing.T) {

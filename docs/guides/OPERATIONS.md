@@ -4865,14 +4865,18 @@ Use a clean checkout at the exact reviewed commit and run:
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 ```
 
-This is the required cheap gate before requesting a freeze. It performs the
-prospective V25 host-bound freeze in temporary output, including the exact
-ceremony filesystem's projected pressure and atomic evidence operations, then
-runs focused production/harness packages and the real-binary semantic and
-stale-worker rehearsals. A capacity or filesystem-protocol refusal is a
-pre-freeze stop: do not create a ceremony ID, signing key, plan, or custody,
-and do not weaken the envelope. Move the ceremony root to an adequate local
-filesystem or free independently reviewed space, then rerun the same command.
+This is the required cheap host/module/command gate before requesting a freeze.
+It performs the prospective V25 host-bound freeze in temporary output,
+including the exact ceremony filesystem's projected pressure and atomic
+evidence operations, verifies the closed module graph, and prebuilds the direct
+V25 Prepare, Execute, Cleanup, and receipt commands. It does not run the
+process-launching production/harness packages, focused real-tool proof, or
+semantic/stale-worker rehearsals inside ceremony preflight; those remain branch
+gates on the exact reviewed commit. A capacity, module, command-build, or
+filesystem-protocol refusal is a pre-freeze stop: do not create a ceremony ID,
+signing key, plan, or custody, and do not weaken the envelope. Move the
+ceremony root to an adequate local filesystem or free independently reviewed
+space, correct the module/tool state, then rerun the same command.
 
 Execution may leave `observation.json.teardown` or
 `observation.json.teardown.tmp` only after it has durably recorded an
@@ -4894,17 +4898,41 @@ preflight. Concurrent executor/resume publication is refused. A wrapper signal,
 abnormal execution child with retained custody, refused cleanup, or incomplete
 preparation leaves its operation lock and private state for review.
 
-Do not request a freeze yet. Process-session ownership is not durable across an
-executor SIGKILL/OOM, and the current inventory cannot structurally exclude PID
-reuse, session escape, or a fork/exit race before deletion. The reviewed remedy
-must keep a stable supervisor/sentinel alive until all descendants drain (or
-define equivalent external process-absence proof); repeated polling alone is
-not sufficient. The same review must put direct V25 Prepare/Cleanup/Destroy and
-Execute/resume under one crash-released run-root lock, bind every later
+V25 now creates `<workspace>.t4013-supervision` before its first operation
+child. Its controller lock is crash-released, while one descriptor-64-or-higher
+lease is inherited by every supported descendant until the controller proves
+drain. PID reuse, session escape, and intermediate process exit therefore do
+not authorize deletion. If the controller dies in `live` or `finalizing`, the
+state is live while any descendant holds the lease and indeterminate after the
+last lease closes; it never becomes drained from lock freedom alone. Teardown
+binds the exact checkpoint, covers finalizer children with the same lease,
+deletes custody, reaches terminal, and retires supervision through recoverable
+`.retiring`/`.retired` transitions while the external prepared/checkpoint
+controls remain authoritative. It removes those controls only after exact
+retirement is durably confirmed.
+
+Do not remove, rename, or hand-edit the supervision directory, its
+`.creating.<token>` stage, `.retiring` directory, or `.retired` state. Do not
+substitute `ps`, `pgrep`, port freedom, or elapsed time for the kernel lease.
+Keep the run lock, closed Go cache, prepared/checkpoint controls, logs, and any
+custody together when a command reports live, indeterminate, mismatched, or
+malformed supervision. The supported V25 driver uses prebuilt direct operation
+roots with no outer `go run`. Receipt resume may complete exact
+drained/terminal authority; any supervision path surviving that recovery
+refuses further publication and seal. Historical V1–V24 bytes and normal
+supported CLI flow remain historical; direct legacy Destroy intentionally
+tightens symlinked cleanup-root and stable/retiring/retired V25-supervision
+refusal.
+
+Do not request a freeze yet. T40.13d must still put direct V25
+Prepare/Cleanup/Destroy and Execute/resume under one crash-released run-root
+lock and immutable admission identity. Later prerequisites must bind every
 Go/Git/Surreal launch to the frozen executable path, reverify private binaries
-across restarts, and move HOME/module/control caches into reviewed custody. Do
-not call the exported custody mutators concurrently. `go mod verify`, the exact
-filesystem projection, the bounded package gates, and both real-binary
-rehearsals must then pass from one clean commit. Passing those gates is readiness
-evidence only; freeze and execution each still require Ben's separate explicit
+across restarts, move HOME/module/control caches into reviewed custody, and
+close the returned-evidence and remaining medium/low gates. Do not call the
+exported custody mutators concurrently. `go mod verify`, the exact filesystem
+projection, bounded package/race/docs gates, focused real-tool proof, and both
+real-binary rehearsals must pass from one clean commit in their designated
+branch-gate or preflight boundary. Passing those gates is readiness evidence
+only; freeze and execution each still require Ben's separate explicit
 authorization and a fresh, unconsumed ceremony identifier.

@@ -42,21 +42,13 @@ func observeHostToolchain(ctx context.Context, closedEnvironment bool) ([]HostTo
 	}
 	observationContext, cancel := context.WithTimeout(ctx, hostObservationTimeout)
 	defer cancel()
-	type result struct {
-		values []HostToolObservation
-		err    error
+	values, err := observeHostToolchainNow(observationContext, closedEnvironment)
+	if err != nil && observationContext.Err() != nil {
+		return nil, fmt.Errorf(
+			"T40.13 host toolchain observation exceeded its deadline: %w", observationContext.Err(),
+		)
 	}
-	done := make(chan result, 1)
-	go func() {
-		values, err := observeHostToolchainNow(observationContext, closedEnvironment)
-		done <- result{values: values, err: err}
-	}()
-	select {
-	case observed := <-done:
-		return observed.values, observed.err
-	case <-observationContext.Done():
-		return nil, fmt.Errorf("T40.13 host toolchain observation exceeded its deadline: %w", observationContext.Err())
-	}
+	return values, err
 }
 
 func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]HostToolObservation, error) {

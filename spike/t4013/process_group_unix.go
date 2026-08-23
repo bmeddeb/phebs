@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func isolatePrivateServerSession(command *exec.Cmd) error {
@@ -120,7 +122,7 @@ func privateServerSessionPIDs(sessionID int) ([]int, error) {
 		if parseErr != nil || pid <= 0 {
 			return nil, errors.New("T40.13 private process session inventory is invalid")
 		}
-		session, sessionErr := syscall.Getsid(pid)
+		session, sessionErr := unix.Getsid(pid)
 		if errors.Is(sessionErr, syscall.ESRCH) {
 			continue
 		}

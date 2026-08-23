@@ -33,6 +33,10 @@ SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
 CLOSED_GO_CACHE=""
+V25_CLEANUP_COMMAND=""
+V25_EXECUTE_COMMAND=""
+V25_PREPARE_COMMAND=""
+V25_RECEIPT_COMMAND=""
 EXIT_PREPARED_PLAN=""
 EXIT_PREPARED_MANIFEST=""
 EXIT_PREPARED_WORKSPACE=""
@@ -98,9 +102,65 @@ closed_go_active() {
 }
 
 initialize_closed_go_cache() {
-  [[ -z "$CLOSED_GO_CACHE" ]] || return
+  [[ -z "$CLOSED_GO_CACHE" ]] || return 0
   CLOSED_GO_CACHE="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-go-cache.XXXXXX")"
   chmod 700 "$CLOSED_GO_CACHE"
+}
+
+initialize_v25_custody_commands() {
+  local command_root command_path
+  [[ -n "$REPO_REAL" ]] || die "repository must be initialized before building custody commands"
+  initialize_closed_go_cache
+  if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_EXECUTE_COMMAND" &&
+    -n "$V25_PREPARE_COMMAND" && -n "$V25_RECEIPT_COMMAND" ]]; then
+    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" \
+      "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+      require_v25_custody_command "$command_path" ||
+        die "prebuilt V25 custody command became invalid: $command_path"
+    done
+    return 0
+  fi
+  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_EXECUTE_COMMAND" &&
+    -z "$V25_PREPARE_COMMAND" && -z "$V25_RECEIPT_COMMAND" ]] ||
+    die "prebuilt V25 custody-command state is incomplete"
+  command_root="${CLOSED_GO_CACHE}/t4013-custody-commands"
+  mkdir -m 700 "$command_root"
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    go build -o "${command_root}/" \
+    ./spike/t4013/cmd/t4013-cleanup \
+    ./spike/t4013/cmd/t4013-execute \
+    ./spike/t4013/cmd/t4013-prepare \
+    ./spike/t4013/cmd/t4013-receipt)
+  V25_CLEANUP_COMMAND="${command_root}/t4013-cleanup"
+  V25_EXECUTE_COMMAND="${command_root}/t4013-execute"
+  V25_PREPARE_COMMAND="${command_root}/t4013-prepare"
+  V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
+  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" \
+    "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+    [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
+      die "prebuilt V25 custody command is invalid: $command_path"
+  done
+}
+
+run_v25_custody_command_in_repo_active() {
+  local command_path="$1" previous_directory="$PWD" status=0
+  shift
+  require_v25_custody_command "$command_path" || return 1
+  cd "$REPO_REAL" || return 1
+  closed_go_active GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    "$command_path" "$@" || status=$?
+  cd "$previous_directory" || return 1
+  return "$status"
+}
+
+require_v25_custody_command() {
+  local command_path="$1"
+  [[ "$command_path" == "${CLOSED_GO_CACHE}/t4013-custody-commands/"* &&
+    -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
+    {
+      printf '%s: V25 custody command was not prebuilt before operation admission\n' "$SCRIPT_NAME" >&2
+      return 1
+    }
 }
 
 cleanup_on_exit() {
@@ -411,20 +471,11 @@ preflight() {
     die "exact V25 prospective host preflight failed"
   fi
   rm -rf -- "$host_plan_root"
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go test \
-    ./internal/lifecycle \
-    ./internal/resolvernamespace \
-    ./internal/rpccallerposting \
-    ./internal/kafkatopicposting \
-    ./internal/relationshippublication \
-    ./spike/t4013/... -count=1)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
-    PHEBS_T4013_READINESS_REHEARSAL=1 go test ./spike/t4013 \
-    -run '^TestProductionPathReadinessRehearsal/(semantic|semantic-stale-worker)$' \
-    -count=1 -timeout 35m)
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  initialize_v25_custody_commands
   require_clean_checkout
-  note "T40.13 production, harness, and V25 real-binary readiness tests: PASS"
+  note "T40.13 host, module, and prebuilt custody-command checks: PASS"
+  note "process-launching regression and readiness suites are branch gates and are not re-run outside durable custody"
 }
 
 verification_preflight() {
@@ -437,13 +488,6 @@ verification_preflight() {
   require_clean_checkout
   (cd "$REPO_REAL" && closed_go go mod download all)
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go test \
-    ./internal/lifecycle \
-    ./internal/resolvernamespace \
-    ./internal/rpccallerposting \
-    ./internal/kafkatopicposting \
-    ./internal/relationshippublication \
-    ./spike/t4013/... -count=1)
   note "source-free verifier checkout: PASS"
 }
 
@@ -615,12 +659,32 @@ cleanup_prepared() {
         [[ -f "$path" && ! -L "$path" ]] || die "private prepared cleanup control is invalid: $path"
       fi
     done
-    (cd "$REPO_REAL" && plan_go "$plan_path" \
-      go run ./spike/t4013/cmd/t4013-cleanup \
-      -root "$REPO_REAL" \
-      -plan "$plan_path" \
-      -prepared "$prepared_path" \
-      -confirm "$CLEANUP_CONFIRM")
+    if is_v25_plan "$plan_path"; then
+      require_v25_custody_command "$V25_CLEANUP_COMMAND" || return 1
+      run_v25_custody_command_in_repo_active "$V25_CLEANUP_COMMAND" \
+        -root "$REPO_REAL" \
+        -plan "$plan_path" \
+        -prepared "$prepared_path" \
+        -confirm "$CLEANUP_CONFIRM"
+    else
+      (cd "$REPO_REAL" && plan_go "$plan_path" \
+        go run ./spike/t4013/cmd/t4013-cleanup \
+        -root "$REPO_REAL" \
+        -plan "$plan_path" \
+        -prepared "$prepared_path" \
+        -confirm "$CLEANUP_CONFIRM")
+    fi
+  fi
+}
+
+refuse_supervision_residue() {
+  local supervision_path="${1}.t4013-supervision" path
+  for path in "$supervision_path" "${supervision_path}.retiring" "${supervision_path}.retired"; do
+    [[ ! -e "$path" && ! -L "$path" ]] ||
+      die "durable custody supervision remains; receipt and seal are refused: $path"
+  done
+  if compgen -G "${supervision_path}.creating.*" >/dev/null; then
+    die "durable custody supervision creation remains; receipt and seal are refused: $supervision_path"
   fi
 }
 
@@ -791,9 +855,14 @@ seal_evidence() {
 
 prepare_receipt_for_seal() {
   local plan_path="$1" plan_digest="$2" observation_path="$3" results_path="$4"
-  if is_v25_plan "$plan_path" || [[ ! -e "$results_path" && ! -L "$results_path" ]]; then
-    # V25 publication is resumable and verifies any existing final bytes;
-    # historical publication retains its original create-only behavior.
+  if is_v25_plan "$plan_path"; then
+    run_v25_custody_command_in_repo_active "$V25_RECEIPT_COMMAND" \
+      -plan "$plan_path" \
+      -plan-digest "$plan_digest" \
+      -observation "$observation_path" \
+      -output "$results_path"
+  elif [[ ! -e "$results_path" && ! -L "$results_path" ]]; then
+    # Historical publication retains its original create-only behavior.
     (cd "$REPO_REAL" && plan_go "$plan_path" \
       go run ./spike/t4013/cmd/t4013-receipt \
       -plan "$plan_path" \
@@ -820,15 +889,26 @@ seal_run() {
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
   acquire_run_lock "$run_root"
   verification_preflight_for_plan "$plan_path"
+  if is_v25_plan "$plan_path"; then
+    initialize_v25_custody_commands
+  fi
   select_signing_key "$ceremony_id"
   ensure_signing_key
   [[ -d "$evidence_root" && ! -L "$evidence_root" && -d "$private_root" && ! -L "$private_root" ]] ||
     die "ceremony evidence or private directory is invalid"
+  plan_digest="$(plan_digest_for "$plan_path")"
   if [[ -e "$custody_path" || -L "$custody_path" ]]; then
     [[ -d "$custody_path" && ! -L "$custody_path" ]] || die "private custody is invalid"
     if [[ -e "${custody_path}/.t4013-executed" || -L "${custody_path}/.t4013-executed" ]]; then
       die "marker-bearing executed custody remains for separately reviewed purge"
     fi
+  fi
+  if is_v25_plan "$plan_path" &&
+    [[ -e "${evidence_root}/observation.json.teardown" || -L "${evidence_root}/observation.json.teardown" ||
+      -e "${evidence_root}/observation.json.teardown.tmp" || -L "${evidence_root}/observation.json.teardown.tmp" ]]; then
+    prepare_receipt_for_seal \
+      "$plan_path" "$plan_digest" \
+      "${evidence_root}/observation.json" "${evidence_root}/results.json"
   fi
   if [[ -e "$prepared_path" || -L "$prepared_path" ||
     -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
@@ -843,20 +923,21 @@ seal_run() {
   fi
   [[ ! -e "$custody_path" && ! -L "$custody_path" ]] || die "private custody remains"
   [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "private ceremony state remains"
+  refuse_supervision_residue "$custody_path"
   require_clean_checkout
-  plan_digest="$(plan_digest_for "$plan_path")"
   prepare_receipt_for_seal \
     "$plan_path" "$plan_digest" \
     "${evidence_root}/observation.json" "${evidence_root}/results.json"
   [[ -f "${evidence_root}/observation.json" && ! -L "${evidence_root}/observation.json" ]] ||
     die "source-free observation is absent after resume"
+  refuse_supervision_residue "$custody_path"
   seal_evidence "$ceremony_id"
 }
 
 execute_ceremony() {
   local ceremony_id="$1" approved_digest="$2" approval="$3"
   local run_root evidence_root private_root plan_path prepared_path observation_path results_path custody_path
-  local actual_digest prepare_status execute_status path
+  local actual_digest prepare_status execute_status path supervision_path
   reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   initialize_repository
@@ -872,6 +953,7 @@ execute_ceremony() {
   observation_path="${evidence_root}/observation.json"
   results_path="${evidence_root}/results.json"
   custody_path="${run_root}/custody"
+  supervision_path="${custody_path}.t4013-supervision"
   [[ -d "$run_root" && ! -L "$run_root" && -d "$evidence_root" && -d "$private_root" ]] ||
     die "frozen ceremony directory is missing or invalid"
   acquire_run_lock "$run_root"
@@ -879,9 +961,10 @@ execute_ceremony() {
   for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing" \
     "$observation_path" "${observation_path}.tmp" \
     "${observation_path}.teardown" "${observation_path}.teardown.tmp" \
-    "$results_path" "${results_path}.tmp" "$custody_path"; do
+    "$results_path" "${results_path}.tmp" "$custody_path" "$supervision_path"; do
     [[ ! -e "$path" && ! -L "$path" ]] || die "ceremony output or custody already exists: $path"
   done
+  refuse_supervision_residue "$custody_path"
   actual_digest="$(plan_digest_for "$plan_path")"
   [[ "$approved_digest" == "$actual_digest" ]] || die "approved plan digest differs from the frozen plan"
   require_exact_inventory "$evidence_root" allowed_signers freeze.json freeze.json.sig plan.json signer.pub
@@ -896,9 +979,10 @@ execute_ceremony() {
   for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing" \
     "$observation_path" "${observation_path}.tmp" \
     "${observation_path}.teardown" "${observation_path}.teardown.tmp" \
-    "$results_path" "${results_path}.tmp" "$custody_path"; do
+    "$results_path" "${results_path}.tmp" "$custody_path" "$supervision_path"; do
     [[ ! -e "$path" && ! -L "$path" ]] || die "ceremony output or custody appeared during preflight: $path"
   done
+  refuse_supervision_residue "$custody_path"
   actual_digest="$(plan_digest_for "$plan_path")"
   [[ "$approved_digest" == "$actual_digest" ]] || die "approved plan digest changed during preflight"
   require_exact_inventory "$evidence_root" allowed_signers freeze.json freeze.json.sig plan.json signer.pub
@@ -908,16 +992,29 @@ execute_ceremony() {
   EXIT_PREPARED_MANIFEST="$prepared_path"
   EXIT_PREPARED_WORKSPACE="$custody_path"
   prepare_status=0
-  plan_go_in_repo_active "$plan_path" \
-    go run ./spike/t4013/cmd/t4013-prepare \
-    -root "$REPO_REAL" \
-    -workspace "$custody_path" \
-    -plan "$plan_path" \
-    -output "$prepared_path" \
-    -base-port "$BASE_PORT" \
-    -confirm "$PREPARE_CONFIRM" || prepare_status=$?
+  if is_v25_plan "$plan_path"; then
+    require_v25_custody_command "$V25_PREPARE_COMMAND" ||
+      die "V25 Prepare cannot start without its prebuilt command"
+    run_v25_custody_command_in_repo_active "$V25_PREPARE_COMMAND" \
+      -root "$REPO_REAL" \
+      -workspace "$custody_path" \
+      -plan "$plan_path" \
+      -output "$prepared_path" \
+      -base-port "$BASE_PORT" \
+      -confirm "$PREPARE_CONFIRM" || prepare_status=$?
+  else
+    plan_go_in_repo_active "$plan_path" \
+      go run ./spike/t4013/cmd/t4013-prepare \
+      -root "$REPO_REAL" \
+      -workspace "$custody_path" \
+      -plan "$plan_path" \
+      -output "$prepared_path" \
+      -base-port "$BASE_PORT" \
+      -confirm "$PREPARE_CONFIRM" || prepare_status=$?
+  fi
   if (( prepare_status != 0 )); then
     if is_v25_plan "$plan_path" && [[ -e "$custody_path" || -L "$custody_path" ||
+      -e "$supervision_path" || -L "$supervision_path" ||
       -e "$prepared_path" || -L "$prepared_path" ||
       -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
       -e "${prepared_path}.preparing" || -L "${prepared_path}.preparing" ]]; then
@@ -931,13 +1028,24 @@ execute_ceremony() {
   EXIT_PREPARED_MANIFEST=""
   EXIT_PREPARED_WORKSPACE=""
   execute_status=0
-  plan_go_in_repo_active "$plan_path" \
-    go run ./spike/t4013/cmd/t4013-execute \
-    -root "$REPO_REAL" \
-    -plan "$plan_path" \
-    -prepared "$prepared_path" \
-    -observation "$observation_path" \
-    -confirm "$EXECUTE_CONFIRM" || execute_status=$?
+  if is_v25_plan "$plan_path"; then
+    require_v25_custody_command "$V25_EXECUTE_COMMAND" ||
+      die "V25 Execute cannot start without its prebuilt command"
+    run_v25_custody_command_in_repo_active "$V25_EXECUTE_COMMAND" \
+      -root "$REPO_REAL" \
+      -plan "$plan_path" \
+      -prepared "$prepared_path" \
+      -observation "$observation_path" \
+      -confirm "$EXECUTE_CONFIRM" || execute_status=$?
+  else
+    plan_go_in_repo_active "$plan_path" \
+      go run ./spike/t4013/cmd/t4013-execute \
+      -root "$REPO_REAL" \
+      -plan "$plan_path" \
+      -prepared "$prepared_path" \
+      -observation "$observation_path" \
+      -confirm "$EXECUTE_CONFIRM" || execute_status=$?
+  fi
   if [[ -e "$custody_path" || -L "$custody_path" ]]; then
     # Persistence and custody destruction are separate boundaries. Even when
     # a complete observation exists, any surviving custody means Execute did
@@ -950,21 +1058,30 @@ execute_ceremony() {
     EXIT_UNPROVEN_REASON="execution child status ${execute_status} without final observation"
     die "execution stopped without final source-free authority; operation state retained"
   fi
+  if is_v25_plan "$plan_path"; then
+    if ! prepare_receipt_for_seal \
+      "$plan_path" "$actual_digest" "$observation_path" "$results_path"; then
+      if [[ -e "$supervision_path" || -L "$supervision_path" ]]; then
+        EXIT_UNPROVEN_REASON="execution child status ${execute_status} with durable supervision"
+      fi
+      die "execution result could not reach exact terminal supervision and evidence state"
+    fi
+  fi
   if ! cleanup_prepared "$plan_path" "$prepared_path"; then
     die "exact private prepared manifest cleanup failed"
   fi
-  for path in "$custody_path" "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing"; do
+  for path in "$custody_path" "$supervision_path" "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing"; do
     [[ ! -e "$path" && ! -L "$path" ]] || die "private custody survived execution cleanup: $path"
   done
+  refuse_supervision_residue "$custody_path"
   require_clean_checkout
-  (cd "$REPO_REAL" && plan_go "$plan_path" \
-    go run ./spike/t4013/cmd/t4013-receipt \
-    -plan "$plan_path" \
-    -plan-digest "$actual_digest" \
-    -observation "$observation_path" \
-    -output "$results_path")
+  if ! is_v25_plan "$plan_path"; then
+    prepare_receipt_for_seal \
+      "$plan_path" "$actual_digest" "$observation_path" "$results_path"
+  fi
   [[ -f "$observation_path" && ! -L "$observation_path" ]] ||
     die "execution produced no source-free observation after resume; no evidence was sealed"
+  refuse_supervision_residue "$custody_path"
   seal_evidence "$ceremony_id"
   if (( execute_status == 0 )); then
     note "ceremony completed; the sealed receipt still requires independent review"

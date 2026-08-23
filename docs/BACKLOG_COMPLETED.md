@@ -9703,3 +9703,74 @@ child start remain T40.13c. This adds no production request/query, sync,
 startup/restart, retry/no-op, publication, corpus/shard read, public schema,
 freeze, ceremony, release, topology/bound, or scale/SLO authority. T40.13c is
 next.
+
+**T40.13c ✅ · Durable hard-death descendant supervision** *(2026-08-23;
+high)* — replaces V25's in-memory session/one-shot absence inference with an
+equivalent external kernel-lock proof. Prepare first durably records one random
+256-bit supervision token in its cleanup control. It then creates
+`<workspace>.t4013-supervision.creating.<token>` with strict controller,
+descendant-lease, and bounded state files, syncs it, and atomically renames it
+to `<workspace>.t4013-supervision` before any host-tool, Git/archive,
+authoring, server, backup/restore, SurrealDB, or indexer child can start. An
+exact-token retry can finish a crash-interrupted creation; a conflicting stage,
+published control, or retirement shape fails closed.
+
+The controller lock is close-on-exec and identifies the one current controller.
+The descendant lease is reserved at file descriptor 64 or higher and inherited
+by every supported child subtree while the operation is live or finalizing.
+Drain closes the controller's copy and can acquire a fresh exclusive lease only
+after every descendant copy has closed. This proof is independent of PID,
+PPID, process session, and intermediate process lifetime: executor SIGKILL/OOM,
+PID reuse, `setsid`, and fork/exit churn cannot manufacture absence. If the
+controller dies while durable state is `live` or `finalizing`, a surviving
+lease reports live; after the last descendant exits, the unchanged active state
+is indeterminate and remains retained. Only the owning controller can publish
+`drained` or `terminal`.
+
+Exact token, plan digest, canonical workspace, operation, phase, and teardown
+checkpoint digest bind every restart inspection. Prepare drains to a reusable
+control; Execute adopts only that exact drained authority. Cleanup, Destroy,
+Execute resume, and receipt resume reject live, mismatched, malformed, or
+indeterminate state. Execute drains against its durable checkpoint, enters
+`finalizing` so post-delete verifier children inherit the same lease, proves a
+second terminal drain after custody deletion, and retires supervision while the
+external prepared/checkpoint controls remain authoritative. Only after exact
+retirement is durably confirmed does teardown remove those controls. Retirement
+commits by renaming through `.retiring`, keeps the strict terminal state
+independently at `.retired` while removing the locks and directory, syncs every
+parent transition, and lets an exact restart complete the same retirement
+without treating partial deletion as absence.
+
+The supported shell prebuilds direct V25 Prepare, Execute, Cleanup, and receipt
+commands before operation admission and starts them in the closed environment
+without an outer `go run` or an immediately preceding Go/module-verification
+process. Full process-launching production/rehearsal suites remain branch gates
+and are no longer rerun inside the expensive ceremony preflight. Receipt resume
+may consume only exact drained/terminal authority; a supervision path surviving
+that exact recovery blocks further publication and seal. Any abnormal command
+result that cannot reach exact terminal authority retains the run lock, cache,
+controls, and custody. Historical V1–V24 bytes and supported CLI flow remain
+unchanged; direct legacy Destroy intentionally tightens symlink and
+stable/retiring/retired V25-supervision refusal.
+
+Default bounded tests cover every atomic creation/retirement crash boundary,
+controller SIGKILL with intermediate-exit and session-escaped descendants,
+finalizer-child drain, mismatched recovery authority, exact
+Cleanup/Destroy/resume outcomes, direct-command shell dispatch, residue refusal,
+real Git/archive, and controlled server/backup/restore inheritance with exact
+lease-inode checks. On Darwin, four isolated opt-in gates passed for Go-run
+transitive inheritance, direct `zoekt-git-index`, Phebs-to-Surreal hard-death
+inheritance after sampler shutdown, and direct Phebs backup/restore roots.
+These are branch evidence, not independent proof of every
+compiler/linker/indexer/restore descendant and not a rehearsal or ceremony
+pass. The active ceremony cost is two advisory locks/two
+controller descriptors and one inherited lease descriptor per descendant. Each
+state transition rewrites and syncs one at-most-2-KiB file; create/retire uses a
+fixed number of small-file renames and syncs. Restart inspection is O(1) over
+one bounded directory, one state file, and two lock attempts, with no unrelated
+process, source, corpus, or shard scan.
+No production request/query, sync tick, startup/restart, retry/no-op,
+publication, lock, cache, memory, disk, or child path gains work. Failure may
+retain the already-bounded custody plus small control/cache authority for a
+separately reviewed purge. T40.13d is next. No freeze, ceremony, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.

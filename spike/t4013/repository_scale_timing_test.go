@@ -117,20 +117,41 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	workspace := filepath.Join(parent, "t4013-repository-scale-timing-"+commit[:12])
-	prepared, err := Prepare(ctx, PrepareRequest{
+	preparedPath := filepath.Join(parent, "t4013-repository-scale-timing-prepared-"+commit[:12]+".json")
+	prepared, err := PrepareToOutput(ctx, PrepareRequest{
 		ModuleRoot: moduleRoot, Workspace: workspace, PlanPath: planPath,
 		Confirm: PrepareConfirm, BasePort: 42731,
-	})
+	}, preparedPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
 		if retainDiagnostic {
-			t.Logf("repository-scale diagnostic custody retained at %s", workspace)
+			t.Logf("repository-scale diagnostic custody retained at %s with control %s", workspace, preparedPath)
 			return
 		}
-		if cleanupErr := DestroyPrepared(prepared, moduleRoot); cleanupErr != nil {
+		if cleanupErr := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); cleanupErr != nil {
 			t.Errorf("destroy repository-scale timing custody: %v", cleanupErr)
+		}
+	}()
+	supervision, err := beginExecuteCustody(workspace, PlanDigest(planBytes), prepared.SupervisionToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	supervisionLive := true
+	defer func() {
+		if retainDiagnostic {
+			_ = supervision.Close()
+			return
+		}
+		if supervisionLive {
+			if abortErr := supervision.AbortExecuteAdmission(); abortErr != nil {
+				retainDiagnostic = true
+				t.Errorf("drain repository-scale timing supervision: %v", abortErr)
+			}
+		}
+		if closeErr := supervision.Close(); closeErr != nil {
+			t.Errorf("close repository-scale timing supervision: %v", closeErr)
 		}
 	}()
 	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, workspace)
@@ -221,6 +242,11 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	running = false
+	if err := supervision.AbortExecuteAdmission(); err != nil {
+		retainDiagnostic = true
+		t.Fatal(err)
+	}
+	supervisionLive = false
 	if observationCurrent <= 0 || progress.Total <= 0 || timing.SchedulerSettled == 0 {
 		t.Fatalf("incomplete timing evidence: observation=%s progress=%+v timing=%+v", observationCurrent, progress, timing)
 	}

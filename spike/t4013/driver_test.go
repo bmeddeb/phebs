@@ -134,6 +134,9 @@ func TestCeremonyDriverClosesAmbientGoAndRehearsalEnvironment(t *testing.T) {
 source "$1"
 trap cleanup_on_exit EXIT
 initialize_closed_go_cache
+initial_cache="$CLOSED_GO_CACHE"
+initialize_closed_go_cache
+[[ "$CLOSED_GO_CACHE" == "$initial_cache" ]]
 export GOFLAGS=-tags=ambient GOWORK=/private/ambient.work PHEBS_T4013_REPOSITORY_SCALE_TIMING=1
 closed_go env
 `
@@ -237,6 +240,87 @@ if plan_go "$2" ignored-command; then exit 0; fi
 	command.Env = append(os.Environ(), "MARKER="+marker)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("failed verification did not stop plan command: %v: %s", err, output)
+	}
+}
+
+func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testing.T) {
+	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	preflight := source[strings.Index(source, "\npreflight() {\n"):strings.Index(source, "\nverification_preflight() {\n")]
+	verification := source[strings.Index(source, "\nverification_preflight() {\n"):strings.Index(source, "\nhistorical_require_clean_checkout() {\n")]
+	for name, section := range map[string]string{"preflight": preflight, "verification preflight": verification} {
+		if strings.Contains(section, "go test") || strings.Contains(section, "PHEBS_T4013_READINESS_REHEARSAL") {
+			t.Fatalf("%s still starts an unsupervised process-launching test suite", name)
+		}
+	}
+	if !strings.Contains(preflight, "initialize_v25_custody_commands") {
+		t.Fatal("preflight does not prebuild the V25 custody commands")
+	}
+	seal := source[strings.Index(source, "\nseal_run() {\n"):strings.Index(source, "\nexecute_ceremony() {\n")]
+	if !strings.Contains(seal, "initialize_v25_custody_commands") {
+		t.Fatal("resumable seal does not prebuild V25 cleanup before admission")
+	}
+	for _, marker := range []string{
+		"go build -o \"${command_root}/\"",
+		"./spike/t4013/cmd/t4013-cleanup",
+		"./spike/t4013/cmd/t4013-execute",
+		"./spike/t4013/cmd/t4013-prepare",
+		"./spike/t4013/cmd/t4013-receipt",
+		"run_v25_custody_command_in_repo_active",
+		"require_v25_custody_command \"$V25_CLEANUP_COMMAND\"",
+		"require_v25_custody_command \"$V25_EXECUTE_COMMAND\"",
+		"require_v25_custody_command \"$V25_PREPARE_COMMAND\"",
+		"$V25_RECEIPT_COMMAND",
+	} {
+		if !strings.Contains(source, marker) {
+			t.Fatalf("direct V25 custody-command marker is absent: %s", marker)
+		}
+	}
+	direct := source[strings.Index(source, "\nrun_v25_custody_command_in_repo_active() {\n"):strings.Index(source, "\nrequire_v25_custody_command() {\n")]
+	if strings.Contains(direct, "plan_go") || strings.Contains(direct, "go mod verify") {
+		t.Fatal("direct V25 operation wrapper starts an unsupervised Go verification process")
+	}
+}
+
+func TestCeremonyDriverRefusesDurableSupervisionResidue(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `source "$1"; refuse_supervision_residue "$2"`
+	root := t.TempDir()
+	custody := filepath.Join(root, "absent", "custody")
+	if err := os.Mkdir(filepath.Dir(custody), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("bash", "-c", script, "supervision-absent", driver, custody).CombinedOutput(); err != nil {
+		t.Fatalf("absent supervision was refused: %v: %s", err, output)
+	}
+	for _, suffix := range []string{"", ".creating.token", ".retiring", ".retired"} {
+		t.Run(suffix, func(t *testing.T) {
+			custody := filepath.Join(root, strings.TrimPrefix(suffix, "."), "custody")
+			if err := os.MkdirAll(filepath.Dir(custody), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			residue := custody + ".t4013-supervision" + suffix
+			if suffix == ".retired" {
+				if err := os.WriteFile(residue, []byte("terminal\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.Mkdir(residue, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			output, err := exec.Command("bash", "-c", script, "supervision-present", driver, custody).CombinedOutput()
+			if err == nil || !bytes.Contains(output, []byte("receipt and seal are refused")) {
+				t.Fatalf("retained supervision %q was accepted: err=%v output=%s", suffix, err, output)
+			}
+		})
 	}
 }
 
@@ -638,6 +722,10 @@ cmp() { :; }
 verify_frozen_identity() { :; }
 preflight_for_plan() { :; }
 require_clean_checkout() { :; }
+require_v25_custody_command() { :; }
+V25_PREPARE_COMMAND=t4013-prepare
+V25_EXECUTE_COMMAND=t4013-execute
+V25_RECEIPT_COMMAND=t4013-receipt
 cleanup_prepared() {
   : > "$CLEANUP_MARKER"
   [[ ! -d "$RUN_ROOT/custody" ]] || rmdir "$RUN_ROOT/custody"
@@ -646,7 +734,27 @@ cleanup_prepared() {
 }
 plan_go() { : > "$RECEIPT_MARKER"; }
 seal_evidence() { : > "$SEAL_MARKER"; }
+run_v25_custody_command_in_repo_active() {
+  if [[ "$1" == *t4013-receipt* ]]; then
+    : > "$RECEIPT_MARKER"
+    return 0
+  fi
+  if [[ "$1" == *t4013-prepare* ]]; then
+    mkdir "$RUN_ROOT/custody"
+    if [[ "$FAIL_PHASE" == prepare ]]; then
+      : > "$RUN_ROOT/private/prepared.json.preparing"
+      return 9
+    fi
+    : > "$RUN_ROOT/private/prepared.json"
+    return 0
+  fi
+  rmdir "$RUN_ROOT/custody"
+  return 9
+}
 plan_go_in_repo_active() {
+  if is_v25_plan "$1" && [[ "$2" == go ]]; then
+    return 88
+  fi
   if [[ "$*" == *t4013-prepare* ]]; then
     mkdir "$RUN_ROOT/custody"
     if [[ "$FAIL_PHASE" == prepare ]]; then
@@ -782,6 +890,12 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 			script := `
 source "$1"
 REPO_REAL="$2"
+V25_RECEIPT_COMMAND=t4013-receipt
+require_v25_custody_command() { :; }
+run_v25_custody_command_in_repo_active() {
+  : > "$MARKER"
+  [[ -e "$RESULTS_PATH" ]] || printf 'resumed receipt\n' > "$RESULTS_PATH"
+}
 plan_go() {
   : > "$MARKER"
   [[ -e "$RESULTS_PATH" ]] || printf 'resumed receipt\n' > "$RESULTS_PATH"
