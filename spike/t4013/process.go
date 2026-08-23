@@ -13,35 +13,48 @@ import (
 	"os/exec"
 	pathpkg "path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-const privateToolchainSchema = "t4013-private-toolchain-v1"
+const (
+	privateToolchainSchema = "t4013-private-toolchain-v1"
+	processProbeTimeout    = 2 * time.Second
+	maxProcessProbeBytes   = 128 << 10
+)
+
+var errPrivateServerShutdownUnproven = errors.New("T40.13 private process session shutdown is unproven")
 
 type privateToolchain struct {
-	Schema  string
-	Phebs   string
-	Zoekt   string
-	Focused string
-	Buf     string
+	Schema            string
+	Phebs             string
+	Zoekt             string
+	Focused           string
+	Buf               string
+	TempDir           string
+	ClosedEnvironment bool
 }
 
 type privateServer struct {
-	command  *exec.Cmd
-	started  time.Time
-	done     chan error
-	log      *os.File
-	logPath  string
-	sampler  *rssSampler
-	stopOnce sync.Once
-	stopErr  error
+	command          *exec.Cmd
+	sessionID        int
+	sessionIsolated  bool
+	started          time.Time
+	done             chan error
+	log              *os.File
+	logPath          string
+	sampler          *rssSampler
+	stopOnce         sync.Once
+	stopErr          error
+	shutdownUnproven bool
 }
 
 type rssSampler struct {
 	pid           int
+	strict        bool
 	stop          chan struct{}
 	done          chan struct{}
 	mu            sync.Mutex
@@ -50,24 +63,95 @@ type rssSampler struct {
 	gitChildren   map[int]struct{}
 	indexChildren map[int]struct{}
 	otherChildren map[int]struct{}
+	err           error
 }
 
-func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (privateToolchain, error) {
-	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) {
-		return privateToolchain{}, errors.New("T40.13 toolchain scope is invalid")
+type frozenSourceExportContract uint8
+
+const (
+	frozenSourceExportLegacy frozenSourceExportContract = iota
+	frozenSourceExportV25
+)
+
+func frozenSourceExportContractForPlan(schema string) frozenSourceExportContract {
+	if planSchemaVersion(schema) >= 25 {
+		return frozenSourceExportV25
+	}
+	return frozenSourceExportLegacy
+}
+
+func buildPrivateToolchain(
+	ctx context.Context, moduleRoot, workspace string, plan Plan,
+) (toolchain privateToolchain, metrics PhaseMetrics, retErr error) {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) ||
+		(frozenSourceExportContractForPlan(plan.Schema) == frozenSourceExportV25 && !hexIdentity(plan.SourceCommit, 40)) {
+		return privateToolchain{}, PhaseMetrics{}, errors.New("T40.13 toolchain scope is invalid")
+	}
+	v25 := planSchemaVersion(plan.Schema) >= 25
+	started := time.Now()
+	privateTemp := ""
+	if v25 {
+		privateTemp = filepath.Join(workspace, "tmp")
+		if err := os.Mkdir(privateTemp, 0o700); err != nil {
+			return privateToolchain{}, PhaseMetrics{}, errors.New("T40.13 private temporary directory is not new")
+		}
+	}
+	var allocation *allocationSampler
+	if v25 {
+		_, allocated, err := measureDataBytesForContract(workspace, true)
+		if err != nil {
+			return privateToolchain{}, PhaseMetrics{}, err
+		}
+		allocation, err = newAllocationSampler(workspace, allocated)
+		if err != nil {
+			return privateToolchain{}, PhaseMetrics{}, err
+		}
+		defer func() {
+			logical, allocated, measureErr := measureDataBytesForContract(workspace, true)
+			peakAllocated, allocationErr := allocation.close()
+			metrics.WallMS = time.Since(started).Milliseconds()
+			metrics.DataLogicalBytes = max(metrics.DataLogicalBytes, logical)
+			metrics.DataAllocatedBytes = max(metrics.DataAllocatedBytes, allocated, peakAllocated)
+			retErr = errors.Join(retErr, measureErr, allocationErr)
+		}()
 	}
 	source := filepath.Join(workspace, "toolchain-source")
-	if err := exportFrozenSource(ctx, moduleRoot, source); err != nil {
-		return privateToolchain{}, err
+	if v25 {
+		exportMetrics, err := exportReviewedSourceMeasured(ctx, moduleRoot, plan.SourceCommit, source, workspace)
+		metrics = mergeMetrics(metrics, exportMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+	} else if err := exportFrozenSourceForPlan(ctx, moduleRoot, plan, source); err != nil {
+		return privateToolchain{}, PhaseMetrics{}, err
 	}
 	output := filepath.Join(workspace, "toolchain")
 	if err := os.Mkdir(output, 0o700); err != nil {
-		return privateToolchain{}, err
+		return privateToolchain{}, metrics, err
 	}
-	toolchain := privateToolchain{
+	buildCache := filepath.Join(workspace, "go-build-cache")
+	if v25 {
+		if err := os.Mkdir(buildCache, 0o700); err != nil {
+			return privateToolchain{}, metrics, errors.New("T40.13 private Go build cache is not new")
+		}
+	}
+	if v25 {
+		command := exec.CommandContext(ctx, "go", "mod", "verify")
+		command.Dir = source
+		command.Env = executionEnvironmentForPlan(plan, privateTemp)
+		command.Stdout, command.Stderr = io.Discard, io.Discard
+		commandMetrics, err := runMeasuredCommand(command, workspace, true)
+		metrics = mergeMetrics(metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, errors.New("T40.13 module cache verification failed")
+		}
+	}
+	toolchain = privateToolchain{
 		Schema: privateToolchainSchema,
 		Phebs:  filepath.Join(output, "phebs"), Zoekt: filepath.Join(output, "zoekt-git-index"),
 		Focused: filepath.Join(output, "phebs-focused-index"), Buf: filepath.Join(output, "buf"),
+		TempDir:           privateTemp,
+		ClosedEnvironment: v25,
 	}
 	builds := []struct {
 		output string
@@ -81,26 +165,94 @@ func buildPrivateToolchain(ctx context.Context, moduleRoot, workspace string) (p
 	}
 	for _, build := range builds {
 		if _, err := os.Lstat(build.output); err == nil || !os.IsNotExist(err) {
-			return privateToolchain{}, errors.New("T40.13 toolchain output already exists")
+			return privateToolchain{}, metrics, errors.New("T40.13 toolchain output already exists")
 		}
 		command := exec.CommandContext(ctx, "go", build.args...)
 		command.Dir = source
-		command.Env = append(scrubExecutionEnvironment(), build.env...)
-		if output, err := command.CombinedOutput(); err != nil {
+		command.Env = executionEnvironmentForPlan(plan, privateTemp)
+		if v25 {
+			command.Env = append(command.Env, "GOCACHE="+buildCache)
+		}
+		command.Env = append(command.Env, build.env...)
+		if v25 {
+			command.Stdout, command.Stderr = io.Discard, io.Discard
+			commandMetrics, err := runMeasuredCommand(command, workspace, true)
+			metrics = mergeMetrics(metrics, commandMetrics)
+			if err != nil {
+				return privateToolchain{}, metrics, errors.New("T40.13 toolchain build failed")
+			}
+		} else if output, err := command.CombinedOutput(); err != nil {
 			_ = output
-			return privateToolchain{}, errors.New("T40.13 toolchain build failed")
+			return privateToolchain{}, PhaseMetrics{}, errors.New("T40.13 toolchain build failed")
 		}
 	}
-	return toolchain, nil
+	if v25 {
+		command := exec.CommandContext(ctx, "go", "mod", "verify")
+		command.Dir = source
+		command.Env = executionEnvironmentForPlan(plan, privateTemp)
+		command.Stdout, command.Stderr = io.Discard, io.Discard
+		commandMetrics, err := runMeasuredCommand(command, workspace, true)
+		metrics = mergeMetrics(metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, errors.New("T40.13 module cache changed during private toolchain build")
+		}
+		if err := os.RemoveAll(buildCache); err != nil {
+			return privateToolchain{}, metrics, errors.New("T40.13 private Go build cache cleanup failed")
+		}
+	}
+	return toolchain, metrics, nil
 }
 
+func runCustodyCombinedOutput(command *exec.Cmd) ([]byte, error) {
+	if command == nil {
+		return nil, errors.New("T40.13 custody command is invalid")
+	}
+	if err := isolatePrivateServerSession(command); err != nil {
+		return nil, err
+	}
+	output, commandErr := command.CombinedOutput()
+	if command.Process == nil {
+		return output, commandErr
+	}
+	return output, errors.Join(commandErr, finishCustodyCommandSession(command.Process.Pid))
+}
+
+func finishCustodyCommandSession(pid int) error {
+	sessionErr := waitPrivateServerSession(pid, time.Now().Add(5*time.Second))
+	if sessionErr == nil {
+		return nil
+	}
+	killErr := killPrivateServerSession(pid)
+	killWaitErr := waitPrivateServerSession(pid, time.Now().Add(5*time.Second))
+	result := errors.Join(
+		errors.New("T40.13 custody command left a surviving process session"),
+		sessionErr, killErr, killWaitErr,
+	)
+	if killWaitErr != nil {
+		result = errors.Join(result, errPrivateServerShutdownUnproven)
+	}
+	return result
+}
+
+func exportFrozenSourceForPlan(ctx context.Context, moduleRoot string, plan Plan, output string) error {
+	if frozenSourceExportContractForPlan(plan.Schema) == frozenSourceExportLegacy {
+		return exportFrozenSource(ctx, moduleRoot, output)
+	}
+	return exportReviewedSource(ctx, moduleRoot, plan.SourceCommit, output)
+}
+
+// exportFrozenSource preserves the exact V1-V24 git archive contract.
 func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
 	if err := os.Mkdir(output, 0o700); err != nil {
 		return err
 	}
 	command := exec.CommandContext(ctx, "git", "archive", "--format=tar", "HEAD")
 	command.Dir = moduleRoot
-	command.Env = scrubExecutionEnvironment()
+	command.Env = legacyExecutionEnvironment()
+	return extractFrozenSourceCommand(command, output)
+}
+
+func extractFrozenSourceCommand(command *exec.Cmd, output string) error {
 	stream, err := command.StdoutPipe()
 	if err != nil {
 		return err
@@ -121,6 +273,137 @@ func exportFrozenSource(ctx context.Context, moduleRoot, output string) error {
 		return errors.New("T40.13 frozen source export failed")
 	}
 	return nil
+}
+
+func extractFrozenSourceCommandMeasured(
+	command *exec.Cmd, output, dataDir string,
+) (PhaseMetrics, error) {
+	if command == nil || !filepath.IsAbs(output) || !filepath.IsAbs(dataDir) {
+		return PhaseMetrics{}, errors.New("T40.13 measured source export is invalid")
+	}
+	_, allocatedBefore, err := measureDataBytesForContract(dataDir, true)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	allocation, err := newAllocationSampler(dataDir, allocatedBefore)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	closeAllocation := func() error {
+		_, closeErr := allocation.close()
+		return closeErr
+	}
+	if err := isolatePrivateServerSession(command); err != nil {
+		return PhaseMetrics{}, errors.Join(err, closeAllocation())
+	}
+	stream, err := command.StdoutPipe()
+	if err != nil {
+		return PhaseMetrics{}, errors.Join(err, closeAllocation())
+	}
+	started := time.Now()
+	if err := command.Start(); err != nil {
+		return PhaseMetrics{}, errors.Join(err, closeAllocation())
+	}
+	sampler := newRSSSampler(command.Process.Pid, true)
+	sampler.sample()
+	go sampler.run()
+	extractErr := extractFrozenSource(stream, output)
+	if extractErr != nil {
+		_ = command.Process.Kill()
+	}
+	waitErr := command.Wait()
+	sessionErr := finishCustodyCommandSession(command.Process.Pid)
+	samplerCloseErr := sampler.close()
+	logical, allocated, measureErr := measureDataBytesForContract(dataDir, true)
+	peakAllocated, allocationErr := allocation.close()
+	allocated = max(allocated, peakAllocated)
+	metrics := PhaseMetrics{
+		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical,
+		DataAllocatedBytes: allocated, GitChildren: 1,
+	}
+	var descendantGit int64
+	var samplerErr error
+	metrics.PeakRSSBytes, descendantGit, metrics.IndexChildren, metrics.OtherChildren, samplerErr = sampler.metrics()
+	metrics.GitChildren += descendantGit
+	return metrics, errors.Join(
+		extractErr, waitErr, sessionErr, samplerCloseErr, samplerErr, measureErr, allocationErr,
+	)
+}
+
+func exportReviewedSource(ctx context.Context, moduleRoot, sourceCommit, output string) error {
+	return exportReviewedSourceWith(ctx, moduleRoot, sourceCommit, output, extractFrozenSourceCommand)
+}
+
+func exportReviewedSourceMeasured(
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
+) (PhaseMetrics, error) {
+	var metrics PhaseMetrics
+	err := exportReviewedSourceWith(ctx, moduleRoot, sourceCommit, output, func(command *exec.Cmd, output string) error {
+		var err error
+		metrics, err = extractFrozenSourceCommandMeasured(command, output, measureRoot)
+		return err
+	})
+	return metrics, err
+}
+
+func exportReviewedSourceWith(
+	ctx context.Context,
+	moduleRoot, sourceCommit, output string,
+	extract func(*exec.Cmd, string) error,
+) (retErr error) {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(output) || !hexIdentity(sourceCommit, 40) {
+		return errors.New("T40.13 frozen source export scope is invalid")
+	}
+	if extract == nil {
+		return errors.New("T40.13 frozen source export is unavailable")
+	}
+	if err := os.Mkdir(output, 0o700); err != nil {
+		return err
+	}
+	objectPath, err := gitOutputForContract(ctx, moduleRoot, true, "rev-parse", "--git-path", "objects")
+	if err != nil {
+		return err
+	}
+	if !filepath.IsAbs(objectPath) {
+		objectPath = filepath.Join(moduleRoot, objectPath)
+	}
+	objectPath, err = filepath.EvalSymlinks(objectPath)
+	if err != nil {
+		return errors.New("T40.13 frozen source object database is invalid")
+	}
+	objectInfo, err := os.Lstat(objectPath)
+	if err != nil || !objectInfo.IsDir() || objectInfo.Mode()&os.ModeSymlink != 0 {
+		return errors.New("T40.13 frozen source object database is invalid")
+	}
+
+	gitDir, err := os.MkdirTemp(filepath.Dir(output), ".t4013-git-export-")
+	if err != nil {
+		return err
+	}
+	defer func() { retErr = errors.Join(retErr, os.RemoveAll(gitDir)) }()
+	if err := os.Mkdir(filepath.Join(gitDir, "objects"), 0o700); err != nil {
+		return err
+	}
+	if err := os.Mkdir(filepath.Join(gitDir, "refs"), 0o700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/unused\n"), 0o600); err != nil {
+		return err
+	}
+
+	gitCore, err := resolveGitCoreExecutable(ctx)
+	if err != nil {
+		return err
+	}
+	command := exec.CommandContext(ctx, gitCore, "-c", "core.attributesFile="+os.DevNull,
+		"archive", "--format=tar", sourceCommit)
+	command.Dir = moduleRoot
+	command.Env = append(gitEnvironmentForContract(true),
+		"GIT_DIR="+gitDir,
+		"GIT_OBJECT_DIRECTORY="+objectPath,
+		"GIT_NO_REPLACE_OBJECTS=1",
+	)
+	return extract(command, output)
 }
 
 func extractFrozenSource(stream io.Reader, output string) error {
@@ -222,8 +505,18 @@ func launchPrivateServer(
 		return nil, err
 	}
 	command := exec.CommandContext(ctx, toolchain.Phebs, "serve", "-config", profile.Config)
+	if toolchain.ClosedEnvironment {
+		if err := isolatePrivateServerSession(command); err != nil {
+			_ = logFile.Close()
+			return nil, err
+		}
+	}
 	command.Stdout, command.Stderr = logFile, logFile
-	command.Env = append(scrubExecutionEnvironment(),
+	if err := validatePrivateTemporaryDirectory(toolchain); err != nil {
+		_ = logFile.Close()
+		return nil, err
+	}
+	command.Env = append(executionEnvironmentForToolchain(toolchain),
 		"PHEBS_ZOEKT_GIT_INDEX="+toolchain.Zoekt,
 		"PHEBS_FOCUSED_INDEX="+toolchain.Focused,
 		"PHEBS_BUF="+toolchain.Buf,
@@ -235,7 +528,11 @@ func launchPrivateServer(
 	}
 	server := &privateServer{
 		command: command, started: time.Now(), done: make(chan error, 1), log: logFile, logPath: logPath,
-		sampler: newRSSSampler(command.Process.Pid),
+		sampler: newRSSSampler(command.Process.Pid, toolchain.ClosedEnvironment),
+	}
+	if toolchain.ClosedEnvironment {
+		server.sessionID = command.Process.Pid
+		server.sessionIsolated = true
 	}
 	go func() { server.done <- command.Wait() }()
 	go server.sampler.run()
@@ -295,9 +592,9 @@ func observeServerStartup(
 		return ServerStartupObservation{}, errors.New("T40.13 startup observation is invalid")
 	}
 	logBytes, logDigest, stage, err := inspectStartupLog(server.logPath)
-	peakRSS, gitChildren, indexChildren, otherChildren := server.sampler.metrics()
-	if err != nil {
-		return ServerStartupObservation{}, err
+	peakRSS, gitChildren, indexChildren, otherChildren, samplerErr := server.sampler.metrics()
+	if err != nil || samplerErr != nil {
+		return ServerStartupObservation{}, errors.Join(err, samplerErr)
 	}
 	return ServerStartupObservation{
 		Profile: profile, Label: label, Outcome: outcome, LastStage: stage,
@@ -360,34 +657,116 @@ func (server *privateServer) stop(timeout time.Duration) error {
 	if server == nil || server.command == nil || server.command.Process == nil {
 		return nil
 	}
-	server.stopOnce.Do(func() {
-		_ = server.command.Process.Signal(os.Interrupt)
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
-		var waitErr error
-		select {
-		case waitErr = <-server.done:
-		case <-timer.C:
-			_ = server.command.Process.Kill()
-			waitErr = <-server.done
-		}
-		server.sampler.close()
-		closeErr := server.log.Close()
-		if waitErr != nil {
-			var exit *exec.ExitError
-			if !errors.As(waitErr, &exit) || exit.ExitCode() != -1 {
-				server.stopErr = errors.Join(waitErr, closeErr)
-				return
+	if !server.sessionIsolated {
+		server.stopOnce.Do(func() {
+			_ = server.command.Process.Signal(os.Interrupt)
+			timer := time.NewTimer(timeout)
+			defer timer.Stop()
+			var waitErr error
+			select {
+			case waitErr = <-server.done:
+			case <-timer.C:
+				_ = server.command.Process.Kill()
+				waitErr = <-server.done
 			}
+			_ = server.sampler.close()
+			closeErr := server.log.Close()
+			if waitErr != nil {
+				var exit *exec.ExitError
+				if !errors.As(waitErr, &exit) || exit.ExitCode() != -1 {
+					server.stopErr = errors.Join(waitErr, closeErr)
+					return
+				}
+			}
+			server.stopErr = closeErr
+		})
+		return server.stopErr
+	}
+	server.stopOnce.Do(func() {
+		pid := server.command.Process.Pid
+		server.sessionID = pid
+		interrupted, interruptErr := interruptPrivateServerRoot(server.command.Process)
+		deadline := time.Now().Add(timeout)
+		waitErr, parentExited := waitPrivateServerCommand(server.done, deadline)
+		sessionErr := waitPrivateServerSession(pid, deadline)
+		forced := !parentExited || sessionErr != nil
+		var killErr error
+		if forced {
+			killErr = killPrivateServerSession(pid)
+			forcedDeadline := time.Now().Add(5 * time.Second)
+			if !parentExited {
+				waitErr, parentExited = waitPrivateServerCommand(server.done, forcedDeadline)
+			}
+			sessionErr = waitPrivateServerSession(pid, forcedDeadline)
 		}
-		server.stopErr = closeErr
+		samplerErr := server.sampler.close()
+		closeErr := server.log.Close()
+		if forced {
+			server.stopErr = errors.Join(
+				errors.New("T40.13 private server required forced process-session kill"),
+				interruptErr, killErr, waitErr, sessionErr, samplerErr, closeErr,
+			)
+			if !parentExited || sessionErr != nil {
+				server.shutdownUnproven = true
+			}
+			return
+		}
+		if waitErr != nil && (!interrupted || !expectedPrivateServerInterrupt(waitErr)) {
+			server.stopErr = errors.Join(waitErr, interruptErr, samplerErr, closeErr)
+			return
+		}
+		server.stopErr = errors.Join(interruptErr, samplerErr, closeErr)
 	})
+	if server.shutdownUnproven {
+		alive, err := privateServerSessionAlive(server.sessionID)
+		if err != nil || alive {
+			return errors.Join(server.stopErr, errPrivateServerShutdownUnproven, err)
+		}
+		server.shutdownUnproven = false
+	}
 	return server.stopErr
 }
 
-func newRSSSampler(pid int) *rssSampler {
+func waitPrivateServerCommand(done <-chan error, deadline time.Time) (error, bool) {
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		select {
+		case err := <-done:
+			return err, true
+		default:
+			return nil, false
+		}
+	}
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err, true
+	case <-timer.C:
+		return nil, false
+	}
+}
+
+func waitPrivateServerSession(pid int, deadline time.Time) error {
+	for {
+		alive, err := privateServerSessionAlive(pid)
+		if err != nil || !alive {
+			return err
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return errors.New("T40.13 private process session survived its shutdown deadline")
+		}
+		if remaining > 10*time.Millisecond {
+			remaining = 10 * time.Millisecond
+		}
+		time.Sleep(remaining)
+	}
+}
+
+func newRSSSampler(pid int, strict bool) *rssSampler {
 	return &rssSampler{
-		pid: pid, stop: make(chan struct{}), done: make(chan struct{}),
+		pid: pid, strict: strict, stop: make(chan struct{}), done: make(chan struct{}),
 		gitChildren: map[int]struct{}{}, indexChildren: map[int]struct{}{}, otherChildren: map[int]struct{}{},
 	}
 }
@@ -407,11 +786,108 @@ func (sampler *rssSampler) run() {
 }
 
 func (sampler *rssSampler) sample() {
+	if !sampler.strict {
+		sampler.sampleLegacy()
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
+	defer cancel()
+	output, probeErr := boundedCommandOutput(ctx, maxProcessProbeBytes,
+		"/bin/ps", "-Ao", "pid=,ppid=,rss=,comm=")
+	pids, processes, parseErr := parseProcessSnapshot(output, sampler.pid)
+	probeErr = errors.Join(probeErr, parseErr)
+	var total int64
+	for _, pid := range pids {
+		process, ok := processes[pid]
+		if !ok {
+			continue
+		}
+		if process.rssBytes > 1<<63-1-total {
+			probeErr = errors.Join(probeErr, errors.New("T40.13 process RSS observation overflowed"))
+			break
+		}
+		total += process.rssBytes
+	}
+	sampler.mu.Lock()
+	if total > sampler.peakRSS {
+		sampler.peakRSS = total
+	}
+	for _, pid := range pids[1:] {
+		name := processes[pid].name
+		switch {
+		case strings.Contains(name, "zoekt-git-index") || strings.Contains(name, "phebs-focused-index"):
+			sampler.indexChildren[pid] = struct{}{}
+		case filepath.Base(name) == "git":
+			sampler.gitChildren[pid] = struct{}{}
+		default:
+			sampler.otherChildren[pid] = struct{}{}
+		}
+	}
+	if ctx.Err() != nil {
+		probeErr = errors.Join(probeErr, ctx.Err())
+	}
+	sampler.err = errors.Join(sampler.err, probeErr)
+	sampler.samples++
+	sampler.mu.Unlock()
+}
+
+type processSnapshot struct {
+	parent   int
+	rssBytes int64
+	name     string
+}
+
+func parseProcessSnapshot(output []byte, root int) ([]int, map[int]processSnapshot, error) {
+	if root <= 0 {
+		return nil, nil, errors.New("T40.13 process snapshot root is invalid")
+	}
+	processes := make(map[int]processSnapshot)
+	children := make(map[int][]int)
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		if len(fields) < 4 || len(processes) >= 8192 {
+			return nil, nil, errors.New("T40.13 process snapshot is invalid or exceeds its bound")
+		}
+		pid, pidErr := strconv.Atoi(fields[0])
+		parent, parentErr := strconv.Atoi(fields[1])
+		kilobytes, rssErr := strconv.ParseInt(fields[2], 10, 64)
+		if pidErr != nil || parentErr != nil || rssErr != nil || pid <= 0 || parent < 0 ||
+			kilobytes < 0 || kilobytes > (1<<63-1)/1024 {
+			return nil, nil, errors.New("T40.13 process snapshot row is invalid")
+		}
+		if _, exists := processes[pid]; exists {
+			return nil, nil, errors.New("T40.13 process snapshot contains a duplicate PID")
+		}
+		processes[pid] = processSnapshot{
+			parent: parent, rssBytes: kilobytes * 1024, name: strings.Join(fields[3:], " "),
+		}
+		children[parent] = append(children[parent], pid)
+	}
+	result := []int{root}
+	seen := map[int]struct{}{root: {}}
+	for index := 0; index < len(result); index++ {
+		for _, child := range children[result[index]] {
+			if _, exists := seen[child]; exists {
+				return nil, nil, errors.New("T40.13 process snapshot contains a parent cycle")
+			}
+			seen[child] = struct{}{}
+			result = append(result, child)
+			if len(result) > 128 {
+				return nil, nil, errors.New("T40.13 process descendant inventory exceeds its bound")
+			}
+		}
+	}
+	return result, processes, nil
+}
+
+func (sampler *rssSampler) sampleLegacy() {
 	pids := processTree(sampler.pid)
 	var total int64
 	for _, pid := range pids {
-		command := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(pid))
-		output, err := command.Output()
+		output, err := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(pid)).Output()
 		if err != nil {
 			continue
 		}
@@ -442,8 +918,7 @@ func (sampler *rssSampler) sample() {
 func processTree(root int) []int {
 	result := []int{root}
 	for index := 0; index < len(result) && len(result) <= 128; index++ {
-		command := exec.Command("pgrep", "-P", strconv.Itoa(result[index]))
-		output, err := command.Output()
+		output, err := exec.Command("pgrep", "-P", strconv.Itoa(result[index])).Output()
 		if err != nil {
 			continue
 		}
@@ -458,21 +933,44 @@ func processTree(root int) []int {
 }
 
 func processName(pid int) string {
-	command := exec.Command("ps", "-o", "comm=", "-p", strconv.Itoa(pid))
-	output, err := command.Output()
+	output, err := exec.Command("ps", "-o", "comm=", "-p", strconv.Itoa(pid)).Output()
 	if err != nil {
 		return ""
 	}
 	return string(bytesTrimSpace(output))
 }
 
-func (sampler *rssSampler) metrics() (peakRSS, gitChildren, indexChildren, otherChildren int64) {
+func boundedCommandOutput(ctx context.Context, limit int64, name string, args ...string) ([]byte, error) {
+	if ctx == nil || limit <= 0 {
+		return nil, errors.New("T40.13 bounded command output is invalid")
+	}
+	command := exec.CommandContext(ctx, name, args...)
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := command.Start(); err != nil {
+		return nil, err
+	}
+	output, readErr := io.ReadAll(io.LimitReader(stdout, limit+1))
+	if int64(len(output)) > limit {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+		return nil, errors.New("T40.13 command output exceeds its bound")
+	}
+	return output, errors.Join(readErr, command.Wait())
+}
+
+func (sampler *rssSampler) metrics() (peakRSS, gitChildren, indexChildren, otherChildren int64, err error) {
 	if sampler == nil {
-		return 0, 0, 0, 0
+		return 0, 0, 0, 0, nil
 	}
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
-	return sampler.peakRSS, int64(len(sampler.gitChildren)), int64(len(sampler.indexChildren)), int64(len(sampler.otherChildren))
+	if sampler.strict {
+		err = sampler.err
+	}
+	return sampler.peakRSS, int64(len(sampler.gitChildren)), int64(len(sampler.indexChildren)), int64(len(sampler.otherChildren)), err
 }
 
 func (sampler *rssSampler) resetWindow() {
@@ -488,20 +986,65 @@ func (sampler *rssSampler) resetWindow() {
 	sampler.otherChildren = map[int]struct{}{}
 }
 
-func (sampler *rssSampler) close() {
+func (sampler *rssSampler) close() error {
 	if sampler == nil {
-		return
+		return nil
 	}
 	select {
 	case <-sampler.done:
-		return
+		sampler.mu.Lock()
+		defer sampler.mu.Unlock()
+		if sampler.strict {
+			return sampler.err
+		}
+		return nil
 	default:
 	}
 	close(sampler.stop)
 	<-sampler.done
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	if sampler.strict {
+		return sampler.err
+	}
+	return nil
 }
 
 func scrubExecutionEnvironment() []string {
+	result := make([]string, 0, len(os.Environ())+10)
+	for _, entry := range os.Environ() {
+		name, _, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(name, "PHEBS_") || strings.HasPrefix(name, "SURREAL_") || name == "ZOEKT_DISABLE_CATFILE_BATCH" ||
+			strings.HasPrefix(name, "GIT_") || strings.HasPrefix(name, "GO") ||
+			strings.HasPrefix(name, "DYLD_") || strings.HasPrefix(name, "LD_") ||
+			name == "CGO_ENABLED" || name == "DEVELOPER_DIR" || name == "BASH_ENV" || name == "ENV" ||
+			name == "TMPDIR" || name == "TEMP" || name == "TMP" {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return append(result,
+		"CGO_ENABLED=0",
+		"GIT_ATTR_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_NO_LAZY_FETCH=1",
+		"GIT_OPTIONAL_LOCKS=0",
+		"GIT_TERMINAL_PROMPT=0",
+		"GOARCH="+runtime.GOARCH,
+		"GOENV=off",
+		"GOEXPERIMENT=",
+		"GOFLAGS=-mod=readonly",
+		"GOFIPS140=off",
+		"GOOS="+runtime.GOOS,
+		"GOPROXY=off",
+		"GOSUMDB=off",
+		"GOTOOLCHAIN=local",
+		"GOWORK=off",
+	)
+}
+
+func legacyExecutionEnvironment() []string {
 	result := make([]string, 0, len(os.Environ()))
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
@@ -514,6 +1057,40 @@ func scrubExecutionEnvironment() []string {
 	return result
 }
 
+func executionEnvironment(closed bool) []string {
+	if closed {
+		return scrubExecutionEnvironment()
+	}
+	return legacyExecutionEnvironment()
+}
+
+func executionEnvironmentForPlan(plan Plan, tempDir ...string) []string {
+	environment := executionEnvironment(planSchemaVersion(plan.Schema) >= 25)
+	if planSchemaVersion(plan.Schema) >= 25 && len(tempDir) == 1 {
+		environment = append(environment, "TMPDIR="+tempDir[0], "GOTMPDIR="+tempDir[0])
+	}
+	return environment
+}
+
+func executionEnvironmentForToolchain(toolchain privateToolchain) []string {
+	environment := executionEnvironment(toolchain.ClosedEnvironment)
+	if toolchain.ClosedEnvironment {
+		environment = append(environment, "TMPDIR="+toolchain.TempDir, "GOTMPDIR="+toolchain.TempDir)
+	}
+	return environment
+}
+
+func validatePrivateTemporaryDirectory(toolchain privateToolchain) error {
+	if !toolchain.ClosedEnvironment {
+		return nil
+	}
+	info, err := os.Lstat(toolchain.TempDir)
+	if err != nil || !filepath.IsAbs(toolchain.TempDir) || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("T40.13 private temporary directory is invalid")
+	}
+	return nil
+}
+
 func validateToolchain(value privateToolchain) error {
 	if value.Schema != privateToolchainSchema {
 		return errors.New("T40.13 toolchain identity is invalid")
@@ -524,7 +1101,7 @@ func validateToolchain(value privateToolchain) error {
 			return fmt.Errorf("T40.13 toolchain executable is invalid")
 		}
 	}
-	return nil
+	return validatePrivateTemporaryDirectory(value)
 }
 
 func observeToolchain(value privateToolchain) ([]ToolchainObservation, error) {

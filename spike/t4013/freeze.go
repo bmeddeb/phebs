@@ -122,17 +122,26 @@ func FrozenPlan(sourceCommit string) (Plan, error) {
 	return value, nil
 }
 
-// FrozenHostPlan creates the current plan by observing and binding the exact
-// host executables that can influence a ceremony before custody exists.
+// FrozenHostPlan preserves the historical public constructor while binding
+// the current closed host inventory.
 func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err := validateV14ConvergenceRoutes(); err != nil {
 		return Plan{}, err
 	}
-	hostToolchain, err := ObserveHostToolchain(ctx)
+	hostToolchain, err := observeHostToolchain(ctx, true)
 	if err != nil {
 		return Plan{}, err
 	}
 	return freshV25PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
+}
+
+// FrozenHostPlanAtCheckout additionally proves the exact clean checkout used
+// by the ceremony driver before authoring the current plan.
+func FrozenHostPlanAtCheckout(ctx context.Context, moduleRoot, sourceCommit string) (Plan, error) {
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		return Plan{}, err
+	}
+	return FrozenHostPlan(ctx, sourceCommit)
 }
 
 func validateV14ConvergenceRoutes() error {
@@ -397,11 +406,15 @@ func freshV24PlanWithHostToolchain(
 }
 
 func frozenV25PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
-	value, err := frozenV24PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err := validateHostToolchain(hostToolchain, true); err != nil {
+		return Plan{}, err
+	}
+	value, err := frozenV24PlanWithHostToolchain(sourceCommit, hostToolchain[:5])
 	if err != nil {
 		return Plan{}, err
 	}
 	value.Schema = PlanSchemaV25
+	value.HostToolchain = slices.Clone(hostToolchain)
 	value.Safety = frozenSafetyV25
 	if err := ValidatePlan(value); err != nil {
 		return Plan{}, err

@@ -18,15 +18,21 @@ existing output.
 go run ./spike/t4013/cmd/t4013-freeze \
   -root "$PWD" \
   -source-commit <exact-40-hex-execution-commit> \
+  -data-parent /absolute/dedicated/t4013 \
+  -bind-host-toolchain \
   -output /absolute/dedicated/t4013/plan.json
 ```
 
-The v3 plan freezes 24 GiB memory and 120 GiB available-disk prerequisites, an
-eight-hour total safety ceiling, 20 GiB peak RSS, 96 GiB maximum allocated data,
-the production five-attempt ceiling, and a 15-minute per-server health-readiness
-deadline. These are stop/decision fences for one neutral mechanics run, not a
-target SLO or supported-scale claim. They may not be raised after any
-measurement begins.
+The bound-host freeze refuses before emitting a plan when that exact
+filesystem cannot satisfy the current V25 pressure projection. Preparation
+rechecks the same gate after authoring against the measured custody bytes.
+
+The current V25 plan freezes 24 GiB memory and 120 GiB available-disk
+prerequisites, a twelve-hour total safety ceiling, 20 GiB peak RSS, 96 GiB
+maximum allocated data, a 72 GiB pre-pressure custody ceiling, the production
+five-attempt ceiling, and a 15-minute per-server health-readiness deadline.
+These are stop/decision fences for one neutral mechanics run, not a target SLO
+or supported-scale claim. They may not be raised after any measurement begins.
 
 The disk prerequisite reserves the existing filesystem's ten-percent hard
 watermark plus two structural search-generation reservations. That is the
@@ -2929,3 +2935,64 @@ unchanged.
 Any future change that widens an accepted recovery fate must re-derive this
 downstream row against its writers, immediate cleaners, fallback cadence, and
 gate clock before another ceremony is authorized.
+
+### V25 pre-freeze production and harness audit
+
+A fresh freeze must start with `run-large-mac-ceremony.sh preflight`. Before it
+creates a ceremony identity or signing key, that command builds the prospective
+V25 host-bound plan in a temporary directory and checks the exact ceremony
+filesystem against the full 72-GiB pre-pressure projection and the required
+fsync, hard-link, rename, and directory-sync protocol. It then runs the bounded
+production/harness packages and real-binary semantic plus stale-worker
+rehearsals. Freeze repeats the host check to close the preflight/freeze gap.
+
+V25 builds from `plan.source_commit`, not the checkout's later `HEAD`, through
+an isolated Git namespace that excludes ambient config, replacement refs, and
+uncommitted attributes while preserving committed `.gitattributes`. Its Go
+build and runtime controls are closed to ambient `GO*`, `GIT_*`, `PHEBS_*`, and
+zoekt toggles. Historical V1-V24 source and execution environments remain
+unchanged. Each private server owns a process session; graceful shutdown must
+remove the whole session, and a forced or canceled shutdown remains an error. The
+V25 wall clock begins at executor entry, including admission preflight.
+
+Before either a completed or stopped run deletes custody, it durably publishes
+an incomplete `observation.json.teardown` checkpoint beside the future
+observation. After deletion it proves custody absent, rechecks the frozen host
+toolchain, safety, deadline, and a 30-second persistence reserve, then
+atomically publishes `observation.json` and retires the checkpoint. If the
+process dies, `t4013-receipt` treats the checkpoint as authoritative over any
+provisional final or `.tmp`, reconstructs a conservative stopped result, and
+removes both checkpoint names before sealing. The wrapper drops its cleanup
+trap after successful preparation; surviving custody is retained for reviewed
+purge and is never inferred safe to delete from observation existence. A
+crash-released directory lock serializes Execute and resume. Wrapper signals,
+abnormal execution children with retained custody, refused cleanup, and
+incomplete preparation all retain private state rather than deleting it.
+
+The production failure-path review also keeps a retry bit for an entire
+lifecycle owner cycle, durably discards every unpublished resolver, RPC,
+Kafka, and composite relationship stage, and performs cancellation-independent
+pin rollback before publication installation. Once installation is ambiguous,
+pins remain for recovery rather than risking collection of current authority.
+Partial-state inspection reads at most one repository beneath each of four
+relationship roots and refuses more than 4,096 direct controls.
+
+These changes add no query/request work, corpus scan, production schema, or
+authority. A partitioned relationship transition adds one bounded current-root
+open; successful stage-discard defers add only in-memory closed checks. Failure
+cleanup, the five-second failed-cycle retry, bounded shutdown, the pre-freeze
+probe, and constant-size teardown persistence occur only at their named
+transitions.
+
+This review does not authorize preflight or freeze yet. Session identities live
+only in executor memory and a process snapshot cannot prove absence after
+SIGKILL/OOM, PID reuse, session escape, or fork/exit churn. A stable reviewed
+supervisor/sentinel or equivalent external proof must close that boundary.
+Frozen host digests also do not yet bind every later executed path, private
+binaries are not reverified across restarts, and HOME/module/control caches
+remain ambient. The shell serializes supported operations, but direct
+Prepare/Cleanup/Destroy calls still lack the shared V25 run-root lock needed to
+exclude custody mutation races. After those corrections, passing the exact
+module, filesystem, bounded-package, semantic, and stale-worker checks will be
+readiness evidence, not freeze, execution, release, scale/SLO, accuracy,
+completeness, migration, or decommission authorization.

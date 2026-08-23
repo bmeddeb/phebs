@@ -17,6 +17,28 @@ import (
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 )
 
+func TestDirectoryBytesClosesSystemToolOnlyWhenRequested(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "source"), []byte("source"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bin := t.TempDir()
+	if err := os.WriteFile(
+		filepath.Join(bin, "du"), []byte("#!/bin/sh\nprintf '12345\\t%s\\n' \"$2\"\n"), 0o700,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	_, legacyAllocated, err := directoryBytes(t.Context(), root, false)
+	if err != nil || legacyAllocated != 12_641_280 {
+		t.Fatalf("historical allocated bytes = %d, %v", legacyAllocated, err)
+	}
+	_, closedAllocated, err := directoryBytes(t.Context(), root, true)
+	if err != nil || closedAllocated == legacyAllocated {
+		t.Fatalf("closed allocated bytes = %d, %v", closedAllocated, err)
+	}
+}
+
 func TestFrozenEnvelopeIsExactDeterministicAndSourceFree(t *testing.T) {
 	first, err := BuildEnvelope()
 	if err != nil {

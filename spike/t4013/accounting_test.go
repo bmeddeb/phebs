@@ -1,8 +1,10 @@
 package t4013
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -91,5 +93,24 @@ func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
 	second, err := sampler.close()
 	if err != nil || second != peak {
 		t.Fatalf("repeated close = %d, %v; want %d", second, err, peak)
+	}
+}
+
+func TestDataMeasurementProcessContractChangesOnlyAtV25(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("exact data-byte measurement is supported on Linux and macOS")
+	}
+	t.Setenv("PATH", t.TempDir())
+	root := t.TempDir()
+	if _, _, err := measureDataBytesForPlan(Plan{Schema: PlanSchemaV24}, root); err == nil {
+		t.Fatal("historical measurement ignored its ambient du contract")
+	}
+	if _, _, err := measureDataBytesForPlan(Plan{Schema: PlanSchemaV25}, root); err != nil {
+		t.Fatalf("V25 measurement did not use its absolute bounded du contract: %v", err)
+	}
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := duKilobytesContext(canceled, root, false); err == nil {
+		t.Fatal("V25 du measurement ignored its context bound")
 	}
 }

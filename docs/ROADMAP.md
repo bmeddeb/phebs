@@ -1642,6 +1642,34 @@ publish remains immutable and the one-hour lifecycle sweep remains only a
 fallback. This closes a production artifact-hygiene defect without changing
 the V25 schema, gate clock, authority, scheduler, or release posture.
 
+The subsequent production/harness audit closes the cheap-testable failure
+boundaries: full lifecycle cycles retain backlog cadence after any owner error;
+all relationship component stages and pre-install pins have immediate bounded
+cleanup; V25 source/tool execution closes ambient Git/Go controls; its total
+clock starts at executor entry; concurrent Execute/resume is serialized; shell
+signals and cleanup refusals retain private state; incomplete preparation does
+not authorize deletion; and teardown has a durable resumable checkpoint before
+custody destruction. Prospective freeze also checks the exact ceremony
+filesystem against V25 pressure growth and atomic evidence operations. V1-V24
+remain historical.
+
+The same audit therefore refuses freeze. Process sessions are only in-memory
+and a one-shot process inventory cannot prove descendant absence after
+SIGKILL/OOM, PID reuse, session escape, or fork/exit churn; a stable reviewed
+supervisor/sentinel or equivalent external proof is still required. Frozen host
+digests also do not bind each later executed path, private binaries are not
+reverified across restarts, and HOME/module/control caches remain ambient. The
+shell serializes supported operations, but direct Prepare/Cleanup/Destroy calls
+still lack one shared run-root lock and can race custody mutation. The
+review host initially failed `go mod verify` on a modified shared module-cache
+directory and its V25 72-GiB projection missed the below-80% watermark by about
+4 GiB. Explicit cleanup removed the orphan test server and rebuildable Go
+caches, restored module verification, and recovered about 45 GiB; the exact
+prospective filesystem check still runs at every freeze. The remaining
+structural gaps are direct refusals, not bypass candidates.
+No freeze, ceremony, release, T40.13/Epic-40 closure, bound/topology change, or
+scale/SLO claim is authorized.
+
 Production registration of the evidence and Workbench surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an

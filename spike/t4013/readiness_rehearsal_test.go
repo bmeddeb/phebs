@@ -49,11 +49,11 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sourceCommit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
+	sourceCommit, err := gitOutputForContract(ctx, moduleRoot, true, "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCleanCheckout(ctx, moduleRoot, sourceCommit); err != nil {
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
 		t.Fatal(err)
 	}
 	workspace := t.TempDir()
@@ -96,8 +96,11 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	result := captureSemanticColdConvergence(t, ctx, profile, server, "a", 4*time.Hour)
 	captureWall := time.Since(started)
 	coldWall := time.Duration(result.coldWallMS) * time.Millisecond
-	peakRSS, _, _, _ := server.sampler.metrics()
-	logical, allocated, err := measureDataBytes(workspace)
+	peakRSS, _, _, _, samplerErr := server.sampler.metrics()
+	if samplerErr != nil {
+		t.Fatal(samplerErr)
+	}
+	logical, allocated, err := measureDataBytesForContract(workspace, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -480,11 +483,26 @@ func buildWorkingTreeToolchain(
 		return privateToolchain{}, err
 	}
 	toolchain := privateToolchain{
-		Schema:  privateToolchainSchema,
-		Phebs:   filepath.Join(output, "phebs"),
-		Zoekt:   filepath.Join(output, "zoekt-git-index"),
-		Focused: filepath.Join(output, "phebs-focused-index"),
-		Buf:     filepath.Join(output, "buf"),
+		Schema:            privateToolchainSchema,
+		Phebs:             filepath.Join(output, "phebs"),
+		Zoekt:             filepath.Join(output, "zoekt-git-index"),
+		Focused:           filepath.Join(output, "phebs-focused-index"),
+		Buf:               filepath.Join(output, "buf"),
+		ClosedEnvironment: true,
+	}
+	toolchain.TempDir = filepath.Join(workspace, "readiness-tmp")
+	if err := os.Mkdir(toolchain.TempDir, 0o700); err != nil {
+		return privateToolchain{}, err
+	}
+	buildCache := filepath.Join(workspace, "readiness-go-build-cache")
+	if err := os.Mkdir(buildCache, 0o700); err != nil {
+		return privateToolchain{}, err
+	}
+	verify := exec.CommandContext(ctx, "go", "mod", "verify")
+	verify.Dir = moduleRoot
+	verify.Env = append(executionEnvironmentForToolchain(toolchain), "GOCACHE="+buildCache)
+	if output, err := runCustodyCombinedOutput(verify); err != nil {
+		return privateToolchain{}, fmt.Errorf("verify readiness module cache: %w: %s", err, output)
 	}
 	builds := []struct {
 		output string
@@ -499,8 +517,9 @@ func buildWorkingTreeToolchain(
 	for _, build := range builds {
 		command := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", build.output, build.path)
 		command.Dir = moduleRoot
-		command.Env = append(scrubExecutionEnvironment(), build.env...)
-		if output, err := command.CombinedOutput(); err != nil {
+		command.Env = append(executionEnvironmentForToolchain(toolchain), "GOCACHE="+buildCache)
+		command.Env = append(command.Env, build.env...)
+		if output, err := runCustodyCombinedOutput(command); err != nil {
 			return privateToolchain{}, fmt.Errorf("build readiness tool %s: %w: %s", build.path, err, output)
 		}
 	}
@@ -573,7 +592,7 @@ func rehearseProductionPath(
 	}
 
 	if kind == "structural" {
-		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"], true); err != nil {
 			t.Fatal(err)
 		}
 		b := awaitReadinessSnapshot(t, ctx, profile, "b", 12*time.Minute)
@@ -581,7 +600,7 @@ func rehearseProductionPath(
 		if snapshotAuthority(a) == snapshotAuthority(b) || changedSourceMembers(a, b) <= 0 {
 			t.Fatal("structural B did not change exact source and derived authority")
 		}
-		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
+		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a-return"], true); err != nil {
 			t.Fatal(err)
 		}
 		a = awaitReadinessSnapshot(t, ctx, profile, "a-return", 12*time.Minute)
@@ -657,7 +676,7 @@ func rehearseSemanticInterruptionBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan := Plan{Schema: PlanSchemaV19}
+	plan := Plan{Schema: PlanSchemaV25}
 	run := &execution{
 		ctx: ctx, plan: plan,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
@@ -668,7 +687,7 @@ func rehearseSemanticInterruptionBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"], true); err != nil {
 		t.Fatal(errors.Join(err, observer.Close()))
 	}
 	if err := waitExactActiveGenerationSchedule(
@@ -692,6 +711,7 @@ func rehearseSemanticInterruptionBoundary(
 	if err != nil {
 		t.Fatal(errors.Join(err, observer.Close()))
 	}
+	triggerScheduleDigest := observer.scheduleDigest
 	if err := observer.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -703,7 +723,7 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	releaseFence()
 	fenceHeld = false
-	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"], true); err != nil {
 		t.Fatal(err)
 	}
 	restarted, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-semantic-interruption")
@@ -721,10 +741,16 @@ func rehearseSemanticInterruptionBoundary(
 	); err != nil {
 		t.Fatal(err)
 	}
-	recovered, err := waitInterruptionLeaseRecovery(
-		ctx, profile, trigger, 3*time.Minute,
+	recovered, err := waitInterruptionLeaseRecoveryV22(
+		ctx, profile, trigger, triggerScheduleDigest,
+		interruptionRecoveryContractForPlan(plan), 3*time.Minute,
 	)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readGenerationLifecycleObservationForPlan(
+		ctx, plan, profile, 30*time.Second,
+	); err != nil {
 		t.Fatal(err)
 	}
 	diagnosticReader, err := store.OpenLocalGenerationChunkReader(ctx, profile.DataDir)
@@ -754,7 +780,9 @@ func rehearseSemanticInterruptionBoundary(
 			snapshotAuthority(a), snapshotAuthority(afterRestart))
 		t.Fatal("semantic interruption rehearsal changed exact A authority")
 	}
-	if err := waitForDerivedPartialClear(ctx, profile.DataDir, 3*time.Minute); err != nil {
+	if err := waitForDerivedPartialClear(
+		ctx, Plan{Schema: PlanSchemaV25}, profile.DataDir, 3*time.Minute,
+	); err != nil {
 		t.Logf("semantic interruption partial controls: %v", rehearsalPartialControls(profile.DataDir))
 		t.Logf("semantic interruption derived inventory: %v", rehearsalDerivedInventory(profile.DataDir))
 		t.Fatal(err)
@@ -765,7 +793,11 @@ func rehearseSemanticInterruptionBoundary(
 
 func rehearsalPartialControls(dataDir string) []string {
 	controls := make([]string, 0, 8)
-	for _, name := range []string{"observations", "extraction-publications", "relationships"} {
+	for _, name := range []string{
+		"observations", "extraction-publications", "relationships",
+		"relationship-resolver-namespaces", "relationship-rpc-postings",
+		"relationship-kafka-postings",
+	} {
 		root := filepath.Join(dataDir, name)
 		_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || len(controls) >= 16 {
@@ -784,7 +816,11 @@ func rehearsalPartialControls(dataDir string) []string {
 
 func rehearsalDerivedInventory(dataDir string) []string {
 	result := make([]string, 0, 16)
-	for _, name := range []string{"observations", "extraction-publications", "relationships"} {
+	for _, name := range []string{
+		"observations", "extraction-publications", "relationships",
+		"relationship-resolver-namespaces", "relationship-rpc-postings",
+		"relationship-kafka-postings",
+	} {
 		entries, err := os.ReadDir(filepath.Join(dataDir, name))
 		if err != nil {
 			result = append(result, name+": "+err.Error())
@@ -827,7 +863,7 @@ func rehearseSemanticStaleWorkerBoundary(
 		t.Fatal(err)
 	}
 	cursor, err := newChunkLifecycleCursor(
-		server.logPath, meter.logOffset, chunkLifecycleValidationV17,
+		server.logPath, meter.logOffset, chunkLifecycleValidationV23,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -836,7 +872,7 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err != nil {
 		t.Fatal(errors.Join(err, cursor.Close()))
 	}
-	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"], true); err != nil {
 		t.Fatal(err)
 	}
 	if err := waitExactActiveGenerationSchedule(
@@ -863,15 +899,14 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"], true); err != nil {
 		t.Fatal(err)
 	}
-	state, err := reader.GenerationChunkLeaseState(ctx, trigger.Identity)
-	if err != nil || !runningLeaseMatchesReport(state, trigger, profile.RepositoryName) {
-		t.Fatalf("semantic stale-worker lease did not survive supersession: %+v, %v", state, err)
-	}
-	if err := reader.FenceCurrentGenerationScheduleForDiagnostic(ctx, state); err != nil {
-		t.Fatalf("semantic stale-worker diagnostic supersession: %v", err)
+	trigger, selectedScheduleDigest, err := fenceRunningGenerationChunkForDiagnostic(
+		ctx, cursor, reader, profile, profile.Revisions["b"], trigger, 3*time.Minute,
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
 	releaseFence()
 	fenceHeld = false
@@ -879,7 +914,10 @@ func rehearseSemanticStaleWorkerBoundary(
 	if snapshotRecoveryAuthority(after) != snapshotRecoveryAuthority(a) {
 		t.Fatal("semantic stale-worker rehearsal changed exact A authority")
 	}
-	settled, err := waitSettledChunkLifecycle(ctx, cursor, trigger, 3*time.Minute)
+	settled, err := waitStaleChunkFence(
+		ctx, cursor, reader, trigger, profile.RepositoryName,
+		selectedScheduleDigest, 3*time.Minute,
+	)
 	if err != nil || settled.Outcome != "stale_fenced" {
 		t.Fatalf("semantic stale-worker settlement = %+v, %v", settled, err)
 	}
@@ -903,7 +941,7 @@ func verifyPartitionTimingDiagnostics(t *testing.T, logPath string) {
 	if err != nil || len(reports) == 0 {
 		t.Fatalf("partition timing reports = %d, error=%v", len(reports), err)
 	}
-	lifecycle, err := newChunkLifecycleCursor(logPath, 0, chunkLifecycleValidationV17)
+	lifecycle, err := newChunkLifecycleCursor(logPath, 0, chunkLifecycleValidationV23)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -958,7 +996,7 @@ func measureProjectionExtraction(
 	profile PreparedProfile,
 ) extractionThroughputMeasurement {
 	t.Helper()
-	inspector, err := newProfileInspector(profile, profileInspectionV16)
+	inspector, err := newProfileInspector(profile, profileInspectionV21)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1064,7 +1102,7 @@ func prepareProjectionProfileNamed(
 		revisions[revision.Revision] = revision.Commit
 	}
 	repository := filepath.Join(authored, "repository.git")
-	if err := updateSourceRevision(ctx, repository, revisions["a"]); err != nil {
+	if err := updateSourceRevision(ctx, repository, revisions["a"], true); err != nil {
 		return PreparedProfile{}, err
 	}
 	repositoryName, err := phebssync.RepoName(repository)
@@ -1138,7 +1176,7 @@ func prepareTimingProfile(
 		revisions[revision.Revision] = revision.Commit
 	}
 	repository := filepath.Join(authored, "repository.git")
-	if err := updateSourceRevision(ctx, repository, revisions["a"]); err != nil {
+	if err := updateSourceRevision(ctx, repository, revisions["a"], true); err != nil {
 		return PreparedProfile{}, err
 	}
 	repositoryName, err := phebssync.RepoName(repository)
@@ -1205,7 +1243,7 @@ func awaitReadinessSnapshot(
 	failureLog ...string,
 ) privateProfileSnapshot {
 	t.Helper()
-	inspector, err := newProfileInspector(profile, profileInspectionV16)
+	inspector, err := newProfileInspector(profile, profileInspectionV21)
 	if err != nil {
 		t.Fatal(err)
 	}

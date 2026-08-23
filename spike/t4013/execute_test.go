@@ -1,7 +1,9 @@
 package t4013
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -26,6 +30,34 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/spike/t401"
 )
+
+func setExecutionObservationPath(t *testing.T, run *execution) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "observation.json")
+	run.observationPath = path
+	return path
+}
+
+func newV25FailureExecution(t *testing.T, module, workspace string) *execution {
+	t.Helper()
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &execution{
+		ctx: t.Context(), moduleRoot: module, workspace: workspace,
+		plan: plan, planBytes: planBytes,
+		observation: emptyObservationForPlan(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}, plan),
+		hostToolchainVerify: func() error { return nil },
+	}
+}
 
 func TestFinalizeObservationPinsEveryEnabledExtractionDomain(t *testing.T) {
 	profiles, err := t401.FrozenProfiles()
@@ -123,16 +155,17 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 	if err := os.WriteFile(filepath.Join(outside, "retained"), []byte("retain"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	observation := emptyObservation(EnvironmentObservation{
-		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
-		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30, InitialUsedPercent: 72,
-	})
-	run := &execution{
-		moduleRoot: module, workspace: workspace, observation: observation,
-		plan: Plan{Safety: frozenSafety}, phase: 5,
-	}
+	run := newV25FailureExecution(t, module, workspace)
+	observationPath := setExecutionObservationPath(t, run)
 	var removeCalls int
 	run.custodyDestroy = func(workspace, moduleRoot string) error {
+		if _, err := os.Lstat(observationPath); !os.IsNotExist(err) {
+			return errors.New("stopped observation published before custody deletion")
+		}
+		checkpoint, err := readTeardownCheckpoint(observationPath)
+		if err != nil || checkpoint.Observation.Teardown.Completed {
+			return fmt.Errorf("stopped teardown checkpoint is unavailable or final: %w", err)
+		}
 		return destroyCustodyWith(workspace, moduleRoot, func(path string) error {
 			removeCalls++
 			if removeCalls == 1 {
@@ -148,10 +181,10 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 				return &os.PathError{Op: "unlinkat", Path: path, Err: syscall.ENOTEMPTY}
 			}
 			return os.RemoveAll(path)
-		}, func(time.Duration) {})
+		}, func(time.Duration) {}, syncDirectory)
 	}
-	run.startPhase(5)
-	stopped, err := run.stopAfterFailure(directRecovery(errors.New("injected recovery failure")))
+	run.startPhase(0)
+	stopped, err := run.stopAfterFailure(errors.New("injected execution failure"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,9 +197,17 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 	if _, err := os.Lstat(filepath.Join(outside, "retained")); err != nil {
 		t.Fatal("stopped-run teardown crossed custody boundary")
 	}
-	if stopped.Outcome != "stopped" || stopped.Decision.Selected != "p6_investigation" ||
-		!stopped.Decision.Substantiated || !stopped.Teardown.Completed || len(stopped.Failures) != 1 ||
-		stopped.Phases[5].Metrics.DataAllocatedBytes == 0 {
+	persisted, err := os.ReadFile(observationPath)
+	if err != nil {
+		t.Fatalf("read persisted stopped observation: %v", err)
+	}
+	decoded, err := DecodeObservation(persisted)
+	if err != nil || decoded.Outcome != "stopped" {
+		t.Fatalf("persisted stopped observation = %+v, %v", decoded, err)
+	}
+	if stopped.Outcome != "stopped" || stopped.Decision.Selected != "unclassified" ||
+		stopped.Decision.Substantiated || !stopped.Teardown.Completed || len(stopped.Failures) != 1 ||
+		stopped.Phases[0].Metrics.DataAllocatedBytes == 0 {
 		t.Fatalf("stopped observation = %+v", stopped)
 	}
 }
@@ -188,7 +229,8 @@ func TestMissingFailedPhaseMeterCannotSelectFrozenDecision(t *testing.T) {
 		moduleRoot: module, workspace: workspace, observation: observation,
 		plan: Plan{Safety: frozenSafety},
 	}
-	run.startPhase(1)
+	setExecutionObservationPath(t, run)
+	run.startPhase(0)
 	run.metersExpected = 1
 	stopped, err := run.stopAfterFailure(errors.New("injected cold failure"))
 	if err != nil {
@@ -197,6 +239,44 @@ func TestMissingFailedPhaseMeterCannotSelectFrozenDecision(t *testing.T) {
 	if stopped.Decision.Selected != "unclassified" || stopped.Decision.Substantiated ||
 		stopped.Failures[0].Code != "failed_phase_measurement_unavailable" {
 		t.Fatalf("stopped decision = %+v, failure = %+v", stopped.Decision, stopped.Failures)
+	}
+}
+
+func TestExpiredExecutionDeadlineStillPublishesStoppedTeardown(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	run := &execution{
+		ctx: ctx, moduleRoot: module, workspace: workspace,
+		plan: Plan{Schema: PlanSchemaV25, Safety: frozenSafetyV25},
+		observation: emptyObservation(EnvironmentObservation{
+			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+		}),
+		hostToolchainVerify: func() error { return nil },
+	}
+	setExecutionObservationPath(t, run)
+	run.startPhase(0)
+	stopped, err := run.stopAfterFailure(errTotalWallDeadline)
+	if errors.Is(err, errObservationPersistence) {
+		t.Fatalf("expired deadline wedged teardown checkpoint: %v", err)
+	}
+	if stopped.Outcome != "stopped" || !stopped.Teardown.Completed ||
+		stopped.Failures[0].Code != "review_ceiling_crossed" {
+		t.Fatalf("expired deadline stop = %+v, %v", stopped, err)
+	}
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expired deadline retained custody: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); err != nil {
+		t.Fatalf("expired deadline lost stopped observation: %v", err)
 	}
 }
 
@@ -888,7 +968,7 @@ func TestRepositoryIndexTerminalStopsConvergenceWithoutWaitingForDeadline(t *tes
 }
 
 func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
-	hostToolchain, err := ObserveHostToolchain(t.Context())
+	hostToolchain, err := observeHostToolchain(t.Context(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1137,6 +1217,7 @@ func TestTerminalProgressSealsThroughStoppedReceipt(t *testing.T) {
 					FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
 				}, selectedPlan),
 			}
+			setExecutionObservationPath(t, run)
 			run.observation.Toolchain = []ToolchainObservation{
 				{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
 				{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
@@ -1414,14 +1495,9 @@ func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	run := &execution{
-		moduleRoot: module, workspace: workspace, plan: Plan{Safety: frozenSafety},
-		observation: emptyObservation(EnvironmentObservation{
-			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
-			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
-		}),
-	}
-	run.startPhase(1)
+	run := newV25FailureExecution(t, module, workspace)
+	setExecutionObservationPath(t, run)
+	run.startPhase(0)
 	meter := &phaseMeter{}
 	run.trackMeter(meter)
 	if _, err := run.finishMeter(meter, nil); err == nil {
@@ -1607,11 +1683,24 @@ func TestV23LifecycleWaitTypesOnlyItsOwnDeadline(t *testing.T) {
 	}
 }
 
-func TestObservationWriterIsExclusiveAndAbsolute(t *testing.T) {
+func TestObservationWriterPreservesHistoricalExclusiveContract(t *testing.T) {
 	value := completedObservation()
 	path := filepath.Join(t.TempDir(), "observation.json")
+	if err := os.WriteFile(path+".tmp", []byte("interrupted"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if err := WriteObservation(path, value); err != nil {
 		t.Fatal(err)
+	}
+	if raw, err := os.ReadFile(path + ".tmp"); err != nil || string(raw) != "interrupted" {
+		t.Fatalf("historical observation writer changed unrelated temporary output: %q, %v", raw, err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded, err := DecodeObservation(raw); err != nil || decoded.Outcome != value.Outcome {
+		t.Fatalf("atomic observation = %+v, %v", decoded, err)
 	}
 	if err := WriteObservation(path, value); err == nil {
 		t.Fatal("observation writer replaced an existing output")
@@ -1621,10 +1710,691 @@ func TestObservationWriterIsExclusiveAndAbsolute(t *testing.T) {
 	}
 }
 
-func TestCompletedObservationIsPrevalidatedBeforeCustodyDeletion(t *testing.T) {
+func TestPromoteStagedFileDoesNotOverwriteAuthority(t *testing.T) {
+	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory := filepath.Join(root, "run", "evidence")
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	temporary := filepath.Join(directory, "freeze.json.tmp.sig")
+	output := filepath.Join(directory, "freeze.json.sig")
+	if err := os.WriteFile(temporary, []byte("signed\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := PromoteStagedFile(temporary, output, root); err != nil {
+		t.Fatal(err)
+	}
+	if raw, err := os.ReadFile(output); err != nil || string(raw) != "signed\n" {
+		t.Fatalf("promoted output = %q, %v", raw, err)
+	}
+	if _, err := os.Lstat(temporary); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("promoted stage survived: %v", err)
+	}
+	if err := os.WriteFile(temporary, []byte("replacement\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := PromoteStagedFile(temporary, output, root); !errors.Is(err, os.ErrExist) {
+		t.Fatalf("overwrite authority error = %v", err)
+	}
+}
+
+func TestReturnedObservationWriteChangesOnlyAtV25(t *testing.T) {
+	legacyPath := filepath.Join(t.TempDir(), "legacy.json")
+	if err := WriteReturnedObservation(legacyPath, completedObservation()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(legacyPath); err != nil {
+		t.Fatalf("historical returned observation was not written: %v", err)
+	}
+	v25Path := filepath.Join(t.TempDir(), "v25.json")
+	if err := WriteReturnedObservation(v25Path, Observation{Schema: ObservationSchemaV25}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(v25Path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("V25 command wrote after Execute: %v", err)
+	}
+}
+
+func TestReceiptWriterIsAtomicAndResumable(t *testing.T) {
+	plan, planBytes := testPlan(t)
+	receipt, err := BuildReceipt(planBytes, marshal(t, completedObservation()), PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "results.json")
+	if err := os.WriteFile(path+".tmp", []byte("partial receipt"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteReceipt(path, receipt); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Fatal("receipt writer retained its temporary output")
+	}
+	if err := WriteReceipt(path, receipt); err != nil {
+		t.Fatalf("identical receipt resume failed: %v", err)
+	}
+	if err := os.Link(path, path+".tmp"); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteReceipt(path, receipt); err != nil {
+		t.Fatalf("identical staged/final receipt resume failed: %v", err)
+	}
+	if _, err := os.Lstat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Fatal("identical staged receipt was not retired after resume")
+	}
+	if raw, err := os.ReadFile(path); err != nil || !bytes.Equal(raw, receipt) {
+		t.Fatalf("atomic receipt differs: %v", err)
+	}
+	different := append(slices.Clone(receipt), '\n')
+	if err := WriteReceipt(path, different); err == nil {
+		t.Fatal("receipt writer accepted different existing bytes")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(raw, receipt) {
+		t.Fatalf("failed receipt resume changed final bytes: %v", err)
+	}
+	if err := ValidateReceipt(mustDecodeReceipt(t, receipt, plan), plan); err != nil {
+		t.Fatalf("persisted receipt is invalid: %v", err)
+	}
+}
+
+func TestAtomicResumeRejectsOversizeFilesBeforeValidation(t *testing.T) {
+	_, planBytes := testPlan(t)
+	observationPath := filepath.Join(t.TempDir(), "observation.json")
+	if err := os.WriteFile(
+		observationPath+".tmp", bytes.Repeat([]byte{'x'}, MaxObservationBytes+1), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(observationPath, planBytes, PlanDigest(planBytes)); err == nil || !strings.Contains(err.Error(), "byte bound") {
+		t.Fatalf("oversize staged observation = %v", err)
+	}
+
+	receiptPath := filepath.Join(t.TempDir(), "results.json")
+	if err := os.WriteFile(
+		receiptPath, bytes.Repeat([]byte{'x'}, MaxReceiptBytes+1), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteReceipt(receiptPath, []byte("bounded")); err == nil || !strings.Contains(err.Error(), "byte bound") {
+		t.Fatalf("oversize existing receipt = %v", err)
+	}
+}
+
+func mustDecodeReceipt(t *testing.T, raw []byte, plan Plan) Receipt {
+	t.Helper()
+	value, err := DecodeReceipt(raw, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return value
+}
+
+func newCompletedTeardownExecution(t *testing.T) *execution {
+	t.Helper()
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	evidence := filepath.Join(root, "evidence")
+	for _, path := range []string{module, workspace, evidence} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "private"), []byte("custody"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	plan, err := FrozenPlan(strings.Repeat("f", 40))
 	if err != nil {
 		t.Fatal(err)
+	}
+	observation := completedObservation()
+	observation.Phases[len(observation.Phases)-1] = PhaseObservation{
+		Name: "teardown", Outcome: "not_run",
+	}
+	observation.Teardown = TeardownObservation{}
+	planBytes := marshal(t, plan)
+	plan.Schema = PlanSchemaV25
+	plan.Safety = frozenSafetyV25
+	run := &execution{
+		ctx: t.Context(), moduleRoot: module, workspace: workspace,
+		plan: plan, planBytes: planBytes, observation: observation,
+		observationPath:     filepath.Join(evidence, "observation.json"),
+		hostToolchainVerify: func() error { return nil },
+	}
+	run.startPhase(11)
+	return run
+}
+
+func TestV25StoppedTeardownPublishesReceiptValidEvidence(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	evidence := filepath.Join(root, "evidence")
+	for _, path := range []string{module, workspace, evidence} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "private"), []byte("custody"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
+	observation.Outcome = "stopped"
+	observation.Phases[0] = PhaseObservation{
+		Name: "preflight", Outcome: "failed", Metrics: PhaseMetrics{WallMS: 1},
+	}
+	observation.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	observation.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	run := &execution{
+		ctx: t.Context(), moduleRoot: module, workspace: workspace,
+		plan: plan, planBytes: planBytes, observation: observation,
+		observationPath:     filepath.Join(evidence, "observation.json"),
+		hostToolchainVerify: func() error { return nil },
+	}
+	run.startPhase(11)
+	if err := run.teardown(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(run.observationPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptRaw, err := BuildReceipt(planBytes, raw, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptRaw, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV25 || receipt.Outcome != "stopped" {
+		t.Fatalf("V25 teardown receipt = %+v, %v", receipt, err)
+	}
+}
+
+func TestCompletedTeardownCheckpointsBeforeAndPublishesAfterCustodyDeletion(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	checkpointedBeforeDeletion := false
+	destroySawIncompleteCheckpoint := false
+	stagedAfterDeletion := false
+	publishedAfterDeletion := false
+	run.checkpointPersist = func(path string, value teardownCheckpoint) error {
+		if _, err := os.Lstat(run.workspace); err != nil {
+			return fmt.Errorf("custody disappeared before checkpoint: %w", err)
+		}
+		if value.Observation.Teardown.Completed || value.Observation.Phases[11].Outcome != "not_run" {
+			return errors.New("pre-delete checkpoint claimed completed teardown")
+		}
+		checkpointedBeforeDeletion = true
+		return writeTeardownCheckpoint(path, value)
+	}
+	run.observationStage = func(path string, value Observation) error {
+		if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
+			return errors.New("custody remained when final observation was staged")
+		}
+		if !value.Teardown.Completed || value.Phases[11].Outcome != "succeeded" {
+			return errors.New("post-delete observation is not final")
+		}
+		stagedAfterDeletion = true
+		return StageObservation(path, value)
+	}
+	run.custodyDestroy = func(workspace, moduleRoot string) error {
+		if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+			return errors.New("final observation was published before custody deletion")
+		}
+		checkpoint, err := readTeardownCheckpoint(run.observationPath)
+		if err != nil || checkpoint.Observation.Teardown.Completed {
+			return fmt.Errorf("read incomplete checkpoint before custody deletion: %w", err)
+		}
+		destroySawIncompleteCheckpoint = true
+		return os.RemoveAll(workspace)
+	}
+	run.observationPublish = func(path string, value Observation) error {
+		if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
+			return errors.New("custody remained when final observation was published")
+		}
+		publishedAfterDeletion = true
+		return PublishObservation(path, value)
+	}
+	if err := run.teardown(); err != nil {
+		t.Fatal(err)
+	}
+	if !checkpointedBeforeDeletion || !destroySawIncompleteCheckpoint || !stagedAfterDeletion || !publishedAfterDeletion ||
+		!run.observationPersisted {
+		t.Fatal("completed teardown crossed the checkpoint/destroy/validate/publish order")
+	}
+}
+
+func TestCompletedTeardownCrossingTotalDeadlinePublishesStoppedEvidence(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	ctx, cancel := context.WithCancelCause(t.Context())
+	run.ctx = ctx
+	run.custodyDestroy = func(workspace, _ string) error {
+		if err := os.RemoveAll(workspace); err != nil {
+			return err
+		}
+		cancel(errTotalWallDeadline)
+		return nil
+	}
+	err := run.teardown()
+	if !errors.Is(err, errTotalWallDeadline) {
+		t.Fatalf("deadline-crossing teardown = %v", err)
+	}
+	raw, readErr := os.ReadFile(run.observationPath)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	value, decodeErr := DecodeObservation(raw)
+	if decodeErr != nil || value.Outcome != "stopped" ||
+		value.Failures[0] != (FailureObservation{Phase: "teardown", Class: "environment", Code: "review_ceiling_crossed"}) ||
+		value.Phases[11].Metrics.WallMS < (teardownPersistenceReserve+teardownRetirementReserve).Milliseconds() {
+		t.Fatalf("deadline-crossing observation = %+v, %v", value, decodeErr)
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
+		t.Fatal("deadline-crossing teardown retained its checkpoint")
+	}
+}
+
+func TestCompletedTeardownCanceledDuringDeletionPublishesStoppedEvidence(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	run.ctx = ctx
+	run.custodyDestroy = func(workspace, _ string) error {
+		if err := os.RemoveAll(workspace); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	}
+	err := run.teardown()
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled teardown = %v", err)
+	}
+	raw, readErr := os.ReadFile(run.observationPath)
+	value, decodeErr := DecodeObservation(raw)
+	if readErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
+		value.Failures[0] != (FailureObservation{Phase: "teardown", Class: "execution", Code: "operational_failure"}) {
+		t.Fatalf("canceled observation = %+v, read=%v, decode=%v", value, readErr, decodeErr)
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("canceled teardown retained checkpoint: %v", err)
+	}
+}
+
+func TestCompletedTeardownCrossingDeadlineDuringPublicationRepairsProvisionalResult(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	ctx, cancel := context.WithCancelCause(t.Context())
+	run.ctx = ctx
+	run.custodyDestroy = func(workspace, _ string) error { return os.RemoveAll(workspace) }
+	var publications int
+	run.observationPublish = func(path string, value Observation) error {
+		publications++
+		if err := PublishObservation(path, value); err != nil {
+			return err
+		}
+		if publications == 1 {
+			cancel(errTotalWallDeadline)
+		}
+		return nil
+	}
+	err := run.teardown()
+	if !errors.Is(err, errTotalWallDeadline) || publications != 2 {
+		t.Fatalf("post-publication deadline = %v, publications=%d", err, publications)
+	}
+	raw, readErr := os.ReadFile(run.observationPath)
+	value, decodeErr := DecodeObservation(raw)
+	if readErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
+		value.Failures[0].Code != "review_ceiling_crossed" {
+		t.Fatalf("repaired deadline observation = %+v, read=%v, decode=%v", value, readErr, decodeErr)
+	}
+}
+
+func TestCompletedTeardownRevalidatesToolchainAfterCustodyAbsence(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected final toolchain drift")
+	var calls int
+	run.hostToolchainVerify = func() error {
+		calls++
+		if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
+			return errors.New("toolchain was checked before stable custody absence")
+		}
+		if calls == 1 {
+			return injected
+		}
+		return nil
+	}
+	run.custodyDestroy = func(workspace, _ string) error { return os.RemoveAll(workspace) }
+	err := run.teardown()
+	if !errors.Is(err, injected) || calls < 2 {
+		t.Fatalf("post-delete toolchain validation = %v, calls=%d", err, calls)
+	}
+	raw, readErr := os.ReadFile(run.observationPath)
+	value, decodeErr := DecodeObservation(raw)
+	if readErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
+		value.Failures[0].Phase != "teardown" || value.Failures[0].Code != "operational_failure" {
+		t.Fatalf("toolchain-drift observation = %+v, read=%v, decode=%v", value, readErr, decodeErr)
+	}
+}
+
+func TestPersistentPostPublicationToolchainDriftLeavesCheckpointAuthority(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected persistent toolchain drift")
+	var calls int
+	run.hostToolchainVerify = func() error {
+		calls++
+		if calls == 1 {
+			return nil
+		}
+		return injected
+	}
+	run.custodyDestroy = func(workspace, _ string) error { return os.RemoveAll(workspace) }
+	err := run.teardown()
+	if !errors.Is(err, injected) || calls != 3 {
+		t.Fatalf("persistent post-publication toolchain drift = %v, calls=%d", err, calls)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("persistent toolchain drift left a provisional final observation")
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(run.observationPath)
+	if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("persistent toolchain drift lost incomplete checkpoint authority: %+v, %v", checkpoint, checkpointErr)
+	}
+}
+
+func TestCompletedTeardownCleanupFailureRetainsCheckpointUntilResume(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected cleanup result")
+	run.custodyDestroy = func(workspace, _ string) error {
+		return errors.Join(os.RemoveAll(workspace), injected)
+	}
+	err := run.teardown()
+	if !errors.Is(err, injected) {
+		t.Fatalf("cleanup failure = %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("cleanup failure published an observation before durable deletion proof")
+	}
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("cleanup failure lost teardown checkpoint: %v", err)
+	}
+	raw, resumeErr := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
+	value, decodeErr := DecodeObservation(raw)
+	if resumeErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
+		value.Failures[0].Phase != "teardown" || value.Failures[0].Code != "operational_failure" {
+		t.Fatalf("cleanup-failure resume = %+v, resume=%v, decode=%v", value, resumeErr, decodeErr)
+	}
+}
+
+func TestCompletedTeardownPersistenceFailureRetainsCustody(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected observation fsync failure")
+	destroyed := false
+	run.checkpointPersist = func(string, teardownCheckpoint) error { return injected }
+	run.custodyDestroy = func(string, string) error {
+		destroyed = true
+		return nil
+	}
+	err := run.teardown()
+	if !errors.Is(err, errObservationPersistence) || !errors.Is(err, injected) {
+		t.Fatalf("completed persistence failure = %v", err)
+	}
+	if destroyed {
+		t.Fatal("completed persistence failure destroyed custody")
+	}
+	if _, err := os.Lstat(run.workspace); err != nil {
+		t.Fatalf("completed persistence failure did not retain custody: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("failed completed persistence exposed a final observation")
+	}
+}
+
+func TestCompletedTeardownDestroyFailureDoesNotPublishCompletion(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected custody deletion failure")
+	run.custodyDestroy = func(string, string) error { return injected }
+	err := run.teardown()
+	if !errors.Is(err, injected) {
+		t.Fatalf("custody deletion failure = %v", err)
+	}
+	if _, err := os.Lstat(run.workspace); err != nil {
+		t.Fatalf("failed custody deletion did not retain custody: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("custody remained beside a published completed observation")
+	}
+	checkpoint, err := readTeardownCheckpoint(run.observationPath)
+	if err != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("durable incomplete teardown checkpoint = %+v, %v", checkpoint, err)
+	}
+}
+
+func TestCompletedObservationPublicationFailureResumesAsStopped(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	injected := errors.New("injected final-link failure")
+	run.custodyDestroy = func(workspace, moduleRoot string) error { return os.RemoveAll(workspace) }
+	run.observationPublish = func(string, Observation) error { return injected }
+	err := run.teardown()
+	if !errors.Is(err, errObservationPersistence) || !errors.Is(err, injected) {
+		t.Fatalf("observation publication failure = %v", err)
+	}
+	if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
+		t.Fatal("custody survived the injected post-destruction publication failure")
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("failed publication exposed a final observation")
+	}
+	if _, err := os.Lstat(run.observationPath + ".tmp"); err != nil {
+		t.Fatalf("failed publication did not retain its durable stage: %v", err)
+	}
+	raw, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
+	if err != nil {
+		t.Fatalf("resume staged observation: %v", err)
+	}
+	if value, err := DecodeObservation(raw); err != nil || value.Outcome != "stopped" ||
+		value.Failures[0].Phase != "teardown" {
+		t.Fatalf("resumed observation = %+v, %v", value, err)
+	}
+	if _, err := os.Lstat(run.observationPath + ".tmp"); !os.IsNotExist(err) {
+		t.Fatal("resumed observation retained its stage")
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
+		t.Fatal("resumed observation retained its teardown checkpoint")
+	}
+}
+
+func TestTeardownCheckpointTakesPrecedenceAfterProcessDeath(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	started := time.Now()
+	if err := run.persistTeardownCheckpoint(started, 7, 8); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(run.workspace); err != nil {
+		t.Fatal(err)
+	}
+	provisional := run.projectedTeardownObservation(started, 7, 8)
+	if err := WriteObservation(run.observationPath, provisional); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := DecodeObservation(raw)
+	if err != nil || value.Outcome != "stopped" || value.Failures[0].Phase != "teardown" ||
+		value.Phases[11].Metrics.WallMS < (teardownPersistenceReserve+teardownRetirementReserve).Milliseconds() {
+		t.Fatalf("checkpoint recovery = %+v, %v", value, err)
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
+		t.Fatal("checkpoint recovery did not retire checkpoint authority")
+	}
+}
+
+func TestTeardownCheckpointTemporaryResumesAndRetires(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
+		t.Fatal(err)
+	}
+	checkpointPath := run.observationPath + ".teardown"
+	if err := os.Rename(checkpointPath, checkpointPath+".tmp"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(run.workspace); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{checkpointPath, checkpointPath + ".tmp"} {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Fatalf("resumed checkpoint residue survived: %s", path)
+		}
+	}
+}
+
+func TestTeardownCheckpointRetirementFailureMustRetryBeforeReceipt(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(run.workspace); err != nil {
+		t.Fatal(err)
+	}
+	checkpointTemporary := run.observationPath + ".teardown.tmp"
+	if err := os.Mkdir(checkpointTemporary, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err == nil ||
+		!strings.Contains(err.Error(), "checkpoint remains authoritative") {
+		t.Fatalf("checkpoint retirement failure = %v", err)
+	}
+	if _, err := readTeardownCheckpoint(run.observationPath); err != nil {
+		t.Fatalf("checkpoint retirement failure lost authority: %v", err)
+	}
+	if err := os.Remove(checkpointTemporary); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err != nil {
+		t.Fatalf("retry checkpoint retirement: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath + ".teardown"); !os.IsNotExist(err) {
+		t.Fatalf("checkpoint survived successful retry: %v", err)
+	}
+}
+
+func TestTeardownCheckpointRejectsWrongPlanWithoutPublishing(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
+		t.Fatal(err)
+	}
+	checkpoint, err := readTeardownCheckpoint(run.observationPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint.PlanDigest = "sha256:" + strings.Repeat("0", 64)
+	raw, err := json.Marshal(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(run.observationPath+".teardown", append(raw, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(run.workspace); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(run.observationPath, run.planBytes, PlanDigest(run.planBytes)); err == nil ||
+		!strings.Contains(err.Error(), "plan digest differs") {
+		t.Fatalf("wrong checkpoint plan binding = %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("wrong checkpoint plan binding published an observation")
+	}
+}
+
+func TestStoppedPersistenceFailureRetainsCustody(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := newV25FailureExecution(t, module, workspace)
+	setExecutionObservationPath(t, run)
+	injected := errors.New("injected stopped observation write failure")
+	destroyed := false
+	run.checkpointPersist = func(string, teardownCheckpoint) error { return injected }
+	run.custodyDestroy = func(string, string) error {
+		destroyed = true
+		return nil
+	}
+	run.startPhase(0)
+	_, err := run.stopAfterFailure(errors.New("injected phase failure"))
+	if !errors.Is(err, errObservationPersistence) || !errors.Is(err, injected) {
+		t.Fatalf("stopped persistence failure = %v", err)
+	}
+	if destroyed {
+		t.Fatal("stopped persistence failure destroyed custody")
+	}
+	if _, err := os.Lstat(workspace); err != nil {
+		t.Fatalf("stopped persistence failure did not retain custody: %v", err)
+	}
+}
+
+func TestStoppedDestroyFailureDoesNotPublishCompletion(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := newV25FailureExecution(t, module, workspace)
+	setExecutionObservationPath(t, run)
+	injected := errors.New("injected stopped custody deletion failure")
+	run.custodyDestroy = func(string, string) error { return injected }
+	run.startPhase(0)
+	stopped, err := run.stopAfterFailure(errors.New("injected phase failure"))
+	if !errors.Is(err, injected) || stopped.Outcome != "stopped" {
+		t.Fatalf("stopped custody deletion failure = %+v, %v", stopped, err)
+	}
+	if _, err := os.Lstat(workspace); err != nil {
+		t.Fatalf("stopped custody deletion failure did not retain custody: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !os.IsNotExist(err) {
+		t.Fatal("stopped custody remained beside a published completed teardown")
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(run.observationPath)
+	if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("stopped custody deletion failure lost its incomplete checkpoint: %+v, %v", checkpoint, checkpointErr)
+	}
+}
+
+func TestHistoricalCompletedObservationIsPrevalidatedBeforeCustodyDeletion(t *testing.T) {
+	plan, err := FrozenPlan(strings.Repeat("f", 40))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version := planSchemaVersion(plan.Schema); version != 1 {
+		t.Fatalf("historical pre-teardown fixture schema version = %d", version)
 	}
 	planBytes := marshal(t, plan)
 	observation := completedObservation()
@@ -1785,15 +2555,17 @@ func TestToolchainObservationBindsEveryExecutable(t *testing.T) {
 	}
 }
 
-func TestFrozenSourceExportIgnoresWorkingTreeMutation(t *testing.T) {
+func TestFrozenSourceExportUsesReviewedCommitAndIgnoresWorkingTreeMutation(t *testing.T) {
 	root := t.TempDir()
-	runGit := func(args ...string) {
+	runGit := func(args ...string) string {
 		t.Helper()
 		command := exec.CommandContext(t.Context(), "git", args...)
 		command.Dir = root
-		if output, err := command.CombinedOutput(); err != nil {
+		output, err := command.CombinedOutput()
+		if err != nil {
 			t.Fatalf("git %v: %v: %s", args, err, output)
 		}
+		return strings.TrimSpace(string(output))
 	}
 	runGit("init")
 	runGit("config", "user.email", "t4013@example.invalid")
@@ -1804,12 +2576,34 @@ func TestFrozenSourceExportIgnoresWorkingTreeMutation(t *testing.T) {
 	}
 	runGit("add", "source.go")
 	runGit("commit", "-m", "freeze")
+	commit := runGit("rev-parse", "HEAD")
 	if err := os.WriteFile(tracked, []byte("package changed\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	output := filepath.Join(t.TempDir(), "export")
-	if err := exportFrozenSource(t.Context(), root, output); err != nil {
+	runGit("add", "source.go")
+	runGit("commit", "-m", "later")
+	if err := os.WriteFile(tracked, []byte("package dirty\n"), 0o600); err != nil {
 		t.Fatal(err)
+	}
+	historicalOutput := filepath.Join(t.TempDir(), "export")
+	if err := exportFrozenSourceForPlan(t.Context(), root, Plan{
+		Schema: PlanSchemaV24, SourceCommit: commit,
+	}, historicalOutput); err != nil {
+		t.Fatal(err)
+	}
+	historical, err := os.ReadFile(filepath.Join(historicalOutput, "source.go"))
+	if err != nil || string(historical) != "package changed\n" {
+		t.Fatalf("V24 exported source = %q, %v", historical, err)
+	}
+	output := filepath.Join(t.TempDir(), "export")
+	metrics, err := exportReviewedSourceMeasured(
+		t.Context(), root, commit, output, filepath.Dir(output),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metrics.GitChildren < 1 || metrics.DataLogicalBytes == 0 || metrics.DataAllocatedBytes == 0 {
+		t.Fatalf("measured source export = %+v", metrics)
 	}
 	got, err := os.ReadFile(filepath.Join(output, "source.go"))
 	if err != nil {
@@ -1817,6 +2611,113 @@ func TestFrozenSourceExportIgnoresWorkingTreeMutation(t *testing.T) {
 	}
 	if string(got) != "package frozen\n" {
 		t.Fatalf("exported source = %q", got)
+	}
+}
+
+func TestFrozenSourceExportIgnoresAmbientAttributes(t *testing.T) {
+	tests := []struct {
+		name    string
+		install func(*testing.T, string, string)
+	}{
+		{
+			name: "global core.attributesFile",
+			install: func(t *testing.T, root, attributes string) {
+				home := t.TempDir()
+				t.Setenv("HOME", home)
+				if err := os.WriteFile(filepath.Join(home, ".gitconfig"), []byte(
+					"[core]\n\tattributesFile = "+attributes+"\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "repository info attributes",
+			install: func(t *testing.T, root, attributes string) {
+				content, err := os.ReadFile(attributes)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(root, ".git", "info", "attributes"), content, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			runGit := func(args ...string) string {
+				t.Helper()
+				command := exec.CommandContext(t.Context(), "git", args...)
+				command.Dir = root
+				output, err := command.CombinedOutput()
+				if err != nil {
+					t.Fatalf("git %v: %v: %s", args, err, output)
+				}
+				return strings.TrimSpace(string(output))
+			}
+			runGit("init")
+			runGit("config", "user.email", "t4013@example.invalid")
+			runGit("config", "user.name", "T40.13")
+			if err := os.WriteFile(filepath.Join(root, "ignored.txt"), []byte("retained\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			const literal = "$Format:%H$\n"
+			if err := os.WriteFile(filepath.Join(root, "substituted.txt"), []byte(literal), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "tree-ignored.txt"), []byte("tree\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "tree-substituted.txt"), []byte(literal), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, ".gitattributes"), []byte(
+				"tree-ignored.txt export-ignore\ntree-substituted.txt export-subst\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			runGit("add", ".gitattributes", "ignored.txt", "substituted.txt", "tree-ignored.txt", "tree-substituted.txt")
+			runGit("commit", "-m", "freeze")
+			commit := runGit("rev-parse", "HEAD")
+			attributes := filepath.Join(t.TempDir(), "attributes")
+			if err := os.WriteFile(attributes, []byte(
+				"ignored.txt export-ignore\nsubstituted.txt export-subst\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			test.install(t, root, attributes)
+
+			historicalOutput := filepath.Join(t.TempDir(), "export")
+			if err := exportFrozenSourceForPlan(t.Context(), root, Plan{
+				Schema: PlanSchemaV24, SourceCommit: commit,
+			}, historicalOutput); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Lstat(filepath.Join(historicalOutput, "ignored.txt")); !os.IsNotExist(err) {
+				t.Fatalf("V24 ambient export-ignore behavior changed: %v", err)
+			}
+			if content, err := os.ReadFile(filepath.Join(historicalOutput, "substituted.txt")); err != nil || string(content) != commit+"\n" {
+				t.Fatalf("V24 ambient export-subst behavior changed: %q, %v", content, err)
+			}
+
+			output := filepath.Join(t.TempDir(), "export")
+			if err := exportFrozenSourceForPlan(t.Context(), root, Plan{
+				Schema: PlanSchemaV25, SourceCommit: commit,
+			}, output); err != nil {
+				t.Fatal(err)
+			}
+			if content, err := os.ReadFile(filepath.Join(output, "ignored.txt")); err != nil || string(content) != "retained\n" {
+				t.Fatalf("ambient export-ignore changed source: %q, %v", content, err)
+			}
+			if content, err := os.ReadFile(filepath.Join(output, "substituted.txt")); err != nil || string(content) != literal {
+				t.Fatalf("ambient export-subst changed source: %q, %v", content, err)
+			}
+			if _, err := os.Lstat(filepath.Join(output, "tree-ignored.txt")); !os.IsNotExist(err) {
+				t.Fatalf("committed export-ignore was not preserved: %v", err)
+			}
+			if content, err := os.ReadFile(filepath.Join(output, "tree-substituted.txt")); err != nil || string(content) != commit+"\n" {
+				t.Fatalf("committed export-subst was not preserved: %q, %v", content, err)
+			}
+		})
 	}
 }
 
@@ -1981,7 +2882,9 @@ func TestDerivedPartialScanReadsOnlyBoundedControlLevel(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 		removed <- os.Remove(filepath.Join(v2, "publishing.json"))
 	}()
-	if err := waitForDerivedPartialClear(t.Context(), dataDir, time.Second); err != nil {
+	if err := waitForDerivedPartialClear(
+		t.Context(), Plan{Schema: PlanSchemaV25}, dataDir, time.Second,
+	); err != nil {
 		t.Fatal(err)
 	}
 	if err := <-removed; err != nil {
@@ -2045,6 +2948,19 @@ func TestStablePhaseAuthorityIsVersionFenced(t *testing.T) {
 	if stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, left) ==
 		stablePhaseAuthorityForPlan(Plan{Schema: PlanSchemaV23}, right) {
 		t.Fatal("V23 phase oracle accepted caller authority drift")
+	}
+}
+
+func TestV25AloneUpgradesInterruptionContracts(t *testing.T) {
+	for _, schema := range []string{PlanSchemaV20, PlanSchemaV21, PlanSchemaV23, PlanSchemaV24} {
+		lifecycleContract, inspectionContract := interruptionContractsForPlan(schema)
+		if lifecycleContract != chunkLifecycleValidationV17 || inspectionContract != profileInspectionV16 {
+			t.Fatalf("historical interruption contracts changed for %s: %d/%d", schema, lifecycleContract, inspectionContract)
+		}
+	}
+	lifecycleContract, inspectionContract := interruptionContractsForPlan(PlanSchemaV25)
+	if lifecycleContract != chunkLifecycleValidationV23 || inspectionContract != profileInspectionV21 {
+		t.Fatalf("V25 interruption contracts = %d/%d", lifecycleContract, inspectionContract)
 	}
 }
 
@@ -2918,29 +3834,80 @@ func TestV22InterruptionLeaseRecoveryCorroboratesCollection(t *testing.T) {
 	}
 }
 
-func TestRelationshipPartialPresentFollowsOneHashedRepository(t *testing.T) {
+func TestRelationshipPartialPresentFollowsEveryHashedComponentRoot(t *testing.T) {
+	roots := []string{
+		filepath.Join("relationships", "relationship-publications"),
+		filepath.Join("relationship-resolver-namespaces", "resolver-namespaces"),
+		filepath.Join("relationship-rpc-postings", "rpc-caller-postings"),
+		filepath.Join("relationship-kafka-postings", "kafka-topic-postings"),
+	}
+	for _, root := range roots {
+		t.Run(root, func(t *testing.T) {
+			dataDir := t.TempDir()
+			publication := filepath.Join(dataDir, root, strings.Repeat("a", 64))
+			if err := os.MkdirAll(publication, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(publication, ".stage-test"), nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			found, err := relationshipPartialPresent(dataDir)
+			if err != nil || !found {
+				t.Fatalf("hashed relationship partial = %t, %v", found, err)
+			}
+			found, err = derivedPartialPresent(dataDir)
+			if err != nil || !found {
+				t.Fatalf("combined derived partial = %t, %v", found, err)
+			}
+		})
+	}
+
 	dataDir := t.TempDir()
-	publication := filepath.Join(
-		dataDir, "relationships", "relationship-publications", strings.Repeat("a", 64),
-	)
-	if err := os.MkdirAll(publication, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(publication, ".stage-test"), nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	found, err := relationshipPartialPresent(dataDir)
-	if err != nil || !found {
-		t.Fatalf("hashed relationship partial = %t, %v", found, err)
-	}
-	if err := os.MkdirAll(
-		filepath.Join(dataDir, "relationships", "relationship-publications", strings.Repeat("b", 64)),
-		0o700,
-	); err != nil {
-		t.Fatal(err)
+	root := filepath.Join(dataDir, "relationships", "relationship-publications")
+	for _, repository := range []string{strings.Repeat("a", 64), strings.Repeat("b", 64)} {
+		if err := os.MkdirAll(filepath.Join(root, repository), 0o700); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if _, err := relationshipPartialPresent(dataDir); err == nil {
 		t.Fatal("multi-repository relationship partial inventory passed its bound")
+	}
+}
+
+func TestRelationshipComponentScanChangesOnlyAtV25(t *testing.T) {
+	dataDir := t.TempDir()
+	stage := filepath.Join(
+		dataDir, "relationship-resolver-namespaces", "resolver-namespaces",
+		strings.Repeat("a", 64), ".stage-test",
+	)
+	if err := os.MkdirAll(filepath.Dir(stage), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stage, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, schema := range []string{PlanSchemaV20, PlanSchemaV21, PlanSchemaV23, PlanSchemaV24} {
+		found, err := derivedPartialPresentForPlan(Plan{Schema: schema}, dataDir)
+		if err != nil || found {
+			t.Fatalf("historical %s component scan = %t, %v", schema, found, err)
+		}
+	}
+	found, err := derivedPartialPresentForPlan(Plan{Schema: PlanSchemaV25}, dataDir)
+	if err != nil || !found {
+		t.Fatalf("V25 component scan = %t, %v", found, err)
+	}
+}
+
+func TestDerivedControlPresentEnforcesItsReadBound(t *testing.T) {
+	directory := t.TempDir()
+	for index := 0; index <= 4096; index++ {
+		path := filepath.Join(directory, fmt.Sprintf("plain-%04d", index))
+		if err := os.WriteFile(path, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if found, err := derivedControlPresent(directory); err == nil || found {
+		t.Fatalf("oversized control inventory = %t, %v", found, err)
 	}
 }
 
@@ -3089,7 +4056,7 @@ func TestChunkLifecycleCursorDrainsSettledReportThroughCurrentEOF(t *testing.T) 
 // stopped observation that cannot seal must fail closed BEFORE custody is
 // destroyed, never after.
 func TestUnconfirmedTerminalDeadlineSealsAndRetainsCustodyOnUnsealable(t *testing.T) {
-	hostToolchain, err := ObserveHostToolchain(t.Context())
+	hostToolchain, err := observeHostToolchain(t.Context(), false)
 	if err != nil {
 		t.Skipf("host toolchain unavailable: %v", err)
 	}
@@ -3140,6 +4107,7 @@ func TestUnconfirmedTerminalDeadlineSealsAndRetainsCustodyOnUnsealable(t *testin
 			{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
 			{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
 		}
+		setExecutionObservationPath(t, run)
 		run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: 1})
 		run.startPhase(1)
 		return run
@@ -3240,7 +4208,7 @@ func TestUnconfirmedTerminalDeadlineSealsAndRetainsCustodyOnUnsealable(t *testin
 // projection recorded, and the V17 detail fence refutes a terminal whose
 // recorded job row is still active.
 func TestV21CallerTerminalRecordsJobProjectionAndSeals(t *testing.T) {
-	hostToolchain, err := ObserveHostToolchain(t.Context())
+	hostToolchain, err := observeHostToolchain(t.Context(), false)
 	if err != nil {
 		t.Skipf("host toolchain unavailable: %v", err)
 	}
@@ -3283,6 +4251,7 @@ func TestV21CallerTerminalRecordsJobProjectionAndSeals(t *testing.T) {
 			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
 		}, v21Plan),
 	}
+	setExecutionObservationPath(t, run)
 	run.observation.Toolchain = []ToolchainObservation{
 		{Name: "phebs", SHA256: digest}, {Name: "zoekt-git-index", SHA256: digest},
 		{Name: "phebs-focused-index", SHA256: digest}, {Name: "buf", SHA256: digest},
@@ -3412,5 +4381,126 @@ func TestExecutionMarkerIsAtomicAndRefusesReuse(t *testing.T) {
 	}
 	if err := writeExecutionMarker(workspace, digest); err == nil {
 		t.Fatal("existing execution marker was overwritten")
+	}
+}
+
+func TestExecutionMarkerDurabilityFailureLeavesReuseFence(t *testing.T) {
+	workspace := t.TempDir()
+	injected := errors.New("injected marker sync failure")
+	err := writeExecutionMarkerWith(workspace, strings.Repeat("a", 64),
+		func(*os.File) error { return injected }, syncDirectory)
+	if !errors.Is(err, injected) {
+		t.Fatalf("marker sync failure = %v", err)
+	}
+	marker := filepath.Join(workspace, executedMarkerName)
+	if _, err := os.Lstat(marker); err != nil {
+		t.Fatalf("ambiguous marker sync removed the reuse fence: %v", err)
+	}
+	if err := writeExecutionMarker(workspace, strings.Repeat("a", 64)); err == nil {
+		t.Fatal("ambiguous marker sync allowed custody reuse")
+	}
+}
+
+func TestObservationLockSerializesExecutionAndResume(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "observation.json")
+	first, err := lockObservationOutput(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second, err := lockObservationOutput(path); err == nil {
+		_ = unlockObservationOutput(second)
+		t.Fatal("concurrent observation operation acquired the same directory lock")
+	}
+	if err := unlockObservationOutput(first); err != nil {
+		t.Fatal(err)
+	}
+	third, err := lockObservationOutput(path)
+	if err != nil {
+		t.Fatalf("released observation lock remained held: %v", err)
+	}
+	if err := unlockObservationOutput(third); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestV25ExecutionDeadlineIncludesAdmission(t *testing.T) {
+	started := time.Now().Add(-5 * time.Minute)
+	plan := Plan{Schema: PlanSchemaV25, Safety: SafetyEnvelope{MaximumTotalWallMS: int64(time.Hour / time.Millisecond)}}
+	ctx, cancel := executionAdmissionContext(context.Background(), plan, started)
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if !ok || !deadline.Equal(started.Add(time.Hour)) {
+		t.Fatalf("V25 execution deadline = %v, %v", deadline, ok)
+	}
+	legacy, legacyCancel := executionAdmissionContext(context.Background(), Plan{Schema: PlanSchemaV24}, started)
+	if legacyCancel != nil {
+		legacyCancel()
+		t.Fatal("historical execution acquired the V25 admission deadline")
+	}
+	if _, ok := legacy.Deadline(); ok {
+		t.Fatal("historical admission context gained a deadline")
+	}
+}
+
+func TestObservationLockIsReleasedAfterProcessDeath(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("V25 observation locking requires Unix flock")
+	}
+	if os.Getenv("PHEBS_T4013_OBSERVATION_LOCK_HELPER") == "1" {
+		lock, err := lockObservationOutput(os.Getenv("PHEBS_T4013_OBSERVATION_PATH"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = unlockObservationOutput(lock) }()
+		if err := os.WriteFile(os.Getenv("PHEBS_T4013_OBSERVATION_LOCK_READY"), []byte("ready\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		for {
+			time.Sleep(time.Second)
+		}
+	}
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observation.json")
+	ready := filepath.Join(root, "ready")
+	child := exec.Command(os.Args[0], "-test.run=^TestObservationLockIsReleasedAfterProcessDeath$")
+	child.Env = append(os.Environ(),
+		"PHEBS_T4013_OBSERVATION_LOCK_HELPER=1",
+		"PHEBS_T4013_OBSERVATION_PATH="+path,
+		"PHEBS_T4013_OBSERVATION_LOCK_READY="+ready,
+	)
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = child.Process.Kill()
+		_ = child.Wait()
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Lstat(ready); err == nil {
+			break
+		} else if !errors.Is(err, os.ErrNotExist) {
+			t.Fatal(err)
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("observation lock helper did not become ready")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if lock, err := lockObservationOutput(path); err == nil {
+		_ = unlockObservationOutput(lock)
+		t.Fatal("parent acquired a child-held observation lock")
+	}
+	if err := child.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	if err := child.Wait(); err == nil {
+		t.Fatal("killed observation lock helper exited successfully")
+	}
+	if lock, err := lockObservationOutput(path); err != nil {
+		t.Fatalf("process death retained the observation lock: %v", err)
+	} else if err := unlockObservationOutput(lock); err != nil {
+		t.Fatal(err)
 	}
 }

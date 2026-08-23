@@ -75,7 +75,7 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit := string(commitBytes[:len(commitBytes)-1])
-	plan, err := FrozenHostPlan(ctx, commit)
+	plan, err := FrozenHostPlanAtCheckout(ctx, moduleRoot, commit)
 	if err != nil {
 		t.Fatal(err)
 	}

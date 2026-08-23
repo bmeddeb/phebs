@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +35,11 @@ import (
 const ExecuteConfirm = "execute-neutral-t4013-and-destroy-custody"
 
 const (
+	teardownCheckpointSchema       = "t4013-teardown-checkpoint-v1"
+	maximumTeardownCheckpointBytes = MaxObservationBytes + 4<<10
+	teardownPersistenceReserve     = 30 * time.Second
+	teardownRetirementReserve      = 30 * time.Second
+
 	// The frozen ceremony enables nine extractor domains: four protobuf,
 	// three Thrift, and two Kafka domains. The T40.1 extractor aggregate
 	// covers only the four IDL template families. The production Kafka
@@ -74,6 +80,8 @@ var (
 	errLifecycleCycleDeadline       = errors.New("T40.13 lifecycle cycle deadline expired")
 	errPressureRecoveryDeadline     = errors.New("T40.13 pressure recovery deadline expired")
 	errAuthorizedQuery              = errors.New("T40.13 authorized query failed")
+	errObservationPersistence       = errors.New("T40.13 observation persistence failed")
+	errTeardownRecovery             = errors.New("T40.13 execution interrupted during teardown")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -91,43 +99,71 @@ type ExecuteRequest struct {
 }
 
 type execution struct {
-	ctx            context.Context
-	moduleRoot     string
-	workspace      string
-	plan           Plan
-	planBytes      []byte
-	prepared       Prepared
-	toolchain      privateToolchain
-	observation    Observation
-	structural     *privateServer
-	semantic       *privateServer
-	structA        privateProfileSnapshot
-	structB        privateProfileSnapshot
-	structAR       privateProfileSnapshot
-	semanticA      privateProfileSnapshot
-	phase          int
-	phaseStarted   time.Time
-	activeMeters   map[*phaseMeter]struct{}
-	partialMetrics PhaseMetrics
-	metersTracked  int
-	metersExpected int
-	measurementErr error
-	custodyDestroy func(string, string) error
-	liveServers    []*privateServer
-	inspectionWork sync.WaitGroup
+	ctx                  context.Context
+	moduleRoot           string
+	workspace            string
+	plan                 Plan
+	planBytes            []byte
+	prepared             Prepared
+	toolchain            privateToolchain
+	observation          Observation
+	structural           *privateServer
+	semantic             *privateServer
+	structA              privateProfileSnapshot
+	structB              privateProfileSnapshot
+	structAR             privateProfileSnapshot
+	semanticA            privateProfileSnapshot
+	phase                int
+	phaseStarted         time.Time
+	activeMeters         map[*phaseMeter]struct{}
+	partialMetrics       PhaseMetrics
+	metersTracked        int
+	metersExpected       int
+	measurementErr       error
+	custodyDestroy       func(string, string) error
+	observationPath      string
+	checkpointPersist    func(string, teardownCheckpoint) error
+	observationStage     func(string, Observation) error
+	observationPublish   func(string, Observation) error
+	checkpointPersisted  bool
+	observationStaged    bool
+	observationPersisted bool
+	observationLock      *os.File
+	executionStarted     time.Time
+	executionCancel      context.CancelFunc
+	hostToolchainVerify  func() error
+	liveServers          []*privateServer
+	serverShutdownErr    error
+	portReservations     map[string]net.Listener
+	inspectionWork       sync.WaitGroup
 }
 
-func Execute(ctx context.Context, request ExecuteRequest) (Observation, error) {
-	run, err := newExecution(ctx, request)
+func Execute(ctx context.Context, request ExecuteRequest) (observation Observation, retErr error) {
+	executionStarted := time.Now()
+	run, err := newExecution(ctx, request, executionStarted)
 	if err != nil {
 		return Observation{}, err
 	}
-	executionContext, cancel := context.WithTimeoutCause(
-		ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond, errTotalWallDeadline,
-	)
+	if run.observationLock != nil {
+		defer func() {
+			retErr = errors.Join(retErr, unlockObservationOutput(run.observationLock))
+		}()
+	}
+	executionContext := run.ctx
+	cancel := run.executionCancel
+	if cancel == nil {
+		executionContext, cancel = context.WithTimeoutCause(
+			ctx, time.Duration(run.plan.Safety.MaximumTotalWallMS)*time.Millisecond, errTotalWallDeadline,
+		)
+	}
 	defer cancel()
 	run.ctx = executionContext
 	if err := run.execute(); err != nil {
+		// Once teardown has a durable checkpoint, only its resume protocol may
+		// publish or revise the source-free terminal observation.
+		if run.checkpointPersisted || run.observationStaged || errors.Is(err, errObservationPersistence) {
+			return stoppedExecutionResult(run.observation, err, nil)
+		}
 		observation, cleanupErr := run.stopAfterFailure(err)
 		return stoppedExecutionResult(observation, err, cleanupErr)
 	}
@@ -138,7 +174,9 @@ func stoppedExecutionResult(observation Observation, cause, cleanupErr error) (O
 	return observation, errors.Join(ErrGateStopped, cause, cleanupErr)
 }
 
-func newExecution(ctx context.Context, request ExecuteRequest) (*execution, error) {
+func newExecution(
+	ctx context.Context, request ExecuteRequest, executionStarted time.Time,
+) (result *execution, retErr error) {
 	if ctx == nil || request.Confirm != ExecuteConfirm || !filepath.IsAbs(request.ModuleRoot) ||
 		!filepath.IsAbs(request.PlanPath) || !filepath.IsAbs(request.Prepared) || !filepath.IsAbs(request.Observation) {
 		return nil, errors.New("T40.13 execution request is invalid")
@@ -155,8 +193,14 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
+	ctx, executionCancel := executionAdmissionContext(ctx, plan, executionStarted)
+	defer func() {
+		if retErr != nil && executionCancel != nil {
+			executionCancel()
+		}
+	}()
 	if planSchemaVersion(plan.Schema) >= 2 {
-		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
 		}
 	}
@@ -169,9 +213,21 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 		return nil, err
 	}
 	workspace := filepath.Dir(filepath.Dir(prepared.Profiles[0].Config))
+	boundaryWorkspace := workspace
+	observationPath := request.Observation
+	if planSchemaVersion(plan.Schema) >= 25 {
+		boundaryWorkspace, err = filepath.EvalSymlinks(workspace)
+		if err != nil {
+			return nil, errors.New("T40.13 execution custody is invalid")
+		}
+		observationPath, err = canonicalNewOutputPath(request.Observation)
+		if err != nil {
+			return nil, fmt.Errorf("T40.13 observation output is invalid: %w", err)
+		}
+	}
 	if filepath.Dir(filepath.Dir(prepared.Profiles[1].Config)) != workspace ||
-		workspace == moduleRoot || isWithin(workspace, moduleRoot) || isWithin(moduleRoot, workspace) ||
-		isWithin(request.Observation, workspace) {
+		boundaryWorkspace == moduleRoot || isWithin(boundaryWorkspace, moduleRoot) || isWithin(moduleRoot, boundaryWorkspace) ||
+		observationPath == boundaryWorkspace || isWithin(observationPath, boundaryWorkspace) {
 		return nil, errors.New("T40.13 execution custody boundary is invalid")
 	}
 	if err := validatePreparedFiles(prepared, workspace); err != nil {
@@ -181,18 +237,25 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("T40.13 execution custody is not a real directory")
 	}
-	if _, err := os.Lstat(request.Observation); err == nil || !os.IsNotExist(err) {
-		return nil, errors.New("T40.13 observation output must not exist")
+	outputPaths := []string{observationPath}
+	if planSchemaVersion(plan.Schema) >= 25 {
+		outputPaths = append(outputPaths, observationPath+".tmp",
+			observationPath+".teardown", observationPath+".teardown.tmp")
+	}
+	for _, path := range outputPaths {
+		if _, err := os.Lstat(path); err == nil || !os.IsNotExist(err) {
+			return nil, errors.New("T40.13 observation output or durable stage must not exist")
+		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return nil, err
 	}
-	if err := verifyCleanCheckout(ctx, moduleRoot, plan.SourceCommit); err != nil {
+	if err := verifyCleanCheckoutForPlan(ctx, moduleRoot, plan); err != nil {
 		return nil, err
 	}
 	workspaceAllocated := int64(0)
 	if planSchemaVersion(plan.Schema) >= 23 {
-		_, workspaceAllocated, err = measureDataBytes(workspace)
+		_, workspaceAllocated, err = measureDataBytesForPlan(plan, workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -201,19 +264,66 @@ func newExecution(ctx context.Context, request ExecuteRequest) (*execution, erro
 	if err != nil {
 		return nil, err
 	}
+	if err := preflightAtomicEvidenceProtocol(filepath.Dir(observationPath), plan); err != nil {
+		return nil, fmt.Errorf("probe T40.13 observation filesystem protocol: %w", err)
+	}
+	var portReservations map[string]net.Listener
+	if planSchemaVersion(plan.Schema) >= 25 {
+		addresses := make([]string, 0, len(prepared.Profiles))
+		for _, profile := range prepared.Profiles {
+			addresses = append(addresses, profile.Address)
+		}
+		portReservations, err = reserveLoopbackAddresses(addresses...)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			if portReservations != nil {
+				_ = releaseLoopbackAddresses(portReservations)
+			}
+		}()
+	}
+	if err := context.Cause(ctx); err != nil {
+		return nil, err
+	}
+	var observationLock *os.File
+	if planSchemaVersion(plan.Schema) >= 25 {
+		observationLock, err = lockObservationOutput(observationPath)
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Custody retained by an unsealable stop still carries the executed marker:
 	// re-running against dirty, previously-executed state would seal evidence
 	// with false cold/warm provenance. Create it atomically only after every
 	// read-only input, checkout, output, and host preflight has passed; a
 	// refused preflight therefore remains safely retryable.
-	if err := writeExecutionMarker(workspace, PlanDigest(planBytes)); err != nil {
-		return nil, err
+	if err := writeExecutionMarkerForPlan(workspace, PlanDigest(planBytes), plan); err != nil {
+		return nil, errors.Join(err, unlockObservationOutput(observationLock))
 	}
 	observation := emptyObservationForPlan(environment, plan)
-	return &execution{
+	result = &execution{
 		ctx: ctx, moduleRoot: moduleRoot, workspace: workspace,
 		plan: plan, planBytes: planBytes, prepared: prepared, observation: observation,
-	}, nil
+		observationPath: observationPath, observationLock: observationLock,
+		portReservations: portReservations, executionStarted: executionStarted,
+		executionCancel: executionCancel,
+	}
+	portReservations = nil
+	return result, nil
+}
+
+func executionAdmissionContext(
+	parent context.Context, plan Plan, started time.Time,
+) (context.Context, context.CancelFunc) {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return parent, nil
+	}
+	return context.WithDeadlineCause(
+		parent,
+		started.Add(time.Duration(plan.Safety.MaximumTotalWallMS)*time.Millisecond),
+		errTotalWallDeadline,
+	)
 }
 
 // executedMarkerName marks custody that an execution has already started on.
@@ -233,11 +343,43 @@ func writeExecutionMarker(workspace, planDigest string) error {
 	if writeErr == nil && closeErr == nil {
 		return nil
 	}
-	removeErr := os.Remove(marker)
-	return fmt.Errorf(
-		"write T40.13 execution marker: %w",
-		errors.Join(writeErr, closeErr, removeErr),
-	)
+	return fmt.Errorf("write T40.13 execution marker: %w", errors.Join(writeErr, closeErr, os.Remove(marker)))
+}
+
+func writeExecutionMarkerForPlan(workspace, planDigest string, plan Plan) error {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return writeExecutionMarker(workspace, planDigest)
+	}
+	return writeExecutionMarkerWith(workspace, planDigest,
+		func(file *os.File) error { return file.Sync() }, syncDirectory)
+}
+
+func writeExecutionMarkerWith(
+	workspace, planDigest string,
+	syncFile func(*os.File) error,
+	syncParent func(string) error,
+) error {
+	if syncFile == nil || syncParent == nil {
+		return errors.New("T40.13 execution marker durability is unavailable")
+	}
+	marker := filepath.Join(workspace, executedMarkerName)
+	file, err := os.OpenFile(marker, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if errors.Is(err, os.ErrExist) {
+		return errors.New("T40.13 execution custody was already executed; a reviewed purge and fresh preparation are required")
+	}
+	if err != nil {
+		return fmt.Errorf("create T40.13 execution marker: %w", err)
+	}
+	_, writeErr := io.WriteString(file, planDigest+"\n")
+	syncErr := syncFile(file)
+	closeErr := file.Close()
+	if writeErr != nil || syncErr != nil || closeErr != nil {
+		return fmt.Errorf("persist T40.13 execution marker: %w", errors.Join(writeErr, syncErr, closeErr))
+	}
+	if err := syncParent(workspace); err != nil {
+		return fmt.Errorf("persist T40.13 execution marker directory entry: %w", err)
+	}
+	return nil
 }
 
 func validatePreparedFiles(prepared Prepared, workspace string) error {
@@ -284,7 +426,12 @@ func (run *execution) execute() error {
 		return exactOracle("production retry ceiling differs from the frozen plan")
 	}
 	preflightStarted := time.Now()
-	toolchain, err := buildPrivateToolchain(run.ctx, run.moduleRoot, run.workspace)
+	if planSchemaVersion(run.plan.Schema) >= 25 && !run.executionStarted.IsZero() {
+		preflightStarted = run.executionStarted
+		run.phaseStarted = run.executionStarted
+	}
+	toolchain, preflightMetrics, err := buildPrivateToolchain(run.ctx, run.moduleRoot, run.workspace, run.plan)
+	run.partialMetrics = mergeMetrics(run.partialMetrics, preflightMetrics)
 	if err != nil {
 		return err
 	}
@@ -296,9 +443,12 @@ func (run *execution) execute() error {
 	if err != nil {
 		return err
 	}
-	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{
-		WallMS: time.Since(preflightStarted).Milliseconds(), OtherChildren: 4,
-	})
+	if planSchemaVersion(run.plan.Schema) < 25 {
+		preflightMetrics = PhaseMetrics{WallMS: time.Since(preflightStarted).Milliseconds(), OtherChildren: 4}
+	} else {
+		preflightMetrics.WallMS = time.Since(preflightStarted).Milliseconds()
+	}
+	run.observation.Phases[0] = succeededPhase("preflight", preflightMetrics)
 	if err := run.enforceSafety(); err != nil {
 		return err
 	}
@@ -352,15 +502,74 @@ func (run *execution) execute() error {
 	if err := run.teardown(); err != nil {
 		return err
 	}
-	if err := run.verifyFrozenHostToolchain(); err != nil {
-		return err
+	if planSchemaVersion(run.plan.Schema) < 25 {
+		if err := run.verifyFrozenHostToolchain(); err != nil {
+			return err
+		}
+		return ValidateObservation(run.observation)
 	}
-	return ValidateObservation(run.observation)
+	return nil
 }
 
 func (run *execution) stopAfterFailure(cause error) (Observation, error) {
+	if planSchemaVersion(run.plan.Schema) < 25 {
+		return run.stopAfterFailureLegacy(cause)
+	}
 	started := time.Now()
 	stopErr := run.stopServers()
+	if errors.Is(stopErr, errPrivateServerShutdownUnproven) {
+		return Observation{}, errors.Join(cause, stopErr)
+	}
+	cause = errors.Join(cause, stopErr)
+	measurementErr := run.captureFailedPhase()
+	ceilingErr := run.enforceSafety()
+	run.observation.Outcome = "stopped"
+	classification := classifyStoppedFailureForPlan(run.plan, cause, measurementErr, ceilingErr)
+	run.observation.Failures = []FailureObservation{{
+		Phase: phaseOrder[run.phase], Class: classification.class, Code: classification.code,
+	}}
+	run.observation.Decision = DecisionObservation{
+		Selected: classification.decision, Reason: classification.reason,
+		Substantiated: classification.substantiated,
+	}
+	run.observation.Teardown = TeardownObservation{}
+	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
+	// Validate the stopped observation BEFORE destroying custody: an
+	// unsealable observation must fail closed with custody retained for the
+	// separately reviewed purge, never destroy hours of evidence first.
+	projected := run.projectedTeardownObservation(started, 0, 0)
+	if err := run.validateReceiptBeforeTeardown(projected); err != nil {
+		return Observation{}, fmt.Errorf(
+			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
+	}
+	if err := run.persistTeardownCheckpoint(started, 0, 0); err != nil {
+		return Observation{}, err
+	}
+	destroy := destroyCustody
+	if run.custodyDestroy != nil {
+		destroy = run.custodyDestroy
+	}
+	destroyErr := destroy(run.workspace, run.moduleRoot)
+	if destroyErr != nil {
+		return run.observation, fmt.Errorf(
+			"T40.13 stopped custody deletion is not durable; teardown checkpoint retained: %w", destroyErr)
+	}
+	if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
+		return run.observation, fmt.Errorf(
+			"T40.13 stopped custody deletion is not durable; teardown checkpoint retained: %w", err)
+	}
+	if err := run.completeTeardown(started, 0, 0, nil); err != nil {
+		return run.observation, err
+	}
+	return run.observation, nil
+}
+
+func (run *execution) stopAfterFailureLegacy(cause error) (Observation, error) {
+	started := time.Now()
+	stopErr := run.stopServers()
+	if errors.Is(stopErr, errPrivateServerShutdownUnproven) || errors.Is(cause, errPrivateServerShutdownUnproven) {
+		return Observation{}, errors.Join(cause, stopErr)
+	}
 	measurementErr := errors.Join(run.captureFailedPhase(), run.verifyFrozenHostToolchain())
 	ceilingErr := run.enforceSafety()
 	teardownAlreadyCompleted := run.observation.Teardown.Completed
@@ -380,17 +589,11 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	}
 	run.observation.Teardown = TeardownObservation{Completed: true}
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
-	// Validate the stopped observation BEFORE destroying custody: an
-	// unsealable observation must fail closed with custody retained for the
-	// separately reviewed purge, never destroy hours of evidence first.
 	if err := run.validateReceiptBeforeTeardown(run.observation); err != nil {
 		return Observation{}, fmt.Errorf(
 			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
 	}
-	_, err := os.Lstat(run.workspace)
-	if errors.Is(err, os.ErrNotExist) && teardownAlreadyCompleted {
-		// A ceiling crossed only after the successful destructive teardown.
-	} else {
+	if _, err := os.Lstat(run.workspace); !errors.Is(err, os.ErrNotExist) || !teardownAlreadyCompleted {
 		destroy := destroyCustody
 		if run.custodyDestroy != nil {
 			destroy = run.custodyDestroy
@@ -402,13 +605,265 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	return run.observation, stopErr
 }
 
+type teardownCheckpoint struct {
+	Schema             string      `json:"schema"`
+	PlanDigest         string      `json:"plan_digest"`
+	Workspace          string      `json:"workspace"`
+	StartedAt          string      `json:"started_at"`
+	DeadlineAt         string      `json:"deadline_at,omitempty"`
+	DataLogicalBytes   int64       `json:"data_logical_bytes"`
+	DataAllocatedBytes int64       `json:"data_allocated_bytes"`
+	Observation        Observation `json:"observation"`
+}
+
+func (run *execution) projectedTeardownObservation(
+	started time.Time,
+	logical, allocated int64,
+) Observation {
+	value := run.observation
+	value.Phases = slices.Clone(run.observation.Phases)
+	last := len(value.Phases) - 1
+	metrics := PhaseMetrics{
+		WallMS:             conservativeTeardownWallMS(started, time.Now()),
+		DataLogicalBytes:   logical,
+		DataAllocatedBytes: allocated,
+	}
+	if value.Outcome == "stopped" && value.Phases[last].Outcome == "failed" {
+		metrics = mergeMetrics(value.Phases[last].Metrics, metrics)
+		value.Phases[last] = PhaseObservation{Name: "teardown", Outcome: "failed", Metrics: metrics}
+	} else {
+		value.Phases[last] = succeededPhase("teardown", metrics)
+	}
+	value.Teardown = TeardownObservation{Completed: true}
+	return value
+}
+
+func conservativeTeardownWallMS(started, finished time.Time) int64 {
+	elapsed := finished.Sub(started)
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	elapsed += teardownPersistenceReserve + teardownRetirementReserve
+	return max(int64(1), int64((elapsed+time.Millisecond-1)/time.Millisecond))
+}
+
+func (run *execution) persistTeardownCheckpoint(
+	started time.Time,
+	logical, allocated int64,
+) error {
+	checkpoint := teardownCheckpoint{
+		Schema: teardownCheckpointSchema, PlanDigest: PlanDigest(run.planBytes),
+		Workspace: run.workspace, StartedAt: started.UTC().Format(time.RFC3339Nano),
+		DataLogicalBytes: logical, DataAllocatedBytes: allocated,
+		Observation: run.observation,
+	}
+	if run.ctx != nil {
+		if deadline, ok := run.ctx.Deadline(); ok {
+			checkpoint.DeadlineAt = deadline.UTC().Format(time.RFC3339Nano)
+		}
+	}
+	persist := writeTeardownCheckpoint
+	if run.checkpointPersist != nil {
+		persist = run.checkpointPersist
+	}
+	if err := persist(run.observationPath, checkpoint); err != nil {
+		return fmt.Errorf("%w: teardown checkpoint: %w", errObservationPersistence, err)
+	}
+	run.checkpointPersisted = true
+	return nil
+}
+
+func (run *execution) completeTeardown(
+	started time.Time,
+	logical, allocated int64,
+	cleanupErr error,
+) error {
+	run.observation = run.projectedTeardownObservation(started, logical, allocated)
+	toolchainErr := run.verifyFrozenHostToolchain()
+	last := len(run.observation.Phases) - 1
+	run.observation.Phases[last].Metrics.WallMS = max(
+		run.observation.Phases[last].Metrics.WallMS,
+		conservativeTeardownWallMS(started, time.Now()),
+	)
+	ceilingErr := errors.Join(
+		run.teardownDeadlineError(teardownPersistenceReserve+teardownRetirementReserve),
+		run.enforceSafety(),
+	)
+	postDeleteErr := errors.Join(cleanupErr, toolchainErr, ceilingErr, run.completedCancellationError())
+
+	if run.observation.Outcome == "completed" && postDeleteErr != nil {
+		run.stopCompletedTeardown(postDeleteErr, ceilingErr)
+	} else if run.observation.Outcome == "stopped" {
+		if cleanupErr != nil || toolchainErr != nil {
+			return fmt.Errorf("T40.13 final teardown validation failed; teardown checkpoint retained: %w",
+				errors.Join(cleanupErr, toolchainErr))
+		}
+		if ceilingErr != nil {
+			classification := classifyStoppedFailureForPlan(run.plan, ceilingErr, nil, ceilingErr)
+			failurePhase := run.observation.Failures[0].Phase
+			run.observation.Failures[0] = FailureObservation{
+				Phase: failurePhase, Class: classification.class, Code: classification.code,
+			}
+			run.observation.Decision = DecisionObservation{
+				Selected: classification.decision, Reason: classification.reason,
+				Substantiated: classification.substantiated,
+			}
+		}
+	}
+	publicationErr := run.persistFinalTeardown(started)
+	return errors.Join(postDeleteErr, publicationErr)
+}
+
+func (run *execution) persistFinalTeardown(started time.Time) error {
+	var observedErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := run.validateReceiptBeforeTeardown(run.observation); err != nil {
+			return fmt.Errorf("T40.13 final observation is unsealable; teardown checkpoint retained: %w", err)
+		}
+		if err := run.stageObservation(); err != nil {
+			return err
+		}
+		if err := run.publishObservation(); err != nil {
+			return err
+		}
+
+		postErr, ceilingErr := run.postPublicationValidation(started)
+		if postErr == nil {
+			if err := removeTeardownCheckpoint(run.observationPath); err != nil {
+				return fmt.Errorf("%w: retire teardown checkpoint: %w", errObservationPersistence, err)
+			}
+			run.checkpointPersisted = false
+			return observedErr
+		}
+		observedErr = errors.Join(observedErr, postErr)
+		if err := removeProvisionalObservation(run.observationPath); err != nil {
+			return errors.Join(observedErr,
+				fmt.Errorf("%w: retire provisional observation: %w", errObservationPersistence, err))
+		}
+		run.observationStaged = false
+		run.observationPersisted = false
+		if run.observation.Outcome == "completed" {
+			run.stopCompletedTeardown(postErr, ceilingErr)
+		} else if ceilingErr != nil {
+			classification := classifyStoppedFailureForPlan(run.plan, ceilingErr, nil, ceilingErr)
+			failurePhase := run.observation.Failures[0].Phase
+			run.observation.Failures[0] = FailureObservation{
+				Phase: failurePhase, Class: classification.class, Code: classification.code,
+			}
+			run.observation.Decision = DecisionObservation{
+				Selected: classification.decision, Reason: classification.reason,
+				Substantiated: classification.substantiated,
+			}
+		}
+		last := len(run.observation.Phases) - 1
+		run.observation.Phases[last].Metrics.WallMS = max(
+			run.observation.Phases[last].Metrics.WallMS,
+			conservativeTeardownWallMS(started, time.Now()),
+		)
+	}
+	return errors.Join(observedErr,
+		fmt.Errorf("%w: final observation persistence exceeded its conservative reserve", errObservationPersistence))
+}
+
+func (run *execution) postPublicationValidation(started time.Time) (error, error) {
+	last := len(run.observation.Phases) - 1
+	covered := time.Duration(run.observation.Phases[last].Metrics.WallMS) * time.Millisecond
+	toolchainErr := run.verifyFrozenHostToolchain()
+	var coverageErr error
+	if elapsed := time.Since(started); elapsed < 0 || elapsed+teardownRetirementReserve > covered {
+		coverageErr = fmt.Errorf("T40.13 teardown persistence exceeded its recorded wall: %w", errReviewCeiling)
+	}
+	ceilingErr := errors.Join(run.teardownDeadlineError(teardownRetirementReserve), run.enforceSafety())
+	if run.observation.Outcome == "stopped" && len(run.observation.Failures) == 1 &&
+		run.observation.Failures[0].Code == "review_ceiling_crossed" {
+		ceilingErr = nil
+	}
+	return errors.Join(coverageErr, toolchainErr, ceilingErr, run.completedCancellationError()), ceilingErr
+}
+
+func (run *execution) completedCancellationError() error {
+	if run == nil || run.ctx == nil || run.observation.Outcome != "completed" {
+		return nil
+	}
+	cause := context.Cause(run.ctx)
+	if cause == nil || errors.Is(cause, errReviewCeiling) {
+		return nil
+	}
+	return fmt.Errorf("T40.13 execution canceled before terminal publication: %w", cause)
+}
+
+func (run *execution) stopCompletedTeardown(cause, ceilingErr error) {
+	last := len(run.observation.Phases) - 1
+	metrics := run.observation.Phases[last].Metrics
+	run.observation.Outcome = "stopped"
+	run.observation.Phases[last] = PhaseObservation{
+		Name: "teardown", Outcome: "failed", Metrics: metrics,
+		AuthorityChanged: false, OracleExact: false,
+	}
+	classification := classifyStoppedFailureForPlan(run.plan, cause, nil, ceilingErr)
+	run.observation.Failures = []FailureObservation{{
+		Phase: "teardown", Class: classification.class, Code: classification.code,
+	}}
+	run.observation.Decision = DecisionObservation{
+		Selected: classification.decision, Reason: classification.reason,
+		Substantiated: classification.substantiated,
+	}
+	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
+}
+
+func (run *execution) teardownDeadlineError(reserve time.Duration) error {
+	if run.ctx == nil {
+		return nil
+	}
+	if errors.Is(context.Cause(run.ctx), errReviewCeiling) {
+		return context.Cause(run.ctx)
+	}
+	if deadline, ok := run.ctx.Deadline(); ok && time.Now().Add(reserve).After(deadline) {
+		return errTotalWallDeadline
+	}
+	return nil
+}
+
+func (run *execution) stageObservation() error {
+	if run == nil || run.observationPath == "" {
+		return fmt.Errorf("%w: output path is unavailable", errObservationPersistence)
+	}
+	stage := StageObservation
+	if run.observationStage != nil {
+		stage = run.observationStage
+	}
+	if err := stage(run.observationPath, run.observation); err != nil {
+		return fmt.Errorf("%w: stage: %w", errObservationPersistence, err)
+	}
+	run.observationStaged = true
+	return nil
+}
+
+func (run *execution) publishObservation() error {
+	if run == nil || !run.observationStaged || run.observationPath == "" {
+		return fmt.Errorf("%w: staged output is unavailable", errObservationPersistence)
+	}
+	publish := PublishObservation
+	if run.observationPublish != nil {
+		publish = run.observationPublish
+	}
+	if err := publish(run.observationPath, run.observation); err != nil {
+		return fmt.Errorf("%w: publish: %w", errObservationPersistence, err)
+	}
+	run.observationPersisted = true
+	return nil
+}
+
 func (run *execution) verifyFrozenHostToolchain() error {
+	if run.hostToolchainVerify != nil {
+		return run.hostToolchainVerify()
+	}
 	if planSchemaVersion(run.plan.Schema) < 2 {
 		return nil
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return VerifyHostToolchain(verificationContext, run.plan.HostToolchain)
+	return verifyHostToolchainForPlan(verificationContext, run.plan)
 }
 
 type stoppedClassification struct {
@@ -617,6 +1072,12 @@ func (run *execution) startServer(
 	before *privateProfileSnapshot,
 ) (*privateServer, *phaseMeter, error) {
 	run.metersExpected++
+	if listener := run.portReservations[profile.Address]; listener != nil {
+		if err := listener.Close(); err != nil {
+			return nil, nil, fmt.Errorf("release T40.13 reserved server address: %w", err)
+		}
+		delete(run.portReservations, profile.Address)
+	}
 	server, err := launchPrivateServer(run.ctx, profile, run.toolchain, label)
 	if err != nil {
 		return nil, nil, err
@@ -671,7 +1132,7 @@ func (run *execution) captureFailedPhase() error {
 		}
 	}
 	if metrics.DataAllocatedBytes == 0 {
-		logical, allocated, err := measureDataBytes(run.workspace)
+		logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
 		captureErr = errors.Join(captureErr, err)
 		if err == nil {
 			metrics.DataLogicalBytes, metrics.DataAllocatedBytes = logical, allocated
@@ -767,7 +1228,7 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 	run.trackMeter(meter)
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 		return err
 	}
 	run.structB, err = run.waitSnapshot(profile, "b", "delta-b", run.fullConvergenceDeadline(), run.structural)
@@ -792,7 +1253,7 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 	run.trackMeter(meter)
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"]); err != nil {
+	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 		return err
 	}
 	run.structAR, err = run.waitSnapshot(profile, "a-return", "return-a", run.fullConvergenceDeadline(), run.structural)
@@ -889,7 +1350,7 @@ func (run *execution) interruption() error {
 			}
 		}
 		run.setInterruptionSubstage("delta_trigger")
-		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 			if triggerObserver != nil {
 				return errors.Join(err, triggerObserver.Close())
 			}
@@ -911,7 +1372,7 @@ func (run *execution) interruption() error {
 			return triggerErr
 		}
 		run.recordInterruptionTrigger(trigger, triggerScheduleDigest, time.Since(started))
-	} else if err := waitForDerivedPartial(run.ctx, profile.DataDir, 90*time.Minute); err != nil {
+	} else if err := waitForDerivedPartial(run.ctx, run.plan, profile.DataDir, 90*time.Minute); err != nil {
 		_ = server.stop(30 * time.Second)
 		return err
 	}
@@ -922,7 +1383,7 @@ func (run *execution) interruption() error {
 	run.semantic = nil
 	if planSchemaVersion(run.plan.Schema) >= 17 {
 		run.setInterruptionSubstage("source_return")
-		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 			return err
 		}
 	}
@@ -971,7 +1432,7 @@ func (run *execution) interruption() error {
 		}
 		run.observation.Interruption.ConvergenceLifecycle = convergenceLifecycle
 		run.setInterruptionSubstage("partial_verification")
-		if partialErr := waitForDerivedPartialClear(run.ctx, profile.DataDir, 5*time.Minute); partialErr != nil {
+		if partialErr := waitForDerivedPartialClear(run.ctx, run.plan, profile.DataDir, 5*time.Minute); partialErr != nil {
 			return directRecovery(partialErr)
 		}
 	} else if planSchemaVersion(run.plan.Schema) >= 17 {
@@ -991,13 +1452,13 @@ func (run *execution) interruption() error {
 			run.observation.Interruption.TriggerRecoveredState = recovered
 		}
 		if planSchemaVersion(run.plan.Schema) >= 19 {
-			if partialErr := waitForDerivedPartialClear(run.ctx, profile.DataDir, 5*time.Minute); partialErr != nil {
+			if partialErr := waitForDerivedPartialClear(run.ctx, run.plan, profile.DataDir, 5*time.Minute); partialErr != nil {
 				return directRecovery(partialErr)
 			}
 		} else {
 			partial, partialErr := derivedPartialPresentV18(profile.DataDir)
 			if partialErr == nil && !partial {
-				partial, partialErr = relationshipPartialPresent(profile.DataDir)
+				partial, partialErr = relationshipPartialPresentLegacy(profile.DataDir)
 			}
 			if partialErr != nil {
 				return directRecovery(partialErr)
@@ -1314,10 +1775,9 @@ func generationLifecycleObservation(status lifecycle.Status) (*InterruptionLifec
 	return nil, errors.New("T40.13 generation lifecycle owner is absent")
 }
 
-// relationshipPartialPresent checks the hashed relationship-publications
-// layout the historical scanner missed (its traversal predated the
-// repository-hash directory level).
-func relationshipPartialPresent(dataDir string) (bool, error) {
+// relationshipPartialPresentLegacy preserves the exact V17-V24 composite-root
+// traversal and its historical os.ReadDir behavior.
+func relationshipPartialPresentLegacy(dataDir string) (bool, error) {
 	root := filepath.Join(dataDir, "relationships", "relationship-publications")
 	rootInfo, err := os.Lstat(root)
 	if os.IsNotExist(err) {
@@ -1337,8 +1797,45 @@ func relationshipPartialPresent(dataDir string) (bool, error) {
 		if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
 			return false, errors.New("T40.13 relationship publication repository is invalid")
 		}
-		if found, err := derivedControlPresent(filepath.Join(root, repository.Name())); err != nil || found {
+		if found, err := derivedControlPresentLegacy(filepath.Join(root, repository.Name())); err != nil || found {
 			return found, err
+		}
+	}
+	return false, nil
+}
+
+// relationshipPartialPresent checks every relationship-owned hashed
+// publication namespace. All four writers can create scanner-visible stages;
+// the atomic root alone is not a complete interruption-cleanliness oracle.
+func relationshipPartialPresent(dataDir string) (bool, error) {
+	roots := []string{
+		filepath.Join(dataDir, "relationships", "relationship-publications"),
+		filepath.Join(dataDir, "relationship-resolver-namespaces", "resolver-namespaces"),
+		filepath.Join(dataDir, "relationship-rpc-postings", "rpc-caller-postings"),
+		filepath.Join(dataDir, "relationship-kafka-postings", "kafka-topic-postings"),
+	}
+	for _, root := range roots {
+		rootInfo, err := os.Lstat(root)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+			return false, errors.Join(err, errors.New("T40.13 relationship publication root is invalid"))
+		}
+		repositories, err := readDirectoryBounded(root, 1)
+		if err != nil {
+			return false, err
+		}
+		if len(repositories) > 1 {
+			return false, errors.New("T40.13 relationship publication repository inventory exceeds its bound")
+		}
+		for _, repository := range repositories {
+			if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+				return false, errors.New("T40.13 relationship publication repository is invalid")
+			}
+			if found, err := derivedControlPresent(filepath.Join(root, repository.Name())); err != nil || found {
+				return found, err
+			}
 		}
 	}
 	return false, nil
@@ -1438,8 +1935,9 @@ func (run *execution) newInterruptionTriggerV18Observer(
 		return nil,
 			errors.New("T40.13 V18 interruption trigger reader is invalid")
 	}
+	lifecycleContract, inspectionContract := interruptionContractsForPlan(run.plan.Schema)
 	cursor, err := newChunkLifecycleCursor(
-		server.logPath, meter.logOffset, chunkLifecycleValidationV17,
+		server.logPath, meter.logOffset, lifecycleContract,
 	)
 	if err != nil {
 		return nil, err
@@ -1454,7 +1952,7 @@ func (run *execution) newInterruptionTriggerV18Observer(
 			err, cursor.Close(), leaseReader.Close(context.WithoutCancel(run.ctx)),
 		)
 	}
-	inspector, err := newProfileInspector(profile, profileInspectionV16)
+	inspector, err := newProfileInspector(profile, inspectionContract)
 	if err != nil {
 		return nil, errors.Join(
 			err, cursor.Close(), leaseReader.Close(context.WithoutCancel(run.ctx)),
@@ -1697,7 +2195,7 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	defer func() { _ = leaseReader.Close(context.Background()) }()
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"]); err != nil {
+	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 		return err
 	}
 	var started generationscheduler.ChunkLifecycleReport
@@ -1739,7 +2237,7 @@ func (run *execution) staleWorker() error {
 	if err != nil {
 		return err
 	}
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"]); err != nil {
+	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
 		return err
 	}
 	if planSchemaVersion(run.plan.Schema) >= 18 {
@@ -1748,32 +2246,11 @@ func (run *execution) staleWorker() error {
 		// non-domain-final completions never touch the index lock). With the
 		// exclusive lock held the B schedule keeps issuing running chunks, so
 		// re-select and fence again instead of aborting the four-hour run.
-		const staleFenceSelectionAttempts = 8
-		for attempt := 0; ; attempt++ {
-			state, stateErr := leaseReader.GenerationChunkLeaseState(run.ctx, started.Identity)
-			if stateErr == nil && runningLeaseMatchesReport(state, started, profile.RepositoryName) &&
-				digestIdentity(state.ScheduleDigest) {
-				fenceErr := leaseReader.FenceCurrentGenerationScheduleForDiagnostic(run.ctx, state)
-				if fenceErr == nil {
-					selectedScheduleDigest = state.ScheduleDigest
-					break
-				}
-				if !errors.Is(fenceErr, store.ErrGenerationStale) {
-					return fenceErr
-				}
-			} else if stateErr != nil && !errors.Is(stateErr, store.ErrNotFound) {
-				return stateErr
-			}
-			if attempt+1 >= staleFenceSelectionAttempts {
-				return errors.New("T40.13 selected B lease did not remain active across supersession")
-			}
-			started, err = waitCurrentRunningGenerationChunk(
-				run.ctx, cursor, leaseReader, profile, profile.Revisions["b"],
-				10*time.Minute, extractionGenerationBindsRevision,
-			)
-			if err != nil {
-				return err
-			}
+		started, selectedScheduleDigest, err = fenceRunningGenerationChunkForDiagnostic(
+			run.ctx, cursor, leaseReader, profile, profile.Revisions["b"], started, 10*time.Minute,
+		)
+		if err != nil {
+			return err
 		}
 		releaseFence()
 		releaseFence = nil
@@ -1824,6 +2301,47 @@ func (run *execution) staleWorker() error {
 	return run.enforceSafety()
 }
 
+func fenceRunningGenerationChunkForDiagnostic(
+	ctx context.Context,
+	cursor *chunkLifecycleCursor,
+	reader *store.LocalGenerationChunkReader,
+	profile PreparedProfile,
+	revision string,
+	started generationscheduler.ChunkLifecycleReport,
+	reselectionLimit time.Duration,
+) (generationscheduler.ChunkLifecycleReport, string, error) {
+	const selectionAttempts = 8
+	for attempt := 0; attempt < selectionAttempts; attempt++ {
+		state, stateErr := reader.GenerationChunkLeaseState(ctx, started.Identity)
+		if stateErr == nil && runningLeaseMatchesReport(state, started, profile.RepositoryName) &&
+			digestIdentity(state.ScheduleDigest) {
+			fenceErr := reader.FenceCurrentGenerationScheduleForDiagnostic(ctx, state)
+			if fenceErr == nil {
+				return started, state.ScheduleDigest, nil
+			}
+			if !errors.Is(fenceErr, store.ErrGenerationStale) {
+				return generationscheduler.ChunkLifecycleReport{}, "", fenceErr
+			}
+		} else if stateErr != nil && !errors.Is(stateErr, store.ErrNotFound) {
+			return generationscheduler.ChunkLifecycleReport{}, "", stateErr
+		}
+		if attempt+1 == selectionAttempts {
+			break
+		}
+		var err error
+		started, err = waitCurrentRunningGenerationChunk(
+			ctx, cursor, reader, profile, revision,
+			reselectionLimit, extractionGenerationBindsRevision,
+		)
+		if err != nil {
+			return generationscheduler.ChunkLifecycleReport{}, "", err
+		}
+	}
+	return generationscheduler.ChunkLifecycleReport{}, "", errors.New(
+		"T40.13 selected B lease did not remain active across supersession",
+	)
+}
+
 const (
 	maxChunkLifecyclePendingBytes   = 1 << 20
 	maxChunkLifecycleReportsPerPoll = 400_000
@@ -1851,6 +2369,15 @@ func lifecycleValidationForPlan(schema string) chunkLifecycleValidation {
 		return chunkLifecycleValidationV17
 	}
 	return chunkLifecycleValidationV16
+}
+
+func interruptionContractsForPlan(
+	schema string,
+) (chunkLifecycleValidation, profileInspectionContract) {
+	if planSchemaVersion(schema) >= 25 {
+		return lifecycleValidationForPlan(schema), profileInspectionForPlan(schema)
+	}
+	return chunkLifecycleValidationV17, profileInspectionV16
 }
 
 type chunkLifecycleCursor struct {
@@ -2562,7 +3089,7 @@ func (run *execution) archiveRestore() error {
 	}
 	metrics = mergeMetrics(backupMetrics, restoreMetrics, metrics)
 	metrics.WallMS = time.Since(started).Milliseconds()
-	metrics.DataLogicalBytes, metrics.DataAllocatedBytes, err = measureDataBytes(run.workspace)
+	metrics.DataLogicalBytes, metrics.DataAllocatedBytes, err = measureDataBytesForPlan(run.plan, run.workspace)
 	if err != nil {
 		return err
 	}
@@ -2762,11 +3289,50 @@ func (run *execution) validateReceiptBeforeTeardown(value Observation) error {
 }
 
 func (run *execution) teardown() error {
+	if planSchemaVersion(run.plan.Schema) < 25 {
+		return run.teardownLegacy()
+	}
 	started := time.Now()
 	if err := run.stopServers(); err != nil {
 		return err
 	}
-	logical, allocated, err := measureDataBytes(run.workspace)
+	logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
+	if err != nil {
+		return err
+	}
+	if err := run.completedCancellationError(); err != nil {
+		return err
+	}
+	projected := run.projectedTeardownObservation(started, logical, allocated)
+	if err := run.validateReceiptBeforeTeardown(projected); err != nil {
+		return fmt.Errorf("T40.13 completed observation is unsealable; custody retained: %w", err)
+	}
+	if err := run.persistTeardownCheckpoint(started, logical, allocated); err != nil {
+		return fmt.Errorf("T40.13 completed observation checkpoint failed; custody retained: %w", err)
+	}
+	if err := run.completedCancellationError(); err != nil {
+		return err
+	}
+	destroy := destroyCustody
+	if run.custodyDestroy != nil {
+		destroy = run.custodyDestroy
+	}
+	destroyErr := destroy(run.workspace, run.moduleRoot)
+	if destroyErr != nil {
+		return fmt.Errorf("T40.13 custody deletion is not durable; teardown checkpoint retained: %w", destroyErr)
+	}
+	if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
+		return fmt.Errorf("T40.13 custody deletion is not durable; teardown checkpoint retained: %w", err)
+	}
+	return run.completeTeardown(started, logical, allocated, nil)
+}
+
+func (run *execution) teardownLegacy() error {
+	started := time.Now()
+	if err := run.stopServers(); err != nil {
+		return err
+	}
+	logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
 	if err != nil {
 		return err
 	}
@@ -2777,11 +3343,11 @@ func (run *execution) teardown() error {
 	if err := destroy(run.workspace, run.moduleRoot); err != nil {
 		return err
 	}
-	if _, err := os.Lstat(run.workspace); !os.IsNotExist(err) {
+	if _, err := os.Lstat(run.workspace); !errors.Is(err, os.ErrNotExist) {
 		return errors.New("T40.13 teardown left custody behind")
 	}
 	run.observation.Teardown = TeardownObservation{Completed: true}
-	run.observation.Phases[11] = succeededPhase("teardown", PhaseMetrics{
+	run.observation.Phases[len(run.observation.Phases)-1] = succeededPhase("teardown", PhaseMetrics{
 		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical, DataAllocatedBytes: allocated,
 	})
 	return run.enforceSafety()
@@ -2805,22 +3371,34 @@ func (run *execution) enforceSafety() error {
 	if totalWall > run.plan.Safety.MaximumTotalWallMS {
 		return errReviewCeiling
 	}
+	if prePressureAllocationCrossed(run.plan, run.observation.Phases) {
+		return errReviewCeiling
+	}
 	return nil
 }
 
 func (run *execution) stopServers() error {
-	var result error
+	result := errors.Join(run.serverShutdownErr, releaseLoopbackAddresses(run.portReservations))
+	retry := run.liveServers[:0]
+	var unproven error
 	for _, server := range run.liveServers {
-		result = errors.Join(result, server.stop(30*time.Second))
+		stopErr := server.stop(30 * time.Second)
+		if errors.Is(stopErr, errPrivateServerShutdownUnproven) {
+			retry = append(retry, server)
+			unproven = errors.Join(unproven, stopErr)
+			continue
+		}
+		result = errors.Join(result, stopErr)
 	}
 	// A process exit or deadline selects its terminal result without waiting for
 	// an already-started synchronous control read. Keep custody intact until that
 	// bounded reader has observed cancellation and returned.
 	run.inspectionWork.Wait()
-	run.liveServers = nil
+	run.liveServers = retry
 	run.structural = nil
 	run.semantic = nil
-	return result
+	run.serverShutdownErr = result
+	return errors.Join(result, unproven)
 }
 
 type convergenceProgressTracker struct {
@@ -3072,36 +3650,7 @@ func (run *execution) waitSnapshot(
 	if run == nil || run.ctx == nil || limit <= 0 || server == nil || server.done == nil {
 		return privateProfileSnapshot{}, errors.New("T40.13 convergence wait is invalid")
 	}
-	contract := profileInspectionLegacy
-	switch run.plan.Schema {
-	case PlanSchemaV14:
-		contract = profileInspectionV14
-	case PlanSchemaV15:
-		contract = profileInspectionV15
-	case PlanSchemaV16:
-		contract = profileInspectionV16
-	case PlanSchemaV17:
-		// V17 changes only the interruption evidence/trigger contract. Exact
-		// convergence classification remains the independently reviewed V16
-		// relationship-pair contract.
-		contract = profileInspectionV16
-	case PlanSchemaV18:
-		contract = profileInspectionV16
-	case PlanSchemaV19:
-		contract = profileInspectionV16
-	case PlanSchemaV20:
-		contract = profileInspectionV20
-	case PlanSchemaV21:
-		contract = profileInspectionV21
-	case PlanSchemaV22:
-		contract = profileInspectionV21
-	case PlanSchemaV23:
-		contract = profileInspectionV21
-	case PlanSchemaV24:
-		contract = profileInspectionV21
-	case PlanSchemaV25:
-		contract = profileInspectionV21
-	}
+	contract := profileInspectionForPlan(run.plan.Schema)
 	inspector, err := newProfileInspector(profile, contract)
 	if err != nil {
 		return privateProfileSnapshot{}, err
@@ -3384,13 +3933,13 @@ func (run *execution) revalidationDeadline() time.Duration {
 	return 20 * time.Minute
 }
 
-func waitForDerivedPartial(ctx context.Context, dataDir string, limit time.Duration) error {
+func waitForDerivedPartial(ctx context.Context, plan Plan, dataDir string, limit time.Duration) error {
 	phase, cancel := phaseContext(ctx, limit)
 	defer cancel()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
-		found, err := derivedPartialPresent(dataDir)
+		found, err := derivedPartialPresentForPlan(plan, dataDir)
 		if err != nil {
 			return err
 		}
@@ -3405,15 +3954,15 @@ func waitForDerivedPartial(ctx context.Context, dataDir string, limit time.Durat
 	}
 }
 
-func waitForDerivedPartialClear(ctx context.Context, dataDir string, limit time.Duration) error {
+func waitForDerivedPartialClear(ctx context.Context, plan Plan, dataDir string, limit time.Duration) error {
 	phase, cancel := phaseContext(ctx, limit)
 	defer cancel()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		partial, err := derivedPartialPresent(dataDir)
-		if err == nil && !partial {
-			partial, err = relationshipPartialPresent(dataDir)
+		partial, err := derivedPartialPresentForPlan(plan, dataDir)
+		if planSchemaVersion(plan.Schema) < 25 && err == nil && !partial {
+			partial, err = relationshipPartialPresentLegacy(dataDir)
 		}
 		if err != nil {
 			return err
@@ -3475,7 +4024,7 @@ func derivedPartialPresentV18(dataDir string) (bool, error) {
 				return false, errors.New("T40.13 derived interruption repository is invalid")
 			}
 			repositoryPath := filepath.Join(root, repository.Name())
-			if found, err := derivedControlPresent(repositoryPath); err != nil || found {
+			if found, err := derivedControlPresentLegacy(repositoryPath); err != nil || found {
 				return found, err
 			}
 			if name == "observations" {
@@ -3487,7 +4036,7 @@ func derivedPartialPresentV18(dataDir string) (bool, error) {
 				case statErr != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0:
 					return false, errors.Join(statErr, errors.New("T40.13 derived interruption v2 control is invalid"))
 				}
-				if found, err := derivedControlPresent(v2); err != nil || found {
+				if found, err := derivedControlPresentLegacy(v2); err != nil || found {
 					return found, err
 				}
 			}
@@ -3509,7 +4058,11 @@ func derivedPartialPresent(dataDir string) (bool, error) {
 		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
 			return false, errors.Join(err, errors.New("T40.13 derived interruption root is invalid"))
 		}
-		repositories, err := os.ReadDir(root)
+		repositoryLimit := 1
+		if name == "extraction-publications" {
+			repositoryLimit = 2
+		}
+		repositories, err := readDirectoryBounded(root, repositoryLimit)
 		if err != nil {
 			return false, err
 		}
@@ -3547,7 +4100,65 @@ func derivedPartialPresent(dataDir string) (bool, error) {
 	return relationshipPartialPresent(dataDir)
 }
 
-func derivedControlPresent(directory string) (bool, error) {
+func derivedPartialPresentForPlan(plan Plan, dataDir string) (bool, error) {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		return derivedPartialPresent(dataDir)
+	}
+	return derivedPartialPresentLegacy(dataDir)
+}
+
+func derivedPartialPresentLegacy(dataDir string) (bool, error) {
+	if !filepath.IsAbs(dataDir) {
+		return false, errors.New("T40.13 derived interruption scope is invalid")
+	}
+	for _, name := range []string{"observations", "extraction-publications"} {
+		root := filepath.Join(dataDir, name)
+		rootInfo, err := os.Lstat(root)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+			return false, errors.Join(err, errors.New("T40.13 derived interruption root is invalid"))
+		}
+		repositories, err := os.ReadDir(root)
+		if err != nil {
+			return false, err
+		}
+		if name == "extraction-publications" {
+			repositories = slices.DeleteFunc(repositories, func(entry os.DirEntry) bool {
+				return entry.Name() == "candidates"
+			})
+		}
+		if len(repositories) > 1 {
+			return false, errors.New("T40.13 derived interruption repository inventory exceeds its bound")
+		}
+		for _, repository := range repositories {
+			if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+				return false, errors.New("T40.13 derived interruption repository is invalid")
+			}
+			repositoryPath := filepath.Join(root, repository.Name())
+			if found, err := derivedControlPresentLegacy(repositoryPath); err != nil || found {
+				return found, err
+			}
+			if name == "observations" {
+				v2 := filepath.Join(repositoryPath, observationpublication.InventoryPublicationDirectoryV2)
+				info, statErr := os.Lstat(v2)
+				switch {
+				case os.IsNotExist(statErr):
+					continue
+				case statErr != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0:
+					return false, errors.Join(statErr, errors.New("T40.13 derived interruption v2 control is invalid"))
+				}
+				if found, err := derivedControlPresentLegacy(v2); err != nil || found {
+					return found, err
+				}
+			}
+		}
+	}
+	return relationshipPartialPresentLegacy(dataDir)
+}
+
+func derivedControlPresentLegacy(directory string) (bool, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return false, err
@@ -3561,6 +4172,34 @@ func derivedControlPresent(directory string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func derivedControlPresent(directory string) (bool, error) {
+	entries, err := readDirectoryBounded(directory, 4096)
+	if err != nil {
+		return false, err
+	}
+	if len(entries) > 4096 {
+		return false, errors.New("T40.13 derived interruption control inventory exceeds its bound")
+	}
+	for _, entry := range entries {
+		if entry.Name() == "publishing.json" || strings.HasPrefix(entry.Name(), ".stage-") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func readDirectoryBounded(path string, limit int) ([]os.DirEntry, error) {
+	directory, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	entries, readErr := directory.ReadDir(limit + 1)
+	if errors.Is(readErr, io.EOF) {
+		readErr = nil
+	}
+	return entries, errors.Join(readErr, directory.Close())
 }
 
 type privateRecoveryBackup struct {
@@ -3588,8 +4227,12 @@ func createLiveBackup(
 	}
 	command := exec.CommandContext(ctx, toolchain.Phebs, "backup", "-config", profile.Config, "-output", backup)
 	command.Stdout, command.Stderr = logFile, logFile
-	command.Env = scrubExecutionEnvironment()
-	metrics, commandErr := runMeasuredCommand(command, workspace)
+	if err := validatePrivateTemporaryDirectory(toolchain); err != nil {
+		_ = logFile.Close()
+		return privateRecoveryBackup{}, PhaseMetrics{}, err
+	}
+	command.Env = executionEnvironmentForToolchain(toolchain)
+	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
 		commandErr = errors.New("T40.13 live backup command failed")
@@ -3633,8 +4276,12 @@ func restoreBackup(
 	}
 	command := exec.CommandContext(ctx, toolchain.Phebs, "restore", "-config", profile.Config, "-backup", backup.path)
 	command.Stdout, command.Stderr = logFile, logFile
-	command.Env = scrubExecutionEnvironment()
-	metrics, commandErr := runMeasuredCommand(command, workspace)
+	if err := validatePrivateTemporaryDirectory(toolchain); err != nil {
+		_ = logFile.Close()
+		return PhaseMetrics{}, err
+	}
+	command.Env = executionEnvironmentForToolchain(toolchain)
+	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
 		commandErr = errors.New("T40.13 restore command failed")
@@ -4064,6 +4711,25 @@ func equalStringSlices(left, right []string) bool {
 }
 
 func WriteObservation(path string, value Observation) error {
+	if observationSchemaVersion(value.Schema) >= 25 {
+		if err := StageObservation(path, value); err != nil {
+			return err
+		}
+		return PublishObservation(path, value)
+	}
+	return writeObservationLegacy(path, value)
+}
+
+// WriteReturnedObservation preserves the V1-V24 command contract. V25 owns
+// durable publication inside Execute so the command must not write after it.
+func WriteReturnedObservation(path string, value Observation) error {
+	if observationSchemaVersion(value.Schema) >= 25 {
+		return nil
+	}
+	return writeObservationLegacy(path, value)
+}
+
+func writeObservationLegacy(path string, value Observation) error {
 	if !filepath.IsAbs(path) || filepath.Clean(path) == string(filepath.Separator) {
 		return errors.New("T40.13 observation output path is invalid")
 	}
@@ -4084,4 +4750,518 @@ func WriteObservation(path string, value Observation) error {
 		return err
 	}
 	return file.Close()
+}
+
+// StageObservation durably writes complete candidate bytes beside the output.
+// A surviving teardown checkpoint keeps those bytes provisional.
+func StageObservation(path string, value Observation) error {
+	raw, err := MarshalObservation(value)
+	if err != nil {
+		return err
+	}
+	return stageAtomicOutput(path, raw, MaxObservationBytes, false)
+}
+
+// PublishObservation atomically links bytes that were durably staged after
+// custody absence and final validation into their output path.
+func PublishObservation(path string, value Observation) error {
+	raw, err := MarshalObservation(value)
+	if err != nil {
+		return err
+	}
+	return publishAtomicOutput(path, raw, MaxObservationBytes, true)
+}
+
+// WriteReceipt durably publishes one validated receipt without exposing a
+// partial final file. Repeating the write with identical bytes completes an
+// interrupted publication; different existing bytes always fail closed.
+func WriteReceipt(path string, raw []byte) error {
+	if len(raw) == 0 || len(raw) > MaxReceiptBytes {
+		return errors.New("T40.13 receipt output is invalid")
+	}
+	if err := stageAtomicOutput(path, raw, MaxReceiptBytes, true); err != nil {
+		return err
+	}
+	return publishAtomicOutput(path, raw, MaxReceiptBytes, true)
+}
+
+// ResumeObservation validates a final or staged source-free observation
+// against the frozen plan, then completes an interrupted atomic publication.
+func ResumeObservation(path string, planBytes []byte, planDigest string) (raw []byte, retErr error) {
+	finalPath, err := canonicalNewOutputPath(path)
+	if err != nil {
+		return nil, err
+	}
+	plan, err := DecodePlan(planBytes)
+	if err != nil || planDigest != PlanDigest(planBytes) {
+		return nil, errors.Join(err, errors.New("T40.13 observation resume plan binding is invalid"))
+	}
+	if planSchemaVersion(plan.Schema) >= 25 {
+		observationLock, lockErr := lockObservationOutput(finalPath)
+		if lockErr != nil {
+			return nil, lockErr
+		}
+		defer func() {
+			retErr = errors.Join(retErr, unlockObservationOutput(observationLock))
+		}()
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(finalPath)
+	if checkpointErr == nil {
+		if checkpoint.PlanDigest != planDigest {
+			return nil, errors.New("T40.13 teardown checkpoint plan digest differs")
+		}
+		if err := confirmCustodyDeletionDurable(checkpoint.Workspace); err != nil {
+			return nil, fmt.Errorf("T40.13 teardown checkpoint lacks durable custody deletion: %w", err)
+		}
+		// The checkpoint is the authority until it is durably retired. Any
+		// observation beside it is only a provisional publication that may
+		// precede the final wall/toolchain check.
+		if err := removeProvisionalObservation(finalPath); err != nil {
+			return nil, fmt.Errorf("retire provisional T40.13 observation: %w", err)
+		}
+		return resumeTeardownCheckpoint(finalPath, planBytes, plan, checkpoint)
+	} else if !errors.Is(checkpointErr, os.ErrNotExist) {
+		return nil, checkpointErr
+	}
+
+	for _, candidate := range []string{finalPath, finalPath + ".tmp"} {
+		raw, readErr := readAtomicRegular(candidate, MaxObservationBytes)
+		if errors.Is(readErr, os.ErrNotExist) {
+			continue
+		}
+		if readErr != nil {
+			return nil, fmt.Errorf("read T40.13 observation for resume: %w", readErr)
+		}
+		if _, err := BuildReceipt(planBytes, raw, planDigest); err != nil {
+			return nil, fmt.Errorf("validate T40.13 observation before resume: %w", err)
+		}
+		if err := publishAtomicOutput(finalPath, raw, MaxObservationBytes, true); err != nil {
+			return nil, fmt.Errorf("resume T40.13 observation publication: %w", err)
+		}
+		if err := removeTeardownCheckpoint(finalPath); err != nil {
+			return nil, fmt.Errorf("retire resumed T40.13 teardown checkpoint: %w", err)
+		}
+		return raw, nil
+	}
+	return nil, fmt.Errorf("read T40.13 observation for resume: %w", os.ErrNotExist)
+}
+
+func writeTeardownCheckpoint(path string, value teardownCheckpoint) error {
+	if err := validateTeardownCheckpoint(value); err != nil {
+		return err
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	raw = append(raw, '\n')
+	checkpointPath := path + ".teardown"
+	if err := stageAtomicOutput(
+		checkpointPath, raw, maximumTeardownCheckpointBytes, false,
+	); err != nil {
+		return err
+	}
+	return publishAtomicOutput(checkpointPath, raw, maximumTeardownCheckpointBytes, true)
+}
+
+func readTeardownCheckpoint(path string) (teardownCheckpoint, error) {
+	checkpointPath := path + ".teardown"
+	raw, err := readAtomicRegular(checkpointPath, maximumTeardownCheckpointBytes)
+	if errors.Is(err, os.ErrNotExist) {
+		raw, err = readAtomicRegular(checkpointPath+".tmp", maximumTeardownCheckpointBytes)
+	}
+	if err != nil {
+		return teardownCheckpoint{}, err
+	}
+	var value teardownCheckpoint
+	if err := decodeStrict(raw, &value); err != nil {
+		return teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
+	}
+	if err := validateTeardownCheckpoint(value); err != nil {
+		return teardownCheckpoint{}, err
+	}
+	return value, nil
+}
+
+func validateTeardownCheckpoint(value teardownCheckpoint) error {
+	_, err := time.Parse(time.RFC3339Nano, value.StartedAt)
+	if err != nil || value.Schema != teardownCheckpointSchema || !digestIdentity(value.PlanDigest) ||
+		!filepath.IsAbs(value.Workspace) || filepath.Clean(value.Workspace) == string(filepath.Separator) ||
+		value.DataLogicalBytes < 0 || value.DataAllocatedBytes < 0 ||
+		value.Observation.Teardown.Completed ||
+		len(value.Observation.Phases) != len(phaseOrder) ||
+		value.Observation.Phases[len(phaseOrder)-1].Outcome != "not_run" &&
+			(value.Observation.Outcome != "stopped" ||
+				value.Observation.Phases[len(phaseOrder)-1].Outcome != "failed") {
+		return errors.New("T40.13 teardown checkpoint is invalid")
+	}
+	if value.DeadlineAt != "" {
+		_, deadlineErr := time.Parse(time.RFC3339Nano, value.DeadlineAt)
+		if deadlineErr != nil {
+			return errors.New("T40.13 teardown checkpoint deadline is invalid")
+		}
+	}
+	return ValidateObservation(value.Observation)
+}
+
+func resumeTeardownCheckpoint(
+	path string,
+	planBytes []byte,
+	plan Plan,
+	checkpoint teardownCheckpoint,
+) ([]byte, error) {
+	started, _ := time.Parse(time.RFC3339Nano, checkpoint.StartedAt)
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	if checkpoint.DeadlineAt != "" {
+		deadline, _ := time.Parse(time.RFC3339Nano, checkpoint.DeadlineAt)
+		ctx, cancel = context.WithDeadlineCause(ctx, deadline, errTotalWallDeadline)
+		defer cancel()
+	}
+	run := &execution{
+		ctx: ctx, plan: plan, planBytes: planBytes, workspace: checkpoint.Workspace,
+		observation: checkpoint.Observation, observationPath: path, checkpointPersisted: true,
+	}
+	var recoveryErr error
+	if run.observation.Outcome == "completed" {
+		recoveryErr = errTeardownRecovery
+	}
+	completeErr := run.completeTeardown(
+		started, checkpoint.DataLogicalBytes, checkpoint.DataAllocatedBytes, recoveryErr,
+	)
+	if run.checkpointPersisted || !run.observationPersisted {
+		return nil, fmt.Errorf("resume T40.13 teardown checkpoint: %w",
+			errors.Join(completeErr, errors.New("teardown checkpoint remains authoritative")))
+	}
+	raw, err := MarshalObservation(run.observation)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func removeTeardownCheckpoint(path string) error {
+	checkpointPath := path + ".teardown"
+	parent := filepath.Dir(checkpointPath)
+	removeErr := removeAtomicTemporary(checkpointPath+".tmp", parent)
+	if removeErr == nil {
+		removeErr = removeAtomicTemporary(checkpointPath, parent)
+	}
+	syncErr := syncDirectory(parent)
+	_, verifyErr := readTeardownCheckpoint(path)
+	if removeErr != nil {
+		if verifyErr != nil {
+			verifyErr = fmt.Errorf("T40.13 teardown checkpoint authority became unreadable: %w", verifyErr)
+		} else {
+			verifyErr = nil
+		}
+	} else if verifyErr == nil {
+		verifyErr = errors.New("T40.13 teardown checkpoint survived retirement")
+	} else if errors.Is(verifyErr, os.ErrNotExist) {
+		verifyErr = nil
+	}
+	return errors.Join(removeErr, syncErr, verifyErr)
+}
+
+func removeProvisionalObservation(path string) error {
+	parent := filepath.Dir(path)
+	if err := removeAtomicTemporary(path+".tmp", parent); err != nil {
+		return err
+	}
+	return removeAtomicTemporary(path, parent)
+}
+
+func canonicalNewOutputPath(path string) (string, error) {
+	if !filepath.IsAbs(path) || filepath.Clean(path) == string(filepath.Separator) {
+		return "", errors.New("output path must be absolute and non-root")
+	}
+	cleaned := filepath.Clean(path)
+	parent, err := filepath.EvalSymlinks(filepath.Dir(cleaned))
+	if err != nil {
+		return "", fmt.Errorf("resolve output directory: %w", err)
+	}
+	info, err := os.Lstat(parent)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("output directory is not a real directory")
+	}
+	return filepath.Join(parent, filepath.Base(cleaned)), nil
+}
+
+func stageAtomicOutput(path string, raw []byte, maximumBytes int, allowIdenticalExisting bool) error {
+	if len(raw) == 0 || maximumBytes <= 0 || len(raw) > maximumBytes {
+		return errors.New("T40.13 atomic output bytes are invalid")
+	}
+	finalPath, err := canonicalNewOutputPath(path)
+	if err != nil {
+		return err
+	}
+	parent := filepath.Dir(finalPath)
+	temporaryPath := finalPath + ".tmp"
+
+	if existing, readErr := readAtomicRegular(finalPath, maximumBytes); readErr == nil {
+		if !allowIdenticalExisting {
+			return fmt.Errorf("create T40.13 atomic output: %w", os.ErrExist)
+		}
+		if !bytes.Equal(existing, raw) {
+			return errors.New("T40.13 existing atomic output differs")
+		}
+		if err := syncRegularFile(finalPath); err != nil {
+			return err
+		}
+		if err := validateAndRemoveAtomicTemporary(temporaryPath, parent, raw, maximumBytes); err != nil {
+			return err
+		}
+		return syncDirectory(parent)
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		return readErr
+	}
+	if err := removeAtomicTemporary(temporaryPath, parent); err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(temporaryPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create T40.13 atomic temporary output: %w", err)
+	}
+	written, writeErr := io.Copy(file, bytes.NewReader(raw))
+	if writeErr == nil && written != int64(len(raw)) {
+		writeErr = io.ErrShortWrite
+	}
+	if writeErr != nil {
+		return cleanupFailedAtomicStage(file, temporaryPath, parent,
+			fmt.Errorf("write T40.13 atomic temporary output: %w", writeErr))
+	}
+	if err := file.Sync(); err != nil {
+		return cleanupFailedAtomicStage(file, temporaryPath, parent,
+			fmt.Errorf("sync T40.13 atomic temporary output: %w", err))
+	}
+	if err := file.Close(); err != nil {
+		return cleanupFailedAtomicStage(nil, temporaryPath, parent,
+			fmt.Errorf("close T40.13 atomic temporary output: %w", err))
+	}
+	if err := syncDirectory(parent); err != nil {
+		// The complete fsynced stage remains available for diagnosis/resume,
+		// but the caller must retain custody because its directory entry was
+		// not proven durable.
+		return fmt.Errorf("sync staged T40.13 output: %w", err)
+	}
+	return nil
+}
+
+func publishAtomicOutput(path string, raw []byte, maximumBytes int, allowIdenticalExisting bool) error {
+	if len(raw) == 0 || maximumBytes <= 0 || len(raw) > maximumBytes {
+		return errors.New("T40.13 atomic output bytes are invalid")
+	}
+	finalPath, err := canonicalNewOutputPath(path)
+	if err != nil {
+		return err
+	}
+	parent := filepath.Dir(finalPath)
+	temporaryPath := finalPath + ".tmp"
+	if existing, readErr := readAtomicRegular(finalPath, maximumBytes); readErr == nil {
+		if !allowIdenticalExisting || !bytes.Equal(existing, raw) {
+			return errors.New("T40.13 existing atomic output differs")
+		}
+		if err := validateAndRemoveAtomicTemporary(temporaryPath, parent, raw, maximumBytes); err != nil {
+			return err
+		}
+		if err := syncRegularFile(finalPath); err != nil {
+			return err
+		}
+		return syncDirectory(parent)
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		return readErr
+	}
+	staged, err := readAtomicRegular(temporaryPath, maximumBytes)
+	if err != nil {
+		return fmt.Errorf("read staged T40.13 atomic output: %w", err)
+	}
+	if !bytes.Equal(staged, raw) {
+		return errors.New("T40.13 staged atomic output differs")
+	}
+	if err := syncRegularFile(temporaryPath); err != nil {
+		return err
+	}
+
+	if err := os.Link(temporaryPath, finalPath); err != nil {
+		if !allowIdenticalExisting || !errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("publish T40.13 atomic output: %w", err)
+		}
+		existing, readErr := readAtomicRegular(finalPath, maximumBytes)
+		if readErr != nil || !bytes.Equal(existing, raw) {
+			return fmt.Errorf("validate concurrently published T40.13 output: %w",
+				errors.Join(readErr, errors.New("output differs")))
+		}
+	}
+	if err := syncDirectory(parent); err != nil {
+		return fmt.Errorf("sync published T40.13 output: %w", err)
+	}
+	if err := os.Remove(temporaryPath); err != nil {
+		return fmt.Errorf("remove T40.13 atomic temporary output: %w", err)
+	}
+	if err := syncDirectory(parent); err != nil {
+		return fmt.Errorf("sync cleaned T40.13 output directory: %w", err)
+	}
+	return nil
+}
+
+// PromoteStagedFile durably publishes one bounded source-free shell artifact
+// without overwriting an existing authority file.
+func PromoteStagedFile(temporaryPath, outputPath, durabilityRoot string) error {
+	const maximumBytes = 4 << 20
+	temporaryPath, err := canonicalNewOutputPath(temporaryPath)
+	if err != nil {
+		return fmt.Errorf("T40.13 staged promotion input is invalid: %w", err)
+	}
+	outputPath, err = canonicalNewOutputPath(outputPath)
+	if err != nil {
+		return fmt.Errorf("T40.13 staged promotion output is invalid: %w", err)
+	}
+	root, err := filepath.EvalSymlinks(durabilityRoot)
+	if err != nil || !filepath.IsAbs(durabilityRoot) || root != filepath.Clean(durabilityRoot) {
+		return errors.Join(err, errors.New("T40.13 staged promotion durability root is invalid"))
+	}
+	rootInfo, err := os.Lstat(root)
+	if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 ||
+		filepath.Dir(temporaryPath) != filepath.Dir(outputPath) || temporaryPath == outputPath ||
+		!isWithin(outputPath, root) {
+		return errors.Join(err, errors.New("T40.13 staged promotion scope is invalid"))
+	}
+	raw, err := readAtomicRegular(temporaryPath, maximumBytes)
+	if err != nil || len(raw) == 0 {
+		return errors.Join(err, errors.New("T40.13 staged promotion input is empty or invalid"))
+	}
+	temporaryInfo, err := os.Lstat(temporaryPath)
+	if err != nil {
+		return err
+	}
+	if outputInfo, outputErr := os.Lstat(outputPath); outputErr == nil {
+		if !os.SameFile(temporaryInfo, outputInfo) {
+			return fmt.Errorf("publish T40.13 staged file: %w", os.ErrExist)
+		}
+	} else if !errors.Is(outputErr, os.ErrNotExist) {
+		return outputErr
+	} else if err := os.Link(temporaryPath, outputPath); err != nil {
+		return fmt.Errorf("publish T40.13 staged file: %w", err)
+	}
+	if err := syncRegularFile(outputPath); err != nil {
+		return err
+	}
+	if err := syncDirectoryChain(filepath.Dir(outputPath), root); err != nil {
+		return err
+	}
+	if err := os.Remove(temporaryPath); err != nil {
+		return fmt.Errorf("remove T40.13 promoted stage: %w", err)
+	}
+	return syncDirectoryChain(filepath.Dir(outputPath), root)
+}
+
+func syncDirectoryChain(directory, root string) error {
+	for {
+		if err := syncDirectory(directory); err != nil {
+			return err
+		}
+		if directory == root {
+			return nil
+		}
+		parent := filepath.Dir(directory)
+		if parent == directory || !isWithin(parent, root) && parent != root {
+			return errors.New("T40.13 durability directory escaped its root")
+		}
+		directory = parent
+	}
+}
+
+func cleanupFailedAtomicStage(file *os.File, temporaryPath, parent string, cause error) error {
+	if file != nil {
+		cause = errors.Join(cause, file.Close())
+	}
+	if info, err := os.Lstat(temporaryPath); err == nil && info.Mode().IsRegular() &&
+		info.Mode()&os.ModeSymlink == 0 {
+		cause = errors.Join(cause, os.Remove(temporaryPath), syncDirectory(parent))
+	}
+	return cause
+}
+
+func validateAndRemoveAtomicTemporary(path, parent string, raw []byte, maximumBytes int) error {
+	staged, err := readAtomicRegular(path, maximumBytes)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(staged, raw) {
+		return errors.New("T40.13 staged and final atomic outputs differ")
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove resumed T40.13 atomic temporary output: %w", err)
+	}
+	return syncDirectory(parent)
+}
+
+func readAtomicRegular(path string, maximumBytes int) ([]byte, error) {
+	if maximumBytes <= 0 {
+		return nil, errors.New("T40.13 atomic output read bound is invalid")
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.New("T40.13 atomic output is not a regular file")
+	}
+	if info.Size() < 0 || info.Size() > int64(maximumBytes) {
+		return nil, errors.New("T40.13 atomic output exceeds its byte bound")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open T40.13 atomic output: %w", err)
+	}
+	openedInfo, statErr := file.Stat()
+	if statErr != nil || !openedInfo.Mode().IsRegular() || !os.SameFile(info, openedInfo) {
+		return nil, errors.Join(errors.New("T40.13 atomic output changed during open"), statErr, file.Close())
+	}
+	raw, readErr := io.ReadAll(io.LimitReader(file, int64(maximumBytes)+1))
+	closeErr := file.Close()
+	if readErr != nil || closeErr != nil {
+		return nil, fmt.Errorf("read T40.13 atomic output: %w", errors.Join(readErr, closeErr))
+	}
+	if len(raw) > maximumBytes {
+		return nil, errors.New("T40.13 atomic output exceeds its byte bound")
+	}
+	return raw, nil
+}
+
+func removeAtomicTemporary(path, parent string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect T40.13 atomic temporary output: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("T40.13 atomic temporary output is not a regular file")
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove stale T40.13 atomic temporary output: %w", err)
+	}
+	return syncDirectory(parent)
+}
+
+func syncRegularFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open T40.13 atomic output for sync: %w", err)
+	}
+	return errors.Join(file.Sync(), file.Close())
+}
+
+func syncDirectory(path string) error {
+	directory, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open T40.13 output directory for sync: %w", err)
+	}
+	return errors.Join(directory.Sync(), directory.Close())
 }

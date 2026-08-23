@@ -534,7 +534,7 @@ func writeStage(
 	rootSchema string,
 	prior *Publication,
 	byMember map[string][]Posting,
-) (*Prepared, error) {
+) (_ *Prepared, retErr error) {
 	if err := ensureRoot(root); err != nil {
 		return nil, err
 	}
@@ -549,10 +549,21 @@ func writeStage(
 	if err != nil {
 		return nil, err
 	}
+	prepared := &Prepared{
+		root: root, repository: authority.Repository, directory: directory,
+	}
 	failed := true
 	defer func() {
-		if failed {
-			_ = os.RemoveAll(directory)
+		if !failed {
+			return
+		}
+		if cleanupErr := prepared.Discard(); cleanupErr != nil {
+			cleanupErr = fmt.Errorf("clean failed RPC caller posting stage: %w", cleanupErr)
+			if errors.Is(retErr, ErrLimit) {
+				retErr = fmt.Errorf("%v; %w", retErr, cleanupErr)
+			} else {
+				retErr = errors.Join(retErr, cleanupErr)
+			}
 		}
 	}()
 	keys := make([]string, 0, len(byMember))
@@ -633,10 +644,7 @@ func writeStage(
 	if err := syncDirectory(directory); err != nil {
 		return nil, err
 	}
-	prepared := &Prepared{
-		root: root, repository: authority.Repository,
-		directory: directory, rootValue: rootValue,
-	}
+	prepared.rootValue = rootValue
 	if _, err := openDirectory(ctx, directory, rootValue, true); err != nil {
 		return nil, err
 	}

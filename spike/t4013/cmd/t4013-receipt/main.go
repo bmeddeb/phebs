@@ -22,15 +22,30 @@ func main() {
 	if err != nil {
 		fail("read plan: %v", err)
 	}
-	observation, err := os.ReadFile(*observationPath)
+	decodedPlan, err := t4013.DecodePlan(plan)
 	if err != nil {
-		fail("read observation: %v", err)
+		fail("decode plan: %v", err)
+	}
+	var observation []byte
+	if decodedPlan.Schema == t4013.PlanSchemaV25 {
+		observation, err = t4013.ResumeObservation(*observationPath, plan, *planDigest)
+	} else {
+		observation, err = os.ReadFile(*observationPath)
+	}
+	if err != nil {
+		fail("read or resume observation: %v", err)
 	}
 	receipt, err := t4013.BuildReceipt(plan, observation, *planDigest)
 	if err != nil {
 		fail("build receipt: %v", err)
 	}
-	writeNew(*output, receipt)
+	if decodedPlan.Schema == t4013.PlanSchemaV25 {
+		if err := t4013.WriteReceipt(*output, receipt); err != nil {
+			fail("write output: %v", err)
+		}
+	} else {
+		writeNew(*output, receipt)
+	}
 }
 
 func writeNew(path string, content []byte) {

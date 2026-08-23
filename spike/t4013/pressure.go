@@ -143,7 +143,7 @@ func createPressureBallast(
 		return nil, 0, 0, errors.Join(gateErr,
 			fmt.Errorf("T40.13 pressure ballast requires normal starting capacity: %w", errProductionPressure))
 	}
-	_, allocatedBefore, err := measureDataBytes(workspace)
+	_, allocatedBefore, err := measureDataBytesForContract(workspace, contract >= pressureBallastV25)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -168,7 +168,7 @@ func createPressureBallast(
 		_ = os.Remove(path)
 		return nil, 0, 0, errors.Join(allocateErr, closeErr)
 	}
-	logical, allocated, err := measureDataBytes(workspace)
+	logical, allocated, err := measureDataBytesForContract(workspace, contract >= pressureBallastV25)
 	if err != nil || allocated > safety.MaximumDataAllocatedBytes {
 		_ = os.Remove(path)
 		if err == nil {

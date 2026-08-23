@@ -113,6 +113,25 @@ func TestFrozenPlanIsDeterministicAndStrict(t *testing.T) {
 	}
 }
 
+func TestPrePressurePeakCeilingChangesOnlyAtV25(t *testing.T) {
+	phases := make([]PhaseObservation, len(phaseOrder))
+	for index, name := range phaseOrder {
+		phases[index] = PhaseObservation{Name: name}
+	}
+	phases[6].Metrics.DataAllocatedBytes = frozenSafetyV25.MaximumPrePressureBytes + 1
+	if !prePressureAllocationCrossed(Plan{Schema: PlanSchemaV25, Safety: frozenSafetyV25}, phases) {
+		t.Fatal("V25 pre-pressure peak crossed without refusal")
+	}
+	if prePressureAllocationCrossed(Plan{Schema: PlanSchemaV24, Safety: frozenSafetyV24}, phases) {
+		t.Fatal("historical plan acquired the V25 pre-pressure peak ceiling")
+	}
+	phases[6].Metrics.DataAllocatedBytes = frozenSafetyV25.MaximumPrePressureBytes
+	phases[7].Metrics.DataAllocatedBytes = frozenSafetyV25.MaximumDataAllocatedBytes
+	if prePressureAllocationCrossed(Plan{Schema: PlanSchemaV25, Safety: frozenSafetyV25}, phases) {
+		t.Fatal("pressure-phase allocation was treated as pre-pressure growth")
+	}
+}
+
 func TestCeremonySchemaLadderIsCompleteAndCoupled(t *testing.T) {
 	for version := 1; version < len(ceremonySchemaLadder); version++ {
 		version := version
@@ -714,7 +733,7 @@ func TestV24PlanFencesCorroboratedInterruptionRequeue(t *testing.T) {
 }
 
 func TestV25PlanFundsMeasuredCeremonyAndPrePressureGrowth(t *testing.T) {
-	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2277,6 +2296,32 @@ func fakeHostToolchain() []HostToolObservation {
 		{Name: "git", Version: "git version 2.53.0", SHA256: "sha256:" + strings.Repeat("d", 64)},
 		{Name: "surreal", Version: "3.2.3+20260721.40522d1", SHA256: "sha256:" + strings.Repeat("e", 64)},
 	}
+}
+
+func fakeHostToolchainV25() []HostToolObservation {
+	values := fakeHostToolchain()
+	return append(values, HostToolObservation{
+		Name: "go-asm", Version: "asm version go1.26.1",
+		SHA256: "sha256:" + strings.Repeat("f", 64),
+	}, HostToolObservation{
+		Name: "git-core", Version: "git version 2.53.0",
+		SHA256: "sha256:" + strings.Repeat("9", 64),
+	}, HostToolObservation{
+		Name: "git-tools", Version: "git version 2.53.0",
+		SHA256: "sha256:" + strings.Repeat("6", 64),
+	}, HostToolObservation{
+		Name: "go-tools", Version: "go version go1.26.1 darwin/arm64",
+		SHA256: "sha256:" + strings.Repeat("8", 64),
+	}, HostToolObservation{
+		Name: "go-root", Version: "go version go1.26.1 darwin/arm64",
+		SHA256: "sha256:" + strings.Repeat("7", 64),
+	}, HostToolObservation{Name: "sandbox-exec", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("6", 64)},
+		HostToolObservation{Name: "sh", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("5", 64)},
+		HostToolObservation{Name: "du", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("4", 64)},
+		HostToolObservation{Name: "ps", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("3", 64)},
+		HostToolObservation{Name: "pgrep", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("2", 64)},
+		HostToolObservation{Name: "sysctl", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("1", 64)},
+	)
 }
 
 func reader(profile, revision string, files uint64) BlobReaderObservation {

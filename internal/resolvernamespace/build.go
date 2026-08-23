@@ -59,7 +59,7 @@ func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
 func build(
 	ctx context.Context, request BuildRequest, rootSchema string,
 	upstream *downstreamauthority.Authority,
-) (*Prepared, error) {
+) (_ *Prepared, retErr error) {
 	if request.Root == "" {
 		return nil, errors.New("resolver namespace root is required")
 	}
@@ -125,9 +125,18 @@ func build(
 		return nil, fmt.Errorf("create resolver namespace stage: %w", err)
 	}
 	prepared := &Prepared{root: request.Root, repository: request.Repository, directory: stage}
+	failed := true
 	defer func() {
-		if err != nil {
-			_ = os.RemoveAll(stage)
+		if !failed {
+			return
+		}
+		if cleanupErr := prepared.Discard(); cleanupErr != nil {
+			cleanupErr = fmt.Errorf("clean failed resolver namespace stage: %w", cleanupErr)
+			if errors.Is(retErr, ErrLimit) {
+				retErr = fmt.Errorf("%v; %w", retErr, cleanupErr)
+			} else {
+				retErr = errors.Join(retErr, cleanupErr)
+			}
 		}
 	}()
 
@@ -210,6 +219,7 @@ func build(
 	if _, err := openGeneration(ctx, stage, rootValue, true); err != nil {
 		return nil, fmt.Errorf("validate resolver namespace stage: %w", err)
 	}
+	failed = false
 	return prepared, nil
 }
 

@@ -38,6 +38,16 @@ type authorState struct {
 }
 
 func Author(ctx context.Context, request AuthorRequest) (Receipt, error) {
+	return author(ctx, request, false)
+}
+
+// AuthorClosedSystem applies the closed V25 host-command contract without
+// changing the historical AuthorRequest shape.
+func AuthorClosedSystem(ctx context.Context, request AuthorRequest) (Receipt, error) {
+	return author(ctx, request, true)
+}
+
+func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Receipt, error) {
 	if ctx == nil {
 		return Receipt{}, errors.New("T40.1 author requires a context")
 	}
@@ -147,7 +157,7 @@ func Author(ctx context.Context, request AuthorRequest) (Receipt, error) {
 	if err != nil {
 		return Receipt{}, err
 	}
-	logical, allocated, err := directoryBytes(ctx, repository)
+	logical, allocated, err := directoryBytes(ctx, repository, closedSystem)
 	if err != nil {
 		return Receipt{}, err
 	}
@@ -1067,7 +1077,7 @@ func splitNUL(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func directoryBytes(ctx context.Context, root string) (uint64, uint64, error) {
+func directoryBytes(ctx context.Context, root string, closedSystem bool) (uint64, uint64, error) {
 	var logical uint64
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -1089,7 +1099,11 @@ func directoryBytes(ctx context.Context, root string) (uint64, uint64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	output, err := runCommand(ctx, "", deterministicBaseEnvironment(), "du", "-sk", root)
+	du := "du"
+	if closedSystem {
+		du = "/usr/bin/du"
+	}
+	output, err := runCommand(ctx, "", deterministicBaseEnvironment(), du, "-sk", root)
 	if err != nil {
 		return 0, 0, errors.New("measure T40.1 allocated repository bytes")
 	}

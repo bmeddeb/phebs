@@ -110,6 +110,9 @@ func charge(client any) { _ = pb.Marker; client.Charge(nil) }
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatal(err)
+	}
 	rootValue := publication.Root()
 	if rootValue.ResolvedCount != 3 || rootValue.NameMatchCount != 1 || rootValue.UnresolvedCount != 2 {
 		t.Fatalf("class totals = %+v", rootValue)
@@ -332,6 +335,79 @@ func charge(client pb.PaymentsClient) { client.Charge(nil) }
 		measurement.Observed <= measurement.Limit || measurement.Limit != 1 {
 		t.Fatalf("resident refusal = %+v, %v", measurement, err)
 	}
+}
+
+func TestDiscardRemovesStageAfterPreinstallPublishFailure(t *testing.T) {
+	root := t.TempDir()
+	resolver := &countingResolver{publication: resolverPublication(t, root, nil)}
+	fixture := observationFixture(
+		t, "cmd/plain.go", "package app\n", []sourcepartition.Placement{{
+			Path: "cmd/plain.go", Mode: "100644", Revisions: []int{0},
+		}},
+	)
+	prepared, err := buildSources(
+		t.Context(), root, fakeSource(t, []observedFixture{fixture}), resolver,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := prepared.directory
+	target := generationDirectory(root, prepared.repository, prepared.rootValue.GenerationDigest)
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prepared.Publish(t.Context()); err == nil {
+		t.Fatal("publish accepted conflicting incomplete generation")
+	}
+	if _, err := os.Lstat(stage); err != nil {
+		t.Fatalf("pre-install publish failure consumed stage: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("discarded stage remains: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatalf("repeated discard = %v", err)
+	}
+}
+
+func TestBuildCleanupFailureIsNotClassifiedAsLimit(t *testing.T) {
+	root := t.TempDir()
+	repository := "github.com/acme/repo"
+	ctx := &stageCleanupFailureContext{
+		Context: t.Context(),
+		remove:  publicationRepository(root, repository),
+		cause:   ErrLimit,
+	}
+	_, err := writeStage(
+		ctx, root, Authority{Repository: repository}, RootSchema, nil,
+		map[string][]Posting{memberKey("grpc", 0): {}},
+	)
+	if ctx.removeErr != nil {
+		t.Fatal(ctx.removeErr)
+	}
+	if err == nil || errors.Is(err, ErrLimit) ||
+		!strings.Contains(err.Error(), "clean failed RPC caller posting stage") ||
+		!strings.Contains(err.Error(), ErrLimit.Error()) {
+		t.Fatalf("cleanup failure classification = %v", err)
+	}
+}
+
+type stageCleanupFailureContext struct {
+	context.Context
+	remove    string
+	cause     error
+	removeErr error
+}
+
+func (ctx *stageCleanupFailureContext) Err() error {
+	if ctx.remove != "" {
+		ctx.removeErr = os.RemoveAll(ctx.remove)
+		ctx.remove = ""
+	}
+	return ctx.cause
 }
 
 func resolverPublication(

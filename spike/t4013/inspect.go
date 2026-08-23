@@ -210,6 +210,24 @@ const (
 	profileInspectionV21
 )
 
+func profileInspectionForPlan(schema string) profileInspectionContract {
+	version := planSchemaVersion(schema)
+	switch {
+	case version >= 21:
+		return profileInspectionV21
+	case version >= 20:
+		return profileInspectionV20
+	case version >= 16:
+		return profileInspectionV16
+	case version >= 15:
+		return profileInspectionV15
+	case version >= 14:
+		return profileInspectionV14
+	default:
+		return profileInspectionLegacy
+	}
+}
+
 func extractionConvergenceProbe(
 	progress extractionpublication.Progress,
 	repository store.RepoStatus,

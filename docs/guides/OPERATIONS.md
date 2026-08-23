@@ -4856,3 +4856,55 @@ returning. Successful publication remains immutable; startup repair and the
 relationship lifecycle sweep remain fallback cleanup rather than the normal
 failure path. This adds no healthy-path filesystem work beyond one closed-state
 check and changes no operator command, schema, authority, or gate deadline.
+
+## T40.R1 V25 pre-freeze readiness protocol
+
+Use a clean checkout at the exact reviewed commit and run:
+
+```sh
+./spike/t4013/run-large-mac-ceremony.sh preflight
+```
+
+This is the required cheap gate before requesting a freeze. It performs the
+prospective V25 host-bound freeze in temporary output, including the exact
+ceremony filesystem's projected pressure and atomic evidence operations, then
+runs focused production/harness packages and the real-binary semantic and
+stale-worker rehearsals. A capacity or filesystem-protocol refusal is a
+pre-freeze stop: do not create a ceremony ID, signing key, plan, or custody,
+and do not weaken the envelope. Move the ceremony root to an adequate local
+filesystem or free independently reviewed space, then rerun the same command.
+
+Execution may leave `observation.json.teardown` or
+`observation.json.teardown.tmp` only after it has durably recorded an
+incomplete teardown transition. If custody still exists, stop: retain it for
+the separately reviewed purge and do not run `seal`. If custody is absent,
+`execute` and the explicit `seal` command both route through
+`t4013-receipt`, which gives the checkpoint precedence over any provisional
+observation, reconstructs a conservative stopped observation, and retires the
+checkpoint before source-free sealing. Do not delete or hand-edit any of these
+files. A persistent frozen-toolchain mismatch must be corrected before resume;
+the harness will keep the checkpoint rather than publish unsound evidence.
+
+V25 alone uses the closed Git/Go execution contract. V1-V24 keep their prior
+archive and ambient execution behavior so retained evidence remains
+reproducible. Private server shutdown is process-session bounded; any forced kill
+or surviving descendant is an execution failure, not a successful phase.
+The V25 total clock begins when the executor is entered, including its admission
+preflight. Concurrent executor/resume publication is refused. A wrapper signal,
+abnormal execution child with retained custody, refused cleanup, or incomplete
+preparation leaves its operation lock and private state for review.
+
+Do not request a freeze yet. Process-session ownership is not durable across an
+executor SIGKILL/OOM, and the current inventory cannot structurally exclude PID
+reuse, session escape, or a fork/exit race before deletion. The reviewed remedy
+must keep a stable supervisor/sentinel alive until all descendants drain (or
+define equivalent external process-absence proof); repeated polling alone is
+not sufficient. The same review must put direct V25 Prepare/Cleanup/Destroy and
+Execute/resume under one crash-released run-root lock, bind every later
+Go/Git/Surreal launch to the frozen executable path, reverify private binaries
+across restarts, and move HOME/module/control caches into reviewed custody. Do
+not call the exported custody mutators concurrently. `go mod verify`, the exact
+filesystem projection, the bounded package gates, and both real-binary
+rehearsals must then pass from one clean commit. Passing those gates is readiness
+evidence only; freeze and execution each still require Ben's separate explicit
+authorization and a fresh, unconsumed ceremony identifier.

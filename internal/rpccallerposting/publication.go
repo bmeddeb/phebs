@@ -21,6 +21,23 @@ type Publication struct {
 	rootValue Root
 }
 
+// Discard durably removes an unpublished stage. Publish closes a stage as
+// soon as its immutable generation is installed.
+func (prepared *Prepared) Discard() error {
+	if prepared == nil || prepared.closed || prepared.directory == "" {
+		return nil
+	}
+	base := publicationRepository(prepared.root, prepared.repository)
+	if err := os.RemoveAll(prepared.directory); err != nil {
+		return err
+	}
+	if err := syncDirectory(base); err != nil {
+		return err
+	}
+	prepared.closed = true
+	return nil
+}
+
 func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 	if prepared == nil || prepared.closed {
 		return nil, errors.New("RPC caller posting stage is closed")

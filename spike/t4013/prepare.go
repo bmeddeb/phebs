@@ -32,6 +32,7 @@ const (
 	PreparedSchema           = "t4013-private-prepared-custody-v1"
 	PrepareConfirm           = "prepare-neutral-t4013-custody"
 	CleanupConfirm           = "cleanup-neutral-t4013-custody"
+	preparedCleanupSchema    = "t4013-prepared-cleanup-v1"
 	custodyRemoveAttempts    = 11
 	custodyRemoveRetryDelay  = 100 * time.Millisecond
 	custodyRemoveSettleDelay = 250 * time.Millisecond
@@ -43,6 +44,13 @@ type PrepareRequest struct {
 	PlanPath   string
 	Confirm    string
 	BasePort   int
+}
+
+type preparedCleanupControl struct {
+	Schema     string `json:"schema"`
+	PlanDigest string `json:"plan_digest"`
+	ModuleRoot string `json:"module_root"`
+	Workspace  string `json:"workspace"`
 }
 
 type Prepared struct {
@@ -64,6 +72,16 @@ type PreparedProfile struct {
 }
 
 func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retErr error) {
+	return prepare(ctx, request, "")
+}
+
+// PrepareToOutput adds V25 durable manifest publication without changing the
+// historical PrepareRequest shape.
+func PrepareToOutput(ctx context.Context, request PrepareRequest, output string) (result Prepared, retErr error) {
+	return prepare(ctx, request, output)
+}
+
+func prepare(ctx context.Context, request PrepareRequest, output string) (result Prepared, retErr error) {
 	if ctx == nil {
 		return Prepared{}, errors.New("T40.13 prepare requires a context")
 	}
@@ -93,41 +111,83 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 	if err != nil {
 		return Prepared{}, err
 	}
+	version := planSchemaVersion(plan.Schema)
+	preparedOutput := ""
+	if version >= 25 && output != "" {
+		preparedOutput, err = canonicalNewOutputPath(output)
+		if err != nil || preparedOutput == workspace || isWithin(preparedOutput, workspace) {
+			return Prepared{}, errors.Join(err, errors.New("T40.13 prepared output is invalid"))
+		}
+		for _, path := range []string{preparedOutput, preparedOutput + ".tmp", preparedOutput + ".preparing"} {
+			if _, statErr := os.Lstat(path); statErr == nil || !errors.Is(statErr, os.ErrNotExist) {
+				return Prepared{}, errors.New("T40.13 prepared output already exists")
+			}
+		}
+	}
 	if planSchemaVersion(plan.Schema) >= 2 {
-		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return Prepared{}, err
 	}
-	if err := verifyCleanCheckout(ctx, moduleRoot, plan.SourceCommit); err != nil {
+	if err := verifyCleanCheckoutForPlan(ctx, moduleRoot, plan); err != nil {
 		return Prepared{}, err
 	}
 	if _, err := HostPreflight(ctx, workspaceParent, plan); err != nil {
 		return Prepared{}, err
 	}
+	releasePorts, err := reserveLoopbackPortsForPlan(plan, request.BasePort)
+	if err != nil {
+		return Prepared{}, err
+	}
+	defer releasePorts()
+	cleanupControl := preparedCleanupControl{
+		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: moduleRoot, Workspace: workspace,
+	}
+	controlPath := preparedOutput + ".preparing"
+	controlWritten := false
+	completed := false
+	defer func() {
+		if completed {
+			return
+		}
+		cleanupErr := destroyCustody(workspace, moduleRoot)
+		if cleanupErr == nil && preparedOutput != "" {
+			cleanupErr = errors.Join(
+				removePreparedPublication(preparedOutput),
+				removePreparedCleanupControl(controlPath),
+			)
+		}
+		retErr = errors.Join(retErr, cleanupErr)
+	}()
+	if preparedOutput != "" && planSchemaVersion(plan.Schema) >= 25 {
+		if err := writePreparedCleanupControl(controlPath, cleanupControl); err != nil {
+			return Prepared{}, err
+		}
+		controlWritten = true
+	}
 	if err := os.Mkdir(workspace, 0o700); err != nil {
 		return Prepared{}, fmt.Errorf("create T40.13 workspace: %w", err)
 	}
-	completed := false
-	defer func() {
-		if !completed {
-			retErr = errors.Join(retErr, destroyCustody(workspace, moduleRoot))
-		}
-	}()
 	profiles, err := t401.FrozenProfiles()
 	if err != nil {
 		return Prepared{}, err
 	}
 	prepared := Prepared{Schema: PreparedSchema, PlanDigest: PlanDigest(planBytes), Profiles: []PreparedProfile{}}
+	author := t401.Author
+	if version >= 25 {
+		author = t401.AuthorClosedSystem
+	}
 	for index, profile := range profiles {
 		profileRoot := filepath.Join(workspace, profile.Kind)
 		if err := os.Mkdir(profileRoot, 0o700); err != nil {
 			return Prepared{}, err
 		}
 		authored := filepath.Join(profileRoot, "authored")
-		receipt, err := t401.Author(ctx, t401.AuthorRequest{
+		receipt, err := author(ctx, t401.AuthorRequest{
 			ModuleRoot: moduleRoot, Output: authored, Profile: profile, ConfirmFrozen: true,
 		})
 		if err != nil {
@@ -138,7 +198,7 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 		for _, revision := range receipt.Revisions {
 			revisions[revision.Revision] = revision.Commit
 		}
-		if err := updateSourceRevision(ctx, repository, revisions["a"]); err != nil {
+		if err := updateSourceRevision(ctx, repository, revisions["a"], planSchemaVersion(plan.Schema) >= 25); err != nil {
 			return Prepared{}, err
 		}
 		repositoryName, err := phebssync.RepoName(repository)
@@ -180,40 +240,125 @@ func Prepare(ctx context.Context, request PrepareRequest) (result Prepared, retE
 			Address: address, Catalog: catalogPath, Revisions: revisions,
 		})
 	}
+	if planSchemaVersion(plan.Schema) >= 25 {
+		_, allocated, measureErr := measureDataBytesForPlan(plan, workspace)
+		if measureErr != nil {
+			return Prepared{}, measureErr
+		}
+		if _, err := hostPreflight(ctx, workspaceParent, allocated, plan); err != nil {
+			return Prepared{}, err
+		}
+	}
 	if planSchemaVersion(plan.Schema) >= 2 {
-		if err := VerifyHostToolchain(ctx, plan.HostToolchain); err != nil {
+		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain after custody authoring: %w", err)
+		}
+	}
+	if preparedOutput != "" {
+		encoded, encodeErr := MarshalPrepared(prepared)
+		if encodeErr != nil {
+			return Prepared{}, encodeErr
+		}
+		if planSchemaVersion(plan.Schema) >= 25 {
+			if err := stageAtomicOutput(preparedOutput, encoded, MaxObservationBytes, false); err != nil {
+				return Prepared{}, err
+			}
+			if err := publishAtomicOutput(preparedOutput, encoded, MaxObservationBytes, false); err != nil {
+				return Prepared{}, err
+			}
+		} else if err := writePrivateNew(preparedOutput, encoded); err != nil {
+			return Prepared{}, err
+		}
+	}
+	if controlWritten {
+		if err := removePreparedCleanupControl(controlPath); err != nil {
+			return Prepared{}, err
 		}
 	}
 	completed = true
 	return prepared, nil
 }
 
+func reserveLoopbackPorts(basePort int) (func(), error) {
+	if basePort < 1024 || basePort > 65533 {
+		return nil, errors.New("T40.13 loopback port preflight is invalid")
+	}
+	listeners, err := reserveLoopbackAddresses(
+		fmt.Sprintf("127.0.0.1:%d", basePort),
+		fmt.Sprintf("127.0.0.1:%d", basePort+1),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return func() { _ = releaseLoopbackAddresses(listeners) }, nil
+}
+
+func reserveLoopbackPortsForPlan(plan Plan, basePort int) (func(), error) {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return func() {}, nil
+	}
+	return reserveLoopbackPorts(basePort)
+}
+
+func reserveLoopbackAddresses(addresses ...string) (map[string]net.Listener, error) {
+	listeners := make(map[string]net.Listener, len(addresses))
+	for _, address := range addresses {
+		if !loopbackAddress(address) || listeners[address] != nil {
+			_ = releaseLoopbackAddresses(listeners)
+			return nil, errors.New("T40.13 loopback port preflight is invalid")
+		}
+		listener, err := net.Listen("tcp", address)
+		if err != nil {
+			_ = releaseLoopbackAddresses(listeners)
+			return nil, fmt.Errorf("T40.13 loopback address %s is unavailable: %w", address, err)
+		}
+		listeners[address] = listener
+	}
+	return listeners, nil
+}
+
+func releaseLoopbackAddresses(listeners map[string]net.Listener) error {
+	var result error
+	for address, listener := range listeners {
+		result = errors.Join(result, listener.Close())
+		delete(listeners, address)
+	}
+	return result
+}
+
 func destroyCustody(workspace, moduleRoot string) error {
-	return destroyCustodyWith(workspace, moduleRoot, os.RemoveAll, time.Sleep)
+	return destroyCustodyWith(workspace, moduleRoot, os.RemoveAll, time.Sleep, syncDirectory)
 }
 
 func destroyCustodyWith(
 	workspace, moduleRoot string,
 	removeAll func(string) error,
 	wait func(time.Duration),
+	syncParent func(string) error,
 ) error {
 	if !filepath.IsAbs(workspace) || !filepath.IsAbs(moduleRoot) || workspace == moduleRoot ||
 		isWithin(moduleRoot, workspace) || isWithin(workspace, moduleRoot) ||
-		removeAll == nil || wait == nil {
+		removeAll == nil || wait == nil || syncParent == nil {
 		return errors.New("T40.13 custody cleanup scope is invalid")
 	}
 	for attempt := 0; attempt < custodyRemoveAttempts; attempt++ {
 		info, err := os.Lstat(workspace)
 		if errors.Is(err, os.ErrNotExist) {
-			if attempt == 0 {
-				return nil
+			if attempt > 0 {
+				wait(custodyRemoveSettleDelay)
 			}
-			wait(custodyRemoveSettleDelay)
-			if _, settleErr := os.Lstat(workspace); errors.Is(settleErr, os.ErrNotExist) {
-				return nil
-			} else if settleErr != nil {
+			if _, settleErr := os.Lstat(workspace); settleErr == nil {
+				continue
+			} else if !errors.Is(settleErr, os.ErrNotExist) {
 				return errors.New("T40.13 custody cleanup absence check failed")
+			}
+			if err := syncParent(filepath.Dir(workspace)); err != nil {
+				return fmt.Errorf("sync T40.13 custody parent after cleanup: %w", err)
+			}
+			if _, durableErr := os.Lstat(workspace); errors.Is(durableErr, os.ErrNotExist) {
+				return nil
+			} else if durableErr != nil {
+				return errors.New("T40.13 custody cleanup durable absence check failed")
 			}
 			continue
 		}
@@ -232,6 +377,22 @@ func destroyCustodyWith(
 	return errors.New("T40.13 custody cleanup did not settle within its retry bound")
 }
 
+func confirmCustodyDeletionDurable(workspace string) error {
+	if !filepath.IsAbs(workspace) || filepath.Clean(workspace) == string(filepath.Separator) {
+		return errors.New("T40.13 custody deletion proof scope is invalid")
+	}
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		return errors.Join(err, errors.New("T40.13 custody remains after teardown"))
+	}
+	if err := syncDirectory(filepath.Dir(workspace)); err != nil {
+		return fmt.Errorf("sync T40.13 custody parent after teardown: %w", err)
+	}
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		return errors.Join(err, errors.New("T40.13 custody reappeared after durable deletion proof"))
+	}
+	return nil
+}
+
 func HostPreflight(ctx context.Context, dataParent string, plan Plan) (EnvironmentObservation, error) {
 	return hostPreflight(ctx, dataParent, 0, plan)
 }
@@ -245,7 +406,7 @@ func hostPreflight(
 	if ctx == nil || !filepath.IsAbs(dataParent) {
 		return EnvironmentObservation{}, errors.New("T40.13 host preflight scope is invalid")
 	}
-	memory, err := physicalMemory(ctx)
+	memory, err := physicalMemory(ctx, planSchemaVersion(plan.Schema) >= 25)
 	if err != nil {
 		return EnvironmentObservation{}, err
 	}
@@ -278,6 +439,9 @@ func hostPreflight(
 		}
 		usedPercent = observedCapacity.UsedPercent
 	}
+	if err := preflightAtomicEvidenceProtocol(dataParent, plan); err != nil {
+		return EnvironmentObservation{}, fmt.Errorf("probe T40.13 atomic evidence filesystem protocol: %w", err)
+	}
 	return EnvironmentObservation{
 		OS: runtime.GOOS, Arch: runtime.GOARCH, MemoryBytes: memory,
 		FilesystemTotalBytes: capacity.TotalBytes, FilesystemAvailableBytes: capacity.AvailableBytes,
@@ -285,10 +449,58 @@ func hostPreflight(
 	}, nil
 }
 
-func physicalMemory(ctx context.Context) (int64, error) {
+func preflightAtomicEvidenceProtocol(dataParent string, plan Plan) (retErr error) {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return nil
+	}
+	probeDirectory, err := os.MkdirTemp(dataParent, ".t4013-evidence-probe-")
+	if err != nil {
+		return err
+	}
+	output := filepath.Join(probeDirectory, "output")
+	renamed := filepath.Join(probeDirectory, "renamed")
+	defer func() {
+		var cleanupErr error
+		for _, path := range []string{output + ".tmp", output, renamed} {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				cleanupErr = errors.Join(cleanupErr, err)
+			}
+		}
+		cleanupErr = errors.Join(cleanupErr, os.Remove(probeDirectory), syncDirectory(dataParent))
+		if cleanupErr != nil {
+			retErr = errors.Join(retErr, fmt.Errorf("clean atomic evidence filesystem probe: %w", cleanupErr))
+		}
+	}()
+	if err := syncDirectory(dataParent); err != nil {
+		return err
+	}
+	payload := []byte("T40.13 atomic evidence filesystem probe\n")
+	if err := stageAtomicOutput(output, payload, len(payload), false); err != nil {
+		return err
+	}
+	if err := publishAtomicOutput(output, payload, len(payload), false); err != nil {
+		return err
+	}
+	if err := os.Rename(output, renamed); err != nil {
+		return err
+	}
+	if err := syncDirectory(probeDirectory); err != nil {
+		return err
+	}
+	if err := os.Remove(renamed); err != nil {
+		return err
+	}
+	return syncDirectory(probeDirectory)
+}
+
+func physicalMemory(ctx context.Context, closedSystem bool) (int64, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		command := exec.CommandContext(ctx, "sysctl", "-n", "hw.memsize")
+		sysctl := "sysctl"
+		if closedSystem {
+			sysctl = "/usr/sbin/sysctl"
+		}
+		command := exec.CommandContext(ctx, sysctl, "-n", "hw.memsize")
 		output, err := command.Output()
 		if err != nil {
 			return 0, errors.New("T40.13 physical memory is unavailable")
@@ -379,18 +591,69 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) error {
 	if err != nil {
 		return errors.New("T40.13 prepared cleanup module root is invalid")
 	}
-	for _, path := range []string{planPath, preparedPath} {
-		info, statErr := os.Lstat(path)
-		if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("T40.13 prepared cleanup control is invalid")
-		}
+	info, statErr := os.Lstat(planPath)
+	if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("T40.13 prepared cleanup control is invalid")
 	}
 	planBytes, err := os.ReadFile(planPath)
 	if err != nil {
 		return fmt.Errorf("read T40.13 cleanup plan: %w", err)
 	}
-	if _, err := DecodePlan(planBytes); err != nil {
+	plan, err := DecodePlan(planBytes)
+	if err != nil {
 		return err
+	}
+	if planSchemaVersion(plan.Schema) < 25 {
+		return cleanupPreparedLegacy(realModuleRoot, planPath, preparedPath, planBytes)
+	}
+	planDigest := PlanDigest(planBytes)
+	prepared, preparedErr := readPreparedPublication(preparedPath, planDigest)
+	controlPath := preparedPath + ".preparing"
+	var control preparedCleanupControl
+	if preparedErr == nil {
+		control = preparedCleanupControl{
+			Schema: preparedCleanupSchema, PlanDigest: planDigest, ModuleRoot: realModuleRoot,
+			Workspace: filepath.Dir(filepath.Dir(prepared.Profiles[0].Config)),
+		}
+		if err := ensurePreparedCleanupControl(controlPath, control); err != nil {
+			return err
+		}
+	} else {
+		control, err = readPreparedCleanupControl(controlPath)
+		if err != nil {
+			return errors.Join(preparedErr, err)
+		}
+	}
+	if control.Schema != preparedCleanupSchema || control.PlanDigest != planDigest ||
+		control.ModuleRoot != realModuleRoot || !filepath.IsAbs(control.Workspace) ||
+		control.Workspace == realModuleRoot || isWithin(control.Workspace, realModuleRoot) ||
+		isWithin(realModuleRoot, control.Workspace) || planPath == control.Workspace ||
+		preparedPath == control.Workspace || isWithin(planPath, control.Workspace) ||
+		isWithin(preparedPath, control.Workspace) {
+		return errors.New("T40.13 prepared cleanup controls must remain outside custody")
+	}
+	if _, markerErr := os.Lstat(filepath.Join(control.Workspace, executedMarkerName)); markerErr == nil {
+		return errors.New("T40.13 executed custody requires separately reviewed purge")
+	} else if !errors.Is(markerErr, os.ErrNotExist) {
+		return errors.New("T40.13 executed custody marker cannot be inspected")
+	}
+	if preparedErr != nil {
+		return errors.Join(preparedErr,
+			errors.New("T40.13 incomplete preparation custody is retained pending external process-absence proof"))
+	}
+	if err := destroyCustody(control.Workspace, realModuleRoot); err != nil {
+		return err
+	}
+	if err := removePreparedPublication(preparedPath); err != nil {
+		return fmt.Errorf("remove T40.13 prepared manifest: %w", err)
+	}
+	return removePreparedCleanupControl(controlPath)
+}
+
+func cleanupPreparedLegacy(moduleRoot, planPath, preparedPath string, planBytes []byte) error {
+	info, err := os.Lstat(preparedPath)
+	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("T40.13 prepared cleanup control is invalid")
 	}
 	preparedBytes, err := os.ReadFile(preparedPath)
 	if err != nil {
@@ -405,13 +668,90 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) error {
 		isWithin(preparedPath, workspace) {
 		return errors.New("T40.13 prepared cleanup controls must remain outside custody")
 	}
-	if err := DestroyPrepared(prepared, realModuleRoot); err != nil {
+	if err := DestroyPrepared(prepared, moduleRoot); err != nil {
 		return err
 	}
-	if err := os.Remove(preparedPath); err != nil {
-		return fmt.Errorf("remove T40.13 prepared manifest: %w", err)
+	return os.Remove(preparedPath)
+}
+
+func readPreparedPublication(path, planDigest string) (Prepared, error) {
+	var selected []byte
+	for _, candidate := range []string{path, path + ".tmp"} {
+		raw, err := readAtomicRegular(candidate, MaxObservationBytes)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return Prepared{}, err
+		}
+		if selected != nil && !bytes.Equal(selected, raw) {
+			return Prepared{}, errors.New("T40.13 prepared publication controls differ")
+		}
+		selected = raw
 	}
-	return nil
+	if selected == nil {
+		return Prepared{}, os.ErrNotExist
+	}
+	return DecodePrepared(selected, planDigest)
+}
+
+func writePreparedCleanupControl(path string, value preparedCleanupControl) error {
+	if value.Schema != preparedCleanupSchema || !digestIdentity(value.PlanDigest) ||
+		!filepath.IsAbs(value.ModuleRoot) || !filepath.IsAbs(value.Workspace) {
+		return errors.New("T40.13 prepared cleanup authority is invalid")
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	raw = append(raw, '\n')
+	if err := writePrivateNew(path, raw); err != nil {
+		return err
+	}
+	return syncDirectory(filepath.Dir(path))
+}
+
+func ensurePreparedCleanupControl(path string, value preparedCleanupControl) error {
+	existing, err := readPreparedCleanupControl(path)
+	if err == nil {
+		if existing != value {
+			return errors.New("T40.13 prepared cleanup authority differs")
+		}
+		return syncDirectory(filepath.Dir(path))
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return writePreparedCleanupControl(path, value)
+}
+
+func readPreparedCleanupControl(path string) (preparedCleanupControl, error) {
+	raw, err := readAtomicRegular(path, 4<<10)
+	if err != nil {
+		return preparedCleanupControl{}, err
+	}
+	var value preparedCleanupControl
+	if err := decodeStrict(raw, &value); err != nil || value.Schema != preparedCleanupSchema ||
+		!digestIdentity(value.PlanDigest) || !filepath.IsAbs(value.ModuleRoot) ||
+		!filepath.IsAbs(value.Workspace) {
+		return preparedCleanupControl{}, errors.New("T40.13 prepared cleanup authority is invalid")
+	}
+	return value, nil
+}
+
+func removePreparedPublication(path string) error {
+	parent := filepath.Dir(path)
+	if err := removeAtomicTemporary(path+".tmp", parent); err != nil {
+		return err
+	}
+	return removeAtomicTemporary(path, parent)
+}
+
+func removePreparedCleanupControl(path string) error {
+	if path == ".preparing" {
+		return nil
+	}
+	return removeAtomicTemporary(path, filepath.Dir(path))
 }
 
 func validatePrepared(value Prepared) error {
@@ -523,19 +863,28 @@ func configFor(repository, repositoryName, catalogPath, dataDir, address, creden
 	return yaml.Marshal(value)
 }
 
-func updateSourceRevision(ctx context.Context, repository, commit string) error {
+func updateSourceRevision(ctx context.Context, repository, commit string, closedGit bool) error {
 	if !hexIdentity(commit, 40) {
 		return errors.New("T40.13 source revision is invalid")
 	}
-	if _, err := gitOutput(ctx, repository, "update-ref", "refs/heads/main", commit); err != nil {
+	if _, err := gitOutputForContract(ctx, repository, closedGit,
+		"update-ref", "refs/heads/main", commit); err != nil {
 		return err
 	}
 	return nil
 }
 
-func gitOutput(ctx context.Context, directory string, args ...string) (string, error) {
-	command := exec.CommandContext(ctx, "git", append([]string{"-C", directory}, args...)...)
-	command.Env = gitEnvironment()
+func gitOutputForContract(ctx context.Context, directory string, closed bool, args ...string) (string, error) {
+	executable := "git"
+	if closed {
+		var err error
+		executable, err = resolveGitCoreExecutable(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+	command := exec.CommandContext(ctx, executable, append([]string{"-C", directory}, args...)...)
+	command.Env = gitEnvironmentForContract(closed)
 	output, err := command.Output()
 	if err != nil {
 		return "", fmt.Errorf("T40.13 git command failed")
@@ -543,15 +892,25 @@ func gitOutput(ctx context.Context, directory string, args ...string) (string, e
 	return string(bytesTrimSpace(output)), nil
 }
 
+func verifyCleanCheckoutForPlan(ctx context.Context, moduleRoot string, plan Plan) error {
+	return verifyCleanCheckoutWithGit(ctx, moduleRoot, plan.SourceCommit,
+		planSchemaVersion(plan.Schema) >= 25)
+}
+
 func verifyCleanCheckout(ctx context.Context, moduleRoot, sourceCommit string) error {
+	return verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, false)
+}
+
+func verifyCleanCheckoutWithGit(ctx context.Context, moduleRoot, sourceCommit string, closed bool) error {
 	if ctx == nil || !filepath.IsAbs(moduleRoot) || !hexIdentity(sourceCommit, 40) {
 		return errors.New("T40.13 checkout identity is invalid")
 	}
-	commit, err := gitOutput(ctx, moduleRoot, "rev-parse", "HEAD")
+	commit, err := gitOutputForContract(ctx, moduleRoot, closed, "rev-parse", "HEAD")
 	if err != nil || commit != sourceCommit {
 		return errors.New("T40.13 checkout differs from the frozen source commit")
 	}
-	status, err := gitOutput(ctx, moduleRoot, "status", "--porcelain=v1", "--untracked-files=all")
+	status, err := gitOutputForContract(ctx, moduleRoot, closed,
+		"status", "--porcelain=v1", "--untracked-files=all")
 	if err != nil || status != "" {
 		return errors.New("T40.13 checkout has modified or untracked files")
 	}
@@ -559,9 +918,13 @@ func verifyCleanCheckout(ctx context.Context, moduleRoot, sourceCommit string) e
 }
 
 func gitEnvironment() []string {
+	return gitEnvironmentForContract(false)
+}
+
+func gitEnvironmentForContract(closed bool) []string {
 	environment := make([]string, 0, len(os.Environ())+6)
 	for _, entry := range os.Environ() {
-		if !strings.HasPrefix(entry, "GIT_") {
+		if !strings.HasPrefix(entry, "GIT_") && (!closed || !strings.HasPrefix(entry, "DEVELOPER_DIR=")) {
 			environment = append(environment, entry)
 		}
 	}

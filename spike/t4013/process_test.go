@@ -3,12 +3,240 @@ package t4013
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"runtime"
+	"slices"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
+
+const privateServerShutdownHelperEnvironment = "PHEBS_T4013_SHUTDOWN_HELPER"
+
+func TestPrivateServerStopTerminatesProcessSession(t *testing.T) {
+	if helperPath := os.Getenv(privateServerShutdownHelperEnvironment); helperPath != "" {
+		runPrivateServerShutdownHelper(helperPath)
+		return
+	}
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("private server process sessions require Linux or macOS")
+	}
+	tests := []struct {
+		name           string
+		cancelContext  bool
+		wantForcedKill bool
+	}{
+		{name: "explicit timeout", wantForcedKill: true},
+		{name: "context cancellation", cancelContext: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			childPIDPath := filepath.Join(t.TempDir(), "child.pid")
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestPrivateServerStopTerminatesProcessSession$")
+			command.Env = append(os.Environ(), privateServerShutdownHelperEnvironment+"="+childPIDPath)
+			if err := isolatePrivateServerSession(command); err != nil {
+				t.Fatal(err)
+			}
+			logFile, err := os.OpenFile(filepath.Join(t.TempDir(), "server.log"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
+			command.Stdout, command.Stderr = logFile, logFile
+			if err := command.Start(); err != nil {
+				_ = logFile.Close()
+				t.Fatal(err)
+			}
+			server := &privateServer{
+				command: command, sessionID: command.Process.Pid, sessionIsolated: true,
+				done: make(chan error, 1), log: logFile,
+			}
+			go func() { server.done <- command.Wait() }()
+			defer func() { _ = killPrivateServerSession(command.Process.Pid) }()
+
+			childPID := awaitPrivateServerShutdownHelper(t, childPIDPath)
+			if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || !alive {
+				t.Fatalf("live server session was not observed: alive=%v err=%v", alive, err)
+			}
+			if err := syscall.Kill(childPID, 0); err != nil {
+				t.Fatalf("live helper child was not independently observed: %v", err)
+			}
+			if test.cancelContext {
+				cancel()
+			}
+			stopErr := server.stop(100 * time.Millisecond)
+			if stopErr == nil {
+				t.Fatal("forced or canceled process-group shutdown passed silently")
+			}
+			if test.wantForcedKill && !strings.Contains(stopErr.Error(), "required forced process-session kill") {
+				t.Fatalf("stop error = %v", stopErr)
+			}
+			if errors.Is(stopErr, errPrivateServerShutdownUnproven) {
+				t.Fatalf("server session absence was not proven: %v", stopErr)
+			}
+			if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || alive {
+				t.Fatalf("server process session survived: alive=%v err=%v", alive, err)
+			}
+			awaitProcessGone(t, childPID)
+		})
+	}
+}
+
+func TestHistoricalPrivateServerStopRetainsRootProcessContract(t *testing.T) {
+	if helperPath := os.Getenv(privateServerShutdownHelperEnvironment); helperPath != "" {
+		runPrivateServerShutdownHelper(helperPath)
+		return
+	}
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("historical process test requires Unix signals")
+	}
+	childPIDPath := filepath.Join(t.TempDir(), "child.pid")
+	command := exec.Command(os.Args[0], "-test.run=^TestHistoricalPrivateServerStopRetainsRootProcessContract$")
+	command.Env = append(os.Environ(), privateServerShutdownHelperEnvironment+"="+childPIDPath)
+	logFile, err := os.OpenFile(filepath.Join(t.TempDir(), "server.log"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command.Stdout, command.Stderr = logFile, logFile
+	if err := command.Start(); err != nil {
+		_ = logFile.Close()
+		t.Fatal(err)
+	}
+	server := &privateServer{command: command, done: make(chan error, 1), log: logFile}
+	go func() { server.done <- command.Wait() }()
+	childPID := awaitPrivateServerShutdownHelper(t, childPIDPath)
+	childRunning := true
+	defer func() {
+		if childRunning {
+			_ = syscall.Kill(-childPID, syscall.SIGKILL)
+		}
+	}()
+	if err := server.stop(100 * time.Millisecond); err != nil {
+		t.Fatalf("historical root-process stop = %v", err)
+	}
+	if err := syscall.Kill(childPID, 0); err != nil {
+		t.Fatalf("historical stop unexpectedly gained descendant-session ownership: %v", err)
+	}
+	if err := syscall.Kill(-childPID, syscall.SIGKILL); err != nil {
+		t.Fatalf("clean historical descendant: %v", err)
+	}
+	awaitProcessGone(t, childPID)
+	childRunning = false
+}
+
+func TestRSSSamplerReportsProbeErrorsOnlyForV25(t *testing.T) {
+	probeErr := errors.New("probe failed")
+	for _, test := range []struct {
+		name   string
+		strict bool
+		want   bool
+	}{
+		{name: "historical", strict: false, want: false},
+		{name: "V25", strict: true, want: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			sampler := newRSSSampler(1, test.strict)
+			sampler.err = probeErr
+			_, _, _, _, err := sampler.metrics()
+			if (err != nil) != test.want {
+				t.Fatalf("strict=%v sampler error = %v", test.strict, err)
+			}
+		})
+	}
+}
+
+func TestCustodyCommandCancellationTerminatesProcessSession(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("custody process sessions require Linux or macOS")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	childPIDPath := filepath.Join(t.TempDir(), "child.pid")
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestPrivateServerStopTerminatesProcessSession$")
+	command.Env = append(os.Environ(), privateServerShutdownHelperEnvironment+"="+childPIDPath)
+	done := make(chan error, 1)
+	go func() {
+		_, err := runCustodyCombinedOutput(command)
+		done <- err
+	}()
+	childPID := awaitPrivateServerShutdownHelper(t, childPIDPath)
+	if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || !alive {
+		t.Fatalf("live custody session was not observed: alive=%v err=%v", alive, err)
+	}
+	if err := syscall.Kill(childPID, 0); err != nil {
+		t.Fatalf("live custody child was not independently observed: %v", err)
+	}
+	cancel()
+	if err := <-done; err == nil {
+		t.Fatal("canceled custody command passed")
+	}
+	if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || alive {
+		t.Fatalf("custody process session survived: alive=%v err=%v", alive, err)
+	}
+	awaitProcessGone(t, childPID)
+}
+
+func awaitProcessGone(t *testing.T, pid int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if err := syscall.Kill(pid, 0); errors.Is(err, syscall.ESRCH) {
+			return
+		} else if err != nil {
+			t.Fatalf("inspect helper child %d: %v", pid, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("helper child %d survived process-session cleanup", pid)
+}
+
+func runPrivateServerShutdownHelper(childPIDPath string) {
+	signal.Ignore(os.Interrupt)
+	readyPath := childPIDPath + ".ready"
+	child := exec.Command("/bin/sh", "-c", `trap '' INT; : > "$1"; while :; do sleep 30; done`, "helper", readyPath)
+	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := child.Start(); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(childPIDPath, []byte(strconv.Itoa(child.Process.Pid)), 0o600); err != nil {
+		panic(err)
+	}
+	if err := child.Wait(); err != nil {
+		panic(err)
+	}
+}
+
+func awaitPrivateServerShutdownHelper(t *testing.T, childPIDPath string) int {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		raw, err := os.ReadFile(childPIDPath)
+		_, readyErr := os.Stat(childPIDPath + ".ready")
+		if err == nil && readyErr == nil {
+			pid, parseErr := strconv.Atoi(string(raw))
+			if parseErr != nil || pid <= 0 {
+				t.Fatalf("helper child PID = %q, %v", raw, parseErr)
+			}
+			return pid
+		}
+		if (err != nil && !errors.Is(err, os.ErrNotExist)) || (readyErr != nil && !errors.Is(readyErr, os.ErrNotExist)) {
+			t.Fatalf("read helper readiness: %v, %v", err, readyErr)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("private server shutdown helper did not become ready")
+	return 0
+}
 
 func TestExtractFrozenSourceAcceptsCanonicalGitDirectoryHeaders(t *testing.T) {
 	archive := frozenSourceArchive(t,
@@ -100,6 +328,104 @@ func TestExtractFrozenSourceRejectsNoncanonicalAndEscapingEntries(t *testing.T) 
 	}
 	if _, err := frozenArchiveName(&tar.Header{Name: "file/", Typeflag: tar.TypeReg}); err == nil {
 		t.Fatal("non-directory trailing slash passed archive-name validation")
+	}
+}
+
+func TestExecutionEnvironmentClosesAmbientGoControls(t *testing.T) {
+	for _, value := range []string{
+		"GOFLAGS=-tags=ambient", "GOWORK=/private/ambient.work", "GOEXPERIMENT=ambient",
+		"GOTOOLCHAIN=auto", "GOOS=plan9", "GOARCH=386", "GOMEMLIMIT=1MiB",
+		"CGO_ENABLED=1", "GIT_CONFIG_GLOBAL=/private/ambient.gitconfig",
+		"PHEBS_PRIVATE=ambient", "SURREAL_LOG=trace", "ZOEKT_DISABLE_CATFILE_BATCH=1",
+		"TMPDIR=/private/ambient-tmp", "GOTMPDIR=/private/ambient-gotmp", "DYLD_INSERT_LIBRARIES=ambient",
+	} {
+		name, replacement, _ := strings.Cut(value, "=")
+		t.Setenv(name, replacement)
+	}
+
+	values := make(map[string][]string)
+	for _, entry := range scrubExecutionEnvironment() {
+		name, value, _ := strings.Cut(entry, "=")
+		values[name] = append(values[name], value)
+	}
+	want := map[string]string{
+		"CGO_ENABLED": "0", "GOARCH": runtime.GOARCH, "GOENV": "off",
+		"GOEXPERIMENT": "", "GOFLAGS": "-mod=readonly", "GOFIPS140": "off", "GOOS": runtime.GOOS,
+		"GOPROXY": "off", "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOWORK": "off",
+		"GIT_ATTR_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+		"GIT_NO_LAZY_FETCH": "1", "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0",
+	}
+	for name, value := range want {
+		if got := values[name]; len(got) != 1 || got[0] != value {
+			t.Fatalf("closed environment %s = %v, want %q", name, got, value)
+		}
+	}
+	for _, name := range []string{
+		"GOMEMLIMIT", "PHEBS_PRIVATE", "SURREAL_LOG", "ZOEKT_DISABLE_CATFILE_BATCH",
+		"TMPDIR", "GOTMPDIR", "DYLD_INSERT_LIBRARIES",
+	} {
+		if got := values[name]; len(got) != 0 {
+			t.Fatalf("ambient environment %s survived: %v", name, got)
+		}
+	}
+}
+
+func TestProcessSnapshotFindsBoundedDescendantsAndRSS(t *testing.T) {
+	pids, processes, err := parseProcessSnapshot([]byte(
+		"10 1 4 /private/phebs\n11 10 8 /usr/bin/git\n12 10 16 /private/phebs-focused-index\n",
+	), 10)
+	if err != nil || !slices.Equal(pids, []int{10, 11, 12}) ||
+		processes[11].rssBytes != 8*1024 || processes[12].name != "/private/phebs-focused-index" {
+		t.Fatalf("process snapshot = %v, %+v, %v", pids, processes, err)
+	}
+}
+
+func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {
+	t.Setenv("GOEXPERIMENT", "historical-ambient")
+	t.Setenv("SURREAL_LOG", "historical-ambient")
+	for _, test := range []struct {
+		schema string
+		want   string
+	}{
+		{PlanSchemaV20, "historical-ambient"},
+		{PlanSchemaV21, "historical-ambient"},
+		{PlanSchemaV23, "historical-ambient"},
+		{PlanSchemaV24, "historical-ambient"},
+		{PlanSchemaV25, ""},
+	} {
+		got := ""
+		surreal := ""
+		for _, entry := range executionEnvironmentForPlan(Plan{Schema: test.schema}) {
+			if name, value, found := strings.Cut(entry, "="); found && name == "GOEXPERIMENT" {
+				got = value
+			}
+			if name, value, found := strings.Cut(entry, "="); found && name == "SURREAL_LOG" {
+				surreal = value
+			}
+		}
+		if got != test.want {
+			t.Fatalf("execution environment for %s = %q, want %q", test.schema, got, test.want)
+		}
+		if surreal != test.want {
+			t.Fatalf("Surreal environment for %s = %q, want %q", test.schema, surreal, test.want)
+		}
+	}
+}
+
+func TestFrozenSourceExportContractChangesOnlyAtV25(t *testing.T) {
+	for _, test := range []struct {
+		schema string
+		want   frozenSourceExportContract
+	}{
+		{PlanSchemaV20, frozenSourceExportLegacy},
+		{PlanSchemaV21, frozenSourceExportLegacy},
+		{PlanSchemaV23, frozenSourceExportLegacy},
+		{PlanSchemaV24, frozenSourceExportLegacy},
+		{PlanSchemaV25, frozenSourceExportV25},
+	} {
+		if got := frozenSourceExportContractForPlan(test.schema); got != test.want {
+			t.Fatalf("source export contract for %s = %v, want %v", test.schema, got, test.want)
+		}
 	}
 }
 

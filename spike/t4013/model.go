@@ -871,7 +871,7 @@ func ValidatePlan(value Plan) error {
 		return errors.New("T40.13 v1 plan unexpectedly binds a host toolchain")
 	}
 	if planSchemaVersion(value.Schema) >= 2 {
-		if err := validateHostToolchain(value.HostToolchain); err != nil {
+		if err := validateHostToolchain(value.HostToolchain, planSchemaVersion(value.Schema) >= 25); err != nil {
 			return err
 		}
 	}
@@ -993,7 +993,7 @@ func ValidateObservation(value Observation) error {
 		return errors.New("T40.13 v1 observation unexpectedly binds a host toolchain")
 	}
 	if version >= 2 {
-		if err := validateHostToolchain(value.HostToolchain); err != nil {
+		if err := validateHostToolchain(value.HostToolchain, version >= 25); err != nil {
 			return err
 		}
 	}
@@ -1443,8 +1443,14 @@ func receiptSchemaForPlan(plan Plan) string {
 	return ReceiptSchema
 }
 
-func validateHostToolchain(values []HostToolObservation) error {
+func validateHostToolchain(values []HostToolObservation, includeAssembler bool) error {
 	want := []string{"go", "go-compile", "go-link", "git", "surreal"}
+	if includeAssembler {
+		want = append(want,
+			"go-asm", "git-core", "git-tools", "go-tools", "go-root",
+			"sandbox-exec", "sh", "du", "ps", "pgrep", "sysctl",
+		)
+	}
 	if len(values) != len(want) {
 		return errors.New("T40.13 host toolchain identity inventory is incomplete")
 	}
@@ -2963,7 +2969,8 @@ func validateCompleted(value Receipt, plan Plan) error {
 		maxAllocated = max(maxAllocated, phase.Metrics.DataAllocatedBytes)
 	}
 	if totalWall > plan.Safety.MaximumTotalWallMS || peakRSS > plan.Safety.MaximumPeakRSSBytes ||
-		maxAllocated > plan.Safety.MaximumDataAllocatedBytes {
+		maxAllocated > plan.Safety.MaximumDataAllocatedBytes ||
+		prePressureAllocationCrossed(plan, value.Phases) {
 		return errors.New("T40.13 completed receipt crossed a frozen safety ceiling")
 	}
 	noop := value.Phases[2]
@@ -2973,6 +2980,21 @@ func validateCompleted(value Receipt, plan Plan) error {
 		return errors.New("T40.13 warm no-op was not an exact reuse")
 	}
 	return nil
+}
+
+func prePressureAllocationCrossed(plan Plan, phases []PhaseObservation) bool {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return false
+	}
+	for _, phase := range phases {
+		if phase.Name == "pressure" {
+			break
+		}
+		if phase.Metrics.DataAllocatedBytes > plan.Safety.MaximumPrePressureBytes {
+			return true
+		}
+	}
+	return false
 }
 
 func PlanDigest(raw []byte) string { return digest(raw) }

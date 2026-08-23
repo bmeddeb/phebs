@@ -185,6 +185,13 @@ type recordingOwner struct {
 	fail  bool
 }
 
+type retryOnceRecordingOwner struct {
+	name     string
+	calls    *[]string
+	errOnce  bool
+	moreOnce bool
+}
+
 type lifecycleObservationPins struct{}
 
 func (lifecycleObservationPins) Pinned(string, string) bool { return false }
@@ -249,6 +256,23 @@ func (owner recordingOwner) Sweep(
 	*owner.calls = append(*owner.calls, owner.name+":"+cursor)
 	if owner.fail {
 		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: errors.New("owner failed")}
+	}
+	return OwnerResult{Cursor: cursor + "x", Scanned: 1, Deleted: 1, Completeness: Exact}
+}
+
+func (owner *retryOnceRecordingOwner) Name() string { return owner.name }
+
+func (owner *retryOnceRecordingOwner) Sweep(
+	_ context.Context, _ time.Time, cursor string, _ Limits,
+) OwnerResult {
+	*owner.calls = append(*owner.calls, owner.name+":"+cursor)
+	if owner.errOnce {
+		owner.errOnce = false
+		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: errors.New("owner failed")}
+	}
+	if owner.moreOnce {
+		owner.moreOnce = false
+		return OwnerResult{Cursor: cursor + "x", Scanned: 1, More: true, Completeness: LowerBound}
 	}
 	return OwnerResult{Cursor: cursor + "x", Scanned: 1, Deleted: 1, Completeness: Exact}
 }
@@ -355,6 +379,76 @@ func TestRunnerRetriesFailedCycleEndWithoutIdle(t *testing.T) {
 	}
 	if want := []string{"alpha:", "bravo:", "alpha:x"}; !reflect.DeepEqual(calls, want) {
 		t.Fatalf("owner calls = %v, want %v", calls, want)
+	}
+}
+
+func TestRunnerRetriesAfterMiddleOwnerCycleDemand(t *testing.T) {
+	tests := []struct {
+		name      string
+		errOnce   bool
+		moreOnce  bool
+		wantCalls []string
+	}{
+		{
+			name:      "error once",
+			errOnce:   true,
+			wantCalls: []string{"alpha:", "bravo:", "charlie:", "alpha:x", "bravo:", "charlie:x"},
+		},
+		{
+			name:      "more once",
+			moreOnce:  true,
+			wantCalls: []string{"alpha:", "bravo:", "charlie:", "alpha:x", "bravo:x", "charlie:x"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			store := newMemoryCursorStore()
+			var calls []string
+			middle := &retryOnceRecordingOwner{
+				name: "bravo", calls: &calls,
+				errOnce: test.errOnce, moreOnce: test.moreOnce,
+			}
+			controller, err := NewController(store,
+				recordingOwner{name: "alpha", calls: &calls},
+				middle,
+				recordingOwner{name: "charlie", calls: &calls},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			results := make(chan OwnerResult, len(test.wantCalls)+1)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, controller, nil, time.Hour, time.Millisecond, func(result OwnerResult) {
+					results <- result
+				}, nil)
+			}()
+
+			for range len(test.wantCalls) {
+				select {
+				case <-results:
+				case <-time.After(time.Second):
+					t.Fatal("runner idled before completing a clean cycle")
+				}
+			}
+			select {
+			case result := <-results:
+				t.Fatalf("runner did not idle after the clean cycle: %+v", result)
+			case <-time.After(50 * time.Millisecond):
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("runner did not stop after the clean cycle")
+			}
+			if !reflect.DeepEqual(calls, test.wantCalls) {
+				t.Fatalf("owner calls = %v, want %v", calls, test.wantCalls)
+			}
+		})
 	}
 }
 

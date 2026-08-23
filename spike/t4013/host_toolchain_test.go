@@ -1,6 +1,11 @@
 package t4013
 
 import (
+	"context"
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -23,5 +28,126 @@ func TestHostToolchainMismatchNamesOnlyTheClosedTool(t *testing.T) {
 	if err := compareHostToolchain(expected, short); err == nil ||
 		err.Error() != "T40.13 host toolchain inventory differs from the frozen plan" {
 		t.Fatalf("short inventory mismatch = %v", err)
+	}
+}
+
+func TestHostTreeDigestChangesWithBuildInput(t *testing.T) {
+	root := t.TempDir()
+	for _, directory := range []string{"src", filepath.Join("pkg", "include")} {
+		if err := os.MkdirAll(filepath.Join(root, directory), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	path := filepath.Join(root, "src", "input.go")
+	if err := os.WriteFile(path, []byte("package input\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := hostTreeDigest(t.Context(), root, "src", filepath.Join("pkg", "include"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("package changed\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	after, err := hostTreeDigest(t.Context(), root, "src", filepath.Join("pkg", "include"))
+	if err != nil || before == after {
+		t.Fatalf("host tree digest did not change: %q %q, %v", before, after, err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := hostTreeDigest(canceled, root, "src"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled host tree digest = %v", err)
+	}
+}
+
+func TestClosedHostToolchainIgnoresAmbientSurrealOverride(t *testing.T) {
+	bin := t.TempDir()
+	pathSurreal := filepath.Join(bin, "surreal")
+	overrideSurreal := filepath.Join(t.TempDir(), "surreal")
+	for path, version := range map[string]string{pathSurreal: "3.0.0", overrideSurreal: "3.1.0"} {
+		if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '"+version+"\\n'\n"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("PHEBS_SURREAL", overrideSurreal)
+
+	for _, test := range []struct {
+		closed bool
+		want   string
+	}{
+		{closed: false, want: "3.1.0"},
+		{closed: true, want: "3.0.0"},
+	} {
+		var observed []HostToolObservation
+		var err error
+		if test.closed {
+			observed, err = observeHostToolchain(t.Context(), true)
+		} else {
+			observed, err = ObserveHostToolchain(t.Context())
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got HostToolObservation
+		for _, value := range observed {
+			if value.Name == "surreal" {
+				got = value
+				break
+			}
+		}
+		if got.Name != "surreal" || got.Version != test.want {
+			t.Fatalf("closed=%t surreal = %+v, want version %s", test.closed, got, test.want)
+		}
+	}
+}
+
+func TestHostToolchainVerifierSelection(t *testing.T) {
+	want := "T40.13 host toolchain identity inventory is incomplete"
+	for name, verify := range map[string]func() error{
+		"public legacy": func() error {
+			return VerifyHostToolchain(t.Context(), fakeHostToolchainV25())
+		},
+		"v24": func() error {
+			return verifyHostToolchainForPlan(t.Context(), Plan{
+				Schema: PlanSchemaV24, HostToolchain: fakeHostToolchainV25(),
+			})
+		},
+		"v25": func() error {
+			return verifyHostToolchainForPlan(t.Context(), Plan{
+				Schema: PlanSchemaV25, HostToolchain: fakeHostToolchain(),
+			})
+		},
+	} {
+		if err := verify(); err == nil || err.Error() != want {
+			t.Fatalf("%s verifier = %v, want %q", name, err, want)
+		}
+	}
+}
+
+func TestHostToolchainEnvironmentChangesOnlyAtV25(t *testing.T) {
+	t.Setenv("GOEXPERIMENT", "historical-ambient")
+	shell, err := exec.LookPath("sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := `printf '%s' "${GOEXPERIMENT:-closed}"`
+	for _, test := range []struct {
+		schema string
+		want   string
+	}{
+		{PlanSchemaV20, "historical-ambient"},
+		{PlanSchemaV21, "historical-ambient"},
+		{PlanSchemaV23, "historical-ambient"},
+		{PlanSchemaV24, "historical-ambient"},
+		{PlanSchemaV25, "closed"},
+	} {
+		got, err := boundedCommand(
+			t.Context(), planSchemaVersion(test.schema) >= 25,
+			shell, "-c", command,
+		)
+		if err != nil || got != test.want {
+			t.Fatalf("host environment for %s = %q, %v; want %q", test.schema, got, err, test.want)
+		}
 	}
 }

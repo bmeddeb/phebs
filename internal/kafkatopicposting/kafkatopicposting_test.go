@@ -136,6 +136,9 @@ func TestBuildSeparatesPlanesSpellingClassificationsAndOccurrences(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatal(err)
+	}
 	rootValue := publication.Root()
 	// The fixture has seven sites and four exact placements.
 	if rootValue.PostingCount != 28 || rootValue.ProducerCount != 16 ||
@@ -551,6 +554,78 @@ func TestResidentLimitErrorCarriesOnlyExactByteScalars(t *testing.T) {
 		resident.Observed != limit+1 || resident.Limit != limit {
 		t.Fatalf("resident refusal = %+v, %v", resident, err)
 	}
+}
+
+func TestDiscardRemovesStageAfterPreinstallPublishFailure(t *testing.T) {
+	root := t.TempDir()
+	fixture := observationFixture(
+		t, "cmd/plain.go", "package app\n", []sourcepartition.Placement{{
+			Path: "cmd/plain.go", Mode: "100644", Revisions: []int{0},
+		}},
+	)
+	prepared, err := buildSource(
+		t.Context(), root, fakeSource(t, []observedFixture{fixture}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := prepared.directory
+	target := generationDirectory(root, prepared.repository, prepared.rootValue.GenerationDigest)
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prepared.Publish(t.Context()); err == nil {
+		t.Fatal("publish accepted conflicting incomplete generation")
+	}
+	if _, err := os.Lstat(stage); err != nil {
+		t.Fatalf("pre-install publish failure consumed stage: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("discarded stage remains: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatalf("repeated discard = %v", err)
+	}
+}
+
+func TestBuildCleanupFailureIsNotClassifiedAsLimit(t *testing.T) {
+	root := t.TempDir()
+	repository := "github.com/acme/repo"
+	ctx := &stageCleanupFailureContext{
+		Context: t.Context(),
+		remove:  publicationRepository(root, repository),
+		cause:   ErrLimit,
+	}
+	_, err := writeStage(
+		ctx, root, Authority{Repository: repository}, RootSchema, nil,
+		map[string][]Posting{memberKey("producer", 0): {}},
+	)
+	if ctx.removeErr != nil {
+		t.Fatal(ctx.removeErr)
+	}
+	if err == nil || errors.Is(err, ErrLimit) ||
+		!strings.Contains(err.Error(), "clean failed Kafka topic posting stage") ||
+		!strings.Contains(err.Error(), ErrLimit.Error()) {
+		t.Fatalf("cleanup failure classification = %v", err)
+	}
+}
+
+type stageCleanupFailureContext struct {
+	context.Context
+	remove    string
+	cause     error
+	removeErr error
+}
+
+func (ctx *stageCleanupFailureContext) Err() error {
+	if ctx.remove != "" {
+		ctx.removeErr = os.RemoveAll(ctx.remove)
+		ctx.remove = ""
+	}
+	return ctx.cause
 }
 
 type memoryCorpus map[string]string

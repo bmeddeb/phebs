@@ -13,6 +13,7 @@ import (
 func main() {
 	root := flag.String("root", "", "absolute module root containing the frozen T40.1 inputs")
 	sourceCommit := flag.String("source-commit", "", "exact 40-hex phebs source commit to measure")
+	dataParent := flag.String("data-parent", "", "absolute ceremony filesystem root to preflight")
 	output := flag.String("output", "", "new output path")
 	bindHostToolchain := flag.Bool("bind-host-toolchain", false, "bind exact Go, Git, and SurrealDB host executables")
 	flag.Parse()
@@ -25,12 +26,20 @@ func main() {
 	var plan t4013.Plan
 	var err error
 	if *bindHostToolchain {
-		plan, err = t4013.FrozenHostPlan(context.Background(), *sourceCommit)
+		plan, err = t4013.FrozenHostPlanAtCheckout(context.Background(), *root, *sourceCommit)
 	} else {
 		plan, err = t4013.FrozenPlan(*sourceCommit)
 	}
 	if err != nil {
 		fail("build plan: %v", err)
+	}
+	if *bindHostToolchain {
+		if *dataParent == "" {
+			fail("-data-parent is required with -bind-host-toolchain")
+		}
+		if _, err := t4013.HostPreflight(context.Background(), *dataParent, plan); err != nil {
+			fail("preflight ceremony host: %v", err)
+		}
 	}
 	encoded, err := t4013.MarshalPlan(plan)
 	if err != nil {

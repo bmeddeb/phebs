@@ -21,7 +21,10 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-const allocationSampleInterval = time.Second
+const (
+	allocationSampleInterval = time.Second
+	dataMeasurementTimeout   = 30 * time.Second
+)
 
 type phaseMeter struct {
 	started    time.Time
@@ -117,7 +120,7 @@ func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfi
 	if err != nil {
 		return nil, err
 	}
-	_, allocated, err := measureDataBytes(dataDir)
+	_, allocated, err := measureDataBytesForContract(dataDir, server.sessionIsolated)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +139,7 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 	if server == nil || server.log == nil || server.started.IsZero() {
 		return nil, errors.New("T40.13 initial phase meter requires a running server")
 	}
-	_, allocated, err := measureDataBytes(dataDir)
+	_, allocated, err := measureDataBytesForContract(dataDir, server.sessionIsolated)
 	if err != nil {
 		return nil, err
 	}
@@ -154,11 +157,11 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 // measured server process tree. The root command is counted as one other child;
 // descendants retain the same closed Git/index/other classification used by a
 // server meter.
-func runMeasuredCommand(command *exec.Cmd, dataDir string) (PhaseMetrics, error) {
+func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMetrics, error) {
 	if command == nil || !filepath.IsAbs(dataDir) {
 		return PhaseMetrics{}, errors.New("T40.13 measured command is invalid")
 	}
-	_, allocatedBefore, err := measureDataBytes(dataDir)
+	_, allocatedBefore, err := measureDataBytesForContract(dataDir, strict)
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
@@ -166,34 +169,47 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string) (PhaseMetrics, error)
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
+	if strict {
+		if err := isolatePrivateServerSession(command); err != nil {
+			_, allocationErr := allocation.close()
+			return PhaseMetrics{}, errors.Join(err, allocationErr)
+		}
+	}
 	started := time.Now()
 	if err := command.Start(); err != nil {
 		_, allocationErr := allocation.close()
 		return PhaseMetrics{}, errors.Join(err, allocationErr)
 	}
-	sampler := newRSSSampler(command.Process.Pid)
+	sampler := newRSSSampler(command.Process.Pid, strict)
 	sampler.sample()
 	go sampler.run()
 	waitErr := command.Wait()
-	sampler.close()
-	logical, allocated, measureErr := measureDataBytes(dataDir)
+	var sessionErr error
+	if strict {
+		sessionErr = finishCustodyCommandSession(command.Process.Pid)
+	}
+	samplerCloseErr := sampler.close()
+	logical, allocated, measureErr := measureDataBytesForContract(dataDir, strict)
 	peakAllocated, allocationErr := allocation.close()
 	allocated = max(allocated, peakAllocated)
 	metrics := PhaseMetrics{
 		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical,
 		DataAllocatedBytes: allocated, OtherChildren: 1,
 	}
-	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren =
+	var samplerErr error
+	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, samplerErr =
 		sampler.metrics()
 	metrics.OtherChildren++
-	return metrics, errors.Join(waitErr, measureErr, allocationErr)
+	return metrics, errors.Join(
+		waitErr, sessionErr, samplerCloseErr, samplerErr, measureErr, allocationErr,
+	)
 }
 
 func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, error) {
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")
 	}
-	logical, allocated, measureErr := measureDataBytes(meter.dataDir)
+	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.server.sessionIsolated)
 	peakAllocated, allocationErr := meter.allocation.close()
 	if measureErr != nil || allocationErr != nil {
 		return PhaseMetrics{}, errors.Join(measureErr, allocationErr)
@@ -203,7 +219,11 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 		WallMS:           time.Since(meter.started).Milliseconds(),
 		DataLogicalBytes: logical, DataAllocatedBytes: allocated,
 	}
-	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren = meter.server.sampler.metrics()
+	var samplerErr error
+	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, samplerErr = meter.server.sampler.metrics()
+	if samplerErr != nil {
+		return PhaseMetrics{}, samplerErr
+	}
 	logMetrics, err := parseLogMetrics(meter.server.logPath, meter.logOffset)
 	if err != nil {
 		return PhaseMetrics{}, err
@@ -262,6 +282,38 @@ func measureDataBytes(path string) (logical, allocated int64, err error) {
 	return logical * 1024, allocated * 1024, nil
 }
 
+func measureDataBytesForPlan(plan Plan, path string) (logical, allocated int64, err error) {
+	return measureDataBytesForContract(path, planSchemaVersion(plan.Schema) >= 25)
+}
+
+func measureDataBytesForContract(path string, strict bool) (logical, allocated int64, err error) {
+	if !strict {
+		return measureDataBytes(path)
+	}
+	return measureDataBytesContext(context.Background(), path)
+}
+
+func measureDataBytesContext(ctx context.Context, path string) (logical, allocated int64, err error) {
+	if ctx == nil || !filepath.IsAbs(path) {
+		return 0, 0, errors.New("T40.13 data measurement path is invalid")
+	}
+	allocated, err = duKilobytesWithin(ctx, path, false)
+	if err != nil {
+		return 0, 0, err
+	}
+	logical, err = duKilobytesWithin(ctx, path, true)
+	if err != nil {
+		return 0, 0, err
+	}
+	return logical * 1024, allocated * 1024, nil
+}
+
+func duKilobytesWithin(parent context.Context, path string, apparent bool) (int64, error) {
+	ctx, cancel := context.WithTimeout(parent, dataMeasurementTimeout)
+	defer cancel()
+	return duKilobytesContext(ctx, path, apparent)
+}
+
 func duKilobytes(path string, apparent bool) (int64, error) {
 	args := []string{"-sk"}
 	if apparent {
@@ -289,6 +341,47 @@ func duKilobytes(path string, apparent bool) (int64, error) {
 	if err != nil {
 		return 0, errors.New("T40.13 data-byte measurement failed")
 	}
+	return parseDUKilobytes(output)
+}
+
+func duKilobytesContext(ctx context.Context, path string, apparent bool) (int64, error) {
+	args := []string{"-sk"}
+	if apparent {
+		switch runtime.GOOS {
+		case "darwin":
+			args = []string{"-skA"}
+		case "linux":
+			args = []string{"-sk", "--apparent-size"}
+		default:
+			return 0, errors.New("T40.13 logical-byte measurement is unsupported")
+		}
+	}
+	args = append(args, path)
+	var output []byte
+	var err error
+	for attempt := range 3 {
+		output, err = exec.CommandContext(ctx, "/usr/bin/du", args...).Output()
+		if err == nil {
+			break
+		}
+		if attempt < 2 {
+			select {
+			case <-ctx.Done():
+				return 0, errors.New("T40.13 data-byte measurement exceeded its deadline")
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
+	}
+	if ctx.Err() != nil {
+		return 0, errors.New("T40.13 data-byte measurement exceeded its deadline")
+	}
+	if err != nil {
+		return 0, errors.New("T40.13 data-byte measurement failed")
+	}
+	return parseDUKilobytes(output)
+}
+
+func parseDUKilobytes(output []byte) (int64, error) {
 	fields := strings.Fields(string(output))
 	if len(fields) < 1 {
 		return 0, errors.New("T40.13 data-byte measurement is invalid")

@@ -83,15 +83,26 @@ func writePublicationStageVersioned(
 	authorityDigest string,
 	prior *Publication,
 	accumulator *buildAccumulator,
-) (*Prepared, error) {
+) (_ *Prepared, retErr error) {
 	directory, err := stageDirectory(root, authority.Repository)
 	if err != nil {
 		return nil, err
 	}
+	prepared := &Prepared{
+		root: root, repository: authority.Repository, directory: directory,
+	}
 	failed := true
 	defer func() {
-		if failed {
-			_ = os.RemoveAll(directory)
+		if !failed {
+			return
+		}
+		if cleanupErr := prepared.abort(); cleanupErr != nil {
+			cleanupErr = fmt.Errorf("clean failed relationship publication stage: %w", cleanupErr)
+			if errors.Is(retErr, ErrLimit) {
+				retErr = fmt.Errorf("%v; %w", retErr, cleanupErr)
+			} else {
+				retErr = errors.Join(retErr, cleanupErr)
+			}
 		}
 	}()
 	value := Root{
@@ -247,7 +258,7 @@ func writePublicationStageVersioned(
 	if err := syncDirectory(directory); err != nil {
 		return nil, err
 	}
-	prepared := &Prepared{root: root, repository: authority.Repository, directory: directory, rootValue: value}
+	prepared.rootValue = value
 	if _, err := openDirectoryComplete(ctx, directory, value); err != nil {
 		return nil, err
 	}

@@ -18,22 +18,7 @@ readonly EXECUTE_CONFIRM="execute-neutral-t4013-and-destroy-custody"
 readonly CLEANUP_CONFIRM="cleanup-neutral-t4013-custody"
 readonly SIGNATURE_NAMESPACE="phebs-t4013"
 readonly FREEZE_SIGNATURE_NAMESPACE="phebs-t4013-freeze"
-readonly REVIEW_STOPPED_CEREMONY_ID_1="t40r1-neutral-01"
-readonly REVIEW_STOPPED_CEREMONY_ID_2="t40r1-neutral-02"
-readonly REVIEW_STOPPED_CEREMONY_ID_3="t40r1-neutral-03"
-readonly REVIEW_STOPPED_CEREMONY_ID_4="t40r1-neutral-04"
-readonly REVIEW_STOPPED_CEREMONY_ID_5="t40r1-neutral-05"
-readonly REVIEW_STOPPED_CEREMONY_ID_6="t40r1-neutral-06"
-readonly REVIEW_STOPPED_CEREMONY_ID_7="t40r1-neutral-07"
-readonly REVIEW_STOPPED_CEREMONY_ID_8="t40r1-neutral-08"
-readonly REVIEW_STOPPED_CEREMONY_ID_9="t40r1-neutral-09"
-readonly REVIEW_STOPPED_CEREMONY_ID_10="t40r1-neutral-10"
-readonly REVIEW_STOPPED_CEREMONY_ID_11="t40r1-neutral-11"
-readonly REVIEW_STOPPED_CEREMONY_ID_12="t40r1-neutral-12"
-readonly REVIEW_STOPPED_CEREMONY_ID_13="t40r1-neutral-13"
-readonly REVIEW_STOPPED_CEREMONY_ID_14="t40r1-neutral-14"
-readonly REVIEW_STOPPED_CEREMONY_ID_15="t40r1-neutral-15"
-readonly REVIEW_STOPPED_CEREMONY_ID_16="t40r1-neutral-16"
+readonly LAST_REVIEW_STOPPED_CEREMONY_NUMBER=34
 readonly RETIRED_SIGNER_FINGERPRINT="SHA256:BqFeTpCclBV0Z6Dz/Lc0dmpb75q7lZSAgH5rc6AK2nw"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
@@ -47,6 +32,13 @@ SIGNING_KEY=""
 SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
+CLOSED_GO_CACHE=""
+EXIT_PREPARED_PLAN=""
+EXIT_PREPARED_MANIFEST=""
+EXIT_PREPARED_WORKSPACE=""
+RUN_LOCK_DIRECTORY=""
+RUN_LOCK_TOKEN=""
+EXIT_UNPROVEN_REASON=""
 
 die() {
   printf '%s: %s\n' "$SCRIPT_NAME" "$*" >&2
@@ -55,6 +47,151 @@ die() {
 
 note() {
   printf '%s\n' "$*"
+}
+
+closed_go() {
+  [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TMPDIR="${TMPDIR:-/tmp}" \
+    LC_ALL=C \
+    CGO_ENABLED=0 \
+    GOENV=off \
+    GOCACHE="$CLOSED_GO_CACHE" \
+    GOEXPERIMENT= \
+    GOFLAGS= \
+    GOTOOLCHAIN=local \
+    GOWORK=off \
+    "$@"
+}
+
+initialize_closed_go_cache() {
+  [[ -z "$CLOSED_GO_CACHE" ]] || return
+  CLOSED_GO_CACHE="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-go-cache.XXXXXX")"
+  chmod 700 "$CLOSED_GO_CACHE"
+}
+
+cleanup_on_exit() {
+  local status=$?
+  trap - EXIT
+  if [[ -z "$EXIT_UNPROVEN_REASON" &&
+    -n "$EXIT_PREPARED_PLAN" && -n "$EXIT_PREPARED_MANIFEST" &&
+    -n "$EXIT_PREPARED_WORKSPACE" &&
+    ! -e "${EXIT_PREPARED_WORKSPACE}/.t4013-executed" &&
+    ! -L "${EXIT_PREPARED_WORKSPACE}/.t4013-executed" ]]; then
+    if ! cleanup_prepared "$EXIT_PREPARED_PLAN" "$EXIT_PREPARED_MANIFEST"; then
+      status=1
+      EXIT_UNPROVEN_REASON="prepared cleanup refused"
+    fi
+  fi
+  if [[ -n "$EXIT_UNPROVEN_REASON" ]]; then
+    printf '%s: operation state retained (%s); child exit is unproven\n' \
+      "$SCRIPT_NAME" "$EXIT_UNPROVEN_REASON" >&2
+    exit "$status"
+  fi
+  if [[ -n "$RUN_LOCK_DIRECTORY" || -n "$RUN_LOCK_TOKEN" ]]; then
+    release_run_lock || status=1
+  fi
+  if [[ -n "$CLOSED_GO_CACHE" ]]; then
+    rm -rf -- "$CLOSED_GO_CACHE" || status=1
+    CLOSED_GO_CACHE=""
+  fi
+  exit "$status"
+}
+
+retain_on_signal() {
+  local signal_name="$1" status="$2"
+  EXIT_UNPROVEN_REASON="signal ${signal_name}"
+  trap - INT TERM HUP
+  exit "$status"
+}
+
+acquire_run_lock() {
+  local run_root="$1" owner
+  [[ "$run_root" == /* && -d "$run_root" && ! -L "$run_root" ]] ||
+    die "ceremony run directory is invalid for locking"
+  [[ -z "$RUN_LOCK_DIRECTORY" && -z "$RUN_LOCK_TOKEN" ]] ||
+    die "this driver already owns a ceremony operation lock"
+  RUN_LOCK_DIRECTORY="${run_root}/.t4013-operation.lock"
+  if ! mkdir -m 700 -- "$RUN_LOCK_DIRECTORY"; then
+    RUN_LOCK_DIRECTORY=""
+    die "ceremony operation lock is retained; prove no operation owns it before reviewed removal"
+  fi
+  RUN_LOCK_TOKEN="$$:${RANDOM}:${RANDOM}"
+  owner="${RUN_LOCK_DIRECTORY}/owner"
+  printf '%s\n' "$RUN_LOCK_TOKEN" > "$owner" ||
+    die "ceremony operation lock owner could not be recorded; lock retained for review"
+}
+
+release_run_lock() {
+  local owner actual unexpected
+  if [[ -z "$RUN_LOCK_DIRECTORY" || -z "$RUN_LOCK_TOKEN" ]]; then
+    printf '%s: ceremony operation lock ownership is incomplete; lock retained for review\n' "$SCRIPT_NAME" >&2
+    return 1
+  fi
+  owner="${RUN_LOCK_DIRECTORY}/owner"
+  if [[ ! -d "$RUN_LOCK_DIRECTORY" || -L "$RUN_LOCK_DIRECTORY" ||
+    ! -f "$owner" || -L "$owner" ]]; then
+    printf '%s: ceremony operation lock ownership is unprovable; lock retained for review\n' "$SCRIPT_NAME" >&2
+    return 1
+  fi
+  actual="$(<"$owner")"
+  if [[ "$actual" != "$RUN_LOCK_TOKEN" ]]; then
+    printf '%s: ceremony operation lock owner changed; lock retained for review\n' "$SCRIPT_NAME" >&2
+    return 1
+  fi
+  if ! unexpected="$(find "$RUN_LOCK_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name owner -print -quit)" ||
+    [[ -n "$unexpected" ]]; then
+    printf '%s: ceremony operation lock contents changed; lock retained for review\n' "$SCRIPT_NAME" >&2
+    return 1
+  fi
+  if ! rm -- "$owner" || ! rmdir -- "$RUN_LOCK_DIRECTORY"; then
+    printf '%s: ceremony operation lock release failed; lock retained for review\n' "$SCRIPT_NAME" >&2
+    return 1
+  fi
+  RUN_LOCK_DIRECTORY=""
+  RUN_LOCK_TOKEN=""
+}
+
+closed_git() {
+  local git_driver exec_path
+  git_driver="$(command -v git)"
+  exec_path="$(env -i \
+    HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    GIT_ATTR_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+    GIT_NO_LAZY_FETCH=1 GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
+    "$git_driver" --exec-path)"
+  [[ "$exec_path" == /* && -d "$exec_path" && ! -L "$exec_path" && \
+    -f "${exec_path}/git" && -x "${exec_path}/git" ]] ||
+    die "closed Git core executable is invalid"
+  env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TMPDIR="${TMPDIR:-/tmp}" \
+    LC_ALL=C \
+    GIT_ATTR_NOSYSTEM=1 \
+    GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_CONFIG_NOSYSTEM=1 \
+    GIT_NO_LAZY_FETCH=1 \
+    GIT_OPTIONAL_LOCKS=0 \
+    GIT_TERMINAL_PROMPT=0 \
+    "${exec_path}/git" "$@"
+}
+
+plan_go() {
+  local plan_path="$1"
+  shift
+  if is_v25_plan "$plan_path"; then
+    closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify || return 1
+    closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off "$@" || return 1
+  else
+    env GOPROXY=off "$@"
+  fi
+}
+
+is_v25_plan() {
+  grep -Eq '"schema"[[:space:]]*:[[:space:]]*"t4013-neutral-convergence-plan-v25"' "$1"
 }
 
 usage() {
@@ -82,6 +219,20 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command is unavailable: $1"
 }
 
+durable_promote() {
+  local temporary="$1" final="$2" filesystem_root="$3"
+  [[ "$temporary" == /* && "$final" == /* && "$filesystem_root" == /* &&
+    "${temporary%/*}" == "${final%/*}" &&
+    -f "$temporary" && ! -L "$temporary" &&
+    ! -e "$final" && ! -L "$final" &&
+    -d "$filesystem_root" && ! -L "$filesystem_root" ]] ||
+    die "durable evidence promotion is invalid"
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    go run ./spike/t4013/cmd/t4013-promote \
+    -temporary "$temporary" -output "$final" -root "$CEREMONY_REAL") ||
+    die "durable evidence promotion failed"
+}
+
 canonical_existing_directory() {
   local path="$1"
   [[ -d "$path" && ! -L "$path" ]] || die "directory is missing, invalid, or a symlink: $path"
@@ -95,12 +246,12 @@ validate_id() {
 }
 
 reject_review_stopped_id() {
-  local value="$1"
-  case "$value" in
-    "$REVIEW_STOPPED_CEREMONY_ID_1"|"$REVIEW_STOPPED_CEREMONY_ID_2"|"$REVIEW_STOPPED_CEREMONY_ID_3"|"$REVIEW_STOPPED_CEREMONY_ID_4"|"$REVIEW_STOPPED_CEREMONY_ID_5"|"$REVIEW_STOPPED_CEREMONY_ID_6"|"$REVIEW_STOPPED_CEREMONY_ID_7"|"$REVIEW_STOPPED_CEREMONY_ID_8"|"$REVIEW_STOPPED_CEREMONY_ID_9"|"$REVIEW_STOPPED_CEREMONY_ID_10"|"$REVIEW_STOPPED_CEREMONY_ID_11"|"$REVIEW_STOPPED_CEREMONY_ID_12"|"$REVIEW_STOPPED_CEREMONY_ID_13"|"$REVIEW_STOPPED_CEREMONY_ID_14"|"$REVIEW_STOPPED_CEREMONY_ID_15"|"$REVIEW_STOPPED_CEREMONY_ID_16")
+  local value="$1" number
+  if [[ "$value" =~ ^t40r1-neutral-([0-9]{2,})$ ]]; then
+    number=$((10#${BASH_REMATCH[1]}))
+    (( number > LAST_REVIEW_STOPPED_CEREMONY_NUMBER )) ||
       die "ceremony id $value is permanently review-stopped; use a fresh id"
-      ;;
-  esac
+  fi
 }
 
 initialize_repository() {
@@ -141,6 +292,105 @@ select_signing_key() {
 
 require_clean_checkout() {
   local status commit
+  status="$(closed_git -C "$REPO_REAL" status --porcelain=v1 --untracked-files=all)"
+  [[ -z "$status" ]] || die "phebs checkout is not clean; commit or remove every tracked/untracked change"
+  commit="$(closed_git -C "$REPO_REAL" rev-parse --verify HEAD)"
+  [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || die "phebs HEAD is not an exact commit"
+  closed_git -C "$REPO_REAL" cat-file -e "${commit}^{commit}"
+}
+
+host_preflight() {
+  local memory_bytes available_kib available_bytes go_version port
+  [[ "$(uname -s)" == "Darwin" ]] || die "the large-machine driver supports macOS only"
+  case "$BASE_PORT" in
+    ''|*[!0-9]*) die "base port is invalid" ;;
+  esac
+  (( BASE_PORT >= 1024 && BASE_PORT <= 65533 )) || die "base port must leave room for two loopback listeners"
+  memory_bytes="$(sysctl -n hw.memsize)"
+  available_kib="$(df -Pk "$CEREMONY_REAL" | awk 'NR == 2 { print $4 }')"
+  [[ "$memory_bytes" =~ ^[0-9]+$ && "$available_kib" =~ ^[0-9]+$ ]] || die "host capacity probes returned invalid values"
+  available_bytes=$((available_kib * 1024))
+  (( memory_bytes >= MINIMUM_MEMORY_BYTES )) || die "host has less than the frozen 24 GiB memory prerequisite"
+  (( available_bytes >= MINIMUM_DISK_BYTES )) || die "host has less than the frozen 120 GiB available-disk prerequisite"
+  go_version="$(closed_go go env GOVERSION)"
+  [[ "$go_version" == go1.26.* ]] || die "the ceremony requires the Go 1.26 toolchain line"
+  for port in "$BASE_PORT" "$((BASE_PORT + 1))"; do
+    if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+      die "ceremony loopback port is already in use: $port"
+    fi
+  done
+  note "macOS host prerequisite: PASS"
+  note "physical memory bytes: $memory_bytes"
+  note "available ceremony bytes: $available_bytes"
+  note "phebs commit: $(closed_git -C "$REPO_REAL" rev-parse HEAD)"
+  note "Go toolchain: $(closed_go go version)"
+  note "Git toolchain: $(closed_git --version)"
+  note "SurrealDB toolchain: $(surreal version)"
+}
+
+preflight() {
+  local command_name commit host_plan_root
+  for command_name in awk cmp cp date df du env find git go grep lsof mkdir mktemp pgrep ps rm sed shasum sort ssh-keygen surreal sysctl tar uname uniq wc; do
+    require_command "$command_name"
+  done
+  initialize_repository
+  initialize_ceremony_root
+  initialize_closed_go_cache
+  require_clean_checkout
+  host_preflight
+  (cd "$REPO_REAL" && closed_go go mod download all)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
+  host_plan_root="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-host-plan.XXXXXX")"
+  if ! (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    go run ./spike/t4013/cmd/t4013-freeze \
+    -root "$REPO_REAL" \
+    -source-commit "$commit" \
+    -data-parent "$CEREMONY_REAL" \
+    -bind-host-toolchain \
+    -output "${host_plan_root}/plan.json") >/dev/null; then
+    rm -rf -- "$host_plan_root"
+    die "exact V25 prospective host preflight failed"
+  fi
+  rm -rf -- "$host_plan_root"
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go test \
+    ./internal/lifecycle \
+    ./internal/resolvernamespace \
+    ./internal/rpccallerposting \
+    ./internal/kafkatopicposting \
+    ./internal/relationshippublication \
+    ./spike/t4013/... -count=1)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    PHEBS_T4013_READINESS_REHEARSAL=1 go test ./spike/t4013 \
+    -run '^TestProductionPathReadinessRehearsal/(semantic|semantic-stale-worker)$' \
+    -count=1 -timeout 35m)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  require_clean_checkout
+  note "T40.13 production, harness, and V25 real-binary readiness tests: PASS"
+}
+
+verification_preflight() {
+  local command_name
+  for command_name in awk cmp du env find git go grep mktemp pgrep ps rm sed shasum sort ssh-keygen tar uniq wc; do
+    require_command "$command_name"
+  done
+  initialize_repository
+  initialize_closed_go_cache
+  require_clean_checkout
+  (cd "$REPO_REAL" && closed_go go mod download all)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go test \
+    ./internal/lifecycle \
+    ./internal/resolvernamespace \
+    ./internal/rpccallerposting \
+    ./internal/kafkatopicposting \
+    ./internal/relationshippublication \
+    ./spike/t4013/... -count=1)
+  note "source-free verifier checkout: PASS"
+}
+
+historical_require_clean_checkout() {
+  local status commit
   status="$(git -C "$REPO_REAL" status --porcelain=v1 --untracked-files=all)"
   [[ -z "$status" ]] || die "phebs checkout is not clean; commit or remove every tracked/untracked change"
   commit="$(git -C "$REPO_REAL" rev-parse --verify HEAD)"
@@ -148,7 +398,7 @@ require_clean_checkout() {
   git -C "$REPO_REAL" cat-file -e "${commit}^{commit}"
 }
 
-host_preflight() {
+historical_host_preflight() {
   local memory_bytes available_kib available_bytes go_version port
   [[ "$(uname -s)" == "Darwin" ]] || die "the large-machine driver supports macOS only"
   case "$BASE_PORT" in
@@ -177,30 +427,46 @@ host_preflight() {
   note "SurrealDB toolchain: $(surreal version)"
 }
 
-preflight() {
+historical_preflight() {
   local command_name
   for command_name in awk cmp cp date df find git go grep lsof mkdir mktemp mv rm sed shasum sort ssh-keygen surreal sysctl tar uname uniq wc; do
     require_command "$command_name"
   done
   initialize_repository
   initialize_ceremony_root
-  require_clean_checkout
-  host_preflight
+  historical_require_clean_checkout
+  historical_host_preflight
   (cd "$REPO_REAL" && go mod download all)
   (cd "$REPO_REAL" && go test ./spike/t4013/... -count=1)
-  require_clean_checkout
+  historical_require_clean_checkout
   note "T40.13 harness tests: PASS"
 }
 
-verification_preflight() {
+historical_verification_preflight() {
   local command_name
   for command_name in awk cmp find git go mktemp rm sed shasum sort ssh-keygen tar uniq wc; do
     require_command "$command_name"
   done
   initialize_repository
-  require_clean_checkout
+  historical_require_clean_checkout
   (cd "$REPO_REAL" && go test ./spike/t4013/... -count=1)
   note "source-free verifier checkout: PASS"
+}
+
+preflight_for_plan() {
+  if is_v25_plan "$1"; then
+    preflight
+  else
+    historical_preflight
+  fi
+}
+
+verification_preflight_for_plan() {
+  if is_v25_plan "$1"; then
+    verification_preflight
+  else
+    historical_verification_preflight
+  fi
 }
 
 ensure_signing_key() {
@@ -234,6 +500,7 @@ plan_digest_for() {
 
 freeze() {
   local ceremony_id="$1" run_root evidence_root private_root commit digest frozen_at public_key fingerprint
+  local signer_tmp allowed_tmp freeze_tmp freeze_signature_tmp
   reject_review_stopped_id "$ceremony_id"
   preflight
   select_signing_key "$ceremony_id"
@@ -243,11 +510,14 @@ freeze() {
   evidence_root="${run_root}/evidence"
   private_root="${run_root}/private"
   mkdir -m 700 "$run_root" "$evidence_root" "$private_root"
-  commit="$(git -C "$REPO_REAL" rev-parse HEAD)"
-  (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-freeze \
+  commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+    go run ./spike/t4013/cmd/t4013-freeze \
     -root "$REPO_REAL" \
     -source-commit "$commit" \
-	-bind-host-toolchain \
+    -data-parent "$CEREMONY_REAL" \
+    -bind-host-toolchain \
     -output "${evidence_root}/plan.json") >/dev/null
   digest="$(plan_digest_for "${evidence_root}/plan.json")"
   frozen_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -255,12 +525,20 @@ freeze() {
   fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk '{print $2}')"
   [[ "$public_key" == ssh-ed25519\ * && "$fingerprint" == SHA256:* ]] ||
     die "ceremony signing identity is invalid"
-  cp -p "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub"
-  printf '%s %s\n' "$SIGNER_IDENTITY" "$public_key" > "${evidence_root}/allowed_signers"
+  signer_tmp="${evidence_root}/signer.pub.tmp"
+  allowed_tmp="${evidence_root}/allowed_signers.tmp"
+  freeze_tmp="${evidence_root}/freeze.json.tmp"
+  freeze_signature_tmp="${freeze_tmp}.sig"
+  cp -p "${SIGNING_KEY}.pub" "$signer_tmp"
+  durable_promote "$signer_tmp" "${evidence_root}/signer.pub" "$evidence_root"
+  printf '%s %s\n' "$SIGNER_IDENTITY" "$public_key" > "$allowed_tmp"
+  durable_promote "$allowed_tmp" "${evidence_root}/allowed_signers" "$evidence_root"
   printf '{\n  "schema": "t4013-freeze-envelope-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "signer_fingerprint": "%s",\n  "frozen_at": "%s"\n}\n' \
-    "$ceremony_id" "$commit" "$digest" "$fingerprint" "$frozen_at" > "${evidence_root}/freeze.json"
+    "$ceremony_id" "$commit" "$digest" "$fingerprint" "$frozen_at" > "$freeze_tmp"
   ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$FREEZE_SIGNATURE_NAMESPACE" \
-    "${evidence_root}/freeze.json" >/dev/null
+    "$freeze_tmp" >/dev/null
+  durable_promote "$freeze_tmp" "${evidence_root}/freeze.json" "$evidence_root"
+  durable_promote "$freeze_signature_tmp" "${evidence_root}/freeze.json.sig" "$evidence_root"
   note "frozen ceremony: $ceremony_id"
   note "source commit: $commit"
   note "plan path: ${evidence_root}/plan.json"
@@ -270,20 +548,22 @@ freeze() {
 }
 
 cleanup_prepared() {
-  local plan_path="$1" prepared_path="$2"
-  if [[ -f "$prepared_path" && ! -L "$prepared_path" ]]; then
-    (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-cleanup \
+  local plan_path="$1" prepared_path="$2" path
+  if [[ -e "$prepared_path" || -L "$prepared_path" ||
+    -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
+    -e "${prepared_path}.preparing" || -L "${prepared_path}.preparing" ]]; then
+    for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing"; do
+      if [[ -e "$path" || -L "$path" ]]; then
+        [[ -f "$path" && ! -L "$path" ]] || die "private prepared cleanup control is invalid: $path"
+      fi
+    done
+    (cd "$REPO_REAL" && plan_go "$plan_path" \
+      go run ./spike/t4013/cmd/t4013-cleanup \
       -root "$REPO_REAL" \
       -plan "$plan_path" \
       -prepared "$prepared_path" \
       -confirm "$CLEANUP_CONFIRM")
   fi
-}
-
-cleanup_trap_command() {
-  local command
-  printf -v command 'cleanup_prepared %q %q || true' "$1" "$2"
-  printf '%s' "$command"
 }
 
 manifest_value() {
@@ -303,7 +583,7 @@ verify_frozen_identity() {
   local evidence_root="$1" source_commit plan_digest
   source_commit="$(manifest_value "${evidence_root}/freeze.json" source_commit)"
   plan_digest="$(manifest_value "${evidence_root}/freeze.json" plan_digest)"
-  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
+  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(closed_git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the frozen execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "frozen plan digest differs"
   ssh-keygen -Y verify \
@@ -327,7 +607,7 @@ verify_evidence_directory() {
   verify_frozen_identity "$evidence_root"
   source_commit="$(manifest_value "$manifest" source_commit)"
   plan_digest="$(manifest_value "$manifest" plan_digest)"
-  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
+  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(closed_git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the sealed execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "sealed plan digest differs"
   (cd "$evidence_root" && shasum -a 256 -c SHA256SUMS)
@@ -338,7 +618,8 @@ verify_evidence_directory() {
     -s "${evidence_root}/SHA256SUMS.sig" < "${evidence_root}/SHA256SUMS"
   temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-verify.XXXXXX")"
   rebuilt="${temporary_root}/results.json"
-  if ! (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-receipt \
+  if ! (cd "$REPO_REAL" && plan_go "${evidence_root}/plan.json" \
+    go run ./spike/t4013/cmd/t4013-receipt \
     -plan "${evidence_root}/plan.json" \
     -plan-digest "$plan_digest" \
     -observation "${evidence_root}/observation.json" \
@@ -356,16 +637,26 @@ verify_evidence_directory() {
 
 seal_evidence() {
   local ceremony_id="$1" run_root evidence_root source_commit plan_digest generated_at
-  local package package_tmp package_digest package_sidecar
+  local package package_tmp package_digest package_sidecar package_sidecar_tmp package_bytes
+  local manifest_tmp checksums_tmp signature_tmp
   local seal_count=0 seal_name
   local -a expected
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
-  source_commit="$(git -C "$REPO_REAL" rev-parse HEAD)"
+  source_commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
   plan_digest="$(plan_digest_for "${evidence_root}/plan.json")"
   generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  manifest_tmp="${evidence_root}/manifest.json.tmp"
+  checksums_tmp="${evidence_root}/SHA256SUMS.tmp"
+  signature_tmp="${checksums_tmp}.sig"
   cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed after freeze"
   verify_frozen_identity "$evidence_root"
+  for seal_name in "$manifest_tmp" "$checksums_tmp" "$signature_tmp"; do
+    if [[ -e "$seal_name" || -L "$seal_name" ]]; then
+      [[ -f "$seal_name" && ! -L "$seal_name" ]] || die "partial source-free seal temporary file is invalid"
+      rm -- "$seal_name"
+    fi
+  done
   for seal_name in manifest.json SHA256SUMS SHA256SUMS.sig; do
     if [[ -e "${evidence_root}/${seal_name}" || -L "${evidence_root}/${seal_name}" ]]; then
       [[ -f "${evidence_root}/${seal_name}" && ! -L "${evidence_root}/${seal_name}" ]] ||
@@ -381,22 +672,28 @@ seal_evidence() {
       [[ -e "${evidence_root}/${seal_name}" ]] && expected+=("$seal_name")
     done
     require_exact_inventory "$evidence_root" "${expected[@]}"
-    # An incomplete three-file seal cannot authenticate anything. Remove only
-    # that closed derived set and rebuild it; a complete but invalid seal above
-    # always fails closed instead of being rewritten.
     if (( seal_count > 0 )); then
-      rm -f -- "${evidence_root}/manifest.json" "${evidence_root}/SHA256SUMS" "${evidence_root}/SHA256SUMS.sig"
+      die "partial source-free seal is retained for review"
     fi
     printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
-      "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "${evidence_root}/manifest.json"
+      "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "$manifest_tmp"
+    durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root"
     (cd "$evidence_root" && shasum -a 256 \
-      allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > SHA256SUMS)
-    ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "${evidence_root}/SHA256SUMS" >/dev/null
+      allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > "$checksums_tmp")
+    ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "$checksums_tmp" >/dev/null
+    durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root"
+    durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root"
     verify_evidence_directory "$evidence_root"
   fi
   package="${run_root}/${ceremony_id}-source-free.tgz"
   package_tmp="${package}.tmp"
   package_sidecar="${package}.sha256"
+  package_sidecar_tmp="${package_sidecar}.tmp"
+  if [[ -e "$package_sidecar_tmp" || -L "$package_sidecar_tmp" ]]; then
+    [[ -f "$package_sidecar_tmp" && ! -L "$package_sidecar_tmp" ]] ||
+      die "source-free package sidecar temporary file is invalid"
+    rm -- "$package_sidecar_tmp"
+  fi
   if [[ -e "$package" || -L "$package" ]]; then
     [[ -f "$package" && ! -L "$package" && ! -e "$package_tmp" && ! -L "$package_tmp" ]] ||
       die "source-free package is partial or invalid"
@@ -407,7 +704,8 @@ seal_evidence() {
       [[ "$(awk 'NR == 1 { print $1, $2 }' "$package_sidecar")" == "$package_digest $(basename "$package")" ]] ||
         die "source-free package sidecar differs"
     else
-      printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar"
+      printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar_tmp"
+      durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root"
     fi
     note "sealed source-free package: $package"
     note "package sha256: $package_digest"
@@ -418,51 +716,94 @@ seal_evidence() {
     rm -- "$package_tmp"
   fi
   if [[ -e "$package_sidecar" || -L "$package_sidecar" ]]; then
-    [[ -f "$package_sidecar" && ! -L "$package_sidecar" ]] || die "source-free package sidecar is invalid"
-    rm -- "$package_sidecar"
+    die "source-free package sidecar exists without its package"
   fi
   COPYFILE_DISABLE=1 tar -C "$run_root" -czf "$package_tmp" evidence
-  mv "$package_tmp" "$package"
-  (( $(wc -c < "$package") <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
+  package_bytes="$(wc -c < "$package_tmp" | awk '{ print $1 }')"
+  [[ "$package_bytes" =~ ^[0-9]+$ ]] || die "source-free package size is invalid"
+  (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
     die "source-free package exceeds its fixed 4-MiB transfer bound"
+  durable_promote "$package_tmp" "$package" "$run_root"
   package_digest="$(shasum -a 256 "$package" | awk '{print $1}')"
-  printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar"
+  printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar_tmp"
+  durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root"
   note "sealed source-free package: $package"
   note "package sha256: $package_digest"
 }
 
+prepare_receipt_for_seal() {
+  local plan_path="$1" plan_digest="$2" observation_path="$3" results_path="$4"
+  if is_v25_plan "$plan_path" || [[ ! -e "$results_path" && ! -L "$results_path" ]]; then
+    # V25 publication is resumable and verifies any existing final bytes;
+    # historical publication retains its original create-only behavior.
+    (cd "$REPO_REAL" && plan_go "$plan_path" \
+      go run ./spike/t4013/cmd/t4013-receipt \
+      -plan "$plan_path" \
+      -plan-digest "$plan_digest" \
+      -observation "$observation_path" \
+      -output "$results_path")
+  else
+    [[ -f "$results_path" && ! -L "$results_path" ]] ||
+      die "historical source-free receipt is absent or invalid"
+  fi
+}
+
 seal_run() {
-  local ceremony_id="$1" run_root evidence_root private_root plan_digest
-  verification_preflight
-  select_signing_key "$ceremony_id"
-  ensure_signing_key
+  local ceremony_id="$1" run_root evidence_root private_root plan_path prepared_path custody_path plan_digest
+  initialize_repository
+  initialize_ceremony_root
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
   private_root="${run_root}/private"
+  plan_path="${evidence_root}/plan.json"
+  prepared_path="${private_root}/prepared.json"
+  custody_path="${run_root}/custody"
+  [[ -d "$run_root" && ! -L "$run_root" ]] || die "ceremony run directory is invalid"
+  [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
+  acquire_run_lock "$run_root"
+  verification_preflight_for_plan "$plan_path"
+  select_signing_key "$ceremony_id"
+  ensure_signing_key
   [[ -d "$evidence_root" && ! -L "$evidence_root" && -d "$private_root" && ! -L "$private_root" ]] ||
     die "ceremony evidence or private directory is invalid"
-  [[ ! -e "${run_root}/custody" && ! -L "${run_root}/custody" ]] || die "private custody remains"
-  [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "private ceremony state remains"
-  [[ -f "${evidence_root}/observation.json" && ! -L "${evidence_root}/observation.json" ]] ||
-    die "source-free observation is absent"
-  plan_digest="$(plan_digest_for "${evidence_root}/plan.json")"
-  if [[ ! -e "${evidence_root}/results.json" && ! -L "${evidence_root}/results.json" ]]; then
-    (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-receipt \
-      -plan "${evidence_root}/plan.json" \
-      -plan-digest "$plan_digest" \
-      -observation "${evidence_root}/observation.json" \
-      -output "${evidence_root}/results.json")
+  if [[ -e "$custody_path" || -L "$custody_path" ]]; then
+    [[ -d "$custody_path" && ! -L "$custody_path" ]] || die "private custody is invalid"
+    if [[ -e "${custody_path}/.t4013-executed" || -L "${custody_path}/.t4013-executed" ]]; then
+      die "marker-bearing executed custody remains for separately reviewed purge"
+    fi
   fi
+  if [[ -e "$prepared_path" || -L "$prepared_path" ||
+    -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
+    -e "${prepared_path}.preparing" || -L "${prepared_path}.preparing" ]]; then
+    [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 \
+      ! -name prepared.json ! -name prepared.json.tmp ! -name prepared.json.preparing -print -quit)" ]] ||
+      die "unexpected private ceremony state remains"
+    if ! cleanup_prepared "${evidence_root}/plan.json" "$prepared_path"; then
+      EXIT_UNPROVEN_REASON="resumable prepared cleanup refused"
+      die "resumable private prepared manifest cleanup failed"
+    fi
+  fi
+  [[ ! -e "$custody_path" && ! -L "$custody_path" ]] || die "private custody remains"
+  [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "private ceremony state remains"
+  require_clean_checkout
+  plan_digest="$(plan_digest_for "$plan_path")"
+  prepare_receipt_for_seal \
+    "$plan_path" "$plan_digest" \
+    "${evidence_root}/observation.json" "${evidence_root}/results.json"
+  [[ -f "${evidence_root}/observation.json" && ! -L "${evidence_root}/observation.json" ]] ||
+    die "source-free observation is absent after resume"
   seal_evidence "$ceremony_id"
 }
 
 execute_ceremony() {
   local ceremony_id="$1" approved_digest="$2" approval="$3"
   local run_root evidence_root private_root plan_path prepared_path observation_path results_path custody_path
-  local actual_digest execute_status cleanup_trap path
+  local actual_digest execute_status path
   reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
-  preflight
+  initialize_repository
+  initialize_ceremony_root
+  initialize_closed_go_cache
   select_signing_key "$ceremony_id"
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
@@ -475,8 +816,12 @@ execute_ceremony() {
   custody_path="${run_root}/custody"
   [[ -d "$run_root" && ! -L "$run_root" && -d "$evidence_root" && -d "$private_root" ]] ||
     die "frozen ceremony directory is missing or invalid"
+  acquire_run_lock "$run_root"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
-  for path in "$prepared_path" "$observation_path" "$results_path" "$custody_path"; do
+  for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing" \
+    "$observation_path" "${observation_path}.tmp" \
+    "${observation_path}.teardown" "${observation_path}.teardown.tmp" \
+    "$results_path" "${results_path}.tmp" "$custody_path"; do
     [[ ! -e "$path" && ! -L "$path" ]] || die "ceremony output or custody already exists: $path"
   done
   actual_digest="$(plan_digest_for "$plan_path")"
@@ -484,47 +829,74 @@ execute_ceremony() {
   require_exact_inventory "$evidence_root" allowed_signers freeze.json freeze.json.sig plan.json signer.pub
   cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed after freeze"
   verify_frozen_identity "$evidence_root"
-  cleanup_trap="$(cleanup_trap_command "$plan_path" "$prepared_path")"
-  trap "$cleanup_trap" EXIT
-  (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-prepare \
+  # Run the costly production/rehearsal preflight only after the requested
+  # frozen identity and empty output state have passed their cheap checks.
+  preflight_for_plan "$plan_path"
+  [[ -d "$run_root" && ! -L "$run_root" && -d "$evidence_root" && -d "$private_root" ]] ||
+    die "frozen ceremony directory changed during preflight"
+  [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan changed during preflight"
+  for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing" \
+    "$observation_path" "${observation_path}.tmp" \
+    "${observation_path}.teardown" "${observation_path}.teardown.tmp" \
+    "$results_path" "${results_path}.tmp" "$custody_path"; do
+    [[ ! -e "$path" && ! -L "$path" ]] || die "ceremony output or custody appeared during preflight: $path"
+  done
+  actual_digest="$(plan_digest_for "$plan_path")"
+  [[ "$approved_digest" == "$actual_digest" ]] || die "approved plan digest changed during preflight"
+  require_exact_inventory "$evidence_root" allowed_signers freeze.json freeze.json.sig plan.json signer.pub
+  cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed during preflight"
+  verify_frozen_identity "$evidence_root"
+  EXIT_PREPARED_PLAN="$plan_path"
+  EXIT_PREPARED_MANIFEST="$prepared_path"
+  EXIT_PREPARED_WORKSPACE="$custody_path"
+  (cd "$REPO_REAL" && plan_go "$plan_path" \
+    go run ./spike/t4013/cmd/t4013-prepare \
     -root "$REPO_REAL" \
     -workspace "$custody_path" \
     -plan "$plan_path" \
     -output "$prepared_path" \
     -base-port "$BASE_PORT" \
     -confirm "$PREPARE_CONFIRM")
+  # The fallback owns only an interrupted Prepare. From this boundary onward,
+  # Execute owns custody and any retained residue.
+  EXIT_PREPARED_PLAN=""
+  EXIT_PREPARED_MANIFEST=""
+  EXIT_PREPARED_WORKSPACE=""
   execute_status=0
-  (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-execute \
+  (cd "$REPO_REAL" && plan_go "$plan_path" \
+    go run ./spike/t4013/cmd/t4013-execute \
     -root "$REPO_REAL" \
     -plan "$plan_path" \
     -prepared "$prepared_path" \
     -observation "$observation_path" \
     -confirm "$EXECUTE_CONFIRM") || execute_status=$?
-  if (( execute_status != 0 )) && [[ ! -e "$observation_path" ]]; then
-    # An unsealable stop deliberately fails closed with custody retained:
-    # destroying it here would erase hours of evidence with nothing sealed.
-    # The executed marker inside custody refuses re-execution; only the
-    # separately reviewed purge may remove it.
-    trap - EXIT
-    die "execution stopped (status ${execute_status}) and sealed no observation; private custody is RETAINED at ${custody_path} for the separately reviewed purge — do not re-execute against it"
+  if [[ -e "$custody_path" || -L "$custody_path" ]]; then
+    # Persistence and custody destruction are separate boundaries. Even when
+    # a complete observation exists, any surviving custody means Execute did
+    # not authorize the wrapper's destructive cleanup fallback.
+    EXIT_UNPROVEN_REASON="execution child status ${execute_status} with custody"
+    die "execution stopped (status ${execute_status}) with private custody RETAINED at ${custody_path} for the separately reviewed purge — do not re-execute against it"
   fi
   if ! cleanup_prepared "$plan_path" "$prepared_path"; then
     die "exact private prepared manifest cleanup failed"
   fi
-  trap - EXIT
-  [[ ! -e "$custody_path" && ! -e "$prepared_path" ]] || die "private custody survived execution cleanup"
-  [[ -f "$observation_path" && ! -L "$observation_path" ]] ||
-    die "execution produced no source-free observation; no evidence was sealed"
-  (cd "$REPO_REAL" && env GOPROXY=off go run ./spike/t4013/cmd/t4013-receipt \
+  for path in "$custody_path" "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing"; do
+    [[ ! -e "$path" && ! -L "$path" ]] || die "private custody survived execution cleanup: $path"
+  done
+  require_clean_checkout
+  (cd "$REPO_REAL" && plan_go "$plan_path" \
+    go run ./spike/t4013/cmd/t4013-receipt \
     -plan "$plan_path" \
     -plan-digest "$actual_digest" \
     -observation "$observation_path" \
     -output "$results_path")
+  [[ -f "$observation_path" && ! -L "$observation_path" ]] ||
+    die "execution produced no source-free observation after resume; no evidence was sealed"
   seal_evidence "$ceremony_id"
   if (( execute_status == 0 )); then
     note "ceremony completed; the sealed receipt still requires independent review"
   else
-    note "ceremony stopped with command status $execute_status; its stopped receipt was sealed for review"
+    note "execution command returned status $execute_status; its resumed source-free outcome receipt was sealed for review"
   fi
 }
 
@@ -566,6 +938,10 @@ verify_bundle() {
 
 main() {
   local command_name="${1:-}"
+  trap cleanup_on_exit EXIT
+  trap 'retain_on_signal INT 130' INT
+  trap 'retain_on_signal TERM 143' TERM
+  trap 'retain_on_signal HUP 129' HUP
   case "$command_name" in
     preflight)
       [[ $# -eq 1 ]] || { usage; exit 2; }

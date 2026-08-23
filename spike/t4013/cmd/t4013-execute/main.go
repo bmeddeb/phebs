@@ -22,14 +22,14 @@ func main() {
 	if flag.NArg() != 0 || *root == "" || *plan == "" || *prepared == "" || *observation == "" {
 		fail("-root, -plan, -prepared, and -observation are required")
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 	result, err := t4013.Execute(ctx, t4013.ExecuteRequest{
 		ModuleRoot: *root, PlanPath: *plan, Prepared: *prepared,
 		Observation: *observation, Confirm: *confirm,
 	})
 	if result.Schema != "" {
-		if writeErr := t4013.WriteObservation(*observation, result); writeErr != nil {
+		if writeErr := t4013.WriteReturnedObservation(*observation, result); writeErr != nil {
 			fail("write observation: %v", writeErr)
 		}
 	}

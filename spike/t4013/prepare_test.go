@@ -3,6 +3,7 @@ package t4013
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,173 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
+
+func TestV25AtomicEvidenceFilesystemPreflight(t *testing.T) {
+	parent := t.TempDir()
+	if err := preflightAtomicEvidenceProtocol(parent, Plan{Schema: PlanSchemaV25}); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(parent)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("filesystem probe residue = %v, %v", entries, err)
+	}
+
+	missing := filepath.Join(parent, "missing")
+	if err := preflightAtomicEvidenceProtocol(missing, Plan{Schema: PlanSchemaV24}); err != nil {
+		t.Fatalf("historical plan acquired V25 filesystem probe: %v", err)
+	}
+	if err := preflightAtomicEvidenceProtocol(missing, Plan{Schema: PlanSchemaV25}); err == nil {
+		t.Fatal("V25 filesystem probe accepted an absent ceremony filesystem")
+	}
+}
+
+func TestPreparePortPreflightRefusesOccupiedPair(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = listener.Close() }()
+	port := listener.Addr().(*net.TCPAddr).Port
+	if port < 1024 || port > 65533 {
+		t.Skipf("ephemeral port %d cannot start a ceremony pair", port)
+	}
+	release, err := reserveLoopbackPortsForPlan(Plan{Schema: PlanSchemaV24}, port)
+	if err != nil {
+		t.Fatalf("historical plan acquired V25 port reservation: %v", err)
+	}
+	release()
+	if _, err := reserveLoopbackPortsForPlan(Plan{Schema: PlanSchemaV25}, port); err == nil {
+		t.Fatal("occupied ceremony port passed the final pre-authoring check")
+	}
+}
+
+func TestPreparedCleanupRetainsCrashIndeterminateCustody(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	module, err := filepath.EvalSymlinks(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace, err = filepath.EvalSymlinks(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planPath := filepath.Join(root, "plan.json")
+	preparedPath := filepath.Join(root, "prepared.json")
+	if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePreparedCleanupControl(preparedPath+".preparing", preparedCleanupControl{
+		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: module, Workspace: workspace,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(preparedPath+".tmp", []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupPrepared(module, planPath, preparedPath, CleanupConfirm); err == nil ||
+		!strings.Contains(err.Error(), "external process-absence proof") {
+		t.Fatalf("crash-indeterminate cleanup = %v", err)
+	}
+	for _, path := range []string{workspace, preparedPath + ".tmp", preparedPath + ".preparing"} {
+		if _, err := os.Lstat(path); err != nil {
+			t.Fatalf("crash-indeterminate cleanup changed %s: %v", path, err)
+		}
+	}
+}
+
+func TestV25CleanupPreparedRefusesExecutedCustody(t *testing.T) {
+	tests := []struct {
+		name       string
+		makeMarker func(string, string) error
+	}{
+		{
+			name: "regular marker",
+			makeMarker: func(marker, _ string) error {
+				return os.WriteFile(marker, []byte("executed\n"), 0o600)
+			},
+		},
+		{
+			name: "symlink marker",
+			makeMarker: func(marker, target string) error {
+				return os.Symlink(target, marker)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			module, err := filepath.EvalSymlinks(module)
+			if err != nil {
+				t.Fatal(err)
+			}
+			workspace, err = filepath.EvalSymlinks(workspace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+			if err != nil {
+				t.Fatal(err)
+			}
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			planPath := filepath.Join(root, "plan.json")
+			preparedPath := filepath.Join(root, "prepared.json")
+			if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			controlPath := preparedPath + ".preparing"
+			if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
+				Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
+				ModuleRoot: module, Workspace: workspace,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			outside := filepath.Join(root, "outside")
+			if err := os.WriteFile(outside, []byte("retain"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			marker := filepath.Join(workspace, executedMarkerName)
+			if err := test.makeMarker(marker, outside); err != nil {
+				t.Fatal(err)
+			}
+
+			err = CleanupPrepared(module, planPath, preparedPath, CleanupConfirm)
+			if err == nil || !strings.Contains(err.Error(), "executed custody") {
+				t.Fatalf("cleanup error = %v", err)
+			}
+			for _, path := range []string{workspace, marker, controlPath, outside} {
+				if _, err := os.Lstat(path); err != nil {
+					t.Fatalf("refused cleanup changed %s: %v", path, err)
+				}
+			}
+		})
+	}
+}
 
 func TestPreparedCustodyIsStrictAndPlanBound(t *testing.T) {
 	profile := func(name string, port string) PreparedProfile {
@@ -275,7 +443,7 @@ func TestDestroyCustodyRetriesTransientDirectoryNotEmptyAndVerifiesStableAbsence
 	}
 	if err := destroyCustodyWith(workspace, moduleRoot, remove, func(delay time.Duration) {
 		waits = append(waits, delay)
-	}); err != nil {
+	}, syncDirectory); err != nil {
 		t.Fatal(err)
 	}
 	if calls != 2 {
@@ -306,12 +474,39 @@ func TestDestroyCustodyDoesNotRetryNonTransientFailure(t *testing.T) {
 		return want
 	}, func(time.Duration) {
 		t.Fatal("non-transient cleanup waited for a retry")
-	})
+	}, syncDirectory)
 	if !errors.Is(err, syscall.EPERM) || calls != 1 {
 		t.Fatalf("cleanup error/calls = %v/%d", err, calls)
 	}
 	if _, statErr := os.Lstat(workspace); statErr != nil {
 		t.Fatalf("non-transient cleanup changed custody: %v", statErr)
+	}
+}
+
+func TestDestroyCustodyRequiresDurableParentDeletion(t *testing.T) {
+	root := t.TempDir()
+	moduleRoot := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{moduleRoot, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := errors.New("injected parent sync failure")
+	err := destroyCustodyWith(
+		workspace, moduleRoot, os.RemoveAll, func(time.Duration) {},
+		func(path string) error {
+			if path != root {
+				t.Fatalf("synced parent = %q, want %q", path, root)
+			}
+			return want
+		},
+	)
+	if !errors.Is(err, want) {
+		t.Fatalf("durable custody deletion = %v", err)
+	}
+	if _, statErr := os.Lstat(workspace); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("custody survived removal before sync failure: %v", statErr)
 	}
 }
 
@@ -333,7 +528,7 @@ func TestDestroyCustodyTransientRetryIsHardBounded(t *testing.T) {
 			t.Fatalf("exhausted retry delay = %s", delay)
 		}
 		waits++
-	})
+	}, syncDirectory)
 	if err == nil || !strings.Contains(err.Error(), "did not settle") ||
 		calls != custodyRemoveAttempts || waits != custodyRemoveAttempts-1 {
 		t.Fatalf("bounded cleanup = %v, calls=%d, waits=%d", err, calls, waits)

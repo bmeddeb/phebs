@@ -23,6 +23,27 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+func TestProfileInspectionContractTracksPlanSchema(t *testing.T) {
+	tests := []struct {
+		schema string
+		want   profileInspectionContract
+	}{
+		{PlanSchema, profileInspectionLegacy},
+		{PlanSchemaV14, profileInspectionV14},
+		{PlanSchemaV15, profileInspectionV15},
+		{PlanSchemaV16, profileInspectionV16},
+		{PlanSchemaV19, profileInspectionV16},
+		{PlanSchemaV20, profileInspectionV20},
+		{PlanSchemaV21, profileInspectionV21},
+		{PlanSchemaV25, profileInspectionV21},
+	}
+	for _, test := range tests {
+		if got := profileInspectionForPlan(test.schema); got != test.want {
+			t.Fatalf("inspection contract for %s = %d, want %d", test.schema, got, test.want)
+		}
+	}
+}
+
 func TestCallerGenerationTerminalClassificationIsImmediateAndTyped(t *testing.T) {
 	total := 192
 	bound := apiresponse.CallerMapPage{Generation: &apiresponse.CallerMapGeneration{

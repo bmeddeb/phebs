@@ -45,6 +45,7 @@ const (
 	mutationAcquireTimeout = 5 * time.Second
 	mutationProbeTimeout   = 25 * time.Millisecond
 	mutationRetryDelay     = 10 * time.Millisecond
+	pinRollbackTimeout     = 5 * time.Second
 )
 
 // RuntimeStore is the exact durable control surface used by the relationship
@@ -471,6 +472,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 			pipelinerefusal.StageRelationshipResolverNamespaces,
 		)
 	}
+	defer func() { retErr = errors.Join(retErr, resolverStage.Discard()) }()
 	resolverPublication, err := resolverStage.Publish(ctx)
 	if err != nil {
 		return fmt.Errorf("publish relationship resolver namespaces: %w", err)
@@ -494,6 +496,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 			pipelinerefusal.StageRelationshipRPCPostings,
 		)
 	}
+	defer func() { retErr = errors.Join(retErr, rpcStage.Discard()) }()
 	rpcPublication, err := rpcStage.Publish(ctx)
 	if err != nil {
 		return fmt.Errorf("publish relationship RPC postings: %w", err)
@@ -517,6 +520,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 			pipelinerefusal.StageRelationshipKafkaProjection,
 		)
 	}
+	defer func() { retErr = errors.Join(retErr, kafkaStage.Discard()) }()
 	kafkaPublication, err := kafkaStage.Publish(ctx)
 	if err != nil {
 		return fmt.Errorf("publish relationship Kafka postings: %w", err)
@@ -564,20 +568,36 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return err
 	}
 	if isPartitionedBinding(binding.Schema) {
-		owner := "relationship:" + stage.Root().GenerationDigest
+		root := stage.Root()
+		if current, openErr := OpenCurrent(
+			ctx, runtime.relationshipRoot(), chunk.Repository,
+		); openErr == nil {
+			currentRoot := current.Root()
+			if currentRoot.GenerationDigest == root.GenerationDigest && currentRoot.Digest == root.Digest {
+				return nil
+			}
+		}
+		owner := "relationship:" + root.GenerationDigest
 		pinned := make([]string, 0, len(binding.Upstream.Domains))
 		for _, domain := range binding.Upstream.Domains {
-			if err := runtime.Store.PinPartitionedExtractionRun(ctx, domain.RunID, owner); err != nil {
-				for _, runID := range pinned {
-					_ = runtime.Store.UnpinPartitionedExtractionRun(ctx, runID, owner)
-				}
-				return fmt.Errorf("pin relationship extraction root: %w", err)
-			}
+			// A store error can arrive after the pin committed. Include the
+			// attempted run before the call so idempotent rollback also covers
+			// that ambiguous outcome.
 			pinned = append(pinned, domain.RunID)
+			if err := runtime.Store.PinPartitionedExtractionRun(ctx, domain.RunID, owner); err != nil {
+				return errors.Join(
+					fmt.Errorf("pin relationship extraction root: %w", err),
+					runtime.rollbackPartitionedPins(ctx, pinned, owner),
+				)
+			}
 		}
 		if _, err := stage.Publish(ctx); err != nil {
-			for _, runID := range pinned {
-				_ = runtime.Store.UnpinPartitionedExtractionRun(ctx, runID, owner)
+			// Publish closes the stage as soon as its immutable generation is
+			// installed. From that point onward an error is ambiguous: current.json
+			// may already name this root, so retaining pins is the safe authority
+			// posture until publication recovery reconciles exact owners.
+			if !stage.closed {
+				err = errors.Join(err, runtime.rollbackPartitionedPins(ctx, pinned, owner))
 			}
 			return fmt.Errorf("publish relationship root: %w", err)
 		}
@@ -587,6 +607,26 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship root: %w", err)
 	}
 	return nil
+}
+
+func (runtime *Runtime) rollbackPartitionedPins(
+	ctx context.Context, runIDs []string, owner string,
+) error {
+	if len(runIDs) == 0 {
+		return nil
+	}
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pinRollbackTimeout)
+	defer cancel()
+	var rollbackErr error
+	for _, runID := range runIDs {
+		if err := runtime.Store.UnpinPartitionedExtractionRun(rollbackCtx, runID, owner); err != nil {
+			rollbackErr = errors.Join(
+				rollbackErr,
+				fmt.Errorf("unpin relationship extraction run %q: %w", runID, err),
+			)
+		}
+	}
+	return rollbackErr
 }
 
 func resolverNamespaceBuildRequest(

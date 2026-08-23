@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,6 +60,11 @@ func TestInspectSurrealBinaryAcceptsBuildMetadataVersion(t *testing.T) {
 	}
 	if identity.Path == "" || !validSHA256(identity.SHA256) {
 		t.Fatalf("identity = %+v", identity)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := InspectSurrealBinaryContext(canceled, path); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled identity inspection = %v", err)
 	}
 }
 

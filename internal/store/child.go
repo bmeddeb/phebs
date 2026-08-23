@@ -92,16 +92,25 @@ func findSurrealBinary(useCache bool) (SurrealIdentity, error) {
 		}
 		candidate = found
 	}
-	return inspectSurrealBinary(candidate, useCache)
+	return inspectSurrealBinary(context.Background(), candidate, useCache)
 }
 
 // InspectSurrealBinary validates one exact executable and returns its stable
 // identity. Restore uses this on the manifest-bound binary before import.
 func InspectSurrealBinary(candidate string) (SurrealIdentity, error) {
-	return inspectSurrealBinary(candidate, false)
+	return inspectSurrealBinary(context.Background(), candidate, false)
 }
 
-func inspectSurrealBinary(candidate string, useCache bool) (SurrealIdentity, error) {
+// InspectSurrealBinaryContext is InspectSurrealBinary with caller cancellation
+// applied to hashing and version inspection.
+func InspectSurrealBinaryContext(ctx context.Context, candidate string) (SurrealIdentity, error) {
+	return inspectSurrealBinary(ctx, candidate, false)
+}
+
+func inspectSurrealBinary(ctx context.Context, candidate string, useCache bool) (SurrealIdentity, error) {
+	if ctx == nil {
+		return SurrealIdentity{}, errors.New("inspect surreal binary: context is nil")
+	}
 	if strings.TrimSpace(candidate) != candidate || candidate == "" {
 		return SurrealIdentity{}, errors.New("inspect surreal binary: path is empty or padded")
 	}
@@ -129,11 +138,11 @@ func inspectSurrealBinary(candidate string, useCache bool) (SurrealIdentity, err
 			return identity, nil
 		}
 	}
-	digest, err := fileSHA256(resolved, 1<<30)
+	digest, err := fileSHA256Context(ctx, resolved, 1<<30)
 	if err != nil {
 		return SurrealIdentity{}, fmt.Errorf("digest surreal binary: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, resolved, "version").CombinedOutput()
 	if err != nil {
@@ -424,21 +433,39 @@ func processAlive(pid int) bool {
 	return processAlivePlatform(pid)
 }
 
-func fileSHA256(path string, maxBytes int64) (string, error) {
+func fileSHA256Context(ctx context.Context, path string, maxBytes int64) (string, error) {
+	if ctx == nil {
+		return "", errors.New("file digest context is nil")
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = file.Close() }()
 	hash := sha256.New()
-	written, err := io.Copy(hash, io.LimitReader(file, maxBytes+1))
+	written, err := io.Copy(hash, io.LimitReader(contextBoundReader{ctx, file}, maxBytes+1))
 	if err != nil {
 		return "", err
 	}
 	if written > maxBytes {
 		return "", fmt.Errorf("file exceeds %d-byte limit", maxBytes)
 	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+type contextBoundReader struct {
+	context.Context
+	io.Reader
+}
+
+func (reader contextBoundReader) Read(value []byte) (int, error) {
+	if err := reader.Err(); err != nil {
+		return 0, err
+	}
+	return reader.Reader.Read(value)
 }
 
 func waitHealthy(ctx context.Context, addr string) error {

@@ -27,6 +27,7 @@ func Run(
 	}
 	delay := time.Duration(0)
 	cycleStarted := false
+	cycleNeedsRetry := false
 	for {
 		if delay > 0 {
 			timer := time.NewTimer(delay)
@@ -51,6 +52,10 @@ func Run(
 		}
 		if result.CycleStart {
 			cycleStarted = true
+			cycleNeedsRetry = false
+		}
+		if cycleStarted && (result.Err != nil || result.More) {
+			cycleNeedsRetry = true
 		}
 		pressureAccelerated := false
 		if gate != nil {
@@ -61,11 +66,12 @@ func Run(
 			pressureAccelerated = capacity.Pressure == PressureCollect ||
 				capacity.Pressure == PressureRefuse
 		}
-		if result.Err != nil || result.More || !result.CycleComplete || !cycleStarted || pressureAccelerated {
+		if cycleNeedsRetry || !result.CycleComplete || !cycleStarted || pressureAccelerated {
 			delay = backlogDelay
 		} else {
 			delay = idleInterval
 			cycleStarted = false
+			cycleNeedsRetry = false
 		}
 	}
 }

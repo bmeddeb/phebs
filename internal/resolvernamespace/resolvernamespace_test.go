@@ -1,6 +1,7 @@
 package resolvernamespace
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -30,6 +31,9 @@ func TestCatalogDeterministicSparseLookupAndClosedStates(t *testing.T) {
 	secondPrepared := buildPrepared(t, root, "sha256:"+strings.Repeat("1", 64), slices.Clone(descriptors), first)
 	second, err := secondPrepared.Publish(t.Context())
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := secondPrepared.Discard(); err != nil {
 		t.Fatal(err)
 	}
 	if first.Root().Digest != second.Root().Digest {
@@ -277,6 +281,100 @@ func TestResidentLimitCarriesExactMeasurement(t *testing.T) {
 		measurement.Dimension != pipelinerefusal.DimensionResidentBytes ||
 		measurement.Observed <= measurement.Limit || measurement.Limit != 1 {
 		t.Fatalf("resident refusal = %+v, %v", measurement, err)
+	}
+}
+
+func TestCanceledBuildRemovesStage(t *testing.T) {
+	root := t.TempDir()
+	repository := "github.com/acme/repo"
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := Build(ctx, BuildRequest{
+		Root: root, Repository: repository, Commit: strings.Repeat("f", 40),
+		ResolverGenerationDigest: "sha256:" + strings.Repeat("1", 64),
+		ResolverManifestDigest:   "sha256:" + strings.Repeat("2", 64),
+		Descriptors: []gocaller.DirectDescriptor{
+			descriptor("grpc", "example.test/a", "AClient", "Read", "a.Service/Read", "a"),
+		},
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled build error = %v", err)
+	}
+	stages, err := filepath.Glob(filepath.Join(repositoryRoot(root, repository), ".stage-*"))
+	if err != nil || len(stages) != 0 {
+		t.Fatalf("canceled build stages = %v, %v", stages, err)
+	}
+}
+
+func TestBuildCleanupFailureIsNotClassifiedAsLimit(t *testing.T) {
+	root := t.TempDir()
+	repository := "github.com/acme/repo"
+	ctx := &stageCleanupFailureContext{
+		Context: t.Context(),
+		remove:  repositoryRoot(root, repository),
+		cause:   ErrLimit,
+	}
+	_, err := Build(ctx, BuildRequest{
+		Root: root, Repository: repository, Commit: strings.Repeat("f", 40),
+		ResolverGenerationDigest: "sha256:" + strings.Repeat("1", 64),
+		ResolverManifestDigest:   "sha256:" + strings.Repeat("2", 64),
+		Descriptors: []gocaller.DirectDescriptor{
+			descriptor("grpc", "example.test/a", "AClient", "Read", "a.Service/Read", "a"),
+		},
+	})
+	if ctx.removeErr != nil {
+		t.Fatal(ctx.removeErr)
+	}
+	if err == nil || errors.Is(err, ErrLimit) ||
+		!strings.Contains(err.Error(), "clean failed resolver namespace stage") ||
+		!strings.Contains(err.Error(), ErrLimit.Error()) {
+		t.Fatalf("cleanup failure classification = %v", err)
+	}
+}
+
+type stageCleanupFailureContext struct {
+	context.Context
+	remove    string
+	cause     error
+	removeErr error
+}
+
+func (ctx *stageCleanupFailureContext) Err() error {
+	if ctx.remove != "" {
+		ctx.removeErr = os.RemoveAll(ctx.remove)
+		ctx.remove = ""
+	}
+	return ctx.cause
+}
+
+func TestDiscardRemovesStageAfterPreinstallPublishFailure(t *testing.T) {
+	root := t.TempDir()
+	prepared := buildPrepared(
+		t, root, "sha256:"+strings.Repeat("1", 64),
+		[]gocaller.DirectDescriptor{
+			descriptor("grpc", "example.test/a", "AClient", "Read", "a.Service/Read", "a"),
+		},
+		nil,
+	)
+	stage := prepared.directory
+	target := generationPath(root, prepared.repository, prepared.rootValue.GenerationDigest)
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prepared.Publish(t.Context()); err == nil {
+		t.Fatal("publish accepted conflicting incomplete generation")
+	}
+	if _, err := os.Lstat(stage); err != nil {
+		t.Fatalf("pre-install publish failure consumed stage: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("discarded stage remains: %v", err)
+	}
+	if err := prepared.Discard(); err != nil {
+		t.Fatalf("repeated discard = %v", err)
 	}
 }
 
