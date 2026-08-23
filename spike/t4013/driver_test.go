@@ -527,37 +527,178 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 }
 
 func TestCeremonyDriverOrdersCheapOperatorGatesBeforeCostlyVerification(t *testing.T) {
-	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	source := string(raw)
-	section := func(name, next string) string {
-		start := strings.Index(source, "\n"+name+"() {")
-		if start < 0 {
-			t.Fatalf("cannot find %s", name)
+	common := `
+source "$1"
+MARKER="$2"
+RUN_ROOT="$3"
+KEY="$4"
+initialize_repository() { REPO_REAL="$RUN_ROOT/repository"; }
+initialize_ceremony_root() { CEREMONY_REAL="${RUN_ROOT%/*}"; }
+run_root_for() { printf '%s\n' "$RUN_ROOT"; }
+`
+	mkdirAll := func(t *testing.T, path string) {
+		t.Helper()
+		if err := os.MkdirAll(path, 0o700); err != nil {
+			t.Fatal(err)
 		}
-		end := strings.Index(source[start+1:], "\n"+next+"() {")
-		if end < 0 {
-			t.Fatalf("cannot isolate %s", name)
+	}
+	writePlan := func(t *testing.T, runRoot string) {
+		t.Helper()
+		mkdirAll(t, filepath.Join(runRoot, "evidence"))
+		mkdirAll(t, filepath.Join(runRoot, "private"))
+		if err := os.WriteFile(
+			filepath.Join(runRoot, "evidence", "plan.json"),
+			[]byte(`{"schema":"`+PlanSchemaV25+`"}`),
+			0o600,
+		); err != nil {
+			t.Fatal(err)
 		}
-		return source[start : start+1+end]
 	}
-	freeze := section("freeze", "prepare_receipt_for_seal")
-	if strings.Index(freeze, "ensure_signing_key") > strings.Index(freeze, "preflight") {
-		t.Fatal("freeze runs costly preflight before signer admission")
+	tests := []struct {
+		name  string
+		want  string
+		setup func(*testing.T, string, string)
+		body  string
+	}{
+		{
+			name: "duplicate freeze ID", want: "already exists",
+			setup: func(t *testing.T, runRoot, _ string) { mkdirAll(t, runRoot) },
+			body: `
+select_signing_key() { :; }
+ensure_signing_key() { :; }
+preflight() { : > "$MARKER"; }
+freeze ceremony
+`,
+		},
+		{
+			name: "missing seal trust anchor", want: "keypair is partial",
+			setup: func(t *testing.T, runRoot, _ string) {
+				writePlan(t, runRoot)
+			},
+			body: `
+select_signing_key() { SIGNING_KEY="$KEY"; }
+verification_preflight_for_plan() { : > "$MARKER"; }
+seal_run ceremony
+`,
+		},
+		{
+			name: "surviving seal custody", want: "marker-bearing executed custody",
+			setup: func(t *testing.T, runRoot, _ string) {
+				writePlan(t, runRoot)
+				mkdirAll(t, filepath.Join(runRoot, "custody"))
+				if err := os.WriteFile(filepath.Join(runRoot, "custody", ".t4013-executed"), nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+			body: `
+select_signing_key() { :; }
+admit_signing_key() { :; }
+verification_preflight_for_plan() { : > "$MARKER"; }
+seal_run ceremony
+`,
+		},
+		{
+			name: "missing verify run", want: "run directory is invalid",
+			body: `
+verification_preflight_for_plan() { : > "$MARKER"; }
+verify_run ceremony
+`,
+		},
+		{
+			name: "missing execute run", want: "frozen ceremony directory is missing",
+			body: `
+select_signing_key() { : > "$MARKER"; }
+execute_ceremony ceremony ignored "$EXECUTE_APPROVAL"
+`,
+		},
+		{
+			name: "dirty preflight checkout", want: "checkout is not clean",
+			body: `
+require_command() { :; }
+closed_git() {
+  if [[ "$*" == *"status --porcelain"* ]]; then printf ' M dirty\n'; else return 99; fi
+}
+initialize_closed_go_cache() { : > "$MARKER"; }
+preflight
+`,
+		},
+		{
+			name: "wrong execution confirmation", want: "approval phrase is invalid",
+			body: `
+initialize_repository() { : > "$MARKER"; }
+execute_ceremony ceremony ignored wrong
+`,
+		},
+		{
+			name: "wrong plan digest", want: "approved plan digest differs",
+			setup: func(t *testing.T, runRoot, _ string) {
+				writePlan(t, runRoot)
+			},
+			body: `
+acquire_run_lock() { :; }
+select_signing_key() { :; }
+admit_signing_key() { :; }
+is_v25_plan() { return 1; }
+initialize_historical_go_cache() { :; }
+refuse_supervision_residue() { :; }
+plan_digest_for() { printf 'sha256:actual\n'; }
+preflight_for_plan() { : > "$MARKER"; }
+execute_ceremony ceremony sha256:wrong "$EXECUTE_APPROVAL"
+`,
+		},
+		{
+			name: "mismatched frozen signer", want: "signing key changed after freeze",
+			setup: func(t *testing.T, runRoot, key string) {
+				writePlan(t, runRoot)
+				generateCeremonyTestKey(t, key)
+				other := filepath.Join(filepath.Dir(key), "other-key")
+				generateCeremonyTestKey(t, other)
+				public, err := os.ReadFile(other + ".pub")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(runRoot, "evidence", "signer.pub"), public, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+			body: `
+acquire_run_lock() { :; }
+select_signing_key() { SIGNING_KEY="$KEY"; }
+is_v25_plan() { return 0; }
+refuse_supervision_residue() { :; }
+plan_digest_for() { printf 'sha256:actual\n'; }
+require_exact_inventory() { :; }
+preflight_for_plan() { : > "$MARKER"; }
+execute_ceremony ceremony sha256:actual "$EXECUTE_APPROVAL"
+`,
+		},
 	}
-	seal := section("seal_run", "execute_ceremony")
-	if strings.Index(seal, "ensure_signing_key") > strings.Index(seal, "verification_preflight_for_plan") {
-		t.Fatal("seal runs costly verification before trust-root admission")
-	}
-	verify := section("verify_run", "verify_bundle")
-	if strings.Index(verify, "frozen plan is missing") > strings.Index(verify, "verification_preflight_for_plan") {
-		t.Fatal("verify runs costly verification before frozen-run admission")
-	}
-	preflight := section("preflight", "verification_preflight")
-	if strings.Index(preflight, "require_clean_checkout") > strings.Index(preflight, "initialize_closed_go_cache") {
-		t.Fatal("preflight initializes caches before dirty-checkout refusal")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			runRoot := filepath.Join(root, "ceremony")
+			key := filepath.Join(root, "missing-key")
+			if test.setup != nil {
+				test.setup(t, runRoot, key)
+			}
+			marker := filepath.Join(root, "costly")
+			output, runErr := exec.Command(
+				"bash", "-c", common+test.body, "cost-first-test", driver, marker, runRoot, key,
+			).CombinedOutput()
+			if runErr == nil || !bytes.Contains(output, []byte(test.want)) {
+				t.Fatalf("refusal = %v, want %q: %s", runErr, test.want, output)
+			}
+			if _, err := os.Lstat(marker); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("costly gate ran before refusal: %v", err)
+			}
+		})
 	}
 }
 
@@ -981,14 +1122,25 @@ func TestCeremonyDriverProvesSigningKeypairMatch(t *testing.T) {
 	if output, runErr := exec.Command("bash", "-c", script, "keypair-test", driver, key).CombinedOutput(); runErr != nil {
 		t.Fatalf("matching keypair refused: %v: %s", runErr, output)
 	}
+	public, err := os.ReadFile(key + ".pub")
+	if err != nil {
+		t.Fatal(err)
+	}
 	otherPublic, err := os.ReadFile(other + ".pub")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(key+".pub", otherPublic, 0o600); err != nil {
+	if err := os.WriteFile(key+".pub", append(public, otherPublic...), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	output, runErr := exec.Command("bash", "-c", script, "keypair-test", driver, key).CombinedOutput()
+	if runErr == nil || !bytes.Contains(output, []byte("public key is unreadable")) {
+		t.Fatalf("multi-key public file was not refused: %v: %s", runErr, output)
+	}
+	if err := os.WriteFile(key+".pub", otherPublic, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output, runErr = exec.Command("bash", "-c", script, "keypair-test", driver, key).CombinedOutput()
 	if runErr == nil || !bytes.Contains(output, []byte("private/public keypair does not match")) {
 		t.Fatalf("mismatched keypair was not refused: %v: %s", runErr, output)
 	}
@@ -1534,6 +1686,7 @@ initialize_closed_go_cache() { :; }
 initialize_historical_go_cache() { :; }
 select_signing_key() { :; }
 ensure_signing_key() { :; }
+admit_signing_key() { :; }
 run_root_for() { printf '%s\n' "$RUN_ROOT"; }
 plan_digest_for() { printf 'sha256:test\n'; }
 require_exact_inventory() { :; }

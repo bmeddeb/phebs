@@ -662,10 +662,18 @@ func realLauncherProfile(
 	profile := PreparedProfile{
 		Config: configPath, Credential: credentialPath, DataDir: dataDir, Address: address,
 	}
-	toolchain := bindLauncherToolchain(t, privateToolchain{
+	surreal, err := store.FindSurrealBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	toolchain := privateToolchain{
 		Schema: privateToolchainSchema, Phebs: phebs, Zoekt: zoekt,
 		TempDir: tempDir, ClosedEnvironment: true,
-	})
+	}
+	toolchain.host.surreal = boundExecutable{
+		name: "surreal", path: surreal.Path, sha256: surreal.SHA256,
+	}
+	toolchain = bindLauncherToolchain(t, toolchain)
 	return profile, toolchain
 }
 

@@ -3727,7 +3727,11 @@ func (run *execution) enforceSafety() error {
 		if phase.Outcome == "not_run" {
 			continue
 		}
-		totalWall += phase.Metrics.WallMS
+		var err error
+		totalWall, err = checkedAddInt64(totalWall, phase.Metrics.WallMS)
+		if err != nil {
+			return errors.Join(errReviewCeiling, err)
+		}
 		if phase.Metrics.PeakRSSBytes > run.plan.Safety.MaximumPeakRSSBytes ||
 			phase.Metrics.DataAllocatedBytes > run.plan.Safety.MaximumDataAllocatedBytes {
 			return errReviewCeiling

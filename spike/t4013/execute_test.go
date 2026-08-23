@@ -3042,6 +3042,11 @@ func TestExecutionSafetyUsesPhaseGaugeMaximaAndTotalWall(t *testing.T) {
 	if err := run.enforceSafety(); !errors.Is(err, errReviewCeiling) {
 		t.Fatalf("wall overflow = %v", err)
 	}
+	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{WallMS: maxInt64Value})
+	if err := run.enforceSafety(); !errors.Is(err, errReviewCeiling) || !errors.Is(err, errArithmeticOverflow) {
+		t.Fatalf("signed wall overflow = %v", err)
+	}
+	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{})
 	run.observation.Phases[1] = succeededPhase("cold", PhaseMetrics{
 		PeakRSSBytes: frozenSafety.MaximumPeakRSSBytes + 1,
 	})

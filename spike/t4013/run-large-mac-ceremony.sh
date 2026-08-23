@@ -1106,14 +1106,22 @@ prove_signing_keypair() {
     die "ceremony signing keypair is partial, invalid, or symlinked"
   private_public="$(ssh-keygen -y -f "$SIGNING_KEY" | awk 'NR == 1 && NF >= 2 { print $1 " " $2 }')" ||
     die "ceremony signing private key cannot derive its public identity"
-  public_key="$(awk 'NR == 1 && NF >= 2 { print $1 " " $2 }' "${SIGNING_KEY}.pub")" ||
+  public_key="$(awk 'NR == 1 && NF >= 2 { print $1 " " $2; next } { exit 2 } END { if (NR != 1) exit 2 }' "${SIGNING_KEY}.pub")" ||
     die "ceremony signing public key is unreadable"
   [[ "$private_public" == ssh-ed25519\ * && "$private_public" == "$public_key" ]] ||
     die "ceremony signing private/public keypair does not match"
 }
 
-ensure_signing_key() {
+admit_signing_key() {
   local fingerprint
+  prove_signing_keypair
+  fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk '{ print $2 }')"
+  [[ "$fingerprint" == SHA256:* ]] || die "ceremony signer fingerprint is invalid"
+  [[ "$fingerprint" != "$RETIRED_SIGNER_FINGERPRINT" ]] ||
+    die "the selected ceremony signer is retired and may not sign new evidence"
+}
+
+ensure_signing_key() {
   if [[ ! -e "$SIGNING_KEY" && ! -L "$SIGNING_KEY" && ! -e "${SIGNING_KEY}.pub" && ! -L "${SIGNING_KEY}.pub" ]]; then
     ssh-keygen -q -t ed25519 -N "" -C "phebs-t4013-ceremony" -f "$SIGNING_KEY"
     chmod 600 "$SIGNING_KEY"
@@ -1121,11 +1129,7 @@ ensure_signing_key() {
     note "created ceremony signing key: $SIGNING_KEY"
     note "back up this key separately before relying on its identity"
   fi
-  prove_signing_keypair
-  fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk '{ print $2 }')"
-  [[ "$fingerprint" == SHA256:* ]] || die "ceremony signer fingerprint is invalid"
-  [[ "$fingerprint" != "$RETIRED_SIGNER_FINGERPRINT" ]] ||
-    die "the selected ceremony signer is retired and may not sign new evidence"
+  admit_signing_key
 }
 
 run_root_for() {
@@ -1548,7 +1552,7 @@ seal_run() {
   [[ -d "$run_root" && ! -L "$run_root" ]] || die "ceremony run directory is invalid"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
   select_signing_key "$ceremony_id"
-  ensure_signing_key
+  admit_signing_key
   if [[ -e "$custody_path" || -L "$custody_path" ]]; then
     [[ -d "$custody_path" && ! -L "$custody_path" ]] || die "private custody is invalid"
     [[ ! -e "${custody_path}/.t4013-executed" && ! -L "${custody_path}/.t4013-executed" ]] ||
@@ -1607,8 +1611,6 @@ execute_ceremony() {
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   initialize_repository
   initialize_ceremony_root
-  select_signing_key "$ceremony_id"
-  ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
   private_root="${run_root}/private"
@@ -1622,6 +1624,8 @@ execute_ceremony() {
     die "frozen ceremony directory is missing or invalid"
   acquire_run_lock "$run_root"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
+  select_signing_key "$ceremony_id"
+  admit_signing_key
   if ! is_v25_plan "$plan_path"; then
     initialize_historical_go_cache
   fi
