@@ -193,7 +193,8 @@ accounting, T40.8's sparse candidate/partition contract, T40.9's bounded
 partition-result/domain-root contract, T40.10's partitioned extraction and
 atomic domain authority, T40.11's downstream adapters plus complete
 recovery/lifecycle/archive ownership, and T40.12's authorized product-consumer
-compatibility replay are complete, and T40.13 is the next scale ticket;
+compatibility replay are complete; T40.13a's fail-closed process sampling is
+also complete, and T40.13b is the next prerequisite inside the T40.13 gate;
 Epic 40 targets bounded derived-pipeline
 convergence for at least two million regular-file physical owners; Epic 41
 separately requires at least 8,000 accepted services and measures a target of

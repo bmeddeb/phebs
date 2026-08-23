@@ -2996,3 +2996,35 @@ exclude custody mutation races. After those corrections, passing the exact
 module, filesystem, bounded-package, semantic, and stale-worker checks will be
 readiness evidence, not freeze, execution, release, scale/SLO, accuracy,
 completeness, migration, or decommission authorization.
+
+### T40.13a fail-closed process sampling
+
+V25 now accepts a process sample only after the bounded `ps` command, complete
+snapshot parse, RSS sum, root check, and child-lifetime classification all
+succeed. A failed sample changes no metrics and retains one typed first cause
+plus a saturating count; phase reset does not erase it. Root absence fails
+until the command's sole `Wait` owner records exit, after which an empty final
+sample is valid only when no still-parented descendant is visible. The
+concurrent server `Wait` handoff is reconciled before deciding that a missing
+root was still expected live.
+
+The one 128-KiB snapshot carries PID, parent, RSS, and command. One synchronous
+pre-`Wait` root read plus at most 129 fixed-size Darwin `kern.proc.pid` or Linux
+`/proc/<pid>/stat` reads bind accepted rows to an atomic kernel start identity,
+PPID, and normalized command class. Per phase, the sampler retains only the
+current accepted descendants and three cumulative counters, counts an accepted
+absence/reappearance or changed kernel identity as another sampled lifetime,
+refuses ambiguous continuity or category drift, and stops before exceeding
+8,192 sampled lifetimes. The `ps` command and root-exit handoff each have an
+independent two-second cap; native identity reads have no separate timer, and
+reset waits for the whole in-flight sample so an old snapshot cannot land in a
+new phase. Strict paths take one initial sample and then at most one sample each
+250 ms; close gives stop priority. The one-second allocation sampler also
+retains only its first failure plus a saturating count. Sanitized
+measured-command errors preserve both typed
+sampler sentinels, which V25 treats as unavailable measurement rather than a
+substantiated recovery result. V1–V24 keep their prior process-sampling cadence.
+The preliminary `ps` row is enumeration/RSS input, not proof of every transient
+fork; same-kernel-token reuse and durable hard-death/escape absence remain
+T40.13c. This changes no public schema or production work and authorizes no
+freeze or ceremony.

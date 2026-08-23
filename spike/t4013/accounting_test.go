@@ -2,9 +2,11 @@ package t4013
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -76,7 +78,7 @@ func TestMergeConcurrentMetricsUsesOuterWallAndConservativeRSSSum(t *testing.T) 
 
 func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
 	root := t.TempDir()
-	sampler, err := newAllocationSampler(root, 4096)
+	sampler, err := newAllocationSampler(root, 4096, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,6 +95,42 @@ func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
 	second, err := sampler.close()
 	if err != nil || second != peak {
 		t.Fatalf("repeated close = %d, %v; want %d", second, err, peak)
+	}
+}
+
+func TestAllocationSamplerRetainsBoundedFirstFailure(t *testing.T) {
+	sampler, err := newAllocationSampler(t.TempDir(), 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := errors.New("first capacity failure")
+	later := errors.New("later capacity failure")
+	sampler.recordFailure(first)
+	for range 10_000 {
+		sampler.recordFailure(later)
+	}
+	_, err = sampler.close()
+	if !errors.Is(err, errAllocationSamplingFailed) || !errors.Is(err, first) || errors.Is(err, later) ||
+		sampler.failedSamples != 10_001 || strings.Count(err.Error(), first.Error()) != 1 ||
+		strings.Contains(err.Error(), later.Error()) {
+		t.Fatalf("bounded allocation failure = first:%v count:%d err:%v",
+			sampler.err, sampler.failedSamples, err)
+	}
+}
+
+func TestHistoricalAllocationSamplerRetainsJoinedFailures(t *testing.T) {
+	sampler, err := newAllocationSampler(t.TempDir(), 0, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := errors.New("first historical capacity failure")
+	later := errors.New("later historical capacity failure")
+	sampler.recordFailure(first)
+	sampler.recordFailure(later)
+	_, err = sampler.close()
+	if !errors.Is(err, first) || !errors.Is(err, later) || errors.Is(err, errAllocationSamplingFailed) ||
+		sampler.failedSamples != 0 {
+		t.Fatalf("historical allocation failure changed: count=%d err=%v", sampler.failedSamples, err)
 	}
 }
 

@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13a next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13b next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,21 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13a · Fail-closed process sampling** *(critical · only next ticket)* —
-make the V25 250-ms process sampler contain every probe/parse failure without
-panicking or growing retained state with phase duration. AC: timeout,
-byte-limit, malformed-row, duplicate-PID, parent-cycle, and short/nil traversal
-tests return one typed sampler failure and never slice an
-empty result; repeated failures retain one bounded first cause plus a bounded
-count rather than an error chain; a missing root fails only while that root is
-still expected live, while an already-observed clean exit may close with a zero
-final sample; Git/index/other child accounting has one explicit cumulative
-ceiling or an equivalent constant-space representation
-and fails closed when exact counting is unavailable; PID reuse cannot silently
-substantiate a lower child count; the healthy path remains one at-most-128-KiB
-`ps` snapshot per tick with at most 128 descendants and V1–V24 sampling remains
-unchanged.
 
 **T40.13b · Cooperative cancellation and shutdown truth** *(high · needs
 T40.13a)* — preserve custody whenever an ordinary command, server, Prepare, or

@@ -1670,13 +1670,28 @@ structural gaps are direct refusals, not bypass candidates.
 No freeze, ceremony, release, T40.13/Epic-40 closure, bound/topology change, or
 scale/SLO claim is authorized.
 
-The post-commit review of `03422ddd` now makes T40.13a the only next scale
-ticket inside the still-open T40.13 gate. Critical/high prerequisites run first:
-T40.13a fail-closed process sampling; T40.13b cooperative cancellation and
-shutdown truth; T40.13c durable hard-death descendant supervision; T40.13d one
-shared custody-mutation/admission lock; T40.13e exact executed-tool identity;
-T40.13f hermetic execution controls; and T40.13g an authenticated bounded
-returned-evidence firewall. Medium tickets then close resumable seal/keypair
+T40.13a now closes fail-closed process sampling without changing a public wire
+or V1–V24 behavior. V25 accepts only complete 128-KiB/two-second snapshots,
+retains one bounded failure cause and count, and validates each accepted row's
+kernel start identity, PPID, and normalized class. It keeps only 128 active
+descendants and three counters and serializes an in-flight sample against phase
+reset. The root binds synchronously before its sole `Wait`; the concurrent
+handoff is reconciled before a root-absence decision, and a missing live root
+still fails. Startup adds one root kernel read and one initial snapshot; steady
+state performs at most one snapshot plus 129 bounded kernel-record reads each
+250 ms, with an 8,192-row/8,192-sampled-lifetime phase ceiling and no
+production-path cost. The one-second allocation sampler likewise retains one
+cause and scalar count. Sanitized command failures retain both sampler
+sentinels and cannot substantiate a V25 recovery decision. A `ps` candidate is
+not every-fork proof; same-token reuse, escape, and hard-death absence remain
+T40.13c.
+
+T40.13b cooperative cancellation and shutdown truth is now the only next scale
+ticket inside the still-open T40.13 gate. Critical/high prerequisites then
+continue through T40.13c durable hard-death descendant supervision, T40.13d one
+shared custody-mutation/admission lock, T40.13e exact executed-tool identity,
+T40.13f hermetic execution controls, and T40.13g an authenticated bounded
+returned-evidence firewall. Medium tickets close resumable seal/keypair
 integrity (T40.13h), bounded exact-control inspection (T40.13i), overflow-safe
 arithmetic (T40.13j), and complete admission accounting (T40.13k). T40.13l last
 closes low-risk cost-first refusal ordering. The original T40.13 neutral

@@ -9611,3 +9611,52 @@ shape, service cap, topology, supported-scale/SLO, accuracy/completeness,
 freshness, migration/decommission, pilot, release, or private-rerun claim;
 `GATE2-V2` remains `NOT_ESTABLISHED`, `DO_NOT_RELEASE` remains in force, and
 T40.13 is next.
+
+**T40.13a ✅ · Fail-closed process sampling** *(2026-08-22; critical)* —
+contains every V25 process-probe, parse, traversal, RSS-overflow, identity, and
+cumulative-accounting failure behind one typed sampler error. Invalid samples
+publish no partial RSS or child state, retain only the first cause plus a
+saturating failure count, and cannot panic on an empty traversal. The sampler
+now binds each retained process to PID plus the Darwin microsecond or Linux
+start-tick kernel identity, treats an observed
+absence/reappearance as another lifetime, refuses an in-place category change,
+and retains only the at-most-128 currently active descendants plus three
+counters. A phase refuses before its 8,192nd observed child lifetime would be
+exceeded. The root must remain present until the command's sole `Wait` owner
+records process exit; only then may a root-absent, descendant-empty final
+snapshot contribute zero.
+
+The root identity is captured synchronously before its sole `Wait` can reap it,
+and the concurrent server handoff is reconciled before a missing-root decision,
+closing both replacement-adoption and reap-before-marker races. Each accepted
+row validates the atomic kernel PPID and normalized process class against the
+process-table candidate. A continuing child whose kernel record becomes
+unavailable fails closed; an accepted changed identity counts a new sampled
+lifetime. The one-second allocation sampler also retains one first
+capacity-probe cause plus a saturating count instead of a duration-growing
+error chain. Measured-command sanitization preserves both sampler sentinels,
+V25 cannot turn either into a substantiated recovery decision, and a failed
+phase meter is not finalized twice.
+
+One serialization mutex makes reset wait for any in-flight probe, so a prior
+phase snapshot cannot land in a new measurement window. Strict standalone and
+server paths take exactly one initial sample and then one sample per 250-ms
+tick; concurrent close is idempotent. Timeout, byte-limit, malformed-row,
+duplicate-PID, reachable-cycle, missing-root, clean-exit, identity-reuse,
+category-drift, child-ceiling, reset-race, and exact 128-descendant tests are
+source-free and bounded. V1–V24 retain their prior sampler and cadence.
+
+This is ceremony-only work. Startup adds one synchronous pre-`Wait` root
+identity read and one initial snapshot. Each active V25 sampler then runs at
+most one 128-KiB `/bin/ps` snapshot plus 129 fixed-size kernel-record reads per
+250-ms tick, parses at most 8,192 host rows, retains at most 128 descendant
+identities, and serializes reset, metrics, and close behind the whole in-flight
+sample. The `ps` command and root-exit handoff each have an independent
+two-second cap; native kernel reads have no separate timer. A preliminary `ps`
+row supplies enumeration and RSS, not proof that a transient child survived
+until kernel validation; exact every-fork accounting, same-kernel-token reuse,
+session escape, and hard-death absence remain T40.13c. It adds no production
+request/query, sync tick, startup/restart, retry/no-op, publication transition,
+corpus/shard read, cache, or child. T40.13b is next. No freeze, ceremony,
+release, T40.13/Epic-40 closure, bound/topology change, or scale/SLO claim is
+authorized.

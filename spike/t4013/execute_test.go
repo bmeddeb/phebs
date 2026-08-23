@@ -1506,8 +1506,8 @@ func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	if run.measurementErr == nil {
 		t.Fatal("meter finalization failure was not retained")
 	}
-	if _, present := run.activeMeters[meter]; !present {
-		t.Fatal("failed meter was removed before stopped-phase capture")
+	if _, present := run.activeMeters[meter]; present {
+		t.Fatal("failed meter remained active for duplicate stopped-phase finalization")
 	}
 	stopped, err := run.stopAfterFailure(exactOracle("injected oracle failure"))
 	if err != nil {
@@ -1516,6 +1516,19 @@ func TestMeterFinalizationFailureRemainsSticky(t *testing.T) {
 	if stopped.Decision.Selected != "unclassified" || stopped.Decision.Substantiated ||
 		stopped.Failures[0].Code != "failed_phase_measurement_unavailable" {
 		t.Fatalf("stopped decision = %+v, failure = %+v", stopped.Decision, stopped.Failures)
+	}
+}
+
+func TestHistoricalFailedMeterRemainsActive(t *testing.T) {
+	run := &execution{plan: Plan{Schema: PlanSchemaV24}}
+	run.startPhase(0)
+	meter := &phaseMeter{}
+	run.trackMeter(meter)
+	if _, err := run.finishMeter(meter, nil); err == nil {
+		t.Fatal("invalid historical meter unexpectedly finalized")
+	}
+	if _, present := run.activeMeters[meter]; !present {
+		t.Fatal("V24 failed-meter retry behavior changed")
 	}
 }
 
@@ -1643,6 +1656,16 @@ func TestV23StoppedFailureClassificationPreservesRecoveryAndDiagnostics(t *testi
 	)
 	if queryCeiling.code != "review_ceiling_crossed" {
 		t.Fatalf("V23 query diagnostics overrode the review ceiling: %+v", queryCeiling)
+	}
+}
+
+func TestV25MeasuredCommandFailureCannotSubstantiateRecovery(t *testing.T) {
+	for _, measurementErr := range []error{errProcessSamplingFailed, errAllocationSamplingFailed} {
+		cause := directRecovery(sanitizeMeasuredCommandFailure("T40.13 restore command failed", measurementErr))
+		got := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV25}, cause, nil, nil)
+		if got.code != "failed_phase_measurement_unavailable" || got.substantiated {
+			t.Fatalf("measurement failure %v classified as %+v", measurementErr, got)
+		}
 	}
 }
 

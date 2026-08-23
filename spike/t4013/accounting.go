@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +38,7 @@ type phaseMeter struct {
 
 type allocationSampler struct {
 	root              string
+	strict            bool
 	baselineAllocated int64
 	baselineAvailable int64
 	minimumAvailable  int64
@@ -44,18 +46,36 @@ type allocationSampler struct {
 	done              chan struct{}
 	mu                sync.Mutex
 	err               error
+	failedSamples     uint64
 	closeOnce         sync.Once
 	peak              int64
 	closeErr          error
 }
 
-func newAllocationSampler(root string, baselineAllocated int64) (*allocationSampler, error) {
+var errAllocationSamplingFailed = errors.New("T40.13 allocation sampling failed")
+
+func retainedMeasurementFailure(err error) error {
+	var retained error
+	if errors.Is(err, errProcessSamplingFailed) {
+		retained = errors.Join(retained, errProcessSamplingFailed)
+	}
+	if errors.Is(err, errAllocationSamplingFailed) {
+		retained = errors.Join(retained, errAllocationSamplingFailed)
+	}
+	return retained
+}
+
+func sanitizeMeasuredCommandFailure(message string, err error) error {
+	return errors.Join(errors.New(message), retainedMeasurementFailure(err))
+}
+
+func newAllocationSampler(root string, baselineAllocated int64, strict bool) (*allocationSampler, error) {
 	capacity, err := lifecycle.ProbeCapacity(context.Background(), root)
 	if err != nil {
 		return nil, err
 	}
 	sampler := &allocationSampler{
-		root: root, baselineAllocated: baselineAllocated,
+		root: root, strict: strict, baselineAllocated: baselineAllocated,
 		baselineAvailable: capacity.AvailableBytes, minimumAvailable: capacity.AvailableBytes,
 		stop: make(chan struct{}), done: make(chan struct{}),
 	}
@@ -82,9 +102,28 @@ func (sampler *allocationSampler) sample() {
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
 	if err != nil {
-		sampler.err = errors.Join(sampler.err, err)
+		sampler.recordFailureLocked(err)
 	} else if capacity.AvailableBytes < sampler.minimumAvailable {
 		sampler.minimumAvailable = capacity.AvailableBytes
+	}
+}
+
+func (sampler *allocationSampler) recordFailure(err error) {
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	sampler.recordFailureLocked(err)
+}
+
+func (sampler *allocationSampler) recordFailureLocked(err error) {
+	if !sampler.strict {
+		sampler.err = errors.Join(sampler.err, err)
+		return
+	}
+	if sampler.err == nil {
+		sampler.err = err
+	}
+	if sampler.failedSamples < ^uint64(0) {
+		sampler.failedSamples++
 	}
 }
 
@@ -107,7 +146,13 @@ func (sampler *allocationSampler) close() (int64, error) {
 			return
 		}
 		sampler.peak = sampler.baselineAllocated + consumed
-		sampler.closeErr = sampler.err
+		if sampler.err != nil {
+			sampler.closeErr = sampler.err
+			if sampler.strict {
+				sampler.closeErr = fmt.Errorf("%w after %d failed samples: %w",
+					errAllocationSamplingFailed, sampler.failedSamples, sampler.err)
+			}
+		}
 	})
 	return sampler.peak, sampler.closeErr
 }
@@ -124,7 +169,7 @@ func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfi
 	if err != nil {
 		return nil, err
 	}
-	allocation, err := newAllocationSampler(dataDir, allocated)
+	allocation, err := newAllocationSampler(dataDir, allocated, server.sessionIsolated)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +188,7 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 	if err != nil {
 		return nil, err
 	}
-	allocation, err := newAllocationSampler(dataDir, allocated)
+	allocation, err := newAllocationSampler(dataDir, allocated, server.sessionIsolated)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +210,7 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
-	allocation, err := newAllocationSampler(dataDir, allocatedBefore)
+	allocation, err := newAllocationSampler(dataDir, allocatedBefore, strict)
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
@@ -181,14 +226,21 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 		return PhaseMetrics{}, errors.Join(err, allocationErr)
 	}
 	sampler := newRSSSampler(command.Process.Pid, strict)
-	sampler.sample()
+	if strict {
+		sampler.captureRootIdentity()
+		sampler.sample()
+		sampler.expectConcurrentRootWait()
+	} else {
+		sampler.sample()
+	}
 	go sampler.run()
 	waitErr := command.Wait()
+	sampler.observeRootExit()
 	var sessionErr error
 	if strict {
 		sessionErr = finishCustodyCommandSession(command.Process.Pid)
 	}
-	samplerCloseErr := sampler.close()
+	_ = sampler.close()
 	logical, allocated, measureErr := measureDataBytesForContract(dataDir, strict)
 	peakAllocated, allocationErr := allocation.close()
 	allocated = max(allocated, peakAllocated)
@@ -201,7 +253,7 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 		sampler.metrics()
 	metrics.OtherChildren++
 	return metrics, errors.Join(
-		waitErr, sessionErr, samplerCloseErr, samplerErr, measureErr, allocationErr,
+		waitErr, sessionErr, samplerErr, measureErr, allocationErr,
 	)
 }
 

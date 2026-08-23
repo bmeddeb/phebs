@@ -146,12 +146,45 @@ func TestRSSSamplerReportsProbeErrorsOnlyForV25(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			sampler := newRSSSampler(1, test.strict)
-			sampler.err = probeErr
+			sampler.recordFailure(probeErr)
 			_, _, _, _, err := sampler.metrics()
 			if (err != nil) != test.want {
 				t.Fatalf("strict=%v sampler error = %v", test.strict, err)
 			}
 		})
+	}
+}
+
+func TestMeasuredShortCommandDoesNotInventSamplerFailure(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("strict process sampling requires Linux or macOS")
+	}
+	for _, test := range []struct {
+		name    string
+		status  string
+		wantErr bool
+	}{
+		{name: "clean", status: "0"},
+		{name: "nonzero", status: "7", wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			metrics, err := runMeasuredCommand(
+				exec.CommandContext(t.Context(), "/bin/sh", "-c", "exit "+test.status), t.TempDir(), true,
+			)
+			if errors.Is(err, errProcessSamplingFailed) || (err != nil) != test.wantErr || metrics.OtherChildren != 1 {
+				t.Fatalf("short command metrics=%+v err=%v", metrics, err)
+			}
+		})
+	}
+}
+
+func TestStrictRSSSamplerStopsBeforeAnotherProbe(t *testing.T) {
+	sampler := newSyntheticRSSSampler(10)
+	close(sampler.stop)
+	sampler.run()
+	if sampler.samples != 0 || sampler.failedSamples != 0 {
+		t.Fatalf("stopped sampler ran another probe: samples=%d failures=%d",
+			sampler.samples, sampler.failedSamples)
 	}
 }
 
@@ -372,12 +405,329 @@ func TestExecutionEnvironmentClosesAmbientGoControls(t *testing.T) {
 
 func TestProcessSnapshotFindsBoundedDescendantsAndRSS(t *testing.T) {
 	pids, processes, err := parseProcessSnapshot([]byte(
-		"10 1 4 /private/phebs\n11 10 8 /usr/bin/git\n12 10 16 /private/phebs-focused-index\n",
+		processSnapshotRow(10, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs")+
+			processSnapshotRow(11, 10, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")+
+			processSnapshotRow(12, 10, 16, "Fri Aug 22 12:00:02 2026", "/private/phebs-focused-index"),
 	), 10)
 	if err != nil || !slices.Equal(pids, []int{10, 11, 12}) ||
-		processes[11].rssBytes != 8*1024 || processes[12].name != "/private/phebs-focused-index" {
+		processes[11].rssBytes != 8*1024 ||
+		processes[12].name != "/private/phebs-focused-index" {
 		t.Fatalf("process snapshot = %v, %+v, %v", pids, processes, err)
 	}
+}
+
+func TestProcessStartIdentityIsStableForCurrentProcess(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("exact process identity is supported on Linux and macOS")
+	}
+	first, err := processStartIdentity(os.Getpid(), processSnapshot{})
+	if err != nil || first.token == "" || first.parent < 0 || first.name == "" {
+		t.Fatalf("first process identity = %+v, %v", first, err)
+	}
+	second, err := processStartIdentity(os.Getpid(), processSnapshot{})
+	if err != nil || second != first {
+		t.Fatalf("second process identity = %+v, %v; want %+v", second, err, first)
+	}
+}
+
+func TestRSSSamplerContainsInvalidStrictSamples(t *testing.T) {
+	root := processSnapshotRow(10, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs")
+	child := processSnapshotRow(11, 10, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")
+	tests := []struct {
+		name     string
+		output   string
+		probeErr error
+	}{
+		{name: "timeout", probeErr: context.DeadlineExceeded},
+		{name: "byte limit", probeErr: errors.New("T40.13 command output exceeds its bound")},
+		{name: "malformed row", output: "10 1 bad /private/phebs\n"},
+		{name: "duplicate PID", output: root + root},
+		{name: "parent cycle", output: processSnapshotRow(10, 11, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs") + child},
+		{name: "nil traversal"},
+		{name: "missing root", output: processSnapshotRow(99, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/other")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sampler := newSyntheticRSSSampler(10)
+			sampler.recordSnapshot([]byte(test.output), test.probeErr)
+			peak, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+			if !errors.Is(err, errProcessSamplingFailed) || peak != 0 || gitChildren != 0 ||
+				indexChildren != 0 || otherChildren != 0 || sampler.failedSamples != 1 ||
+				len(sampler.activeChildren) != 0 {
+				t.Fatalf("invalid sample metrics = %d %d %d %d, failures=%d active=%d err=%v",
+					peak, gitChildren, indexChildren, otherChildren, sampler.failedSamples,
+					len(sampler.activeChildren), err)
+			}
+		})
+	}
+
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordSnapshot([]byte(root), nil)
+	peak, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+	if err != nil || peak != 4*1024 || gitChildren != 0 || indexChildren != 0 || otherChildren != 0 {
+		t.Fatalf("root-only sample metrics = %d %d %d %d, err=%v",
+			peak, gitChildren, indexChildren, otherChildren, err)
+	}
+
+	mismatch := newSyntheticRSSSampler(10)
+	mismatch.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+		if pid == 11 {
+			candidate.parent++
+		}
+		return processIdentityObservation{
+			token: strconv.Itoa(pid), parent: candidate.parent, name: candidate.name,
+		}, nil
+	}
+	mismatch.recordSnapshot([]byte(root+child), nil)
+	if peak, gitChildren, _, _, err := mismatch.metrics(); !errors.Is(err, errProcessSamplingFailed) || peak != 0 || gitChildren != 0 {
+		t.Fatalf("kernel/table mismatch = peak:%d git:%d err:%v", peak, gitChildren, err)
+	}
+}
+
+func TestProcessClassificationAcceptsOwnedKernelNameLimits(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		want processClass
+	}{
+		{name: "zoekt-git-index", want: processClassIndex},
+		{name: "phebs-focused-i", want: processClassIndex},
+		{name: "phebs-focused-in", want: processClassIndex},
+		{name: "(phebs-focused-i)", want: processClassIndex},
+		{name: "(git)", want: processClassGit},
+	} {
+		if got := classifyProcess(test.name); got != test.want {
+			t.Fatalf("kernel command %q class = %d, want %d", test.name, got, test.want)
+		}
+	}
+	for _, name := range []string{"phebs-focused-i", "phebs-focused-in"} {
+		_, class, err := validateProcessIdentityObservation(11, processSnapshot{
+			parent: 10, name: "/private/phebs-focused-index",
+		}, processIdentityObservation{token: "child", parent: 10, name: name})
+		if err != nil || class != processClassIndex {
+			t.Fatalf("kernel command %q did not match its owned binary: class=%d err=%v", name, class, err)
+		}
+	}
+}
+
+func TestRSSSamplerRetainsBoundedFirstFailure(t *testing.T) {
+	first := errors.New("first process probe failure")
+	later := errors.New("later process probe failure")
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordSnapshot(nil, first)
+	for range 10_000 {
+		sampler.recordSnapshot(nil, later)
+	}
+	_, _, _, _, err := sampler.metrics()
+	if !errors.Is(err, errProcessSamplingFailed) || !errors.Is(err, first) || errors.Is(err, later) ||
+		sampler.firstErr != first || sampler.failedSamples != 10_001 ||
+		strings.Count(err.Error(), first.Error()) != 1 || strings.Contains(err.Error(), later.Error()) {
+		t.Fatalf("bounded sampler failure = first:%v count:%d err:%v",
+			sampler.firstErr, sampler.failedSamples, err)
+	}
+	sampler.resetWindow()
+	_, _, _, _, err = sampler.metrics()
+	if !errors.Is(err, first) || sampler.failedSamples != 10_001 {
+		t.Fatalf("reset erased sampler failure: count=%d err=%v", sampler.failedSamples, err)
+	}
+	sampler.failedSamples = ^uint64(0)
+	sampler.recordSnapshot(nil, later)
+	if sampler.failedSamples != ^uint64(0) {
+		t.Fatalf("failed sample count wrapped to %d", sampler.failedSamples)
+	}
+}
+
+func TestRSSSamplerCountsChildLifetimesInConstantSpace(t *testing.T) {
+	const rootStart = "Fri Aug 22 12:00:00 2026"
+	root := processSnapshotRow(10, 1, 4, rootStart, "/private/phebs")
+	gitA := processSnapshotRow(11, 10, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")
+	index := processSnapshotRow(12, 10, 16, "Fri Aug 22 12:00:02 2026", "/private/phebs-focused-index")
+	sampler := newSyntheticRSSSampler(10)
+	for range 2 {
+		sampler.recordSnapshot([]byte(root+gitA+index), nil)
+	}
+	_, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+	if err != nil || gitChildren != 1 || indexChildren != 1 || otherChildren != 0 || len(sampler.activeChildren) != 2 {
+		t.Fatalf("repeated child sample = %d %d %d active=%d err=%v",
+			gitChildren, indexChildren, otherChildren, len(sampler.activeChildren), err)
+	}
+	sampler.recordSnapshot([]byte(root), nil)
+	sampler.recordSnapshot([]byte(root+gitA), nil)
+	gitB := processSnapshotRow(11, 10, 8, "Fri Aug 22 12:00:03 2026", "/usr/bin/git")
+	sampler.recordSnapshot([]byte(root+gitB), nil)
+	_, gitChildren, indexChildren, otherChildren, err = sampler.metrics()
+	if err != nil || gitChildren != 2 || indexChildren != 1 || otherChildren != 0 || len(sampler.activeChildren) != 1 {
+		t.Fatalf("reused child sample = %d %d %d active=%d err=%v",
+			gitChildren, indexChildren, otherChildren, len(sampler.activeChildren), err)
+	}
+	strong := newSyntheticRSSSampler(10)
+	identities := map[int]string{10: strong.rootIdentity.token, 11: "child-instance-a"}
+	strong.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+		return processIdentityObservation{
+			token: identities[pid], parent: candidate.parent, name: candidate.name,
+		}, nil
+	}
+	strong.recordSnapshot([]byte(root+gitA), nil)
+	identities[11] = "child-instance-b"
+	strong.recordSnapshot([]byte(root+gitA), nil)
+	_, gitChildren, _, _, err = strong.metrics()
+	if err != nil || gitChildren != 2 {
+		t.Fatalf("same-second PID reuse = %d, err=%v", gitChildren, err)
+	}
+
+	drift := newSyntheticRSSSampler(10)
+	drift.recordSnapshot([]byte(root+gitA), nil)
+	drift.recordSnapshot([]byte(root+processSnapshotRow(
+		11, 10, 8, "Fri Aug 22 12:00:01 2026", "/private/phebs-focused-index")), nil)
+	_, _, _, _, err = drift.metrics()
+	if !errors.Is(err, errProcessSamplingFailed) {
+		t.Fatalf("child class drift passed: %v", err)
+	}
+
+	unavailable := newSyntheticRSSSampler(10)
+	unavailable.recordSnapshot([]byte(root+gitA), nil)
+	unavailable.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+		if pid == 11 {
+			return processIdentityObservation{}, errors.New("identity disappeared")
+		}
+		return processIdentityObservation{
+			token: unavailable.rootIdentity.token, parent: candidate.parent, name: candidate.name,
+		}, nil
+	}
+	unavailable.recordSnapshot([]byte(root+gitA), nil)
+	if _, _, _, _, err = unavailable.metrics(); !errors.Is(err, errProcessSamplingFailed) {
+		t.Fatalf("ambiguous child identity passed: %v", err)
+	}
+	firstUnavailable := newSyntheticRSSSampler(10)
+	firstUnavailable.identityProbe = unavailable.identityProbe
+	for range 2 {
+		firstUnavailable.recordSnapshot([]byte(root+gitA), nil)
+	}
+	_, gitChildren, _, _, err = firstUnavailable.metrics()
+	if !errors.Is(err, errProcessSamplingFailed) || gitChildren != 0 || len(firstUnavailable.activeChildren) != 0 {
+		t.Fatalf("repeated first-seen identity failure = %d active=%d err=%v",
+			gitChildren, len(firstUnavailable.activeChildren), err)
+	}
+
+	bounded := newSyntheticRSSSampler(10)
+	bounded.strictGitChildren = maxProcessChildLifetimes - 1
+	bounded.recordSnapshot([]byte(root+gitA+index), nil)
+	_, gitChildren, indexChildren, _, err = bounded.metrics()
+	if !errors.Is(err, errProcessSamplingFailed) || gitChildren != maxProcessChildLifetimes-1 || indexChildren != 0 ||
+		len(bounded.activeChildren) != 0 {
+		t.Fatalf("child ceiling = git:%d index:%d active:%d err=%v",
+			gitChildren, indexChildren, len(bounded.activeChildren), err)
+	}
+}
+
+func TestRSSSamplerAllowsZeroSampleAfterObservedRootExit(t *testing.T) {
+	live := newSyntheticRSSSampler(10)
+	live.recordSnapshot(nil, nil)
+	if _, _, _, _, err := live.metrics(); !errors.Is(err, errProcessSamplingFailed) {
+		t.Fatalf("missing live root passed: %v", err)
+	}
+
+	exited := newSyntheticRSSSampler(10)
+	exited.observeRootExit()
+	exited.recordSnapshot(nil, nil)
+	if peak, gitChildren, indexChildren, otherChildren, err := exited.metrics(); err != nil || peak != 0 || gitChildren != 0 || indexChildren != 0 || otherChildren != 0 {
+		t.Fatalf("observed root exit = %d %d %d %d, err=%v",
+			peak, gitChildren, indexChildren, otherChildren, err)
+	}
+	raced := newSyntheticRSSSampler(10)
+	raced.expectConcurrentRootWait()
+	recorded := make(chan struct{})
+	go func() {
+		raced.recordSnapshot(nil, nil)
+		close(recorded)
+	}()
+	select {
+	case <-recorded:
+		t.Fatal("missing-root sample did not wait for its concurrent Wait owner")
+	case <-time.After(10 * time.Millisecond):
+	}
+	raced.observeRootExit()
+	<-recorded
+	if _, _, _, _, err := raced.metrics(); err != nil {
+		t.Fatalf("reap-before-marker race failed: %v", err)
+	}
+
+	survivor := newSyntheticRSSSampler(10)
+	survivor.observeRootExit()
+	survivor.recordSnapshot([]byte(processSnapshotRow(
+		11, 10, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")), nil)
+	if _, _, _, _, err := survivor.metrics(); !errors.Is(err, errProcessSamplingFailed) {
+		t.Fatalf("missing root with surviving child passed: %v", err)
+	}
+
+	reused := newSyntheticRSSSampler(10)
+	reused.observeRootExit()
+	reused.recordSnapshot([]byte(processSnapshotRow(
+		10, 1, 4, "Fri Aug 22 12:00:01 2026", "/private/reused")), nil)
+	if peak, _, _, _, err := reused.metrics(); err != nil || peak != 0 {
+		t.Fatalf("reused root after observed exit = peak:%d err:%v", peak, err)
+	}
+}
+
+func TestRSSSamplerResetWaitsForInFlightSnapshot(t *testing.T) {
+	root := []byte(processSnapshotRow(10, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs"))
+	sampler := newSyntheticRSSSampler(10)
+	sampler.sampleMu.Lock()
+	sampler.recordSnapshotLocked(root, nil)
+	sampler.mu.Lock()
+	resetDone := make(chan struct{})
+	go func() {
+		sampler.resetWindow()
+		close(resetDone)
+	}()
+	sampler.sampleMu.Unlock()
+	deadline := time.Now().Add(time.Second)
+	for sampler.sampleMu.TryLock() {
+		sampler.sampleMu.Unlock()
+		if time.Now().After(deadline) {
+			sampler.mu.Unlock()
+			t.Fatal("reset did not acquire the sample barrier")
+		}
+		runtime.Gosched()
+	}
+	sampler.mu.Unlock()
+	<-resetDone
+	peak, _, _, _, err := sampler.metrics()
+	if err != nil || peak != 0 || sampler.samples != 0 {
+		t.Fatalf("reset retained prior-window sample: peak=%d samples=%d err=%v", peak, sampler.samples, err)
+	}
+}
+
+func TestProcessSnapshotDescendantBoundary(t *testing.T) {
+	root := processSnapshotRow(10, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs")
+	var children strings.Builder
+	for index := 0; index < maxProcessDescendants+1; index++ {
+		children.WriteString(processSnapshotRow(
+			11+index, 10, 1, "Fri Aug 22 12:00:01 2026", "/private/child"))
+	}
+	output := children.String()
+	last := strings.LastIndex(output, "\n")
+	previous := strings.LastIndex(output[:last], "\n")
+	accepted := root + output[:previous+1]
+	if pids, _, err := parseProcessSnapshot([]byte(accepted), 10); err != nil || len(pids) != maxProcessDescendants+1 {
+		t.Fatalf("maximum descendant snapshot = %d, err=%v", len(pids), err)
+	}
+	if _, _, err := parseProcessSnapshot([]byte(root+output), 10); err == nil {
+		t.Fatal("over-bound descendant snapshot passed")
+	}
+}
+
+func processSnapshotRow(pid, parent, rss int, _ string, name string) string {
+	return strconv.Itoa(pid) + " " + strconv.Itoa(parent) + " " + strconv.Itoa(rss) + " " + name + "\n"
+}
+
+func newSyntheticRSSSampler(pid int) *rssSampler {
+	sampler := newRSSSampler(pid, true)
+	sampler.identityProbe = func(observedPID int, candidate processSnapshot) (processIdentityObservation, error) {
+		token := strconv.Itoa(observedPID)
+		return processIdentityObservation{token: token, parent: candidate.parent, name: candidate.name}, nil
+	}
+	sampler.captureRootIdentity()
+	return sampler
 }
 
 func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {

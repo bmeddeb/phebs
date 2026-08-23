@@ -998,6 +998,9 @@ func classifyStoppedFailureForPlan(
 	plan Plan,
 	cause, measurementErr, ceilingErr error,
 ) stoppedClassification {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		measurementErr = errors.Join(measurementErr, retainedMeasurementFailure(cause))
+	}
 	if planSchemaVersion(plan.Schema) < 23 {
 		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
 	}
@@ -1104,6 +1107,9 @@ func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapsh
 	metrics, err := meter.finish(after)
 	if err != nil {
 		run.measurementErr = errors.Join(run.measurementErr, err)
+		if planSchemaVersion(run.plan.Schema) >= 25 {
+			delete(run.activeMeters, meter)
+		}
 		return metrics, err
 	}
 	delete(run.activeMeters, meter)
@@ -4235,7 +4241,7 @@ func createLiveBackup(
 	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
-		commandErr = errors.New("T40.13 live backup command failed")
+		commandErr = sanitizeMeasuredCommandFailure("T40.13 live backup command failed", commandErr)
 	}
 	if commandErr != nil || closeErr != nil {
 		return privateRecoveryBackup{}, metrics, errors.Join(commandErr, closeErr)
@@ -4284,7 +4290,7 @@ func restoreBackup(
 	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
-		commandErr = errors.New("T40.13 restore command failed")
+		commandErr = sanitizeMeasuredCommandFailure("T40.13 restore command failed", commandErr)
 	}
 	if commandErr != nil || closeErr != nil {
 		return metrics, errors.Join(commandErr, closeErr)
