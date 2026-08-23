@@ -167,15 +167,16 @@ func buildPrivateToolchain(
 	}
 	source := filepath.Join(workspace, "toolchain-source")
 	if v25 {
-		exportMetrics, err := exportReviewedSourceMeasuredWithBoundGit(
+		exportMetrics, exportErr := exportReviewedSourceMeasuredWithBoundGit(
 			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore, controls,
 		)
-		metrics, err = mergeMetrics(metrics, exportMetrics)
-		if err != nil {
-			return privateToolchain{}, metrics, err
+		var mergeErr error
+		metrics, mergeErr = mergeMetrics(metrics, exportMetrics)
+		if mergeErr != nil {
+			return privateToolchain{}, metrics, mergeErr
 		}
-		if err != nil {
-			return privateToolchain{}, metrics, err
+		if exportErr != nil {
+			return privateToolchain{}, metrics, exportErr
 		}
 	} else if err := exportFrozenSourceForPlan(ctx, moduleRoot, plan, source); err != nil {
 		return privateToolchain{}, PhaseMetrics{}, err
@@ -201,14 +202,14 @@ func buildPrivateToolchain(
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, err := runMeasuredCommand(command, workspace, true)
+		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
 		metrics, err = mergeMetrics(metrics, commandMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
-		if err != nil {
+		if commandErr != nil {
 			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 private module download failed", err)
+				sanitizeMeasuredCommandFailure("T40.13 private module download failed", commandErr)
 		}
 		goPath, err = hostTools.goDriver.pathForLaunch(ctx)
 		if err != nil {
@@ -218,14 +219,14 @@ func buildPrivateToolchain(
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, false)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, err = runMeasuredCommand(command, workspace, true)
+		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
 		metrics, err = mergeMetrics(metrics, commandMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
-		if err != nil {
+		if commandErr != nil {
 			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 private module verification failed", err)
+				sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
 		}
 		moduleCacheDigest, err = privateCacheDigest(ctx, controls.ModuleCache)
 		if err != nil {
@@ -273,14 +274,14 @@ func buildPrivateToolchain(
 		command.Env = append(command.Env, build.env...)
 		if v25 {
 			command.Stdout, command.Stderr = io.Discard, io.Discard
-			commandMetrics, err := runMeasuredCommand(command, workspace, true)
-			metrics, err = mergeMetrics(metrics, commandMetrics)
-			if err != nil {
-				return privateToolchain{}, metrics, err
+			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
+			metrics, mergeErr := mergeMetrics(metrics, commandMetrics)
+			if mergeErr != nil {
+				return privateToolchain{}, metrics, mergeErr
 			}
-			if err != nil {
+			if commandErr != nil {
 				return privateToolchain{}, metrics,
-					sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", err)
+					sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", commandErr)
 			}
 		} else if output, err := command.CombinedOutput(); err != nil {
 			_ = output
@@ -463,13 +464,11 @@ func extractFrozenSourceCommandMeasured(
 	var descendantGit int64
 	var samplerErr error
 	metrics.PeakRSSBytes, descendantGit, metrics.IndexChildren, metrics.OtherChildren, samplerErr = sampler.metrics()
-	metrics.GitChildren, samplerErr = checkedAddInt64(metrics.GitChildren, descendantGit)
-	if samplerErr != nil {
-		return metrics, errors.Join(extractErr, samplerErr)
-	}
+	var addErr error
+	metrics.GitChildren, addErr = checkedAddInt64(metrics.GitChildren, descendantGit)
 	return metrics, errors.Join(
 		extractErr, waitErr, signaledCommandShutdownUnproven(waitErr),
-		sessionErr, samplerErr, measureErr, allocationErr,
+		sessionErr, samplerErr, addErr, measureErr, allocationErr,
 	)
 }
 

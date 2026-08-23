@@ -209,7 +209,9 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 			t.Fatal(pollErr)
 		}
 		for _, report := range newReports {
-			addPartitionTiming(&timing, report)
+			if err := addPartitionTiming(&timing, report); err != nil {
+				t.Fatal(err)
+			}
 			reports = append(reports, report)
 		}
 		lifecycleReports, pollErr := lifecycleCursor.poll()
@@ -217,7 +219,9 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 			t.Fatal(pollErr)
 		}
 		for _, report := range lifecycleReports {
-			addSchedulerTiming(&timing, report)
+			if err := addSchedulerTiming(&timing, report); err != nil {
+				t.Fatal(err)
+			}
 		}
 		if observationCurrent > 0 {
 			path := "/api/extraction-progress?repository=" + url.QueryEscape(profile.RepositoryName)

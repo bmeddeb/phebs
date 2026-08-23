@@ -30,6 +30,11 @@ bounded verifier, toolchain, cache, and host gates where facts are already
 available. Required semantic verification remains intact after admission;
 call-order tests prove expensive commands are skipped on refusal.
 
+**T40.13 prerequisite-stack merge-bar correction** · 2026-08-23 — Combined
+validation found command, sampler, and timing-aggregation errors overwritten or
+ignored after T40.13j–l. The shared paths now preserve those failures without
+adding work; the complete gate still requires independent review.
+
 ---
 
 ## EPIC 0 — Bootstrap

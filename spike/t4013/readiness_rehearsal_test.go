@@ -359,7 +359,14 @@ func captureSemanticColdConvergence(
 				partitionErr = pollErr
 			} else {
 				for _, report := range reports {
-					addPartitionTiming(&tail.Timing, report)
+					if timingErr := addPartitionTiming(&tail.Timing, report); timingErr != nil {
+						tail.TimingCaptureOK = false
+						if tail.TimingErrorClass == "" {
+							tail.TimingErrorClass = "partition_timing_aggregation_failed"
+						}
+						partitionErr = timingErr
+						break
+					}
 				}
 			}
 		}
@@ -372,7 +379,14 @@ func captureSemanticColdConvergence(
 				lifecycleErr = pollErr
 			} else {
 				for _, report := range reports {
-					addSchedulerTiming(&tail.Timing, report)
+					if timingErr := addSchedulerTiming(&tail.Timing, report); timingErr != nil {
+						tail.TimingCaptureOK = false
+						if tail.TimingErrorClass == "" {
+							tail.TimingErrorClass = "scheduler_timing_aggregation_failed"
+						}
+						lifecycleErr = timingErr
+						break
+					}
 				}
 			}
 		}

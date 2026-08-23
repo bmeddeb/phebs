@@ -28,7 +28,7 @@ func TestPartitionTimingCursorAggregatesOnlySourceFreeDurations(t *testing.T) {
 		t.Fatalf("reports = %+v, error=%v", reports, err)
 	}
 	var observation ExtractionTimingObservation
-	addPartitionTiming(&observation, reports[0])
+	mustAddPartitionTiming(t, &observation, reports[0])
 	if observation.Attempts != 1 || observation.Completed != 1 ||
 		observation.ExecutorTotalMS != 20 || observation.RuntimeMaxMS != 40 ||
 		validateExtractionTiming(observation) != nil {
@@ -57,17 +57,17 @@ func TestPartitionTimingAggregatesMeasuredAndUnknownRefusals(t *testing.T) {
 		RefusalObserved:       12_501, RefusalLimit: 12_500,
 	}
 	var observation ExtractionTimingObservation
-	addPartitionTiming(&observation, report)
+	mustAddPartitionTiming(t, &observation, report)
 	report.Identity = digestB
 	report.RefusalObserved = 12_503
-	addPartitionTiming(&observation, report)
+	mustAddPartitionTiming(t, &observation, report)
 	report.Identity = digestA
 	report.RefusalStage = pipelinerefusal.StageUnknown
 	report.RefusalGenerationKind = pipelinerefusal.GenerationUnknown
 	report.RefusalClassification = pipelinerefusal.ClassificationUnknown
 	report.RefusalDimension = pipelinerefusal.DimensionUnknown
 	report.RefusalObserved, report.RefusalLimit = 0, 0
-	addPartitionTiming(&observation, report)
+	mustAddPartitionTiming(t, &observation, report)
 	if len(observation.Refusals) != 1 || observation.Refusals[0].Count != 2 ||
 		observation.Refusals[0].MaxObserved != 12_503 || observation.UnknownRefusals != 1 ||
 		observation.TerminalRefusals != 3 || validateExtractionTiming(observation) != nil {
@@ -93,7 +93,7 @@ func TestPartitionTimingAggregatesMeasuredAndUnknownRefusals(t *testing.T) {
 	legacy.RefusalStage, legacy.RefusalGenerationKind = "", ""
 	legacy.RefusalClassification, legacy.RefusalDimension = "", ""
 	legacy.RefusalObserved, legacy.RefusalLimit = 0, 0
-	addPartitionTiming(&mixedVersion, legacy)
+	mustAddPartitionTiming(t, &mixedVersion, legacy)
 	current := report
 	current.Identity = digestB
 	current.RefusalStage = pipelinerefusal.StageEvidenceStaging
@@ -101,7 +101,7 @@ func TestPartitionTimingAggregatesMeasuredAndUnknownRefusals(t *testing.T) {
 	current.RefusalClassification = pipelinerefusal.ClassificationLimit
 	current.RefusalDimension = pipelinerefusal.DimensionFacts
 	current.RefusalObserved, current.RefusalLimit = 12_501, 12_500
-	addPartitionTiming(&mixedVersion, current)
+	mustAddPartitionTiming(t, &mixedVersion, current)
 	if mixedVersion.UnknownRefusals != 1 || len(mixedVersion.Refusals) != 1 ||
 		validateExtractionTiming(mixedVersion) != nil {
 		t.Fatalf("mixed-version refusal aggregate = %+v", mixedVersion)
@@ -139,7 +139,7 @@ func TestPartitionTimingV3AttributesClosedFailuresAndWallBuckets(t *testing.T) {
 		if err := extractionpublication.ValidatePartitionTimingReport(report); err != nil {
 			t.Fatal(err)
 		}
-		addPartitionTiming(&observation, report)
+		mustAddPartitionTiming(t, &observation, report)
 	}
 	if observation.Schema != extractionTimingSchemaV3 || len(observation.DomainTimings) != 2 ||
 		validateExtractionTiming(observation) != nil {
@@ -168,11 +168,11 @@ func TestPartitionTimingV3UpgradeRetainsHistoricalAttemptsAsUnknown(t *testing.T
 	digestA := "sha256:" + strings.Repeat("a", 64)
 	digestB := "sha256:" + strings.Repeat("b", 64)
 	var observation ExtractionTimingObservation
-	addPartitionTiming(&observation, extractionpublication.PartitionTimingReport{
+	mustAddPartitionTiming(t, &observation, extractionpublication.PartitionTimingReport{
 		Schema:   extractionpublication.PartitionTimingSchemaV2,
 		Identity: digestA, Generation: digestB, Outcome: "failed", ExecutorMS: 20, TotalMS: 25,
 	})
-	addPartitionTiming(&observation, extractionpublication.PartitionTimingReport{
+	mustAddPartitionTiming(t, &observation, extractionpublication.PartitionTimingReport{
 		Schema:   extractionpublication.PartitionTimingSchemaV3,
 		Identity: digestB, Generation: digestA, Domain: "grpc-caller",
 		Outcome: "completed", ExecutorMS: 30, TotalMS: 35,
@@ -183,5 +183,16 @@ func TestPartitionTimingV3UpgradeRetainsHistoricalAttemptsAsUnknown(t *testing.T
 		observation.DomainTimings[1].ExecutorUnbucketed != 1 ||
 		validateExtractionTiming(observation) != nil {
 		t.Fatalf("mixed v2/v3 timing = %+v", observation)
+	}
+}
+
+func mustAddPartitionTiming(
+	t *testing.T,
+	observation *ExtractionTimingObservation,
+	report extractionpublication.PartitionTimingReport,
+) {
+	t.Helper()
+	if err := addPartitionTiming(observation, report); err != nil {
+		t.Fatal(err)
 	}
 }
