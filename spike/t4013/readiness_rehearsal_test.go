@@ -511,19 +511,46 @@ func buildWorkingTreeToolchain(
 		Buf:               filepath.Join(output, "buf"),
 		ClosedEnvironment: true,
 	}
-	toolchain.TempDir = filepath.Join(workspace, "readiness-tmp")
-	if err := os.Mkdir(toolchain.TempDir, 0o700); err != nil {
+	gitCore, err := resolveGitCoreExecutable(ctx)
+	if err != nil {
 		return privateToolchain{}, err
 	}
-	buildCache := filepath.Join(workspace, "readiness-go-build-cache")
-	if err := os.Mkdir(buildCache, 0o700); err != nil {
+	toolchain.host.gitCore.path = gitCore
+	controlPath := filepath.Join(workspace, executionControlsFilename)
+	if raw, readErr := os.ReadFile(controlPath); readErr == nil {
+		toolchain.controlsDigest = digest(raw)
+		toolchain.controls, err = openExecutionControls(
+			workspace, toolchain.controlsDigest, toolchain.host, true,
+		)
+	} else if errors.Is(readErr, os.ErrNotExist) {
+		toolchain.controls, toolchain.controlsDigest, err = createExecutionControls(workspace, toolchain.host)
+	} else {
+		err = readErr
+	}
+	if err != nil {
 		return privateToolchain{}, err
+	}
+	toolchain.TempDir = toolchain.controls.Temp
+	for _, path := range []string{toolchain.controls.ModuleCache, toolchain.controls.BuildCache} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			return privateToolchain{}, err
+		}
+	}
+	download := exec.CommandContext(ctx, "go", "mod", "download", "all")
+	download.Dir = moduleRoot
+	download.Env = executionEnvironmentForControls(toolchain.controls, true)
+	if output, err := runCustodyCombinedOutput(download); err != nil {
+		return privateToolchain{}, fmt.Errorf("download readiness modules: %w: %s", err, output)
 	}
 	verify := exec.CommandContext(ctx, "go", "mod", "verify")
 	verify.Dir = moduleRoot
-	verify.Env = append(executionEnvironmentForToolchain(toolchain), "GOCACHE="+buildCache)
+	verify.Env = executionEnvironmentForControls(toolchain.controls, false)
 	if output, err := runCustodyCombinedOutput(verify); err != nil {
 		return privateToolchain{}, fmt.Errorf("verify readiness module cache: %w: %s", err, output)
+	}
+	moduleDigest, err := privateCacheDigest(ctx, toolchain.controls.ModuleCache)
+	if err != nil {
+		return privateToolchain{}, err
 	}
 	builds := []struct {
 		output string
@@ -538,10 +565,19 @@ func buildWorkingTreeToolchain(
 	for _, build := range builds {
 		command := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", build.output, build.path)
 		command.Dir = moduleRoot
-		command.Env = append(executionEnvironmentForToolchain(toolchain), "GOCACHE="+buildCache)
+		command.Env = executionEnvironmentForControls(toolchain.controls, false)
 		command.Env = append(command.Env, build.env...)
 		if output, err := runCustodyCombinedOutput(command); err != nil {
 			return privateToolchain{}, fmt.Errorf("build readiness tool %s: %w: %s", build.path, err, output)
+		}
+	}
+	after, err := privateCacheDigest(ctx, toolchain.controls.ModuleCache)
+	if err != nil || after != moduleDigest {
+		return privateToolchain{}, errors.Join(err, errors.New("readiness module cache changed during build"))
+	}
+	for _, path := range []string{toolchain.controls.ModuleCache, toolchain.controls.BuildCache} {
+		if err := removePrivateGoCache(path); err != nil {
+			return privateToolchain{}, err
 		}
 	}
 	if err := validateToolchain(toolchain); err != nil {

@@ -500,7 +500,8 @@ func TestV25ExecutionRefusesAliasedDestructivePaths(t *testing.T) {
 		}
 		return Prepared{
 			Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes),
-			SupervisionToken: strings.Repeat("a", 64),
+			SupervisionToken:        strings.Repeat("a", 64),
+			ExecutionControlsSHA256: "sha256:" + strings.Repeat("b", 64),
 			Profiles: []PreparedProfile{
 				profile("structural-2m-v1", "structural", "41731"),
 				profile("semantic-262144-v1", "semantic", "41732"),
@@ -3135,6 +3136,41 @@ func TestFrozenSourceExportUsesReviewedCommitAndIgnoresWorkingTreeMutation(t *te
 	}
 	if string(got) != "package frozen\n" {
 		t.Fatalf("exported source = %q", got)
+	}
+
+	workspace := filepath.Join(t.TempDir(), "custody")
+	if err := os.Mkdir(workspace, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	gitCore, err := resolveGitCoreExecutable(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitDigest, err := executableDigestContext(t.Context(), gitCore)
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := hostToolchainBinding{gitCore: boundExecutable{name: "git-core", path: gitCore, sha256: gitDigest}}
+	controls, _, err := createExecutionControls(workspace, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{
+		"HOME=/ambient/home", "TMPDIR=/ambient/tmp", "GIT_CONFIG_GLOBAL=/ambient/gitconfig",
+		"BASH_ENV=/ambient/bash", "ENV=/ambient/env",
+	} {
+		name, replacement, _ := strings.Cut(value, "=")
+		t.Setenv(name, replacement)
+	}
+	closedOutput := filepath.Join(workspace, "closed-source")
+	if _, err := exportReviewedSourceMeasuredWithBoundGit(
+		t.Context(), root, commit, closedOutput, workspace, host.gitCore, controls,
+	); err != nil {
+		t.Fatal(err)
+	}
+	closed, err := os.ReadFile(filepath.Join(closedOutput, "source.go"))
+	if err != nil || string(closed) != "package frozen\n" {
+		t.Fatalf("closed exported source = %q, %v", closed, err)
 	}
 }
 

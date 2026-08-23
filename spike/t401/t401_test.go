@@ -35,6 +35,19 @@ func TestBoundGitIsReverifiedBeforeEveryAuthorLaunch(t *testing.T) {
 	}
 }
 
+func TestBoundGitUsesOnlyItsSuppliedClosedEnvironment(t *testing.T) {
+	t.Setenv("HOME", "/ambient/home")
+	t.Setenv("TMPDIR", "/ambient/tmp")
+	t.Setenv("BASH_ENV", "/ambient/bash")
+	git := gitExecutable{environment: []string{"HOME=/custody/home", "TMPDIR=/custody/tmp"}}
+	got := git.environmentFor([]string{"GIT_DIR=/custody/git"})
+	if !slices.Equal(got, []string{
+		"HOME=/custody/home", "TMPDIR=/custody/tmp", "GIT_DIR=/custody/git",
+	}) {
+		t.Fatalf("closed Git environment = %v", got)
+	}
+}
+
 func TestDirectoryBytesClosesSystemToolOnlyWhenRequested(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "source"), []byte("source"), 0o600); err != nil {

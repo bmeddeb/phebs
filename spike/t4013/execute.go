@@ -321,11 +321,18 @@ func newExecution(
 		}()
 	}
 	var hostTools hostToolchainBinding
+	var controls executionControls
 	if version >= 25 {
 		var bindErr error
 		hostTools, bindErr = bindHostToolchainForPlan(ctx, plan)
 		if bindErr != nil {
 			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", bindErr)
+		}
+		controls, bindErr = openExecutionControls(
+			workspace, prepared.ExecutionControlsSHA256, hostTools, true,
+		)
+		if bindErr != nil {
+			return nil, bindErr
 		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
@@ -335,6 +342,7 @@ func newExecution(
 	if version >= 25 {
 		checkoutErr = verifyCleanCheckoutWithBoundGit(
 			ctx, moduleRoot, plan.SourceCommit, hostTools.gitCore,
+			executionEnvironmentForControls(controls, false),
 		)
 	} else {
 		checkoutErr = verifyCleanCheckoutForPlan(ctx, moduleRoot, plan)
@@ -516,7 +524,8 @@ func (run *execution) execute() error {
 		run.phaseStarted = run.executionStarted
 	}
 	toolchain, preflightMetrics, err := buildPrivateToolchain(
-		run.ctx, run.moduleRoot, run.workspace, run.plan, run.hostTools,
+		run.ctx, run.moduleRoot, run.workspace, run.prepared.ExecutionControlsSHA256,
+		run.plan, run.hostTools,
 	)
 	run.partialMetrics = mergeMetrics(run.partialMetrics, preflightMetrics)
 	if err != nil {
@@ -796,7 +805,9 @@ func (run *execution) persistTeardownCheckpoint(
 
 func (run *execution) updateSourceRevision(repository, commit string) error {
 	if planSchemaVersion(run.plan.Schema) >= 25 {
-		return updateSourceRevisionWithGit(run.ctx, repository, commit, run.hostTools.gitCore)
+		return updateSourceRevisionWithGit(
+			run.ctx, repository, commit, run.hostTools.gitCore, run.toolchain.controls,
+		)
 	}
 	return updateSourceRevision(run.ctx, repository, commit, false)
 }

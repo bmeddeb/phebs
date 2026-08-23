@@ -50,8 +50,11 @@ func TestPrivateToolReplacementRefusesEveryHarnessLaunchBeforeMutation(t *testin
 	}
 
 	for _, boundary := range boundaries {
-		for replaced := 0; replaced < 4; replaced++ {
-			name := privateToolchainInputs(privateToolchain{})[replaced].name
+		for replaced := 0; replaced <= 4; replaced++ {
+			name := "execution control manifest"
+			if replaced < 4 {
+				name = privateToolchainInputs(privateToolchain{})[replaced].name
+			}
 			t.Run(boundary.name+"/"+name, func(t *testing.T) {
 				workspace := t.TempDir()
 				toolRoot := filepath.Join(workspace, "toolchain")
@@ -67,6 +70,16 @@ func TestPrivateToolReplacementRefusesEveryHarnessLaunchBeforeMutation(t *testin
 					Phebs: filepath.Join(toolRoot, "phebs"), Zoekt: filepath.Join(toolRoot, "zoekt-git-index"),
 					Focused: filepath.Join(toolRoot, "phebs-focused-index"), Buf: filepath.Join(toolRoot, "buf"),
 				}
+				gitCore, err := filepath.Abs(os.Args[0])
+				if err != nil {
+					t.Fatal(err)
+				}
+				toolchain.host.gitCore.path = gitCore
+				toolchain.controls, toolchain.controlsDigest, err = createExecutionControls(workspace, toolchain.host)
+				if err != nil {
+					t.Fatal(err)
+				}
+				toolchain.TempDir = toolchain.controls.Temp
 				for index, input := range privateToolchainInputs(toolchain) {
 					if err := os.WriteFile(input.path, []byte{byte(index + 1)}, 0o700); err != nil {
 						t.Fatal(err)
@@ -75,15 +88,21 @@ func TestPrivateToolReplacementRefusesEveryHarnessLaunchBeforeMutation(t *testin
 				if _, err := bindPrivateToolchain(t.Context(), &toolchain); err != nil {
 					t.Fatal(err)
 				}
-				input := privateToolchainInputs(toolchain)[replaced]
-				if err := os.WriteFile(input.path, []byte{byte(replaced + 10)}, 0o700); err != nil {
+				if replaced < 4 {
+					input := privateToolchainInputs(toolchain)[replaced]
+					if err := os.WriteFile(input.path, []byte{byte(replaced + 10)}, 0o700); err != nil {
+						t.Fatal(err)
+					}
+				} else if err := os.WriteFile(
+					filepath.Join(workspace, executionControlsFilename), []byte("{}\n"), 0o600,
+				); err != nil {
 					t.Fatal(err)
 				}
 				profile := PreparedProfile{
 					Config: filepath.Join(profileRoot, "phebs.yaml"), DataDir: filepath.Join(profileRoot, "data"),
 				}
-				err := boundary.run(t.Context(), toolchain, profile, workspace)
-				if err == nil || !strings.Contains(err.Error(), input.name) {
+				err = boundary.run(t.Context(), toolchain, profile, workspace)
+				if err == nil || !strings.Contains(err.Error(), name) {
 					t.Fatalf("replacement error = %v", err)
 				}
 				for _, path := range []string{
@@ -556,7 +575,8 @@ func TestExecutionEnvironmentClosesAmbientGoControls(t *testing.T) {
 	}
 	for _, name := range []string{
 		"GOMEMLIMIT", "PHEBS_PRIVATE", "SURREAL_LOG", "ZOEKT_DISABLE_CATFILE_BATCH",
-		"TMPDIR", "GOTMPDIR", "DYLD_INSERT_LIBRARIES",
+		"TMPDIR", "GOTMPDIR", "DYLD_INSERT_LIBRARIES", "HOME", "PATH", "SHELL",
+		"BASH_ENV", "ENV", "XDG_CONFIG_HOME", "GOMODCACHE", "GOCACHE",
 	} {
 		if got := values[name]; len(got) != 0 {
 			t.Fatalf("ambient environment %s survived: %v", name, got)

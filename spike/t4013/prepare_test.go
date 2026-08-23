@@ -352,6 +352,7 @@ func TestPreparedCustodyIsStrictAndPlanBound(t *testing.T) {
 		t.Fatal("historical prepared schema accepted a supervision token")
 	}
 	value.Schema = PreparedSchemaV2
+	value.ExecutionControlsSHA256 = "sha256:" + strings.Repeat("b", 64)
 	if _, err := MarshalPrepared(value); err != nil {
 		t.Fatalf("supervised prepared schema rejected its token: %v", err)
 	}
@@ -530,6 +531,7 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	token := drainedPrepareSupervision(t, workspace, PlanDigest(planBytes))
 	prepared := Prepared{
 		Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes), SupervisionToken: token,
+		ExecutionControlsSHA256: "sha256:" + strings.Repeat("b", 64),
 		Profiles: []PreparedProfile{
 			profile("structural-2m-v1", "structural", "41731"),
 			profile("semantic-262144-v1", "semantic", "41732"),

@@ -133,14 +133,19 @@ func TestCeremonyDriverClosesAmbientGoAndRehearsalEnvironment(t *testing.T) {
 	script := `
 source "$1"
 trap cleanup_on_exit EXIT
+CEREMONY_REAL="$2"
 initialize_closed_go_cache
 initial_cache="$CLOSED_GO_CACHE"
 initialize_closed_go_cache
 [[ "$CLOSED_GO_CACHE" == "$initial_cache" ]]
 export GOFLAGS=-tags=ambient GOWORK=/private/ambient.work PHEBS_T4013_REPOSITORY_SCALE_TIMING=1
-closed_go env
+export HOME=/private/ambient-home TMPDIR=/private/ambient-tmp TEMP=/private/ambient-temp
+export BASH_ENV=/private/ambient-bash ENV=/private/ambient-env SHELL=/private/ambient-shell
+export XDG_CONFIG_HOME=/private/ambient-config XDG_CACHE_HOME=/private/ambient-cache
+export PATH=/private/ambient-path
+closed_go /usr/bin/env
 `
-	output, err := exec.Command("bash", "-c", script, "closed-go-test", driver).CombinedOutput()
+	output, err := exec.Command("bash", "-c", script, "closed-go-test", driver, t.TempDir()).CombinedOutput()
 	if err != nil {
 		t.Fatalf("closed Go environment failed: %v: %s", err, output)
 	}
@@ -161,6 +166,40 @@ closed_go env
 	}
 	if _, found := values["PHEBS_T4013_REPOSITORY_SCALE_TIMING"]; found {
 		t.Fatal("closed Go environment retained an ambient rehearsal trigger")
+	}
+	for _, name := range []string{"BASH_ENV", "ENV", "SHELL"} {
+		if _, found := values[name]; found {
+			t.Fatalf("closed Go environment retained ambient %s", name)
+		}
+	}
+	for _, name := range []string{"HOME", "TMPDIR", "TEMP", "GOMODCACHE", "GOCACHE", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"} {
+		if got := values[name]; !strings.Contains(got, "/.t4013-controls.") || strings.Contains(got, "ambient") {
+			t.Fatalf("closed Go environment %s = %q", name, got)
+		}
+	}
+}
+
+func TestCeremonyDriverCleanupRemovesReadOnlyPrivateModuleCache(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ceremony := t.TempDir()
+	script := `
+source "$1"
+CEREMONY_REAL="$2"
+initialize_closed_go_cache
+mkdir -p "$CLOSED_GO_MODULE_CACHE/example@v1/child"
+chmod 500 "$CLOSED_GO_MODULE_CACHE/example@v1/child" \
+  "$CLOSED_GO_MODULE_CACHE/example@v1" "$CLOSED_GO_MODULE_CACHE"
+trap cleanup_on_exit EXIT
+`
+	if output, err := exec.Command("bash", "-c", script, "readonly-cache-test", driver, ceremony).CombinedOutput(); err != nil {
+		t.Fatalf("read-only private cache cleanup failed: %v: %s", err, output)
+	}
+	entries, err := os.ReadDir(ceremony)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("private controls survived cleanup: %v, %v", entries, err)
 	}
 }
 
@@ -194,12 +233,10 @@ func TestCeremonyDriverRetainsCanonicalHostToolsAcrossPathDrift(t *testing.T) {
 	script := `
 source "$1"
 trap cleanup_on_exit EXIT
-initialize_closed_go_cache
 PATH="$2:/usr/bin:/bin"
 export PATH
-initialize_closed_go_path
-initialize_closed_git_paths
-initialize_closed_surreal_path
+CEREMONY_REAL="$4"
+initialize_closed_go_cache
 PATH="$3:/usr/bin:/bin"
 export PATH
 closed_go go version
@@ -210,7 +247,7 @@ chmod 700 "$CLOSED_GO_PATH"
 if (closed_go go version); then exit 91; fi
 `
 	output, err := exec.Command(
-		"bash", "-c", script, "host-path-drift", driver, first, second,
+		"bash", "-c", script, "host-path-drift", driver, first, second, t.TempDir(),
 	).CombinedOutput()
 	if err != nil {
 		t.Fatalf("bound host tools failed: %v: %s", err, output)
@@ -233,23 +270,25 @@ func TestCeremonyDriverRehashesEveryPrebuiltV25Command(t *testing.T) {
 	}
 	script := `
 source "$1"
-CLOSED_GO_CACHE="$2"
-mkdir -p "$CLOSED_GO_CACHE/t4013-custody-commands"
-for name in cleanup execute lock prepare receipt; do
-  path="$CLOSED_GO_CACHE/t4013-custody-commands/t4013-$name"
+CLOSED_COMMAND_ROOT="$2"
+mkdir -p "$CLOSED_COMMAND_ROOT"
+for name in cleanup execute freeze lock prepare promote receipt; do
+  path="$CLOSED_COMMAND_ROOT/t4013-$name"
   printf '#!/bin/sh\nexit 0\n' > "$path"
   chmod 700 "$path"
   digest="$(executable_digest "$path")"
   case "$name" in
     cleanup) V25_CLEANUP_COMMAND="$path"; V25_CLEANUP_SHA256="$digest" ;;
     execute) V25_EXECUTE_COMMAND="$path"; V25_EXECUTE_SHA256="$digest" ;;
+    freeze) V25_FREEZE_COMMAND="$path"; V25_FREEZE_SHA256="$digest" ;;
     lock) V25_LOCK_COMMAND="$path"; V25_LOCK_SHA256="$digest" ;;
     prepare) V25_PREPARE_COMMAND="$path"; V25_PREPARE_SHA256="$digest" ;;
+    promote) V25_PROMOTE_COMMAND="$path"; V25_PROMOTE_SHA256="$digest" ;;
     receipt) V25_RECEIPT_COMMAND="$path"; V25_RECEIPT_SHA256="$digest" ;;
   esac
 done
-for path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
-  "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+for path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+  "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
   require_v25_custody_command "$path"
   printf '#!/bin/sh\nexit 1\n' >| "$path"
   chmod 700 "$path"
@@ -262,8 +301,90 @@ done
 	if err != nil {
 		t.Fatalf("private command identity check failed: %v: %s", err, output)
 	}
-	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 5 {
-		t.Fatalf("private command refusals = %d, want 5: %s", count, output)
+	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 7 {
+		t.Fatalf("private command refusals = %d, want 7: %s", count, output)
+	}
+}
+
+func TestCeremonyDriverBuildsFromOwnedCachesThenMakesThemAbsent(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	tools := filepath.Join(root, "tools")
+	gitCore := filepath.Join(tools, "git-core")
+	repository := filepath.Join(root, "repository")
+	ceremony := filepath.Join(root, "ceremony")
+	hostModule := filepath.Join(root, "ambient-module-cache")
+	for _, path := range []string{tools, gitCore, repository, ceremony, hostModule} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(tools, "go"), `#!/bin/sh
+case "$1 $2" in
+  "mod download") : > "$GOMODCACHE/downloaded" ;;
+  "mod verify") test -f "$GOMODCACHE/downloaded" ;;
+  "clean -modcache") /bin/rm -rf "$GOMODCACHE" ;;
+  "build -o")
+    for name in cleanup execute freeze lock prepare promote receipt; do
+      printf '#!/bin/sh\nexit 0\n' > "$3/t4013-$name"
+      /bin/chmod 700 "$3/t4013-$name"
+    done
+    ;;
+  *) exit 91 ;;
+esac
+`)
+	write(filepath.Join(tools, "git"), "#!/bin/sh\nprintf '%s/git-core\\n' \"${0%/*}\"\n")
+	write(filepath.Join(gitCore, "git"), "#!/bin/sh\nexit 0\n")
+	write(filepath.Join(tools, "surreal"), "#!/bin/sh\nexit 0\n")
+	hostMarker := filepath.Join(hostModule, "retain")
+	if err := os.WriteFile(hostMarker, []byte("host\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	script := `
+source "$1"
+trap cleanup_on_exit EXIT
+PATH="$2:/usr/bin:/bin"
+export PATH
+REPO_REAL="$3"
+CEREMONY_REAL="$4"
+export GOMODCACHE="$5" GOCACHE="$5/ambient-build" HOME=/ambient/home TMPDIR=/ambient/tmp
+initialize_v25_custody_commands
+[[ "$CLOSED_CACHES_ABSENT" == 1 ]]
+[[ ! -e "$CLOSED_GO_MODULE_CACHE" && ! -e "$CLOSED_GO_CACHE" ]]
+[[ -f "$5/retain" && ! -e "$5/downloaded" ]]
+for name in cleanup execute freeze lock prepare promote receipt; do
+  [[ -x "$CLOSED_COMMAND_ROOT/t4013-$name" ]]
+done
+validate_closed_controls
+`
+	command := exec.Command(
+		"bash", "-c", script, "owned-cache-test", driver, tools, repository, ceremony, hostModule,
+	)
+	command.Env = append(os.Environ(),
+		"CLOSED_CONTROL_ROOT=/ambient/control",
+		"CLOSED_GO_PATH=/ambient/go",
+		"CLOSED_GO_MODULE_CACHE=/ambient/module",
+		"V25_EXECUTE_COMMAND=/ambient/execute",
+	)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("owned cache lifecycle failed: %v: %s", err, output)
+	}
+	if raw, err := os.ReadFile(hostMarker); err != nil || string(raw) != "host\n" {
+		t.Fatalf("ambient module cache changed: %q, %v", raw, err)
+	}
+	entries, err := os.ReadDir(ceremony)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("private shell controls survived cleanup: %v, %v", entries, err)
 	}
 }
 
@@ -272,7 +393,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; trap cleanup_on_exit EXIT; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" env`
+	script := `source "$1"; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
 	for _, test := range []struct {
 		schema string
 		want   string
@@ -288,7 +409,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte("module example.invalid/driver-test\n\ngo 1.26\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		output, err := exec.Command("bash", "-c", script, "plan-go-test", driver, plan, module).CombinedOutput()
+		output, err := exec.Command("bash", "-c", script, "plan-go-test", driver, plan, module, t.TempDir()).CombinedOutput()
 		if err != nil {
 			t.Fatalf("plan environment %s: %v: %s", test.schema, err, output)
 		}
@@ -370,8 +491,10 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 		"go build -o \"${command_root}/\"",
 		"./spike/t4013/cmd/t4013-cleanup",
 		"./spike/t4013/cmd/t4013-execute",
+		"./spike/t4013/cmd/t4013-freeze",
 		"./spike/t4013/cmd/t4013-lock",
 		"./spike/t4013/cmd/t4013-prepare",
+		"./spike/t4013/cmd/t4013-promote",
 		"./spike/t4013/cmd/t4013-receipt",
 		"run_v25_custody_command_in_repo_active",
 		"require_v25_custody_command \"$V25_CLEANUP_COMMAND\"",
@@ -397,7 +520,8 @@ func TestCeremonyDriverSharesInheritedV25RunRootLock(t *testing.T) {
 	}
 	source := string(raw)
 	for _, marker := range []string{
-		`exec "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"`,
+		`exec /usr/bin/env -i`,
+		`"$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"`,
 		`T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}"`,
 		`"$V25_LOCK_COMMAND" -run-root "$run_root" -adopt`,
 		`RUN_LOCK_TOKEN="inherited:${T4013_RUN_LOCK_FD}"`,
@@ -843,6 +967,7 @@ SIGNING_KEY="$ROOT_PATH/signing-key"
 initialize_repository() { :; }
 initialize_ceremony_root() { :; }
 initialize_closed_go_cache() { :; }
+initialize_historical_go_cache() { :; }
 select_signing_key() { :; }
 ensure_signing_key() { :; }
 run_root_for() { printf '%s\n' "$RUN_ROOT"; }
@@ -1072,10 +1197,10 @@ func TestCeremonyDriverRetainsSurvivingCustodyAndPublishesSealFilesAtomically(t 
 		`verification_preflight_for_plan "$plan_path"`,
 		`manifest_tmp="${evidence_root}/manifest.json.tmp"`,
 		`-data-parent "$CEREMONY_REAL"`,
-		`durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root"`,
-		`durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root"`,
-		`durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root"`,
-		`go run ./spike/t4013/cmd/t4013-promote`,
+		`durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"`,
+		`durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root" "$plan_path"`,
+		`durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root" "$plan_path"`,
+		`require_v25_custody_command "$V25_PROMOTE_COMMAND"`,
 	} {
 		if !strings.Contains(driver, marker) {
 			t.Fatalf("custody-safe atomic seal marker is absent: %s", marker)

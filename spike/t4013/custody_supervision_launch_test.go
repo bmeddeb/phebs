@@ -45,6 +45,26 @@ func bindLauncherToolchain(t *testing.T, toolchain privateToolchain) privateTool
 			t.Fatal(err)
 		}
 	}
+	workspace := filepath.Dir(toolchain.TempDir)
+	gitCore, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	toolchain.host.gitCore.path = gitCore
+	toolchain.controls, toolchain.controlsDigest, err = createExecutionControls(workspace, toolchain.host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toolchain.TempDir = toolchain.controls.Temp
+	for _, name := range []string{
+		"T4013_CUSTODY_LEASE", "T4013_CUSTODY_LEASE_FD", "T4013_CUSTODY_LAUNCHER_MODE",
+		"T4013_LAUNCHER_TEST_BINARY", "T4013_LAUNCHER_READY", "T4013_LAUNCHER_RELEASE",
+		"T4013_LAUNCHER_DATA", "T4013_LAUNCHER_OUTPUT",
+	} {
+		if value, ok := os.LookupEnv(name); ok {
+			toolchain.extraEnvironment = append(toolchain.extraEnvironment, name+"="+value)
+		}
+	}
 	if _, err := bindPrivateToolchain(t.Context(), &toolchain); err != nil {
 		t.Fatal(err)
 	}
@@ -243,6 +263,10 @@ exec "$T4013_LAUNCHER_TEST_BINARY" -test.run='^TestV25CustodyLauncherDescendantH
 			supervision := beginLauncherCustody(t, workspace, "phebs-"+mode)
 			t.Setenv("T4013_CUSTODY_LEASE", filepath.Join(supervision.directory, custodyLeaseName))
 			t.Setenv("T4013_CUSTODY_LEASE_FD", strconv.FormatUint(uint64(supervision.lease.Fd()), 10))
+			toolchain.extraEnvironment = append(toolchain.extraEnvironment,
+				"T4013_CUSTODY_LEASE="+os.Getenv("T4013_CUSTODY_LEASE"),
+				"T4013_CUSTODY_LEASE_FD="+os.Getenv("T4013_CUSTODY_LEASE_FD"),
+			)
 			launcherCtx, cancelLauncher := context.WithTimeout(t.Context(), 15*time.Second)
 			defer cancelLauncher()
 			done := make(chan error, 1)

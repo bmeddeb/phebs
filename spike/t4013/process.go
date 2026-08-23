@@ -14,6 +14,7 @@ import (
 	pathpkg "path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,9 @@ type privateToolchain struct {
 	Buf               string
 	TempDir           string
 	ClosedEnvironment bool
+	controls          executionControls
+	controlsDigest    string
+	extraEnvironment  []string
 	host              hostToolchainBinding
 	digests           [4]string
 }
@@ -124,7 +128,7 @@ func frozenSourceExportContractForPlan(schema string) frozenSourceExportContract
 }
 
 func buildPrivateToolchain(
-	ctx context.Context, moduleRoot, workspace string, plan Plan, hostTools hostToolchainBinding,
+	ctx context.Context, moduleRoot, workspace, controlsDigest string, plan Plan, hostTools hostToolchainBinding,
 ) (toolchain privateToolchain, metrics PhaseMetrics, retErr error) {
 	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) ||
 		(frozenSourceExportContractForPlan(plan.Schema) == frozenSourceExportV25 && !hexIdentity(plan.SourceCommit, 40)) {
@@ -133,11 +137,14 @@ func buildPrivateToolchain(
 	v25 := planSchemaVersion(plan.Schema) >= 25
 	started := time.Now()
 	privateTemp := ""
+	var controls executionControls
 	if v25 {
-		privateTemp = filepath.Join(workspace, "tmp")
-		if err := os.Mkdir(privateTemp, 0o700); err != nil {
-			return privateToolchain{}, PhaseMetrics{}, errors.New("T40.13 private temporary directory is not new")
+		var err error
+		controls, err = openExecutionControls(workspace, controlsDigest, hostTools, true)
+		if err != nil {
+			return privateToolchain{}, PhaseMetrics{}, err
 		}
+		privateTemp = controls.Temp
 	}
 	var allocation *allocationSampler
 	if v25 {
@@ -161,7 +168,7 @@ func buildPrivateToolchain(
 	source := filepath.Join(workspace, "toolchain-source")
 	if v25 {
 		exportMetrics, err := exportReviewedSourceMeasuredWithBoundGit(
-			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore,
+			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore, controls,
 		)
 		metrics = mergeMetrics(metrics, exportMetrics)
 		if err != nil {
@@ -175,25 +182,45 @@ func buildPrivateToolchain(
 		return privateToolchain{}, metrics, err
 	}
 	buildCache := filepath.Join(workspace, "go-build-cache")
+	moduleCacheDigest := ""
 	if v25 {
-		if err := os.Mkdir(buildCache, 0o700); err != nil {
-			return privateToolchain{}, metrics, errors.New("T40.13 private Go build cache is not new")
+		buildCache = controls.BuildCache
+		for _, path := range []string{controls.ModuleCache, buildCache} {
+			if err := os.Mkdir(path, 0o700); err != nil {
+				return privateToolchain{}, metrics, errors.New("T40.13 private Go cache is not new")
+			}
 		}
-	}
-	if v25 {
 		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
-		command := exec.CommandContext(ctx, goPath, "mod", "verify")
+		command := exec.CommandContext(ctx, goPath, "mod", "download", "all")
 		command.Dir = source
-		command.Env = executionEnvironmentForPlan(plan, privateTemp)
+		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, err := runMeasuredCommand(command, workspace, true)
 		metrics = mergeMetrics(metrics, commandMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 module cache verification failed", err)
+				sanitizeMeasuredCommandFailure("T40.13 private module download failed", err)
+		}
+		goPath, err = hostTools.goDriver.pathForLaunch(ctx)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+		command = exec.CommandContext(ctx, goPath, "mod", "verify")
+		command.Dir = source
+		command.Env = executionEnvironmentForControls(controls, false)
+		command.Stdout, command.Stderr = io.Discard, io.Discard
+		commandMetrics, err = runMeasuredCommand(command, workspace, true)
+		metrics = mergeMetrics(metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics,
+				sanitizeMeasuredCommandFailure("T40.13 private module verification failed", err)
+		}
+		moduleCacheDigest, err = privateCacheDigest(ctx, controls.ModuleCache)
+		if err != nil {
+			return privateToolchain{}, metrics, err
 		}
 	}
 	toolchain = privateToolchain{
@@ -202,6 +229,8 @@ func buildPrivateToolchain(
 		Focused: filepath.Join(output, "phebs-focused-index"), Buf: filepath.Join(output, "buf"),
 		TempDir:           privateTemp,
 		ClosedEnvironment: v25,
+		controls:          controls,
+		controlsDigest:    controlsDigest,
 		host:              hostTools,
 	}
 	builds := []struct {
@@ -230,7 +259,7 @@ func buildPrivateToolchain(
 		command.Dir = source
 		command.Env = executionEnvironmentForPlan(plan, privateTemp)
 		if v25 {
-			command.Env = append(command.Env, "GOCACHE="+buildCache)
+			command.Env = executionEnvironmentForControls(controls, false)
 		}
 		command.Env = append(command.Env, build.env...)
 		if v25 {
@@ -247,22 +276,21 @@ func buildPrivateToolchain(
 		}
 	}
 	if v25 {
-		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
-		if err != nil {
-			return privateToolchain{}, metrics, err
-		}
-		command := exec.CommandContext(ctx, goPath, "mod", "verify")
-		command.Dir = source
-		command.Env = executionEnvironmentForPlan(plan, privateTemp)
-		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, err := runMeasuredCommand(command, workspace, true)
-		metrics = mergeMetrics(metrics, commandMetrics)
-		if err != nil {
+		after, err := privateCacheDigest(ctx, controls.ModuleCache)
+		if err != nil || after != moduleCacheDigest {
 			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 module cache changed during private toolchain build", err)
+				errors.Join(err, errors.New("T40.13 private module cache changed during toolchain build"))
 		}
-		if err := os.RemoveAll(buildCache); err != nil {
-			return privateToolchain{}, metrics, errors.New("T40.13 private Go build cache cleanup failed")
+		for _, path := range []string{controls.ModuleCache, buildCache} {
+			if err := removePrivateGoCache(path); err != nil {
+				return privateToolchain{}, metrics, fmt.Errorf("T40.13 private Go cache cleanup failed: %w", err)
+			}
+		}
+		if err := syncDirectory(filepath.Dir(controls.ModuleCache)); err != nil {
+			return privateToolchain{}, metrics, fmt.Errorf("persist T40.13 private Go cache cleanup: %w", err)
+		}
+		if err := validateExecutionControlPaths(controls, true); err != nil {
+			return privateToolchain{}, metrics, err
 		}
 		if _, err := bindPrivateToolchain(ctx, &toolchain); err != nil {
 			return privateToolchain{}, metrics, err
@@ -457,25 +485,28 @@ func exportReviewedSourceMeasuredWithGit(
 ) (PhaseMetrics, error) {
 	return exportReviewedSourceMeasuredWithResolver(
 		ctx, moduleRoot, sourceCommit, output, measureRoot,
-		func() (string, error) { return gitCore, nil },
+		func() (string, error) { return gitCore, nil }, nil,
 	)
 }
 
 func exportReviewedSourceMeasuredWithBoundGit(
-	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string, git boundExecutable,
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
+	git boundExecutable, controls executionControls,
 ) (PhaseMetrics, error) {
 	return exportReviewedSourceMeasuredWithResolver(
 		ctx, moduleRoot, sourceCommit, output, measureRoot,
 		func() (string, error) { return git.pathForLaunch(ctx) },
+		executionEnvironmentForControls(controls, false),
 	)
 }
 
 func exportReviewedSourceMeasuredWithResolver(
 	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
 	gitPath func() (string, error),
+	environment []string,
 ) (PhaseMetrics, error) {
 	var metrics PhaseMetrics
-	err := exportReviewedSourceWithResolver(ctx, moduleRoot, sourceCommit, output, gitPath, func(command *exec.Cmd, output string) error {
+	err := exportReviewedSourceWithResolver(ctx, moduleRoot, sourceCommit, output, gitPath, environment, func(command *exec.Cmd, output string) error {
 		var err error
 		metrics, err = extractFrozenSourceCommandMeasured(command, output, measureRoot)
 		return err
@@ -494,7 +525,7 @@ func exportReviewedSourceWith(
 	}
 	return exportReviewedSourceWithResolver(
 		ctx, moduleRoot, sourceCommit, output,
-		func() (string, error) { return gitCore, nil }, extract,
+		func() (string, error) { return gitCore, nil }, nil, extract,
 	)
 }
 
@@ -502,6 +533,7 @@ func exportReviewedSourceWithResolver(
 	ctx context.Context,
 	moduleRoot, sourceCommit, output string,
 	gitPath func() (string, error),
+	environment []string,
 	extract func(*exec.Cmd, string) error,
 ) (retErr error) {
 	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(output) ||
@@ -518,7 +550,11 @@ func exportReviewedSourceWithResolver(
 	if err != nil || !filepath.IsAbs(gitCore) {
 		return errors.Join(err, errors.New("T40.13 frozen source Git executable is invalid"))
 	}
-	objectPath, err := gitOutputWithExecutable(ctx, moduleRoot, gitCore, true,
+	gitEnvironment := environment
+	if gitEnvironment == nil {
+		gitEnvironment = gitEnvironmentForContract(true)
+	}
+	objectPath, err := gitOutputWithExecutableEnvironment(ctx, moduleRoot, gitCore, gitEnvironment,
 		"rev-parse", "--git-path", "objects")
 	if err != nil {
 		return err
@@ -561,7 +597,7 @@ func exportReviewedSourceWithResolver(
 	command := exec.CommandContext(ctx, gitCore, "-c", "core.attributesFile="+os.DevNull,
 		"archive", "--format=tar", sourceCommit)
 	command.Dir = moduleRoot
-	command.Env = append(gitEnvironmentForContract(true),
+	command.Env = append(slices.Clone(gitEnvironment),
 		"GIT_DIR="+gitDir,
 		"GIT_OBJECT_DIRECTORY="+objectPath,
 		"GIT_NO_REPLACE_OBJECTS=1",
@@ -1467,19 +1503,7 @@ func (sampler *rssSampler) close() error {
 }
 
 func scrubExecutionEnvironment() []string {
-	result := make([]string, 0, len(os.Environ())+10)
-	for _, entry := range os.Environ() {
-		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PHEBS_") || strings.HasPrefix(name, "SURREAL_") || name == "ZOEKT_DISABLE_CATFILE_BATCH" ||
-			strings.HasPrefix(name, "GIT_") || strings.HasPrefix(name, "GO") ||
-			strings.HasPrefix(name, "DYLD_") || strings.HasPrefix(name, "LD_") ||
-			name == "CGO_ENABLED" || name == "DEVELOPER_DIR" || name == "BASH_ENV" || name == "ENV" ||
-			name == "TMPDIR" || name == "TEMP" || name == "TMP" {
-			continue
-		}
-		result = append(result, entry)
-	}
-	return append(result,
+	return []string{
 		"CGO_ENABLED=0",
 		"GIT_ATTR_NOSYSTEM=1",
 		"GIT_CONFIG_GLOBAL=/dev/null",
@@ -1487,17 +1511,21 @@ func scrubExecutionEnvironment() []string {
 		"GIT_NO_LAZY_FETCH=1",
 		"GIT_OPTIONAL_LOCKS=0",
 		"GIT_TERMINAL_PROMPT=0",
-		"GOARCH="+runtime.GOARCH,
+		"GOARCH=" + runtime.GOARCH,
 		"GOENV=off",
 		"GOEXPERIMENT=",
 		"GOFLAGS=-mod=readonly",
 		"GOFIPS140=off",
-		"GOOS="+runtime.GOOS,
+		"GOOS=" + runtime.GOOS,
 		"GOPROXY=off",
 		"GOSUMDB=off",
+		"GOTELEMETRY=off",
 		"GOTOOLCHAIN=local",
 		"GOWORK=off",
-	)
+		"LANG=C",
+		"LC_ALL=C",
+		"TZ=UTC",
+	}
 }
 
 func legacyExecutionEnvironment() []string {
@@ -1528,10 +1556,43 @@ func executionEnvironmentForPlan(plan Plan, tempDir ...string) []string {
 	return environment
 }
 
+func executionEnvironmentForControls(controls executionControls, allowDownload bool) []string {
+	environment := scrubExecutionEnvironment()
+	if allowDownload {
+		environment = replaceEnvironmentValue(environment, "GOPROXY", "https://proxy.golang.org")
+		environment = replaceEnvironmentValue(environment, "GOSUMDB", "sum.golang.org")
+	}
+	return append(environment,
+		"HOME="+controls.Home,
+		"PATH="+controls.GitExecPath,
+		"TMPDIR="+controls.Temp,
+		"TEMP="+controls.Temp,
+		"TMP="+controls.Temp,
+		"GOTMPDIR="+controls.Temp,
+		"GOMODCACHE="+controls.ModuleCache,
+		"GOCACHE="+controls.BuildCache,
+		"XDG_CONFIG_HOME="+controls.Home,
+		"XDG_CACHE_HOME="+controls.Temp,
+		"XDG_DATA_HOME="+controls.Home,
+		"GIT_EXEC_PATH="+controls.GitExecPath,
+	)
+}
+
+func replaceEnvironmentValue(environment []string, name, value string) []string {
+	prefix := name + "="
+	for index := range environment {
+		if strings.HasPrefix(environment[index], prefix) {
+			environment[index] = prefix + value
+			return environment
+		}
+	}
+	return append(environment, prefix+value)
+}
+
 func executionEnvironmentForToolchain(toolchain privateToolchain) []string {
 	environment := executionEnvironment(toolchain.ClosedEnvironment)
 	if toolchain.ClosedEnvironment {
-		environment = append(environment, "TMPDIR="+toolchain.TempDir, "GOTMPDIR="+toolchain.TempDir)
+		environment = executionEnvironmentForControls(toolchain.controls, false)
 		if toolchain.host.surreal.path != "" {
 			environment = append(environment,
 				"PHEBS_SURREAL="+toolchain.host.surreal.path,
@@ -1541,6 +1602,7 @@ func executionEnvironmentForToolchain(toolchain privateToolchain) []string {
 				"PHEBS_BUF_SHA256="+toolchain.digests[3],
 			)
 		}
+		environment = append(environment, toolchain.extraEnvironment...)
 	}
 	return environment
 }
@@ -1549,8 +1611,16 @@ func validatePrivateTemporaryDirectory(toolchain privateToolchain) error {
 	if !toolchain.ClosedEnvironment {
 		return nil
 	}
-	info, err := os.Lstat(toolchain.TempDir)
-	if err != nil || !filepath.IsAbs(toolchain.TempDir) || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+	if toolchain.TempDir != toolchain.controls.Temp || !digestIdentity(toolchain.controlsDigest) {
+		return errors.New("T40.13 private temporary directory is invalid")
+	}
+	controls, err := openExecutionControls(
+		toolchain.controls.Workspace, toolchain.controlsDigest, toolchain.host, true,
+	)
+	if err != nil {
+		return errors.Join(err, errors.New("T40.13 private temporary directory is invalid"))
+	}
+	if controls != toolchain.controls {
 		return errors.New("T40.13 private temporary directory is invalid")
 	}
 	return nil

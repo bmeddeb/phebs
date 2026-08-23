@@ -25,6 +25,8 @@ readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
 readonly MINIMUM_DISK_BYTES=$((120 * 1024 * 1024 * 1024))
 readonly MAXIMUM_TRANSFER_PACKAGE_BYTES=$((4 * 1024 * 1024))
+readonly CLOSED_SYSTEM_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+readonly HOST_PATH="${PATH:-}"
 
 REPO_ROOT="${PHEBS_REPO_ROOT:-$SCRIPT_REPO_ROOT}"
 CEREMONY_ROOT="${PHEBS_CEREMONY_ROOT:-${HOME:-}/phebs-t4013-ceremony}"
@@ -33,25 +35,72 @@ SIGNING_KEY=""
 SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
+CLOSED_CONTROL_ROOT="${CLOSED_CONTROL_ROOT:-}"
+CLOSED_CONTROL_SHA256="${CLOSED_CONTROL_SHA256:-}"
+CLOSED_CONTROL_MANIFEST="${CLOSED_CONTROL_MANIFEST:-}"
+CLOSED_HOME="${CLOSED_HOME:-}"
+CLOSED_TMP="${CLOSED_TMP:-}"
 CLOSED_GO_CACHE="${CLOSED_GO_CACHE:-}"
+CLOSED_GO_MODULE_CACHE="${CLOSED_GO_MODULE_CACHE:-}"
+CLOSED_COMMAND_ROOT="${CLOSED_COMMAND_ROOT:-}"
+CLOSED_CACHES_ABSENT="${CLOSED_CACHES_ABSENT:-0}"
 CLOSED_GO_PATH="${CLOSED_GO_PATH:-}"
 CLOSED_GO_SHA256="${CLOSED_GO_SHA256:-}"
 CLOSED_GIT_PATH="${CLOSED_GIT_PATH:-}"
 CLOSED_GIT_SHA256="${CLOSED_GIT_SHA256:-}"
 CLOSED_GIT_CORE_PATH="${CLOSED_GIT_CORE_PATH:-}"
 CLOSED_GIT_CORE_SHA256="${CLOSED_GIT_CORE_SHA256:-}"
+CLOSED_GIT_EXEC_PATH="${CLOSED_GIT_EXEC_PATH:-}"
 CLOSED_SURREAL_PATH="${CLOSED_SURREAL_PATH:-}"
 CLOSED_SURREAL_SHA256="${CLOSED_SURREAL_SHA256:-}"
 V25_CLEANUP_COMMAND="${V25_CLEANUP_COMMAND:-}"
 V25_CLEANUP_SHA256="${V25_CLEANUP_SHA256:-}"
 V25_EXECUTE_COMMAND="${V25_EXECUTE_COMMAND:-}"
 V25_EXECUTE_SHA256="${V25_EXECUTE_SHA256:-}"
+V25_FREEZE_COMMAND="${V25_FREEZE_COMMAND:-}"
+V25_FREEZE_SHA256="${V25_FREEZE_SHA256:-}"
 V25_LOCK_COMMAND="${V25_LOCK_COMMAND:-}"
 V25_LOCK_SHA256="${V25_LOCK_SHA256:-}"
 V25_PREPARE_COMMAND="${V25_PREPARE_COMMAND:-}"
 V25_PREPARE_SHA256="${V25_PREPARE_SHA256:-}"
+V25_PROMOTE_COMMAND="${V25_PROMOTE_COMMAND:-}"
+V25_PROMOTE_SHA256="${V25_PROMOTE_SHA256:-}"
 V25_RECEIPT_COMMAND="${V25_RECEIPT_COMMAND:-}"
 V25_RECEIPT_SHA256="${V25_RECEIPT_SHA256:-}"
+if [[ -z "${T4013_RUN_LOCK_FD:-}" ]]; then
+  CLOSED_CONTROL_ROOT=""
+  CLOSED_CONTROL_SHA256=""
+  CLOSED_CONTROL_MANIFEST=""
+  CLOSED_HOME=""
+  CLOSED_TMP=""
+  CLOSED_GO_CACHE=""
+  CLOSED_GO_MODULE_CACHE=""
+  CLOSED_COMMAND_ROOT=""
+  CLOSED_CACHES_ABSENT=0
+  CLOSED_GO_PATH=""
+  CLOSED_GO_SHA256=""
+  CLOSED_GIT_PATH=""
+  CLOSED_GIT_SHA256=""
+  CLOSED_GIT_CORE_PATH=""
+  CLOSED_GIT_CORE_SHA256=""
+  CLOSED_GIT_EXEC_PATH=""
+  CLOSED_SURREAL_PATH=""
+  CLOSED_SURREAL_SHA256=""
+  V25_CLEANUP_COMMAND=""
+  V25_CLEANUP_SHA256=""
+  V25_EXECUTE_COMMAND=""
+  V25_EXECUTE_SHA256=""
+  V25_FREEZE_COMMAND=""
+  V25_FREEZE_SHA256=""
+  V25_LOCK_COMMAND=""
+  V25_LOCK_SHA256=""
+  V25_PREPARE_COMMAND=""
+  V25_PREPARE_SHA256=""
+  V25_PROMOTE_COMMAND=""
+  V25_PROMOTE_SHA256=""
+  V25_RECEIPT_COMMAND=""
+  V25_RECEIPT_SHA256=""
+fi
 EXIT_PREPARED_PLAN=""
 EXIT_PREPARED_MANIFEST=""
 EXIT_PREPARED_WORKSPACE=""
@@ -116,9 +165,9 @@ initialize_closed_go_path() {
 initialize_closed_git_paths() {
   local exec_path
   if [[ -n "$CLOSED_GIT_PATH" || -n "$CLOSED_GIT_SHA256" ||
-    -n "$CLOSED_GIT_CORE_PATH" || -n "$CLOSED_GIT_CORE_SHA256" ]]; then
+    -n "$CLOSED_GIT_CORE_PATH" || -n "$CLOSED_GIT_CORE_SHA256" || -n "$CLOSED_GIT_EXEC_PATH" ]]; then
     [[ -n "$CLOSED_GIT_PATH" && -n "$CLOSED_GIT_SHA256" &&
-      -n "$CLOSED_GIT_CORE_PATH" && -n "$CLOSED_GIT_CORE_SHA256" ]] ||
+      -n "$CLOSED_GIT_CORE_PATH" && -n "$CLOSED_GIT_CORE_SHA256" && -n "$CLOSED_GIT_EXEC_PATH" ]] ||
       die "closed Git identity state is incomplete"
     return
   fi
@@ -126,7 +175,7 @@ initialize_closed_git_paths() {
   CLOSED_GIT_SHA256="$(executable_digest "$CLOSED_GIT_PATH")"
   require_bound_executable "$CLOSED_GIT_PATH" "$CLOSED_GIT_SHA256" Git || die "closed Git identity is invalid"
   exec_path="$(env -i \
-    HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    LC_ALL=C LANG=C TZ=UTC \
     GIT_ATTR_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
     GIT_NO_LAZY_FETCH=1 GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
     "$CLOSED_GIT_PATH" --exec-path)"
@@ -134,6 +183,7 @@ initialize_closed_git_paths() {
     die "closed Git executable directory is invalid"
   CLOSED_GIT_CORE_PATH="$(canonical_executable_path "${exec_path}/git")"
   CLOSED_GIT_CORE_SHA256="$(executable_digest "$CLOSED_GIT_CORE_PATH")"
+  CLOSED_GIT_EXEC_PATH="$exec_path"
 }
 
 initialize_closed_surreal_path() {
@@ -146,9 +196,66 @@ initialize_closed_surreal_path() {
   CLOSED_SURREAL_SHA256="$(executable_digest "$CLOSED_SURREAL_PATH")"
 }
 
+closed_control_manifest_content() {
+  printf '%s\n' \
+    'schema=t4013-shell-execution-controls-v1' \
+    "root=$CLOSED_CONTROL_ROOT" \
+    "home=$CLOSED_HOME" \
+    "tmp=$CLOSED_TMP" \
+    "go_build=$CLOSED_GO_CACHE" \
+    "go_module=$CLOSED_GO_MODULE_CACHE" \
+    "commands=$CLOSED_COMMAND_ROOT" \
+    "go=$CLOSED_GO_PATH" \
+    "go_sha256=$CLOSED_GO_SHA256" \
+    "git=$CLOSED_GIT_PATH" \
+    "git_sha256=$CLOSED_GIT_SHA256" \
+    "git_core=$CLOSED_GIT_CORE_PATH" \
+    "git_core_sha256=$CLOSED_GIT_CORE_SHA256" \
+    "git_exec=$CLOSED_GIT_EXEC_PATH" \
+    "surreal=$CLOSED_SURREAL_PATH" \
+    "surreal_sha256=$CLOSED_SURREAL_SHA256" \
+    "system_path=$CLOSED_SYSTEM_PATH"
+}
+
+validate_closed_controls() {
+  local expected
+  PATH="$CLOSED_SYSTEM_PATH"
+  export PATH
+  [[ -n "$CEREMONY_REAL" && -d "$CEREMONY_REAL" && ! -L "$CEREMONY_REAL" &&
+    "$CLOSED_CONTROL_ROOT" == "$CEREMONY_REAL"/.t4013-controls.* &&
+    -d "$CLOSED_CONTROL_ROOT" && ! -L "$CLOSED_CONTROL_ROOT" &&
+    "$CLOSED_CONTROL_MANIFEST" == "$CLOSED_CONTROL_ROOT/control" &&
+    -f "$CLOSED_CONTROL_MANIFEST" && ! -L "$CLOSED_CONTROL_MANIFEST" &&
+    "$CLOSED_HOME" == "$CLOSED_CONTROL_ROOT/home" && -d "$CLOSED_HOME" && ! -L "$CLOSED_HOME" &&
+    "$CLOSED_TMP" == "$CLOSED_CONTROL_ROOT/tmp" && -d "$CLOSED_TMP" && ! -L "$CLOSED_TMP" &&
+    "$CLOSED_GO_CACHE" == "$CLOSED_CONTROL_ROOT/go-build" &&
+    "$CLOSED_GO_MODULE_CACHE" == "$CLOSED_CONTROL_ROOT/go-mod" &&
+    "$CLOSED_COMMAND_ROOT" == "$CLOSED_CONTROL_ROOT/commands" &&
+    -d "$CLOSED_GIT_EXEC_PATH" && ! -L "$CLOSED_GIT_EXEC_PATH" ]] ||
+    die "closed execution control paths are invalid"
+  case "$CLOSED_CACHES_ABSENT" in
+    0)
+      [[ -d "$CLOSED_GO_CACHE" && ! -L "$CLOSED_GO_CACHE" &&
+        -d "$CLOSED_GO_MODULE_CACHE" && ! -L "$CLOSED_GO_MODULE_CACHE" ]] ||
+        die "closed Go caches are invalid"
+      ;;
+    1)
+      [[ ! -e "$CLOSED_GO_CACHE" && ! -L "$CLOSED_GO_CACHE" &&
+        ! -e "$CLOSED_GO_MODULE_CACHE" && ! -L "$CLOSED_GO_MODULE_CACHE" ]] ||
+        die "retired closed Go caches reappeared"
+      ;;
+    *) die "closed Go cache state is invalid" ;;
+  esac
+  expected="$(closed_control_manifest_content)"
+  [[ "$(<"$CLOSED_CONTROL_MANIFEST")" == "$expected" &&
+    "$CLOSED_CONTROL_SHA256" =~ ^sha256:[0-9a-f]{64}$ &&
+    "$(executable_digest "$CLOSED_CONTROL_MANIFEST")" == "$CLOSED_CONTROL_SHA256" ]] ||
+    die "closed execution control manifest changed"
+}
+
 closed_go() {
   local argument command=() command_seen=0
-  [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  validate_closed_controls
   for argument in "$@"; do
     if (( command_seen == 0 )) && [[ "$argument" != *=* ]]; then
       command_seen=1
@@ -163,16 +270,20 @@ closed_go() {
     command+=("$argument")
   done
   env -i \
-    HOME="$HOME" \
-    PATH="$PATH" \
-    TMPDIR="${TMPDIR:-/tmp}" \
-    LC_ALL=C \
+    HOME="$CLOSED_HOME" \
+    PATH="$CLOSED_GIT_EXEC_PATH" \
+    TMPDIR="$CLOSED_TMP" TEMP="$CLOSED_TMP" TMP="$CLOSED_TMP" \
+    XDG_CONFIG_HOME="$CLOSED_HOME" XDG_CACHE_HOME="$CLOSED_TMP" XDG_DATA_HOME="$CLOSED_HOME" \
+    LC_ALL=C LANG=C TZ=UTC \
     CGO_ENABLED=0 \
     GOENV=off \
     GOCACHE="$CLOSED_GO_CACHE" \
+    GOMODCACHE="$CLOSED_GO_MODULE_CACHE" \
+    GOTMPDIR="$CLOSED_TMP" \
     GOEXPERIMENT= \
     GOFLAGS= \
     GOTOOLCHAIN=local \
+    GOTELEMETRY=off \
     GOWORK=off \
     T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
     "${command[@]}"
@@ -193,7 +304,7 @@ run_active_child() {
 
 closed_go_active() {
   local argument command=() command_seen=0
-  [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  validate_closed_controls
   for argument in "$@"; do
     if (( command_seen == 0 )) && [[ "$argument" != *=* ]]; then
       command_seen=1
@@ -208,25 +319,79 @@ closed_go_active() {
     command+=("$argument")
   done
   run_active_child env -i \
-    HOME="$HOME" \
-    PATH="$PATH" \
-    TMPDIR="${TMPDIR:-/tmp}" \
-    LC_ALL=C \
+    HOME="$CLOSED_HOME" \
+    PATH="$CLOSED_GIT_EXEC_PATH" \
+    TMPDIR="$CLOSED_TMP" TEMP="$CLOSED_TMP" TMP="$CLOSED_TMP" \
+    XDG_CONFIG_HOME="$CLOSED_HOME" XDG_CACHE_HOME="$CLOSED_TMP" XDG_DATA_HOME="$CLOSED_HOME" \
+    LC_ALL=C LANG=C TZ=UTC \
     CGO_ENABLED=0 \
     GOENV=off \
     GOCACHE="$CLOSED_GO_CACHE" \
+    GOMODCACHE="$CLOSED_GO_MODULE_CACHE" \
+    GOTMPDIR="$CLOSED_TMP" \
     GOEXPERIMENT= \
     GOFLAGS= \
     GOTOOLCHAIN=local \
+    GOTELEMETRY=off \
     GOWORK=off \
     T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
     "${command[@]}"
 }
 
 initialize_closed_go_cache() {
+  if [[ -n "$CLOSED_CONTROL_ROOT" ]]; then
+    validate_closed_controls
+    return 0
+  fi
+  [[ -n "$CEREMONY_REAL" ]] || die "ceremony root must be initialized before closed execution controls"
+  [[ -z "$CLOSED_CONTROL_SHA256" && -z "$CLOSED_CONTROL_MANIFEST" &&
+    -z "$CLOSED_HOME" && -z "$CLOSED_TMP" && -z "$CLOSED_GO_CACHE" &&
+    -z "$CLOSED_GO_MODULE_CACHE" && -z "$CLOSED_COMMAND_ROOT" ]] ||
+    die "closed execution control state is incomplete"
+  initialize_closed_go_path
+  initialize_closed_git_paths
+  initialize_closed_surreal_path
+  CLOSED_CONTROL_ROOT="$(mktemp -d "$CEREMONY_REAL/.t4013-controls.XXXXXX")"
+  CLOSED_CONTROL_MANIFEST="$CLOSED_CONTROL_ROOT/control"
+  CLOSED_HOME="$CLOSED_CONTROL_ROOT/home"
+  CLOSED_TMP="$CLOSED_CONTROL_ROOT/tmp"
+  CLOSED_GO_CACHE="$CLOSED_CONTROL_ROOT/go-build"
+  CLOSED_GO_MODULE_CACHE="$CLOSED_CONTROL_ROOT/go-mod"
+  CLOSED_COMMAND_ROOT="$CLOSED_CONTROL_ROOT/commands"
+  CLOSED_CACHES_ABSENT=0
+  mkdir -m 700 "$CLOSED_HOME" "$CLOSED_TMP" "$CLOSED_GO_CACHE" "$CLOSED_GO_MODULE_CACHE"
+  closed_control_manifest_content > "$CLOSED_CONTROL_MANIFEST"
+  chmod 600 "$CLOSED_CONTROL_MANIFEST"
+  CLOSED_CONTROL_SHA256="$(executable_digest "$CLOSED_CONTROL_MANIFEST")"
+  validate_closed_controls
+}
+
+initialize_historical_go_cache() {
+  [[ -z "$CLOSED_CONTROL_ROOT" ]] || die "historical execution cannot use V25 controls"
   [[ -z "$CLOSED_GO_CACHE" ]] || return 0
   CLOSED_GO_CACHE="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-go-cache.XXXXXX")"
   chmod 700 "$CLOSED_GO_CACHE"
+}
+
+historical_closed_go() {
+  local argument command=() command_seen=0
+  [[ -n "$CLOSED_GO_CACHE" ]] || die "historical closed Go cache is not initialized"
+  for argument in "$@"; do
+    if (( command_seen == 0 )) && [[ "$argument" != *=* ]]; then
+      command_seen=1
+      if [[ "$argument" == go ]]; then
+        initialize_closed_go_path
+        require_bound_executable "$CLOSED_GO_PATH" "$CLOSED_GO_SHA256" Go || return 1
+        argument="$CLOSED_GO_PATH"
+      fi
+    fi
+    command+=("$argument")
+  done
+  env -i \
+    HOME="$HOME" PATH="$HOST_PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    CGO_ENABLED=0 GOENV=off GOCACHE="$CLOSED_GO_CACHE" GOEXPERIMENT= GOFLAGS= \
+    GOTOOLCHAIN=local GOWORK=off T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
+    "${command[@]}"
 }
 
 initialize_v25_custody_commands() {
@@ -235,11 +400,15 @@ initialize_v25_custody_commands() {
   initialize_closed_go_cache
   if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_CLEANUP_SHA256" &&
     -n "$V25_EXECUTE_COMMAND" && -n "$V25_EXECUTE_SHA256" &&
+    -n "$V25_FREEZE_COMMAND" && -n "$V25_FREEZE_SHA256" &&
     -n "$V25_LOCK_COMMAND" && -n "$V25_LOCK_SHA256" &&
     -n "$V25_PREPARE_COMMAND" && -n "$V25_PREPARE_SHA256" &&
+    -n "$V25_PROMOTE_COMMAND" && -n "$V25_PROMOTE_SHA256" &&
     -n "$V25_RECEIPT_COMMAND" && -n "$V25_RECEIPT_SHA256" ]]; then
-    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
-      "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+    validate_closed_controls
+    [[ "$CLOSED_CACHES_ABSENT" == 1 ]] || die "prebuilt V25 commands retained mutable Go caches"
+    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+      "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
       require_v25_custody_command "$command_path" ||
         die "prebuilt V25 custody command became invalid: $command_path"
     done
@@ -247,34 +416,52 @@ initialize_v25_custody_commands() {
   fi
   [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_CLEANUP_SHA256" &&
     -z "$V25_EXECUTE_COMMAND" && -z "$V25_EXECUTE_SHA256" &&
+    -z "$V25_FREEZE_COMMAND" && -z "$V25_FREEZE_SHA256" &&
     -z "$V25_LOCK_COMMAND" && -z "$V25_LOCK_SHA256" &&
     -z "$V25_PREPARE_COMMAND" && -z "$V25_PREPARE_SHA256" &&
+    -z "$V25_PROMOTE_COMMAND" && -z "$V25_PROMOTE_SHA256" &&
     -z "$V25_RECEIPT_COMMAND" && -z "$V25_RECEIPT_SHA256" ]] ||
     die "prebuilt V25 custody-command state is incomplete"
-  command_root="${CLOSED_GO_CACHE}/t4013-custody-commands"
+  [[ "$CLOSED_CACHES_ABSENT" == 0 && ! -e "$CLOSED_COMMAND_ROOT" && ! -L "$CLOSED_COMMAND_ROOT" ]] ||
+    die "closed build controls are not fresh"
+  (cd "$REPO_REAL" && closed_go GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org \
+    go mod download all)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  command_root="$CLOSED_COMMAND_ROOT"
   mkdir -m 700 "$command_root"
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
     go build -o "${command_root}/" \
     ./spike/t4013/cmd/t4013-cleanup \
     ./spike/t4013/cmd/t4013-execute \
+    ./spike/t4013/cmd/t4013-freeze \
     ./spike/t4013/cmd/t4013-lock \
     ./spike/t4013/cmd/t4013-prepare \
+    ./spike/t4013/cmd/t4013-promote \
     ./spike/t4013/cmd/t4013-receipt)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
   V25_CLEANUP_COMMAND="${command_root}/t4013-cleanup"
   V25_CLEANUP_SHA256="$(executable_digest "$V25_CLEANUP_COMMAND")"
   V25_EXECUTE_COMMAND="${command_root}/t4013-execute"
   V25_EXECUTE_SHA256="$(executable_digest "$V25_EXECUTE_COMMAND")"
+  V25_FREEZE_COMMAND="${command_root}/t4013-freeze"
+  V25_FREEZE_SHA256="$(executable_digest "$V25_FREEZE_COMMAND")"
   V25_LOCK_COMMAND="${command_root}/t4013-lock"
   V25_LOCK_SHA256="$(executable_digest "$V25_LOCK_COMMAND")"
   V25_PREPARE_COMMAND="${command_root}/t4013-prepare"
   V25_PREPARE_SHA256="$(executable_digest "$V25_PREPARE_COMMAND")"
+  V25_PROMOTE_COMMAND="${command_root}/t4013-promote"
+  V25_PROMOTE_SHA256="$(executable_digest "$V25_PROMOTE_COMMAND")"
   V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
   V25_RECEIPT_SHA256="$(executable_digest "$V25_RECEIPT_COMMAND")"
-  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
-    "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
+    "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
     [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
       die "prebuilt V25 custody command is invalid: $command_path"
   done
+  (cd "$REPO_REAL" && closed_go GOPROXY=off GOSUMDB=off go clean -modcache)
+  rm -rf -- "$CLOSED_GO_CACHE"
+  CLOSED_CACHES_ABSENT=1
+  validate_closed_controls
 }
 
 run_v25_custody_command_in_repo_active() {
@@ -293,11 +480,13 @@ require_v25_custody_command() {
   case "$command_path" in
     "$V25_CLEANUP_COMMAND") expected="$V25_CLEANUP_SHA256" ;;
     "$V25_EXECUTE_COMMAND") expected="$V25_EXECUTE_SHA256" ;;
+    "$V25_FREEZE_COMMAND") expected="$V25_FREEZE_SHA256" ;;
     "$V25_LOCK_COMMAND") expected="$V25_LOCK_SHA256" ;;
     "$V25_PREPARE_COMMAND") expected="$V25_PREPARE_SHA256" ;;
+    "$V25_PROMOTE_COMMAND") expected="$V25_PROMOTE_SHA256" ;;
     "$V25_RECEIPT_COMMAND") expected="$V25_RECEIPT_SHA256" ;;
   esac
-  [[ "$command_path" == "${CLOSED_GO_CACHE}/t4013-custody-commands/"* &&
+  [[ "$command_path" == "${CLOSED_COMMAND_ROOT}/"* &&
     -n "$expected" && -f "$command_path" && ! -L "$command_path" && -x "$command_path" &&
     "$(executable_digest "$command_path")" == "$expected" ]] ||
     {
@@ -327,7 +516,14 @@ cleanup_on_exit() {
   if [[ -n "$RUN_LOCK_DIRECTORY" || -n "$RUN_LOCK_TOKEN" ]]; then
     release_run_lock || status=1
   fi
-  if [[ -n "$CLOSED_GO_CACHE" ]]; then
+  if [[ -n "$CLOSED_CONTROL_ROOT" ]]; then
+    validate_closed_controls
+    if [[ "$CLOSED_CACHES_ABSENT" == 0 ]]; then
+      find "$CLOSED_GO_CACHE" "$CLOSED_GO_MODULE_CACHE" -type d -exec /bin/chmod 700 {} + || status=1
+    fi
+    rm -rf -- "$CLOSED_CONTROL_ROOT" || status=1
+    CLOSED_CONTROL_ROOT=""
+  elif [[ -n "$CLOSED_GO_CACHE" ]]; then
     rm -rf -- "$CLOSED_GO_CACHE" || status=1
     CLOSED_GO_CACHE=""
   fi
@@ -435,22 +631,42 @@ enter_v25_run_lock() {
   initialize_v25_custody_commands
   require_v25_custody_command "$V25_LOCK_COMMAND" ||
     die "V25 run-root lock command was not prebuilt before operation admission"
-  export CLOSED_GO_CACHE CLOSED_GO_PATH CLOSED_GO_SHA256 CLOSED_GIT_PATH CLOSED_GIT_SHA256
-  export CLOSED_GIT_CORE_PATH CLOSED_GIT_CORE_SHA256 CLOSED_SURREAL_PATH CLOSED_SURREAL_SHA256
-  export V25_CLEANUP_COMMAND V25_CLEANUP_SHA256 V25_EXECUTE_COMMAND V25_EXECUTE_SHA256
-  export V25_LOCK_COMMAND V25_LOCK_SHA256 V25_PREPARE_COMMAND V25_PREPARE_SHA256
-  export V25_RECEIPT_COMMAND V25_RECEIPT_SHA256
-  exec "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"
+  exec /usr/bin/env -i \
+    HOME="$CLOSED_HOME" PATH="$CLOSED_SYSTEM_PATH" \
+    TMPDIR="$CLOSED_TMP" TEMP="$CLOSED_TMP" TMP="$CLOSED_TMP" \
+    XDG_CONFIG_HOME="$CLOSED_HOME" XDG_CACHE_HOME="$CLOSED_TMP" XDG_DATA_HOME="$CLOSED_HOME" \
+    LC_ALL=C LANG=C TZ=UTC \
+    PHEBS_REPO_ROOT="$REPO_REAL" PHEBS_CEREMONY_ROOT="$CEREMONY_REAL" \
+    PHEBS_T4013_BASE_PORT="$BASE_PORT" \
+    CLOSED_CONTROL_ROOT="$CLOSED_CONTROL_ROOT" CLOSED_CONTROL_SHA256="$CLOSED_CONTROL_SHA256" \
+    CLOSED_CONTROL_MANIFEST="$CLOSED_CONTROL_MANIFEST" CLOSED_HOME="$CLOSED_HOME" CLOSED_TMP="$CLOSED_TMP" \
+    CLOSED_GO_CACHE="$CLOSED_GO_CACHE" CLOSED_GO_MODULE_CACHE="$CLOSED_GO_MODULE_CACHE" \
+    CLOSED_COMMAND_ROOT="$CLOSED_COMMAND_ROOT" CLOSED_CACHES_ABSENT="$CLOSED_CACHES_ABSENT" \
+    CLOSED_GO_PATH="$CLOSED_GO_PATH" CLOSED_GO_SHA256="$CLOSED_GO_SHA256" \
+    CLOSED_GIT_PATH="$CLOSED_GIT_PATH" CLOSED_GIT_SHA256="$CLOSED_GIT_SHA256" \
+    CLOSED_GIT_CORE_PATH="$CLOSED_GIT_CORE_PATH" CLOSED_GIT_CORE_SHA256="$CLOSED_GIT_CORE_SHA256" \
+    CLOSED_GIT_EXEC_PATH="$CLOSED_GIT_EXEC_PATH" \
+    CLOSED_SURREAL_PATH="$CLOSED_SURREAL_PATH" CLOSED_SURREAL_SHA256="$CLOSED_SURREAL_SHA256" \
+    V25_CLEANUP_COMMAND="$V25_CLEANUP_COMMAND" V25_CLEANUP_SHA256="$V25_CLEANUP_SHA256" \
+    V25_EXECUTE_COMMAND="$V25_EXECUTE_COMMAND" V25_EXECUTE_SHA256="$V25_EXECUTE_SHA256" \
+    V25_FREEZE_COMMAND="$V25_FREEZE_COMMAND" V25_FREEZE_SHA256="$V25_FREEZE_SHA256" \
+    V25_LOCK_COMMAND="$V25_LOCK_COMMAND" V25_LOCK_SHA256="$V25_LOCK_SHA256" \
+    V25_PREPARE_COMMAND="$V25_PREPARE_COMMAND" V25_PREPARE_SHA256="$V25_PREPARE_SHA256" \
+    V25_PROMOTE_COMMAND="$V25_PROMOTE_COMMAND" V25_PROMOTE_SHA256="$V25_PROMOTE_SHA256" \
+    V25_RECEIPT_COMMAND="$V25_RECEIPT_COMMAND" V25_RECEIPT_SHA256="$V25_RECEIPT_SHA256" \
+    "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"
 }
 
 closed_git() {
+  initialize_closed_go_cache
   initialize_closed_git_paths
   require_bound_executable "$CLOSED_GIT_CORE_PATH" "$CLOSED_GIT_CORE_SHA256" Git-core || return 1
+  validate_closed_controls
   env -i \
-    HOME="$HOME" \
-    PATH="$PATH" \
-    TMPDIR="${TMPDIR:-/tmp}" \
-    LC_ALL=C \
+    HOME="$CLOSED_HOME" PATH="$CLOSED_GIT_EXEC_PATH" \
+    TMPDIR="$CLOSED_TMP" TEMP="$CLOSED_TMP" TMP="$CLOSED_TMP" \
+    XDG_CONFIG_HOME="$CLOSED_HOME" XDG_CACHE_HOME="$CLOSED_TMP" XDG_DATA_HOME="$CLOSED_HOME" \
+    LC_ALL=C LANG=C TZ=UTC \
     GIT_ATTR_NOSYSTEM=1 \
     GIT_CONFIG_GLOBAL=/dev/null \
     GIT_CONFIG_NOSYSTEM=1 \
@@ -461,20 +677,40 @@ closed_git() {
 }
 
 closed_surreal() {
+  initialize_closed_go_cache
   initialize_closed_surreal_path
   require_bound_executable "$CLOSED_SURREAL_PATH" "$CLOSED_SURREAL_SHA256" SurrealDB || return 1
-  env -i HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+  validate_closed_controls
+  env -i HOME="$CLOSED_HOME" PATH="$CLOSED_GIT_EXEC_PATH" \
+    TMPDIR="$CLOSED_TMP" TEMP="$CLOSED_TMP" TMP="$CLOSED_TMP" \
+    XDG_CONFIG_HOME="$CLOSED_HOME" XDG_CACHE_HOME="$CLOSED_TMP" XDG_DATA_HOME="$CLOSED_HOME" \
+    LC_ALL=C LANG=C TZ=UTC \
     "$CLOSED_SURREAL_PATH" "$@"
+}
+
+plan_git() {
+  local plan_path="$1"
+  shift
+  if is_v25_plan "$plan_path"; then
+    closed_git "$@"
+    return
+  fi
+  initialize_closed_git_paths
+  require_bound_executable "$CLOSED_GIT_CORE_PATH" "$CLOSED_GIT_CORE_SHA256" Git-core || return 1
+  env -i \
+    HOME="$HOME" PATH="$HOST_PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    GIT_ATTR_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+    GIT_NO_LAZY_FETCH=1 GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
+    "$CLOSED_GIT_CORE_PATH" "$@"
 }
 
 plan_go() {
   local plan_path="$1"
   shift
   if is_v25_plan "$plan_path"; then
-    closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify || return 1
     closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off "$@" || return 1
   else
-    env GOPROXY=off "$@"
+    env PATH="$HOST_PATH" GOPROXY=off "$@"
   fi
 }
 
@@ -482,10 +718,9 @@ plan_go_active() {
   local plan_path="$1"
   shift
   if is_v25_plan "$plan_path"; then
-    closed_go_active GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify || return 1
     closed_go_active GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off "$@" || return 1
   else
-    env GOPROXY=off "$@"
+    env PATH="$HOST_PATH" GOPROXY=off "$@"
   fi
 }
 
@@ -528,17 +763,25 @@ require_command() {
 }
 
 durable_promote() {
-  local temporary="$1" final="$2" filesystem_root="$3"
+  local temporary="$1" final="$2" filesystem_root="$3" plan_path="$4"
   [[ "$temporary" == /* && "$final" == /* && "$filesystem_root" == /* &&
     "${temporary%/*}" == "${final%/*}" &&
     -f "$temporary" && ! -L "$temporary" &&
     ! -e "$final" && ! -L "$final" &&
     -d "$filesystem_root" && ! -L "$filesystem_root" ]] ||
     die "durable evidence promotion is invalid"
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
-    go run ./spike/t4013/cmd/t4013-promote \
-    -temporary "$temporary" -output "$final" -root "$CEREMONY_REAL") ||
-    die "durable evidence promotion failed"
+  if is_v25_plan "$plan_path"; then
+    initialize_v25_custody_commands
+    require_v25_custody_command "$V25_PROMOTE_COMMAND" || die "V25 promotion command is unavailable"
+    (cd "$REPO_REAL" && closed_go \
+      "$V25_PROMOTE_COMMAND" -temporary "$temporary" -output "$final" -root "$CEREMONY_REAL") ||
+      die "durable evidence promotion failed"
+  else
+    (cd "$REPO_REAL" && historical_closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+      go run ./spike/t4013/cmd/t4013-promote \
+      -temporary "$temporary" -output "$final" -root "$CEREMONY_REAL") ||
+      die "durable evidence promotion failed"
+  fi
 }
 
 canonical_existing_directory() {
@@ -638,7 +881,7 @@ host_preflight() {
 
 preflight() {
   local command_name commit host_plan_root
-  for command_name in awk cmp cp date df du env find git go grep lsof mkdir mktemp pgrep ps rm sed shasum sort ssh-keygen surreal sysctl tar uname uniq wc; do
+  for command_name in awk cmp cp date df du env find grep lsof mkdir mktemp pgrep ps rm sed shasum sort ssh-keygen sysctl tar uname uniq wc; do
     require_command "$command_name"
   done
   initialize_repository
@@ -646,23 +889,20 @@ preflight() {
   initialize_closed_go_cache
   require_clean_checkout
   host_preflight
-  (cd "$REPO_REAL" && closed_go go mod download all)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  initialize_v25_custody_commands
   commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
-  host_plan_root="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-host-plan.XXXXXX")"
-  if ! (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
-    go run ./spike/t4013/cmd/t4013-freeze \
+  host_plan_root="$(mktemp -d "$CLOSED_TMP/phebs-t4013-host-plan.XXXXXX")"
+  if ! run_v25_custody_command_in_repo_active "$V25_FREEZE_COMMAND" \
     -root "$REPO_REAL" \
     -source-commit "$commit" \
     -data-parent "$CEREMONY_REAL" \
     -bind-host-toolchain \
-    -output "${host_plan_root}/plan.json") >/dev/null; then
+    -output "${host_plan_root}/plan.json" >/dev/null; then
     rm -rf -- "$host_plan_root"
     die "exact V25 prospective host preflight failed"
   fi
   rm -rf -- "$host_plan_root"
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
-  initialize_v25_custody_commands
+  validate_closed_controls
   require_clean_checkout
   note "T40.13 host, module, and prebuilt custody-command checks: PASS"
   note "process-launching regression and readiness suites are branch gates and are not re-run outside durable custody"
@@ -670,14 +910,14 @@ preflight() {
 
 verification_preflight() {
   local command_name
-  for command_name in awk cmp du env find git go grep mktemp pgrep ps rm sed shasum sort ssh-keygen tar uniq wc; do
+  for command_name in awk cmp du env find grep mktemp pgrep ps rm sed shasum sort ssh-keygen tar uniq wc; do
     require_command "$command_name"
   done
   initialize_repository
+  initialize_ceremony_root
   initialize_closed_go_cache
   require_clean_checkout
-  (cd "$REPO_REAL" && closed_go go mod download all)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+  initialize_v25_custody_commands
   note "source-free verifier checkout: PASS"
 }
 
@@ -721,6 +961,8 @@ historical_host_preflight() {
 
 historical_preflight() {
   local command_name
+  PATH="$HOST_PATH"
+  export PATH
   for command_name in awk cmp cp date df find git go grep lsof mkdir mktemp mv rm sed shasum sort ssh-keygen surreal sysctl tar uname uniq wc; do
     require_command "$command_name"
   done
@@ -736,6 +978,8 @@ historical_preflight() {
 
 historical_verification_preflight() {
   local command_name
+  PATH="$HOST_PATH"
+  export PATH
   for command_name in awk cmp find git go mktemp rm sed shasum sort ssh-keygen tar uniq wc; do
     require_command "$command_name"
   done
@@ -803,14 +1047,12 @@ freeze() {
   private_root="${run_root}/private"
   mkdir -m 700 "$run_root" "$evidence_root" "$private_root"
   commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
-    go run ./spike/t4013/cmd/t4013-freeze \
+  run_v25_custody_command_in_repo_active "$V25_FREEZE_COMMAND" \
     -root "$REPO_REAL" \
     -source-commit "$commit" \
     -data-parent "$CEREMONY_REAL" \
     -bind-host-toolchain \
-    -output "${evidence_root}/plan.json") >/dev/null
+    -output "${evidence_root}/plan.json" >/dev/null
   digest="$(plan_digest_for "${evidence_root}/plan.json")"
   frozen_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   public_key="$(awk 'NF >= 2 { print $1 " " $2; exit }' "${SIGNING_KEY}.pub")"
@@ -822,15 +1064,15 @@ freeze() {
   freeze_tmp="${evidence_root}/freeze.json.tmp"
   freeze_signature_tmp="${freeze_tmp}.sig"
   cp -p "${SIGNING_KEY}.pub" "$signer_tmp"
-  durable_promote "$signer_tmp" "${evidence_root}/signer.pub" "$evidence_root"
+  durable_promote "$signer_tmp" "${evidence_root}/signer.pub" "$evidence_root" "${evidence_root}/plan.json"
   printf '%s %s\n' "$SIGNER_IDENTITY" "$public_key" > "$allowed_tmp"
-  durable_promote "$allowed_tmp" "${evidence_root}/allowed_signers" "$evidence_root"
+  durable_promote "$allowed_tmp" "${evidence_root}/allowed_signers" "$evidence_root" "${evidence_root}/plan.json"
   printf '{\n  "schema": "t4013-freeze-envelope-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "signer_fingerprint": "%s",\n  "frozen_at": "%s"\n}\n' \
     "$ceremony_id" "$commit" "$digest" "$fingerprint" "$frozen_at" > "$freeze_tmp"
   ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$FREEZE_SIGNATURE_NAMESPACE" \
     "$freeze_tmp" >/dev/null
-  durable_promote "$freeze_tmp" "${evidence_root}/freeze.json" "$evidence_root"
-  durable_promote "$freeze_signature_tmp" "${evidence_root}/freeze.json.sig" "$evidence_root"
+  durable_promote "$freeze_tmp" "${evidence_root}/freeze.json" "$evidence_root" "${evidence_root}/plan.json"
+  durable_promote "$freeze_signature_tmp" "${evidence_root}/freeze.json.sig" "$evidence_root" "${evidence_root}/plan.json"
   note "frozen ceremony: $ceremony_id"
   note "source commit: $commit"
   note "plan path: ${evidence_root}/plan.json"
@@ -892,10 +1134,11 @@ require_exact_inventory() {
 }
 
 verify_frozen_identity() {
-  local evidence_root="$1" source_commit plan_digest
+  local evidence_root="$1" plan_path source_commit plan_digest
+  plan_path="${evidence_root}/plan.json"
   source_commit="$(manifest_value "${evidence_root}/freeze.json" source_commit)"
   plan_digest="$(manifest_value "${evidence_root}/freeze.json" plan_digest)"
-  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(closed_git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
+  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(plan_git "$plan_path" -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the frozen execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "frozen plan digest differs"
   ssh-keygen -Y verify \
@@ -906,7 +1149,7 @@ verify_frozen_identity() {
 }
 
 verify_evidence_directory() {
-  local evidence_root="$1" manifest source_commit plan_digest temporary_root rebuilt
+  local evidence_root="$1" manifest source_commit plan_digest temporary_root rebuilt temporary_parent
   local required
   require_exact_inventory "$evidence_root" \
     allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json \
@@ -919,7 +1162,7 @@ verify_evidence_directory() {
   verify_frozen_identity "$evidence_root"
   source_commit="$(manifest_value "$manifest" source_commit)"
   plan_digest="$(manifest_value "$manifest" plan_digest)"
-  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(closed_git -C "$REPO_REAL" rev-parse HEAD)" ]] ||
+  [[ "$source_commit" =~ ^[0-9a-f]{40}$ && "$source_commit" == "$(plan_git "${evidence_root}/plan.json" -C "$REPO_REAL" rev-parse HEAD)" ]] ||
     die "verification checkout differs from the sealed execution commit"
   [[ "$plan_digest" == "$(plan_digest_for "${evidence_root}/plan.json")" ]] || die "sealed plan digest differs"
   (cd "$evidence_root" && shasum -a 256 -c SHA256SUMS)
@@ -928,14 +1171,27 @@ verify_evidence_directory() {
     -I "$SIGNER_IDENTITY" \
     -n "$SIGNATURE_NAMESPACE" \
     -s "${evidence_root}/SHA256SUMS.sig" < "${evidence_root}/SHA256SUMS"
-  temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-verify.XXXXXX")"
+  temporary_parent="${TMPDIR:-/tmp}"
+  if is_v25_plan "${evidence_root}/plan.json"; then
+    temporary_parent="$CLOSED_TMP"
+  fi
+  temporary_root="$(mktemp -d "$temporary_parent/phebs-t4013-verify.XXXXXX")"
   rebuilt="${temporary_root}/results.json"
-  if ! (cd "$REPO_REAL" && plan_go "${evidence_root}/plan.json" \
+  if is_v25_plan "${evidence_root}/plan.json"; then
+    run_v25_custody_command_in_repo_active "$V25_RECEIPT_COMMAND" \
+      -plan "${evidence_root}/plan.json" \
+      -plan-digest "$plan_digest" \
+      -observation "${evidence_root}/observation.json" \
+      -output "$rebuilt" || {
+        rm -rf -- "$temporary_root"
+        die "source-free receipt could not be rebuilt"
+      }
+  elif ! (cd "$REPO_REAL" && plan_go "${evidence_root}/plan.json" \
     go run ./spike/t4013/cmd/t4013-receipt \
-    -plan "${evidence_root}/plan.json" \
-    -plan-digest "$plan_digest" \
-    -observation "${evidence_root}/observation.json" \
-    -output "$rebuilt"); then
+      -plan "${evidence_root}/plan.json" \
+      -plan-digest "$plan_digest" \
+      -observation "${evidence_root}/observation.json" \
+      -output "$rebuilt"); then
     rm -rf -- "$temporary_root"
     die "source-free receipt could not be rebuilt"
   fi
@@ -948,15 +1204,16 @@ verify_evidence_directory() {
 }
 
 seal_evidence() {
-  local ceremony_id="$1" run_root evidence_root source_commit plan_digest generated_at
+  local ceremony_id="$1" run_root evidence_root plan_path source_commit plan_digest generated_at
   local package package_tmp package_digest package_sidecar package_sidecar_tmp package_bytes
   local manifest_tmp checksums_tmp signature_tmp
   local seal_count=0 seal_name
   local -a expected
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
-  source_commit="$(closed_git -C "$REPO_REAL" rev-parse HEAD)"
-  plan_digest="$(plan_digest_for "${evidence_root}/plan.json")"
+  plan_path="${evidence_root}/plan.json"
+  source_commit="$(plan_git "$plan_path" -C "$REPO_REAL" rev-parse HEAD)"
+  plan_digest="$(plan_digest_for "$plan_path")"
   generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   manifest_tmp="${evidence_root}/manifest.json.tmp"
   checksums_tmp="${evidence_root}/SHA256SUMS.tmp"
@@ -989,12 +1246,12 @@ seal_evidence() {
     fi
     printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
       "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "$manifest_tmp"
-    durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root"
+    durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"
     (cd "$evidence_root" && shasum -a 256 \
       allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > "$checksums_tmp")
     ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "$checksums_tmp" >/dev/null
-    durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root"
-    durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root"
+    durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root" "$plan_path"
+    durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root" "$plan_path"
     verify_evidence_directory "$evidence_root"
   fi
   package="${run_root}/${ceremony_id}-source-free.tgz"
@@ -1017,7 +1274,7 @@ seal_evidence() {
         die "source-free package sidecar differs"
     else
       printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar_tmp"
-      durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root"
+      durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root" "$plan_path"
     fi
     note "sealed source-free package: $package"
     note "package sha256: $package_digest"
@@ -1035,10 +1292,10 @@ seal_evidence() {
   [[ "$package_bytes" =~ ^[0-9]+$ ]] || die "source-free package size is invalid"
   (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
     die "source-free package exceeds its fixed 4-MiB transfer bound"
-  durable_promote "$package_tmp" "$package" "$run_root"
+  durable_promote "$package_tmp" "$package" "$run_root" "$plan_path"
   package_digest="$(shasum -a 256 "$package" | awk '{print $1}')"
   printf '%s  %s\n' "$package_digest" "$(basename "$package")" > "$package_sidecar_tmp"
-  durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root"
+  durable_promote "$package_sidecar_tmp" "$package_sidecar" "$run_root" "$plan_path"
   note "sealed source-free package: $package"
   note "package sha256: $package_digest"
 }
@@ -1077,6 +1334,9 @@ seal_run() {
   custody_path="${run_root}/custody"
   [[ -d "$run_root" && ! -L "$run_root" ]] || die "ceremony run directory is invalid"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
+  if ! is_v25_plan "$plan_path"; then
+    initialize_historical_go_cache
+  fi
   acquire_run_lock "$run_root"
   verification_preflight_for_plan "$plan_path"
   if is_v25_plan "$plan_path"; then
@@ -1132,7 +1392,6 @@ execute_ceremony() {
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   initialize_repository
   initialize_ceremony_root
-  initialize_closed_go_cache
   select_signing_key "$ceremony_id"
   ensure_signing_key
   run_root="$(run_root_for "$ceremony_id")"
@@ -1148,6 +1407,9 @@ execute_ceremony() {
     die "frozen ceremony directory is missing or invalid"
   acquire_run_lock "$run_root"
   [[ -f "$plan_path" && ! -L "$plan_path" ]] || die "frozen plan is missing or symlinked"
+  if ! is_v25_plan "$plan_path"; then
+    initialize_historical_go_cache
+  fi
   for path in "$prepared_path" "${prepared_path}.tmp" "${prepared_path}.preparing" \
     "$observation_path" "${observation_path}.tmp" \
     "${observation_path}.teardown" "${observation_path}.teardown.tmp" \
@@ -1296,7 +1558,7 @@ verify_bundle() {
   (( package_bytes > 0 && package_bytes <= MAXIMUM_TRANSFER_PACKAGE_BYTES )) ||
     die "bundle exceeds the fixed 4-MiB transfer bound"
   verification_preflight
-  temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/phebs-t4013-bundle.XXXXXX")"
+  temporary_root="$(mktemp -d "$CLOSED_TMP/phebs-t4013-bundle.XXXXXX")"
   listing="${temporary_root}/listing"
   COPYFILE_DISABLE=1 tar -tzf "$package" > "$listing"
   while IFS= read -r entry; do

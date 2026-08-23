@@ -373,7 +373,8 @@ func minimalV25Prepared(workspace, planDigest string) Prepared {
 	}
 	return Prepared{
 		Schema: PreparedSchemaV2, PlanDigest: planDigest,
-		SupervisionToken: strings.Repeat("a", 64),
+		SupervisionToken:        strings.Repeat("a", 64),
+		ExecutionControlsSHA256: "sha256:" + strings.Repeat("b", 64),
 		Profiles: []PreparedProfile{
 			profile("structural-2m-v1", "structural", "41731"),
 			profile("semantic-262144-v1", "semantic", "41732"),

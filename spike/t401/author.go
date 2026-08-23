@@ -40,8 +40,9 @@ type authorState struct {
 }
 
 type gitExecutable struct {
-	path   string
-	sha256 string
+	path        string
+	sha256      string
+	environment []string
 }
 
 func (git gitExecutable) pathForLaunch() (string, error) {
@@ -67,12 +68,14 @@ func AuthorClosedSystem(ctx context.Context, request AuthorRequest) (Receipt, er
 // AuthorClosedSystemWithGit uses one already-verified canonical Git path for
 // every V25 authoring command.
 func AuthorClosedSystemWithGit(
-	ctx context.Context, request AuthorRequest, path, sha256 string,
+	ctx context.Context, request AuthorRequest, path, sha256 string, environment []string,
 ) (Receipt, error) {
-	if !filepath.IsAbs(path) || sha256 == "" {
-		return Receipt{}, errors.New("T40.1 closed author Git executable must be absolute")
+	if !filepath.IsAbs(path) || sha256 == "" || len(environment) == 0 {
+		return Receipt{}, errors.New("T40.1 closed author Git binding is invalid")
 	}
-	return author(ctx, request, true, gitExecutable{path: path, sha256: sha256})
+	return author(ctx, request, true, gitExecutable{
+		path: path, sha256: sha256, environment: slices.Clone(environment),
+	})
 }
 
 func author(ctx context.Context, request AuthorRequest, closedSystem bool, git gitExecutable) (Receipt, error) {
@@ -417,7 +420,7 @@ func importRevision(
 	}
 	command := exec.CommandContext(ctx, gitPath, "fast-import", "--quiet", "--date-format=raw")
 	command.Dir = repository
-	command.Env = deterministicGitEnvironment(nil)
+	command.Env = git.environmentFor(nil)
 	stdin, err := command.StdinPipe()
 	if err != nil {
 		return err
@@ -962,7 +965,7 @@ func inspectRevisionTree(
 	}
 	command := exec.CommandContext(ctx, gitPath, "ls-tree", "-r", "-l", "-z", commit)
 	command.Dir = repository
-	command.Env = deterministicGitEnvironment(nil)
+	command.Env = git.environmentFor(nil)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		return 0, 0, err
@@ -1240,7 +1243,14 @@ func runGitWithExecutable(
 	if err != nil {
 		return "", err
 	}
-	return runCommand(ctx, directory, deterministicGitEnvironment(extraEnvironment), path, arguments...)
+	return runCommand(ctx, directory, git.environmentFor(extraEnvironment), path, arguments...)
+}
+
+func (git gitExecutable) environmentFor(extra []string) []string {
+	if git.environment == nil {
+		return deterministicGitEnvironment(extra)
+	}
+	return append(slices.Clone(git.environment), extra...)
 }
 
 func runCommand(ctx context.Context, directory string, environment []string, name string, arguments ...string) (string, error) {

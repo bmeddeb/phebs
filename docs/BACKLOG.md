@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13f next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13g next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,17 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13f · Hermetic execution controls** *(high · needs T40.13e)* — remove
-ambient state that can change V25 Git/Go/source behavior after identity review.
-AC: HOME, module, build, temporary, Git, and shell control paths are
-custody-local and digest-bound or explicitly absent; frozen-source export and
-private builds invoke only that closed environment; poisoned ambient config,
-HOME, module cache, and temporary controls cannot affect output; restarts reopen
-and revalidate the same controls; cleanup owns every private cache without
-touching shared host state; cache identity work has one fixed bound per
-immutable snapshot and never rehashes a full cache per poll, phase, or restart;
-V1–V24 environment behavior remains unchanged.
 
 **T40.13g · Authenticated returned-evidence firewall** *(high · needs
 T40.13f)* — make an untrusted returned bundle safe to inspect and impossible to

@@ -9858,3 +9858,42 @@ file hashing, so ordinary query, worker, sync, startup, and publication paths
 gain no corpus/shard read, child, retained cache, or persistent state. T40.13f
 is next. No freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound
 change, or scale/SLO claim is authorized.
+
+**T40.13f ✅ · Hermetic execution controls** *(2026-08-23; high)* — fresh V25
+Prepare now creates one canonical, at-most-4-KiB execution-control manifest
+inside custody and binds its SHA-256 identity in private prepared authority.
+It fixes custody-local HOME, XDG, temporary, module, and build paths plus the
+reviewed Git exec directory. T40.1 authoring, frozen-source export, revision
+changes, module acquisition, private builds, Phebs serve/backup/restore, and
+every restart use an allowlist-only environment with ambient Go/Git/HOME/PATH,
+module, temporary, dynamic-loader, and shell startup controls absent. Execute
+reopens and exact-compares the manifest, host binding, directories, and cache
+absence before mutation and every private launch.
+
+Private builds populate a fresh module cache through the explicit public Go
+checksum path, run `go mod verify`, and bind one snapshot under the existing
+100,000-entry/2-GiB tree limit. Builds then run offline, compare that snapshot
+once after all four outputs, and durably remove module and build caches before
+runtime. A replacement manifest, symlinked temp path, changed module snapshot,
+or reappearing runtime cache refuses. Custody cleanup owns those paths and
+cannot follow them into shared host state.
+
+The supported shell mirrors the contract beneath the ceremony root. It drops
+untrusted inherited `CLOSED_*` values unless a live run-lock descriptor is
+being adopted, fixes its system PATH after exact tool discovery, and
+digest-binds its private HOME/temp/cache/command paths with the retained host
+tools. Fresh private caches build seven exact commands—freeze, promote,
+Prepare, Execute, Cleanup, lock, and receipt—then disappear. Lock re-exec and
+later commands revalidate the small manifest, explicit cache absence, and
+executable digests; normal cleanup removes only that exact root, while
+unproven exit retains it.
+
+Bounded tests poison ambient HOME/PATH/XDG/Git/Go/module/temp/shell controls,
+replace private manifests and directories, prove host caches remain untouched,
+exercise closed source export and serve/backup/restore revalidation, and retain
+V1–V24 environment behavior. Module snapshot hashing is two bounded linear
+reads around one build, never a poll, phase, restart, retry, request, or
+publication transition; reopening reads one at-most-4-KiB manifest and a fixed
+directory set. Ordinary production paths gain no work. T40.13g is next. No
+freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
+scale/SLO claim is authorized.

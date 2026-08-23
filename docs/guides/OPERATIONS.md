@@ -4868,8 +4868,10 @@ Use a clean checkout at the exact reviewed commit and run:
 This is the required cheap host/module/command gate before requesting a freeze.
 It performs the prospective V25 host-bound freeze in temporary output,
 including the exact ceremony filesystem's projected pressure and atomic
-evidence operations, verifies the closed module graph, and prebuilds the direct
-V25 Prepare, Execute, Cleanup, and receipt commands. It does not run the
+evidence operations, verifies a fresh custody-local module graph, and prebuilds
+the exact V25 freeze, promotion, Prepare, Execute, Cleanup, lock, and receipt
+commands. It removes the private module and build caches before returning. It
+does not run the
 process-launching production/harness packages, focused real-tool proof, or
 semantic/stale-worker rehearsals inside ceremony preflight; those remain branch
 gates on the exact reviewed commit. A capacity, module, command-build, or
@@ -4914,10 +4916,10 @@ retirement is durably confirmed.
 Do not remove, rename, or hand-edit the supervision directory, its
 `.creating.<token>` stage, `.retiring` directory, or `.retired` state. Do not
 substitute `ps`, `pgrep`, port freedom, or elapsed time for the kernel lease.
-Keep the run lock, closed Go cache, prepared/checkpoint controls, logs, and any
-custody together when a command reports live, indeterminate, mismatched, or
-malformed supervision. The supported V25 driver uses prebuilt direct operation
-roots with no outer `go run`. Receipt resume may complete exact
+Keep the run lock, closed execution-control root, prepared/checkpoint controls,
+logs, and any custody together when a command reports live, indeterminate,
+mismatched, or malformed supervision. The supported V25 driver uses prebuilt
+direct operation roots with no outer `go run`. Receipt resume may complete exact
 drained/terminal authority; any supervision path surviving that recovery
 refuses further publication and seal. Historical V1–V24 bytes and normal
 supported CLI flow remain historical; direct legacy Destroy intentionally
@@ -4946,16 +4948,34 @@ executable immediately before each ceremony launch. The four custody-built
 binaries are rehashed as one bounded snapshot before every serve, backup, or
 restore start; Phebs also rechecks exact SurrealDB immediately before start and
 exact zoekt, focused-index, and Buf immediately before each child launch. The
-shell retains and rehashes all five
+shell retains and rehashes all seven
 prebuilt V25 commands across its lock re-exec. A changed file, symlink, or PATH
 selection is a hard refusal; do not replace a tool or hand-edit its digest.
 Full Go/Git tree hashing is limited to fixed admission and terminal snapshots.
 
-Do not request a freeze yet. T40.13f and later prerequisites must move
-HOME/module/control caches into reviewed custody and close the returned-evidence
-and remaining medium/low gates. `go mod verify`, the exact filesystem
-projection, bounded package/race/docs gates, focused real-tool proof, and both
-real-binary rehearsals must pass from one clean commit in their designated
-branch-gate or preflight boundary. Passing those gates is readiness evidence
-only; freeze and execution each still require Ben's separate explicit
+V25 Prepare also writes `.t4013-execution-controls.json` inside custody and
+binds its digest in `prepared.json`. Its HOME, XDG config/cache/data, temporary,
+module, build, PATH, and Git exec selections are fixed; shell startup controls
+and ambient Go/Git configuration are absent. Do not edit or replace that
+manifest or its `.t4013-execution/{home,tmp}` directories. Execute reopens the
+same bounded manifest before mutation and each serve, backup, or restore start.
+A fresh private module cache is checksum-verified and hashed under the fixed
+100,000-entry/2-GiB tree limit, compared once after offline private builds, and
+then removed together with the build cache. Their absence before runtime is an
+enforced state, not a cleanup suggestion.
+
+The shell mirrors these controls beneath the ceremony root. It ignores ambient
+`CLOSED_*` values unless adopting the live inherited operation-lock descriptor,
+fixes system PATH after exact Go/Git/Surreal discovery, and revalidates its
+small digest-bound manifest after lock re-exec. On a proved normal exit it
+removes only that exact private root; an unproven child exit retains the whole
+root with custody for review. Never point a `CLOSED_*` variable at a shared
+host cache, and never delete retained controls independently.
+
+Do not request a freeze yet. T40.13g and later prerequisites must close the
+returned-evidence and remaining medium/low gates. `go mod verify`, the exact
+filesystem projection, bounded package/race/docs gates, focused real-tool
+proof, and both real-binary rehearsals must pass from one clean commit in their
+designated branch-gate or preflight boundary. Passing those gates is readiness
+evidence only; freeze and execution each still require Ben's separate explicit
 authorization and a fresh, unconsumed ceremony identifier.
