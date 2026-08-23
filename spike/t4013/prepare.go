@@ -884,6 +884,13 @@ func readPreparedCleanupAdmission(
 				err, errors.New("T40.13 prepared cleanup authority is invalid"),
 			)
 		}
+		if admission.control.Schema == preparedCleanupSchemaV2 {
+			if err := requireCanonicalCompact(admission.controlRaw, admission.control); err != nil {
+				return preparedCleanupAdmission{}, errors.New(
+					"T40.13 prepared cleanup authority is not canonical",
+				)
+			}
+		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return preparedCleanupAdmission{}, errors.New("T40.13 prepared cleanup authority cannot be inspected")
 	}
@@ -1062,6 +1069,11 @@ func readPreparedCleanupControl(path string) (preparedCleanupControl, error) {
 		!filepath.IsAbs(value.Workspace) || filepath.Clean(value.ModuleRoot) == string(filepath.Separator) ||
 		filepath.Clean(value.Workspace) == string(filepath.Separator) {
 		return preparedCleanupControl{}, errors.New("T40.13 prepared cleanup authority is invalid")
+	}
+	if value.Schema == preparedCleanupSchemaV2 {
+		if err := requireCanonicalCompact(raw, value); err != nil {
+			return preparedCleanupControl{}, errors.New("T40.13 prepared cleanup authority is not canonical")
+		}
 	}
 	return value, nil
 }

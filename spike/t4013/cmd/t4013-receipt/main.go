@@ -18,13 +18,9 @@ func main() {
 	if flag.NArg() != 0 || *planPath == "" || *planDigest == "" || *observationPath == "" || *output == "" {
 		fail("-plan, -plan-digest, -observation, and -output are required")
 	}
-	plan, err := os.ReadFile(*planPath)
+	plan, decodedPlan, err := t4013.ReadPlanControl(*planPath)
 	if err != nil {
 		fail("read plan: %v", err)
-	}
-	decodedPlan, err := t4013.DecodePlan(plan)
-	if err != nil {
-		fail("decode plan: %v", err)
 	}
 	var observation []byte
 	if decodedPlan.Schema == t4013.PlanSchemaV25 {

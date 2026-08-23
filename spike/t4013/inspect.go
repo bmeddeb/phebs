@@ -382,7 +382,7 @@ func newProfileInspector(
 	profile PreparedProfile,
 	contract profileInspectionContract,
 ) (*profileInspector, error) {
-	raw, err := os.ReadFile(profile.Credential)
+	raw, err := readAtomicRegular(profile.Credential, maximumCredentialBytes)
 	if err != nil {
 		return nil, errors.New("T40.13 credential is unavailable")
 	}
@@ -588,7 +588,7 @@ func (inspector *profileInspector) inspectWithProgress(
 		}
 		return privateProfileSnapshot{}, probe, err
 	}
-	catalogRaw, err := os.ReadFile(profile.Catalog)
+	catalogRaw, err := readAtomicRegular(profile.Catalog, servicecatalog.MaxEncodedBytes)
 	if err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("service_census", relationshipRoot.Digest), err
 	}
@@ -1428,15 +1428,16 @@ func readSearchReceipt(
 		focusedindex.SearchGenerationRootDirectory(indexDirectory),
 		repositoryHash(repository), reference.Directory, "generation.json",
 	)
-	raw, err := os.ReadFile(path)
-	if err != nil || len(raw) > 1<<20 {
+	raw, err := readAtomicRegular(path, 1<<20)
+	if err != nil {
 		return focusedindex.SearchGenerationReceipt{}, errors.Join(err, errors.New("T40.13 search receipt is unavailable"))
 	}
 	var receipt focusedindex.SearchGenerationReceipt
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&receipt); err != nil {
+	if err := decodeStrict(raw, &receipt); err != nil {
 		return focusedindex.SearchGenerationReceipt{}, err
+	}
+	if err := requireCanonicalCompact(raw, receipt); err != nil {
+		return focusedindex.SearchGenerationReceipt{}, errors.New("T40.13 search receipt is not canonical")
 	}
 	if receipt.Schema != focusedindex.SearchGenerationReceiptSchema || receipt.Repository != repository ||
 		receipt.SearchDigest != reference.GenerationDigest || receipt.BlobReaderMode != focusedindex.SearchBlobReaderGoGit ||
@@ -1456,8 +1457,8 @@ func inspectExtraction(
 		return extractionSnapshot{}, convergenceProbe("extraction_inventory").SHA256, err
 	}
 	root := filepath.Join(profile.DataDir, "extraction-publications")
-	controls, err := filepath.Glob(filepath.Join(root, "*", "*", "generation.json"))
-	if err != nil || len(controls) > 64 {
+	controls, err := boundedExtractionControls(root, 64)
+	if err != nil {
 		return extractionSnapshot{}, convergenceProbe("extraction_inventory", len(controls)).SHA256,
 			errors.New("T40.13 extraction inventory is invalid")
 	}
@@ -1470,18 +1471,20 @@ func inspectExtraction(
 		if err := inspectionContextFence(ctx); err != nil {
 			return extractionSnapshot{}, progress, err
 		}
-		raw, readErr := os.ReadFile(control)
+		raw, readErr := readAtomicRegular(control, int(extractionpublication.MaxGenerationControlBytes))
 		if err := inspectionContextFence(ctx); err != nil {
 			return extractionSnapshot{}, progress, err
 		}
-		if readErr != nil || len(raw) > int(extractionpublication.MaxGenerationControlBytes) {
-			continue
+		if readErr != nil {
+			return extractionSnapshot{}, progress, errors.New("T40.13 extraction generation control is invalid")
 		}
 		var generation extractionpublication.Generation
-		decoder := json.NewDecoder(bytes.NewReader(raw))
-		decoder.DisallowUnknownFields()
-		if decoder.Decode(&generation) != nil || generation.Repository != profile.RepositoryName {
-			continue
+		if decodeStrict(raw, &generation) != nil || generation.Repository != profile.RepositoryName {
+			return extractionSnapshot{}, progress, errors.New("T40.13 extraction generation control is invalid")
+		}
+		canonical, marshalErr := json.Marshal(generation)
+		if marshalErr != nil || !bytes.Equal(raw, canonical) {
+			return extractionSnapshot{}, progress, errors.New("T40.13 extraction generation control is not canonical")
 		}
 		status, statusErr := runtime.Status(ctx, profile.RepositoryName, generation.Digest)
 		if err := inspectionContextFence(ctx); err != nil {
@@ -1521,6 +1524,44 @@ func inspectExtraction(
 		}
 	}
 	return extractionSnapshot{}, progress, errors.New("T40.13 current extraction generation is unavailable")
+}
+
+func boundedExtractionControls(root string, maximum int) ([]string, error) {
+	if _, err := os.Lstat(root); errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	repositories, err := readDirectoryBounded(root, maximum)
+	if err != nil {
+		return nil, err
+	}
+	controls := make([]string, 0, maximum)
+	for _, repository := range repositories {
+		if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+		generations, err := readDirectoryBounded(filepath.Join(root, repository.Name()), maximum)
+		if err != nil {
+			return nil, err
+		}
+		for _, generation := range generations {
+			if !generation.IsDir() || generation.Type()&os.ModeSymlink != 0 {
+				continue
+			}
+			control := filepath.Join(root, repository.Name(), generation.Name(), "generation.json")
+			if _, err := os.Lstat(control); errors.Is(err, os.ErrNotExist) {
+				continue
+			} else if err != nil {
+				return nil, err
+			}
+			controls = append(controls, control)
+			if len(controls) > maximum {
+				return nil, errors.New("T40.13 extraction inventory exceeds its entry bound")
+			}
+		}
+	}
+	return controls, nil
 }
 
 // extractionGenerationBindsRevision proves that a currently reported

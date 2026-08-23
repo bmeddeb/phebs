@@ -275,7 +275,7 @@ func TestCeremonyDriverRehashesEveryPrebuiltV25Command(t *testing.T) {
 source "$1"
 CLOSED_COMMAND_ROOT="$2"
 mkdir -p "$CLOSED_COMMAND_ROOT"
-for name in bundle cleanup execute freeze lock prepare promote receipt; do
+for name in bundle cleanup execute freeze inspect lock prepare promote receipt; do
   path="$CLOSED_COMMAND_ROOT/t4013-$name"
   printf '#!/bin/sh\nexit 0\n' > "$path"
   chmod 700 "$path"
@@ -285,6 +285,7 @@ for name in bundle cleanup execute freeze lock prepare promote receipt; do
     cleanup) V25_CLEANUP_COMMAND="$path"; V25_CLEANUP_SHA256="$digest" ;;
     execute) V25_EXECUTE_COMMAND="$path"; V25_EXECUTE_SHA256="$digest" ;;
     freeze) V25_FREEZE_COMMAND="$path"; V25_FREEZE_SHA256="$digest" ;;
+    inspect) V25_INSPECT_COMMAND="$path"; V25_INSPECT_SHA256="$digest" ;;
     lock) V25_LOCK_COMMAND="$path"; V25_LOCK_SHA256="$digest" ;;
     prepare) V25_PREPARE_COMMAND="$path"; V25_PREPARE_SHA256="$digest" ;;
     promote) V25_PROMOTE_COMMAND="$path"; V25_PROMOTE_SHA256="$digest" ;;
@@ -292,7 +293,7 @@ for name in bundle cleanup execute freeze lock prepare promote receipt; do
   esac
 done
 for path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
-  "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+  "$V25_INSPECT_COMMAND" "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
   require_v25_custody_command "$path"
   printf '#!/bin/sh\nexit 1\n' >| "$path"
   chmod 700 "$path"
@@ -305,8 +306,8 @@ done
 	if err != nil {
 		t.Fatalf("private command identity check failed: %v: %s", err, output)
 	}
-	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 8 {
-		t.Fatalf("private command refusals = %d, want 8: %s", count, output)
+	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 9 {
+		t.Fatalf("private command refusals = %d, want 9: %s", count, output)
 	}
 }
 
@@ -338,8 +339,12 @@ case "$1 $2" in
   "mod verify") test -f "$GOMODCACHE/downloaded" ;;
   "clean -modcache") /bin/rm -rf "$GOMODCACHE" ;;
   "build -o")
-	    for name in bundle cleanup execute freeze lock prepare promote receipt; do
-      printf '#!/bin/sh\nexit 0\n' > "$3/t4013-$name"
+	    for name in bundle cleanup execute freeze inspect lock prepare promote receipt; do
+      if [ "$name" = inspect ]; then
+        printf '#!/bin/sh\nif [ "$1" = -file-digest ]; then printf "sha256:%%s\\n" "$(shasum -a 256 "$2" | awk "{print \\$1}")"; fi\n' > "$3/t4013-$name"
+      else
+        printf '#!/bin/sh\nexit 0\n' > "$3/t4013-$name"
+      fi
       /bin/chmod 700 "$3/t4013-$name"
     done
     ;;
@@ -365,7 +370,7 @@ initialize_v25_custody_commands
 [[ "$CLOSED_CACHES_ABSENT" == 1 ]]
 [[ ! -e "$CLOSED_GO_MODULE_CACHE" && ! -e "$CLOSED_GO_CACHE" ]]
 [[ -f "$5/retain" && ! -e "$5/downloaded" ]]
-for name in bundle cleanup execute freeze lock prepare promote receipt; do
+for name in bundle cleanup execute freeze inspect lock prepare promote receipt; do
   [[ -x "$CLOSED_COMMAND_ROOT/t4013-$name" ]]
 done
 validate_closed_controls
@@ -397,7 +402,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
+	script := `source "$1"; is_v25_plan() { grep -q -- '-v25"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
 	for _, test := range []struct {
 		schema string
 		want   string
@@ -438,7 +443,7 @@ func TestCeremonyDriverKeepsHistoricalCommandsForeground(t *testing.T) {
 	if err := os.WriteFile(plan, []byte(`{"schema":"`+PlanSchemaV24+`"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; run_active_child() { return 99; }; plan_go_active "$2" printf 'historical-foreground\n'`
+	script := `source "$1"; is_v25_plan() { return 1; }; run_active_child() { return 99; }; plan_go_active "$2" printf 'historical-foreground\n'`
 	output, err := exec.Command("bash", "-c", script, "historical-plan-go-test", driver, plan).CombinedOutput()
 	if err != nil || string(output) != "historical-foreground\n" {
 		t.Fatalf("historical command dispatch = %v: %q", err, output)
@@ -457,6 +462,7 @@ func TestCeremonyDriverStopsWhenV25ModuleVerificationFails(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "requested-command-ran")
 	script := `
 source "$1"
+is_v25_plan() { return 0; }
 closed_go() {
   if [[ "$*" == *"go mod verify"* ]]; then return 9; fi
   : > "$MARKER"
@@ -497,6 +503,7 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 		"./spike/t4013/cmd/t4013-cleanup",
 		"./spike/t4013/cmd/t4013-execute",
 		"./spike/t4013/cmd/t4013-freeze",
+		"./spike/t4013/cmd/t4013-inspect",
 		"./spike/t4013/cmd/t4013-lock",
 		"./spike/t4013/cmd/t4013-prepare",
 		"./spike/t4013/cmd/t4013-promote",
@@ -504,6 +511,7 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 		"run_v25_custody_command_in_repo_active",
 		"require_v25_custody_command \"$V25_CLEANUP_COMMAND\"",
 		"require_v25_custody_command \"$V25_EXECUTE_COMMAND\"",
+		"require_v25_custody_command \"$V25_INSPECT_COMMAND\"",
 		"require_v25_custody_command \"$V25_LOCK_COMMAND\"",
 		"require_v25_custody_command \"$V25_PREPARE_COMMAND\"",
 		"$V25_RECEIPT_COMMAND",
@@ -531,8 +539,9 @@ func TestCeremonyDriverReturnedBundleAuthentication(t *testing.T) {
 	}
 	root := t.TempDir()
 	bundleCommand := filepath.Join(root, "t4013-bundle")
+	inspectCommand := filepath.Join(root, "t4013-inspect")
 	if output, err := exec.Command(
-		"go", "build", "-o", bundleCommand, "./cmd/t4013-bundle",
+		"go", "build", "-o", root, "./cmd/t4013-bundle", "./cmd/t4013-inspect",
 	).CombinedOutput(); err != nil {
 		t.Fatalf("build returned-bundle verifier: %v: %s", err, output)
 	}
@@ -559,7 +568,7 @@ func TestCeremonyDriverReturnedBundleAuthentication(t *testing.T) {
 				reviewerKey,
 				strings.Repeat("0", 64)+"  ../outside\n",
 			),
-			want: "checksum inventory contains a noncanonical entry",
+			want: "checksum inventory is not one bounded canonical value",
 		},
 		{
 			name: "authenticated checksums precede frozen plan identity",
@@ -577,6 +586,8 @@ CLOSED_TMP="$2"
 CLOSED_COMMAND_ROOT="${3%/*}"
 V25_BUNDLE_COMMAND="$3"
 V25_BUNDLE_SHA256="$(executable_digest "$3")"
+V25_INSPECT_COMMAND="$6"
+V25_INSPECT_SHA256="$(executable_digest "$6")"
 verification_preflight() { :; }
 run_v25_custody_command_in_repo_active() { "$@"; }
 trap cleanup_on_exit EXIT
@@ -592,6 +603,7 @@ verify_bundle "$4" --reviewed-signer-fingerprint "$5"
 				bundleCommand,
 				test.packagePath,
 				reviewerFingerprint,
+				inspectCommand,
 			).CombinedOutput()
 			if runErr == nil || !bytes.Contains(output, []byte(test.want)) {
 				t.Fatalf("returned authentication error = %v, want %q: %s", runErr, test.want, output)
@@ -809,13 +821,18 @@ func TestCeremonyDriverRefusesDurableSupervisionResidue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; refuse_supervision_residue "$2"`
+	inspector := filepath.Join(t.TempDir(), "t4013-inspect")
+	build := exec.Command("go", "build", "-o", inspector, "./cmd/t4013-inspect")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build exact-control inspector: %v: %s", err, output)
+	}
+	script := `source "$1"; V25_INSPECT_COMMAND="$3"; run_v25_custody_command_in_repo_active() { "$@"; }; refuse_supervision_residue "$2"`
 	root := t.TempDir()
 	custody := filepath.Join(root, "absent", "custody")
 	if err := os.Mkdir(filepath.Dir(custody), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if output, err := exec.Command("bash", "-c", script, "supervision-absent", driver, custody).CombinedOutput(); err != nil {
+	if output, err := exec.Command("bash", "-c", script, "supervision-absent", driver, custody, inspector).CombinedOutput(); err != nil {
 		t.Fatalf("absent supervision was refused: %v: %s", err, output)
 	}
 	for _, suffix := range []string{"", ".creating.token", ".retiring", ".retired"} {
@@ -832,7 +849,7 @@ func TestCeremonyDriverRefusesDurableSupervisionResidue(t *testing.T) {
 			} else if err := os.Mkdir(residue, 0o700); err != nil {
 				t.Fatal(err)
 			}
-			output, err := exec.Command("bash", "-c", script, "supervision-present", driver, custody).CombinedOutput()
+			output, err := exec.Command("bash", "-c", script, "supervision-present", driver, custody, inspector).CombinedOutput()
 			if err == nil || !bytes.Contains(output, []byte("receipt and seal are refused")) {
 				t.Fatalf("retained supervision %q was accepted: err=%v output=%s", suffix, err, output)
 			}
@@ -850,6 +867,7 @@ func TestCeremonyDriverSelectsPreflightByPlanSchema(t *testing.T) {
 	}
 	script := `
 source "$1"
+is_v25_plan() { grep -q -- '-v25"' "$1"; }
 preflight() { printf 'v25-execute\n'; }
 historical_preflight() { printf 'historical-execute\n'; }
 verification_preflight() { printf 'v25-seal\n'; }
@@ -1011,6 +1029,8 @@ verify_evidence_directory() {
     -n "$SIGNATURE_NAMESPACE" -s "$EVIDENCE_ROOT/SHA256SUMS.sig" < "$EVIDENCE_ROOT/SHA256SUMS" >/dev/null 2>&1
   (cd "$EVIDENCE_ROOT" && shasum -a 256 -c SHA256SUMS >/dev/null)
 }
+manifest_value() { awk -F '"' -v wanted="$2" '$2 == wanted { print $4; exit }' "$1"; }
+require_exact_inventory() { :; }
 durable_stage() { :; }
 durable_discard_stage() { rm -- "$1"; }
 durable_promote() {
@@ -1468,6 +1488,7 @@ func TestCeremonyDriverFailurePolicyIsV25OnlyAndStopsBeforeSeal(t *testing.T) {
 			sealMarker := filepath.Join(root, "seal")
 			script := `
 source "$1"
+is_v25_plan() { grep -q -- '-v25"' "$1"; }
 REPO_REAL="$REPOSITORY_PATH"
 CEREMONY_REAL="$ROOT_PATH"
 CLOSED_GO_CACHE="$CACHE_PATH"
@@ -1481,6 +1502,7 @@ ensure_signing_key() { :; }
 run_root_for() { printf '%s\n' "$RUN_ROOT"; }
 plan_digest_for() { printf 'sha256:test\n'; }
 require_exact_inventory() { :; }
+refuse_supervision_residue() { :; }
 cmp() { :; }
 verify_frozen_identity() { :; }
 preflight_for_plan() { :; }
@@ -1652,6 +1674,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 			}
 			script := `
 source "$1"
+is_v25_plan() { grep -q -- '-v25"' "$1"; }
 REPO_REAL="$2"
 V25_RECEIPT_COMMAND=t4013-receipt
 require_v25_custody_command() { :; }

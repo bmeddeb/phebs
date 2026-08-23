@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13i next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13j next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,16 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13i · Bounded exact-control inspection** *(medium · needs T40.13h)* —
-make malformed private controls refuse within their declared byte and entry
-budgets. AC: every exact reader opens a no-follow regular descriptor, limit-reads
-at most its maximum plus one byte before allocation, confirms file identity,
-requires one canonical value followed by EOF, and uses bounded directory
-enumeration instead of unbounded glob/read patterns; symlink, replacement,
-trailing-data, maximum-plus-one-byte, and maximum-plus-one-entry cases refuse;
-file identity is stable across the read; valid maximum controls preserve
-existing semantics and V1–V24 retained evidence remains readable.
 
 **T40.13j · Overflow-safe ceremony arithmetic** *(medium · needs T40.13i)* —
 make every phase, total-wall, byte, count, and resource aggregation refuse

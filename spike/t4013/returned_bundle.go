@@ -94,29 +94,9 @@ func readReturnedPackage(path string) ([]byte, error) {
 	if !filepath.IsAbs(path) {
 		return nil, errors.New("returned package path must be absolute")
 	}
-	pathInfo, err := os.Lstat(path)
-	if err != nil || pathInfo.Mode()&os.ModeSymlink != 0 || !pathInfo.Mode().IsRegular() {
-		return nil, errors.New("returned package must be a regular file, not a symlink")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open returned package: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-	openedInfo, err := file.Stat()
-	if err != nil || !openedInfo.Mode().IsRegular() || !os.SameFile(pathInfo, openedInfo) {
-		return nil, errors.New("returned package changed while it was opened")
-	}
-	raw, err := io.ReadAll(io.LimitReader(file, maxReturnedPackageBytes+1))
+	raw, err := readAtomicRegular(path, maxReturnedPackageBytes)
 	if err != nil {
 		return nil, fmt.Errorf("read returned package: %w", err)
-	}
-	afterOpen, statErr := file.Stat()
-	afterPath, lstatErr := os.Lstat(path)
-	if statErr != nil || lstatErr != nil || afterPath.Mode()&os.ModeSymlink != 0 ||
-		!os.SameFile(openedInfo, afterOpen) || !os.SameFile(openedInfo, afterPath) ||
-		openedInfo.Size() != afterOpen.Size() || int64(len(raw)) != afterOpen.Size() {
-		return nil, errors.New("returned package changed while it was read")
 	}
 	if len(raw) == 0 || len(raw) > maxReturnedPackageBytes {
 		return nil, errors.New("returned package exceeds the fixed 4-MiB transfer bound")
@@ -262,7 +242,7 @@ func writeReturnedEvidence(
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return errors.New("returned extraction root must be an existing directory, not a symlink")
 	}
-	entries, err := os.ReadDir(outputRoot)
+	entries, err := readDirectoryBounded(outputRoot, 0)
 	if err != nil {
 		return fmt.Errorf("read returned extraction root: %w", err)
 	}

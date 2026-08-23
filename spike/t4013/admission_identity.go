@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 )
 
@@ -17,7 +15,7 @@ type exactFileIdentity struct {
 }
 
 func readPlanIdentity(path string) (exactFileIdentity, Plan, error) {
-	raw, err := readBoundedFile(path, MaxPlanBytes)
+	raw, err := readAtomicRegular(path, MaxPlanBytes)
 	if err != nil {
 		return exactFileIdentity{}, Plan{}, fmt.Errorf("read T40.13 plan: %w", err)
 	}
@@ -29,6 +27,12 @@ func readPlanIdentity(path string) (exactFileIdentity, Plan, error) {
 		path: path, raw: raw, maximum: MaxPlanBytes, description: "plan",
 	}
 	if planSchemaVersion(plan.Schema) >= 25 {
+		canonical, marshalErr := MarshalPlan(plan)
+		if marshalErr != nil || !bytes.Equal(raw, canonical) {
+			return exactFileIdentity{}, Plan{}, errors.Join(
+				marshalErr, errors.New("T40.13 V25 plan is not canonical"),
+			)
+		}
 		identity.path, err = canonicalExistingAuthorityPath(path)
 		if err != nil {
 			return exactFileIdentity{}, Plan{}, errors.Join(
@@ -53,6 +57,12 @@ func readPreparedIdentity(path, planDigest string) (exactFileIdentity, Prepared,
 	prepared, err := DecodePrepared(raw, planDigest)
 	if err != nil {
 		return exactFileIdentity{}, Prepared{}, err
+	}
+	encoded, err := MarshalPrepared(prepared)
+	if err != nil || !bytes.Equal(raw, encoded) {
+		return exactFileIdentity{}, Prepared{}, errors.Join(
+			err, errors.New("T40.13 V25 prepared custody is not canonical"),
+		)
 	}
 	return exactFileIdentity{
 		path: canonical, raw: raw, maximum: MaxObservationBytes, description: "prepared custody",
@@ -82,23 +92,4 @@ func (identity exactFileIdentity) revalidate() error {
 		return fmt.Errorf("T40.13 %s identity changed before admission", identity.description)
 	}
 	return nil
-}
-
-func readBoundedFile(path string, maximum int) ([]byte, error) {
-	if maximum <= 0 {
-		return nil, errors.New("T40.13 admission read bound is invalid")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(file, int64(maximum)+1))
-	closeErr := file.Close()
-	if readErr != nil || closeErr != nil {
-		return nil, errors.Join(readErr, closeErr)
-	}
-	if len(raw) > maximum {
-		return nil, errors.New("T40.13 admission input exceeds its byte bound")
-	}
-	return raw, nil
 }

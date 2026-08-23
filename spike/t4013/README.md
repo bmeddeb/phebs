@@ -3262,3 +3262,31 @@ and byte-identical resume cleanup, syncing the file and every parent through
 the ceremony root at each transition. Cheap keypair and fault-injection tests
 cover the complete crash matrix without preparing a corpus. T40.13i remains
 next; no freeze or ceremony is authorized.
+
+### T40.13i bounded exact-control inspection
+
+Fresh V25 control authority is read through one shared no-follow regular-file
+boundary. It reads no more than the control's declared maximum plus one byte,
+checks the same file identity before open and after read through both the open
+descriptor and published path, and requires typed JSON to equal the exact
+compact or indented bytes emitted by its writer with EOF immediately after the
+single value. Final symlinks, path replacement, in-place metadata drift,
+trailing values, and oversized controls refuse. Historical V1–V24 plan and
+evidence bytes retain their existing decoders.
+
+The driver prebuilds and rehashes `t4013-inspect` with the other V25 commands.
+Plan schema/digest, freeze and transfer values, the eight-entry checksum
+inventory, exact evidence/private directories, supervision residue, and the
+closed shell manifest all use that command. Exact directories read only their
+expected entry count plus one; the supervision-parent scan is capped at 4,096
+entries. Current extraction inspection uses bounded descriptor enumeration at
+both directory levels and admits no more than 64 canonical generation
+controls. The closed shell manifest is not consulted as authority until the
+inspector has been built and digest-bound.
+
+These checks are control-plane-only. They add fixed identity stats around
+already bounded reads, one binary to the existing batch build, and no new
+cache, poll, production request/query, publication write, corpus/shard read, or
+service child. Cheap tests cover symlink, replacement, trailing data,
+maximum-plus-one byte/entry refusal, valid maxima, and retained V24 decoding.
+T40.13j remains next; no freeze or ceremony is authorized.

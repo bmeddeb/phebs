@@ -1781,9 +1781,16 @@ never overwritten, while an invalid interrupted non-authority stage is durably
 discarded and regenerated. Only the exact ten-file result can verify as
 complete.
 
-T40.13i's bounded exact-control inspection is now the only next scale ticket
-inside the still-open T40.13 gate. Later medium tickets close overflow-safe
-arithmetic (T40.13j) and complete admission accounting (T40.13k). T40.13l last
+T40.13i is complete. V25 private controls now share one no-follow regular-file
+reader with byte-bound-plus-one admission and stable pre/open/post identity;
+their typed decoders require canonical single-value bytes through EOF. The
+supported driver uses a ninth digest-bound inspector for exact plan/envelope,
+checksum, shell-control, and directory decisions, while live extraction and
+custody scans use bounded descriptor enumeration instead of glob/full reads.
+Historical V1–V24 plan/evidence bytes retain their prior decoder behavior.
+
+T40.13j's overflow-safe ceremony arithmetic is now the only next scale ticket
+inside the still-open T40.13 gate. T40.13k then closes complete admission accounting. T40.13l last
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

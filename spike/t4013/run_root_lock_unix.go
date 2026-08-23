@@ -58,7 +58,7 @@ func canonicalRunRoot(root string) (string, error) {
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return "", errors.Join(err, errors.New("T40.13 V25 run root is invalid"))
 	}
-	file, err := os.Open(real)
+	file, err := openNoFollowDirectory(real)
 	if err != nil {
 		return "", fmt.Errorf("open T40.13 V25 run root: %w", err)
 	}

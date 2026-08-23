@@ -76,13 +76,8 @@ func openExecutionControls(
 		return executionControls{}, errors.New("T40.13 execution control identity is invalid")
 	}
 	path := filepath.Join(workspace, executionControlsFilename)
-	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
-		info.Size() <= 0 || info.Size() > maxExecutionControlsBytes {
-		return executionControls{}, errors.Join(err, errors.New("T40.13 execution control manifest is invalid"))
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil || int64(len(raw)) != info.Size() || digest(raw) != expectedDigest {
+	raw, err := readAtomicRegular(path, maxExecutionControlsBytes)
+	if err != nil || len(raw) == 0 || digest(raw) != expectedDigest {
 		return executionControls{}, errors.Join(err, errors.New("T40.13 execution control manifest changed"))
 	}
 	controls, err := t401.DecodeStrict[executionControls](raw)

@@ -481,16 +481,17 @@ func hostTreeDigest(ctx context.Context, root string, trees ...string) (string, 
 				return errors.New("host tree exceeds its byte bound")
 			}
 			total += info.Size()
-			file, err := os.Open(path)
+			file, err := openNoFollowRegular(path)
 			if err != nil {
 				return err
 			}
 			written, copyErr := io.Copy(hash, io.LimitReader(contextReader{ctx, file}, info.Size()+1))
 			after, statErr := file.Stat()
+			afterPath, pathErr := os.Lstat(path)
 			closeErr := file.Close()
-			if copyErr != nil || statErr != nil || closeErr != nil || written != info.Size() ||
-				after.Size() != info.Size() || after.Mode() != info.Mode() || !os.SameFile(info, after) {
-				return errors.Join(copyErr, statErr, closeErr, errors.New("host tree entry changed while hashing"))
+			if copyErr != nil || statErr != nil || pathErr != nil || closeErr != nil || written != info.Size() ||
+				!sameFileSnapshot(info, after) || !sameFileSnapshot(after, afterPath) {
+				return errors.Join(copyErr, statErr, pathErr, closeErr, errors.New("host tree entry changed while hashing"))
 			}
 			_, _ = hash.Write([]byte{0})
 			return nil
@@ -660,24 +661,7 @@ func resolveExactExecutable(path string) (string, error) {
 }
 
 func executableDigest(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = file.Close() }()
-	info, err := file.Stat()
-	if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > maxHostExecutableBytes {
-		return "", errors.New("host executable changed or exceeded its byte bound")
-	}
-	hash := sha256.New()
-	written, err := io.Copy(hash, io.LimitReader(file, maxHostExecutableBytes+1))
-	if err != nil {
-		return "", err
-	}
-	if written != info.Size() || written > maxHostExecutableBytes {
-		return "", errors.New("host executable changed while hashing")
-	}
-	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
+	return regularFileDigestContext(context.Background(), path, maxHostExecutableBytes)
 }
 
 func executableDigestContext(ctx context.Context, path string) (string, error) {
@@ -697,12 +681,12 @@ func regularFileDigestContext(ctx context.Context, path string, maximumBytes int
 		before.Size() <= 0 || before.Size() > maximumBytes {
 		return "", errors.Join(err, errors.New("host executable changed or exceeded its byte bound"))
 	}
-	file, err := os.Open(path)
+	file, err := openNoFollowRegular(path)
 	if err != nil {
 		return "", err
 	}
 	opened, err := file.Stat()
-	if err != nil || !os.SameFile(before, opened) {
+	if err != nil || !sameFileSnapshot(before, opened) {
 		_ = file.Close()
 		return "", errors.Join(err, errors.New("host executable changed before hashing"))
 	}
@@ -716,7 +700,7 @@ func regularFileDigestContext(ctx context.Context, path string, maximumBytes int
 	closeErr := file.Close()
 	afterPath, pathStatErr := os.Lstat(path)
 	if openStatErr != nil || closeErr != nil || pathStatErr != nil ||
-		!os.SameFile(opened, afterOpen) || !os.SameFile(afterOpen, afterPath) ||
+		!sameFileSnapshot(opened, afterOpen) || !sameFileSnapshot(afterOpen, afterPath) ||
 		afterPath.Mode()&os.ModeSymlink != 0 || written != before.Size() || written > maximumBytes {
 		return "", errors.New("host executable changed while hashing")
 	}

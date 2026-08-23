@@ -801,6 +801,12 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	if err := ValidateObservation(value); err != nil {
 		return Observation{}, err
 	}
+	if value.Schema == ObservationSchemaV25 {
+		canonical, err := MarshalObservation(value)
+		if err != nil || !bytes.Equal(raw, canonical) {
+			return Observation{}, errors.Join(err, errors.New("T40.13 V25 observation is not canonical"))
+		}
+	}
 	return value, nil
 }
 

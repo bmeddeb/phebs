@@ -9997,3 +9997,44 @@ production request/query, sync tick, startup/restart, persistent cache, held
 service lock, or production publication-transition work. T40.13i is next. No
 freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
 scale/SLO claim is authorized.
+
+**T40.13i ✅ · Bounded exact-control inspection** *(2026-08-23; medium)* —
+V25 exact files now enter through one shared reader that rejects a final
+symlink with `O_NOFOLLOW`, admits only a regular descriptor, reads no more than
+the declared maximum plus one byte, and compares mode, size, modification time,
+device/inode identity, and the still-published path before and after the read.
+Plans, prepared custody, execution controls, cleanup controls, supervision
+state, teardown checkpoints, observations, search/extraction controls, host
+tool/tree inputs, and returned packages reuse that boundary. Current typed JSON
+authorities must be the exact compact or indented encoding emitted by their
+writer and contain one value followed by EOF; V1–V24 plan and evidence decoding
+remains unchanged.
+
+The supported driver now builds and rehashes a ninth hermetic command,
+`t4013-inspect`. It replaces plan-schema `grep`, manifest `awk`, checksum-line
+loops, evidence/private-directory `find`, and supervision `compgen` with the
+same bounded reader and descriptor-based directory enumeration. The closed
+shell manifest is write-only bootstrap state until that inspector is compiled
+and bound, then every later use exact-reads its at-most-4-KiB identity. Exact
+directories read only the expected count plus one; supervision is capped at
+4,096 siblings. The current extraction inventory similarly caps each of its
+two directory levels at 64 entries and admits at most 64 canonical generation
+controls instead of expanding an unbounded glob.
+
+Table-driven checks reject final symlinks, deterministic path replacement
+while a descriptor is open, trailing JSON, maximum-plus-one bytes, and
+maximum-plus-one directory entries; valid byte/entry maxima and a deliberately
+noncanonical retained V24 plan remain readable, while the same V25 shape
+refuses. Focused driver checks cover the ninth command and bounded supervision
+path without a corpus, rehearsal, or ceremony.
+
+This work is ceremony/control-plane only. Each exact file read adds at most two
+post-read identity stats to its existing bounded content read. An exact
+directory reads the declared count plus one entry; the largest live fixed scan
+is 4,097 supervision siblings, and extraction inspection visits at most 64
+repository entries, 64 entries per admitted repository directory, and 64
+generation controls. The ninth command joins the existing one-time V25 build;
+it adds no module download, cache, poll, persistent state, production
+request/query, sync tick, publication write, corpus/shard read, or service
+child. T40.13j is next. No freeze, ceremony, release, T40.13/Epic-40 closure,
+topology/bound change, or scale/SLO claim is authorized.

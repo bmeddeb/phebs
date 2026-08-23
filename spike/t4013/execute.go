@@ -38,6 +38,8 @@ const (
 	teardownCheckpointSchema       = "t4013-teardown-checkpoint-v1"
 	teardownCheckpointSchemaV2     = "t4013-teardown-checkpoint-v2"
 	maximumTeardownCheckpointBytes = MaxObservationBytes + 4<<10
+	maximumPreparedConfigBytes     = 64 << 10
+	maximumCredentialBytes         = 257
 	teardownPersistenceReserve     = 30 * time.Second
 	teardownRetirementReserve      = 30 * time.Second
 
@@ -494,11 +496,15 @@ func validatePreparedFiles(prepared Prepared, workspace string) error {
 				return errors.New("T40.13 prepared directory is invalid")
 			}
 		}
-		credential, err := os.ReadFile(profile.Credential)
+		credential, err := readAtomicRegular(profile.Credential, maximumCredentialBytes)
 		if err != nil {
 			return err
 		}
-		parsed, err := config.Load(profile.Config)
+		configRaw, err := readAtomicRegular(profile.Config, maximumPreparedConfigBytes)
+		if err != nil {
+			return err
+		}
+		parsed, err := config.Parse(configRaw)
 		if err != nil || parsed.Server.DataDir != profile.DataDir || parsed.Server.Addr != profile.Address ||
 			parsed.Auth.APIKey != string(bytesTrimSpace(credential)) || len(parsed.Connections) != 1 ||
 			parsed.Connections[0].Type != "git" || parsed.Connections[0].URL != profile.Repository ||
@@ -3508,7 +3514,7 @@ func (run *execution) validateReceiptBeforeTeardown(value Observation) error {
 	if len(run.planBytes) == 0 {
 		return ValidateObservation(value)
 	}
-	observationBytes, err := json.Marshal(value)
+	observationBytes, err := MarshalObservation(value)
 	if err != nil {
 		return err
 	}
@@ -4440,15 +4446,41 @@ func derivedControlPresent(directory string) (bool, error) {
 }
 
 func readDirectoryBounded(path string, limit int) ([]os.DirEntry, error) {
-	directory, err := os.Open(path)
+	if limit < 0 {
+		return nil, errors.New("T40.13 directory entry bound is invalid")
+	}
+	before, err := os.Lstat(path)
+	if err != nil || !before.IsDir() || before.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.Join(err, errors.New("T40.13 bounded directory is invalid"))
+	}
+	directory, err := openNoFollowDirectory(path)
 	if err != nil {
 		return nil, err
+	}
+	opened, statErr := directory.Stat()
+	if statErr != nil || !opened.IsDir() || !sameFileSnapshot(before, opened) {
+		return nil, errors.Join(
+			statErr, errors.New("T40.13 bounded directory changed during open"), directory.Close(),
+		)
 	}
 	entries, readErr := directory.ReadDir(limit + 1)
 	if errors.Is(readErr, io.EOF) {
 		readErr = nil
 	}
-	return entries, errors.Join(readErr, directory.Close())
+	afterOpen, afterStatErr := directory.Stat()
+	afterPath, lstatErr := os.Lstat(path)
+	closeErr := directory.Close()
+	if readErr != nil || afterStatErr != nil || lstatErr != nil || closeErr != nil {
+		return nil, errors.Join(readErr, afterStatErr, lstatErr, closeErr)
+	}
+	if !afterPath.IsDir() || afterPath.Mode()&os.ModeSymlink != 0 ||
+		!sameFileSnapshot(opened, afterOpen) || !sameFileSnapshot(opened, afterPath) {
+		return nil, errors.New("T40.13 bounded directory changed during inspection")
+	}
+	if len(entries) > limit {
+		return nil, errors.New("T40.13 directory exceeds its entry bound")
+	}
+	return entries, nil
 }
 
 type privateRecoveryBackup struct {
@@ -5325,6 +5357,14 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 	if err := validateTeardownCheckpoint(value); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
+	if value.Schema == teardownCheckpointSchemaV2 {
+		canonical, err := marshalTeardownCheckpoint(value)
+		if err != nil || !bytes.Equal(raw, canonical) {
+			return exactFileIdentity{}, teardownCheckpoint{}, errors.Join(
+				err, errors.New("T40.13 V25 teardown checkpoint is not canonical"),
+			)
+		}
+	}
 	return exactFileIdentity{
 		path: checkpointPath, raw: raw, maximum: maximumTeardownCheckpointBytes,
 		description: "teardown checkpoint",
@@ -5776,35 +5816,56 @@ func validateAndRemoveAtomicTemporary(path, parent string, raw []byte, maximumBy
 
 func readAtomicRegular(path string, maximumBytes int) ([]byte, error) {
 	if maximumBytes <= 0 {
-		return nil, errors.New("T40.13 atomic output read bound is invalid")
+		return nil, errors.New("T40.13 exact-file read bound is invalid")
 	}
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("T40.13 atomic output is not a regular file")
+		return nil, errors.New("T40.13 exact file is not regular")
 	}
 	if info.Size() < 0 || info.Size() > int64(maximumBytes) {
-		return nil, errors.New("T40.13 atomic output exceeds its byte bound")
+		return nil, errors.New("T40.13 exact file exceeds its byte bound")
 	}
-	file, err := os.Open(path)
+	file, err := openNoFollowRegular(path)
 	if err != nil {
-		return nil, fmt.Errorf("open T40.13 atomic output: %w", err)
+		return nil, fmt.Errorf("open T40.13 exact file: %w", err)
 	}
 	openedInfo, statErr := file.Stat()
-	if statErr != nil || !openedInfo.Mode().IsRegular() || !os.SameFile(info, openedInfo) {
-		return nil, errors.Join(errors.New("T40.13 atomic output changed during open"), statErr, file.Close())
+	if statErr != nil || !openedInfo.Mode().IsRegular() || !sameFileSnapshot(info, openedInfo) {
+		return nil, errors.Join(errors.New("T40.13 exact file changed during open"), statErr, file.Close())
 	}
+	return readOpenedAtomicRegular(path, maximumBytes, openedInfo, file)
+}
+
+func readOpenedAtomicRegular(
+	path string, maximumBytes int, openedInfo os.FileInfo, file *os.File,
+) ([]byte, error) {
 	raw, readErr := io.ReadAll(io.LimitReader(file, int64(maximumBytes)+1))
+	afterOpen, afterStatErr := file.Stat()
+	afterPath, lstatErr := os.Lstat(path)
 	closeErr := file.Close()
-	if readErr != nil || closeErr != nil {
-		return nil, fmt.Errorf("read T40.13 atomic output: %w", errors.Join(readErr, closeErr))
+	if readErr != nil || afterStatErr != nil || lstatErr != nil || closeErr != nil {
+		return nil, fmt.Errorf("read T40.13 exact file: %w", errors.Join(
+			readErr, afterStatErr, lstatErr, closeErr,
+		))
+	}
+	if !afterPath.Mode().IsRegular() || afterPath.Mode()&os.ModeSymlink != 0 ||
+		!sameFileSnapshot(openedInfo, afterOpen) || !sameFileSnapshot(openedInfo, afterPath) ||
+		int64(len(raw)) != afterOpen.Size() {
+		return nil, errors.New("T40.13 exact file changed during read")
 	}
 	if len(raw) > maximumBytes {
-		return nil, errors.New("T40.13 atomic output exceeds its byte bound")
+		return nil, errors.New("T40.13 exact file exceeds its byte bound")
 	}
 	return raw, nil
+}
+
+func sameFileSnapshot(first, second os.FileInfo) bool {
+	return first != nil && second != nil && os.SameFile(first, second) &&
+		first.Mode() == second.Mode() && first.Size() == second.Size() &&
+		first.ModTime().Equal(second.ModTime())
 }
 
 func removeAtomicTemporary(path, parent string) error {
@@ -5825,7 +5886,7 @@ func removeAtomicTemporary(path, parent string) error {
 }
 
 func syncRegularFile(path string) error {
-	file, err := os.Open(path)
+	file, err := openNoFollowRegular(path)
 	if err != nil {
 		return fmt.Errorf("open T40.13 atomic output for sync: %w", err)
 	}
@@ -5833,7 +5894,7 @@ func syncRegularFile(path string) error {
 }
 
 func syncDirectory(path string) error {
-	directory, err := os.Open(path)
+	directory, err := openNoFollowDirectory(path)
 	if err != nil {
 		return fmt.Errorf("open T40.13 output directory for sync: %w", err)
 	}

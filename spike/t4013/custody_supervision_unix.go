@@ -583,7 +583,7 @@ func validateCustodyRetiringDirectory(directory string) error {
 	if err := validateCustodyDirectory(directory); err != nil {
 		return err
 	}
-	entries, err := os.ReadDir(directory)
+	entries, err := readDirectoryBounded(directory, 3)
 	if err != nil {
 		return fmt.Errorf("read T40.13 retiring custody: %w", err)
 	}
@@ -659,7 +659,7 @@ func validateCustodyDirectory(directory string) error {
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0o077 != 0 {
 		return errors.Join(err, errors.New("T40.13 custody directory is invalid"))
 	}
-	file, err := os.Open(directory)
+	file, err := openNoFollowDirectory(directory)
 	if err != nil {
 		return fmt.Errorf("open T40.13 custody directory: %w", err)
 	}
@@ -683,7 +683,7 @@ func validateCustodyCreationStage(directory string) error {
 	if err := validateCustodyDirectory(directory); err != nil {
 		return err
 	}
-	entries, err := os.ReadDir(directory)
+	entries, err := readDirectoryBounded(directory, 4)
 	if err != nil {
 		return fmt.Errorf("read T40.13 custody stage: %w", err)
 	}
@@ -970,6 +970,9 @@ func readCustodyStateFile(path string) (custodyControlState, error) {
 	}
 	if err := validateCustodyState(state); err != nil {
 		return custodyControlState{}, err
+	}
+	if err := requireCanonicalCompact(raw, state); err != nil {
+		return custodyControlState{}, errors.New("T40.13 custody state is not canonical")
 	}
 	return state, nil
 }

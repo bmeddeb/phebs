@@ -61,6 +61,8 @@ V25_EXECUTE_COMMAND="${V25_EXECUTE_COMMAND:-}"
 V25_EXECUTE_SHA256="${V25_EXECUTE_SHA256:-}"
 V25_FREEZE_COMMAND="${V25_FREEZE_COMMAND:-}"
 V25_FREEZE_SHA256="${V25_FREEZE_SHA256:-}"
+V25_INSPECT_COMMAND="${V25_INSPECT_COMMAND:-}"
+V25_INSPECT_SHA256="${V25_INSPECT_SHA256:-}"
 V25_LOCK_COMMAND="${V25_LOCK_COMMAND:-}"
 V25_LOCK_SHA256="${V25_LOCK_SHA256:-}"
 V25_PREPARE_COMMAND="${V25_PREPARE_COMMAND:-}"
@@ -96,6 +98,8 @@ if [[ -z "${T4013_RUN_LOCK_FD:-}" ]]; then
   V25_EXECUTE_SHA256=""
   V25_FREEZE_COMMAND=""
   V25_FREEZE_SHA256=""
+  V25_INSPECT_COMMAND=""
+  V25_INSPECT_SHA256=""
   V25_LOCK_COMMAND=""
   V25_LOCK_SHA256=""
   V25_PREPARE_COMMAND=""
@@ -223,7 +227,7 @@ closed_control_manifest_content() {
 }
 
 validate_closed_controls() {
-  local expected
+  local expected expected_digest actual_digest
   PATH="$CLOSED_SYSTEM_PATH"
   export PATH
   [[ -n "$CEREMONY_REAL" && -d "$CEREMONY_REAL" && ! -L "$CEREMONY_REAL" &&
@@ -252,10 +256,23 @@ validate_closed_controls() {
     *) die "closed Go cache state is invalid" ;;
   esac
   expected="$(closed_control_manifest_content)"
-  [[ "$(<"$CLOSED_CONTROL_MANIFEST")" == "$expected" &&
-    "$CLOSED_CONTROL_SHA256" =~ ^sha256:[0-9a-f]{64}$ &&
-    "$(executable_digest "$CLOSED_CONTROL_MANIFEST")" == "$CLOSED_CONTROL_SHA256" ]] ||
+  expected_digest="sha256:$(printf '%s\n' "$expected" | shasum -a 256 | awk '{print $1}')"
+  [[ "$CLOSED_CONTROL_SHA256" =~ ^sha256:[0-9a-f]{64}$ &&
+    "$CLOSED_CONTROL_SHA256" == "$expected_digest" ]] ||
     die "closed execution control manifest changed"
+  if [[ -n "$V25_INSPECT_COMMAND" ]]; then
+    require_v25_custody_command "$V25_INSPECT_COMMAND" ||
+      die "bounded exact-control inspector changed"
+    actual_digest="$("$V25_INSPECT_COMMAND" -file-digest "$CLOSED_CONTROL_MANIFEST" -maximum-bytes 4096)" ||
+      die "closed execution control manifest cannot be inspected"
+    [[ "$actual_digest" == "$CLOSED_CONTROL_SHA256" ]] ||
+      die "closed execution control manifest changed"
+  else
+    # The fresh 0700 build root does not treat this write-only marker as
+    # authority until the exact inspector has been compiled and bound.
+    [[ "$CLOSED_CACHES_ABSENT" == 0 ]] ||
+      die "bounded exact-control inspector is absent after command build"
+  fi
 }
 
 closed_go() {
@@ -367,7 +384,7 @@ initialize_closed_go_cache() {
   mkdir -m 700 "$CLOSED_HOME" "$CLOSED_TMP" "$CLOSED_GO_CACHE" "$CLOSED_GO_MODULE_CACHE"
   closed_control_manifest_content > "$CLOSED_CONTROL_MANIFEST"
   chmod 600 "$CLOSED_CONTROL_MANIFEST"
-  CLOSED_CONTROL_SHA256="$(executable_digest "$CLOSED_CONTROL_MANIFEST")"
+  CLOSED_CONTROL_SHA256="sha256:$(closed_control_manifest_content | shasum -a 256 | awk '{print $1}')"
   validate_closed_controls
 }
 
@@ -407,6 +424,7 @@ initialize_v25_custody_commands() {
     -n "$V25_CLEANUP_COMMAND" && -n "$V25_CLEANUP_SHA256" &&
     -n "$V25_EXECUTE_COMMAND" && -n "$V25_EXECUTE_SHA256" &&
     -n "$V25_FREEZE_COMMAND" && -n "$V25_FREEZE_SHA256" &&
+    -n "$V25_INSPECT_COMMAND" && -n "$V25_INSPECT_SHA256" &&
     -n "$V25_LOCK_COMMAND" && -n "$V25_LOCK_SHA256" &&
     -n "$V25_PREPARE_COMMAND" && -n "$V25_PREPARE_SHA256" &&
     -n "$V25_PROMOTE_COMMAND" && -n "$V25_PROMOTE_SHA256" &&
@@ -414,7 +432,7 @@ initialize_v25_custody_commands() {
     validate_closed_controls
     [[ "$CLOSED_CACHES_ABSENT" == 1 ]] || die "prebuilt V25 commands retained mutable Go caches"
     for command_path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
-      "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+      "$V25_INSPECT_COMMAND" "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
       require_v25_custody_command "$command_path" ||
         die "prebuilt V25 custody command became invalid: $command_path"
     done
@@ -424,6 +442,7 @@ initialize_v25_custody_commands() {
     -z "$V25_CLEANUP_COMMAND" && -z "$V25_CLEANUP_SHA256" &&
     -z "$V25_EXECUTE_COMMAND" && -z "$V25_EXECUTE_SHA256" &&
     -z "$V25_FREEZE_COMMAND" && -z "$V25_FREEZE_SHA256" &&
+    -z "$V25_INSPECT_COMMAND" && -z "$V25_INSPECT_SHA256" &&
     -z "$V25_LOCK_COMMAND" && -z "$V25_LOCK_SHA256" &&
     -z "$V25_PREPARE_COMMAND" && -z "$V25_PREPARE_SHA256" &&
     -z "$V25_PROMOTE_COMMAND" && -z "$V25_PROMOTE_SHA256" &&
@@ -442,10 +461,13 @@ initialize_v25_custody_commands() {
     ./spike/t4013/cmd/t4013-cleanup \
     ./spike/t4013/cmd/t4013-execute \
     ./spike/t4013/cmd/t4013-freeze \
+    ./spike/t4013/cmd/t4013-inspect \
     ./spike/t4013/cmd/t4013-lock \
     ./spike/t4013/cmd/t4013-prepare \
     ./spike/t4013/cmd/t4013-promote \
     ./spike/t4013/cmd/t4013-receipt)
+  V25_INSPECT_COMMAND="${command_root}/t4013-inspect"
+  V25_INSPECT_SHA256="$(executable_digest "$V25_INSPECT_COMMAND")"
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
   V25_BUNDLE_COMMAND="${command_root}/t4013-bundle"
   V25_BUNDLE_SHA256="$(executable_digest "$V25_BUNDLE_COMMAND")"
@@ -464,7 +486,7 @@ initialize_v25_custody_commands() {
   V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
   V25_RECEIPT_SHA256="$(executable_digest "$V25_RECEIPT_COMMAND")"
   for command_path in "$V25_BUNDLE_COMMAND" "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_FREEZE_COMMAND" \
-    "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+    "$V25_INSPECT_COMMAND" "$V25_LOCK_COMMAND" "$V25_PREPARE_COMMAND" "$V25_PROMOTE_COMMAND" "$V25_RECEIPT_COMMAND"; do
     [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
       die "prebuilt V25 custody command is invalid: $command_path"
   done
@@ -492,6 +514,7 @@ require_v25_custody_command() {
     "$V25_CLEANUP_COMMAND") expected="$V25_CLEANUP_SHA256" ;;
     "$V25_EXECUTE_COMMAND") expected="$V25_EXECUTE_SHA256" ;;
     "$V25_FREEZE_COMMAND") expected="$V25_FREEZE_SHA256" ;;
+    "$V25_INSPECT_COMMAND") expected="$V25_INSPECT_SHA256" ;;
     "$V25_LOCK_COMMAND") expected="$V25_LOCK_SHA256" ;;
     "$V25_PREPARE_COMMAND") expected="$V25_PREPARE_SHA256" ;;
     "$V25_PROMOTE_COMMAND") expected="$V25_PROMOTE_SHA256" ;;
@@ -613,8 +636,15 @@ release_run_lock() {
     printf '%s: ceremony operation lock owner changed; lock retained for review\n' "$SCRIPT_NAME" >&2
     return 1
   fi
-  if ! unexpected="$(find "$RUN_LOCK_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name owner -print -quit)" ||
+  if [[ -n "$V25_INSPECT_COMMAND" ]]; then
+    if ! run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" \
+      -exact-directory "$RUN_LOCK_DIRECTORY" -- owner; then
+      printf '%s: ceremony operation lock contents changed; lock retained for review\n' "$SCRIPT_NAME" >&2
+      return 1
+    fi
+  elif ! unexpected="$(find "$RUN_LOCK_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name owner -print -quit)" ||
     [[ -n "$unexpected" ]]; then
+    # Historical V1-V24 operation locks retain their original shell inspection.
     printf '%s: ceremony operation lock contents changed; lock retained for review\n' "$SCRIPT_NAME" >&2
     return 1
   fi
@@ -642,8 +672,8 @@ enter_v25_run_lock() {
   plan_path="${run_root}/evidence/plan.json"
   [[ -d "$run_root" && ! -L "$run_root" && -f "$plan_path" && ! -L "$plan_path" ]] ||
     return 0
-  is_v25_plan "$plan_path" || return 0
   initialize_v25_custody_commands
+  is_v25_plan "$plan_path" || return 0
   require_v25_custody_command "$V25_LOCK_COMMAND" ||
     die "V25 run-root lock command was not prebuilt before operation admission"
   exec /usr/bin/env -i \
@@ -666,6 +696,7 @@ enter_v25_run_lock() {
     V25_CLEANUP_COMMAND="$V25_CLEANUP_COMMAND" V25_CLEANUP_SHA256="$V25_CLEANUP_SHA256" \
     V25_EXECUTE_COMMAND="$V25_EXECUTE_COMMAND" V25_EXECUTE_SHA256="$V25_EXECUTE_SHA256" \
     V25_FREEZE_COMMAND="$V25_FREEZE_COMMAND" V25_FREEZE_SHA256="$V25_FREEZE_SHA256" \
+    V25_INSPECT_COMMAND="$V25_INSPECT_COMMAND" V25_INSPECT_SHA256="$V25_INSPECT_SHA256" \
     V25_LOCK_COMMAND="$V25_LOCK_COMMAND" V25_LOCK_SHA256="$V25_LOCK_SHA256" \
     V25_PREPARE_COMMAND="$V25_PREPARE_COMMAND" V25_PREPARE_SHA256="$V25_PREPARE_SHA256" \
     V25_PROMOTE_COMMAND="$V25_PROMOTE_COMMAND" V25_PROMOTE_SHA256="$V25_PROMOTE_SHA256" \
@@ -750,7 +781,12 @@ plan_go_in_repo_active() {
 }
 
 is_v25_plan() {
-  grep -Eq '"schema"[[:space:]]*:[[:space:]]*"t4013-neutral-convergence-plan-v25"' "$1"
+  local schema
+  require_v25_custody_command "$V25_INSPECT_COMMAND" ||
+    die "bounded exact-control inspector is unavailable"
+  schema="$(run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" -plan-schema "$1")" ||
+    die "plan failed bounded exact-control inspection"
+  [[ "$schema" == "t4013-neutral-convergence-plan-v25" ]]
 }
 
 usage() {
@@ -1100,7 +1136,10 @@ run_root_for() {
 
 plan_digest_for() {
   local plan_path="$1"
-  printf 'sha256:%s\n' "$(shasum -a 256 "$plan_path" | awk '{print $1}')"
+  require_v25_custody_command "$V25_INSPECT_COMMAND" ||
+    die "bounded exact-control inspector is unavailable"
+  run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" -plan-digest "$plan_path" ||
+    die "plan failed bounded exact-control inspection"
 }
 
 freeze() {
@@ -1179,27 +1218,25 @@ cleanup_prepared() {
 }
 
 refuse_supervision_residue() {
-  local supervision_path="${1}.t4013-supervision" path
-  for path in "$supervision_path" "${supervision_path}.retiring" "${supervision_path}.retired"; do
-    [[ ! -e "$path" && ! -L "$path" ]] ||
-      die "durable custody supervision remains; receipt and seal are refused: $path"
-  done
-  if compgen -G "${supervision_path}.creating.*" >/dev/null; then
-    die "durable custody supervision creation remains; receipt and seal are refused: $supervision_path"
-  fi
+  local supervision_path="${1}.t4013-supervision"
+  run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" \
+    -directory "$(dirname "$supervision_path")" \
+    -forbid-prefix "$(basename "$supervision_path")" -maximum-entries 4096 ||
+    die "durable custody supervision remains or exceeds its inspection bound; receipt and seal are refused"
 }
 
 manifest_value() {
   local manifest="$1" key="$2"
-  awk -F '"' -v wanted="$key" '$2 == wanted { print $4; exit }' "$manifest"
+  run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" \
+    -json-value "$manifest" -key "$key"
 }
 
 require_exact_inventory() {
-  local directory="$1" expected actual
+  local directory="$1"
   shift
-  expected="$(printf '%s\n' "$@" | LC_ALL=C sort)"
-  actual="$(cd "$directory" && find . -mindepth 1 -maxdepth 1 -print | sed 's#^\./##' | LC_ALL=C sort)"
-  [[ "$actual" == "$expected" ]] || die "evidence directory contains an unexpected or missing path"
+  run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" \
+    -exact-directory "$directory" -- "$@" ||
+    die "evidence directory contains an unexpected or missing path"
 }
 
 verify_frozen_identity() {
@@ -1221,24 +1258,15 @@ verify_frozen_identity() {
 
 verify_checksum_inventory() {
   local evidence_root="$1" trusted_allowed_signers="$2"
-  local checksum_line checksum_pattern checksum_names="" expected_names
-  checksum_pattern='^([0-9a-f]{64})  ([A-Za-z0-9._-]+)$'
+  run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" \
+    -checksums "${evidence_root}/SHA256SUMS" ||
+    die "checksum inventory is not one bounded canonical value"
   ssh-keygen -Y verify \
     -f "$trusted_allowed_signers" \
     -I "$SIGNER_IDENTITY" \
     -n "$SIGNATURE_NAMESPACE" \
     -s "${evidence_root}/SHA256SUMS.sig" < "${evidence_root}/SHA256SUMS" ||
     die "returned checksum inventory signature is not authentic"
-  while IFS= read -r checksum_line || [[ -n "$checksum_line" ]]; do
-    [[ "$checksum_line" =~ $checksum_pattern ]] ||
-      die "checksum inventory contains a noncanonical entry"
-    checksum_names+="${BASH_REMATCH[2]}"$'\n'
-  done < "${evidence_root}/SHA256SUMS"
-  expected_names="$(printf '%s\n' \
-    allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub |
-    LC_ALL=C sort)"$'\n'
-  [[ "$(printf '%s' "$checksum_names" | LC_ALL=C sort)"$'\n' == "$expected_names" ]] ||
-    die "checksum inventory does not contain exactly the expected evidence files"
   (cd "$evidence_root" && shasum -a 256 -c SHA256SUMS) ||
     die "returned evidence checksum differs"
 }
@@ -1505,6 +1533,8 @@ prepare_receipt_for_seal() {
 
 seal_run() {
   local ceremony_id="$1" run_root evidence_root private_root plan_path prepared_path custody_path plan_digest
+  local private_name
+  local -a private_expected=()
   initialize_repository
   initialize_ceremony_root
   run_root="$(run_root_for "$ceremony_id")"
@@ -1544,16 +1574,19 @@ seal_run() {
   if [[ -e "$prepared_path" || -L "$prepared_path" ||
     -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
     -e "${prepared_path}.preparing" || -L "${prepared_path}.preparing" ]]; then
-    [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 \
-      ! -name prepared.json ! -name prepared.json.tmp ! -name prepared.json.preparing -print -quit)" ]] ||
-      die "unexpected private ceremony state remains"
+    for private_name in prepared.json prepared.json.tmp prepared.json.preparing; do
+      if [[ -e "${private_root}/${private_name}" || -L "${private_root}/${private_name}" ]]; then
+        private_expected+=("$private_name")
+      fi
+    done
+    require_exact_inventory "$private_root" "${private_expected[@]}"
     if ! cleanup_prepared "${evidence_root}/plan.json" "$prepared_path"; then
       EXIT_UNPROVEN_REASON="resumable prepared cleanup refused"
       die "resumable private prepared manifest cleanup failed"
     fi
   fi
   [[ ! -e "$custody_path" && ! -L "$custody_path" ]] || die "private custody remains"
-  [[ -z "$(find "$private_root" -mindepth 1 -maxdepth 1 -print -quit)" ]] || die "private ceremony state remains"
+  require_exact_inventory "$private_root"
   refuse_supervision_residue "$custody_path"
   require_clean_checkout
   prepare_receipt_for_seal \
