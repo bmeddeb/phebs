@@ -3,6 +3,7 @@ package t4013
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,6 +77,32 @@ func TestBoundedExactRegularRefusesReplacementDuringRead(t *testing.T) {
 	}
 	if _, err := readOpenedAtomicRegular(path, 32, opened, file); err == nil {
 		t.Fatal("replacement retained exact-control authority")
+	}
+}
+
+func TestBoundedExactRegularDoesNotClassifyPostOpenRemovalAsAbsence(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "control")
+	if _, err := readAtomicRegular(path, 32); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pre-open absence error = %v, want absent sentinel", err)
+	}
+	if err := os.WriteFile(path, []byte("control\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file, err := openNoFollowRegular(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if _, err := readOpenedAtomicRegular(path, 32, opened, file); err == nil || errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("post-open removal error = %v, want unstable authority without absent sentinel", err)
 	}
 }
 

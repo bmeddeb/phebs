@@ -10046,6 +10046,20 @@ noncanonical retained V24 plan remain readable, while the same V25 shape
 refuses. Focused driver checks cover the ninth command and bounded supervision
 path without a corpus, rehearsal, or ceremony.
 
+The completion review retained the earlier 14-file OCR coverage and isolated
+the two unresolved large files. A 30-minute targeted retry made 118 bounded
+review-tool calls but did not pass: the shell item timed out and `execute.go`
+exhausted its tool-round budget, with no comments returned. The line-by-line
+manual equivalent traced every changed hunk and every shared reader caller. It
+found one root-boundary defect: a path removed after its descriptor was opened
+still wrapped `os.ErrNotExist`, allowing resume/publication callers to mistake
+an unstable authority for clean pre-open absence. Exact file and directory
+post-open path loss now reports only instability, while genuine pre-open
+absence retains the sentinel. A deterministic regression pins both sides of
+that classification. The full T40.13 package, focused race check, vet, lint,
+shell syntax, docs, glossary, and whitespace gates pass; no additional
+critical, high, or medium finding remains in the two-file manual equivalent.
+
 This work is ceremony/control-plane only. Each exact file read adds at most two
 post-read identity stats to its existing bounded content read. An exact
 directory reads the declared count plus one entry; the largest live fixed scan

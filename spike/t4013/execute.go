@@ -4584,8 +4584,11 @@ func readDirectoryBounded(path string, limit int) ([]os.DirEntry, error) {
 	afterOpen, afterStatErr := directory.Stat()
 	afterPath, lstatErr := os.Lstat(path)
 	closeErr := directory.Close()
-	if readErr != nil || afterStatErr != nil || lstatErr != nil || closeErr != nil {
-		return nil, errors.Join(readErr, afterStatErr, lstatErr, closeErr)
+	if readErr != nil || afterStatErr != nil || closeErr != nil {
+		return nil, errors.Join(readErr, afterStatErr, closeErr)
+	}
+	if lstatErr != nil {
+		return nil, fmt.Errorf("T40.13 bounded directory changed during inspection: %v", lstatErr)
 	}
 	if !afterPath.IsDir() || afterPath.Mode()&os.ModeSymlink != 0 ||
 		!sameFileSnapshot(opened, afterOpen) || !sameFileSnapshot(opened, afterPath) {
@@ -5990,10 +5993,15 @@ func readOpenedAtomicRegular(
 	afterOpen, afterStatErr := file.Stat()
 	afterPath, lstatErr := os.Lstat(path)
 	closeErr := file.Close()
-	if readErr != nil || afterStatErr != nil || lstatErr != nil || closeErr != nil {
+	if readErr != nil || afterStatErr != nil || closeErr != nil {
 		return nil, fmt.Errorf("read T40.13 exact file: %w", errors.Join(
-			readErr, afterStatErr, lstatErr, closeErr,
+			readErr, afterStatErr, closeErr,
 		))
+	}
+	if lstatErr != nil {
+		// A post-open disappearance is an unstable authority, not the clean
+		// pre-open absence that callers may handle as an empty state.
+		return nil, fmt.Errorf("read T40.13 exact file: published path changed: %v", lstatErr)
 	}
 	if !afterPath.Mode().IsRegular() || afterPath.Mode()&os.ModeSymlink != 0 ||
 		!sameFileSnapshot(openedInfo, afterOpen) || !sameFileSnapshot(openedInfo, afterPath) ||
