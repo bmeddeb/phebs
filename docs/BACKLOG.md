@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13k next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13l next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1578,6 +1578,12 @@ injected admission child tree is visible in the receipt; probe/meter failure
 retains custody and cannot be classified as a complete
 measurement; the meter remains bounded and starts no extra corpus read or
 production child.
+
+T40.13k is complete. V25 Execute now meters admission before phase one with
+bounded process-tree wall, peak-RSS, and child-lifetime facts, merges those facts
+into the preflight phase, and refuses completed evidence when the meter is
+unavailable or fails. T40.13l is now the only next scale ticket inside the
+still-open T40.13 gate and closes low-risk cost-first refusal ordering.
 
 **T40.13l · Cost-first operator gates** *(low operational risk · needs
 T40.13k)* — reject immutable bad inputs before running the bounded but costly

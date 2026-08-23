@@ -102,50 +102,52 @@ type ExecuteRequest struct {
 }
 
 type execution struct {
-	ctx                  context.Context
-	moduleRoot           string
-	workspace            string
-	preparedPath         string
-	preparedDigest       string
-	plan                 Plan
-	planBytes            []byte
-	prepared             Prepared
-	toolchain            privateToolchain
-	observation          Observation
-	structural           *privateServer
-	semantic             *privateServer
-	structA              privateProfileSnapshot
-	structB              privateProfileSnapshot
-	structAR             privateProfileSnapshot
-	semanticA            privateProfileSnapshot
-	phase                int
-	phaseStarted         time.Time
-	activeMeters         map[*phaseMeter]struct{}
-	partialMetrics       PhaseMetrics
-	metersTracked        int
-	metersExpected       int
-	measurementErr       error
-	custodyDestroy       func(string, string) error
-	terminalDrain        func() error
-	observationPath      string
-	checkpointPersist    func(string, teardownCheckpoint) error
-	observationStage     func(string, Observation) error
-	observationPublish   func(string, Observation) error
-	checkpointPersisted  bool
-	observationStaged    bool
-	observationPersisted bool
-	runRootLock          *runRootLock
-	executionStarted     time.Time
-	executionCancel      context.CancelFunc
-	hostToolchainVerify  func() error
-	hostTools            hostToolchainBinding
-	hostTerminalVerified bool
-	liveServers          []*privateServer
-	serverShutdownErr    error
-	portReservations     map[string]net.Listener
-	inspectionWork       sync.WaitGroup
-	supervision          *custodySupervision
-	checkpointDigest     string
+	ctx                         context.Context
+	moduleRoot                  string
+	workspace                   string
+	preparedPath                string
+	preparedDigest              string
+	plan                        Plan
+	planBytes                   []byte
+	prepared                    Prepared
+	toolchain                   privateToolchain
+	observation                 Observation
+	structural                  *privateServer
+	semantic                    *privateServer
+	structA                     privateProfileSnapshot
+	structB                     privateProfileSnapshot
+	structAR                    privateProfileSnapshot
+	semanticA                   privateProfileSnapshot
+	phase                       int
+	phaseStarted                time.Time
+	activeMeters                map[*phaseMeter]struct{}
+	partialMetrics              PhaseMetrics
+	metersTracked               int
+	metersExpected              int
+	measurementErr              error
+	custodyDestroy              func(string, string) error
+	terminalDrain               func() error
+	observationPath             string
+	checkpointPersist           func(string, teardownCheckpoint) error
+	observationStage            func(string, Observation) error
+	observationPublish          func(string, Observation) error
+	checkpointPersisted         bool
+	observationStaged           bool
+	observationPersisted        bool
+	runRootLock                 *runRootLock
+	executionStarted            time.Time
+	executionCancel             context.CancelFunc
+	hostToolchainVerify         func() error
+	hostTools                   hostToolchainBinding
+	hostTerminalVerified        bool
+	liveServers                 []*privateServer
+	serverShutdownErr           error
+	portReservations            map[string]net.Listener
+	inspectionWork              sync.WaitGroup
+	supervision                 *custodySupervision
+	checkpointDigest            string
+	admissionMetrics            PhaseMetrics
+	admissionAccountingComplete bool
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (observation Observation, retErr error) {
@@ -209,6 +211,27 @@ func newExecution(
 	}
 	planBytes := planIdentity.raw
 	version := planSchemaVersion(plan.Schema)
+	var admissionSampler *rssSampler
+	admissionStarted := time.Now()
+	if version >= 25 {
+		admissionSampler = newRSSSampler(os.Getpid(), true)
+		admissionSampler.captureRootIdentity()
+		admissionSampler.sample()
+		go admissionSampler.run()
+		defer func() {
+			admissionCloseErr := admissionSampler.close()
+			admissionMetrics := PhaseMetrics{WallMS: time.Since(admissionStarted).Milliseconds()}
+			var admissionMetricsErr error
+			admissionMetrics.PeakRSSBytes, admissionMetrics.GitChildren, admissionMetrics.IndexChildren,
+				admissionMetrics.OtherChildren, admissionMetricsErr = admissionSampler.metrics()
+			admissionErr := errors.Join(admissionCloseErr, admissionMetricsErr)
+			if result != nil {
+				result.admissionMetrics = admissionMetrics
+				result.admissionAccountingComplete = admissionErr == nil
+				result.measurementErr = errors.Join(result.measurementErr, admissionErr)
+			}
+		}()
+	}
 	ctx, executionCancel := executionAdmissionContext(ctx, plan, executionStarted)
 	defer func() {
 		if retErr != nil && executionCancel != nil {
@@ -533,7 +556,7 @@ func (run *execution) execute() error {
 		run.ctx, run.moduleRoot, run.workspace, run.prepared.ExecutionControlsSHA256,
 		run.plan, run.hostTools,
 	)
-	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, preflightMetrics)
+	mergedMetrics, mergeErr := mergeMetrics(run.admissionMetrics, preflightMetrics)
 	if mergeErr != nil {
 		return mergeErr
 	}
@@ -552,9 +575,12 @@ func (run *execution) execute() error {
 	if planSchemaVersion(run.plan.Schema) < 25 {
 		preflightMetrics = PhaseMetrics{WallMS: time.Since(preflightStarted).Milliseconds(), OtherChildren: 4}
 	} else {
-		preflightMetrics.WallMS = time.Since(preflightStarted).Milliseconds()
+		preflightMetrics = mergedMetrics
 	}
 	run.observation.Phases[0] = succeededPhase("preflight", preflightMetrics)
+	if planSchemaVersion(run.plan.Schema) >= 25 && !run.admissionAccountingComplete {
+		return errors.New("T40.13 admission phase accounting is incomplete")
+	}
 	if err := run.enforceSafety(); err != nil {
 		return err
 	}

@@ -18,6 +18,12 @@ count, resource, timing, construction, and receipt aggregation. MaxInt64
 boundary tests fail closed before comparison; ordinary values and historical
 receipts remain exact, with no wire widening or saturation.
 
+**T40.13k · Complete executor-admission accounting** ✅ 2026-08-23 — V25
+Execute now accounts for pre-phase-one admission with bounded process-tree
+wall, peak-RSS, and child-lifetime facts merged into `preflight`. Meter failure
+keeps phase accounting incomplete and refuses completed evidence before custody
+destruction; V1–V24 behavior remains unchanged.
+
 ---
 
 ## EPIC 0 — Bootstrap

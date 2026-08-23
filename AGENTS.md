@@ -199,9 +199,9 @@ hard-death descendant supervision and T40.13d's shared custody-mutation and
 immutable-admission lock and T40.13e's exact executed-tool identity closure are
 also complete; T40.13f's hermetic execution controls, T40.13g's authenticated
 returned-evidence firewall, T40.13h's resumable seal/keypair integrity, and
-T40.13i's bounded exact-control inspection and T40.13j's overflow-safe ceremony
-arithmetic are complete, and T40.13k is the next prerequisite inside the
-T40.13 gate; Epic 40
+T40.13i's bounded exact-control inspection, T40.13j's overflow-safe ceremony
+arithmetic, and T40.13k's complete executor-admission accounting are complete,
+and T40.13l is the next prerequisite inside the T40.13 gate; Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services

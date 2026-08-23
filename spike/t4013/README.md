@@ -3298,3 +3298,14 @@ the arithmetic and metric merge paths; ordinary values and historical receipt
 decoders remain exact. The checks add constant work per already-visited scalar,
 with no wider wire representation or saturation. T40.13k remains next; no
 freeze or ceremony is authorized.
+
+### T40.13k complete executor-admission accounting
+
+V25 Execute now brackets pre-phase-one admission with the existing bounded
+fail-closed process sampler. Its wall time, peak RSS, and Git/index/other child
+lifetime facts merge into the explicit `preflight` phase alongside private
+toolchain-build metrics. A sampler or metric failure leaves phase accounting
+incomplete and stops before completed evidence can be published or custody
+destroyed. Historical V1–V24 accounting remains unchanged. The meter adds only
+one bounded admission interval and no corpus read, production child, or wire
+field; T40.13l remains next.

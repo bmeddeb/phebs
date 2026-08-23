@@ -2971,6 +2971,11 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 }
 
 func validateCompleted(value Receipt, plan Plan) error {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		if len(value.Checks) != len(checkNames) || !value.Checks[len(value.Checks)-1].Passed {
+			return errors.New("T40.13 completed receipt lacks complete phase accounting")
+		}
+	}
 	if planSchemaVersion(plan.Schema) >= 3 {
 		want := [][2]string{
 			{"structural-2m-v1", "cold"}, {"semantic-262144-v1", "cold"},

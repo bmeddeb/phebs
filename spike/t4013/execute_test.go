@@ -5050,3 +5050,16 @@ func TestV25ExecutionDeadlineIncludesAdmission(t *testing.T) {
 		t.Fatal("historical admission context gained a deadline")
 	}
 }
+
+func TestV25CompletedReceiptRequiresAdmissionAccounting(t *testing.T) {
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV25TeardownObservation(plan)
+	value.Checks[len(value.Checks)-1].Passed = false
+	planBytes := marshal(t, plan)
+	if _, err := BuildReceipt(planBytes, marshal(t, value), PlanDigest(planBytes)); err == nil {
+		t.Fatal("completed V25 receipt accepted incomplete admission accounting")
+	}
+}
