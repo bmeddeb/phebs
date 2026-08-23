@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/executableidentity"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
@@ -39,6 +40,17 @@ const (
 // FindBinary locates zoekt-git-index: env override, next to our executable,
 // ./bin beside the executable (the `make build` layout), then PATH.
 func FindBinary() (string, error) {
+	candidate, err := findBinary()
+	if err != nil {
+		return "", err
+	}
+	if err := executableidentity.Verify(candidate, os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")); err != nil {
+		return "", fmt.Errorf("verify zoekt-git-index identity: %w", err)
+	}
+	return candidate, nil
+}
+
+func findBinary() (string, error) {
 	var candidate string
 	var err error
 	if p := os.Getenv("PHEBS_ZOEKT_GIT_INDEX"); p != "" {
@@ -388,6 +400,13 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	start := time.Now()
 	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: %s: ", repo.Name, childName), ix.Verbose)
 	cmd.Stdout, cmd.Stderr = out, out
+	expectedSHA256 := os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")
+	if unit != nil {
+		expectedSHA256 = os.Getenv("PHEBS_FOCUSED_INDEX_SHA256")
+	}
+	if err := executableidentity.Verify(cmd.Path, expectedSHA256); err != nil {
+		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)
+	}
 	runErr := cmd.Run()
 	out.Flush()
 	if runErr != nil {

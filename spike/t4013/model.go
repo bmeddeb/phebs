@@ -592,9 +592,10 @@ type ToolchainObservation struct {
 // HostToolObservation binds a source-free ceremony to an exact executable and
 // its bounded public version identity without retaining a host filesystem path.
 type HostToolObservation struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	SHA256  string `json:"sha256"`
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	SHA256     string `json:"sha256"`
+	PathSHA256 string `json:"path_sha256,omitempty"`
 }
 
 type EnvironmentObservation struct {
@@ -1456,7 +1457,9 @@ func validateHostToolchain(values []HostToolObservation, includeAssembler bool) 
 	}
 	for index, name := range want {
 		value := values[index]
-		if value.Name != name || !boundedVersion(value.Version) || !digestIdentity(value.SHA256) {
+		if value.Name != name || !boundedVersion(value.Version) || !digestIdentity(value.SHA256) ||
+			includeAssembler && !digestIdentity(value.PathSHA256) ||
+			!includeAssembler && value.PathSHA256 != "" {
 			return errors.New("T40.13 host toolchain identity is invalid")
 		}
 	}

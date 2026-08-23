@@ -27,6 +27,47 @@ const (
 	hostObservationTimeout = 30 * time.Second
 )
 
+type boundExecutable struct {
+	name   string
+	path   string
+	sha256 string
+}
+
+type hostToolchainBinding struct {
+	goDriver boundExecutable
+	git      boundExecutable
+	gitCore  boundExecutable
+	surreal  boundExecutable
+}
+
+func (binding hostToolchainBinding) verifyExecutables(ctx context.Context) error {
+	for _, executable := range []boundExecutable{
+		binding.goDriver, binding.git, binding.gitCore, binding.surreal,
+	} {
+		if _, err := executable.pathForLaunch(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (executable boundExecutable) pathForLaunch(ctx context.Context) (string, error) {
+	if ctx == nil || executable.name == "" || !filepath.IsAbs(executable.path) ||
+		!digestIdentity(executable.sha256) {
+		return "", errors.New("T40.13 bound executable identity is invalid")
+	}
+	info, err := os.Lstat(executable.path)
+	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+		info.Mode()&0o111 == 0 {
+		return "", errors.Join(err, fmt.Errorf("T40.13 bound executable changed: %s", executable.name))
+	}
+	observed, err := executableDigestContext(ctx, executable.path)
+	if err != nil || observed != executable.sha256 {
+		return "", errors.Join(err, fmt.Errorf("T40.13 bound executable changed: %s", executable.name))
+	}
+	return executable.path, nil
+}
+
 // ObserveHostToolchain returns the exact, source-free identities of every host
 // executable used directly or indirectly to build and operate the ceremony.
 func ObserveHostToolchain(ctx context.Context) ([]HostToolObservation, error) {
@@ -38,11 +79,11 @@ func observeHostToolchain(ctx context.Context, closedEnvironment bool) ([]HostTo
 		return nil, errors.New("T40.13 host toolchain context is nil")
 	}
 	if !closedEnvironment {
-		return observeHostToolchainNow(ctx, false)
+		return observeHostToolchainNow(ctx, false, nil)
 	}
 	observationContext, cancel := context.WithTimeout(ctx, hostObservationTimeout)
 	defer cancel()
-	values, err := observeHostToolchainNow(observationContext, closedEnvironment)
+	values, err := observeHostToolchainNow(observationContext, closedEnvironment, nil)
 	if err != nil && observationContext.Err() != nil {
 		return nil, fmt.Errorf(
 			"T40.13 host toolchain observation exceeded its deadline: %w", observationContext.Err(),
@@ -51,16 +92,24 @@ func observeHostToolchain(ctx context.Context, closedEnvironment bool) ([]HostTo
 	return values, err
 }
 
-func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]HostToolObservation, error) {
+func observeHostToolchainNow(
+	ctx context.Context, closedEnvironment bool, binding *hostToolchainBinding,
+) ([]HostToolObservation, error) {
 	digestExecutable := func(path string) (string, error) {
 		if closedEnvironment {
 			return executableDigestContext(ctx, path)
 		}
 		return executableDigest(path)
 	}
-	goPath, err := resolveExecutable("go")
-	if err != nil {
-		return nil, err
+	var goPath string
+	var err error
+	if binding != nil {
+		goPath = binding.goDriver.path
+	} else {
+		goPath, err = resolveExecutable("go")
+		if err != nil {
+			return nil, err
+		}
 	}
 	goDigestBefore, err := digestExecutable(goPath)
 	if err != nil {
@@ -126,9 +175,14 @@ func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]Hos
 			return nil, fmt.Errorf("observe Go assembler version: %w", err)
 		}
 	}
-	gitPath, err := resolveExecutable("git")
-	if err != nil {
-		return nil, err
+	var gitPath string
+	if binding != nil {
+		gitPath = binding.git.path
+	} else {
+		gitPath, err = resolveExecutable("git")
+		if err != nil {
+			return nil, err
+		}
 	}
 	gitIdentity, err := observeExecutable(ctx, closedEnvironment, "git", gitPath, "--version")
 	if err != nil {
@@ -139,15 +193,19 @@ func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]Hos
 	var gitExecPath, gitToolsDigest string
 	if closedEnvironment {
 		var resolveErr error
-		gitCorePath, resolveErr = resolveGitCoreExecutable(ctx)
-		if resolveErr != nil {
-			return nil, resolveErr
+		if binding != nil {
+			gitCorePath = binding.gitCore.path
+		} else {
+			gitCorePath, resolveErr = resolveGitCoreExecutableFor(ctx, gitPath)
+			if resolveErr != nil {
+				return nil, resolveErr
+			}
 		}
 		gitCoreIdentity, err = observeExecutable(ctx, true, "git-core", gitCorePath, "--version")
 		if err != nil {
 			return nil, fmt.Errorf("observe Git core version: %w", err)
 		}
-		gitExecPath, err = resolveGitExecPath(ctx)
+		gitExecPath, err = resolveGitExecPathFor(ctx, gitPath)
 		if err != nil {
 			return nil, err
 		}
@@ -190,9 +248,15 @@ func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]Hos
 	}
 	var surreal store.SurrealIdentity
 	if closedEnvironment {
-		surrealPath, resolveErr := resolveExecutable("surreal")
-		if resolveErr != nil {
-			return nil, resolveErr
+		var surrealPath string
+		if binding != nil {
+			surrealPath = binding.surreal.path
+		} else {
+			var resolveErr error
+			surrealPath, resolveErr = resolveExecutable("surreal")
+			if resolveErr != nil {
+				return nil, resolveErr
+			}
 		}
 		surreal, err = store.InspectSurrealBinaryContext(ctx, surrealPath)
 		if err == nil {
@@ -230,12 +294,14 @@ func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]Hos
 			HostToolObservation{Name: "go-root", Version: goVersion, SHA256: goRootDigest},
 		)
 		values = append(values, systemIdentities...)
-		paths = append(paths, asmPath, gitCorePath, "", "", "")
+		paths = append(paths, asmPath, gitCorePath, gitExecPath, toolDirectory, goRoot)
 		paths = append(paths, systemPaths...)
 	}
 	if closedEnvironment {
 		for index, path := range paths {
-			if path == "" {
+			values[index].PathSHA256 = hostPathDigest(path)
+			switch values[index].Name {
+			case "git-tools", "go-tools", "go-root":
 				continue
 			}
 			digest, digestErr := executableDigestContext(ctx, path)
@@ -260,18 +326,22 @@ func observeHostToolchainNow(ctx context.Context, closedEnvironment bool) ([]Hos
 }
 
 func resolveGitCoreExecutable(ctx context.Context) (string, error) {
-	execPath, err := resolveGitExecPath(ctx)
+	gitPath, err := resolveExecutable("git")
+	if err != nil {
+		return "", err
+	}
+	return resolveGitCoreExecutableFor(ctx, gitPath)
+}
+
+func resolveGitCoreExecutableFor(ctx context.Context, gitPath string) (string, error) {
+	execPath, err := resolveGitExecPathFor(ctx, gitPath)
 	if err != nil {
 		return "", err
 	}
 	return resolveExactExecutable(filepath.Join(execPath, "git"))
 }
 
-func resolveGitExecPath(ctx context.Context) (string, error) {
-	gitPath, err := resolveExecutable("git")
-	if err != nil {
-		return "", err
-	}
+func resolveGitExecPathFor(ctx context.Context, gitPath string) (string, error) {
 	execPath, err := boundedCommand(ctx, true, gitPath, "--exec-path")
 	if err != nil || !filepath.IsAbs(execPath) {
 		return "", errors.Join(err, errors.New("T40.13 Git executable directory is invalid"))
@@ -441,7 +511,91 @@ func VerifyHostToolchain(ctx context.Context, expected []HostToolObservation) er
 }
 
 func verifyHostToolchainForPlan(ctx context.Context, plan Plan) error {
+	if planSchemaVersion(plan.Schema) >= 25 {
+		_, err := bindHostToolchainForPlan(ctx, plan)
+		return err
+	}
 	return verifyHostToolchain(ctx, plan.HostToolchain, planSchemaVersion(plan.Schema) >= 25)
+}
+
+func bindHostToolchainForPlan(ctx context.Context, plan Plan) (hostToolchainBinding, error) {
+	if planSchemaVersion(plan.Schema) < 25 {
+		return hostToolchainBinding{}, verifyHostToolchainForPlan(ctx, plan)
+	}
+	if err := validateHostToolchain(plan.HostToolchain, true); err != nil {
+		return hostToolchainBinding{}, err
+	}
+	binding, err := prebindHostToolchain(ctx, plan.HostToolchain)
+	if err != nil {
+		return hostToolchainBinding{}, err
+	}
+	observationContext, cancel := context.WithTimeout(ctx, hostObservationTimeout)
+	defer cancel()
+	observed, err := observeHostToolchainNow(observationContext, true, &binding)
+	if err != nil {
+		if observationContext.Err() != nil {
+			return hostToolchainBinding{}, fmt.Errorf(
+				"T40.13 host toolchain observation exceeded its deadline: %w", observationContext.Err(),
+			)
+		}
+		return hostToolchainBinding{}, err
+	}
+	if err := compareHostToolchain(plan.HostToolchain, observed); err != nil {
+		return hostToolchainBinding{}, err
+	}
+	if err := binding.verifyExecutables(ctx); err != nil {
+		return hostToolchainBinding{}, err
+	}
+	return binding, nil
+}
+
+func prebindHostToolchain(
+	ctx context.Context, expected []HostToolObservation,
+) (hostToolchainBinding, error) {
+	goPath, err := resolveExecutable("go")
+	if err != nil {
+		return hostToolchainBinding{}, err
+	}
+	gitPath, err := resolveExecutable("git")
+	if err != nil {
+		return hostToolchainBinding{}, err
+	}
+	surrealPath, err := resolveExecutable("surreal")
+	if err != nil {
+		return hostToolchainBinding{}, err
+	}
+	binding := hostToolchainBinding{
+		goDriver: bindObservedExecutable(expected, "go", goPath),
+		git:      bindObservedExecutable(expected, "git", gitPath),
+		surreal:  bindObservedExecutable(expected, "surreal", surrealPath),
+	}
+	for _, executable := range []boundExecutable{binding.goDriver, binding.git, binding.surreal} {
+		if _, err := executable.pathForLaunch(ctx); err != nil {
+			return hostToolchainBinding{}, err
+		}
+	}
+	gitCorePath, err := resolveGitCoreExecutableFor(ctx, binding.git.path)
+	if err != nil {
+		return hostToolchainBinding{}, err
+	}
+	binding.gitCore = bindObservedExecutable(expected, "git-core", gitCorePath)
+	if _, err := binding.gitCore.pathForLaunch(ctx); err != nil {
+		return hostToolchainBinding{}, err
+	}
+	return binding, nil
+}
+
+func bindObservedExecutable(values []HostToolObservation, name, path string) boundExecutable {
+	for _, value := range values {
+		if value.Name == name && value.PathSHA256 == hostPathDigest(path) {
+			return boundExecutable{name: name, path: path, sha256: value.SHA256}
+		}
+	}
+	return boundExecutable{}
+}
+
+func hostPathDigest(path string) string {
+	return digest([]byte("host-executable-path\x00" + path))
 }
 
 func verifyHostToolchain(
@@ -538,21 +692,32 @@ func regularFileDigestContext(ctx context.Context, path string, maximumBytes int
 	if ctx == nil {
 		return "", errors.New("host digest context is nil")
 	}
+	before, err := os.Lstat(path)
+	if err != nil || !before.Mode().IsRegular() || before.Mode()&os.ModeSymlink != 0 ||
+		before.Size() <= 0 || before.Size() > maximumBytes {
+		return "", errors.Join(err, errors.New("host executable changed or exceeded its byte bound"))
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = file.Close() }()
-	info, err := file.Stat()
-	if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > maximumBytes {
-		return "", errors.New("host executable changed or exceeded its byte bound")
+	opened, err := file.Stat()
+	if err != nil || !os.SameFile(before, opened) {
+		_ = file.Close()
+		return "", errors.Join(err, errors.New("host executable changed before hashing"))
 	}
 	hash := sha256.New()
 	written, err := io.Copy(hash, io.LimitReader(contextReader{ctx, file}, maximumBytes+1))
 	if err != nil {
+		_ = file.Close()
 		return "", err
 	}
-	if written != info.Size() || written > maximumBytes {
+	afterOpen, openStatErr := file.Stat()
+	closeErr := file.Close()
+	afterPath, pathStatErr := os.Lstat(path)
+	if openStatErr != nil || closeErr != nil || pathStatErr != nil ||
+		!os.SameFile(opened, afterOpen) || !os.SameFile(afterOpen, afterPath) ||
+		afterPath.Mode()&os.ModeSymlink != 0 || written != before.Size() || written > maximumBytes {
 		return "", errors.New("host executable changed while hashing")
 	}
 	if err := ctx.Err(); err != nil {

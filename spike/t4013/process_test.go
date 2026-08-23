@@ -24,6 +24,82 @@ import (
 
 const privateServerShutdownHelperEnvironment = "PHEBS_T4013_SHUTDOWN_HELPER"
 
+func TestPrivateToolReplacementRefusesEveryHarnessLaunchBeforeMutation(t *testing.T) {
+	boundaries := []struct {
+		name string
+		run  func(context.Context, privateToolchain, PreparedProfile, string) error
+	}{
+		{name: "serve", run: func(ctx context.Context, toolchain privateToolchain, profile PreparedProfile, workspace string) error {
+			server, err := launchPrivateServer(ctx, profile, toolchain, "boundary")
+			if server != nil {
+				_ = server.stop(time.Second)
+			}
+			return err
+		}},
+		{name: "backup", run: func(ctx context.Context, toolchain privateToolchain, profile PreparedProfile, workspace string) error {
+			_, _, err := createLiveBackup(ctx, toolchain, profile, workspace, "boundary")
+			return err
+		}},
+		{name: "restore", run: func(ctx context.Context, toolchain privateToolchain, profile PreparedProfile, workspace string) error {
+			base := filepath.Dir(profile.Config)
+			_, err := restoreBackup(ctx, toolchain, profile, workspace, privateRecoveryBackup{
+				path: filepath.Join(base, "backup-boundary"), logPath: filepath.Join(base, "recovery-boundary.log"),
+			}, "boundary")
+			return err
+		}},
+	}
+
+	for _, boundary := range boundaries {
+		for replaced := 0; replaced < 4; replaced++ {
+			name := privateToolchainInputs(privateToolchain{})[replaced].name
+			t.Run(boundary.name+"/"+name, func(t *testing.T) {
+				workspace := t.TempDir()
+				toolRoot := filepath.Join(workspace, "toolchain")
+				profileRoot := filepath.Join(workspace, "profile")
+				tempRoot := filepath.Join(workspace, "tmp")
+				for _, path := range []string{toolRoot, profileRoot, tempRoot, filepath.Join(profileRoot, "data")} {
+					if err := os.Mkdir(path, 0o700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				toolchain := privateToolchain{
+					Schema: privateToolchainSchema, ClosedEnvironment: true, TempDir: tempRoot,
+					Phebs: filepath.Join(toolRoot, "phebs"), Zoekt: filepath.Join(toolRoot, "zoekt-git-index"),
+					Focused: filepath.Join(toolRoot, "phebs-focused-index"), Buf: filepath.Join(toolRoot, "buf"),
+				}
+				for index, input := range privateToolchainInputs(toolchain) {
+					if err := os.WriteFile(input.path, []byte{byte(index + 1)}, 0o700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if _, err := bindPrivateToolchain(t.Context(), &toolchain); err != nil {
+					t.Fatal(err)
+				}
+				input := privateToolchainInputs(toolchain)[replaced]
+				if err := os.WriteFile(input.path, []byte{byte(replaced + 10)}, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				profile := PreparedProfile{
+					Config: filepath.Join(profileRoot, "phebs.yaml"), DataDir: filepath.Join(profileRoot, "data"),
+				}
+				err := boundary.run(t.Context(), toolchain, profile, workspace)
+				if err == nil || !strings.Contains(err.Error(), input.name) {
+					t.Fatalf("replacement error = %v", err)
+				}
+				for _, path := range []string{
+					filepath.Join(profileRoot, "server-boundary.log"),
+					filepath.Join(profileRoot, "recovery-boundary.log"),
+					profile.DataDir + ".prior-boundary",
+				} {
+					if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+						t.Fatalf("launch mutation exists after refusal: %s: %v", path, err)
+					}
+				}
+			})
+		}
+	}
+}
+
 func TestPrivateServerStopTerminatesProcessSession(t *testing.T) {
 	if helperPath := os.Getenv(privateServerShutdownHelperEnvironment); helperPath != "" {
 		runPrivateServerShutdownHelper(helperPath)
@@ -115,6 +191,10 @@ func TestReviewedSourceExportRetainsControlOnlyForUnprovenShutdown(t *testing.T)
 	runGit("add", "source.go")
 	runGit("commit", "-m", "freeze")
 	commit := runGit("rev-parse", "HEAD")
+	gitCore, err := resolveGitCoreExecutable(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
 	ordinary := errors.New("ordinary export failure")
 	for _, test := range []struct {
 		name         string
@@ -133,7 +213,7 @@ func TestReviewedSourceExportRetainsControlOnlyForUnprovenShutdown(t *testing.T)
 			ctx, cancel := context.WithCancelCause(t.Context())
 			defer cancel(nil)
 			err := exportReviewedSourceWith(
-				ctx, repository, commit, output,
+				ctx, repository, commit, output, gitCore,
 				func(*exec.Cmd, string) error {
 					if test.contextCause != nil {
 						cancel(test.contextCause)

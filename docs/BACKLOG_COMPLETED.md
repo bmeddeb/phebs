@@ -9816,3 +9816,45 @@ publication, caches, memory, disk, and child processes gain no work. Failure
 retains only existing bounded custody/control/cache state plus the persistent
 empty lock inode. T40.13e is next. No freeze, ceremony, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
+
+**T40.13e ✅ · Executed-tool identity closure** *(2026-08-23; high)* — fresh
+V25 plans now bind a source-free digest of each canonical host-tool path beside
+its version and content digest. Prepare, Execute, and resumed teardown retain
+only paths matching those commitments. Every Go build launch and every Git
+export, authoring, checkout, and revision launch rehashes and invokes the exact
+retained executable instead of resolving PATH again. The exact SurrealDB path
+and expected digest are supplied to every private Phebs process.
+
+After the four custody-local binaries are built, one ordered digest snapshot
+binds `phebs`, `zoekt-git-index`, `phebs-focused-index`, and Buf. All four are
+rehashed before each serve, backup, or restore launch and before log creation
+or data rename. Phebs also rechecks SurrealDB immediately before start and
+zoekt, focused-index, and Buf immediately before each child launch; initial
+discovery refuses a mismatch, and SurrealDB cannot reuse its metadata identity
+cache when an expected digest is present. The supported
+shell canonicalizes and retains its Go, Git driver/core, and SurrealDB paths,
+binds all five prebuilt V25 commands by digest, and exports those identities
+through the run-lock re-exec. Content replacement, symlink insertion, and PATH
+drift fail closed before launch mutation. Prepare's small durable supervision
+authority still necessarily precedes host-version children so T40.13c's
+hard-death proof remains intact.
+
+Bounded tests replace all four private tools at serve, backup, and restore
+boundaries; replace host and T40.1 Git commands between launches; change PATH;
+insert symlinks; bypass SurrealDB's same-metadata cache; replace SurrealDB from
+inside its version probe; replace a later index child; and replace each of the
+five shell commands. The full T40.1/T40.13 suites retain historical V1–V24
+behavior and bytes. OCR selected the 13 production/harness files but returned
+zero bytes after 12 minutes and was stopped rather than retried. The manual
+launch-path equivalent found the discovery-to-index-child gap closed above;
+no critical, high, or medium finding remains after that correction.
+
+Full Go/Git trees are hashed only at fixed admission and terminal snapshot
+boundaries, never by a poll or phase loop. Later teardown/publication checks
+rehash only four retained host executables. Existing bounds remain 100,000
+entries/2 GiB for a full tree, 256 MiB per host executable, and 2 GiB per
+private executable. Empty expected-digest settings return before production
+file hashing, so ordinary query, worker, sync, startup, and publication paths
+gain no corpus/shard read, child, retained cache, or persistent state. T40.13f
+is next. No freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound
+change, or scale/SLO claim is authorized.

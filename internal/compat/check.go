@@ -23,6 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/executableidentity"
 	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
@@ -232,8 +233,9 @@ type Service interface {
 
 // Checker invokes one pinned Buf binary through the platform sandbox.
 type Checker struct {
-	bin     string
-	tempDir string
+	bin            string
+	expectedSHA256 string
+	tempDir        string
 }
 
 // FindBinary locates Buf using the same deployment pattern as the zoekt child:
@@ -283,7 +285,11 @@ func New(bin string) (*Checker, error) {
 	if err := sandboxSupported(); err != nil {
 		return nil, err
 	}
-	return &Checker{bin: resolved}, nil
+	expected := os.Getenv("PHEBS_BUF_SHA256")
+	if err := executableidentity.Verify(resolved, expected); err != nil {
+		return nil, fmt.Errorf("%w: verify buf identity: %v", ErrUnavailable, err)
+	}
+	return &Checker{bin: resolved, expectedSHA256: expected}, nil
 }
 
 // Validate performs the same sandboxed version probe used by Check. Servers
@@ -351,7 +357,7 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 		"--config", fixedConfig, "--against-config", fixedConfig,
 		"--disable-symlinks", "--error-format=json", "--timeout=10s",
 	}
-	output, err := runSandboxed(ctx, root, c.bin, arguments)
+	output, err := c.runSandboxed(ctx, root, arguments)
 	if err != nil {
 		return nil, err
 	}
@@ -433,7 +439,7 @@ func validLineage(value string) bool {
 }
 
 func (c *Checker) version(ctx context.Context, root string) (string, error) {
-	output, err := runSandboxed(ctx, root, c.bin, []string{"--version"})
+	output, err := c.runSandboxed(ctx, root, []string{"--version"})
 	if err != nil {
 		return "", err
 	}
@@ -445,6 +451,13 @@ func (c *Checker) version(ctx context.Context, root string) (string, error) {
 		return "", fmt.Errorf("%w: invalid buf version output", ErrUnavailable)
 	}
 	return version, nil
+}
+
+func (c *Checker) runSandboxed(ctx context.Context, root string, arguments []string) (commandOutput, error) {
+	if err := executableidentity.Verify(c.bin, c.expectedSHA256); err != nil {
+		return commandOutput{}, fmt.Errorf("%w: verify buf identity: %v", ErrUnavailable, err)
+	}
+	return runSandboxed(ctx, root, c.bin, arguments)
 }
 
 func canonicalFiles(input []File) ([]File, error) {

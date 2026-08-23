@@ -15,6 +15,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/executableidentity"
 )
 
 type AuthorRequest struct {
@@ -37,17 +39,43 @@ type authorState struct {
 	MetadataWritten bool   `json:"metadata_written"`
 }
 
+type gitExecutable struct {
+	path   string
+	sha256 string
+}
+
+func (git gitExecutable) pathForLaunch() (string, error) {
+	if git.path == "" {
+		return "", errors.New("T40.1 Git executable is absent")
+	}
+	if err := executableidentity.Verify(git.path, git.sha256); err != nil {
+		return "", fmt.Errorf("verify T40.1 Git executable: %w", err)
+	}
+	return git.path, nil
+}
+
 func Author(ctx context.Context, request AuthorRequest) (Receipt, error) {
-	return author(ctx, request, false)
+	return author(ctx, request, false, gitExecutable{path: "git"})
 }
 
 // AuthorClosedSystem applies the closed V25 host-command contract without
 // changing the historical AuthorRequest shape.
 func AuthorClosedSystem(ctx context.Context, request AuthorRequest) (Receipt, error) {
-	return author(ctx, request, true)
+	return author(ctx, request, true, gitExecutable{path: "git"})
 }
 
-func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Receipt, error) {
+// AuthorClosedSystemWithGit uses one already-verified canonical Git path for
+// every V25 authoring command.
+func AuthorClosedSystemWithGit(
+	ctx context.Context, request AuthorRequest, path, sha256 string,
+) (Receipt, error) {
+	if !filepath.IsAbs(path) || sha256 == "" {
+		return Receipt{}, errors.New("T40.1 closed author Git executable must be absolute")
+	}
+	return author(ctx, request, true, gitExecutable{path: path, sha256: sha256})
+}
+
+func author(ctx context.Context, request AuthorRequest, closedSystem bool, git gitExecutable) (Receipt, error) {
 	if ctx == nil {
 		return Receipt{}, errors.New("T40.1 author requires a context")
 	}
@@ -96,14 +124,16 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 	}
 	repository := filepath.Join(stage, "repository.git")
 	if !state.GitInitialized {
-		if _, err := runGit(ctx, "", nil, "init", "--bare", "--quiet", "--initial-branch=main", repository); err != nil {
+		if _, err := runGitWithExecutable(ctx, "", nil, git,
+			"init", "--bare", "--quiet", "--initial-branch=main", repository); err != nil {
 			return Receipt{}, err
 		}
 		for _, setting := range [][2]string{
 			{"core.autocrlf", "false"}, {"core.filemode", "false"},
 			{"commit.gpgsign", "false"}, {"zoekt.name", RepositoryName},
 		} {
-			if _, err := runGit(ctx, repository, nil, "config", setting[0], setting[1]); err != nil {
+			if _, err := runGitWithExecutable(ctx, repository, nil, git,
+				"config", setting[0], setting[1]); err != nil {
 				return Receipt{}, err
 			}
 		}
@@ -115,7 +145,7 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 			return Receipt{}, err
 		}
 	}
-	state, err = reconcileAuthorState(ctx, stage, repository, state)
+	state, err = reconcileAuthorState(ctx, stage, repository, state, git)
 	if err != nil {
 		return Receipt{}, err
 	}
@@ -126,7 +156,7 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 		if err := inject(request.FailAt, "before_"+point); err != nil {
 			return Receipt{}, err
 		}
-		if err := importRevision(ctx, repository, request.Profile, transition, index); err != nil {
+		if err := importRevision(ctx, repository, request.Profile, transition, index, git); err != nil {
 			return Receipt{}, err
 		}
 		state.NextRevision++
@@ -141,7 +171,8 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 		if err := inject(request.FailAt, "before_git_verify"); err != nil {
 			return Receipt{}, err
 		}
-		if _, err := runGit(ctx, repository, nil, "fsck", "--strict", "--no-dangling"); err != nil {
+		if _, err := runGitWithExecutable(ctx, repository, nil, git,
+			"fsck", "--strict", "--no-dangling"); err != nil {
 			return Receipt{}, err
 		}
 		state.GitVerified = true
@@ -153,7 +184,7 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 	if err != nil {
 		return Receipt{}, err
 	}
-	revisions, err := readRevisionIdentities(ctx, repository, request.Profile, oracle)
+	revisions, err := readRevisionIdentities(ctx, repository, request.Profile, oracle, git)
 	if err != nil {
 		return Receipt{}, err
 	}
@@ -208,7 +239,7 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 			Name: artifact.name, Bytes: uint64(len(artifact.content)), SHA256: SHA256(artifact.content),
 		})
 	}
-	gitVersion, err := runGit(ctx, repository, nil, "--version")
+	gitVersion, err := runGitWithExecutable(ctx, repository, nil, git, "--version")
 	if err != nil {
 		return Receipt{}, err
 	}
@@ -247,7 +278,8 @@ func author(ctx context.Context, request AuthorRequest, closedSystem bool) (Rece
 	if err := inject(request.FailAt, "before_publish"); err != nil {
 		return Receipt{}, err
 	}
-	if _, err := runGit(ctx, repository, nil, "fsck", "--strict", "--no-dangling"); err != nil {
+	if _, err := runGitWithExecutable(ctx, repository, nil, git,
+		"fsck", "--strict", "--no-dangling"); err != nil {
 		return Receipt{}, err
 	}
 	if err := os.Rename(stage, request.Output); err != nil {
@@ -308,8 +340,11 @@ func openAuthorState(stage, profile, digest string) (authorState, bool, error) {
 	return state, true, nil
 }
 
-func reconcileAuthorState(ctx context.Context, stage, repository string, state authorState) (authorState, error) {
-	countOutput, err := runGit(ctx, repository, nil, "rev-list", "--count", "--all")
+func reconcileAuthorState(
+	ctx context.Context, stage, repository string, state authorState, git gitExecutable,
+) (authorState, error) {
+	countOutput, err := runGitWithExecutable(ctx, repository, nil, git,
+		"rev-list", "--count", "--all")
 	if err != nil {
 		return authorState{}, err
 	}
@@ -359,11 +394,15 @@ func saveAuthorState(stage string, state authorState) error {
 	return syncDirectory(stage)
 }
 
-func importRevision(ctx context.Context, repository string, profile Profile, transition Transition, index int) (returnErr error) {
+func importRevision(
+	ctx context.Context, repository string, profile Profile, transition Transition, index int,
+	git gitExecutable,
+) (returnErr error) {
 	parent := ""
 	if index > 0 {
 		var err error
-		parent, err = runGit(ctx, repository, nil, "rev-parse", "refs/heads/main")
+		parent, err = runGitWithExecutable(ctx, repository, nil, git,
+			"rev-parse", "refs/heads/main")
 		if err != nil {
 			return err
 		}
@@ -372,7 +411,11 @@ func importRevision(ctx context.Context, repository string, profile Profile, tra
 			return errors.New("T40.1 parent revision is invalid")
 		}
 	}
-	command := exec.CommandContext(ctx, "git", "fast-import", "--quiet", "--date-format=raw")
+	gitPath, err := git.pathForLaunch()
+	if err != nil {
+		return err
+	}
+	command := exec.CommandContext(ctx, gitPath, "fast-import", "--quiet", "--date-format=raw")
 	command.Dir = repository
 	command.Env = deterministicGitEnvironment(nil)
 	stdin, err := command.StdinPipe()
@@ -868,8 +911,11 @@ func padded(prefix string, size uint64) ([]byte, error) {
 	return content, nil
 }
 
-func readRevisionIdentities(ctx context.Context, repository string, profile Profile, oracle Oracle) ([]RevisionIdentity, error) {
-	output, err := runGit(ctx, repository, nil, "rev-list", "--reverse", "refs/heads/main")
+func readRevisionIdentities(
+	ctx context.Context, repository string, profile Profile, oracle Oracle, git gitExecutable,
+) ([]RevisionIdentity, error) {
+	output, err := runGitWithExecutable(ctx, repository, nil, git,
+		"rev-list", "--reverse", "refs/heads/main")
 	if err != nil {
 		return nil, err
 	}
@@ -879,12 +925,15 @@ func readRevisionIdentities(ctx context.Context, repository string, profile Prof
 	}
 	revisions := make([]RevisionIdentity, 0, len(commits))
 	for index, commit := range commits {
-		tree, err := runGit(ctx, repository, nil, "rev-parse", commit+"^{tree}")
+		tree, err := runGitWithExecutable(ctx, repository, nil, git,
+			"rev-parse", commit+"^{tree}")
 		if err != nil {
 			return nil, err
 		}
 		expected := oracle.Revisions[index]
-		regularFiles, uniqueGoBlobs, err := inspectRevisionTree(ctx, repository, commit, profile, expected.Revision)
+		regularFiles, uniqueGoBlobs, err := inspectRevisionTree(
+			ctx, repository, commit, profile, expected.Revision, git,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -905,8 +954,13 @@ func inspectRevisionTree(
 	repository, commit string,
 	profile Profile,
 	revision string,
+	git gitExecutable,
 ) (uint64, uint64, error) {
-	command := exec.CommandContext(ctx, "git", "ls-tree", "-r", "-l", "-z", commit)
+	gitPath, err := git.pathForLaunch()
+	if err != nil {
+		return 0, 0, err
+	}
+	command := exec.CommandContext(ctx, gitPath, "ls-tree", "-r", "-l", "-z", commit)
 	command.Dir = repository
 	command.Env = deterministicGitEnvironment(nil)
 	stdout, err := command.StdoutPipe()
@@ -1174,7 +1228,19 @@ func inject(selected, point string) error {
 }
 
 func runGit(ctx context.Context, directory string, extraEnvironment []string, arguments ...string) (string, error) {
-	return runCommand(ctx, directory, deterministicGitEnvironment(extraEnvironment), "git", arguments...)
+	return runGitWithExecutable(
+		ctx, directory, extraEnvironment, gitExecutable{path: "git"}, arguments...,
+	)
+}
+
+func runGitWithExecutable(
+	ctx context.Context, directory string, extraEnvironment []string, git gitExecutable, arguments ...string,
+) (string, error) {
+	path, err := git.pathForLaunch()
+	if err != nil {
+		return "", err
+	}
+	return runCommand(ctx, directory, deterministicGitEnvironment(extraEnvironment), path, arguments...)
 }
 
 func runCommand(ctx context.Context, directory string, environment []string, name string, arguments ...string) (string, error) {

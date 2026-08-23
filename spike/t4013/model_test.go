@@ -2300,7 +2300,7 @@ func fakeHostToolchain() []HostToolObservation {
 
 func fakeHostToolchainV25() []HostToolObservation {
 	values := fakeHostToolchain()
-	return append(values, HostToolObservation{
+	values = append(values, HostToolObservation{
 		Name: "go-asm", Version: "asm version go1.26.1",
 		SHA256: "sha256:" + strings.Repeat("f", 64),
 	}, HostToolObservation{
@@ -2322,6 +2322,10 @@ func fakeHostToolchainV25() []HostToolObservation {
 		HostToolObservation{Name: "pgrep", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("2", 64)},
 		HostToolObservation{Name: "sysctl", Version: "bound executable", SHA256: "sha256:" + strings.Repeat("1", 64)},
 	)
+	for index := range values {
+		values[index].PathSHA256 = hostPathDigest("/host/" + values[index].Name)
+	}
+	return values
 }
 
 func reader(profile, revision string, files uint64) BlobReaderObservation {

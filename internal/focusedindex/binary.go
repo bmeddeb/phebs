@@ -5,9 +5,22 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/bmeddeb/phebs/internal/executableidentity"
 )
 
 func FindBinary() (string, error) {
+	path, err := findBinary()
+	if err != nil {
+		return "", err
+	}
+	if err := executableidentity.Verify(path, os.Getenv("PHEBS_FOCUSED_INDEX_SHA256")); err != nil {
+		return "", fmt.Errorf("verify focused-index identity: %w", err)
+	}
+	return path, nil
+}
+
+func findBinary() (string, error) {
 	if path := os.Getenv("PHEBS_FOCUSED_INDEX"); path != "" {
 		return executablePath(path)
 	}

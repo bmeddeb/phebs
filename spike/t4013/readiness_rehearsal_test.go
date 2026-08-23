@@ -547,6 +547,9 @@ func buildWorkingTreeToolchain(
 	if err := validateToolchain(toolchain); err != nil {
 		return privateToolchain{}, err
 	}
+	if _, err := bindPrivateToolchain(ctx, &toolchain); err != nil {
+		return privateToolchain{}, err
+	}
 	return toolchain, nil
 }
 

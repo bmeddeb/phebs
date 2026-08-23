@@ -164,6 +164,109 @@ closed_go env
 	}
 }
 
+func TestCeremonyDriverRetainsCanonicalHostToolsAcrossPathDrift(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	first := filepath.Join(root, "first")
+	second := filepath.Join(root, "second")
+	gitCore := filepath.Join(first, "git-core")
+	for _, path := range []string{first, second, gitCore} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(first, "go"), "#!/bin/sh\nprintf 'go-first\\n'\n")
+	write(filepath.Join(second, "go"), "#!/bin/sh\nprintf 'go-second\\n'\n")
+	write(filepath.Join(first, "git"), "#!/bin/sh\nprintf '%s/git-core\\n' \"${0%/*}\"\n")
+	write(filepath.Join(gitCore, "git"), "#!/bin/sh\nprintf 'git-first\\n'\n")
+	write(filepath.Join(second, "git"), "#!/bin/sh\nprintf 'git-second\\n'\n")
+	write(filepath.Join(first, "surreal"), "#!/bin/sh\nprintf 'surreal-first\\n'\n")
+	write(filepath.Join(second, "surreal"), "#!/bin/sh\nprintf 'surreal-second\\n'\n")
+	script := `
+source "$1"
+trap cleanup_on_exit EXIT
+initialize_closed_go_cache
+PATH="$2:/usr/bin:/bin"
+export PATH
+initialize_closed_go_path
+initialize_closed_git_paths
+initialize_closed_surreal_path
+PATH="$3:/usr/bin:/bin"
+export PATH
+closed_go go version
+closed_git --version
+closed_surreal version
+printf '#!/bin/sh\nprintf replacement\\n' >| "$CLOSED_GO_PATH"
+chmod 700 "$CLOSED_GO_PATH"
+if (closed_go go version); then exit 91; fi
+`
+	output, err := exec.Command(
+		"bash", "-c", script, "host-path-drift", driver, first, second,
+	).CombinedOutput()
+	if err != nil {
+		t.Fatalf("bound host tools failed: %v: %s", err, output)
+	}
+	for _, want := range []string{"go-first\n", "git-first\n", "surreal-first\n", "bound Go executable changed"} {
+		if !bytes.Contains(output, []byte(want)) {
+			t.Fatalf("bound host tool output lacks %q: %s", want, output)
+		}
+	}
+	if bytes.Contains(output, []byte("go-second")) || bytes.Contains(output, []byte("git-second")) ||
+		bytes.Contains(output, []byte("surreal-second")) || bytes.Contains(output, []byte("replacement\n")) {
+		t.Fatalf("PATH drift or replacement was executed: %s", output)
+	}
+}
+
+func TestCeremonyDriverRehashesEveryPrebuiltV25Command(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+source "$1"
+CLOSED_GO_CACHE="$2"
+mkdir -p "$CLOSED_GO_CACHE/t4013-custody-commands"
+for name in cleanup execute lock prepare receipt; do
+  path="$CLOSED_GO_CACHE/t4013-custody-commands/t4013-$name"
+  printf '#!/bin/sh\nexit 0\n' > "$path"
+  chmod 700 "$path"
+  digest="$(executable_digest "$path")"
+  case "$name" in
+    cleanup) V25_CLEANUP_COMMAND="$path"; V25_CLEANUP_SHA256="$digest" ;;
+    execute) V25_EXECUTE_COMMAND="$path"; V25_EXECUTE_SHA256="$digest" ;;
+    lock) V25_LOCK_COMMAND="$path"; V25_LOCK_SHA256="$digest" ;;
+    prepare) V25_PREPARE_COMMAND="$path"; V25_PREPARE_SHA256="$digest" ;;
+    receipt) V25_RECEIPT_COMMAND="$path"; V25_RECEIPT_SHA256="$digest" ;;
+  esac
+done
+for path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
+  "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
+  require_v25_custody_command "$path"
+  printf '#!/bin/sh\nexit 1\n' >| "$path"
+  chmod 700 "$path"
+  if require_v25_custody_command "$path"; then exit 92; fi
+done
+`
+	output, err := exec.Command(
+		"bash", "-c", script, "private-command-replacement", driver, filepath.Join(t.TempDir(), "cache"),
+	).CombinedOutput()
+	if err != nil {
+		t.Fatalf("private command identity check failed: %v: %s", err, output)
+	}
+	if count := bytes.Count(output, []byte("was not prebuilt before operation admission")); count != 5 {
+		t.Fatalf("private command refusals = %d, want 5: %s", count, output)
+	}
+}
+
 func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
 	if err != nil {

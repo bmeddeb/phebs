@@ -3,6 +3,8 @@ package t401
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"os/exec"
@@ -16,6 +18,22 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 )
+
+func TestBoundGitIsReverifiedBeforeEveryAuthorLaunch(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "git")
+	content := []byte("#!/bin/sh\nprintf '#!/bin/sh\\nexit 99\\n' > \"$0\"\nchmod 700 \"$0\"\nprintf 'git version test\\n'\n")
+	if err := os.WriteFile(path, content, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(content)
+	git := gitExecutable{path: path, sha256: "sha256:" + hex.EncodeToString(sum[:])}
+	if _, err := runGitWithExecutable(t.Context(), "", nil, git, "--version"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runGitWithExecutable(t.Context(), "", nil, git, "--version"); err == nil {
+		t.Fatal("replacement Git executable was launched")
+	}
+}
 
 func TestDirectoryBytesClosesSystemToolOnlyWhenRequested(t *testing.T) {
 	root := t.TempDir()

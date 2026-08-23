@@ -149,6 +149,7 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		}
 	}
 	var supervision *custodySupervision
+	var hostTools hostToolchainBinding
 	cleanupControl := preparedCleanupControl{
 		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
 		ModuleRoot: moduleRoot, Workspace: workspace,
@@ -190,15 +191,24 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		}
 	}
 	if version >= 25 {
-		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
+		hostTools, err = bindHostToolchainForPlan(ctx, plan)
+		if err != nil {
 			return Prepared{}, fmt.Errorf("verify frozen host toolchain before custody: %w", err)
 		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return Prepared{}, err
 	}
-	if err := verifyCleanCheckoutForPlan(ctx, moduleRoot, plan); err != nil {
-		return Prepared{}, err
+	var checkoutErr error
+	if version >= 25 {
+		checkoutErr = verifyCleanCheckoutWithBoundGit(
+			ctx, moduleRoot, plan.SourceCommit, hostTools.gitCore,
+		)
+	} else {
+		checkoutErr = verifyCleanCheckoutForPlan(ctx, moduleRoot, plan)
+	}
+	if checkoutErr != nil {
+		return Prepared{}, checkoutErr
 	}
 	if _, err := HostPreflight(ctx, workspaceParent, plan); err != nil {
 		return Prepared{}, err
@@ -223,19 +233,27 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		prepared.Schema = PreparedSchemaV2
 		prepared.SupervisionToken = supervision.Token()
 	}
-	author := t401.Author
-	if version >= 25 {
-		author = t401.AuthorClosedSystem
-	}
 	for index, profile := range profiles {
 		profileRoot := filepath.Join(workspace, profile.Kind)
 		if err := os.Mkdir(profileRoot, 0o700); err != nil {
 			return Prepared{}, err
 		}
 		authored := filepath.Join(profileRoot, "authored")
-		receipt, err := author(ctx, t401.AuthorRequest{
+		authorRequest := t401.AuthorRequest{
 			ModuleRoot: moduleRoot, Output: authored, Profile: profile, ConfirmFrozen: true,
-		})
+		}
+		var receipt t401.Receipt
+		if version >= 25 {
+			gitPath, pathErr := hostTools.gitCore.pathForLaunch(ctx)
+			if pathErr != nil {
+				return Prepared{}, pathErr
+			}
+			receipt, err = t401.AuthorClosedSystemWithGit(
+				ctx, authorRequest, gitPath, hostTools.gitCore.sha256,
+			)
+		} else {
+			receipt, err = t401.Author(ctx, authorRequest)
+		}
 		if err != nil {
 			return Prepared{}, fmt.Errorf("author %s: %w", profile.Name, err)
 		}
@@ -244,7 +262,12 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		for _, revision := range receipt.Revisions {
 			revisions[revision.Revision] = revision.Commit
 		}
-		if err := updateSourceRevision(ctx, repository, revisions["a"], planSchemaVersion(plan.Schema) >= 25); err != nil {
+		if version >= 25 {
+			err = updateSourceRevisionWithGit(ctx, repository, revisions["a"], hostTools.gitCore)
+		} else {
+			err = updateSourceRevision(ctx, repository, revisions["a"], false)
+		}
+		if err != nil {
 			return Prepared{}, err
 		}
 		repositoryName, err := phebssync.RepoName(repository)
@@ -1174,6 +1197,23 @@ func updateSourceRevision(ctx context.Context, repository, commit string, closed
 	return nil
 }
 
+func updateSourceRevisionWithGit(
+	ctx context.Context, repository, commit string, git boundExecutable,
+) error {
+	if !hexIdentity(commit, 40) {
+		return errors.New("T40.13 source revision is invalid")
+	}
+	path, err := git.pathForLaunch(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := gitOutputWithExecutable(ctx, repository, path, true,
+		"update-ref", "refs/heads/main", commit); err != nil {
+		return err
+	}
+	return nil
+}
+
 func gitOutputForContract(ctx context.Context, directory string, closed bool, args ...string) (string, error) {
 	executable := "git"
 	if closed {
@@ -1182,6 +1222,15 @@ func gitOutputForContract(ctx context.Context, directory string, closed bool, ar
 		if err != nil {
 			return "", err
 		}
+	}
+	return gitOutputWithExecutable(ctx, directory, executable, closed, args...)
+}
+
+func gitOutputWithExecutable(
+	ctx context.Context, directory, executable string, closed bool, args ...string,
+) (string, error) {
+	if closed && !filepath.IsAbs(executable) {
+		return "", errors.New("T40.13 bound Git executable is invalid")
 	}
 	command := exec.CommandContext(ctx, executable, append([]string{"-C", directory}, args...)...)
 	command.Env = gitEnvironmentForContract(closed)
@@ -1195,6 +1244,32 @@ func gitOutputForContract(ctx context.Context, directory string, closed bool, ar
 func verifyCleanCheckoutForPlan(ctx context.Context, moduleRoot string, plan Plan) error {
 	return verifyCleanCheckoutWithGit(ctx, moduleRoot, plan.SourceCommit,
 		planSchemaVersion(plan.Schema) >= 25)
+}
+
+func verifyCleanCheckoutWithBoundGit(
+	ctx context.Context, moduleRoot, sourceCommit string, git boundExecutable,
+) error {
+	path, err := git.pathForLaunch(ctx)
+	if err != nil {
+		return err
+	}
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !hexIdentity(sourceCommit, 40) {
+		return errors.New("T40.13 checkout identity is invalid")
+	}
+	commit, err := gitOutputWithExecutable(ctx, moduleRoot, path, true, "rev-parse", "HEAD")
+	if err != nil || commit != sourceCommit {
+		return errors.New("T40.13 checkout differs from the frozen source commit")
+	}
+	path, err = git.pathForLaunch(ctx)
+	if err != nil {
+		return err
+	}
+	status, err := gitOutputWithExecutable(ctx, moduleRoot, path, true,
+		"status", "--porcelain=v1", "--untracked-files=all")
+	if err != nil || status != "" {
+		return errors.New("T40.13 checkout has modified or untracked files")
+	}
+	return nil
 }
 
 func verifyCleanCheckout(ctx context.Context, moduleRoot, sourceCommit string) error {

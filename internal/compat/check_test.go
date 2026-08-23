@@ -48,6 +48,14 @@ func requireChecker(t *testing.T) *Checker {
 	return testChecker
 }
 
+func TestCheckerRefusesWrongCeremonyExecutableDigest(t *testing.T) {
+	checker := requireChecker(t)
+	t.Setenv("PHEBS_BUF_SHA256", "sha256:"+strings.Repeat("0", 64))
+	if _, err := New(checker.bin); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("wrong expected Buf digest error = %v", err)
+	}
+}
+
 func TestCheckerReportsWireBreakWithStableFieldIdentity(t *testing.T) {
 	checker := requireChecker(t)
 	request := Request{

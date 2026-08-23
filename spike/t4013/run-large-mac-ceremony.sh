@@ -34,11 +34,24 @@ SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
 CLOSED_GO_CACHE="${CLOSED_GO_CACHE:-}"
+CLOSED_GO_PATH="${CLOSED_GO_PATH:-}"
+CLOSED_GO_SHA256="${CLOSED_GO_SHA256:-}"
+CLOSED_GIT_PATH="${CLOSED_GIT_PATH:-}"
+CLOSED_GIT_SHA256="${CLOSED_GIT_SHA256:-}"
+CLOSED_GIT_CORE_PATH="${CLOSED_GIT_CORE_PATH:-}"
+CLOSED_GIT_CORE_SHA256="${CLOSED_GIT_CORE_SHA256:-}"
+CLOSED_SURREAL_PATH="${CLOSED_SURREAL_PATH:-}"
+CLOSED_SURREAL_SHA256="${CLOSED_SURREAL_SHA256:-}"
 V25_CLEANUP_COMMAND="${V25_CLEANUP_COMMAND:-}"
+V25_CLEANUP_SHA256="${V25_CLEANUP_SHA256:-}"
 V25_EXECUTE_COMMAND="${V25_EXECUTE_COMMAND:-}"
+V25_EXECUTE_SHA256="${V25_EXECUTE_SHA256:-}"
 V25_LOCK_COMMAND="${V25_LOCK_COMMAND:-}"
+V25_LOCK_SHA256="${V25_LOCK_SHA256:-}"
 V25_PREPARE_COMMAND="${V25_PREPARE_COMMAND:-}"
+V25_PREPARE_SHA256="${V25_PREPARE_SHA256:-}"
 V25_RECEIPT_COMMAND="${V25_RECEIPT_COMMAND:-}"
+V25_RECEIPT_SHA256="${V25_RECEIPT_SHA256:-}"
 EXIT_PREPARED_PLAN=""
 EXIT_PREPARED_MANIFEST=""
 EXIT_PREPARED_WORKSPACE=""
@@ -57,8 +70,98 @@ note() {
   printf '%s\n' "$*"
 }
 
+canonical_executable_path() {
+  local path="$1" target directory links=0
+  [[ "$path" == /* ]] || path="$(command -v "$path")"
+  while [[ -L "$path" ]]; do
+    (( links += 1 ))
+    (( links <= 40 )) || die "executable symlink chain is too deep: $1"
+    target="$(readlink "$path")"
+    if [[ "$target" == /* ]]; then
+      path="$target"
+    else
+      path="$(dirname "$path")/$target"
+    fi
+  done
+  directory="$(cd "$(dirname "$path")" && pwd -P)"
+  path="${directory}/$(basename "$path")"
+  [[ -f "$path" && ! -L "$path" && -x "$path" ]] ||
+    die "executable is not a canonical regular file: $1"
+  printf '%s\n' "$path"
+}
+
+executable_digest() {
+  printf 'sha256:%s\n' "$(shasum -a 256 "$1" | awk '{print $1}')"
+}
+
+require_bound_executable() {
+  local path="$1" expected="$2" name="$3"
+  [[ "$path" == /* && -f "$path" && ! -L "$path" && -x "$path" &&
+    "$expected" =~ ^sha256:[0-9a-f]{64}$ && "$(executable_digest "$path")" == "$expected" ]] || {
+    printf '%s: bound %s executable changed before launch\n' "$SCRIPT_NAME" "$name" >&2
+    return 1
+  }
+}
+
+initialize_closed_go_path() {
+  if [[ -n "$CLOSED_GO_PATH" || -n "$CLOSED_GO_SHA256" ]]; then
+    [[ -n "$CLOSED_GO_PATH" && -n "$CLOSED_GO_SHA256" ]] ||
+      die "closed Go identity state is incomplete"
+    return
+  fi
+  CLOSED_GO_PATH="$(canonical_executable_path go)"
+  CLOSED_GO_SHA256="$(executable_digest "$CLOSED_GO_PATH")"
+}
+
+initialize_closed_git_paths() {
+  local exec_path
+  if [[ -n "$CLOSED_GIT_PATH" || -n "$CLOSED_GIT_SHA256" ||
+    -n "$CLOSED_GIT_CORE_PATH" || -n "$CLOSED_GIT_CORE_SHA256" ]]; then
+    [[ -n "$CLOSED_GIT_PATH" && -n "$CLOSED_GIT_SHA256" &&
+      -n "$CLOSED_GIT_CORE_PATH" && -n "$CLOSED_GIT_CORE_SHA256" ]] ||
+      die "closed Git identity state is incomplete"
+    return
+  fi
+  CLOSED_GIT_PATH="$(canonical_executable_path git)"
+  CLOSED_GIT_SHA256="$(executable_digest "$CLOSED_GIT_PATH")"
+  require_bound_executable "$CLOSED_GIT_PATH" "$CLOSED_GIT_SHA256" Git || die "closed Git identity is invalid"
+  exec_path="$(env -i \
+    HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    GIT_ATTR_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+    GIT_NO_LAZY_FETCH=1 GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
+    "$CLOSED_GIT_PATH" --exec-path)"
+  [[ "$exec_path" == /* && -d "$exec_path" && ! -L "$exec_path" ]] ||
+    die "closed Git executable directory is invalid"
+  CLOSED_GIT_CORE_PATH="$(canonical_executable_path "${exec_path}/git")"
+  CLOSED_GIT_CORE_SHA256="$(executable_digest "$CLOSED_GIT_CORE_PATH")"
+}
+
+initialize_closed_surreal_path() {
+  if [[ -n "$CLOSED_SURREAL_PATH" || -n "$CLOSED_SURREAL_SHA256" ]]; then
+    [[ -n "$CLOSED_SURREAL_PATH" && -n "$CLOSED_SURREAL_SHA256" ]] ||
+      die "closed SurrealDB identity state is incomplete"
+    return
+  fi
+  CLOSED_SURREAL_PATH="$(canonical_executable_path surreal)"
+  CLOSED_SURREAL_SHA256="$(executable_digest "$CLOSED_SURREAL_PATH")"
+}
+
 closed_go() {
+  local argument command=() command_seen=0
   [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  for argument in "$@"; do
+    if (( command_seen == 0 )) && [[ "$argument" != *=* ]]; then
+      command_seen=1
+      if [[ "$argument" == go ]]; then
+        initialize_closed_go_path
+        require_bound_executable "$CLOSED_GO_PATH" "$CLOSED_GO_SHA256" Go || return 1
+        argument="$CLOSED_GO_PATH"
+      elif [[ -n "$CLOSED_GO_PATH" && "$argument" == "$CLOSED_GO_PATH" ]]; then
+        require_bound_executable "$CLOSED_GO_PATH" "$CLOSED_GO_SHA256" Go || return 1
+      fi
+    fi
+    command+=("$argument")
+  done
   env -i \
     HOME="$HOME" \
     PATH="$PATH" \
@@ -72,7 +175,7 @@ closed_go() {
     GOTOOLCHAIN=local \
     GOWORK=off \
     T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
-    "$@"
+    "${command[@]}"
 }
 
 run_active_child() {
@@ -89,7 +192,21 @@ run_active_child() {
 }
 
 closed_go_active() {
+  local argument command=() command_seen=0
   [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  for argument in "$@"; do
+    if (( command_seen == 0 )) && [[ "$argument" != *=* ]]; then
+      command_seen=1
+      if [[ "$argument" == go ]]; then
+        initialize_closed_go_path
+        require_bound_executable "$CLOSED_GO_PATH" "$CLOSED_GO_SHA256" Go || return 1
+        argument="$CLOSED_GO_PATH"
+      elif [[ -n "$CLOSED_GO_PATH" && "$argument" == "$CLOSED_GO_PATH" ]]; then
+        require_bound_executable "$CLOSED_GO_PATH" "$CLOSED_GO_SHA256" Go || return 1
+      fi
+    fi
+    command+=("$argument")
+  done
   run_active_child env -i \
     HOME="$HOME" \
     PATH="$PATH" \
@@ -103,7 +220,7 @@ closed_go_active() {
     GOTOOLCHAIN=local \
     GOWORK=off \
     T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
-    "$@"
+    "${command[@]}"
 }
 
 initialize_closed_go_cache() {
@@ -116,9 +233,11 @@ initialize_v25_custody_commands() {
   local command_root command_path
   [[ -n "$REPO_REAL" ]] || die "repository must be initialized before building custody commands"
   initialize_closed_go_cache
-  if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_EXECUTE_COMMAND" &&
-    -n "$V25_LOCK_COMMAND" &&
-    -n "$V25_PREPARE_COMMAND" && -n "$V25_RECEIPT_COMMAND" ]]; then
+  if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_CLEANUP_SHA256" &&
+    -n "$V25_EXECUTE_COMMAND" && -n "$V25_EXECUTE_SHA256" &&
+    -n "$V25_LOCK_COMMAND" && -n "$V25_LOCK_SHA256" &&
+    -n "$V25_PREPARE_COMMAND" && -n "$V25_PREPARE_SHA256" &&
+    -n "$V25_RECEIPT_COMMAND" && -n "$V25_RECEIPT_SHA256" ]]; then
     for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
       "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
       require_v25_custody_command "$command_path" ||
@@ -126,8 +245,11 @@ initialize_v25_custody_commands() {
     done
     return 0
   fi
-  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_EXECUTE_COMMAND" && -z "$V25_LOCK_COMMAND" &&
-    -z "$V25_PREPARE_COMMAND" && -z "$V25_RECEIPT_COMMAND" ]] ||
+  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_CLEANUP_SHA256" &&
+    -z "$V25_EXECUTE_COMMAND" && -z "$V25_EXECUTE_SHA256" &&
+    -z "$V25_LOCK_COMMAND" && -z "$V25_LOCK_SHA256" &&
+    -z "$V25_PREPARE_COMMAND" && -z "$V25_PREPARE_SHA256" &&
+    -z "$V25_RECEIPT_COMMAND" && -z "$V25_RECEIPT_SHA256" ]] ||
     die "prebuilt V25 custody-command state is incomplete"
   command_root="${CLOSED_GO_CACHE}/t4013-custody-commands"
   mkdir -m 700 "$command_root"
@@ -139,10 +261,15 @@ initialize_v25_custody_commands() {
     ./spike/t4013/cmd/t4013-prepare \
     ./spike/t4013/cmd/t4013-receipt)
   V25_CLEANUP_COMMAND="${command_root}/t4013-cleanup"
+  V25_CLEANUP_SHA256="$(executable_digest "$V25_CLEANUP_COMMAND")"
   V25_EXECUTE_COMMAND="${command_root}/t4013-execute"
+  V25_EXECUTE_SHA256="$(executable_digest "$V25_EXECUTE_COMMAND")"
   V25_LOCK_COMMAND="${command_root}/t4013-lock"
+  V25_LOCK_SHA256="$(executable_digest "$V25_LOCK_COMMAND")"
   V25_PREPARE_COMMAND="${command_root}/t4013-prepare"
+  V25_PREPARE_SHA256="$(executable_digest "$V25_PREPARE_COMMAND")"
   V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
+  V25_RECEIPT_SHA256="$(executable_digest "$V25_RECEIPT_COMMAND")"
   for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
     "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
     [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
@@ -162,9 +289,17 @@ run_v25_custody_command_in_repo_active() {
 }
 
 require_v25_custody_command() {
-  local command_path="$1"
+  local command_path="$1" expected=""
+  case "$command_path" in
+    "$V25_CLEANUP_COMMAND") expected="$V25_CLEANUP_SHA256" ;;
+    "$V25_EXECUTE_COMMAND") expected="$V25_EXECUTE_SHA256" ;;
+    "$V25_LOCK_COMMAND") expected="$V25_LOCK_SHA256" ;;
+    "$V25_PREPARE_COMMAND") expected="$V25_PREPARE_SHA256" ;;
+    "$V25_RECEIPT_COMMAND") expected="$V25_RECEIPT_SHA256" ;;
+  esac
   [[ "$command_path" == "${CLOSED_GO_CACHE}/t4013-custody-commands/"* &&
-    -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
+    -n "$expected" && -f "$command_path" && ! -L "$command_path" && -x "$command_path" &&
+    "$(executable_digest "$command_path")" == "$expected" ]] ||
     {
       printf '%s: V25 custody command was not prebuilt before operation admission\n' "$SCRIPT_NAME" >&2
       return 1
@@ -300,22 +435,17 @@ enter_v25_run_lock() {
   initialize_v25_custody_commands
   require_v25_custody_command "$V25_LOCK_COMMAND" ||
     die "V25 run-root lock command was not prebuilt before operation admission"
-  export CLOSED_GO_CACHE V25_CLEANUP_COMMAND V25_EXECUTE_COMMAND V25_LOCK_COMMAND
-  export V25_PREPARE_COMMAND V25_RECEIPT_COMMAND
+  export CLOSED_GO_CACHE CLOSED_GO_PATH CLOSED_GO_SHA256 CLOSED_GIT_PATH CLOSED_GIT_SHA256
+  export CLOSED_GIT_CORE_PATH CLOSED_GIT_CORE_SHA256 CLOSED_SURREAL_PATH CLOSED_SURREAL_SHA256
+  export V25_CLEANUP_COMMAND V25_CLEANUP_SHA256 V25_EXECUTE_COMMAND V25_EXECUTE_SHA256
+  export V25_LOCK_COMMAND V25_LOCK_SHA256 V25_PREPARE_COMMAND V25_PREPARE_SHA256
+  export V25_RECEIPT_COMMAND V25_RECEIPT_SHA256
   exec "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"
 }
 
 closed_git() {
-  local git_driver exec_path
-  git_driver="$(command -v git)"
-  exec_path="$(env -i \
-    HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
-    GIT_ATTR_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
-    GIT_NO_LAZY_FETCH=1 GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
-    "$git_driver" --exec-path)"
-  [[ "$exec_path" == /* && -d "$exec_path" && ! -L "$exec_path" && \
-    -f "${exec_path}/git" && -x "${exec_path}/git" ]] ||
-    die "closed Git core executable is invalid"
+  initialize_closed_git_paths
+  require_bound_executable "$CLOSED_GIT_CORE_PATH" "$CLOSED_GIT_CORE_SHA256" Git-core || return 1
   env -i \
     HOME="$HOME" \
     PATH="$PATH" \
@@ -327,7 +457,14 @@ closed_git() {
     GIT_NO_LAZY_FETCH=1 \
     GIT_OPTIONAL_LOCKS=0 \
     GIT_TERMINAL_PROMPT=0 \
-    "${exec_path}/git" "$@"
+    "$CLOSED_GIT_CORE_PATH" "$@"
+}
+
+closed_surreal() {
+  initialize_closed_surreal_path
+  require_bound_executable "$CLOSED_SURREAL_PATH" "$CLOSED_SURREAL_SHA256" SurrealDB || return 1
+  env -i HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LC_ALL=C \
+    "$CLOSED_SURREAL_PATH" "$@"
 }
 
 plan_go() {
@@ -496,7 +633,7 @@ host_preflight() {
   note "phebs commit: $(closed_git -C "$REPO_REAL" rev-parse HEAD)"
   note "Go toolchain: $(closed_go go version)"
   note "Git toolchain: $(closed_git --version)"
-  note "SurrealDB toolchain: $(surreal version)"
+  note "SurrealDB toolchain: $(closed_surreal version)"
 }
 
 preflight() {

@@ -3,6 +3,8 @@ package indexer_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -58,6 +60,25 @@ func TestMain(m *testing.M) {
 		_ = os.Setenv("PHEBS_FOCUSED_INDEX", bin)
 	}
 	os.Exit(m.Run())
+}
+
+func TestCeremonyExpectedChildDigestsAreEnforcedAtDiscovery(t *testing.T) {
+	wrong := "sha256:" + strings.Repeat("0", 64)
+	for _, test := range []struct {
+		name string
+		env  string
+		find func() (string, error)
+	}{
+		{name: "zoekt", env: "PHEBS_ZOEKT_GIT_INDEX_SHA256", find: indexer.FindBinary},
+		{name: "focused", env: "PHEBS_FOCUSED_INDEX_SHA256", find: focusedindex.FindBinary},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(test.env, wrong)
+			if _, err := test.find(); err == nil || !strings.Contains(err.Error(), "identity") {
+				t.Fatalf("wrong expected digest error = %v", err)
+			}
+		})
+	}
 }
 
 func gitc(t *testing.T, dir string, args ...string) string {
@@ -412,6 +433,47 @@ func TestIndexVerboseForwardsChildOutputOnlyWhenEnabled(t *testing.T) {
 				t.Fatalf("parent phase present = %t, want %t; logs=%q", hasParentPhase, verbose, logs.String())
 			}
 		})
+	}
+}
+
+func TestIndexRevalidatesExpectedChildDigestBeforeLaunch(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "one")
+	name, err := sync.RepoName("file://" + origin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, name)); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "zoekt-git-index")
+	original := []byte("#!/bin/sh\nexit 0\n")
+	if err := os.WriteFile(path, original, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(original)
+	t.Setenv("PHEBS_ZOEKT_GIT_INDEX_SHA256", "sha256:"+hex.EncodeToString(sum[:]))
+	marker := filepath.Join(t.TempDir(), "replacement-ran")
+	t.Setenv("T4013_REPLACEMENT_MARKER", marker)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n: > \"$T4013_REPLACEMENT_MARKER\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	st := &indexLogStore{repo: store.Repo{Name: name}}
+	ix := &indexer.Indexer{DataDir: dataDir, Bin: path, Store: st}
+	if err := ix.Index(ctx, st.repo, true); err == nil || !strings.Contains(err.Error(), "identity before launch") {
+		t.Fatalf("replacement indexer error = %v", err)
+	}
+	if _, err := os.Lstat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("replacement indexer ran: %v", err)
 	}
 }
 

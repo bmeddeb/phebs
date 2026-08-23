@@ -409,7 +409,11 @@ func frozenV25PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	if err := validateHostToolchain(hostToolchain, true); err != nil {
 		return Plan{}, err
 	}
-	value, err := frozenV24PlanWithHostToolchain(sourceCommit, hostToolchain[:5])
+	historicalHostToolchain := slices.Clone(hostToolchain[:5])
+	for index := range historicalHostToolchain {
+		historicalHostToolchain[index].PathSHA256 = ""
+	}
+	value, err := frozenV24PlanWithHostToolchain(sourceCommit, historicalHostToolchain)
 	if err != nil {
 		return Plan{}, err
 	}

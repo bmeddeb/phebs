@@ -3177,6 +3177,29 @@ tree hash gains work. Tests cover contention from every mutator, exact-byte
 replacement, output boundaries, stale-inode reuse, inherited ownership, and
 SIGKILL release while retaining historical V1–V24 behavior.
 
-T40.13e exact executed-tool identity remains next. This ticket authorizes no
-freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
-scale/SLO claim.
+### T40.13e exact executed-tool identity
+
+Fresh V25 plans bind a source-free digest of every canonical host-tool path as
+well as version/content identity. Prepare, Execute, and resumed teardown retain
+the matching private Go, Git/core, and SurrealDB paths. Every Go build command
+and every Git export, authoring, checkout, or revision command rehashes and
+invokes that exact path. Private server environments receive the exact
+SurrealDB path and expected SurrealDB, zoekt, focused-index, and Buf digests.
+
+The four custody-built binaries form one bounded digest snapshot. The harness
+rehashes all four before each serve, backup, and restore launch, before creating
+its log or renaming data. Phebs rechecks SurrealDB immediately before start and
+zoekt, focused-index, and Buf immediately before each child launch. The
+supported shell similarly retains and rehashes
+its exact host tools and all five prebuilt V25 commands, including across the
+run-lock re-exec. Replacement, symlink, and PATH drift therefore refuse before
+launch mutation. Historical V1–V24 bytes and launch behavior remain exact.
+
+Full Go/Git tree hashing occurs only at fixed admission and terminal snapshot
+boundaries, never per poll or phase; later teardown checks rehash only the four
+retained host executables. Each full tree remains capped at 100,000 entries and
+2 GiB, host executables at 256 MiB, and private executables at 2 GiB. Empty
+expected-digest settings add no production file hashing or child work. T40.13f
+hermetic execution controls remains next. This ticket authorizes no freeze,
+ceremony, release, T40.13/Epic-40 closure, topology/bound change, or scale/SLO
+claim.

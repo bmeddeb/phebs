@@ -25,6 +25,32 @@ import (
 
 const launcherDescendantModeEnv = "T4013_CUSTODY_LAUNCHER_MODE"
 
+func bindLauncherToolchain(t *testing.T, toolchain privateToolchain) privateToolchain {
+	t.Helper()
+	toolchain.Schema = privateToolchainSchema
+	root := t.TempDir()
+	paths := []*string{&toolchain.Phebs, &toolchain.Zoekt, &toolchain.Focused, &toolchain.Buf}
+	for index, path := range paths {
+		if *path != "" {
+			continue
+		}
+		*path = filepath.Join(root, privateToolchainInputs(toolchain)[index].name)
+		if err := os.WriteFile(*path, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if toolchain.TempDir == "" {
+		toolchain.TempDir = filepath.Join(root, "tmp")
+		if err := os.Mkdir(toolchain.TempDir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := bindPrivateToolchain(t.Context(), &toolchain); err != nil {
+		t.Fatal(err)
+	}
+	return toolchain
+}
+
 func TestV25CustodyLeaseCoversRealGitArchive(t *testing.T) {
 	root := t.TempDir()
 	repository := filepath.Join(root, "repository")
@@ -51,8 +77,12 @@ func TestV25CustodyLeaseCoversRealGitArchive(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
-	err := exportReviewedSourceWith(
-		ctx, repository, commit, filepath.Join(workspace, "source"),
+	gitCore, err := resolveGitCoreExecutable(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exportReviewedSourceWith(
+		ctx, repository, commit, filepath.Join(workspace, "source"), gitCore,
 		func(command *exec.Cmd, _ string) error {
 			stream, err := command.StdoutPipe()
 			if err != nil {
@@ -122,12 +152,13 @@ exit 0
 	supervision := beginLauncherCustody(t, workspace, "phebs-serve")
 	t.Setenv("T4013_CUSTODY_LEASE", filepath.Join(supervision.directory, custodyLeaseName))
 	t.Setenv("T4013_CUSTODY_LEASE_FD", strconv.FormatUint(uint64(supervision.lease.Fd()), 10))
-	server, err := launchPrivateServer(t.Context(), PreparedProfile{
-		Config: configPath,
-	}, privateToolchain{
+	toolchain := bindLauncherToolchain(t, privateToolchain{
 		Schema: privateToolchainSchema, Phebs: serverPath,
 		TempDir: tempDir, ClosedEnvironment: true,
-	}, "custody")
+	})
+	server, err := launchPrivateServer(t.Context(), PreparedProfile{
+		Config: configPath,
+	}, toolchain, "custody")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,6 +227,7 @@ exec "$T4013_LAUNCHER_TEST_BINARY" -test.run='^TestV25CustodyLauncherDescendantH
 			toolchain := privateToolchain{
 				Phebs: toolPath, TempDir: tempDir, ClosedEnvironment: true,
 			}
+			toolchain = bindLauncherToolchain(t, toolchain)
 			profile := PreparedProfile{Config: configPath, DataDir: dataDir}
 			if mode == "restore" {
 				if err := os.Mkdir(filepath.Join(profileRoot, "backup-test"), 0o700); err != nil {
@@ -603,12 +635,14 @@ func realLauncherProfile(
 	if err := os.WriteFile(credentialPath, []byte("t4013-real-custody\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	return PreparedProfile{
-			Config: configPath, Credential: credentialPath, DataDir: dataDir, Address: address,
-		}, privateToolchain{
-			Schema: privateToolchainSchema, Phebs: phebs, Zoekt: zoekt,
-			TempDir: tempDir, ClosedEnvironment: true,
-		}
+	profile := PreparedProfile{
+		Config: configPath, Credential: credentialPath, DataDir: dataDir, Address: address,
+	}
+	toolchain := bindLauncherToolchain(t, privateToolchain{
+		Schema: privateToolchainSchema, Phebs: phebs, Zoekt: zoekt,
+		TempDir: tempDir, ClosedEnvironment: true,
+	})
+	return profile, toolchain
 }
 
 func waitForRealLauncherRuntime(t *testing.T, dataDir string, timeout time.Duration) store.LocalRuntime {

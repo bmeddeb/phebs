@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/executableidentity"
 )
 
 const (
@@ -92,22 +94,37 @@ func findSurrealBinary(useCache bool) (SurrealIdentity, error) {
 		}
 		candidate = found
 	}
-	return inspectSurrealBinary(context.Background(), candidate, useCache)
+	expected := os.Getenv("PHEBS_SURREAL_SHA256")
+	if expected != "" && (strings.TrimSpace(expected) != expected || !validSHA256(expected)) {
+		return SurrealIdentity{}, errors.New("find surreal binary: expected digest is invalid")
+	}
+	identity, err := inspectSurrealBinary(
+		context.Background(), candidate, useCache && expected == "", expected,
+	)
+	if err != nil {
+		return SurrealIdentity{}, err
+	}
+	if expected != "" && identity.SHA256 != expected {
+		return SurrealIdentity{}, errors.New("find surreal binary: executable digest differs")
+	}
+	return identity, nil
 }
 
 // InspectSurrealBinary validates one exact executable and returns its stable
 // identity. Restore uses this on the manifest-bound binary before import.
 func InspectSurrealBinary(candidate string) (SurrealIdentity, error) {
-	return inspectSurrealBinary(context.Background(), candidate, false)
+	return inspectSurrealBinary(context.Background(), candidate, false, "")
 }
 
 // InspectSurrealBinaryContext is InspectSurrealBinary with caller cancellation
 // applied to hashing and version inspection.
 func InspectSurrealBinaryContext(ctx context.Context, candidate string) (SurrealIdentity, error) {
-	return inspectSurrealBinary(ctx, candidate, false)
+	return inspectSurrealBinary(ctx, candidate, false, "")
 }
 
-func inspectSurrealBinary(ctx context.Context, candidate string, useCache bool) (SurrealIdentity, error) {
+func inspectSurrealBinary(
+	ctx context.Context, candidate string, useCache bool, expectedSHA256 string,
+) (SurrealIdentity, error) {
 	if ctx == nil {
 		return SurrealIdentity{}, errors.New("inspect surreal binary: context is nil")
 	}
@@ -141,6 +158,9 @@ func inspectSurrealBinary(ctx context.Context, candidate string, useCache bool) 
 	digest, err := fileSHA256Context(ctx, resolved, 1<<30)
 	if err != nil {
 		return SurrealIdentity{}, fmt.Errorf("digest surreal binary: %w", err)
+	}
+	if expectedSHA256 != "" && digest != expectedSHA256 {
+		return SurrealIdentity{}, errors.New("find surreal binary: executable digest differs")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -222,6 +242,9 @@ func startEngine(ctx context.Context, engine string) (runtime LocalRuntime, stop
 	identity, err := findSurrealBinary(true)
 	if err != nil {
 		return LocalRuntime{}, nil, err
+	}
+	if err := executableidentity.Verify(identity.Path, os.Getenv("PHEBS_SURREAL_SHA256")); err != nil {
+		return LocalRuntime{}, nil, fmt.Errorf("verify surreal identity before start: %w", err)
 	}
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

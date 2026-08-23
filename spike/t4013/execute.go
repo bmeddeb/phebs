@@ -136,6 +136,8 @@ type execution struct {
 	executionStarted     time.Time
 	executionCancel      context.CancelFunc
 	hostToolchainVerify  func() error
+	hostTools            hostToolchainBinding
+	hostTerminalVerified bool
 	liveServers          []*privateServer
 	serverShutdownErr    error
 	portReservations     map[string]net.Listener
@@ -318,16 +320,27 @@ func newExecution(
 			retErr = errors.Join(retErr, supervision.Close())
 		}()
 	}
+	var hostTools hostToolchainBinding
 	if version >= 25 {
-		if err := verifyHostToolchainForPlan(ctx, plan); err != nil {
-			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", err)
+		var bindErr error
+		hostTools, bindErr = bindHostToolchainForPlan(ctx, plan)
+		if bindErr != nil {
+			return nil, fmt.Errorf("verify frozen host toolchain before execution: %w", bindErr)
 		}
 	}
 	if err := VerifyInputs(moduleRoot); err != nil {
 		return nil, err
 	}
-	if err := verifyCleanCheckoutForPlan(ctx, moduleRoot, plan); err != nil {
-		return nil, err
+	var checkoutErr error
+	if version >= 25 {
+		checkoutErr = verifyCleanCheckoutWithBoundGit(
+			ctx, moduleRoot, plan.SourceCommit, hostTools.gitCore,
+		)
+	} else {
+		checkoutErr = verifyCleanCheckoutForPlan(ctx, moduleRoot, plan)
+	}
+	if checkoutErr != nil {
+		return nil, checkoutErr
 	}
 	workspaceAllocated := int64(0)
 	if planSchemaVersion(plan.Schema) >= 23 {
@@ -379,6 +392,7 @@ func newExecution(
 		portReservations: portReservations, executionStarted: executionStarted,
 		executionCancel: executionCancel, supervision: supervision,
 		preparedPath: preparedPath, preparedDigest: preparedDigest,
+		hostTools: hostTools,
 	}
 	portReservations = nil
 	return result, nil
@@ -501,7 +515,9 @@ func (run *execution) execute() error {
 		preflightStarted = run.executionStarted
 		run.phaseStarted = run.executionStarted
 	}
-	toolchain, preflightMetrics, err := buildPrivateToolchain(run.ctx, run.moduleRoot, run.workspace, run.plan)
+	toolchain, preflightMetrics, err := buildPrivateToolchain(
+		run.ctx, run.moduleRoot, run.workspace, run.plan, run.hostTools,
+	)
 	run.partialMetrics = mergeMetrics(run.partialMetrics, preflightMetrics)
 	if err != nil {
 		return err
@@ -778,6 +794,13 @@ func (run *execution) persistTeardownCheckpoint(
 	return nil
 }
 
+func (run *execution) updateSourceRevision(repository, commit string) error {
+	if planSchemaVersion(run.plan.Schema) >= 25 {
+		return updateSourceRevisionWithGit(run.ctx, repository, commit, run.hostTools.gitCore)
+	}
+	return updateSourceRevision(run.ctx, repository, commit, false)
+}
+
 func (run *execution) completeTeardown(
 	started time.Time,
 	logical, allocated int64,
@@ -1044,7 +1067,14 @@ func (run *execution) verifyFrozenHostToolchain() error {
 	}
 	verificationContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return verifyHostToolchainForPlan(verificationContext, run.plan)
+	if planSchemaVersion(run.plan.Schema) >= 25 && run.hostTerminalVerified {
+		return run.hostTools.verifyExecutables(verificationContext)
+	}
+	err := verifyHostToolchainForPlan(verificationContext, run.plan)
+	if err == nil && planSchemaVersion(run.plan.Schema) >= 25 {
+		run.hostTerminalVerified = true
+	}
+	return err
 }
 
 type stoppedClassification struct {
@@ -1415,7 +1445,7 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 	run.trackMeter(meter)
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+	if err := run.updateSourceRevision(profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
 	run.structB, err = run.waitSnapshot(profile, "b", "delta-b", run.fullConvergenceDeadline(), run.structural)
@@ -1440,7 +1470,7 @@ func (run *execution) deltaAndReturn() error {
 		return err
 	}
 	run.trackMeter(meter)
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a-return"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+	if err := run.updateSourceRevision(profile.Repository, profile.Revisions["a-return"]); err != nil {
 		return err
 	}
 	run.structAR, err = run.waitSnapshot(profile, "a-return", "return-a", run.fullConvergenceDeadline(), run.structural)
@@ -1537,7 +1567,7 @@ func (run *execution) interruption() error {
 			}
 		}
 		run.setInterruptionSubstage("delta_trigger")
-		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+		if err := run.updateSourceRevision(profile.Repository, profile.Revisions["b"]); err != nil {
 			if triggerObserver != nil {
 				return errors.Join(err, triggerObserver.Close())
 			}
@@ -1570,7 +1600,7 @@ func (run *execution) interruption() error {
 	run.semantic = nil
 	if planSchemaVersion(run.plan.Schema) >= 17 {
 		run.setInterruptionSubstage("source_return")
-		if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+		if err := run.updateSourceRevision(profile.Repository, profile.Revisions["a"]); err != nil {
 			return err
 		}
 	}
@@ -2382,7 +2412,7 @@ func (run *execution) staleWorker() error {
 		return err
 	}
 	defer func() { _ = leaseReader.Close(context.Background()) }()
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["b"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+	if err := run.updateSourceRevision(profile.Repository, profile.Revisions["b"]); err != nil {
 		return err
 	}
 	var started generationscheduler.ChunkLifecycleReport
@@ -2424,7 +2454,7 @@ func (run *execution) staleWorker() error {
 	if err != nil {
 		return err
 	}
-	if err := updateSourceRevision(run.ctx, profile.Repository, profile.Revisions["a"], planSchemaVersion(run.plan.Schema) >= 25); err != nil {
+	if err := run.updateSourceRevision(profile.Repository, profile.Revisions["a"]); err != nil {
 		return err
 	}
 	if planSchemaVersion(run.plan.Schema) >= 18 {
@@ -4429,6 +4459,9 @@ func createLiveBackup(
 		!isWithin(logPath, workspace) || label == "" || strings.ContainsAny(label, "/\\: ") {
 		return privateRecoveryBackup{}, PhaseMetrics{}, errors.New("T40.13 live backup scope is invalid")
 	}
+	if err := revalidatePrivateToolchain(ctx, toolchain); err != nil {
+		return privateRecoveryBackup{}, PhaseMetrics{}, err
+	}
 	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return privateRecoveryBackup{}, PhaseMetrics{}, err
@@ -4465,6 +4498,9 @@ func restoreBackup(
 		!isWithin(backup.path, workspace) || !isWithin(backup.logPath, workspace) ||
 		filepath.Dir(backup.path) != base || filepath.Dir(backup.logPath) != base {
 		return PhaseMetrics{}, errors.New("T40.13 restore scope is invalid")
+	}
+	if err := revalidatePrivateToolchain(ctx, toolchain); err != nil {
+		return PhaseMetrics{}, err
 	}
 	backupInfo, backupErr := os.Lstat(backup.path)
 	logInfo, logErr := os.Lstat(backup.logPath)
@@ -5354,6 +5390,16 @@ func resumeTeardownCheckpoint(
 		if err := supervision.BeginFinalization(checkpointDigest); err != nil {
 			return nil, fmt.Errorf("resume T40.13 drained custody: %w", err)
 		}
+	}
+	if planSchemaVersion(plan.Schema) >= 25 && hostToolchainVerify == nil {
+		binding, bindErr := bindHostToolchainForPlan(ctx, plan)
+		if bindErr != nil {
+			return nil, fmt.Errorf("resume T40.13 frozen host toolchain: %w", bindErr)
+		}
+		run.hostTools = binding
+		run.hostTerminalVerified = true
+	}
+	if supervision != nil {
 		if err := destroyCustody(run.workspace, run.moduleRoot); err != nil {
 			return nil, fmt.Errorf("resume T40.13 custody deletion: %w", err)
 		}

@@ -1732,9 +1732,25 @@ the prepared digest, while a no-checkpoint Resume is read-only unless a final
 observation is already settled. Historical V1–V24 bytes and supported paths
 remain compatible.
 
-T40.13e exact executed-tool identity is now the only next scale ticket inside
+T40.13e is complete. V25 plan bytes now bind source-free digests of every
+canonical host-tool path, while Prepare, Execute, and resumed teardown retain
+the matching private paths and invoke them directly. Go is rehashed before
+each private build command; Git core is rehashed before every source export,
+authoring, checkout, and revision command; the exact SurrealDB path and digest
+are passed to each private server. The four built private binaries form one
+bounded digest snapshot that is rechecked before every serve, backup, and
+restore launch; Phebs also rechecks exact SurrealDB identity immediately before
+start and exact zoekt, focused-index, and Buf identities immediately before
+each child launch. The supported shell retains and
+rehashes its exact Go, Git/core, and SurrealDB tools plus all five prebuilt V25
+commands across run-lock re-exec. Replacement, symlink, and PATH drift fail
+before launch mutation. Full Go/Git tree hashing is fixed to admission and
+terminal snapshot checks, never a poll or phase loop; later teardown checks
+rehash only four executable files. Historical V1–V24 bytes remain exact.
+
+T40.13f hermetic execution controls is now the only next scale ticket inside
 the still-open T40.13 gate. Critical/high prerequisites continue through
-T40.13f hermetic execution controls and T40.13g an authenticated bounded
+T40.13g's authenticated bounded
 returned-evidence firewall. Medium tickets close resumable seal/keypair
 integrity (T40.13h), bounded exact-control inspection (T40.13i), overflow-safe
 arithmetic (T40.13j), and complete admission accounting (T40.13k). T40.13l last
@@ -1743,16 +1759,15 @@ convergence gate follows only after the complete stack, bounded regressions,
 independent review, and separate authorization. No ticket may use a freeze,
 rehearsal, or giant authoring run as its regression test.
 
-This lock adds no production query/request, sync-tick, startup, or publication
-work. One V25 run retains one zero-byte lock inode; a direct operation holds one
-descriptor and the shell passes that descriptor to descendants for the full
-operation. Admission and retry perform only a fixed lock attempt plus bounded
-reads: plan 64 KiB, prepared 256 KiB, cleanup control 4 KiB, and teardown
-checkpoint 260 KiB. Runs with different roots remain independent; one run root
-is intentionally serialized. A crashed shell's surviving descendant can retain
-one descriptor until exit, after which the kernel releases the lock. There is
-no corpus, shard, process-table, or tree-hash scan. No freeze, ceremony,
-release, topology/bound change, or scale/SLO claim is authorized.
+Executed-tool binding is ceremony-only. Path commitments add sixteen fixed
+SHA-256 strings to fresh V25 plan bytes without exposing paths. Each full host
+snapshot remains bounded by 100,000 entries and 2 GiB; each direct executable
+or private-tool check is bounded by 256 MiB or 2 GiB respectively. The shell
+hashes only a command it is about to launch. Empty expected-digest settings
+perform no production file hashing, child launch, corpus/shard read, or
+retained allocation; ordinary query, worker, sync, and publication paths are
+unchanged. No freeze, ceremony, release, topology/bound change, or scale/SLO
+claim is authorized.
 
 Production registration of the evidence and Workbench surfaces still requires:
 

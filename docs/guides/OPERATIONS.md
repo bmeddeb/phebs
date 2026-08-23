@@ -4940,10 +4940,20 @@ authority, 4 KiB for cleanup control, and 260 KiB for a teardown checkpoint.
 Prepared output is invalid inside custody or the reviewed module checkout.
 Do not bypass these boundaries or hand-edit a prepared/checkpoint identity.
 
-Do not request a freeze yet. T40.13e and later prerequisites must bind every
-Go/Git/Surreal launch to the frozen executable path, reverify private binaries
-across restarts, move HOME/module/control caches into reviewed custody, and
-close the returned-evidence and remaining medium/low gates. `go mod verify`, the exact filesystem
+V25 now binds source-free canonical-path digests for every frozen host tool,
+retains exact Go, Git/core, and SurrealDB paths, and rehashes the relevant exact
+executable immediately before each ceremony launch. The four custody-built
+binaries are rehashed as one bounded snapshot before every serve, backup, or
+restore start; Phebs also rechecks exact SurrealDB immediately before start and
+exact zoekt, focused-index, and Buf immediately before each child launch. The
+shell retains and rehashes all five
+prebuilt V25 commands across its lock re-exec. A changed file, symlink, or PATH
+selection is a hard refusal; do not replace a tool or hand-edit its digest.
+Full Go/Git tree hashing is limited to fixed admission and terminal snapshots.
+
+Do not request a freeze yet. T40.13f and later prerequisites must move
+HOME/module/control caches into reviewed custody and close the returned-evidence
+and remaining medium/low gates. `go mod verify`, the exact filesystem
 projection, bounded package/race/docs gates, focused real-tool proof, and both
 real-binary rehearsals must pass from one clean commit in their designated
 branch-gate or preflight boundary. Passing those gates is readiness evidence

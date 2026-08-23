@@ -41,6 +41,8 @@ type privateToolchain struct {
 	Buf               string
 	TempDir           string
 	ClosedEnvironment bool
+	host              hostToolchainBinding
+	digests           [4]string
 }
 
 type privateServer struct {
@@ -122,7 +124,7 @@ func frozenSourceExportContractForPlan(schema string) frozenSourceExportContract
 }
 
 func buildPrivateToolchain(
-	ctx context.Context, moduleRoot, workspace string, plan Plan,
+	ctx context.Context, moduleRoot, workspace string, plan Plan, hostTools hostToolchainBinding,
 ) (toolchain privateToolchain, metrics PhaseMetrics, retErr error) {
 	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(workspace) ||
 		(frozenSourceExportContractForPlan(plan.Schema) == frozenSourceExportV25 && !hexIdentity(plan.SourceCommit, 40)) {
@@ -158,7 +160,9 @@ func buildPrivateToolchain(
 	}
 	source := filepath.Join(workspace, "toolchain-source")
 	if v25 {
-		exportMetrics, err := exportReviewedSourceMeasured(ctx, moduleRoot, plan.SourceCommit, source, workspace)
+		exportMetrics, err := exportReviewedSourceMeasuredWithBoundGit(
+			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore,
+		)
 		metrics = mergeMetrics(metrics, exportMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics, err
@@ -177,7 +181,11 @@ func buildPrivateToolchain(
 		}
 	}
 	if v25 {
-		command := exec.CommandContext(ctx, "go", "mod", "verify")
+		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+		command := exec.CommandContext(ctx, goPath, "mod", "verify")
 		command.Dir = source
 		command.Env = executionEnvironmentForPlan(plan, privateTemp)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
@@ -194,6 +202,7 @@ func buildPrivateToolchain(
 		Focused: filepath.Join(output, "phebs-focused-index"), Buf: filepath.Join(output, "buf"),
 		TempDir:           privateTemp,
 		ClosedEnvironment: v25,
+		host:              hostTools,
 	}
 	builds := []struct {
 		output string
@@ -209,7 +218,15 @@ func buildPrivateToolchain(
 		if _, err := os.Lstat(build.output); err == nil || !os.IsNotExist(err) {
 			return privateToolchain{}, metrics, errors.New("T40.13 toolchain output already exists")
 		}
-		command := exec.CommandContext(ctx, "go", build.args...)
+		goPath := "go"
+		if v25 {
+			var pathErr error
+			goPath, pathErr = hostTools.goDriver.pathForLaunch(ctx)
+			if pathErr != nil {
+				return privateToolchain{}, metrics, pathErr
+			}
+		}
+		command := exec.CommandContext(ctx, goPath, build.args...)
 		command.Dir = source
 		command.Env = executionEnvironmentForPlan(plan, privateTemp)
 		if v25 {
@@ -230,7 +247,11 @@ func buildPrivateToolchain(
 		}
 	}
 	if v25 {
-		command := exec.CommandContext(ctx, "go", "mod", "verify")
+		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+		command := exec.CommandContext(ctx, goPath, "mod", "verify")
 		command.Dir = source
 		command.Env = executionEnvironmentForPlan(plan, privateTemp)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
@@ -242,6 +263,9 @@ func buildPrivateToolchain(
 		}
 		if err := os.RemoveAll(buildCache); err != nil {
 			return privateToolchain{}, metrics, errors.New("T40.13 private Go build cache cleanup failed")
+		}
+		if _, err := bindPrivateToolchain(ctx, &toolchain); err != nil {
+			return privateToolchain{}, metrics, err
 		}
 	}
 	return toolchain, metrics, nil
@@ -407,14 +431,51 @@ func extractFrozenSourceCommandMeasured(
 }
 
 func exportReviewedSource(ctx context.Context, moduleRoot, sourceCommit, output string) error {
-	return exportReviewedSourceWith(ctx, moduleRoot, sourceCommit, output, extractFrozenSourceCommand)
+	gitCore, err := resolveGitCoreExecutable(ctx)
+	if err != nil {
+		return err
+	}
+	return exportReviewedSourceWith(
+		ctx, moduleRoot, sourceCommit, output, gitCore, extractFrozenSourceCommand,
+	)
 }
 
 func exportReviewedSourceMeasured(
 	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
 ) (PhaseMetrics, error) {
+	gitCore, err := resolveGitCoreExecutable(ctx)
+	if err != nil {
+		return PhaseMetrics{}, err
+	}
+	return exportReviewedSourceMeasuredWithGit(
+		ctx, moduleRoot, sourceCommit, output, measureRoot, gitCore,
+	)
+}
+
+func exportReviewedSourceMeasuredWithGit(
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot, gitCore string,
+) (PhaseMetrics, error) {
+	return exportReviewedSourceMeasuredWithResolver(
+		ctx, moduleRoot, sourceCommit, output, measureRoot,
+		func() (string, error) { return gitCore, nil },
+	)
+}
+
+func exportReviewedSourceMeasuredWithBoundGit(
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string, git boundExecutable,
+) (PhaseMetrics, error) {
+	return exportReviewedSourceMeasuredWithResolver(
+		ctx, moduleRoot, sourceCommit, output, measureRoot,
+		func() (string, error) { return git.pathForLaunch(ctx) },
+	)
+}
+
+func exportReviewedSourceMeasuredWithResolver(
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
+	gitPath func() (string, error),
+) (PhaseMetrics, error) {
 	var metrics PhaseMetrics
-	err := exportReviewedSourceWith(ctx, moduleRoot, sourceCommit, output, func(command *exec.Cmd, output string) error {
+	err := exportReviewedSourceWithResolver(ctx, moduleRoot, sourceCommit, output, gitPath, func(command *exec.Cmd, output string) error {
 		var err error
 		metrics, err = extractFrozenSourceCommandMeasured(command, output, measureRoot)
 		return err
@@ -424,10 +485,27 @@ func exportReviewedSourceMeasured(
 
 func exportReviewedSourceWith(
 	ctx context.Context,
-	moduleRoot, sourceCommit, output string,
+	moduleRoot, sourceCommit, output, gitCore string,
 	extract func(*exec.Cmd, string) error,
 ) (retErr error) {
-	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(output) || !hexIdentity(sourceCommit, 40) {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(output) ||
+		!filepath.IsAbs(gitCore) || !hexIdentity(sourceCommit, 40) {
+		return errors.New("T40.13 frozen source export scope is invalid")
+	}
+	return exportReviewedSourceWithResolver(
+		ctx, moduleRoot, sourceCommit, output,
+		func() (string, error) { return gitCore, nil }, extract,
+	)
+}
+
+func exportReviewedSourceWithResolver(
+	ctx context.Context,
+	moduleRoot, sourceCommit, output string,
+	gitPath func() (string, error),
+	extract func(*exec.Cmd, string) error,
+) (retErr error) {
+	if ctx == nil || !filepath.IsAbs(moduleRoot) || !filepath.IsAbs(output) ||
+		!hexIdentity(sourceCommit, 40) || gitPath == nil {
 		return errors.New("T40.13 frozen source export scope is invalid")
 	}
 	if extract == nil {
@@ -436,7 +514,12 @@ func exportReviewedSourceWith(
 	if err := os.Mkdir(output, 0o700); err != nil {
 		return err
 	}
-	objectPath, err := gitOutputForContract(ctx, moduleRoot, true, "rev-parse", "--git-path", "objects")
+	gitCore, err := gitPath()
+	if err != nil || !filepath.IsAbs(gitCore) {
+		return errors.Join(err, errors.New("T40.13 frozen source Git executable is invalid"))
+	}
+	objectPath, err := gitOutputWithExecutable(ctx, moduleRoot, gitCore, true,
+		"rev-parse", "--git-path", "objects")
 	if err != nil {
 		return err
 	}
@@ -471,9 +554,9 @@ func exportReviewedSourceWith(
 		return err
 	}
 
-	gitCore, err := resolveGitCoreExecutable(ctx)
-	if err != nil {
-		return err
+	gitCore, err = gitPath()
+	if err != nil || !filepath.IsAbs(gitCore) {
+		return errors.Join(err, errors.New("T40.13 frozen source Git executable is invalid"))
 	}
 	command := exec.CommandContext(ctx, gitCore, "-c", "core.attributesFile="+os.DevNull,
 		"archive", "--format=tar", sourceCommit)
@@ -578,6 +661,9 @@ func launchPrivateServer(
 	if ctx == nil || toolchain.Schema != privateToolchainSchema ||
 		label == "" || strings.ContainsAny(label, "/\\: ") {
 		return nil, errors.New("T40.13 server start is invalid")
+	}
+	if err := revalidatePrivateToolchain(ctx, toolchain); err != nil {
+		return nil, err
 	}
 	logPath := filepath.Join(filepath.Dir(profile.Config), "server-"+label+".log")
 	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
@@ -1446,6 +1532,15 @@ func executionEnvironmentForToolchain(toolchain privateToolchain) []string {
 	environment := executionEnvironment(toolchain.ClosedEnvironment)
 	if toolchain.ClosedEnvironment {
 		environment = append(environment, "TMPDIR="+toolchain.TempDir, "GOTMPDIR="+toolchain.TempDir)
+		if toolchain.host.surreal.path != "" {
+			environment = append(environment,
+				"PHEBS_SURREAL="+toolchain.host.surreal.path,
+				"PHEBS_SURREAL_SHA256="+toolchain.host.surreal.sha256,
+				"PHEBS_ZOEKT_GIT_INDEX_SHA256="+toolchain.digests[1],
+				"PHEBS_FOCUSED_INDEX_SHA256="+toolchain.digests[2],
+				"PHEBS_BUF_SHA256="+toolchain.digests[3],
+			)
+		}
 	}
 	return environment
 }
@@ -1478,7 +1573,80 @@ func observeToolchain(value privateToolchain) ([]ToolchainObservation, error) {
 	if err := validateToolchain(value); err != nil {
 		return nil, err
 	}
-	inputs := []struct {
+	if privateToolchainDigestsValid(value.digests) {
+		return privateToolchainObservations(value), nil
+	}
+	return observeToolchainContext(context.Background(), value)
+}
+
+func bindPrivateToolchain(
+	ctx context.Context, value *privateToolchain,
+) ([]ToolchainObservation, error) {
+	if value == nil {
+		return nil, errors.New("T40.13 private toolchain is absent")
+	}
+	observed, err := observeToolchainContext(ctx, *value)
+	if err != nil {
+		return nil, err
+	}
+	for index := range observed {
+		value.digests[index] = observed[index].SHA256
+	}
+	return observed, nil
+}
+
+func revalidatePrivateToolchain(ctx context.Context, value privateToolchain) error {
+	if !value.ClosedEnvironment {
+		return nil
+	}
+	if err := validateToolchain(value); err != nil {
+		return err
+	}
+	if !privateToolchainDigestsValid(value.digests) {
+		return errors.New("T40.13 private toolchain lacks bound executable digests")
+	}
+	for index, input := range privateToolchainInputs(value) {
+		observed, err := privateExecutableDigest(ctx, input.path)
+		if err != nil || observed != value.digests[index] {
+			return errors.Join(err, fmt.Errorf("T40.13 private executable changed: %s", input.name))
+		}
+	}
+	return nil
+}
+
+func observeToolchainContext(ctx context.Context, value privateToolchain) ([]ToolchainObservation, error) {
+	if ctx == nil {
+		return nil, errors.New("T40.13 private toolchain context is nil")
+	}
+	if err := validateToolchain(value); err != nil {
+		return nil, err
+	}
+	inputs := privateToolchainInputs(value)
+	result := make([]ToolchainObservation, 0, len(inputs))
+	for _, input := range inputs {
+		digest, err := privateExecutableDigest(ctx, input.path)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, ToolchainObservation{Name: input.name, SHA256: digest})
+	}
+	return result, nil
+}
+
+func privateExecutableDigest(ctx context.Context, path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+		info.Mode()&0o111 == 0 || info.Size() <= 0 || info.Size() > 2<<30 {
+		return "", errors.Join(err, errors.New("T40.13 toolchain executable exceeds its digest bound"))
+	}
+	return regularFileDigestContext(ctx, path, 2<<30)
+}
+
+func privateToolchainInputs(value privateToolchain) [4]struct {
+	name string
+	path string
+} {
+	return [4]struct {
 		name string
 		path string
 	}{
@@ -1487,25 +1655,22 @@ func observeToolchain(value privateToolchain) ([]ToolchainObservation, error) {
 		{"phebs-focused-index", value.Focused},
 		{"buf", value.Buf},
 	}
-	result := make([]ToolchainObservation, 0, len(inputs))
-	for _, input := range inputs {
-		info, err := os.Lstat(input.path)
-		if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 2<<30 {
-			return nil, errors.New("T40.13 toolchain executable exceeds its digest bound")
+}
+
+func privateToolchainDigestsValid(values [4]string) bool {
+	for _, value := range values {
+		if !digestIdentity(value) {
+			return false
 		}
-		file, err := os.Open(input.path)
-		if err != nil {
-			return nil, err
-		}
-		hash := sha256.New()
-		_, copyErr := io.CopyN(hash, file, info.Size())
-		closeErr := file.Close()
-		if copyErr != nil || closeErr != nil {
-			return nil, errors.Join(copyErr, closeErr)
-		}
-		result = append(result, ToolchainObservation{
-			Name: input.name, SHA256: "sha256:" + hex.EncodeToString(hash.Sum(nil)),
-		})
 	}
-	return result, nil
+	return true
+}
+
+func privateToolchainObservations(value privateToolchain) []ToolchainObservation {
+	inputs := privateToolchainInputs(value)
+	result := make([]ToolchainObservation, 0, len(inputs))
+	for index, input := range inputs {
+		result = append(result, ToolchainObservation{Name: input.name, SHA256: value.digests[index]})
+	}
+	return result
 }

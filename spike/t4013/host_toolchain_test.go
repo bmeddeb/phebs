@@ -31,6 +31,109 @@ func TestHostToolchainMismatchNamesOnlyTheClosedTool(t *testing.T) {
 	}
 }
 
+func TestBoundExecutableRefusesReplacementBeforeLaunch(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tool")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	sha256, err := executableDigestContext(t.Context(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound := boundExecutable{name: "tool", path: path, sha256: sha256}
+	if _, err := bound.pathForLaunch(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bound.pathForLaunch(t.Context()); err == nil {
+		t.Fatal("replacement executable passed its bound launch identity")
+	}
+}
+
+func TestPrebindRefusesHostReplacementBeforeVersionLaunch(t *testing.T) {
+	bin := t.TempDir()
+	marker := filepath.Join(t.TempDir(), "replacement-ran")
+	paths := map[string]string{}
+	for _, name := range []string{"go", "git", "surreal"} {
+		path := filepath.Join(bin, name)
+		if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		paths[name] = path
+	}
+	goSHA256, err := executableDigestContext(t.Context(), paths["go"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths["go"], []byte("#!/bin/sh\n: > \"$T4013_MARKER\"\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	t.Setenv("T4013_MARKER", marker)
+	expected := []HostToolObservation{
+		{Name: "go", SHA256: goSHA256, PathSHA256: hostPathDigest(paths["go"])},
+		{Name: "git", SHA256: digest([]byte("unused")), PathSHA256: hostPathDigest(paths["git"])},
+		{Name: "surreal", SHA256: digest([]byte("unused")), PathSHA256: hostPathDigest(paths["surreal"])},
+	}
+	if _, err := prebindHostToolchain(t.Context(), expected); err == nil {
+		t.Fatal("replacement host tool passed prebinding")
+	}
+	if _, err := os.Lstat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("replacement host tool ran before refusal: %v", err)
+	}
+}
+
+func TestHostToolchainPathIdentityDetectsPathSearchDrift(t *testing.T) {
+	expected := fakeHostToolchainV25()
+	if err := validateHostToolchain(expected, true); err != nil {
+		for index, value := range expected {
+			if !digestIdentity(value.PathSHA256) {
+				t.Fatalf("fake path identity %d (%s) = %q", index, value.Name, value.PathSHA256)
+			}
+		}
+		t.Fatal(err)
+	}
+	observed := append([]HostToolObservation(nil), expected...)
+	observed[0].PathSHA256 = hostPathDigest("/different/go")
+	if err := compareHostToolchain(expected, observed); err == nil ||
+		err.Error() != "T40.13 host toolchain differs from the frozen plan: go" {
+		t.Fatalf("path drift = %v", err)
+	}
+}
+
+func TestLaterTerminalChecksUseOnlyRetainedExecutableBindings(t *testing.T) {
+	root := t.TempDir()
+	bindings := make([]boundExecutable, 4)
+	for index, name := range []string{"go", "git", "git-core", "surreal"} {
+		path := filepath.Join(root, name)
+		if err := os.WriteFile(path, []byte{byte(index + 1)}, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		sha256, err := executableDigestContext(t.Context(), path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bindings[index] = boundExecutable{name: name, path: path, sha256: sha256}
+	}
+	run := &execution{
+		plan: Plan{Schema: PlanSchemaV25}, hostTerminalVerified: true,
+		hostTools: hostToolchainBinding{
+			goDriver: bindings[0], git: bindings[1], gitCore: bindings[2], surreal: bindings[3],
+		},
+	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bindings[2].path, []byte("replacement"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.verifyFrozenHostToolchain(); err == nil || !strings.Contains(err.Error(), "git-core") {
+		t.Fatalf("later exact executable check = %v", err)
+	}
+}
+
 func TestHostTreeDigestChangesWithBuildInput(t *testing.T) {
 	root := t.TempDir()
 	for _, directory := range []string{"src", filepath.Join("pkg", "include")} {
