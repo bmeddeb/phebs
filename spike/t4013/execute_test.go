@@ -2019,11 +2019,79 @@ func TestPromoteStagedFileDoesNotOverwriteAuthority(t *testing.T) {
 	if _, err := os.Lstat(temporary); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("promoted stage survived: %v", err)
 	}
+	if err := os.WriteFile(temporary, []byte("signed\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := PromoteStagedFile(temporary, output, root); err != nil {
+		t.Fatalf("resume identical promotion: %v", err)
+	}
+	if _, err := os.Lstat(temporary); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("identical resumed stage survived: %v", err)
+	}
 	if err := os.WriteFile(temporary, []byte("replacement\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := PromoteStagedFile(temporary, output, root); !errors.Is(err, os.ErrExist) {
 		t.Fatalf("overwrite authority error = %v", err)
+	}
+	if raw, err := os.ReadFile(output); err != nil || string(raw) != "signed\n" {
+		t.Fatalf("differing resume changed authority = %q, %v", raw, err)
+	}
+}
+
+func TestSyncStagedFileScopesDurability(t *testing.T) {
+	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := filepath.Join(root, "run", "evidence", "manifest.json.tmp")
+	if err := os.MkdirAll(filepath.Dir(stage), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stage, []byte("manifest\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SyncStagedFile(stage, root); err != nil {
+		t.Fatal(err)
+	}
+	if raw, err := os.ReadFile(stage); err != nil || string(raw) != "manifest\n" {
+		t.Fatalf("synced stage = %q, %v", raw, err)
+	}
+	outside := filepath.Join(filepath.Dir(root), "outside-stage")
+	if err := os.WriteFile(outside, []byte("outside\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SyncStagedFile(outside, root); err == nil {
+		t.Fatal("staged sync accepted a path outside its root")
+	}
+}
+
+func TestDiscardStagedFileScopesDurability(t *testing.T) {
+	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := filepath.Join(root, "run", "evidence", "SHA256SUMS.tmp.sig")
+	if err := os.MkdirAll(filepath.Dir(stage), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stage, []byte("partial"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := DiscardStagedFile(stage, root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("discarded stage survived: %v", err)
+	}
+	outside := filepath.Join(filepath.Dir(root), "outside-discard")
+	if err := os.WriteFile(outside, []byte("outside\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := DiscardStagedFile(outside, root); err == nil {
+		t.Fatal("staged discard accepted a path outside its root")
 	}
 }
 

@@ -5618,8 +5618,67 @@ func publishAtomicOutput(path string, raw []byte, maximumBytes int, allowIdentic
 	return nil
 }
 
+func canonicalDurabilityRoot(durabilityRoot string) (string, error) {
+	root, err := filepath.EvalSymlinks(durabilityRoot)
+	if err != nil || !filepath.IsAbs(durabilityRoot) || root != filepath.Clean(durabilityRoot) {
+		return "", errors.Join(err, errors.New("T40.13 staged durability root is invalid"))
+	}
+	rootInfo, err := os.Lstat(root)
+	if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+		return "", errors.Join(err, errors.New("T40.13 staged durability root is invalid"))
+	}
+	return root, nil
+}
+
+// SyncStagedFile makes one bounded source-free shell stage and its directory
+// chain durable before that exact stage can become resumable authority.
+func SyncStagedFile(path, durabilityRoot string) error {
+	const maximumBytes = 4 << 20
+	path, err := canonicalNewOutputPath(path)
+	if err != nil {
+		return fmt.Errorf("T40.13 staged sync input is invalid: %w", err)
+	}
+	root, err := canonicalDurabilityRoot(durabilityRoot)
+	if err != nil {
+		return err
+	}
+	if !isWithin(path, root) {
+		return errors.New("T40.13 staged sync input is outside its root")
+	}
+	raw, err := readAtomicRegular(path, maximumBytes)
+	if err != nil || len(raw) == 0 {
+		return errors.Join(err, errors.New("T40.13 staged sync input is empty or invalid"))
+	}
+	if err := syncRegularFile(path); err != nil {
+		return err
+	}
+	return syncDirectoryChain(filepath.Dir(path), root)
+}
+
+// DiscardStagedFile durably removes one incomplete non-authority stage.
+func DiscardStagedFile(path, durabilityRoot string) error {
+	const maximumBytes = 4 << 20
+	path, err := canonicalNewOutputPath(path)
+	if err != nil {
+		return fmt.Errorf("T40.13 staged discard input is invalid: %w", err)
+	}
+	root, err := canonicalDurabilityRoot(durabilityRoot)
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+		info.Size() < 0 || info.Size() > maximumBytes || !isWithin(path, root) {
+		return errors.Join(err, errors.New("T40.13 staged discard input is invalid or outside its root"))
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove incomplete T40.13 stage: %w", err)
+	}
+	return syncDirectoryChain(filepath.Dir(path), root)
+}
+
 // PromoteStagedFile durably publishes one bounded source-free shell artifact
-// without overwriting an existing authority file.
+// without overwriting a differing authority file.
 func PromoteStagedFile(temporaryPath, outputPath, durabilityRoot string) error {
 	const maximumBytes = 4 << 20
 	temporaryPath, err := canonicalNewOutputPath(temporaryPath)
@@ -5630,15 +5689,13 @@ func PromoteStagedFile(temporaryPath, outputPath, durabilityRoot string) error {
 	if err != nil {
 		return fmt.Errorf("T40.13 staged promotion output is invalid: %w", err)
 	}
-	root, err := filepath.EvalSymlinks(durabilityRoot)
-	if err != nil || !filepath.IsAbs(durabilityRoot) || root != filepath.Clean(durabilityRoot) {
-		return errors.Join(err, errors.New("T40.13 staged promotion durability root is invalid"))
+	root, err := canonicalDurabilityRoot(durabilityRoot)
+	if err != nil {
+		return err
 	}
-	rootInfo, err := os.Lstat(root)
-	if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 ||
-		filepath.Dir(temporaryPath) != filepath.Dir(outputPath) || temporaryPath == outputPath ||
+	if filepath.Dir(temporaryPath) != filepath.Dir(outputPath) || temporaryPath == outputPath ||
 		!isWithin(outputPath, root) {
-		return errors.Join(err, errors.New("T40.13 staged promotion scope is invalid"))
+		return errors.New("T40.13 staged promotion scope is invalid")
 	}
 	raw, err := readAtomicRegular(temporaryPath, maximumBytes)
 	if err != nil || len(raw) == 0 {
@@ -5650,7 +5707,11 @@ func PromoteStagedFile(temporaryPath, outputPath, durabilityRoot string) error {
 	}
 	if outputInfo, outputErr := os.Lstat(outputPath); outputErr == nil {
 		if !os.SameFile(temporaryInfo, outputInfo) {
-			return fmt.Errorf("publish T40.13 staged file: %w", os.ErrExist)
+			existing, readErr := readAtomicRegular(outputPath, maximumBytes)
+			if readErr != nil || !bytes.Equal(raw, existing) {
+				return fmt.Errorf("publish T40.13 staged file: %w",
+					errors.Join(readErr, os.ErrExist))
+			}
 		}
 	} else if !errors.Is(outputErr, os.ErrNotExist) {
 		return outputErr

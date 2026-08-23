@@ -1770,11 +1770,21 @@ canonical evidence files before they are opened, and the same trust root binds
 the frozen plan identity. One owned temporary extraction root is removed on
 success, error, or signal.
 
-T40.13h's resumable seal/keypair integrity is now the only next scale ticket
-inside the still-open T40.13 gate. Later medium tickets close bounded
-exact-control inspection (T40.13i), overflow-safe arithmetic (T40.13j), and
-complete admission accounting (T40.13k). T40.13l last closes low-risk
-cost-first refusal ordering.
+T40.13h is complete. Existing Ed25519 private/public files must derive the same
+canonical public identity before freeze or seal. The three final seal files now
+form one authenticated resume transaction: exact manifest and checksum stages
+are validated against the frozen run, the checksum signature is authenticated
+before publication, and the existing promotion helper syncs each stage and
+every parent-directory transition. Zero-, one-, two-, and three-promotion
+crashes converge to the same retained bytes; a differing final authority is
+never overwritten, while an invalid interrupted non-authority stage is durably
+discarded and regenerated. Only the exact ten-file result can verify as
+complete.
+
+T40.13i's bounded exact-control inspection is now the only next scale ticket
+inside the still-open T40.13 gate. Later medium tickets close overflow-safe
+arithmetic (T40.13j) and complete admission accounting (T40.13k). T40.13l last
+closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
 ticket may use a freeze, rehearsal, or giant authoring run as its regression

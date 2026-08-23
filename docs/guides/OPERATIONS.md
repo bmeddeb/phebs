@@ -4845,7 +4845,22 @@ plan-bound receipt in memory. The driver also supports:
 
 Use `seal` only after execution produced `observation.json` and private custody
 is absent. It rebuilds a missing receipt, resumes an incomplete derived seal,
-verifies a complete seal/package, and never rewrites a complete invalid seal.
+verifies a complete seal/package, and never rewrites a differing final seal.
+Before freeze or seal, an existing Ed25519 private key must derive the same
+canonical identity as its public-key file; a partial or mismatched pair is a
+hard stop.
+
+`manifest.json.tmp`, `SHA256SUMS.tmp`, and `SHA256SUMS.tmp.sig` are bounded
+transaction stages, not disposable residue. The driver validates each stage
+against the frozen run, durably syncs it through the ceremony root, and resumes
+the exact manifest, authenticated signature, and checksum authority in that
+order. A crash may therefore leave zero, one, two, or all three final names.
+Rerun `seal` with the same key and checkout; do not delete, rename, or hand-edit
+either a stage or final. A complete seal is recognized only after the exact
+ten-file inventory and full evidence verification pass. A differing existing
+final is retained and refused rather than overwritten. If a crash interrupts
+stage creation before validation, the next `seal` durably discards only that
+invalid non-authority stage and regenerates it from the frozen inputs.
 
 ## T40.R1 neutral-34 relationship-stage cleanup
 
@@ -5003,7 +5018,7 @@ and verifies the frozen plan with the same trust root. Its private temporary
 root is removed on success, error, INT, TERM, or HUP. Do not inspect a rejected
 temporary tree or retry with an identity copied from the rejected bundle.
 
-Do not request a freeze yet. T40.13h and later prerequisites must close the
+Do not request a freeze yet. T40.13i and later prerequisites must close the
 remaining medium/low gates. `go mod verify`, the exact
 filesystem projection, bounded package/race/docs gates, focused real-tool
 proof, and both real-binary rehearsals must pass from one clean commit in their

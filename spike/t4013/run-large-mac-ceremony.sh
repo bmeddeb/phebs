@@ -786,7 +786,7 @@ durable_promote() {
   [[ "$temporary" == /* && "$final" == /* && "$filesystem_root" == /* &&
     "${temporary%/*}" == "${final%/*}" &&
     -f "$temporary" && ! -L "$temporary" &&
-    ! -e "$final" && ! -L "$final" &&
+    ! -L "$final" && (! -e "$final" || -f "$final") &&
     -d "$filesystem_root" && ! -L "$filesystem_root" ]] ||
     die "durable evidence promotion is invalid"
   if is_v25_plan "$plan_path"; then
@@ -800,6 +800,46 @@ durable_promote() {
       go run ./spike/t4013/cmd/t4013-promote \
       -temporary "$temporary" -output "$final" -root "$CEREMONY_REAL") ||
       die "durable evidence promotion failed"
+  fi
+}
+
+durable_stage() {
+  local stage="$1" filesystem_root="$2" plan_path="$3"
+  [[ "$stage" == /* && "$filesystem_root" == /* &&
+    -f "$stage" && ! -L "$stage" &&
+    -d "$filesystem_root" && ! -L "$filesystem_root" &&
+    "${stage%/*}" == "$filesystem_root" ]] ||
+    die "durable evidence stage is invalid"
+  if is_v25_plan "$plan_path"; then
+    initialize_v25_custody_commands
+    require_v25_custody_command "$V25_PROMOTE_COMMAND" || die "V25 stage command is unavailable"
+    (cd "$REPO_REAL" && closed_go \
+      "$V25_PROMOTE_COMMAND" -stage "$stage" -root "$CEREMONY_REAL") ||
+      die "durable evidence stage failed"
+  else
+    (cd "$REPO_REAL" && historical_closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+      go run ./spike/t4013/cmd/t4013-promote -stage "$stage" -root "$CEREMONY_REAL") ||
+      die "durable evidence stage failed"
+  fi
+}
+
+durable_discard_stage() {
+  local stage="$1" filesystem_root="$2" plan_path="$3"
+  [[ "$stage" == /* && "$filesystem_root" == /* &&
+    -f "$stage" && ! -L "$stage" &&
+    -d "$filesystem_root" && ! -L "$filesystem_root" &&
+    "${stage%/*}" == "$filesystem_root" ]] ||
+    die "discarded evidence stage is invalid"
+  if is_v25_plan "$plan_path"; then
+    initialize_v25_custody_commands
+    require_v25_custody_command "$V25_PROMOTE_COMMAND" || die "V25 stage command is unavailable"
+    (cd "$REPO_REAL" && closed_go \
+      "$V25_PROMOTE_COMMAND" -discard "$stage" -root "$CEREMONY_REAL") ||
+      die "durable evidence stage discard failed"
+  else
+    (cd "$REPO_REAL" && historical_closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \
+      go run ./spike/t4013/cmd/t4013-promote -discard "$stage" -root "$CEREMONY_REAL") ||
+      die "durable evidence stage discard failed"
   fi
 }
 
@@ -1024,18 +1064,28 @@ verification_preflight_for_plan() {
   fi
 }
 
+prove_signing_keypair() {
+  local private_public public_key
+  [[ -f "$SIGNING_KEY" && ! -L "$SIGNING_KEY" && -f "${SIGNING_KEY}.pub" && ! -L "${SIGNING_KEY}.pub" ]] ||
+    die "ceremony signing keypair is partial, invalid, or symlinked"
+  private_public="$(ssh-keygen -y -f "$SIGNING_KEY" | awk 'NR == 1 && NF >= 2 { print $1 " " $2 }')" ||
+    die "ceremony signing private key cannot derive its public identity"
+  public_key="$(awk 'NR == 1 && NF >= 2 { print $1 " " $2 }' "${SIGNING_KEY}.pub")" ||
+    die "ceremony signing public key is unreadable"
+  [[ "$private_public" == ssh-ed25519\ * && "$private_public" == "$public_key" ]] ||
+    die "ceremony signing private/public keypair does not match"
+}
+
 ensure_signing_key() {
   local fingerprint
-  if [[ -e "$SIGNING_KEY" || -L "$SIGNING_KEY" || -e "${SIGNING_KEY}.pub" || -L "${SIGNING_KEY}.pub" ]]; then
-    [[ -f "$SIGNING_KEY" && ! -L "$SIGNING_KEY" && -f "${SIGNING_KEY}.pub" && ! -L "${SIGNING_KEY}.pub" ]] ||
-      die "ceremony signing keypair is partial, invalid, or symlinked"
-  else
+  if [[ ! -e "$SIGNING_KEY" && ! -L "$SIGNING_KEY" && ! -e "${SIGNING_KEY}.pub" && ! -L "${SIGNING_KEY}.pub" ]]; then
     ssh-keygen -q -t ed25519 -N "" -C "phebs-t4013-ceremony" -f "$SIGNING_KEY"
     chmod 600 "$SIGNING_KEY"
     chmod 644 "${SIGNING_KEY}.pub"
     note "created ceremony signing key: $SIGNING_KEY"
     note "back up this key separately before relying on its identity"
   fi
+  prove_signing_keypair
   fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk '{ print $2 }')"
   [[ "$fingerprint" == SHA256:* ]] || die "ceremony signer fingerprint is invalid"
   [[ "$fingerprint" != "$RETIRED_SIGNER_FINGERPRINT" ]] ||
@@ -1246,58 +1296,141 @@ verify_evidence_directory() {
   note "source-free evidence verification: PASS"
 }
 
-seal_evidence() {
-  local ceremony_id="$1" run_root evidence_root plan_path source_commit plan_digest generated_at
-  local package package_tmp package_digest package_sidecar package_sidecar_tmp package_bytes
-  local manifest_tmp checksums_tmp signature_tmp
-  local reviewed_signer_fingerprint
-  local seal_count=0 seal_name
+seal_manifest_matches() {
+  local path="$1" ceremony_id="$2" source_commit="$3" plan_digest="$4" sealed_at
+  [[ "$(manifest_value "$path" schema)" == "t4013-source-free-transfer-v1" &&
+    "$(manifest_value "$path" ceremony_id)" == "$ceremony_id" &&
+    "$(manifest_value "$path" source_commit)" == "$source_commit" &&
+    "$(manifest_value "$path" plan_digest)" == "$plan_digest" ]] || return 1
+  sealed_at="$(manifest_value "$path" sealed_at)"
+  [[ "$sealed_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]
+}
+
+complete_evidence_seal() {
+  local ceremony_id="$1" evidence_root="$2" plan_path="$3" source_commit="$4" plan_digest="$5"
+  local generated_at manifest_tmp checksums_tmp signature_tmp checksum_input seal_name expected_checksums
   local -a expected
+  manifest_tmp="${evidence_root}/manifest.json.tmp"
+  checksums_tmp="${evidence_root}/SHA256SUMS.tmp"
+  signature_tmp="${checksums_tmp}.sig"
+
+  prove_signing_keypair
+  cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" ||
+    die "ceremony signing key changed after freeze"
+  verify_frozen_identity "$evidence_root"
+  expected=(allowed_signers freeze.json freeze.json.sig observation.json plan.json results.json signer.pub)
+  for seal_name in manifest.json manifest.json.tmp SHA256SUMS SHA256SUMS.tmp SHA256SUMS.sig SHA256SUMS.tmp.sig; do
+    if [[ -e "${evidence_root}/${seal_name}" || -L "${evidence_root}/${seal_name}" ]]; then
+      [[ -f "${evidence_root}/${seal_name}" && ! -L "${evidence_root}/${seal_name}" ]] ||
+        die "partial source-free seal path is invalid: $seal_name"
+      expected+=("$seal_name")
+    fi
+  done
+  require_exact_inventory "$evidence_root" "${expected[@]}"
+
+  if [[ -e "${evidence_root}/manifest.json" ]]; then
+    seal_manifest_matches "${evidence_root}/manifest.json" "$ceremony_id" "$source_commit" "$plan_digest" ||
+      die "source-free seal manifest authority differs from the frozen run"
+    if [[ -e "$manifest_tmp" ]]; then
+      if cmp -s "$manifest_tmp" "${evidence_root}/manifest.json"; then
+        durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"
+      else
+        durable_discard_stage "$manifest_tmp" "$evidence_root" "$plan_path"
+      fi
+    fi
+  else
+    if [[ -e "$manifest_tmp" ]] &&
+      ! seal_manifest_matches "$manifest_tmp" "$ceremony_id" "$source_commit" "$plan_digest"; then
+      durable_discard_stage "$manifest_tmp" "$evidence_root" "$plan_path"
+    fi
+    if [[ ! -e "$manifest_tmp" ]]; then
+      generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
+        "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "$manifest_tmp"
+    fi
+    seal_manifest_matches "$manifest_tmp" "$ceremony_id" "$source_commit" "$plan_digest" ||
+      die "new source-free seal manifest is invalid"
+    durable_stage "$manifest_tmp" "$evidence_root" "$plan_path"
+    durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"
+  fi
+
+  if [[ -e "${evidence_root}/SHA256SUMS" && -e "${evidence_root}/SHA256SUMS.sig" &&
+    ! -e "$manifest_tmp" && ! -e "$checksums_tmp" && ! -e "$signature_tmp" ]]; then
+    require_exact_inventory "$evidence_root" \
+      allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json \
+      SHA256SUMS SHA256SUMS.sig signer.pub
+    verify_evidence_directory "$evidence_root"
+    return
+  fi
+
+  expected_checksums="$(cd "$evidence_root" && shasum -a 256 \
+    allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub)"
+  if [[ -e "${evidence_root}/SHA256SUMS" ]]; then
+    cmp -s "${evidence_root}/SHA256SUMS" <(printf '%s\n' "$expected_checksums") ||
+      die "partial source-free checksum authority differs from the frozen run"
+  fi
+  if [[ -e "$checksums_tmp" ]]; then
+    if ! cmp -s "$checksums_tmp" <(printf '%s\n' "$expected_checksums"); then
+      durable_discard_stage "$checksums_tmp" "$evidence_root" "$plan_path"
+    fi
+  fi
+  if [[ ! -e "$checksums_tmp" && (! -e "${evidence_root}/SHA256SUMS" ||
+    (! -e "${evidence_root}/SHA256SUMS.sig" && ! -e "$signature_tmp")) ]]; then
+    printf '%s\n' "$expected_checksums" > "$checksums_tmp"
+  fi
+  if [[ -e "$checksums_tmp" ]]; then
+    durable_stage "$checksums_tmp" "$evidence_root" "$plan_path"
+    checksum_input="$checksums_tmp"
+  else
+    checksum_input="${evidence_root}/SHA256SUMS"
+  fi
+
+  if [[ -e "${evidence_root}/SHA256SUMS.sig" ]]; then
+    ssh-keygen -Y verify -f "${evidence_root}/allowed_signers" -I "$SIGNER_IDENTITY" \
+      -n "$SIGNATURE_NAMESPACE" -s "${evidence_root}/SHA256SUMS.sig" < "$checksum_input" >/dev/null 2>&1 ||
+      die "partial source-free checksum signature authority is not authentic"
+  fi
+  if [[ -e "$signature_tmp" ]]; then
+    if ! ssh-keygen -Y verify -f "${evidence_root}/allowed_signers" -I "$SIGNER_IDENTITY" \
+      -n "$SIGNATURE_NAMESPACE" -s "$signature_tmp" < "$checksum_input" >/dev/null 2>&1; then
+      durable_discard_stage "$signature_tmp" "$evidence_root" "$plan_path"
+    elif [[ -e "${evidence_root}/SHA256SUMS.sig" ]] &&
+      ! cmp -s "$signature_tmp" "${evidence_root}/SHA256SUMS.sig"; then
+      durable_discard_stage "$signature_tmp" "$evidence_root" "$plan_path"
+    fi
+  fi
+  if [[ ! -e "$signature_tmp" && ! -e "${evidence_root}/SHA256SUMS.sig" ]]; then
+    [[ "$checksum_input" == "$checksums_tmp" ]] ||
+      die "partial source-free seal cannot stage its missing signature"
+    ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "$checksums_tmp" >/dev/null
+    ssh-keygen -Y verify -f "${evidence_root}/allowed_signers" -I "$SIGNER_IDENTITY" \
+      -n "$SIGNATURE_NAMESPACE" -s "$signature_tmp" < "$checksums_tmp" >/dev/null 2>&1 ||
+      die "new source-free checksum signature is not authentic"
+  fi
+
+  if [[ -e "$signature_tmp" ]]; then
+    durable_stage "$signature_tmp" "$evidence_root" "$plan_path"
+    durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root" "$plan_path"
+  fi
+  if [[ -e "$checksums_tmp" ]]; then
+    durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root" "$plan_path"
+  fi
+  require_exact_inventory "$evidence_root" \
+    allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json \
+    SHA256SUMS SHA256SUMS.sig signer.pub
+  verify_evidence_directory "$evidence_root"
+}
+
+seal_evidence() {
+  local ceremony_id="$1" run_root evidence_root plan_path source_commit plan_digest
+  local package package_tmp package_digest package_sidecar package_sidecar_tmp package_bytes
+  local reviewed_signer_fingerprint
   run_root="$(run_root_for "$ceremony_id")"
   evidence_root="${run_root}/evidence"
   plan_path="${evidence_root}/plan.json"
   source_commit="$(plan_git "$plan_path" -C "$REPO_REAL" rev-parse HEAD)"
   plan_digest="$(plan_digest_for "$plan_path")"
-  generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  manifest_tmp="${evidence_root}/manifest.json.tmp"
-  checksums_tmp="${evidence_root}/SHA256SUMS.tmp"
-  signature_tmp="${checksums_tmp}.sig"
-  cmp -s "${SIGNING_KEY}.pub" "${evidence_root}/signer.pub" || die "ceremony signing key changed after freeze"
-  verify_frozen_identity "$evidence_root"
-  for seal_name in "$manifest_tmp" "$checksums_tmp" "$signature_tmp"; do
-    if [[ -e "$seal_name" || -L "$seal_name" ]]; then
-      [[ -f "$seal_name" && ! -L "$seal_name" ]] || die "partial source-free seal temporary file is invalid"
-      rm -- "$seal_name"
-    fi
-  done
-  for seal_name in manifest.json SHA256SUMS SHA256SUMS.sig; do
-    if [[ -e "${evidence_root}/${seal_name}" || -L "${evidence_root}/${seal_name}" ]]; then
-      [[ -f "${evidence_root}/${seal_name}" && ! -L "${evidence_root}/${seal_name}" ]] ||
-        die "partial source-free seal is invalid: $seal_name"
-      seal_count=$((seal_count + 1))
-    fi
-  done
-  if (( seal_count == 3 )); then
-    verify_evidence_directory "$evidence_root"
-  else
-    expected=(allowed_signers freeze.json freeze.json.sig observation.json plan.json results.json signer.pub)
-    for seal_name in manifest.json SHA256SUMS SHA256SUMS.sig; do
-      [[ -e "${evidence_root}/${seal_name}" ]] && expected+=("$seal_name")
-    done
-    require_exact_inventory "$evidence_root" "${expected[@]}"
-    if (( seal_count > 0 )); then
-      die "partial source-free seal is retained for review"
-    fi
-    printf '{\n  "schema": "t4013-source-free-transfer-v1",\n  "ceremony_id": "%s",\n  "source_commit": "%s",\n  "plan_digest": "%s",\n  "sealed_at": "%s"\n}\n' \
-      "$ceremony_id" "$source_commit" "$plan_digest" "$generated_at" > "$manifest_tmp"
-    durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"
-    (cd "$evidence_root" && shasum -a 256 \
-      allowed_signers freeze.json freeze.json.sig manifest.json observation.json plan.json results.json signer.pub > "$checksums_tmp")
-    ssh-keygen -Y sign -f "$SIGNING_KEY" -n "$SIGNATURE_NAMESPACE" "$checksums_tmp" >/dev/null
-    durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root" "$plan_path"
-    durable_promote "$signature_tmp" "${evidence_root}/SHA256SUMS.sig" "$evidence_root" "$plan_path"
-    verify_evidence_directory "$evidence_root"
-  fi
+  complete_evidence_seal "$ceremony_id" "$evidence_root" "$plan_path" "$source_commit" "$plan_digest"
   reviewed_signer_fingerprint="$(ssh-keygen -lf "${SIGNING_KEY}.pub" -E sha256 | awk 'NR == 1 { print $2 }')"
   [[ "$reviewed_signer_fingerprint" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] ||
     die "ceremony signer fingerprint is invalid before package verification"

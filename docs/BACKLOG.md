@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13h next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13i next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,16 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13h · Resumable seal and keypair integrity** *(medium · needs
-T40.13g)* — make sealing one recoverable authenticated transaction rather than
-three independently promoted files. AC: an existing private/public signing
-pair is proved matched before freeze or seal; crashes after zero, one, two, or
-three final promotions resume to the same exact bytes or deterministically
-retain the last valid result; partial final state cannot be mistaken for a
-completed seal or permanently strand a resumable one; parent-directory
-durability is proved at each authority transition; cheap fault injection covers
-every crash shape and mismatched pair without giant preparation.
 
 **T40.13i · Bounded exact-control inspection** *(medium · needs T40.13h)* —
 make malformed private controls refuse within their declared byte and entry

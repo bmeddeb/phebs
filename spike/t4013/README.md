@@ -3243,4 +3243,22 @@ writes only 0600 files beneath one fresh 0700 temporary root. The shell now
 builds and rehashes this eighth hermetic command and removes the root on every
 exit. Small tests cover traversal, links, devices, expansion, unexpected
 checksum paths, package-digest mismatch, and wholesale re-signing without a
-ceremony run. T40.13h remains next; no freeze or ceremony is authorized.
+ceremony run.
+
+### T40.13h resumable seal and keypair integrity
+
+An existing Ed25519 private/public signing pair must derive the same canonical
+public identity before freeze or seal. The source-free manifest, checksum
+signature, and checksum inventory are now one recoverable transaction. Their
+three fixed stages are validated, authenticated, and durably synced before
+publication; final order is manifest, signature, then checksum. A crash after
+zero, one, two, or three final promotions resumes the exact retained bytes, and
+a differing final is never overwritten. An incomplete non-authority stage is
+durably discarded and regenerated after validation fails. Only the exact
+ten-file evidence inventory passing full verification is complete.
+
+The existing digest-bound promotion command supplies both stage-only durability
+and byte-identical resume cleanup, syncing the file and every parent through
+the ceremony root at each transition. Cheap keypair and fault-injection tests
+cover the complete crash matrix without preparing a corpus. T40.13i remains
+next; no freeze or ceremony is authorized.

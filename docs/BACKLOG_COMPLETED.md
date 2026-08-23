@@ -9944,3 +9944,56 @@ startup/restart, retry/no-op, or publication-transition cost. Historical
 evidence bytes remain readable when accompanied by separately reviewed trust.
 T40.13h is next. No freeze, ceremony, release, T40.13/Epic-40 closure,
 topology/bound change, or scale/SLO claim is authorized.
+
+**T40.13h ✅ · Resumable seal and keypair integrity** *(2026-08-23; medium)* —
+an existing Ed25519 private key must now derive the same canonical public
+identity as its selected `.pub` file before either freeze or seal. A partial,
+symlinked, malformed, or mismatched pair refuses before any signing authority
+is created.
+
+The source-free manifest, checksum signature, and checksum inventory now form
+one resumable authenticated transaction. The three fixed temporary paths are
+retained instead of deleted, validated against the exact frozen ceremony,
+source commit, plan digest, and recomputed eight-file checksum inventory, and
+authenticated with the frozen signer before publication. Manifest publishes
+first, then the authenticated checksum signature, then its checksum inventory;
+only the exact ten-file inventory passing the full existing verifier is
+complete. A partial final set resumes, while a differing final is retained and
+refused rather than overwritten. A kill during stage creation leaves no durable
+authority: the next invocation durably discards that invalid regular stage and
+regenerates it from frozen inputs instead of becoming stranded.
+
+The digest-bound promotion helper now has a stage-only mode that syncs each
+bounded regular stage and every parent directory through the ceremony root. A
+promotion also accepts a distinct byte-identical stage beside its final so an
+interrupted cleanup can finish, while continuing to reject replacement bytes;
+it syncs the final and directory chain before and after stage removal. Cheap
+fault injection kills the transaction after zero, one, two, and three final
+promotions and proves the resumed finals retain the exact pre-crash bytes.
+Separate focused tests prove keypair mismatch refusal, stage scope, identical
+resume cleanup, and differing-authority retention without authoring a corpus.
+
+OCR reviewed three code items and returned four comments after twelve minutes;
+one shell item timed out and one comment-filter request failed, so the result
+is partial rather than an independent pass. Its high finding restored
+unconditional shell-side dangling-final-symlink refusal before the Go boundary.
+Three low findings moved containment ahead of a bounded stage read, added the
+same direct-parent shell fence to stage sync/discard, and made public-key read
+failure explicit. A focused regression now exercises the dangling-final case.
+The manual follow-up additionally found and closed interrupted invalid-stage
+recovery and the final-boundary keypair recheck; no known critical, high, or
+medium finding remains.
+
+This work is ceremony-only. Freeze adds one private-key derivation; standalone
+seal and execute add one early admission derivation plus one final sealing
+recheck. A fresh seal adds three bounded stage-sync command calls to the
+existing three promotions over a sub-4-KiB manifest, eight-line checksum
+inventory, and small signature; each has a fixed-depth parent sync. A complete
+no-op seal performs
+the existing full verification without stage writes. Retry examines only six
+fixed stage/final names, the existing ten-entry directory inventory, eight
+small hashes, and signatures. There is no poll, full corpus/shard read,
+production request/query, sync tick, startup/restart, persistent cache, held
+service lock, or production publication-transition work. T40.13i is next. No
+freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
+scale/SLO claim is authorized.

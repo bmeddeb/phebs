@@ -900,12 +900,258 @@ func TestCeremonyDriverExposesResumableSealCommand(t *testing.T) {
 	for _, marker := range []string{
 		`$SCRIPT_NAME seal <ceremony-id>`,
 		`seal_run "$2"`,
-		`if (( seal_count == 3 )); then`,
+		`complete_evidence_seal "$ceremony_id" "$evidence_root" "$plan_path" "$source_commit" "$plan_digest"`,
 	} {
 		if !strings.Contains(string(raw), marker) {
 			t.Fatalf("resumable seal marker is absent: %s", marker)
 		}
 	}
+}
+
+func TestCeremonyDriverProvesSigningKeypairMatch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen is unavailable")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	key := filepath.Join(root, "signer")
+	other := filepath.Join(root, "other")
+	generateCeremonyTestKey(t, key)
+	generateCeremonyTestKey(t, other)
+	script := `source "$1"; SIGNING_KEY="$2"; ensure_signing_key`
+	if output, runErr := exec.Command("bash", "-c", script, "keypair-test", driver, key).CombinedOutput(); runErr != nil {
+		t.Fatalf("matching keypair refused: %v: %s", runErr, output)
+	}
+	otherPublic, err := os.ReadFile(other + ".pub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(key+".pub", otherPublic, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output, runErr := exec.Command("bash", "-c", script, "keypair-test", driver, key).CombinedOutput()
+	if runErr == nil || !bytes.Contains(output, []byte("private/public keypair does not match")) {
+		t.Fatalf("mismatched keypair was not refused: %v: %s", runErr, output)
+	}
+}
+
+func TestCeremonyDriverRejectsDanglingPromotionFinal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	evidence := filepath.Join(root, "evidence")
+	if err := os.Mkdir(evidence, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	temporary := filepath.Join(evidence, "manifest.json.tmp")
+	final := filepath.Join(evidence, "manifest.json")
+	if err := os.WriteFile(temporary, []byte("manifest\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(evidence, "missing"), final); err != nil {
+		t.Fatal(err)
+	}
+	script := `
+source "$1"
+is_v25_plan() { return 1; }
+historical_closed_go() { :; }
+durable_promote "$2" "$3" "$4" "$4/plan.json"
+`
+	output, runErr := exec.Command("bash", "-c", script, "dangling-final-test",
+		driver, temporary, final, evidence).CombinedOutput()
+	if runErr == nil || !bytes.Contains(output, []byte("durable evidence promotion is invalid")) {
+		t.Fatalf("dangling promotion final was not refused: %v: %s", runErr, output)
+	}
+}
+
+func TestCeremonyDriverResumesEverySealPromotionCrash(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen is unavailable")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := filepath.Join(t.TempDir(), "signer")
+	generateCeremonyTestKey(t, key)
+	publicKey, err := os.ReadFile(key + ".pub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields := strings.Fields(string(publicKey))
+	if len(fields) < 2 {
+		t.Fatalf("generated public key is invalid: %q", publicKey)
+	}
+	const ceremonyID = "cheap-seal"
+	sourceCommit := strings.Repeat("a", 40)
+	planDigest := "sha256:" + strings.Repeat("b", 64)
+	script := `
+source "$1"
+SIGNING_KEY="$2"
+FAIL_AFTER="$3"
+PROMOTION_COUNT_PATH="$4"
+EVIDENCE_ROOT="$5"
+verify_frozen_identity() { :; }
+verify_evidence_directory() {
+  ssh-keygen -Y verify -f "$EVIDENCE_ROOT/allowed_signers" -I "$SIGNER_IDENTITY" \
+    -n "$SIGNATURE_NAMESPACE" -s "$EVIDENCE_ROOT/SHA256SUMS.sig" < "$EVIDENCE_ROOT/SHA256SUMS" >/dev/null 2>&1
+  (cd "$EVIDENCE_ROOT" && shasum -a 256 -c SHA256SUMS >/dev/null)
+}
+durable_stage() { :; }
+durable_discard_stage() { rm -- "$1"; }
+durable_promote() {
+  local temporary="$1" final="$2" count=0
+  if [[ -e "$PROMOTION_COUNT_PATH" ]]; then
+    read -r count < "$PROMOTION_COUNT_PATH"
+  fi
+  if (( FAIL_AFTER >= 0 && count == FAIL_AFTER )); then
+    exit 97
+  fi
+  if [[ -e "$final" ]]; then
+    cmp -s "$temporary" "$final" || exit 98
+    rm -- "$temporary"
+  else
+    mv -- "$temporary" "$final"
+  fi
+  count=$((count + 1))
+  printf '%s\n' "$count" >| "$PROMOTION_COUNT_PATH"
+  if (( FAIL_AFTER >= 0 && count == FAIL_AFTER )); then
+    exit 97
+  fi
+}
+complete_evidence_seal "$6" "$5" "$5/plan.json" "$7" "$8"
+`
+
+	for _, crashAfter := range []int{0, 1, 2, 3} {
+		crashAfterString := []string{"0", "1", "2", "3"}[crashAfter]
+		t.Run(crashAfterString+"-promotions", func(t *testing.T) {
+			evidence := filepath.Join(t.TempDir(), "evidence")
+			if err := os.Mkdir(evidence, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			files := map[string][]byte{
+				"allowed_signers":  []byte("phebs-ceremony " + fields[0] + " " + fields[1] + "\n"),
+				"freeze.json":      []byte("freeze\n"),
+				"freeze.json.sig":  []byte("freeze-signature\n"),
+				"observation.json": []byte("observation\n"),
+				"plan.json":        []byte("plan\n"),
+				"results.json":     []byte("results\n"),
+				"signer.pub":       publicKey,
+			}
+			for name, raw := range files {
+				if err := os.WriteFile(filepath.Join(evidence, name), raw, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if crashAfter == 0 {
+				if err := os.WriteFile(filepath.Join(evidence, "manifest.json.tmp"), []byte("partial"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			counter := filepath.Join(t.TempDir(), "promotions")
+			arguments := []string{"-c", script, "seal-crash-test", driver, key,
+				crashAfterString, counter, evidence, ceremonyID, sourceCommit, planDigest}
+			if output, runErr := exec.Command("bash", arguments...).CombinedOutput(); runErr == nil {
+				t.Fatalf("crash after %d promotions completed: %s", crashAfter, output)
+			}
+			finalCount := 0
+			for _, name := range []string{"manifest.json", "SHA256SUMS.sig", "SHA256SUMS"} {
+				if _, err := os.Lstat(filepath.Join(evidence, name)); err == nil {
+					finalCount++
+				} else if !errors.Is(err, os.ErrNotExist) {
+					t.Fatal(err)
+				}
+			}
+			if finalCount != crashAfter {
+				t.Fatalf("finals after injected crash = %d, want %d", finalCount, crashAfter)
+			}
+			retained := retainedSealBytes(t, evidence)
+			if crashAfter == 1 {
+				for _, name := range []string{"SHA256SUMS.tmp", "SHA256SUMS.tmp.sig"} {
+					if err := os.WriteFile(filepath.Join(evidence, name), []byte("partial"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			arguments[5] = "-1"
+			if output, runErr := exec.Command("bash", arguments...).CombinedOutput(); runErr != nil {
+				t.Fatalf("resume after %d promotions: %v: %s", crashAfter, runErr, output)
+			}
+			for final, raw := range retained {
+				got, readErr := os.ReadFile(filepath.Join(evidence, final))
+				if readErr != nil || !bytes.Equal(got, raw) {
+					t.Fatalf("%s changed across resume: %q, %v", final, got, readErr)
+				}
+			}
+			entries, err := os.ReadDir(evidence)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 10 {
+				t.Fatalf("completed seal entries = %d, want 10", len(entries))
+			}
+			if crashAfter == 3 {
+				manifest := filepath.Join(evidence, "manifest.json")
+				before, err := os.ReadFile(manifest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(manifest+".tmp", []byte("differing stage"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if output, runErr := exec.Command("bash", arguments...).CombinedOutput(); runErr != nil {
+					t.Fatalf("retain complete authority over differing stage: %v: %s", runErr, output)
+				}
+				after, err := os.ReadFile(manifest)
+				if err != nil || !bytes.Equal(after, before) {
+					t.Fatalf("differing stage changed manifest authority: %q, %v", after, err)
+				}
+			}
+		})
+	}
+}
+
+func generateCeremonyTestKey(t *testing.T, path string) {
+	t.Helper()
+	if output, err := exec.Command("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "test", "-f", path).CombinedOutput(); err != nil {
+		t.Fatalf("generate signing key: %v: %s", err, output)
+	}
+}
+
+func retainedSealBytes(t *testing.T, evidence string) map[string][]byte {
+	t.Helper()
+	retained := make(map[string][]byte, 3)
+	for final, candidates := range map[string][]string{
+		"manifest.json":  {"manifest.json", "manifest.json.tmp"},
+		"SHA256SUMS":     {"SHA256SUMS", "SHA256SUMS.tmp"},
+		"SHA256SUMS.sig": {"SHA256SUMS.sig", "SHA256SUMS.tmp.sig"},
+	} {
+		for _, candidate := range candidates {
+			raw, err := os.ReadFile(filepath.Join(evidence, candidate))
+			if err == nil {
+				retained[final] = raw
+				break
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatal(err)
+			}
+		}
+	}
+	return retained
 }
 
 func TestCeremonyDriverSerializesRunOperations(t *testing.T) {
@@ -1458,6 +1704,7 @@ func TestCeremonyDriverRetainsSurvivingCustodyAndPublishesSealFilesAtomically(t 
 		`cleanup_prepared "${evidence_root}/plan.json" "$prepared_path"`,
 		`verification_preflight_for_plan "$plan_path"`,
 		`manifest_tmp="${evidence_root}/manifest.json.tmp"`,
+		`durable_stage "$manifest_tmp" "$evidence_root" "$plan_path"`,
 		`-data-parent "$CEREMONY_REAL"`,
 		`durable_promote "$manifest_tmp" "${evidence_root}/manifest.json" "$evidence_root" "$plan_path"`,
 		`durable_promote "$checksums_tmp" "${evidence_root}/SHA256SUMS" "$evidence_root" "$plan_path"`,
