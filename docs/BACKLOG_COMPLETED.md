@@ -9660,3 +9660,46 @@ request/query, sync tick, startup/restart, retry/no-op, publication transition,
 corpus/shard read, cache, or child. T40.13b is next. No freeze, ceremony,
 release, T40.13/Epic-40 closure, bound/topology change, or scale/SLO claim is
 authorized.
+
+**T40.13b ✅ · Cooperative cancellation and shutdown truth** *(2026-08-22;
+high)* — makes V25 shutdown uncertainty sticky for a signaled custody command,
+a forced server stop, or a process session that survives its first bounded
+shutdown wait. A later absence poll cannot clear the static
+`errPrivateServerShutdownUnproven` sentinel, and measured-command sanitization
+preserves that sentinel without retaining raw child details.
+
+Every incomplete V25 Prepare after its `.preparing` or workspace boundary now
+retains the workspace, controls, manifest staging/final bytes, and
+custody-local Git export namespace. A preexisting matching `.preparing` control
+plus a present workspace is an incomplete-preparation fence and Cleanup refuses
+it; only an already-absent workspace permits retirement of that exact manifest
+and control. Historical V1–V24 failed-Prepare cleanup remains unchanged.
+
+Stopped and completed Execute paths check the original cause, server-stop
+result, operator cancellation, and an external parent deadline before
+checkpointing/deletion and again
+across deletion and terminal publication. Once a retention cause is observed,
+Execute returns no observation, removes any provisional terminal bytes, and
+keeps its durable teardown checkpoint authoritative. The final pre-delete check
+is the destructive linearization point: a cancellation first observed after
+recursive deletion begins cannot restore custody, but publishes no terminal
+evidence and retains checkpoint plus shell operation state. Checkpoint
+retirement is the final terminal-publication boundary.
+
+The supported shell tracks Prepare/Execute process groups, forwards and reaps
+INT/TERM/HUP, and retains the operation lock, closed Go cache, controls, logs,
+and surviving custody while suppressing cleanup, receipt, and seal work.
+Opt-in real-binary diagnostics keep explicit workspaces/plans after any failed
+stop. Bounded tests cover all three signals, original/stop shutdown sentinels,
+Prepare/control retention, stopped/completed checkpoint and deletion windows,
+terminal staging/publication cancellation, sticky forced shutdown, and
+diagnostic cleanup policy without authoring the giant corpus.
+
+Healthy execution adds only constant-time cancellation/error checks and shell
+process-group bookkeeping. Failure may retain the complete bounded private
+state until reviewed purge. Durable executor-death absence, PID reuse, session
+escape, fork/exit churn, supervisor recovery, and registration before every
+child start remain T40.13c. This adds no production request/query, sync,
+startup/restart, retry/no-op, publication, corpus/shard read, public schema,
+freeze, ceremony, release, topology/bound, or scale/SLO authority. T40.13c is
+next.

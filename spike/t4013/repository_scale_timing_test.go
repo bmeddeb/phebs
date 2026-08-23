@@ -47,7 +47,8 @@ type repositoryScaleTimingReview struct {
 
 // TestRepositoryScaleTimingReview is an opt-in engineering diagnostic, not a
 // ceremony. It authors the exact frozen corpus, observes only bounded public
-// progress plus source-free timing logs, and destroys all custody on exit.
+// progress plus source-free timing logs, and destroys custody only after a
+// proven clean server stop.
 func TestRepositoryScaleTimingReview(t *testing.T) {
 	if os.Getenv(repositoryScaleTimingEnvironment) != "1" {
 		t.Skip("set " + repositoryScaleTimingEnvironment + "=1 to run the repository-scale timing review")
@@ -91,12 +92,19 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	retainDiagnostic := false
 	planFile, err := os.CreateTemp(parent, "t4013-timing-plan-*.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	planPath := planFile.Name()
-	defer func() { _ = os.Remove(planPath) }()
+	defer func() {
+		if retainDiagnostic {
+			t.Logf("repository-scale diagnostic plan retained at %s", planPath)
+			return
+		}
+		_ = os.Remove(planPath)
+	}()
 	if err := planFile.Chmod(0o600); err != nil {
 		_ = planFile.Close()
 		t.Fatal(err)
@@ -117,6 +125,10 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
+		if retainDiagnostic {
+			t.Logf("repository-scale diagnostic custody retained at %s", workspace)
+			return
+		}
 		if cleanupErr := DestroyPrepared(prepared, moduleRoot); cleanupErr != nil {
 			t.Errorf("destroy repository-scale timing custody: %v", cleanupErr)
 		}
@@ -133,7 +145,10 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 	running := true
 	defer func() {
 		if running {
-			_ = server.stop(30 * time.Second)
+			if err := server.stop(30 * time.Second); err != nil {
+				retainDiagnostic = true
+				t.Errorf("stop repository-scale diagnostic; retained at %s: %v", workspace, err)
+			}
 		}
 	}()
 	if _, err := awaitPrivateServerHealth(ctx, server, profile, "repository-scale-timing", 2*time.Minute); err != nil {
@@ -202,6 +217,7 @@ func TestRepositoryScaleTimingReview(t *testing.T) {
 		}
 	}
 	if err := server.stop(30 * time.Second); err != nil {
+		retainDiagnostic = true
 		t.Fatal(err)
 	}
 	running = false

@@ -65,8 +65,16 @@ func retainedMeasurementFailure(err error) error {
 	return retained
 }
 
+func retainedMeasuredCommandFailure(err error) error {
+	retained := retainedMeasurementFailure(err)
+	if errors.Is(err, errPrivateServerShutdownUnproven) {
+		retained = errors.Join(retained, errPrivateServerShutdownUnproven)
+	}
+	return retained
+}
+
 func sanitizeMeasuredCommandFailure(message string, err error) error {
-	return errors.Join(errors.New(message), retainedMeasurementFailure(err))
+	return errors.Join(errors.New(message), retainedMeasuredCommandFailure(err))
 }
 
 func newAllocationSampler(root string, baselineAllocated int64, strict bool) (*allocationSampler, error) {
@@ -252,8 +260,12 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, samplerErr =
 		sampler.metrics()
 	metrics.OtherChildren++
+	var shutdownErr error
+	if strict {
+		shutdownErr = signaledCommandShutdownUnproven(waitErr)
+	}
 	return metrics, errors.Join(
-		waitErr, sessionErr, samplerErr, measureErr, allocationErr,
+		waitErr, shutdownErr, sessionErr, samplerErr, measureErr, allocationErr,
 	)
 }
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -194,6 +195,22 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 		if got != test.want {
 			t.Fatalf("plan environment %s = %q, want %q", test.schema, got, test.want)
 		}
+	}
+}
+
+func TestCeremonyDriverKeepsHistoricalCommandsForeground(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := filepath.Join(t.TempDir(), "plan.json")
+	if err := os.WriteFile(plan, []byte(`{"schema":"`+PlanSchemaV24+`"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	script := `source "$1"; run_active_child() { return 99; }; plan_go_active "$2" printf 'historical-foreground\n'`
+	output, err := exec.Command("bash", "-c", script, "historical-plan-go-test", driver, plan).CombinedOutput()
+	if err != nil || string(output) != "historical-foreground\n" {
+		t.Fatalf("historical command dispatch = %v: %q", err, output)
 	}
 }
 
@@ -446,6 +463,236 @@ retain_on_signal TERM 143
 	}
 	if _, err := os.Lstat(cleanupMarker); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("signal ran destructive prepared cleanup: %v", err)
+	}
+}
+
+func TestCeremonyDriverForwardsSignalsAndRetainsOperationState(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name   string
+		signal syscall.Signal
+		status int
+	}{
+		{name: "INT", signal: syscall.SIGINT, status: 130},
+		{name: "TERM", signal: syscall.SIGTERM, status: 143},
+		{name: "HUP", signal: syscall.SIGHUP, status: 129},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			runRoot := filepath.Join(root, "run")
+			cache := filepath.Join(root, "go-cache")
+			workspace := filepath.Join(root, "custody")
+			prepared := filepath.Join(root, "prepared.json")
+			ready := filepath.Join(root, "ready")
+			forwarded := filepath.Join(root, "forwarded")
+			cleanupMarker := filepath.Join(root, "cleanup-ran")
+			for _, path := range []string{runRoot, cache, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, path := range []string{prepared + ".preparing", filepath.Join(workspace, "server.log")} {
+				if err := os.WriteFile(path, []byte("retain\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			script := `
+source "$1"
+cleanup_prepared() { : > "$CLEANUP_MARKER"; }
+CLOSED_GO_CACHE="$CACHE_PATH"
+EXIT_PREPARED_PLAN="$ROOT_PATH/plan.json"
+EXIT_PREPARED_MANIFEST="$PREPARED_PATH"
+EXIT_PREPARED_WORKSPACE="$WORKSPACE_PATH"
+trap cleanup_on_exit EXIT
+trap 'retain_on_signal INT 130' INT
+trap 'retain_on_signal TERM 143' TERM
+trap 'retain_on_signal HUP 129' HUP
+acquire_run_lock "$RUN_ROOT"
+run_active_child bash -c '
+  trap '\''printf "forwarded\n" > "$FORWARDED_PATH"; exit 0'\'' INT TERM HUP
+  : > "$READY_PATH"
+  for _ in 1 2 3 4 5; do sleep 1; done
+'
+`
+			command := exec.Command("bash", "-c", script, "signal-forwarding-test", driver)
+			command.Env = append(os.Environ(),
+				"ROOT_PATH="+root,
+				"RUN_ROOT="+runRoot,
+				"CACHE_PATH="+cache,
+				"WORKSPACE_PATH="+workspace,
+				"PREPARED_PATH="+prepared,
+				"READY_PATH="+ready,
+				"FORWARDED_PATH="+forwarded,
+				"CLEANUP_MARKER="+cleanupMarker,
+			)
+			var output bytes.Buffer
+			command.Stdout, command.Stderr = &output, &output
+			if err := command.Start(); err != nil {
+				t.Fatal(err)
+			}
+			deadline := time.Now().Add(5 * time.Second)
+			for {
+				if _, err := os.Lstat(ready); err == nil {
+					break
+				} else if !errors.Is(err, os.ErrNotExist) {
+					t.Fatal(err)
+				}
+				if time.Now().After(deadline) {
+					_ = command.Process.Kill()
+					_ = command.Wait()
+					t.Fatalf("active child did not become ready: %s", output.String())
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			if err := command.Process.Signal(test.signal); err != nil {
+				_ = command.Process.Kill()
+				_ = command.Wait()
+				t.Fatal(err)
+			}
+			runErr := command.Wait()
+			var exitErr *exec.ExitError
+			if !errors.As(runErr, &exitErr) || exitErr.ExitCode() != test.status ||
+				!bytes.Contains(output.Bytes(), []byte("child exit is unproven")) {
+				t.Fatalf("signal forwarding = %v: %s", runErr, output.String())
+			}
+			for _, path := range []string{
+				forwarded,
+				filepath.Join(runRoot, ".t4013-operation.lock"),
+				cache,
+				workspace,
+				prepared + ".preparing",
+				filepath.Join(workspace, "server.log"),
+			} {
+				if _, err := os.Lstat(path); err != nil {
+					t.Fatalf("signal removed retained state %s: %v", path, err)
+				}
+			}
+			if _, err := os.Lstat(cleanupMarker); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("signal ran destructive cleanup: %v", err)
+			}
+		})
+	}
+}
+
+func TestCeremonyDriverFailurePolicyIsV25OnlyAndStopsBeforeSeal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name        string
+		schema      string
+		phase       string
+		wantCleanup bool
+		wantReceipt bool
+		wantRetain  bool
+	}{
+		{name: "V25 Prepare", schema: PlanSchemaV25, phase: "prepare", wantRetain: true},
+		{name: "V25 Execute", schema: PlanSchemaV25, phase: "execute", wantRetain: true},
+		{name: "historical Prepare", schema: PlanSchemaV24, phase: "prepare", wantCleanup: true},
+		{name: "historical Execute", schema: PlanSchemaV24, phase: "execute", wantCleanup: true, wantReceipt: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			runRoot := filepath.Join(root, "run")
+			evidence := filepath.Join(runRoot, "evidence")
+			private := filepath.Join(runRoot, "private")
+			repository := filepath.Join(root, "repository")
+			cache := filepath.Join(root, "go-cache")
+			for _, path := range []string{evidence, private, repository, cache} {
+				if err := os.MkdirAll(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			plan := filepath.Join(evidence, "plan.json")
+			if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cleanupMarker := filepath.Join(root, "cleanup")
+			receiptMarker := filepath.Join(root, "receipt")
+			sealMarker := filepath.Join(root, "seal")
+			script := `
+source "$1"
+REPO_REAL="$REPOSITORY_PATH"
+CEREMONY_REAL="$ROOT_PATH"
+CLOSED_GO_CACHE="$CACHE_PATH"
+SIGNING_KEY="$ROOT_PATH/signing-key"
+initialize_repository() { :; }
+initialize_ceremony_root() { :; }
+initialize_closed_go_cache() { :; }
+select_signing_key() { :; }
+ensure_signing_key() { :; }
+run_root_for() { printf '%s\n' "$RUN_ROOT"; }
+plan_digest_for() { printf 'sha256:test\n'; }
+require_exact_inventory() { :; }
+cmp() { :; }
+verify_frozen_identity() { :; }
+preflight_for_plan() { :; }
+require_clean_checkout() { :; }
+cleanup_prepared() {
+  : > "$CLEANUP_MARKER"
+  [[ ! -d "$RUN_ROOT/custody" ]] || rmdir "$RUN_ROOT/custody"
+  [[ ! -e "$2" ]] || unlink "$2"
+  [[ ! -e "$2.preparing" ]] || unlink "$2.preparing"
+}
+plan_go() { : > "$RECEIPT_MARKER"; }
+seal_evidence() { : > "$SEAL_MARKER"; }
+plan_go_in_repo_active() {
+  if [[ "$*" == *t4013-prepare* ]]; then
+    mkdir "$RUN_ROOT/custody"
+    if [[ "$FAIL_PHASE" == prepare ]]; then
+      : > "$RUN_ROOT/private/prepared.json.preparing"
+      return 9
+    fi
+    : > "$RUN_ROOT/private/prepared.json"
+    return 0
+  fi
+  rmdir "$RUN_ROOT/custody"
+  return 9
+}
+trap cleanup_on_exit EXIT
+execute_ceremony fresh-policy-test sha256:test "$EXECUTE_APPROVAL"
+`
+			command := exec.Command("bash", "-c", script, "failure-policy-test", driver)
+			command.Env = append(os.Environ(),
+				"ROOT_PATH="+root,
+				"RUN_ROOT="+runRoot,
+				"REPOSITORY_PATH="+repository,
+				"CACHE_PATH="+cache,
+				"FAIL_PHASE="+test.phase,
+				"CLEANUP_MARKER="+cleanupMarker,
+				"RECEIPT_MARKER="+receiptMarker,
+				"SEAL_MARKER="+sealMarker,
+			)
+			output, runErr := command.CombinedOutput()
+			if runErr == nil {
+				t.Fatalf("failed ceremony returned success: %s", output)
+			}
+			for path, want := range map[string]bool{
+				cleanupMarker: test.wantCleanup,
+				receiptMarker: test.wantReceipt,
+				sealMarker:    false,
+				filepath.Join(runRoot, ".t4013-operation.lock"): test.wantRetain,
+				cache: test.wantRetain,
+			} {
+				_, err := os.Lstat(path)
+				if (err == nil) != want || err != nil && !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("path %s present=%t, want=%t, err=%v; output=%s", path, err == nil, want, err, output)
+				}
+			}
+			if got := bytes.Contains(output, []byte("child exit is unproven")); got != test.wantRetain {
+				t.Fatalf("unproven retention output=%t, want=%t: %s", got, test.wantRetain, output)
+			}
+		})
 	}
 }
 

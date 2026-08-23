@@ -39,6 +39,7 @@ EXIT_PREPARED_WORKSPACE=""
 RUN_LOCK_DIRECTORY=""
 RUN_LOCK_TOKEN=""
 EXIT_UNPROVEN_REASON=""
+ACTIVE_CHILD_PID=""
 
 die() {
   printf '%s: %s\n' "$SCRIPT_NAME" "$*" >&2
@@ -52,6 +53,36 @@ note() {
 closed_go() {
   [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
   env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TMPDIR="${TMPDIR:-/tmp}" \
+    LC_ALL=C \
+    CGO_ENABLED=0 \
+    GOENV=off \
+    GOCACHE="$CLOSED_GO_CACHE" \
+    GOEXPERIMENT= \
+    GOFLAGS= \
+    GOTOOLCHAIN=local \
+    GOWORK=off \
+    "$@"
+}
+
+run_active_child() {
+  local status=0 monitor_was_enabled=0
+  [[ -z "$ACTIVE_CHILD_PID" ]] || die "another custody child is already active"
+  [[ $- == *m* ]] && monitor_was_enabled=1
+  set -m
+  "$@" &
+  ACTIVE_CHILD_PID=$!
+  (( monitor_was_enabled == 1 )) || set +m
+  wait "$ACTIVE_CHILD_PID" || status=$?
+  ACTIVE_CHILD_PID=""
+  return "$status"
+}
+
+closed_go_active() {
+  [[ -n "$CLOSED_GO_CACHE" ]] || die "closed Go cache is not initialized"
+  run_active_child env -i \
     HOME="$HOME" \
     PATH="$PATH" \
     TMPDIR="${TMPDIR:-/tmp}" \
@@ -104,6 +135,13 @@ retain_on_signal() {
   local signal_name="$1" status="$2"
   EXIT_UNPROVEN_REASON="signal ${signal_name}"
   trap - INT TERM HUP
+  if [[ -n "$ACTIVE_CHILD_PID" ]]; then
+    if ! kill -s "$signal_name" -- "-${ACTIVE_CHILD_PID}" 2>/dev/null; then
+      EXIT_UNPROVEN_REASON="${EXIT_UNPROVEN_REASON}; child signal forwarding failed"
+    fi
+    wait "$ACTIVE_CHILD_PID" 2>/dev/null || :
+    ACTIVE_CHILD_PID=""
+  fi
   exit "$status"
 }
 
@@ -188,6 +226,26 @@ plan_go() {
   else
     env GOPROXY=off "$@"
   fi
+}
+
+plan_go_active() {
+  local plan_path="$1"
+  shift
+  if is_v25_plan "$plan_path"; then
+    closed_go_active GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify || return 1
+    closed_go_active GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off "$@" || return 1
+  else
+    env GOPROXY=off "$@"
+  fi
+}
+
+plan_go_in_repo_active() {
+  local plan_path="$1" previous_directory="$PWD" status=0
+  shift
+  cd "$REPO_REAL" || return 1
+  plan_go_active "$plan_path" "$@" || status=$?
+  cd "$previous_directory" || return 1
+  return "$status"
 }
 
 is_v25_plan() {
@@ -798,7 +856,7 @@ seal_run() {
 execute_ceremony() {
   local ceremony_id="$1" approved_digest="$2" approval="$3"
   local run_root evidence_root private_root plan_path prepared_path observation_path results_path custody_path
-  local actual_digest execute_status path
+  local actual_digest prepare_status execute_status path
   reject_review_stopped_id "$ceremony_id"
   [[ "$approval" == "$EXECUTE_APPROVAL" ]] || die "execution approval phrase is invalid"
   initialize_repository
@@ -849,33 +907,48 @@ execute_ceremony() {
   EXIT_PREPARED_PLAN="$plan_path"
   EXIT_PREPARED_MANIFEST="$prepared_path"
   EXIT_PREPARED_WORKSPACE="$custody_path"
-  (cd "$REPO_REAL" && plan_go "$plan_path" \
+  prepare_status=0
+  plan_go_in_repo_active "$plan_path" \
     go run ./spike/t4013/cmd/t4013-prepare \
     -root "$REPO_REAL" \
     -workspace "$custody_path" \
     -plan "$plan_path" \
     -output "$prepared_path" \
     -base-port "$BASE_PORT" \
-    -confirm "$PREPARE_CONFIRM")
+    -confirm "$PREPARE_CONFIRM" || prepare_status=$?
+  if (( prepare_status != 0 )); then
+    if is_v25_plan "$plan_path" && [[ -e "$custody_path" || -L "$custody_path" ||
+      -e "$prepared_path" || -L "$prepared_path" ||
+      -e "${prepared_path}.tmp" || -L "${prepared_path}.tmp" ||
+      -e "${prepared_path}.preparing" || -L "${prepared_path}.preparing" ]]; then
+      EXIT_UNPROVEN_REASON="prepare child status ${prepare_status} with retained operation state"
+    fi
+    die "preparation stopped with status ${prepare_status}"
+  fi
   # The fallback owns only an interrupted Prepare. From this boundary onward,
   # Execute owns custody and any retained residue.
   EXIT_PREPARED_PLAN=""
   EXIT_PREPARED_MANIFEST=""
   EXIT_PREPARED_WORKSPACE=""
   execute_status=0
-  (cd "$REPO_REAL" && plan_go "$plan_path" \
+  plan_go_in_repo_active "$plan_path" \
     go run ./spike/t4013/cmd/t4013-execute \
     -root "$REPO_REAL" \
     -plan "$plan_path" \
     -prepared "$prepared_path" \
     -observation "$observation_path" \
-    -confirm "$EXECUTE_CONFIRM") || execute_status=$?
+    -confirm "$EXECUTE_CONFIRM" || execute_status=$?
   if [[ -e "$custody_path" || -L "$custody_path" ]]; then
     # Persistence and custody destruction are separate boundaries. Even when
     # a complete observation exists, any surviving custody means Execute did
     # not authorize the wrapper's destructive cleanup fallback.
     EXIT_UNPROVEN_REASON="execution child status ${execute_status} with custody"
     die "execution stopped (status ${execute_status}) with private custody RETAINED at ${custody_path} for the separately reviewed purge — do not re-execute against it"
+  fi
+  if is_v25_plan "$plan_path" && (( execute_status != 0 )) &&
+    [[ ! -f "$observation_path" || -L "$observation_path" ]]; then
+    EXIT_UNPROVEN_REASON="execution child status ${execute_status} without final observation"
+    die "execution stopped without final source-free authority; operation state retained"
   fi
   if ! cleanup_prepared "$plan_path" "$prepared_path"; then
     die "exact private prepared manifest cleanup failed"

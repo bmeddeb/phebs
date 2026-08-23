@@ -162,6 +162,9 @@ func Execute(ctx context.Context, request ExecuteRequest) (observation Observati
 		// Once teardown has a durable checkpoint, only its resume protocol may
 		// publish or revise the source-free terminal observation.
 		if run.checkpointPersisted || run.observationStaged || errors.Is(err, errObservationPersistence) {
+			if planSchemaVersion(run.plan.Schema) >= 25 && custodyRetentionCause(run.ctx, err) != nil {
+				return stoppedExecutionResult(Observation{}, err, nil)
+			}
 			return stoppedExecutionResult(run.observation, err, nil)
 		}
 		observation, cleanupErr := run.stopAfterFailure(err)
@@ -517,10 +520,10 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	}
 	started := time.Now()
 	stopErr := run.stopServers()
-	if errors.Is(stopErr, errPrivateServerShutdownUnproven) {
-		return Observation{}, errors.Join(cause, stopErr)
-	}
 	cause = errors.Join(cause, stopErr)
+	if retentionErr := custodyRetentionCause(run.ctx, cause); retentionErr != nil {
+		return Observation{}, errors.Join(cause, retentionErr)
+	}
 	measurementErr := run.captureFailedPhase()
 	ceilingErr := run.enforceSafety()
 	run.observation.Outcome = "stopped"
@@ -542,8 +545,14 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 		return Observation{}, fmt.Errorf(
 			"T40.13 stopped observation is unsealable; custody retained for reviewed purge: %w", err)
 	}
+	if retentionErr := custodyRetentionCause(run.ctx, cause); retentionErr != nil {
+		return Observation{}, errors.Join(cause, retentionErr)
+	}
 	if err := run.persistTeardownCheckpoint(started, 0, 0); err != nil {
 		return Observation{}, err
+	}
+	if retentionErr := custodyRetentionCause(run.ctx, cause); retentionErr != nil {
+		return Observation{}, errors.Join(cause, retentionErr)
 	}
 	destroy := destroyCustody
 	if run.custodyDestroy != nil {
@@ -557,6 +566,9 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
 		return run.observation, fmt.Errorf(
 			"T40.13 stopped custody deletion is not durable; teardown checkpoint retained: %w", err)
+	}
+	if retentionErr := custodyRetentionCause(run.ctx, cause); retentionErr != nil {
+		return Observation{}, errors.Join(cause, retentionErr)
 	}
 	if err := run.completeTeardown(started, 0, 0, nil); err != nil {
 		return run.observation, err
@@ -717,18 +729,47 @@ func (run *execution) completeTeardown(
 func (run *execution) persistFinalTeardown(started time.Time) error {
 	var observedErr error
 	for attempt := 0; attempt < 2; attempt++ {
+		if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+			return fmt.Errorf("T40.13 execution canceled before terminal publication; teardown checkpoint retained: %w", retentionErr)
+		}
 		if err := run.validateReceiptBeforeTeardown(run.observation); err != nil {
 			return fmt.Errorf("T40.13 final observation is unsealable; teardown checkpoint retained: %w", err)
 		}
 		if err := run.stageObservation(); err != nil {
 			return err
 		}
+		if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+			if err := removeProvisionalObservation(run.observationPath); err != nil {
+				return errors.Join(retentionErr,
+					fmt.Errorf("%w: retire canceled provisional observation: %w", errObservationPersistence, err))
+			}
+			run.observationStaged = false
+			return fmt.Errorf("T40.13 execution canceled before terminal publication; teardown checkpoint retained: %w", retentionErr)
+		}
 		if err := run.publishObservation(); err != nil {
 			return err
+		}
+		if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+			if err := removeProvisionalObservation(run.observationPath); err != nil {
+				return errors.Join(retentionErr,
+					fmt.Errorf("%w: retire canceled terminal observation: %w", errObservationPersistence, err))
+			}
+			run.observationStaged = false
+			run.observationPersisted = false
+			return fmt.Errorf("T40.13 execution canceled across terminal publication; teardown checkpoint retained: %w", retentionErr)
 		}
 
 		postErr, ceilingErr := run.postPublicationValidation(started)
 		if postErr == nil {
+			if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+				if err := removeProvisionalObservation(run.observationPath); err != nil {
+					return errors.Join(retentionErr,
+						fmt.Errorf("%w: retire canceled terminal observation: %w", errObservationPersistence, err))
+				}
+				run.observationStaged = false
+				run.observationPersisted = false
+				return fmt.Errorf("T40.13 execution canceled before terminal retirement; teardown checkpoint retained: %w", retentionErr)
+			}
 			if err := removeTeardownCheckpoint(run.observationPath); err != nil {
 				return fmt.Errorf("%w: retire teardown checkpoint: %w", errObservationPersistence, err)
 			}
@@ -3329,6 +3370,9 @@ func (run *execution) teardown() error {
 	}
 	if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
 		return fmt.Errorf("T40.13 custody deletion is not durable; teardown checkpoint retained: %w", err)
+	}
+	if retentionErr := custodyRetentionCause(run.ctx, nil); retentionErr != nil {
+		return fmt.Errorf("T40.13 execution canceled across custody deletion; teardown checkpoint retained: %w", retentionErr)
 	}
 	return run.completeTeardown(started, logical, allocated, nil)
 }

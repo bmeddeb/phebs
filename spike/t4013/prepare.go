@@ -149,21 +149,18 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 	}
 	controlPath := preparedOutput + ".preparing"
 	controlWritten := false
+	stateStarted := false
 	completed := false
 	defer func() {
 		if completed {
 			return
 		}
-		cleanupErr := destroyCustody(workspace, moduleRoot)
-		if cleanupErr == nil && preparedOutput != "" {
-			cleanupErr = errors.Join(
-				removePreparedPublication(preparedOutput),
-				removePreparedCleanupControl(controlPath),
-			)
-		}
-		retErr = errors.Join(retErr, cleanupErr)
+		retErr = errors.Join(retErr, cleanupFailedPreparation(
+			ctx, version, retErr, stateStarted, workspace, moduleRoot, preparedOutput, controlPath,
+		))
 	}()
 	if preparedOutput != "" && planSchemaVersion(plan.Schema) >= 25 {
+		stateStarted = true
 		if err := writePreparedCleanupControl(controlPath, cleanupControl); err != nil {
 			return Prepared{}, err
 		}
@@ -172,6 +169,7 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 	if err := os.Mkdir(workspace, 0o700); err != nil {
 		return Prepared{}, fmt.Errorf("create T40.13 workspace: %w", err)
 	}
+	stateStarted = true
 	profiles, err := t401.FrozenProfiles()
 	if err != nil {
 		return Prepared{}, err
@@ -260,13 +258,15 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 			return Prepared{}, encodeErr
 		}
 		if planSchemaVersion(plan.Schema) >= 25 {
-			if err := stageAtomicOutput(preparedOutput, encoded, MaxObservationBytes, false); err != nil {
-				return Prepared{}, err
-			}
-			if err := publishAtomicOutput(preparedOutput, encoded, MaxObservationBytes, false); err != nil {
+			if err := publishPreparedOutput(ctx, preparedOutput, encoded); err != nil {
 				return Prepared{}, err
 			}
 		} else if err := writePrivateNew(preparedOutput, encoded); err != nil {
+			return Prepared{}, err
+		}
+	}
+	if version >= 25 && preparedOutput == "" {
+		if err := custodyRetentionCause(ctx, nil); err != nil {
 			return Prepared{}, err
 		}
 	}
@@ -277,6 +277,48 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 	}
 	completed = true
 	return prepared, nil
+}
+
+func publishPreparedOutput(ctx context.Context, path string, raw []byte) error {
+	if err := custodyRetentionCause(ctx, nil); err != nil {
+		return err
+	}
+	if err := stageAtomicOutput(path, raw, MaxObservationBytes, false); err != nil {
+		return err
+	}
+	if err := custodyRetentionCause(ctx, nil); err != nil {
+		return err
+	}
+	if err := publishAtomicOutput(path, raw, MaxObservationBytes, false); err != nil {
+		return err
+	}
+	return custodyRetentionCause(ctx, nil)
+}
+
+func cleanupFailedPreparation(
+	ctx context.Context,
+	version int,
+	cause error,
+	stateStarted bool,
+	workspace, moduleRoot, preparedOutput, controlPath string,
+) error {
+	if version >= 25 {
+		if retentionErr := custodyRetentionCause(ctx, cause); retentionErr != nil {
+			return retentionErr
+		}
+		if stateStarted {
+			return errors.New("T40.13 incomplete preparation custody is retained pending external process-absence proof")
+		}
+		return nil
+	}
+	cleanupErr := destroyCustody(workspace, moduleRoot)
+	if cleanupErr == nil && preparedOutput != "" {
+		cleanupErr = errors.Join(
+			removePreparedPublication(preparedOutput),
+			removePreparedCleanupControl(controlPath),
+		)
+	}
+	return cleanupErr
 }
 
 func reserveLoopbackPorts(basePort int) (func(), error) {
@@ -609,14 +651,30 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) error {
 	planDigest := PlanDigest(planBytes)
 	prepared, preparedErr := readPreparedPublication(preparedPath, planDigest)
 	controlPath := preparedPath + ".preparing"
+	_, controlStatErr := os.Lstat(controlPath)
+	controlPreexisting := controlStatErr == nil
+	if controlStatErr != nil && !errors.Is(controlStatErr, os.ErrNotExist) {
+		return errors.New("T40.13 prepared cleanup authority cannot be inspected")
+	}
 	var control preparedCleanupControl
 	if preparedErr == nil {
-		control = preparedCleanupControl{
+		expected := preparedCleanupControl{
 			Schema: preparedCleanupSchema, PlanDigest: planDigest, ModuleRoot: realModuleRoot,
 			Workspace: filepath.Dir(filepath.Dir(prepared.Profiles[0].Config)),
 		}
-		if err := ensurePreparedCleanupControl(controlPath, control); err != nil {
-			return err
+		if controlPreexisting {
+			control, err = readPreparedCleanupControl(controlPath)
+			if err != nil {
+				return err
+			}
+			if control != expected {
+				return errors.New("T40.13 prepared cleanup authority differs")
+			}
+		} else {
+			control = expected
+			if err := ensurePreparedCleanupControl(controlPath, control); err != nil {
+				return err
+			}
 		}
 	} else {
 		control, err = readPreparedCleanupControl(controlPath)
@@ -640,6 +698,17 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) error {
 	if preparedErr != nil {
 		return errors.Join(preparedErr,
 			errors.New("T40.13 incomplete preparation custody is retained pending external process-absence proof"))
+	}
+	if controlPreexisting {
+		if _, err := os.Lstat(control.Workspace); err == nil {
+			return errors.New("T40.13 incomplete preparation custody is retained pending external process-absence proof")
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return errors.New("T40.13 incomplete preparation custody cannot be inspected")
+		}
+		if err := removePreparedPublication(preparedPath); err != nil {
+			return fmt.Errorf("remove T40.13 prepared manifest: %w", err)
+		}
+		return removePreparedCleanupControl(controlPath)
 	}
 	if err := destroyCustody(control.Workspace, realModuleRoot); err != nil {
 		return err

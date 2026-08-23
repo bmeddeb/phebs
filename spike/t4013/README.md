@@ -3028,3 +3028,49 @@ The preliminary `ps` row is enumeration/RSS input, not proof of every transient
 fork; same-kernel-token reuse and durable hard-death/escape absence remain
 T40.13c. This changes no public schema or production work and authorizes no
 freeze or ceremony.
+
+### T40.13b cooperative cancellation and shutdown truth
+
+V25 now keeps shutdown uncertainty sticky. A custody command that exits by a
+signal, a server that requires forced termination, or a process session that
+survives its first bounded shutdown wait returns the static
+`errPrivateServerShutdownUnproven` sentinel even when a later poll sees no
+process. Measured-command sanitization preserves that sentinel without
+retaining private child output. This is a retention decision, not durable
+absence proof.
+
+Once V25 Prepare attempts its `.preparing` control or creates its workspace,
+any incomplete return retains the workspace, manifest staging/final bytes,
+control, and custody-local Git export namespace. Cleanup treats a preexisting
+matching `.preparing` file plus a present workspace as an incomplete
+preparation and refuses deletion; if custody is already absent, it may retire
+only the matching manifest and control. V1–V24 keep their historical automatic
+failed-Prepare cleanup.
+
+Execute checks the original failure, server shutdown, operator cancellation,
+and an external parent deadline before checkpointing and deletion. The frozen
+total-wall deadline has a distinct reviewed cause and remains sealable. Execute
+checks interruption again after the
+durable teardown checkpoint, after custody deletion, and across terminal
+staging, publication, validation, and checkpoint retirement. A detected
+retention cause returns no observation, removes provisional terminal bytes,
+and leaves the teardown checkpoint authoritative. The final pre-delete check is
+the destructive linearization point: cancellation first observed after
+recursive deletion starts cannot recreate custody, but it still prevents a
+terminal observation and retains checkpoint/shell operation state. Final
+checkpoint retirement is the terminal-publication commit boundary.
+
+The supported shell runs Prepare and Execute as tracked process groups. Its
+INT, TERM, and HUP traps forward the signal, reap the group leader, and retain
+the operation lock, Go cache, controls, logs, and any surviving custody. It
+does not run fallback cleanup, receipt construction, or sealing after such a
+signal. Opt-in real-binary diagnostics likewise remove state only after a clean
+server stop; failed stops report the retained absolute path.
+
+Healthy execution adds constant-time context/error checks and shell
+process-group bookkeeping only. A failed operation can retain the entire
+bounded custody, cache, logs, controls, Git namespace, and checkpoint until a
+separately reviewed purge. SIGKILL/OOM of the executor, PID reuse, session
+escape, fork/exit churn, and registration of every child start still require
+T40.13c's durable external supervisor/proof. No freeze, ceremony, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.

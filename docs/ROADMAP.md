@@ -1686,9 +1686,21 @@ sentinels and cannot substantiate a V25 recovery decision. A `ps` candidate is
 not every-fork proof; same-token reuse, escape, and hard-death absence remain
 T40.13c.
 
-T40.13b cooperative cancellation and shutdown truth is now the only next scale
+T40.13b now closes cooperative cancellation and shutdown truth without claiming
+durable descendant absence. Signaled/forced command exits and initially
+surviving sessions keep a sticky unproven sentinel; incomplete V25 Prepare,
+preexisting `.preparing` custody, operator cancellation, external parent
+deadlines, and failed real-binary stops retain their controls and diagnostics.
+The distinct frozen total-wall cause remains sealable. The shell forwards INT/TERM/HUP to
+the tracked Prepare/Execute process group and suppresses cleanup, receipt, and
+seal work. Execute publishes no terminal evidence once cancellation or shutdown
+uncertainty is observed; if cancellation first becomes visible after deletion
+starts, the durable checkpoint and shell operation state remain authoritative.
+V1–V24 remain historical, and no production path or public schema changes.
+
+T40.13c durable hard-death descendant supervision is now the only next scale
 ticket inside the still-open T40.13 gate. Critical/high prerequisites then
-continue through T40.13c durable hard-death descendant supervision, T40.13d one
+continue through T40.13d one
 shared custody-mutation/admission lock, T40.13e exact executed-tool identity,
 T40.13f hermetic execution controls, and T40.13g an authenticated bounded
 returned-evidence firewall. Medium tickets close resumable seal/keypair

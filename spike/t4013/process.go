@@ -44,17 +44,15 @@ type privateToolchain struct {
 }
 
 type privateServer struct {
-	command          *exec.Cmd
-	sessionID        int
-	sessionIsolated  bool
-	started          time.Time
-	done             chan error
-	log              *os.File
-	logPath          string
-	sampler          *rssSampler
-	stopOnce         sync.Once
-	stopErr          error
-	shutdownUnproven bool
+	command         *exec.Cmd
+	sessionIsolated bool
+	started         time.Time
+	done            chan error
+	log             *os.File
+	logPath         string
+	sampler         *rssSampler
+	stopOnce        sync.Once
+	stopErr         error
 }
 
 type rssSampler struct {
@@ -260,7 +258,19 @@ func runCustodyCombinedOutput(command *exec.Cmd) ([]byte, error) {
 	if command.Process == nil {
 		return output, commandErr
 	}
-	return output, errors.Join(commandErr, finishCustodyCommandSession(command.Process.Pid))
+	return output, errors.Join(
+		commandErr,
+		signaledCommandShutdownUnproven(commandErr),
+		finishCustodyCommandSession(command.Process.Pid),
+	)
+}
+
+func signaledCommandShutdownUnproven(err error) error {
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == -1 {
+		return errPrivateServerShutdownUnproven
+	}
+	return nil
 }
 
 func finishCustodyCommandSession(pid int) error {
@@ -270,14 +280,30 @@ func finishCustodyCommandSession(pid int) error {
 	}
 	killErr := killPrivateServerSession(pid)
 	killWaitErr := waitPrivateServerSession(pid, time.Now().Add(5*time.Second))
-	result := errors.Join(
+	return errors.Join(
 		errors.New("T40.13 custody command left a surviving process session"),
-		sessionErr, killErr, killWaitErr,
+		errPrivateServerShutdownUnproven, sessionErr, killErr, killWaitErr,
 	)
-	if killWaitErr != nil {
-		result = errors.Join(result, errPrivateServerShutdownUnproven)
+}
+
+func custodyRetentionCause(ctx context.Context, cause error) error {
+	if errors.Is(cause, errPrivateServerShutdownUnproven) {
+		return errPrivateServerShutdownUnproven
 	}
-	return result
+	if errors.Is(cause, context.Canceled) {
+		return context.Canceled
+	}
+	if ctx == nil {
+		return nil
+	}
+	ctxCause := context.Cause(ctx)
+	if errors.Is(ctxCause, context.Canceled) {
+		return context.Canceled
+	}
+	if errors.Is(ctxCause, context.DeadlineExceeded) && !errors.Is(ctxCause, errTotalWallDeadline) {
+		return context.DeadlineExceeded
+	}
+	return nil
 }
 
 func exportFrozenSourceForPlan(ctx context.Context, moduleRoot string, plan Plan, output string) error {
@@ -375,7 +401,8 @@ func extractFrozenSourceCommandMeasured(
 	metrics.PeakRSSBytes, descendantGit, metrics.IndexChildren, metrics.OtherChildren, samplerErr = sampler.metrics()
 	metrics.GitChildren += descendantGit
 	return metrics, errors.Join(
-		extractErr, waitErr, sessionErr, samplerErr, measureErr, allocationErr,
+		extractErr, waitErr, signaledCommandShutdownUnproven(waitErr),
+		sessionErr, samplerErr, measureErr, allocationErr,
 	)
 }
 
@@ -429,7 +456,11 @@ func exportReviewedSourceWith(
 	if err != nil {
 		return err
 	}
-	defer func() { retErr = errors.Join(retErr, os.RemoveAll(gitDir)) }()
+	defer func() {
+		if custodyRetentionCause(ctx, retErr) == nil {
+			retErr = errors.Join(retErr, os.RemoveAll(gitDir))
+		}
+	}()
 	if err := os.Mkdir(filepath.Join(gitDir, "objects"), 0o700); err != nil {
 		return err
 	}
@@ -580,7 +611,6 @@ func launchPrivateServer(
 		sampler: newRSSSampler(command.Process.Pid, toolchain.ClosedEnvironment),
 	}
 	if toolchain.ClosedEnvironment {
-		server.sessionID = command.Process.Pid
 		server.sessionIsolated = true
 		server.sampler.captureRootIdentity()
 		server.sampler.sample()
@@ -740,7 +770,6 @@ func (server *privateServer) stop(timeout time.Duration) error {
 	}
 	server.stopOnce.Do(func() {
 		pid := server.command.Process.Pid
-		server.sessionID = pid
 		interrupted, interruptErr := interruptPrivateServerRoot(server.command.Process)
 		deadline := time.Now().Add(timeout)
 		waitErr, parentExited := waitPrivateServerCommand(server.done, deadline)
@@ -751,7 +780,7 @@ func (server *privateServer) stop(timeout time.Duration) error {
 			killErr = killPrivateServerSession(pid)
 			forcedDeadline := time.Now().Add(5 * time.Second)
 			if !parentExited {
-				waitErr, parentExited = waitPrivateServerCommand(server.done, forcedDeadline)
+				waitErr, _ = waitPrivateServerCommand(server.done, forcedDeadline)
 			}
 			sessionErr = waitPrivateServerSession(pid, forcedDeadline)
 		}
@@ -760,26 +789,19 @@ func (server *privateServer) stop(timeout time.Duration) error {
 		if forced {
 			server.stopErr = errors.Join(
 				errors.New("T40.13 private server required forced process-session kill"),
+				errPrivateServerShutdownUnproven,
 				interruptErr, killErr, waitErr, sessionErr, samplerErr, closeErr,
 			)
-			if !parentExited || sessionErr != nil {
-				server.shutdownUnproven = true
-			}
 			return
 		}
 		if waitErr != nil && (!interrupted || !expectedPrivateServerInterrupt(waitErr)) {
-			server.stopErr = errors.Join(waitErr, interruptErr, samplerErr, closeErr)
+			server.stopErr = errors.Join(
+				waitErr, signaledCommandShutdownUnproven(waitErr), interruptErr, samplerErr, closeErr,
+			)
 			return
 		}
 		server.stopErr = errors.Join(interruptErr, samplerErr, closeErr)
 	})
-	if server.shutdownUnproven {
-		alive, err := privateServerSessionAlive(server.sessionID)
-		if err != nil || alive {
-			return errors.Join(server.stopErr, errPrivateServerShutdownUnproven, err)
-		}
-		server.shutdownUnproven = false
-	}
 	return server.stopErr
 }
 

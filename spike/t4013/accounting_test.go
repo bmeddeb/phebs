@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -73,6 +74,43 @@ func TestMergeConcurrentMetricsUsesOuterWallAndConservativeRSSSum(t *testing.T) 
 	concurrent.PeakRSSBytes = 1<<63 - 1
 	if _, err := mergeConcurrentMetrics(outer, concurrent); err == nil {
 		t.Fatal("concurrent RSS overflow was accepted")
+	}
+}
+
+func TestMeasuredCommandSanitizationRetainsOnlyCustodySentinels(t *testing.T) {
+	private := errors.New("private command detail")
+	for _, retained := range []error{
+		errProcessSamplingFailed,
+		errAllocationSamplingFailed,
+		errPrivateServerShutdownUnproven,
+	} {
+		got := sanitizeMeasuredCommandFailure("measured command failed", errors.Join(private, retained))
+		if !errors.Is(got, retained) || errors.Is(got, private) || strings.Contains(got.Error(), private.Error()) {
+			t.Fatalf("sanitized %v = %v", retained, got)
+		}
+	}
+}
+
+func TestStrictMeasuredCommandRetainsSignaledShutdownUncertainty(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("strict process sessions require Linux or macOS")
+	}
+	for _, test := range []struct {
+		name   string
+		strict bool
+		want   bool
+	}{
+		{name: "historical", strict: false},
+		{name: "V25", strict: true, want: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := runMeasuredCommand(
+				exec.CommandContext(t.Context(), "/bin/sh", "-c", "kill -KILL $$"), t.TempDir(), test.strict,
+			)
+			if errors.Is(err, errPrivateServerShutdownUnproven) != test.want {
+				t.Fatalf("signaled measured command = %v", err)
+			}
+		})
 	}
 }
 

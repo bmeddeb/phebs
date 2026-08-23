@@ -1,6 +1,7 @@
 package t4013
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -102,6 +103,106 @@ func TestPreparedCleanupRetainsCrashIndeterminateCustody(t *testing.T) {
 			t.Fatalf("crash-indeterminate cleanup changed %s: %v", path, err)
 		}
 	}
+}
+
+func TestFailedPreparationRetainsIncompleteV25Custody(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		version    int
+		cancel     bool
+		cause      error
+		wantText   string
+		wantRetain bool
+		wantErr    error
+	}{
+		{name: "V25 ordinary failure", version: 25, cause: errors.New("author failed"), wantRetain: true, wantText: "external process-absence proof"},
+		{name: "V25 cancellation", version: 25, cancel: true, cause: errors.New("author failed"), wantRetain: true, wantErr: context.Canceled},
+		{name: "V25 shutdown uncertainty", version: 25, cause: errPrivateServerShutdownUnproven, wantRetain: true, wantErr: errPrivateServerShutdownUnproven},
+		{name: "historical cancellation", version: 24, cancel: true, cause: context.Canceled},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			output := filepath.Join(root, "prepared.json")
+			control := output + ".preparing"
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, path := range []string{output, control} {
+				if err := os.WriteFile(path, []byte("control\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			if test.cancel {
+				cancel()
+			} else {
+				defer cancel()
+			}
+			err := cleanupFailedPreparation(
+				ctx, test.version, test.cause, true, workspace, module, output, control,
+			)
+			if test.wantErr != nil && !errors.Is(err, test.wantErr) ||
+				test.wantText != "" && (err == nil || !strings.Contains(err.Error(), test.wantText)) ||
+				test.wantErr == nil && test.wantText == "" && err != nil {
+				t.Fatalf("cleanup error = %v, want %v", err, test.wantErr)
+			}
+			for _, path := range []string{workspace, output, control} {
+				_, err := os.Lstat(path)
+				if test.wantRetain && err != nil {
+					t.Fatalf("retained path %s = %v", path, err)
+				}
+				if !test.wantRetain && !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("cleaned path %s = %v", path, err)
+				}
+			}
+		})
+	}
+}
+
+func TestPreparedPublicationChecksCancellationAtEveryBoundary(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		cancelAt  int
+		wantTemp  bool
+		wantFinal bool
+	}{
+		{name: "before stage", cancelAt: 1},
+		{name: "after stage", cancelAt: 2, wantTemp: true},
+		{name: "after publication", cancelAt: 3, wantFinal: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			output := filepath.Join(t.TempDir(), "prepared.json")
+			ctx := &cancelAtErrContext{Context: t.Context(), cancelAt: test.cancelAt}
+			err := publishPreparedOutput(ctx, output, []byte("prepared\n"))
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("publication cancellation = %v", err)
+			}
+			for path, want := range map[string]bool{output + ".tmp": test.wantTemp, output: test.wantFinal} {
+				_, err := os.Lstat(path)
+				if (err == nil) != want || err != nil && !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("publication path %s present=%t, err=%v", path, err == nil, err)
+				}
+			}
+		})
+	}
+}
+
+type cancelAtErrContext struct {
+	context.Context
+	calls    int
+	cancelAt int
+}
+
+func (ctx *cancelAtErrContext) Err() error {
+	ctx.calls++
+	if ctx.calls >= ctx.cancelAt {
+		return context.Canceled
+	}
+	return nil
 }
 
 func TestV25CleanupPreparedRefusesExecutedCustody(t *testing.T) {
@@ -347,7 +448,7 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("retain"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	plan, err := FrozenPlan(testSourceCommit)
+	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,6 +484,29 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	if err := os.WriteFile(preparedPath, preparedBytes, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	realModuleRoot, err := filepath.EvalSymlinks(moduleRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlPath := preparedPath + ".preparing"
+	if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
+		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: realModuleRoot, Workspace: workspace,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err == nil ||
+		!strings.Contains(err.Error(), "external process-absence proof") {
+		t.Fatalf("preexisting preparation fence cleanup = %v", err)
+	}
+	for _, path := range []string{workspace, preparedPath, controlPath} {
+		if _, err := os.Lstat(path); err != nil {
+			t.Fatalf("preexisting preparation fence changed %s: %v", path, err)
+		}
+	}
+	if err := removePreparedCleanupControl(controlPath); err != nil {
+		t.Fatal(err)
+	}
 	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, "wrong"); err == nil {
 		t.Fatal("cleanup accepted the wrong confirmation")
 	}
@@ -403,11 +527,19 @@ func TestCleanupPreparedDestroysOnlyPlanBoundCustodyAndManifest(t *testing.T) {
 	if err := os.WriteFile(preparedPath, preparedBytes, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := writePreparedCleanupControl(controlPath, preparedCleanupControl{
+		Schema: preparedCleanupSchema, PlanDigest: PlanDigest(planBytes),
+		ModuleRoot: realModuleRoot, Workspace: workspace,
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if err := CleanupPrepared(moduleRoot, planPath, preparedPath, CleanupConfirm); err != nil {
 		t.Fatalf("cleanup after ordinary custody teardown: %v", err)
 	}
-	if _, err := os.Lstat(preparedPath); !os.IsNotExist(err) {
-		t.Fatal("cleanup retained the post-execution prepared manifest")
+	for _, path := range []string{preparedPath, controlPath} {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Fatalf("cleanup retained post-execution control %s", path)
+		}
 	}
 }
 

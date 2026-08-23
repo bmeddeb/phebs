@@ -26,6 +26,17 @@ import (
 const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
 const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
 
+func retainFailedDiagnosticWorkspace(t *testing.T, workspace string) {
+	t.Helper()
+	if t.Failed() {
+		t.Logf("real-binary diagnostic custody retained at %s", workspace)
+		return
+	}
+	if err := os.RemoveAll(workspace); err != nil {
+		t.Errorf("remove successful real-binary diagnostic custody: %v", err)
+	}
+}
+
 // The exact semantic profile has 264 partitions under the historical shared
 // whole-repository shape. The versioned Proto and Thrift execution-subrange
 // policies add four partitions apiece without changing candidate ownership.
@@ -56,7 +67,11 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
 		t.Fatal(err)
 	}
-	workspace := t.TempDir()
+	workspace, err := os.MkdirTemp("", "phebs-t4013-semantic-timing-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer retainFailedDiagnosticWorkspace(t, workspace)
 	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, workspace)
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +101,9 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	running := true
 	defer func() {
 		if running {
-			_ = server.stop(30 * time.Second)
+			if err := server.stop(30 * time.Second); err != nil {
+				t.Errorf("stop exact semantic diagnostic; retained at %s: %v", workspace, err)
+			}
 		}
 	}()
 	if _, err := awaitPrivateServerHealth(ctx, server, profile, "exact-semantic-cold", 15*time.Minute); err != nil {
@@ -457,7 +474,11 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	workspace := t.TempDir()
+	workspace, err := os.MkdirTemp("", "phebs-t4013-readiness-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer retainFailedDiagnosticWorkspace(t, workspace)
 	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, workspace)
 	if err != nil {
 		t.Fatal(err)
@@ -549,7 +570,9 @@ func rehearseProductionPath(
 	running := true
 	defer func() {
 		if running {
-			_ = server.stop(30 * time.Second)
+			if err := server.stop(30 * time.Second); err != nil {
+				t.Errorf("stop readiness diagnostic; retained at %s: %v", workspace, err)
+			}
 		}
 	}()
 	if _, err := awaitPrivateServerHealth(ctx, server, profile, "rehearsal-cold", 2*time.Minute); err != nil {
@@ -733,7 +756,9 @@ func rehearseSemanticInterruptionBoundary(
 	handedOff := false
 	defer func() {
 		if !handedOff {
-			_ = restarted.stop(30 * time.Second)
+			if err := restarted.stop(30 * time.Second); err != nil {
+				t.Errorf("stop interruption diagnostic; retained at %s: %v", filepath.Dir(profile.DataDir), err)
+			}
 		}
 	}()
 	if _, err := awaitPrivateServerHealth(
@@ -851,7 +876,11 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = server.stop(30 * time.Second) }()
+	defer func() {
+		if err := server.stop(30 * time.Second); err != nil {
+			t.Errorf("stop stale-worker diagnostic; retained at %s: %v", filepath.Dir(profile.DataDir), err)
+		}
+	}()
 	if _, err := awaitPrivateServerHealth(
 		ctx, server, profile, "rehearsal-stale-cold", 2*time.Minute,
 	); err != nil {

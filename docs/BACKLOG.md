@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13b next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13c next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,20 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13b · Cooperative cancellation and shutdown truth** *(high · needs
-T40.13a)* — preserve custody whenever an ordinary command, server, Prepare, or
-Execute cannot prove every descendant stopped. AC: every measured-command
-wrapper preserves `errPrivateServerShutdownUnproven`; V25 stopped execution
-checks both its original cause and server-stop result before checkpoint or
-deletion; INT/TERM/HUP during Prepare or Execute retains the operation lock,
-controls, logs, and custody while publishing no false terminal result;
-cooperative or known-process shutdown that remains uncertain retains custody
-for T40.13c's durable proof instead of treating a session poll as authority;
-opt-in real-binary tests treat a failed stop as a retained diagnostic failure
-and never allow `t.TempDir` or `DestroyPrepared` to remove that state; cheap
-injected-signal and failed-stop
-tests cover every deletion path without starting the giant corpus.
 
 **T40.13c · Durable hard-death descendant supervision** *(high · needs
 T40.13b)* — replace in-memory session identity and one-shot absence inference

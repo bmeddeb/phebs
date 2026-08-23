@@ -58,7 +58,7 @@ func TestPrivateServerStopTerminatesProcessSession(t *testing.T) {
 				t.Fatal(err)
 			}
 			server := &privateServer{
-				command: command, sessionID: command.Process.Pid, sessionIsolated: true,
+				command: command, sessionIsolated: true,
 				done: make(chan error, 1), log: logFile,
 			}
 			go func() { server.done <- command.Wait() }()
@@ -81,14 +81,89 @@ func TestPrivateServerStopTerminatesProcessSession(t *testing.T) {
 			if test.wantForcedKill && !strings.Contains(stopErr.Error(), "required forced process-session kill") {
 				t.Fatalf("stop error = %v", stopErr)
 			}
-			if errors.Is(stopErr, errPrivateServerShutdownUnproven) {
-				t.Fatalf("server session absence was not proven: %v", stopErr)
+			if !errors.Is(stopErr, errPrivateServerShutdownUnproven) {
+				t.Fatalf("forced shutdown lost its retained uncertainty: %v", stopErr)
 			}
 			if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || alive {
 				t.Fatalf("server process session survived: alive=%v err=%v", alive, err)
 			}
 			awaitProcessGone(t, childPID)
 		})
+	}
+}
+
+func TestReviewedSourceExportRetainsControlOnlyForUnprovenShutdown(t *testing.T) {
+	repository := t.TempDir()
+	runGit := func(args ...string) string {
+		t.Helper()
+		command := exec.CommandContext(t.Context(), "git", args...)
+		command.Dir = repository
+		output, err := command.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, output)
+		}
+		return strings.TrimSpace(string(output))
+	}
+	runGit("init")
+	runGit("config", "user.email", "t4013@example.invalid")
+	runGit("config", "user.name", "T40.13")
+	if err := os.WriteFile(filepath.Join(repository, "source.go"), []byte("package frozen\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runGit("add", "source.go")
+	runGit("commit", "-m", "freeze")
+	commit := runGit("rev-parse", "HEAD")
+	ordinary := errors.New("ordinary export failure")
+	for _, test := range []struct {
+		name         string
+		cause        error
+		contextCause error
+		wantRetain   bool
+	}{
+		{name: "ordinary failure", cause: ordinary},
+		{name: "cancellation", cause: context.Canceled, wantRetain: true},
+		{name: "external deadline", cause: ordinary, contextCause: context.DeadlineExceeded, wantRetain: true},
+		{name: "shutdown uncertainty", cause: errPrivateServerShutdownUnproven, wantRetain: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			parent := t.TempDir()
+			output := filepath.Join(parent, "source")
+			ctx, cancel := context.WithCancelCause(t.Context())
+			defer cancel(nil)
+			err := exportReviewedSourceWith(
+				ctx, repository, commit, output,
+				func(*exec.Cmd, string) error {
+					if test.contextCause != nil {
+						cancel(test.contextCause)
+					}
+					return test.cause
+				},
+			)
+			if !errors.Is(err, test.cause) {
+				t.Fatalf("export error = %v, want %v", err, test.cause)
+			}
+			controls, err := filepath.Glob(filepath.Join(parent, ".t4013-git-export-*"))
+			if err != nil || (len(controls) > 0) != test.wantRetain {
+				t.Fatalf("retained export controls = %v, %v", controls, err)
+			}
+		})
+	}
+}
+
+func TestMeasuredSourceExportRetainsSignaledShutdownUncertainty(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("strict process sessions require Linux or macOS")
+	}
+	root := t.TempDir()
+	output := filepath.Join(root, "source")
+	if err := os.Mkdir(output, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	_, err := extractFrozenSourceCommandMeasured(
+		exec.CommandContext(t.Context(), "/bin/sh", "-c", "kill -KILL $$"), output, root,
+	)
+	if !errors.Is(err, errPrivateServerShutdownUnproven) {
+		t.Fatalf("signaled measured source export = %v", err)
 	}
 }
 
@@ -203,17 +278,21 @@ func TestCustodyCommandCancellationTerminatesProcessSession(t *testing.T) {
 		done <- err
 	}()
 	childPID := awaitPrivateServerShutdownHelper(t, childPIDPath)
-	if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || !alive {
+	sessionID, err := syscall.Getsid(childPID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if alive, err := privateServerSessionAlive(sessionID); err != nil || !alive {
 		t.Fatalf("live custody session was not observed: alive=%v err=%v", alive, err)
 	}
 	if err := syscall.Kill(childPID, 0); err != nil {
 		t.Fatalf("live custody child was not independently observed: %v", err)
 	}
 	cancel()
-	if err := <-done; err == nil {
-		t.Fatal("canceled custody command passed")
+	if err := <-done; !errors.Is(err, errPrivateServerShutdownUnproven) {
+		t.Fatalf("canceled custody command lost shutdown uncertainty: %v", err)
 	}
-	if alive, err := privateServerSessionAlive(command.Process.Pid); err != nil || alive {
+	if alive, err := privateServerSessionAlive(sessionID); err != nil || alive {
 		t.Fatalf("custody process session survived: alive=%v err=%v", alive, err)
 	}
 	awaitProcessGone(t, childPID)

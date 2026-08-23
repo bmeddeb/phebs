@@ -212,6 +212,148 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 	}
 }
 
+func TestV25StoppedExecutionRetainsCustodyBeforeAnyDestructiveTransition(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		cause    error
+		stopErr  error
+		cancel   bool
+		deadline bool
+		want     error
+	}{
+		{name: "original shutdown uncertainty", cause: errPrivateServerShutdownUnproven, want: errPrivateServerShutdownUnproven},
+		{name: "server stop uncertainty", cause: errors.New("phase failed"), stopErr: errPrivateServerShutdownUnproven, want: errPrivateServerShutdownUnproven},
+		{name: "execution cancellation", cause: errors.New("phase failed"), cancel: true, want: context.Canceled},
+		{name: "external deadline", cause: errors.New("phase failed"), deadline: true, want: context.DeadlineExceeded},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run := newV25FailureExecution(t, module, workspace)
+			if test.cancel {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				run.ctx = ctx
+			} else if test.deadline {
+				ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+				defer cancel()
+				run.ctx = ctx
+			}
+			run.serverShutdownErr = test.stopErr
+			observationPath := setExecutionObservationPath(t, run)
+			destroyed := false
+			run.custodyDestroy = func(string, string) error {
+				destroyed = true
+				return nil
+			}
+			run.startPhase(0)
+			stopped, err := run.stopAfterFailure(test.cause)
+			if stopped.Schema != "" || !errors.Is(err, test.want) || !errors.Is(err, test.cause) || destroyed {
+				t.Fatalf("retained stop = %+v, err=%v, destroyed=%t", stopped, err, destroyed)
+			}
+			if _, err := os.Lstat(workspace); err != nil {
+				t.Fatalf("retained custody = %v", err)
+			}
+			for _, path := range []string{observationPath, observationPath + ".teardown"} {
+				if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("retained stop published %s: %v", path, err)
+				}
+			}
+		})
+	}
+}
+
+func TestV25StoppedInterruptionAfterCheckpointRetainsCustody(t *testing.T) {
+	for _, interruption := range []error{context.Canceled, context.DeadlineExceeded} {
+		t.Run(interruption.Error(), func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run := newV25FailureExecution(t, module, workspace)
+			ctx, cancel := context.WithCancelCause(t.Context())
+			run.ctx = ctx
+			observationPath := setExecutionObservationPath(t, run)
+			run.checkpointPersist = func(path string, value teardownCheckpoint) error {
+				if err := writeTeardownCheckpoint(path, value); err != nil {
+					return err
+				}
+				cancel(interruption)
+				return nil
+			}
+			destroyed := false
+			run.custodyDestroy = func(string, string) error {
+				destroyed = true
+				return nil
+			}
+			run.startPhase(0)
+			cause := errors.New("phase failed")
+			stopped, err := run.stopAfterFailure(cause)
+			if stopped.Schema != "" || !errors.Is(err, interruption) || !errors.Is(err, cause) || destroyed {
+				t.Fatalf("checkpoint interruption = %+v, err=%v, destroyed=%t", stopped, err, destroyed)
+			}
+			if _, err := os.Lstat(workspace); err != nil {
+				t.Fatalf("checkpoint interruption lost custody: %v", err)
+			}
+			if _, err := os.Lstat(observationPath); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("checkpoint interruption published a terminal observation: %v", err)
+			}
+			checkpoint, checkpointErr := readTeardownCheckpoint(observationPath)
+			if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+				t.Fatalf("checkpoint interruption authority = %+v, %v", checkpoint, checkpointErr)
+			}
+		})
+	}
+}
+
+func TestV25StoppedCancellationCrossingDeletionRetainsCheckpoint(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := newV25FailureExecution(t, module, workspace)
+	ctx, cancel := context.WithCancel(t.Context())
+	run.ctx = ctx
+	observationPath := setExecutionObservationPath(t, run)
+	run.custodyDestroy = func(workspace, _ string) error {
+		if err := os.RemoveAll(workspace); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	}
+	run.startPhase(0)
+	cause := errors.New("phase failed")
+	stopped, err := run.stopAfterFailure(cause)
+	if stopped.Schema != "" || !errors.Is(err, context.Canceled) || !errors.Is(err, cause) {
+		t.Fatalf("deletion-crossing stop = %+v, %v", stopped, err)
+	}
+	if _, err := os.Lstat(workspace); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deletion-crossing custody state = %v", err)
+	}
+	if _, err := os.Lstat(observationPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deletion-crossing stop published a terminal observation: %v", err)
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(observationPath)
+	if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("deletion-crossing stop checkpoint = %+v, %v", checkpoint, checkpointErr)
+	}
+}
+
 func TestMissingFailedPhaseMeterCannotSelectFrozenDecision(t *testing.T) {
 	root := t.TempDir()
 	module := filepath.Join(root, "module")
@@ -251,7 +393,9 @@ func TestExpiredExecutionDeadlineStillPublishesStoppedTeardown(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	ctx, cancel := context.WithDeadlineCause(
+		context.Background(), time.Now().Add(-time.Second), errTotalWallDeadline,
+	)
 	defer cancel()
 	run := &execution{
 		ctx: ctx, moduleRoot: module, workspace: workspace,
@@ -2034,7 +2178,42 @@ func TestCompletedTeardownCrossingTotalDeadlinePublishesStoppedEvidence(t *testi
 	}
 }
 
-func TestCompletedTeardownCanceledDuringDeletionPublishesStoppedEvidence(t *testing.T) {
+func TestCompletedTeardownCancellationAfterCheckpointRetainsCustody(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	run.ctx = ctx
+	run.checkpointPersist = func(path string, value teardownCheckpoint) error {
+		if err := writeTeardownCheckpoint(path, value); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	}
+	destroyed := false
+	run.custodyDestroy = func(string, string) error {
+		destroyed = true
+		return nil
+	}
+	err := run.teardown()
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled teardown = %v", err)
+	}
+	if destroyed {
+		t.Fatal("canceled teardown destroyed custody")
+	}
+	if _, err := os.Lstat(run.workspace); err != nil {
+		t.Fatalf("canceled teardown lost custody: %v", err)
+	}
+	if _, err := os.Lstat(run.observationPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("canceled teardown published a terminal observation: %v", err)
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(run.observationPath)
+	if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("canceled teardown checkpoint = %+v, %v", checkpoint, checkpointErr)
+	}
+}
+
+func TestCompletedTeardownCancellationCrossingDeletionRetainsCheckpoint(t *testing.T) {
 	run := newCompletedTeardownExecution(t)
 	ctx, cancel := context.WithCancel(t.Context())
 	run.ctx = ctx
@@ -2047,16 +2226,70 @@ func TestCompletedTeardownCanceledDuringDeletionPublishesStoppedEvidence(t *test
 	}
 	err := run.teardown()
 	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("canceled teardown = %v", err)
+		t.Fatalf("deletion-crossing cancellation = %v", err)
 	}
-	raw, readErr := os.ReadFile(run.observationPath)
-	value, decodeErr := DecodeObservation(raw)
-	if readErr != nil || decodeErr != nil || value.Outcome != "stopped" ||
-		value.Failures[0] != (FailureObservation{Phase: "teardown", Class: "execution", Code: "operational_failure"}) {
-		t.Fatalf("canceled observation = %+v, read=%v, decode=%v", value, readErr, decodeErr)
+	if _, err := os.Lstat(run.workspace); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deletion-crossing custody state = %v", err)
 	}
-	if _, err := os.Lstat(run.observationPath + ".teardown"); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("canceled teardown retained checkpoint: %v", err)
+	if _, err := os.Lstat(run.observationPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deletion-crossing cancellation published a terminal observation: %v", err)
+	}
+	checkpoint, checkpointErr := readTeardownCheckpoint(run.observationPath)
+	if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+		t.Fatalf("deletion-crossing checkpoint = %+v, %v", checkpoint, checkpointErr)
+	}
+}
+
+func TestCompletedTeardownCancellationDuringPublicationRetainsCheckpoint(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		inject func(*execution, context.CancelFunc)
+	}{
+		{
+			name: "staging",
+			inject: func(run *execution, cancel context.CancelFunc) {
+				run.observationStage = func(path string, value Observation) error {
+					if err := StageObservation(path, value); err != nil {
+						return err
+					}
+					cancel()
+					return nil
+				}
+			},
+		},
+		{
+			name: "publication",
+			inject: func(run *execution, cancel context.CancelFunc) {
+				run.observationPublish = func(path string, value Observation) error {
+					if err := PublishObservation(path, value); err != nil {
+						return err
+					}
+					cancel()
+					return nil
+				}
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			run := newCompletedTeardownExecution(t)
+			ctx, cancel := context.WithCancel(t.Context())
+			run.ctx = ctx
+			run.custodyDestroy = func(workspace, _ string) error { return os.RemoveAll(workspace) }
+			test.inject(run, cancel)
+			err := run.teardown()
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("publication cancellation = %v", err)
+			}
+			for _, path := range []string{run.observationPath, run.observationPath + ".tmp"} {
+				if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("publication cancellation retained provisional output %s: %v", path, err)
+				}
+			}
+			checkpoint, checkpointErr := readTeardownCheckpoint(run.observationPath)
+			if checkpointErr != nil || checkpoint.Observation.Teardown.Completed {
+				t.Fatalf("publication cancellation checkpoint = %+v, %v", checkpoint, checkpointErr)
+			}
+		})
 	}
 }
 
