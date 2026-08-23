@@ -9774,3 +9774,45 @@ publication, lock, cache, memory, disk, or child path gains work. Failure may
 retain the already-bounded custody plus small control/cache authority for a
 separately reviewed purge. T40.13d is next. No freeze, ceremony, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
+
+**T40.13d ✅ · Custody mutation serialization and immutable admission**
+*(2026-08-23; high)* — V25 Prepare, Cleanup, Destroy, Execute, Resume, and the
+supported shell now share one persistent crash-released
+`<run-root>/.t4013-operation.lock`. Darwin and Linux use one nonblocking kernel
+lock over a regular zero-byte 0600 inode that is never removed. A stale inode
+is reusable; SIGKILL releases ownership after every inherited descriptor
+closes. The supported shell prebuilds `t4013-lock`, re-executes execute/seal
+beneath it, and carries that same descriptor through the closed environment.
+Unsupported platforms fail closed. Historical V1–V24 shell locking and bytes
+remain compatible.
+
+Each V25 mutator may use a preliminary authority read only to locate the run.
+It acquires the shared lock before reading custody/output preconditions, then
+rereads and exact-compares the bounded authority under the lock. Plan input is
+limited to 64 KiB, prepared authority to 256 KiB, cleanup control to 4 KiB,
+and teardown checkpoints to 260 KiB. Prepare refuses prepared output inside
+custody or the reviewed module checkout, and its CLI consumes the library's
+single plan decode. Destroy binds an immutable bounded copy of its direct
+Prepared value. Execute checkpoints bind the prepared digest; Resume validates
+that digest under the same lock before destructive recovery. Without a
+checkpoint, V25 Resume is read-only and either returns an already-settled final
+observation or refuses staged output.
+
+Bounded tests prove direct and inherited competing-process refusal across all
+five mutators, stale-inode reuse, SIGKILL release, exact plan/prepared byte
+replacement refusal, output-boundary refusal, checkpoint recovery identity,
+and supported-shell admission ordering. The full T40.13 package, command,
+race, vet, lint, module, documentation, and Linux compile gates remain the
+merge bar.
+
+The steady-state cost is confined to V25 ceremony operations. One run retains
+one zero-byte inode. A direct operation holds one descriptor; the shell's
+descriptor is inherited for the full operation, so a surviving descendant can
+retain it until exit. One run root is intentionally serialized, while distinct
+roots remain independent. Admission and retry perform a constant number of
+bounded reads and one lock attempt, with no corpus, shard, process-table, or
+tree-hash scan. Production queries/requests, sync ticks, startup/restart,
+publication, caches, memory, disk, and child processes gain no work. Failure
+retains only existing bounded custody/control/cache state plus the persistent
+empty lock inode. T40.13e is next. No freeze, ceremony, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.

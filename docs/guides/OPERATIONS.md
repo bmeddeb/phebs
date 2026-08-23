@@ -4924,13 +4924,26 @@ supported CLI flow remain historical; direct legacy Destroy intentionally
 tightens symlinked cleanup-root and stable/retiring/retired V25-supervision
 refusal.
 
-Do not request a freeze yet. T40.13d must still put direct V25
-Prepare/Cleanup/Destroy and Execute/resume under one crash-released run-root
-lock and immutable admission identity. Later prerequisites must bind every
+V25 uses the persistent regular file `<run-root>/.t4013-operation.lock` as the
+one custody-mutation lock for direct Prepare, Cleanup, Destroy, Execute, Resume,
+and the supported shell. Do not remove it as stale: file existence carries no
+liveness claim, and the kernel lock is crash-released only after every inherited
+descriptor closes. The shell re-executes V25 execute/seal under this lock and
+passes the exact descriptor through its closed environment. A busy lock means
+another operation or surviving descendant still owns the run; retain all state
+and retry only after the kernel admits the lock.
+
+Each mutator uses preliminary bounded authority bytes only to locate the run,
+then acquires the lock before custody/output preconditions and revalidates the
+same exact bytes under it. Limits are 64 KiB for a plan, 256 KiB for prepared
+authority, 4 KiB for cleanup control, and 260 KiB for a teardown checkpoint.
+Prepared output is invalid inside custody or the reviewed module checkout.
+Do not bypass these boundaries or hand-edit a prepared/checkpoint identity.
+
+Do not request a freeze yet. T40.13e and later prerequisites must bind every
 Go/Git/Surreal launch to the frozen executable path, reverify private binaries
 across restarts, move HOME/module/control caches into reviewed custody, and
-close the returned-evidence and remaining medium/low gates. Do not call the
-exported custody mutators concurrently. `go mod verify`, the exact filesystem
+close the returned-evidence and remaining medium/low gates. `go mod verify`, the exact filesystem
 projection, bounded package/race/docs gates, focused real-tool proof, and both
 real-binary rehearsals must pass from one clean commit in their designated
 branch-gate or preflight boundary. Passing those gates is readiness evidence

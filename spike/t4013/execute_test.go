@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"syscall"
@@ -70,6 +69,17 @@ func attachV25TestSupervision(t *testing.T, run *execution) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	prepared := minimalV25Prepared(run.workspace, PlanDigest(run.planBytes))
+	prepared.SupervisionToken = token
+	preparedRaw, err := MarshalPrepared(prepared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(run.preparedPath, preparedRaw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run.prepared = prepared
+	run.preparedDigest = digest(preparedRaw)
 	prepare, err := beginPrepareCustody(run.workspace, PlanDigest(run.planBytes), token)
 	if err != nil {
 		t.Fatal(err)
@@ -2675,6 +2685,39 @@ func TestTeardownCheckpointRefusesIndeterminateProcessDeath(t *testing.T) {
 	}
 }
 
+func TestResumeRefusesChangedPreparedAdmission(t *testing.T) {
+	run := newCompletedTeardownExecution(t)
+	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.supervision.Drain(run.checkpointDigest); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.supervision.Close(); err != nil {
+		t.Fatal(err)
+	}
+	changed := run.prepared
+	changed.Profiles = slices.Clone(run.prepared.Profiles)
+	changed.Profiles[0].RepositoryName = "local.invalid/changed-structural"
+	raw, err := MarshalPrepared(changed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(run.preparedPath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResumeObservation(
+		run.observationPath, run.planBytes, PlanDigest(run.planBytes),
+	); err == nil || !strings.Contains(err.Error(), "prepared admission bytes changed") {
+		t.Fatalf("changed prepared resume = %v", err)
+	}
+	for _, path := range []string{run.workspace, run.observationPath + ".teardown", run.preparedPath} {
+		if _, err := os.Lstat(path); err != nil {
+			t.Fatalf("changed prepared admission removed %s: %v", path, err)
+		}
+	}
+}
+
 func TestTeardownCheckpointSchemasSeparateHistoricalAndSupervisedAuthority(t *testing.T) {
 	run := newCompletedTeardownExecution(t)
 	if err := run.persistTeardownCheckpoint(time.Now(), 7, 8); err != nil {
@@ -2688,6 +2731,7 @@ func TestTeardownCheckpointSchemasSeparateHistoricalAndSupervisedAuthority(t *te
 	historical.Schema = teardownCheckpointSchema
 	historical.ModuleRoot = ""
 	historical.PreparedPath = ""
+	historical.PreparedDigest = ""
 	historical.SupervisionToken = ""
 	raw, err := marshalTeardownCheckpoint(historical)
 	if err != nil || bytes.Contains(raw, []byte(`"supervision_token"`)) {
@@ -4881,28 +4925,6 @@ func TestExecutionMarkerDurabilityFailureLeavesReuseFence(t *testing.T) {
 	}
 }
 
-func TestObservationLockSerializesExecutionAndResume(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "observation.json")
-	first, err := lockObservationOutput(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if second, err := lockObservationOutput(path); err == nil {
-		_ = unlockObservationOutput(second)
-		t.Fatal("concurrent observation operation acquired the same directory lock")
-	}
-	if err := unlockObservationOutput(first); err != nil {
-		t.Fatal(err)
-	}
-	third, err := lockObservationOutput(path)
-	if err != nil {
-		t.Fatalf("released observation lock remained held: %v", err)
-	}
-	if err := unlockObservationOutput(third); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestV25ExecutionDeadlineIncludesAdmission(t *testing.T) {
 	started := time.Now().Add(-5 * time.Minute)
 	plan := Plan{Schema: PlanSchemaV25, Safety: SafetyEnvelope{MaximumTotalWallMS: int64(time.Hour / time.Millisecond)}}
@@ -4919,68 +4941,5 @@ func TestV25ExecutionDeadlineIncludesAdmission(t *testing.T) {
 	}
 	if _, ok := legacy.Deadline(); ok {
 		t.Fatal("historical admission context gained a deadline")
-	}
-}
-
-func TestObservationLockIsReleasedAfterProcessDeath(t *testing.T) {
-	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
-		t.Skip("V25 observation locking requires Unix flock")
-	}
-	if os.Getenv("PHEBS_T4013_OBSERVATION_LOCK_HELPER") == "1" {
-		lock, err := lockObservationOutput(os.Getenv("PHEBS_T4013_OBSERVATION_PATH"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() { _ = unlockObservationOutput(lock) }()
-		if err := os.WriteFile(os.Getenv("PHEBS_T4013_OBSERVATION_LOCK_READY"), []byte("ready\n"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		for {
-			time.Sleep(time.Second)
-		}
-	}
-
-	root := t.TempDir()
-	path := filepath.Join(root, "observation.json")
-	ready := filepath.Join(root, "ready")
-	child := exec.Command(os.Args[0], "-test.run=^TestObservationLockIsReleasedAfterProcessDeath$")
-	child.Env = append(os.Environ(),
-		"PHEBS_T4013_OBSERVATION_LOCK_HELPER=1",
-		"PHEBS_T4013_OBSERVATION_PATH="+path,
-		"PHEBS_T4013_OBSERVATION_LOCK_READY="+ready,
-	)
-	if err := child.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = child.Process.Kill()
-		_ = child.Wait()
-	}()
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		if _, err := os.Lstat(ready); err == nil {
-			break
-		} else if !errors.Is(err, os.ErrNotExist) {
-			t.Fatal(err)
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("observation lock helper did not become ready")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if lock, err := lockObservationOutput(path); err == nil {
-		_ = unlockObservationOutput(lock)
-		t.Fatal("parent acquired a child-held observation lock")
-	}
-	if err := child.Process.Kill(); err != nil {
-		t.Fatal(err)
-	}
-	if err := child.Wait(); err == nil {
-		t.Fatal("killed observation lock helper exited successfully")
-	}
-	if lock, err := lockObservationOutput(path); err != nil {
-		t.Fatalf("process death retained the observation lock: %v", err)
-	} else if err := unlockObservationOutput(lock); err != nil {
-		t.Fatal(err)
 	}
 }

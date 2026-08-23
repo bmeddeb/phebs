@@ -3147,3 +3147,36 @@ pass. T40.13d's shared V25 custody-mutation/admission lock remains next. No
 preflight result, test, branch, or this closure authorizes freeze, ceremony
 execution, release, T40.13/Epic-40 closure, topology/bound change, or a
 scale/SLO claim.
+
+### T40.13d custody mutation serialization and immutable admission
+
+V25 now serializes direct Prepare, Cleanup, Destroy, Execute, Resume, and the
+supported shell on one persistent `<run-root>/.t4013-operation.lock`. Darwin
+and Linux use a nonblocking kernel lock; the empty 0600 inode is never removed,
+so stale existence is harmless and SIGKILL releases ownership only after every
+inherited descriptor closes. The shell prebuilds `t4013-lock`, re-executes
+execute/seal beneath it, and passes the same descriptor through its closed
+environment. Other platforms fail closed.
+
+Plan, prepared, cleanup-control, and teardown-checkpoint bytes are bounded and
+used only as preliminary locators before locking. Each mutator rereads and
+compares the exact authority under the lock before any custody or output
+mutation. Execute checkpoints also bind the prepared digest. Prepare refuses a
+prepared output inside custody or the reviewed module checkout, and its CLI
+uses the library's single plan decode. A no-checkpoint Resume is read-only: it
+returns an already-settled final observation or refuses staged output.
+
+One run root is deliberately serialized; different run roots remain
+independent. The fixed admission bounds are 64 KiB for plan, 256 KiB for
+prepared authority, 4 KiB for cleanup control, and 260 KiB for a teardown
+checkpoint. There is one zero-byte inode and one held descriptor per direct
+operation; the shell descriptor may remain inherited by a surviving descendant
+until it exits. Retry performs one lock attempt and the same bounded reads. No
+production query/request, sync, startup, publication, corpus/shard scan, or
+tree hash gains work. Tests cover contention from every mutator, exact-byte
+replacement, output boundaries, stale-inode reuse, inherited ownership, and
+SIGKILL release while retaining historical V1–V24 behavior.
+
+T40.13e exact executed-tool identity remains next. This ticket authorizes no
+freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound change, or
+scale/SLO claim.

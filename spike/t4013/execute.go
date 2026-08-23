@@ -104,6 +104,7 @@ type execution struct {
 	moduleRoot           string
 	workspace            string
 	preparedPath         string
+	preparedDigest       string
 	plan                 Plan
 	planBytes            []byte
 	prepared             Prepared
@@ -131,7 +132,7 @@ type execution struct {
 	checkpointPersisted  bool
 	observationStaged    bool
 	observationPersisted bool
-	observationLock      *os.File
+	runRootLock          *runRootLock
 	executionStarted     time.Time
 	executionCancel      context.CancelFunc
 	hostToolchainVerify  func() error
@@ -149,9 +150,9 @@ func Execute(ctx context.Context, request ExecuteRequest) (observation Observati
 	if err != nil {
 		return Observation{}, err
 	}
-	if run.observationLock != nil {
+	if run.runRootLock != nil {
 		defer func() {
-			retErr = errors.Join(retErr, unlockObservationOutput(run.observationLock))
+			retErr = errors.Join(retErr, run.runRootLock.Close())
 		}()
 	}
 	if run.supervision != nil {
@@ -198,14 +199,11 @@ func newExecution(
 	if err != nil {
 		return nil, err
 	}
-	planBytes, err := os.ReadFile(request.PlanPath)
+	planIdentity, plan, err := readPlanIdentity(request.PlanPath)
 	if err != nil {
 		return nil, err
 	}
-	plan, err := DecodePlan(planBytes)
-	if err != nil {
-		return nil, err
-	}
+	planBytes := planIdentity.raw
 	version := planSchemaVersion(plan.Schema)
 	ctx, executionCancel := executionAdmissionContext(ctx, plan, executionStarted)
 	defer func() {
@@ -219,23 +217,25 @@ func newExecution(
 		}
 	}
 	preparedPath := request.Prepared
+	preparedDigest := ""
+	var preparedIdentity exactFileIdentity
+	var prepared Prepared
 	if version >= 25 {
-		preparedPath, err = canonicalNewOutputPath(request.Prepared)
-		if err != nil || preparedPath != filepath.Clean(request.Prepared) {
-			return nil, errors.New("T40.13 prepared custody path is not canonical")
+		preparedIdentity, prepared, err = readPreparedIdentity(request.Prepared, PlanDigest(planBytes))
+		if err != nil {
+			return nil, err
 		}
-		info, statErr := os.Lstat(preparedPath)
-		if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, errors.New("T40.13 prepared custody is not a regular file")
+		preparedPath = preparedIdentity.path
+		preparedDigest = digest(preparedIdentity.raw)
+	} else {
+		preparedBytes, readErr := os.ReadFile(preparedPath)
+		if readErr != nil {
+			return nil, readErr
 		}
-	}
-	preparedBytes, err := os.ReadFile(preparedPath)
-	if err != nil {
-		return nil, err
-	}
-	prepared, err := DecodePrepared(preparedBytes, PlanDigest(planBytes))
-	if err != nil {
-		return nil, err
+		prepared, err = DecodePrepared(preparedBytes, PlanDigest(planBytes))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if version >= 25 && prepared.Schema != PreparedSchemaV2 ||
 		version < 25 && prepared.Schema != PreparedSchema {
@@ -244,9 +244,27 @@ func newExecution(
 	workspace := filepath.Dir(filepath.Dir(prepared.Profiles[0].Config))
 	boundaryWorkspace := workspace
 	observationPath := request.Observation
+	var admissionLock *runRootLock
 	if planSchemaVersion(plan.Schema) >= 25 {
+		locatedWorkspace, _, locateErr := custodyControlDirectory(workspace)
+		if locateErr != nil {
+			return nil, errors.New("T40.13 execution custody is invalid")
+		}
+		var lockErr error
+		admissionLock, lockErr = lockRunRoot(filepath.Dir(locatedWorkspace))
+		if lockErr != nil {
+			return nil, lockErr
+		}
+		defer func() {
+			if retErr != nil {
+				retErr = errors.Join(retErr, admissionLock.Close())
+			}
+		}()
+		if err := errors.Join(planIdentity.revalidate(), preparedIdentity.revalidate()); err != nil {
+			return nil, err
+		}
 		boundaryWorkspace, err = filepath.EvalSymlinks(workspace)
-		if err != nil || boundaryWorkspace != filepath.Clean(workspace) {
+		if err != nil || boundaryWorkspace != locatedWorkspace || boundaryWorkspace != filepath.Clean(workspace) {
 			return nil, errors.New("T40.13 execution custody is invalid")
 		}
 		workspace = boundaryWorkspace
@@ -344,30 +362,23 @@ func newExecution(
 	if err := context.Cause(ctx); err != nil {
 		return nil, err
 	}
-	var observationLock *os.File
-	if planSchemaVersion(plan.Schema) >= 25 {
-		observationLock, err = lockObservationOutput(observationPath)
-		if err != nil {
-			return nil, err
-		}
-	}
 	// Custody retained by an unsealable stop still carries the executed marker:
 	// re-running against dirty, previously-executed state would seal evidence
 	// with false cold/warm provenance. Create it atomically only after every
 	// read-only input, checkout, output, and host preflight has passed; a
 	// refused preflight therefore remains safely retryable.
 	if err := writeExecutionMarkerForPlan(workspace, PlanDigest(planBytes), plan); err != nil {
-		return nil, errors.Join(err, unlockObservationOutput(observationLock))
+		return nil, err
 	}
 	restorePreparedCustody = false
 	observation := emptyObservationForPlan(environment, plan)
 	result = &execution{
 		ctx: ctx, moduleRoot: moduleRoot, workspace: workspace,
 		plan: plan, planBytes: planBytes, prepared: prepared, observation: observation,
-		observationPath: observationPath, observationLock: observationLock,
+		observationPath: observationPath, runRootLock: admissionLock,
 		portReservations: portReservations, executionStarted: executionStarted,
 		executionCancel: executionCancel, supervision: supervision,
-		preparedPath: preparedPath,
+		preparedPath: preparedPath, preparedDigest: preparedDigest,
 	}
 	portReservations = nil
 	return result, nil
@@ -685,6 +696,7 @@ type teardownCheckpoint struct {
 	ModuleRoot         string      `json:"module_root,omitempty"`
 	Workspace          string      `json:"workspace"`
 	PreparedPath       string      `json:"prepared_path,omitempty"`
+	PreparedDigest     string      `json:"prepared_digest,omitempty"`
 	SupervisionToken   string      `json:"supervision_token,omitempty"`
 	StartedAt          string      `json:"started_at"`
 	DeadlineAt         string      `json:"deadline_at,omitempty"`
@@ -742,6 +754,7 @@ func (run *execution) persistTeardownCheckpoint(
 		checkpoint.Schema = teardownCheckpointSchemaV2
 		checkpoint.ModuleRoot = run.moduleRoot
 		checkpoint.PreparedPath = run.preparedPath
+		checkpoint.PreparedDigest = run.preparedDigest
 		checkpoint.SupervisionToken = run.supervision.Token()
 	}
 	if run.ctx != nil {
@@ -896,6 +909,13 @@ func (run *execution) commitTerminalTeardown() error {
 		}
 		run.checkpointPersisted = false
 		return nil
+	}
+	present, err := validatePreparedPublicationDigest(run.preparedPath, run.preparedDigest)
+	if err != nil {
+		return fmt.Errorf("revalidate T40.13 private prepared publication: %w", err)
+	}
+	if !present {
+		return fmt.Errorf("revalidate T40.13 private prepared publication: %w", os.ErrNotExist)
 	}
 	drainTerminal := run.supervision.DrainTerminal
 	if run.terminalDrain != nil {
@@ -4993,16 +5013,39 @@ func resumeObservation(
 	if err != nil || planDigest != PlanDigest(planBytes) {
 		return nil, errors.Join(err, errors.New("T40.13 observation resume plan binding is invalid"))
 	}
+	planBytes = slices.Clone(planBytes)
+	var checkpoint teardownCheckpoint
+	var checkpointErr error
 	if planSchemaVersion(plan.Schema) >= 25 {
-		observationLock, lockErr := lockObservationOutput(finalPath)
+		locator, locatedCheckpoint, locateErr := readTeardownCheckpointIdentity(finalPath)
+		if errors.Is(locateErr, os.ErrNotExist) {
+			return readSettledV25Observation(finalPath, planBytes, planDigest)
+		}
+		if locateErr != nil {
+			return nil, locateErr
+		}
+		workspace, _, rootErr := custodyControlDirectory(locatedCheckpoint.Workspace)
+		if rootErr != nil {
+			return nil, rootErr
+		}
+		admissionLock, lockErr := lockRunRoot(filepath.Dir(workspace))
 		if lockErr != nil {
 			return nil, lockErr
 		}
 		defer func() {
-			retErr = errors.Join(retErr, unlockObservationOutput(observationLock))
+			retErr = errors.Join(retErr, admissionLock.Close())
 		}()
+		lockedIdentity, lockedCheckpoint, lockedErr := readTeardownCheckpointIdentity(finalPath)
+		if lockedErr != nil {
+			return nil, lockedErr
+		}
+		if locator.path != lockedIdentity.path || !bytes.Equal(locator.raw, lockedIdentity.raw) {
+			return nil, errors.New("T40.13 teardown admission changed before locking")
+		}
+		checkpoint = lockedCheckpoint
+	} else {
+		checkpoint, checkpointErr = readTeardownCheckpoint(finalPath)
 	}
-	checkpoint, checkpointErr := readTeardownCheckpoint(finalPath)
 	if checkpointErr == nil {
 		if checkpoint.PlanDigest != planDigest {
 			return nil, errors.New("T40.13 teardown checkpoint plan digest differs")
@@ -5029,6 +5072,12 @@ func resumeObservation(
 		if !hexIdentity(checkpoint.SupervisionToken, 64) || checkpoint.ModuleRoot == "" ||
 			checkpoint.PreparedPath == "" {
 			return nil, errors.New("T40.13 teardown checkpoint lacks durable custody supervision")
+		}
+		preparedPresent, err := validatePreparedPublicationDigest(
+			checkpoint.PreparedPath, checkpoint.PreparedDigest,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("revalidate T40.13 prepared admission: %w", err)
 		}
 		status, supervision, err := inspectCustodySupervision(
 			checkpoint.Workspace, planDigest, checkpoint.SupervisionToken,
@@ -5084,6 +5133,9 @@ func resumeObservation(
 		if status != custodyStatusDrained {
 			return nil, errors.New("T40.13 teardown custody state is invalid")
 		}
+		if !preparedPresent {
+			return nil, errors.New("T40.13 drained teardown lacks its exact prepared admission")
+		}
 		if err := removeProvisionalObservation(finalPath); err != nil {
 			return nil, fmt.Errorf("retire provisional T40.13 observation: %w", err)
 		}
@@ -5115,6 +5167,22 @@ func resumeObservation(
 		return raw, nil
 	}
 	return nil, fmt.Errorf("read T40.13 observation for resume: %w", os.ErrNotExist)
+}
+
+func readSettledV25Observation(path string, planBytes []byte, planDigest string) ([]byte, error) {
+	if _, err := readAtomicRegular(path+".tmp", MaxObservationBytes); err == nil {
+		return nil, errors.New("T40.13 staged observation lacks run-root teardown authority")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("read T40.13 observation for resume: %w", err)
+	}
+	raw, err := readAtomicRegular(path, MaxObservationBytes)
+	if err != nil {
+		return nil, fmt.Errorf("read T40.13 observation for resume: %w", err)
+	}
+	if _, err := BuildReceipt(planBytes, raw, planDigest); err != nil {
+		return nil, fmt.Errorf("validate T40.13 observation before resume: %w", err)
+	}
+	return raw, nil
 }
 
 func teardownCheckpointSchemaForPlan(plan Plan) string {
@@ -5189,22 +5257,31 @@ func marshalTeardownCheckpoint(value teardownCheckpoint) ([]byte, error) {
 }
 
 func readTeardownCheckpoint(path string) (teardownCheckpoint, error) {
+	_, value, err := readTeardownCheckpointIdentity(path)
+	return value, err
+}
+
+func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownCheckpoint, error) {
 	checkpointPath := path + ".teardown"
 	raw, err := readAtomicRegular(checkpointPath, maximumTeardownCheckpointBytes)
 	if errors.Is(err, os.ErrNotExist) {
-		raw, err = readAtomicRegular(checkpointPath+".tmp", maximumTeardownCheckpointBytes)
+		checkpointPath += ".tmp"
+		raw, err = readAtomicRegular(checkpointPath, maximumTeardownCheckpointBytes)
 	}
 	if err != nil {
-		return teardownCheckpoint{}, err
+		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
 	var value teardownCheckpoint
 	if err := decodeStrict(raw, &value); err != nil {
-		return teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
+		return exactFileIdentity{}, teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
 	}
 	if err := validateTeardownCheckpoint(value); err != nil {
-		return teardownCheckpoint{}, err
+		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
-	return value, nil
+	return exactFileIdentity{
+		path: checkpointPath, raw: raw, maximum: maximumTeardownCheckpointBytes,
+		description: "teardown checkpoint",
+	}, value, nil
 }
 
 func validateTeardownCheckpoint(value teardownCheckpoint) error {
@@ -5223,12 +5300,14 @@ func validateTeardownCheckpoint(value teardownCheckpoint) error {
 		return errors.New("T40.13 teardown checkpoint is invalid")
 	}
 	if value.Schema == teardownCheckpointSchema {
-		if value.SupervisionToken != "" || value.ModuleRoot != "" || value.PreparedPath != "" {
+		if value.SupervisionToken != "" || value.ModuleRoot != "" || value.PreparedPath != "" ||
+			value.PreparedDigest != "" {
 			return errors.New("T40.13 historical teardown checkpoint acquired supervision")
 		}
 	} else if !hexIdentity(value.SupervisionToken, 64) ||
 		!filepath.IsAbs(value.ModuleRoot) || filepath.Clean(value.ModuleRoot) == string(filepath.Separator) ||
 		!filepath.IsAbs(value.PreparedPath) || filepath.Clean(value.PreparedPath) == string(filepath.Separator) ||
+		!digestIdentity(value.PreparedDigest) ||
 		value.ModuleRoot == value.Workspace || isWithin(value.ModuleRoot, value.Workspace) ||
 		isWithin(value.Workspace, value.ModuleRoot) || value.PreparedPath == value.Workspace ||
 		isWithin(value.PreparedPath, value.Workspace) {
@@ -5262,7 +5341,8 @@ func resumeTeardownCheckpoint(
 	}
 	run := &execution{
 		ctx: ctx, moduleRoot: checkpoint.ModuleRoot, preparedPath: checkpoint.PreparedPath,
-		plan: plan, planBytes: planBytes, workspace: checkpoint.Workspace,
+		preparedDigest: checkpoint.PreparedDigest,
+		plan:           plan, planBytes: planBytes, workspace: checkpoint.Workspace,
 		observation: checkpoint.Observation, observationPath: path, checkpointPersisted: true,
 		supervision: supervision, checkpointDigest: checkpointDigest,
 		hostToolchainVerify: hostToolchainVerify,
@@ -5297,6 +5377,23 @@ func resumeTeardownCheckpoint(
 		return nil, err
 	}
 	return raw, nil
+}
+
+func validatePreparedPublicationDigest(path, expected string) (bool, error) {
+	if !digestIdentity(expected) {
+		return false, errors.New("T40.13 prepared admission digest is invalid")
+	}
+	raw, err := readPreparedPublicationBytes(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if digest(raw) != expected {
+		return true, errors.New("T40.13 prepared admission bytes changed")
+	}
+	return true, nil
 }
 
 func removeTeardownCheckpoint(path string) error {

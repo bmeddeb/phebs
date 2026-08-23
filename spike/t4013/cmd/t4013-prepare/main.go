@@ -25,32 +25,15 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
-	planBytes, err := os.ReadFile(*plan)
-	if err != nil {
-		fail("read plan: %v", err)
-	}
-	frozenPlan, err := t4013.DecodePlan(planBytes)
-	if err != nil {
-		fail("decode plan: %v", err)
-	}
-	preparedOutput := ""
-	if frozenPlan.Schema == t4013.PlanSchemaV25 {
-		preparedOutput = *output
-	}
 	request := t4013.PrepareRequest{
 		ModuleRoot: *root, Workspace: *workspace, PlanPath: *plan,
 		Confirm: *confirm, BasePort: *basePort,
 	}
-	var prepared t4013.Prepared
-	if frozenPlan.Schema == t4013.PlanSchemaV25 {
-		prepared, err = t4013.PrepareToOutput(ctx, request, preparedOutput)
-	} else {
-		prepared, err = t4013.Prepare(ctx, request)
-	}
+	prepared, err := t4013.PrepareToOutput(ctx, request, *output)
 	if err != nil {
 		fail("prepare: %v", err)
 	}
-	if frozenPlan.Schema == t4013.PlanSchemaV25 {
+	if prepared.Schema == t4013.PreparedSchemaV2 {
 		return
 	}
 	encoded, err := t4013.MarshalPrepared(prepared)

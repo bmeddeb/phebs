@@ -267,11 +267,13 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 		"go build -o \"${command_root}/\"",
 		"./spike/t4013/cmd/t4013-cleanup",
 		"./spike/t4013/cmd/t4013-execute",
+		"./spike/t4013/cmd/t4013-lock",
 		"./spike/t4013/cmd/t4013-prepare",
 		"./spike/t4013/cmd/t4013-receipt",
 		"run_v25_custody_command_in_repo_active",
 		"require_v25_custody_command \"$V25_CLEANUP_COMMAND\"",
 		"require_v25_custody_command \"$V25_EXECUTE_COMMAND\"",
+		"require_v25_custody_command \"$V25_LOCK_COMMAND\"",
 		"require_v25_custody_command \"$V25_PREPARE_COMMAND\"",
 		"$V25_RECEIPT_COMMAND",
 	} {
@@ -282,6 +284,31 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 	direct := source[strings.Index(source, "\nrun_v25_custody_command_in_repo_active() {\n"):strings.Index(source, "\nrequire_v25_custody_command() {\n")]
 	if strings.Contains(direct, "plan_go") || strings.Contains(direct, "go mod verify") {
 		t.Fatal("direct V25 operation wrapper starts an unsupervised Go verification process")
+	}
+}
+
+func TestCeremonyDriverSharesInheritedV25RunRootLock(t *testing.T) {
+	raw, err := os.ReadFile("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	for _, marker := range []string{
+		`exec "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"`,
+		`T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}"`,
+		`"$V25_LOCK_COMMAND" -run-root "$run_root" -adopt`,
+		`RUN_LOCK_TOKEN="inherited:${T4013_RUN_LOCK_FD}"`,
+		`enter_v25_run_lock "$@"`,
+	} {
+		if !strings.Contains(source, marker) {
+			t.Fatalf("shared V25 run-root lock marker is absent: %s", marker)
+		}
+	}
+	main := source[strings.Index(source, "\nmain() {\n"):]
+	enter := strings.Index(main, `enter_v25_run_lock "$@"`)
+	dispatch := strings.Index(main, `case "$command_name" in`)
+	if enter < 0 || dispatch < 0 || enter > dispatch {
+		t.Fatal("V25 run-root lock is not entered before command dispatch")
 	}
 }
 

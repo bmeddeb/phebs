@@ -1545,7 +1545,7 @@ Focused/race/docs gates and independent review remain mandatory before a later
 integration/freeze request; no scale/SLO, release, T40.13/Epic 40 closure, or
 Epic 41 progression follows.
 
-### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13d next)*
+### T40.13 pre-freeze remediation sequence *(planned 2026-08-22 · T40.13e next)*
 
 The exact post-commit review of `03422ddd07a0b4e6aa0ce26c5b375c682ab565d3`
 found ceremony-crash, custody-loss, orphan-process, and returned-evidence trust
@@ -1553,20 +1553,6 @@ failures after the host module, process, and capacity refusals were cleared.
 T40.13 remains the final neutral convergence gate. The following prerequisites
 are PR-sized, stacked in order, and do not authorize a freeze or use a ceremony
 as their test.
-
-**T40.13d · Custody mutation serialization and immutable admission** *(high ·
-needs T40.13c)* — put every V25 Prepare, Cleanup, Destroy, Execute, and Resume
-mutation under one crash-released run-root lock and bind admission inputs once.
-AC: the lock is acquired before output/custody precondition reads and those
-conditions are rechecked under the lock; direct APIs and the supported shell
-share the same exclusion rather than independent locks; one bounded exact
-plan/prepared byte identity is read and revalidated under that lock by Prepare,
-Cleanup, Destroy, Execute, and Resume; a prepared output cannot be written
-inside custody or the reviewed module checkout; the prepare CLI and library
-consume that identity instead of a schema double-read; competing-process,
-stale-lock, output-race, and crash-release tests prove that one operation
-cannot delete or overwrite another operation's
-authority; historical V1–V24 entry points remain byte-compatible.
 
 **T40.13e · Executed-tool identity closure** *(high · needs T40.13d)* — make
 the executable identities verified at freeze be the identities used at every

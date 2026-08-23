@@ -102,28 +102,39 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		return Prepared{}, errors.New("T40.13 workspace parent must be an absolute real path")
 	}
 	workspace := filepath.Join(workspaceParent, filepath.Base(request.Workspace))
+	planIdentity, plan, err := readPlanIdentity(request.PlanPath)
+	if err != nil {
+		return Prepared{}, err
+	}
+	planBytes := planIdentity.raw
+	version := planSchemaVersion(plan.Schema)
+	var admissionLock *runRootLock
+	if version >= 25 {
+		admissionLock, err = lockRunRoot(workspaceParent)
+		if err != nil {
+			return Prepared{}, err
+		}
+		defer func() {
+			retErr = errors.Join(retErr, admissionLock.Close())
+		}()
+		if err := planIdentity.revalidate(); err != nil {
+			return Prepared{}, err
+		}
+	}
 	if workspace == moduleRoot || isWithin(workspace, moduleRoot) || isWithin(moduleRoot, workspace) {
 		return Prepared{}, errors.New("T40.13 workspace must be outside and must not contain the module root")
 	}
 	if _, err := os.Lstat(workspace); err == nil || !os.IsNotExist(err) {
 		return Prepared{}, errors.New("T40.13 workspace must not already exist")
 	}
-	planBytes, err := os.ReadFile(request.PlanPath)
-	if err != nil {
-		return Prepared{}, fmt.Errorf("read T40.13 plan: %w", err)
-	}
-	plan, err := DecodePlan(planBytes)
-	if err != nil {
-		return Prepared{}, err
-	}
-	version := planSchemaVersion(plan.Schema)
 	preparedOutput := ""
 	if version >= 25 {
 		if output == "" {
 			return Prepared{}, errors.New("T40.13 V25 preparation requires durable output authority")
 		}
 		preparedOutput, err = canonicalNewOutputPath(output)
-		if err != nil || preparedOutput == workspace || isWithin(preparedOutput, workspace) {
+		if err != nil || preparedOutput == workspace || isWithin(preparedOutput, workspace) ||
+			preparedOutput == moduleRoot || isWithin(preparedOutput, moduleRoot) {
 			return Prepared{}, errors.Join(err, errors.New("T40.13 prepared output is invalid"))
 		}
 		for _, path := range []string{preparedOutput, preparedOutput + ".tmp", preparedOutput + ".preparing"} {
@@ -623,7 +634,11 @@ func MarshalPrepared(value Prepared) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(encoded, '\n'), nil
+	encoded = append(encoded, '\n')
+	if len(encoded) > MaxObservationBytes {
+		return nil, errors.New("T40.13 prepared custody exceeds its fixed byte bound")
+	}
+	return encoded, nil
 }
 
 func DecodePrepared(raw []byte, planDigest string) (Prepared, error) {
@@ -646,27 +661,50 @@ func DecodePrepared(raw []byte, planDigest string) (Prepared, error) {
 	return value, nil
 }
 
-func DestroyPrepared(value Prepared, moduleRoot string) error {
-	realModuleRoot, err := filepath.EvalSymlinks(moduleRoot)
-	if validatePrepared(value) != nil || err != nil || !filepath.IsAbs(realModuleRoot) {
+func DestroyPrepared(value Prepared, moduleRoot string) (retErr error) {
+	preparedRaw, err := MarshalPrepared(value)
+	if err != nil {
 		return errors.New("T40.13 prepared cleanup request is invalid")
 	}
-	workspace := filepath.Dir(filepath.Dir(value.Profiles[0].Config))
-	if filepath.Dir(filepath.Dir(value.Profiles[1].Config)) != workspace {
+	boundValue, err := DecodePrepared(preparedRaw, value.PlanDigest)
+	if err != nil {
+		return errors.New("T40.13 prepared cleanup request is invalid")
+	}
+	realModuleRoot, err := filepath.EvalSymlinks(moduleRoot)
+	if err != nil || !filepath.IsAbs(realModuleRoot) {
+		return errors.New("T40.13 prepared cleanup request is invalid")
+	}
+	workspace := filepath.Dir(filepath.Dir(boundValue.Profiles[0].Config))
+	if filepath.Dir(filepath.Dir(boundValue.Profiles[1].Config)) != workspace {
 		return errors.New("T40.13 prepared cleanup custody differs")
 	}
 	realWorkspace, supervisionDirectory, err := custodyControlDirectory(workspace)
 	if err != nil {
 		return errors.New("T40.13 prepared cleanup custody is invalid")
 	}
-	for _, profile := range value.Profiles {
+	if boundValue.SupervisionToken != "" {
+		admissionLock, lockErr := lockRunRoot(filepath.Dir(realWorkspace))
+		if lockErr != nil {
+			return lockErr
+		}
+		defer func() {
+			retErr = errors.Join(retErr, admissionLock.Close())
+		}()
+		currentRaw, marshalErr := MarshalPrepared(value)
+		if marshalErr != nil || !bytes.Equal(currentRaw, preparedRaw) {
+			return errors.Join(
+				marshalErr, errors.New("T40.13 prepared cleanup admission changed before locking"),
+			)
+		}
+	}
+	for _, profile := range boundValue.Profiles {
 		for _, path := range []string{profile.Repository, profile.Config, profile.Credential, profile.DataDir, profile.Catalog} {
 			if !isWithin(path, workspace) {
 				return errors.New("T40.13 prepared cleanup path escaped custody")
 			}
 		}
 	}
-	if value.SupervisionToken == "" {
+	if boundValue.SupervisionToken == "" {
 		for _, path := range []string{
 			supervisionDirectory,
 			supervisionDirectory + ".retiring",
@@ -686,7 +724,7 @@ func DestroyPrepared(value Prepared, moduleRoot string) error {
 		return errors.New("T40.13 executed custody marker cannot be inspected")
 	}
 	return destroySupervisedPreparedCustody(
-		realWorkspace, realModuleRoot, value.PlanDigest, value.SupervisionToken,
+		realWorkspace, realModuleRoot, boundValue.PlanDigest, boundValue.SupervisionToken,
 	)
 }
 
@@ -706,53 +744,45 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) (retErr
 	if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
 		return errors.New("T40.13 prepared cleanup control is invalid")
 	}
-	planBytes, err := os.ReadFile(planPath)
-	if err != nil {
-		return fmt.Errorf("read T40.13 cleanup plan: %w", err)
-	}
-	plan, err := DecodePlan(planBytes)
+	planIdentity, plan, err := readPlanIdentity(planPath)
 	if err != nil {
 		return err
 	}
+	planBytes := planIdentity.raw
 	if planSchemaVersion(plan.Schema) < 25 {
 		return cleanupPreparedLegacy(realModuleRoot, planPath, preparedPath, planBytes)
 	}
 	planDigest := PlanDigest(planBytes)
-	prepared, preparedErr := readPreparedPublication(preparedPath, planDigest)
-	controlPath := preparedPath + ".preparing"
-	_, controlStatErr := os.Lstat(controlPath)
-	controlPreexisting := controlStatErr == nil
-	if controlStatErr != nil && !errors.Is(controlStatErr, os.ErrNotExist) {
-		return errors.New("T40.13 prepared cleanup authority cannot be inspected")
+	locator, err := readPreparedCleanupAdmission(realModuleRoot, preparedPath, planDigest)
+	if err != nil {
+		return err
 	}
-	var control preparedCleanupControl
-	if preparedErr == nil {
-		if prepared.Schema != PreparedSchemaV2 {
-			return errors.New("T40.13 prepared custody lacks supervised identity")
-		}
-		expected := preparedCleanupControl{
-			Schema: preparedCleanupSchemaV2, PlanDigest: planDigest, ModuleRoot: realModuleRoot,
-			Workspace:        filepath.Dir(filepath.Dir(prepared.Profiles[0].Config)),
-			SupervisionToken: prepared.SupervisionToken,
-		}
-		if controlPreexisting {
-			control, err = readPreparedCleanupControl(controlPath)
-			if err != nil {
-				return err
-			}
-			if control != expected {
-				return errors.New("T40.13 prepared cleanup authority differs")
-			}
-		} else {
-			control = expected
-			if err := ensurePreparedCleanupControl(controlPath, control); err != nil {
-				return err
-			}
-		}
-	} else {
-		control, err = readPreparedCleanupControl(controlPath)
-		if err != nil {
-			return errors.Join(preparedErr, err)
+	canonicalWorkspace, _, err := custodyControlDirectory(locator.control.Workspace)
+	if err != nil {
+		return err
+	}
+	admissionLock, err := lockRunRoot(filepath.Dir(canonicalWorkspace))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		retErr = errors.Join(retErr, admissionLock.Close())
+	}()
+	if err := planIdentity.revalidate(); err != nil {
+		return err
+	}
+	locked, err := readPreparedCleanupAdmission(realModuleRoot, preparedPath, planDigest)
+	if err != nil {
+		return err
+	}
+	if !locator.equal(locked) {
+		return errors.New("T40.13 prepared cleanup admission changed before locking")
+	}
+	control := locked.control
+	controlPath := locked.controlPath
+	if !locked.controlPreexisting {
+		if err := ensurePreparedCleanupControl(controlPath, control); err != nil {
+			return err
 		}
 	}
 	if control.Schema != preparedCleanupSchemaV2 || control.PlanDigest != planDigest ||
@@ -760,8 +790,8 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) (retErr
 		!hexIdentity(control.SupervisionToken, 64) ||
 		control.Workspace == realModuleRoot || isWithin(control.Workspace, realModuleRoot) ||
 		isWithin(realModuleRoot, control.Workspace) || planPath == control.Workspace ||
-		preparedPath == control.Workspace || isWithin(planPath, control.Workspace) ||
-		isWithin(preparedPath, control.Workspace) {
+		locked.preparedPath == control.Workspace || isWithin(planPath, control.Workspace) ||
+		isWithin(locked.preparedPath, control.Workspace) {
 		return errors.New("T40.13 prepared cleanup controls must remain outside custody")
 	}
 	if _, markerErr := os.Lstat(filepath.Join(control.Workspace, executedMarkerName)); markerErr == nil {
@@ -774,13 +804,81 @@ func CleanupPrepared(moduleRoot, planPath, preparedPath, confirm string) (retErr
 	); err != nil {
 		return err
 	}
-	if err := removePreparedPublication(preparedPath); err != nil {
+	if err := removePreparedPublication(locked.preparedPath); err != nil {
 		return fmt.Errorf("remove T40.13 prepared manifest: %w", err)
 	}
 	if err := removePreparedCleanupControl(controlPath); err != nil {
 		return err
 	}
 	return nil
+}
+
+type preparedCleanupAdmission struct {
+	preparedPath       string
+	controlPath        string
+	preparedRaw        []byte
+	controlRaw         []byte
+	controlPreexisting bool
+	control            preparedCleanupControl
+}
+
+func readPreparedCleanupAdmission(
+	moduleRoot, preparedPath, planDigest string,
+) (preparedCleanupAdmission, error) {
+	canonical, err := canonicalExistingAuthorityPath(preparedPath)
+	if err != nil {
+		return preparedCleanupAdmission{}, errors.Join(
+			err, errors.New("T40.13 prepared cleanup path is not canonical"),
+		)
+	}
+	admission := preparedCleanupAdmission{
+		preparedPath: canonical,
+		controlPath:  canonical + ".preparing",
+	}
+	admission.preparedRaw, err = readPreparedPublicationBytes(canonical)
+	preparedErr := err
+	var prepared Prepared
+	if preparedErr == nil {
+		prepared, preparedErr = DecodePrepared(admission.preparedRaw, planDigest)
+	}
+	admission.controlRaw, err = readAtomicRegular(admission.controlPath, preparedCleanupMaxBytes)
+	if err == nil {
+		admission.controlPreexisting = true
+		if err := decodeStrict(admission.controlRaw, &admission.control); err != nil ||
+			!validPreparedCleanupIdentity(admission.control) {
+			return preparedCleanupAdmission{}, errors.Join(
+				err, errors.New("T40.13 prepared cleanup authority is invalid"),
+			)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return preparedCleanupAdmission{}, errors.New("T40.13 prepared cleanup authority cannot be inspected")
+	}
+	if preparedErr == nil {
+		if prepared.Schema != PreparedSchemaV2 {
+			return preparedCleanupAdmission{}, errors.New("T40.13 prepared custody lacks supervised identity")
+		}
+		expected := preparedCleanupControl{
+			Schema: preparedCleanupSchemaV2, PlanDigest: planDigest, ModuleRoot: moduleRoot,
+			Workspace:        filepath.Dir(filepath.Dir(prepared.Profiles[0].Config)),
+			SupervisionToken: prepared.SupervisionToken,
+		}
+		if admission.controlPreexisting && admission.control != expected {
+			return preparedCleanupAdmission{}, errors.New("T40.13 prepared cleanup authority differs")
+		}
+		admission.control = expected
+	} else if !admission.controlPreexisting {
+		return preparedCleanupAdmission{}, errors.Join(preparedErr, os.ErrNotExist)
+	}
+	return admission, nil
+}
+
+func (admission preparedCleanupAdmission) equal(other preparedCleanupAdmission) bool {
+	return admission.preparedPath == other.preparedPath &&
+		admission.controlPath == other.controlPath &&
+		admission.controlPreexisting == other.controlPreexisting &&
+		admission.control == other.control &&
+		bytes.Equal(admission.preparedRaw, other.preparedRaw) &&
+		bytes.Equal(admission.controlRaw, other.controlRaw)
 }
 
 func destroySupervisedPreparedCustody(
@@ -863,7 +961,7 @@ func cleanupPreparedLegacy(moduleRoot, planPath, preparedPath string, planBytes 
 	return os.Remove(preparedPath)
 }
 
-func readPreparedPublication(path, planDigest string) (Prepared, error) {
+func readPreparedPublicationBytes(path string) ([]byte, error) {
 	var selected []byte
 	for _, candidate := range []string{path, path + ".tmp"} {
 		raw, err := readAtomicRegular(candidate, MaxObservationBytes)
@@ -871,17 +969,17 @@ func readPreparedPublication(path, planDigest string) (Prepared, error) {
 			continue
 		}
 		if err != nil {
-			return Prepared{}, err
+			return nil, err
 		}
 		if selected != nil && !bytes.Equal(selected, raw) {
-			return Prepared{}, errors.New("T40.13 prepared publication controls differ")
+			return nil, errors.New("T40.13 prepared publication controls differ")
 		}
 		selected = raw
 	}
 	if selected == nil {
-		return Prepared{}, os.ErrNotExist
+		return nil, os.ErrNotExist
 	}
-	return DecodePrepared(selected, planDigest)
+	return selected, nil
 }
 
 func writePreparedCleanupControl(path string, value preparedCleanupControl) error {

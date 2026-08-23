@@ -10,6 +10,7 @@ umask 077
 
 readonly SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+readonly SCRIPT_PATH="${SCRIPT_DIRECTORY}/$(basename "${BASH_SOURCE[0]}")"
 readonly SCRIPT_REPO_ROOT="$(cd "${SCRIPT_DIRECTORY}/../.." && pwd -P)"
 readonly DEFAULT_BASE_PORT=41731
 readonly EXECUTE_APPROVAL="execute-reviewed-neutral-t4013-plan"
@@ -32,16 +33,18 @@ SIGNING_KEY=""
 SIGNING_ROOT=""
 REPO_REAL=""
 CEREMONY_REAL=""
-CLOSED_GO_CACHE=""
-V25_CLEANUP_COMMAND=""
-V25_EXECUTE_COMMAND=""
-V25_PREPARE_COMMAND=""
-V25_RECEIPT_COMMAND=""
+CLOSED_GO_CACHE="${CLOSED_GO_CACHE:-}"
+V25_CLEANUP_COMMAND="${V25_CLEANUP_COMMAND:-}"
+V25_EXECUTE_COMMAND="${V25_EXECUTE_COMMAND:-}"
+V25_LOCK_COMMAND="${V25_LOCK_COMMAND:-}"
+V25_PREPARE_COMMAND="${V25_PREPARE_COMMAND:-}"
+V25_RECEIPT_COMMAND="${V25_RECEIPT_COMMAND:-}"
 EXIT_PREPARED_PLAN=""
 EXIT_PREPARED_MANIFEST=""
 EXIT_PREPARED_WORKSPACE=""
 RUN_LOCK_DIRECTORY=""
 RUN_LOCK_TOKEN=""
+RUN_LOCK_INHERITED=0
 EXIT_UNPROVEN_REASON=""
 ACTIVE_CHILD_PID=""
 
@@ -68,6 +71,7 @@ closed_go() {
     GOFLAGS= \
     GOTOOLCHAIN=local \
     GOWORK=off \
+    T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
     "$@"
 }
 
@@ -98,6 +102,7 @@ closed_go_active() {
     GOFLAGS= \
     GOTOOLCHAIN=local \
     GOWORK=off \
+    T4013_RUN_LOCK_FD="${T4013_RUN_LOCK_FD:-}" \
     "$@"
 }
 
@@ -112,15 +117,16 @@ initialize_v25_custody_commands() {
   [[ -n "$REPO_REAL" ]] || die "repository must be initialized before building custody commands"
   initialize_closed_go_cache
   if [[ -n "$V25_CLEANUP_COMMAND" && -n "$V25_EXECUTE_COMMAND" &&
+    -n "$V25_LOCK_COMMAND" &&
     -n "$V25_PREPARE_COMMAND" && -n "$V25_RECEIPT_COMMAND" ]]; then
-    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" \
+    for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
       "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
       require_v25_custody_command "$command_path" ||
         die "prebuilt V25 custody command became invalid: $command_path"
     done
     return 0
   fi
-  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_EXECUTE_COMMAND" &&
+  [[ -z "$V25_CLEANUP_COMMAND" && -z "$V25_EXECUTE_COMMAND" && -z "$V25_LOCK_COMMAND" &&
     -z "$V25_PREPARE_COMMAND" && -z "$V25_RECEIPT_COMMAND" ]] ||
     die "prebuilt V25 custody-command state is incomplete"
   command_root="${CLOSED_GO_CACHE}/t4013-custody-commands"
@@ -129,13 +135,15 @@ initialize_v25_custody_commands() {
     go build -o "${command_root}/" \
     ./spike/t4013/cmd/t4013-cleanup \
     ./spike/t4013/cmd/t4013-execute \
+    ./spike/t4013/cmd/t4013-lock \
     ./spike/t4013/cmd/t4013-prepare \
     ./spike/t4013/cmd/t4013-receipt)
   V25_CLEANUP_COMMAND="${command_root}/t4013-cleanup"
   V25_EXECUTE_COMMAND="${command_root}/t4013-execute"
+  V25_LOCK_COMMAND="${command_root}/t4013-lock"
   V25_PREPARE_COMMAND="${command_root}/t4013-prepare"
   V25_RECEIPT_COMMAND="${command_root}/t4013-receipt"
-  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" \
+  for command_path in "$V25_CLEANUP_COMMAND" "$V25_EXECUTE_COMMAND" "$V25_LOCK_COMMAND" \
     "$V25_PREPARE_COMMAND" "$V25_RECEIPT_COMMAND"; do
     [[ -f "$command_path" && ! -L "$command_path" && -x "$command_path" ]] ||
       die "prebuilt V25 custody command is invalid: $command_path"
@@ -212,6 +220,17 @@ acquire_run_lock() {
   [[ -z "$RUN_LOCK_DIRECTORY" && -z "$RUN_LOCK_TOKEN" ]] ||
     die "this driver already owns a ceremony operation lock"
   RUN_LOCK_DIRECTORY="${run_root}/.t4013-operation.lock"
+  if [[ -n "${T4013_RUN_LOCK_FD:-}" ]]; then
+    [[ "$T4013_RUN_LOCK_FD" =~ ^[0-9]+$ && "$T4013_RUN_LOCK_FD" -ge 3 ]] ||
+      die "inherited V25 ceremony operation lock is invalid"
+    require_v25_custody_command "$V25_LOCK_COMMAND" ||
+      die "V25 run-root lock command is unavailable while adopting inherited custody"
+    "$V25_LOCK_COMMAND" -run-root "$run_root" -adopt ||
+      die "inherited V25 ceremony operation lock cannot be adopted"
+    RUN_LOCK_TOKEN="inherited:${T4013_RUN_LOCK_FD}"
+    RUN_LOCK_INHERITED=1
+    return
+  fi
   if ! mkdir -m 700 -- "$RUN_LOCK_DIRECTORY"; then
     RUN_LOCK_DIRECTORY=""
     die "ceremony operation lock is retained; prove no operation owns it before reviewed removal"
@@ -227,6 +246,15 @@ release_run_lock() {
   if [[ -z "$RUN_LOCK_DIRECTORY" || -z "$RUN_LOCK_TOKEN" ]]; then
     printf '%s: ceremony operation lock ownership is incomplete; lock retained for review\n' "$SCRIPT_NAME" >&2
     return 1
+  fi
+  if (( RUN_LOCK_INHERITED == 1 )); then
+    if [[ ! -f "$RUN_LOCK_DIRECTORY" || -L "$RUN_LOCK_DIRECTORY" ]]; then
+      printf '%s: inherited V25 ceremony operation lock changed; lock retained by the process\n' "$SCRIPT_NAME" >&2
+      return 1
+    fi
+    RUN_LOCK_DIRECTORY=""
+    RUN_LOCK_TOKEN=""
+    return 0
   fi
   owner="${RUN_LOCK_DIRECTORY}/owner"
   if [[ ! -d "$RUN_LOCK_DIRECTORY" || -L "$RUN_LOCK_DIRECTORY" ||
@@ -250,6 +278,31 @@ release_run_lock() {
   fi
   RUN_LOCK_DIRECTORY=""
   RUN_LOCK_TOKEN=""
+}
+
+enter_v25_run_lock() {
+  local command_name="${1:-}" ceremony_id run_root plan_path
+  [[ "$command_name" == execute || "$command_name" == seal ]] || return 0
+  if [[ "$command_name" == execute && $# -ne 4 ]] ||
+    [[ "$command_name" == seal && $# -ne 2 ]]; then
+    return 0
+  fi
+  [[ -z "${T4013_RUN_LOCK_FD:-}" ]] || return 0
+  ceremony_id="${2:-}"
+  validate_id "$ceremony_id"
+  initialize_repository
+  initialize_ceremony_root
+  run_root="$(run_root_for "$ceremony_id")"
+  plan_path="${run_root}/evidence/plan.json"
+  [[ -d "$run_root" && ! -L "$run_root" && -f "$plan_path" && ! -L "$plan_path" ]] ||
+    return 0
+  is_v25_plan "$plan_path" || return 0
+  initialize_v25_custody_commands
+  require_v25_custody_command "$V25_LOCK_COMMAND" ||
+    die "V25 run-root lock command was not prebuilt before operation admission"
+  export CLOSED_GO_CACHE V25_CLEANUP_COMMAND V25_EXECUTE_COMMAND V25_LOCK_COMMAND
+  export V25_PREPARE_COMMAND V25_RECEIPT_COMMAND
+  exec "$V25_LOCK_COMMAND" -run-root "$run_root" -- "$SCRIPT_PATH" "$@"
 }
 
 closed_git() {
@@ -1132,6 +1185,7 @@ main() {
   trap 'retain_on_signal INT 130' INT
   trap 'retain_on_signal TERM 143' TERM
   trap 'retain_on_signal HUP 129' HUP
+  enter_v25_run_lock "$@"
   case "$command_name" in
     preflight)
       [[ $# -eq 1 ]] || { usage; exit 2; }

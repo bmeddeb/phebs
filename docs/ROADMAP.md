@@ -1722,10 +1722,19 @@ legacy Destroy has stricter symlink and stable/retiring/retired
 V25-supervision refusal. Production paths gain no work, and no freeze or
 ceremony is authorized.
 
-T40.13d's shared custody-mutation/admission lock is now the only next scale
-ticket inside the still-open T40.13 gate. Critical/high prerequisites continue
-through T40.13e exact executed-tool identity,
-T40.13f hermetic execution controls, and T40.13g an authenticated bounded
+T40.13d is complete. Every V25 custody mutator now shares one persistent
+crash-released run-root lock between direct APIs and the supported shell,
+acquires it before custody/output admission, and revalidates bounded exact
+plan, prepared, cleanup-control, or checkpoint bytes under that lock. Prepare
+also refuses prepared output inside custody or the reviewed module checkout,
+and its CLI no longer decodes the plan separately. Execute checkpoints bind
+the prepared digest, while a no-checkpoint Resume is read-only unless a final
+observation is already settled. Historical V1–V24 bytes and supported paths
+remain compatible.
+
+T40.13e exact executed-tool identity is now the only next scale ticket inside
+the still-open T40.13 gate. Critical/high prerequisites continue through
+T40.13f hermetic execution controls and T40.13g an authenticated bounded
 returned-evidence firewall. Medium tickets close resumable seal/keypair
 integrity (T40.13h), bounded exact-control inspection (T40.13i), overflow-safe
 arithmetic (T40.13j), and complete admission accounting (T40.13k). T40.13l last
@@ -1733,6 +1742,17 @@ closes low-risk cost-first refusal ordering. The original T40.13 neutral
 convergence gate follows only after the complete stack, bounded regressions,
 independent review, and separate authorization. No ticket may use a freeze,
 rehearsal, or giant authoring run as its regression test.
+
+This lock adds no production query/request, sync-tick, startup, or publication
+work. One V25 run retains one zero-byte lock inode; a direct operation holds one
+descriptor and the shell passes that descriptor to descendants for the full
+operation. Admission and retry perform only a fixed lock attempt plus bounded
+reads: plan 64 KiB, prepared 256 KiB, cleanup control 4 KiB, and teardown
+checkpoint 260 KiB. Runs with different roots remain independent; one run root
+is intentionally serialized. A crashed shell's surviving descendant can retain
+one descriptor until exit, after which the kernel releases the lock. There is
+no corpus, shard, process-table, or tree-hash scan. No freeze, ceremony,
+release, topology/bound change, or scale/SLO claim is authorized.
 
 Production registration of the evidence and Workbench surfaces still requires:
 
