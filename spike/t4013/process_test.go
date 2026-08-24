@@ -803,7 +803,7 @@ func TestRSSSamplerCountsChildLifetimesInConstantSpace(t *testing.T) {
 func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 	root := processSnapshotRow(10, 1, 4, "", "/private/phebs")
 	child := processSnapshotRow(11, 10, 8, "", "/usr/bin/git")
-	disappeared := errors.Join(errProcessIdentityDisappeared, errors.New("process exited"))
+	missing := errors.Join(errProcessIdentityMissing, errors.New("process exited"))
 	identity := func(sampler *rssSampler, childError error, wrongParent bool) func(int, processSnapshot) (processIdentityObservation, error) {
 		return func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
 			if pid == 11 && childError != nil {
@@ -823,7 +823,7 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 
 	t.Run("fresh complete retry commits", func(t *testing.T) {
 		sampler := newSyntheticRSSSampler(10)
-		sampler.identityProbe = identity(sampler, disappeared, false)
+		sampler.identityProbe = identity(sampler, missing, false)
 		attempts := 0
 		waits := 0
 		sampler.retryWait = func(context.Context) error {
@@ -879,7 +879,7 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 	t.Run("disappearance exhaustion preserves prior state", func(t *testing.T) {
 		sampler := newSyntheticRSSSampler(10)
 		sampler.recordSnapshot([]byte(root+child), nil)
-		sampler.identityProbe = identity(sampler, disappeared, false)
+		sampler.identityProbe = identity(sampler, missing, false)
 		attempts := 0
 		waits := 0
 		sampler.retryWait = func(context.Context) error {
@@ -902,7 +902,7 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 
 	t.Run("first-sample disappearance exhaustion commits nothing", func(t *testing.T) {
 		sampler := newSyntheticRSSSampler(10)
-		sampler.identityProbe = identity(sampler, disappeared, false)
+		sampler.identityProbe = identity(sampler, missing, false)
 		attempts := 0
 		waits := 0
 		sampler.retryWait = func(context.Context) error {
@@ -939,7 +939,7 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 		}
 		sampler.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
 			if pid == 11 && attempts == 1 {
-				return processIdentityObservation{}, disappeared
+				return processIdentityObservation{}, missing
 			}
 			return identity(sampler, nil, true)(pid, candidate)
 		}
@@ -953,7 +953,7 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 
 	t.Run("deadline cancellation during retry is sticky", func(t *testing.T) {
 		sampler := newSyntheticRSSSampler(10)
-		sampler.identityProbe = identity(sampler, disappeared, false)
+		sampler.identityProbe = identity(sampler, missing, false)
 		attempts := 0
 		waits := 0
 		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
@@ -970,6 +970,33 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 			attempts != 1 || waits != 1 || sampler.failedSamples != 1 || peak != 0 || gitChildren != 0 {
 			t.Fatalf("deadline retry = attempts:%d waits:%d peak:%d git:%d failures:%d err=%v",
 				attempts, waits, peak, gitChildren, sampler.failedSamples, err)
+		}
+	})
+
+	t.Run("root disappearance never retries", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		attempts := 0
+		waits := 0
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		sampler.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+			if pid == 10 {
+				return processIdentityObservation{}, missing
+			}
+			return identity(sampler, nil, false)(pid, candidate)
+		}
+		sampler.sample()
+		_, _, _, _, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || attempts != 1 || waits != 0 ||
+			sampler.failedSamples != 1 || errors.Is(err, errProcessChildIdentityDisappeared) {
+			t.Fatalf("root disappearance retry = attempts:%d waits:%d failures:%d err=%v",
+				attempts, waits, sampler.failedSamples, err)
 		}
 	})
 }

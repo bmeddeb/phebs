@@ -19,7 +19,7 @@ func processStartIdentity(pid int, _ processSnapshot) (processIdentityObservatio
 	if err != nil {
 		if errors.Is(err, unix.EIO) || errors.Is(err, unix.ESRCH) {
 			return processIdentityObservation{}, errors.Join(
-				errProcessIdentityDisappeared,
+				errProcessIdentityMissing,
 				fmt.Errorf("T40.13 inspect process identity: %w", err),
 			)
 		}

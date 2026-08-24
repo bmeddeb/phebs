@@ -1650,7 +1650,7 @@ reuses the complete V25 host observation and plan-binding boundary before
 controls or builds; the corrected rehearsal and independent review remain open.
 Real convergence then reproduced Darwin's child-exit race between `ps` and
 `kern.proc.pid`. T40.13a now permits at most two fresh complete retries only for a typed
-disappeared child, with both attempts sharing the existing two-second deadline;
+disappeared child, with all attempts sharing the existing two-second deadline;
 every other failure remains sticky and no failed attempt contributes evidence.
 The corrected full rehearsal remains `BLOCKED / HIGH` on
 `sustained_child_identity_churn` and

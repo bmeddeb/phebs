@@ -556,22 +556,23 @@ func buildWorkingTreeToolchain(
 			return privateToolchain{}, err
 		}
 	}
-	hydrations := []struct {
-		args []string
-		env  []string
-	}{
-		{[]string{"list", "-deps", "./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index", "./cmd/phebs-focused-index"}, nil},
-		{[]string{"list", "-deps", "github.com/bufbuild/buf/cmd/buf"}, []string{"CGO_ENABLED=0"}},
+	goPath, err := toolchain.host.goDriver.pathForLaunch(ctx)
+	if err != nil {
+		return privateToolchain{}, err
 	}
-	for _, hydration := range hydrations {
-		command := exec.CommandContext(ctx, "go", hydration.args...)
-		command.Dir = moduleRoot
-		command.Env = append(executionEnvironmentForControls(toolchain.controls, true), hydration.env...)
-		if output, err := runCustodyCombinedOutput(command); err != nil {
-			return privateToolchain{}, fmt.Errorf("hydrate readiness modules: %w: %s", err, output)
-		}
+	hydrate := exec.CommandContext(ctx, goPath, "list", "-deps",
+		"./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index",
+		"./cmd/phebs-focused-index", "github.com/bufbuild/buf/cmd/buf")
+	hydrate.Dir = moduleRoot
+	hydrate.Env = executionEnvironmentForControls(toolchain.controls, true)
+	if output, err := runCustodyCombinedOutput(hydrate); err != nil {
+		return privateToolchain{}, fmt.Errorf("hydrate readiness modules: %w: %s", err, output)
 	}
-	verify := exec.CommandContext(ctx, "go", "mod", "verify")
+	goPath, err = toolchain.host.goDriver.pathForLaunch(ctx)
+	if err != nil {
+		return privateToolchain{}, err
+	}
+	verify := exec.CommandContext(ctx, goPath, "mod", "verify")
 	verify.Dir = moduleRoot
 	verify.Env = executionEnvironmentForControls(toolchain.controls, true)
 	if output, err := runCustodyCombinedOutput(verify); err != nil {
@@ -592,7 +593,11 @@ func buildWorkingTreeToolchain(
 		{toolchain.Buf, "github.com/bufbuild/buf/cmd/buf", []string{"CGO_ENABLED=0"}},
 	}
 	for _, build := range builds {
-		command := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", build.output, build.path)
+		goPath, err := toolchain.host.goDriver.pathForLaunch(ctx)
+		if err != nil {
+			return privateToolchain{}, err
+		}
+		command := exec.CommandContext(ctx, goPath, "build", "-trimpath", "-o", build.output, build.path)
 		command.Dir = moduleRoot
 		command.Env = executionEnvironmentForControls(toolchain.controls, false)
 		command.Env = append(command.Env, build.env...)

@@ -20,7 +20,7 @@ func processStartIdentity(pid int, _ processSnapshot) (processIdentityObservatio
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return processIdentityObservation{}, errors.Join(
-				errProcessIdentityDisappeared,
+				errProcessIdentityMissing,
 				fmt.Errorf("T40.13 open process identity: %w", err),
 			)
 		}

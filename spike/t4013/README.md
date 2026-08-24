@@ -3035,7 +3035,7 @@ V25 now accepts a process sample only after the bounded `ps` command, complete
 snapshot parse, RSS sum, root check, and child-lifetime classification all
 succeed. A child typed as disappeared between `ps` and its Darwin/Linux kernel
 identity read permits at most two fresh whole-sample retries under the same two-second
-deadline. The retry reruns every read and commits only if the complete second
+deadline. Retry reruns every read and commits only if one complete retry
 attempt succeeds; every other error is immediately sticky. A failed logical
 sample changes no metrics and retains one typed first cause
 plus a saturating count; phase reset does not erase it. Root absence fails

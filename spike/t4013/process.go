@@ -36,7 +36,9 @@ var errPrivateServerShutdownUnproven = errors.New("T40.13 private process sessio
 
 var errProcessSamplingFailed = errors.New("T40.13 process sampling failed")
 
-var errProcessIdentityDisappeared = errors.New("T40.13 process disappeared before identity capture")
+var errProcessIdentityMissing = errors.New("T40.13 process disappeared before identity capture")
+
+var errProcessChildIdentityDisappeared = errors.New("T40.13 child disappeared before identity capture")
 
 type privateToolchain struct {
 	Schema            string
@@ -197,40 +199,33 @@ func buildPrivateToolchain(
 				return privateToolchain{}, metrics, errors.New("T40.13 private Go cache is not new")
 			}
 		}
-		hydrations := []struct {
-			args []string
-			env  []string
-		}{
-			{[]string{"list", "-deps", "./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index", "./cmd/phebs-focused-index"}, nil},
-			{[]string{"list", "-deps", "github.com/bufbuild/buf/cmd/buf"}, []string{"CGO_ENABLED=0"}},
-		}
-		for _, hydration := range hydrations {
-			goPath, err := hostTools.goDriver.pathForLaunch(ctx)
-			if err != nil {
-				return privateToolchain{}, metrics, err
-			}
-			command := exec.CommandContext(ctx, goPath, hydration.args...)
-			command.Dir = source
-			command.Env = append(executionEnvironmentForControls(controls, true), hydration.env...)
-			command.Stdout, command.Stderr = io.Discard, io.Discard
-			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
-			if commandErr != nil {
-				commandErr = sanitizeMeasuredCommandFailure("T40.13 private module hydration failed", commandErr)
-			}
-			metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
-			if err != nil {
-				return privateToolchain{}, metrics, err
-			}
-		}
 		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
-		command := exec.CommandContext(ctx, goPath, "mod", "verify")
+		command := exec.CommandContext(ctx, goPath, "list", "-deps",
+			"./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index",
+			"./cmd/phebs-focused-index", "github.com/bufbuild/buf/cmd/buf")
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
+		if commandErr != nil {
+			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module hydration failed", commandErr)
+		}
+		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+		goPath, err = hostTools.goDriver.pathForLaunch(ctx)
+		if err != nil {
+			return privateToolchain{}, metrics, err
+		}
+		command = exec.CommandContext(ctx, goPath, "mod", "verify")
+		command.Dir = source
+		command.Env = executionEnvironmentForControls(controls, true)
+		command.Stdout, command.Stderr = io.Discard, io.Discard
+		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
 		if commandErr != nil {
 			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
 		}
@@ -1094,7 +1089,7 @@ func (sampler *rssSampler) sample() {
 			return
 		}
 		attemptErrs = append(attemptErrs, sampleErr)
-		if !errors.Is(sampleErr, errProcessIdentityDisappeared) {
+		if !errors.Is(sampleErr, errProcessChildIdentityDisappeared) {
 			sampler.recordFailure(errors.Join(attemptErrs...))
 			return
 		}
@@ -1214,6 +1209,10 @@ func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr e
 		previous, previouslyActive := previousChildren[pid]
 		identityObservation, probeErr := sampler.identityProbe(pid, process)
 		if probeErr != nil {
+			if errors.Is(probeErr, errProcessIdentityMissing) {
+				return errors.Join(errProcessChildIdentityDisappeared,
+					fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr))
+			}
 			return fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr)
 		}
 		identity, class, identityErr := validateProcessIdentityObservation(pid, process, identityObservation)
