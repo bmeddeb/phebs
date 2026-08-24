@@ -800,6 +800,180 @@ func TestRSSSamplerCountsChildLifetimesInConstantSpace(t *testing.T) {
 	}
 }
 
+func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
+	root := processSnapshotRow(10, 1, 4, "", "/private/phebs")
+	child := processSnapshotRow(11, 10, 8, "", "/usr/bin/git")
+	disappeared := errors.Join(errProcessIdentityDisappeared, errors.New("process exited"))
+	identity := func(sampler *rssSampler, childError error, wrongParent bool) func(int, processSnapshot) (processIdentityObservation, error) {
+		return func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+			if pid == 11 && childError != nil {
+				return processIdentityObservation{}, childError
+			}
+			parent := candidate.parent
+			if pid == 11 && wrongParent {
+				parent++
+			}
+			token := strconv.Itoa(pid)
+			if pid == 10 {
+				token = sampler.rootIdentity.token
+			}
+			return processIdentityObservation{token: token, parent: parent, name: candidate.name}, nil
+		}
+	}
+
+	t.Run("fresh complete retry commits", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		sampler.identityProbe = identity(sampler, disappeared, false)
+		attempts := 0
+		waits := 0
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		var shared context.Context
+		sampler.snapshotProbe = func(ctx context.Context) ([]byte, error) {
+			attempts++
+			if shared == nil {
+				shared = ctx
+				if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > processProbeTimeout {
+					t.Fatal("process retry lacks the shared bounded deadline")
+				}
+			} else if ctx != shared {
+				t.Fatal("retry replaced the shared process-probe deadline")
+			}
+			if attempts == 1 {
+				return []byte(root + child), nil
+			}
+			return []byte(root), nil
+		}
+		sampler.sample()
+		peak, gitChildren, _, _, err := sampler.metrics()
+		if err != nil || attempts != 2 || waits != 1 || peak != 4*1024 || gitChildren != 0 ||
+			sampler.samples != 1 || sampler.failedSamples != 0 {
+			t.Fatalf("fresh retry = attempts:%d waits:%d peak:%d git:%d samples:%d failures:%d err=%v",
+				attempts, waits, peak, gitChildren, sampler.samples, sampler.failedSamples, err)
+		}
+	})
+
+	t.Run("non-disappearance is sticky", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		sampler.identityProbe = identity(sampler, errors.New("permission denied"), false)
+		attempts := 0
+		waits := 0
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.sample()
+		_, _, _, _, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || attempts != 1 || waits != 0 || sampler.failedSamples != 1 {
+			t.Fatalf("non-disappearance retry = attempts:%d waits:%d failures:%d err=%v",
+				attempts, waits, sampler.failedSamples, err)
+		}
+	})
+
+	t.Run("disappearance exhaustion preserves prior state", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		sampler.recordSnapshot([]byte(root+child), nil)
+		sampler.identityProbe = identity(sampler, disappeared, false)
+		attempts := 0
+		waits := 0
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.sample()
+		peak, gitChildren, _, _, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || attempts != maxProcessSampleAttempts ||
+			waits != maxProcessSampleAttempts-1 || sampler.failedSamples != 1 ||
+			peak != 12*1024 || gitChildren != 1 || len(sampler.activeChildren) != 1 {
+			t.Fatalf("exhausted retry = attempts:%d waits:%d peak:%d git:%d active:%d failures:%d err=%v",
+				attempts, waits, peak, gitChildren, len(sampler.activeChildren), sampler.failedSamples, err)
+		}
+	})
+
+	t.Run("first-sample disappearance exhaustion commits nothing", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		sampler.identityProbe = identity(sampler, disappeared, false)
+		attempts := 0
+		waits := 0
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.sample()
+		peak, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || attempts != maxProcessSampleAttempts ||
+			waits != maxProcessSampleAttempts-1 || sampler.failedSamples != 1 ||
+			peak != 0 || gitChildren != 0 || indexChildren != 0 || otherChildren != 0 ||
+			len(sampler.activeChildren) != 0 || sampler.samples != 0 {
+			t.Fatalf("first exhausted retry = attempts:%d waits:%d metrics:%d/%d/%d/%d active:%d samples:%d failures:%d err=%v",
+				attempts, waits, peak, gitChildren, indexChildren, otherChildren, len(sampler.activeChildren),
+				sampler.samples, sampler.failedSamples, err)
+		}
+	})
+
+	t.Run("second-attempt identity mismatch refuses", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		attempts := 0
+		waits := 0
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return nil
+		}
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+			if pid == 11 && attempts == 1 {
+				return processIdentityObservation{}, disappeared
+			}
+			return identity(sampler, nil, true)(pid, candidate)
+		}
+		sampler.sample()
+		_, _, _, _, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || attempts != 2 || waits != 1 ||
+			!strings.Contains(err.Error(), "does not match") {
+			t.Fatalf("second-attempt mismatch = attempts:%d waits:%d err=%v", attempts, waits, err)
+		}
+	})
+
+	t.Run("deadline cancellation during retry is sticky", func(t *testing.T) {
+		sampler := newSyntheticRSSSampler(10)
+		sampler.identityProbe = identity(sampler, disappeared, false)
+		attempts := 0
+		waits := 0
+		sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+			attempts++
+			return []byte(root + child), nil
+		}
+		sampler.retryWait = func(context.Context) error {
+			waits++
+			return context.DeadlineExceeded
+		}
+		sampler.sample()
+		peak, gitChildren, _, _, err := sampler.metrics()
+		if !errors.Is(err, errProcessSamplingFailed) || !errors.Is(err, context.DeadlineExceeded) ||
+			attempts != 1 || waits != 1 || sampler.failedSamples != 1 || peak != 0 || gitChildren != 0 {
+			t.Fatalf("deadline retry = attempts:%d waits:%d peak:%d git:%d failures:%d err=%v",
+				attempts, waits, peak, gitChildren, sampler.failedSamples, err)
+		}
+	})
+}
+
 func TestRSSSamplerAllowsZeroSampleAfterObservedRootExit(t *testing.T) {
 	live := newSyntheticRSSSampler(10)
 	live.recordSnapshot(nil, nil)

@@ -18,6 +18,12 @@ func processStartIdentity(pid int, _ processSnapshot) (processIdentityObservatio
 	}
 	file, err := os.Open(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return processIdentityObservation{}, errors.Join(
+				errProcessIdentityDisappeared,
+				fmt.Errorf("T40.13 open process identity: %w", err),
+			)
+		}
 		return processIdentityObservation{}, fmt.Errorf("T40.13 open process identity: %w", err)
 	}
 	defer func() { _ = file.Close() }()

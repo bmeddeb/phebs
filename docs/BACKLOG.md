@@ -1638,6 +1638,26 @@ Independent final re-review accepted exact clean commit
 no critical, high, or medium finding. That acceptance closes only the
 code/review prerequisite; the complete bounded gates, fresh unconsumed
 identifier, and Ben's separate freeze and execution authorizations remain.
+The subsequent exact-commit production-path rehearsal refused broad
+`go mod download all` hydration at 2.3 GiB under the unchanged 2-GiB cache
+bound. V25 now hydrates only the exact admitted tool dependency closures; the
+four-tool closure measured 1.5 GiB and built offline without cache growth.
+This correction reopens the exact-commit regression and independent-review
+prerequisites without authorizing identifier consumption or ceremony.
+The next rehearsal attempt also exposed that its closed harness bound only
+Git-core and therefore could not supply exact SurrealDB authority. It now
+reuses the complete V25 host observation and plan-binding boundary before
+controls or builds; the corrected rehearsal and independent review remain open.
+Real convergence then reproduced Darwin's child-exit race between `ps` and
+`kern.proc.pid`. T40.13a now permits at most two fresh complete retries only for a typed
+disappeared child, with both attempts sharing the existing two-second deadline;
+every other failure remains sticky and no failed attempt contributes evidence.
+The corrected full rehearsal remains `BLOCKED / HIGH` on
+`sustained_child_identity_churn` and
+`root_exit_snapshot_handoff_indeterminate`. These fail-closed findings prevent
+complete phase accounting; they do not establish a production vulnerability or
+false pass, and they do not justify wider retries. No ceremony identifier is
+selected or consumed pending a separately reviewed sampling/handoff correction.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

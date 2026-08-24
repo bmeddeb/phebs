@@ -525,11 +525,17 @@ func buildWorkingTreeToolchain(
 		Buf:               filepath.Join(output, "buf"),
 		ClosedEnvironment: true,
 	}
-	gitCore, err := resolveGitCoreExecutable(ctx)
+	hostToolchain, err := observeHostToolchain(ctx, true)
 	if err != nil {
 		return privateToolchain{}, err
 	}
-	toolchain.host.gitCore.path = gitCore
+	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
+		Schema:        PlanSchemaV25,
+		HostToolchain: hostToolchain,
+	})
+	if err != nil {
+		return privateToolchain{}, err
+	}
 	controlPath := filepath.Join(workspace, executionControlsFilename)
 	if raw, readErr := os.ReadFile(controlPath); readErr == nil {
 		toolchain.controlsDigest = digest(raw)
@@ -550,15 +556,24 @@ func buildWorkingTreeToolchain(
 			return privateToolchain{}, err
 		}
 	}
-	download := exec.CommandContext(ctx, "go", "mod", "download", "all")
-	download.Dir = moduleRoot
-	download.Env = executionEnvironmentForControls(toolchain.controls, true)
-	if output, err := runCustodyCombinedOutput(download); err != nil {
-		return privateToolchain{}, fmt.Errorf("download readiness modules: %w: %s", err, output)
+	hydrations := []struct {
+		args []string
+		env  []string
+	}{
+		{[]string{"list", "-deps", "./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index", "./cmd/phebs-focused-index"}, nil},
+		{[]string{"list", "-deps", "github.com/bufbuild/buf/cmd/buf"}, []string{"CGO_ENABLED=0"}},
+	}
+	for _, hydration := range hydrations {
+		command := exec.CommandContext(ctx, "go", hydration.args...)
+		command.Dir = moduleRoot
+		command.Env = append(executionEnvironmentForControls(toolchain.controls, true), hydration.env...)
+		if output, err := runCustodyCombinedOutput(command); err != nil {
+			return privateToolchain{}, fmt.Errorf("hydrate readiness modules: %w: %s", err, output)
+		}
 	}
 	verify := exec.CommandContext(ctx, "go", "mod", "verify")
 	verify.Dir = moduleRoot
-	verify.Env = executionEnvironmentForControls(toolchain.controls, false)
+	verify.Env = executionEnvironmentForControls(toolchain.controls, true)
 	if output, err := runCustodyCombinedOutput(verify); err != nil {
 		return privateToolchain{}, fmt.Errorf("verify readiness module cache: %w: %s", err, output)
 	}

@@ -453,8 +453,8 @@ initialize_v25_custody_commands() {
   [[ "$CLOSED_CACHES_ABSENT" == 0 && ! -e "$CLOSED_COMMAND_ROOT" && ! -L "$CLOSED_COMMAND_ROOT" ]] ||
     die "closed build controls are not fresh"
   (cd "$REPO_REAL" && closed_go GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org \
-    go mod download all)
-  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off go mod verify)
+    go list -deps ./spike/t4013/cmd/... >/dev/null)
+  (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org go mod verify)
   command_root="$CLOSED_COMMAND_ROOT"
   mkdir -m 700 "$command_root"
   (cd "$REPO_REAL" && closed_go GOFLAGS=-mod=readonly GOPROXY=off GOSUMDB=off \

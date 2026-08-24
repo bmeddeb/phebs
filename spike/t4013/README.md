@@ -2634,6 +2634,9 @@ The opt-in real-binary rehearsal uses separate fresh semantic repositories for
 interruption and stale-worker, avoiding a vacuous second transition through an
 already-materialized B generation. It retains structural delta/return,
 live-backup/offline-restore, lifecycle, and authorized-query coverage. The
+V25 rehearsal now observes and binds the complete exact host toolchain before
+creating its closed execution controls, so SurrealDB and child-tool identities
+cannot fall back to ambient `PATH` lookup. The
 first corrected run exposed a production stale-authority retry failure during
 the interruption return-to-A restart; that stacked production blocker must be
 closed before the rehearsal, integration, or freeze gate can pass. The small
@@ -3030,7 +3033,11 @@ completeness, migration, or decommission authorization.
 
 V25 now accepts a process sample only after the bounded `ps` command, complete
 snapshot parse, RSS sum, root check, and child-lifetime classification all
-succeed. A failed sample changes no metrics and retains one typed first cause
+succeed. A child typed as disappeared between `ps` and its Darwin/Linux kernel
+identity read permits at most two fresh whole-sample retries under the same two-second
+deadline. The retry reruns every read and commits only if the complete second
+attempt succeeds; every other error is immediately sticky. A failed logical
+sample changes no metrics and retains one typed first cause
 plus a saturating count; phase reset does not erase it. Root absence fails
 until the command's sole `Wait` owner records exit, after which an empty final
 sample is valid only when no still-parented descendant is visible. The
@@ -3044,8 +3051,14 @@ PPID, and normalized command class. Per phase, the sampler retains only the
 current accepted descendants and three cumulative counters, counts an accepted
 absence/reappearance or changed kernel identity as another sampled lifetime,
 refuses ambiguous continuity or category drift, and stops before exceeding
-8,192 sampled lifetimes. The `ps` command and root-exit handoff each have an
-independent two-second cap; native identity reads have no separate timer, and
+8,192 sampled lifetimes. Retry raises one logical sample to at most three 128-KiB/
+8,192-row snapshots and three sets of at most 129 native identities within the
+same two seconds. Retries wait a fixed 25 ms, at most 50 ms total, to leave the
+observed exit burst. A disappeared short-lived child may be absent from the
+accepted retry, as it may already be absent between ordinary 250-ms samples;
+zero means zero in accepted identity-bound samples, not proof of no transient
+fork. All attempts share one two-second cap; the root-exit handoff retains its
+independent two-second cap. Native identity reads have no separate timer, and
 reset waits for the whole in-flight sample so an old snapshot cannot land in a
 new phase. Strict paths take one initial sample and then at most one sample each
 250 ms; close gives stop priority. The one-second allocation sampler also
@@ -3057,6 +3070,15 @@ The preliminary `ps` row is enumeration/RSS input, not proof of every transient
 fork; same-kernel-token reuse and durable hard-death/escape absence remain
 T40.13c. This changes no public schema or production work and authorizes no
 freeze or ceremony.
+
+The corrected real-binary rehearsal remains blocked at this boundary. It
+recorded `sustained_child_identity_churn` when stale-worker exhausted all three
+paced attempts in two logical samples, and
+`root_exit_snapshot_handoff_indeterminate` when semantic sampling observed a
+descendant-bearing snapshot after the sole `Wait` owner marked root exit. Both
+fail closed; neither proves corrupt production behavior or authorizes wider
+retry bounds. A separately reviewed sampler/launch-observation design and an
+exact root-exit snapshot handoff are required before readiness can pass.
 
 ### T40.13b cooperative cancellation and shutdown truth
 
@@ -3256,8 +3278,10 @@ Fresh V25 Prepare binds one at-most-4-KiB execution-control manifest inside
 custody. Authoring, source export, private module/build work, server/recovery
 launches, and restarts use its custody-local HOME, XDG, temporary, module, and
 build paths plus the reviewed Git exec directory. A fresh module cache is
-checksum-verified and hashed under the 100,000-entry/2-GiB tree bound, compared
-after offline builds, and removed with the build cache before runtime. Execute
+hydrated only for the exact custody binaries' build dependency closures,
+then checksum-verified online to admit lazy graph metadata before it is hashed
+under the 100,000-entry/2-GiB tree bound. The
+digest is compared after offline builds, and both caches are removed before runtime. Execute
 reopens the exact manifest and cache-absence state before mutation and every
 private launch. The supported shell mirrors the controls beneath the ceremony
 root; historical V1–V24 execution remains unchanged.

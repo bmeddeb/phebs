@@ -335,7 +335,7 @@ func TestCeremonyDriverBuildsFromOwnedCachesThenMakesThemAbsent(t *testing.T) {
 	}
 	write(filepath.Join(tools, "go"), `#!/bin/sh
 case "$1 $2" in
-  "mod download") : > "$GOMODCACHE/downloaded" ;;
+  "list -deps") : > "$GOMODCACHE/downloaded" ;;
   "mod verify") test -f "$GOMODCACHE/downloaded" ;;
   "clean -modcache") /bin/rm -rf "$GOMODCACHE" ;;
   "build -o")

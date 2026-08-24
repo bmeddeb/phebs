@@ -17,6 +17,12 @@ func processStartIdentity(pid int, _ processSnapshot) (processIdentityObservatio
 	}
 	process, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
 	if err != nil {
+		if errors.Is(err, unix.EIO) || errors.Is(err, unix.ESRCH) {
+			return processIdentityObservation{}, errors.Join(
+				errProcessIdentityDisappeared,
+				fmt.Errorf("T40.13 inspect process identity: %w", err),
+			)
+		}
 		return processIdentityObservation{}, fmt.Errorf("T40.13 inspect process identity: %w", err)
 	}
 	started := process.Proc.P_starttime

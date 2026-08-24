@@ -28,11 +28,15 @@ const (
 	maxProcessSnapshotRows   = 8192
 	maxProcessDescendants    = 128
 	maxProcessChildLifetimes = 8192
+	maxProcessSampleAttempts = 3
+	processSampleRetryDelay  = 25 * time.Millisecond
 )
 
 var errPrivateServerShutdownUnproven = errors.New("T40.13 private process session shutdown is unproven")
 
 var errProcessSamplingFailed = errors.New("T40.13 process sampling failed")
+
+var errProcessIdentityDisappeared = errors.New("T40.13 process disappeared before identity capture")
 
 type privateToolchain struct {
 	Schema            string
@@ -75,6 +79,8 @@ type rssSampler struct {
 	otherChildren       map[int]struct{}
 	activeChildren      map[int]sampledProcess
 	identityProbe       func(int, processSnapshot) (processIdentityObservation, error)
+	snapshotProbe       func(context.Context) ([]byte, error)
+	retryWait           func(context.Context) error
 	strictGitChildren   int64
 	strictIndexChildren int64
 	strictOtherChildren int64
@@ -191,31 +197,40 @@ func buildPrivateToolchain(
 				return privateToolchain{}, metrics, errors.New("T40.13 private Go cache is not new")
 			}
 		}
+		hydrations := []struct {
+			args []string
+			env  []string
+		}{
+			{[]string{"list", "-deps", "./cmd/phebs", "github.com/sourcegraph/zoekt/cmd/zoekt-git-index", "./cmd/phebs-focused-index"}, nil},
+			{[]string{"list", "-deps", "github.com/bufbuild/buf/cmd/buf"}, []string{"CGO_ENABLED=0"}},
+		}
+		for _, hydration := range hydrations {
+			goPath, err := hostTools.goDriver.pathForLaunch(ctx)
+			if err != nil {
+				return privateToolchain{}, metrics, err
+			}
+			command := exec.CommandContext(ctx, goPath, hydration.args...)
+			command.Dir = source
+			command.Env = append(executionEnvironmentForControls(controls, true), hydration.env...)
+			command.Stdout, command.Stderr = io.Discard, io.Discard
+			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
+			if commandErr != nil {
+				commandErr = sanitizeMeasuredCommandFailure("T40.13 private module hydration failed", commandErr)
+			}
+			metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
+			if err != nil {
+				return privateToolchain{}, metrics, err
+			}
+		}
 		goPath, err := hostTools.goDriver.pathForLaunch(ctx)
 		if err != nil {
 			return privateToolchain{}, metrics, err
 		}
-		command := exec.CommandContext(ctx, goPath, "mod", "download", "all")
+		command := exec.CommandContext(ctx, goPath, "mod", "verify")
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
-		if commandErr != nil {
-			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module download failed", commandErr)
-		}
-		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
-		if err != nil {
-			return privateToolchain{}, metrics, err
-		}
-		goPath, err = hostTools.goDriver.pathForLaunch(ctx)
-		if err != nil {
-			return privateToolchain{}, metrics, err
-		}
-		command = exec.CommandContext(ctx, goPath, "mod", "verify")
-		command.Dir = source
-		command.Env = executionEnvironmentForControls(controls, false)
-		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
 		if commandErr != nil {
 			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
 		}
@@ -977,6 +992,22 @@ func newRSSSampler(pid int, strict bool) *rssSampler {
 		pid: pid, strict: strict, stop: make(chan struct{}), done: make(chan struct{}),
 		gitChildren: map[int]struct{}{}, indexChildren: map[int]struct{}{}, otherChildren: map[int]struct{}{},
 		activeChildren: map[int]sampledProcess{}, identityProbe: processStartIdentity,
+		snapshotProbe: func(ctx context.Context) ([]byte, error) {
+			return boundedCommandOutput(ctx, maxProcessProbeBytes,
+				"/bin/ps", "-Ao", "pid=,ppid=,rss=,comm=")
+		},
+		retryWait: waitProcessSampleRetry,
+	}
+}
+
+func waitProcessSampleRetry(ctx context.Context) error {
+	timer := time.NewTimer(processSampleRetryDelay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
 	}
 }
 
@@ -1046,14 +1077,40 @@ func (sampler *rssSampler) sample() {
 	}
 	sampler.sampleMu.Lock()
 	defer sampler.sampleMu.Unlock()
+	if sampler.snapshotProbe == nil {
+		sampler.recordFailure(errors.New("T40.13 process snapshot probe is unavailable"))
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
 	defer cancel()
-	output, probeErr := boundedCommandOutput(ctx, maxProcessProbeBytes,
-		"/bin/ps", "-Ao", "pid=,ppid=,rss=,comm=")
-	if ctx.Err() != nil {
-		probeErr = errors.Join(probeErr, ctx.Err())
+	var attemptErrs []error
+	for attempt := range maxProcessSampleAttempts {
+		output, probeErr := sampler.snapshotProbe(ctx)
+		if ctx.Err() != nil {
+			probeErr = errors.Join(probeErr, ctx.Err())
+		}
+		sampleErr := sampler.recordSnapshotAttemptLocked(output, probeErr)
+		if sampleErr == nil {
+			return
+		}
+		attemptErrs = append(attemptErrs, sampleErr)
+		if !errors.Is(sampleErr, errProcessIdentityDisappeared) {
+			sampler.recordFailure(errors.Join(attemptErrs...))
+			return
+		}
+		if attempt+1 < maxProcessSampleAttempts {
+			if sampler.retryWait == nil {
+				sampler.recordFailure(errors.Join(append(attemptErrs,
+					errors.New("T40.13 process sample retry wait is unavailable"))...))
+				return
+			}
+			if waitErr := sampler.retryWait(ctx); waitErr != nil {
+				sampler.recordFailure(errors.Join(append(attemptErrs, waitErr)...))
+				return
+			}
+		}
 	}
-	sampler.recordSnapshotLocked(output, probeErr)
+	sampler.recordFailure(errors.Join(attemptErrs...))
 }
 
 func (sampler *rssSampler) recordSnapshot(output []byte, probeErr error) {
@@ -1063,48 +1120,48 @@ func (sampler *rssSampler) recordSnapshot(output []byte, probeErr error) {
 }
 
 func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
+	if err := sampler.recordSnapshotAttemptLocked(output, probeErr); err != nil {
+		sampler.recordFailure(err)
+	}
+}
+
+func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr error) error {
 	if probeErr != nil {
-		sampler.recordFailure(probeErr)
-		return
+		return probeErr
 	}
 	pids, processes, parseErr := parseProcessSnapshot(output, sampler.pid)
 	if parseErr != nil {
-		sampler.recordFailure(parseErr)
-		return
+		return parseErr
 	}
 	if len(pids) == 0 {
-		sampler.recordFailure(errors.New("T40.13 process snapshot traversal is empty"))
-		return
+		return errors.New("T40.13 process snapshot traversal is empty")
 	}
 	root, rootPresent := processes[sampler.pid]
 	if !rootPresent {
 		if !sampler.awaitObservedRootExit() || len(pids) != 1 {
-			sampler.recordFailure(errors.New("T40.13 process snapshot omitted its live root"))
-			return
+			return errors.New("T40.13 process snapshot omitted its live root")
 		}
 		sampler.mu.Lock()
 		sampler.activeChildren = map[int]sampledProcess{}
 		sampler.samples++
 		sampler.mu.Unlock()
-		return
+		return nil
 	}
 	sampler.mu.Lock()
 	rootExited := sampler.rootExited
 	sampler.mu.Unlock()
 	if rootExited {
 		if len(pids) != 1 {
-			sampler.recordFailure(errors.New("T40.13 process snapshot retained descendants after root exit"))
-			return
+			return errors.New("T40.13 process snapshot retained descendants after root exit")
 		}
 		sampler.mu.Lock()
 		sampler.activeChildren = map[int]sampledProcess{}
 		sampler.samples++
 		sampler.mu.Unlock()
-		return
+		return nil
 	}
 	if sampler.identityProbe == nil {
-		sampler.recordFailure(errors.New("T40.13 process identity probe is unavailable"))
-		return
+		return errors.New("T40.13 process identity probe is unavailable")
 	}
 	rootObservation, identityErr := sampler.identityProbe(sampler.pid, root)
 	if identityErr != nil {
@@ -1113,38 +1170,33 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 			sampler.activeChildren = map[int]sampledProcess{}
 			sampler.samples++
 			sampler.mu.Unlock()
-			return
+			return nil
 		}
-		sampler.recordFailure(fmt.Errorf("T40.13 process root identity is unavailable: %w", identityErr))
-		return
+		return fmt.Errorf("T40.13 process root identity is unavailable: %w", identityErr)
 	}
 	rootIdentity, _, identityErr := validateProcessIdentityObservation(sampler.pid, root, rootObservation)
 	if identityErr != nil {
-		sampler.recordFailure(fmt.Errorf("T40.13 process root identity is invalid: %w", identityErr))
-		return
+		return fmt.Errorf("T40.13 process root identity is invalid: %w", identityErr)
 	}
 
 	sampler.mu.Lock()
 	if sampler.rootExited {
 		if len(pids) != 1 {
-			sampler.recordFailureLocked(errors.New("T40.13 process snapshot retained descendants after root exit"))
 			sampler.mu.Unlock()
-			return
+			return errors.New("T40.13 process snapshot retained descendants after root exit")
 		}
 		sampler.activeChildren = map[int]sampledProcess{}
 		sampler.samples++
 		sampler.mu.Unlock()
-		return
+		return nil
 	}
 	if !sampler.rootSeen {
-		sampler.recordFailureLocked(errors.New("T40.13 process root identity was not captured before its Wait owner"))
 		sampler.mu.Unlock()
-		return
+		return errors.New("T40.13 process root identity was not captured before its Wait owner")
 	}
 	if sampler.rootIdentity != rootIdentity {
-		sampler.recordFailureLocked(errors.New("T40.13 process snapshot root identity changed"))
 		sampler.mu.Unlock()
-		return
+		return errors.New("T40.13 process snapshot root identity changed")
 	}
 	previousChildren := sampler.activeChildren
 	gitChildren := sampler.strictGitChildren
@@ -1155,21 +1207,18 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 	nextActive := make(map[int]sampledProcess, len(pids)-1)
 	totalChildren, err := checkedSumInt64(gitChildren, indexChildren, otherChildren)
 	if err != nil {
-		sampler.recordFailure(err)
-		return
+		return err
 	}
 	for _, pid := range pids[1:] {
 		process := processes[pid]
 		previous, previouslyActive := previousChildren[pid]
 		identityObservation, probeErr := sampler.identityProbe(pid, process)
 		if probeErr != nil {
-			sampler.recordFailure(fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr))
-			return
+			return fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr)
 		}
 		identity, class, identityErr := validateProcessIdentityObservation(pid, process, identityObservation)
 		if identityErr != nil {
-			sampler.recordFailure(fmt.Errorf("T40.13 process child identity is invalid: %w", identityErr))
-			return
+			return fmt.Errorf("T40.13 process child identity is invalid: %w", identityErr)
 		}
 		observed := sampledProcess{
 			identity: identity,
@@ -1177,15 +1226,13 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 		}
 		if previouslyActive && previous.identity == observed.identity {
 			if previous.class != observed.class {
-				sampler.recordFailure(errors.New("T40.13 process child classification changed within one lifetime"))
-				return
+				return errors.New("T40.13 process child classification changed within one lifetime")
 			}
 			nextActive[pid] = observed
 			continue
 		}
 		if totalChildren >= maxProcessChildLifetimes {
-			sampler.recordFailure(errors.New("T40.13 cumulative process child inventory exceeds its bound"))
-			return
+			return errors.New("T40.13 cumulative process child inventory exceeds its bound")
 		}
 		totalChildren++
 		switch observed.class {
@@ -1202,14 +1249,12 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 	for _, pid := range pids {
 		process := processes[pid]
 		if process.rssBytes > 1<<63-1-total {
-			sampler.recordFailure(errors.New("T40.13 process RSS observation overflowed"))
-			return
+			return errors.New("T40.13 process RSS observation overflowed")
 		}
 		var addErr error
 		total, addErr = checkedAddInt64(total, process.rssBytes)
 		if addErr != nil {
-			sampler.recordFailure(addErr)
-			return
+			return addErr
 		}
 	}
 
@@ -1225,6 +1270,7 @@ func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
 	sampler.strictIndexChildren = indexChildren
 	sampler.strictOtherChildren = otherChildren
 	sampler.samples++
+	return nil
 }
 
 func classifyProcess(name string) processClass {

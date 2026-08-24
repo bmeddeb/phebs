@@ -1817,6 +1817,28 @@ with no critical, high, or medium finding, closing the code/review prerequisite
 only. Full bounded regressions, real-binary rehearsals, the full
 `internal/store` gate, a fresh unconsumed identifier, and separate freeze and
 execution authorizations remain mandatory.
+The exact-commit production-path rehearsal then refused the fresh 2.3-GiB
+private module cache created by `go mod download all` under the unchanged 2-GiB
+bound. V25 now hydrates only the exact admitted command dependency closures;
+the four-tool closure measured 1.5 GiB and built offline without cache growth.
+This correction requires a new exact clean commit, full gates, and independent
+review before identifier selection or any separately authorized freeze.
+The same rehearsal then exposed its pre-existing incomplete closed-host binding:
+only Git-core was retained, so the source-free server could not receive exact
+SurrealDB authority. The harness now reuses the complete V25 host observation
+and plan-binding boundary before controls or builds. Corrected rehearsal and
+independent review remain mandatory.
+Real convergence then reproduced Darwin's `ps`-to-`kern.proc.pid` exit race.
+T40.13a now permits at most two fresh complete retries only for a typed disappeared child,
+under the same two-second deadline; all other identity failures remain sticky,
+and failed attempts commit no evidence. This sampled-lifetime correction also
+requires the corrected rehearsal and independent review.
+The final bounded rehearsal remained `BLOCKED / HIGH` after those corrections:
+`sustained_child_identity_churn` exhausted all three paced attempts during
+stale-worker, and `root_exit_snapshot_handoff_indeterminate` observed a
+descendant-bearing snapshot after the semantic root-exit marker without proving
+which event came first. Both fail closed. Do not widen retry bounds; no fresh
+ceremony identifier is selected or consumed.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
