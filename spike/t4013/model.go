@@ -3159,8 +3159,11 @@ func validProcessClassTransitions(value PhaseMetrics, allowed bool) bool {
 		value.GitToOtherTransitions, value.GitToIndexTransitions,
 		value.IndexToOtherTransitions, value.IndexToGitTransitions,
 	)
-	if err != nil || (!allowed && transitions != 0) {
+	if err != nil {
 		return false
+	}
+	if !allowed {
+		return transitions == 0
 	}
 	children, err := checkedSumInt64(value.GitChildren, value.IndexChildren, value.OtherChildren)
 	if err != nil || transitions > children {

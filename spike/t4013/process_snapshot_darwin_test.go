@@ -77,7 +77,7 @@ func TestDarwinNativeSamplerSurvivesSustainedChildChurn(t *testing.T) {
 
 func TestDarwinNativeSamplerAccountsExecClassEpoch(t *testing.T) {
 	command := exec.CommandContext(t.Context(), "/bin/sh", "-c",
-		`/bin/sh -c 'sleep 1; exec /usr/bin/git hash-object --stdin' child & wait`)
+		`/bin/sh -c 'sleep 1; exec /usr/bin/git hash-object --stdin' child <&0 & wait`)
 	input, err := command.StdinPipe()
 	if err != nil {
 		t.Fatal(err)

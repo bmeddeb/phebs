@@ -814,6 +814,14 @@ func TestV26ReceiptRetainsBoundedProcessClassTransitions(t *testing.T) {
 }
 
 func TestV26ProcessClassTransitionDirectionsRequireSourceAndDestinationEpochs(t *testing.T) {
+	historical := PhaseMetrics{GitChildren: maxInt64Value, IndexChildren: maxInt64Value}
+	if !validProcessClassTransitions(historical, false) {
+		t.Fatal("historical zero-transition metrics acquired V26 child-sum validation")
+	}
+	historical.OtherToGitTransitions = 1
+	if validProcessClassTransitions(historical, false) {
+		t.Fatal("historical metrics acquired a V26 transition")
+	}
 	tests := []struct {
 		name        string
 		metrics     PhaseMetrics
