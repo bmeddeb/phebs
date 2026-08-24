@@ -84,7 +84,15 @@ func observeHostToolchain(ctx context.Context, closedEnvironment bool) ([]HostTo
 	}
 	observationContext, cancel := context.WithTimeout(ctx, hostObservationTimeout)
 	defer cancel()
-	values, err := observeHostToolchainNow(observationContext, closedEnvironment, nil)
+	var binding *hostToolchainBinding
+	bound, ok, err := closedHostToolchainBinding(observationContext, nil)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		binding = &bound
+	}
+	values, err := observeHostToolchainNow(observationContext, closedEnvironment, binding)
 	if err != nil && observationContext.Err() != nil {
 		return nil, fmt.Errorf(
 			"T40.13 host toolchain observation exceeded its deadline: %w", observationContext.Err(),
@@ -554,6 +562,9 @@ func bindHostToolchainForPlan(ctx context.Context, plan Plan) (hostToolchainBind
 func prebindHostToolchain(
 	ctx context.Context, expected []HostToolObservation,
 ) (hostToolchainBinding, error) {
+	if binding, ok, err := closedHostToolchainBinding(ctx, expected); ok || err != nil {
+		return binding, err
+	}
 	goPath, err := resolveExecutable("go")
 	if err != nil {
 		return hostToolchainBinding{}, err
@@ -585,6 +596,64 @@ func prebindHostToolchain(
 		return hostToolchainBinding{}, err
 	}
 	return binding, nil
+}
+
+func closedHostToolchainBinding(
+	ctx context.Context, expected []HostToolObservation,
+) (hostToolchainBinding, bool, error) {
+	paths := []string{
+		os.Getenv("CLOSED_GO_PATH"),
+		os.Getenv("CLOSED_GIT_PATH"),
+		os.Getenv("CLOSED_GIT_CORE_PATH"),
+		os.Getenv("CLOSED_SURREAL_PATH"),
+	}
+	present := 0
+	for _, path := range paths {
+		if path != "" {
+			present++
+		}
+	}
+	if present == 0 {
+		return hostToolchainBinding{}, false, nil
+	}
+	if present != len(paths) {
+		return hostToolchainBinding{}, true, errors.New("T40.13 closed host tool paths are incomplete")
+	}
+	for index, path := range paths {
+		resolved, err := resolveExactExecutable(path)
+		if err != nil || resolved != path {
+			return hostToolchainBinding{}, true, errors.Join(
+				err, errors.New("T40.13 closed host tool path is not exact"),
+			)
+		}
+		paths[index] = resolved
+	}
+	names := []string{"go", "git", "git-core", "surreal"}
+	executables := make([]boundExecutable, len(paths))
+	for index, path := range paths {
+		if expected == nil {
+			digest, err := executableDigestContext(ctx, path)
+			if err != nil {
+				return hostToolchainBinding{}, true, err
+			}
+			executables[index] = boundExecutable{name: names[index], path: path, sha256: digest}
+		} else {
+			executables[index] = bindObservedExecutable(expected, names[index], path)
+		}
+		if _, err := executables[index].pathForLaunch(ctx); err != nil {
+			return hostToolchainBinding{}, true, err
+		}
+	}
+	gitCore, err := resolveGitCoreExecutableFor(ctx, executables[1].path)
+	if err != nil || gitCore != executables[2].path {
+		return hostToolchainBinding{}, true, errors.Join(
+			err, errors.New("T40.13 closed Git core path differs from Git authority"),
+		)
+	}
+	return hostToolchainBinding{
+		goDriver: executables[0], git: executables[1],
+		gitCore: executables[2], surreal: executables[3],
+	}, true, nil
 }
 
 func bindObservedExecutable(values []HostToolObservation, name, path string) boundExecutable {

@@ -423,13 +423,25 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 			t.Fatalf("plan environment %s: %v: %s", test.schema, err, output)
 		}
 		got := ""
+		closedPaths := 0
 		for _, entry := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-			if name, value, found := strings.Cut(entry, "="); found && name == "GOEXPERIMENT" {
-				got = value
+			if name, value, found := strings.Cut(entry, "="); found {
+				if name == "GOEXPERIMENT" {
+					got = value
+				}
+				switch name {
+				case "CLOSED_GO_PATH", "CLOSED_GIT_PATH", "CLOSED_GIT_CORE_PATH", "CLOSED_SURREAL_PATH":
+					if value != "" {
+						closedPaths++
+					}
+				}
 			}
 		}
 		if got != test.want {
 			t.Fatalf("plan environment %s = %q, want %q", test.schema, got, test.want)
+		}
+		if test.schema == PlanSchemaV25 && closedPaths != 4 {
+			t.Fatalf("plan environment %s has %d closed host paths, want 4", test.schema, closedPaths)
 		}
 	}
 }

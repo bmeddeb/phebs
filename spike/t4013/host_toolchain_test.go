@@ -85,6 +85,65 @@ func TestPrebindRefusesHostReplacementBeforeVersionLaunch(t *testing.T) {
 	}
 }
 
+func TestPrebindUsesClosedHostPathsWithoutPATH(t *testing.T) {
+	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitExec := filepath.Join(root, "git-core")
+	if err := os.Mkdir(gitExec, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	paths := map[string]string{
+		"go":       filepath.Join(root, "go"),
+		"git":      filepath.Join(root, "git"),
+		"git-core": filepath.Join(gitExec, "git"),
+		"surreal":  filepath.Join(root, "surreal"),
+	}
+	marker := filepath.Join(root, "git-ran")
+	for name, path := range paths {
+		content := "#!/bin/sh\nexit 0\n"
+		if name == "git" {
+			content = "#!/bin/sh\n: > '" + marker + "'\nprintf '%s\\n' '" + gitExec + "'\n"
+		}
+		if err := os.WriteFile(path, []byte(content), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expected := make([]HostToolObservation, 0, len(paths))
+	for _, name := range []string{"go", "git", "git-core", "surreal"} {
+		sha256, err := executableDigestContext(t.Context(), paths[name])
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected = append(expected, HostToolObservation{
+			Name: name, SHA256: sha256, PathSHA256: hostPathDigest(paths[name]),
+		})
+	}
+	t.Setenv("PATH", "")
+	t.Setenv("CLOSED_GO_PATH", paths["go"])
+	t.Setenv("CLOSED_GIT_PATH", paths["git"])
+	t.Setenv("CLOSED_GIT_CORE_PATH", paths["git-core"])
+	t.Setenv("CLOSED_SURREAL_PATH", paths["surreal"])
+	mismatched := append([]HostToolObservation(nil), expected...)
+	mismatched[1].SHA256 = digest([]byte("replaced Git"))
+	if _, err := prebindHostToolchain(t.Context(), mismatched); err == nil {
+		t.Fatal("mismatched closed Git passed prebinding")
+	}
+	if _, err := os.Lstat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("mismatched closed Git ran before refusal: %v", err)
+	}
+	binding, err := prebindHostToolchain(t.Context(), expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if binding.goDriver.path != paths["go"] || binding.git.path != paths["git"] ||
+		binding.gitCore.path != paths["git-core"] || binding.surreal.path != paths["surreal"] {
+		t.Fatalf("closed binding = %+v", binding)
+	}
+}
+
 func TestHostToolchainPathIdentityDetectsPathSearchDrift(t *testing.T) {
 	expected := fakeHostToolchainV25()
 	if err := validateHostToolchain(expected, true); err != nil {
