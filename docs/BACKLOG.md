@@ -1659,9 +1659,12 @@ now accepts PID, PPID, start identity, command class, and RSS only from one
 accepted sampled-lifetime observation. A root-exit marker crossing discards the
 whole attempt and permits exactly one fresh handoff observation under the same
 two-second deadline; an already-observed exit requires no descendants. The
-corrected real-binary rehearsal, bounded package suite, and race suite pass.
-Full repository/store gates and exact-clean-commit independent review remain
-mandatory. No ceremony identifier is selected or consumed before those gates.
+corrected real-binary rehearsal, bounded package/race suites, complete
+`internal/store` gate, and exact-clean-commit independent review now pass on
+`afa297966f7129bf7930c0834e8808c3992f35c5` with no critical, high, or medium
+finding. Integration, dedicated-host preflight, and separate freeze and
+execution authorizations remain mandatory. No ceremony identifier is selected
+or consumed.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

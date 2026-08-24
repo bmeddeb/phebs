@@ -3048,6 +3048,12 @@ sample is valid only when no still-parented descendant is visible. The
 concurrent server `Wait` handoff is reconciled before deciding that a missing
 root was still expected live.
 
+Exact clean commit `afa297966f7129bf7930c0834e8808c3992f35c5` passed the
+complete package/race, real-launcher, production-path rehearsal, and
+`internal/store` gates and independent review with no critical, high, or medium
+finding. This is readiness to request integration only: no identifier is
+selected or consumed, and freeze and execution remain separately authorized.
+
 One synchronous pre-`Wait` root read binds the root before sampling. One Darwin
 attempt performs at most 129 task-all-info reads, 129 child-list calls, and 128
 short-info revalidations across at most 128 discovered candidates. One Linux

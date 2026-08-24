@@ -1839,9 +1839,12 @@ kernel-identity observation with bounded native parent traversal and one
 coherent PID/PPID/start/class/RSS record per accepted process. A root-exit
 marker crossing discards the whole attempt and permits exactly one fresh
 handoff observation under the same two-second deadline; an already-observed
-exit requires no descendants. Corrected real-binary, package, and race gates
-pass. Full repository/store gates and exact-clean-commit independent review
-remain mandatory; no fresh ceremony identifier is selected or consumed.
+exit requires no descendants. Corrected real-binary, package, race, full
+`internal/store`, and exact-clean-commit independent-review gates pass on
+`afa297966f7129bf7930c0834e8808c3992f35c5` with no critical, high, or medium
+finding. Integration, dedicated-host preflight, and separate freeze and
+execution authorizations remain mandatory; no fresh ceremony identifier is
+selected or consumed.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
