@@ -93,6 +93,13 @@ func directRecovery(cause error) error {
 	return errors.Join(errDirectRecovery, cause)
 }
 
+func directRecoveryIfError(cause error) error {
+	if cause == nil {
+		return nil
+	}
+	return directRecovery(cause)
+}
+
 type ExecuteRequest struct {
 	ModuleRoot  string
 	PlanPath    string
@@ -556,13 +563,12 @@ func (run *execution) execute() error {
 		run.ctx, run.moduleRoot, run.workspace, run.prepared.ExecutionControlsSHA256,
 		run.plan, run.hostTools,
 	)
-	mergedMetrics, mergeErr := mergeMetrics(run.admissionMetrics, preflightMetrics)
-	if mergeErr != nil {
-		return mergeErr
-	}
+	mergedMetrics, combinedErr := mergeMetricsPreservingError(
+		err, run.admissionMetrics, preflightMetrics,
+	)
 	run.partialMetrics = mergedMetrics
-	if err != nil {
-		return err
+	if combinedErr != nil {
+		return combinedErr
 	}
 	if err := validateToolchain(toolchain); err != nil {
 		return err
@@ -1416,7 +1422,8 @@ func (run *execution) captureFailedPhase() error {
 	}
 	captureErr := run.measurementErr
 	if run.metersTracked < run.metersExpected {
-		captureErr = errors.New("T40.13 failed phase lacks its complete meter inventory")
+		captureErr = errors.Join(captureErr,
+			errors.New("T40.13 failed phase lacks its complete meter inventory"))
 	}
 	for meter := range run.activeMeters {
 		measured, err := meter.finish(nil)
@@ -1604,13 +1611,12 @@ func (run *execution) interruption() error {
 	backup, backupCommandMetrics, err := createLiveBackup(
 		run.ctx, run.toolchain, profile, run.workspace, "interruption",
 	)
-	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, backupCommandMetrics)
-	if mergeErr != nil {
-		return mergeErr
-	}
+	mergedMetrics, combinedErr := mergeMetricsPreservingError(
+		directRecoveryIfError(err), run.partialMetrics, backupCommandMetrics,
+	)
 	run.partialMetrics = mergedMetrics
-	if err != nil {
-		return directRecovery(err)
+	if combinedErr != nil {
+		return combinedErr
 	}
 	backupServerMetrics, err := run.finishMeter(backupMeter, &backupSnapshot)
 	if err != nil {
@@ -1629,13 +1635,12 @@ func (run *execution) interruption() error {
 	restoreMetrics, err := restoreBackup(
 		run.ctx, run.toolchain, profile, run.workspace, backup, "interruption",
 	)
-	mergedMetrics, mergeErr = mergeMetrics(run.partialMetrics, restoreMetrics)
-	if mergeErr != nil {
-		return mergeErr
-	}
+	mergedMetrics, combinedErr = mergeMetricsPreservingError(
+		directRecoveryIfError(err), run.partialMetrics, restoreMetrics,
+	)
 	run.partialMetrics = mergedMetrics
-	if err != nil {
-		return directRecovery(err)
+	if combinedErr != nil {
+		return combinedErr
 	}
 	run.setInterruptionSubstage("restored_boundary")
 	if err := verifyRestoredBoundary(
@@ -3354,13 +3359,12 @@ func (run *execution) archiveRestore() error {
 	backup, backupCommandMetrics, err := createLiveBackup(
 		run.ctx, run.toolchain, profile, run.workspace, "archive-restore",
 	)
-	mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, backupCommandMetrics)
-	if mergeErr != nil {
-		return mergeErr
-	}
+	mergedMetrics, combinedErr := mergeMetricsPreservingError(
+		directRecoveryIfError(err), run.partialMetrics, backupCommandMetrics,
+	)
 	run.partialMetrics = mergedMetrics
-	if err != nil {
-		return directRecovery(err)
+	if combinedErr != nil {
+		return combinedErr
 	}
 	backupServerMetrics, err := run.finishMeter(backupServerMeter, &run.structAR)
 	if err != nil {
@@ -3377,13 +3381,12 @@ func (run *execution) archiveRestore() error {
 	restoreMetrics, err := restoreBackup(
 		run.ctx, run.toolchain, profile, run.workspace, backup, "archive-restore",
 	)
-	mergedMetrics, mergeErr = mergeMetrics(run.partialMetrics, restoreMetrics)
-	if mergeErr != nil {
-		return mergeErr
-	}
+	mergedMetrics, combinedErr = mergeMetricsPreservingError(
+		directRecoveryIfError(err), run.partialMetrics, restoreMetrics,
+	)
 	run.partialMetrics = mergedMetrics
-	if err != nil {
-		return directRecovery(err)
+	if combinedErr != nil {
+		return combinedErr
 	}
 	if err := verifyRestoredBoundary(
 		run.ctx, profile, run.structAR, planSchemaVersion(run.plan.Schema) >= 19,
@@ -5075,6 +5078,14 @@ func mergeMetrics(values ...PhaseMetrics) (PhaseMetrics, error) {
 		}
 	}
 	return result, nil
+}
+
+func mergeMetricsPreservingError(operationErr error, values ...PhaseMetrics) (PhaseMetrics, error) {
+	metrics, mergeErr := mergeMetrics(values...)
+	if mergeErr != nil && len(values) > 0 {
+		metrics = values[0]
+	}
+	return metrics, errors.Join(operationErr, mergeErr)
 }
 
 // mergeConcurrentMetrics keeps the outer wall interval and conservatively sums

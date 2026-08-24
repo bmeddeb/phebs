@@ -170,13 +170,10 @@ func buildPrivateToolchain(
 		exportMetrics, exportErr := exportReviewedSourceMeasuredWithBoundGit(
 			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore, controls,
 		)
-		var mergeErr error
-		metrics, mergeErr = mergeMetrics(metrics, exportMetrics)
-		if mergeErr != nil {
-			return privateToolchain{}, metrics, mergeErr
-		}
-		if exportErr != nil {
-			return privateToolchain{}, metrics, exportErr
+		var combinedErr error
+		metrics, combinedErr = mergeMetricsPreservingError(exportErr, metrics, exportMetrics)
+		if combinedErr != nil {
+			return privateToolchain{}, metrics, combinedErr
 		}
 	} else if err := exportFrozenSourceForPlan(ctx, moduleRoot, plan, source); err != nil {
 		return privateToolchain{}, PhaseMetrics{}, err
@@ -203,13 +200,12 @@ func buildPrivateToolchain(
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
-		metrics, err = mergeMetrics(metrics, commandMetrics)
+		if commandErr != nil {
+			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module download failed", commandErr)
+		}
+		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics, err
-		}
-		if commandErr != nil {
-			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 private module download failed", commandErr)
 		}
 		goPath, err = hostTools.goDriver.pathForLaunch(ctx)
 		if err != nil {
@@ -220,13 +216,12 @@ func buildPrivateToolchain(
 		command.Env = executionEnvironmentForControls(controls, false)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
-		metrics, err = mergeMetrics(metrics, commandMetrics)
+		if commandErr != nil {
+			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
+		}
+		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
 		if err != nil {
 			return privateToolchain{}, metrics, err
-		}
-		if commandErr != nil {
-			return privateToolchain{}, metrics,
-				sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
 		}
 		moduleCacheDigest, err = privateCacheDigest(ctx, controls.ModuleCache)
 		if err != nil {
@@ -275,13 +270,12 @@ func buildPrivateToolchain(
 		if v25 {
 			command.Stdout, command.Stderr = io.Discard, io.Discard
 			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
-			metrics, mergeErr := mergeMetrics(metrics, commandMetrics)
-			if mergeErr != nil {
-				return privateToolchain{}, metrics, mergeErr
-			}
 			if commandErr != nil {
-				return privateToolchain{}, metrics,
-					sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", commandErr)
+				commandErr = sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", commandErr)
+			}
+			metrics, combinedErr := mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
+			if combinedErr != nil {
+				return privateToolchain{}, metrics, combinedErr
 			}
 		} else if output, err := command.CombinedOutput(); err != nil {
 			_ = output

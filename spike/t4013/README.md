@@ -2152,6 +2152,7 @@ caller-abstention ceiling.
 ```sh
 cd ~/phebs
 
+export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled
 ./spike/t4013/run-large-mac-ceremony.sh preflight
 
 # Authorized only after this custody ledger is fast-forwarded to main.
@@ -3209,6 +3210,28 @@ expected-digest settings add no production file hashing or child work. T40.13f
 hermetic execution controls remains next. This ticket authorizes no freeze,
 ceremony, release, T40.13/Epic-40 closure, topology/bound change, or scale/SLO
 claim.
+
+### T40.13e review correction: dedicated-host boundary
+
+The complete-gate review supersedes the atomic “exact executed-tool” reading
+above. The implementation rehashes a pathname and then launches it. Those
+checks reject pre-check and persistent drift, but they do not prove the bytes
+the kernel executes after the final check or a transient replacement restored
+before the next snapshot. `ObserveHostToolchain` commits only the Go execution
+core's bounded identities. The driver utilities `awk`, `cmp`, `cp`, `date`,
+`df`, `du`, `env`, `find`, `grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`,
+`rm`, `sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`,
+and `wc` remain an enumerated trusted host TCB.
+
+The supported envelope is therefore one dedicated, single-operator host.
+Disable automatic/manual package, OS, and tool updates and stop every other
+same-UID writer/process before preflight; keep that state through source-free
+packaging. Every operational driver command refuses unless
+`PHEBS_T4013_HOST_STABILITY_ATTESTATION` exactly equals
+`dedicated-single-operator-host-with-tool-mutation-disabled`. Existing path,
+content, tree, and closed-environment checks remain defense in depth. An
+adversarial same-UID ceremony requires a separately reviewed atomic
+snapshot/fd-execution design and is not authorized by V25.
 
 ### T40.13f hermetic execution controls
 

@@ -702,6 +702,38 @@ execute_ceremony ceremony sha256:actual "$EXECUTE_APPROVAL"
 	}
 }
 
+func TestCeremonyDriverRequiresDedicatedHostAttestationBeforeAdmission(t *testing.T) {
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := `
+source "$1"
+HOST_STABILITY_ATTESTATION=wrong
+require_host_stability_attestation
+`
+	output, runErr := exec.Command("bash", "-c", script, "host-attestation-test", driver).CombinedOutput()
+	if runErr == nil || !bytes.Contains(output, []byte("stability attestation is missing or invalid")) {
+		t.Fatalf("invalid host attestation was not refused: %v: %s", runErr, output)
+	}
+	script = `
+source "$1"
+HOST_STABILITY_ATTESTATION="$HOST_STABILITY_CONFIRMATION"
+require_host_stability_attestation
+`
+	if output, runErr := exec.Command("bash", "-c", script, "host-attestation-test", driver).CombinedOutput(); runErr != nil {
+		t.Fatalf("exact host attestation was refused: %v: %s", runErr, output)
+	}
+	raw, err := os.ReadFile(driver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := string(raw[strings.Index(string(raw), "\nmain() {\n"):])
+	if strings.Index(main, "require_host_stability_attestation") > strings.Index(main, "enter_v25_run_lock") {
+		t.Fatal("host attestation runs after V25 admission")
+	}
+}
+
 func TestCeremonyDriverReturnedBundleAuthentication(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")

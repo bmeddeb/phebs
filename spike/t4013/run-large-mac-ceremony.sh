@@ -14,6 +14,7 @@ readonly SCRIPT_PATH="${SCRIPT_DIRECTORY}/$(basename "${BASH_SOURCE[0]}")"
 readonly SCRIPT_REPO_ROOT="$(cd "${SCRIPT_DIRECTORY}/../.." && pwd -P)"
 readonly DEFAULT_BASE_PORT=41731
 readonly EXECUTE_APPROVAL="execute-reviewed-neutral-t4013-plan"
+readonly HOST_STABILITY_CONFIRMATION="dedicated-single-operator-host-with-tool-mutation-disabled"
 readonly PREPARE_CONFIRM="prepare-neutral-t4013-custody"
 readonly EXECUTE_CONFIRM="execute-neutral-t4013-and-destroy-custody"
 readonly CLEANUP_CONFIRM="cleanup-neutral-t4013-custody"
@@ -31,6 +32,7 @@ readonly HOST_PATH="${PATH:-}"
 REPO_ROOT="${PHEBS_REPO_ROOT:-$SCRIPT_REPO_ROOT}"
 CEREMONY_ROOT="${PHEBS_CEREMONY_ROOT:-${HOME:-}/phebs-t4013-ceremony}"
 BASE_PORT="${PHEBS_T4013_BASE_PORT:-$DEFAULT_BASE_PORT}"
+HOST_STABILITY_ATTESTATION="${PHEBS_T4013_HOST_STABILITY_ATTESTATION:-}"
 SIGNING_KEY=""
 SIGNING_ROOT=""
 REPO_REAL=""
@@ -683,6 +685,7 @@ enter_v25_run_lock() {
     LC_ALL=C LANG=C TZ=UTC \
     PHEBS_REPO_ROOT="$REPO_REAL" PHEBS_CEREMONY_ROOT="$CEREMONY_REAL" \
     PHEBS_T4013_BASE_PORT="$BASE_PORT" \
+    PHEBS_T4013_HOST_STABILITY_ATTESTATION="$HOST_STABILITY_ATTESTATION" \
     CLOSED_CONTROL_ROOT="$CLOSED_CONTROL_ROOT" CLOSED_CONTROL_SHA256="$CLOSED_CONTROL_SHA256" \
     CLOSED_CONTROL_MANIFEST="$CLOSED_CONTROL_MANIFEST" CLOSED_HOME="$CLOSED_HOME" CLOSED_TMP="$CLOSED_TMP" \
     CLOSED_GO_CACHE="$CLOSED_GO_CACHE" CLOSED_GO_MODULE_CACHE="$CLOSED_GO_MODULE_CACHE" \
@@ -792,7 +795,8 @@ is_v25_plan() {
 usage() {
   cat <<EOF
 Usage:
-  $SCRIPT_NAME preflight
+  PHEBS_T4013_HOST_STABILITY_ATTESTATION=$HOST_STABILITY_CONFIRMATION \
+    $SCRIPT_NAME preflight
   $SCRIPT_NAME freeze <ceremony-id>
   $SCRIPT_NAME execute <ceremony-id> <approved-plan-digest> $EXECUTE_APPROVAL
   $SCRIPT_NAME seal <ceremony-id>
@@ -810,7 +814,17 @@ Defaults:
 The freeze and execute commands are deliberately separate. Review and record
 the printed plan digest before invoking execute. No command accepts a private
 monorepo path; this is the neutral two-million-owner ceremony only.
+
+Every operational command requires PHEBS_T4013_HOST_STABILITY_ATTESTATION to
+equal the phrase shown above. It attests that this is a dedicated,
+single-operator host and that package, OS, tool, and other same-UID mutation is
+disabled from preflight through source-free packaging.
 EOF
+}
+
+require_host_stability_attestation() {
+  [[ "$HOST_STABILITY_ATTESTATION" == "$HOST_STABILITY_CONFIRMATION" ]] ||
+    die "dedicated-host stability attestation is missing or invalid"
 }
 
 require_command() {
@@ -1814,6 +1828,11 @@ main() {
   trap 'retain_on_signal INT 130' INT
   trap 'retain_on_signal TERM 143' TERM
   trap 'retain_on_signal HUP 129' HUP
+  if [[ "$command_name" == preflight || "$command_name" == freeze ||
+    "$command_name" == execute || "$command_name" == seal ||
+    "$command_name" == verify || "$command_name" == verify-bundle ]]; then
+    require_host_stability_attestation
+  fi
   enter_v25_run_lock "$@"
   case "$command_name" in
     preflight)

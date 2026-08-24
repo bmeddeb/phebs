@@ -1793,6 +1793,21 @@ T40.13j's overflow-safe ceremony arithmetic, T40.13k's complete
 executor-admission accounting, and T40.13l's cost-first operator gates are
 complete. The original T40.13 gate remains open for its clean exact commit,
 bounded regressions, independent review, and separate authorization.
+
+The full-gate review of `97576e3319b565ab3af3fb407b7a361e552ee974`
+returned `FIX-FIRST` on two boundaries. The remediation now preserves both
+operation and aggregation failures at every shared metric merge and preserves
+an existing measurement error alongside incomplete meter inventory. It also
+supersedes the earlier atomic “exact executed-tool” interpretation: V25 uses a
+dedicated, single-operator host whose package, OS, tool, and other same-UID
+mutation is explicitly prohibited from preflight through source-free
+packaging. Every supported command requires the fixed host-stability
+attestation before admission. Path/content/tree checks remain bounded defense
+in depth against pre-check and persistent drift; they do not prove kernel-
+executed bytes after pathname verification. The Go inventory is only its
+committed execution-core subset; the driver's fixed shell utilities are an
+enumerated trusted host TCB. Independent re-review and all clean-commit gates
+remain mandatory before a separately authorized freeze.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

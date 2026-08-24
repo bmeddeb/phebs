@@ -4957,17 +4957,31 @@ authority, 4 KiB for cleanup control, and 260 KiB for a teardown checkpoint.
 Prepared output is invalid inside custody or the reviewed module checkout.
 Do not bypass these boundaries or hand-edit a prepared/checkpoint identity.
 
-V25 now binds source-free canonical-path digests for every frozen host tool,
-retains exact Go, Git/core, and SurrealDB paths, and rehashes the relevant exact
-executable immediately before each ceremony launch. The four custody-built
-binaries are rehashed as one bounded snapshot before every serve, backup, or
-restore start; Phebs also rechecks exact SurrealDB immediately before start and
-exact zoekt, focused-index, and Buf immediately before each child launch. The
-shell retains and rehashes all eight prebuilt V25 commands across its lock
-re-exec, including the bounded returned-bundle inspector. A changed file,
-symlink, or PATH selection is a hard refusal; do not replace a tool or hand-edit
-its digest.
-Full Go/Git tree hashing is limited to fixed admission and terminal snapshots.
+V25 commits a bounded Go execution-core subset: Go, Git/core, SurrealDB,
+compiler/linker/asm, six system tools, and the reviewed Go/Git trees. It
+rehashes retained host and custody-built paths at their named check boundaries;
+a changed file, symlink, or PATH selection is a hard refusal. These are
+pathname checks, not atomic executed-byte proof: they detect pre-check and
+persistent drift but cannot detect a transient replacement restored after the
+launch or prove the bytes the kernel executes after the final check.
+
+Run V25 only on one dedicated, single-operator host. Before preflight, disable
+automatic/manual package, OS, and tool updates and stop every other same-UID
+writer/process; keep that state through source-free packaging. Export the exact
+attestation for every operational command:
+
+```sh
+export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled
+```
+
+The driver's `awk`, `cmp`, `cp`, `date`, `df`, `du`, `env`, `find`, `grep`,
+`lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`, `rm`, `sed`, `shasum`, `sort`,
+`ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities are an
+enumerated trusted host TCB rather than plan-committed executed identities.
+Existing path/content/tree checks remain defense in depth. An adversarial
+same-UID boundary requires a separately reviewed atomic snapshot/fd-execution
+design; V25 does not authorize it. Full Go/Git tree hashing remains limited to
+fixed admission and terminal snapshots.
 
 V25 Prepare also writes `.t4013-execution-controls.json` inside custody and
 binds its digest in `prepared.json`. Its HOME, XDG config/cache/data, temporary,

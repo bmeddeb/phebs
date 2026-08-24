@@ -1,6 +1,10 @@
 package t4013
 
-import "testing"
+import (
+	"errors"
+	"strings"
+	"testing"
+)
 
 func TestCheckedArithmeticBoundaries(t *testing.T) {
 	addCases := []struct {
@@ -44,5 +48,18 @@ func TestMetricAggregationRefusesOverflow(t *testing.T) {
 	}
 	if _, err := mergeConcurrentMetrics(PhaseMetrics{PeakRSSBytes: maxInt64Value}, PhaseMetrics{PeakRSSBytes: 1}); err == nil {
 		t.Fatal("concurrent RSS aggregation accepted signed overflow")
+	}
+}
+
+func TestMetricAggregationPreservesSimultaneousOperationFailure(t *testing.T) {
+	operationErr := errors.New("operation failed")
+	metrics, err := mergeMetricsPreservingError(
+		operationErr,
+		PhaseMetrics{WallMS: maxInt64Value, ControlReads: 7},
+		PhaseMetrics{WallMS: 1},
+	)
+	if !errors.Is(err, operationErr) || !strings.Contains(err.Error(), "aggregation overflowed") ||
+		metrics.ControlReads != 7 {
+		t.Fatalf("simultaneous failures were not preserved: %v", err)
 	}
 }

@@ -1931,6 +1931,19 @@ func TestV25MeasuredCommandFailureCannotSubstantiateRecovery(t *testing.T) {
 	}
 }
 
+func TestCaptureFailedPhasePreservesMeasurementAndIncompleteInventory(t *testing.T) {
+	measurementErr := errors.New("measurement failed")
+	run := execution{
+		plan: Plan{Schema: PlanSchemaV25}, phase: 0, workspace: t.TempDir(),
+		observation:    Observation{Phases: []PhaseObservation{{Outcome: "not_run"}}},
+		measurementErr: measurementErr, metersExpected: 1,
+	}
+	err := run.captureFailedPhase()
+	if !errors.Is(err, measurementErr) || !strings.Contains(err.Error(), "complete meter inventory") {
+		t.Fatalf("simultaneous capture failures were not preserved: %v", err)
+	}
+}
+
 func TestV23LifecycleWaitTypesOnlyItsOwnDeadline(t *testing.T) {
 	credential := filepath.Join(t.TempDir(), "credential")
 	if err := os.WriteFile(credential, []byte("secret\n"), 0o600); err != nil {

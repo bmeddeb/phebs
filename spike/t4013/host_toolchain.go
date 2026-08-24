@@ -68,8 +68,9 @@ func (executable boundExecutable) pathForLaunch(ctx context.Context) (string, er
 	return executable.path, nil
 }
 
-// ObserveHostToolchain returns the exact, source-free identities of every host
-// executable used directly or indirectly to build and operate the ceremony.
+// ObserveHostToolchain returns the committed source-free identities used by
+// the Go execution core. The shell driver's fixed utilities remain part of the
+// dedicated-host TCB and are not claimed by this inventory.
 func ObserveHostToolchain(ctx context.Context) ([]HostToolObservation, error) {
 	return observeHostToolchain(ctx, false)
 }

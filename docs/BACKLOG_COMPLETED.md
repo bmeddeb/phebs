@@ -9882,6 +9882,21 @@ gain no corpus/shard read, child, retained cache, or persistent state. T40.13f
 is next. No freeze, ceremony, release, T40.13/Epic-40 closure, topology/bound
 change, or scale/SLO claim is authorized.
 
+**T40.13e review correction (2026-08-23).** A later complete-gate review
+supersedes this ticket's atomic/exact-executed interpretation. The implementation
+rehashes a pathname and then launches it; it refuses pre-check and persistent
+drift but cannot prove the bytes executed after the final check or a transient
+replacement restored before the next snapshot. `ObserveHostToolchain` commits
+the Go execution core's bounded subset, while the driver's admitted `awk`,
+`cmp`, `cp`, `date`, `df`, `du`, `env`, `find`, `grep`, `lsof`, `mkdir`,
+`mktemp`, `pgrep`, `ps`, `rm`, `sed`, `shasum`, `sort`, `ssh-keygen`,
+`sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities remain an enumerated host
+TCB. V25 therefore requires an explicit dedicated, single-operator host
+attestation prohibiting package, OS, tool, and other same-UID mutation from
+preflight through source-free packaging. An adversarial same-UID boundary
+requires a future atomic snapshot/fd-execution design; this correction makes no
+such claim.
+
 **T40.13f ✅ · Hermetic execution controls** *(2026-08-23; high)* — fresh V25
 Prepare now creates one canonical, at-most-4-KiB execution-control manifest
 inside custody and binds its SHA-256 identity in private prepared authority.

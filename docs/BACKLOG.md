@@ -1614,6 +1614,20 @@ only its isolated formerly timed-out test, a fresh unconsumed ceremony
 identifier, and Ben's separate freeze and execution authorizations. A green
 prerequisite stack is readiness evidence, not Epic 40 closure.
 
+The complete review of clean commit
+`97576e3319b565ab3af3fb407b7a361e552ee974` returned `FIX-FIRST`: metric
+aggregation could still replace a simultaneous operation/measurement error,
+and T40.13e's executed-byte wording exceeded its pathname checks and omitted
+the driver's authority utilities from the committed inventory. The stacked
+remediation joins both errors at every shared boundary and explicitly selects
+a dedicated, single-operator host envelope. The fixed attestation prohibits
+package, OS, tool, and other same-UID mutation from preflight through packaging;
+path/content/tree checks remain defense in depth, while the shell utilities are
+an enumerated trusted host TCB. This supersedes the atomic executed-tool claim
+without weakening a production trust boundary: an adversarial same-UID model
+would require a new snapshot/fd-execution ticket. Re-review and every gate
+above remain required; no ceremony identifier is consumed by this correction.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
