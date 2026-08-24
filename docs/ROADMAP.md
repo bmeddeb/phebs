@@ -1812,8 +1812,11 @@ committed execution-core subset. The Bash interpreter/builtins and `awk`,
 `grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`, `readlink`, `rm`, `rmdir`,
 `sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and
 `wc` driver utilities are an enumerated trusted host TCB. Independent re-review
-and all clean-commit gates remain mandatory before a separately authorized
-freeze.
+accepted exact clean commit `7696f047e8e936d96887af736c707991f494a94b`
+with no critical, high, or medium finding, closing the code/review prerequisite
+only. Full bounded regressions, real-binary rehearsals, the full
+`internal/store` gate, a fresh unconsumed identifier, and separate freeze and
+execution authorizations remain mandatory.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
