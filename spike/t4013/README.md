@@ -3034,9 +3034,10 @@ completeness, migration, or decommission authorization.
 V25 accepts a process sample only after complete bounded enumeration, coherent
 identity/RSS observation, root checks, and child-lifetime classification all
 succeed. Darwin uses native parent traversal and one task-all-info record per
-accepted process. A denied task-all-info row is absent only when privilege-free
-short BSD info proves the PID missing or no longer parented to the process that
-discovered it; a still-parented denial fails. Linux retains bounded `ps`
+accepted process. A denied descendant task-all-info row is absent only when
+privilege-free short BSD info proves the PID missing or no longer parented to
+the process that discovered it; a still-parented denial fails, and root denial
+is always sticky. Linux retains bounded `ps`
 enumeration plus `/proc` identity reads and at most two fresh whole-sample
 retries for a typed disappeared child under the same two-second deadline. Every
 other error is immediately sticky. A failed logical sample changes no metrics

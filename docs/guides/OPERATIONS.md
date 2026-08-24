@@ -4825,10 +4825,11 @@ identity, command class, and resident bytes therefore come from one observation.
 A child that exits before its record is read is absent from that accepted
 250-ms sampled-lifetime observation. One attempt inspects at most 128
 descendant candidates across the whole traversal, including disappeared or
-drifted candidates. A task-all-info `EPERM` adds one privilege-free short BSD
-read only to prove that the PID is missing or no longer belongs to the parent
-that discovered it; only that reuse/reparent transition is absent from the
-sample. A still-parented denied child, invalid record, parent/class/identity
+drifted candidates. A descendant task-all-info `EPERM` adds one privilege-free
+short BSD read only to prove that the PID is missing or no longer belongs to the
+parent that discovered it; only that reuse/reparent transition is absent from
+the sample. Root task-all-info `EPERM` is always sticky. A still-parented denied
+child, invalid record, parent/class/identity
 drift, other permission/system failure, duplicate, or overflow remains
 fail-closed. If
 the sole process `Wait` owner marks root exit while a
