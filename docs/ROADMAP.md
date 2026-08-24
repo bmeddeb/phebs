@@ -1837,8 +1837,10 @@ The final bounded rehearsal remained `BLOCKED / HIGH` after those corrections:
 `sustained_child_identity_churn` exhausted all three paced attempts during
 stale-worker, and `root_exit_snapshot_handoff_indeterminate` observed a
 descendant-bearing snapshot after the semantic root-exit marker without proving
-which event came first. Both fail closed. Do not widen retry bounds; no fresh
-ceremony identifier is selected or consumed.
+which event came first. The final exact-commit run also recorded
+`child_identity_class_transition` when process-table and kernel command classes
+disagreed for one PID. All three fail closed. Do not widen retry bounds or
+weaken identity equality; no fresh ceremony identifier is selected or consumed.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

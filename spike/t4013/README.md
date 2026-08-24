@@ -3076,9 +3076,13 @@ recorded `sustained_child_identity_churn` when stale-worker exhausted all three
 paced attempts in two logical samples, and
 `root_exit_snapshot_handoff_indeterminate` when semantic sampling observed a
 descendant-bearing snapshot after the sole `Wait` owner marked root exit. Both
-fail closed; neither proves corrupt production behavior or authorizes wider
-retry bounds. A separately reviewed sampler/launch-observation design and an
-exact root-exit snapshot handoff are required before readiness can pass.
+fail closed. The final exact-commit run also recorded
+`child_identity_class_transition` when process-table and kernel command classes
+disagreed for one PID during semantic and structural work; it remains
+non-retryable. None proves corrupt production behavior or authorizes wider
+retry bounds or weaker identity equality. A separately reviewed
+sampler/launch-observation design and exact root-exit snapshot handoff are
+required before readiness can pass.
 
 ### T40.13b cooperative cancellation and shutdown truth
 

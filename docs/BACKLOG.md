@@ -1654,10 +1654,13 @@ disappeared child, with all attempts sharing the existing two-second deadline;
 every other failure remains sticky and no failed attempt contributes evidence.
 The corrected full rehearsal remains `BLOCKED / HIGH` on
 `sustained_child_identity_churn` and
-`root_exit_snapshot_handoff_indeterminate`. These fail-closed findings prevent
+`root_exit_snapshot_handoff_indeterminate`. The final exact-commit rehearsal
+also recorded `child_identity_class_transition` when process-table and kernel
+command classes disagreed for one PID. These fail-closed findings prevent
 complete phase accounting; they do not establish a production vulnerability or
-false pass, and they do not justify wider retries. No ceremony identifier is
-selected or consumed pending a separately reviewed sampling/handoff correction.
+false pass, and they justify neither wider retries nor weaker identity equality.
+No ceremony identifier is selected or consumed pending a separately reviewed
+sampling/handoff correction.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
