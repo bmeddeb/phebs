@@ -397,18 +397,19 @@ validate_closed_controls
 	}
 }
 
-func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
+func TestCeremonyDriverChangesExecutionEnvironmentAtV25(t *testing.T) {
 	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; is_v25_plan() { grep -q -- '-v25"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
+	script := `source "$1"; is_v25_plan() { grep -Eq -- '-v2(5|6)"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
 	for _, test := range []struct {
 		schema string
 		want   string
 	}{
 		{schema: PlanSchemaV24, want: "historical-ambient"},
 		{schema: PlanSchemaV25, want: ""},
+		{schema: PlanSchemaV26, want: ""},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -440,7 +441,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentOnlyAtV25(t *testing.T) {
 		if got != test.want {
 			t.Fatalf("plan environment %s = %q, want %q", test.schema, got, test.want)
 		}
-		if test.schema == PlanSchemaV25 && closedPaths != 4 {
+		if planSchemaVersion(test.schema) >= 25 && closedPaths != 4 {
 			t.Fatalf("plan environment %s has %d closed host paths, want 4", test.schema, closedPaths)
 		}
 	}
@@ -1094,7 +1095,7 @@ func TestCeremonyDriverSelectsPreflightByPlanSchema(t *testing.T) {
 	}
 	script := `
 source "$1"
-is_v25_plan() { grep -q -- '-v25"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6)"' "$1"; }
 preflight() { printf 'v25-execute\n'; }
 historical_preflight() { printf 'historical-execute\n'; }
 verification_preflight() { printf 'v25-seal\n'; }
@@ -1108,6 +1109,7 @@ verification_preflight_for_plan "$2"
 	}{
 		{schema: PlanSchemaV24, want: "historical-execute\nhistorical-seal\n"},
 		{schema: PlanSchemaV25, want: "v25-execute\nv25-seal\n"},
+		{schema: PlanSchemaV26, want: "v25-execute\nv25-seal\n"},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -1726,7 +1728,7 @@ func TestCeremonyDriverFailurePolicyIsV25OnlyAndStopsBeforeSeal(t *testing.T) {
 			sealMarker := filepath.Join(root, "seal")
 			script := `
 source "$1"
-is_v25_plan() { grep -q -- '-v25"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6)"' "$1"; }
 REPO_REAL="$REPOSITORY_PATH"
 CEREMONY_REAL="$ROOT_PATH"
 CLOSED_GO_CACHE="$CACHE_PATH"
@@ -1893,6 +1895,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 		{name: "historical-existing", schema: PlanSchemaV24, existing: true},
 		{name: "historical-missing", schema: PlanSchemaV24, wantCommand: true},
 		{name: "v25-existing", schema: PlanSchemaV25, existing: true, wantCommand: true},
+		{name: "v26-existing", schema: PlanSchemaV26, existing: true, wantCommand: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -1913,7 +1916,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 			}
 			script := `
 source "$1"
-is_v25_plan() { grep -q -- '-v25"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6)"' "$1"; }
 REPO_REAL="$2"
 V25_RECEIPT_COMMAND=t4013-receipt
 require_v25_custody_command() { :; }

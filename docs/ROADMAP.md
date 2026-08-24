@@ -1845,6 +1845,19 @@ exit requires no descendants. Corrected real-binary, package, race, full
 finding. Integration, dedicated-host preflight, and separate freeze and
 execution authorizations remain mandatory; no fresh ceremony identifier is
 selected or consumed.
+Neutral-35 subsequently consumed its exact V25 identifier and stopped honestly
+after structural convergence because the sampler treated a coherent
+same-PID/start-token executable-class change as impossible. Its sealed receipt
+is `unclassified / failed_phase_measurement_unavailable`; teardown and the
+source-free package verified, and the result establishes neither pipeline
+failure nor scale success. T40.13m is now the only next scale ticket. It models
+that event as one bounded executable-image epoch, advances fresh evidence to
+V26 with six fixed source-free transition-direction counters, and leaves every
+identity, root, descendant, cadence, deadline, and cumulative ceiling refusal
+intact. Full exact-commit package/race, real-launcher, readiness rehearsal,
+repository/store, documentation, and independent-review gates must pass before
+integration. `t40r1-neutral-36` is only the next nominal candidate; identifier
+selection, freeze, and execution require their existing separate approvals.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

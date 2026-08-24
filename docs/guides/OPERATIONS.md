@@ -5064,3 +5064,28 @@ proof, and both real-binary rehearsals must pass from one clean commit in their
 designated branch-gate or preflight boundary. Passing those gates is readiness
 evidence only; freeze and execution each still require Ben's separate explicit
 authorization and a fresh, unconsumed ceremony identifier.
+
+## T40.R1 neutral-35 stop and V26 executable-image accounting
+
+Preserve `t40r1-neutral-35` and its verified source-free package unchanged.
+The run converged its structural observer, then stopped because V25 could not
+measure a coherent same-process executable-class transition. Do not relabel it
+as a pipeline failure or pass, reuse its identifier, rerun its frozen plan, or
+delete its signed evidence. Teardown already proved that derived and scratch
+source custody was not retained.
+
+Fresh V26 phase metrics count a coherent same-PID/start-token class change as a
+new sampled executable-image epoch and retain only six bounded transition
+directions. These facts contain no executable path, command, token, source, or
+child output. A missing transition field means zero; any V1–V25 evidence with a
+nonzero transition field is invalid. A same-snapshot class disagreement is
+still an ambiguous measurement failure, not an exec epoch.
+
+Before requesting another freeze, run the deterministic Darwin exec regression,
+the complete T40.13 package and race package, the real-launcher proof, the
+production-path readiness rehearsal, full `internal/store`, documentation,
+glossary, shell-syntax, whitespace, vet, and independent review gates on one
+clean exact commit. The nominal `t40r1-neutral-36` identifier is not selected
+by this guidance. After integration, run standalone dedicated-host preflight;
+then request separate freeze authorization, frozen-plan review, and exact-ID/
+digest execution authorization in that order.

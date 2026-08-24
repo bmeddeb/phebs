@@ -663,6 +663,29 @@ func TestRSSSamplerContainsInvalidStrictSamples(t *testing.T) {
 	if peak, gitChildren, _, _, err := mismatch.metrics(); !errors.Is(err, errProcessSamplingFailed) || peak != 0 || gitChildren != 0 {
 		t.Fatalf("kernel/table mismatch = peak:%d git:%d err:%v", peak, gitChildren, err)
 	}
+	classMismatch := newSyntheticRSSSampler(10)
+	classMismatch.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+		name := candidate.name
+		if pid == 11 {
+			name = "/private/phebs-focused-index"
+		}
+		return processIdentityObservation{token: strconv.Itoa(pid), parent: candidate.parent, name: name}, nil
+	}
+	classMismatch.recordSnapshot([]byte(root+child), nil)
+	if peak, gitChildren, indexChildren, _, err := classMismatch.metrics(); !errors.Is(err, errProcessSamplingFailed) || peak != 0 || gitChildren != 0 || indexChildren != 0 {
+		t.Fatalf("kernel/table class mismatch = peak:%d git:%d index:%d err:%v",
+			peak, gitChildren, indexChildren, err)
+	}
+	parentDrift := newSyntheticRSSSampler(10)
+	parentDrift.recordSnapshot([]byte(root+child), nil)
+	intermediary := processSnapshotRow(12, 10, 4, "Fri Aug 22 12:00:02 2026", "/private/helper")
+	reparented := processSnapshotRow(11, 12, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")
+	parentDrift.recordSnapshot([]byte(root+intermediary+reparented), nil)
+	if _, gitChildren, _, otherChildren, err := parentDrift.metrics(); !errors.Is(err, errProcessSamplingFailed) || gitChildren != 1 || otherChildren != 0 ||
+		!strings.Contains(err.Error(), "parent changed within one lifetime") {
+		t.Fatalf("same-lifetime parent drift = git:%d other:%d active:%+v err:%v",
+			gitChildren, otherChildren, parentDrift.activeChildren, err)
+	}
 }
 
 func TestProcessClassificationAcceptsOwnedKernelNameLimits(t *testing.T) {
@@ -717,7 +740,7 @@ func TestRSSSamplerRetainsBoundedFirstFailure(t *testing.T) {
 	}
 }
 
-func TestRSSSamplerCountsChildLifetimesInConstantSpace(t *testing.T) {
+func TestRSSSamplerCountsChildExecutionEpochsInConstantSpace(t *testing.T) {
 	const rootStart = "Fri Aug 22 12:00:00 2026"
 	root := processSnapshotRow(10, 1, 4, rootStart, "/private/phebs")
 	gitA := processSnapshotRow(11, 10, 8, "Fri Aug 22 12:00:01 2026", "/usr/bin/git")
@@ -754,14 +777,47 @@ func TestRSSSamplerCountsChildLifetimesInConstantSpace(t *testing.T) {
 	if err != nil || gitChildren != 2 {
 		t.Fatalf("same-second PID reuse = %d, err=%v", gitChildren, err)
 	}
-
-	drift := newSyntheticRSSSampler(10)
-	drift.recordSnapshot([]byte(root+gitA), nil)
-	drift.recordSnapshot([]byte(root+processSnapshotRow(
+	identities[11] = "child-instance-c"
+	strong.recordSnapshot([]byte(root+processSnapshotRow(
 		11, 10, 8, "Fri Aug 22 12:00:01 2026", "/private/phebs-focused-index")), nil)
-	_, _, _, _, err = drift.metrics()
-	if !errors.Is(err, errProcessSamplingFailed) {
-		t.Fatalf("child class drift passed: %v", err)
+	identityMetrics, err := strong.phaseMetrics()
+	if err != nil || identityMetrics.GitChildren != 2 || identityMetrics.IndexChildren != 1 ||
+		identityMetrics.GitToIndexTransitions != 0 {
+		t.Fatalf("changed identity class = %+v, %v", identityMetrics, err)
+	}
+
+	execEpoch := newSyntheticRSSSampler(10)
+	execEpoch.recordSnapshot([]byte(root+gitA), nil)
+	execEpoch.recordSnapshot([]byte(root+processSnapshotRow(
+		11, 10, 8, "Fri Aug 22 12:00:01 2026", "/private/phebs-focused-index")), nil)
+	transitionMetrics, err := execEpoch.phaseMetrics()
+	gitChildren, indexChildren, otherChildren = transitionMetrics.GitChildren,
+		transitionMetrics.IndexChildren, transitionMetrics.OtherChildren
+	if err != nil || gitChildren != 1 || indexChildren != 1 || otherChildren != 0 ||
+		transitionMetrics.GitToIndexTransitions != 1 || len(execEpoch.activeChildren) != 1 ||
+		execEpoch.activeChildren[11].class != processClassIndex {
+		t.Fatalf("child exec epochs = %+v active:%+v err=%v",
+			transitionMetrics, execEpoch.activeChildren, err)
+	}
+	execEpoch.recordSnapshot([]byte(root+gitA), nil)
+	execEpoch.recordSnapshot([]byte(root+gitA), nil)
+	transitionMetrics, err = execEpoch.phaseMetrics()
+	if err != nil || transitionMetrics.GitChildren != 2 || transitionMetrics.IndexChildren != 1 ||
+		transitionMetrics.GitToIndexTransitions != 1 || transitionMetrics.IndexToGitTransitions != 1 ||
+		execEpoch.activeChildren[11].class != processClassGit {
+		t.Fatalf("reversed exec epochs = %+v active:%+v err=%v",
+			transitionMetrics, execEpoch.activeChildren, err)
+	}
+	execEpoch.strictGitChildren = maxProcessChildLifetimes - 1
+	execEpoch.recordSnapshot([]byte(root+processSnapshotRow(
+		11, 10, 8, "Fri Aug 22 12:00:01 2026", "/private/phebs-focused-index")), nil)
+	transitionMetrics, err = execEpoch.phaseMetrics()
+	gitChildren, indexChildren = transitionMetrics.GitChildren, transitionMetrics.IndexChildren
+	if !errors.Is(err, errProcessSamplingFailed) || gitChildren != maxProcessChildLifetimes-1 ||
+		indexChildren != 1 || transitionMetrics.GitToIndexTransitions != 1 ||
+		transitionMetrics.IndexToGitTransitions != 1 || execEpoch.activeChildren[11].class != processClassGit {
+		t.Fatalf("bounded exec epoch = %+v active:%+v err=%v",
+			transitionMetrics, execEpoch.activeChildren, err)
 	}
 
 	unavailable := newSyntheticRSSSampler(10)
@@ -1183,6 +1239,7 @@ func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV23, "historical-ambient"},
 		{PlanSchemaV24, "historical-ambient"},
 		{PlanSchemaV25, ""},
+		{PlanSchemaV26, ""},
 	} {
 		got := ""
 		surreal := ""
@@ -1213,6 +1270,7 @@ func TestFrozenSourceExportContractChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV23, frozenSourceExportLegacy},
 		{PlanSchemaV24, frozenSourceExportLegacy},
 		{PlanSchemaV25, frozenSourceExportV25},
+		{PlanSchemaV26, frozenSourceExportV25},
 	} {
 		if got := frozenSourceExportContractForPlan(test.schema); got != test.want {
 			t.Fatalf("source export contract for %s = %v, want %v", test.schema, got, test.want)

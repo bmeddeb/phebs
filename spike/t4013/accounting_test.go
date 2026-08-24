@@ -47,14 +47,14 @@ func TestAuthorityChangeAccountingIsPlaneExact(t *testing.T) {
 
 func TestMergeMetricsSumsEventsButKeepsAbsoluteGaugeMaxima(t *testing.T) {
 	got, err := mergeMetrics(
-		PhaseMetrics{WallMS: 2, PeakRSSBytes: 8, DataLogicalBytes: 12, DataAllocatedBytes: 6, Retries: 1},
-		PhaseMetrics{WallMS: 3, PeakRSSBytes: 7, DataLogicalBytes: 10, DataAllocatedBytes: 9, Retries: 2},
+		PhaseMetrics{WallMS: 2, PeakRSSBytes: 8, DataLogicalBytes: 12, DataAllocatedBytes: 6, Retries: 1, OtherToGitTransitions: 1},
+		PhaseMetrics{WallMS: 3, PeakRSSBytes: 7, DataLogicalBytes: 10, DataAllocatedBytes: 9, Retries: 2, OtherToGitTransitions: 2},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.WallMS != 5 || got.PeakRSSBytes != 8 || got.DataLogicalBytes != 12 ||
-		got.DataAllocatedBytes != 9 || got.Retries != 3 {
+		got.DataAllocatedBytes != 9 || got.Retries != 3 || got.OtherToGitTransitions != 3 {
 		t.Fatalf("merged metrics = %+v", got)
 	}
 }

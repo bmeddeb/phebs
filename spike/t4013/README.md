@@ -3401,3 +3401,40 @@ custody; and preflight checks checkout cleanliness before cache or command
 construction. Required semantic verification still runs after cheap admission
 succeeds. Call-order regression tests prove the expensive gates are skipped on
 these refusals. T40.13 remains open; no freeze or ceremony is authorized.
+
+### Neutral-35 process-image accounting stop and T40.13m
+
+`t40r1-neutral-35` is an immutable signed V25 stop. The structural convergence
+observer reached `complete` after 3,660,371 ms and all 1,956 extraction
+partitions completed without failure. The cold meter then surfaced 12 failed
+samples sharing the sampler's first sticky cause: one coherent process identity
+appeared with a different normalized class across accepted snapshots. V25
+could retain only the generic `failed_phase_measurement_unavailable` code, so
+the exact transition direction cannot be reconstructed after custody teardown.
+Later phases correctly remain `not_run`; this result is neither a pipeline
+failure nor a gate pass.
+
+T40.13m treats `(PID, kernel start token, parent, class)` as the sampled
+executable-image epoch. The same PID/start token/parent and same class is
+unchanged. A new class on the same coherent identity and parent increments the
+destination Git/index/other epoch once, updates the active epoch, and consumes
+the existing 8,192 cumulative ceiling. A changed token or accepted
+absence/reappearance remains a new process lifetime without an exec-transition
+fact. Failed samples still commit nothing.
+
+Fresh contracts advance to V26. Each phase can retain six optional integer
+counters: other-to-Git, other-to-index, Git-to-other, Git-to-index,
+index-to-other, and index-to-Git. They reveal no path, command, token, source,
+or process output and must be absent/zero in V1–V25. Counter merge is checked
+for overflow and total transitions cannot exceed the phase's retained sampled
+epochs.
+
+The change adds no process probe, retry, deadline, child, or production work.
+Same-snapshot candidate/kernel class disagreement, parent or start drift,
+unreadable identity, duplicates, cycles, root-exit handoff, the 128-descendant
+bound, 250-ms cadence, and shared two-second attempt deadline remain
+fail-closed. A deterministic Darwin test holds a real `git hash-object --stdin`
+exec open long enough to prove the same kernel identity crosses from other to
+Git; synthetic tests fence repeats, bounds, ambiguity, merge, and historical
+schema behavior. Neutral-35 cannot be reused, and neutral-36 is not selected or
+authorized by this correction.

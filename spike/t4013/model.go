@@ -49,6 +49,7 @@ const (
 	PlanSchemaV23        = "t4013-neutral-convergence-plan-v23"
 	PlanSchemaV24        = "t4013-neutral-convergence-plan-v24"
 	PlanSchemaV25        = "t4013-neutral-convergence-plan-v25"
+	PlanSchemaV26        = "t4013-neutral-convergence-plan-v26"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -74,6 +75,7 @@ const (
 	ObservationSchemaV23 = "t4013-neutral-convergence-observation-v23"
 	ObservationSchemaV24 = "t4013-neutral-convergence-observation-v24"
 	ObservationSchemaV25 = "t4013-neutral-convergence-observation-v25"
+	ObservationSchemaV26 = "t4013-neutral-convergence-observation-v26"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -112,6 +114,7 @@ const (
 	ReceiptSchemaV23             = "t4013-neutral-convergence-receipt-v23"
 	ReceiptSchemaV24             = "t4013-neutral-convergence-receipt-v24"
 	ReceiptSchemaV25             = "t4013-neutral-convergence-receipt-v25"
+	ReceiptSchemaV26             = "t4013-neutral-convergence-receipt-v26"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -159,6 +162,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV23, ObservationSchemaV23, ReceiptSchemaV23},
 	{PlanSchemaV24, ObservationSchemaV24, ReceiptSchemaV24},
 	{PlanSchemaV25, ObservationSchemaV25, ReceiptSchemaV25},
+	{PlanSchemaV26, ObservationSchemaV26, ReceiptSchemaV26},
 }
 
 const (
@@ -674,6 +678,12 @@ type PhaseMetrics struct {
 	Retries                   int64 `json:"retries"`
 	ReusedControls            int64 `json:"reused_controls"`
 	ReusedMembers             int64 `json:"reused_members"`
+	OtherToGitTransitions     int64 `json:"other_to_git_transitions,omitempty"`
+	OtherToIndexTransitions   int64 `json:"other_to_index_transitions,omitempty"`
+	GitToOtherTransitions     int64 `json:"git_to_other_transitions,omitempty"`
+	GitToIndexTransitions     int64 `json:"git_to_index_transitions,omitempty"`
+	IndexToOtherTransitions   int64 `json:"index_to_other_transitions,omitempty"`
+	IndexToGitTransitions     int64 `json:"index_to_git_transitions,omitempty"`
 }
 
 type CheckObservation struct {
@@ -801,10 +811,10 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	if err := ValidateObservation(value); err != nil {
 		return Observation{}, err
 	}
-	if value.Schema == ObservationSchemaV25 {
+	if observationSchemaVersion(value.Schema) >= 25 {
 		canonical, err := MarshalObservation(value)
 		if err != nil || !bytes.Equal(raw, canonical) {
-			return Observation{}, errors.Join(err, errors.New("T40.13 V25 observation is not canonical"))
+			return Observation{}, errors.Join(err, errors.New("T40.13 V25+ observation is not canonical"))
 		}
 	}
 	return value, nil
@@ -932,6 +942,8 @@ func ValidatePlan(value Plan) error {
 	case PlanSchemaV24:
 		wantSafety = frozenSafetyV24
 	case PlanSchemaV25:
+		wantSafety = frozenSafetyV25
+	case PlanSchemaV26:
 		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
@@ -1062,7 +1074,7 @@ func ValidateObservation(value Observation) error {
 	}
 	for index, phase := range value.Phases {
 		if phase.Name != phaseOrder[index] || !slices.Contains([]string{"succeeded", "failed", "not_run"}, phase.Outcome) ||
-			!nonnegativeMetrics(phase.Metrics) {
+			!nonnegativeMetrics(phase.Metrics) || !validProcessClassTransitions(phase.Metrics, version >= 26) {
 			return errors.New("T40.13 phase observation is invalid")
 		}
 	}
@@ -3132,7 +3144,23 @@ func nonnegativeMetrics(value PhaseMetrics) bool {
 		value.OtherChildren >= 0 && value.ControlReads >= 0 && value.MemberReads >= 0 &&
 		value.PublicationWrites >= 0 && value.PublicationTransactions >= 0 &&
 		value.OrchestrationTransactions >= 0 && value.Retries >= 0 &&
-		value.ReusedControls >= 0 && value.ReusedMembers >= 0
+		value.ReusedControls >= 0 && value.ReusedMembers >= 0 &&
+		value.OtherToGitTransitions >= 0 && value.OtherToIndexTransitions >= 0 &&
+		value.GitToOtherTransitions >= 0 && value.GitToIndexTransitions >= 0 &&
+		value.IndexToOtherTransitions >= 0 && value.IndexToGitTransitions >= 0
+}
+
+func validProcessClassTransitions(value PhaseMetrics, allowed bool) bool {
+	transitions, err := checkedSumInt64(
+		value.OtherToGitTransitions, value.OtherToIndexTransitions,
+		value.GitToOtherTransitions, value.GitToIndexTransitions,
+		value.IndexToOtherTransitions, value.IndexToGitTransitions,
+	)
+	if err != nil || (!allowed && transitions != 0) {
+		return false
+	}
+	children, err := checkedSumInt64(value.GitChildren, value.IndexChildren, value.OtherChildren)
+	return err == nil && transitions <= children
 }
 
 func digest(raw []byte) string {

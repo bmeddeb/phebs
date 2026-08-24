@@ -2238,7 +2238,7 @@ func newCompletedTeardownExecution(t *testing.T) *execution {
 
 func completedV25TeardownObservation(plan Plan) Observation {
 	value := completedV7Observation(plan)
-	value.Schema = ObservationSchemaV25
+	value.Schema = observationSchemaForPlan(plan)
 	value.HostToolchain = slices.Clone(plan.HostToolchain)
 	value.ServerStartups = slices.Insert(value.ServerStartups, 6, ServerStartupObservation{
 		Profile: "structural-2m-v1", Label: "pressure-restart", Outcome: "healthy",

@@ -75,6 +75,56 @@ func TestDarwinNativeSamplerSurvivesSustainedChildChurn(t *testing.T) {
 	}
 }
 
+func TestDarwinNativeSamplerAccountsExecClassEpoch(t *testing.T) {
+	command := exec.CommandContext(t.Context(), "/bin/sh", "-c",
+		`/bin/sh -c 'sleep 1; exec /usr/bin/git hash-object --stdin' child & wait`)
+	input, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := isolatePrivateServerSession(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = input.Close()
+		_ = killPrivateServerSession(command.Process.Pid)
+		_ = command.Wait()
+		_ = finishCustodyCommandSession(command.Process.Pid)
+	}()
+
+	sampler := newRSSSampler(command.Process.Pid, true)
+	sampler.captureRootIdentity()
+	seenOther := make(map[processIdentity]struct{})
+	transitioned := false
+	deadline := time.Now().Add(5 * time.Second)
+	for !transitioned && time.Now().Before(deadline) {
+		sampler.sample()
+		sampler.mu.Lock()
+		for _, child := range sampler.activeChildren {
+			if child.class == processClassOther {
+				seenOther[child.identity] = struct{}{}
+			}
+			if child.class == processClassGit {
+				_, transitioned = seenOther[child.identity]
+			}
+		}
+		sampler.mu.Unlock()
+		if !transitioned {
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	sampler.sample()
+	metrics, err := sampler.phaseMetrics()
+	if err != nil || !transitioned || metrics.GitChildren != 1 || metrics.OtherChildren == 0 ||
+		metrics.OtherToGitTransitions != 1 || sampler.failedSamples != 0 || sampler.samples < 2 {
+		t.Fatalf("native exec epochs = transitioned:%t metrics:%+v samples:%d failed:%d err=%v",
+			transitioned, metrics, sampler.samples, sampler.failedSamples, err)
+	}
+}
+
 func TestDarwinSnapshotRefusesParentDriftAndCandidateOverflow(t *testing.T) {
 	root := processSnapshot{parent: 1, name: "phebs", identityToken: "root", coherent: true}
 	t.Run("parent-drift", func(t *testing.T) {

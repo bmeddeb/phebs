@@ -256,16 +256,14 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical,
 		DataAllocatedBytes: allocated, OtherChildren: 1,
 	}
-	var samplerErr error
-	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, samplerErr =
-		sampler.metrics()
-	metrics.OtherChildren++
+	processMetrics, samplerErr := sampler.phaseMetrics()
+	metrics, mergeErr := mergeMetrics(metrics, processMetrics)
 	var shutdownErr error
 	if strict {
 		shutdownErr = signaledCommandShutdownUnproven(waitErr)
 	}
 	return metrics, errors.Join(
-		waitErr, shutdownErr, sessionErr, samplerErr, measureErr, allocationErr,
+		waitErr, shutdownErr, sessionErr, samplerErr, mergeErr, measureErr, allocationErr,
 	)
 }
 
@@ -283,10 +281,10 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 		WallMS:           time.Since(meter.started).Milliseconds(),
 		DataLogicalBytes: logical, DataAllocatedBytes: allocated,
 	}
-	var samplerErr error
-	metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, samplerErr = meter.server.sampler.metrics()
-	if samplerErr != nil {
-		return PhaseMetrics{}, samplerErr
+	processMetrics, samplerErr := meter.server.sampler.phaseMetrics()
+	metrics, mergeErr := mergeMetrics(metrics, processMetrics)
+	if samplerErr != nil || mergeErr != nil {
+		return PhaseMetrics{}, errors.Join(samplerErr, mergeErr)
 	}
 	logMetrics, err := parseLogMetrics(meter.server.logPath, meter.logOffset)
 	if err != nil {

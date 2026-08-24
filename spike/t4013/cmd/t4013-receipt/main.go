@@ -22,8 +22,9 @@ func main() {
 	if err != nil {
 		fail("read plan: %v", err)
 	}
+	durableEvidence := decodedPlan.Schema == t4013.PlanSchemaV25 || decodedPlan.Schema == t4013.PlanSchemaV26
 	var observation []byte
-	if decodedPlan.Schema == t4013.PlanSchemaV25 {
+	if durableEvidence {
 		observation, err = t4013.ResumeObservation(*observationPath, plan, *planDigest)
 	} else {
 		observation, err = os.ReadFile(*observationPath)
@@ -35,7 +36,7 @@ func main() {
 	if err != nil {
 		fail("build receipt: %v", err)
 	}
-	if decodedPlan.Schema == t4013.PlanSchemaV25 {
+	if durableEvidence {
 		if err := t4013.WriteReceipt(*output, receipt); err != nil {
 			fail("write output: %v", err)
 		}

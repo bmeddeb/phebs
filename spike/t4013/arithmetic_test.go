@@ -46,6 +46,9 @@ func TestMetricAggregationRefusesOverflow(t *testing.T) {
 	if _, err := mergeMetrics(PhaseMetrics{PublicationWrites: maxInt64Value}, PhaseMetrics{PublicationWrites: 1}); err == nil {
 		t.Fatal("scalar aggregation accepted signed overflow")
 	}
+	if _, err := mergeMetrics(PhaseMetrics{GitToIndexTransitions: maxInt64Value}, PhaseMetrics{GitToIndexTransitions: 1}); err == nil {
+		t.Fatal("process-class transition aggregation accepted signed overflow")
+	}
 	if _, err := mergeConcurrentMetrics(PhaseMetrics{PeakRSSBytes: maxInt64Value}, PhaseMetrics{PeakRSSBytes: 1}); err == nil {
 		t.Fatal("concurrent RSS aggregation accepted signed overflow")
 	}

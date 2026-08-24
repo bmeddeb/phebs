@@ -1666,6 +1666,43 @@ finding. Integration, dedicated-host preflight, and separate freeze and
 execution authorizations remain mandatory. No ceremony identifier is selected
 or consumed.
 
+Neutral-35 is consumed as a verified signed V25 measurement stop. At exact
+source `158dc6c9d87c26e4e7fc6a2f2ce38cc900da2119` and plan
+`sha256:d9c1a646a7722c0d6496d1866c3a1450cbcbdfbf5c17c340d324173fe2ea543c`,
+the structural observer reached `complete` at 3,660,371 ms and extraction
+reported 1,956 of 1,956 partitions completed with zero failures. Process
+accounting then retained 12 failed samples sharing one sticky same-identity
+class-change cause. Because the exact transition direction was not present in
+source-free V25 evidence, cold is correctly failed as
+`failed_phase_measurement_unavailable`, later phases are `not_run`, and the
+decision is unsubstantiated `unclassified`; this is neither a pipeline failure
+nor a scale pass. Teardown destroyed derived and scratch custody. The verified
+source-free package is
+`sha256:a1b1114e74010bedaac65cf037b5135895dcb6b1cf0bcb4753888b9aeaadf7c1`.
+
+**T40.13m · Bounded executable-image epoch accounting** *(high gate readiness ·
+needs immutable neutral-35 review)* — replace the false assumption that a
+kernel process lifetime has one immutable executable class. AC: across two
+complete coherent snapshots, the exact same PID, kernel start token, and parent
+with a new normalized class consumes one new sampled executable-image epoch,
+increments the destination Git/index/other count once, updates the active
+epoch, and remains inside the existing 8,192 cumulative ceiling; a same-class
+repeat is free, while changed identity or absence/reappearance remains a new
+sampled lifetime. Fresh plan/observation/receipt contracts advance to V26 and
+retain six optional source-free old-class-to-new-class transition counters;
+V1–V25 bytes validate only with those counters absent/zero. Same-snapshot
+candidate/kernel class disagreement, parent/start drift, malformed/unreadable
+identity, duplicate/cycle, root handoff, 128 descendants, 250-ms cadence,
+shared two-second deadline, and no-partial-commit rules remain fail-closed.
+Tests must include a deterministic Darwin same-PID shell-to-real-Git exec,
+synthetic transition/repeat/reversal/identity/bound cases, within-snapshot
+class mismatch, metric merge/overflow, and V25/V26 receipt validation. The
+correction adds no probe, retry, deadline, production work, or bound increase.
+Full bounded package/race, real-launcher, readiness rehearsal, repository/store,
+docs, glossary, shell, and independent-review gates remain required before
+integration. `t40r1-neutral-36` is an unselected candidate only; freeze and
+execution remain separately authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

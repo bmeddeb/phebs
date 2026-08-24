@@ -760,6 +760,48 @@ func TestV25PlanFundsMeasuredCeremonyAndPrePressureGrowth(t *testing.T) {
 	}
 }
 
+func TestV26ReceiptRetainsBoundedProcessClassTransitions(t *testing.T) {
+	plan, err := frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV26 || observationSchemaForPlan(plan) != ObservationSchemaV26 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV26 {
+		t.Fatalf("v26 schema set = %q/%q/%q", plan.Schema,
+			observationSchemaForPlan(plan), receiptSchemaForPlan(plan))
+	}
+	value := completedV25TeardownObservation(plan)
+	value.Phases[1].Metrics.OtherChildren++
+	value.Phases[1].Metrics.OtherToGitTransitions = 1
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Phases[1].Metrics.OtherToGitTransitions != 1 {
+		t.Fatalf("v26 transition receipt = %+v, %v", receipt.Phases[1].Metrics, err)
+	}
+	historical := value
+	historical.Schema = ObservationSchemaV25
+	if ValidateObservation(historical) == nil {
+		t.Fatal("V25 observation acquired process-class transition evidence")
+	}
+	overCount := value
+	overCount.Phases = slices.Clone(value.Phases)
+	overCount.Phases[1].Metrics.OtherToGitTransitions = 2
+	if ValidateObservation(overCount) == nil {
+		t.Fatal("transition evidence exceeded its sampled execution epochs")
+	}
+}
+
 func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
 	projection := &AuthorizedQueryObservation{
 		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",

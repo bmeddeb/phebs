@@ -530,7 +530,7 @@ func buildWorkingTreeToolchain(
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV25,
+		Schema:        PlanSchemaV26,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -772,7 +772,7 @@ func rehearseSemanticInterruptionBoundary(
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan := Plan{Schema: PlanSchemaV25}
+	plan := Plan{Schema: PlanSchemaV26}
 	run := &execution{
 		ctx: ctx, plan: plan,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
@@ -879,7 +879,7 @@ func rehearseSemanticInterruptionBoundary(
 		t.Fatal("semantic interruption rehearsal changed exact A authority")
 	}
 	if err := waitForDerivedPartialClear(
-		ctx, Plan{Schema: PlanSchemaV25}, profile.DataDir, 3*time.Minute,
+		ctx, Plan{Schema: PlanSchemaV26}, profile.DataDir, 3*time.Minute,
 	); err != nil {
 		t.Logf("semantic interruption partial controls: %v", rehearsalPartialControls(profile.DataDir))
 		t.Logf("semantic interruption derived inventory: %v", rehearsalDerivedInventory(profile.DataDir))

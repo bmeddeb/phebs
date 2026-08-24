@@ -228,9 +228,9 @@ func newExecution(
 		defer func() {
 			admissionCloseErr := admissionSampler.close()
 			admissionMetrics := PhaseMetrics{WallMS: time.Since(admissionStarted).Milliseconds()}
-			var admissionMetricsErr error
-			admissionMetrics.PeakRSSBytes, admissionMetrics.GitChildren, admissionMetrics.IndexChildren,
-				admissionMetrics.OtherChildren, admissionMetricsErr = admissionSampler.metrics()
+			processMetrics, processMetricsErr := admissionSampler.phaseMetrics()
+			admissionMetrics, admissionMetricsErr := mergeMetrics(admissionMetrics, processMetrics)
+			admissionMetricsErr = errors.Join(processMetricsErr, admissionMetricsErr)
 			admissionErr := errors.Join(admissionCloseErr, admissionMetricsErr)
 			if result != nil {
 				result.admissionMetrics = admissionMetrics
@@ -5142,6 +5142,24 @@ func addMetricScalars(result *PhaseMetrics, value PhaseMetrics) error {
 		return err
 	}
 	if result.ReusedMembers, err = checkedAddInt64(result.ReusedMembers, value.ReusedMembers); err != nil {
+		return err
+	}
+	if result.OtherToGitTransitions, err = checkedAddInt64(result.OtherToGitTransitions, value.OtherToGitTransitions); err != nil {
+		return err
+	}
+	if result.OtherToIndexTransitions, err = checkedAddInt64(result.OtherToIndexTransitions, value.OtherToIndexTransitions); err != nil {
+		return err
+	}
+	if result.GitToOtherTransitions, err = checkedAddInt64(result.GitToOtherTransitions, value.GitToOtherTransitions); err != nil {
+		return err
+	}
+	if result.GitToIndexTransitions, err = checkedAddInt64(result.GitToIndexTransitions, value.GitToIndexTransitions); err != nil {
+		return err
+	}
+	if result.IndexToOtherTransitions, err = checkedAddInt64(result.IndexToOtherTransitions, value.IndexToOtherTransitions); err != nil {
+		return err
+	}
+	if result.IndexToGitTransitions, err = checkedAddInt64(result.IndexToGitTransitions, value.IndexToGitTransitions); err != nil {
 		return err
 	}
 	return nil

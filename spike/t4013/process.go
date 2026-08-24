@@ -89,6 +89,7 @@ type rssSampler struct {
 	strictGitChildren   int64
 	strictIndexChildren int64
 	strictOtherChildren int64
+	strictTransitions   [3][3]int64
 	rootIdentity        processIdentity
 	rootSeen            bool
 	rootExited          bool
@@ -121,6 +122,7 @@ const (
 
 type sampledProcess struct {
 	identity processIdentity
+	parent   int
 	class    processClass
 }
 
@@ -468,11 +470,8 @@ func extractFrozenSourceCommandMeasured(
 		WallMS: time.Since(started).Milliseconds(), DataLogicalBytes: logical,
 		DataAllocatedBytes: allocated, GitChildren: 1,
 	}
-	var descendantGit int64
-	var samplerErr error
-	metrics.PeakRSSBytes, descendantGit, metrics.IndexChildren, metrics.OtherChildren, samplerErr = sampler.metrics()
-	var addErr error
-	metrics.GitChildren, addErr = checkedAddInt64(metrics.GitChildren, descendantGit)
+	processMetrics, samplerErr := sampler.phaseMetrics()
+	metrics, addErr := mergeMetrics(metrics, processMetrics)
 	return metrics, errors.Join(
 		extractErr, waitErr, signaledCommandShutdownUnproven(waitErr),
 		sessionErr, samplerErr, addErr, measureErr, allocationErr,
@@ -1236,6 +1235,7 @@ func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
 	gitChildren := sampler.strictGitChildren
 	indexChildren := sampler.strictIndexChildren
 	otherChildren := sampler.strictOtherChildren
+	transitions := sampler.strictTransitions
 	sampler.mu.Unlock()
 
 	nextActive := make(map[int]sampledProcess, len(pids)-1)
@@ -1267,12 +1267,15 @@ func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
 		}
 		observed := sampledProcess{
 			identity: identity,
+			parent:   process.parent,
 			class:    class,
 		}
-		if previouslyActive && previous.identity == observed.identity {
-			if previous.class != observed.class {
-				return errors.New("T40.13 process child classification changed within one lifetime")
-			}
+		if previouslyActive && previous.identity == observed.identity && previous.parent != observed.parent {
+			return errors.New("T40.13 process child parent changed within one lifetime")
+		}
+		sameIdentity := previouslyActive && previous.identity == observed.identity
+		// A coherent class change keeps the kernel lifetime but starts a sampled executable-image epoch.
+		if sameIdentity && previous.class == observed.class {
 			nextActive[pid] = observed
 			continue
 		}
@@ -1287,6 +1290,9 @@ func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
 			indexChildren++
 		default:
 			otherChildren++
+		}
+		if sameIdentity {
+			transitions[previous.class][observed.class]++
 		}
 		nextActive[pid] = observed
 	}
@@ -1320,6 +1326,7 @@ func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
 	sampler.strictGitChildren = gitChildren
 	sampler.strictIndexChildren = indexChildren
 	sampler.strictOtherChildren = otherChildren
+	sampler.strictTransitions = transitions
 	sampler.samples++
 	return nil
 }
@@ -1538,8 +1545,13 @@ func boundedCommandOutput(ctx context.Context, limit int64, name string, args ..
 }
 
 func (sampler *rssSampler) metrics() (peakRSS, gitChildren, indexChildren, otherChildren int64, err error) {
+	metrics, err := sampler.phaseMetrics()
+	return metrics.PeakRSSBytes, metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren, err
+}
+
+func (sampler *rssSampler) phaseMetrics() (PhaseMetrics, error) {
 	if sampler == nil {
-		return 0, 0, 0, 0, nil
+		return PhaseMetrics{}, nil
 	}
 	if sampler.strict {
 		sampler.sampleMu.Lock()
@@ -1548,11 +1560,21 @@ func (sampler *rssSampler) metrics() (peakRSS, gitChildren, indexChildren, other
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
 	if sampler.strict {
-		return sampler.peakRSS, sampler.strictGitChildren, sampler.strictIndexChildren,
-			sampler.strictOtherChildren, sampler.strictErrorLocked()
+		return PhaseMetrics{
+			PeakRSSBytes: sampler.peakRSS, GitChildren: sampler.strictGitChildren,
+			IndexChildren: sampler.strictIndexChildren, OtherChildren: sampler.strictOtherChildren,
+			OtherToGitTransitions:   sampler.strictTransitions[processClassOther][processClassGit],
+			OtherToIndexTransitions: sampler.strictTransitions[processClassOther][processClassIndex],
+			GitToOtherTransitions:   sampler.strictTransitions[processClassGit][processClassOther],
+			GitToIndexTransitions:   sampler.strictTransitions[processClassGit][processClassIndex],
+			IndexToOtherTransitions: sampler.strictTransitions[processClassIndex][processClassOther],
+			IndexToGitTransitions:   sampler.strictTransitions[processClassIndex][processClassGit],
+		}, sampler.strictErrorLocked()
 	}
-	return sampler.peakRSS, int64(len(sampler.gitChildren)), int64(len(sampler.indexChildren)),
-		int64(len(sampler.otherChildren)), nil
+	return PhaseMetrics{
+		PeakRSSBytes: sampler.peakRSS, GitChildren: int64(len(sampler.gitChildren)),
+		IndexChildren: int64(len(sampler.indexChildren)), OtherChildren: int64(len(sampler.otherChildren)),
+	}, nil
 }
 
 func (sampler *rssSampler) strictErrorLocked() error {
@@ -1631,6 +1653,7 @@ func (sampler *rssSampler) resetWindow() {
 		sampler.strictGitChildren = 0
 		sampler.strictIndexChildren = 0
 		sampler.strictOtherChildren = 0
+		sampler.strictTransitions = [3][3]int64{}
 		return
 	}
 	sampler.gitChildren = map[int]struct{}{}
