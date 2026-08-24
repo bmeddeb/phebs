@@ -69,3 +69,62 @@ func TestDarwinNativeSamplerSurvivesSustainedChildChurn(t *testing.T) {
 			sampler.samples, peak, otherChildren, err)
 	}
 }
+
+func TestDarwinSnapshotRefusesParentDriftAndCandidateOverflow(t *testing.T) {
+	root := processSnapshot{parent: 1, name: "phebs", identityToken: "root", coherent: true}
+	t.Run("parent-drift", func(t *testing.T) {
+		_, _, err := collectDarwinProcessSnapshot(
+			t.Context(), 10,
+			func(pid int) ([]int, error) {
+				if pid == 10 {
+					return []int{11}, nil
+				}
+				return nil, nil
+			},
+			func(pid int) (processSnapshot, error) {
+				if pid == 10 {
+					return root, nil
+				}
+				return processSnapshot{parent: 9, name: "git", identityToken: "child", coherent: true}, nil
+			},
+		)
+		if err == nil || err.Error() != "T40.13 native process parent changed during observation" {
+			t.Fatalf("parent drift = %v", err)
+		}
+	})
+	t.Run("candidate-overflow", func(t *testing.T) {
+		children := make([]int, maxProcessDescendants)
+		for index := range children {
+			children[index] = index + 11
+		}
+		observations := 0
+		_, _, err := collectDarwinProcessSnapshot(
+			t.Context(), 10,
+			func(pid int) ([]int, error) {
+				switch pid {
+				case 10:
+					return children, nil
+				case 11:
+					return []int{1000}, nil
+				default:
+					return nil, nil
+				}
+			},
+			func(pid int) (processSnapshot, error) {
+				observations++
+				if pid == 10 {
+					return root, nil
+				}
+				parent := 10
+				if pid == 1000 {
+					parent = 11
+				}
+				return processSnapshot{parent: parent, name: "git", identityToken: "child", coherent: true}, nil
+			},
+		)
+		if err == nil || err.Error() != "T40.13 native process candidate inventory exceeds its bound" ||
+			observations != maxProcessDescendants+1 {
+			t.Fatalf("candidate overflow = observations:%d err:%v", observations, err)
+		}
+	})
+}

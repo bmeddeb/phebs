@@ -47,13 +47,21 @@ func nativeProcessSnapshotProbe() func(context.Context, int) ([]int, map[int]pro
 func darwinProcessSnapshot(
 	ctx context.Context, root int,
 ) ([]int, map[int]processSnapshot, error) {
+	return collectDarwinProcessSnapshot(ctx, root, darwinChildPIDs, darwinProcessObservation)
+}
+
+func collectDarwinProcessSnapshot(
+	ctx context.Context, root int,
+	childrenOf func(int) ([]int, error),
+	observe func(int) (processSnapshot, error),
+) ([]int, map[int]processSnapshot, error) {
 	if ctx == nil || root <= 0 {
 		return nil, nil, errors.New("T40.13 native process snapshot scope is invalid")
 	}
 	result := []int{root}
 	processes := make(map[int]processSnapshot, maxProcessDescendants+1)
 	seen := map[int]struct{}{root: {}}
-	if observed, err := darwinProcessObservation(root); err == nil {
+	if observed, err := observe(root); err == nil {
 		processes[root] = observed
 	} else if !errors.Is(err, errProcessIdentityMissing) {
 		return nil, nil, err
@@ -62,16 +70,22 @@ func darwinProcessSnapshot(
 		if err := ctx.Err(); err != nil {
 			return nil, nil, err
 		}
-		children, err := darwinChildPIDs(result[index])
+		children, err := childrenOf(result[index])
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, child := range children {
+			if err := ctx.Err(); err != nil {
+				return nil, nil, err
+			}
 			if _, duplicate := seen[child]; duplicate {
 				return nil, nil, errors.New("T40.13 native process snapshot contains a duplicate PID")
 			}
+			if len(seen) > maxProcessDescendants {
+				return nil, nil, errors.New("T40.13 native process candidate inventory exceeds its bound")
+			}
 			seen[child] = struct{}{}
-			observed, err := darwinProcessObservation(child)
+			observed, err := observe(child)
 			if errors.Is(err, errProcessIdentityMissing) {
 				continue
 			}
@@ -79,7 +93,7 @@ func darwinProcessSnapshot(
 				return nil, nil, err
 			}
 			if observed.parent != result[index] {
-				continue
+				return nil, nil, errors.New("T40.13 native process parent changed during observation")
 			}
 			result = append(result, child)
 			processes[child] = observed

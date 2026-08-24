@@ -4823,9 +4823,11 @@ On Darwin, V25 process accounting uses bounded native parent traversal and one
 kernel task-all-info record per accepted root or descendant. PID, PPID, start
 identity, command class, and resident bytes therefore come from one observation.
 A child that exits before its record is read is absent from that accepted
-250-ms sampled-lifetime observation. Invalid records, parent/class/identity
-drift, permission/system failures, duplicates, and the 128-descendant bound
-remain fail-closed. If the sole process `Wait` owner marks root exit while a
+250-ms sampled-lifetime observation. One attempt inspects at most 128
+descendant candidates across the whole traversal, including disappeared or
+drifted candidates; invalid records, parent/class/identity drift,
+permission/system failures, duplicates, and overflow remain fail-closed. If
+the sole process `Wait` owner marks root exit while a
 sample is being observed, that attempt commits nothing and the sampler takes
 exactly one fresh handoff observation under the same two-second deadline. A
 root already known exited must have no descendants. This changes neither the

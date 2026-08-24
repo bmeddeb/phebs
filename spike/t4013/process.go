@@ -1308,6 +1308,9 @@ func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
 
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
+	if sampler.rootExited {
+		return errProcessRootExitTransition
+	}
 	sampler.rootIdentity = rootIdentity
 	sampler.rootSeen = true
 	if total > sampler.peakRSS {
