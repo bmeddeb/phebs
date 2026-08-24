@@ -1652,15 +1652,16 @@ Real convergence then reproduced Darwin's child-exit race between `ps` and
 `kern.proc.pid`. T40.13a now permits at most two fresh complete retries only for a typed
 disappeared child, with all attempts sharing the existing two-second deadline;
 every other failure remains sticky and no failed attempt contributes evidence.
-The corrected full rehearsal remains `BLOCKED / HIGH` on
-`sustained_child_identity_churn` and
-`root_exit_snapshot_handoff_indeterminate`. The final exact-commit rehearsal
-also recorded `child_identity_class_transition` when process-table and kernel
-command classes disagreed for one PID. These fail-closed findings prevent
-complete phase accounting; they do not establish a production vulnerability or
-false pass, and they justify neither wider retries nor weaker identity equality.
-No ceremony identifier is selected or consumed pending a separately reviewed
-sampling/handoff correction.
+The Darwin sampler correction closes those three rehearsal blockers without
+widening retry or weakening identity equality. Bounded native parent traversal
+now accepts PID, PPID, start identity, command class, and RSS only from one
+`PROC_PIDTASKALLINFO` record; a child gone before that record is absent from the
+accepted sampled-lifetime observation. A root-exit marker crossing discards the
+whole attempt and permits exactly one fresh handoff observation under the same
+two-second deadline; an already-observed exit requires no descendants. The
+corrected real-binary rehearsal, bounded package suite, and race suite pass.
+Full repository/store gates and exact-clean-commit independent review remain
+mandatory. No ceremony identifier is selected or consumed before those gates.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

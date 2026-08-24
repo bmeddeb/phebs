@@ -1001,6 +1001,59 @@ func TestRSSSamplerRetriesOnlyFreshDisappearedChildSnapshots(t *testing.T) {
 	})
 }
 
+func TestRSSSamplerAcceptsOnlyCompleteCoherentRecords(t *testing.T) {
+	sampler := newSyntheticRSSSampler(10)
+	sampler.identityProbe = func(int, processSnapshot) (processIdentityObservation, error) {
+		t.Fatal("coherent snapshot called the split identity probe")
+		return processIdentityObservation{}, nil
+	}
+	sampler.nativeSnapshotProbe = func(context.Context, int) ([]int, map[int]processSnapshot, error) {
+		return []int{10, 11}, map[int]processSnapshot{
+			10: {parent: 1, rssBytes: 4 * 1024, name: "phebs", identityToken: sampler.rootIdentity.token, coherent: true},
+			11: {parent: 10, rssBytes: 8 * 1024, name: "git", identityToken: "child", coherent: true},
+		}, nil
+	}
+	sampler.sample()
+	peak, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+	if err != nil || peak != 12*1024 || gitChildren != 1 || indexChildren != 0 || otherChildren != 0 ||
+		sampler.samples != 1 || len(sampler.activeChildren) != 1 {
+		t.Fatalf("coherent sample = peak:%d git:%d index:%d other:%d samples:%d active:%d err:%v",
+			peak, gitChildren, indexChildren, otherChildren, sampler.samples, len(sampler.activeChildren), err)
+	}
+}
+
+func TestRSSSamplerRetakesSnapshotAcrossRootExitMarker(t *testing.T) {
+	root := []byte(processSnapshotRow(10, 1, 4, "", "/private/phebs"))
+	sampler := newSyntheticRSSSampler(10)
+	sampler.expectConcurrentRootWait()
+	attempts := 0
+	sampler.snapshotProbe = func(context.Context) ([]byte, error) {
+		attempts++
+		if attempts == 1 {
+			return root, nil
+		}
+		return nil, nil
+	}
+	sampler.identityProbe = func(pid int, candidate processSnapshot) (processIdentityObservation, error) {
+		if pid == sampler.pid && attempts == 1 {
+			sampler.observeRootExit()
+		}
+		token := strconv.Itoa(pid)
+		if pid == sampler.pid {
+			token = sampler.rootIdentity.token
+		}
+		return processIdentityObservation{token: token, parent: candidate.parent, name: candidate.name}, nil
+	}
+	sampler.sample()
+	peak, gitChildren, indexChildren, otherChildren, err := sampler.metrics()
+	if err != nil || attempts != 2 || peak != 0 || gitChildren != 0 || indexChildren != 0 ||
+		otherChildren != 0 || sampler.samples != 1 || sampler.failedSamples != 0 {
+		t.Fatalf("root handoff = attempts:%d peak:%d children:%d/%d/%d samples:%d failures:%d err:%v",
+			attempts, peak, gitChildren, indexChildren, otherChildren, sampler.samples,
+			sampler.failedSamples, err)
+	}
+}
+
 func TestRSSSamplerAllowsZeroSampleAfterObservedRootExit(t *testing.T) {
 	live := newSyntheticRSSSampler(10)
 	live.recordSnapshot(nil, nil)
@@ -1017,9 +1070,14 @@ func TestRSSSamplerAllowsZeroSampleAfterObservedRootExit(t *testing.T) {
 	}
 	raced := newSyntheticRSSSampler(10)
 	raced.expectConcurrentRootWait()
+	attempts := 0
+	raced.snapshotProbe = func(context.Context) ([]byte, error) {
+		attempts++
+		return nil, nil
+	}
 	recorded := make(chan struct{})
 	go func() {
-		raced.recordSnapshot(nil, nil)
+		raced.sample()
 		close(recorded)
 	}()
 	select {
@@ -1029,8 +1087,8 @@ func TestRSSSamplerAllowsZeroSampleAfterObservedRootExit(t *testing.T) {
 	}
 	raced.observeRootExit()
 	<-recorded
-	if _, _, _, _, err := raced.metrics(); err != nil {
-		t.Fatalf("reap-before-marker race failed: %v", err)
+	if _, _, _, _, err := raced.metrics(); err != nil || attempts != 2 {
+		t.Fatalf("reap-before-marker race = attempts:%d err:%v", attempts, err)
 	}
 
 	survivor := newSyntheticRSSSampler(10)
@@ -1104,6 +1162,7 @@ func processSnapshotRow(pid, parent, rss int, _ string, name string) string {
 
 func newSyntheticRSSSampler(pid int) *rssSampler {
 	sampler := newRSSSampler(pid, true)
+	sampler.nativeSnapshotProbe = nil
 	sampler.identityProbe = func(observedPID int, candidate processSnapshot) (processIdentityObservation, error) {
 		token := strconv.Itoa(observedPID)
 		return processIdentityObservation{token: token, parent: candidate.parent, name: candidate.name}, nil

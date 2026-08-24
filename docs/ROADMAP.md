@@ -1833,14 +1833,15 @@ T40.13a now permits at most two fresh complete retries only for a typed disappea
 under the same two-second deadline; all other identity failures remain sticky,
 and failed attempts commit no evidence. This sampled-lifetime correction also
 requires the corrected rehearsal and independent review.
-The final bounded rehearsal remained `BLOCKED / HIGH` after those corrections:
-`sustained_child_identity_churn` exhausted all three paced attempts during
-stale-worker, and `root_exit_snapshot_handoff_indeterminate` observed a
-descendant-bearing snapshot after the semantic root-exit marker without proving
-which event came first. The final exact-commit run also recorded
-`child_identity_class_transition` when process-table and kernel command classes
-disagreed for one PID. All three fail closed. Do not widen retry bounds or
-weaken identity equality; no fresh ceremony identifier is selected or consumed.
+The Darwin sampler correction closes those three rehearsal blockers without
+widening retry or weakening identity equality. It replaces the split `ps` and
+kernel-identity observation with bounded native parent traversal and one
+coherent PID/PPID/start/class/RSS record per accepted process. A root-exit
+marker crossing discards the whole attempt and permits exactly one fresh
+handoff observation under the same two-second deadline; an already-observed
+exit requires no descendants. Corrected real-binary, package, and race gates
+pass. Full repository/store gates and exact-clean-commit independent review
+remain mandatory; no fresh ceremony identifier is selected or consumed.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

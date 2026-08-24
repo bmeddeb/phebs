@@ -208,9 +208,7 @@ exit 0
 	if err := server.stop(5 * time.Second); err != nil {
 		t.Fatal(err)
 	}
-	if err := supervision.Drain(""); err != nil {
-		t.Fatal(err)
-	}
+	drainLauncherCustody(t, supervision, 10*time.Second)
 	finishLauncherCustody(t, supervision)
 }
 

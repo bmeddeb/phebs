@@ -3071,18 +3071,19 @@ fork; same-kernel-token reuse and durable hard-death/escape absence remain
 T40.13c. This changes no public schema or production work and authorizes no
 freeze or ceremony.
 
-The corrected real-binary rehearsal remains blocked at this boundary. It
-recorded `sustained_child_identity_churn` when stale-worker exhausted all three
-paced attempts in two logical samples, and
-`root_exit_snapshot_handoff_indeterminate` when semantic sampling observed a
-descendant-bearing snapshot after the sole `Wait` owner marked root exit. Both
-fail closed. The final exact-commit run also recorded
-`child_identity_class_transition` when process-table and kernel command classes
-disagreed for one PID during semantic and structural work; it remains
-non-retryable. None proves corrupt production behavior or authorizes wider
-retry bounds or weaker identity equality. A separately reviewed
-sampler/launch-observation design and exact root-exit snapshot handoff are
-required before readiness can pass.
+Darwin now closes the split-observation boundary with native bounded parent
+traversal. Each accepted process is one coherent `PROC_PIDTASKALLINFO` record:
+PID, PPID, start identity, command class, and RSS cannot cross an exec/exit
+transition between separate reads. A discovered child gone before that record
+is absent from the accepted sampled-lifetime observation. Every other invalid,
+drifting, over-bound, or unreadable record remains sticky. The sampler captures
+the root-exit marker before observation; a false-to-true crossing discards the
+whole attempt and permits exactly one fresh handoff observation under the same
+two-second deadline. An already-observed exit requires an empty descendant set.
+No failed attempt commits evidence. Linux retains the split-observation retry.
+The sustained-churn regression, corrected real-binary rehearsal, bounded
+package suite, and race suite pass. Full repository/store gates and independent
+exact-clean-commit review remain mandatory before identifier selection.
 
 ### T40.13b cooperative cancellation and shutdown truth
 

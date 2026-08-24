@@ -40,6 +40,8 @@ var errProcessIdentityMissing = errors.New("T40.13 process disappeared before id
 
 var errProcessChildIdentityDisappeared = errors.New("T40.13 child disappeared before identity capture")
 
+var errProcessRootExitTransition = errors.New("T40.13 process root exited during snapshot capture")
+
 type privateToolchain struct {
 	Schema            string
 	Phebs             string
@@ -82,6 +84,7 @@ type rssSampler struct {
 	activeChildren      map[int]sampledProcess
 	identityProbe       func(int, processSnapshot) (processIdentityObservation, error)
 	snapshotProbe       func(context.Context) ([]byte, error)
+	nativeSnapshotProbe func(context.Context, int) ([]int, map[int]processSnapshot, error)
 	retryWait           func(context.Context) error
 	strictGitChildren   int64
 	strictIndexChildren int64
@@ -991,7 +994,7 @@ func newRSSSampler(pid int, strict bool) *rssSampler {
 			return boundedCommandOutput(ctx, maxProcessProbeBytes,
 				"/bin/ps", "-Ao", "pid=,ppid=,rss=,comm=")
 		},
-		retryWait: waitProcessSampleRetry,
+		nativeSnapshotProbe: nativeProcessSnapshotProbe(), retryWait: waitProcessSampleRetry,
 	}
 }
 
@@ -1072,40 +1075,67 @@ func (sampler *rssSampler) sample() {
 	}
 	sampler.sampleMu.Lock()
 	defer sampler.sampleMu.Unlock()
-	if sampler.snapshotProbe == nil {
+	if sampler.snapshotProbe == nil && sampler.nativeSnapshotProbe == nil {
 		sampler.recordFailure(errors.New("T40.13 process snapshot probe is unavailable"))
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
 	defer cancel()
 	var attemptErrs []error
-	for attempt := range maxProcessSampleAttempts {
-		output, probeErr := sampler.snapshotProbe(ctx)
+	childAttempts := 0
+	rootHandoffUsed := false
+	for {
+		rootExitedAtStart := sampler.observedRootExit()
+		pids, processes, probeErr := sampler.probeProcessSnapshot(ctx)
 		if ctx.Err() != nil {
 			probeErr = errors.Join(probeErr, ctx.Err())
 		}
-		sampleErr := sampler.recordSnapshotAttemptLocked(output, probeErr)
+		sampleErr := sampler.recordProcessSnapshotAttemptLocked(
+			ctx, pids, processes, probeErr, rootExitedAtStart,
+		)
 		if sampleErr == nil {
 			return
 		}
 		attemptErrs = append(attemptErrs, sampleErr)
+		if errors.Is(sampleErr, errProcessRootExitTransition) && !rootHandoffUsed {
+			rootHandoffUsed = true
+			continue
+		}
 		if !errors.Is(sampleErr, errProcessChildIdentityDisappeared) {
 			sampler.recordFailure(errors.Join(attemptErrs...))
 			return
 		}
-		if attempt+1 < maxProcessSampleAttempts {
-			if sampler.retryWait == nil {
-				sampler.recordFailure(errors.Join(append(attemptErrs,
-					errors.New("T40.13 process sample retry wait is unavailable"))...))
-				return
-			}
-			if waitErr := sampler.retryWait(ctx); waitErr != nil {
-				sampler.recordFailure(errors.Join(append(attemptErrs, waitErr)...))
-				return
-			}
+		childAttempts++
+		if childAttempts >= maxProcessSampleAttempts {
+			sampler.recordFailure(errors.Join(attemptErrs...))
+			return
+		}
+		if sampler.retryWait == nil {
+			sampler.recordFailure(errors.Join(append(attemptErrs,
+				errors.New("T40.13 process sample retry wait is unavailable"))...))
+			return
+		}
+		if waitErr := sampler.retryWait(ctx); waitErr != nil {
+			sampler.recordFailure(errors.Join(append(attemptErrs, waitErr)...))
+			return
 		}
 	}
-	sampler.recordFailure(errors.Join(attemptErrs...))
+}
+
+func (sampler *rssSampler) probeProcessSnapshot(
+	ctx context.Context,
+) ([]int, map[int]processSnapshot, error) {
+	if sampler.nativeSnapshotProbe != nil {
+		return sampler.nativeSnapshotProbe(ctx, sampler.pid)
+	}
+	if sampler.snapshotProbe == nil {
+		return nil, nil, errors.New("T40.13 process snapshot probe is unavailable")
+	}
+	output, err := sampler.snapshotProbe(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return parseProcessSnapshot(output, sampler.pid)
 }
 
 func (sampler *rssSampler) recordSnapshot(output []byte, probeErr error) {
@@ -1115,12 +1145,14 @@ func (sampler *rssSampler) recordSnapshot(output []byte, probeErr error) {
 }
 
 func (sampler *rssSampler) recordSnapshotLocked(output []byte, probeErr error) {
-	if err := sampler.recordSnapshotAttemptLocked(output, probeErr); err != nil {
+	if err := sampler.recordSnapshotAttemptLocked(output, probeErr, sampler.observedRootExit()); err != nil {
 		sampler.recordFailure(err)
 	}
 }
 
-func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr error) error {
+func (sampler *rssSampler) recordSnapshotAttemptLocked(
+	output []byte, probeErr error, rootExitedAtStart bool,
+) error {
 	if probeErr != nil {
 		return probeErr
 	}
@@ -1128,62 +1160,69 @@ func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr e
 	if parseErr != nil {
 		return parseErr
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
+	defer cancel()
+	return sampler.recordProcessSnapshotAttemptLocked(ctx, pids, processes, nil, rootExitedAtStart)
+}
+
+func (sampler *rssSampler) recordProcessSnapshotAttemptLocked(
+	ctx context.Context, pids []int, processes map[int]processSnapshot,
+	probeErr error, rootExitedAtStart bool,
+) error {
+	if ctx == nil {
+		return errors.New("T40.13 process snapshot context is invalid")
+	}
+	if probeErr != nil {
+		return probeErr
+	}
 	if len(pids) == 0 {
 		return errors.New("T40.13 process snapshot traversal is empty")
 	}
 	root, rootPresent := processes[sampler.pid]
+	rootExitedAfterEnumeration := sampler.observedRootExit()
+	if !rootExitedAtStart && rootExitedAfterEnumeration {
+		return errProcessRootExitTransition
+	}
 	if !rootPresent {
-		if !sampler.awaitObservedRootExit() || len(pids) != 1 {
-			return errors.New("T40.13 process snapshot omitted its live root")
-		}
-		sampler.mu.Lock()
-		sampler.activeChildren = map[int]sampledProcess{}
-		sampler.samples++
-		sampler.mu.Unlock()
-		return nil
-	}
-	sampler.mu.Lock()
-	rootExited := sampler.rootExited
-	sampler.mu.Unlock()
-	if rootExited {
-		if len(pids) != 1 {
-			return errors.New("T40.13 process snapshot retained descendants after root exit")
-		}
-		sampler.mu.Lock()
-		sampler.activeChildren = map[int]sampledProcess{}
-		sampler.samples++
-		sampler.mu.Unlock()
-		return nil
-	}
-	if sampler.identityProbe == nil {
-		return errors.New("T40.13 process identity probe is unavailable")
-	}
-	rootObservation, identityErr := sampler.identityProbe(sampler.pid, root)
-	if identityErr != nil {
-		if sampler.awaitObservedRootExit() && len(pids) == 1 {
-			sampler.mu.Lock()
-			sampler.activeChildren = map[int]sampledProcess{}
-			sampler.samples++
-			sampler.mu.Unlock()
+		if rootExitedAtStart {
+			if len(pids) != 1 {
+				return fmt.Errorf("T40.13 process snapshot retained descendants after root exit (exit_at_start=true descendants=%d)",
+					len(pids)-1)
+			}
+			sampler.commitEmptyProcessSample()
 			return nil
+		}
+		if !sampler.awaitObservedRootExit(ctx) {
+			return fmt.Errorf("T40.13 process snapshot omitted its live root (exit_at_start=%t exit_after_enumeration=%t)",
+				rootExitedAtStart, rootExitedAfterEnumeration)
+		}
+		return errProcessRootExitTransition
+	}
+	if rootExitedAtStart {
+		if len(pids) != 1 {
+			return fmt.Errorf("T40.13 process snapshot retained descendants after root exit (exit_at_start=%t exit_after_enumeration=%t descendants=%d)",
+				rootExitedAtStart, rootExitedAfterEnumeration, len(pids)-1)
+		}
+		sampler.commitEmptyProcessSample()
+		return nil
+	}
+	rootObservation, identityErr := sampler.processIdentityObservation(sampler.pid, root)
+	if identityErr != nil {
+		if sampler.awaitObservedRootExit(ctx) {
+			return errProcessRootExitTransition
 		}
 		return fmt.Errorf("T40.13 process root identity is unavailable: %w", identityErr)
 	}
 	rootIdentity, _, identityErr := validateProcessIdentityObservation(sampler.pid, root, rootObservation)
 	if identityErr != nil {
-		return fmt.Errorf("T40.13 process root identity is invalid: %w", identityErr)
+		return fmt.Errorf("T40.13 process root identity is invalid (exit_at_start=%t exit_after_enumeration=%t): %w",
+			rootExitedAtStart, rootExitedAfterEnumeration, identityErr)
 	}
 
 	sampler.mu.Lock()
 	if sampler.rootExited {
-		if len(pids) != 1 {
-			sampler.mu.Unlock()
-			return errors.New("T40.13 process snapshot retained descendants after root exit")
-		}
-		sampler.activeChildren = map[int]sampledProcess{}
-		sampler.samples++
 		sampler.mu.Unlock()
-		return nil
+		return errProcessRootExitTransition
 	}
 	if !sampler.rootSeen {
 		sampler.mu.Unlock()
@@ -1207,17 +1246,24 @@ func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr e
 	for _, pid := range pids[1:] {
 		process := processes[pid]
 		previous, previouslyActive := previousChildren[pid]
-		identityObservation, probeErr := sampler.identityProbe(pid, process)
+		identityObservation, probeErr := sampler.processIdentityObservation(pid, process)
 		if probeErr != nil {
 			if errors.Is(probeErr, errProcessIdentityMissing) {
 				return errors.Join(errProcessChildIdentityDisappeared,
-					fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr))
+					fmt.Errorf("T40.13 process child identity is unavailable (pid=%d ppid=%d table_class=%d exit_at_start=%t exit_after_enumeration=%t exit_after_identity=%t): %w",
+						pid, process.parent, classifyProcess(process.name), rootExitedAtStart,
+						rootExitedAfterEnumeration, sampler.observedRootExit(), probeErr))
 			}
-			return fmt.Errorf("T40.13 process child identity is unavailable: %w", probeErr)
+			return fmt.Errorf("T40.13 process child identity is unavailable (pid=%d ppid=%d table_class=%d exit_at_start=%t exit_after_enumeration=%t exit_after_identity=%t): %w",
+				pid, process.parent, classifyProcess(process.name), rootExitedAtStart,
+				rootExitedAfterEnumeration, sampler.observedRootExit(), probeErr)
 		}
 		identity, class, identityErr := validateProcessIdentityObservation(pid, process, identityObservation)
 		if identityErr != nil {
-			return fmt.Errorf("T40.13 process child identity is invalid: %w", identityErr)
+			return fmt.Errorf("T40.13 process child identity is invalid (pid=%d ppid=%d kernel_ppid=%d table_class=%d kernel_class=%d token=%s exit_at_start=%t exit_after_enumeration=%t exit_after_identity=%t): %w",
+				pid, process.parent, identityObservation.parent, classifyProcess(process.name),
+				classifyProcess(identityObservation.name), identityObservation.token, rootExitedAtStart,
+				rootExitedAfterEnumeration, sampler.observedRootExit(), identityErr)
 		}
 		observed := sampledProcess{
 			identity: identity,
@@ -1243,6 +1289,9 @@ func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr e
 			otherChildren++
 		}
 		nextActive[pid] = observed
+	}
+	if sampler.observedRootExit() {
+		return errProcessRootExitTransition
 	}
 	var total int64
 	for _, pid := range pids {
@@ -1270,6 +1319,30 @@ func (sampler *rssSampler) recordSnapshotAttemptLocked(output []byte, probeErr e
 	sampler.strictOtherChildren = otherChildren
 	sampler.samples++
 	return nil
+}
+
+func (sampler *rssSampler) processIdentityObservation(
+	pid int, process processSnapshot,
+) (processIdentityObservation, error) {
+	if process.coherent {
+		if process.identityToken == "" {
+			return processIdentityObservation{}, errors.New("T40.13 coherent process identity is empty")
+		}
+		return processIdentityObservation{
+			token: process.identityToken, parent: process.parent, name: process.name,
+		}, nil
+	}
+	if sampler.identityProbe == nil {
+		return processIdentityObservation{}, errors.New("T40.13 process identity probe is unavailable")
+	}
+	return sampler.identityProbe(pid, process)
+}
+
+func (sampler *rssSampler) commitEmptyProcessSample() {
+	sampler.mu.Lock()
+	sampler.activeChildren = map[int]sampledProcess{}
+	sampler.samples++
+	sampler.mu.Unlock()
 }
 
 func classifyProcess(name string) processClass {
@@ -1322,9 +1395,11 @@ func (sampler *rssSampler) recordFailureLocked(err error) {
 }
 
 type processSnapshot struct {
-	parent   int
-	rssBytes int64
-	name     string
+	parent        int
+	rssBytes      int64
+	name          string
+	identityToken string
+	coherent      bool
 }
 
 func parseProcessSnapshot(output []byte, root int) ([]int, map[int]processSnapshot, error) {
@@ -1509,7 +1584,16 @@ func (sampler *rssSampler) observeRootExit() {
 	}
 }
 
-func (sampler *rssSampler) awaitObservedRootExit() bool {
+func (sampler *rssSampler) observedRootExit() bool {
+	if sampler == nil {
+		return false
+	}
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	return sampler.rootExited
+}
+
+func (sampler *rssSampler) awaitObservedRootExit(ctx context.Context) bool {
 	sampler.mu.Lock()
 	exited := sampler.rootExited
 	wait := sampler.rootWait
@@ -1517,14 +1601,12 @@ func (sampler *rssSampler) awaitObservedRootExit() bool {
 	if exited || wait == nil {
 		return exited
 	}
-	timer := time.NewTimer(processProbeTimeout)
-	defer timer.Stop()
 	select {
 	case <-wait:
 		sampler.mu.Lock()
 		defer sampler.mu.Unlock()
 		return sampler.rootExited
-	case <-timer.C:
+	case <-ctx.Done():
 		return false
 	}
 }
