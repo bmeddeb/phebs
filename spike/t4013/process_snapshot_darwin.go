@@ -50,14 +50,6 @@ type darwinProcessShortBSDInfo struct {
 	reserved                   uint32
 }
 
-type darwinProcessPermissionError struct {
-	parent int
-	err    error
-}
-
-func (err *darwinProcessPermissionError) Error() string { return err.err.Error() }
-func (err *darwinProcessPermissionError) Unwrap() error { return err.err }
-
 func nativeProcessSnapshotProbe() func(context.Context, int) ([]int, map[int]processSnapshot, error) {
 	return darwinProcessSnapshot
 }
@@ -107,9 +99,16 @@ func collectDarwinProcessSnapshot(
 			if errors.Is(err, errProcessIdentityMissing) {
 				continue
 			}
-			var denied *darwinProcessPermissionError
-			if errors.As(err, &denied) && denied.parent != result[index] {
-				continue
+			if errors.Is(err, unix.EPERM) {
+				missing, reconcileErr := reconcileDarwinDeniedChild(
+					child, result[index], darwinProcessShortParent,
+				)
+				if reconcileErr != nil {
+					return nil, nil, errors.Join(err, reconcileErr)
+				}
+				if missing {
+					continue
+				}
 			}
 			if err != nil {
 				return nil, nil, err
@@ -180,21 +179,6 @@ func darwinProcessObservation(pid int) (processSnapshot, error) {
 			return processSnapshot{}, errors.Join(errProcessIdentityMissing,
 				fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno))
 		}
-		if errors.Is(errno, unix.EPERM) {
-			parent, parentErr := darwinProcessShortParent(pid)
-			if errors.Is(parentErr, errProcessIdentityMissing) {
-				return processSnapshot{}, parentErr
-			}
-			if parentErr == nil {
-				return processSnapshot{}, &darwinProcessPermissionError{
-					parent: parent,
-					err:    fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno),
-				}
-			}
-			return processSnapshot{}, errors.Join(
-				fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno), parentErr,
-			)
-		}
 		return processSnapshot{}, fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno)
 	}
 	if returned == 0 {
@@ -218,6 +202,19 @@ func darwinProcessObservation(pid int) (processSnapshot, error) {
 			strconv.FormatUint(record.bsd.startedMicroseconds, 10),
 		coherent: true,
 	}, nil
+}
+
+func reconcileDarwinDeniedChild(
+	pid, expectedParent int, shortParent func(int) (int, error),
+) (bool, error) {
+	parent, err := shortParent(pid)
+	if errors.Is(err, errProcessIdentityMissing) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return parent != expectedParent, nil
 }
 
 func darwinProcessShortParent(pid int) (int, error) {

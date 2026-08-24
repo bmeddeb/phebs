@@ -133,11 +133,23 @@ func TestDarwinSnapshotRefusesParentDriftAndCandidateOverflow(t *testing.T) {
 		}
 	})
 	t.Run("denied-reused-pid", func(t *testing.T) {
+		missing, err := reconcileDarwinDeniedChild(11, 10, func(int) (int, error) {
+			return 9, nil
+		})
+		if err != nil || !missing {
+			t.Fatalf("denied reused PID = missing:%t err:%v", missing, err)
+		}
+		missing, err = reconcileDarwinDeniedChild(11, 10, func(int) (int, error) {
+			return 10, nil
+		})
+		if err != nil || missing {
+			t.Fatalf("denied current child = missing:%t err:%v", missing, err)
+		}
 		pids, processes, err := collectDarwinProcessSnapshot(
 			t.Context(), 10,
 			func(pid int) ([]int, error) {
 				if pid == 10 {
-					return []int{11}, nil
+					return []int{1 << 30}, nil
 				}
 				return nil, nil
 			},
@@ -145,13 +157,26 @@ func TestDarwinSnapshotRefusesParentDriftAndCandidateOverflow(t *testing.T) {
 				if pid == 10 {
 					return root, nil
 				}
-				return processSnapshot{}, &darwinProcessPermissionError{
-					parent: 9, err: unix.EPERM,
-				}
+				return processSnapshot{}, unix.EPERM
 			},
 		)
 		if err != nil || !slices.Equal(pids, []int{10}) || len(processes) != 1 {
-			t.Fatalf("denied reused PID = pids:%v processes:%v err:%v", pids, processes, err)
+			t.Fatalf("denied missing child = pids:%v processes:%v err:%v", pids, processes, err)
 		}
 	})
+}
+
+func TestDarwinRootPermissionDenialIsSticky(t *testing.T) {
+	observations := 0
+	_, _, err := collectDarwinProcessSnapshot(
+		t.Context(), 10,
+		func(int) ([]int, error) { return nil, nil },
+		func(int) (processSnapshot, error) {
+			observations++
+			return processSnapshot{}, unix.EPERM
+		},
+	)
+	if !errors.Is(err, unix.EPERM) || observations != 1 {
+		t.Fatalf("root permission denial = observations:%d err:%v", observations, err)
+	}
 }
