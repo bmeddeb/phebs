@@ -4974,14 +4974,20 @@ attestation for every operational command:
 export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled
 ```
 
-The driver's `awk`, `cmp`, `cp`, `date`, `df`, `du`, `env`, `find`, `grep`,
-`lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`, `rm`, `sed`, `shasum`, `sort`,
-`ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities are an
-enumerated trusted host TCB rather than plan-committed executed identities.
+The Bash interpreter and builtins plus driver's `awk`, `basename`, `chmod`,
+`cmp`, `cp`, `date`, `df`, `dirname`, `du`, `env`, `find`, `grep`, `lsof`,
+`mkdir`, `mktemp`, `pgrep`, `ps`, `readlink`, `rm`, `rmdir`, `sed`, `shasum`,
+`sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities are
+an enumerated trusted host TCB rather than plan-committed executed identities.
 Existing path/content/tree checks remain defense in depth. An adversarial
 same-UID boundary requires a separately reviewed atomic snapshot/fd-execution
 design; V25 does not authorize it. Full Go/Git tree hashing remains limited to
 fixed admission and terminal snapshots.
+
+The shell driver is the only supported V25 ceremony admission path. Direct
+`cmd/t4013-*` binaries are low-level library/harness interfaces and historical
+construction references, not V25 operational procedures; do not use them to
+admit, freeze, execute, resume, or seal a ceremony.
 
 V25 Prepare also writes `.t4013-execution-controls.json` inside custody and
 binds its digest in `prepared.json`. Its HOME, XDG config/cache/data, temporary,

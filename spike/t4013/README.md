@@ -7,6 +7,18 @@ the authored bare repositories, data directories, logs, query text, returned
 source, credentials, and process transcripts remain outside the repository and
 are destroyed after the run.
 
+## Supported V25 admission path
+
+`run-large-mac-ceremony.sh` is the only supported V25 ceremony entrypoint. It
+requires the dedicated-host stability attestation before preflight, freeze,
+execute, seal, verify, or returned-package verification and retains the
+reviewed lock, signer, cleanup, and packaging sequence. The direct
+`cmd/t4013-*` examples below document low-level library/harness interfaces and
+historical construction; they are not V25 operational procedures and must not
+be used to admit, freeze, execute, resume, or seal a ceremony. Use the driver
+workflow under “Corrected-V3 custody fence and neutral-21 freeze
+authorization,” with a fresh separately authorized identifier.
+
 ## Prospective freeze
 
 The execution commit is frozen before either giant repository is authored.
@@ -15,6 +27,7 @@ the same-SHA blob-reader comparison before emitting a new plan. It refuses an
 existing output.
 
 ```sh
+# Low-level harness reference only; not a supported V25 ceremony command.
 go run ./spike/t4013/cmd/t4013-freeze \
   -root "$PWD" \
   -source-commit <exact-40-hex-execution-commit> \
@@ -97,6 +110,7 @@ two loopback installations use generated private bearer credentials and
 separate ports/data roots:
 
 ```sh
+# Low-level harness reference only; not a supported V25 ceremony command.
 go run ./spike/t4013/cmd/t4013-prepare \
   -root "$PWD" \
   -workspace /absolute/dedicated/t4013-custody \
@@ -114,6 +128,7 @@ measured stop. The source-free observation must be outside custody and must not
 already exist:
 
 ```sh
+# Low-level harness reference only; not a supported V25 ceremony command.
 go run ./spike/t4013/cmd/t4013-execute \
   -root "$PWD" \
   -plan /absolute/dedicated/t4013-plan.json \
@@ -149,6 +164,7 @@ extraction diagnostic schemas. They are mechanics counters, not kernel I/O or
 database-profiler estimates.
 
 ```sh
+# Low-level harness reference only; not a supported V25 ceremony command.
 go run ./spike/t4013/cmd/t4013-receipt \
   -plan /absolute/dedicated/t4013/plan.json \
   -plan-digest sha256:<exact-plan-digest> \
@@ -3218,10 +3234,11 @@ above. The implementation rehashes a pathname and then launches it. Those
 checks reject pre-check and persistent drift, but they do not prove the bytes
 the kernel executes after the final check or a transient replacement restored
 before the next snapshot. `ObserveHostToolchain` commits only the Go execution
-core's bounded identities. The driver utilities `awk`, `cmp`, `cp`, `date`,
-`df`, `du`, `env`, `find`, `grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`,
-`rm`, `sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`,
-and `wc` remain an enumerated trusted host TCB.
+core's bounded identities. The Bash interpreter and builtins plus driver
+utilities `awk`, `basename`, `chmod`, `cmp`, `cp`, `date`, `df`, `dirname`,
+`du`, `env`, `find`, `grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`,
+`readlink`, `rm`, `rmdir`, `sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`,
+`tar`, `uname`, `uniq`, and `wc` remain an enumerated trusted host TCB.
 
 The supported envelope is therefore one dedicated, single-operator host.
 Disable automatic/manual package, OS, and tool updates and stop every other

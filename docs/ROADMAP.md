@@ -1801,13 +1801,19 @@ an existing measurement error alongside incomplete meter inventory. It also
 supersedes the earlier atomic “exact executed-tool” interpretation: V25 uses a
 dedicated, single-operator host whose package, OS, tool, and other same-UID
 mutation is explicitly prohibited from preflight through source-free
-packaging. Every supported command requires the fixed host-stability
-attestation before admission. Path/content/tree checks remain bounded defense
+packaging. The shell driver is the only supported V25 ceremony admission path;
+its commands require the fixed host-stability attestation before admission,
+while direct `cmd/t4013-*` binaries remain low-level harness/library interfaces.
+Path/content/tree checks remain bounded defense
 in depth against pre-check and persistent drift; they do not prove kernel-
 executed bytes after pathname verification. The Go inventory is only its
-committed execution-core subset; the driver's fixed shell utilities are an
-enumerated trusted host TCB. Independent re-review and all clean-commit gates
-remain mandatory before a separately authorized freeze.
+committed execution-core subset. The Bash interpreter/builtins and `awk`,
+`basename`, `chmod`, `cmp`, `cp`, `date`, `df`, `dirname`, `du`, `env`, `find`,
+`grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`, `readlink`, `rm`, `rmdir`,
+`sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and
+`wc` driver utilities are an enumerated trusted host TCB. Independent re-review
+and all clean-commit gates remain mandatory before a separately authorized
+freeze.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

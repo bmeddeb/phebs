@@ -1622,8 +1622,14 @@ the driver's authority utilities from the committed inventory. The stacked
 remediation joins both errors at every shared boundary and explicitly selects
 a dedicated, single-operator host envelope. The fixed attestation prohibits
 package, OS, tool, and other same-UID mutation from preflight through packaging;
-path/content/tree checks remain defense in depth, while the shell utilities are
-an enumerated trusted host TCB. This supersedes the atomic executed-tool claim
+path/content/tree checks remain defense in depth. The shell driver is the only
+supported V25 ceremony admission path; direct `cmd/t4013-*` binaries remain
+low-level harness/library interfaces. The Bash interpreter/builtins plus
+`awk`, `basename`, `chmod`, `cmp`, `cp`, `date`, `df`, `dirname`, `du`, `env`,
+`find`, `grep`, `lsof`, `mkdir`, `mktemp`, `pgrep`, `ps`, `readlink`, `rm`,
+`rmdir`, `sed`, `shasum`, `sort`, `ssh-keygen`, `sysctl`, `tar`, `uname`,
+`uniq`, and `wc` are the enumerated trusted shell TCB. This supersedes the
+atomic executed-tool claim
 without weakening a production trust boundary: an adversarial same-UID model
 would require a new snapshot/fd-execution ticket. Re-review and every gate
 above remain required; no ceremony identifier is consumed by this correction.

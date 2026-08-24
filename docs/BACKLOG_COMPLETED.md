@@ -9888,10 +9888,14 @@ rehashes a pathname and then launches it; it refuses pre-check and persistent
 drift but cannot prove the bytes executed after the final check or a transient
 replacement restored before the next snapshot. `ObserveHostToolchain` commits
 the Go execution core's bounded subset, while the driver's admitted `awk`,
-`cmp`, `cp`, `date`, `df`, `du`, `env`, `find`, `grep`, `lsof`, `mkdir`,
-`mktemp`, `pgrep`, `ps`, `rm`, `sed`, `shasum`, `sort`, `ssh-keygen`,
-`sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities remain an enumerated host
-TCB. V25 therefore requires an explicit dedicated, single-operator host
+`bash` interpreter/builtins, `awk`, `basename`, `chmod`, `cmp`, `cp`, `date`,
+`df`, `dirname`, `du`, `env`, `find`, `grep`, `lsof`, `mkdir`, `mktemp`,
+`pgrep`, `ps`, `readlink`, `rm`, `rmdir`, `sed`, `shasum`, `sort`,
+`ssh-keygen`, `sysctl`, `tar`, `uname`, `uniq`, and `wc` utilities remain an
+enumerated host TCB. The shell driver is the only supported V25 ceremony
+admission path; direct `cmd/t4013-*` interfaces are low-level harness/library
+references, not V25 operational procedures. V25 therefore requires an explicit
+dedicated, single-operator host
 attestation prohibiting package, OS, tool, and other same-UID mutation from
 preflight through source-free packaging. An adversarial same-UID boundary
 requires a future atomic snapshot/fd-execution design; this correction makes no
