@@ -10,6 +10,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestDarwinProcessObservationIsCoherent(t *testing.T) {
@@ -41,6 +43,9 @@ func TestDarwinChildPIDsAndMissingObservation(t *testing.T) {
 	}
 	if _, err := darwinProcessObservation(1 << 30); !errors.Is(err, errProcessIdentityMissing) {
 		t.Fatalf("missing native process = %v", err)
+	}
+	if parent, err := darwinProcessShortParent(os.Getpid()); err != nil || parent != os.Getppid() {
+		t.Fatalf("native short parent = %d, %v", parent, err)
 	}
 }
 
@@ -125,6 +130,28 @@ func TestDarwinSnapshotRefusesParentDriftAndCandidateOverflow(t *testing.T) {
 		if err == nil || err.Error() != "T40.13 native process candidate inventory exceeds its bound" ||
 			observations != maxProcessDescendants+1 {
 			t.Fatalf("candidate overflow = observations:%d err:%v", observations, err)
+		}
+	})
+	t.Run("denied-reused-pid", func(t *testing.T) {
+		pids, processes, err := collectDarwinProcessSnapshot(
+			t.Context(), 10,
+			func(pid int) ([]int, error) {
+				if pid == 10 {
+					return []int{11}, nil
+				}
+				return nil, nil
+			},
+			func(pid int) (processSnapshot, error) {
+				if pid == 10 {
+					return root, nil
+				}
+				return processSnapshot{}, &darwinProcessPermissionError{
+					parent: 9, err: unix.EPERM,
+				}
+			},
+		)
+		if err != nil || !slices.Equal(pids, []int{10}) || len(processes) != 1 {
+			t.Fatalf("denied reused PID = pids:%v processes:%v err:%v", pids, processes, err)
 		}
 	})
 }

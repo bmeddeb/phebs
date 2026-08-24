@@ -18,6 +18,7 @@ const (
 	processInfoCallPIDInfo  = 2
 	processParentOnly       = 6
 	processPIDTaskAllInfo   = 2
+	processPIDShortBSDInfo  = 13
 )
 
 type darwinProcessBSDInfo struct {
@@ -39,6 +40,23 @@ type darwinProcessTaskAllInfo struct {
 	bsd  darwinProcessBSDInfo
 	task darwinProcessTaskInfo
 }
+
+type darwinProcessShortBSDInfo struct {
+	pid, parent, group, status uint32
+	command                    [16]byte
+	flags                      uint32
+	uid, gid, realUID, realGID uint32
+	savedUID, savedGID         uint32
+	reserved                   uint32
+}
+
+type darwinProcessPermissionError struct {
+	parent int
+	err    error
+}
+
+func (err *darwinProcessPermissionError) Error() string { return err.err.Error() }
+func (err *darwinProcessPermissionError) Unwrap() error { return err.err }
 
 func nativeProcessSnapshotProbe() func(context.Context, int) ([]int, map[int]processSnapshot, error) {
 	return darwinProcessSnapshot
@@ -87,6 +105,10 @@ func collectDarwinProcessSnapshot(
 			seen[child] = struct{}{}
 			observed, err := observe(child)
 			if errors.Is(err, errProcessIdentityMissing) {
+				continue
+			}
+			var denied *darwinProcessPermissionError
+			if errors.As(err, &denied) && denied.parent != result[index] {
 				continue
 			}
 			if err != nil {
@@ -156,9 +178,24 @@ func darwinProcessObservation(pid int) (processSnapshot, error) {
 	if errno != 0 {
 		if errors.Is(errno, unix.ESRCH) {
 			return processSnapshot{}, errors.Join(errProcessIdentityMissing,
-				fmt.Errorf("T40.13 inspect native process: %w", errno))
+				fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno))
 		}
-		return processSnapshot{}, fmt.Errorf("T40.13 inspect native process: %w", errno)
+		if errors.Is(errno, unix.EPERM) {
+			parent, parentErr := darwinProcessShortParent(pid)
+			if errors.Is(parentErr, errProcessIdentityMissing) {
+				return processSnapshot{}, parentErr
+			}
+			if parentErr == nil {
+				return processSnapshot{}, &darwinProcessPermissionError{
+					parent: parent,
+					err:    fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno),
+				}
+			}
+			return processSnapshot{}, errors.Join(
+				fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno), parentErr,
+			)
+		}
+		return processSnapshot{}, fmt.Errorf("T40.13 inspect native process PID %d: %w", pid, errno)
 	}
 	if returned == 0 {
 		return processSnapshot{}, errProcessIdentityMissing
@@ -181,4 +218,27 @@ func darwinProcessObservation(pid int) (processSnapshot, error) {
 			strconv.FormatUint(record.bsd.startedMicroseconds, 10),
 		coherent: true,
 	}, nil
+}
+
+func darwinProcessShortParent(pid int) (int, error) {
+	var record darwinProcessShortBSDInfo
+	returned, _, errno := unix.Syscall6(
+		unix.SYS_PROC_INFO, processInfoCallPIDInfo, uintptr(pid), processPIDShortBSDInfo, 0,
+		uintptr(unsafe.Pointer(&record)), unsafe.Sizeof(record),
+	)
+	if errno != 0 {
+		if errors.Is(errno, unix.ESRCH) {
+			return 0, errors.Join(errProcessIdentityMissing,
+				fmt.Errorf("T40.13 inspect native short process PID %d: %w", pid, errno))
+		}
+		return 0, fmt.Errorf("T40.13 inspect native short process PID %d: %w", pid, errno)
+	}
+	if returned == 0 {
+		return 0, errProcessIdentityMissing
+	}
+	if returned != unsafe.Sizeof(record) || record.pid != uint32(pid) ||
+		uint64(record.parent) > uint64(^uint(0)>>1) {
+		return 0, errors.New("T40.13 native short process record is invalid")
+	}
+	return int(record.parent), nil
 }

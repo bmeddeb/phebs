@@ -3031,34 +3031,39 @@ completeness, migration, or decommission authorization.
 
 ### T40.13a fail-closed process sampling
 
-V25 now accepts a process sample only after the bounded `ps` command, complete
-snapshot parse, RSS sum, root check, and child-lifetime classification all
-succeed. A child typed as disappeared between `ps` and its Darwin/Linux kernel
-identity read permits at most two fresh whole-sample retries under the same two-second
-deadline. Retry reruns every read and commits only if one complete retry
-attempt succeeds; every other error is immediately sticky. A failed logical
-sample changes no metrics and retains one typed first cause
+V25 accepts a process sample only after complete bounded enumeration, coherent
+identity/RSS observation, root checks, and child-lifetime classification all
+succeed. Darwin uses native parent traversal and one task-all-info record per
+accepted process. A denied task-all-info row is absent only when privilege-free
+short BSD info proves the PID missing or no longer parented to the process that
+discovered it; a still-parented denial fails. Linux retains bounded `ps`
+enumeration plus `/proc` identity reads and at most two fresh whole-sample
+retries for a typed disappeared child under the same two-second deadline. Every
+other error is immediately sticky. A failed logical sample changes no metrics
+and retains one typed first cause
 plus a saturating count; phase reset does not erase it. Root absence fails
 until the command's sole `Wait` owner records exit, after which an empty final
 sample is valid only when no still-parented descendant is visible. The
 concurrent server `Wait` handoff is reconciled before deciding that a missing
 root was still expected live.
 
-The one 128-KiB snapshot carries PID, parent, RSS, and command. One synchronous
-pre-`Wait` root read plus at most 129 fixed-size Darwin `kern.proc.pid` or Linux
-`/proc/<pid>/stat` reads bind accepted rows to an atomic kernel start identity,
-PPID, and normalized command class. Per phase, the sampler retains only the
+One synchronous pre-`Wait` root read binds the root before sampling. One Darwin
+attempt performs at most 129 task-all-info reads, 129 child-list calls, and 128
+short-info revalidations across at most 128 discovered candidates. One Linux
+attempt retains its 128-KiB/8,192-row `ps` snapshot and at most 129
+`/proc/<pid>/stat` identity reads. Per phase, the sampler retains only the
 current accepted descendants and three cumulative counters, counts an accepted
 absence/reappearance or changed kernel identity as another sampled lifetime,
 refuses ambiguous continuity or category drift, and stops before exceeding
-8,192 sampled lifetimes. Retry raises one logical sample to at most three 128-KiB/
-8,192-row snapshots and three sets of at most 129 native identities within the
-same two seconds. Retries wait a fixed 25 ms, at most 50 ms total, to leave the
-observed exit burst. A disappeared short-lived child may be absent from the
-accepted retry, as it may already be absent between ordinary 250-ms samples;
+8,192 sampled lifetimes. Linux retry raises one logical sample to at most three
+128-KiB/8,192-row snapshots and three sets of at most 129 native identities
+within the same two seconds. Retries wait a fixed 25 ms, at most 50 ms total,
+to leave the observed exit burst. A disappeared short-lived child may be absent
+from the accepted observation, as it may already be absent between ordinary
+250-ms samples;
 zero means zero in accepted identity-bound samples, not proof of no transient
-fork. All attempts share one two-second cap; the root-exit handoff retains its
-independent two-second cap. Native identity reads have no separate timer, and
+fork. All attempts and the one permitted root-exit handoff share one two-second
+cap. Native identity reads have no separate timer, and
 reset waits for the whole in-flight sample so an old snapshot cannot land in a
 new phase. Strict paths take one initial sample and then at most one sample each
 250 ms; close gives stop priority. The one-second allocation sampler also
@@ -3066,10 +3071,10 @@ retains only its first failure plus a saturating count. Sanitized
 measured-command errors preserve both typed
 sampler sentinels, which V25 treats as unavailable measurement rather than a
 substantiated recovery result. V1–V24 keep their prior process-sampling cadence.
-The preliminary `ps` row is enumeration/RSS input, not proof of every transient
-fork; same-kernel-token reuse and durable hard-death/escape absence remain
-T40.13c. This changes no public schema or production work and authorizes no
-freeze or ceremony.
+Neither native traversal nor the Linux `ps` row proves every transient fork;
+same-kernel-token reuse and durable hard-death/escape absence remain T40.13c.
+This changes no public schema or production work and authorizes no freeze or
+ceremony.
 
 Darwin now closes the split-observation boundary with native bounded parent
 traversal. Each accepted process is one coherent `PROC_PIDTASKALLINFO` record:
