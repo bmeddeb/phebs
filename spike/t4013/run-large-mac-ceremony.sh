@@ -994,8 +994,8 @@ preflight() {
     require_command "$command_name"
   done
   initialize_repository
-  require_clean_checkout
   initialize_ceremony_root
+  require_clean_checkout
   initialize_closed_go_cache
   host_preflight
   initialize_v25_custody_commands
@@ -1023,8 +1023,8 @@ verification_preflight() {
     require_command "$command_name"
   done
   initialize_repository
-  require_clean_checkout
   initialize_ceremony_root
+  require_clean_checkout
   initialize_closed_go_cache
   initialize_v25_custody_commands
   note "source-free verifier checkout: PASS"

@@ -493,6 +493,13 @@ func TestCeremonyDriverPrebuildsV25CustodyCommandsWithoutRuntimeSuites(t *testin
 	if !strings.Contains(preflight, "initialize_v25_custody_commands") {
 		t.Fatal("preflight does not prebuild the V25 custody commands")
 	}
+	for name, section := range map[string]string{"preflight": preflight, "verification preflight": verification} {
+		root := strings.Index(section, "initialize_ceremony_root")
+		clean := strings.Index(section, "require_clean_checkout")
+		if root < 0 || clean < 0 || root > clean {
+			t.Fatalf("%s checks the checkout before closed controls have a ceremony root", name)
+		}
+	}
 	seal := source[strings.Index(source, "\nseal_run() {\n"):strings.Index(source, "\nexecute_ceremony() {\n")]
 	if !strings.Contains(seal, "initialize_v25_custody_commands") {
 		t.Fatal("resumable seal does not prebuild V25 cleanup before admission")
