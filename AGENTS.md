@@ -201,8 +201,10 @@ also complete; T40.13f's hermetic execution controls, T40.13g's authenticated
 returned-evidence firewall, T40.13h's resumable seal/keypair integrity, and
 T40.13i's bounded exact-control inspection, T40.13j's overflow-safe ceremony
 arithmetic, T40.13k's complete executor-admission accounting, and T40.13l's
-cost-first operator gates are complete; the original T40.13 gate remains open
-pending its final review and authorization; Epic 40
+cost-first operator gates are complete; T40.13m's bounded executable-image
+epoch accounting and V26 evidence fence are also complete; the original
+T40.13 gate remains open pending integration, exact-main preflight, and
+separate authorization; Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services

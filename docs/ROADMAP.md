@@ -1850,16 +1850,17 @@ after structural convergence because the sampler treated a coherent
 same-PID/start-token executable-class change as impossible. Its sealed receipt
 is `unclassified / failed_phase_measurement_unavailable`; teardown and the
 source-free package verified, and the result establishes neither pipeline
-failure nor scale success. T40.13m is now the only next scale ticket. It models
-that event as one bounded executable-image epoch, advances fresh evidence to
-V26 with six fixed source-free transition-direction counters, and leaves every
-identity, root, descendant, cadence, deadline, and cumulative ceiling refusal
-intact. Receipt provenance requires the plan's exact observation schema, and
-each transition direction requires retained epochs for both classes. Full
-exact-commit package/race, real-launcher, readiness rehearsal,
-repository/store, documentation, and independent-review gates must pass before
-integration. `t40r1-neutral-36` is only the next nominal candidate; identifier
-selection, freeze, and execution require their existing separate approvals.
+failure nor scale success. T40.13m is complete on exact clean code commit
+`97772bb69fba77feb06fa79317b401d1e0815575`: V26 models the event as one
+bounded executable-image epoch with six fixed source-free directions, exact
+plan/observation provenance, and source/destination epoch coherence while
+leaving every identity, root, descendant, cadence, deadline, and cumulative
+ceiling refusal intact. Complete exact package/race, real-launcher, readiness,
+store, repository, and independent-review gates pass with no critical, high,
+medium, or actionable low finding. Integration and exact-main dedicated-host
+preflight are next. `t40r1-neutral-36` is only the nominal candidate;
+identifier selection, freeze, frozen-plan review, and execution retain their
+separate approvals.
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

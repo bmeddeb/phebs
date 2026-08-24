@@ -1680,8 +1680,16 @@ nor a scale pass. Teardown destroyed derived and scratch custody. The verified
 source-free package is
 `sha256:a1b1114e74010bedaac65cf037b5135895dcb6b1cf0bcb4753888b9aeaadf7c1`.
 
+T40.13m is complete on exact clean code commit
+`97772bb69fba77feb06fa79317b401d1e0815575`. The complete package/race,
+real-launcher, readiness, full `internal/store`, repository, and deterministic
+exec-transition gates pass. Fresh independent review reports critical 0, high
+0, medium 0, and no actionable low finding after its rejected findings were
+corrected. Integration and exact-main dedicated-host preflight remain next;
+no fresh ceremony identifier is selected, consumed, or frozen.
+
 **T40.13m · Bounded executable-image epoch accounting** *(high gate readiness ·
-needs immutable neutral-35 review)* — replace the false assumption that a
+complete; integration requested)* — replace the false assumption that a
 kernel process lifetime has one immutable executable class. AC: across two
 complete coherent snapshots, the exact same PID, kernel start token, and parent
 with a new normalized class consumes one new sampled executable-image epoch,

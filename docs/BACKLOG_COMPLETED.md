@@ -12,6 +12,17 @@ appended to PLAN.md as dated ADR bullets — no new architecture docs.
 
 Conventions: `T<epic>.<n>` · deps listed only where they cross epics or gate.
 
+**T40.13m · Bounded executable-image epoch accounting** ✅ 2026-08-24 — Fresh
+V26 evidence treats a coherent same-PID/start-token/parent class change as one
+bounded executable-image epoch, retains six source-free direction counters,
+and preserves every identity, descendant, deadline, and 8,192-epoch refusal.
+Receipts bind the plan's exact observation schema; each direction requires
+source and destination epochs; V1–V25 validation remains byte/behavior fenced.
+Exact code commit `97772bb69fba77feb06fa79317b401d1e0815575` passed the
+complete package/race, real-launcher, readiness, store, and independent-review
+gates with no critical, high, medium, or actionable low finding. Neutral-35
+remains an immutable honest stop; no new identifier or freeze is authorized.
+
 **T40.13j · Overflow-safe ceremony arithmetic** ✅ 2026-08-23 — Shared
 checked signed addition and multiplication now guard phase, total-wall, byte,
 count, resource, timing, construction, and receipt aggregation. MaxInt64

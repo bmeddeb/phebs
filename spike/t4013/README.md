@@ -3440,3 +3440,11 @@ exec open long enough to prove the same kernel identity crosses from other to
 Git; synthetic tests fence repeats, bounds, ambiguity, merge, and historical
 schema behavior. Neutral-35 cannot be reused, and neutral-36 is not selected or
 authorized by this correction.
+
+Exact clean code commit `97772bb69fba77feb06fa79317b401d1e0815575`
+passed the complete package/race, real-launcher, production-path readiness,
+full `internal/store`, repository, and deterministic transition gates. Fresh
+independent review reported critical 0, high 0, medium 0, and no actionable low
+finding. T40.13m is complete and requests integration only; exact-main
+preflight, identifier selection, freeze, frozen-plan review, and execution
+remain separate steps.

@@ -5095,3 +5095,8 @@ clean exact commit. The nominal `t40r1-neutral-36` identifier is not selected
 by this guidance. After integration, run standalone dedicated-host preflight;
 then request separate freeze authorization, frozen-plan review, and exact-ID/
 digest execution authorization in that order.
+
+T40.13m cleared those gates on exact clean code commit
+`97772bb69fba77feb06fa79317b401d1e0815575`; independent review found no
+critical, high, medium, or actionable low issue. This is integration readiness,
+not permission to select `t40r1-neutral-36`, freeze a plan, or execute it.
