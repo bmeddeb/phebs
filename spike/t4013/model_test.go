@@ -772,6 +772,7 @@ func TestV26ReceiptRetainsBoundedProcessClassTransitions(t *testing.T) {
 	}
 	value := completedV25TeardownObservation(plan)
 	value.Phases[1].Metrics.OtherChildren++
+	value.Phases[1].Metrics.GitChildren++
 	value.Phases[1].Metrics.OtherToGitTransitions = 1
 	planBytes, err := MarshalPlan(plan)
 	if err != nil {
@@ -794,11 +795,60 @@ func TestV26ReceiptRetainsBoundedProcessClassTransitions(t *testing.T) {
 	if ValidateObservation(historical) == nil {
 		t.Fatal("V25 observation acquired process-class transition evidence")
 	}
+	downgraded := historical
+	downgraded.Phases = slices.Clone(historical.Phases)
+	downgraded.Phases[1].Metrics.OtherToGitTransitions = 0
+	downgradedBytes, err := MarshalObservation(downgraded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildReceipt(planBytes, downgradedBytes, PlanDigest(planBytes)); err == nil {
+		t.Fatal("V26 plan relabeled a canonical V25 observation")
+	}
 	overCount := value
 	overCount.Phases = slices.Clone(value.Phases)
 	overCount.Phases[1].Metrics.OtherToGitTransitions = 2
 	if ValidateObservation(overCount) == nil {
 		t.Fatal("transition evidence exceeded its sampled execution epochs")
+	}
+}
+
+func TestV26ProcessClassTransitionDirectionsRequireSourceAndDestinationEpochs(t *testing.T) {
+	tests := []struct {
+		name        string
+		metrics     PhaseMetrics
+		clearSource func(*PhaseMetrics)
+		clearTarget func(*PhaseMetrics)
+	}{
+		{"other-to-git", PhaseMetrics{OtherChildren: 1, GitChildren: 1, OtherToGitTransitions: 1},
+			func(value *PhaseMetrics) { value.OtherChildren = 0 }, func(value *PhaseMetrics) { value.GitChildren = 0 }},
+		{"other-to-index", PhaseMetrics{OtherChildren: 1, IndexChildren: 1, OtherToIndexTransitions: 1},
+			func(value *PhaseMetrics) { value.OtherChildren = 0 }, func(value *PhaseMetrics) { value.IndexChildren = 0 }},
+		{"git-to-other", PhaseMetrics{GitChildren: 1, OtherChildren: 1, GitToOtherTransitions: 1},
+			func(value *PhaseMetrics) { value.GitChildren = 0 }, func(value *PhaseMetrics) { value.OtherChildren = 0 }},
+		{"git-to-index", PhaseMetrics{GitChildren: 1, IndexChildren: 1, GitToIndexTransitions: 1},
+			func(value *PhaseMetrics) { value.GitChildren = 0 }, func(value *PhaseMetrics) { value.IndexChildren = 0 }},
+		{"index-to-other", PhaseMetrics{IndexChildren: 1, OtherChildren: 1, IndexToOtherTransitions: 1},
+			func(value *PhaseMetrics) { value.IndexChildren = 0 }, func(value *PhaseMetrics) { value.OtherChildren = 0 }},
+		{"index-to-git", PhaseMetrics{IndexChildren: 1, GitChildren: 1, IndexToGitTransitions: 1},
+			func(value *PhaseMetrics) { value.IndexChildren = 0 }, func(value *PhaseMetrics) { value.GitChildren = 0 }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if !validProcessClassTransitions(test.metrics, true) {
+				t.Fatal("valid transition direction was refused")
+			}
+			sourceMissing := test.metrics
+			test.clearSource(&sourceMissing)
+			if validProcessClassTransitions(sourceMissing, true) {
+				t.Fatal("transition without a source epoch passed")
+			}
+			targetMissing := test.metrics
+			test.clearTarget(&targetMissing)
+			if validProcessClassTransitions(targetMissing, true) {
+				t.Fatal("transition without a destination epoch passed")
+			}
+		})
 	}
 }
 

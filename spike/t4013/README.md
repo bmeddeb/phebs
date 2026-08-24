@@ -3427,7 +3427,9 @@ counters: other-to-Git, other-to-index, Git-to-other, Git-to-index,
 index-to-other, and index-to-Git. They reveal no path, command, token, source,
 or process output and must be absent/zero in V1–V25. Counter merge is checked
 for overflow and total transitions cannot exceed the phase's retained sampled
-epochs.
+epochs. Receipt construction requires the exact observation schema selected by
+the plan, and each direction's incoming and outgoing counts must be covered by
+the corresponding class epochs.
 
 The change adds no process probe, retry, deadline, child, or production work.
 Same-snapshot candidate/kernel class disagreement, parent or start drift,

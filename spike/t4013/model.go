@@ -758,6 +758,9 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 	if err != nil {
 		return nil, err
 	}
+	if observation.Schema != observationSchemaForPlan(plan) {
+		return nil, errors.New("T40.13 observation schema differs from its frozen plan")
+	}
 	receipt := Receipt{
 		Schema: receiptSchemaForPlan(plan), PlanDigest: planDigest, SourceCommit: plan.SourceCommit,
 		MeasuredOn: observation.MeasuredOn, Outcome: observation.Outcome,
@@ -3160,7 +3163,19 @@ func validProcessClassTransitions(value PhaseMetrics, allowed bool) bool {
 		return false
 	}
 	children, err := checkedSumInt64(value.GitChildren, value.IndexChildren, value.OtherChildren)
-	return err == nil && transitions <= children
+	if err != nil || transitions > children {
+		return false
+	}
+	within := func(limit int64, values ...int64) bool {
+		total, err := checkedSumInt64(values...)
+		return err == nil && total <= limit
+	}
+	return within(value.OtherChildren, value.GitToOtherTransitions, value.IndexToOtherTransitions) &&
+		within(value.OtherChildren, value.OtherToGitTransitions, value.OtherToIndexTransitions) &&
+		within(value.GitChildren, value.OtherToGitTransitions, value.IndexToGitTransitions) &&
+		within(value.GitChildren, value.GitToOtherTransitions, value.GitToIndexTransitions) &&
+		within(value.IndexChildren, value.OtherToIndexTransitions, value.GitToIndexTransitions) &&
+		within(value.IndexChildren, value.IndexToOtherTransitions, value.IndexToGitTransitions)
 }
 
 func digest(raw []byte) string {

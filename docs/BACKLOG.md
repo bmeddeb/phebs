@@ -1690,13 +1690,18 @@ epoch, and remains inside the existing 8,192 cumulative ceiling; a same-class
 repeat is free, while changed identity or absence/reappearance remains a new
 sampled lifetime. Fresh plan/observation/receipt contracts advance to V26 and
 retain six optional source-free old-class-to-new-class transition counters;
-V1–V25 bytes validate only with those counters absent/zero. Same-snapshot
+V1–V25 bytes validate only with those counters absent/zero. Receipt creation,
+resume, and rebuild require the exact observation schema selected by the plan;
+each direction must be funded by both its source and destination class epochs,
+not only by the aggregate child count. Same-snapshot
 candidate/kernel class disagreement, parent/start drift, malformed/unreadable
 identity, duplicate/cycle, root handoff, 128 descendants, 250-ms cadence,
 shared two-second deadline, and no-partial-commit rules remain fail-closed.
 Tests must include a deterministic Darwin same-PID shell-to-real-Git exec,
 synthetic transition/repeat/reversal/identity/bound cases, within-snapshot
-class mismatch, metric merge/overflow, and V25/V26 receipt validation. The
+class mismatch, all six direction/source/destination cases, metric
+merge/overflow, V25/V26 receipt validation, and the real V26 shell/receipt
+dispatch. The
 correction adds no probe, retry, deadline, production work, or bound increase.
 Full bounded package/race, real-launcher, readiness rehearsal, repository/store,
 docs, glossary, shell, and independent-review gates remain required before

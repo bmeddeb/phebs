@@ -1878,6 +1878,112 @@ false
 	}
 }
 
+func TestCeremonyDriverRecognizesV26ThroughTheRealInspector(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ceremony driver is a Bash script")
+	}
+	driver, err := filepath.Abs("run-large-mac-ceremony.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	inspector := filepath.Join(root, "t4013-inspect")
+	if output, err := exec.Command("go", "build", "-o", inspector, "./cmd/t4013-inspect").CombinedOutput(); err != nil {
+		t.Fatalf("build exact-control inspector: %v: %s", err, output)
+	}
+	script := `
+source "$1"
+CLOSED_COMMAND_ROOT="$2"
+V25_INSPECT_COMMAND="$3"
+V25_INSPECT_SHA256="$(executable_digest "$3")"
+run_v25_custody_command_in_repo_active() { "$@"; }
+if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
+`
+	v24, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v25, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v26, err := frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		plan Plan
+		want string
+	}{
+		{v24, "historical\n"},
+		{v25, "current\n"},
+		{v26, "current\n"},
+	} {
+		plan := filepath.Join(t.TempDir(), "plan.json")
+		planBytes, err := MarshalPlan(test.plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(plan, planBytes, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		output, err := exec.Command("bash", "-c", script, "plan-schema-test", driver, root, inspector, plan).CombinedOutput()
+		if err != nil || string(output) != test.want {
+			t.Fatalf("real plan predicate %s = %q, %v", test.plan.Schema, output, err)
+		}
+	}
+}
+
+func TestV26ReceiptCommandUsesDurablePublication(t *testing.T) {
+	root := t.TempDir()
+	receiptCommand := filepath.Join(root, "t4013-receipt")
+	if output, err := exec.Command("go", "build", "-o", receiptCommand, "./cmd/t4013-receipt").CombinedOutput(); err != nil {
+		t.Fatalf("build receipt command: %v: %s", err, output)
+	}
+	plan, err := frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(completedV25TeardownObservation(plan))
+	if err != nil {
+		t.Fatal(err)
+	}
+	planPath := filepath.Join(root, "plan.json")
+	observationPath := filepath.Join(root, "observation.json")
+	resultPath := filepath.Join(root, "results.json")
+	if err := os.WriteFile(planPath, planBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(observationPath, observationBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(resultPath+".tmp", []byte("interrupted"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output, err := exec.Command(receiptCommand,
+		"-plan", planPath, "-plan-digest", PlanDigest(planBytes),
+		"-observation", observationPath, "-output", resultPath,
+	).CombinedOutput()
+	if err != nil {
+		t.Fatalf("V26 receipt command: %v: %s", err, output)
+	}
+	if _, err := os.Lstat(resultPath + ".tmp"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("V26 receipt command retained its interrupted stage: %v", err)
+	}
+	raw, err := os.ReadFile(resultPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(raw, plan)
+	if err != nil || receipt.Schema != ReceiptSchemaV26 {
+		t.Fatalf("V26 durable receipt = %+v, %v", receipt, err)
+	}
+}
+
 func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")

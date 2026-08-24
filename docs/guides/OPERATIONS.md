@@ -5081,6 +5081,12 @@ child output. A missing transition field means zero; any V1–V25 evidence with 
 nonzero transition field is invalid. A same-snapshot class disagreement is
 still an ambiguous measurement failure, not an exec epoch.
 
+Receipt construction, observation resume, and returned-bundle rebuilding must
+reject an observation whose schema is not the exact schema selected by the
+frozen plan. Each transition direction also requires a retained sampled epoch
+for both its source and destination class; aggregate child counts alone are not
+sufficient evidence.
+
 Before requesting another freeze, run the deterministic Darwin exec regression,
 the complete T40.13 package and race package, the real-launcher proof, the
 production-path readiness rehearsal, full `internal/store`, documentation,
