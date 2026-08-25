@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
@@ -73,6 +74,127 @@ func TestBuildV2ParityDeterminismAndPrefixRoutedLookup(t *testing.T) {
 	placements, err := first.LookupPath("tree/02049/file.go")
 	if err != nil || len(placements) != 2 || placements[0].Path != "tree" || placements[1].Path != "tree/02049" {
 		t.Fatalf("path lookup = %+v, %v", placements, err)
+	}
+}
+
+func TestPrefixPreludeCoversWholeRoutedRange(t *testing.T) {
+	catalog := acceptedCatalog(2, false)
+	catalog.Memberships[0].Path = "a"
+	catalog.Memberships[1].Path = "a/x"
+	for index := range MaxPathsPerMember {
+		catalog.Unowned = append(catalog.Unowned, servicecatalog.UnownedPlacement{
+			Path: fmt.Sprintf("a-%04d", index), Origin: servicecatalog.OriginBase,
+		})
+	}
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generation.Root.PlacementMembers) != 2 || generation.Root.PlacementMembers[1].PreludeClaims != 1 {
+		t.Fatalf("placement members = %+v", generation.Root.PlacementMembers)
+	}
+	placements, err := generation.LookupPath("a/x/file.go")
+	if err != nil || len(placements) != 2 || placements[0].Path != "a" || placements[1].Path != "a/x" {
+		t.Fatalf("path lookup = %+v, %v", placements, err)
+	}
+	mapped, err := generation.ToV2()
+	if err != nil || len(mapped.Unowned) != MaxPathsPerMember {
+		t.Fatalf("unowned round-trip = %d, %v", len(mapped.Unowned), err)
+	}
+
+	missing := cloneGeneration(generation)
+	ordinal := 1
+	memberIndex := len(missing.Root.ServiceMembers) + ordinal
+	var member PlacementMember
+	if err := decodeCanonical(missing.Members[memberIndex].Content, &member); err != nil {
+		t.Fatal(err)
+	}
+	member.Inherited = []Placement{}
+	replacePlacementMember(t, &missing, ordinal, member)
+	if err := ValidateGeneration(missing); err == nil {
+		t.Fatal("missing routed-range ancestor was admitted")
+	}
+}
+
+func TestV2SuccessorParityAndPersistedConversion(t *testing.T) {
+	authority := servicecatalog.Authority{Kind: servicecatalog.AuthorityCommitted, ID: "catalog", Version: strings.Repeat("b", 40)}
+	catalog := servicecatalog.Catalog{Schema: servicecatalog.Schema, Authority: authority}
+	owner := servicecatalog.Service{Key: "owner", DisplayName: "owner", Disposition: servicecatalog.DispositionRejected, Origin: servicecatalog.OriginBase, Reason: "renamed"}
+	for index := range 513 {
+		key := fmt.Sprintf("target-%04d", index)
+		catalog.Services = append(catalog.Services, servicecatalog.Service{
+			Key: key, DisplayName: key, Disposition: servicecatalog.DispositionAccepted,
+			Origin: servicecatalog.OriginBase,
+		})
+		catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+			ServiceKey: key, Path: fmt.Sprintf("target/%04d", index),
+			Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+		})
+		owner.Successors = append(owner.Successors, key)
+	}
+	catalog.Services = append(catalog.Services, owner)
+	wantDigest, err := servicecatalog.Digest(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generation, err := Build(testBinding(authority), catalog)
+	if err != nil || generation.Root.MappedV2Digest != wantDigest {
+		t.Fatalf("v2 successor mapping = %q, %v", generation.Root.MappedV2Digest, err)
+	}
+
+	canonical, err := servicecatalog.Canonical(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication := servicecatalog.Publication{
+		Schema: servicecatalog.PublicationSchema, Repository: "example/catalog",
+		SourceKind: servicecatalog.SourceCommitted, SourcePath: "/tmp/catalog.json",
+		SourceCommit: authority.Version, SourceCensusDigest: rawDigest([]byte("census")),
+		Authority: authority, CatalogDigest: wantDigest, Canonical: canonical,
+	}
+	publication.GenerationDigest, err = servicecatalog.PublicationGenerationDigest(publication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name      string
+		persisted bool
+	}{
+		{name: "unpublished"},
+		{name: "persisted", persisted: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := publication
+			if test.persisted {
+				candidate.ControlRevision = 7
+				candidate.PublishedAt = time.Date(2026, 8, 25, 18, 0, 0, 0, time.UTC)
+			}
+			if _, err := FromV2(candidate, catalog); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDecodeCanonicalPreflightsCollections(t *testing.T) {
+	tests := []struct {
+		name  string
+		field string
+		count int
+	}{
+		{name: "services", field: "services", count: MaxServicesPerMember + 1},
+		{name: "placements", field: "placements", count: MaxPathsPerMember + 1},
+		{name: "successors", field: "successors", count: MaxServiceSuccessors + 1},
+		{name: "claims", field: "claims", count: MaxClaimsPerPlacement + 1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			raw := []byte(`{"` + test.field + `":[` + strings.Repeat(`{},`, test.count-1) + `{}` + `]}`)
+			var value map[string]any
+			if err := decodeCanonical(raw, &value); !errors.Is(err, ErrLimit) {
+				t.Fatalf("decode error = %v", err)
+			}
+		})
 	}
 }
 
@@ -168,6 +290,14 @@ func TestExpandedRulesAndDowngradeRefusal(t *testing.T) {
 	tooMany := acceptedCatalog(MaxTotalServices+1, false)
 	if _, err := Build(testBinding(tooMany.Authority), tooMany); !errors.Is(err, ErrLimit) {
 		t.Fatalf("service one-over = %v", err)
+	}
+
+	successorOverflow := servicecatalog.Catalog{Schema: servicecatalog.Schema, Authority: cycle.Authority, Services: []servicecatalog.Service{{
+		Key: "retired", DisplayName: "retired", Disposition: servicecatalog.DispositionRejected,
+		Origin: servicecatalog.OriginBase, Reason: "renamed", Successors: make([]string, MaxServiceSuccessors+1),
+	}}}
+	if _, err := Build(testBinding(successorOverflow.Authority), successorOverflow); !errors.Is(err, ErrLimit) {
+		t.Fatalf("successor one-over = %v", err)
 	}
 }
 

@@ -32,6 +32,13 @@ func normalize(catalog servicecatalog.Catalog) (servicecatalog.Catalog, catalogS
 		len(catalog.Memberships) > MaxMemberships || len(catalog.Unowned) > MaxDistinctPaths {
 		return servicecatalog.Catalog{}, catalogStats{}, limitf("catalog aggregate count")
 	}
+	successors := 0
+	for _, service := range catalog.Services {
+		if len(service.Successors) > MaxServiceSuccessors || len(service.Successors) > MaxSuccessorEdges-successors {
+			return servicecatalog.Catalog{}, catalogStats{}, limitf("successor edges")
+		}
+		successors += len(service.Successors)
+	}
 	normalized := servicecatalog.Catalog{
 		Schema: servicecatalog.Schema, Authority: catalog.Authority,
 		Override: cloneOverride(catalog.Override),
@@ -58,9 +65,6 @@ func normalize(catalog servicecatalog.Catalog) (servicecatalog.Catalog, catalogS
 	for _, service := range normalized.Services {
 		if _, duplicate := services[service.Key]; duplicate {
 			return servicecatalog.Catalog{}, catalogStats{}, invalidf("duplicate service %q", service.Key)
-		}
-		if len(service.Successors) > MaxServiceSuccessors {
-			return servicecatalog.Catalog{}, catalogStats{}, limitf("service %q successors", service.Key)
 		}
 		services[service.Key] = service
 	}
@@ -111,9 +115,6 @@ func normalize(catalog servicecatalog.Catalog) (servicecatalog.Catalog, catalogS
 			stats.dispositions.Conflict++
 		case servicecatalog.DispositionRejected:
 			stats.dispositions.Rejected++
-		}
-		if len(service.Successors) > MaxSuccessorEdges-stats.successors {
-			return servicecatalog.Catalog{}, catalogStats{}, limitf("successor edges")
 		}
 		stats.successors += len(service.Successors)
 	}

@@ -13,7 +13,8 @@ import (
 )
 
 func FromV2(publication servicecatalog.Publication, catalog servicecatalog.Catalog) (Generation, error) {
-	if err := servicecatalog.ValidatePublication(publication, false); err != nil {
+	persisted := publication.ControlRevision != 0 || !publication.PublishedAt.IsZero()
+	if err := servicecatalog.ValidatePublication(publication, persisted); err != nil {
 		return Generation{}, err
 	}
 	digest, err := servicecatalog.Digest(catalog)
@@ -60,7 +61,8 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 	for _, service := range serviceView.Services {
 		serviceDispositions[service.Key] = service.Disposition
 	}
-	prior := make(map[string]Placement, root.Paths)
+	priorByPath := make(map[string]Placement, root.Paths)
+	prior := make([]Placement, 0, root.Paths)
 	for ordinal, descriptor := range root.PlacementMembers {
 		encoded := generation.Members[memberIndex]
 		memberIndex++
@@ -71,14 +73,19 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 		if decodeCanonical(encoded.Content, &member) != nil || validatePlacementMember(root, descriptor, member) != nil {
 			return invalidf("placement member %d", ordinal)
 		}
-		if !reflect.DeepEqual(member.Inherited, inheritedFor(member.FirstPath, prior)) {
+		next := ""
+		if ordinal+1 < len(root.PlacementMembers) {
+			next = root.PlacementMembers[ordinal+1].First
+		}
+		if !reflect.DeepEqual(member.Inherited, inheritedForRange(member.FirstPath, next, prior)) {
 			return invalidf("placement member %d inherited prelude", ordinal)
 		}
 		for _, placement := range member.Placements {
-			if _, duplicate := prior[placement.Path]; duplicate {
+			if _, duplicate := priorByPath[placement.Path]; duplicate {
 				return invalidf("duplicate placement %q", placement.Path)
 			}
-			prior[placement.Path] = placement
+			priorByPath[placement.Path] = placement
+			prior = append(prior, placement)
 			if placement.Unowned != nil {
 				placementView.Unowned = append(placementView.Unowned, *placement.Unowned)
 			}
@@ -94,6 +101,7 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 			}
 		}
 	}
+	serviceView.Unowned = slices.Clone(placementView.Unowned)
 	serviceNormalized, serviceStats, err := normalize(serviceView)
 	if err != nil {
 		return err

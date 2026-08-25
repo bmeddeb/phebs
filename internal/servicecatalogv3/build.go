@@ -3,8 +3,6 @@ package servicecatalogv3
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"path"
-	"slices"
 	"sort"
 	"strings"
 
@@ -164,43 +162,74 @@ func packPlacementGroups(placements []Placement, maxGroups int) ([]placementGrou
 		return nil, limitf("placement members")
 	}
 	groups := make([]placementGroup, 0, min(maxGroups, (len(placements)+MaxPathsPerMember-1)/MaxPathsPerMember))
-	prior := make(map[string]Placement, len(placements))
+	prior := make([]Placement, 0, len(placements))
 	for index := 0; index < len(placements); {
-		inherited := inheritedFor(placements[index].Path, prior)
-		estimated := memberEnvelopeReserve
-		for _, placement := range inherited {
-			raw, err := json.Marshal(placement)
-			if err != nil {
-				return nil, err
-			}
-			if len(raw)+1 > MaxMemberBytes-estimated {
-				return nil, limitf("inherited claim prelude")
-			}
-			estimated += len(raw) + 1
+		first := placements[index].Path
+		candidates, err := inheritedCandidates(first, prior)
+		if err != nil {
+			return nil, err
 		}
-		group := placementGroup{inherited: inherited}
+		group := placementGroup{}
+		ordinaryBytes, inheritedBytes, activated := 0, 0, 0
+		acceptedNext := ""
 		for index < len(placements) && len(group.placements) < MaxPathsPerMember {
 			raw, err := json.Marshal(placements[index])
 			if err != nil {
 				return nil, err
 			}
-			if len(group.placements) > 0 && len(raw)+1 > MaxMemberBytes-estimated {
+			next := ""
+			if index+1 < len(placements) {
+				next = placements[index+1].Path
+			}
+			for activated < len(candidates) && (next == "" || candidates[activated].first < next) {
+				if candidates[activated].bytes > MaxMemberBytes-inheritedBytes {
+					return nil, limitf("inherited claim prelude")
+				}
+				inheritedBytes += candidates[activated].bytes
+				activated++
+			}
+			estimated := memberEnvelopeReserve + ordinaryBytes + len(raw) + 1 + inheritedBytes
+			if len(group.placements) > 0 && estimated > MaxMemberBytes {
 				break
 			}
-			if len(raw)+1 > MaxMemberBytes-estimated {
+			if estimated > MaxMemberBytes {
 				return nil, limitf("one placement member")
 			}
 			group.placements = append(group.placements, placements[index])
-			prior[placements[index].Path] = placements[index]
-			estimated += len(raw) + 1
+			ordinaryBytes += len(raw) + 1
+			acceptedNext = next
 			index++
 		}
+		group.inherited = inheritedForRange(first, acceptedNext, prior)
 		if len(groups) >= maxGroups {
 			return nil, limitf("placement members")
 		}
 		groups = append(groups, group)
+		prior = append(prior, group.placements...)
 	}
 	return groups, nil
+}
+
+type inheritedCandidate struct {
+	first string
+	bytes int
+}
+
+func inheritedCandidates(first string, prior []Placement) ([]inheritedCandidate, error) {
+	result := make([]inheritedCandidate, 0)
+	for _, placement := range prior {
+		if len(placement.Claims) == 0 || placement.Path+"0" <= first {
+			continue
+		}
+		placement.Unowned = nil
+		raw, err := json.Marshal(placement)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, inheritedCandidate{first: placement.Path + "/", bytes: len(raw) + 1})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].first < result[j].first })
+	return result, nil
 }
 
 func makePlacements(catalog servicecatalog.Catalog) ([]Placement, error) {
@@ -253,15 +282,15 @@ func makePlacements(catalog servicecatalog.Catalog) ([]Placement, error) {
 	return result, nil
 }
 
-func inheritedFor(first string, prior map[string]Placement) []Placement {
-	result := []Placement{}
-	for parent := path.Dir(first); parent != "."; parent = path.Dir(parent) {
-		if placement, exists := prior[parent]; exists && len(placement.Claims) > 0 {
-			placement.Unowned = nil
-			result = append(result, placement)
+func inheritedForRange(first, next string, prior []Placement) []Placement {
+	result := make([]Placement, 0)
+	for _, placement := range prior {
+		if len(placement.Claims) == 0 || placement.Path+"0" <= first || next != "" && placement.Path+"/" >= next {
+			continue
 		}
+		placement.Unowned = nil
+		result = append(result, placement)
 	}
-	slices.Reverse(result)
 	return result
 }
 

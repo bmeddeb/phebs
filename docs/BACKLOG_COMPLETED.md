@@ -10207,13 +10207,29 @@ ancestor lookup, service point reads, malformed inventory, cross-view drift,
 cycles, fan-out, unowned overlap, one-over services, expanded downgrade refusal,
 and the combined maximum service and compact maximum-claim placement shapes.
 
+The independent review correction widened only the per-service successor bound
+to v2's existing 4,000-edge aggregate ceiling, derives inherited preludes from
+the complete routed lexical interval, checks member collections before typed
+decode growth, accepts strict persisted and unpublished v2 envelopes, and
+reconstructs nonempty unowned state from its sole placement authority. Focused
+regressions cover the formerly missing later-path ancestor, a valid 513-edge v2
+record, persisted conversion, collection one-over inputs, and nonempty unowned
+round-trip.
+
 Production steady-state work is zero because no runtime package imports v3.
-Explicit build/full validation is linear in the bounded service, membership,
-placement, and successor inputs; logical identity is streamed into a bounded
-hash rather than buffered. A keyed read validates the small root and one
-at-most-2-MiB member. There is no store, filesystem, network, source/Git,
+Explicit build/full validation is bounded `O(N log N)` because it canonically
+sorts inputs and interval-prelude candidates; logical identity is streamed into
+a bounded hash rather than buffered. A keyed read validates the small root and
+token-scans, decodes, and hashes one at-most-2-MiB member. There is no store,
+filesystem, network, source/Git,
 corpus/shard, lock, cache, worker, or child-process work. T41.3 retains source
 census proof and immutable storage. Integration and Epic 41 progression remain
 blocked on Epic 40 closure and the stacked T41.1 merge bar; no runtime
 selection, production cap, ceremony, scale/SLO, release, topology, migration,
 or decommission claim is authorized.
+
+The no-OCR non-runtime merge bar passed. The repository-wide test remains
+blocked outside T41.2 by T30.6m's retained 52-component allocation assertion
+after T40.7 added the 53rd component, T32.4's retained pre-preservation T32.3
+input digests, and one `internal/store` timeout while another store suite was
+active. Those repairs are separately owned prerequisites.

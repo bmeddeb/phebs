@@ -820,7 +820,9 @@ catalog, relationship, or correctness authority.
   complete validation proves the two views plus inherited prefix claims before
   a keyed root-plus-one-member read is available. It adds no store schema,
   ingestion, census proof, lifecycle owner, activation, or runtime import;
-  integration remains separate and T41.3 follows its merge bar.
+  integration remains separate and T41.3 follows its merge bar. Its
+  independent-review corrections are committed and the rebased lineage owns a
+  fresh current-tree gate.
 - T41.3 is the next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

@@ -24,7 +24,7 @@ const (
 	MaxMemberships        = 75_000
 	MaxDistinctPaths      = 40_000
 	MaxSuccessorEdges     = 12_500
-	MaxServiceSuccessors  = 512
+	MaxServiceSuccessors  = servicecatalog.MaxSuccessorEdges
 	MaxClaimsPerPlacement = 4_000
 	MaxServicesPerMember  = 512
 	MaxPathsPerMember     = 2_048
@@ -233,6 +233,9 @@ func canonical(value any) ([]byte, error) {
 }
 
 func decodeCanonical(raw []byte, value any) error {
+	if err := preflightCollections(raw); err != nil {
+		return err
+	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(value); err != nil {
@@ -246,6 +249,97 @@ func decodeCanonical(raw []byte, value any) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+func preflightCollections(raw []byte) error {
+	if len(raw) > MaxMemberBytes {
+		return limitf("member bytes")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	if err := preflightValue(decoder, ""); err != nil {
+		return err
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func preflightValue(decoder *json.Decoder, field string) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	delimiter, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+	switch delimiter {
+	case '{':
+		for decoder.More() {
+			name, ok := anyTokenString(decoder)
+			if !ok {
+				return ErrInvalid
+			}
+			if err := preflightValue(decoder, name); err != nil {
+				return err
+			}
+		}
+	case '[':
+		limit, bounded := memberCollectionLimit(field)
+		count := 0
+		for decoder.More() {
+			if bounded && count >= limit {
+				return limitf("collection %q", field)
+			}
+			if err := preflightValue(decoder, ""); err != nil {
+				return err
+			}
+			count++
+		}
+	default:
+		return ErrInvalid
+	}
+	end, err := decoder.Token()
+	if err != nil || end != matchingDelimiter(delimiter) {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func anyTokenString(decoder *json.Decoder) (string, bool) {
+	token, err := decoder.Token()
+	if err != nil {
+		return "", false
+	}
+	value, ok := token.(string)
+	return value, ok
+}
+
+func matchingDelimiter(delimiter json.Delim) json.Delim {
+	if delimiter == '{' {
+		return '}'
+	}
+	return ']'
+}
+
+func memberCollectionLimit(field string) (int, bool) {
+	switch field {
+	case "services":
+		return MaxServicesPerMember, true
+	case "memberships", "roles":
+		return MaxMemberships, true
+	case "successors":
+		return MaxServiceSuccessors, true
+	case "inherited":
+		return MaxDistinctPaths, true
+	case "placements":
+		return MaxPathsPerMember, true
+	case "claims":
+		return MaxClaimsPerPlacement, true
+	default:
+		return 0, false
+	}
 }
 
 func mustJSON(value any) []byte { raw, _ := json.Marshal(value); return raw }
