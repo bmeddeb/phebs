@@ -734,6 +734,10 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
+- T41.1R1 is a repository merge-bar compatibility prerequisite: it moves only
+  current synthetic SCIP producers to typed ranges, preserves deliberate
+  legacy-read fixtures and retained bytes, and may integrate as maintenance
+  without advancing Epic 41. T41.1 still waits for Epic 40 closure.
 - T40.13 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

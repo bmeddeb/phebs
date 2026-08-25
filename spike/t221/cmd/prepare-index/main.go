@@ -140,7 +140,7 @@ func (b builder) document(rel string, occurrences []authoredOccurrence) *scip.Do
 		lineStart := strings.LastIndex(text[:offset], "\n") + 1
 		character := int32(offset - lineStart)
 		doc.Occurrences = append(doc.Occurrences, &scip.Occurrence{
-			Range:       []int32{line, character, character + int32(len(occurrence.ident))},
+			TypedRange:  scip.NewRangeUnchecked([]int32{line, character, character + int32(len(occurrence.ident))}).AsTypedRange(),
 			Symbol:      occurrence.symbol,
 			SymbolRoles: int32(occurrence.roles),
 		})

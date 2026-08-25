@@ -308,7 +308,7 @@ func testOccurrence(content string, start, length int, symbol string, roles scip
 	startCharacter := encodedUnits(content[lineStart:start], encoding)
 	endCharacter := startCharacter + encodedUnits(content[start:start+length], encoding)
 	return &scip.Occurrence{
-		Range:       []int32{line, startCharacter, endCharacter},
+		TypedRange:  scip.NewRangeUnchecked([]int32{line, startCharacter, endCharacter}).AsTypedRange(),
 		Symbol:      symbol,
 		SymbolRoles: int32(roles),
 	}
