@@ -531,7 +531,7 @@ func buildWorkingTreeToolchain(
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV28,
+		Schema:        PlanSchemaV29,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -691,6 +691,13 @@ func rehearseProductionPath(
 	}
 
 	if kind == "structural" {
+		if err := server.stop(30 * time.Second); err != nil {
+			t.Fatal(err)
+		}
+		running = false
+		server, a = rehearseWarmNoopRestart(t, ctx, workspace, profile, toolchain, a)
+		running = true
+		t.Log("structural warm-noop restart boundary passed")
 		if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"], true); err != nil {
 			t.Fatal(err)
 		}
@@ -751,6 +758,47 @@ func rehearseProductionPath(
 	running = false
 }
 
+func rehearseWarmNoopRestart(
+	t *testing.T,
+	ctx context.Context,
+	workspace string,
+	profile PreparedProfile,
+	toolchain privateToolchain,
+	before privateProfileSnapshot,
+) (*privateServer, privateProfileSnapshot) {
+	t.Helper()
+	plan := Plan{Schema: PlanSchemaV29, Safety: frozenSafetyV25}
+	run := &execution{
+		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
+		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
+		structA:     before,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(2)
+	complete := false
+	defer func() {
+		if complete {
+			return
+		}
+		if err := run.stopServers(); err != nil {
+			t.Errorf("stop warm-noop diagnostic; retained at %s: %v", workspace, err)
+		}
+		for active := range run.activeMeters {
+			if _, err := run.finishMeter(active, nil); err != nil {
+				t.Errorf("finish warm-noop diagnostic meter; retained at %s: %v", workspace, err)
+			}
+		}
+	}()
+	if err := run.warmNoop(); err != nil {
+		t.Fatal(err)
+	}
+	startup := run.observation.ServerStartups[0]
+	metrics := run.observation.Phases[2].Metrics
+	t.Logf("warm-noop startup Git children=%d phase Git children=%d", startup.GitChildren, metrics.GitChildren)
+	complete = true
+	return run.structural, before
+}
+
 func rehearseSemanticInterruptionBoundary(
 	t *testing.T,
 	ctx context.Context,
@@ -769,7 +817,7 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
-	plan := Plan{Schema: PlanSchemaV28, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV29, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),

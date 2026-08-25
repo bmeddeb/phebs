@@ -5387,3 +5387,31 @@ re-review with all severity counts zero. No code-review finding remains; a
 later host-clean structural confirmation is still required. Integration,
 exact-main preflight, fresh-ID selection, freeze, frozen-plan review, and exact
 ID/digest execution remain separate explicit decisions.
+
+## T40.R1 neutral-38 warm-noop stop and V29
+
+Keep all neutral-38 public evidence, its source-free archive, operation-lock
+file, and signer. Its V28 source is
+`b79406d12f517caed08f07120ca91b0ac1fbe471` and its plan digest is
+`sha256:da1804e13afb7b04a45a462552b75627ebb3a6e58bbe95c03c4fbad8080d2506`.
+Preflight and cold passed; phase 3 `warm_noop` stopped because the complete
+phase meter sampled two Git lifetimes. The healthy `warm-noop` startup record
+sampled those same two lifetimes. Authority, index, and publication remained
+unchanged, and teardown destroyed both derived and scratch-source custody.
+
+This is a V28 ceremony-oracle mismatch. Production boot deliberately enqueues
+connection freshness work; do not disable that production path or reinterpret
+neutral-38 as a pipeline or phase-6 failure. V29 accepts startup Git only when
+the complete warm phase count equals the paired healthy-startup count. Any
+additional sampled Git lifetime after health, index child, publication
+mutation, authority/snapshot movement, or missing reuse still stops exactly.
+Historical V1–V28 plans retain their previous predicate.
+
+Before a fresh freeze, run the exact V29 helper/model tests and the complete
+real-binary readiness suite. Structural readiness now invokes production
+`warmNoop` after cold convergence, so this boundary costs minutes rather than
+the 79m56s exact cold ceremony. Continue with the complete package/race,
+launcher, `internal/`, standalone `internal/store`, module, vet, lint, docs,
+glossary, shell, and whitespace gates plus recorded independent review. Only
+then integrate, run exact-main preflight, and freeze the fresh identifier.
+Freeze and execution remain separate authorizations.

@@ -1589,8 +1589,15 @@ func (run *execution) warmNoop() error {
 	if err != nil {
 		return err
 	}
-	if !privateSnapshotEqual(run.structA, after) || metrics.GitChildren != 0 || metrics.IndexChildren != 0 ||
-		metrics.PublicationWrites != 0 || metrics.PublicationTransactions != 0 || metrics.ReusedControls == 0 {
+	startup := ServerStartupObservation{GitChildren: -1}
+	if count := len(run.observation.ServerStartups); count > 0 {
+		candidate := run.observation.ServerStartups[count-1]
+		if candidate.Profile == profile.Name && candidate.Label == "warm-noop" && candidate.Outcome == "healthy" {
+			startup = candidate
+		}
+	}
+	if !privateSnapshotEqual(run.structA, after) ||
+		!warmNoopMetricsExact(run.plan, metrics, false, startup) {
 		return exactOracle("warm no-op moved authority or performed content work")
 	}
 	run.observation.Phases[2] = succeededPhase("warm_noop", metrics)

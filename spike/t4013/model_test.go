@@ -1056,6 +1056,96 @@ func TestV28RetainedPartialAttributionIsClosedAndRoundTrips(t *testing.T) {
 	}
 }
 
+func TestV29WarmNoopAllowsStartupGitWithoutWeakeningReuse(t *testing.T) {
+	v28, err := frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v29, err := frozenV29PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	metrics := PhaseMetrics{GitChildren: 2, ReusedControls: 2}
+	startup := ServerStartupObservation{GitChildren: 2}
+	if warmNoopMetricsExact(v28, metrics, false, startup) {
+		t.Fatal("V28 accepted sampled startup Git children")
+	}
+	if !warmNoopMetricsExact(v29, metrics, false, startup) {
+		t.Fatal("V29 rejected ordinary startup Git validation")
+	}
+	if warmNoopMetricsExact(v29, metrics, false, ServerStartupObservation{GitChildren: 1}) {
+		t.Fatal("V29 accepted a post-startup Git lifetime")
+	}
+	for name, mutate := range map[string]func(*PhaseMetrics, *bool){
+		"index child":             func(metrics *PhaseMetrics, _ *bool) { metrics.IndexChildren = 1 },
+		"publication write":       func(metrics *PhaseMetrics, _ *bool) { metrics.PublicationWrites = 1 },
+		"publication transaction": func(metrics *PhaseMetrics, _ *bool) { metrics.PublicationTransactions = 1 },
+		"no reuse":                func(metrics *PhaseMetrics, _ *bool) { metrics.ReusedControls = 0 },
+		"authority changed":       func(_ *PhaseMetrics, changed *bool) { *changed = true },
+	} {
+		t.Run(name, func(t *testing.T) {
+			forged := metrics
+			changed := false
+			mutate(&forged, &changed)
+			if warmNoopMetricsExact(v29, forged, changed, startup) {
+				t.Fatal("V29 accepted non-reuse work")
+			}
+		})
+	}
+	overBound := int64(maxProcessChildLifetimes + 1)
+	if warmNoopMetricsExact(v29,
+		PhaseMetrics{OtherChildren: overBound, ReusedControls: 1}, false,
+		ServerStartupObservation{},
+	) {
+		t.Fatal("V29 accepted an over-bound warm phase process inventory")
+	}
+	if warmNoopMetricsExact(v29,
+		PhaseMetrics{ReusedControls: 1}, false,
+		ServerStartupObservation{OtherChildren: overBound},
+	) {
+		t.Fatal("V29 accepted an over-bound warm startup process inventory")
+	}
+}
+
+func TestV29CompletedReceiptBindsWarmGitToHealthyStartup(t *testing.T) {
+	build := func(t *testing.T, plan Plan, startupGit, phaseGit int64) error {
+		t.Helper()
+		planBytes, err := MarshalPlan(plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		observation := completedV25TeardownObservation(plan)
+		observation.ServerStartups[2].GitChildren = startupGit
+		observation.Phases[2].Metrics.GitChildren = phaseGit
+		observationBytes, err := MarshalObservation(observation)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+		return err
+	}
+	v29, err := frozenV29PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := build(t, v29, 2, 2); err != nil {
+		t.Fatalf("matching V29 startup/phase Git children failed: %v", err)
+	}
+	if err := build(t, v29, 2, 3); err == nil {
+		t.Fatal("V29 accepted a post-health Git child")
+	}
+	if err := build(t, v29, maxProcessChildLifetimes+1, maxProcessChildLifetimes+1); err == nil {
+		t.Fatal("V29 accepted an over-bound forged process inventory")
+	}
+	v28, err := frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := build(t, v28, 2, 2); err == nil {
+		t.Fatal("V28 historical receipt accepted nonzero warm Git children")
+	}
+}
+
 func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
 	tests := []struct {
 		name        string

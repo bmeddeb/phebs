@@ -258,8 +258,18 @@ third retry was attempted. Fresh review of exact corrected source commit
 one low lock-cost wording gap. Source-identical documentation commit
 `c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
 re-review with all severity counts zero. No code-review finding remains; only a
-later host-clean structural confirmation remains before integration readiness.
-The original T40.13 gate remains open; integration, exact-main
+later host-clean structural confirmation remained before integration readiness.
+That confirmation, integration, and exact-main preparation led to
+`t40r1-neutral-38`, which passed preflight and the 79m56.010s cold phase at
+source `b79406d12f517caed08f07120ca91b0ac1fbe471`, then stopped honestly in
+phase 3 `warm_noop`: the V28 phase meter sampled the same two Git lifetimes as
+its healthy startup and rejected them despite unchanged authority, zero index
+and publication movement, and positive reuse. Teardown retained no derived or
+scratch-source custody. T40.13p's prospective V29 contract requires the whole
+warm phase Git count to equal its paired healthy-startup count, while retaining
+exact snapshot, index, publication, authority, and reuse gates; V1–V28 remain
+exact. The small real-binary readiness path now calls production `warmNoop`.
+The original T40.13 gate remains open; review, integration, exact-main
 preflight, fresh-ID selection, freeze, and execution remain separately
 authorized. Epic 40
 targets

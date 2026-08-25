@@ -306,6 +306,7 @@ func TestHostToolchainEnvironmentChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV26, "closed"},
 		{PlanSchemaV27, "closed"},
 		{PlanSchemaV28, "closed"},
+		{PlanSchemaV29, "closed"},
 	} {
 		got, err := boundedCommand(
 			t.Context(), planSchemaVersion(test.schema) >= 25,

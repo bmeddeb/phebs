@@ -79,8 +79,10 @@ server. The fixed phase order is:
 2. `cold` — author revision A, start the ordinary server, and wait for exact
    source, search, observation, extraction-domain, resolver, posting, and
    relationship authority.
-3. `warm_noop` — request the already-current generation again; require no Git
-   or index child, publication write/transaction, or authority movement.
+3. `warm_noop` — request the already-current generation again. V1–V28 require
+   no Git child; V29 requires the full phase Git count to equal its paired
+   healthy-startup count. Every version requires no index child, publication
+   write/transaction, or authority movement and requires positive reuse.
 4. `delta_b` — advance only the frozen one-file B revision and prove that only
    its admitted partition changes.
 5. `return_a` — advance to the frozen A-return tree, reproduce A content
@@ -177,7 +179,8 @@ receipts (structural A/B/A-return and semantic A), all with `mode=go_git`, zero
 batch reads, and fallback reads equal to offered regular files. Every applicable
 partition must settle, all required domains and relationship roots must publish,
 and deliberately absent inputs plus unsupported syntax must remain explicit.
-The warm no-op must have zero content children and publication mutations.
+The warm no-op must have no post-startup sampled Git lifetime, index child, or
+publication/authority mutation.
 
 The result is mechanics evidence for one neutral environment only. It does not
 establish a target SLO, supported service cardinality, accuracy, completeness,
@@ -3679,3 +3682,41 @@ re-review with all severity counts zero. No code-review finding remains; later
 host-clean structural confirmation remains.
 No integration, fresh ID, rerun, freeze, execution, release, T40.13/Epic-40
 closure, topology/bound change, or scale/SLO claim is authorized.
+
+### Neutral-38 warm-noop stop and V29 coherence
+
+Neutral-38 is an immutable V28 phase-3 stop. It binds source
+`b79406d12f517caed08f07120ca91b0ac1fbe471`, plan
+`sha256:da1804e13afb7b04a45a462552b75627ebb3a6e58bbe95c03c4fbad8080d2506`,
+observation
+`sha256:5d6482c6bd64a7e6cca44a5975d5f56290f1de3e8c6ab7d3e57675565fa40d2f`,
+receipt
+`sha256:d24439bab4d275a93f8c8cd5ddaa0b5e36e7e6455df3f3fb3cc2a97d594e9ad5`,
+and source-free package
+`sha256:16f0794e5aee06fd7396c401faf31945331376f130bbd4e7db50bb20c8a96658`.
+Preflight passed in 66.663s and cold passed in 79m56.010s. Warm restart stopped
+after 5.069s because V28 rejected two sampled Git lifetimes. The paired healthy
+startup also retained exactly two Git lifetimes; snapshot authority did not
+move, index children and publication writes/transactions were zero, and two
+controls were reused. Teardown passed in 89.630s and destroyed derived and
+scratch-source custody. The retained `member_reads=2,001,958` is the cumulative
+post-phase fallback-read plus settled-partition cardinality, not a warm-phase
+delta and not an oracle input.
+
+The ordinary server intentionally enqueues connection freshness work at every
+boot. V29 therefore treats startup Git as part of restart admission: the full
+warm phase must retain exactly the same sampled Git lifetime count as its own
+healthy `warm-noop` startup. A newly sampled post-health Git lifetime still
+fails, as do any index child, publication write/transaction, authority or exact
+snapshot change, or missing control reuse. V1–V28 keep their frozen zero-Git
+predicate and serialized meanings.
+
+The production-binary readiness rehearsal now calls the same `warmNoop`
+implementation after cold convergence on the 4,096-file structural projection.
+V29 changes no production startup, sync, watcher, request, retry, publication,
+or lifecycle behavior. Ceremony execution adds fixed startup-record and bounded
+schema lookups, three closed identity/outcome checks, two checked three-counter
+sums against the existing 8,192-lifetime ceiling, and one scalar equality over
+already-retained values; readiness adds one bounded restart/health/revalidation
+cycle. A fresh ceremony still requires the complete gate, independent review,
+integration, exact-main preflight, and separate freeze and execution authority.

@@ -2039,6 +2039,30 @@ confirmation remains. No integration, identifier, rerun,
 freeze, execution, release, T40.13/Epic-40 closure, topology/bound change, or
 scale/SLO claim is authorized.
 
+`t40r1-neutral-38` then passed preflight and cold on exact V28 source
+`b79406d12f517caed08f07120ca91b0ac1fbe471` and plan
+`sha256:da1804e13afb7b04a45a462552b75627ebb3a6e58bbe95c03c4fbad8080d2506`,
+but stopped in phase 3 `warm_noop`. Its healthy startup and complete phase meter
+both sampled two Git lifetimes; authority stayed unchanged, no index or
+publication mutation occurred, two controls were reused, and teardown retained
+no derived or scratch-source custody. This exposes a ceremony-contract mismatch,
+not a production pipeline failure: ordinary boot intentionally enqueues
+connection freshness work, while V28 required zero Git children across the
+whole restart.
+
+T40.13p advances only fresh ceremony contracts to V29. Warm reuse now requires
+the phase Git count to equal its paired healthy-startup count, so any sampled
+post-health Git lifetime still fails. Exact snapshot equality, zero index and
+publication movement, unchanged authority, and positive reuse remain mandatory;
+V1–V28 remain exact. The small real-binary structural readiness path now invokes
+production `warmNoop` after cold convergence. Production behavior and costs are
+unchanged; ceremony execution adds fixed startup-record and bounded schema
+lookups, closed identity/outcome checks, checked three-counter ceiling sums, and
+one scalar equality, while readiness adds one bounded restart. Complete gates,
+exact-source independent review, integration,
+exact-main preflight, and separate neutral-39 freeze/review/execution decisions
+remain ahead.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

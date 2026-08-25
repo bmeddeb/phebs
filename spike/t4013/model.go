@@ -52,6 +52,7 @@ const (
 	PlanSchemaV26        = "t4013-neutral-convergence-plan-v26"
 	PlanSchemaV27        = "t4013-neutral-convergence-plan-v27"
 	PlanSchemaV28        = "t4013-neutral-convergence-plan-v28"
+	PlanSchemaV29        = "t4013-neutral-convergence-plan-v29"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -80,6 +81,7 @@ const (
 	ObservationSchemaV26 = "t4013-neutral-convergence-observation-v26"
 	ObservationSchemaV27 = "t4013-neutral-convergence-observation-v27"
 	ObservationSchemaV28 = "t4013-neutral-convergence-observation-v28"
+	ObservationSchemaV29 = "t4013-neutral-convergence-observation-v29"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -121,6 +123,7 @@ const (
 	ReceiptSchemaV26             = "t4013-neutral-convergence-receipt-v26"
 	ReceiptSchemaV27             = "t4013-neutral-convergence-receipt-v27"
 	ReceiptSchemaV28             = "t4013-neutral-convergence-receipt-v28"
+	ReceiptSchemaV29             = "t4013-neutral-convergence-receipt-v29"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -171,6 +174,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV26, ObservationSchemaV26, ReceiptSchemaV26},
 	{PlanSchemaV27, ObservationSchemaV27, ReceiptSchemaV27},
 	{PlanSchemaV28, ObservationSchemaV28, ReceiptSchemaV28},
+	{PlanSchemaV29, ObservationSchemaV29, ReceiptSchemaV29},
 }
 
 const (
@@ -1004,6 +1008,8 @@ func ValidatePlan(value Plan) error {
 	case PlanSchemaV27:
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV28:
+		wantSafety = frozenSafetyV25
+	case PlanSchemaV29:
 		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
@@ -3227,12 +3233,40 @@ func validateCompleted(value Receipt, plan Plan) error {
 		return errors.New("T40.13 completed receipt crossed a frozen safety ceiling")
 	}
 	noop := value.Phases[2]
-	if noop.Metrics.GitChildren != 0 || noop.Metrics.IndexChildren != 0 ||
-		noop.Metrics.PublicationWrites != 0 || noop.Metrics.PublicationTransactions != 0 ||
-		noop.AuthorityChanged || noop.Metrics.ReusedControls == 0 {
+	startup := ServerStartupObservation{}
+	if planSchemaVersion(plan.Schema) >= 29 {
+		startup = value.ServerStartups[2]
+	}
+	if !warmNoopMetricsExact(plan, noop.Metrics, noop.AuthorityChanged, startup) {
 		return errors.New("T40.13 warm no-op was not an exact reuse")
 	}
 	return nil
+}
+
+func warmNoopMetricsExact(
+	plan Plan,
+	metrics PhaseMetrics,
+	authorityChanged bool,
+	startup ServerStartupObservation,
+) bool {
+	// V1-V28 froze zero sampled Git children. V29 admits only lifetimes already
+	// observed by healthy startup, so later warm work still fails closed.
+	gitExact := metrics.GitChildren == 0
+	if planSchemaVersion(plan.Schema) >= 29 {
+		phaseChildren, phaseErr := checkedSumInt64(
+			metrics.GitChildren, metrics.IndexChildren, metrics.OtherChildren,
+		)
+		startupChildren, startupErr := checkedSumInt64(
+			startup.GitChildren, startup.IndexChildren, startup.OtherChildren,
+		)
+		gitExact = metrics.GitChildren >= 0 && metrics.IndexChildren >= 0 && metrics.OtherChildren >= 0 &&
+			startup.GitChildren >= 0 && startup.IndexChildren >= 0 && startup.OtherChildren >= 0 &&
+			phaseErr == nil && startupErr == nil && phaseChildren <= maxProcessChildLifetimes &&
+			startupChildren <= maxProcessChildLifetimes && metrics.GitChildren == startup.GitChildren
+	}
+	return gitExact &&
+		metrics.IndexChildren == 0 && metrics.PublicationWrites == 0 &&
+		metrics.PublicationTransactions == 0 && !authorityChanged && metrics.ReusedControls > 0
 }
 
 func prePressureAllocationCrossed(plan Plan, phases []PhaseObservation) bool {

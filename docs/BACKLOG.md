@@ -1958,6 +1958,39 @@ the only remaining regression gate. No
 integration, fresh identifier, rerun, freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
 
+**T40.13p · Neutral-38 warm-restart oracle coherence** *(high gate readiness ·
+needs T40.13o and neutral-38)* — preserve neutral-38 as the exact V28
+`warm_noop` stop at source `b79406d12f517caed08f07120ca91b0ac1fbe471`
+and plan
+`sha256:da1804e13afb7b04a45a462552b75627ebb3a6e58bbe95c03c4fbad8080d2506`.
+Preflight and the 79m56.010s cold phase passed. Warm restart stopped after
+5.069s solely because its phase meter sampled two Git lifetimes; the healthy
+startup record sampled the same two. Authority was unchanged, index children
+and publication writes/transactions were zero, two controls were reused, and
+exact teardown retained no derived or scratch-source custody. The cumulative
+`member_reads=2,001,958` field is snapshot cardinality accounting, not a warm
+phase delta or rejection predicate.
+
+AC: fresh plan, observation, and receipt contracts advance to V29 while V1–V28
+remain exact. V29 warm reuse requires phase Git children to equal the paired
+healthy `warm-noop` startup Git children. Any sampled post-health Git lifetime,
+index child, publication write/transaction, snapshot or authority change, or
+missing control reuse fails. The completed-receipt validator applies the same
+predicate. The real-binary 4,096-file structural readiness path calls the
+production `warmNoop` implementation after cold convergence. Driver, durable
+receipt, toolchain, inspection, and execution-contract registries recognize
+V29. Production boot freshness remains unchanged and intentional.
+
+Steady-state cost: production requests, startup, sync ticks, retry/no-op,
+publication, lifecycle, locks, caches, corpus/member reads, memory, disk, and
+child processes gain no work. Ceremony execution adds fixed startup-record and
+bounded schema lookups, three closed identity/outcome checks, two checked
+three-counter sums against the existing 8,192-lifetime ceiling, and one scalar
+equality over already-retained startup/phase counts. Readiness adds one bounded small-fixture
+restart/health/revalidation cycle. Full exact-tree gates, independent review,
+integration, exact-main preflight, fresh-ID freeze, frozen-plan review, and
+exact-ID/digest execution authorization remain required.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
