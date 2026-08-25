@@ -98,17 +98,24 @@ git bundle verify spike/t323/t323-neutral-corpus.bundle
 ```
 
 The tests generate the catalog, oracle, and profile bytes twice; author two
-fresh repositories with fixed Git identity and timestamps; require identical
-commits, trees, bundle, receipt, and artifact digests; strict-decode every
-closed shape; and compare the retained files byte-for-byte with fresh output.
+fresh repositories with fixed Git identity and timestamps; require those two
+ambient-toolchain runs to have identical commits, trees, bundles, receipts,
+and artifact digests; strict-decode every closed shape; and compare the
+retained catalog, oracle, and profile files byte-for-byte with fresh output.
+The retained receipt must keep its pinned byte digest and match the fresh
+semantic identities except for the Git-version-sensitive bundle byte count and
+digest; the bundle path remains exact. Separately, the retained bundle must
+still match its frozen byte length and digest, fetch successfully, expose the
+receipt's main commit, and contain every receipt-bound commit and tree.
 
-The retained bundle was last authored with Git 2.54.0, and its digest pins that
-pack encoding, while the SCIP blob pins the current protobuf deterministic
-encoding. A Git upgrade may therefore change the bundle bytes while the commit
-and tree identities remain stable; a protobuf upgrade may change a semantically
-equivalent SCIP blob and thereby
-change its tree and commit identities. Either case must fail loudly and
-requires reviewed receipt re-authoring rather than an automatic re-pin.
+The retained bundle was last authored with Git 2.54.0, and its digest preserves
+that exact pack encoding, while the SCIP blob pins the current protobuf
+deterministic encoding. A Git upgrade may change newly generated bundle bytes
+while the commit and tree identities remain stable; that pack-only difference
+does not re-author or supersede the retained evidence. A protobuf upgrade may
+change a semantically equivalent SCIP blob and thereby change tree and commit
+identities; that semantic fixture change still fails and requires a separately
+reviewed replacement decision rather than an automatic re-pin.
 
 This package is a development-only retained fixture. Production packages do
 not import it; startup, restart, requests, queries, sync ticks, retries,

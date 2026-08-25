@@ -144,8 +144,10 @@ func TestArtifactsAndGitTreesAreDeterministic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	first.Bundle.Bytes, first.Bundle.SHA256 = 0, ""
+	retained.Bundle.Bytes, retained.Bundle.SHA256 = 0, ""
 	if !reflect.DeepEqual(first, retained) {
-		t.Fatalf("retained receipt differs from deterministic author\ngenerated: %+v\nretained: %+v", first, retained)
+		t.Fatalf("retained semantic receipt differs from deterministic author\ngenerated: %+v\nretained: %+v", first, retained)
 	}
 	for index := range first.Revisions {
 		if first.Revisions[index].Tree == "" || first.Revisions[index].Commit == "" {
@@ -172,6 +174,10 @@ func TestRetainedArtifactsMatchGenerator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	const retainedReceiptSHA256 = "sha256:899492dcfe2f768de7e75003ff5d420655cbfeb8c44d9a76505bf6d6b8dededd"
+	if got := SHA256(receiptBytes); got != retainedReceiptSHA256 {
+		t.Fatalf("retained receipt SHA-256 = %s, want %s", got, retainedReceiptSHA256)
+	}
 	receipt, err := DecodeStrict[Receipt](receiptBytes)
 	if err != nil {
 		t.Fatal(err)
@@ -190,10 +196,48 @@ func TestRetainedArtifactsMatchGenerator(t *testing.T) {
 	if len(bundle) != receipt.Bundle.Bytes || SHA256(bundle) != receipt.Bundle.SHA256 {
 		t.Fatal("retained bundle identity differs from receipt")
 	}
+	verifyRetainedBundleHistory(t, receipt.Bundle.Path, receipt.Revisions)
 	for _, artifact := range receipt.Artifacts {
 		content, ok := wantArtifacts[artifact.Path]
 		if !ok || len(content) != artifact.Bytes || SHA256(content) != artifact.SHA256 {
 			t.Fatalf("retained identity differs for %s", artifact.Path)
+		}
+	}
+}
+
+func verifyRetainedBundleHistory(t *testing.T, bundlePath string, revisions []RevisionIdentity) {
+	t.Helper()
+	if len(revisions) == 0 {
+		t.Fatal("retained bundle has no revisions")
+	}
+	bundlePath, err := filepath.Abs(bundlePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := filepath.Join(t.TempDir(), "repository")
+	if err := os.MkdirAll(repository, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runGit(repository, nil, "init", "-q", "-b", "verify"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runGit(repository, nil, "fetch", "-q", bundlePath, "refs/heads/main:refs/remotes/bundle/main"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := runGit(repository, nil, "rev-parse", "refs/remotes/bundle/main")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(head) != revisions[len(revisions)-1].Commit {
+		t.Fatalf("retained bundle main = %s, want %s", strings.TrimSpace(head), revisions[len(revisions)-1].Commit)
+	}
+	for _, revision := range revisions {
+		tree, err := runGit(repository, nil, "rev-parse", revision.Commit+"^{tree}")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.TrimSpace(tree) != revision.Tree {
+			t.Fatalf("retained bundle revision %s tree = %s, want %s", revision.Revision, strings.TrimSpace(tree), revision.Tree)
 		}
 	}
 }
