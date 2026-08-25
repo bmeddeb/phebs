@@ -1988,7 +1988,9 @@ may pair one closed owner with
 fixed-order six-root scan, exposes no path/raw error/content, and excludes the
 candidate namespace from ceremony attribution. Production stage recovery still
 owns package candidate residue. Publication transitions are cheaper by one
-full validation. Extraction validation/retirement is one startup pass under
+full validation. Startup checks cancellation before every raw collision
+preflight and rename, syncing any changed prefix before return. Extraction
+validation/retirement is one startup pass under
 the shared lifecycle-mutation lock, capped at 2,000,000 charged work
 operations, stats, and candidates, eight peak descriptors, and 510,000,000
 name bytes; it reads names/types/stats, not contents, and deletes nothing.
@@ -2001,11 +2003,13 @@ Each lifecycle turn also admits at most 64 stage candidates, sixteen removals,
 256 stats including descriptor-open stats, eight peak descriptors, and 1 MiB of names.
 A clean pass becomes exact/idle; raw post-start residue is lower-bound without
 permanent five-second backlog. Eligibility and drain are lifecycle-only,
-adding no product
-request/query, repository sync-tick, ordinary retry/no-op, corpus/shard read,
-hash, cache, worker, or child.
+adding no product request/query, repository sync-tick, corpus/shard read, hash,
+cache, worker, child, or lock. New non-reused generation construction adds one
+serial result-directory fsync per accepted domain, zero through 64, before the
+existing final stage sync/rename. Reuse/no-op adds none; a failed rebuild retry
+repeats that bounded work, and restore's existing per-domain sync is unchanged.
 
-Exact-tree gates passed: 20 deterministic V28/typed-nil repetitions (1.495s),
+The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s),
 complete T40.13 package (103.560s), full package race (113.820s), focused
 publication race, real-launcher custody proof (62.074s), readiness, every
 uncached `internal/` package including standalone `internal/store` (983.068s),
@@ -2017,7 +2021,14 @@ survived, the diagnostic root remains retained at
 and the one bounded structural rerun passed in 194.515s. The inherited
 T30.6m/T32.3/T32.4 repository-aggregate fixture reds were not needlessly
 duplicated; the required internal/store bar is green. Recorded independent
-exact-commit review remains open. No integration, identifier, rerun,
+review of exact commit `704c2360e75e8a7d7068cbf3cd49b492a84cb50d`
+reported critical/high 0, medium 1, and low 1; the cancellation and cost-record
+findings above are corrected. Corrected-tree cancellation (20 repetitions),
+extraction normal/race, lifecycle, command, and static/docs gates pass. Its two
+structural confirmations were both invalidated after healthy `http_ready` by
+host-native sampler `EPERM`; both diagnostic roots are retained, PIDs 79356 and
+81088 are gone, and the bounded rule permits no third retry. A fresh exact
+commit, re-review, and later host-clean structural confirmation remain. No integration, identifier, rerun,
 freeze, execution, release, T40.13/Epic-40 closure, topology/bound change, or
 scale/SLO claim is authorized.
 

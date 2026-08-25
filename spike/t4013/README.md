@@ -3608,6 +3608,9 @@ controller limit. A raw stage created after startup remains untouched and makes
 completeness lower-bound. Sparse-candidate residue is production-owned here but
 excluded from ceremony partial attribution.
 
+Startup checks cancellation before each raw-stage collision preflight and
+rename, then syncs any already-renamed prefix before returning.
+
 Fresh ceremony contracts advance to V28. A stopped
 `interruption/partial_verification` may retain exactly one paired owner/kind:
 
@@ -3638,10 +3641,14 @@ descriptors, and 1 MiB of names. Clean completion is exact
 and idle; raw post-start residue is lower-bound without permanent backlog.
 Lifecycle alone promotes eligible retired residue and drains collecting
 residue. Product
-query/request, repository sync-tick, ordinary retry/no-op, corpus/shard/content,
-hash, cache, worker, and child costs are unchanged.
+query/request, repository sync-tick, corpus/shard/content, hash, cache, worker,
+child, and lock costs are unchanged. New non-reused generation creation adds
+one serial result-directory fsync per accepted domain (zero through 64) before
+the existing final stage sync/rename. Reuse/no-op adds none; a failed absent-
+generation rebuild repeats those bounded syncs, while restore's existing per-
+domain sync is unchanged.
 
-Exact-tree gates passed: 20 deterministic V28/typed-nil repetitions (1.495s),
+The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s),
 complete package (103.560s), full package race (113.820s), focused publication
 race, real-launcher custody proof (62.074s), every uncached `internal/` package
 including standalone `internal/store` (983.068s), and module/vet/lint/docs/
@@ -3650,6 +3657,18 @@ and stale-worker passed, while structural alone met host-native sampler `EPERM`
 after healthy startup. No PID/session survived, diagnostic root
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-403545186`
 is retained, and the one bounded structural rerun passed in 194.515s. Recorded
-independent exact-commit review is still required.
+independent review of exact commit
+`704c2360e75e8a7d7068cbf3cd49b492a84cb50d` found critical/high 0, medium 1,
+and low 1. The cancellation and cost-record findings above are corrected. The
+corrected tree passed 20 cancellation repetitions (0.597s), extraction normal/
+race (7.560s/9.354s), lifecycle (0.615s), command (12.288s), and static/docs
+gates. Its two structural confirmations were invalidated by repeated native
+sampler `EPERM` after healthy `http_ready` (82.405s and 80.245s); PIDs
+79356/81088 are gone, roots
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
+and
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`
+remain retained, and no third retry is permitted. A fresh exact commit,
+independent re-review, and later host-clean structural confirmation remain.
 No integration, fresh ID, rerun, freeze, execution, release, T40.13/Epic-40
 closure, topology/bound change, or scale/SLO claim is authorized.

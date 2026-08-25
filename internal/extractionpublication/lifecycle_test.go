@@ -1,6 +1,7 @@
 package extractionpublication
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -544,6 +545,57 @@ func TestStageRecoveryWorkCapDoesNotOvershoot(t *testing.T) {
 	}
 	if budget.work != MaxStageRecoveryWork {
 		t.Fatalf("recovery work overshot: %d", budget.work)
+	}
+}
+
+func TestRawStageRetirementStopsBeforeMutationWhenCanceled(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "repository")
+	rawName := stageGenerationPrefix + "14"
+	rawPath := filepath.Join(root, rawName)
+	writeStageFixture(t, rawPath, stageGeneration, 0)
+	info, err := os.Lstat(rawPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stages := []stageCandidate{{
+		name: rawName, kind: stageGeneration, state: stageRaw, expected: info,
+	}}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	for _, test := range []struct {
+		name string
+		run  func(*stageRootAuthority, *stageBudget) error
+	}{
+		{
+			name: "preflight",
+			run: func(authority *stageRootAuthority, budget *stageBudget) error {
+				return preflightRawRetirement(ctx, authority, stages, budget)
+			},
+		},
+		{
+			name: "rename",
+			run: func(authority *stageRootAuthority, budget *stageBudget) error {
+				_, _, err := retireRawStages(ctx, authority, stages, budget)
+				return err
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			budget := newRecoveryStageBudget()
+			authority, err := openStableStageRoot(root, budget)
+			if err != nil {
+				t.Fatal(err)
+			}
+			runErr := test.run(authority, budget)
+			closeErr := authority.close()
+			if !errors.Is(runErr, context.Canceled) || closeErr != nil {
+				t.Fatalf("canceled retirement = %v, close = %v", runErr, closeErr)
+			}
+			if _, err := os.Lstat(rawPath); err != nil {
+				t.Fatalf("canceled retirement changed raw stage: %v", err)
+			}
+		})
 	}
 }
 

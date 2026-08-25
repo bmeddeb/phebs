@@ -177,7 +177,7 @@ func recoverStages(
 			}
 		}
 		if err == nil {
-			err = preflightRawRetirement(authority, stages, budget)
+			err = preflightRawRetirement(ctx, authority, stages, budget)
 		}
 		rawCount := len(stagesInState(stages, stageRaw))
 		if err == nil && rawCount > 0 &&
@@ -186,22 +186,9 @@ func recoverStages(
 		}
 		changed := false
 		if err == nil {
-			for index := range stages {
-				if stages[index].state != stageRaw {
-					continue
-				}
-				destination := transitionStageName(stages[index], stageRetired)
-				if err = renameStage(
-					authority, stages[index].name, destination,
-					stages[index].expected, budget,
-				); err != nil {
-					break
-				}
-				stages[index].name = destination
-				stages[index].state = stageRetired
-				report.Retired++
-				changed = true
-			}
+			var retired int
+			retired, changed, err = retireRawStages(ctx, authority, stages, budget)
+			report.Retired += retired
 		}
 		if changed {
 			err = errors.Join(err, syncStageRoot(authority.root, budget))
@@ -370,11 +357,17 @@ func stagesInState(stages []stageCandidate, state stageState) []stageCandidate {
 }
 
 func preflightRawRetirement(
-	authority *stageRootAuthority, stages []stageCandidate, budget *stageBudget,
+	ctx context.Context,
+	authority *stageRootAuthority,
+	stages []stageCandidate,
+	budget *stageBudget,
 ) error {
 	for _, stage := range stages {
 		if stage.state != stageRaw {
 			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := requireStageDestinationAbsent(
 			authority, transitionStageName(stage, stageRetired), budget,
@@ -383,6 +376,34 @@ func preflightRawRetirement(
 		}
 	}
 	return nil
+}
+
+func retireRawStages(
+	ctx context.Context,
+	authority *stageRootAuthority,
+	stages []stageCandidate,
+	budget *stageBudget,
+) (retired int, changed bool, resultErr error) {
+	for index := range stages {
+		if stages[index].state != stageRaw {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return retired, changed, err
+		}
+		destination := transitionStageName(stages[index], stageRetired)
+		if err := renameStage(
+			authority, stages[index].name, destination,
+			stages[index].expected, budget,
+		); err != nil {
+			return retired, changed, err
+		}
+		stages[index].name = destination
+		stages[index].state = stageRetired
+		retired++
+		changed = true
+	}
+	return retired, changed, nil
 }
 
 func requireStageDestinationAbsent(

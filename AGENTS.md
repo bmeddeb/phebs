@@ -227,10 +227,10 @@ and completed exact clean teardown. Its controlling signed attribution is
 identify the retained owner/kind or distinguish timeout from scanner failure.
 T40.13o's typed-nil accounting guard, marker commit-point correction, bounded
 startup retirement plus policy-preserving extraction-stage lifecycle, and V28
-retained-partial owner/kind evidence are implemented. Exact-tree targeted,
-package, race, real-launcher, readiness, complete `internal/`, standalone
-`internal/store`, module, vet, lint, docs, glossary, shell, and whitespace gates
-passed; independent exact-commit review remains pending. One complete readiness
+retained-partial owner/kind evidence are implemented. The pre-review tree passed
+targeted, package, race, real-launcher, readiness, complete `internal/`,
+standalone `internal/store`, module, vet, lint, docs, glossary, shell, and
+whitespace gates. One complete readiness
 attempt was invalidated only by host-native sampler `EPERM` after healthy
 structural startup; no process survived, its diagnostic root is retained, and
 the one bounded structural rerun passed. Startup deletes no stage and inventories
@@ -238,6 +238,19 @@ at most 4,096 regular plus 4,096 sparse repositories; either startup or one
 lifecycle turn accepts at most 20,000 direct entries from one selected
 repository directory plus one overflow sentinel. Scheduled lifecycle alone
 applies the 24-hour/newest-two promotion policy and drains collecting residue.
+Startup checks cancellation before each raw-stage preflight and rename and
+syncs any completed prefix before returning. New-generation creation adds one
+serial result-directory sync per accepted domain (zero to 64); reuse/no-op adds
+none, while an absent-generation rebuild repeats that bounded work.
+Independent review of exact commit `704c2360e75e8a7d7068cbf3cd49b492a84cb50d`
+reported critical 0, high 0, medium 1, and low 1: the startup cancellation gap
+and omitted per-domain sync cost above. Both are corrected. Twenty cancellation
+repetitions plus extraction normal/race, lifecycle, command, vet, lint, docs,
+glossary, shell, format, and whitespace pass. Two corrected-tree structural
+confirmations were invalidated by repeated host-native sampler `EPERM` after
+healthy `http_ready`; both diagnostic roots remain, no process survives, and no
+third retry was attempted. A fresh exact commit, re-review, and later host-clean
+structural confirmation remain before integration readiness.
 The original T40.13 gate remains open; integration, exact-main
 preflight, fresh-ID selection, freeze, and execution remain separately
 authorized. Epic 40

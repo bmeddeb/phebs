@@ -1838,8 +1838,8 @@ documentation correction above resolves it; no finding remains. T40.13n
 requests integration only and selects no identifier.
 
 **T40.13o · Neutral-35/36/37 evidence and partial-publication recovery
-closure** *(high gate readiness · implemented; exact-tree gates passed and
-independent review pending; needs T40.13n and neutral-37)* — reconcile the three consumed
+closure** *(high gate readiness · review corrections implemented; exact-tree
+structural confirmation and re-review pending; needs T40.13n and neutral-37)* — reconcile the three consumed
 runs without collapsing their distinct outcomes, close the V27 typed-nil and
 partial-publication recovery defects, and make a future stopped receipt retain
 bounded source-free attribution. Neutral-35 was the 63.325-minute V25 cold
@@ -1890,6 +1890,11 @@ The ceremony scan is fixed-order and bounded across those six roots, reveals no
 path/raw error/content, and intentionally excludes extraction candidate stages;
 production recovery/lifecycle still owns every package stage.
 
+Startup checks cancellation before each raw-stage collision preflight and each
+rename. If cancellation follows a completed rename, the changed parent is still
+synced before return, so the bounded partial prefix is restartable and no later
+entry is mutated after cancellation is observed.
+
 Steady-state cost: publication removes one redundant post-marker full
 validation and adds only one constant pre-commit cancellation check. V28 adds
 one ceremony-only bounded six-root scan per existing partial-verification poll.
@@ -1908,9 +1913,14 @@ descriptor-open stats), eight peak descriptors, and 1 MiB of names. A clean comp
 pass is exact and idle; post-start raw stages make it lower-bound without
 creating permanent five-second backlog. Scheduled lifecycle alone performs
 eligibility selection, collecting promotion and sync, and bounded drain work.
-There is no added product query/request, repository sync tick, ordinary
-retry/no-op, corpus/shard/content read, hash pass, cache, worker, or child.
-The exact tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
+New non-reused extraction-generation construction performs one synchronous
+result-directory fsync per accepted domain, from zero through 64 serial syncs,
+before the existing final staging-directory sync and rename. Exact reuse/no-op
+performs none; a failed creation retry that rebuilds an absent generation
+repeats the same bounded sync work. Restore already performed its per-domain
+syncs. There is no added product query/request, repository sync tick,
+corpus/shard/content read, hash pass, cache, worker, child, or lock.
+The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
 complete T40.13 package (103.560s), full package race (113.820s), focused
 publication race, the real-launcher custody proof (62.074s), and readiness.
 The first complete readiness attempt ran 233.93s: semantic and stale-worker
@@ -1922,8 +1932,20 @@ is retained, and the one bounded structural rerun passed in 194.515s. Every
 983.068s; module, vet, lint, docs, glossary, shell, and whitespace gates passed.
 The repository aggregate was not duplicated because its inherited
 T30.6m/T32.3/T32.4 retained-fixture reds are already reproduced at the base and
-the ticket's complete internal/store bar is green. Recorded independent exact-
-commit review remains required. No
+the ticket's complete internal/store bar is green. Independent review of exact
+commit `704c2360e75e8a7d7068cbf3cd49b492a84cb50d` reported critical 0, high 0,
+medium 1, and low 1: the startup cancellation gap and omitted 0–64 sync cost
+above. Both are corrected. The corrected tree passed the cancellation regression
+20 times (0.597s), full extraction normal/race (7.560s/9.354s), lifecycle
+(0.615s), command (12.288s), vet, lint, docs, glossary, shell, format, and
+whitespace. Two corrected-tree structural confirmations were invalidated after
+healthy `http_ready` by the same host-native sampler `EPERM` (82.405s and
+80.245s). PIDs 79356 and 81088 do not survive; diagnostic roots
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
+and
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`
+remain retained. The bounded rule permits no third retry. A fresh exact commit,
+independent re-review, and later host-clean structural confirmation remain. No
 integration, fresh identifier, rerun, freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
 
