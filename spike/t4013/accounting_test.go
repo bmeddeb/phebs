@@ -702,6 +702,60 @@ func TestV30BoundarySemanticFailureRetainsSafetyMetrics(t *testing.T) {
 	}
 }
 
+func TestV30CleanupFailureRetainsSafetyMetrics(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "payload"), []byte(strings.Repeat("x", 4096)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(root, "server.log")
+	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, allocated, err := measureDataBytesForContract(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation, err := newAllocationSampler(root, allocated, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sampler := newSyntheticRSSSampler(10)
+	sampler.peakRSS = 101
+	sampler.strictGitChildren = 1
+	cause := errors.New("synthetic finish cleanup failure")
+	meter := &phaseMeter{
+		started: time.Now().Add(-time.Millisecond), dataDir: root, allocation: allocation, strict: true,
+		server: &privateServer{logPath: logPath, sampler: sampler}, finishCleanup: func() error { return cause },
+	}
+	plan := Plan{Schema: PlanSchemaV30, Safety: SafetyEnvelope{
+		MaximumTotalWallMS: 1 << 60, MaximumPeakRSSBytes: 100,
+		MaximumDataAllocatedBytes: 1 << 60, MaximumPrePressureBytes: 1 << 60,
+	}}
+	run := execution{
+		plan: plan, workspace: root,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(2)
+	run.trackMeter(meter)
+	metrics, err := run.finishMeter(meter, nil)
+	if !errors.Is(err, cause) || run.measurementErr != nil || !meter.boundaryFailed ||
+		metrics.PeakRSSBytes != 101 || metrics.GitChildren != 1 ||
+		run.partialMetrics.PeakRSSBytes != 101 || run.partialMetrics.GitChildren != 1 {
+		t.Fatalf("cleanup metrics=%+v partial=%+v measurement=%v err=%v",
+			metrics, run.partialMetrics, run.measurementErr, err)
+	}
+	measurementErr := run.captureFailedPhase()
+	ceilingErr := run.enforceSafety()
+	classification := classifyStoppedFailureForPlan(plan, err, measurementErr, ceilingErr)
+	if measurementErr != nil || !errors.Is(ceilingErr, errReviewCeiling) ||
+		classification.code != "review_ceiling_crossed" ||
+		run.observation.Phases[2].Metrics.PeakRSSBytes != 101 ||
+		run.observation.Phases[2].Metrics.GitChildren != 1 {
+		t.Fatalf("failed phase=%+v measurement=%v ceiling=%v classification=%+v",
+			run.observation.Phases[2], measurementErr, ceilingErr, classification)
+	}
+}
+
 func TestPhaseMeterRetainsProcessFailureWhenDataGaugeFails(t *testing.T) {
 	root := t.TempDir()
 	_, allocated, err := measureDataBytesForContract(root, true)

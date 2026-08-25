@@ -500,7 +500,14 @@ func (meter *phaseMeter) finish(
 	if meter.finishCleanup != nil {
 		cleanup := meter.finishCleanup
 		meter.finishCleanup = nil
-		defer func() { resultErr = errors.Join(resultErr, cleanup()) }()
+		defer func() {
+			cleanupErr := cleanup()
+			if cleanupErr != nil && resultErr == nil {
+				meter.boundaryFailed = true
+				meter.boundaryMeasurement = nil
+			}
+			resultErr = errors.Join(resultErr, cleanupErr)
+		}()
 	}
 	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.strict)
 	var processMetrics PhaseMetrics
