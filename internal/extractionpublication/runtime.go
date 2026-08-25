@@ -25,9 +25,14 @@ import (
 // Runtime owns only partition execution controls. Candidate/source/
 // observation content stays behind Source, and evidence authority stays behind
 // Publisher.
+type scheduleStore interface {
+	store.GenerationSchedulerStore
+	RetireCurrentGenerationSchedule(context.Context, store.GenerationSchedule) error
+}
+
 type Runtime struct {
 	Root          string
-	Store         store.GenerationSchedulerStore
+	Store         scheduleStore
 	Source        Source
 	Executor      Executor
 	Publisher     Publisher
@@ -274,13 +279,14 @@ func (runtime *Runtime) ReuseAuthority(
 	if err != nil {
 		return "", false, err
 	}
-	var current *store.GenerationSchedule
 	if schedule, scheduleErr := runtime.Store.GetGenerationSchedule(
 		ctx, authority.Repository, ScheduleStage,
-	); scheduleErr == nil && schedule.Status == store.GenerationScheduleActive {
-		current = schedule
+	); scheduleErr == nil {
 		target, targetErr := runtime.scheduleTarget(authority.Repository, schedule.Generation)
-		if targetErr == nil && target == binding.Target {
+		if targetErr != nil {
+			return "", false, targetErr
+		}
+		if schedule.Status == store.GenerationScheduleActive && target == binding.Target {
 			return binding.Target, true, nil
 		}
 	} else if scheduleErr != nil && !errors.Is(scheduleErr, store.ErrNotFound) {
@@ -293,12 +299,7 @@ func (runtime *Runtime) ReuseAuthority(
 			return "", false, nil
 		}
 	}
-	if current != nil {
-		if err := runtime.enqueueRecovery(ctx, generation, *current); err != nil {
-			return "", false, err
-		}
-	}
-	return binding.Target, true, nil
+	return binding.Target, true, runtime.ensureCompleteSchedule(ctx, generation)
 }
 
 // ExistingPlans returns the durable run bindings for an exact already-created
@@ -488,7 +489,7 @@ func (runtime *Runtime) Reconcile(
 		return "", err
 	}
 	if generation.WorkItems == 0 {
-		return target, nil
+		return target, runtime.ensureCompleteSchedule(ctx, generation)
 	}
 	return target, runtime.enqueue(ctx, generation)
 }
@@ -635,40 +636,9 @@ func (runtime *Runtime) enqueue(ctx context.Context, generation Generation) erro
 	return err
 }
 
-// enqueueRecovery gives an already-complete historical authority a fresh
-// schedule identity when a different incomplete schedule is still current.
-// Reusing immutable roots alone is insufficient: the stale schedule would
-// otherwise remain claimable and keep the operational projection non-current.
-func (runtime *Runtime) enqueueRecovery(
-	ctx context.Context,
-	generation Generation,
-	current store.GenerationSchedule,
-) error {
-	if current.Repository != generation.Repository || current.Stage != ScheduleStage ||
-		current.Status != store.GenerationScheduleActive || !validDigest(current.Digest) {
-		return invalid("recovery schedule predecessor")
-	}
-	scheduleGeneration := recoveryGeneration(generation.Digest, current.Digest)
-	binding := scheduleBinding{
-		Schema: BindingSchema, Repository: generation.Repository,
-		ScheduleGeneration: scheduleGeneration, TargetGeneration: generation.Digest,
-		PriorSchedule: current.Digest,
-	}
-	if err := runtime.writeBinding(binding); err != nil {
-		return err
-	}
-	_, err := runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
-		Repository: generation.Repository, Stage: ScheduleStage,
-		Generation: scheduleGeneration, ResourceClass: store.GenerationResourceExtraction,
-		TotalItems: int64(generation.WorkItems), ChunkItems: ScheduleChunkItems,
-		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
-	})
-	return err
-}
-
 func (runtime *Runtime) ensureCompleteSchedule(ctx context.Context, generation Generation) error {
 	current, err := runtime.Store.GetGenerationSchedule(ctx, generation.Repository, ScheduleStage)
-	if errors.Is(err, store.ErrNotFound) || err == nil && current.Status != store.GenerationScheduleActive {
+	if errors.Is(err, store.ErrNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -678,7 +648,10 @@ func (runtime *Runtime) ensureCompleteSchedule(ctx context.Context, generation G
 	if err != nil || target == generation.Digest {
 		return err
 	}
-	return runtime.enqueueRecovery(ctx, generation, *current)
+	if generation.WorkItems == 0 {
+		return runtime.Store.RetireCurrentGenerationSchedule(ctx, *current)
+	}
+	return runtime.enqueue(ctx, generation)
 }
 
 func (runtime *Runtime) writeBinding(binding scheduleBinding) error {

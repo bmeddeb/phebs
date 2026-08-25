@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"syscall"
@@ -38,8 +39,21 @@ func setExecutionObservationPath(t *testing.T, run *execution) string {
 }
 
 func newV25FailureExecution(t *testing.T, module, workspace string) *execution {
+	return newFailureExecution(t, module, workspace, frozenV25PlanWithHostToolchain)
+}
+
+func newV27FailureExecution(t *testing.T, module, workspace string) *execution {
+	return newFailureExecution(t, module, workspace, frozenV27PlanWithHostToolchain)
+}
+
+func newFailureExecution(
+	t *testing.T,
+	module string,
+	workspace string,
+	freeze func(string, []HostToolObservation) (Plan, error),
+) *execution {
 	t.Helper()
-	plan, err := frozenV25PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	plan, err := freeze(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,6 +261,210 @@ func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testin
 		stopped.Decision.Substantiated || !stopped.Teardown.Completed || len(stopped.Failures) != 1 ||
 		stopped.Phases[0].Metrics.DataAllocatedBytes == 0 {
 		t.Fatalf("stopped observation = %+v", stopped)
+	}
+}
+
+func TestV27StoppedDataDeadlineProjectsOnlyTypedPrimaryCause(t *testing.T) {
+	for _, test := range []struct {
+		name           string
+		primary        bool
+		higherPriority bool
+		wantProjection bool
+		wantCode       string
+	}{
+		{name: "primary", primary: true, wantProjection: true, wantCode: "failed_phase_measurement_unavailable"},
+		{name: "capture fallback", wantCode: "failed_phase_measurement_unavailable"},
+		{name: "higher priority", primary: true, higherPriority: true, wantCode: "review_ceiling_crossed"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			module := filepath.Join(root, "module")
+			workspace := filepath.Join(root, "custody")
+			for _, path := range []string{module, workspace} {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run := newV27FailureExecution(t, module, workspace)
+			setExecutionObservationPath(t, run)
+			run.startPhase(0)
+			measurement := newDataMeasurementDeadlineError(false)
+			if errors.Is(measurement, context.DeadlineExceeded) {
+				t.Fatalf("typed deadline changed historical context identity: %v", measurement)
+			}
+			cause := error(errors.New("ordinary primary failure"))
+			if test.primary {
+				cause = measurement
+			}
+			if test.higherPriority {
+				cause = errors.Join(cause, errTotalWallDeadline)
+			}
+			if !test.primary {
+				run.measurementErr = measurement
+			}
+			stopped, err := run.stopAfterFailure(cause)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stopped.Failures[0].Code != test.wantCode {
+				t.Fatalf("deadline changed generic classification = %+v / %+v",
+					stopped.Failures, stopped.Decision)
+			}
+			if test.higherPriority {
+				if stopped.Decision.Selected != "cohort_experiment" || !stopped.Decision.Substantiated {
+					t.Fatalf("higher-priority decision = %+v", stopped.Decision)
+				}
+			} else if stopped.Decision.Selected != "unclassified" || stopped.Decision.Substantiated {
+				t.Fatalf("measurement decision = %+v", stopped.Decision)
+			}
+			failure := stopped.DataMeasurement
+			if !test.wantProjection {
+				if failure != nil {
+					t.Fatalf("capture-only deadline was projected: %+v", failure)
+				}
+				return
+			}
+			if failure == nil || failure.Schema != dataMeasurementFailureSchemaV1 ||
+				failure.Scope != dataMeasurementScope || failure.Gauge != dataMeasurementAllocated ||
+				failure.Reason != dataMeasurementDeadline || failure.DeadlineMS != 30_000 {
+				t.Fatalf("data-measurement projection = %+v", failure)
+			}
+		})
+	}
+}
+
+func TestV27TeardownCeilingReclassificationClearsDataMeasurement(t *testing.T) {
+	verify := func(t *testing.T, run *execution, stopped Observation, err error) {
+		t.Helper()
+		if !errors.Is(err, errTotalWallDeadline) || stopped.DataMeasurement != nil ||
+			len(stopped.Failures) != 1 || stopped.Failures[0].Code != "review_ceiling_crossed" {
+			t.Fatalf("reclassified stop = %+v, %v", stopped, err)
+		}
+		raw, readErr := os.ReadFile(run.observationPath)
+		persisted, decodeErr := DecodeObservation(raw)
+		if readErr != nil || decodeErr != nil || persisted.DataMeasurement != nil ||
+			persisted.Failures[0].Code != "review_ceiling_crossed" {
+			t.Fatalf("persisted reclassified stop = %+v, read=%v decode=%v",
+				persisted, readErr, decodeErr)
+		}
+		receiptRaw, receiptErr := BuildReceipt(
+			run.planBytes, raw, PlanDigest(run.planBytes),
+		)
+		if receiptErr != nil {
+			t.Fatalf("reclassified receipt: %v", receiptErr)
+		}
+		if receipt, decodeReceiptErr := DecodeReceipt(receiptRaw, run.plan); decodeReceiptErr != nil ||
+			receipt.DataMeasurement != nil || receipt.Failures[0].Code != "review_ceiling_crossed" {
+			t.Fatalf("reclassified receipt = %+v, %v", receipt, decodeReceiptErr)
+		}
+	}
+	newRun := func(t *testing.T) *execution {
+		t.Helper()
+		root := t.TempDir()
+		module := filepath.Join(root, "module")
+		workspace := filepath.Join(root, "custody")
+		for _, path := range []string{module, workspace} {
+			if err := os.Mkdir(path, 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		run := newV27FailureExecution(t, module, workspace)
+		setExecutionObservationPath(t, run)
+		run.startPhase(0)
+		return run
+	}
+
+	t.Run("post-delete", func(t *testing.T) {
+		run := newRun(t)
+		var cancel context.CancelFunc
+		defer func() {
+			if cancel != nil {
+				cancel()
+			}
+		}()
+		run.custodyDestroy = func(workspace, _ string) error {
+			if err := os.RemoveAll(workspace); err != nil {
+				return err
+			}
+			run.ctx, cancel = context.WithDeadlineCause(
+				t.Context(), time.Now().Add(-time.Second), errTotalWallDeadline,
+			)
+			return nil
+		}
+		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false))
+		verify(t, run, stopped, err)
+	})
+
+	t.Run("post-publication", func(t *testing.T) {
+		run := newRun(t)
+		run.custodyDestroy = func(workspace, _ string) error { return os.RemoveAll(workspace) }
+		var cancel context.CancelFunc
+		defer func() {
+			if cancel != nil {
+				cancel()
+			}
+		}()
+		var publications int
+		run.observationPublish = func(path string, value Observation) error {
+			publications++
+			if err := PublishObservation(path, value); err != nil {
+				return err
+			}
+			if publications == 1 {
+				run.ctx, cancel = context.WithDeadlineCause(
+					t.Context(), time.Now().Add(-time.Second), errTotalWallDeadline,
+				)
+			}
+			return nil
+		}
+		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false))
+		if publications != 2 {
+			t.Fatalf("reclassified publications = %d, want 2", publications)
+		}
+		verify(t, run, stopped, err)
+	})
+}
+
+func TestHistoricalTeardownCheckpointRejectsNestedDataMeasurementNull(t *testing.T) {
+	observation := emptyObservation(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	})
+	observation.Outcome = "stopped"
+	observation.Phases[0] = PhaseObservation{Name: "preflight", Outcome: "failed"}
+	observation.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	observation.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	checkpoint := teardownCheckpoint{
+		Schema: teardownCheckpointSchema, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		Workspace: filepath.Clean(t.TempDir()), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Observation: observation,
+	}
+	raw, err := marshalTeardownCheckpoint(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		t.Fatal(err)
+	}
+	nested, ok := object["observation"].(map[string]any)
+	if !ok {
+		t.Fatal("checkpoint observation is not an object")
+	}
+	nested["data_measurement_failure"] = nil
+	raw, err = json.Marshal(object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, '\n')
+	path := filepath.Join(t.TempDir(), "observation.json")
+	if err := os.WriteFile(path+".teardown", raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readTeardownCheckpoint(path); err == nil {
+		t.Fatal("historical checkpoint accepted a nested null data-measurement field")
 	}
 }
 
@@ -588,6 +806,19 @@ func TestV3ObservationStartsWithFrozenHostToolchainAndStartupSchema(t *testing.T
 }
 
 func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T) {
+	testServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t, PlanSchemaV3, false)
+}
+
+func TestV27ServerHealthDeadlineRetainsCoherentLaunchMeter(t *testing.T) {
+	testServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t, PlanSchemaV27, true)
+}
+
+func testServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(
+	t *testing.T,
+	schema string,
+	coherent bool,
+) {
+	t.Helper()
 	root := t.TempDir()
 	module := filepath.Join(root, "module")
 	workspace := filepath.Join(root, "custody")
@@ -611,12 +842,12 @@ func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T
 	}
 	run := &execution{
 		ctx: t.Context(), moduleRoot: module, workspace: workspace,
-		plan:      Plan{Schema: PlanSchemaV3, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
+		plan:      Plan{Schema: schema, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
 		toolchain: privateToolchain{Schema: privateToolchainSchema, Phebs: serverPath},
 		observation: emptyObservationForPlan(EnvironmentObservation{
 			OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
 			FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
-		}, Plan{Schema: PlanSchemaV3}),
+		}, Plan{Schema: schema}),
 	}
 	run.startPhase(1)
 	server, meter, err := run.startServer(PreparedProfile{
@@ -625,6 +856,14 @@ func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T
 	}, "cold", nil)
 	if err == nil || server == nil || meter == nil {
 		t.Fatalf("deadline start = %v, %v, %v", server, meter, err)
+	}
+	if run.metersExpected != 1 || run.metersTracked != 1 ||
+		len(run.activeMeters) != 1 {
+		t.Fatalf("launched meter inventory = expected:%d tracked:%d active:%d",
+			run.metersExpected, run.metersTracked, len(run.activeMeters))
+	}
+	if coherent && !meter.started.Before(server.started) {
+		t.Fatalf("V27 meter started at %s after server launch %s", meter.started, server.started)
 	}
 	if stopErr := run.stopServers(); stopErr != nil {
 		t.Fatal(stopErr)
@@ -646,6 +885,106 @@ func TestServerHealthDeadlineRetainsLaunchMeterAndStartupDiagnostic(t *testing.T
 	}
 	if time.Duration(startup.WallMS)*time.Millisecond < 250*time.Millisecond {
 		t.Fatalf("startup wall = %dms", startup.WallMS)
+	}
+}
+
+func TestV27PrelaunchBoundaryFailureDoesNotInventExpectedMeter(t *testing.T) {
+	workspace := filepath.Clean(t.TempDir())
+	otherWorkspace := filepath.Clean(t.TempDir())
+	boundary, err := newDataMeasurementBoundary(otherWorkspace, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), workspace: workspace,
+		plan: Plan{Schema: PlanSchemaV27, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
+	}
+	run.startPhase(5)
+	server, meter, err := run.startServerV27(
+		PreparedProfile{}, "interruption-restart", nil, boundary,
+	)
+	if err == nil || server != nil || meter != nil || run.measurementErr == nil {
+		t.Fatalf("prelaunch boundary failure = server:%v meter:%v error:%v measurement:%v",
+			server, meter, err, run.measurementErr)
+	}
+	if run.metersExpected != 0 || run.metersTracked != 0 ||
+		len(run.activeMeters) != 0 || len(run.liveServers) != 0 {
+		t.Fatalf("prelaunch meter inventory = expected:%d tracked:%d active:%d servers:%d",
+			run.metersExpected, run.metersTracked, len(run.activeMeters), len(run.liveServers))
+	}
+}
+
+func TestV27PrelaunchAllocatedGaugeFailureDoesNotInventExpectedMeter(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "missing-custody")
+	run := &execution{
+		ctx: t.Context(), workspace: workspace,
+		plan: Plan{Schema: PlanSchemaV27, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
+	}
+	run.startPhase(1)
+	server, meter, err := run.startServerV27(PreparedProfile{}, "cold", nil, nil)
+	if err == nil || server != nil || meter != nil || run.measurementErr == nil {
+		t.Fatalf("prelaunch gauge failure = server:%v meter:%v error:%v measurement:%v",
+			server, meter, err, run.measurementErr)
+	}
+	if run.metersExpected != 0 || run.metersTracked != 0 ||
+		len(run.activeMeters) != 0 || len(run.liveServers) != 0 {
+		t.Fatalf("prelaunch gauge inventory = expected:%d tracked:%d meters:%d servers:%d",
+			run.metersExpected, run.metersTracked, len(run.activeMeters), len(run.liveServers))
+	}
+}
+
+func TestV27LaunchFailureClosesPrelaunchAllocationMeter(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "custody")
+	profileRoot := filepath.Join(workspace, "profile")
+	for _, path := range []string{workspace, profileRoot} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	invalidExecutable := filepath.Join(root, "invalid-phebs")
+	if err := os.WriteFile(invalidExecutable, []byte("not an executable image\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	run := &execution{
+		ctx: t.Context(), workspace: workspace,
+		plan:      Plan{Schema: PlanSchemaV27, Safety: SafetyEnvelope{ServerHealthDeadlineMS: 300}},
+		toolchain: privateToolchain{Schema: privateToolchainSchema, Phebs: invalidExecutable},
+	}
+	run.startPhase(1)
+	server, meter, err := run.startServerV27(PreparedProfile{
+		Config: filepath.Join(profileRoot, "phebs.yaml"),
+	}, "launch-failure", nil, nil)
+	if err == nil || server != nil || meter != nil {
+		t.Fatalf("launch failure = server:%v meter:%v error:%v", server, meter, err)
+	}
+	if run.measurementErr != nil || run.metersExpected != 0 || run.metersTracked != 0 ||
+		len(run.activeMeters) != 0 || len(run.liveServers) != 0 {
+		t.Fatalf("failed launch retained accounting: measurement:%v expected:%d tracked:%d meters:%d servers:%d",
+			run.measurementErr, run.metersExpected, run.metersTracked,
+			len(run.activeMeters), len(run.liveServers))
+	}
+}
+
+func TestV27ArchiveRestoreKeepsMergedDataMaxima(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("exact data-byte measurement is supported on Linux and macOS")
+	}
+	workspace := filepath.Clean(t.TempDir())
+	merged := PhaseMetrics{DataLogicalBytes: 1 << 60, DataAllocatedBytes: 1 << 59}
+	got, err := archiveRestoreDataMetricsForPlan(
+		Plan{Schema: PlanSchemaV27}, workspace, merged,
+	)
+	if err != nil || got.DataLogicalBytes != merged.DataLogicalBytes ||
+		got.DataAllocatedBytes != merged.DataAllocatedBytes {
+		t.Fatalf("V27 archive maxima = %+v, %v; want %+v", got, err, merged)
+	}
+	historical, err := archiveRestoreDataMetricsForPlan(
+		Plan{Schema: PlanSchemaV26}, workspace, merged,
+	)
+	if err != nil || historical.DataLogicalBytes == merged.DataLogicalBytes ||
+		historical.DataAllocatedBytes == merged.DataAllocatedBytes {
+		t.Fatalf("V26 archive terminal gauge changed = %+v, %v", historical, err)
 	}
 }
 
@@ -1923,11 +2262,30 @@ func TestV23StoppedFailureClassificationPreservesRecoveryAndDiagnostics(t *testi
 
 func TestV25MeasuredCommandFailureCannotSubstantiateRecovery(t *testing.T) {
 	for _, measurementErr := range []error{errProcessSamplingFailed, errAllocationSamplingFailed} {
-		cause := directRecovery(sanitizeMeasuredCommandFailure("T40.13 restore command failed", measurementErr))
+		cause := directRecovery(sanitizeMeasuredCommandFailure(
+			"T40.13 restore command failed", measurementErr, false,
+		))
 		got := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV25}, cause, nil, nil)
 		if got.code != "failed_phase_measurement_unavailable" || got.substantiated {
 			t.Fatalf("measurement failure %v classified as %+v", measurementErr, got)
 		}
+	}
+}
+
+func TestDataMeasurementDeadlineClassificationChangesOnlyAtV27(t *testing.T) {
+	deadline := newDataMeasurementDeadlineError(false)
+	historical := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV26}, deadline, nil, nil)
+	current := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV27}, deadline, nil, nil)
+	if historical.code != "operational_failure" || current.code != "failed_phase_measurement_unavailable" ||
+		current.substantiated {
+		t.Fatalf("V26/V27 data deadline classification = %+v / %+v", historical, current)
+	}
+	sanitized := directRecovery(sanitizeMeasuredCommandFailure(
+		"T40.13 restore command failed", deadline, true,
+	))
+	current = classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV27}, sanitized, nil, nil)
+	if current.code != "failed_phase_measurement_unavailable" || current.substantiated {
+		t.Fatalf("V27 sanitized data deadline classification = %+v", current)
 	}
 }
 

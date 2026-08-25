@@ -996,6 +996,61 @@ RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[s
 	return &schedule, nil
 }
 
+type retireCurrentGenerationScheduleRec struct {
+	Retired bool `json:"retired"`
+}
+
+// RetireCurrentGenerationSchedule removes one exact current projection without
+// inventing work for a generation that has no scheduler items. Active workers
+// are fenced by the missing current row and finish through the ordinary stale
+// completion path; the immutable schedule and chunks remain lifecycle-owned.
+func (s *Surreal) RetireCurrentGenerationSchedule(
+	ctx context.Context,
+	expected GenerationSchedule,
+) error {
+	if err := ValidateGenerationSchedule(expected); err != nil {
+		return fmt.Errorf("retire current generation schedule: %w", err)
+	}
+	results, err := queryGenerationSchedule[[]retireCurrentGenerationScheduleRec](
+		ctx, s.db, "retire_current", `
+BEGIN;
+LET $current_digest = (SELECT schedule_digest FROM $current
+	WHERE repository = $repository AND stage = $stage AND generation = $generation
+	LIMIT 1)[0].schedule_digest;
+LET $schedule_digest = (SELECT digest FROM $schedule
+	WHERE repository = $repository AND stage = $stage AND generation = $generation
+		AND digest = $digest LIMIT 1)[0].digest;
+LET $retired = $current_digest = $digest AND $schedule_digest = $digest;
+IF $retired {
+	UPDATE $schedule SET status = 'superseded', updated_at = time::now()
+		WHERE status = 'active' RETURN NONE;
+	DELETE $current WHERE schedule_digest = $digest AND repository = $repository
+		AND stage = $stage AND generation = $generation RETURN NONE;
+};
+RETURN [{ retired: $retired }];
+COMMIT;`, map[string]any{
+			"current": models.NewRecordID(
+				"generation_schedule_current",
+				strings.TrimPrefix(generationCurrentID(expected.Repository, expected.Stage), "sha256:"),
+			),
+			"schedule": models.NewRecordID(
+				"generation_schedule", strings.TrimPrefix(expected.Digest, "sha256:"),
+			),
+			"digest": expected.Digest, "repository": expected.Repository,
+			"stage": expected.Stage, "generation": expected.Generation,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("retire current generation schedule: %w", err)
+	}
+	for _, result := range *results {
+		if len(result.Result) == 1 && result.Result[0].Retired {
+			return nil
+		}
+	}
+	return ErrGenerationStale
+}
+
 // GetGenerationScheduleFailure returns only the final failed attempt for an
 // exact current settled schedule. The caller must still re-read the schedule
 // after composing a larger projection to close the ordinary read fence.

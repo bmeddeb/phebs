@@ -202,9 +202,22 @@ returned-evidence firewall, T40.13h's resumable seal/keypair integrity, and
 T40.13i's bounded exact-control inspection, T40.13j's overflow-safe ceremony
 arithmetic, T40.13k's complete executor-admission accounting, and T40.13l's
 cost-first operator gates are complete; T40.13m's bounded executable-image
-epoch accounting and V26 evidence fence are also complete; the original
-T40.13 gate remains open pending integration, exact-main preflight, and
-separate authorization; Epic 40
+epoch accounting and V26 evidence fence are also complete; the exact-main
+`t40r1-neutral-36` ceremony then stopped honestly at
+`interruption/restart_start` with generic unsubstantiated
+`failed_phase_measurement_unavailable`, completed teardown without retained
+derived or scratch-source custody, and established neither a pipeline failure
+nor a scale pass. T40.13n's V27 coherent restart accounting, path-free typed
+data-gauge diagnostic, and settled-schedule recovery repair are implemented;
+the corrected bounded real-binary readiness rehearsal and exact-tree package,
+race, launcher, internal/store, module, vet, lint, docs, glossary, and shell
+gates passed. Two independent working-tree reviews are clean after the
+zero-work correction made exact mismatched-current retirement invent no
+partition. An extra uncached repository run was baseline-red only on inherited
+T30.6m/T32.3/T32.4 retained-artifact assertions reproduced unchanged at the
+base commit; no T40.13n or `internal/` package failed. The original T40.13 gate
+remains open pending T40.13n's exact-commit review, integration, exact-main
+preflight, and separate freeze and execution authorizations; Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services

@@ -205,6 +205,105 @@ func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) 
 	}
 }
 
+func TestRetireCurrentGenerationScheduleFencesExactActiveAndSettledRows(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	dataDir := t.TempDir()
+	state, err := OpenLocal(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+	reader, err := OpenLocalGenerationChunkReader(t.Context(), dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reader.Close(context.Background()) })
+
+	for index, settled := range []bool{false, true} {
+		name := "active"
+		if settled {
+			name = "settled"
+		}
+		t.Run(name, func(t *testing.T) {
+			spec := generationSpec(
+				fmt.Sprintf("example.invalid/retire-%d", index),
+				"sha256:"+strings.Repeat(fmt.Sprintf("%x", index+1), 64),
+			)
+			spec.TotalItems, spec.ChunkItems = 1, 1
+			schedule, err := state.EnqueueGenerationSchedule(t.Context(), spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := state.ExpandGenerationSchedule(
+				t.Context(), spec.Repository, spec.Stage, spec.Generation,
+			); err != nil {
+				t.Fatal(err)
+			}
+			chunk, err := state.ClaimGenerationChunk(
+				t.Context(), spec.ResourceClass, "retire-worker",
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if settled {
+				if err := state.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
+					t.Fatal(err)
+				}
+			}
+			current, err := state.GetGenerationSchedule(t.Context(), spec.Repository, spec.Stage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := state.RetireCurrentGenerationSchedule(t.Context(), *current); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := state.GetGenerationSchedule(
+				t.Context(), spec.Repository, spec.Stage,
+			); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("retired current schedule = %v", err)
+			}
+			if !settled {
+				if err := state.CompleteGenerationChunk(t.Context(), *chunk); !errors.Is(err, ErrGenerationStale) {
+					t.Fatalf("retired active completion = %v", err)
+				}
+			}
+			retained, err := reader.GenerationScheduleRetentionState(
+				t.Context(), spec.Repository, spec.Stage, schedule.Digest,
+			)
+			wantStatus := GenerationScheduleSuperseded
+			if settled {
+				wantStatus = GenerationScheduleSettled
+			}
+			if err != nil || !retained.Present || retained.CurrentPresent || retained.Current ||
+				retained.Status != wantStatus {
+				t.Fatalf("retired exact schedule = %+v, %v", retained, err)
+			}
+			if err := state.RetireCurrentGenerationSchedule(
+				t.Context(), *current,
+			); !errors.Is(err, ErrGenerationStale) {
+				t.Fatalf("repeated retirement = %v", err)
+			}
+			successorSpec := spec
+			successorSpec.Generation = "sha256:" + strings.Repeat(fmt.Sprintf("%x", index+3), 64)
+			successor, err := state.EnqueueGenerationSchedule(t.Context(), successorSpec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := state.RetireCurrentGenerationSchedule(
+				t.Context(), *current,
+			); !errors.Is(err, ErrGenerationStale) {
+				t.Fatalf("stale retirement beside successor = %v", err)
+			}
+			selected, err := state.GetGenerationSchedule(t.Context(), spec.Repository, spec.Stage)
+			if err != nil || selected.Digest != successor.Digest {
+				t.Fatalf("successor after stale retirement = %+v, %v", selected, err)
+			}
+		})
+	}
+}
+
 func TestClearAllGenerationScheduleStateForRestore(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")

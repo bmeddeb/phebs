@@ -5100,3 +5100,147 @@ T40.13m cleared those gates on exact clean code commit
 `97772bb69fba77feb06fa79317b401d1e0815575`; independent review found no
 critical, high, medium, or actionable low issue. This is integration readiness,
 not permission to select `t40r1-neutral-36`, freeze a plan, or execute it.
+
+## T40.R1 neutral-36 stop and V27 restart data accounting
+
+Preserve `t40r1-neutral-36` and its signed source-free evidence unchanged. The
+run binds source `acc5a23f046229c580b972bcbb0107f2f7062882`, plan
+`sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`,
+observation
+`sha256:141750ff0ae7da9af7e006bfb59cc260ff973abe02509e2e269474dea7c8d22d`,
+receipt
+`sha256:9d9ec605ad90ccd1010a920cb86c405656851349d85ccb0ac2243b18606e6ee6`,
+and package
+`sha256:e5ec0c04338b17d91064c160f34a1a78b6ba174773107bfd592d2bf80f0e0677`.
+Preflight, cold, warm no-op, delta B, and return A succeeded. Interruption
+selected an attempt-zero `extraction-partitions` chunk, returned the source to
+A, then stopped after 6,059,839 ms at `restart_start` with
+`failed_phase_measurement_unavailable` and an unsubstantiated `unclassified`
+decision. The signed V26 bytes do not identify which data gauge failed or
+retain its private raw error. Do not call this a process or pipeline failure,
+infer recovery, treat it as a pass, reuse its ID or plan, or start another
+ceremony from its generic code. Recovery verification and all later mechanics
+phases did not run. Teardown completed in 187,542 ms with
+`derived_data_retained=false` and `scratch_source_retained=false`.
+
+V27 makes a restart meter begin at one coherent data boundary. When the first
+server's phase meter finishes successfully, it may return a private
+`dataMeasurementBoundary` containing only the raw end allocated-byte value and
+canonical workspace. The immediately following restart may consume that value
+exactly once and only for the same workspace. The handoff is process-private:
+it is never serialized, signed, logged, or accepted from a plan, prepared
+manifest, observation, or receipt. A missing boundary takes one allocated-only
+gauge before launching the server. The allocation sampler and meter wall clock
+start from that prelaunch value. If the prelaunch gauge fails, no expected or
+active meter exists; after process launch, the meter is tracked before health
+so a health failure remains completely inventoried. Each strict allocated or
+logical gauge retains the existing 30-second deadline.
+
+A stopped V27 observation and receipt may contain one optional
+`data_measurement_failure` and only with this exact source-free shape:
+
+```json
+{
+  "schema": "t4013-data-measurement-failure-v1",
+  "scope": "custody",
+  "gauge": "allocated",
+  "reason": "deadline",
+  "deadline_ms": 30000
+}
+```
+
+`gauge` may instead be `logical`. The projection has no path, command, output,
+process identity, source identity, or raw error. It is valid only on a stopped
+V27 `failed_phase_measurement_unavailable` result, is absent on success, and
+must be absent from V1–V26. Unknown values, a second diagnostic, or a diagnostic
+on another outcome fail validation and returned-bundle rebuilding.
+
+Archive/restore uses the logical and allocated maxima already merged from the
+backup, restore, and restarted-server meters. It does not replace those peaks
+with a terminal workspace re-gauge. Readiness coverage must exercise the two
+real `startServer` meters in order, prove both finish with
+`metersExpected == metersTracked == 2`, leave no active meter, and retain two
+healthy `http_ready` startup records with bounded digest, attempt, wall, and
+RSS facts while both meters retain positive logical and allocated bytes. The
+two exact meters perform five sequential strict gauge boundaries—one more than
+the prior rehearsal—with at most three `/usr/bin/du` attempts per boundary, an
+individual 30-second cap, at most 15 child attempts, and at most 150 seconds
+aggregate. Relative to the prior rehearsal this sequence also adds one private
+server launch/health cycle with its process and allocation samplers. The real
+interruption path falls from 20 to 16 gauge boundaries (at most 60 to 48 child
+attempts); archive/restore falls from 18 to 15 (at most 54 to 45). Production
+ceremony server count is unchanged. A V27 start moves one allocation-sampler
+goroutine ahead of the existing bounded four-executable revalidation and
+launch; it probes capacity at 1 Hz during that prelaunch window. Observation,
+receipt, and teardown-checkpoint decode performs one extra bounded raw-JSON
+presence check so historical absent fields remain distinct from explicit
+`null`. V27 receipt decode also performs one bounded canonical JSON re-encode
+and byte comparison so duplicate keys cannot create a second diagnostic. These
+are evidence-boundary CPU/temporary-allocation costs, not extra I/O or product
+steady-state work.
+
+The first V27 readiness attempt exposed a distinct restart-recovery invariant,
+not a reason to extend the 12-minute bound. Exact A domain pointers had been
+reactivated while `generation_schedule_current` still targeted a settled B
+generation, leaving `/api/extraction-progress` permanently `settled` rather
+than `current`. Both completed-generation reconcile and the exact-authority
+reuse fast path now call the shared schedule-coherence check. If an existing
+active or settled schedule targets another nonzero generation, the runtime uses
+the existing immutable transition enqueue; completed roots are replayed from
+their bounded controls and neither source nor an extractor is reopened. For a
+zero-applicable generation, it instead retires the exact mismatched current
+schedule. An active schedule becomes superseded, a settled schedule remains
+settled, immutable rows/chunks remain lifecycle-owned, and exact domain roots
+remain product authority. The current projection becomes absent, so
+`/api/extraction-progress` returns the established `unavailable` state. This
+path writes no binding and does not misreport a control transition as one
+partition. Focused tests cover active and settled predecessors, both reused and
+newly completed zero-work authority, no orphan binding, a concurrent-successor
+fence, and zero repeat content work. The settled-B → reused-A test separately
+proves a fresh A-target binding and current progress. The corrected real-binary rehearsal passed all
+structural A→B→A/restore, semantic interruption/restore, and stale-worker cases
+in 362.24 seconds.
+
+An active schedule already targeting the exact authority keeps its prior early
+return. Absent-schedule reuse adds a second bounded current-schedule query and
+no binding read. Settled reuse adds that query plus two pointer-sized binding
+reads, one during initial target resolution and one during the repeated
+coherence check. A reuse mismatch totals three schedule queries and three
+binding reads before nonzero enqueue; completed reconciliation totals two of
+each. Nonzero enqueue adds one pointer-sized binding write and one bounded
+schedule transaction while the existing repository shard lock is held.
+Zero-work retirement replaces those
+binding/enqueue writes with one transaction that performs exact current and
+schedule point reads, updates status only when active, and deletes only the
+matching current row; a concurrent successor causes a stale refusal without
+mutation. Later workers reuse immutable result controls under the existing
+chunk, retry, repository-token, retention, memory, and disk bounds. No
+corpus/shard/member scan, source lease, extractor execution, new goroutine, new
+lock, API shape, persistent schema, topology, or service-bound work is added.
+
+T40.13n implementation and exact-tree gates are complete; fresh exact-commit
+independent review is pending. The complete package (97.258s), race package
+(109.786s), real-launcher proof (60.902s), 20 repeated V27/schema/accounting
+runs (248.065s), semantic (124.67s), stale-worker (31.30s), structural
+(138.58s), and full `internal/store` gates (1065.618s standalone; 1109.512s in
+the uncached repository run) passed. Module verification, vet, lint,
+documentation, glossary, shell syntax, whitespace, and every `internal/`
+package also passed. One earlier structural attempt was invalid after a
+host-native process-sampler `EPERM`; no process survives and the retained
+diagnostic root is
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-3094976911`.
+The bounded rerun on the same tree passed. The extra uncached repository
+aggregate remains red only on inherited T30.6m retention-component budgets,
+Git-2.54 T32.3 bytes on this Git-2.50.1 host, and T32.4 pre-repin bindings; all
+four assertions reproduce at the exact base commit. Do not reauthor those
+fixtures as part of T40.13n or claim the aggregate passed.
+
+Do not select a fresh identifier or request a freeze. Complete fresh
+exact-commit independent review first. Ben must then separately authorize
+integration. Only after integration may a clean
+exact-main dedicated-host `preflight` run. If it passes, select a fresh,
+unconsumed identifier and distinct signer, request freeze authorization, review
+the frozen plan/digest and signer fingerprint, then request separate exact-ID/
+digest execution authorization. A failed gate, preflight refusal, plan drift,
+or retained/indeterminate custody is a stop; do not weaken a bound, reuse an ID,
+seal surviving custody, or hand-delete supervision or teardown authority.

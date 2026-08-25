@@ -50,6 +50,7 @@ const (
 	PlanSchemaV24        = "t4013-neutral-convergence-plan-v24"
 	PlanSchemaV25        = "t4013-neutral-convergence-plan-v25"
 	PlanSchemaV26        = "t4013-neutral-convergence-plan-v26"
+	PlanSchemaV27        = "t4013-neutral-convergence-plan-v27"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -76,6 +77,7 @@ const (
 	ObservationSchemaV24 = "t4013-neutral-convergence-observation-v24"
 	ObservationSchemaV25 = "t4013-neutral-convergence-observation-v25"
 	ObservationSchemaV26 = "t4013-neutral-convergence-observation-v26"
+	ObservationSchemaV27 = "t4013-neutral-convergence-observation-v27"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -115,6 +117,7 @@ const (
 	ReceiptSchemaV24             = "t4013-neutral-convergence-receipt-v24"
 	ReceiptSchemaV25             = "t4013-neutral-convergence-receipt-v25"
 	ReceiptSchemaV26             = "t4013-neutral-convergence-receipt-v26"
+	ReceiptSchemaV27             = "t4013-neutral-convergence-receipt-v27"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -163,6 +166,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV24, ObservationSchemaV24, ReceiptSchemaV24},
 	{PlanSchemaV25, ObservationSchemaV25, ReceiptSchemaV25},
 	{PlanSchemaV26, ObservationSchemaV26, ReceiptSchemaV26},
+	{PlanSchemaV27, ObservationSchemaV27, ReceiptSchemaV27},
 }
 
 const (
@@ -262,25 +266,26 @@ type PlanClaims struct {
 }
 
 type Observation struct {
-	Schema           string                       `json:"schema"`
-	MeasuredOn       string                       `json:"measured_on"`
-	Outcome          string                       `json:"outcome"`
-	Environment      EnvironmentObservation       `json:"environment"`
-	HostToolchain    []HostToolObservation        `json:"host_toolchain,omitempty"`
-	Toolchain        []ToolchainObservation       `json:"toolchain"`
-	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
-	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
-	Interruption     *InterruptionObservation     `json:"interruption,omitempty"`
-	AuthorizedQuery  *AuthorizedQueryObservation  `json:"authorized_query,omitempty"`
-	Profiles         []ProfileObservation         `json:"profiles"`
-	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
-	Service          ServiceControlObservation    `json:"service_control"`
-	Explicit         ExplicitStateObservation     `json:"explicit_states"`
-	Phases           []PhaseObservation           `json:"phases"`
-	Checks           []CheckObservation           `json:"checks"`
-	Failures         []FailureObservation         `json:"failures"`
-	Decision         DecisionObservation          `json:"decision"`
-	Teardown         TeardownObservation          `json:"teardown"`
+	Schema           string                             `json:"schema"`
+	MeasuredOn       string                             `json:"measured_on"`
+	Outcome          string                             `json:"outcome"`
+	Environment      EnvironmentObservation             `json:"environment"`
+	HostToolchain    []HostToolObservation              `json:"host_toolchain,omitempty"`
+	Toolchain        []ToolchainObservation             `json:"toolchain"`
+	ServerStartups   []ServerStartupObservation         `json:"server_startups,omitempty"`
+	ConvergenceWaits []ConvergenceWaitObservation       `json:"convergence_waits,omitempty"`
+	Interruption     *InterruptionObservation           `json:"interruption,omitempty"`
+	AuthorizedQuery  *AuthorizedQueryObservation        `json:"authorized_query,omitempty"`
+	DataMeasurement  *DataMeasurementFailureObservation `json:"data_measurement_failure,omitempty"`
+	Profiles         []ProfileObservation               `json:"profiles"`
+	BlobReaders      []BlobReaderObservation            `json:"blob_readers"`
+	Service          ServiceControlObservation          `json:"service_control"`
+	Explicit         ExplicitStateObservation           `json:"explicit_states"`
+	Phases           []PhaseObservation                 `json:"phases"`
+	Checks           []CheckObservation                 `json:"checks"`
+	Failures         []FailureObservation               `json:"failures"`
+	Decision         DecisionObservation                `json:"decision"`
+	Teardown         TeardownObservation                `json:"teardown"`
 }
 
 const authorizedQuerySchemaV1 = "t4013-authorized-query-v1"
@@ -295,6 +300,23 @@ type AuthorizedQueryObservation struct {
 	Class    string `json:"class"`
 	Status   int    `json:"status,omitempty"`
 	Attempts int    `json:"attempts"`
+}
+
+const (
+	dataMeasurementFailureSchemaV1  = "t4013-data-measurement-failure-v1"
+	frozenDataMeasurementDeadlineMS = int64(30_000)
+)
+
+// DataMeasurementFailureObservation is the closed, source-free projection of
+// one custody byte-gauge deadline. The failed phase and its existing substage
+// identify the execution boundary; paths, commands, output, and raw errors
+// remain private.
+type DataMeasurementFailureObservation struct {
+	Schema     string `json:"schema"`
+	Scope      string `json:"scope"`
+	Gauge      string `json:"gauge"`
+	Reason     string `json:"reason"`
+	DeadlineMS int64  `json:"deadline_ms"`
 }
 
 const (
@@ -710,28 +732,29 @@ type TeardownObservation struct {
 }
 
 type Receipt struct {
-	Schema           string                       `json:"schema"`
-	PlanDigest       string                       `json:"plan_digest"`
-	SourceCommit     string                       `json:"source_commit"`
-	MeasuredOn       string                       `json:"measured_on"`
-	Outcome          string                       `json:"outcome"`
-	Environment      EnvironmentObservation       `json:"environment"`
-	HostToolchain    []HostToolObservation        `json:"host_toolchain,omitempty"`
-	Toolchain        []ToolchainObservation       `json:"toolchain"`
-	ServerStartups   []ServerStartupObservation   `json:"server_startups,omitempty"`
-	ConvergenceWaits []ConvergenceWaitObservation `json:"convergence_waits,omitempty"`
-	Interruption     *InterruptionObservation     `json:"interruption,omitempty"`
-	AuthorizedQuery  *AuthorizedQueryObservation  `json:"authorized_query,omitempty"`
-	Profiles         []ProfileObservation         `json:"profiles"`
-	BlobReaders      []BlobReaderObservation      `json:"blob_readers"`
-	Service          ServiceControlObservation    `json:"service_control"`
-	Explicit         ExplicitStateObservation     `json:"explicit_states"`
-	Phases           []PhaseObservation           `json:"phases"`
-	Checks           []CheckObservation           `json:"checks"`
-	Failures         []FailureObservation         `json:"failures"`
-	Decision         DecisionObservation          `json:"decision"`
-	Teardown         TeardownObservation          `json:"teardown"`
-	Claims           ReceiptClaims                `json:"claims"`
+	Schema           string                             `json:"schema"`
+	PlanDigest       string                             `json:"plan_digest"`
+	SourceCommit     string                             `json:"source_commit"`
+	MeasuredOn       string                             `json:"measured_on"`
+	Outcome          string                             `json:"outcome"`
+	Environment      EnvironmentObservation             `json:"environment"`
+	HostToolchain    []HostToolObservation              `json:"host_toolchain,omitempty"`
+	Toolchain        []ToolchainObservation             `json:"toolchain"`
+	ServerStartups   []ServerStartupObservation         `json:"server_startups,omitempty"`
+	ConvergenceWaits []ConvergenceWaitObservation       `json:"convergence_waits,omitempty"`
+	Interruption     *InterruptionObservation           `json:"interruption,omitempty"`
+	AuthorizedQuery  *AuthorizedQueryObservation        `json:"authorized_query,omitempty"`
+	DataMeasurement  *DataMeasurementFailureObservation `json:"data_measurement_failure,omitempty"`
+	Profiles         []ProfileObservation               `json:"profiles"`
+	BlobReaders      []BlobReaderObservation            `json:"blob_readers"`
+	Service          ServiceControlObservation          `json:"service_control"`
+	Explicit         ExplicitStateObservation           `json:"explicit_states"`
+	Phases           []PhaseObservation                 `json:"phases"`
+	Checks           []CheckObservation                 `json:"checks"`
+	Failures         []FailureObservation               `json:"failures"`
+	Decision         DecisionObservation                `json:"decision"`
+	Teardown         TeardownObservation                `json:"teardown"`
+	Claims           ReceiptClaims                      `json:"claims"`
 }
 
 type ReceiptClaims struct {
@@ -769,6 +792,7 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		ConvergenceWaits: observation.ConvergenceWaits,
 		Interruption:     cloneInterruptionObservation(observation.Interruption),
 		AuthorizedQuery:  cloneAuthorizedQueryObservation(observation.AuthorizedQuery),
+		DataMeasurement:  cloneDataMeasurementFailureObservation(observation.DataMeasurement),
 		Profiles:         observation.Profiles,
 		BlobReaders:      observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
@@ -778,7 +802,11 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 	if err := ValidateReceipt(receipt, plan); err != nil {
 		return nil, err
 	}
-	encoded, err := json.MarshalIndent(receipt, "", "  ")
+	return marshalReceipt(receipt)
+}
+
+func marshalReceipt(value Receipt) ([]byte, error) {
+	encoded, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return nil, err
 	}
@@ -810,6 +838,11 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	var value Observation
 	if err := decodeStrict(raw, &value); err != nil {
 		return Observation{}, fmt.Errorf("decode T40.13 observation: %w", err)
+	}
+	if err := validateSerializedDataMeasurementField(
+		raw, observationSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Observation{}, err
 	}
 	if err := ValidateObservation(value); err != nil {
 		return Observation{}, err
@@ -948,6 +981,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV26:
 		wantSafety = frozenSafetyV25
+	case PlanSchemaV27:
+		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -1054,6 +1089,9 @@ func ValidateObservation(value Observation) error {
 	if err := validateAuthorizedQueryObservation(value); err != nil {
 		return err
 	}
+	if err := validateDataMeasurementFailureObservation(value); err != nil {
+		return err
+	}
 	if len(value.Profiles) != 2 || value.Profiles[0].Name != "structural-2m-v1" ||
 		value.Profiles[1].Name != "semantic-262144-v1" {
 		return errors.New("T40.13 profile observation inventory is invalid")
@@ -1119,6 +1157,7 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 		ConvergenceWaits: value.ConvergenceWaits,
 		Interruption:     cloneInterruptionObservation(value.Interruption),
 		AuthorizedQuery:  cloneAuthorizedQueryObservation(value.AuthorizedQuery),
+		DataMeasurement:  cloneDataMeasurementFailureObservation(value.DataMeasurement),
 		Profiles:         value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
@@ -1212,6 +1251,38 @@ func cloneAuthorizedQueryObservation(value *AuthorizedQueryObservation) *Authori
 	}
 	result := *value
 	return &result
+}
+
+func cloneDataMeasurementFailureObservation(
+	value *DataMeasurementFailureObservation,
+) *DataMeasurementFailureObservation {
+	if value == nil {
+		return nil
+	}
+	result := *value
+	return &result
+}
+
+func validateDataMeasurementFailureObservation(value Observation) error {
+	version := observationSchemaVersion(value.Schema)
+	failure := value.DataMeasurement
+	if version < 27 {
+		if failure != nil {
+			return errors.New("T40.13 historical observation acquired data-measurement diagnostics")
+		}
+		return nil
+	}
+	if failure == nil {
+		return nil
+	}
+	if value.Outcome != "stopped" || len(value.Failures) != 1 ||
+		value.Failures[0].Code != "failed_phase_measurement_unavailable" ||
+		failure.Schema != dataMeasurementFailureSchemaV1 || failure.Scope != "custody" ||
+		!slices.Contains([]string{"allocated", "logical"}, failure.Gauge) ||
+		failure.Reason != "deadline" || failure.DeadlineMS != frozenDataMeasurementDeadlineMS {
+		return errors.New("T40.13 data-measurement failure projection is invalid")
+	}
+	return nil
 }
 
 func validateAuthorizedQueryObservation(value Observation) error {
@@ -2979,8 +3050,19 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	if err := decodeStrict(raw, &value); err != nil {
 		return Receipt{}, fmt.Errorf("decode T40.13 receipt: %w", err)
 	}
+	if err := validateSerializedDataMeasurementField(
+		raw, receiptSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Receipt{}, err
+	}
 	if err := validateReceipt(value, plan, PlanDigest(raw) == legacyStoppedReceiptDigest); err != nil {
 		return Receipt{}, err
+	}
+	if receiptSchemaVersion(value.Schema) >= 27 {
+		canonical, err := marshalReceipt(value)
+		if err != nil || !bytes.Equal(raw, canonical) {
+			return Receipt{}, errors.Join(err, errors.New("T40.13 V27 receipt is not canonical"))
+		}
 	}
 	return value, nil
 }
@@ -3137,6 +3219,32 @@ func decodeStrict(raw []byte, target any) error {
 			err = errors.New("multiple JSON values")
 		}
 		return err
+	}
+	return nil
+}
+
+func validateSerializedDataMeasurementField(raw []byte, version int, nested bool) error {
+	var presence struct {
+		DataMeasurement json.RawMessage `json:"data_measurement_failure"`
+		Observation     struct {
+			DataMeasurement json.RawMessage `json:"data_measurement_failure"`
+		} `json:"observation"`
+	}
+	if err := json.Unmarshal(raw, &presence); err != nil {
+		return err
+	}
+	field := presence.DataMeasurement
+	if nested {
+		field = presence.Observation.DataMeasurement
+	}
+	if field == nil {
+		return nil
+	}
+	if version < 27 {
+		return errors.New("T40.13 historical evidence acquired data-measurement diagnostics")
+	}
+	if bytes.Equal(bytes.TrimSpace(field), []byte("null")) {
+		return errors.New("T40.13 data-measurement diagnostics cannot be null")
 	}
 	return nil
 }

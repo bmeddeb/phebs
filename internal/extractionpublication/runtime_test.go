@@ -369,6 +369,20 @@ func (state *testScheduleStore) GetGenerationSchedule(
 	return &copy, nil
 }
 
+func (state *testScheduleStore) RetireCurrentGenerationSchedule(
+	_ context.Context, expected store.GenerationSchedule,
+) error {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	key := scheduleKey(expected.Repository, expected.Stage)
+	current, ok := state.current[key]
+	if !ok || current.Digest != expected.Digest || current.Generation != expected.Generation {
+		return store.ErrGenerationStale
+	}
+	delete(state.current, key)
+	return nil
+}
+
 func (state *testScheduleStore) HeartbeatGenerationChunk(_ context.Context, chunk store.GenerationChunk) error {
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -388,6 +402,9 @@ func (state *testScheduleStore) settle(repository string, failed int) {
 	key := scheduleKey(repository, ScheduleStage)
 	schedule := state.current[key]
 	schedule.Status = store.GenerationScheduleSettled
+	schedule.NextOffset = schedule.TotalItems
+	schedule.Materialized = schedule.TotalChunks
+	schedule.Succeeded = schedule.TotalChunks - failed
 	schedule.Failed = failed
 	state.current[key] = schedule
 }
@@ -941,25 +958,48 @@ func TestRuntimeSmallDeltaAndAToBToAReactivation(t *testing.T) {
 	}
 }
 
-func TestRuntimeSettledSuccessorStillGetsFreshTransitionSchedule(t *testing.T) {
+func TestRuntimeReuseAuthorityRepairsSettledSuccessorSchedule(t *testing.T) {
 	planA := buildTestPlan(t, "sha256:"+strings.Repeat("5", 64), true)
-	runtime, state, _, _, _, _, domainA := newRuntimeFixture(t, planA)
+	runtime, state, source, executor, _, fence, domainA := newRuntimeFixture(t, planA)
 	generationA, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{domainA})
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := runtime.Handle(t.Context(), currentChunk(t, state, planA.Repository, 0)); err != nil {
+		t.Fatal(err)
+	}
+	state.settle(planA.Repository, 0)
 	planB := buildTestPlan(t, "sha256:"+strings.Repeat("6", 64), true)
+	fence.current = planB.SourceGenerationDigest
 	generationB, err := runtime.Reconcile(t.Context(), planB.Repository, []DomainPlan{{
 		Schema: DomainSchema, RunID: "run-b", Plan: planB,
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state.settle(planB.Repository, 0)
-	if _, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{{
-		Schema: DomainSchema, RunID: "run-a-return", Plan: planA,
-	}}); err != nil {
+	if err := runtime.Handle(t.Context(), currentChunk(t, state, planB.Repository, 0)); err != nil {
 		t.Fatal(err)
+	}
+	state.settle(planB.Repository, 0)
+	fence.current = planA.SourceGenerationDigest
+	generation, err := runtime.openGeneration(
+		runtime.generationDirectory(planA.Repository, generationA), planA.Repository, generationA,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.reactivateComplete(
+		t.Context(), generation, runtime.generationDirectory(planA.Repository, generationA),
+	); err != nil {
+		t.Fatal(err)
+	}
+	authority, err := authorityForPlans(planA.Repository, []DomainPlan{domainA})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, reused, err := runtime.ReuseAuthority(t.Context(), authority)
+	if err != nil || !reused || target != generationA {
+		t.Fatalf("reuse settled B to A = %q/%t, %v", target, reused, err)
 	}
 	schedule, err := state.GetGenerationSchedule(t.Context(), planA.Repository, ScheduleStage)
 	if err != nil || schedule.Generation == generationA || schedule.Generation == generationB {
@@ -968,6 +1008,150 @@ func TestRuntimeSettledSuccessorStillGetsFreshTransitionSchedule(t *testing.T) {
 	binding, err := runtime.readBinding(planA.Repository, schedule.Generation)
 	if err != nil || binding.TargetGeneration != generationA || binding.PriorSchedule == "" {
 		t.Fatalf("settled B to A transition binding = %+v, %v", binding, err)
+	}
+	if err := runtime.Handle(t.Context(), currentChunk(t, state, planA.Repository, 0)); err != nil {
+		t.Fatal(err)
+	}
+	state.settle(planA.Repository, 0)
+	progress, err := runtime.Progress(t.Context(), planA.Repository)
+	if err != nil || progress.State != "current" || progress.CurrentDomains != progress.Domains {
+		t.Fatalf("reactivated A progress = %+v, %v", progress, err)
+	}
+	if acquired, _ := source.counts(); acquired != 2 || executor.callCount() != 2 {
+		t.Fatalf("settled A/B/A repeated content: source %d executor %d", acquired, executor.callCount())
+	}
+}
+
+func TestRuntimeZeroWorkReuseRetiresMismatchedSchedule(t *testing.T) {
+	for _, settled := range []bool{false, true} {
+		name := "active"
+		if settled {
+			name = "settled"
+		}
+		t.Run(name, func(t *testing.T) {
+			planA := buildTestPlan(t, "sha256:"+strings.Repeat("a", 64), false)
+			runtime, state, source, executor, publisher, fence, domainA := newRuntimeFixture(t, planA)
+			generationA, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{domainA})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := state.GetGenerationSchedule(
+				t.Context(), planA.Repository, ScheduleStage,
+			); !errors.Is(err, store.ErrNotFound) {
+				t.Fatalf("initial zero-work schedule = %v", err)
+			}
+
+			planB := buildTestPlan(t, "sha256:"+strings.Repeat("b", 64), true)
+			fence.current = planB.SourceGenerationDigest
+			_, err = runtime.Reconcile(t.Context(), planB.Repository, []DomainPlan{{
+				Schema: DomainSchema, RunID: "run-b", Plan: planB,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			chunkB := currentChunk(t, state, planB.Repository, 0)
+			scheduleB, err := state.GetGenerationSchedule(t.Context(), planB.Repository, ScheduleStage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if settled {
+				if err := runtime.Handle(t.Context(), chunkB); err != nil {
+					t.Fatal(err)
+				}
+				state.settle(planB.Repository, 0)
+				fence.current = planA.SourceGenerationDigest
+				generation, err := runtime.openGeneration(
+					runtime.generationDirectory(planA.Repository, generationA),
+					planA.Repository, generationA,
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := runtime.reactivateComplete(
+					t.Context(), generation,
+					runtime.generationDirectory(planA.Repository, generationA),
+				); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			authority, err := authorityForPlans(planA.Repository, []DomainPlan{domainA})
+			if err != nil {
+				t.Fatal(err)
+			}
+			acquiredBefore, releasedBefore := source.counts()
+			executedBefore, publishedBefore, fencedBefore := executor.callCount(), publisher.calls, fence.calls
+			target, reused, err := runtime.ReuseAuthority(t.Context(), authority)
+			if err != nil || !reused || target != generationA {
+				t.Fatalf("reuse zero-work A after B = %q/%t, %v", target, reused, err)
+			}
+			if _, err := state.GetGenerationSchedule(
+				t.Context(), planA.Repository, ScheduleStage,
+			); !errors.Is(err, store.ErrNotFound) {
+				t.Fatalf("retired schedule = %v", err)
+			}
+			if _, err := os.Stat(runtime.bindingPath(
+				planA.Repository, recoveryGeneration(generationA, scheduleB.Digest),
+			)); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("zero-work transition binding = %v", err)
+			}
+			root, err := runtime.Current(t.Context(), planA.Repository, planA.Domain)
+			if err != nil || root.PlanDigest != planA.Digest {
+				t.Fatalf("zero-work current root = %+v, %v", root, err)
+			}
+			progress, err := runtime.Progress(t.Context(), planA.Repository)
+			if err != nil || progress != (Progress{State: "unavailable"}) {
+				t.Fatalf("zero-work progress = %+v, %v", progress, err)
+			}
+			acquiredAfter, releasedAfter := source.counts()
+			if acquiredAfter != acquiredBefore || releasedAfter != releasedBefore ||
+				executor.callCount() != executedBefore || publisher.calls != publishedBefore ||
+				fence.calls != fencedBefore {
+				t.Fatalf(
+					"zero-work reuse performed work: source %d/%d -> %d/%d executor %d -> %d publisher %d -> %d fence %d -> %d",
+					acquiredBefore, releasedBefore, acquiredAfter, releasedAfter,
+					executedBefore, executor.callCount(), publishedBefore, publisher.calls,
+					fencedBefore, fence.calls,
+				)
+			}
+		})
+	}
+}
+
+func TestRuntimeNewZeroWorkGenerationRetiresActivePredecessor(t *testing.T) {
+	planB := buildTestPlan(t, "sha256:"+strings.Repeat("c", 64), true)
+	runtime, state, source, executor, _, fence, domainB := newRuntimeFixture(t, planB)
+	if _, err := runtime.Reconcile(t.Context(), planB.Repository, []DomainPlan{domainB}); err != nil {
+		t.Fatal(err)
+	}
+	scheduleB, err := state.GetGenerationSchedule(t.Context(), planB.Repository, ScheduleStage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planA := buildTestPlan(t, "sha256:"+strings.Repeat("d", 64), false)
+	fence.current = planA.SourceGenerationDigest
+	generationA, err := runtime.Reconcile(t.Context(), planA.Repository, []DomainPlan{{
+		Schema: DomainSchema, RunID: "run-zero", Plan: planA,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.GetGenerationSchedule(
+		t.Context(), planA.Repository, ScheduleStage,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("retired schedule = %v", err)
+	}
+	if _, err := os.Stat(runtime.bindingPath(
+		planA.Repository, recoveryGeneration(generationA, scheduleB.Digest),
+	)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("new zero-work transition binding = %v", err)
+	}
+	root, err := runtime.Current(t.Context(), planA.Repository, planA.Domain)
+	if err != nil || root.PlanDigest != planA.Digest {
+		t.Fatalf("new zero-work current root = %+v, %v", root, err)
+	}
+	if acquired, released := source.counts(); acquired != 0 || released != 0 || executor.callCount() != 0 {
+		t.Fatalf("new zero-work content work = source %d/%d executor %d", acquired, released, executor.callCount())
 	}
 }
 

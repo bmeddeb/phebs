@@ -860,6 +860,196 @@ func TestV26ProcessClassTransitionDirectionsRequireSourceAndDestinationEpochs(t 
 	}
 }
 
+func TestV27DataMeasurementFailureProjectionIsClosedAndHistorical(t *testing.T) {
+	plan, err := frozenV27PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV27 || observationSchemaForPlan(plan) != ObservationSchemaV27 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV27 || plan.Safety != frozenSafetyV25 {
+		t.Fatalf("v27 schema set = %q/%q/%q safety=%+v", plan.Schema,
+			observationSchemaForPlan(plan), receiptSchemaForPlan(plan), plan.Safety)
+	}
+	value := Observation{
+		Schema: ObservationSchemaV27, Outcome: "stopped",
+		Failures: []FailureObservation{{
+			Phase: "interruption", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+		}},
+		DataMeasurement: &DataMeasurementFailureObservation{
+			Schema: dataMeasurementFailureSchemaV1, Scope: "custody", Gauge: "allocated",
+			Reason: "deadline", DeadlineMS: frozenDataMeasurementDeadlineMS,
+		},
+	}
+	if err := validateDataMeasurementFailureObservation(value); err != nil {
+		t.Fatalf("V27 data measurement projection refused: %v", err)
+	}
+	logical := value
+	logical.DataMeasurement = cloneDataMeasurementFailureObservation(value.DataMeasurement)
+	logical.DataMeasurement.Gauge = "logical"
+	if err := validateDataMeasurementFailureObservation(logical); err != nil {
+		t.Fatalf("V27 logical measurement projection refused: %v", err)
+	}
+	historical := value
+	historical.Schema = ObservationSchemaV26
+	if err := validateDataMeasurementFailureObservation(historical); err == nil {
+		t.Fatal("V26 observation acquired V27 data-measurement diagnostics")
+	}
+	completed := value
+	completed.Outcome = "completed"
+	completed.Failures = nil
+	if err := validateDataMeasurementFailureObservation(completed); err == nil {
+		t.Fatal("completed observation retained data-measurement diagnostics")
+	}
+	for _, mutate := range []func(*DataMeasurementFailureObservation){
+		func(failure *DataMeasurementFailureObservation) { failure.Schema = "t4013-data-measurement-failure-v2" },
+		func(failure *DataMeasurementFailureObservation) { failure.Scope = "profile" },
+		func(failure *DataMeasurementFailureObservation) { failure.Gauge = "unknown" },
+		func(failure *DataMeasurementFailureObservation) { failure.Reason = "failed" },
+		func(failure *DataMeasurementFailureObservation) { failure.DeadlineMS++ },
+	} {
+		forged := value
+		forged.DataMeasurement = cloneDataMeasurementFailureObservation(value.DataMeasurement)
+		mutate(forged.DataMeasurement)
+		if err := validateDataMeasurementFailureObservation(forged); err == nil {
+			t.Fatalf("forged data-measurement projection passed: %+v", forged.DataMeasurement)
+		}
+	}
+}
+
+func TestV27StoppedReceiptRetainsTypedDataMeasurementDeadline(t *testing.T) {
+	plan, err := frozenV27PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := stoppedV27DataMeasurementObservation(plan, "logical")
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.DataMeasurement == nil || receipt.DataMeasurement.Gauge != "logical" {
+		t.Fatalf("V27 data-measurement receipt = %+v, %v", receipt.DataMeasurement, err)
+	}
+	duplicate := bytes.Replace(receiptBytes,
+		[]byte("  \"data_measurement_failure\": {"),
+		[]byte("  \"data_measurement_failure\": null,\n  \"data_measurement_failure\": {"), 1,
+	)
+	if bytes.Equal(duplicate, receiptBytes) {
+		t.Fatal("V27 receipt lacks its data-measurement field")
+	}
+	if _, err := DecodeReceipt(duplicate, plan); err == nil {
+		t.Fatal("V27 receipt accepted duplicate data-measurement diagnostics")
+	}
+}
+
+func stoppedV27DataMeasurementObservation(plan Plan, gauge string) Observation {
+	value := completedV25TeardownObservation(plan)
+	value.Outcome = "stopped"
+	value.Phases[5].Outcome = "failed"
+	value.Phases[5].OracleExact = false
+	for index := 6; index < len(value.Phases)-1; index++ {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Checks[len(value.Checks)-1].Passed = false
+	value.ServerStartups = slices.Clone(value.ServerStartups[:5])
+	value.ConvergenceWaits = slices.Clone(value.ConvergenceWaits[:6])
+	value.Interruption.LastSubstage = "restart_start"
+	value.Interruption.TriggerRecoveredState = ""
+	value.Interruption.RecoveryLifecycle = nil
+	value.Interruption.ConvergenceLifecycle = nil
+	value.Failures = []FailureObservation{{
+		Phase: "interruption", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+	}}
+	value.Decision = DecisionObservation{
+		Selected: "unclassified", Reason: "failed_phase_measurement_unavailable",
+	}
+	value.DataMeasurement = &DataMeasurementFailureObservation{
+		Schema: dataMeasurementFailureSchemaV1, Scope: "custody", Gauge: gauge,
+		Reason: "deadline", DeadlineMS: frozenDataMeasurementDeadlineMS,
+	}
+	return value
+}
+
+func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
+	tests := []struct {
+		name        string
+		plan        func() (Plan, error)
+		observation func(Plan) Observation
+	}{
+		{
+			name:        "v1",
+			plan:        func() (Plan, error) { return FrozenPlan(testSourceCommit) },
+			observation: func(Plan) Observation { return completedObservation() },
+		},
+		{
+			name: "v24",
+			plan: func() (Plan, error) {
+				return frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+			},
+			observation: completedV25TeardownObservation,
+		},
+		{
+			name: "v26",
+			plan: func() (Plan, error) {
+				return frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+			},
+			observation: completedV25TeardownObservation,
+		},
+		{
+			name: "v27",
+			plan: func() (Plan, error) {
+				return frozenV27PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+			},
+			observation: completedV25TeardownObservation,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := test.plan()
+			if err != nil {
+				t.Fatal(err)
+			}
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			observationBytes, err := MarshalObservation(test.observation(plan))
+			if err != nil {
+				t.Fatal(err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeObservation(addTopLevelNullField(t, observationBytes)); err == nil {
+				t.Fatal("observation accepted a null data-measurement field")
+			}
+			if _, err := DecodeReceipt(addTopLevelNullField(t, receiptBytes), plan); err == nil {
+				t.Fatal("receipt accepted a null data-measurement field")
+			}
+		})
+	}
+}
+
+func addTopLevelNullField(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	boundary := bytes.LastIndex(raw, []byte("\n}"))
+	if boundary < 0 {
+		t.Fatal("JSON object lacks its final boundary")
+	}
+	result := slices.Clone(raw[:boundary])
+	result = append(result, []byte(",\n  \"data_measurement_failure\": null\n}\n")...)
+	return result
+}
+
 func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
 	projection := &AuthorizedQueryObservation{
 		Schema: authorizedQuerySchemaV1, Profile: "semantic-262144-v1",

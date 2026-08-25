@@ -24,7 +24,11 @@ import (
 
 const (
 	allocationSampleInterval = time.Second
-	dataMeasurementTimeout   = 30 * time.Second
+	dataMeasurementTimeout   = time.Duration(frozenDataMeasurementDeadlineMS) * time.Millisecond
+	dataMeasurementScope     = "custody"
+	dataMeasurementAllocated = "allocated"
+	dataMeasurementLogical   = "logical"
+	dataMeasurementDeadline  = "deadline"
 )
 
 type phaseMeter struct {
@@ -34,6 +38,93 @@ type phaseMeter struct {
 	logOffset  int64
 	before     *privateProfileSnapshot
 	allocation *allocationSampler
+	strict     bool
+	captureRaw bool
+	rawEnd     *dataMeasurementBoundary
+}
+
+// dataMeasurementBoundary is the successful raw allocated-byte end gauge of
+// one meter. A V27 interruption restart may consume it once, and only for the
+// same canonical custody workspace, instead of immediately walking that large
+// workspace again.
+type dataMeasurementBoundary struct {
+	workspace string
+	allocated int64
+	consumed  bool
+}
+
+type dataMeasurementDeadlineError struct {
+	gauge string
+}
+
+func (*dataMeasurementDeadlineError) Error() string {
+	return "T40.13 data-byte measurement exceeded its deadline"
+}
+
+func newDataMeasurementDeadlineError(apparent bool) error {
+	gauge := dataMeasurementAllocated
+	if apparent {
+		gauge = dataMeasurementLogical
+	}
+	return &dataMeasurementDeadlineError{gauge: gauge}
+}
+
+func dataMeasurementContextError(ctx context.Context, apparent bool) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return newDataMeasurementDeadlineError(apparent)
+	}
+	// Preserve the historical sanitized text for a canceled direct helper
+	// call, but do not mis-project cancellation as a 30-second gauge deadline.
+	return errors.New("T40.13 data-byte measurement exceeded its deadline")
+}
+
+func dataMeasurementDeadlineCause(err error) *dataMeasurementDeadlineError {
+	var deadline *dataMeasurementDeadlineError
+	if !errors.As(err, &deadline) ||
+		(deadline.gauge != dataMeasurementAllocated && deadline.gauge != dataMeasurementLogical) {
+		return nil
+	}
+	return deadline
+}
+
+// projectDataMeasurementDeadline returns the fixed source-free public
+// projection of a typed custody gauge deadline. It deliberately carries no
+// measured path, command, output, or raw error text.
+func projectDataMeasurementDeadline(err error) *DataMeasurementFailureObservation {
+	deadline := dataMeasurementDeadlineCause(err)
+	if deadline == nil {
+		return nil
+	}
+	return &DataMeasurementFailureObservation{
+		Schema: dataMeasurementFailureSchemaV1, Scope: dataMeasurementScope,
+		Gauge: deadline.gauge, Reason: dataMeasurementDeadline,
+		DeadlineMS: frozenDataMeasurementDeadlineMS,
+	}
+}
+
+func newDataMeasurementBoundary(workspace string, allocated int64) (*dataMeasurementBoundary, error) {
+	if !filepath.IsAbs(workspace) || filepath.Clean(workspace) != workspace || allocated < 0 {
+		return nil, errors.New("T40.13 data-measurement boundary is invalid")
+	}
+	return &dataMeasurementBoundary{workspace: workspace, allocated: allocated}, nil
+}
+
+func (boundary *dataMeasurementBoundary) consume(workspace string) (int64, error) {
+	if boundary == nil || boundary.consumed || !filepath.IsAbs(workspace) ||
+		filepath.Clean(workspace) != workspace || boundary.workspace != workspace {
+		return 0, errors.New("T40.13 data-measurement boundary handoff is invalid")
+	}
+	boundary.consumed = true
+	return boundary.allocated, nil
+}
+
+func (meter *phaseMeter) takeRawEndBoundary() (*dataMeasurementBoundary, error) {
+	if meter == nil || meter.rawEnd == nil {
+		return nil, errors.New("T40.13 successful phase meter lacks its raw data boundary")
+	}
+	boundary := meter.rawEnd
+	meter.rawEnd = nil
+	return boundary, nil
 }
 
 type allocationSampler struct {
@@ -73,8 +164,12 @@ func retainedMeasuredCommandFailure(err error) error {
 	return retained
 }
 
-func sanitizeMeasuredCommandFailure(message string, err error) error {
-	return errors.Join(errors.New(message), retainedMeasuredCommandFailure(err))
+func sanitizeMeasuredCommandFailure(message string, err error, retainDataMeasurement bool) error {
+	retained := retainedMeasuredCommandFailure(err)
+	if retainDataMeasurement {
+		retained = errors.Join(retained, dataMeasurementDeadlineCause(err))
+	}
+	return errors.Join(errors.New(message), retained)
 }
 
 func newAllocationSampler(root string, baselineAllocated int64, strict bool) (*allocationSampler, error) {
@@ -184,7 +279,7 @@ func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfi
 	server.sampler.resetWindow()
 	return &phaseMeter{
 		started: time.Now(), server: server, dataDir: dataDir, logOffset: offset,
-		before: before, allocation: allocation,
+		before: before, allocation: allocation, strict: server.sessionIsolated,
 	}, nil
 }
 
@@ -202,7 +297,7 @@ func beginInitialPhaseMeter(server *privateServer, dataDir string, before *priva
 	}
 	return &phaseMeter{
 		started: server.started, server: server, dataDir: dataDir, logOffset: 0, before: before,
-		allocation: allocation,
+		allocation: allocation, strict: server.sessionIsolated,
 	}, nil
 }
 
@@ -271,11 +366,12 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")
 	}
-	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.server.sessionIsolated)
+	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.strict)
 	peakAllocated, allocationErr := meter.allocation.close()
 	if measureErr != nil || allocationErr != nil {
 		return PhaseMetrics{}, errors.Join(measureErr, allocationErr)
 	}
+	rawAllocated := allocated
 	allocated = max(allocated, peakAllocated)
 	metrics := PhaseMetrics{
 		WallMS:           time.Since(meter.started).Milliseconds(),
@@ -315,6 +411,13 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 		}
 		metrics.PublicationTransactions = authorityChanges(before, *after)
 		metrics.PublicationWrites = metrics.PublicationTransactions
+	}
+	if meter.captureRaw {
+		boundary, err := newDataMeasurementBoundary(meter.dataDir, rawAllocated)
+		if err != nil {
+			return PhaseMetrics{}, err
+		}
+		meter.rawEnd = boundary
 	}
 	return metrics, nil
 }
@@ -371,6 +474,25 @@ func measureDataBytesForContract(path string, strict bool) (logical, allocated i
 		return measureDataBytes(path)
 	}
 	return measureDataBytesContext(context.Background(), path)
+}
+
+func measureDataAllocatedBytesForContract(path string, strict bool) (int64, error) {
+	if !filepath.IsAbs(path) {
+		return 0, errors.New("T40.13 data measurement path is invalid")
+	}
+	var (
+		allocated int64
+		err       error
+	)
+	if strict {
+		allocated, err = duKilobytesWithin(context.Background(), path, false)
+	} else {
+		allocated, err = duKilobytes(path, false)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return checkedMulInt64(allocated, 1024)
 }
 
 func measureDataBytesContext(ctx context.Context, path string) (logical, allocated int64, err error) {
@@ -455,13 +577,13 @@ func duKilobytesContext(ctx context.Context, path string, apparent bool) (int64,
 		if attempt < 2 {
 			select {
 			case <-ctx.Done():
-				return 0, errors.New("T40.13 data-byte measurement exceeded its deadline")
+				return 0, dataMeasurementContextError(ctx, apparent)
 			case <-time.After(100 * time.Millisecond):
 			}
 		}
 	}
 	if ctx.Err() != nil {
-		return 0, errors.New("T40.13 data-byte measurement exceeded its deadline")
+		return 0, dataMeasurementContextError(ctx, apparent)
 	}
 	if err != nil {
 		return 0, errors.New("T40.13 data-byte measurement failed")

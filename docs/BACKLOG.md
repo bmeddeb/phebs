@@ -1716,6 +1716,119 @@ docs, glossary, shell, and independent-review gates remain required before
 integration. `t40r1-neutral-36` is an unselected candidate only; freeze and
 execution remain separately authorized.
 
+Neutral-36 measured outcome (2026-08-24): `t40r1-neutral-36` is now consumed as
+an immutable signed V26 measurement stop. Its source-free evidence binds exact
+source `acc5a23f046229c580b972bcbb0107f2f7062882`, plan
+`sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`,
+observation
+`sha256:141750ff0ae7da9af7e006bfb59cc260ff973abe02509e2e269474dea7c8d22d`,
+receipt
+`sha256:9d9ec605ad90ccd1010a920cb86c405656851349d85ccb0ac2243b18606e6ee6`,
+and package
+`sha256:e5ec0c04338b17d91064c160f34a1a78b6ba174773107bfd592d2bf80f0e0677`.
+Preflight, cold, warm no-op, delta B, and return A succeeded. Interruption
+selected an attempt-zero `extraction-partitions` chunk, returned source to A,
+and failed after 6,059,839 ms at `restart_start` with the generic
+`failed_phase_measurement_unavailable` oracle code and an unsubstantiated
+`unclassified` decision. The sealed contract does not retain the failing data
+gauge or internal error, so it cannot establish a process/pipeline cause or a
+scale pass. Recovery verification and the remaining mechanics phases did not
+run. Teardown completed in 187,542 ms with neither derived data nor scratch
+source retained. The identifier and frozen plan may not be reused, and this
+outcome authorizes no private rerun.
+
+**T40.13n · Coherent restart accounting and typed data-gauge evidence** *(high
+gate readiness · implementation and exact-tree gates complete; exact-commit review pending; needs T40.13m and neutral-36)* —
+make a stopped V27 restart retain enough source-free evidence to distinguish a
+bounded data-gauge deadline without weakening measurement completeness. AC: a
+successfully finished first-server meter may return one private
+`dataMeasurementBoundary` containing only its raw end allocated bytes and
+canonical workspace; the immediately following restart consumes it once and
+only for the same workspace. Without that handoff, restart performs an
+allocated-only gauge before launch and starts both its allocation sampler and
+wall clock at that prelaunch boundary. A failed prelaunch gauge creates no
+expected or active meter; after launch, the meter is tracked before health so a
+health failure retains a complete inventory. Fresh V27 plan/observation/receipt
+schemas admit at most one `data_measurement_failure` in observation/receipt
+bytes with exact schema
+`t4013-data-measurement-failure-v1`, `scope=custody`,
+`gauge=allocated|logical`, `reason=deadline`, and `deadline_ms=30000`; no path,
+command, output, identity, or raw error may enter evidence, and V1–V26 require
+the field absent. The existing per-gauge 30-second bound remains unchanged.
+Archive/restore preserves the peak logical and allocated gauges already merged
+from backup, restore, and restarted-server meters rather than overwriting them
+with a terminal re-gauge. Tests cover same-workspace one-shot consumption,
+missing/mismatched/reused boundaries, prelaunch and post-launch failure
+inventory, singular-diagnostic vocabulary/history/receipt rebuilding,
+archive-peak preservation, simultaneous failures, and a real readiness path
+with two finished start meters, no active meters, and two healthy source-free
+startup records. That exact readiness boundary performs five sequential strict
+gauge boundaries across the two meters—one more than the prior rehearsal—with
+at most three `/usr/bin/du` attempts per boundary, the unchanged 30-second
+per-boundary cap, at most 15 child attempts, and at most 150 seconds aggregate.
+Relative to the prior rehearsal it also performs one additional private server
+launch/health cycle with the existing process and allocation samplers. The real
+interruption path falls from 20 to 16 gauge boundaries (at most 60 to 48 child
+attempts); archive/restore falls from 18 to 15 (at most 54 to 45). Production
+ceremony server count is unchanged, but each V27 server start begins one
+allocation-sampler goroutine before the existing bounded four-executable
+revalidation and launch, probing capacity at 1 Hz during that prelaunch window.
+Observation, receipt, and teardown-checkpoint decoding adds one bounded raw-JSON
+presence check to preserve historical absent-field/null semantics; V27 receipt
+decode also performs one bounded canonical JSON re-encode and byte comparison
+to refuse duplicate keys. This adds no
+product request/query, sync, publication, source/corpus/shard read,
+persistent schema, topology, or service-bound work. Exact-commit independent
+review, integration, exact-main preflight, and separate freeze and execution
+approvals remain required. No fresh identifier is selected.
+
+The first V27 readiness attempt found a separate production recovery defect:
+all exact A extraction pointers had been reactivated while the current
+operational schedule still targeted settled B, so bounded progress could never
+become `current`. The shared runtime now checks an exact reused/completed
+generation against any active or settled predecessor. A nonzero mismatch uses
+the existing immutable transition enqueue. A zero-applicable mismatch instead
+retires the exact current schedule projection without writing a binding or
+inventing a partition; active history becomes superseded, settled history stays
+settled, both remain lifecycle-owned, exact domain pointers stay authoritative,
+and operational progress returns the established `unavailable` state. Focused
+regressions cover settled-B → reused-A current progress and active/settled
+zero-work reuse/new-publication retirement with zero repeat source/extractor
+work. The corrected real-binary rehearsal passed structural
+A→B→A/restore, semantic interruption/restore, and stale-worker recovery in
+362.24 seconds. An exact active target retains its early return. Absent-schedule
+reuse adds a second current-schedule query and no binding read. Settled reuse
+adds that query plus two pointer-sized binding reads across initial target
+resolution and the repeated coherence check. A reuse mismatch totals three
+schedule queries and three binding reads; completed reconciliation totals two
+of each. Nonzero enqueue then adds one bounded binding write and the existing
+schedule transaction under the reconciler shard lock. Zero-work retirement instead uses
+one exact transaction with current/schedule point reads, an active-only status
+update, and current-row deletion; a concurrent successor makes it stale without
+mutation. Immutable completed controls may be replayed only through the
+existing bounded chunks; no source/corpus member or extractor is reopened, and
+concurrency, retention, memory, disk, API shape, persistent schema, topology,
+and service bounds are unchanged.
+
+The final exact working tree passed the complete T40.13 package (97.258s), its
+full race package (109.786s), real-launcher custody proof (60.902s), 20 repeated
+V27/schema/accounting runs (248.065s), semantic interruption/restore (124.67s),
+stale-worker recovery (31.30s), structural A→B→A/offline-restore recovery
+(138.58s), and full `internal/store` twice (1065.618s standalone and 1109.512s
+inside an uncached repository run). Module verification, vet, lint, docs,
+glossary, shell syntax, and whitespace also passed; every `internal/` package
+was green in the uncached run. One earlier structural attempt was invalidated
+by a host-native process-sampler `EPERM` after healthy startup; its diagnostic
+root is retained and no process survives, and the same exact tree passed the
+bounded structural rerun. The repository aggregate remains honestly red only
+on four inherited retained-artifact assertions: T30.6m still binds 52 rather
+than 54 retention components, the host Git 2.50.1 cannot reproduce T32.3 bytes
+pinned by Git 2.54, and T32.4 still binds the pre-repin T32.3 digests. Each
+failure reproduced unchanged at base
+`acc5a23f046229c580b972bcbb0107f2f7062882`; none is a T40.13n regression, and
+their separate fixture repair is not folded into this ticket. Two independent
+working-tree reviews found no actionable issue. Exact-commit review remains.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

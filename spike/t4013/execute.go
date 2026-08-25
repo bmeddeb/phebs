@@ -653,6 +653,7 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	if planSchemaVersion(run.plan.Schema) < 25 {
 		return run.stopAfterFailureLegacy(cause)
 	}
+	primaryCause := cause
 	started := time.Now()
 	stopErr := run.stopServers()
 	cause = errors.Join(cause, stopErr)
@@ -663,12 +664,10 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	ceilingErr := run.enforceSafety()
 	run.observation.Outcome = "stopped"
 	classification := classifyStoppedFailureForPlan(run.plan, cause, measurementErr, ceilingErr)
-	run.observation.Failures = []FailureObservation{{
-		Phase: phaseOrder[run.phase], Class: classification.class, Code: classification.code,
-	}}
-	run.observation.Decision = DecisionObservation{
-		Selected: classification.decision, Reason: classification.reason,
-		Substantiated: classification.substantiated,
+	run.setStoppedClassification(phaseOrder[run.phase], classification)
+	if planSchemaVersion(run.plan.Schema) >= 27 &&
+		classification.code == "failed_phase_measurement_unavailable" {
+		run.observation.DataMeasurement = projectDataMeasurementDeadline(primaryCause)
 	}
 	run.observation.Teardown = TeardownObservation{}
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
@@ -907,13 +906,7 @@ func (run *execution) completeTeardown(
 		if ceilingErr != nil {
 			classification := classifyStoppedFailureForPlan(run.plan, ceilingErr, nil, ceilingErr)
 			failurePhase := run.observation.Failures[0].Phase
-			run.observation.Failures[0] = FailureObservation{
-				Phase: failurePhase, Class: classification.class, Code: classification.code,
-			}
-			run.observation.Decision = DecisionObservation{
-				Selected: classification.decision, Reason: classification.reason,
-				Substantiated: classification.substantiated,
-			}
+			run.setStoppedClassification(failurePhase, classification)
 		}
 	}
 	publicationErr := run.persistFinalTeardown(started)
@@ -982,13 +975,7 @@ func (run *execution) persistFinalTeardown(started time.Time) error {
 		} else if ceilingErr != nil {
 			classification := classifyStoppedFailureForPlan(run.plan, ceilingErr, nil, ceilingErr)
 			failurePhase := run.observation.Failures[0].Phase
-			run.observation.Failures[0] = FailureObservation{
-				Phase: failurePhase, Class: classification.class, Code: classification.code,
-			}
-			run.observation.Decision = DecisionObservation{
-				Selected: classification.decision, Reason: classification.reason,
-				Substantiated: classification.substantiated,
-			}
+			run.setStoppedClassification(failurePhase, classification)
 		}
 		last := len(run.observation.Phases) - 1
 		wallMS, wallErr := conservativeTeardownWallMS(started, time.Now())
@@ -1084,13 +1071,7 @@ func (run *execution) stopCompletedTeardown(cause, ceilingErr error) {
 		AuthorityChanged: false, OracleExact: false,
 	}
 	classification := classifyStoppedFailureForPlan(run.plan, cause, nil, ceilingErr)
-	run.observation.Failures = []FailureObservation{{
-		Phase: "teardown", Class: classification.class, Code: classification.code,
-	}}
-	run.observation.Decision = DecisionObservation{
-		Selected: classification.decision, Reason: classification.reason,
-		Substantiated: classification.substantiated,
-	}
+	run.setStoppedClassification("teardown", classification)
 	run.observation.Checks[len(run.observation.Checks)-1].Passed = false
 }
 
@@ -1162,6 +1143,17 @@ type stoppedClassification struct {
 	decision      string
 	reason        string
 	substantiated bool
+}
+
+func (run *execution) setStoppedClassification(phase string, classification stoppedClassification) {
+	run.observation.Failures = []FailureObservation{{
+		Phase: phase, Class: classification.class, Code: classification.code,
+	}}
+	run.observation.Decision = DecisionObservation{
+		Selected: classification.decision, Reason: classification.reason,
+		Substantiated: classification.substantiated,
+	}
+	run.observation.DataMeasurement = nil
 }
 
 func classifyStoppedFailure(cause, measurementErr, ceilingErr error) stoppedClassification {
@@ -1291,6 +1283,9 @@ func classifyStoppedFailureForPlan(
 	if planSchemaVersion(plan.Schema) >= 25 {
 		measurementErr = errors.Join(measurementErr, retainedMeasurementFailure(cause))
 	}
+	if planSchemaVersion(plan.Schema) >= 27 {
+		measurementErr = errors.Join(measurementErr, dataMeasurementDeadlineCause(cause))
+	}
 	if planSchemaVersion(plan.Schema) < 23 {
 		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
 	}
@@ -1364,6 +1359,17 @@ func (run *execution) startServer(
 	label string,
 	before *privateProfileSnapshot,
 ) (*privateServer, *phaseMeter, error) {
+	if planSchemaVersion(run.plan.Schema) >= 27 {
+		return run.startServerV27(profile, label, before, nil)
+	}
+	return run.startServerLegacy(profile, label, before)
+}
+
+func (run *execution) startServerLegacy(
+	profile PreparedProfile,
+	label string,
+	before *privateProfileSnapshot,
+) (*privateServer, *phaseMeter, error) {
 	run.metersExpected++
 	if listener := run.portReservations[profile.Address]; listener != nil {
 		if err := listener.Close(); err != nil {
@@ -1388,6 +1394,64 @@ func (run *execution) startServer(
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
 	if (planSchemaVersion(run.plan.Schema) >= 3) &&
 		startup.Profile != "" {
+		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
+	}
+	return server, meter, healthErr
+}
+
+func (run *execution) startServerV27(
+	profile PreparedProfile,
+	label string,
+	before *privateProfileSnapshot,
+	boundary *dataMeasurementBoundary,
+) (*privateServer, *phaseMeter, error) {
+	if planSchemaVersion(run.plan.Schema) < 27 {
+		return nil, nil, errors.New("T40.13 coherent server start requires V27")
+	}
+	started := time.Now()
+	var (
+		allocated int64
+		err       error
+	)
+	if boundary != nil {
+		allocated, err = boundary.consume(run.workspace)
+	} else {
+		allocated, err = measureDataAllocatedBytesForContract(run.workspace, true)
+	}
+	if err != nil {
+		run.measurementErr = errors.Join(run.measurementErr, err)
+		return nil, nil, err
+	}
+	allocation, err := newAllocationSampler(run.workspace, allocated, true)
+	if err != nil {
+		run.measurementErr = errors.Join(run.measurementErr, err)
+		return nil, nil, err
+	}
+	if listener := run.portReservations[profile.Address]; listener != nil {
+		if err := listener.Close(); err != nil {
+			_, allocationErr := allocation.close()
+			run.measurementErr = errors.Join(run.measurementErr, allocationErr)
+			return nil, nil, errors.Join(
+				fmt.Errorf("release T40.13 reserved server address: %w", err), allocationErr,
+			)
+		}
+		delete(run.portReservations, profile.Address)
+	}
+	server, err := launchPrivateServer(run.ctx, profile, run.toolchain, label)
+	if err != nil {
+		_, allocationErr := allocation.close()
+		run.measurementErr = errors.Join(run.measurementErr, allocationErr)
+		return nil, nil, errors.Join(err, allocationErr)
+	}
+	run.liveServers = append(run.liveServers, server)
+	meter := &phaseMeter{
+		started: started, server: server, dataDir: run.workspace, logOffset: 0,
+		before: before, allocation: allocation, strict: true, captureRaw: true,
+	}
+	run.trackMeter(meter)
+	deadline := time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
+	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
+	if startup.Profile != "" {
 		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
 	}
 	return server, meter, healthErr
@@ -1707,8 +1771,22 @@ func (run *execution) interruption() error {
 	if err != nil {
 		return err
 	}
+	var restartBoundary *dataMeasurementBoundary
+	if planSchemaVersion(run.plan.Schema) >= 27 {
+		restartBoundary, err = meter.takeRawEndBoundary()
+		if err != nil {
+			return err
+		}
+	}
 	run.setInterruptionSubstage("restart_start")
-	server, restartMeter, err := run.startServer(profile, "interruption-restart", &run.semanticA)
+	var restartMeter *phaseMeter
+	if planSchemaVersion(run.plan.Schema) >= 27 {
+		server, restartMeter, err = run.startServerV27(
+			profile, "interruption-restart", &run.semanticA, restartBoundary,
+		)
+	} else {
+		server, restartMeter, err = run.startServer(profile, "interruption-restart", &run.semanticA)
+	}
 	if err != nil {
 		return err
 	}
@@ -3420,13 +3498,30 @@ func (run *execution) archiveRestore() error {
 		return err
 	}
 	metrics.WallMS = time.Since(started).Milliseconds()
-	metrics.DataLogicalBytes, metrics.DataAllocatedBytes, err = measureDataBytesForPlan(run.plan, run.workspace)
+	metrics, err = archiveRestoreDataMetricsForPlan(run.plan, run.workspace, metrics)
 	if err != nil {
 		return err
 	}
 	run.structAR = after
 	run.observation.Phases[8] = succeededPhase("archive_restore", metrics)
 	return run.enforceSafety()
+}
+
+func archiveRestoreDataMetricsForPlan(
+	plan Plan,
+	workspace string,
+	metrics PhaseMetrics,
+) (PhaseMetrics, error) {
+	if planSchemaVersion(plan.Schema) >= 27 {
+		return metrics, nil
+	}
+	logical, allocated, err := measureDataBytesForPlan(plan, workspace)
+	if err != nil {
+		return metrics, err
+	}
+	metrics.DataLogicalBytes = logical
+	metrics.DataAllocatedBytes = allocated
+	return metrics, nil
 }
 
 func (run *execution) collection() error {
@@ -4643,7 +4738,9 @@ func createLiveBackup(
 	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
-		commandErr = sanitizeMeasuredCommandFailure("T40.13 live backup command failed", commandErr)
+		commandErr = sanitizeMeasuredCommandFailure(
+			"T40.13 live backup command failed", commandErr, toolchain.dataMeasurementV27,
+		)
 	}
 	if commandErr != nil || closeErr != nil {
 		return privateRecoveryBackup{}, metrics, errors.Join(commandErr, closeErr)
@@ -4695,7 +4792,9 @@ func restoreBackup(
 	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
 	closeErr := logFile.Close()
 	if commandErr != nil {
-		commandErr = sanitizeMeasuredCommandFailure("T40.13 restore command failed", commandErr)
+		commandErr = sanitizeMeasuredCommandFailure(
+			"T40.13 restore command failed", commandErr, toolchain.dataMeasurementV27,
+		)
 	}
 	if commandErr != nil || closeErr != nil {
 		return metrics, errors.Join(commandErr, closeErr)
@@ -5533,6 +5632,11 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 	var value teardownCheckpoint
 	if err := decodeStrict(raw, &value); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
+	}
+	if err := validateSerializedDataMeasurementField(
+		raw, observationSchemaVersion(value.Observation.Schema), true,
+	); err != nil {
+		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
 	if err := validateTeardownCheckpoint(value); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err

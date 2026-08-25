@@ -3448,3 +3448,107 @@ independent review reported critical 0, high 0, medium 0, and no actionable low
 finding. T40.13m is complete and requests integration only; exact-main
 preflight, identifier selection, freeze, frozen-plan review, and execution
 remain separate steps.
+
+### Neutral-36 restart measurement stop and T40.13n
+
+`t40r1-neutral-36` is an immutable signed V26 stop at exact source
+`acc5a23f046229c580b972bcbb0107f2f7062882`. Its plan is
+`sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`,
+observation is
+`sha256:141750ff0ae7da9af7e006bfb59cc260ff973abe02509e2e269474dea7c8d22d`,
+receipt is
+`sha256:9d9ec605ad90ccd1010a920cb86c405656851349d85ccb0ac2243b18606e6ee6`,
+and source-free package is
+`sha256:e5ec0c04338b17d91064c160f34a1a78b6ba174773107bfd592d2bf80f0e0677`.
+The first five mechanics phases succeeded. Interruption selected an
+attempt-zero extraction partition, returned source to A, and stopped after
+6,059,839 ms at `restart_start` with the generic
+`failed_phase_measurement_unavailable` code. V26 does not retain the failed
+data gauge or its raw cause, so the decision remains unsubstantiated
+`unclassified`, not a pipeline failure or pass. Recovery verification and all
+later mechanics phases were not run. Teardown completed in 187,542 ms without
+retaining derived data or scratch source.
+
+T40.13n advances only fresh plan, observation, and receipt contracts to V27.
+The successful first-server meter can return a private
+`dataMeasurementBoundary` containing its raw end allocated bytes and canonical
+workspace. The immediately following restart accepts it only once and only for
+that workspace. The value never enters evidence or durable authority. Without
+the handoff, restart takes an allocated-only baseline before process launch;
+the allocation sampler and wall clock start there. A failed prelaunch baseline
+creates no expected/active meter. A launched server is registered before
+health, so health failure still leaves a complete meter inventory. Allocated
+and logical gauges keep the existing 30-second deadline.
+
+V27 may retain one optional path-free `data_measurement_failure` with schema
+`t4013-data-measurement-failure-v1`, scope `custody`, gauge `allocated` or
+`logical`, reason `deadline`, and `deadline_ms=30000`. It contains no path,
+command, output, identity, or raw error; it is permitted only for a stopped V27
+measurement-unavailable result and must be absent on success and in V1–V26.
+Archive/restore also retains the logical/allocated maxima already merged from
+backup, restore, and restarted-server meters instead of overwriting them with
+a terminal re-gauge.
+
+Regressions must cover same-workspace one-shot use, missing/mismatched/reused
+boundaries, failed prelaunch inventory, launched health failure, exact
+diagnostic validation and returned-bundle reconstruction, historical bytes,
+simultaneous failures, and archive maxima. The real readiness sequence must
+finish both ordered start meters, leave expected/tracked counts equal at two
+with no active meter, and retain both healthy source-free startup records. The
+two meters perform five sequential strict gauge boundaries—one more than the
+prior rehearsal—with at most three `/usr/bin/du` attempts each, an individual
+30-second cap, at most 15 child attempts, and at most 150 seconds aggregate.
+That rehearsal also adds one private server launch/health cycle and its process/
+allocation samplers relative to the prior sequence. The real interruption path
+falls from 20 to 16 gauge boundaries (at most 60 to 48 child attempts), while
+archive/restore falls from 18 to 15 (at most 54 to 45). Production ceremony
+server count is unchanged; one allocation-sampler goroutine now probes capacity
+at 1 Hz during the existing bounded executable-revalidation/prelaunch window.
+Evidence/checkpoint decoding adds one bounded raw-JSON presence check to retain
+historical absent-field/null semantics; V27 receipt decode also performs one
+bounded canonical JSON re-encode and byte comparison to refuse duplicate keys.
+This is bounded ceremony-only work: it
+changes no product request/query, sync, publication,
+source/corpus/shard read, persistent state, topology, or service bound.
+
+The first V27 readiness attempt retained a source-free recovery defect: exact A
+domain pointers were current while the operational current schedule still
+targeted settled B. The runtime now subjects both completed-generation
+reconcile and exact-authority reuse to the same schedule-coherence check. A
+nonzero active or settled target mismatch uses the existing immutable
+transition enqueue. A zero-applicable mismatch instead retires the exact
+current projection, leaves immutable history lifecycle-owned and exact roots
+authoritative, writes no binding, and returns the established `unavailable`
+operational state rather than claiming one fictional partition. Focused
+active/settled and new/reused zero-work regressions supplement the crash/no-op
+test that proves an A-targeted schedule, `Progress.State == current`, and no
+repeated source or extractor work. The
+corrected real-binary rehearsal passed structural A→B→A/restore, semantic
+interruption/restore, and stale-worker recovery in 362.24 seconds. Exact active
+reuse keeps its early return. Absent reuse adds a second bounded schedule query
+and no binding read; settled reuse adds that query plus two pointer-sized
+binding reads across initial and repeated target resolution. A reuse mismatch
+totals three schedule queries and three binding reads, while completed
+reconciliation totals two of each. Nonzero enqueue adds the pointer-sized
+binding write and bounded schedule transaction under the existing shard lock
+and chunk limits. A zero-work mismatch instead performs one
+exact current/schedule point-read transaction, active-only status update, and
+current-row deletion; concurrent successor movement makes it stale without
+mutation. No new corpus/member read, source lease, extractor, goroutine, lock,
+API shape, persistent schema, topology, or service-bound work follows.
+
+Implementation and exact-tree gates are complete. The complete package
+(97.258s), race package (109.786s), real-launcher proof (60.902s), 20 repeated
+V27/schema/accounting runs (248.065s), semantic (124.67s), stale-worker
+(31.30s), structural (138.58s), full `internal/store` (1065.618s standalone;
+1109.512s in the uncached repository run), module, vet, lint, docs, glossary,
+shell, whitespace, and every `internal/` package passed. A host-native sampler
+`EPERM` invalidated one earlier structural attempt after healthy startup; no
+process survives, the diagnostic root is retained, and the same tree passed
+the bounded rerun. The extra repository aggregate is baseline-red only on
+inherited T30.6m budgets, Git-2.54 T32.3 retained bytes on Git 2.50.1, and
+T32.4 pre-repin bindings, all reproduced unchanged at the base commit. It is
+not claimed green and those fixtures are outside this ticket. Two independent
+working-tree reviews are clean; exact-commit review remains. Integration, exact-main
+preflight, fresh-ID selection, freeze, plan review, and execution remain
+separate explicit decisions; no gate or Epic closure is claimed.

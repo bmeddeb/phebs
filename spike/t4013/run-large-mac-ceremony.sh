@@ -798,7 +798,8 @@ is_v25_plan() {
   schema="$(run_v25_custody_command_in_repo_active "$V25_INSPECT_COMMAND" -plan-schema "$1")" ||
     die "plan failed bounded exact-control inspection"
   [[ "$schema" == "t4013-neutral-convergence-plan-v25" ||
-    "$schema" == "t4013-neutral-convergence-plan-v26" ]]
+    "$schema" == "t4013-neutral-convergence-plan-v26" ||
+    "$schema" == "t4013-neutral-convergence-plan-v27" ]]
 }
 
 usage() {

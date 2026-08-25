@@ -1861,6 +1861,96 @@ medium, or actionable low finding. Integration and exact-main dedicated-host
 preflight are next. `t40r1-neutral-36` is only the nominal candidate;
 identifier selection, freeze, frozen-plan review, and execution retain their
 separate approvals.
+
+Neutral-36 subsequently consumed its V26 identifier at exact main source
+`acc5a23f046229c580b972bcbb0107f2f7062882`. Its signed source-free evidence
+binds plan
+`sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`,
+observation
+`sha256:141750ff0ae7da9af7e006bfb59cc260ff973abe02509e2e269474dea7c8d22d`,
+receipt
+`sha256:9d9ec605ad90ccd1010a920cb86c405656851349d85ccb0ac2243b18606e6ee6`,
+and package
+`sha256:e5ec0c04338b17d91064c160f34a1a78b6ba174773107bfd592d2bf80f0e0677`.
+Preflight through return A succeeded. Interruption selected an attempt-zero
+`extraction-partitions` chunk, restored source A, and stopped after 6,059,839
+ms at `restart_start` with generic unsubstantiated
+`failed_phase_measurement_unavailable`. The receipt does not retain the failed
+data gauge or raw cause, recovery verification and later phases did not run,
+and the result is neither a pipeline failure nor a scale pass. Teardown took
+187,542 ms and retained neither derived data nor scratch source. The exact ID
+and plan are permanently consumed; no private rerun is authorized.
+
+T40.13n is now the only next scale ticket. Its implementation, corrected
+bounded real-binary readiness rehearsal, and exact-tree gates are complete;
+exact-commit independent review is pending.
+Fresh V27 accounting will carry one successful first-server raw end allocated
+gauge through a private same-workspace one-shot boundary into restart, or take
+an allocated-only baseline before launch when no boundary exists. Allocation
+sampling and wall time begin at that prelaunch boundary; a failed prelaunch
+creates no expected/active meter, while a launched server is tracked before
+health. One optional path-free `data_measurement_failure` may retain only
+schema `t4013-data-measurement-failure-v1`, `scope=custody`, an allocated or
+logical gauge, `reason=deadline`, and the unchanged 30,000-ms deadline.
+Archive/restore retains merged peak gauges rather than replacing them with one
+terminal reading. Historical V1–V26 evidence remains exact, including explicit
+`null` rejection at bounded observation/receipt/checkpoint decode; V27 receipt
+decode adds one bounded canonical JSON re-encode/comparison to refuse duplicate
+keys. Interruption
+falls from 20 to 16 gauge boundaries (at most 60 to 48 `/usr/bin/du` attempts)
+and archive/restore from 18 to 15 (at most 54 to 45); each boundary retains a
+30-second cap. Readiness has five boundaries (at most 15 attempts/150 seconds)
+and one additional private server launch/health cycle relative to its earlier
+sequence. Ceremony server count is unchanged; one allocation sampler now begins
+before the existing executable revalidation/launch and probes capacity at 1 Hz
+during that bounded prelaunch window. The implementation, bounded regressions,
+real-launcher, full internal/store, module, vet, lint, documentation, glossary,
+shell, whitespace, and steady-state-cost gates passed on one exact tree. Fresh
+exact-commit independent review must complete before Ben may separately
+authorize integration. Only after integration may a
+clean exact-main dedicated-host preflight precede fresh-ID selection, separate
+freeze authorization, frozen-plan review, and separate exact-ID/digest
+execution authorization. No completion, identifier, freeze, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim exists yet.
+
+The first V27 readiness attempt stopped honestly after 12 minutes of semantic
+restart convergence. Read-only retained-state audit proved the product bytes
+and all A extraction pointers were current, but the operational current row
+still named a settled B schedule, so progress remained non-current with no
+actor able to change it. This was not a measurement, timeout, or resource
+failure. The shared extraction runtime now routes both completed-generation
+reconciliation and exact-authority reuse through one schedule-coherence check.
+A mismatched active or settled predecessor gets the existing fresh immutable
+transition schedule for nonzero work. Zero-applicable authority instead retires
+the exact mismatched current projection, keeps immutable history lifecycle-owned
+and exact roots authoritative, writes no binding, and retains the established
+`unavailable` progress state rather than fabricating a partition. Focused
+active/settled and new/reused zero-work regressions supplement the exact
+settled-B → reused-A crash/no-op regression and corrected 362.24-second
+rehearsal. Steady exact active reuse is unchanged. Absent reuse adds a second
+schedule query and no binding read; settled reuse adds that query plus two
+pointer-sized binding reads across initial and repeated target resolution. A
+reuse mismatch totals three schedule queries and three binding reads, while
+completed reconciliation totals two of each. Nonzero enqueue then adds one
+pointer-sized binding write and one existing schedule transaction under the
+existing shard lock and chunk limits. A
+zero-work mismatch uses one exact current/schedule point-read transaction,
+active-only status update, and current-row deletion; a concurrent successor
+makes it stale without mutation. No API shape or persistent schema changes.
+
+Exact-tree evidence includes the complete T40.13 package (97.258s), race
+package (109.786s), real-launcher proof (60.902s), 20 repeated
+V27/schema/accounting runs (248.065s), final semantic (124.67s), stale-worker
+(31.30s), and structural (138.58s) readiness cohorts, and full
+`internal/store` (1065.618s standalone; 1109.512s within an uncached repository
+run). Every `internal/` package passed. An earlier host-native process-sampler
+`EPERM` made one structural attempt invalid after healthy startup; the exact
+tree passed its bounded rerun and no process survives. The extra repository
+aggregate is baseline-red only on inherited T30.6m component budgets, Git-2.54
+T32.3 retained bytes on the Git-2.50.1 host, and T32.4's pre-repin bindings;
+all four assertions fail identically at the base commit. This ticket neither
+claims `go test ./...` green nor reauthors those unrelated fixtures.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

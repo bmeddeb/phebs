@@ -43,18 +43,19 @@ var errProcessChildIdentityDisappeared = errors.New("T40.13 child disappeared be
 var errProcessRootExitTransition = errors.New("T40.13 process root exited during snapshot capture")
 
 type privateToolchain struct {
-	Schema            string
-	Phebs             string
-	Zoekt             string
-	Focused           string
-	Buf               string
-	TempDir           string
-	ClosedEnvironment bool
-	controls          executionControls
-	controlsDigest    string
-	extraEnvironment  []string
-	host              hostToolchainBinding
-	digests           [4]string
+	Schema             string
+	Phebs              string
+	Zoekt              string
+	Focused            string
+	Buf                string
+	TempDir            string
+	ClosedEnvironment  bool
+	dataMeasurementV27 bool
+	controls           executionControls
+	controlsDigest     string
+	extraEnvironment   []string
+	host               hostToolchainBinding
+	digests            [4]string
 }
 
 type privateServer struct {
@@ -216,7 +217,9 @@ func buildPrivateToolchain(
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
 		if commandErr != nil {
-			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module hydration failed", commandErr)
+			commandErr = sanitizeMeasuredCommandFailure(
+				"T40.13 private module hydration failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
+			)
 		}
 		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
 		if err != nil {
@@ -232,7 +235,9 @@ func buildPrivateToolchain(
 		command.Stdout, command.Stderr = io.Discard, io.Discard
 		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
 		if commandErr != nil {
-			commandErr = sanitizeMeasuredCommandFailure("T40.13 private module verification failed", commandErr)
+			commandErr = sanitizeMeasuredCommandFailure(
+				"T40.13 private module verification failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
+			)
 		}
 		metrics, err = mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
 		if err != nil {
@@ -247,11 +252,12 @@ func buildPrivateToolchain(
 		Schema: privateToolchainSchema,
 		Phebs:  filepath.Join(output, "phebs"), Zoekt: filepath.Join(output, "zoekt-git-index"),
 		Focused: filepath.Join(output, "phebs-focused-index"), Buf: filepath.Join(output, "buf"),
-		TempDir:           privateTemp,
-		ClosedEnvironment: v25,
-		controls:          controls,
-		controlsDigest:    controlsDigest,
-		host:              hostTools,
+		TempDir:            privateTemp,
+		ClosedEnvironment:  v25,
+		dataMeasurementV27: planSchemaVersion(plan.Schema) >= 27,
+		controls:           controls,
+		controlsDigest:     controlsDigest,
+		host:               hostTools,
 	}
 	builds := []struct {
 		output string
@@ -286,7 +292,9 @@ func buildPrivateToolchain(
 			command.Stdout, command.Stderr = io.Discard, io.Discard
 			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
 			if commandErr != nil {
-				commandErr = sanitizeMeasuredCommandFailure("T40.13 toolchain build failed", commandErr)
+				commandErr = sanitizeMeasuredCommandFailure(
+					"T40.13 toolchain build failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
+				)
 			}
 			metrics, combinedErr := mergeMetricsPreservingError(commandErr, metrics, commandMetrics)
 			if combinedErr != nil {

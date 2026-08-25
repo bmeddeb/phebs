@@ -132,7 +132,7 @@ func darwinChildPIDs(parent int) ([]int, error) {
 	}
 	buffer := make([]int32, maxProcessDescendants+1)
 	returned, _, errno := unix.Syscall6(
-		unix.SYS_PROC_INFO,
+		unix.SYS_PROC_INFO, //nolint:staticcheck // x/sys has no proc_pidinfo wrapper.
 		processInfoCallListPIDs,
 		processParentOnly,
 		uintptr(parent),
@@ -166,7 +166,7 @@ func darwinProcessObservation(pid int) (processSnapshot, error) {
 	}
 	var record darwinProcessTaskAllInfo
 	returned, _, errno := unix.Syscall6(
-		unix.SYS_PROC_INFO,
+		unix.SYS_PROC_INFO, //nolint:staticcheck // x/sys has no proc_pidinfo wrapper.
 		processInfoCallPIDInfo,
 		uintptr(pid),
 		processPIDTaskAllInfo,
@@ -220,7 +220,8 @@ func reconcileDarwinDeniedChild(
 func darwinProcessShortParent(pid int) (int, error) {
 	var record darwinProcessShortBSDInfo
 	returned, _, errno := unix.Syscall6(
-		unix.SYS_PROC_INFO, processInfoCallPIDInfo, uintptr(pid), processPIDShortBSDInfo, 0,
+		unix.SYS_PROC_INFO, //nolint:staticcheck // x/sys has no proc_pidinfo wrapper.
+		processInfoCallPIDInfo, uintptr(pid), processPIDShortBSDInfo, 0,
 		uintptr(unsafe.Pointer(&record)), unsafe.Sizeof(record),
 	)
 	if errno != 0 {

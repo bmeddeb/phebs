@@ -498,7 +498,7 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, kind := range []string{"semantic", "structural"} {
+	for _, kind := range []string{"structural", "semantic"} {
 		t.Run(kind, func(t *testing.T) {
 			rehearseProductionPath(t, ctx, moduleRoot, workspace, toolchain, kind)
 		})
@@ -518,19 +518,20 @@ func buildWorkingTreeToolchain(
 		return privateToolchain{}, err
 	}
 	toolchain := privateToolchain{
-		Schema:            privateToolchainSchema,
-		Phebs:             filepath.Join(output, "phebs"),
-		Zoekt:             filepath.Join(output, "zoekt-git-index"),
-		Focused:           filepath.Join(output, "phebs-focused-index"),
-		Buf:               filepath.Join(output, "buf"),
-		ClosedEnvironment: true,
+		Schema:             privateToolchainSchema,
+		Phebs:              filepath.Join(output, "phebs"),
+		Zoekt:              filepath.Join(output, "zoekt-git-index"),
+		Focused:            filepath.Join(output, "phebs-focused-index"),
+		Buf:                filepath.Join(output, "buf"),
+		ClosedEnvironment:  true,
+		dataMeasurementV27: true,
 	}
 	hostToolchain, err := observeHostToolchain(ctx, true)
 	if err != nil {
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV26,
+		Schema:        PlanSchemaV27,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -683,7 +684,9 @@ func rehearseProductionPath(
 	}
 	t.Log("cold lifecycle and authorized query passed")
 	if kind == "semantic" {
-		server, a = rehearseSemanticInterruptionBoundary(t, ctx, profile, toolchain, server, a)
+		server, a = rehearseSemanticInterruptionBoundary(
+			t, ctx, workspace, profile, toolchain, server, a,
+		)
 		t.Log("semantic interruption boundary passed")
 	}
 
@@ -751,6 +754,7 @@ func rehearseProductionPath(
 func rehearseSemanticInterruptionBoundary(
 	t *testing.T,
 	ctx context.Context,
+	workspace string,
 	profile PreparedProfile,
 	toolchain privateToolchain,
 	server *privateServer,
@@ -765,20 +769,39 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
-	// The observer is fully armed before the source update; after selection the
-	// graceful stop may settle or release the lease, so restart proves its exact
-	// non-running fate and unchanged A authority.
-	meter, err := beginPhaseMeter(server, profile.DataDir, &a)
+	plan := Plan{Schema: PlanSchemaV27, Safety: frozenSafetyV25}
+	run := &execution{
+		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(5)
+	if err := server.stop(30 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	handedOff := false
+	defer func() {
+		if handedOff {
+			return
+		}
+		if err := run.stopServers(); err != nil {
+			t.Errorf("stop interruption diagnostic; retained at %s: %v", workspace, err)
+		}
+		for active := range run.activeMeters {
+			if _, err := run.finishMeter(active, nil); err != nil {
+				t.Errorf("finish interruption diagnostic meter; retained at %s: %v", workspace, err)
+			}
+		}
+	}()
+	server, firstMeter, err := run.startServer(profile, "interruption-first", &a)
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan := Plan{Schema: PlanSchemaV26}
-	run := &execution{
-		ctx: ctx, plan: plan,
-		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
-	}
+
+	// The observer is fully armed before the source update; after selection the
+	// graceful stop may settle or release the lease, so restart proves its exact
+	// non-running fate and unchanged A authority.
 	observer, err := run.newInterruptionTriggerV18Observer(
-		server, meter, profile, profile.Revisions["b"],
+		server, firstMeter, profile, profile.Revisions["b"],
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -811,9 +834,6 @@ func rehearseSemanticInterruptionBoundary(
 	if err := observer.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := meter.finish(nil); err != nil {
-		t.Fatal(err)
-	}
 	if err := server.stop(30 * time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -822,22 +842,28 @@ func rehearseSemanticInterruptionBoundary(
 	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a"], true); err != nil {
 		t.Fatal(err)
 	}
-	restarted, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-semantic-interruption")
+	firstMetrics, err := run.finishMeter(firstMeter, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	handedOff := false
-	defer func() {
-		if !handedOff {
-			if err := restarted.stop(30 * time.Second); err != nil {
-				t.Errorf("stop interruption diagnostic; retained at %s: %v", filepath.Dir(profile.DataDir), err)
-			}
-		}
-	}()
-	if _, err := awaitPrivateServerHealth(
-		ctx, restarted, profile, "rehearsal-semantic-interruption", 2*time.Minute,
-	); err != nil {
+	restartBoundary, err := firstMeter.takeRawEndBoundary()
+	if err != nil {
 		t.Fatal(err)
+	}
+	if restartBoundary.workspace != workspace || restartBoundary.allocated <= 0 || restartBoundary.consumed {
+		t.Fatalf(
+			"semantic interruption restart boundary workspace_match=%t allocated_bytes=%d consumed=%t",
+			restartBoundary.workspace == workspace, restartBoundary.allocated, restartBoundary.consumed,
+		)
+	}
+	restarted, restartMeter, err := run.startServerV27(
+		profile, "interruption-restart", &a, restartBoundary,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !restartBoundary.consumed {
+		t.Fatal("semantic interruption restart did not consume its exact data boundary")
 	}
 	recovered, err := waitInterruptionLeaseRecoveryV22(
 		ctx, profile, trigger, triggerScheduleDigest,
@@ -879,12 +905,62 @@ func rehearseSemanticInterruptionBoundary(
 		t.Fatal("semantic interruption rehearsal changed exact A authority")
 	}
 	if err := waitForDerivedPartialClear(
-		ctx, Plan{Schema: PlanSchemaV26}, profile.DataDir, 3*time.Minute,
+		ctx, plan, profile.DataDir, 3*time.Minute,
 	); err != nil {
 		t.Logf("semantic interruption partial controls: %v", rehearsalPartialControls(profile.DataDir))
 		t.Logf("semantic interruption derived inventory: %v", rehearsalDerivedInventory(profile.DataDir))
 		t.Fatal(err)
 	}
+	restartMetrics, err := run.finishMeter(restartMeter, &afterRestart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.metersExpected != 2 || run.metersTracked != 2 || len(run.activeMeters) != 0 ||
+		run.measurementErr != nil {
+		t.Fatalf(
+			"semantic interruption meter inventory expected=%d tracked=%d active=%d error=%v",
+			run.metersExpected, run.metersTracked, len(run.activeMeters), run.measurementErr,
+		)
+	}
+	mergedMetrics, err := mergeMetrics(firstMetrics, restartMetrics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.partialMetrics != mergedMetrics {
+		t.Fatalf("semantic interruption merged meter evidence changed: got=%+v want=%+v",
+			run.partialMetrics, mergedMetrics)
+	}
+	for _, evidence := range []struct {
+		name    string
+		metrics PhaseMetrics
+	}{
+		{name: "first", metrics: firstMetrics},
+		{name: "restart", metrics: restartMetrics},
+	} {
+		if evidence.metrics.WallMS <= 0 || evidence.metrics.PeakRSSBytes <= 0 ||
+			evidence.metrics.DataLogicalBytes <= 0 || evidence.metrics.DataAllocatedBytes <= 0 {
+			t.Fatalf("semantic interruption %s meter evidence is incomplete: %+v",
+				evidence.name, evidence.metrics)
+		}
+	}
+	wantLabels := []string{"interruption-first", "interruption-restart"}
+	if len(run.observation.ServerStartups) != len(wantLabels) {
+		t.Fatalf("semantic interruption startup inventory = %+v", run.observation.ServerStartups)
+	}
+	for index, startup := range run.observation.ServerStartups {
+		if startup.Profile != profile.Name || startup.Label != wantLabels[index] ||
+			startup.Outcome != "healthy" || startup.LastStage != "http_ready" ||
+			startup.LastHealthClass != "ok" || startup.HealthAttempts <= 0 ||
+			startup.WallMS <= 0 || startup.PeakRSSBytes <= 0 || startup.LogBytes <= 0 ||
+			!digestIdentity(startup.LogSHA256) {
+			t.Fatalf("semantic interruption startup evidence = %+v", startup)
+		}
+	}
+	t.Logf(
+		"semantic interruption exact meters first_wall_ms=%d restart_wall_ms=%d logical_bytes=%d allocated_bytes=%d",
+		firstMetrics.WallMS, restartMetrics.WallMS,
+		restartMetrics.DataLogicalBytes, restartMetrics.DataAllocatedBytes,
+	)
 	handedOff = true
 	return restarted, afterRestart
 }

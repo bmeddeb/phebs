@@ -2,6 +2,7 @@ package t4013
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLogAccountingUsesOnlyClosedDiagnosticReceipts(t *testing.T) {
@@ -87,10 +89,17 @@ func TestMeasuredCommandSanitizationRetainsOnlyCustodySentinels(t *testing.T) {
 		errAllocationSamplingFailed,
 		errPrivateServerShutdownUnproven,
 	} {
-		got := sanitizeMeasuredCommandFailure("measured command failed", errors.Join(private, retained))
+		got := sanitizeMeasuredCommandFailure("measured command failed", errors.Join(private, retained), false)
 		if !errors.Is(got, retained) || errors.Is(got, private) || strings.Contains(got.Error(), private.Error()) {
 			t.Fatalf("sanitized %v = %v", retained, got)
 		}
+	}
+	deadline := newDataMeasurementDeadlineError(false)
+	historical := sanitizeMeasuredCommandFailure("measured command failed", deadline, false)
+	current := sanitizeMeasuredCommandFailure("measured command failed", deadline, true)
+	if projectDataMeasurementDeadline(historical) != nil ||
+		projectDataMeasurementDeadline(current) == nil {
+		t.Fatalf("versioned data-measurement sanitization = historical:%v current:%v", historical, current)
 	}
 }
 
@@ -136,6 +145,96 @@ func TestAllocationSamplerRetainsCapacityTroughAfterSpaceReturns(t *testing.T) {
 	second, err := sampler.close()
 	if err != nil || second != peak {
 		t.Fatalf("repeated close = %d, %v; want %d", second, err, peak)
+	}
+}
+
+func TestV27RawEndBoundaryUsesRawGaugeAndIsOneShotForOneWorkspace(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("exact data-byte measurement is supported on Linux and macOS")
+	}
+	root := filepath.Clean(t.TempDir())
+	logPath := filepath.Join(root, "server.log")
+	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, rawAllocated, err := measureDataBytesForContract(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation, err := newAllocationSampler(root, rawAllocated, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation.mu.Lock()
+	drop := int64(4096)
+	if allocation.baselineAvailable < drop {
+		drop = allocation.baselineAvailable
+	}
+	allocation.minimumAvailable = allocation.baselineAvailable - drop
+	allocation.mu.Unlock()
+	meter := &phaseMeter{
+		started: time.Now(), server: &privateServer{logPath: logPath}, dataDir: root,
+		allocation: allocation, strict: true, captureRaw: true,
+	}
+	metrics, err := meter.finish(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	boundary, err := meter.takeRawEndBoundary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocated, err := boundary.consume(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if allocated != rawAllocated || metrics.DataAllocatedBytes < allocated+drop {
+		t.Fatalf("raw/peak allocation = %d/%d, want raw %d and peak >= %d",
+			allocated, metrics.DataAllocatedBytes, rawAllocated, allocated+drop)
+	}
+	if _, err := boundary.consume(root); err == nil {
+		t.Fatal("raw-end boundary was consumed twice")
+	}
+	if _, err := meter.takeRawEndBoundary(); err == nil {
+		t.Fatal("raw-end boundary was handed off twice")
+	}
+	other, err := newDataMeasurementBoundary(root, rawAllocated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := other.consume(filepath.Clean(t.TempDir())); err == nil {
+		t.Fatal("raw-end boundary crossed workspaces")
+	}
+}
+
+func TestDataMeasurementDeadlineProjectionIsTypedAndSourceFree(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		apparent bool
+		gauge    string
+	}{
+		{name: "allocated", gauge: dataMeasurementAllocated},
+		{name: "logical", apparent: true, gauge: dataMeasurementLogical},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			private := errors.New("/private/custody/secret")
+			projection := projectDataMeasurementDeadline(errors.Join(
+				private, newDataMeasurementDeadlineError(test.apparent),
+			))
+			if projection == nil || projection.Schema != dataMeasurementFailureSchemaV1 ||
+				projection.Scope != dataMeasurementScope || projection.Gauge != test.gauge ||
+				projection.Reason != dataMeasurementDeadline ||
+				projection.DeadlineMS != 30_000 {
+				t.Fatalf("deadline projection = %+v", projection)
+			}
+			raw, err := json.Marshal(projection)
+			if err != nil || strings.Contains(string(raw), private.Error()) {
+				t.Fatalf("source-free projection = %s, %v", raw, err)
+			}
+		})
+	}
+	if got := projectDataMeasurementDeadline(errors.New("ordinary failure")); got != nil {
+		t.Fatalf("ordinary failure projected as deadline: %+v", got)
 	}
 }
 
@@ -187,9 +286,20 @@ func TestDataMeasurementProcessContractChangesOnlyAtV25(t *testing.T) {
 	if _, _, err := measureDataBytesForPlan(Plan{Schema: PlanSchemaV25}, root); err != nil {
 		t.Fatalf("V25 measurement did not use its absolute bounded du contract: %v", err)
 	}
+	if _, err := measureDataAllocatedBytesForContract(root, true); err != nil {
+		t.Fatalf("V27 allocated-only fallback did not use its absolute bounded du contract: %v", err)
+	}
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := duKilobytesContext(canceled, root, false); err == nil {
+	if _, err := duKilobytesContext(canceled, root, false); err == nil ||
+		projectDataMeasurementDeadline(err) != nil {
 		t.Fatal("V25 du measurement ignored its context bound")
+	}
+	expired, expire := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer expire()
+	if _, err := duKilobytesContext(expired, root, false); err == nil ||
+		errors.Is(err, context.DeadlineExceeded) ||
+		projectDataMeasurementDeadline(err).Gauge != dataMeasurementAllocated {
+		t.Fatalf("typed gauge deadline changed its historical context identity: %v", err)
 	}
 }
