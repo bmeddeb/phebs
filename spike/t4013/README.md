@@ -3876,8 +3876,16 @@ sample through its whole lifecycle cycle, refuses exact-mode stale-reap
 mutations/errors, preserves and seals same-phase process-sampling evidence after
 review-ceiling teardown, continues warm confirmation from its settled cursor,
 allocates no exact-report state when disabled, and corrects the lifecycle owner
-count to fourteen. Focused correction regressions and parallel review passed;
-complete exact-tree gates and recorded independent re-review remain pending. No
-merge, exact-main preflight, fresh-ID freeze, execution, release,
+count to fourteen. Exact correction commit
+`ec4f2500d1b68dcbe539667d5833fdf694bc5adc` passed the complete machine gate:
+package 101.806s, race 116.836s, real launcher 64.460s, readiness 820.702s,
+command 12.869s, `internal/store` 1019.180s, `internal/sync` 64.082s, and all
+static/documentation checks. Re-review recorded 0 critical, 0 high, 0 medium,
+and 2 low findings: deterministic warm-cursor close on two pre-confirmation
+failure paths, and two contradictory startup-cost sentences. The next
+correction keeps the proven cursor FD under unconditional phase-meter finish
+cleanup and fixes those sentences; focused normal/race, docs, and glossary pass.
+A new immutable commit, complete gate, and fresh independent review remain
+pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is passed or
 authorized here.

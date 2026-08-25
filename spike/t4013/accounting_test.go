@@ -713,14 +713,17 @@ func TestPhaseMeterRetainsProcessFailureWhenDataGaugeFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	processCause := errors.New("synthetic process failure")
+	cleanupCause := errors.New("synthetic finish cleanup failure")
 	sampler := newSyntheticRSSSampler(10)
 	sampler.recordFailure(processCause)
 	meter := &phaseMeter{
 		started: time.Now(), server: &privateServer{sampler: sampler},
 		dataDir: "relative", allocation: allocation, strict: true,
+		finishCleanup: func() error { return cleanupCause },
 	}
 	_, err = meter.finish(nil, PlanSchemaV30)
-	if err == nil || !errors.Is(err, errProcessSamplingFailed) || !errors.Is(err, processCause) {
+	if err == nil || !errors.Is(err, errProcessSamplingFailed) ||
+		!errors.Is(err, processCause) || !errors.Is(err, cleanupCause) {
 		t.Fatalf("data/process measurement error = %v", err)
 	}
 }

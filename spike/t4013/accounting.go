@@ -40,6 +40,7 @@ type phaseMeter struct {
 	before                *privateProfileSnapshot
 	allocation            *allocationSampler
 	beforeProcessSnapshot func() error
+	finishCleanup         func() error
 	boundaryFailed        bool
 	boundaryMeasurement   error
 	strict                bool
@@ -489,9 +490,17 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 	)
 }
 
-func (meter *phaseMeter) finish(after *privateProfileSnapshot, planSchema string) (PhaseMetrics, error) {
+func (meter *phaseMeter) finish(
+	after *privateProfileSnapshot,
+	planSchema string,
+) (_ PhaseMetrics, resultErr error) {
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")
+	}
+	if meter.finishCleanup != nil {
+		cleanup := meter.finishCleanup
+		meter.finishCleanup = nil
+		defer func() { resultErr = errors.Join(resultErr, cleanup()) }()
 	}
 	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.strict)
 	var processMetrics PhaseMetrics

@@ -5517,8 +5517,8 @@ this phase individually proves rollback, active-lease, marker, or store-pin
 survival. Run the mandatory `internal/lifecycle`, `internal/store`, and
 publication regression gates for those protection semantics.
 
-V30 changes no product query/request, repository sync tick, ordinary
-startup/restart, retry/no-op, publication, lock, cache, persistent schema,
+V30 changes no product query/request, repository sync tick, retry/no-op,
+publication, lock, cache, persistent schema,
 memory/disk bound, or child-process path. Production lifecycle scheduling adds
 the pressure-recovery suffix-plus-full-cycle and the fail-closed capacity retry
 described above; healthy normal hourly cadence is unchanged. Ceremony phase 9
@@ -5549,8 +5549,14 @@ on 2026-08-25. Independent review of exact commit
 medium, and 3 low findings. Its correction tree passes focused repeated and
 parallel review for the whole-cycle capacity latch, exact stale-reap refusal,
 post-delete process-sentinel sealing, settled warm-cursor handoff, absent-mode
-allocation, and fourteen-owner wording. Do not merge, run exact-main preflight,
-select or freeze a fresh identifier, or execute another ceremony until the
-corrected exact commit passes the complete gate and recorded independent
-re-review. No later authorization is established by this implementation
-record.
+allocation, and fourteen-owner wording. Exact correction commit
+`ec4f2500d1b68dcbe539667d5833fdf694bc5adc` then passed the complete machine
+gate, but re-review recorded 0 critical, 0 high, 0 medium, and 2 low findings:
+the settled warm cursor lacked deterministic close on two pre-confirmation
+failures, and this guide plus the backlog contradicted the startup lookup cost.
+The next correction keeps the proven FD under unconditional phase-meter finish
+cleanup and fixes both cost sentences; focused normal/race, docs, and glossary
+pass. Do not merge, run exact-main preflight, select or freeze a fresh
+identifier, or execute another ceremony until a new exact commit passes the
+complete gate and recorded independent review. No later authorization is
+established by this implementation record.

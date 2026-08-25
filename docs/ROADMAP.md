@@ -2167,11 +2167,17 @@ passed on 2026-08-25. Independent review of exact commit
 `4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical, 0 high, 3
 medium, and 3 low findings. The correction tree closes the whole-cycle capacity
 latch, exact stale-reap, teardown-sentinel, warm-cursor, absent-allocation, and
-owner-count findings; focused correction regressions and parallel review pass.
-Complete exact-tree gates and recorded independent re-review remain pending.
-Merge, exact-main preflight, fresh-ID freeze, execution, release,
-T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims remain
-unauthorized.
+owner-count findings. Exact correction commit
+`ec4f2500d1b68dcbe539667d5833fdf694bc5adc` passed every machine gate, but
+re-review recorded 0 critical, 0 high, 0 medium, and 2 low findings: two
+pre-confirmation paths did not deterministically close the settled warm cursor,
+and two owning cost sections contradicted the startup lookup record. The next
+correction keeps the proven FD under unconditional phase-meter finish cleanup
+and fixes those sentences; focused normal/race and documentation checks pass. A
+new immutable commit, complete exact-tree gate, and fresh independent review
+remain pending. Merge, exact-main preflight, fresh-ID freeze, execution,
+release, T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims
+remain unauthorized.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

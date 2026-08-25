@@ -4386,6 +4386,7 @@ func (run *execution) waitWarmNoopSnapshot(
 			profile, server, cursor, after, deadline,
 		)
 	}
+	meter.finishCleanup = cursor.Close
 	return after, nil
 }
 
@@ -4395,7 +4396,7 @@ func (run *execution) confirmWarmNoopBoundary(
 	cursor *candidateReuseCursor,
 	expected privateProfileSnapshot,
 	deadline time.Time,
-) (resultErr error) {
+) error {
 	if run == nil || run.ctx == nil || server == nil || server.done == nil ||
 		cursor == nil || deadline.IsZero() || !deadline.After(time.Now()) {
 		return errConvergenceDeadline
@@ -4404,7 +4405,6 @@ func (run *execution) confirmWarmNoopBoundary(
 	if err != nil {
 		return err
 	}
-	defer func() { resultErr = errors.Join(resultErr, cursor.Close()) }()
 	phase, cancel := context.WithDeadline(run.ctx, deadline)
 	defer cancel()
 	ticker := time.NewTicker(5 * time.Second)

@@ -360,10 +360,16 @@ of exact commit `4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical,
 non-exact capacity sample through its whole lifecycle cycle, refuses exact-mode
 stale reap mutations/errors, preserves same-phase process-sampling evidence
 through review-ceiling teardown, reuses the settled warm cursor, allocates no
-absent exact-report state, and names all fourteen lifecycle owners. Focused
-correction regressions and parallel review passed; complete exact-tree gates and
-recorded independent re-review remain pending. Integration, exact-main
-preflight, freeze, and execution are not yet passed or authorized.
+absent exact-report state, and names all fourteen lifecycle owners. Exact
+correction commit `ec4f2500d1b68dcbe539667d5833fdf694bc5adc` passed the complete
+machine gate, but re-review recorded 0 critical, 0 high, 0 medium, and 2 low
+findings: a settled warm cursor was not deterministically closed on two
+pre-confirmation failure paths, and two owning cost sections contradicted the
+startup lookup record. The next correction keeps that exact FD under an
+unconditional phase-meter finish cleanup and removes the contradictory wording;
+focused normal/race and documentation checks pass. A new immutable commit,
+complete exact-tree gates, and independent review remain pending. Integration,
+exact-main preflight, freeze, and execution are not yet passed or authorized.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
