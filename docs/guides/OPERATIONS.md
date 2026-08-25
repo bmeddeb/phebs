@@ -5415,3 +5415,18 @@ launcher, `internal/`, standalone `internal/store`, module, vet, lint, docs,
 glossary, shell, and whitespace gates plus recorded independent review. Only
 then integrate, run exact-main preflight, and freeze the fresh identifier.
 Freeze and execution remain separate authorizations.
+
+Current preparation record: exact implementation commit
+`06b6e61e2316b33b5cad326e9efa2c9b97194309` passed independent review with
+critical/high/medium/low all zero after the reviewer-selected custody, bound,
+and cost corrections. Deterministic V29, package/race, real-launcher, all
+`internal/`, standalone store, module, vet, lint, docs, glossary, shell, and
+whitespace gates pass. One pre-review structural rehearsal crossed production
+`warmNoop` with startup/phase Git counts 3/3. The final content has not passed
+its host gate: a fresh-module network timeout stopped before launch, then one
+unchanged retry reached healthy `http_ready` and hit the intentionally sticky
+Darwin native sampler `EPERM`. Retain diagnostic roots
+`phebs-t4013-readiness-2696656312` and `phebs-t4013-readiness-2146731620`;
+PID 66440 is gone and no process survives. Do not retry again in the same host
+state, relax root denial, integrate, or freeze. Resume with one later host-clean
+complete exact-commit readiness run.

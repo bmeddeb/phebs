@@ -1991,6 +1991,32 @@ restart/health/revalidation cycle. Full exact-tree gates, independent review,
 integration, exact-main preflight, fresh-ID freeze, frozen-plan review, and
 exact-ID/digest execution authorization remain required.
 
+Gate status (2026-08-25): the corrected content passed 20 V29 repetitions
+(1.333s), complete package (159.565s), full package race (145.292s), real
+launcher custody (85.128s), all 69 non-store `internal/` packages, standalone
+`internal/store` (1,256.530s), module, vet, lint, docs, glossary, shell, and
+whitespace. Independent review of exact commit
+`06b6e61e2316b33b5cad326e9efa2c9b97194309` reported critical/high/medium/low
+all zero. Its two earlier medium findings—failure-path readiness custody and a
+forged over-8,192 warm process inventory—and one low cost wording finding were
+corrected before that commit.
+
+Readiness remains open. One pre-review structural run passed the production
+warm boundary with startup Git children 3 equal to phase Git children 3. For
+the final content, one confirmation stopped before launch on a transient fresh
+module-cache network timeout at retained root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2696656312`.
+After exact module reachability recovered, its one unchanged retry reached
+healthy `http_ready` and then stopped on the deliberately sticky Darwin native
+sampler `EPERM`; root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2146731620`
+is retained and PID 66440 is gone. Neither attempt is readiness evidence, no
+process survives, and no further retry was attempted. A later host-clean
+complete exact-commit readiness pass is mandatory before a merge request.
+Integration, exact-main preflight, neutral-39 freeze/review/execution, release,
+T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims remain
+unauthorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

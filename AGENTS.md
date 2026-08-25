@@ -269,9 +269,20 @@ scratch-source custody. T40.13p's prospective V29 contract requires the whole
 warm phase Git count to equal its paired healthy-startup count, while retaining
 exact snapshot, index, publication, authority, and reuse gates; V1–V28 remain
 exact. The small real-binary readiness path now calls production `warmNoop`.
-The original T40.13 gate remains open; review, integration, exact-main
-preflight, fresh-ID selection, freeze, and execution remain separately
-authorized. Epic 40
+The corrected content passed 20 V29 repetitions, complete package/race,
+real-launcher custody, all 69 non-store `internal/` packages, standalone
+`internal/store`, module, vet, lint, docs, glossary, shell, and whitespace.
+Independent review of exact commit
+`06b6e61e2316b33b5cad326e9efa2c9b97194309` found critical, high, medium, and
+low counts all zero. One pre-review structural rehearsal passed the production
+warm boundary with startup Git children 3 and phase Git children 3. The final
+content's first confirmation stopped before launch on module-network timeout;
+its one unchanged retry reached healthy `http_ready` and then met the existing
+sticky Darwin sampler `EPERM`. Both diagnostic roots remain, no process
+survives, and no further retry was attempted. A later host-clean complete
+exact-commit readiness pass remains mandatory before integration readiness.
+The original T40.13 gate remains open; integration, exact-main preflight,
+fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services
