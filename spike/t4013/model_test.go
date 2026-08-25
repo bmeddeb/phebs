@@ -894,6 +894,18 @@ func TestV30StartupProcessSentinelBindsFailedMeasurement(t *testing.T) {
 			t.Fatalf("matching V30 startup sentinel with %q failed: %v", code, err)
 		}
 	}
+	ceiling := newValue(
+		"stopped", "failed_phase_process_sampling_unavailable", "authorized_query", true,
+	)
+	ceiling.Failures[0] = FailureObservation{
+		Phase: "authorized_query", Class: "environment", Code: "review_ceiling_crossed",
+	}
+	ceiling.Decision = DecisionObservation{
+		Selected: "cohort_experiment", Reason: "frozen_review_ceiling_crossed", Substantiated: true,
+	}
+	if err := ValidateObservation(ceiling); err != nil {
+		t.Fatalf("higher-priority V30 startup sentinel failed: %v", err)
+	}
 	wrongClass := newValue("stopped", "failed_phase_measurement_unavailable", "authorized_query", true)
 	wrongClass.Failures[0].Class = "execution"
 	nonzeroFact := newValue("stopped", "failed_phase_process_sampling_unavailable", "authorized_query", true)

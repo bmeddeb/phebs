@@ -457,11 +457,15 @@ func serve(args []string) error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	exactReportFailed := make(chan struct{})
-	var exactReportFailureOnce sync.Once
-	failExactReport := func(error) {
-		exactReportFailureOnce.Do(func() { close(exactReportFailed) })
-		cancel()
+	var exactReportFailed chan struct{}
+	var failExactReport func(error)
+	if exactReports {
+		exactReportFailed = make(chan struct{})
+		var exactReportFailureOnce sync.Once
+		failExactReport = func(error) {
+			exactReportFailureOnce.Do(func() { close(exactReportFailed) })
+			cancel()
+		}
 	}
 
 	if err := os.MkdirAll(cfg.Server.DataDir, 0o755); err != nil {

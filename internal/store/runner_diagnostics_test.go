@@ -14,6 +14,8 @@ type lifecycleRunnerStore struct {
 	flakyRunnerStore
 	job     Job
 	claimed bool
+	reaped  int
+	reapErr error
 }
 
 func (s *lifecycleRunnerStore) ReapStale(
@@ -22,7 +24,7 @@ func (s *lifecycleRunnerStore) ReapStale(
 	time.Duration,
 	int,
 ) (int, error) {
-	return 0, nil
+	return s.reaped, s.reapErr
 }
 
 func (s *lifecycleRunnerStore) ClaimJob(
@@ -95,6 +97,55 @@ func TestRunnerLifecycleFollowsPersistedSuccess(t *testing.T) {
 	if len(state.statuses) != 2 || state.statuses[0] != StatusRunning ||
 		state.statuses[1] != StatusDone {
 		t.Fatalf("persisted statuses = %v", state.statuses)
+	}
+}
+
+func TestRunnerExactLifecycleRefusesStaleReap(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		reaped  int
+		reapErr error
+	}{
+		{name: "durable mutation", reaped: 1},
+		{name: "unavailable result", reapErr: errors.New("private reap error")},
+		{name: "partial mutation", reaped: 1, reapErr: errors.New("private partial error")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			state := &lifecycleRunnerStore{reaped: test.reaped, reapErr: test.reapErr}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			failed := make(chan error, 1)
+			done := make(chan struct{})
+			runner := &Runner{
+				Store: state, Kind: JobSync, Interval: time.Millisecond,
+				LifecycleReportFailure: func(err error) {
+					failed <- err
+					cancel()
+				},
+			}
+			go func() {
+				defer close(done)
+				runner.Run(ctx)
+			}()
+			select {
+			case err := <-failed:
+				if err == nil || strings.Contains(err.Error(), "private") {
+					t.Fatalf("unbounded stale-reap failure = %v", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("exact lifecycle accepted an unreported stale reap")
+			}
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("runner did not stop after stale-reap refusal")
+			}
+			state.mu.Lock()
+			defer state.mu.Unlock()
+			if state.claimed {
+				t.Fatal("runner claimed work after stale-reap refusal")
+			}
+		})
 	}
 }
 

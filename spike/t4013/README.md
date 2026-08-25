@@ -3846,9 +3846,11 @@ fixed phase deadlines. Truthful `durable-jobs` backlog does not block either
 waiter; an owner error or backlog in one of the 13 required drained rows keeps
 owner progression at five-second cadence until the deadline. Healthy normal
 hourly steady state is unchanged. No product
-query, request, repository sync tick, ordinary startup/restart, retry/no-op,
-publication transition, lock, cache, corpus/shard read, persistent schema,
-memory/disk bound, or child-process work changes. Ceremony phase 9 adds one
+query, request, repository sync tick, retry/no-op, publication transition, lock,
+cache, corpus/shard read, persistent schema, memory/disk bound, or child-process
+work changes. Ordinary startup adds one closed exact-control environment lookup
+and branch; when absent it allocates no report channel or sink and adds no
+persistent work. Ceremony phase 9 adds one
 restart, the same bounded owner/status work, and scalar-plus-14-row validation
 with 13 exact/drained predicates and one durable-job lower-bound predicate.
 Warm restart adds incremental phase-local candidate/job lifecycle parsing,
@@ -3858,16 +3860,24 @@ one bounded post-reset log-tail scan, and the atomic process/log-EOF handoff
 under the unchanged revalidation deadline. Phase 7 adds one existing
 post-recovery protected-authority inspection. Only exact-control mode adds
 synchronous per-report log writes for candidate output and all seven job
-runners; ordinary steady-state reporting is
-unchanged. No production request, job, child, or new deadline is added.
+runners; ordinary steady-state reporting is unchanged. No production request,
+job, child, or new deadline is added.
 
-Focused and bounded regressions passed, including the complete package
-(104.564s), full package race (129.985s), real-launcher custody proof
-(115.754s), and complete production-path readiness rehearsal (884.324s).
-Every `internal/` package passed in one run, including `internal/store`
-(1081.231s) and `internal/sync` (61.915s). Module verification and compilation,
-vet, repository-pinned golangci-lint 2.12.2, documentation, glossary, shell, and
-whitespace gates also passed. Recorded exact-commit independent review remains
-pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
+The pre-review focused and bounded regressions passed, including the complete
+package (104.564s), full package race (129.985s), real-launcher custody proof
+(115.754s), complete production-path readiness rehearsal (884.324s), every
+`internal/` package including `internal/store` (1081.231s) and `internal/sync`
+(61.915s), module verification and compilation, vet, repository-pinned
+golangci-lint 2.12.2, documentation, glossary, shell, and whitespace.
+Independent review of exact commit
+`4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical, 0 high, 3
+medium, and 3 low findings. The correction tree latches every non-exact capacity
+sample through its whole lifecycle cycle, refuses exact-mode stale-reap
+mutations/errors, preserves and seals same-phase process-sampling evidence after
+review-ceiling teardown, continues warm confirmation from its settled cursor,
+allocates no exact-report state when disabled, and corrects the lifecycle owner
+count to fourteen. Focused correction regressions and parallel review passed;
+complete exact-tree gates and recorded independent re-review remain pending. No
+merge, exact-main preflight, fresh-ID freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is passed or
 authorized here.

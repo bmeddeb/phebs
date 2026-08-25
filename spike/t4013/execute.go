@@ -4378,13 +4378,12 @@ func (run *execution) waitWarmNoopSnapshot(
 			return snapshot, probe, nil
 		},
 	)
-	closeErr := cursor.Close()
-	if waitErr != nil || closeErr != nil {
-		return privateProfileSnapshot{}, errors.Join(waitErr, closeErr)
+	if waitErr != nil {
+		return privateProfileSnapshot{}, errors.Join(waitErr, cursor.Close())
 	}
 	meter.beforeProcessSnapshot = func() error {
 		return run.confirmWarmNoopBoundary(
-			profile, server, meter.logOffset, after, deadline,
+			profile, server, cursor, after, deadline,
 		)
 	}
 	return after, nil
@@ -4393,19 +4392,15 @@ func (run *execution) waitWarmNoopSnapshot(
 func (run *execution) confirmWarmNoopBoundary(
 	profile PreparedProfile,
 	server *privateServer,
-	logOffset int64,
+	cursor *candidateReuseCursor,
 	expected privateProfileSnapshot,
 	deadline time.Time,
 ) (resultErr error) {
 	if run == nil || run.ctx == nil || server == nil || server.done == nil ||
-		deadline.IsZero() || !deadline.After(time.Now()) {
+		cursor == nil || deadline.IsZero() || !deadline.After(time.Now()) {
 		return errConvergenceDeadline
 	}
 	inspector, err := newProfileInspector(profile, profileInspectionForPlan(run.plan.Schema))
-	if err != nil {
-		return err
-	}
-	cursor, err := newCandidateReuseCursor(server.logPath, logOffset)
 	if err != nil {
 		return err
 	}

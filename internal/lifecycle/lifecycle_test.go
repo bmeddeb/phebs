@@ -433,6 +433,7 @@ func TestRunnerCompletesFreshCycleAfterPressureRecovery(t *testing.T) {
 			},
 		},
 		{name: "unavailable at cycle end without prior pressure", normalAfter: 1, unavailableAt: 3},
+		{name: "unavailable at middle owner without prior pressure", normalAfter: 1, unavailableAt: 2},
 		{
 			name: "normal then unavailable at cycle end", rotation: "bravo",
 			normalAfter: 2, unavailableAt: 4,

@@ -1824,12 +1824,14 @@ func validateStartupProcessSentinels(value Observation) error {
 	if value.Outcome == "stopped" && len(value.Failures) == 1 {
 		failure := value.Failures[0]
 		phaseIndex := slices.Index(phaseOrder, failure.Phase)
-		if failure.Class == "oracle" && phaseIndex >= 0 && phaseIndex < len(value.Phases) &&
+		measurementFailure := failure.Class == "oracle" && slices.Contains([]string{
+			"failed_phase_process_sampling_unavailable",
+			"failed_phase_measurement_unavailable",
+		}, failure.Code)
+		ceilingFailure := failure.Class == "environment" && failure.Code == "review_ceiling_crossed"
+		if phaseIndex >= 0 && phaseIndex < len(value.Phases) &&
 			value.Phases[phaseIndex].Outcome == "failed" &&
-			slices.Contains([]string{
-				"failed_phase_process_sampling_unavailable",
-				"failed_phase_measurement_unavailable",
-			}, failure.Code) {
+			(measurementFailure || ceilingFailure) {
 			allowedPhase = failure.Phase
 		}
 	}

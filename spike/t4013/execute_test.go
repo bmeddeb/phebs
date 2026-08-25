@@ -46,6 +46,10 @@ func newV27FailureExecution(t *testing.T, module, workspace string) *execution {
 	return newFailureExecution(t, module, workspace, frozenV27PlanWithHostToolchain)
 }
 
+func newV30FailureExecution(t *testing.T, module, workspace string) *execution {
+	return newFailureExecution(t, module, workspace, frozenV30PlanWithHostToolchain)
+}
+
 func newFailureExecution(
 	t *testing.T,
 	module string,
@@ -423,6 +427,65 @@ func TestV27TeardownCeilingReclassificationClearsDataMeasurement(t *testing.T) {
 		}
 		verify(t, run, stopped, err)
 	})
+}
+
+func TestV30TeardownCeilingKeepsProcessSamplingFactSealable(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := newV30FailureExecution(t, module, workspace)
+	observationPath := setExecutionObservationPath(t, run)
+	run.observation.Toolchain = completedObservation().Toolchain
+	run.observation.Phases[0] = succeededPhase("preflight", PhaseMetrics{})
+	run.startPhase(1)
+	unavailable := true
+	run.observation.ServerStartups = append(run.observation.ServerStartups, ServerStartupObservation{
+		Profile: "structural-2m-v1", Label: "cold", Outcome: "healthy",
+		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+		ProcessSamplingUnavailable: &unavailable,
+	})
+	run.measurementErr = errProcessSamplingFailed
+	var cancel context.CancelFunc
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
+	run.custodyDestroy = func(workspace, _ string) error {
+		if err := os.RemoveAll(workspace); err != nil {
+			return err
+		}
+		run.ctx, cancel = context.WithDeadlineCause(
+			t.Context(), time.Now().Add(-time.Second), errTotalWallDeadline,
+		)
+		return nil
+	}
+	stopped, err := run.stopAfterFailure(errProcessSamplingFailed)
+	if !errors.Is(err, errTotalWallDeadline) || stopped.Outcome != "stopped" ||
+		len(stopped.Failures) != 1 || stopped.Failures[0].Code != "review_ceiling_crossed" ||
+		len(stopped.ServerStartups) != 1 ||
+		stopped.ServerStartups[0].ProcessSamplingUnavailable == nil ||
+		!*stopped.ServerStartups[0].ProcessSamplingUnavailable {
+		t.Fatalf("V30 reclassified process stop = %+v, %v", stopped, err)
+	}
+	if validateErr := ValidateObservation(stopped); validateErr != nil {
+		t.Fatalf("V30 reclassified process stop is unsealable: %v", validateErr)
+	}
+	raw, readErr := os.ReadFile(observationPath)
+	persisted, decodeErr := DecodeObservation(raw)
+	if readErr != nil || decodeErr != nil || persisted.Failures[0].Code != "review_ceiling_crossed" {
+		t.Fatalf("V30 persisted reclassified process stop = %+v, read=%v decode=%v",
+			persisted, readErr, decodeErr)
+	}
+	if _, checkpointErr := os.Lstat(observationPath + ".teardown"); !errors.Is(checkpointErr, os.ErrNotExist) {
+		t.Fatalf("V30 reclassified process stop retained terminal checkpoint: %v", checkpointErr)
+	}
 }
 
 func TestHistoricalTeardownCheckpointRejectsNestedCurrentFields(t *testing.T) {

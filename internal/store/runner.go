@@ -84,10 +84,12 @@ func (r *Runner) Run(ctx context.Context) {
 		if n, err := r.Store.ReapStale(ctx, r.Kind, r.StaleAfter, r.MaxAttempts); err != nil {
 			if ctx.Err() == nil {
 				log.Printf("runner %s: reap stale %s: %v", r.Who, r.Kind, err)
+				r.failLifecycleReport(errors.New("job lifecycle stale reap is unavailable"))
 			}
 		} else if n > 0 {
 			log.Printf("runner %s: reaped %d stale %s", r.Who, n, r.Kind)
 			jobsTotal.WithLabelValues(string(r.Kind), "reaped").Add(float64(n))
+			r.failLifecycleReport(errors.New("job lifecycle stale reap changed durable state"))
 		}
 		var dependencyDrainDeadline time.Time
 		for ctx.Err() == nil {

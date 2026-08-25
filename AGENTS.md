@@ -333,11 +333,13 @@ full cycle—at most 28 selected turns for 14 owners and at most 64 under the
 32-owner bound—at the existing five-second cadence. Any owner error/backlog or
 unavailable/non-exact capacity removes that bound and keeps the runner at five
 seconds. The phase-7 and phase-9 waiters make no 28/64 claim and remain governed
-by their fixed phase deadlines. Healthy normal hourly state and
-query, sync, ordinary startup/restart, retry/no-op, publication, lock, cache,
-schema, memory/disk, and child costs remain unchanged. Only V30 exact-control
-server mode adds synchronous per-report log writes for candidate output and the
-seven job runners; ordinary steady-state reporting remains advisory. The warm
+by their fixed phase deadlines. Healthy normal hourly state and query, sync,
+retry/no-op, publication, lock, cache, schema, memory/disk, and child costs
+remain unchanged. Ordinary startup adds one closed exact-control environment
+lookup and branch; when absent it allocates no report channel or sink and adds
+no persistent work. Only V30 exact-control server mode adds synchronous
+per-report log writes for candidate output and the seven job runners; ordinary
+steady-state reporting remains advisory. The warm
 harness adds incremental phase-local parsing, exact-authority reinspection per
 attempt, one existing five-second quiet interval, a single finished-metrics
 startup refresh with no second process sample, a bounded post-reset log-tail
@@ -348,13 +350,20 @@ adds one restart and bounded 14-row evidence whose validation applies 13
 exact/drained predicates and one durable-job lower-bound predicate. Truthful
 `durable-jobs` backlog does not block either V30 lifecycle waiter; an owner error
 or backlog in one of the 13 required drained rows keeps owner progression at the
-five-second cadence until the fixed phase deadline. Its focused and bounded
-regressions, complete package/race, real-launcher custody, production-path
-readiness, every `internal/` package including full store, module
-verification/compilation, vet, repository-pinned lint, documentation, glossary,
-shell, and whitespace gates passed on 2026-08-25. Exact-commit independent
-review, integration, exact-main preflight, freeze, and execution are not yet
-passed or authorized.
+five-second cadence until the fixed phase deadline. Its pre-review focused and
+bounded regressions, complete package/race, real-launcher custody,
+production-path readiness, every `internal/` package including full store,
+module verification/compilation, vet, repository-pinned lint, documentation,
+glossary, shell, and whitespace gates passed on 2026-08-25. Independent review
+of exact commit `4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical,
+0 high, 3 medium, and 3 low findings. The correction tree now latches any
+non-exact capacity sample through its whole lifecycle cycle, refuses exact-mode
+stale reap mutations/errors, preserves same-phase process-sampling evidence
+through review-ceiling teardown, reuses the settled warm cursor, allocates no
+absent exact-report state, and names all fourteen lifecycle owners. Focused
+correction regressions and parallel review passed; complete exact-tree gates and
+recorded independent re-review remain pending. Integration, exact-main
+preflight, freeze, and execution are not yet passed or authorized.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

@@ -2115,19 +2115,27 @@ one bounded post-reset log-tail scan, and an atomic process/log-EOF handoff
 under the unchanged revalidation deadline. Phase 7 adds one existing
 protected-authority inspection after recovery. Only
 exact-control server mode adds synchronous per-report log writes for candidate
-output and the seven job runners; ordinary steady-state reporting is unchanged.
-No new production request, job, child, or deadline is added.
+output and the seven job runners. Ordinary startup adds one closed
+exact-control environment lookup and branch; when absent it allocates no report
+channel or sink and adds no persistent work. Ordinary steady-state reporting is
+unchanged. No new production request, job, child, or deadline is added.
 
-Gate status (2026-08-25): focused and bounded regressions passed, including the
+Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
-(115.754s), and complete readiness rehearsal (884.324s). Every `internal/`
-package passed in one run, including `internal/store` (1081.231s) and
-`internal/sync` (61.915s). Module verification and compilation, vet,
-repository-pinned golangci-lint 2.12.2, documentation, glossary, shell, and
-whitespace gates passed. Recorded exact-commit independent review remains
-pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
-T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim has passed or
-been authorized.
+(115.754s), complete readiness rehearsal (884.324s), every `internal/` package
+including `internal/store` (1081.231s) and `internal/sync` (61.915s), module,
+vet, repository-pinned lint, documentation, glossary, shell, and whitespace
+gates passed. Independent review of exact commit
+`4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical, 0 high, 3
+medium, and 3 low findings. The correction tree latches non-exact capacity for
+the whole lifecycle cycle, refuses exact-mode stale reap changes/errors,
+preserves same-phase process-sampling evidence through review-ceiling teardown,
+continues warm confirmation from the settled cursor, allocates no absent
+exact-report state, and corrects the owner count to fourteen. Focused correction
+regressions and parallel review passed; complete exact-tree gates and recorded
+independent re-review remain pending. No merge, exact-main preflight, fresh-ID
+freeze, execution, release, T40.13/Epic-40 closure, topology/bound change, or
+scale/SLO claim has passed or been authorized.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

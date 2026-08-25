@@ -73,10 +73,11 @@ func Run(
 			capacityExact := capacity.Pressure != PressureUnavailable &&
 				(capacityErr == nil || errors.Is(capacityErr, ErrPressureRefusal))
 			capacityExactNormal := capacityExact && capacity.Pressure == PressureNormal
+			if result.CycleStart {
+				capacityRetryCycle = false
+			}
 			if !capacityExact {
 				capacityRetryCycle = true
-			} else if result.CycleComplete {
-				capacityRetryCycle = false
 			}
 			if pressureAccelerated {
 				pressureRecoveryCycle = true

@@ -2144,9 +2144,11 @@ phase-7 and phase-9 waiters make no 28/64 claim and remain governed by their
 fixed phase deadlines. Truthful `durable-jobs` backlog does not block either
 waiter; an owner error or backlog in one of the 13 required drained rows keeps
 owner progression at five-second cadence until the deadline. Healthy normal
-hourly cadence and all product query/request,
-repository sync, ordinary startup/restart, retry/no-op, publication, lock,
-cache, persistent schema, disk, memory, and child-process paths are unchanged.
+hourly cadence and all product query/request, repository sync, retry/no-op,
+publication, lock, cache, persistent schema, disk, memory, and child-process
+paths are unchanged. Ordinary startup adds one closed exact-control environment
+lookup and branch; when absent it allocates no report channel or sink and adds
+no persistent work.
 Ceremony phase 9 adds one restart, the same bounded owner/status work, and
 14-row validation with 13 exact/drained predicates and one durable-job
 lower-bound predicate. Warm restart adds incremental phase-local candidate/job
@@ -2155,16 +2157,21 @@ five-second quiet interval, one finished-metrics startup refresh without a
 second process sample, one bounded post-reset log-tail scan, and the atomic
 process/log-EOF handoff under the unchanged revalidation deadline. Phase 7
 adds one existing post-recovery authority inspection. Only exact-control mode
-adds synchronous per-report log writes;
-ordinary steady-state reporting remains advisory. No production request, job,
-child, or new deadline is added.
-Focused and bounded regressions, complete package/race, real-launcher custody,
-production-path readiness, every `internal/` package including full store,
-module verification/compilation, vet, repository-pinned lint, documentation,
-glossary, shell, and whitespace gates passed on 2026-08-25. Recorded
-exact-commit independent review remains pending. Merge, exact-main preflight,
-fresh-ID freeze, execution, release, T40.13/Epic-40 closure, topology/bound
-changes, and scale/SLO claims remain unauthorized.
+adds synchronous per-report log writes; ordinary steady-state reporting remains
+advisory. No production request, job, child, or new deadline is added.
+The pre-review focused and bounded regressions, complete package/race,
+real-launcher custody, production-path readiness, every `internal/` package
+including full store, module verification/compilation, vet,
+repository-pinned lint, documentation, glossary, shell, and whitespace gates
+passed on 2026-08-25. Independent review of exact commit
+`4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical, 0 high, 3
+medium, and 3 low findings. The correction tree closes the whole-cycle capacity
+latch, exact stale-reap, teardown-sentinel, warm-cursor, absent-allocation, and
+owner-count findings; focused correction regressions and parallel review pass.
+Complete exact-tree gates and recorded independent re-review remain pending.
+Merge, exact-main preflight, fresh-ID freeze, execution, release,
+T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims remain
+unauthorized.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

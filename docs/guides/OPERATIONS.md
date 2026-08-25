@@ -3079,7 +3079,7 @@ Administrators can open Settings or request `GET /api/lifecycle-status` to see
 the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
 source. The response is capped at 16 KiB and reports only enabled state, fixed
 turn/watermark limits, the latest allocated-capacity class, and one latest
-source-free result for each of the thirteen owners, including the real
+source-free result for each of the fourteen owners, including the real
 `search-generations` owner. It contains no cursor,
 repository, generation, path, retained content, or raw error. A status request
 does not run a turn, probe the filesystem, acquire the mutation lock, or read
@@ -5535,14 +5535,22 @@ without a second process read, one bounded post-reset log-tail scan, and the
 atomic process/log-EOF handoff under the unchanged revalidation deadline. Phase
 7 adds one existing protected-authority inspection after recovery. Only
 exact-control mode adds synchronous per-report log writes for candidate output
-and all seven job runners; ordinary steady-state
-reporting remains advisory. No production request, job, child, or new deadline
-is added.
+and all seven job runners. Ordinary startup adds one closed exact-control
+environment lookup and branch; when absent it allocates no report channel or
+sink and adds no persistent work. Ordinary steady-state reporting remains
+advisory. No production request, job, child, or new deadline is added.
 
-Focused and bounded regressions, complete package/race, real-launcher custody,
-production-path readiness, every `internal/` package including full store,
-module verification/compilation, vet, repository-pinned lint, documentation,
-glossary, shell, and whitespace passed on 2026-08-25. Do not merge, run
-exact-main preflight, select or freeze a fresh identifier, or execute another
-ceremony until the exact source commit receives recorded independent review.
-No later authorization is established by this implementation record.
+The pre-review focused and bounded regressions, complete package/race,
+real-launcher custody, production-path readiness, every `internal/` package
+including full store, module verification/compilation, vet,
+repository-pinned lint, documentation, glossary, shell, and whitespace passed
+on 2026-08-25. Independent review of exact commit
+`4b40beb28e1549a4d269a7a7e0d9ed604c775c4b` recorded 0 critical, 0 high, 3
+medium, and 3 low findings. Its correction tree passes focused repeated and
+parallel review for the whole-cycle capacity latch, exact stale-reap refusal,
+post-delete process-sentinel sealing, settled warm-cursor handoff, absent-mode
+allocation, and fourteen-owner wording. Do not merge, run exact-main preflight,
+select or freeze a fresh identifier, or execute another ceremony until the
+corrected exact commit passes the complete gate and recorded independent
+re-review. No later authorization is established by this implementation
+record.

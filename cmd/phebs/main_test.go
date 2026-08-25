@@ -81,6 +81,9 @@ func TestT4013ExactReportsEnvironmentIsClosed(t *testing.T) {
 }
 
 func TestBindT4013ExactReportsIsSynchronousAndOptional(t *testing.T) {
+	if err := t4013ExactReportTerminalError(nil); err != nil {
+		t.Fatalf("absent exact reporting acquired terminal error: %v", err)
+	}
 	ordinaryCandidate := &candidatejob.Worker{}
 	ordinaryRunner := &store.Runner{}
 	bindT4013ExactReports(false, nil, ordinaryCandidate, ordinaryRunner)
