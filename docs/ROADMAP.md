@@ -814,7 +814,14 @@ catalog, relationship, or correctness authority.
   aggregate limits plus at-most-512-claim relationship buckets after the
   existing 1-MiB wire failed the maximum 4,000-claim shape. Epic 40 is closed,
   its merge bar is accepted, and it changes no production cap or registration.
-- T41.2 is the next scale ticket. Later tickets stay dependency-ordered
+- T41.2 implements the runtime-dark pure v3 root and dual bounded
+  service/placement member contract on top of T41.1. Exact v2 semantics and
+  mapped digests are preserved, expanded generations refuse v2 downgrade, and
+  complete validation proves the two views plus inherited prefix claims before
+  a keyed root-plus-one-member read is available. It adds no store schema,
+  ingestion, census proof, lifecycle owner, activation, or runtime import;
+  integration remains separate and T41.3 follows its merge bar.
+- T41.3 is the next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - T40.R1 Take 3 is a verified `unclassified` startup-readiness stop, not a

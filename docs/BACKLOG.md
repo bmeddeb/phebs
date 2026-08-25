@@ -3039,29 +3039,6 @@ the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration; T41.2 is next.
 
-**T41.2 · Segmented service-catalog v3 contract** — implement the pure root and
-dual member views while retaining v2 record semantics. Draft reduce-only
-bounds are 512 services/2 MiB per service-range member, 2,048 paths/2 MiB per
-placement-range member, 64 total members, a 256-KiB root, and T41.1's separate
-logical/encoded aggregates. AC: the root binds repository/source/base/override
-authority, aggregate disposition/role/path/successor/claim counts, ordered
-nonoverlapping service and path ranges, all member digests/bytes, one logical
-catalog digest, and policy digest; validation proves internal membership/path
-cross-view equality, unowned exclusivity, overlap/fan-out/total-claim bounds,
-successor liveness/cycles, ordering, and exact member inventory. Source-file
-liveness and census complement remain T41.3. Placement members are
-prefix-routed subtrees: each contains a bounded, digest-accounted inherited
-ancestor-claim prelude, so cross-service nested prefixes are never missed and
-one file-path lookup reads root plus one matching placement member. Complete
-validation proves every inherited claim against the service view and rejects
-missing/extra duplication; T41.3 merge-streams the ordered placement view once
-against the source census rather than performing one lookup per file. Service
-lookup reads root plus one service member; full iteration streams in canonical order; every
-bound is pre-growth; every v2-admitted catalog maps to identical v3 logical
-semantics and a mapped digest, while expanded v3 refuses v2 downgrade; maximum
-combined service paths/successors and maximum path claims each fit one member;
-no runtime import; full merge bar.
-
 **T41.3 · Dark catalog-v3 ingestion and immutable store authority** — ingest
 operator or committed selections into T41.2, stream the source census to prove
 placement liveness and exact complement, and store precious immutable root/

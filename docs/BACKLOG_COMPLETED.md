@@ -10186,3 +10186,34 @@ it adds no module download, cache, poll, persistent state, production
 request/query, sync tick, publication write, corpus/shard read, or service
 child. T40.13j is next. No freeze, ceremony, release, T40.13/Epic-40 closure,
 topology/bound change, or scale/SLO claim is authorized.
+**T41.2 ✅ · Segmented service-catalog v3 contract** *(2026-08-25; high)* —
+The runtime-dark `internal/servicecatalogv3` package now builds one canonical
+root over bounded service-key and placement-path members without changing the
+v2 runtime. The root binds repository/source/census/base/override authority,
+the frozen reduce-only policy, logical and mapped-v2 digests, exact aggregate
+counts, ordered ranges, and every member digest and byte count. Service members
+retain exact v2 services and memberships; placement members compact the same
+memberships into service/path claims and carry the exact earlier ancestor
+claims needed for a root-plus-one-member prefix lookup.
+
+Complete validation decodes every member once, rejects missing/extra/corrupt
+inventory and inherited preludes, and proves canonical ordering, dual-view
+equality, dispositions, roles, unowned exclusivity, path overlap, accepted
+fan-out, total claims, successor liveness/cycles, all selected aggregate limits,
+and exact root/member bytes. V2-compatible catalogs retain their exact v2
+digest and round-trip normalized semantics; expanded catalogs omit that digest
+and refuse downgrade. Tests cover deterministic segmentation, a boundary-crossing
+ancestor lookup, service point reads, malformed inventory, cross-view drift,
+cycles, fan-out, unowned overlap, one-over services, expanded downgrade refusal,
+and the combined maximum service and compact maximum-claim placement shapes.
+
+Production steady-state work is zero because no runtime package imports v3.
+Explicit build/full validation is linear in the bounded service, membership,
+placement, and successor inputs; logical identity is streamed into a bounded
+hash rather than buffered. A keyed read validates the small root and one
+at-most-2-MiB member. There is no store, filesystem, network, source/Git,
+corpus/shard, lock, cache, worker, or child-process work. T41.3 retains source
+census proof and immutable storage. Integration and Epic 41 progression remain
+blocked on Epic 40 closure and the stacked T41.1 merge bar; no runtime
+selection, production cap, ceremony, scale/SLO, release, topology, migration,
+or decommission claim is authorized.
