@@ -2,9 +2,13 @@
 
 <img src="./docs/phebs-banner.svg" alt="phebs — Self-hosted code search and static change-impact analysis." width="960">
 
+<img src="./docs/phebs-demo.gif" alt="Demo: sign in, search indexed code, open a match in the file view, and review repositories." width="960">
+
 *pronounced **"febz"***
 
 **Self-hosted code search and static change-impact analysis for microservice repositories.**
+
+**[phebs.com](https://phebs.com)** · [How it compares](./docs/COMPARISON.md)
 
 [![ci](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml)
 

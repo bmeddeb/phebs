@@ -12,6 +12,7 @@ when two pages appear to overlap.
 | Install, configure, or operate phebs | [MANUAL.md](./MANUAL.md), then its task guide |
 | Plan or implement a change | [ROADMAP.md](./ROADMAP.md), then [BACKLOG.md](./BACKLOG.md) and [PLAN.md](../PLAN.md) |
 | Evaluate a pilot | [PITCH.md](./PITCH.md), then [PILOT_CHARTER.md](./PILOT_CHARTER.md) |
+| Compare phebs with other code search tools | [COMPARISON.md](./COMPARISON.md) |
 | Review an evidence pack | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) and [PACK_MANIFEST.md](./PACK_MANIFEST.md) |
 
 ## Content ownership
@@ -29,6 +30,7 @@ when two pages appear to overlap.
 | Interface philosophy, discipline, and design language | [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) | Governs presentation only; it cannot broaden authority, claims, or caveats |
 | Pilot authority and claims | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | Downstream documents cannot broaden its authority |
 | Validation records | [`spike/t111/`](../spike/t111/) | Sealed evidence: never rewrite, relocate, or summarize as a new result |
+| Positioning against alternative tools | [COMPARISON.md](./COMPARISON.md) | Date every external claim; re-verify before editing; stay fair and factual |
 
 ## User guides
 
