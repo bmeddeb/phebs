@@ -1738,7 +1738,7 @@ source retained. The identifier and frozen plan may not be reused, and this
 outcome authorizes no private rerun.
 
 **T40.13n · Coherent restart accounting and typed data-gauge evidence** *(high
-gate readiness · implementation and exact-tree gates complete; exact-commit review pending; needs T40.13m and neutral-36)* —
+gate readiness · complete; requests integration only; needs T40.13m and neutral-36)* —
 make a stopped V27 restart retain enough source-free evidence to distinguish a
 bounded data-gauge deadline without weakening measurement completeness. AC: a
 successfully finished first-server meter may return one private
@@ -1778,9 +1778,9 @@ presence check to preserve historical absent-field/null semantics; V27 receipt
 decode also performs one bounded canonical JSON re-encode and byte comparison
 to refuse duplicate keys. This adds no
 product request/query, sync, publication, source/corpus/shard read,
-persistent schema, topology, or service-bound work. Exact-commit independent
-review, integration, exact-main preflight, and separate freeze and execution
-approvals remain required. No fresh identifier is selected.
+persistent schema, topology, or service-bound work. Integration, exact-main
+preflight, and separate freeze and execution approvals remain required. No
+fresh identifier is selected.
 
 The first V27 readiness attempt found a separate production recovery defect:
 all exact A extraction pointers had been reactivated while the current
@@ -1794,18 +1794,21 @@ settled, both remain lifecycle-owned, exact domain pointers stay authoritative,
 and operational progress returns the established `unavailable` state. Focused
 regressions cover settled-B → reused-A current progress and active/settled
 zero-work reuse/new-publication retirement with zero repeat source/extractor
-work. The corrected real-binary rehearsal passed structural
-A→B→A/restore, semantic interruption/restore, and stale-worker recovery in
-362.24 seconds. An exact active target retains its early return. Absent-schedule
+work. The corrected real-binary rehearsal passed structural A→B→A/restore,
+semantic interruption/restore, and stale-worker recovery. An exact active
+target retains its early return. Absent-schedule
 reuse adds a second current-schedule query and no binding read. Settled reuse
 adds that query plus two pointer-sized binding reads across initial target
-resolution and the repeated coherence check. A reuse mismatch totals three
-schedule queries and three binding reads; completed reconciliation totals two
-of each. Nonzero enqueue then adds one bounded binding write and the existing
-schedule transaction under the reconciler shard lock. Zero-work retirement instead uses
-one exact transaction with current/schedule point reads, an active-only status
-update, and current-row deletion; a concurrent successor makes it stale without
-mutation. Immutable completed controls may be replayed only through the
+resolution and the repeated coherence check. On a nonzero mismatch, reuse
+totals three schedule-query/binding-read pairs: two before enqueue and one
+confirming pair inside it. Completed reconciliation totals two: one before
+enqueue and one inside. Enqueue then adds one bounded binding write and the
+existing schedule transaction under the reconciler shard lock. A zero-work
+mismatch stops before enqueue: reuse performs two pairs and completed or new
+reconciliation performs one, followed by the exact retirement transaction's
+current/schedule point reads, active-only status update, and current-row
+deletion. A concurrent successor makes it stale without mutation. Immutable
+completed controls may be replayed only through the
 existing bounded chunks; no source/corpus member or extractor is reopened, and
 concurrency, retention, memory, disk, API shape, persistent schema, topology,
 and service bounds are unchanged.
@@ -1826,8 +1829,13 @@ than 54 retention components, the host Git 2.50.1 cannot reproduce T32.3 bytes
 pinned by Git 2.54, and T32.4 still binds the pre-repin T32.3 digests. Each
 failure reproduced unchanged at base
 `acc5a23f046229c580b972bcbb0107f2f7062882`; none is a T40.13n regression, and
-their separate fixture repair is not folded into this ticket. Two independent
-working-tree reviews found no actionable issue. Exact-commit review remains.
+their separate fixture repair is not folded into this ticket. Independent
+review of exact source commit
+`b5d6b74da8644811c5e1bfffd658b73661797ee2` found no functional issue and one
+low cost-record issue: the confirming nonzero pair belongs inside enqueue and
+zero work has fewer pre-retirement pairs. The synchronized source-identical
+documentation correction above resolves it; no finding remains. T40.13n
+requests integration only and selects no identifier.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

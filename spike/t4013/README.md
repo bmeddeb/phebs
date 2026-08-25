@@ -3522,19 +3522,21 @@ authoritative, writes no binding, and returns the established `unavailable`
 operational state rather than claiming one fictional partition. Focused
 active/settled and new/reused zero-work regressions supplement the crash/no-op
 test that proves an A-targeted schedule, `Progress.State == current`, and no
-repeated source or extractor work. The
-corrected real-binary rehearsal passed structural A→B→A/restore, semantic
-interruption/restore, and stale-worker recovery in 362.24 seconds. Exact active
+repeated source or extractor work. The corrected real-binary rehearsal passed
+structural A→B→A/restore, semantic interruption/restore, and stale-worker
+recovery. Exact active
 reuse keeps its early return. Absent reuse adds a second bounded schedule query
 and no binding read; settled reuse adds that query plus two pointer-sized
-binding reads across initial and repeated target resolution. A reuse mismatch
-totals three schedule queries and three binding reads, while completed
-reconciliation totals two of each. Nonzero enqueue adds the pointer-sized
-binding write and bounded schedule transaction under the existing shard lock
-and chunk limits. A zero-work mismatch instead performs one
-exact current/schedule point-read transaction, active-only status update, and
-current-row deletion; concurrent successor movement makes it stale without
-mutation. No new corpus/member read, source lease, extractor, goroutine, lock,
+binding reads across initial and repeated target resolution. On a nonzero
+mismatch, reuse totals three schedule-query/binding-read pairs—two before
+enqueue and one inside—while completed reconciliation totals two—one before
+and one inside. Enqueue adds the pointer-sized binding write and bounded
+schedule transaction under the existing shard lock and chunk limits. A
+zero-work mismatch stops before enqueue: reuse performs two pairs and completed
+or new reconciliation performs one, then the exact retirement transaction does
+its current/schedule point reads, active-only status update, and current-row
+deletion. Concurrent successor movement makes it stale without mutation. No
+new corpus/member read, source lease, extractor, goroutine, lock,
 API shape, persistent schema, topology, or service-bound work follows.
 
 Implementation and exact-tree gates are complete. The complete package
@@ -3548,7 +3550,10 @@ process survives, the diagnostic root is retained, and the same tree passed
 the bounded rerun. The extra repository aggregate is baseline-red only on
 inherited T30.6m budgets, Git-2.54 T32.3 retained bytes on Git 2.50.1, and
 T32.4 pre-repin bindings, all reproduced unchanged at the base commit. It is
-not claimed green and those fixtures are outside this ticket. Two independent
-working-tree reviews are clean; exact-commit review remains. Integration, exact-main
+not claimed green and those fixtures are outside this ticket. Independent
+review found exact source commit
+`b5d6b74da8644811c5e1bfffd658b73661797ee2` functionally clean and one low
+cost-record issue, resolved by the source-identical correction above. T40.13n
+requests integration only. Integration, exact-main
 preflight, fresh-ID selection, freeze, plan review, and execution remain
 separate explicit decisions; no gate or Epic closure is claimed.

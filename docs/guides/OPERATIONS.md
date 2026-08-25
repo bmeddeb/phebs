@@ -5197,29 +5197,32 @@ path writes no binding and does not misreport a control transition as one
 partition. Focused tests cover active and settled predecessors, both reused and
 newly completed zero-work authority, no orphan binding, a concurrent-successor
 fence, and zero repeat content work. The settled-B → reused-A test separately
-proves a fresh A-target binding and current progress. The corrected real-binary rehearsal passed all
-structural A→B→A/restore, semantic interruption/restore, and stale-worker cases
-in 362.24 seconds.
+proves a fresh A-target binding and current progress. The corrected real-binary
+rehearsal passed all structural A→B→A/restore, semantic interruption/restore,
+and stale-worker cases.
 
 An active schedule already targeting the exact authority keeps its prior early
 return. Absent-schedule reuse adds a second bounded current-schedule query and
 no binding read. Settled reuse adds that query plus two pointer-sized binding
 reads, one during initial target resolution and one during the repeated
-coherence check. A reuse mismatch totals three schedule queries and three
-binding reads before nonzero enqueue; completed reconciliation totals two of
-each. Nonzero enqueue adds one pointer-sized binding write and one bounded
-schedule transaction while the existing repository shard lock is held.
-Zero-work retirement replaces those
-binding/enqueue writes with one transaction that performs exact current and
-schedule point reads, updates status only when active, and deletes only the
-matching current row; a concurrent successor causes a stale refusal without
-mutation. Later workers reuse immutable result controls under the existing
+coherence check. On a nonzero mismatch, reuse totals three
+schedule-query/binding-read pairs: two before enqueue and one confirming pair
+inside it. Completed reconciliation totals two: one before enqueue and one
+inside. Enqueue then adds one pointer-sized binding write and one bounded
+schedule transaction while the existing repository shard lock is held. A
+zero-work mismatch stops before enqueue: reuse performs two pairs and completed
+or new reconciliation performs one. The exact retirement transaction then
+performs current and schedule point reads, updates status only when active, and
+deletes only the matching current row; a concurrent successor causes a stale
+refusal without mutation. Later workers reuse immutable result controls under the existing
 chunk, retry, repository-token, retention, memory, and disk bounds. No
 corpus/shard/member scan, source lease, extractor execution, new goroutine, new
 lock, API shape, persistent schema, topology, or service-bound work is added.
 
-T40.13n implementation and exact-tree gates are complete; fresh exact-commit
-independent review is pending. The complete package (97.258s), race package
+T40.13n implementation, exact-tree gates, and independent review are complete.
+Exact source commit `b5d6b74da8644811c5e1bfffd658b73661797ee2` is
+functionally clean; review found one low cost-record issue, corrected in the
+source-identical wording above. The complete package (97.258s), race package
 (109.786s), real-launcher proof (60.902s), 20 repeated V27/schema/accounting
 runs (248.065s), semantic (124.67s), stale-worker (31.30s), structural
 (138.58s), and full `internal/store` gates (1065.618s standalone; 1109.512s in
@@ -5235,9 +5238,8 @@ Git-2.54 T32.3 bytes on this Git-2.50.1 host, and T32.4 pre-repin bindings; all
 four assertions reproduce at the exact base commit. Do not reauthor those
 fixtures as part of T40.13n or claim the aggregate passed.
 
-Do not select a fresh identifier or request a freeze. Complete fresh
-exact-commit independent review first. Ben must then separately authorize
-integration. Only after integration may a clean
+Do not select a fresh identifier or request a freeze. Ben must separately
+authorize integration. Only after integration may a clean
 exact-main dedicated-host `preflight` run. If it passes, select a fresh,
 unconsumed identifier and distinct signer, request freeze authorization, review
 the frozen plan/digest and signer fingerprint, then request separate exact-ID/

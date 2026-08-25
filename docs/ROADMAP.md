@@ -1882,8 +1882,8 @@ and the result is neither a pipeline failure nor a scale pass. Teardown took
 and plan are permanently consumed; no private rerun is authorized.
 
 T40.13n is now the only next scale ticket. Its implementation, corrected
-bounded real-binary readiness rehearsal, and exact-tree gates are complete;
-exact-commit independent review is pending.
+bounded real-binary readiness rehearsal, exact-tree gates, and independent
+exact-source review are complete. It requests integration only.
 Fresh V27 accounting will carry one successful first-server raw end allocated
 gauge through a private same-workspace one-shot boundary into restart, or take
 an allocated-only baseline before launch when no boundary exists. Allocation
@@ -1905,9 +1905,11 @@ sequence. Ceremony server count is unchanged; one allocation sampler now begins
 before the existing executable revalidation/launch and probes capacity at 1 Hz
 during that bounded prelaunch window. The implementation, bounded regressions,
 real-launcher, full internal/store, module, vet, lint, documentation, glossary,
-shell, whitespace, and steady-state-cost gates passed on one exact tree. Fresh
-exact-commit independent review must complete before Ben may separately
-authorize integration. Only after integration may a
+shell, whitespace, and steady-state-cost gates passed on one exact tree.
+Independent review found exact source commit
+`b5d6b74da8644811c5e1bfffd658b73661797ee2` functionally clean; its one low
+cost-record issue is corrected in source-identical documentation. Ben must
+separately authorize integration. Only after integration may a
 clean exact-main dedicated-host preflight precede fresh-ID selection, separate
 freeze authorization, frozen-plan review, and separate exact-ID/digest
 execution authorization. No completion, identifier, freeze, release,
@@ -1926,17 +1928,19 @@ the exact mismatched current projection, keeps immutable history lifecycle-owned
 and exact roots authoritative, writes no binding, and retains the established
 `unavailable` progress state rather than fabricating a partition. Focused
 active/settled and new/reused zero-work regressions supplement the exact
-settled-B → reused-A crash/no-op regression and corrected 362.24-second
-rehearsal. Steady exact active reuse is unchanged. Absent reuse adds a second
+settled-B → reused-A crash/no-op regression and corrected rehearsal. Steady
+exact active reuse is unchanged. Absent reuse adds a second
 schedule query and no binding read; settled reuse adds that query plus two
-pointer-sized binding reads across initial and repeated target resolution. A
-reuse mismatch totals three schedule queries and three binding reads, while
-completed reconciliation totals two of each. Nonzero enqueue then adds one
-pointer-sized binding write and one existing schedule transaction under the
-existing shard lock and chunk limits. A
-zero-work mismatch uses one exact current/schedule point-read transaction,
-active-only status update, and current-row deletion; a concurrent successor
-makes it stale without mutation. No API shape or persistent schema changes.
+pointer-sized binding reads across initial and repeated target resolution. On a
+nonzero mismatch, reuse totals three schedule-query/binding-read pairs—two
+before enqueue and one inside—while completed reconciliation totals two—one
+before and one inside. Enqueue then adds one pointer-sized binding write and
+one existing schedule transaction under the existing shard lock and chunk
+limits. A zero-work mismatch stops before enqueue: reuse performs two pairs and
+completed or new reconciliation performs one, followed by one exact
+current/schedule point-read retirement transaction, active-only status update,
+and current-row deletion. A concurrent successor makes it stale without
+mutation. No API shape or persistent schema changes.
 
 Exact-tree evidence includes the complete T40.13 package (97.258s), race
 package (109.786s), real-launcher proof (60.902s), 20 repeated

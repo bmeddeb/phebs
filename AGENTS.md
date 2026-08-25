@@ -211,13 +211,16 @@ nor a scale pass. T40.13n's V27 coherent restart accounting, path-free typed
 data-gauge diagnostic, and settled-schedule recovery repair are implemented;
 the corrected bounded real-binary readiness rehearsal and exact-tree package,
 race, launcher, internal/store, module, vet, lint, docs, glossary, and shell
-gates passed. Two independent working-tree reviews are clean after the
-zero-work correction made exact mismatched-current retirement invent no
-partition. An extra uncached repository run was baseline-red only on inherited
+gates passed. Independent review of exact source commit
+`b5d6b74da8644811c5e1bfffd658b73661797ee2` found the code clean and one low
+cost-record issue, corrected in source-identical documentation: exact
+mismatched-current retirement invents no partition, and its pre-retirement
+schedule reads are now stated separately from nonzero enqueue. An extra
+uncached repository run was baseline-red only on inherited
 T30.6m/T32.3/T32.4 retained-artifact assertions reproduced unchanged at the
 base commit; no T40.13n or `internal/` package failed. The original T40.13 gate
-remains open pending T40.13n's exact-commit review, integration, exact-main
-preflight, and separate freeze and execution authorizations; Epic 40
+remains open pending integration, exact-main preflight, and separate freeze and
+execution authorizations; Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services
