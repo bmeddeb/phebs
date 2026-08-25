@@ -1,0 +1,611 @@
+{
+  "schema": "t411-service-load-envelope-v1",
+  "profiles": [
+    {
+      "schema": "t411-service-load-profile-v1",
+      "name": "accepted-services-8000",
+      "seed": "t411-neutral-service-load-v1",
+      "authority": {
+        "kind": "operator",
+        "id": "t411-neutral-authority",
+        "version": "accepted-8000-v1",
+        "explicit": true,
+        "inferred": false
+      },
+      "accepted_services": 8000,
+      "total_service_records": 8000,
+      "memberships": 48000,
+      "distinct_paths": 25280,
+      "unowned_paths": 80,
+      "role_memberships": [
+        {
+          "name": "generated",
+          "count": 16000
+        },
+        {
+          "name": "primary",
+          "count": 8000
+        },
+        {
+          "name": "shared",
+          "count": 8000
+        },
+        {
+          "name": "supporting",
+          "count": 8000
+        },
+        {
+          "name": "typed",
+          "count": 8000
+        }
+      ],
+      "max_accepted_path_fanout": 20,
+      "max_total_claims_per_placement": 20,
+      "logical_catalog": {
+        "bytes": 6060113,
+        "sha256": "sha256:ef929d8090645fb5082ddc3d34294ebb1a549b10dda70e35a7b798f43ca9b4c5"
+      },
+      "fixture": {
+        "algorithm": "sha256-framed-path-and-t411-neutral-fixture-v1-content",
+        "regular_files": 25280,
+        "distinct_contents": 25280,
+        "content_bytes": 1468080,
+        "sha256": "sha256:5f3fa1c26556e1ff27e8d7c347a38fde5055f335ce6e5d08e90e0255d4ffe87b"
+      },
+      "publication_projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 6046,
+          "sha256": "sha256:988a444343a94ade26a897a0f6453c32e0ca58872fac776edd886aeb4fd58214"
+        },
+        "service_members": 16,
+        "service_member_bytes": 6058192,
+        "max_service_member_bytes": 387721,
+        "placement_members": 13,
+        "placement_member_bytes": 6256080,
+        "max_placement_member_bytes": 886273,
+        "total_members": 29,
+        "encoded_bytes": 12320318,
+        "member_set_sha256": "sha256:4b257d5dcbe39c73f8c273a94708abba5bfede9aa55b3dd6703b90eece4d3a38"
+      },
+      "relationship_distributions": [
+        {
+          "name": "empty",
+          "edges": 0,
+          "bytes": 73,
+          "sha256": "sha256:97d1a2f4da12055e5ac5d4171ec62f8487b0325177cc57e0738ea95ee9efb86f"
+        },
+        {
+          "name": "mixed",
+          "edges": 8000,
+          "bytes": 768072,
+          "sha256": "sha256:88bff9b0f2ec82bb0f8811216128bf4612d59072c283e2f1258788fdd24e01d8"
+        },
+        {
+          "name": "dense",
+          "edges": 152000,
+          "bytes": 14744072,
+          "sha256": "sha256:1e5a8e78fb0bba1483e0c82cc5a10c9784aaf63e884a139c9c594b5408fec33f"
+        }
+      ],
+      "claims": {
+        "synthetic": true,
+        "source_free": true,
+        "explicit_authority": true,
+        "establishes_target_slo": false,
+        "establishes_accuracy": false,
+        "qualifies_supported_scale": false,
+        "changes_production_behavior": false,
+        "authorizes_release": false
+      }
+    },
+    {
+      "schema": "t411-service-load-profile-v1",
+      "name": "accepted-services-10000",
+      "seed": "t411-neutral-service-load-v1",
+      "authority": {
+        "kind": "operator",
+        "id": "t411-neutral-authority",
+        "version": "accepted-10000-v1",
+        "explicit": true,
+        "inferred": false
+      },
+      "accepted_services": 10000,
+      "total_service_records": 10000,
+      "memberships": 60000,
+      "distinct_paths": 31600,
+      "unowned_paths": 100,
+      "role_memberships": [
+        {
+          "name": "generated",
+          "count": 20000
+        },
+        {
+          "name": "primary",
+          "count": 10000
+        },
+        {
+          "name": "shared",
+          "count": 10000
+        },
+        {
+          "name": "supporting",
+          "count": 10000
+        },
+        {
+          "name": "typed",
+          "count": 10000
+        }
+      ],
+      "max_accepted_path_fanout": 20,
+      "max_total_claims_per_placement": 20,
+      "logical_catalog": {
+        "bytes": 7575094,
+        "sha256": "sha256:e29376eb94bd73e8ef35708fa22d61f9ed6757a0b0f4d6c3c175b4ddfbc46fd4"
+      },
+      "fixture": {
+        "algorithm": "sha256-framed-path-and-t411-neutral-fixture-v1-content",
+        "regular_files": 31600,
+        "distinct_contents": 31600,
+        "content_bytes": 1835100,
+        "sha256": "sha256:7a0a392c22fcc0d79291192512772845006d2c0f2d22fe76cb546b1f06568e7b"
+      },
+      "publication_projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 7431,
+          "sha256": "sha256:7cf8ef69c3239939e38f61e3dd8a1a2f9e62badfe0bbe19b3260e370dead55ca"
+        },
+        "service_members": 20,
+        "service_member_bytes": 7572740,
+        "max_service_member_bytes": 387721,
+        "placement_members": 16,
+        "placement_member_bytes": 7820060,
+        "max_placement_member_bytes": 1107805,
+        "total_members": 36,
+        "encoded_bytes": 15400231,
+        "member_set_sha256": "sha256:a3590b9d3c032a759850784cd69f8cf6a952d1b76f725383b2469f8fa7c30def"
+      },
+      "relationship_distributions": [
+        {
+          "name": "empty",
+          "edges": 0,
+          "bytes": 73,
+          "sha256": "sha256:97d1a2f4da12055e5ac5d4171ec62f8487b0325177cc57e0738ea95ee9efb86f"
+        },
+        {
+          "name": "mixed",
+          "edges": 10000,
+          "bytes": 960072,
+          "sha256": "sha256:05d70ff8312124329d1c3881229872899070d0cff63567bf4b562e2ce8828773"
+        },
+        {
+          "name": "dense",
+          "edges": 190000,
+          "bytes": 18430072,
+          "sha256": "sha256:17e4ccbb496c6edd7bdc80824cb0967a6ee2bd9dbb1d9eeddab1a63252995493"
+        }
+      ],
+      "claims": {
+        "synthetic": true,
+        "source_free": true,
+        "explicit_authority": true,
+        "establishes_target_slo": false,
+        "establishes_accuracy": false,
+        "qualifies_supported_scale": false,
+        "changes_production_behavior": false,
+        "authorizes_release": false
+      }
+    },
+    {
+      "schema": "t411-service-load-profile-v1",
+      "name": "accepted-services-12500",
+      "seed": "t411-neutral-service-load-v1",
+      "authority": {
+        "kind": "operator",
+        "id": "t411-neutral-authority",
+        "version": "accepted-12500-v1",
+        "explicit": true,
+        "inferred": false
+      },
+      "accepted_services": 12500,
+      "total_service_records": 12500,
+      "memberships": 75000,
+      "distinct_paths": 39500,
+      "unowned_paths": 125,
+      "role_memberships": [
+        {
+          "name": "generated",
+          "count": 25000
+        },
+        {
+          "name": "primary",
+          "count": 12500
+        },
+        {
+          "name": "shared",
+          "count": 12500
+        },
+        {
+          "name": "supporting",
+          "count": 12500
+        },
+        {
+          "name": "typed",
+          "count": 12500
+        }
+      ],
+      "max_accepted_path_fanout": 20,
+      "max_total_claims_per_placement": 20,
+      "logical_catalog": {
+        "bytes": 9468819,
+        "sha256": "sha256:b60793c9d124732f041fdd9b513c83327092530b1ebdf8a4cdc9b048c3a0e2b8"
+      },
+      "fixture": {
+        "algorithm": "sha256-framed-path-and-t411-neutral-fixture-v1-content",
+        "regular_files": 39500,
+        "distinct_contents": 39500,
+        "content_bytes": 2293875,
+        "sha256": "sha256:0ce0ed7b7d8c8323ac7c47598e532b24307a52be1f059e5607f4836ebdd6138d"
+      },
+      "publication_projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 9193,
+          "sha256": "sha256:f76efb1c69bd8ff0a1cf22d3992858d7e5495c33aa810a728fa4f44295ec67f9"
+        },
+        "service_members": 25,
+        "service_member_bytes": 9465925,
+        "max_service_member_bytes": 387721,
+        "placement_members": 20,
+        "placement_member_bytes": 9775053,
+        "max_placement_member_bytes": 1550808,
+        "total_members": 45,
+        "encoded_bytes": 19250171,
+        "member_set_sha256": "sha256:03382cc4d7709f5ee464ace1080403237866145cec075461276e58285ada225c"
+      },
+      "relationship_distributions": [
+        {
+          "name": "empty",
+          "edges": 0,
+          "bytes": 73,
+          "sha256": "sha256:97d1a2f4da12055e5ac5d4171ec62f8487b0325177cc57e0738ea95ee9efb86f"
+        },
+        {
+          "name": "mixed",
+          "edges": 12500,
+          "bytes": 1200072,
+          "sha256": "sha256:300360822a159b4464b0b713a2f3727c8451f1955931e78e8a783e08c6d2fbe4"
+        },
+        {
+          "name": "dense",
+          "edges": 237500,
+          "bytes": 23037572,
+          "sha256": "sha256:69ffe0cc045157599bd50293b269160c63c610ccce59486cfd5b0f7aba069ff9"
+        }
+      ],
+      "claims": {
+        "synthetic": true,
+        "source_free": true,
+        "explicit_authority": true,
+        "establishes_target_slo": false,
+        "establishes_accuracy": false,
+        "qualifies_supported_scale": false,
+        "changes_production_behavior": false,
+        "authorizes_release": false
+      }
+    }
+  ],
+  "transition_profile": {
+    "schema": "t411-service-transition-profile-v1",
+    "name": "authority-and-lifecycle-transitions-v1",
+    "revisions": [
+      {
+        "name": "r0-a",
+        "catalog": {
+          "schema": "phebs-service-catalog-v2",
+          "authority": {
+            "kind": "operator",
+            "id": "t411-transition-authority",
+            "version": "r0"
+          },
+          "services": [
+            {
+              "key": "svc.alpha",
+              "display_name": "svc.alpha",
+              "disposition": "accepted",
+              "origin": "base"
+            },
+            {
+              "key": "svc.beta",
+              "display_name": "svc.beta",
+              "disposition": "proposal",
+              "origin": "base",
+              "reason": "t411-transition-case"
+            },
+            {
+              "key": "svc.gamma",
+              "display_name": "svc.gamma",
+              "disposition": "conflict",
+              "origin": "base",
+              "reason": "t411-transition-case"
+            },
+            {
+              "key": "svc.legacy",
+              "display_name": "svc.legacy",
+              "disposition": "rejected",
+              "origin": "base",
+              "reason": "t411-transition-case",
+              "successors": [
+                "svc.alpha"
+              ]
+            },
+            {
+              "key": "svc.readd",
+              "display_name": "svc.readd",
+              "disposition": "accepted",
+              "origin": "base"
+            }
+          ],
+          "memberships": [
+            {
+              "service_key": "svc.alpha",
+              "path": "services/alpha/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.beta",
+              "path": "services/beta/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.gamma",
+              "path": "services/gamma/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.readd",
+              "path": "services/readd/main.go",
+              "role": "primary",
+              "origin": "base"
+            }
+          ],
+          "unowned": []
+        }
+      },
+      {
+        "name": "r1-b",
+        "catalog": {
+          "schema": "phebs-service-catalog-v2",
+          "authority": {
+            "kind": "operator",
+            "id": "t411-transition-authority",
+            "version": "r1"
+          },
+          "services": [
+            {
+              "key": "svc.alpha",
+              "display_name": "svc.alpha",
+              "disposition": "accepted",
+              "origin": "base"
+            },
+            {
+              "key": "svc.beta",
+              "display_name": "svc.beta",
+              "disposition": "accepted",
+              "origin": "base"
+            },
+            {
+              "key": "svc.gamma",
+              "display_name": "svc.gamma",
+              "disposition": "conflict",
+              "origin": "base",
+              "reason": "t411-transition-case"
+            },
+            {
+              "key": "svc.legacy",
+              "display_name": "svc.legacy",
+              "disposition": "rejected",
+              "origin": "base",
+              "reason": "t411-transition-case",
+              "successors": [
+                "svc.alpha"
+              ]
+            }
+          ],
+          "memberships": [
+            {
+              "service_key": "svc.alpha",
+              "path": "services/alpha/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.beta",
+              "path": "services/beta/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.gamma",
+              "path": "services/gamma/main.go",
+              "role": "primary",
+              "origin": "base"
+            }
+          ],
+          "unowned": []
+        }
+      },
+      {
+        "name": "r2-a-return",
+        "catalog": {
+          "schema": "phebs-service-catalog-v2",
+          "authority": {
+            "kind": "operator",
+            "id": "t411-transition-authority",
+            "version": "r2-a-return"
+          },
+          "services": [
+            {
+              "key": "svc.alpha",
+              "display_name": "svc.alpha",
+              "disposition": "accepted",
+              "origin": "base"
+            },
+            {
+              "key": "svc.beta",
+              "display_name": "svc.beta",
+              "disposition": "proposal",
+              "origin": "base",
+              "reason": "t411-transition-case"
+            },
+            {
+              "key": "svc.gamma",
+              "display_name": "svc.gamma",
+              "disposition": "conflict",
+              "origin": "base",
+              "reason": "t411-transition-case"
+            },
+            {
+              "key": "svc.legacy",
+              "display_name": "svc.legacy",
+              "disposition": "rejected",
+              "origin": "base",
+              "reason": "t411-transition-case",
+              "successors": [
+                "svc.alpha"
+              ]
+            },
+            {
+              "key": "svc.readd",
+              "display_name": "svc.readd",
+              "disposition": "accepted",
+              "origin": "base"
+            }
+          ],
+          "memberships": [
+            {
+              "service_key": "svc.alpha",
+              "path": "services/alpha/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.beta",
+              "path": "services/beta/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.gamma",
+              "path": "services/gamma/main.go",
+              "role": "primary",
+              "origin": "base"
+            },
+            {
+              "service_key": "svc.readd",
+              "path": "services/readd/main.go",
+              "role": "primary",
+              "origin": "base"
+            }
+          ],
+          "unowned": []
+        }
+      }
+    ],
+    "cases": [
+      {
+        "name": "proposal-to-accepted",
+        "service_key": "svc.beta",
+        "from": "proposal",
+        "to": "accepted"
+      },
+      {
+        "name": "conflict-preserved",
+        "service_key": "svc.gamma",
+        "from": "conflict",
+        "to": "conflict"
+      },
+      {
+        "name": "rejected-successor",
+        "service_key": "svc.legacy",
+        "from": "rejected",
+        "to": "rejected",
+        "successors": [
+          "svc.alpha"
+        ]
+      },
+      {
+        "name": "omission-tombstone",
+        "service_key": "svc.readd",
+        "from": "accepted",
+        "to": "removed",
+        "expected_incarnation": 1
+      },
+      {
+        "name": "readd-incarnation",
+        "service_key": "svc.readd",
+        "from": "removed",
+        "to": "accepted",
+        "expected_incarnation": 2
+      },
+      {
+        "name": "a-b-a",
+        "service_key": "svc.alpha",
+        "from": "accepted",
+        "to": "accepted",
+        "expected_incarnation": 1
+      }
+    ],
+    "claims": {
+      "synthetic": true,
+      "source_free": true,
+      "explicit_authority": true,
+      "establishes_target_slo": false,
+      "establishes_accuracy": false,
+      "qualifies_supported_scale": false,
+      "changes_production_behavior": false,
+      "authorizes_release": false
+    }
+  },
+  "boundary_profile": {
+    "max_service": {
+      "service_key_bytes": 128,
+      "display_name_bytes": 128,
+      "reason_bytes": 512,
+      "distinct_paths": 128,
+      "path_bytes": 65536,
+      "successors": 512,
+      "member": {
+        "bytes": 158158,
+        "sha256": "sha256:676d5ee8cc33226fdae5cbf65b2945c9aa8b2870573fe763217f2eecf3154eb5"
+      }
+    },
+    "max_placement": {
+      "path_bytes": 4096,
+      "claims": 4000,
+      "roles_per_claim": 5,
+      "catalog_member": {
+        "bytes": 1528421,
+        "sha256": "sha256:ad7c83f819c7f339af3512d5bee4a2c8d4f010e737ba07846999f45cfc45a26b"
+      },
+      "unbucketed_relationship_bytes": 3052846,
+      "claims_per_relationship_bucket": 512,
+      "relationship_buckets": 8,
+      "max_relationship_bucket_bytes": 408942
+    }
+  },
+  "claims": {
+    "synthetic": true,
+    "source_free": true,
+    "explicit_authority": true,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "qualifies_supported_scale": false,
+    "changes_production_behavior": false,
+    "authorizes_release": false
+  }
+}

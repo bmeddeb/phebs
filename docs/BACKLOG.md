@@ -3026,6 +3026,18 @@ store-transaction, filesystem, and lifecycle estimates by byte kind; no
 runtime registration or production cap change; dated PLAN decision and full
 merge bar.
 
+Prospective 2026-08-25 measurement retains the draft reduce-only aggregate
+limits and selects the 12,500 total-record hard pre-growth refusal: the
+accepted-only comparator is 9,468,819 logical canonical bytes and 19,250,171
+encoded bytes across 45 members, with a 9,193-byte root and 1,550,808-byte
+largest ordinary member. The maximum combined service and placement members
+are 158,158 and 1,528,421 bytes. A maximum two-sided 4,000-claim relationship
+projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
+selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
+the measured maximum bucket is 408,942 bytes. This planning branch changes no
+production constant or runtime registration and cannot integrate or advance
+Epic 41 until Epic 40 closes and the full T41.1 merge bar is accepted.
+
 **T41.2 · Segmented service-catalog v3 contract** — implement the pure root and
 dual member views while retaining v2 record semantics. Draft reduce-only
 bounds are 512 services/2 MiB per service-range member, 2,048 paths/2 MiB per

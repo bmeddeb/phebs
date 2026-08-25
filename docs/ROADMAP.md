@@ -807,6 +807,12 @@ catalog, relationship, or correctness authority.
   current synthetic SCIP producers to typed ranges, preserves deliberate
   legacy-read fixtures and retained bytes, and may integrate as maintenance
   without advancing Epic 41. T41.1 still waits for Epic 40 closure.
+- A prospective T41.1 planning branch freezes source-free
+  8,000/10,000/12,500 accepted-service recipes and selects reduce-only
+  aggregate limits plus at-most-512-claim relationship buckets after the
+  existing 1-MiB wire failed the maximum 4,000-claim shape. It changes no
+  production cap or registration and does not advance Epic 41; integration
+  remains gated on Epic 40 closure and the T41.1 merge bar.
 - T40.13 is the only next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

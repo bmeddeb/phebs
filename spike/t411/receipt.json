@@ -1,0 +1,330 @@
+{
+  "schema": "t411-service-load-receipt-v1",
+  "measured_on": "2026-08-25",
+  "inputs": {
+    "t323_receipt_sha256": "sha256:899492dcfe2f768de7e75003ff5d420655cbfeb8c44d9a76505bf6d6b8dededd",
+    "t323_bundle_sha256": "sha256:8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa"
+  },
+  "environment": {
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_version": "go1.27.0",
+    "logical_cpus": 10,
+    "process_peak_rss_bytes": 155566080,
+    "rss_method": "getrusage-self-after-validation-before-artifact-write"
+  },
+  "envelope": {
+    "bytes": 18143,
+    "sha256": "sha256:99ec8a3dc79537bf1db842234f6fe054abd03c9af7503987f78c5530fdfd525f"
+  },
+  "profiles": [
+    {
+      "name": "accepted-services-8000",
+      "profile_digest": "sha256:bf3f697f2ff9cbfe6ebc9956dd9e86be852acea8a258d4767ce3e5c5c4b43ef6",
+      "wall_micros": 137300,
+      "go_allocated_bytes": 143186504,
+      "serialization": [
+        {
+          "kind": "logical_catalog",
+          "measurement": "exact_canonical",
+          "bytes": 6060113
+        },
+        {
+          "kind": "catalog_root",
+          "measurement": "exact_encoded",
+          "bytes": 6046
+        },
+        {
+          "kind": "service_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 6058192
+        },
+        {
+          "kind": "placement_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 6256080
+        },
+        {
+          "kind": "publication",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 12320318
+        },
+        {
+          "kind": "fixture_content",
+          "measurement": "exact_generated",
+          "bytes": 1468080
+        },
+        {
+          "kind": "relationship_empty",
+          "measurement": "exact_canonical",
+          "bytes": 73
+        },
+        {
+          "kind": "relationship_mixed",
+          "measurement": "exact_canonical",
+          "bytes": 768072
+        },
+        {
+          "kind": "relationship_dense",
+          "measurement": "exact_canonical",
+          "bytes": 14744072
+        }
+      ],
+      "projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 6046,
+          "sha256": "sha256:988a444343a94ade26a897a0f6453c32e0ca58872fac776edd886aeb4fd58214"
+        },
+        "service_members": 16,
+        "service_member_bytes": 6058192,
+        "max_service_member_bytes": 387721,
+        "placement_members": 13,
+        "placement_member_bytes": 6256080,
+        "max_placement_member_bytes": 886273,
+        "total_members": 29,
+        "encoded_bytes": 12320318,
+        "member_set_sha256": "sha256:4b257d5dcbe39c73f8c273a94708abba5bfede9aa55b3dd6703b90eece4d3a38"
+      },
+      "store_transaction_estimate": {
+        "immutable_rows": 30,
+        "largest_row_bytes": 886273,
+        "pointer_swap_rows": 1,
+        "pointer_swap_bytes": 89
+      },
+      "filesystem_estimate": {
+        "regular_files": 25280,
+        "logical_bytes": 1468080
+      },
+      "lifecycle_estimate": {
+        "root_rows": 1,
+        "member_rows": 29,
+        "collect_rows": 30,
+        "collect_bytes": 12320318
+      }
+    },
+    {
+      "name": "accepted-services-10000",
+      "profile_digest": "sha256:f54f6c634dea5ce780df1f82591d876ddd229e125444549c1288d7ee4483cf91",
+      "wall_micros": 176042,
+      "go_allocated_bytes": 179447024,
+      "serialization": [
+        {
+          "kind": "logical_catalog",
+          "measurement": "exact_canonical",
+          "bytes": 7575094
+        },
+        {
+          "kind": "catalog_root",
+          "measurement": "exact_encoded",
+          "bytes": 7431
+        },
+        {
+          "kind": "service_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 7572740
+        },
+        {
+          "kind": "placement_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 7820060
+        },
+        {
+          "kind": "publication",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 15400231
+        },
+        {
+          "kind": "fixture_content",
+          "measurement": "exact_generated",
+          "bytes": 1835100
+        },
+        {
+          "kind": "relationship_empty",
+          "measurement": "exact_canonical",
+          "bytes": 73
+        },
+        {
+          "kind": "relationship_mixed",
+          "measurement": "exact_canonical",
+          "bytes": 960072
+        },
+        {
+          "kind": "relationship_dense",
+          "measurement": "exact_canonical",
+          "bytes": 18430072
+        }
+      ],
+      "projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 7431,
+          "sha256": "sha256:7cf8ef69c3239939e38f61e3dd8a1a2f9e62badfe0bbe19b3260e370dead55ca"
+        },
+        "service_members": 20,
+        "service_member_bytes": 7572740,
+        "max_service_member_bytes": 387721,
+        "placement_members": 16,
+        "placement_member_bytes": 7820060,
+        "max_placement_member_bytes": 1107805,
+        "total_members": 36,
+        "encoded_bytes": 15400231,
+        "member_set_sha256": "sha256:a3590b9d3c032a759850784cd69f8cf6a952d1b76f725383b2469f8fa7c30def"
+      },
+      "store_transaction_estimate": {
+        "immutable_rows": 37,
+        "largest_row_bytes": 1107805,
+        "pointer_swap_rows": 1,
+        "pointer_swap_bytes": 89
+      },
+      "filesystem_estimate": {
+        "regular_files": 31600,
+        "logical_bytes": 1835100
+      },
+      "lifecycle_estimate": {
+        "root_rows": 1,
+        "member_rows": 36,
+        "collect_rows": 37,
+        "collect_bytes": 15400231
+      }
+    },
+    {
+      "name": "accepted-services-12500",
+      "profile_digest": "sha256:adc7e45536cf4a1bb193f80f41ff8a5c34eb011d29f79e43e9d20e75baa1903d",
+      "wall_micros": 219988,
+      "go_allocated_bytes": 230730360,
+      "serialization": [
+        {
+          "kind": "logical_catalog",
+          "measurement": "exact_canonical",
+          "bytes": 9468819
+        },
+        {
+          "kind": "catalog_root",
+          "measurement": "exact_encoded",
+          "bytes": 9193
+        },
+        {
+          "kind": "service_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 9465925
+        },
+        {
+          "kind": "placement_members",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 9775053
+        },
+        {
+          "kind": "publication",
+          "measurement": "exact_encoded_aggregate",
+          "bytes": 19250171
+        },
+        {
+          "kind": "fixture_content",
+          "measurement": "exact_generated",
+          "bytes": 2293875
+        },
+        {
+          "kind": "relationship_empty",
+          "measurement": "exact_canonical",
+          "bytes": 73
+        },
+        {
+          "kind": "relationship_mixed",
+          "measurement": "exact_canonical",
+          "bytes": 1200072
+        },
+        {
+          "kind": "relationship_dense",
+          "measurement": "exact_canonical",
+          "bytes": 23037572
+        }
+      ],
+      "projection": {
+        "policy_digest": "sha256:7fe0a6a15dc0d7fdd7e06766febcfde76d30ac0a2e71678d8f0872af30b71b80",
+        "root": {
+          "bytes": 9193,
+          "sha256": "sha256:f76efb1c69bd8ff0a1cf22d3992858d7e5495c33aa810a728fa4f44295ec67f9"
+        },
+        "service_members": 25,
+        "service_member_bytes": 9465925,
+        "max_service_member_bytes": 387721,
+        "placement_members": 20,
+        "placement_member_bytes": 9775053,
+        "max_placement_member_bytes": 1550808,
+        "total_members": 45,
+        "encoded_bytes": 19250171,
+        "member_set_sha256": "sha256:03382cc4d7709f5ee464ace1080403237866145cec075461276e58285ada225c"
+      },
+      "store_transaction_estimate": {
+        "immutable_rows": 46,
+        "largest_row_bytes": 1550808,
+        "pointer_swap_rows": 1,
+        "pointer_swap_bytes": 89
+      },
+      "filesystem_estimate": {
+        "regular_files": 39500,
+        "logical_bytes": 2293875
+      },
+      "lifecycle_estimate": {
+        "root_rows": 1,
+        "member_rows": 45,
+        "collect_rows": 46,
+        "collect_bytes": 19250171
+      }
+    }
+  ],
+  "boundary_profile": {
+    "max_service": {
+      "service_key_bytes": 128,
+      "display_name_bytes": 128,
+      "reason_bytes": 512,
+      "distinct_paths": 128,
+      "path_bytes": 65536,
+      "successors": 512,
+      "member": {
+        "bytes": 158158,
+        "sha256": "sha256:676d5ee8cc33226fdae5cbf65b2945c9aa8b2870573fe763217f2eecf3154eb5"
+      }
+    },
+    "max_placement": {
+      "path_bytes": 4096,
+      "claims": 4000,
+      "roles_per_claim": 5,
+      "catalog_member": {
+        "bytes": 1528421,
+        "sha256": "sha256:ad7c83f819c7f339af3512d5bee4a2c8d4f010e737ba07846999f45cfc45a26b"
+      },
+      "unbucketed_relationship_bytes": 3052846,
+      "claims_per_relationship_bucket": 512,
+      "relationship_buckets": 8,
+      "max_relationship_bucket_bytes": 408942
+    }
+  },
+  "decision": {
+    "accepted_floor": 8000,
+    "accepted_target": 10000,
+    "max_total_service_records": 12500,
+    "max_memberships": 75000,
+    "max_distinct_paths": 40000,
+    "max_successor_edges": 12500,
+    "max_service_successors": 512,
+    "max_logical_bytes": 16777216,
+    "max_publication_bytes": 33554432,
+    "max_claims_per_placement": 4000,
+    "max_claims_per_bucket": 512,
+    "relationship_representation": "placement-claim-buckets-v1",
+    "hard_pre_growth_refusal": true,
+    "changes_production_caps": false
+  },
+  "claims": {
+    "synthetic": true,
+    "source_free": true,
+    "explicit_authority": true,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "qualifies_supported_scale": false,
+    "changes_production_behavior": false,
+    "authorizes_release": false
+  }
+}
