@@ -402,7 +402,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentAtV25(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; is_v25_plan() { grep -Eq -- '-v2(5|6|7)"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
+	script := `source "$1"; is_v25_plan() { grep -Eq -- '-v2(5|6|7|8)"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
 	for _, test := range []struct {
 		schema string
 		want   string
@@ -411,6 +411,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentAtV25(t *testing.T) {
 		{schema: PlanSchemaV25, want: ""},
 		{schema: PlanSchemaV26, want: ""},
 		{schema: PlanSchemaV27, want: ""},
+		{schema: PlanSchemaV28, want: ""},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -1096,7 +1097,7 @@ func TestCeremonyDriverSelectsPreflightByPlanSchema(t *testing.T) {
 	}
 	script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v2(5|6|7)"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6|7|8)"' "$1"; }
 preflight() { printf 'v25-execute\n'; }
 historical_preflight() { printf 'historical-execute\n'; }
 verification_preflight() { printf 'v25-seal\n'; }
@@ -1112,6 +1113,7 @@ verification_preflight_for_plan "$2"
 		{schema: PlanSchemaV25, want: "v25-execute\nv25-seal\n"},
 		{schema: PlanSchemaV26, want: "v25-execute\nv25-seal\n"},
 		{schema: PlanSchemaV27, want: "v25-execute\nv25-seal\n"},
+		{schema: PlanSchemaV28, want: "v25-execute\nv25-seal\n"},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -1730,7 +1732,7 @@ func TestCeremonyDriverFailurePolicyIsV25OnlyAndStopsBeforeSeal(t *testing.T) {
 			sealMarker := filepath.Join(root, "seal")
 			script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v2(5|6|7)"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6|7|8)"' "$1"; }
 REPO_REAL="$REPOSITORY_PATH"
 CEREMONY_REAL="$ROOT_PATH"
 CLOSED_GO_CACHE="$CACHE_PATH"
@@ -1880,7 +1882,7 @@ false
 	}
 }
 
-func TestCeremonyDriverRecognizesV27ThroughTheRealInspector(t *testing.T) {
+func TestCeremonyDriverRecognizesV28ThroughTheRealInspector(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")
 	}
@@ -1917,6 +1919,10 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 	if err != nil {
 		t.Fatal(err)
 	}
+	v28, err := frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, test := range []struct {
 		plan Plan
 		want string
@@ -1925,6 +1931,7 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 		{v25, "current\n"},
 		{v26, "current\n"},
 		{v27, "current\n"},
+		{v28, "current\n"},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		planBytes, err := MarshalPlan(test.plan)
@@ -1941,7 +1948,7 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 	}
 }
 
-func TestV26AndV27ReceiptCommandsUseDurablePublication(t *testing.T) {
+func TestV26ThroughV28ReceiptCommandsUseDurablePublication(t *testing.T) {
 	commandRoot := t.TempDir()
 	receiptCommand := filepath.Join(commandRoot, "t4013-receipt")
 	if output, err := exec.Command("go", "build", "-o", receiptCommand, "./cmd/t4013-receipt").CombinedOutput(); err != nil {
@@ -1954,6 +1961,7 @@ func TestV26AndV27ReceiptCommandsUseDurablePublication(t *testing.T) {
 	}{
 		{"v26", frozenV26PlanWithHostToolchain, ReceiptSchemaV26},
 		{"v27", frozenV27PlanWithHostToolchain, ReceiptSchemaV27},
+		{"v28", frozenV28PlanWithHostToolchain, ReceiptSchemaV28},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -2003,7 +2011,7 @@ func TestV26AndV27ReceiptCommandsUseDurablePublication(t *testing.T) {
 	}
 }
 
-func TestV27ReturnedEvidenceRebuildRetainsDataMeasurementDiagnostic(t *testing.T) {
+func TestReturnedEvidenceRebuildRetainsCurrentDiagnostics(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")
 	}
@@ -2018,50 +2026,75 @@ func TestV27ReturnedEvidenceRebuildRetainsDataMeasurementDiagnostic(t *testing.T
 	).CombinedOutput(); err != nil {
 		t.Fatalf("build returned-evidence controls: %v: %s", err, output)
 	}
-	plan, err := frozenV27PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name        string
+		plan        func(string, []HostToolObservation) (Plan, error)
+		observation func(Plan) Observation
+		mutate      func(*Observation)
+	}{
+		{
+			name: "v27-data-measurement", plan: frozenV27PlanWithHostToolchain,
+			observation: func(plan Plan) Observation {
+				return stoppedV27DataMeasurementObservation(plan, "logical")
+			},
+			mutate: func(value *Observation) { value.DataMeasurement.Gauge = "allocated" },
+		},
+		{
+			name: "v28-retained-partial", plan: frozenV28PlanWithHostToolchain,
+			observation: func(plan Plan) Observation {
+				return stoppedV28RetainedPartialObservation(
+					plan, retainedPartialResolver, retainedPartialMarker,
+				)
+			},
+			mutate: func(value *Observation) { value.Interruption.RetainedPartialKind = retainedPartialStage },
+		},
 	}
-	planBytes, err := MarshalPlan(plan)
-	if err != nil {
-		t.Fatal(err)
-	}
-	observation := stoppedV27DataMeasurementObservation(plan, "logical")
-	observationBytes, err := MarshalObservation(observation)
-	if err != nil {
-		t.Fatal(err)
-	}
-	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
-	if err != nil {
-		t.Fatal(err)
-	}
-	evidence := t.TempDir()
-	manifest := []byte("{\n" +
-		"  \"schema\": \"t4013-source-free-transfer-v1\",\n" +
-		"  \"ceremony_id\": \"v27-returned-evidence-test\",\n" +
-		"  \"source_commit\": \"" + testSourceCommit + "\",\n" +
-		"  \"plan_digest\": \"" + PlanDigest(planBytes) + "\",\n" +
-		"  \"sealed_at\": \"2026-08-24T00:00:00Z\"\n" +
-		"}\n")
-	files := map[string][]byte{
-		"allowed_signers":  []byte("test signer\n"),
-		"freeze.json":      []byte("test freeze\n"),
-		"freeze.json.sig":  []byte("test freeze signature\n"),
-		"manifest.json":    manifest,
-		"observation.json": observationBytes,
-		"plan.json":        planBytes,
-		"results.json":     receiptBytes,
-		"SHA256SUMS":       []byte("test checksums\n"),
-		"SHA256SUMS.sig":   []byte("test checksum signature\n"),
-		"signer.pub":       []byte("test signer public key\n"),
-	}
-	for name, raw := range files {
-		if err := os.WriteFile(filepath.Join(evidence, name), raw, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	closedTemporary := t.TempDir()
-	script := `
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := test.plan(testSourceCommit, fakeHostToolchainV25())
+			if err != nil {
+				t.Fatal(err)
+			}
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			observation := test.observation(plan)
+			observationBytes, err := MarshalObservation(observation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence := t.TempDir()
+			manifest := []byte("{\n" +
+				"  \"schema\": \"t4013-source-free-transfer-v1\",\n" +
+				"  \"ceremony_id\": \"" + test.name + "\",\n" +
+				"  \"source_commit\": \"" + testSourceCommit + "\",\n" +
+				"  \"plan_digest\": \"" + PlanDigest(planBytes) + "\",\n" +
+				"  \"sealed_at\": \"2026-08-24T00:00:00Z\"\n" +
+				"}\n")
+			files := map[string][]byte{
+				"allowed_signers":  []byte("test signer\n"),
+				"freeze.json":      []byte("test freeze\n"),
+				"freeze.json.sig":  []byte("test freeze signature\n"),
+				"manifest.json":    manifest,
+				"observation.json": observationBytes,
+				"plan.json":        planBytes,
+				"results.json":     receiptBytes,
+				"SHA256SUMS":       []byte("test checksums\n"),
+				"SHA256SUMS.sig":   []byte("test checksum signature\n"),
+				"signer.pub":       []byte("test signer public key\n"),
+			}
+			for name, raw := range files {
+				if err := os.WriteFile(filepath.Join(evidence, name), raw, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			closedTemporary := t.TempDir()
+			script := `
 source "$1"
 CLOSED_TMP="$2"
 CLOSED_COMMAND_ROOT="$3"
@@ -2076,27 +2109,29 @@ plan_git() { printf '%s\n' "$SOURCE_COMMIT"; }
 run_v25_custody_command_in_repo_active() { "$@"; }
 verify_evidence_directory "$5"
 `
-	verify := func() ([]byte, error) {
-		command := exec.Command(
-			"bash", "-c", script, "v27-returned-evidence-test",
-			driver, closedTemporary, commandRoot, t.TempDir(), evidence,
-		)
-		command.Env = append(os.Environ(), "SOURCE_COMMIT="+testSourceCommit)
-		return command.CombinedOutput()
-	}
-	if output, err := verify(); err != nil {
-		t.Fatalf("V27 returned evidence verification: %v: %s", err, output)
-	}
-	observation.DataMeasurement.Gauge = "allocated"
-	forgedObservation, err := MarshalObservation(observation)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(evidence, "observation.json"), forgedObservation, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if output, err := verify(); err == nil || !bytes.Contains(output, []byte("rebuilt receipt differs")) {
-		t.Fatalf("forged V27 returned diagnostic = %v: %s", err, output)
+			verify := func() ([]byte, error) {
+				command := exec.Command(
+					"bash", "-c", script, test.name,
+					driver, closedTemporary, commandRoot, t.TempDir(), evidence,
+				)
+				command.Env = append(os.Environ(), "SOURCE_COMMIT="+testSourceCommit)
+				return command.CombinedOutput()
+			}
+			if output, err := verify(); err != nil {
+				t.Fatalf("returned evidence verification: %v: %s", err, output)
+			}
+			test.mutate(&observation)
+			forgedObservation, err := MarshalObservation(observation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(evidence, "observation.json"), forgedObservation, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if output, err := verify(); err == nil || !bytes.Contains(output, []byte("rebuilt receipt differs")) {
+				t.Fatalf("forged returned diagnostic = %v: %s", err, output)
+			}
+		})
 	}
 }
 
@@ -2119,6 +2154,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 		{name: "v25-existing", schema: PlanSchemaV25, existing: true, wantCommand: true},
 		{name: "v26-existing", schema: PlanSchemaV26, existing: true, wantCommand: true},
 		{name: "v27-existing", schema: PlanSchemaV27, existing: true, wantCommand: true},
+		{name: "v28-existing", schema: PlanSchemaV28, existing: true, wantCommand: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -2139,7 +2175,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 			}
 			script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v2(5|6|7)"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v2(5|6|7|8)"' "$1"; }
 REPO_REAL="$2"
 V25_RECEIPT_COMMAND=t4013-receipt
 require_v25_custody_command() { :; }

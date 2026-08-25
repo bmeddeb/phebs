@@ -38,6 +38,7 @@ func TestProfileInspectionContractTracksPlanSchema(t *testing.T) {
 		{PlanSchemaV25, profileInspectionV21},
 		{PlanSchemaV26, profileInspectionV21},
 		{PlanSchemaV27, profileInspectionV21},
+		{PlanSchemaV28, profileInspectionV21},
 	}
 	for _, test := range tests {
 		if got := profileInspectionForPlan(test.schema); got != test.want {

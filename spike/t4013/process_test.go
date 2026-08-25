@@ -1241,6 +1241,7 @@ func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV25, ""},
 		{PlanSchemaV26, ""},
 		{PlanSchemaV27, ""},
+		{PlanSchemaV28, ""},
 	} {
 		got := ""
 		surreal := ""
@@ -1273,6 +1274,7 @@ func TestFrozenSourceExportContractChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV25, frozenSourceExportV25},
 		{PlanSchemaV26, frozenSourceExportV25},
 		{PlanSchemaV27, frozenSourceExportV25},
+		{PlanSchemaV28, frozenSourceExportV25},
 	} {
 		if got := frozenSourceExportContractForPlan(test.schema); got != test.want {
 			t.Fatalf("source export contract for %s = %v, want %v", test.schema, got, test.want)

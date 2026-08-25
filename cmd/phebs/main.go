@@ -454,6 +454,7 @@ func serve(args []string) error {
 	defer stopBackground()
 
 	capacityGate := lifecycle.NewGate(cfg.Server.DataDir)
+	partitionPublicationRoot := filepath.Join(cfg.Server.DataDir, "extraction-publications")
 	acquireLifecycleMutation := func(lockCtx context.Context) (func(), error) {
 		return focusedindex.AcquireMutationLock(
 			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
@@ -489,6 +490,9 @@ func serve(args []string) error {
 	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwner{
 		DataDir: cfg.Server.DataDir, Pins: relationshipCache,
 		AcquireExclusive: acquireObservationTransition, Store: st,
+	})
+	lifecycleOwners = append(lifecycleOwners, lifecycle.ExtractionStageOwner{
+		Root: partitionPublicationRoot, Acquire: acquireLifecycleMutation,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
 	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
@@ -589,6 +593,28 @@ func serve(args []string) error {
 			"relationship recovery: repositories=%d completed=%d unavailable=%d invalid=%d",
 			relationshipRecovery.Repositories, relationshipRecovery.Completed,
 			relationshipRecovery.Unavailable, relationshipRecovery.Invalid,
+		)
+	}
+	releaseExtractionStageRecovery, extractionStageRecoveryLockErr :=
+		acquireLifecycleMutation(ctx)
+	if extractionStageRecoveryLockErr != nil {
+		return fmt.Errorf("lock extraction publication stage recovery: %w", extractionStageRecoveryLockErr)
+	}
+	var extractionStageRecovery extractionpublication.StageRecoveryReport
+	var extractionStageRecoveryErr error
+	func() {
+		defer releaseExtractionStageRecovery()
+		extractionStageRecovery, extractionStageRecoveryErr =
+			extractionpublication.RecoverStages(ctx, partitionPublicationRoot)
+	}()
+	if extractionStageRecoveryErr != nil {
+		return fmt.Errorf("recover extraction publication stages: %w", extractionStageRecoveryErr)
+	}
+	if extractionStageRecovery.Repositories > 0 {
+		diagnostics.Logf(
+			"extraction stage recovery: repositories=%d retired=%d work=%d",
+			extractionStageRecovery.Repositories, extractionStageRecovery.Retired,
+			extractionStageRecovery.Work,
 		)
 	}
 	reportT4013Startup("authority_recovery_complete")
@@ -1091,9 +1117,8 @@ func serve(args []string) error {
 			return authority.SourceGenerationDigest,
 				authority.ObservationGenerationDigest, authorityErr
 		}
-		partitionRoot := filepath.Join(cfg.Server.DataDir, "extraction-publications")
 		partitionRuntime = &extractionpublication.Runtime{
-			Root: partitionRoot, Store: st,
+			Root: partitionPublicationRoot, Store: st,
 			Executor:    &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
 			Publisher:   extractionpublication.StorePublisher{Store: st},
 			Diagnostics: cfg.Diagnostics.Extraction,
@@ -1147,7 +1172,7 @@ func serve(args []string) error {
 			)
 		}
 		partitionReconciler := &extractionpublication.Reconciler{
-			Root: partitionRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
+			Root: partitionPublicationRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
 			Runtime: partitionRuntime, Evidence: st,
 			OpenCandidate: openPartitionCandidate, Authority: readPartitionAuthority,
 			CandidateReference: readPartitionCandidateReference,

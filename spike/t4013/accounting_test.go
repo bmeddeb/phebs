@@ -236,6 +236,10 @@ func TestDataMeasurementDeadlineProjectionIsTypedAndSourceFree(t *testing.T) {
 	if got := projectDataMeasurementDeadline(errors.New("ordinary failure")); got != nil {
 		t.Fatalf("ordinary failure projected as deadline: %+v", got)
 	}
+	var typedNil *dataMeasurementDeadlineError
+	if got := projectDataMeasurementDeadline(typedNil); got != nil {
+		t.Fatalf("typed nil projected as deadline: %+v", got)
+	}
 }
 
 func TestAllocationSamplerRetainsBoundedFirstFailure(t *testing.T) {

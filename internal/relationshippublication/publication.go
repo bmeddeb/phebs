@@ -270,6 +270,9 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 	if prepared == nil || prepared.closed {
 		return nil, errors.New("relationship publication stage is closed")
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	base := repositoryRoot(prepared.root, prepared.repository)
 	target := generationPath(prepared.root, prepared.repository, prepared.rootValue.GenerationDigest)
 	if _, err := os.Lstat(target); err == nil {
@@ -288,6 +291,9 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 	if err := syncDirectory(base); err != nil {
 		return nil, err
 	}
+	// Build completely validated a new stage; the existing-target branch above
+	// completely validates reused bytes. Do not consult ctx once the marker can
+	// exist: either finish the bounded controls or leave recovery authority.
 	pointer, err := newPointer(prepared.rootValue)
 	if err != nil {
 		return nil, err
@@ -302,9 +308,6 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 		return nil, err
 	}
 	if err := replaceFile(filepath.Join(base, "publishing.json"), markerRaw); err != nil {
-		return nil, err
-	}
-	if _, err := openDirectoryComplete(ctx, target, prepared.rootValue); err != nil {
 		return nil, err
 	}
 	pointerRaw, err := json.Marshal(pointer)

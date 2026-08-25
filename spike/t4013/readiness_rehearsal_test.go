@@ -531,7 +531,7 @@ func buildWorkingTreeToolchain(
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV27,
+		Schema:        PlanSchemaV28,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -769,7 +769,7 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
-	plan := Plan{Schema: PlanSchemaV27, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV28, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),

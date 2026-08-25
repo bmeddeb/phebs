@@ -51,6 +51,7 @@ const (
 	PlanSchemaV25        = "t4013-neutral-convergence-plan-v25"
 	PlanSchemaV26        = "t4013-neutral-convergence-plan-v26"
 	PlanSchemaV27        = "t4013-neutral-convergence-plan-v27"
+	PlanSchemaV28        = "t4013-neutral-convergence-plan-v28"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -78,6 +79,7 @@ const (
 	ObservationSchemaV25 = "t4013-neutral-convergence-observation-v25"
 	ObservationSchemaV26 = "t4013-neutral-convergence-observation-v26"
 	ObservationSchemaV27 = "t4013-neutral-convergence-observation-v27"
+	ObservationSchemaV28 = "t4013-neutral-convergence-observation-v28"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -118,6 +120,7 @@ const (
 	ReceiptSchemaV25             = "t4013-neutral-convergence-receipt-v25"
 	ReceiptSchemaV26             = "t4013-neutral-convergence-receipt-v26"
 	ReceiptSchemaV27             = "t4013-neutral-convergence-receipt-v27"
+	ReceiptSchemaV28             = "t4013-neutral-convergence-receipt-v28"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -167,6 +170,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV25, ObservationSchemaV25, ReceiptSchemaV25},
 	{PlanSchemaV26, ObservationSchemaV26, ReceiptSchemaV26},
 	{PlanSchemaV27, ObservationSchemaV27, ReceiptSchemaV27},
+	{PlanSchemaV28, ObservationSchemaV28, ReceiptSchemaV28},
 }
 
 const (
@@ -320,10 +324,19 @@ type DataMeasurementFailureObservation struct {
 }
 
 const (
-	interruptionSchemaV1      = "t4013-interruption-v1"
-	interruptionSchemaV2      = "t4013-interruption-v2"
-	interruptionFateCollected = "collected"
-	interruptionFateRequeued  = "requeued"
+	interruptionSchemaV1        = "t4013-interruption-v1"
+	interruptionSchemaV2        = "t4013-interruption-v2"
+	interruptionSchemaV3        = "t4013-interruption-v3"
+	interruptionFateCollected   = "collected"
+	interruptionFateRequeued    = "requeued"
+	retainedPartialObservation  = "observation_publication"
+	retainedPartialExtraction   = "extraction_publication"
+	retainedPartialRelationship = "relationship_publication"
+	retainedPartialResolver     = "resolver_namespace"
+	retainedPartialRPC          = "rpc_caller_postings"
+	retainedPartialKafka        = "kafka_topic_postings"
+	retainedPartialMarker       = "publishing_marker"
+	retainedPartialStage        = "stage_directory"
 )
 
 // InterruptionObservation retains the exact source-free lifecycle lease used
@@ -356,6 +369,8 @@ type InterruptionObservation struct {
 	// retaining paths, timestamps, cursors, or store rows.
 	RecoveryLifecycle    *InterruptionLifecycleObservation `json:"recovery_lifecycle,omitempty"`
 	ConvergenceLifecycle *InterruptionLifecycleObservation `json:"convergence_lifecycle,omitempty"`
+	RetainedPartialOwner string                            `json:"retained_partial_owner,omitempty"`
+	RetainedPartialKind  string                            `json:"retained_partial_kind,omitempty"`
 }
 
 type InterruptionLifecycleObservation struct {
@@ -844,6 +859,11 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	); err != nil {
 		return Observation{}, err
 	}
+	if err := validateSerializedRetainedPartialFields(
+		raw, observationSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Observation{}, err
+	}
 	if err := ValidateObservation(value); err != nil {
 		return Observation{}, err
 	}
@@ -982,6 +1002,8 @@ func ValidatePlan(value Plan) error {
 	case PlanSchemaV26:
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV27:
+		wantSafety = frozenSafetyV25
+	case PlanSchemaV28:
 		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
@@ -1354,9 +1376,27 @@ func validateInterruptionObservation(value Observation) error {
 	if version >= 22 {
 		wantInterruptionSchema = interruptionSchemaV2
 	}
+	if version >= 28 {
+		wantInterruptionSchema = interruptionSchemaV3
+	}
 	if interruption == nil || interruption.Schema != wantInterruptionSchema ||
 		interruptionSubstageIndex(value.Schema, interruption.LastSubstage) < 0 {
 		return errors.New("T40.13 interruption diagnostic identity is invalid")
+	}
+	hasRetainedOwner := interruption.RetainedPartialOwner != ""
+	hasRetainedKind := interruption.RetainedPartialKind != ""
+	if hasRetainedOwner != hasRetainedKind {
+		return errors.New("T40.13 retained partial attribution is incomplete")
+	}
+	if hasRetainedOwner && (version != 28 || value.Outcome != "stopped" ||
+		interruption.LastSubstage != "partial_verification" ||
+		value.Phases[5].Name != "interruption" || value.Phases[5].Outcome != "failed" ||
+		!validRetainedPartialOwner(interruption.RetainedPartialOwner) ||
+		!validRetainedPartialKind(interruption.RetainedPartialKind)) {
+		return errors.New("T40.13 retained partial attribution is invalid")
+	}
+	if version < 28 && (hasRetainedOwner || hasRetainedKind) {
+		return errors.New("T40.13 historical interruption acquired retained partial attribution")
 	}
 	if version < 22 && (interruption.TriggerScheduleSHA256 != "" ||
 		interruption.RecoveryLifecycle != nil || interruption.ConvergenceLifecycle != nil) {
@@ -3055,6 +3095,11 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	); err != nil {
 		return Receipt{}, err
 	}
+	if err := validateSerializedRetainedPartialFields(
+		raw, receiptSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Receipt{}, err
+	}
 	if err := validateReceipt(value, plan, PlanDigest(raw) == legacyStoppedReceiptDigest); err != nil {
 		return Receipt{}, err
 	}
@@ -3224,29 +3269,150 @@ func decodeStrict(raw []byte, target any) error {
 }
 
 func validateSerializedDataMeasurementField(raw []byte, version int, nested bool) error {
-	var presence struct {
-		DataMeasurement json.RawMessage `json:"data_measurement_failure"`
-		Observation     struct {
-			DataMeasurement json.RawMessage `json:"data_measurement_failure"`
-		} `json:"observation"`
-	}
-	if err := json.Unmarshal(raw, &presence); err != nil {
+	containers, err := serializedEvidenceContainers(raw, nested)
+	if err != nil {
 		return err
 	}
-	field := presence.DataMeasurement
-	if nested {
-		field = presence.Observation.DataMeasurement
-	}
-	if field == nil {
-		return nil
-	}
-	if version < 27 {
-		return errors.New("T40.13 historical evidence acquired data-measurement diagnostics")
-	}
-	if bytes.Equal(bytes.TrimSpace(field), []byte("null")) {
-		return errors.New("T40.13 data-measurement diagnostics cannot be null")
+	for _, container := range containers {
+		for _, field := range container {
+			if !strings.EqualFold(field.name, "data_measurement_failure") {
+				continue
+			}
+			if version < 27 {
+				return errors.New("T40.13 historical evidence acquired data-measurement diagnostics")
+			}
+			if bytes.Equal(bytes.TrimSpace(field.raw), []byte("null")) {
+				return errors.New("T40.13 data-measurement diagnostics cannot be null")
+			}
+		}
 	}
 	return nil
+}
+
+func validateSerializedRetainedPartialFields(raw []byte, version int, nested bool) error {
+	containers, err := serializedEvidenceContainers(raw, nested)
+	if err != nil {
+		return err
+	}
+	for _, container := range containers {
+		var interruptions []serializedField
+		for _, field := range container {
+			if strings.EqualFold(field.name, "interruption") {
+				interruptions = append(interruptions, field)
+			}
+		}
+		found := false
+		for _, field := range interruptions {
+			interruption, err := serializedObjectFields(field.raw)
+			if err != nil {
+				return err
+			}
+			ownerFields, kindFields := 0, 0
+			for _, diagnostic := range interruption {
+				if !strings.EqualFold(diagnostic.name, "retained_partial_owner") &&
+					!strings.EqualFold(diagnostic.name, "retained_partial_kind") {
+					continue
+				}
+				found = true
+				switch diagnostic.name {
+				case "retained_partial_owner":
+					ownerFields++
+				case "retained_partial_kind":
+					kindFields++
+				default:
+					return errors.New("T40.13 retained-partial attribution uses a noncanonical field")
+				}
+				if ownerFields > 1 || kindFields > 1 {
+					return errors.New("T40.13 retained-partial attribution is duplicated")
+				}
+				if version < 28 {
+					return errors.New("T40.13 historical evidence acquired retained-partial attribution")
+				}
+				if bytes.Equal(bytes.TrimSpace(diagnostic.raw), []byte("null")) {
+					return errors.New("T40.13 retained-partial attribution cannot be null")
+				}
+				var value string
+				if json.Unmarshal(diagnostic.raw, &value) != nil ||
+					(diagnostic.name == "retained_partial_owner" && !validRetainedPartialOwner(value)) ||
+					(diagnostic.name == "retained_partial_kind" && !validRetainedPartialKind(value)) {
+					return errors.New("T40.13 retained-partial attribution value is invalid")
+				}
+			}
+		}
+		if found && (len(interruptions) != 1 || interruptions[0].name != "interruption") {
+			return errors.New("T40.13 retained-partial attribution is hidden by duplicate or noncanonical evidence")
+		}
+	}
+	return nil
+}
+
+func validRetainedPartialOwner(value string) bool {
+	return slices.Contains([]string{
+		retainedPartialObservation, retainedPartialExtraction, retainedPartialRelationship,
+		retainedPartialResolver, retainedPartialRPC, retainedPartialKafka,
+	}, value)
+}
+
+func validRetainedPartialKind(value string) bool {
+	return slices.Contains([]string{retainedPartialMarker, retainedPartialStage}, value)
+}
+
+type serializedField struct {
+	name string
+	raw  json.RawMessage
+}
+
+func serializedEvidenceContainers(raw []byte, nested bool) ([][]serializedField, error) {
+	root, err := serializedObjectFields(raw)
+	if err != nil || !nested {
+		return [][]serializedField{root}, err
+	}
+	var result [][]serializedField
+	for _, field := range root {
+		if !strings.EqualFold(field.name, "observation") {
+			continue
+		}
+		if field.name != "observation" || len(result) != 0 {
+			return nil, errors.New("T40.13 serialized observation evidence is duplicate or noncanonical")
+		}
+		observation, err := serializedObjectFields(field.raw)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, observation)
+	}
+	return result, nil
+}
+
+func serializedObjectFields(raw []byte) ([]serializedField, error) {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	if delimiter, ok := token.(json.Delim); !ok || delimiter != '{' {
+		return nil, nil
+	}
+	var fields []serializedField
+	for decoder.More() {
+		key, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+		name, ok := key.(string)
+		if !ok {
+			return nil, errors.New("T40.13 serialized evidence key is invalid")
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return nil, err
+		}
+		fields = append(fields, serializedField{name: name, raw: value})
+	}
+	if _, err := decoder.Token(); err != nil {
+		return nil, err
+	}
+	return fields, nil
 }
 
 func nonnegativeMetrics(value PhaseMetrics) bool {

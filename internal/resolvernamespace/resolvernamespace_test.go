@@ -224,6 +224,72 @@ func TestRecoveryValidatesCompleteGenerationBeforePointerSwap(t *testing.T) {
 	}
 }
 
+func TestPublishCancellationFenceAndConstantControlCommit(t *testing.T) {
+	descriptors := []gocaller.DirectDescriptor{
+		descriptor("grpc", "example.test/a", "AClient", "Read", "a.Service/Read", "a"),
+	}
+	t.Run("pre-canceled", func(t *testing.T) {
+		root := t.TempDir()
+		prepared := buildPrepared(t, root, "sha256:"+strings.Repeat("1", 64), descriptors, nil)
+		stage := prepared.directory
+		target := generationPath(root, prepared.repository, prepared.rootValue.GenerationDigest)
+		base := repositoryRoot(root, prepared.repository)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if _, err := prepared.Publish(ctx); !errors.Is(err, context.Canceled) {
+			t.Fatalf("pre-canceled publish = %v", err)
+		}
+		if prepared.closed {
+			t.Fatal("pre-canceled publish closed the stage")
+		}
+		if _, err := os.Lstat(stage); err != nil {
+			t.Fatalf("pre-canceled stage missing: %v", err)
+		}
+		for _, path := range []string{target, filepath.Join(base, "publishing.json"), filepath.Join(base, "current.json")} {
+			if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("pre-canceled control/install exists at %s: %v", path, err)
+			}
+		}
+	})
+
+	t.Run("late-cancellation", func(t *testing.T) {
+		root := t.TempDir()
+		prepared := buildPrepared(t, root, "sha256:"+strings.Repeat("1", 64), descriptors, nil)
+		baseCtx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		ctx := &cancelAfterFirstCheckContext{Context: baseCtx, cancel: cancel}
+		publication, err := prepared.Publish(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ctx.checks != 1 || !errors.Is(baseCtx.Err(), context.Canceled) {
+			t.Fatalf("publish context checks = %d", ctx.checks)
+		}
+		if _, err := os.Lstat(filepath.Join(publication.base, "publishing.json")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("late cancellation stranded marker: %v", err)
+		}
+		current, err := OpenCurrent(t.Context(), root, prepared.repository)
+		if err != nil || current.Root().Digest != publication.Root().Digest {
+			t.Fatalf("late-canceled authority = %+v, %v", current, err)
+		}
+	})
+}
+
+type cancelAfterFirstCheckContext struct {
+	context.Context
+	checks int
+	cancel context.CancelFunc
+}
+
+func (ctx *cancelAfterFirstCheckContext) Err() error {
+	ctx.checks++
+	err := ctx.Context.Err()
+	if ctx.checks == 1 && err == nil {
+		ctx.cancel()
+	}
+	return err
+}
+
 func TestSparseLookupDoesNotReadSiblingNamespace(t *testing.T) {
 	root := t.TempDir()
 	publication := buildPublication(t, root, "sha256:"+strings.Repeat("1", 64), []gocaller.DirectDescriptor{

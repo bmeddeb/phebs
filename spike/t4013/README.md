@@ -3557,3 +3557,125 @@ cost-record issue, resolved by the source-identical correction above. T40.13n
 requests integration only. Integration, exact-main
 preflight, fresh-ID selection, freeze, plan review, and execution remain
 separate explicit decisions; no gate or Epic closure is claimed.
+
+### Neutral-37 partial-verification stop and T40.13o
+
+The recent ceremony history contains three distinct stops:
+
+- neutral-35: V25, exact source
+  `158dc6c9d87c26e4e7fc6a2f2ce38cc900da2119`, plan
+  `sha256:d9c1a646a7722c0d6496d1866c3a1450cbcbdfbf5c17c340d324173fe2ea543c`,
+  cold measurement stop after 63.325 minutes;
+- neutral-36: V26, exact source
+  `acc5a23f046229c580b972bcbb0107f2f7062882`, plan
+  `sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`,
+  `interruption/restart_start` stop after 327.939 minutes; and
+- neutral-37: V27, exact source
+  `3d6ecf294e655c9121ea57cdec24b23b91a1cf4e`, plan
+  `sha256:52b6c9d519358d84c34cbdb5b49bc44eff22005298e4a281ed3a598d82896f5b`,
+  `interruption/partial_verification` stop after 317.565 minutes.
+
+Neutral-37 proved requeued recovery for the selected lease and completed exact
+clean teardown. Its reconciled controlling signed attribution is
+`recovery/direct_recovery_failed/p6_investigation/substantiated`. V27 cannot
+name the retained partial owner/kind, prove simultaneous capture failure, or
+separate a partial-clear timeout from a scanner error. Neutral-36 likewise
+establishes neither a pipeline failure nor a scale pass. The V26 meter defect
+predated neutral-35, so these stops are not a causal chain in which each repair
+introduced the next defect.
+
+T40.13o rejects a typed-nil data-measurement deadline before either V27
+classification or command-failure sanitization can consume it. Nondeadline
+causes therefore remain byte-for-byte classification-equivalent across the
+V26/V27 boundary, and a sanitized backup/restore failure cannot panic on a nil
+deadline.
+
+Relationship and resolver publication now have one cancellation boundary
+before commit. New/reused generations are completely validated before a marker
+can exist; after that point the bounded marker→pointer→marker-removal sequence
+finishes without repeating the full generation validation. Existing hard-death
+and control-I/O recovery authority is unchanged.
+
+Extraction publication now gives package-owned stages bounded startup recovery
+before workers and real lifecycle ownership. Startup validates every raw
+generation, restore, and sparse stage tree, atomically moves it into a retired
+namespace, and durably syncs the parent. It performs no deletion or drain and
+preserves bytes and modification time. Scheduled lifecycle promotes a retired
+stage to collecting, with a durable parent sync, only when it is at least 24
+hours old or older than the newest two for its repository and kind. Collecting
+stages then drain unconditionally across bounded turns and restarts under every
+controller limit. A raw stage created after startup remains untouched and makes
+completeness lower-bound. Sparse-candidate residue is production-owned here but
+excluded from ceremony partial attribution.
+
+Startup checks cancellation before each raw-stage collision preflight and
+rename, then syncs any already-renamed prefix before returning.
+
+Fresh ceremony contracts advance to V28. A stopped
+`interruption/partial_verification` may retain exactly one paired owner/kind:
+
+- owner: `observation_publication`, `extraction_publication`,
+  `relationship_publication`, `resolver_namespace`, `rpc_caller_postings`, or
+  `kafka_topic_postings`;
+- kind: `publishing_marker` or `stage_directory`.
+
+The fixed-order ceremony scan visits only those six bounded publication roots,
+prefers marker over stage, and retains no path, name, timestamp, raw error,
+source, or content. V1–V27 reject either field; V28 rejects incomplete, null,
+hidden-duplicate/mixed-case, unknown, or outcome-incoherent fields through the
+observation, receipt, returned-evidence, and teardown-checkpoint boundaries.
+
+Publication removes one full validation and adds one constant cancellation
+check. V28 adds one bounded six-root scan to each existing partial-verification
+poll. Startup acquires and holds the shared lifecycle-mutation lock once for one
+pass capped at 2,000,000 charged work operations, stats, and stage candidates,
+eight scanner-charged peak descriptors, and 510,000,000 name bytes; the eight
+exclude the one existing mutation-lock descriptor. It reads names/types/metadata, not
+content, hashes nothing, and deletes nothing. Startup inventories at most 4,096
+regular plus 4,096 sparse repository namespaces and may retain those 8,192
+bounded identities. Each lifecycle turn acquires that existing shared lock once
+and holds it while inventorying at most 4,096 repositories in one publication
+or sparse phase. Either path accepts at most 20,000 direct
+entries from one selected repository directory and retains at most one extra
+entry only to detect overflow. Each turn also admits at most 64 candidates,
+sixteen removals, 256 stats including descriptor-open stats, eight peak
+descriptors, and 1 MiB of names. Clean completion is exact
+and idle; raw post-start residue is lower-bound without permanent backlog.
+Lifecycle alone promotes eligible retired residue and drains collecting
+residue. Product
+query/request, repository sync-tick, corpus/shard/content, hash, cache, worker,
+and child costs are unchanged. No new lock primitive is added. New non-reused generation creation adds
+one serial result-directory fsync per accepted domain (zero through 64) before
+the existing final stage sync/rename. Reuse/no-op adds none; a failed absent-
+generation rebuild repeats those bounded syncs, while restore's existing per-
+domain sync is unchanged. The new syncs extend the existing one-of-64
+reconciler shard-mutex hold.
+
+The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s),
+complete package (103.560s), full package race (113.820s), focused publication
+race, real-launcher custody proof (62.074s), every uncached `internal/` package
+including standalone `internal/store` (983.068s), and module/vet/lint/docs/
+glossary/shell/whitespace. One complete readiness attempt ran 233.93s; semantic
+and stale-worker passed, while structural alone met host-native sampler `EPERM`
+after healthy startup. No PID/session survived, diagnostic root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-403545186`
+is retained, and the one bounded structural rerun passed in 194.515s. Recorded
+independent review of exact commit
+`704c2360e75e8a7d7068cbf3cd49b492a84cb50d` found critical/high 0, medium 1,
+and low 1. The cancellation and cost-record findings above are corrected. The
+corrected tree passed 20 cancellation repetitions (0.597s), extraction normal/
+race (7.560s/9.354s), lifecycle (0.615s), command (12.288s), and static/docs
+gates. Its two structural confirmations were invalidated by repeated native
+sampler `EPERM` after healthy `http_ready` (82.405s and 80.245s); PIDs
+79356/81088 are gone, roots
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
+and
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`
+remain retained, and no third retry is permitted. Fresh review of exact
+corrected source commit `710f66f440464c4dabf1723f98134cb941c07232` found
+critical/high/medium 0 and one low lock-cost wording gap. Source-identical docs
+commit `c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
+re-review with all severity counts zero. No code-review finding remains; later
+host-clean structural confirmation remains.
+No integration, fresh ID, rerun, freeze, execution, release, T40.13/Epic-40
+closure, topology/bound change, or scale/SLO claim is authorized.

@@ -1145,6 +1145,105 @@ func TestRecoveryValidatesCompleteGenerationBeforePointerSwap(t *testing.T) {
 	}
 }
 
+func TestPublishCancellationFenceAndConstantControlCommit(t *testing.T) {
+	t.Run("pre-canceled", func(t *testing.T) {
+		root := t.TempDir()
+		authority := testAuthority(t, "example.com/acme/pre-canceled")
+		stage := emptyRelationshipStage(t, root, authority)
+		stagePath := stage.directory
+		target := generationPath(root, authority.Repository, stage.rootValue.GenerationDigest)
+		base := repositoryRoot(root, authority.Repository)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if _, err := stage.Publish(ctx); !errors.Is(err, context.Canceled) {
+			t.Fatalf("pre-canceled publish = %v", err)
+		}
+		if stage.closed {
+			t.Fatal("pre-canceled publish closed the stage")
+		}
+		if _, err := os.Lstat(stagePath); err != nil {
+			t.Fatalf("pre-canceled stage missing: %v", err)
+		}
+		for _, path := range []string{target, filepath.Join(base, "publishing.json"), filepath.Join(base, "current.json")} {
+			if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("pre-canceled control/install exists at %s: %v", path, err)
+			}
+		}
+	})
+
+	t.Run("late-cancellation", func(t *testing.T) {
+		root := t.TempDir()
+		stage, repository := populatedRelationshipStage(t, root)
+		baseCtx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		ctx := &cancelAfterFirstCheckContext{Context: baseCtx, cancel: cancel}
+		publication, err := stage.Publish(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ctx.checks != 1 || !errors.Is(baseCtx.Err(), context.Canceled) {
+			t.Fatalf("publish context checks = %d", ctx.checks)
+		}
+		if _, err := os.Lstat(filepath.Join(publication.base, "publishing.json")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("late cancellation stranded marker: %v", err)
+		}
+		current, err := OpenCurrent(t.Context(), root, repository)
+		if err != nil || current.Root().Digest != publication.Root().Digest {
+			t.Fatalf("late-canceled authority = %+v, %v", current, err)
+		}
+	})
+}
+
+func populatedRelationshipStage(t *testing.T, root string) (*Prepared, string) {
+	t.Helper()
+	catalog, states := relationshipCatalog(t)
+	resolver := fakeResolver{root: resolverRoot(t, catalog.Repository)}
+	rpcValues := []rpccallerposting.Posting{
+		rpcPosting("late-cancel", "unresolved", "grpc", "", "misc/free.go", ""),
+	}
+	rpc := fakeRPC{values: rpcValues}
+	rpc.root = rpcRoot(t, catalog.Repository, resolver.root, rpcValues)
+	kafka := fakeKafka{}
+	kafka.root = kafkaRoot(t, catalog.Repository, rpc.root.Authority, nil)
+	stage, err := buildSources(t.Context(), root, catalog, states, resolver, rpc, kafka)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stage.rootValue.RepositoryMembers) == 0 {
+		t.Fatal("late-cancellation fixture has no completely validated member")
+	}
+	return stage, catalog.Repository
+}
+
+func emptyRelationshipStage(t *testing.T, root string, authority Authority) *Prepared {
+	t.Helper()
+	stage, err := writePublicationStage(
+		t.Context(), root, authority, mustDigest(t, authority),
+		&buildAccumulator{
+			repository: map[int][]Projection{}, services: map[string]*serviceAccumulator{},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return stage
+}
+
+type cancelAfterFirstCheckContext struct {
+	context.Context
+	checks int
+	cancel context.CancelFunc
+}
+
+func (ctx *cancelAfterFirstCheckContext) Err() error {
+	ctx.checks++
+	err := ctx.Context.Err()
+	if ctx.checks == 1 && err == nil {
+		ctx.cancel()
+	}
+	return err
+}
+
 func TestLifecyclePreservesCurrentRollbackFloorAndReaderLease(t *testing.T) {
 	root := t.TempDir()
 	repository := "example.com/acme/lifecycle"
