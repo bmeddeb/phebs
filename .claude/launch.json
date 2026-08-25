@@ -4,8 +4,25 @@
     {
       "name": "phebs-ux-dev",
       "runtimeExecutable": "make",
-      "runtimeArgs": ["-C", "/Users/ben/phebs-ux", "dev", "ARGS=-config phebs-ux-dev.yaml"],
+      "runtimeArgs": [
+        "-C",
+        "/Users/ben/phebs-ux",
+        "dev",
+        "ARGS=-config phebs-ux-dev.yaml"
+      ],
       "port": 3073
+    },
+    {
+      "name": "phebs-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--directory",
+        "/Users/ben/phebs.com/launch-drafts/site"
+      ],
+      "port": 4173
     }
   ]
 }

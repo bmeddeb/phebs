@@ -7,7 +7,9 @@ node_modules/
 coverage.out
 *.test
 .qwen/
-
+.claude/
+.launch-drafts/
+launch-drafts/
 # T11.1 spike: corpus clones and extraction output are derived, never committed
 spike/t111/corpus/
 spike/t111/.module-cache/
