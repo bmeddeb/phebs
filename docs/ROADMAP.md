@@ -1990,13 +1990,15 @@ candidate namespace from ceremony attribution. Production stage recovery still
 owns package candidate residue. Publication transitions are cheaper by one
 full validation. Startup checks cancellation before every raw collision
 preflight and rename, syncing any changed prefix before return. Extraction
-validation/retirement is one startup pass under
-the shared lifecycle-mutation lock, capped at 2,000,000 charged work
-operations, stats, and candidates, eight peak descriptors, and 510,000,000
-name bytes; it reads names/types/stats, not contents, and deletes nothing.
+validation/retirement is one startup pass under one acquisition of the shared
+lifecycle-mutation lock, capped at 2,000,000 charged work operations, stats,
+and candidates, eight scanner-charged peak descriptors, and 510,000,000 name
+bytes; the eight excludes the existing lock descriptor. It reads
+names/types/stats, not contents, and deletes nothing.
 Startup inventories at most 4,096 regular plus 4,096 sparse repository
 namespaces and may retain those 8,192 bounded identities. Each lifecycle turn
-inventories at most 4,096 repositories in one publication or sparse phase.
+acquires that existing shared lock once and holds it while inventorying at most
+4,096 repositories in one publication or sparse phase.
 Either path accepts at most 20,000 direct entries from one selected repository
 directory and retains at most one additional entry only to detect overflow.
 Each lifecycle turn also admits at most 64 stage candidates, sixteen removals,
@@ -2004,10 +2006,11 @@ Each lifecycle turn also admits at most 64 stage candidates, sixteen removals,
 A clean pass becomes exact/idle; raw post-start residue is lower-bound without
 permanent five-second backlog. Eligibility and drain are lifecycle-only,
 adding no product request/query, repository sync-tick, corpus/shard read, hash,
-cache, worker, child, or lock. New non-reused generation construction adds one
+cache, worker, or child. No new lock primitive is added. New non-reused generation construction adds one
 serial result-directory fsync per accepted domain, zero through 64, before the
 existing final stage sync/rename. Reuse/no-op adds none; a failed rebuild retry
-repeats that bounded work, and restore's existing per-domain sync is unchanged.
+repeats that bounded work, restore's existing per-domain sync is unchanged, and
+the new syncs extend the existing one-of-64 reconciler shard-mutex hold.
 
 The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s),
 complete T40.13 package (103.560s), full package race (113.820s), focused

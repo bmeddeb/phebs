@@ -1898,14 +1898,17 @@ entry is mutated after cancellation is observed.
 Steady-state cost: publication removes one redundant post-marker full
 validation and adds only one constant pre-commit cancellation check. V28 adds
 one ceremony-only bounded six-root scan per existing partial-verification poll.
-Extraction startup holds the existing shared lifecycle-mutation lock for one
-bounded pass: at most 2,000,000 charged work operations, stats, and stage
-candidates, eight peak descriptors, and 510,000,000 name bytes. It reads only
+Extraction startup acquires and holds the existing shared lifecycle-mutation
+lock once for one bounded pass: at most 2,000,000 charged work operations,
+stats, and stage candidates, eight scanner-charged peak descriptors, and
+510,000,000 name bytes. The eight-descriptor budget excludes the one existing
+mutation-lock descriptor. It reads only
 names, types, and metadata, then renames and syncs; it reads no stage content,
 hashes nothing, and deletes nothing. Startup inventories at most 4,096 regular
 plus 4,096 sparse repository namespaces and may retain those 8,192 bounded
-identities while it works. Each scheduled lifecycle turn inventories at most
-4,096 repositories in one publication or sparse phase. Either path accepts at
+identities while it works. Each scheduled lifecycle turn acquires that existing
+shared lock once and holds it while it inventories at most 4,096 repositories
+in one publication or sparse phase. Either path accepts at
 most 20,000 direct entries from one selected repository directory and retains
 at most one additional entry only to detect overflow. Each lifecycle turn also
 admits at most 64 stage candidates, sixteen removals, 256 stats (including
@@ -1918,8 +1921,9 @@ result-directory fsync per accepted domain, from zero through 64 serial syncs,
 before the existing final staging-directory sync and rename. Exact reuse/no-op
 performs none; a failed creation retry that rebuilds an absent generation
 repeats the same bounded sync work. Restore already performed its per-domain
-syncs. There is no added product query/request, repository sync tick,
-corpus/shard/content read, hash pass, cache, worker, child, or lock.
+syncs. Those new syncs extend the existing one-of-64 reconciler shard-mutex hold.
+No new lock primitive is added. There is no added product query/request,
+repository sync tick, corpus/shard/content read, hash pass, cache, worker, or child.
 The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
 complete T40.13 package (103.560s), full package race (113.820s), focused
 publication race, the real-launcher custody proof (62.074s), and readiness.

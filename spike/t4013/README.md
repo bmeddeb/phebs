@@ -3627,13 +3627,15 @@ observation, receipt, returned-evidence, and teardown-checkpoint boundaries.
 
 Publication removes one full validation and adds one constant cancellation
 check. V28 adds one bounded six-root scan to each existing partial-verification
-poll. Startup holds the shared lifecycle-mutation lock for one pass capped at
-2,000,000 charged work operations, stats, and stage candidates, eight peak
-descriptors, and 510,000,000 name bytes; it reads names/types/metadata, not
+poll. Startup acquires and holds the shared lifecycle-mutation lock once for one
+pass capped at 2,000,000 charged work operations, stats, and stage candidates,
+eight scanner-charged peak descriptors, and 510,000,000 name bytes; the eight
+exclude the one existing mutation-lock descriptor. It reads names/types/metadata, not
 content, hashes nothing, and deletes nothing. Startup inventories at most 4,096
 regular plus 4,096 sparse repository namespaces and may retain those 8,192
-bounded identities. Each lifecycle turn inventories at most 4,096 repositories
-in one publication or sparse phase. Either path accepts at most 20,000 direct
+bounded identities. Each lifecycle turn acquires that existing shared lock once
+and holds it while inventorying at most 4,096 repositories in one publication
+or sparse phase. Either path accepts at most 20,000 direct
 entries from one selected repository directory and retains at most one extra
 entry only to detect overflow. Each turn also admits at most 64 candidates,
 sixteen removals, 256 stats including descriptor-open stats, eight peak
@@ -3642,11 +3644,12 @@ and idle; raw post-start residue is lower-bound without permanent backlog.
 Lifecycle alone promotes eligible retired residue and drains collecting
 residue. Product
 query/request, repository sync-tick, corpus/shard/content, hash, cache, worker,
-child, and lock costs are unchanged. New non-reused generation creation adds
+and child costs are unchanged. No new lock primitive is added. New non-reused generation creation adds
 one serial result-directory fsync per accepted domain (zero through 64) before
 the existing final stage sync/rename. Reuse/no-op adds none; a failed absent-
 generation rebuild repeats those bounded syncs, while restore's existing per-
-domain sync is unchanged.
+domain sync is unchanged. The new syncs extend the existing one-of-64
+reconciler shard-mutex hold.
 
 The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s),
 complete package (103.560s), full package race (113.820s), focused publication

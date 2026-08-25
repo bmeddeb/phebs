@@ -242,6 +242,10 @@ Startup checks cancellation before each raw-stage preflight and rename and
 syncs any completed prefix before returning. New-generation creation adds one
 serial result-directory sync per accepted domain (zero to 64); reuse/no-op adds
 none, while an absent-generation rebuild repeats that bounded work.
+Startup and each scheduled stage turn each acquire the existing shared
+lifecycle-mutation lock once for their complete bounded pass; the scanner's
+eight-descriptor budget excludes that already-existing lock descriptor. The
+new-generation syncs extend the existing one-of-64 reconciler shard-lock hold.
 Independent review of exact commit `704c2360e75e8a7d7068cbf3cd49b492a84cb50d`
 reported critical 0, high 0, medium 1, and low 1: the startup cancellation gap
 and omitted per-domain sync cost above. Both are corrected. Twenty cancellation

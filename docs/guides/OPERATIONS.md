@@ -5331,15 +5331,17 @@ timestamp, raw error, source, or content.
 
 Cost remains isolated. Publication removes one redundant full validation and
 adds one constant cancellation check. V28 adds one bounded six-root scan per
-existing ceremony partial-verification poll. Extraction startup holds the
-existing shared lifecycle-mutation lock for one bounded pass: at most
-2,000,000 charged work operations, stats, and stage candidates, eight peak
-descriptors, and 510,000,000 name bytes. It reads names, types, and metadata,
+existing ceremony partial-verification poll. Extraction startup acquires and
+holds the existing shared lifecycle-mutation lock once for one bounded pass: at
+most 2,000,000 charged work operations, stats, and stage candidates, eight
+scanner-charged peak descriptors, and 510,000,000 name bytes. That budget
+excludes the one existing mutation-lock descriptor. It reads names, types, and metadata,
 not file content, performs no hash pass, and only renames plus parent-syncs raw
 stages; it never deletes them. Startup inventories at most 4,096 regular plus
 4,096 sparse repository namespaces and may retain those 8,192 bounded
-identities. Each scheduled lifecycle turn inventories at most 4,096 repositories
-in one publication or sparse phase. Either path accepts at most 20,000 direct
+identities. Each scheduled lifecycle turn acquires that existing shared lock
+once and holds it while inventorying at most 4,096 repositories in one
+publication or sparse phase. Either path accepts at most 20,000 direct
 entries from one selected repository directory and retains at most one extra
 entry only to detect overflow. Each turn also admits at most 64 stage candidates,
 sixteen removals, 256 stats including descriptor-open stats, eight peak
@@ -5349,11 +5351,12 @@ lower-bound but does not advertise permanent five-second backlog. Scheduled
 lifecycle alone selects eligible retired stages, promotes and syncs them, and
 performs bounded unconditional collecting drains. Product queries and requests,
 repository sync ticks, source/corpus/shard reads, hashing, caches, workers,
-children, and locks gain no work. New non-reused generation construction adds
+or children gain no work. No new lock primitive is added. New non-reused generation construction adds
 one synchronous result-directory fsync for each accepted domain, zero through
 64 serial syncs, before the existing final staging-directory sync and rename.
 Exact reuse/no-op performs none; an absent-generation rebuild retry repeats the
 same bounded syncs. Restore already had per-domain syncs and is unchanged.
+The new syncs extend the existing one-of-64 reconciler shard-mutex hold.
 
 The pre-review tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
 complete T40.13 package (103.560s), full package race (113.820s), focused
