@@ -253,8 +253,12 @@ repetitions plus extraction normal/race, lifecycle, command, vet, lint, docs,
 glossary, shell, format, and whitespace pass. Two corrected-tree structural
 confirmations were invalidated by repeated host-native sampler `EPERM` after
 healthy `http_ready`; both diagnostic roots remain, no process survives, and no
-third retry was attempted. A fresh exact commit, re-review, and later host-clean
-structural confirmation remain before integration readiness.
+third retry was attempted. Fresh review of exact corrected source commit
+`710f66f440464c4dabf1723f98134cb941c07232` found critical/high/medium 0 and
+one low lock-cost wording gap. Source-identical documentation commit
+`c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
+re-review with all severity counts zero. No code-review finding remains; only a
+later host-clean structural confirmation remains before integration readiness.
 The original T40.13 gate remains open; integration, exact-main
 preflight, fresh-ID selection, freeze, and execution remain separately
 authorized. Epic 40

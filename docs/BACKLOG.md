@@ -1838,8 +1838,8 @@ documentation correction above resolves it; no finding remains. T40.13n
 requests integration only and selects no identifier.
 
 **T40.13o · Neutral-35/36/37 evidence and partial-publication recovery
-closure** *(high gate readiness · review corrections implemented; exact-tree
-structural confirmation and re-review pending; needs T40.13n and neutral-37)* — reconcile the three consumed
+closure** *(high gate readiness · independently reviewed; exact-tree
+host-clean structural confirmation pending; needs T40.13n and neutral-37)* — reconcile the three consumed
 runs without collapsing their distinct outcomes, close the V27 typed-nil and
 partial-publication recovery defects, and make a future stopped receipt retain
 bounded source-free attribution. Neutral-35 was the 63.325-minute V25 cold
@@ -1948,8 +1948,13 @@ healthy `http_ready` by the same host-native sampler `EPERM` (82.405s and
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
 and
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`
-remain retained. The bounded rule permits no third retry. A fresh exact commit,
-independent re-review, and later host-clean structural confirmation remain. No
+remain retained. The bounded rule permits no third retry. Fresh review of exact
+corrected source commit `710f66f440464c4dabf1723f98134cb941c07232`
+found critical/high/medium 0 and one low lock-cost wording gap. Source-identical
+documentation commit `c4dfdabbd594b5f841b92058923343382d6cf5aa`
+corrected it and passed exact re-review with critical/high/medium/low all zero.
+No code-review finding remains; a later host-clean structural confirmation is
+the only remaining regression gate. No
 integration, fresh identifier, rerun, freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
 

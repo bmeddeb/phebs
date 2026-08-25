@@ -2030,8 +2030,12 @@ findings above are corrected. Corrected-tree cancellation (20 repetitions),
 extraction normal/race, lifecycle, command, and static/docs gates pass. Its two
 structural confirmations were both invalidated after healthy `http_ready` by
 host-native sampler `EPERM`; both diagnostic roots are retained, PIDs 79356 and
-81088 are gone, and the bounded rule permits no third retry. A fresh exact
-commit, re-review, and later host-clean structural confirmation remain. No integration, identifier, rerun,
+81088 are gone, and the bounded rule permits no third retry. Fresh review of
+exact corrected source `710f66f440464c4dabf1723f98134cb941c07232` found
+critical/high/medium 0 and one low lock-cost wording gap; source-identical docs
+commit `c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
+re-review with every severity count zero. Only a later host-clean structural
+confirmation remains. No integration, identifier, rerun,
 freeze, execution, release, T40.13/Epic-40 closure, topology/bound change, or
 scale/SLO claim is authorized.
 

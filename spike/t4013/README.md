@@ -3671,7 +3671,11 @@ sampler `EPERM` after healthy `http_ready` (82.405s and 80.245s); PIDs
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
 and
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`
-remain retained, and no third retry is permitted. A fresh exact commit,
-independent re-review, and later host-clean structural confirmation remain.
+remain retained, and no third retry is permitted. Fresh review of exact
+corrected source commit `710f66f440464c4dabf1723f98134cb941c07232` found
+critical/high/medium 0 and one low lock-cost wording gap. Source-identical docs
+commit `c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
+re-review with all severity counts zero. No code-review finding remains; later
+host-clean structural confirmation remains.
 No integration, fresh ID, rerun, freeze, execution, release, T40.13/Epic-40
 closure, topology/bound change, or scale/SLO claim is authorized.

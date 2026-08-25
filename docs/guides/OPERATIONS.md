@@ -5379,7 +5379,11 @@ PIDs 79356/81088 are gone; retain diagnostic roots
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-2026572958`
 and
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-180141300`.
-Do not attempt a third bounded retry. A fresh exact commit, independent re-review,
-and a later host-clean structural confirmation remain required. Integration,
+Do not attempt a third bounded retry. Fresh review of exact corrected source
+`710f66f440464c4dabf1723f98134cb941c07232` found critical/high/medium 0 and
+one low lock-cost wording gap. Source-identical documentation commit
+`c4dfdabbd594b5f841b92058923343382d6cf5aa` corrected it and passed exact
+re-review with all severity counts zero. No code-review finding remains; a
+later host-clean structural confirmation is still required. Integration,
 exact-main preflight, fresh-ID selection, freeze, frozen-plan review, and exact
 ID/digest execution remain separate explicit decisions.
