@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -134,16 +135,23 @@ func TestJobLifecycleReceiptUsesEligibilityAndBoundedFields(t *testing.T) {
 
 func TestJobLifecycleReceiptCapDropsOversizedTarget(t *testing.T) {
 	called := false
-	runner := &Runner{LifecycleReports: func([]byte) error {
-		called = true
-		return nil
-	}}
+	failed := false
+	runner := &Runner{
+		LifecycleReports: func([]byte) error {
+			called = true
+			return nil
+		},
+		LifecycleReportFailure: func(error) { failed = true },
+	}
 	runner.emitLifecycle("claimed", Job{
 		ID: "job:oversized", Kind: JobSync,
 		Target: strings.Repeat("x", MaxJobLifecycleReportSize),
 	}, 0, "claimed", nil)
 	if called {
 		t.Fatal("oversized job lifecycle receipt reached sink")
+	}
+	if !failed {
+		t.Fatal("oversized job lifecycle receipt did not fail exact reporting")
 	}
 }
 
@@ -154,4 +162,33 @@ func TestJobLifecycleSinkPanicIsAdvisory(t *testing.T) {
 	runner.emitLifecycle("done", Job{
 		ID: "connection_sync_job:panic", Kind: JobSync, Target: "example.invalid/repo",
 	}, time.Second, "success", nil)
+}
+
+func TestJobLifecycleFailuresNotifyExactCaller(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		sink JobLifecycleSink
+	}{
+		{name: "error", sink: func([]byte) error { return errors.New("private sink error") }},
+		{name: "panic", sink: func([]byte) error { panic("private sink panic") }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var failures int
+			runner := &Runner{
+				LifecycleReports: test.sink,
+				LifecycleReportFailure: func(err error) {
+					failures++
+					if err == nil || strings.Contains(err.Error(), "private") {
+						t.Fatalf("unbounded lifecycle failure = %v", err)
+					}
+				},
+			}
+			runner.emitLifecycle("done", Job{
+				ID: "connection_sync_job:exact", Kind: JobSync, Target: "example.invalid/repo",
+			}, time.Second, "success", nil)
+			if failures != 1 {
+				t.Fatalf("failure callbacks = %d", failures)
+			}
+		})
+	}
 }

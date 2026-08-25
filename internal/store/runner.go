@@ -27,6 +27,9 @@ type Runner struct {
 
 	Diagnostics      bool
 	LifecycleReports JobLifecycleSink
+	// LifecycleReportFailure is optional and keeps ordinary diagnostics
+	// advisory. Exact-control callers use it to cancel their root context.
+	LifecycleReportFailure func(error)
 }
 
 type durableErrorTexter interface {

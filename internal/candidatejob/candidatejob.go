@@ -96,7 +96,10 @@ type Worker struct {
 	recover          func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 	Diagnostics      bool
 	OperationReports CandidateOperationSink
-	Now              func() time.Time
+	// OperationReportFailure is optional and keeps ordinary diagnostics
+	// advisory. Exact-control callers use it to cancel their root context.
+	OperationReportFailure func(error)
+	Now                    func() time.Time
 }
 
 // PolicyDigest returns the complete current candidate-policy identity used by
@@ -171,7 +174,8 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) (result error) 
 	if worker != nil {
 		now = worker.Now
 	}
-	diagnostics := worker != nil && (worker.Diagnostics || worker.OperationReports != nil)
+	diagnostics := worker != nil && (worker.Diagnostics || worker.OperationReports != nil ||
+		worker.OperationReportFailure != nil)
 	operation := &candidateOperationRecorder{}
 	if diagnostics {
 		operation = newCandidateOperation(job, now)
@@ -185,7 +189,12 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) (result error) 
 					outcome = "canceled"
 				}
 			}
-			worker.emitOperation(operation.snapshot(outcome))
+			if err := worker.emitOperation(operation.snapshot(outcome)); err != nil {
+				result = errors.Join(result, store.WithClass(
+					store.ClassExtract,
+					fmt.Errorf("candidate operation report: %w", err),
+				))
+			}
 		}()
 	}
 	if err := worker.handle(ctx, job, operation); err != nil {

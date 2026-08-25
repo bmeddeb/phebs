@@ -192,6 +192,73 @@ type retryOnceRecordingOwner struct {
 	moreOnce bool
 }
 
+type blockingOwner struct {
+	started chan<- time.Time
+	release <-chan struct{}
+}
+
+func (blockingOwner) Name() string { return "blocking" }
+
+func (owner blockingOwner) Sweep(
+	_ context.Context, attemptedAt time.Time, cursor string, _ Limits,
+) OwnerResult {
+	owner.started <- attemptedAt
+	<-owner.release
+	return OwnerResult{Cursor: cursor, Completeness: Exact}
+}
+
+type blockingRecordingOwner struct {
+	name    string
+	calls   *[]string
+	turn    int
+	blockAt int
+	started chan<- struct{}
+	release <-chan struct{}
+}
+
+func (owner *blockingRecordingOwner) Name() string { return owner.name }
+
+func (owner *blockingRecordingOwner) Sweep(
+	_ context.Context, _ time.Time, cursor string, _ Limits,
+) OwnerResult {
+	*owner.calls = append(*owner.calls, owner.name+":"+cursor)
+	owner.turn++
+	if owner.turn == owner.blockAt {
+		owner.started <- struct{}{}
+		<-owner.release
+	}
+	return OwnerResult{Cursor: cursor + "x", Scanned: 1, Deleted: 1, Completeness: Exact}
+}
+
+func TestStatusMonitorKeepsSweepStartAcrossStraddledFence(t *testing.T) {
+	started := make(chan time.Time, 1)
+	release := make(chan struct{})
+	owner := blockingOwner{started: started, release: release}
+	controller, err := NewController(newMemoryCursorStore(), owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeFence := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	controller.now = func() time.Time { return beforeFence }
+	result := make(chan OwnerResult, 1)
+	go func() { result <- controller.Tick(t.Context()) }()
+	if got := <-started; !got.Equal(beforeFence) {
+		t.Fatalf("sweep started at %s, want %s", got, beforeFence)
+	}
+
+	monitor, err := NewStatusMonitor(true, []Owner{owner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	monitor.now = func() time.Time { return beforeFence.Add(time.Hour) }
+	close(release)
+	monitor.ObserveOwner(<-result)
+	got := monitor.Snapshot().Owners[0].AttemptedAt
+	if got == nil || !got.Equal(beforeFence) {
+		t.Fatalf("published attempt = %v, want sweep start %s", got, beforeFence)
+	}
+}
+
 type lifecycleObservationPins struct{}
 
 func (lifecycleObservationPins) Pinned(string, string) bool { return false }
@@ -345,6 +412,263 @@ func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	want := []string{"charlie:", "alpha:", "bravo:", "charlie:x"}
 	if !reflect.DeepEqual(calls, want) {
 		t.Fatalf("owner calls = %v, want %v", calls, want)
+	}
+}
+
+func TestRunnerCompletesFreshCycleAfterPressureRecovery(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		rotation      string
+		normalAfter   int
+		unavailableAt int
+		want          []string
+	}{
+		{name: "middle owner", normalAfter: 2},
+		{name: "final owner", normalAfter: 3},
+		{
+			name: "unavailable at cycle end", normalAfter: 4, unavailableAt: 3,
+			want: []string{
+				"alpha:", "bravo:", "charlie:", "alpha:x", "bravo:x", "charlie:x",
+				"alpha:xx", "bravo:xx", "charlie:xx",
+			},
+		},
+		{name: "unavailable at cycle end without prior pressure", normalAfter: 1, unavailableAt: 3},
+		{
+			name: "normal then unavailable at cycle end", rotation: "bravo",
+			normalAfter: 2, unavailableAt: 4,
+			want: []string{
+				"charlie:", "alpha:", "bravo:", "charlie:x",
+				"alpha:x", "bravo:x", "charlie:xx", "alpha:xx",
+				"bravo:xx", "charlie:xxx",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := newMemoryCursorStore()
+			store.values[rotationCursorKey] = test.rotation
+			var calls []string
+			controller, err := NewController(store,
+				recordingOwner{name: "alpha", calls: &calls},
+				recordingOwner{name: "bravo", calls: &calls},
+				recordingOwner{name: "charlie", calls: &calls},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			capacityChecks := 0
+			gate := &Gate{dataDir: t.TempDir()}
+			gate.probe = func(context.Context, string) (Capacity, error) {
+				capacityChecks++
+				if capacityChecks == test.unavailableAt {
+					return Capacity{}, errors.New("capacity unavailable")
+				}
+				used := int64(800)
+				if capacityChecks >= test.normalAfter {
+					used = 700
+				}
+				return Capacity{
+					TotalBytes: 1_000, AvailableBytes: 1_000 - used, UsedBytes: used,
+				}, nil
+			}
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			want := test.want
+			if want == nil {
+				want = []string{"alpha:", "bravo:", "charlie:", "alpha:x", "bravo:x", "charlie:x"}
+			}
+			results := make(chan OwnerResult, len(want)+1)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, controller, gate, time.Hour, time.Millisecond, func(result OwnerResult) {
+					results <- result
+				}, nil)
+			}()
+
+			for range len(want) {
+				select {
+				case <-results:
+				case <-time.After(time.Second):
+					t.Fatal("runner idled before completing the fresh recovery cycle")
+				}
+			}
+			select {
+			case result := <-results:
+				t.Fatalf("runner did not idle after the fresh recovery cycle: %+v", result)
+			case <-time.After(50 * time.Millisecond):
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("runner did not stop after the fresh recovery cycle")
+			}
+			if !reflect.DeepEqual(calls, want) {
+				t.Fatalf("owner calls = %v, want %v", calls, want)
+			}
+		})
+	}
+}
+
+func TestRunnerCompletesCycleStartedAfterMidSweepPressureRecovery(t *testing.T) {
+	var calls []string
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	first := &blockingRecordingOwner{
+		name: "alpha", calls: &calls, blockAt: 2, started: started, release: release,
+	}
+	controller, err := NewController(newMemoryCursorStore(), first,
+		recordingOwner{name: "bravo", calls: &calls},
+		recordingOwner{name: "charlie", calls: &calls},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	used := int64(800)
+	gate := &Gate{dataDir: t.TempDir()}
+	gate.probe = func(context.Context, string) (Capacity, error) {
+		return Capacity{TotalBytes: 1_000, AvailableBytes: 1_000 - used, UsedBytes: used}, nil
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	results := make(chan OwnerResult, 10)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		Run(ctx, controller, gate, time.Hour, time.Millisecond, func(result OwnerResult) {
+			results <- result
+		}, nil)
+	}()
+	for range 3 {
+		select {
+		case <-results:
+		case <-time.After(time.Second):
+			t.Fatal("runner did not observe the pressure cycle")
+		}
+	}
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("next cycle did not begin under pressure")
+	}
+	used = 700
+	close(release)
+	for range 6 {
+		select {
+		case <-results:
+		case <-time.After(time.Second):
+			t.Fatal("runner idled before a wholly post-recovery cycle")
+		}
+	}
+	select {
+	case result := <-results:
+		t.Fatalf("runner did not idle after the wholly post-recovery cycle: %+v", result)
+	case <-time.After(50 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not stop after pressure recovery")
+	}
+	want := []string{
+		"alpha:", "bravo:", "charlie:",
+		"alpha:x", "bravo:x", "charlie:x",
+		"alpha:xx", "bravo:xx", "charlie:xx",
+	}
+	if !reflect.DeepEqual(calls, want) {
+		t.Fatalf("owner calls = %v, want %v", calls, want)
+	}
+}
+
+func TestRunnerPressureRecoveryWaitsForDrainedNormalCycle(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		more bool
+		err  bool
+		want []string
+	}{
+		{
+			name: "backlog", more: true,
+			want: []string{
+				"charlie:", "alpha:", "bravo:", "charlie:x", "alpha:x",
+				"bravo:x", "charlie:xx", "alpha:xx", "bravo:xx", "charlie:xxx",
+				"alpha:xxx", "bravo:xxx", "charlie:xxxx",
+			},
+		},
+		{
+			name: "error", err: true,
+			want: []string{
+				"charlie:", "alpha:", "bravo:", "charlie:x", "alpha:x",
+				"bravo:", "charlie:xx", "alpha:xx", "bravo:x", "charlie:xxx",
+				"alpha:xxx", "bravo:xx", "charlie:xxxx",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := newMemoryCursorStore()
+			store.values[rotationCursorKey] = "bravo"
+			var calls []string
+			middle := &retryOnceRecordingOwner{
+				name: "bravo", calls: &calls, moreOnce: test.more, errOnce: test.err,
+			}
+			controller, err := NewController(store,
+				recordingOwner{name: "alpha", calls: &calls}, middle,
+				recordingOwner{name: "charlie", calls: &calls},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			capacityChecks := 0
+			gate := &Gate{dataDir: t.TempDir()}
+			gate.probe = func(context.Context, string) (Capacity, error) {
+				capacityChecks++
+				if capacityChecks == 7 {
+					return Capacity{}, errors.New("capacity unavailable")
+				}
+				used := int64(700)
+				if capacityChecks == 1 {
+					used = 800
+				}
+				return Capacity{
+					TotalBytes: 1_000, AvailableBytes: 1_000 - used, UsedBytes: used,
+				}, nil
+			}
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			results := make(chan OwnerResult, len(test.want)+1)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, controller, gate, time.Hour, time.Millisecond, func(result OwnerResult) {
+					results <- result
+				}, nil)
+			}()
+
+			for range len(test.want) {
+				select {
+				case <-results:
+				case <-time.After(time.Second):
+					t.Fatal("runner idled before a drained wholly-normal recovery cycle")
+				}
+			}
+			select {
+			case result := <-results:
+				t.Fatalf("runner did not idle after the drained recovery cycle: %+v", result)
+			case <-time.After(50 * time.Millisecond):
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("runner did not stop after the drained recovery cycle")
+			}
+			if !reflect.DeepEqual(calls, test.want) {
+				t.Fatalf("owner calls = %v, want %v", calls, test.want)
+			}
+		})
 	}
 }
 

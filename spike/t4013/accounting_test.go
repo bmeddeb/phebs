@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,294 @@ func TestLogAccountingUsesOnlyClosedDiagnosticReceipts(t *testing.T) {
 	}
 	if metrics.OrchestrationTransactions != 2 || metrics.Retries != 1 || metrics.ReusedControls != 1 {
 		t.Fatalf("metrics = %+v", metrics)
+	}
+	v30, err := parseLogMetricsForPlan(path, 0, PlanSchemaV30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v30.ReusedControls != 0 {
+		t.Fatalf("V30 counted non-production reuse outcome: %+v", v30)
+	}
+}
+
+func TestV30CandidateReuseCursorWaitsForSuccessfulQuiescence(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newCandidateReuseCursor(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	appendLog := func(lines string) {
+		t.Helper()
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, writeErr := file.WriteString(lines)
+		if closeErr := file.Close(); writeErr != nil || closeErr != nil {
+			t.Fatal(errors.Join(writeErr, closeErr))
+		}
+	}
+	appendLog("job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"claimed\",\"job_id\":\"candidate:1\",\"outcome\":\"claimed\"}\n" +
+		"candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"cold_reuse\",\"outcome\":\"done\"}\n")
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("active reuse settled=%t err=%v", settled, err)
+	}
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("unresolved reuse settled=%t err=%v", settled, err)
+	}
+	appendLog("job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"done\",\"job_id\":\"candidate:1\",\"outcome\":\"success\"}\n")
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("newly completed reuse settled=%t err=%v", settled, err)
+	}
+	if settled, err := cursor.poll(); err != nil || !settled {
+		t.Fatalf("quiet reuse settled=%t err=%v", settled, err)
+	}
+}
+
+func TestV30CandidateReuseRejectsFailedAndRetriedWork(t *testing.T) {
+	for _, line := range []string{
+		"candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"warm_noop\",\"outcome\":\"failed\"}\n",
+		"job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"requeued\",\"job_id\":\"candidate:1\",\"outcome\":\"retryable\"}\n",
+	} {
+		t.Run(strings.Fields(line)[0], func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "server.log")
+			if err := os.WriteFile(path, []byte(line), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cursor, err := newCandidateReuseCursor(path, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = cursor.Close() }()
+			if _, err := cursor.poll(); err == nil {
+				t.Fatal("V30 accepted failed warm work")
+			}
+		})
+	}
+}
+
+func TestV30CandidateReuseKeepsDeferredWorkUnresolved(t *testing.T) {
+	for _, event := range []string{"deferred", "yielded"} {
+		t.Run(event, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "server.log")
+			lines := "job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"claimed\",\"job_id\":\"candidate:1\",\"outcome\":\"claimed\"}\n" +
+				"candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"cold_reuse\",\"outcome\":\"done\"}\n" +
+				"job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"" + event + "\",\"job_id\":\"candidate:1\",\"outcome\":\"pending\"}\n"
+			if err := os.WriteFile(path, []byte(lines), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cursor, err := newCandidateReuseCursor(path, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = cursor.Close() }()
+			if settled, err := cursor.poll(); err != nil || settled {
+				t.Fatalf("initial settled=%t err=%v", settled, err)
+			}
+			if settled, err := cursor.poll(); err != nil || settled {
+				t.Fatalf("deferred settled=%t err=%v", settled, err)
+			}
+		})
+	}
+}
+
+func TestV30CandidateReuseRejectsMixedContentWork(t *testing.T) {
+	for _, decision := range []string{"rebuild", "repair"} {
+		t.Run(decision, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "server.log")
+			lines := "candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"" + decision + "\",\"outcome\":\"done\"}\n" +
+				"candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"cold_reuse\",\"outcome\":\"done\"}\n"
+			if err := os.WriteFile(path, []byte(lines), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cursor, err := newCandidateReuseCursor(path, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = cursor.Close() }()
+			if _, err := cursor.poll(); err == nil {
+				t.Fatalf("V30 accepted %s followed by reuse", decision)
+			}
+		})
+	}
+}
+
+func TestV30CandidateReuseWaitsForCompleteLogLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	line := "candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"cold_reuse\",\"outcome\":\"done\"}"
+	if err := os.WriteFile(path, []byte(line), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = opened.Close() }()
+	cursor, err := newCandidateReuseCursor(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("partial line settled=%t err=%v", settled, err)
+	}
+	if _, err := opened.WriteString("\n"); err != nil {
+		t.Fatal(err)
+	}
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("completed line settled without quiet poll=%t err=%v", settled, err)
+	}
+	if settled, err := cursor.poll(); err != nil || !settled {
+		t.Fatalf("quiet complete line settled=%t err=%v", settled, err)
+	}
+}
+
+func TestV30PhaseLogHandoffRetainsPostBoundaryReports(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "server.log")
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = logFile.Close() }()
+	reuse := "candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"cold_reuse\",\"outcome\":\"done\"}\n"
+	if _, err := logFile.WriteString(reuse); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := newCandidateReuseCursor(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settled, err := cursor.poll(); err != nil || settled {
+		t.Fatalf("new reuse settled=%t err=%v", settled, err)
+	}
+	if settled, err := cursor.poll(); err != nil || !settled {
+		t.Fatalf("quiet reuse settled=%t err=%v", settled, err)
+	}
+	boundary, err := cursor.settledOffset()
+	if closeErr := cursor.Close(); err != nil || closeErr != nil {
+		t.Fatal(errors.Join(err, closeErr))
+	}
+	server := &privateServer{log: logFile, logPath: path, sampler: newSyntheticRSSSampler(10)}
+	if err := server.primeLogOffset(boundary); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.sampler.phaseMetricsAndResetWindow(); err != nil {
+		t.Fatal(err)
+	}
+	ordinary := "ordinary log line\n"
+	if _, err := logFile.WriteString(ordinary); err != nil {
+		t.Fatal(err)
+	}
+	settledBoundary, err := server.settlePrimedLogHandoff(boundary)
+	if err != nil || settledBoundary != boundary+int64(len(ordinary)) {
+		t.Fatalf("settled boundary = %d, err=%v", settledBoundary, err)
+	}
+	postBoundary := "candidate operation: {\"schema\":\"phebs-candidate-operation-v1\",\"decision\":\"rebuild\",\"outcome\":\"done\"}\n" +
+		"job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"requeued\",\"job_id\":\"candidate:2\",\"outcome\":\"retryable\"}\n"
+	if _, err := logFile.WriteString(postBoundary); err != nil {
+		t.Fatal(err)
+	}
+	warm, err := parseLogMetricsForPlanThrough(path, 0, settledBoundary, PlanSchemaV30)
+	if err != nil || warm.ReusedControls != 1 || warm.OrchestrationTransactions != 0 || warm.Retries != 0 {
+		t.Fatalf("bounded warm metrics = %+v, err=%v", warm, err)
+	}
+
+	meter, err := beginPhaseMeter(server, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = meter.allocation.close() }()
+	if meter.logOffset != settledBoundary {
+		t.Fatalf("next phase offset = %d, want %d", meter.logOffset, settledBoundary)
+	}
+	delta, err := parseLogMetricsForPlan(path, meter.logOffset, PlanSchemaV30)
+	if err != nil || delta.OrchestrationTransactions != 1 || delta.Retries != 1 {
+		t.Fatalf("delta metrics = %+v, err=%v", delta, err)
+	}
+	deltaCursor, err := newCandidateReuseCursor(path, meter.logOffset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deltaCursor.Close() }()
+	if _, err := deltaCursor.poll(); err == nil {
+		t.Fatal("post-boundary candidate report was dropped")
+	}
+}
+
+func TestV30PhaseLogHandoffRejectsWorkBetweenPrimeAndProcessReset(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "server.log")
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = logFile.Close() }()
+	server := &privateServer{log: logFile, logPath: path, sampler: newSyntheticRSSSampler(10)}
+	meter, err := beginPhaseMeter(server, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.sampler.peakRSS = 41
+	server.sampler.strictGitChildren = 1
+	meter.beforeProcessSnapshot = func() error {
+		if err := server.primeLogOffset(meter.logOffset); err != nil {
+			return err
+		}
+		_, err := logFile.WriteString(
+			"job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"claimed\",\"job_id\":\"candidate:2\",\"outcome\":\"claimed\"}\n",
+		)
+		return err
+	}
+	metrics, err := meter.finish(nil, PlanSchemaV30)
+	resetMetrics, resetErr := server.sampler.phaseMetrics()
+	if !errors.Is(err, errExactOracle) || metrics.PeakRSSBytes != 41 ||
+		metrics.GitChildren != 1 || resetErr != nil || resetMetrics.PeakRSSBytes != 0 ||
+		resetMetrics.GitChildren != 0 {
+		t.Fatalf("straddled exact work metrics=%+v reset=%+v resetErr=%v err=%v",
+			metrics, resetMetrics, resetErr, err)
+	}
+}
+
+func TestV30PhaseLogHandoffRejectsExactTailAfterProcessReset(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = logFile.Close() }()
+	server := &privateServer{logPath: path, sampler: newSyntheticRSSSampler(10)}
+	if err := server.primeLogOffset(0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.sampler.phaseMetricsAndResetWindow(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := logFile.WriteString(
+		"job lifecycle: {\"schema\":\"phebs-job-lifecycle-v1\",\"event\":\"claimed\",\"job_id\":\"candidate:2\",\"outcome\":\"claimed\"}\n",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.settlePrimedLogHandoff(0); !errors.Is(err, errExactOracle) {
+		t.Fatalf("post-reset exact tail = %v, want exact refusal", err)
+	}
+}
+
+func TestV30PhaseLogHandoffRejectsPartialTail(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(path, []byte("job life"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := &privateServer{logPath: path}
+	if err := server.primeLogOffset(0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.settlePrimedLogHandoff(0); err == nil {
+		t.Fatal("partial handoff tail passed")
 	}
 }
 
@@ -176,7 +465,7 @@ func TestV27RawEndBoundaryUsesRawGaugeAndIsOneShotForOneWorkspace(t *testing.T) 
 		started: time.Now(), server: &privateServer{logPath: logPath}, dataDir: root,
 		allocation: allocation, strict: true, captureRaw: true,
 	}
-	metrics, err := meter.finish(nil)
+	metrics, err := meter.finish(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +548,180 @@ func TestAllocationSamplerRetainsBoundedFirstFailure(t *testing.T) {
 		strings.Contains(err.Error(), later.Error()) {
 		t.Fatalf("bounded allocation failure = first:%v count:%d err:%v",
 			sampler.err, sampler.failedSamples, err)
+	}
+}
+
+func TestV30BoundaryJoinsProcessAndAllocationFailures(t *testing.T) {
+	root := t.TempDir()
+	logPath := filepath.Join(root, "server.log")
+	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, allocated, err := measureDataBytesForContract(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation, err := newAllocationSampler(root, allocated, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocationCause := errors.New("synthetic allocation failure")
+	allocation.recordFailure(allocationCause)
+	processCause := errors.New("synthetic process failure")
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordFailure(processCause)
+	server := &privateServer{logPath: logPath, sampler: sampler}
+	if err := server.primeLogOffset(0); err != nil {
+		t.Fatal(err)
+	}
+	meter := &phaseMeter{
+		started: time.Now(), server: server, dataDir: root, allocation: allocation, strict: true,
+		beforeProcessSnapshot: func() error { return nil },
+	}
+	_, err = meter.finish(nil, PlanSchemaV30)
+	if !errors.Is(err, errProcessSamplingFailed) || !errors.Is(err, processCause) ||
+		!errors.Is(err, errAllocationSamplingFailed) || !errors.Is(err, allocationCause) {
+		t.Fatalf("joined boundary measurement error = %v", err)
+	}
+}
+
+func TestV30BoundarySemanticFailureIsNotMeasurementFailure(t *testing.T) {
+	for _, withAllocationFailure := range []bool{false, true} {
+		for _, withProcessFailure := range []bool{false, true} {
+			name := strconv.FormatBool(withAllocationFailure) + "/" + strconv.FormatBool(withProcessFailure)
+			t.Run(name, func(t *testing.T) {
+				root := t.TempDir()
+				_, allocated, err := measureDataBytesForContract(root, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				allocation, err := newAllocationSampler(root, allocated, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if withAllocationFailure {
+					allocation.recordFailure(errors.New("synthetic allocation failure"))
+				}
+				sampler := newSyntheticRSSSampler(10)
+				if withProcessFailure {
+					sampler.recordFailure(errors.New("synthetic process failure"))
+				}
+				semantic := errConvergenceDeadline
+				meter := &phaseMeter{
+					started: time.Now(), dataDir: root, allocation: allocation, strict: true,
+					server:                &privateServer{sampler: sampler},
+					beforeProcessSnapshot: func() error { return semantic },
+				}
+				run := execution{plan: Plan{Schema: PlanSchemaV30}}
+				_, err = run.finishMeter(meter, nil)
+				if !errors.Is(err, semantic) || errors.Is(run.measurementErr, semantic) {
+					t.Fatalf("boundary error=%v measurement=%v", err, run.measurementErr)
+				}
+				if got := errors.Is(run.measurementErr, errAllocationSamplingFailed); got != withAllocationFailure {
+					t.Fatalf("allocation measurement retained=%t, want %t: %v", got, withAllocationFailure, run.measurementErr)
+				}
+				if got := errors.Is(run.measurementErr, errProcessSamplingFailed); got != withProcessFailure {
+					t.Fatalf("process measurement retained=%t, want %t: %v", got, withProcessFailure, run.measurementErr)
+				}
+				classification := classifyStoppedFailureForPlan(
+					run.plan, err, run.measurementErr, nil,
+				)
+				want := "convergence_deadline_expired"
+				switch {
+				case withAllocationFailure && withProcessFailure:
+					want = "failed_phase_measurement_unavailable"
+				case withAllocationFailure:
+					want = "failed_phase_allocation_sampling_unavailable"
+				case withProcessFailure:
+					want = "failed_phase_process_sampling_unavailable"
+				}
+				if classification.code != want {
+					t.Fatalf("classification = %+v, want %s", classification, want)
+				}
+			})
+		}
+	}
+}
+
+func TestV30BoundarySemanticFailureRetainsSafetyMetrics(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "payload"), []byte(strings.Repeat("x", 4096)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, allocated, err := measureDataBytesForContract(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation, err := newAllocationSampler(root, allocated, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation.mu.Lock()
+	allocation.minimumAvailable -= 4096
+	allocation.mu.Unlock()
+	wantAllocated := allocated + 4096
+	sampler := newSyntheticRSSSampler(10)
+	sampler.peakRSS = 101
+	sampler.strictGitChildren = 1
+	cause := exactOracle("synthetic boundary refusal")
+	meter := &phaseMeter{
+		started: time.Now().Add(-time.Millisecond), dataDir: root, allocation: allocation, strict: true,
+		server: &privateServer{sampler: sampler}, beforeProcessSnapshot: func() error { return cause },
+	}
+	plan := Plan{Schema: PlanSchemaV30, Safety: SafetyEnvelope{
+		MaximumTotalWallMS: 1 << 60, MaximumPeakRSSBytes: 100,
+		MaximumDataAllocatedBytes: 1 << 60, MaximumPrePressureBytes: 1 << 60,
+	}}
+	run := execution{
+		plan: plan, workspace: root,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(2)
+	run.trackMeter(meter)
+	metrics, err := run.finishMeter(meter, nil)
+	if !errors.Is(err, errExactOracle) || run.measurementErr != nil ||
+		metrics.PeakRSSBytes != 101 || metrics.GitChildren != 1 ||
+		metrics.WallMS <= 0 || metrics.DataLogicalBytes <= 0 ||
+		metrics.DataAllocatedBytes < wantAllocated || run.partialMetrics.PeakRSSBytes != 101 ||
+		run.partialMetrics.GitChildren != 1 {
+		t.Fatalf("boundary metrics=%+v partial=%+v measurement=%v err=%v",
+			metrics, run.partialMetrics, run.measurementErr, err)
+	}
+	measurementErr := run.captureFailedPhase()
+	ceilingErr := run.enforceSafety()
+	classification := classifyStoppedFailureForPlan(plan, cause, measurementErr, ceilingErr)
+	if measurementErr != nil || !errors.Is(ceilingErr, errReviewCeiling) ||
+		classification.code != "review_ceiling_crossed" ||
+		run.observation.Phases[2].Metrics.PeakRSSBytes != 101 ||
+		run.observation.Phases[2].Metrics.GitChildren != 1 ||
+		run.observation.Phases[2].Metrics.WallMS <= 0 ||
+		run.observation.Phases[2].Metrics.DataLogicalBytes <= 0 ||
+		run.observation.Phases[2].Metrics.DataAllocatedBytes < wantAllocated {
+		t.Fatalf("failed phase=%+v measurement=%v ceiling=%v classification=%+v",
+			run.observation.Phases[2], measurementErr, ceilingErr, classification)
+	}
+}
+
+func TestPhaseMeterRetainsProcessFailureWhenDataGaugeFails(t *testing.T) {
+	root := t.TempDir()
+	_, allocated, err := measureDataBytesForContract(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allocation, err := newAllocationSampler(root, allocated, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	processCause := errors.New("synthetic process failure")
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordFailure(processCause)
+	meter := &phaseMeter{
+		started: time.Now(), server: &privateServer{sampler: sampler},
+		dataDir: "relative", allocation: allocation, strict: true,
+	}
+	_, err = meter.finish(nil, PlanSchemaV30)
+	if err == nil || !errors.Is(err, errProcessSamplingFailed) || !errors.Is(err, processCause) {
+		t.Fatalf("data/process measurement error = %v", err)
 	}
 }
 

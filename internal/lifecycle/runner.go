@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 )
@@ -28,6 +29,10 @@ func Run(
 	delay := time.Duration(0)
 	cycleStarted := false
 	cycleNeedsRetry := false
+	pressureRecoveryCycle := false
+	pressureRecoveryNormalCycle := false
+	capacityRetryCycle := false
+	priorCapacityExactNormal := false
 	for {
 		if delay > 0 {
 			timer := time.NewTimer(delay)
@@ -65,8 +70,33 @@ func Run(
 			}
 			pressureAccelerated = capacity.Pressure == PressureCollect ||
 				capacity.Pressure == PressureRefuse
+			capacityExact := capacity.Pressure != PressureUnavailable &&
+				(capacityErr == nil || errors.Is(capacityErr, ErrPressureRefusal))
+			capacityExactNormal := capacityExact && capacity.Pressure == PressureNormal
+			if !capacityExact {
+				capacityRetryCycle = true
+			} else if result.CycleComplete {
+				capacityRetryCycle = false
+			}
+			if pressureAccelerated {
+				pressureRecoveryCycle = true
+				pressureRecoveryNormalCycle = false
+			}
+			if pressureRecoveryCycle {
+				if result.CycleStart {
+					pressureRecoveryNormalCycle = priorCapacityExactNormal && capacityExactNormal
+				} else if !capacityExactNormal {
+					pressureRecoveryNormalCycle = false
+				}
+				if result.CycleComplete && pressureRecoveryNormalCycle && !cycleNeedsRetry {
+					pressureRecoveryCycle = false
+					pressureRecoveryNormalCycle = false
+				}
+			}
+			priorCapacityExactNormal = capacityExactNormal
 		}
-		if cycleNeedsRetry || !result.CycleComplete || !cycleStarted || pressureAccelerated {
+		if cycleNeedsRetry || !result.CycleComplete || !cycleStarted ||
+			pressureAccelerated || pressureRecoveryCycle || capacityRetryCycle {
 			delay = backlogDelay
 		} else {
 			delay = idleInterval

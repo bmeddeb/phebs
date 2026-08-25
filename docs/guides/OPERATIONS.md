@@ -5430,3 +5430,119 @@ Darwin native sampler `EPERM`. Retain diagnostic roots
 PID 66440 is gone and no process survives. Do not retry again in the same host
 state, relax root denial, integrate, or freeze. Resume with one later host-clean
 complete exact-commit readiness run.
+
+## T40.R1 neutral-39 source-free stop and V30
+
+Retain neutral-39's sealed source-free package at digest
+`sha256:681aef5bb4ebe77c63ed564f5dfe499609a76738c3172b7a58e9c9f87d6a43cb`
+and record only that execution returned status 1. The last useful wrapper
+monitor line reported `prepare/admission` and unknown custody age. Its later
+terminal-summary `jq` expression failed because of shell quoting; repair that
+monitor separately before reuse. This output did not disturb execution and
+does not recover the private cause. Do not label neutral-39 `EPERM`, assign it
+to phase 6 or any other phase, or infer a pipeline failure from unavailable
+source-free evidence.
+
+V30 keeps successful startup log inspection and health/stage observations when
+the process sampler alone fails. Zero process counters in that projection mean
+unavailable, not measured zero, and carry
+`process_sampling_unavailable=true`. A process-only failure seals
+`failed_phase_process_sampling_unavailable`; an allocation-only failure seals
+`failed_phase_allocation_sampling_unavailable`. Mixed measurement failure keeps
+`failed_phase_measurement_unavailable`. V1–V29 parsing, validation, and
+outcome meanings remain exact.
+
+For V30 warm restart, do not evaluate the paired startup/phase Git oracle at
+HTTP health or the first successful reuse report alone. Within the existing
+revalidation deadline, incrementally track phase-local candidate and job
+lifecycle reports. Require a candidate reuse report whose decision is
+`warm_noop`, `cold_reuse`, or `marker_recovery` and whose outcome is `done`;
+reject released, failed, or requeued work. Treat claimed, started, deferred, and
+yielded as unresolved persisted work; each observed job must later report
+`event=done,outcome=success`. Re-inspect exact authority on every attempt. Once
+all jobs resolve, require one existing five-second convergence interval with no
+new candidate or job report. Finish the phase meter exactly once at that settled
+boundary. Refresh paired startup process counters from that single finished
+`PhaseMetrics` sampler snapshot—do not take a second process sample—and refresh
+only log/stage/wall observations there. Settle the atomic warm→delta handoff of
+the finished process window and exact log EOF with a bounded post-reset tail
+scan: any candidate/job report or partial tail refuses the boundary, complete
+unrelated lines advance the warm EOF, and later exact claimed/started reports
+are delta. Then require complete phase Git count to equal
+the refreshed startup count. This bounded quiescence tolerates
+health-before-sync/reuse but still rejects every sampled Git lifetime after the
+boundary. V1–V29 keep their frozen warm behavior.
+
+V30 ceremony servers set exact-control reporting for candidate output and the
+sync, fetch, candidate, extraction, resolver, caller, and index job runners.
+Each report is written synchronously. Any encode, size-cap, sink, or panic
+failure latches cancellation; after background workers join, the server returns
+a nonzero terminal error. Without exact-control mode, ordinary runtime sinks
+remain advisory and never change queue or handler outcome.
+
+For phase 7, remove ballast first and then establish the recovery fence. Accept
+normal recovery only after all 14 owner attempts are newer than that fence in
+one coherent sorted cycle and one final exact-normal capacity observation is
+newer than the latest owner. Then re-inspect protected authority and require it
+unchanged. Do not infer that capacity stayed normal throughout that cycle or
+wait for the production runner to become hourly-idle eligible.
+
+Independently, production idle recovery brackets the sorted cycle-start owner
+with exact-normal capacity observations and requires every result through the
+ensuing sorted cycle to be error-free and drained. Only that clean path costs at
+most 28 turns for the selected 14-owner inventory and at most 64 under the
+existing 32-owner controller bound. Any owner error/backlog or transient
+`PressureUnavailable`/other non-exact capacity removes the 28/64 bound and keeps
+the runner at five-second cadence.
+
+For phase 8, compare restored product content with the V30 comparator. Only
+`IndexedCommit`, `RelationshipGeneration`, and `RelationshipRootDigest` may
+differ. `CallerGeneration`, `RelationshipSemanticDigest`, and every other
+product field must remain equal. The restored
+readiness rehearsal uses the same comparator and requires all 14 owners fresh
+and `state=ok`; an all-`not_run` status is not readiness. Require exact,
+drained results for the 13 non-`durable-jobs` owners. Require `durable-jobs` to
+remain truthfully `lower_bound`, permitting backlog while live writers exist,
+and require exact capacity after the latest owner.
+
+Phase 9 restarts the server to force a phase-local lifecycle cycle. Require the
+sorted frozen 14-owner inventory to be fresh and report `state=ok`. Thirteen
+non-`durable-jobs` owners must be exact with no backlog; `durable-jobs` must be
+`lower_bound` and may retain backlog because live writers prevent an exact
+oracle. Require exact capacity observed after the latest owner. Preserve
+unchanged current stable authority and seal only the bounded per-owner
+name/state/completeness/scanned/deleted/backlog projection.
+Do not interpret nonzero `deleted` as a required live oracle and do not claim
+this phase individually proves rollback, active-lease, marker, or store-pin
+survival. Run the mandatory `internal/lifecycle`, `internal/store`, and
+publication regression gates for those protection semantics.
+
+V30 changes no product query/request, repository sync tick, ordinary
+startup/restart, retry/no-op, publication, lock, cache, persistent schema,
+memory/disk bound, or child-process path. Production lifecycle scheduling adds
+the pressure-recovery suffix-plus-full-cycle and the fail-closed capacity retry
+described above; healthy normal hourly cadence is unchanged. Ceremony phase 9
+adds one restart, existing status polling, and fixed validation of 14 rows; it
+makes no 28/64 turn claim and remains governed by the fixed phase deadline.
+Truthful `durable-jobs` backlog does not block either V30 lifecycle waiter; an
+owner error or backlog in one of the 13 required drained rows keeps owner
+progression at five-second cadence until the deadline. Row validation is 13
+exact/drained predicates plus one durable-job lower-bound predicate. Warm
+restart adds incremental phase-local candidate/job lifecycle parsing,
+exact-authority reinspection per attempt, one
+existing five-second quiet interval, one finished-metrics startup refresh
+without a second process read, one bounded post-reset log-tail scan, and the
+atomic process/log-EOF handoff under the unchanged revalidation deadline. Phase
+7 adds one existing protected-authority inspection after recovery. Only
+exact-control mode adds synchronous per-report log writes for candidate output
+and all seven job runners; ordinary steady-state
+reporting remains advisory. No production request, job, child, or new deadline
+is added.
+
+Focused and bounded regressions, complete package/race, real-launcher custody,
+production-path readiness, every `internal/` package including full store,
+module verification/compilation, vet, repository-pinned lint, documentation,
+glossary, shell, and whitespace passed on 2026-08-25. Do not merge, run
+exact-main preflight, select or freeze a fresh identifier, or execute another
+ceremony until the exact source commit receives recorded independent review.
+No later authorization is established by this implementation record.

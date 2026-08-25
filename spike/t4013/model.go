@@ -53,6 +53,7 @@ const (
 	PlanSchemaV27        = "t4013-neutral-convergence-plan-v27"
 	PlanSchemaV28        = "t4013-neutral-convergence-plan-v28"
 	PlanSchemaV29        = "t4013-neutral-convergence-plan-v29"
+	PlanSchemaV30        = "t4013-neutral-convergence-plan-v30"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -82,6 +83,7 @@ const (
 	ObservationSchemaV27 = "t4013-neutral-convergence-observation-v27"
 	ObservationSchemaV28 = "t4013-neutral-convergence-observation-v28"
 	ObservationSchemaV29 = "t4013-neutral-convergence-observation-v29"
+	ObservationSchemaV30 = "t4013-neutral-convergence-observation-v30"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -94,7 +96,10 @@ const (
 	// observationDetailV17 records the caller-leaf job projection beside the
 	// caller-generation probe: a dead caller pipeline is a typed terminal and
 	// a live requeued publisher holds the terminal stop.
-	observationDetailV17         = 13
+	observationDetailV17 = 13
+	// observationDetailV30 adds the distinct post-pressure-recovery authority
+	// confirmation without changing V1-V29 convergence inventories.
+	observationDetailV30         = 14
 	ReceiptSchema                = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2              = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3              = "t4013-neutral-convergence-receipt-v3"
@@ -124,6 +129,7 @@ const (
 	ReceiptSchemaV27             = "t4013-neutral-convergence-receipt-v27"
 	ReceiptSchemaV28             = "t4013-neutral-convergence-receipt-v28"
 	ReceiptSchemaV29             = "t4013-neutral-convergence-receipt-v29"
+	ReceiptSchemaV30             = "t4013-neutral-convergence-receipt-v30"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -175,6 +181,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV27, ObservationSchemaV27, ReceiptSchemaV27},
 	{PlanSchemaV28, ObservationSchemaV28, ReceiptSchemaV28},
 	{PlanSchemaV29, ObservationSchemaV29, ReceiptSchemaV29},
+	{PlanSchemaV30, ObservationSchemaV30, ReceiptSchemaV30},
 }
 
 const (
@@ -285,6 +292,7 @@ type Observation struct {
 	Interruption     *InterruptionObservation           `json:"interruption,omitempty"`
 	AuthorizedQuery  *AuthorizedQueryObservation        `json:"authorized_query,omitempty"`
 	DataMeasurement  *DataMeasurementFailureObservation `json:"data_measurement_failure,omitempty"`
+	Collection       *CollectionObservation             `json:"collection,omitempty"`
 	Profiles         []ProfileObservation               `json:"profiles"`
 	BlobReaders      []BlobReaderObservation            `json:"blob_readers"`
 	Service          ServiceControlObservation          `json:"service_control"`
@@ -297,6 +305,56 @@ type Observation struct {
 }
 
 const authorizedQuerySchemaV1 = "t4013-authorized-query-v1"
+
+const collectionObservationSchemaV1 = "t4013-lifecycle-collection-v1"
+
+var expectedCollectionOwners = []string{
+	lifecycle.CatalogOwner,
+	lifecycle.JobOwner,
+	lifecycle.GenerationScheduleOwner,
+	lifecycle.InvestigationOwner,
+	lifecycle.ObservationOwner,
+	lifecycle.ObservationV2Owner,
+	lifecycle.PartialStageOwner,
+	lifecycle.ProofOwner,
+	lifecycle.ReaderOwner,
+	lifecycle.RelationshipOwner,
+	lifecycle.ResolverOwner,
+	lifecycle.SearchOwner,
+	lifecycle.TombstoneOwner,
+	lifecycle.SourceOwner,
+}
+
+func v30CollectionOwnerBounded(
+	name string,
+	completeness lifecycle.Completeness,
+	backlog bool,
+) bool {
+	if name == lifecycle.JobOwner {
+		return completeness == lifecycle.LowerBound
+	}
+	return completeness == lifecycle.Exact && !backlog
+}
+
+// CollectionObservation is the bounded source-free projection of the V30
+// phase-local lifecycle cycle. Timestamps, cursors, paths, and store rows stay
+// private; exact per-owner work remains reviewable in the returned receipt.
+type CollectionObservation struct {
+	Schema                      string                       `json:"schema"`
+	FreshCycle                  bool                         `json:"fresh_cycle"`
+	CapacityObservedAfterOwners bool                         `json:"capacity_observed_after_owners"`
+	AuthorityUnchanged          bool                         `json:"authority_unchanged"`
+	Owners                      []CollectionOwnerObservation `json:"owners"`
+}
+
+type CollectionOwnerObservation struct {
+	Name         string                 `json:"name"`
+	State        string                 `json:"state"`
+	Completeness lifecycle.Completeness `json:"completeness"`
+	Scanned      int                    `json:"scanned"`
+	Deleted      int                    `json:"deleted"`
+	Backlog      bool                   `json:"backlog"`
+}
 
 // AuthorizedQueryObservation is a bounded source-free failure projection.
 // It names only the frozen profile and endpoint class; URLs, repository names,
@@ -420,19 +478,20 @@ func interruptionSubstageIndex(schema, name string) int {
 // The raw startup log, configuration, paths, credentials, and process output
 // remain in custody and are destroyed after the ceremony.
 type ServerStartupObservation struct {
-	Profile         string `json:"profile"`
-	Label           string `json:"label"`
-	Outcome         string `json:"outcome"`
-	LastStage       string `json:"last_stage"`
-	LastHealthClass string `json:"last_health_class"`
-	HealthAttempts  int64  `json:"health_attempts"`
-	WallMS          int64  `json:"wall_ms"`
-	PeakRSSBytes    int64  `json:"peak_rss_bytes"`
-	GitChildren     int64  `json:"git_children"`
-	IndexChildren   int64  `json:"index_children"`
-	OtherChildren   int64  `json:"other_children"`
-	LogBytes        int64  `json:"log_bytes"`
-	LogSHA256       string `json:"log_sha256"`
+	Profile                    string `json:"profile"`
+	Label                      string `json:"label"`
+	Outcome                    string `json:"outcome"`
+	LastStage                  string `json:"last_stage"`
+	LastHealthClass            string `json:"last_health_class"`
+	HealthAttempts             int64  `json:"health_attempts"`
+	WallMS                     int64  `json:"wall_ms"`
+	PeakRSSBytes               int64  `json:"peak_rss_bytes"`
+	GitChildren                int64  `json:"git_children"`
+	IndexChildren              int64  `json:"index_children"`
+	OtherChildren              int64  `json:"other_children"`
+	ProcessSamplingUnavailable *bool  `json:"process_sampling_unavailable,omitempty"`
+	LogBytes                   int64  `json:"log_bytes"`
+	LogSHA256                  string `json:"log_sha256"`
 }
 
 // ConvergenceWaitObservation retains only a closed stage and digests of
@@ -764,6 +823,7 @@ type Receipt struct {
 	Interruption     *InterruptionObservation           `json:"interruption,omitempty"`
 	AuthorizedQuery  *AuthorizedQueryObservation        `json:"authorized_query,omitempty"`
 	DataMeasurement  *DataMeasurementFailureObservation `json:"data_measurement_failure,omitempty"`
+	Collection       *CollectionObservation             `json:"collection,omitempty"`
 	Profiles         []ProfileObservation               `json:"profiles"`
 	BlobReaders      []BlobReaderObservation            `json:"blob_readers"`
 	Service          ServiceControlObservation          `json:"service_control"`
@@ -812,6 +872,7 @@ func BuildReceipt(planBytes, observationBytes []byte, planDigest string) ([]byte
 		Interruption:     cloneInterruptionObservation(observation.Interruption),
 		AuthorizedQuery:  cloneAuthorizedQueryObservation(observation.AuthorizedQuery),
 		DataMeasurement:  cloneDataMeasurementFailureObservation(observation.DataMeasurement),
+		Collection:       cloneCollectionObservation(observation.Collection),
 		Profiles:         observation.Profiles,
 		BlobReaders:      observation.BlobReaders, Service: observation.Service,
 		Explicit: observation.Explicit, Phases: observation.Phases, Checks: observation.Checks,
@@ -859,6 +920,16 @@ func DecodeObservation(raw []byte) (Observation, error) {
 		return Observation{}, fmt.Errorf("decode T40.13 observation: %w", err)
 	}
 	if err := validateSerializedDataMeasurementField(
+		raw, observationSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Observation{}, err
+	}
+	if err := validateSerializedCollectionField(
+		raw, observationSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Observation{}, err
+	}
+	if err := validateSerializedStartupProcessField(
 		raw, observationSchemaVersion(value.Schema), false,
 	); err != nil {
 		return Observation{}, err
@@ -927,6 +998,8 @@ func receiptSchemaVersion(schema string) int {
 
 func convergenceDetailVersion(observationVersion int) int {
 	switch {
+	case observationVersion >= 30:
+		return observationDetailV30
 	case observationVersion >= 21:
 		return observationDetailV17
 	case observationVersion >= 16:
@@ -1010,6 +1083,8 @@ func ValidatePlan(value Plan) error {
 	case PlanSchemaV28:
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV29:
+		wantSafety = frozenSafetyV25
+	case PlanSchemaV30:
 		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
@@ -1099,6 +1174,7 @@ func ValidateObservation(value Observation) error {
 			value.ServerStartups,
 			version >= 10,
 			version >= 11,
+			version >= 30,
 		); err != nil {
 			return err
 		}
@@ -1118,6 +1194,9 @@ func ValidateObservation(value Observation) error {
 		return err
 	}
 	if err := validateDataMeasurementFailureObservation(value); err != nil {
+		return err
+	}
+	if err := validateCollectionObservation(value); err != nil {
 		return err
 	}
 	if len(value.Profiles) != 2 || value.Profiles[0].Name != "structural-2m-v1" ||
@@ -1158,6 +1237,9 @@ func ValidateObservation(value Observation) error {
 			return errors.New("T40.13 failure observation is invalid")
 		}
 	}
+	if err := validateStartupProcessSentinels(value); err != nil {
+		return err
+	}
 	if !slices.Contains([]string{"continue", "reduce", "cohort_experiment", "p6_investigation", "unclassified"}, value.Decision.Selected) ||
 		value.Decision.Reason == "" || len(value.Decision.Reason) > 256 {
 		return errors.New("T40.13 decision observation is invalid")
@@ -1186,6 +1268,7 @@ func validateReceipt(value Receipt, plan Plan, exactLegacyStoppedReceipt bool) e
 		Interruption:     cloneInterruptionObservation(value.Interruption),
 		AuthorizedQuery:  cloneAuthorizedQueryObservation(value.AuthorizedQuery),
 		DataMeasurement:  cloneDataMeasurementFailureObservation(value.DataMeasurement),
+		Collection:       cloneCollectionObservation(value.Collection),
 		Profiles:         value.Profiles, BlobReaders: value.BlobReaders,
 		Service: value.Service, Explicit: value.Explicit, Phases: value.Phases, Checks: value.Checks,
 		Failures: value.Failures, Decision: value.Decision, Teardown: value.Teardown,
@@ -1291,6 +1374,41 @@ func cloneDataMeasurementFailureObservation(
 	return &result
 }
 
+func cloneCollectionObservation(value *CollectionObservation) *CollectionObservation {
+	if value == nil {
+		return nil
+	}
+	result := *value
+	result.Owners = slices.Clone(value.Owners)
+	return &result
+}
+
+func validateCollectionObservation(value Observation) error {
+	version := observationSchemaVersion(value.Schema)
+	collectionSucceeded := len(value.Phases) > 9 && value.Phases[9].Outcome == "succeeded"
+	if version < 30 || !collectionSucceeded {
+		if value.Collection != nil {
+			return errors.New("T40.13 observation retained unrelated collection evidence")
+		}
+		return nil
+	}
+	observation := value.Collection
+	if observation == nil || observation.Schema != collectionObservationSchemaV1 ||
+		!observation.FreshCycle || !observation.CapacityObservedAfterOwners ||
+		!observation.AuthorityUnchanged || len(observation.Owners) != len(expectedCollectionOwners) {
+		return errors.New("T40.13 V30 collection evidence is incomplete")
+	}
+	for index, owner := range observation.Owners {
+		if owner.Name != expectedCollectionOwners[index] || owner.State != "ok" ||
+			!v30CollectionOwnerBounded(owner.Name, owner.Completeness, owner.Backlog) || owner.Scanned < 0 ||
+			owner.Scanned > lifecycle.MaxCandidatesPerTick || owner.Deleted < 0 ||
+			owner.Deleted > lifecycle.MaxDeletesPerTick {
+			return errors.New("T40.13 V30 collection owner evidence is invalid")
+		}
+	}
+	return nil
+}
+
 func validateDataMeasurementFailureObservation(value Observation) error {
 	version := observationSchemaVersion(value.Schema)
 	failure := value.DataMeasurement
@@ -1314,7 +1432,8 @@ func validateDataMeasurementFailureObservation(value Observation) error {
 }
 
 func validateAuthorizedQueryObservation(value Observation) error {
-	if observationSchemaVersion(value.Schema) < 23 {
+	version := observationSchemaVersion(value.Schema)
+	if version < 23 {
 		if value.AuthorizedQuery != nil {
 			return errors.New("T40.13 historical observation acquired authorized-query diagnostics")
 		}
@@ -1325,11 +1444,14 @@ func validateAuthorizedQueryObservation(value Observation) error {
 	for _, failure := range value.Failures {
 		queryFailure = queryFailure || failure.Code == "authorized_query_failed"
 		projectionAllowed = projectionAllowed || failure.Phase == "authorized_query" &&
-			slices.Contains([]string{
+			(slices.Contains([]string{
 				"authorized_query_failed",
 				"failed_phase_measurement_unavailable",
 				"review_ceiling_crossed",
-			}, failure.Code)
+			}, failure.Code) || version >= 30 && slices.Contains([]string{
+				"failed_phase_process_sampling_unavailable",
+				"failed_phase_allocation_sampling_unavailable",
+			}, failure.Code))
 	}
 	if value.Outcome == "completed" || !projectionAllowed {
 		if value.AuthorizedQuery != nil {
@@ -1636,6 +1758,7 @@ func validateServerStartups(
 	values []ServerStartupObservation,
 	allowPressureRestart bool,
 	allowInterruptionBackup bool,
+	allowCollectionRestart bool,
 ) error {
 	if len(values) > 16 {
 		return errors.New("T40.13 startup diagnostic inventory exceeds its bound")
@@ -1650,6 +1773,9 @@ func validateServerStartups(
 	}
 	if allowInterruptionBackup {
 		labels = append(labels, "interruption-backup")
+	}
+	if allowCollectionRestart {
+		labels = append(labels, "collection")
 	}
 	outcomes := []string{"healthy", "deadline", "exited", "canceled", "inspector_error"}
 	stages := []string{
@@ -1673,6 +1799,12 @@ func validateServerStartups(
 			return errors.New("T40.13 startup diagnostic identity is duplicated")
 		}
 		seen[key] = struct{}{}
+		if value.ProcessSamplingUnavailable != nil &&
+			(!allowCollectionRestart || !*value.ProcessSamplingUnavailable ||
+				value.PeakRSSBytes != 0 || value.GitChildren != 0 ||
+				value.IndexChildren != 0 || value.OtherChildren != 0) {
+			return errors.New("T40.13 startup process-sampling diagnostic is invalid")
+		}
 		if value.Outcome == "healthy" {
 			if value.LastStage != "http_ready" || value.LastHealthClass != "ok" || value.HealthAttempts == 0 {
 				return errors.New("T40.13 healthy startup diagnostic is incoherent")
@@ -1682,6 +1814,60 @@ func validateServerStartups(
 		}
 	}
 	return nil
+}
+
+func validateStartupProcessSentinels(value Observation) error {
+	if observationSchemaVersion(value.Schema) < 30 {
+		return nil
+	}
+	var allowedPhase string
+	if value.Outcome == "stopped" && len(value.Failures) == 1 {
+		failure := value.Failures[0]
+		phaseIndex := slices.Index(phaseOrder, failure.Phase)
+		if failure.Class == "oracle" && phaseIndex >= 0 && phaseIndex < len(value.Phases) &&
+			value.Phases[phaseIndex].Outcome == "failed" &&
+			slices.Contains([]string{
+				"failed_phase_process_sampling_unavailable",
+				"failed_phase_measurement_unavailable",
+			}, failure.Code) {
+			allowedPhase = failure.Phase
+		}
+	}
+	for _, startup := range value.ServerStartups {
+		if startup.PeakRSSBytes != 0 || startup.GitChildren != 0 ||
+			startup.IndexChildren != 0 || startup.OtherChildren != 0 {
+			continue
+		}
+		if startup.ProcessSamplingUnavailable == nil ||
+			!*startup.ProcessSamplingUnavailable || allowedPhase == "" ||
+			startupPhase(startup.Label) != allowedPhase {
+			return errors.New("T40.13 V30 startup process sentinel is not bound to its failed measurement")
+		}
+	}
+	return nil
+}
+
+func startupPhase(label string) string {
+	switch label {
+	case "cold":
+		return "cold"
+	case "warm-noop":
+		return "warm_noop"
+	case "interruption-first", "interruption-restart", "interruption-backup":
+		return "interruption"
+	case "stale-worker":
+		return "stale_worker"
+	case "pressure-restart":
+		return "pressure"
+	case "archive-restore":
+		return "archive_restore"
+	case "collection":
+		return "collection"
+	case "authorized-query":
+		return "authorized_query"
+	default:
+		return ""
+	}
 }
 
 func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion int) error {
@@ -1696,6 +1882,9 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 	}
 	if detailVersion >= 7 {
 		labels = append(labels, "interruption-backup")
+	}
+	if detailVersion >= observationDetailV30 {
+		labels = append(labels, "pressure-recovery")
 	}
 	revisions := []string{"a", "b", "a-return"}
 	outcomes := []string{"converged", "deadline", "canceled"}
@@ -2969,6 +3158,11 @@ func validateStopped(value Receipt) error {
 		if failure.Class != "oracle" {
 			return errors.New("T40.13 unclassified failure identity is invalid")
 		}
+	case "failed_phase_process_sampling_unavailable", "failed_phase_allocation_sampling_unavailable":
+		if receiptSchemaVersion(value.Schema) < 30 || failure.Class != "oracle" {
+			return errors.New("T40.13 typed measurement failure identity is invalid")
+		}
+		wantReason = failure.Code
 	case "operational_failure":
 		if failure.Class != "execution" {
 			return errors.New("T40.13 operational failure identity is invalid")
@@ -3101,6 +3295,16 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	); err != nil {
 		return Receipt{}, err
 	}
+	if err := validateSerializedCollectionField(
+		raw, receiptSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Receipt{}, err
+	}
+	if err := validateSerializedStartupProcessField(
+		raw, receiptSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Receipt{}, err
+	}
 	if err := validateSerializedRetainedPartialFields(
 		raw, receiptSchemaVersion(value.Schema), false,
 	); err != nil {
@@ -3137,6 +3341,9 @@ func validateCompleted(value Receipt, plan Plan) error {
 		if planSchemaVersion(plan.Schema) >= 11 {
 			want = slices.Insert(want, 3, [2]string{"semantic-262144-v1", "interruption-backup"})
 		}
+		if planSchemaVersion(plan.Schema) >= 30 {
+			want = slices.Insert(want, len(want)-1, [2]string{"structural-2m-v1", "collection"})
+		}
 		if len(value.ServerStartups) != len(want) {
 			return errors.New("T40.13 completed receipt lacks the exact startup inventory")
 		}
@@ -3159,6 +3366,11 @@ func validateCompleted(value Receipt, plan Plan) error {
 		}
 		if planSchemaVersion(plan.Schema) >= 11 {
 			want = slices.Insert(want, 5, [3]string{"semantic-262144-v1", "interruption-backup", "a"})
+		}
+		if planSchemaVersion(plan.Schema) >= 30 {
+			pressureIndex := slices.Index(want, [3]string{"structural-2m-v1", "pressure", "a-return"})
+			want = slices.Insert(want, pressureIndex+1,
+				[3]string{"structural-2m-v1", "pressure-recovery", "a-return"})
 		}
 		if len(value.ConvergenceWaits) != len(want) {
 			return errors.New("T40.13 completed receipt lacks the exact convergence wait inventory")
@@ -3318,6 +3530,76 @@ func validateSerializedDataMeasurementField(raw []byte, version int, nested bool
 			if bytes.Equal(bytes.TrimSpace(field.raw), []byte("null")) {
 				return errors.New("T40.13 data-measurement diagnostics cannot be null")
 			}
+		}
+	}
+	return nil
+}
+
+func validateSerializedCollectionField(raw []byte, version int, nested bool) error {
+	containers, err := serializedEvidenceContainers(raw, nested)
+	if err != nil {
+		return err
+	}
+	for _, container := range containers {
+		for _, field := range container {
+			if !strings.EqualFold(field.name, "collection") {
+				continue
+			}
+			if version < 30 {
+				return errors.New("T40.13 historical evidence acquired collection diagnostics")
+			}
+			if field.name != "collection" || bytes.Equal(bytes.TrimSpace(field.raw), []byte("null")) {
+				return errors.New("T40.13 collection diagnostics are null or noncanonical")
+			}
+		}
+	}
+	return nil
+}
+
+func validateSerializedStartupProcessField(raw []byte, version int, nested bool) error {
+	containers, err := serializedEvidenceContainers(raw, nested)
+	if err != nil {
+		return err
+	}
+	for _, container := range containers {
+		var startupFields []serializedField
+		for _, field := range container {
+			if strings.EqualFold(field.name, "server_startups") {
+				startupFields = append(startupFields, field)
+			}
+		}
+		found := false
+		for _, field := range startupFields {
+			var startups []json.RawMessage
+			if err := json.Unmarshal(field.raw, &startups); err != nil {
+				return err
+			}
+			for _, rawStartup := range startups {
+				startup, err := serializedObjectFields(rawStartup)
+				if err != nil {
+					return err
+				}
+				count := 0
+				for _, diagnostic := range startup {
+					if !strings.EqualFold(diagnostic.name, "process_sampling_unavailable") {
+						continue
+					}
+					found = true
+					count++
+					var unavailable bool
+					if version < 30 {
+						return errors.New("T40.13 historical evidence acquired startup process-sampling diagnostics")
+					}
+					if diagnostic.name != "process_sampling_unavailable" || count > 1 ||
+						bytes.Equal(bytes.TrimSpace(diagnostic.raw), []byte("null")) ||
+						json.Unmarshal(diagnostic.raw, &unavailable) != nil || !unavailable {
+						return errors.New("T40.13 startup process-sampling diagnostics are invalid")
+					}
+				}
+			}
+		}
+		if found && (len(startupFields) != 1 || startupFields[0].name != "server_startups") {
+			return errors.New("T40.13 startup process-sampling diagnostics are hidden or noncanonical")
 		}
 	}
 	return nil

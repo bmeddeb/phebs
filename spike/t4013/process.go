@@ -42,6 +42,8 @@ var errProcessChildIdentityDisappeared = errors.New("T40.13 child disappeared be
 
 var errProcessRootExitTransition = errors.New("T40.13 process root exited during snapshot capture")
 
+const t4013ExactReportsEnvironment = "PHEBS_T4013_EXACT_REPORTS=source-free-v1"
+
 type privateToolchain struct {
 	Schema             string
 	Phebs              string
@@ -51,6 +53,7 @@ type privateToolchain struct {
 	TempDir            string
 	ClosedEnvironment  bool
 	dataMeasurementV27 bool
+	exactReportsV30    bool
 	controls           executionControls
 	controlsDigest     string
 	extraEnvironment   []string
@@ -65,6 +68,9 @@ type privateServer struct {
 	done            chan error
 	log             *os.File
 	logPath         string
+	logWindowMu     sync.Mutex
+	primedLogOffset int64
+	logWindowPrimed bool
 	sampler         *rssSampler
 	stopOnce        sync.Once
 	stopErr         error
@@ -98,6 +104,7 @@ type rssSampler struct {
 	rootExitOnce        sync.Once
 	firstErr            error
 	failedSamples       uint64
+	windowPrimed        bool
 	closeOnce           sync.Once
 	closeErr            error
 }
@@ -255,6 +262,7 @@ func buildPrivateToolchain(
 		TempDir:            privateTemp,
 		ClosedEnvironment:  v25,
 		dataMeasurementV27: planSchemaVersion(plan.Schema) >= 27,
+		exactReportsV30:    planSchemaVersion(plan.Schema) >= 30,
 		controls:           controls,
 		controlsDigest:     controlsDigest,
 		host:               hostTools,
@@ -746,12 +754,7 @@ func launchPrivateServer(
 		_ = logFile.Close()
 		return nil, err
 	}
-	command.Env = append(executionEnvironmentForToolchain(toolchain),
-		"PHEBS_ZOEKT_GIT_INDEX="+toolchain.Zoekt,
-		"PHEBS_FOCUSED_INDEX="+toolchain.Focused,
-		"PHEBS_BUF="+toolchain.Buf,
-		"PHEBS_T4013_STARTUP_DIAGNOSTICS=source-free-v1",
-	)
+	command.Env = privateServerEnvironment(toolchain)
 	if err := command.Start(); err != nil {
 		_ = logFile.Close()
 		return nil, err
@@ -773,6 +776,19 @@ func launchPrivateServer(
 	}()
 	go server.sampler.run()
 	return server, nil
+}
+
+func privateServerEnvironment(toolchain privateToolchain) []string {
+	environment := append(executionEnvironmentForToolchain(toolchain),
+		"PHEBS_ZOEKT_GIT_INDEX="+toolchain.Zoekt,
+		"PHEBS_FOCUSED_INDEX="+toolchain.Focused,
+		"PHEBS_BUF="+toolchain.Buf,
+		"PHEBS_T4013_STARTUP_DIAGNOSTICS=source-free-v1",
+	)
+	if toolchain.exactReportsV30 {
+		environment = append(environment, t4013ExactReportsEnvironment)
+	}
+	return environment
 }
 
 func awaitPrivateServerHealth(
@@ -829,16 +845,25 @@ func observeServerStartup(
 	}
 	logBytes, logDigest, stage, err := inspectStartupLog(server.logPath)
 	peakRSS, gitChildren, indexChildren, otherChildren, samplerErr := server.sampler.metrics()
-	if err != nil || samplerErr != nil {
+	if err != nil {
 		return ServerStartupObservation{}, errors.Join(err, samplerErr)
 	}
-	return ServerStartupObservation{
+	observation := ServerStartupObservation{
 		Profile: profile, Label: label, Outcome: outcome, LastStage: stage,
 		LastHealthClass: healthClass, HealthAttempts: attempts,
-		WallMS: time.Since(server.started).Milliseconds(), PeakRSSBytes: peakRSS,
-		GitChildren: gitChildren, IndexChildren: indexChildren, OtherChildren: otherChildren,
+		WallMS:   time.Since(server.started).Milliseconds(),
 		LogBytes: logBytes, LogSHA256: logDigest,
-	}, nil
+	}
+	if samplerErr != nil {
+		unavailable := true
+		observation.ProcessSamplingUnavailable = &unavailable
+		return observation, samplerErr
+	}
+	observation.PeakRSSBytes = peakRSS
+	observation.GitChildren = gitChildren
+	observation.IndexChildren = indexChildren
+	observation.OtherChildren = otherChildren
+	return observation, nil
 }
 
 func inspectStartupLog(path string) (int64, string, string, error) {
@@ -1567,6 +1592,26 @@ func (sampler *rssSampler) phaseMetrics() (PhaseMetrics, error) {
 	}
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
+	return sampler.phaseMetricsLocked()
+}
+
+func (sampler *rssSampler) phaseMetricsAndResetWindow() (PhaseMetrics, error) {
+	if sampler == nil {
+		return PhaseMetrics{}, nil
+	}
+	if sampler.strict {
+		sampler.sampleMu.Lock()
+		defer sampler.sampleMu.Unlock()
+	}
+	sampler.mu.Lock()
+	defer sampler.mu.Unlock()
+	metrics, err := sampler.phaseMetricsLocked()
+	sampler.resetWindowLocked()
+	sampler.windowPrimed = true
+	return metrics, err
+}
+
+func (sampler *rssSampler) phaseMetricsLocked() (PhaseMetrics, error) {
 	if sampler.strict {
 		return PhaseMetrics{
 			PeakRSSBytes: sampler.peakRSS, GitChildren: sampler.strictGitChildren,
@@ -1589,8 +1634,9 @@ func (sampler *rssSampler) strictErrorLocked() error {
 	if sampler.firstErr == nil {
 		return nil
 	}
-	return fmt.Errorf("%w after %d failed samples: %w",
-		errProcessSamplingFailed, sampler.failedSamples, sampler.firstErr)
+	return &samplingFailure{
+		kind: errProcessSamplingFailed, failed: sampler.failedSamples, cause: sampler.firstErr,
+	}
 }
 
 func (sampler *rssSampler) expectConcurrentRootWait() {
@@ -1654,6 +1700,14 @@ func (sampler *rssSampler) resetWindow() {
 	}
 	sampler.mu.Lock()
 	defer sampler.mu.Unlock()
+	if sampler.windowPrimed {
+		sampler.windowPrimed = false
+		return
+	}
+	sampler.resetWindowLocked()
+}
+
+func (sampler *rssSampler) resetWindowLocked() {
 	sampler.peakRSS = 0
 	sampler.samples = 0
 	if sampler.strict {
@@ -1815,6 +1869,9 @@ func validatePrivateTemporaryDirectory(toolchain privateToolchain) error {
 func validateToolchain(value privateToolchain) error {
 	if value.Schema != privateToolchainSchema {
 		return errors.New("T40.13 toolchain identity is invalid")
+	}
+	if value.exactReportsV30 && !value.ClosedEnvironment {
+		return errors.New("T40.13 exact-report toolchain is not isolated")
 	}
 	for _, path := range []string{value.Phebs, value.Zoekt, value.Focused, value.Buf} {
 		info, err := os.Lstat(path)

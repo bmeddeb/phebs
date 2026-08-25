@@ -67,8 +67,10 @@ func (controller *Controller) Tick(ctx context.Context) OwnerResult {
 	if err != nil {
 		return OwnerResult{Owner: owner.name, Completeness: Unavailable, Err: fmt.Errorf("read lifecycle owner cursor: %w", err)}
 	}
-	result := owner.owner.Sweep(ctx, controller.now().UTC(), cursor, controller.limits)
+	attemptedAt := controller.now().UTC()
+	result := owner.owner.Sweep(ctx, attemptedAt, cursor, controller.limits)
 	result.Owner = owner.name
+	result.AttemptedAt = attemptedAt
 	result.CycleStart = owner.name == controller.owners[0].name
 	result.CycleComplete = owner.name == controller.owners[len(controller.owners)-1].name
 	if result.Err == nil {

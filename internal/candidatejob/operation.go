@@ -2,6 +2,7 @@ package candidatejob
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -194,18 +195,19 @@ func candidateDurationMS(duration time.Duration) int64 {
 	return duration.Milliseconds()
 }
 
-func (worker *Worker) emitOperation(report CandidateOperationReport) {
-	if worker == nil || (!worker.Diagnostics && worker.OperationReports == nil) {
-		return
+func (worker *Worker) emitOperation(report CandidateOperationReport) (result error) {
+	if worker == nil || (!worker.Diagnostics && worker.OperationReports == nil &&
+		worker.OperationReportFailure == nil) {
+		return nil
 	}
 	data, err := json.Marshal(report)
 	if err != nil {
 		diagnostics.Logf("encode candidate operation: %v", err)
-		return
+		return worker.failOperationReport(errors.New("encode candidate operation"))
 	}
 	if len(data) > MaxCandidateOperationSize {
 		diagnostics.Logf("encode candidate operation: report exceeds %d bytes", MaxCandidateOperationSize)
-		return
+		return worker.failOperationReport(errors.New("candidate operation report exceeds its bound"))
 	}
 	sink := worker.OperationReports
 	if sink == nil {
@@ -218,10 +220,28 @@ func (worker *Worker) emitOperation(report CandidateOperationReport) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				diagnostics.Logf("candidate operation sink panic (%T)", recovered)
+				result = worker.failOperationReport(errors.New("candidate operation sink panicked"))
 			}
 		}()
 		if err := sink(data); err != nil {
 			diagnostics.Logf("candidate operation sink error (%T)", err)
+			result = worker.failOperationReport(errors.New("candidate operation sink failed"))
 		}
 	}()
+	return result
+}
+
+func (worker *Worker) failOperationReport(err error) (result error) {
+	if worker == nil || worker.OperationReportFailure == nil || err == nil {
+		return nil
+	}
+	result = err
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			diagnostics.Logf("candidate operation failure callback panic (%T)", recovered)
+			result = errors.New("candidate operation failure callback panicked")
+		}
+	}()
+	worker.OperationReportFailure(err)
+	return result
 }

@@ -801,7 +801,8 @@ is_v25_plan() {
     "$schema" == "t4013-neutral-convergence-plan-v26" ||
     "$schema" == "t4013-neutral-convergence-plan-v27" ||
     "$schema" == "t4013-neutral-convergence-plan-v28" ||
-    "$schema" == "t4013-neutral-convergence-plan-v29" ]]
+    "$schema" == "t4013-neutral-convergence-plan-v29" ||
+    "$schema" == "t4013-neutral-convergence-plan-v30" ]]
 }
 
 usage() {

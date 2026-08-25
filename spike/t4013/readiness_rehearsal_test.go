@@ -525,13 +525,14 @@ func buildWorkingTreeToolchain(
 		Buf:                filepath.Join(output, "buf"),
 		ClosedEnvironment:  true,
 		dataMeasurementV27: true,
+		exactReportsV30:    true,
 	}
 	hostToolchain, err := observeHostToolchain(ctx, true)
 	if err != nil {
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV29,
+		Schema:        PlanSchemaV30,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -633,6 +634,7 @@ func rehearseProductionPath(
 	kind string,
 ) {
 	t.Helper()
+	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
 	profile, err := prepareProjectionProfile(ctx, moduleRoot, workspace, kind)
 	if err != nil {
 		t.Fatal(err)
@@ -729,6 +731,7 @@ func rehearseProductionPath(
 	}
 	t.Log("live backup and offline restore boundary passed")
 
+	cycleAfter := time.Now().UTC()
 	server, err = launchPrivateServer(ctx, profile, toolchain, "rehearsal-restored")
 	if err != nil {
 		t.Fatal(err)
@@ -742,10 +745,10 @@ func rehearseProductionPath(
 		revision = "a-return"
 	}
 	restored := awaitReadinessSnapshot(t, ctx, profile, revision, 12*time.Minute)
-	if !privateRestoreProductEqual(restored, a) {
+	if !privateRestoreProductEqualForPlan(plan, restored, a) {
 		t.Fatal("live backup and offline restore changed recovered semantic authority")
 	}
-	if _, err := waitLifecycle(ctx, profile, false, 3*time.Minute); err != nil {
+	if _, err := waitLifecycleAfterForPlan(ctx, plan, profile, true, cycleAfter, 3*time.Minute); err != nil {
 		t.Fatal(err)
 	}
 	if _, exact, err := queryProfile(ctx, profile, serviceKey, requireCitation); err != nil || !exact {
@@ -767,7 +770,7 @@ func rehearseWarmNoopRestart(
 	before privateProfileSnapshot,
 ) (*privateServer, privateProfileSnapshot) {
 	t.Helper()
-	plan := Plan{Schema: PlanSchemaV29, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
@@ -817,7 +820,7 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
-	plan := Plan{Schema: PlanSchemaV29, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
@@ -1150,7 +1153,7 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err := errors.Join(cursor.Close(), reader.Close(context.WithoutCancel(ctx))); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := meter.finish(&after); err != nil {
+	if _, err := meter.finish(&after, PlanSchemaV30); err != nil {
 		t.Fatal(err)
 	}
 	t.Log("semantic stale-worker boundary passed")

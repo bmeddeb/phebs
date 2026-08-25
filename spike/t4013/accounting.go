@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,15 +33,18 @@ const (
 )
 
 type phaseMeter struct {
-	started    time.Time
-	server     *privateServer
-	dataDir    string
-	logOffset  int64
-	before     *privateProfileSnapshot
-	allocation *allocationSampler
-	strict     bool
-	captureRaw bool
-	rawEnd     *dataMeasurementBoundary
+	started               time.Time
+	server                *privateServer
+	dataDir               string
+	logOffset             int64
+	before                *privateProfileSnapshot
+	allocation            *allocationSampler
+	beforeProcessSnapshot func() error
+	boundaryFailed        bool
+	boundaryMeasurement   error
+	strict                bool
+	captureRaw            bool
+	rawEnd                *dataMeasurementBoundary
 }
 
 // dataMeasurementBoundary is the successful raw allocated-byte end gauge of
@@ -144,6 +148,20 @@ type allocationSampler struct {
 }
 
 var errAllocationSamplingFailed = errors.New("T40.13 allocation sampling failed")
+
+type samplingFailure struct {
+	kind   error
+	failed uint64
+	cause  error
+}
+
+func (failure *samplingFailure) Error() string {
+	return fmt.Sprintf("%v after %d failed samples: %v", failure.kind, failure.failed, failure.cause)
+}
+
+func (failure *samplingFailure) Unwrap() []error {
+	return []error{failure.kind, failure.cause}
+}
 
 func retainedMeasurementFailure(err error) error {
 	var retained error
@@ -254,8 +272,9 @@ func (sampler *allocationSampler) close() (int64, error) {
 		if sampler.err != nil {
 			sampler.closeErr = sampler.err
 			if sampler.strict {
-				sampler.closeErr = fmt.Errorf("%w after %d failed samples: %w",
-					errAllocationSamplingFailed, sampler.failedSamples, sampler.err)
+				sampler.closeErr = &samplingFailure{
+					kind: errAllocationSamplingFailed, failed: sampler.failedSamples, cause: sampler.err,
+				}
 			}
 		}
 	})
@@ -278,11 +297,117 @@ func beginPhaseMeter(server *privateServer, dataDir string, before *privateProfi
 	if err != nil {
 		return nil, err
 	}
+	offset, err = server.consumePrimedLogOffset(offset)
+	if err != nil {
+		_, allocationErr := allocation.close()
+		return nil, errors.Join(err, allocationErr)
+	}
 	server.sampler.resetWindow()
 	return &phaseMeter{
 		started: time.Now(), server: server, dataDir: dataDir, logOffset: offset,
 		before: before, allocation: allocation, strict: server.sessionIsolated,
 	}, nil
+}
+
+func (server *privateServer) primeLogOffset(offset int64) error {
+	if server == nil || offset < 0 {
+		return errors.New("T40.13 phase log handoff is invalid")
+	}
+	server.logWindowMu.Lock()
+	defer server.logWindowMu.Unlock()
+	if server.logWindowPrimed {
+		return errors.New("T40.13 phase log handoff is already primed")
+	}
+	server.primedLogOffset = offset
+	server.logWindowPrimed = true
+	return nil
+}
+
+func (server *privateServer) primedLogOffsetValue() (int64, error) {
+	if server == nil {
+		return 0, errors.New("T40.13 phase log handoff is invalid")
+	}
+	server.logWindowMu.Lock()
+	defer server.logWindowMu.Unlock()
+	if !server.logWindowPrimed {
+		return 0, errors.New("T40.13 phase log handoff is not primed")
+	}
+	return server.primedLogOffset, nil
+}
+
+func (server *privateServer) settlePrimedLogHandoff(offset int64) (int64, error) {
+	if server == nil || offset < 0 {
+		return 0, errors.New("T40.13 phase log handoff is invalid")
+	}
+	end, err := unrelatedLogTailEnd(server.logPath, offset)
+	if err != nil {
+		return 0, err
+	}
+	server.logWindowMu.Lock()
+	defer server.logWindowMu.Unlock()
+	if !server.logWindowPrimed || server.primedLogOffset != offset {
+		return 0, errors.New("T40.13 phase log handoff changed during settlement")
+	}
+	server.primedLogOffset = end
+	return end, nil
+}
+
+func unrelatedLogTailEnd(path string, offset int64) (end int64, resultErr error) {
+	if !filepath.IsAbs(path) || offset < 0 {
+		return 0, errors.New("T40.13 phase log handoff range is invalid")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { resultErr = errors.Join(resultErr, file.Close()) }()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() < offset || info.Size() > maxStartupLogBytes {
+		return 0, errors.Join(err, errors.New("T40.13 phase log handoff range is unavailable"))
+	}
+	end = info.Size()
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		return 0, err
+	}
+	limited := &io.LimitedReader{R: file, N: end - offset}
+	reader := bufio.NewReaderSize(limited, maxCandidateReuseLineBytes)
+	for {
+		line, readErr := reader.ReadSlice('\n')
+		if bytes.Contains(line, []byte("candidate operation: ")) ||
+			bytes.Contains(line, []byte("job lifecycle: ")) {
+			return 0, exactOracle("warm no-op log/process boundary straddled exact work")
+		}
+		switch {
+		case readErr == nil:
+			continue
+		case errors.Is(readErr, io.EOF) && len(line) == 0 && limited.N == 0:
+			return end, nil
+		case errors.Is(readErr, bufio.ErrBufferFull):
+			return 0, errors.New("T40.13 phase log handoff line exceeds its bound")
+		case errors.Is(readErr, io.EOF):
+			return 0, errors.New("T40.13 phase log handoff ended with a partial line")
+		default:
+			return 0, readErr
+		}
+	}
+}
+
+func (server *privateServer) consumePrimedLogOffset(fallback int64) (int64, error) {
+	if server == nil || fallback < 0 {
+		return 0, errors.New("T40.13 phase log handoff is invalid")
+	}
+	server.logWindowMu.Lock()
+	defer server.logWindowMu.Unlock()
+	if !server.logWindowPrimed {
+		return fallback, nil
+	}
+	if server.primedLogOffset > fallback {
+		return 0, errors.New("T40.13 phase log handoff exceeds the current log")
+	}
+	offset := server.primedLogOffset
+	server.primedLogOffset = 0
+	server.logWindowPrimed = false
+	return offset, nil
 }
 
 func beginInitialPhaseMeter(server *privateServer, dataDir string, before *privateProfileSnapshot) (*phaseMeter, error) {
@@ -364,14 +489,43 @@ func runMeasuredCommand(command *exec.Cmd, dataDir string, strict bool) (PhaseMe
 	)
 }
 
-func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, error) {
+func (meter *phaseMeter) finish(after *privateProfileSnapshot, planSchema string) (PhaseMetrics, error) {
 	if meter == nil || meter.server == nil {
 		return PhaseMetrics{}, errors.New("T40.13 phase meter is invalid")
 	}
 	logical, allocated, measureErr := measureDataBytesForContract(meter.dataDir, meter.strict)
+	var processMetrics PhaseMetrics
+	var samplerErr error
+	processSnapshotTaken := false
+	logEnd := int64(-1)
+	if measureErr == nil && meter.beforeProcessSnapshot != nil {
+		settle := meter.beforeProcessSnapshot
+		meter.beforeProcessSnapshot = nil
+		if err := settle(); err != nil {
+			return meter.failBoundary(err, logical, allocated)
+		}
+		var err error
+		logEnd, err = meter.server.primedLogOffsetValue()
+		if err != nil {
+			return meter.failBoundary(err, logical, allocated)
+		}
+		processMetrics, samplerErr = meter.server.sampler.phaseMetricsAndResetWindow()
+		processSnapshotTaken = true
+		if planSchemaVersion(planSchema) >= 30 {
+			logEnd, err = meter.server.settlePrimedLogHandoff(logEnd)
+			if err != nil {
+				return meter.finishBoundaryFailure(
+					err, logical, allocated, processMetrics, samplerErr,
+				)
+			}
+		}
+	}
 	peakAllocated, allocationErr := meter.allocation.close()
-	if measureErr != nil || allocationErr != nil {
-		return PhaseMetrics{}, errors.Join(measureErr, allocationErr)
+	if !processSnapshotTaken {
+		processMetrics, samplerErr = meter.server.sampler.phaseMetrics()
+	}
+	if measureErr != nil || allocationErr != nil || samplerErr != nil {
+		return PhaseMetrics{}, errors.Join(measureErr, allocationErr, samplerErr)
 	}
 	rawAllocated := allocated
 	allocated = max(allocated, peakAllocated)
@@ -379,12 +533,19 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 		WallMS:           time.Since(meter.started).Milliseconds(),
 		DataLogicalBytes: logical, DataAllocatedBytes: allocated,
 	}
-	processMetrics, samplerErr := meter.server.sampler.phaseMetrics()
 	metrics, mergeErr := mergeMetrics(metrics, processMetrics)
-	if samplerErr != nil || mergeErr != nil {
-		return PhaseMetrics{}, errors.Join(samplerErr, mergeErr)
+	if mergeErr != nil {
+		return PhaseMetrics{}, mergeErr
 	}
-	logMetrics, err := parseLogMetrics(meter.server.logPath, meter.logOffset)
+	var logMetrics PhaseMetrics
+	var err error
+	if processSnapshotTaken {
+		logMetrics, err = parseLogMetricsForPlanThrough(
+			meter.server.logPath, meter.logOffset, logEnd, planSchema,
+		)
+	} else {
+		logMetrics, err = parseLogMetricsForPlan(meter.server.logPath, meter.logOffset, planSchema)
+	}
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
@@ -422,6 +583,36 @@ func (meter *phaseMeter) finish(after *privateProfileSnapshot) (PhaseMetrics, er
 		meter.rawEnd = boundary
 	}
 	return metrics, nil
+}
+
+func (meter *phaseMeter) failBoundary(
+	boundaryErr error,
+	logical, allocated int64,
+) (PhaseMetrics, error) {
+	processMetrics, samplerErr := meter.server.sampler.phaseMetrics()
+	return meter.finishBoundaryFailure(
+		boundaryErr, logical, allocated, processMetrics, samplerErr,
+	)
+}
+
+func (meter *phaseMeter) finishBoundaryFailure(
+	boundaryErr error,
+	logical, allocated int64,
+	processMetrics PhaseMetrics,
+	samplerErr error,
+) (PhaseMetrics, error) {
+	peakAllocated, allocationErr := meter.allocation.close()
+	metrics := PhaseMetrics{
+		WallMS: time.Since(meter.started).Milliseconds(), DataLogicalBytes: logical,
+		DataAllocatedBytes: max(allocated, peakAllocated),
+	}
+	merged, mergeErr := mergeMetrics(metrics, processMetrics)
+	if mergeErr == nil {
+		metrics = merged
+	}
+	meter.boundaryFailed = true
+	meter.boundaryMeasurement = errors.Join(samplerErr, allocationErr, mergeErr)
+	return metrics, errors.Join(boundaryErr, meter.boundaryMeasurement)
 }
 
 func authorityChanges(before, after privateProfileSnapshot) int64 {
@@ -606,6 +797,17 @@ func parseDUKilobytes(output []byte) (int64, error) {
 }
 
 func parseLogMetrics(path string, offset int64) (PhaseMetrics, error) {
+	return parseLogMetricsForPlan(path, offset, "")
+}
+
+func parseLogMetricsForPlan(path string, offset int64, planSchema string) (PhaseMetrics, error) {
+	return parseLogMetricsForPlanThrough(path, offset, -1, planSchema)
+}
+
+func parseLogMetricsForPlanThrough(path string, offset, end int64, planSchema string) (PhaseMetrics, error) {
+	if offset < 0 || end >= 0 && end < offset {
+		return PhaseMetrics{}, errors.New("T40.13 phase log range is invalid")
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return PhaseMetrics{}, err
@@ -615,7 +817,16 @@ func parseLogMetrics(path string, offset int64) (PhaseMetrics, error) {
 		return PhaseMetrics{}, err
 	}
 	var result PhaseMetrics
-	scanner := bufio.NewScanner(file)
+	var reader io.Reader = file
+	if end >= 0 {
+		info, statErr := file.Stat()
+		if statErr != nil || info.Size() < end {
+			_ = file.Close()
+			return PhaseMetrics{}, errors.Join(statErr, errors.New("T40.13 phase log range is unavailable"))
+		}
+		reader = io.LimitReader(file, end-offset)
+	}
+	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 4096), 1<<20)
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -633,6 +844,9 @@ func parseLogMetrics(path string, offset int64) (PhaseMetrics, error) {
 		case bytes.Contains(line, []byte("candidate operation: ")):
 			var report candidatejob.CandidateOperationReport
 			if decodeLogObject(line, "candidate operation: ", &report) == nil && report.Schema == candidatejob.CandidateOperationSchema {
+				if planSchemaVersion(planSchema) >= 30 && report.Outcome != "done" {
+					continue
+				}
 				switch report.Decision {
 				case "warm_noop":
 					result.ReusedControls++
@@ -660,6 +874,151 @@ func parseLogMetrics(path string, offset int64) (PhaseMetrics, error) {
 		}
 	}
 	return result, errors.Join(scanner.Err(), file.Close())
+}
+
+const maxCandidateReuseLineBytes = candidatejob.MaxCandidateOperationSize + 1024
+
+type candidateReuseCursor struct {
+	file    *os.File
+	reader  *bufio.Reader
+	pending []byte
+	active  map[string]struct{}
+	reused  bool
+	offset  int64
+	settled bool
+}
+
+func newCandidateReuseCursor(path string, offset int64) (*candidateReuseCursor, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	return &candidateReuseCursor{
+		file: file, reader: bufio.NewReaderSize(file, maxCandidateReuseLineBytes),
+		active: make(map[string]struct{}), offset: offset,
+	}, nil
+}
+
+func (cursor *candidateReuseCursor) Close() error {
+	if cursor == nil || cursor.file == nil {
+		return nil
+	}
+	err := cursor.file.Close()
+	cursor.file = nil
+	return err
+}
+
+func (cursor *candidateReuseCursor) poll() (bool, error) {
+	if cursor == nil || cursor.file == nil || cursor.reader == nil {
+		return false, errors.New("T40.13 candidate reuse cursor is invalid")
+	}
+	info, err := cursor.file.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > maxStartupLogBytes {
+		return false, errors.Join(err, errors.New("T40.13 candidate reuse log exceeds its bound"))
+	}
+	cursor.settled = false
+	changed := false
+	for {
+		line, readErr := cursor.reader.ReadBytes('\n')
+		if len(line) > 0 {
+			nextOffset, addErr := checkedAddInt64(cursor.offset, int64(len(line)))
+			if addErr != nil {
+				return false, addErr
+			}
+			cursor.offset = nextOffset
+			cursor.pending = append(cursor.pending, line...)
+			if len(cursor.pending) > maxCandidateReuseLineBytes {
+				return false, errors.New("T40.13 candidate reuse line exceeds its bound")
+			}
+			if cursor.pending[len(cursor.pending)-1] == '\n' {
+				complete := bytes.TrimSuffix(cursor.pending, []byte{'\n'})
+				candidate := bytes.Contains(complete, []byte("candidate operation: "))
+				reused, parseErr := parseCandidateReuseLine(complete)
+				job, jobErr := cursor.observeJobLifecycle(complete)
+				cursor.pending = cursor.pending[:0]
+				if parseErr != nil || jobErr != nil {
+					return false, errors.Join(parseErr, jobErr)
+				}
+				cursor.reused = cursor.reused || reused
+				changed = changed || candidate || job
+			}
+		}
+		if errors.Is(readErr, io.EOF) {
+			cursor.settled = cursor.reused && len(cursor.active) == 0 && len(cursor.pending) == 0 && !changed
+			return cursor.settled, nil
+		}
+		if readErr != nil {
+			return false, readErr
+		}
+	}
+}
+
+func (cursor *candidateReuseCursor) settledOffset() (int64, error) {
+	if cursor == nil || !cursor.settled || cursor.offset < 0 {
+		return 0, errors.New("T40.13 candidate reuse cursor is not settled")
+	}
+	return cursor.offset, nil
+}
+
+func parseCandidateReuseLine(line []byte) (bool, error) {
+	const prefix = "candidate operation: "
+	if !bytes.Contains(line, []byte(prefix)) {
+		return false, nil
+	}
+	var report candidatejob.CandidateOperationReport
+	if err := decodeLogObject(line, prefix, &report); err != nil {
+		return false, errors.New("T40.13 candidate reuse report is malformed")
+	}
+	if report.Schema != candidatejob.CandidateOperationSchema {
+		return false, nil
+	}
+	reuse := report.Decision == "warm_noop" || report.Decision == "cold_reuse" ||
+		report.Decision == "marker_recovery"
+	if !reuse {
+		return false, errors.New("T40.13 warm no-op performed non-reuse candidate work")
+	}
+	if reuse && report.Outcome != "done" {
+		return false, errors.New("T40.13 candidate reuse did not complete")
+	}
+	return reuse, nil
+}
+
+func (cursor *candidateReuseCursor) observeJobLifecycle(line []byte) (bool, error) {
+	const prefix = "job lifecycle: "
+	if !bytes.Contains(line, []byte(prefix)) {
+		return false, nil
+	}
+	var report store.JobLifecycleReport
+	if err := decodeLogObject(line, prefix, &report); err != nil ||
+		report.Schema != store.JobLifecycleSchema || report.JobID == "" {
+		return false, errors.New("T40.13 warm no-op job lifecycle report is malformed")
+	}
+	switch report.Event {
+	case "claimed", "started":
+		cursor.active[report.JobID] = struct{}{}
+		if len(cursor.active) > maxProcessChildLifetimes {
+			return false, errors.New("T40.13 warm no-op job inventory exceeds its bound")
+		}
+	case "done":
+		delete(cursor.active, report.JobID)
+		if report.Outcome != "success" {
+			return false, errors.New("T40.13 warm no-op job did not complete")
+		}
+	case "deferred", "yielded":
+		cursor.active[report.JobID] = struct{}{}
+		if len(cursor.active) > maxProcessChildLifetimes {
+			return false, errors.New("T40.13 warm no-op job inventory exceeds its bound")
+		}
+	case "released", "failed", "requeued":
+		return false, errors.New("T40.13 warm no-op job did not complete")
+	default:
+		return false, errors.New("T40.13 warm no-op job lifecycle event is invalid")
+	}
+	return true, nil
 }
 
 func decodeLogObject(line []byte, marker string, target any) error {

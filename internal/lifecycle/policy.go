@@ -91,6 +91,10 @@ type OwnerResult struct {
 	Scanned int
 	Deleted int
 	More    bool
+	// AttemptedAt is stamped by Controller immediately before the owner sweep.
+	// Status publication must not move this fence past work that straddled a
+	// pressure or restart boundary.
+	AttemptedAt time.Time
 	// CycleStart identifies the first owner in the controller's stable sorted
 	// order. It lets a newly started runner distinguish the end of a durable
 	// rotation suffix from the end of one complete process-observed cycle.

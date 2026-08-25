@@ -799,7 +799,7 @@ func TestCandidateOperationReportsRebuildAndPointerOnlyWarmNoop(t *testing.T) {
 	}
 }
 
-func TestCandidateOperationSinkPanicIsAdvisory(t *testing.T) {
+func TestCandidateOperationSinkPanicIsAdvisoryWithoutCallback(t *testing.T) {
 	t.Parallel()
 	dataDir, repository, commit := candidateGitFixture(t)
 	state := &manifestStore{repository: &store.Repo{
@@ -814,17 +814,107 @@ func TestCandidateOperationSinkPanicIsAdvisory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker.OperationReports = func([]byte) error {
-		panic("diagnostic sink")
-	}
+	worker.OperationReports = func([]byte) error { panic("private sink panic") }
 	if err := worker.Handle(t.Context(), store.Job{
-		ID: "candidate_manifest_job:panic", Kind: store.JobCandidate,
+		ID: "candidate_manifest_job:advisory", Kind: store.JobCandidate,
 		Target: repository,
 	}); err != nil {
-		t.Fatalf("candidate result changed by diagnostic sink panic: %v", err)
+		t.Fatalf("candidate result changed by advisory report failure: %v", err)
 	}
 	if state.pointer == nil || state.pointer.ManifestDigest == "" {
-		t.Fatal("diagnostic sink panic prevented candidate publication")
+		t.Fatal("advisory report failure prevented candidate publication")
+	}
+}
+
+func TestCandidateOperationFailuresNotifyExactCaller(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		jobID string
+		sink  CandidateOperationSink
+	}{
+		{
+			name: "sink error",
+			sink: func([]byte) error { return errors.New("private sink error") },
+		},
+		{
+			name: "sink panic",
+			sink: func([]byte) error { panic("private sink panic") },
+		},
+		{
+			name:  "oversize",
+			jobID: strings.Repeat("x", MaxCandidateOperationSize),
+			sink:  func([]byte) error { return nil },
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			dataDir, repository, commit := candidateGitFixture(t)
+			state := &manifestStore{repository: &store.Repo{
+				Name: repository, IndexedCommitHash: commit,
+			}}
+			worker, _, err := New(dataDir, state, []extract.Extractor{
+				policyExtractor{
+					domain: "proto-contract", version: "proto-v1",
+					requiredSuffix: ".proto",
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			worker.OperationReports = test.sink
+			var failure error
+			var callbacks int
+			worker.OperationReportFailure = func(err error) {
+				callbacks++
+				failure = err
+			}
+			jobID := test.jobID
+			if jobID == "" {
+				jobID = "candidate_manifest_job:exact"
+			}
+			handleErr := worker.Handle(t.Context(), store.Job{
+				ID: jobID, Kind: store.JobCandidate, Target: repository,
+			})
+			if handleErr == nil {
+				t.Fatal("candidate report failure did not fail exact handling")
+			}
+			if callbacks != 1 || failure == nil {
+				t.Fatalf("failure callback = (%d, %v), want one bounded error", callbacks, failure)
+			}
+			for _, current := range []error{failure, handleErr} {
+				if len(current.Error()) > 128 || strings.Contains(current.Error(), "private") {
+					t.Fatalf("unbounded candidate report failure = %q", current)
+				}
+			}
+			if state.pointer == nil || state.pointer.ManifestDigest == "" {
+				t.Fatal("exact report failure preceded candidate publication")
+			}
+		})
+	}
+}
+
+func TestCandidateOperationFailureCallbackPanicIsBounded(t *testing.T) {
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+	}}
+	worker, _, err := New(dataDir, state, []extract.Extractor{
+		policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.OperationReports = func([]byte) error { return errors.New("private sink error") }
+	worker.OperationReportFailure = func(error) { panic("private callback panic") }
+	err = worker.Handle(t.Context(), store.Job{
+		ID: "candidate_manifest_job:callback-panic", Kind: store.JobCandidate,
+		Target: repository,
+	})
+	if err == nil || !strings.Contains(err.Error(), "failure callback panicked") ||
+		strings.Contains(err.Error(), "private") || len(err.Error()) > 128 {
+		t.Fatalf("callback panic error = %v", err)
 	}
 }
 

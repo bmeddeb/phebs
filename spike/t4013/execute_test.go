@@ -425,11 +425,62 @@ func TestV27TeardownCeilingReclassificationClearsDataMeasurement(t *testing.T) {
 	})
 }
 
-func TestHistoricalTeardownCheckpointRejectsNestedDataMeasurementNull(t *testing.T) {
+func TestHistoricalTeardownCheckpointRejectsNestedCurrentFields(t *testing.T) {
 	observation := emptyObservation(EnvironmentObservation{
 		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
 		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
 	})
+	observation.Outcome = "stopped"
+	observation.Phases[0] = PhaseObservation{Name: "preflight", Outcome: "failed"}
+	observation.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	observation.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	checkpoint := teardownCheckpoint{
+		Schema: teardownCheckpointSchema, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		Workspace: filepath.Clean(t.TempDir()), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Observation: observation,
+	}
+	raw, err := marshalTeardownCheckpoint(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"data_measurement_failure", "collection"} {
+		t.Run(field, func(t *testing.T) {
+			var object map[string]any
+			if err := json.Unmarshal(raw, &object); err != nil {
+				t.Fatal(err)
+			}
+			nested, ok := object["observation"].(map[string]any)
+			if !ok {
+				t.Fatal("checkpoint observation is not an object")
+			}
+			nested[field] = nil
+			forged, err := json.Marshal(object)
+			if err != nil {
+				t.Fatal(err)
+			}
+			forged = append(forged, '\n')
+			path := filepath.Join(t.TempDir(), "observation.json")
+			if err := os.WriteFile(path+".teardown", forged, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := readTeardownCheckpoint(path); err == nil {
+				t.Fatalf("historical checkpoint accepted nested null %s", field)
+			}
+		})
+	}
+}
+
+func TestHistoricalTeardownCheckpointRejectsNestedStartupProcessSamplingField(t *testing.T) {
+	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
 	observation.Outcome = "stopped"
 	observation.Phases[0] = PhaseObservation{Name: "preflight", Outcome: "failed"}
 	observation.Failures = []FailureObservation{{
@@ -453,18 +504,18 @@ func TestHistoricalTeardownCheckpointRejectsNestedDataMeasurementNull(t *testing
 	if !ok {
 		t.Fatal("checkpoint observation is not an object")
 	}
-	nested["data_measurement_failure"] = nil
-	raw, err = json.Marshal(object)
+	nested["server_startups"] = []any{map[string]any{"process_sampling_unavailable": nil}}
+	forged, err := json.Marshal(object)
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw = append(raw, '\n')
+	forged = append(forged, '\n')
 	path := filepath.Join(t.TempDir(), "observation.json")
-	if err := os.WriteFile(path+".teardown", raw, 0o600); err != nil {
+	if err := os.WriteFile(path+".teardown", forged, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := readTeardownCheckpoint(path); err == nil {
-		t.Fatal("historical checkpoint accepted a nested null data-measurement field")
+		t.Fatal("historical checkpoint accepted nested startup process-sampling diagnostics")
 	}
 }
 
@@ -2359,6 +2410,184 @@ func TestDataMeasurementDeadlineClassificationChangesOnlyAtV27(t *testing.T) {
 	}
 }
 
+func TestV30MeasurementClassificationNamesSingleFailedSampler(t *testing.T) {
+	private := errors.New("private sampler failure")
+	for _, test := range []struct {
+		name    string
+		failure error
+		want    string
+	}{
+		{
+			name: "process",
+			failure: &samplingFailure{
+				kind: errProcessSamplingFailed, failed: 1, cause: private,
+			},
+			want: "failed_phase_process_sampling_unavailable",
+		},
+		{
+			name: "allocation",
+			failure: &samplingFailure{
+				kind: errAllocationSamplingFailed, failed: 1, cause: private,
+			},
+			want: "failed_phase_allocation_sampling_unavailable",
+		},
+		{
+			name: "both samplers", failure: errors.Join(errProcessSamplingFailed, errAllocationSamplingFailed),
+			want: "failed_phase_measurement_unavailable",
+		},
+		{
+			name: "process and data", failure: errors.Join(
+				errProcessSamplingFailed, newDataMeasurementDeadlineError(false),
+			),
+			want: "failed_phase_measurement_unavailable",
+		},
+		{
+			name: "allocation and other", failure: errors.Join(errAllocationSamplingFailed, private),
+			want: "failed_phase_measurement_unavailable",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := classifyStoppedFailureForPlan(
+				Plan{Schema: PlanSchemaV30}, errors.New("private failure"), test.failure, nil,
+			)
+			if got.code != test.want || got.reason != test.want || got.substantiated {
+				t.Fatalf("V30 classification = %+v", got)
+			}
+		})
+	}
+	historical := classifyStoppedFailureForPlan(
+		Plan{Schema: PlanSchemaV29}, errors.New("private failure"), errProcessSamplingFailed, nil,
+	)
+	if historical.code != "failed_phase_measurement_unavailable" {
+		t.Fatalf("V29 process sampling classification changed: %+v", historical)
+	}
+}
+
+func TestRetainServerStartupChangesOnlyAtV30(t *testing.T) {
+	startup := ServerStartupObservation{Profile: "structural-2m-v1", Label: "cold"}
+	historical := execution{plan: Plan{Schema: PlanSchemaV29}}
+	historical.retainServerStartup(startup, errProcessSamplingFailed)
+	if len(historical.observation.ServerStartups) != 0 {
+		t.Fatal("V29 retained partial startup evidence")
+	}
+	current := execution{plan: Plan{Schema: PlanSchemaV30}}
+	current.retainServerStartup(startup, errProcessSamplingFailed)
+	if !slices.Equal(current.observation.ServerStartups, []ServerStartupObservation{startup}) {
+		t.Fatalf("V30 startup evidence = %+v", current.observation.ServerStartups)
+	}
+}
+
+func TestV30WarmNoopStartupUsesFinishedMetricsSnapshot(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "server.log")
+	if err := os.WriteFile(logPath, []byte(
+		`T40.13 startup lifecycle: {"schema":"t4013-source-free-startup-v1","stage":"http_ready"}`+"\n",
+	), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	profile := PreparedProfile{Name: "structural-2m-v1"}
+	run := &execution{observation: Observation{ServerStartups: []ServerStartupObservation{{
+		Profile: profile.Name, Label: "warm-noop", Outcome: "healthy",
+		LastHealthClass: "ok", HealthAttempts: 4,
+	}}}}
+	metrics := PhaseMetrics{
+		PeakRSSBytes: 42, GitChildren: 3, IndexChildren: 2, OtherChildren: 7,
+	}
+	if err := run.refreshWarmNoopStartup(
+		profile, &privateServer{started: time.Now().Add(-time.Second), logPath: logPath}, metrics,
+	); err != nil {
+		t.Fatal(err)
+	}
+	got := run.observation.ServerStartups[0]
+	if got.LastStage != "http_ready" || got.LastHealthClass != "ok" || got.HealthAttempts != 4 ||
+		got.WallMS < 1 || got.LogBytes < 1 || !digestIdentity(got.LogSHA256) ||
+		got.PeakRSSBytes != metrics.PeakRSSBytes || got.GitChildren != metrics.GitChildren ||
+		got.IndexChildren != metrics.IndexChildren || got.OtherChildren != metrics.OtherChildren {
+		t.Fatalf("warm startup = %+v", got)
+	}
+}
+
+func TestV30LifecycleReadinessRequiresFreshBoundedCycle(t *testing.T) {
+	fence := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	owners := make([]lifecycle.OwnerStatus, len(expectedCollectionOwners))
+	for index, name := range expectedCollectionOwners {
+		attempted := fence.Add(time.Duration(index+1) * time.Second)
+		owners[index] = lifecycle.OwnerStatus{
+			Name: name, State: "ok", Completeness: lifecycle.Exact, AttemptedAt: &attempted,
+		}
+		if name == lifecycle.JobOwner {
+			owners[index].Completeness = lifecycle.LowerBound
+			owners[index].Backlog = true
+		}
+	}
+	capacity := fence.Add(time.Duration(len(owners)+1) * time.Second)
+	status := lifecycle.Status{
+		Owners: owners,
+		Capacity: lifecycle.CapacityStatus{
+			Completeness: lifecycle.Exact, Pressure: lifecycle.PressureNormal, ObservedAt: &capacity,
+		},
+	}
+	if !lifecycleStatusReady(status, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("fresh exact drained lifecycle cycle was not ready")
+	}
+	stale := status
+	stale.Owners = slices.Clone(status.Owners)
+	stale.Owners[0].AttemptedAt = &fence
+	if lifecycleStatusReady(stale, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("stale lifecycle attempt passed")
+	}
+	rotated := status
+	rotated.Owners = slices.Clone(status.Owners)
+	lateFirst := capacity.Add(time.Second)
+	lateCapacity := lateFirst.Add(time.Second)
+	rotated.Owners[0].AttemptedAt = &lateFirst
+	rotated.Capacity.ObservedAt = &lateCapacity
+	if lifecycleStatusReady(rotated, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("fresh rotation suffix and prefix passed as one coherent cycle")
+	}
+	missing := status
+	missing.Owners = slices.Clone(status.Owners[:len(status.Owners)-1])
+	if lifecycleStatusReady(missing, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("incomplete lifecycle owner inventory passed")
+	}
+	unknown := status
+	unknown.Owners = slices.Clone(status.Owners)
+	unknown.Owners[0].Name = "unknown"
+	if lifecycleStatusReady(unknown, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("unknown lifecycle owner passed")
+	}
+	backlogged := status
+	backlogged.Owners = slices.Clone(status.Owners)
+	backlogged.Owners[2].Backlog = true
+	if lifecycleStatusReady(backlogged, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("backlogged lifecycle owner passed")
+	}
+	jobs := status
+	jobs.Owners = slices.Clone(status.Owners)
+	jobs.Owners[slices.Index(expectedCollectionOwners, lifecycle.JobOwner)].Completeness = lifecycle.Unavailable
+	if lifecycleStatusReady(jobs, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("unavailable durable-job lifecycle result passed")
+	}
+	capacityBeforeOwner := status
+	capacityBeforeOwner.Capacity.ObservedAt = &fence
+	if lifecycleStatusReady(capacityBeforeOwner, true, lifecycle.PressureNormal, fence, lifecycleWaitV30) {
+		t.Fatal("capacity observation preceding owner attempts passed")
+	}
+	pressureEntry := status
+	pressureEntry.Owners = slices.Clone(status.Owners)
+	for index := range pressureEntry.Owners {
+		pressureEntry.Owners[index].Completeness = lifecycle.LowerBound
+		pressureEntry.Owners[index].Backlog = true
+		pressureEntry.Owners[index].AttemptedAt = nil
+	}
+	pressureEntry.Capacity.Pressure = lifecycle.PressureCollect
+	pressureEntry.Capacity.ObservedAt = nil
+	if !lifecycleStatusReady(
+		pressureEntry, true, lifecycle.PressureCollect, time.Time{}, lifecycleWaitV30,
+	) {
+		t.Fatal("zero-fence V30 pressure entry lost historical lifecycle semantics")
+	}
+}
+
 func TestV27OrdinarySanitizedRecoveryDoesNotInventDataDeadline(t *testing.T) {
 	ordinary := errors.New("private nondeadline failure")
 	historicalCause := directRecovery(sanitizeMeasuredCommandFailure(
@@ -2728,6 +2957,47 @@ func completedV25TeardownObservation(plan Plan) Observation {
 		ConvergenceLifecycle: &InterruptionLifecycleObservation{
 			State: "ok", Completeness: lifecycle.Exact,
 		},
+	}
+	if planSchemaVersion(plan.Schema) >= 30 {
+		pressureIndex := slices.IndexFunc(value.ConvergenceWaits, func(wait ConvergenceWaitObservation) bool {
+			return wait.Profile == "structural-2m-v1" && wait.Label == "pressure" &&
+				wait.Revision == "a-return"
+		})
+		pressureRecovery := value.ConvergenceWaits[pressureIndex]
+		pressureRecovery.Label = "pressure-recovery"
+		value.ConvergenceWaits = slices.Insert(
+			value.ConvergenceWaits, pressureIndex+1, pressureRecovery,
+		)
+		value.ServerStartups = slices.Insert(
+			value.ServerStartups, len(value.ServerStartups)-1, ServerStartupObservation{
+				Profile: "structural-2m-v1", Label: "collection", Outcome: "healthy",
+				LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
+				WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
+			},
+		)
+		for index := range value.ServerStartups {
+			value.ServerStartups[index].PeakRSSBytes = 1
+		}
+		value.Collection = exactTestCollectionObservation()
+	}
+	return value
+}
+
+func exactTestCollectionObservation() *CollectionObservation {
+	value := &CollectionObservation{
+		Schema: collectionObservationSchemaV1, FreshCycle: true,
+		CapacityObservedAfterOwners: true, AuthorityUnchanged: true,
+		Owners: make([]CollectionOwnerObservation, 0, len(expectedCollectionOwners)),
+	}
+	for _, name := range expectedCollectionOwners {
+		owner := CollectionOwnerObservation{
+			Name: name, State: "ok", Completeness: lifecycle.Exact,
+		}
+		if name == lifecycle.JobOwner {
+			owner.Completeness = lifecycle.LowerBound
+			owner.Backlog = true
+		}
+		value.Owners = append(value.Owners, owner)
 	}
 	return value
 }

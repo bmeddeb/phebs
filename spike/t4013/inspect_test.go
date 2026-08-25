@@ -40,6 +40,7 @@ func TestProfileInspectionContractTracksPlanSchema(t *testing.T) {
 		{PlanSchemaV27, profileInspectionV21},
 		{PlanSchemaV28, profileInspectionV21},
 		{PlanSchemaV29, profileInspectionV21},
+		{PlanSchemaV30, profileInspectionV21},
 	}
 	for _, test := range tests {
 		if got := profileInspectionForPlan(test.schema); got != test.want {
@@ -546,8 +547,9 @@ func TestSnapshotRecoveryAuthorityUsesStableRelationshipSemantics(t *testing.T) 
 	}
 }
 
-func TestRestoreProductParityExcludesRebuiltControlIdentities(t *testing.T) {
+func TestV29RestoreProductParityPreservesHistoricalControlExclusions(t *testing.T) {
 	left := privateProfileSnapshot{
+		IndexedCommit:    "commit-a",
 		SourceGeneration: "source", SearchGeneration: "search",
 		ObservationGeneration: "observation", ExtractionGeneration: "extraction",
 		CallerGeneration: "caller-a", RelationshipGeneration: "relationship-a",
@@ -555,16 +557,64 @@ func TestRestoreProductParityExcludesRebuiltControlIdentities(t *testing.T) {
 		ExtractionFacts: 3, RelationshipPublished: true,
 	}
 	right := left
+	right.IndexedCommit = "commit-b"
 	right.CallerGeneration = "caller-b"
 	right.RelationshipGeneration = "relationship-b"
 	right.RelationshipRootDigest = "root-b"
 	right.RelationshipSemanticDigest = "semantic-b"
 	if !privateRestoreProductEqual(left, right) {
-		t.Fatal("restore product parity rejected rebuilt control identities")
+		t.Fatal("historical restore product parity rejected rebuilt control identities")
+	}
+	if !privateRestoreProductEqualForPlan(Plan{Schema: PlanSchemaV29}, left, right) {
+		t.Fatal("V29 restore product parity changed its frozen control exclusions")
 	}
 	right.ExtractionFacts++
-	if privateRestoreProductEqual(left, right) {
-		t.Fatal("restore product parity accepted changed product content")
+	if privateRestoreProductEqual(left, right) ||
+		privateRestoreProductEqualForPlan(Plan{Schema: PlanSchemaV29}, left, right) {
+		t.Fatal("historical restore product parity accepted changed product content")
+	}
+}
+
+func TestV30RestoreProductParityRetainsCallerAndRelationshipContentIdentity(t *testing.T) {
+	plan := Plan{Schema: PlanSchemaV30}
+	left := privateProfileSnapshot{
+		IndexedCommit:    "commit-a",
+		SourceGeneration: "source", SearchGeneration: "search",
+		ObservationGeneration: "observation", ExtractionGeneration: "extraction",
+		CallerGeneration: "caller", RelationshipGeneration: "relationship-a",
+		RelationshipRootDigest: "root-a", RelationshipSemanticDigest: "semantic",
+		ExtractionFacts: 3, RelationshipPublished: true,
+	}
+
+	reminted := left
+	reminted.IndexedCommit = "commit-b"
+	reminted.RelationshipGeneration = "relationship-b"
+	reminted.RelationshipRootDigest = "root-b"
+	if !privateRestoreProductEqualForPlan(plan, left, reminted) {
+		t.Fatal("V30 restore product parity rejected reminted control identities")
+	}
+
+	for _, test := range []struct {
+		name   string
+		change func(*privateProfileSnapshot)
+	}{
+		{name: "caller generation", change: func(value *privateProfileSnapshot) {
+			value.CallerGeneration = "caller-changed"
+		}},
+		{name: "relationship semantic digest", change: func(value *privateProfileSnapshot) {
+			value.RelationshipSemanticDigest = "semantic-changed"
+		}},
+		{name: "product aggregate", change: func(value *privateProfileSnapshot) {
+			value.ExtractionFacts++
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			right := reminted
+			test.change(&right)
+			if privateRestoreProductEqualForPlan(plan, left, right) {
+				t.Fatal("V30 restore product parity accepted changed product identity")
+			}
+		})
 	}
 }
 

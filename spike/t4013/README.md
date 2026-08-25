@@ -81,7 +81,22 @@ server. The fixed phase order is:
    relationship authority.
 3. `warm_noop` — request the already-current generation again. V1–V28 require
    no Git child; V29 requires the full phase Git count to equal its paired
-   healthy-startup count. Every version requires no index child, publication
+   healthy-startup count. V30 incrementally tracks phase-local candidate and job
+   lifecycle reports within the existing revalidation deadline. A `done` reuse
+   decision of `warm_noop`, `cold_reuse`, or `marker_recovery` is necessary but
+   not sufficient: released, failed, or requeued work rejects; claimed, started,
+   deferred, and yielded work stays unresolved until its later
+   `event=done,outcome=success`; exact authority is re-inspected on every
+   attempt; and one existing five-second convergence interval must add no
+   candidate/job report after all jobs resolve. The phase meter finishes once
+   there. Its single finished `PhaseMetrics` snapshot supplies paired startup
+   process counters without a second sampler read, while log/stage/wall refresh
+   at that settled boundary. The atomic warm→delta handoff transfers the finished
+   process window with the exact log EOF and performs a bounded post-reset tail
+   scan: any candidate/job report or partial tail refuses the boundary, complete
+   unrelated lines advance the warm EOF, and later exact claimed/started reports
+   remain delta before the same equality, so post-boundary Git still fails. Every
+   version requires no index child, publication
    write/transaction, or authority movement and requires positive reuse.
 4. `delta_b` — advance only the frozen one-file B revision and prove that only
    its admitted partition changes.
@@ -93,12 +108,22 @@ server. The fixed phase order is:
 7. `stale_worker` — let a superseded lease finish and prove its final fence
    cannot publish.
 8. `pressure` — exercise the real capacity gate and default-on bounded owner
-   rotation without filling the filesystem or weakening the hard watermark.
+   rotation without filling the filesystem or weakening the hard watermark,
+   prove coherent sorted post-ballast owner attempts, observe final exact-normal
+   capacity after the latest owner, and re-confirm protected authority without
+   claiming capacity stayed normal throughout the cycle or waiting for hourly
+   idle eligibility.
 9. `archive_restore` — create the production backup, restore into a separate
    empty dedicated installation, verify precious authority and explicit
    derived inclusion/omission, then converge.
-10. `collection` — retain current, rollback, active lease, marker, and store-pin
-    roots while bounded turns reclaim only eligible generations.
+10. `collection` — in V30, restart and prove all 14 owners fresh and
+    `state=ok`; require the 13 non-`durable-jobs` owners exact and drained,
+    permit truthful `durable-jobs` `lower_bound` plus backlog while live writers
+    exist, require exact capacity after the latest owner, preserve unchanged
+    current stable authority, and retain bounded per-owner counters. Eligible
+    deletion and individual rollback/lease/marker/store-pin protection remain
+    mandatory regression-gate semantics, not claims inferred from this live
+    phase; V1–V29 retain their frozen collection predicates.
 11. `authorized_query` — issue the fixed source-free query classes through an
     authenticated API client and retain only counts, equality, authorization,
     root/citation identity, and final-fence results.
@@ -3736,3 +3761,113 @@ Retained roots are `phebs-t4013-readiness-2696656312` and
 No further same-host retry, integration, freeze, execution, release, Epic
 closure, topology/bound change, or scale/SLO claim is authorized. The next gate
 is one later host-clean complete exact-commit readiness pass.
+
+### Neutral-39 source-free disposition and V30 integrity
+
+Neutral-39 returned execution status 1 and sealed a source-free package at
+`sha256:681aef5bb4ebe77c63ed564f5dfe499609a76738c3172b7a58e9c9f87d6a43cb`.
+The wrapper monitor's last useful output was `prepare/admission` with unknown
+custody age. Its terminal-summary `jq` expression then failed on shell quoting.
+That script defect did not disturb the execution, but the returned custody
+contains no raw private error. Do not infer sampler `EPERM`, phase 6, or any
+other named phase/cause from this evidence.
+
+Fresh V30 contracts retain an otherwise-valid startup log, health boundary, and
+stage when process sampling fails; the unavailable process counters use the
+existing zero sentinel, carry `process_sampling_unavailable=true`, and are not
+measured-zero claims. A process-only failure
+seals `failed_phase_process_sampling_unavailable`; an allocation-only failure
+seals `failed_phase_allocation_sampling_unavailable`, while a mixed measurement
+failure keeps `failed_phase_measurement_unavailable`. Historical
+V1–V29 contracts remain exact.
+
+V30 warm restart incrementally tracks phase-local candidate and job lifecycle
+reports within the existing revalidation deadline. A candidate report with
+`outcome=done` and `decision=warm_noop|cold_reuse|marker_recovery` is necessary
+but does not complete the boundary. Released, failed, or requeued work rejects;
+claimed, started, deferred, and yielded work remains unresolved until its later
+`event=done,outcome=success`; exact authority is re-inspected on every attempt;
+and one existing five-second convergence interval must add no candidate or job
+report after all jobs resolve. The phase meter finishes once at that bounded
+quiescent boundary. Its single finished `PhaseMetrics` snapshot refreshes paired
+startup process counters without another sampler read; log/stage/wall refresh
+there. The atomic warm→delta handoff transfers the finished process window with
+the exact log EOF and performs a bounded post-reset tail scan: any candidate/job
+report or partial tail refuses the boundary, complete unrelated lines advance
+the warm EOF, and later exact claimed/started reports remain delta before
+complete phase/startup Git comparison. This accepts health-before-sync/reuse
+without accepting sampled post-boundary Git. V1–V29
+keep their frozen warm predicates.
+
+V30 ceremony servers enable synchronous exact candidate output and lifecycle
+sinks for the sync, fetch, candidate, extraction, resolver, caller, and index
+job runners. Any encode, size-cap, sink, or panic failure latches cancellation;
+after background workers join, the server returns a nonzero terminal error.
+Ordinary runtime sinks remain advisory when exact-control mode is absent.
+
+V30 phase 7 fences lifecycle evidence immediately after ballast removal. Every
+owner attempt must be newer than the fence and preserve one coherent sorted
+cycle; one final exact-normal capacity observation must follow the newest owner.
+Phase 7 then re-inspects protected authority and requires it unchanged. It does
+not claim capacity stayed normal throughout that cycle and does not wait for the
+runner's hourly-idle eligibility. Independently, the shared production runner
+requires exact-normal capacity immediately before and after the sorted
+cycle-start owner, then one wholly normal, error-free, drained sorted cycle
+before hourly idle.
+
+The V30 phase-8 restore comparator clears only `IndexedCommit`,
+`RelationshipGeneration`, and `RelationshipRootDigest` before comparison. It
+retains `CallerGeneration`, `RelationshipSemanticDigest`, and all remaining
+product content. The restored readiness rehearsal
+uses this same comparator and rejects stale or all-`not_run` lifecycle status by
+requiring all 14 owners fresh and `state=ok`, exact drained results for the 13
+non-`durable-jobs` owners, truthful `durable-jobs` `lower_bound` with backlog
+permitted, and exact capacity after the latest owner.
+
+V30 phase 9 restarts the server and accepts only a phase-local cycle with all
+sorted frozen 14 owners fresh and `state=ok`. The 13 non-`durable-jobs` owners
+must be exact and drained; `durable-jobs` must truthfully remain `lower_bound`
+and may retain backlog because live writers prevent an exact oracle. Capacity
+must be exact after the latest owner and current stable authority unchanged.
+Observation and receipt bytes record one bounded source-free row per owner:
+name/state/completeness/scanned/deleted/backlog. The phase does not require a
+deletion and does not claim to live-prove rollback, active-lease, marker, or
+store-pin roots individually. Those protection guarantees remain mandatory
+`internal/lifecycle`, `internal/store`, and publication regression gates.
+
+Production lifecycle scheduling adds a pressure-recovery cursor suffix plus one
+full normal cycle at the existing five-second cadence. Only while capacity stays
+exact-normal and every owner result is error-free and drained is that at most 28
+turns for this 14-owner inventory and at most 64 under the at-most-32-owner
+controller bound. Any owner error/backlog or unavailable/non-exact capacity
+removes the 28/64 turn bound and keeps the runner at five-second cadence. The
+phase-7 and phase-9 waiters make no 28/64 claim and remain governed by their
+fixed phase deadlines. Truthful `durable-jobs` backlog does not block either
+waiter; an owner error or backlog in one of the 13 required drained rows keeps
+owner progression at five-second cadence until the deadline. Healthy normal
+hourly steady state is unchanged. No product
+query, request, repository sync tick, ordinary startup/restart, retry/no-op,
+publication transition, lock, cache, corpus/shard read, persistent schema,
+memory/disk bound, or child-process work changes. Ceremony phase 9 adds one
+restart, the same bounded owner/status work, and scalar-plus-14-row validation
+with 13 exact/drained predicates and one durable-job lower-bound predicate.
+Warm restart adds incremental phase-local candidate/job lifecycle parsing,
+exact-authority reinspection per attempt, one existing five-second quiet
+interval, one finished-metrics startup refresh without a second process read,
+one bounded post-reset log-tail scan, and the atomic process/log-EOF handoff
+under the unchanged revalidation deadline. Phase 7 adds one existing
+post-recovery protected-authority inspection. Only exact-control mode adds
+synchronous per-report log writes for candidate output and all seven job
+runners; ordinary steady-state reporting is
+unchanged. No production request, job, child, or new deadline is added.
+
+Focused and bounded regressions passed, including the complete package
+(104.564s), full package race (129.985s), real-launcher custody proof
+(115.754s), and complete production-path readiness rehearsal (884.324s).
+Every `internal/` package passed in one run, including `internal/store`
+(1081.231s) and `internal/sync` (61.915s). Module verification and compilation,
+vet, repository-pinned golangci-lint 2.12.2, documentation, glossary, shell, and
+whitespace gates also passed. Recorded exact-commit independent review remains
+pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is passed or
+authorized here.

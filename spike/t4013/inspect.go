@@ -1732,6 +1732,16 @@ func privateRestoreProductEqual(left, right privateProfileSnapshot) bool {
 	return reflect.DeepEqual(left, right)
 }
 
+func privateRestoreProductEqualForPlan(plan Plan, left, right privateProfileSnapshot) bool {
+	if planSchemaVersion(plan.Schema) < 30 {
+		return privateRestoreProductEqual(left, right)
+	}
+	left.IndexedCommit, right.IndexedCommit = "", ""
+	left.RelationshipGeneration, right.RelationshipGeneration = "", ""
+	left.RelationshipRootDigest, right.RelationshipRootDigest = "", ""
+	return reflect.DeepEqual(left, right)
+}
+
 func changedSourceMembers(left, right privateProfileSnapshot) int {
 	if len(left.SourceMemberDigests) != len(right.SourceMemberDigests) {
 		return -1

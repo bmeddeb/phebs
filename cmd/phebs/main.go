@@ -83,6 +83,8 @@ const (
 	t335CatalogEncodedSHA256     = "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0"
 	t344CatalogEncodedBytes      = 3401
 	t344CatalogEncodedSHA256     = "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94"
+	t4013ExactReportsEnvironment = "PHEBS_T4013_EXACT_REPORTS"
+	t4013ExactReportsContract    = "source-free-v1"
 )
 
 var errPartitionAuthorityPending = errors.New("partitioned extraction authority pending")
@@ -319,11 +321,66 @@ func reportT4013Startup(stage string) {
 	}
 }
 
+func t4013ExactReportsEnabled() (bool, error) {
+	value, present := os.LookupEnv(t4013ExactReportsEnvironment)
+	if !present {
+		return false, nil
+	}
+	if value != t4013ExactReportsContract {
+		return false, errors.New("T40.13 exact-report contract is invalid")
+	}
+	return true, nil
+}
+
+func t4013ExactReportSink(prefix string) func([]byte) error {
+	return func(report []byte) error {
+		return log.Output(2, prefix+string(report))
+	}
+}
+
+func bindT4013ExactReports(
+	enabled bool,
+	fail func(error),
+	candidate *candidatejob.Worker,
+	runners ...*store.Runner,
+) {
+	if !enabled {
+		return
+	}
+	if fail == nil {
+		panic("T40.13 exact reporting lacks its failure latch")
+	}
+	if candidate != nil {
+		candidate.OperationReports = t4013ExactReportSink("candidate operation: ")
+		candidate.OperationReportFailure = fail
+	}
+	for _, runner := range runners {
+		if runner == nil {
+			continue
+		}
+		runner.LifecycleReports = t4013ExactReportSink("job lifecycle: ")
+		runner.LifecycleReportFailure = fail
+	}
+}
+
+func t4013ExactReportTerminalError(failed <-chan struct{}) error {
+	select {
+	case <-failed:
+		return errors.New("T40.13 exact reporting failed")
+	default:
+		return nil
+	}
+}
+
 func serve(args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
 	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
 	addr := flags.String("addr", "", "listen address (overrides config)")
 	_ = flags.Parse(args)
+	exactReports, err := t4013ExactReportsEnabled()
+	if err != nil {
+		return err
+	}
 	reportT4013Startup("process_started")
 
 	cfg, rawConfig, err := loadServerConfig(*cfgPath)
@@ -400,6 +457,12 @@ func serve(args []string) error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	exactReportFailed := make(chan struct{})
+	var exactReportFailureOnce sync.Once
+	failExactReport := func(error) {
+		exactReportFailureOnce.Do(func() { close(exactReportFailed) })
+		cancel()
+	}
 
 	if err := os.MkdirAll(cfg.Server.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)
@@ -887,9 +950,10 @@ func serve(args []string) error {
 	runner := &store.Runner{Store: st, Kind: store.JobSync,
 		Handle:   phebssync.HandlerWithCallerLifecycle(cfg, st, callerPublications),
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
-	runBackground(func() { runner.Run(ctx) })
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
+	bindT4013ExactReports(exactReports, failExactReport, nil, runner, fetchRunner)
+	runBackground(func() { runner.Run(ctx) })
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
@@ -1265,7 +1329,6 @@ func serve(args []string) error {
 			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs,
 		}
-		runBackground(func() { candidateRunner.Run(ctx) })
 		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: func(
 			jobCtx context.Context,
 			job store.Job,
@@ -1302,6 +1365,11 @@ func serve(args []string) error {
 			return partitionErr
 		},
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
+		bindT4013ExactReports(
+			exactReports, failExactReport, candidateWorker,
+			candidateRunner, exRunner, resolverRunner, callerRunner,
+		)
+		runBackground(func() { candidateRunner.Run(ctx) })
 		runBackground(func() { exRunner.Run(ctx) })
 		partitionScheduler := &generationscheduler.Scheduler{
 			Store:       st,
@@ -1396,6 +1464,7 @@ func serve(args []string) error {
 		}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
+		bindT4013ExactReports(exactReports, failExactReport, nil, ixRunner)
 		runBackground(func() { ixRunner.Run(ctx) })
 	}
 
@@ -1745,7 +1814,8 @@ func serve(args []string) error {
 	// in-flight handlers (and their audit/usage writes) finish before the
 	// deferred store/searcher Closes run.
 	<-shutdownDone
-	return nil
+	stopBackground()
+	return t4013ExactReportTerminalError(exactReportFailed)
 }
 
 func openStoreAfterRetentionWarning(

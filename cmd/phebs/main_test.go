@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -46,6 +48,83 @@ func TestDeferPendingPartitionAuthorityOnlySuppressesExpectedOrdering(t *testing
 	corrupt := errors.New("current v2 source root is missing")
 	if err, deferred := deferPendingPartitionAuthority(corrupt); !errors.Is(err, corrupt) || deferred {
 		t.Fatalf("corrupt authority = %v, %t", err, deferred)
+	}
+}
+
+func TestT4013ExactReportsEnvironmentIsClosed(t *testing.T) {
+	prior, present := os.LookupEnv(t4013ExactReportsEnvironment)
+	t.Cleanup(func() {
+		if present {
+			_ = os.Setenv(t4013ExactReportsEnvironment, prior)
+		} else {
+			_ = os.Unsetenv(t4013ExactReportsEnvironment)
+		}
+	})
+	if err := os.Unsetenv(t4013ExactReportsEnvironment); err != nil {
+		t.Fatal(err)
+	}
+	if enabled, err := t4013ExactReportsEnabled(); err != nil || enabled {
+		t.Fatalf("absent exact reports = %t, %v", enabled, err)
+	}
+	if err := os.Setenv(t4013ExactReportsEnvironment, t4013ExactReportsContract); err != nil {
+		t.Fatal(err)
+	}
+	if enabled, err := t4013ExactReportsEnabled(); err != nil || !enabled {
+		t.Fatalf("exact reports = %t, %v", enabled, err)
+	}
+	if err := os.Setenv(t4013ExactReportsEnvironment, "unknown"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := t4013ExactReportsEnabled(); err == nil {
+		t.Fatal("unknown exact-report contract was accepted")
+	}
+}
+
+func TestBindT4013ExactReportsIsSynchronousAndOptional(t *testing.T) {
+	ordinaryCandidate := &candidatejob.Worker{}
+	ordinaryRunner := &store.Runner{}
+	bindT4013ExactReports(false, nil, ordinaryCandidate, ordinaryRunner)
+	if ordinaryCandidate.OperationReports != nil || ordinaryCandidate.OperationReportFailure != nil ||
+		ordinaryRunner.LifecycleReports != nil || ordinaryRunner.LifecycleReportFailure != nil {
+		t.Fatal("ordinary reporting acquired exact controls")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	failed := make(chan struct{})
+	var once sync.Once
+	fail := func(error) {
+		once.Do(func() { close(failed) })
+		cancel()
+	}
+	candidate := &candidatejob.Worker{}
+	runners := []*store.Runner{{}, {}}
+	bindT4013ExactReports(true, fail, candidate, runners[0], nil, runners[1])
+	if candidate.OperationReports == nil || candidate.OperationReportFailure == nil {
+		t.Fatal("candidate exact reporting is incomplete")
+	}
+	for index, runner := range runners {
+		if runner.LifecycleReports == nil || runner.LifecycleReportFailure == nil {
+			t.Fatalf("runner %d exact reporting is incomplete", index)
+		}
+	}
+	if err := candidate.OperationReports([]byte(`{"schema":"candidate"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runners[0].LifecycleReports([]byte(`{"schema":"lifecycle"}`)); err != nil {
+		t.Fatal(err)
+	}
+	runners[1].LifecycleReportFailure(errors.New("bounded failure"))
+	select {
+	case <-ctx.Done():
+	default:
+		t.Fatal("exact report failure did not synchronously cancel the root context")
+	}
+	if err := t4013ExactReportTerminalError(failed); err == nil {
+		t.Fatal("exact report failure did not latch a terminal server error")
+	}
+	clean := make(chan struct{})
+	if err := t4013ExactReportTerminalError(clean); err != nil {
+		t.Fatalf("clean exact reporting acquired terminal error: %v", err)
 	}
 }
 

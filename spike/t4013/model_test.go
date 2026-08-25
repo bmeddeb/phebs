@@ -166,6 +166,8 @@ func TestCeremonySchemaLadderIsCompleteAndCoupled(t *testing.T) {
 			}
 			wantDetail := -1
 			switch {
+			case version >= 30:
+				wantDetail = observationDetailV30
 			case version >= 21:
 				wantDetail = observationDetailV17
 			case version >= 16:
@@ -763,6 +765,179 @@ func TestV25PlanFundsMeasuredCeremonyAndPrePressureGrowth(t *testing.T) {
 	}
 }
 
+func TestV30ReceiptRequiresFreshBoundedCollectionEvidence(t *testing.T) {
+	plan, err := frozenV30PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV30 || observationSchemaForPlan(plan) != ObservationSchemaV30 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV30 || plan.Safety != frozenSafetyV25 {
+		t.Fatalf("V30 schema set = %q/%q/%q", plan.Schema,
+			observationSchemaForPlan(plan), receiptSchemaForPlan(plan))
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := completedV25TeardownObservation(plan)
+	observationBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Collection == nil ||
+		len(receipt.Collection.Owners) != len(expectedCollectionOwners) {
+		t.Fatalf("V30 collection receipt = %+v, %v", receipt.Collection, err)
+	}
+
+	missing := value
+	missing.Collection = nil
+	if ValidateObservation(missing) == nil {
+		t.Fatal("V30 completed observation omitted collection evidence")
+	}
+	backlogged := value
+	backlogged.Collection = cloneCollectionObservation(value.Collection)
+	backlogged.Collection.Owners[0].Backlog = true
+	if ValidateObservation(backlogged) == nil {
+		t.Fatal("V30 collection evidence accepted exact-owner backlog")
+	}
+	jobUnavailable := value
+	jobUnavailable.Collection = cloneCollectionObservation(value.Collection)
+	jobIndex := slices.IndexFunc(jobUnavailable.Collection.Owners, func(owner CollectionOwnerObservation) bool {
+		return owner.Name == lifecycle.JobOwner
+	})
+	jobUnavailable.Collection.Owners[jobIndex].Completeness = lifecycle.Unavailable
+	if ValidateObservation(jobUnavailable) == nil {
+		t.Fatal("V30 collection evidence accepted unavailable durable jobs")
+	}
+
+	v29, err := frozenV29PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical := completedV25TeardownObservation(v29)
+	historical.Collection = exactTestCollectionObservation()
+	if ValidateObservation(historical) == nil {
+		t.Fatal("V29 historical observation acquired V30 collection evidence")
+	}
+}
+
+func TestV30StoppedReceiptAcceptsOnlyItsTypedMeasurementCodes(t *testing.T) {
+	phases := make([]PhaseObservation, len(phaseOrder))
+	for index, name := range phaseOrder {
+		phases[index] = PhaseObservation{Name: name, Outcome: "not_run"}
+	}
+	phases[0].Outcome = "succeeded"
+	phases[1].Outcome = "failed"
+	phases[len(phases)-1].Outcome = "succeeded"
+	for _, code := range []string{
+		"failed_phase_process_sampling_unavailable",
+		"failed_phase_allocation_sampling_unavailable",
+	} {
+		value := Receipt{
+			Schema: ReceiptSchemaV30, Outcome: "stopped", Phases: phases,
+			Failures: []FailureObservation{{Phase: "cold", Class: "oracle", Code: code}},
+			Decision: DecisionObservation{Selected: "unclassified", Reason: code},
+			Teardown: TeardownObservation{Completed: true},
+		}
+		if err := validateStopped(value); err != nil {
+			t.Fatalf("V30 typed code %q failed: %v", code, err)
+		}
+		value.Schema = ReceiptSchemaV29
+		if validateStopped(value) == nil {
+			t.Fatalf("V29 accepted V30 typed code %q", code)
+		}
+	}
+}
+
+func TestV30StartupProcessSentinelBindsFailedMeasurement(t *testing.T) {
+	plan, err := frozenV30PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	newValue := func(outcome, code, failurePhase string, processUnavailable bool) Observation {
+		value := completedV25TeardownObservation(plan)
+		value.Outcome = outcome
+		for index := range value.ServerStartups {
+			if value.ServerStartups[index].Label == "authorized-query" {
+				value.ServerStartups[index].PeakRSSBytes = 0
+				value.ServerStartups[index].GitChildren = 0
+				value.ServerStartups[index].IndexChildren = 0
+				value.ServerStartups[index].OtherChildren = 0
+				if processUnavailable {
+					unavailable := true
+					value.ServerStartups[index].ProcessSamplingUnavailable = &unavailable
+				}
+			}
+		}
+		if outcome == "stopped" {
+			phaseIndex := slices.Index(phaseOrder, failurePhase)
+			value.Phases[phaseIndex].Outcome = "failed"
+			value.Phases[phaseIndex].OracleExact = false
+			value.Failures = []FailureObservation{{
+				Phase: failurePhase, Class: "oracle", Code: code,
+			}}
+			value.Decision = DecisionObservation{Selected: "unclassified", Reason: code}
+		}
+		return value
+	}
+
+	for _, code := range []string{
+		"failed_phase_process_sampling_unavailable",
+		"failed_phase_measurement_unavailable",
+	} {
+		if err := ValidateObservation(newValue("stopped", code, "authorized_query", true)); err != nil {
+			t.Fatalf("matching V30 startup sentinel with %q failed: %v", code, err)
+		}
+	}
+	wrongClass := newValue("stopped", "failed_phase_measurement_unavailable", "authorized_query", true)
+	wrongClass.Failures[0].Class = "execution"
+	nonzeroFact := newValue("stopped", "failed_phase_process_sampling_unavailable", "authorized_query", true)
+	for index := range nonzeroFact.ServerStartups {
+		if nonzeroFact.ServerStartups[index].Label == "authorized-query" {
+			nonzeroFact.ServerStartups[index].PeakRSSBytes = 1
+		}
+	}
+	for name, value := range map[string]Observation{
+		"completed": newValue("completed", "", "", true),
+		"generic without process fact": newValue(
+			"stopped", "failed_phase_measurement_unavailable", "authorized_query", false,
+		),
+		"allocation only": newValue(
+			"stopped", "failed_phase_allocation_sampling_unavailable", "authorized_query", true,
+		),
+		"wrong phase": newValue(
+			"stopped", "failed_phase_process_sampling_unavailable", "cold", true,
+		),
+		"wrong class":  wrongClass,
+		"nonzero fact": nonzeroFact,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := ValidateObservation(value); err == nil {
+				t.Fatal("unbound V30 startup process sentinel passed")
+			}
+		})
+	}
+
+	v29, err := frozenV29PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateObservation(completedV25TeardownObservation(v29)); err != nil {
+		t.Fatalf("V29 historical zero startup counters changed: %v", err)
+	}
+	historicalFact := completedV25TeardownObservation(v29)
+	unavailable := true
+	historicalFact.ServerStartups[0].ProcessSamplingUnavailable = &unavailable
+	if err := ValidateObservation(historicalFact); err == nil {
+		t.Fatal("V29 accepted V30 startup process-sampling evidence")
+	}
+}
+
 func TestV26ReceiptRetainsBoundedProcessClassTransitions(t *testing.T) {
 	plan, err := frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
@@ -1221,6 +1396,119 @@ func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
 	}
 }
 
+func TestCollectionFieldIsVersionFencedAndNeverNull(t *testing.T) {
+	tests := []struct {
+		name string
+		plan func() (Plan, error)
+	}{
+		{name: "v1", plan: func() (Plan, error) { return FrozenPlan(testSourceCommit) }},
+		{name: "v24", plan: func() (Plan, error) {
+			return frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+		}},
+		{name: "v26", plan: func() (Plan, error) {
+			return frozenV26PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+		}},
+		{name: "v29", plan: func() (Plan, error) {
+			return frozenV29PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+		}},
+		{name: "v30", plan: func() (Plan, error) {
+			return frozenV30PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := test.plan()
+			if err != nil {
+				t.Fatal(err)
+			}
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			observation := completedV25TeardownObservation(plan)
+			if planSchemaVersion(plan.Schema) == 1 {
+				observation = completedObservation()
+			}
+			observationBytes, err := MarshalObservation(observation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeObservation(addTopLevelNullNamedField(t, observationBytes, "collection")); err == nil {
+				t.Fatal("observation accepted a null collection field")
+			}
+			if _, err := DecodeReceipt(addTopLevelNullNamedField(t, receiptBytes, "collection"), plan); err == nil {
+				t.Fatal("receipt accepted a null collection field")
+			}
+			mixed := bytes.Replace(
+				addTopLevelNullNamedField(t, observationBytes, "collection"),
+				[]byte(`"collection"`), []byte(`"Collection"`), 1,
+			)
+			if _, err := DecodeObservation(mixed); err == nil {
+				t.Fatal("observation accepted a mixed-case collection field")
+			}
+			mixed = bytes.Replace(
+				addTopLevelNullNamedField(t, receiptBytes, "collection"),
+				[]byte(`"collection"`), []byte(`"Collection"`), 1,
+			)
+			if _, err := DecodeReceipt(mixed, plan); err == nil {
+				t.Fatal("receipt accepted a mixed-case collection field")
+			}
+		})
+	}
+}
+
+func TestStartupProcessSamplingFieldIsVersionFencedAndCanonical(t *testing.T) {
+	canonical := []byte(`{"server_startups":[{"process_sampling_unavailable":true}]}`)
+	for _, version := range []int{1, 24, 26, 29} {
+		if err := validateSerializedStartupProcessField(canonical, version, false); err == nil {
+			t.Fatalf("V%d acquired startup process-sampling diagnostics", version)
+		}
+	}
+	if err := validateSerializedStartupProcessField(canonical, 30, false); err != nil {
+		t.Fatalf("canonical V30 startup process-sampling diagnostics failed: %v", err)
+	}
+	for name, raw := range map[string][]byte{
+		"null":       []byte(`{"server_startups":[{"process_sampling_unavailable":null}]}`),
+		"false":      []byte(`{"server_startups":[{"process_sampling_unavailable":false}]}`),
+		"mixed-case": []byte(`{"server_startups":[{"process_sampling_Unavailable":true}]}`),
+		"duplicate":  []byte(`{"server_startups":[{"process_sampling_unavailable":true,"process_sampling_unavailable":true}]}`),
+		"hidden":     []byte(`{"server_startups":[],"server_startups":[{"process_sampling_unavailable":true}]}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := validateSerializedStartupProcessField(raw, 30, false); err == nil {
+				t.Fatal("V30 accepted invalid startup process-sampling diagnostics")
+			}
+		})
+	}
+
+	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(completedV25TeardownObservation(plan))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeObservation(addStartupProcessSamplingNull(t, observationBytes)); err == nil {
+		t.Fatal("V24 observation accepted startup process-sampling diagnostics")
+	}
+	if _, err := DecodeReceipt(addStartupProcessSamplingNull(t, receiptBytes), plan); err == nil {
+		t.Fatal("V24 receipt accepted startup process-sampling diagnostics")
+	}
+}
+
 func TestRetainedPartialFieldsAreNeverHistoricalOrNull(t *testing.T) {
 	for _, test := range []struct {
 		name string
@@ -1285,14 +1573,44 @@ func TestRetainedPartialFieldsAreNeverHistoricalOrNull(t *testing.T) {
 }
 
 func addTopLevelNullField(t *testing.T, raw []byte) []byte {
+	return addTopLevelNullNamedField(t, raw, "data_measurement_failure")
+}
+
+func addTopLevelNullNamedField(t *testing.T, raw []byte, field string) []byte {
 	t.Helper()
 	boundary := bytes.LastIndex(raw, []byte("\n}"))
 	if boundary < 0 {
 		t.Fatal("JSON object lacks its final boundary")
 	}
 	result := slices.Clone(raw[:boundary])
-	result = append(result, []byte(",\n  \"data_measurement_failure\": null\n}\n")...)
+	result = append(result, []byte(",\n  \""+field+"\": null\n}\n")...)
 	return result
+}
+
+func addStartupProcessSamplingNull(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		t.Fatal(err)
+	}
+	container := object
+	if observation, ok := object["observation"].(map[string]any); ok {
+		container = observation
+	}
+	startups, ok := container["server_startups"].([]any)
+	if !ok || len(startups) == 0 {
+		t.Fatal("JSON object lacks server startup evidence")
+	}
+	startup, ok := startups[0].(map[string]any)
+	if !ok {
+		t.Fatal("server startup is not an object")
+	}
+	startup["process_sampling_unavailable"] = nil
+	result, err := json.Marshal(object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return append(result, '\n')
 }
 
 func addRetainedPartialNullFields(t *testing.T, raw []byte) []byte {
@@ -1386,6 +1704,18 @@ func TestV23AuthorizedQueryFailureProjectionIsVersionFenced(t *testing.T) {
 	}}
 	if err := validateAuthorizedQueryObservation(forged); err == nil {
 		t.Fatal("exact-gate stop accepted unrelated authorized-query diagnostics")
+	}
+	typed := value
+	typed.Schema = ObservationSchemaV29
+	typed.Failures = []FailureObservation{{
+		Phase: "authorized_query", Class: "oracle", Code: "failed_phase_process_sampling_unavailable",
+	}}
+	if err := validateAuthorizedQueryObservation(typed); err == nil {
+		t.Fatal("V29 authorized-query projection accepted a V30 measurement code")
+	}
+	typed.Schema = ObservationSchemaV30
+	if err := validateAuthorizedQueryObservation(typed); err != nil {
+		t.Fatalf("V30 authorized-query projection refused its measurement code: %v", err)
 	}
 }
 
@@ -1969,10 +2299,10 @@ func TestHistoricalObservationRejectsPressureRestartDiagnostic(t *testing.T) {
 		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
 		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
 	}}
-	if err := validateServerStartups(values, false, false); err == nil {
+	if err := validateServerStartups(values, false, false, false); err == nil {
 		t.Fatal("v9 observation acquired the v10 pressure restart label")
 	}
-	if err := validateServerStartups(values, true, false); err != nil {
+	if err := validateServerStartups(values, true, false, false); err != nil {
 		t.Fatalf("v10 pressure restart diagnostic failed: %v", err)
 	}
 }
@@ -1983,10 +2313,10 @@ func TestV10ObservationRejectsV11InterruptionBackupDiagnostic(t *testing.T) {
 		LastStage: "http_ready", LastHealthClass: "ok", HealthAttempts: 1,
 		WallMS: 1, LogBytes: 1, LogSHA256: "sha256:" + strings.Repeat("a", 64),
 	}}
-	if err := validateServerStartups(values, true, false); err == nil {
+	if err := validateServerStartups(values, true, false, false); err == nil {
 		t.Fatal("v10 observation acquired the v11 interruption backup label")
 	}
-	if err := validateServerStartups(values, true, true); err != nil {
+	if err := validateServerStartups(values, true, true, false); err != nil {
 		t.Fatalf("v11 interruption backup diagnostic failed: %v", err)
 	}
 }

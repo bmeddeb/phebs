@@ -510,6 +510,62 @@ func TestInspectStartupLogRejectsUnknownStage(t *testing.T) {
 	}
 }
 
+func TestObserveServerStartupRetainsLogEvidenceWhenProcessSamplingFails(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	raw := []byte(
+		"private startup detail stays in custody\n" +
+			"T40.13 startup lifecycle: {\"schema\":\"t4013-source-free-startup-v1\",\"stage\":\"http_ready\"}\n",
+	)
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sampler := newSyntheticRSSSampler(10)
+	sampler.peakRSS = 1024
+	sampler.strictGitChildren = 2
+	sampler.strictIndexChildren = 3
+	sampler.strictOtherChildren = 4
+	sampler.recordFailure(errors.New("synthetic sampler failure"))
+	server := &privateServer{
+		started: time.Now().Add(-time.Second), logPath: path, sampler: sampler,
+	}
+
+	observation, err := observeServerStartup(
+		server, "structural-2m-v1", "cold", "healthy", "ok", 7,
+	)
+	if !errors.Is(err, errProcessSamplingFailed) {
+		t.Fatalf("startup error = %v", err)
+	}
+	sum := sha256.Sum256(raw)
+	if observation.Profile != "structural-2m-v1" || observation.Label != "cold" ||
+		observation.Outcome != "healthy" || observation.LastStage != "http_ready" ||
+		observation.LastHealthClass != "ok" || observation.HealthAttempts != 7 ||
+		observation.WallMS < 0 || observation.LogBytes != int64(len(raw)) ||
+		observation.LogSHA256 != "sha256:"+hex.EncodeToString(sum[:]) {
+		t.Fatalf("startup observation = %+v", observation)
+	}
+	if observation.PeakRSSBytes != 0 || observation.GitChildren != 0 ||
+		observation.IndexChildren != 0 || observation.OtherChildren != 0 ||
+		observation.ProcessSamplingUnavailable == nil ||
+		!*observation.ProcessSamplingUnavailable {
+		t.Fatalf("unavailable process counters were retained: %+v", observation)
+	}
+}
+
+func TestObserveServerStartupDiscardsEvidenceWhenLogInspectionFails(t *testing.T) {
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordFailure(errors.New("synthetic sampler failure"))
+	server := &privateServer{
+		started: time.Now(), logPath: filepath.Join(t.TempDir(), "missing.log"), sampler: sampler,
+	}
+
+	observation, err := observeServerStartup(
+		server, "structural-2m-v1", "cold", "healthy", "ok", 1,
+	)
+	if err == nil || observation != (ServerStartupObservation{}) {
+		t.Fatalf("startup observation = %+v, error = %v", observation, err)
+	}
+}
+
 func TestExtractFrozenSourceRejectsNoncanonicalAndEscapingEntries(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -710,6 +766,18 @@ func TestProcessClassificationAcceptsOwnedKernelNameLimits(t *testing.T) {
 		if err != nil || class != processClassIndex {
 			t.Fatalf("kernel command %q did not match its owned binary: class=%d err=%v", name, class, err)
 		}
+	}
+}
+
+func TestPrivateServerExactReportsEnvironmentIsV30Fenced(t *testing.T) {
+	hasExact := func(toolchain privateToolchain) bool {
+		return slices.Contains(privateServerEnvironment(toolchain), t4013ExactReportsEnvironment)
+	}
+	if hasExact(privateToolchain{}) {
+		t.Fatal("historical private server acquired exact-report controls")
+	}
+	if !hasExact(privateToolchain{exactReportsV30: true}) {
+		t.Fatal("V30 private server lacks exact-report controls")
 	}
 }
 
@@ -1193,6 +1261,31 @@ func TestRSSSamplerResetWaitsForInFlightSnapshot(t *testing.T) {
 	}
 }
 
+func TestRSSSamplerPhaseHandoffRetainsNextWindowSample(t *testing.T) {
+	root := processSnapshotRow(10, 1, 4, "", "/private/phebs")
+	warmGit := processSnapshotRow(11, 10, 8, "", "/usr/bin/git")
+	deltaIndex := processSnapshotRow(12, 10, 16, "", "/private/phebs-focused-index")
+	sampler := newSyntheticRSSSampler(10)
+	sampler.recordSnapshot([]byte(root+warmGit), nil)
+
+	warm, err := sampler.phaseMetricsAndResetWindow()
+	if err != nil || warm.GitChildren != 1 || warm.IndexChildren != 0 {
+		t.Fatalf("warm handoff metrics = %+v, err=%v", warm, err)
+	}
+	sampler.recordSnapshot([]byte(root+deltaIndex), nil)
+	sampler.resetWindow()
+	delta, err := sampler.phaseMetrics()
+	if err != nil || delta.GitChildren != 0 || delta.IndexChildren != 1 {
+		t.Fatalf("primed delta metrics = %+v, err=%v", delta, err)
+	}
+
+	sampler.resetWindow()
+	cleared, err := sampler.phaseMetrics()
+	if err != nil || cleared.PeakRSSBytes != 0 || cleared.GitChildren != 0 || cleared.IndexChildren != 0 {
+		t.Fatalf("consumed handoff did not reset normally: %+v, err=%v", cleared, err)
+	}
+}
+
 func TestProcessSnapshotDescendantBoundary(t *testing.T) {
 	root := processSnapshotRow(10, 1, 4, "Fri Aug 22 12:00:00 2026", "/private/phebs")
 	var children strings.Builder
@@ -1243,6 +1336,7 @@ func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV27, ""},
 		{PlanSchemaV28, ""},
 		{PlanSchemaV29, ""},
+		{PlanSchemaV30, ""},
 	} {
 		got := ""
 		surreal := ""
@@ -1277,6 +1371,7 @@ func TestFrozenSourceExportContractChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV27, frozenSourceExportV25},
 		{PlanSchemaV28, frozenSourceExportV25},
 		{PlanSchemaV29, frozenSourceExportV25},
+		{PlanSchemaV30, frozenSourceExportV25},
 	} {
 		if got := frozenSourceExportContractForPlan(test.schema); got != test.want {
 			t.Fatalf("source export contract for %s = %v, want %v", test.schema, got, test.want)

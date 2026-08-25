@@ -2017,6 +2017,118 @@ Integration, exact-main preflight, neutral-39 freeze/review/execution, release,
 T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims remain
 unauthorized.
 
+**T40.13q · Neutral-39 diagnostic, lifecycle, and restore evidence integrity**
+*(high gate readiness · needs T40.13p and neutral-39)* — retain neutral-39 as
+the source-free status-1 execution sealed in package
+`sha256:681aef5bb4ebe77c63ed564f5dfe499609a76738c3172b7a58e9c9f87d6a43cb`.
+Its wrapper monitor last reported `prepare/admission` with unknown custody age;
+the later terminal-summary `jq` expression failed on shell quoting. The monitor
+bug did not disturb execution, but no raw private error survived source-free
+custody. Do not attribute this run to sampler `EPERM` or name a failed ceremony
+phase that its returned evidence does not prove.
+
+AC: fresh plans, observations, receipts, driver paths, and readiness advance to
+V30 while V1–V29 remain byte- and predicate-exact. If startup log inspection and
+health/stage observation succeeded but process sampling failed, V30 retains the
+valid startup evidence and uses zero only as the established unavailable-counter
+sentinel, never as a measured-zero claim, with explicit
+`process_sampling_unavailable=true`. A process-only failure seals
+`failed_phase_process_sampling_unavailable`; an allocation-only failure seals
+`failed_phase_allocation_sampling_unavailable`. Simultaneous or otherwise mixed
+measurement failure remains `failed_phase_measurement_unavailable`.
+
+V30 warm restart incrementally tracks phase-local candidate and job lifecycle
+reports within the existing revalidation deadline. A candidate report with
+`decision=warm_noop|cold_reuse|marker_recovery` and `outcome=done` is necessary
+but does not complete the boundary. Released, failed, or requeued work rejects;
+claimed, started, deferred, and yielded reports keep that job unresolved until
+it later reports `event=done,outcome=success`; every attempt re-inspects exact
+authority; and one existing five-second convergence interval must add no
+candidate or job report after every job resolves. At that bounded quiescent
+boundary the phase meter finishes once. Its single finished `PhaseMetrics`
+process snapshot refreshes the paired startup process counters without another
+sampler read; log/stage/wall facts refresh there. The atomic warm→delta handoff
+transfers that process boundary with the exact log EOF and performs a bounded
+post-reset tail scan: any candidate/job report or partial tail refuses the
+boundary, complete unrelated lines advance the warm EOF, and later exact
+claimed/started reports remain delta before startup/phase Git equality. This
+admits
+health-before-sync/reuse without admitting sampled post-boundary Git; V1–V29
+warm semantics remain exact.
+
+V30 ceremony servers enable synchronous exact candidate and job lifecycle sinks
+for the sync, fetch, candidate, extraction, resolver, caller, and index runners.
+Any encode, size-cap, sink, or panic failure latches cancellation; after all
+workers join, the server returns a nonzero terminal error. Without the closed
+exact-control environment, ordinary runtime reporting remains advisory.
+
+Phase 7 fences immediately after ballast removal. Every lifecycle owner must
+have `AttemptedAt` strictly after that fence in one coherent sorted cycle, and
+one final exact-normal capacity observation must follow the latest owner. It
+then re-inspects and requires protected authority unchanged. This ceremony gate
+does not claim capacity stayed normal throughout the owner cycle and does not
+wait for production hourly-idle eligibility. Independently, after production
+capacity moves from collect/refuse to normal, exact-normal observations must
+immediately bracket the sorted cycle-start owner and every owner result through
+the ensuing coherent sorted cycle must be error-free and drained before hourly
+idle.
+
+Phase 8 uses the V30 restore comparator in execution and readiness. It may
+discard only `IndexedCommit`, `RelationshipGeneration`, and
+`RelationshipRootDigest`; it must compare `CallerGeneration`,
+`RelationshipSemanticDigest` and all other product content.
+
+Phase 9 restarts the ceremony server and waits for a phase-local cycle in which
+all sorted frozen 14 owners are fresh and `state=ok`. The 13 owners other than
+`durable-jobs` must be exact and drained; `durable-jobs` must truthfully report
+`lower_bound` and may retain backlog because live writers prevent an exact
+oracle. Exact capacity must be observed after the latest owner, current stable
+authority must remain unchanged, and one bounded row per owner seals only
+name/state/completeness/scanned/deleted/backlog. The restored readiness wait
+requires the same owner-specific cycle and the V30 restore comparator. This
+live phase does not claim eligible deletion or individually prove rollback,
+active-lease, marker, or store-pin preservation; mandatory
+`internal/lifecycle`, `internal/store`, and publication regression gates remain
+the proof for those root protections.
+
+Steady-state cost: no product query/request, repository sync tick, ordinary
+startup/restart, retry/no-op, publication transition, corpus/shard scan, lock,
+cache, persistent schema, memory/disk bound, or child-process behavior changes.
+Production lifecycle scheduling adds a pressure-transition recovery suffix plus
+one full cycle at the existing five-second cadence. Only while capacity stays
+exact-normal and every owner result is error-free and drained is that at most 28
+turns for the exact 14-owner inventory and at most 64 under the existing
+at-most-32-owner controller bound. Any owner error/backlog or unavailable/
+non-exact capacity removes the 28/64 turn bound and retains five-second runner
+cadence. Healthy normal hourly cadence is unchanged. Neither ceremony lifecycle
+waiter claims the 28/64 bound; each remains governed by its fixed phase deadline.
+Phase 9 adds one restart, existing status polling, and a 14-row source-free
+projection. Truthful `durable-jobs` backlog does not block either waiter; an
+owner error or backlog in one of the 13 required drained rows keeps owner
+progression at five-second cadence until the deadline. Validation is fixed
+scalar work plus 13 exact/drained row predicates and one `durable-jobs`
+lower-bound predicate. Warm
+restart adds incremental phase-local candidate/job lifecycle parsing,
+exact-authority reinspection per attempt, one existing five-second quiet
+interval, one finished-metrics startup refresh without a second process sample,
+one bounded post-reset log-tail scan, and an atomic process/log-EOF handoff
+under the unchanged revalidation deadline. Phase 7 adds one existing
+protected-authority inspection after recovery. Only
+exact-control server mode adds synchronous per-report log writes for candidate
+output and the seven job runners; ordinary steady-state reporting is unchanged.
+No new production request, job, child, or deadline is added.
+
+Gate status (2026-08-25): focused and bounded regressions passed, including the
+complete package (104.564s), full package race (129.985s), real-launcher proof
+(115.754s), and complete readiness rehearsal (884.324s). Every `internal/`
+package passed in one run, including `internal/store` (1081.231s) and
+`internal/sync` (61.915s). Module verification and compilation, vet,
+repository-pinned golangci-lint 2.12.2, documentation, glossary, shell, and
+whitespace gates passed. Recorded exact-commit independent review remains
+pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim has passed or
+been authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

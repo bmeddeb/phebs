@@ -109,7 +109,10 @@ func (monitor *StatusMonitor) ObserveOwner(result OwnerResult) {
 	if !ok {
 		return
 	}
-	attempted := monitor.now().UTC()
+	attempted := result.AttemptedAt
+	if attempted.IsZero() {
+		attempted = monitor.now().UTC()
+	}
 	state := "ok"
 	if result.Err != nil {
 		state = "error"

@@ -65,6 +65,7 @@ var (
 	errDirectRecovery               = errors.New("T40.13 direct recovery refused")
 	errProductionPressure           = errors.New("T40.13 production pressure gate refused")
 	errConvergenceDeadline          = errors.New("T40.13 frozen convergence deadline expired")
+	errWarmNoopReusePending         = errors.New("T40.13 warm no-op reuse is pending")
 	errConvergenceServerExit        = errors.New("T40.13 server exited during convergence")
 	errConvergenceTimeline          = errors.New("T40.13 convergence transition limit exceeded")
 	errRepositoryIndexTerminal      = errors.New("T40.13 repository index job terminated before publication")
@@ -1293,7 +1294,15 @@ func classifyStoppedFailureForPlan(
 	}
 	if measurementErr != nil || errors.Is(cause, errTotalWallDeadline) ||
 		errors.Is(ceilingErr, errTotalWallDeadline) || errors.Is(ceilingErr, errReviewCeiling) {
-		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
+		classification := classifyStoppedFailure(cause, measurementErr, ceilingErr)
+		if planSchemaVersion(plan.Schema) >= 30 &&
+			classification.code == "failed_phase_measurement_unavailable" {
+			if code := singleSamplerFailureCode(measurementErr); code != "" {
+				classification.code = code
+				classification.reason = classification.code
+			}
+		}
+		return classification
 	}
 	// V23 preserves P6 attribution for every inner archive-recovery failure.
 	// Historical classifiers inspected several inner sentinels first and could
@@ -1329,6 +1338,64 @@ func classifyStoppedFailureForPlan(
 		}
 	}
 	return classifyStoppedFailure(cause, measurementErr, ceilingErr)
+}
+
+const (
+	measurementFailureProcess uint8 = 1 << iota
+	measurementFailureAllocation
+	measurementFailureData
+	measurementFailureOther
+)
+
+func singleSamplerFailureCode(err error) string {
+	switch measurementFailureKinds(err) {
+	case measurementFailureProcess:
+		return "failed_phase_process_sampling_unavailable"
+	case measurementFailureAllocation:
+		return "failed_phase_allocation_sampling_unavailable"
+	default:
+		return ""
+	}
+}
+
+func measurementFailureKinds(err error) uint8 {
+	if err == nil {
+		return 0
+	}
+	if failure, ok := err.(*samplingFailure); ok {
+		switch failure.kind {
+		case errProcessSamplingFailed:
+			return measurementFailureProcess
+		case errAllocationSamplingFailed:
+			return measurementFailureAllocation
+		default:
+			return measurementFailureOther
+		}
+	}
+	if _, ok := err.(*dataMeasurementDeadlineError); ok {
+		return measurementFailureData
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		var kinds uint8
+		for _, inner := range joined.Unwrap() {
+			kinds |= measurementFailureKinds(inner)
+		}
+		return kinds
+	}
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return measurementFailureKinds(wrapped.Unwrap())
+	}
+	var kinds uint8
+	if errors.Is(err, errProcessSamplingFailed) {
+		kinds |= measurementFailureProcess
+	}
+	if errors.Is(err, errAllocationSamplingFailed) {
+		kinds |= measurementFailureAllocation
+	}
+	if kinds == 0 {
+		kinds = measurementFailureOther
+	}
+	return kinds
 }
 
 func (run *execution) startPhase(index int) {
@@ -1394,9 +1461,8 @@ func (run *execution) startServerLegacy(
 		deadline = time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	}
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
-	if (planSchemaVersion(run.plan.Schema) >= 3) &&
-		startup.Profile != "" {
-		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
+	if planSchemaVersion(run.plan.Schema) >= 3 {
+		run.retainServerStartup(startup, healthErr)
 	}
 	return server, meter, healthErr
 }
@@ -1453,16 +1519,33 @@ func (run *execution) startServerV27(
 	run.trackMeter(meter)
 	deadline := time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
 	startup, healthErr := awaitPrivateServerHealth(run.ctx, server, profile, label, deadline)
-	if startup.Profile != "" {
-		run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
-	}
+	run.retainServerStartup(startup, healthErr)
 	return server, meter, healthErr
 }
 
+func (run *execution) retainServerStartup(startup ServerStartupObservation, healthErr error) {
+	if startup.Profile == "" || planSchemaVersion(run.plan.Schema) < 30 &&
+		errors.Is(healthErr, errProcessSamplingFailed) {
+		return
+	}
+	run.observation.ServerStartups = append(run.observation.ServerStartups, startup)
+}
+
 func (run *execution) finishMeter(meter *phaseMeter, after *privateProfileSnapshot) (PhaseMetrics, error) {
-	metrics, err := meter.finish(after)
+	metrics, err := meter.finish(after, run.plan.Schema)
 	if err != nil {
-		run.measurementErr = errors.Join(run.measurementErr, err)
+		measurementErr := err
+		if meter.boundaryFailed {
+			measurementErr = meter.boundaryMeasurement
+			mergedMetrics, mergeErr := mergeMetrics(run.partialMetrics, metrics)
+			measurementErr = errors.Join(measurementErr, mergeErr)
+			if mergeErr == nil {
+				run.partialMetrics = mergedMetrics
+			} else {
+				err = errors.Join(err, mergeErr)
+			}
+		}
+		run.measurementErr = errors.Join(run.measurementErr, measurementErr)
 		if planSchemaVersion(run.plan.Schema) >= 25 {
 			delete(run.activeMeters, meter)
 		}
@@ -1492,10 +1575,14 @@ func (run *execution) captureFailedPhase() error {
 			errors.New("T40.13 failed phase lacks its complete meter inventory"))
 	}
 	for meter := range run.activeMeters {
-		measured, err := meter.finish(nil)
+		measured, err := meter.finish(nil, run.plan.Schema)
 		delete(run.activeMeters, meter)
-		captureErr = errors.Join(captureErr, err)
-		if err == nil {
+		measurementErr := err
+		if meter.boundaryFailed {
+			measurementErr = meter.boundaryMeasurement
+		}
+		captureErr = errors.Join(captureErr, measurementErr)
+		if err == nil || meter.boundaryFailed {
 			mergedMetrics, mergeErr := mergeMetrics(metrics, measured)
 			if mergeErr != nil {
 				captureErr = errors.Join(captureErr, mergeErr)
@@ -1581,12 +1668,15 @@ func (run *execution) warmNoop() error {
 		return err
 	}
 	run.structural = server
-	after, err := run.waitSnapshot(profile, "a", "warm-noop", run.revalidationDeadline(), server)
+	after, err := run.waitWarmNoopSnapshot(profile, server, meter)
 	if err != nil {
 		return err
 	}
 	metrics, err := run.finishMeter(meter, &after)
 	if err != nil {
+		return err
+	}
+	if err := run.refreshWarmNoopStartup(profile, server, metrics); err != nil {
 		return err
 	}
 	startup := ServerStartupObservation{GitChildren: -1}
@@ -3425,13 +3515,35 @@ func (run *execution) pressure() error {
 		return err
 	}
 	ballastPresent = false
-	if _, err := waitLifecyclePressureForPlan(
-		run.ctx, run.plan, profile, true, lifecycle.PressureNormal,
-		pressureWaitRecover, 10*time.Minute,
-	); err != nil {
-		return err
+	var recoveryErr error
+	if planSchemaVersion(run.plan.Schema) >= 30 {
+		_, recoveryErr = waitLifecyclePressureAfterForPlan(
+			run.ctx, run.plan, profile, true, lifecycle.PressureNormal,
+			pressureWaitRecover, time.Now().UTC(), 10*time.Minute,
+		)
+	} else {
+		_, recoveryErr = waitLifecyclePressureForPlan(
+			run.ctx, run.plan, profile, true, lifecycle.PressureNormal,
+			pressureWaitRecover, 10*time.Minute,
+		)
 	}
-	pressureMetrics, err := run.finishMeter(pressureMeter, &after)
+	if recoveryErr != nil {
+		return recoveryErr
+	}
+	recovered := after
+	if planSchemaVersion(run.plan.Schema) >= 30 {
+		recovered, err = run.waitSnapshot(
+			profile, "a-return", "pressure-recovery", run.revalidationDeadline(), run.structural,
+		)
+		if err != nil {
+			return err
+		}
+		if stablePhaseAuthorityForPlan(run.plan, recovered) !=
+			stablePhaseAuthorityForPlan(run.plan, run.structAR) {
+			return exactOracle("pressure recovery changed protected authority")
+		}
+	}
+	pressureMetrics, err := run.finishMeter(pressureMeter, &recovered)
 	if err != nil {
 		return err
 	}
@@ -3442,7 +3554,7 @@ func (run *execution) pressure() error {
 	metrics.WallMS = time.Since(started).Milliseconds()
 	metrics.DataLogicalBytes = max(metrics.DataLogicalBytes, pressureLogical)
 	metrics.DataAllocatedBytes = max(metrics.DataAllocatedBytes, pressureAllocated)
-	run.structAR = after
+	run.structAR = recovered
 	run.observation.Phases[7] = succeededPhase("pressure", metrics)
 	return run.enforceSafety()
 }
@@ -3505,7 +3617,7 @@ func (run *execution) archiveRestore() error {
 		after.RelationshipGeneration == run.structAR.RelationshipGeneration
 	if planSchemaVersion(run.plan.Schema) >= 19 {
 		restoredEqual = after.ObservationGeneration == run.structAR.ObservationGeneration &&
-			privateRestoreProductEqual(after, run.structAR)
+			privateRestoreProductEqualForPlan(run.plan, after, run.structAR)
 	}
 	if !restoredEqual {
 		return directRecovery(errors.New("archive restore changed precious authority"))
@@ -3546,6 +3658,9 @@ func archiveRestoreDataMetricsForPlan(
 }
 
 func (run *execution) collection() error {
+	if planSchemaVersion(run.plan.Schema) >= 30 {
+		return run.collectionV30()
+	}
 	profile := run.prepared.Profiles[0]
 	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
 	if err != nil {
@@ -3571,6 +3686,77 @@ func (run *execution) collection() error {
 		run.structAR = after
 	}
 	return run.enforceSafety()
+}
+
+func (run *execution) collectionV30() error {
+	profile := run.prepared.Profiles[0]
+	started := time.Now()
+	priorMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	if err != nil {
+		return err
+	}
+	run.trackMeter(priorMeter)
+	if err := run.structural.stop(30 * time.Second); err != nil {
+		return err
+	}
+	run.structural = nil
+	priorMetrics, err := run.finishMeter(priorMeter, &run.structAR)
+	if err != nil {
+		return err
+	}
+	cycleAfter := time.Now().UTC()
+	server, meter, err := run.startServer(profile, "collection", &run.structAR)
+	if err != nil {
+		return err
+	}
+	run.structural = server
+	status, err := waitLifecycleAfterForPlan(
+		run.ctx, run.plan, profile, true, cycleAfter, 10*time.Minute,
+	)
+	if err != nil {
+		return err
+	}
+	after, err := run.waitSnapshot(
+		profile, "a-return", "collection", run.revalidationDeadline(), run.structural,
+	)
+	if err != nil {
+		return err
+	}
+	if stablePhaseAuthorityForPlan(run.plan, after) != stablePhaseAuthorityForPlan(run.plan, run.structAR) {
+		return exactOracle("collection changed protected authority")
+	}
+	currentMetrics, err := run.finishMeter(meter, &after)
+	if err != nil {
+		return err
+	}
+	metrics, err := mergeMetrics(priorMetrics, currentMetrics)
+	if err != nil {
+		return err
+	}
+	metrics.WallMS = time.Since(started).Milliseconds()
+	run.observation.Collection = projectCollectionObservation(status)
+	run.observation.Phases[9] = succeededPhase("collection", metrics)
+	run.structAR = after
+	if err := run.enforceSafety(); err != nil {
+		run.observation.Collection = nil
+		return err
+	}
+	return nil
+}
+
+func projectCollectionObservation(status lifecycle.Status) *CollectionObservation {
+	result := &CollectionObservation{
+		Schema: collectionObservationSchemaV1, FreshCycle: true,
+		CapacityObservedAfterOwners: true, AuthorityUnchanged: true,
+		Owners: make([]CollectionOwnerObservation, 0, len(status.Owners)),
+	}
+	for _, owner := range status.Owners {
+		result.Owners = append(result.Owners, CollectionOwnerObservation{
+			Name: owner.Name, State: owner.State, Completeness: owner.Completeness,
+			Scanned: owner.Scanned, Deleted: owner.Deleted, Backlog: owner.Backlog,
+		})
+	}
+	return result
 }
 
 func (run *execution) authorizedQueries() error {
@@ -4149,6 +4335,164 @@ func (run *execution) waitSnapshot(
 			return inspector.inspectWithProgress(attempt, profile, revision)
 		},
 	)
+}
+
+func (run *execution) waitWarmNoopSnapshot(
+	profile PreparedProfile,
+	server *privateServer,
+	meter *phaseMeter,
+) (privateProfileSnapshot, error) {
+	if planSchemaVersion(run.plan.Schema) < 30 {
+		return run.waitSnapshot(
+			profile, "a", "warm-noop", run.revalidationDeadline(), server,
+		)
+	}
+	if meter == nil {
+		return privateProfileSnapshot{}, errors.New("T40.13 warm no-op meter is invalid")
+	}
+	contract := profileInspectionForPlan(run.plan.Schema)
+	inspector, err := newProfileInspector(profile, contract)
+	if err != nil {
+		return privateProfileSnapshot{}, err
+	}
+	cursor, err := newCandidateReuseCursor(server.logPath, meter.logOffset)
+	if err != nil {
+		return privateProfileSnapshot{}, err
+	}
+	limit := run.revalidationDeadline()
+	deadline := time.Now().Add(limit)
+	after, waitErr := run.waitSnapshotWithInspection(
+		profile, "a", "warm-noop", limit, server,
+		func(attempt context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+			snapshot, probe, inspectErr := inspector.inspectWithProgress(attempt, profile, "a")
+			if inspectErr != nil {
+				return snapshot, probe, inspectErr
+			}
+			settled, reuseErr := cursor.poll()
+			if reuseErr != nil {
+				return snapshot, probe, reuseErr
+			}
+			if !settled {
+				return snapshot, probe, errWarmNoopReusePending
+			}
+			return snapshot, probe, nil
+		},
+	)
+	closeErr := cursor.Close()
+	if waitErr != nil || closeErr != nil {
+		return privateProfileSnapshot{}, errors.Join(waitErr, closeErr)
+	}
+	meter.beforeProcessSnapshot = func() error {
+		return run.confirmWarmNoopBoundary(
+			profile, server, meter.logOffset, after, deadline,
+		)
+	}
+	return after, nil
+}
+
+func (run *execution) confirmWarmNoopBoundary(
+	profile PreparedProfile,
+	server *privateServer,
+	logOffset int64,
+	expected privateProfileSnapshot,
+	deadline time.Time,
+) (resultErr error) {
+	if run == nil || run.ctx == nil || server == nil || server.done == nil ||
+		deadline.IsZero() || !deadline.After(time.Now()) {
+		return errConvergenceDeadline
+	}
+	inspector, err := newProfileInspector(profile, profileInspectionForPlan(run.plan.Schema))
+	if err != nil {
+		return err
+	}
+	cursor, err := newCandidateReuseCursor(server.logPath, logOffset)
+	if err != nil {
+		return err
+	}
+	defer func() { resultErr = errors.Join(resultErr, cursor.Close()) }()
+	phase, cancel := context.WithDeadline(run.ctx, deadline)
+	defer cancel()
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		snapshot, _, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
+			phase, server,
+			func(attempt context.Context) (privateProfileSnapshot, privateConvergenceProbe, error) {
+				return inspector.inspectWithProgress(attempt, profile, "a")
+			},
+		)
+		if exited {
+			return errors.Join(exitErr, errConvergenceServerExit)
+		}
+		if inspectErr == nil {
+			if !privateSnapshotEqual(expected, snapshot) {
+				return exactOracle("warm no-op authority moved during final measurement")
+			}
+			settled, reuseErr := cursor.poll()
+			if reuseErr != nil {
+				return reuseErr
+			}
+			if settled {
+				offset, offsetErr := cursor.settledOffset()
+				if offsetErr != nil {
+					return offsetErr
+				}
+				return server.primeLogOffset(offset)
+			}
+		}
+		if errors.Is(inspectErr, errRepositoryIndexTerminal) ||
+			errors.Is(inspectErr, errObservationBoundRefusal) ||
+			errors.Is(inspectErr, errObservationTerminal) ||
+			errors.Is(inspectErr, errExtractionBoundRefusal) ||
+			errors.Is(inspectErr, errExtractionJobTerminal) ||
+			errors.Is(inspectErr, errExtractionScheduleTerminal) ||
+			errors.Is(inspectErr, errCallerGenerationBoundRefusal) ||
+			errors.Is(inspectErr, errCallerGenerationTerminal) ||
+			errors.Is(inspectErr, errRelationshipBoundRefusal) ||
+			errors.Is(inspectErr, errRelationshipTerminal) {
+			return inspectErr
+		}
+		select {
+		case exitErr := <-server.done:
+			server.done <- exitErr
+			return errors.Join(exitErr, errConvergenceServerExit)
+		case <-phase.Done():
+			if run.ctx.Err() == nil && errors.Is(phase.Err(), context.DeadlineExceeded) {
+				return errConvergenceDeadline
+			}
+			return errors.Join(phase.Err(), errors.New("T40.13 warm no-op boundary canceled"))
+		case <-ticker.C:
+		}
+	}
+}
+
+func (run *execution) refreshWarmNoopStartup(
+	profile PreparedProfile,
+	server *privateServer,
+	metrics PhaseMetrics,
+) error {
+	startupIndex := len(run.observation.ServerStartups) - 1
+	if startupIndex < 0 || server == nil || server.started.IsZero() {
+		return exactOracle("warm no-op lacks its startup observation")
+	}
+	startup := run.observation.ServerStartups[startupIndex]
+	if startup.Profile != profile.Name || startup.Label != "warm-noop" || startup.Outcome != "healthy" {
+		return exactOracle("warm no-op startup observation is not paired")
+	}
+	logBytes, logDigest, stage, err := inspectStartupLog(server.logPath)
+	if err != nil {
+		return err
+	}
+	startup.LastStage = stage
+	startup.WallMS = time.Since(server.started).Milliseconds()
+	startup.LogBytes = logBytes
+	startup.LogSHA256 = logDigest
+	startup.PeakRSSBytes = metrics.PeakRSSBytes
+	startup.GitChildren = metrics.GitChildren
+	startup.IndexChildren = metrics.IndexChildren
+	startup.OtherChildren = metrics.OtherChildren
+	run.observation.ServerStartups[startupIndex] = startup
+	return nil
 }
 
 func (run *execution) waitSnapshotWithInspection(
@@ -4940,7 +5284,7 @@ func restoreBackup(
 }
 
 func waitLifecycle(ctx context.Context, profile PreparedProfile, requireCycle bool, limit time.Duration) (lifecycle.Status, error) {
-	return waitLifecycleWithContract(ctx, profile, requireCycle, "", limit, lifecycleWaitLegacy)
+	return waitLifecycleWithContract(ctx, profile, requireCycle, "", time.Time{}, limit, lifecycleWaitLegacy)
 }
 
 type lifecycleWaitContract uint8
@@ -4949,6 +5293,8 @@ const (
 	lifecycleWaitLegacy lifecycleWaitContract = iota
 	lifecycleWaitV23
 	lifecycleWaitV23PressureRecovery
+	lifecycleWaitV30
+	lifecycleWaitV30PressureRecovery
 )
 
 type pressureWaitPurpose uint8
@@ -4959,6 +5305,9 @@ const (
 )
 
 func lifecycleWaitContractForPlan(plan Plan) lifecycleWaitContract {
+	if planSchemaVersion(plan.Schema) >= 30 {
+		return lifecycleWaitV30
+	}
 	if planSchemaVersion(plan.Schema) >= 23 {
 		return lifecycleWaitV23
 	}
@@ -4973,7 +5322,20 @@ func waitLifecycleForPlan(
 	limit time.Duration,
 ) (lifecycle.Status, error) {
 	return waitLifecycleWithContract(
-		ctx, profile, requireCycle, "", limit, lifecycleWaitContractForPlan(plan),
+		ctx, profile, requireCycle, "", time.Time{}, limit, lifecycleWaitContractForPlan(plan),
+	)
+}
+
+func waitLifecycleAfterForPlan(
+	ctx context.Context,
+	plan Plan,
+	profile PreparedProfile,
+	requireCycle bool,
+	attemptedAfter time.Time,
+	limit time.Duration,
+) (lifecycle.Status, error) {
+	return waitLifecycleWithContract(
+		ctx, profile, requireCycle, "", attemptedAfter, limit, lifecycleWaitContractForPlan(plan),
 	)
 }
 
@@ -4987,11 +5349,35 @@ func waitLifecyclePressureForPlan(
 	limit time.Duration,
 ) (lifecycle.Status, error) {
 	contract := lifecycleWaitContractForPlan(plan)
-	if contract == lifecycleWaitV23 && purpose == pressureWaitRecover {
-		contract = lifecycleWaitV23PressureRecovery
+	if purpose == pressureWaitRecover {
+		switch contract {
+		case lifecycleWaitV23:
+			contract = lifecycleWaitV23PressureRecovery
+		case lifecycleWaitV30:
+			contract = lifecycleWaitV30PressureRecovery
+		}
 	}
 	return waitLifecycleWithContract(
-		ctx, profile, requireCycle, pressure, limit, contract,
+		ctx, profile, requireCycle, pressure, time.Time{}, limit, contract,
+	)
+}
+
+func waitLifecyclePressureAfterForPlan(
+	ctx context.Context,
+	plan Plan,
+	profile PreparedProfile,
+	requireCycle bool,
+	pressure lifecycle.Pressure,
+	purpose pressureWaitPurpose,
+	attemptedAfter time.Time,
+	limit time.Duration,
+) (lifecycle.Status, error) {
+	contract := lifecycleWaitContractForPlan(plan)
+	if purpose == pressureWaitRecover {
+		contract = lifecycleWaitV30PressureRecovery
+	}
+	return waitLifecycleWithContract(
+		ctx, profile, requireCycle, pressure, attemptedAfter, limit, contract,
 	)
 }
 
@@ -5000,6 +5386,7 @@ func waitLifecycleWithContract(
 	profile PreparedProfile,
 	requireCycle bool,
 	pressure lifecycle.Pressure,
+	attemptedAfter time.Time,
 	limit time.Duration,
 	contract lifecycleWaitContract,
 ) (lifecycle.Status, error) {
@@ -5013,15 +5400,11 @@ func waitLifecycleWithContract(
 	defer ticker.Stop()
 	for {
 		var status lifecycle.Status
-		if readErr := inspector.get(phase, profile, "/api/lifecycle-status", &status); readErr == nil && lifecycle.ValidateStatus(status) == nil {
-			complete := true
-			for _, owner := range status.Owners {
-				if owner.State == "error" || requireCycle && owner.State == "not_run" {
-					complete = false
-					break
-				}
-			}
-			if complete && (pressure == "" || status.Capacity.Pressure == pressure) {
+		if readErr := inspector.get(phase, profile, "/api/lifecycle-status", &status); readErr == nil &&
+			lifecycle.ValidateStatus(status) == nil {
+			if lifecycleStatusReady(
+				status, requireCycle, pressure, attemptedAfter, contract,
+			) {
 				return status, nil
 			}
 		}
@@ -5030,19 +5413,65 @@ func waitLifecycleWithContract(
 			if contract >= lifecycleWaitV23 && ctx.Err() != nil {
 				return lifecycle.Status{}, ctx.Err()
 			}
-			if contract == lifecycleWaitV23PressureRecovery {
+			if contract == lifecycleWaitV23PressureRecovery || contract == lifecycleWaitV30PressureRecovery {
 				return lifecycle.Status{}, errPressureRecoveryDeadline
 			}
-			if contract == lifecycleWaitV23 && pressure != "" {
+			if (contract == lifecycleWaitV23 || contract == lifecycleWaitV30) && pressure != "" {
 				return lifecycle.Status{}, errors.Join(errLifecycleCycleDeadline, errProductionPressure)
 			}
-			if contract == lifecycleWaitV23 {
+			if contract != lifecycleWaitLegacy {
 				return lifecycle.Status{}, errLifecycleCycleDeadline
 			}
 			return lifecycle.Status{}, errors.New("T40.13 lifecycle cycle deadline expired")
 		case <-ticker.C:
 		}
 	}
+}
+
+func lifecycleStatusReady(
+	status lifecycle.Status,
+	requireCycle bool,
+	pressure lifecycle.Pressure,
+	attemptedAfter time.Time,
+	contract lifecycleWaitContract,
+) bool {
+	requireExact := contract >= lifecycleWaitV30 && !attemptedAfter.IsZero()
+	if requireExact {
+		if len(status.Owners) != len(expectedCollectionOwners) {
+			return false
+		}
+		for index, owner := range status.Owners {
+			if owner.Name != expectedCollectionOwners[index] {
+				return false
+			}
+		}
+	}
+	latestAttempt := attemptedAfter
+	for _, owner := range status.Owners {
+		if owner.State == "error" || requireCycle && owner.State == "not_run" {
+			return false
+		}
+		if requireExact && (owner.State != "ok" ||
+			!v30CollectionOwnerBounded(owner.Name, owner.Completeness, owner.Backlog)) {
+			return false
+		}
+		if !attemptedAfter.IsZero() {
+			if owner.AttemptedAt == nil || !owner.AttemptedAt.After(attemptedAfter) {
+				return false
+			}
+			if requireExact && !owner.AttemptedAt.After(latestAttempt) {
+				return false
+			}
+			if owner.AttemptedAt.After(latestAttempt) {
+				latestAttempt = *owner.AttemptedAt
+			}
+		}
+	}
+	if pressure != "" && status.Capacity.Pressure != pressure {
+		return false
+	}
+	return attemptedAfter.IsZero() || status.Capacity.Completeness == lifecycle.Exact &&
+		status.Capacity.ObservedAt != nil && status.Capacity.ObservedAt.After(latestAttempt)
 }
 
 func queryProfile(
@@ -5768,6 +6197,16 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 		return exactFileIdentity{}, teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
 	}
 	if err := validateSerializedDataMeasurementField(
+		raw, observationSchemaVersion(value.Observation.Schema), true,
+	); err != nil {
+		return exactFileIdentity{}, teardownCheckpoint{}, err
+	}
+	if err := validateSerializedCollectionField(
+		raw, observationSchemaVersion(value.Observation.Schema), true,
+	); err != nil {
+		return exactFileIdentity{}, teardownCheckpoint{}, err
+	}
+	if err := validateSerializedStartupProcessField(
 		raw, observationSchemaVersion(value.Observation.Schema), true,
 	); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err
