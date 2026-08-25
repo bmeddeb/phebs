@@ -8,6 +8,8 @@
 
 **Self-hosted code search and static change-impact analysis for microservice repositories.**
 
+**[phebs.com](https://phebs.com)** · [How it compares](./docs/COMPARISON.md)
+
 [![ci](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml)
 
 </div>
