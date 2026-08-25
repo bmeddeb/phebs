@@ -157,9 +157,12 @@ func TestCeremonySchemaLadderIsCompleteAndCoupled(t *testing.T) {
 			case version >= 17 && version < 22 &&
 				(observation.Interruption == nil || observation.Interruption.Schema != interruptionSchemaV1):
 				t.Fatal("v17-v21 observation lost its interruption-v1 contract")
-			case version >= 22 &&
+			case version >= 22 && version < 28 &&
 				(observation.Interruption == nil || observation.Interruption.Schema != interruptionSchemaV2):
-				t.Fatal("v22+ observation lost its interruption-v2 contract")
+				t.Fatal("v22-v27 observation lost its interruption-v2 contract")
+			case version >= 28 &&
+				(observation.Interruption == nil || observation.Interruption.Schema != interruptionSchemaV3):
+				t.Fatal("v28+ observation lost its interruption-v3 contract")
 			}
 			wantDetail := -1
 			switch {
@@ -978,6 +981,81 @@ func stoppedV27DataMeasurementObservation(plan Plan, gauge string) Observation {
 	return value
 }
 
+func stoppedV28RetainedPartialObservation(plan Plan, owner, kind string) Observation {
+	value := completedV25TeardownObservation(plan)
+	value.Outcome = "stopped"
+	value.Phases[5].Outcome = "failed"
+	value.Phases[5].OracleExact = false
+	for index := 6; index < len(value.Phases)-1; index++ {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Checks = frozenChecks(false)
+	value.Interruption.LastSubstage = "partial_verification"
+	value.Interruption.RetainedPartialOwner = owner
+	value.Interruption.RetainedPartialKind = kind
+	value.Failures = []FailureObservation{{
+		Phase: "interruption", Class: "recovery", Code: "direct_recovery_failed",
+	}}
+	value.Decision = DecisionObservation{
+		Selected: "p6_investigation", Reason: "direct_recovery_failed", Substantiated: true,
+	}
+	return value
+}
+
+func TestV28RetainedPartialAttributionIsClosedAndRoundTrips(t *testing.T) {
+	plan, err := frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV28 || observationSchemaForPlan(plan) != ObservationSchemaV28 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV28 || plan.Safety != frozenSafetyV25 {
+		t.Fatalf("v28 schema set = %q/%q/%q", plan.Schema,
+			observationSchemaForPlan(plan), receiptSchemaForPlan(plan))
+	}
+	value := stoppedV28RetainedPartialObservation(
+		plan, retainedPartialResolver, retainedPartialMarker,
+	)
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.Interruption == nil ||
+		receipt.Interruption.RetainedPartialOwner != retainedPartialResolver ||
+		receipt.Interruption.RetainedPartialKind != retainedPartialMarker {
+		t.Fatalf("V28 retained partial receipt = %+v, %v", receipt.Interruption, err)
+	}
+
+	for name, mutate := range map[string]func(*Observation){
+		"missing kind":   func(value *Observation) { value.Interruption.RetainedPartialKind = "" },
+		"unknown owner":  func(value *Observation) { value.Interruption.RetainedPartialOwner = "private/path" },
+		"unknown kind":   func(value *Observation) { value.Interruption.RetainedPartialKind = "raw_error" },
+		"completed":      func(value *Observation) { value.Outcome = "completed" },
+		"wrong substage": func(value *Observation) { value.Interruption.LastSubstage = "restart_convergence" },
+		"historical": func(value *Observation) {
+			value.Schema = ObservationSchemaV27
+			value.Interruption.Schema = interruptionSchemaV2
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			forged := value
+			forged.Interruption = cloneInterruptionObservation(value.Interruption)
+			mutate(&forged)
+			if err := validateInterruptionObservation(forged); err == nil {
+				t.Fatal("forged retained partial attribution passed validation")
+			}
+		})
+	}
+}
+
 func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -1010,6 +1088,13 @@ func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
 			},
 			observation: completedV25TeardownObservation,
 		},
+		{
+			name: "v28",
+			plan: func() (Plan, error) {
+				return frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+			},
+			observation: completedV25TeardownObservation,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1035,6 +1120,76 @@ func TestDataMeasurementNullFieldIsNeverAccepted(t *testing.T) {
 			if _, err := DecodeReceipt(addTopLevelNullField(t, receiptBytes), plan); err == nil {
 				t.Fatal("receipt accepted a null data-measurement field")
 			}
+			mixedObservation := bytes.Replace(
+				addTopLevelNullField(t, observationBytes),
+				[]byte(`"data_measurement_failure"`), []byte(`"data_measurement_FAILURE"`), 1,
+			)
+			if _, err := DecodeObservation(mixedObservation); err == nil {
+				t.Fatal("observation accepted a mixed-case null data-measurement field")
+			}
+		})
+	}
+}
+
+func TestRetainedPartialFieldsAreNeverHistoricalOrNull(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		plan func() (Plan, error)
+	}{
+		{
+			name: "historical-v24",
+			plan: func() (Plan, error) {
+				return frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+			},
+		},
+		{
+			name: "current-v28",
+			plan: func() (Plan, error) {
+				return frozenV28PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := test.plan()
+			if err != nil {
+				t.Fatal(err)
+			}
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			observationBytes, err := MarshalObservation(completedV25TeardownObservation(plan))
+			if err != nil {
+				t.Fatal(err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeObservation(addRetainedPartialNullFields(t, observationBytes)); err == nil {
+				t.Fatal("observation accepted null retained-partial fields")
+			}
+			if _, err := DecodeReceipt(addRetainedPartialNullFields(t, receiptBytes), plan); err == nil {
+				t.Fatal("receipt accepted null retained-partial fields")
+			}
+			if _, err := DecodeObservation(addDuplicateRetainedPartialInterruption(t, observationBytes)); err == nil {
+				t.Fatal("observation accepted retained-partial fields hidden by a duplicate interruption")
+			}
+			if _, err := DecodeReceipt(addDuplicateRetainedPartialInterruption(t, receiptBytes), plan); err == nil {
+				t.Fatal("receipt accepted retained-partial fields hidden by a duplicate interruption")
+			}
+			if _, err := DecodeObservation(addDuplicateRetainedPartialValues(t, observationBytes)); err == nil {
+				t.Fatal("observation accepted non-null retained-partial fields hidden by a duplicate interruption")
+			}
+			if _, err := DecodeReceipt(addDuplicateRetainedPartialValues(t, receiptBytes), plan); err == nil {
+				t.Fatal("receipt accepted non-null retained-partial fields hidden by a duplicate interruption")
+			}
+			if _, err := DecodeObservation(addMixedCaseRetainedPartialNullFields(t, observationBytes)); err == nil {
+				t.Fatal("observation accepted mixed-case null retained-partial fields")
+			}
+			if _, err := DecodeReceipt(addMixedCaseRetainedPartialNullFields(t, receiptBytes), plan); err == nil {
+				t.Fatal("receipt accepted mixed-case null retained-partial fields")
+			}
 		})
 	}
 }
@@ -1047,6 +1202,52 @@ func addTopLevelNullField(t *testing.T, raw []byte) []byte {
 	}
 	result := slices.Clone(raw[:boundary])
 	result = append(result, []byte(",\n  \"data_measurement_failure\": null\n}\n")...)
+	return result
+}
+
+func addRetainedPartialNullFields(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	needle := []byte("  \"interruption\": {\n")
+	replacement := []byte("  \"interruption\": {\n" +
+		"    \"retained_partial_owner\": null,\n" +
+		"    \"retained_partial_kind\": null,\n")
+	result := bytes.Replace(raw, needle, replacement, 1)
+	if bytes.Equal(result, raw) {
+		t.Fatal("JSON object lacks its interruption boundary")
+	}
+	return result
+}
+
+func addDuplicateRetainedPartialInterruption(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	needle := []byte("  \"interruption\": {")
+	replacement := []byte("  \"interruption\": {\"retained_partial_owner\":null," +
+		"\"retained_partial_kind\":null},\n  \"interruption\": {")
+	result := bytes.Replace(raw, needle, replacement, 1)
+	if bytes.Equal(result, raw) {
+		t.Fatal("JSON object lacks its interruption boundary")
+	}
+	return result
+}
+
+func addDuplicateRetainedPartialValues(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	needle := []byte("  \"interruption\": {")
+	replacement := []byte("  \"Interruption\": {\"retained_partial_OWNER\":\"observation_publication\"," +
+		"\"retained_partial_KIND\":\"publishing_marker\"},\n  \"interruption\": {")
+	result := bytes.Replace(raw, needle, replacement, 1)
+	if bytes.Equal(result, raw) {
+		t.Fatal("JSON object lacks its interruption boundary")
+	}
+	return result
+}
+
+func addMixedCaseRetainedPartialNullFields(t *testing.T, raw []byte) []byte {
+	t.Helper()
+	result := addRetainedPartialNullFields(t, raw)
+	result = bytes.Replace(result, []byte(`"interruption"`), []byte(`"Interruption"`), 1)
+	result = bytes.Replace(result, []byte(`"retained_partial_owner"`), []byte(`"retained_partial_OWNER"`), 1)
+	result = bytes.Replace(result, []byte(`"retained_partial_kind"`), []byte(`"retained_partial_KIND"`), 1)
 	return result
 }
 

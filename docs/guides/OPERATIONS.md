@@ -5246,3 +5246,117 @@ the frozen plan/digest and signer fingerprint, then request separate exact-ID/
 digest execution authorization. A failed gate, preflight refusal, plan drift,
 or retained/indeterminate custody is a stop; do not weaken a bound, reuse an ID,
 seal surviving custody, or hand-delete supervision or teardown authority.
+
+## T40.R1 neutral-37 stop and T40.13o recovery closure
+
+Preserve all three recent ceremony packages and their identifiers. They are
+different stopped outcomes, not repetitions of one meter failure:
+
+| Run | Contract and exact authority | Terminal boundary | Total wall |
+|---|---|---|---:|
+| `t40r1-neutral-35` | V25; source `158dc6c9d87c26e4e7fc6a2f2ce38cc900da2119`; plan `sha256:d9c1a646a7722c0d6496d1866c3a1450cbcbdfbf5c17c340d324173fe2ea543c` | cold measurement stop | 63.325 min |
+| `t40r1-neutral-36` | V26; source `acc5a23f046229c580b972bcbb0107f2f7062882`; plan `sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7` | `interruption/restart_start` | 327.939 min |
+| `t40r1-neutral-37` | V27; source `3d6ecf294e655c9121ea57cdec24b23b91a1cf4e`; plan `sha256:52b6c9d519358d84c34cbdb5b49bc44eff22005298e4a281ed3a598d82896f5b` | `interruption/partial_verification` | 317.565 min |
+
+Neutral-36's signed generic measurement-unavailable result cannot establish a
+pipeline failure or scale pass. Neutral-37 proved the selected lease was
+requeued before its later partial-verification stop, and exact teardown then
+retained neither derived nor scratch-source custody. Its reconciled controlling
+signed attribution is
+`recovery/direct_recovery_failed/p6_investigation/substantiated`. Do not infer
+the retained owner or kind, a simultaneous evidence-capture failure, or whether
+the final partial-clear result came from deadline expiry or a scanner error;
+V27 did not sign those distinctions. The V26 meter-ordering defect existed
+before neutral-35, so do not describe the chronology as each preceding fix
+introducing the next defect.
+
+T40.13o corrects two V27 typed-nil paths. A nonmatching
+`dataMeasurementDeadlineCause` must not enter `errors.Join`, and the sanitizer
+must not dereference a nil matched deadline. The differential boundary is
+simple: V26 and V27 produce the same classification for every nondeadline
+cause; V27 differs only when a real typed allocated/logical data-gauge deadline
+exists.
+
+Relationship and resolver publication now check cancellation once before the
+commit point. New stage bytes are completely validated during build, and an
+existing installed target is completely validated before marker creation. Once
+`publishing.json` may exist, publication finishes the bounded
+marker→pointer→marker-removal sequence without a second full validation or a
+late cancellation branch. Hard death or control I/O still leaves the existing
+marker/pointer recovery authority.
+
+Extraction stage recovery runs before extraction workers. It accepts only
+package-owned raw generation, restore, and sparse stage names and exact bounded
+trees. It atomically renames every valid raw stage into a retired namespace and
+durably syncs the parent before any worker starts. Startup never deletes,
+drains, or promotes a stage to collecting: retirement preserves its bytes and
+modification time for the frozen grace/count policy.
+
+The real `partial-stages` lifecycle owner first evaluates retired stages. A
+retired stage becomes eligible when it is at least 24 hours old or older than
+the newest two retired stages for its repository and kind. Lifecycle then
+atomically moves that stage to collecting and syncs the parent, so the age/count
+decision is not reset by a crash. Collecting stages drain unconditionally
+across bounded turns and restarts under every controller limit. A raw stage
+created after startup may belong to a live writer, so lifecycle leaves it
+untouched and reports lower-bound completeness. This ownership includes
+package sparse-candidate residue even though the ceremony attribution scanner
+below deliberately excludes the candidate namespace.
+
+Fresh plan, observation, and receipt contracts use V28. Only a stopped
+`interruption/partial_verification` may retain this paired source-free shape:
+
+```json
+{
+  "retained_partial_owner": "extraction_publication",
+  "retained_partial_kind": "stage_directory"
+}
+```
+
+The owner vocabulary is `observation_publication`,
+`extraction_publication`, `relationship_publication`, `resolver_namespace`,
+`rpc_caller_postings`, or `kafka_topic_postings`. Kind is
+`publishing_marker` or `stage_directory`. Both fields must appear together.
+V1–V27 require them absent; V28 rejects null, incomplete, unknown,
+duplicate-hidden, mixed-case-hidden, or outcome-incoherent fields in direct
+observations, receipts, and teardown checkpoints. The scanner visits the six
+roots in that fixed order, marker before stage, under the existing bounded
+partial-verification poll and deadline. It retains no path, entry name,
+timestamp, raw error, source, or content.
+
+Cost remains isolated. Publication removes one redundant full validation and
+adds one constant cancellation check. V28 adds one bounded six-root scan per
+existing ceremony partial-verification poll. Extraction startup holds the
+existing shared lifecycle-mutation lock for one bounded pass: at most
+2,000,000 charged work operations, stats, and stage candidates, eight peak
+descriptors, and 510,000,000 name bytes. It reads names, types, and metadata,
+not file content, performs no hash pass, and only renames plus parent-syncs raw
+stages; it never deletes them. Startup inventories at most 4,096 regular plus
+4,096 sparse repository namespaces and may retain those 8,192 bounded
+identities. Each scheduled lifecycle turn inventories at most 4,096 repositories
+in one publication or sparse phase. Either path accepts at most 20,000 direct
+entries from one selected repository directory and retains at most one extra
+entry only to detect overflow. Each turn also admits at most 64 stage candidates,
+sixteen removals, 256 stats including descriptor-open stats, eight peak
+descriptors, and 1 MiB of names. A clean completed pass reports
+exact and returns to the normal idle cadence. Raw post-start residue reports
+lower-bound but does not advertise permanent five-second backlog. Scheduled
+lifecycle alone selects eligible retired stages, promotes and syncs them, and
+performs bounded unconditional collecting drains. Product queries and requests,
+repository sync ticks, ordinary retry/no-op paths, source/corpus/shard reads,
+hashing, caches, workers, and child processes gain no work.
+
+The exact tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
+complete T40.13 package (103.560s), full package race (113.820s), focused
+publication race, real-launcher custody proof (62.074s), every uncached
+`internal/` package including standalone `internal/store` (983.068s), and all
+module/vet/lint/docs/glossary/shell/whitespace gates. In the first 233.93s
+complete readiness attempt, semantic and stale-worker passed; structural alone
+met host-native process-sampler `EPERM` after healthy startup. No PID/session
+survived, diagnostic root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-403545186`
+remains retained, and the one bounded structural rerun passed in 194.515s. Do
+not select another identifier or request a freeze yet: a recorded independent
+exact-commit review remains required. Integration,
+exact-main preflight, fresh-ID selection, freeze, frozen-plan review, and exact
+ID/digest execution remain separate explicit decisions.

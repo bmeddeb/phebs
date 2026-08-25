@@ -468,6 +468,76 @@ func TestHistoricalTeardownCheckpointRejectsNestedDataMeasurementNull(t *testing
 	}
 }
 
+func TestHistoricalTeardownCheckpointRejectsNestedRetainedPartialNull(t *testing.T) {
+	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
+	observation.Outcome = "stopped"
+	observation.Phases[0] = PhaseObservation{Name: "preflight", Outcome: "failed"}
+	observation.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	observation.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	checkpoint := teardownCheckpoint{
+		Schema: teardownCheckpointSchema, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		Workspace: filepath.Clean(t.TempDir()), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Observation: observation,
+	}
+	raw, err := marshalTeardownCheckpoint(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := slices.Clone(raw)
+	var object map[string]any
+	if err := json.Unmarshal(raw, &object); err != nil {
+		t.Fatal(err)
+	}
+	nested, ok := object["observation"].(map[string]any)
+	if !ok {
+		t.Fatal("checkpoint observation is not an object")
+	}
+	interruption, ok := nested["interruption"].(map[string]any)
+	if !ok {
+		t.Fatal("checkpoint interruption is not an object")
+	}
+	interruption["retained_partial_owner"] = nil
+	interruption["retained_partial_kind"] = nil
+	raw, err = json.Marshal(object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, '\n')
+	path := filepath.Join(t.TempDir(), "observation.json")
+	if err := os.WriteFile(path+".teardown", raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readTeardownCheckpoint(path); err == nil {
+		t.Fatal("historical checkpoint accepted nested null retained-partial fields")
+	}
+
+	duplicate := bytes.Replace(
+		original,
+		[]byte(`"observation":`),
+		[]byte(`"Observation":{"Interruption":{"retained_partial_OWNER":null,"retained_partial_KIND":null}},"observation":`),
+		1,
+	)
+	if bytes.Equal(duplicate, original) {
+		t.Fatal("checkpoint lacks its observation boundary")
+	}
+	duplicatePath := filepath.Join(t.TempDir(), "observation.json")
+	if err := os.WriteFile(duplicatePath+".teardown", duplicate, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readTeardownCheckpoint(duplicatePath); err == nil {
+		t.Fatal("historical checkpoint accepted retained-partial fields hidden by a duplicate observation")
+	}
+}
+
 func TestV25StoppedExecutionRetainsCustodyBeforeAnyDestructiveTransition(t *testing.T) {
 	for _, test := range []struct {
 		name     string
@@ -2289,6 +2359,28 @@ func TestDataMeasurementDeadlineClassificationChangesOnlyAtV27(t *testing.T) {
 	}
 }
 
+func TestV27OrdinarySanitizedRecoveryDoesNotInventDataDeadline(t *testing.T) {
+	ordinary := errors.New("private nondeadline failure")
+	historicalCause := directRecovery(sanitizeMeasuredCommandFailure(
+		"T40.13 restore command failed", ordinary, false,
+	))
+	currentCause := directRecovery(sanitizeMeasuredCommandFailure(
+		"T40.13 restore command failed", ordinary, true,
+	))
+	historical := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV26}, historicalCause, nil, nil)
+	current := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV27}, currentCause, nil, nil)
+	if historical != current || current.code != "direct_recovery_failed" || !current.substantiated {
+		t.Fatalf("V26/V27 nondeadline recovery = %+v / %+v", historical, current)
+	}
+	if projection := projectDataMeasurementDeadline(currentCause); projection != nil {
+		t.Fatalf("ordinary sanitized recovery projected as deadline: %+v", projection)
+	}
+	var deadline *dataMeasurementDeadlineError
+	if errors.As(currentCause, &deadline) {
+		t.Fatalf("ordinary sanitized recovery retained typed deadline: %#v", deadline)
+	}
+}
+
 func TestCaptureFailedPhasePreservesMeasurementAndIncompleteInventory(t *testing.T) {
 	measurementErr := errors.New("measurement failed")
 	run := execution{
@@ -2618,8 +2710,12 @@ func completedV25TeardownObservation(plan Plan) Observation {
 		}
 	}
 	attempt := 0
+	interruptionSchema := interruptionSchemaV2
+	if planSchemaVersion(plan.Schema) >= 28 {
+		interruptionSchema = interruptionSchemaV3
+	}
 	value.Interruption = &InterruptionObservation{
-		Schema: interruptionSchemaV2, LastSubstage: "complete",
+		Schema: interruptionSchema, LastSubstage: "complete",
 		TriggerStage:            extractionpublication.ScheduleStage,
 		TriggerGenerationSHA256: "sha256:" + strings.Repeat("a", 64),
 		TriggerChunkSHA256:      "sha256:" + strings.Repeat("b", 64),
@@ -3911,6 +4007,115 @@ func TestDerivedPartialScanIgnoresCandidateNamespace(t *testing.T) {
 	found, err := derivedPartialPresent(dataDir)
 	if err != nil || found {
 		t.Fatalf("candidate namespace plus one repository = %t, %v", found, err)
+	}
+}
+
+func TestV28RetainedPartialScanIsPathFreeAndDeterministic(t *testing.T) {
+	roots := []struct {
+		name, path, owner string
+	}{
+		{"observation", "observations", retainedPartialObservation},
+		{"extraction", "extraction-publications", retainedPartialExtraction},
+		{"relationship", filepath.Join("relationships", "relationship-publications"), retainedPartialRelationship},
+		{"resolver", filepath.Join("relationship-resolver-namespaces", "resolver-namespaces"), retainedPartialResolver},
+		{"rpc", filepath.Join("relationship-rpc-postings", "rpc-caller-postings"), retainedPartialRPC},
+		{"kafka", filepath.Join("relationship-kafka-postings", "kafka-topic-postings"), retainedPartialKafka},
+	}
+	for _, root := range roots {
+		for _, control := range []struct {
+			name, kind string
+		}{
+			{"publishing.json", retainedPartialMarker},
+			{".stage-test", retainedPartialStage},
+		} {
+			t.Run(root.name+"/"+control.kind, func(t *testing.T) {
+				dataDir := t.TempDir()
+				publication := filepath.Join(dataDir, root.path, strings.Repeat("a", 64))
+				if err := os.MkdirAll(publication, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Mkdir(filepath.Join(publication, control.name), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				retained, err := retainedDerivedPartial(dataDir)
+				if err != nil || retained == nil || retained.Owner != root.owner || retained.Kind != control.kind {
+					t.Fatalf("retained partial = %+v, %v", retained, err)
+				}
+			})
+		}
+	}
+
+	dataDir := t.TempDir()
+	observation := filepath.Join(dataDir, "observations", strings.Repeat("a", 64))
+	if err := os.MkdirAll(filepath.Join(observation, ".stage-test"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	v2 := filepath.Join(observation, observationpublication.InventoryPublicationDirectoryV2)
+	if err := os.MkdirAll(filepath.Join(v2, "publishing.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(
+		dataDir, "extraction-publications", strings.Repeat("b", 64), "publishing.json",
+	), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	retained, err := retainedDerivedPartial(dataDir)
+	if err != nil || retained == nil || retained.Owner != retainedPartialObservation || retained.Kind != retainedPartialMarker {
+		t.Fatalf("owner/kind priority = %+v, %v", retained, err)
+	}
+
+	candidates := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(
+		candidates, "extraction-publications", "candidates", "publishing.json",
+	), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if retained, err := retainedDerivedPartial(candidates); err != nil || retained != nil {
+		t.Fatalf("candidate attribution = %+v, %v", retained, err)
+	}
+}
+
+func TestV28RetainedPartialTimeoutProjectsOnlyTypedScannerEvidence(t *testing.T) {
+	dataDir := t.TempDir()
+	publication := filepath.Join(dataDir, "relationship-resolver-namespaces", "resolver-namespaces", strings.Repeat("a", 64))
+	if err := os.MkdirAll(filepath.Join(publication, ".stage-test"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	err := waitForDerivedPartialClear(
+		t.Context(), Plan{Schema: PlanSchemaV28}, dataDir, time.Nanosecond,
+	)
+	var retained *retainedPartialError
+	if !errors.As(err, &retained) || retained == nil ||
+		retained.Owner != retainedPartialResolver || retained.Kind != retainedPartialStage ||
+		err.Error() != "T40.13 interruption restart retained partial derived publication state" {
+		t.Fatalf("typed retained partial timeout = %+v, %v", retained, err)
+	}
+	run := &execution{
+		plan:        Plan{Schema: PlanSchemaV28},
+		observation: Observation{Interruption: &InterruptionObservation{}},
+	}
+	run.setRetainedPartialAttribution(directRecovery(err))
+	if run.observation.Interruption.RetainedPartialOwner != retainedPartialResolver ||
+		run.observation.Interruption.RetainedPartialKind != retainedPartialStage {
+		t.Fatalf("projected retained partial = %+v", run.observation.Interruption)
+	}
+
+	historicalErr := waitForDerivedPartialClear(
+		t.Context(), Plan{Schema: PlanSchemaV27}, dataDir, time.Nanosecond,
+	)
+	retained = nil
+	if historicalErr == nil || errors.As(historicalErr, &retained) {
+		t.Fatalf("historical timeout acquired V28 attribution: %+v, %v", retained, historicalErr)
+	}
+	scannerErr := waitForDerivedPartialClear(
+		t.Context(), Plan{Schema: PlanSchemaV28}, "relative", time.Nanosecond,
+	)
+	run.observation.Interruption.RetainedPartialOwner = ""
+	run.observation.Interruption.RetainedPartialKind = ""
+	run.setRetainedPartialAttribution(scannerErr)
+	if run.observation.Interruption.RetainedPartialOwner != "" ||
+		run.observation.Interruption.RetainedPartialKind != "" {
+		t.Fatalf("scanner error invented retained partial attribution: %+v", run.observation.Interruption)
 	}
 }
 

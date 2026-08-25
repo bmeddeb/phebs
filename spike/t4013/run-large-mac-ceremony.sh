@@ -799,7 +799,8 @@ is_v25_plan() {
     die "plan failed bounded exact-control inspection"
   [[ "$schema" == "t4013-neutral-convergence-plan-v25" ||
     "$schema" == "t4013-neutral-convergence-plan-v26" ||
-    "$schema" == "t4013-neutral-convergence-plan-v27" ]]
+    "$schema" == "t4013-neutral-convergence-plan-v27" ||
+    "$schema" == "t4013-neutral-convergence-plan-v28" ]]
 }
 
 usage() {

@@ -1837,6 +1837,96 @@ zero work has fewer pre-retirement pairs. The synchronized source-identical
 documentation correction above resolves it; no finding remains. T40.13n
 requests integration only and selects no identifier.
 
+**T40.13o · Neutral-35/36/37 evidence and partial-publication recovery
+closure** *(high gate readiness · implemented; exact-tree gates passed and
+independent review pending; needs T40.13n and neutral-37)* — reconcile the three consumed
+runs without collapsing their distinct outcomes, close the V27 typed-nil and
+partial-publication recovery defects, and make a future stopped receipt retain
+bounded source-free attribution. Neutral-35 was the 63.325-minute V25 cold
+measurement stop at exact source
+`158dc6c9d87c26e4e7fc6a2f2ce38cc900da2119` and plan
+`sha256:d9c1a646a7722c0d6496d1866c3a1450cbcbdfbf5c17c340d324173fe2ea543c`.
+Neutral-36 was the 327.939-minute V26 stop at
+`interruption/restart_start`, exact source
+`acc5a23f046229c580b972bcbb0107f2f7062882`, and plan
+`sha256:e2403ee87df84383e47b5b78a1f7fc1085425da3ec1b5af5f3214fa4e03ca9e7`;
+its generic measurement-unavailable evidence establishes neither a pipeline
+failure nor a scale pass. Neutral-37 was the 317.565-minute V27 stop at
+`interruption/partial_verification`, exact source
+`3d6ecf294e655c9121ea57cdec24b23b91a1cf4e`, and plan
+`sha256:52b6c9d519358d84c34cbdb5b49bc44eff22005298e4a281ed3a598d82896f5b`.
+It proved the selected lease was requeued, then completed exact clean teardown;
+its controlling signed attribution is
+`recovery/direct_recovery_failed/p6_investigation/substantiated`. Its signed
+V27 bytes do not identify a retained partial owner/kind, prove a simultaneous
+capture failure, or distinguish a partial-clear timeout from a scanner error.
+The V26 meter-ordering defect predated neutral-35; the chronology must not say
+that each run's repair introduced the next defect.
+
+AC: both callers of `dataMeasurementDeadlineCause` reject a typed-nil pointer;
+V26 and V27 classify every ordinary nondeadline cause identically, and a
+sanitized measured-command failure cannot panic. Relationship and resolver
+publication consult cancellation before the commit point, completely validate
+new/reused bytes before creating `publishing.json`, and finish the bounded
+marker→pointer→marker-removal sequence once the marker can exist; no redundant
+full-generation validation remains after the marker. Before workers, startup
+validates and atomically moves every package-owned raw generation, restore, and
+sparse extraction stage into a retired namespace, then durably syncs the
+parent. It deletes or drains nothing and preserves bytes and modification time.
+The real lifecycle owner alone moves an eligible retired stage to collecting
+and syncs the parent when it is at least 24 hours old or older than the newest
+two for that repository and kind. Collecting stages then drain unconditionally
+across bounded turns and restarts under all controller limits. Raw stages
+created after startup remain untouched and make the report lower-bound. Fresh
+plan/observation/receipt contracts advance to V28. A
+stopped `interruption/partial_verification` may retain exactly one paired
+`retained_partial_owner` and `retained_partial_kind`; owner is one of
+`observation_publication`, `extraction_publication`,
+`relationship_publication`, `resolver_namespace`, `rpc_caller_postings`, or
+`kafka_topic_postings`, and kind is `publishing_marker` or `stage_directory`.
+V1–V27 require both fields absent, while V28 rejects incomplete, null,
+duplicate-hidden, mixed-case-hidden, unknown, or outcome-incoherent fields.
+The ceremony scan is fixed-order and bounded across those six roots, reveals no
+path/raw error/content, and intentionally excludes extraction candidate stages;
+production recovery/lifecycle still owns every package stage.
+
+Steady-state cost: publication removes one redundant post-marker full
+validation and adds only one constant pre-commit cancellation check. V28 adds
+one ceremony-only bounded six-root scan per existing partial-verification poll.
+Extraction startup holds the existing shared lifecycle-mutation lock for one
+bounded pass: at most 2,000,000 charged work operations, stats, and stage
+candidates, eight peak descriptors, and 510,000,000 name bytes. It reads only
+names, types, and metadata, then renames and syncs; it reads no stage content,
+hashes nothing, and deletes nothing. Startup inventories at most 4,096 regular
+plus 4,096 sparse repository namespaces and may retain those 8,192 bounded
+identities while it works. Each scheduled lifecycle turn inventories at most
+4,096 repositories in one publication or sparse phase. Either path accepts at
+most 20,000 direct entries from one selected repository directory and retains
+at most one additional entry only to detect overflow. Each lifecycle turn also
+admits at most 64 stage candidates, sixteen removals, 256 stats (including
+descriptor-open stats), eight peak descriptors, and 1 MiB of names. A clean completed
+pass is exact and idle; post-start raw stages make it lower-bound without
+creating permanent five-second backlog. Scheduled lifecycle alone performs
+eligibility selection, collecting promotion and sync, and bounded drain work.
+There is no added product query/request, repository sync tick, ordinary
+retry/no-op, corpus/shard/content read, hash pass, cache, worker, or child.
+The exact tree passed 20 deterministic V28/typed-nil repetitions (1.495s), the
+complete T40.13 package (103.560s), full package race (113.820s), focused
+publication race, the real-launcher custody proof (62.074s), and readiness.
+The first complete readiness attempt ran 233.93s: semantic and stale-worker
+passed, while structural alone was invalidated after healthy startup by
+host-native process-sampler `EPERM`. No PID/session survived; diagnostic root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-403545186`
+is retained, and the one bounded structural rerun passed in 194.515s. Every
+`internal/` package passed uncached, including standalone `internal/store` in
+983.068s; module, vet, lint, docs, glossary, shell, and whitespace gates passed.
+The repository aggregate was not duplicated because its inherited
+T30.6m/T32.3/T32.4 retained-fixture reds are already reproduced at the base and
+the ticket's complete internal/store bar is green. Recorded independent exact-
+commit review remains required. No
+integration, fresh identifier, rerun, freeze, execution, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

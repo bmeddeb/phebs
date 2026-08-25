@@ -47,15 +47,18 @@ func (prepared *Prepared) Publish(ctx context.Context) (*Publication, error) {
 	if prepared == nil || prepared.closed {
 		return nil, errors.New("resolver namespace stage is closed")
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	publication, err := prepared.install(ctx)
 	if err != nil {
 		return nil, err
 	}
+	// Build completely validated a new stage; install completely validates an
+	// existing target before reaching here. Do not consult ctx once the marker
+	// can exist: either finish the bounded controls or leave recovery authority.
 	if err := writeMarker(publication.base, publication.pointer); err != nil {
 		return nil, err
-	}
-	if _, err := openGeneration(ctx, publication.directory, publication.rootValue, true); err != nil {
-		return nil, fmt.Errorf("validate installed resolver namespace generation: %w", err)
 	}
 	if err := writePointer(publication.base, publication.pointer); err != nil {
 		return nil, err

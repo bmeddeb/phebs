@@ -1284,7 +1284,9 @@ func classifyStoppedFailureForPlan(
 		measurementErr = errors.Join(measurementErr, retainedMeasurementFailure(cause))
 	}
 	if planSchemaVersion(plan.Schema) >= 27 {
-		measurementErr = errors.Join(measurementErr, dataMeasurementDeadlineCause(cause))
+		if deadline := dataMeasurementDeadlineCause(cause); deadline != nil {
+			measurementErr = errors.Join(measurementErr, deadline)
+		}
 	}
 	if planSchemaVersion(plan.Schema) < 23 {
 		return classifyStoppedFailure(cause, measurementErr, ceilingErr)
@@ -1827,6 +1829,7 @@ func (run *execution) interruption() error {
 		run.observation.Interruption.ConvergenceLifecycle = convergenceLifecycle
 		run.setInterruptionSubstage("partial_verification")
 		if partialErr := waitForDerivedPartialClear(run.ctx, run.plan, profile.DataDir, 5*time.Minute); partialErr != nil {
+			run.setRetainedPartialAttribution(partialErr)
 			return directRecovery(partialErr)
 		}
 	} else if planSchemaVersion(run.plan.Schema) >= 17 {
@@ -2250,6 +2253,17 @@ func (run *execution) setInterruptionSubstage(substage string) {
 		return
 	}
 	run.observation.Interruption.LastSubstage = substage
+}
+
+func (run *execution) setRetainedPartialAttribution(cause error) {
+	if run == nil || planSchemaVersion(run.plan.Schema) < 28 || run.observation.Interruption == nil {
+		return
+	}
+	var retained *retainedPartialError
+	if errors.As(cause, &retained) && retained != nil {
+		run.observation.Interruption.RetainedPartialOwner = retained.Owner
+		run.observation.Interruption.RetainedPartialKind = retained.Kind
+	}
 }
 
 func (run *execution) recordInterruptionTrigger(
@@ -4431,7 +4445,14 @@ func waitForDerivedPartialClear(ctx context.Context, plan Plan, dataDir string, 
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		partial, err := derivedPartialPresentForPlan(plan, dataDir)
+		var retained *retainedPartialError
+		partial, err := false, error(nil)
+		if planSchemaVersion(plan.Schema) >= 28 {
+			retained, err = retainedDerivedPartial(dataDir)
+			partial = retained != nil
+		} else {
+			partial, err = derivedPartialPresentForPlan(plan, dataDir)
+		}
 		if planSchemaVersion(plan.Schema) < 25 && err == nil && !partial {
 			partial, err = relationshipPartialPresentLegacy(dataDir)
 		}
@@ -4443,6 +4464,9 @@ func waitForDerivedPartialClear(ctx context.Context, plan Plan, dataDir string, 
 		}
 		select {
 		case <-phase.Done():
+			if retained != nil {
+				return retained
+			}
 			return errors.New("T40.13 interruption restart retained partial derived publication state")
 		case <-ticker.C:
 		}
@@ -4569,6 +4593,106 @@ func derivedPartialPresent(dataDir string) (bool, error) {
 		}
 	}
 	return relationshipPartialPresent(dataDir)
+}
+
+type retainedPartialError struct {
+	Owner string
+	Kind  string
+}
+
+func (*retainedPartialError) Error() string {
+	return "T40.13 interruption restart retained partial derived publication state"
+}
+
+func retainedDerivedPartial(dataDir string) (*retainedPartialError, error) {
+	if !filepath.IsAbs(dataDir) {
+		return nil, errors.New("T40.13 derived interruption scope is invalid")
+	}
+	type root struct {
+		path              string
+		owner             string
+		limit             int
+		ignoreCandidates  bool
+		observationV2Root bool
+	}
+	roots := []root{
+		{filepath.Join(dataDir, "observations"), retainedPartialObservation, 1, false, true},
+		{filepath.Join(dataDir, "extraction-publications"), retainedPartialExtraction, 2, true, false},
+		{filepath.Join(dataDir, "relationships", "relationship-publications"), retainedPartialRelationship, 1, false, false},
+		{filepath.Join(dataDir, "relationship-resolver-namespaces", "resolver-namespaces"), retainedPartialResolver, 1, false, false},
+		{filepath.Join(dataDir, "relationship-rpc-postings", "rpc-caller-postings"), retainedPartialRPC, 1, false, false},
+		{filepath.Join(dataDir, "relationship-kafka-postings", "kafka-topic-postings"), retainedPartialKafka, 1, false, false},
+	}
+	for _, root := range roots {
+		rootInfo, err := os.Lstat(root.path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+			return nil, errors.Join(err, errors.New("T40.13 derived interruption root is invalid"))
+		}
+		repositories, err := readDirectoryBounded(root.path, root.limit)
+		if err != nil {
+			return nil, err
+		}
+		if root.ignoreCandidates {
+			repositories = slices.DeleteFunc(repositories, func(entry os.DirEntry) bool {
+				return entry.Name() == "candidates"
+			})
+		}
+		if len(repositories) > 1 {
+			return nil, errors.New("T40.13 derived interruption repository inventory exceeds its bound")
+		}
+		for _, repository := range repositories {
+			if !repository.IsDir() || repository.Type()&os.ModeSymlink != 0 {
+				return nil, errors.New("T40.13 derived interruption repository is invalid")
+			}
+			repositoryPath := filepath.Join(root.path, repository.Name())
+			kind, err := retainedDerivedControlKind(repositoryPath)
+			if err != nil {
+				return nil, err
+			}
+			if root.observationV2Root && kind != retainedPartialMarker {
+				v2 := filepath.Join(repositoryPath, observationpublication.InventoryPublicationDirectoryV2)
+				info, statErr := os.Lstat(v2)
+				switch {
+				case os.IsNotExist(statErr):
+				case statErr != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0:
+					return nil, errors.Join(statErr, errors.New("T40.13 derived interruption v2 control is invalid"))
+				default:
+					v2Kind, controlErr := retainedDerivedControlKind(v2)
+					if controlErr != nil {
+						return nil, controlErr
+					}
+					if v2Kind == retainedPartialMarker || kind == "" {
+						kind = v2Kind
+					}
+				}
+			}
+			if kind != "" {
+				return &retainedPartialError{Owner: root.owner, Kind: kind}, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func retainedDerivedControlKind(directory string) (string, error) {
+	entries, err := readDirectoryBounded(directory, 4096)
+	if err != nil {
+		return "", err
+	}
+	stage := false
+	for _, entry := range entries {
+		if entry.Name() == "publishing.json" {
+			return retainedPartialMarker, nil
+		}
+		stage = stage || strings.HasPrefix(entry.Name(), ".stage-")
+	}
+	if stage {
+		return retainedPartialStage, nil
+	}
+	return "", nil
 }
 
 func derivedPartialPresentForPlan(plan Plan, dataDir string) (bool, error) {
@@ -5147,6 +5271,9 @@ func emptyObservationForPlan(environment EnvironmentObservation, plan Plan) Obse
 		if version >= 22 {
 			interruptionSchema = interruptionSchemaV2
 		}
+		if version >= 28 {
+			interruptionSchema = interruptionSchemaV3
+		}
 		value.Interruption = &InterruptionObservation{
 			Schema: interruptionSchema, LastSubstage: "not_started",
 		}
@@ -5634,6 +5761,11 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 		return exactFileIdentity{}, teardownCheckpoint{}, fmt.Errorf("decode T40.13 teardown checkpoint: %w", err)
 	}
 	if err := validateSerializedDataMeasurementField(
+		raw, observationSchemaVersion(value.Observation.Schema), true,
+	); err != nil {
+		return exactFileIdentity{}, teardownCheckpoint{}, err
+	}
+	if err := validateSerializedRetainedPartialFields(
 		raw, observationSchemaVersion(value.Observation.Schema), true,
 	); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err

@@ -80,7 +80,7 @@ func dataMeasurementContextError(ctx context.Context, apparent bool) error {
 
 func dataMeasurementDeadlineCause(err error) *dataMeasurementDeadlineError {
 	var deadline *dataMeasurementDeadlineError
-	if !errors.As(err, &deadline) ||
+	if !errors.As(err, &deadline) || deadline == nil ||
 		(deadline.gauge != dataMeasurementAllocated && deadline.gauge != dataMeasurementLogical) {
 		return nil
 	}
@@ -167,7 +167,9 @@ func retainedMeasuredCommandFailure(err error) error {
 func sanitizeMeasuredCommandFailure(message string, err error, retainDataMeasurement bool) error {
 	retained := retainedMeasuredCommandFailure(err)
 	if retainDataMeasurement {
-		retained = errors.Join(retained, dataMeasurementDeadlineCause(err))
+		if deadline := dataMeasurementDeadlineCause(err); deadline != nil {
+			retained = errors.Join(retained, deadline)
+		}
 	}
 	return errors.Join(errors.New(message), retained)
 }

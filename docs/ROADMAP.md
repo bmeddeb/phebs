@@ -1955,6 +1955,72 @@ T32.3 retained bytes on the Git-2.50.1 host, and T32.4's pre-repin bindings;
 all four assertions fail identically at the base commit. This ticket neither
 claims `go test ./...` green nor reauthors those unrelated fixtures.
 
+Neutral-37 subsequently consumed its V27 identifier at exact main source
+`3d6ecf294e655c9121ea57cdec24b23b91a1cf4e` and plan
+`sha256:52b6c9d519358d84c34cbdb5b49bc44eff22005298e4a281ed3a598d82896f5b`.
+It ran for 317.565 minutes, proved the selected interruption lease was
+requeued, and stopped at `interruption/partial_verification`; exact teardown
+then left no derived or scratch-source custody. The reconciled controlling
+signed attribution is
+`recovery/direct_recovery_failed/p6_investigation/substantiated`. Its V27
+evidence cannot identify which publication owner or partial kind remained,
+prove simultaneous capture failure, or distinguish the partial-clear deadline
+from a scanner error. Neutral-35, neutral-36, and neutral-37 are three distinct
+outcomes: respectively the 63.325-minute V25 cold stop, the 327.939-minute V26
+`restart_start` stop, and this V27 `partial_verification` stop. The V26 meter
+defect predated neutral-35; no causal sequence in which each fix introduced the
+next defect is established.
+
+T40.13o is now the only next scale ticket. Its implementation guards the two
+V27 typed-nil deadline paths; moves relationship/resolver cancellation before
+the publication commit point and removes redundant full validation after a
+marker exists; validates and atomically retires every raw generation, restore,
+and sparse extraction stage before workers with a durable parent sync; and
+advances fresh ceremony evidence to V28. Startup preserves bytes and
+modification time and performs no deletion. Scheduled lifecycle alone promotes
+retired stages that are at least 24 hours old or older than the newest two for
+their repository and kind into collecting with a durable sync; collecting
+stages then drain unconditionally across bounded turns and restarts. A
+post-start raw stage remains untouched and makes completeness lower-bound. V28
+may pair one closed owner with
+`publishing_marker|stage_directory` only on a stopped
+`interruption/partial_verification`. Its existing poll performs one bounded,
+fixed-order six-root scan, exposes no path/raw error/content, and excludes the
+candidate namespace from ceremony attribution. Production stage recovery still
+owns package candidate residue. Publication transitions are cheaper by one
+full validation. Extraction validation/retirement is one startup pass under
+the shared lifecycle-mutation lock, capped at 2,000,000 charged work
+operations, stats, and candidates, eight peak descriptors, and 510,000,000
+name bytes; it reads names/types/stats, not contents, and deletes nothing.
+Startup inventories at most 4,096 regular plus 4,096 sparse repository
+namespaces and may retain those 8,192 bounded identities. Each lifecycle turn
+inventories at most 4,096 repositories in one publication or sparse phase.
+Either path accepts at most 20,000 direct entries from one selected repository
+directory and retains at most one additional entry only to detect overflow.
+Each lifecycle turn also admits at most 64 stage candidates, sixteen removals,
+256 stats including descriptor-open stats, eight peak descriptors, and 1 MiB of names.
+A clean pass becomes exact/idle; raw post-start residue is lower-bound without
+permanent five-second backlog. Eligibility and drain are lifecycle-only,
+adding no product
+request/query, repository sync-tick, ordinary retry/no-op, corpus/shard read,
+hash, cache, worker, or child.
+
+Exact-tree gates passed: 20 deterministic V28/typed-nil repetitions (1.495s),
+complete T40.13 package (103.560s), full package race (113.820s), focused
+publication race, real-launcher custody proof (62.074s), readiness, every
+uncached `internal/` package including standalone `internal/store` (983.068s),
+and module/vet/lint/docs/glossary/shell/whitespace. One 233.93s complete
+readiness attempt was invalidated only when structural met host-native sampler
+`EPERM` after healthy startup; semantic and stale-worker passed, no PID/session
+survived, the diagnostic root remains retained at
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-403545186`,
+and the one bounded structural rerun passed in 194.515s. The inherited
+T30.6m/T32.3/T32.4 repository-aggregate fixture reds were not needlessly
+duplicated; the required internal/store bar is green. Recorded independent
+exact-commit review remains open. No integration, identifier, rerun,
+freeze, execution, release, T40.13/Epic-40 closure, topology/bound change, or
+scale/SLO claim is authorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

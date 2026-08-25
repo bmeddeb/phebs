@@ -450,13 +450,17 @@ func (runtime *Runtime) Reconcile(
 		if err := writeExclusiveCanonical(filepath.Join(staging, planName), domain); err != nil {
 			return "", err
 		}
-		if err := ensurePrivateDirectory(filepath.Join(staging, domainKey(domain.Plan.Domain))); err != nil {
+		resultDirectory := filepath.Join(staging, domainKey(domain.Plan.Domain))
+		if err := ensurePrivateDirectory(resultDirectory); err != nil {
 			return "", err
 		}
 		if err := writeExclusiveCanonical(
-			filepath.Join(staging, domainKey(domain.Plan.Domain), completionName()),
+			filepath.Join(resultDirectory, completionName()),
 			newCompletionControl(domain.Plan),
 		); err != nil {
+			return "", err
+		}
+		if err := syncDirectory(resultDirectory); err != nil {
 			return "", err
 		}
 	}

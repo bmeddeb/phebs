@@ -219,8 +219,28 @@ schedule reads are now stated separately from nonzero enqueue. An extra
 uncached repository run was baseline-red only on inherited
 T30.6m/T32.3/T32.4 retained-artifact assertions reproduced unchanged at the
 base commit; no T40.13n or `internal/` package failed. The original T40.13 gate
-remains open pending integration, exact-main preflight, and separate freeze and
-execution authorizations; Epic 40
+then advanced through one integrated exact-main ceremony:
+`t40r1-neutral-37` stopped after 317.565 minutes at
+`interruption/partial_verification`, after its selected lease proved `requeued`,
+and completed exact clean teardown. Its controlling signed attribution is
+`recovery/direct_recovery_failed/p6_investigation/substantiated`; V27 cannot
+identify the retained owner/kind or distinguish timeout from scanner failure.
+T40.13o's typed-nil accounting guard, marker commit-point correction, bounded
+startup retirement plus policy-preserving extraction-stage lifecycle, and V28
+retained-partial owner/kind evidence are implemented. Exact-tree targeted,
+package, race, real-launcher, readiness, complete `internal/`, standalone
+`internal/store`, module, vet, lint, docs, glossary, shell, and whitespace gates
+passed; independent exact-commit review remains pending. One complete readiness
+attempt was invalidated only by host-native sampler `EPERM` after healthy
+structural startup; no process survived, its diagnostic root is retained, and
+the one bounded structural rerun passed. Startup deletes no stage and inventories
+at most 4,096 regular plus 4,096 sparse repositories; either startup or one
+lifecycle turn accepts at most 20,000 direct entries from one selected
+repository directory plus one overflow sentinel. Scheduled lifecycle alone
+applies the 24-hour/newest-two promotion policy and drains collecting residue.
+The original T40.13 gate remains open; integration, exact-main
+preflight, fresh-ID selection, freeze, and execution remain separately
+authorized. Epic 40
 targets
 bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services
