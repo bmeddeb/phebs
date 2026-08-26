@@ -5661,3 +5661,26 @@ authority, caches, memory, and children are unchanged. Require focused
 package/race, documentation, and independent review before deciding on one
 small phase-6 rehearsal. This ticket does not authorize a merge, fresh freeze,
 ceremony execution, release, Epic closure, or scale/SLO claim.
+
+Exact gate result (2026-08-26): implementation commit
+`0e5eba0109e632b9a1bd8f24c9f876aca5146e68` passed affected-package normal and
+race tests, focused harness race, 20 focused repetitions, vet, documentation,
+glossary, whitespace, and independent working-tree review after its one low
+cost-wording correction. The exact-clean command
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^semantic$' \
+  -count=1 -v -timeout=35m
+```
+
+passed. The phase-6 first and restart meters were 8,889 and 6,961 ms; the final
+data gauges were 219,816,960 logical and 220,921,856 allocated bytes. The
+interruption boundary and partial-state-clear oracle passed, followed by live
+backup/offline restore and restored lifecycle/query verification. The semantic
+subtest took 295.38s and the whole command including private tool builds took
+456.36s for the top-level rehearsal test; the package command completed in
+456.991s. Success removed its temporary workspace and no matching process
+remains. This closes only the T40.13s focused gate. Before any new full
+ceremony, review and run the phase-7 stale-worker boundary independently; do
+not touch retained neutral-40 custody.

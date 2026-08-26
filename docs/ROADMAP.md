@@ -2251,6 +2251,18 @@ one small phase-6 rehearsal. Do not re-execute or purge neutral-40 custody, and
 do not merge, freeze a fresh identifier, execute another ceremony, advance
 Epic 41, or claim scale/SLO evidence from this stop.
 
+Exact implementation commit `0e5eba0109e632b9a1bd8f24c9f876aca5146e68`
+then passed the affected normal/race, repeated focused, vet, documentation,
+glossary, and whitespace gates. Its exact-clean real-binary semantic rehearsal
+passed the phase-6 interruption/restart and partial-state-clear boundary in a
+295.38s subtest; the top-level rehearsal test took 456.36s and the package
+command completed in 456.991s. Backup/restore and restored lifecycle/query
+verification also passed, successful cleanup removed the temporary workspace,
+and no matching process remains. T40.13s is ready for the explicitly requested
+fast-forward integration. This focused result establishes no phase 7–11,
+full-ceremony, release, Epic-closure, or scale/SLO claim; review the phase-7
+stale-worker boundary separately before another full ceremony.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

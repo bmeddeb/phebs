@@ -424,6 +424,19 @@ embedded, fixture, or harness input changed. All three readiness legs are now
 green for the exact implementation bytes, no rehearsal process or port-65499
 listener survives, and fresh exact-HEAD documentation re-review remains the
 final branch-close check.
+The integrated `t40r1-neutral-40` ceremony then stopped honestly in phase 6
+with retained `observation_publication` / `stage_directory` custody. T40.13s
+fixes the exact same-generation live-stage residue and the V29/V30
+retained-partial sealing rejection. Exact implementation commit
+`0e5eba0109e632b9a1bd8f24c9f876aca5146e68` passed its affected normal/race,
+focused repeated, vet, documentation, glossary, and whitespace gates. Its
+exact-clean real-binary semantic rehearsal passed phase-6 interruption/restart,
+partial-state clearance, backup/restore, restored lifecycle, and authorized
+query in 295.38s of subtest time and 456.36s total including private tool
+builds for the top-level rehearsal test; the package command completed in
+456.991s. Successful cleanup removed the temporary workspace and no matching
+process remains. Phases 7–11 and a full ceremony remain unestablished and must
+be reviewed independently before a fresh freeze.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

@@ -3963,3 +3963,23 @@ legs are green for exact implementation commit
 port-65499 listener survives. Fresh exact-HEAD documentation re-review remains
 the final branch-close check, and all integration/freeze/execution boundaries
 remain unchanged.
+
+## T40.13s neutral-40 phase-6 recovery
+
+Neutral-40 stopped honestly at phase-6 partial verification with retained
+`observation_publication` / `stage_directory` custody. Exact implementation
+commit `0e5eba0109e632b9a1bd8f24c9f876aca5146e68` retires an exactly validated
+same-generation stage through the existing collecting lifecycle after durable
+root/marker completion and admits V28 retained-partial attribution in later
+frozen versions. V1–V27 remain exact.
+
+Affected normal/race, focused repeated, vet, documentation, glossary, and
+whitespace gates pass. The exact-clean real-binary semantic rehearsal passed
+the phase-6 interruption/restart and partial-state-clear boundary: first and
+restart meters were 8,889/6,961 ms, final data gauges were 219,816,960 logical
+and 220,921,856 allocated bytes, the semantic subtest took 295.38s, and the
+top-level rehearsal test including tool builds took 456.36s; the package
+command completed in 456.991s. Backup/restore, restored lifecycle, and
+authorized query also passed. Successful cleanup removed the temporary
+workspace and no matching process remains. This is focused readiness, not a
+phase 7–11, full-ceremony, release, Epic-closure, or scale/SLO result.

@@ -2276,6 +2276,22 @@ Retained neutral-40 custody must not be re-executed or purged without separate
 review; no merge, fresh-ID freeze, execution, release, Epic closure, or
 scale/SLO claim follows.
 
+Gate status (2026-08-26): exact implementation commit
+`0e5eba0109e632b9a1bd8f24c9f876aca5146e68` passed both affected packages,
+the complete observation-publication race package, focused harness race, 20
+focused repetitions, vet, documentation, glossary, and whitespace. Independent
+working-tree review found critical/high/medium 0 and one low cost-wording gap;
+the committed tree includes that correction. The opt-in real-binary semantic
+rehearsal then passed on the exact clean commit: phase-6 first/restart meters
+were 8,889/6,961 ms with 219,816,960 logical and 220,921,856 allocated bytes;
+the interruption boundary, partial-state clear, backup/restore, restored
+lifecycle, and authorized query all passed. The semantic subtest took 295.38s
+and the top-level rehearsal test including private tool builds took 456.36s;
+the package command completed in 456.991s. Its temporary workspace was removed
+and no matching process remains. T40.13s is eligible for the separately
+authorized fast-forward merge; phases 7–11, a new freeze, full ceremony,
+release, Epic closure, and scale/SLO evidence remain unestablished.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
