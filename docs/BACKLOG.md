@@ -2208,6 +2208,18 @@ for this epic.
   service count, target SLO, accuracy, release, or P6 claim. Epic 42 composes
   both dimensions.
 
+**T41.1R1 · SCIP typed-range toolchain compatibility prerequisite** — migrate
+the six current synthetic occurrence producers reported by the upgraded SCIP
+bindings from deprecated repeated-int ranges to SCIP's typed range oneof.
+Keep deliberate legacy-read fixtures unchanged and do not re-author retained
+indexes, bundles, receipts, or evidence. AC: exact source coordinates and
+reader results remain unchanged; current producers contain no lint-visible
+deprecated range assignment; focused code-navigation, extraction, T20.1, and
+T22.1 tests pass; repository lint and documentation gates pass; production
+steady-state cost is zero; independent review and full merge bar. This repair
+may integrate as toolchain maintenance before Epic 40 closes but does not
+advance T41.1 or Epic 41.
+
 **T41.1 · Production-aligned 10,000-service profiles and cap decision** — add
 new `t411-service-load-profile-v1` accepted-only 8,000-, 10,000-, and
 12,500-service profiles using typed-requires-supporting and fan-out 20, plus a

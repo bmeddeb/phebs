@@ -959,12 +959,12 @@ func use(v *shared.Item) {
 	// the getter rows built by makeIndex.
 	field := fieldSymbol(dependencyVersion, goName)
 	index.Documents[0].Occurrences = append(index.Documents[0].Occurrences, &scip.Occurrence{
-		Range:       rangeFor(t, generated, goName, 0, scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart),
+		TypedRange:  scip.NewRangeUnchecked(rangeFor(t, generated, goName, 0, scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart)).AsTypedRange(),
 		Symbol:      field,
 		SymbolRoles: int32(scip.SymbolRole_Definition | scip.SymbolRole_Generated),
 	})
 	index.Documents[1].Occurrences = append(index.Documents[1].Occurrences, &scip.Occurrence{
-		Range:       rangeFor(t, consumer, goName, 1, scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart),
+		TypedRange:  scip.NewRangeUnchecked(rangeFor(t, consumer, goName, 1, scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart)).AsTypedRange(),
 		Symbol:      field,
 		SymbolRoles: int32(scip.SymbolRole_WriteAccess),
 	})

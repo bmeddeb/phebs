@@ -117,7 +117,7 @@ func documentContent(path string, content []byte, occurrences []indexedOccurrenc
 	}
 	for _, occurrence := range occurrences {
 		out.Occurrences = append(out.Occurrences, &scip.Occurrence{
-			Range:       sourceRange(string(content), occurrence.needle, occurrence.occurrence),
+			TypedRange:  scip.NewRangeUnchecked(sourceRange(string(content), occurrence.needle, occurrence.occurrence)).AsTypedRange(),
 			Symbol:      occurrence.symbol,
 			SymbolRoles: int32(occurrence.roles),
 		})

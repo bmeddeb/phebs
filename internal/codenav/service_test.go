@@ -577,7 +577,8 @@ func TestReferencesAreDeterministicallyBounded(t *testing.T) {
 		doc.Occurrences = make([]*scip.Occurrence, 0, referenceCount)
 		for i := int32(referenceCount - 1); i >= 0; i-- {
 			doc.Occurrences = append(doc.Occurrences, &scip.Occurrence{
-				Range: []int32{1, i, i + 1}, Symbol: symbol,
+				TypedRange: scip.NewRangeUnchecked([]int32{1, i, i + 1}).AsTypedRange(),
+				Symbol:     symbol,
 			})
 		}
 	}
