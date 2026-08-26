@@ -96,6 +96,23 @@ func Open(ctx context.Context, endpoint, user, pass, namespace, database string)
 	if err != nil {
 		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
 	}
+	return openConnected(ctx, db, user, pass, namespace, database)
+}
+
+func openConnected(
+	ctx context.Context,
+	db *surrealdb.DB,
+	user, pass, namespace, database string,
+) (_ *Surreal, retErr error) {
+	failed := true
+	defer func() {
+		if !failed {
+			return
+		}
+		if err := db.Close(ctx); err != nil {
+			retErr = errors.Join(retErr, fmt.Errorf("close store connection: %w", err))
+		}
+	}()
 	if _, err := db.SignIn(ctx, surrealdb.Auth{Username: user, Password: pass}); err != nil {
 		return nil, fmt.Errorf("signin: %w", err)
 	}
@@ -106,6 +123,7 @@ func Open(ctx context.Context, endpoint, user, pass, namespace, database string)
 	if err := s.applySchema(ctx); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
+	failed = false
 	return s, nil
 }
 
