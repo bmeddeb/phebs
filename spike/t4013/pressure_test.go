@@ -167,3 +167,32 @@ func TestRequiredPressureBallastHonorsBothFrozenAllocationBounds(t *testing.T) {
 		})
 	}
 }
+
+func TestPressureRehearsalRequiresBoundedNormalFilesystem(t *testing.T) {
+	tests := []struct {
+		name     string
+		capacity lifecycle.Capacity
+		wantErr  bool
+	}{
+		{name: "bounded normal", capacity: lifecycle.Capacity{
+			TotalBytes: maximumPressureRehearsalFilesystemBytes,
+			Pressure:   lifecycle.PressureNormal,
+		}},
+		{name: "host filesystem", capacity: lifecycle.Capacity{
+			TotalBytes: maximumPressureRehearsalFilesystemBytes + 1,
+			Pressure:   lifecycle.PressureNormal,
+		}, wantErr: true},
+		{name: "already pressured", capacity: lifecycle.Capacity{
+			TotalBytes: maximumPressureRehearsalFilesystemBytes,
+			Pressure:   lifecycle.PressureCollect,
+		}, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validatePressureRehearsalCapacity(test.capacity)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("error = %v; wantErr %t", err, test.wantErr)
+			}
+		})
+	}
+}

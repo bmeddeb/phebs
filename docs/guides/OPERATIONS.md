@@ -5684,3 +5684,46 @@ subtest took 295.38s and the whole command including private tool builds took
 remains. This closes only the T40.13s focused gate. Before any new full
 ceremony, review and run the phase-7 stale-worker boundary independently; do
 not touch retained neutral-40 custody.
+
+### Focused T40.13 Phase-8 pressure rehearsal
+
+Human Phase 8 is `pressure` (`phaseOrder[7]`). There was no existing focused
+production-path selector: the ordinary `structural` readiness leg skips
+pressure and continues to archive/restore. Use only the bounded wrapper:
+
+```sh
+./spike/t4013/run-phase8-pressure-rehearsal.sh
+```
+
+The wrapper permits one run at a time, requires at least 32 GiB available on
+the `/private/tmp` backing filesystem, and mounts a Spotlight-disabled 16-GiB
+APFS sparse image as the test's `TMPDIR`. The test refuses any larger or
+already-pressured guest filesystem both before profile authoring and
+immediately before ballast; its test-only allocation envelope is also capped
+at 16 GiB. Do not invoke the underlying selector with host `TMPDIR`: at the
+2026-08-26 host capacity it would otherwise request about 57 GiB of real
+ballast.
+
+The rehearsal reaches structural A→B→A-return and calls the production
+pressure coordinator. Pass requires
+`structural pressure collect/recovery boundary passed`, followed by `PASS`.
+Success proves real APFS `collect` entry, the pressure restart, all production
+lifecycle owners, unchanged protected authority, checked ballast removal, a
+fresh coherent V30 normal cycle with final exact-normal capacity, complete
+metering, and shutdown. It does not prove the two-million-owner corpus,
+root-volume ballast scale, Phase 1–7 handoff, signed custody/evidence, or later
+phases.
+
+Success non-forcibly detaches and deletes the sparse image. Failure attempts a
+non-forced detach and retains the image; if detach fails, it reports and leaves
+the unique mount and exclusive lock intact. That retained image contains private logs,
+credentials, and synthetic source. Do not share, delete, or rerun against it
+before review. Hard death may leave
+`/private/tmp/phebs-t4013-phase8.lock`; prove the wrapper and all rehearsal
+processes absent before removing it. Because the rehearsal builds the working
+tree, repeat it unchanged on an immutable clean commit before using the pass as
+candidate evidence.
+
+The 2026-08-26 audit found about 142.4 GiB free against an approximately
+168.7-GiB V25 projected minimum before operating margin. Even a focused Phase-8
+pass leaves the next full ceremony disk-blocked until that projection passes.

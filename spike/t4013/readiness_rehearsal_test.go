@@ -16,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -25,6 +26,9 @@ import (
 
 const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
 const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
+const pressureRehearsalEnvironment = "PHEBS_T4013_PRESSURE_REHEARSAL"
+
+const maximumPressureRehearsalFilesystemBytes int64 = 16 << 30
 
 func retainFailedDiagnosticWorkspace(t *testing.T, workspace string) {
 	t.Helper()
@@ -506,6 +510,129 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 	t.Run("semantic-stale-worker", func(t *testing.T) {
 		rehearseSemanticStaleWorkerBoundary(t, ctx, moduleRoot, workspace, toolchain)
 	})
+	t.Run("structural-pressure", func(t *testing.T) {
+		if os.Getenv(pressureRehearsalEnvironment) != "1" {
+			t.Skip("set " + pressureRehearsalEnvironment + "=1 to run the real pressure rehearsal")
+		}
+		rehearseStructuralPressureBoundary(t, ctx, moduleRoot, workspace, toolchain)
+	})
+}
+
+func rehearseStructuralPressureBoundary(
+	t *testing.T,
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	toolchain privateToolchain,
+) {
+	t.Helper()
+	capacity, err := lifecycle.NewGate(workspace).Check(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePressureRehearsalCapacity(capacity); err != nil {
+		t.Fatal(err)
+	}
+
+	profile, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "structural", "structural-pressure",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-pressure-cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var run *execution
+	complete := false
+	defer func() {
+		if complete {
+			return
+		}
+		var runStopErr error
+		if run != nil {
+			runStopErr = run.stopServers()
+			for active := range run.activeMeters {
+				if _, err := run.finishMeter(active, nil); err != nil {
+					t.Errorf("finish pressure diagnostic meter; retained at %s: %v", workspace, err)
+				}
+			}
+		}
+		if err := errors.Join(server.stop(30*time.Second), runStopErr); err != nil {
+			t.Errorf("stop pressure diagnostic; retained at %s: %v", workspace, err)
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(
+		ctx, server, profile, "rehearsal-pressure-cold", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	a := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["b"], true); err != nil {
+		t.Fatal(err)
+	}
+	b := awaitReadinessSnapshot(t, ctx, profile, "b", 12*time.Minute)
+	if changedSourceMembers(a, b) != 1 {
+		t.Fatal("pressure rehearsal B changed other than one source partition")
+	}
+	if err := updateSourceRevision(ctx, profile.Repository, profile.Revisions["a-return"], true); err != nil {
+		t.Fatal(err)
+	}
+	aReturn := awaitReadinessSnapshot(t, ctx, profile, "a-return", 12*time.Minute)
+	if changedSourceMembers(b, aReturn) != 1 ||
+		!equalStringSlices(a.SourceMemberDigests, aReturn.SourceMemberDigests) {
+		t.Fatal("pressure rehearsal A return did not reproduce the frozen source partitions")
+	}
+	capacity, err = lifecycle.NewGate(workspace).Check(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePressureRehearsalCapacity(capacity); err != nil {
+		t.Fatal(err)
+	}
+
+	safety := frozenSafetyV25
+	safety.MaximumPrePressureBytes = maximumPressureRehearsalFilesystemBytes
+	safety.MaximumDataAllocatedBytes = maximumPressureRehearsalFilesystemBytes
+	safety.MaximumPressureBallastBytes = maximumPressureRehearsalFilesystemBytes
+	plan := Plan{Schema: PlanSchemaV30, Safety: safety}
+	run = &execution{
+		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
+		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
+		structural:  server,
+		structAR:    aReturn,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(7)
+	if err := run.pressure(); err != nil {
+		t.Fatal(err)
+	}
+	phase := run.observation.Phases[7]
+	if phase.Name != "pressure" || phase.Outcome != "succeeded" || !phase.OracleExact {
+		t.Fatalf("pressure phase observation = %+v", phase)
+	}
+	if _, err := os.Lstat(filepath.Join(workspace, pressureBallastName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pressure rehearsal ballast survived success: %v", err)
+	}
+	if err := errors.Join(server.stop(30*time.Second), run.stopServers()); err != nil {
+		t.Fatal(err)
+	}
+	complete = true
+	t.Log("structural pressure collect/recovery boundary passed")
+}
+
+func validatePressureRehearsalCapacity(capacity lifecycle.Capacity) error {
+	if capacity.TotalBytes > maximumPressureRehearsalFilesystemBytes {
+		return fmt.Errorf(
+			"pressure rehearsal filesystem bytes = %d; want at most %d on a dedicated bounded filesystem",
+			capacity.TotalBytes, maximumPressureRehearsalFilesystemBytes,
+		)
+	}
+	if capacity.Pressure != lifecycle.PressureNormal {
+		return fmt.Errorf("pressure rehearsal starting capacity = %s; want normal", capacity.Pressure)
+	}
+	return nil
 }
 
 func buildWorkingTreeToolchain(

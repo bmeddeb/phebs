@@ -3983,3 +3983,46 @@ command completed in 456.991s. Backup/restore, restored lifecycle, and
 authorized query also passed. Successful cleanup removed the temporary
 workspace and no matching process remains. This is focused readiness, not a
 phase 7–11, full-ceremony, release, Epic-closure, or scale/SLO result.
+
+## Focused Phase-8 pressure rehearsal
+
+Human Phase 8 is `pressure` (`phaseOrder[7]`). The earlier `structural`
+readiness leg skips it and proceeds to backup/restore, so that leg is not
+pressure evidence. The separately opt-in `structural-pressure` leg reaches the
+small structural A→B→A-return boundary and then calls the production
+`execution.pressure()` coordinator. It requires a real `collect` lifecycle
+cycle, unchanged protected authority, verified ballast removal, a fresh
+coherent V30 normal owner cycle with final exact-normal capacity, unchanged
+recovered authority, complete metering, and proven server shutdown.
+
+Never run this selector with `TMPDIR` on the host data volume: at the current
+host capacity the production target would allocate about 57 GiB. The supported
+wrapper admits one run at a time, requires at least 32 GiB available on the
+backing `/private/tmp` filesystem, creates a dedicated 16-GiB APFS sparse
+image, and gives the test a separate 16-GiB allocation ceiling. The Go test
+refuses a larger or already-pressured filesystem before profile authoring and
+again immediately before ballast:
+
+```sh
+./spike/t4013/run-phase8-pressure-rehearsal.sh
+```
+
+Success detaches and deletes the image and includes
+`structural pressure collect/recovery boundary passed`. Failure attempts a
+non-forced detach and retains the sparse image; a detach failure reports and
+retains the mount, image, and exclusive lock. The retained image contains private logs,
+credentials, and synthetic authored source, so do not rerun blindly, share it,
+or delete it before review. A hard-dead wrapper may also leave the exclusive
+`/private/tmp/phebs-t4013-phase8.lock`; prove process absence before removing
+that lock. The bounded rehearsal exercises real APFS allocation and all
+production lifecycle owners, but it does not prove the two-million-owner
+accumulated state, root-volume ballast scale, Phase 1–7 handoff, signed ceremony
+custody/evidence, or any later phase. It intentionally builds the working tree;
+an immutable clean commit and unchanged exact-commit rerun are required before
+carrying the result into candidate readiness.
+
+The 2026-08-26 host audit found about 142.4 GiB available while the V25
+pre-pressure projection requires about 168.7 GiB before operating margin. A
+focused pass therefore does not make the current host ready for another full
+ceremony; recheck and free at least the remaining projected deficit before any
+freeze.
