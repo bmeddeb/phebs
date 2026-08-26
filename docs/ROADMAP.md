@@ -2214,6 +2214,20 @@ exact-commit readiness rehearsal. Integration, exact-main preflight,
 identifier selection, freeze, execution, release, Epic closure, and scale/SLO
 claims remain unauthorized.
 
+Exact implementation commit `9bee810cd692d831993ff2e4784fb067f628b768`
+subsequently passed the focused native/custody repetitions, changed-package
+normal/race gates, module verification, vet, pinned lint, documentation,
+glossary, shell, and whitespace and received independent review with all
+severity counts zero. Its unsandboxed host-clean structural readiness rehearsal
+passed in 373.567s with exact teardown. The serial `internal/...` run reached
+the default ten-minute package alarm while `internal/store` opened a fresh
+engine, but every completed package was green; the unchanged exact standalone
+full `internal/store` package passed under its 30-minute allowance in 993.780s.
+No SurrealDB child or port-65499 listener survives. T40.13r's review, readiness,
+and full-store blockers are closed, making the source-identical branch eligible
+for a separate integration request. No merge, exact-main preflight, identifier
+selection, freeze, or execution is authorized by this record.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

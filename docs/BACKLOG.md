@@ -2215,6 +2215,21 @@ substitute for review or readiness of this changed tree. No identifier, merge,
 exact-main preflight, freeze, execution, release, Epic closure, or scale/SLO
 claim follows.
 
+Gate status (2026-08-26): exact implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768` passed focused native/custody
+repetitions, changed-package normal/race, module, vet, pinned lint,
+documentation, glossary, shell, and whitespace gates. Independent exact-commit
+review reported critical/high/medium/low all zero. The unsandboxed host-clean
+structural rehearsal passed in 373.567s and completed exact teardown. The
+serial `internal/...` command reached the default ten-minute package alarm
+while `internal/store` opened a fresh engine, with every completed package
+green; the exact standalone full `internal/store` package then passed under
+its 30-minute allowance in 993.780s. No SurrealDB child or port-65499 listener
+survives. The T40.13r review, readiness, and full-store blockers are closed and
+the source-identical branch is eligible for a separate integration request;
+merge, exact-main preflight, identifier selection, freeze, execution, release,
+Epic closure, and scale/SLO claims remain unauthorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

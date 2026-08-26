@@ -3936,3 +3936,18 @@ static/documentation checks, a fresh immutable commit and independent review,
 then one host-clean exact-commit readiness rehearsal. It selects no identifier
 and authorizes no merge, exact-main preflight, freeze, execution, release,
 Epic closure, or scale/SLO claim.
+
+Exact gate result (2026-08-26): implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768` passed focused native/custody
+repetitions, changed-package normal/race, module verification, vet, pinned lint,
+documentation, glossary, shell, and whitespace. Independent exact-commit
+review reported critical/high/medium/low all zero. The unsandboxed host-clean
+structural rehearsal passed in 373.567s and completed exact teardown. The
+serial `internal/...` command reached the default ten-minute package alarm in
+fresh store initialization after every earlier completed package passed; the
+exact standalone full `internal/store` package then passed under its 30-minute
+allowance in 993.780s. No SurrealDB child or port-65499 listener survives. This
+closes T40.13r's review, readiness, and full-store blockers and makes the
+source-identical branch eligible for a separate integration request; it does
+not authorize merge, exact-main preflight, identifier selection, freeze,
+execution, release, Epic closure, or a scale/SLO claim.

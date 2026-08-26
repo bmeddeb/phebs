@@ -5608,3 +5608,16 @@ group departure, or confirmed zombie is omitted. A later serial exact-candidate
 normal/race and session-custody checks, static/documentation gates, a fresh
 independent exact-diff review, and one host-clean exact-commit readiness
 rehearsal. Do not select or freeze `t40r1-neutral-40` from this correction.
+
+Exact gate result (2026-08-26): implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768` passed focused native/custody,
+changed-package normal/race, static, and documentation gates and independent
+review with critical/high/medium/low all zero. One unsandboxed host-clean
+structural rehearsal crossed the former denied-descendant boundary and passed
+in 373.567s with exact clean teardown. The serial `internal/...` command hit
+the default ten-minute package alarm while the store package opened a fresh
+engine; every completed package passed, and the exact standalone full store
+package passed under `-timeout 30m` in 993.780s. No SurrealDB child or
+port-65499 listener remains. T40.13r is therefore eligible for an integration
+request, but operators must not infer authority to merge, run exact-main
+preflight, select an identifier, freeze, or execute a ceremony.

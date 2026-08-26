@@ -401,6 +401,20 @@ fail-closed ceremony sampler and V1-V30 evidence exact. Focused changed-path
 gates, an immutable commit, fresh independent review, and one host-clean
 exact-commit readiness rehearsal remain required before integration can be
 requested.
+Exact implementation commit `9bee810cd692d831993ff2e4784fb067f628b768`
+then passed the focused native/custody repetitions, changed-package normal and
+race gates, module verification, vet, pinned lint, documentation, glossary,
+shell, and whitespace gates and received independent review with
+critical/high/medium/low all zero. Its unsandboxed host-clean structural
+readiness rehearsal crossed the formerly denied startup boundary and passed in
+373.567s with exact clean teardown. The serial `internal/...` run reached the
+default ten-minute package alarm while `internal/store` was opening a fresh
+engine; every completed package passed, the exact standalone full
+`internal/store` package then passed under its 30-minute allowance in 993.780s,
+and no SurrealDB child or port-65499 listener survives. These close T40.13r's
+code-review, readiness, and full-store blockers and make the source-identical
+branch eligible for a separate integration request; they do not authorize a
+merge, exact-main preflight, identifier selection, freeze, or execution.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
