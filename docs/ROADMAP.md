@@ -2189,7 +2189,7 @@ structural `http_ready` before sticky Darwin root-sampler `EPERM`; semantic and
 stale-worker passed in the complete run. Root denial is not retried because a
 blind interval could omit a descendant lifetime. The full internal command also
 timed out in fresh store schema application after 1320.596s on the degraded
-host, while the exact isolated subtest passed in 11.349s and every completed
+run, while the exact isolated subtest passed in 11.349s and every completed
 package was green. No child survives. A later host-clean complete readiness and
 full internal/store pass are required before integration can be requested; no
 merge, exact-main preflight, identifier selection, freeze, or execution is

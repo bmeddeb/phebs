@@ -2158,8 +2158,8 @@ a later sample could omit a short-lived descendant during the blind interval.
 No process survives; diagnostic root
 `/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-1359799332`
 is retained. The exact full `internal/...` run also timed out in
-`internal/store` (1320.596s) during fresh `OpenLocal` schema application on the
-degraded host; the isolated exact subtest passed in 11.349s, all completed
+`internal/store` (1320.596s) during fresh `OpenLocal` schema application; the
+isolated exact subtest passed in 11.349s, all completed
 internal packages passed, and no SurrealDB child survives. A later host-clean
 complete readiness plus full internal/store run remains mandatory. No merge,
 exact-main preflight, identifier selection, freeze, execution, release,

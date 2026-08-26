@@ -383,7 +383,7 @@ same structural refusal, so no third attempt was made. Retrying a denied root
 could miss a short-lived descendant and remains forbidden. No rehearsal PID or
 session survives; the second diagnostic root is retained. The exact full
 `internal/...` command separately timed out in `internal/store` (1320.596s)
-while opening a fresh schema under a slow host; that exact isolated subtest then
+while opening a fresh schema; that exact isolated subtest then
 passed in 11.349s, every completed internal package passed, and no SurrealDB
 child survives. A later host-clean complete readiness and full internal/store
 pass are mandatory before integration can be requested.

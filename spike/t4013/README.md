@@ -3899,7 +3899,7 @@ its one bounded unchanged confirmation both reached healthy structural
 `http_ready` before sticky Darwin root-sampler `EPERM`; semantic 302.46s and
 stale-worker 31.04s passed in the complete run. Root denial remains fail-closed
 because retry could miss a descendant lifetime. The full internal command also
-timed out in store schema application at 1320.596s on the degraded host; the
+timed out in store schema application at 1320.596s; the
 isolated exact subtest passed in 11.349s and all completed packages were green.
 No process survives. A later host-clean complete readiness and full
 internal/store pass are mandatory before merge, exact-main preflight, fresh-ID
