@@ -816,13 +816,16 @@ catalog, relationship, or correctness authority.
   its merge bar is accepted, and it changes no production cap or registration.
 - T41.2 implements the runtime-dark pure v3 root and dual bounded
   service/placement member contract on top of T41.1. Exact v2 semantics and
-  mapped digests are preserved, expanded generations refuse v2 downgrade, and
-  complete validation proves the two views plus inherited prefix claims before
-  a keyed root-plus-one-member read is available. It adds no store schema,
+  mapped digests are preserved inside the selected v3 domain; an otherwise
+  valid v2 graph above 512 successors on one service refuses v3 admission so
+  T41.6/T41.7 retain their selected response/backend bound. Expanded
+  generations refuse v2 downgrade, and complete validation proves the two
+  views plus inherited prefix claims before a keyed root-plus-one-member read
+  is available. It adds no store schema,
   ingestion, census proof, lifecycle owner, activation, or runtime import;
   integration remains separate and T41.3 follows its merge bar. Its
-  independent-review corrections are committed and the rebased lineage owns a
-  fresh current-tree gate.
+  focused/race/vet/static/documentation closure and independent review are
+  complete; the rebased lineage owns a fresh current-tree gate.
 - T41.3 is the next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

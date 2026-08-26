@@ -24,8 +24,8 @@ const (
 	MaxMemberships    = 75_000
 	MaxDistinctPaths  = 40_000
 	MaxSuccessorEdges = 12_500
-	// V2 has no per-service cap; one service may own its aggregate edge budget.
-	MaxServiceSuccessors  = servicecatalog.MaxSuccessorEdges
+	// V3 narrows v2's aggregate-only posture to one per-service bound.
+	MaxServiceSuccessors  = 512
 	MaxClaimsPerPlacement = 4_000
 	MaxServicesPerMember  = 512
 	MaxPathsPerMember     = 2_048

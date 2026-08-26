@@ -10207,13 +10207,17 @@ ancestor lookup, service point reads, malformed inventory, cross-view drift,
 cycles, fan-out, unowned overlap, one-over services, expanded downgrade refusal,
 and the combined maximum service and compact maximum-claim placement shapes.
 
-The independent review correction widened only the per-service successor bound
-to v2's existing 4,000-edge aggregate ceiling, derives inherited preludes from
-the complete routed lexical interval, checks member collections before typed
-decode growth, accepts strict persisted and unpublished v2 envelopes, and
-reconstructs nonempty unowned state from its sole placement authority. Focused
-regressions cover the formerly missing later-path ancestor, a valid 513-edge v2
-record, persisted conversion, collection one-over inputs, and nonempty unowned
+The closure correction retains T41.1's selected 512-successor per-service v3
+bound and the separate 12,500-edge v3 aggregate consumed by T41.6/T41.7.
+Otherwise-valid v2 catalogs above 512 successors on one service now refuse v3
+conversion instead of widening that downstream contract; exact v2 digest and
+round-trip guarantees remain for the overlapping admitted domain. The earlier
+review correction still derives inherited preludes from the complete routed
+lexical interval, checks member collections before typed decode growth, accepts
+strict persisted and unpublished v2 envelopes, and reconstructs nonempty
+unowned state from its sole placement authority. Focused regressions cover the
+512 boundary, valid-v2 513 refusal, formerly missing later-path ancestor,
+persisted conversion, collection one-over inputs, and nonempty unowned
 round-trip.
 
 Production steady-state work is zero because no runtime package imports v3.
@@ -10228,8 +10232,6 @@ blocked on Epic 40 closure and the stacked T41.1 merge bar; no runtime
 selection, production cap, ceremony, scale/SLO, release, topology, migration,
 or decommission claim is authorized.
 
-The no-OCR non-runtime merge bar passed. The repository-wide test remains
-blocked outside T41.2 by T30.6m's retained 52-component allocation assertion
-after T40.7 added the 53rd component, T32.4's retained pre-preservation T32.3
-input digests, and one `internal/store` timeout while another store suite was
-active. Those repairs are separately owned prerequisites.
+The final T41.2 focused, race, vet, lint, documentation, glossary, module, and
+whitespace gates pass, and independent review has no unresolved T41.2 finding.
+The full repository/store suites were intentionally not rerun for this closure.

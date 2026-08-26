@@ -116,11 +116,11 @@ func TestPrefixPreludeCoversWholeRoutedRange(t *testing.T) {
 	}
 }
 
-func TestV2SuccessorParityAndPersistedConversion(t *testing.T) {
+func TestV2SuccessorBoundaryAndPersistedConversion(t *testing.T) {
 	authority := servicecatalog.Authority{Kind: servicecatalog.AuthorityCommitted, ID: "catalog", Version: strings.Repeat("b", 40)}
 	catalog := servicecatalog.Catalog{Schema: servicecatalog.Schema, Authority: authority}
 	owner := servicecatalog.Service{Key: "owner", DisplayName: "owner", Disposition: servicecatalog.DispositionRejected, Origin: servicecatalog.OriginBase, Reason: "renamed"}
-	for index := range 513 {
+	for index := range MaxServiceSuccessors {
 		key := fmt.Sprintf("target-%04d", index)
 		catalog.Services = append(catalog.Services, servicecatalog.Service{
 			Key: key, DisplayName: key, Disposition: servicecatalog.DispositionAccepted,
@@ -173,6 +173,70 @@ func TestV2SuccessorParityAndPersistedConversion(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+
+	overflow := catalog
+	overflow.Services = slices.Clone(catalog.Services)
+	overflow.Memberships = slices.Clone(catalog.Memberships)
+	overflowOwner := overflow.Services[len(overflow.Services)-1]
+	overflowOwner.Successors = append(slices.Clone(overflowOwner.Successors), "target-overflow")
+	overflow.Services[len(overflow.Services)-1] = overflowOwner
+	overflow.Services = append(overflow.Services, servicecatalog.Service{
+		Key: "target-overflow", DisplayName: "target overflow", Disposition: servicecatalog.DispositionAccepted,
+		Origin: servicecatalog.OriginBase,
+	})
+	overflow.Memberships = append(overflow.Memberships, servicecatalog.Membership{
+		ServiceKey: "target-overflow", Path: "target/overflow", Role: servicecatalog.RolePrimary,
+		Origin: servicecatalog.OriginBase,
+	})
+	overflowDigest, err := servicecatalog.Digest(overflow)
+	if err != nil {
+		t.Fatalf("v2 successor one-over validity = %v", err)
+	}
+	overflowCanonical, err := servicecatalog.Canonical(overflow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	overflowPublication := publication
+	overflowPublication.CatalogDigest = overflowDigest
+	overflowPublication.Canonical = overflowCanonical
+	overflowPublication.GenerationDigest, err = servicecatalog.PublicationGenerationDigest(overflowPublication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := FromV2(overflowPublication, overflow); !errors.Is(err, ErrLimit) {
+		t.Fatalf("valid v2 successor one-over conversion = %v", err)
+	}
+}
+
+func TestSuccessorAggregateBoundary(t *testing.T) {
+	catalog := acceptedCatalog(MaxServiceSuccessors, false)
+	targets := make([]string, len(catalog.Services))
+	for index, service := range catalog.Services {
+		targets[index] = service.Key
+	}
+	remaining := MaxSuccessorEdges
+	for index := 0; remaining > 0; index++ {
+		count := min(MaxServiceSuccessors, remaining)
+		key := fmt.Sprintf("owner-%02d", index)
+		catalog.Services = append(catalog.Services, servicecatalog.Service{
+			Key: key, DisplayName: key, Disposition: servicecatalog.DispositionRejected,
+			Origin: servicecatalog.OriginBase, Reason: "renamed", Successors: slices.Clone(targets[:count]),
+		})
+		remaining -= count
+	}
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil || generation.Root.Successors != MaxSuccessorEdges {
+		t.Fatalf("aggregate successor boundary = %d, %v", generation.Root.Successors, err)
+	}
+
+	overflow := catalog
+	overflow.Services = slices.Clone(catalog.Services)
+	owner := overflow.Services[len(overflow.Services)-1]
+	owner.Successors = append(slices.Clone(owner.Successors), targets[len(owner.Successors)])
+	overflow.Services[len(overflow.Services)-1] = owner
+	if _, err := Build(testBinding(overflow.Authority), overflow); !errors.Is(err, ErrLimit) {
+		t.Fatalf("aggregate successor one-over = %v", err)
 	}
 }
 
