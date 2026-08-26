@@ -2240,6 +2240,17 @@ port-65499 listener survives. A fresh exact-HEAD documentation re-review is the
 only remaining T40.13r branch-close check, with all merge and ceremony
 authorizations still separate.
 
+The integrated `t40r1-neutral-40` run then stopped honestly in phase 6 and
+retained custody for reviewed purge. Its closed attribution identifies an
+`observation_publication` `stage_directory`, not a scale result. T40.13s is the
+only next ticket: retire an exactly validated redundant same-generation
+`.stage-*` through the existing `collecting-stage-*` lifecycle and accept the
+V28 retained-partial schema in later frozen versions. Focused package/race,
+documentation, and independent review must pass before deciding whether to run
+one small phase-6 rehearsal. Do not re-execute or purge neutral-40 custody, and
+do not merge, freeze a fresh identifier, execute another ceremony, advance
+Epic 41, or claim scale/SLO evidence from this stop.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

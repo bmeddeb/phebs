@@ -206,6 +206,7 @@ func CompleteInventoryPublicationV2(
 	}
 	marker = confirmed
 	destination := inventoryGenerationDirectoryV2(root, repository, ref.GenerationDigest)
+	redundantStage := false
 	if _, err := os.Lstat(destination); errors.Is(err, os.ErrNotExist) {
 		if err := os.Rename(transition.Directory, destination); err != nil {
 			return InventoryPublicationRootV2{}, err
@@ -224,6 +225,7 @@ func CompleteInventoryPublicationV2(
 		if validateErr != nil || existing != ref {
 			return InventoryPublicationRootV2{}, errors.Join(validateErr, invalid("inventory v2 generation collision"))
 		}
+		redundantStage = transition.Directory != destination
 	}
 	next, err := prospectiveInventoryPublicationRootV2(marker, ref)
 	if err != nil {
@@ -237,6 +239,18 @@ func CompleteInventoryPublicationV2(
 	}
 	if err := syncDirectory(inventoryPublicationDirectoryV2(root, repository)); err != nil {
 		return InventoryPublicationRootV2{}, err
+	}
+	if redundantStage {
+		retired := filepath.Join(
+			inventoryPublicationDirectoryV2(root, repository),
+			"collecting-stage-"+transitionID,
+		)
+		if err := os.Rename(transition.Directory, retired); err != nil {
+			return InventoryPublicationRootV2{}, err
+		}
+		if err := syncDirectory(inventoryPublicationDirectoryV2(root, repository)); err != nil {
+			return InventoryPublicationRootV2{}, err
+		}
 	}
 	return next, nil
 }

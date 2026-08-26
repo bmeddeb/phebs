@@ -2242,6 +2242,40 @@ port-65499 listener survives. Fresh exact-HEAD documentation re-review remains
 the final T40.13r branch-close check; every authorization boundary above stays
 unchanged.
 
+**T40.13s · Same-generation observation-stage recovery and retained-partial sealing**
+*(high ceremony correctness · needs the retained neutral-40 stop)* — preserve
+`t40r1-neutral-40` as an honest phase-6 stop. Its retained custody identifies
+an `observation_publication` `stage_directory`; it establishes neither a scale
+pass nor a later-phase result. The production collision path validated an
+already-current immutable generation and advanced the same authority, but left
+the redundant `.stage-*` live. Separately, the V30 stopped-observation validator
+rejected the retained-partial fields that its V28 schema introduced.
+
+AC: after an exact same-generation collision validates, completion must first
+durably write the root, remove the marker, and sync the publication directory;
+it then same-parent-renames only the redundant stage to the existing
+`collecting-stage-*` lifecycle namespace and syncs again. A mismatched or
+invalid generation still refuses, recursive deletion remains outside the
+publication fence, and current/rollback authority is unchanged. Valid stopped
+retained-partial attribution is accepted for V28 and later while V1-V27 remain
+closed. Focused tests must prove the redundant live stage is gone, its retired
+directory is ordinary and non-symlink, V28/V29/V30 receipt round trips, and the
+historical V27 refusal.
+
+Steady-state cost: only a successful same-generation collision adds one
+same-filesystem rename, one publication-directory sync, and later bounded
+lifecycle deletion. When worker retry or startup recovery reaches that
+collision, the rename and sync extend its existing exclusive mutation-lock hold;
+they add no lock acquisition. New-generation publication, collision-free
+retry/recovery, ordinary no-op/reuse, query, sync tick, store/schema, authority
+reads, caches, corpus or shard reads, memory bounds, and child processes are
+unchanged. The harness change is one in-memory version comparison during
+stopped-observation validation. Focused package/race, documentation,
+whitespace, and independent review gates precede any small phase-6 rehearsal.
+Retained neutral-40 custody must not be re-executed or purged without separate
+review; no merge, fresh-ID freeze, execution, release, Epic closure, or
+scale/SLO claim follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

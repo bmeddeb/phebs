@@ -1177,6 +1177,7 @@ func stoppedV28RetainedPartialObservation(plan Plan, owner, kind string) Observa
 		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
 	}
 	value.Checks = frozenChecks(false)
+	value.Collection = nil
 	value.Interruption.LastSubstage = "partial_verification"
 	value.Interruption.RetainedPartialOwner = owner
 	value.Interruption.RetainedPartialKind = kind
@@ -1238,6 +1239,45 @@ func TestV28RetainedPartialAttributionIsClosedAndRoundTrips(t *testing.T) {
 			mutate(&forged)
 			if err := validateInterruptionObservation(forged); err == nil {
 				t.Fatal("forged retained partial attribution passed validation")
+			}
+		})
+	}
+}
+
+func TestV29AndV30RetainedPartialAttributionRoundTrips(t *testing.T) {
+	tests := []struct {
+		name  string
+		build func(string, []HostToolObservation) (Plan, error)
+	}{
+		{name: "v29", build: frozenV29PlanWithHostToolchain},
+		{name: "v30", build: frozenV30PlanWithHostToolchain},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := test.build(testSourceCommit, fakeHostToolchainV25())
+			if err != nil {
+				t.Fatal(err)
+			}
+			value := stoppedV28RetainedPartialObservation(
+				plan, retainedPartialObservation, retainedPartialStage,
+			)
+			planBytes, err := MarshalPlan(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			observationBytes, err := MarshalObservation(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			receipt, err := DecodeReceipt(receiptBytes, plan)
+			if err != nil || receipt.Interruption == nil ||
+				receipt.Interruption.RetainedPartialOwner != retainedPartialObservation ||
+				receipt.Interruption.RetainedPartialKind != retainedPartialStage {
+				t.Fatalf("retained partial receipt = %+v, %v", receipt.Interruption, err)
 			}
 		})
 	}

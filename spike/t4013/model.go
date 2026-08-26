@@ -1516,7 +1516,7 @@ func validateInterruptionObservation(value Observation) error {
 	if hasRetainedOwner != hasRetainedKind {
 		return errors.New("T40.13 retained partial attribution is incomplete")
 	}
-	if hasRetainedOwner && (version != 28 || value.Outcome != "stopped" ||
+	if hasRetainedOwner && (version < 28 || value.Outcome != "stopped" ||
 		interruption.LastSubstage != "partial_verification" ||
 		value.Phases[5].Name != "interruption" || value.Phases[5].Outcome != "failed" ||
 		!validRetainedPartialOwner(interruption.RetainedPartialOwner) ||

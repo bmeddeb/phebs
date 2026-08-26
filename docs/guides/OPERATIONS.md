@@ -3286,6 +3286,9 @@ transition; the lifecycle owner drains the retired bytes later rather than
 performing recursive deletion under the publication fence.
 Republishing the exact current generation returns the unchanged root, including
 its existing rollback floor; a same-generation reference mismatch refuses.
+After that exact collision is durably committed and its marker is cleared, the
+redundant live `.stage-*` is renamed to `collecting-stage-*`; the lifecycle
+owner drains it later, so successful completion leaves no live partial stage.
 
 ### Partitioned extraction execution
 
@@ -5632,3 +5635,29 @@ three legs are green for implementation commit
 port-65499 listener remains. Exact-HEAD documentation re-review is still
 required before requesting integration, and no merge or ceremony authority is
 implied.
+
+### T40.13s neutral-40 phase-6 recovery
+
+`t40r1-neutral-40` stopped honestly in phase 6. Keep its private custody for a
+separately reviewed purge and do not execute against it again. The retained
+closed attribution is `observation_publication` / `stage_directory`; this is
+not a scale pass and says nothing about phases 7–11.
+
+The production cause is the exact same-generation collision path described
+above: it validated the already-current immutable generation and completed the
+authority transition but left the redundant stage in the live `.stage-*`
+namespace. T40.13s moves that stage to the existing collecting namespace only
+after the root, marker removal, and first directory sync are durable, then
+syncs the rename. A mismatch still refuses and deletion remains lifecycle work.
+The companion harness correction accepts valid retained-partial attribution in
+V28 and later; V1–V27 remain unchanged and closed.
+
+Only that collision path adds one same-filesystem rename, one directory sync,
+and a later bounded lifecycle deletion. If worker retry or startup recovery
+reaches the collision, those two operations extend its existing exclusive
+mutation-lock hold without acquiring another lock. Ordinary new-generation
+publication, collision-free retry/recovery, reuse/no-op, query, sync, store,
+authority, caches, memory, and children are unchanged. Require focused
+package/race, documentation, and independent review before deciding on one
+small phase-6 rehearsal. This ticket does not authorize a merge, fresh freeze,
+ceremony execution, release, Epic closure, or scale/SLO claim.

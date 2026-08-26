@@ -215,6 +215,15 @@ func TestInventoryV2SameGenerationRetryPreservesRollbackFloor(t *testing.T) {
 		retried.Current != publicationB.Current || retried.Prior == nil || *retried.Prior != publicationA.Current {
 		t.Fatalf("same-generation retry = %+v, want %+v, %v", retried, publicationB, err)
 	}
+	if _, err := os.Lstat(retry.Directory); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("same-generation retry retained live stage: %v", err)
+	}
+	retired := filepath.Join(
+		filepath.Dir(retry.Directory), "collecting-stage-"+retry.TransitionID,
+	)
+	if info, err := os.Lstat(retired); err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("same-generation retry retirement = %v, %v", info, err)
+	}
 }
 
 func TestInventoryV2BeginReservesNamespaceAndCountsRetiredStages(t *testing.T) {
