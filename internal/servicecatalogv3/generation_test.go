@@ -196,6 +196,13 @@ func TestDecodeCanonicalPreflightsCollections(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("nesting depth", func(t *testing.T) {
+		raw := []byte(strings.Repeat("[", maxPreflightDepth+1) + "0" + strings.Repeat("]", maxPreflightDepth+1))
+		if err := preflightCollections(raw); !errors.Is(err, ErrLimit) {
+			t.Fatalf("decode error = %v", err)
+		}
+	})
 }
 
 func TestCompleteValidationRejectsInventoryPreludeAndCrossViewDrift(t *testing.T) {

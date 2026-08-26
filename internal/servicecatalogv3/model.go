@@ -33,6 +33,7 @@ const (
 	MaxMemberBytes        = 2 << 20
 	MaxLogicalBytes       = 16 << 20
 	MaxPublicationBytes   = 32 << 20
+	maxPreflightDepth     = 64
 )
 
 var (
@@ -256,7 +257,7 @@ func preflightCollections(raw []byte) error {
 		return limitf("member bytes")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
-	if err := preflightValue(decoder, ""); err != nil {
+	if err := preflightValue(decoder, "", 0); err != nil {
 		return err
 	}
 	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
@@ -265,7 +266,7 @@ func preflightCollections(raw []byte) error {
 	return nil
 }
 
-func preflightValue(decoder *json.Decoder, field string) error {
+func preflightValue(decoder *json.Decoder, field string, depth int) error {
 	token, err := decoder.Token()
 	if err != nil {
 		return err
@@ -274,6 +275,9 @@ func preflightValue(decoder *json.Decoder, field string) error {
 	if !ok {
 		return nil
 	}
+	if depth >= maxPreflightDepth {
+		return limitf("nesting depth")
+	}
 	switch delimiter {
 	case '{':
 		for decoder.More() {
@@ -281,7 +285,7 @@ func preflightValue(decoder *json.Decoder, field string) error {
 			if !ok {
 				return ErrInvalid
 			}
-			if err := preflightValue(decoder, name); err != nil {
+			if err := preflightValue(decoder, name, depth+1); err != nil {
 				return err
 			}
 		}
@@ -292,7 +296,7 @@ func preflightValue(decoder *json.Decoder, field string) error {
 			if bounded && count >= limit {
 				return limitf("collection %q", field)
 			}
-			if err := preflightValue(decoder, ""); err != nil {
+			if err := preflightValue(decoder, "", depth+1); err != nil {
 				return err
 			}
 			count++
