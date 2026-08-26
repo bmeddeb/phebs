@@ -2230,6 +2230,18 @@ the source-identical branch is eligible for a separate integration request;
 merge, exact-main preflight, identifier selection, freeze, execution, release,
 Epic closure, and scale/SLO claims remain unauthorized.
 
+Independent review of the first gate record found one medium preservation gap:
+the 373.567s structural leg alone was not the inherited complete-readiness
+suite. Without changing any built source, the remaining `semantic` and
+`semantic-stale-worker` legs then passed together in 390.868s. The prior
+structural result is preserved across the documentation-only commit because no
+compiled, embedded, fixture, or harness input changed. All three readiness
+legs are now green for implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768`, and no rehearsal process or
+port-65499 listener survives. Fresh exact-HEAD documentation re-review remains
+the final T40.13r branch-close check; every authorization boundary above stays
+unchanged.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

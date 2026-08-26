@@ -5621,3 +5621,14 @@ package passed under `-timeout 30m` in 993.780s. No SurrealDB child or
 port-65499 listener remains. T40.13r is therefore eligible for an integration
 request, but operators must not infer authority to merge, run exact-main
 preflight, select an identifier, freeze, or execute a ceremony.
+
+Complete-readiness correction: independent review correctly rejected treating
+the structural leg alone as the whole suite. The source-identical branch then
+passed `semantic` and `semantic-stale-worker` together in 390.868s. Preserve
+the earlier 373.567s structural result because the intervening commit changed
+documentation only and no compiled, embedded, fixture, or harness input. All
+three legs are green for implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768`; no rehearsal process or
+port-65499 listener remains. Exact-HEAD documentation re-review is still
+required before requesting integration, and no merge or ceremony authority is
+implied.

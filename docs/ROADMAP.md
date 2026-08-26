@@ -2228,6 +2228,18 @@ and full-store blockers are closed, making the source-identical branch eligible
 for a separate integration request. No merge, exact-main preflight, identifier
 selection, freeze, or execution is authorized by this record.
 
+Independent review selected one medium correction to that record: structural
+alone did not satisfy the inherited complete-readiness gate. The unchanged
+implementation then passed the remaining `semantic` and
+`semantic-stale-worker` legs together in 390.868s. The 373.567s structural
+result is preserved across the intervening documentation-only commit because
+no compiled, embedded, fixture, or harness input changed. All three readiness
+legs are green for exact implementation commit
+`9bee810cd692d831993ff2e4784fb067f628b768`; no rehearsal process or
+port-65499 listener survives. A fresh exact-HEAD documentation re-review is the
+only remaining T40.13r branch-close check, with all merge and ceremony
+authorizations still separate.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

@@ -415,6 +415,15 @@ and no SurrealDB child or port-65499 listener survives. These close T40.13r's
 code-review, readiness, and full-store blockers and make the source-identical
 branch eligible for a separate integration request; they do not authorize a
 merge, exact-main preflight, identifier selection, freeze, or execution.
+Independent review of that source-identical gate record found one medium
+preservation gap: structural alone did not comprise complete readiness. The
+remaining `semantic` and `semantic-stale-worker` legs then passed together in
+390.868s without changing any built source; the earlier 373.567s structural
+result is preserved across the documentation-only commit because no compiled,
+embedded, fixture, or harness input changed. All three readiness legs are now
+green for the exact implementation bytes, no rehearsal process or port-65499
+listener survives, and fresh exact-HEAD documentation re-review remains the
+final branch-close check.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
