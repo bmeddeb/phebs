@@ -2145,6 +2145,26 @@ pending. No merge, exact-main preflight, fresh-ID freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim has passed or
 been authorized.
 
+Final exact source commit `50df638ad065814f4a9ea75c4f7493a622df3de0`
+closes the cleanup-only safety-metric loss and passed independent review with
+critical/high/medium/low all zero. Complete package (106.392s), full race
+(134.820s), real-launcher custody (61.472s), command (19.006s), module,
+compile-only, vet, pinned lint, docs, glossary, shell, and whitespace gates are
+green. Readiness is not green: one complete run reached healthy structural
+`http_ready` and then retained a Darwin root-sampler `EPERM`, while semantic
+(302.46s) and stale-worker (31.04s) passed; one bounded unchanged confirmation
+reproduced the structural refusal. Root denial remains sticky because accepting
+a later sample could omit a short-lived descendant during the blind interval.
+No process survives; diagnostic root
+`/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t4013-readiness-1359799332`
+is retained. The exact full `internal/...` run also timed out in
+`internal/store` (1320.596s) during fresh `OpenLocal` schema application on the
+degraded host; the isolated exact subtest passed in 11.349s, all completed
+internal packages passed, and no SurrealDB child survives. A later host-clean
+complete readiness plus full internal/store run remains mandatory. No merge,
+exact-main preflight, identifier selection, freeze, execution, release,
+T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

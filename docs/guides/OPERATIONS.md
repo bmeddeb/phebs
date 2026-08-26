@@ -5560,3 +5560,18 @@ pass. Do not merge, run exact-main preflight, select or freeze a fresh
 identifier, or execute another ceremony until a new exact commit passes the
 complete gate and recorded independent review. No later authorization is
 established by this implementation record.
+
+Exact source commit `50df638ad065814f4a9ea75c4f7493a622df3de0`
+implements that cleanup-boundary correction and passed fresh independent review
+with critical/high/medium/low all zero. Its package/race, real-launcher,
+command, module/compile, vet, pinned lint, documentation, glossary, shell, and
+whitespace gates pass. It is not freeze-ready: the complete readiness run and
+one bounded unchanged confirmation both reached healthy structural `http_ready`
+before sticky Darwin root-sampler `EPERM`; the complete run's semantic and
+stale-worker legs passed. Do not retry or reconcile a denied root: an
+unobservable interval can hide a descendant lifetime. No rehearsal process
+survives. The exact full internal run separately timed out in fresh store
+schema application after 1320.596s; its exact isolated subtest passed in
+11.349s, but a later host-clean full internal/store pass is still required.
+Keep integration, exact-main preflight, identifier selection, freeze, and
+execution blocked until both host gates pass.

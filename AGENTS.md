@@ -370,6 +370,23 @@ unconditional phase-meter finish cleanup and removes the contradictory wording;
 focused normal/race and documentation checks pass. A new immutable commit,
 complete exact-tree gates, and independent review remain pending. Integration,
 exact-main preflight, freeze, and execution are not yet passed or authorized.
+Final exact source commit `50df638ad065814f4a9ea75c4f7493a622df3de0`
+closes the cleanup-only safety-metric loss and passed fresh independent review
+with critical/high/medium/low all zero. It passed the complete T40.13 package
+(106.392s), full race package (134.820s), real-launcher custody proof (61.472s),
+command package (19.006s), module verification/compilation, vet, pinned lint,
+documentation, glossary, shell, and whitespace gates. Readiness remains open:
+one complete rehearsal reached healthy structural `http_ready` and then retained
+the deliberately sticky Darwin root-sampler `EPERM`; semantic (302.46s) and
+stale-worker (31.04s) passed. One bounded unchanged confirmation reproduced the
+same structural refusal, so no third attempt was made. Retrying a denied root
+could miss a short-lived descendant and remains forbidden. No rehearsal PID or
+session survives; the second diagnostic root is retained. The exact full
+`internal/...` command separately timed out in `internal/store` (1320.596s)
+while opening a fresh schema under a slow host; that exact isolated subtest then
+passed in 11.349s, every completed internal package passed, and no SurrealDB
+child survives. A later host-clean complete readiness and full internal/store
+pass are mandatory before integration can be requested.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

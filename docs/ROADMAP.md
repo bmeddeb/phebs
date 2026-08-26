@@ -2179,6 +2179,22 @@ remain pending. Merge, exact-main preflight, fresh-ID freeze, execution,
 release, T40.13/Epic-40 closure, topology/bound changes, and scale/SLO claims
 remain unauthorized.
 
+Final exact source commit `50df638ad065814f4a9ea75c4f7493a622df3de0`
+closes the cleanup-only metric-retention finding and passed fresh independent
+review with all severity counts zero. Package/race, real-launcher, command,
+module/compile, vet, pinned lint, documentation, glossary, shell, and whitespace
+gates pass. The integration gate remains red on host evidence: a complete
+readiness run and its one bounded unchanged confirmation both reached healthy
+structural `http_ready` before sticky Darwin root-sampler `EPERM`; semantic and
+stale-worker passed in the complete run. Root denial is not retried because a
+blind interval could omit a descendant lifetime. The full internal command also
+timed out in fresh store schema application after 1320.596s on the degraded
+host, while the exact isolated subtest passed in 11.349s and every completed
+package was green. No child survives. A later host-clean complete readiness and
+full internal/store pass are required before integration can be requested; no
+merge, exact-main preflight, identifier selection, freeze, or execution is
+authorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
