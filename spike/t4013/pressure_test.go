@@ -2,9 +2,17 @@ package t4013
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/sourcepartition"
+	"github.com/bmeddeb/phebs/spike/t401"
 )
 
 func TestPressureTargetBytesSelectsReportedPercentMidpoint(t *testing.T) {
@@ -194,5 +202,102 @@ func TestPressureRehearsalRequiresBoundedNormalFilesystem(t *testing.T) {
 				t.Fatalf("error = %v; wantErr %t", err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestFrozenStructuralPressureRetirementFitsRecoveryDeadline(t *testing.T) {
+	profiles, err := t401.FrozenProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var structural t401.Profile
+	for _, profile := range profiles {
+		if profile.Name == t401.StructuralProfileName {
+			structural = profile
+			break
+		}
+	}
+	reuseClasses := int(structural.Shape.GoBlobReuseClasses)
+	if reuseClasses == 0 {
+		t.Fatal("frozen structural profile is missing")
+	}
+	minimumPlacementsPerBlob := int(structural.Aggregate.EligibleGoFiles / structural.Shape.GoBlobReuseClasses)
+	if 2*minimumPlacementsPerBlob <= sourcepartition.MaxPlacementsPerPartition {
+		t.Fatal("frozen structural shape no longer proves one source member per reuse class")
+	}
+
+	root := t.TempDir()
+	repository := strings.Repeat("a", 64)
+	generation := strings.Repeat("b", 64)
+	collecting := filepath.Join(root, repository, observationpublication.InventoryPublicationDirectoryV2, "collecting-"+generation)
+	sourceSegment := filepath.Join(collecting, observationpublication.InventoryPublicationSourceNameV2, "segment-00000")
+	inventorySegment := filepath.Join(collecting, observationpublication.InventoryPublicationInventoryNameV2, "segment-00000")
+	objects := filepath.Join(inventorySegment, "objects")
+	for _, directory := range []string{sourceSegment, objects} {
+		if err := os.MkdirAll(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(path string) {
+		t.Helper()
+		if err := os.WriteFile(path, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sourceDigest := strings.Repeat("c", 64)
+	write(filepath.Join(filepath.Dir(sourceSegment), "phebs-source-partitions-"+sourceDigest+".root.json"))
+	write(filepath.Join(sourceSegment, "phebs-source-partitions-"+sourceDigest+".manifest.json"))
+	write(filepath.Join(filepath.Dir(inventorySegment), observationpublication.InventoryRootNameV2))
+	write(filepath.Join(inventorySegment, "segment.json"))
+	for ordinal := 0; ordinal < reuseClasses; ordinal++ {
+		write(filepath.Join(sourceSegment, fmt.Sprintf("phebs-source-partitions-%016x-%016x.%05d.jsonl", 1, 2, ordinal)))
+		write(filepath.Join(inventorySegment, fmt.Sprintf("member-%05d.jsonl", ordinal)))
+	}
+	// Replay the retained revision-B topology: it adds one distinct observation
+	// while preserving 512 source members, making the larger retirement tree.
+	for ordinal := 0; ordinal < reuseClasses+1; ordinal++ {
+		write(filepath.Join(objects, fmt.Sprintf("%016x-%064x.json", ordinal, ordinal)))
+	}
+
+	cursor := ""
+	turns := 0
+	deleted := 0
+	for {
+		result, err := observationpublication.SweepInventoryLifecycleV2(
+			t.Context(), root, time.Now(), cursor, observationpublication.InventoryPinsV2{},
+			lifecycle.MaxCandidatesPerTick, lifecycle.MaxDeletesPerTick,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Deleted > lifecycle.MaxDeletesPerTick {
+			t.Fatalf("turn deleted %d entries, limit %d", result.Deleted, lifecycle.MaxDeletesPerTick)
+		}
+		turns++
+		deleted += result.Deleted
+		cursor = result.Cursor
+		if !result.More {
+			break
+		}
+		if turns > 128 {
+			t.Fatal("frozen structural retirement did not converge")
+		}
+	}
+
+	const (
+		recoveryDeadline       = 10 * time.Minute
+		minimumExecutionMargin = 4 * time.Minute
+	)
+	wantDeleted := 10 + 2*reuseClasses + (reuseClasses + 1)
+	wantTurns := (wantDeleted + lifecycle.MaxDeletesPerTick - 1) / lifecycle.MaxDeletesPerTick
+	if deleted != wantDeleted || turns != wantTurns {
+		t.Fatalf("retirement = %d entries in %d turns, want %d in %d", deleted, turns, wantDeleted, wantTurns)
+	}
+	// Allow worst owner alignment and two wholly fresh 14-owner cycles after
+	// deletion. The remainder of the fixed deadline funds bounded sweep work and
+	// the one-second status observer.
+	scheduled := time.Duration((turns+3)*len(expectedCollectionOwners)) * lifecycle.DefaultPressureRecoveryDelay
+	if scheduled > recoveryDeadline-minimumExecutionMargin {
+		t.Fatalf("scheduled recovery = %v, want at least %v execution margin", scheduled, minimumExecutionMargin)
 	}
 }

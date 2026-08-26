@@ -368,6 +368,75 @@ func TestControllerPersistsFairRotationAcrossRestartAndLocalizesFailure(t *testi
 	}
 }
 
+func TestRunnerBacklogDelayAcceleratesOnlyPressureRecovery(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		backlog  time.Duration
+		pressure bool
+		want     time.Duration
+	}{
+		{name: "ordinary backlog", backlog: DefaultBacklogDelay, want: DefaultBacklogDelay},
+		{name: "pressure recovery", backlog: DefaultBacklogDelay, pressure: true, want: DefaultPressureRecoveryDelay},
+		{name: "short configured retry", backlog: time.Millisecond, pressure: true, want: time.Millisecond},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := runnerBacklogDelay(test.backlog, test.pressure); got != test.want {
+				t.Fatalf("delay = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestRunnerUsesPressureRecoveryDelayUntilCleanCycle(t *testing.T) {
+	var calls []string
+	controller, err := NewController(newMemoryCursorStore(), recordingOwner{name: "owner", calls: &calls})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks := 0
+	gate := &Gate{dataDir: t.TempDir()}
+	gate.probe = func(context.Context, string) (Capacity, error) {
+		checks++
+		used := int64(700)
+		if checks == 1 {
+			used = 800
+		}
+		return Capacity{TotalBytes: 1_000, AvailableBytes: 1_000 - used, UsedBytes: used}, nil
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	results := make(chan OwnerResult, 4)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		Run(ctx, controller, gate, DefaultIdleInterval, DefaultBacklogDelay, func(result OwnerResult) {
+			results <- result
+		}, nil)
+	}()
+
+	deadline := time.NewTimer(4 * time.Second)
+	defer deadline.Stop()
+	for range 3 {
+		select {
+		case <-results:
+		case <-deadline.C:
+			t.Fatal("runner did not use the pressure-recovery delay")
+		}
+	}
+	select {
+	case result := <-results:
+		t.Fatalf("runner did not idle after the clean recovery cycle: %+v", result)
+	case <-time.After(500 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not stop after pressure recovery")
+	}
+}
+
 func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	store := newMemoryCursorStore()
 	store.values[rotationCursorKey] = "bravo"

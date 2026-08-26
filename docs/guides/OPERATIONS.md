@@ -2963,10 +2963,21 @@ turn through durable CAS cursors. A successful turn uses at most sixteen store
 queries including four cursor operations, 64 candidate rows, sixteen deleted
 rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
 Failure is local: the failed owner's cursor stays put while durable rotation
-gives the next owner a turn. Backlog and 80% pressure use the five-second
-cadence; a completed unpressured cycle returns to one hour. Destructive store
-turns share the index mutation lock, so online backup observes either before or
-after a sweep.
+gives the next owner a turn. Ordinary backlog, errors, and capacity retry use
+the five-second cadence; a completed unpressured cycle returns to one hour.
+While capacity is `collect`/`refuse`, or after pressure until the existing
+recovery latch proves a wholly exact-normal, error-free, drained cycle, the
+serial owner-turn delay is capped at 250 milliseconds. Destructive store turns
+share the index mutation lock, so online backup observes either before or after
+a sweep.
+
+The 250-millisecond value is a delay after the prior sweep finishes. It offers
+at most four owner-turn starts per second before sweep duration, not four
+completed turns. Each start performs the existing capacity gate check, timer
+allocation, and in-memory status update; the host probe uses two `Lstat` calls
+plus open, `fstat`, `fstatfs`, and close. These runner operations can occur at
+20x the former pressure cadence until recovery clears the latch. The separate
+per-owner limits above remain unchanged.
 
 Catalog collection transactionally protects current, every service desired or
 active catalog reference, and current plus two rollback generations. It scans
@@ -5494,9 +5505,13 @@ Independently, production idle recovery brackets the sorted cycle-start owner
 with exact-normal capacity observations and requires every result through the
 ensuing sorted cycle to be error-free and drained. Only that clean path costs at
 most 28 turns for the selected 14-owner inventory and at most 64 under the
-existing 32-owner controller bound. Any owner error/backlog or transient
-`PressureUnavailable`/other non-exact capacity removes the 28/64 bound and keeps
-the runner at five-second cadence.
+existing 32-owner controller bound. During `collect`/`refuse` and the latched
+recovery, those turns are separated by at most 250 milliseconds, so their
+scheduled delay is at most seven or sixteen seconds, respectively, plus sweep
+work. Any owner error/backlog or transient `PressureUnavailable`/other
+non-exact capacity removes the 28/64 bound and keeps the 250-millisecond cadence
+latched until a later clean cycle. A retry that has never observed pressure
+retains the ordinary five-second cadence.
 
 For phase 8, compare restored product content with the V30 comparator. Only
 `IndexedCommit`, `RelationshipGeneration`, and `RelationshipRootDigest` may
@@ -5527,10 +5542,11 @@ the pressure-recovery suffix-plus-full-cycle and the fail-closed capacity retry
 described above; healthy normal hourly cadence is unchanged. Ceremony phase 9
 adds one restart, existing status polling, and fixed validation of 14 rows; it
 makes no 28/64 turn claim and remains governed by the fixed phase deadline.
-Truthful `durable-jobs` backlog does not block either V30 lifecycle waiter; an
-owner error or backlog in one of the 13 required drained rows keeps owner
-progression at five-second cadence until the deadline. Row validation is 13
-exact/drained predicates plus one durable-job lower-bound predicate. Warm
+Truthful `durable-jobs` backlog does not block either V30 lifecycle waiter. In
+the pressure-recovery waiter, an error/backlog keeps the 250-millisecond latch;
+the later unpressured phase-9 restart retains ordinary five-second progression.
+Row validation is 13 exact/drained predicates plus one durable-job lower-bound
+predicate. Warm
 restart adds incremental phase-local candidate/job lifecycle parsing,
 exact-authority reinspection per attempt, one
 existing five-second quiet interval, one finished-metrics startup refresh
@@ -5727,3 +5743,18 @@ candidate evidence.
 The 2026-08-26 audit found about 142.4 GiB free against an approximately
 168.7-GiB V25 projected minimum before operating margin. Even a focused Phase-8
 pass leaves the next full ceremony disk-blocked until that projection passes.
+
+The first focused run reached real APFS `collect` and removed ballast, then
+expired after 947.94 seconds with `observation-v2-generations` still draining:
+410 deletion units remained after nine selected-owner turns. The detached
+diagnostic image was reviewed, proved free of a live process, mount, and lock,
+then permanently purged, reclaiming about 15.7 GiB. Read-only inspection of the
+retained full structural custody counted 1,546 deletion units in generation A
+and 1,547 in B. The larger tree needs 97 turns at the unchanged sixteen-delete
+bound; a one-second fair-rotation delay cannot fit the ten-minute recovery
+deadline. The correction caps only collect/refuse and latched pressure recovery
+at 250 milliseconds. Its deterministic real-collector regression reserves at
+most 350 seconds of scheduled delay for the exact 1,547-entry shape after worst
+alignment and two fresh cycles. Runtime work and status observation consume the
+remaining headroom, so this is not a pass or SLO. Require an immutable clean
+commit, focused gates, and independent review before rerunning the wrapper.

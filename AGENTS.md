@@ -437,6 +437,20 @@ builds for the top-level rehearsal test; the package command completed in
 456.991s. Successful cleanup removed the temporary workspace and no matching
 process remains. Phases 7–11 and a full ceremony remain unestablished and must
 be reviewed independently before a fresh freeze.
+The first focused Phase-8 pressure rehearsal then reached real `collect` and
+ballast removal but expired while the observation-v2 owner still had backlog;
+its reviewed detached image was purged. Retained full structural generations
+contain 1,546/1,547 deletion units and require 97 observation-v2 turns at the
+unchanged sixteen-delete cap, so one-second fair rotation would still exceed
+the fixed ten-minute recovery deadline. The pending correction keeps ordinary
+backlog/error/capacity retry at five seconds and healthy idle at one hour, while
+only `collect`/`refuse` or the existing pressure-recovery latch caps the serial
+turn delay at 250 milliseconds. V30 predicates, fair order, and per-turn limits
+remain exact. That post-sweep delay offers at most four turn starts and four
+existing capacity probes per second before sweep duration, plus the existing
+timer allocation and in-memory status update; it does not claim four completed
+turns. This provides deterministic scheduler headroom, not a Phase-8 or
+full-ceremony pass; focused rerun and exact-tree review gates remain required.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

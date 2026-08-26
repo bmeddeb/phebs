@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	DefaultIdleInterval = time.Hour
-	DefaultBacklogDelay = 5 * time.Second
+	DefaultIdleInterval          = time.Hour
+	DefaultBacklogDelay          = 5 * time.Second
+	DefaultPressureRecoveryDelay = 250 * time.Millisecond
 )
 
 type Reporter func(OwnerResult)
@@ -98,11 +99,20 @@ func Run(
 		}
 		if cycleNeedsRetry || !result.CycleComplete || !cycleStarted ||
 			pressureAccelerated || pressureRecoveryCycle || capacityRetryCycle {
-			delay = backlogDelay
+			delay = runnerBacklogDelay(
+				backlogDelay, pressureAccelerated || pressureRecoveryCycle,
+			)
 		} else {
 			delay = idleInterval
 			cycleStarted = false
 			cycleNeedsRetry = false
 		}
 	}
+}
+
+func runnerBacklogDelay(backlogDelay time.Duration, pressureRecovery bool) time.Duration {
+	if pressureRecovery && backlogDelay > DefaultPressureRecoveryDelay {
+		return DefaultPressureRecoveryDelay
+	}
+	return backlogDelay
 }

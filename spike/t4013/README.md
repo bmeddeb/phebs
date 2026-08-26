@@ -3835,17 +3835,22 @@ deletion and does not claim to live-prove rollback, active-lease, marker, or
 store-pin roots individually. Those protection guarantees remain mandatory
 `internal/lifecycle`, `internal/store`, and publication regression gates.
 
-Production lifecycle scheduling adds a pressure-recovery cursor suffix plus one
-full normal cycle at the existing five-second cadence. Only while capacity stays
-exact-normal and every owner result is error-free and drained is that at most 28
-turns for this 14-owner inventory and at most 64 under the at-most-32-owner
-controller bound. Any owner error/backlog or unavailable/non-exact capacity
-removes the 28/64 turn bound and keeps the runner at five-second cadence. The
-phase-7 and phase-9 waiters make no 28/64 claim and remain governed by their
-fixed phase deadlines. Truthful `durable-jobs` backlog does not block either
-waiter; an owner error or backlog in one of the 13 required drained rows keeps
-owner progression at five-second cadence until the deadline. Healthy normal
-hourly steady state is unchanged. No product
+Production lifecycle scheduling retains the five-second ordinary backlog/error
+cadence and one-hour healthy idle cadence. While capacity is `collect`/`refuse`
+or the existing pressure-recovery latch remains set, it caps the serial
+owner-turn delay at 250 milliseconds. The latch still clears only after
+exact-normal capacity and one wholly normal, error-free, drained sorted cycle.
+Only that clean path has the existing at-most-28-turn bound for this 14-owner
+inventory and at-most-64-turn bound under the 32-owner controller ceiling; its
+scheduled delay is now at most seven or sixteen seconds, respectively, plus
+sweep work. An owner error/backlog or unavailable/non-exact capacity removes
+that turn bound. If pressure has been observed, the 250-millisecond cadence
+remains latched until a later clean cycle; a never-pressure-latched ordinary
+retry remains five seconds. The phase-7 and phase-9 waiters make no 28/64 claim
+and remain governed by their fixed phase deadlines. Truthful `durable-jobs`
+backlog does not block either waiter. A later unpressured phase-9 restart and
+its unresolved owner progression retain the ordinary five-second cadence.
+Healthy normal hourly steady state is unchanged. No product
 query, request, repository sync tick, retry/no-op, publication transition, lock,
 cache, corpus/shard read, persistent schema, memory/disk bound, or child-process
 work changes. Ordinary startup adds one closed exact-control environment lookup
@@ -3862,6 +3867,14 @@ post-recovery protected-authority inspection. Only exact-control mode adds
 synchronous per-report log writes for candidate output and all seven job
 runners; ordinary steady-state reporting is unchanged. No production request,
 job, child, or new deadline is added.
+
+The 250-millisecond value is a post-sweep delay, so elevated mode offers at
+most four owner-turn starts per second before sweep duration; it does not claim
+four completed turns. Each start also performs the existing capacity gate
+check, timer allocation, and in-memory status update. The host gate check uses
+two `Lstat` calls plus open, `fstat`, `fstatfs`, and close. These operations may
+run at 20x the former pressure cadence until the latch clears; owner limits and
+serial execution remain unchanged.
 
 The pre-review focused and bounded regressions passed, including the complete
 package (104.564s), full package race (129.985s), real-launcher custody proof
@@ -4026,3 +4039,19 @@ pre-pressure projection requires about 168.7 GiB before operating margin. A
 focused pass therefore does not make the current host ready for another full
 ceremony; recheck and free at least the remaining projected deficit before any
 freeze.
+
+The first focused run reached real pressure and ballast removal, then failed
+honestly after 947.94 seconds because `observation-v2-generations` still had
+410 deletion units pending after nine selected-owner turns. The detached image
+was reviewed, proved free of a live process, mount, and lock, then permanently
+purged; about 15.7 GiB was reclaimed. Read-only inspection of retained full
+structural custody found 1,546 deletion units for generation A and 1,547 for B.
+At sixteen deletes per selected-owner turn, B needs 97 turns. Fourteen-owner
+fair rotation makes a one-second delay incapable of meeting the unchanged
+ten-minute recovery deadline. The corrected production runner therefore uses
+250 milliseconds only during `collect`/`refuse` or latched pressure recovery.
+A deterministic real-collector regression drains the exact 1,547-entry shape
+and reserves at most 350 seconds of scheduled delay after worst alignment and
+two fresh cycles, leaving more than four minutes for bounded work and status
+polling. This is headroom, not a Phase-8 pass; do not rerun the focused wrapper
+until the correction is on an immutable clean commit and its review gates pass.

@@ -2120,6 +2120,25 @@ exact-control environment lookup and branch; when absent it allocates no report
 channel or sink and adds no persistent work. Ordinary steady-state reporting is
 unchanged. No new production request, job, child, or deadline is added.
 
+T40.13 Phase-8 cadence correction (2026-08-26; supersedes only the pressure
+cadence wording above): the first focused pressure rehearsal expired with a
+truthful observation-v2 backlog. Exact retained full structural generations
+contain 1,546/1,547 deletion units, so the larger tree needs 97 selected-owner
+turns at the unchanged sixteen-delete cap. Fourteen-owner rotation at one
+second still cannot fit the fixed ten-minute recovery deadline. Ordinary
+backlog/error/capacity retry remains five seconds and healthy idle remains one
+hour; only `collect`/`refuse` or the existing latched pressure recovery caps the
+serial turn delay at 250 milliseconds. The exact larger tree then has 341.25
+seconds of scheduled inter-turn delay, and the deterministic regression
+conservatively reserves no more than 350 seconds after alignment and fresh
+cycles. This is headroom rather than an SLO or ceremony pass. Elevated mode
+offers at most four bounded turn starts per second before sweep duration until
+a clean recovery cycle, a 20x scheduling-frequency increase; all
+candidate/delete/query/stat/descriptor/metadata limits,
+fair order, lock scope, concurrency, schemas, and V30 evidence predicates are
+unchanged. A real focused rerun, complete gates, and independent review remain
+required.
+
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
 (115.754s), complete readiness rehearsal (884.324s), every `internal/` package

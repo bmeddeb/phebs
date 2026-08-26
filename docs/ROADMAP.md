@@ -2163,6 +2163,23 @@ process/log-EOF handoff under the unchanged revalidation deadline. Phase 7
 adds one existing post-recovery authority inspection. Only exact-control mode
 adds synchronous per-report log writes; ordinary steady-state reporting remains
 advisory. No production request, job, child, or new deadline is added.
+
+T40.13 Phase-8 cadence correction (2026-08-26; supersedes only the pressure
+cadence wording above): the failed focused run and read-only retained-custody
+count show that the larger frozen structural observation tree has 1,547
+deletion units and requires 97 observation-v2 turns at sixteen deletes per
+turn. One-second fair rotation still exceeds the fixed ten-minute deadline.
+Ordinary backlog/error/capacity retry remains five seconds and healthy idle one
+hour; only `collect`/`refuse` or the existing pressure-recovery latch caps the
+serial turn delay at 250 milliseconds. The exact-tree regression budgets no
+more than 350 seconds of scheduled delay after worst alignment and fresh
+cycles, leaving runtime headroom but establishing neither an SLO nor a Phase-8
+or full-ceremony pass. Elevated mode offers at most four bounded owner-turn
+starts per second before sweep duration until a clean cycle, 20x the prior
+pressure scheduling frequency; per-turn limits,
+fair order, lock scope, concurrency, schema, and V30 predicates remain exact.
+The focused real-binary rerun and complete review gates remain mandatory.
+
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package
 including full store, module verification/compilation, vet,
