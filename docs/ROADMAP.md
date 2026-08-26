@@ -2199,6 +2199,21 @@ full internal/store pass are required before integration can be requested; no
 merge, exact-main preflight, identifier selection, freeze, or execution is
 authorized.
 
+T40.13r supersedes two parts of that host-gate record. A later serial
+`internal/store` run on the exact pre-ticket candidate passed in 1003.037s, so
+store is no longer an unresolved blocker. The Darwin refusal was not a root
+denial: retained custody proves PID 554 was a still-parented descendant but did
+not retain its executable identity. A bounded host reproduction establishes
+the mechanism: the production compatibility monitor's setuid-root `/bin/ps`
+child yields the same coherent task-all-info `EPERM`, and a separate Darwin
+ceremony-session inventory could create the same helper during admission.
+T40.13r removes both Darwin helper launches through bounded native process
+records while preserving the sticky fail-closed sampler and V1-V30 evidence.
+Focused changed-path gates and fresh independent review precede one host-clean
+exact-commit readiness rehearsal. Integration, exact-main preflight,
+identifier selection, freeze, execution, release, Epic closure, and scale/SLO
+claims remain unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

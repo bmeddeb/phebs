@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -62,7 +61,7 @@ func (b *limitedBuffer) result() (string, bool) {
 func sandboxSupported() error {
 	var required []string
 	if runtime.GOOS == "darwin" {
-		required = []string{"/usr/bin/sandbox-exec", "/bin/sh", "/bin/ps"}
+		required = []string{"/usr/bin/sandbox-exec", "/bin/sh"}
 	} else {
 		required = []string{"/bin/sh"}
 		if _, err := exec.LookPath("bwrap"); err != nil {
@@ -187,28 +186,4 @@ func sandboxCommand(root, bin string, arguments []string) (*exec.Cmd, error) {
 
 func killProcessGroup(pid int) {
 	_ = syscall.Kill(-pid, syscall.SIGKILL)
-}
-
-func processGroupRSS(pgid int) (int64, error) {
-	output, err := exec.Command("/bin/ps", "-axo", "pgid=,rss=").Output()
-	if err != nil {
-		return 0, err
-	}
-	var total int64
-	for _, line := range strings.Split(string(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) != 2 {
-			continue
-		}
-		group, groupErr := strconv.Atoi(fields[0])
-		if groupErr != nil || group != pgid {
-			continue
-		}
-		kilobytes, rssErr := strconv.ParseInt(fields[1], 10, 64)
-		if rssErr != nil || kilobytes < 0 {
-			return 0, errors.New("invalid ps RSS output")
-		}
-		total += kilobytes << 10
-	}
-	return total, nil
 }

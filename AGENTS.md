@@ -387,6 +387,20 @@ while opening a fresh schema; that exact isolated subtest then
 passed in 11.349s, every completed internal package passed, and no SurrealDB
 child survives. A later host-clean complete readiness and full internal/store
 pass are mandatory before integration can be requested.
+T40.13r supersedes those two remaining-host-gate statements. A later serial
+exact-candidate `internal/store` run passed in 1003.037s. Retained readiness
+custody proves the Darwin-denied PID 554 was a still-parented descendant, not
+the Phebs root, but did not retain its executable identity. A bounded live-host
+reproduction establishes the causal mechanism without inventing that missing
+field: the 50-ms production compatibility monitor launched setuid-root
+`/bin/ps`, for which coherent task-all-info returned the same `EPERM`; Darwin
+ceremony session custody separately retained another `ps` launch that could
+recreate the class under admission accounting. T40.13r removes both Darwin
+helpers through bounded native process records while leaving the sticky
+fail-closed ceremony sampler and V1-V30 evidence exact. Focused changed-path
+gates, an immutable commit, fresh independent review, and one host-clean
+exact-commit readiness rehearsal remain required before integration can be
+requested.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
@@ -394,6 +408,9 @@ bounded derived-pipeline convergence for at least two million regular-file
 physical owners; Epic 41 separately requires at least 8,000 accepted services
 and measures a target of 10,000 accepted services; Epic 42 composes both
 dimensions before any topology posture changes.
+T40.13r clarifies that “remain separately authorized” grants no present
+authority: integration, exact-main preflight, fresh-ID selection, freeze, and
+execution each require a later explicit authorization.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

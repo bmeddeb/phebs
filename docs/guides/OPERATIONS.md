@@ -5575,3 +5575,36 @@ schema application after 1320.596s; its exact isolated subtest passed in
 11.349s, but a later host-clean full internal/store pass is still required.
 Keep integration, exact-main preflight, identifier selection, freeze, and
 execution blocked until both host gates pass.
+
+### T40.13r Darwin denied-descendant sampler availability
+
+Supersede the preceding `root-sampler EPERM` wording. The retained refusal
+proves PID 554 was a still-parented descendant of the healthy startup root; it
+does not preserve that PID's path, name, or UID. Do not retroactively invent
+those fields. A separate bounded live-host probe establishes the relevant
+mechanism: `/bin/ps` is setuid-root on this Darwin host, the production
+compatibility checker launched it every 50 ms for RSS accounting, and coherent
+task-all-info inspection of that live helper returns `EPERM` while short BSD
+identity remains readable.
+
+T40.13r removes the helper rather than relaxing evidence. Darwin compatibility
+RSS accounting now lists at most 128 members of only the Buf process group and
+reads each accepted member's coherent resident bytes in-process. Darwin
+ceremony private-session custody also uses bounded native all-PID enumeration,
+`getsid`, and short zombie-state records; Linux retains its existing `ps`
+implementation. The root/descendant sampler still fails immediately and
+stickily on a live denied descendant. Operators must not retry, ignore, run as
+root, or relabel that failure.
+
+The compatibility monitor retains its 50-ms cadence, 512-MiB ceiling, and
+three-consecutive-error process-group kill while introducing a 128-member
+process-group bound. Session custody introduces an 8,192-non-kernel-host-PID
+bound while retaining the 1,024-session-member bound, 10-ms shutdown polling,
+and existing deadlines.
+Invalid, duplicate, oversized, permission-denied, or
+overflowed native records fail closed; a vanished process, coherent process-
+group departure, or confirmed zombie is omitted. A later serial exact-candidate
+`internal/store` run passed in 1003.037s. Before integration, require focused
+normal/race and session-custody checks, static/documentation gates, a fresh
+independent exact-diff review, and one host-clean exact-commit readiness
+rehearsal. Do not select or freeze `t40r1-neutral-40` from this correction.

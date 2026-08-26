@@ -3904,3 +3904,35 @@ isolated exact subtest passed in 11.349s and all completed packages were green.
 No process survives. A later host-clean complete readiness and full
 internal/store pass are mandatory before merge, exact-main preflight, fresh-ID
 freeze, or execution can be requested.
+
+## T40.13r Darwin denied-descendant helper removal
+
+The prior `root-sampler EPERM` attribution is superseded. Retained readiness
+custody proves PID 554 was a still-parented descendant of the healthy Phebs
+startup root, but it did not retain that PID's executable identity. A bounded
+live-host reproduction establishes the causal mechanism without claiming that
+missing historical field: the production compatibility monitor launched this
+host's setuid-root `/bin/ps` every 50 ms, and coherent task-all-info inspection
+of that live helper returns the same `EPERM` while short identity succeeds.
+The Darwin private-session custodian also retained a separate `ps` launch that
+could reproduce the class while admission accounting samples the executor.
+
+T40.13r removes both Darwin helper launches. Compatibility RSS monitoring uses
+one bounded native process-group inventory plus coherent resident-byte records;
+private-session custody uses bounded native all-PID enumeration, `getsid`, short
+zombie-state records, and final session revalidation. Linux behavior is
+unchanged. The strict ceremony
+sampler, including its frozen denied-child reconciliation, and V1-V30 schemas
+remain exact. The new paths retain the existing compatibility
+50-ms/512-MiB/three-failure policy and 1,024-session-member bound, introduce
+128-member process-group and 8,192-non-kernel-host-PID bounds, and retain
+existing shutdown cadence/deadlines. They remove repeated setuid
+children and text parsing; malformed, duplicate, permission, capacity, and
+arithmetic failures remain closed.
+
+The earlier exact candidate's later serial `internal/store` run passed in
+1003.037s. This ticket still requires focused package/race and custody gates,
+static/documentation checks, a fresh immutable commit and independent review,
+then one host-clean exact-commit readiness rehearsal. It selects no identifier
+and authorizes no merge, exact-main preflight, freeze, execution, release,
+Epic closure, or scale/SLO claim.

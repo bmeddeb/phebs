@@ -2165,6 +2165,56 @@ complete readiness plus full internal/store run remains mandatory. No merge,
 exact-main preflight, identifier selection, freeze, execution, release,
 T40.13/Epic-40 closure, topology/bound change, or scale/SLO claim is authorized.
 
+**T40.13r · Darwin denied-descendant sampler availability**
+*(high gate readiness · needs T40.13q and the retained readiness refusal)* —
+supersede the earlier `root-sampler EPERM` attribution. Retained custody proves
+that PID 554 was a still-parented descendant of the healthy Phebs startup root,
+not the root itself; it did not retain that descendant's executable identity.
+A bounded live-host reproduction establishes the causal mechanism without
+inventing the missing historical field: the compatibility monitor's 50-ms
+`/bin/ps` child is setuid-root on Darwin, and coherent task-all-info inspection
+of that live child returns the same `EPERM` while short identity remains
+readable. The fresh ticket also closes the sibling Darwin ceremony-session
+inventory, which could otherwise create the same helper under admission
+accounting.
+
+AC: remove `/bin/ps` from the Darwin compatibility memory monitor and from
+Darwin private-session custody, not from the Linux implementation or frozen
+historical tool inventories. Compatibility monitoring must enumerate at most
+128 process-group members through a 129-slot native inventory, validate each
+accepted PID and group through one coherent task-all-info record, sum resident
+bytes with checked arithmetic, and retain the existing 50-ms cadence, 512-MiB
+limit, and three-consecutive-failure kill. Darwin session custody must enumerate
+at most 8,192 non-kernel host PIDs through an 8,194-slot native inventory that
+also accommodates Darwin PID 0 and one overflow sentinel, select the target
+through `getsid`, revalidate the session after short-status inspection, omit
+only vanished processes, privilege-free short-record-confirmed zombies, or a
+process coherently confirmed outside the target session, and retain the existing
+1,024-member session bound, shutdown deadlines, and signaling behavior.
+Duplicate, malformed, permission, inventory, or arithmetic failures remain
+closed. The T40 root and descendant sampler remains unchanged: root or
+still-parented denied-descendant `EPERM` is sticky, while only the frozen
+short-identity proof of disappearance or reparenting may omit a denied child.
+Retrying, ignoring, or otherwise reclassifying that denial is forbidden.
+V1-V30 evidence bytes and predicates do not change.
+
+Steady-state cost: each Darwin sandboxed compatibility command replaces one
+setuid child and one full-host text scan every 50 ms with one bounded
+process-group list call and at most 128 fixed task-info reads. Each ceremony
+session inspection replaces one full-host `ps` child/text parse with one
+bounded native inventory, at most 8,192 initial `getsid` calls, and at most
+1,025 short-status/confirming-`getsid` pairs (1,024 accepted members plus one
+overflow sentinel); existing 10-ms shutdown polling remains.
+No product search/query, repository sync, store/schema, authority, publication,
+lock, cache, corpus/shard read, service bound, or ceremony deadline changes.
+Focused native/repetition/race, real compatibility, session-custody, package,
+static/documentation, and independent exact-diff review must pass before one
+host-clean exact-commit readiness rehearsal. The earlier exact candidate's
+serial full `internal/store` pass removes that unrelated blocker, but does not
+substitute for review or readiness of this changed tree. No identifier, merge,
+exact-main preflight, freeze, execution, release, Epic closure, or scale/SLO
+claim follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
