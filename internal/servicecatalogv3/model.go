@@ -20,10 +20,11 @@ const (
 	ServiceMemberSchema   = "phebs-service-catalog-v3-service-member"
 	PlacementMemberSchema = "phebs-service-catalog-v3-placement-member"
 
-	MaxTotalServices      = 12_500
-	MaxMemberships        = 75_000
-	MaxDistinctPaths      = 40_000
-	MaxSuccessorEdges     = 12_500
+	MaxTotalServices  = 12_500
+	MaxMemberships    = 75_000
+	MaxDistinctPaths  = 40_000
+	MaxSuccessorEdges = 12_500
+	// V2 has no per-service cap; one service may own its aggregate edge budget.
 	MaxServiceSuccessors  = servicecatalog.MaxSuccessorEdges
 	MaxClaimsPerPlacement = 4_000
 	MaxServicesPerMember  = 512
