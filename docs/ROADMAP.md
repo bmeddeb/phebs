@@ -2410,6 +2410,19 @@ fast-forward integration. This focused result establishes no phase 7–11,
 full-ceremony, release, Epic-closure, or scale/SLO claim; review the phase-7
 stale-worker boundary separately before another full ceremony.
 
+The later exact-main freeze attempt first advanced the permanent consumed-ID
+fence through neutral-40, then stopped prospectively because 138.13 GiB free
+did not satisfy V30's 168.69-GiB projected minimum. A separate read-only purge
+review reverified the frozen digest/signature and proved process, listener,
+mount, and lock absence. With explicit operator approval, only neutral-40's
+whole 45.61-GiB `custody` directory was durably removed; its signed evidence,
+prepared authority, supervision state, operation lock, ceremony root, and
+signing key remain. There is no sealed observation or receipt, so the reviewed
+phase-6 attribution did not become signed proof. This irreversible cleanup
+establishes no phase pass, host-ready result, fresh freeze, release, closure,
+or scale/SLO claim. Exact-main preflight and a fresh neutral-41 freeze remain
+next; execution remains separately unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

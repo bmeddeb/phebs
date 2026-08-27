@@ -556,6 +556,19 @@ separately identified Phase-7/9 reruns. Cross-phase handoff, a complete signed
 ceremony, release, Epic closure, and scale/SLO claims remain open. Integration,
 exact-main gates, fresh-ID selection, freeze and frozen-plan review, execution,
 and push remain separate actions requiring their own authorization.
+Exact main then advanced the permanent consumed-identifier fence through
+neutral-40. The first prospective host preflight passed clean-checkout,
+toolchain, memory, ports, and module checks but refused before freeze because
+138.13 GiB available did not satisfy the 168.69-GiB V30 projected minimum. A
+separate read-only review proved neutral-40 process, listener, mount, and lock
+absence and reverified its frozen plan digest and signature. After Ben's
+explicit approval, only its whole 45.61-GiB `custody` directory was durably
+removed; signed evidence, prepared authority, supervision state, operation
+lock, ceremony root, and signing key remain. The preserved freeze envelope has
+no sealed observation or receipt, so the phase-6 cause remains reviewed
+repository/terminal attribution rather than signed ceremony proof. This purge
+establishes no pass or readiness result. A fresh exact-main preflight and an
+unused neutral-41 freeze are authorized separately; execution is not.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

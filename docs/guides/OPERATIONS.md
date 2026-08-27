@@ -6041,3 +6041,22 @@ reruns. Cross-phase handoff, complete signed ceremony, release, closure, and
 scale/SLO claims remain open. Integration, exact-main gates, fresh-ID
 selection, freeze and frozen-plan review, execution, and push remain separate
 actions requiring their own authorization.
+
+### Reviewed neutral-40 custody retirement
+
+On 2026-08-26 the first exact-main prospective preflight stopped before freeze:
+138.13 GiB available did not satisfy V30's 168.69-GiB projected minimum. A
+separate read-only purge review reverified neutral-40's plan digest and freeze
+signature and proved no matching process, listener, mount, or lock holder
+remained. After explicit operator approval, the exact whole
+`t40r1-neutral-40/custody` directory was removed with bounded retries,
+parent-directory sync, durable absence checks, and sibling revalidation. The
+retired namespace accounted for 48,978,554,880 allocated bytes (45.61 GiB).
+
+Keep `evidence/`, `private/prepared.json`, `custody.t4013-supervision/`, the
+operation lock, ceremony root, and signing key. The deletion is irreversible
+without an independently verified backup and removes later private forensic or
+resume capability. The preserved signed freeze envelope contains no sealed
+observation or receipt: it proves the frozen plan, source, digest, signer, and
+time only, not the reviewed phase-6 cause. Cleanup alone establishes no phase
+pass, host readiness, fresh freeze, release, closure, or scale/SLO claim.
