@@ -8,6 +8,7 @@ coverage.out
 *.test
 .qwen/
 .claude/
+.github/hooks/impeccable.json
 .launch-drafts/
 launch-drafts/
 # T11.1 spike: corpus clones and extraction output are derived, never committed
