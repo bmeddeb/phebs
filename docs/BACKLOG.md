@@ -2251,6 +2251,21 @@ Phase-9 exact-clean attribution, prior-phase handoff, complete ceremony,
 release, Epic closure, and scale/SLO claims remain open; the source-identical
 record grants no integration, preflight, freeze, execution, or push authority.
 
+The unchanged Phase-9 `structural-archive-restore` selector then passed under
+fixed-HEAD and clean-worktree guards at exact commit
+`0d4cd82132bca5a0c48d1d1df9e377a0720c4bb9`. It emitted the required boundary
+marker; the subtest took 89.04 seconds, the top-level readiness test 148.55
+seconds, and the package command 149.292 seconds. The final active
+relationship-progress row was a bounded nonterminal convergence observation
+superseded by the terminal pass. Exact two-meter/two-server accounting,
+shutdown, and successful current-workspace cleanup passed; a separate check
+found no matching rehearsal process. This closes Phase-9 exact attribution and
+the separately identified Phase-7/9 reruns. Cross-phase handoff, complete
+signed ceremony, release, Epic closure, and scale/SLO claims remain open.
+Integration, exact-main gates, fresh-ID selection, freeze and frozen-plan
+review, execution, and push remain separate actions requiring their own
+authorization.
+
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
 (115.754s), complete readiness rehearsal (884.324s), every `internal/` package

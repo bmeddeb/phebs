@@ -543,6 +543,19 @@ process. This closes only Phase-7 exact attribution. Phase-9 exact-clean
 attribution, prior-phase handoff, a complete ceremony, release, Epic closure,
 and scale/SLO claims remain open; the source-identical record grants no
 integration, preflight, freeze, execution, or push authority.
+The unchanged Phase-9 `structural-archive-restore` selector then passed under
+fixed-HEAD and clean-worktree guards at exact commit
+`0d4cd82132bca5a0c48d1d1df9e377a0720c4bb9`. It emitted the required
+archive/restore boundary marker; the subtest took 89.04s, the top-level
+readiness test 148.55s, and the package command 149.292s. The final active
+relationship-progress row was a bounded nonterminal convergence observation
+superseded by the pass. Exact two-meter/two-server accounting, shutdown, and
+successful current-workspace cleanup passed; a separate check found no
+matching rehearsal process. This closes Phase-9 exact attribution and the
+separately identified Phase-7/9 reruns. Cross-phase handoff, a complete signed
+ceremony, release, Epic closure, and scale/SLO claims remain open. Integration,
+exact-main gates, fresh-ID selection, freeze and frozen-plan review, execution,
+and push remain separate actions requiring their own authorization.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

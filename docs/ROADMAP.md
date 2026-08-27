@@ -2295,6 +2295,21 @@ attribution. Phase-9 exact-clean attribution and all full-ceremony, release,
 closure, and scale/SLO claims remain open; integration, preflight, freeze,
 execution, and push remain separate actions requiring their own authorization.
 
+The unchanged Phase-9 `structural-archive-restore` selector then passed under
+fixed-HEAD and clean-worktree guards at exact commit
+`0d4cd82132bca5a0c48d1d1df9e377a0720c4bb9`. It emitted the required boundary
+marker; the subtest took 89.04 seconds, the top-level readiness test 148.55
+seconds, and the package command 149.292 seconds. The final active
+relationship-progress row was a bounded nonterminal convergence observation
+superseded by the terminal pass. Exact two-meter/two-server accounting,
+shutdown, and successful current-workspace cleanup passed; a separate check
+found no matching rehearsal process. This closes Phase-9 exact attribution and
+the separately identified Phase-7/9 reruns. Cross-phase handoff, complete
+signed ceremony, release, closure, and scale/SLO claims remain open.
+Integration, exact-main gates, fresh-ID selection, freeze and frozen-plan
+review, execution, and push remain separate actions requiring their own
+authorization.
+
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package
 including full store, module verification/compilation, vet,
