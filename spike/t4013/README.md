@@ -4364,13 +4364,15 @@ rejects neutral-41 and first admits neutral-42.
 Before another freeze, run the focused timeout, v2 diagnostic/round-trip,
 strict-caller propagation, historical-version, and identifier tests, then the
 exact full-profile replay through Phase 7's terminal gauge. This is
-harness-only: each complete measurement pair retains the same two `du`
-children and metadata walks; meter or measured-command begin and finish can
-consume two pairs, while the V27 restart start consumes one allocated-only
-gauge plus its finish pair. All return early and remain inside the unchanged
-12-hour ceremony ceiling. No production query, worker, sync, store, lifecycle,
-publication, lock, cache, corpus read, memory/disk allocation, or child-process
-cost changes.
+harness-only: each pair retains two serial gauges, and each gauge permits the
+unchanged maximum of three serial `/usr/bin/du` attempts inside its one
+deadline. A healthy first-attempt pair launches two children; a completed
+retrying pair may launch six and repeat the metadata walk six times. Meter or
+measured-command begin and finish can consume two pairs, while the V27 restart
+start consumes one allocated-only gauge plus its finish pair. All return early
+and remain inside the unchanged 12-hour ceremony ceiling. No production query,
+worker, sync, store, lifecycle, publication, lock, cache, corpus read,
+memory/disk allocation, or child-process cost changes.
 
 Neutral-41 retained no physical custody. Its 2,294,916 logical Git-tree owners
 and Phase-6 byte maxima do not reproduce Phase 7's filesystem entries,

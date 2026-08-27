@@ -2468,12 +2468,14 @@ file-count/byte-floor proxy cannot satisfy this gate.
 
 Steady-state cost: no production request/query, sync tick, startup/restart,
 retry/no-op, publication, lifecycle/store, lock, cache, schema, corpus/shard
-read, hashing, memory/disk, or production child changes. Each complete
-measurement pair retains two serial `du` children and exact
-filesystem-metadata traversals; only that pair's maximum reserve rises from 60
-seconds to 600 seconds. Meter or measured-command begin and finish can consume
-two pairs; the V27 restart start consumes one allocated-only gauge plus its
-finish pair. All complete early when `du` returns and remain within the
+read, hashing, memory/disk, or production child changes. Each complete pair
+retains two serial gauges. Each gauge permits the unchanged maximum of three
+serial `/usr/bin/du` attempts inside its one deadline: a healthy first-attempt
+pair launches two children, while a completed retrying pair may launch six and
+repeat the metadata traversal six times. Only the pair's maximum reserve rises
+from 60 seconds to 600 seconds. Meter or measured-command begin and finish can
+consume two pairs; the V27 restart start consumes one allocated-only gauge plus
+its finish pair. All complete early when `du` returns and remain within the
 unchanged 12-hour ceremony ceiling. The diagnostic adds bounded scalar JSON
 only on failure. No merge, freeze, execution, release, T40.13/Epic-40 closure,
 or scale/SLO claim follows.

@@ -6119,9 +6119,12 @@ unchanged. Before another freeze, require focused timeout, projection,
 round-trip, strict-caller, historical-version, and neutral-41 rejection/
 neutral-42 admission tests, followed by one exact full-profile replay through
 Phase 7's terminal gauge. The correction changes no production path or
-steady-state cost. During a ceremony each complete measurement pair launches
-the same two exact `du` children; only its maximum wait reserve changes, while
-earlier completion returns immediately.
+steady-state cost. During a ceremony each complete pair retains two serial
+gauges. Each gauge permits the unchanged maximum of three serial
+`/usr/bin/du` attempts inside its one deadline: a healthy first-attempt pair
+launches two children, while a completed retrying pair may launch six. Only
+the pair's maximum wait reserve changes; earlier completion returns
+immediately.
 
 Neutral-41's clean teardown retained no physical custody to remeasure. The
 frozen 2,294,916 count describes logical Git-tree owners, not physical custody
