@@ -508,6 +508,15 @@ fixture does not replay or prove Phases 1–11, full-scale or signed custody, a
 complete ceremony, release, Epic closure, or a scale/SLO claim. Complete gates,
 independent review, an immutable commit, and an unchanged exact-clean human run
 remain required before the next full ceremony is planned.
+The first exact-clean attempt at commit
+`cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
+publication, supervision, or supervised Phebs/Surreal server launch because its synthetic prepared
+copies retained bounded projection-profile names instead of the frozen ceremony
+identities. Review found no matching process and purged the retained 207 MiB
+temporary root. The correction maps only the manifest copies through the
+existing frozen constants and adds a fast schema invariant; production
+validation and authored profile bytes remain unchanged. A corrected immutable
+commit, complete bounded gates, re-review, and exact-clean run remain pending.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

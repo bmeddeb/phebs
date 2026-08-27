@@ -540,6 +540,35 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 	})
 }
 
+func TestTeardownRehearsalPreparedFixtureUsesFrozenIdentities(t *testing.T) {
+	prepared := minimalV25Prepared(t.TempDir(), "sha256:"+strings.Repeat("a", 64))
+	prepared.Profiles[0].Name = "structural-partition-throughput-v1"
+	prepared.Profiles[1].Name = "semantic-projection-v1"
+	fixture := teardownRehearsalPreparedFixture(
+		prepared.PlanDigest, prepared.ExecutionControlsSHA256,
+		prepared.Profiles[0], prepared.Profiles[1],
+	)
+	fixture.SupervisionToken = prepared.SupervisionToken
+	if err := validatePrepared(fixture); err != nil {
+		t.Fatalf("validate teardown rehearsal prepared fixture: %v", err)
+	}
+}
+
+func teardownRehearsalPreparedFixture(
+	planDigest string,
+	controlsDigest string,
+	structural PreparedProfile,
+	semantic PreparedProfile,
+) Prepared {
+	structural.Name = t401.StructuralProfileName
+	semantic.Name = t401.SemanticProfileName
+	return Prepared{
+		Schema: PreparedSchemaV2, PlanDigest: planDigest,
+		ExecutionControlsSHA256: controlsDigest,
+		Profiles:                []PreparedProfile{structural, semantic},
+	}
+}
+
 // TestProductionPathTeardownRehearsal is separate from the shared readiness
 // fixture because the production coordinator destroys its exact custody root.
 // Prior phases are represented by a receipt-valid source-free fixture; only
@@ -641,11 +670,9 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 		observationPath: observationPath, preparedPath: preparedPath,
 		toolchain: toolchain, hostTools: hostTools, runRootLock: lock,
 	}
-	attachTestSupervision(t, run, Prepared{
-		Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes),
-		ExecutionControlsSHA256: toolchain.controlsDigest,
-		Profiles:                []PreparedProfile{structural, semantic},
-	})
+	attachTestSupervision(t, run, teardownRehearsalPreparedFixture(
+		PlanDigest(planBytes), toolchain.controlsDigest, structural, semantic,
+	))
 	server, err := launchPrivateServer(ctx, structural, toolchain, "rehearsal-teardown")
 	if err != nil {
 		t.Fatal(err)

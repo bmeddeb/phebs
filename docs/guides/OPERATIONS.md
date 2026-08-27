@@ -5943,7 +5943,9 @@ child a recursive data-deletion target. Named external prepared, checkpoint,
 and supervision protocol artifacts are intentionally retired, and successful
 test cleanup removes the private parent after assertions. The working-tree toolchain, both bounded prepared profiles,
 execution controls, synthetic source, and derived data live inside that child.
-The observation and prepared publication live outside it. A receipt-valid V30
+The observation and schema-valid synthetic V30 prepared publication live
+outside it. Only the prepared manifest copies use the frozen ceremony profile
+identities; authored bytes retain their bounded projection identities. A receipt-valid V30
 source-free fixture stands in for already completed Phases 1–11; it is not a
 replay or proof of those phases.
 
@@ -5984,3 +5986,11 @@ handoff, full corpus, signed custody/evidence, complete ceremony, release, Epic
 closure, or scale/SLO claim. Require an immutable clean commit, bounded gates,
 independent review, and an unchanged exact-commit run before full-ceremony
 planning.
+
+The first exact-clean attempt at commit
+`cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
+publication, supervision, or supervised Phebs/Surreal server launch because the copied manifest labels
+still used the projection-profile names. Review found no matching process and
+purged the retained 207 MiB temporary root. The correction maps only those
+copies to the existing frozen profile constants and adds a fast schema
+invariant; no production validator or authored profile is relaxed.

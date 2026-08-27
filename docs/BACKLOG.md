@@ -2214,6 +2214,16 @@ human run remain pending. This isolated fixture does not prove Phases 1–11 or
 their handoff, full-scale/signed custody, a complete ceremony, release, Epic
 closure, or a scale/SLO claim.
 
+The first exact-clean Phase-12 attempt at commit
+`cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
+publication, supervision, or supervised Phebs/Surreal server launch: the synthetic manifest copies
+retained the bounded projection-profile names instead of the frozen ceremony
+identities. Its 207 MiB retained root had no matching process and was purged
+after review. The correction maps only the copied control labels through the
+existing frozen constants and adds a fast schema invariant without relaxing
+production validation or changing authored bytes. Corrected exact gates,
+re-review, and the exact-clean human run remain pending.
+
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
 (115.754s), complete readiness rehearsal (884.324s), every `internal/` package

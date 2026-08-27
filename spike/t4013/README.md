@@ -4230,7 +4230,9 @@ go test ./spike/t4013 \
 ```
 
 The fixture builds the working-tree toolchain and both existing bounded
-profiles inside custody, publishes a real V30 prepared manifest outside it,
+profiles inside custody, publishes a schema-valid synthetic V30 prepared
+manifest outside it whose copied control labels use the frozen ceremony
+identities while the authored bytes retain their bounded projection identities,
 and represents Phases 1–11 with the existing receipt-valid source-free
 completed-prefix fixture. It acquires the production run-root lock and real
 prepare→execute supervision before launching one structural Phebs/Surreal
@@ -4276,3 +4278,11 @@ Phases 1–11, their handoff, full structural scale, signed ceremony custody or
 evidence, a complete ceremony, release, Epic closure, or a scale/SLO claim.
 Commit and independently review the implementation, then run this selector
 unchanged from an exact clean checkout before planning the full ceremony.
+
+The first exact-clean attempt at commit
+`cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
+publication, supervision, or supervised Phebs/Surreal server launch because those copied labels still
+used the projection-profile names. Review found no matching process and purged
+the retained 207 MiB temporary root. The corrected fixture maps only the
+manifest copies to the existing frozen profile constants and has a fast
+schema-invariant regression; the authored profile bytes remain unchanged.

@@ -2256,6 +2256,16 @@ their handoff, full scale, signed custody/evidence, a complete ceremony,
 release, closure, or SLO; only after this focused gate passes should the next
 full ceremony be planned.
 
+The first exact-clean Phase-12 attempt at commit
+`cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
+publication, supervision, or supervised Phebs/Surreal server launch because its synthetic manifest
+copies retained bounded projection-profile names rather than the frozen
+ceremony identities. Review found no matching process and purged the retained
+207 MiB root. The correction maps only those copied labels through the existing
+frozen constants and adds a fast schema invariant; production validation and
+authored bytes stay unchanged. Corrected exact gates, re-review, and the
+exact-clean run remain required before full-ceremony planning.
+
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package
 including full store, module verification/compilation, vet,
