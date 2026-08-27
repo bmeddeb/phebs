@@ -152,6 +152,13 @@ func (lock *runRootLock) Close() error {
 	return err
 }
 
+func (lock *runRootLock) inheritedDescriptorValue() (string, error) {
+	if lock == nil || lock.file == nil {
+		return "", errors.New("T40.13 V25 run-root lock descriptor is unavailable")
+	}
+	return strconv.FormatUint(uint64(lock.file.Fd()), 10), nil
+}
+
 // ValidateInheritedRunRootLock adopts and locks the descriptor inherited by a
 // parent shell. The lock remains held by that parent's shared descriptor after
 // this process exits.

@@ -3182,6 +3182,11 @@ func validateStopped(value Receipt) error {
 			return errors.New("T40.13 operational failure identity is invalid")
 		}
 		wantReason = "operational_failure"
+	case "phase7_replay_boundary_reached":
+		if receiptSchemaVersion(value.Schema) < 31 || failure.Class != "execution" || failure.Phase != "pressure" {
+			return errors.New("T40.13 full-profile phase-7 replay boundary identity is invalid")
+		}
+		wantReason = "phase7_replay_boundary_reached"
 	case "interruption_trigger_unsatisfiable":
 		if receiptSchemaVersion(value.Schema) < 17 ||
 			failure.Class != "execution" ||

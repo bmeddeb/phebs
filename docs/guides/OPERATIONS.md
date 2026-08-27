@@ -6133,3 +6133,35 @@ hardlink, cache, or concurrent-work shape. Do not substitute an empty-file or
 sparse-payload APFS fixture, and do not treat the small `semantic-stale-worker`
 rehearsal as full-shape evidence. A new freeze remains forbidden until the
 exact full-profile Phase-7 replay exists, passes, and proves clean teardown.
+
+Run that replay only from its separately reviewed exact-clean commit on the
+dedicated Darwin host:
+
+```sh
+PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled \
+  ./spike/t4013/run-phase7-full-profile-replay.sh "$(git rev-parse HEAD)"
+```
+
+Set `PHEBS_T4013_PHASE7_REPLAY_PARENT` to an absolute private directory when
+`/private/tmp` is not the desired backing volume. The wrapper prints the fresh
+run root before authoring. It binds the canonical Go driver, clears ambient Go
+workspace/overlay controls, and uses fresh private build and module caches.
+Cache hydration and compilation precede the Go test alarm and have no separate
+wrapper wall deadline. Inside the test binary, plan observation plus exact
+two-profile preparation has a four-hour deadline; execution then receives the
+unchanged independent 12-hour ceiling; the test alarm is 20 hours from binary
+start.
+
+INT, TERM, and HUP are forwarded to the child process group. Any child failure,
+surviving group, cancellation, measurement error, or uncertain teardown retains
+the run/control roots and `/private/tmp/phebs-t4013-phase7-full.lock`. Do not
+rerun, share, or purge those paths before process-absence review. A valid result
+requires the terminal line `Phase 7 full-profile replay: PASS`, emitted only
+after result hashing, private-cache retirement, and atomic publication of the
+exact commit, result path, and digest to `completion` inside the retained fixed
+lock. The wrapper must also return zero and that marker must match the result.
+A result or marker without terminal success is not a pass. The retained lock
+prevents a hard-death window from admitting a second expensive replay and must
+be retired only after separate result and process-absence review. Even a valid
+replay proves only the Phase-7 pre-freeze gate; it does not establish a complete
+ceremony, scale/SLO, freeze, or release authority.

@@ -2480,6 +2480,31 @@ unchanged 12-hour ceremony ceiling. The diagnostic adds bounded scalar JSON
 only on failure. No merge, freeze, execution, release, T40.13/Epic-40 closure,
 or scale/SLO claim follows.
 
+Implementation now includes the missing exact full-profile Phase-7 runner.
+The opt-in `run-phase7-full-profile-replay.sh` requires a reviewed exact-clean
+HEAD and dedicated-host attestation, authors both frozen profiles, and calls
+the same `executeThroughStaleWorker` prefix used by production `Execute`.
+Pressure and later coordinators are not called. The deliberate V31-only
+pressure-boundary stop exists solely to reuse the production resumable
+stopped-teardown protocol; its cleanup observation is bound into a separate
+source-free replay record that requires phases 0–6 succeeded, the Phase-7
+terminal logical and allocated gauges nonzero, `pressure_started=false`, and
+custody plus supervision retired. A late server-stop error cannot use the
+deliberate boundary identity. The wrapper binds its Go driver, clears ambient
+Go/workspace/overlay controls, uses fresh private build/module caches, and
+forwards INT/TERM/HUP to the child process group. Cancellation or cleanup
+uncertainty retains the private roots and fixed lock. After result hashing and
+cache retirement, success atomically writes an exact completion marker inside
+the retained fixed lock, so hard death cannot reopen admission before terminal
+output. Only a zero-status wrapper with terminal PASS and a matching marker
+admits the result; the lock then requires separately reviewed retirement.
+In-test preparation is capped at four hours, execution retains its
+independent 12-hour ceiling, and the test alarm is 20 hours from binary start;
+module download/compilation happens before that alarm. Lightweight classification,
+result-shape, skip, shell, and
+package gates do not satisfy the AC: the exact expensive replay and independent
+review of its source-free result remain mandatory before any freeze.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

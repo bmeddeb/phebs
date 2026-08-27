@@ -86,6 +86,7 @@ var (
 	errAuthorizedQuery              = errors.New("T40.13 authorized query failed")
 	errObservationPersistence       = errors.New("T40.13 observation persistence failed")
 	errTeardownRecovery             = errors.New("T40.13 execution interrupted during teardown")
+	errFullProfilePhase7Boundary    = errors.New("T40.13 full-profile phase-7 replay boundary reached")
 )
 
 func exactOracle(message string) error { return fmt.Errorf("%w: %s", errExactOracle, message) }
@@ -551,6 +552,51 @@ func validatePreparedFiles(prepared Prepared, workspace string) error {
 }
 
 func (run *execution) execute() error {
+	if err := run.executeThroughStaleWorker(); err != nil {
+		return err
+	}
+	run.startPhase(7)
+	if err := run.pressure(); err != nil {
+		return err
+	}
+	run.startPhase(8)
+	if err := run.archiveRestore(); err != nil {
+		return err
+	}
+	run.startPhase(9)
+	if err := run.collection(); err != nil {
+		return err
+	}
+	run.startPhase(10)
+	if err := run.authorizedQueries(); err != nil {
+		return err
+	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
+		return err
+	}
+	if err := run.finalizeObservation(); err != nil {
+		return err
+	}
+	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
+		return fmt.Errorf("T40.13 completed observation is unsealable; custody retained: %w", err)
+	}
+	run.startPhase(11)
+	if err := run.teardown(); err != nil {
+		return err
+	}
+	if planSchemaVersion(run.plan.Schema) < 25 {
+		if err := run.verifyFrozenHostToolchain(); err != nil {
+			return err
+		}
+		return ValidateObservation(run.observation)
+	}
+	return nil
+}
+
+// executeThroughStaleWorker is the unchanged production prefix through the
+// human Phase 7 terminal data gauge. The opt-in full-profile replay calls this
+// exact path and stops before pressure starts.
+func (run *execution) executeThroughStaleWorker() error {
 	run.startPhase(0)
 	if extractionpublication.ScheduleMaxAttempts != run.plan.Safety.MaximumRetriesPerUnit {
 		return exactOracle("production retry ceiling differs from the frozen plan")
@@ -612,41 +658,6 @@ func (run *execution) execute() error {
 	if err := run.staleWorker(); err != nil {
 		return err
 	}
-	run.startPhase(7)
-	if err := run.pressure(); err != nil {
-		return err
-	}
-	run.startPhase(8)
-	if err := run.archiveRestore(); err != nil {
-		return err
-	}
-	run.startPhase(9)
-	if err := run.collection(); err != nil {
-		return err
-	}
-	run.startPhase(10)
-	if err := run.authorizedQueries(); err != nil {
-		return err
-	}
-	if err := run.verifyFrozenHostToolchain(); err != nil {
-		return err
-	}
-	if err := run.finalizeObservation(); err != nil {
-		return err
-	}
-	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
-		return fmt.Errorf("T40.13 completed observation is unsealable; custody retained: %w", err)
-	}
-	run.startPhase(11)
-	if err := run.teardown(); err != nil {
-		return err
-	}
-	if planSchemaVersion(run.plan.Schema) < 25 {
-		if err := run.verifyFrozenHostToolchain(); err != nil {
-			return err
-		}
-		return ValidateObservation(run.observation)
-	}
 	return nil
 }
 
@@ -664,7 +675,12 @@ func (run *execution) stopAfterFailure(cause error) (Observation, error) {
 	measurementErr := run.captureFailedPhase()
 	ceilingErr := run.enforceSafety()
 	run.observation.Outcome = "stopped"
-	classification := classifyStoppedFailureForPlan(run.plan, cause, measurementErr, ceilingErr)
+	classificationCause := cause
+	if planSchemaVersion(run.plan.Schema) >= 31 &&
+		errors.Is(primaryCause, errFullProfilePhase7Boundary) && stopErr != nil {
+		classificationCause = stopErr
+	}
+	classification := classifyStoppedFailureForPlan(run.plan, classificationCause, measurementErr, ceilingErr)
 	run.setStoppedClassification(phaseOrder[run.phase], classification)
 	if planSchemaVersion(run.plan.Schema) >= 27 &&
 		classification.code == "failed_phase_measurement_unavailable" {
@@ -1303,6 +1319,12 @@ func classifyStoppedFailureForPlan(
 			}
 		}
 		return classification
+	}
+	if planSchemaVersion(plan.Schema) >= 31 && errors.Is(cause, errFullProfilePhase7Boundary) {
+		return stoppedClassification{
+			class: "execution", code: "phase7_replay_boundary_reached",
+			decision: "unclassified", reason: "phase7_replay_boundary_reached",
+		}
 	}
 	// V23 preserves P6 attribution for every inner archive-recovery failure.
 	// Historical classifiers inspected several inner sentinels first and could

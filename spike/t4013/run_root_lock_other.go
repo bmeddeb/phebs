@@ -21,6 +21,10 @@ func (lock *runRootLock) Close() error {
 	return nil
 }
 
+func (lock *runRootLock) inheritedDescriptorValue() (string, error) {
+	return "", errors.New("T40.13 V25 run-root locking requires Linux or macOS")
+}
+
 func ValidateInheritedRunRootLock(string) error {
 	return errors.New("T40.13 V25 run-root locking requires Linux or macOS")
 }

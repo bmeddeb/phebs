@@ -2461,6 +2461,27 @@ a synthetic proxy is not accepted. The change adds no production steady-state
 work and authorizes no merge, freeze, execution, release, Epic closure, or
 scale/SLO claim.
 
+The full-profile Phase-7 runner is now implemented on the T40.13t continuation
+branch. It factors the exact production prefix through `stale_worker` once,
+then uses the existing resumable stopped-teardown protocol at a V31-only
+replay boundary before publishing a separate source-free result. The result
+requires the real terminal data gauges, says pressure never started, and grants
+no ceremony, scale, freeze, or release claim. Its fixed external lock and
+inherited run-root lock span preparation through cleanup; any cancellation,
+unproven shutdown, measurement failure, or cleanup uncertainty retains the
+fresh private root. The wrapper also binds and revalidates its Go driver,
+removes ambient Go overlay/workspace controls, uses fresh private build/module
+caches, forwards INT/TERM/HUP to the child process group, and rejects any late
+server-stop error as the deliberate boundary. Success atomically records the
+exact commit, result path, and digest inside the retained fixed lock before its
+zero-status terminal PASS; both are required, and reviewed lock retirement is
+separate. Preparation has a four-hour deadline,
+execution retains its independent 12-hour ceiling, and the test alarm is 20
+hours from binary start; fresh cache hydration and compilation precede that
+alarm. Lightweight gates alone do not close T40.13t. An immutable
+exact-clean commit, independent code review, the expensive replay, and review
+of its source-free result remain next; freeze stays forbidden.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

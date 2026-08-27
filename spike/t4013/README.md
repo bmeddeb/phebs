@@ -4380,3 +4380,54 @@ directories, hardlinks, cache posture, or concurrent work. Neither a synthetic
 file tree nor the small `semantic-stale-worker` rehearsal satisfies the gate.
 A new freeze remains forbidden until an exact full-profile Phase-7 replay
 passes and its cleanup is confirmed.
+
+### Exact full-profile Phase-7 replay
+
+The dedicated runner now exercises the real frozen profiles and the unchanged
+production prefix through `stale_worker`; it is not the small semantic
+rehearsal and creates no synthetic proxy. Run it only from the separately
+reviewed exact-clean commit on the dedicated host:
+
+```sh
+PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled \
+  ./spike/t4013/run-phase7-full-profile-replay.sh "$(git rev-parse HEAD)"
+```
+
+Set `PHEBS_T4013_PHASE7_REPLAY_PARENT` to an absolute private directory to
+place the fresh run root somewhere other than `/private/tmp`. The wrapper
+prints that root before authoring. It holds a fixed exclusive replay lock and
+the Go test holds the inherited run-root lock across preparation, execution,
+and cleanup. The wrapper binds and revalidates its canonical Go driver, clears
+ambient Go environment, workspace, and overlay controls, and builds with fresh
+private Go build and module caches. Those caches can add dependency-download,
+compile, disk, and wall cost; they are removed on success and retained beside
+the run root on failure. Inside the test binary, plan observation and exact
+two-profile preparation have a four-hour context deadline. The unchanged V31
+execution deadline then starts with execution admission and remains 12 hours.
+The Go test alarm is 20 hours from binary start, leaving four hours beyond
+those two maxima for stop/retirement and diagnostics. Fresh module download
+and compilation happen before that alarm, have no separate wrapper wall
+deadline, and remain cancellable through the documented signal path.
+
+After Phase 7's terminal exact logical/allocated meter succeeds, no pressure
+function is called. A V31-only deliberate boundary uses the normal resumable
+stopped-teardown protocol to stop/join descendants, checkpoint, delete custody,
+publish its cleanup observation, and retire supervision and the prepared
+authority. The final `phase7-replay.json` is a distinct source-free record. A
+pass requires phases 0–6 succeeded, nonzero terminal data gauges, pressure not
+started, re-bindable ports, exact-clean source unchanged, and durable custody
+and supervision retirement. A late server-stop error keeps its real failure
+identity and cannot be accepted as the deliberate boundary. It explicitly establishes no ceremony pass,
+scale/SLO, freeze, or release authority.
+
+INT, TERM, and HUP are forwarded to the test's process group. On any failure
+the wrapper prints the retained run/control roots. Do not rerun, share, or
+purge them before process-absence review; the fixed exclusive lock is also
+retained to block an accidental second attempt. After hashing the result and
+retiring private caches, success atomically writes the exact commit, result
+path, and digest to `completion` inside that lock. Only the wrapper's terminal
+zero-status `PASS` plus a matching completion marker admits
+`phase7-replay.json`; a file or marker left by an interrupted wrapper is not a
+pass. The lock requires separately reviewed retirement after result and
+process-absence review. The exact expensive replay and review of its resulting
+digest remain mandatory before a new freeze.
