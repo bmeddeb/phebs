@@ -2423,6 +2423,19 @@ establishes no phase pass, host-ready result, fresh freeze, release, closure,
 or scale/SLO claim. Exact-main preflight and a fresh neutral-41 freeze remain
 next; execution remains separately unauthorized.
 
+The first post-purge preflight then refused the upper side of V30 pressure
+reachability: 197,643,706,368 available bytes left too much ballast to fit
+after the 72-GiB pre-pressure projection inside the 96-GiB custody ceiling. On
+this 494,384,795,648-byte volume the exact available-space window is
+181,130,218,415–194,540,402,299 bytes. A dedicated owner-only
+7,000,000,000-byte logical (7,013,421,056-byte allocated) reservation now sits
+beside, not inside, ceremony run roots. Prospective preflight passed with it
+present after reporting 190,598,098,944 available bytes. Keep it unchanged
+through execution and source-free package review; it is host-specific, is not
+custody/evidence, and must not become a copied constant. The workaround changes
+no frozen limit and establishes no ceremony result. Exact-final-source
+preflight and neutral-41 freeze remain next; execution remains unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

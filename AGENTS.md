@@ -569,6 +569,21 @@ no sealed observation or receipt, so the phase-6 cause remains reviewed
 repository/terminal attribution rather than signed ceremony proof. This purge
 establishes no pass or readiness result. A fresh exact-main preflight and an
 unused neutral-41 freeze are authorized separately; execution is not.
+The first post-purge prospective preflight then refused the other side of the
+same V30 pressure contract: 197,643,706,368 available bytes left more pressure
+ballast than could fit after the frozen 72-GiB pre-pressure projection inside
+the 96-GiB custody ceiling. On this exact 494,384,795,648-byte volume, the
+admissible available-space window is 181,130,218,415 through
+194,540,402,299 bytes. An owner-only 7,000,000,000-byte logical
+(7,013,421,056-byte allocated) reservation now lives beside all run roots as
+`t40r1-neutral-41.host-pressure-reservation.bin`; it is neither custody nor
+evidence. With it present, exact-main prospective preflight passed after
+reporting 190,598,098,944 available bytes. Keep the reservation unchanged
+through execution and source-free package review, then retire it only after a
+separate terminal disposition. Its size is host-specific; never copy it in
+place of rerunning preflight. This workaround changes no frozen bound and
+establishes no ceremony result. Neutral-41 freeze is authorized; execution is
+not.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets
@@ -579,6 +594,11 @@ dimensions before any topology posture changes.
 T40.13r clarifies that “remain separately authorized” grants no present
 authority: integration, exact-main preflight, fresh-ID selection, freeze, and
 execution each require a later explicit authorization.
+That later authorization is now present only for the completed integration and
+push plus exact-final-source preflight, fresh neutral-41 selection, and freeze:
+Ben explicitly requested those actions. Freeze remains conditional on the
+final committed and pushed exact `main` passing preflight. Ceremony execution,
+seal, release, and reservation retirement remain unauthorized.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

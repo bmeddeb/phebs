@@ -6060,3 +6060,29 @@ resume capability. The preserved signed freeze envelope contains no sealed
 observation or receipt: it proves the frozen plan, source, digest, signer, and
 time only, not the reviewed phase-6 cause. Cleanup alone establishes no phase
 pass, host readiness, fresh freeze, release, closure, or scale/SLO claim.
+
+### V30 host-pressure window reservation
+
+V30 pressure admission has both a lower and upper available-space boundary.
+The 72-GiB pre-pressure projection must remain below the 80% soft watermark,
+and the later ballast must still fit inside the unused portion of the 96-GiB
+custody ceiling while reaching the 82% target. On the current
+494,384,795,648-byte volume, that yields an exact preflight window of
+181,130,218,415 through 194,540,402,299 available bytes. More free space can
+therefore refuse pressure reachability just as too little space refuses normal
+pre-pressure growth.
+
+After the neutral-40 purge, 197,643,706,368 available bytes exceeded the upper
+boundary. The dedicated owner-only ceremony-root sibling
+`t40r1-neutral-41.host-pressure-reservation.bin` has a 7,000,000,000-byte
+logical size and 7,013,421,056 allocated bytes. It is outside every run root
+and is neither custody nor evidence. With it present, exact-main prospective
+preflight passed after reporting 190,598,098,944 available bytes.
+
+Keep the reservation path and bytes unchanged from preflight through execution
+and source-free package review. Do not include it in returned evidence, move it
+into a run root, or infer this size on another host; ordinary filesystem use
+changes the window, so always rerun preflight. Remove the reservation only
+after separately reviewed terminal package disposition, with a durability and
+absence check. This workaround changes no frozen limit and proves no ceremony
+result.
