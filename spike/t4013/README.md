@@ -4096,3 +4096,40 @@ separate host check found no matching Phebs/Surreal process. This claim is only
 about the current run; older retained readiness roots remain untouched. Because
 the run preceded the immutable implementation commit, repeat the same selector
 on the clean commit before treating it as candidate evidence.
+
+## Focused Phase-10 collection rehearsal
+
+Human Phase 10 is `collection` (`phaseOrder[9]`). Run its separately opt-in
+real-binary selector directly:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_COLLECTION_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^structural-collection$' \
+  -count=1 -v -timeout=35m
+```
+
+The fixture authors the small structural repository at A-return before its
+first server launch, converges that clean phase-entry state, and then calls the
+production V30 `execution.collection()` coordinator. A pass includes
+`structural collection fresh-cycle boundary passed` followed by `PASS`. It
+proves the real stop/restart, a fresh sorted 14-owner cycle, the owner-specific
+exact/drained rules, exact capacity after the latest owner, unchanged stable
+authority, bounded collection evidence, exact two-meter/two-server accounting,
+and shutdown.
+
+Do not change this isolated fixture to replay A→B→A. That transition creates
+same-generation collecting residue whose drain belongs to Phase 8; replaying it
+without the Phase-8 handoff would turn this into a predictable timeout instead
+of a Phase-10 test. The passing focused Phase-8 rehearsal covers that drain.
+This selector therefore does not prove Phase-8 or Phase-9 handoff residue, the
+full structural corpus, eligible deletion, individual rollback/lease/marker/
+store-pin roots, signed ceremony custody, or later phases.
+
+No sparse image, ballast, or fixed lock is used. Success removes the temporary
+workspace. Failure reports and retains the exact private
+`phebs-t4013-readiness-*` root containing logs, credentials, synthetic source,
+and derived data; prove its processes and listener absent before review, purge,
+or rerun. The selector builds the working tree, so an immutable clean commit
+and unchanged exact-commit pass are required for candidate evidence.

@@ -484,6 +484,100 @@ func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	}
 }
 
+func TestRunnerCompletesFourteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
+	names := []string{
+		CatalogOwner,
+		JobOwner,
+		GenerationScheduleOwner,
+		InvestigationOwner,
+		ObservationOwner,
+		ObservationV2Owner,
+		PartialStageOwner,
+		ProofOwner,
+		ReaderOwner,
+		RelationshipOwner,
+		ResolverOwner,
+		SearchOwner,
+		TombstoneOwner,
+		SourceOwner,
+	}
+	for _, cursor := range append([]string{""}, names...) {
+		testName := cursor
+		if testName == "" {
+			testName = "empty"
+		}
+		t.Run(testName, func(t *testing.T) {
+			store := newMemoryCursorStore()
+			store.values[rotationCursorKey] = cursor
+			owners := make([]Owner, 0, len(names))
+			for _, name := range names {
+				owners = append(owners, StaticOwner{OwnerName: name, Completeness: Exact})
+			}
+			controller, err := NewController(store, owners...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			next := 0
+			for index, name := range names {
+				if name == cursor {
+					next = index + 1
+					if next == len(names) {
+						next = 0
+					}
+					break
+				}
+			}
+			want := append([]string(nil), names[next:]...)
+			if next != 0 {
+				want = append(want, names...)
+			}
+			if len(want) > 27 {
+				t.Fatalf("clean cycle turns = %d; want at most 27", len(want))
+			}
+
+			ctx, cancel := context.WithCancel(t.Context())
+			results := make(chan OwnerResult, 1)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, controller, nil, time.Hour, time.Millisecond, func(result OwnerResult) {
+					results <- result
+				}, nil)
+			}()
+
+			got := make([]string, 0, len(want))
+			for range want {
+				select {
+				case result := <-results:
+					got = append(got, result.Owner)
+				case <-time.After(time.Second):
+					cancel()
+					t.Fatal("runner idled before completing the fresh cycle")
+				}
+			}
+			var extra string
+			select {
+			case result := <-results:
+				extra = result.Owner
+			case <-time.After(100 * time.Millisecond):
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("runner did not stop after the fresh cycle")
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("owner order = %v, want %v", got, want)
+			}
+			if extra != "" {
+				t.Fatalf("runner did not idle after the fresh cycle; next owner = %s", extra)
+			}
+		})
+	}
+}
+
 func TestRunnerCompletesFreshCycleAfterPressureRecovery(t *testing.T) {
 	for _, test := range []struct {
 		name          string

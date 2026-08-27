@@ -28,6 +28,7 @@ const readinessRehearsalEnvironment = "PHEBS_T4013_READINESS_REHEARSAL"
 const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
 const pressureRehearsalEnvironment = "PHEBS_T4013_PRESSURE_REHEARSAL"
 const archiveRestoreRehearsalEnvironment = "PHEBS_T4013_ARCHIVE_RESTORE_REHEARSAL"
+const collectionRehearsalEnvironment = "PHEBS_T4013_COLLECTION_REHEARSAL"
 
 const maximumPressureRehearsalFilesystemBytes int64 = 16 << 30
 
@@ -523,6 +524,12 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 		}
 		rehearseStructuralArchiveRestoreBoundary(t, ctx, moduleRoot, workspace, toolchain)
 	})
+	t.Run("structural-collection", func(t *testing.T) {
+		if os.Getenv(collectionRehearsalEnvironment) != "1" {
+			t.Skip("set " + collectionRehearsalEnvironment + "=1 to run the real collection rehearsal")
+		}
+		rehearseStructuralCollectionBoundary(t, ctx, moduleRoot, workspace, toolchain)
+	})
 }
 
 func rehearseStructuralPressureBoundary(
@@ -734,6 +741,98 @@ func rehearseStructuralArchiveRestoreBoundary(
 	}
 	complete = true
 	t.Log("structural archive/restore authority boundary passed")
+}
+
+func rehearseStructuralCollectionBoundary(
+	t *testing.T,
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	toolchain privateToolchain,
+) {
+	t.Helper()
+	profile, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "structural", "structural-collection",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := updateSourceRevision(
+		ctx, profile.Repository, profile.Revisions["a-return"], true,
+	); err != nil {
+		t.Fatal(err)
+	}
+	server, err := launchPrivateServer(ctx, profile, toolchain, "rehearsal-collection-cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var run *execution
+	complete := false
+	defer func() {
+		if complete {
+			return
+		}
+		var runStopErr error
+		if run != nil {
+			runStopErr = run.stopServers()
+			for active := range run.activeMeters {
+				if _, err := run.finishMeter(active, nil); err != nil {
+					t.Errorf("finish collection diagnostic meter; retained at %s: %v", workspace, err)
+				}
+			}
+		}
+		if err := errors.Join(server.stop(30*time.Second), runStopErr); err != nil {
+			t.Errorf("stop collection diagnostic; retained at %s: %v", workspace, err)
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(
+		ctx, server, profile, "rehearsal-collection-cold", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	aReturn := awaitReadinessSnapshot(t, ctx, profile, "a-return", 12*time.Minute)
+
+	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	run = &execution{
+		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
+		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
+		structural:  server,
+		structAR:    aReturn,
+		liveServers: []*privateServer{server},
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	run.startPhase(9)
+	if err := run.collection(); err != nil {
+		t.Fatal(err)
+	}
+	phase := run.observation.Phases[9]
+	if phase.Name != "collection" || phase.Outcome != "succeeded" || !phase.OracleExact {
+		t.Fatalf("collection phase observation = %+v", phase)
+	}
+	if err := validateCollectionObservation(run.observation); err != nil {
+		t.Fatalf("collection observation: %v", err)
+	}
+	if len(run.observation.ServerStartups) != 1 ||
+		run.observation.ServerStartups[0].Label != "collection" ||
+		run.observation.ServerStartups[0].Outcome != "healthy" {
+		t.Fatalf("collection startup observation = %+v", run.observation.ServerStartups)
+	}
+	if run.metersExpected != 2 || run.metersTracked != 2 || len(run.activeMeters) != 0 ||
+		run.measurementErr != nil || len(run.liveServers) != 2 {
+		t.Fatalf(
+			"collection accounting expected=%d tracked=%d active=%d measurement=%v servers=%d",
+			run.metersExpected, run.metersTracked, len(run.activeMeters), run.measurementErr,
+			len(run.liveServers),
+		)
+	}
+	if err := run.stopServers(); err != nil {
+		t.Fatal(err)
+	}
+	if len(run.liveServers) != 0 || run.structural != nil {
+		t.Fatal("collection rehearsal retained a server after shutdown")
+	}
+	complete = true
+	t.Log("structural collection fresh-cycle boundary passed")
 }
 
 func buildWorkingTreeToolchain(

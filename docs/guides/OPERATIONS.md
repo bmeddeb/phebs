@@ -5799,3 +5799,42 @@ process. This claim covers only the current run; older retained readiness roots
 remain untouched. This run preceded the immutable implementation commit, so
 operators must repeat the unchanged selector on the clean commit before
 candidate attribution.
+
+### Focused T40.13 Phase-10 collection rehearsal
+
+Human Phase 10 is `collection` (`phaseOrder[9]`). Run only the dedicated
+selector:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_COLLECTION_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^structural-collection$' \
+  -count=1 -v -timeout=35m
+```
+
+The rehearsal authors the existing small structural profile at A-return before
+its first server launch, converges that clean phase-entry state, and calls the
+unchanged production V30 collection coordinator. Require
+`structural collection fresh-cycle boundary passed` followed by `PASS`. The
+result covers the real stop/restart, all sorted 14 lifecycle owners fresh after
+restart, the 13 exact/drained predicates plus the truthful `durable-jobs`
+lower-bound predicate, exact capacity observed after the latest owner,
+unchanged stable authority, bounded collection evidence, exact two-meter/two-
+server accounting, and shutdown.
+
+Do not add A→B→A to this fixture. That transition creates same-generation
+collecting residue whose drain belongs to the separately passing Phase-8
+rehearsal; adding it without reproducing the Phase-8 handoff would manufacture
+a Phase-10 timeout. This clean-entry selector does not prove Phase-8 or Phase-9
+handoff residue, the full structural corpus, eligible deletion, individual
+rollback/lease/marker/store-pin roots, signed ceremony custody, or later
+phases.
+
+No sparse image, ballast, or fixed lock is used. A successful run removes its
+temporary workspace. A failure reports and retains one exact private
+`phebs-t4013-readiness-*` root containing logs, credentials, synthetic source,
+and derived state. Do not share or rerun against it; first prove the rehearsal
+processes and listener absent, then review and purge only that exact root.
+Because the selector builds the working tree, an immutable clean commit and
+unchanged exact-commit pass are required for candidate evidence.
