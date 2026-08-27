@@ -2247,9 +2247,11 @@ calls the unchanged V30 coordinator. A new private `custody/` child is the only
 recursive data-deletion target; evidence, prepared publication, the lock, and a
 sentinel are siblings, while named external protocol artifacts are retired and
 successful test cleanup removes the parent. A pass requires proven session shutdown, nonzero data gauges,
-checkpoint-before-delete, durable exact absence, terminal observation publication and completed receipt validation,
+terminal checkpoint retirement, durable exact absence, terminal observation publication and completed receipt validation,
 terminal supervision/prepared/checkpoint retirement, sibling preservation, and
 lock lifetime through simulated Execute return. No production code is added.
+The deterministic package regression remains authoritative for
+checkpoint-before-delete ordering.
 Bounded gates, independent review, an immutable commit, and an unchanged
 exact-clean human run remain required. The fixture does not prove Phases 1–11,
 their handoff, full scale, signed custody/evidence, a complete ceremony,
@@ -2258,13 +2260,28 @@ full ceremony be planned.
 
 The first exact-clean Phase-12 attempt at commit
 `cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
-publication, supervision, or supervised Phebs/Surreal server launch because its synthetic manifest
-copies retained bounded projection-profile names rather than the frozen
+publication, supervision, or supervised Phebs/Surreal server launch because its
+synthetic manifest copies retained bounded projection-profile names rather than the frozen
 ceremony identities. Review found no matching process and purged the retained
 207 MiB root. The correction maps only those copied labels through the existing
 frozen constants and adds a fast schema invariant; production validation and
-authored bytes stay unchanged. Corrected exact gates, re-review, and the
-exact-clean run remain required before full-ceremony planning.
+authored bytes stay unchanged. At that point, corrected exact gates, re-review,
+and the exact-clean run remained required before full-ceremony planning.
+
+The corrected Phase-12 selector then passed unchanged from exact clean commit
+`81d0a7a73214dbfa906e01eb3a8d611e8e950b2a`. It emitted the exact-commit and
+custody-retirement markers; the test took 87.79 seconds and the package command
+88.348 seconds. Its graceful shutdown, exact gauges, terminal checkpoint
+retirement, durable absence, terminal observation and completed-receipt
+validation, external protocol retirement, sibling preservation, lock
+lifetime/reacquisition, frozen-host validation, and three clean-checkout
+assertions passed. Successful cleanup left no matching temporary root or
+process. This closes only the focused Phase-12 exact-run requirement. The
+exact package gate separately passed the deterministic checkpoint-before-delete
+ordering regression. The Phase-7 and Phase-9 exact-clean reruns and all
+full-ceremony, release, closure, and scale/SLO
+claims remain open; integration, preflight, freeze, execution, and push remain
+separate actions requiring their own authorization.
 
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package

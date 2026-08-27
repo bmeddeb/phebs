@@ -5961,11 +5961,12 @@ prepare→execute supervision, launches one structural Phebs/Surreal session to
 then calls the unchanged `execution.teardown()` coordinator. Require
 `teardown custody retirement boundary passed` followed by `PASS`. That marker
 means process/session shutdown, nonzero logical and allocated measurements,
-checkpoint-before-delete, exact custody deletion plus durable absence, final
+terminal checkpoint retirement, exact custody deletion plus durable absence, final
 observation publication, completed receipt validation, terminal descendant
 drain, supervision/prepared/checkpoint retirement, sibling preservation, and
 lock lifetime all passed. Negative cancellation, hard-death, delete,
-publication, and resume paths remain under the deterministic unit/atomic gates.
+publication, checkpoint-before-delete ordering, and resume paths remain under
+the deterministic unit/atomic gates.
 
 The test context is 15 minutes and the command timeout is 20 minutes. It pays
 seven bounded Git control invocations, private module hydration/verification
@@ -5989,8 +5990,25 @@ planning.
 
 The first exact-clean attempt at commit
 `cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
-publication, supervision, or supervised Phebs/Surreal server launch because the copied manifest labels
-still used the projection-profile names. Review found no matching process and
+publication, supervision, or supervised Phebs/Surreal server launch because the
+copied manifest labels still used the projection-profile names. Review found no matching process and
 purged the retained 207 MiB temporary root. The correction maps only those
 copies to the existing frozen profile constants and adds a fast schema
 invariant; no production validator or authored profile is relaxed.
+
+The corrected selector passed unchanged from exact clean commit
+`81d0a7a73214dbfa906e01eb3a8d611e8e950b2a`:
+
+```text
+teardown exact source commit: 81d0a7a73214dbfa906e01eb3a8d611e8e950b2a
+teardown custody retirement boundary passed
+--- PASS: TestProductionPathTeardownRehearsal (87.79s)
+PASS
+ok github.com/bmeddeb/phebs/spike/t4013 88.348s
+```
+
+All selector assertions passed, and successful cleanup left no matching
+temporary root or process. Treat this only as focused Phase-12 exact evidence.
+The Phase-7 and Phase-9 exact-clean reruns and all full-ceremony, release,
+closure, and scale/SLO claims remain open. This source-identical result record
+grants no integration, preflight, freeze, execution, or push authority.

@@ -510,13 +510,29 @@ independent review, an immutable commit, and an unchanged exact-clean human run
 remain required before the next full ceremony is planned.
 The first exact-clean attempt at commit
 `cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
-publication, supervision, or supervised Phebs/Surreal server launch because its synthetic prepared
-copies retained bounded projection-profile names instead of the frozen ceremony
+publication, supervision, or supervised Phebs/Surreal server launch because its
+synthetic prepared copies retained bounded projection-profile names instead of the frozen ceremony
 identities. Review found no matching process and purged the retained 207 MiB
 temporary root. The correction maps only the manifest copies through the
 existing frozen constants and adds a fast schema invariant; production
-validation and authored profile bytes remain unchanged. A corrected immutable
-commit, complete bounded gates, re-review, and exact-clean run remain pending.
+validation and authored profile bytes remain unchanged. At that point, a
+corrected immutable commit, complete bounded gates, re-review, and exact-clean
+run remained pending.
+The corrected selector then passed unchanged from exact clean commit
+`81d0a7a73214dbfa906e01eb3a8d611e8e950b2a`. It logged that exact source
+commit and `teardown custody retirement boundary passed`; the test took 87.79s
+and the package command 88.348s. Graceful session shutdown, both nonzero data
+gauges, terminal checkpoint retirement, durable custody absence, terminal observation
+and completed-receipt validation, supervision/prepared/checkpoint retirement,
+sibling preservation, lock lifetime and reacquisition, frozen-host validation,
+and all three clean-checkout boundaries passed. Successful cleanup left no
+matching temporary root or process. This closes only the focused Phase-12
+exact-run requirement. The exact package gate separately passed the
+deterministic checkpoint-before-delete ordering regression. The Phase-7 and
+Phase-9 exact-clean reruns, prior-phase handoff, a complete ceremony, release,
+Epic closure, and scale/SLO claims
+remain open; this source-identical result record authorizes none of the
+separate integration, preflight, freeze, execution, or push actions.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

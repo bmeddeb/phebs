@@ -4246,13 +4246,15 @@ receipt prechecks as the dispatcher and calls the unchanged production
 Require `teardown custody retirement boundary passed` followed by `PASS`.
 
 A pass proves the live process/session stopped without an unproven forced
-shutdown; exact nonzero data gauges; durable checkpoint before deletion;
+shutdown; exact nonzero data gauges; terminal checkpoint retirement;
 exact-scope custody deletion and stable absence; final observation publication
 and completed receipt validation; terminal descendant drain; supervision,
 prepared-publication, provisional-file, and checkpoint retirement; survival of
 the outside sentinel and module root; and run-root-lock retention until the
 simulated Execute return. Existing unit and atomic tests separately own
 cancellation, hard-death, deletion/publication failure, and resume coverage.
+The deterministic package regression separately owns checkpoint-before-delete
+ordering.
 
 The test has a 15-minute context and a 20-minute package timeout. One run pays
 seven bounded Git control invocations, private dependency hydration/
@@ -4276,13 +4278,31 @@ session absent and reviewing the exact retained state.
 This is isolated Phase-12 evidence only. The source-free fixture does not prove
 Phases 1–11, their handoff, full structural scale, signed ceremony custody or
 evidence, a complete ceremony, release, Epic closure, or a scale/SLO claim.
-Commit and independently review the implementation, then run this selector
-unchanged from an exact clean checkout before planning the full ceremony.
+The correction still required an independent review and unchanged exact-clean
+run before planning the full ceremony.
 
 The first exact-clean attempt at commit
 `cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
-publication, supervision, or supervised Phebs/Surreal server launch because those copied labels still
-used the projection-profile names. Review found no matching process and purged
+publication, supervision, or supervised Phebs/Surreal server launch because
+those copied labels still used the projection-profile names. Review found no matching process and purged
 the retained 207 MiB temporary root. The corrected fixture maps only the
 manifest copies to the existing frozen profile constants and has a fast
 schema-invariant regression; the authored profile bytes remain unchanged.
+
+The corrected selector passed unchanged from exact clean commit
+`81d0a7a73214dbfa906e01eb3a8d611e8e950b2a`:
+
+```text
+teardown exact source commit: 81d0a7a73214dbfa906e01eb3a8d611e8e950b2a
+teardown custody retirement boundary passed
+--- PASS: TestProductionPathTeardownRehearsal (87.79s)
+PASS
+ok github.com/bmeddeb/phebs/spike/t4013 88.348s
+```
+
+All selector assertions passed, and successful cleanup left no matching
+temporary root or process. This closes only the focused Phase-12 exact-run
+requirement. The Phase-7 and Phase-9 exact-clean reruns, prior-phase handoff,
+complete ceremony, release, Epic closure, and scale/SLO claims remain open. This
+source-identical result record grants no integration, preflight, freeze,
+execution, or push authority.

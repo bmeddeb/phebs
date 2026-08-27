@@ -2204,11 +2204,11 @@ successful test cleanup removes the parent. It builds both bounded profiles in c
 receipt-valid V30 completed-prefix fixture for Phases 1–11, takes real
 prepare→execute supervision, and launches one live structural Phebs/Surreal
 session before calling the unchanged production teardown coordinator. A pass
-requires session shutdown, exact data gauges, checkpoint-before-delete, durable
-custody absence, terminal observation publication, completed receipt validation,
+requires session shutdown, exact data gauges, terminal checkpoint retirement,
+durable custody absence, terminal observation publication, completed receipt validation,
 supervision/prepared/checkpoint retirement, sibling preservation, and lock
 custody through simulated Execute return. Existing tests remain authoritative
-for negative failure and resume paths; no production code is added. Complete
+for checkpoint-before-delete ordering, negative failure, and resume paths; no production code is added. Complete
 gates, independent review, an immutable commit, and an unchanged exact-clean
 human run remain pending. This isolated fixture does not prove Phases 1–11 or
 their handoff, full-scale/signed custody, a complete ceremony, release, Epic
@@ -2216,13 +2216,28 @@ closure, or a scale/SLO claim.
 
 The first exact-clean Phase-12 attempt at commit
 `cbbb873d251b56c0a2cd645ab02c99ee3a60d90a` stopped before prepared
-publication, supervision, or supervised Phebs/Surreal server launch: the synthetic manifest copies
-retained the bounded projection-profile names instead of the frozen ceremony
+publication, supervision, or supervised Phebs/Surreal server launch: the
+synthetic manifest copies retained the bounded projection-profile names instead of the frozen ceremony
 identities. Its 207 MiB retained root had no matching process and was purged
 after review. The correction maps only the copied control labels through the
 existing frozen constants and adds a fast schema invariant without relaxing
-production validation or changing authored bytes. Corrected exact gates,
-re-review, and the exact-clean human run remain pending.
+production validation or changing authored bytes. At that point, corrected
+exact gates, re-review, and the exact-clean human run remained pending.
+
+The corrected Phase-12 selector then passed unchanged from exact clean commit
+`81d0a7a73214dbfa906e01eb3a8d611e8e950b2a`. It emitted both required
+terminal lines; the test took 87.79 seconds and the package command 88.348
+seconds. Its shutdown, exact gauges, terminal checkpoint retirement, durable
+absence, terminal observation and completed-receipt validation, external
+protocol retirement, sibling preservation, lock lifetime/reacquisition,
+frozen-host validation, and three clean-checkout assertions passed. Successful
+cleanup left no matching temporary root or process. This closes only the
+focused Phase-12 exact-run requirement. The exact package gate separately
+passed the deterministic checkpoint-before-delete ordering regression. The
+Phase-7 and Phase-9 exact-clean reruns,
+prior-phase handoff, complete ceremony, release, Epic closure, and scale/SLO
+claims remain open; integration, preflight, freeze, execution, and push remain
+separate actions requiring their own authorization.
 
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
