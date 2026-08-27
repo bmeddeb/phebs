@@ -2449,14 +2449,17 @@ removed. This is a harness-accounting stop, not a pipeline failure or scale
 result.
 
 T40.13t is next. V31 keeps exact `du` as the only strict data meter, raises
-each whole-custody gauge deadline to 300,000 ms for a bounded 10-minute
-two-gauge reserve, propagates that bound through every strict caller, and adds
-only a closed path-free v2 typed deadline diagnostic. V1–V30 remain exact;
+each whole-custody gauge deadline to 300,000 ms for a bounded 10-minute reserve
+per allocated/logical pair, propagates that bound through every strict caller,
+and adds only a closed path-free v2 typed deadline diagnostic. V1–V30 remain exact;
 neutral-41 is consumed and neutral-42 becomes first admissible. Focused
 timeout, propagation, diagnostic, historical-version, and identifier gates plus
-one same-shape Phase-7 gauge probe are mandatory before another freeze. The
-change adds no production steady-state work and authorizes no merge, freeze,
-execution, release, Epic closure, or scale/SLO claim.
+an exact full-profile replay through Phase 7's terminal gauge are mandatory
+before another freeze. Neutral-41 retained no physical custody, and its logical
+owner counts plus Phase-6 byte maxima cannot reconstruct the filesystem shape;
+a synthetic proxy is not accepted. The change adds no production steady-state
+work and authorizes no merge, freeze, execution, release, Epic closure, or
+scale/SLO claim.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

@@ -4354,7 +4354,7 @@ Epic closure. The identifier is consumed and must never be reused.
 
 T40.13t advances only fresh ceremony bytes to V31. It retains exact `du` as
 the sole strict logical/allocated meter and gives each whole-custody invocation
-300,000 ms, for at most 10 minutes across the serial pair. All strict callers
+300,000 ms, for at most 10 minutes per serial pair. All strict callers
 must propagate the same deadline. A fresh
 `t4013-data-measurement-failure-v2` projection may report only the exact gauge,
 `reason=deadline`, and `deadline_ms=300000`; it retains no path or raw cause.
@@ -4362,8 +4362,19 @@ V1–V30 schemas and predicates remain exact. The permanent identifier fence
 rejects neutral-41 and first admits neutral-42.
 
 Before another freeze, run the focused timeout, v2 diagnostic/round-trip,
-strict-caller propagation, historical-version, and identifier tests, then one
-same-shape Phase-7 gauge probe. This is harness-only: the same two `du`
-children and metadata walks remain, normal completion returns as soon as they
-finish, and no production query, worker, sync, store, lifecycle, publication,
-lock, cache, corpus read, memory/disk allocation, or child-process cost changes.
+strict-caller propagation, historical-version, and identifier tests, then the
+exact full-profile replay through Phase 7's terminal gauge. This is
+harness-only: each complete measurement pair retains the same two `du`
+children and metadata walks; meter or measured-command begin and finish can
+consume two pairs, while the V27 restart start consumes one allocated-only
+gauge plus its finish pair. All return early and remain inside the unchanged
+12-hour ceremony ceiling. No production query, worker, sync, store, lifecycle,
+publication, lock, cache, corpus read, memory/disk allocation, or child-process
+cost changes.
+
+Neutral-41 retained no physical custody. Its 2,294,916 logical Git-tree owners
+and Phase-6 byte maxima do not reproduce Phase 7's filesystem entries,
+directories, hardlinks, cache posture, or concurrent work. Neither a synthetic
+file tree nor the small `semantic-stale-worker` rehearsal satisfies the gate.
+A new freeze remains forbidden until an exact full-profile Phase-7 replay
+passes and its cleanup is confirmed.

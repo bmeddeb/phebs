@@ -6105,16 +6105,28 @@ Do not call this a pipeline failure or scale pass, and never reuse
 `t40r1-neutral-41`. Preserve its signed source-free package. T40.13t advances
 only a fresh ceremony to V31. It keeps exact `du` as the sole strict logical
 and allocated meter; no estimate, `statfs` delta, cached value, or fallback may
-satisfy a phase fence. Each gauge receives 300,000 ms, so two serial gauges
-have a strict 10-minute aggregate reserve. Every strict call path must pass and
-propagate that same bound.
+satisfy a phase fence. Each gauge receives 300,000 ms, so one serial
+allocated/logical pair has a strict 10-minute aggregate reserve. Every strict
+call path must pass and propagate that same bound. Meter or measured-command
+begin and finish can consume two pairs; the V27 restart start uses one
+allocated-only gauge plus its finish pair. All remain inside the unchanged
+12-hour ceremony ceiling.
 
 On a deadline, fresh V31 evidence may emit only the closed path-free
 `t4013-data-measurement-failure-v2` projection with the exact gauge,
 `reason=deadline`, and `deadline_ms=300000`. V1–V30 schemas and predicates stay
 unchanged. Before another freeze, require focused timeout, projection,
 round-trip, strict-caller, historical-version, and neutral-41 rejection/
-neutral-42 admission tests, followed by one same-shape Phase-7 data-gauge
-probe. The correction changes no production path or steady-state cost. During
-a ceremony it launches the same two exact `du` children; only the maximum wait
-reserve changes, while earlier completion returns immediately.
+neutral-42 admission tests, followed by one exact full-profile replay through
+Phase 7's terminal gauge. The correction changes no production path or
+steady-state cost. During a ceremony each complete measurement pair launches
+the same two exact `du` children; only its maximum wait reserve changes, while
+earlier completion returns immediately.
+
+Neutral-41's clean teardown retained no physical custody to remeasure. The
+frozen 2,294,916 count describes logical Git-tree owners, not physical custody
+files, and its successful Phase-6 byte maxima do not bound Phase 7's directory,
+hardlink, cache, or concurrent-work shape. Do not substitute an empty-file or
+sparse-payload APFS fixture, and do not treat the small `semantic-stale-worker`
+rehearsal as full-shape evidence. A new freeze remains forbidden until the
+exact full-profile Phase-7 replay exists, passes, and proves clean teardown.

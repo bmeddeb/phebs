@@ -599,6 +599,20 @@ push plus exact-final-source preflight, fresh neutral-41 selection, and freeze:
 Ben explicitly requested those actions. Freeze remains conditional on the
 final committed and pushed exact `main` passing preflight. Ceremony execution,
 seal, release, and reservation retirement remain unauthorized.
+Neutral-41 was later explicitly executed and sealed. Its verified source-free
+package `sha256:8b29e86c7227752964addd1c5dc06c729ed53288d0371b6926c78dc4dc555423`
+proves Phases 1–6 passed; Phase 7 completed its stale-worker functional boundary
+and then stopped on the inherited 30-second exact allocated-custody gauge.
+Phases 8–11 did not run, teardown retained no custody or process, and the
+separately reviewed pressure reservation was durably retired after Ben's
+explicit cleanup approval. T40.13t is the prospective V31 harness correction;
+neutral-41 is consumed and neutral-42 is first admissible. No fresh freeze,
+execution, release, Epic closure, or scale/SLO claim is authorized.
+Independent correction review rejected a synthetic owner-count/byte-floor
+fixture as non-equivalent to real Phase-7 custody: the retained evidence does
+not bound its physical entries, directories, hardlinks, cache posture, or
+concurrent work. No such fixture is shipped. An exact full-profile replay
+through Phase 7's terminal gauge remains mandatory before any fresh freeze.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

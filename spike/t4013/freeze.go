@@ -531,6 +531,15 @@ func frozenV30PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToo
 	return value, nil
 }
 
+//nolint:unused // Retained for exact historical V30 plan reconstruction.
+func freshV30PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	return freshPlan(frozenV30PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
+}
+
 func frozenV31PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
 	value, err := frozenV30PlanWithHostToolchain(sourceCommit, hostToolchain)
 	if err != nil {

@@ -2452,22 +2452,29 @@ reviewed pressure reservation was durably retired.
 
 AC: advance only fresh plan/observation/receipt execution to V31; V1–V30 bytes
 and predicates remain exact. Keep `du` as the sole strict logical and allocated
-meter. Give each exact whole-custody gauge a 300,000-ms deadline, so the two
-serial gauges reserve at most 10 minutes, and propagate that same strict bound
-through every caller. Add a closed source-free
+meter. Give each exact whole-custody gauge a 300,000-ms deadline, so one
+allocated/logical pair reserves at most 10 minutes, and propagate that same
+strict bound through every caller. Add a closed source-free
 `t4013-data-measurement-failure-v2` diagnostic that identifies only the exact
 gauge, `reason=deadline`, and `deadline_ms=300000`; do not retain a path or raw
 error. Retire consumed identifier `t40r1-neutral-41` and admit 42. Focused tests
 must pin the timeout, v2 projection/round trip, every strict caller, historical
-V1–V30 behavior, and the identifier fence. One same-shape Phase-7 gauge probe
-must pass before any new freeze.
+V1–V30 behavior, and the identifier fence. One exact full-profile Phase-7
+rehearsal must pass through the terminal gauge before any new freeze.
+Neutral-41's clean teardown left no physical custody to remeasure. Its logical
+owner counts and Phase-6 byte maxima do not bound the real Phase-7 filesystem
+entry, directory, hardlink, cache, or concurrent-work shape, so a synthetic
+file-count/byte-floor proxy cannot satisfy this gate.
 
 Steady-state cost: no production request/query, sync tick, startup/restart,
 retry/no-op, publication, lifecycle/store, lock, cache, schema, corpus/shard
-read, hashing, memory/disk, or production child changes. The ceremony retains
-the same two serial `du` children and exact filesystem-metadata traversals; only
-their maximum combined wait reserve rises from 60 seconds to 600 seconds, and
-normal early completion is unchanged. The diagnostic adds bounded scalar JSON
+read, hashing, memory/disk, or production child changes. Each complete
+measurement pair retains two serial `du` children and exact
+filesystem-metadata traversals; only that pair's maximum reserve rises from 60
+seconds to 600 seconds. Meter or measured-command begin and finish can consume
+two pairs; the V27 restart start consumes one allocated-only gauge plus its
+finish pair. All complete early when `du` returns and remain within the
+unchanged 12-hour ceremony ceiling. The diagnostic adds bounded scalar JSON
 only on failure. No merge, freeze, execution, release, T40.13/Epic-40 closure,
 or scale/SLO claim follows.
 
