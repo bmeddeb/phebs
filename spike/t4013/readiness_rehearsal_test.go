@@ -125,7 +125,7 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	if samplerErr != nil {
 		t.Fatal(samplerErr)
 	}
-	logical, allocated, err := measureDataBytesForContract(workspace, true)
+	logical, allocated, err := measureDataBytesForSchemaContext(ctx, PlanSchemaV31, workspace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -866,7 +866,7 @@ func rehearseStructuralPressureBoundary(
 	safety.MaximumPrePressureBytes = maximumPressureRehearsalFilesystemBytes
 	safety.MaximumDataAllocatedBytes = maximumPressureRehearsalFilesystemBytes
 	safety.MaximumPressureBallastBytes = maximumPressureRehearsalFilesystemBytes
-	plan := Plan{Schema: PlanSchemaV30, Safety: safety}
+	plan := Plan{Schema: PlanSchemaV31, Safety: safety}
 	run = &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
@@ -964,7 +964,7 @@ func rehearseStructuralArchiveRestoreBoundary(
 		t.Fatal("archive/restore rehearsal A return did not reproduce the frozen source partitions")
 	}
 
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	run = &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
@@ -1048,7 +1048,7 @@ func rehearseStructuralCollectionBoundary(
 	}
 	aReturn := awaitReadinessSnapshot(t, ctx, profile, "a-return", 12*time.Minute)
 
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	run = &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
@@ -1185,7 +1185,7 @@ func rehearseAuthorizedQueryBoundary(
 	}
 	structAR := awaitReadinessSnapshot(t, ctx, structuralProfile, "a-return", 12*time.Minute)
 
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	run = &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:         Prepared{Profiles: []PreparedProfile{structuralProfile, semanticProfile}},
@@ -1302,13 +1302,14 @@ func buildWorkingTreeToolchain(
 		ClosedEnvironment:  true,
 		dataMeasurementV27: true,
 		exactReportsV30:    true,
+		planSchema:         PlanSchemaV31,
 	}
 	hostToolchain, err := observeHostToolchain(ctx, true)
 	if err != nil {
 		return privateToolchain{}, err
 	}
 	toolchain.host, err = bindHostToolchainForPlan(ctx, Plan{
-		Schema:        PlanSchemaV30,
+		Schema:        PlanSchemaV31,
 		HostToolchain: hostToolchain,
 	})
 	if err != nil {
@@ -1410,7 +1411,7 @@ func rehearseProductionPath(
 	kind string,
 ) {
 	t.Helper()
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	profile, err := prepareProjectionProfile(ctx, moduleRoot, workspace, kind)
 	if err != nil {
 		t.Fatal(err)
@@ -1546,7 +1547,7 @@ func rehearseWarmNoopRestart(
 	before privateProfileSnapshot,
 ) (*privateServer, privateProfileSnapshot) {
 	t.Helper()
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		prepared:    Prepared{Profiles: []PreparedProfile{profile}},
@@ -1596,7 +1597,7 @@ func rehearseSemanticInterruptionBoundary(
 	}
 	beforeRelationshipAuthority := beforeRelationship.Root().Authority
 
-	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	plan := Plan{Schema: PlanSchemaV31, Safety: frozenSafetyV25}
 	run := &execution{
 		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
 		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
@@ -1863,7 +1864,7 @@ func rehearseSemanticStaleWorkerBoundary(
 		t.Fatal(err)
 	}
 	a := awaitReadinessSnapshot(t, ctx, profile, "a", 12*time.Minute)
-	meter, err := beginPhaseMeter(server, profile.DataDir, &a)
+	meter, err := beginPhaseMeter(ctx, PlanSchemaV31, server, profile.DataDir, &a)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1929,7 +1930,7 @@ func rehearseSemanticStaleWorkerBoundary(
 	if err := errors.Join(cursor.Close(), reader.Close(context.WithoutCancel(ctx))); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := meter.finish(&after, PlanSchemaV30); err != nil {
+	if _, err := meter.finish(&after, PlanSchemaV31); err != nil {
 		t.Fatal(err)
 	}
 	t.Log("semantic stale-worker boundary passed")

@@ -2438,6 +2438,39 @@ and no matching process remains. T40.13s is eligible for the separately
 authorized fast-forward merge; phases 7–11, a new freeze, full ceremony,
 release, Epic closure, and scale/SLO evidence remain unestablished.
 
+**T40.13t · Bounded full-custody data-gauge accounting**
+*(high ceremony correctness · needs the sealed neutral-41 stop)* — preserve
+`t40r1-neutral-41` as an honest V30 harness-accounting stop. Exact source
+`a28e0573f0089c22dda610ad1bf065328d47865d`, frozen plan
+`sha256:8799f5e63f61b44ecea7b3e08f607922715589a0832b0b2802f75824ad9fd507`,
+and sealed source-free package
+`sha256:8b29e86c7227752964addd1c5dc06c729ed53288d0371b6926c78dc4dc555423`
+prove Phases 1–6 passed. Phase 7 completed the stale fence and convergence,
+then its final exact allocated-data gauge exceeded the inherited 30,000-ms
+deadline. Phases 8–11 did not run. Teardown was clean, and the separately
+reviewed pressure reservation was durably retired.
+
+AC: advance only fresh plan/observation/receipt execution to V31; V1–V30 bytes
+and predicates remain exact. Keep `du` as the sole strict logical and allocated
+meter. Give each exact whole-custody gauge a 300,000-ms deadline, so the two
+serial gauges reserve at most 10 minutes, and propagate that same strict bound
+through every caller. Add a closed source-free
+`t4013-data-measurement-failure-v2` diagnostic that identifies only the exact
+gauge, `reason=deadline`, and `deadline_ms=300000`; do not retain a path or raw
+error. Retire consumed identifier `t40r1-neutral-41` and admit 42. Focused tests
+must pin the timeout, v2 projection/round trip, every strict caller, historical
+V1–V30 behavior, and the identifier fence. One same-shape Phase-7 gauge probe
+must pass before any new freeze.
+
+Steady-state cost: no production request/query, sync tick, startup/restart,
+retry/no-op, publication, lifecycle/store, lock, cache, schema, corpus/shard
+read, hashing, memory/disk, or production child changes. The ceremony retains
+the same two serial `du` children and exact filesystem-metadata traversals; only
+their maximum combined wait reserve rises from 60 seconds to 600 seconds, and
+normal early completion is unchanged. The diagnostic adds bounded scalar JSON
+only on failure. No merge, freeze, execution, release, T40.13/Epic-40 closure,
+or scale/SLO claim follows.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

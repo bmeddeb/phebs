@@ -2436,6 +2436,28 @@ custody/evidence, and must not become a copied constant. The workaround changes
 no frozen limit and establishes no ceremony result. Exact-final-source
 preflight and neutral-41 freeze remain next; execution remains unauthorized.
 
+Neutral-41 then froze and executed exact source
+`a28e0573f0089c22dda610ad1bf065328d47865d` under reviewed V30 plan
+`sha256:8799f5e63f61b44ecea7b3e08f607922715589a0832b0b2802f75824ad9fd507`.
+Its independently verified source-free package
+`sha256:8b29e86c7227752964addd1c5dc06c729ed53288d0371b6926c78dc4dc555423`
+proves Phases 1–6 passed. Phase 7 completed its functional stale fence and
+convergence but stopped when the final exact allocated-data `du` exceeded the
+30,000-ms gauge deadline. Phases 8–11 did not run; teardown cleanly retired
+custody and processes. The reviewed host-pressure reservation was then durably
+removed. This is a harness-accounting stop, not a pipeline failure or scale
+result.
+
+T40.13t is next. V31 keeps exact `du` as the only strict data meter, raises
+each whole-custody gauge deadline to 300,000 ms for a bounded 10-minute
+two-gauge reserve, propagates that bound through every strict caller, and adds
+only a closed path-free v2 typed deadline diagnostic. V1–V30 remain exact;
+neutral-41 is consumed and neutral-42 becomes first admissible. Focused
+timeout, propagation, diagnostic, historical-version, and identifier gates plus
+one same-shape Phase-7 gauge probe are mandatory before another freeze. The
+change adds no production steady-state work and authorizes no merge, freeze,
+execution, release, Epic closure, or scale/SLO claim.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

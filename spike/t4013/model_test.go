@@ -211,6 +211,21 @@ func TestFreshV14PlanStampsFreezeDateWithoutChangingHistoricalPlan(t *testing.T)
 	}
 }
 
+func TestFreshV31PlanUsesCurrentCoupledSchemas(t *testing.T) {
+	frozenAt := time.Date(2026, 8, 27, 1, 30, 0, 0, time.FixedZone("PDT", -7*60*60))
+	plan, err := freshV31PlanWithHostToolchain(
+		testSourceCommit, fakeHostToolchainV25(), frozenAt,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV31 || plan.FrozenOn != "2026-08-27" ||
+		observationSchemaForPlan(plan) != ObservationSchemaV31 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV31 || plan.Safety != frozenSafetyV25 {
+		t.Fatalf("fresh V31 plan = %+v", plan)
+	}
+}
+
 func TestV2PlanAndReceiptBindExactHostToolchain(t *testing.T) {
 	hostToolchain := fakeHostToolchain()
 	plan, err := frozenV2PlanWithHostToolchain(testSourceCommit, hostToolchain)
@@ -1102,6 +1117,47 @@ func TestV27DataMeasurementFailureProjectionIsClosedAndHistorical(t *testing.T) 
 		mutate(forged.DataMeasurement)
 		if err := validateDataMeasurementFailureObservation(forged); err == nil {
 			t.Fatalf("forged data-measurement projection passed: %+v", forged.DataMeasurement)
+		}
+	}
+}
+
+func TestV31DataMeasurementFailureRaisesOnlyItsClosedDeadline(t *testing.T) {
+	legacy := Observation{
+		Outcome: "stopped",
+		Failures: []FailureObservation{{
+			Phase: "stale_worker", Class: "oracle", Code: "failed_phase_measurement_unavailable",
+		}},
+		DataMeasurement: &DataMeasurementFailureObservation{
+			Schema: dataMeasurementFailureSchemaV1, Scope: "custody", Gauge: "allocated",
+			Reason: "deadline", DeadlineMS: frozenDataMeasurementDeadlineMS,
+		},
+	}
+	for _, schema := range []string{
+		ObservationSchemaV27, ObservationSchemaV28, ObservationSchemaV29, ObservationSchemaV30,
+	} {
+		legacy.Schema = schema
+		if err := validateDataMeasurementFailureObservation(legacy); err != nil {
+			t.Fatalf("historical schema %q lost its V1/30-second projection: %v", schema, err)
+		}
+	}
+
+	v31 := legacy
+	v31.Schema = ObservationSchemaV31
+	v31.DataMeasurement = cloneDataMeasurementFailureObservation(legacy.DataMeasurement)
+	v31.DataMeasurement.Schema = dataMeasurementFailureSchemaV2
+	v31.DataMeasurement.DeadlineMS = frozenDataMeasurementDeadlineV31MS
+	if err := validateDataMeasurementFailureObservation(v31); err != nil {
+		t.Fatalf("V31 V2/300-second projection failed: %v", err)
+	}
+	for _, mutate := range []func(*DataMeasurementFailureObservation){
+		func(value *DataMeasurementFailureObservation) { value.Schema = dataMeasurementFailureSchemaV1 },
+		func(value *DataMeasurementFailureObservation) { value.DeadlineMS = frozenDataMeasurementDeadlineMS },
+	} {
+		forged := v31
+		forged.DataMeasurement = cloneDataMeasurementFailureObservation(v31.DataMeasurement)
+		mutate(forged.DataMeasurement)
+		if err := validateDataMeasurementFailureObservation(forged); err == nil {
+			t.Fatalf("V31 accepted a historical measurement contract: %+v", forged.DataMeasurement)
 		}
 	}
 }

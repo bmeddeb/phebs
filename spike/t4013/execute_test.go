@@ -50,6 +50,10 @@ func newV30FailureExecution(t *testing.T, module, workspace string) *execution {
 	return newFailureExecution(t, module, workspace, frozenV30PlanWithHostToolchain)
 }
 
+func newV31FailureExecution(t *testing.T, module, workspace string) *execution {
+	return newFailureExecution(t, module, workspace, frozenV31PlanWithHostToolchain)
+}
+
 func newFailureExecution(
 	t *testing.T,
 	module string,
@@ -296,7 +300,7 @@ func TestV27StoppedDataDeadlineProjectsOnlyTypedPrimaryCause(t *testing.T) {
 			run := newV27FailureExecution(t, module, workspace)
 			setExecutionObservationPath(t, run)
 			run.startPhase(0)
-			measurement := newDataMeasurementDeadlineError(false)
+			measurement := newDataMeasurementDeadlineError(false, dataMeasurementTimeout)
 			if errors.Is(measurement, context.DeadlineExceeded) {
 				t.Fatalf("typed deadline changed historical context identity: %v", measurement)
 			}
@@ -338,6 +342,33 @@ func TestV27StoppedDataDeadlineProjectsOnlyTypedPrimaryCause(t *testing.T) {
 				t.Fatalf("data-measurement projection = %+v", failure)
 			}
 		})
+	}
+}
+
+func TestV31StoppedDataDeadlineProjectsOnlyV2Bound(t *testing.T) {
+	root := t.TempDir()
+	module := filepath.Join(root, "module")
+	workspace := filepath.Join(root, "custody")
+	for _, path := range []string{module, workspace} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := newV31FailureExecution(t, module, workspace)
+	setExecutionObservationPath(t, run)
+	run.startPhase(0)
+	stopped, err := run.stopAfterFailure(
+		newDataMeasurementDeadlineError(false, dataMeasurementTimeoutV31),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	failure := stopped.DataMeasurement
+	if failure == nil || failure.Schema != dataMeasurementFailureSchemaV2 ||
+		failure.Scope != dataMeasurementScope || failure.Gauge != dataMeasurementAllocated ||
+		failure.Reason != dataMeasurementDeadline ||
+		failure.DeadlineMS != frozenDataMeasurementDeadlineV31MS {
+		t.Fatalf("V31 data-measurement projection = %+v", failure)
 	}
 }
 
@@ -399,7 +430,7 @@ func TestV27TeardownCeilingReclassificationClearsDataMeasurement(t *testing.T) {
 			)
 			return nil
 		}
-		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false))
+		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false, dataMeasurementTimeout))
 		verify(t, run, stopped, err)
 	})
 
@@ -425,7 +456,7 @@ func TestV27TeardownCeilingReclassificationClearsDataMeasurement(t *testing.T) {
 			}
 			return nil
 		}
-		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false))
+		stopped, err := run.stopAfterFailure(newDataMeasurementDeadlineError(false, dataMeasurementTimeout))
 		if publications != 2 {
 			t.Fatalf("reclassified publications = %d, want 2", publications)
 		}
@@ -2461,7 +2492,7 @@ func TestV25MeasuredCommandFailureCannotSubstantiateRecovery(t *testing.T) {
 }
 
 func TestDataMeasurementDeadlineClassificationChangesOnlyAtV27(t *testing.T) {
-	deadline := newDataMeasurementDeadlineError(false)
+	deadline := newDataMeasurementDeadlineError(false, dataMeasurementTimeout)
 	historical := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV26}, deadline, nil, nil)
 	current := classifyStoppedFailureForPlan(Plan{Schema: PlanSchemaV27}, deadline, nil, nil)
 	if historical.code != "operational_failure" || current.code != "failed_phase_measurement_unavailable" ||
@@ -2504,7 +2535,7 @@ func TestV30MeasurementClassificationNamesSingleFailedSampler(t *testing.T) {
 		},
 		{
 			name: "process and data", failure: errors.Join(
-				errProcessSamplingFailed, newDataMeasurementDeadlineError(false),
+				errProcessSamplingFailed, newDataMeasurementDeadlineError(false, dataMeasurementTimeout),
 			),
 			want: "failed_phase_measurement_unavailable",
 		},
@@ -4044,7 +4075,7 @@ func TestFrozenSourceExportUsesReviewedCommitAndIgnoresWorkingTreeMutation(t *te
 	}
 	closedOutput := filepath.Join(workspace, "closed-source")
 	if _, err := exportReviewedSourceMeasuredWithBoundGit(
-		t.Context(), root, commit, closedOutput, workspace, host.gitCore, controls,
+		t.Context(), root, commit, closedOutput, workspace, PlanSchemaV30, host.gitCore, controls,
 	); err != nil {
 		t.Fatal(err)
 	}

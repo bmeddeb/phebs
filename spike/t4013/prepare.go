@@ -321,7 +321,7 @@ func prepare(ctx context.Context, request PrepareRequest, output string) (result
 		})
 	}
 	if planSchemaVersion(plan.Schema) >= 25 {
-		_, allocated, measureErr := measureDataBytesForPlan(plan, workspace)
+		_, allocated, measureErr := measureDataBytesForPlanContext(ctx, plan, workspace)
 		if measureErr != nil {
 			return Prepared{}, measureErr
 		}

@@ -67,7 +67,8 @@ func TestPrivateToolReplacementRefusesEveryHarnessLaunchBeforeMutation(t *testin
 				}
 				toolchain := privateToolchain{
 					Schema: privateToolchainSchema, ClosedEnvironment: true, TempDir: tempRoot,
-					Phebs: filepath.Join(toolRoot, "phebs"), Zoekt: filepath.Join(toolRoot, "zoekt-git-index"),
+					planSchema: PlanSchemaV25,
+					Phebs:      filepath.Join(toolRoot, "phebs"), Zoekt: filepath.Join(toolRoot, "zoekt-git-index"),
 					Focused: filepath.Join(toolRoot, "phebs-focused-index"), Buf: filepath.Join(toolRoot, "buf"),
 				}
 				gitCore, err := filepath.Abs(os.Args[0])
@@ -261,6 +262,7 @@ func TestMeasuredSourceExportRetainsSignaledShutdownUncertainty(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := extractFrozenSourceCommandMeasured(
+		t.Context(), PlanSchemaV30,
 		exec.CommandContext(t.Context(), "/bin/sh", "-c", "kill -KILL $$"), output, root,
 	)
 	if !errors.Is(err, errPrivateServerShutdownUnproven) {
@@ -345,6 +347,7 @@ func TestMeasuredShortCommandDoesNotInventSamplerFailure(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			metrics, err := runMeasuredCommand(
+				t.Context(), PlanSchemaV30,
 				exec.CommandContext(t.Context(), "/bin/sh", "-c", "exit "+test.status), t.TempDir(), true,
 			)
 			if errors.Is(err, errProcessSamplingFailed) || (err != nil) != test.wantErr || metrics.OtherChildren != 1 {
@@ -1337,6 +1340,7 @@ func TestExecutionEnvironmentChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV28, ""},
 		{PlanSchemaV29, ""},
 		{PlanSchemaV30, ""},
+		{PlanSchemaV31, ""},
 	} {
 		got := ""
 		surreal := ""
@@ -1372,6 +1376,7 @@ func TestFrozenSourceExportContractChangesOnlyAtV25(t *testing.T) {
 		{PlanSchemaV28, frozenSourceExportV25},
 		{PlanSchemaV29, frozenSourceExportV25},
 		{PlanSchemaV30, frozenSourceExportV25},
+		{PlanSchemaV31, frozenSourceExportV25},
 	} {
 		if got := frozenSourceExportContractForPlan(test.schema); got != test.want {
 			t.Fatalf("source export contract for %s = %v, want %v", test.schema, got, test.want)

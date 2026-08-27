@@ -6086,3 +6086,35 @@ changes the window, so always rerun preflight. Remove the reservation only
 after separately reviewed terminal package disposition, with a durability and
 absence check. This workaround changes no frozen limit and proves no ceremony
 result.
+
+### Neutral-41 sealed stop and V31 data-gauge budget
+
+`t40r1-neutral-41` ran exact source
+`a28e0573f0089c22dda610ad1bf065328d47865d` from frozen V30 plan
+`sha256:8799f5e63f61b44ecea7b3e08f607922715589a0832b0b2802f75824ad9fd507`.
+The returned bundle verified, and the sealed source-free package digest is
+`sha256:8b29e86c7227752964addd1c5dc06c729ed53288d0371b6926c78dc4dc555423`.
+It proves Phases 1–6 passed. Phase 7 completed stale-worker fencing and
+convergence before its terminal exact allocated-data `du` exceeded the
+30,000-ms deadline. Phases 8–11 did not run. Teardown proved no retained
+custody, process, or listener. After separate review and approval, the
+7,000,000,000-byte host-pressure reservation was removed, its parent synced,
+and durable absence verified.
+
+Do not call this a pipeline failure or scale pass, and never reuse
+`t40r1-neutral-41`. Preserve its signed source-free package. T40.13t advances
+only a fresh ceremony to V31. It keeps exact `du` as the sole strict logical
+and allocated meter; no estimate, `statfs` delta, cached value, or fallback may
+satisfy a phase fence. Each gauge receives 300,000 ms, so two serial gauges
+have a strict 10-minute aggregate reserve. Every strict call path must pass and
+propagate that same bound.
+
+On a deadline, fresh V31 evidence may emit only the closed path-free
+`t4013-data-measurement-failure-v2` projection with the exact gauge,
+`reason=deadline`, and `deadline_ms=300000`. V1–V30 schemas and predicates stay
+unchanged. Before another freeze, require focused timeout, projection,
+round-trip, strict-caller, historical-version, and neutral-41 rejection/
+neutral-42 admission tests, followed by one same-shape Phase-7 data-gauge
+probe. The correction changes no production path or steady-state cost. During
+a ceremony it launches the same two exact `du` children; only the maximum wait
+reserve changes, while earlier completion returns immediately.

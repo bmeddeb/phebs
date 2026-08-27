@@ -54,6 +54,7 @@ type privateToolchain struct {
 	ClosedEnvironment  bool
 	dataMeasurementV27 bool
 	exactReportsV30    bool
+	planSchema         string
 	controls           executionControls
 	controlsDigest     string
 	extraEnvironment   []string
@@ -169,7 +170,7 @@ func buildPrivateToolchain(
 	}
 	var allocation *allocationSampler
 	if v25 {
-		_, allocated, err := measureDataBytesForContract(workspace, true)
+		_, allocated, err := measureDataBytesForPlanContext(ctx, plan, workspace)
 		if err != nil {
 			return privateToolchain{}, PhaseMetrics{}, err
 		}
@@ -178,7 +179,7 @@ func buildPrivateToolchain(
 			return privateToolchain{}, PhaseMetrics{}, err
 		}
 		defer func() {
-			logical, allocated, measureErr := measureDataBytesForContract(workspace, true)
+			logical, allocated, measureErr := measureDataBytesForPlanContext(ctx, plan, workspace)
 			peakAllocated, allocationErr := allocation.close()
 			metrics.WallMS = time.Since(started).Milliseconds()
 			metrics.DataLogicalBytes = max(metrics.DataLogicalBytes, logical)
@@ -189,7 +190,7 @@ func buildPrivateToolchain(
 	source := filepath.Join(workspace, "toolchain-source")
 	if v25 {
 		exportMetrics, exportErr := exportReviewedSourceMeasuredWithBoundGit(
-			ctx, moduleRoot, plan.SourceCommit, source, workspace, hostTools.gitCore, controls,
+			ctx, moduleRoot, plan.SourceCommit, source, workspace, plan.Schema, hostTools.gitCore, controls,
 		)
 		var combinedErr error
 		metrics, combinedErr = mergeMetricsPreservingError(exportErr, metrics, exportMetrics)
@@ -222,7 +223,7 @@ func buildPrivateToolchain(
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
+		commandMetrics, commandErr := runMeasuredCommand(ctx, plan.Schema, command, workspace, true)
 		if commandErr != nil {
 			commandErr = sanitizeMeasuredCommandFailure(
 				"T40.13 private module hydration failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
@@ -240,7 +241,7 @@ func buildPrivateToolchain(
 		command.Dir = source
 		command.Env = executionEnvironmentForControls(controls, true)
 		command.Stdout, command.Stderr = io.Discard, io.Discard
-		commandMetrics, commandErr = runMeasuredCommand(command, workspace, true)
+		commandMetrics, commandErr = runMeasuredCommand(ctx, plan.Schema, command, workspace, true)
 		if commandErr != nil {
 			commandErr = sanitizeMeasuredCommandFailure(
 				"T40.13 private module verification failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
@@ -263,6 +264,7 @@ func buildPrivateToolchain(
 		ClosedEnvironment:  v25,
 		dataMeasurementV27: planSchemaVersion(plan.Schema) >= 27,
 		exactReportsV30:    planSchemaVersion(plan.Schema) >= 30,
+		planSchema:         plan.Schema,
 		controls:           controls,
 		controlsDigest:     controlsDigest,
 		host:               hostTools,
@@ -298,7 +300,7 @@ func buildPrivateToolchain(
 		command.Env = append(command.Env, build.env...)
 		if v25 {
 			command.Stdout, command.Stderr = io.Discard, io.Discard
-			commandMetrics, commandErr := runMeasuredCommand(command, workspace, true)
+			commandMetrics, commandErr := runMeasuredCommand(ctx, plan.Schema, command, workspace, true)
 			if commandErr != nil {
 				commandErr = sanitizeMeasuredCommandFailure(
 					"T40.13 toolchain build failed", commandErr, planSchemaVersion(plan.Schema) >= 27,
@@ -438,12 +440,13 @@ func extractFrozenSourceCommand(command *exec.Cmd, output string) error {
 }
 
 func extractFrozenSourceCommandMeasured(
-	command *exec.Cmd, output, dataDir string,
+	ctx context.Context, planSchema string, command *exec.Cmd, output, dataDir string,
 ) (PhaseMetrics, error) {
-	if command == nil || !filepath.IsAbs(output) || !filepath.IsAbs(dataDir) {
+	if ctx == nil || planSchemaVersion(planSchema) < 25 || command == nil ||
+		!filepath.IsAbs(output) || !filepath.IsAbs(dataDir) {
 		return PhaseMetrics{}, errors.New("T40.13 measured source export is invalid")
 	}
-	_, allocatedBefore, err := measureDataBytesForContract(dataDir, true)
+	_, allocatedBefore, err := measureDataBytesForSchemaContext(ctx, planSchema, dataDir)
 	if err != nil {
 		return PhaseMetrics{}, err
 	}
@@ -479,7 +482,7 @@ func extractFrozenSourceCommandMeasured(
 	sampler.observeRootExit()
 	sessionErr := finishCustodyCommandSession(command.Process.Pid)
 	_ = sampler.close()
-	logical, allocated, measureErr := measureDataBytesForContract(dataDir, true)
+	logical, allocated, measureErr := measureDataBytesForSchemaContext(ctx, planSchema, dataDir)
 	peakAllocated, allocationErr := allocation.close()
 	allocated = max(allocated, peakAllocated)
 	metrics := PhaseMetrics{
@@ -512,39 +515,39 @@ func exportReviewedSourceMeasured(
 		return PhaseMetrics{}, err
 	}
 	return exportReviewedSourceMeasuredWithGit(
-		ctx, moduleRoot, sourceCommit, output, measureRoot, gitCore,
+		ctx, moduleRoot, sourceCommit, output, measureRoot, PlanSchemaV30, gitCore,
 	)
 }
 
 func exportReviewedSourceMeasuredWithGit(
-	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot, gitCore string,
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot, planSchema, gitCore string,
 ) (PhaseMetrics, error) {
 	return exportReviewedSourceMeasuredWithResolver(
-		ctx, moduleRoot, sourceCommit, output, measureRoot,
+		ctx, moduleRoot, sourceCommit, output, measureRoot, planSchema,
 		func() (string, error) { return gitCore, nil }, nil,
 	)
 }
 
 func exportReviewedSourceMeasuredWithBoundGit(
-	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot, planSchema string,
 	git boundExecutable, controls executionControls,
 ) (PhaseMetrics, error) {
 	return exportReviewedSourceMeasuredWithResolver(
-		ctx, moduleRoot, sourceCommit, output, measureRoot,
+		ctx, moduleRoot, sourceCommit, output, measureRoot, planSchema,
 		func() (string, error) { return git.pathForLaunch(ctx) },
 		executionEnvironmentForControls(controls, false),
 	)
 }
 
 func exportReviewedSourceMeasuredWithResolver(
-	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot string,
+	ctx context.Context, moduleRoot, sourceCommit, output, measureRoot, planSchema string,
 	gitPath func() (string, error),
 	environment []string,
 ) (PhaseMetrics, error) {
 	var metrics PhaseMetrics
 	err := exportReviewedSourceWithResolver(ctx, moduleRoot, sourceCommit, output, gitPath, environment, func(command *exec.Cmd, output string) error {
 		var err error
-		metrics, err = extractFrozenSourceCommandMeasured(command, output, measureRoot)
+		metrics, err = extractFrozenSourceCommandMeasured(ctx, planSchema, command, output, measureRoot)
 		return err
 	})
 	return metrics, err
@@ -1872,6 +1875,9 @@ func validateToolchain(value privateToolchain) error {
 	}
 	if value.exactReportsV30 && !value.ClosedEnvironment {
 		return errors.New("T40.13 exact-report toolchain is not isolated")
+	}
+	if value.ClosedEnvironment && planSchemaVersion(value.planSchema) < 25 {
+		return errors.New("T40.13 private toolchain plan schema is invalid")
 	}
 	for _, path := range []string{value.Phebs, value.Zoekt, value.Focused, value.Buf} {
 		info, err := os.Lstat(path)

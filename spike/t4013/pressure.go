@@ -164,12 +164,13 @@ func requiredPressureBallast(
 func createPressureBallast(
 	ctx context.Context,
 	workspace string,
-	safety SafetyEnvelope,
-	contract pressureBallastContract,
+	plan Plan,
 ) (*pressureBallast, int64, int64, error) {
 	if ctx == nil || !filepath.IsAbs(workspace) {
 		return nil, 0, 0, errors.New("T40.13 pressure ballast scope is invalid")
 	}
+	safety := plan.Safety
+	contract := pressureBallastContractForPlan(plan)
 	info, err := os.Lstat(workspace)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, 0, 0, errors.Join(err, errors.New("T40.13 pressure ballast root is invalid"))
@@ -180,7 +181,7 @@ func createPressureBallast(
 		return nil, 0, 0, errors.Join(gateErr,
 			fmt.Errorf("T40.13 pressure ballast requires normal starting capacity: %w", errProductionPressure))
 	}
-	_, allocatedBefore, err := measureDataBytesForContract(workspace, contract >= pressureBallastV25)
+	_, allocatedBefore, err := measureDataBytesForPlanContext(ctx, plan, workspace)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -205,7 +206,7 @@ func createPressureBallast(
 		_ = os.Remove(path)
 		return nil, 0, 0, errors.Join(allocateErr, closeErr)
 	}
-	logical, allocated, err := measureDataBytesForContract(workspace, contract >= pressureBallastV25)
+	logical, allocated, err := measureDataBytesForPlanContext(ctx, plan, workspace)
 	if err != nil || allocated > safety.MaximumDataAllocatedBytes {
 		_ = os.Remove(path)
 		if err == nil {

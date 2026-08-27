@@ -385,7 +385,7 @@ func newExecution(
 	}
 	workspaceAllocated := int64(0)
 	if planSchemaVersion(plan.Schema) >= 23 {
-		_, workspaceAllocated, err = measureDataBytesForPlan(plan, workspace)
+		_, workspaceAllocated, err = measureDataBytesForPlanContext(ctx, plan, workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -1451,7 +1451,7 @@ func (run *execution) startServerLegacy(
 		return nil, nil, err
 	}
 	run.liveServers = append(run.liveServers, server)
-	meter, err := beginInitialPhaseMeter(server, run.workspace, before)
+	meter, err := beginInitialPhaseMeter(run.ctx, run.plan.Schema, server, run.workspace, before)
 	if err != nil {
 		return server, nil, err
 	}
@@ -1484,7 +1484,7 @@ func (run *execution) startServerV27(
 	if boundary != nil {
 		allocated, err = boundary.consume(run.workspace)
 	} else {
-		allocated, err = measureDataAllocatedBytesForContract(run.workspace, true)
+		allocated, err = measureDataAllocatedBytesForPlanContext(run.ctx, run.plan, run.workspace)
 	}
 	if err != nil {
 		run.measurementErr = errors.Join(run.measurementErr, err)
@@ -1515,6 +1515,7 @@ func (run *execution) startServerV27(
 	meter := &phaseMeter{
 		started: started, server: server, dataDir: run.workspace, logOffset: 0,
 		before: before, allocation: allocation, strict: true, captureRaw: true,
+		measurementContext: run.ctx,
 	}
 	run.trackMeter(meter)
 	deadline := time.Duration(run.plan.Safety.ServerHealthDeadlineMS) * time.Millisecond
@@ -1592,7 +1593,7 @@ func (run *execution) captureFailedPhase() error {
 		}
 	}
 	if metrics.DataAllocatedBytes == 0 {
-		logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
+		logical, allocated, err := measureDataBytesForPlanContext(run.ctx, run.plan, run.workspace)
 		captureErr = errors.Join(captureErr, err)
 		if err == nil {
 			metrics.DataLogicalBytes, metrics.DataAllocatedBytes = logical, allocated
@@ -1696,7 +1697,7 @@ func (run *execution) warmNoop() error {
 
 func (run *execution) deltaAndReturn() error {
 	profile := run.prepared.Profiles[0]
-	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structA)
+	meter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structA)
 	if err != nil {
 		return err
 	}
@@ -1721,7 +1722,7 @@ func (run *execution) deltaAndReturn() error {
 	}
 
 	run.startPhase(4)
-	meter, err = beginPhaseMeter(run.structural, run.workspace, &run.structB)
+	meter, err = beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structB)
 	if err != nil {
 		return err
 	}
@@ -3466,7 +3467,7 @@ func waitStaleChunkFence(
 func (run *execution) pressure() error {
 	started := time.Now()
 	profile := run.prepared.Profiles[0]
-	priorMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	priorMeter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -3480,7 +3481,7 @@ func (run *execution) pressure() error {
 		return err
 	}
 	ballast, pressureLogical, pressureAllocated, err := createPressureBallast(
-		run.ctx, run.workspace, run.plan.Safety, pressureBallastContractForPlan(run.plan),
+		run.ctx, run.workspace, run.plan,
 	)
 	if err != nil {
 		return err
@@ -3562,7 +3563,7 @@ func (run *execution) pressure() error {
 func (run *execution) archiveRestore() error {
 	profile := run.prepared.Profiles[0]
 	started := time.Now()
-	backupServerMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	backupServerMeter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -3648,7 +3649,7 @@ func archiveRestoreDataMetricsForPlan(
 	if planSchemaVersion(plan.Schema) >= 27 {
 		return metrics, nil
 	}
-	logical, allocated, err := measureDataBytesForPlan(plan, workspace)
+	logical, allocated, err := measureDataBytesForPlanContext(context.Background(), plan, workspace)
 	if err != nil {
 		return metrics, err
 	}
@@ -3662,7 +3663,7 @@ func (run *execution) collection() error {
 		return run.collectionV30()
 	}
 	profile := run.prepared.Profiles[0]
-	meter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	meter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -3691,7 +3692,7 @@ func (run *execution) collection() error {
 func (run *execution) collectionV30() error {
 	profile := run.prepared.Profiles[0]
 	started := time.Now()
-	priorMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	priorMeter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -3761,7 +3762,7 @@ func projectCollectionObservation(status lifecycle.Status) *CollectionObservatio
 
 func (run *execution) authorizedQueries() error {
 	started := time.Now()
-	structMeter, err := beginPhaseMeter(run.structural, run.workspace, &run.structAR)
+	structMeter, err := beginPhaseMeter(run.ctx, run.plan.Schema, run.structural, run.workspace, &run.structAR)
 	if err != nil {
 		return err
 	}
@@ -3942,7 +3943,7 @@ func (run *execution) teardown() error {
 	if err := run.stopServers(); err != nil {
 		return err
 	}
-	logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
+	logical, allocated, err := measureDataBytesForPlanContext(run.ctx, run.plan, run.workspace)
 	if err != nil {
 		return err
 	}
@@ -4002,7 +4003,9 @@ func (run *execution) teardownLegacy() error {
 	if err := run.stopServers(); err != nil {
 		return err
 	}
-	logical, allocated, err := measureDataBytesForPlan(run.plan, run.workspace)
+	logical, allocated, err := measureDataBytesForPlanContext(
+		context.Background(), run.plan, run.workspace,
+	)
 	if err != nil {
 		return err
 	}
@@ -5205,7 +5208,9 @@ func createLiveBackup(
 		return privateRecoveryBackup{}, PhaseMetrics{}, err
 	}
 	command.Env = executionEnvironmentForToolchain(toolchain)
-	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
+	metrics, commandErr := runMeasuredCommand(
+		ctx, toolchain.planSchema, command, workspace, toolchain.ClosedEnvironment,
+	)
 	closeErr := logFile.Close()
 	if commandErr != nil {
 		commandErr = sanitizeMeasuredCommandFailure(
@@ -5259,7 +5264,9 @@ func restoreBackup(
 		return PhaseMetrics{}, err
 	}
 	command.Env = executionEnvironmentForToolchain(toolchain)
-	metrics, commandErr := runMeasuredCommand(command, workspace, toolchain.ClosedEnvironment)
+	metrics, commandErr := runMeasuredCommand(
+		ctx, toolchain.planSchema, command, workspace, toolchain.ClosedEnvironment,
+	)
 	closeErr := logFile.Close()
 	if commandErr != nil {
 		commandErr = sanitizeMeasuredCommandFailure(

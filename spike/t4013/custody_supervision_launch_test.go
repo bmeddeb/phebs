@@ -28,6 +28,9 @@ const launcherDescendantModeEnv = "T4013_CUSTODY_LAUNCHER_MODE"
 func bindLauncherToolchain(t *testing.T, toolchain privateToolchain) privateToolchain {
 	t.Helper()
 	toolchain.Schema = privateToolchainSchema
+	if toolchain.ClosedEnvironment && toolchain.planSchema == "" {
+		toolchain.planSchema = PlanSchemaV25
+	}
 	root := t.TempDir()
 	paths := []*string{&toolchain.Phebs, &toolchain.Zoekt, &toolchain.Focused, &toolchain.Buf}
 	for index, path := range paths {

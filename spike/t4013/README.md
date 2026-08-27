@@ -4335,3 +4335,35 @@ reruns. Cross-phase handoff, complete signed ceremony, release, Epic closure,
 and scale/SLO claims remain open. Integration, exact-main gates, fresh-ID
 selection, freeze and frozen-plan review, execution, and push remain separate
 actions requiring their own authorization.
+
+## Neutral-41 sealed stop and T40.13t
+
+The exact V30 `t40r1-neutral-41` ceremony bound source
+`a28e0573f0089c22dda610ad1bf065328d47865d` and frozen plan
+`sha256:8799f5e63f61b44ecea7b3e08f607922715589a0832b0b2802f75824ad9fd507`.
+Returned evidence verification passed. The sealed source-free package is
+`sha256:8b29e86c7227752964addd1c5dc06c729ed53288d0371b6926c78dc4dc555423`.
+
+Phases 1–6 passed. Phase 7 completed its functional stale-worker fence and
+convergence, then the terminal exact allocated-custody `du` exceeded the
+30,000-ms gauge deadline. Phases 8–11 did not run. Teardown proved clean
+custody and process retirement. The separately reviewed host-pressure
+reservation was durably removed after package disposition. Treat this as an
+honest harness-accounting stop, not a pipeline failure, scale pass, release, or
+Epic closure. The identifier is consumed and must never be reused.
+
+T40.13t advances only fresh ceremony bytes to V31. It retains exact `du` as
+the sole strict logical/allocated meter and gives each whole-custody invocation
+300,000 ms, for at most 10 minutes across the serial pair. All strict callers
+must propagate the same deadline. A fresh
+`t4013-data-measurement-failure-v2` projection may report only the exact gauge,
+`reason=deadline`, and `deadline_ms=300000`; it retains no path or raw cause.
+V1–V30 schemas and predicates remain exact. The permanent identifier fence
+rejects neutral-41 and first admits neutral-42.
+
+Before another freeze, run the focused timeout, v2 diagnostic/round-trip,
+strict-caller propagation, historical-version, and identifier tests, then one
+same-shape Phase-7 gauge probe. This is harness-only: the same two `du`
+children and metadata walks remain, normal completion returns as soon as they
+finish, and no production query, worker, sync, store, lifecycle, publication,
+lock, cache, corpus read, memory/disk allocation, or child-process cost changes.

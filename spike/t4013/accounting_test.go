@@ -227,7 +227,7 @@ func TestV30PhaseLogHandoffRetainsPostBoundaryReports(t *testing.T) {
 		t.Fatalf("bounded warm metrics = %+v, err=%v", warm, err)
 	}
 
-	meter, err := beginPhaseMeter(server, root, nil)
+	meter, err := beginPhaseMeter(t.Context(), PlanSchemaV30, server, root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestV30PhaseLogHandoffRejectsWorkBetweenPrimeAndProcessReset(t *testing.T) 
 	}
 	defer func() { _ = logFile.Close() }()
 	server := &privateServer{log: logFile, logPath: path, sampler: newSyntheticRSSSampler(10)}
-	meter, err := beginPhaseMeter(server, root, nil)
+	meter, err := beginPhaseMeter(t.Context(), PlanSchemaV30, server, root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +383,7 @@ func TestMeasuredCommandSanitizationRetainsOnlyCustodySentinels(t *testing.T) {
 			t.Fatalf("sanitized %v = %v", retained, got)
 		}
 	}
-	deadline := newDataMeasurementDeadlineError(false)
+	deadline := newDataMeasurementDeadlineError(false, dataMeasurementTimeout)
 	historical := sanitizeMeasuredCommandFailure("measured command failed", deadline, false)
 	current := sanitizeMeasuredCommandFailure("measured command failed", deadline, true)
 	if projectDataMeasurementDeadline(historical) != nil ||
@@ -405,8 +405,14 @@ func TestStrictMeasuredCommandRetainsSignaledShutdownUncertainty(t *testing.T) {
 		{name: "V25", strict: true, want: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			planSchema := PlanSchemaV24
+			if test.strict {
+				planSchema = PlanSchemaV25
+			}
 			_, err := runMeasuredCommand(
-				exec.CommandContext(t.Context(), "/bin/sh", "-c", "kill -KILL $$"), t.TempDir(), test.strict,
+				t.Context(), planSchema,
+				exec.CommandContext(t.Context(), "/bin/sh", "-c", "kill -KILL $$"),
+				t.TempDir(), test.strict,
 			)
 			if errors.Is(err, errPrivateServerShutdownUnproven) != test.want {
 				t.Fatalf("signaled measured command = %v", err)
@@ -446,7 +452,9 @@ func TestV27RawEndBoundaryUsesRawGaugeAndIsOneShotForOneWorkspace(t *testing.T) 
 	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, rawAllocated, err := measureDataBytesForContract(root, true)
+	_, rawAllocated, err := measureDataBytesForPlanContext(
+		t.Context(), Plan{Schema: PlanSchemaV27}, root,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -501,19 +509,23 @@ func TestDataMeasurementDeadlineProjectionIsTypedAndSourceFree(t *testing.T) {
 		name     string
 		apparent bool
 		gauge    string
+		deadline time.Duration
+		schema   string
 	}{
-		{name: "allocated", gauge: dataMeasurementAllocated},
-		{name: "logical", apparent: true, gauge: dataMeasurementLogical},
+		{name: "V30/allocated", gauge: dataMeasurementAllocated, deadline: dataMeasurementTimeout, schema: dataMeasurementFailureSchemaV1},
+		{name: "V30/logical", apparent: true, gauge: dataMeasurementLogical, deadline: dataMeasurementTimeout, schema: dataMeasurementFailureSchemaV1},
+		{name: "V31/allocated", gauge: dataMeasurementAllocated, deadline: dataMeasurementTimeoutV31, schema: dataMeasurementFailureSchemaV2},
+		{name: "V31/logical", apparent: true, gauge: dataMeasurementLogical, deadline: dataMeasurementTimeoutV31, schema: dataMeasurementFailureSchemaV2},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			private := errors.New("/private/custody/secret")
 			projection := projectDataMeasurementDeadline(errors.Join(
-				private, newDataMeasurementDeadlineError(test.apparent),
+				private, newDataMeasurementDeadlineError(test.apparent, test.deadline),
 			))
-			if projection == nil || projection.Schema != dataMeasurementFailureSchemaV1 ||
+			if projection == nil || projection.Schema != test.schema ||
 				projection.Scope != dataMeasurementScope || projection.Gauge != test.gauge ||
 				projection.Reason != dataMeasurementDeadline ||
-				projection.DeadlineMS != 30_000 {
+				projection.DeadlineMS != test.deadline.Milliseconds() {
 				t.Fatalf("deadline projection = %+v", projection)
 			}
 			raw, err := json.Marshal(projection)
@@ -528,6 +540,42 @@ func TestDataMeasurementDeadlineProjectionIsTypedAndSourceFree(t *testing.T) {
 	var typedNil *dataMeasurementDeadlineError
 	if got := projectDataMeasurementDeadline(typedNil); got != nil {
 		t.Fatalf("typed nil projected as deadline: %+v", got)
+	}
+	if got := projectDataMeasurementDeadline(
+		newDataMeasurementDeadlineError(false, time.Second),
+	); got != nil {
+		t.Fatalf("unknown deadline projected: %+v", got)
+	}
+}
+
+func TestV31DataMeasurementDistinguishesParentEndFromLocalDeadline(t *testing.T) {
+	parentCanceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := dataMeasurementContextError(
+		parentCanceled, parentCanceled, false, dataMeasurementTimeoutV31,
+	); !errors.Is(err, context.Canceled) || projectDataMeasurementDeadline(err) != nil {
+		t.Fatalf("parent cancellation = %v", err)
+	}
+
+	parentExpired, expireParent := context.WithDeadline(context.Background(), time.Time{})
+	defer expireParent()
+	if err := dataMeasurementContextError(
+		parentExpired, parentExpired, false, dataMeasurementTimeoutV31,
+	); !errors.Is(err, context.DeadlineExceeded) || projectDataMeasurementDeadline(err) != nil {
+		t.Fatalf("parent deadline = %v", err)
+	}
+
+	localExpired, expireLocal := context.WithCancelCause(context.Background())
+	expireLocal(errDataMeasurementLocalDeadline)
+	err := dataMeasurementContextError(
+		context.Background(), localExpired, true, dataMeasurementTimeoutV31,
+	)
+	projection := projectDataMeasurementDeadline(err)
+	if errors.Is(err, context.DeadlineExceeded) || projection == nil ||
+		projection.Schema != dataMeasurementFailureSchemaV2 ||
+		projection.Gauge != dataMeasurementLogical ||
+		projection.DeadlineMS != frozenDataMeasurementDeadlineV31MS {
+		t.Fatalf("local deadline = %v, projection = %+v", err, projection)
 	}
 }
 
@@ -557,7 +605,9 @@ func TestV30BoundaryJoinsProcessAndAllocationFailures(t *testing.T) {
 	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, allocated, err := measureDataBytesForContract(root, true)
+	_, allocated, err := measureDataBytesForPlanContext(
+		t.Context(), Plan{Schema: PlanSchemaV30}, root,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +641,9 @@ func TestV30BoundarySemanticFailureIsNotMeasurementFailure(t *testing.T) {
 			name := strconv.FormatBool(withAllocationFailure) + "/" + strconv.FormatBool(withProcessFailure)
 			t.Run(name, func(t *testing.T) {
 				root := t.TempDir()
-				_, allocated, err := measureDataBytesForContract(root, true)
+				_, allocated, err := measureDataBytesForPlanContext(
+					t.Context(), Plan{Schema: PlanSchemaV30}, root,
+				)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -648,7 +700,9 @@ func TestV30BoundarySemanticFailureRetainsSafetyMetrics(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "payload"), []byte(strings.Repeat("x", 4096)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, allocated, err := measureDataBytesForContract(root, true)
+	_, allocated, err := measureDataBytesForPlanContext(
+		t.Context(), Plan{Schema: PlanSchemaV30}, root,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -711,7 +765,9 @@ func TestV30CleanupFailureRetainsSafetyMetrics(t *testing.T) {
 	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, allocated, err := measureDataBytesForContract(root, true)
+	_, allocated, err := measureDataBytesForPlanContext(
+		t.Context(), Plan{Schema: PlanSchemaV30}, root,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -758,7 +814,9 @@ func TestV30CleanupFailureRetainsSafetyMetrics(t *testing.T) {
 
 func TestPhaseMeterRetainsProcessFailureWhenDataGaugeFails(t *testing.T) {
 	root := t.TempDir()
-	_, allocated, err := measureDataBytesForContract(root, true)
+	_, allocated, err := measureDataBytesForPlanContext(
+		t.Context(), Plan{Schema: PlanSchemaV30}, root,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -798,32 +856,44 @@ func TestHistoricalAllocationSamplerRetainsJoinedFailures(t *testing.T) {
 	}
 }
 
-func TestDataMeasurementProcessContractChangesOnlyAtV25(t *testing.T) {
+func TestDataMeasurementProcessContractChangesOnlyAtV25AndV31(t *testing.T) {
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		t.Skip("exact data-byte measurement is supported on Linux and macOS")
 	}
 	t.Setenv("PATH", t.TempDir())
 	root := t.TempDir()
-	if _, _, err := measureDataBytesForPlan(Plan{Schema: PlanSchemaV24}, root); err == nil {
+	if _, _, err := measureDataBytesForPlanContext(t.Context(), Plan{Schema: PlanSchemaV24}, root); err == nil {
 		t.Fatal("historical measurement ignored its ambient du contract")
 	}
-	if _, _, err := measureDataBytesForPlan(Plan{Schema: PlanSchemaV25}, root); err != nil {
+	if _, _, err := measureDataBytesForPlanContext(t.Context(), Plan{Schema: PlanSchemaV25}, root); err != nil {
 		t.Fatalf("V25 measurement did not use its absolute bounded du contract: %v", err)
 	}
-	if _, err := measureDataAllocatedBytesForContract(root, true); err != nil {
+	if _, err := measureDataAllocatedBytesForPlanContext(
+		context.Background(), Plan{Schema: PlanSchemaV30}, root,
+	); err != nil {
 		t.Fatalf("V27 allocated-only fallback did not use its absolute bounded du contract: %v", err)
 	}
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := duKilobytesContext(canceled, root, false); err == nil ||
-		projectDataMeasurementDeadline(err) != nil {
-		t.Fatal("V25 du measurement ignored its context bound")
+	if _, _, err := measureDataBytesForPlanContext(
+		canceled, Plan{Schema: PlanSchemaV25}, root,
+	); err != nil {
+		t.Fatalf("V25 measurement adopted the V31 parent-context contract: %v", err)
+	}
+	if _, _, err := measureDataBytesForPlanContext(
+		canceled, Plan{Schema: PlanSchemaV31}, root,
+	); !errors.Is(err, context.Canceled) || projectDataMeasurementDeadline(err) != nil {
+		t.Fatalf("V31 parent cancellation = %v", err)
+	}
+	if _, _, err := measureDataBytesForPlanContext(
+		context.Background(), Plan{Schema: PlanSchemaV31}, root,
+	); err != nil {
+		t.Fatalf("V31 measurement did not use its absolute bounded du contract: %v", err)
 	}
 	expired, expire := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer expire()
 	if _, err := duKilobytesContext(expired, root, false); err == nil ||
-		errors.Is(err, context.DeadlineExceeded) ||
-		projectDataMeasurementDeadline(err).Gauge != dataMeasurementAllocated {
-		t.Fatalf("typed gauge deadline changed its historical context identity: %v", err)
+		!errors.Is(err, context.DeadlineExceeded) || projectDataMeasurementDeadline(err) != nil {
+		t.Fatalf("raw du context identity = %v", err)
 	}
 }

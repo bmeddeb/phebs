@@ -54,6 +54,7 @@ const (
 	PlanSchemaV28        = "t4013-neutral-convergence-plan-v28"
 	PlanSchemaV29        = "t4013-neutral-convergence-plan-v29"
 	PlanSchemaV30        = "t4013-neutral-convergence-plan-v30"
+	PlanSchemaV31        = "t4013-neutral-convergence-plan-v31"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -84,6 +85,7 @@ const (
 	ObservationSchemaV28 = "t4013-neutral-convergence-observation-v28"
 	ObservationSchemaV29 = "t4013-neutral-convergence-observation-v29"
 	ObservationSchemaV30 = "t4013-neutral-convergence-observation-v30"
+	ObservationSchemaV31 = "t4013-neutral-convergence-observation-v31"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -130,6 +132,7 @@ const (
 	ReceiptSchemaV28             = "t4013-neutral-convergence-receipt-v28"
 	ReceiptSchemaV29             = "t4013-neutral-convergence-receipt-v29"
 	ReceiptSchemaV30             = "t4013-neutral-convergence-receipt-v30"
+	ReceiptSchemaV31             = "t4013-neutral-convergence-receipt-v31"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -182,6 +185,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV28, ObservationSchemaV28, ReceiptSchemaV28},
 	{PlanSchemaV29, ObservationSchemaV29, ReceiptSchemaV29},
 	{PlanSchemaV30, ObservationSchemaV30, ReceiptSchemaV30},
+	{PlanSchemaV31, ObservationSchemaV31, ReceiptSchemaV31},
 }
 
 const (
@@ -369,8 +373,10 @@ type AuthorizedQueryObservation struct {
 }
 
 const (
-	dataMeasurementFailureSchemaV1  = "t4013-data-measurement-failure-v1"
-	frozenDataMeasurementDeadlineMS = int64(30_000)
+	dataMeasurementFailureSchemaV1     = "t4013-data-measurement-failure-v1"
+	dataMeasurementFailureSchemaV2     = "t4013-data-measurement-failure-v2"
+	frozenDataMeasurementDeadlineMS    = int64(30_000)
+	frozenDataMeasurementDeadlineV31MS = int64(300_000)
 )
 
 // DataMeasurementFailureObservation is the closed, source-free projection of
@@ -1086,6 +1092,8 @@ func ValidatePlan(value Plan) error {
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV30:
 		wantSafety = frozenSafetyV25
+	case PlanSchemaV31:
+		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
 		return errors.New("T40.13 frozen safety envelope changed")
@@ -1421,11 +1429,15 @@ func validateDataMeasurementFailureObservation(value Observation) error {
 	if failure == nil {
 		return nil
 	}
+	wantSchema, wantDeadline := dataMeasurementFailureSchemaV1, frozenDataMeasurementDeadlineMS
+	if version >= 31 {
+		wantSchema, wantDeadline = dataMeasurementFailureSchemaV2, frozenDataMeasurementDeadlineV31MS
+	}
 	if value.Outcome != "stopped" || len(value.Failures) != 1 ||
 		value.Failures[0].Code != "failed_phase_measurement_unavailable" ||
-		failure.Schema != dataMeasurementFailureSchemaV1 || failure.Scope != "custody" ||
+		failure.Schema != wantSchema || failure.Scope != "custody" ||
 		!slices.Contains([]string{"allocated", "logical"}, failure.Gauge) ||
-		failure.Reason != "deadline" || failure.DeadlineMS != frozenDataMeasurementDeadlineMS {
+		failure.Reason != "deadline" || failure.DeadlineMS != wantDeadline {
 		return errors.New("T40.13 data-measurement failure projection is invalid")
 	}
 	return nil

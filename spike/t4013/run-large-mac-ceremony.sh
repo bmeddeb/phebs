@@ -20,7 +20,7 @@ readonly EXECUTE_CONFIRM="execute-neutral-t4013-and-destroy-custody"
 readonly CLEANUP_CONFIRM="cleanup-neutral-t4013-custody"
 readonly SIGNATURE_NAMESPACE="phebs-t4013"
 readonly FREEZE_SIGNATURE_NAMESPACE="phebs-t4013-freeze"
-readonly LAST_REVIEW_STOPPED_CEREMONY_NUMBER=40
+readonly LAST_REVIEW_STOPPED_CEREMONY_NUMBER=41
 readonly RETIRED_SIGNER_FINGERPRINT="SHA256:BqFeTpCclBV0Z6Dz/Lc0dmpb75q7lZSAgH5rc6AK2nw"
 readonly SIGNER_IDENTITY="phebs-ceremony"
 readonly MINIMUM_MEMORY_BYTES=$((24 * 1024 * 1024 * 1024))
@@ -802,7 +802,8 @@ is_v25_plan() {
     "$schema" == "t4013-neutral-convergence-plan-v27" ||
     "$schema" == "t4013-neutral-convergence-plan-v28" ||
     "$schema" == "t4013-neutral-convergence-plan-v29" ||
-    "$schema" == "t4013-neutral-convergence-plan-v30" ]]
+    "$schema" == "t4013-neutral-convergence-plan-v30" ||
+    "$schema" == "t4013-neutral-convergence-plan-v31" ]]
 }
 
 usage() {
