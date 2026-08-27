@@ -2278,10 +2278,22 @@ lifetime/reacquisition, frozen-host validation, and three clean-checkout
 assertions passed. Successful cleanup left no matching temporary root or
 process. This closes only the focused Phase-12 exact-run requirement. The
 exact package gate separately passed the deterministic checkpoint-before-delete
-ordering regression. The Phase-7 and Phase-9 exact-clean reruns and all
-full-ceremony, release, closure, and scale/SLO
-claims remain open; integration, preflight, freeze, execution, and push remain
+ordering regression. At that point, the Phase-7 and Phase-9 exact-clean reruns
+and all full-ceremony, release, closure, and scale/SLO claims remained open;
+integration, preflight, freeze, execution, and push remain
 separate actions requiring their own authorization.
+
+The unchanged Phase-7 `semantic-stale-worker` selector then passed under
+fixed-HEAD and clean-worktree guards at exact commit
+`ce6212974f40fc452a124345c751a2b5bd473f9f`. It emitted the required boundary
+marker; the subtest took 32.52 seconds, the top-level readiness test 91.40
+seconds, and the package command 92.025 seconds. Its pending and HTTP-409 lines
+were bounded nonterminal convergence observations superseded by the terminal
+pass. Successful cleanup removed the current workspace, and a separate check
+found no matching rehearsal process. This closes only Phase-7 exact
+attribution. Phase-9 exact-clean attribution and all full-ceremony, release,
+closure, and scale/SLO claims remain open; integration, preflight, freeze,
+execution, and push remain separate actions requiring their own authorization.
 
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package

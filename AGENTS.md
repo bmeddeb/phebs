@@ -528,11 +528,21 @@ sibling preservation, lock lifetime and reacquisition, frozen-host validation,
 and all three clean-checkout boundaries passed. Successful cleanup left no
 matching temporary root or process. This closes only the focused Phase-12
 exact-run requirement. The exact package gate separately passed the
-deterministic checkpoint-before-delete ordering regression. The Phase-7 and
-Phase-9 exact-clean reruns, prior-phase handoff, a complete ceremony, release,
-Epic closure, and scale/SLO claims
-remain open; this source-identical result record authorizes none of the
+deterministic checkpoint-before-delete ordering regression. At that point, the
+Phase-7 and Phase-9 exact-clean reruns, prior-phase handoff, a complete ceremony,
+release, Epic closure, and scale/SLO claims remained open; this source-identical result record authorizes none of the
 separate integration, preflight, freeze, execution, or push actions.
+The unchanged Phase-7 `semantic-stale-worker` selector subsequently passed
+under fixed-HEAD and clean-worktree guards at exact commit
+`ce6212974f40fc452a124345c751a2b5bd473f9f`. It emitted the required boundary
+marker; the subtest took 32.52s, the top-level readiness test 91.40s, and the
+package command 92.025s. Pending and HTTP-409 lines were bounded nonterminal
+convergence observations superseded by the pass. Successful cleanup removed
+the current workspace, and a separate check found no matching rehearsal
+process. This closes only Phase-7 exact attribution. Phase-9 exact-clean
+attribution, prior-phase handoff, a complete ceremony, release, Epic closure,
+and scale/SLO claims remain open; the source-identical record grants no
+integration, preflight, freeze, execution, or push authority.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

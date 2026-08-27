@@ -4302,7 +4302,21 @@ ok github.com/bmeddeb/phebs/spike/t4013 88.348s
 
 All selector assertions passed, and successful cleanup left no matching
 temporary root or process. This closes only the focused Phase-12 exact-run
-requirement. The Phase-7 and Phase-9 exact-clean reruns, prior-phase handoff,
-complete ceremony, release, Epic closure, and scale/SLO claims remain open. This
+requirement. At that point, the Phase-7 and Phase-9 exact-clean reruns,
+prior-phase handoff, complete ceremony, release, Epic closure, and scale/SLO
+claims remained open. This
 source-identical result record grants no integration, preflight, freeze,
 execution, or push authority.
+
+The unchanged Phase-7 `semantic-stale-worker` selector then passed under
+fixed-HEAD and clean-worktree guards at exact commit
+`ce6212974f40fc452a124345c751a2b5bd473f9f`. It emitted
+`semantic stale-worker boundary passed`; the subtest took 32.52 seconds, the
+top-level readiness test 91.40 seconds, and the package command 92.025 seconds.
+Its pending and HTTP-409 lines were bounded nonterminal convergence
+observations superseded by the terminal pass. Successful cleanup removed the
+current workspace, and a separate check found no matching rehearsal process.
+This closes only Phase-7 exact attribution. Phase-9 exact-clean attribution,
+prior-phase handoff, complete ceremony, release, Epic closure, and scale/SLO
+claims remain open. This source-identical record grants no integration,
+preflight, freeze, execution, or push authority.
