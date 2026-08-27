@@ -6135,17 +6135,100 @@ rehearsal as full-shape evidence. A new freeze remains forbidden until the
 exact full-profile Phase-7 replay exists, passes, and proves clean teardown.
 
 Run that replay only from its separately reviewed exact-clean commit on the
-dedicated Darwin host:
+dedicated Darwin host. This is the supported entry path: it materializes and
+verifies the committed wrapper in a private directory outside the checkout,
+with the entire bootstrap under fixed `/usr/bin/env -i` and
+`/bin/bash --noprofile --norc`.
+Do not invoke the live worktree copy directly.
 
 ```sh
-PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled \
-  ./spike/t4013/run-phase7-full-profile-replay.sh "$(git rev-parse HEAD)"
+/usr/bin/env -i \
+  HOME=/dev/null PATH=/usr/bin:/bin:/opt/homebrew/bin LC_ALL=C LANG=C TZ=UTC \
+  PHEBS_T4013_PHASE7_REPLAY_REVIEWED_COMMIT=REPLACE_WITH_REVIEWED_40_HEX_COMMIT \
+  /bin/bash --noprofile --norc -c '
+    set -euo pipefail
+    umask 077
+    checkout="$(cd "$1" && pwd -P)"
+    expected="$PHEBS_T4013_PHASE7_REPLAY_REVIEWED_COMMIT"
+    [[ "$expected" =~ ^[0-9a-f]{40}$ ]]
+    bootstrap="$(/usr/bin/mktemp -d /private/tmp/phebs-t4013-phase7-bootstrap.XXXXXX)"
+    runner="$bootstrap/run-phase7-full-profile-replay.sh"
+    cleanup_bootstrap() {
+      status=$?
+      trap - EXIT
+      /bin/rm -f -- "$runner" || status=1
+      /bin/rmdir -- "$bootstrap" || status=1
+      exit "$status"
+    }
+    trap cleanup_bootstrap EXIT
+    closed_git() {
+      /usr/bin/env -i HOME=/dev/null PATH=/usr/bin:/bin LC_ALL=C LANG=C TZ=UTC \
+        GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+        GIT_ATTR_NOSYSTEM=1 GIT_NO_LAZY_FETCH=1 GIT_NO_REPLACE_OBJECTS=1 \
+        GIT_OPTIONAL_LOCKS=0 GIT_TERMINAL_PROMPT=0 \
+        /usr/bin/git -c core.hooksPath=/dev/null -c core.attributesFile=/dev/null \
+          -c core.excludesFile=/dev/null -c core.fsmonitor=false "$@"
+    }
+    blob="$(closed_git -C "$checkout" rev-parse \
+      "$expected:spike/t4013/run-phase7-full-profile-replay.sh")"
+    [[ "$blob" =~ ^[0-9a-f]{40}$ ]]
+    closed_git -C "$checkout" cat-file blob "$blob" > "$runner"
+    [[ "$(closed_git -C "$checkout" hash-object --no-filters "$runner")" == "$blob" ]]
+    /bin/chmod 700 "$runner"
+    export PHEBS_T4013_PHASE7_REPLAY_CHECKOUT="$checkout"
+    export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled
+    printf 'Phase 7 replay bootstrap: %s\n' "$bootstrap"
+    source "$runner"
+    main "$expected"
+    trap - EXIT
+    /bin/rm -f -- "$runner"
+    /bin/rmdir -- "$bootstrap"
+  ' phase7-bootstrap /Users/ben/phebs.com
 ```
 
-Set `PHEBS_T4013_PHASE7_REPLAY_PARENT` to an absolute private directory when
-`/private/tmp` is not the desired backing volume. The wrapper prints the fresh
-run root before authoring. It binds the canonical Go driver, clears ambient Go
-workspace/overlay controls, and uses fresh private build and module caches.
+When `/private/tmp` is not the desired backing volume, add an explicit
+`PHEBS_T4013_PHASE7_REPLAY_PARENT=/absolute/private/path` assignment to the
+leading `/usr/bin/env -i` invocation. It must be outside the source
+checkout. The wrapper prints the fresh run root before authoring. It binds the
+canonical Go driver, clears ambient Go
+workspace/overlay controls, and uses fresh private build and module caches. It
+also binds Git, creates a fresh owner-only shared clone detached at the exact
+commit with closed system/global config, attributes, hooks, excludes,
+fsmonitor, and replacement objects, and compiles and runs only from that clone.
+The Go child inherits the same closed Git environment for VCS stamping and
+module fallback. The original checkout supplies Git
+objects; the external bootstrap supplies the separately blob-verified wrapper,
+and no unverified live source bytes become executable authority. The wrapper's
+pre/post blob checks are later drift fences. It rejects modified, untracked, or ignored files in the private
+source before and after execution, so ignored files and index flags in the live
+checkout cannot change the replay binary.
+Clone, checkout, and Go each run synchronously below a shell sentinel that
+remains the owned process-group leader until the direct workload exits. The
+wrapper stops that pinned group, requires an exact snapshot containing only the
+live sentinel, resumes it, and releases it through a parent-held descriptor for
+its private FIFO. Any dead, extra, malformed, or uninspectable member retains
+the sentinel, control root, and fixed lock. A nested launcher installs
+terminating traps before it emits ready; the parent retries an interrupted
+ready read and forwards a latched signal only after consuming ready.
+Deterministic before-ready and after-ready regressions prove a signal cannot
+cross into an unstarted workload. Per boundary this adds one sentinel shell,
+one nested launcher shell,
+two FIFOs, one
+parent-held read/write release descriptor, one parent read-only notification
+descriptor, three empty-marker creates, one status write plus rename, two
+notification writes, one release write, one marker unlink, and normally one full-host process
+snapshot. Fail-closed quiescence permits at most 100 snapshots and roughly one
+second of ten-millisecond waits per child. The sentinel alone holds the
+notification writer while its workload runs with that descriptor closed, so
+completion or hard death wakes the blocking parent read with a record or EOF
+and launches no polling process. Exact job comparison adds one short
+command-substitution Bash child at drain entry and one more only when a signal
+handler enters. Clone, checkout, Go, and recursive
+private-cache/source retirement make four such boundaries. Hydration and
+compilation retain their already-documented lack of a wrapper deadline.
+The printed owner-only bootstrap contains only the reviewed wrapper. Success
+removes it; a refusal, failure, or signal after wrapper admission retains it
+beside the reported replay state for the same post-absence housekeeping review.
 Cache hydration and compilation precede the Go test alarm and have no separate
 wrapper wall deadline. Inside the test binary, plan observation plus exact
 two-profile preparation has a four-hour deadline; execution then receives the
@@ -6154,7 +6237,8 @@ start.
 
 INT, TERM, and HUP are forwarded to the child process group. Any child failure,
 surviving group, cancellation, measurement error, or uncertain teardown retains
-the run/control roots and `/private/tmp/phebs-t4013-phase7-full.lock`. Do not
+the run/control roots, exact source clone, and
+`/private/tmp/phebs-t4013-phase7-full.lock`. Do not
 rerun, share, or purge those paths before process-absence review. A valid result
 requires the terminal line `Phase 7 full-profile replay: PASS`, emitted only
 after result hashing, private-cache retirement, and atomic publication of the

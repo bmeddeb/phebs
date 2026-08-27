@@ -19,6 +19,8 @@ const (
 	fullProfilePhase7ReplayRoot        = "PHEBS_T4013_PHASE7_REPLAY_ROOT"
 	fullProfilePhase7ReplayCommit      = "PHEBS_T4013_PHASE7_REPLAY_COMMIT"
 	fullProfilePhase7ReplayGoSHA256    = "PHEBS_T4013_PHASE7_REPLAY_GO_SHA256"
+	fullProfilePhase7ReplayGitSHA256   = "PHEBS_T4013_PHASE7_REPLAY_GIT_SHA256"
+	fullProfilePhase7ReplaySourceRoot  = "PHEBS_T4013_PHASE7_REPLAY_SOURCE_ROOT"
 	fullProfilePhase7HostAttestation   = "PHEBS_T4013_HOST_STABILITY_ATTESTATION"
 	fullProfilePhase7Attestation       = "dedicated-single-operator-host-with-tool-mutation-disabled"
 	fullProfilePhase7ReplaySchema      = "t4013-full-profile-phase7-replay-v1"
@@ -73,6 +75,9 @@ func TestProductionFullProfilePhase7Replay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if moduleRoot != os.Getenv(fullProfilePhase7ReplaySourceRoot) {
+		t.Fatal("full-profile Phase 7 replay is not running from its exact source export")
+	}
 	runRoot, err := validateFullProfilePhase7RunRoot(os.Getenv(fullProfilePhase7ReplayRoot), moduleRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +110,10 @@ func TestProductionFullProfilePhase7Replay(t *testing.T) {
 	if plan.Schema != PlanSchemaV31 {
 		t.Fatalf("full-profile Phase 7 replay plan schema = %s", plan.Schema)
 	}
-	if err := validateFullProfilePhase7GoBinding(plan, os.Getenv(fullProfilePhase7ReplayGoSHA256)); err != nil {
+	if err := validateFullProfilePhase7ToolBinding(plan, "go", os.Getenv(fullProfilePhase7ReplayGoSHA256)); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateFullProfilePhase7ToolBinding(plan, "git", os.Getenv(fullProfilePhase7ReplayGitSHA256)); err != nil {
 		t.Fatal(err)
 	}
 	planRaw, err := MarshalPlan(plan)
@@ -173,7 +181,7 @@ func TestProductionFullProfilePhase7Replay(t *testing.T) {
 	if err := validateFullProfilePhase7Prefix(run); err != nil {
 		stopAfterReplayFailure("full-profile Phase 7 prefix is invalid", err)
 	}
-	if err := verifyCleanCheckoutWithBoundGit(
+	if err := verifyFullProfilePhase7ExactSourceWithBoundGit(
 		run.ctx, moduleRoot, commit, run.hostTools.gitCore,
 		executionEnvironmentForControls(run.toolchain.controls, false),
 	); err != nil {
@@ -203,7 +211,7 @@ func TestProductionFullProfilePhase7Replay(t *testing.T) {
 	if err := confirmFullProfilePhase7Retirement(run, preparedPath, cleanupObservationPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCleanCheckoutWithBoundGit(
+	if err := verifyFullProfilePhase7ExactSourceWithBoundGit(
 		t.Context(), moduleRoot, commit, run.hostTools.gitCore, gitEnvironmentForContract(true),
 	); err != nil {
 		t.Fatal(err)
@@ -254,19 +262,37 @@ func validateFullProfilePhase7RunRoot(path, moduleRoot string) (string, error) {
 	return real, nil
 }
 
-func validateFullProfilePhase7GoBinding(plan Plan, expected string) error {
+func validateFullProfilePhase7ToolBinding(plan Plan, name, expected string) error {
 	if !digestIdentity(expected) {
-		return errors.New("full-profile Phase 7 replay Go driver digest is invalid")
+		return fmt.Errorf("full-profile Phase 7 replay %s driver digest is invalid", name)
 	}
 	for _, tool := range plan.HostToolchain {
-		if tool.Name == "go" {
+		if tool.Name == name {
 			if tool.SHA256 != expected {
-				return errors.New("full-profile Phase 7 replay Go driver differs from the frozen plan")
+				return fmt.Errorf("full-profile Phase 7 replay %s driver differs from the frozen plan", name)
 			}
 			return nil
 		}
 	}
-	return errors.New("full-profile Phase 7 replay frozen Go driver is absent")
+	return fmt.Errorf("full-profile Phase 7 replay frozen %s driver is absent", name)
+}
+
+func verifyFullProfilePhase7ExactSourceWithBoundGit(
+	ctx context.Context, moduleRoot, sourceCommit string, git boundExecutable, environment []string,
+) error {
+	if err := verifyCleanCheckoutWithBoundGit(ctx, moduleRoot, sourceCommit, git, environment); err != nil {
+		return err
+	}
+	path, err := git.pathForLaunch(ctx)
+	if err != nil {
+		return err
+	}
+	status, err := gitOutputWithExecutableEnvironment(ctx, moduleRoot, path, environment,
+		"status", "--porcelain=v1", "--untracked-files=all", "--ignored=matching")
+	if err != nil || status != "" {
+		return errors.New("full-profile Phase 7 exact source has extra build inputs")
+	}
+	return nil
 }
 
 func validateFullProfilePhase7Prefix(run *execution) error {
@@ -431,14 +457,18 @@ func TestFullProfilePhase7ReplayResultValidation(t *testing.T) {
 	}
 }
 
-func TestFullProfilePhase7GoBinding(t *testing.T) {
+func TestFullProfilePhase7ToolBinding(t *testing.T) {
 	digestValue := "sha256:" + fmt.Sprintf("%064x", 1)
-	plan := Plan{HostToolchain: []HostToolObservation{{Name: "go", SHA256: digestValue}}}
-	if err := validateFullProfilePhase7GoBinding(plan, digestValue); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateFullProfilePhase7GoBinding(plan, "sha256:"+fmt.Sprintf("%064x", 2)); err == nil {
-		t.Fatal("full-profile Phase 7 replay accepted a different Go driver")
+	for _, name := range []string{"go", "git"} {
+		t.Run(name, func(t *testing.T) {
+			plan := Plan{HostToolchain: []HostToolObservation{{Name: name, SHA256: digestValue}}}
+			if err := validateFullProfilePhase7ToolBinding(plan, name, digestValue); err != nil {
+				t.Fatal(err)
+			}
+			if err := validateFullProfilePhase7ToolBinding(plan, name, "sha256:"+fmt.Sprintf("%064x", 2)); err == nil {
+				t.Fatalf("full-profile Phase 7 replay accepted a different %s driver", name)
+			}
+		})
 	}
 }
 

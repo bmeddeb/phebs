@@ -2469,17 +2469,48 @@ requires the real terminal data gauges, says pressure never started, and grants
 no ceremony, scale, freeze, or release claim. Its fixed external lock and
 inherited run-root lock span preparation through cleanup; any cancellation,
 unproven shutdown, measurement failure, or cleanup uncertainty retains the
-fresh private root. The wrapper also binds and revalidates its Go driver,
-removes ambient Go overlay/workspace controls, uses fresh private build/module
-caches, forwards INT/TERM/HUP to the child process group, and rejects any late
+fresh private root. Exact-main `d18fde43` was rejected before replay because a
+live-worktree build could consume ignored or index-hidden inputs. The correction
+requires the reviewed commit as an independent 40-hex input, then materializes
+and hash-checks that commit's wrapper with absolute host utilities inside a
+fixed `/usr/bin/env -i` plus `/bin/bash --noprofile --norc` bootstrap;
+direct live-wrapper invocation is unsupported. It then binds Git and Go,
+compiles and runs from a fresh owner-only shared clone detached
+at the exact commit under closed Git config/attributes/excludes/fsmonitor/
+replacement-object/hooks controls, requires its
+parent outside the original checkout, rejects every modified,
+untracked, or ignored private-source input before and after execution, removes
+ambient Go overlay/workspace controls, applies closed Git controls to nested Go
+VCS work, uses fresh private build/module caches, and runs clone, checkout, and
+Go beneath identity-pinning sentinels whose exact stopped group must contain a
+live sentinel and no other member before release through a parent-held FIFO
+descriptor. Any dead, extra, or uninspectable member is retained with the fixed
+lock. A nested launcher installs terminating traps before it emits ready; the
+parent retries an interrupted ready read and forwards a latched signal only
+after consuming ready, so a signal before or immediately after readiness
+cannot cross into an unstarted workload. Each boundary adds one sentinel
+shell, one nested launcher shell,
+two FIFOs, one parent-held read/write release
+descriptor, one parent read-only notification descriptor, three empty-marker
+creates, one status write plus rename, two notification writes, one release
+write, one marker unlink,
+and normally one but at most 100 host process snapshots plus about one second
+of bounded quiescence waits. The sentinel alone holds the notification writer
+while its workload runs with that descriptor closed, so a record or EOF wakes
+the blocking parent read without polling. Exact job comparison adds one short
+command-substitution Bash child at drain entry and one more only when a signal
+handler enters. The same fixed-lock sentinel
+supervises recursive private-cache/source retirement, making four child
+boundaries. It forwards INT/TERM/HUP to the
+pinned child group and rejects any late
 server-stop error as the deliberate boundary. Success atomically records the
 exact commit, result path, and digest inside the retained fixed lock before its
 zero-status terminal PASS; both are required, and reviewed lock retirement is
 separate. Preparation has a four-hour deadline,
 execution retains its independent 12-hour ceiling, and the test alarm is 20
 hours from binary start; fresh cache hydration and compilation precede that
-alarm. Lightweight gates alone do not close T40.13t. An immutable
-exact-clean commit, independent code review, the expensive replay, and review
+alarm. Lightweight gates alone do not close T40.13t. A new immutable
+exact-source commit, independent code review, the expensive replay, and review
 of its source-free result remain next; freeze stays forbidden.
 
 closes low-risk cost-first refusal ordering.

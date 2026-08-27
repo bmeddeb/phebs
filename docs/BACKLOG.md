@@ -2481,8 +2481,11 @@ only on failure. No merge, freeze, execution, release, T40.13/Epic-40 closure,
 or scale/SLO claim follows.
 
 Implementation now includes the missing exact full-profile Phase-7 runner.
-The opt-in `run-phase7-full-profile-replay.sh` requires a reviewed exact-clean
-HEAD and dedicated-host attestation, authors both frozen profiles, and calls
+The opt-in protocol requires an independently supplied reviewed 40-hex commit,
+materializes and hash-checks that commit's
+`run-phase7-full-profile-replay.sh` with fixed closed Git, and executes it under
+`env -i` Bash; direct live-wrapper invocation is unsupported. It requires a
+reviewed exact-clean HEAD and dedicated-host attestation, authors both frozen profiles, and calls
 the same `executeThroughStaleWorker` prefix used by production `Execute`.
 Pressure and later coordinators are not called. The deliberate V31-only
 pressure-boundary stop exists solely to reuse the production resumable
@@ -2490,9 +2493,40 @@ stopped-teardown protocol; its cleanup observation is bound into a separate
 source-free replay record that requires phases 0–6 succeeded, the Phase-7
 terminal logical and allocated gauges nonzero, `pressure_started=false`, and
 custody plus supervision retired. A late server-stop error cannot use the
-deliberate boundary identity. The wrapper binds its Go driver, clears ambient
-Go/workspace/overlay controls, uses fresh private build/module caches, and
-forwards INT/TERM/HUP to the child process group. Cancellation or cleanup
+deliberate boundary identity. The supported fixed `/usr/bin/env -i` outer
+bootstrap materializes the reviewed wrapper with absolute host utilities; the
+wrapper then binds Git and Go and creates a fresh
+owner-only shared clone detached at the reviewed commit under closed Git
+config/attributes/excludes/fsmonitor/replacement-object/hooks controls, requires the replay parent outside the original
+checkout, and compiles and runs exclusively from that source. It rejects
+modified, untracked, or ignored inputs in the private clone before and after
+execution, clears ambient Go/workspace/overlay controls, uses fresh private
+build/module caches, gives the Go child the same closed Git controls, and
+forwards INT/TERM/HUP to the child process group. Clone, checkout, and Go each
+run under an identity-pinning sentinel; stopped exact group inspection admits
+release through a parent-held FIFO descriptor only when that sentinel is the
+sole live stopped member, while every other result
+retains the sentinel/control root/fixed lock. A nested launcher installs
+terminating traps before it emits ready; the parent retries an interrupted
+ready read and forwards a latched signal only after consuming ready, so a
+signal before or immediately after readiness cannot cross into an unstarted
+workload. Each boundary adds
+one sentinel shell, one nested launcher shell, two FIFOs, one
+parent-held read/write release descriptor, one parent read-only notification
+descriptor, three empty-marker creates, one status write plus rename, two
+notification writes, one release write, one marker unlink, and normally one but at most 100
+host process snapshots plus roughly one second of bounded quiescence waits.
+The sentinel is the notification FIFO's sole writer during the workload, which
+closes that descriptor, so completion or hard death wakes the blocking parent
+read with a record or EOF and launches no polling process. Exact job comparison
+adds one short command-substitution Bash child at drain entry and one more only
+when a signal handler enters. The same
+sentinel rooted in the fixed lock supervises recursive private-cache/source
+retirement, for four child boundaries total.
+Regressions prove an ignored live `_test.go`, assume-unchanged and
+skip-worktree modifications, a hidden live wrapper, poisoned Bash/Git state,
+and poisoned local fsmonitor are not compiled or executed, and an ignored in-checkout parent is
+refused before authoring. Cancellation or cleanup
 uncertainty retains the private roots and fixed lock. After result hashing and
 cache retirement, success atomically writes an exact completion marker inside
 the retained fixed lock, so hard death cannot reopen admission before terminal
@@ -2502,7 +2536,9 @@ In-test preparation is capped at four hours, execution retains its
 independent 12-hour ceiling, and the test alarm is 20 hours from binary start;
 module download/compilation happens before that alarm. Lightweight classification,
 result-shape, skip, shell, and
-package gates do not satisfy the AC: the exact expensive replay and independent
+package gates do not satisfy the AC: exact-main `d18fde43` was rejected before
+execution because its live-worktree build could consume hidden inputs. A new
+immutable correction, independent review, the exact expensive replay, and
 review of its source-free result remain mandatory before any freeze.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*

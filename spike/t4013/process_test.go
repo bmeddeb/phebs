@@ -625,7 +625,8 @@ func TestExecutionEnvironmentClosesAmbientGoControls(t *testing.T) {
 		"GOEXPERIMENT": "", "GOFLAGS": "-mod=readonly", "GOFIPS140": "off", "GOOS": runtime.GOOS,
 		"GOPROXY": "off", "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOWORK": "off",
 		"GIT_ATTR_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
-		"GIT_NO_LAZY_FETCH": "1", "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0",
+		"GIT_NO_LAZY_FETCH": "1", "GIT_NO_REPLACE_OBJECTS": "1",
+		"GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0",
 	}
 	for name, value := range want {
 		if got := values[name]; len(got) != 1 || got[0] != value {
