@@ -484,6 +484,18 @@ authority revalidation, exact metering, and shutdown. It adds no production
 code and no sparse image, ballast, archive, or fixed lock. Its exact-clean run,
 all broader ceremony/custody evidence, release, Epic closure, and scale/SLO
 claims remain open.
+The unchanged Phase-11 selector then passed from exact clean commit
+`c2e6eed8faab01854f3af94264ec3054487c877e`: its subtest took 44.46s, the
+top-level readiness test 104.93s, and the package command 105.614s. Both exact
+authority waits, all fixed query/citation oracles, exact control-read/two-meter
+accounting, the mandatory query-member minimum, listener transfer, restart,
+and shutdown passed. Successful cleanup retained no current-run diagnostic root
+and left no matching process. This closes only the focused Phase-11 exact-run
+requirement; Phase-9 exact-clean attribution, prior-phase handoff, a complete
+ceremony, release, Epic closure, and scale/SLO claims remain open. Ben
+authorized fast-forward integration after the source-identical result record,
+superseding only the following historical integration-open wording; exact-main
+preflight, freeze, execution, and push remain separate.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

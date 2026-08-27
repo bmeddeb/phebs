@@ -4196,3 +4196,21 @@ bounds for these healthy rehearsal profiles, not the production ceremony's
 combined phase ceiling. Because the selector builds the working tree, commit
 it and repeat it unchanged from an exact clean checkout before treating a pass
 as candidate evidence.
+
+Exact focused result (2026-08-26): the unchanged selector passed from exact
+clean commit `c2e6eed8faab01854f3af94264ec3054487c877e`. It emitted
+`authorized-query dual-profile boundary passed`; the Phase-11 subtest completed
+in 44.46 seconds, the top-level readiness test in 104.93 seconds, and the
+package command in 105.614 seconds. Both stable-authority waits, every fixed
+query/citation oracle, exact control-read and two-meter accounting, the
+mandatory query-member minimum, listener transfer, semantic restart, and final
+shutdown checks passed. The preceding `readiness pending` messages were bounded
+nonterminal convergence observations, not failures.
+
+The exact-HEAD and clean-worktree guards passed. Successful cleanup retained no
+current-run diagnostic root, and a separate host check found no matching
+Phebs/Surreal process. This closes only the focused Phase-11 exact-run requirement. It does
+not prove Phase-8/9/10 handoff residue, full structural scale, signed ceremony
+custody/evidence, a complete ceremony, release, Epic closure, or a scale/SLO
+claim. The earlier Phase-9 exact-clean rerun remains formally open. This result
+record is source-identical documentation after the tested commit.
