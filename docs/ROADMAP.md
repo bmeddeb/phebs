@@ -2239,6 +2239,23 @@ ceremony, release, Epic closure, and scale/SLO claims remain open. Ben
 authorized fast-forward integration after this source-identical result record;
 preflight, freeze, execution, and push remain separate.
 
+The last isolated seam is human Phase 12 (`teardown`, `phaseOrder[11]`). Its
+separate opt-in real-binary rehearsal uses a receipt-valid source-free fixture
+for the completed prefix, but takes the real run-root lock and
+prepare→execute supervision, starts one structural Phebs/Surreal session, and
+calls the unchanged V30 coordinator. A new private `custody/` child is the only
+recursive data-deletion target; evidence, prepared publication, the lock, and a
+sentinel are siblings, while named external protocol artifacts are retired and
+successful test cleanup removes the parent. A pass requires proven session shutdown, nonzero data gauges,
+checkpoint-before-delete, durable exact absence, terminal observation publication and completed receipt validation,
+terminal supervision/prepared/checkpoint retirement, sibling preservation, and
+lock lifetime through simulated Execute return. No production code is added.
+Bounded gates, independent review, an immutable commit, and an unchanged
+exact-clean human run remain required. The fixture does not prove Phases 1–11,
+their handoff, full scale, signed custody/evidence, a complete ceremony,
+release, closure, or SLO; only after this focused gate passes should the next
+full ceremony be planned.
+
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package
 including full store, module verification/compilation, vet,

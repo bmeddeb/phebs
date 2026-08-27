@@ -2196,6 +2196,24 @@ ceremony, release, Epic closure, and scale/SLO claims remain open. Ben
 authorized fast-forward integration after this source-identical result record;
 preflight, freeze, execution, and push remain separate.
 
+Human Phase 12 (`teardown`, `phaseOrder[11]`) now has a separate opt-in
+real-binary rehearsal whose unique parent keeps evidence, the run-root lock,
+prepared publication, and a sentinel outside `custody/`, its only recursive
+data-deletion target. Named external protocol artifacts are still retired, and
+successful test cleanup removes the parent. It builds both bounded profiles in custody, uses the existing
+receipt-valid V30 completed-prefix fixture for Phases 1–11, takes real
+prepare→execute supervision, and launches one live structural Phebs/Surreal
+session before calling the unchanged production teardown coordinator. A pass
+requires session shutdown, exact data gauges, checkpoint-before-delete, durable
+custody absence, terminal observation publication, completed receipt validation,
+supervision/prepared/checkpoint retirement, sibling preservation, and lock
+custody through simulated Execute return. Existing tests remain authoritative
+for negative failure and resume paths; no production code is added. Complete
+gates, independent review, an immutable commit, and an unchanged exact-clean
+human run remain pending. This isolated fixture does not prove Phases 1–11 or
+their handoff, full-scale/signed custody, a complete ceremony, release, Epic
+closure, or a scale/SLO claim.
+
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
 (115.754s), complete readiness rehearsal (884.324s), every `internal/` package

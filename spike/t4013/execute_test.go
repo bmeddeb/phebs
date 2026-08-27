@@ -80,6 +80,11 @@ func newFailureExecution(
 
 func attachV25TestSupervision(t *testing.T, run *execution) {
 	t.Helper()
+	attachTestSupervision(t, run, minimalV25Prepared(run.workspace, PlanDigest(run.planBytes)))
+}
+
+func attachTestSupervision(t *testing.T, run *execution, prepared Prepared) {
+	t.Helper()
 	if run.preparedPath == "" {
 		run.preparedPath = filepath.Join(filepath.Dir(run.workspace), "prepared.json")
 	}
@@ -87,7 +92,6 @@ func attachV25TestSupervision(t *testing.T, run *execution) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prepared := minimalV25Prepared(run.workspace, PlanDigest(run.planBytes))
 	prepared.SupervisionToken = token
 	preparedRaw, err := MarshalPrepared(prepared)
 	if err != nil {

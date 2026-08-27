@@ -5923,3 +5923,64 @@ only. It does not establish Phase-8/9/10 handoff residue, full structural scale,
 signed ceremony custody/evidence, a complete ceremony, release, Epic closure,
 or a scale/SLO claim. The earlier Phase-9 exact-clean rerun remains formally
 open. This result record changes documentation only after the tested commit.
+
+### Focused T40.13 Phase-12 teardown rehearsal
+
+Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-
+fresh-temporary-root selector:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_TEARDOWN_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathTeardownRehearsal$' \
+  -count=1 -v -timeout=20m
+```
+
+The test creates one unique `phebs-t4013-teardown-*` parent with sibling
+evidence, run-root lock, and sentinel paths, and makes only its `custody/`
+child a recursive data-deletion target. Named external prepared, checkpoint,
+and supervision protocol artifacts are intentionally retired, and successful
+test cleanup removes the private parent after assertions. The working-tree toolchain, both bounded prepared profiles,
+execution controls, synthetic source, and derived data live inside that child.
+The observation and prepared publication live outside it. A receipt-valid V30
+source-free fixture stands in for already completed Phases 1–11; it is not a
+replay or proof of those phases.
+
+Before authoring or building anything, the selector binds `HEAD` and refuses
+all modified, staged, or untracked files. It repeats that check before
+destructive entry and after terminal retirement. Successful output prints
+`teardown exact source commit: <commit>` immediately before the pass marker, so
+retain both lines with the terminal `PASS`.
+
+The selector takes the production run-root lock, transitions real
+prepare→execute supervision, launches one structural Phebs/Surreal session to
+`http_ready`, performs terminal host-tool and completed-receipt prevalidation,
+then calls the unchanged `execution.teardown()` coordinator. Require
+`teardown custody retirement boundary passed` followed by `PASS`. That marker
+means process/session shutdown, nonzero logical and allocated measurements,
+checkpoint-before-delete, exact custody deletion plus durable absence, final
+observation publication, completed receipt validation, terminal descendant
+drain, supervision/prepared/checkpoint retirement, sibling preservation, and
+lock lifetime all passed. Negative cancellation, hard-death, delete,
+publication, and resume paths remain under the deterministic unit/atomic gates.
+
+The test context is 15 minutes and the command timeout is 20 minutes. It pays
+seven bounded Git control invocations, private module hydration/verification
+and four builds, two bounded profile
+authors without convergence, one structural server launch/stop, two serial
+whole-custody `du` walks under their existing 30-second bounds, recursive
+deletion, small bounded atomic publications, fsyncs, descendant drains, and
+host-tool revalidation. The evidence reserves do not sleep. These are focused
+fixture costs, not a full-custody teardown bound.
+
+Success removes the exact temporary parent after assertions. Failure attempts
+tracked-server shutdown and retains the entire exact parent. Do not assume
+custody itself survives every failure: checkpoint/stage/supervision authority
+can correctly remain outside custody after a post-delete failure. Do not rerun,
+resume, share, or purge the retained root until its processes are proven absent
+and its exact commit point is reviewed. The selector proves no prior-phase
+handoff, full corpus, signed custody/evidence, complete ceremony, release, Epic
+closure, or scale/SLO claim. Require an immutable clean commit, bounded gates,
+independent review, and an unchanged exact-commit run before full-ceremony
+planning.

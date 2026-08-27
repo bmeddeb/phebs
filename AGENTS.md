@@ -496,6 +496,18 @@ ceremony, release, Epic closure, and scale/SLO claims remain open. Ben
 authorized fast-forward integration after the source-identical result record,
 superseding only the following historical integration-open wording; exact-main
 preflight, freeze, execution, and push remain separate.
+A separately opt-in human Phase-12 rehearsal now exercises the unchanged V30
+`teardown` coordinator against one live supervised structural Phebs/Surreal
+session and a receipt-valid source-free completed-prefix fixture. It holds the
+real run-root lock, recursively deletes only a new private `custody/` child,
+retires the named external protocol artifacts, and requires checkpoint
+ordering, durable absence, terminal observation publication, completed receipt
+validation, sibling preservation, and lock release after the simulated Execute
+return. Successful test cleanup then removes the private parent. It adds no production code. The
+fixture does not replay or prove Phases 1–11, full-scale or signed custody, a
+complete ceremony, release, Epic closure, or a scale/SLO claim. Complete gates,
+independent review, an immutable commit, and an unchanged exact-clean human run
+remain required before the next full ceremony is planned.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

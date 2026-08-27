@@ -4214,3 +4214,65 @@ not prove Phase-8/9/10 handoff residue, full structural scale, signed ceremony
 custody/evidence, a complete ceremony, release, Epic closure, or a scale/SLO
 claim. The earlier Phase-9 exact-clean rerun remains formally open. This result
 record is source-identical documentation after the tested commit.
+
+## Focused Phase-12 teardown rehearsal
+
+Human Phase 12 is `teardown` (`phaseOrder[11]`). Its separately opt-in test has
+its own private parent because the production coordinator destroys the exact
+`custody/` child:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_TEARDOWN_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathTeardownRehearsal$' \
+  -count=1 -v -timeout=20m
+```
+
+The fixture builds the working-tree toolchain and both existing bounded
+profiles inside custody, publishes a real V30 prepared manifest outside it,
+and represents Phases 1–11 with the existing receipt-valid source-free
+completed-prefix fixture. It acquires the production run-root lock and real
+prepare→execute supervision before launching one structural Phebs/Surreal
+session through `http_ready`; Phase 11 normally leaves only structural live.
+Before any authoring or build it binds `HEAD` and rejects modified, staged, or
+untracked files. It repeats that exact check before destructive entry and after
+terminal retirement, then prints `teardown exact source commit: <commit>` next
+to the pass marker. It also performs the same terminal host-tool and completed-
+receipt prechecks as the dispatcher and calls the unchanged production
+`execution.teardown()`.
+Require `teardown custody retirement boundary passed` followed by `PASS`.
+
+A pass proves the live process/session stopped without an unproven forced
+shutdown; exact nonzero data gauges; durable checkpoint before deletion;
+exact-scope custody deletion and stable absence; final observation publication
+and completed receipt validation; terminal descendant drain; supervision,
+prepared-publication, provisional-file, and checkpoint retirement; survival of
+the outside sentinel and module root; and run-root-lock retention until the
+simulated Execute return. Existing unit and atomic tests separately own
+cancellation, hard-death, deletion/publication failure, and resume coverage.
+
+The test has a 15-minute context and a 20-minute package timeout. One run pays
+seven bounded Git control invocations, private dependency hydration/
+verification, four Go builds, two bounded-profile
+authors without convergence, one structural server startup, two serial
+whole-custody `du` traversals, one serial server stop, recursive exact-custody
+deletion, small atomic checkpoint/observation writes, descendant drain, fsync,
+and host-tool revalidation. The two 30-second teardown reserves are recorded
+in evidence rather than slept. This focused bound is not a maximum for deleting
+the full ceremony custody.
+
+No sparse image, ballast, convergence, query, archive, pressure cycle, or full
+corpus is used. On success the test removes only its new
+`phebs-t4013-teardown-*` parent after every assertion. On failure it attempts
+tracked-server shutdown and retains that complete exact parent. A pre-delete
+failure can retain custody; a post-delete publication or retirement failure can
+instead retain external checkpoint, stage, or supervision authority after
+custody is absent. Do not rerun, resume, share, or purge it before proving the
+session absent and reviewing the exact retained state.
+
+This is isolated Phase-12 evidence only. The source-free fixture does not prove
+Phases 1–11, their handoff, full structural scale, signed ceremony custody or
+evidence, a complete ceremony, release, Epic closure, or a scale/SLO claim.
+Commit and independently review the implementation, then run this selector
+unchanged from an exact clean checkout before planning the full ceremony.

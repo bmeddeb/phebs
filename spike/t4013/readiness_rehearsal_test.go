@@ -30,6 +30,7 @@ const pressureRehearsalEnvironment = "PHEBS_T4013_PRESSURE_REHEARSAL"
 const archiveRestoreRehearsalEnvironment = "PHEBS_T4013_ARCHIVE_RESTORE_REHEARSAL"
 const collectionRehearsalEnvironment = "PHEBS_T4013_COLLECTION_REHEARSAL"
 const authorizedQueryRehearsalEnvironment = "PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL"
+const teardownRehearsalEnvironment = "PHEBS_T4013_TEARDOWN_REHEARSAL"
 
 const maximumPressureRehearsalFilesystemBytes int64 = 16 << 30
 
@@ -537,6 +538,227 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 		}
 		rehearseAuthorizedQueryBoundary(t, ctx, moduleRoot, workspace, toolchain)
 	})
+}
+
+// TestProductionPathTeardownRehearsal is separate from the shared readiness
+// fixture because the production coordinator destroys its exact custody root.
+// Prior phases are represented by a receipt-valid source-free fixture; only
+// the Phase-12 process, lock, deletion, publication, and retirement boundary is
+// exercised here.
+func TestProductionPathTeardownRehearsal(t *testing.T) {
+	if os.Getenv(readinessRehearsalEnvironment) != "1" ||
+		os.Getenv(teardownRehearsalEnvironment) != "1" {
+		t.Skip("set " + readinessRehearsalEnvironment + "=1 and " +
+			teardownRehearsalEnvironment + "=1 to run the real teardown rehearsal")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Minute)
+	defer cancel()
+	moduleRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	moduleRoot, err = filepath.EvalSymlinks(moduleRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceCommit, err := gitOutputForContract(ctx, moduleRoot, true, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		t.Fatal(err)
+	}
+	runRoot, err := os.MkdirTemp("", "phebs-t4013-teardown-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRoot, err = filepath.EvalSymlinks(runRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer retainFailedDiagnosticWorkspace(t, runRoot)
+	custody := filepath.Join(runRoot, "custody")
+	evidence := filepath.Join(runRoot, "evidence")
+	for _, path := range []string{custody, evidence} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if custody == moduleRoot || isWithin(custody, moduleRoot) || isWithin(moduleRoot, custody) {
+		t.Fatal("teardown rehearsal custody overlaps the module root")
+	}
+	sentinelPath := filepath.Join(runRoot, "outside-custody")
+	const sentinel = "teardown sibling must survive\n"
+	if err := os.WriteFile(sentinelPath, []byte(sentinel), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, custody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structural, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, custody, "structural", "structural-teardown",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	semantic, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, custody, "semantic", "semantic-teardown",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostToolchain, err := observeHostToolchain(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV30PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostTools, err := bindHostToolchainForPlan(ctx, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := completedV25TeardownObservation(plan)
+	observation.Phases[11] = PhaseObservation{Name: "teardown", Outcome: "not_run"}
+	observation.Teardown = TeardownObservation{}
+	observationPath := filepath.Join(evidence, "observation.json")
+	preparedPath := filepath.Join(evidence, "prepared.json")
+	lock, err := lockRunRoot(runRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = lock.Close() }()
+	run := &execution{
+		ctx: ctx, moduleRoot: moduleRoot, workspace: custody,
+		plan: plan, planBytes: planBytes, observation: observation,
+		observationPath: observationPath, preparedPath: preparedPath,
+		toolchain: toolchain, hostTools: hostTools, runRootLock: lock,
+	}
+	attachTestSupervision(t, run, Prepared{
+		Schema: PreparedSchemaV2, PlanDigest: PlanDigest(planBytes),
+		ExecutionControlsSHA256: toolchain.controlsDigest,
+		Profiles:                []PreparedProfile{structural, semantic},
+	})
+	server, err := launchPrivateServer(ctx, structural, toolchain, "rehearsal-teardown")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run.structural = server
+	run.liveServers = []*privateServer{server}
+	complete := false
+	defer func() {
+		if !complete {
+			if err := run.stopServers(); err != nil {
+				t.Errorf("stop teardown diagnostic; retained at %s: %v", runRoot, err)
+			}
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(
+		ctx, server, structural, "rehearsal-teardown", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		t.Fatalf("pre-teardown exact checkout: %v", err)
+	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
+		t.Fatalf("pre-teardown receipt fixture: %v", err)
+	}
+	run.startPhase(11)
+	if err := run.teardown(); err != nil {
+		t.Fatal(err)
+	}
+
+	phase := run.observation.Phases[11]
+	if phase.Name != "teardown" || phase.Outcome != "succeeded" || !phase.OracleExact ||
+		phase.Metrics.DataLogicalBytes <= 0 || phase.Metrics.DataAllocatedBytes <= 0 ||
+		!run.observation.Teardown.Completed || run.observation.Teardown.DerivedDataRetained ||
+		run.observation.Teardown.ScratchSourceRetained {
+		t.Fatalf("teardown phase observation = %+v, teardown=%+v", phase, run.observation.Teardown)
+	}
+	if !run.observationPersisted || run.checkpointPersisted || len(run.liveServers) != 0 ||
+		run.structural != nil || run.semantic != nil || server.stopErr != nil {
+		t.Fatalf(
+			"teardown terminal state persisted=%t checkpoint=%t servers=%d structural=%t semantic=%t stop=%v",
+			run.observationPersisted, run.checkpointPersisted, len(run.liveServers),
+			run.structural != nil, run.semantic != nil, server.stopErr,
+		)
+	}
+	if err := confirmCustodyDeletionDurable(custody); err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmCustodySupervisionRetired(
+		custody, PlanDigest(planBytes), run.supervision.Token(), custodyOperationExecute,
+		run.checkpointDigest,
+	); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		preparedPath, observationPath + ".tmp", observationPath + ".teardown",
+		observationPath + ".teardown.tmp",
+	} {
+		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("retired teardown artifact %s = %v", path, err)
+		}
+	}
+	raw, err := os.ReadFile(observationPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	final, err := DecodeObservation(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateObservation(final); err != nil {
+		t.Fatal(err)
+	}
+	receiptRaw, err := BuildReceipt(planBytes, raw, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptRaw, plan)
+	if err != nil || receipt.Outcome != "completed" || receipt.Decision.Selected != "continue" ||
+		!receipt.Teardown.Completed {
+		t.Fatalf("teardown receipt = %+v, %v", receipt, err)
+	}
+	if got, err := os.ReadFile(sentinelPath); err != nil || string(got) != sentinel {
+		t.Fatalf("teardown sibling = %q, %v", got, err)
+	}
+	if _, err := os.Lstat(moduleRoot); err != nil {
+		t.Fatalf("teardown changed module root: %v", err)
+	}
+	if contender, err := lockRunRoot(runRoot); err == nil {
+		_ = contender.Close()
+		t.Fatal("teardown released the run-root lock before Execute would return")
+	} else if !strings.Contains(err.Error(), "already active") {
+		t.Fatalf("teardown run-root lock proof = %v", err)
+	}
+	if err := lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reacquired, err := lockRunRoot(runRoot)
+	if err != nil {
+		t.Fatalf("teardown run-root lock did not release: %v", err)
+	}
+	if err := reacquired.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		t.Fatalf("terminal exact checkout: %v", err)
+	}
+	complete = true
+	t.Logf("teardown exact source commit: %s", sourceCommit)
+	t.Log("teardown custody retirement boundary passed")
 }
 
 func rehearseStructuralPressureBoundary(
