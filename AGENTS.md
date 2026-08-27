@@ -451,6 +451,15 @@ existing capacity probes per second before sweep duration, plus the existing
 timer allocation and in-memory status update; it does not claim four completed
 turns. This provides deterministic scheduler headroom, not a Phase-8 or
 full-ceremony pass; focused rerun and exact-tree review gates remain required.
+The dedicated human Phase-9 `archive_restore` rehearsal now calls the production
+coordinator after a small structural A→B→A-return. Its first working-tree run
+passed in 88.70 seconds for the subtest and 147.917 seconds for the package
+command, with exact meter/server accounting, successful shutdown, no retained
+current-run workspace, and no matching process. Older retained readiness roots
+remain untouched. Because the run preceded its immutable implementation commit,
+an unchanged exact-clean-commit rerun remains required before candidate
+attribution. Human Phase 10 collection and every broader ceremony, release,
+Epic-closure, and scale/SLO claim remain open.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

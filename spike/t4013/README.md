@@ -4055,3 +4055,44 @@ and reserves at most 350 seconds of scheduled delay after worst alignment and
 two fresh cycles, leaving more than four minutes for bounded work and status
 polling. This is headroom, not a Phase-8 pass; do not rerun the focused wrapper
 until the correction is on an immutable clean commit and its review gates pass.
+
+## Focused Phase-9 archive/restore rehearsal
+
+Human Phase 9 is `archive_restore` (`phaseOrder[8]`). The V30 text that calls
+`collection` “phase 9” uses its zero-based index; that is human Phase 10. The
+separately opt-in `structural-archive-restore` leg reaches the small structural
+A→B→A-return boundary and calls the production `execution.archiveRestore()`
+coordinator directly:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_ARCHIVE_RESTORE_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^structural-archive-restore$' \
+  -count=1 -v -timeout=35m
+```
+
+A pass includes `structural archive/restore authority boundary passed`. It
+proves the small-profile live backup, stopped source server, offline restore,
+restored-boundary inspection, restored server convergence, V30 product
+comparison, exact Phase-9 metrics, and shutdown through the production
+coordinator. It does not run human Phase 10 collection and proves neither the
+Phase-8 handoff nor the two-million-owner, signed-custody, or full-ceremony
+shape.
+
+No sparse image, ballast, or fixed lock is used. Success removes the temporary
+workspace. Failure reports and retains the exact private
+`phebs-t4013-readiness-*` root containing logs, credentials, synthetic source,
+backup, and derived data; prove its processes and listener absent before
+review, purge, or rerun. The rehearsal builds the working tree, so repeat it
+unchanged on an immutable clean commit before carrying the result into
+candidate readiness.
+
+The first dedicated working-tree run passed: the Phase-9 subtest completed in
+88.70 seconds, the top-level readiness test in 147.32 seconds, and the package
+command in 147.917 seconds. Exact two-meter/two-server accounting and final
+shutdown passed; successful cleanup removed the private workspace, and a
+separate host check found no matching Phebs/Surreal process. This claim is only
+about the current run; older retained readiness roots remain untouched. Because
+the run preceded the immutable implementation commit, repeat the same selector
+on the clean commit before treating it as candidate evidence.

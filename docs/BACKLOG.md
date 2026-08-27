@@ -2139,6 +2139,17 @@ fair order, lock scope, concurrency, schemas, and V30 evidence predicates are
 unchanged. A real focused rerun, complete gates, and independent review remain
 required.
 
+Human Phase 9 is `archive_restore` (`phaseOrder[8]`), not the zero-based
+collection index. Its new opt-in small structural rehearsal directly exercises
+the production live-backup, stop, offline-restore, restored-boundary,
+reconvergence/comparator, meter, and shutdown coordinator. The first
+working-tree run passed in 88.70 seconds for the subtest and 147.917 seconds for
+the package command, removed its current-run private workspace, and left no
+matching process. Older retained readiness roots remain untouched. Because it
+preceded the immutable implementation commit, an unchanged exact-clean-commit
+rerun remains mandatory. Human Phase 10 collection, signed custody, full scale,
+release, Epic closure, and scale/SLO claims remain open.
+
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof
 (115.754s), complete readiness rehearsal (884.324s), every `internal/` package

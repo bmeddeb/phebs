@@ -2180,6 +2180,17 @@ pressure scheduling frequency; per-turn limits,
 fair order, lock scope, concurrency, schema, and V30 predicates remain exact.
 The focused real-binary rerun and complete review gates remain mandatory.
 
+The separately opt-in human Phase-9 (`archive_restore`, `phaseOrder[8]`)
+rehearsal now calls the exact production archive/restore coordinator after a
+small structural A→B→A-return. Its first working-tree run passed in 88.70
+seconds for the subtest and 147.917 seconds for the package command, including
+exact meter/server accounting and shutdown; cleanup removed its current-run
+private workspace and left no matching process. Older retained readiness roots
+remain untouched. The run preceded the immutable implementation commit, so
+repeat it unchanged on the clean commit before candidate attribution. This is
+not human Phase 10 collection, a full-scale or signed-custody result, release,
+Epic closure, or a scale/SLO claim.
+
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package
 including full store, module verification/compilation, vet,
