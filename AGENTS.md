@@ -451,6 +451,17 @@ existing capacity probes per second before sweep duration, plus the existing
 timer allocation and in-memory status update; it does not claim four completed
 turns. This provides deterministic scheduler headroom, not a Phase-8 or
 full-ceremony pass; focused rerun and exact-tree review gates remain required.
+The separately run human Phase-7 `semantic-stale-worker` selector passed in
+32.22s for the subtest, 197.17s for the top-level readiness test, and 197.835s
+for the package command. Its retained terminal record does not bind exact HEAD
+and clean-checkout proof, so exact candidate attribution remains open. The
+corrected Phase-8 wrapper then passed from exact clean commit
+`37fba2896f500104fa8283914ed19b8a003e3a24`: its subtest took 252.48s, the
+top-level readiness test 310.35s, and the package command 311.030s. That commit
+is integrated into `main`; a later host check found no matching diagnostic path
+or live rehearsal/Surreal process. These focused results supersede the earlier
+Phase-7/8 run requirements only; prior-phase handoff, full-scale custody,
+release, Epic closure, and scale/SLO claims remain open.
 The dedicated human Phase-9 `archive_restore` rehearsal now calls the production
 coordinator after a small structural A→B→A-return. Its first working-tree run
 passed in 88.70 seconds for the subtest and 147.917 seconds for the package
@@ -460,6 +471,19 @@ remain untouched. Because the run preceded its immutable implementation commit,
 an unchanged exact-clean-commit rerun remains required before candidate
 attribution. Human Phase 10 collection and every broader ceremony, release,
 Epic-closure, and scale/SLO claim remain open.
+The unchanged human Phase-10 selector subsequently passed from exact clean
+commit `15487bbf15b602b04d81fbae6b989777b5cac44d`: its subtest took 147.89s, the
+top-level readiness test 205.45s, and the package command 206.121s. Successful
+cleanup retained no diagnostic root and left no matching process. That
+commit was integrated into and pushed as `main`. The Phase-10 exact-rerun
+requirement is closed, but the earlier Phase-9 exact-clean rerun remains
+formally open. A separately opt-in human Phase-11 `authorized_query` rehearsal
+now drives the unchanged production coordinator over converged semantic-A and
+structural-A-return profiles, with real restart, fixed query/citation oracles,
+authority revalidation, exact metering, and shutdown. It adds no production
+code and no sparse image, ballast, archive, or fixed lock. Its exact-clean run,
+all broader ceremony/custody evidence, release, Epic closure, and scale/SLO
+claims remain open.
 The original T40.13 gate remains open; integration, exact-main preflight,
 fresh-ID selection, freeze, and execution remain separately authorized. Epic 40
 targets

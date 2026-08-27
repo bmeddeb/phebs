@@ -4756,8 +4756,9 @@ already-open bounded fields and adds no request.
 
 Each authorized endpoint has at most three attempts. Transport failures and
 HTTP 409 wait one second between attempts; the HTTP client keeps its existing
-30-second request timeout. The complete two-profile suite has nine endpoint
-checks and therefore at most 27 requests and 18 seconds of retry delay if each
+30-second request timeout. The complete two-profile suite has at most ten
+endpoint checks because either relationship response may carry a citation. It
+therefore permits at most 30 requests and 20 seconds of retry delay if each
 check succeeds only on attempt three; the first terminal failure stops later
 queries. Evidence retains only the frozen profile, query name, failure class,
 numeric status when applicable, and attempts. It never retains URL, response,
@@ -5701,6 +5702,15 @@ remains. This closes only the T40.13s focused gate. Before any new full
 ceremony, review and run the phase-7 stale-worker boundary independently; do
 not touch retained neutral-40 custody.
 
+Focused Phase-7 result (2026-08-26): the separately run
+`semantic-stale-worker` selector emitted `semantic stale-worker boundary
+passed`; its subtest completed in 32.22 seconds, the top-level readiness test
+in 197.17 seconds, and the package command in 197.835 seconds. Successful
+cleanup removed that run's private workspace. The retained terminal record
+does not bind an exact HEAD and clean-checkout proof, so exact candidate
+attribution remains open. This is not prior-phase handoff, full-scale custody,
+release, or SLO evidence.
+
 ### Focused T40.13 Phase-8 pressure rehearsal
 
 Human Phase 8 is `pressure` (`phaseOrder[7]`). There was no existing focused
@@ -5758,6 +5768,16 @@ most 350 seconds of scheduled delay for the exact 1,547-entry shape after worst
 alignment and two fresh cycles. Runtime work and status observation consume the
 remaining headroom, so this is not a pass or SLO. Require an immutable clean
 commit, focused gates, and independent review before rerunning the wrapper.
+
+Exact focused result (2026-08-26): the corrected wrapper subsequently passed
+from clean commit `37fba2896f500104fa8283914ed19b8a003e3a24`. It emitted
+`structural pressure collect/recovery boundary passed`; the subtest completed
+in 252.48 seconds, the top-level readiness test in 310.35 seconds, and the
+package command in 311.030 seconds. The correction commit is integrated into
+`main`; a later read-only host check found no matching Phase-8 diagnostic path
+or live rehearsal/Surreal process. This supersedes only the focused-rerun
+requirement. Prior-phase handoff, the full corpus/root-volume shape, signed
+custody, later phases, release, closure, and scale/SLO claims remain open.
 
 ### Focused T40.13 Phase-9 archive/restore rehearsal
 
@@ -5838,3 +5858,50 @@ and derived state. Do not share or rerun against it; first prove the rehearsal
 processes and listener absent, then review and purge only that exact root.
 Because the selector builds the working tree, an immutable clean commit and
 unchanged exact-commit pass are required for candidate evidence.
+
+Exact focused result (2026-08-26): the unchanged selector passed from clean
+commit `15487bbf15b602b04d81fbae6b989777b5cac44d`. The Phase-10 subtest completed
+in 147.89 seconds, the top-level readiness test in 205.45 seconds, and the
+package command in 206.121 seconds. It emitted the required boundary marker,
+removed its successful workspace, retained no diagnostic root, and left no
+matching Phebs/Surreal process. That commit is integrated into and pushed as
+`main`. This remains clean-entry focused evidence; the separately recorded
+Phase-9 exact-commit rerun and all broader custody, scale, and release gates
+remain open.
+
+### Focused T40.13 Phase-11 authorized-query rehearsal
+
+Human Phase 11 is `authorized_query` (`phaseOrder[10]`). Run only the dedicated
+selector:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^authorized-query$' \
+  -count=1 -v -timeout=35m
+```
+
+The rehearsal converges semantic A, starts structural A-return while the
+semantic port is occupied, then stops semantic, re-reserves that port, and
+converges structural before calling the unchanged production V30
+authorized-query coordinator. Require
+`authorized-query dual-profile boundary passed` followed by `PASS`. A pass
+covers the production semantic restart, stable semantic and structural
+authority revalidation, the fixed unauthenticated, search, service-inventory,
+relationship, and citation oracles, exact control-read and two-meter accounting,
+at least the three mandatory query-member reads, and shutdown. Existing unit
+tests retain the separate retry, terminal-response, and source-free
+failure-projection coverage.
+
+This is a clean Phase-11 entry, not a replay of Phase 8, 9, or 10. It does not prove
+handoff residue, full structural corpus, signed ceremony custody, release, or
+scale claim. No sparse image, ballast, archive, or fixed lock is used. Success
+removes the temporary workspace. Failure reports and retains one exact private
+`phebs-t4013-readiness-*` root. A query failure logs the bounded source-free
+projection when present. Do not share or rerun against it; first prove all
+rehearsal processes and listeners absent, then review and purge only that exact
+root. The shared 30-minute test context and 35-minute command timeout bound the
+healthy rehearsal profiles, not the production ceremony's combined phase
+ceilings. The selector builds the working tree, so an immutable clean commit
+and unchanged exact-commit pass are required for candidate evidence.

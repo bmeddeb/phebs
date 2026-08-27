@@ -29,6 +29,7 @@ const exactSemanticTimingEnvironment = "PHEBS_T4013_EXACT_SEMANTIC_TIMING"
 const pressureRehearsalEnvironment = "PHEBS_T4013_PRESSURE_REHEARSAL"
 const archiveRestoreRehearsalEnvironment = "PHEBS_T4013_ARCHIVE_RESTORE_REHEARSAL"
 const collectionRehearsalEnvironment = "PHEBS_T4013_COLLECTION_REHEARSAL"
+const authorizedQueryRehearsalEnvironment = "PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL"
 
 const maximumPressureRehearsalFilesystemBytes int64 = 16 << 30
 
@@ -530,6 +531,12 @@ func TestProductionPathReadinessRehearsal(t *testing.T) {
 		}
 		rehearseStructuralCollectionBoundary(t, ctx, moduleRoot, workspace, toolchain)
 	})
+	t.Run("authorized-query", func(t *testing.T) {
+		if os.Getenv(authorizedQueryRehearsalEnvironment) != "1" {
+			t.Skip("set " + authorizedQueryRehearsalEnvironment + "=1 to run the real authorized-query rehearsal")
+		}
+		rehearseAuthorizedQueryBoundary(t, ctx, moduleRoot, workspace, toolchain)
+	})
 }
 
 func rehearseStructuralPressureBoundary(
@@ -833,6 +840,199 @@ func rehearseStructuralCollectionBoundary(
 	}
 	complete = true
 	t.Log("structural collection fresh-cycle boundary passed")
+}
+
+func rehearseAuthorizedQueryBoundary(
+	t *testing.T,
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	toolchain privateToolchain,
+) {
+	t.Helper()
+	semanticProfile, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "semantic", "semantic-authorized-query",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	semanticSeed, err := launchPrivateServer(
+		ctx, semanticProfile, toolchain, "rehearsal-authorized-query-semantic-seed",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var structuralServer *privateServer
+	var portReservations map[string]net.Listener
+	var run *execution
+	complete := false
+	defer func() {
+		if complete {
+			return
+		}
+		var runStopErr error
+		if run != nil {
+			if run.observation.AuthorizedQuery != nil {
+				t.Logf("authorized-query failure projection: %+v", run.observation.AuthorizedQuery)
+			}
+			runStopErr = run.stopServers()
+			for active := range run.activeMeters {
+				if _, err := run.finishMeter(active, nil); err != nil {
+					t.Errorf("finish authorized-query diagnostic meter; retained at %s: %v", workspace, err)
+				}
+			}
+		}
+		var semanticStopErr error
+		if semanticSeed != nil {
+			semanticStopErr = semanticSeed.stop(30 * time.Second)
+		}
+		var structuralStopErr error
+		if structuralServer != nil {
+			structuralStopErr = structuralServer.stop(30 * time.Second)
+		}
+		reservationErr := releaseLoopbackAddresses(portReservations)
+		if err := errors.Join(structuralStopErr, semanticStopErr, runStopErr, reservationErr); err != nil {
+			t.Errorf("stop authorized-query diagnostic; retained at %s: %v", workspace, err)
+		}
+	}()
+	if _, err := awaitPrivateServerHealth(
+		ctx, semanticSeed, semanticProfile, "rehearsal-authorized-query-semantic-seed", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	semanticA := awaitReadinessSnapshot(t, ctx, semanticProfile, "a", 12*time.Minute)
+
+	// Keep the semantic port occupied until structural is listening; the profile
+	// address helper intentionally releases its listener.
+	structuralProfile, err := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "structural", "structural-authorized-query",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := updateSourceRevision(
+		ctx, structuralProfile.Repository, structuralProfile.Revisions["a-return"], true,
+	); err != nil {
+		t.Fatal(err)
+	}
+	structuralServer, err = launchPrivateServer(
+		ctx, structuralProfile, toolchain, "rehearsal-authorized-query-structural",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := awaitPrivateServerHealth(
+		ctx, structuralServer, structuralProfile, "rehearsal-authorized-query-structural", 2*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := semanticSeed.stop(30 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	semanticSeed = nil
+	portReservations, err = reserveLoopbackAddresses(semanticProfile.Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structAR := awaitReadinessSnapshot(t, ctx, structuralProfile, "a-return", 12*time.Minute)
+
+	plan := Plan{Schema: PlanSchemaV30, Safety: frozenSafetyV25}
+	run = &execution{
+		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
+		prepared:         Prepared{Profiles: []PreparedProfile{structuralProfile, semanticProfile}},
+		structural:       structuralServer,
+		structAR:         structAR,
+		semanticA:        semanticA,
+		liveServers:      []*privateServer{structuralServer},
+		portReservations: portReservations,
+		observation:      emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	portReservations = nil
+	run.startPhase(10)
+	if err := run.authorizedQueries(); err != nil {
+		t.Fatal(err)
+	}
+	phase := run.observation.Phases[10]
+	if phase.Name != "authorized_query" || phase.Outcome != "succeeded" || !phase.OracleExact {
+		t.Fatalf("authorized-query phase observation = %+v", phase)
+	}
+	var meterControlReads, meterMemberReads int64
+	for _, snapshot := range []privateProfileSnapshot{run.structAR, run.semanticA} {
+		published, err := checkedMulInt64(int64(snapshot.PublishedDomains), 3)
+		if err != nil {
+			t.Fatal(err)
+		}
+		controlReads, err := checkedSumInt64(7, published, int64(snapshot.ApplicablePartitions))
+		if err != nil {
+			t.Fatal(err)
+		}
+		meterControlReads, err = checkedAddInt64(meterControlReads, controlReads)
+		if err != nil {
+			t.Fatal(err)
+		}
+		memberReads, err := checkedSumInt64(
+			int64(snapshot.BlobReader.FallbackReads), int64(snapshot.SettledPartitions),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		meterMemberReads, err = checkedAddInt64(meterMemberReads, memberReads)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	expectedControlReads, err := checkedAddInt64(meterControlReads, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	minimumMemberReads, err := checkedAddInt64(meterMemberReads, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if phase.Metrics.ControlReads != expectedControlReads || phase.Metrics.MemberReads < minimumMemberReads {
+		t.Fatalf(
+			"authorized-query reads control=%d want=%d member=%d want-at-least=%d",
+			phase.Metrics.ControlReads, expectedControlReads,
+			phase.Metrics.MemberReads, minimumMemberReads,
+		)
+	}
+	if err := validateAuthorizedQueryObservation(run.observation); err != nil {
+		t.Fatalf("authorized-query observation: %v", err)
+	}
+	if run.observation.AuthorizedQuery != nil {
+		t.Fatalf("successful authorized query retained failure evidence: %+v", run.observation.AuthorizedQuery)
+	}
+	if len(run.observation.ServerStartups) != 1 ||
+		run.observation.ServerStartups[0].Profile != semanticProfile.Name ||
+		run.observation.ServerStartups[0].Label != "authorized-query" ||
+		run.observation.ServerStartups[0].Outcome != "healthy" {
+		t.Fatalf("authorized-query startup observation = %+v", run.observation.ServerStartups)
+	}
+	waits := run.observation.ConvergenceWaits
+	if len(waits) != 2 ||
+		waits[0].Profile != semanticProfile.Name || waits[0].Label != "authorized-query-semantic" ||
+		waits[0].Revision != "a" || waits[0].Outcome != "converged" ||
+		waits[1].Profile != structuralProfile.Name || waits[1].Label != "authorized-query-structural" ||
+		waits[1].Revision != "a-return" || waits[1].Outcome != "converged" {
+		t.Fatalf("authorized-query convergence observations = %+v", waits)
+	}
+	if run.metersExpected != 2 || run.metersTracked != 2 || len(run.activeMeters) != 0 ||
+		run.measurementErr != nil || len(run.liveServers) != 2 || run.semantic != nil ||
+		run.structural != structuralServer {
+		t.Fatalf(
+			"authorized-query accounting expected=%d tracked=%d active=%d measurement=%v servers=%d semantic=%v structural_live=%t",
+			run.metersExpected, run.metersTracked, len(run.activeMeters), run.measurementErr,
+			len(run.liveServers), run.semantic != nil, run.structural == structuralServer,
+		)
+	}
+	if err := run.stopServers(); err != nil {
+		t.Fatal(err)
+	}
+	if len(run.liveServers) != 0 || run.structural != nil || run.semantic != nil {
+		t.Fatal("authorized-query rehearsal retained a server after shutdown")
+	}
+	complete = true
+	t.Log("authorized-query dual-profile boundary passed")
 }
 
 func buildWorkingTreeToolchain(

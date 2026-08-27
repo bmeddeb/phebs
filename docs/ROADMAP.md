@@ -2180,6 +2180,19 @@ pressure scheduling frequency; per-turn limits,
 fair order, lock scope, concurrency, schema, and V30 predicates remain exact.
 The focused real-binary rerun and complete review gates remain mandatory.
 
+The separately run human Phase-7 `semantic-stale-worker` selector passed in
+32.22 seconds for the subtest, 197.17 seconds for the top-level readiness test,
+and 197.835 seconds for the package command. Its retained terminal record does
+not bind exact HEAD and clean-checkout proof, so exact candidate attribution
+remains open. The corrected Phase-8 wrapper subsequently passed from exact
+clean commit `37fba2896f500104fa8283914ed19b8a003e3a24`: the subtest took
+252.48 seconds, the top-level readiness test 310.35 seconds, and the package
+command 311.030 seconds. That commit is integrated into `main`; a later host
+check found no matching Phase-8 diagnostic path or live rehearsal/Surreal
+process. These focused results supersede only the earlier Phase-7/8 run
+requirements. Prior-phase handoff, full-corpus/root-volume scale, signed
+custody, release, Epic closure, and scale/SLO claims remain open.
+
 The separately opt-in human Phase-9 (`archive_restore`, `phaseOrder[8]`)
 rehearsal now calls the exact production archive/restore coordinator after a
 small structural A→B→A-return. Its first working-tree run passed in 88.70
@@ -2190,6 +2203,28 @@ remain untouched. The run preceded the immutable implementation commit, so
 repeat it unchanged on the clean commit before candidate attribution. This is
 not human Phase 10 collection, a full-scale or signed-custody result, release,
 Epic closure, or a scale/SLO claim.
+
+Human Phase 10 subsequently passed its unchanged selector from exact clean
+commit `15487bbf15b602b04d81fbae6b989777b5cac44d`: the subtest took 147.89
+seconds, the top-level readiness test 205.45 seconds, and the package command
+206.121 seconds. It emitted the production boundary marker, removed its
+successful workspace, retained no diagnostic root, and left no matching
+process. That commit is integrated into and pushed as `main`. This closes only
+the Phase-10 exact-rerun requirement. The earlier Phase-9 exact-clean rerun and
+all full-custody, scale, release, and Epic-closure gates remain open.
+
+The next isolated seam is human Phase 11 (`authorized_query`,
+`phaseOrder[10]`). Its separately opt-in real-binary rehearsal enters with
+semantic A converged and stopped plus structural A-return converged and live,
+then invokes the unchanged production V30 coordinator. It requires the real
+semantic restart, stable authority for both profiles, the fixed unauthorized,
+search, service-inventory, relationship, and citation oracles, exact two-meter
+accounting, and shutdown. Existing unit tests retain retry and source-free
+failure-projection coverage, so the ticket adds no production path or duplicate
+query harness. The rehearsal uses no sparse image, ballast, archive, or fixed
+lock. Bounded gates, independent review, an immutable commit, and an unchanged
+exact-clean run remain required before candidate attribution; the clean entry
+does not prove prior-phase handoff, full-scale custody, release, closure, or SLO.
 
 The pre-review focused and bounded regressions, complete package/race,
 real-launcher custody, production-path readiness, every `internal/` package

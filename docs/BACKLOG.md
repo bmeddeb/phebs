@@ -2139,6 +2139,19 @@ fair order, lock scope, concurrency, schemas, and V30 evidence predicates are
 unchanged. A real focused rerun, complete gates, and independent review remain
 required.
 
+The separately run human Phase-7 `semantic-stale-worker` selector passed in
+32.22 seconds for the subtest, 197.17 seconds for the top-level readiness test,
+and 197.835 seconds for the package command. Its retained terminal record does
+not bind exact HEAD and clean-checkout proof, so exact candidate attribution
+remains open. The corrected Phase-8 wrapper subsequently passed from exact
+clean commit `37fba2896f500104fa8283914ed19b8a003e3a24`: the subtest took
+252.48 seconds, the top-level readiness test 310.35 seconds, and the package
+command 311.030 seconds. That commit is integrated into `main`; a later host
+check found no matching Phase-8 diagnostic path or live rehearsal/Surreal
+process. These focused results supersede only the earlier Phase-7/8 run
+requirements. Prior-phase handoff, full-corpus/root-volume scale, signed
+custody, release, Epic closure, and scale/SLO claims remain open.
+
 Human Phase 9 is `archive_restore` (`phaseOrder[8]`), not the zero-based
 collection index. Its new opt-in small structural rehearsal directly exercises
 the production live-backup, stop, offline-restore, restored-boundary,
@@ -2149,6 +2162,26 @@ matching process. Older retained readiness roots remain untouched. Because it
 preceded the immutable implementation commit, an unchanged exact-clean-commit
 rerun remains mandatory. Human Phase 10 collection, signed custody, full scale,
 release, Epic closure, and scale/SLO claims remain open.
+
+Human Phase 10 then passed its unchanged selector from exact clean commit
+`15487bbf15b602b04d81fbae6b989777b5cac44d`: the subtest took 147.89 seconds,
+the top-level readiness test 205.45 seconds, and the package command 206.121
+seconds. It emitted the required production boundary marker, removed its
+successful workspace, retained no diagnostic root, and left no matching
+process. That commit is integrated into and pushed as `main`. This closes only
+the Phase-10 exact-rerun requirement; the earlier Phase-9 exact-clean rerun and
+all full-custody, scale, release, and Epic-closure gates remain open.
+
+Human Phase 11 now has a separately opt-in real-binary `authorized-query`
+rehearsal. It enters cleanly with semantic A converged and stopped plus
+structural A-return converged and live, then calls the unchanged production V30
+coordinator. A pass requires the semantic restart, both stable-authority
+revalidations, the fixed unauthorized/search/service/relationship/citation
+oracles, exact two-meter accounting, and shutdown. Existing tests retain retry
+and source-free failure-projection coverage; no production code, sparse image,
+ballast, archive, or fixed lock is added. Its immutable exact-clean run remains
+pending and will not prove Phase-8/9/10 handoff residue, full-scale custody,
+release, Epic closure, or scale/SLO claim.
 
 Gate status (2026-08-25): the pre-review focused and bounded regressions,
 complete package (104.564s), full package race (129.985s), real-launcher proof

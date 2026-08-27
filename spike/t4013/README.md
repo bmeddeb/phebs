@@ -3997,6 +3997,14 @@ authorized query also passed. Successful cleanup removed the temporary
 workspace and no matching process remains. This is focused readiness, not a
 phase 7–11, full-ceremony, release, Epic-closure, or scale/SLO result.
 
+The separately run human Phase-7 `semantic-stale-worker` selector subsequently
+emitted `semantic stale-worker boundary passed`; its subtest completed in 32.22
+seconds, the top-level readiness test in 197.17 seconds, and the package command
+in 197.835 seconds. Successful cleanup removed that run's private workspace.
+The retained terminal record does not bind an exact HEAD and clean-checkout
+proof, so exact candidate attribution remains open. This is focused Phase-7
+evidence only, not prior-phase handoff, full-scale custody, release, or SLO.
+
 ## Focused Phase-8 pressure rehearsal
 
 Human Phase 8 is `pressure` (`phaseOrder[7]`). The earlier `structural`
@@ -4055,6 +4063,16 @@ and reserves at most 350 seconds of scheduled delay after worst alignment and
 two fresh cycles, leaving more than four minutes for bounded work and status
 polling. This is headroom, not a Phase-8 pass; do not rerun the focused wrapper
 until the correction is on an immutable clean commit and its review gates pass.
+
+That corrected rerun subsequently passed from exact clean commit
+`37fba2896f500104fa8283914ed19b8a003e3a24`. It emitted
+`structural pressure collect/recovery boundary passed`; the Phase-8 subtest
+completed in 252.48 seconds, the top-level readiness test in 310.35 seconds,
+and the package command in 311.030 seconds. The correction commit is integrated
+into `main`; a later read-only host check found no matching Phase-8 diagnostic
+path or live rehearsal/Surreal process. This supersedes only the focused-rerun
+requirement. Prior-phase handoff, the full corpus/root-volume shape, signed
+custody, later phases, release, closure, and scale/SLO claims remain open.
 
 ## Focused Phase-9 archive/restore rehearsal
 
@@ -4133,3 +4151,48 @@ workspace. Failure reports and retains the exact private
 and derived data; prove its processes and listener absent before review, purge,
 or rerun. The selector builds the working tree, so an immutable clean commit
 and unchanged exact-commit pass are required for candidate evidence.
+
+The unchanged selector passed from an exact clean checkout at commit
+`15487bbf15b602b04d81fbae6b989777b5cac44d`: the Phase-10 subtest completed in
+147.89 seconds, the top-level readiness test in 205.45 seconds, and the package
+command in 206.121 seconds. It emitted the required boundary marker, removed
+its successful workspace, retained no diagnostic root, and left no matching
+Phebs/Surreal process. That commit is integrated into and pushed as `main`.
+This remains clean-entry focused evidence; the earlier Phase-9 exact-commit
+rerun and every broader custody, scale, and release gate remain open.
+
+## Focused Phase-11 authorized-query rehearsal
+
+Human Phase 11 is `authorized_query` (`phaseOrder[10]`). Run its separately
+opt-in real-binary selector directly:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^authorized-query$' \
+  -count=1 -v -timeout=35m
+```
+
+The fixture converges semantic A, starts structural A-return while the semantic
+port is occupied, then stops semantic, re-reserves that port, and converges
+structural before calling the unchanged production V30 authorized-query
+coordinator. Require
+`authorized-query dual-profile boundary passed` followed by `PASS`. This
+covers the semantic restart, stable authority revalidation for both profiles,
+the fixed unauthenticated, search, service-inventory, relationship, and
+citation checks, exact control-read and two-meter accounting, at least the three
+mandatory query-member reads, and shutdown. Existing unit tests separately pin
+the retry and terminal-failure projections.
+
+This clean-entry selector does not replay Phase 8, 9, or 10 and does not prove
+handoff residue, full structural corpus, signed ceremony custody, release, or
+scale claim. It uses no sparse image, ballast, archive, or fixed lock. Success
+removes the temporary workspace. Failure reports and retains the exact private
+`phebs-t4013-readiness-*` root. A query failure logs the bounded source-free
+projection when present; prove its processes and listener absent before review,
+purge, or rerun. The 30-minute test context and 35-minute command timeout are
+bounds for these healthy rehearsal profiles, not the production ceremony's
+combined phase ceiling. Because the selector builds the working tree, commit
+it and repeat it unchanged from an exact clean checkout before treating a pass
+as candidate evidence.
