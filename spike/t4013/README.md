@@ -4575,3 +4575,36 @@ memory/disk ceiling, or production authority changes. Observation and receipt
 decode plus teardown-checkpoint resume each perform one extra in-memory
 field-presence scan over their already-read bounded bytes (256 KiB, 256 KiB,
 and 260 KiB respectively) and at most 16 convergence waits; this adds no I/O.
+
+## Exact V32 full-profile Phase-7 pass
+
+The exact-clean V32 candidate
+`968311621f389643365587f4ae588ba83c832e68` passed the dedicated full-profile
+replay. The test took 21,280.34 seconds and the wrapper returned terminal PASS
+after 21,281.087 seconds. Preflight, cold, warm no-op, delta B, return A,
+interruption, and stale worker all succeeded with exact oracles. Phase 6
+`interruption` took 7,253.516 seconds and Phase 7 `stale_worker` took
+2,303.216 seconds.
+
+The v2 source-free result is retained at
+`t4013u-v32-full-profile-phase7-replay.json` with digest
+`sha256:0e17da4500e8000713ca8e3abc6f97041772b3d78bdb2bf3661589f5e5b84c75`.
+It binds the exact V32 plan digest
+`sha256:8784172854b86275d55705e920e6bf6e0499910e3d254c961a41639a0f5a3005`
+and clean-teardown observation digest
+`sha256:6eaef4eb7cea706c2e9b5874a5e09e0e3978e6cdb6363fd316263c9650a8a426`.
+Five converged waits counted six recognized progress-retry conflicts and
+retained only five to seven transitions, so the run exercised V32's correction
+without reaching or changing the 32-transition limit.
+
+The deliberate `after_stale_worker_before_pressure` boundary started no
+pressure work. Terminal logical and allocated gauges were nonzero; stopped
+teardown retired custody, supervision, the private driver, and the bootstrap.
+Separate result and process-absence review matched the plan, cleanup, result,
+and completion-marker hashes and found no surviving process, listener, holder,
+or mount. Preserve the source-free result before retiring the temporary result
+root, fixed completion lock, and host-pressure reservation.
+
+This closes only T40.13u's exact Phase-7 replay/result gate. It establishes no
+Phase-8-or-later handoff, complete ceremony, scale/SLO, freeze, release, or
+Epic-40 pass.

@@ -2601,6 +2601,24 @@ required before a merge request. A new immutable candidate, exact replay,
 freeze, ceremony, release, Epic closure, and scale/SLO claim remain separate
 and unauthorized.
 
+Exact result (2026-08-28): the clean immutable candidate
+`968311621f389643365587f4ae588ba83c832e68` passed the dedicated V32
+full-profile replay in 21,281.087 seconds. All seven phases through
+`stale_worker` succeeded with exact oracles; the deliberate boundary stopped
+before `pressure`, published a v2 source-free result, and completed clean
+custody/supervision retirement. Five convergence waits counted six recognized
+progress-retry conflicts and all converged with five to seven retained
+transitions, directly exercising the correction without changing the
+32-transition ceiling. The exact replay result is retained at
+`spike/t4013/t4013u-v32-full-profile-phase7-replay.json`; it binds the plan,
+cleanup observation, and result with respective SHA-256 digests
+`8784172854b86275d55705e920e6bf6e0499910e3d254c961a41639a0f5a3005`,
+`6eaef4eb7cea706c2e9b5874a5e09e0e3978e6cdb6363fd316263c9650a8a426`,
+and `0e17da4500e8000713ca8e3abc6f97041772b3d78bdb2bf3661589f5e5b84c75`.
+This satisfies T40.13u's expensive replay and result-review AC only; integration,
+exact-main preflight, freeze, the complete ceremony, release, Epic closure,
+and scale/SLO evidence remain separate.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -631,6 +631,23 @@ and `Invalid` 500s as `500_store` and `500_response`; they remain outside the
 hold and retain ordinary transition cost. This changes no product wire behavior
 and authorizes no replay, freeze, execution,
 release, Epic closure, or scale/SLO claim.
+Exact-clean source `968311621f389643365587f4ae588ba83c832e68` then passed
+the V32 full-profile prefix through Phase 7 in 21,281.087 seconds. All seven
+phase oracles succeeded, and five converged waits counted six recognized
+progress-retry conflicts while retaining only five to seven transitions. The
+source-free v2 result
+`sha256:0e17da4500e8000713ca8e3abc6f97041772b3d78bdb2bf3661589f5e5b84c75`
+binds plan
+`sha256:8784172854b86275d55705e920e6bf6e0499910e3d254c961a41639a0f5a3005`
+and clean-teardown observation
+`sha256:6eaef4eb7cea706c2e9b5874a5e09e0e3978e6cdb6363fd316263c9650a8a426`;
+the exact result is retained at
+`spike/t4013/t4013u-v32-full-profile-phase7-replay.json`. Separate review
+proved matching completion evidence and no surviving process, listener,
+holder, mount, custody, supervision, driver, or bootstrap. This closes only
+T40.13u's replay/result gate and makes the reviewed branch integration-ready;
+pressure and every later phase, exact-main freeze, complete ceremony, release,
+Epic closure, and scale/SLO evidence remain open.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

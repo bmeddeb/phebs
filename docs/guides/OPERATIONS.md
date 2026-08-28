@@ -6249,3 +6249,33 @@ prevents a hard-death window from admitting a second expensive replay and must
 be retired only after separate result and process-absence review. Even a valid
 replay proves only the Phase-7 pre-freeze gate; it does not establish a complete
 ceremony, scale/SLO, freeze, or release authority.
+
+### V32 full-profile Phase-7 result disposition
+
+The exact-clean replay at source
+`968311621f389643365587f4ae588ba83c832e68` returned terminal PASS after
+21,281.087 seconds. Its source-free v2 result is
+`sha256:0e17da4500e8000713ca8e3abc6f97041772b3d78bdb2bf3661589f5e5b84c75`,
+bound to plan
+`sha256:8784172854b86275d55705e920e6bf6e0499910e3d254c961a41639a0f5a3005`
+and cleanup observation
+`sha256:6eaef4eb7cea706c2e9b5874a5e09e0e3978e6cdb6363fd316263c9650a8a426`.
+All seven phases through stale worker succeeded, pressure never started, and
+clean stopped teardown retired custody and supervision.
+
+The separate result review matched all three files and the completion marker,
+verified six recognized progress-retry conflicts across five converged waits,
+and found no replay, Phebs, SurrealDB, listener, holder, or mount. Preserve the
+byte-identical result at
+`spike/t4013/t4013u-v32-full-profile-phase7-replay.json` before retirement.
+The reviewed temporary deletion scope is exactly the successful result root
+`/private/tmp/phebs-t4013-phase7-full.1NOZ2Z`, the fixed
+`/private/tmp/phebs-t4013-phase7-full.lock`, and the owner-only
+`/private/tmp/phebs-t4013-phase7-v32.host-pressure-reservation.bin`. The
+reservation has a 62,500,000,000-byte logical size and 62,500,003,840 allocated
+bytes. Remove those paths only after the retained result is durable, sync
+`/private/tmp`, and verify exact absence plus the restored filesystem capacity.
+Do not include older unrelated bootstrap records in that deletion.
+
+This disposition closes the replay lock only. It authorizes no new freeze,
+ceremony, release, scale/SLO claim, or Epic closure.

@@ -2544,6 +2544,20 @@ Focused/package/race/vet/docs gates, independent review, and a clean immutable
 candidate precede any separately authorized full-profile replay. Merge,
 freeze, ceremony, release, Epic closure, and scale/SLO evidence remain open.
 
+The exact-clean V32 candidate
+`968311621f389643365587f4ae588ba83c832e68` then passed the real full-profile
+prefix through Phase 7 in 21,281.087 seconds. All seven phase oracles succeeded;
+five waits counted six recognized progress-retry conflicts and still converged
+with only five to seven retained transitions. The v2 replay result is
+`sha256:0e17da4500e8000713ca8e3abc6f97041772b3d78bdb2bf3661589f5e5b84c75`,
+bound to plan `sha256:8784172854b86275d55705e920e6bf6e0499910e3d254c961a41639a0f5a3005`
+and clean-teardown observation
+`sha256:6eaef4eb7cea706c2e9b5874a5e09e0e3978e6cdb6363fd316263c9650a8a426`.
+The exact source-free result is retained under `spike/t4013/`. This closes the
+T40.13u replay/result gate and makes the reviewed branch eligible for
+integration; it does not exercise Phase 8 or later, authorize a freeze or
+ceremony, establish a scale/SLO claim, or close Epic 40.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
