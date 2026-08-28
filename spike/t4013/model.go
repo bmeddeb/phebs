@@ -2162,6 +2162,10 @@ func progressRetryConflictOwnsDiagnosticLimit(
 		value.ProgressRetryConflicts == 0 {
 		return false
 	}
+	// Tracker-produced evidence writes the held transition and aggregate last
+	// wall from the same elapsed value. The equality is a decode-time forgery
+	// fence: an older conflict-shaped row cannot borrow a later retry count to
+	// relax relationship-tail equality.
 	return (isProgressRetryConflictDiagnostic(
 		last.Stage, last.Class, last.HTTPStatus, last.HTTPReason,
 	) && last.WallMS == value.ProgressRetryConflictLastWallMS) || (isProgressRetryConflictDiagnostic(

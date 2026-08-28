@@ -481,7 +481,8 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, probe, err
 	}
 	var progress observationpublication.Progress
-	progressPath := "/api/observation-progress?repository=" + url.QueryEscape(profile.RepositoryName)
+	progressPath := apiresponse.ObservationProgressPath + "?repository=" +
+		url.QueryEscape(profile.RepositoryName)
 	if err := inspector.get(ctx, profile, progressPath, &progress); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("observation_publication", searchRoot.Current.GenerationDigest), err
 	}
@@ -502,7 +503,8 @@ func (inspector *profileInspector) inspectWithProgress(
 		return privateProfileSnapshot{}, probe, errors.New("T40.13 observation publication has not converged")
 	}
 	var extractionSchedule extractionpublication.Progress
-	extractionPath := "/api/extraction-progress?repository=" + url.QueryEscape(profile.RepositoryName)
+	extractionPath := apiresponse.ExtractionProgressPath + "?repository=" +
+		url.QueryEscape(profile.RepositoryName)
 	if err := inspector.get(ctx, profile, extractionPath, &extractionSchedule); err != nil {
 		return privateProfileSnapshot{}, convergenceProbe("extraction_publication"), err
 	}
