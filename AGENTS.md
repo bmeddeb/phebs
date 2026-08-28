@@ -626,8 +626,10 @@ generation progress, holds one latest conflict while same-stage pending
 progress resumes, materializes it for every non-recognized next event or
 terminal receipt, and records bounded generic count/first/last-wall evidence.
 The 32-entry cap, non-benign transition accounting, diagnostic-limit priority,
-and V1–V31 bytes remain exact. This changes no product wire behavior and
-authorizes no replay, freeze, execution,
+and V1–V31 bytes remain exact. V32 also names only extraction-progress `Read`
+and `Invalid` 500s as `500_store` and `500_response`; they remain outside the
+hold and retain ordinary transition cost. This changes no product wire behavior
+and authorizes no replay, freeze, execution,
 release, Epic closure, or scale/SLO claim.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its

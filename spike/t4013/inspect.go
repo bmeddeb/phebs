@@ -1317,6 +1317,17 @@ func classifyHTTPStatusReason(
 	if decodeHumaResponse(raw, address, &problem) != nil || problem.Status != status {
 		return httpReasonOther
 	}
+	if contract >= profileInspectionV32 && status == http.StatusInternalServerError {
+		requestPath, _, _ := strings.Cut(path, "?")
+		if requestPath == apiresponse.ExtractionProgressPath {
+			switch problem.Detail {
+			case apiresponse.ExtractionProgressDetailRead:
+				return httpReason500Store
+			case apiresponse.ExtractionProgressDetailInvalid:
+				return httpReason500Response
+			}
+		}
+	}
 	switch {
 	case status == http.StatusConflict && progressRetryConflictDetail(contract, path, problem.Detail):
 		return httpReason409Stale

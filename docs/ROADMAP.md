@@ -2533,7 +2533,9 @@ recognized conflict replaces the hold; same-stage pending progress clears it.
 Any non-recognized next probe, or wait recording, materializes the hold so
 deadline, server-exit, all-conflict, and terminal evidence still seals.
 Control-absence, unknown 409s, 5xx, 503, transport, and every other class keep
-consuming the unchanged 32-entry bound; V1–V31 remain exact. The change adds
+consuming the unchanged 32-entry bound. V32 additionally names the two exact
+extraction-progress 500 details as `500_store` and `500_response` without
+placing either in the retry hold; V1–V31 remain exact. The change adds
 constant-time, constant-memory harness accounting only.
 Its observation/receipt/checkpoint compatibility fence also adds one bounded
 in-memory scan of already-read evidence and at most 16 waits on each decode or

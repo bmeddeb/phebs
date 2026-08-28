@@ -4557,6 +4557,13 @@ time; unrelated and conflict-free limits remain strict. V1–V31
 classification and receipt validation remain exact. Fresh full-profile pass
 records use `t4013-full-profile-phase7-replay-v2` and bind a V32 plan.
 
+V32 also names the two exact extraction-progress 500 details without making
+them transparent: `Read` is `500_store` and `Invalid` is `500_response`.
+Either detail on another endpoint and every V1–V31 occurrence remains
+`status_other`. These 500s never enter the retry hold, so adjacent identical
+shapes use only the historical coalescer while 500/pending alternation and
+distinct 500 faults continue consuming the diagnostic inventory.
+
 This changes no production wire behavior or work. Existing caller-generation
 detail strings become named constants. Each V32 HTTP error performs one closed
 endpoint/detail match and each convergence probe performs one closed predicate;

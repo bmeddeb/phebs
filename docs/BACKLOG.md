@@ -2568,6 +2568,10 @@ the wait, materialize the hold. This must make final-409 and all-409 waits
 sealable without raising the fixed 32-transition bound. Observation
 control-absence, unknown 409s, transport, response, 5xx, 503, terminal,
 non-progress stages, and overflow inspections remain distinct and fail closed.
+Also name the exact extraction-progress `Read` 500 as `500_store` and `Invalid`
+500 as `500_response` under V32 only; neither enters the retry hold, and both
+retain their ordinary transition cost. The same details remain `status_other`
+on V1–V31 and on unrelated endpoints.
 At 31 existing
 entries, a held conflict may become entry 32 and the next terminal remains the
 overflow inspection; preserve diagnostic-limit priority and its typed terminal

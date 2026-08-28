@@ -790,6 +790,59 @@ func TestProfileInspectorClassifiesClosedProgressRetryConflicts(t *testing.T) {
 	}
 }
 
+func TestProfileInspectorClassifiesClosedExtractionProgressFailures(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		detail string
+		reason string
+	}{
+		{name: "read", detail: apiresponse.ExtractionProgressDetailRead, reason: httpReason500Store},
+		{name: "invalid", detail: apiresponse.ExtractionProgressDetailInvalid, reason: httpReason500Response},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+				response.Header().Set("Content-Type", "application/problem+json")
+				response.WriteHeader(http.StatusInternalServerError)
+				_, _ = fmt.Fprintf(response,
+					`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":500,"detail":%q}`,
+					request.Host, test.detail,
+				)
+			}))
+			defer server.Close()
+			inspector := &profileInspector{
+				client: server.Client(), credential: "private-test-token", contract: profileInspectionV32,
+			}
+			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
+			var target struct{}
+			err := inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
+			var statusErr *privateHTTPStatusError
+			if !errors.As(err, &statusErr) || statusErr.Status != http.StatusInternalServerError ||
+				statusErr.Reason != test.reason {
+				t.Fatalf("status error = %+v, %v", statusErr, err)
+			}
+			diagnostic := classifyConvergenceInspection(err)
+			if diagnostic.class != "status" || diagnostic.httpReason != test.reason ||
+				isProgressRetryConflictDiagnostic(
+					"extraction_publication", diagnostic.class,
+					diagnostic.httpStatus, diagnostic.httpReason,
+				) {
+				t.Fatalf("diagnostic = %+v", diagnostic)
+			}
+
+			inspector.contract = profileInspectionV21
+			err = inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
+			if !errors.As(err, &statusErr) || statusErr.Reason != httpReasonOther {
+				t.Fatalf("historical status error = %+v, %v", statusErr, err)
+			}
+			inspector.contract = profileInspectionV32
+			err = inspector.get(t.Context(), profile, "/api/repo-status", &target)
+			if !errors.As(err, &statusErr) || statusErr.Reason != httpReasonOther {
+				t.Fatalf("unrelated endpoint status error = %+v, %v", statusErr, err)
+			}
+		})
+	}
+}
+
 func TestProfileInspectorPreservesHistoricalResponseErrors(t *testing.T) {
 	tests := []struct {
 		name     string
