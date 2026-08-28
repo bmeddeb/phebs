@@ -2541,6 +2541,54 @@ execution because its live-worktree build could consume hidden inputs. A new
 immutable correction, independent review, the exact expensive replay, and
 review of its source-free result remain mandatory before any freeze.
 
+**T40.13u · V32 extraction retry-conflict transition accounting**
+*(high ceremony correctness · needs the retained V31 full-profile stop)* —
+preserve the failed full-profile Phase-7 replay as coherent evidence, not a
+pipeline stall. The command ran for 23,469.777 seconds. Its stale-worker wait
+ran for 2,540,013 ms across 509 probes and 155 progress changes, but exhausted
+the 32-entry diagnostic inventory because 15 extraction-progress HTTP 409s,
+then classified `status_other`, alternated with fresh pending projections.
+The active schedule still reported 272 materialized, 70 succeeded, 202 pending,
+and zero failed partitions. The source-free cleanup observation digest is
+`sha256:c69ce4124464f22934a2cd5972898ad1a7143604dbe1fcabdddcefa2689d675d`.
+The replay did not reach the later explicit stale-chunk fence and establishes
+no Phase-7 pass.
+
+AC: advance only fresh plan/observation/receipt bytes to V32 and the fresh
+full-profile replay result to v2; keep V1–V31 bytes, classification, and
+validation exact. Under the V32 inspection contract only, classify the two
+closed extraction-progress 409 details—stale snapshot and authority race—as
+the existing `409_stale` reason. Count every recognized conflict with exact
+first/last wall times while holding at most one latest transition. If the next
+completed probe is same-stage pending progress, clear the hold and let the
+existing progress coalescer bridge the conflict. Before any other class/stage,
+or before recording the wait, materialize the hold. This must make final-409
+and all-409 waits sealable without raising the fixed 32-transition bound.
+Unknown 409s, transport, response, 5xx, control, terminal, different-stage,
+and overflow inspections remain distinct and fail closed. At 31 existing
+entries, a held conflict may become entry 32 and the next terminal remains the
+overflow inspection; preserve diagnostic-limit priority and its typed terminal
+projection. Tests must pin the incident-shaped 409/pending sequence, V31
+historical overflow, final/all-conflict materialization, non-benign flushes,
+31/32 boundaries, summary forgery rejection, schema coupling, current driver
+dispatch, and the existing last-inspection XOR.
+
+Steady-state cost: no product request/query, worker, sync tick,
+startup/restart, retry/no-op, publication, lifecycle/store mutation, lock,
+cache, corpus/shard read, hashing, disk/memory ceiling, polling interval,
+deadline, or child changes. Each V32 convergence inspection performs one
+closed stage/class/status/reason predicate. A recognized conflict updates an
+`int64` count, two durations, and one fixed transition value; recording or a
+distinct next probe appends at most that one value before the existing bounded
+slice clone. The receipt adds at most three scalar JSON fields. V31 retains its
+old accounting. Observation decode, receipt decode, and teardown-checkpoint
+resume each add one in-memory field-presence pass over already-read evidence
+(at most 256 KiB for observations/receipts and 260 KiB for checkpoints) and at
+most 16 convergence waits; they add no I/O or child. Focused/package/race/vet/docs gates and independent review are
+required before a merge request. A new immutable candidate, exact replay,
+freeze, ceremony, release, Epic closure, and scale/SLO claim remain separate
+and unauthorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

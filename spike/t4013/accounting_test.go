@@ -890,6 +890,11 @@ func TestDataMeasurementProcessContractChangesOnlyAtV25AndV31(t *testing.T) {
 	); err != nil {
 		t.Fatalf("V31 measurement did not use its absolute bounded du contract: %v", err)
 	}
+	if _, _, err := measureDataBytesForPlanContext(
+		context.Background(), Plan{Schema: PlanSchemaV32}, root,
+	); err != nil {
+		t.Fatalf("V32 did not inherit the V31 measurement contract: %v", err)
+	}
 	expired, expire := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer expire()
 	if _, err := duKilobytesContext(expired, root, false); err == nil ||

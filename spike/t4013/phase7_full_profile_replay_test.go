@@ -23,7 +23,7 @@ const (
 	fullProfilePhase7ReplaySourceRoot  = "PHEBS_T4013_PHASE7_REPLAY_SOURCE_ROOT"
 	fullProfilePhase7HostAttestation   = "PHEBS_T4013_HOST_STABILITY_ATTESTATION"
 	fullProfilePhase7Attestation       = "dedicated-single-operator-host-with-tool-mutation-disabled"
-	fullProfilePhase7ReplaySchema      = "t4013-full-profile-phase7-replay-v1"
+	fullProfilePhase7ReplaySchema      = "t4013-full-profile-phase7-replay-v2"
 	fullProfilePhase7ReplayBoundary    = "after_stale_worker_before_pressure"
 	fullProfilePhase7PreparationLimit  = 4 * time.Hour
 )
@@ -107,7 +107,7 @@ func TestProductionFullProfilePhase7Replay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if plan.Schema != PlanSchemaV31 {
+	if plan.Schema != PlanSchemaV32 {
 		t.Fatalf("full-profile Phase 7 replay plan schema = %s", plan.Schema)
 	}
 	if err := validateFullProfilePhase7ToolBinding(plan, "go", os.Getenv(fullProfilePhase7ReplayGoSHA256)); err != nil {
@@ -392,7 +392,7 @@ func marshalFullProfilePhase7ReplayResult(value fullProfilePhase7ReplayResult) (
 
 func validateFullProfilePhase7ReplayResult(value fullProfilePhase7ReplayResult) error {
 	if value.Schema != fullProfilePhase7ReplaySchema || value.Outcome != "passed" ||
-		!hexIdentity(value.SourceCommit, 40) || value.PlanSchema != PlanSchemaV31 ||
+		!hexIdentity(value.SourceCommit, 40) || value.PlanSchema != PlanSchemaV32 ||
 		!digestIdentity(value.PlanDigest) || value.Boundary != fullProfilePhase7ReplayBoundary ||
 		value.PressureStarted || value.TerminalDataGaugeDeadlineMS != frozenDataMeasurementDeadlineV31MS ||
 		!digestIdentity(value.CleanupObservationSHA256) || !value.CustodyAndSupervisionRetired ||
@@ -426,7 +426,7 @@ func TestFullProfilePhase7ReplayResultValidation(t *testing.T) {
 		return fullProfilePhase7ReplayResult{
 			Schema: fullProfilePhase7ReplaySchema, Outcome: "passed",
 			SourceCommit: "0123456789abcdef0123456789abcdef01234567",
-			PlanSchema:   PlanSchemaV31, PlanDigest: digestValue,
+			PlanSchema:   PlanSchemaV32, PlanDigest: digestValue,
 			Profiles: []string{"structural-2m-v1", "semantic-262144-v1"}, Phases: phases,
 			Boundary:                     fullProfilePhase7ReplayBoundary,
 			TerminalDataGaugeDeadlineMS:  frozenDataMeasurementDeadlineV31MS,

@@ -55,6 +55,7 @@ const (
 	PlanSchemaV29        = "t4013-neutral-convergence-plan-v29"
 	PlanSchemaV30        = "t4013-neutral-convergence-plan-v30"
 	PlanSchemaV31        = "t4013-neutral-convergence-plan-v31"
+	PlanSchemaV32        = "t4013-neutral-convergence-plan-v32"
 	ObservationSchema    = "t4013-neutral-convergence-observation-v1"
 	ObservationSchemaV2  = "t4013-neutral-convergence-observation-v2"
 	ObservationSchemaV3  = "t4013-neutral-convergence-observation-v3"
@@ -86,6 +87,7 @@ const (
 	ObservationSchemaV29 = "t4013-neutral-convergence-observation-v29"
 	ObservationSchemaV30 = "t4013-neutral-convergence-observation-v30"
 	ObservationSchemaV31 = "t4013-neutral-convergence-observation-v31"
+	ObservationSchemaV32 = "t4013-neutral-convergence-observation-v32"
 
 	// observationDetailV15 is the convergence-wait detail version introduced
 	// by the V15 schemas: extraction schedule authority takes precedence over
@@ -101,7 +103,10 @@ const (
 	observationDetailV17 = 13
 	// observationDetailV30 adds the distinct post-pressure-recovery authority
 	// confirmation without changing V1-V29 convergence inventories.
-	observationDetailV30         = 14
+	observationDetailV30 = 14
+	// observationDetailV32 adds bounded extraction retry-conflict evidence and
+	// leaves V1-V31 convergence transition accounting exact.
+	observationDetailV32         = 15
 	ReceiptSchema                = "t4013-neutral-convergence-receipt-v1"
 	ReceiptSchemaV2              = "t4013-neutral-convergence-receipt-v2"
 	ReceiptSchemaV3              = "t4013-neutral-convergence-receipt-v3"
@@ -133,6 +138,7 @@ const (
 	ReceiptSchemaV29             = "t4013-neutral-convergence-receipt-v29"
 	ReceiptSchemaV30             = "t4013-neutral-convergence-receipt-v30"
 	ReceiptSchemaV31             = "t4013-neutral-convergence-receipt-v31"
+	ReceiptSchemaV32             = "t4013-neutral-convergence-receipt-v32"
 	MaxPlanBytes                 = 64 << 10
 	MaxObservationBytes          = 256 << 10
 	MaxReceiptBytes              = 256 << 10
@@ -186,6 +192,7 @@ var ceremonySchemaLadder = [...]ceremonySchemaSet{
 	{PlanSchemaV29, ObservationSchemaV29, ReceiptSchemaV29},
 	{PlanSchemaV30, ObservationSchemaV30, ReceiptSchemaV30},
 	{PlanSchemaV31, ObservationSchemaV31, ReceiptSchemaV31},
+	{PlanSchemaV32, ObservationSchemaV32, ReceiptSchemaV32},
 }
 
 const (
@@ -504,40 +511,43 @@ type ServerStartupObservation struct {
 // bounded source-free controls. It never retains repository paths, source
 // bytes, HTTP bodies, credentials, or raw process output.
 type ConvergenceWaitObservation struct {
-	Profile                           string                             `json:"profile"`
-	Label                             string                             `json:"label"`
-	Revision                          string                             `json:"revision"`
-	Outcome                           string                             `json:"outcome"`
-	FirstStage                        string                             `json:"first_stage,omitempty"`
-	LastStage                         string                             `json:"last_stage"`
-	Attempts                          int64                              `json:"attempts"`
-	ProgressChanges                   int64                              `json:"progress_changes"`
-	StageChanges                      int64                              `json:"stage_changes,omitempty"`
-	FirstProgressSHA256               string                             `json:"first_progress_sha256"`
-	LastProgressSHA256                string                             `json:"last_progress_sha256"`
-	LastProgressChangeWallMS          int64                              `json:"last_progress_change_wall_ms,omitempty"`
-	ObservationProgress               *ObservationProgressObservation    `json:"observation_progress,omitempty"`
-	ObservationProgressWallMS         int64                              `json:"observation_progress_wall_ms,omitempty"`
-	ExtractionProgress                *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
-	ExtractionProgressWallMS          int64                              `json:"extraction_progress_wall_ms,omitempty"`
-	ExtractionTiming                  *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
-	CallerProgress                    *CallerProgressObservation         `json:"caller_progress,omitempty"`
-	CallerProgressWallMS              int64                              `json:"caller_progress_wall_ms,omitempty"`
-	InspectionTransitions             []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
-	LastSuccessfulProbeSHA256         string                             `json:"last_successful_probe_sha256,omitempty"`
-	LastSuccessfulProbeWallMS         int64                              `json:"last_successful_probe_wall_ms,omitempty"`
-	LastInspectionStage               string                             `json:"last_inspection_stage,omitempty"`
-	LastInspectionClass               string                             `json:"last_inspection_class,omitempty"`
-	LastInspectionHTTPStatus          int                                `json:"last_inspection_http_status,omitempty"`
-	LastInspectionHTTPReason          string                             `json:"last_inspection_http_reason,omitempty"`
-	LastInspectionSHA256              string                             `json:"last_inspection_sha256,omitempty"`
-	LastInspectionWallMS              int64                              `json:"last_inspection_wall_ms,omitempty"`
-	RepositoryIndexFailureClass       string                             `json:"repository_index_failure_class,omitempty"`
-	RelationshipFailureClass          string                             `json:"relationship_failure_class,omitempty"`
-	RelationshipTerminalConfirmations int64                              `json:"relationship_terminal_confirmations,omitempty"`
-	TransitionLimitExceeded           bool                               `json:"transition_limit_exceeded,omitempty"`
-	DeadlineMS                        int64                              `json:"deadline_ms"`
-	WallMS                            int64                              `json:"wall_ms"`
+	Profile                            string                             `json:"profile"`
+	Label                              string                             `json:"label"`
+	Revision                           string                             `json:"revision"`
+	Outcome                            string                             `json:"outcome"`
+	FirstStage                         string                             `json:"first_stage,omitempty"`
+	LastStage                          string                             `json:"last_stage"`
+	Attempts                           int64                              `json:"attempts"`
+	ProgressChanges                    int64                              `json:"progress_changes"`
+	StageChanges                       int64                              `json:"stage_changes,omitempty"`
+	FirstProgressSHA256                string                             `json:"first_progress_sha256"`
+	LastProgressSHA256                 string                             `json:"last_progress_sha256"`
+	LastProgressChangeWallMS           int64                              `json:"last_progress_change_wall_ms,omitempty"`
+	ObservationProgress                *ObservationProgressObservation    `json:"observation_progress,omitempty"`
+	ObservationProgressWallMS          int64                              `json:"observation_progress_wall_ms,omitempty"`
+	ExtractionProgress                 *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
+	ExtractionProgressWallMS           int64                              `json:"extraction_progress_wall_ms,omitempty"`
+	ExtractionTiming                   *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
+	CallerProgress                     *CallerProgressObservation         `json:"caller_progress,omitempty"`
+	CallerProgressWallMS               int64                              `json:"caller_progress_wall_ms,omitempty"`
+	ExtractionRetryConflicts           int64                              `json:"extraction_retry_conflicts,omitempty"`
+	ExtractionRetryConflictFirstWallMS int64                              `json:"extraction_retry_conflict_first_wall_ms,omitempty"`
+	ExtractionRetryConflictLastWallMS  int64                              `json:"extraction_retry_conflict_last_wall_ms,omitempty"`
+	InspectionTransitions              []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
+	LastSuccessfulProbeSHA256          string                             `json:"last_successful_probe_sha256,omitempty"`
+	LastSuccessfulProbeWallMS          int64                              `json:"last_successful_probe_wall_ms,omitempty"`
+	LastInspectionStage                string                             `json:"last_inspection_stage,omitempty"`
+	LastInspectionClass                string                             `json:"last_inspection_class,omitempty"`
+	LastInspectionHTTPStatus           int                                `json:"last_inspection_http_status,omitempty"`
+	LastInspectionHTTPReason           string                             `json:"last_inspection_http_reason,omitempty"`
+	LastInspectionSHA256               string                             `json:"last_inspection_sha256,omitempty"`
+	LastInspectionWallMS               int64                              `json:"last_inspection_wall_ms,omitempty"`
+	RepositoryIndexFailureClass        string                             `json:"repository_index_failure_class,omitempty"`
+	RelationshipFailureClass           string                             `json:"relationship_failure_class,omitempty"`
+	RelationshipTerminalConfirmations  int64                              `json:"relationship_terminal_confirmations,omitempty"`
+	TransitionLimitExceeded            bool                               `json:"transition_limit_exceeded,omitempty"`
+	DeadlineMS                         int64                              `json:"deadline_ms"`
+	WallMS                             int64                              `json:"wall_ms"`
 }
 
 // ExtractionTimingObservation aggregates source-free per-attempt phase
@@ -945,6 +955,11 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	); err != nil {
 		return Observation{}, err
 	}
+	if err := validateSerializedExtractionRetryConflictFields(
+		raw, observationSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Observation{}, err
+	}
 	if err := ValidateObservation(value); err != nil {
 		return Observation{}, err
 	}
@@ -1004,6 +1019,8 @@ func receiptSchemaVersion(schema string) int {
 
 func convergenceDetailVersion(observationVersion int) int {
 	switch {
+	case observationVersion >= 32:
+		return observationDetailV32
 	case observationVersion >= 30:
 		return observationDetailV30
 	case observationVersion >= 21:
@@ -1093,6 +1110,8 @@ func ValidatePlan(value Plan) error {
 	case PlanSchemaV30:
 		wantSafety = frozenSafetyV25
 	case PlanSchemaV31:
+		wantSafety = frozenSafetyV25
+	case PlanSchemaV32:
 		wantSafety = frozenSafetyV25
 	}
 	if value.Safety != wantSafety {
@@ -1946,6 +1965,9 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			return errors.New("T40.13 convergence wait identity is duplicated")
 		}
 		seen[key] = struct{}{}
+		if err := validateExtractionRetryConflicts(value, detailVersion); err != nil {
+			return err
+		}
 		if err := validateRelationshipFailure(value, detailVersion); err != nil {
 			return err
 		}
@@ -2079,6 +2101,41 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 		if err := validateConvergenceTransitions(value, stages, detailVersion); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateExtractionRetryConflicts(value ConvergenceWaitObservation, detailVersion int) error {
+	if detailVersion < observationDetailV32 {
+		if value.ExtractionRetryConflicts != 0 || value.ExtractionRetryConflictFirstWallMS != 0 ||
+			value.ExtractionRetryConflictLastWallMS != 0 {
+			return errors.New("T40.13 historical convergence wait acquired extraction retry conflicts")
+		}
+		return nil
+	}
+	if value.ExtractionRetryConflicts == 0 {
+		if value.ExtractionRetryConflictFirstWallMS != 0 || value.ExtractionRetryConflictLastWallMS != 0 {
+			return errors.New("T40.13 absent extraction retry conflicts acquired wall times")
+		}
+		return nil
+	}
+	if value.ExtractionRetryConflicts < 0 || value.ExtractionRetryConflicts > value.Attempts ||
+		value.ExtractionRetryConflictFirstWallMS <= 0 ||
+		value.ExtractionRetryConflictFirstWallMS > value.ExtractionRetryConflictLastWallMS ||
+		value.ExtractionRetryConflictLastWallMS > value.WallMS ||
+		value.ExtractionRetryConflictLastWallMS > value.LastInspectionWallMS {
+		return errors.New("T40.13 extraction retry conflict summary is invalid")
+	}
+	for _, transition := range value.InspectionTransitions {
+		if transition.Stage == "extraction_publication" {
+			return nil
+		}
+	}
+	if value.LastInspectionStage != "extraction_publication" ||
+		value.LastInspectionClass != "status" ||
+		value.LastInspectionHTTPStatus != 409 ||
+		value.LastInspectionHTTPReason != httpReason409Stale {
+		return errors.New("T40.13 extraction retry conflict summary lacks extraction evidence")
 	}
 	return nil
 }
@@ -2448,6 +2505,7 @@ func validateConvergenceTransitions(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
+		(detailVersion < observationDetailV32 || !value.TransitionLimitExceeded) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 relationship failure transition fence is invalid")
 	}
@@ -2639,6 +2697,7 @@ func validateConvergenceWithoutSuccessfulProbe(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
+		(detailVersion < observationDetailV32 || !value.TransitionLimitExceeded) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 unsuccessful relationship failure transition fence is invalid")
 	}
@@ -3329,6 +3388,11 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	); err != nil {
 		return Receipt{}, err
 	}
+	if err := validateSerializedExtractionRetryConflictFields(
+		raw, receiptSchemaVersion(value.Schema), false,
+	); err != nil {
+		return Receipt{}, err
+	}
 	if err := validateReceipt(value, plan, PlanDigest(raw) == legacyStoppedReceiptDigest); err != nil {
 		return Receipt{}, err
 	}
@@ -3676,6 +3740,40 @@ func validateSerializedRetainedPartialFields(raw []byte, version int, nested boo
 		}
 		if found && (len(interruptions) != 1 || interruptions[0].name != "interruption") {
 			return errors.New("T40.13 retained-partial attribution is hidden by duplicate or noncanonical evidence")
+		}
+	}
+	return nil
+}
+
+func validateSerializedExtractionRetryConflictFields(raw []byte, version int, nested bool) error {
+	containers, err := serializedEvidenceContainers(raw, nested)
+	if err != nil {
+		return err
+	}
+	for _, container := range containers {
+		for _, field := range container {
+			if !strings.EqualFold(field.name, "convergence_waits") {
+				continue
+			}
+			var waits []json.RawMessage
+			if err := json.Unmarshal(field.raw, &waits); err != nil {
+				return err
+			}
+			for _, rawWait := range waits {
+				wait, err := serializedObjectFields(rawWait)
+				if err != nil {
+					return err
+				}
+				for _, diagnostic := range wait {
+					if strings.EqualFold(diagnostic.name, "extraction_retry_conflicts") ||
+						strings.EqualFold(diagnostic.name, "extraction_retry_conflict_first_wall_ms") ||
+						strings.EqualFold(diagnostic.name, "extraction_retry_conflict_last_wall_ms") {
+						if version < 32 {
+							return errors.New("T40.13 historical evidence acquired extraction retry conflicts")
+						}
+					}
+				}
+			}
 		}
 	}
 	return nil

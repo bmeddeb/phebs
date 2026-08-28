@@ -4513,3 +4513,49 @@ zero-status `PASS` plus a matching completion marker admits
 pass. The lock requires separately reviewed retirement after result and
 process-absence review. The exact expensive replay and review of its resulting
 digest remain mandatory before a new freeze.
+
+## Failed V31 full-profile replay and T40.13u
+
+The exact V31 full-profile replay ran for 23,469.777 seconds and stopped in
+`stale_worker` with `T40.13 convergence transition limit exceeded`. Its
+2,540.013-second wait recorded 509 attempts, 155 progress changes, and exactly
+32 transitions. Fifteen extraction-progress HTTP 409 responses classified as
+`status_other` alternated with pending projections. This defeated adjacent
+coalescing even though the schedule remained active at 272 materialized, 70
+succeeded, 202 pending, and zero failed. The final successful projection was
+fresh, so the evidence does not establish a stalled pipeline.
+
+The source-free cleanup observation is bound by
+`sha256:c69ce4124464f22934a2cd5972898ad1a7143604dbe1fcabdddcefa2689d675d`.
+The replay stopped before the later explicit stale-chunk fence, published no
+Phase-7 pass result, and authorizes no new replay, freeze, ceremony, release,
+Epic closure, or scale/SLO claim. Its separately reviewed process-absence and
+cleanup result does not retire the external replay lock.
+
+T40.13u advances only fresh ceremony evidence to V32. Under that contract,
+the closed extraction-progress stale-snapshot and authority-race 409 details
+map to the existing `409_stale` reason. The convergence tracker counts every
+such conflict, keeps exact first and last wall times, and holds only the latest
+transition. Same-stage pending progress clears the hold and resumes the
+existing coalesced pending transition. Any other class or stage materializes
+the conflict first. Recording also materializes an unresolved hold, so a wait
+ending on one or containing only conflicts still has a timeline tail matching
+its last inspection.
+
+The 32-transition ceiling is unchanged. Unknown 409s, transport errors, 5xx,
+response/control failures, terminals, cross-stage probes, and overflow
+inspections remain distinct. With 31 existing entries, a held conflict can
+become entry 32; a following terminal remains the overflow inspection and the
+existing diagnostic-limit priority keeps its typed projection. V1–V31
+classification and receipt validation remain exact. Fresh full-profile pass
+records use `t4013-full-profile-phase7-replay-v2` and bind a V32 plan.
+
+This adds no production work. Each V32 convergence probe performs one closed
+predicate; a recognized conflict updates one counter, two times, and one fixed
+transition value. At most one transition is materialized before the existing
+bounded clone, and the source-free wait adds at most three scalar fields. No
+request count, five-second poll cadence, deadline, lock, hash, child,
+memory/disk ceiling, or production authority changes. Observation and receipt
+decode plus teardown-checkpoint resume each perform one extra in-memory
+field-presence scan over their already-read bounded bytes (256 KiB, 256 KiB,
+and 260 KiB respectively) and at most 16 convergence waits; this adds no I/O.

@@ -132,7 +132,7 @@ func FrozenHostPlan(ctx context.Context, sourceCommit string) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	return freshV31PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
+	return freshV32PlanWithHostToolchain(sourceCommit, hostToolchain, time.Now())
 }
 
 // FrozenHostPlanAtCheckout additionally proves the exact clean checkout used
@@ -558,6 +558,26 @@ func freshV31PlanWithHostToolchain(
 	frozenAt time.Time,
 ) (Plan, error) {
 	return freshPlan(frozenV31PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
+}
+
+func frozenV32PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {
+	value, err := frozenV31PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		return Plan{}, err
+	}
+	value.Schema = PlanSchemaV32
+	if err := ValidatePlan(value); err != nil {
+		return Plan{}, err
+	}
+	return value, nil
+}
+
+func freshV32PlanWithHostToolchain(
+	sourceCommit string,
+	hostToolchain []HostToolObservation,
+	frozenAt time.Time,
+) (Plan, error) {
+	return freshPlan(frozenV32PlanWithHostToolchain, sourceCommit, hostToolchain, frozenAt)
 }
 
 func frozenV13PlanWithHostToolchain(sourceCommit string, hostToolchain []HostToolObservation) (Plan, error) {

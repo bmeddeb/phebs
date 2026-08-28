@@ -613,6 +613,20 @@ fixture as non-equivalent to real Phase-7 custody: the retained evidence does
 not bound its physical entries, directories, hardlinks, cache posture, or
 concurrent work. No such fixture is shipped. An exact full-profile replay
 through Phase 7's terminal gauge remains mandatory before any fresh freeze.
+That exact V31 replay later stopped after 23,469.777 seconds in the stale-worker
+wait when 15 extraction-progress HTTP 409 `status_other` rows alternated with
+fresh pending projections and filled the 32-entry diagnostic inventory. The
+schedule remained active at 272 materialized, 70 succeeded, 202 pending, and
+zero failed; source-free cleanup observation
+`sha256:c69ce4124464f22934a2cd5972898ad1a7143604dbe1fcabdddcefa2689d675d`
+is coherent, but the later explicit stale-chunk fence was not reached.
+T40.13u's prospective V32 contract classifies only the two closed extraction
+stale/authority 409 details, holds one latest conflict while same-stage pending
+progress resumes, materializes it for every other next event or terminal
+receipt, and records bounded count/first/last-wall evidence. The 32-entry cap,
+non-benign transition accounting, diagnostic-limit priority, and V1–V31 bytes
+remain exact. This is harness-only and authorizes no replay, freeze, execution,
+release, Epic closure, or scale/SLO claim.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

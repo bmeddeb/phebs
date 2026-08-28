@@ -4102,6 +4102,7 @@ func (run *execution) stopServers() error {
 
 type convergenceProgressTracker struct {
 	coalesceTransitionProgress        bool
+	summarizeExtractionRetryConflicts bool
 	attempts                          int64
 	progressChanges                   int64
 	stageChanges                      int64
@@ -4117,6 +4118,11 @@ type convergenceProgressTracker struct {
 	extractionProgressAtWall          time.Duration
 	extractionTiming                  ExtractionTimingObservation
 	inspectionTransitions             []ConvergenceTransitionObservation
+	extractionRetryConflicts          int64
+	extractionRetryConflictFirstAt    time.Duration
+	extractionRetryConflictLastAt     time.Duration
+	heldExtractionRetryConflict       ConvergenceTransitionObservation
+	hasHeldExtractionRetryConflict    bool
 	lastInspection                    convergenceInspectionDiagnostic
 	lastInspectionProbe               privateConvergenceProbe
 	lastInspectionAt                  time.Duration
@@ -4204,6 +4210,45 @@ func (tracker *convergenceProgressTracker) observeTransition(
 	if tracker.coalesceTransitionProgress {
 		transition.FirstProgressSHA256 = probe.SHA256
 	}
+	if tracker.summarizeExtractionRetryConflicts && probe.Stage == "extraction_publication" &&
+		diagnostic.class == "status" && diagnostic.httpStatus == http.StatusConflict &&
+		diagnostic.httpReason == httpReason409Stale {
+		tracker.extractionRetryConflicts++
+		if tracker.extractionRetryConflictFirstAt == 0 {
+			tracker.extractionRetryConflictFirstAt = elapsed
+		}
+		tracker.extractionRetryConflictLastAt = elapsed
+		if !tracker.hasHeldExtractionRetryConflict &&
+			len(tracker.inspectionTransitions) >= maxConvergenceTransitions {
+			return true
+		}
+		tracker.heldExtractionRetryConflict = transition
+		tracker.hasHeldExtractionRetryConflict = true
+		return false
+	}
+	if tracker.hasHeldExtractionRetryConflict {
+		if diagnostic.class == "pending" && probe.Stage == tracker.heldExtractionRetryConflict.Stage {
+			tracker.hasHeldExtractionRetryConflict = false
+		} else {
+			tracker.materializeHeldExtractionRetryConflict()
+		}
+	}
+	return tracker.appendConvergenceTransition(transition)
+}
+
+func (tracker *convergenceProgressTracker) materializeHeldExtractionRetryConflict() {
+	if !tracker.hasHeldExtractionRetryConflict {
+		return
+	}
+	tracker.inspectionTransitions = append(
+		tracker.inspectionTransitions, tracker.heldExtractionRetryConflict,
+	)
+	tracker.hasHeldExtractionRetryConflict = false
+}
+
+func (tracker *convergenceProgressTracker) appendConvergenceTransition(
+	transition ConvergenceTransitionObservation,
+) bool {
 	if count := len(tracker.inspectionTransitions); count > 0 {
 		last := &tracker.inspectionTransitions[count-1]
 		if last.Stage == transition.Stage && last.Class == transition.Class &&
@@ -4548,7 +4593,8 @@ func (run *execution) waitSnapshotWithInspection(
 	defer ticker.Stop()
 	started := time.Now()
 	progress := convergenceProgressTracker{
-		coalesceTransitionProgress: planSchemaVersion(run.plan.Schema) >= 13,
+		coalesceTransitionProgress:        planSchemaVersion(run.plan.Schema) >= 13,
+		summarizeExtractionRetryConflicts: planSchemaVersion(run.plan.Schema) >= 32,
 	}
 	for {
 		snapshot, probe, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
@@ -4701,6 +4747,7 @@ func (run *execution) recordConvergenceWait(
 		})
 		return
 	}
+	progress.materializeHeldExtractionRetryConflict()
 	wait := ConvergenceWaitObservation{
 		Profile: profile.Name, Label: label, Revision: revision, Outcome: outcome,
 		LastStage: progress.last.Stage, Attempts: progress.attempts,
@@ -4771,6 +4818,11 @@ func (run *execution) recordConvergenceWait(
 			}
 		}
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
+	}
+	if planSchemaVersion(run.plan.Schema) >= 32 {
+		wait.ExtractionRetryConflicts = progress.extractionRetryConflicts
+		wait.ExtractionRetryConflictFirstWallMS = progress.extractionRetryConflictFirstAt.Milliseconds()
+		wait.ExtractionRetryConflictLastWallMS = progress.extractionRetryConflictLastAt.Milliseconds()
 	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
 }
@@ -6236,6 +6288,11 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
 	if err := validateSerializedRetainedPartialFields(
+		raw, observationSchemaVersion(value.Observation.Schema), true,
+	); err != nil {
+		return exactFileIdentity{}, teardownCheckpoint{}, err
+	}
+	if err := validateSerializedExtractionRetryConflictFields(
 		raw, observationSchemaVersion(value.Observation.Schema), true,
 	); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err

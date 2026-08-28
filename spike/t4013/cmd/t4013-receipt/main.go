@@ -25,7 +25,8 @@ func main() {
 	durableEvidence := decodedPlan.Schema == t4013.PlanSchemaV25 ||
 		decodedPlan.Schema == t4013.PlanSchemaV26 || decodedPlan.Schema == t4013.PlanSchemaV27 ||
 		decodedPlan.Schema == t4013.PlanSchemaV28 || decodedPlan.Schema == t4013.PlanSchemaV29 ||
-		decodedPlan.Schema == t4013.PlanSchemaV30 || decodedPlan.Schema == t4013.PlanSchemaV31
+		decodedPlan.Schema == t4013.PlanSchemaV30 || decodedPlan.Schema == t4013.PlanSchemaV31 ||
+		decodedPlan.Schema == t4013.PlanSchemaV32
 	var observation []byte
 	if durableEvidence {
 		observation, err = t4013.ResumeObservation(*observationPath, plan, *planDigest)

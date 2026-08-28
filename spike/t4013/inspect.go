@@ -208,11 +208,14 @@ const (
 	profileInspectionV16
 	profileInspectionV20
 	profileInspectionV21
+	profileInspectionV32
 )
 
 func profileInspectionForPlan(schema string) profileInspectionContract {
 	version := planSchemaVersion(schema)
 	switch {
+	case version >= 32:
+		return profileInspectionV32
 	case version >= 21:
 		return profileInspectionV21
 	case version >= 20:
@@ -1277,7 +1280,9 @@ func (inspector *profileInspector) get(
 		closeErr := response.Body.Close()
 		reason := httpReasonOther
 		if readErr == nil && closeErr == nil && len(raw) > 0 && len(raw) <= maxHTTPStatusResponseBytes {
-			reason = classifyHTTPStatusReason(response.StatusCode, profile.Address, raw)
+			reason = classifyHTTPStatusReason(
+				inspector.contract, path, response.StatusCode, profile.Address, raw,
+			)
 		}
 		return &privateHTTPStatusError{Status: response.StatusCode, Reason: reason}
 	}
@@ -1292,7 +1297,13 @@ func (inspector *profileInspector) get(
 	return nil
 }
 
-func classifyHTTPStatusReason(status int, address string, raw []byte) string {
+func classifyHTTPStatusReason(
+	contract profileInspectionContract,
+	path string,
+	status int,
+	address string,
+	raw []byte,
+) string {
 	var problem struct {
 		Type     string            `json:"type,omitempty"`
 		Title    string            `json:"title,omitempty"`
@@ -1307,7 +1318,10 @@ func classifyHTTPStatusReason(status int, address string, raw []byte) string {
 	switch {
 	case status == http.StatusConflict &&
 		(problem.Detail == apiresponse.ObservationProgressDetailStale ||
-			problem.Detail == apiresponse.ObservationProgressDetailAuthority):
+			problem.Detail == apiresponse.ObservationProgressDetailAuthority ||
+			contract >= profileInspectionV32 && extractionProgressRequest(path) &&
+				(problem.Detail == apiresponse.ExtractionProgressDetailStale ||
+					problem.Detail == apiresponse.ExtractionProgressDetailAuthority)):
 		return httpReason409Stale
 	case status == http.StatusConflict && problem.Detail == apiresponse.ObservationProgressDetailControlAbsent:
 		return httpReason409ControlAbsent
@@ -1339,6 +1353,11 @@ func classifyHTTPStatusReason(status int, address string, raw []byte) string {
 	default:
 		return httpReasonOther
 	}
+}
+
+func extractionProgressRequest(path string) bool {
+	requestPath, _, _ := strings.Cut(path, "?")
+	return requestPath == apiresponse.ExtractionProgressPath
 }
 
 // decodeHumaResponse consumes Huma's transport-owned top-level $schema link

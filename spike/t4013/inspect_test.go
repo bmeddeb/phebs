@@ -42,6 +42,7 @@ func TestProfileInspectionContractTracksPlanSchema(t *testing.T) {
 		{PlanSchemaV29, profileInspectionV21},
 		{PlanSchemaV30, profileInspectionV21},
 		{PlanSchemaV31, profileInspectionV21},
+		{PlanSchemaV32, profileInspectionV32},
 	}
 	for _, test := range tests {
 		if got := profileInspectionForPlan(test.schema); got != test.want {
@@ -744,7 +745,9 @@ func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T
 				)
 			}))
 			defer server.Close()
-			inspector := &profileInspector{client: server.Client(), credential: "private-test-token"}
+			inspector := &profileInspector{
+				client: server.Client(), credential: "private-test-token", contract: profileInspectionV32,
+			}
 			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
 			var target struct{}
 			err := inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
@@ -760,6 +763,17 @@ func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T
 			if diagnostic.class != "status" || diagnostic.httpStatus != http.StatusConflict ||
 				diagnostic.httpReason != httpReason409Stale {
 				t.Fatalf("diagnostic = %+v", diagnostic)
+			}
+			inspector.contract = profileInspectionV21
+			err = inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
+			if !errors.As(err, &statusErr) || statusErr.Reason != httpReasonOther {
+				t.Fatalf("historical status error = %+v, %v", statusErr, err)
+			}
+			inspector.contract = profileInspectionV32
+			var unrelated *privateHTTPStatusError
+			err = inspector.get(t.Context(), profile, "/api/observation-progress", &target)
+			if !errors.As(err, &unrelated) || unrelated.Reason != httpReasonOther {
+				t.Fatalf("unrelated endpoint status error = %+v, %v", unrelated, err)
 			}
 		})
 	}

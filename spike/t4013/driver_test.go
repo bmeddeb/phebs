@@ -404,7 +404,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentAtV25(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	script := `source "$1"; is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[01])"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
+	script := `source "$1"; is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[0-2])"' "$1"; }; trap cleanup_on_exit EXIT; CEREMONY_REAL="$4"; initialize_closed_go_cache; cd "$3"; export GOEXPERIMENT=historical-ambient; plan_go "$2" /usr/bin/env`
 	for _, test := range []struct {
 		schema string
 		want   string
@@ -417,6 +417,7 @@ func TestCeremonyDriverChangesExecutionEnvironmentAtV25(t *testing.T) {
 		{schema: PlanSchemaV29, want: ""},
 		{schema: PlanSchemaV30, want: ""},
 		{schema: PlanSchemaV31, want: ""},
+		{schema: PlanSchemaV32, want: ""},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -1102,7 +1103,7 @@ func TestCeremonyDriverSelectsPreflightByPlanSchema(t *testing.T) {
 	}
 	script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[01])"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[0-2])"' "$1"; }
 preflight() { printf 'v25-execute\n'; }
 historical_preflight() { printf 'historical-execute\n'; }
 verification_preflight() { printf 'v25-seal\n'; }
@@ -1122,6 +1123,7 @@ verification_preflight_for_plan "$2"
 		{schema: PlanSchemaV29, want: "v25-execute\nv25-seal\n"},
 		{schema: PlanSchemaV30, want: "v25-execute\nv25-seal\n"},
 		{schema: PlanSchemaV31, want: "v25-execute\nv25-seal\n"},
+		{schema: PlanSchemaV32, want: "v25-execute\nv25-seal\n"},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		if err := os.WriteFile(plan, []byte(`{"schema":"`+test.schema+`"}`), 0o600); err != nil {
@@ -1740,7 +1742,7 @@ func TestCeremonyDriverFailurePolicyIsV25OnlyAndStopsBeforeSeal(t *testing.T) {
 			sealMarker := filepath.Join(root, "seal")
 			script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[01])"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[0-2])"' "$1"; }
 REPO_REAL="$REPOSITORY_PATH"
 CEREMONY_REAL="$ROOT_PATH"
 CLOSED_GO_CACHE="$CACHE_PATH"
@@ -1890,7 +1892,7 @@ false
 	}
 }
 
-func TestCeremonyDriverRecognizesV25ThroughV31ViaRealInspector(t *testing.T) {
+func TestCeremonyDriverRecognizesV25ThroughV32ViaRealInspector(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ceremony driver is a Bash script")
 	}
@@ -1943,6 +1945,10 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 	if err != nil {
 		t.Fatal(err)
 	}
+	v32, err := frozenV32PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, test := range []struct {
 		plan Plan
 		want string
@@ -1955,6 +1961,7 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 		{v29, "current\n"},
 		{v30, "current\n"},
 		{v31, "current\n"},
+		{v32, "current\n"},
 	} {
 		plan := filepath.Join(t.TempDir(), "plan.json")
 		planBytes, err := MarshalPlan(test.plan)
@@ -1971,7 +1978,7 @@ if is_v25_plan "$4"; then printf 'current\n'; else printf 'historical\n'; fi
 	}
 }
 
-func TestV26ThroughV31ReceiptCommandsUseDurablePublication(t *testing.T) {
+func TestV26ThroughV32ReceiptCommandsUseDurablePublication(t *testing.T) {
 	commandRoot := t.TempDir()
 	receiptCommand := filepath.Join(commandRoot, "t4013-receipt")
 	if output, err := exec.Command("go", "build", "-o", receiptCommand, "./cmd/t4013-receipt").CombinedOutput(); err != nil {
@@ -1988,6 +1995,7 @@ func TestV26ThroughV31ReceiptCommandsUseDurablePublication(t *testing.T) {
 		{"v29", frozenV29PlanWithHostToolchain, ReceiptSchemaV29},
 		{"v30", frozenV30PlanWithHostToolchain, ReceiptSchemaV30},
 		{"v31", frozenV31PlanWithHostToolchain, ReceiptSchemaV31},
+		{"v32", frozenV32PlanWithHostToolchain, ReceiptSchemaV32},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -2184,6 +2192,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 		{name: "v29-existing", schema: PlanSchemaV29, existing: true, wantCommand: true},
 		{name: "v30-existing", schema: PlanSchemaV30, existing: true, wantCommand: true},
 		{name: "v31-existing", schema: PlanSchemaV31, existing: true, wantCommand: true},
+		{name: "v32-existing", schema: PlanSchemaV32, existing: true, wantCommand: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -2204,7 +2213,7 @@ func TestCeremonyDriverPreservesHistoricalSealReceiptAndResumesV25(t *testing.T)
 			}
 			script := `
 source "$1"
-is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[01])"' "$1"; }
+is_v25_plan() { grep -Eq -- '-v(2[5-9]|3[0-2])"' "$1"; }
 REPO_REAL="$2"
 V25_RECEIPT_COMMAND=t4013-receipt
 require_v25_custody_command() { :; }

@@ -166,6 +166,8 @@ func TestCeremonySchemaLadderIsCompleteAndCoupled(t *testing.T) {
 			}
 			wantDetail := -1
 			switch {
+			case version >= 32:
+				wantDetail = observationDetailV32
 			case version >= 30:
 				wantDetail = observationDetailV30
 			case version >= 21:
@@ -223,6 +225,125 @@ func TestFreshV31PlanUsesCurrentCoupledSchemas(t *testing.T) {
 		observationSchemaForPlan(plan) != ObservationSchemaV31 ||
 		receiptSchemaForPlan(plan) != ReceiptSchemaV31 || plan.Safety != frozenSafetyV25 {
 		t.Fatalf("fresh V31 plan = %+v", plan)
+	}
+}
+
+func TestFreshV32PlanUsesCurrentCoupledSchemas(t *testing.T) {
+	frozenAt := time.Date(2026, 8, 27, 1, 30, 0, 0, time.FixedZone("PDT", -7*60*60))
+	plan, err := freshV32PlanWithHostToolchain(
+		testSourceCommit, fakeHostToolchainV25(), frozenAt,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Schema != PlanSchemaV32 || plan.FrozenOn != "2026-08-27" ||
+		observationSchemaForPlan(plan) != ObservationSchemaV32 ||
+		receiptSchemaForPlan(plan) != ReceiptSchemaV32 || plan.Safety != frozenSafetyV25 {
+		t.Fatalf("fresh V32 plan = %+v", plan)
+	}
+}
+
+func TestV32ExtractionRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *testing.T) {
+	plan, err := frozenV32PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tracker := convergenceProgressTracker{
+		coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+	}
+	tracker.observe(
+		convergenceProbe("extraction_publication", "first"),
+		convergenceInspectionDiagnostic{class: "pending"}, time.Second,
+	)
+	tracker.observe(
+		convergenceProbe("extraction_publication", "retry"),
+		convergenceInspectionDiagnostic{
+			class: "status", httpStatus: 409, httpReason: httpReason409Stale,
+		}, 2*time.Second,
+	)
+	tracker.observe(
+		convergenceProbe("extraction_publication", "resumed"),
+		convergenceInspectionDiagnostic{class: "pending"}, 3*time.Second,
+	)
+	tracker.observe(
+		convergenceProbe("complete", "complete"),
+		convergenceInspectionDiagnostic{class: "complete"}, 4*time.Second,
+	)
+	run := &execution{plan: plan}
+	run.recordConvergenceWait(
+		PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "converged",
+		time.Duration(plan.Safety.FullConvergenceDeadlineMS)*time.Millisecond,
+		time.Now().Add(-5*time.Second), tracker,
+	)
+	observation := completedV25TeardownObservation(plan)
+	index := slices.IndexFunc(observation.ConvergenceWaits, func(wait ConvergenceWaitObservation) bool {
+		return wait.Profile == "semantic-262144-v1" && wait.Label == "stale-worker" && wait.Revision == "a"
+	})
+	if index < 0 {
+		t.Fatal("completed V32 observation lacks its stale-worker wait")
+	}
+	observation.ConvergenceWaits[index] = run.observation.ConvergenceWaits[0]
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observationBytes, err := MarshalObservation(observation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decodedObservation, err := DecodeObservation(observationBytes)
+	if err != nil || decodedObservation.ConvergenceWaits[index].ExtractionRetryConflicts != 1 {
+		t.Fatalf("V32 observation retry evidence = %+v, %v",
+			decodedObservation.ConvergenceWaits[index], err)
+	}
+	receiptBytes, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := DecodeReceipt(receiptBytes, plan)
+	if err != nil || receipt.ConvergenceWaits[index].ExtractionRetryConflicts != 1 ||
+		receipt.ConvergenceWaits[index].ExtractionRetryConflictFirstWallMS != 2_000 ||
+		receipt.ConvergenceWaits[index].ExtractionRetryConflictLastWallMS != 2_000 {
+		t.Fatalf("V32 receipt retry evidence = %+v, %v", receipt.ConvergenceWaits[index], err)
+	}
+
+	historicalPlan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalPlanBytes, err := MarshalPlan(historicalPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalObservationBytes, err := MarshalObservation(completedV25TeardownObservation(historicalPlan))
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalReceiptBytes, err := BuildReceipt(
+		historicalPlanBytes, historicalObservationBytes, PlanDigest(historicalPlanBytes),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{
+		"extraction_retry_conflicts",
+		"extraction_retry_conflict_first_wall_ms",
+		"extraction_retry_conflict_last_wall_ms",
+	} {
+		for _, encoded := range []string{"0", "null"} {
+			t.Run(field+"-"+encoded, func(t *testing.T) {
+				if _, err := DecodeObservation(
+					addFirstConvergenceWaitField(t, historicalObservationBytes, field, encoded),
+				); err == nil {
+					t.Fatal("historical observation accepted V32 retry-conflict field presence")
+				}
+				if _, err := DecodeReceipt(
+					addFirstConvergenceWaitField(t, historicalReceiptBytes, field, encoded), historicalPlan,
+				); err == nil {
+					t.Fatal("historical receipt accepted V32 retry-conflict field presence")
+				}
+			})
+		}
 	}
 }
 
@@ -1148,6 +1269,11 @@ func TestV31DataMeasurementFailureRaisesOnlyItsClosedDeadline(t *testing.T) {
 	v31.DataMeasurement.DeadlineMS = frozenDataMeasurementDeadlineV31MS
 	if err := validateDataMeasurementFailureObservation(v31); err != nil {
 		t.Fatalf("V31 V2/300-second projection failed: %v", err)
+	}
+	v32 := v31
+	v32.Schema = ObservationSchemaV32
+	if err := validateDataMeasurementFailureObservation(v32); err != nil {
+		t.Fatalf("V32 did not inherit the V31 data-measurement contract: %v", err)
 	}
 	for _, mutate := range []func(*DataMeasurementFailureObservation){
 		func(value *DataMeasurementFailureObservation) { value.Schema = dataMeasurementFailureSchemaV1 },
@@ -3366,6 +3492,17 @@ func marshal(t *testing.T, value any) []byte {
 		t.Fatal(err)
 	}
 	return encoded
+}
+
+func addFirstConvergenceWaitField(t *testing.T, raw []byte, field, value string) []byte {
+	t.Helper()
+	marker := []byte("    {\n      \"profile\":")
+	replacement := []byte("    {\n      \"" + field + "\": " + value + ",\n      \"profile\":")
+	result := bytes.Replace(raw, marker, replacement, 1)
+	if bytes.Equal(result, raw) {
+		t.Fatal("serialized evidence lacks a convergence wait")
+	}
+	return result
 }
 
 func slicesEqual(left, right []InputBinding) bool {

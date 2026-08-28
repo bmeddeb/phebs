@@ -2513,6 +2513,32 @@ alarm. Lightweight gates alone do not close T40.13t. A new immutable
 exact-source commit, independent code review, the expensive replay, and review
 of its source-free result remain next; freeze stays forbidden.
 
+That exact V31 full-profile replay then stopped honestly in `stale_worker`
+after 23,469.777 seconds. The 2,540.013-second convergence wait was still
+moving—509 probes, 155 digest changes, and a last successful projection only
+about one poll old—but its 32-entry diagnostic inventory filled with 15
+alternating extraction-progress HTTP 409 `status_other` rows and pending rows.
+The active schedule retained 272 materialized partitions, with 70 succeeded,
+202 pending, and zero failed. Source-free cleanup observation
+`sha256:c69ce4124464f22934a2cd5972898ad1a7143604dbe1fcabdddcefa2689d675d`
+is coherent; the explicit later stale-chunk fence was not reached, so this is
+neither a stall finding nor a Phase-7 pass.
+
+T40.13u is now the active correction. Fresh V32 bytes classify only the two
+closed extraction-progress stale/authority 409 details as `409_stale`, retain
+an exact count plus first/last wall times, and hold one latest conflict outside
+the transition inventory until same-stage pending progress resumes. Any other
+next probe, or wait recording, materializes the hold so deadline, server-exit,
+all-conflict, and terminal evidence still seals. Unknown statuses and every
+non-benign class keep consuming the unchanged 32-entry bound; V1–V31 remain
+exact. The change adds constant-time, constant-memory harness accounting only.
+Its observation/receipt/checkpoint compatibility fence also adds one bounded
+in-memory scan of already-read evidence and at most 16 waits on each decode or
+resume path, with no extra I/O or child.
+Focused/package/race/vet/docs gates, independent review, and a clean immutable
+candidate precede any separately authorized full-profile replay. Merge,
+freeze, ceremony, release, Epic closure, and scale/SLO evidence remain open.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
