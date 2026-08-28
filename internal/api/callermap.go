@@ -35,7 +35,13 @@ const (
 	callerMapMaxRefusals      = 32
 )
 
-const CallerGenerationProgressPath = "/api/caller-generation-progress"
+const (
+	CallerGenerationProgressPath = "/api/caller-generation-progress"
+
+	CallerGenerationProgressDetailChanged       = "caller generation changed while building the response"
+	CallerGenerationProgressDetailAuthority     = "caller map authority is no longer valid"
+	CallerGenerationProgressDetailAuthorization = "caller map authorization changed while building the response; retry"
+)
 
 // CallerMapService is the shared, transport-neutral exact-caller read engine.
 // Huma is only an adapter; T20.11 binds MCP to these same methods.

@@ -458,7 +458,7 @@ func (service *exactCallerMapService) generationProgress(
 		}
 		if !current {
 			return nil, huma.Error409Conflict(
-				"caller generation changed while building the response",
+				CallerGenerationProgressDetailChanged,
 			)
 		}
 		confirmed, confirmErr := service.confirmAuthorization(
@@ -1103,7 +1103,7 @@ func validExactCallerPublicationDescriptor(
 
 func exactCallerAuthorityConflict() error {
 	return huma.Error409Conflict(
-		"caller map authority is no longer valid",
+		CallerGenerationProgressDetailAuthority,
 	)
 }
 
@@ -1701,7 +1701,7 @@ func (service *exactCallerMapService) confirmWithRepository(
 	}
 	if !current {
 		return store.Repo{}, huma.Error409Conflict(
-			"caller generation changed while building the response",
+			CallerGenerationProgressDetailChanged,
 		)
 	}
 	return service.confirmAuthorization(ctx, repository, visibility)
@@ -1717,7 +1717,7 @@ func (service *exactCallerMapService) confirmAuthorization(
 		return store.Repo{}, err
 	}
 	if confirmed != visibility {
-		return store.Repo{}, huma.Error409Conflict("caller map authorization changed while building the response; retry")
+		return store.Repo{}, huma.Error409Conflict(CallerGenerationProgressDetailAuthorization)
 	}
 	return repo, nil
 }

@@ -104,7 +104,7 @@ const (
 	// observationDetailV30 adds the distinct post-pressure-recovery authority
 	// confirmation without changing V1-V29 convergence inventories.
 	observationDetailV30 = 14
-	// observationDetailV32 adds bounded extraction retry-conflict evidence and
+	// observationDetailV32 adds bounded progress retry-conflict evidence and
 	// leaves V1-V31 convergence transition accounting exact.
 	observationDetailV32         = 15
 	ReceiptSchema                = "t4013-neutral-convergence-receipt-v1"
@@ -511,43 +511,43 @@ type ServerStartupObservation struct {
 // bounded source-free controls. It never retains repository paths, source
 // bytes, HTTP bodies, credentials, or raw process output.
 type ConvergenceWaitObservation struct {
-	Profile                            string                             `json:"profile"`
-	Label                              string                             `json:"label"`
-	Revision                           string                             `json:"revision"`
-	Outcome                            string                             `json:"outcome"`
-	FirstStage                         string                             `json:"first_stage,omitempty"`
-	LastStage                          string                             `json:"last_stage"`
-	Attempts                           int64                              `json:"attempts"`
-	ProgressChanges                    int64                              `json:"progress_changes"`
-	StageChanges                       int64                              `json:"stage_changes,omitempty"`
-	FirstProgressSHA256                string                             `json:"first_progress_sha256"`
-	LastProgressSHA256                 string                             `json:"last_progress_sha256"`
-	LastProgressChangeWallMS           int64                              `json:"last_progress_change_wall_ms,omitempty"`
-	ObservationProgress                *ObservationProgressObservation    `json:"observation_progress,omitempty"`
-	ObservationProgressWallMS          int64                              `json:"observation_progress_wall_ms,omitempty"`
-	ExtractionProgress                 *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
-	ExtractionProgressWallMS           int64                              `json:"extraction_progress_wall_ms,omitempty"`
-	ExtractionTiming                   *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
-	CallerProgress                     *CallerProgressObservation         `json:"caller_progress,omitempty"`
-	CallerProgressWallMS               int64                              `json:"caller_progress_wall_ms,omitempty"`
-	ExtractionRetryConflicts           int64                              `json:"extraction_retry_conflicts,omitempty"`
-	ExtractionRetryConflictFirstWallMS int64                              `json:"extraction_retry_conflict_first_wall_ms,omitempty"`
-	ExtractionRetryConflictLastWallMS  int64                              `json:"extraction_retry_conflict_last_wall_ms,omitempty"`
-	InspectionTransitions              []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
-	LastSuccessfulProbeSHA256          string                             `json:"last_successful_probe_sha256,omitempty"`
-	LastSuccessfulProbeWallMS          int64                              `json:"last_successful_probe_wall_ms,omitempty"`
-	LastInspectionStage                string                             `json:"last_inspection_stage,omitempty"`
-	LastInspectionClass                string                             `json:"last_inspection_class,omitempty"`
-	LastInspectionHTTPStatus           int                                `json:"last_inspection_http_status,omitempty"`
-	LastInspectionHTTPReason           string                             `json:"last_inspection_http_reason,omitempty"`
-	LastInspectionSHA256               string                             `json:"last_inspection_sha256,omitempty"`
-	LastInspectionWallMS               int64                              `json:"last_inspection_wall_ms,omitempty"`
-	RepositoryIndexFailureClass        string                             `json:"repository_index_failure_class,omitempty"`
-	RelationshipFailureClass           string                             `json:"relationship_failure_class,omitempty"`
-	RelationshipTerminalConfirmations  int64                              `json:"relationship_terminal_confirmations,omitempty"`
-	TransitionLimitExceeded            bool                               `json:"transition_limit_exceeded,omitempty"`
-	DeadlineMS                         int64                              `json:"deadline_ms"`
-	WallMS                             int64                              `json:"wall_ms"`
+	Profile                           string                             `json:"profile"`
+	Label                             string                             `json:"label"`
+	Revision                          string                             `json:"revision"`
+	Outcome                           string                             `json:"outcome"`
+	FirstStage                        string                             `json:"first_stage,omitempty"`
+	LastStage                         string                             `json:"last_stage"`
+	Attempts                          int64                              `json:"attempts"`
+	ProgressChanges                   int64                              `json:"progress_changes"`
+	StageChanges                      int64                              `json:"stage_changes,omitempty"`
+	FirstProgressSHA256               string                             `json:"first_progress_sha256"`
+	LastProgressSHA256                string                             `json:"last_progress_sha256"`
+	LastProgressChangeWallMS          int64                              `json:"last_progress_change_wall_ms,omitempty"`
+	ObservationProgress               *ObservationProgressObservation    `json:"observation_progress,omitempty"`
+	ObservationProgressWallMS         int64                              `json:"observation_progress_wall_ms,omitempty"`
+	ExtractionProgress                *ExtractionProgressObservation     `json:"extraction_progress,omitempty"`
+	ExtractionProgressWallMS          int64                              `json:"extraction_progress_wall_ms,omitempty"`
+	ExtractionTiming                  *ExtractionTimingObservation       `json:"extraction_timing,omitempty"`
+	CallerProgress                    *CallerProgressObservation         `json:"caller_progress,omitempty"`
+	CallerProgressWallMS              int64                              `json:"caller_progress_wall_ms,omitempty"`
+	ProgressRetryConflicts            int64                              `json:"progress_retry_conflicts,omitempty"`
+	ProgressRetryConflictFirstWallMS  int64                              `json:"progress_retry_conflict_first_wall_ms,omitempty"`
+	ProgressRetryConflictLastWallMS   int64                              `json:"progress_retry_conflict_last_wall_ms,omitempty"`
+	InspectionTransitions             []ConvergenceTransitionObservation `json:"inspection_transitions,omitempty"`
+	LastSuccessfulProbeSHA256         string                             `json:"last_successful_probe_sha256,omitempty"`
+	LastSuccessfulProbeWallMS         int64                              `json:"last_successful_probe_wall_ms,omitempty"`
+	LastInspectionStage               string                             `json:"last_inspection_stage,omitempty"`
+	LastInspectionClass               string                             `json:"last_inspection_class,omitempty"`
+	LastInspectionHTTPStatus          int                                `json:"last_inspection_http_status,omitempty"`
+	LastInspectionHTTPReason          string                             `json:"last_inspection_http_reason,omitempty"`
+	LastInspectionSHA256              string                             `json:"last_inspection_sha256,omitempty"`
+	LastInspectionWallMS              int64                              `json:"last_inspection_wall_ms,omitempty"`
+	RepositoryIndexFailureClass       string                             `json:"repository_index_failure_class,omitempty"`
+	RelationshipFailureClass          string                             `json:"relationship_failure_class,omitempty"`
+	RelationshipTerminalConfirmations int64                              `json:"relationship_terminal_confirmations,omitempty"`
+	TransitionLimitExceeded           bool                               `json:"transition_limit_exceeded,omitempty"`
+	DeadlineMS                        int64                              `json:"deadline_ms"`
+	WallMS                            int64                              `json:"wall_ms"`
 }
 
 // ExtractionTimingObservation aggregates source-free per-attempt phase
@@ -955,7 +955,7 @@ func DecodeObservation(raw []byte) (Observation, error) {
 	); err != nil {
 		return Observation{}, err
 	}
-	if err := validateSerializedExtractionRetryConflictFields(
+	if err := validateSerializedProgressRetryConflictFields(
 		raw, observationSchemaVersion(value.Schema), false,
 	); err != nil {
 		return Observation{}, err
@@ -1965,7 +1965,7 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 			return errors.New("T40.13 convergence wait identity is duplicated")
 		}
 		seen[key] = struct{}{}
-		if err := validateExtractionRetryConflicts(value, detailVersion); err != nil {
+		if err := validateProgressRetryConflicts(value, detailVersion); err != nil {
 			return err
 		}
 		if err := validateRelationshipFailure(value, detailVersion); err != nil {
@@ -2105,64 +2105,69 @@ func validateConvergenceWaits(values []ConvergenceWaitObservation, detailVersion
 	return nil
 }
 
-func validateExtractionRetryConflicts(value ConvergenceWaitObservation, detailVersion int) error {
+func validateProgressRetryConflicts(value ConvergenceWaitObservation, detailVersion int) error {
 	if detailVersion < observationDetailV32 {
-		if value.ExtractionRetryConflicts != 0 || value.ExtractionRetryConflictFirstWallMS != 0 ||
-			value.ExtractionRetryConflictLastWallMS != 0 {
-			return errors.New("T40.13 historical convergence wait acquired extraction retry conflicts")
+		if value.ProgressRetryConflicts != 0 || value.ProgressRetryConflictFirstWallMS != 0 ||
+			value.ProgressRetryConflictLastWallMS != 0 {
+			return errors.New("T40.13 historical convergence wait acquired progress retry conflicts")
 		}
 		return nil
 	}
-	if value.ExtractionRetryConflicts == 0 {
-		if value.ExtractionRetryConflictFirstWallMS != 0 || value.ExtractionRetryConflictLastWallMS != 0 {
-			return errors.New("T40.13 absent extraction retry conflicts acquired wall times")
+	if value.ProgressRetryConflicts == 0 {
+		if value.ProgressRetryConflictFirstWallMS != 0 || value.ProgressRetryConflictLastWallMS != 0 {
+			return errors.New("T40.13 absent progress retry conflicts acquired wall times")
 		}
 		return nil
 	}
-	if value.ExtractionRetryConflicts < 0 || value.ExtractionRetryConflicts > value.Attempts ||
-		value.ExtractionRetryConflictFirstWallMS <= 0 ||
-		value.ExtractionRetryConflictFirstWallMS > value.ExtractionRetryConflictLastWallMS ||
-		value.ExtractionRetryConflictLastWallMS > value.WallMS ||
-		value.ExtractionRetryConflictLastWallMS > value.LastInspectionWallMS {
-		return errors.New("T40.13 extraction retry conflict summary is invalid")
+	if value.ProgressRetryConflicts < 0 || value.ProgressRetryConflicts > value.Attempts ||
+		value.ProgressRetryConflictFirstWallMS <= 0 ||
+		value.ProgressRetryConflictFirstWallMS > value.ProgressRetryConflictLastWallMS ||
+		value.ProgressRetryConflictLastWallMS > value.WallMS ||
+		value.ProgressRetryConflictLastWallMS > value.LastInspectionWallMS {
+		return errors.New("T40.13 progress retry conflict summary is invalid")
 	}
 	// Same-stage pending coalescing deliberately removes individual conflict
 	// rows. The count and wall times are bounded aggregate evidence, not a
-	// per-conflict fence, so retain at least extraction-stage context.
+	// per-conflict or per-stage fence, so retain at least one eligible stage.
 	for _, transition := range value.InspectionTransitions {
-		if transition.Stage == "extraction_publication" {
+		if progressRetryConflictStage(transition.Stage) {
 			return nil
 		}
 	}
-	if !isExtractionRetryConflictDiagnostic(
+	if !isProgressRetryConflictDiagnostic(
 		value.LastInspectionStage, value.LastInspectionClass,
 		value.LastInspectionHTTPStatus, value.LastInspectionHTTPReason,
 	) {
-		return errors.New("T40.13 extraction retry conflict summary lacks extraction evidence")
+		return errors.New("T40.13 progress retry conflict summary lacks eligible-stage evidence")
 	}
 	return nil
 }
 
-func isExtractionRetryConflictDiagnostic(stage, class string, status int, reason string) bool {
-	return stage == "extraction_publication" && class == "status" &&
+func progressRetryConflictStage(stage string) bool {
+	return stage == "observation_publication" || stage == "extraction_publication" ||
+		stage == "caller_generation"
+}
+
+func isProgressRetryConflictDiagnostic(stage, class string, status int, reason string) bool {
+	return progressRetryConflictStage(stage) && class == "status" &&
 		status == 409 && reason == httpReason409Stale
 }
 
-func extractionRetryConflictOwnsDiagnosticLimit(
+func progressRetryConflictOwnsDiagnosticLimit(
 	value ConvergenceWaitObservation,
 	last ConvergenceTransitionObservation,
 	detailVersion int,
 ) bool {
 	if detailVersion < observationDetailV32 || !value.TransitionLimitExceeded ||
-		value.ExtractionRetryConflicts == 0 {
+		value.ProgressRetryConflicts == 0 {
 		return false
 	}
-	return isExtractionRetryConflictDiagnostic(
+	return (isProgressRetryConflictDiagnostic(
 		last.Stage, last.Class, last.HTTPStatus, last.HTTPReason,
-	) || isExtractionRetryConflictDiagnostic(
+	) && last.WallMS == value.ProgressRetryConflictLastWallMS) || (isProgressRetryConflictDiagnostic(
 		value.LastInspectionStage, value.LastInspectionClass,
 		value.LastInspectionHTTPStatus, value.LastInspectionHTTPReason,
-	)
+	) && value.LastInspectionWallMS == value.ProgressRetryConflictLastWallMS)
 }
 
 // CallerProgressObservation is the caller-generation probe reduced to its
@@ -2530,7 +2535,7 @@ func validateConvergenceTransitions(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
-		!extractionRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
+		!progressRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 relationship failure transition fence is invalid")
 	}
@@ -2722,7 +2727,7 @@ func validateConvergenceWithoutSuccessfulProbe(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
-		!extractionRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
+		!progressRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 unsuccessful relationship failure transition fence is invalid")
 	}
@@ -3413,7 +3418,7 @@ func DecodeReceipt(raw []byte, plan Plan) (Receipt, error) {
 	); err != nil {
 		return Receipt{}, err
 	}
-	if err := validateSerializedExtractionRetryConflictFields(
+	if err := validateSerializedProgressRetryConflictFields(
 		raw, receiptSchemaVersion(value.Schema), false,
 	); err != nil {
 		return Receipt{}, err
@@ -3770,7 +3775,7 @@ func validateSerializedRetainedPartialFields(raw []byte, version int, nested boo
 	return nil
 }
 
-func validateSerializedExtractionRetryConflictFields(raw []byte, version int, nested bool) error {
+func validateSerializedProgressRetryConflictFields(raw []byte, version int, nested bool) error {
 	containers, err := serializedEvidenceContainers(raw, nested)
 	if err != nil {
 		return err
@@ -3790,11 +3795,11 @@ func validateSerializedExtractionRetryConflictFields(raw []byte, version int, ne
 					return err
 				}
 				for _, diagnostic := range wait {
-					if strings.EqualFold(diagnostic.name, "extraction_retry_conflicts") ||
-						strings.EqualFold(diagnostic.name, "extraction_retry_conflict_first_wall_ms") ||
-						strings.EqualFold(diagnostic.name, "extraction_retry_conflict_last_wall_ms") {
+					if strings.EqualFold(diagnostic.name, "progress_retry_conflicts") ||
+						strings.EqualFold(diagnostic.name, "progress_retry_conflict_first_wall_ms") ||
+						strings.EqualFold(diagnostic.name, "progress_retry_conflict_last_wall_ms") {
 						if version < 32 {
-							return errors.New("T40.13 historical evidence acquired extraction retry conflicts")
+							return errors.New("T40.13 historical evidence acquired progress retry conflicts")
 						}
 					}
 				}

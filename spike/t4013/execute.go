@@ -4102,7 +4102,7 @@ func (run *execution) stopServers() error {
 
 type convergenceProgressTracker struct {
 	coalesceTransitionProgress        bool
-	summarizeExtractionRetryConflicts bool
+	summarizeProgressRetryConflicts   bool
 	attempts                          int64
 	progressChanges                   int64
 	stageChanges                      int64
@@ -4118,11 +4118,11 @@ type convergenceProgressTracker struct {
 	extractionProgressAtWall          time.Duration
 	extractionTiming                  ExtractionTimingObservation
 	inspectionTransitions             []ConvergenceTransitionObservation
-	extractionRetryConflicts          int64
-	extractionRetryConflictFirstAt    time.Duration
-	extractionRetryConflictLastAt     time.Duration
-	heldExtractionRetryConflict       ConvergenceTransitionObservation
-	hasHeldExtractionRetryConflict    bool
+	progressRetryConflicts            int64
+	progressRetryConflictFirstAt      time.Duration
+	progressRetryConflictLastAt       time.Duration
+	heldProgressRetryConflict         ConvergenceTransitionObservation
+	hasHeldProgressRetryConflict      bool
 	lastInspection                    convergenceInspectionDiagnostic
 	lastInspectionProbe               privateConvergenceProbe
 	lastInspectionAt                  time.Duration
@@ -4210,40 +4210,40 @@ func (tracker *convergenceProgressTracker) observeTransition(
 	if tracker.coalesceTransitionProgress {
 		transition.FirstProgressSHA256 = probe.SHA256
 	}
-	if tracker.summarizeExtractionRetryConflicts && isExtractionRetryConflictDiagnostic(
+	if tracker.summarizeProgressRetryConflicts && isProgressRetryConflictDiagnostic(
 		probe.Stage, diagnostic.class, diagnostic.httpStatus, diagnostic.httpReason,
 	) {
-		tracker.extractionRetryConflicts++
-		if tracker.extractionRetryConflictFirstAt == 0 {
-			tracker.extractionRetryConflictFirstAt = elapsed
+		tracker.progressRetryConflicts++
+		if tracker.progressRetryConflictFirstAt == 0 {
+			tracker.progressRetryConflictFirstAt = elapsed
 		}
-		tracker.extractionRetryConflictLastAt = elapsed
-		if !tracker.hasHeldExtractionRetryConflict &&
+		tracker.progressRetryConflictLastAt = elapsed
+		if !tracker.hasHeldProgressRetryConflict &&
 			len(tracker.inspectionTransitions) >= maxConvergenceTransitions {
 			return true
 		}
-		tracker.heldExtractionRetryConflict = transition
-		tracker.hasHeldExtractionRetryConflict = true
+		tracker.heldProgressRetryConflict = transition
+		tracker.hasHeldProgressRetryConflict = true
 		return false
 	}
-	if tracker.hasHeldExtractionRetryConflict {
-		if diagnostic.class == "pending" && probe.Stage == tracker.heldExtractionRetryConflict.Stage {
-			tracker.hasHeldExtractionRetryConflict = false
+	if tracker.hasHeldProgressRetryConflict {
+		if diagnostic.class == "pending" && probe.Stage == tracker.heldProgressRetryConflict.Stage {
+			tracker.hasHeldProgressRetryConflict = false
 		} else {
-			tracker.materializeHeldExtractionRetryConflict()
+			tracker.materializeHeldProgressRetryConflict()
 		}
 	}
 	return tracker.appendConvergenceTransition(transition)
 }
 
-func (tracker *convergenceProgressTracker) materializeHeldExtractionRetryConflict() {
-	if !tracker.hasHeldExtractionRetryConflict {
+func (tracker *convergenceProgressTracker) materializeHeldProgressRetryConflict() {
+	if !tracker.hasHeldProgressRetryConflict {
 		return
 	}
 	tracker.inspectionTransitions = append(
-		tracker.inspectionTransitions, tracker.heldExtractionRetryConflict,
+		tracker.inspectionTransitions, tracker.heldProgressRetryConflict,
 	)
-	tracker.hasHeldExtractionRetryConflict = false
+	tracker.hasHeldProgressRetryConflict = false
 }
 
 func (tracker *convergenceProgressTracker) appendConvergenceTransition(
@@ -4593,8 +4593,8 @@ func (run *execution) waitSnapshotWithInspection(
 	defer ticker.Stop()
 	started := time.Now()
 	progress := convergenceProgressTracker{
-		coalesceTransitionProgress:        planSchemaVersion(run.plan.Schema) >= 13,
-		summarizeExtractionRetryConflicts: planSchemaVersion(run.plan.Schema) >= 32,
+		coalesceTransitionProgress:      planSchemaVersion(run.plan.Schema) >= 13,
+		summarizeProgressRetryConflicts: planSchemaVersion(run.plan.Schema) >= 32,
 	}
 	for {
 		snapshot, probe, inspectErr, exitErr, exited := run.inspectConvergenceAttempt(
@@ -4747,7 +4747,7 @@ func (run *execution) recordConvergenceWait(
 		})
 		return
 	}
-	progress.materializeHeldExtractionRetryConflict()
+	progress.materializeHeldProgressRetryConflict()
 	wait := ConvergenceWaitObservation{
 		Profile: profile.Name, Label: label, Revision: revision, Outcome: outcome,
 		LastStage: progress.last.Stage, Attempts: progress.attempts,
@@ -4820,9 +4820,9 @@ func (run *execution) recordConvergenceWait(
 		wait.TransitionLimitExceeded = outcome == "diagnostic_limit"
 	}
 	if planSchemaVersion(run.plan.Schema) >= 32 {
-		wait.ExtractionRetryConflicts = progress.extractionRetryConflicts
-		wait.ExtractionRetryConflictFirstWallMS = progress.extractionRetryConflictFirstAt.Milliseconds()
-		wait.ExtractionRetryConflictLastWallMS = progress.extractionRetryConflictLastAt.Milliseconds()
+		wait.ProgressRetryConflicts = progress.progressRetryConflicts
+		wait.ProgressRetryConflictFirstWallMS = progress.progressRetryConflictFirstAt.Milliseconds()
+		wait.ProgressRetryConflictLastWallMS = progress.progressRetryConflictLastAt.Milliseconds()
 	}
 	run.observation.ConvergenceWaits = append(run.observation.ConvergenceWaits, wait)
 }
@@ -6292,7 +6292,7 @@ func readTeardownCheckpointIdentity(path string) (exactFileIdentity, teardownChe
 	); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err
 	}
-	if err := validateSerializedExtractionRetryConflictFields(
+	if err := validateSerializedProgressRetryConflictFields(
 		raw, observationSchemaVersion(value.Observation.Schema), true,
 	); err != nil {
 		return exactFileIdentity{}, teardownCheckpoint{}, err

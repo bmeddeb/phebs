@@ -243,37 +243,49 @@ func TestFreshV32PlanUsesCurrentCoupledSchemas(t *testing.T) {
 	}
 }
 
-func TestV32ExtractionRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *testing.T) {
+func TestV32ProgressRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *testing.T) {
 	plan, err := frozenV32PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tracker := convergenceProgressTracker{
-		coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+		coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 	}
 	tracker.observe(
-		convergenceProbe("extraction_publication", "first"),
+		convergenceProbe("observation_publication", "first"),
 		convergenceInspectionDiagnostic{class: "pending"}, time.Second,
 	)
 	tracker.observe(
-		convergenceProbe("extraction_publication", "retry"),
+		convergenceProbe("observation_publication", "retry"),
 		convergenceInspectionDiagnostic{
 			class: "status", httpStatus: 409, httpReason: httpReason409Stale,
 		}, 2*time.Second,
 	)
 	tracker.observe(
-		convergenceProbe("extraction_publication", "resumed"),
-		convergenceInspectionDiagnostic{class: "pending"}, 3*time.Second,
+		convergenceProbe("extraction_publication", "retry"),
+		convergenceInspectionDiagnostic{
+			class: "status", httpStatus: 409, httpReason: httpReason409Stale,
+		}, 3*time.Second,
+	)
+	tracker.observe(
+		convergenceProbe("caller_generation", "retry"),
+		convergenceInspectionDiagnostic{
+			class: "status", httpStatus: 409, httpReason: httpReason409Stale,
+		}, 4*time.Second,
+	)
+	tracker.observe(
+		convergenceProbe("caller_generation", "resumed"),
+		convergenceInspectionDiagnostic{class: "pending"}, 5*time.Second,
 	)
 	tracker.observe(
 		convergenceProbe("complete", "complete"),
-		convergenceInspectionDiagnostic{class: "complete"}, 4*time.Second,
+		convergenceInspectionDiagnostic{class: "complete"}, 6*time.Second,
 	)
 	run := &execution{plan: plan}
 	run.recordConvergenceWait(
 		PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "converged",
 		time.Duration(plan.Safety.FullConvergenceDeadlineMS)*time.Millisecond,
-		time.Now().Add(-5*time.Second), tracker,
+		time.Now().Add(-7*time.Second), tracker,
 	)
 	observation := completedV25TeardownObservation(plan)
 	index := slices.IndexFunc(observation.ConvergenceWaits, func(wait ConvergenceWaitObservation) bool {
@@ -292,7 +304,7 @@ func TestV32ExtractionRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *
 		t.Fatal(err)
 	}
 	decodedObservation, err := DecodeObservation(observationBytes)
-	if err != nil || decodedObservation.ConvergenceWaits[index].ExtractionRetryConflicts != 1 {
+	if err != nil || decodedObservation.ConvergenceWaits[index].ProgressRetryConflicts != 3 {
 		t.Fatalf("V32 observation retry evidence = %+v, %v",
 			decodedObservation.ConvergenceWaits[index], err)
 	}
@@ -301,9 +313,9 @@ func TestV32ExtractionRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *
 		t.Fatal(err)
 	}
 	receipt, err := DecodeReceipt(receiptBytes, plan)
-	if err != nil || receipt.ConvergenceWaits[index].ExtractionRetryConflicts != 1 ||
-		receipt.ConvergenceWaits[index].ExtractionRetryConflictFirstWallMS != 2_000 ||
-		receipt.ConvergenceWaits[index].ExtractionRetryConflictLastWallMS != 2_000 {
+	if err != nil || receipt.ConvergenceWaits[index].ProgressRetryConflicts != 3 ||
+		receipt.ConvergenceWaits[index].ProgressRetryConflictFirstWallMS != 2_000 ||
+		receipt.ConvergenceWaits[index].ProgressRetryConflictLastWallMS != 4_000 {
 		t.Fatalf("V32 receipt retry evidence = %+v, %v", receipt.ConvergenceWaits[index], err)
 	}
 
@@ -326,9 +338,9 @@ func TestV32ExtractionRetryConflictEvidenceRoundTripsAndIsHistoricallyFenced(t *
 		t.Fatal(err)
 	}
 	for _, field := range []string{
-		"extraction_retry_conflicts",
-		"extraction_retry_conflict_first_wall_ms",
-		"extraction_retry_conflict_last_wall_ms",
+		"progress_retry_conflicts",
+		"progress_retry_conflict_first_wall_ms",
+		"progress_retry_conflict_last_wall_ms",
 	} {
 		for _, encoded := range []string{"0", "null"} {
 			t.Run(field+"-"+encoded, func(t *testing.T) {

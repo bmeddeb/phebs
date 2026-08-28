@@ -2524,14 +2524,17 @@ The active schedule retained 272 materialized partitions, with 70 succeeded,
 is coherent; the explicit later stale-chunk fence was not reached, so this is
 neither a stall finding nor a Phase-7 pass.
 
-T40.13u is now the active correction. Fresh V32 bytes classify only the two
-closed extraction-progress stale/authority 409 details as `409_stale`, retain
-an exact count plus first/last wall times, and hold one latest conflict outside
-the transition inventory until same-stage pending progress resumes. Any other
-next probe, or wait recording, materializes the hold so deadline, server-exit,
-all-conflict, and terminal evidence still seals. Unknown statuses and every
-non-benign class keep consuming the unchanged 32-entry bound; V1–V31 remain
-exact. The change adds constant-time, constant-memory harness accounting only.
+T40.13u is now the active correction. Fresh V32 bytes endpoint-fence and
+classify seven closed snapshot/authority 409 details as `409_stale`: two from
+observation progress, two from extraction progress, and three from caller
+generation progress. They retain one aggregate count plus first/last wall
+times and one latest conflict outside the transition inventory. A later
+recognized conflict replaces the hold; same-stage pending progress clears it.
+Any non-recognized next probe, or wait recording, materializes the hold so
+deadline, server-exit, all-conflict, and terminal evidence still seals.
+Control-absence, unknown 409s, 5xx, 503, transport, and every other class keep
+consuming the unchanged 32-entry bound; V1–V31 remain exact. The change adds
+constant-time, constant-memory harness accounting only.
 Its observation/receipt/checkpoint compatibility fence also adds one bounded
 in-memory scan of already-read evidence and at most 16 waits on each decode or
 resume path, with no extra I/O or child.

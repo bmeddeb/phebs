@@ -1316,12 +1316,7 @@ func classifyHTTPStatusReason(
 		return httpReasonOther
 	}
 	switch {
-	case status == http.StatusConflict &&
-		(problem.Detail == apiresponse.ObservationProgressDetailStale ||
-			problem.Detail == apiresponse.ObservationProgressDetailAuthority ||
-			(contract >= profileInspectionV32 && extractionProgressRequest(path) &&
-				(problem.Detail == apiresponse.ExtractionProgressDetailStale ||
-					problem.Detail == apiresponse.ExtractionProgressDetailAuthority))):
+	case status == http.StatusConflict && progressRetryConflictDetail(contract, path, problem.Detail):
 		return httpReason409Stale
 	case status == http.StatusConflict && problem.Detail == apiresponse.ObservationProgressDetailControlAbsent:
 		return httpReason409ControlAbsent
@@ -1355,9 +1350,29 @@ func classifyHTTPStatusReason(
 	}
 }
 
-func extractionProgressRequest(path string) bool {
+func progressRetryConflictDetail(
+	contract profileInspectionContract,
+	path, detail string,
+) bool {
+	if contract < profileInspectionV32 {
+		return detail == apiresponse.ObservationProgressDetailStale ||
+			detail == apiresponse.ObservationProgressDetailAuthority
+	}
 	requestPath, _, _ := strings.Cut(path, "?")
-	return requestPath == apiresponse.ExtractionProgressPath
+	switch requestPath {
+	case apiresponse.ObservationProgressPath:
+		return detail == apiresponse.ObservationProgressDetailStale ||
+			detail == apiresponse.ObservationProgressDetailAuthority
+	case apiresponse.ExtractionProgressPath:
+		return detail == apiresponse.ExtractionProgressDetailStale ||
+			detail == apiresponse.ExtractionProgressDetailAuthority
+	case apiresponse.CallerGenerationProgressPath:
+		return detail == apiresponse.CallerGenerationProgressDetailChanged ||
+			detail == apiresponse.CallerGenerationProgressDetailAuthority ||
+			detail == apiresponse.CallerGenerationProgressDetailAuthorization
+	default:
+		return false
+	}
 }
 
 // decodeHumaResponse consumes Huma's transport-owned top-level $schema link

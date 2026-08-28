@@ -2541,7 +2541,7 @@ execution because its live-worktree build could consume hidden inputs. A new
 immutable correction, independent review, the exact expensive replay, and
 review of its source-free result remain mandatory before any freeze.
 
-**T40.13u · V32 extraction retry-conflict transition accounting**
+**T40.13u · V32 progress retry-conflict transition accounting**
 *(high ceremony correctness · needs the retained V31 full-profile stop)* —
 preserve the failed full-profile Phase-7 replay as coherent evidence, not a
 pipeline stall. The command ran for 23,469.777 seconds. Its stale-worker wait
@@ -2556,32 +2556,38 @@ no Phase-7 pass.
 
 AC: advance only fresh plan/observation/receipt bytes to V32 and the fresh
 full-profile replay result to v2; keep V1–V31 bytes, classification, and
-validation exact. Under the V32 inspection contract only, classify the two
-closed extraction-progress 409 details—stale snapshot and authority race—as
-the existing `409_stale` reason. Count every recognized conflict with exact
-first/last wall times while holding at most one latest transition. If the next
-completed probe is same-stage pending progress, clear the hold and let the
-existing progress coalescer bridge the conflict. Before any other class/stage,
-or before recording the wait, materialize the hold. This must make final-409
-and all-409 waits sealable without raising the fixed 32-transition bound.
-Unknown 409s, transport, response, 5xx, control, terminal, different-stage,
-and overflow inspections remain distinct and fail closed. At 31 existing
+validation exact. Under the V32 inspection contract only, classify seven
+closed snapshot/authority 409 details as the existing `409_stale` reason: two
+from observation progress, two from extraction progress, and three from caller
+generation progress. Bind every classification to its exact endpoint. Count
+every recognized conflict with exact first/last wall times while holding at
+most one latest transition. Another recognized conflict replaces the hold; a
+same-stage pending probe clears it and lets the existing progress coalescer
+bridge the conflict. Before any non-recognized class/stage, or before recording
+the wait, materialize the hold. This must make final-409 and all-409 waits
+sealable without raising the fixed 32-transition bound. Observation
+control-absence, unknown 409s, transport, response, 5xx, 503, terminal,
+non-progress stages, and overflow inspections remain distinct and fail closed.
+At 31 existing
 entries, a held conflict may become entry 32 and the next terminal remains the
 overflow inspection; preserve diagnostic-limit priority and its typed terminal
 projection. Relax relationship-tail equality only when the counted recognized
-conflict is the retained tail or the overflow inspection; conflict-free and
-causally unrelated diagnostic limits retain the V31 fence. Tests must pin the incident-shaped 409/pending sequence, V31
-historical overflow, final/all-conflict materialization, non-benign flushes,
-31/32 boundaries, summary forgery rejection, schema coupling, current driver
-dispatch, and the existing last-inspection XOR.
+conflict is the retained tail or the overflow inspection at the aggregate's
+exact last-conflict wall time; conflict-free and causally unrelated diagnostic
+limits retain the V31 fence. Tests must pin all three endpoint/stage sets, the
+incident-shaped 409/pending sequence, V31 historical overflow,
+final/all-conflict materialization, cross-stage hold replacement, non-benign
+flushes, 31/32 boundaries, summary forgery rejection, schema coupling, current
+driver dispatch, and the existing last-inspection XOR.
 
 Steady-state cost: no product request/query, worker, sync tick,
 startup/restart, retry/no-op, publication, lifecycle/store mutation, lock,
 cache, corpus/shard read, hashing, disk/memory ceiling, polling interval,
-deadline, or child changes. Each V32 convergence inspection performs one
+deadline, or child changes. Each V32 HTTP error classification performs one
+closed endpoint/detail match, and each convergence inspection performs one
 closed stage/class/status/reason predicate. A recognized conflict updates an
 `int64` count, two durations, and one fixed transition value; recording or a
-distinct next probe appends at most that one value before the existing bounded
+non-recognized next probe appends at most that one value before the existing bounded
 slice clone. The receipt adds at most three scalar JSON fields. V31 retains its
 old accounting. Observation decode, receipt decode, and teardown-checkpoint
 resume each add one in-memory field-presence pass over already-read evidence

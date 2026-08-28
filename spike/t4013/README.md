@@ -4533,28 +4533,34 @@ Epic closure, or scale/SLO claim. Its separately reviewed process-absence and
 cleanup result does not retire the external replay lock.
 
 T40.13u advances only fresh ceremony evidence to V32. Under that contract,
-the closed extraction-progress stale-snapshot and authority-race 409 details
-map to the existing `409_stale` reason. The convergence tracker counts every
-such conflict, keeps exact first and last wall times, and holds only the latest
-transition. Same-stage pending progress clears the hold and resumes the
-existing coalesced pending transition. Any other class or stage materializes
-the conflict first. Recording also materializes an unresolved hold, so a wait
-ending on one or containing only conflicts still has a timeline tail matching
-its last inspection.
+seven closed snapshot/authority 409 details map to the existing `409_stale`
+reason only on their exact endpoints: two observation-progress details, two
+extraction-progress details, and three caller-generation-progress details.
+The convergence tracker counts every such conflict, keeps exact first and last
+wall times, and holds only the latest transition. A later recognized conflict,
+including one from another eligible stage, replaces the hold. Same-stage
+pending progress clears it and resumes the existing coalesced pending
+transition. Any non-recognized class or stage materializes the conflict first.
+Recording also materializes an unresolved hold, so a wait ending on one or
+containing only conflicts still has a timeline tail matching its last
+inspection.
 
-The 32-transition ceiling is unchanged. Unknown 409s, transport errors, 5xx,
-response/control failures, terminals, cross-stage probes, and overflow
-inspections remain distinct. With 31 existing entries, a held conflict can
+The 32-transition ceiling is unchanged. Observation control-absence, unknown
+409s, transport errors, 5xx, 503s, response/control failures, terminals,
+non-progress stages, and overflow inspections remain distinct. With 31
+existing entries, a held conflict can
 become entry 32; a following terminal remains the overflow inspection and the
 existing diagnostic-limit priority keeps its typed projection. The historical
 relationship-tail fence is relaxed only when that counted conflict is the
-retained tail or overflow inspection; unrelated and conflict-free limits remain
-strict. V1–V31
+retained tail or overflow inspection at the exact aggregate last-conflict wall
+time; unrelated and conflict-free limits remain strict. V1–V31
 classification and receipt validation remain exact. Fresh full-profile pass
 records use `t4013-full-profile-phase7-replay-v2` and bind a V32 plan.
 
-This adds no production work. Each V32 convergence probe performs one closed
-predicate; a recognized conflict updates one counter, two times, and one fixed
+This changes no production wire behavior or work. Existing caller-generation
+detail strings become named constants. Each V32 HTTP error performs one closed
+endpoint/detail match and each convergence probe performs one closed predicate;
+a recognized conflict updates one counter, two times, and one fixed
 transition value. At most one transition is materialized before the existing
 bounded clone, and the source-free wait adds at most three scalar fields. No
 request count, five-second poll cadence, deadline, lock, hash, child,

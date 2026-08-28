@@ -617,6 +617,59 @@ func TestHistoricalTeardownCheckpointRejectsNestedStartupProcessSamplingField(t 
 	}
 }
 
+func TestHistoricalTeardownCheckpointRejectsNestedProgressRetryFields(t *testing.T) {
+	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := emptyObservationForPlan(EnvironmentObservation{
+		OS: "darwin", Arch: "arm64", MemoryBytes: 24 << 30,
+		FilesystemTotalBytes: 460 << 30, FilesystemAvailableBytes: 130 << 30,
+	}, plan)
+	observation.Outcome = "stopped"
+	observation.Phases[0] = PhaseObservation{Name: "preflight", Outcome: "failed"}
+	observation.Failures = []FailureObservation{{
+		Phase: "preflight", Class: "execution", Code: "operational_failure",
+	}}
+	observation.Decision = DecisionObservation{Selected: "unclassified", Reason: "operational_failure"}
+	observation.ConvergenceWaits = completedV25TeardownObservation(plan).ConvergenceWaits
+	checkpoint := teardownCheckpoint{
+		Schema: teardownCheckpointSchema, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		Workspace: filepath.Clean(t.TempDir()), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Observation: observation,
+	}
+	raw, err := marshalTeardownCheckpoint(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{
+		"progress_retry_conflicts",
+		"progress_retry_conflict_first_wall_ms",
+		"progress_retry_conflict_last_wall_ms",
+	} {
+		t.Run(field, func(t *testing.T) {
+			var object map[string]any
+			if err := json.Unmarshal(raw, &object); err != nil {
+				t.Fatal(err)
+			}
+			observation := object["observation"].(map[string]any)
+			waits := observation["convergence_waits"].([]any)
+			waits[0].(map[string]any)[field] = nil
+			forged, err := json.Marshal(object)
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(t.TempDir(), "observation.json")
+			if err := os.WriteFile(path+".teardown", append(forged, '\n'), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := readTeardownCheckpoint(path); err == nil {
+				t.Fatal("historical checkpoint accepted nested progress retry field")
+			}
+		})
+	}
+}
+
 func TestHistoricalTeardownCheckpointRejectsNestedRetainedPartialNull(t *testing.T) {
 	plan, err := frozenV24PlanWithHostToolchain(testSourceCommit, fakeHostToolchain())
 	if err != nil {
@@ -1498,9 +1551,9 @@ func TestV13ConvergenceProgressChurnCoalescesWithoutWeakeningTransitionBound(t *
 	}
 }
 
-func TestV32ExtractionRetryConflictsResumePendingProgressWithoutConsumingTransitions(t *testing.T) {
+func TestV32ProgressRetryConflictsResumePendingProgressWithoutConsumingTransitions(t *testing.T) {
 	tracker := convergenceProgressTracker{
-		coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+		coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 	}
 	first := convergenceProbe("extraction_publication", "progress", 0)
 	if tracker.observe(first, convergenceInspectionDiagnostic{class: "pending"}, time.Second) {
@@ -1524,7 +1577,7 @@ func TestV32ExtractionRetryConflictsResumePendingProgressWithoutConsumingTransit
 			t.Fatalf("resumed progress %d exceeded the transition bound", index)
 		}
 	}
-	if tracker.extractionRetryConflicts != 100 || tracker.hasHeldExtractionRetryConflict ||
+	if tracker.progressRetryConflicts != 100 || tracker.hasHeldProgressRetryConflict ||
 		len(tracker.inspectionTransitions) != 1 ||
 		tracker.inspectionTransitions[0].ProgressChanges != 100 {
 		t.Fatalf("tracker = %+v", tracker)
@@ -1535,9 +1588,9 @@ func TestV32ExtractionRetryConflictsResumePendingProgressWithoutConsumingTransit
 		5*time.Minute, time.Now().Add(-4*time.Minute), tracker,
 	)
 	wait := run.observation.ConvergenceWaits[0]
-	if wait.ExtractionRetryConflicts != 100 ||
-		wait.ExtractionRetryConflictFirstWallMS != 2_000 ||
-		wait.ExtractionRetryConflictLastWallMS != 200_000 {
+	if wait.ProgressRetryConflicts != 100 ||
+		wait.ProgressRetryConflictFirstWallMS != 2_000 ||
+		wait.ProgressRetryConflictLastWallMS != 200_000 {
 		t.Fatalf("retry summary = %+v", wait)
 	}
 	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, observationDetailV32); err != nil {
@@ -1550,16 +1603,16 @@ func TestV32ExtractionRetryConflictsResumePendingProgressWithoutConsumingTransit
 		name   string
 		mutate func(*ConvergenceWaitObservation)
 	}{
-		{name: "zero-count", mutate: func(value *ConvergenceWaitObservation) { value.ExtractionRetryConflicts = 0 }},
-		{name: "negative-count", mutate: func(value *ConvergenceWaitObservation) { value.ExtractionRetryConflicts = -1 }},
-		{name: "count-over-attempts", mutate: func(value *ConvergenceWaitObservation) { value.ExtractionRetryConflicts = value.Attempts + 1 }},
-		{name: "first-zero", mutate: func(value *ConvergenceWaitObservation) { value.ExtractionRetryConflictFirstWallMS = 0 }},
+		{name: "zero-count", mutate: func(value *ConvergenceWaitObservation) { value.ProgressRetryConflicts = 0 }},
+		{name: "negative-count", mutate: func(value *ConvergenceWaitObservation) { value.ProgressRetryConflicts = -1 }},
+		{name: "count-over-attempts", mutate: func(value *ConvergenceWaitObservation) { value.ProgressRetryConflicts = value.Attempts + 1 }},
+		{name: "first-zero", mutate: func(value *ConvergenceWaitObservation) { value.ProgressRetryConflictFirstWallMS = 0 }},
 		{name: "reversed-walls", mutate: func(value *ConvergenceWaitObservation) {
-			value.ExtractionRetryConflictFirstWallMS = value.ExtractionRetryConflictLastWallMS + 1
+			value.ProgressRetryConflictFirstWallMS = value.ProgressRetryConflictLastWallMS + 1
 		}},
-		{name: "last-after-wait", mutate: func(value *ConvergenceWaitObservation) { value.ExtractionRetryConflictLastWallMS = value.WallMS + 1 }},
+		{name: "last-after-wait", mutate: func(value *ConvergenceWaitObservation) { value.ProgressRetryConflictLastWallMS = value.WallMS + 1 }},
 		{name: "last-after-inspection", mutate: func(value *ConvergenceWaitObservation) {
-			value.ExtractionRetryConflictLastWallMS = value.LastInspectionWallMS + 1
+			value.ProgressRetryConflictLastWallMS = value.LastInspectionWallMS + 1
 		}},
 		{name: "unrelated-evidence", mutate: func(value *ConvergenceWaitObservation) {
 			value.FirstStage = "repository_index"
@@ -1580,88 +1633,203 @@ func TestV32ExtractionRetryConflictsResumePendingProgressWithoutConsumingTransit
 	}
 }
 
-func TestV31ExtractionRetryConflictsKeepHistoricalTransitionBound(t *testing.T) {
-	tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
-	tracker.observe(
-		convergenceProbe("extraction_publication", "progress", 0),
-		convergenceInspectionDiagnostic{class: "pending"}, time.Millisecond,
-	)
-	status := convergenceInspectionDiagnostic{
-		class: "status", httpStatus: http.StatusConflict, httpReason: httpReasonOther,
-	}
-	var exceeded bool
-	for index := 0; index < 16; index++ {
-		exceeded = tracker.observe(
-			convergenceProbe("extraction_publication", "retry", index), status,
-			time.Duration(index*2+2)*time.Millisecond,
-		)
-		if exceeded {
-			t.Fatalf("historical conflict %d exceeded early", index)
-		}
-		exceeded = tracker.observe(
-			convergenceProbe("extraction_publication", "progress", index+1),
-			convergenceInspectionDiagnostic{class: "pending"},
-			time.Duration(index*2+3)*time.Millisecond,
-		)
-	}
-	if !exceeded || len(tracker.inspectionTransitions) != maxConvergenceTransitions ||
-		tracker.extractionRetryConflicts != 0 || tracker.hasHeldExtractionRetryConflict {
-		t.Fatalf("historical tracker = %+v", tracker)
-	}
-}
-
-func TestV32FinalExtractionRetryConflictIsMaterializedForSealing(t *testing.T) {
+func TestV32SiblingProgressRetryConflictsResumeWithoutConsumingTransitions(t *testing.T) {
 	retry := convergenceInspectionDiagnostic{
 		class: "status", httpStatus: http.StatusConflict, httpReason: httpReason409Stale,
 	}
-	for _, test := range []struct {
-		name        string
-		withPending bool
-	}{
-		{name: "all-conflict"},
-		{name: "after-progress", withPending: true},
-	} {
-		t.Run(test.name, func(t *testing.T) {
+	for _, stage := range []string{"observation_publication", "caller_generation"} {
+		t.Run(stage, func(t *testing.T) {
 			tracker := convergenceProgressTracker{
-				coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+				coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 			}
-			if test.withPending {
-				tracker.observe(
-					convergenceProbe("extraction_publication", "pending"),
-					convergenceInspectionDiagnostic{class: "pending"}, time.Second,
-				)
-			}
-			for index := 0; index < 3; index++ {
+			tracker.observe(
+				convergenceProbe(stage, "progress", 0),
+				convergenceInspectionDiagnostic{class: "pending"}, time.Millisecond,
+			)
+			for index := 0; index < 100; index++ {
 				if tracker.observe(
-					convergenceProbe("extraction_publication", "retry", index), retry,
-					time.Duration(index+2)*time.Second,
+					convergenceProbe(stage, "retry", index), retry,
+					time.Duration(index*2+2)*time.Millisecond,
+				) || tracker.observe(
+					convergenceProbe(stage, "progress", index+1),
+					convergenceInspectionDiagnostic{class: "pending"},
+					time.Duration(index*2+3)*time.Millisecond,
 				) {
-					t.Fatalf("retry conflict %d exceeded the transition bound", index)
+					t.Fatalf("retry cycle %d exceeded the transition bound", index)
 				}
 			}
-			run := &execution{plan: Plan{Schema: PlanSchemaV32}}
-			run.recordConvergenceWait(
-				PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "deadline",
-				time.Minute, time.Now().Add(-10*time.Second), tracker,
-			)
-			wait := run.observation.ConvergenceWaits[0]
-			if !tracker.hasHeldExtractionRetryConflict {
-				t.Fatal("recording mutated the source tracker hold")
-			}
-			tail := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
-			if wait.ExtractionRetryConflicts != 3 || tail.Class != "status" ||
-				tail.HTTPStatus != http.StatusConflict || tail.HTTPReason != httpReason409Stale ||
-				tail.ProgressSHA256 != wait.LastInspectionSHA256 || tail.WallMS != 4_000 {
-				t.Fatalf("wait = %+v", wait)
-			}
-			if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, observationDetailV32); err != nil {
-				t.Fatalf("V32 final-conflict wait failed validation: %v", err)
+			if tracker.progressRetryConflicts != 100 || tracker.hasHeldProgressRetryConflict ||
+				len(tracker.inspectionTransitions) != 1 ||
+				tracker.inspectionTransitions[0].ProgressChanges != 100 {
+				t.Fatalf("tracker = %+v", tracker)
 			}
 		})
 	}
 }
 
-func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *testing.T) {
+func TestV31ProgressRetryConflictsKeepHistoricalTransitionBound(t *testing.T) {
+	for _, test := range []struct {
+		stage  string
+		reason string
+	}{
+		{stage: "observation_publication", reason: httpReason409Stale},
+		{stage: "extraction_publication", reason: httpReasonOther},
+		{stage: "caller_generation", reason: httpReasonOther},
+	} {
+		t.Run(test.stage, func(t *testing.T) {
+			tracker := convergenceProgressTracker{coalesceTransitionProgress: true}
+			tracker.observe(
+				convergenceProbe(test.stage, "progress", 0),
+				convergenceInspectionDiagnostic{class: "pending"}, time.Millisecond,
+			)
+			status := convergenceInspectionDiagnostic{
+				class: "status", httpStatus: http.StatusConflict, httpReason: test.reason,
+			}
+			var exceeded bool
+			for index := 0; index < 16; index++ {
+				exceeded = tracker.observe(
+					convergenceProbe(test.stage, "retry", index), status,
+					time.Duration(index*2+2)*time.Millisecond,
+				)
+				if exceeded {
+					t.Fatalf("historical conflict %d exceeded early", index)
+				}
+				exceeded = tracker.observe(
+					convergenceProbe(test.stage, "progress", index+1),
+					convergenceInspectionDiagnostic{class: "pending"},
+					time.Duration(index*2+3)*time.Millisecond,
+				)
+			}
+			if !exceeded || len(tracker.inspectionTransitions) != maxConvergenceTransitions ||
+				tracker.progressRetryConflicts != 0 || tracker.hasHeldProgressRetryConflict {
+				t.Fatalf("historical tracker = %+v", tracker)
+			}
+		})
+	}
+}
+
+func TestV32FinalProgressRetryConflictIsMaterializedForSealing(t *testing.T) {
+	retry := convergenceInspectionDiagnostic{
+		class: "status", httpStatus: http.StatusConflict, httpReason: httpReason409Stale,
+	}
+	for _, stage := range []string{
+		"observation_publication", "extraction_publication", "caller_generation",
+	} {
+		for _, test := range []struct {
+			name        string
+			withPending bool
+		}{
+			{name: "all-conflict"},
+			{name: "after-progress", withPending: true},
+		} {
+			t.Run(stage+"/"+test.name, func(t *testing.T) {
+				tracker := convergenceProgressTracker{
+					coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
+				}
+				if test.withPending {
+					tracker.observe(
+						convergenceProbe(stage, "pending"),
+						convergenceInspectionDiagnostic{class: "pending"}, time.Second,
+					)
+				}
+				for index := 0; index < 3; index++ {
+					if tracker.observe(
+						convergenceProbe(stage, "retry", index), retry,
+						time.Duration(index+2)*time.Second,
+					) {
+						t.Fatalf("retry conflict %d exceeded the transition bound", index)
+					}
+				}
+				run := &execution{plan: Plan{Schema: PlanSchemaV32}}
+				run.recordConvergenceWait(
+					PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "deadline",
+					time.Minute, time.Now().Add(-10*time.Second), tracker,
+				)
+				wait := run.observation.ConvergenceWaits[0]
+				if !tracker.hasHeldProgressRetryConflict {
+					t.Fatal("recording mutated the source tracker hold")
+				}
+				tail := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
+				if wait.ProgressRetryConflicts != 3 || tail.Class != "status" ||
+					tail.HTTPStatus != http.StatusConflict || tail.HTTPReason != httpReason409Stale ||
+					tail.ProgressSHA256 != wait.LastInspectionSHA256 || tail.WallMS != 4_000 {
+					t.Fatalf("wait = %+v", wait)
+				}
+				if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, observationDetailV32); err != nil {
+					t.Fatalf("V32 final-conflict wait failed validation: %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestV32ProgressRetryConflictUsesOneCrossStageHold(t *testing.T) {
+	retry := convergenceInspectionDiagnostic{
+		class: "status", httpStatus: http.StatusConflict, httpReason: httpReason409Stale,
+	}
+	tracker := convergenceProgressTracker{
+		coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
+	}
+	for index, stage := range []string{
+		"observation_publication", "extraction_publication", "caller_generation",
+	} {
+		if tracker.observeTransition(
+			convergenceProbe(stage, "retry", index), retry, time.Duration(index+1)*time.Second,
+		) {
+			t.Fatalf("recognized conflict %d exceeded the transition bound", index)
+		}
+	}
+	if tracker.progressRetryConflicts != 3 || !tracker.hasHeldProgressRetryConflict ||
+		tracker.heldProgressRetryConflict.Stage != "caller_generation" ||
+		len(tracker.inspectionTransitions) != 0 {
+		t.Fatalf("cross-stage hold = %+v", tracker)
+	}
+	tracker.observeTransition(
+		convergenceProbe("caller_generation", "pending"),
+		convergenceInspectionDiagnostic{class: "pending"}, 4*time.Second,
+	)
+	if tracker.hasHeldProgressRetryConflict || len(tracker.inspectionTransitions) != 1 ||
+		tracker.inspectionTransitions[0].Stage != "caller_generation" {
+		t.Fatalf("resumed hold = %+v", tracker)
+	}
+
+	tracker.observeTransition(
+		convergenceProbe("observation_publication", "retry"), retry, 5*time.Second,
+	)
+	tracker.observeTransition(
+		convergenceProbe("extraction_publication", "pending"),
+		convergenceInspectionDiagnostic{class: "pending"}, 6*time.Second,
+	)
+	if len(tracker.inspectionTransitions) != 3 ||
+		tracker.inspectionTransitions[1].Stage != "observation_publication" ||
+		tracker.inspectionTransitions[2].Stage != "extraction_publication" {
+		t.Fatalf("cross-stage displacement = %+v", tracker.inspectionTransitions)
+	}
+}
+
+func TestV32ProgressRetryConflictStageSetIsClosed(t *testing.T) {
+	for _, test := range []struct {
+		stage  string
+		status int
+		reason string
+		want   bool
+	}{
+		{stage: "observation_publication", status: 409, reason: httpReason409Stale, want: true},
+		{stage: "extraction_publication", status: 409, reason: httpReason409Stale, want: true},
+		{stage: "caller_generation", status: 409, reason: httpReason409Stale, want: true},
+		{stage: "observation_publication", status: 409, reason: httpReason409ControlAbsent},
+		{stage: "extraction_publication", status: 500, reason: httpReason500Response},
+		{stage: "caller_generation", status: 503, reason: httpReason503Unavailable},
+		{stage: "repository_visibility", status: 500, reason: httpReasonOther},
+		{stage: "relationship_publication", status: 409, reason: httpReason409Stale},
+	} {
+		if got := isProgressRetryConflictDiagnostic(test.stage, "status", test.status, test.reason); got != test.want {
+			t.Fatalf("stage=%q status=%d reason=%q recognized=%t, want %t", test.stage, test.status, test.reason, got, test.want)
+		}
+	}
+}
+
+func TestV32ProgressRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *testing.T) {
 	retry := convergenceInspectionDiagnostic{
 		class: "status", httpStatus: http.StatusConflict, httpReason: httpReason409Stale,
 	}
@@ -1672,7 +1840,7 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 		{class: "terminal"},
 	} {
 		tracker := convergenceProgressTracker{
-			coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+			coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 		}
 		tracker.observe(convergenceProbe("extraction_publication", "pending"),
 			convergenceInspectionDiagnostic{class: "pending"}, time.Second)
@@ -1686,7 +1854,7 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 	}
 
 	tracker := convergenceProgressTracker{
-		coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+		coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 	}
 	for index := 0; index < maxConvergenceTransitions; index++ {
 		class := "pending"
@@ -1708,7 +1876,7 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 	if !tracker.observe(overflow, retry, time.Second) {
 		t.Fatal("recognized retry conflict weakened the full transition bound")
 	}
-	if tracker.hasHeldExtractionRetryConflict || tracker.extractionRetryConflicts != 1 ||
+	if tracker.hasHeldProgressRetryConflict || tracker.progressRetryConflicts != 1 ||
 		len(tracker.inspectionTransitions) != maxConvergenceTransitions {
 		t.Fatalf("overflow tracker = %+v", tracker)
 	}
@@ -1721,7 +1889,7 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 	tail := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
 	if tail.RelationshipFailureClass != relationshipFailureCurrentControl ||
 		wait.RelationshipFailureClass != "" ||
-		!isExtractionRetryConflictDiagnostic(
+		!isProgressRetryConflictDiagnostic(
 			wait.LastInspectionStage, wait.LastInspectionClass,
 			wait.LastInspectionHTTPStatus, wait.LastInspectionHTTPReason,
 		) {
@@ -1732,7 +1900,7 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 	}
 }
 
-func TestV32HeldExtractionRetryConflictPreservesDiagnosticLimitPriority(t *testing.T) {
+func TestV32HeldProgressRetryConflictPreservesDiagnosticLimitPriority(t *testing.T) {
 	terminal := ExtractionProgressObservation{
 		State: "unavailable", JobState: string(store.StatusFailed), JobAttempts: 2,
 	}
@@ -1751,7 +1919,7 @@ func TestV32HeldExtractionRetryConflictPreservesDiagnosticLimitPriority(t *testi
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			tracker := convergenceProgressTracker{
-				coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+				coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 			}
 			for index := 0; index < maxConvergenceTransitions-1; index++ {
 				class := "pending"
@@ -1802,10 +1970,18 @@ func TestV32HeldExtractionRetryConflictPreservesDiagnosticLimitPriority(t *testi
 				t.Fatalf("V32 held-conflict terminal overflow failed validation: %v", err)
 			}
 			if test.name == "relationship" {
+				wrongLastWall := wait
+				wrongLastWall.ProgressRetryConflictFirstWallMS--
+				wrongLastWall.ProgressRetryConflictLastWallMS--
+				if err := validateConvergenceWaits(
+					[]ConvergenceWaitObservation{wrongLastWall}, observationDetailV32,
+				); err == nil || !strings.Contains(err.Error(), "relationship failure transition fence") {
+					t.Fatalf("noncausal retry wall relaxed relationship fence: %v", err)
+				}
 				historical := wait
-				historical.ExtractionRetryConflicts = 0
-				historical.ExtractionRetryConflictFirstWallMS = 0
-				historical.ExtractionRetryConflictLastWallMS = 0
+				historical.ProgressRetryConflicts = 0
+				historical.ProgressRetryConflictFirstWallMS = 0
+				historical.ProgressRetryConflictLastWallMS = 0
 				if err := validateConvergenceWaits(
 					[]ConvergenceWaitObservation{historical}, observationDetailV30,
 				); err == nil {
@@ -1820,9 +1996,9 @@ func TestV32HeldExtractionRetryConflictPreservesDiagnosticLimitPriority(t *testi
 						tail.HTTPStatus = 0
 						tail.HTTPReason = ""
 						if !counted {
-							unrelated.ExtractionRetryConflicts = 0
-							unrelated.ExtractionRetryConflictFirstWallMS = 0
-							unrelated.ExtractionRetryConflictLastWallMS = 0
+							unrelated.ProgressRetryConflicts = 0
+							unrelated.ProgressRetryConflictFirstWallMS = 0
+							unrelated.ProgressRetryConflictLastWallMS = 0
 						}
 						err := validateConvergenceWaits(
 							[]ConvergenceWaitObservation{unrelated}, observationDetailV32,
@@ -1850,7 +2026,7 @@ func TestV32RetryConflictRelationshipFenceWithoutSuccessfulProbe(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			tracker := convergenceProgressTracker{
-				coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+				coalesceTransitionProgress: true, summarizeProgressRetryConflicts: true,
 			}
 			for index := 0; index < maxConvergenceTransitions-1; index++ {
 				class := "transport"
@@ -1902,6 +2078,14 @@ func TestV32RetryConflictRelationshipFenceWithoutSuccessfulProbe(t *testing.T) {
 			}
 			if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, observationDetailV32); err != nil {
 				t.Fatalf("errors-only retry-conflict boundary failed validation: %v", err)
+			}
+			wrongLastWall := wait
+			wrongLastWall.ProgressRetryConflictFirstWallMS--
+			wrongLastWall.ProgressRetryConflictLastWallMS--
+			if err := validateConvergenceWaits(
+				[]ConvergenceWaitObservation{wrongLastWall}, observationDetailV32,
+			); err == nil || !strings.Contains(err.Error(), "relationship failure transition fence") {
+				t.Fatalf("errors-only noncausal retry wall relaxed relationship fence: %v", err)
 			}
 
 			unrelated := wait

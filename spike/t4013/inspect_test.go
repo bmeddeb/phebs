@@ -690,9 +690,13 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 		reason string
 	}{
 		{name: "stale", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailStale, reason: httpReason409Stale},
+		{name: "authority", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailAuthority, reason: httpReason409Stale},
 		{name: "control absent", status: http.StatusConflict, detail: apiresponse.ObservationProgressDetailControlAbsent, reason: httpReason409ControlAbsent},
 		{name: "store", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailStore, reason: httpReason500Store},
+		{name: "authorize", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailAuthorize, reason: httpReason500Store},
 		{name: "projection response", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailProjection, reason: httpReason500Response},
+		{name: "encode response", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailEncode, reason: httpReason500Response},
+		{name: "bound response", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailBound, reason: httpReason500Response},
 		{name: "projection control", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailControl, reason: httpReason500Control},
 		{name: "projection publication", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailPublication, reason: httpReason500Publication},
 		{name: "projection planning", status: http.StatusInternalServerError, detail: apiresponse.ObservationProgressDetailPlanning, reason: httpReason500Planning},
@@ -726,13 +730,20 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 	}
 }
 
-func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T) {
+func TestProfileInspectorClassifiesClosedProgressRetryConflicts(t *testing.T) {
 	tests := []struct {
-		name   string
-		detail string
+		name             string
+		path             string
+		detail           string
+		historicalReason string
 	}{
-		{name: "stale", detail: apiresponse.ExtractionProgressDetailStale},
-		{name: "authority", detail: apiresponse.ExtractionProgressDetailAuthority},
+		{name: "observation stale", path: apiresponse.ObservationProgressPath, detail: apiresponse.ObservationProgressDetailStale, historicalReason: httpReason409Stale},
+		{name: "observation authority", path: apiresponse.ObservationProgressPath, detail: apiresponse.ObservationProgressDetailAuthority, historicalReason: httpReason409Stale},
+		{name: "extraction stale", path: apiresponse.ExtractionProgressPath, detail: apiresponse.ExtractionProgressDetailStale, historicalReason: httpReasonOther},
+		{name: "extraction authority", path: apiresponse.ExtractionProgressPath, detail: apiresponse.ExtractionProgressDetailAuthority, historicalReason: httpReasonOther},
+		{name: "caller changed", path: apiresponse.CallerGenerationProgressPath, detail: apiresponse.CallerGenerationProgressDetailChanged, historicalReason: httpReasonOther},
+		{name: "caller authority", path: apiresponse.CallerGenerationProgressPath, detail: apiresponse.CallerGenerationProgressDetailAuthority, historicalReason: httpReasonOther},
+		{name: "caller authorization", path: apiresponse.CallerGenerationProgressPath, detail: apiresponse.CallerGenerationProgressDetailAuthorization, historicalReason: httpReasonOther},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -750,7 +761,7 @@ func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T
 			}
 			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
 			var target struct{}
-			err := inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
+			err := inspector.get(t.Context(), profile, test.path, &target)
 			var statusErr *privateHTTPStatusError
 			if !errors.As(err, &statusErr) {
 				t.Fatalf("status error = %v", err)
@@ -765,13 +776,13 @@ func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T
 				t.Fatalf("diagnostic = %+v", diagnostic)
 			}
 			inspector.contract = profileInspectionV21
-			err = inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
-			if !errors.As(err, &statusErr) || statusErr.Reason != httpReasonOther {
+			err = inspector.get(t.Context(), profile, test.path, &target)
+			if !errors.As(err, &statusErr) || statusErr.Reason != test.historicalReason {
 				t.Fatalf("historical status error = %+v, %v", statusErr, err)
 			}
 			inspector.contract = profileInspectionV32
 			var unrelated *privateHTTPStatusError
-			err = inspector.get(t.Context(), profile, "/api/observation-progress", &target)
+			err = inspector.get(t.Context(), profile, "/api/repo-status", &target)
 			if !errors.As(err, &unrelated) || unrelated.Reason != httpReasonOther {
 				t.Fatalf("unrelated endpoint status error = %+v, %v", unrelated, err)
 			}
