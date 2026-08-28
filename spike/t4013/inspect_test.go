@@ -725,6 +725,46 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 	}
 }
 
+func TestProfileInspectorClassifiesClosedExtractionProgressStatuses(t *testing.T) {
+	tests := []struct {
+		name   string
+		detail string
+	}{
+		{name: "stale", detail: apiresponse.ExtractionProgressDetailStale},
+		{name: "authority", detail: apiresponse.ExtractionProgressDetailAuthority},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+				response.Header().Set("Content-Type", "application/problem+json")
+				response.WriteHeader(http.StatusConflict)
+				_, _ = fmt.Fprintf(response,
+					`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":409,"detail":%q}`,
+					request.Host, test.detail,
+				)
+			}))
+			defer server.Close()
+			inspector := &profileInspector{client: server.Client(), credential: "private-test-token"}
+			profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
+			var target struct{}
+			err := inspector.get(t.Context(), profile, apiresponse.ExtractionProgressPath, &target)
+			var statusErr *privateHTTPStatusError
+			if !errors.As(err, &statusErr) {
+				t.Fatalf("status error = %v", err)
+			}
+			if statusErr.Status != http.StatusConflict ||
+				statusErr.Reason != httpReason409Stale {
+				t.Fatalf("status error = status=%d reason=%q, %v", statusErr.Status, statusErr.Reason, err)
+			}
+			diagnostic := classifyConvergenceInspection(err)
+			if diagnostic.class != "status" || diagnostic.httpStatus != http.StatusConflict ||
+				diagnostic.httpReason != httpReason409Stale {
+				t.Fatalf("diagnostic = %+v", diagnostic)
+			}
+		})
+	}
+}
+
 func TestProfileInspectorPreservesHistoricalResponseErrors(t *testing.T) {
 	tests := []struct {
 		name     string
