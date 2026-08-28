@@ -1693,8 +1693,14 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 		if index%2 == 1 {
 			class = "transport"
 		}
+		probe := convergenceProbe("extraction_publication", index)
+		if index == maxConvergenceTransitions-1 {
+			class = "pending"
+			probe = convergenceProbe("relationship_publication", index)
+			probe.RelationshipFailureClass = relationshipFailureCurrentControl
+		}
 		tracker.observe(
-			convergenceProbe("extraction_publication", index),
+			probe,
 			convergenceInspectionDiagnostic{class: class}, time.Duration(index+1)*time.Millisecond,
 		)
 	}
@@ -1711,6 +1717,16 @@ func TestV32ExtractionRetryConflictDoesNotHideOtherTransitionsOrOverflow(t *test
 		PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "diagnostic_limit",
 		time.Minute, time.Now().Add(-2*time.Second), tracker,
 	)
+	wait := run.observation.ConvergenceWaits[0]
+	tail := wait.InspectionTransitions[len(wait.InspectionTransitions)-1]
+	if tail.RelationshipFailureClass != relationshipFailureCurrentControl ||
+		wait.RelationshipFailureClass != "" ||
+		!isExtractionRetryConflictDiagnostic(
+			wait.LastInspectionStage, wait.LastInspectionClass,
+			wait.LastInspectionHTTPStatus, wait.LastInspectionHTTPReason,
+		) {
+		t.Fatalf("retry-conflict overflow fence = %+v", wait)
+	}
 	if err := validateConvergenceWaits(run.observation.ConvergenceWaits, observationDetailV32); err != nil {
 		t.Fatalf("V32 retry-conflict overflow failed validation: %v", err)
 	}
@@ -1795,6 +1811,116 @@ func TestV32HeldExtractionRetryConflictPreservesDiagnosticLimitPriority(t *testi
 				); err == nil {
 					t.Fatal("V31 accepted the V32 diagnostic-limit relationship fence")
 				}
+				for _, counted := range []bool{false, true} {
+					t.Run(fmt.Sprintf("unrelated-retry-count-%t", counted), func(t *testing.T) {
+						unrelated := wait
+						unrelated.InspectionTransitions = slices.Clone(wait.InspectionTransitions)
+						tail := &unrelated.InspectionTransitions[len(unrelated.InspectionTransitions)-1]
+						tail.Class = "transport"
+						tail.HTTPStatus = 0
+						tail.HTTPReason = ""
+						if !counted {
+							unrelated.ExtractionRetryConflicts = 0
+							unrelated.ExtractionRetryConflictFirstWallMS = 0
+							unrelated.ExtractionRetryConflictLastWallMS = 0
+						}
+						err := validateConvergenceWaits(
+							[]ConvergenceWaitObservation{unrelated}, observationDetailV32,
+						)
+						if err == nil || !strings.Contains(err.Error(), "relationship failure transition fence") {
+							t.Fatalf("unrelated retry evidence relaxed relationship fence: %v", err)
+						}
+					})
+				}
+			}
+		})
+	}
+}
+
+func TestV32RetryConflictRelationshipFenceWithoutSuccessfulProbe(t *testing.T) {
+	retry := convergenceInspectionDiagnostic{
+		class: "status", httpStatus: http.StatusConflict, httpReason: httpReason409Stale,
+	}
+	for _, test := range []struct {
+		name           string
+		retryOverflows bool
+	}{
+		{name: "held-conflict-is-tail"},
+		{name: "conflict-is-overflow-inspection", retryOverflows: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tracker := convergenceProgressTracker{
+				coalesceTransitionProgress: true, summarizeExtractionRetryConflicts: true,
+			}
+			for index := 0; index < maxConvergenceTransitions-1; index++ {
+				class := "transport"
+				if index%2 == 1 {
+					class = "response"
+				}
+				tracker.observe(
+					convergenceProbe("extraction_publication", index),
+					convergenceInspectionDiagnostic{class: class},
+					time.Duration(index+1)*time.Millisecond,
+				)
+			}
+			retryProbe := convergenceProbe("extraction_publication", "retry")
+			relationshipProbe := convergenceProbe("relationship_publication", "terminal")
+			relationshipProbe.RelationshipFailureClass = relationshipFailureAuthorityGap
+			if test.retryOverflows {
+				if tracker.observe(
+					relationshipProbe, convergenceInspectionDiagnostic{class: "terminal"},
+					time.Duration(maxConvergenceTransitions)*time.Millisecond,
+				) {
+					t.Fatal("relationship transition exceeded before slot 32")
+				}
+				if !tracker.observe(
+					retryProbe, retry, time.Duration(maxConvergenceTransitions+1)*time.Millisecond,
+				) {
+					t.Fatal("retry conflict did not remain the overflow inspection")
+				}
+			} else {
+				if tracker.observe(
+					retryProbe, retry, time.Duration(maxConvergenceTransitions)*time.Millisecond,
+				) {
+					t.Fatal("held conflict exceeded before displacement")
+				}
+				if !tracker.observe(
+					relationshipProbe, convergenceInspectionDiagnostic{class: "terminal"},
+					time.Duration(maxConvergenceTransitions+1)*time.Millisecond,
+				) {
+					t.Fatal("relationship terminal did not remain the overflow inspection")
+				}
+			}
+			run := &execution{plan: Plan{Schema: PlanSchemaV32}}
+			run.recordConvergenceWait(
+				PreparedProfile{Name: "semantic-262144-v1"}, "a", "stale-worker", "diagnostic_limit",
+				time.Minute, time.Now().Add(-time.Second), tracker,
+			)
+			wait := run.observation.ConvergenceWaits[0]
+			if wait.FirstStage != convergenceNotInspected || wait.LastStage != convergenceNotInspected {
+				t.Fatalf("errors-only wait invented successful progress: %+v", wait)
+			}
+			if err := validateConvergenceWaits([]ConvergenceWaitObservation{wait}, observationDetailV32); err != nil {
+				t.Fatalf("errors-only retry-conflict boundary failed validation: %v", err)
+			}
+
+			unrelated := wait
+			unrelated.InspectionTransitions = slices.Clone(wait.InspectionTransitions)
+			if test.retryOverflows {
+				unrelated.LastInspectionClass = "transport"
+				unrelated.LastInspectionHTTPStatus = 0
+				unrelated.LastInspectionHTTPReason = ""
+			} else {
+				tail := &unrelated.InspectionTransitions[len(unrelated.InspectionTransitions)-1]
+				tail.Class = "response"
+				tail.HTTPStatus = 0
+				tail.HTTPReason = ""
+			}
+			err := validateConvergenceWaits(
+				[]ConvergenceWaitObservation{unrelated}, observationDetailV32,
+			)
+			if err == nil || !strings.Contains(err.Error(), "relationship failure transition fence") {
+				t.Fatalf("errors-only unrelated retry relaxed relationship fence: %v", err)
 			}
 		})
 	}

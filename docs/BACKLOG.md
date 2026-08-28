@@ -2568,7 +2568,9 @@ Unknown 409s, transport, response, 5xx, control, terminal, different-stage,
 and overflow inspections remain distinct and fail closed. At 31 existing
 entries, a held conflict may become entry 32 and the next terminal remains the
 overflow inspection; preserve diagnostic-limit priority and its typed terminal
-projection. Tests must pin the incident-shaped 409/pending sequence, V31
+projection. Relax relationship-tail equality only when the counted recognized
+conflict is the retained tail or the overflow inspection; conflict-free and
+causally unrelated diagnostic limits retain the V31 fence. Tests must pin the incident-shaped 409/pending sequence, V31
 historical overflow, final/all-conflict materialization, non-benign flushes,
 31/32 boundaries, summary forgery rejection, schema coupling, current driver
 dispatch, and the existing last-inspection XOR.

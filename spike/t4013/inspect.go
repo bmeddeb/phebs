@@ -1319,9 +1319,9 @@ func classifyHTTPStatusReason(
 	case status == http.StatusConflict &&
 		(problem.Detail == apiresponse.ObservationProgressDetailStale ||
 			problem.Detail == apiresponse.ObservationProgressDetailAuthority ||
-			contract >= profileInspectionV32 && extractionProgressRequest(path) &&
+			(contract >= profileInspectionV32 && extractionProgressRequest(path) &&
 				(problem.Detail == apiresponse.ExtractionProgressDetailStale ||
-					problem.Detail == apiresponse.ExtractionProgressDetailAuthority)):
+					problem.Detail == apiresponse.ExtractionProgressDetailAuthority))):
 		return httpReason409Stale
 	case status == http.StatusConflict && problem.Detail == apiresponse.ObservationProgressDetailControlAbsent:
 		return httpReason409ControlAbsent

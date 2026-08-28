@@ -2126,18 +2126,43 @@ func validateExtractionRetryConflicts(value ConvergenceWaitObservation, detailVe
 		value.ExtractionRetryConflictLastWallMS > value.LastInspectionWallMS {
 		return errors.New("T40.13 extraction retry conflict summary is invalid")
 	}
+	// Same-stage pending coalescing deliberately removes individual conflict
+	// rows. The count and wall times are bounded aggregate evidence, not a
+	// per-conflict fence, so retain at least extraction-stage context.
 	for _, transition := range value.InspectionTransitions {
 		if transition.Stage == "extraction_publication" {
 			return nil
 		}
 	}
-	if value.LastInspectionStage != "extraction_publication" ||
-		value.LastInspectionClass != "status" ||
-		value.LastInspectionHTTPStatus != 409 ||
-		value.LastInspectionHTTPReason != httpReason409Stale {
+	if !isExtractionRetryConflictDiagnostic(
+		value.LastInspectionStage, value.LastInspectionClass,
+		value.LastInspectionHTTPStatus, value.LastInspectionHTTPReason,
+	) {
 		return errors.New("T40.13 extraction retry conflict summary lacks extraction evidence")
 	}
 	return nil
+}
+
+func isExtractionRetryConflictDiagnostic(stage, class string, status int, reason string) bool {
+	return stage == "extraction_publication" && class == "status" &&
+		status == 409 && reason == httpReason409Stale
+}
+
+func extractionRetryConflictOwnsDiagnosticLimit(
+	value ConvergenceWaitObservation,
+	last ConvergenceTransitionObservation,
+	detailVersion int,
+) bool {
+	if detailVersion < observationDetailV32 || !value.TransitionLimitExceeded ||
+		value.ExtractionRetryConflicts == 0 {
+		return false
+	}
+	return isExtractionRetryConflictDiagnostic(
+		last.Stage, last.Class, last.HTTPStatus, last.HTTPReason,
+	) || isExtractionRetryConflictDiagnostic(
+		value.LastInspectionStage, value.LastInspectionClass,
+		value.LastInspectionHTTPStatus, value.LastInspectionHTTPReason,
+	)
 }
 
 // CallerProgressObservation is the caller-generation probe reduced to its
@@ -2505,7 +2530,7 @@ func validateConvergenceTransitions(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
-		(detailVersion < observationDetailV32 || !value.TransitionLimitExceeded) &&
+		!extractionRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 relationship failure transition fence is invalid")
 	}
@@ -2697,7 +2722,7 @@ func validateConvergenceWithoutSuccessfulProbe(
 	}
 	last := value.InspectionTransitions[len(value.InspectionTransitions)-1]
 	if detailVersion >= observationDetailV16 &&
-		(detailVersion < observationDetailV32 || !value.TransitionLimitExceeded) &&
+		!extractionRetryConflictOwnsDiagnosticLimit(value, last, detailVersion) &&
 		last.RelationshipFailureClass != value.RelationshipFailureClass {
 		return errors.New("T40.13 unsuccessful relationship failure transition fence is invalid")
 	}

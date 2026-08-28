@@ -4210,9 +4210,9 @@ func (tracker *convergenceProgressTracker) observeTransition(
 	if tracker.coalesceTransitionProgress {
 		transition.FirstProgressSHA256 = probe.SHA256
 	}
-	if tracker.summarizeExtractionRetryConflicts && probe.Stage == "extraction_publication" &&
-		diagnostic.class == "status" && diagnostic.httpStatus == http.StatusConflict &&
-		diagnostic.httpReason == httpReason409Stale {
+	if tracker.summarizeExtractionRetryConflicts && isExtractionRetryConflictDiagnostic(
+		probe.Stage, diagnostic.class, diagnostic.httpStatus, diagnostic.httpReason,
+	) {
 		tracker.extractionRetryConflicts++
 		if tracker.extractionRetryConflictFirstAt == 0 {
 			tracker.extractionRetryConflictFirstAt = elapsed

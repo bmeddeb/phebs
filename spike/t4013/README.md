@@ -4546,7 +4546,10 @@ The 32-transition ceiling is unchanged. Unknown 409s, transport errors, 5xx,
 response/control failures, terminals, cross-stage probes, and overflow
 inspections remain distinct. With 31 existing entries, a held conflict can
 become entry 32; a following terminal remains the overflow inspection and the
-existing diagnostic-limit priority keeps its typed projection. V1–V31
+existing diagnostic-limit priority keeps its typed projection. The historical
+relationship-tail fence is relaxed only when that counted conflict is the
+retained tail or overflow inspection; unrelated and conflict-free limits remain
+strict. V1–V31
 classification and receipt validation remain exact. Fresh full-profile pass
 records use `t4013-full-profile-phase7-replay-v2` and bind a V32 plan.
 
