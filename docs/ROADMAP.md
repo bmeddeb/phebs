@@ -2558,6 +2558,25 @@ T40.13u replay/result gate and makes the reviewed branch eligible for
 integration; it does not exercise Phase 8 or later, authorize a freeze or
 ceremony, establish a scale/SLO claim, or close Epic 40.
 
+The integrated `t40r1-neutral-42` ceremony then stopped honestly in Phase 9
+after archive/restore. Exact source
+`4496d5e12ebc026e2a12e8011505207f6582aaf1`, plan
+`sha256:6818fa92a235ecad3978b48e3a6d6d4f67eba9e9647035d5eb2cd134207ae080`,
+and sealed source-free package
+`sha256:9bb96d6c0dc059f6f34573c0b4469f8968eaf8fe3b89009ab39312ce5f94ec74`
+show that restartable generation schedules were correctly absent after restore
+while imported extraction/resolver/caller job projections still described the
+discarded epoch. The retained failed extraction projection was therefore
+misread as a current terminal successor before a restored schedule existed.
+T40.13v is the active production correction: restore clears those three
+downstream pointer/timestamp/version triples with generation controls, retains
+all job history and the independent index projection, and lets the next exact
+generic or candidate writer rebind its returned pending row. The terminal
+oracle and every evidence/schema contract remain unchanged. Focused gates,
+independent review, and the small Phase-9 rehearsal precede any integration or
+new freeze; the sealed stop establishes no pipeline failure, Phase-9 pass,
+ceremony pass, release, Epic closure, or scale/SLO claim.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

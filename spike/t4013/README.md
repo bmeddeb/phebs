@@ -4608,3 +4608,42 @@ root, fixed completion lock, and host-pressure reservation.
 This closes only T40.13u's exact Phase-7 replay/result gate. It establishes no
 Phase-8-or-later handoff, complete ceremony, scale/SLO, freeze, release, or
 Epic-40 pass.
+
+## Neutral-42 Phase-9 stop and T40.13v
+
+The exact-main `t40r1-neutral-42` ceremony passed its frozen preflight and
+advanced through archive/restore, then returned status 1 with a verified
+source-free package. Its exact source is
+`4496d5e12ebc026e2a12e8011505207f6582aaf1`, plan digest is
+`sha256:6818fa92a235ecad3978b48e3a6d6d4f67eba9e9647035d5eb2cd134207ae080`,
+and sealed package digest is
+`sha256:9bb96d6c0dc059f6f34573c0b4469f8968eaf8fe3b89009ab39312ce5f94ec74`.
+The bundle is an honest stop, not a ceremony or Phase-9 pass.
+
+The restored store correctly omitted restartable generation schedules and
+derived publications. It did not invalidate repo-level latest extraction,
+resolver, and caller job projections, whose pointer, ordering timestamp, and
+writer-version marker still belonged to the pre-backup control epoch. Phase 9
+therefore saw no current extraction schedule but repeatedly read the same
+historical failed extraction projection and applied the unchanged current-job
+terminal oracle. The archive/restore boundary itself and server health had
+already passed; the evidence establishes a stale authority projection, not a
+new extraction failure.
+
+T40.13v moves invalidation to the production generation-control restore
+transaction. It unsets all three downstream projection triples without
+decoding or deleting any job history and leaves the independent index-job
+projection intact. The next generic enqueue now projects an exact coalesced
+extraction row just as the existing caller/resolver paths do. Candidate
+publication likewise projects its exact returned extraction successor, whether
+new or coalesced. Clearing the ordering timestamp is necessary: an older
+pending row cannot otherwise supersede the imported newer failed row.
+
+This adds one restore-only repository-table update inside an existing
+transaction. Each affected writer adds at most one guarded point update inside
+its existing transaction; there is no extra round trip, lock, history scan,
+requeue, backfill, deletion, child, or schema/evidence change. The current
+terminal oracle remains strict for a genuinely current failed successor.
+Focused normal/race, live recovery, vet/docs, independent review, and the small
+Phase-9 archive/restore rehearsal remain required before integration or any
+new freeze. A full ceremony is not required to test this correction.

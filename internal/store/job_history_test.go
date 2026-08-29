@@ -679,6 +679,109 @@ func TestRepoStatusesProjectsOnlyClosedLatestExtractionFailure(t *testing.T) {
 	}
 }
 
+func TestRestoreClearsDownstreamJobProjectionsAndRebindsPending(t *testing.T) {
+	s := newJobHistoryStore(t)
+	ctx := context.Background()
+	repository := "example.com/projection/restore-epoch"
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: repository, CloneURL: "https://example.com/restore-epoch.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	indexJob, err := s.CreateJob(ctx, JobIndex, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type projectionCase struct {
+		kind                        JobKind
+		pointer, createdAt, version string
+		versionValue                string
+	}
+	tests := []projectionCase{
+		{JobExtract, "latest_extraction_job", "latest_extraction_job_created_at", "latest_extraction_job_projection_version", extractionJobProjectionVersion},
+		{JobResolverCatalog, "latest_resolver_job", "latest_resolver_job_created_at", "latest_resolver_job_projection_version", resolverJobProjectionVersion},
+		{JobCallerLeaf, "latest_caller_job", "latest_caller_job_created_at", "latest_caller_job_projection_version", callerJobProjectionVersion},
+	}
+	created := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	pendingIDs := make(map[JobKind]string, len(tests))
+	for index, test := range tests {
+		pending := models.NewRecordID(string(test.kind), "restore-pending")
+		failed := models.NewRecordID(string(test.kind), "restore-failed")
+		requireJobHistoryQuery(t, ctx, s, fmt.Sprintf(`BEGIN;
+CREATE $pending CONTENT {
+	target: $target, status: 'pending', attempts: 1,
+	created_at: $pending_created, pending_key: $target, force: false
+} RETURN NONE;
+CREATE $failed CONTENT {
+	target: $target, status: 'failed', attempts: 2,
+	created_at: $failed_created, finished_at: $failed_created,
+	error: 'historical failure'
+} RETURN NONE;
+UPDATE $repository SET %s = $failed, %s = $failed_created,
+	%s = $version RETURN NONE;
+COMMIT;`, test.pointer, test.createdAt, test.version), map[string]any{
+			"pending":         pending,
+			"failed":          failed,
+			"repository":      repoID(repository),
+			"target":          repository,
+			"pending_created": created.Add(time.Duration(index) * time.Second),
+			"failed_created":  created.Add(time.Duration(index+10) * time.Second),
+			"version":         test.versionValue,
+		})
+		pendingIDs[test.kind] = pending.String()
+	}
+	assertProjection := func(status RepoStatus, kind JobKind, want JobProjectionState, wantStatus JobStatus) {
+		t.Helper()
+		var state JobProjectionState
+		var projectedStatus JobStatus
+		switch kind {
+		case JobExtract:
+			state = status.LastExtractionJobState
+			if status.LastExtractionJob != nil {
+				projectedStatus = status.LastExtractionJob.Status
+			}
+		case JobResolverCatalog:
+			state = status.LastResolverJobState
+			if status.LastResolverJob != nil {
+				projectedStatus = status.LastResolverJob.Status
+			}
+		case JobCallerLeaf:
+			state = status.LastCallerJobState
+			if status.LastCallerJob != nil {
+				projectedStatus = status.LastCallerJob.Status
+			}
+		}
+		if state != want || projectedStatus != wantStatus {
+			t.Fatalf("%s projection = %s/%s, want %s/%s", kind, state, projectedStatus, want, wantStatus)
+		}
+	}
+	status := requireRepoJobStatus(t, ctx, s, repository)
+	for _, test := range tests {
+		assertProjection(status, test.kind, JobProjectionExact, StatusFailed)
+	}
+	if err := s.ClearAllGenerationScheduleStateForRestore(ctx); err != nil {
+		t.Fatal(err)
+	}
+	status = requireRepoJobStatus(t, ctx, s, repository)
+	if status.LastIndexJobState != JobProjectionExact || status.LastIndexJob == nil ||
+		status.LastIndexJob.ID != indexJob.ID {
+		t.Fatalf("retained index projection = %+v; want %s", status.LastIndexJob, indexJob.ID)
+	}
+	for _, test := range tests {
+		assertProjection(status, test.kind, JobProjectionUnavailable, "")
+		before, err := s.ListJobs(ctx, test.kind, "")
+		if err != nil || len(before) != 2 {
+			t.Fatalf("retained %s history = %+v, %v", test.kind, before, err)
+		}
+		rebound, err := s.EnqueuePending(ctx, test.kind, repository, false)
+		if err != nil || rebound.ID != pendingIDs[test.kind] || rebound.Attempts != 1 {
+			t.Fatalf("rebound %s job = %+v, %v; want %s", test.kind, rebound, err, pendingIDs[test.kind])
+		}
+		status = requireRepoJobStatus(t, ctx, s, repository)
+		assertProjection(status, test.kind, JobProjectionExact, StatusPending)
+	}
+}
+
 func TestRepoStatusesDoesNotDecodeTerminalHistory(t *testing.T) {
 	s := newJobHistoryStore(t)
 	ctx := context.Background()

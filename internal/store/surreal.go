@@ -2343,11 +2343,10 @@ func (j jobRec) toJob(kind JobKind) Job {
 }
 
 // projectLatestIndexJobSQL is embedded in every generic queue transaction that
-// can create an indexing job. Keeping the projection in those writer
-// transactions avoids replaying a table event for every retained job during a
-// database restore. Existing/coalesced rows deliberately do not establish
-// authority: only a newly created post-cutover job can make the projection
-// exact.
+// can create a job. Keeping the projection in those writer transactions avoids
+// replaying a table event for every retained job during a database restore.
+// Coalesced downstream rows are repaired separately below; an existing index
+// row deliberately does not establish current writer authority.
 const projectLatestIndexJobSQL = `
 IF $table = 'indexing_job' AND $created_job != NONE {
 	UPDATE type::record('repo', $target)
@@ -2394,6 +2393,24 @@ IF $table = 'resolver_catalog_job' AND $created_job != NONE {
 	RETURN NONE;
 };`
 
+// projectExtractionJobSQL projects the exact extraction successor returned by
+// candidate publication. That transaction can create or coalesce the row, so
+// the returned row rather than job-table history is the current writer proof.
+const projectExtractionJobSQL = `
+LET $extraction_projected = IF array::len($fanout) = 1
+	THEN $fanout[0] ELSE NONE END;
+IF $extraction_projected != NONE {
+	UPDATE type::record('repo', $extraction_projected.target)
+	SET latest_extraction_job = $extraction_projected.id,
+		latest_extraction_job_created_at = $extraction_projected.created_at,
+		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
+	WHERE latest_extraction_job_created_at = NONE
+		OR latest_extraction_job_created_at < $extraction_projected.created_at
+		OR (latest_extraction_job_created_at = $extraction_projected.created_at
+			AND latest_extraction_job < $extraction_projected.id)
+	RETURN NONE;
+};`
+
 // projectCallerJobSQL mirrors the caller_leaf_job arm of
 // projectLatestIndexJobSQL for domain transactions that create or coalesce a
 // caller successor outside the generic queue. Projecting the exact returned
@@ -2412,10 +2429,21 @@ IF $caller_projected != NONE {
 };`
 
 // projectExistingJobProjectionSQL is appended only where $job may be a
-// coalesced pending caller or resolver row. Newly created jobs are already
-// handled by projectLatestIndexJobSQL; these arms establish the current writer
-// marker for an exact pre-cutover pending row without scanning job history.
+// coalesced pending downstream row. Newly created jobs are already handled by
+// projectLatestIndexJobSQL; these arms establish the current writer marker for
+// the exact returned row without scanning job history.
 const projectExistingJobProjectionSQL = `
+IF $table = 'extraction_job' AND $created_job = NONE AND array::len($job) = 1 {
+	UPDATE type::record('repo', $target)
+	SET latest_extraction_job = $job[0].id,
+		latest_extraction_job_created_at = $job[0].created_at,
+		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
+	WHERE latest_extraction_job_created_at = NONE
+		OR latest_extraction_job_created_at < $job[0].created_at
+		OR (latest_extraction_job_created_at = $job[0].created_at
+			AND latest_extraction_job < $job[0].id)
+	RETURN NONE;
+};
 IF $table = 'caller_leaf_job' AND $created_job = NONE AND array::len($job) = 1 {
 	UPDATE type::record('repo', $target)
 	SET latest_caller_job = $job[0].id,

@@ -76,6 +76,26 @@ func finishPendingCandidateExtraction(
 	}
 }
 
+func candidateRepoStatus(
+	t *testing.T,
+	ctx context.Context,
+	s *store.Surreal,
+	repository string,
+) store.RepoStatus {
+	t.Helper()
+	statuses, err := s.RepoStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range statuses {
+		if status.Name == repository {
+			return status
+		}
+	}
+	t.Fatalf("repository %q is missing from status", repository)
+	return store.RepoStatus{}
+}
+
 func TestCandidateManifestGuardedPublicationAndIdempotentFanout(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
@@ -125,6 +145,28 @@ func TestCandidateManifestGuardedPublicationAndIdempotentFanout(t *testing.T) {
 	jobs, err = s.ListJobs(ctx, store.JobExtract, store.StatusPending)
 	if err != nil || len(jobs) != 1 || jobs[0].Target != repository {
 		t.Fatalf("initial fanout = %+v, %v; want one pending extraction", jobs, err)
+	}
+	originalJob := jobs[0]
+	if status := candidateRepoStatus(t, ctx, s, repository); status.LastExtractionJobState != store.JobProjectionExact ||
+		status.LastExtractionJob == nil || status.LastExtractionJob.Status != store.StatusPending {
+		t.Fatalf("initial extraction projection = %+v", status.LastExtractionJob)
+	}
+	if err := s.ClearAllGenerationScheduleStateForRestore(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if status := candidateRepoStatus(t, ctx, s, repository); status.LastExtractionJobState != store.JobProjectionUnavailable || status.LastExtractionJob != nil {
+		t.Fatalf("cleared extraction projection = %s/%+v", status.LastExtractionJobState, status.LastExtractionJob)
+	}
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatalf("restore-epoch candidate publication: %v", err)
+	}
+	jobs, err = s.ListJobs(ctx, store.JobExtract, store.StatusPending)
+	if err != nil || len(jobs) != 1 || jobs[0].ID != originalJob.ID {
+		t.Fatalf("restore-epoch fanout = %+v, %v; want coalesced %s", jobs, err, originalJob.ID)
+	}
+	if status := candidateRepoStatus(t, ctx, s, repository); status.LastExtractionJobState != store.JobProjectionExact ||
+		status.LastExtractionJob == nil || status.LastExtractionJob.Status != store.StatusPending {
+		t.Fatalf("rebound extraction projection = %+v", status.LastExtractionJob)
 	}
 
 	finishPendingCandidateExtraction(t, ctx, s)

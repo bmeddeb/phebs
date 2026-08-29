@@ -325,7 +325,7 @@ LET $catalog_fanout = IF array::len($published) != 1 THEN []
 			pending_key: $repository,
 			force: $catalog_force
 		} RETURN AFTER)
-	END;` + projectResolverJobSQL + `
+	END;` + projectExtractionJobSQL + projectResolverJobSQL + `
 RETURN IF array::len($fanout) = 1
 	AND array::len($catalog_fanout) = 1
 	AND (array::len($retired_caller) = 0

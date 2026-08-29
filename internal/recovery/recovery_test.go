@@ -372,6 +372,17 @@ connections:
 	); err != nil {
 		t.Fatalf("record pre-backup control outcome: %v", err)
 	}
+	extractionJobs, err := st.ListJobs(ctx, store.JobExtract, store.StatusPending)
+	if err != nil || len(extractionJobs) != 1 {
+		t.Fatalf("pre-backup extraction jobs = %+v, %v", extractionJobs, err)
+	}
+	extractionBeforeRestore := extractionJobs[0]
+	preRestoreStatus := requireRecoveryRepoStatus(t, ctx, st, names[0])
+	if preRestoreStatus.LastExtractionJobState != store.JobProjectionExact ||
+		preRestoreStatus.LastExtractionJob == nil ||
+		preRestoreStatus.LastExtractionJob.Status != store.StatusPending {
+		t.Fatalf("pre-backup extraction projection = %+v", preRestoreStatus.LastExtractionJob)
+	}
 	const (
 		retainedJobTarget = "recovery-fixture/retained-terminal-job"
 		retainedJobError  = "retained backup diagnostic: exact terminal failure"
@@ -522,6 +533,36 @@ connections:
 	assertRecoveryJobEqual(
 		t, retainedJobBeforeRestore, retainedJobAfterRestore,
 	)
+	extractionAfterRestore := requireRecoveryJob(
+		t, ctx, restored, store.JobExtract, store.StatusPending,
+		extractionBeforeRestore.ID,
+	)
+	assertRecoveryJobEqual(t, extractionBeforeRestore, extractionAfterRestore)
+	restoredStatus := requireRecoveryRepoStatus(t, ctx, restored, names[0])
+	if restoredStatus.LastExtractionJobState != store.JobProjectionUnavailable ||
+		restoredStatus.LastExtractionJob != nil ||
+		restoredStatus.LastCallerJobState != store.JobProjectionUnavailable ||
+		restoredStatus.LastCallerJob != nil ||
+		restoredStatus.LastResolverJobState != store.JobProjectionUnavailable ||
+		restoredStatus.LastResolverJob != nil {
+		t.Fatalf("restored downstream projections = %+v", restoredStatus)
+	}
+	reboundExtraction, err := restored.EnqueuePending(
+		ctx, store.JobExtract, names[0], false,
+	)
+	if err != nil || reboundExtraction.ID != extractionBeforeRestore.ID ||
+		reboundExtraction.NotBefore != nil {
+		t.Fatalf(
+			"restored extraction rebound = %+v, %v; want %s immediately pending",
+			reboundExtraction, err, extractionBeforeRestore.ID,
+		)
+	}
+	restoredStatus = requireRecoveryRepoStatus(t, ctx, restored, names[0])
+	if restoredStatus.LastExtractionJobState != store.JobProjectionExact ||
+		restoredStatus.LastExtractionJob == nil ||
+		restoredStatus.LastExtractionJob.Status != store.StatusPending {
+		t.Fatalf("rebound extraction projection = %+v", restoredStatus.LastExtractionJob)
+	}
 	lifecycleCursor, lifecycleRevision, err := restored.GetLifecycleCursor(ctx, "rotation")
 	if err != nil || lifecycleCursor != "generation-schedules" || lifecycleRevision != 1 {
 		t.Fatalf("restored lifecycle cursor = %q/%d, %v", lifecycleCursor, lifecycleRevision, err)
@@ -702,6 +743,26 @@ func requireRecoveryJob(
 	}
 	t.Fatalf("%s job %q is missing from %s history", status, id, kind)
 	return store.Job{}
+}
+
+func requireRecoveryRepoStatus(
+	t *testing.T,
+	ctx context.Context,
+	state *store.Surreal,
+	repository string,
+) store.RepoStatus {
+	t.Helper()
+	statuses, err := state.RepoStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range statuses {
+		if status.Name == repository {
+			return status
+		}
+	}
+	t.Fatalf("repository %q is missing from status", repository)
+	return store.RepoStatus{}
 }
 
 func assertRecoveryJobEqual(t *testing.T, before, after store.Job) {

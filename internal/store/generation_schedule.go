@@ -120,11 +120,22 @@ func (s *Surreal) generationResourceClassMigrationComplete(ctx context.Context) 
 // scheduler controls and extraction-domain roots without decoding them. Backup
 // archives intentionally omit the filesystem generations and bindings those
 // rows address, so retaining the rows would let an active schedule or current
-// domain pointer permanently mask the required rebuild. Immutable outcomes
-// remain available for exact reuse by the successor schedule.
+// domain pointer permanently mask the required rebuild. Downstream job
+// history remains precious, but its repo projections belong to this discarded
+// control epoch and stay unavailable until an exact successor writer rebinds
+// them. Immutable outcomes remain available for exact reuse by the successor
+// schedule.
 func (s *Surreal) ClearAllGenerationScheduleStateForRestore(ctx context.Context) error {
 	results, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
+UPDATE repo UNSET
+	latest_extraction_job, latest_extraction_job_created_at,
+	latest_extraction_job_projection_version,
+	latest_resolver_job, latest_resolver_job_created_at,
+	latest_resolver_job_projection_version,
+	latest_caller_job, latest_caller_job_created_at,
+	latest_caller_job_projection_version
+	RETURN NONE;
 DELETE generation_schedule_chunk RETURN NONE;
 DELETE generation_schedule_current RETURN NONE;
 DELETE generation_schedule_repository RETURN NONE;

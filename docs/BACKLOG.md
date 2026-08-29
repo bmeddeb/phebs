@@ -2619,6 +2619,47 @@ This satisfies T40.13u's expensive replay and result-review AC only; integration
 exact-main preflight, freeze, the complete ceremony, release, Epic closure,
 and scale/SLO evidence remain separate.
 
+**T40.13v · Restore-epoch downstream job projection authority**
+*(high production recovery correctness · needs the sealed neutral-42 stop)* —
+preserve `t40r1-neutral-42` as an honest Phase-9 archive/restore stop. Exact
+source `4496d5e12ebc026e2a12e8011505207f6582aaf1`, plan
+`sha256:6818fa92a235ecad3978b48e3a6d6d4f67eba9e9647035d5eb2cd134207ae080`,
+and source-free package
+`sha256:9bb96d6c0dc059f6f34573c0b4469f8968eaf8fe3b89009ab39312ce5f94ec74`
+show that restore correctly discarded restartable generation schedules but
+left repo-level extraction, resolver, and caller job projections in the
+imported control epoch. The unavailable restored schedule plus the retained
+historical failed extraction projection caused the current terminal oracle to
+stop before a restored successor could own that projection. This is neither a
+Phase-9 pass nor evidence of a new pipeline failure.
+
+AC: the restore-only generation-control reset must unset all three downstream
+job pointers, their ordering timestamps, and their writer-version markers in
+one transaction. Preserve durable job history and the independent index-job
+projection. A subsequent generic enqueue must project an exact coalesced
+pending extraction, resolver, or caller row even when that row predates the
+imported failed projection; candidate publication must do the same for its
+exact returned extraction successor. Do not scan, delete, rewrite, requeue, or
+backfill job history, and do not weaken the current terminal oracle. Retained
+plan/observation/receipt/store schemas and wire bytes stay exact.
+
+Tests must reproduce an older pending row behind a newer failed projection,
+prove all downstream projections become unavailable while history and the
+index projection survive, and prove generic and candidate writers rebind the
+same pending row. The real backup/offline-restore test must cross the production
+reset and rebind path. Focused normal/race, recovery, vet, docs, whitespace,
+independent exact-candidate review, and the small Phase-9 archive/restore
+rehearsal are the merge bar. A full ceremony is not a regression test.
+
+Steady-state cost: one restore-only repository-table update in the existing
+generation-control transaction; no extra round trip, lock, history scan, row
+deletion, backfill, or child. A coalesced generic extraction enqueue and a
+candidate publication each add at most one guarded repo-record point update in
+their existing transaction. Ordinary queries, sync, non-restore startup,
+lifecycle cadence, evidence bytes, caches, corpus/shard reads, memory/disk
+ceilings, and every deadline remain unchanged. Merge, freeze, full ceremony,
+release, Epic closure, and scale/SLO evidence remain separately unauthorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
