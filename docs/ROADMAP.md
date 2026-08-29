@@ -2625,6 +2625,21 @@ focused-race, vet, pinned-lint, module, docs, glossary, shell, and whitespace
 gates passed; two final independent reviews reported all severity counts zero.
 Integration can now be requested but remains separately unauthorized.
 
+T40.13x is integrated locally at exact source
+`356f155ba21a156bfbb26cd1d317feb0c0b8fe89`; push remains separate. T40.13y is
+the final bounded late-phase handoff gate before another expensive ceremony.
+It preserves the standalone teardown selector and introduces no production
+behavior: a V32 hybrid fixture retains an explicitly synthetic completed Phase
+1–8/global full-profile prefix, deletes every synthetic Phase 9–12 startup,
+wait, phase, collection, query, and teardown field, then runs the unchanged
+bounded archive/restore, collection, authorized-query, and teardown
+coordinators. The structural server remains live until teardown owns shutdown.
+The fast splice regression, exact-clean real-binary run, complete focused gates,
+and independent review remain pending. Even a pass establishes only the small
+completed late-phase handoff and custody-retirement protocol; full-corpus
+deletion cost, signed ceremony evidence, complete ceremony, scale/SLO, freeze,
+release, and Epic closure remain open.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

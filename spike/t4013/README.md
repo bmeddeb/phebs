@@ -4733,3 +4733,60 @@ Complete affected-package tests, focused race, vet, repository-pinned lint,
 module verification, docs, glossary, shell, and whitespace passed. Two final
 independent reviews reported critical/high/medium/low findings all zero. This
 is focused evidence only, not a complete ceremony or scale/SLO pass.
+
+## T40.13y combined Phase-9 through Phase-12 rehearsal
+
+The remaining bounded seam is the completed handoff from the real late phases
+into destructive custody retirement. The standalone Phase-12 selector passed
+with a receipt-valid synthetic Phase 1–11 fixture, while the T40.13x selector
+passed real Phases 9–11 but stopped its servers itself. T40.13y combines those
+boundaries without changing production code.
+
+Run only from an exact committed clean tree:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_LATE_PHASE_TEARDOWN_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathLatePhaseTeardownRehearsal$' \
+  -count=1 -v -timeout=35m
+```
+
+The fixture uses a frozen V32 plan, external `evidence/`, production run-root
+lock, prepared publication, and prepare→execute supervision. It starts from the
+existing receipt-valid completed observation but clones only the synthetic
+Phase 1–8 prefix: eight startup rows through `pressure-restart` and ten waits
+through `pressure-recovery`. Every synthetic Phase 9–12 phase, startup, wait,
+collection, authorized-query, and teardown field is removed. A fast regression
+requires that truncated value to fail completed-receipt construction.
+
+The selector then runs the unchanged bounded `archiveRestore`, `collection`,
+and `authorizedQueries` coordinators. It deliberately omits T40.13x's explicit
+post-phase search because that request occurs after Phase-11 metering. The
+structural server remains live, semantic is stopped, all meters and port
+reservations are closed, and Phase 12 alone owns tracked-session shutdown,
+both nonzero custody gauges, pre-delete receipt validation, checkpointing,
+descendant drain, exact recursive deletion, terminal publication, and protocol
+retirement. Require `Phase 9 through Phase 12 custody retirement boundary
+passed` followed by `PASS`.
+
+One healthy run builds the private toolchain once, authors the two existing
+bounded profiles, starts the semantic seed and four production-coordinator
+server lifetimes, performs one live backup/offline restore, one fresh 14-owner
+collection cycle, the fixed dual-profile queries, two whole-custody teardown
+gauges, recursive private-custody deletion, fsyncs, and bounded publication/
+retirement. The internal context is 30 minutes; the command alarm is 35 minutes.
+These bounds do not establish a full-custody deletion maximum.
+
+Success removes only the unique `phebs-t4013-late-teardown-*` parent after
+asserting terminal receipt validity, sibling/module preservation, lock lifetime,
+and final clean HEAD. Failure retains that complete parent. Depending on the
+commit point, custody may already be absent while external checkpoint, staged
+observation, or supervision authority remains. Do not rerun, resume, share, or
+purge it before process-absence and exact commit-point review.
+
+This hybrid test is intentionally honest: Phase 1–8 and the global frozen
+full-profile totals remain synthetic receipt evidence. A pass proves only the
+small real Phase 9–12 completed handoff and graceful retirement. It does not
+prove full-corpus deletion cost, signed ceremony evidence, hard-death recovery,
+a complete ceremony, release, Epic closure, or a scale/SLO claim.

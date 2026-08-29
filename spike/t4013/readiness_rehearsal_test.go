@@ -36,6 +36,7 @@ const archiveRestoreRehearsalEnvironment = "PHEBS_T4013_ARCHIVE_RESTORE_REHEARSA
 const collectionRehearsalEnvironment = "PHEBS_T4013_COLLECTION_REHEARSAL"
 const authorizedQueryRehearsalEnvironment = "PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL"
 const teardownRehearsalEnvironment = "PHEBS_T4013_TEARDOWN_REHEARSAL"
+const latePhaseTeardownRehearsalEnvironment = "PHEBS_T4013_LATE_PHASE_TEARDOWN_REHEARSAL"
 
 const maximumPressureRehearsalFilesystemBytes int64 = 16 << 30
 
@@ -574,6 +575,83 @@ func teardownRehearsalPreparedFixture(
 	}
 }
 
+func latePhaseTeardownObservation(plan Plan) (Observation, error) {
+	value := completedV25TeardownObservation(plan)
+	firstStartup := slices.IndexFunc(value.ServerStartups, func(startup ServerStartupObservation) bool {
+		return startup.Label == "archive-restore"
+	})
+	firstWait := slices.IndexFunc(value.ConvergenceWaits, func(wait ConvergenceWaitObservation) bool {
+		return wait.Label == "archive-restore"
+	})
+	if firstStartup < 0 || firstWait < 0 {
+		return Observation{}, errors.New("T40.13 late-phase fixture lacks its replacement boundary")
+	}
+	value.ServerStartups = slices.Clone(value.ServerStartups[:firstStartup])
+	value.ConvergenceWaits = slices.Clone(value.ConvergenceWaits[:firstWait])
+	for index := 8; index < len(value.Phases); index++ {
+		value.Phases[index] = PhaseObservation{Name: phaseOrder[index], Outcome: "not_run"}
+	}
+	value.Collection = nil
+	value.AuthorizedQuery = nil
+	value.Teardown = TeardownObservation{}
+	return value, nil
+}
+
+func TestLatePhaseTeardownObservationReplacesEverySyntheticLatePhase(t *testing.T) {
+	plan, err := frozenV32PlanWithHostToolchain(testSourceCommit, fakeHostToolchainV25())
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := latePhaseTeardownObservation(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(value.ServerStartups) != 8 ||
+		value.ServerStartups[len(value.ServerStartups)-1].Label != "pressure-restart" ||
+		len(value.ConvergenceWaits) != 10 ||
+		value.ConvergenceWaits[len(value.ConvergenceWaits)-1].Label != "pressure-recovery" ||
+		value.Collection != nil || value.AuthorizedQuery != nil || value.Teardown.Completed {
+		t.Fatalf(
+			"late-phase replacement boundary startups=%d waits=%d collection=%t teardown=%+v",
+			len(value.ServerStartups), len(value.ConvergenceWaits), value.Collection != nil, value.Teardown,
+		)
+	}
+	for index, phase := range value.Phases {
+		want := "succeeded"
+		if index >= 8 {
+			want = "not_run"
+		}
+		if phase.Name != phaseOrder[index] || phase.Outcome != want {
+			t.Fatalf("late-phase replacement phase %d = %+v, want outcome %s", index, phase, want)
+		}
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	partialBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildReceipt(planBytes, partialBytes, PlanDigest(planBytes)); err == nil {
+		t.Fatal("truncated late-phase fixture produced a completed receipt")
+	}
+
+	completed := completedV25TeardownObservation(plan)
+	value.ServerStartups = append(value.ServerStartups, completed.ServerStartups[8:]...)
+	value.ConvergenceWaits = append(value.ConvergenceWaits, completed.ConvergenceWaits[10:]...)
+	copy(value.Phases[8:], completed.Phases[8:])
+	value.Collection = completed.Collection
+	value.Teardown = completed.Teardown
+	observationBytes, err := MarshalObservation(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildReceipt(planBytes, observationBytes, PlanDigest(planBytes)); err != nil {
+		t.Fatalf("reconstructed late-phase receipt: %v", err)
+	}
+}
+
 // TestProductionPathTeardownRehearsal is separate from the shared readiness
 // fixture because the production coordinator destroys its exact custody root.
 // Prior phases are represented by a receipt-valid source-free fixture; only
@@ -710,7 +788,166 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 	if err := run.teardown(); err != nil {
 		t.Fatal(err)
 	}
+	assertCompletedTeardownRehearsal(t, ctx, runRoot, sentinelPath, sentinel, run, lock)
+	complete = true
+	t.Logf("teardown exact source commit: %s", sourceCommit)
+	t.Log("teardown custody retirement boundary passed")
+}
 
+// TestProductionPathLatePhaseTeardownRehearsal replaces the receipt fixture's
+// synthetic Phase 9-12 suffix with the real bounded archive/restore,
+// collection, authorized-query, and teardown coordinators. The completed
+// Phase 1-8 prefix and global full-profile oracle remain explicitly synthetic.
+func TestProductionPathLatePhaseTeardownRehearsal(t *testing.T) {
+	if os.Getenv(readinessRehearsalEnvironment) != "1" ||
+		os.Getenv(latePhaseTeardownRehearsalEnvironment) != "1" {
+		t.Skip("set " + readinessRehearsalEnvironment + "=1 and " +
+			latePhaseTeardownRehearsalEnvironment + "=1 to run the late-phase teardown rehearsal")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Minute)
+	defer cancel()
+	moduleRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	moduleRoot, err = filepath.EvalSymlinks(moduleRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceCommit, err := gitOutputForContract(ctx, moduleRoot, true, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		t.Fatal(err)
+	}
+	runRoot, err := os.MkdirTemp("", "phebs-t4013-late-teardown-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRoot, err = filepath.EvalSymlinks(runRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer retainFailedDiagnosticWorkspace(t, runRoot)
+	custody := filepath.Join(runRoot, "custody")
+	evidence := filepath.Join(runRoot, "evidence")
+	for _, path := range []string{custody, evidence} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if custody == moduleRoot || isWithin(custody, moduleRoot) || isWithin(moduleRoot, custody) {
+		t.Fatal("late-phase teardown custody overlaps the module root")
+	}
+	sentinelPath := filepath.Join(runRoot, "outside-custody")
+	const sentinel = "late-phase teardown sibling must survive\n"
+	if err := os.WriteFile(sentinelPath, []byte(sentinel), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	toolchain, err := buildWorkingTreeToolchain(ctx, moduleRoot, custody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structural, semantic, reservations, err := prepareLatePhaseRehearsalProfiles(
+		ctx, moduleRoot, custody,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := releaseLoopbackAddresses(reservations); err != nil {
+			t.Errorf("release late-phase profile reservations: %v", err)
+		}
+	}()
+	structural.Name = t401.StructuralProfileName
+	semantic.Name = t401.SemanticProfileName
+	hostToolchain, err := observeHostToolchain(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := frozenV32PlanWithHostToolchain(sourceCommit, hostToolchain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBytes, err := MarshalPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostTools, err := bindHostToolchainForPlan(ctx, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation, err := latePhaseTeardownObservation(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, err := lockRunRoot(runRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = lock.Close() }()
+	run := &execution{
+		ctx: ctx, moduleRoot: moduleRoot, workspace: custody,
+		plan: plan, planBytes: planBytes, observation: observation,
+		observationPath: filepath.Join(evidence, "observation.json"),
+		preparedPath:    filepath.Join(evidence, "prepared.json"),
+		toolchain:       toolchain,
+		hostTools:       hostTools,
+		runRootLock:     lock,
+	}
+	defer cleanupLatePhaseRehearsal(t, run, custody)
+	attachTestSupervision(t, run, teardownRehearsalPreparedFixture(
+		PlanDigest(planBytes), toolchain.controlsDigest, structural, semantic,
+	))
+	result := runLatePhaseRehearsal(
+		t, ctx, run, toolchain, structural, semantic, reservations,
+	)
+	searchAuthorityAfter, err := inspectSearchAuthorityFence(ctx, result.structuralProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if searchAuthorityAfter != result.searchAuthorityBefore {
+		t.Fatal("late-phase authorized search changed exact search authority")
+	}
+	if len(run.observation.ServerStartups) != 11 || len(run.observation.ConvergenceWaits) != 14 ||
+		len(run.portReservations) != 0 || len(run.activeMeters) != 0 || run.structural == nil ||
+		run.semantic != nil {
+		t.Fatalf(
+			"late-phase handoff startups=%d waits=%d reservations=%d meters=%d structural=%t semantic=%t",
+			len(run.observation.ServerStartups), len(run.observation.ConvergenceWaits),
+			len(run.portReservations), len(run.activeMeters), run.structural != nil, run.semantic != nil,
+		)
+	}
+	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+		t.Fatalf("pre-teardown exact checkout: %v", err)
+	}
+	if err := run.verifyFrozenHostToolchain(); err != nil {
+		t.Fatal(err)
+	}
+	if err := run.validateCompletedObservationBeforeTeardown(); err != nil {
+		t.Fatalf("late-phase pre-teardown receipt: %v", err)
+	}
+	run.startPhase(11)
+	if err := run.teardown(); err != nil {
+		t.Fatal(err)
+	}
+	assertCompletedTeardownRehearsal(t, ctx, runRoot, sentinelPath, sentinel, run, lock)
+	t.Logf("late-phase teardown exact source commit: %s", sourceCommit)
+	t.Log("Phase 9 through Phase 12 custody retirement boundary passed")
+}
+
+func assertCompletedTeardownRehearsal(
+	t *testing.T,
+	ctx context.Context,
+	runRoot string,
+	sentinelPath string,
+	sentinel string,
+	run *execution,
+	lock *runRootLock,
+) {
+	t.Helper()
 	phase := run.observation.Phases[11]
 	if phase.Name != "teardown" || phase.Outcome != "succeeded" || !phase.OracleExact ||
 		phase.Metrics.DataLogicalBytes <= 0 || phase.Metrics.DataAllocatedBytes <= 0 ||
@@ -719,31 +956,32 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 		t.Fatalf("teardown phase observation = %+v, teardown=%+v", phase, run.observation.Teardown)
 	}
 	if !run.observationPersisted || run.checkpointPersisted || len(run.liveServers) != 0 ||
-		run.structural != nil || run.semantic != nil || server.stopErr != nil {
+		run.structural != nil || run.semantic != nil || run.serverShutdownErr != nil ||
+		len(run.portReservations) != 0 {
 		t.Fatalf(
-			"teardown terminal state persisted=%t checkpoint=%t servers=%d structural=%t semantic=%t stop=%v",
+			"teardown terminal state persisted=%t checkpoint=%t servers=%d structural=%t semantic=%t reservations=%d stop=%v",
 			run.observationPersisted, run.checkpointPersisted, len(run.liveServers),
-			run.structural != nil, run.semantic != nil, server.stopErr,
+			run.structural != nil, run.semantic != nil, len(run.portReservations), run.serverShutdownErr,
 		)
 	}
-	if err := confirmCustodyDeletionDurable(custody); err != nil {
+	if err := confirmCustodyDeletionDurable(run.workspace); err != nil {
 		t.Fatal(err)
 	}
 	if err := confirmCustodySupervisionRetired(
-		custody, PlanDigest(planBytes), run.supervision.Token(), custodyOperationExecute,
+		run.workspace, PlanDigest(run.planBytes), run.supervision.Token(), custodyOperationExecute,
 		run.checkpointDigest,
 	); err != nil {
 		t.Fatal(err)
 	}
 	for _, path := range []string{
-		preparedPath, observationPath + ".tmp", observationPath + ".teardown",
-		observationPath + ".teardown.tmp",
+		run.preparedPath, run.observationPath + ".tmp", run.observationPath + ".teardown",
+		run.observationPath + ".teardown.tmp",
 	} {
 		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("retired teardown artifact %s = %v", path, err)
 		}
 	}
-	raw, err := os.ReadFile(observationPath)
+	raw, err := os.ReadFile(run.observationPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,11 +992,11 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 	if err := ValidateObservation(final); err != nil {
 		t.Fatal(err)
 	}
-	receiptRaw, err := BuildReceipt(planBytes, raw, PlanDigest(planBytes))
+	receiptRaw, err := BuildReceipt(run.planBytes, raw, PlanDigest(run.planBytes))
 	if err != nil {
 		t.Fatal(err)
 	}
-	receipt, err := DecodeReceipt(receiptRaw, plan)
+	receipt, err := DecodeReceipt(receiptRaw, run.plan)
 	if err != nil || receipt.Outcome != "completed" || receipt.Decision.Selected != "continue" ||
 		!receipt.Teardown.Completed {
 		t.Fatalf("teardown receipt = %+v, %v", receipt, err)
@@ -766,7 +1004,7 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 	if got, err := os.ReadFile(sentinelPath); err != nil || string(got) != sentinel {
 		t.Fatalf("teardown sibling = %q, %v", got, err)
 	}
-	if _, err := os.Lstat(moduleRoot); err != nil {
+	if _, err := os.Lstat(run.moduleRoot); err != nil {
 		t.Fatalf("teardown changed module root: %v", err)
 	}
 	if contender, err := lockRunRoot(runRoot); err == nil {
@@ -785,12 +1023,9 @@ func TestProductionPathTeardownRehearsal(t *testing.T) {
 	if err := reacquired.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCleanCheckoutWithGit(ctx, moduleRoot, sourceCommit, true); err != nil {
+	if err := verifyCleanCheckoutWithGit(ctx, run.moduleRoot, run.plan.SourceCommit, true); err != nil {
 		t.Fatalf("terminal exact checkout: %v", err)
 	}
-	complete = true
-	t.Logf("teardown exact source commit: %s", sourceCommit)
-	t.Log("teardown custody retirement boundary passed")
 }
 
 func rehearseStructuralPressureBoundary(
@@ -1096,44 +1331,86 @@ func rehearseStructuralCollectionBoundary(
 	t.Log("structural collection fresh-cycle boundary passed")
 }
 
-func rehearseAuthorizedQueryBoundary(
-	t *testing.T,
+type latePhaseRehearsalResult struct {
+	structuralProfile       PreparedProfile
+	searchAuthorityBefore   string
+	firstSearch             authorizedQueryAttempt
+	firstSearchAttemptCount int
+}
+
+func prepareLatePhaseRehearsalProfiles(
 	ctx context.Context,
 	moduleRoot string,
 	workspace string,
-	toolchain privateToolchain,
-) {
-	t.Helper()
-	semanticProfile, err := prepareProjectionProfileNamed(
+) (PreparedProfile, PreparedProfile, map[string]net.Listener, error) {
+	semantic, err := prepareProjectionProfileNamed(
 		ctx, moduleRoot, workspace, "semantic", "semantic-authorized-query",
 	)
 	if err != nil {
-		t.Fatal(err)
+		return PreparedProfile{}, PreparedProfile{}, nil, err
 	}
-	semanticSeed, err := launchPrivateServer(
-		ctx, semanticProfile, toolchain, "rehearsal-authorized-query-semantic-seed",
-	)
+	reservations, err := reserveLoopbackAddresses(semantic.Address)
 	if err != nil {
-		t.Fatal(err)
+		return PreparedProfile{}, PreparedProfile{}, nil, err
 	}
+	structural, prepareErr := prepareProjectionProfileNamed(
+		ctx, moduleRoot, workspace, "structural", "structural-authorized-query",
+	)
+	if prepareErr != nil {
+		return PreparedProfile{}, PreparedProfile{}, nil, errors.Join(
+			prepareErr, releaseLoopbackAddresses(reservations),
+		)
+	}
+	structuralReservation, err := reserveLoopbackAddresses(structural.Address)
+	if err != nil {
+		return PreparedProfile{}, PreparedProfile{}, nil, errors.Join(
+			err, releaseLoopbackAddresses(reservations),
+		)
+	}
+	reservations[structural.Address] = structuralReservation[structural.Address]
+	return structural, semantic, reservations, nil
+}
+
+func cleanupLatePhaseRehearsal(t *testing.T, run *execution, workspace string) {
+	t.Helper()
+	if run.observation.AuthorizedQuery != nil {
+		t.Logf("authorized-query failure projection: %+v", run.observation.AuthorizedQuery)
+	}
+	runStopErr := run.stopServers()
+	for active := range run.activeMeters {
+		if _, err := run.finishMeter(active, nil); err != nil {
+			t.Errorf("finish late-phase diagnostic meter; retained at %s: %v", workspace, err)
+		}
+	}
+	if run.supervision != nil {
+		runStopErr = errors.Join(runStopErr, run.supervision.Close())
+	}
+	if runStopErr != nil {
+		t.Errorf("stop late-phase diagnostic; retained at %s: %v", workspace, runStopErr)
+	}
+}
+
+func runLatePhaseRehearsal(
+	t *testing.T,
+	ctx context.Context,
+	run *execution,
+	toolchain privateToolchain,
+	structuralProfile PreparedProfile,
+	semanticProfile PreparedProfile,
+	portReservations map[string]net.Listener,
+) latePhaseRehearsalResult {
+	t.Helper()
+	var semanticSeed *privateServer
 	var structuralServer *privateServer
-	var portReservations map[string]net.Listener
-	var run *execution
-	complete := false
+	handedOff := false
 	defer func() {
-		if complete {
+		if handedOff {
 			return
 		}
-		var runStopErr error
-		if run != nil {
-			if run.observation.AuthorizedQuery != nil {
-				t.Logf("authorized-query failure projection: %+v", run.observation.AuthorizedQuery)
-			}
-			runStopErr = run.stopServers()
-			for active := range run.activeMeters {
-				if _, err := run.finishMeter(active, nil); err != nil {
-					t.Errorf("finish authorized-query diagnostic meter; retained at %s: %v", workspace, err)
-				}
+		runStopErr := run.stopServers()
+		for active := range run.activeMeters {
+			if _, err := run.finishMeter(active, nil); err != nil {
+				t.Errorf("finish late-phase diagnostic meter; retained at %s: %v", run.workspace, err)
 			}
 		}
 		var semanticStopErr error
@@ -1144,11 +1421,29 @@ func rehearseAuthorizedQueryBoundary(
 		if structuralServer != nil {
 			structuralStopErr = structuralServer.stop(30 * time.Second)
 		}
-		reservationErr := releaseLoopbackAddresses(portReservations)
-		if err := errors.Join(structuralStopErr, semanticStopErr, runStopErr, reservationErr); err != nil {
-			t.Errorf("stop authorized-query diagnostic; retained at %s: %v", workspace, err)
+		if err := errors.Join(
+			runStopErr, semanticStopErr, structuralStopErr,
+			releaseLoopbackAddresses(portReservations),
+		); err != nil {
+			t.Errorf("stop late-phase diagnostic; retained at %s: %v", run.workspace, err)
 		}
 	}()
+
+	var err error
+	semanticListener := portReservations[semanticProfile.Address]
+	if semanticListener == nil {
+		t.Fatal("semantic late-phase address reservation is missing")
+	}
+	if err := semanticListener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	delete(portReservations, semanticProfile.Address)
+	semanticSeed, err = launchPrivateServer(
+		ctx, semanticProfile, toolchain, "rehearsal-authorized-query-semantic-seed",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := awaitPrivateServerHealth(
 		ctx, semanticSeed, semanticProfile, "rehearsal-authorized-query-semantic-seed", 2*time.Minute,
 	); err != nil {
@@ -1156,19 +1451,19 @@ func rehearseAuthorizedQueryBoundary(
 	}
 	semanticA := awaitReadinessSnapshot(t, ctx, semanticProfile, "a", 12*time.Minute)
 
-	// Keep the semantic port occupied until structural is listening; the profile
-	// address helper intentionally releases its listener.
-	structuralProfile, err := prepareProjectionProfileNamed(
-		ctx, moduleRoot, workspace, "structural", "structural-authorized-query",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := updateSourceRevision(
 		ctx, structuralProfile.Repository, structuralProfile.Revisions["a-return"], true,
 	); err != nil {
 		t.Fatal(err)
 	}
+	structuralListener := portReservations[structuralProfile.Address]
+	if structuralListener == nil {
+		t.Fatal("structural late-phase address reservation is missing")
+	}
+	if err := structuralListener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	delete(portReservations, structuralProfile.Address)
 	structuralServer, err = launchPrivateServer(
 		ctx, structuralProfile, toolchain, "rehearsal-authorized-query-structural",
 	)
@@ -1190,18 +1485,18 @@ func rehearseAuthorizedQueryBoundary(
 	}
 	structAR := awaitReadinessSnapshot(t, ctx, structuralProfile, "a-return", 12*time.Minute)
 
-	plan := Plan{Schema: PlanSchemaV32, Safety: frozenSafetyV25}
-	run = &execution{
-		ctx: ctx, workspace: workspace, plan: plan, toolchain: toolchain,
-		prepared:         Prepared{Profiles: []PreparedProfile{structuralProfile, semanticProfile}},
-		structural:       structuralServer,
-		structAR:         structAR,
-		semanticA:        semanticA,
-		liveServers:      []*privateServer{structuralServer},
-		portReservations: portReservations,
-		observation:      emptyObservationForPlan(EnvironmentObservation{}, plan),
-	}
+	startupOffset := len(run.observation.ServerStartups)
+	waitOffset := len(run.observation.ConvergenceWaits)
+	run.toolchain = toolchain
+	run.prepared.Profiles = []PreparedProfile{structuralProfile, semanticProfile}
+	run.structural = structuralServer
+	run.structAR = structAR
+	run.semanticA = semanticA
+	run.liveServers = append(run.liveServers, structuralServer)
+	run.portReservations = portReservations
+	structuralServer = nil
 	portReservations = nil
+
 	run.startPhase(8)
 	if err := run.archiveRestore(); err != nil {
 		t.Fatal(err)
@@ -1218,10 +1513,8 @@ func rehearseAuthorizedQueryBoundary(
 		phase.Outcome != "succeeded" || !phase.OracleExact {
 		t.Fatalf("combined collection phase = %+v", phase)
 	}
-	structuralServer = run.structural
-	searchAuthorityBefore, err := inspectSearchAuthorityFence(
-		ctx, structuralProfile,
-	)
+	currentStructural := run.structural
+	searchAuthorityBefore, err := inspectSearchAuthorityFence(ctx, structuralProfile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1235,6 +1528,7 @@ func rehearseAuthorizedQueryBoundary(
 	if err := run.authorizedQueries(); err != nil {
 		t.Fatal(err)
 	}
+	run.authorizedQueryObserver = nil
 	if len(structuralSearchAttempts) == 0 ||
 		structuralSearchAttempts[0].Attempt != 1 ||
 		structuralSearchAttempts[len(structuralSearchAttempts)-1].Class != "success" {
@@ -1246,40 +1540,7 @@ func rehearseAuthorizedQueryBoundary(
 			firstSearch.Reason != httpReason409SearchWarming) {
 		t.Fatalf("first structural search outcome = %+v", firstSearch)
 	}
-	firstSearchAttemptCount := len(structuralSearchAttempts)
-	inspector, err := newProfileInspector(structuralProfile, profileInspectionV32)
-	if err != nil {
-		t.Fatal(err)
-	}
-	laterRunner := &authorizedQueryRunner{
-		inspector: inspector, profile: structuralProfile, maxAttempts: 1,
-		observer: run.authorizedQueryObserver,
-	}
-	var laterSearch search.Result
-	if err := laterRunner.get(
-		ctx, "search", apiresponse.SearchPath+"?q=T401&max_matches=1", &laterSearch,
-	); err != nil {
-		t.Fatal(err)
-	}
-	laterAttempts := structuralSearchAttempts[firstSearchAttemptCount:]
-	if len(laterAttempts) != 1 || laterAttempts[0].Attempt != 1 ||
-		laterAttempts[0].Class != "success" {
-		t.Fatalf("later structural search attempts = %+v", laterAttempts)
-	}
-	t.Logf(
-		"structural search first=%s/%d/%s attempts=%d later=%s attempts=%d",
-		firstSearch.Class, firstSearch.Status, firstSearch.Reason,
-		firstSearchAttemptCount, laterAttempts[0].Class, len(laterAttempts),
-	)
-	searchAuthorityAfter, err := inspectSearchAuthorityFence(
-		ctx, structuralProfile,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if searchAuthorityAfter != searchAuthorityBefore {
-		t.Fatal("authorized search changed exact search authority")
-	}
+
 	phase := run.observation.Phases[10]
 	if phase.Name != "authorized_query" || phase.Outcome != "succeeded" || !phase.OracleExact {
 		t.Fatalf("authorized-query phase observation = %+v", phase)
@@ -1330,19 +1591,17 @@ func rehearseAuthorizedQueryBoundary(
 	if run.observation.AuthorizedQuery != nil {
 		t.Fatalf("successful authorized query retained failure evidence: %+v", run.observation.AuthorizedQuery)
 	}
-	if len(run.observation.ServerStartups) != 3 ||
-		run.observation.ServerStartups[0].Profile != structuralProfile.Name ||
-		run.observation.ServerStartups[0].Label != "archive-restore" ||
-		run.observation.ServerStartups[0].Outcome != "healthy" ||
-		run.observation.ServerStartups[1].Profile != structuralProfile.Name ||
-		run.observation.ServerStartups[1].Label != "collection" ||
-		run.observation.ServerStartups[1].Outcome != "healthy" ||
-		run.observation.ServerStartups[2].Profile != semanticProfile.Name ||
-		run.observation.ServerStartups[2].Label != "authorized-query" ||
-		run.observation.ServerStartups[2].Outcome != "healthy" {
-		t.Fatalf("authorized-query startup observation = %+v", run.observation.ServerStartups)
+	startups := run.observation.ServerStartups[startupOffset:]
+	if len(startups) != 3 ||
+		startups[0].Profile != structuralProfile.Name || startups[0].Label != "archive-restore" ||
+		startups[0].Outcome != "healthy" ||
+		startups[1].Profile != structuralProfile.Name || startups[1].Label != "collection" ||
+		startups[1].Outcome != "healthy" ||
+		startups[2].Profile != semanticProfile.Name || startups[2].Label != "authorized-query" ||
+		startups[2].Outcome != "healthy" {
+		t.Fatalf("late-phase startup observation = %+v", startups)
 	}
-	waits := run.observation.ConvergenceWaits
+	waits := run.observation.ConvergenceWaits[waitOffset:]
 	if len(waits) != 4 ||
 		waits[0].Profile != structuralProfile.Name || waits[0].Label != "archive-restore" ||
 		waits[0].Revision != "a-return" || waits[0].Outcome != "converged" ||
@@ -1352,16 +1611,87 @@ func rehearseAuthorizedQueryBoundary(
 		waits[2].Revision != "a" || waits[2].Outcome != "converged" ||
 		waits[3].Profile != structuralProfile.Name || waits[3].Label != "authorized-query-structural" ||
 		waits[3].Revision != "a-return" || waits[3].Outcome != "converged" {
-		t.Fatalf("authorized-query convergence observations = %+v", waits)
+		t.Fatalf("late-phase convergence observations = %+v", waits)
 	}
 	if run.metersExpected != 2 || run.metersTracked != 2 || len(run.activeMeters) != 0 ||
 		run.measurementErr != nil || len(run.liveServers) != 4 || run.semantic != nil ||
-		run.structural != structuralServer {
+		run.structural != currentStructural {
 		t.Fatalf(
 			"authorized-query accounting expected=%d tracked=%d active=%d measurement=%v servers=%d semantic=%v structural_live=%t",
 			run.metersExpected, run.metersTracked, len(run.activeMeters), run.measurementErr,
-			len(run.liveServers), run.semantic != nil, run.structural == structuralServer,
+			len(run.liveServers), run.semantic != nil, run.structural == currentStructural,
 		)
+	}
+	handedOff = true
+	return latePhaseRehearsalResult{
+		structuralProfile:       structuralProfile,
+		searchAuthorityBefore:   searchAuthorityBefore,
+		firstSearch:             firstSearch,
+		firstSearchAttemptCount: len(structuralSearchAttempts),
+	}
+}
+
+func rehearseAuthorizedQueryBoundary(
+	t *testing.T,
+	ctx context.Context,
+	moduleRoot string,
+	workspace string,
+	toolchain privateToolchain,
+) {
+	t.Helper()
+	structuralProfile, semanticProfile, reservations, err := prepareLatePhaseRehearsalProfiles(
+		ctx, moduleRoot, workspace,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := releaseLoopbackAddresses(reservations); err != nil {
+			t.Errorf("release authorized-query profile reservations: %v", err)
+		}
+	}()
+	plan := Plan{Schema: PlanSchemaV32, Safety: frozenSafetyV25}
+	run := &execution{
+		ctx: ctx, workspace: workspace, plan: plan,
+		observation: emptyObservationForPlan(EnvironmentObservation{}, plan),
+	}
+	defer cleanupLatePhaseRehearsal(t, run, workspace)
+	result := runLatePhaseRehearsal(
+		t, ctx, run, toolchain, structuralProfile, semanticProfile, reservations,
+	)
+
+	inspector, err := newProfileInspector(result.structuralProfile, profileInspectionV32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var laterAttempts []authorizedQueryAttempt
+	laterRunner := &authorizedQueryRunner{
+		inspector: inspector, profile: result.structuralProfile, maxAttempts: 1,
+		observer: func(attempt authorizedQueryAttempt) {
+			laterAttempts = append(laterAttempts, attempt)
+		},
+	}
+	var laterSearch search.Result
+	if err := laterRunner.get(
+		ctx, "search", apiresponse.SearchPath+"?q=T401&max_matches=1", &laterSearch,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(laterAttempts) != 1 || laterAttempts[0].Attempt != 1 ||
+		laterAttempts[0].Class != "success" {
+		t.Fatalf("later structural search attempts = %+v", laterAttempts)
+	}
+	t.Logf(
+		"structural search first=%s/%d/%s attempts=%d later=%s attempts=%d",
+		result.firstSearch.Class, result.firstSearch.Status, result.firstSearch.Reason,
+		result.firstSearchAttemptCount, laterAttempts[0].Class, len(laterAttempts),
+	)
+	searchAuthorityAfter, err := inspectSearchAuthorityFence(ctx, result.structuralProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if searchAuthorityAfter != result.searchAuthorityBefore {
+		t.Fatal("authorized search changed exact search authority")
 	}
 	if err := run.stopServers(); err != nil {
 		t.Fatal(err)
@@ -1369,7 +1699,6 @@ func rehearseAuthorizedQueryBoundary(
 	if len(run.liveServers) != 0 || run.structural != nil || run.semantic != nil {
 		t.Fatal("authorized-query rehearsal retained a server after shutdown")
 	}
-	complete = true
 	t.Log("archive/restore, collection restart, and authorized-query boundary passed")
 }
 

@@ -5966,6 +5966,52 @@ real-binary regression, not a full-size ceremony; it does not replay Phases 1–
 or Phase 12 and authorizes no merge, freeze, execution, release, Epic closure,
 or scale/SLO claim.
 
+### T40.13y combined Phase-9 through Phase-12 rehearsal
+
+Use this final bounded handoff gate before another expensive ceremony. Run only
+from the committed exact-clean T40.13y branch:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_LATE_PHASE_TEARDOWN_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathLatePhaseTeardownRehearsal$' \
+  -count=1 -v -timeout=35m
+```
+
+The selector creates a unique `phebs-t4013-late-teardown-*` parent with
+`custody/`, external `evidence/`, and a sibling sentinel. It uses the production
+run-root lock, frozen V32 host bindings, prepared publication, supervision,
+checkpoint, deletion, and terminal-publication protocol. Its receipt-valid
+fixture is deliberately hybrid: completed Phase 1–8 and the global full-profile
+oracle are synthetic, while every Phase 9–12 phase/startup/wait/collection/
+query/teardown field is cleared and then supplied by the real bounded
+coordinators. The truncated fixture is separately required not to seal as a
+completed receipt.
+
+Require exactly eleven startup rows and fourteen convergence waits before
+teardown, no active meter or loopback reservation, structural live and semantic
+stopped, unchanged search authority, and successful pre-delete receipt
+validation. Phase 12 must perform the shutdown; do not add a manual stop between
+the query phase and teardown. A pass ends with the exact source commit,
+`Phase 9 through Phase 12 custody retirement boundary passed`, and `PASS`.
+
+The test has a 30-minute context and 35-minute command alarm. The first search
+may use the existing V32 warming retry schedule; the separate T40.13x
+post-phase search is intentionally absent because it is outside Phase-11
+metering. Success proves nonzero teardown gauges, durable custody absence,
+completed terminal receipt, protocol retirement, sibling/module preservation,
+lock custody through simulated Execute return, and terminal clean HEAD.
+
+On any failure, stop. The reported private parent may contain credentials,
+synthetic source, backup, store data, logs, and external protocol authority.
+Custody itself may already be absent after a post-delete failure. Do not rerun,
+resume, share, or purge until process/listener absence and the exact checkpoint,
+stage, and supervision commit point have been reviewed. A pass remains bounded
+handoff evidence only: it does not prove Phase 1–8, full-corpus deletion cost,
+signed ceremony custody/evidence, hard-death recovery, a complete ceremony,
+release, Epic closure, or scale/SLO.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

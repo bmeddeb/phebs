@@ -2754,6 +2754,43 @@ whitespace passed. Two final independent reviews reported all severity counts
 zero. Integration, freeze, execution, release, Epic closure, and scale/SLO
 evidence remain separate.
 
+**T40.13y · Completed Phase-9 through Phase-12 handoff rehearsal**
+*(medium-risk harness evidence · needs T40.13x)* — close the remaining bounded
+late-phase seam before spending another full ceremony. Preserve the existing
+standalone Phase-12 selector, but add one V32 real-binary run that crosses
+archive/restore, the structural collection restart, both authorized-query
+profiles, and completed custody retirement without stopping the structural
+server before teardown.
+
+AC: the fixture must retain only the existing receipt-valid synthetic Phase
+1–8 prefix and global full-profile oracle. It must clone and truncate the
+startup/wait inventories through pressure, clear every synthetic Phase 9–12
+field, and prove that truncated observation cannot produce a completed
+receipt. Real Phase 9–11 execution must append exactly three healthy startups,
+four converged waits, fresh collection evidence, and exact succeeded phase
+records. Phase 12 must own all tracked-server shutdown, both nonzero custody
+gauges, pre-delete validation, checkpoint-before-delete, durable exact-custody
+absence, terminal observation/receipt publication, supervision/prepared/
+checkpoint retirement, sibling and module preservation, run-root-lock lifetime,
+and terminal clean-HEAD proof.
+
+Run the fast splice and teardown-order regressions, complete T40.13 package,
+focused race/vet/docs/glossary/shell/whitespace gates, the exact-clean opt-in
+rehearsal under a 30-minute context and 35-minute command alarm, and independent
+review. On failure retain the complete private parent; do not rerun or purge
+until process absence and the external checkpoint/stage/supervision commit
+point are reviewed. No production code, schema, full-corpus proxy, or fault
+injection is authorized by this ticket.
+
+Steady-state cost: zero. The test authors the two existing bounded profiles and
+builds the private toolchain once; it starts the semantic seed plus the real
+late-phase server sequence, runs backup/restore, one fresh lifecycle cycle,
+fixed queries, two serial teardown gauges, recursive private-custody deletion,
+and bounded protocol retirement. This does not bound full-custody deletion,
+replay Phases 1–8, prove signed ceremony evidence, establish a complete
+ceremony or scale/SLO result, or authorize freeze, execution, release, or Epic
+closure.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
