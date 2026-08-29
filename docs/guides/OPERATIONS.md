@@ -1552,6 +1552,16 @@ publication validation, then again from the descriptor-stable mmap before it
 can serve. This closes mixed-member, replacement-race, and watcher-delay false
 negatives without a sleep; budget the bounded two-pass cold cost for a newly
 published large repository.
+If the request deadline expires while that same cache-owned validation or
+exact-reader fill is still active, `/api/search` returns status 409 with the
+fixed detail `search generation is warming; retry`. The validation continues
+under its independent ten-minute ceiling; client cancellation, a completed
+validation error, the validator deadline, a stale root, an active publication
+marker, corrupt content, and ordinary query/backend deadlines remain terminal.
+Task completion and the cache-owned deadline are resolved before the request
+deadline, so a deadline race cannot relabel a terminal validator result as
+warming or a successful same-generation fill as an unexplained 500.
+Service search propagates the warming state without scheduling index repair.
 At most two whole-repository fills run concurrently, and stable validation
 failures retry with fingerprint-keyed exponential backoff from 250 ms to 30 s.
 Member identity change retries immediately.
@@ -5869,23 +5879,16 @@ matching Phebs/Surreal process. That commit is integrated into and pushed as
 Phase-9 exact-commit rerun and all broader custody, scale, and release gates
 remain open.
 
-### Focused T40.13 Phase-11 authorized-query rehearsal
+### Historical T40.13 Phase-11 authorized-query rehearsal
 
-Human Phase 11 is `authorized_query` (`phaseOrder[10]`). Run only the dedicated
-selector:
-
-```sh
-PHEBS_T4013_READINESS_REHEARSAL=1 \
-PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL=1 \
-go test ./spike/t4013 \
-  -run '^TestProductionPathReadinessRehearsal$/^authorized-query$' \
-  -count=1 -v -timeout=35m
-```
+This pre-T40.13x contract is retained only to interpret the 2026-08-26 result.
+The same selector now owns the combined Phase-9→10→11 gate documented in the
+next subsection; use only that current command and marker.
 
 The rehearsal converges semantic A, starts structural A-return while the
 semantic port is occupied, then stops semantic, re-reserves that port, and
 converges structural before calling the unchanged production V30
-authorized-query coordinator. Require
+authorized-query coordinator. It required the historical marker
 `authorized-query dual-profile boundary passed` followed by `PASS`. A pass
 covers the production semantic restart, stable semantic and structural
 authority revalidation, the fixed unauthenticated, search, service-inventory,
@@ -5894,7 +5897,7 @@ at least the three mandatory query-member reads, and shutdown. Existing unit
 tests retain the separate retry, terminal-response, and source-free
 failure-projection coverage.
 
-This is a clean Phase-11 entry, not a replay of Phase 8, 9, or 10. It does not prove
+That was a clean Phase-11 entry, not a replay of Phase 8, 9, or 10. It did not prove
 handoff residue, full structural corpus, signed ceremony custody, release, or
 scale claim. No sparse image, ballast, archive, or fixed lock is used. Success
 removes the temporary workspace. Failure reports and retains one exact private
@@ -5903,8 +5906,7 @@ projection when present. Do not share or rerun against it; first prove all
 rehearsal processes and listeners absent, then review and purge only that exact
 root. The shared 30-minute test context and 35-minute command timeout bound the
 healthy rehearsal profiles, not the production ceremony's combined phase
-ceilings. The selector builds the working tree, so an immutable clean commit
-and unchanged exact-commit pass are required for candidate evidence.
+ceilings. It is superseded and must not be rerun as the current candidate gate.
 
 Exact focused result (2026-08-26): the unchanged selector passed from exact
 clean commit `c2e6eed8faab01854f3af94264ec3054487c877e`. It emitted
@@ -5923,6 +5925,46 @@ only. It does not establish Phase-8/9/10 handoff residue, full structural scale,
 signed ceremony custody/evidence, a complete ceremony, release, Epic closure,
 or a scale/SLO claim. The earlier Phase-9 exact-clean rerun remains formally
 open. This result record changes documentation only after the tested commit.
+
+### T40.13x combined Phase-9 through Phase-11 rehearsal
+
+After the neutral-43 Phase-11 stop, the authorized-query selector also crosses
+the production archive/restore boundary and Phase-10 structural restart before
+issuing the Phase-11 searches:
+
+```sh
+PHEBS_T4013_READINESS_REHEARSAL=1 \
+PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL=1 \
+go test ./spike/t4013 \
+  -run '^TestProductionPathReadinessRehearsal$/^authorized-query$' \
+  -count=1 -v -timeout=35m
+```
+
+Require
+`archive/restore, collection restart, and authorized-query boundary passed`
+followed by `PASS`. The selector checks that no search publication marker is
+present and that store, source manifest, search root, and receipt revisions
+remain exact before and after the first structural search. It then runs the
+unchanged unauthenticated and authorized dual-profile query oracles. A fixed
+warming 409 is retried at most three times: the first retry remains one second;
+when the first search response was exact warming and the second attempt remains
+retryable, the final attempt is deferred by the reader's ten-minute cache-task
+ceiling. Other 409 responses keep the one-second cadence unless they are the
+second retryable response after first-attempt warming; a 500 is terminal on
+its first attempt, and cancellation during either wait is recorded as the
+transport/deadline stop rather than the preceding response. V1–V31 retain their
+historical reason classification, context, retry cadence, and wait-cancellation
+evidence. The explicit later search is single-attempt; the 35-minute Go alarm
+leaves cleanup margin beyond the rehearsal's internal 30-minute context.
+
+Exact corrected-tree result (2026-08-29): the selector logged the first
+structural search as a single-attempt success and the explicit later search as
+a second single-attempt success, preserved exact authority, emitted the required
+combined marker, and retired its successful workspace. The selected subtest
+took 184.94 seconds and the package 238.435 seconds. This remains a small
+real-binary regression, not a full-size ceremony; it does not replay Phases 1–8
+or Phase 12 and authorizes no merge, freeze, execution, release, Epic closure,
+or scale/SLO claim.
 
 ### Focused T40.13 Phase-12 teardown rehearsal
 

@@ -36,6 +36,8 @@ const privateSnapshotSchema = "t4013-private-profile-snapshot-v1"
 
 const maxHTTPStatusResponseBytes = 4 << 10
 
+const httpReason409SearchWarming = "409_search_warming"
+
 var (
 	errHTTPTransport = errors.New("T40.13 HTTP request failed")
 	errHTTPResponse  = errors.New("T40.13 HTTP response is invalid")
@@ -1317,8 +1319,8 @@ func classifyHTTPStatusReason(
 	if decodeHumaResponse(raw, address, &problem) != nil || problem.Status != status {
 		return httpReasonOther
 	}
+	requestPath, _, _ := strings.Cut(path, "?")
 	if contract >= profileInspectionV32 && status == http.StatusInternalServerError {
-		requestPath, _, _ := strings.Cut(path, "?")
 		if requestPath == apiresponse.ExtractionProgressPath {
 			switch problem.Detail {
 			case apiresponse.ExtractionProgressDetailRead:
@@ -1329,6 +1331,10 @@ func classifyHTTPStatusReason(
 		}
 	}
 	switch {
+	case contract >= profileInspectionV32 &&
+		status == http.StatusConflict && requestPath == apiresponse.SearchPath &&
+		problem.Detail == apiresponse.SearchGenerationWarmingDetail:
+		return httpReason409SearchWarming
 	case status == http.StatusConflict && progressRetryConflictDetail(contract, path, problem.Detail):
 		return httpReason409Stale
 	case status == http.StatusConflict && problem.Detail == apiresponse.ObservationProgressDetailControlAbsent:

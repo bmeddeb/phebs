@@ -26,6 +26,25 @@ import (
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
+const (
+	SearchPath                    = "/api/search"
+	SearchGenerationWarmingDetail = "search generation is warming; retry"
+)
+
+func searchHTTPError(err error) error {
+	switch {
+	case errors.Is(err, search.ErrWholeGenerationWarming):
+		return huma.Error409Conflict(SearchGenerationWarmingDetail)
+	case errors.Is(err, search.ErrInvalidQuery),
+		errors.Is(err, search.ErrInvalidScopeSelector):
+		return huma.Error400BadRequest(err.Error())
+	case errors.Is(err, servicequery.ErrUnavailable):
+		return huma.Error409Conflict("search scope unavailable", err)
+	default:
+		return huma.Error500InternalServerError("search", err)
+	}
+}
+
 type Options struct {
 	Version string
 	APIKey  string // empty = open API; serve logs the warning
@@ -246,7 +265,7 @@ func New(opts Options) http.Handler {
 	type searchOut struct {
 		Body *search.Result
 	}
-	huma.Get(api, "/api/search", func(ctx context.Context, in *searchIn) (*searchOut, error) {
+	huma.Get(api, SearchPath, func(ctx context.Context, in *searchIn) (*searchOut, error) {
 		if opts.Search == nil {
 			return nil, huma.Error503ServiceUnavailable("search unavailable")
 		}
@@ -255,14 +274,7 @@ func New(opts Options) http.Handler {
 		}, in.Q,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})
 		if err != nil {
-			if errors.Is(err, search.ErrInvalidQuery) ||
-				errors.Is(err, search.ErrInvalidScopeSelector) {
-				return nil, huma.Error400BadRequest(err.Error())
-			}
-			if errors.Is(err, servicequery.ErrUnavailable) {
-				return nil, huma.Error409Conflict("search scope unavailable", err)
-			}
-			return nil, huma.Error500InternalServerError("search", err)
+			return nil, searchHTTPError(err)
 		}
 		return &searchOut{Body: res}, nil
 	})
@@ -291,7 +303,11 @@ func New(opts Options) http.Handler {
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines},
 			func(r *search.Result) { _ = send(sse.Message{Data: r}) })
 		if err != nil {
-			_ = send(sse.Message{Data: &streamErr{Message: err.Error()}})
+			message := err.Error()
+			if errors.Is(err, search.ErrWholeGenerationWarming) {
+				message = SearchGenerationWarmingDetail
+			}
+			_ = send(sse.Message{Data: &streamErr{Message: message}})
 			return
 		}
 		_ = send(sse.Message{Data: scope})

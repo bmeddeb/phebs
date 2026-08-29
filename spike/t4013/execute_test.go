@@ -4935,6 +4935,143 @@ func TestV23AuthorizedQueryRetriesAndRetainsSourceFreeFailure(t *testing.T) {
 	}
 }
 
+func TestAuthorizedQueryDefersLastRetryForExactSearchWarming(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := func(
+		t *testing.T,
+		details []string,
+		deadline time.Duration,
+	) (int, *authorizedQueryRunner, error) {
+		t.Helper()
+		calls := 0
+		server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+			calls++
+			response.Header().Set("Content-Type", "application/json")
+			if calls <= len(details) {
+				response.WriteHeader(http.StatusConflict)
+				_, _ = fmt.Fprintf(response,
+					`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":409,"detail":%q}`,
+					request.Host, details[calls-1],
+				)
+				return
+			}
+			_, _ = fmt.Fprintf(response,
+				`{"$schema":"http://%s/schemas/TestResponse.json"}`,
+				request.Host,
+			)
+		}))
+		defer server.Close()
+		profile := PreparedProfile{
+			Name: "structural-2m-v1", Credential: credential,
+			Address: strings.TrimPrefix(server.URL, "http://"),
+		}
+		inspector, err := newProfileInspector(profile, profileInspectionV32)
+		if err != nil {
+			t.Fatal(err)
+		}
+		runner := &authorizedQueryRunner{
+			inspector: inspector, profile: profile, maxAttempts: 3,
+			retryDelay: time.Millisecond, warmingRetryDelay: time.Second,
+			retainFailure: true, retainWaitFailure: true,
+		}
+		ctx, cancel := context.WithTimeout(t.Context(), deadline)
+		defer cancel()
+		var target struct{}
+		err = runner.get(
+			ctx, "search", apiresponse.SearchPath+"?q=T401", &target,
+		)
+		return calls, runner, err
+	}
+	t.Run("first warming protects final attempt", func(t *testing.T) {
+		calls, runner, err := run(t, []string{
+			apiresponse.SearchGenerationWarmingDetail,
+			"other retryable conflict",
+		}, 100*time.Millisecond)
+		if !errors.Is(err, errAuthorizedQuery) ||
+			!errors.Is(err, errHTTPTransport) ||
+			!errors.Is(err, context.DeadlineExceeded) || calls != 2 ||
+			runner.failure == nil || runner.failure.Class != "transport" ||
+			runner.failure.Attempts != 2 {
+			t.Fatalf("calls=%d failure=%+v err=%v", calls, runner.failure, err)
+		}
+	})
+	t.Run("late warming keeps ordinary retry", func(t *testing.T) {
+		calls, runner, err := run(t, []string{
+			"other retryable conflict",
+			apiresponse.SearchGenerationWarmingDetail,
+		}, 250*time.Millisecond)
+		if err != nil || calls != 3 || runner.failure != nil {
+			t.Fatalf("calls=%d failure=%+v err=%v", calls, runner.failure, err)
+		}
+	})
+}
+
+func TestAuthorizedQueryWaitCancellationIsV32Only(t *testing.T) {
+	credential := filepath.Join(t.TempDir(), "credential")
+	if err := os.WriteFile(credential, []byte("secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusConflict)
+		_, _ = fmt.Fprintf(response,
+			`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":409,"detail":"retry"}`,
+			request.Host,
+		)
+	}))
+	defer server.Close()
+	profile := PreparedProfile{
+		Name: "structural-2m-v1", Credential: credential,
+		Address: strings.TrimPrefix(server.URL, "http://"),
+	}
+	for _, test := range []struct {
+		name              string
+		contract          profileInspectionContract
+		retainWaitFailure bool
+		failureClass      string
+		failureStatus     int
+	}{
+		{
+			name: "v31", contract: profileInspectionLegacy,
+			failureClass: "status", failureStatus: http.StatusConflict,
+		},
+		{
+			name: "v32", contract: profileInspectionV32,
+			retainWaitFailure: true, failureClass: "transport",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			inspector, err := newProfileInspector(profile, test.contract)
+			if err != nil {
+				t.Fatal(err)
+			}
+			runner := &authorizedQueryRunner{
+				inspector: inspector, profile: profile, maxAttempts: 3,
+				retryDelay: time.Second, retainFailure: true,
+				retainWaitFailure: test.retainWaitFailure,
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+			defer cancel()
+			var target struct{}
+			err = runner.get(
+				ctx, "search", apiresponse.SearchPath+"?q=T401", &target,
+			)
+			if !errors.Is(err, errAuthorizedQuery) || runner.failure == nil ||
+				runner.failure.Class != test.failureClass ||
+				runner.failure.Status != test.failureStatus ||
+				runner.failure.Attempts != 1 {
+				t.Fatalf("failure=%+v err=%v", runner.failure, err)
+			}
+			if test.retainWaitFailure && !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("V32 wait error lost deadline: %v", err)
+			}
+		})
+	}
+}
+
 func TestDerivedPartialScanReadsOnlyBoundedControlLevel(t *testing.T) {
 	dataDir := t.TempDir()
 	repository := filepath.Join(dataDir, "observations", "repository")

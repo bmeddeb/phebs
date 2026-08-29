@@ -648,6 +648,33 @@ holder, mount, custody, supervision, driver, or bootstrap. This closes only
 T40.13u's replay/result gate and makes the reviewed branch integration-ready;
 pressure and every later phase, exact-main freeze, complete ceremony, release,
 Epic closure, and scale/SLO evidence remain open.
+The later exact-main `t40r1-neutral-43` ceremony passed Phases 1–10 and clean
+teardown but stopped on the first structural authorized search with one HTTP
+500. Its sealed source-free package
+`sha256:0ecacfe9dda34ec601c9391ac73d9b9b3ba84b7481588041541477ea9e26c1ee`
+does not retain the private cause. T40.13x preserves a compact source-free stop
+summary at
+`spike/t4013/t4013x-neutral43-authorized-query-stop.json`, permanently retires
+identifier 43, and independently reproduces the cold-reader boundary without
+attributing that cause to the sealed receipt. Whole-reader startup remains
+lazy: only a request deadline that leaves the same cache-owned validation or
+exact fill active, or races its same-generation successful completion, returns
+typed warming; a completed error or cache-task expiry wins the deadline race,
+service search schedules no false repair, and every
+marker/root/content fence remains mandatory. REST maps warming to a fixed 409.
+Only V32 gives the final query attempt the ten-minute cache-ceiling delay after
+a first-attempt warming response and a second retryable response; V1–V31 keep
+their historical classifier, context, cadence, and wait-cancellation evidence.
+The corrected combined
+Phase-9→10→11 real-binary selector recorded the first and later structural
+searches as single-attempt successes, preserved exact store/source/root/receipt
+authority and counts with no publication marker, and passed in 184.94 seconds
+for the selected subtest and 238.435 seconds for the package. Focused normal and
+race, complete affected-package, vet, repository-pinned lint, module, docs,
+glossary, shell, and whitespace gates pass. Two final independent reviews
+reported critical/high/medium/low findings all zero. The corrected tree is
+eligible for a separate integration request; no merge, fresh freeze, execution,
+release, Epic closure, or scale/SLO claim follows automatically.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

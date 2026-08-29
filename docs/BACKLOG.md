@@ -2732,6 +2732,28 @@ and disk/memory ceilings otherwise remain unchanged. Merge, freeze, complete
 ceremony, release, Epic closure, and scale/SLO evidence remain separately
 unauthorized.
 
+Implementation result (2026-08-29): the production reader now returns one
+typed warming sentinel only when the request deadline leaves the same
+cache-owned shared validation or exact-reader load active or races its
+same-generation successful completion. REST exposes that state as one fixed
+409 without private cause; service search does not queue a
+repair for it. Startup remains lazy, the request and cache-task deadlines stay
+at ten seconds and ten minutes, and every exact marker/root/content fence stays
+mandatory. V32 retains three attempts and defers only its final exact-warming
+attempt when the first search reported warming and the second attempt remained
+retryable, inside a twenty-minute context. V1–V31 keep their historical
+classifier, context, retry cadence, and wait-cancellation evidence. Focused
+normal and race tests passed across search, API, and harness packages. The
+extended real-binary selector crossed archive/restore, the Phase-10 restart,
+fresh collection, unchanged pre/post search authority, and both Phase-11
+profiles while recording the first and later structural searches as
+single-attempt successes. The corrected selected subtest took 184.94 seconds
+and the package 238.435 seconds. Complete affected-package tests, focused race,
+vet, repository-pinned lint, module verification, docs, glossary, shell, and
+whitespace passed. Two final independent reviews reported all severity counts
+zero. Integration, freeze, execution, release, Epic closure, and scale/SLO
+evidence remain separate.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -730,6 +730,39 @@ func TestProfileInspectorClassifiesClosedObservationProgressStatuses(t *testing.
 	}
 }
 
+func TestProfileInspectorClassifiesSearchGenerationWarming(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/problem+json")
+		response.WriteHeader(http.StatusConflict)
+		_, _ = fmt.Fprintf(response,
+			`{"$schema":"http://%s/schemas/ErrorModel.json","title":"closed","status":409,"detail":%q}`,
+			request.Host, apiresponse.SearchGenerationWarmingDetail,
+		)
+	}))
+	defer server.Close()
+	inspector := &profileInspector{
+		client: server.Client(), credential: "private-test-token",
+		contract: profileInspectionV32,
+	}
+	profile := PreparedProfile{Address: strings.TrimPrefix(server.URL, "http://")}
+	var target struct{}
+	err := inspector.get(
+		t.Context(), profile, apiresponse.SearchPath+"?q=T401", &target,
+	)
+	var statusErr *privateHTTPStatusError
+	if !errors.As(err, &statusErr) || statusErr.Status != http.StatusConflict ||
+		statusErr.Reason != httpReason409SearchWarming {
+		t.Fatalf("warming status error = %+v, %v", statusErr, err)
+	}
+	inspector.contract = profileInspectionLegacy
+	err = inspector.get(
+		t.Context(), profile, apiresponse.SearchPath+"?q=T401", &target,
+	)
+	if !errors.As(err, &statusErr) || statusErr.Reason != httpReasonOther {
+		t.Fatalf("legacy warming status error = %+v, %v", statusErr, err)
+	}
+}
+
 func TestProfileInspectorClassifiesClosedProgressRetryConflicts(t *testing.T) {
 	tests := []struct {
 		name             string

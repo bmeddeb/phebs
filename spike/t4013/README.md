@@ -4161,23 +4161,16 @@ Phebs/Surreal process. That commit is integrated into and pushed as `main`.
 This remains clean-entry focused evidence; the earlier Phase-9 exact-commit
 rerun and every broader custody, scale, and release gate remain open.
 
-## Focused Phase-11 authorized-query rehearsal
+## Historical focused Phase-11 authorized-query rehearsal
 
-Human Phase 11 is `authorized_query` (`phaseOrder[10]`). Run its separately
-opt-in real-binary selector directly:
-
-```sh
-PHEBS_T4013_READINESS_REHEARSAL=1 \
-PHEBS_T4013_AUTHORIZED_QUERY_REHEARSAL=1 \
-go test ./spike/t4013 \
-  -run '^TestProductionPathReadinessRehearsal$/^authorized-query$' \
-  -count=1 -v -timeout=35m
-```
+This pre-T40.13x contract is retained only to interpret the 2026-08-26 result.
+The same selector now owns the combined Phase-9→10→11 gate documented under
+`Neutral-43 Phase-11 stop and T40.13x`; use that current command and marker.
 
 The fixture converges semantic A, starts structural A-return while the semantic
 port is occupied, then stops semantic, re-reserves that port, and converges
 structural before calling the unchanged production V30 authorized-query
-coordinator. Require
+coordinator. It required the historical marker
 `authorized-query dual-profile boundary passed` followed by `PASS`. This
 covers the semantic restart, stable authority revalidation for both profiles,
 the fixed unauthenticated, search, service-inventory, relationship, and
@@ -4185,17 +4178,16 @@ citation checks, exact control-read and two-meter accounting, at least the three
 mandatory query-member reads, and shutdown. Existing unit tests separately pin
 the retry and terminal-failure projections.
 
-This clean-entry selector does not replay Phase 8, 9, or 10 and does not prove
+That historical clean-entry selector did not replay Phase 8, 9, or 10 and did not prove
 handoff residue, full structural corpus, signed ceremony custody, release, or
 scale claim. It uses no sparse image, ballast, archive, or fixed lock. Success
 removes the temporary workspace. Failure reports and retains the exact private
 `phebs-t4013-readiness-*` root. A query failure logs the bounded source-free
 projection when present; prove its processes and listener absent before review,
 purge, or rerun. The 30-minute test context and 35-minute command timeout are
-bounds for these healthy rehearsal profiles, not the production ceremony's
-combined phase ceiling. Because the selector builds the working tree, commit
-it and repeat it unchanged from an exact clean checkout before treating a pass
-as candidate evidence.
+bounds for those healthy rehearsal profiles, not the production ceremony's
+combined phase ceiling. It is superseded and must not be rerun as the current
+candidate gate.
 
 Exact focused result (2026-08-26): the unchanged selector passed from exact
 clean commit `c2e6eed8faab01854f3af94264ec3054487c877e`. It emitted
@@ -4704,3 +4696,40 @@ publication-marker state, exact root/store revision equality, and a later
 search outcome. Only after those facts identify the boundary may production
 code change. Generic 500 retry, a longer product query timeout, and weakened
 root/marker/content validation are not acceptable substitutes.
+
+The focused reproduction identified a request/cache lifetime mismatch without
+attributing that private cause to the sanitized ceremony receipt. Whole-reader
+startup remains lazy. When a ten-second request expires while the same
+cache-owned shared validation or exact-reader fill is still active, or when
+the deadline races that task's same-generation successful completion, the
+reader returns a typed warming sentinel that preserves
+`context.DeadlineExceeded`.
+REST maps only that state to fixed status 409 detail
+`search generation is warming; retry`; service search does not enqueue repair.
+Cancellation, completed validation failure, the ten-minute cache-task deadline,
+publication marker, stale root, corrupt content, and query/backend deadlines
+retain their terminal behavior.
+
+V32 retains three authorized-query attempts. The first warming retry waits one
+second; when the first search reported exact warming and the second attempt
+remains retryable, the final attempt waits the reader's ten-minute cache ceiling
+inside a twenty-minute query context. A generic 409 keeps the existing
+one-second cadence unless it is the second retryable response after
+first-attempt warming; status 500 remains a single attempt, and cancellation
+during a wait is recorded as transport/deadline. V1–V31 keep their historical
+classifier, context, retry schedule, and wait-cancellation evidence. No schema
+or sealed field changes.
+
+Focused normal/race tests cover shared and exact cold loads, task/request
+deadline coincidence, cancellation, repair suppression, HTTP privacy, status
+classification, and the exact retry schedule. The combined real-binary selector
+crosses archive/restore, the actual Phase-10 restart and fresh collection,
+records the first and later structural search outcomes, and verifies unchanged
+store/source/root/receipt revisions and counts with no publication marker. The
+corrected-tree selector recorded both the first and later structural searches
+as single-attempt successes, emitted the combined boundary marker, and passed
+in 184.94 seconds for the selected subtest and 238.435 seconds for the package.
+Complete affected-package tests, focused race, vet, repository-pinned lint,
+module verification, docs, glossary, shell, and whitespace passed. Two final
+independent reviews reported critical/high/medium/low findings all zero. This
+is focused evidence only, not a complete ceremony or scale/SLO pass.

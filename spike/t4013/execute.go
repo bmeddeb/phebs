@@ -157,6 +157,7 @@ type execution struct {
 	checkpointDigest            string
 	admissionMetrics            PhaseMetrics
 	admissionAccountingComplete bool
+	authorizedQueryObserver     func(authorizedQueryAttempt)
 }
 
 func Execute(ctx context.Context, request ExecuteRequest) (observation Observation, retErr error) {
@@ -3803,7 +3804,24 @@ func (run *execution) authorizedQueries() error {
 		return exactOracle("authorized-query restart changed semantic authority")
 	}
 	query := queryProfile
-	if planSchemaVersion(run.plan.Schema) >= 23 {
+	switch version := planSchemaVersion(run.plan.Schema); {
+	case version >= 32:
+		query = func(
+			ctx context.Context,
+			profile PreparedProfile,
+			serviceKey string,
+			requireCitation bool,
+		) (int, bool, error) {
+			count, exact, failure, queryErr := queryProfileV32(
+				ctx, profile, serviceKey, requireCitation,
+				run.authorizedQueryObserver,
+			)
+			if queryErr != nil {
+				run.observation.AuthorizedQuery = failure
+			}
+			return count, exact, queryErr
+		}
+	case version >= 23:
 		query = func(
 			ctx context.Context,
 			profile PreparedProfile,
@@ -5582,13 +5600,49 @@ func queryProfileV23(
 	return count, exact, runner.failure, err
 }
 
+func queryProfileV32(
+	ctx context.Context,
+	profile PreparedProfile,
+	serviceKey string,
+	requireCitation bool,
+	observer func(authorizedQueryAttempt),
+) (int, bool, *AuthorizedQueryObservation, error) {
+	inspector, err := newProfileInspector(profile, profileInspectionV32)
+	if err != nil {
+		return 0, false, nil, err
+	}
+	queryCtx, cancel := context.WithTimeout(
+		ctx, 2*search.WholeGenerationWarmingTimeout,
+	)
+	defer cancel()
+	runner := &authorizedQueryRunner{
+		inspector: inspector, profile: profile, maxAttempts: 3,
+		retryDelay: time.Second, warmingRetryDelay: search.WholeGenerationWarmingTimeout,
+		retainFailure: true, retainWaitFailure: true, observer: observer,
+	}
+	count, exact, err := queryProfileWithRunner(queryCtx, runner, serviceKey, requireCitation)
+	return count, exact, runner.failure, err
+}
+
+type authorizedQueryAttempt struct {
+	Profile string
+	Query   string
+	Class   string
+	Reason  string
+	Attempt int
+	Status  int
+}
+
 type authorizedQueryRunner struct {
-	inspector     *profileInspector
-	profile       PreparedProfile
-	maxAttempts   int
-	retryDelay    time.Duration
-	retainFailure bool
-	failure       *AuthorizedQueryObservation
+	inspector         *profileInspector
+	profile           PreparedProfile
+	maxAttempts       int
+	retryDelay        time.Duration
+	warmingRetryDelay time.Duration
+	retainFailure     bool
+	retainWaitFailure bool
+	failure           *AuthorizedQueryObservation
+	observer          func(authorizedQueryAttempt)
 }
 
 func (runner *authorizedQueryRunner) fail(query string, attempt int, cause error) error {
@@ -5619,15 +5673,56 @@ func (runner *authorizedQueryRunner) retryable(cause error) bool {
 	return errors.As(cause, &status) && status.Status == http.StatusConflict
 }
 
-func (runner *authorizedQueryRunner) waitRetry(ctx context.Context) error {
-	if runner.retryDelay <= 0 {
+func exactSearchWarming(cause error) bool {
+	var status *privateHTTPStatusError
+	return errors.As(cause, &status) &&
+		status.Status == http.StatusConflict &&
+		status.Reason == httpReason409SearchWarming
+}
+
+func (runner *authorizedQueryRunner) observe(
+	query string,
+	attempt int,
+	cause error,
+) {
+	if runner.observer == nil {
+		return
+	}
+	observation := authorizedQueryAttempt{
+		Profile: runner.profile.Name, Query: query,
+		Class: "success", Attempt: attempt,
+	}
+	if cause != nil {
+		observation.Class = "response"
+		var status *privateHTTPStatusError
+		switch {
+		case errors.As(cause, &status):
+			observation.Class = "status"
+			observation.Status = status.Status
+			observation.Reason = status.Reason
+		case errors.Is(cause, errHTTPTransport):
+			observation.Class = "transport"
+		}
+	}
+	runner.observer(observation)
+}
+
+func (runner *authorizedQueryRunner) waitRetry(
+	ctx context.Context,
+	deferFinal bool,
+) error {
+	delay := runner.retryDelay
+	if deferFinal && runner.warmingRetryDelay > delay {
+		delay = runner.warmingRetryDelay
+	}
+	if delay <= 0 {
 		return nil
 	}
-	timer := time.NewTimer(runner.retryDelay)
+	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		return errHTTPTransport
+		return errors.Join(errHTTPTransport, ctx.Err())
 	case <-timer.C:
 		return nil
 	}
@@ -5638,14 +5733,25 @@ func (runner *authorizedQueryRunner) get(
 	query, path string,
 	target any,
 ) error {
+	firstAttemptWarming := false
 	for attempt := 1; attempt <= runner.maxAttempts; attempt++ {
 		err := runner.inspector.get(ctx, runner.profile, path, target)
+		runner.observe(query, attempt, err)
 		if err == nil {
 			return nil
 		}
+		if attempt == 1 {
+			firstAttemptWarming = exactSearchWarming(err)
+		}
 		if attempt < runner.maxAttempts && runner.retryable(err) {
-			if waitErr := runner.waitRetry(ctx); waitErr == nil {
+			waitErr := runner.waitRetry(
+				ctx, attempt == 2 && firstAttemptWarming,
+			)
+			if waitErr == nil {
 				continue
+			}
+			if runner.retainWaitFailure {
+				return runner.fail(query, attempt, waitErr)
 			}
 		}
 		return runner.fail(query, attempt, err)
@@ -5683,8 +5789,12 @@ func (runner *authorizedQueryRunner) unauthorized(ctx context.Context) error {
 			}
 		}
 		if attempt < runner.maxAttempts && runner.retryable(err) {
-			if waitErr := runner.waitRetry(ctx); waitErr == nil {
+			waitErr := runner.waitRetry(ctx, false)
+			if waitErr == nil {
 				continue
+			}
+			if runner.retainWaitFailure {
+				return runner.fail("unauthorized_repositories", attempt, waitErr)
 			}
 		}
 		return runner.fail("unauthorized_repositories", attempt, err)
@@ -5702,7 +5812,9 @@ func queryProfileWithRunner(
 		return 0, false, err
 	}
 	var searchResult search.Result
-	if err := runner.get(ctx, "search", "/api/search?q=T401&max_matches=1", &searchResult); err != nil {
+	if err := runner.get(
+		ctx, "search", apiresponse.SearchPath+"?q=T401&max_matches=1", &searchResult,
+	); err != nil {
 		return 0, false, err
 	}
 	if len(searchResult.Files) == 0 || len(searchResult.Files[0].Chunks) == 0 ||

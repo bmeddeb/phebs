@@ -2,10 +2,12 @@ package search
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
@@ -14,6 +16,139 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func TestColdWholeValidationDeadlineIsRetryableAndReused(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	searcher, err := Open(fixture.indexDir, fixture.store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+	for range cap(searcher.whole.loadSlots) {
+		searcher.whole.loadSlots <- struct{}{}
+	}
+	searcher.maxWallTime = 50 * time.Millisecond
+	if _, err := searcher.Search(
+		t.Context(), "T343_NEEDLE", Options{MaxMatches: 10},
+	); !errors.Is(err, ErrWholeGenerationWarming) ||
+		!errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("cold shared search error = %v", err)
+	}
+	repo := searcher.whole.repos[fixture.store.repo.Name]
+	repo.mu.Lock()
+	validation := repo.validation
+	validated := repo.shared != nil && repo.shared.validated
+	repo.mu.Unlock()
+	if validation == nil || validated {
+		t.Fatalf("cold shared state validation=%t validated=%t", validation != nil, validated)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := searcher.Search(canceled, "T343_NEEDLE", Options{}); !errors.Is(
+		err, context.Canceled,
+	) || errors.Is(err, ErrWholeGenerationWarming) {
+		t.Fatalf("canceled shared search error = %v", err)
+	}
+	for range cap(searcher.whole.loadSlots) {
+		<-searcher.whole.loadSlots
+	}
+	searcher.maxWallTime = 5 * time.Second
+	result, err := searcher.Search(
+		t.Context(), "T343_NEEDLE", Options{MaxMatches: 10},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 2 {
+		t.Fatalf("warmed shared search files=%d", len(result.Files))
+	}
+	repo.mu.Lock()
+	validated = repo.shared != nil && repo.shared.validated
+	validation = repo.validation
+	repo.mu.Unlock()
+	if !validated || validation != nil {
+		t.Fatalf("warmed shared state validation=%t validated=%t", validation != nil, validated)
+	}
+}
+
+func TestWholeWaitClassifiesRequestAndCacheDeadlinesExactly(t *testing.T) {
+	deadlineContext := func(t *testing.T) context.Context {
+		t.Helper()
+		ctx, cancel := context.WithDeadline(
+			t.Context(), time.Now().Add(-time.Second),
+		)
+		t.Cleanup(cancel)
+		return ctx
+	}
+	t.Run("shared completed success", func(t *testing.T) {
+		binding := &wholeSharedBinding{validated: true}
+		validation := &wholeSharedValidation{
+			ready: make(chan struct{}), binding: binding,
+			ctx: t.Context(), cancel: func() {},
+		}
+		close(validation.ready)
+		repo := &wholeRepoCache{shared: binding}
+		cache := newWholeCache(t.TempDir())
+		defer cache.close()
+		err := cache.waitForSharedValidation(
+			deadlineContext(t), repo, validation, binding,
+		)
+		if !errors.Is(err, ErrWholeGenerationWarming) ||
+			!errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("completed shared wait error = %v", err)
+		}
+	})
+	t.Run("shared cache deadline", func(t *testing.T) {
+		binding := &wholeSharedBinding{}
+		validation := &wholeSharedValidation{
+			ready: make(chan struct{}), binding: binding,
+			ctx: deadlineContext(t), cancel: func() {},
+		}
+		repo := &wholeRepoCache{shared: binding, validation: validation}
+		cache := newWholeCache(t.TempDir())
+		defer cache.close()
+		err := cache.waitForSharedValidation(
+			deadlineContext(t), repo, validation, binding,
+		)
+		if !errors.Is(err, context.DeadlineExceeded) ||
+			errors.Is(err, ErrWholeGenerationWarming) {
+			t.Fatalf("expired shared cache error = %v", err)
+		}
+	})
+	t.Run("exact completed error", func(t *testing.T) {
+		terminal := errors.New("exact load failed")
+		load := &wholeCacheLoad{
+			ready: make(chan struct{}), err: terminal,
+			ctx: t.Context(), cancel: func() {},
+		}
+		close(load.ready)
+		cache := newWholeCache(t.TempDir())
+		defer cache.close()
+		_, err := cache.waitForLoad(
+			deadlineContext(t), &wholeRepoCache{}, load, "repo", nil,
+		)
+		if !errors.Is(err, terminal) ||
+			errors.Is(err, ErrWholeGenerationWarming) {
+			t.Fatalf("completed exact load error = %v", err)
+		}
+	})
+	t.Run("exact cache deadline", func(t *testing.T) {
+		load := &wholeCacheLoad{
+			ready: make(chan struct{}), revisions: nil,
+			ctx: deadlineContext(t), cancel: func() {},
+		}
+		repo := &wholeRepoCache{load: load}
+		cache := newWholeCache(t.TempDir())
+		defer cache.close()
+		_, err := cache.waitForLoad(
+			deadlineContext(t), repo, load, "repo", nil,
+		)
+		if !errors.Is(err, context.DeadlineExceeded) ||
+			errors.Is(err, ErrWholeGenerationWarming) {
+			t.Fatalf("expired exact cache error = %v", err)
+		}
+	})
+}
 
 func TestOpenDefersWholeContentValidationUntilFirstQuery(t *testing.T) {
 	const repository = "example.com/acme/lazy-startup"

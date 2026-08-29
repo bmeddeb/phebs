@@ -102,11 +102,20 @@ type wholeLease struct {
 	searcher   zoekt.Streamer
 }
 
-const wholeCacheLoadTimeout = 10 * time.Minute
+// WholeGenerationWarmingTimeout bounds one cache-owned validation or exact
+// reader load independently of the request that started it.
+const WholeGenerationWarmingTimeout = 10 * time.Minute
 const maxConcurrentWholeLoads = 2
 
 var errWholeSharedBaselineChanged = errors.New(
 	"whole-repository shared baseline changed",
+)
+
+// ErrWholeGenerationWarming means the request deadline expired while the same
+// exact generation's cache-owned work was active or raced its successful
+// completion. It is retryable; validation remains mandatory.
+var ErrWholeGenerationWarming = errors.New(
+	"whole-repository generation is warming",
 )
 
 func newWholeCache(indexDir string) *wholeCache {
@@ -322,57 +331,90 @@ func (c *wholeCache) ensureSharedValidated(
 	revisions []store.IndexedRevision,
 	binding *wholeSharedBinding,
 ) error {
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	repo.mu.Lock()
+	if repo.pruned || repo.shared != binding {
+		repo.mu.Unlock()
+		return errWholeSharedBaselineChanged
+	}
+	if binding.validated {
+		repo.mu.Unlock()
+		return nil
+	}
+	if repo.validation != nil {
+		validation := repo.validation
+		repo.mu.Unlock()
+		return c.waitForSharedValidation(
+			ctx, repo, validation, binding,
+		)
+	}
+	if binding.lastError != nil &&
+		time.Now().Before(binding.retryAt) {
+		err := binding.lastError
+		repo.mu.Unlock()
+		return err
+	}
+	loadCtx, cancel := context.WithTimeout(
+		c.closeCtx, WholeGenerationWarmingTimeout,
+	)
+	validation := &wholeSharedValidation{
+		ready:   make(chan struct{}),
+		binding: binding,
+		ctx:     loadCtx,
+		cancel:  cancel,
+	}
+	repo.validation = validation
+	go c.validateShared(
+		repo, validation, repository, revisions,
+	)
+	repo.mu.Unlock()
+	return c.waitForSharedValidation(
+		ctx, repo, validation, binding,
+	)
+}
+
+func (c *wholeCache) waitForSharedValidation(
+	ctx context.Context,
+	repo *wholeRepoCache,
+	validation *wholeSharedValidation,
+	binding *wholeSharedBinding,
+) error {
+	select {
+	case <-validation.ready:
+	case <-ctx.Done():
+	case <-c.closeCtx.Done():
+	}
+	requestErr := ctx.Err()
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	select {
+	case <-validation.ready:
+		if validation.err != nil {
+			return validation.err
 		}
-		repo.mu.Lock()
-		if repo.pruned || repo.shared != binding {
-			repo.mu.Unlock()
+		if repo.pruned || repo.shared != binding || !binding.validated {
 			return errWholeSharedBaselineChanged
 		}
-		if binding.validated {
-			repo.mu.Unlock()
-			return nil
+		if errors.Is(requestErr, context.DeadlineExceeded) {
+			return errors.Join(ErrWholeGenerationWarming, requestErr)
 		}
-		if repo.validation != nil {
-			validation := repo.validation
-			repo.mu.Unlock()
-			select {
-			case <-validation.ready:
-				if validation.err != nil {
-					return validation.err
-				}
-				continue
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-c.closeCtx.Done():
-				return errors.New(
-					"whole-repository search cache is closed",
-				)
-			}
-		}
-		if binding.lastError != nil &&
-			time.Now().Before(binding.retryAt) {
-			err := binding.lastError
-			repo.mu.Unlock()
-			return err
-		}
-		loadCtx, cancel := context.WithTimeout(
-			c.closeCtx, wholeCacheLoadTimeout,
-		)
-		validation := &wholeSharedValidation{
-			ready:   make(chan struct{}),
-			binding: binding,
-			ctx:     loadCtx,
-			cancel:  cancel,
-		}
-		repo.validation = validation
-		go c.validateShared(
-			repo, validation, repository, revisions,
-		)
-		repo.mu.Unlock()
+		return requestErr
+	default:
 	}
+	if cacheErr := validation.ctx.Err(); cacheErr != nil {
+		return cacheErr
+	}
+	if requestErr != nil {
+		if errors.Is(requestErr, context.DeadlineExceeded) &&
+			!repo.pruned && repo.shared == binding &&
+			repo.validation == validation {
+			return errors.Join(ErrWholeGenerationWarming, requestErr)
+		}
+		return requestErr
+	}
+	return errors.New("whole-repository search cache is closed")
 }
 
 func (c *wholeCache) validateShared(
@@ -571,7 +613,7 @@ func (c *wholeCache) acquireExact(
 			continue
 		}
 		loadCtx, cancel := context.WithTimeout(
-			c.closeCtx, wholeCacheLoadTimeout,
+			c.closeCtx, WholeGenerationWarmingTimeout,
 		)
 		load := &wholeCacheLoad{
 			ready:     make(chan struct{}),
@@ -599,13 +641,23 @@ func (c *wholeCache) waitForLoad(
 ) (*wholeLease, error) {
 	select {
 	case <-load.ready:
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		repo.mu.Lock()
-		defer repo.mu.Unlock()
+	case <-ctx.Done():
+	case <-c.closeCtx.Done():
+	}
+	requestErr := ctx.Err()
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	select {
+	case <-load.ready:
 		if load.err != nil {
 			return nil, load.err
+		}
+		if requestErr != nil {
+			if errors.Is(requestErr, context.DeadlineExceeded) &&
+				!repo.pruned && slices.Equal(load.revisions, revisions) {
+				return nil, errors.Join(ErrWholeGenerationWarming, requestErr)
+			}
+			return nil, requestErr
 		}
 		entry := load.entry
 		if entry == nil || repo.pruned || repo.entry != entry ||
@@ -618,11 +670,20 @@ func (c *wholeCache) waitForLoad(
 			cache: c, repo: repo, entry: entry,
 			repository: repository, searcher: entry.searcher,
 		}, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-c.closeCtx.Done():
-		return nil, errors.New("whole-repository search cache is closed")
+	default:
 	}
+	if cacheErr := load.ctx.Err(); cacheErr != nil {
+		return nil, cacheErr
+	}
+	if requestErr != nil {
+		if errors.Is(requestErr, context.DeadlineExceeded) &&
+			!repo.pruned && repo.load == load &&
+			slices.Equal(load.revisions, revisions) {
+			return nil, errors.Join(ErrWholeGenerationWarming, requestErr)
+		}
+		return nil, requestErr
+	}
+	return nil, errors.New("whole-repository search cache is closed")
 }
 
 func (c *wholeCache) fill(

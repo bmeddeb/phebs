@@ -109,7 +109,7 @@ func open(
 	var err error
 	if st != nil {
 		bootstrapCtx, cancel := context.WithTimeout(
-			context.Background(), wholeCacheLoadTimeout,
+			context.Background(), WholeGenerationWarmingTimeout,
 		)
 		candidates, err = whole.captureSharedCandidates(
 			bootstrapCtx, st,
@@ -129,7 +129,7 @@ func open(
 	}
 	if st != nil {
 		bootstrapCtx, cancel := context.WithTimeout(
-			context.Background(), wholeCacheLoadTimeout,
+			context.Background(), WholeGenerationWarmingTimeout,
 		)
 		err = whole.bootstrapShared(
 			bootstrapCtx, z, st, candidates,

@@ -2607,6 +2607,24 @@ stale root revisions, an active publication marker, and other search failures
 remain fenced until the focused test distinguishes them. No complete ceremony,
 release, Epic closure, or scale/SLO claim follows.
 
+Focused reproduction established the independently testable defect without
+retroactively attributing it to the sanitized receipt: a request could expire
+while its same-generation cache-owned exact validation remained healthy, and
+the API collapsed that state into status 500. T40.13x now types only that live
+deadline as warming, maps it to a fixed private-cause-free 409, suppresses
+service repair, and leaves lazy startup and every exact validation fence intact.
+The three-attempt V32 runner defers its final attempt only when the first search
+reported exact warming and the second attempt remained retryable; arbitrary 500
+is never retried, and V1–V31 retain their historical classifier, cadence, and
+wait-cancellation evidence.
+The combined Phase-9→10→11 small-profile selector also records the first and a
+later structural search outcome beside unchanged exact authority. Both were
+single-attempt successes in the corrected-tree pass; the selected subtest took
+184.94 seconds and the package 238.435 seconds. Complete affected-package,
+focused-race, vet, pinned-lint, module, docs, glossary, shell, and whitespace
+gates passed; two final independent reviews reported all severity counts zero.
+Integration can now be requested but remains separately unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

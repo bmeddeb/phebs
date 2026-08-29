@@ -207,6 +207,48 @@ func TestServiceSearchUsesExactV2PredicateAndFinalFence(t *testing.T) {
 	}
 }
 
+func TestServiceSearchDoesNotRepairAStillWarmingExactReader(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	searcher, err := Open(fixture.indexDir, fixture.store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+	for range cap(searcher.whole.loadSlots) {
+		searcher.whole.loadSlots <- struct{}{}
+	}
+	searcher.maxWallTime = 50 * time.Millisecond
+	request := ServiceRequest{
+		Repository: fixture.store.repo.Name, ServiceKey: "orders",
+		Expression: "T343_NEEDLE", RevisionSelector: "HEAD",
+	}
+	if _, err := searcher.SearchService(
+		t.Context(), request, Options{MaxMatches: 10},
+	); !errors.Is(err, ErrWholeGenerationWarming) ||
+		!errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("cold service search error = %v", err)
+	}
+	if fixture.store.repairs != 0 {
+		t.Fatalf("warming reader queued repairs = %d", fixture.store.repairs)
+	}
+	for range cap(searcher.whole.loadSlots) {
+		<-searcher.whole.loadSlots
+	}
+	searcher.maxWallTime = 5 * time.Second
+	result, err := searcher.SearchService(
+		t.Context(), request, Options{MaxMatches: 10},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Result.Files) != 1 || fixture.store.repairs != 0 {
+		t.Fatalf(
+			"warmed service search files=%d repairs=%d",
+			len(result.Result.Files), fixture.store.repairs,
+		)
+	}
+}
+
 func TestSharedSearchScopeReceiptDistinguishesAllCodeAndService(t *testing.T) {
 	fixture := buildServiceSearchFixture(t)
 	searcher, err := Open(fixture.indexDir, fixture.store)

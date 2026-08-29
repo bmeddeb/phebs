@@ -6,19 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	apiresponse "github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
+	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -1197,9 +1202,83 @@ func rehearseAuthorizedQueryBoundary(
 		observation:      emptyObservationForPlan(EnvironmentObservation{}, plan),
 	}
 	portReservations = nil
+	run.startPhase(8)
+	if err := run.archiveRestore(); err != nil {
+		t.Fatal(err)
+	}
+	if phase := run.observation.Phases[8]; phase.Name != "archive_restore" ||
+		phase.Outcome != "succeeded" || !phase.OracleExact {
+		t.Fatalf("combined archive/restore phase = %+v", phase)
+	}
+	run.startPhase(9)
+	if err := run.collection(); err != nil {
+		t.Fatal(err)
+	}
+	if phase := run.observation.Phases[9]; phase.Name != "collection" ||
+		phase.Outcome != "succeeded" || !phase.OracleExact {
+		t.Fatalf("combined collection phase = %+v", phase)
+	}
+	structuralServer = run.structural
+	searchAuthorityBefore, err := inspectSearchAuthorityFence(
+		ctx, structuralProfile,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var structuralSearchAttempts []authorizedQueryAttempt
+	run.authorizedQueryObserver = func(attempt authorizedQueryAttempt) {
+		if attempt.Profile == structuralProfile.Name && attempt.Query == "search" {
+			structuralSearchAttempts = append(structuralSearchAttempts, attempt)
+		}
+	}
 	run.startPhase(10)
 	if err := run.authorizedQueries(); err != nil {
 		t.Fatal(err)
+	}
+	if len(structuralSearchAttempts) == 0 ||
+		structuralSearchAttempts[0].Attempt != 1 ||
+		structuralSearchAttempts[len(structuralSearchAttempts)-1].Class != "success" {
+		t.Fatalf("first structural search attempts = %+v", structuralSearchAttempts)
+	}
+	firstSearch := structuralSearchAttempts[0]
+	if firstSearch.Class != "success" &&
+		(firstSearch.Class != "status" || firstSearch.Status != http.StatusConflict ||
+			firstSearch.Reason != httpReason409SearchWarming) {
+		t.Fatalf("first structural search outcome = %+v", firstSearch)
+	}
+	firstSearchAttemptCount := len(structuralSearchAttempts)
+	inspector, err := newProfileInspector(structuralProfile, profileInspectionV32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	laterRunner := &authorizedQueryRunner{
+		inspector: inspector, profile: structuralProfile, maxAttempts: 1,
+		observer: run.authorizedQueryObserver,
+	}
+	var laterSearch search.Result
+	if err := laterRunner.get(
+		ctx, "search", apiresponse.SearchPath+"?q=T401&max_matches=1", &laterSearch,
+	); err != nil {
+		t.Fatal(err)
+	}
+	laterAttempts := structuralSearchAttempts[firstSearchAttemptCount:]
+	if len(laterAttempts) != 1 || laterAttempts[0].Attempt != 1 ||
+		laterAttempts[0].Class != "success" {
+		t.Fatalf("later structural search attempts = %+v", laterAttempts)
+	}
+	t.Logf(
+		"structural search first=%s/%d/%s attempts=%d later=%s attempts=%d",
+		firstSearch.Class, firstSearch.Status, firstSearch.Reason,
+		firstSearchAttemptCount, laterAttempts[0].Class, len(laterAttempts),
+	)
+	searchAuthorityAfter, err := inspectSearchAuthorityFence(
+		ctx, structuralProfile,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if searchAuthorityAfter != searchAuthorityBefore {
+		t.Fatal("authorized search changed exact search authority")
 	}
 	phase := run.observation.Phases[10]
 	if phase.Name != "authorized_query" || phase.Outcome != "succeeded" || !phase.OracleExact {
@@ -1251,22 +1330,32 @@ func rehearseAuthorizedQueryBoundary(
 	if run.observation.AuthorizedQuery != nil {
 		t.Fatalf("successful authorized query retained failure evidence: %+v", run.observation.AuthorizedQuery)
 	}
-	if len(run.observation.ServerStartups) != 1 ||
-		run.observation.ServerStartups[0].Profile != semanticProfile.Name ||
-		run.observation.ServerStartups[0].Label != "authorized-query" ||
-		run.observation.ServerStartups[0].Outcome != "healthy" {
+	if len(run.observation.ServerStartups) != 3 ||
+		run.observation.ServerStartups[0].Profile != structuralProfile.Name ||
+		run.observation.ServerStartups[0].Label != "archive-restore" ||
+		run.observation.ServerStartups[0].Outcome != "healthy" ||
+		run.observation.ServerStartups[1].Profile != structuralProfile.Name ||
+		run.observation.ServerStartups[1].Label != "collection" ||
+		run.observation.ServerStartups[1].Outcome != "healthy" ||
+		run.observation.ServerStartups[2].Profile != semanticProfile.Name ||
+		run.observation.ServerStartups[2].Label != "authorized-query" ||
+		run.observation.ServerStartups[2].Outcome != "healthy" {
 		t.Fatalf("authorized-query startup observation = %+v", run.observation.ServerStartups)
 	}
 	waits := run.observation.ConvergenceWaits
-	if len(waits) != 2 ||
-		waits[0].Profile != semanticProfile.Name || waits[0].Label != "authorized-query-semantic" ||
-		waits[0].Revision != "a" || waits[0].Outcome != "converged" ||
-		waits[1].Profile != structuralProfile.Name || waits[1].Label != "authorized-query-structural" ||
-		waits[1].Revision != "a-return" || waits[1].Outcome != "converged" {
+	if len(waits) != 4 ||
+		waits[0].Profile != structuralProfile.Name || waits[0].Label != "archive-restore" ||
+		waits[0].Revision != "a-return" || waits[0].Outcome != "converged" ||
+		waits[1].Profile != structuralProfile.Name || waits[1].Label != "collection" ||
+		waits[1].Revision != "a-return" || waits[1].Outcome != "converged" ||
+		waits[2].Profile != semanticProfile.Name || waits[2].Label != "authorized-query-semantic" ||
+		waits[2].Revision != "a" || waits[2].Outcome != "converged" ||
+		waits[3].Profile != structuralProfile.Name || waits[3].Label != "authorized-query-structural" ||
+		waits[3].Revision != "a-return" || waits[3].Outcome != "converged" {
 		t.Fatalf("authorized-query convergence observations = %+v", waits)
 	}
 	if run.metersExpected != 2 || run.metersTracked != 2 || len(run.activeMeters) != 0 ||
-		run.measurementErr != nil || len(run.liveServers) != 2 || run.semantic != nil ||
+		run.measurementErr != nil || len(run.liveServers) != 4 || run.semantic != nil ||
 		run.structural != structuralServer {
 		t.Fatalf(
 			"authorized-query accounting expected=%d tracked=%d active=%d measurement=%v servers=%d semantic=%v structural_live=%t",
@@ -1281,7 +1370,60 @@ func rehearseAuthorizedQueryBoundary(
 		t.Fatal("authorized-query rehearsal retained a server after shutdown")
 	}
 	complete = true
-	t.Log("authorized-query dual-profile boundary passed")
+	t.Log("archive/restore, collection restart, and authorized-query boundary passed")
+}
+
+func inspectSearchAuthorityFence(
+	ctx context.Context,
+	profile PreparedProfile,
+) (string, error) {
+	inspector, err := newProfileInspector(profile, profileInspectionV32)
+	if err != nil {
+		return "", err
+	}
+	repository, err := inspector.currentRepositoryStatus(ctx, profile)
+	if err != nil {
+		return "", err
+	}
+	indexDir := filepath.Join(profile.DataDir, "index")
+	if focusedindex.IsPublishing(indexDir, profile.RepositoryName) {
+		return "", errors.New("T40.13 search publication marker is present")
+	}
+	source, err := repositoryindex.ReadSourceManifest(
+		indexDir, profile.RepositoryName,
+	)
+	if err != nil {
+		return "", err
+	}
+	root, err := focusedindex.ReadSearchGenerationRoot(
+		indexDir, profile.RepositoryName,
+	)
+	if err != nil {
+		return "", err
+	}
+	receipt, err := readSearchReceipt(
+		indexDir, profile.RepositoryName, root.Current,
+	)
+	if err != nil {
+		return "", err
+	}
+	if focusedindex.IsPublishing(indexDir, profile.RepositoryName) {
+		return "", errors.New("T40.13 search publication marker changed during inspection")
+	}
+	if !slices.Equal(repository.IndexedRevisions, root.Current.Revisions) ||
+		!slices.Equal(source.Revisions, root.Current.Revisions) ||
+		!slices.Equal(receipt.Revisions, root.Current.Revisions) ||
+		receipt.SourceDigest != source.Digest ||
+		receipt.SearchDigest != root.Current.GenerationDigest ||
+		receipt.ShardCount != root.Current.ShardCount ||
+		receipt.FileCount != root.Current.FileCount {
+		return "", errors.New("T40.13 search root, receipt, source, and store authority differ")
+	}
+	return convergenceProbe(
+		"search_readiness", source.Digest, receipt.SearchDigest,
+		root.Current.LogicalBytes, root.Current.AllocatedBytes,
+		root.Current.ShardCount, root.Current.FileCount,
+	).SHA256, nil
 }
 
 func buildWorkingTreeToolchain(

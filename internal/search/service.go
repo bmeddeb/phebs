@@ -85,6 +85,9 @@ func (s *Searcher) SearchService(
 		if bindErr == nil {
 			bindErr = errors.New("no exact generation reader")
 		}
+		if errors.Is(bindErr, ErrWholeGenerationWarming) {
+			return nil, fmt.Errorf("service search: bind reader: %w", bindErr)
+		}
 		if repairErr := s.requestWholeRepair(
 			ctx, request.Repository, searchGeneration.Revisions,
 		); repairErr != nil {
