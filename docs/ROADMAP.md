@@ -2595,6 +2595,18 @@ phase, plan/evidence, custody, production, or resource work. Focused review and
 integration followed by repeated exact-main preflight precede freeze; execution
 remains a separate decision.
 
+The integrated `t40r1-neutral-43` ceremony then passed exact preflight through
+collection, including the T40.13v archive/restore correction and the first
+complete fresh collection cycle, before its first structural authorized search
+returned status 500. Teardown completed without retained derived or scratch
+source custody. T40.13x preserves the signed source-free stop summary, retires
+identifier 43, and adds a bounded Phase-9→10→11 discriminator before selecting
+a correction. The leading hypothesis is deferred cold whole-reader validation
+after the Phase-10 restart, but the sanitized receipt cannot prove that cause;
+stale root revisions, an active publication marker, and other search failures
+remain fenced until the focused test distinguishes them. No complete ceremony,
+release, Epic closure, or scale/SLO claim follows.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

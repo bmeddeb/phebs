@@ -1,0 +1,64 @@
+{
+  "schema": "t4013-neutral43-authorized-query-stop-v1",
+  "ceremony_id": "t40r1-neutral-43",
+  "source_commit": "c992e54497d3468841bfd40d53005237f1a2ba29",
+  "plan_schema": "t4013-neutral-convergence-plan-v32",
+  "observation_schema": "t4013-neutral-convergence-observation-v32",
+  "receipt_schema": "t4013-neutral-convergence-receipt-v32",
+  "plan_digest": "sha256:08343c47f0684b0178aaa12ccf7179bf85fd4eca1e6aa4f1e2f61f32238b9f80",
+  "signer_fingerprint": "SHA256:CTtrPAq6Gf/hI7663d84Hv3oJcv75rMQ9g/eF2LHnPU",
+  "sealed_at": "2026-08-29T16:50:48Z",
+  "observation_sha256": "sha256:772ea1f486a2c76bbb3cadda5039d63c26a87dad916f07c1df3577a08fbebbce",
+  "receipt_sha256": "sha256:0a5b0bc50005cc98132fee0a326e4c24cbf6433f3ac506616780ec86caaaeb43",
+  "manifest_sha256": "sha256:f9de2715343cf760c8684541bf8337b9cc1fe6d3d80b897e5056d922fd5c7287",
+  "package_sha256": "sha256:0ecacfe9dda34ec601c9391ac73d9b9b3ba84b7481588041541477ea9e26c1ee",
+  "package_bytes": 27526,
+  "outcome": "stopped",
+  "succeeded_phases": [
+    "preflight",
+    "cold",
+    "warm_noop",
+    "delta_b",
+    "return_a",
+    "interruption",
+    "stale_worker",
+    "pressure",
+    "archive_restore",
+    "collection",
+    "teardown"
+  ],
+  "failure": {
+    "phase": "authorized_query",
+    "profile": "structural-2m-v1",
+    "query": "search",
+    "class": "status",
+    "status": 500,
+    "attempts": 1,
+    "wall_ms": 422934,
+    "oracle_exact": false,
+    "decision": "unclassified",
+    "reason": "authorized_query_failed",
+    "substantiated": false,
+    "source_free_projection_omits_private_cause": true
+  },
+  "collection": {
+    "fresh_cycle": true,
+    "capacity_observed_after_owners": true,
+    "authority_unchanged": true,
+    "exact_drained_owners": 13,
+    "durable_jobs": {
+      "completeness": "lower_bound",
+      "scanned": 64,
+      "deleted": 0,
+      "backlog": true
+    }
+  },
+  "teardown": {
+    "completed": true,
+    "derived_data_retained": false,
+    "scratch_source_retained": false
+  },
+  "establishes_ceremony_pass": false,
+  "establishes_scale_or_slo": false,
+  "authorizes_freeze_or_release": false
+}

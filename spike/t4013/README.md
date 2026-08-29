@@ -4683,3 +4683,24 @@ no ceremony phase, plan/evidence field, custody action, product work, child,
 scan, lock, deadline, or memory/disk cost and removes no neutral-42 material.
 After focused review and integration, repeat exact-main preflight, freeze
 neutral-43, and stop for independent plan review before any execution.
+
+## Neutral-43 Phase-11 stop and T40.13x
+
+The exact-main `t40r1-neutral-43` ceremony passed preflight, cold, warm-noop,
+delta, return, interruption, stale-worker, pressure, archive/restore, and
+collection before the first structural authorized search returned HTTP 500.
+Teardown completed without retained derived or scratch-source custody. The
+committed `t4013x-neutral43-authorized-query-stop.json` binds the source, plan,
+signed evidence, receipt, manifest, and package digests while retaining only
+source-free facts; its digest is
+`sha256:76c7515ffb926b945b4bec01c9e4913c765bcd5a90add407754d405b1369ebe4`.
+It does not name a private server error or assert a root cause that the sealed
+evidence cannot prove.
+
+T40.13x permanently retires neutral-43 and tests the real handoff that isolated
+selectors miss: archive/restore, the Phase-10 server restart and fresh
+collection, then the first authorized search. The discriminator records the
+publication-marker state, exact root/store revision equality, and a later
+search outcome. Only after those facts identify the boundary may production
+code change. Generic 500 retry, a longer product query timeout, and weakened
+root/marker/content validation are not acceptable substitutes.

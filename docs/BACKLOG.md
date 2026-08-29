@@ -2689,6 +2689,49 @@ Repeat exact-main prospective preflight after integration, then freeze and stop
 for plan review; do not execute. The ticket deletes no prior evidence,
 reservation, custody, or control root and adds no production or ceremony work.
 
+**T40.13x · Phase-11 cold exact-reader readiness and attribution**
+*(high production correctness · needs the sealed neutral-43 stop)* — preserve
+`t40r1-neutral-43` as an honest Phase-11 stop. Exact source
+`c992e54497d3468841bfd40d53005237f1a2ba29`, plan
+`sha256:08343c47f0684b0178aaa12ccf7179bf85fd4eca1e6aa4f1e2f61f32238b9f80`,
+and source-free package
+`sha256:0ecacfe9dda34ec601c9391ac73d9b9b3ba84b7481588041541477ea9e26c1ee`
+show exact success through collection and clean teardown, followed by one
+status-500 structural authorized search. The source-free receipt deliberately
+does not retain the server's private reason, so this stop does not establish a
+stale root, a publication-marker fossil, cold whole-reader validation, or any
+other root cause. The committed compact summary is
+`sha256:76c7515ffb926b945b4bec01c9e4913c765bcd5a90add407754d405b1369ebe4`.
+
+AC: permanently reject neutral-43 and preserve a committed source-free digest
+summary. Add one bounded production-path discriminator that crosses
+archive/restore, the Phase-10 restart, fresh lifecycle collection, and the
+first Phase-11 search. It must record publication-marker presence, exact
+root/store revision equality, and the first versus later search outcome so the
+cold-reader boundary is distinguishable from stale publication authority.
+Correct the shared readiness boundary rather than retrying generic status 500
+or relaxing exact marker/root/content validation. Keep the existing ten-second
+product query budget and retained schemas exact unless a separately justified
+schema change is unavoidable.
+
+Tests must make the pre-correction cold failure reproducible in seconds, prove
+the selected shared correction, and keep stale-root and active-publication
+refusals fail-closed. Add one combined Phase-9→10→11 focused rehearsal; the
+existing isolated Phase-9 and Phase-11 selectors are insufficient because
+Phase 10 restarts the structural server. Focused normal/race, vet, docs,
+glossary, shell, whitespace, and independent exact-candidate review form the
+merge bar. A complete ceremony is not a regression test.
+
+Steady-state cost: identifier and evidence changes add no runtime work. The
+discriminator is test-only. The production correction may perform only the
+already-required exact generation validation at a lifecycle/readiness boundary;
+it must add no second corpus/shard pass per restart, no request-time fallback
+scan, no new polling loop, child, persistent lock, or relaxed deadline. Query,
+sync tick, retry/no-op, publication, lifecycle mutation, cache invalidation,
+and disk/memory ceilings otherwise remain unchanged. Merge, freeze, complete
+ceremony, release, Epic closure, and scale/SLO evidence remain separately
+unauthorized.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
