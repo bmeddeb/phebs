@@ -4647,3 +4647,25 @@ terminal oracle remains strict for a genuinely current failed successor.
 Focused normal/race, live recovery, vet/docs, independent review, and the small
 Phase-9 archive/restore rehearsal remain required before integration or any
 new freeze. A full ceremony is not required to test this correction.
+
+### Exact T40.13v Phase-9 focused pass
+
+Exact implementation commit
+`d6fe7d41fef76750cf6454baf0fd2161c4c82378` passed the focused store and live
+restore regressions normally and under the race detector, the complete
+`internal/recovery` package, repo-status projections, module verification,
+vet, focused lint, documentation, glossary, format, and whitespace. Independent
+review traced the restore call and every fresh/coalesced extraction writer and
+reported critical, high, medium, and low findings all zero.
+
+The exact-clean real-binary selector then observed restored extraction schedule
+absence followed by a current active schedule and one benign 409, without
+resurrecting the imported terminal projection. The
+`structural-archive-restore` boundary passed in 90.55 seconds; the top-level
+readiness test took 228.48 seconds and the package command completed in
+229.179 seconds. Successful teardown removed the diagnostic workspace.
+
+This supersedes neutral-42's specific Phase-9 restore-projection blocker. It
+does not rerun earlier phases, exercise Phases 10–12, establish a full ceremony
+or scale/SLO pass, or authorize merge, exact-main preflight, freeze, execution,
+release, or Epic-40 closure.

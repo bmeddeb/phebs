@@ -2577,6 +2577,16 @@ independent review, and the small Phase-9 rehearsal precede any integration or
 new freeze; the sealed stop establishes no pipeline failure, Phase-9 pass,
 ceremony pass, release, Epic closure, or scale/SLO claim.
 
+Exact implementation commit
+`d6fe7d41fef76750cf6454baf0fd2161c4c82378` then passed focused normal/race,
+complete recovery, module, vet, lint, documentation, and independent review
+with all severity counts zero. Its exact-clean real-binary Phase-9 rehearsal
+crossed restored schedule absence, current successor creation, and a benign
+409 before passing the archive/restore authority boundary in 90.55 seconds;
+the package completed in 229.179 seconds. T40.13v's focused correction gate is
+closed. Integration, exact-main preflight, freeze, a complete ceremony,
+release, Epic closure, and scale/SLO claims remain separate.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

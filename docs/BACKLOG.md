@@ -2660,6 +2660,19 @@ lifecycle cadence, evidence bytes, caches, corpus/shard reads, memory/disk
 ceilings, and every deadline remain unchanged. Merge, freeze, full ceremony,
 release, Epic closure, and scale/SLO evidence remain separately unauthorized.
 
+Exact result (2026-08-29): implementation commit
+`d6fe7d41fef76750cf6454baf0fd2161c4c82378` passed focused store/recovery
+normal and race coverage, the complete recovery package, module verification,
+vet, focused lint, documentation, glossary, format, and whitespace. Independent
+review traced the restore caller and every extraction writer and reported all
+severity counts zero. The exact-clean real-binary Phase-9 rehearsal then
+observed the restored schedule move from unavailable to an active extraction
+successor, crossed a benign 409, and passed the archive/restore authority
+boundary in 90.55 seconds; the top-level test and package completed in 228.48
+and 229.179 seconds. This closes T40.13v's focused correction gate only. Merge,
+exact-main preflight, freeze, complete ceremony, release, Epic closure, and
+scale/SLO evidence remain separate.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/
