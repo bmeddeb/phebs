@@ -4669,3 +4669,17 @@ This supersedes neutral-42's specific Phase-9 restore-projection blocker. It
 does not rerun earlier phases, exercise Phases 10–12, establish a full ceremony
 or scale/SLO pass, or authorize merge, exact-main preflight, freeze, execution,
 release, or Epic-40 closure.
+
+## T40.13w neutral-42 identifier retirement
+
+`t40r1-neutral-42` is consumed by its sealed Phase-9 stop. Its retained run
+root currently prevents overwrite, but that directory may later be retired by
+separately reviewed housekeeping and is not permanent non-reuse authority.
+The launcher therefore advances its constant numeric review-stopped fence
+through 42; neutral-43 is the first admissible fresh identifier.
+
+This changes one comparison constant and one focused regression table. It adds
+no ceremony phase, plan/evidence field, custody action, product work, child,
+scan, lock, deadline, or memory/disk cost and removes no neutral-42 material.
+After focused review and integration, repeat exact-main preflight, freeze
+neutral-43, and stop for independent plan review before any execution.

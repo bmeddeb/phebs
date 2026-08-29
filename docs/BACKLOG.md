@@ -2673,6 +2673,22 @@ and 229.179 seconds. This closes T40.13v's focused correction gate only. Merge,
 exact-main preflight, freeze, complete ceremony, release, Epic closure, and
 scale/SLO evidence remain separate.
 
+**T40.13w · Retire consumed neutral-42 ceremony identifier**
+*(low-risk harness integrity · needs the sealed neutral-42 disposition)* —
+advance the permanent review-stopped fence from 41 through 42 before freezing
+neutral-43. The extant neutral-42 directory is only an incidental overwrite
+guard; later reviewed housekeeping must not make that consumed identifier
+admissible again.
+
+AC: `t40r1-neutral-42` is rejected by the launcher's constant-time numeric
+fence and `t40r1-neutral-43` is the first accepted sentinel. Preserve every
+other ID validation, plan/evidence byte, phase, deadline, and custody behavior.
+Run the focused driver regression, shell syntax, documentation, glossary, and
+whitespace gates plus independent review before fast-forward integration.
+Repeat exact-main prospective preflight after integration, then freeze and stop
+for plan review; do not execute. The ticket deletes no prior evidence,
+reservation, custody, or control root and adds no production or ceremony work.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -2587,6 +2587,14 @@ the package completed in 229.179 seconds. T40.13v's focused correction gate is
 closed. Integration, exact-main preflight, freeze, a complete ceremony,
 release, Epic closure, and scale/SLO claims remain separate.
 
+Before neutral-43 freeze, T40.13w advances the launcher's permanent consumed-ID
+fence through neutral-42. The retained neutral-42 directory blocks reuse today
+but cannot substitute for the durable numeric fence after later reviewed
+housekeeping. The focused change rejects 42 and first admits 43, adding no
+phase, plan/evidence, custody, production, or resource work. Focused review and
+integration followed by repeated exact-main preflight precede freeze; execution
+remains a separate decision.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
