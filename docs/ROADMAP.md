@@ -2634,11 +2634,16 @@ behavior: a V32 hybrid fixture retains an explicitly synthetic completed Phase
 wait, phase, collection, query, and teardown field, then runs the unchanged
 bounded archive/restore, collection, authorized-query, and teardown
 coordinators. The structural server remains live until teardown owns shutdown.
-The fast splice regression, exact-clean real-binary run, complete focused gates,
-and independent review remain pending. Even a pass establishes only the small
-completed late-phase handoff and custody-retirement protocol; full-corpus
-deletion cost, signed ceremony evidence, complete ceremony, scale/SLO, freeze,
-release, and Epic closure remain open.
+The fast splice regression, complete normal/race, vet, pinned-lint, module,
+docs, glossary, and whitespace gates passed; independent corrected-diff review
+reported no finding. Exact clean implementation commit
+`1f589e3ece12d60a625fa28fbad06156419359a5` then passed the real selector in
+244.12 seconds for the test and 244.816 seconds for the package. It emitted the
+completed Phase 9–12 custody-retirement marker, removed its unique private
+parent, and left no matching process or port-65499 listener. This establishes
+only the small completed late-phase handoff and custody-retirement protocol;
+full-corpus deletion cost, signed ceremony evidence, complete ceremony,
+scale/SLO, freeze, release, and Epic closure remain open.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

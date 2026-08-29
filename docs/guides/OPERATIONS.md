@@ -6012,6 +6012,14 @@ handoff evidence only: it does not prove Phase 1–8, full-corpus deletion cost,
 signed ceremony custody/evidence, hard-death recovery, a complete ceremony,
 release, Epic closure, or scale/SLO.
 
+Exact result (2026-08-29): clean implementation commit
+`1f589e3ece12d60a625fa28fbad06156419359a5` passed in 244.12 seconds for the
+test and 244.816 seconds for the package, emitted the required completed-handoff
+marker, removed the successful private parent, left no matching process or
+port-65499 listener, and kept the checkout clean. This clears the bounded
+Phase-9→12 handoff gate only. Integration, exact-main preflight, freeze, and any
+full ceremony remain separate decisions.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

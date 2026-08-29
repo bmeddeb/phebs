@@ -2791,6 +2791,16 @@ replay Phases 1–8, prove signed ceremony evidence, establish a complete
 ceremony or scale/SLO result, or authorize freeze, execution, release, or Epic
 closure.
 
+Result (2026-08-29): exact clean implementation commit
+`1f589e3ece12d60a625fa28fbad06156419359a5` passed the selector in 244.12
+seconds for the test and 244.816 seconds for the package. The required Phase
+9–12 custody-retirement marker, completed receipt, durable custody absence,
+protocol retirement, clean checkout, private-parent removal, process absence,
+and free port 65499 were observed. Complete normal/race, vet, pinned-lint,
+module, docs, glossary, and whitespace gates passed; independent corrected-diff
+review reported no finding. Integration and every full-ceremony claim remain
+separate.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

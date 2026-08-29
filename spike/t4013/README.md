@@ -4790,3 +4790,13 @@ full-profile totals remain synthetic receipt evidence. A pass proves only the
 small real Phase 9–12 completed handoff and graceful retirement. It does not
 prove full-corpus deletion cost, signed ceremony evidence, hard-death recovery,
 a complete ceremony, release, Epic closure, or a scale/SLO claim.
+
+Exact result (2026-08-29): clean implementation commit
+`1f589e3ece12d60a625fa28fbad06156419359a5` emitted the exact source line and
+`Phase 9 through Phase 12 custody retirement boundary passed`, then passed in
+244.12 seconds for the selected test and 244.816 seconds for the package. The
+successful parent was removed; the terminal sweep found no matching private
+root or process and no port-65499 listener. Complete normal/race, vet,
+repository-pinned lint, module, docs, glossary, and whitespace gates passed,
+and independent corrected-diff review reported no finding. This is bounded
+handoff evidence only; integration and a full ceremony remain separate.
