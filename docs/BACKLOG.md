@@ -2873,6 +2873,17 @@ first admit 46. Require package/race, semantic-scale, late-phase, vet, lint,
 docs, glossary, shell, whitespace, and zero-finding exact-commit review before
 integration; freeze and execution remain separate authorizations.
 
+Gate record (2026-08-30): exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the full package and race
+package, vet, pinned lint, docs, glossary, shell, formatting, and whitespace.
+Its unchanged host-network late-phase selector passed the real Phase 9–12
+handoff and custody retirement in 246.48 seconds after one pre-launch isolated
+module-cache DNS failure. Its semantic-scale v5 record passed with exact totals
+`262144/0/180224/360448/9`, 2,083,618 ms cold wall, 3,427,647,488-byte peak RSS,
+and 3,346,604,032 allocated bytes; exact cleanup completed. Fresh exact-commit
+review and independent OCR found zero issues. The implementation is eligible
+for an explicit integration request, not an implicit merge or freeze.
+
 Steady-state cost: no product path changes. V32 ceremony completion retains
 ten scalar comparisons and formats mismatch strings only on refusal; V1–V31
 retain their prior branch. The exact semantic and late-phase gates are opt-in

@@ -6084,6 +6084,23 @@ same-volume reservation and complete
 `190,000,000,000` decimal bytes. Freeze still stops for plan and signer review
 and never authorizes execution.
 
+#### Exact T40.13aa candidate record
+
+Exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the full normal/race,
+static, documentation, and zero-finding independent review gates. Its unchanged
+host-network T40.13y run passed the real Phase 9–12 handoff and custody
+retirement in 246.48 seconds. One earlier invocation stopped before launch
+because its isolated module cache could not resolve `proxy.golang.org`; after
+confirming no matching process, its private diagnostic root was purged.
+
+The exact semantic-scale run emitted `t4013-take19-semantic-fit-v5` with
+`freeze_ready=true`, exact totals `262144/0/180224/360448/9`, a 2,083,618 ms
+cold wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes. It
+then passed and removed its private workspace. These records make the
+implementation eligible for a separate integration request. They do not
+authorize merge, exact-main preflight, neutral-46 freeze, or execution.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

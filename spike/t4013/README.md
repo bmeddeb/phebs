@@ -4872,3 +4872,21 @@ package/race, exact semantic, bounded late-phase, static/documentation, and
 independent exact-commit review gates, followed by separate integration and
 freeze authorization. Freeze still stops for independent plan/signer review;
 execution remains separately unauthorized.
+
+### Exact T40.13aa candidate record
+
+Exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the complete package in
+116.826 seconds, the race package in 126.759 seconds, vet, pinned lint, docs,
+glossary, shell syntax, formatting, whitespace, and fresh exact-commit review
+with zero findings. One T40.13y invocation stopped before private-tool launch
+on isolated module-cache DNS; its unique diagnostic root matched no process and
+was purged. The unchanged host-network run then passed the real Phase 9–12
+handoff and exact custody retirement in 246.48 seconds.
+
+The full semantic selector emitted the v5 fit record with
+`freeze_ready=true`, exact totals `262144/0/180224/360448/9`, 2,083,618 ms cold
+wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes. It passed
+with exact cleanup in 2,183.88 seconds. This closes the branch-local scale-total
+and completion-corridor blockers; integration, exact-main preflight, neutral-46
+freeze, and execution remain separate authorizations.

@@ -2672,6 +2672,16 @@ and existing-gate coverage without V33 or product behavior, and retire
 identifier 45. Neutral-46 freeze and execution remain separately gated and
 unauthorized.
 
+Exact implementation commit `06df07ec4a7e3db7145874e0d1d9208883908bad`
+then passed its full normal/race, static, documentation, and exact-commit
+zero-finding review gates. The real Phase 9–12 selector passed in 246.48
+seconds with exact custody retirement. The full semantic selector independently
+confirmed `262144/0/180224/360448/9`, `freeze_ready=true`, a 2,083,618 ms cold
+wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes before
+exact cleanup. This closes the T40.13aa branch blockers and permits a separate
+integration request; main integration, exact-main preflight, neutral-46 freeze,
+and execution remain unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No
