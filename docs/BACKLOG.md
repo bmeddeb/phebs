@@ -3359,6 +3359,254 @@ unchanged; the 390px strip verified; the workflows guide's header
 description updated; the full receipt matrix re-captured in one
 reviewed update.
 
+## Epic 45 · Bazel-first managed SCIP generation *(planned after Epics 40–42 · cross-track)*
+
+Phebs is purpose-built for massive, service-dense monorepositories. This epic
+targets Bazel-managed Go repositories with at least 5,000 logical services and
+source trees in the 12-GB class. As defined in
+`docs/SIZING_ASSUMPTIONS.md`, that means 5,000 simultaneously accepted service
+incarnations in one exact repository/catalog generation and at least
+12,000,000,000 declared Git blob bytes across unique regular source paths
+admitted by one frozen HEAD indexing profile, with generated, vendored, test,
+excluded, gitlink, and external-repository treatment reported separately. The
+separate neutral headroom target remains 10,000 accepted services over the
+two-million-eligible-Go-path profile. These are design requirements, not
+claims that the current release has passed a target-corpus scale, freshness,
+accuracy, or operating gate.
+
+The shipped committed root and focused unit-bound one-blob readers remain exact
+compatibility paths. Their 64-MiB blob and monolithic semantic/cache limits are
+current scoped refusal boundaries, not the selected product-scale typed-index
+topology. Epic 45 must make managed generation and serving partitionable,
+resumable, and complete-by-manifest without multiplying source/type work by
+service count or requiring one whole-repository package graph or one in-memory
+SCIP snapshot.
+
+### Boundary
+
+- Bazel is the first managed indexing provider. The initial feasibility route
+  is the upstream-documented `scip-go` Go Packages Driver Protocol with the
+  `rules_go` `gopackagesdriver`; it is a path to validate against the exact
+  target repository/configuration, not a pre-established scale claim.
+- A provider is an out-of-process, closed-profile executor, not a Go dynamic
+  plugin or an extractor capability. Repository BUILD/Starlark/tool execution
+  is privileged code execution and is administrator-only initially.
+- The browser may select only installed provider descriptors and named
+  profiles. It never supplies an executable path, shell fragment, arbitrary
+  environment, credential, cache URL, or raw Bazel flags.
+- The initial Bazel provider has default-deny network egress and no remote
+  cache. Operators prehydrate dependencies and toolchains. Any later network or
+  cache access requires a separate dated decision over a closed destination
+  allowlist, credential boundary, repository-code exfiltration controls, and
+  new negative evidence.
+- Bazel `aquery` may contribute bounded planning or diagnostic evidence about
+  configured actions/artifacts. It is neither Go-package/service authority nor
+  an unmeasured required whole-graph production input.
+- A Phebs-managed SCIP bundle contains conforming SCIP `Index` members plus a
+  Phebs root/manifest. SCIP field-wise encoding is not called native sharding:
+  routing, retry, completeness, lifecycle, and atomic publication are Phebs
+  contracts.
+- Service identity, service membership, Bazel target/package identity, and
+  physical SCIP member identity remain separate. One service is never silently
+  turned into one virtual repository or one physical member.
+- Completeness binds four independently digested layers: the ordered configured
+  Bazel-target universe; the sealed target-to-Go-package-load-unit plan; each
+  package unit's canonical document set; and deterministic
+  document-to-SCIP-member assignment. **Required unit** means only a stable Go
+  package-load unit in that plan. Target, service, repository, document, and
+  physical-member identities cannot substitute for it.
+- Partial work is progress only. A durable attempt manifest records every
+  complete, failed, predeclared-excluded, or unsupported unit, but only an
+  attempt whose required units all complete may publish a current bundle.
+  Failed or unsupported required units leave the attempt non-current and the
+  prior complete generation current; when none exists, navigation remains
+  unavailable. A closed profile may qualify current coverage only with
+  exclusions frozen before execution and may never relabel runtime failure as
+  exclusion.
+- Disabled or unconfigured managed indexing adds no child, workspace, scan,
+  query, write, poll, lock, cache, or retained artifact. Every enabled-path
+  ticket records cold, retry, cancellation, warm reuse/no-op, publication,
+  startup/recovery, lifecycle, query, memory, disk, descriptor, and descendant
+  process costs.
+- Backend implementation belongs to the scale track; Settings implementation
+  belongs to the presentation track and requires the flagged handoff in
+  `AGENTS.md`. No ticket crosses that ownership boundary silently.
+
+**T45.1 · Target failure receipt and Bazel/scip-go feasibility gate** —
+reproduce the failed SCIP attempt without retaining private source, names,
+paths, commands, credentials, or raw errors in the repository; classify whether
+failure occurs during workspace/tool preflight, Bazel/package discovery,
+package loading/type checking, global relationship construction, SCIP
+serialization, validation, or current Phebs admission. No target command runs
+until a separately reviewed source-free harness gate proves an exact disposable
+workspace; a closed scrubbed environment; disabled ambient system/workspace/home
+bazelrc discovery with at most one operator-copied, fully resolved and
+digest-bound profile configuration; request-private bounded output user
+root/base and local caches; no network or remote cache; process-tree
+supervision; wall/RSS/disk/descriptor/output limits; Bazel-server and
+persistent-worker shutdown; and exact cleanup or retained-custody proof. Then
+run the exact pinned
+`rules_go` `gopackagesdriver` plus `scip-go` path over at least three authorized
+bounded cohorts: ordinary Go, generated-proto/cgo posture, and high shared-dep
+fan-out. Use exact package patterns, explicit module/version identity, named
+Bazel configuration, and initially reduced `skip-tests`/`skip-implementations`
+posture. Include one unrelated broken target outside the frozen requested
+universe; it must neither be built nor enter coverage, and a provider path that
+cannot isolate it records `REDUCE` or `STOP`. A broken required target must
+instead make the attempt terminal and non-current. AC: record exact commit and
+tool/config/profile digests; requested/succeeded/failed/excluded/unsupported
+target and package-unit counts; the complete configured-target → stable
+package-unit → canonical-document → proposed-member mapping; output
+bytes/documents/occurrences/symbols; process-tree peak RSS, wall, child count,
+descriptors, output-root/cache bytes, and retained scratch/cleanup state;
+compare definitions, references, hover, and cross-cohort symbol identity with
+an independently reviewed small oracle; prove that `--keep_going`, partial
+driver output, or one successful cohort cannot create a complete claim; record
+one `GO`, `REDUCE`, or `STOP` decision for T45.2. The spike changes no runtime
+behavior, admission cap, UI, release posture, or current typed-index authority.
+
+**T45.2 · Closed provider/profile and execution-authority contract** *(needs
+T45.1 GO)* — define versioned provider descriptors, operator-owned named
+profiles, immutable request identity, capability reporting, and bounded
+structured refusal/progress vocabulary. One request binds repository
+incarnation, exact indexed commit/source generation, provider, profile/config
+digest, configured-target-universe digest, Bazel/rules_go/Go/indexer identities,
+resource policy, and idempotency key; the planned successor identity also binds
+the sealed target-to-package-load-unit map digest. AC: strict decoding rejects
+unknown, duplicate, missing, unsafe, or oversized fields before mutation; only
+administrators may plan or execute; ordinary repository visibility grants no
+host execution; profiles contain no browser-supplied arbitrary command data;
+ambient bazelrc discovery is disabled; any single admitted operator-copied rc
+is fully resolved, closed-field validated, and digest-bound; output roots and
+any request-private local cache are identity-bound and lifecycle-owned; tool
+replacement and equal-value A→B→A profile transitions cannot alias;
+threat model and configuration guide distinguish the managed child from pure
+extractors; disabled steady state is zero-work.
+
+**T45.3 · Immutable Phebs SCIP-bundle and atomic-publication contract** *(needs
+T45.2)* — define a small exact generation root over bounded conforming SCIP
+`Index` members, document-routing members, symbol-routing members, and complete
+coverage outcomes. A durable attempt manifest binds exact
+source/provider/profile/tool authority, ordered staged member
+names/digests/bytes/counts, configured-target-universe digest, sealed
+target-to-package-plan digest, complete package/document/member mapping, and
+every terminal complete/failed/predeclared-excluded/unsupported target and
+package-unit classification. A separate
+publishable bundle root exists only when every required unit is complete and
+every exclusion was frozen by the exact profile before execution. AC: every
+root, member, document path, symbol key, collection count, encoded byte kind, and
+aggregate dimension has a measured reduce-first bound; canonical builds are
+byte-identical; duplicate documents, conflicting metadata, unsafe paths,
+missing/extra/corrupt configured targets, package units, target/package edges,
+package/document edges, document/member assignments, members, or routes,
+divergent routing, incomplete coverage, and stale source refuse before
+publication; **required unit** is encoded only as the stable package-load-unit
+identity and cannot be decoded as a target, service, repository, document, or
+member; failed or unsupported required units produce only the terminal
+non-current attempt manifest; one atomic fenced
+pointer preserves the prior generation until complete replacement; the legacy
+committed blob source remains strict-readable side by side; the schema calls
+this a Phebs bundle, never a native SCIP shard format.
+
+**T45.4 · Managed exact-workspace executor and durable generation scheduling**
+*(needs T45.2–T45.3)* — materialize or bind an exact private build workspace
+rather than running Bazel against the bare mirror; execute providers under
+pinned executable identities, process-group/descendant supervision, bounded
+environment and output, timeout/RSS/descriptor/disk limits, default-deny
+network egress, and no remote cache. Dependencies and toolchains are
+operator-prehydrated. Disable ambient system/workspace/home bazelrc discovery;
+admit only the exact closed profile configuration; place output user root,
+output base, repository/disk/action caches, server state, and persistent-worker
+state inside request-private bounded custody; disable shared caches; and prove
+server/worker/descendant shutdown plus lifecycle accounting before cleanup or
+resume. Adding any network/shared-cache path requires its own dated security and
+cost decision. Add a dedicated durable typed-index request/job
+and bounded generation schedule rather than overloading `JobIndex` or encoding
+options in a queue target. AC: preflight/planning, member execution,
+validation, and publication have independent durable states; one repository
+token and initially one execution slot bound concurrency; heartbeat, retry,
+fresh successor, coalescing, cancellation, server shutdown, hard death, stale
+worker, and exact same-generation resume are covered; late workers cannot
+publish across a source/profile/tool fence; cancellation kills descendants and
+cleans or inventories scratch without retiring the prior current generation;
+capacity refusal occurs before materialization and staging growth.
+
+**T45.5 · Generated typed-index source and routed code-navigation reader**
+*(needs T45.3)* — introduce an exact typed-index publication resolver that
+preserves the current Git-blob source and adds generated bundle authority.
+Route a document lookup to bounded document members and a symbol lookup to the
+exact bounded symbol/member postings; do not scan every member per request.
+Cache members independently under explicit byte/count limits and pin active
+readers across publication/lifecycle transitions. AC: definition, references,
+hover, implementations/relationships, position encodings, deterministic
+truncation, unavailable paths, and source conversion retain legacy behavior;
+cross-member and shared-library fixtures equal a trusted monolithic small
+oracle; malformed one-member and routing attacks fail closed without poisoning
+unrelated repositories; cold/warm query costs, maximum member fan-out, held
+locks, cache invalidation, and worst-case resident memory are recorded.
+SCIP-derived evidence remains unavailable for generated bundles until T45.9.
+
+**T45.6 · Bazel managed provider** *(needs T45.1–T45.5)* — implement the first
+provider using the exact validated `rules_go` `gopackagesdriver`/`scip-go`
+route. Preflight detects and reports, but never guesses authority from,
+`MODULE.bazel`/WORKSPACE posture, compatible rules_go, toolchain/configuration,
+and installed profile. Planning selects bounded package cohorts from the named
+profile, emits stable package-load-unit identities plus the complete
+configured-target mapping, and records coverage before execution. AC: canary
+and dry-run modes perform no publication; no default run expands to `//...` or `./...` without
+an explicit measured profile; tests/implementations default to the T45.1
+posture until separately widened; generated source, cgo, external repos,
+configuration transitions, build failures, and driver limitations are explicit
+outcomes; unchanged exact commit/profile/tool requests exact-reuse without
+another Bazel/scip-go child; changed authority creates a distinct successor;
+target-corpus execution repeats the frozen T45.1 cost and correctness gates
+before runtime registration.
+
+**T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
+Bazel closure)* — add only separately validated providers behind the same
+publication contract: a standard Go module/`go.work` `scip-go` provider and an
+operator-supplied existing-artifact import. AC: provider order keeps Bazel
+first for a Bazel-detected/configured repository; module discovery is bounded
+and exact rather than recursive best effort; import copies into immutable
+staging and verifies bytes/metadata/commit/coverage rather than trusting a
+mutable external path; unavailable providers are omitted or explicitly
+unavailable, never rendered as functioning controls; no generic shell-command
+provider or dynamic Go plugin is introduced.
+
+**T45.8 · Authorized API and Settings workflow** *(needs T45.4–T45.6;
+presentation-track handoff)* — add an administrator-only **Code navigation
+indexing** Settings section with repository and exact-commit selection,
+provider cards in configured order with Bazel first, named target/config and
+resource profiles, canary/dry-run, and explicit generation. Add bounded APIs
+for provider descriptors, exact repository typed-index/job status, plan, and
+enqueue; mutation carries CSRF, audit target, expected revision, request digest,
+and idempotency. AC: the UI shows absent/current/stale/planning/indexing/
+validating/publishing/failed/canceled states; polls one cheap durable status
+projection while retaining last-good state; never renders raw child output or
+private paths; retry is exact and a stale browser request is rejected; the
+File-page unavailable state links administrators to the preselected Settings
+section while ordinary users retain non-actionable `available: false`; mobile,
+keyboard, reduced-motion, light/dark, and bounded-error gates pass.
+
+**T45.9 · Generated-SCIP evidence integration and product-scale closure**
+*(needs T45.5, T45.6, and T45.8; T45.7 is optional)* — decide separately
+whether generated bundle members may feed SCIP-derived evidence. If GO,
+replace the one-blob extractor capability
+with a bounded exact member iterator whose facts still cite immutable source
+reads and whose coverage binds the complete bundle root; if STOP, keep code
+navigation and evidence postures explicitly independent. Then run one neutral
+and one separately authorized target closure covering cold generation, bounded
+failure, restart/resume, stale-source fencing, cross-member queries, warm
+reuse/no-op, pressure/lifecycle, backup/restore or explicit regenerate-on-
+restore, Settings/API parity, and clean teardown. AC: every design-target claim
+names exact corpus/config/tool/host evidence; 5,000+ services and 12-GB-class
+source remain the required product class, while a supported numeric envelope
+is recorded only from retained measurements; incomplete/error states remain
+visible; no release or `DO_NOT_RELEASE` change occurs without a separate
+validation decision. The closure receipt uses the exact accepted-service and
+admitted-source-byte dimensions in `docs/SIZING_ASSUMPTIONS.md`; aggregate
+filesystem size or total catalog rows cannot substitute for them.
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary

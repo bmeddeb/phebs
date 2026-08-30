@@ -64,6 +64,26 @@ build tags, generated input treatment, excluded paths, metadata sources,
 query mix, result bounds, freshness target, backup frequency, and permitted
 maintenance window. A missing dimension blocks acceptance.
 
+### Declared product-design dimensions
+
+The massive-monorepo target uses exact dimensions rather than labels alone:
+
+- **5,000 services** means at least 5,000 simultaneously accepted logical
+  service incarnations in one exact repository/catalog generation. Proposed,
+  conflicting, rejected, removed, and tombstoned records are reported
+  separately and do not satisfy that count.
+- **12-GB-class source** means at least 12,000,000,000 declared Git blob bytes
+  (decimal GB) across unique regular-file paths classified as source and
+  admitted by one frozen indexing profile at one exact HEAD source generation.
+  The receipt reports first-party, generated, vendored, and test path/byte
+  totals separately, whether each category is admitted or excluded, and every
+  excluded source byte. Gitlinks and external-repository contents do not count
+  unless a later contract imports them as separately identified source
+  authority.
+- **Neutral headroom** means 10,000 simultaneously accepted service
+  incarnations and two million eligible Go paths under its exact synthetic
+  profile. It is mechanics evidence, not a target-corpus or release claim.
+
 ## 3. Resource model
 
 All terms use observed or independently justified **upper bounds**. Units and
@@ -113,7 +133,7 @@ separate interactive and MCP concurrency, queue delay, cancellation latency,
 shutdown drain, stale-worker recovery, backup time, restore time, and teardown
 time. Partial results and retries are counted as cost, not discarded.
 
-## 4. Product limits to preserve
+## 4. Safety properties and scoped limits to preserve
 
 The accepted worksheet records the exact implementation version and verifies
 its effective limits. Current design expectations include:
@@ -128,8 +148,14 @@ its effective limits. Current design expectations include:
 - disk-space stop behavior that preserves current publications and precious
   state.
 
-An implementation limit is a safety ceiling, not proof that the selected
-pilot workload fits beneath it.
+Every numeric limit must name its scope: per file, member, partition,
+generation, request, worker, or retained publication. An implementation limit
+is a current safety/refusal boundary, not the product's intended repository
+ceiling and not proof that the selected workload fits beneath it. When a
+whole-generation limit falls below the declared design target, the required
+response is a measured partitioned or streamed successor contract; silently
+excluding the target, raising an unmeasured monolithic buffer, or weakening
+fail-closed publication is not an implementation.
 
 ## 5. Non-source feasibility worksheet
 

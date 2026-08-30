@@ -88,6 +88,7 @@ analyzes:
 | Supervised SurrealDB child | local state persistence under the server's isolated host identity | serving as an independent authorization authority |
 | Git and zoekt child processes | bounded mirror/index operations with explicit arguments and scrubbed environment | interpreting policy; retaining credentials; executing corpus hooks |
 | Extractor context | pure reads of explicitly supplied immutable objects within limits | network, corpus writes, dynamic loading, repository scripts, generators, or plugins |
+| Managed indexing provider *(planned Epic 45; not currently registered)* | running one exact administrator-selected closed profile against one immutable private workspace and returning staged typed-index artifacts | interpreting policy; publishing authority; accepting browser-supplied commands, environment, credentials, cache URLs, raw build flags, ambient bazelrc files, shared output roots, or shared caches; treating its output as trusted |
 | Approved identity provider | authenticating admitted identities | determining phebs object/evidence authorization by itself |
 | Approved source/metadata providers | supplying versioned source, build, deployment, catalog, or ownership inputs | proving runtime behavior, current accountability, or cross-input identity equivalence |
 | MCP client | presenting an authenticated request and rendering server-qualified output | strengthening conclusions, recreating negative wording, or treating an ID as authorization |
@@ -113,6 +114,13 @@ approved source and metadata providers
   -> pure-reader extraction / isolated index child
   -> atomic staged publication
 
+planned administrator-authorized managed indexing
+  -> installed closed provider/profile
+  -> exact private source workspace
+  -> isolated build/index child with bounded capabilities
+  -> untrusted staged SCIP bundle
+  -> complete validation and atomic publication
+
 authorized export request
   -> current principal projection and redaction
   -> immutable classified dossier
@@ -124,7 +132,8 @@ The security boundaries requiring Gate-1 validation are:
 1. **Ingress boundary:** external APIs, Git transport, identity provider, and
    metadata adapters into the isolated host.
 2. **Corpus boundary:** untrusted repository bytes into parsers, Git readers,
-   SCIP readers, and child indexers.
+   SCIP readers, child indexers, and any separately authorized managed build
+   execution.
 3. **Authorization boundary:** authenticated principal to object and evidence
    projections, including aggregates, refusals, pagination, and caches.
 4. **Publication boundary:** staged worker output to visible immutable facts,
@@ -157,6 +166,7 @@ The security boundaries requiring Gate-1 validation are:
 | TM-15 | External metadata or human disposition is presented as direct source truth | typed evidence basis; source/version/time window; conflicts retained; no silent arbitration | mixed/conflicting-input fixture and rendered provenance review |
 | TM-16 | Export or sharing leaks the creator's larger universe or hidden historical scope | recipient-specific current projection; no prior-scope counts; classified redacted export; reauthorization on reopen | creator/recipient differential tests and export inspection |
 | TM-17 | A complete-looking empty result is produced from failed, partial, truncated, stale, or unenumerated analysis | claim-specific absence eligibility; reconciled independent universe; explicit blockers; server-owned qualification text | fixtures for zero, partial, stale, inaccessible, and truncated states |
+| TM-18 | A managed indexing request turns repository BUILD/Starlark, generators, toolchains, ambient rc/configuration, persistent Bazel state, caches, or child output into unbounded or cross-request host execution, credential/network access, source leakage, or typed-index authority | administrator-only request; installed closed profile; exact private workspace; pinned tool identities; scrubbed bounded environment; disabled ambient rc discovery; at most one fully resolved digest-bound operator configuration; request-private bounded output user root/base and local caches; shared caches disabled; no network or remote cache initially; separately reviewed closed egress/credential policy before any later remote capability; Bazel-server/worker descendant supervision and shutdown proof; staged output treated as hostile; complete manifest validation and fenced atomic publication | malicious-build, ambient-rc, cache/output-root cross-contamination, and profile-substitution fixtures; capability inspection; child/worker/server timeout/OOM/disk/cancel/hard-death tests; cleanup/restart plus partial/stale/late-publication tests |
 
 ## 6. Control invariants
 
@@ -168,8 +178,17 @@ The following invariants are release-blocking:
   pagination, diffs, proof resolution, and qualification.
 - Unknown and unauthorized sensitive identities share one canonical refusal
   shape.
-- Corpus-provided code is never executed by an extractor, generator, plugin,
-  build script, hook, or dynamically loaded artifact.
+- A pure extractor never executes corpus-provided code, including generators,
+  plugins, build scripts, hooks, or dynamically loaded artifacts.
+- A managed indexing provider may execute repository build logic only after an
+  explicit administrator request through an installed closed profile, inside
+  the separate bounded boundary in TM-18. The initial boundary has no network
+  or remote-cache access, ignores ambient rc files, and contains Bazel output,
+  cache, server, and persistent-worker state inside request-private bounded
+  custody. Its staged output is untrusted and cannot become current authority
+  until complete validation and fenced atomic publication.
+  That capability remains absent until Epic 45 implements and verifies the
+  contract.
 - Visible facts and their complete coverage/provenance publish as one atomic
   unit.
 - A bundle, digest, proof ID, pin, cache entry, or prior access is not an

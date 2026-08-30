@@ -97,9 +97,13 @@ under `idl/` and handwritten Go under `src/` is therefore eligible without
 moving files or making declarations adjacent to callers. Generated Go stubs
 must be committed somewhere in that same pinned repository for the current
 syntactic gRPC/Thrift consumer readers to index them. For protobuf field
-references, a repository-root `index.scip` must additionally describe that
-same immutable revision. phebs never runs the repository's build, code
-generator, plugin, or dependency downloader.
+references, the current committed-artifact workflow additionally requires a
+SCIP index for that same immutable revision: repository-root `index.scip` in
+whole-repository mode, or the exact configured supporting path in focused
+mode. Current pure extractors and committed-index readers never run the
+repository's build, code generator, plugin, or dependency downloader. The
+separately bounded, administrator-authorized managed provider planned below is
+the only proposed build-execution boundary; it is not shipped.
 
 Epic 20's dark caller resolver can additionally consume three optional,
 committed JSON snapshots from fixed repository-root paths:
@@ -1215,22 +1219,26 @@ selected result commit is checked again before serialization.
 
 ### Precise code navigation (SCIP)
 
-`sym:` search uses ctags. Precise go-to-definition, references, and hover use
-a committed [SCIP](https://scip-code.org/) index instead. Run the appropriate
-SCIP indexer for the repository's language, write its binary protobuf as
-`index.scip` at the repository root, commit it with the source it describes,
-and let phebs sync/reindex that commit. No separate upload or side database is
-required.
+#### Current committed-index compatibility paths
 
-The first lookup lazily reads `index.scip` from the exact indexed commit. An
-absent index is a normal `available: false` result. Index blobs over 64 MiB,
-source files over 10 MiB, more than 32 MiB of aggregate source conversion in
-one lookup, malformed or semantically oversized indexes, symbolic/short
-revisions, and unsafe paths fail explicitly. The LRU snapshot cache has a 512
-MiB accounted budget. Results are deterministically selected; reference
-responses stop at 500 locations and set `truncated`, and hover content is
-capped at 64 KiB. The UI uses UTF-16 offsets (matching browser strings), while
-the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
+`sym:` search uses ctags. Precise go-to-definition, references, and hover use
+a committed [SCIP](https://scip-code.org/) index instead. For an unconfigured
+whole-repository scope, run the appropriate SCIP indexer, write its binary
+protobuf as `index.scip` at the repository root, commit it with the source it
+describes, and let phebs sync/reindex that commit. A focused repository instead
+uses only its exact configured supporting SCIP path inside the committed unit;
+it never falls back to root `index.scip`. No separate upload or side database
+is required for either compatibility mode.
+
+The first lookup lazily reads the selected committed SCIP blob from the exact
+indexed commit. An absent index is a normal `available: false` result. Index
+blobs over 64 MiB, source files over 10 MiB, more than 32 MiB of aggregate
+source conversion in one lookup, malformed or semantically oversized indexes,
+symbolic/short revisions, and unsafe paths fail explicitly. The LRU snapshot
+cache has a 512 MiB accounted budget. Results are deterministically selected;
+reference responses stop at 500 locations and set `truncated`, and hover
+content is capped at 64 KiB. The UI uses UTF-16 offsets (matching browser
+strings), while the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
 
 Position encoding is document-local. A document that leaves it unspecified or
 uses an unknown encoding is omitted from the navigation snapshot instead of
@@ -1242,18 +1250,23 @@ field describes source-file bytes rather than SCIP range units. Other
 index-wide structural and boundedness failures remain hard errors and are
 negative-cached by immutable revision.
 
-The extraction reader uses the same root-only product boundary with its own
-trusted corpus ledger. The root path is fixed—nested indexes and manifests are
-not alternatives—and the blob must have appeared as a regular file in the
-complete walk of the indexed commit. Mutable refs and Git replacement objects
-cannot redirect it; lazy object fetching is disabled. The reader opens only
-the recorded immutable blob, enforces its separate 64 MiB limit, and
-recomputes SHA-256 before parsing. A root `index.scip` symlink is an explicit
-extraction failure, not an “index absent” result. T20.1 selected this mode for
-the frozen monorepo target; phebs has no sharded-index manifest or part-reader
-surface.
+In whole-repository mode, the extraction reader uses the same root-only
+boundary with its own trusted corpus ledger. The root path is fixed—nested
+indexes and manifests are not alternatives—and the blob must have appeared as
+a regular file in the complete walk of the indexed commit. Mutable refs and
+Git replacement objects cannot redirect it; lazy object fetching is disabled.
+The reader opens only the recorded immutable blob, enforces its separate 64
+MiB limit, and recomputes SHA-256 before parsing. A root `index.scip` symlink
+is an explicit extraction failure, not an “index absent” result. A focused
+reader instead opens only the unit-bound supporting artifact, accounts the
+whole blob, and rejects out-of-unit documents; it has no root fallback. T20.1
+selected the root mode for its frozen gate. Both committed-artifact modes
+remain shipped compatibility paths; their one-blob semantic limits are current
+refusal boundaries, not the intended typed-index ceiling for the declared
+massive-monorepo target. phebs does not yet ship a generated-index manifest or
+part-reader surface.
 
-SCIP-derived experimental extractors parse the complete bounded root index
+SCIP-derived experimental extractors parse the complete bounded committed index
 before applying their source-language projection, so every foreign-language
 document and occurrence still consumes the global SCIP safety limits. The
 protobuf field reader then considers only `.go` and `.proto` source documents;
@@ -1265,6 +1278,75 @@ an integrity failure for the field readers and a typed
 `stale_symbol_input` gap for the caller reader. This is a bounded
 source-language posture, not a claim that cross-language references are
 extracted.
+
+#### Bazel-first managed generation target
+
+The planned product-scale path is a managed indexing provider, not a dynamic
+in-process plugin and not one virtual repository per service. Bazel is first:
+the initial feasibility path uses
+[`scip-go`](https://github.com/scip-code/scip-go#other-build-systems) through
+the Go Packages Driver Protocol with the
+[`rules_go` `gopackagesdriver`](https://github.com/bazel-contrib/rules_go/blob/master/docs/editors.md),
+bound to an exact repository commit, Bazel configuration, rules_go version, Go
+toolchain, and indexer identity. This is the upstream-documented Bazel-aware
+package-loading path; it still requires target-repository measurement and does
+not by itself establish whole-monorepo scalability.
+
+Managed generation must be partitionable and resumable without requiring one
+whole-repository package/type graph or one monolithic in-memory navigation
+snapshot. The selected design publishes a Phebs-managed bundle of conforming
+SCIP [`Index`](https://github.com/scip-code/scip/blob/main/scip.proto) members
+behind one exact complete manifest. Completeness has four distinct bound
+layers: the profile's ordered configured Bazel-target universe; the sealed
+target-to-Go-package-load-unit mapping returned by planning; each package
+unit's canonical document set; and the deterministic document-to-SCIP-member
+assignment. A **required unit** always means one stable Go package-load unit in
+that sealed plan, never a service, Bazel target, repository, document, or
+physical member. One package unit may satisfy several targets, and service
+scope remains a separate catalog projection.
+
+A durable attempt manifest binds every layer and every complete, failed,
+predeclared-excluded, or unsupported outcome. Only an attempt whose requested
+targets resolve completely, whose required package units all complete, and
+whose expected documents, routes, and members all validate may publish a
+current bundle. A failure, unsupported required unit, missing/extra mapping, or
+document/member mismatch leaves the attempt non-current and preserves the
+prior complete generation, or `available: false` when none exists. A profile
+may publish exact qualified coverage only for target exclusions frozen before
+execution; it cannot convert a runtime failure into an exclusion. Partial
+members are progress, never current authority. SCIP permits field-wise index
+emission and consumption, but it defines neither this bundle nor its routing,
+retry, lifecycle, or atomic-publication semantics; those remain Phebs
+contracts.
+
+[Bazel `aquery`](https://bazel.build/query/aquery) may supply measured
+diagnostic or planning evidence about configured actions and artifacts, but it
+is not Go-package, service-identity, or completeness authority.
+
+The initial provider has default-deny network egress and no remote cache;
+dependencies and toolchains must be prehydrated by the operator. Any later
+network or remote-cache capability requires a separate reviewed decision with
+a closed destination allowlist, credential boundary, repository-code
+exfiltration analysis, and new negative evidence.
+
+Bazel also has ambient local control and state. The managed boundary disables
+automatic system, workspace, and home
+[`bazelrc`](https://bazel.build/run/bazelrc) discovery and admits at most one
+operator-copied, fully resolved, digest-bound profile configuration. Every run
+uses request-private, capacity-bounded
+[`output_user_root` and `output_base`](https://bazel.build/remote/output-directories);
+shared repository, disk, and action caches are disabled. Any admitted local
+cache is request-private, identity-bound, byte-accounted, and lifecycle-owned.
+The Bazel server, persistent workers, and all descendants must stop before the
+workspace can be sealed or removed. These controls follow Bazel's documented
+server/output layout and its distinction between
+[`--disk_cache` and remote caches](https://bazel.build/remote/caching); network
+denial alone is not treated as isolation.
+
+The managed generation workflow is not shipped yet. Until its backlog gate
+closes, installations must continue to provide the current committed artifact:
+root `index.scip` for whole-repository mode or the configured unit-bound
+supporting path for focused mode. Settings offers no Bazel execution control.
 
 ### Git history
 

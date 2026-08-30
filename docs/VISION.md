@@ -30,6 +30,22 @@ owner. In a monorepo, one physical repository may contain thousands of
 services, shared libraries, generated trees, contracts, deployment
 descriptors, and unowned source.
 
+phebs is purpose-built for massive, service-dense monorepositories. Its design
+target includes Bazel-managed Go repositories with at least 5,000 logical
+services and source trees in the 12-GB class. Exact sizing means 5,000
+simultaneously accepted service incarnations in one exact repository/catalog
+generation and at least 12,000,000,000 declared Git blob bytes across unique
+regular source paths admitted by one frozen HEAD indexing profile; generated,
+vendored, test, excluded, gitlink, and external-repository treatment is
+reported separately. The neutral scale program uses a larger validation target
+of 10,000 accepted services and two million eligible Go paths to establish
+headroom. These are architectural requirements, not claims that the current
+release has passed every scale, freshness, accuracy, or operating gate. A
+current compatibility limit, admission fence, or unfinished validation gate
+below this envelope describes implementation maturity; it does not narrow the
+product target. The canonical dimension definitions live in
+[Sizing assumptions](./SIZING_ASSUMPTIONS.md#declared-product-design-dimensions).
+
 The product should let an authorized user select **All code** or one exact
 service and answer:
 

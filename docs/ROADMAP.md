@@ -35,6 +35,26 @@ generations; services are first-class catalog, search, relationship, and
 workflow scopes over those generations. Epics 40–42 now evolve the physical
 pipeline and logical authority independently before one combined scale gate.
 
+The declared product design target includes Bazel-managed Go monorepositories
+with at least 5,000 logical services and source trees in the 12-GB class. The
+exact dimensions are 5,000 simultaneously accepted service incarnations in
+one exact repository/catalog generation and at least 12,000,000,000 declared Git
+blob bytes across unique regular source paths admitted by one frozen HEAD
+indexing profile, with generated, vendored, test, excluded, gitlink, and
+external-repository treatment reported separately. The larger neutral
+headroom target remains 10,000 accepted services over the
+two-million-eligible-Go-path physical profile. Current per-file, per-member,
+per-partition, per-generation, request, cache, and worker ceilings remain
+fail-closed safety boundaries; none silently narrows that product target.
+Epic 45 is the planned Bazel-first managed SCIP-generation program. It retains
+the committed root and focused unit-bound one-blob readers as compatibility
+paths while measuring and then, only after a GO gate, adding out-of-process
+providers, immutable member bundles, exact completeness manifests, routed
+reads, lifecycle, and an administrator Settings workflow. Epic 45 establishes
+no supported scale or release claim and does not modify the active Epic 40–42
+ceremony sequence; its initial feasibility spike requires separate
+authorization if run before Epic 42 closes.
+
 ## Now
 
 T31.1 completed on 2026-08-04. Bounded, source-free, component-specific
