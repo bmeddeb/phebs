@@ -2645,6 +2645,20 @@ only the small completed late-phase handoff and custody-retirement protocol;
 full-corpus deletion cost, signed ceremony evidence, complete ceremony,
 scale/SLO, freeze, release, and Epic closure remain open.
 
+The integrated `t40r1-neutral-44` ceremony then passed preflight through stale
+worker and stopped honestly at Phase 8 before `pressure-restart` or ballast
+creation. Its sealed V32 receipt records
+`lifecycle/production_pressure_gate_refused` with the frozen substantiated
+`reduce` verdict and clean teardown; archive/restore, collection, authorized
+query, and the full-size T40.13x confirmation did not run. Execution preflight
+had only an at-most 230,893,179-byte nominal zero-workspace margin below the
+host-pressure upper boundary. The package omits the prepared allocation,
+Phase-8 capacity, and selected inner refusal arm, so later external freeing is
+an operational diagnosis rather than a sealed cause or product-capacity
+result. T40.13z retires identifier 44, preserves V32 and every pressure/custody
+bound, and returns host preparation to the existing stable same-volume
+reservation protocol before any separately authorized neutral-45 freeze.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

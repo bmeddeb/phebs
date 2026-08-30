@@ -6020,6 +6020,42 @@ port-65499 listener, and kept the checkout clean. This clears the bounded
 Phase-9→12 handoff gate only. Integration, exact-main preflight, freeze, and any
 full ceremony remain separate decisions.
 
+### Neutral-44 pressure-stop disposition
+
+Preserve `/Users/ben/phebs-t4013-ceremony/t40r1-neutral-44` and its source-free
+package digest
+`a20d9a8b895ed0a727fe616f1d68ff994d9530409d8688ffbd55e168eccf1655`.
+The sealed V32 run passed through stale worker and stopped at Phase 8 with
+`lifecycle/production_pressure_gate_refused`, `reduce`, and `substantiated`
+before `pressure-restart` or ballast creation. Teardown completed with no
+derived or scratch-source custody. Archive/restore, collection, authorized
+query, and Phase 11 did not run.
+
+The receipt retains execution-preflight availability `194,309,509,120` on a
+`494,384,795,648`-byte volume. Its nominal zero-workspace margin below the
+frozen upper boundary is at most 230,893,179 bytes; the prepared-workspace
+allocation, Phase-8 capacity sample, and selected inner refusal arm were not
+sealed. Record host freeing as the operational diagnosis, not an exact cause or
+product-capacity finding.
+
+Neutral-44 is consumed. After T40.13z integration, use neutral-45. Before
+exact-main preflight, review stale artifacts and preserve all evidence and
+unresolved commit points. Keep one owner-only, regular, same-volume, fully
+allocated reservation stable across preflight, freeze, execution, and package
+review. Do not create a sparse file or delete the current reservation without a
+verified replacement. Re-measure after cleanup; availability must remain in
+`181,130,218,415..194,540,402,299`, with at most `190,000,000,000` decimal
+bytes as the operating target. Then run:
+
+```sh
+export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-with-tool-mutation-disabled
+./spike/t4013/run-large-mac-ceremony.sh preflight
+./spike/t4013/run-large-mac-ceremony.sh freeze t40r1-neutral-45
+```
+
+Freeze stops for independent plan-digest and signer-fingerprint review. Do not
+execute without the later explicit execution authorization.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

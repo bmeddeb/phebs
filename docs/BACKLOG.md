@@ -2801,6 +2801,47 @@ module, docs, glossary, and whitespace gates passed; independent corrected-diff
 review reported no finding. Integration and every full-ceremony claim remain
 separate.
 
+**T40.13z · Neutral-44 pressure stop and consumed-ID retirement**
+*(low-risk harness integrity · needs the sealed neutral-44 disposition)* —
+preserve `t40r1-neutral-44` as an honest Phase-8 pressure stop. Exact source
+`f6b731543d136c2801bcbc85db53dc9e8fd7498f`, plan
+`sha256:4dbcf229862fe2d569c64ee7ca14581808ab5fe245867f16e40bdbcbddc0c6db`,
+observation
+`sha256:0bef1ba01d2a92e8f06dc87c502c5468252407ba70005b10f3770b60d333425b`,
+receipt
+`sha256:61d8198fab6d0f4ce98837f92c565deb1ca0720c0412b3a56d08dabfbf3d051a`,
+manifest
+`sha256:88d20d3fc397df1cb43e412ab457a77b12734036cdf4572f426630e128e3b148`,
+freeze
+`sha256:8c5614b47ea9ffa503fd3c6128685902e42d5dc44f4ca1c1bb8bc516e8a7d659`,
+and source-free package
+`sha256:a20d9a8b895ed0a727fe616f1d68ff994d9530409d8688ffbd55e168eccf1655`
+show that preflight through stale worker succeeded before pressure returned
+`lifecycle/production_pressure_gate_refused`, `reduce`, and `substantiated`.
+No `pressure-restart` or ballast creation occurred; archive/restore,
+collection, authorized query, and the full-size T40.13x Phase-11 confirmation
+did not run. Teardown completed without derived or scratch-source custody.
+
+AC: permanently reject neutral-44 and admit neutral-45 first. Preserve the
+sealed distinction between the at-most 230,893,179-byte nominal zero-workspace
+preflight slack and an exact Phase-8 cause: prepared allocation, the Phase-8
+capacity sample, and the selected inner refusal arm are absent. Do not change
+V32 or widen the 80/96-GiB custody ceilings.
+
+After reviewed cleanup, use the existing owner-only, same-volume, fully
+allocated stable-reservation protocol, keep availability inside
+`181,130,218,415..194,540,402,299`, and target at most `190,000,000,000`
+decimal bytes. Pass the focused driver test, shell syntax, docs, glossary, and
+whitespace gates plus independent review. Integration remains a separate
+authorization; only exact-main preflight and neutral-45 freeze may follow it,
+and freeze stops for plan review. Execution remains unauthorized.
+
+Steady-state cost: one constant-time consumed-ID comparison and one test row.
+Documentation and the host reservation add no production request, query, sync,
+retry, publication, lifecycle/store mutation, child, lock, schema, cache, or
+persistent product state. The reservation is host preparation, not evidence or
+ceremony custody.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

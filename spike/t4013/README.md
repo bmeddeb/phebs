@@ -4800,3 +4800,32 @@ root or process and no port-65499 listener. Complete normal/race, vet,
 repository-pinned lint, module, docs, glossary, and whitespace gates passed,
 and independent corrected-diff review reported no finding. This is bounded
 handoff evidence only; integration and a full ceremony remain separate.
+
+## Neutral-44 Phase-8 pressure stop and T40.13z
+
+`t40r1-neutral-44` is a sealed V32 stop, not a complete ceremony or product
+capacity result. Exact source `f6b731543d136c2801bcbc85db53dc9e8fd7498f`
+passed preflight through stale worker, then returned
+`lifecycle/production_pressure_gate_refused`, `reduce`, and `substantiated`
+before `pressure-restart` or any ballast write. Archive/restore, collection,
+authorized query, and the full-size T40.13x Phase-11 confirmation did not run.
+Teardown left no derived or scratch-source custody. The source-free package is
+`sha256:a20d9a8b895ed0a727fe616f1d68ff994d9530409d8688ffbd55e168eccf1655`.
+
+The signed execution-preflight availability was `194,309,509,120` bytes on a
+`494,384,795,648`-byte volume. This is at most 230,893,179 bytes below the
+frozen zero-workspace upper boundary, but the package does not retain prepared
+workspace allocation, the Phase-8 capacity sample, or the selected inner
+refusal arm. Treat later external freeing as the best operational diagnosis,
+not as a sealed exact cause.
+
+T40.13z advances the consumed-ID fence through 44; neutral-45 is first
+admissible. Do not delete an existing host reservation merely to "clean" the
+volume: that increases available space and can recreate this refusal. After
+reviewed cleanup, use one owner-only regular same-volume file, verify it is
+fully allocated and stable, keep available bytes inside
+`181,130,218,415..194,540,402,299`, and target at most `190,000,000,000`
+decimal bytes for margin. This does not change V32, the 80/96-GiB custody
+ceilings, or any product path. Exact-main preflight and neutral-45 freeze remain
+post-integration operations; freeze still stops for independent plan review and
+does not authorize execution.
