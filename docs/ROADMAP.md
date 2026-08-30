@@ -2659,6 +2659,19 @@ result. T40.13z retires identifier 44, preserves V32 and every pressure/custody
 bound, and returns host preparation to the existing stable same-volume
 reservation protocol before any separately authorized neutral-45 freeze.
 
+The exact-main `t40r1-neutral-45` run then crossed the real late-phase
+corridor: all eleven production phase bodies, eleven startups, and fourteen
+waits completed before V32 finalization sealed
+`authorized_query/oracle/exact_gate_failed`; stopped teardown retired all
+derived and scratch-source custody. Retained publication evidence proves all
+262,144 semantic records were observed, hence publication unsupported blobs
+were zero. The frozen 131,072 instead belongs to parsed observation-gap
+classifications. T40.13aa is the only next scale ticket: correct that V32
+ceremony-only type conflation, preserve V1–V31, add field-terminal diagnostics
+and existing-gate coverage without V33 or product behavior, and retire
+identifier 45. Neutral-46 freeze and execution remain separately gated and
+unauthorized.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

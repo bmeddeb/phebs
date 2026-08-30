@@ -141,12 +141,12 @@ func TestExactSemanticColdTiming(t *testing.T) {
 	running = false
 
 	freezeReady := result.converged && coldWall < 4*time.Hour && result.tail.TimingCaptureOK &&
-		result.snapshot.ObservationRecords == 262_144 &&
+		exactSemanticTotalsReady(result.snapshot) &&
 		exactSemanticScheduleReady(result.snapshot) &&
 		peakRSS <= frozenSafetyV14.MaximumPeakRSSBytes &&
 		allocated <= frozenSafetyV14.MaximumDataAllocatedBytes
 	fit := semanticColdTimingFit{
-		Schema:                         "t4013-take19-semantic-fit-v4",
+		Schema:                         "t4013-take19-semantic-fit-v5",
 		SourceCommit:                   sourceCommit,
 		Profile:                        profile.Name,
 		Diagnostic:                     "TestExactSemanticColdTiming",
@@ -168,6 +168,14 @@ func TestExactSemanticColdTiming(t *testing.T) {
 		RelationshipEntryMS:            result.tail.StageEntryMS["relationship_publication"],
 		ExpectedRecords:                262_144,
 		ObservationRecords:             result.snapshot.ObservationRecords,
+		ExpectedUnsupportedBlobs:       0,
+		ObservationUnsupportedBlobs:    result.snapshot.UnsupportedBlobs,
+		ExpectedExtractionFacts:        frozenSemanticExtractionFacts,
+		ExtractionFacts:                result.snapshot.ExtractionFacts,
+		ExpectedExtractionRows:         frozenSemanticExtractionRows,
+		ExtractionRows:                 result.snapshot.ExtractionRows,
+		ExpectedPublishedDomains:       frozenExtractorDomainCount,
+		PublishedDomains:               result.snapshot.PublishedDomains,
 		ExpectedExtractionPartitions:   exactSemanticExtractionPartitions,
 		ApplicableExtractionPartitions: result.snapshot.ApplicablePartitions,
 		SettledExtractionPartitions:    result.snapshot.SettledPartitions,
@@ -191,8 +199,10 @@ func TestExactSemanticColdTiming(t *testing.T) {
 
 	if !freezeReady {
 		t.Fatalf(
-			"exact semantic timing refused: converged=%t wall_ms=%d records=%d applicable_partitions=%d settled_partitions=%d last_stage=%s extraction_entry_ms=%d terminal=%q peak_rss_bytes=%d allocated_bytes=%d",
+			"exact semantic timing refused: converged=%t wall_ms=%d records=%d unsupported_blobs=%d extraction_facts=%d extraction_rows=%d published_domains=%d applicable_partitions=%d settled_partitions=%d last_stage=%s extraction_entry_ms=%d terminal=%q peak_rss_bytes=%d allocated_bytes=%d",
 			result.converged, result.coldWallMS, result.snapshot.ObservationRecords,
+			result.snapshot.UnsupportedBlobs, result.snapshot.ExtractionFacts,
+			result.snapshot.ExtractionRows, result.snapshot.PublishedDomains,
 			result.snapshot.ApplicablePartitions, result.snapshot.SettledPartitions,
 			result.tail.LastStage, result.tail.StageEntryMS["extraction_publication"], result.terminal,
 			peakRSS, allocated,
@@ -204,6 +214,45 @@ func exactSemanticScheduleReady(snapshot privateProfileSnapshot) bool {
 	return snapshot.ApplicablePartitions == exactSemanticExtractionPartitions &&
 		snapshot.SettledPartitions == exactSemanticExtractionPartitions &&
 		snapshot.RetryExhaustedPartitions == 0
+}
+
+func exactSemanticTotalsReady(snapshot privateProfileSnapshot) bool {
+	return snapshot.ObservationRecords == 262_144 &&
+		snapshot.UnsupportedBlobs == 0 &&
+		snapshot.ExtractionFacts == frozenSemanticExtractionFacts &&
+		snapshot.ExtractionRows == frozenSemanticExtractionRows &&
+		snapshot.PublishedDomains == frozenExtractorDomainCount
+}
+
+func TestExactSemanticTotalsReady(t *testing.T) {
+	t.Parallel()
+	exact := privateProfileSnapshot{
+		ObservationRecords: 262_144, ExtractionFacts: frozenSemanticExtractionFacts,
+		ExtractionRows: frozenSemanticExtractionRows, PublishedDomains: frozenExtractorDomainCount,
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*privateProfileSnapshot)
+		want   bool
+	}{
+		{name: "exact", want: true},
+		{name: "records", mutate: func(value *privateProfileSnapshot) { value.ObservationRecords-- }},
+		{name: "unsupported blobs", mutate: func(value *privateProfileSnapshot) { value.UnsupportedBlobs = 131_072 }},
+		{name: "facts", mutate: func(value *privateProfileSnapshot) { value.ExtractionFacts-- }},
+		{name: "rows", mutate: func(value *privateProfileSnapshot) { value.ExtractionRows-- }},
+		{name: "domains", mutate: func(value *privateProfileSnapshot) { value.PublishedDomains-- }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			value := exact
+			if test.mutate != nil {
+				test.mutate(&value)
+			}
+			if got := exactSemanticTotalsReady(value); got != test.want {
+				t.Fatalf("exactSemanticTotalsReady() = %t, want %t", got, test.want)
+			}
+		})
+	}
 }
 
 func TestExactSemanticScheduleReady(t *testing.T) {
@@ -254,6 +303,14 @@ type semanticColdTimingFit struct {
 	RelationshipEntryMS            int64                          `json:"relationship_entry_ms"`
 	ExpectedRecords                int                            `json:"expected_records"`
 	ObservationRecords             uint64                         `json:"observation_records"`
+	ExpectedUnsupportedBlobs       uint64                         `json:"expected_unsupported_blobs"`
+	ObservationUnsupportedBlobs    uint64                         `json:"observation_unsupported_blobs"`
+	ExpectedExtractionFacts        int64                          `json:"expected_extraction_facts"`
+	ExtractionFacts                int64                          `json:"extraction_facts"`
+	ExpectedExtractionRows         int64                          `json:"expected_extraction_rows"`
+	ExtractionRows                 int64                          `json:"extraction_rows"`
+	ExpectedPublishedDomains       int                            `json:"expected_published_domains"`
+	PublishedDomains               int                            `json:"published_domains"`
 	ExpectedExtractionPartitions   int                            `json:"expected_extraction_partitions"`
 	ApplicableExtractionPartitions int                            `json:"applicable_extraction_partitions"`
 	SettledExtractionPartitions    int                            `json:"settled_extraction_partitions"`
@@ -1400,6 +1457,14 @@ func runLatePhaseRehearsal(
 	portReservations map[string]net.Listener,
 ) latePhaseRehearsalResult {
 	t.Helper()
+	structuralContract, err := t401.StructuralPartitionProfile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	semanticContract, err := t401.ProjectionProfile("semantic")
+	if err != nil {
+		t.Fatal(err)
+	}
 	var semanticSeed *privateServer
 	var structuralServer *privateServer
 	handedOff := false
@@ -1429,7 +1494,6 @@ func runLatePhaseRehearsal(
 		}
 	}()
 
-	var err error
 	semanticListener := portReservations[semanticProfile.Address]
 	if semanticListener == nil {
 		t.Fatal("semantic late-phase address reservation is missing")
@@ -1484,6 +1548,8 @@ func runLatePhaseRehearsal(
 		t.Fatal(err)
 	}
 	structAR := awaitReadinessSnapshot(t, ctx, structuralProfile, "a-return", 12*time.Minute)
+	assertProjectionProfileTotals(t, "initial structural A-return", structAR, structuralContract)
+	assertProjectionProfileTotals(t, "initial semantic A", semanticA, semanticContract)
 
 	startupOffset := len(run.observation.ServerStartups)
 	waitOffset := len(run.observation.ConvergenceWaits)
@@ -1505,6 +1571,7 @@ func runLatePhaseRehearsal(
 		phase.Outcome != "succeeded" || !phase.OracleExact {
 		t.Fatalf("combined archive/restore phase = %+v", phase)
 	}
+	assertProjectionProfileTotals(t, "post-restore structural A-return", run.structAR, structuralContract)
 	run.startPhase(9)
 	if err := run.collection(); err != nil {
 		t.Fatal(err)
@@ -1513,6 +1580,7 @@ func runLatePhaseRehearsal(
 		phase.Outcome != "succeeded" || !phase.OracleExact {
 		t.Fatalf("combined collection phase = %+v", phase)
 	}
+	assertProjectionProfileTotals(t, "post-collection structural A-return", run.structAR, structuralContract)
 	currentStructural := run.structural
 	searchAuthorityBefore, err := inspectSearchAuthorityFence(ctx, structuralProfile)
 	if err != nil {
@@ -1545,6 +1613,8 @@ func runLatePhaseRehearsal(
 	if phase.Name != "authorized_query" || phase.Outcome != "succeeded" || !phase.OracleExact {
 		t.Fatalf("authorized-query phase observation = %+v", phase)
 	}
+	assertProjectionProfileTotals(t, "post-query structural A-return", run.structAR, structuralContract)
+	assertProjectionProfileTotals(t, "post-query semantic A", run.semanticA, semanticContract)
 	var meterControlReads, meterMemberReads int64
 	for _, snapshot := range []privateProfileSnapshot{run.structAR, run.semanticA} {
 		published, err := checkedMulInt64(int64(snapshot.PublishedDomains), 3)
@@ -1628,6 +1698,32 @@ func runLatePhaseRehearsal(
 		searchAuthorityBefore:   searchAuthorityBefore,
 		firstSearch:             firstSearch,
 		firstSearchAttemptCount: len(structuralSearchAttempts),
+	}
+}
+
+func assertProjectionProfileTotals(
+	t *testing.T,
+	label string,
+	snapshot privateProfileSnapshot,
+	profile t401.Profile,
+) {
+	t.Helper()
+	wantFacts := int64(profile.Aggregate.ExtractorFacts)
+	wantRows := int64(profile.Aggregate.ExtractorStagingRows)
+	if profile.Kind == "semantic" {
+		wantFacts = derivedSemanticExtractionFacts(profile)
+		wantRows = 2 * wantFacts
+	}
+	if snapshot.ObservationRecords != profile.Aggregate.UniqueGoBlobs ||
+		snapshot.UnsupportedBlobs != 0 ||
+		snapshot.ExtractionFacts != wantFacts || snapshot.ExtractionRows != wantRows ||
+		snapshot.PublishedDomains != frozenExtractorDomainCount {
+		t.Fatalf(
+			"%s totals records=%d want=%d unsupported_blobs=%d want=0 facts=%d want=%d rows=%d want=%d domains=%d want=%d",
+			label, snapshot.ObservationRecords, profile.Aggregate.UniqueGoBlobs,
+			snapshot.UnsupportedBlobs, snapshot.ExtractionFacts, wantFacts,
+			snapshot.ExtractionRows, wantRows, snapshot.PublishedDomains, frozenExtractorDomainCount,
+		)
 	}
 }
 

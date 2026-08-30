@@ -6056,6 +6056,34 @@ export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-wit
 Freeze stops for independent plan-digest and signer-fingerprint review. Do not
 execute without the later explicit execution authorization.
 
+### Neutral-45 post-query oracle-stop disposition
+
+Preserve `/Users/ben/phebs-t4013-ceremony/t40r1-neutral-45` and its source-free
+package digest
+`0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`.
+The sealed V32 run completed all eleven production phase bodies before
+finalization returned `authorized_query/oracle/exact_gate_failed`; stopped
+teardown completed with no derived or scratch-source custody. It is not a
+complete ceremony, pipeline failure, product-capacity result, or scale/SLO
+pass, and it must not be rerun or relabeled.
+
+The retained semantic publication reports 262,144 records and 262,144
+observed blobs. The validated `records = observed + unsupported` invariant
+therefore proves zero unsupported blobs. The frozen 131,072 is a separate
+count of gap classifications inside successfully parsed observations.
+T40.13aa corrects only that V32 finalizer type conflation and preserves
+`Explicit.GapFacts=131072`; V1–V31, receipt schemas, product behavior, and
+resource ceilings remain unchanged.
+
+The neutral-44 section's command naming neutral-45 is now historical and
+superseded. Neutral-45 is consumed. Do not preflight or freeze neutral-46 until
+T40.13aa is independently reviewed and integrated, the exact-main gates pass,
+and a separate freeze authorization is given. Retain the same stable
+same-volume reservation and complete
+`181,130,218,415..194,540,402,299` availability window, targeting at most
+`190,000,000,000` decimal bytes. Freeze still stops for plan and signer review
+and never authorizes execution.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

@@ -2843,6 +2843,41 @@ retry, publication, lifecycle/store mutation, child, lock, schema, cache, or
 persistent product state. The reservation is host preparation, not evidence or
 ceremony custody.
 
+**T40.13aa · Neutral-45 typed exact-oracle correction**
+*(high ceremony correctness · needs the sealed neutral-45 disposition)* —
+preserve `t40r1-neutral-45` as an honest V32 post-query finalization stop.
+Exact source `49cc5afb1cb3bc8846080588742ff9141d15af90`, plan
+`sha256:4b6edd87951e7c7016094489a77c9bd4be324de9c7e0ac55ebce70aa429cfef7`,
+observation
+`sha256:98bf4348cb0dea39409f67be932555e7bda0efb4a950186ff6c43b9fae9a71b1`,
+receipt
+`sha256:7615b170d9ebd8b5e52846e3014032311091ca733217aeffdedda41489873798`,
+and package
+`sha256:0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`
+bind the finalizer's type error: publication unsupported blobs are zero, while
+131,072 is the separately modeled observation-gap count from the two
+65,536-input semantic gap families. All eleven production phase bodies ran;
+stopped teardown is exact and custody-free.
+
+AC: rename the private snapshot counter to unsupported blobs; require
+structural and semantic publication unsupported blobs to equal zero in V32;
+derive and assert the separate 131,072 gap-classification oracle; project
+`Explicit.GapFacts` and `NoSilentEmpty` from that value; retain V1–V31
+execution and completed-receipt validation exactly; and report all ten V32
+final scalar mismatches deterministically. Extend the existing finalizer
+derivation/table, full-scale `TestExactSemanticColdTiming`
+(`262144/0/180224/360448/9`), and the T40.13y initial, post-restore,
+post-collection, and post-query projection checks. Add no `exact_totals`
+receipt section, V33, or permanent copied neutral-45 fixture. Retire 45 and
+first admit 46. Require package/race, semantic-scale, late-phase, vet, lint,
+docs, glossary, shell, whitespace, and zero-finding exact-commit review before
+integration; freeze and execution remain separate authorizations.
+
+Steady-state cost: no product path changes. V32 ceremony completion retains
+ten scalar comparisons and formats mismatch strings only on refusal; V1–V31
+retain their prior branch. The exact semantic and late-phase gates are opt-in
+test work only.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

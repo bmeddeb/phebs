@@ -4829,3 +4829,46 @@ decimal bytes for margin. This does not change V32, the 80/96-GiB custody
 ceilings, or any product path. Exact-main preflight and neutral-45 freeze remain
 post-integration operations; freeze still stops for independent plan review and
 does not authorize execution.
+
+## Neutral-45 post-query finalization stop and T40.13aa
+
+`t40r1-neutral-45` is a sealed V32 stop at exact source
+`49cc5afb1cb3bc8846080588742ff9141d15af90`, with source-free package
+`sha256:0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`.
+All eleven production phase bodies, eleven startups, and fourteen waits
+completed before finalization returned
+`authorized_query/oracle/exact_gate_failed`. Stopped teardown removed all
+derived and scratch-source custody. This is not a complete ceremony, pipeline
+failure, product-capacity result, or scale/SLO pass.
+
+The private profile snapshot reads publication `UnsupportedCount`. Neutral-45
+retains 262,144 semantic publication records and 262,144 observed blobs, so the
+validated `records = observed + unsupported` invariant proves the unsupported
+blob count is zero. The T40.1 frozen 131,072 instead counts gap
+classifications inside successfully parsed observations from the two
+65,536-input semantic gap families. Reusing one counter for both meanings made
+the first final exact-total comparison fail and would have made completed
+validation fail again through a projected zero `GapFacts`.
+
+T40.13aa keeps the V32 final oracle strict while separating those types:
+
+- structural totals are records/unsupported blobs/facts/rows/domains
+  `512/0/0/0/9`;
+- semantic totals are `262144/0/180224/360448/9`; and
+- semantic `Explicit.GapFacts` remains separately fixed at 131,072 with
+  `NoSilentEmpty=true` when the frozen unavailable inputs are present.
+
+Every V32 scalar mismatch is named with observed and expected values. No
+`exact_totals` receipt section or V33 is added, and V1–V31 execution retains
+its historical oracle and projection. The exact semantic diagnostic advances
+its source-free fit record to `t4013-take19-semantic-fit-v5` and gates all five
+semantic totals. The existing T40.13y path additionally checks the bounded
+structural projection before restore and after restore, collection, and query,
+plus semantic totals before and after query, before its existing completed
+receipt and real teardown boundary.
+
+Neutral-45 is consumed. Neutral-46 is first eligible only after focused,
+package/race, exact semantic, bounded late-phase, static/documentation, and
+independent exact-commit review gates, followed by separate integration and
+freeze authorization. Freeze still stops for independent plan/signer review;
+execution remains separately unauthorized.
