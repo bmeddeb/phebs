@@ -2836,7 +2836,8 @@ whitespace gates plus independent review. Integration remains a separate
 authorization; only exact-main preflight and neutral-45 freeze may follow it,
 and freeze stops for plan review. Execution remains unauthorized.
 
-Steady-state cost: one constant-time consumed-ID comparison and one test row.
+Steady-state cost: the existing constant-time consumed-ID comparison and one
+test row are retained.
 Documentation and the host reservation add no production request, query, sync,
 retry, publication, lifecycle/store mutation, child, lock, schema, cache, or
 persistent product state. The reservation is host preparation, not evidence or
