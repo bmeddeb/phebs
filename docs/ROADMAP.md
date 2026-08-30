@@ -2682,6 +2682,16 @@ exact cleanup. This closes the T40.13aa branch blockers and permits a separate
 integration request; main integration, exact-main preflight, neutral-46 freeze,
 and execution remain unauthorized.
 
+Neutral-46 was subsequently frozen at exact main and passed independent plan,
+signature, and host review, but an operator-requested SIGINT interrupted its
+entered Execute before a checkpoint or source-free observation existed. The
+fail-closed shell retained executed custody with live-phase supervision and no
+sealable result. Exact process and kernel-lock review authorized deletion of
+only the custody unit; the frozen evidence and external controls remain as an
+unsealed interruption record. T40.13ab retires 46 and first admits 47 without
+changing V32 or product behavior. Fresh exact-main preflight, freeze, and local
+operator execution remain separate steps.
+
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete
 stack, bounded regressions, independent review, and separate authorization. No

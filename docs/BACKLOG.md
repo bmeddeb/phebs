@@ -2889,6 +2889,27 @@ ten scalar comparisons and formats mismatch strings only on refusal; V1–V31
 retain their prior branch. The exact semantic and late-phase gates are opt-in
 test work only.
 
+**T40.13ab · Neutral-46 interruption disposition and fresh-ID fence**
+*(small ceremony integrity · needs the retained neutral-46 controls)* — keep
+neutral-46 as an unsealed operator-interrupted freeze. It entered Execute and
+was interrupted before any teardown checkpoint or source-free observation;
+there is no resumable or sealable receipt. Exact lock/process review authorized
+deletion of only its private `custody/` unit. Frozen evidence, prepared control,
+live-phase supervision record, operation lock, signer, and reservation remain.
+
+AC: advance the permanent stopped-ID fence through 46 and first admit 47;
+record the exact plan/freeze/signer and retained-control digests; forbid
+re-execution, seal, or fabricated observation for 46; preserve V32 and every
+product/resource bound; pass the focused driver, shell, documentation,
+glossary, whitespace, and independent-review gates before exact-main
+integration. Neutral-47 preflight/freeze and execution remain separate
+boundaries.
+
+Steady-state cost: one existing integer comparison changes its constant and the
+test table adds one row. No production request, query, worker, retry,
+publication, lifecycle/store mutation, child, lock, cache, or persistent state
+changes.
+
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
 Raise logical-service capacity through segmented authority and bounded state/

@@ -6101,6 +6101,35 @@ then passed and removed its private workspace. These records make the
 implementation eligible for a separate integration request. They do not
 authorize merge, exact-main preflight, neutral-46 freeze, or execution.
 
+### Neutral-46 operator-interruption disposition
+
+Preserve `/Users/ben/phebs-t4013-ceremony/t40r1-neutral-46` as an unsealed
+interruption record. Its exact source is
+`d148af0225a3b462db8d64c2a37934a27d45ce7e`, plan digest is
+`adfc861dd34189e1981288bd981e4e8d98cf05f83eba7c7ebf76c5583728f9ad`,
+freeze-envelope digest is
+`d210bf55638dfbaef063a1cc1832991e3db158890ce62575bdfc259f6bdc43af`,
+and signer fingerprint is
+`SHA256:1uhz9vtR4Ec0NnrtFxRlxbl7dLFdyLU0OSzO6hlEZgM`.
+
+The corrected execution command entered the one-shot Execute boundary, then
+received an operator-requested SIGINT before any teardown checkpoint or
+source-free observation. Exit 130 retained prepared control
+`sha256:c34ca87a72b479f092efbdfa2c976f071243978aad020d9c7ef60891f82f5baf`
+and live-phase execute supervision
+`sha256:ab10a4d45f47be04e4ff282cb35f8acc0bbdea8d70a7242bade2cff7496d8eed`.
+It is neither resumable nor sealable. Do not rerun `execute`, run `seal`, edit
+the controls, or invent an observation.
+
+Process, listener, controller-lock, descendant-lock, and operation-lock review
+found no surviving owner. Exact kernel-lock admission then authorized the
+reviewed purge of only `t40r1-neutral-46/custody`; the parent was synced and
+absence proved twice. Preserve `evidence/`, `private/prepared.json`,
+`custody.t4013-supervision/`, `.t4013-operation.lock`, `signing/`, and the
+host-pressure reservation. Neutral-46 is consumed. After T40.13ab integration,
+neutral-47 is the first admissible identifier; rerun preflight and freeze it,
+then stop for independent plan/signer review before any local execution.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

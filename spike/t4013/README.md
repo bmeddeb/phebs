@@ -4890,3 +4890,24 @@ wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes. It passed
 with exact cleanup in 2,183.88 seconds. This closes the branch-local scale-total
 and completion-corridor blockers; integration, exact-main preflight, neutral-46
 freeze, and execution remain separate authorizations.
+
+## Neutral-46 operator interruption and T40.13ab
+
+Neutral-46 froze exact source
+`d148af0225a3b462db8d64c2a37934a27d45ce7e` with plan
+`sha256:adfc861dd34189e1981288bd981e4e8d98cf05f83eba7c7ebf76c5583728f9ad`,
+freeze envelope
+`sha256:d210bf55638dfbaef063a1cc1832991e3db158890ce62575bdfc259f6bdc43af`,
+and signer `SHA256:1uhz9vtR4Ec0NnrtFxRlxbl7dLFdyLU0OSzO6hlEZgM`.
+Its Execute was interrupted by operator-requested SIGINT after the one-shot
+marker but before a checkpoint or source-free observation. The retained
+prepared and live-supervision digests are
+`c34ca87a72b479f092efbdfa2c976f071243978aad020d9c7ef60891f82f5baf` and
+`ab10a4d45f47be04e4ff282cb35f8acc0bbdea8d70a7242bade2cff7496d8eed`.
+
+No supported resume or seal exists for that shape. Exact process and kernel
+lock review authorized deletion of only the private custody unit; frozen
+evidence and all external controls remain. T40.13ab retires 46 and first admits
+47. It changes no plan schema, product behavior, or resource bound. Neutral-47
+still requires exact-main preflight, freeze, independent digest/signer review,
+and a separate local execution command.
