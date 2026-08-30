@@ -3734,8 +3734,25 @@ mutable external path; unavailable providers are omitted or explicitly
 unavailable, never rendered as functioning controls; no generic shell-command
 provider or dynamic Go plugin is introduced.
 
-**T45.8 · Authorized API and Settings workflow** *(needs T45.4–T45.6;
-presentation-track handoff)* — add an administrator-only **Code navigation
+**T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
+may precede T45.2)* — add an administrator-only **Code navigation indexing**
+section that states the current build truth without consuming or implying a
+managed-indexing authority. The single provider card is ordered `01 · Bazel
+first`, carries the closed blue `Unavailable` state, and says that managed
+generation is not registered and committed SCIP artifacts remain the only
+code-navigation source. AC: the component makes no request, poll, or mutation;
+renders no repository, profile, target/config, resource, canary, dry-run,
+executable, environment, credential, cache, raw-flag, plan, retry, or generate
+control; does not call or relabel `/api/reindex`; infers no repository support,
+index absence, or build configuration; is absent for ordinary users; uses text
+and color for state; stacks without document overflow at 390 px; adds focused
+unit coverage and a deterministic Settings 390 receipt. This is a presentation
+foothold only: it registers no provider/capability, links no File-page state,
+and does not satisfy T45.8b or authorize T45.2–T45.7.
+
+**T45.8b · Authorized API and Settings workflow** *(needs T45.4–T45.6;
+presentation-track handoff)* — replace T45.8a's fixed unavailable boundary with
+an administrator-only **Code navigation
 indexing** Settings section with repository/current-HEAD selection and the
 resolved exact commit shown read-only,
 provider cards in configured order with Bazel first, named target/config and
@@ -3751,7 +3768,7 @@ section while ordinary users retain non-actionable `available: false`; mobile,
 keyboard, reduced-motion, light/dark, and bounded-error gates pass.
 
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
-*(needs T45.5, T45.6, and T45.8; T45.7 is optional)* — decide separately
+*(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,
 replace the one-blob extractor capability
 with a bounded exact member iterator whose facts still cite immutable source

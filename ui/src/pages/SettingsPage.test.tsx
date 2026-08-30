@@ -126,6 +126,16 @@ test('lists reviewed capability names without secret material', async () => {
   expect(screen.queryByText(/secret/)).toBeNull()
 })
 
+test('managed code-navigation indexing boundary is administrator-only', async () => {
+  const { unmount } = renderPage()
+  await screen.findByText('Read-only client')
+  expect(screen.queryByRole('region', { name: 'Code navigation indexing' })).toBeNull()
+
+  unmount()
+  renderPage(true)
+  expect(await screen.findByRole('region', { name: 'Code navigation indexing' })).toBeTruthy()
+})
+
 test('key creation is read-only unless Investigation write is explicit', async () => {
   const { unmount } = renderPage()
   await screen.findByText('Read-only client')

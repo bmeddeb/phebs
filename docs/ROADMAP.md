@@ -57,7 +57,10 @@ regenerate-on-restore ownership before routed reads, and a current-HEAD-only
 administrator Settings workflow. Epic 45 establishes no supported scale or
 release claim and does not modify the active Epic 40–42 ceremony sequence; its
 target feasibility spike requires separate authorization if run before Epic 42
-closes.
+closes. T45.8a may land one earlier static
+administrator Settings boundary with Bazel first and visibly unavailable; it
+performs no request or action and does not advance the provider/API/execution
+sequence.
 
 ## Now
 

@@ -12,6 +12,7 @@ import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
 import { PALETTES, PALETTE_NAMES, isPaletteName } from '../palette'
 import type { Token } from '../highlight'
 import { isAbortError, relTime } from '../util'
+import { CodeNavigationIndexingSection } from './CodeNavigationIndexingSection'
 
 export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const [css] = useStyletron()
@@ -127,6 +128,8 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
           )}
         </section>
       )}
+
+      {isAdmin && <CodeNavigationIndexingSection />}
 
       <AppearanceSection />
 

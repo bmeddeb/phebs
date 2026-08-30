@@ -80,6 +80,16 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
     }
     await waitForReceiptReady(page)
   }
+  if (route.scrollIntoView) {
+    const target = page.locator(route.scrollIntoView).first()
+    await expect(target, `required scroll target missing: ${route.scrollIntoView}`).toBeVisible()
+    await target.evaluate((node) => {
+      node.scrollIntoView({ block: 'start', inline: 'nearest' })
+      // The application header is 53px tall. Keep the target below it and
+      // pin a little breathing room so the reviewed heading is never hidden.
+      window.scrollBy(0, -64)
+    })
+  }
   if (route.expand) {
     await page.$$eval('main details', (nodes) => nodes.forEach((node) => { (node as HTMLDetailsElement).open = true }))
   }

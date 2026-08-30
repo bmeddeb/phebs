@@ -1373,8 +1373,12 @@ The managed generation workflow is not shipped yet. Until its backlog gate
 closes, installations must continue to provide the current committed artifact:
 root `index.scip` for whole-repository mode or the configured unit-bound
 supporting path for focused mode. Settings offers no Bazel execution control.
-The planned control selects a repository's current HEAD only and displays its
-resolved immutable commit read-only.
+Administrators see one static **Code navigation indexing** boundary with
+`01 · Bazel first` and `Unavailable`; it makes no request, infers no repository
+support or index absence, and exposes no selector or action. Ordinary users do
+not see that operational boundary. Its planned interactive replacement selects
+a repository's current HEAD only and displays the resolved immutable commit
+read-only.
 
 ### Git history
 
@@ -1518,7 +1522,9 @@ whole-repository. Every experimental local-evidence publication and coverage
 read uses the exact indexed commit plus unit digest, so a same-commit scope
 change cannot reuse the previous unit's evidence.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
-Named keys are read-only for Investigation mutations by default; the creation
+Administrators also see the static, non-actionable Bazel-first managed-indexing
+boundary described above; it is not a generation control. Named keys are
+read-only for Investigation mutations by default; the creation
 form can explicitly add the immutable `investigation:write` capability and
 listed metadata shows the reviewed capability name.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:

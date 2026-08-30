@@ -36,6 +36,10 @@ export interface ReceiptRoute {
   // Keyboard chords pressed after readiness (e.g. the command navigator's
   // Control+k), before capture.
   press?: string[]
+  // Scroll one required region fully into view before capture. The selector
+  // MUST match; this keeps below-the-fold mobile receipts from passing while
+  // the surface they name is still outside the reviewed viewport.
+  scrollIntoView?: string
 }
 
 const T323_REPO = 'local/Users/ben/phebs-ux/spike/t323/t323-neutral-corpus.bundle'
@@ -95,6 +99,12 @@ export const ROUTES: ReceiptRoute[] = [
     name: 'settings',
     path: '/settings',
     mask: ['[data-volatile="lifecycle"]', 'section[aria-labelledby="lifecycle-heading"] [role="status"]'],
+  },
+  {
+    name: 'settings-indexing-390',
+    path: '/settings',
+    viewport: { width: 390, height: 844 },
+    scrollIntoView: '#code-navigation-indexing',
   },
   // The run mutates audit values, not table anatomy. Mask only the dynamic
   // cell contents so headers, rows, spacing, borders, and status-chip layout
