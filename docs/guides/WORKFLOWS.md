@@ -1287,10 +1287,23 @@ the initial feasibility path uses
 [`scip-go`](https://github.com/scip-code/scip-go#other-build-systems) through
 the Go Packages Driver Protocol with the
 [`rules_go` `gopackagesdriver`](https://github.com/bazel-contrib/rules_go/blob/master/docs/editors.md),
-bound to an exact repository commit, Bazel configuration, rules_go version, Go
-toolchain, and indexer identity. This is the upstream-documented Bazel-aware
-package-loading path; it still requires target-repository measurement and does
-not by itself establish whole-monorepo scalability.
+bound to the repository's current authoritative HEAD and its exact commit,
+Bazel configuration, rules_go version, Go toolchain, and indexer identity.
+This is the upstream-documented Bazel-aware package-loading path; it is neither
+the configured-target completeness oracle nor a historical-commit selector,
+and it still requires target-repository measurement rather than establishing
+whole-monorepo scalability.
+
+Before that path may run against an authorized target repository, T45.1a must
+merge and independently pass. Its source-free harness freezes minimal spike
+identities and one Bazel-native planner: bounded exact `cquery` target
+enumeration plus a pinned Phebs-owned aspect/provider projection for the stable
+target-to-Go-package-load-unit and canonical-document map. Configuration
+transitions, aliases, tests, generated/proto/cgo sources, external repositories,
+and many-target-to-one-package edges must be deterministic. `scip-go`,
+`gopackagesdriver`, `aquery`, filesystem discovery, and partial package output
+cannot create or amend those authority layers; an inexact planner stops the
+feasibility program.
 
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
@@ -1323,11 +1336,14 @@ contracts.
 diagnostic or planning evidence about configured actions and artifacts, but it
 is not Go-package, service-identity, or completeness authority.
 
-The initial provider has default-deny network egress and no remote cache;
-dependencies and toolchains must be prehydrated by the operator. Any later
-network or remote-cache capability requires a separate reviewed decision with
-a closed destination allowlist, credential boundary, repository-code
-exfiltration analysis, and new negative evidence.
+The initial provider has default-deny network egress and no remote cache. The
+operator supplies one immutable dependency/toolchain bundle with a bounded
+count/byte/digest manifest. Preflight verifies it and copies it into
+request-private custody before repository code runs; missing, oversized, or
+mismatched material refuses, and no mutable shared cache is mounted or reused.
+Any later network or remote-cache capability requires a separate reviewed
+decision with a closed destination allowlist, credential boundary,
+repository-code exfiltration analysis, and new negative evidence.
 
 Bazel also has ambient local control and state. The managed boundary disables
 automatic system, workspace, and home
@@ -1337,16 +1353,28 @@ uses request-private, capacity-bounded
 [`output_user_root` and `output_base`](https://bazel.build/remote/output-directories);
 shared repository, disk, and action caches are disabled. Any admitted local
 cache is request-private, identity-bound, byte-accounted, and lifecycle-owned.
+`GOPACKAGESDRIVER` resolves only to the pinned Phebs-owned audited launcher and
+closed argv; a repository-provided script, executable path, environment, or rc
+file is rejected.
 The Bazel server, persistent workers, and all descendants must stop before the
 workspace can be sealed or removed. These controls follow Bazel's documented
 server/output layout and its distinction between
 [`--disk_cache` and remote caches](https://bazel.build/remote/caching); network
 denial alone is not treated as isolation.
 
+Generated bundles use regenerate-on-restore. Backup retains only bounded
+request/profile intent, not a generated current pointer or member bytes.
+Restore exposes generated navigation as unavailable, revalidates current HEAD,
+profile, planner, launcher, and tool authority, and may then enqueue a distinct
+successor. This recovery/lifecycle contract must pass before a generated reader
+or provider registers; T45.9 validates it rather than choosing it.
+
 The managed generation workflow is not shipped yet. Until its backlog gate
 closes, installations must continue to provide the current committed artifact:
 root `index.scip` for whole-repository mode or the configured unit-bound
 supporting path for focused mode. Settings offers no Bazel execution control.
+The planned control selects a repository's current HEAD only and displays its
+resolved immutable commit read-only.
 
 ### Git history
 

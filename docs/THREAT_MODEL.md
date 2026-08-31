@@ -166,7 +166,7 @@ The security boundaries requiring Gate-1 validation are:
 | TM-15 | External metadata or human disposition is presented as direct source truth | typed evidence basis; source/version/time window; conflicts retained; no silent arbitration | mixed/conflicting-input fixture and rendered provenance review |
 | TM-16 | Export or sharing leaks the creator's larger universe or hidden historical scope | recipient-specific current projection; no prior-scope counts; classified redacted export; reauthorization on reopen | creator/recipient differential tests and export inspection |
 | TM-17 | A complete-looking empty result is produced from failed, partial, truncated, stale, or unenumerated analysis | claim-specific absence eligibility; reconciled independent universe; explicit blockers; server-owned qualification text | fixtures for zero, partial, stale, inaccessible, and truncated states |
-| TM-18 | A managed indexing request turns repository BUILD/Starlark, generators, toolchains, ambient rc/configuration, persistent Bazel state, caches, or child output into unbounded or cross-request host execution, credential/network access, source leakage, or typed-index authority | administrator-only request; installed closed profile; exact private workspace; pinned tool identities; scrubbed bounded environment; disabled ambient rc discovery; at most one fully resolved digest-bound operator configuration; request-private bounded output user root/base and local caches; shared caches disabled; no network or remote cache initially; separately reviewed closed egress/credential policy before any later remote capability; Bazel-server/worker descendant supervision and shutdown proof; staged output treated as hostile; complete manifest validation and fenced atomic publication | malicious-build, ambient-rc, cache/output-root cross-contamination, and profile-substitution fixtures; capability inspection; child/worker/server timeout/OOM/disk/cancel/hard-death tests; cleanup/restart plus partial/stale/late-publication tests |
+| TM-18 | A managed indexing request turns repository BUILD/Starlark, generators, toolchains, a repository-controlled package-driver launcher, ambient rc/configuration, prehydrated dependencies, persistent Bazel state, caches, or child output into unbounded or cross-request host execution, credential/network access, source leakage, or typed-index authority | administrator-only request; separately merged source-free harness; installed closed profile; exact private workspace; pinned Phebs-owned planner/launcher/tool identities; scrubbed bounded environment; disabled ambient rc discovery; at most one fully resolved digest-bound operator configuration; immutable count/byte/digest-bounded prehydration bundle copied into request-private custody before execution; request-private bounded output user root/base and local caches; shared caches disabled; no network or remote cache initially; separately reviewed closed egress/credential policy before any later remote capability; Bazel-server/worker descendant supervision and shutdown proof; staged output treated as hostile; Bazel-native completeness plan, complete manifest validation, fenced atomic publication, and regenerate-on-restore before reader/provider registration | malicious-build, repository-launcher, ambient-rc, prehydration-substitution, cache/output-root cross-contamination, and profile-substitution fixtures; capability inspection; child/worker/server timeout/OOM/disk/cancel/hard-death tests; cleanup/restart/restore plus partial/stale/late-publication tests |
 
 ## 6. Control invariants
 
@@ -185,8 +185,12 @@ The following invariants are release-blocking:
   the separate bounded boundary in TM-18. The initial boundary has no network
   or remote-cache access, ignores ambient rc files, and contains Bazel output,
   cache, server, and persistent-worker state inside request-private bounded
-  custody. Its staged output is untrusted and cannot become current authority
-  until complete validation and fenced atomic publication.
+  custody. Only a pinned Phebs-owned planner/driver launcher may execute; one
+  immutable digest-manifested offline bundle is verified and copied into that
+  custody before repository code. Its staged output is untrusted and cannot
+  become current authority until Bazel-native plan reconciliation, complete
+  validation, and fenced atomic publication. Generated bundles are absent
+  after restore until a newly fenced current-HEAD generation completes.
   That capability remains absent until Epic 45 implements and verifies the
   contract.
 - Visible facts and their complete coverage/provenance publish as one atomic
