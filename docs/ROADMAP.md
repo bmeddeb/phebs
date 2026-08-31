@@ -160,9 +160,8 @@ density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, and T43R.5 queued after T43R.1 and T43R.2
 completed on 2026-08-30 and T43R.3–4 completed on 2026-08-31. It
-touched no scale plane, authority, or claim; T41.2 is integrated, while
-T41.3–T41.5 retain stacked merge bars whose separate integration precedes
-T41.6.
+touched no scale plane, authority, or claim; T41.2–T41.5 are integrated and
+T41.6 is next.
 
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
@@ -898,8 +897,7 @@ catalog, relationship, or correctness authority.
   clearing plans, and indexed desired/active roots protect historical catalogs.
   The 10,000-service proof bounds every chunk at 512 rows, cold writes at
   10,000 rows, activation writes at 10,000, and one-service deltas at one row.
-  T41.3–T41.5 remain one stacked integration boundary; T41.6 is next after
-  separate authorization.
+  T41.3–T41.5 are integrated; T41.6 is next.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

@@ -10471,7 +10471,7 @@ complete affected normal, and complete affected race results close the branch
 merge bar. The full store package passed in 1151.527s normally and 1219.900s
 under race; live recovery passed in 58.899s and 60.924s respectively.
 
-T41.3–T41.5 remain one unmerged stacked integration boundary. T41.6 is next
-only after separate integration authorization. This ticket changes no current
+T41.3–T41.5 are integrated on the current-main lineage and T41.6 is next. This
+ticket changes no current
 production service cap, release posture, ceremony, scale/SLO, topology,
 migration-completion, or decommission claim.

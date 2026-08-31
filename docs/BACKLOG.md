@@ -3037,9 +3037,8 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration. T41.2 is integrated; T41.3,
-T41.4, and T41.5 own the stacked dark-ingestion/lifecycle/state merge bars.
-T41.6 is next only after their separately authorized integration.
+production constant or runtime registration. T41.2–T41.5 are integrated;
+T41.6 is next.
 
 **T41.6 · Sparse catalog/state/search backend** — migrate verified store point/
 page state reads and service-query compile/runtime to root/member authority,
