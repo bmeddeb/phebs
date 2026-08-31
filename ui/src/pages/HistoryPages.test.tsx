@@ -17,7 +17,7 @@ const fixture = vi.hoisted(() => {
     author: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
     committer: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
   }
-  return { commit, fetchCommits: vi.fn() }
+  return { commit, fetchCommits: vi.fn(), fetchDiff: vi.fn() }
 })
 
 vi.mock('../api', async (importOriginal) => ({
@@ -31,13 +31,7 @@ vi.mock('../api', async (importOriginal) => ({
       { status: 'deleted', path: 'src/old.go', additions: 0, deletions: 3 },
     ],
   }),
-  fetchDiff: async () => ({
-    base: 'b'.repeat(40),
-    head: fixture.commit.id,
-    files: [],
-    patch: '@@ -1 +1 @@\n-old\n+new',
-    truncated: false,
-  }),
+  fetchDiff: fixture.fetchDiff,
   fetchBlame: async () => ({
     revision: fixture.commit.id,
     path: 'src/new.go',
@@ -57,6 +51,14 @@ const page = (child: React.ReactNode) => (
 beforeEach(() => {
   fixture.fetchCommits.mockReset()
   fixture.fetchCommits.mockResolvedValue({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: false })
+  fixture.fetchDiff.mockReset()
+  fixture.fetchDiff.mockResolvedValue({
+    base: 'b'.repeat(40),
+    head: fixture.commit.id,
+    files: [{ status: 'added', path: 'src/new.go', additions: 2, deletions: 0 }],
+    patch: '@@ -1 +1 @@\n-old\n+new',
+    truncated: false,
+  })
 })
 
 afterEach(cleanup)
@@ -98,10 +100,133 @@ test('history ignores a stale load-more response after navigation', async () => 
 test('commit renders bounded patch rows and does not link a deleted file at the new revision', async () => {
   render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
   expect(await screen.findByRole('heading', { name: 'Add launch status' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'added file: src/new.go' })).toBeTruthy()
   expect(screen.getByText('+new')).toBeTruthy()
   expect(screen.getByText('-old')).toBeTruthy()
   expect(screen.getByRole('link', { name: 'src/new.go' }).getAttribute('href')).toContain('/file?')
   expect(screen.queryByRole('link', { name: 'src/old.go' })).toBeNull()
+})
+
+test('commit groups an ordered multi-file patch into deferred semantic regions', async () => {
+  const patchLines = [
+    'diff --git "a/raw before.go" "b/raw after.go"',
+    'similarity index 82%',
+    '',
+    '--- "a/raw before.go"',
+    '+++ "b/raw after.go"',
+    '@@ -1 +1 @@',
+    '-package before',
+    '---leading minus content',
+    '+package after',
+    '+++leading plus content',
+    'diff --git a/src/old.go b/src/old.go',
+    'deleted file mode 100644',
+    '--- a/src/old.go',
+    '+++ /dev/null',
+    '@@ -1 +0,0 @@',
+    '-package old',
+    'diff --git a/assets/logo.bin b/assets/logo.bin',
+    'new file mode 100644',
+    'Binary files /dev/null and b/assets/logo.bin differ',
+  ]
+  fixture.fetchDiff.mockResolvedValueOnce({
+    base: 'b'.repeat(40),
+    head: fixture.commit.id,
+    files: [
+      { status: 'renamed', old_path: 'src/structured before.go', path: 'src/structured after.go', additions: 2, deletions: 2 },
+      { status: 'deleted', path: 'src/old.go', additions: 0, deletions: 1 },
+      { status: 'added', path: 'assets/logo.bin', binary: true },
+    ],
+    patch: `${patchLines.join('\n')}\n`,
+    truncated: false,
+  })
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  const regions = await screen.findAllByRole('region')
+  expect(regions).toHaveLength(3)
+  expect(regions[0].getAttribute('aria-labelledby')).toBe('commit-diff-file-0')
+  expect(regions[0].textContent).toContain('src/structured before.go → src/structured after.go')
+  expect(regions[0].textContent).toContain('diff --git "a/raw before.go" "b/raw after.go"')
+  expect(regions[0].textContent).toContain('+package after')
+  expect(regions[0].textContent).not.toContain('-package old')
+  expect(regions[1].getAttribute('aria-labelledby')).toBe('commit-diff-file-1')
+  expect(regions[1].textContent).toContain('src/old.go')
+  expect(regions[1].textContent).toContain('-package old')
+  expect(regions[2].textContent).toContain('assets/logo.bin')
+  expect(regions[2].textContent).toContain('binary')
+  expect(regions[2].textContent).toContain('Binary files /dev/null and b/assets/logo.bin differ')
+  const renderedLines = regions.flatMap((region) => Array.from(region.children[1].children, (line) => line.textContent))
+  expect(renderedLines).toEqual(patchLines)
+  expect(screen.getByText('+++leading plus content').className).toBe(screen.getByText('+package after').className)
+  expect(screen.getByText('+++leading plus content').className).not.toBe(screen.getByText('+++ "b/raw after.go"').className)
+  expect(screen.getByText('---leading minus content').className).toBe(screen.getByText('-package before').className)
+  expect(screen.getByText('---leading minus content').className).not.toBe(screen.getByText('--- "a/raw before.go"').className)
+  expect(regions.every((region) => region.style.contentVisibility === 'auto')).toBe(true)
+  expect(regions.every((region) => region.style.containIntrinsicSize === 'auto 320px')).toBe(true)
+})
+
+test('commit preserves an unmatched patch prelude without assigning file authority', async () => {
+  fixture.fetchDiff.mockResolvedValueOnce({
+    base: 'b'.repeat(40),
+    head: fixture.commit.id,
+    files: [
+      { status: 'added', path: 'src/new.go', additions: 1, deletions: 0 },
+      { status: 'modified', path: 'src/partial.go', additions: 1, deletions: 0 },
+    ],
+    patch: 'partial patch context\ndiff --git a/src/new.go b/src/new.go\n@@ -0,0 +1 @@\n+package new\ndiff --git a/src/partial.go b/src/partial.go\n@@ -1 +1 @@\n+partial line\ndiff --git a/raw/unmatched.go b/raw/unmatched.go\npartial final line',
+    truncated: true,
+  })
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  expect(await screen.findByText('Diff truncated')).toBeTruthy()
+  const regions = screen.getAllByRole('region')
+  expect(regions).toHaveLength(4)
+  expect(regions[0].textContent).toContain('Patch prelude')
+  expect(regions[0].textContent).toContain('partial patch context')
+  expect(regions[1].textContent).toContain('src/new.go')
+  expect(regions[1].textContent).toContain('+package new')
+  expect(regions[2].textContent).toContain('src/partial.go')
+  expect(regions[2].textContent).toContain('+partial line')
+  expect(regions[3].textContent).toContain('File 3')
+  expect(regions[3].textContent).toContain('diff --git a/raw/unmatched.go b/raw/unmatched.go')
+  expect(regions[3].textContent).toContain('partial final line')
+})
+
+test('commit keeps a headerless multi-file patch identity neutral', async () => {
+  fixture.fetchDiff.mockResolvedValueOnce({
+    base: 'b'.repeat(40),
+    head: fixture.commit.id,
+    files: [
+      { status: 'modified', path: 'src/one.go', additions: 1, deletions: 1 },
+      { status: 'modified', path: 'src/two.go', additions: 1, deletions: 1 },
+    ],
+    patch: '@@ -1 +1 @@\n-old\n+new\n',
+    truncated: false,
+  })
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  const region = await screen.findByRole('region', { name: 'Patch' })
+  expect(region.textContent).not.toContain('src/one.go')
+  expect(region.textContent).not.toContain('src/two.go')
+  expect(Array.from(region.children[1].children, (line) => line.textContent)).toEqual(['@@ -1 +1 @@', '-old', '+new'])
+})
+
+test('commit omits a phantom patch region when Git returns no patch text', async () => {
+  fixture.fetchDiff.mockResolvedValueOnce({
+    base: 'b'.repeat(40),
+    head: fixture.commit.id,
+    files: [{ status: 'modified', path: 'src/new.go', additions: 0, deletions: 0 }],
+    patch: '',
+    truncated: false,
+  })
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  expect(await screen.findByRole('heading', { name: 'Add launch status' })).toBeTruthy()
+  expect(screen.queryByRole('region')).toBeNull()
 })
 
 test('blame maps source lines to commit metadata', async () => {

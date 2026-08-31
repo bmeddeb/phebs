@@ -1396,6 +1396,16 @@ Diff context defaults to three lines when omitted, while an explicit
 repository/path and pins supplied branch names to immutable object IDs before
 subsequent Git commands run.
 
+The Commit page presents patch text as labelled file regions. File identity,
+status, and statistics come from the structured diff response in its existing
+order; the raw `diff --git` line starts a visual region but is not parsed into
+path authority. A headerless patch uses file identity only when the response
+contains exactly one file. Unmatched prelude or truncated metadata stays
+visible as `Patch prelude`, `Patch`, or `File N`. Every patch line remains in
+original order, and each file body owns its horizontal scroll. Offscreen file
+regions use browser content containment to defer layout and paint; this does
+not virtualize or remove the complete patch DOM.
+
 ## Web UI
 
 Served at `/` from the binary. After setup/login, the main views are

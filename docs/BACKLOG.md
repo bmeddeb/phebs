@@ -3256,8 +3256,10 @@ unscheduled:
 implementation and explicit retained-receipt merge exception are recorded in
 the completed backlog.
 
-**T43R.2 · Commit diff density (F34)** — per-file grouping and
-`contentVisibility` for the Commit page's flat div-per-line diff.
+**T43R.2 ✅ · Commit diff density (F34)** *(completed 2026-08-30 →
+[BACKLOG_COMPLETED.md](./BACKLOG_COMPLETED.md))* — the per-file Commit diff
+presentation, bounded cost, responsive evidence, and explicit retained-receipt
+merge exception are recorded in the completed backlog.
 
 **T43R.3 · House confirm dialog (S1)** — replace the Workbench's native
 `window.confirm` guard with the kit's dialog semantics.

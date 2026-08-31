@@ -105,7 +105,7 @@ Routing: **HF** = pre-T43.2 hotfix candidate · otherwise the owning ticket.
 | F31 | m | HistoryPage.tsx:97 | §2 "never an absence claim" | "No commits." bare → "No commits are visible for this path at {ref}." | T43.6 |
 | F32 | M | ContractAtlas:1294–1300 vs CallerMap; AnalysisScopePanel | §3 closed vocabulary | unresolved red vs amber; unpublished neutral vs amber → semantic-status module | T43.2 |
 | F33 | m | FilePage.tsx:208,355–361,414 | §3 a11y | Sticky offsets hardcoded to 52px header; aria-label diverges from visible label | T43.3 |
-| F34 | m | CommitPage PatchView | §3 tables are the evidence surface | Flat div-per-line diff, no per-file grouping, no contentVisibility | T43.11 |
+| F34 | m | CommitPage PatchView | §3 tables are the evidence surface | Flat div-per-line diff, no per-file grouping, no contentVisibility | T43R.2 (closed) |
 | F35 | m | InvestigationPage.tsx:245 | §1 nothing implied | Permanent dead "What changed — '—'" quarter implies absent capability | T43.3 |
 | F36 | m | AnalyticsPage.tsx:117 | §3 a11y ("text conveys everything color conveys") | Bar values hover-title only; zero-height = missing-data ambiguity | T43.10 |
 | F37 | M | ui/src/pages/* | §2 charter review presupposes a kit | Nine chip components, three table systems, five focusRing clones, seven truncation helpers with different arithmetic, duplicated validateCitation → extract kit, delete locals | T43.3 |

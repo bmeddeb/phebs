@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
@@ -57,7 +58,7 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
           )}
           <ChangeList repo={repo} ref={commit.revision} changes={commit.changes} />
           {diff?.truncated && <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.status.stale.text, marginTop: '16px' })}><WarningIcon /> Diff truncated</div>}
-          {diff && <PatchView patch={diff.patch} />}
+          {diff && <PatchView diff={diff} />}
         </>
       )}
     </div>
@@ -90,21 +91,150 @@ function ChangeList({ repo, ref, changes }: { repo: string; ref: string; changes
   )
 }
 
-function PatchView({ patch }: { patch: string }) {
+type PatchGroup = {
+  lines: string[]
+  change?: GitFileChange
+  fileNumber?: number
+  prelude: boolean
+}
+
+type PatchLineKind = 'add' | 'del' | 'hunk' | 'plain'
+
+const PATCH_SECTION_STYLE: CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: 'auto 320px',
+}
+
+function PatchView({ diff }: { diff: DiffResult }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const groups = useMemo(() => groupPatch(diff.patch, diff.files), [diff.patch, diff.files])
+  const lineBase = {
+    minHeight: '20px',
+    paddingLeft: '10px',
+    paddingRight: '14px',
+    whiteSpace: 'pre' as const,
+    fontFamily: FONTS.MONO,
+    fontSize: '12px',
+    lineHeight: '20px',
+  }
+  const lineClasses: Record<PatchLineKind, string> = {
+    add: css({ ...lineBase, color: tok.status.current.text, backgroundColor: tok.addedLineBg }),
+    del: css({ ...lineBase, color: tok.status.conflict.text, backgroundColor: tok.deletedLineBg }),
+    hunk: css({ ...lineBase, color: tok.status.unavailable.text, backgroundColor: 'transparent' }),
+    plain: css({ ...lineBase, color: tok.plainCode, backgroundColor: 'transparent' }),
+  }
+  if (groups.length === 0) return null
+
   return (
-    <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflowX: 'auto' })}>
-      {patch.split('\n').map((line, index) => {
-        const kind = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : 'plain'
+    <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
+      {groups.map((group, groupIndex) => {
+        const headingId = `commit-diff-file-${groupIndex}`
         return (
-          <div key={index} className={css({ minHeight: '20px', paddingLeft: '10px', paddingRight: '14px', whiteSpace: 'pre', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '20px', color: kind === 'add' ? tok.status.current.text : kind === 'del' ? tok.status.conflict.text : kind === 'hunk' ? tok.status.unavailable.text : tok.plainCode, backgroundColor: kind === 'add' ? tok.addedLineBg : kind === 'del' ? tok.deletedLineBg : 'transparent' })}>
-            {line || ' '}
-          </div>
+          <section
+            key={`${group.fileNumber ?? 'patch'}:${groupIndex}`}
+            aria-labelledby={headingId}
+            style={PATCH_SECTION_STYLE}
+            className={css({ borderBottom: `1px solid ${tok.cardBorder}`, ':last-child': { borderBottom: 'none' } })}
+          >
+            <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '38px', paddingLeft: '10px', paddingRight: '10px', backgroundColor: tok.fill, borderTopLeftRadius: groupIndex === 0 ? '7px' : 0, borderTopRightRadius: groupIndex === 0 ? '7px' : 0 })}>
+              {group.change && (
+                <span
+                  aria-hidden="true"
+                  className={css({ flexShrink: 0, minWidth: '18px', fontFamily: FONTS.MONO, fontSize: '11px', fontWeight: 600, color: statusColor(group.change.status, tok), textAlign: 'center' })}
+                >
+                  {statusLabel(group.change.status)}
+                </span>
+              )}
+              <h2 id={headingId} className={css({ minWidth: 0, flex: 1, margin: 0, fontSize: '12px', lineHeight: '20px', fontWeight: 500, color: tok.textSecondary, overflow: 'hidden' })}>
+                {group.change && (
+                  <span className={css({ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' })}>
+                    {statusText(group.change.status)} file:{' '}
+                  </span>
+                )}
+                <code className={css({ display: 'block', fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })} title={patchGroupHeading(group)}>
+                  {patchGroupHeading(group)}
+                </code>
+              </h2>
+              {group.change && (
+                <span className={css({ flexShrink: 0, fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textTertiary, whiteSpace: 'nowrap' })}>
+                  {group.change.binary ? 'binary' : <><span className={css({ color: tok.status.current.text })}>+{group.change.additions ?? 0}</span>{' '}<span className={css({ color: tok.status.conflict.text })}>-{group.change.deletions ?? 0}</span></>}
+                </span>
+              )}
+            </div>
+            <div className={css({ overflowX: 'auto', overscrollBehaviorX: 'contain' })}>
+              <PatchLines lines={group.lines} lineClasses={lineClasses} />
+            </div>
+          </section>
         )
       })}
     </div>
   )
+}
+
+function groupPatch(patch: string, files: GitFileChange[]): PatchGroup[] {
+  if (patch === '') return []
+  const lines = patch.split('\n')
+  if (lines.at(-1) === '') lines.pop()
+  if (!lines.some((line) => line.startsWith('diff --git '))) {
+    return [{ lines, change: files.length === 1 ? files[0] : undefined, prelude: false }]
+  }
+
+  const groups: PatchGroup[] = []
+  let currentLines: string[] = []
+  let currentChange: GitFileChange | undefined
+  let currentFileNumber: number | undefined
+  let nextFileIndex = 0
+
+  const flush = () => {
+    if (currentLines.length === 0) return
+    groups.push({
+      lines: currentLines,
+      change: currentChange,
+      fileNumber: currentFileNumber,
+      prelude: currentFileNumber === undefined,
+    })
+  }
+
+  for (const line of lines) {
+    if (line.startsWith('diff --git ')) {
+      flush()
+      currentLines = [line]
+      currentChange = files[nextFileIndex]
+      currentFileNumber = nextFileIndex + 1
+      nextFileIndex += 1
+      continue
+    }
+    currentLines.push(line)
+  }
+  flush()
+
+  return groups
+}
+
+function patchGroupHeading(group: PatchGroup): string {
+  if (group.change) {
+    return group.change.old_path ? `${group.change.old_path} → ${group.change.path}` : group.change.path
+  }
+  if (group.prelude) return 'Patch prelude'
+  if (group.fileNumber) return `File ${group.fileNumber}`
+  return 'Patch'
+}
+
+function PatchLines({ lines, lineClasses }: { lines: string[]; lineClasses: Record<PatchLineKind, string> }) {
+  let inHunk = false
+  return lines.map((line, lineIndex) => {
+    const kind = patchLineKind(line, inHunk)
+    if (kind === 'hunk') inHunk = true
+    return <div key={lineIndex} className={lineClasses[kind]}>{line}</div>
+  })
+}
+
+function patchLineKind(line: string, inHunk: boolean): PatchLineKind {
+  if (line.startsWith('@@')) return 'hunk'
+  if (inHunk && line.startsWith('+')) return 'add'
+  if (inHunk && line.startsWith('-')) return 'del'
+  return 'plain'
 }
 
 function statusColor(status: string, tok: ReturnType<typeof usePhebsTokens>): string {
@@ -116,8 +246,18 @@ function statusColor(status: string, tok: ReturnType<typeof usePhebsTokens>): st
 function statusLabel(status: string): string {
   if (status === 'added') return 'A'
   if (status === 'deleted') return 'D'
-  if (status === 'renamed' || status === 'copied') return 'R'
-  return 'M'
+  if (status === 'modified') return 'M'
+  if (status === 'renamed') return 'R'
+  if (status === 'copied') return 'C'
+  if (status === 'type_changed') return 'T'
+  if (status === 'unmerged') return 'U'
+  return '?'
+}
+
+function statusText(status: string): string {
+  if (status === 'added' || status === 'deleted' || status === 'modified' || status === 'renamed' || status === 'copied' || status === 'unmerged') return status
+  if (status === 'type_changed') return 'type changed'
+  return 'unknown'
 }
 
 function formatTime(value: string): string {

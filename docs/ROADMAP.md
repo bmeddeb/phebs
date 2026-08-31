@@ -156,8 +156,8 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, and four remaining residue items queued as
-T43R.2–5 after T43R.1 completed on 2026-08-30. It
+baseline, zero open blockers, and three remaining residue items queued as
+T43R.3–5 after T43R.1 and T43R.2 completed on 2026-08-30. It
 touched no scale plane, authority, or claim; T40.13 remains the next scale
 ticket.
 
@@ -179,6 +179,26 @@ discarded. Ben explicitly waived the final authenticated retained-cohort
 comparison because that cohort's operator password was unavailable; this is a
 merge exception, not a passing retained receipt. The ticket changes no product
 authority or scale-plane behavior.
+
+T43R.2 completed in the presentation track on 2026-08-30 after rebasing its
+unique change onto the integrated type-floor branch. It groups the existing
+bounded Commit patch into labelled
+file regions, binds displayed identity and statistics only from structured
+diff metadata, preserves unmatched/truncated material under neutral labels,
+and uses per-file content containment without claiming virtualization. The
+ticket changes no Git/API authority or scale-plane behavior.
+
+The stacked T43R.2 branch now passes 610 UI tests, lint/build, documentation,
+glossary, whitespace, mechanical design review, and source-free responsive
+browser review across both themes and densities at 1440px and 390px. Review
+findings around hunk-aware `---`/`+++` classification, terminal-newline
+sentinels, status accessibility, and fallback coverage are corrected. The
+implementation adds 2,823 raw and 700 gzip bytes across the unchanged
+160-chunk JavaScript set and no backend work. Its four existing Commit
+baselines remain unchanged. After the retained cohort's operator password
+proved unavailable during T43R.1 integration, Ben explicitly named T43R.2 as
+the next merge; this is a merge exception, not a passing retained Commit
+receipt.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

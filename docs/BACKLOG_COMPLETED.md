@@ -9556,6 +9556,36 @@ discarded. Ben explicitly waived the final authenticated retained-cohort
 comparison because that cohort's operator password was unavailable; this is a
 merge exception, not a passing retained receipt.
 
+**T43R.2 ✅ · Commit diff density (F34)** *(completed 2026-08-30)* — the
+Commit page now groups the existing bounded patch into labelled per-file
+regions. Exact `diff --git ` lines define visual boundaries, while ordered
+`DiffResult.files` metadata remains the only source for displayed file
+identity, status, and statistics. Headerless single-file patches may use their
+sole structured record; unmatched prelude, truncated, or metadata-free groups
+stay visible under neutral labels. Every patch line remains in original order,
+the global truncation warning and deleted-file link guard remain intact, each
+file body owns horizontal overflow, and `content-visibility: auto` with an
+`auto 320px` intrinsic estimate defers offscreen rendering without claiming
+virtualization.
+
+Four focused cases bring the complete UI suite to 610 passing tests across
+rename, delete, binary, hunk, adversarial `---`/`+++` content, exact line
+ownership, terminal newlines, fallbacks, containment, accessible names, and
+empty output. Independent review's hunk-classification, line-sentinel,
+accessible-name, and fallback-test findings are corrected. Lint,
+typecheck/build, documentation, glossary, whitespace, mechanical design review,
+and source-free 1440px/390px light/dark × comfortable/dense QA pass with zero
+document overflow or console warning/error and local horizontal scrolling.
+The main chunk changes by +0/+3 raw/gzip bytes and all 160 JavaScript chunks by
++2,823/+700 bytes. Runtime adds one memoized linear partition of the existing
+2-MiB-bounded patch, one small group record and line-reference slot per line,
+and one containment boundary per group; it adds no request, backend, event,
+poll, timer, retained state, store/disk, child, lock, cache, startup, sync,
+retry/no-op, or publication work. The four existing Commit baselines remain
+unchanged. After the retained cohort's operator password proved unavailable,
+Ben explicitly named T43R.2 as the next merge; this is a merge exception, not
+a passing retained Commit receipt.
+
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
 RPC/Kafka postings, caller-leaf generation identities, and atomic service
