@@ -9607,9 +9607,10 @@ unchanged. After the retained cohort's operator password proved unavailable,
 Ben explicitly named T43R.2 as the next merge; this is a merge exception, not
 a passing retained Commit receipt.
 
-**T43R.3 · House confirm dialog (S1)** *(provisional implementation record;
-closure gates pending)* — the ticket branch replaces only the Workbench's dirty
-same-app link `window.confirm` guard with the shared house `alertdialog`. A
+**T43R.3 ✅ · House confirm dialog (S1)** *(completed 2026-08-31; needs
+T43R.2)* — exact implementation commit `789d926` replaces only the
+Workbench's dirty same-app link `window.confirm` guard with the shared house
+`alertdialog`. A
 qualifying click is prevented before navigation and retains its exact hash;
 opening or dismissing the dialog changes no URL, draft, preview, request, or
 durable state. **Keep editing** is the safe initially focused action. Escape,
@@ -9634,14 +9635,18 @@ chunk is 339,224/96,515 → 339,257/96,541 bytes (+33/+26 raw/gzip); all
 JavaScript is 160 chunks at 6,840,322/2,030,036 → 161 chunks at
 6,856,622/2,035,234 (+16,300/+5,198).
 
-Closure targets two new deterministic open-dialog routes, desktop and 390px,
-across both themes and densities: 32 authenticated routes and 130 retained
-baselines in total. **This is not yet a completed-ticket claim.** All available
-local browser and receipt sessions are signed out, so the eight PNGs, full
-manifest test, responsive/accessibility and clean-console browser QA, exact
-commit, and completion date remain open. No passing receipt or merge exception
-is claimed; this provisional record must be replaced before the ticket receives
-a checkmark.
+Two deterministic open-dialog routes, desktop and 390px, now cover both themes
+and densities: the authenticated manifest is 32 routes and 130 retained
+baselines. The update run and immediate clean comparison each pass 9/9 tests,
+including authentication, and all eight new PNGs were visually reviewed. The
+manifest contract passes. Source-free 1440px/390px browser QA additionally
+passes initial focus, Escape/cancel and focus return, explicit discard, exact
+URL retention/navigation, accessible naming, 11px action text, viewport
+containment, zero document overflow, and a clean console. The receipt harness
+now observes the first application `main`, avoiding a strict-locator collision
+with the seeded Workbench's content landmark without changing product behavior.
+Independent final review reports critical/high/medium/low 0. No receipt
+exception, merge, or integration is claimed.
 
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,

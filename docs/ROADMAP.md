@@ -158,8 +158,8 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, T43R.3 active, and T43R.4–5 queued after T43R.1
-and T43R.2 completed on 2026-08-30. It
+baseline, zero open blockers, and T43R.4–5 queued after T43R.1 and T43R.2
+completed on 2026-08-30 and T43R.3 completed on 2026-08-31. It
 touched no scale plane, authority, or claim; T41.2 takes its separate
 integration gate before T41.3 begins.
 
@@ -202,7 +202,8 @@ proved unavailable during T43R.1 integration, Ben explicitly named T43R.2 as
 the next merge; this is a merge exception, not a passing retained Commit
 receipt.
 
-T43R.3 is active in the presentation track. Its implementation replaces only
+T43R.3 completed in the presentation track on 2026-08-31. Exact implementation
+commit `789d926` replaces only
 the dirty Workbench same-app link's native `window.confirm` with the shared
 house `alertdialog`: the safe **Keep editing** action receives initial focus;
 Escape, backdrop dismissal, the close affordance, and cancellation return
@@ -211,18 +212,20 @@ follows the captured exact hash. The browser-owned `beforeunload` warning,
 same-revision step movement, clean links, and modified/new-tab activation stay
 unchanged. This is not a browser Back/Forward or programmatic-navigation
 interceptor and creates no request, mutation, authority, or durable state.
-Closure targets deterministic desktop and 390px open-dialog routes, growing
-the manifest from 30 authenticated routes/122 retained baselines to 32/130.
+Deterministic desktop and 390px open-dialog routes grow the manifest from 30
+authenticated routes/122 retained baselines to 32/130.
 Independent review found no navigation race and one medium close-lifecycle
 issue; the branch now unmounts the open dialog immediately, eliminating Base
 UI's 500-ms closed focus-lock tail. Focused tests pass 35/35; the complete
 non-receipt-manifest UI set passes 617/617; lint, typecheck/build, whitespace,
 and the mechanical detector pass. The main chunk is +33/+26 raw/gzip bytes and
-all JavaScript is +16,300/+5,198 bytes with one lazy chunk added. The eight new
-PNGs, full manifest test, responsive browser matrix, exact commit, and
-completion claim remain open because all available local browser and receipt
-sessions are signed out. No passing receipt, exception, completion, or
-integration claim is made by this roadmap entry.
+all JavaScript is +16,300/+5,198 bytes with one lazy chunk added. The targeted
+receipt update and clean comparison each pass 9/9, all eight retained PNGs were
+visually reviewed, and the 130-baseline manifest contract passes. Source-free
+1440px/390px browser QA passes both themes and densities with exact focus and
+navigation behavior, 11px actions, viewport containment, zero document
+overflow, and a clean console. Independent final review reports no finding.
+No receipt exception, merge, or integration is claimed by this roadmap entry.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

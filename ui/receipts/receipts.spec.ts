@@ -4,6 +4,7 @@ import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './rout
 type ReceiptWindow = typeof window & { __phebsReceiptPending?: number }
 
 async function waitForReceiptReady(page: Page) {
+  const applicationMain = page.locator('main').first()
   // Let lazy-route effects begin before observing the request counter.
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
@@ -14,7 +15,7 @@ async function waitForReceiptReady(page: Page) {
   ).toBe(0)
 
   await expect.poll(async () => {
-    const states = await page.locator('main [role="status"]').evaluateAll((nodes) =>
+    const states = await applicationMain.locator('[role="status"]').evaluateAll((nodes) =>
       nodes.map((node) => `${node.getAttribute('aria-label') ?? ''} ${node.textContent ?? ''}`.trim()),
     )
     return states.some((state) => /\b(loading|reading|checking|searching)\b/i.test(state))
@@ -23,7 +24,7 @@ async function waitForReceiptReady(page: Page) {
   let prior = ''
   let stableSamples = 0
   await expect.poll(async () => {
-    const next = await page.locator('main').evaluate((node) => node.innerHTML)
+    const next = await applicationMain.evaluate((node) => node.innerHTML)
     stableSamples = next === prior ? stableSamples + 1 : 0
     prior = next
     return stableSamples
@@ -55,7 +56,7 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   await page.addInitScript((value) => localStorage.setItem('phebs-density', value as string), density)
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`/#${path}`)
-  await page.waitForSelector('main', { state: 'visible' })
+  await expect(page.locator('main').first()).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   await waitForReceiptReady(page)
   if (route.awaitAbsent) {
