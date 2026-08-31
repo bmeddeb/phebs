@@ -3294,10 +3294,18 @@ The existing manifest remains 32 authenticated routes / 130 PNGs: its
 literal AC records that no receipt opens a citation, and adding a
 desktop/390 open-citation pair would be a separate eight-PNG scope
 amendment, not this close. Current marker-production, API-fencing, and
-Relationship Explorer focused tests pass. A reconstructed exact-main
-canonical cohort reached server readiness, but fixed 90% hard-watermark
-admission refused all three indexes because the host data volume is 92%
-used. Relative to the stacked base, the production build adds 893 raw/
+Relationship Explorer focused tests pass. A fresh exact-main cohort—
+previously described here as canonical—reached server readiness. After
+host use fell from 92% to 77%, all three search indexes completed, but
+rebuilding is explicitly a baseline-refresh event and the T307 relationship
+endpoint still returned a bare unavailable root; server logs separately
+reported a partition-result collision. The surviving noncanonical instance
+uses a different operator identity and is bound to `/Users/ben/phebs`; its
+three repository rows retain the earlier watermark failures, while the
+receipt manifest's exact repository/service selector
+(`local/Users/ben/phebs-ux/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle`,
+`orders-api`) returns not found. Relative to the stacked base, the production
+build adds 893 raw/
 298 gzip bytes across all JavaScript (358/152 in the initial entry and
 537/166 in the existing exact-citation lazy chunk, individually
 compressed), with no new dependency or chunk and unchanged highlight/
