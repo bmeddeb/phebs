@@ -10227,8 +10227,9 @@ a bounded hash rather than buffered. A keyed read validates the small root and
 token-scans, decodes, and hashes one at-most-2-MiB member. There is no store,
 filesystem, network, source/Git,
 corpus/shard, lock, cache, worker, or child-process work. T41.3 retains source
-census proof and immutable storage. Integration and Epic 41 progression remain
-blocked on Epic 40 closure and the stacked T41.1 merge bar; no runtime
+census proof and immutable storage. Epic 40 is closed and T41.1 is integrated;
+T41.2 is merge-ready on the current-main lineage, with integration still a
+separate authorization before T41.3 begins. No runtime
 selection, production cap, ceremony, scale/SLO, release, topology, migration,
 or decommission claim is authorized.
 
