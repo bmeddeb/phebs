@@ -156,11 +156,12 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, five residue items queued as T43R.1–5. It
+baseline, zero open blockers, and four remaining residue items queued as
+T43R.2–5 after T43R.1 completed on 2026-08-30. It
 touched no scale plane, authority, or claim; T40.13 remains the next scale
 ticket.
 
-T43R.1 entered the presentation track on 2026-08-30. The adopted type-floor
+T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential
 meaning is already present at 11px or larger. The ticket audits the complete
@@ -169,11 +170,15 @@ sub-floor values through a source contract, and requires 200% zoom plus 390px
 verification. The branch audit found 190 non-decorative static declarations
 (191 literal branches) plus one dynamic Brand site; 178 static declarations are
 now at least 11px, 12 remain on the closed reviewed token ledger, and the Brand
-site is clamped. Source, contrast, full UI, lint/build, documentation, and local
-responsive browser gates pass. The retained neutral-cohort screenshot update
-is still open because this host lacks the pinned `surreal` executable, so the
-ticket remains active and unmerged. It changes no product authority or
-scale-plane behavior.
+site is clamped. Source, contrast, the complete 606-test UI suite, lint/build,
+documentation, and local responsive browser gates pass. The eight committed
+Settings receipts were visually reviewed across desktop/390px, both themes,
+and both densities. The full 123-case receipt runner passed against a
+disposable authenticated neutral cohort, and its non-retained output was
+discarded. Ben explicitly waived the final authenticated retained-cohort
+comparison because that cohort's operator password was unavailable; this is a
+merge exception, not a passing retained receipt. The ticket changes no product
+authority or scale-plane behavior.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

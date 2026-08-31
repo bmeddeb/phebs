@@ -9526,6 +9526,36 @@ any interaction path — entrances are one-shot compositor CSS, loops run
 only in loading states, and the recorded 150ms list-interaction budget
 is unchanged.
 
+**T43R.1 ✅ · Type-floor adjudication (F14)** *(completed 2026-08-30)* —
+interface text now has an 11px minimum with one named 10px
+`evidenceMetadata` token limited to non-interactive supplementary machine
+metadata whose essential meaning is already present at 11px or larger. The
+exact-tree audit found 190 non-decorative static declarations (191 literal
+branches) plus one prop-driven Brand site: 178 declarations are at least 11px,
+12 use the closed semantic ledger, and Brand is clamped to 11px. The
+fail-closed source contract rejects raw sub-floor values, shorthand, keywords,
+aliases, `calc()`, standalone relative values, unresolved dynamic expressions,
+unreviewed JSX, new token sites, and SVG downscaling. Independent review found
+and the branch corrected two actionable 10px uses, SVG scaling and label
+overflow, and the earlier fail-open Brand/CSS paths.
+
+The complete 606-test UI suite, focused type/contrast tests, lint, build,
+documentation, glossary, and whitespace gates pass. The main chunk moves from
+339,217/96,508 bytes raw/gzip to 339,224/96,512 (+7/+4); all 160 JS chunks move
+from 6,836,095/2,028,854 to 6,837,499/2,029,336 bytes (+1,404/+482). Runtime
+cost is one constant theme object, one `Math.max` per Brand render, and 12
+bounded static DOM attributes, with no new request, poll, mutation, event,
+interaction, startup, sync, retry/no-op, store, child, lock, cache, disk,
+timer, or retained-state work. Authenticated fixture QA at 1440px, 390px, and
+the 720-CSS-pixel reflow equivalent of 200% found zero document overflow, zero
+interactive sub-floor text, and no clipped 10px metadata. The eight committed
+Settings receipts were visually reviewed across desktop/390px, both themes,
+and both densities. The full 123-case receipt runner passed against a
+disposable authenticated neutral cohort, and its non-retained output was
+discarded. Ben explicitly waived the final authenticated retained-cohort
+comparison because that cohort's operator password was unavailable; this is a
+merge exception, not a passing retained receipt.
+
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
 RPC/Kafka postings, caller-leaf generation identities, and atomic service
