@@ -60,6 +60,7 @@ afterEach(cleanup)
 
 test('late source responses cannot overwrite the current route', async () => {
   const rendered = render(view('repo=r&path=old.go&ref=old-ref'))
+  expect(screen.getByRole('button', { name: 'Help for File' })).toBeTruthy()
   expect(api.sourceCalls).toHaveLength(1)
 
   rendered.rerender(view('repo=r&path=new.go&ref=new-ref'))

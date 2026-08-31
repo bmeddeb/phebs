@@ -9,6 +9,9 @@ import { href } from '../router'
 import { CommitIcon } from '../icons'
 import { FONTS, usePhebsTokens } from '../theme'
 import { boundedError, isAbortError, repoFilter } from '../util'
+import { SectionHelp } from '../components/SectionHelp'
+
+const HISTORY_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['history'])
 
 export default function HistoryPage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
@@ -148,6 +151,11 @@ function HistoryHeader({ repo, path, ref }: { repo: string; path: string; ref: s
       <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
         <CommitIcon size={20} />
         <h1 className={css({ margin: 0, fontSize: '20px', lineHeight: '28px', fontWeight: 600, color: tok.textPrimary })}>History</h1>
+        <SectionHelp
+          termId="implementation_evidence"
+          enabledCapabilities={HISTORY_EVIDENCE_CAPABILITIES}
+          triggerLabel="History"
+        />
       </div>
       <div className={css({ display: 'flex', gap: '5px', marginTop: '8px', minWidth: 0, fontSize: '13px', color: tok.textTertiary })}>
         <a href={href('/search', { q: repoFilter(repo) })} className={css({ color: tok.textSecondary, textDecoration: 'none' })}>{repo}</a>

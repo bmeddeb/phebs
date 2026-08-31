@@ -9,6 +9,9 @@ import { href } from '../router'
 import { CommitIcon, WarningIcon } from '../icons'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import { SectionHelp } from '../components/SectionHelp'
+
+const HISTORY_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['history'])
 
 export default function CommitPage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
@@ -46,6 +49,11 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
           <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' })}>
             <CommitIcon size={20} />
             <code className={css({ fontFamily: FONTS.MONO, fontSize: '13px', color: tok.textSecondary })}>{commit.commit.short_id}</code>
+            <SectionHelp
+              termId="implementation_evidence"
+              enabledCapabilities={HISTORY_EVIDENCE_CAPABILITIES}
+              triggerLabel="Commit"
+            />
           </div>
           <h1 className={css({ marginTop: 0, marginBottom: '12px', fontSize: '22px', lineHeight: '30px', fontWeight: 600, color: tok.textPrimary })}>
             {commit.commit.subject || '(no subject)'}

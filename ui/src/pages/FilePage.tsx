@@ -27,6 +27,9 @@ import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
 import { fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
 import { RepositoryTree } from '../RepositoryBrowser'
+import { SectionHelp } from '../components/SectionHelp'
+
+const FILE_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['source-search'])
 
 interface SourcePosition {
   line: number
@@ -345,6 +348,11 @@ function Breadcrumb({
         {dir && <span className={css({ color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{dir}</span>}
         <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: tok.textPrimary, fontWeight: 600 })}>{name}</span>
         <CopyInline text={path} title="Copy path" size={12} />
+        <SectionHelp
+          termId="implementation_evidence"
+          enabledCapabilities={FILE_EVIDENCE_CAPABILITIES}
+          triggerLabel="File"
+        />
       </div>
       {(ref || meta?.indexed_commit_hash) && (
         <span className={css({ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', color: tok.textSecondary, border: `1px solid ${tok.cardBorder}`, borderRadius: '999px', padding: '2px 9px', whiteSpace: 'nowrap' })}>

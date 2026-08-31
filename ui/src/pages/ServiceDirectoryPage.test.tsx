@@ -50,6 +50,10 @@ test('renders exact authority, page summaries, lifecycle states, roles, and sour
   }))
 
   expect(await screen.findByRole('heading', { name: 'Service directory' })).toBeTruthy()
+  const help = screen.getByRole('button', { name: 'Help for Service directory' })
+  fireEvent.click(help)
+  expect(await screen.findByRole('dialog', { name: 'Service directory help' })).toBeTruthy()
+  expect(screen.getByText('Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.')).toBeTruthy()
   expect(screen.getByText('t335-demo')).toBeTruthy()
   expect(screen.getByText('2/4 accepted files')).toBeTruthy()
   expect(screen.getByText('Unowned files')).toBeTruthy()
@@ -222,6 +226,7 @@ test('bounds an oversized error body before rendering it', async () => {
 test('requires an exact repository deep link before any catalog request', () => {
   renderPage(new URLSearchParams())
   expect(screen.getByRole('heading', { name: 'Service directory' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Help for Service directory' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Choose a repository' }).getAttribute('href')).toBe('#/repos')
   expect(api.fetchServiceInventory).not.toHaveBeenCalled()
   expect(api.fetchServiceDetail).not.toHaveBeenCalled()

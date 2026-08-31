@@ -14,6 +14,7 @@ import {
   type ServiceStatus,
 } from '../api'
 import ServiceOverview from '../components/ServiceOverview'
+import { SectionHelp } from '../components/SectionHelp'
 import { StateNotice, StatusWord } from '../components/kit'
 import { VirtualList, type VirtualRowProps } from '../components/VirtualList'
 import { href, navigate, replaceRoute } from '../router'
@@ -21,6 +22,7 @@ import { FONTS, TYPE, focusRing, useDensity, usePhebsTokens, type DensityName, t
 import { boundedError, isAbortError, relTime } from '../util'
 
 const PAGE_SIZE = 50
+const SERVICE_CATALOG_HELP_CAPABILITIES: ReadonlySet<string> = new Set(['service-catalog-v2'])
 
 // T43.11: fixed per-density row heights — the windowed list's geometry is
 // declared, never measured, so it holds at ten-thousand-row catalogs. Both
@@ -162,9 +164,16 @@ export default function ServiceDirectoryPage({ params, relationshipsAvailable = 
         <div className={css({ fontSize: '11px', lineHeight: '16px', letterSpacing: '0.1em', textTransform: 'uppercase', color: tok.textTertiary, marginBottom: '10px' })}>
           Repository context required
         </div>
-        <h1 className={css({ fontSize: '30px', lineHeight: '36px', letterSpacing: '-0.025em', margin: 0, color: tok.textPrimary })}>
-          Service directory
-        </h1>
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+          <h1 className={css({ fontSize: '30px', lineHeight: '36px', letterSpacing: '-0.025em', margin: 0, color: tok.textPrimary })}>
+            Service directory
+          </h1>
+          <SectionHelp
+            termId="service_catalog_authority"
+            enabledCapabilities={SERVICE_CATALOG_HELP_CAPABILITIES}
+            triggerLabel="Service directory"
+          />
+        </div>
         <p className={css({ maxWidth: '620px', margin: '14px 0 24px', fontSize: '14px', lineHeight: '22px', color: tok.textSecondary })}>
           Choose a visible repository first. Service identities are local to one
           catalog and are never combined across repositories.
@@ -239,9 +248,16 @@ function DirectoryHeader({ route }: { route: DirectoryRoute }) {
           <span aria-hidden="true">/</span>
           <span className={css({ fontFamily: FONTS.MONO, overflowWrap: 'anywhere' })}>{route.repository}</span>
         </div>
-        <h1 id="service-directory-title" className={css({ margin: 0, fontSize: '24px', lineHeight: '30px', letterSpacing: '-0.02em', color: tok.textPrimary })}>
-          Service directory
-        </h1>
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+          <h1 id="service-directory-title" className={css({ margin: 0, fontSize: '24px', lineHeight: '30px', letterSpacing: '-0.02em', color: tok.textPrimary })}>
+            Service directory
+          </h1>
+          <SectionHelp
+            termId="service_catalog_authority"
+            enabledCapabilities={SERVICE_CATALOG_HELP_CAPABILITIES}
+            triggerLabel="Service directory"
+          />
+        </div>
       </div>
       <span className={css({ fontSize: '12px', lineHeight: '18px', color: tok.textTertiary, maxWidth: '420px', textAlign: 'right', '@media screen and (max-width: 720px)': { textAlign: 'left' } })}>
         Catalog authority plus exact static relationships · source content only on citation

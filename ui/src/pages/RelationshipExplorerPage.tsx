@@ -12,6 +12,7 @@ import {
 import { href, navigate, replaceRoute } from '../router'
 import { FONTS, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens } from '../theme'
 import { CitationChip, CitationPanel, ClaimBoundary } from '../components/kit'
+import { SectionHelp } from '../components/SectionHelp'
 import { VirtualList, type VirtualListHandle, type VirtualRowProps } from '../components/VirtualList'
 import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { validateServiceRelationshipCitation, validateServiceRelationshipRoot } from '../components/serviceRelationshipCitation'
@@ -19,6 +20,7 @@ import { boundedError, isAbortError } from '../util'
 
 const PAGE_SIZE = 50
 const PAGE_SCHEMA = 'phebs-service-relationship-page-v1'
+const RELATIONSHIP_HELP_CAPABILITIES: ReadonlySet<string> = new Set(['service-relationships-v1'])
 
 type Direction = 'all' | 'uses' | 'provided' | 'produces' | 'consumes'
 type EvidenceKind = 'all' | 'rpc' | 'kafka'
@@ -207,7 +209,14 @@ export default function RelationshipExplorerPage({ params }: { params: URLSearch
 
       <div className={css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '18px', flexWrap: 'wrap', marginBottom: '18px' })}>
         <div>
-          <h1 id="relationship-explorer-title" className={css({ margin: 0, color: tok.textPrimary, fontSize: '27px', lineHeight: '34px', letterSpacing: '-0.025em' })}>Relationship explorer</h1>
+          <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+            <h1 id="relationship-explorer-title" className={css({ margin: 0, color: tok.textPrimary, fontSize: '27px', lineHeight: '34px', letterSpacing: '-0.025em' })}>Relationship explorer</h1>
+            <SectionHelp
+              termId="exact_static_relationship"
+              enabledCapabilities={RELATIONSHIP_HELP_CAPABILITIES}
+              triggerLabel="Relationship explorer"
+            />
+          </div>
           <p className={css({ margin: '5px 0 0', color: tok.textTertiary, fontSize: '12px', lineHeight: '18px' })}>Exact static source relationships · source evidence first</p>
         </div>
         <label className={css({ display: 'inline-flex', alignItems: 'center', gap: '7px', minHeight: '32px', color: tok.textSecondary, fontSize: '11px', cursor: route.serviceKey && page ? 'pointer' : 'default' })}>

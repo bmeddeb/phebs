@@ -206,7 +206,7 @@ export function SectionHelp({
         </div>
         <button
           type="button"
-          aria-label={`Close ${term.label} help`}
+          aria-label={`Close ${triggerLabel ?? term.label} help`}
           onClick={() => dismiss(true)}
           className={css({
             width: '24px',

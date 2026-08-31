@@ -66,6 +66,11 @@ afterEach(cleanup)
 test('history links commits at the immutable revision', async () => {
   render(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&path=src%2Fnew.go&ref=' + fixture.commit.id)} />))
   const link = await screen.findByRole('link', { name: /Add launch status/ })
+  const help = screen.getByRole('button', { name: 'Help for History' })
+  fireEvent.click(help)
+  expect(await screen.findByRole('dialog', { name: 'History help' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Close History help' })).toBeTruthy()
+  expect(screen.getByText('Similarity or proximity is not a correctness ranking and does not authorize an edit.')).toBeTruthy()
   expect(link.getAttribute('href')).toContain(`ref=${fixture.commit.id}`)
   expect(document.body.textContent).toContain('Ada · ada@example.com')
 })
@@ -129,6 +134,7 @@ test('history ignores a stale load-more response after navigation', async () => 
 test('commit renders bounded patch rows and does not link a deleted file at the new revision', async () => {
   render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
   expect(await screen.findByRole('heading', { name: 'Add launch status' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Help for Commit' })).toBeTruthy()
   expect(screen.getByRole('region', { name: 'added file: src/new.go' })).toBeTruthy()
   expect(screen.getByText('+new')).toBeTruthy()
   expect(screen.getByText('-old')).toBeTruthy()
@@ -261,6 +267,7 @@ test('commit omits a phantom patch region when Git returns no patch text', async
 test('blame maps source lines to commit metadata', async () => {
   render(page(<BlamePage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&path=src%2Fnew.go&ref=' + fixture.commit.id)} />))
   expect(await screen.findByText('package main')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Help for Blame' })).toBeTruthy()
   const commitLink = screen.getByRole('link', { name: /Ada aaaaaaaa/ })
   expect(commitLink.getAttribute('href')).toBe(`#/commit?repo=example.com%2Facme%2Fapp&ref=${fixture.commit.id}`)
 })
