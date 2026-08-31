@@ -1,6 +1,8 @@
 package servicecatalogv3
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,6 +13,58 @@ import (
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
+
+// DecodeCatalog opens the retained logical record model under v3's expanded
+// aggregate bounds. Input need not already be canonically ordered.
+func DecodeCatalog(raw []byte) (servicecatalog.Catalog, error) {
+	catalog, err := servicecatalog.DecodeWithLimits(raw, servicecatalog.DecodeLimits{
+		MaxEncodedBytes: MaxPublicationBytes, MaxServices: MaxTotalServices,
+		MaxMemberships: MaxMemberships, MaxDistinctPaths: MaxDistinctPaths,
+		MaxSuccessorEdges:    MaxSuccessorEdges,
+		MaxServiceSuccessors: MaxServiceSuccessors,
+	})
+	if err != nil {
+		if errors.Is(err, servicecatalog.ErrEncodedLimit) ||
+			errors.Is(err, servicecatalog.ErrServiceLimit) ||
+			errors.Is(err, servicecatalog.ErrMembershipLimit) ||
+			errors.Is(err, servicecatalog.ErrDistinctPathLimit) ||
+			errors.Is(err, servicecatalog.ErrSuccessorLimit) {
+			return servicecatalog.Catalog{}, fmt.Errorf("%w: %v", ErrLimit, err)
+		}
+		return servicecatalog.Catalog{}, err
+	}
+	normalized, _, err := normalize(catalog)
+	return normalized, err
+}
+
+// ValidateCatalog applies v3's logical contract without building members.
+func ValidateCatalog(catalog servicecatalog.Catalog) error {
+	_, _, err := normalize(catalog)
+	return err
+}
+
+// EncodeRoot returns the exact precious root bytes stored by T41.3.
+func EncodeRoot(root Root) ([]byte, error) {
+	if err := ValidateRoot(root); err != nil {
+		return nil, err
+	}
+	return canonical(root)
+}
+
+// DecodeRoot strict-opens exact canonical precious root bytes.
+func DecodeRoot(raw []byte) (Root, error) {
+	if len(raw) > MaxRootBytes {
+		return Root{}, limitf("root bytes")
+	}
+	var root Root
+	if err := decodeCanonical(raw, &root); err != nil {
+		return Root{}, err
+	}
+	if err := ValidateRoot(root); err != nil {
+		return Root{}, err
+	}
+	return root, nil
+}
 
 func FromV2(publication servicecatalog.Publication, catalog servicecatalog.Catalog) (Generation, error) {
 	persisted := publication.ControlRevision != 0 || !publication.PublishedAt.IsZero()

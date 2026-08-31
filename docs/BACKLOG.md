@@ -3037,20 +3037,8 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration; T41.2 is next.
-
-**T41.3 · Dark catalog-v3 ingestion and immutable store authority** — ingest
-operator or committed selections into T41.2, stream the source census to prove
-placement liveness and exact complement, and store precious immutable root/
-member rows instead of one monolithic JSON string. Keep ordinary v3 runtime
-selection unregistered through T41.9. AC: complete validation precedes a dark
-candidate pointer; every identity collision is byte-equal or refusal;
-same-authority-version/different-bytes refuses; committed still means declared
-version unless a separate provenance decision changes it; restart no-op uses
-bounded metadata and selected file reads; v1/v2 current/historical authority
-remains unchanged; startup schema uses an explicit idempotent migration rather
-than `IF NOT EXISTS` assertion drift; malicious, partial, concurrent,
-crash-gap, census, and live maximum-shape SurrealDB tests; full merge bar.
+production constant or runtime registration. T41.2 is integrated, T41.3 owns
+the current dark-ingestion merge bar, and T41.4 is next.
 
 **T41.4 · Catalog-v3 recovery, archive, and lifecycle owner** — own v3 root/
 member durability before state consumes it. AC: startup repairs only complete

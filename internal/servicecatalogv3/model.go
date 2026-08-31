@@ -235,7 +235,7 @@ func canonical(value any) ([]byte, error) {
 }
 
 func decodeCanonical(raw []byte, value any) error {
-	if err := preflightCollections(raw); err != nil {
+	if err := preflightJSON(raw, MaxMemberBytes, memberCollectionLimit); err != nil {
 		return err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -254,11 +254,17 @@ func decodeCanonical(raw []byte, value any) error {
 }
 
 func preflightCollections(raw []byte) error {
-	if len(raw) > MaxMemberBytes {
-		return limitf("member bytes")
+	return preflightJSON(raw, MaxMemberBytes, memberCollectionLimit)
+}
+
+type collectionLimit func(string) (int, bool)
+
+func preflightJSON(raw []byte, maxBytes int, limit collectionLimit) error {
+	if len(raw) > maxBytes {
+		return limitf("encoded bytes")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
-	if err := preflightValue(decoder, "", 0); err != nil {
+	if err := preflightValue(decoder, "", 0, limit); err != nil {
 		return err
 	}
 	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
@@ -267,7 +273,12 @@ func preflightCollections(raw []byte) error {
 	return nil
 }
 
-func preflightValue(decoder *json.Decoder, field string, depth int) error {
+func preflightValue(
+	decoder *json.Decoder,
+	field string,
+	depth int,
+	limit collectionLimit,
+) error {
 	token, err := decoder.Token()
 	if err != nil {
 		return err
@@ -286,18 +297,18 @@ func preflightValue(decoder *json.Decoder, field string, depth int) error {
 			if !ok {
 				return ErrInvalid
 			}
-			if err := preflightValue(decoder, name, depth+1); err != nil {
+			if err := preflightValue(decoder, name, depth+1, limit); err != nil {
 				return err
 			}
 		}
 	case '[':
-		limit, bounded := memberCollectionLimit(field)
+		maximum, bounded := limit(field)
 		count := 0
 		for decoder.More() {
-			if bounded && count >= limit {
+			if bounded && count >= maximum {
 				return limitf("collection %q", field)
 			}
-			if err := preflightValue(decoder, "", depth+1); err != nil {
+			if err := preflightValue(decoder, "", depth+1, limit); err != nil {
 				return err
 			}
 			count++

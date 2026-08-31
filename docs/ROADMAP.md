@@ -160,8 +160,8 @@ density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, and T43R.5 queued after T43R.1 and T43R.2
 completed on 2026-08-30 and T43R.3–4 completed on 2026-08-31. It
-touched no scale plane, authority, or claim; T41.2 takes its separate
-integration gate before T41.3 begins.
+touched no scale plane, authority, or claim; T41.2 is integrated and T41.3
+takes its separate integration gate before T41.4 begins.
 
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
@@ -826,8 +826,9 @@ service count × repository bytes
 - **Epic 41 — 10,000-service authority and sparse consumers (active):** T41.1
   froze production-valid 8,000/10,000/12,500 profiles and selected the
   reduce-only aggregate envelope; T41.2 retains v2 semantics in
-  a v3 root with dual service/path member views, publish immutable precious
-  authority with real lifecycle ownership, reconcile and activate state under
+  a v3 root with dual service/path member views; T41.3 streams exact census
+  proof and stores precious root/member rows behind a dark pointer. Next,
+  add real lifecycle ownership, reconcile and activate state under
   separate resumable fences, make authorized point/page reads member-local,
   bucket relationship publications, and close on a neutral
   10,000-service recovery/lifecycle/product gate. No constants-only increase
@@ -870,11 +871,18 @@ catalog, relationship, or correctness authority.
   generations refuse v2 downgrade, and complete validation proves the two
   views plus inherited prefix claims before a keyed root-plus-one-member read
   is available. It adds no store schema,
-  ingestion, census proof, lifecycle owner, activation, or runtime import;
-  integration remains separate and T41.3 follows its merge bar. Its
+  ingestion, census proof, lifecycle owner, activation, or runtime import.
+  T41.2 is integrated. Its
   focused/race/vet/static/documentation closure and independent review are
-  complete; the rebased lineage owns a fresh current-tree gate.
-- T41.3 is the next scale ticket. Later tickets stay dependency-ordered
+  complete.
+- T41.3 adds strict expanded-input ingestion, streamed source-census liveness
+  and complement proof, precious content-addressed root/member rows, one
+  immutable authority-version claim, and one distinct dark candidate pointer.
+  Complete validation and the repository fence occur before the interactive
+  transaction commits any pointer; exact restart no-op reads bounded metadata
+  and no Git/member state. V1/v2 authority remains byte-identical and no server
+  path registers v3. Integration remains separate; T41.4 is next.
+- Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - T40.R1 Take 3 is a verified `unclassified` startup-readiness stop, not a

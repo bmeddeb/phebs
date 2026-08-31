@@ -326,7 +326,23 @@ func (r *Reconciler) census(
 	catalog servicecatalog.Catalog,
 	fillLegacyUnowned bool,
 ) (censusResult, error) {
-	if _, err := servicecatalog.Normalize(catalog); err != nil {
+	return r.censusValidated(
+		ctx, repository, commit, catalog, fillLegacyUnowned,
+		func(candidate servicecatalog.Catalog) error {
+			_, err := servicecatalog.Normalize(candidate)
+			return err
+		},
+	)
+}
+
+func (r *Reconciler) censusValidated(
+	ctx context.Context,
+	repository, commit string,
+	catalog servicecatalog.Catalog,
+	fillLegacyUnowned bool,
+	validate func(servicecatalog.Catalog) error,
+) (censusResult, error) {
+	if err := validate(catalog); err != nil {
 		return censusResult{}, fmt.Errorf("validate catalog before census: %w", err)
 	}
 	dir, err := phebssync.SafeRepoDir(r.DataDir, repository)
@@ -505,17 +521,27 @@ func (p *placementIndex) distinctCount() int {
 }
 
 func readCatalog(selection config.ServiceCatalog) ([]byte, error) {
-	before, err := os.Lstat(selection.Path)
+	content, err := readSelectedFile(selection.Path, servicecatalog.MaxEncodedBytes)
+	if errors.Is(err, errSelectedCatalogEncodedLimit) {
+		return nil, servicecatalog.ErrEncodedLimit
+	}
+	return content, err
+}
+
+var errSelectedCatalogEncodedLimit = errors.New("selected catalog exceeds the encoded-byte limit")
+
+func readSelectedFile(selectedPath string, limit int64) ([]byte, error) {
+	before, err := os.Lstat(selectedPath)
 	if err != nil {
 		return nil, fmt.Errorf("inspect selected catalog: %w", err)
 	}
 	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
 		return nil, errors.New("selected catalog must be a non-symlink regular file")
 	}
-	if before.Size() > servicecatalog.MaxEncodedBytes {
-		return nil, servicecatalog.ErrEncodedLimit
+	if before.Size() > limit {
+		return nil, errSelectedCatalogEncodedLimit
 	}
-	file, err := os.Open(selection.Path)
+	file, err := os.Open(selectedPath)
 	if err != nil {
 		return nil, fmt.Errorf("open selected catalog: %w", err)
 	}
@@ -524,12 +550,12 @@ func readCatalog(selection config.ServiceCatalog) ([]byte, error) {
 	if err != nil || !after.Mode().IsRegular() || !os.SameFile(before, after) {
 		return nil, errors.New("selected catalog changed while opening")
 	}
-	content, err := io.ReadAll(io.LimitReader(file, servicecatalog.MaxEncodedBytes+1))
+	content, err := io.ReadAll(io.LimitReader(file, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("read selected catalog: %w", err)
 	}
-	if len(content) > servicecatalog.MaxEncodedBytes {
-		return nil, servicecatalog.ErrEncodedLimit
+	if int64(len(content)) > limit {
+		return nil, errSelectedCatalogEncodedLimit
 	}
 	return content, nil
 }

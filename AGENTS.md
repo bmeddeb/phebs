@@ -710,9 +710,11 @@ reverified; evidence, signer, and identifier history remain. T41.1's reviewed
 runtime-dark 8,000/10,000/12,500-service profiles select the reduce-only v3
 aggregate envelope and at-most-512-claim relationship buckets without changing
 the current 4,000-service production cap or runtime registration. T41.2's
-reviewed runtime-dark v3 contract is merge-ready on the current-main lineage;
-T41.3 is the next dependency-ordered scale ticket after that separate
-integration. Epic 42 still owns combined-scale proof.
+reviewed runtime-dark v3 contract is integrated. T41.3's dark strict ingestion,
+streamed census, precious root/member authority, explicit schema migration,
+and atomic candidate pointer are merge-ready after the current branch gate;
+T41.4 is next after a separate integration. Epic 42 still owns combined-scale
+proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

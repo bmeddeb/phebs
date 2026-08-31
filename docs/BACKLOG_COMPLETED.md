@@ -10311,11 +10311,65 @@ token-scans, decodes, and hashes one at-most-2-MiB member. There is no store,
 filesystem, network, source/Git,
 corpus/shard, lock, cache, worker, or child-process work. T41.3 retains source
 census proof and immutable storage. Epic 40 is closed and T41.1 is integrated;
-T41.2 is merge-ready on the current-main lineage, with integration still a
-separate authorization before T41.3 begins. No runtime
+T41.2 is integrated on the current-main lineage and T41.3 owns the separate
+dark-ingestion merge bar. No runtime
 selection, production cap, ceremony, scale/SLO, release, topology, migration,
 or decommission claim is authorized.
 
 The final T41.2 focused, race, vet, lint, documentation, glossary, module, and
 whitespace gates pass, and independent review has no unresolved T41.2 finding.
 The full repository/store suites were intentionally not rerun for this closure.
+
+**T41.3 ✅ · Dark catalog-v3 ingestion and immutable store authority**
+*(2026-08-30; high)* — the runtime-dark `V3Reconciler` now reads explicit
+operator or committed catalog selections through the retained strict logical
+parser under T41.2's expanded limits. It reuses the existing streamed
+`git ls-tree` census to prove every placement is live and every regular file is
+exactly accepted or unowned. Committed authority remains declared by the exact
+indexed commit; operator versions remain explicit configuration/catalog tokens.
+No server path constructs the reconciler, so ordinary v3 selection remains
+unregistered through T41.9.
+
+SurrealDB stores one precious canonical root row and at most 64 independently
+content-addressed member rows instead of one monolithic catalog string. A
+logical-authority-version row rejects same-version/different-logical-byte
+replacement. Root/member digest collisions must match every stored byte. One
+interactive transaction rechecks the repository commit, exact-opens or creates
+the immutable rows and authority claim, then advances only the distinct dark
+candidate pointer; failure at any statement rolls the whole transaction back.
+Complete generation validation runs before the transaction and again after
+commit. The exact restart no-op reads the selected file plus candidate/root/
+version metadata, rebuilds deterministically in memory, and performs no census
+or member-row read. V1/v2 current and historical publications remain unchanged.
+
+Startup owns a fixed-version idempotent migration: absent-marker installation
+creates four empty preflight tables, refuses any unowned prototype row,
+`OVERWRITE`s the exact schema, and records completion; steady startup performs
+one marker point read and no v3 table scan. Live SurrealDB regressions cover
+root and member identity collisions, same-version replacement, partial member
+inventory, concurrent exact publication, injected pre-pointer crash rollback,
+schema-drift repair/idempotence, v1/v2 isolation, streamed census publication,
+and the 12,500-service/75,000-membership/37,500-path maximum aggregate shape.
+Strict expanded decoding also retains duplicate, missing, unknown, trailing,
+one-over, and nesting refusal tests.
+
+The complete affected normal suites pass, including `internal/store` in
+1063.434s; the complete affected race suites pass, including
+`internal/store` in 1099.851s. Repository-wide compile-only, vet, lint,
+module-verification, documentation, glossary, and whitespace gates also pass.
+
+Production request/query, sync, retry/no-op, publication, cache, worker, and
+child cost remains zero because v3 is unregistered. Startup adds one fixed
+migration-marker read. Explicit selected-repository reconciliation reads one
+at-most-32-MiB file and three bounded metadata rows; a changed candidate adds
+one streaming Git child and at most 40,000 placement keys. Build/validation is
+bounded by the frozen 32-MiB publication. Publication makes at most four
+interactive-transaction attempts; each performs one repository read, at most
+64 member point reads and conditional creates, and one root/version/pointer
+read plus conditional write, followed by three metadata and at most 64 member
+strict-open reads. The database transaction spans those bounded operations;
+no application lock, cache, network service, shard/corpus scan, or persistent
+worker is added. T41.4 retains recovery, backup/restore, orphan repair, and
+lifecycle collection. This ticket makes no activation, production-cap,
+release, ceremony, scale/SLO, topology, migration-completion, or decommission
+claim.

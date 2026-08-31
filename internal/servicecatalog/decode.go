@@ -13,7 +13,38 @@ import (
 // Decode accepts exactly one closed JSON value, enforces collection limits
 // before appending another element, and returns the normalized catalog.
 func Decode(content []byte) (Catalog, error) {
-	if len(content) > MaxEncodedBytes {
+	catalog, err := DecodeWithLimits(content, DecodeLimits{
+		MaxEncodedBytes: MaxEncodedBytes, MaxServices: MaxServices,
+		MaxMemberships: MaxMemberships, MaxDistinctPaths: MaxDistinctPaths,
+		MaxSuccessorEdges:    MaxSuccessorEdges,
+		MaxServiceSuccessors: MaxSuccessorEdges,
+	})
+	if err != nil {
+		return Catalog{}, err
+	}
+	return Normalize(catalog)
+}
+
+// DecodeLimits lets segmented ingestion reuse this strict parser without
+// weakening v2's constants.
+type DecodeLimits struct {
+	MaxEncodedBytes      int
+	MaxServices          int
+	MaxMemberships       int
+	MaxDistinctPaths     int
+	MaxSuccessorEdges    int
+	MaxServiceSuccessors int
+}
+
+// DecodeWithLimits parses the retained logical record model under caller-owned
+// aggregate bounds. The caller applies its semantic normalization next.
+func DecodeWithLimits(content []byte, limits DecodeLimits) (Catalog, error) {
+	if limits.MaxEncodedBytes < 1 || limits.MaxServices < 1 ||
+		limits.MaxMemberships < 1 || limits.MaxDistinctPaths < 1 ||
+		limits.MaxSuccessorEdges < 1 || limits.MaxServiceSuccessors < 1 {
+		return Catalog{}, fmt.Errorf("%w: decode limits are invalid", ErrInvalid)
+	}
+	if len(content) > limits.MaxEncodedBytes {
 		return Catalog{}, ErrEncodedLimit
 	}
 	if !utf8.Valid(content) {
@@ -21,16 +52,16 @@ func Decode(content []byte) (Catalog, error) {
 	}
 	decoder := json.NewDecoder(bytes.NewReader(content))
 	var catalog Catalog
-	if err := decodeCatalog(decoder, &catalog); err != nil {
+	if err := decodeCatalog(decoder, &catalog, limits); err != nil {
 		return Catalog{}, fmt.Errorf("%w: decode: %w", ErrInvalid, err)
 	}
 	if err := finish(decoder); err != nil {
 		return Catalog{}, fmt.Errorf("%w: decode: %w", ErrInvalid, err)
 	}
-	return Normalize(catalog)
+	return catalog, nil
 }
 
-func decodeCatalog(decoder *json.Decoder, out *Catalog) error {
+func decodeCatalog(decoder *json.Decoder, out *Catalog, limits DecodeLimits) error {
 	if err := beginObject(decoder, "catalog"); err != nil {
 		return err
 	}
@@ -53,11 +84,11 @@ func decodeCatalog(decoder *json.Decoder, out *Catalog) error {
 				out.Override = &value
 			}
 		case "services":
-			err = decodeServices(decoder, &out.Services, &successorCount)
+			err = decodeServices(decoder, &out.Services, &successorCount, limits)
 		case "memberships":
-			err = decodeMemberships(decoder, &out.Memberships)
+			err = decodeMemberships(decoder, &out.Memberships, limits)
 		case "unowned":
-			err = decodeUnowned(decoder, &out.Unowned)
+			err = decodeUnowned(decoder, &out.Unowned, limits)
 		default:
 			err = unknownField(field)
 		}
@@ -129,16 +160,21 @@ func decodeOverride(decoder *json.Decoder, out *OperatorOverride) error {
 	return requireFields(seen, "id", "version")
 }
 
-func decodeServices(decoder *json.Decoder, out *[]Service, successorCount *int) error {
+func decodeServices(
+	decoder *json.Decoder,
+	out *[]Service,
+	successorCount *int,
+	limits DecodeLimits,
+) error {
 	if err := beginArray(decoder, "services"); err != nil {
 		return err
 	}
 	for decoder.More() {
-		if len(*out) >= MaxServices {
+		if len(*out) >= limits.MaxServices {
 			return ErrServiceLimit
 		}
 		var service Service
-		if err := decodeService(decoder, &service, successorCount); err != nil {
+		if err := decodeService(decoder, &service, successorCount, limits); err != nil {
 			return err
 		}
 		*out = append(*out, service)
@@ -146,7 +182,12 @@ func decodeServices(decoder *json.Decoder, out *[]Service, successorCount *int) 
 	return endArray(decoder)
 }
 
-func decodeService(decoder *json.Decoder, out *Service, successorCount *int) error {
+func decodeService(
+	decoder *json.Decoder,
+	out *Service,
+	successorCount *int,
+	limits DecodeLimits,
+) error {
 	if err := beginObject(decoder, "service"); err != nil {
 		return err
 	}
@@ -168,7 +209,7 @@ func decodeService(decoder *json.Decoder, out *Service, successorCount *int) err
 		case "reason":
 			err = decodeString(decoder, &out.Reason)
 		case "successors":
-			err = decodeSuccessors(decoder, &out.Successors, successorCount)
+			err = decodeSuccessors(decoder, &out.Successors, successorCount, limits)
 		default:
 			err = unknownField(field)
 		}
@@ -182,12 +223,18 @@ func decodeService(decoder *json.Decoder, out *Service, successorCount *int) err
 	return requireFields(seen, "key", "display_name", "disposition", "origin")
 }
 
-func decodeSuccessors(decoder *json.Decoder, out *[]string, total *int) error {
+func decodeSuccessors(
+	decoder *json.Decoder,
+	out *[]string,
+	total *int,
+	limits DecodeLimits,
+) error {
 	if err := beginArray(decoder, "successors"); err != nil {
 		return err
 	}
 	for decoder.More() {
-		if *total >= MaxSuccessorEdges {
+		if *total >= limits.MaxSuccessorEdges ||
+			len(*out) >= limits.MaxServiceSuccessors {
 			return ErrSuccessorLimit
 		}
 		var successor string
@@ -200,12 +247,16 @@ func decodeSuccessors(decoder *json.Decoder, out *[]string, total *int) error {
 	return endArray(decoder)
 }
 
-func decodeMemberships(decoder *json.Decoder, out *[]Membership) error {
+func decodeMemberships(
+	decoder *json.Decoder,
+	out *[]Membership,
+	limits DecodeLimits,
+) error {
 	if err := beginArray(decoder, "memberships"); err != nil {
 		return err
 	}
 	for decoder.More() {
-		if len(*out) >= MaxMemberships {
+		if len(*out) >= limits.MaxMemberships {
 			return ErrMembershipLimit
 		}
 		var membership Membership
@@ -249,12 +300,16 @@ func decodeMembership(decoder *json.Decoder, out *Membership) error {
 	return requireFields(seen, "service_key", "path", "role", "origin")
 }
 
-func decodeUnowned(decoder *json.Decoder, out *[]UnownedPlacement) error {
+func decodeUnowned(
+	decoder *json.Decoder,
+	out *[]UnownedPlacement,
+	limits DecodeLimits,
+) error {
 	if err := beginArray(decoder, "unowned"); err != nil {
 		return err
 	}
 	for decoder.More() {
-		if len(*out) >= MaxDistinctPaths {
+		if len(*out) >= limits.MaxDistinctPaths {
 			return ErrDistinctPathLimit
 		}
 		var unowned UnownedPlacement

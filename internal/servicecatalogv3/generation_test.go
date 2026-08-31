@@ -2,6 +2,7 @@ package servicecatalogv3
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -12,6 +13,54 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
+
+func TestDecodeCatalogExpandedBoundsAndRootRoundTrip(t *testing.T) {
+	expanded := acceptedCatalog(servicecatalog.MaxServices+1, false)
+	expanded.Unowned = []servicecatalog.UnownedPlacement{}
+	raw, err := json.Marshal(expanded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeCatalog(raw)
+	if err != nil || len(decoded.Services) != servicecatalog.MaxServices+1 {
+		t.Fatalf("decode expanded catalog = %d, %v", len(decoded.Services), err)
+	}
+	generation, err := Build(testBinding(decoded.Authority), decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootRaw, err := EncodeRoot(generation.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened, err := DecodeRoot(rootRaw)
+	if err != nil || !reflect.DeepEqual(opened, generation.Root) {
+		t.Fatalf("root round-trip = %+v, %v", opened, err)
+	}
+
+	overflow := acceptedCatalog(MaxTotalServices+1, false)
+	overflow.Unowned = []servicecatalog.UnownedPlacement{}
+	overflowRaw, err := json.Marshal(overflow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeCatalog(overflowRaw); !errors.Is(err, ErrLimit) {
+		t.Fatalf("service collection one-over = %v", err)
+	}
+	for name, malformed := range map[string][]byte{
+		"unknown field":   []byte(`{"schema":"phebs-service-catalog-v2","authority":{"kind":"committed","id":"catalog","version":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"services":[],"memberships":[],"unowned":[],"extra":true}`),
+		"duplicate field": []byte(`{"schema":"phebs-service-catalog-v2","schema":"phebs-service-catalog-v2","authority":{"kind":"committed","id":"catalog","version":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"services":[],"memberships":[],"unowned":[]}`),
+		"missing field":   []byte(`{"schema":"phebs-service-catalog-v2","authority":{"kind":"committed","id":"catalog","version":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"services":[],"memberships":[]}`),
+		"trailing value":  append(bytes.Clone(raw), []byte(` {}`)...),
+		"deep nesting":    []byte(strings.Repeat("[", maxPreflightDepth+1) + "0" + strings.Repeat("]", maxPreflightDepth+1)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := DecodeCatalog(malformed); err == nil {
+				t.Fatal("malformed catalog was admitted")
+			}
+		})
+	}
+}
 
 func testBinding(authority servicecatalog.Authority) Binding {
 	commit := strings.Repeat("a", 40)
