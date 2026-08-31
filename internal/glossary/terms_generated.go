@@ -2,7 +2,7 @@
 
 package glossary
 
-const Digest = "sha256:84d38aedda6abafb1ce0da6c397c89054bc5fcb52c642e97250c0111ed4907a3"
+const Digest = "sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e"
 
 const (
 	CapabilityCallerMapExactIdentity Capability = "caller-map-exact-identity"
@@ -123,7 +123,7 @@ var Terms = []Term{
 		ID:                TermImplementationEvidence,
 		Label:             "Implementation evidence",
 		ShortHelp:         "Cited source or history that may inform how the change is implemented.",
-		ExpandedHelp:      "Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them.",
+		ExpandedHelp:      "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
 		EvidenceBoundary:  "Similarity or proximity is not a correctness ranking and does not authorize an edit.",
 		AuthorityBoundary: "The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
 		Modes:             []Mode{"add", "migrate", "modify", "retire"},
@@ -186,10 +186,10 @@ var Terms = []Term{
 	{
 		ID:                TermServiceCatalogAuthority,
 		Label:             "Service catalog authority",
-		ShortHelp:         "The reviewed repository metadata that defines one service identity and its lifecycle state.",
+		ShortHelp:         "The reviewed catalog metadata bound to a repository that defines one service identity and its lifecycle state.",
 		ExpandedHelp:      "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
 		EvidenceBoundary:  "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
-		AuthorityBoundary: "Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
+		AuthorityBoundary: "Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
 		Modes:             []Mode{"add", "migrate", "modify", "retire"},
 		Surfaces:          []Surface{"manual", "mcp", "service_directory"},
 		WireAliases:       []string{},

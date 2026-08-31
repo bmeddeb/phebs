@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -60,7 +60,11 @@ afterEach(cleanup)
 
 test('late source responses cannot overwrite the current route', async () => {
   const rendered = render(view('repo=r&path=old.go&ref=old-ref'))
-  expect(screen.getByRole('button', { name: 'Help for File' })).toBeTruthy()
+  const help = screen.getByRole('button', { name: 'Help for File' })
+  fireEvent.click(help)
+  const helpDialog = await screen.findByRole('dialog', { name: 'File help' })
+  expect(within(helpDialog).getByText('Cited source or history that may inform how the change is implemented.')).toBeTruthy()
+  expect(within(helpDialog).queryByText('Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.')).toBeNull()
   expect(api.sourceCalls).toHaveLength(1)
 
   rendered.rerender(view('repo=r&path=new.go&ref=new-ref'))

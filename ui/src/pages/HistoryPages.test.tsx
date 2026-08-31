@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -136,7 +136,10 @@ test('history ignores a stale load-more response after navigation', async () => 
 test('commit renders bounded patch rows and does not link a deleted file at the new revision', async () => {
   render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
   expect(await screen.findByRole('heading', { name: 'Add launch status' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Help for Commit' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Help for Commit' }))
+  const helpDialog = await screen.findByRole('dialog', { name: 'Commit help' })
+  expect(within(helpDialog).getByText('Cited source or history that may inform how the change is implemented.')).toBeTruthy()
+  expect(within(helpDialog).queryByText('Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.')).toBeNull()
   expect(screen.getByRole('region', { name: 'added file: src/new.go' })).toBeTruthy()
   expect(screen.getByText('+new')).toBeTruthy()
   expect(screen.getByText('-old')).toBeTruthy()
@@ -288,7 +291,10 @@ test('commit omits a phantom patch region when Git returns no patch text', async
 test('blame maps source lines to commit metadata', async () => {
   render(page(<BlamePage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&path=src%2Fnew.go&ref=' + fixture.commit.id)} />))
   expect(await screen.findByText('package main')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Help for Blame' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Help for Blame' }))
+  const helpDialog = await screen.findByRole('dialog', { name: 'Blame help' })
+  expect(within(helpDialog).getByText('Cited source or history that may inform how the change is implemented.')).toBeTruthy()
+  expect(within(helpDialog).queryByText('Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.')).toBeNull()
   const commitLink = screen.getByRole('link', { name: /Ada aaaaaaaa/ })
   expect(commitLink.getAttribute('href')).toBe(`#/commit?repo=example.com%2Facme%2Fapp&ref=${fixture.commit.id}`)
 })

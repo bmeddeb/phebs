@@ -1,6 +1,6 @@
 // Code generated from internal/glossary/glossary.json; DO NOT EDIT.
 export const glossarySchemaVersion = "change-workbench-glossary-v1" as const
-export const glossaryDigest = "sha256:84d38aedda6abafb1ce0da6c397c89054bc5fcb52c642e97250c0111ed4907a3" as const
+export const glossaryDigest = "sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e" as const
 
 export const glossaryCapabilities = [
   "caller-map-exact-identity",
@@ -166,7 +166,7 @@ export const glossaryTerms = [
     "id": "implementation_evidence",
     "label": "Implementation evidence",
     "shortHelp": "Cited source or history that may inform how the change is implemented.",
-    "expandedHelp": "Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them.",
+    "expandedHelp": "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
     "evidenceBoundary": "Similarity or proximity is not a correctness ranking and does not authorize an edit.",
     "authorityBoundary": "The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
     "modes": [
@@ -289,10 +289,10 @@ export const glossaryTerms = [
   {
     "id": "service_catalog_authority",
     "label": "Service catalog authority",
-    "shortHelp": "The reviewed repository metadata that defines one service identity and its lifecycle state.",
+    "shortHelp": "The reviewed catalog metadata bound to a repository that defines one service identity and its lifecycle state.",
     "expandedHelp": "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
     "evidenceBoundary": "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
-    "authorityBoundary": "Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
+    "authorityBoundary": "Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
     "modes": [
       "add",
       "migrate",

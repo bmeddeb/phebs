@@ -899,7 +899,7 @@ glossary below is the complete documentation fallback.
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
 #### Canonical Change Workbench glossary
 
-The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:84d38aedda6abafb1ce0da6c397c89054bc5fcb52c642e97250c0111ed4907a3`.
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e`.
 
 ##### Analysis scope & gaps
 
@@ -961,7 +961,7 @@ Each row retains its repository, selected service key, incarnation, service gene
 
 Cited source or history that may inform how the change is implemented.
 
-Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them.
+Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.
 
 - Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit.
 - Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.
@@ -1015,12 +1015,12 @@ The row retains the call-site citation, generated symbol, wire operation, declar
 
 ##### Service catalog authority
 
-The reviewed repository metadata that defines one service identity and its lifecycle state.
+The reviewed catalog metadata bound to a repository that defines one service identity and its lifecycle state.
 
 The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.
 
 - Evidence boundary: Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.
-- Authority boundary: Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.
+- Authority boundary: Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.
 - Applies to modes: `add`, `migrate`, `modify`, `retire`
 - Registered surfaces: `manual`, `mcp`, `service_directory`
 - Required capabilities (all): `service-catalog-v2`
