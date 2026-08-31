@@ -15,7 +15,7 @@ import { CitationChip, CitationPanel, ClaimBoundary } from '../components/kit'
 import { VirtualList, type VirtualListHandle, type VirtualRowProps } from '../components/VirtualList'
 import { EXPLORER_DIAGRAM_ADDENDUM, RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
 import { validateServiceRelationshipCitation, validateServiceRelationshipRoot } from '../components/serviceRelationshipCitation'
-import { isAbortError } from '../util'
+import { boundedError, isAbortError } from '../util'
 
 const PAGE_SIZE = 50
 const PAGE_SCHEMA = 'phebs-service-relationship-page-v1'
@@ -779,8 +779,6 @@ function classificationLabel(row: ServiceRelationshipRow): string {
 
 function rowID(index: number): string { return `R-${String(index + 1).padStart(2, '0')}` }
 function titleCase(value: string): string { return value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : value }
-function boundedError(cause: unknown): string { const value = String(cause).replace(/^Error:\s*/, ''); return value.length <= 512 ? value : `${value.slice(0, 511)}…` }
-
 function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) } }function inputStyle(tok: PhebsTokens) { return { width: '100%', height: '36px', boxSizing: 'border-box' as const, padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontFamily: 'inherit', fontSize: '11.5px', ':focus': { borderColor: tok.accent }, ':focus-visible': focusRing(tok) } }
 function primaryButton(tok: PhebsTokens) { return { minHeight: '36px', padding: '0 13px', border: '0', borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) } }
 function resetLink(tok: PhebsTokens) { return { minHeight: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tok.selectedText, fontSize: '11px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }

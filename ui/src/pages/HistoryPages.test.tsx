@@ -70,6 +70,35 @@ test('history links commits at the immutable revision', async () => {
   expect(document.body.textContent).toContain('Ada · ada@example.com')
 })
 
+test('history bounds an initial request failure', async () => {
+  fixture.fetchCommits.mockRejectedValueOnce(new Error('initial history failure'))
+
+  render(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp')} />))
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent?.trim()).toBe('initial history failure')
+  expect(document.body.textContent).not.toContain('Error: initial history failure')
+  expect(document.body.textContent).not.toContain('No commits are visible')
+})
+
+test('history bounds a load-more request failure', async () => {
+  const oversized = `load-more failure ${'x'.repeat(600)}`
+  const expected = `${oversized.slice(0, 511)}…`
+  fixture.fetchCommits
+    .mockResolvedValueOnce({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: true })
+    .mockRejectedValueOnce(new Error(oversized))
+
+  render(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp')} />))
+  await screen.findByText('Add launch status')
+  fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent?.trim()).toBe(expected)
+  expect(expected).toHaveLength(512)
+  expect(document.body.textContent).not.toContain('Error: load-more failure')
+  expect(screen.getByRole('link', { name: /Add launch status/ })).toBeTruthy()
+})
+
 test('history ignores a stale load-more response after navigation', async () => {
   const oldCommit = { ...fixture.commit, id: 'c'.repeat(40), short_id: 'ccccccc', subject: 'Old repository commit' }
   const staleCommit = { ...fixture.commit, id: 'd'.repeat(40), short_id: 'ddddddd', subject: 'Stale page commit' }

@@ -14,7 +14,7 @@ import { FONTS, focusRing, usePhebsTokens, type PhebsTokens } from '../theme'
 import { CitationChip, CitationPanel, StatusChip } from './kit'
 import { validateServiceRelationshipCitation, validateServiceRelationshipRoot } from './serviceRelationshipCitation'
 import { RELATIONSHIP_CAVEAT_MIRROR } from '../caveats'
-import { isAbortError } from '../util'
+import { boundedError, isAbortError } from '../util'
 import { href } from '../router'
 
 const RELATIONSHIP_PAGE_SIZE = 25
@@ -539,11 +539,6 @@ function snapshotColor(state: string, tok: PhebsTokens): string {
 
 function titleCase(value: string): string {
   return value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : value
-}
-
-function boundedError(cause: unknown): string {
-  const message = String(cause).replace(/^Error:\s*/, '')
-  return message.length <= 512 ? message : `${message.slice(0, 511)}…`
 }
 
 function emptyState(tok: PhebsTokens) {

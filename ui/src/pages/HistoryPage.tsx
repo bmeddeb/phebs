@@ -8,7 +8,7 @@ import type { GitCommit } from '../api'
 import { href } from '../router'
 import { CommitIcon } from '../icons'
 import { FONTS, usePhebsTokens } from '../theme'
-import { isAbortError, repoFilter } from '../util'
+import { boundedError, isAbortError, repoFilter } from '../util'
 
 export default function HistoryPage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
@@ -47,7 +47,7 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
       })
       .catch((cause) => {
         if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
-          setError(String(cause))
+          setError(boundedError(cause))
         }
       })
       .finally(() => {
@@ -74,7 +74,7 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
       setHasMore(result.has_more)
     } catch (cause) {
       if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
-        setError(String(cause))
+        setError(boundedError(cause))
       }
     } finally {
       if (loadMoreController.current === controller) {
@@ -88,13 +88,13 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
     <div className={css({ maxWidth: '1040px', margin: '0 auto' })}>
       <HistoryHeader repo={repo} path={path} ref={revision} />
       {error && (
-        <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
+        <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', minWidth: 0, marginLeft: 0, marginRight: 0, overflowWrap: 'anywhere' } } }}>
           {error}
         </Notification>
       )}
       {loading ? <Spinner $size="small" /> : (
         <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
-          {commits.length === 0 && <div className={css({ padding: '28px 0', color: tok.textTertiary })}>No commits are visible for this path at {ref ? <code>{ref}</code> : 'the indexed revision'}.</div>}
+          {!error && commits.length === 0 && <div className={css({ padding: '28px 0', color: tok.textTertiary })}>No commits are visible for this path at {ref ? <code>{ref}</code> : 'the indexed revision'}.</div>}
           {commits.map((commit) => (
             <a
               key={commit.id}

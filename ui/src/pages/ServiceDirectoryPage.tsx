@@ -18,7 +18,7 @@ import { StateNotice, StatusWord } from '../components/kit'
 import { VirtualList, type VirtualRowProps } from '../components/VirtualList'
 import { href, navigate, replaceRoute } from '../router'
 import { FONTS, TYPE, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens, type ToneName } from '../theme'
-import { isAbortError, relTime } from '../util'
+import { boundedError, isAbortError, relTime } from '../util'
 
 const PAGE_SIZE = 50
 
@@ -804,11 +804,6 @@ function shortIdentity(value: string): string {
 
 function titleCase(value: string): string {
   return value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : value
-}
-
-function boundedError(cause: unknown): string {
-  const message = String(cause).replace(/^Error:\s*/, '')
-  return message.length <= 512 ? message : `${message.slice(0, 511)}…`
 }
 
 function primaryLink(tok: PhebsTokens) {

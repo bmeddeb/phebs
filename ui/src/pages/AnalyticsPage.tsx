@@ -8,7 +8,7 @@ import { Spinner } from 'baseui/spinner'
 import { fetchAnalytics, type AnalyticsSummary } from '../api'
 import { usePhebsTokens } from '../theme'
 import { ChartIcon } from '../icons'
-import { isAbortError } from '../util'
+import { boundedError, isAbortError } from '../util'
 
 const DAYS = 30
 
@@ -33,7 +33,7 @@ export default function AnalyticsPage({ isAdmin }: { isAdmin: boolean }) {
       })
       .catch((cause) => {
         if (gen !== generation.current || isAbortError(cause)) return
-        setError(String(cause))
+        setError(boundedError(cause))
       })
       .finally(() => {
         if (gen === generation.current) setLoading(false)
@@ -58,7 +58,7 @@ export default function AnalyticsPage({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {error && (
-        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto' } } }}>
+        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', minWidth: 0, overflowWrap: 'anywhere' } } }}>
           {error}
         </Notification>
       )}

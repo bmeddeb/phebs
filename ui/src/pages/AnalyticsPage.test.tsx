@@ -58,6 +58,19 @@ test('renders tiles, daily bars, and top repos from local data', async () => {
   expect(screen.getByText('30')).toBeTruthy()
 })
 
+test('bounds analytics request failures', async () => {
+  const oversized = `analytics unavailable ${'x'.repeat(600)}`
+  const expected = `${oversized.slice(0, 511)}…`
+  api.fetchAnalytics.mockRejectedValueOnce(new Error(oversized))
+
+  page()
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent?.trim()).toBe(expected)
+  expect(expected).toHaveLength(512)
+  expect(document.body.textContent).not.toContain('Error: analytics unavailable')
+})
+
 test('non-admins get a notice, no fetch', () => {
   page(false)
   expect(screen.getByText(/requires administrator access/)).toBeTruthy()

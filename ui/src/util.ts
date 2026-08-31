@@ -88,3 +88,8 @@ export function runeColumnToUTF16Offset(line: string, column: number): number {
 export function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
+
+export function boundedError(cause: unknown): string {
+  const message = String(cause).replace(/^Error:\s*/, '')
+  return message.length <= 512 ? message : `${message.slice(0, 511)}…`
+}
