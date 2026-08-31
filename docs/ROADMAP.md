@@ -145,9 +145,11 @@ closed bounded nonproduct partition results and atomic domain roots on
 2026-08-07, T40.10 installed partitioned extraction and atomic domain
 authority, T40.11 migrated downstream generations plus their recovery,
 archive, rollback, pin, and lifecycle ownership, and T40.12 replayed authorized
-product consumers across retained v1 and current v2 roots. T40.13 remains open after T40.13l; the original gate still requires review and authorization. Epic 41 separately targets 10,000
-accepted services with an 8,000 accepted-service floor; Epic 42 composes both
-dimensions. No private rerun is authorized.
+product consumers across retained v1 and current v2 roots. Neutral-47 later
+passed T40.13's frozen mechanics gate and the 2026-08-30 disposition closed
+Epic 40. Epic 41 is now active, separately targeting 10,000 accepted services
+with an 8,000 accepted-service floor; Epic 42 composes both dimensions. No
+private rerun or release is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -158,8 +160,8 @@ density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, and three remaining residue items queued as
 T43R.3–5 after T43R.1 and T43R.2 completed on 2026-08-30. It
-touched no scale plane, authority, or claim; T40.13 remains the next scale
-ticket.
+touched no scale plane, authority, or claim; T41.2 is the next scale ticket
+after T41.1's integration.
 
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
@@ -752,8 +754,8 @@ service count × repository bytes
 
 ### Program sequence
 
-- **Epic 40 — very-large-monorepo derived-pipeline convergence (T40.1–T40.13
-  complete; closure disposition pending):** neutral-47 passed the frozen V32
+- **Epic 40 — very-large-monorepo derived-pipeline convergence (completed
+  2026-08-30):** neutral-47 passed the frozen V32
   mechanics gate with an independently reviewed `completed/continue` receipt.
   Exact source-free refusal attribution,
   the frozen neutral envelope, independent generation-scoped planning,
@@ -773,14 +775,15 @@ service count × repository bytes
   versioned v2 plan with a measured 1-GiB aggregate while preserving v1 restart
   validity. Serialized extraction throughput must also be measured before any
   Take 17 freeze. No rerun or bound change is authorized by this record.
-- **Epic 41 — 10,000-service authority and sparse consumers (after Epic 40):**
-  freeze production-valid 8,000/10,000/12,500 profiles, retain v2 semantics in
+- **Epic 41 — 10,000-service authority and sparse consumers (active):** T41.1
+  froze production-valid 8,000/10,000/12,500 profiles and selected the
+  reduce-only aggregate envelope; T41.2 next retains v2 semantics in
   a v3 root with dual service/path member views, publish immutable precious
   authority with real lifecycle ownership, reconcile and activate state under
   separate resumable fences, make authorized point/page reads member-local,
   bucket relationship publications, and close on a neutral
-  10,000-service recovery/lifecycle/product gate. T41.1 owns final aggregate
-  limits; no constants-only increase is permitted.
+  10,000-service recovery/lifecycle/product gate. No constants-only increase
+  is permitted.
 - **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
   freeze a deterministic combined corpus and independent oracle, execute cold,
   no-op, delta, A→B→A, interruption, restore, pressure, lifecycle, and product
@@ -803,17 +806,15 @@ catalog, relationship, or correctness authority.
 
 ### Decision and claim boundary
 
-- T41.1R1 is a repository merge-bar compatibility prerequisite: it moves only
+- T41.1R1 completed as a repository merge-bar compatibility prerequisite: it moves only
   current synthetic SCIP producers to typed ranges, preserves deliberate
-  legacy-read fixtures and retained bytes, and may integrate as maintenance
-  without advancing Epic 41. T41.1 still waits for Epic 40 closure.
-- A prospective T41.1 planning branch freezes source-free
+  legacy-read fixtures and retained bytes, and added no production work.
+- T41.1 freezes source-free
   8,000/10,000/12,500 accepted-service recipes and selects reduce-only
   aggregate limits plus at-most-512-claim relationship buckets after the
-  existing 1-MiB wire failed the maximum 4,000-claim shape. It changes no
-  production cap or registration and does not advance Epic 41; integration
-  remains gated on Epic 40 closure and the T41.1 merge bar.
-- T40.13 is the only next scale ticket. Later tickets stay dependency-ordered
+  existing 1-MiB wire failed the maximum 4,000-claim shape. Epic 40 is closed,
+  its merge bar is accepted, and it changes no production cap or registration.
+- T41.2 is the next scale ticket. Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
 - T40.R1 Take 3 is a verified `unclassified` startup-readiness stop, not a
@@ -2783,8 +2784,9 @@ selected lease requeued; pressure, archive/restore, collection, semantic and
 structural authorized queries, and completed custody-free teardown all passed.
 T40.13 is complete. Its receipt remains mechanics evidence only: it establishes
 no target SLO, service scale, accuracy, completeness, migration, or
-decommissioning and authorizes no release or private rerun. Epic 40
-closure/demo disposition and Epic 41 progression remain separate decisions.
+decommissioning and authorizes no release or private rerun. The separate
+2026-08-30 disposition closes Epic 40 and advances Epic 41 without changing
+those claims; only the exact unheld host-pressure ballast was retired.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

@@ -12,6 +12,27 @@ appended to PLAN.md as dated ADR bullets — no new architecture docs.
 
 Conventions: `T<epic>.<n>` · deps listed only where they cross epics or gate.
 
+**T41.1 ✅ · Production-aligned 10,000-service profiles and cap decision**
+*(2026-08-30 integration; evidence authored and reviewed 2026-08-25)* — froze
+source-free accepted-only 8,000/10,000/12,500-service recipes with exact
+48,000/60,000/75,000 memberships and 25,280/31,600/39,500 distinct paths,
+plus a separate real-v2-valid transition profile. The comparator selected hard
+pre-growth limits of 12,500 total records, 75,000 memberships, 40,000 paths,
+12,500 successor edges, 512 successors per service, 16 MiB logical bytes, and
+32 MiB encoded publication bytes without changing a production cap. The
+existing 1-MiB relationship wire cannot contain the maximum 4,000-claim shape,
+so T41.1 selects at-most-512-claim `placement-claim-buckets-v1` for T41.8.
+Envelope `sha256:99ec8a3dc79537bf1db842234f6fe054abd03c9af7503987f78c5530fdfd525f`
+and receipt `sha256:c9a30ab63960fee682558a04e79b66f1d1fcf2b9a7f2bfc2e3a012139291dc55`
+preserve the T32.3 receipt and bundle identities. The spike is runtime-dark,
+establishes no supported scale, SLO, release, or combined-scale claim, and
+makes T41.2 the next dependency-ordered scale ticket.
+
+**T41.1R1 ✅ · SCIP typed-range toolchain compatibility prerequisite**
+*(2026-08-25)* — migrated the six current synthetic occurrence producers to
+SCIP's typed range oneof while preserving deliberate legacy-read fixtures,
+exact coordinates, retained indexes, bundles, receipts, and production cost.
+
 **T40.13m · Bounded executable-image epoch accounting** ✅ 2026-08-24 — Fresh
 V26 evidence treats a coherent same-PID/start-token/parent class change as one
 bounded executable-image epoch, retains six source-free direction counters,

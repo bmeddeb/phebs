@@ -703,8 +703,14 @@ fourteen waits converged, interruption recovered the selected lease as
 custody. T40.13 is complete. The receipt remains mechanics evidence only and
 authorizes no release or private rerun; it establishes no target SLO, service
 scale, accuracy, completeness, migration, or decommissioning. Epic 40
-closure/demo disposition and Epic 41 progression remain separate decisions.
-The current 4,000-service cap remains until its named measured ticket.
+closed by Ben's explicit 2026-08-30 disposition, which advances Epic 41 while
+leaving every evidence nonclaim and `DO_NOT_RELEASE` intact. The exact unheld
+66,500,000,000-byte host-pressure ballast was retired after the signed package
+reverified; evidence, signer, and identifier history remain. T41.1's reviewed
+runtime-dark 8,000/10,000/12,500-service profiles select the reduce-only v3
+aggregate envelope and at-most-512-claim relationship buckets without changing
+the current 4,000-service production cap or runtime registration. T41.2 is the
+next dependency-ordered scale ticket; Epic 42 still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

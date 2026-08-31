@@ -92,5 +92,6 @@ queries, sync ticks, retries/no-ops, publication transitions, caches, locks,
 workers, stores, source reads, Git children, and lifecycle turns perform no
 T41.1 work. The profiles establish no supported service count, target SLO,
 accuracy/completeness, migration/decommission result, release posture, large-
-repository result, topology decision, Epic 41 progression, freeze, or ceremony
-authorization.
+repository result, topology decision, freeze, or ceremony authorization. The
+separate 2026-08-30 program decision advances the backlog to T41.2 without
+changing any of those evidence nonclaims.

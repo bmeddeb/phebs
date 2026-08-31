@@ -29,9 +29,9 @@ T39.4's evidence/workflow gate stopped before unsealing and T39.5 retained the
 no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
-retained as engineering evidence, not as a scale pass. Epics 40–42 are now the
-explicit scale-convergence program: T40.1–T40.12 are complete and T40.13 is next,
-while Epic 41 separately targets
+retained as engineering evidence, not as a scale pass. Epic 40 closed on
+2026-08-30 after neutral-47 passed the frozen mechanics gate. Epic 41 is now
+the active scale track and separately targets
 at least 8,000 accepted services and measures 10,000 accepted logical services,
 and Epic 42 composes the physical-repository and service-cardinality envelopes.
 Epic 43 runs in parallel as the charter-governed presentation track: it
@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(T40.1–T40.13 complete · closure disposition pending)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(completed 2026-08-30)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -2934,14 +2934,15 @@ passed their frozen checks.
 Outcome: T40.13 is complete. The receipt remains mechanics evidence only and
 explicitly establishes no target SLO, service scale, accuracy, completeness,
 migration, or decommissioning, and authorizes neither release nor private
-rerun. Epic 40 closure/demo disposition, Epic 41 progression, and reservation
-retirement remain separate decisions.
+rerun. Ben's separate 2026-08-30 disposition closes Epic 40, advances Epic 41,
+and retires only the exact unheld host-pressure ballast after revalidating the
+signed neutral-47 package. It changes none of those evidence nonclaims.
 
 Steady-state cost: documentation only; no compiled, embedded, fixture, corpus,
 harness, request, worker, retry, publication, lifecycle, store, child, lock,
 cache, schema, bound, or persistent product state changes.
 
-## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
+## Epic 41 · Ten-thousand-service authority and sparse consumers *(active)*
 
 Raise logical-service capacity through segmented authority and bounded state/
 publication design, not a constants-only change. The required floor is 8,000
@@ -2984,7 +2985,7 @@ for this epic.
   service count, target SLO, accuracy, release, or P6 claim. Epic 42 composes
   both dimensions.
 
-**T41.1R1 · SCIP typed-range toolchain compatibility prerequisite** — migrate
+**T41.1R1 ✅ · SCIP typed-range toolchain compatibility prerequisite** — migrate
 the six current synthetic occurrence producers reported by the upgraded SCIP
 bindings from deprecated repeated-int ranges to SCIP's typed range oneof.
 Keep deliberate legacy-read fixtures unchanged and do not re-author retained
@@ -2993,10 +2994,10 @@ reader results remain unchanged; current producers contain no lint-visible
 deprecated range assignment; focused code-navigation, extraction, T20.1, and
 T22.1 tests pass; repository lint and documentation gates pass; production
 steady-state cost is zero; independent review and full merge bar. This repair
-may integrate as toolchain maintenance before Epic 40 closes but does not
+integrated as toolchain maintenance before Epic 40 closed and did not itself
 advance T41.1 or Epic 41.
 
-**T41.1 · Production-aligned 10,000-service profiles and cap decision** — add
+**T41.1 ✅ · Production-aligned 10,000-service profiles and cap decision** — add
 new `t411-service-load-profile-v1` accepted-only 8,000-, 10,000-, and
 12,500-service profiles using typed-requires-supporting and fan-out 20, plus a
 separate small transition/authority profile. Reuse the deterministic identity
@@ -3026,7 +3027,7 @@ store-transaction, filesystem, and lifecycle estimates by byte kind; no
 runtime registration or production cap change; dated PLAN decision and full
 merge bar.
 
-Prospective 2026-08-25 measurement retains the draft reduce-only aggregate
+The reviewed 2026-08-25 measurement retains the reduce-only aggregate
 limits and selects the 12,500 total-record hard pre-growth refusal: the
 accepted-only comparator is 9,468,819 logical canonical bytes and 19,250,171
 encoded bytes across 45 members, with a 9,193-byte root and 1,550,808-byte
@@ -3034,9 +3035,9 @@ largest ordinary member. The maximum combined service and placement members
 are 158,158 and 1,528,421 bytes. A maximum two-sided 4,000-claim relationship
 projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
-the measured maximum bucket is 408,942 bytes. This planning branch changes no
-production constant or runtime registration and cannot integrate or advance
-Epic 41 until Epic 40 closes and the full T41.1 merge bar is accepted.
+the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
+the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
+production constant or runtime registration; T41.2 is next.
 
 **T41.2 · Segmented service-catalog v3 contract** — implement the pure root and
 dual member views while retaining v2 record semantics. Draft reduce-only
