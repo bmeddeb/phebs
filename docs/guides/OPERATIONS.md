@@ -6056,6 +6056,113 @@ export PHEBS_T4013_HOST_STABILITY_ATTESTATION=dedicated-single-operator-host-wit
 Freeze stops for independent plan-digest and signer-fingerprint review. Do not
 execute without the later explicit execution authorization.
 
+### Neutral-45 post-query oracle-stop disposition
+
+Preserve `/Users/ben/phebs-t4013-ceremony/t40r1-neutral-45` and its source-free
+package digest
+`0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`.
+The sealed V32 run completed all eleven production phase bodies before
+finalization returned `authorized_query/oracle/exact_gate_failed`; stopped
+teardown completed with no derived or scratch-source custody. It is not a
+complete ceremony, pipeline failure, product-capacity result, or scale/SLO
+pass, and it must not be rerun or relabeled.
+
+The retained semantic publication reports 262,144 records and 262,144
+observed blobs. The validated `records = observed + unsupported` invariant
+therefore proves zero unsupported blobs. The frozen 131,072 is a separate
+count of gap classifications inside successfully parsed observations.
+T40.13aa corrects only that V32 finalizer type conflation and preserves
+`Explicit.GapFacts=131072`; V1–V31, receipt schemas, product behavior, and
+resource ceilings remain unchanged.
+
+The neutral-44 section's command naming neutral-45 is now historical and
+superseded. Neutral-45 is consumed. Do not preflight or freeze neutral-46 until
+T40.13aa is independently reviewed and integrated, the exact-main gates pass,
+and a separate freeze authorization is given. Retain the same stable
+same-volume reservation and complete
+`181,130,218,415..194,540,402,299` availability window, targeting at most
+`190,000,000,000` decimal bytes. Freeze still stops for plan and signer review
+and never authorizes execution.
+
+#### Exact T40.13aa candidate record
+
+Exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the full normal/race,
+static, documentation, and zero-finding independent review gates. Its unchanged
+host-network T40.13y run passed the real Phase 9–12 handoff and custody
+retirement in 246.48 seconds. One earlier invocation stopped before launch
+because its isolated module cache could not resolve `proxy.golang.org`; after
+confirming no matching process, its private diagnostic root was purged.
+
+The exact semantic-scale run emitted `t4013-take19-semantic-fit-v5` with
+`freeze_ready=true`, exact totals `262144/0/180224/360448/9`, a 2,083,618 ms
+cold wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes. It
+then passed and removed its private workspace. These records make the
+implementation eligible for a separate integration request. They do not
+authorize merge, exact-main preflight, neutral-46 freeze, or execution.
+
+### Neutral-46 operator-interruption disposition
+
+Preserve `/Users/ben/phebs-t4013-ceremony/t40r1-neutral-46` as an unsealed
+interruption record. Its exact source is
+`d148af0225a3b462db8d64c2a37934a27d45ce7e`, plan digest is
+`adfc861dd34189e1981288bd981e4e8d98cf05f83eba7c7ebf76c5583728f9ad`,
+freeze-envelope digest is
+`d210bf55638dfbaef063a1cc1832991e3db158890ce62575bdfc259f6bdc43af`,
+and signer fingerprint is
+`SHA256:1uhz9vtR4Ec0NnrtFxRlxbl7dLFdyLU0OSzO6hlEZgM`.
+
+The corrected execution command entered the one-shot Execute boundary, then
+received an operator-requested SIGINT before any teardown checkpoint or
+source-free observation. Exit 130 retained prepared control
+`sha256:c34ca87a72b479f092efbdfa2c976f071243978aad020d9c7ef60891f82f5baf`
+and live-phase execute supervision
+`sha256:ab10a4d45f47be04e4ff282cb35f8acc0bbdea8d70a7242bade2cff7496d8eed`.
+It is neither resumable nor sealable. Do not rerun `execute`, run `seal`, edit
+the controls, or invent an observation.
+
+Process, listener, controller-lock, descendant-lock, and operation-lock review
+found no surviving owner. Exact kernel-lock admission then authorized the
+reviewed purge of only `t40r1-neutral-46/custody`; the parent was synced and
+absence proved twice. Preserve `evidence/`, `private/prepared.json`,
+`custody.t4013-supervision/`, `.t4013-operation.lock`, `signing/`, and the
+host-pressure reservation. Neutral-46 is consumed. After T40.13ab integration,
+neutral-47 is the first admissible identifier; rerun preflight and freeze it,
+then stop for independent plan/signer review before any local execution.
+
+### Neutral-47 completed-gate disposition
+
+Preserve the sealed source-free package at
+`/Users/ben/phebs-t4013-ceremony/t40r1-neutral-47/t40r1-neutral-47-source-free.tgz`.
+Its independently recomputed digest is
+`7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`.
+It binds exact source `fb88c1d7fed7f32c1c3dd07303268366535cfa0c`, plan
+`sha256:44fe9383a2011fbe0be15460e96294cf011b4e01da4c7e4e6e7965281295c810`,
+freeze envelope
+`sha256:43ec1d76a48a741398bb65728aaecf3caf96be40f74c52b6d0d7cc619e29df07`,
+and signer `SHA256:6wAVXoPkI8zOwWbEjbZ6TCqVlj3TnbMUZS2Bf4LROKM`.
+Observation, receipt, and manifest digests are respectively
+`cb66267d19dad7063a11eb32b7bffb074c71fdf8dd13f6dc58c3e49069dba156`,
+`3f6a45fccb47119518041a6ec87cabfa3c596bf5fd3d261dcbaaf48c9d20522b`,
+and `0a7eb408d374a7ad9001132c966fbfbc80d13fa9632279ce7a1f3d408f1cb2b0`.
+
+Independent verification passed the freeze signature, evidence signature,
+checksum inventory, source-free evidence validator, and returned-bundle
+validator. The V32 receipt records `outcome=completed`, substantiated
+`decision=continue`, and `reason=all_exact_mechanics_passed`. All 12 phases and
+16 checks passed exact oracles, all 11 server startups were healthy, and all
+14 convergence waits ended `converged/complete`. Interruption completed with
+the selected lease `requeued`; archive/restore, fresh collection, semantic and
+structural authorized queries, and exact totals passed. Teardown completed,
+and the run root retains no custody, supervision, prepared control, derived
+data, scratch source, or ceremony process.
+
+This is the T40.13 mechanics-gate pass. Do not relabel it as a target SLO,
+supported service scale, accuracy/completeness, migration, decommissioning,
+release, or private-rerun authorization. Preserve the package and signer.
+Retire the host-pressure reservation only through a separate reviewed cleanup;
+Epic 40 closure/demo disposition and Epic 41 progression are separate actions.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-

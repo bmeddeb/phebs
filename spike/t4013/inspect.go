@@ -79,7 +79,7 @@ type privateProfileSnapshot struct {
 	PhysicalOwners             uint64
 	DeclaredSourceBytes        uint64
 	ObservationRecords         uint64
-	ObservationUnsupported     uint64
+	UnsupportedBlobs           uint64
 	ExtractionFacts            int64
 	ExtractionRows             int64
 	ExtractionReferences       int64
@@ -618,13 +618,13 @@ func (inspector *profileInspector) inspectWithProgress(
 		CallerGeneration:       callerProbe.callerGenerationDigest,
 		RelationshipGeneration: relationshipRoot.GenerationDigest, RelationshipRootDigest: relationshipRoot.Digest,
 		RegularFiles: uint64(source.RegularOwnerCount), PhysicalOwners: uint64(source.OwnerCount),
-		DeclaredSourceBytes:    uint64(source.RegularDeclaredBytes),
-		ObservationRecords:     uint64(progress.Publication.RecordCount),
-		ObservationUnsupported: uint64(progress.Publication.UnsupportedCount),
-		ExtractionFacts:        extraction.facts,
-		ExtractionRows:         extraction.rows,
-		ExtractionReferences:   extraction.references,
-		SearchLogicalBytes:     receipt.LogicalBytes, SearchAllocatedBytes: receipt.AllocatedBytes,
+		DeclaredSourceBytes:  uint64(source.RegularDeclaredBytes),
+		ObservationRecords:   uint64(progress.Publication.RecordCount),
+		UnsupportedBlobs:     uint64(progress.Publication.UnsupportedCount),
+		ExtractionFacts:      extraction.facts,
+		ExtractionRows:       extraction.rows,
+		ExtractionReferences: extraction.references,
+		SearchLogicalBytes:   receipt.LogicalBytes, SearchAllocatedBytes: receipt.AllocatedBytes,
 		BlobReader: BlobReaderObservation{
 			Profile: profile.Name, Revision: revision, Mode: receipt.BlobReaderMode,
 			FilesOffered: uint64(receipt.FilesOffered), BatchReads: uint64(receipt.BatchReadCount),

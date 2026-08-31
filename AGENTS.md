@@ -692,6 +692,18 @@ unique private parent, left no matching process or port-65499 listener, and
 preserved a clean checkout. This establishes neither full-custody deletion
 cost, signed ceremony evidence, a complete ceremony, release, Epic closure,
 nor scale/SLO.
+Exact-main `t40r1-neutral-47` then completed the frozen V32 T40.13 mechanics
+gate at source `fb88c1d7fed7f32c1c3dd07303268366535cfa0c`. Its independently
+verified source-free package
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`
+records substantiated `continue/all_exact_mechanics_passed`: all twelve phases
+and sixteen checks passed exact oracles, all eleven startups were healthy, all
+fourteen waits converged, interruption recovered the selected lease as
+`requeued`, and completed teardown retained no derived or scratch-source
+custody. T40.13 is complete. The receipt remains mechanics evidence only and
+authorizes no release or private rerun; it establishes no target SLO, service
+scale, accuracy, completeness, migration, or decommissioning. Epic 40
+closure/demo disposition and Epic 41 progression remain separate decisions.
 The current 4,000-service cap remains until its named measured ticket.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

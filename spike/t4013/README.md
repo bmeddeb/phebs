@@ -4829,3 +4829,108 @@ decimal bytes for margin. This does not change V32, the 80/96-GiB custody
 ceilings, or any product path. Exact-main preflight and neutral-45 freeze remain
 post-integration operations; freeze still stops for independent plan review and
 does not authorize execution.
+
+## Neutral-45 post-query finalization stop and T40.13aa
+
+`t40r1-neutral-45` is a sealed V32 stop at exact source
+`49cc5afb1cb3bc8846080588742ff9141d15af90`, with source-free package
+`sha256:0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`.
+All eleven production phase bodies, eleven startups, and fourteen waits
+completed before finalization returned
+`authorized_query/oracle/exact_gate_failed`. Stopped teardown removed all
+derived and scratch-source custody. This is not a complete ceremony, pipeline
+failure, product-capacity result, or scale/SLO pass.
+
+The private profile snapshot reads publication `UnsupportedCount`. Neutral-45
+retains 262,144 semantic publication records and 262,144 observed blobs, so the
+validated `records = observed + unsupported` invariant proves the unsupported
+blob count is zero. The T40.1 frozen 131,072 instead counts gap
+classifications inside successfully parsed observations from the two
+65,536-input semantic gap families. Reusing one counter for both meanings made
+the first final exact-total comparison fail and would have made completed
+validation fail again through a projected zero `GapFacts`.
+
+T40.13aa keeps the V32 final oracle strict while separating those types:
+
+- structural totals are records/unsupported blobs/facts/rows/domains
+  `512/0/0/0/9`;
+- semantic totals are `262144/0/180224/360448/9`; and
+- semantic `Explicit.GapFacts` remains separately fixed at 131,072 with
+  `NoSilentEmpty=true` when the frozen unavailable inputs are present.
+
+Every V32 scalar mismatch is named with observed and expected values. No
+`exact_totals` receipt section or V33 is added, and V1–V31 execution retains
+its historical oracle and projection. The exact semantic diagnostic advances
+its source-free fit record to `t4013-take19-semantic-fit-v5` and gates all five
+semantic totals. The existing T40.13y path additionally checks the bounded
+structural projection before restore and after restore, collection, and query,
+plus semantic totals before and after query, before its existing completed
+receipt and real teardown boundary.
+
+Neutral-45 is consumed. Neutral-46 is first eligible only after focused,
+package/race, exact semantic, bounded late-phase, static/documentation, and
+independent exact-commit review gates, followed by separate integration and
+freeze authorization. Freeze still stops for independent plan/signer review;
+execution remains separately unauthorized.
+
+### Exact T40.13aa candidate record
+
+Exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the complete package in
+116.826 seconds, the race package in 126.759 seconds, vet, pinned lint, docs,
+glossary, shell syntax, formatting, whitespace, and fresh exact-commit review
+with zero findings. One T40.13y invocation stopped before private-tool launch
+on isolated module-cache DNS; its unique diagnostic root matched no process and
+was purged. The unchanged host-network run then passed the real Phase 9–12
+handoff and exact custody retirement in 246.48 seconds.
+
+The full semantic selector emitted the v5 fit record with
+`freeze_ready=true`, exact totals `262144/0/180224/360448/9`, 2,083,618 ms cold
+wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes. It passed
+with exact cleanup in 2,183.88 seconds. This closes the branch-local scale-total
+and completion-corridor blockers; integration, exact-main preflight, neutral-46
+freeze, and execution remain separate authorizations.
+
+## Neutral-46 operator interruption and T40.13ab
+
+Neutral-46 froze exact source
+`d148af0225a3b462db8d64c2a37934a27d45ce7e` with plan
+`sha256:adfc861dd34189e1981288bd981e4e8d98cf05f83eba7c7ebf76c5583728f9ad`,
+freeze envelope
+`sha256:d210bf55638dfbaef063a1cc1832991e3db158890ce62575bdfc259f6bdc43af`,
+and signer `SHA256:1uhz9vtR4Ec0NnrtFxRlxbl7dLFdyLU0OSzO6hlEZgM`.
+Its Execute was interrupted by operator-requested SIGINT after the one-shot
+marker but before a checkpoint or source-free observation. The retained
+prepared and live-supervision digests are
+`c34ca87a72b479f092efbdfa2c976f071243978aad020d9c7ef60891f82f5baf` and
+`ab10a4d45f47be04e4ff282cb35f8acc0bbdea8d70a7242bade2cff7496d8eed`.
+
+No supported resume or seal exists for that shape. Exact process and kernel
+lock review authorized deletion of only the private custody unit; frozen
+evidence and all external controls remain. T40.13ab retires 46 and first admits
+47. It changes no plan schema, product behavior, or resource bound. Neutral-47
+still requires exact-main preflight, freeze, independent digest/signer review,
+and a separate local execution command.
+
+## Neutral-47 completed T40.13 gate
+
+Neutral-47 froze and executed exact source
+`fb88c1d7fed7f32c1c3dd07303268366535cfa0c` under plan
+`sha256:44fe9383a2011fbe0be15460e96294cf011b4e01da4c7e4e6e7965281295c810`
+and signer `SHA256:6wAVXoPkI8zOwWbEjbZ6TCqVlj3TnbMUZS2Bf4LROKM`. Its source-free package
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`
+passed independent digest, signature, checksum, bundle, and receipt review.
+
+V32 records `completed`, substantiated `continue`, and
+`all_exact_mechanics_passed`. All 12 phases and 16 checks passed exact oracles;
+all 11 startups were healthy and all 14 waits converged. Structural settled
+1,956/1,956 partitions for 2,000,002 physical owners; semantic settled 272/272
+for 294,914 physical owners. Interruption recovered the selected lease as
+`requeued`; pressure, archive/restore, collection, both authorized-query
+boundaries, exact totals, and teardown passed. Teardown retained no derived or
+scratch-source custody.
+
+This completes T40.13's frozen mechanics gate. It does not establish a target
+SLO, service scale, accuracy, completeness, migration, or decommissioning, and
+does not authorize release or a private rerun. Epic 40 closure/demo disposition
+and Epic 41 progression remain separate decisions.

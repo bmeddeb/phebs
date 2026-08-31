@@ -705,8 +705,10 @@ service count × repository bytes
 
 ### Program sequence
 
-- **Epic 40 — very-large-monorepo derived-pipeline convergence (in progress;
-  T40.1–T40.12 complete, T40.13 next):** exact source-free refusal attribution,
+- **Epic 40 — very-large-monorepo derived-pipeline convergence (T40.1–T40.13
+  complete; closure disposition pending):** neutral-47 passed the frozen V32
+  mechanics gate with an independently reviewed `completed/continue` receipt.
+  Exact source-free refusal attribution,
   the frozen neutral envelope, independent generation-scoped planning,
   hierarchical source/observation roots, immutable search lifecycle, joint
   observation recovery/archive ownership, chunk-proportional evidence append,
@@ -2678,6 +2680,58 @@ an operational diagnosis rather than a sealed cause or product-capacity
 result. T40.13z retires identifier 44, preserves V32 and every pressure/custody
 bound, and returns host preparation to the existing stable same-volume
 reservation protocol before any separately authorized neutral-45 freeze.
+
+The exact-main `t40r1-neutral-45` run then crossed the real late-phase
+corridor: all eleven production phase bodies, eleven startups, and fourteen
+waits completed before V32 finalization sealed
+`authorized_query/oracle/exact_gate_failed`; stopped teardown retired all
+derived and scratch-source custody. Retained publication evidence proves all
+262,144 semantic records were observed, hence publication unsupported blobs
+were zero. The frozen 131,072 instead belongs to parsed observation-gap
+classifications. T40.13aa is the only next scale ticket: correct that V32
+ceremony-only type conflation, preserve V1–V31, add field-terminal diagnostics
+and existing-gate coverage without V33 or product behavior, and retire
+identifier 45. Neutral-46 freeze and execution remain separately gated and
+unauthorized.
+
+Exact implementation commit `06df07ec4a7e3db7145874e0d1d9208883908bad`
+then passed its full normal/race, static, documentation, and exact-commit
+zero-finding review gates. The real Phase 9–12 selector passed in 246.48
+seconds with exact custody retirement. The full semantic selector independently
+confirmed `262144/0/180224/360448/9`, `freeze_ready=true`, a 2,083,618 ms cold
+wall, 3,427,647,488-byte peak RSS, and 3,346,604,032 allocated bytes before
+exact cleanup. This closes the T40.13aa branch blockers and permits a separate
+integration request; main integration, exact-main preflight, neutral-46 freeze,
+and execution remain unauthorized.
+
+Neutral-46 was subsequently frozen at exact main and passed independent plan,
+signature, and host review, but an operator-requested SIGINT interrupted its
+entered Execute before a checkpoint or source-free observation existed. The
+fail-closed shell retained executed custody with live-phase supervision and no
+sealable result. Exact process and kernel-lock review authorized deletion of
+only the custody unit; the frozen evidence and external controls remain as an
+unsealed interruption record. T40.13ab retires 46 and first admits 47 without
+changing V32 or product behavior. Fresh exact-main preflight, freeze, and local
+operator execution remain separate steps.
+
+Exact-main `t40r1-neutral-47` subsequently completed and sealed the frozen V32
+gate. Source `fb88c1d7fed7f32c1c3dd07303268366535cfa0c`, plan
+`sha256:44fe9383a2011fbe0be15460e96294cf011b4e01da4c7e4e6e7965281295c810`,
+observation
+`sha256:cb66267d19dad7063a11eb32b7bffb074c71fdf8dd13f6dc58c3e49069dba156`,
+receipt `sha256:3f6a45fccb47119518041a6ec87cabfa3c596bf5fd3d261dcbaaf48c9d20522b`,
+manifest `sha256:0a7eb408d374a7ad9001132c966fbfbc80d13fa9632279ce7a1f3d408f1cb2b0`,
+and package
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`
+passed independent signature, checksum, bundle, and receipt review. All twelve
+phases and sixteen checks passed exact oracles; all eleven startups were
+healthy and all fourteen waits converged. Interruption completed with the
+selected lease requeued; pressure, archive/restore, collection, semantic and
+structural authorized queries, and completed custody-free teardown all passed.
+T40.13 is complete. Its receipt remains mechanics evidence only: it establishes
+no target SLO, service scale, accuracy, completeness, migration, or
+decommissioning and authorizes no release or private rerun. Epic 40
+closure/demo disposition and Epic 41 progression remain separate decisions.
 
 closes low-risk cost-first refusal ordering.
 The original T40.13 neutral convergence gate follows only after the complete

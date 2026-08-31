@@ -49,7 +49,10 @@ const (
 	// producer domain additionally emits one fact for each of the two
 	// 65,536-input Kafka Go families (literal and dynamic-topic); the Kafka
 	// consumer and the typed-input domains emit no facts for this corpus.
-	frozenExtractorDomainCount         = 9
+	frozenExtractorDomainCount = 9
+	// Observation gaps are classifications inside successfully parsed
+	// observations. They are distinct from unsupported publication blobs.
+	frozenSemanticObservationGaps      = uint64(2 * 65_536)
 	frozenSemanticIDLExtractionFacts   = int64(49_152)
 	frozenSemanticKafkaExtractionFacts = int64(2 * 65_536)
 	frozenSemanticExtractionFacts      = frozenSemanticIDLExtractionFacts + frozenSemanticKafkaExtractionFacts
@@ -3896,10 +3899,15 @@ func (run *execution) authorizedQueries() error {
 func (run *execution) finalizeObservation() error {
 	structural := run.structAR
 	semantic := run.semanticA
-	if structural.ObservationRecords != 512 || structural.ObservationUnsupported != 0 ||
+	version := planSchemaVersion(run.plan.Schema)
+	if version >= 32 {
+		if err := validateV32FrozenFinalTotals(structural, semantic); err != nil {
+			return err
+		}
+	} else if structural.ObservationRecords != 512 || structural.UnsupportedBlobs != 0 ||
 		structural.ExtractionFacts != 0 || structural.ExtractionRows != 0 ||
 		structural.PublishedDomains != frozenExtractorDomainCount ||
-		semantic.ObservationRecords != 262_144 || semantic.ObservationUnsupported != 131_072 ||
+		semantic.ObservationRecords != 262_144 || semantic.UnsupportedBlobs != 131_072 ||
 		semantic.PublishedDomains != frozenExtractorDomainCount ||
 		semantic.ExtractionFacts != frozenSemanticExtractionFacts ||
 		semantic.ExtractionRows != frozenSemanticExtractionRows {
@@ -3928,16 +3936,51 @@ func (run *execution) finalizeObservation() error {
 		ExactUnownedOracle:    structural.UnownedPrefixes == 101,
 	}
 	unavailable := structural.UnavailableDomains + semantic.UnavailableDomains
+	gapFacts := semantic.UnsupportedBlobs
+	if version >= 32 {
+		gapFacts = frozenSemanticObservationGaps
+	}
 	run.observation.Explicit = ExplicitStateObservation{
 		AbsentTypedInputs: unavailable, UnavailableDomains: unavailable,
-		UnsupportedSyntaxFacts: 16_384, GapFacts: semantic.ObservationUnsupported,
-		NoSilentEmpty: unavailable > 0 && semantic.ObservationUnsupported > 0,
+		UnsupportedSyntaxFacts: 16_384, GapFacts: gapFacts,
+		NoSilentEmpty: unavailable > 0 && gapFacts > 0,
 	}
 	for index := range run.observation.Checks {
 		run.observation.Checks[index].Passed = true
 	}
 	run.observation.Decision = DecisionObservation{
 		Selected: "continue", Reason: "all_exact_mechanics_passed", Substantiated: true,
+	}
+	return nil
+}
+
+func validateV32FrozenFinalTotals(structural, semantic privateProfileSnapshot) error {
+	totals := []struct {
+		name           string
+		observed, want int64
+	}{
+		{"structural.observation_records", int64(structural.ObservationRecords), 512},
+		{"structural.observation_unsupported_blobs", int64(structural.UnsupportedBlobs), 0},
+		{"structural.extraction_facts", structural.ExtractionFacts, 0},
+		{"structural.extraction_rows", structural.ExtractionRows, 0},
+		{"structural.published_domains", int64(structural.PublishedDomains), frozenExtractorDomainCount},
+		{"semantic.observation_records", int64(semantic.ObservationRecords), 262_144},
+		{"semantic.observation_unsupported_blobs", int64(semantic.UnsupportedBlobs), 0},
+		{"semantic.extraction_facts", semantic.ExtractionFacts, frozenSemanticExtractionFacts},
+		{"semantic.extraction_rows", semantic.ExtractionRows, frozenSemanticExtractionRows},
+		{"semantic.published_domains", int64(semantic.PublishedDomains), frozenExtractorDomainCount},
+	}
+	var mismatches []string
+	for _, total := range totals {
+		if total.observed != total.want {
+			mismatches = append(mismatches, fmt.Sprintf(
+				"%s=%d want=%d", total.name, total.observed, total.want,
+			))
+		}
+	}
+	if len(mismatches) != 0 {
+		return exactOracle("source-free final totals differ from the frozen oracle: " +
+			strings.Join(mismatches, "; "))
 	}
 	return nil
 }

@@ -118,14 +118,14 @@ func TestCeremonyDriverRetiresEveryConsumedNeutralID(t *testing.T) {
 		"t40r1-neutral-01", "t40r1-neutral-16", "t40r1-neutral-17", "t40r1-neutral-34",
 		"t40r1-neutral-35", "t40r1-neutral-36", "t40r1-neutral-37", "t40r1-neutral-38",
 		"t40r1-neutral-39", "t40r1-neutral-40", "t40r1-neutral-41", "t40r1-neutral-42",
-		"t40r1-neutral-43", "t40r1-neutral-44",
+		"t40r1-neutral-43", "t40r1-neutral-44", "t40r1-neutral-45", "t40r1-neutral-46",
 	} {
 		if err := exec.Command("bash", "-c", script, "retired-id-test", driver, value).Run(); err == nil {
 			t.Fatalf("consumed ceremony id passed: %s", value)
 		}
 	}
 	if output, err := exec.Command(
-		"bash", "-c", script, "fresh-id-test", driver, "t40r1-neutral-45",
+		"bash", "-c", script, "fresh-id-test", driver, "t40r1-neutral-47",
 	).CombinedOutput(); err != nil {
 		t.Fatalf("fresh ceremony id was rejected: %v: %s", err, output)
 	}

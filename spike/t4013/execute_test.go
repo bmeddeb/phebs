@@ -128,79 +128,130 @@ func TestFinalizeObservationPinsEveryEnabledExtractionDomain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var semantic t401.Profile
+	var structural, semantic t401.Profile
 	for _, profile := range profiles {
-		if profile.Kind == "semantic" {
+		switch profile.Kind {
+		case "structural":
+			structural = profile
+		case "semantic":
 			semantic = profile
 		}
 	}
-	if semantic.Name == "" {
-		t.Fatal("frozen semantic profile is absent")
+	if structural.Name == "" || semantic.Name == "" {
+		t.Fatal("frozen structural or semantic profile is absent")
 	}
-	wantFacts := int64(semantic.Aggregate.ExtractorFacts)
-	for _, family := range semantic.Families {
-		switch family.Name {
-		case "go_kafka_literal", "go_dynamic_topic":
-			wantFacts += int64(family.Inputs * family.RecordsPerInput)
-		}
+	if structural.Aggregate.UniqueGoBlobs != 512 || structural.Aggregate.ObservationGaps != 0 ||
+		structural.Aggregate.ExtractorFacts != 0 || structural.Aggregate.ExtractorStagingRows != 0 {
+		t.Fatalf("derived structural totals = %+v", structural.Aggregate)
 	}
+	wantFacts := derivedSemanticExtractionFacts(semantic)
 	if wantFacts != frozenSemanticExtractionFacts || 2*wantFacts != frozenSemanticExtractionRows {
 		t.Fatalf("derived extraction oracle = %d/%d, constants = %d/%d",
 			wantFacts, 2*wantFacts, frozenSemanticExtractionFacts, frozenSemanticExtractionRows)
 	}
+	if semantic.Aggregate.UniqueGoBlobs != 262_144 ||
+		semantic.Aggregate.ObservationGaps != frozenSemanticObservationGaps {
+		t.Fatalf("derived semantic observation totals = %+v", semantic.Aggregate)
+	}
 
 	validRun := func() *execution {
 		return &execution{
+			plan: Plan{Schema: PlanSchemaV32},
 			structAR: privateProfileSnapshot{
 				Name: "structural-2m-v1", ObservationRecords: 512,
-				PublishedDomains: frozenExtractorDomainCount,
+				PublishedDomains: frozenExtractorDomainCount, UnavailableDomains: 2,
 			},
 			semanticA: privateProfileSnapshot{
 				Name: "semantic-262144-v1", ObservationRecords: 262_144,
-				ObservationUnsupported: 131_072, PublishedDomains: frozenExtractorDomainCount,
+				PublishedDomains: frozenExtractorDomainCount, UnavailableDomains: 2,
 				ExtractionFacts: frozenSemanticExtractionFacts, ExtractionRows: frozenSemanticExtractionRows,
 			},
 			observation: Observation{Checks: make([]CheckObservation, 1)},
 		}
 	}
-	if err := validRun().finalizeObservation(); err != nil {
+	run := validRun()
+	if err := run.finalizeObservation(); err != nil {
 		t.Fatalf("complete-domain oracle refused: %v", err)
+	}
+	if run.observation.Explicit.GapFacts != frozenSemanticObservationGaps ||
+		!run.observation.Explicit.NoSilentEmpty {
+		t.Fatalf("explicit gap projection = %+v", run.observation.Explicit)
+	}
+	historical := validRun()
+	historical.plan.Schema = PlanSchemaV31
+	historical.semanticA.UnsupportedBlobs = frozenSemanticObservationGaps
+	if err := historical.finalizeObservation(); err != nil {
+		t.Fatalf("historical final oracle refused: %v", err)
+	}
+	if historical.observation.Explicit.GapFacts != frozenSemanticObservationGaps ||
+		!historical.observation.Explicit.NoSilentEmpty {
+		t.Fatalf("historical explicit gap projection = %+v", historical.observation.Explicit)
+	}
+	historical = validRun()
+	historical.plan.Schema = PlanSchemaV31
+	if err := historical.finalizeObservation(); !errors.Is(err, errExactOracle) ||
+		err.Error() != "T40.13 exact oracle refused: source-free semantic totals differ from the frozen oracle" {
+		t.Fatalf("historical oracle error = %v", err)
 	}
 
 	tests := []struct {
-		name   string
-		mutate func(*execution)
+		name     string
+		fragment string
+		mutate   func(*execution)
 	}{
-		{
-			name: "stale IDL-only totals",
-			mutate: func(run *execution) {
-				run.semanticA.ExtractionFacts = int64(semantic.Aggregate.ExtractorFacts)
-				run.semanticA.ExtractionRows = int64(semantic.Aggregate.ExtractorStagingRows)
-			},
-		},
-		{
-			name: "missing enabled domain",
-			mutate: func(run *execution) {
-				run.semanticA.PublishedDomains--
-			},
-		},
-		{
-			name: "unexpected structural fact",
-			mutate: func(run *execution) {
-				run.structAR.ExtractionFacts = 1
-				run.structAR.ExtractionRows = 2
-			},
-		},
+		{"structural records", "structural.observation_records=513 want=512", func(run *execution) { run.structAR.ObservationRecords++ }},
+		{"structural unsupported blobs", "structural.observation_unsupported_blobs=1 want=0", func(run *execution) { run.structAR.UnsupportedBlobs++ }},
+		{"structural facts", "structural.extraction_facts=1 want=0", func(run *execution) { run.structAR.ExtractionFacts++ }},
+		{"structural rows", "structural.extraction_rows=1 want=0", func(run *execution) { run.structAR.ExtractionRows++ }},
+		{"structural domains", "structural.published_domains=8 want=9", func(run *execution) { run.structAR.PublishedDomains-- }},
+		{"semantic records", "semantic.observation_records=262145 want=262144", func(run *execution) { run.semanticA.ObservationRecords++ }},
+		{"semantic unsupported blobs", "semantic.observation_unsupported_blobs=131072 want=0", func(run *execution) { run.semanticA.UnsupportedBlobs = 131_072 }},
+		{"semantic facts", "semantic.extraction_facts=180223 want=180224", func(run *execution) { run.semanticA.ExtractionFacts-- }},
+		{"semantic rows", "semantic.extraction_rows=360447 want=360448", func(run *execution) { run.semanticA.ExtractionRows-- }},
+		{"semantic domains", "semantic.published_domains=8 want=9", func(run *execution) { run.semanticA.PublishedDomains-- }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			run := validRun()
 			test.mutate(run)
-			if err := run.finalizeObservation(); !errors.Is(err, errExactOracle) {
+			err := run.finalizeObservation()
+			if !errors.Is(err, errExactOracle) {
 				t.Fatalf("oracle error = %v, want %v", err, errExactOracle)
+			}
+			if !strings.Contains(err.Error(), test.fragment) {
+				t.Fatalf("oracle error %q does not contain %q", err, test.fragment)
 			}
 		})
 	}
+
+	run = validRun()
+	for _, test := range tests {
+		test.mutate(run)
+	}
+	err = run.finalizeObservation()
+	if !errors.Is(err, errExactOracle) {
+		t.Fatalf("combined oracle error = %v, want %v", err, errExactOracle)
+	}
+	wantFragments := make([]string, 0, len(tests))
+	for _, test := range tests {
+		wantFragments = append(wantFragments, test.fragment)
+	}
+	wantMessage := "T40.13 exact oracle refused: source-free final totals differ from the frozen oracle: " +
+		strings.Join(wantFragments, "; ")
+	if err.Error() != wantMessage {
+		t.Fatalf("combined oracle error = %q, want %q", err, wantMessage)
+	}
+}
+
+func derivedSemanticExtractionFacts(profile t401.Profile) int64 {
+	facts := int64(profile.Aggregate.ExtractorFacts)
+	for _, family := range profile.Families {
+		switch family.Name {
+		case "go_kafka_literal", "go_dynamic_topic":
+			facts += int64(family.Inputs * family.RecordsPerInput)
+		}
+	}
+	return facts
 }
 
 func TestStoppedExecutionDestroysOnlyExactCustodyAndRemainsReceiptable(t *testing.T) {

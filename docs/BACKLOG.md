@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.12 complete · T40.13 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(T40.1–T40.13 complete · closure disposition pending)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -2842,6 +2842,104 @@ Documentation and the host reservation add no production request, query, sync,
 retry, publication, lifecycle/store mutation, child, lock, schema, cache, or
 persistent product state. The reservation is host preparation, not evidence or
 ceremony custody.
+
+**T40.13aa · Neutral-45 typed exact-oracle correction**
+*(high ceremony correctness · needs the sealed neutral-45 disposition)* —
+preserve `t40r1-neutral-45` as an honest V32 post-query finalization stop.
+Exact source `49cc5afb1cb3bc8846080588742ff9141d15af90`, plan
+`sha256:4b6edd87951e7c7016094489a77c9bd4be324de9c7e0ac55ebce70aa429cfef7`,
+observation
+`sha256:98bf4348cb0dea39409f67be932555e7bda0efb4a950186ff6c43b9fae9a71b1`,
+receipt
+`sha256:7615b170d9ebd8b5e52846e3014032311091ca733217aeffdedda41489873798`,
+and package
+`sha256:0b6c398e56b87c888c34cfb65ec4253ce0cfbaa7f18ff6e9957b85a7486d665e`
+bind the finalizer's type error: publication unsupported blobs are zero, while
+131,072 is the separately modeled observation-gap count from the two
+65,536-input semantic gap families. All eleven production phase bodies ran;
+stopped teardown is exact and custody-free.
+
+AC: rename the private snapshot counter to unsupported blobs; require
+structural and semantic publication unsupported blobs to equal zero in V32;
+derive and assert the separate 131,072 gap-classification oracle; project
+`Explicit.GapFacts` and `NoSilentEmpty` from that value; retain V1–V31
+execution and completed-receipt validation exactly; and report all ten V32
+final scalar mismatches deterministically. Extend the existing finalizer
+derivation/table, full-scale `TestExactSemanticColdTiming`
+(`262144/0/180224/360448/9`), and the T40.13y initial, post-restore,
+post-collection, and post-query projection checks. Add no `exact_totals`
+receipt section, V33, or permanent copied neutral-45 fixture. Retire 45 and
+first admit 46. Require package/race, semantic-scale, late-phase, vet, lint,
+docs, glossary, shell, whitespace, and zero-finding exact-commit review before
+integration; freeze and execution remain separate authorizations.
+
+Gate record (2026-08-30): exact implementation commit
+`06df07ec4a7e3db7145874e0d1d9208883908bad` passed the full package and race
+package, vet, pinned lint, docs, glossary, shell, formatting, and whitespace.
+Its unchanged host-network late-phase selector passed the real Phase 9–12
+handoff and custody retirement in 246.48 seconds after one pre-launch isolated
+module-cache DNS failure. Its semantic-scale v5 record passed with exact totals
+`262144/0/180224/360448/9`, 2,083,618 ms cold wall, 3,427,647,488-byte peak RSS,
+and 3,346,604,032 allocated bytes; exact cleanup completed. Fresh exact-commit
+review and independent OCR found zero issues. The implementation is eligible
+for an explicit integration request, not an implicit merge or freeze.
+
+Steady-state cost: no product path changes. V32 ceremony completion retains
+ten scalar comparisons and formats mismatch strings only on refusal; V1–V31
+retain their prior branch. The exact semantic and late-phase gates are opt-in
+test work only.
+
+**T40.13ab · Neutral-46 interruption disposition and fresh-ID fence**
+*(small ceremony integrity · needs the retained neutral-46 controls)* — keep
+neutral-46 as an unsealed operator-interrupted freeze. It entered Execute and
+was interrupted before any teardown checkpoint or source-free observation;
+there is no resumable or sealable receipt. Exact lock/process review authorized
+deletion of only its private `custody/` unit. Frozen evidence, prepared control,
+live-phase supervision record, operation lock, signer, and reservation remain.
+
+AC: advance the permanent stopped-ID fence through 46 and first admit 47;
+record the exact plan/freeze/signer and retained-control digests; forbid
+re-execution, seal, or fabricated observation for 46; preserve V32 and every
+product/resource bound; pass the focused driver, shell, documentation,
+glossary, whitespace, and independent-review gates before exact-main
+integration. Neutral-47 preflight/freeze and execution remain separate
+boundaries.
+
+Steady-state cost: one existing integer comparison changes its constant and the
+test table adds one row. No production request, query, worker, retry,
+publication, lifecycle/store mutation, child, lock, cache, or persistent state
+changes.
+
+**T40.13ac ✅ · Neutral-47 completed gate disposition**
+*(2026-08-30 · documentation-only · needs the sealed neutral-47 package)* —
+record the independently reviewed T40.13 mechanics pass without expanding its
+claims. Exact source
+`fb88c1d7fed7f32c1c3dd07303268366535cfa0c` produced V32 outcome
+`completed` and substantiated decision `continue/all_exact_mechanics_passed`.
+The signed source-free package is
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`.
+
+AC (met): independently recompute the package digest; verify the freeze and
+evidence signatures, checksum inventory, and returned bundle; match the exact
+source, plan, freeze, observation, receipt, manifest, and signer identities;
+require all 12 phases and 16 checks to pass exact oracles, all 11 startups to
+be healthy, all 14 waits to converge, and completed teardown to retain neither
+derived nor scratch-source custody. The structural profile published 2,000,002
+physical owners with 1,956/1,956 settled partitions and nine domains; the
+semantic profile published 294,914 physical owners with 272/272 settled
+partitions and nine domains. Interruption recovered the selected lease as
+`requeued`; pressure, archive/restore, collection, and authorized query all
+passed their frozen checks.
+
+Outcome: T40.13 is complete. The receipt remains mechanics evidence only and
+explicitly establishes no target SLO, service scale, accuracy, completeness,
+migration, or decommissioning, and authorizes neither release nor private
+rerun. Epic 40 closure/demo disposition, Epic 41 progression, and reservation
+retirement remain separate decisions.
+
+Steady-state cost: documentation only; no compiled, embedded, fixture, corpus,
+harness, request, worker, retry, publication, lifecycle, store, child, lock,
+cache, schema, bound, or persistent product state changes.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 
