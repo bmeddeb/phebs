@@ -158,8 +158,9 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, and T43R.5 queued after T43R.1 and T43R.2
-completed on 2026-08-30 and T43R.3–4 completed on 2026-08-31. It
+baseline, zero open blockers, and T43R.5 implemented with its retained visual
+comparison still open after T43R.1 and T43R.2 completed on 2026-08-30 and
+T43R.3–4 completed on 2026-08-31. It
 touched no scale plane, authority, or claim; T41.2–T41.5 are integrated and
 T41.6 is next.
 
@@ -249,6 +250,28 @@ comparisons did not run and no clean retained comparison is claimed. Relative
 to the T43R.3 parent, the main chunk changes by +114/+37 raw/gzip bytes and the
 unchanged 161-chunk JavaScript set changes by -106/-131. Independent final
 review reports critical/high/medium/low 0. No merge or integration is claimed.
+
+T43R.5 implementation is complete on its presentation branch. Separate commits
+`c9c7929`, `06409ea`, and `c23d2ab`, explicitly authorized as a boundary
+crossing, add the canonical **Service catalog authority** and **Exact static
+relationship** glossary terms, their `service-catalog-v2` and
+`service-relationships-v1` predicates, exact catalog/Git surface registrations,
+citation wording bound to the actual immutable-root reader contract, and
+per-surface provenance language that does not invent one shared Git envelope.
+Commits `fa1659a` and `0cbb224` deploy one shared contextual-help control on
+Service Directory, Relationship Explorer, File, History, Blame, and Commit;
+the Git routes reuse **Implementation evidence**, and Commit retains the
+control while loading or failed. The complete 628-test UI suite, glossary
+verification, lint, typecheck/build, and targeted authenticated 1440px/390px
+browser review pass. Final exact-HEAD review reports critical/high/medium/low
+0. Relative to exact main, the complete built asset set is +4,408/+2,225
+raw/gzip bytes and adds one lazy shared chunk; a closed control performs no
+request and installs no global listener or timer. The canonical retained
+receipt cohort is unavailable, while the available live cohort cannot supply
+equivalent fixture state. The eight affected existing routes—Service
+Directory, three Relationship Explorer states, File, History, Blame, and
+Commit—therefore leave 32 theme/density PNGs stale. No baseline update, clean
+retained comparison, ticket completion, merge, or integration is claimed.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

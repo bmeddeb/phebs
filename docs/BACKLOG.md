@@ -3217,6 +3217,22 @@ completed backlog.
 catalog (directory, explorer) and git (file, history, blame, commit)
 surfaces; it already reaches six surfaces through the analysis scope panel.
 
+*Implementation status (2026-08-31).* Canonical glossary commits `c9c7929`,
+`06409ea`, and `c23d2ab` add the catalog terms, capability predicates, exact
+surface registrations, generated clients, immutable citation-root wording,
+and truthful per-surface provenance boundaries. UI commits `fa1659a` and
+`0cbb224` deploy the shared control across all six named routes and keep Commit
+help available while loading or failed; `c23d2ab` also binds the Git route
+tests to the intended term and available capability state. Final exact-HEAD
+review reports critical/high/medium/low 0.
+Glossary verification, the complete 628-test UI suite, lint, build, and
+targeted authenticated desktop/390px browser review pass. The retained visual
+close remains open: the change affects eight existing receipt routes and
+therefore 32 stored theme/density PNGs, which are stale. The canonical receipt
+cohort is not available, and the available live cohort cannot supply equivalent
+fixture state. No baseline update, clean retained comparison, completion,
+merge, or integration is claimed.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the
