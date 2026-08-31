@@ -1,6 +1,6 @@
 // Code generated from internal/glossary/glossary.json; DO NOT EDIT.
 export const glossarySchemaVersion = "change-workbench-glossary-v1" as const
-export const glossaryDigest = "sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330" as const
+export const glossaryDigest = "sha256:84d38aedda6abafb1ce0da6c397c89054bc5fcb52c642e97250c0111ed4907a3" as const
 
 export const glossaryCapabilities = [
   "caller-map-exact-identity",
@@ -141,7 +141,7 @@ export const glossaryTerms = [
     "shortHelp": "A published RPC or Kafka source relationship bound to one exact service incarnation and generation.",
     "expandedHelp": "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
     "evidenceBoundary": "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
-    "authorityBoundary": "Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
+    "authorityBoundary": "Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
     "modes": [
       "add",
       "migrate",

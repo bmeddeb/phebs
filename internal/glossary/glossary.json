@@ -67,7 +67,7 @@
       "short_help": "A published RPC or Kafka source relationship bound to one exact service incarnation and generation.",
       "expanded_help": "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
       "evidence_boundary": "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
-      "authority_boundary": "Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
+      "authority_boundary": "Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
       "modes": ["add", "migrate", "modify", "retire"],
       "surfaces": ["manual", "mcp", "relationship_explorer"],
       "wire_aliases": [],

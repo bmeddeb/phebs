@@ -475,6 +475,12 @@ identities and revisions, lifecycle counts, accepted/unowned source counts,
 and shared placements describe the exact catalog and service-state snapshot;
 they do not read source bytes or infer a runtime topology.
 
+The contextual-help control beside **Service directory** opens the canonical
+**Service catalog authority** definition and its evidence and authority
+boundaries. It is available both before a repository is selected and after the
+directory loads. Opening it performs no request and does not promote catalog
+metadata into ownership, deployment, runtime, or relationship authority.
+
 Use lifecycle and disposition filters to isolate unavailable, stale, conflict,
 proposal, or accepted identities. Removed identities are excluded by default
 and require **Include removed identities**. Choosing a row adds its exact
@@ -546,6 +552,12 @@ repository deliberately asks the existing authorization-first reader for the
 same service key across all visible indexed repositories, up to its 32-root
 bound. This is a broad fallback, not a claim that equal keys across repositories
 share one deployment or owner.
+
+The contextual-help control beside **Relationship explorer** opens the
+canonical **Exact static relationship** definition and its evidence and
+authority boundaries. It is available before and after a query, performs no
+request, and does not turn source relationships into runtime traffic,
+deployment, ownership, or completeness claims.
 
 The remaining filters map directly to the exact reader rather than filtering a
 larger client result:
@@ -887,7 +899,7 @@ glossary below is the complete documentation fallback.
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
 #### Canonical Change Workbench glossary
 
-The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330`.
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:84d38aedda6abafb1ce0da6c397c89054bc5fcb52c642e97250c0111ed4907a3`.
 
 ##### Analysis scope & gaps
 
@@ -938,7 +950,7 @@ A published RPC or Kafka source relationship bound to one exact service incarnat
 Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.
 
 - Evidence boundary: Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.
-- Authority boundary: Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.
+- Authority boundary: Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.
 - Applies to modes: `add`, `migrate`, `modify`, `retire`
 - Registered surfaces: `manual`, `mcp`, `relationship_explorer`
 - Required capabilities (all): `service-relationships-v1`
@@ -1438,6 +1450,12 @@ Diff context defaults to three lines when omitted, while an explicit
 `context_lines=0` returns zero-context hunks. Every request validates the
 repository/path and pins supplied branch names to immutable object IDs before
 subsequent Git commands run.
+
+File, History, Blame, and Commit each expose the same canonical
+**Implementation evidence** contextual help. The control explains what source,
+history, blame, commits, and diffs can support and preserves the distinction
+between evidence and instruction or correctness. Opening it performs no Git or
+HTTP request.
 
 History failures use the same bounded presentation as catalog failures: one
 synthetic leading `Error:` prefix is removed, displayed detail is capped at 512
