@@ -137,6 +137,15 @@ export default function ServiceDirectoryPage({ params, relationshipsAvailable = 
           }
           return
         }
+        if (detailResult.value && (
+          detailResult.value.repository.repository !== inventoryResult.value.repository.repository ||
+          detailResult.value.repository.catalog_generation !== inventoryResult.value.repository.catalog_generation ||
+          detailResult.value.repository.catalog_control_revision !== inventoryResult.value.repository.catalog_control_revision ||
+          detailResult.value.repository.state_control_revision !== inventoryResult.value.repository.state_control_revision
+        )) {
+          setDetailError('Service authority changed while loading. Retry detail.')
+          return
+        }
         setDetail(detailResult.value)
       })
       .finally(() => {
@@ -195,6 +204,11 @@ export default function ServiceDirectoryPage({ params, relationshipsAvailable = 
               <button type="button" onClick={() => setReload((value) => value + 1)} className={css(textButton(tok))}>
                 Retry
               </button>
+              {route.cursor && (
+                <a href={directoryHref(route, { cursor: '', serviceKey: '' })} className={css(textButtonLink(tok))}>
+                  First page
+                </a>
+              )}
             </div>
           </Notification>
         </div>
@@ -583,7 +597,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
           Service detail unavailable
         </div>
         <h2 className={css({ margin: '7px 0 0', fontSize: '17px', lineHeight: '23px', color: tok.textPrimary })}>
-          The inventory is still current
+          The inventory remains available
         </h2>
         <p className={css({ margin: '9px 0 0', fontSize: '12px', lineHeight: '18px', overflowWrap: 'anywhere' })}>
           {detailError}
@@ -790,7 +804,7 @@ function directoryParams(route: DirectoryRoute): Record<string, string> {
   if (route.cursor) result.cursor = route.cursor
   if (route.serviceKey) result.service_key = route.serviceKey
   if (route.relationshipView !== 'dependencies') result.relationship_view = route.relationshipView
-  if (route.relationshipCursor) result.relationship_cursor = route.relationshipCursor
+  if (route.serviceKey && route.relationshipCursor) result.relationship_cursor = route.relationshipCursor
   if (route.narrow) result.narrow = route.narrow
   if (route.group !== 'none') result.group = route.group
   return result

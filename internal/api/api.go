@@ -38,6 +38,8 @@ func searchHTTPError(err error) error {
 	case errors.Is(err, search.ErrInvalidQuery),
 		errors.Is(err, search.ErrInvalidScopeSelector):
 		return huma.Error400BadRequest(err.Error())
+	case errors.Is(err, search.ErrScopeNotFound):
+		return huma.Error404NotFound("search scope not found")
 	case errors.Is(err, servicequery.ErrUnavailable):
 		return huma.Error409Conflict("search scope unavailable", err)
 	default:
@@ -49,9 +51,14 @@ type Options struct {
 	Version string
 	APIKey  string // empty = open API; serve logs the warning
 	Store   store.Store
-	Search  *search.Searcher // nil = search endpoints answer 503
-	CodeNav *codenav.Service // nil = precise code navigation answers 503
-	DataDir string           // bare mirrors for file serving (T4.4)
+	Search  *search.Searcher // nil with no ScopedSearch = search endpoints answer 503
+	// ScopedSearch optionally supplies one preconstructed shared search
+	// boundary. Nil preserves the ordinary v2 Search path. T41.7 uses this seam
+	// only to prove the runtime-dark v3 path through HTTP/SSE; T41.9 owns
+	// production selection.
+	ScopedSearch search.ScopedSearcher
+	CodeNav      *codenav.Service // nil = precise code navigation answers 503
+	DataDir      string           // bare mirrors for file serving (T4.4)
 	// IsAdmin is set by serve to gate operational mutations. Nil preserves the
 	// standalone handler's test and embedding behavior except for explicitly
 	// administrator-only inventory reads, which fail closed when it is nil.
@@ -182,6 +189,10 @@ type Options struct {
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
 // document at /api/openapi.json and docs UI at /api/docs.
 func New(opts Options) http.Handler {
+	scopedSearch := opts.ScopedSearch
+	if scopedSearch == nil && opts.Search != nil {
+		scopedSearch = opts.Search
+	}
 	if opts.ServiceDirectory == nil {
 		opts.ServiceDirectory = NewServiceDirectoryService(opts)
 	}
@@ -266,10 +277,10 @@ func New(opts Options) http.Handler {
 		Body *search.Result
 	}
 	huma.Get(api, SearchPath, func(ctx context.Context, in *searchIn) (*searchOut, error) {
-		if opts.Search == nil {
+		if scopedSearch == nil {
 			return nil, huma.Error503ServiceUnavailable("search unavailable")
 		}
-		res, err := opts.Search.SearchScoped(ctx, search.ScopeSelector{
+		res, err := scopedSearch.SearchScoped(ctx, search.ScopeSelector{
 			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
 		}, in.Q,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})
@@ -293,11 +304,11 @@ func New(opts Options) http.Handler {
 		"done":    &search.Stats{},
 		"error":   &streamErr{},
 	}, func(ctx context.Context, in *searchIn, send sse.Sender) {
-		if opts.Search == nil {
+		if scopedSearch == nil {
 			_ = send(sse.Message{Data: &streamErr{Message: "search unavailable"}})
 			return
 		}
-		stats, scope, err := opts.Search.StreamScoped(ctx, search.ScopeSelector{
+		stats, scope, err := scopedSearch.StreamScoped(ctx, search.ScopeSelector{
 			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
 		}, in.Q,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines},

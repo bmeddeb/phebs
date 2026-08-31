@@ -713,9 +713,9 @@ the current 4,000-service production cap or runtime registration. T41.2's
 reviewed runtime-dark v3 contract is integrated. T41.3's dark ingestion and
 immutable authority, T41.4's recovery/lifecycle ownership, and T41.5's
 resumable state reconcile/activation are also integrated. T41.6's sparse
-catalog/state/search backend is implementation-complete on its ticket branch;
-T41.7 is next after integration. Epic 42
-still owns combined-scale proof.
+catalog/state/search backend and T41.7's authorized directory/search transport
+parity are implementation-complete on the stacked scale lineage; T41.8 is next
+and integration remains separate. Epic 42 still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

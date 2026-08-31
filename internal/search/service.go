@@ -24,6 +24,11 @@ type ServiceResult struct {
 	Authority servicequery.Authority
 }
 
+type serviceScopeRuntime struct {
+	open    func(context.Context, string, string) (servicequery.RuntimeScope, error)
+	confirm func(context.Context, servicequery.RuntimeScope) error
+}
+
 // SearchService runs one exact v2 service query against an immutable direct
 // whole-generation lease. Placement predicates execute before ranking; no
 // result-time service filter is permitted. Every result is discarded if the
@@ -34,26 +39,76 @@ func (s *Searcher) SearchService(
 	request ServiceRequest,
 	opts Options,
 ) (*ServiceResult, error) {
+	if s == nil || s.st == nil {
+		return nil, fmt.Errorf("service search: runtime authority is unavailable")
+	}
+	runtimeStore, ok := s.st.(servicequery.RuntimeStore)
+	runtime := serviceScopeRuntime{}
+	if ok {
+		runtime.open = func(
+			ctx context.Context, repository, serviceKey string,
+		) (servicequery.RuntimeScope, error) {
+			return servicequery.OpenRuntimeScope(
+				ctx, s.indexDir, runtimeStore, repository, serviceKey,
+			)
+		}
+		runtime.confirm = func(ctx context.Context, scope servicequery.RuntimeScope) error {
+			return servicequery.ConfirmRuntimeScope(
+				ctx, s.indexDir, runtimeStore, scope,
+			)
+		}
+	}
+	return s.searchService(ctx, request, opts, runtime)
+}
+
+// SearchServiceV3 is the explicit runtime-dark segmented-catalog search seam.
+// It shares the complete authorization, exact-reader, query, and result path
+// with SearchService while substituting only the v3 scope open/final fence.
+// No production caller selects this method; T41.9 owns runtime selection.
+func (s *Searcher) SearchServiceV3(
+	ctx context.Context,
+	reader *store.ServiceStateV3Reader,
+	request ServiceRequest,
+	opts Options,
+) (*ServiceResult, error) {
+	if s == nil || s.st == nil {
+		return nil, fmt.Errorf("service search: runtime authority is unavailable")
+	}
+	runtimeStore, ok := s.st.(servicequery.RuntimeRepositoryStore)
+	runtime := serviceScopeRuntime{}
+	if ok && reader != nil {
+		runtime.open = func(
+			ctx context.Context, repository, serviceKey string,
+		) (servicequery.RuntimeScope, error) {
+			return servicequery.OpenRuntimeScopeV3(
+				ctx, s.indexDir, runtimeStore, reader, repository, serviceKey,
+			)
+		}
+		runtime.confirm = func(ctx context.Context, scope servicequery.RuntimeScope) error {
+			return servicequery.ConfirmRuntimeScopeV3(
+				ctx, s.indexDir, runtimeStore, reader, scope,
+			)
+		}
+	}
+	return s.searchService(ctx, request, opts, runtime)
+}
+
+func (s *Searcher) searchService(
+	ctx context.Context,
+	request ServiceRequest,
+	opts Options,
+	runtime serviceScopeRuntime,
+) (*ServiceResult, error) {
 	callerCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, s.queryWallTime())
 	defer cancel()
-	runtimeStore, ok := s.st.(servicequery.RuntimeStore)
-	if !ok || s.whole == nil {
-		return nil, fmt.Errorf("service search: runtime authority is unavailable")
-	}
-	repo, err := s.st.GetRepo(ctx, request.Repository)
-	if err != nil {
+	if _, err := s.authorizeServiceRepository(ctx, request.Repository); err != nil {
 		return nil, fmt.Errorf("service search: repository: %w", err)
 	}
-	if s.Visible != nil {
-		allow := s.Visible(ctx)
-		if allow != nil && !allow(*repo) {
-			return nil, fmt.Errorf("service search: repository: %w", store.ErrNotFound)
-		}
+	if s.whole == nil || runtime.open == nil || runtime.confirm == nil {
+		return nil, fmt.Errorf("service search: runtime authority is unavailable")
 	}
-	opened, err := servicequery.OpenRuntimeScope(
-		ctx, s.indexDir, runtimeStore, request.Repository, request.ServiceKey,
-	)
+	opened, err := runtime.open(ctx, request.Repository, request.ServiceKey)
 	if err != nil {
 		return nil, fmt.Errorf("service search: %w", err)
 	}
@@ -107,9 +162,7 @@ func (s *Searcher) SearchService(
 		)
 	}
 	s.clearWholeRepair(request.Repository)
-	if err := servicequery.ConfirmRuntimeScope(
-		ctx, s.indexDir, runtimeStore, opened,
-	); err != nil {
+	if err := runtime.confirm(ctx, opened); err != nil {
 		return nil, fmt.Errorf("service search: pre-query fence: %w", err)
 	}
 	compiled, err := servicequery.Compile(servicequery.Request{
@@ -126,16 +179,17 @@ func (s *Searcher) SearchService(
 	if err != nil {
 		return nil, fmt.Errorf("service search: query: %w", err)
 	}
-	currentRepo, repoErr := s.st.GetRepo(ctx, request.Repository)
-	if repoErr != nil || !lease.current(ctx, *currentRepo, true) {
+	currentRepo, repoErr := s.authorizeServiceRepository(ctx, request.Repository)
+	if repoErr != nil {
+		return nil, fmt.Errorf("service search: repository reauthorization: %w", repoErr)
+	}
+	if !lease.current(ctx, *currentRepo, true) {
 		lease.invalidate()
 		return nil, fmt.Errorf(
 			"service search: %w: reader generation changed", servicequery.ErrUnavailable,
 		)
 	}
-	if err := servicequery.ConfirmRuntimeScope(
-		ctx, s.indexDir, runtimeStore, opened,
-	); err != nil {
+	if err := runtime.confirm(ctx, opened); err != nil {
 		return nil, fmt.Errorf("service search: final fence: %w", err)
 	}
 	versions := map[string]string{
@@ -157,4 +211,28 @@ func (s *Searcher) SearchService(
 		s.Usage(callerCtx, usageEvent(wire.Stats, repositories))
 	}
 	return &ServiceResult{Result: wire, Authority: compiled.Authority}, nil
+}
+
+// authorizeServiceRepository resolves request visibility before the repository
+// point lookup. Calling it again after query execution makes revocation fail
+// closed before catalog/state confirmation and before any result escapes.
+func (s *Searcher) authorizeServiceRepository(
+	ctx context.Context,
+	repository string,
+) (*store.Repo, error) {
+	var allow func(store.Repo) bool
+	if s.Visible != nil {
+		allow = s.Visible(ctx)
+	}
+	repo, err := s.st.GetRepo(ctx, repository)
+	if err != nil {
+		return nil, err
+	}
+	if repo == nil {
+		return nil, errors.New("repository lookup returned nil")
+	}
+	if repo.Deleting || allow != nil && !allow(*repo) {
+		return nil, store.ErrNotFound
+	}
+	return repo, nil
 }

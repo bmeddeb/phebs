@@ -42,10 +42,14 @@ type CompatibilityQueries interface {
 type Options struct {
 	Version string
 	Store   store.Store
-	Search  *search.Searcher          // nil = search_code reports unavailable
-	DataDir string                    // bare mirrors for read_file
-	CodeNav *codenav.Service          // nil = SCIP tools report unavailable
-	History *phebssync.HistoryService // nil = construct from DataDir
+	Search  *search.Searcher // nil with no ScopedSearch = search_code unavailable
+	// ScopedSearch optionally supplies the same preconstructed search boundary
+	// used by HTTP. Nil preserves the ordinary v2 Search path; production does
+	// not select the runtime-dark T41.7 v3 adapter.
+	ScopedSearch search.ScopedSearcher
+	DataDir      string                    // bare mirrors for read_file
+	CodeNav      *codenav.Service          // nil = SCIP tools report unavailable
+	History      *phebssync.HistoryService // nil = construct from DataDir
 	// Proofs enables the proof-backed evidence tools. Nil leaves them
 	// unregistered so the provisional extraction feature stays dark.
 	Proofs ProofQueries
@@ -100,6 +104,10 @@ const maxFileBytes = 200_000
 // SCIP navigation, and bounded Git history plumbing.
 func NewServer(opts Options) *sdk.Server {
 	s := sdk.NewServer(&sdk.Implementation{Name: "phebs", Version: opts.Version}, nil)
+	scopedSearch := opts.ScopedSearch
+	if scopedSearch == nil && opts.Search != nil {
+		scopedSearch = opts.Search
+	}
 	history := opts.History
 	if history == nil {
 		history = phebssync.NewHistoryService(opts.DataDir)
@@ -117,10 +125,10 @@ func NewServer(opts Options) *sdk.Server {
 		Name:        "search_code",
 		Description: "Search All code or one exact service scope. Returns matched files, line-numbered chunks, and a digest-bound scope receipt; service scope includes accepted shared paths and excludes unowned paths.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in searchIn) (*sdk.CallToolResult, search.Result, error) {
-		if opts.Search == nil {
+		if scopedSearch == nil {
 			return nil, search.Result{}, errors.New("search unavailable: no index open")
 		}
-		res, err := opts.Search.SearchScoped(ctx, search.ScopeSelector{
+		res, err := scopedSearch.SearchScoped(ctx, search.ScopeSelector{
 			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
 		}, in.Query,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})

@@ -114,10 +114,12 @@ type ServiceStateFilter struct {
 
 // ServiceStatePosition is the stable seek boundary carried by an authorized
 // cursor. Incarnation makes removal/re-add of the boundary key invalidate the
-// cursor even if its spelling returns.
+// cursor even if its spelling returns; v3 additionally binds the immutable
+// member range that supplied the boundary.
 type ServiceStatePosition struct {
-	ServiceKey  string
-	Incarnation uint64
+	ServiceKey        string
+	Incarnation       uint64
+	MemberRangeDigest string
 }
 
 // ServiceStateEntry pairs one strict lifecycle row with its current catalog

@@ -47,11 +47,11 @@ type Searcher struct {
 	// the actor and must never block on failure.
 	Usage func(ctx context.Context, event store.UsageEvent)
 	// Visible is the per-user RepoSet hook (T10.3), filling the reservation
-	// noted in CLAUDE.md. Called once per query with the request context, it
-	// returns the caller's repo predicate — or nil when the caller may see
-	// everything (administrators). A nil field disables permission filtering.
-	// Filtering happens here, in the pre-pass, so REST, SSE, and MCP inherit
-	// it and nothing is post-filtered.
+	// noted in CLAUDE.md. All-code search resolves it in the pre-pass; service
+	// search resolves it before authority work and again after query execution
+	// so revocation discards the result. It returns the caller's repo predicate
+	// — or nil when the caller may see everything (administrators). A nil field
+	// disables permission filtering. REST, SSE, and MCP share these boundaries.
 	Visible func(ctx context.Context) func(store.Repo) bool
 }
 

@@ -478,6 +478,12 @@ func serviceDescriptor(root Root, key string) (MemberDescriptor, bool) {
 	return root.ServiceMembers[index], true
 }
 
+// ServiceMemberDescriptor returns the one immutable service-member range that
+// contains key. Product cursors bind this descriptor without opening a member.
+func ServiceMemberDescriptor(root Root, key string) (MemberDescriptor, bool) {
+	return serviceDescriptor(root, key)
+}
+
 func cloneReadRoot(root Root) Root {
 	root.ServiceMembers = slices.Clone(root.ServiceMembers)
 	root.PlacementMembers = slices.Clone(root.PlacementMembers)

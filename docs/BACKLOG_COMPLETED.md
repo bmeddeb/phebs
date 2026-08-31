@@ -10617,3 +10617,48 @@ package passed in 1109.535s and the full race package passed in 1213.738s.
 T41.7 is next after integration, while T41.9 still owns selection.
 This ticket changes no production service cap, release posture, ceremony,
 scale/SLO, topology, migration-completion, or decommission claim.
+
+**T41.7 ✅ · Authorized HTTP/MCP/UI v3 parity**
+*(2026-08-31; high)* — the runtime-dark v3 backend now has explicit
+authorization-first directory and scoped-search transport parity without
+selecting v3 for production traffic.
+
+The shared directory boundary preserves the existing inventory/detail schemas,
+authorizes before repository, cursor, service, state, root, or member work, and
+rechecks authorization before emission. Process-local HMAC continuations bind
+query/page size, principal/provider/permission/visibility context, catalog and
+summary authority, seek identity/incarnation, and the immutable v3 member
+range. V3 leases remain held through response validation and the final
+authority fence; malformed or partial authority fails closed, lifecycle states
+remain explicit, and the selected 512-successor/1-MiB detail bounds remain
+unchanged. The explicit v3 search adapter reuses the existing immutable reader,
+compiler, ranking, receipt, HTTP, streamed-HTTP, MCP, and final-fence paths.
+
+Ben's approved presentation handoff is limited to
+`ui/src/pages/ServiceDirectoryPage.tsx` and its test. A failed process-local
+cursor offers a filter-preserving first-page route and clears the selected
+detail state. Concurrent inventory/detail reads compare repository, catalog
+generation/revision, and state revision before detail renders; drift keeps the
+inventory usable but refuses the detail. This adds no route, wire schema, query
+shape, polling, or accumulated page state.
+
+Forged, restarted, and drifted cursors; revocation; hidden and missing services;
+deep links; pagination; concurrent publication; malformed authority;
+HTTP/streamed-HTTP/MCP parity; v2 regression; and the 10,000-service page bound
+are covered. The full store package passed in 1129.985s normally and 1167.423s
+under race; complete affected normal/race packages, repository build/vet/lint,
+module, documentation, glossary, shell, and whitespace gates passed. The final
+UI suite passed 631 tests, lint/build and the embedded UI build passed, and a
+source-free Chrome proof passed at desktop and 390 px across 10,000-service
+paging, invalid-cursor recovery, crossed-authority refusal, bounded DOM, and no
+document overflow. The integrated built directory route is 48.01 kB (12.25 kB gzip), adds
+no dependency, and preserves the existing 150ms 10,000-row interaction budget.
+
+Directory construction reads one 32-byte random secret; each continuation
+signs or verifies one at-most-16-KiB token. Dark v3 page/detail adds one final
+pointer/summary confirmation pair, search adds one shared-interface dispatch,
+and the UI retains one page plus at most one detail without polling. No write,
+schema migration, worker, child, Git/source/corpus read, lifecycle turn, new
+lock, cache enlargement, production cap, release/SLO, topology, migration, or
+decommission claim is added. T41.8 is next on the stacked scale lineage; T41.9
+still owns runtime selection.

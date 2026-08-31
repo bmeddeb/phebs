@@ -2,6 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -91,12 +94,27 @@ func (read *ServiceStateV3Read) Close() {
 	})
 }
 
+// ServiceStateV3Page pins every verified member used by the page until Close.
 type ServiceStateV3Page struct {
 	Pointer      ServiceCatalogV3Pointer
 	Root         servicecatalogv3.Root
 	Summary      servicecatalog.RepositoryState
 	Entries      []ServiceStateEntry
 	Continuation *ServiceStatePosition
+
+	lease     *servicecatalogv3.ReadLease
+	closeOnce sync.Once
+}
+
+func (page *ServiceStateV3Page) Close() {
+	if page == nil {
+		return
+	}
+	page.closeOnce.Do(func() {
+		if page.lease != nil {
+			page.lease.Close()
+		}
+	})
 }
 
 type ServiceStateV3Snapshot struct {
@@ -115,13 +133,19 @@ func (reader *ServiceStateV3Reader) OpenService(
 	}
 	pointer, err := reader.source.GetServiceCatalogV3CandidatePointer(ctx, repository)
 	if err != nil {
+		if !errors.Is(err, ErrNotFound) && !errors.Is(err, os.ErrNotExist) {
+			err = serviceStateV3AuthorityError(err)
+		}
 		return nil, fmt.Errorf("open service state v3: catalog pointer: %w", err)
 	}
 	current, err := reader.cache.Open(
 		ctx, reader.source, repository, pointer.RootDigest,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("open service state v3: current catalog: %w", err)
+		return nil, fmt.Errorf(
+			"open service state v3: current catalog: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	read := &ServiceStateV3Read{Pointer: pointer, currentLease: current}
 	defer func() {
@@ -136,7 +160,10 @@ func (reader *ServiceStateV3Reader) OpenService(
 	read.Root = root
 	summary, err := reader.source.GetServiceStateV3SummaryPoint(ctx, repository)
 	if err != nil {
-		return nil, fmt.Errorf("open service state v3: summary: %w", err)
+		return nil, fmt.Errorf(
+			"open service state v3: summary: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	if !sameServiceStateV3Fence(pointer, summary) {
 		return nil, fmt.Errorf("open service state v3: unreconciled summary: %w", ErrConflict)
@@ -144,6 +171,9 @@ func (reader *ServiceStateV3Reader) OpenService(
 	read.Summary = summary
 	state, err := reader.source.GetServiceStateV3Point(ctx, repository, serviceKey)
 	if err != nil {
+		if !errors.Is(err, ErrNotFound) && !errors.Is(err, os.ErrNotExist) {
+			err = serviceStateV3AuthorityError(err)
+		}
 		return nil, fmt.Errorf("open service state v3: state: %w", err)
 	}
 	read.Entry.State = state
@@ -152,11 +182,17 @@ func (reader *ServiceStateV3Reader) OpenService(
 		if validateErr := servicecatalogv3.ValidateStateProjection(
 			state, desired, false,
 		); validateErr != nil {
-			return nil, fmt.Errorf("open service state v3: desired projection: %w", validateErr)
+			return nil, fmt.Errorf(
+				"open service state v3: desired projection: %w",
+				serviceStateV3AuthorityError(validateErr),
+			)
 		}
 		read.Entry.Projection = cloneServiceStateV3Projection(&desired)
 	} else if !errors.Is(err, os.ErrNotExist) || !state.Removed {
-		return nil, fmt.Errorf("open service state v3: desired projection: %w", err)
+		return nil, fmt.Errorf(
+			"open service state v3: desired projection: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 
 	if state.ActiveCatalogGeneration == "" {
@@ -169,7 +205,10 @@ func (reader *ServiceStateV3Reader) OpenService(
 			ctx, reader.source, repository, state.ActiveCatalogGeneration,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("open service state v3: active catalog: %w", err)
+			return nil, fmt.Errorf(
+				"open service state v3: active catalog: %w",
+				serviceStateV3AuthorityError(err),
+			)
 		}
 		read.activeLease = activeLease
 		activeRoot, valid = activeLease.Root()
@@ -179,10 +218,16 @@ func (reader *ServiceStateV3Reader) OpenService(
 	}
 	active, err := activeLease.Service(ctx, reader.source, serviceKey)
 	if err != nil {
-		return nil, fmt.Errorf("open service state v3: active projection: %w", err)
+		return nil, fmt.Errorf(
+			"open service state v3: active projection: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	if err := servicecatalogv3.ValidateStateProjection(state, active, true); err != nil {
-		return nil, fmt.Errorf("open service state v3: active projection: %w", err)
+		return nil, fmt.Errorf(
+			"open service state v3: active projection: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	read.ActiveRoot = activeRoot
 	read.ActiveProjection = cloneServiceStateV3Projection(&active)
@@ -199,25 +244,39 @@ func (reader *ServiceStateV3Reader) ListServices(
 	if reader == nil || validateCandidateRepository(repository) != nil ||
 		validateServiceStateFilter(filter) != nil || limit < 1 ||
 		limit > MaxServiceStateReadPage ||
-		(after.ServiceKey == "") != (after.Incarnation == 0) {
+		(after.ServiceKey == "") != (after.Incarnation == 0) ||
+		(after.ServiceKey == "") != (after.MemberRangeDigest == "") {
 		return nil, fmt.Errorf("list service states v3: %w", ErrInvalidServiceStateV3)
 	}
 	pointer, err := reader.source.GetServiceCatalogV3CandidatePointer(ctx, repository)
 	if err != nil {
+		if !errors.Is(err, ErrNotFound) && !errors.Is(err, os.ErrNotExist) {
+			err = serviceStateV3AuthorityError(err)
+		}
 		return nil, fmt.Errorf("list service states v3: catalog pointer: %w", err)
 	}
 	lease, err := reader.cache.Open(ctx, reader.source, repository, pointer.RootDigest)
 	if err != nil {
-		return nil, fmt.Errorf("list service states v3: catalog: %w", err)
+		return nil, fmt.Errorf(
+			"list service states v3: catalog: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
-	defer lease.Close()
+	defer func() {
+		if retErr != nil {
+			lease.Close()
+		}
+	}()
 	root, valid := lease.Root()
 	if !valid {
 		return nil, fmt.Errorf("list service states v3: catalog lease: %w", ErrConflict)
 	}
 	summary, err := reader.source.GetServiceStateV3SummaryPoint(ctx, repository)
 	if err != nil {
-		return nil, fmt.Errorf("list service states v3: summary: %w", err)
+		return nil, fmt.Errorf(
+			"list service states v3: summary: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	if !sameServiceStateV3Fence(pointer, summary) {
 		return nil, fmt.Errorf("list service states v3: unreconciled summary: %w", ErrConflict)
@@ -226,7 +285,15 @@ func (reader *ServiceStateV3Reader) ListServices(
 		anchor, anchorErr := reader.source.GetServiceStateV3Point(
 			ctx, repository, after.ServiceKey,
 		)
-		if anchorErr != nil || anchor.Incarnation != after.Incarnation {
+		if anchorErr != nil {
+			anchorErr = serviceStateV3AuthorityError(anchorErr)
+			if errors.Is(anchorErr, ErrConflict) {
+				return nil, fmt.Errorf("list service states v3: seek changed: %w", ErrConflict)
+			}
+			return nil, fmt.Errorf("list service states v3: seek: %w", anchorErr)
+		}
+		position, positionErr := serviceStateV3Position(root, anchor)
+		if positionErr != nil || anchor.Incarnation != after.Incarnation || position != after {
 			return nil, fmt.Errorf("list service states v3: seek changed: %w", ErrConflict)
 		}
 	}
@@ -234,7 +301,10 @@ func (reader *ServiceStateV3Reader) ListServices(
 		ctx, repository, after.ServiceKey, maxServiceStateScanPage+1,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list service states v3: rows: %w", err)
+		return nil, fmt.Errorf(
+			"list service states v3: rows: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	if len(rows) > maxServiceStateScanPage+1 {
 		return nil, fmt.Errorf("list service states v3: row bound: %w", ErrConflict)
@@ -248,7 +318,10 @@ func (reader *ServiceStateV3Reader) ListServices(
 	var continuation *ServiceStatePosition
 	for index, state := range rows {
 		if state.Repository != repository || state.ServiceKey <= prior {
-			return nil, fmt.Errorf("list service states v3: row order: %w", ErrInvalidServiceStateV3)
+			return nil, fmt.Errorf(
+				"list service states v3: row order: %w",
+				errors.Join(ErrInvalidServiceStateV3, ErrConflict),
+			)
 		}
 		prior = state.ServiceKey
 		projection, projectionErr := lease.Service(ctx, reader.source, state.ServiceKey)
@@ -258,12 +331,18 @@ func (reader *ServiceStateV3Reader) ListServices(
 			if err := servicecatalogv3.ValidateStateProjection(
 				state, projection, false,
 			); err != nil {
-				return nil, fmt.Errorf("list service states v3: projection: %w", err)
+				return nil, fmt.Errorf(
+					"list service states v3: projection: %w",
+					serviceStateV3AuthorityError(err),
+				)
 			}
 			projected = cloneServiceStateV3Projection(&projection)
 		case errors.Is(projectionErr, os.ErrNotExist) && state.Removed:
 		default:
-			return nil, fmt.Errorf("list service states v3: projection: %w", projectionErr)
+			return nil, fmt.Errorf(
+				"list service states v3: projection: %w",
+				serviceStateV3AuthorityError(projectionErr),
+			)
 		}
 		matches := (filter.Status == "" || state.Status == filter.Status) &&
 			(filter.Disposition == "" || state.Disposition == filter.Disposition) &&
@@ -276,27 +355,38 @@ func (reader *ServiceStateV3Reader) ListServices(
 		})
 		if len(entries) == limit {
 			if index < len(rows)-1 || hasMore {
-				continuation = &ServiceStatePosition{
-					ServiceKey: state.ServiceKey, Incarnation: state.Incarnation,
+				position, positionErr := serviceStateV3Position(root, state)
+				if positionErr != nil {
+					return nil, fmt.Errorf(
+						"list service states v3: continuation: %w", positionErr,
+					)
 				}
+				continuation = &position
 			}
 			break
 		}
 	}
 	if len(entries) < limit && hasMore && len(rows) != 0 {
 		last := rows[len(rows)-1]
-		continuation = &ServiceStatePosition{
-			ServiceKey: last.ServiceKey, Incarnation: last.Incarnation,
+		position, positionErr := serviceStateV3Position(root, last)
+		if positionErr != nil {
+			return nil, fmt.Errorf(
+				"list service states v3: continuation: %w", positionErr,
+			)
 		}
+		continuation = &position
 	}
 	if err := reader.source.ConfirmServiceStateV3Snapshot(
 		ctx, pointer, summary,
 	); err != nil {
-		return nil, fmt.Errorf("list service states v3: final fence: %w", err)
+		return nil, fmt.Errorf(
+			"list service states v3: final fence: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	return &ServiceStateV3Page{
 		Pointer: pointer, Root: root, Summary: summary,
-		Entries: entries, Continuation: continuation,
+		Entries: entries, Continuation: continuation, lease: lease,
 	}, nil
 }
 
@@ -393,7 +483,8 @@ func (reader *ServiceStateV3Reader) AcceptedSnapshot(
 		ctx, pointer, summary,
 	); err != nil {
 		return ServiceStateV3Snapshot{}, fmt.Errorf(
-			"accepted service state v3 snapshot: final fence: %w", err,
+			"accepted service state v3 snapshot: final fence: %w",
+			serviceStateV3AuthorityError(err),
 		)
 	}
 	return ServiceStateV3Snapshot{
@@ -417,9 +508,77 @@ func (reader *ServiceStateV3Reader) Confirm(
 	if err := reader.source.ConfirmServiceStateV3Snapshot(
 		ctx, read.Pointer, read.Summary,
 	); err != nil {
-		return fmt.Errorf("confirm service state v3 read: %w", err)
+		return fmt.Errorf(
+			"confirm service state v3 read: %w",
+			serviceStateV3AuthorityError(err),
+		)
 	}
 	return nil
+}
+
+func (reader *ServiceStateV3Reader) ConfirmPage(
+	ctx context.Context,
+	page *ServiceStateV3Page,
+) error {
+	if reader == nil || page == nil {
+		return fmt.Errorf("confirm service state v3 page: %w", ErrInvalidServiceStateV3)
+	}
+	if page.lease == nil {
+		return fmt.Errorf("confirm service state v3 page: missing lease: %w", ErrConflict)
+	}
+	if _, valid := page.lease.Root(); !valid {
+		return fmt.Errorf("confirm service state v3 page: closed lease: %w", ErrConflict)
+	}
+	if err := reader.source.ConfirmServiceStateV3Snapshot(
+		ctx, page.Pointer, page.Summary,
+	); err != nil {
+		return fmt.Errorf(
+			"confirm service state v3 page: %w",
+			serviceStateV3AuthorityError(err),
+		)
+	}
+	return nil
+}
+
+func serviceStateV3Position(
+	root servicecatalogv3.Root,
+	state servicecatalog.ServiceState,
+) (ServiceStatePosition, error) {
+	descriptor, found := servicecatalogv3.ServiceMemberDescriptor(root, state.ServiceKey)
+	if !found && !state.Removed {
+		return ServiceStatePosition{}, errors.Join(ErrInvalidServiceStateV3, ErrConflict)
+	}
+	binding := struct {
+		Schema      string                            `json:"schema"`
+		RootDigest  string                            `json:"root_digest"`
+		ServiceKey  string                            `json:"service_key"`
+		Incarnation uint64                            `json:"incarnation"`
+		Present     bool                              `json:"present"`
+		Member      servicecatalogv3.MemberDescriptor `json:"member"`
+	}{
+		Schema: "phebs-service-state-v3-member-range-v1", RootDigest: root.Digest,
+		ServiceKey: state.ServiceKey, Incarnation: state.Incarnation,
+		Present: found, Member: descriptor,
+	}
+	raw, err := json.Marshal(binding)
+	if err != nil {
+		return ServiceStatePosition{}, err
+	}
+	sum := sha256.Sum256(raw)
+	return ServiceStatePosition{
+		ServiceKey: state.ServiceKey, Incarnation: state.Incarnation,
+		MemberRangeDigest: "sha256:" + hex.EncodeToString(sum[:]),
+	}, nil
+}
+
+func serviceStateV3AuthorityError(err error) error {
+	if errors.Is(err, ErrNotFound) || errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, servicecatalogv3.ErrInvalid) ||
+		errors.Is(err, ErrInvalidServiceStateV3) ||
+		errors.Is(err, ErrInvalidServiceCatalogV3Candidate) {
+		return errors.Join(err, ErrConflict)
+	}
+	return err
 }
 
 func (s *Surreal) GetServiceStateV3SummaryPoint(

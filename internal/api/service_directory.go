@@ -3,6 +3,9 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -23,7 +27,7 @@ const (
 	serviceDirectoryCapability   = "service-catalog-v2"
 	serviceInventorySchema       = "phebs-service-inventory-v1"
 	serviceDetailSchema          = "phebs-service-detail-v1"
-	serviceCursorSchema          = "phebs-service-inventory-cursor-v1"
+	serviceCursorSchema          = "phebs-service-inventory-cursor-v2"
 	serviceInventoryOrder        = "service_key:asc"
 	serviceDefaultPageSize       = 50
 	serviceMaxPageSize           = 100
@@ -31,6 +35,7 @@ const (
 	serviceResponseBytesLimit    = 1 << 20
 	serviceMembershipRoleLimit   = 5
 	serviceMembershipRecordLimit = servicecatalog.MaxServicePaths * serviceMembershipRoleLimit
+	serviceCatalogViewV3         = "segmented-v3"
 )
 
 type serviceDirectoryStore interface {
@@ -54,6 +59,8 @@ type serviceDirectoryStore interface {
 type ServiceDirectoryService struct {
 	opts   Options
 	states serviceDirectoryStore
+	v3     *store.ServiceStateV3Reader
+	secret [sha256.Size]byte
 }
 
 func NewServiceDirectoryService(opts Options) *ServiceDirectoryService {
@@ -61,7 +68,27 @@ func NewServiceDirectoryService(opts Options) *ServiceDirectoryService {
 	if !ok || states == nil {
 		return nil
 	}
-	return &ServiceDirectoryService{opts: opts, states: states}
+	service := &ServiceDirectoryService{opts: opts, states: states}
+	if _, err := rand.Read(service.secret[:]); err != nil {
+		return nil
+	}
+	return service
+}
+
+// NewServiceDirectoryServiceV3 constructs the runtime-dark segmented backend.
+// T41.9 owns selecting it for production traffic.
+func NewServiceDirectoryServiceV3(
+	opts Options,
+	reader *store.ServiceStateV3Reader,
+) *ServiceDirectoryService {
+	if opts.Store == nil || reader == nil {
+		return nil
+	}
+	service := &ServiceDirectoryService{opts: opts, v3: reader}
+	if _, err := rand.Read(service.secret[:]); err != nil {
+		return nil
+	}
+	return service
 }
 
 // ServiceInventoryQuery is the closed filter set for one authorized
@@ -183,7 +210,8 @@ type serviceInventoryCursor struct {
 	Order                  string            `json:"order"`
 	AfterServiceKey        string            `json:"after_service_key"`
 	AfterIncarnation       uint64            `json:"after_incarnation"`
-	Checksum               string            `json:"checksum"`
+	CatalogView            string            `json:"catalog_view,omitempty"`
+	MemberRangeDigest      string            `json:"member_range_digest,omitempty"`
 }
 
 func (service *ServiceDirectoryService) List(
@@ -192,7 +220,7 @@ func (service *ServiceDirectoryService) List(
 	pageSize int,
 	encodedCursor string,
 ) (*ServiceInventory, error) {
-	if service == nil || service.states == nil {
+	if service == nil || service.states == nil && service.v3 == nil {
 		return nil, huma.Error503ServiceUnavailable("service catalog unavailable")
 	}
 	repository, authorization, err := service.authorize(ctx, query.Repository)
@@ -205,12 +233,13 @@ func (service *ServiceDirectoryService) List(
 		return nil, err
 	}
 	queryDigest := digestJSON(struct {
-		Schema string                `json:"schema"`
-		Order  string                `json:"order"`
-		Query  ServiceInventoryQuery `json:"query"`
-	}{serviceInventorySchema, serviceInventoryOrder, query})
-	cursor, err := decodeServiceInventoryCursor(
-		encodedCursor, queryDigest, authorization,
+		Schema   string                `json:"schema"`
+		Order    string                `json:"order"`
+		Query    ServiceInventoryQuery `json:"query"`
+		PageSize int                   `json:"page_size"`
+	}{serviceInventorySchema, serviceInventoryOrder, query, pageSize})
+	cursor, err := service.decodeServiceInventoryCursor(
+		encodedCursor, queryDigest, authorization, service.catalogView(),
 	)
 	if err != nil {
 		return nil, err
@@ -219,24 +248,67 @@ func (service *ServiceDirectoryService) List(
 	if cursor != nil {
 		after.ServiceKey = cursor.AfterServiceKey
 		after.Incarnation = cursor.AfterIncarnation
+		after.MemberRangeDigest = cursor.MemberRangeDigest
 	}
-	page, err := service.states.ListServiceStates(
-		ctx, query.Repository, filter, after, pageSize+1,
+	var (
+		repositoryProjection ServiceRepository
+		summary              servicecatalog.RepositoryState
+		entries              []store.ServiceStateEntry
+		position             store.ServiceStatePosition
+		catalogGeneration    string
+		catalogRevision      uint64
+		v3Page               *store.ServiceStateV3Page
 	)
-	if err != nil {
-		return nil, serviceDirectoryReadError("list service inventory", err)
+	if service.v3 != nil {
+		v3Page, err = service.v3.ListServices(
+			ctx, query.Repository, filter, after, pageSize,
+		)
+		if err != nil {
+			return nil, serviceDirectoryReadError("list service inventory", err)
+		}
+		defer v3Page.Close()
+		repositoryProjection = projectServiceRepositoryV3(
+			v3Page.Pointer, v3Page.Root, v3Page.Summary,
+		)
+		summary = v3Page.Summary
+		entries = v3Page.Entries
+		catalogGeneration = v3Page.Pointer.RootDigest
+		catalogRevision = v3Page.Pointer.ControlRevision
+		if v3Page.Continuation != nil {
+			position = *v3Page.Continuation
+		}
+	} else {
+		var page *store.ServiceStatePage
+		page, err = service.states.ListServiceStates(
+			ctx, query.Repository, filter, after, pageSize+1,
+		)
+		if err != nil {
+			return nil, serviceDirectoryReadError("list service inventory", err)
+		}
+		repositoryProjection = projectServiceRepository(page.Publication, page.Summary)
+		summary = page.Summary
+		catalogGeneration = page.Publication.GenerationDigest
+		catalogRevision = page.Publication.ControlRevision
+		more := len(page.Entries) > pageSize
+		entries = page.Entries
+		if more {
+			entries = entries[:pageSize]
+			last := entries[len(entries)-1].State
+			position = store.ServiceStatePosition{
+				ServiceKey: last.ServiceKey, Incarnation: last.Incarnation,
+			}
+		} else if page.Continuation != nil {
+			position = *page.Continuation
+		}
 	}
-	if err := validateServiceCursorSnapshot(cursor, page); err != nil {
+	if err := validateServiceCursorSnapshot(
+		cursor, catalogGeneration, catalogRevision, summary,
+	); err != nil {
 		return nil, err
-	}
-	more := len(page.Entries) > pageSize
-	entries := page.Entries
-	if more {
-		entries = entries[:pageSize]
 	}
 	rows := make([]Service, 0, len(entries))
 	for _, entry := range entries {
-		row, projectionErr := projectServiceRow(entry)
+		row, projectionErr := projectServiceRowBounded(entry, service.successorLimit())
 		if projectionErr != nil {
 			return nil, huma.Error500InternalServerError("project service inventory", projectionErr)
 		}
@@ -244,43 +316,37 @@ func (service *ServiceDirectoryService) List(
 	}
 	result := &ServiceInventory{
 		SchemaVersion: serviceInventorySchema,
-		Repository:    projectServiceRepository(page.Publication, page.Summary),
+		Repository:    repositoryProjection,
 		Filters:       query,
 		Services:      rows,
 		Pagination: ServicePagination{
 			Order: serviceInventoryOrder, PageSize: pageSize, Returned: len(rows),
 		},
 	}
-	position := store.ServiceStatePosition{}
-	if more {
-		last := entries[len(entries)-1].State
-		position = store.ServiceStatePosition{
-			ServiceKey: last.ServiceKey, Incarnation: last.Incarnation,
-		}
-	} else if page.Continuation != nil {
-		position = *page.Continuation
-	}
 	if position.ServiceKey != "" {
-		result.Pagination.NextCursor, err = encodeServiceInventoryCursor(
+		result.Pagination.NextCursor, err = service.encodeServiceInventoryCursor(
 			serviceInventoryCursor{
 				Schema: serviceCursorSchema, QueryDigest: queryDigest,
 				Authorization:          authorization,
-				CatalogGeneration:      page.Publication.GenerationDigest,
-				CatalogControlRevision: page.Publication.ControlRevision,
-				SummaryDigest:          page.Summary.SummaryDigest,
-				SummaryControlRevision: page.Summary.ControlRevision,
+				CatalogGeneration:      catalogGeneration,
+				CatalogControlRevision: catalogRevision,
+				SummaryDigest:          summary.SummaryDigest,
+				SummaryControlRevision: summary.ControlRevision,
 				Order:                  serviceInventoryOrder, AfterServiceKey: position.ServiceKey,
-				AfterIncarnation: position.Incarnation,
+				AfterIncarnation: position.Incarnation, CatalogView: service.catalogView(),
+				MemberRangeDigest: position.MemberRangeDigest,
 			},
 		)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("encode service inventory cursor", err)
 		}
 	}
-	if err := service.confirm(ctx, repository, authorization, page.Summary); err != nil {
+	if err := validateServiceResponseSize(result); err != nil {
 		return nil, err
 	}
-	if err := validateServiceResponseSize(result); err != nil {
+	if err := service.confirmPage(
+		ctx, repository, authorization, summary, v3Page,
+	); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -290,7 +356,7 @@ func (service *ServiceDirectoryService) Detail(
 	ctx context.Context,
 	repositoryName, serviceKey string,
 ) (*ServiceDetail, error) {
-	if service == nil || service.states == nil {
+	if service == nil || service.states == nil && service.v3 == nil {
 		return nil, huma.Error503ServiceUnavailable("service catalog unavailable")
 	}
 	repository, authorization, err := service.authorize(ctx, repositoryName)
@@ -300,31 +366,68 @@ func (service *ServiceDirectoryService) Detail(
 	if strings.TrimSpace(serviceKey) == "" {
 		return nil, huma.Error404NotFound("service not found")
 	}
-	read, err := service.states.GetServiceStateRead(ctx, repository.Name, serviceKey)
-	if err != nil {
-		return nil, serviceDirectoryReadError("read service detail", err)
+	var (
+		repositoryProjection ServiceRepository
+		summary              servicecatalog.RepositoryState
+		entry                store.ServiceStateEntry
+		v3Read               *store.ServiceStateV3Read
+	)
+	if service.v3 != nil {
+		v3Read, err = service.v3.OpenService(ctx, repository.Name, serviceKey)
+		if err != nil {
+			return nil, serviceDirectoryReadError("read service detail", err)
+		}
+		defer v3Read.Close()
+		repositoryProjection = projectServiceRepositoryV3(
+			v3Read.Pointer, v3Read.Root, v3Read.Summary,
+		)
+		summary, entry = v3Read.Summary, v3Read.Entry
+	} else {
+		var read *store.ServiceStateRead
+		read, err = service.states.GetServiceStateRead(ctx, repository.Name, serviceKey)
+		if err != nil {
+			return nil, serviceDirectoryReadError("read service detail", err)
+		}
+		repositoryProjection = projectServiceRepository(read.Publication, read.Summary)
+		summary, entry = read.Summary, read.Entry
 	}
-	row, err := projectServiceRow(read.Entry)
+	row, err := projectServiceRowBounded(entry, service.successorLimit())
 	if err != nil {
 		return nil, huma.Error500InternalServerError("project service detail", err)
 	}
 	detail := &ServiceDetail{
 		SchemaVersion: serviceDetailSchema,
-		Repository:    projectServiceRepository(read.Publication, read.Summary),
+		Repository:    repositoryProjection,
 		Service:       row,
-		Successors:    append([]string{}, read.Entry.State.Successors...),
-		Memberships:   projectServiceMemberships(read.Entry.Projection),
+		Successors:    append([]string{}, entry.State.Successors...),
+		Memberships:   projectServiceMemberships(entry.Projection),
 	}
-	if err := validateServiceDetailPaths(detail); err != nil {
+	if err := validateServiceDetailPaths(detail, service.successorLimit()); err != nil {
 		return nil, huma.Error500InternalServerError("project service detail", err)
-	}
-	if err := service.confirm(ctx, repository, authorization, read.Summary); err != nil {
-		return nil, err
 	}
 	if err := validateServiceResponseSize(detail); err != nil {
 		return nil, err
 	}
+	if err := service.confirmDetail(
+		ctx, repository, authorization, summary, v3Read,
+	); err != nil {
+		return nil, err
+	}
 	return detail, nil
+}
+
+func (service *ServiceDirectoryService) catalogView() string {
+	if service != nil && service.v3 != nil {
+		return serviceCatalogViewV3
+	}
+	return ""
+}
+
+func (service *ServiceDirectoryService) successorLimit() int {
+	if service != nil && service.v3 != nil {
+		return servicecatalogv3.MaxServiceSuccessors
+	}
+	return servicecatalog.MaxSuccessorEdges
 }
 
 func (service *ServiceDirectoryService) authorize(
@@ -354,11 +457,10 @@ func (service *ServiceDirectoryService) authorize(
 		catalogVisibilityContext(ctx, service.opts, []store.Repo{*repository}), nil
 }
 
-func (service *ServiceDirectoryService) confirm(
+func (service *ServiceDirectoryService) confirmAuthorization(
 	ctx context.Context,
 	repository store.Repo,
 	authorization VisibilityContext,
-	summary servicecatalog.RepositoryState,
 ) error {
 	confirmedRepository, confirmedAuthorization, err := service.authorize(
 		ctx, repository.Name,
@@ -369,10 +471,53 @@ func (service *ServiceDirectoryService) confirm(
 	if confirmedRepository.Name != repository.Name || confirmedAuthorization != authorization {
 		return huma.Error409Conflict("service catalog authorization changed while building the response; retry")
 	}
+	return nil
+}
+
+func (service *ServiceDirectoryService) confirmPage(
+	ctx context.Context,
+	repository store.Repo,
+	authorization VisibilityContext,
+	summary servicecatalog.RepositoryState,
+	page *store.ServiceStateV3Page,
+) error {
+	if err := service.confirmAuthorization(ctx, repository, authorization); err != nil {
+		return err
+	}
+	if service.v3 != nil {
+		if err := service.v3.ConfirmPage(ctx, page); err != nil {
+			return serviceDirectoryReadError("confirm service inventory", err)
+		}
+		return nil
+	}
 	if err := service.states.ConfirmServiceStateSnapshot(
 		ctx, repository.Name, summary,
 	); err != nil {
 		return serviceDirectoryReadError("confirm service inventory", err)
+	}
+	return nil
+}
+
+func (service *ServiceDirectoryService) confirmDetail(
+	ctx context.Context,
+	repository store.Repo,
+	authorization VisibilityContext,
+	summary servicecatalog.RepositoryState,
+	read *store.ServiceStateV3Read,
+) error {
+	if err := service.confirmAuthorization(ctx, repository, authorization); err != nil {
+		return err
+	}
+	if service.v3 != nil {
+		if err := service.v3.Confirm(ctx, read); err != nil {
+			return serviceDirectoryReadError("confirm service detail", err)
+		}
+		return nil
+	}
+	if err := service.states.ConfirmServiceStateSnapshot(
+		ctx, repository.Name, summary,
+	); err != nil {
+		return serviceDirectoryReadError("confirm service detail", err)
 	}
 	return nil
 }
@@ -439,9 +584,47 @@ func projectServiceRepository(
 	}
 }
 
+func projectServiceRepositoryV3(
+	pointer store.ServiceCatalogV3Pointer,
+	root servicecatalogv3.Root,
+	summary servicecatalog.RepositoryState,
+) ServiceRepository {
+	authority := ServiceAuthority{
+		Kind: root.Binding.Authority.Kind, ID: root.Binding.Authority.ID,
+		Version: root.Binding.Authority.Version,
+	}
+	if root.Binding.Override != nil {
+		authority.OverrideID = root.Binding.Override.ID
+		authority.OverrideVersion = root.Binding.Override.Version
+	}
+	return ServiceRepository{
+		Repository: root.Binding.Repository, SourceKind: root.Binding.Source.Kind,
+		SourceCommit:      root.Binding.Source.Commit,
+		SourceFileCount:   root.Binding.Source.FileCount,
+		AcceptedFileCount: root.Binding.Source.AcceptedFileCount,
+		UnownedFileCount:  root.Binding.Source.UnownedFileCount,
+		Authority:         authority, CatalogDigest: root.LogicalDigest,
+		CatalogGeneration:      pointer.RootDigest,
+		CatalogControlRevision: pointer.ControlRevision,
+		StateControlRevision:   summary.ControlRevision,
+		CatalogServiceCount:    summary.CatalogServiceCount,
+		LiveServiceCount:       summary.LiveServiceCount, CurrentCount: summary.CurrentCount,
+		StaleCount: summary.StaleCount, UnavailableCount: summary.UnavailableCount,
+		ConflictCount: summary.ConflictCount, TombstoneCount: summary.TombstoneCount,
+		PublishedAt: pointer.PublishedAt, StateUpdatedAt: summary.UpdatedAt,
+	}
+}
+
 func projectServiceRow(entry store.ServiceStateEntry) (Service, error) {
+	return projectServiceRowBounded(entry, servicecatalog.MaxSuccessorEdges)
+}
+
+func projectServiceRowBounded(
+	entry store.ServiceStateEntry,
+	successorLimit int,
+) (Service, error) {
 	state := entry.State
-	if len(state.Successors) > servicecatalog.MaxSuccessorEdges {
+	if successorLimit < 0 || len(state.Successors) > successorLimit {
 		return Service{}, errors.New("service successor limit exceeded")
 	}
 	row := Service{
@@ -509,9 +692,9 @@ func projectServiceMemberships(
 	return memberships
 }
 
-func validateServiceDetailPaths(detail *ServiceDetail) error {
+func validateServiceDetailPaths(detail *ServiceDetail, successorLimit int) error {
 	if len(detail.Memberships) > serviceMembershipRecordLimit ||
-		len(detail.Successors) > servicecatalog.MaxSuccessorEdges {
+		successorLimit < 0 || len(detail.Successors) > successorLimit {
 		return errors.New("service detail collection limit exceeded")
 	}
 	paths := make(map[string]struct{}, servicecatalog.MaxServicePaths)
@@ -530,23 +713,26 @@ func validateServiceDetailPaths(detail *ServiceDetail) error {
 
 func validateServiceCursorSnapshot(
 	cursor *serviceInventoryCursor,
-	page *store.ServiceStatePage,
+	catalogGeneration string,
+	catalogRevision uint64,
+	summary servicecatalog.RepositoryState,
 ) error {
 	if cursor == nil {
 		return nil
 	}
-	if cursor.CatalogGeneration != page.Publication.GenerationDigest ||
-		cursor.CatalogControlRevision != page.Publication.ControlRevision ||
-		cursor.SummaryDigest != page.Summary.SummaryDigest ||
-		cursor.SummaryControlRevision != page.Summary.ControlRevision {
+	if cursor.CatalogGeneration != catalogGeneration ||
+		cursor.CatalogControlRevision != catalogRevision ||
+		cursor.SummaryDigest != summary.SummaryDigest ||
+		cursor.SummaryControlRevision != summary.ControlRevision {
 		return huma.Error409Conflict("service inventory cursor is no longer valid")
 	}
 	return nil
 }
 
-func decodeServiceInventoryCursor(
+func (service *ServiceDirectoryService) decodeServiceInventoryCursor(
 	encoded, queryDigest string,
 	authorization VisibilityContext,
+	catalogView string,
 ) (*serviceInventoryCursor, error) {
 	if encoded == "" {
 		return nil, nil
@@ -554,8 +740,19 @@ func decodeServiceInventoryCursor(
 	if len(encoded) > serviceCursorBytesLimit {
 		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(encoded)
-	if err != nil || len(raw) > serviceCursorBytesLimit || !json.Valid(raw) {
+	payload, signature, ok := strings.Cut(encoded, ".")
+	if !ok {
+		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	provided, signatureErr := base64.RawURLEncoding.DecodeString(signature)
+	mac := hmac.New(sha256.New, service.secret[:])
+	_, _ = mac.Write(raw)
+	if err != nil || signatureErr != nil ||
+		base64.RawURLEncoding.EncodeToString(raw) != payload ||
+		base64.RawURLEncoding.EncodeToString(provided) != signature ||
+		len(raw) > serviceCursorBytesLimit || !json.Valid(raw) ||
+		!hmac.Equal(provided, mac.Sum(nil)) {
 		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -568,26 +765,29 @@ func decodeServiceInventoryCursor(
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
 	}
-	checksum := cursor.Checksum
-	cursor.Checksum = ""
-	if cursor.Schema != serviceCursorSchema || cursor.QueryDigest != queryDigest ||
-		cursor.Authorization != authorization || cursor.Order != serviceInventoryOrder ||
-		cursor.AfterServiceKey == "" || cursor.AfterIncarnation == 0 || checksum == "" ||
-		checksum != digestJSON(cursor) {
+	if cursor.Schema != serviceCursorSchema || cursor.Order != serviceInventoryOrder ||
+		cursor.AfterServiceKey == "" || cursor.AfterIncarnation == 0 ||
+		(cursor.CatalogView == serviceCatalogViewV3) != (cursor.MemberRangeDigest != "") {
+		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
+	}
+	if cursor.QueryDigest != queryDigest || cursor.Authorization != authorization ||
+		cursor.CatalogView != catalogView {
 		return nil, huma.Error409Conflict("service inventory cursor is no longer valid")
 	}
-	cursor.Checksum = checksum
 	return &cursor, nil
 }
 
-func encodeServiceInventoryCursor(cursor serviceInventoryCursor) (string, error) {
-	cursor.Checksum = ""
-	cursor.Checksum = digestJSON(cursor)
+func (service *ServiceDirectoryService) encodeServiceInventoryCursor(
+	cursor serviceInventoryCursor,
+) (string, error) {
 	raw, err := json.Marshal(cursor)
 	if err != nil {
 		return "", err
 	}
-	encoded := base64.RawURLEncoding.EncodeToString(raw)
+	mac := hmac.New(sha256.New, service.secret[:])
+	_, _ = mac.Write(raw)
+	encoded := base64.RawURLEncoding.EncodeToString(raw) + "." +
+		base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 	if len(raw) > serviceCursorBytesLimit || len(encoded) > serviceCursorBytesLimit {
 		return "", errors.New("service inventory cursor exceeded its limit")
 	}
@@ -609,10 +809,10 @@ func validateServiceResponseSize(value any) error {
 
 func serviceDirectoryReadError(operation string, err error) error {
 	switch {
-	case errors.Is(err, store.ErrNotFound):
-		return huma.Error404NotFound("service not found")
 	case errors.Is(err, store.ErrConflict):
 		return huma.Error409Conflict("service catalog changed; retry")
+	case errors.Is(err, store.ErrNotFound):
+		return huma.Error404NotFound("service not found")
 	default:
 		return huma.Error500InternalServerError(operation, err)
 	}

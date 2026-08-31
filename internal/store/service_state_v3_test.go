@@ -821,10 +821,12 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	after, err := serviceStateV3Position(first.Root, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
 	page, err := pageReader.ListServices(
-		ctx, repository, ServiceStateFilter{}, ServiceStatePosition{
-			ServiceKey: anchor.ServiceKey, Incarnation: anchor.Incarnation,
-		}, MaxServiceStateReadPage,
+		ctx, repository, ServiceStateFilter{}, after, MaxServiceStateReadPage,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -832,11 +834,25 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	pageStats := pageCache.Stats()
 	if len(page.Entries) != MaxServiceStateReadPage ||
 		page.Entries[0].State.ServiceKey != "service-00500" ||
+		page.Continuation == nil || page.Continuation.MemberRangeDigest == "" ||
 		pageCounter.pointers.Load() != 1 || pageCounter.roots.Load() != 1 ||
 		pageCounter.members.Load() != 2 || pageCounter.summaries.Load() != 1 ||
 		pageCounter.points.Load() != 1 || pageCounter.pages.Load() != 1 ||
-		pageCounter.confirms.Load() != 1 || pageStats.MemberReads != 2 {
+		pageCounter.confirms.Load() != 1 || pageStats.MemberReads != 2 ||
+		pageStats.RootLeases != 1 || pageStats.MemberLeases != 2 {
 		t.Fatalf("10,000-service page counts = %+v / %+v", pageStats, page)
+	}
+	forged := *page.Continuation
+	page.Close()
+	closedStats := pageCache.Stats()
+	if closedStats.RootLeases != 0 || closedStats.MemberLeases != 0 {
+		t.Fatalf("closed page retained leases = %+v", closedStats)
+	}
+	forged.MemberRangeDigest = "sha256:" + strings.Repeat("0", 64)
+	if _, err := pageReader.ListServices(
+		ctx, repository, ServiceStateFilter{}, forged, MaxServiceStateReadPage,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("forged v3 member-range cursor = %v", err)
 	}
 
 	batchCounter, batchReader, batchCache := newServiceStateV3CountingReader(t, s)

@@ -128,7 +128,10 @@ zero for owners that do not publish those metric kinds. There is no v3
 retention configuration key and no valid dark candidate auto-promotes.
 V3 service-state reconcile and activation likewise have no configuration key
 or production worker: they are explicit store-only protocols until the later
-runtime-selector ticket.
+runtime-selector ticket. T41.7 hardens ordinary directory cursors with a
+process-local HMAC and adds only preconstructed, runtime-dark directory/search
+adapters for parity tests; no v3 runtime-selection key or capability is added,
+and T41.9 owns any production selection.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,

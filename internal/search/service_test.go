@@ -291,6 +291,20 @@ func TestSharedSearchScopeReceiptDistinguishesAllCodeAndService(t *testing.T) {
 	}
 }
 
+func TestServiceSearchWithoutStoreReturnsUnavailable(t *testing.T) {
+	searcher, err := Open(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(searcher.Close)
+	result, err := searcher.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeService, Repository: "example.com/acme/mono", ServiceKey: "orders",
+	}, "needle", Options{})
+	if result != nil || err == nil || !strings.Contains(err.Error(), "runtime authority is unavailable") {
+		t.Fatalf("service search without store = %+v, %v", result, err)
+	}
+}
+
 func TestServiceSearchRefusesInvalidV2WithoutLegacyFallback(t *testing.T) {
 	fixture := buildServiceSearchFixture(t)
 	searchPath := filepath.Join(

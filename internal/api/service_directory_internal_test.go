@@ -244,6 +244,24 @@ func TestServiceDirectoryCursorBindsSnapshotAndIncarnation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	forged := []byte(first.Pagination.NextCursor)
+	forged[0] ^= 1
+	if _, err := service.List(t.Context(), ServiceInventoryQuery{
+		Repository: fake.publication.Repository,
+	}, 1, string(forged)); humaStatus(err) != http.StatusBadRequest {
+		t.Fatalf("forged cursor = %v, want 400", err)
+	}
+	restarted := NewServiceDirectoryService(Options{Store: fake})
+	if _, err := restarted.List(t.Context(), ServiceInventoryQuery{
+		Repository: fake.publication.Repository,
+	}, 1, first.Pagination.NextCursor); humaStatus(err) != http.StatusBadRequest {
+		t.Fatalf("restarted-process cursor = %v, want 400", err)
+	}
+	if _, err := service.List(t.Context(), ServiceInventoryQuery{
+		Repository: fake.publication.Repository,
+	}, 2, first.Pagination.NextCursor); humaStatus(err) != http.StatusConflict {
+		t.Fatalf("page-size-transition cursor = %v, want 409", err)
+	}
 	principal = "user:other"
 	if _, err := service.List(t.Context(), ServiceInventoryQuery{
 		Repository: fake.publication.Repository,
@@ -273,18 +291,19 @@ func TestServiceDirectoryCursorBindsSnapshotAndIncarnation(t *testing.T) {
 	}
 	// The production store rejects this at its seek boundary; the fake mirrors
 	// that explicit invariant for the transport test.
-	decoded, err := decodeServiceInventoryCursor(
+	decoded, err := service.decodeServiceInventoryCursor(
 		first.Pagination.NextCursor,
 		digestJSON(struct {
-			Schema string                `json:"schema"`
-			Order  string                `json:"order"`
-			Query  ServiceInventoryQuery `json:"query"`
+			Schema   string                `json:"schema"`
+			Order    string                `json:"order"`
+			Query    ServiceInventoryQuery `json:"query"`
+			PageSize int                   `json:"page_size"`
 		}{serviceInventorySchema, serviceInventoryOrder, ServiceInventoryQuery{
 			Repository: fake.publication.Repository,
-		}}),
+		}, 1}),
 		catalogVisibilityContext(t.Context(), service.opts, []store.Repo{
 			fake.repositories[fake.publication.Repository],
-		}),
+		}), service.catalogView(),
 	)
 	if err != nil || decoded.AfterIncarnation == fake.entries[0].State.Incarnation {
 		t.Fatalf("cursor incarnation binding = %+v, err %v", decoded, err)
@@ -381,7 +400,7 @@ func TestServiceDirectoryBounds(t *testing.T) {
 	for index := range detail.Memberships {
 		detail.Memberships[index].Path = fmt.Sprintf("%04d-%s", index, strings.Repeat("p", 4091))
 	}
-	if err := validateServiceDetailPaths(&detail); err == nil {
+	if err := validateServiceDetailPaths(&detail, servicecatalog.MaxSuccessorEdges); err == nil {
 		t.Fatal("oversized distinct path bytes succeeded")
 	}
 	if err := validateServiceResponseSize(ServiceDetail{

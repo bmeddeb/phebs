@@ -11,6 +11,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicequery"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func TestSearchHTTPErrorClassifiesOnlyColdWarmingAsRetryable(t *testing.T) {
@@ -37,6 +38,14 @@ func TestSearchHTTPErrorClassifiesOnlyColdWarmingAsRetryable(t *testing.T) {
 		{
 			name: "scope unavailable", err: servicequery.ErrUnavailable,
 			status: http.StatusConflict,
+		},
+		{
+			name: "hidden scope", err: search.ErrScopeNotFound,
+			status: http.StatusNotFound, wantDetail: "search scope not found",
+		},
+		{
+			name: "unrelated store miss", err: store.ErrNotFound,
+			status: http.StatusInternalServerError,
 		},
 		{
 			name: "other", err: errors.New("broken search generation"),

@@ -3038,19 +3038,8 @@ selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration. T41.2–T41.5 are integrated;
-T41.6 is implementation-complete on its ticket branch, and T41.7 is next after
-integration.
-
-**T41.7 · Authorized HTTP/MCP/UI v3 parity** — project T41.6 through service
-inventory/detail, status, search scope, HTTP, MCP, and the existing directory
-without changing authority semantics. AC: authorization precedes repository/
-service lookup; cursors bind visible repositories, catalog generation, member
-range, principal, and page state; one page reads only intersecting members;
-the selected 512-successor posture is returned under the existing bounded
-detail response rather than re-decided here; stale/partial/unavailable/conflict/
-removed states remain explicit; forged cursor, revocation, hidden-service,
-deep-link, pagination, concurrent publication, browser, and 10,000-service
-paged-UI bounds pass; v3 selection remains runtime-dark; full merge bar.
+T41.6–T41.7 are implementation-complete on the stacked scale lineage. T41.8
+is next; integration remains separate.
 
 **T41.8 · Dark bucketed relationship publication** — replace
 one-file-per-service relationship storage and the monolithic hot root with a

@@ -142,6 +142,24 @@ test('shows bounded errors and retries the same exact route', async () => {
   expect(await screen.findByRole('option', { name: /Orders API/ })).toBeTruthy()
 })
 
+test('offers a filter-preserving first-page route when a cursor is invalid', async () => {
+  api.fetchServiceInventory.mockRejectedValueOnce(new Error('400: service inventory cursor is invalid'))
+  renderPage(new URLSearchParams({
+    repository: repositoryName,
+    status: 'stale',
+    include_removed: 'true',
+    cursor: 'expired/page',
+    service_key: 'orders-api',
+    relationship_cursor: 'orphaned/detail-page',
+  }))
+
+  expect(await screen.findByText('400: service inventory cursor is invalid')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+  expect(decodeURIComponent(screen.getByRole('link', { name: 'First page' }).getAttribute('href') ?? '')).toBe(
+    '#/services?repository=example.invalid/neutral+mono&status=stale&include_removed=true',
+  )
+})
+
 test('keeps inventory usable when an exact detail deep link is unavailable', async () => {
   api.fetchServiceDetail.mockRejectedValueOnce(new Error('404: service not found'))
   renderPage(new URLSearchParams({
@@ -149,7 +167,7 @@ test('keeps inventory usable when an exact detail deep link is unavailable', asy
     service_key: 'removed-service',
   }))
   expect(await screen.findByText('Service detail unavailable')).toBeTruthy()
-  expect(screen.getByText('The inventory is still current')).toBeTruthy()
+  expect(screen.getByText('The inventory remains available')).toBeTruthy()
   expect(screen.getByText('404: service not found')).toBeTruthy()
   expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Clear selection' }).getAttribute('href')).toBe(
@@ -157,6 +175,27 @@ test('keeps inventory usable when an exact detail deep link is unavailable', asy
   )
   fireEvent.click(screen.getByRole('button', { name: 'Retry detail' }))
   await waitFor(() => expect(api.fetchServiceDetail).toHaveBeenCalledTimes(2))
+})
+
+test.each([
+  ['repository identity', { repository: 'example.invalid/other' }],
+  ['catalog generation', { catalog_generation: `sha256:${'9'.repeat(64)}` }],
+  ['catalog revision', { catalog_control_revision: 3 }],
+  ['state revision', { state_control_revision: 8 }],
+] satisfies [string, Partial<ServiceRepository>][])('keeps inventory usable but refuses detail from different %s', async (_name, authority) => {
+  api.fetchServiceDetail.mockResolvedValueOnce({
+    ...detail(),
+    repository: { ...repository(), ...authority },
+  })
+  renderPage(new URLSearchParams({
+    repository: repositoryName,
+    service_key: 'orders-api',
+  }))
+
+  expect(await screen.findByText('Service detail unavailable')).toBeTruthy()
+  expect(screen.getByText('Service authority changed while loading. Retry detail.')).toBeTruthy()
+  expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
+  expect(screen.queryByText('service/orders')).toBeNull()
 })
 
 test('narrow and group-by-state are instant, window-scoped, and URL-borne', async () => {

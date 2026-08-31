@@ -506,6 +506,17 @@ poll, accumulate prior inventory pages, cache authority across principals, or
 turn catalog paths into evidence. **Search this service** uses the exact
 service-search scope when the service is current or explicitly stale.
 
+Directory continuations for ordinary v2 and the runtime-dark v3 adapter are
+HMAC-authenticated and process-local, so a server restart requires a fresh
+first-page route. V3 additionally binds the exact immutable member range and
+keeps the verified member lease until response validation and the final
+authorization/authority fence complete. No configuration or production
+selector exposes that adapter before T41.9. If a continuation refuses, the
+directory preserves its filters and offers a first-page route. Concurrent
+inventory/detail responses render detail only when repository, catalog
+generation/revision, and state revision match; otherwise the inventory remains
+available and the detail fails closed with retry and clear-selection actions.
+
 When the server also advertises `service-relationships-v1`, the selected
 detail adds an **Exact relationship overview**. Its three linked summaries are
 the exact bounded reference counts for:
@@ -1204,19 +1215,20 @@ reader, or runtime faults remain HTTP 500 rather than being relabeled as an
 ordinary unavailable service.
 
 The v3 catalog and v3 service-state machinery remains runtime-dark and adds no
-HTTP, MCP, UI, or configuration surface. Explicit store reconciliation writes
-at most 512 rows per durable chunk and keeps strict v3 reads unavailable until
-the final matching-summary CAS. Explicit activation then updates at most 512
-rows plus that matching summary atomically, so services already activated from
-the same catalog remain readable while later chunks settle.
+selected or advertised production v3 HTTP, MCP, UI, or configuration surface.
+Explicit store reconciliation writes at most 512 rows per durable chunk and
+keeps strict v3 reads unavailable until the final matching-summary CAS.
+Explicit activation then updates at most 512 rows plus that matching summary
+atomically, so services already activated from the same catalog remain readable
+while later chunks settle.
 
 Its dark query compiler/runtime can now consume a verified v3 root/member
 lease without changing the existing query authority receipt. Current service
 scope reads one member; stale scope may open exactly one historical member,
 and the lease stays pinned through the final repository/catalog/state/search
-fence. This entry point is intentionally unregistered: all product search
-continues to use the selected v2 path until T41.7 supplies authorized transport
-parity and T41.9 explicitly selects the v3 stack.
+fence. The same unregistered adapter now projects that exact scope and receipt
+through HTTP, streamed HTTP, and MCP. Ordinary product search continues to use
+the selected v2 path; T41.9 alone may select the v3 stack in production.
 
 
 ### Revision scopes
