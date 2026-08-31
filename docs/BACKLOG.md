@@ -52,7 +52,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 40 · Very-large-monorepo derived-pipeline convergence *(in progress · T40.1–T40.12 complete · T40.13 next)*
+## Epic 40 · Very-large-monorepo derived-pipeline convergence *(T40.1–T40.13 complete · closure disposition pending)*
 
 Make the source-observation, candidate, extraction, and downstream generation
 pipeline converge under a neutral repository shape with at least two million
@@ -2909,6 +2909,37 @@ Steady-state cost: one existing integer comparison changes its constant and the
 test table adds one row. No production request, query, worker, retry,
 publication, lifecycle/store mutation, child, lock, cache, or persistent state
 changes.
+
+**T40.13ac ✅ · Neutral-47 completed gate disposition**
+*(2026-08-30 · documentation-only · needs the sealed neutral-47 package)* —
+record the independently reviewed T40.13 mechanics pass without expanding its
+claims. Exact source
+`fb88c1d7fed7f32c1c3dd07303268366535cfa0c` produced V32 outcome
+`completed` and substantiated decision `continue/all_exact_mechanics_passed`.
+The signed source-free package is
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`.
+
+AC (met): independently recompute the package digest; verify the freeze and
+evidence signatures, checksum inventory, and returned bundle; match the exact
+source, plan, freeze, observation, receipt, manifest, and signer identities;
+require all 12 phases and 16 checks to pass exact oracles, all 11 startups to
+be healthy, all 14 waits to converge, and completed teardown to retain neither
+derived nor scratch-source custody. The structural profile published 2,000,002
+physical owners with 1,956/1,956 settled partitions and nine domains; the
+semantic profile published 294,914 physical owners with 272/272 settled
+partitions and nine domains. Interruption recovered the selected lease as
+`requeued`; pressure, archive/restore, collection, and authorized query all
+passed their frozen checks.
+
+Outcome: T40.13 is complete. The receipt remains mechanics evidence only and
+explicitly establishes no target SLO, service scale, accuracy, completeness,
+migration, or decommissioning, and authorizes neither release nor private
+rerun. Epic 40 closure/demo disposition, Epic 41 progression, and reservation
+retirement remain separate decisions.
+
+Steady-state cost: documentation only; no compiled, embedded, fixture, corpus,
+harness, request, worker, retry, publication, lifecycle, store, child, lock,
+cache, schema, bound, or persistent product state changes.
 
 ## Epic 41 · Ten-thousand-service authority and sparse consumers *(scheduled after Epic 40)*
 

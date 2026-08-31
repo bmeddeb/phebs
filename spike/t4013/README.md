@@ -4911,3 +4911,26 @@ evidence and all external controls remain. T40.13ab retires 46 and first admits
 47. It changes no plan schema, product behavior, or resource bound. Neutral-47
 still requires exact-main preflight, freeze, independent digest/signer review,
 and a separate local execution command.
+
+## Neutral-47 completed T40.13 gate
+
+Neutral-47 froze and executed exact source
+`fb88c1d7fed7f32c1c3dd07303268366535cfa0c` under plan
+`sha256:44fe9383a2011fbe0be15460e96294cf011b4e01da4c7e4e6e7965281295c810`
+and signer `SHA256:6wAVXoPkI8zOwWbEjbZ6TCqVlj3TnbMUZS2Bf4LROKM`. Its source-free package
+`sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`
+passed independent digest, signature, checksum, bundle, and receipt review.
+
+V32 records `completed`, substantiated `continue`, and
+`all_exact_mechanics_passed`. All 12 phases and 16 checks passed exact oracles;
+all 11 startups were healthy and all 14 waits converged. Structural settled
+1,956/1,956 partitions for 2,000,002 physical owners; semantic settled 272/272
+for 294,914 physical owners. Interruption recovered the selected lease as
+`requeued`; pressure, archive/restore, collection, both authorized-query
+boundaries, exact totals, and teardown passed. Teardown retained no derived or
+scratch-source custody.
+
+This completes T40.13's frozen mechanics gate. It does not establish a target
+SLO, service scale, accuracy, completeness, migration, or decommissioning, and
+does not authorize release or a private rerun. Epic 40 closure/demo disposition
+and Epic 41 progression remain separate decisions.

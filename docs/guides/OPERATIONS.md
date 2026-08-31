@@ -6130,6 +6130,39 @@ host-pressure reservation. Neutral-46 is consumed. After T40.13ab integration,
 neutral-47 is the first admissible identifier; rerun preflight and freeze it,
 then stop for independent plan/signer review before any local execution.
 
+### Neutral-47 completed-gate disposition
+
+Preserve the sealed source-free package at
+`/Users/ben/phebs-t4013-ceremony/t40r1-neutral-47/t40r1-neutral-47-source-free.tgz`.
+Its independently recomputed digest is
+`7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0`.
+It binds exact source `fb88c1d7fed7f32c1c3dd07303268366535cfa0c`, plan
+`sha256:44fe9383a2011fbe0be15460e96294cf011b4e01da4c7e4e6e7965281295c810`,
+freeze envelope
+`sha256:43ec1d76a48a741398bb65728aaecf3caf96be40f74c52b6d0d7cc619e29df07`,
+and signer `SHA256:6wAVXoPkI8zOwWbEjbZ6TCqVlj3TnbMUZS2Bf4LROKM`.
+Observation, receipt, and manifest digests are respectively
+`cb66267d19dad7063a11eb32b7bffb074c71fdf8dd13f6dc58c3e49069dba156`,
+`3f6a45fccb47119518041a6ec87cabfa3c596bf5fd3d261dcbaaf48c9d20522b`,
+and `0a7eb408d374a7ad9001132c966fbfbc80d13fa9632279ce7a1f3d408f1cb2b0`.
+
+Independent verification passed the freeze signature, evidence signature,
+checksum inventory, source-free evidence validator, and returned-bundle
+validator. The V32 receipt records `outcome=completed`, substantiated
+`decision=continue`, and `reason=all_exact_mechanics_passed`. All 12 phases and
+16 checks passed exact oracles, all 11 server startups were healthy, and all
+14 convergence waits ended `converged/complete`. Interruption completed with
+the selected lease `requeued`; archive/restore, fresh collection, semantic and
+structural authorized queries, and exact totals passed. Teardown completed,
+and the run root retains no custody, supervision, prepared control, derived
+data, scratch source, or ceremony process.
+
+This is the T40.13 mechanics-gate pass. Do not relabel it as a target SLO,
+supported service scale, accuracy/completeness, migration, decommissioning,
+release, or private-rerun authorization. Preserve the package and signer.
+Retire the host-pressure reservation only through a separate reviewed cleanup;
+Epic 40 closure/demo disposition and Epic 41 progression are separate actions.
+
 ### Focused T40.13 Phase-12 teardown rehearsal
 
 Human Phase 12 is `teardown` (`phaseOrder[11]`). Run only its destructive-to-a-
