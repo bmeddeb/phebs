@@ -9690,6 +9690,49 @@ effect, listener, timer, cache invalidation, lock, persistence, backend, disk,
 child, authority, or concurrency work. Independent final review reports
 critical/high/medium/low 0. No merge or integration is claimed.
 
+**T43R.5 ✅ · SectionHelp deployment (S3)** *(completed 2026-08-31; needs
+T43R.4)* — canonical glossary commits `c9c7929`, `06409ea`, and `c23d2ab`
+add **Service catalog authority** under `service-catalog-v2`, **Exact static
+relationship** under `service-relationships-v1`, and exact registrations for
+Service Directory, Relationship Explorer, File, History, Blame, and Commit.
+The four Git routes reuse **Implementation evidence** under reviewed core
+`source-search` or `history`. The corrected definitions preserve the immutable
+selected relationship root without inventing a citation-time currentness
+fence, identify catalog input as operator/catalog metadata bound to rather than
+read from a repository, and describe each Git reader's actual route context and
+bounded response fields instead of claiming one shared provenance envelope.
+
+UI commits `fa1659a` and `0cbb224` deploy one heading-adjacent shared control
+per route, keep it available in pre-data, loading, loaded, and failed states,
+use contextual accessible trigger and close names, and retain the canonical
+unavailable explanation when a required capability is absent. Help changes no
+source, catalog, relationship, or Git authority and makes no ownership,
+deployment, runtime-traffic, completeness, instruction, correctness, provider,
+or release claim. File, Commit, and Blame tests open the dialog and bind both
+the intended canonical term and its available capability predicate.
+
+Glossary generation/tests and verification pass; the complete UI suite passes
+628/628, lint and typecheck/build pass, and targeted authenticated 1440px/390px
+Chrome review confirms focus return, Escape dismissal, viewport containment,
+zero document overflow, and a clean target-page console. Final exact
+implementation review at `c23d2ab` reports critical/high/medium/low 0. Relative
+to exact main, all built JS/CSS/HTML is +4,408/+2,225 raw/gzip bytes with one
+added lazy shared chunk. A closed control adds no request, poll, mutation,
+global listener, timer, portal, backend, schema, persistence, startup/sync,
+retry/no-op, publication, lock, cache, disk, or child work; only an open help
+surface mounts the existing bounded portal, listeners, geometry reads, and
+short hover-close timer.
+
+The manifest remains 32 authenticated routes/130 baselines. This ticket changes
+eight existing routes—Service Directory, three Relationship Explorer states,
+File, History, Blame, and Commit—and therefore leaves 32 stored theme/density
+PNGs stale. The canonical retained cohort is unavailable, and the available
+live cohort cannot supply equivalent fixture state. Ben explicitly waived the
+canonical retained comparison on 2026-08-31. This is a completion exception,
+specifically a retained-receipt-gate exception—not a passing comparison or
+approval to retain noncanonical loading, error, or unavailable states. No
+baseline update, clean retained comparison, merge, or integration is claimed.
+
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
 RPC/Kafka postings, caller-leaf generation identities, and atomic service

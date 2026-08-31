@@ -158,11 +158,12 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, and T43R.5 implemented with its retained visual
-comparison still open after T43R.1 and T43R.2 completed on 2026-08-30 and
-T43R.3–4 completed on 2026-08-31. It
-touched no scale plane, authority, or claim; T41.2–T41.5 are integrated and
-T41.6 is next.
+baseline, zero open blockers, and all T43R.1–5 residue completed after T43R.1
+and T43R.2 completed on 2026-08-30 and T43R.3–5 completed on 2026-08-31.
+T43R.5 closes under an explicit retained-receipt exception, not a passing
+comparison. It
+changed no scale-plane runtime or product authority and made no scale or
+release claim; T41.2–T41.5 are integrated and T41.6 is next.
 
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
@@ -251,7 +252,7 @@ to the T43R.3 parent, the main chunk changes by +114/+37 raw/gzip bytes and the
 unchanged 161-chunk JavaScript set changes by -106/-131. Independent final
 review reports critical/high/medium/low 0. No merge or integration is claimed.
 
-T43R.5 implementation is complete on its presentation branch. Separate commits
+T43R.5 completed in the presentation track on 2026-08-31. Separate commits
 `c9c7929`, `06409ea`, and `c23d2ab`, explicitly authorized as a boundary
 crossing, add the canonical **Service catalog authority** and **Exact static
 relationship** glossary terms, their `service-catalog-v2` and
@@ -268,10 +269,13 @@ browser review pass. Final exact-HEAD review reports critical/high/medium/low
 raw/gzip bytes and adds one lazy shared chunk; a closed control performs no
 request and installs no global listener or timer. The canonical retained
 receipt cohort is unavailable, while the available live cohort cannot supply
-equivalent fixture state. The eight affected existing routes—Service
-Directory, three Relationship Explorer states, File, History, Blame, and
-Commit—therefore leave 32 theme/density PNGs stale. No baseline update, clean
-retained comparison, ticket completion, merge, or integration is claimed.
+equivalent fixture state. The manifest remains 32 authenticated routes/130
+baselines. The eight affected existing routes—Service Directory, three
+Relationship Explorer states, File, History, Blame, and Commit—therefore leave
+32 theme/density PNGs stale. Ben explicitly waived the canonical retained
+comparison on 2026-08-31. This is a receipt-gate completion exception, not a
+passing comparison or approval to record noncanonical fixture states. No
+baseline update, clean retained comparison, merge, or integration is claimed.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
