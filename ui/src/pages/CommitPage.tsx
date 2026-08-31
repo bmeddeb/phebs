@@ -42,19 +42,19 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
 
   return (
     <div className={css({ maxWidth: '1200px', margin: '0 auto' })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' })}>
+        <CommitIcon size={20} />
+        <code className={css({ fontFamily: FONTS.MONO, fontSize: '13px', color: tok.textSecondary })}>{commit?.commit.short_id ?? 'Commit'}</code>
+        <SectionHelp
+          termId="implementation_evidence"
+          enabledCapabilities={HISTORY_EVIDENCE_CAPABILITIES}
+          triggerLabel="Commit"
+        />
+      </div>
       {error && <Notification kind={NOTIFICATION_KIND.negative}>{error}</Notification>}
       {!commit && !error && <Spinner $size="small" />}
       {commit && (
         <>
-          <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' })}>
-            <CommitIcon size={20} />
-            <code className={css({ fontFamily: FONTS.MONO, fontSize: '13px', color: tok.textSecondary })}>{commit.commit.short_id}</code>
-            <SectionHelp
-              termId="implementation_evidence"
-              enabledCapabilities={HISTORY_EVIDENCE_CAPABILITIES}
-              triggerLabel="Commit"
-            />
-          </div>
           <h1 className={css({ marginTop: 0, marginBottom: '12px', fontSize: '22px', lineHeight: '30px', fontWeight: 600, color: tok.textPrimary })}>
             {commit.commit.subject || '(no subject)'}
           </h1>

@@ -17,20 +17,13 @@ const fixture = vi.hoisted(() => {
     author: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
     committer: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
   }
-  return { commit, fetchCommits: vi.fn(), fetchDiff: vi.fn() }
+  return { commit, fetchCommits: vi.fn(), fetchCommit: vi.fn(), fetchDiff: vi.fn() }
 })
 
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   fetchCommits: fixture.fetchCommits,
-  fetchCommit: async () => ({
-    revision: fixture.commit.id,
-    commit: fixture.commit,
-    changes: [
-      { status: 'added', path: 'src/new.go', additions: 2, deletions: 0 },
-      { status: 'deleted', path: 'src/old.go', additions: 0, deletions: 3 },
-    ],
-  }),
+  fetchCommit: fixture.fetchCommit,
   fetchDiff: fixture.fetchDiff,
   fetchBlame: async () => ({
     revision: fixture.commit.id,
@@ -51,6 +44,15 @@ const page = (child: React.ReactNode) => (
 beforeEach(() => {
   fixture.fetchCommits.mockReset()
   fixture.fetchCommits.mockResolvedValue({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: false })
+  fixture.fetchCommit.mockReset()
+  fixture.fetchCommit.mockResolvedValue({
+    revision: fixture.commit.id,
+    commit: fixture.commit,
+    changes: [
+      { status: 'added', path: 'src/new.go', additions: 2, deletions: 0 },
+      { status: 'deleted', path: 'src/old.go', additions: 0, deletions: 3 },
+    ],
+  })
   fixture.fetchDiff.mockReset()
   fixture.fetchDiff.mockResolvedValue({
     base: 'b'.repeat(40),
@@ -140,6 +142,25 @@ test('commit renders bounded patch rows and does not link a deleted file at the 
   expect(screen.getByText('-old')).toBeTruthy()
   expect(screen.getByRole('link', { name: 'src/new.go' }).getAttribute('href')).toContain('/file?')
   expect(screen.queryByRole('link', { name: 'src/old.go' })).toBeNull()
+})
+
+test('commit keeps contextual help available while loading', () => {
+  fixture.fetchCommit.mockReturnValueOnce(new Promise(() => {}))
+  fixture.fetchDiff.mockReturnValueOnce(new Promise(() => {}))
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  expect(screen.getByRole('button', { name: 'Help for Commit' })).toBeTruthy()
+  expect(screen.getByText('Commit')).toBeTruthy()
+})
+
+test('commit keeps contextual help available after a request failure', async () => {
+  fixture.fetchCommit.mockRejectedValueOnce(new Error('commit request failed'))
+
+  render(page(<CommitPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp&ref=' + fixture.commit.id)} />))
+
+  expect((await screen.findByRole('alert')).textContent).toContain('commit request failed')
+  expect(screen.getByRole('button', { name: 'Help for Commit' })).toBeTruthy()
 })
 
 test('commit groups an ordered multi-file patch into deferred semantic regions', async () => {
