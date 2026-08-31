@@ -158,8 +158,8 @@ through authority drawers, contract-exact caveats, citation objects, scope
 continuity, keyboard navigation, operator cards, and ten-thousand-row
 density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
-baseline, zero open blockers, and T43R.4–5 queued after T43R.1 and T43R.2
-completed on 2026-08-30 and T43R.3 completed on 2026-08-31. It
+baseline, zero open blockers, and T43R.5 queued after T43R.1 and T43R.2
+completed on 2026-08-30 and T43R.3–4 completed on 2026-08-31. It
 touched no scale plane, authority, or claim; T41.2 takes its separate
 integration gate before T41.3 begins.
 
@@ -226,6 +226,29 @@ visually reviewed, and the 130-baseline manifest contract passes. Source-free
 navigation behavior, 11px actions, viewport containment, zero document
 overflow, and a clean console. Independent final review reports no finding.
 No receipt exception, merge, or integration is claimed by this roadmap entry.
+
+T43R.4 completed in the presentation track on 2026-08-31. Exact implementation
+commit `0ec15f0` moves the catalog surfaces' existing error formatter into one
+shared helper and applies it to History's initial/load-more failures and
+Analytics failures. One leading `Error:` prefix is removed; values through 512
+UTF-16 code units remain exact; longer values retain 511 units plus `…`.
+History keeps already loaded commits after a later failure and no longer pairs
+an initial failure with the false **No commits** state. Analytics renders no
+zero/empty usage claim when its request fails. Abort, generation, request-key,
+authorization, and stale-response fences remain exact.
+
+The focused contract set passes 48/48 and the complete UI suite passes 626/626;
+lint and typecheck/build pass. Source-free forced-failure browser QA at 1440px
+and 390px, light/comfortable and dark/dense, confirms exact 512-unit alert text,
+`role=alert`, unbroken-token wrapping, viewport containment, zero document
+overflow, and a clean console on both pages. The retained manifest stays at 32
+authenticated routes/130 baselines; this failure state adds no route or PNG.
+The retained runner's unauthenticated pair passed, but its stored authenticated
+state was stale and no receipt password was configured, so 128 authenticated
+comparisons did not run and no clean retained comparison is claimed. Relative
+to the T43R.3 parent, the main chunk changes by +114/+37 raw/gzip bytes and the
+unchanged 161-chunk JavaScript set changes by -106/-131. Independent final
+review reports critical/high/medium/low 0. No merge or integration is claimed.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and

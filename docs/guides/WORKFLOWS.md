@@ -1404,6 +1404,13 @@ Diff context defaults to three lines when omitted, while an explicit
 repository/path and pins supplied branch names to immutable object IDs before
 subsequent Git commands run.
 
+History failures use the same bounded presentation as catalog failures: one
+synthetic leading `Error:` prefix is removed, displayed detail is capped at 512
+UTF-16 code units, and unbroken metadata wraps within the viewport. An initial
+failure is not reported as **No commits**; a later page failure leaves already
+loaded commits visible and the existing **Load more** action remains the only
+page-retry path. This display bound is not sensitive-data redaction.
+
 The Commit page presents patch text as labelled file regions. File identity,
 status, and statistics come from the structured diff response in its existing
 order; the raw `diff --git` line starts a visual region but is not parsed into

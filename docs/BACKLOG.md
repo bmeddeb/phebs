@@ -3256,9 +3256,11 @@ merge exception are recorded in the completed backlog.
 dialog boundary, bounded cost, responsive review, and retained 32-route/
 130-baseline receipt evidence are recorded in the completed backlog.
 
-**T43R.4 · Bounded errors everywhere (S2)** — History and Analytics render
-raw `String(cause)`; route them through the bounded-error form the catalog
-surfaces use.
+**T43R.4 ✅ · Bounded errors everywhere (S2)** *(completed 2026-08-31 →
+[BACKLOG_COMPLETED.md](./BACKLOG_COMPLETED.md))* — the shared 512-unit
+failure contract, History/Analytics state truth, bounded cost, targeted
+responsive evidence, and exact retained-receipt nonclaim are recorded in the
+completed backlog.
 
 **T43R.5 · SectionHelp deployment (S3)** — extend the glossary help to the
 catalog (directory, explorer) and git (file, history, blame, commit)

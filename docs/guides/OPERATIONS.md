@@ -1230,6 +1230,11 @@ query text is deliberately **not** stored. Events never leave the machine and
 nothing phones home — a deliberate divergence from upstream's telemetry.
 The `#/analytics` dashboard and `GET /api/analytics` aggregate them on demand;
 `analytics.retention` (default 365 days, `"0"` forever) bounds growth.
+If the dashboard request fails, it shows an alert rather than zero or empty
+usage. One synthetic leading `Error:` prefix is removed, displayed detail is
+capped at 512 UTF-16 code units, and unbroken metadata wraps within the
+viewport. This display bound is not sensitive-data redaction and adds no
+automatic retry.
 
 ### Job system
 

@@ -9648,6 +9648,48 @@ with the seeded Workbench's content landmark without changing product behavior.
 Independent final review reports critical/high/medium/low 0. No receipt
 exception, merge, or integration is claimed.
 
+**T43R.4 ✅ · Bounded errors everywhere (S2)** *(completed 2026-08-31; needs
+T43R.3)* — exact implementation commit `0ec15f0` moves the catalog surfaces'
+existing formatter into one shared `boundedError` helper and applies it to the
+two raw History failure paths plus Analytics. It removes one leading `Error:`
+prefix with following whitespace, preserves values through 512 UTF-16 code
+units, and otherwise retains 511 units plus `…`. Utility tests pin 511, 512,
+513, and an exact 512-unit astral-string case. The three catalog consumers keep
+their existing call sites and byte-for-byte formatter behavior.
+
+History runs the helper only after its existing abort, generation, and exact
+request-key fences. Initial failure no longer appears beside a false **No
+commits** claim; load-more failure keeps prior commits visible and leaves the
+existing page action intact. Analytics runs the helper only after its existing
+generation/abort fence and renders no zero or empty usage claim on failure.
+Both existing Base UI alerts retain `role=alert` and add `min-width: 0` plus
+`overflow-wrap: anywhere`. No automatic retry or redaction claim is added.
+
+The focused contract set passes 48/48 and the complete UI suite passes 626/626;
+lint, typecheck/build, and whitespace pass. Source-free forced-failure browser
+QA covers History and Analytics at 1440px and 390px in light/comfortable and
+dark/dense: each rendered detail is exactly 512 units, ends in the ellipsis,
+wraps an unbroken token without local or document overflow, remains within the
+viewport, and produces no console warning/error. The retained manifest remains
+32 authenticated routes/130 baselines because the ticket adds no fixture route
+or PNG. A comparison attempt passed the two anonymous receipts, then stopped at
+setup because stored authentication was stale and no receipt password was
+configured; 128 authenticated comparisons did not run, so this record makes no
+clean retained-comparison claim.
+
+Relative to the exact T43R.3 parent, the main chunk changes from
+339,257/96,541 to 339,371/96,578 raw/gzip bytes (+114/+37). All JavaScript
+remains 161 chunks and changes from 6,856,622/2,035,234 to
+6,856,516/2,035,103 bytes (-106/-131) because the three formatter clones now
+share one implementation. Successful, aborted, and stale paths add no work.
+Each accepted failure performs one string conversion, one anchored prefix
+replacement, one length check, and at most one 511-unit slice plus ellipsis;
+transient normalization remains proportional to the incoming cause string as
+before, while retained state is capped at 512 units. It adds no request,
+effect, listener, timer, cache invalidation, lock, persistence, backend, disk,
+child, authority, or concurrency work. Independent final review reports
+critical/high/medium/low 0. No merge or integration is claimed.
+
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
 RPC/Kafka postings, caller-leaf generation identities, and atomic service
