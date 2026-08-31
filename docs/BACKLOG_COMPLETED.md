@@ -10422,3 +10422,56 @@ V3 remains unregistered for selection and all v1/v2 catalog and state authority
 is unchanged. T41.5 owns state writers and activation fencing; T41.9 still owns
 the runtime selector. This ticket makes no production-cap, release, ceremony,
 scale/SLO, topology, migration-completion, or decommission claim.
+
+**T41.5 ✅ · Resumable service-state reconcile and activation**
+*(2026-08-31; high)* — v3 state now uses distinct shadow rows, repository
+summaries, and durable plans while reusing the existing generation scheduler's
+chunk, lease, current-pointer, retry, and lifecycle authority. No runtime
+worker or selector is registered.
+
+Reconcile strict-opens the selected dark v3 candidate and processes one
+at-most-512-service member per chunk. Ordered removal pages inspect at most 512
+rows and open only intersecting service members. The repository summary stays
+absent or catalog-mismatched until one final CAS, so no partial reconciliation
+can appear current. Activation starts only from an exact candidate/summary
+match; every service chunk updates at most 512 rows plus that already-matching
+summary atomically, preserving readable independently current services.
+
+Every chunk fences the candidate root/revision, plan and schedule identity,
+current pointer, exact lease, prior plan cursor and tombstone count, summary,
+and each written row's revision/digest. A crash after the state transaction but
+before scheduler settlement safely replays without rewriting state. Terminal
+failure can create at most eight repair/continue successors from the preserved
+cursor; no rollback is claimed. Candidate publication refuses while reconcile
+is running and atomically supersedes an activation plan and schedule so a stale
+lease cannot commit.
+
+Unchanged service projection identity excludes the catalog root while the
+desired and active rows retain and index-pin the exact historical root that
+authored them. A one-service catalog delta and A→B→A therefore each rewrite
+one service rather than the full catalog. Removed→re-added increments the
+incarnation exactly once. Catalog collection rechecks both indexed root fields.
+Generation-schedule collection owns settled v3 plans, and restore preserves
+precious state rows/summaries while clearing restartable plans for bounded
+reconstruction.
+
+The 10,000-service cold/no-op/activation/one-service-delta/A→B→A proof
+completed in 7.386s. Every chunk stayed at or below 512 rows; cold reconcile
+read at most 20,000 state rows and wrote 10,000, activation read and wrote
+10,000, and each small delta wrote one. Encoded writes stayed below 64 MiB and
+the plan remained within the frozen member/chunk bound. The v1/v2 catalog,
+state, summary, revision, and pointer bytes remained exactly unchanged.
+
+Focused normal and race tests cover schema drift/idempotence, transaction
+rollback, restart/replay, terminal repair, settled lifecycle collection,
+successor fencing, partial activation readability, ABA/incarnation, the
+10,000-service bound, and exact live backup/restore. Repository-wide
+compile-only, vet, lint, module, documentation, glossary, shell, whitespace,
+complete affected normal, and complete affected race results close the branch
+merge bar. The full store package passed in 1151.527s normally and 1219.900s
+under race; live recovery passed in 58.899s and 60.924s respectively.
+
+T41.3–T41.5 remain one unmerged stacked integration boundary. T41.6 is next
+only after separate integration authorization. This ticket changes no current
+production service cap, release posture, ceremony, scale/SLO, topology,
+migration-completion, or decommission claim.

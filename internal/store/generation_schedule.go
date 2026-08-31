@@ -140,6 +140,7 @@ DELETE generation_schedule_chunk RETURN NONE;
 DELETE generation_schedule_current RETURN NONE;
 DELETE generation_schedule_repository RETURN NONE;
 DELETE generation_schedule RETURN NONE;
+DELETE service_state_v3_plan RETURN NONE;
 DELETE extraction_domain_root RETURN NONE;
 COMMIT;`, nil)
 	if err != nil {

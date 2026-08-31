@@ -304,6 +304,9 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		!equalServiceCatalogV3Root(rootRows[0], rootWanted, rootIdentifier) {
 		return ErrConflict
 	}
+	if len(rootRows) == 1 {
+		rootWanted.RecordedAt = rootRows[0].RecordedAt
+	}
 	if len(rootRows) == 0 {
 		created, createErr := surrealdb.Query[[]serviceCatalogV3RootRec](
 			ctx, tx, `CREATE $rid CONTENT {
@@ -404,6 +407,15 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 			candidateRows[0], root.Binding.Repository,
 		) {
 		return ErrConflict
+	}
+	priorRoot := ""
+	if len(candidateRows) == 1 {
+		priorRoot = candidateRows[0].RootDigest
+	}
+	if err := fenceServiceStateV3CandidateAdvance(
+		ctx, tx, root.Binding.Repository, priorRoot, root.Digest,
+	); err != nil {
+		return err
 	}
 	if len(candidateRows) == 0 || candidateRows[0].RootDigest != root.Digest {
 		revision := uint64(1)

@@ -3004,8 +3004,10 @@ active catalog reference, and current plus two rollback generations. It scans
 at most eleven candidates and deletes one immutable generation per turn;
 authority-version claims remain. Generation-schedule collection protects the
 current pointer and every running lease, then removes no more than fifteen
-chunks plus an empty schedule. Its wrapped key cursor reconsiders a schedule
-after a lease releases.
+chunks plus an empty schedule. Runtime-dark v3 service-state reconcile and
+activation plans reuse this scheduler ownership; collecting a settled schedule
+removes its non-running shadow plan in the same transaction. Its wrapped key
+cursor reconsiders a schedule after a lease releases.
 
 Job maintenance covers all eight durable job tables. It deletes at most
 sixteen terminal rows older than 30 days, performs a restart-resumable 64-row
@@ -3128,6 +3130,12 @@ and validation before serving. Collection protects the dark candidate, future
 current/desired/active state references, and two newest prior roots; an atomic
 `collecting` transition removes an eligible root from history before one
 member edge per turn drains, with shared content deleted only by its last root.
+V3 state rows and repository summaries remain precious across backup/restore;
+restartable v3 state plans are cleared on restore and reconstructed from the
+bounded surviving rows. Indexed desired/active catalog references pin their
+historical roots. Reconcile keeps the summary catalog-mismatched until its final
+CAS; activation updates at most 512 rows plus the matching summary atomically.
+Neither protocol is registered with the production scheduler yet.
 
 The retained source-free receipt at `spike/t354/results.json` binds T32.3's
 synthetic 1,000/5,000-service profiles to production-path gates for catalog

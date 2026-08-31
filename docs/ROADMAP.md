@@ -160,9 +160,9 @@ density, closing with a motion pass. It completed on 2026-08-08 — closure
 record `spike/t431/CLOSURE.md`, re-critique 37/40 against the 23/40
 baseline, zero open blockers, and T43R.5 queued after T43R.1 and T43R.2
 completed on 2026-08-30 and T43R.3–4 completed on 2026-08-31. It
-touched no scale plane, authority, or claim; T41.2 is integrated, T41.3 and
-T41.4 retain stacked merge bars, and their separate integration precedes
-T41.5.
+touched no scale plane, authority, or claim; T41.2 is integrated, while
+T41.3–T41.5 retain stacked merge bars whose separate integration precedes
+T41.6.
 
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
@@ -829,9 +829,9 @@ service count × repository bytes
   reduce-only aggregate envelope; T41.2 retains v2 semantics in
   a v3 root with dual service/path member views; T41.3 streams exact census
   proof and stores precious root/member rows behind a dark pointer; T41.4 adds
-  exact recovery/archive ownership and a fifteenth bounded lifecycle owner.
-  Next, reconcile and activate state under
-  separate resumable fences, make authorized point/page reads member-local,
+  exact recovery/archive ownership and a fifteenth bounded lifecycle owner;
+  T41.5 reconciles and activates shadow state under separate resumable fences.
+  Next, make authorized point/page reads member-local,
   bucket relationship publications, and close on a neutral
   10,000-service recovery/lifecycle/product gate. No constants-only increase
   is permitted.
@@ -889,8 +889,17 @@ catalog, relationship, or correctness authority.
   validates the whole precious v3 inventory under live backup and after
   restore; and adds one shared-lock lifecycle owner with atomic tombstoning,
   candidate/state-reference/rollback protection, restartable member drains,
-  malformed-row isolation, and exact byte status. T41.3 and T41.4 remain a
-  stacked integration boundary; T41.5 is next after separate authorization.
+  malformed-row isolation, and exact byte status.
+- T41.5 reuses generation-scheduler chunks and leases for distinct v3
+  reconcile and activation plans. Reconcile withholds the matching summary
+  until its final CAS; activation updates at most 512 rows plus that summary
+  atomically. Successor publication fences reconcile and supersedes activation,
+  terminal repair/continue is bounded, restore preserves precious state while
+  clearing plans, and indexed desired/active roots protect historical catalogs.
+  The 10,000-service proof bounds every chunk at 512 rows, cold writes at
+  10,000 rows, activation writes at 10,000, and one-service deltas at one row.
+  T41.3–T41.5 remain one stacked integration boundary; T41.6 is next after
+  separate authorization.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

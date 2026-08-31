@@ -39,6 +39,9 @@ type ServiceCatalogV3PreciousReport struct {
 	HistoricalRoots int
 	CollectingRoots int
 	Members         int
+	StateRows       int
+	StateSummaries  int
+	StatePlans      int
 	LogicalBytes    int64
 	RootBytes       int64
 	MemberBytes     int64
@@ -1004,6 +1007,7 @@ SELECT * FROM service_catalog_v3_candidate
 	if len(candidates) > MaxServiceCatalogV3LifecycleRoots {
 		return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
 	}
+	candidateRoots := make(map[string]string, len(candidates))
 	for _, candidate := range candidates {
 		if !validServiceCatalogV3CandidateRecord(candidate, candidate.Repository) ||
 			states[candidate.RootDigest] != serviceCatalogV3Historical {
@@ -1012,6 +1016,7 @@ SELECT * FROM service_catalog_v3_candidate
 		if _, openErr := s.GetServiceCatalogV3Candidate(ctx, candidate.Repository); openErr != nil {
 			return ServiceCatalogV3PreciousReport{}, openErr
 		}
+		candidateRoots[candidate.Repository] = candidate.RootDigest
 	}
 	const maxStateReferences = servicecatalogv3.MaxTotalServices*2 + 1
 	referenceResults, err := surrealdb.Query[[]serviceCatalogV3StateReferenceRec](ctx, s.db, `
@@ -1040,6 +1045,15 @@ SELECT * FROM service_catalog_v3_state_reference
 			return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
 		}
 	}
+	stateRows, stateSummaries, statePlans, err := s.validateServiceStateV3Precious(
+		ctx, states, candidateRoots,
+	)
+	if err != nil {
+		return ServiceCatalogV3PreciousReport{}, err
+	}
+	report.StateRows = stateRows
+	report.StateSummaries = stateSummaries
+	report.StatePlans = statePlans
 	return report, nil
 }
 
@@ -1159,6 +1173,10 @@ LET $candidate = (SELECT root_digest FROM service_catalog_v3_candidate
 	WHERE repository = $repository LIMIT 1)[0].root_digest;
 LET $state_refs = array::len(SELECT id FROM service_catalog_v3_state_reference
 	WHERE root_digest = $digest LIMIT 1);
+LET $desired_refs = array::len(SELECT id FROM service_state_v3_current
+	WHERE desired_catalog_generation = $digest LIMIT 1);
+LET $active_refs = array::len(SELECT id FROM service_state_v3_current
+	WHERE active_catalog_generation = $digest LIMIT 1);
 LET $prior_retained = IF $candidate = NONE THEN $retained ELSE $retained - 1 END;
 LET $newest_prior = SELECT VALUE root_digest FROM service_catalog_v3_lifecycle
 	WHERE repository = $repository AND state = 'historical'
@@ -1169,7 +1187,8 @@ LET $eligible = $row != NONE AND $row.root_digest = $digest
 	AND $row.member_cursor = 0 AND $row.member_count = $member_count
 	AND $row.logical_bytes = $logical_bytes AND $row.root_bytes = $root_bytes
 	AND $row.member_bytes = $member_bytes AND $candidate != $digest
-	AND $state_refs = 0 AND $digest NOT IN $newest_prior;
+	AND $state_refs = 0 AND $desired_refs = 0 AND $active_refs = 0
+	AND $digest NOT IN $newest_prior;
 LET $transitioned = IF $eligible THEN
 	(UPDATE $rid SET state = 'collecting', tombstoned_at = time::now()
 		RETURN AFTER)

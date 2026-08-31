@@ -22,6 +22,7 @@ type generationLifecycleCandidate struct {
 	Digest     string    `json:"digest"`
 	Repository string    `json:"repository"`
 	Stage      string    `json:"stage"`
+	Generation string    `json:"generation"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
@@ -46,7 +47,7 @@ func (s *Surreal) SweepGenerationScheduleLifecycle(
 		return GenerationLifecycleSweep{}, errors.New("sweep generation lifecycle: limits are invalid")
 	}
 	results, err := surrealdb.Query[[]generationLifecycleCandidate](ctx, s.db, `
-RETURN SELECT digest, repository, stage, updated_at FROM generation_schedule
+RETURN SELECT digest, repository, stage, generation, updated_at FROM generation_schedule
 	WHERE status != 'active' AND digest > $after
 	ORDER BY digest LIMIT $limit;`, map[string]any{
 		"after": after, "limit": scanLimit,
@@ -66,7 +67,8 @@ RETURN SELECT digest, repository, stage, updated_at FROM generation_schedule
 		return sweep, nil
 	}
 	for _, candidate := range candidates {
-		if !validSHA256(candidate.Digest) || candidate.Repository == "" ||
+		if !validSHA256(candidate.Digest) || !validSHA256(candidate.Generation) ||
+			candidate.Repository == "" ||
 			!validGenerationToken(candidate.Stage) || candidate.UpdatedAt.IsZero() {
 			return GenerationLifecycleSweep{}, errors.New("scan generation lifecycle: candidate is malformed")
 		}
@@ -108,11 +110,19 @@ func (s *Surreal) collectGenerationSchedule(
 	if deleteLimit < 2 {
 		return 0, nil
 	}
-	chunkLimit := deleteLimit - 1 // reserve one deletion for the schedule row
+	isServiceStateV3 := candidate.Stage == ServiceStateV3ReconcileStage ||
+		candidate.Stage == ServiceStateV3ActivateStage
+	controlRows := 1
+	if isServiceStateV3 {
+		controlRows++
+	}
+	chunkLimit := max(0, deleteLimit-controlRows)
 	results, err := surrealdb.Query[[]generationLifecycleDelete](ctx, s.db, `
 BEGIN;
 LET $schedule = (SELECT digest, repository, stage, status, updated_at
 	FROM $schedule_rid LIMIT 1)[0];
+LET $plan = IF $service_state_v3 THEN
+	(SELECT digest, schedule_digest, state FROM $plan_rid LIMIT 1)[0] ELSE NONE END;
 LET $current = (SELECT schedule_digest FROM $current_rid LIMIT 1)[0].schedule_digest;
 LET $newest = SELECT VALUE digest FROM generation_schedule
 	WHERE repository = $repository AND stage = $stage AND status != 'active'
@@ -120,24 +130,32 @@ LET $newest = SELECT VALUE digest FROM generation_schedule
 LET $running = array::len(SELECT id FROM generation_schedule_chunk
 	WHERE schedule_digest = $digest AND status = 'running' LIMIT 1);
 LET $beyond_count = $schedule != NONE AND $digest NOT IN $newest;
+LET $plan_ok = !$service_state_v3 OR $plan = NONE OR
+	($plan.digest = $generation AND $plan.schedule_digest = $digest AND $plan.state != 'running');
 LET $eligible = $schedule != NONE AND $schedule.digest = $digest AND
 	$schedule.repository = $repository AND $schedule.stage = $stage AND
 	$schedule.status != 'active' AND $current != $digest AND $running = 0 AND
-	$beyond_count;
+	$beyond_count AND $plan_ok;
 LET $chunk_ids = (IF $eligible THEN (SELECT VALUE id FROM generation_schedule_chunk
 	WHERE schedule_digest = $digest ORDER BY offset, attempt LIMIT $chunk_limit) ELSE [] END) ?? [];
 LET $deleted_chunks = IF $eligible AND array::len($chunk_ids) > 0 THEN
 	(DELETE $chunk_ids RETURN BEFORE) ELSE [] END;
 LET $remaining = IF $eligible THEN array::len(SELECT id FROM generation_schedule_chunk
 	WHERE schedule_digest = $digest LIMIT 1) ELSE 1 END;
+LET $deleted_plan = IF $eligible AND $remaining = 0 AND $plan != NONE THEN
+	(DELETE $plan_rid RETURN BEFORE) ELSE [] END;
 LET $deleted_schedule = IF $eligible AND $remaining = 0 THEN
 	(DELETE $schedule_rid RETURN BEFORE) ELSE [] END;
-RETURN [{ deleted: array::len($deleted_chunks) + array::len($deleted_schedule) }];
+RETURN [{ deleted: array::len($deleted_chunks) + array::len($deleted_plan) +
+	array::len($deleted_schedule) }];
 COMMIT;`, map[string]any{
 		"schedule_rid": models.NewRecordID("generation_schedule", strings.TrimPrefix(candidate.Digest, "sha256:")),
 		"current_rid":  models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(candidate.Repository, candidate.Stage), "sha256:")),
 		"repository":   candidate.Repository, "stage": candidate.Stage,
-		"digest": candidate.Digest, "retained": retained, "chunk_limit": chunkLimit,
+		"digest": candidate.Digest, "generation": candidate.Generation,
+		"retained": retained, "chunk_limit": chunkLimit,
+		"service_state_v3": isServiceStateV3,
+		"plan_rid":         serviceStateV3PlanID(candidate.Generation),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("collect generation lifecycle: %w", err)

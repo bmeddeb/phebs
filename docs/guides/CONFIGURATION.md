@@ -126,6 +126,9 @@ only source-free scan/delete/backlog state plus exact retired logical bytes and
 physically deleted root/member bytes for its latest turn. These counters are
 zero for owners that do not publish those metric kinds. There is no v3
 retention configuration key and no valid dark candidate auto-promotes.
+V3 service-state reconcile and activation likewise have no configuration key
+or production worker: they are explicit store-only protocols until the later
+runtime-selector ticket.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,

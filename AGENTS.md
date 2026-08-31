@@ -715,8 +715,11 @@ streamed census, precious root/member authority, explicit schema migration,
 and atomic candidate pointer are merge-ready on their ticket branch. T41.4's
 complete-only startup repair, exact backup/restore validation, root/member
 lifecycle edges, future state-reference fence, atomic tombstone/drain, and
-fifteenth lifecycle owner are stacked and merge-ready after the current branch
-gate; T41.5 is next only after a separately authorized integration. Epic 42
+fifteenth lifecycle owner are stacked and merge-ready. T41.5's separately
+fenced, at-most-512-row v3 state reconcile/activation protocols, bounded
+repair/continue, restore ownership, and historical-root pins are stacked behind
+the current branch gate. T41.6 is next only after a separately authorized
+integration of T41.3–T41.5. Epic 42
 still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

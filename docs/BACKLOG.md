@@ -3037,31 +3037,9 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration. T41.2 is integrated; T41.3 and
-T41.4 own the stacked dark-ingestion/lifecycle merge bars, and T41.5 is next
-after their separately authorized integration.
-
-**T41.5 · Resumable service-state reconcile and activation** — replace
-all-service transactions with durable at-most-512-row chunks, reducible by
-T41.1 measurement, and explicitly separate the two protocols. Reconcile keeps
-the repository summary catalog-mismatched and all service reads unavailable
-until one final summary CAS; activation starts only after that match and updates
-each chunk of rows plus the already-matching summary atomically so independently
-current services remain readable. All v3 rows, summaries, plans, chunks, and
-pointers occupy a distinct versioned shadow namespace until T41.9; preactivation
-tests require existing v1/v2 rows, revisions, summaries, and pointers to remain
-byte-identical. AC: a store fence refuses publication of a
-successor catalog while reconcile is unsettled; every chunk fences catalog,
-plan, prior row revision/digest, and tombstone counters; restart reuses settled
-chunks; removed→re-added increments incarnation once; terminal failure permits
-bounded repair/continue only—rollback requires a future preimage/staged-row
-contract; stale/concurrent chunks roll back; active/desired generation
-references have an index or bounded aggregate pin; 10,000-service cold/no-op/
-small-delta/A→B→A/live-store tests bound rows, bytes, locks, reads, and wall
-time with no O(N²) projection; reconcile/activation plans and chunks reuse the
-generation-scheduler stage/lease identity and its named lifecycle coverage for
-settled, superseded, interrupted, and restored rows; explicit schema migration
-and full merge bar.
+production constant or runtime registration. T41.2 is integrated; T41.3,
+T41.4, and T41.5 own the stacked dark-ingestion/lifecycle/state merge bars.
+T41.6 is next only after their separately authorized integration.
 
 **T41.6 · Sparse catalog/state/search backend** — migrate verified store point/
 page state reads and service-query compile/runtime to root/member authority,

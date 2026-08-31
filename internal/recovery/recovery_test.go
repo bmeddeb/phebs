@@ -110,6 +110,22 @@ connections:
 	if err != nil {
 		t.Fatal(err)
 	}
+	serviceStateV3Reconcile, err := st.BeginServiceStateV3Reconcile(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, st, serviceStateV3Reconcile)
+	serviceStateV3Activation, err := st.BeginServiceStateV3Activation(
+		ctx, names[0], "sha256:"+strings.Repeat("9", 64),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, st, serviceStateV3Activation)
+	serviceStateV3SummaryBeforeRestore, err := st.GetServiceStateV3Summary(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -548,8 +564,18 @@ connections:
 	}
 	if report, err := restored.ValidateServiceCatalogV3Precious(ctx); err != nil ||
 		report.HistoricalRoots != 1 || report.CollectingRoots != 0 ||
-		report.Members != len(catalogV3BeforeRestore.Members) {
+		report.Members != len(catalogV3BeforeRestore.Members) ||
+		report.StateRows != 1 || report.StateSummaries != 1 || report.StatePlans != 0 {
 		t.Fatalf("restored catalog v3 precious = %+v, %v", report, err)
+	}
+	serviceStateV3SummaryAfterRestore, err := restored.GetServiceStateV3Summary(ctx, names[0])
+	if err != nil || !reflect.DeepEqual(
+		serviceStateV3SummaryAfterRestore, serviceStateV3SummaryBeforeRestore,
+	) {
+		t.Fatalf(
+			"restored service state v3 summary = %+v, %v; want %+v",
+			serviceStateV3SummaryAfterRestore, err, serviceStateV3SummaryBeforeRestore,
+		)
 	}
 	serviceStateAfterRestore, err := restored.GetServiceState(
 		ctx, names[0], "recovery",
@@ -831,6 +857,40 @@ func assertRecoveryJobEqual(t *testing.T, before, after store.Job) {
 		!equalOptionalTime(before.FinishedAt, after.FinishedAt) ||
 		before.Force != after.Force || before.LeaseToken != after.LeaseToken {
 		t.Fatalf("restored terminal job changed: before=%+v after=%+v", before, after)
+	}
+}
+
+func runRecoveryServiceStateV3Plan(
+	t *testing.T,
+	ctx context.Context,
+	state *store.Surreal,
+	begin store.ServiceStateV3Begin,
+) {
+	t.Helper()
+	schedule := begin.Schedule
+	for schedule.NextOffset < schedule.TotalItems {
+		var err error
+		schedule, err = state.ExpandGenerationSchedule(
+			ctx, schedule.Repository, schedule.Stage, schedule.Generation,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for {
+		chunk, err := state.ClaimGenerationChunk(
+			ctx, store.GenerationResourceCPU, "recovery-service-state-v3",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := state.ProcessServiceStateV3Chunk(ctx, *chunk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Settled {
+			return
+		}
 	}
 }
 

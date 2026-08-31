@@ -1163,6 +1163,13 @@ known service generation/state unavailability returns 409. Unexpected store,
 reader, or runtime faults remain HTTP 500 rather than being relabeled as an
 ordinary unavailable service.
 
+The v3 catalog and v3 service-state machinery remains runtime-dark and adds no
+HTTP, MCP, UI, or configuration surface. Explicit store reconciliation writes
+at most 512 rows per durable chunk and keeps strict v3 reads unavailable until
+the final matching-summary CAS. Explicit activation then updates at most 512
+rows plus that matching summary atomically, so services already activated from
+the same catalog remain readable while later chunks settle.
+
 
 ### Revision scopes
 

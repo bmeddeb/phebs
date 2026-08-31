@@ -33,6 +33,32 @@ const (
 
 var ErrInvalidServiceState = errors.New("invalid service state")
 
+// StatePolicy lets the segmented v3 shadow state reuse the proven lifecycle
+// row contract without weakening the v1 schemas or limits.
+type StatePolicy struct {
+	ServiceSchema          string
+	RepositorySchema       string
+	ServiceDigestDomain    string
+	RepositoryDigestDomain string
+	MaxServices            int
+	MaxSuccessors          int
+}
+
+func V1StatePolicy() StatePolicy {
+	return StatePolicy{
+		ServiceSchema: ServiceStateSchema, RepositorySchema: RepositoryStateSchema,
+		ServiceDigestDomain:    "phebs-service-state-v1\x00",
+		RepositoryDigestDomain: "phebs-service-state-repository-v1\x00",
+		MaxServices:            MaxServices, MaxSuccessors: MaxSuccessorEdges,
+	}
+}
+
+func validStatePolicy(policy StatePolicy) bool {
+	return policy.ServiceSchema != "" && policy.RepositorySchema != "" &&
+		policy.ServiceDigestDomain != "" && policy.RepositoryDigestDomain != "" &&
+		policy.MaxServices > 0 && policy.MaxSuccessors > 0
+}
+
 // ServiceProjection is the exact service-local record input derived from one
 // complete catalog publication. Its digest deliberately excludes unrelated
 // catalog records; ServiceDesiredGeneration adds the store-minted incarnation.
@@ -385,8 +411,19 @@ func ServiceDesiredGeneration(
 
 // ValidateServiceState proves the closed row shape and its semantic digest.
 func ValidateServiceState(state ServiceState, persisted bool) error {
-	if state.Schema != ServiceStateSchema {
-		return stateInvalidf("schema must be %q", ServiceStateSchema)
+	return ValidateServiceStateWithPolicy(state, persisted, V1StatePolicy())
+}
+
+func ValidateServiceStateWithPolicy(
+	state ServiceState,
+	persisted bool,
+	policy StatePolicy,
+) error {
+	if !validStatePolicy(policy) {
+		return stateInvalidf("state policy is invalid")
+	}
+	if state.Schema != policy.ServiceSchema {
+		return stateInvalidf("schema must be %q", policy.ServiceSchema)
 	}
 	if err := reponame.Validate(state.Repository); err != nil {
 		return stateInvalidf("repository is not canonical")
@@ -468,7 +505,7 @@ func ValidateServiceState(state ServiceState, persisted bool) error {
 			return stateInvalidf("live state requires desired identities")
 		}
 	}
-	digest, err := serviceStateDigest(state)
+	digest, err := serviceStateDigest(state, policy)
 	if err != nil {
 		return err
 	}
@@ -487,11 +524,18 @@ func ValidateServiceState(state ServiceState, persisted bool) error {
 // SetServiceStateDigest derives the semantic state digest after callers have
 // populated every field except revision/time.
 func SetServiceStateDigest(state *ServiceState) error {
+	return SetServiceStateDigestWithPolicy(state, V1StatePolicy())
+}
+
+func SetServiceStateDigestWithPolicy(
+	state *ServiceState,
+	policy StatePolicy,
+) error {
 	if state == nil {
 		return stateInvalidf("state is nil")
 	}
 	state.Successors = append([]string{}, state.Successors...)
-	digest, err := serviceStateDigest(*state)
+	digest, err := serviceStateDigest(*state, policy)
 	if err != nil {
 		return err
 	}
@@ -501,8 +545,19 @@ func SetServiceStateDigest(state *ServiceState) error {
 
 // ValidateRepositoryState proves the bounded summary and its digest.
 func ValidateRepositoryState(state RepositoryState, persisted bool) error {
-	if state.Schema != RepositoryStateSchema {
-		return stateInvalidf("repository schema must be %q", RepositoryStateSchema)
+	return ValidateRepositoryStateWithPolicy(state, persisted, V1StatePolicy())
+}
+
+func ValidateRepositoryStateWithPolicy(
+	state RepositoryState,
+	persisted bool,
+	policy StatePolicy,
+) error {
+	if !validStatePolicy(policy) {
+		return stateInvalidf("state policy is invalid")
+	}
+	if state.Schema != policy.RepositorySchema {
+		return stateInvalidf("repository schema must be %q", policy.RepositorySchema)
 	}
 	if err := reponame.Validate(state.Repository); err != nil {
 		return stateInvalidf("summary repository is not canonical")
@@ -520,14 +575,14 @@ func ValidateRepositoryState(state RepositoryState, persisted bool) error {
 			return stateInvalidf("summary count is negative")
 		}
 	}
-	if state.CatalogServiceCount > MaxServices || state.LiveServiceCount > MaxServices ||
+	if state.CatalogServiceCount > policy.MaxServices || state.LiveServiceCount > policy.MaxServices ||
 		state.LiveServiceCount != state.CurrentCount+state.StaleCount+
 			state.UnavailableCount+state.ConflictCount ||
 		state.CatalogServiceCount < state.LiveServiceCount ||
 		state.TombstoneCount < state.CatalogServiceCount-state.LiveServiceCount {
 		return stateInvalidf("summary counts are inconsistent")
 	}
-	digest, err := repositoryStateDigest(state)
+	digest, err := repositoryStateDigest(state, policy)
 	if err != nil {
 		return err
 	}
@@ -544,10 +599,17 @@ func ValidateRepositoryState(state RepositoryState, persisted bool) error {
 }
 
 func SetRepositoryStateDigest(state *RepositoryState) error {
+	return SetRepositoryStateDigestWithPolicy(state, V1StatePolicy())
+}
+
+func SetRepositoryStateDigestWithPolicy(
+	state *RepositoryState,
+	policy StatePolicy,
+) error {
 	if state == nil {
 		return stateInvalidf("summary is nil")
 	}
-	digest, err := repositoryStateDigest(*state)
+	digest, err := repositoryStateDigest(*state, policy)
 	if err != nil {
 		return err
 	}
@@ -555,10 +617,10 @@ func SetRepositoryStateDigest(state *RepositoryState) error {
 	return nil
 }
 
-func serviceStateDigest(state ServiceState) (string, error) {
+func serviceStateDigest(state ServiceState, policy StatePolicy) (string, error) {
 	if len(state.DisplayName) > MaxDisplayNameBytes || len(state.Reason) > MaxReasonBytes ||
 		!utf8.ValidString(state.DisplayName) || !utf8.ValidString(state.Reason) ||
-		len(state.Successors) > MaxSuccessorEdges {
+		len(state.Successors) > policy.MaxSuccessors {
 		return "", stateInvalidf("state text or successor limit exceeded")
 	}
 	binding := struct {
@@ -594,10 +656,10 @@ func serviceStateDigest(state ServiceState) (string, error) {
 		ActiveSearchGeneration:   state.ActiveSearchGeneration,
 		Status:                   state.Status, Removed: state.Removed,
 	}
-	return digestJSON("phebs-service-state-v1\x00", binding)
+	return digestJSON(policy.ServiceDigestDomain, binding)
 }
 
-func repositoryStateDigest(state RepositoryState) (string, error) {
+func repositoryStateDigest(state RepositoryState, policy StatePolicy) (string, error) {
 	binding := struct {
 		Schema                 string `json:"schema"`
 		Repository             string `json:"repository"`
@@ -620,7 +682,7 @@ func repositoryStateDigest(state RepositoryState) (string, error) {
 		UnavailableCount: state.UnavailableCount, ConflictCount: state.ConflictCount,
 		TombstoneCount: state.TombstoneCount,
 	}
-	return digestJSON("phebs-service-state-repository-v1\x00", binding)
+	return digestJSON(policy.RepositoryDigestDomain, binding)
 }
 
 func digestJSON(domain string, value any) (string, error) {
