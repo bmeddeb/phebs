@@ -198,6 +198,46 @@ func TestServiceCatalogV3LiveMaximumShape(t *testing.T) {
 		len(opened.Generation.Members) != len(generation.Members) {
 		t.Fatalf("maximum candidate open = %+v, %v", opened, err)
 	}
+	if len(generation.Members) < 2 || len(generation.Members) > servicecatalogv3.MaxMembers {
+		t.Fatalf("maximum member inventory = %d", len(generation.Members))
+	}
+	nextCommit := strings.Repeat("5", 40)
+	if err := s.SetRepoIndexed(ctx, repository, nextCommit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	next := testServiceCatalogV3Generation(t, repository, nextCommit, "Next")
+	if err := s.PublishServiceCatalogV3Candidate(ctx, next); err != nil {
+		t.Fatal(err)
+	}
+	var retiredLogical, deletedRoot, deletedMembers int64
+	cursor := ""
+	for turn := range 256 {
+		sweep, sweepErr := s.SweepServiceCatalogV3Lifecycle(ctx, cursor, 11, 16, 1)
+		if sweepErr != nil {
+			t.Fatalf("maximum lifecycle turn %d: %+v, %v", turn, sweep, sweepErr)
+		}
+		cursor = sweep.Cursor
+		retiredLogical += sweep.RetiredLogicalBytes
+		deletedRoot += sweep.DeletedRootBytes
+		deletedMembers += sweep.DeletedMemberBytes
+		if deletedRoot == int64(generation.Root.RootBytes) {
+			break
+		}
+	}
+	if retiredLogical != int64(generation.Root.LogicalBytes) ||
+		deletedRoot != int64(generation.Root.RootBytes) ||
+		deletedMembers != int64(generation.Root.EncodedMemberBytes) {
+		t.Fatalf(
+			"maximum lifecycle bytes logical/root/member = %d/%d/%d; want %d/%d/%d",
+			retiredLogical, deletedRoot, deletedMembers,
+			generation.Root.LogicalBytes, generation.Root.RootBytes,
+			generation.Root.EncodedMemberBytes,
+		)
+	}
+	report, err := s.ValidateServiceCatalogV3Precious(ctx)
+	if err != nil || report.HistoricalRoots != 1 || report.CollectingRoots != 0 {
+		t.Fatalf("maximum lifecycle final = %+v, %v", report, err)
+	}
 }
 
 func testServiceCatalogV3Generation(

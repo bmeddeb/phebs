@@ -90,7 +90,7 @@ service_catalogs:
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
 | `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible; omission or `"0"` keeps bundles and pins indefinitely |
-| `lifecycle.enabled`                         | `true`           | runs bounded owner-separated catalog, search-generation, generation-schedule, and terminal-job maintenance and reports its source-free state through the administrator status; `false` disables automated collection but keeps hard-watermark admission and every root/pin/lease/tombstone fence |
+| `lifecycle.enabled`                         | `true`           | runs bounded owner-separated v1/v2 catalog, dark catalog-v3, search-generation, generation-schedule, and terminal-job maintenance and reports its source-free state through the administrator status; `false` disables automated collection but keeps hard-watermark admission and every root/pin/lease/tombstone fence |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
@@ -121,6 +121,11 @@ Administrators can inspect the fixed 16-KiB-bounded
 `GET /api/lifecycle-status` or Settings projection; it copies in-memory
 aggregate state only and exposes no cursor, repository, generation, path,
 retained content, or raw error.
+The dark `catalog-v3-generations` owner is independently listed and reports
+only source-free scan/delete/backlog state plus exact retired logical bytes and
+physically deleted root/member bytes for its latest turn. These counters are
+zero for owners that do not publish those metric kinds. There is no v3
+retention configuration key and no valid dark candidate auto-promotes.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,

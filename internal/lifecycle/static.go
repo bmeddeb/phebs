@@ -8,6 +8,7 @@ import (
 
 const (
 	CatalogOwner       = "catalog-generations"
+	CatalogV3Owner     = "catalog-v3-generations"
 	SourceOwner        = "source-generations"
 	SearchOwner        = "search-generations"
 	ObservationOwner   = "observation-namespaces"

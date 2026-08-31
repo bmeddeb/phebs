@@ -26,6 +26,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -89,6 +90,27 @@ connections:
 	serviceCatalogBeforeRestore, err = requireRecoveryServiceCatalog(
 		ctx, st, names[0],
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalCatalog, err := servicecatalog.Decode(serviceCatalogBeforeRestore.Canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogV3BeforeRestore, err := servicecatalogv3.FromV2(
+		serviceCatalogBeforeRestore, logicalCatalog,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.PublishServiceCatalogV3Candidate(ctx, catalogV3BeforeRestore); err != nil {
+		t.Fatalf("publish pre-backup catalog v3: %v", err)
+	}
+	openedCatalogV3BeforeRestore, err := st.GetServiceCatalogV3Candidate(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,6 +462,13 @@ connections:
 	if err != nil {
 		t.Fatalf("live backup: %v", err)
 	}
+	catalogV3PreciousAfterBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
+	if err != nil || catalogV3PreciousAfterBackup != catalogV3PreciousBeforeBackup {
+		t.Fatalf(
+			"completed backup pinned or changed catalog v3: before=%+v after=%+v err=%v",
+			catalogV3PreciousBeforeBackup, catalogV3PreciousAfterBackup, err,
+		)
+	}
 	if _, err := os.Lstat(filepath.Join(backupDir, "caller-leaves")); !os.IsNotExist(err) {
 		t.Fatalf("backup copied caller-leaf root outside its archive: %v", err)
 	}
@@ -507,6 +536,20 @@ connections:
 			"restored service catalog = %+v, %v; want %+v",
 			serviceCatalogAfterRestore, err, serviceCatalogBeforeRestore,
 		)
+	}
+	openedCatalogV3AfterRestore, err := restored.GetServiceCatalogV3Candidate(ctx, names[0])
+	if err != nil || !reflect.DeepEqual(
+		openedCatalogV3AfterRestore, openedCatalogV3BeforeRestore,
+	) {
+		t.Fatalf(
+			"restored catalog v3 = %+v, %v; want %+v",
+			openedCatalogV3AfterRestore, err, openedCatalogV3BeforeRestore,
+		)
+	}
+	if report, err := restored.ValidateServiceCatalogV3Precious(ctx); err != nil ||
+		report.HistoricalRoots != 1 || report.CollectingRoots != 0 ||
+		report.Members != len(catalogV3BeforeRestore.Members) {
+		t.Fatalf("restored catalog v3 precious = %+v, %v", report, err)
 	}
 	serviceStateAfterRestore, err := restored.GetServiceState(
 		ctx, names[0], "recovery",

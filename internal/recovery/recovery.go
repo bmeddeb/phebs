@@ -239,6 +239,19 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("acquire consistent index backup lock: %w", err)
 	}
 	defer releaseBackup()
+	validationStore, err := store.Open(
+		ctx, runtime.Endpoint, "root", "root", "phebs", "phebs",
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("open live store for catalog v3 validation: %w", err)
+	}
+	if _, err := validationStore.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		_ = validationStore.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("validate live catalog v3 precious inventory: %w", err)
+	}
+	if err := validationStore.Close(context.WithoutCancel(ctx)); err != nil {
+		return Manifest{}, fmt.Errorf("close catalog v3 validation store: %w", err)
+	}
 
 	artifactPath := filepath.Join(stage, DatabaseName)
 	args := []string{
@@ -594,6 +607,14 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	st, err := store.OpenLocal(ctx, target)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("validate restored store: %w", err)
+	}
+	if _, err := st.RepairServiceCatalogV3Startup(ctx); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("repair restored catalog v3 state: %w", err)
+	}
+	if _, err := st.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("validate restored catalog v3 inventory: %w", err)
 	}
 	if err := clearGenerationScheduleState(ctx, st); err != nil {
 		_ = st.Close(context.WithoutCancel(ctx))

@@ -56,7 +56,7 @@ func Build(binding Binding, catalog servicecatalog.Catalog) (Generation, error) 
 
 	root := Root{
 		Schema: RootSchema, Binding: cloneBinding(binding), Policy: FrozenPolicy(), PolicyDigest: PolicyDigest(),
-		LogicalDigest: logicalDigest, MappedV2Digest: mappedV2, Services: len(normalized.Services),
+		LogicalBytes: logicalBytes, LogicalDigest: logicalDigest, MappedV2Digest: mappedV2, Services: len(normalized.Services),
 		Dispositions: stats.dispositions, Memberships: len(normalized.Memberships), Roles: stats.roles,
 		Paths: stats.paths, Unowned: len(normalized.Unowned), Successors: stats.successors, Claims: stats.claims,
 		ServiceMembers: []MemberDescriptor{}, PlacementMembers: []MemberDescriptor{},

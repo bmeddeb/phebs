@@ -126,6 +126,7 @@ type Root struct {
 	Binding            Binding            `json:"binding"`
 	Policy             Policy             `json:"policy"`
 	PolicyDigest       string             `json:"policy_digest"`
+	LogicalBytes       int                `json:"logical_bytes"`
 	LogicalDigest      string             `json:"logical_digest"`
 	MappedV2Digest     string             `json:"mapped_v2_digest,omitempty"`
 	Services           int                `json:"services"`

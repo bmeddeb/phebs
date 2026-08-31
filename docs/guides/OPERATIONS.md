@@ -2938,6 +2938,7 @@ may override these protections.
 | Owner | Default age | Default count | Independent byte/quantity metric |
 | --- | ---: | ---: | --- |
 | catalog generations | 30 days | 3 per repository | 64 MiB canonical JSON per repository |
+| dark catalog-v3 generations | disabled | candidate + 2 prior per repository | separate exact logical, root, and content-addressed member bytes |
 | source generations | 14 days | 2 per repository | 8 GiB encoded members per repository |
 | search generations | 14 days | 2 per repository | 50 GiB filesystem allocated bytes per repository |
 | observation namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
@@ -2973,10 +2974,14 @@ prior generation leave the live-root set. Proof and Investigation pins and
 active leases always win, even if disk remains above 90%. T35.3 rechecks all
 roots immediately before collection and coordinates with backup.
 
-The installed controller has fourteen closed owners and advances one owner per
+The installed controller has fifteen closed owners and advances one owner per
 turn through durable CAS cursors. A successful turn uses at most sixteen store
 queries including four cursor operations, 64 candidate rows, sixteen deleted
 rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
+The dark catalog-v3 owner additionally batch-opens at most one 32-MiB complete
+generation before its atomic tombstone, then validates and advances one
+at-most-2-MiB member on each restartable collecting turn; those content bytes
+are not relabeled as lifecycle metadata.
 Failure is local: the failed owner's cursor stays put while durable rotation
 gives the next owner a turn. Ordinary backlog, errors, and capacity retry use
 the five-second cadence; a completed unpressured cycle returns to one hour.
@@ -3105,12 +3110,24 @@ Administrators can open Settings or request `GET /api/lifecycle-status` to see
 the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
 source. The response is capped at 16 KiB and reports only enabled state, fixed
 turn/watermark limits, the latest allocated-capacity class, and one latest
-source-free result for each of the fourteen owners, including the real
-`search-generations` owner. It contains no cursor,
+source-free result for each of the fifteen owners, including the real
+`search-generations` and dark `catalog-v3-generations` owners. The latter adds
+exact latest-turn `logical_bytes`, `root_bytes`, and `member_bytes`; other
+owners report zero for those metric kinds. The response contains no cursor,
 repository, generation, path, retained content, or raw error. A status request
 does not run a turn, probe the filesystem, acquire the mutation lock, or read
 the store; it copies the bounded in-memory monitor populated by normal
 maintenance and index admission.
+
+Catalog-v3 remains runtime-dark. Startup repairs lifecycle metadata only for a
+complete strict-valid pre-lifecycle inventory and refuses more than 64 such
+roots; it never changes the v1/v2 pointer. Live backup validates every
+referenced historical or partially collecting root/member under the existing
+exclusive mutation lock and writes no durable pin. Restore repeats that repair
+and validation before serving. Collection protects the dark candidate, future
+current/desired/active state references, and two newest prior roots; an atomic
+`collecting` transition removes an eligible root from history before one
+member edge per turn drains, with shared content deleted only by its last root.
 
 The retained source-free receipt at `spike/t354/results.json` binds T32.3's
 synthetic 1,000/5,000-service profiles to production-path gates for catalog

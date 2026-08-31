@@ -5,6 +5,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
 
 const StatusSchema = "phebs-lifecycle-status-v1"
@@ -35,6 +37,9 @@ type OwnerStatus struct {
 	Completeness Completeness `json:"completeness" enum:"exact,lower_bound,unavailable"`
 	Scanned      int          `json:"scanned"`
 	Deleted      int          `json:"deleted"`
+	LogicalBytes int64        `json:"logical_bytes"`
+	RootBytes    int64        `json:"root_bytes"`
+	MemberBytes  int64        `json:"member_bytes"`
 	Backlog      bool         `json:"backlog"`
 	AttemptedAt  *time.Time   `json:"attempted_at,omitempty"`
 }
@@ -120,6 +125,8 @@ func (monitor *StatusMonitor) ObserveOwner(result OwnerResult) {
 	monitor.status.Owners[index] = OwnerStatus{
 		Name: result.Owner, State: state, Completeness: result.Completeness,
 		Scanned: result.Scanned, Deleted: result.Deleted, Backlog: result.More,
+		LogicalBytes: result.LogicalBytes, RootBytes: result.RootBytes,
+		MemberBytes: result.MemberBytes,
 		AttemptedAt: &attempted,
 	}
 }
@@ -173,7 +180,10 @@ func ValidateStatus(status Status) error {
 			(owner.State != "not_run" && owner.State != "ok" && owner.State != "error") ||
 			(owner.Completeness != Exact && owner.Completeness != LowerBound && owner.Completeness != Unavailable) ||
 			owner.Scanned < 0 || owner.Scanned > MaxCandidatesPerTick ||
-			owner.Deleted < 0 || owner.Deleted > MaxDeletesPerTick {
+			owner.Deleted < 0 || owner.Deleted > MaxDeletesPerTick ||
+			owner.LogicalBytes < 0 || owner.LogicalBytes > servicecatalogv3.MaxLogicalBytes ||
+			owner.RootBytes < 0 || owner.RootBytes > servicecatalogv3.MaxRootBytes ||
+			owner.MemberBytes < 0 || owner.MemberBytes > servicecatalogv3.MaxMemberBytes {
 			return errors.New("lifecycle owner status is invalid")
 		}
 		previous = owner.Name

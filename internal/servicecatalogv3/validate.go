@@ -378,7 +378,8 @@ func writeLogical(writer io.Writer, catalog servicecatalog.Catalog) error {
 func ValidateRoot(root Root) error {
 	if root.Schema != RootSchema || reponame.Validate(root.Binding.Repository) != nil || validateBinding(root.Binding) != nil ||
 		root.PolicyDigest != PolicyDigest() || !reflect.DeepEqual(root.Policy, FrozenPolicy()) ||
-		!validDigest(root.LogicalDigest) || root.MappedV2Digest != "" && !validDigest(root.MappedV2Digest) ||
+		root.LogicalBytes < 1 || root.LogicalBytes > MaxLogicalBytes || !validDigest(root.LogicalDigest) ||
+		root.MappedV2Digest != "" && !validDigest(root.MappedV2Digest) ||
 		root.Services < 0 || root.Services > MaxTotalServices || root.Memberships < 0 || root.Memberships > MaxMemberships ||
 		root.Paths < 0 || root.Paths > MaxDistinctPaths || root.Successors < 0 || root.Successors > MaxSuccessorEdges ||
 		root.Claims < 0 || root.Claims > MaxMemberships || root.Unowned < 0 || root.Unowned > root.Paths ||

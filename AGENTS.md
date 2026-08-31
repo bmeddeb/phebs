@@ -712,9 +712,12 @@ aggregate envelope and at-most-512-claim relationship buckets without changing
 the current 4,000-service production cap or runtime registration. T41.2's
 reviewed runtime-dark v3 contract is integrated. T41.3's dark strict ingestion,
 streamed census, precious root/member authority, explicit schema migration,
-and atomic candidate pointer are merge-ready after the current branch gate;
-T41.4 is next after a separate integration. Epic 42 still owns combined-scale
-proof.
+and atomic candidate pointer are merge-ready on their ticket branch. T41.4's
+complete-only startup repair, exact backup/restore validation, root/member
+lifecycle edges, future state-reference fence, atomic tombstone/drain, and
+fifteenth lifecycle owner are stacked and merge-ready after the current branch
+gate; T41.5 is next only after a separately authorized integration. Epic 42
+still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

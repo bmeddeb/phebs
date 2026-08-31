@@ -10373,3 +10373,52 @@ worker is added. T41.4 retains recovery, backup/restore, orphan repair, and
 lifecycle collection. This ticket makes no activation, production-cap,
 release, ceremony, scale/SLO, topology, migration-completion, or decommission
 claim.
+
+**T41.4 ✅ · Catalog-v3 recovery, archive, and lifecycle authority**
+*(2026-08-31; high)* — every new v3 publication now records one immutable
+lifecycle row and exact root/member edges in the same transaction before its
+dark pointer can move. The one-time upgrade admits at most 64 pre-lifecycle
+roots and repairs only complete strict-valid generations; partial candidates
+and one-over inventories refuse. Startup then removes a bounded set of
+unreferenced edge/member/authority rows without changing any v1/v2 pointer.
+
+The distinct `catalog-v3-generations` owner is the controller's fifteenth
+closed owner. It holds the existing shared mutation lock, protects the dark
+candidate, future current/desired/active state-reference rows, and two newest
+prior generations, then atomically changes an eligible historical row to
+`collecting` before deleting any precious byte. Each later turn rechecks those
+roots inside its transaction and advances one exact member edge. Shared member
+content survives until its last root drains; the immutable root and unused
+authority claim leave only after all edges are gone. A malformed row advances
+only that owner's durable cursor with an unavailable result, so other owners
+continue. Status reports exact retired logical bytes and physically deleted
+root/member bytes.
+
+The root now binds its exact logical byte count in addition to its logical
+digest. Live backup acquires the existing exclusive mutation lock, opens a
+validation connection, and strict-validates all referenced historical and
+partially collecting rows/members before the ordinary whole-database export.
+It writes no pin and changes no lifecycle row. Restore applies the supported
+pre-lifecycle repair and repeats the same exact inventory validation before
+serving. The database artifact already contains every precious root/member,
+edge, state reference, and collection cursor, so no second archive format or
+manifest entry is introduced.
+
+Regressions cover complete-only startup repair, bounded orphan deletion,
+pre-lifecycle one-over refusal, schema-drift repair/idempotence, candidate and
+two-prior retention, active-state-root pinning, malformed-row isolation,
+interrupted collection through a new store connection, exact live
+backup/restore with no backup pin, and collection of the complete
+12,500-service/75,000-membership/37,500-path maximum generation with exact
+logical/root/member byte totals.
+
+The complete affected normal suites pass, including `internal/store` in
+1129.126s and live recovery in 111.036s. The complete affected race suites
+pass, including `internal/store` in 1160.013s and live recovery in 114.430s.
+Repository-wide compile-only, vet, lint, module, documentation, glossary, and
+whitespace gates also pass.
+
+V3 remains unregistered for selection and all v1/v2 catalog and state authority
+is unchanged. T41.5 owns state writers and activation fencing; T41.9 still owns
+the runtime selector. This ticket makes no production-cap, release, ceremony,
+scale/SLO, topology, migration-completion, or decommission claim.

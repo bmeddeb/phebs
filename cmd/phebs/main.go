@@ -532,8 +532,24 @@ func serve(args []string) error {
 			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
 		)
 	}
+	releaseCatalogRepair, err := acquireLifecycleMutation(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire catalog v3 startup repair lock: %w", err)
+	}
+	catalogRepair, repairErr := st.RepairServiceCatalogV3Startup(ctx)
+	releaseCatalogRepair()
+	if repairErr != nil {
+		return fmt.Errorf("repair catalog v3 startup state: %w", repairErr)
+	}
+	if catalogRepair.More {
+		log.Printf(
+			"catalog v3 startup orphan backlog: scanned=%d deleted=%d",
+			catalogRepair.OrphansScanned, catalogRepair.OrphansDeleted,
+		)
+	}
 	lifecycleOwners := []lifecycle.Owner{
 		lifecycle.CatalogGenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
+		lifecycle.CatalogV3GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
 		lifecycle.GenerationOwner{Store: st, Acquire: acquireLifecycleMutation},
 		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
 	}

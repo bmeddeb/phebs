@@ -3037,23 +3037,9 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration. T41.2 is integrated, T41.3 owns
-the current dark-ingestion merge bar, and T41.4 is next.
-
-**T41.4 · Catalog-v3 recovery, archive, and lifecycle owner** — own v3 root/
-member durability before state consumes it. AC: startup repairs only complete
-strict-valid candidates and removes bounded orphans without changing the v2
-pointer; backup/restore includes every referenced precious root/member byte
-and revalidates exact inventory; the lifecycle owner rechecks current, dark
-candidate, future desired/active state references, rollback floor, and active
-state roots inside the destructive transaction while holding the shared
-mutation lock across it; completed backups never pin live rows. One atomic
-`collecting`/tombstone transition removes the generation from historical
-authority before the first member drain; roots and members collect in bounded restartable order with exact
-logical/member byte accounting, fair cursors, malformed-owner isolation, and
-pressure/status integration; maximum-member, interrupted collection/restore,
-orphan, malformed-row, current/prior, and one-over tests; full recovery/merge
-bars.
+production constant or runtime registration. T41.2 is integrated; T41.3 and
+T41.4 own the stacked dark-ingestion/lifecycle merge bars, and T41.5 is next
+after their separately authorized integration.
 
 **T41.5 · Resumable service-state reconcile and activation** — replace
 all-service transactions with durable at-most-512-row chunks, reducible by

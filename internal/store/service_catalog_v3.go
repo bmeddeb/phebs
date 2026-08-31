@@ -385,6 +385,11 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 			return ErrConflict
 		}
 	}
+	if _, err := ensureServiceCatalogV3LifecycleMetadata(
+		ctx, tx, root, rootWanted.RecordedAt,
+	); err != nil {
+		return err
+	}
 
 	candidateID := serviceCatalogV3CandidateID(root.Binding.Repository)
 	candidateResults, err := surrealdb.Query[[]serviceCatalogV3CandidateRec](
@@ -544,6 +549,19 @@ func (s *Surreal) GetServiceCatalogV3CandidateRoot(
 		}, versionIdentifier,
 	) {
 		return nil, fmt.Errorf("get service catalog v3 candidate: authority-version identity: %w", ErrInvalidServiceCatalogV3Candidate)
+	}
+	lifecycleResults, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
+		ctx, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3LifecycleID(root.Digest)},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get service catalog v3 candidate: lifecycle: %w", err)
+	}
+	lifecycleRows := firstDomainRows(lifecycleResults)
+	if len(lifecycleRows) != 1 || !equalServiceCatalogV3Lifecycle(
+		lifecycleRows[0], serviceCatalogV3LifecycleWanted(root, rootRecord.RecordedAt),
+	) {
+		return nil, fmt.Errorf("get service catalog v3 candidate: lifecycle identity: %w", ErrInvalidServiceCatalogV3Candidate)
 	}
 	return &ServiceCatalogV3CandidateRoot{
 		Root: root, ControlRevision: candidate.ControlRevision,

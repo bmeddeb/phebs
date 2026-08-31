@@ -86,11 +86,14 @@ const (
 )
 
 type OwnerResult struct {
-	Owner   string
-	Cursor  string
-	Scanned int
-	Deleted int
-	More    bool
+	Owner        string
+	Cursor       string
+	Scanned      int
+	Deleted      int
+	LogicalBytes int64
+	RootBytes    int64
+	MemberBytes  int64
+	More         bool
 	// AttemptedAt is stamped by Controller immediately before the owner sweep.
 	// Status publication must not move this fence past work that straddled a
 	// pressure or restart boundary.

@@ -43,6 +43,29 @@ func ValidateCatalog(catalog servicecatalog.Catalog) error {
 	return err
 }
 
+// ValidateMember strict-opens one root-described precious member.
+func ValidateMember(root Root, descriptor MemberDescriptor, raw []byte) error {
+	if len(raw) != descriptor.ContentBytes || rawDigest(raw) != descriptor.Digest {
+		return ErrInvalid
+	}
+	switch descriptor.Kind {
+	case "service":
+		var member ServiceMember
+		if err := decodeCanonical(raw, &member); err != nil {
+			return err
+		}
+		return validateServiceMember(root, descriptor, member)
+	case "placement":
+		var member PlacementMember
+		if err := decodeCanonical(raw, &member); err != nil {
+			return err
+		}
+		return validatePlacementMember(root, descriptor, member)
+	default:
+		return ErrInvalid
+	}
+}
+
 // EncodeRoot returns the exact precious root bytes stored by T41.3.
 func EncodeRoot(root Root) ([]byte, error) {
 	if err := ValidateRoot(root); err != nil {
@@ -172,7 +195,8 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 		return invalidf("service and placement views disagree")
 	}
 	logicalBytes, logicalDigest, err := logicalIdentity(serviceNormalized)
-	if err != nil || logicalBytes > MaxLogicalBytes || logicalDigest != root.LogicalDigest {
+	if err != nil || logicalBytes != root.LogicalBytes ||
+		logicalBytes > MaxLogicalBytes || logicalDigest != root.LogicalDigest {
 		return invalidf("logical catalog digest")
 	}
 	if root.Services != len(serviceNormalized.Services) || root.Memberships != len(serviceNormalized.Memberships) ||

@@ -359,6 +359,14 @@ func TestCompleteValidationRejectsInventoryPreludeAndCrossViewDrift(t *testing.T
 	if err := ValidateGeneration(incomplete); err == nil {
 		t.Fatal("missing member was admitted")
 	}
+	wrongLogicalBytes := cloneGeneration(base)
+	wrongLogicalBytes.Root.LogicalBytes++
+	if err := finalizeRoot(&wrongLogicalBytes.Root); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateGeneration(wrongLogicalBytes); err == nil {
+		t.Fatal("wrong logical byte count was admitted")
+	}
 }
 
 func TestExpandedRulesAndDowngradeRefusal(t *testing.T) {
