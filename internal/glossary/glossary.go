@@ -40,16 +40,20 @@ var (
 		"contract-impact-report",
 		"coverage-certificate",
 		"history",
+		"service-catalog-v2",
+		"service-relationships-v1",
 		"source-search",
 	}
 	requiredTermIDs = []string{
 		"analysis_scope_and_gaps",
 		"could_not_resolve",
 		"coverage_certificate",
+		"exact_static_relationship",
 		"implementation_evidence",
 		"matching_static_evidence",
 		"name_match_needing_review",
 		"resolved_caller",
+		"service_catalog_authority",
 		"success_criterion",
 	}
 )
@@ -265,7 +269,10 @@ func validate(value Document) error {
 	if !slices.Equal(termIDs, requiredTermIDs) {
 		return errors.New("glossary terms contain a duplicate, unknown, or stale id")
 	}
-	for _, surface := range []Surface{"atlas", "caller_map", "impact", "manual", "mcp", "workbench"} {
+	for _, surface := range []Surface{
+		"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
+		"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
+	} {
 		if !coveredSurfaces[surface] {
 			return fmt.Errorf("glossary has no registered term for %s", surface)
 		}
@@ -291,8 +298,10 @@ func validateModes(term Term) error {
 
 func validateSurfaces(term Term) error {
 	allowed := map[Surface]bool{
-		"atlas": true, "caller_map": true, "impact": true,
-		"manual": true, "mcp": true, "workbench": true,
+		"atlas": true, "blame": true, "caller_map": true, "commit": true,
+		"file": true, "history": true, "impact": true, "manual": true,
+		"mcp": true, "relationship_explorer": true, "service_directory": true,
+		"workbench": true,
 	}
 	if len(term.Surfaces) == 0 || len(term.Surfaces) > len(allowed) {
 		return fmt.Errorf("glossary term %s surfaces are outside the allowed range", term.ID)

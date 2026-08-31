@@ -29,6 +29,8 @@
               "contract-impact-report",
               "coverage-certificate",
               "history",
+              "service-catalog-v2",
+              "service-relationships-v1",
               "source-search"
             ]
           },
@@ -47,6 +49,8 @@
               "contract-impact-report",
               "coverage-certificate",
               "history",
+              "service-catalog-v2",
+              "service-relationships-v1",
               "source-search"
             ]
           },
@@ -94,10 +98,12 @@
             "analysis_scope_and_gaps",
             "could_not_resolve",
             "coverage_certificate",
+            "exact_static_relationship",
             "implementation_evidence",
             "matching_static_evidence",
             "name_match_needing_review",
             "resolved_caller",
+            "service_catalog_authority",
             "success_criterion"
           ]
         },
@@ -129,14 +135,20 @@
           "items": {
             "enum": [
               "atlas",
+              "blame",
               "caller_map",
+              "commit",
+              "file",
+              "history",
               "impact",
               "manual",
               "mcp",
+              "relationship_explorer",
+              "service_directory",
               "workbench"
             ]
           },
-          "maxItems": 6,
+          "maxItems": 12,
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
@@ -182,11 +194,13 @@
           "contract-impact-report",
           "coverage-certificate",
           "history",
+          "service-catalog-v2",
+          "service-relationships-v1",
           "source-search"
         ]
       },
-      "maxItems": 8,
-      "minItems": 8,
+      "maxItems": 10,
+      "minItems": 10,
       "type": "array",
       "uniqueItems": true
     },
@@ -197,8 +211,8 @@
       "items": {
         "$ref": "#/$defs/term"
       },
-      "maxItems": 8,
-      "minItems": 8,
+      "maxItems": 10,
+      "minItems": 10,
       "type": "array"
     }
   },

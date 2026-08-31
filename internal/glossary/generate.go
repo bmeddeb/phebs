@@ -71,7 +71,10 @@ func projectGo(document Document, glossaryDigest string) ([]byte, error) {
 			goIdentifier(string(mode)), strconv.Quote(string(mode)))
 	}
 	output.WriteString(")\n\nconst (\n")
-	for _, surface := range []Surface{"atlas", "caller_map", "impact", "manual", "mcp", "workbench"} {
+	for _, surface := range []Surface{
+		"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
+		"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
+	} {
 		fmt.Fprintf(&output, "\tSurface%s Surface = %s\n",
 			goIdentifier(string(surface)), strconv.Quote(string(surface)))
 	}
@@ -173,7 +176,7 @@ func projectTypeScript(document Document, glossaryDigest string) ([]byte, error)
 	output.WriteString(" as const\n")
 	output.WriteString("export type GlossaryCapability = typeof glossaryCapabilities[number]\n")
 	output.WriteString("export type GlossaryMode = 'add' | 'migrate' | 'modify' | 'retire'\n")
-	output.WriteString("export type GlossarySurface = 'atlas' | 'caller_map' | 'impact' | 'manual' | 'mcp' | 'workbench'\n\n")
+	output.WriteString("export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory' | 'workbench'\n\n")
 	output.WriteString("export type GlossaryTerm = Readonly<{\n")
 	output.WriteString("  id: string\n  label: string\n  shortHelp: string\n  expandedHelp: string\n")
 	output.WriteString("  evidenceBoundary: string\n  authorityBoundary: string\n")
@@ -234,7 +237,10 @@ func projectSchema(document Document) ([]byte, error) {
 					"authority_boundary": boundedStringSchema(maxTextBytes),
 					"modes":              enumArraySchema([]string{"add", "migrate", "modify", "retire"}, 1, 4),
 					"surfaces": enumArraySchema(
-						[]string{"atlas", "caller_map", "impact", "manual", "mcp", "workbench"}, 1, 6,
+						[]string{
+							"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
+							"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
+						}, 1, 12,
 					),
 					"wire_aliases": map[string]any{
 						"type": "array", "maxItems": maxArrayRows, "uniqueItems": true,

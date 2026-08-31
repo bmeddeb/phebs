@@ -16,7 +16,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/glossary/genrepo"
 )
 
-const frozenDigest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1"
+const frozenDigest = "sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330"
 
 func TestEmbeddedGlossaryAndGeneratedGoStayCanonical(t *testing.T) {
 	document, canonical, digest, err := glossary.LoadEmbedded()
@@ -285,12 +285,24 @@ func TestQualifiedSurfaceRegistrations(t *testing.T) {
 			glossary.TermCoverageCertificate,
 			glossary.TermMatchingStaticEvidence,
 		},
+		glossary.SurfaceBlame: {
+			glossary.TermImplementationEvidence,
+		},
 		glossary.SurfaceCallerMap: {
 			glossary.TermAnalysisScopeAndGaps,
 			glossary.TermCouldNotResolve,
 			glossary.TermMatchingStaticEvidence,
 			glossary.TermNameMatchNeedingReview,
 			glossary.TermResolvedCaller,
+		},
+		glossary.SurfaceCommit: {
+			glossary.TermImplementationEvidence,
+		},
+		glossary.SurfaceFile: {
+			glossary.TermImplementationEvidence,
+		},
+		glossary.SurfaceHistory: {
+			glossary.TermImplementationEvidence,
 		},
 		glossary.SurfaceImpact: {
 			glossary.TermAnalysisScopeAndGaps,
@@ -302,21 +314,31 @@ func TestQualifiedSurfaceRegistrations(t *testing.T) {
 			glossary.TermAnalysisScopeAndGaps,
 			glossary.TermCouldNotResolve,
 			glossary.TermCoverageCertificate,
+			glossary.TermExactStaticRelationship,
 			glossary.TermImplementationEvidence,
 			glossary.TermMatchingStaticEvidence,
 			glossary.TermNameMatchNeedingReview,
 			glossary.TermResolvedCaller,
+			glossary.TermServiceCatalogAuthority,
 			glossary.TermSuccessCriterion,
 		},
 		glossary.SurfaceMCP: {
 			glossary.TermAnalysisScopeAndGaps,
 			glossary.TermCouldNotResolve,
 			glossary.TermCoverageCertificate,
+			glossary.TermExactStaticRelationship,
 			glossary.TermImplementationEvidence,
 			glossary.TermMatchingStaticEvidence,
 			glossary.TermNameMatchNeedingReview,
 			glossary.TermResolvedCaller,
+			glossary.TermServiceCatalogAuthority,
 			glossary.TermSuccessCriterion,
+		},
+		glossary.SurfaceRelationshipExplorer: {
+			glossary.TermExactStaticRelationship,
+		},
+		glossary.SurfaceServiceDirectory: {
+			glossary.TermServiceCatalogAuthority,
 		},
 		glossary.SurfaceWorkbench: {
 			glossary.TermAnalysisScopeAndGaps,

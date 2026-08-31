@@ -2,7 +2,7 @@
 
 package glossary
 
-const Digest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1"
+const Digest = "sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330"
 
 const (
 	CapabilityCallerMapExactIdentity Capability = "caller-map-exact-identity"
@@ -12,6 +12,8 @@ const (
 	CapabilityContractImpactReport   Capability = "contract-impact-report"
 	CapabilityCoverageCertificate    Capability = "coverage-certificate"
 	CapabilityHistory                Capability = "history"
+	CapabilityServiceCatalogV2       Capability = "service-catalog-v2"
+	CapabilityServiceRelationshipsV1 Capability = "service-relationships-v1"
 	CapabilitySourceSearch           Capability = "source-search"
 )
 
@@ -23,26 +25,34 @@ const (
 )
 
 const (
-	SurfaceAtlas     Surface = "atlas"
-	SurfaceCallerMap Surface = "caller_map"
-	SurfaceImpact    Surface = "impact"
-	SurfaceManual    Surface = "manual"
-	SurfaceMCP       Surface = "mcp"
-	SurfaceWorkbench Surface = "workbench"
+	SurfaceAtlas                Surface = "atlas"
+	SurfaceBlame                Surface = "blame"
+	SurfaceCallerMap            Surface = "caller_map"
+	SurfaceCommit               Surface = "commit"
+	SurfaceFile                 Surface = "file"
+	SurfaceHistory              Surface = "history"
+	SurfaceImpact               Surface = "impact"
+	SurfaceManual               Surface = "manual"
+	SurfaceMCP                  Surface = "mcp"
+	SurfaceRelationshipExplorer Surface = "relationship_explorer"
+	SurfaceServiceDirectory     Surface = "service_directory"
+	SurfaceWorkbench            Surface = "workbench"
 )
 
 const (
-	TermAnalysisScopeAndGaps   TermID = "analysis_scope_and_gaps"
-	TermCouldNotResolve        TermID = "could_not_resolve"
-	TermCoverageCertificate    TermID = "coverage_certificate"
-	TermImplementationEvidence TermID = "implementation_evidence"
-	TermMatchingStaticEvidence TermID = "matching_static_evidence"
-	TermNameMatchNeedingReview TermID = "name_match_needing_review"
-	TermResolvedCaller         TermID = "resolved_caller"
-	TermSuccessCriterion       TermID = "success_criterion"
+	TermAnalysisScopeAndGaps    TermID = "analysis_scope_and_gaps"
+	TermCouldNotResolve         TermID = "could_not_resolve"
+	TermCoverageCertificate     TermID = "coverage_certificate"
+	TermExactStaticRelationship TermID = "exact_static_relationship"
+	TermImplementationEvidence  TermID = "implementation_evidence"
+	TermMatchingStaticEvidence  TermID = "matching_static_evidence"
+	TermNameMatchNeedingReview  TermID = "name_match_needing_review"
+	TermResolvedCaller          TermID = "resolved_caller"
+	TermServiceCatalogAuthority TermID = "service_catalog_authority"
+	TermSuccessCriterion        TermID = "success_criterion"
 )
 
-var Capabilities = []Capability{CapabilityCallerMapExactIdentity, CapabilityChangeWorkbench, CapabilityCodeNavigation, CapabilityContractAtlas, CapabilityContractImpactReport, CapabilityCoverageCertificate, CapabilityHistory, CapabilitySourceSearch}
+var Capabilities = []Capability{CapabilityCallerMapExactIdentity, CapabilityChangeWorkbench, CapabilityCodeNavigation, CapabilityContractAtlas, CapabilityContractImpactReport, CapabilityCoverageCertificate, CapabilityHistory, CapabilityServiceCatalogV2, CapabilityServiceRelationshipsV1, CapabilitySourceSearch}
 
 var Terms = []Term{
 	{
@@ -94,6 +104,22 @@ var Terms = []Term{
 		},
 	},
 	{
+		ID:                TermExactStaticRelationship,
+		Label:             "Exact static relationship",
+		ShortHelp:         "A published RPC or Kafka source relationship bound to one exact service incarnation and generation.",
+		ExpandedHelp:      "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
+		EvidenceBoundary:  "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
+		AuthorityBoundary: "Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
+		Modes:             []Mode{"add", "migrate", "modify", "retire"},
+		Surfaces:          []Surface{"manual", "mcp", "relationship_explorer"},
+		WireAliases:       []string{},
+		Availability: CapabilityPredicate{
+			RequiresAll:     []Capability{"service-relationships-v1"},
+			RequiresAny:     []Capability{},
+			UnavailableHelp: "Exact static relationships are unavailable because the service relationship capability is not enabled for this surface.",
+		},
+	},
+	{
 		ID:                TermImplementationEvidence,
 		Label:             "Implementation evidence",
 		ShortHelp:         "Cited source or history that may inform how the change is implemented.",
@@ -101,7 +127,7 @@ var Terms = []Term{
 		EvidenceBoundary:  "Similarity or proximity is not a correctness ranking and does not authorize an edit.",
 		AuthorityBoundary: "The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
 		Modes:             []Mode{"add", "migrate", "modify", "retire"},
-		Surfaces:          []Surface{"manual", "mcp", "workbench"},
+		Surfaces:          []Surface{"blame", "commit", "file", "history", "manual", "mcp", "workbench"},
 		WireAliases:       []string{},
 		Availability: CapabilityPredicate{
 			RequiresAll:     []Capability{},
@@ -155,6 +181,22 @@ var Terms = []Term{
 			RequiresAll:     []Capability{"caller-map-exact-identity"},
 			RequiresAny:     []Capability{},
 			UnavailableHelp: "Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate.",
+		},
+	},
+	{
+		ID:                TermServiceCatalogAuthority,
+		Label:             "Service catalog authority",
+		ShortHelp:         "The reviewed repository metadata that defines one service identity and its lifecycle state.",
+		ExpandedHelp:      "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
+		EvidenceBoundary:  "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
+		AuthorityBoundary: "Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
+		Modes:             []Mode{"add", "migrate", "modify", "retire"},
+		Surfaces:          []Surface{"manual", "mcp", "service_directory"},
+		WireAliases:       []string{},
+		Availability: CapabilityPredicate{
+			RequiresAll:     []Capability{"service-catalog-v2"},
+			RequiresAny:     []Capability{},
+			UnavailableHelp: "Service catalog authority is unavailable because the service catalog capability is not enabled for this surface.",
 		},
 	},
 	{

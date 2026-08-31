@@ -887,7 +887,7 @@ glossary below is the complete documentation fallback.
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
 #### Canonical Change Workbench glossary
 
-The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1`.
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330`.
 
 ##### Analysis scope & gaps
 
@@ -931,6 +931,20 @@ The certificate records the authorized repository universe, indexed revisions, p
 - Required capabilities (any): none
 - When unavailable: The coverage certificate is unavailable because extraction coverage is not enabled for this surface.
 
+##### Exact static relationship
+
+A published RPC or Kafka source relationship bound to one exact service incarnation and generation.
+
+Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.
+
+- Evidence boundary: Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.
+- Authority boundary: Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `relationship_explorer`
+- Required capabilities (all): `service-relationships-v1`
+- Required capabilities (any): none
+- When unavailable: Exact static relationships are unavailable because the service relationship capability is not enabled for this surface.
+
 ##### Implementation evidence
 
 Cited source or history that may inform how the change is implemented.
@@ -940,7 +954,7 @@ Search matches, definitions, references, tests, mocks, documentation, blame, com
 - Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit.
 - Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.
 - Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `manual`, `mcp`, `workbench`
+- Registered surfaces: `blame`, `commit`, `file`, `history`, `manual`, `mcp`, `workbench`
 - Required capabilities (all): none
 - Required capabilities (any): `code-navigation`, `history`, `source-search`
 - When unavailable: Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.
@@ -986,6 +1000,20 @@ The row retains the call-site citation, generated symbol, wire operation, declar
 - Required capabilities (all): `caller-map-exact-identity`
 - Required capabilities (any): none
 - When unavailable: Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate.
+
+##### Service catalog authority
+
+The reviewed repository metadata that defines one service identity and its lifecycle state.
+
+The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.
+
+- Evidence boundary: Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.
+- Authority boundary: Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `service_directory`
+- Required capabilities (all): `service-catalog-v2`
+- Required capabilities (any): none
+- When unavailable: Service catalog authority is unavailable because the service catalog capability is not enabled for this surface.
 
 ##### Success criterion
 

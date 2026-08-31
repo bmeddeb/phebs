@@ -1,6 +1,6 @@
 // Code generated from internal/glossary/glossary.json; DO NOT EDIT.
 export const glossarySchemaVersion = "change-workbench-glossary-v1" as const
-export const glossaryDigest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1" as const
+export const glossaryDigest = "sha256:354838d7094f74b1f6951f11485d6a915f26c07211a0abbc820263842084b330" as const
 
 export const glossaryCapabilities = [
   "caller-map-exact-identity",
@@ -10,11 +10,13 @@ export const glossaryCapabilities = [
   "contract-impact-report",
   "coverage-certificate",
   "history",
+  "service-catalog-v2",
+  "service-relationships-v1",
   "source-search"
 ] as const
 export type GlossaryCapability = typeof glossaryCapabilities[number]
 export type GlossaryMode = 'add' | 'migrate' | 'modify' | 'retire'
-export type GlossarySurface = 'atlas' | 'caller_map' | 'impact' | 'manual' | 'mcp' | 'workbench'
+export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory' | 'workbench'
 
 export type GlossaryTerm = Readonly<{
   id: string
@@ -134,6 +136,33 @@ export const glossaryTerms = [
     }
   },
   {
+    "id": "exact_static_relationship",
+    "label": "Exact static relationship",
+    "shortHelp": "A published RPC or Kafka source relationship bound to one exact service incarnation and generation.",
+    "expandedHelp": "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
+    "evidenceBoundary": "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
+    "authorityBoundary": "Rows come only from authorized exact-current relationship roots and are revalidated before cited source bytes load; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
+    "modes": [
+      "add",
+      "migrate",
+      "modify",
+      "retire"
+    ],
+    "surfaces": [
+      "manual",
+      "mcp",
+      "relationship_explorer"
+    ],
+    "wireAliases": [],
+    "availability": {
+      "requiresAll": [
+        "service-relationships-v1"
+      ],
+      "requiresAny": [],
+      "unavailableHelp": "Exact static relationships are unavailable because the service relationship capability is not enabled for this surface."
+    }
+  },
+  {
     "id": "implementation_evidence",
     "label": "Implementation evidence",
     "shortHelp": "Cited source or history that may inform how the change is implemented.",
@@ -147,6 +176,10 @@ export const glossaryTerms = [
       "retire"
     ],
     "surfaces": [
+      "blame",
+      "commit",
+      "file",
+      "history",
       "manual",
       "mcp",
       "workbench"
@@ -251,6 +284,33 @@ export const glossaryTerms = [
       ],
       "requiresAny": [],
       "unavailableHelp": "Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate."
+    }
+  },
+  {
+    "id": "service_catalog_authority",
+    "label": "Service catalog authority",
+    "shortHelp": "The reviewed repository metadata that defines one service identity and its lifecycle state.",
+    "expandedHelp": "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
+    "evidenceBoundary": "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
+    "authorityBoundary": "Only immutable accepted catalog and committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
+    "modes": [
+      "add",
+      "migrate",
+      "modify",
+      "retire"
+    ],
+    "surfaces": [
+      "manual",
+      "mcp",
+      "service_directory"
+    ],
+    "wireAliases": [],
+    "availability": {
+      "requiresAll": [
+        "service-catalog-v2"
+      ],
+      "requiresAny": [],
+      "unavailableHelp": "Service catalog authority is unavailable because the service catalog capability is not enabled for this surface."
     }
   },
   {
