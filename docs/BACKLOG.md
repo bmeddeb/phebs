@@ -3037,9 +3037,8 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration. T41.2–T41.5 are integrated;
-T41.6–T41.7 are implementation-complete on the stacked scale lineage. T41.8
-is next; integration remains separate.
+production constant or runtime registration. T41.2–T41.7 are integrated. T41.8
+is next.
 
 **T41.8 · Dark bucketed relationship publication** — replace
 one-file-per-service relationship storage and the monolithic hot root with a

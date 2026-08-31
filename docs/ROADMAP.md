@@ -163,9 +163,7 @@ and T43R.2 completed on 2026-08-30 and T43R.3–5 completed on 2026-08-31.
 T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
-release claim; T41.2–T41.5 are integrated and T41.6–T41.7 are
-implementation-complete on the stacked scale lineage. T41.8 is next;
-integration remains separate.
+release claim; T41.2–T41.7 are integrated. T41.8 is next.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -960,8 +958,7 @@ catalog, relationship, or correctness authority.
   clearing plans, and indexed desired/active roots protect historical catalogs.
   The 10,000-service proof bounds every chunk at 512 rows, cold writes at
   10,000 rows, activation writes at 10,000, and one-service deltas at one row.
-  T41.3–T41.5 are integrated; T41.6–T41.7 are implementation-complete on the
-  stacked scale lineage, T41.8 is next, and integration remains separate.
+  T41.3–T41.7 are integrated; T41.8 is next.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

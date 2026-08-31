@@ -10648,11 +10648,12 @@ HTTP/streamed-HTTP/MCP parity; v2 regression; and the 10,000-service page bound
 are covered. The full store package passed in 1129.985s normally and 1167.423s
 under race; complete affected normal/race packages, repository build/vet/lint,
 module, documentation, glossary, shell, and whitespace gates passed. The final
-UI suite passed 631 tests, lint/build and the embedded UI build passed, and a
-source-free Chrome proof passed at desktop and 390 px across 10,000-service
+Before rebase, the T41.7 UI suite passed 631 tests, lint/build and the embedded
+UI build passed, and a source-free Chrome proof passed at desktop and 390 px across 10,000-service
 paging, invalid-cursor recovery, crossed-authority refusal, bounded DOM, and no
-document overflow. The integrated built directory route is 48.01 kB (12.25 kB gzip), adds
-no dependency, and preserves the existing 150ms 10,000-row interaction budget.
+document overflow. The rebased combined UI suite passes 638 tests, and the
+integrated built directory route is 48.01 kB (12.25 kB gzip), adds no
+dependency, and preserves the existing 150ms 10,000-row interaction budget.
 
 Directory construction reads one 32-byte random secret; each continuation
 signs or verifies one at-most-16-KiB token. Dark v3 page/detail adds one final
@@ -10660,5 +10661,5 @@ pointer/summary confirmation pair, search adds one shared-interface dispatch,
 and the UI retains one page plus at most one detail without polling. No write,
 schema migration, worker, child, Git/source/corpus read, lifecycle turn, new
 lock, cache enlargement, production cap, release/SLO, topology, migration, or
-decommission claim is added. T41.8 is next on the stacked scale lineage; T41.9
-still owns runtime selection.
+decommission claim is added. T41.6–T41.7 are integrated on the current-main
+lineage; T41.8 is next and T41.9 still owns runtime selection.
