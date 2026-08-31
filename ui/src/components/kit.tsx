@@ -3,7 +3,8 @@ import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import type { PipelineRefusalReceipt, ServiceRelationshipCitation } from '../api'
 import type { Token } from '../highlight'
-import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, useMode, usePalette, usePhebsTokens, type ToneName } from '../theme'
+import type { PaletteName } from '../palette'
+import { FONTS, MOTION, NUMERIC, animated, focusRing, toneFor, useMode, usePalette, usePhebsTokens, type Mode, type ToneName } from '../theme'
 
 // The shared evidence kit (T43.3). One implementation per primitive; pages
 // keep choosing the tone word, the kit owns the anatomy. Status colors always
@@ -384,35 +385,66 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
 const CITATION_HIGHLIGHT_MAX_UNITS = 65_536
 const CITATION_HIGHLIGHT_MAX_LINES = 1_500
 
+type CitedSourceHighlight = {
+  path: string
+  content: string
+  mode: Mode
+  palette: PaletteName
+  lines: string[]
+  tokenLines: Token[][]
+}
+
 function CitedSource({ path, content }: { path: string; content: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  return (
+    <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>
+      <HighlightedCitationBytes path={path} content={content} />
+    </pre>
+  )
+}
+
+export function HighlightedCitationBytes({ path, content }: { path: string; content: string }) {
   const { mode } = useMode()
   const { palette } = usePalette()
-  const [tokenLines, setTokenLines] = useState<Token[][] | null>(null)
+  const [highlight, setHighlight] = useState<CitedSourceHighlight | null>(null)
   useEffect(() => {
     let active = true
-    setTokenLines(null)
+    setHighlight(null)
     if (content.length > CITATION_HIGHLIGHT_MAX_UNITS) return
-    const lines = content.split('\n')
-    if (lines.length > CITATION_HIGHLIGHT_MAX_LINES) return
-    void Promise.all([import('../highlight'), import('../lang')])
-      .then(async ([highlight, lang]) => {
+    if (!citationLineCountWithinBound(content)) return
+    void import('../lang')
+      .then(async (lang) => {
         const language = await lang.languageFor(path)
+        if (!active || language === null) return
+        const tokenizer = await import('../highlight')
         if (!active) return
-        setTokenLines(lines.map((line) => highlight.tokenize(line, language, mode, palette)))
+        const lines = content.split('\n')
+        setHighlight({
+          path,
+          content,
+          mode,
+          palette,
+          lines,
+          tokenLines: lines.map((line) => tokenizer.tokenize(line, language, mode, palette)),
+        })
       })
       .catch(() => {})
     return () => { active = false }
   }, [path, content, mode, palette])
-  const lines = content.split('\n')
+  const current = highlight?.path === path &&
+    highlight.content === content &&
+    highlight.mode === mode &&
+    highlight.palette === palette
+    ? highlight
+    : null
   return (
-    <pre tabIndex={0} className={css({ margin: '10px 0 0', maxHeight: '280px', overflow: 'auto', padding: '12px', border: `1px solid ${tok.cardBorder}`, backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', ':focus-visible': focusRing(tok) })}>
-      {tokenLines
-        ? lines.map((line, index) => (
+    <>
+      {current
+        ? current.lines.map((line, index) => (
           <Fragment key={index}>
             {index > 0 ? '\n' : null}
-            {(tokenLines[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
+            {(current.tokenLines[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
               <span key={spanIndex} style={span.color ? { color: span.color, fontStyle: span.fontStyle } : undefined}>
                 {line.slice(span.from, span.to)}
               </span>
@@ -420,8 +452,21 @@ function CitedSource({ path, content }: { path: string; content: string }) {
           </Fragment>
         ))
         : content}
-    </pre>
+    </>
   )
+}
+
+function citationLineCountWithinBound(content: string): boolean {
+  let lineCount = 1
+  let offset = 0
+  while (lineCount <= CITATION_HIGHLIGHT_MAX_LINES) {
+    const newline = content.indexOf('\n', offset)
+    if (newline === -1) return true
+    lineCount += 1
+    if (lineCount > CITATION_HIGHLIGHT_MAX_LINES) return false
+    offset = newline + 1
+  }
+  return false
 }
 
 function CitationIdentity({ label, value }: { label: string; value: string }) {

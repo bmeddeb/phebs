@@ -3277,6 +3277,36 @@ exact-bound and one-over tests — and the highlight proof asserts a
 known keyword's palette color in both themes with byte-identical text,
 closing the null-language false-positive the first test allowed.
 
+Closure follow-up (2026-08-31): the audit found that exact caller
+citations used by Caller Map, Caller Comparison, and Workbench still
+rendered plain bytes outside the shared relationship-citation
+highlighter. Both envelopes now share one presentation-only byte
+renderer while retaining their separate authorization, identity,
+failure, and chrome contracts. Highlight state is keyed to path,
+content, theme, and palette so stale spans can never cross a citation
+transition. Exact-caller read state is additionally keyed to the full
+source/capability identity: refreshed rows synchronously hide old bytes,
+abort the old read, and ignore any late old response. The cheap fallback
+now performs a bounded newline scan without splitting; an unsupported
+path does not load the tokenizer or create per-line spans; tokenizer
+failure remains exact plain text.
+The existing manifest remains 32 authenticated routes / 130 PNGs: its
+literal AC records that no receipt opens a citation, and adding a
+desktop/390 open-citation pair would be a separate eight-PNG scope
+amendment, not this close. Current marker-production, API-fencing, and
+Relationship Explorer focused tests pass. A reconstructed exact-main
+canonical cohort reached server readiness, but fixed 90% hard-watermark
+admission refused all three indexes because the host data volume is 92%
+used. Relative to the stacked base, the production build adds 893 raw/
+298 gzip bytes across all JavaScript (358/152 in the initial entry and
+537/166 in the existing exact-citation lazy chunk, individually
+compressed), with no new dependency or chunk and unchanged highlight/
+language asset raw sizes. A supported exact-caller citation's first open
+may fetch those existing lazy static assets; later module-cached opens do
+not. No baseline update, clean retained comparison, ticket completion,
+merge, or integration is claimed; the deterministic-receipts clause
+therefore remains open.
+
 **T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
 palette registry over the single highlight module. AC: the current
 palette ships as the default plus at least three curated alternatives,

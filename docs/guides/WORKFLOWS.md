@@ -1517,14 +1517,22 @@ is a failure or terminal refusal.
   assistive technology), `Enter` opens the selected file at its first
   match, `y` copies the selected path, `o` collapses or expands the
   selected repository group.
-- **Citation highlighting** (T44.1): citation panels render cited source
-  bytes through the same best-effort line tokenizer search results use,
-  in both themes. The bytes are never altered — only presentation spans
-  are added. Highlighting is bounded: content over 65,536 UTF-16 units
-  or 1,500 lines renders as exact plain text instead (evidence spans are
-  normally tiny; the bound keeps adversarially large citations from
-  costing main-thread seconds), and any tokenizer failure falls back to
-  the plain bytes.
+- **Citation highlighting** (T44.1): relationship citations and exact caller
+  citations in Caller Map, Caller Comparison, and Workbench render cited
+  source bytes through the same best-effort line tokenizer search results
+  use, in both themes. Their authorization, immutable identity, and failure
+  envelopes remain separate; only presentation is shared. The bytes are
+  never altered — only presentation spans are added. Highlighting is bounded:
+  content over 65,536 UTF-16 units or 1,500 lines renders as exact plain text
+  instead (evidence spans are normally tiny; the bound keeps adversarially
+  large citations from costing main-thread seconds). The line bound is checked
+  without allocating a line array. Unsupported paths remain one plain text
+  node without loading the tokenizer, and any tokenizer failure falls back to
+  the exact plain bytes. A citation transition shows its current plain bytes
+  until its own path/theme/palette-bound tokens are ready; spans from a prior
+  citation are never reused. Exact caller read state is also bound to its full
+  source and capability identity: a refreshed row hides old bytes immediately,
+  aborts the superseded read, and ignores a late superseded response.
 - **Directory and explorer lists** (T43.11): the service list and the
   exact relationship rows are single tab stops. With the list focused,
   `↑`/`↓` move the active row, `PageUp`/`PageDown` move by a viewport,

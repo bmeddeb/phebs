@@ -5,7 +5,7 @@ import {
   type CallerMapCitation,
   type CallerMapSource,
 } from '../api'
-import { CitationChip, IdentityText, StatusChip } from '../components/kit'
+import { CitationChip, HighlightedCitationBytes, IdentityText, StatusChip } from '../components/kit'
 import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
@@ -23,43 +23,64 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [citation, setCitation] = useState<CallerMapCitation | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const sourceIdentity = exactSourceIdentity(source)
+  const [citationRead, setCitationRead] = useState<{
+    sourceIdentity: string
+    citation: CallerMapCitation
+  } | null>(null)
+  const [loadingIdentity, setLoadingIdentity] = useState<string | null>(null)
+  const [errorRead, setErrorRead] = useState<{
+    sourceIdentity: string
+    message: string
+  } | null>(null)
   const request = useRef<AbortController | null>(null)
+  const citation = citationRead?.sourceIdentity === sourceIdentity ? citationRead.citation : null
+  const loading = loadingIdentity === sourceIdentity
+  const error = errorRead?.sourceIdentity === sourceIdentity ? errorRead.message : ''
   const exactCapability = source.plane === 'repository-overlay' &&
     Boolean(source.citation && source.object_id && source.blob_digest)
 
   useEffect(() => () => request.current?.abort(), [])
+  useEffect(() => {
+    request.current?.abort()
+    request.current = null
+    setCitationRead(null)
+    setLoadingIdentity(null)
+    setErrorRead(null)
+  }, [sourceIdentity])
 
   const toggleCitation = () => {
     if (citation) {
-      setCitation(null)
-      setError('')
+      setCitationRead(null)
+      setErrorRead(null)
       return
     }
     if (!exactCapability || !source.citation) return
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    setLoading(true)
-    setError('')
+    setLoadingIdentity(sourceIdentity)
+    setErrorRead(null)
     fetchCallerCitation(source.citation, controller.signal)
       .then((result) => {
+        if (request.current !== controller) return
         if (!exactCitationMatches(source, result)) {
           throw new Error('Exact citation response did not match the selected caller occurrence.')
         }
-        setCitation(result)
+        setCitationRead({ sourceIdentity, citation: result })
       })
       .catch((cause) => {
-        if (!isAbortError(cause)) {
-          setError(cause instanceof Error ? cause.message : String(cause))
+        if (request.current === controller && !isAbortError(cause)) {
+          setErrorRead({
+            sourceIdentity,
+            message: cause instanceof Error ? cause.message : String(cause),
+          })
         }
       })
       .finally(() => {
         if (request.current === controller) {
           request.current = null
-          setLoading(false)
+          setLoadingIdentity((current) => current === sourceIdentity ? null : current)
         }
       })
   }
@@ -162,12 +183,31 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
               overflowWrap: 'anywhere',
             })}
           >
-            {citation.content}
+            <HighlightedCitationBytes path={citation.source.path} content={citation.content} />
           </pre>
         </section>
       )}
     </div>
   )
+}
+
+function exactSourceIdentity(source: CallerMapSource): string {
+  return JSON.stringify([
+    source.repository,
+    source.commit,
+    source.path,
+    source.object_id,
+    source.blob_digest,
+    source.plane,
+    source.start_byte,
+    source.end_byte,
+    source.start_line,
+    source.end_line,
+    source.assertion_id,
+    source.run_id,
+    source.atom_id,
+    source.citation,
+  ])
 }
 
 function exactCitationMatches(

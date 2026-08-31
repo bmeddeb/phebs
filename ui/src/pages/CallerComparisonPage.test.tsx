@@ -306,7 +306,7 @@ beforeEach(() => {
         schema_version: 'caller-map-citation-v1',
         generation: generation(endpoint),
         source: callerRow(index, endpoint).source,
-        content: `client.Get(order${index})`,
+        content: `return client.Get(order${index})`,
       }
     },
   )
@@ -390,9 +390,15 @@ test('renders two exact generations, four classifications, and range-only citati
   const exactCitationButton = sourceLabel.parentElement?.querySelector('button')
   expect(exactCitationButton).not.toBeNull()
   fireEvent.click(exactCitationButton!)
-  expect((await screen.findByLabelText(
+  const citedBytes = await screen.findByLabelText(
     'Exact cited bytes for github.com/acme/orders/src/caller_1.go:2',
-  )).textContent).toBe('client.Get(order1)')
+  )
+  expect(citedBytes.textContent).toBe('return client.Get(order1)')
+  await waitFor(() => {
+    const keyword = Array.from(citedBytes.querySelectorAll('span'))
+      .find((span) => span.textContent === 'return') as HTMLElement | undefined
+    expect(keyword?.style.color).toBeTruthy()
+  })
   expect(api.fetchCallerCitation).toHaveBeenCalledWith(
     'exact-citation-protobuf-1', expect.any(AbortSignal),
   )

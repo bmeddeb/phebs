@@ -327,7 +327,7 @@ beforeEach(() => {
         schema_version: 'caller-map-citation-v1',
         generation: callerPage([]).generation!,
         source,
-        content: `client.Get(order${index})`,
+        content: `return client.Get(order${index})`,
       }
     },
   )
@@ -437,9 +437,15 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   const exactCitationButton = sourceLabel.parentElement?.querySelector('button')
   expect(exactCitationButton).not.toBeNull()
   fireEvent.click(exactCitationButton!)
-  expect((await screen.findByLabelText(
+  const citedBytes = await screen.findByLabelText(
     `Exact cited bytes for ${sourceRepo}/src/caller_1.go:2`,
-  )).textContent).toBe('client.Get(order1)')
+  )
+  expect(citedBytes.textContent).toBe('return client.Get(order1)')
+  await waitFor(() => {
+    const keyword = Array.from(citedBytes.querySelectorAll('span'))
+      .find((span) => span.textContent === 'return') as HTMLElement | undefined
+    expect(keyword?.style.color).toBeTruthy()
+  })
   expect(api.fetchCallerCitation).toHaveBeenCalledWith(
     'exact-citation-1', expect.any(AbortSignal),
   )

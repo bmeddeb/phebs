@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 import { BaseProvider } from 'baseui'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
@@ -236,6 +239,64 @@ describe('CitationPanel', () => {
     const pre = document.querySelector('pre')!
     await waitFor(() => expect(pre.textContent).toBe(content))
     expect(pre.querySelectorAll('span').length).toBe(0)
+  })
+
+  it('keeps unsupported languages as exact plain bytes without tokenizing (T44.1f)', async () => {
+    const highlighter = await import('../highlight')
+    const tokenize = vi.spyOn(highlighter, 'tokenize')
+    const content = 'return bytes_with_no_language'
+    mount(<CitationPanel
+      id="hl-unsupported"
+      loading={false}
+      error=""
+      citation={{
+        ...citation,
+        evidence: { ...citation.evidence, path: 'evidence/opaque.unknown' },
+        content,
+      }}
+      onClose={() => {}}
+    />)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+    const pre = document.querySelector('pre')!
+    expect(pre.textContent).toBe(content)
+    expect(pre.querySelectorAll('span')).toHaveLength(0)
+    expect(tokenize).not.toHaveBeenCalled()
+  })
+
+  it('falls back to exact plain bytes when tokenization fails (T44.1f)', async () => {
+    const highlighter = await import('../highlight')
+    const tokenize = vi.spyOn(highlighter, 'tokenize').mockImplementation(() => {
+      throw new Error('synthetic tokenizer failure')
+    })
+    const content = 'return "still exact"'
+    mount(<CitationPanel id="hl-failure" loading={false} error="" citation={{ ...citation, content }} onClose={() => {}} />)
+    await waitFor(() => expect(tokenize).toHaveBeenCalled())
+    const pre = document.querySelector('pre')!
+    expect(pre.textContent).toBe(content)
+    expect(pre.querySelectorAll('span')).toHaveLength(0)
+  })
+
+  it('never presents stale highlighted bytes while citation identity changes (T44.1f)', async () => {
+    const first = { ...citation, content: 'return "old"' }
+    const mounted = mount(<CitationPanel id="hl-rerender" loading={false} error="" citation={first} onClose={() => {}} />)
+    await keywordSpan()
+    const nextContent = 'current exact bytes are not the old citation'
+    mounted.rerender(
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={lightTheme}>
+          <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
+            <CitationPanel
+              id="hl-rerender"
+              loading={false}
+              error=""
+              citation={{ ...citation, content: nextContent }}
+              onClose={() => {}}
+            />
+          </ModeContext.Provider>
+        </BaseProvider>
+      </StyletronProvider>,
+    )
+    expect(document.querySelector('pre')!.textContent).toBe(nextContent)
   })
 
   it('announces loading and fail-closed errors', () => {
