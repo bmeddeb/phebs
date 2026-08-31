@@ -3038,19 +3038,8 @@ selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration. T41.2–T41.5 are integrated;
-T41.6 is next.
-
-**T41.6 · Sparse catalog/state/search backend** — migrate verified store point/
-page state reads and service-query compile/runtime to root/member authority,
-without adding HTTP/MCP/UI changes. AC: a service detail/search reads one root,
-one service member, bounded state rows, and at most one historical member for a
-stale service; inventory pages read only intersecting members; one verified
-generation/member cache has bounded entries and lease-delayed retirement;
-batch relationship consumers stream the catalog/state once instead of opening
-it per 101-row page; malformed current v3 never falls back to v2; selected
-512-successor service state remains within response/backend bounds; cold,
-warm, revocation seam, concurrent-publication, and exact read/hash/query count
-tests at 10,000 services; full focused and merge bars.
+T41.6 is implementation-complete on its ticket branch, and T41.7 is next after
+integration.
 
 **T41.7 · Authorized HTTP/MCP/UI v3 parity** — project T41.6 through service
 inventory/detail, status, search scope, HTTP, MCP, and the existing directory

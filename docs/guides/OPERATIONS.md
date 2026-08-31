@@ -3137,6 +3137,17 @@ historical roots. Reconcile keeps the summary catalog-mismatched until its final
 CAS; activation updates at most 512 rows plus the matching summary atomically.
 Neither protocol is registered with the production scheduler yet.
 
+The dark v3 read backend strict-opens the candidate pointer and summary before
+serving state. A bounded verified cache retains at most eight roots and 128
+decoded service members; concurrent cold fills coalesce, and an active detail
+or search lease delays eviction through its final authority fence. A current
+detail opens one service member; stale detail may add one historical member.
+Inventory scans at most 500 ordered state rows and opens only member ranges
+intersecting that scan. Cache saturation with only leased entries refuses the
+new fill rather than exceeding the bound. Malformed or unreconciled v3 never
+falls back to v2. No operator setting or product selector exposes this path;
+T41.7 owns transport projection and T41.9 owns selection.
+
 The retained source-free receipt at `spike/t354/results.json` binds T32.3's
 synthetic 1,000/5,000-service profiles to production-path gates for catalog
 churn, coalescing, interrupted stages, reader leases, proof-pin release,

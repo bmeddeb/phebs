@@ -135,6 +135,15 @@ type ServiceStateRead struct {
 	Entry       ServiceStateEntry
 }
 
+// AcceptedServiceStateSnapshot is the one-pass v2 batch boundary used by
+// relationship builders. Publication, summary, and rows are final-fenced
+// before return.
+type AcceptedServiceStateSnapshot struct {
+	Publication servicecatalog.Publication
+	Summary     servicecatalog.RepositoryState
+	States      []servicecatalog.ServiceState
+}
+
 // ServiceStatePage is one ordered bounded inventory snapshot. Continuation is
 // the scan boundary when a sparse filter did not fill the requested page.
 type ServiceStatePage struct {
@@ -627,6 +636,62 @@ func (s *Surreal) GetServiceStateRead(
 		Publication: cloneServiceStatePublication(*publication),
 		Summary:     *summary,
 		Entry:       *entry,
+	}, nil
+}
+
+func (s *Surreal) GetAcceptedServiceStateSnapshot(
+	ctx context.Context,
+	repository string,
+	limit int,
+) (*AcceptedServiceStateSnapshot, error) {
+	if validateCandidateRepository(repository) != nil ||
+		limit < 1 || limit > servicecatalog.MaxServices {
+		return nil, fmt.Errorf("get accepted service states: invalid request")
+	}
+	publication, verified, summary, err := s.serviceStateSnapshot(ctx, repository)
+	if err != nil {
+		return nil, fmt.Errorf("get accepted service states: %w", err)
+	}
+	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_current
+	WHERE repository = $repository AND removed = false AND disposition = $accepted
+	ORDER BY service_key LIMIT $limit`, map[string]any{
+		"repository": repository, "accepted": servicecatalog.DispositionAccepted,
+		"limit": limit + 1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get accepted service states: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) > limit {
+		return nil, fmt.Errorf("get accepted service states: service limit exceeded")
+	}
+	states := make([]servicecatalog.ServiceState, 0, len(rows))
+	prior := ""
+	for _, row := range rows {
+		state, stateErr := serviceStateFromRec(row)
+		if stateErr != nil || state.Repository != repository ||
+			state.ServiceKey <= prior || state.Removed ||
+			state.Disposition != servicecatalog.DispositionAccepted {
+			return nil, fmt.Errorf(
+				"get accepted service states: invalid row: %w",
+				servicecatalog.ErrInvalidServiceState,
+			)
+		}
+		if _, projectionErr := verifyServiceStateProjection(*state, verified); projectionErr != nil {
+			return nil, fmt.Errorf("get accepted service states: %w", projectionErr)
+		}
+		prior = state.ServiceKey
+		cloned := *state
+		cloned.Successors = slices.Clone(state.Successors)
+		states = append(states, cloned)
+	}
+	if err := s.ConfirmServiceStateSnapshot(ctx, repository, *summary); err != nil {
+		return nil, fmt.Errorf("get accepted service states: final fence: %w", err)
+	}
+	return &AcceptedServiceStateSnapshot{
+		Publication: cloneServiceStatePublication(*publication),
+		Summary:     *summary, States: states,
 	}, nil
 }
 

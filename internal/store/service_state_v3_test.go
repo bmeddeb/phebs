@@ -1,10 +1,14 @@
 package store
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,6 +17,89 @@ import (
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
+
+type serviceStateV3ReadCounter struct {
+	*Surreal
+	pointers  atomic.Int64
+	roots     atomic.Int64
+	members   atomic.Int64
+	summaries atomic.Int64
+	points    atomic.Int64
+	pages     atomic.Int64
+	accepted  atomic.Int64
+	confirms  atomic.Int64
+}
+
+func (counter *serviceStateV3ReadCounter) GetServiceCatalogV3CandidatePointer(
+	ctx context.Context, repository string,
+) (ServiceCatalogV3Pointer, error) {
+	counter.pointers.Add(1)
+	return counter.Surreal.GetServiceCatalogV3CandidatePointer(ctx, repository)
+}
+
+func (counter *serviceStateV3ReadCounter) ReadServiceCatalogV3Root(
+	ctx context.Context, repository, digest string,
+) (servicecatalogv3.Root, error) {
+	counter.roots.Add(1)
+	return counter.Surreal.ReadServiceCatalogV3Root(ctx, repository, digest)
+}
+
+func (counter *serviceStateV3ReadCounter) ReadServiceCatalogV3Member(
+	ctx context.Context, descriptor servicecatalogv3.MemberDescriptor,
+) ([]byte, error) {
+	counter.members.Add(1)
+	return counter.Surreal.ReadServiceCatalogV3Member(ctx, descriptor)
+}
+
+func (counter *serviceStateV3ReadCounter) GetServiceStateV3SummaryPoint(
+	ctx context.Context, repository string,
+) (servicecatalog.RepositoryState, error) {
+	counter.summaries.Add(1)
+	return counter.Surreal.GetServiceStateV3SummaryPoint(ctx, repository)
+}
+
+func (counter *serviceStateV3ReadCounter) GetServiceStateV3Point(
+	ctx context.Context, repository, key string,
+) (servicecatalog.ServiceState, error) {
+	counter.points.Add(1)
+	return counter.Surreal.GetServiceStateV3Point(ctx, repository, key)
+}
+
+func (counter *serviceStateV3ReadCounter) ListServiceStateV3Rows(
+	ctx context.Context, repository, after string, limit int,
+) ([]servicecatalog.ServiceState, error) {
+	counter.pages.Add(1)
+	return counter.Surreal.ListServiceStateV3Rows(ctx, repository, after, limit)
+}
+
+func (counter *serviceStateV3ReadCounter) ListAcceptedServiceStateV3Rows(
+	ctx context.Context, repository string, limit int,
+) ([]servicecatalog.ServiceState, error) {
+	counter.accepted.Add(1)
+	return counter.Surreal.ListAcceptedServiceStateV3Rows(ctx, repository, limit)
+}
+
+func (counter *serviceStateV3ReadCounter) ConfirmServiceStateV3Snapshot(
+	ctx context.Context,
+	pointer ServiceCatalogV3Pointer,
+	summary servicecatalog.RepositoryState,
+) error {
+	counter.confirms.Add(1)
+	return counter.Surreal.ConfirmServiceStateV3Snapshot(ctx, pointer, summary)
+}
+
+func newServiceStateV3CountingReader(
+	t *testing.T, s *Surreal,
+) (*serviceStateV3ReadCounter, *ServiceStateV3Reader, *servicecatalogv3.ReadCache) {
+	t.Helper()
+	counter := &serviceStateV3ReadCounter{Surreal: s}
+	cache := servicecatalogv3.NewDefaultReadCache()
+	reader, err := NewServiceStateV3Reader(counter, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return counter, reader, cache
+}
 
 func TestServiceStateV3ReconcileActivationAndSuccessorFence(t *testing.T) {
 	s := newServiceCatalogV3InternalStore(t)
@@ -682,11 +769,119 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	runServiceStateV3Plan(t, s, activation)
 	assertServiceStateV3PlanBounds(t, s, activation.Plan.Digest, servicesCount, servicesCount)
 
+	counter, reader, cache := newServiceStateV3CountingReader(t, s)
+	const concurrentReaders = 8
+	errs := make([]error, concurrentReaders)
+	var wait sync.WaitGroup
+	for index := range concurrentReaders {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			read, readErr := reader.OpenService(ctx, repository, "service-05123")
+			if readErr == nil {
+				readErr = reader.Confirm(ctx, read)
+			}
+			if read != nil {
+				read.Close()
+			}
+			errs[index] = readErr
+		}()
+	}
+	wait.Wait()
+	for _, readErr := range errs {
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+	}
+	stats := cache.Stats()
+	if counter.pointers.Load() != concurrentReaders || counter.roots.Load() != 1 ||
+		counter.members.Load() != 1 || counter.summaries.Load() != concurrentReaders ||
+		counter.points.Load() != concurrentReaders || counter.confirms.Load() != concurrentReaders ||
+		stats.RootReads != 1 || stats.MemberReads != 1 ||
+		stats.RootValidations != 1 || stats.MemberValidations != 1 {
+		t.Fatalf("10,000-service concurrent cold counts = %+v", stats)
+	}
+	warm, err := reader.OpenService(ctx, repository, "service-05123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.Confirm(ctx, warm); err != nil {
+		t.Fatal(err)
+	}
+	warm.Close()
+	stats = cache.Stats()
+	if counter.roots.Load() != 1 || counter.members.Load() != 1 ||
+		stats.RootReads != 1 || stats.MemberReads != 1 ||
+		stats.RootLeases != 0 || stats.MemberLeases != 0 {
+		t.Fatalf("10,000-service warm/cache counts = %+v", stats)
+	}
+
+	pageCounter, pageReader, pageCache := newServiceStateV3CountingReader(t, s)
+	anchor, err := s.GetServiceStateV3Point(ctx, repository, "service-00499")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, err := pageReader.ListServices(
+		ctx, repository, ServiceStateFilter{}, ServiceStatePosition{
+			ServiceKey: anchor.ServiceKey, Incarnation: anchor.Incarnation,
+		}, MaxServiceStateReadPage,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageStats := pageCache.Stats()
+	if len(page.Entries) != MaxServiceStateReadPage ||
+		page.Entries[0].State.ServiceKey != "service-00500" ||
+		pageCounter.pointers.Load() != 1 || pageCounter.roots.Load() != 1 ||
+		pageCounter.members.Load() != 2 || pageCounter.summaries.Load() != 1 ||
+		pageCounter.points.Load() != 1 || pageCounter.pages.Load() != 1 ||
+		pageCounter.confirms.Load() != 1 || pageStats.MemberReads != 2 {
+		t.Fatalf("10,000-service page counts = %+v / %+v", pageStats, page)
+	}
+
+	batchCounter, batchReader, batchCache := newServiceStateV3CountingReader(t, s)
+	snapshot, err := batchReader.AcceptedSnapshot(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batchStats := batchCache.Stats()
+	if len(snapshot.States) != servicesCount || batchCounter.pointers.Load() != 1 ||
+		batchCounter.roots.Load() != 1 ||
+		batchCounter.members.Load() != int64(len(first.Root.ServiceMembers)) ||
+		batchCounter.summaries.Load() != 1 || batchCounter.accepted.Load() != 1 ||
+		batchCounter.confirms.Load() != 1 ||
+		batchStats.MemberValidations != uint64(len(first.Root.ServiceMembers)) {
+		t.Fatalf("10,000-service batch counts = %+v", batchStats)
+	}
+
+	_, heldReader, heldCache := newServiceStateV3CountingReader(t, s)
+	held, err := heldReader.OpenService(ctx, repository, "service-09999")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	deltaServices := append([]servicecatalog.Service(nil), services...)
 	deltaServices[len(deltaServices)-1].DisplayName = "Changed service"
 	second := serviceStateV3Generation(t, repository, commit, "ten-thousand-b", deltaServices)
 	if err := s.PublishServiceCatalogV3Candidate(ctx, second); err != nil {
 		t.Fatal(err)
+	}
+	_, seamReader, _ := newServiceStateV3CountingReader(t, s)
+	if opened, seamErr := seamReader.OpenService(
+		ctx, repository, "service-09999",
+	); seamErr == nil {
+		opened.Close()
+		t.Fatal("concurrent catalog publication escaped unreconciled summary")
+	}
+	if err := heldReader.Confirm(ctx, held); !errors.Is(err, ErrConflict) {
+		t.Fatalf("revoked v3 read confirmation = %v", err)
+	}
+	if stats := heldCache.Stats(); stats.RootLeases != 1 || stats.MemberLeases != 1 {
+		t.Fatalf("revoked v3 read retired before lease close = %+v", stats)
+	}
+	held.Close()
+	if stats := heldCache.Stats(); stats.RootLeases != 0 || stats.MemberLeases != 0 {
+		t.Fatalf("revoked v3 read lease remained = %+v", stats)
 	}
 	delta, err := s.BeginServiceStateV3Reconcile(ctx, repository)
 	if err != nil {
@@ -694,6 +889,17 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	}
 	runServiceStateV3Plan(t, s, delta)
 	assertServiceStateV3PlanBounds(t, s, delta.Plan.Digest, servicesCount*2, 1)
+
+	staleCounter, staleReader, staleCache := newServiceStateV3CountingReader(t, s)
+	stale, err := staleReader.OpenService(ctx, repository, "service-09999")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stale.Entry.State.Status != servicecatalog.StatusStale ||
+		staleCounter.roots.Load() != 2 || staleCounter.members.Load() != 2 {
+		t.Fatalf("stale v3 detail counts = %+v / %+v", staleCache.Stats(), stale.Entry.State)
+	}
+	stale.Close()
 
 	if err := s.PublishServiceCatalogV3Candidate(ctx, first); err != nil {
 		t.Fatal(err)
@@ -706,6 +912,51 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	assertServiceStateV3PlanBounds(t, s, aba.Plan.Digest, servicesCount*2, 1)
 	if time.Since(started) > 10*time.Minute {
 		t.Fatalf("10,000-service cold/no-op/delta/A-B-A exceeded ten minutes: %s", time.Since(started))
+	}
+}
+
+func TestServiceStateV3ReadKeepsMaximumSuccessorRowBounded(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-successors"
+	commit := strings.Repeat("8", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	services := make([]servicecatalog.Service, 1, servicecatalogv3.MaxServiceSuccessors+1)
+	services[0] = servicecatalog.Service{
+		Key: "owner", DisplayName: "Owner", Disposition: servicecatalog.DispositionRejected,
+		Origin: servicecatalog.OriginBase, Reason: "split",
+		Successors: make([]string, servicecatalogv3.MaxServiceSuccessors),
+	}
+	for index := range servicecatalogv3.MaxServiceSuccessors {
+		key := fmt.Sprintf("successor-%03d", index)
+		services[0].Successors[index] = key
+		services = append(services, servicecatalog.Service{
+			Key: key, DisplayName: key, Disposition: servicecatalog.DispositionAccepted,
+			Origin: servicecatalog.OriginBase,
+		})
+	}
+	generation := serviceStateV3Generation(
+		t, repository, commit, "maximum-successors", services,
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
+		t.Fatal(err)
+	}
+	begin, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, begin)
+	_, reader, _ := newServiceStateV3CountingReader(t, s)
+	read, err := reader.OpenService(ctx, repository, "owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer read.Close()
+	encoded, err := json.Marshal(read.Entry.State)
+	if err != nil || len(read.Entry.State.Successors) != servicecatalogv3.MaxServiceSuccessors ||
+		len(encoded) > 64<<10 {
+		t.Fatalf("maximum-successor state = %d successors, %d bytes, %v",
+			len(read.Entry.State.Successors), len(encoded), err)
 	}
 }
 

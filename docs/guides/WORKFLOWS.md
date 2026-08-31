@@ -1210,6 +1210,14 @@ the final matching-summary CAS. Explicit activation then updates at most 512
 rows plus that matching summary atomically, so services already activated from
 the same catalog remain readable while later chunks settle.
 
+Its dark query compiler/runtime can now consume a verified v3 root/member
+lease without changing the existing query authority receipt. Current service
+scope reads one member; stale scope may open exactly one historical member,
+and the lease stays pinned through the final repository/catalog/state/search
+fence. This entry point is intentionally unregistered: all product search
+continues to use the selected v2 path until T41.7 supplies authorized transport
+parity and T41.9 explicitly selects the v3 stack.
+
 
 ### Revision scopes
 

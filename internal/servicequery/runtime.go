@@ -15,10 +15,14 @@ import (
 // final-fence one service-scoped search. Authorization remains the caller's
 // responsibility and must happen before invoking OpenRuntimeScope.
 type RuntimeStore interface {
-	GetRepo(context.Context, string) (*store.Repo, error)
+	RuntimeRepositoryStore
 	GetServiceStateRead(context.Context, string, string) (*store.ServiceStateRead, error)
 	GetServiceCatalogGeneration(context.Context, string, string) (*servicecatalog.Publication, error)
 	ConfirmServiceStateSnapshot(context.Context, string, servicecatalog.RepositoryState) error
+}
+
+type RuntimeRepositoryStore interface {
+	GetRepo(context.Context, string) (*store.Repo, error)
 }
 
 // RuntimeScope is an opaque strict-open store/filesystem snapshot. Its
@@ -30,6 +34,7 @@ type RuntimeScope struct {
 	source   repositoryindex.SourceManifest
 	repo     store.Repo
 	summary  servicecatalog.RepositoryState
+	v3Read   *store.ServiceStateV3Read
 	valid    bool
 }
 
@@ -42,6 +47,13 @@ func (scope RuntimeScope) Search() (repositoryindex.SearchManifest, bool) {
 		return repositoryindex.SearchManifest{}, false
 	}
 	return cloneSearchManifest(scope.search), true
+}
+
+func (scope *RuntimeScope) Close() {
+	if scope != nil && scope.v3Read != nil {
+		scope.v3Read.Close()
+		scope.valid = false
+	}
 }
 
 // OpenRuntimeScope strict-opens current catalog/state, the exact historical
@@ -108,6 +120,69 @@ func OpenRuntimeScope(
 	return opened, nil
 }
 
+// OpenRuntimeScopeV3 is the unregistered segmented-catalog runtime seam. It
+// holds the root/member lease through final confirmation; T41.9 owns selecting
+// this path for product traffic.
+func OpenRuntimeScopeV3(
+	ctx context.Context,
+	indexDir string,
+	st RuntimeRepositoryStore,
+	reader *store.ServiceStateV3Reader,
+	repository, serviceKey string,
+) (_ RuntimeScope, retErr error) {
+	repo, err := st.GetRepo(ctx, repository)
+	if err != nil {
+		return RuntimeScope{}, unavailablef("repository state: %v", err)
+	}
+	revisions, err := runtimeRevisions(*repo)
+	if err != nil {
+		return RuntimeScope{}, err
+	}
+	read, err := reader.OpenService(ctx, repository, serviceKey)
+	if err != nil {
+		return RuntimeScope{}, unavailablef("service state v3: %v", err)
+	}
+	opened := RuntimeScope{v3Read: read}
+	defer func() {
+		if retErr != nil {
+			opened.Close()
+		}
+	}()
+	if read.Entry.Projection == nil || read.ActiveProjection == nil ||
+		read.Entry.State.ActiveCatalogGeneration == "" {
+		return RuntimeScope{}, unavailablef("service has no searchable catalog projection")
+	}
+	search, source, err := focusedindex.ReadRepositorySearchGeneration(
+		indexDir, repository, revisions,
+	)
+	if err != nil {
+		return RuntimeScope{}, unavailablef("repository search generation: %v", err)
+	}
+	if read.Entry.State.ActiveSearchGeneration != search.Digest {
+		return RuntimeScope{}, unavailablef("service search generation is not active")
+	}
+	prepared, err := PrepareV3(V3Scope{
+		CurrentRoot: read.Root, CurrentControlRevision: read.Pointer.ControlRevision,
+		ActiveRoot: read.ActiveRoot, Summary: read.Summary, State: read.Entry.State,
+		DesiredProjection: *read.Entry.Projection,
+		ActiveProjection:  *read.ActiveProjection,
+		Search:            search,
+	})
+	if err != nil {
+		return RuntimeScope{}, err
+	}
+	opened.prepared = prepared
+	opened.search = cloneSearchManifest(search)
+	opened.source = cloneSourceManifest(source)
+	opened.repo = cloneRuntimeRepo(*repo)
+	opened.summary = read.Summary
+	opened.valid = true
+	if err := ConfirmRuntimeScopeV3(ctx, indexDir, st, reader, opened); err != nil {
+		return RuntimeScope{}, err
+	}
+	return opened, nil
+}
+
 func dereferenceCatalog(
 	ctx context.Context,
 	st RuntimeStore,
@@ -138,6 +213,31 @@ func ConfirmRuntimeScope(
 	); err != nil {
 		return unavailablef("service state changed: %v", err)
 	}
+	return confirmRuntimeRepository(ctx, indexDir, st, scope)
+}
+
+func ConfirmRuntimeScopeV3(
+	ctx context.Context,
+	indexDir string,
+	st RuntimeRepositoryStore,
+	reader *store.ServiceStateV3Reader,
+	scope RuntimeScope,
+) error {
+	if !scope.valid || scope.v3Read == nil {
+		return invalidf("runtime v3 scope was not opened")
+	}
+	if err := reader.Confirm(ctx, scope.v3Read); err != nil {
+		return unavailablef("service state changed: %v", err)
+	}
+	return confirmRuntimeRepository(ctx, indexDir, st, scope)
+}
+
+func confirmRuntimeRepository(
+	ctx context.Context,
+	indexDir string,
+	st RuntimeRepositoryStore,
+	scope RuntimeScope,
+) error {
 	repo, err := st.GetRepo(ctx, scope.repo.Name)
 	if err != nil || !sameRuntimeRepo(scope.repo, repo) {
 		return unavailablef("repository generation changed")

@@ -10576,3 +10576,44 @@ T41.3–T41.5 are integrated on the current-main lineage and T41.6 is next. This
 ticket changes no current
 production service cap, release posture, ceremony, scale/SLO, topology,
 migration-completion, or decommission claim.
+
+**T41.6 ✅ · Sparse catalog/state/search backend**
+*(2026-08-31; high)* — the runtime-dark v3 stack now has bounded verified
+root/member reads without adding an HTTP, MCP, UI, configuration, or runtime
+selection surface.
+
+One shared cache retains at most eight strict-validated roots and 128 decoded
+service members. Concurrent cold fills coalesce; entries with active leases
+cannot be evicted, and a saturated cache refuses before starting another
+root/member read when every retirement candidate is leased. Root-derived
+source identity is computed once per root. Each service member is read,
+SHA-256 checked, canonically decoded, and projected once on cold fill; warm
+reads reuse the exact verified projection.
+
+A detail read binds one dark pointer, current root, repository summary, service
+state row, and service member. A stale service may additionally bind one
+historical root/member, and its lease remains live through the final
+catalog/state/repository/search fence. Inventory pages scan at most 500 ordered
+state rows and open only members intersecting that scan. A one-pass v3 accepted
+snapshot joins one accepted-state query to one stream of service members. The
+existing v2 relationship builder now uses the equivalent one-pass accepted
+snapshot rather than reopening the whole catalog/summary for each 101-row
+page. Malformed or unreconciled v3 fails closed with no v2 fallback.
+
+The exact 10,000-service proof passed in 7.442s. Eight concurrent cold detail
+reads produced one root read/validation and one member read/hash; the warm read
+added neither. A 101-result page spanning a member boundary read exactly two
+members. The accepted snapshot read its one state set and each of 20 service
+members once. Pointer publication before summary reconcile refused; revocation
+failed the retained read's final fence; the old entries remained pinned until
+close; and stale detail used exactly two roots/two members. The selected
+512-successor state round-tripped through the store and encoded below 64 KiB.
+
+Focused normal and race suites cover cold/warm/singleflight, bounded cache
+retirement, malformed roots, compile authority, runtime lease revocation,
+one-pass relationship reads, page/member counts, stale historical authority,
+and the 10,000-service/512-successor shapes. The corrected full normal store
+package passed in 1109.535s and the full race package passed in 1213.738s.
+T41.7 is next after integration, while T41.9 still owns selection.
+This ticket changes no production service cap, release posture, ceremony,
+scale/SLO, topology, migration-completion, or decommission claim.

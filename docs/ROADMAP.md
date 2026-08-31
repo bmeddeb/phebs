@@ -163,7 +163,8 @@ and T43R.2 completed on 2026-08-30 and T43R.3–5 completed on 2026-08-31.
 T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
-release claim; T41.2–T41.5 are integrated and T41.6 is next.
+release claim; T41.2–T41.5 are integrated and T41.6 is
+implementation-complete on its ticket branch. T41.7 is next after integration.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -887,8 +888,10 @@ service count × repository bytes
   proof and stores precious root/member rows behind a dark pointer; T41.4 adds
   exact recovery/archive ownership and a fifteenth bounded lifecycle owner;
   T41.5 reconciles and activates shadow state under separate resumable fences.
-  Next, make authorized point/page reads member-local,
-  bucket relationship publications, and close on a neutral
+  T41.6 adds member-local point/page reads, one bounded verified cache, the dark
+  segmented service-query runtime, and one-pass relationship state snapshots.
+  Next, project that backend through authorized product surfaces, bucket
+  relationship publications, and close on a neutral
   10,000-service recovery/lifecycle/product gate. No constants-only increase
   is permitted.
 - **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
@@ -954,7 +957,8 @@ catalog, relationship, or correctness authority.
   clearing plans, and indexed desired/active roots protect historical catalogs.
   The 10,000-service proof bounds every chunk at 512 rows, cold writes at
   10,000 rows, activation writes at 10,000, and one-service deltas at one row.
-  T41.3–T41.5 are integrated; T41.6 is next.
+  T41.3–T41.5 are integrated; T41.6 is implementation-complete and T41.7 is
+  next after integration.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

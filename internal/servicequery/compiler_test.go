@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -137,6 +138,39 @@ func TestCompileUsesExactStaleActiveGeneration(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidScope) {
 		t.Fatalf("mismatched active reader error = %v", err)
+	}
+}
+
+func TestCompileV3BindsSegmentedAuthorityWithoutV2Fallback(t *testing.T) {
+	t.Parallel()
+	scope := testV3Scope(t, strings.Repeat("a", 40), 17)
+	prepared, err := PrepareV3(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiled, err := Compile(Request{
+		Expression: "T416_NEEDLE", RevisionSelector: "HEAD",
+		Scopes: []PreparedScope{prepared},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, branches, predicates := queryAtoms(compiled.Query)
+	if !slices.Equal(branches, []string{"HEAD"}) || len(predicates) != 2 ||
+		compiled.Authority.CurrentCatalogGeneration != scope.CurrentRoot.Digest ||
+		compiled.Authority.CatalogControlRevision != scope.CurrentControlRevision ||
+		compiled.Authority.ActiveCatalogGeneration != scope.ActiveRoot.Digest {
+		t.Fatalf("v3 compiled authority = %+v / %v", compiled.Authority, predicates)
+	}
+	malformed := scope
+	malformed.CurrentRoot.Digest = "sha256:" + strings.Repeat("f", 64)
+	if _, err := PrepareV3(malformed); !errors.Is(err, ErrInvalidScope) {
+		t.Fatalf("malformed current v3 root error = %v", err)
+	}
+	mismatched := scope
+	mismatched.Search = testSearchManifest(t, strings.Repeat("b", 40))
+	if _, err := PrepareV3(mismatched); !errors.Is(err, ErrInvalidScope) {
+		t.Fatalf("mismatched v3 search error = %v", err)
 	}
 }
 
@@ -456,4 +490,86 @@ func testSearchManifest(t *testing.T, head string) repositoryindex.SearchManifes
 		t.Fatal(err)
 	}
 	return manifest
+}
+
+func testV3Scope(t *testing.T, commit string, revision uint64) V3Scope {
+	t.Helper()
+	authority := servicecatalog.Authority{
+		Kind: servicecatalog.AuthorityOperator, ID: "test-v3", Version: "v3",
+	}
+	catalog := servicecatalog.Catalog{
+		Schema: servicecatalog.Schema, Authority: authority,
+		Services: []servicecatalog.Service{{
+			Key: "svc.orders", DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+		Memberships: []servicecatalog.Membership{
+			{ServiceKey: "svc.orders", Path: "services/orders", Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase},
+			{ServiceKey: "svc.orders", Path: "shared/trace.go", Role: servicecatalog.RoleSupporting, Origin: servicecatalog.OriginBase},
+		},
+	}
+	generation, err := servicecatalogv3.Build(servicecatalogv3.Binding{
+		Repository: testRepository,
+		Source: servicecatalogv3.Source{
+			Kind: servicecatalog.SourceOperator, Path: "/catalog/v3.json", Commit: commit,
+			CensusDigest: digest("test-v3-census\x00", []byte(commit)),
+			FileCount:    2, AcceptedFileCount: 2,
+		},
+		Authority: authority,
+	}, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	descriptor := generation.Root.ServiceMembers[0]
+	var raw []byte
+	for _, member := range generation.Members {
+		if member.Kind == descriptor.Kind && member.Ordinal == descriptor.Ordinal {
+			raw = member.Content
+			break
+		}
+	}
+	projections, err := servicecatalogv3.ProjectServiceMember(
+		generation.Root, descriptor, raw,
+	)
+	if err != nil || len(projections) != 1 {
+		t.Fatalf("v3 projection = %+v, %v", projections, err)
+	}
+	projection := projections[0]
+	desired, err := servicecatalogv3.ServiceDesiredGeneration(projection, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := servicecatalog.ServiceState{
+		Schema:     servicecatalogv3.ServiceStateSchema,
+		Repository: testRepository, ServiceKey: projection.Service.Key,
+		DisplayName: projection.Service.DisplayName,
+		Disposition: projection.Service.Disposition, Origin: projection.Service.Origin,
+		Successors: []string{}, Incarnation: 1,
+		DesiredGeneration: desired, DesiredSourceGeneration: projection.SourceGeneration,
+		DesiredCatalogGeneration: projection.CatalogGeneration,
+		ActiveDesiredGeneration:  desired, ActiveSourceGeneration: projection.SourceGeneration,
+		ActiveCatalogGeneration: projection.CatalogGeneration,
+		Status:                  servicecatalog.StatusCurrent, ControlRevision: 3,
+		ChangedAt: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC),
+	}
+	if err := servicecatalogv3.SetServiceStateDigest(&state); err != nil {
+		t.Fatal(err)
+	}
+	summary := servicecatalog.RepositoryState{
+		Schema: servicecatalogv3.RepositoryStateSchema, Repository: testRepository,
+		CatalogGeneration:      generation.Root.Digest,
+		CatalogControlRevision: revision, CatalogServiceCount: 1,
+		LiveServiceCount: 1, CurrentCount: 1, ControlRevision: 4,
+		UpdatedAt: time.Date(2026, 8, 31, 12, 1, 0, 0, time.UTC),
+	}
+	if err := servicecatalogv3.SetRepositoryStateDigest(&summary); err != nil {
+		t.Fatal(err)
+	}
+	return V3Scope{
+		CurrentRoot: generation.Root, CurrentControlRevision: revision,
+		ActiveRoot: generation.Root, Summary: summary, State: state,
+		DesiredProjection: projection, ActiveProjection: projection,
+		Search: testSearchManifest(t, commit),
+	}
 }

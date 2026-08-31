@@ -712,7 +712,9 @@ aggregate envelope and at-most-512-claim relationship buckets without changing
 the current 4,000-service production cap or runtime registration. T41.2's
 reviewed runtime-dark v3 contract is integrated. T41.3's dark ingestion and
 immutable authority, T41.4's recovery/lifecycle ownership, and T41.5's
-resumable state reconcile/activation are also integrated. T41.6 is next. Epic 42
+resumable state reconcile/activation are also integrated. T41.6's sparse
+catalog/state/search backend is implementation-complete on its ticket branch;
+T41.7 is next after integration. Epic 42
 still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure

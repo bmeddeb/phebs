@@ -57,6 +57,7 @@ func (s *Searcher) SearchService(
 	if err != nil {
 		return nil, fmt.Errorf("service search: %w", err)
 	}
+	defer opened.Close()
 	prepared, valid := opened.Prepared()
 	searchGeneration, searchValid := opened.Search()
 	if !valid || !searchValid {

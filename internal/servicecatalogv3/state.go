@@ -48,6 +48,10 @@ func SourceGenerationDigest(root Root) (string, error) {
 	if err := ValidateRoot(root); err != nil {
 		return "", err
 	}
+	return sourceGenerationDigest(root)
+}
+
+func sourceGenerationDigest(root Root) (string, error) {
 	binding := struct {
 		Schema     string `json:"schema"`
 		Repository string `json:"repository"`
@@ -70,15 +74,28 @@ func ProjectServiceMember(
 	descriptor MemberDescriptor,
 	raw []byte,
 ) ([]servicecatalog.ServiceProjection, error) {
-	if descriptor.Kind != "service" || ValidateMember(root, descriptor, raw) != nil {
+	sourceGeneration, err := SourceGenerationDigest(root)
+	if err != nil {
+		return nil, err
+	}
+	return projectServiceMember(root, descriptor, raw, sourceGeneration)
+}
+
+func projectServiceMember(
+	root Root,
+	descriptor MemberDescriptor,
+	raw []byte,
+	sourceGeneration string,
+) ([]servicecatalog.ServiceProjection, error) {
+	if descriptor.Kind != "service" || len(raw) != descriptor.ContentBytes ||
+		rawDigest(raw) != descriptor.Digest {
 		return nil, ErrInvalid
 	}
 	var member ServiceMember
 	if err := decodeCanonical(raw, &member); err != nil {
 		return nil, err
 	}
-	sourceGeneration, err := SourceGenerationDigest(root)
-	if err != nil {
+	if err := validateServiceMember(root, descriptor, member); err != nil {
 		return nil, err
 	}
 	projections := make([]servicecatalog.ServiceProjection, 0, len(member.Services))
@@ -145,4 +162,40 @@ func ServiceDesiredGeneration(
 		return "", err
 	}
 	return digest(desiredGenerationSchema+"\x00", raw), nil
+}
+
+// ValidateStateProjection proves that one persisted v3 state row still binds
+// either its desired projection or its independently active projection.
+func ValidateStateProjection(
+	state servicecatalog.ServiceState,
+	projection servicecatalog.ServiceProjection,
+	active bool,
+) error {
+	if err := ValidateServiceState(state, true); err != nil {
+		return err
+	}
+	desired, err := ServiceDesiredGeneration(projection, state.Incarnation)
+	if err != nil {
+		return err
+	}
+	if active {
+		if state.ActiveDesiredGeneration != desired ||
+			state.ActiveSourceGeneration != projection.SourceGeneration ||
+			state.ActiveCatalogGeneration != projection.CatalogGeneration {
+			return fmt.Errorf("%w: active projection identity", ErrInvalid)
+		}
+		return nil
+	}
+	service := projection.Service
+	if state.DesiredGeneration != desired ||
+		state.DesiredSourceGeneration != projection.SourceGeneration ||
+		state.DesiredCatalogGeneration != projection.CatalogGeneration ||
+		state.ServiceKey != service.Key || state.DisplayName != service.DisplayName ||
+		state.Disposition != service.Disposition || state.Origin != service.Origin ||
+		state.Reason != service.Reason ||
+		!slices.Equal(state.Successors, service.Successors) ||
+		state.Removed != projection.Removed {
+		return fmt.Errorf("%w: desired projection identity", ErrInvalid)
+	}
+	return nil
 }

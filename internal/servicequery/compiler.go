@@ -19,6 +19,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -64,6 +65,20 @@ type Scope struct {
 	Search         repositoryindex.SearchManifest
 }
 
+// V3Scope is the dark segmented-catalog equivalent of Scope. The caller
+// supplies projections read through a verified root/member lease; no v2
+// publication is consulted or accepted as fallback.
+type V3Scope struct {
+	CurrentRoot            servicecatalogv3.Root
+	CurrentControlRevision uint64
+	ActiveRoot             servicecatalogv3.Root
+	Summary                servicecatalog.RepositoryState
+	State                  servicecatalog.ServiceState
+	DesiredProjection      servicecatalog.ServiceProjection
+	ActiveProjection       servicecatalog.ServiceProjection
+	Search                 repositoryindex.SearchManifest
+}
+
 // PreparedScope is an opaque, fully verified placement and generation
 // authority. Callers may cache it only under its embedded state/search fences;
 // compiling another expression or indexed selector then performs no catalog
@@ -86,6 +101,14 @@ type Compiled struct {
 // decoded at most once; equal generations share the verified decode.
 func Prepare(scope Scope) (PreparedScope, error) {
 	resolved, err := validateScope(scope)
+	if err != nil {
+		return PreparedScope{}, err
+	}
+	return PreparedScope{resolved: resolved, valid: true}, nil
+}
+
+func PrepareV3(scope V3Scope) (PreparedScope, error) {
+	resolved, err := validateV3Scope(scope)
 	if err != nil {
 		return PreparedScope{}, err
 	}
@@ -163,19 +186,20 @@ func Compile(request Request) (Compiled, error) {
 }
 
 type resolvedScope struct {
-	repository       string
-	serviceKey       string
-	status           string
-	incarnation      uint64
-	revision         indexedRevision
-	currentCatalog   servicecatalog.Publication
-	activeProjection servicecatalog.ServiceProjection
-	summary          servicecatalog.RepositoryState
-	state            servicecatalog.ServiceState
-	search           repositoryindex.SearchManifest
-	revisions        []store.IndexedRevision
-	paths            []string
-	pathBytes        int
+	repository               string
+	serviceKey               string
+	status                   string
+	incarnation              uint64
+	revision                 indexedRevision
+	currentCatalogGeneration string
+	catalogControlRevision   uint64
+	activeProjection         servicecatalog.ServiceProjection
+	summary                  servicecatalog.RepositoryState
+	state                    servicecatalog.ServiceState
+	search                   repositoryindex.SearchManifest
+	revisions                []store.IndexedRevision
+	paths                    []string
+	pathBytes                int
 }
 
 type indexedRevision struct {
@@ -265,32 +289,128 @@ func validateScope(scope Scope) (resolvedScope, error) {
 			"active catalog source commit is not the search generation HEAD",
 		)
 	}
-	paths := make([]string, 0, len(activeProjection.Memberships))
-	pathBytes := 0
-	for _, membership := range activeProjection.Memberships {
-		if len(paths) > 0 && paths[len(paths)-1] == membership.Path {
-			continue
-		}
-		if len(paths) >= servicecatalog.MaxServicePaths ||
-			pathBytes > servicecatalog.MaxServicePathBytes-len(membership.Path) {
-			return resolvedScope{}, invalidf("active service placement bound exceeded")
-		}
-		paths = append(paths, membership.Path)
-		pathBytes += len(membership.Path)
-	}
-	if len(paths) == 0 {
-		return resolvedScope{}, unavailablef("active service has no placement paths")
+	paths, pathBytes, err := resolvePaths(activeProjection)
+	if err != nil {
+		return resolvedScope{}, err
 	}
 
 	return resolvedScope{
 		repository: repository, serviceKey: scope.State.ServiceKey,
 		status: scope.State.Status, incarnation: scope.State.Incarnation,
-		currentCatalog:   scope.CurrentCatalog,
-		activeProjection: activeProjection, summary: scope.Summary,
+		currentCatalogGeneration: scope.CurrentCatalog.GenerationDigest,
+		catalogControlRevision:   scope.CurrentCatalog.ControlRevision,
+		activeProjection:         activeProjection, summary: scope.Summary,
 		state: scope.State, search: scope.Search,
 		revisions: slices.Clone(scope.Search.Revisions),
 		paths:     paths, pathBytes: pathBytes,
 	}, nil
+}
+
+func validateV3Scope(scope V3Scope) (resolvedScope, error) {
+	if err := servicecatalogv3.ValidateRoot(scope.CurrentRoot); err != nil {
+		return resolvedScope{}, invalidWrap("current catalog", err)
+	}
+	activeRoot := scope.ActiveRoot
+	if activeRoot.Digest == scope.CurrentRoot.Digest {
+		activeRoot = scope.CurrentRoot
+	} else if err := servicecatalogv3.ValidateRoot(activeRoot); err != nil {
+		return resolvedScope{}, invalidWrap("active catalog", err)
+	}
+	if scope.CurrentControlRevision == 0 {
+		return resolvedScope{}, invalidf("current catalog control revision is missing")
+	}
+	if err := servicecatalogv3.ValidateRepositoryState(scope.Summary, true); err != nil {
+		return resolvedScope{}, invalidWrap("repository summary", err)
+	}
+	if err := servicecatalogv3.ValidateServiceState(scope.State, true); err != nil {
+		return resolvedScope{}, invalidWrap("service state", err)
+	}
+	if err := repositoryindex.ValidateSearchManifest(scope.Search); err != nil {
+		return resolvedScope{}, invalidWrap("repository search generation", err)
+	}
+
+	repository := scope.CurrentRoot.Binding.Repository
+	if scope.Summary.Repository != repository || scope.State.Repository != repository ||
+		activeRoot.Binding.Repository != repository || scope.Search.Repository != repository {
+		return resolvedScope{}, invalidf("repository identities disagree")
+	}
+	if scope.Summary.CatalogGeneration != scope.CurrentRoot.Digest ||
+		scope.Summary.CatalogControlRevision != scope.CurrentControlRevision {
+		return resolvedScope{}, invalidf("catalog and summary fences disagree")
+	}
+	if scope.DesiredProjection.Removed ||
+		scope.DesiredProjection.Service.Disposition != servicecatalog.DispositionAccepted {
+		return resolvedScope{}, unavailablef("service has no accepted desired projection")
+	}
+	if err := servicecatalogv3.ValidateStateProjection(
+		scope.State, scope.DesiredProjection, false,
+	); err != nil {
+		return resolvedScope{}, invalidWrap("desired service projection", err)
+	}
+	if scope.State.Status != servicecatalog.StatusCurrent &&
+		scope.State.Status != servicecatalog.StatusStale {
+		return resolvedScope{}, unavailablef(
+			"service status %q has no searchable active generation", scope.State.Status,
+		)
+	}
+	if scope.ActiveProjection.Removed ||
+		scope.ActiveProjection.Service.Disposition != servicecatalog.DispositionAccepted {
+		return resolvedScope{}, invalidf("active catalog has no accepted service projection")
+	}
+	if err := servicecatalogv3.ValidateStateProjection(
+		scope.State, scope.ActiveProjection, true,
+	); err != nil {
+		return resolvedScope{}, invalidWrap("active service projection", err)
+	}
+	if scope.ActiveProjection.CatalogGeneration != activeRoot.Digest {
+		return resolvedScope{}, invalidf("active projection and catalog disagree")
+	}
+	if scope.Search.TopologyPolicy != repositoryindex.DirectTopologyPolicy ||
+		scope.Search.SourceGenerationDigest == "" {
+		return resolvedScope{}, invalidf("search generation is not direct source authority")
+	}
+	if len(scope.Search.Revisions) == 0 ||
+		scope.Search.Revisions[0].Commit != activeRoot.Binding.Source.Commit {
+		return resolvedScope{}, invalidf(
+			"active catalog source commit is not the search generation HEAD",
+		)
+	}
+	paths, pathBytes, err := resolvePaths(scope.ActiveProjection)
+	if err != nil {
+		return resolvedScope{}, err
+	}
+	return resolvedScope{
+		repository: repository, serviceKey: scope.State.ServiceKey,
+		status: scope.State.Status, incarnation: scope.State.Incarnation,
+		currentCatalogGeneration: scope.CurrentRoot.Digest,
+		catalogControlRevision:   scope.CurrentControlRevision,
+		activeProjection:         scope.ActiveProjection, summary: scope.Summary,
+		state: scope.State, search: scope.Search,
+		revisions: slices.Clone(scope.Search.Revisions),
+		paths:     paths, pathBytes: pathBytes,
+	}, nil
+}
+
+func resolvePaths(
+	projection servicecatalog.ServiceProjection,
+) ([]string, int, error) {
+	paths := make([]string, 0, len(projection.Memberships))
+	pathBytes := 0
+	for _, membership := range projection.Memberships {
+		if len(paths) > 0 && paths[len(paths)-1] == membership.Path {
+			continue
+		}
+		if len(paths) >= servicecatalog.MaxServicePaths ||
+			pathBytes > servicecatalog.MaxServicePathBytes-len(membership.Path) {
+			return nil, 0, invalidf("active service placement bound exceeded")
+		}
+		paths = append(paths, membership.Path)
+		pathBytes += len(membership.Path)
+	}
+	if len(paths) == 0 {
+		return nil, 0, unavailablef("active service has no placement paths")
+	}
+	return paths, pathBytes, nil
 }
 
 func serviceStateMatchesProjection(

@@ -59,6 +59,11 @@ type RuntimeStore interface {
 	store.ServiceStateStore
 	store.ResolverCatalogPublicationStore
 	store.PartitionedEvidenceStore
+	GetAcceptedServiceStateSnapshot(
+		context.Context,
+		string,
+		int,
+	) (*store.AcceptedServiceStateSnapshot, error)
 }
 
 type Runtime struct {
@@ -787,58 +792,21 @@ func resolverProtocols(state resolvercatalog.State) []resolvermaterialize.Protoc
 func (runtime *Runtime) loadServiceSnapshot(
 	ctx context.Context, repository string,
 ) (runtimeSnapshot, error) {
-	var result runtimeSnapshot
-	position := store.ServiceStatePosition{}
-	for {
-		page, err := runtime.Store.ListServiceStates(
-			ctx, repository, store.ServiceStateFilter{}, position,
-			store.MaxServiceStateReadPage,
-		)
-		if err != nil {
-			return result, fmt.Errorf("load relationship service states: %w", err)
-		}
-		if page == nil {
-			return result, fmt.Errorf("%w: nil service state page", ErrInvalid)
-		}
-		if result.catalog.GenerationDigest == "" {
-			result.catalog = page.Publication
-			result.summary = page.Summary
-		} else if !sameCatalogFence(result.catalog, page.Publication) ||
-			!sameSummaryFence(result.summary, page.Summary) {
-			return result, fmt.Errorf("%w: service state snapshot changed", ErrPublishing)
-		}
-		for _, entry := range page.Entries {
-			if entry.State.Disposition == servicecatalog.DispositionAccepted && !entry.State.Removed {
-				if len(result.states) >= MaxServices {
-					return result, ErrLimit
-				}
-				result.states = append(result.states, entry.State)
-			}
-		}
-		if page.Continuation == nil {
-			break
-		}
-		if page.Continuation.ServiceKey <= position.ServiceKey {
-			return result, fmt.Errorf("%w: service state cursor did not advance", ErrInvalid)
-		}
-		position = *page.Continuation
+	snapshot, err := runtime.Store.GetAcceptedServiceStateSnapshot(
+		ctx, repository, MaxServices,
+	)
+	if err != nil {
+		return runtimeSnapshot{}, fmt.Errorf("load relationship service states: %w", err)
 	}
-	if result.catalog.GenerationDigest == "" ||
-		servicecatalog.ValidatePublication(result.catalog, true) != nil ||
-		servicecatalog.ValidateRepositoryState(result.summary, true) != nil {
-		return result, fmt.Errorf("%w: service state snapshot", ErrInvalid)
+	if snapshot == nil ||
+		servicecatalog.ValidatePublication(snapshot.Publication, true) != nil ||
+		servicecatalog.ValidateRepositoryState(snapshot.Summary, true) != nil {
+		return runtimeSnapshot{}, fmt.Errorf("%w: service state snapshot", ErrInvalid)
 	}
-	if err := runtime.Store.ConfirmServiceStateSnapshot(ctx, repository, result.summary); err != nil {
-		return result, fmt.Errorf("confirm relationship service states: %w", err)
-	}
-	return result, nil
-}
-
-func sameCatalogFence(left, right servicecatalog.Publication) bool {
-	return left.Repository == right.Repository &&
-		left.GenerationDigest == right.GenerationDigest &&
-		left.CatalogDigest == right.CatalogDigest &&
-		left.ControlRevision == right.ControlRevision
+	return runtimeSnapshot{
+		catalog: snapshot.Publication, summary: snapshot.Summary,
+		states: snapshot.States,
+	}, nil
 }
 
 func sameSummaryFence(left, right servicecatalog.RepositoryState) bool {

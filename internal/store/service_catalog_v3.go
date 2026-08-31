@@ -26,6 +26,13 @@ type ServiceCatalogV3CandidateRoot struct {
 	PublishedAt     time.Time
 }
 
+type ServiceCatalogV3Pointer struct {
+	Repository      string
+	RootDigest      string
+	ControlRevision uint64
+	PublishedAt     time.Time
+}
+
 type ServiceCatalogV3Candidate struct {
 	Generation      servicecatalogv3.Generation
 	ControlRevision uint64
@@ -48,6 +55,7 @@ type ServiceCatalogV3CandidateStore interface {
 }
 
 var _ ServiceCatalogV3CandidateStore = (*Surreal)(nil)
+var _ servicecatalogv3.ReadSource = (*Surreal)(nil)
 
 type serviceCatalogV3RootRec struct {
 	RootDigest string           `json:"root_digest"`
@@ -500,45 +508,95 @@ func (s *Surreal) GetServiceCatalogV3CandidateRoot(
 	ctx context.Context,
 	repository string,
 ) (*ServiceCatalogV3CandidateRoot, error) {
+	pointer, err := s.GetServiceCatalogV3CandidatePointer(ctx, repository)
+	if err != nil {
+		return nil, err
+	}
+	root, err := s.ReadServiceCatalogV3Root(ctx, repository, pointer.RootDigest)
+	if err != nil {
+		return nil, fmt.Errorf("get service catalog v3 candidate: %w", err)
+	}
+	return &ServiceCatalogV3CandidateRoot{
+		Root: root, ControlRevision: pointer.ControlRevision,
+		PublishedAt: pointer.PublishedAt,
+	}, nil
+}
+
+func (s *Surreal) GetServiceCatalogV3CandidatePointer(
+	ctx context.Context,
+	repository string,
+) (ServiceCatalogV3Pointer, error) {
 	if err := validateCandidateRepository(repository); err != nil {
-		return nil, fmt.Errorf("get service catalog v3 candidate: repository: %w", err)
+		return ServiceCatalogV3Pointer{}, fmt.Errorf(
+			"get service catalog v3 candidate pointer: repository: %w", err,
+		)
 	}
 	candidateResults, err := surrealdb.Query[[]serviceCatalogV3CandidateRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogV3CandidateID(repository)},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get service catalog v3 candidate: pointer: %w", err)
+		return ServiceCatalogV3Pointer{}, fmt.Errorf(
+			"get service catalog v3 candidate pointer: %w", err,
+		)
 	}
 	candidateRows := firstDomainRows(candidateResults)
 	if len(candidateRows) == 0 {
-		return nil, fmt.Errorf("service catalog v3 candidate for %q: %w", repository, ErrNotFound)
+		return ServiceCatalogV3Pointer{}, fmt.Errorf(
+			"service catalog v3 candidate for %q: %w", repository, ErrNotFound,
+		)
 	}
 	if len(candidateRows) != 1 ||
 		!validServiceCatalogV3CandidateRecord(candidateRows[0], repository) {
-		return nil, fmt.Errorf("get service catalog v3 candidate: pointer: %w", ErrInvalidServiceCatalogV3Candidate)
+		return ServiceCatalogV3Pointer{}, fmt.Errorf(
+			"get service catalog v3 candidate pointer: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
 	}
 	candidate := candidateRows[0]
+	return ServiceCatalogV3Pointer{
+		Repository: repository, RootDigest: candidate.RootDigest,
+		ControlRevision: candidate.ControlRevision,
+		PublishedAt:     candidate.PublishedAt.UTC(),
+	}, nil
+}
+
+func (s *Surreal) ReadServiceCatalogV3Root(
+	ctx context.Context,
+	repository, digest string,
+) (servicecatalogv3.Root, error) {
+	if validateCandidateRepository(repository) != nil || !validSHA256Digest(digest) {
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root: invalid identity: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
+	}
 	rootResults, err := surrealdb.Query[[]serviceCatalogV3RootRec](
 		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3RootID(candidate.RootDigest)},
+		map[string]any{"rid": serviceCatalogV3RootID(digest)},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get service catalog v3 candidate: root: %w", err)
+		return servicecatalogv3.Root{}, fmt.Errorf("read service catalog v3 root: %w", err)
 	}
 	rootRows := firstDomainRows(rootResults)
 	if len(rootRows) != 1 {
-		return nil, fmt.Errorf("get service catalog v3 candidate: root inventory: %w", ErrInvalidServiceCatalogV3Candidate)
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root inventory: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
 	}
 	rootRecord := rootRows[0]
 	root, err := servicecatalogv3.DecodeRoot([]byte(rootRecord.RootJSON))
-	if err != nil || root.Digest != candidate.RootDigest ||
+	if err != nil || root.Digest != digest ||
 		root.Binding.Repository != repository ||
 		!equalServiceCatalogV3Root(rootRecord, serviceCatalogV3RootRec{
 			RootDigest: root.Digest, Repository: repository,
 			RootBytes: len(rootRecord.RootJSON), RootJSON: rootRecord.RootJSON,
-		}, candidate.RootDigest[len("sha256:"):]) {
-		return nil, fmt.Errorf("get service catalog v3 candidate: root identity: %w", ErrInvalidServiceCatalogV3Candidate)
+		}, digest[len("sha256:"):]) {
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root identity: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
 	}
 	overrideID, overrideVersion := serviceCatalogV3Override(root)
 	versionID := serviceCatalogV3AuthorityVersionID(root)
@@ -546,7 +604,9 @@ func (s *Surreal) GetServiceCatalogV3CandidateRoot(
 		ctx, s.db, "SELECT * FROM $rid", map[string]any{"rid": versionID},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get service catalog v3 candidate: authority version: %w", err)
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root authority version: %w", err,
+		)
 	}
 	versionRows := firstDomainRows(versionResults)
 	versionIdentifier, _ := versionID.ID.(string)
@@ -560,25 +620,41 @@ func (s *Surreal) GetServiceCatalogV3CandidateRoot(
 			LogicalDigest: root.LogicalDigest,
 		}, versionIdentifier,
 	) {
-		return nil, fmt.Errorf("get service catalog v3 candidate: authority-version identity: %w", ErrInvalidServiceCatalogV3Candidate)
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root authority-version identity: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
 	}
 	lifecycleResults, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogV3LifecycleID(root.Digest)},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get service catalog v3 candidate: lifecycle: %w", err)
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root lifecycle: %w", err,
+		)
 	}
 	lifecycleRows := firstDomainRows(lifecycleResults)
 	if len(lifecycleRows) != 1 || !equalServiceCatalogV3Lifecycle(
 		lifecycleRows[0], serviceCatalogV3LifecycleWanted(root, rootRecord.RecordedAt),
 	) {
-		return nil, fmt.Errorf("get service catalog v3 candidate: lifecycle identity: %w", ErrInvalidServiceCatalogV3Candidate)
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root lifecycle identity: %w",
+			ErrInvalidServiceCatalogV3Candidate,
+		)
 	}
-	return &ServiceCatalogV3CandidateRoot{
-		Root: root, ControlRevision: candidate.ControlRevision,
-		PublishedAt: candidate.PublishedAt.UTC(),
-	}, nil
+	return root, nil
+}
+
+func (s *Surreal) ReadServiceCatalogV3Member(
+	ctx context.Context,
+	descriptor servicecatalogv3.MemberDescriptor,
+) ([]byte, error) {
+	raw, err := s.serviceCatalogV3MemberContent(ctx, descriptor)
+	if err != nil {
+		return nil, fmt.Errorf("read service catalog v3 member: %w", err)
+	}
+	return raw, nil
 }
 
 func (s *Surreal) GetServiceCatalogV3Candidate(
@@ -595,31 +671,13 @@ func (s *Surreal) GetServiceCatalogV3Candidate(
 	)
 	members := make([]servicecatalogv3.EncodedMember, 0, len(descriptors))
 	for _, descriptor := range descriptors {
-		results, queryErr := surrealdb.Query[[]serviceCatalogV3MemberRec](
-			ctx, s.db, "SELECT * FROM $rid",
-			map[string]any{"rid": serviceCatalogV3MemberID(descriptor.Digest)},
-		)
-		if queryErr != nil {
-			return nil, fmt.Errorf("get service catalog v3 candidate: member: %w", queryErr)
-		}
-		rows := firstDomainRows(results)
-		wanted := serviceCatalogV3MemberRec{
-			MemberDigest: descriptor.Digest, Kind: descriptor.Kind,
-			Ordinal: descriptor.Ordinal, ContentBytes: descriptor.ContentBytes,
-		}
-		if len(rows) != 1 || rows[0].ContentBytes != len(rows[0].Content) ||
-			!equalServiceCatalogV3Member(
-				rows[0], serviceCatalogV3MemberRec{
-					MemberDigest: wanted.MemberDigest, Kind: wanted.Kind,
-					Ordinal: wanted.Ordinal, ContentBytes: wanted.ContentBytes,
-					Content: rows[0].Content,
-				}, descriptor.Digest[len("sha256:"):],
-			) {
-			return nil, fmt.Errorf("get service catalog v3 candidate: member inventory: %w", ErrInvalidServiceCatalogV3Candidate)
+		raw, readErr := s.ReadServiceCatalogV3Member(ctx, descriptor)
+		if readErr != nil {
+			return nil, fmt.Errorf("get service catalog v3 candidate: %w", readErr)
 		}
 		members = append(members, servicecatalogv3.EncodedMember{
 			Kind: descriptor.Kind, Ordinal: descriptor.Ordinal,
-			Content: []byte(rows[0].Content),
+			Content: raw,
 		})
 	}
 	generation := servicecatalogv3.Generation{Root: opened.Root, Members: members}

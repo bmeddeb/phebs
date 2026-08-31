@@ -32,6 +32,7 @@ type runtimeHandleCleanupStore struct {
 	domains     map[string]store.PartitionedExtractionDomain
 
 	confirmCalls    int
+	snapshotCalls   int
 	failConfirmCall int
 	pinFailure      error
 	failPinRun      string
@@ -82,6 +83,24 @@ func (state *runtimeHandleCleanupStore) ListServiceStates(
 		Publication: state.publication,
 		Summary:     state.summary,
 		Entries:     entries,
+	}, nil
+}
+
+func (state *runtimeHandleCleanupStore) GetAcceptedServiceStateSnapshot(
+	ctx context.Context,
+	repository string,
+	limit int,
+) (*store.AcceptedServiceStateSnapshot, error) {
+	state.snapshotCalls++
+	if repository != state.publication.Repository || len(state.states) > limit {
+		return nil, store.ErrNotFound
+	}
+	if err := state.ConfirmServiceStateSnapshot(ctx, repository, state.summary); err != nil {
+		return nil, err
+	}
+	return &store.AcceptedServiceStateSnapshot{
+		Publication: state.publication, Summary: state.summary,
+		States: slices.Clone(state.states),
 	}, nil
 }
 
@@ -174,7 +193,8 @@ func TestRuntimeHandleAbortsRootStageAfterLateAuthorityFence(t *testing.T) {
 	fixture.store.failConfirmCall = 2
 
 	err := fixture.runtime.Handle(t.Context(), fixture.chunk)
-	if !errors.Is(err, ErrPublishing) || fixture.store.confirmCalls != 2 {
+	if !errors.Is(err, ErrPublishing) || fixture.store.confirmCalls != 2 ||
+		fixture.store.snapshotCalls != 1 {
 		t.Fatalf("late authority fence = calls %d, error %v", fixture.store.confirmCalls, err)
 	}
 	if len(fixture.store.pinCalls) != 0 {
@@ -191,7 +211,8 @@ func TestRuntimeHandleAbortsRootStageAndUnwindsPins(t *testing.T) {
 	fixture.store.failPinAfterSet = true
 
 	err := fixture.runtime.Handle(t.Context(), fixture.chunk)
-	if !errors.Is(err, fixture.store.pinFailure) || fixture.store.confirmCalls != 2 {
+	if !errors.Is(err, fixture.store.pinFailure) || fixture.store.confirmCalls != 2 ||
+		fixture.store.snapshotCalls != 1 {
 		t.Fatalf("partitioned pin failure = confirms %d, error %v", fixture.store.confirmCalls, err)
 	}
 	if len(fixture.store.pinCalls) != 2 || len(fixture.store.unpinCalls) != 2 ||
