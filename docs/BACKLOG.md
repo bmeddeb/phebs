@@ -3233,87 +3233,11 @@ icon-button details (T44.3/T44.5); `frontend-design` for the preview — the
 product's first Read-mode surface (T44.3); `impeccable` remains the
 critique instrument; `/security-review` gates T44.3 and T44.4.
 
-**T44.1 · Proto and citation highlighting** — wire `.proto` through the
-already-installed legacy protobuf stream mode with language name/color
-entries, and route citation-panel source spans through the shared chunk
-tokenizer. AC: proto files highlight in the viewer and search chunks;
-citation spans render highlighted in both themes; zero new dependencies;
-no screenshot baseline changes (no capture opens a citation today —
-recorded, not hidden); suite, lint, build, gates green.
-*Implementation landed 2026-08-08; the AC's deterministic-receipts
-clause stays open pending the scale track's T40.13 convergence gate
-(eight relationship-explorer captures fail closed against retained
-baselines until the fixture can serve marker-bearing roots).* The
-loader case was the only missing piece — name
-and dot color were always mapped; `.proto` now streams through the
-legacy protobuf mode as its own 0.8 kB lazy chunk. Citation panels
-render cited bytes through the shared line-oriented tokenizer,
-lazy-loaded so the evidence kit adds no CodeMirror weight to the
-initial chunk; a test pins the bytes as identical through highlighting,
-and a failed load falls back to the plain bytes. Live-verified on the
-fixture's `api/orders.proto`. The file receipt route turned out to BE
-a proto file, so its four baselines now show the highlighting — the
-receipt showcases the ticket. Rider: the settings lifecycle badge got
-a fixed-width reserved slot (its masked box sized itself to the live
-pressure word — the last content-derived mask geometry). Bundle: main
-chunk +0.8 kB (index gzip 93.43 → 93.76 kB), one new 0.8 kB lazy
-chunk, zero new dependencies; no interaction-path work — both loads
-are lazy on first use. Thrift rider: `.thrift` had the identical
-gap (name and dot mapped, no loader case) and no published mode
-exists — it is built from the clike stream core with the IDL's frozen
-word lists plus a `#` line-comment hook, riding the existing lazy
-clike chunk (cost: config bytes). The corpus holds no thrift files,
-so the pin is the four loader/keyword/comment tests — no live
-verification is possible today and no baseline moves. Receipts: file
-and settings pairs re-baselined;
-the eight relationship-explorer-service captures fail closed against
-retained baselines because main's T40.12 root validator refuses the
-fixture's pre-convergence bare unavailable roots — correct fail-closed
-behavior awaiting the in-flight T40.13 convergence gate, recorded
-here, not re-baselined. Review follow-up (T44.1f): citation
-highlighting is bounded — 65,536 UTF-16 units / 1,500 lines, guarded
-before any lazy import, exact plain-text fallback, pinned by
-exact-bound and one-over tests — and the highlight proof asserts a
-known keyword's palette color in both themes with byte-identical text,
-closing the null-language false-positive the first test allowed.
-
-Closure follow-up (2026-08-31): the audit found that exact caller
-citations used by Caller Map, Caller Comparison, and Workbench still
-rendered plain bytes outside the shared relationship-citation
-highlighter. Both envelopes now share one presentation-only byte
-renderer while retaining their separate authorization, identity,
-failure, and chrome contracts. Highlight state is keyed to path,
-content, theme, and palette so stale spans can never cross a citation
-transition. Exact-caller read state is additionally keyed to the full
-source/capability identity: refreshed rows synchronously hide old bytes,
-abort the old read, and ignore any late old response. The cheap fallback
-now performs a bounded newline scan without splitting; an unsupported
-path does not load the tokenizer or create per-line spans; tokenizer
-failure remains exact plain text.
-The existing manifest remains 32 authenticated routes / 130 PNGs: its
-literal AC records that no receipt opens a citation, and adding a
-desktop/390 open-citation pair would be a separate eight-PNG scope
-amendment, not this close. Current marker-production, API-fencing, and
-Relationship Explorer focused tests pass. A fresh exact-main cohort—
-previously described here as canonical—reached server readiness. After
-host use fell from 92% to 77%, all three search indexes completed, but
-rebuilding is explicitly a baseline-refresh event and the T307 relationship
-endpoint still returned a bare unavailable root; server logs separately
-reported a partition-result collision. The surviving noncanonical instance
-uses a different operator identity and is bound to `/Users/ben/phebs`; its
-three repository rows retain the earlier watermark failures, while the
-receipt manifest's exact repository/service selector
-(`local/Users/ben/phebs-ux/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle`,
-`orders-api`) returns not found. Relative to the stacked base, the production
-build adds 893 raw/
-298 gzip bytes across all JavaScript (358/152 in the initial entry and
-537/166 in the existing exact-citation lazy chunk, individually
-compressed), with no new dependency or chunk and unchanged highlight/
-language asset raw sizes. A supported exact-caller citation's first open
-may fetch those existing lazy static assets; later module-cached opens do
-not. No baseline update, clean retained comparison, ticket completion,
-merge, or integration is claimed; the deterministic-receipts clause
-therefore remains open.
+**T44.1 ✅ · Proto and citation highlighting** *(completed 2026-08-31 →
+[BACKLOG_COMPLETED.md](./BACKLOG_COMPLETED.md))* — Protobuf/Thrift language
+loading, shared bounded citation highlighting, exact-caller identity and race
+fences, bundle/interaction cost, and the explicit retained-receipt-gate
+completion exception are recorded in the completed backlog.
 
 **T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
 palette registry over the single highlight module. AC: the current

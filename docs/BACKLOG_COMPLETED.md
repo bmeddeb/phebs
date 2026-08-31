@@ -9648,6 +9648,64 @@ with the seeded Workbench's content landmark without changing product behavior.
 Independent final review reports critical/high/medium/low 0. No receipt
 exception, merge, or integration is claimed.
 
+**T44.1 ✅ · Proto and citation highlighting** *(completed 2026-08-31)* —
+`.proto` files now load the already-installed legacy protobuf stream mode as
+their own 0.8 kB lazy chunk, with the existing language name and dot color.
+Because no published Thrift mode exists, `.thrift` uses the installed clike
+stream core with frozen IDL keywords and `#` line comments, adding no
+dependency or separate chunk. The neutral fixture's `api/orders.proto` was
+verified live; Thrift remains pinned by loader, keyword, and comment tests
+because the fixture corpus contains no Thrift source.
+
+Relationship citations and exact caller citations used by Caller Map, Caller
+Comparison, and Workbench now share one presentation-only
+`HighlightedCitationBytes` renderer. Their authorization, generation,
+mismatch, failure, and chrome envelopes remain separate. Highlight state is
+keyed to path, exact content, theme, and palette, so a transition immediately
+shows only the current raw bytes until its own tokenization finishes. Exact
+caller loading, error, and response state is additionally keyed to the full
+source/capability identity; a transition aborts the old read, hides its bytes,
+and rejects a late superseded response.
+
+The renderer refuses more than 65,536 UTF-16 units or 1,500 lines before any
+lazy import, performs one allocation-free bounded newline scan, and preserves
+exact plain text for unsupported paths, oversized input, or tokenizer/load
+failure. Supported input splits and tokenizes once within those bounds.
+Tests pin the exact boundary and one-over cases, byte identity, transition
+safety, superseded-response rejection, the exact Protobuf `message` token's
+palette color, and a known citation keyword's palette color in both themes.
+Independent final review of exact implementation commit `287072e` reports
+critical/high/medium/low 0.
+
+Relative to the stacked base, production JavaScript adds 893 raw/298 gzip
+bytes: 358/152 in the initial entry and 537/166 in the existing exact-citation
+lazy chunk, with no dependency, new chunk, or change to the existing language
+and highlighting asset sizes. A supported exact-caller citation's first open
+may fetch those existing lazy assets; module-cached later opens do not. Each
+exact-caller render serializes fourteen already-bounded identity fields once;
+an active identity transition adds one abort and local clear. No extra API
+request, poll, mutation, authority read, startup/restart, sync, retry/no-op,
+publication, schema/store, lock, persistent cache, disk, or child work is
+added. The focused and complete UI tests, lint, typecheck/build, documentation
+gates, browser evidence, and independent review are green.
+
+The manifest remains 32 authenticated routes/130 baselines. The file and
+settings pairs updated with the original implementation remain the reviewed
+receipt state; no capture opens an exact-caller citation. Eight
+relationship-explorer-service comparisons remain unpassed. Once disk use fell
+from 92% to 77%, a fresh exact-main cohort completed all three search indexes,
+but rebuilding is explicitly a baseline-refresh event. Its T307 endpoint still
+returned a bare unavailable root, while logs separately reported a
+partition-result collision. The surviving live instance cannot supply the
+manifest's environment-bound repository, service, operator, or relationship
+root state.
+
+Ben explicitly waived the canonical retained comparison on 2026-08-31. This
+is a retained-receipt-gate completion exception, not a passing comparison, a
+baseline-refresh authorization, or approval to retain a noncanonical
+bare-unavailable or not-found state. No additional baseline update, clean
+retained comparison, merge, or integration is claimed.
+
 **T43R.4 ✅ · Bounded errors everywhere (S2)** *(completed 2026-08-31; needs
 T43R.3)* — exact implementation commit `0ec15f0` moves the catalog surfaces'
 existing formatter into one shared `boundedError` helper and applies it to the

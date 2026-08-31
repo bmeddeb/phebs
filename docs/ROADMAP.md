@@ -165,6 +165,12 @@ comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.5 are integrated and T41.6 is next.
 
+Epic 44 is now active in the presentation track. T44.1 completed on
+2026-08-31 at exact implementation commit `287072e` under an explicit
+canonical retained-receipt exception, not a passing comparison or baseline
+refresh. Its source-highlighting changes do not alter scale-plane runtime or
+product authority. T44.2 is next.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential
@@ -276,6 +282,30 @@ Relationship Explorer states, File, History, Blame, and Commit—therefore leave
 comparison on 2026-08-31. This is a receipt-gate completion exception, not a
 passing comparison or approval to record noncanonical fixture states. No
 baseline update, clean retained comparison, merge, or integration is claimed.
+
+T44.1 completed in the presentation track on 2026-08-31. Protobuf now uses the
+installed legacy stream mode and Thrift uses the installed clike core with
+frozen IDL words; neither adds a dependency. Relationship and exact-caller
+citations share one bounded presentation renderer while retaining their
+separate authorization, identity, generation, failure, and chrome contracts.
+Input is capped before lazy imports at 65,536 UTF-16 units/1,500 lines;
+unsupported, oversized, and failed tokenization preserves exact plain bytes.
+Exact-caller state is keyed to the full source/capability identity, aborts an
+old read on transition, and rejects late superseded responses. Focused and
+complete UI tests, lint, typecheck/build, documentation, browser evidence, and
+independent review of exact implementation commit `287072e` are green; review
+reports critical/high/medium/low 0. The measured production JavaScript delta
+is +893/+298 raw/gzip bytes with no dependency or new chunk.
+
+The manifest remains 32 authenticated routes/130 baselines. Eight
+relationship-explorer-service comparisons remain unpassed because the
+canonical environment-bound cohort is unavailable and the surviving live
+instance cannot supply equivalent repository, service, operator, or
+relationship-root state. Ben explicitly waived that canonical comparison on
+2026-08-31. This is a receipt-gate completion exception, not a passing
+comparison, baseline-refresh authorization, or approval of noncanonical
+unavailable/not-found states. No additional baseline update, clean retained
+comparison, merge, or integration is claimed.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
