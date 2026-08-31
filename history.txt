@@ -37,3 +37,4 @@ SELECT id, status, attempts, error, not_before, finished_at FROM caller_leaf_job
 SELECT repository,stage,generation,total_chunks,materialized,pending,running,succeeded,failed,status,created_at FROM generation_schedule WHERE stage IN ['go-source-observation-plan','go-source-observation','go-source-observation-inventory-v2'] ORDER BY created_at;
 SELECT stage,generation,offset,attempt,status,error FROM generation_schedule_chunk WHERE stage = 'go-source-observation' ORDER BY generation,offset,attempt;
 SELECT key, cursor, revision, updated_at FROM lifecycle_cursor ORDER BY key;
+SELECT email, display_name, is_admin, disabled FROM user;

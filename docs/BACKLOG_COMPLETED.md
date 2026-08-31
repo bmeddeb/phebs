@@ -9607,6 +9607,42 @@ unchanged. After the retained cohort's operator password proved unavailable,
 Ben explicitly named T43R.2 as the next merge; this is a merge exception, not
 a passing retained Commit receipt.
 
+**T43R.3 · House confirm dialog (S1)** *(provisional implementation record;
+closure gates pending)* — the ticket branch replaces only the Workbench's dirty
+same-app link `window.confirm` guard with the shared house `alertdialog`. A
+qualifying click is prevented before navigation and retains its exact hash;
+opening or dismissing the dialog changes no URL, draft, preview, request, or
+durable state. **Keep editing** is the safe initially focused action. Escape,
+backdrop dismissal, the close affordance, and cancellation return focus to the
+invoking link; only explicit **Discard edits and leave** follows the captured
+hash. The native browser `beforeunload` warning remains, while clean links,
+modified/new-tab activation, and same exact-revision Workbench step movement
+retain their prior behavior. This ticket claims no browser Back/Forward or
+programmatic-navigation interception.
+
+The bounded interaction adds one captured destination, one modal with two
+actions, and modal-lifetime focus/key handlers only for a qualifying dirty
+click. It adds no request, mutation, poll, timer, startup, sync/retry/no-op,
+store/disk, child, lock, cache, publication, authority, or runtime-persistence
+work. Independent review found no navigation race and one medium
+close-lifecycle issue: Base UI retained the closed focus lock for 500 ms. The
+correction immediately unmounts the open-dialog implementation, so a closed
+render returns `null`; focused tests pass 35/35. The complete
+non-receipt-manifest UI set passes 617/617, and lint, typecheck/build,
+whitespace, and the mechanical detector pass. Relative to exact main, the main
+chunk is 339,224/96,515 → 339,257/96,541 bytes (+33/+26 raw/gzip); all
+JavaScript is 160 chunks at 6,840,322/2,030,036 → 161 chunks at
+6,856,622/2,035,234 (+16,300/+5,198).
+
+Closure targets two new deterministic open-dialog routes, desktop and 390px,
+across both themes and densities: 32 authenticated routes and 130 retained
+baselines in total. **This is not yet a completed-ticket claim.** All available
+local browser and receipt sessions are signed out, so the eight PNGs, full
+manifest test, responsive/accessibility and clean-console browser QA, exact
+commit, and completion date remain open. No passing receipt or merge exception
+is claimed; this provisional record must be replaced before the ticket receives
+a checkmark.
+
 **T40.11 ✅ · Downstream generation adapters, archive, and lifecycle**
 *(2026-08-08; needs T40.4, T40.9, and T40.10)* — migrates resolver namespaces,
 RPC/Kafka postings, caller-leaf generation identities, and atomic service

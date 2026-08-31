@@ -645,11 +645,19 @@ any later edit marks the preview expired and requires **Refresh preview**.
 Compatibility `unavailable` remains visibly distinct from a compatible
 result. Permission loss, source refusal, stale revision or preview conflicts,
 and retry paths remain explicit; structured server problem responses render
-their bounded detail rather than raw JSON. Unsaved edits install the browser's
-ordinary tab/unload warning; a same-app navigation link that leaves the
-Workbench or drops an exact revision identity also asks for confirmation,
-while movement among its four steps remains uninterrupted. A failed
-create/append invalidates its preview so retry requires fresh evidence.
+their bounded detail rather than raw JSON. Unsaved edits retain the browser's
+ordinary native tab/unload warning. An unmodified same-app link that would
+leave the Workbench or drop its exact Investigation/revision identity is
+stopped before navigation and opens the house confirmation `alertdialog`.
+**Keep editing** receives initial focus; Escape, backdrop dismissal, the close
+affordance, and **Keep editing** cancel without changing the URL or draft and
+return focus to the invoking link. Only explicit **Discard edits and leave**
+follows the captured exact hash. Opening or dismissing the dialog performs no
+request or mutation. Movement among the four steps for the same exact revision,
+clean links, and modified/new-tab activation remain uninterrupted. The guard
+does not claim to intercept browser Back/Forward or programmatic navigation.
+A failed create/append invalidates its preview so retry requires fresh
+evidence.
 General schema validation stays distinct from source-limit refusal, endpoint
 growth stops at three selections, and oversized UTF-8 ticket or proposal
 pastes remain visible with an explicit refusal instead of being silently

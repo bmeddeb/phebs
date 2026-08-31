@@ -3251,8 +3251,54 @@ the completed backlog.
 presentation, bounded cost, responsive evidence, and explicit retained-receipt
 merge exception are recorded in the completed backlog.
 
-**T43R.3 · House confirm dialog (S1)** — replace the Workbench's native
-`window.confirm` guard with the kit's dialog semantics.
+**T43R.3 · House confirm dialog (S1)** *(implementation in progress; needs
+T43R.2)* — replace only the Workbench's dirty same-app link
+`window.confirm` guard with the shared kit dialog; retain the browser-owned
+native unload warning and do not broaden this into a router guard.
+
+Product boundary: a qualifying dirty link is prevented before navigation and
+its exact hash is captured. Opening or cancelling the dialog changes no URL,
+draft, preview, request, or durable state. The modal is an `alertdialog` with a
+labelled title and description; **Keep editing** receives initial focus.
+Escape, backdrop dismissal, the close affordance, and **Keep editing** cancel
+and return focus to the invoking link. Only explicit **Discard edits and
+leave** follows the captured exact hash, once. Clean links, modified/new-tab
+activation, and links that preserve the same exact Investigation/revision while
+moving among Workbench steps retain their behavior. The browser's native
+`beforeunload` warning remains; browser Back/Forward and programmatic
+navigation are outside this ticket's claim.
+
+AC: one shared house confirmation primitive with no new dependency; semantic
+modal naming, safe initial focus, Tab/Shift+Tab containment, Escape/dismissal,
+and focus return are component-tested; Workbench tests pin cancel, explicit
+discard, captured-destination identity, exact-revision step exemptions,
+clean/modified/new-tab behavior, retained `beforeunload`, and absence of the
+Workbench `window.confirm` call. The complete UI suite, lint/build,
+documentation/glossary/whitespace, clean-console accessibility review, and
+1440px/390px light/dark × comfortable/dense browser gates must pass with no
+document overflow. Deterministic open-dialog receipts at desktop and 390px add
+two authenticated routes across both themes and densities: the target matrix
+is 32 routes and 130 retained baselines, while the existing Workbench captures
+remain unchanged. Record exact main/all-JavaScript raw+gzip bundle deltas,
+chunk count, independent review, and receipt comparison before marking the
+ticket complete.
+
+Cost: clean and exempt links retain their existing constant-time checks. One
+qualifying dirty click stores one bounded destination, mounts one modal with
+two actions and modal-lifetime focus/key handlers, and then discards that state
+or performs one exact hash navigation. There is no request, mutation, poll,
+timer, startup, sync/retry/no-op, store/disk, child, lock, cache, publication,
+authority, or runtime-persistence work. The review correction immediately
+unmounts the open-dialog implementation on close, so ordinary closed renders
+return `null` and no 500-ms Base UI focus-lock tail remains. Focused tests pass
+35/35; the non-receipt-manifest UI suite passes 617/617; lint,
+typecheck/build, whitespace, and the mechanical detector pass. Exact-main to
+branch bundle accounting is 339,224/96,515 → 339,257/96,541 main bytes
+(+33/+26 raw/gzip) and 160 chunks at 6,840,322/2,030,036 → 161 chunks at
+6,856,622/2,035,234 (+16,300/+5,198). The eight new PNGs, full manifest test,
+responsive browser matrix, exact commit, and completion claim remain open:
+all available local browser and receipt sessions are signed out, so no passing
+receipt or merge exception is claimed.
 
 **T43R.4 · Bounded errors everywhere (S2)** — History and Analytics render
 raw `String(cause)`; route them through the bounded-error form the catalog

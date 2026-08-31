@@ -20,10 +20,11 @@ import {
   type WorkbenchTicketKind,
   type WorkbenchView,
 } from '../api'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { StatusChip } from '../components/kit'
 import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
-import { StatusChip } from '../components/kit'
 import {
   WorkbenchHowStep,
   WorkbenchWhereStep,
@@ -53,6 +54,10 @@ interface PageFailure {
   title: string
   detail: string
   status?: number
+}
+
+interface PendingLeave {
+  destinationHash: string
 }
 
 export default function WorkbenchPage({
@@ -96,6 +101,7 @@ export default function WorkbenchPage({
   const [previewing, setPreviewing] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [actionFailure, setActionFailure] = useState<PageFailure | null>(null)
+  const [pendingLeave, setPendingLeave] = useState<PendingLeave | null>(null)
   const [evidence, setEvidence] = useState<WorkbenchEvidenceInput>(
     routeEvidence,
   )
@@ -104,6 +110,10 @@ export default function WorkbenchPage({
   useEffect(() => {
     setEvidence(routeEvidence)
   }, [routeEvidence, routeKey])
+
+  useEffect(() => {
+    setPendingLeave(null)
+  }, [seedKey])
 
   useEffect(() => {
     if (!investigationID && atlasSeed) {
@@ -224,12 +234,10 @@ export default function WorkbenchPage({
           )
         if (preservesExactRevision) return
       }
-      if (!window.confirm(
-        'Leave the Workbench and discard unsaved Why or What edits?',
-      )) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
+      event.preventDefault()
+      event.stopPropagation()
+      target.focus({ preventScroll: true })
+      setPendingLeave({ destinationHash: destination.hash })
     }
     window.addEventListener('beforeunload', preventLoss)
     document.addEventListener('click', confirmInAppLeave, true)
@@ -238,6 +246,12 @@ export default function WorkbenchPage({
       document.removeEventListener('click', confirmInAppLeave, true)
     }
   }, [dirty, investigationID, revisionID])
+
+  const confirmPendingLeave = useCallback(() => {
+    const destinationHash = pendingLeave?.destinationHash
+    setPendingLeave(null)
+    if (destinationHash) window.location.hash = destinationHash
+  }, [pendingLeave])
 
   const previewPlan = async () => {
     if (!plan) return
@@ -436,6 +450,15 @@ export default function WorkbenchPage({
           )}
         </main>
       </div>
+      <ConfirmDialog
+        isOpen={pendingLeave !== null}
+        title="Discard unsaved edits?"
+        detail="Leaving the Workbench discards unsaved Why or What edits."
+        cancelLabel="Keep editing"
+        confirmLabel="Discard edits and leave"
+        onCancel={() => setPendingLeave(null)}
+        onConfirm={confirmPendingLeave}
+      />
     </div>
   )
 }

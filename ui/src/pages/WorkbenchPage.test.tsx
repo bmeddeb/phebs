@@ -243,13 +243,16 @@ function emptyChecklist(kind: WorkbenchTicketKind): WorkbenchChecklistPage {
 
 function wrapped(
   params: URLSearchParams,
-  outsideNavigation: 'search' | 'workbench-home' | null = null,
+  outsideNavigation: 'search' | 'search-new-tab' | 'workbench-home' | null = null,
 ) {
   return (
     <StyletronProvider value={engine}>
       <ModeContext value={{ mode: 'light', toggle: () => {} }}>
         <BaseProvider theme={lightTheme}>
           {outsideNavigation === 'search' && <a href="#/search">Search</a>}
+          {outsideNavigation === 'search-new-tab' && (
+            <a href="#/search" target="_blank">Search in new tab</a>
+          )}
           {outsideNavigation === 'workbench-home' && (
             <a href="#/workbench">Workbench home</a>
           )}
@@ -351,8 +354,7 @@ test('bounds ticket intake by the persisted UTF-8 problem byte ceiling', () => {
   expect(screen.getByLabelText('Ticket text').getAttribute('maxlength')).toBeNull()
 })
 
-test('confirms before a dirty draft follows an in-app link outside Workbench', () => {
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+test('keeps a dirty draft and returns focus when leave confirmation is cancelled', async () => {
   render(wrapped(new URLSearchParams(), 'search'))
   fireEvent.change(screen.getByLabelText('Workbench title'), {
     target: { value: 'Keep this draft' },
@@ -362,18 +364,37 @@ test('confirms before a dirty draft follows an in-app link outside Workbench', (
   })
   fireEvent.click(screen.getByRole('button', { name: 'Shape the Why' }))
 
-  fireEvent.click(screen.getByRole('link', { name: 'Search' }))
+  const searchLink = screen.getByRole('link', { name: 'Search' })
+  searchLink.focus()
+  fireEvent.click(searchLink)
 
-  expect(confirm).toHaveBeenCalledWith(
-    'Leave the Workbench and discard unsaved Why or What edits?',
-  )
+  const dialog = await screen.findByRole('alertdialog', {
+    name: 'Discard unsaved edits?',
+  })
+  expect(within(dialog).getByText(
+    'Leaving the Workbench discards unsaved Why or What edits.',
+  )).toBeTruthy()
+  const keepEditing = within(dialog).getByRole('button', {
+    name: 'Keep editing',
+  })
+  await waitFor(() => expect(document.activeElement).toBe(keepEditing))
   expect(window.location.hash).toBe('#/workbench?source=ticket&step=why')
   expect(screen.getByRole('heading', { name: 'Why this change?' })).toBeTruthy()
+  expect(api.previewWorkbench).not.toHaveBeenCalled()
+  expect(api.createWorkbench).not.toHaveBeenCalled()
+
+  fireEvent.click(keepEditing)
+
+  await waitFor(() => {
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(document.activeElement).toBe(searchLink)
+  })
+  expect(window.location.hash).toBe('#/workbench?source=ticket&step=why')
+  expect(screen.getByDisplayValue('Keep this draft')).toBeTruthy()
 })
 
-test('confirms before a dirty exact revision drops its identity for Workbench home', async () => {
+test('discards a dirty exact revision only after explicit confirmation', async () => {
   api.fetchWorkbench.mockResolvedValue(view('retire'))
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   window.location.hash =
     `#/workbench?investigation_id=${investigationID}` +
     `&revision_id=${revisionID}&step=why`
@@ -385,17 +406,92 @@ test('confirms before a dirty exact revision drops its identity for Workbench ho
     target: { value: 'Keep this exact revision edit.' },
   })
 
-  fireEvent.click(screen.getByRole('link', { name: 'Workbench home' }))
+  const workbenchHome = screen.getByRole('link', { name: 'Workbench home' })
+  workbenchHome.focus()
+  fireEvent.click(workbenchHome)
 
-  expect(confirm).toHaveBeenCalledWith(
-    'Leave the Workbench and discard unsaved Why or What edits?',
-  )
+  const dialog = await screen.findByRole('alertdialog', {
+    name: 'Discard unsaved edits?',
+  })
   expect(window.location.hash).toBe(
     `#/workbench?investigation_id=${investigationID}` +
     `&revision_id=${revisionID}&step=why`,
   )
   expect(screen.getByText('Unsaved edits')).toBeTruthy()
   expect(screen.getByText(revisionID)).toBeTruthy()
+
+  fireEvent.click(within(dialog).getByRole('button', {
+    name: 'Discard edits and leave',
+  }))
+
+  await waitFor(() => {
+    expect(window.location.hash).toBe('#/workbench')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+})
+
+test('allows dirty step navigation that preserves the exact revision', async () => {
+  api.fetchWorkbench.mockResolvedValue(view('retire'))
+  window.location.hash =
+    `#/workbench?investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}&step=why`
+  render(wrapped(new URLSearchParams(
+    `investigation_id=${investigationID}&revision_id=${revisionID}&step=why`,
+  )))
+  await screen.findByRole('heading', { name: 'Why this change?' })
+  fireEvent.change(screen.getByLabelText('Problem'), {
+    target: { value: 'Keep this exact revision edit.' },
+  })
+
+  fireEvent.click(screen.getByRole('link', { name: /What/ }))
+
+  await waitFor(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1])
+    expect(params.get('investigation_id')).toBe(investigationID)
+    expect(params.get('revision_id')).toBe(revisionID)
+    expect(params.get('step')).toBe('what')
+  })
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  expect(api.previewWorkbench).not.toHaveBeenCalled()
+  expect(api.reviseWorkbench).not.toHaveBeenCalled()
+})
+
+test('leaves modified and new-tab link activation to the browser', () => {
+  render(wrapped(new URLSearchParams(), 'search'))
+  fireEvent.change(screen.getByLabelText('Workbench title'), {
+    target: { value: 'Keep this draft' },
+  })
+  fireEvent.change(screen.getByLabelText('Ticket text'), {
+    target: { value: 'Unsaved proposal context.' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Shape the Why' }))
+
+  const modifiedLink = screen.getByRole('link', { name: 'Search' })
+  modifiedLink.addEventListener('click', (event) => event.preventDefault(), {
+    once: true,
+  })
+  fireEvent.click(modifiedLink, {
+    metaKey: true,
+  })
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+
+  cleanup()
+  window.location.hash = '#/workbench'
+  render(wrapped(new URLSearchParams(), 'search-new-tab'))
+  fireEvent.change(screen.getByLabelText('Workbench title'), {
+    target: { value: 'Keep this draft' },
+  })
+  fireEvent.change(screen.getByLabelText('Ticket text'), {
+    target: { value: 'Unsaved proposal context.' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Shape the Why' }))
+
+  const newTabLink = screen.getByRole('link', { name: 'Search in new tab' })
+  newTabLink.addEventListener('click', (event) => event.preventDefault(), {
+    once: true,
+  })
+  fireEvent.click(newTabLink)
+  expect(screen.queryByRole('alertdialog')).toBeNull()
 })
 
 test('starts from an exact Contract Atlas operation without implicit reads or writes', () => {
