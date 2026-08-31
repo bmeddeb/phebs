@@ -1580,9 +1580,11 @@ is a failure or terminal refusal.
   reading), Classic (traditional editor hues), and High contrast
   (maximal separation). The choice re-colors the file viewer, search
   result chunks, and citation source without reload, persists in this
-  browser, and every palette meets the AA contrast floor against both
-  code backgrounds in both themes (high contrast holds ≥7:1 against the
-  page). A live specimen previews the selection.
+  browser, and every palette meets the AA contrast floor against the page,
+  citation band, search-row hover, selected-line, and search-match surfaces
+  in both themes (high contrast holds ≥7:1 against the page). A live specimen
+  previews the selection and falls back to uncolored source while a new
+  palette or theme is being tokenized, so prior colors are never relabeled.
 - **Row density**: the header's rows button (next to the theme toggle)
   switches every density-aware surface between comfortable and dense
   rows. Density changes spacing and row height, never information; the

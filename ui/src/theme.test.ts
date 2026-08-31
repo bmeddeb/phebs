@@ -54,15 +54,15 @@ describe('evidence metadata retains normal-text contrast at its 10px exception',
 })
 
 // T44.2: every curated syntax palette holds the AA floor on every surface
-// syntax text can render on — the page background, the anchor-line tint,
-// AND the search-match highlight (matchBg, where matched syntax text is
-// drawn) — in both modes; high-contrast additionally holds ≥7:1 against
-// the page. This gate found the original default's sub-AA comment grays;
-// T44.2f added matchBg after comments/operators failed the amber/brown
-// match background it had missed.
+// syntax text can render on — the page and citation-band backgrounds,
+// search-row hover, anchor-line tint, and search-match highlight — in both
+// modes; high-contrast additionally holds ≥7:1 against the page. This gate
+// found the original default's sub-AA comment grays; T44.2f added matchBg
+// after comments/operators failed the amber/brown match background it had
+// missed, and the closure audit added the real hover/citation surfaces.
 describe('syntax palettes are WCAG AA on every code surface', () => {
   const ROLES: RoleName[] = ['keyword', 'func', 'type', 'string', 'comment', 'number', 'operator']
-  const SURFACES: (keyof PhebsTokens)[] = ['pageBg', 'selectedLineBg', 'matchBg']
+  const SURFACES: (keyof PhebsTokens)[] = ['pageBg', 'bandBg', 'hoverFill', 'selectedLineBg', 'matchBg']
   for (const name of PALETTE_NAMES) {
     for (const mode of ['light', 'dark'] as Mode[]) {
       const tok = TOKENS[mode]

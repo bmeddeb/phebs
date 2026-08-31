@@ -171,6 +171,19 @@ canonical retained-receipt exception, not a passing comparison or baseline
 refresh. Its source-highlighting changes do not alter scale-plane runtime or
 product authority. T44.2 is next.
 
+T44.2's 2026-08-31 closure audit hardens palette-transition identity, expands
+the AA matrix to all five shipped code surfaces, pins the receipt harness to
+the default palette and matching lazy-ready specimen, and adds same-mounted
+consumer coverage. The complete 753-test UI suite, lint, typecheck/build, and
+desktop/390px browser checks pass; the branch adds 114 raw/62 individually
+gzipped JavaScript bytes with no dependency or chunk. The retained manifest
+remains 32 authenticated routes/130 PNGs with no baseline changes. Its
+targeted eight-comparison Settings run stopped during authentication because
+the stored session was stale and receipt credentials were absent, so no PNG
+comparison ran. T44.2 remains the next presentation ticket pending a clean
+retained comparison or a separately explicit exception; neither a baseline
+refresh nor completion is claimed.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

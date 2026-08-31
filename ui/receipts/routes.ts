@@ -29,6 +29,9 @@ export interface ReceiptRoute {
   // in main. Guards transitional instance states (e.g. post-restart index
   // rebuilds) that are real but not the surface's settled truth.
   awaitAbsent?: string[]
+  // Required rendered ready-state selectors. Lazy presentation must settle
+  // before capture rather than relying on generic DOM quiet alone.
+  awaitVisible?: string[]
   // Interactions performed after readiness, before capture. Each selector
   // MUST match — a missing element fails the capture instead of silently
   // producing a baseline of the wrong state.
@@ -120,11 +123,13 @@ export const ROUTES: ReceiptRoute[] = [
     name: 'settings',
     path: '/settings',
     mask: ['[data-volatile="lifecycle"]', 'section[aria-labelledby="lifecycle-heading"] [role="status"]'],
+    awaitVisible: ['[data-palette-ready="true"]'],
   },
   {
     name: 'settings-indexing-390',
     path: '/settings',
     viewport: { width: 390, height: 844 },
+    awaitVisible: ['[data-palette-ready="true"]'],
     scrollIntoView: '#code-navigation-indexing',
   },
   // The run mutates audit values, not table anatomy. Mask only the dynamic

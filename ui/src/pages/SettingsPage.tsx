@@ -8,8 +8,8 @@ import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '
 import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
-import { usePhebsTokens, useMode, usePalette, FONTS, TYPE } from '../theme'
-import { PALETTES, PALETTE_NAMES, isPaletteName } from '../palette'
+import { usePhebsTokens, useMode, usePalette, FONTS, TYPE, type Mode } from '../theme'
+import { PALETTES, PALETTE_NAMES, isPaletteName, type PaletteName } from '../palette'
 import type { Token } from '../highlight'
 import { isAbortError, relTime } from '../util'
 import { CodeNavigationIndexingSection } from './CodeNavigationIndexingSection'
@@ -303,22 +303,36 @@ function PaletteSpecimen() {
   const tok = usePhebsTokens()
   const { mode } = useMode()
   const { palette } = usePalette()
-  const [rows, setRows] = useState<Token[][] | null>(null)
+  const [highlight, setHighlight] = useState<{
+    mode: Mode
+    palette: PaletteName
+    rows: Token[][]
+  } | null>(null)
   useEffect(() => {
     let active = true
+    // A palette/theme transition must never relabel the prior spans. Render
+    // the exact plain specimen until this identity's lazy tokenization lands.
+    setHighlight(null)
     // Lazy like the citation path: the settings chunk carries no
     // CodeMirror weight until the specimen actually renders.
     void Promise.all([import('../highlight'), import('../lang')])
-      .then(async ([highlight, lang]) => {
+      .then(async ([highlighter, lang]) => {
         const language = await lang.languageFor('specimen.go')
         if (!active) return
-        setRows(SPECIMEN_LINES.map((line) => highlight.tokenize(line, language, mode, palette)))
+        setHighlight({
+          mode,
+          palette,
+          rows: SPECIMEN_LINES.map((line) => highlighter.tokenize(line, language, mode, palette)),
+        })
       })
       .catch(() => {})
     return () => { active = false }
   }, [mode, palette])
+  const rows = highlight?.mode === mode && highlight.palette === palette
+    ? highlight.rows
+    : null
   return (
-    <pre aria-hidden="true" className={css({ margin: 0, padding: '10px 12px', border: `1px solid ${tok.innerSep}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', overflowX: 'auto' })}>
+    <pre aria-hidden="true" data-palette-ready={rows ? 'true' : undefined} className={css({ margin: 0, padding: '10px 12px', border: `1px solid ${tok.innerSep}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', overflowX: 'auto' })}>
       {SPECIMEN_LINES.map((line, index) => (
         <span key={index}>
           {index > 0 ? '\n' : null}

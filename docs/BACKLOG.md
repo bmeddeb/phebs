@@ -3248,6 +3248,24 @@ surfaces. The persisted-value guard uses an own-property check, not
 to the default instead of indexing to undefined; pinned by
 palette.test.ts.
 
+Closure audit (2026-08-31): Settings token rows are now bound to their exact
+theme/palette identity and fall back to the plain specimen during every new
+lazy tokenization, so old colors cannot be relabelled or stranded after a
+failure. Same-mounted File, Search, relationship-citation, and exact-caller
+tests prove live recoloring without restarting or refetching their underlying
+work. The AA matrix now covers `pageBg`, `bandBg`, `hoverFill`,
+`selectedLineBg`, and `matchBg`. The receipt harness explicitly seeds the
+Phebs default and waits for specimen readiness on both Settings routes. The
+complete 753-test UI suite, lint, typecheck/build, and desktop/390px browser
+checks pass; the production JavaScript delta is +114 raw/+62 individually
+gzipped bytes with no dependency or chunk. Twelve local browser-driven
+transitions settled in 56–109 ms (60-ms median), recorded as mechanics rather
+than an SLO. The manifest stays at 32 authenticated routes/130 PNGs and no
+baseline byte changes. The targeted eight-comparison retained Settings run
+stopped before comparison because the stored session was stale and receipt
+credentials were absent. T44.2 therefore remains open: no clean retained
+comparison, baseline refresh, completion, merge, or integration is claimed.
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force

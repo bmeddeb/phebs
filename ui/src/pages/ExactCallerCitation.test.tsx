@@ -6,7 +6,8 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as api from '../api'
 import type { CallerMapCitation, CallerMapSource } from '../api'
-import { lightTheme, ModeContext } from '../theme'
+import { lightTheme, ModeContext, PaletteContext } from '../theme'
+import type { PaletteName } from '../palette'
 import ExactCallerCitation from './ExactCallerCitation'
 
 vi.mock('../api', () => ({ fetchCallerCitation: vi.fn() }))
@@ -49,12 +50,14 @@ function response(selected: CallerMapSource, content: string): CallerMapCitation
   }
 }
 
-function wrapped(selected: CallerMapSource) {
+function wrapped(selected: CallerMapSource, palette: PaletteName = 'phebs') {
   return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={lightTheme}>
         <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
-          <ExactCallerCitation source={selected} />
+          <PaletteContext.Provider value={{ palette, setPalette: () => {} }}>
+            <ExactCallerCitation source={selected} />
+          </PaletteContext.Provider>
         </ModeContext.Provider>
       </BaseProvider>
     </StyletronProvider>
@@ -93,4 +96,24 @@ test('ignores an old citation response that settles after source identity change
 
   expect(screen.queryByTestId('caller-map-exact-citation')).toBeNull()
   expect(screen.queryByText('return stale')).toBeNull()
+})
+
+test('re-colors an open exact citation without re-reading its source (T44.2)', async () => {
+  const selected = source('internal/palette.go', 'citation:palette')
+  fetchCallerCitation.mockResolvedValue(response(selected, 'return value'))
+  const mounted = render(wrapped(selected))
+  fireEvent.click(screen.getByRole('button', { name: /internal\/palette\.go:2/ }))
+
+  const keywordColor = async () => await waitFor(() => {
+    const scope = screen.getByTestId('caller-map-exact-citation')
+    const keyword = Array.from(scope.querySelectorAll('span')).find((element) => element.textContent === 'return') as HTMLElement | undefined
+    expect(keyword?.style.color).toBeTruthy()
+    return keyword!.style.color
+  })
+  const phebsColor = await keywordColor()
+
+  mounted.rerender(wrapped(selected, 'classic'))
+
+  expect(await keywordColor()).not.toBe(phebsColor)
+  expect(fetchCallerCitation).toHaveBeenCalledTimes(1)
 })

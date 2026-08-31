@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './routes'
+import { DEFAULT_PALETTE } from '../src/palette'
 
 type ReceiptWindow = typeof window & { __phebsReceiptPending?: number }
 
@@ -54,11 +55,19 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   })
   await page.addInitScript((mode) => localStorage.setItem('phebs-theme', mode as string), theme)
   await page.addInitScript((value) => localStorage.setItem('phebs-density', value as string), density)
+  // Receipts pin the product default, never a reusable session's personal
+  // palette preference (T44.2).
+  await page.addInitScript((value) => localStorage.setItem('phebs-palette', value as string), DEFAULT_PALETTE)
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`/#${path}`)
   await expect(page.locator('main').first()).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   await waitForReceiptReady(page)
+  if (route.awaitVisible) {
+    for (const selector of route.awaitVisible) {
+      await expect(page.locator(selector).first(), `required ready state missing: ${selector}`).toBeVisible()
+    }
+  }
   if (route.awaitAbsent) {
     for (const text of route.awaitAbsent) {
       await expect.poll(
