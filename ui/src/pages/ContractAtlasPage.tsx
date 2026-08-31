@@ -24,7 +24,7 @@ import {
   OpenIcon,
 } from '../icons'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import { ClaimBoundary, StateNotice, StatusChip } from '../components/kit'
 import ContractDependencyMap from '../components/ContractDependencyMap'
@@ -422,7 +422,7 @@ export default function ContractAtlasPage({
             })}>
               Declared interfaces
             </h2>
-            <span className={css({ fontFamily: FONTS.MONO, fontSize: '10px', color: tok.textTertiary })}>
+            <span className={css({ fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textTertiary })}>
               {catalog?.items.length ?? 0} rows
             </span>
           </div>
@@ -468,7 +468,7 @@ export default function ContractAtlasPage({
               >
                 Load next bounded page
               </Button>
-              <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
+              <div className={css({ marginTop: '7px', color: tok.textTertiary, fontSize: '11px', lineHeight: '15px' })}>
                 Continuation reason: {humanize(catalog.pagination.reason || 'bounded page')}
               </div>
             </div>
@@ -611,7 +611,7 @@ function ContractGroupRow({
             display: 'block',
             marginTop: '3px',
             color: tok.textTertiary,
-            fontSize: '10px',
+            fontSize: '11px',
             lineHeight: '15px',
             overflowWrap: 'anywhere',
           })}>
@@ -657,7 +657,7 @@ function ContractGroupRow({
                 <span className={css({ display: 'block', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '17px' })}>
                   {item.method}
                 </span>
-                <span className={css({ display: 'block', color: tok.textTertiary, fontSize: '10px', lineHeight: '14px' })}>
+                <span className={css({ display: 'block', color: tok.textTertiary, fontSize: '11px', lineHeight: '14px' })}>
                   {item.declaration.sources[0]?.path ?? 'source unavailable'}
                 </span>
               </span>
@@ -666,11 +666,11 @@ function ContractGroupRow({
           )
         })}
         {declaration && (
-          <div className={css({
+          <div data-evidence-metadata="contract-atlas-declaration-run" className={css({
             padding: '7px 12px 9px 33px',
             borderTop: `1px solid ${tok.innerSep}`,
             color: tok.textTertiary,
-            fontSize: '10px',
+            fontSize: TYPE.evidenceMetadata.fontSize,
             lineHeight: '15px',
           })}>
             declaration run {shortID(declaration.run_id)}
@@ -895,7 +895,7 @@ function MessagePanel({
         <div className={css({ color: tok.textPrimary, fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '18px', overflowWrap: 'anywhere' })}>
           {reference.raw}
         </div>
-        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '10px', lineHeight: '16px', overflowWrap: 'anywhere' })}>
+        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' })}>
           {reference.declaration || reference.reason || reference.resolution}
         </div>
         {message.truncated && (
@@ -942,7 +942,7 @@ function MessageTree({ message, depth }: { message: ContractCatalogMessage; dept
               <span className={css({ color: tok.textPrimary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px' })}>
                 {field.detail.name}
               </span>
-              <span className={css({ display: 'block', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '15px', overflowWrap: 'anywhere' })}>
+              <span className={css({ display: 'block', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '15px', overflowWrap: 'anywhere' })}>
                 {fieldTypeLabel(field.detail)} · field {field.field_number}
                 {field.detail.oneof ? ` · oneof ${field.detail.oneof}` : ''}
               </span>
@@ -953,7 +953,7 @@ function MessageTree({ message, depth }: { message: ContractCatalogMessage; dept
             field.nested.fields && field.nested.fields.length > 0
               ? <MessageTree message={field.nested} depth={depth + 1} />
               : (
-                <div className={css({ margin: '6px 0 0 11px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
+                <div className={css({ margin: '6px 0 0 11px', color: tok.textTertiary, fontSize: '11px', lineHeight: '15px' })}>
                   {humanize(field.nested.state)}
                   {field.nested.reason ? ` · ${humanize(field.nested.reason)}` : ''}
                 </div>
@@ -1089,11 +1089,11 @@ function CoverageDigest({ certificate }: { certificate: CoverageCertificate }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <div className={css({
+    <div data-evidence-metadata="contract-atlas-coverage-short-digest" className={css({
       maxWidth: '300px',
       color: tok.textTertiary,
       fontFamily: FONTS.MONO,
-      fontSize: '10px',
+      fontSize: TYPE.evidenceMetadata.fontSize,
       lineHeight: '15px',
       textAlign: 'right',
       overflowWrap: 'anywhere',
@@ -1151,7 +1151,7 @@ function CoverageDetails({ certificate }: { certificate: CoverageCertificate }) 
           </tbody>
         </table>
       </div>
-      <div className={css({ marginTop: '8px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '10px', overflowWrap: 'anywhere' })}>
+      <div data-evidence-metadata="contract-atlas-coverage-full-digest" className={css({ marginTop: '8px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: TYPE.evidenceMetadata.fontSize, overflowWrap: 'anywhere' })}>
         {certificate.digest}
       </div>
     </details>
@@ -1183,7 +1183,7 @@ function HeaderCell({ children }: { children: React.ReactNode }) {
       borderBottom: `1px solid ${tok.cardBorder}`,
       color: tok.textTertiary,
       fontFamily: FONTS.MONO,
-      fontSize: '9px',
+      fontSize: '11px',
       lineHeight: '14px',
       fontWeight: 650,
       letterSpacing: '0.04em',
@@ -1204,7 +1204,7 @@ function Cell({ children, mono = false }: { children: React.ReactNode; mono?: bo
       padding: '9px 13px 9px 0',
       color: tok.textSecondary,
       fontFamily: mono ? FONTS.MONO : FONTS.SANS,
-      fontSize: mono ? '10px' : '11px',
+      fontSize: '11px',
       lineHeight: '17px',
       verticalAlign: 'top',
       overflowWrap: 'anywhere',
@@ -1354,7 +1354,7 @@ function filterLabelStyle(color: string) {
     display: 'grid',
     gap: '5px',
     color,
-    fontSize: '10px',
+    fontSize: '11px',
     lineHeight: '14px',
     fontWeight: 650,
     letterSpacing: '0.03em',

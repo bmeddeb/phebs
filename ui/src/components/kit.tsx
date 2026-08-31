@@ -153,7 +153,7 @@ export function ClaimBoundary({ caveat, summary, children }: {
   const establishes = cut === -1 ? caveat : caveat.slice(0, cut + 1)
   const doesNotEstablish = cut === -1 ? '' : caveat.slice(cut + 1).trim()
   const label = (text: string) => (
-    <span className={css({ display: 'block', color: tok.textPrimary, fontSize: '10.5px', lineHeight: '15px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' })}>{text}</span>
+    <span className={css({ display: 'block', color: tok.textPrimary, fontSize: '11px', lineHeight: '15px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' })}>{text}</span>
   )
   return (
     <CaveatCollapse summary={summary ?? firstClause(caveat)}>
@@ -337,7 +337,7 @@ export function CitationPanel({ id, loading, error, citation, onClose, onRefresh
       <div className={css({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' })}>
         <div>
           <h2 id={titleID} className={css({ margin: 0, fontSize: '12px', lineHeight: '17px', color: tok.textPrimary })}>Exact source citation</h2>
-          {citation && <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>{citation.evidence.path} · lines {citation.evidence.span.start_line}–{citation.evidence.span.end_line}</div>}
+          {citation && <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px', lineHeight: '15px' })}>{citation.evidence.path} · lines {citation.evidence.span.start_line}–{citation.evidence.span.end_line}</div>}
         </div>
         <button type="button" onClick={onClose} className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '11px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', ':focus-visible': focusRing(tok) })}>Close citation</button>
       </div>
@@ -428,7 +428,7 @@ function CitationIdentity({ label, value }: { label: string; value: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <div className={css({ minWidth: 0, color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
+    <div className={css({ minWidth: 0, color: tok.textTertiary, fontSize: '11px', lineHeight: '15px' })}>
       {label}
       <IdentityText title={value}>{shortIdentity(value)}</IdentityText>
     </div>

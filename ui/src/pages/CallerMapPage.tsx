@@ -13,7 +13,7 @@ import {
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
 import { ClaimBoundary, StatusChip } from '../components/kit'
@@ -705,17 +705,17 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
         </div>
         {generation?.reason && (
           <div className={css({
-            marginTop: '4px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px',
+            marginTop: '4px', color: tok.textTertiary, fontSize: '11px', lineHeight: '15px',
           })}>
             {generation.reason}. This is not evidence of zero callers.
           </div>
         )}
       </div>
       {generation && (
-        <div className={css({
+        <div data-evidence-metadata="caller-map-generation-identifiers" className={css({
           color: tok.textTertiary,
           fontFamily: FONTS.MONO,
-          fontSize: '9px',
+          fontSize: TYPE.evidenceMetadata.fontSize,
           lineHeight: '15px',
           textAlign: 'right',
           overflowWrap: 'anywhere',
@@ -777,7 +777,7 @@ function PageProgress({
             ? 'Caller total unavailable'
             : `Rows ${start}–${end} of ${total}`}
         </div>
-        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
+        <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px', lineHeight: '15px' })}>
           {unavailable
             ? 'No partial page or zero-caller conclusion is shown.'
             : page.pagination.complete
@@ -939,7 +939,7 @@ function RowSection({
         borderBottom: `1px solid ${tok.innerSep}`,
         backgroundColor: tok.bandBg,
         color: tok.textSecondary,
-        fontSize: '10px',
+        fontSize: '11px',
         lineHeight: '15px',
         fontWeight: 650,
         letterSpacing: '0.04em',
@@ -1024,17 +1024,17 @@ function CallerRow({
         <details className={css({ marginTop: '7px', color: tok.textTertiary })}>
           <summary className={css({
             cursor: 'pointer',
-            fontSize: '10px',
+            fontSize: '11px',
             ':focus-visible': { outline: `2px solid ${tok.accent}` },
           })}>
             {row.source.plane === 'repository-overlay'
               ? 'Repository-overlay identity and byte span'
               : 'Evidence identity and byte span'}
           </summary>
-          <div className={css({
+          <div data-evidence-metadata="caller-map-source-identifiers" className={css({
             marginTop: '5px',
             fontFamily: FONTS.MONO,
-            fontSize: '9px',
+            fontSize: TYPE.evidenceMetadata.fontSize,
             lineHeight: '15px',
             overflowWrap: 'anywhere',
           })}>
@@ -1069,20 +1069,20 @@ function CallerRow({
           marginTop: '5px',
           color: tok.textTertiary,
           fontFamily: FONTS.MONO,
-          fontSize: '10px',
+          fontSize: '11px',
           lineHeight: '16px',
           overflowWrap: 'anywhere',
         })}>
           {row.unit_group}
         </div>
         {row.unit.reason && (
-          <div className={css({ marginTop: '4px', color: tok.textTertiary, fontSize: '10px' })}>
+          <div className={css({ marginTop: '4px', color: tok.textTertiary, fontSize: '11px' })}>
             {humanize(row.unit.reason)}
           </div>
         )}
         {candidates.length === 1 && (
           <div className={css({ marginTop: '7px' })}>
-            <div className={css({ color: tok.textSecondary, fontSize: '10px' })}>
+            <div className={css({ color: tok.textSecondary, fontSize: '11px' })}>
               1 candidate
             </div>
             <div className={css({ marginTop: '6px' })}>
@@ -1102,7 +1102,7 @@ function CallerRow({
                 backgroundColor: 'transparent',
                 color: tok.textSecondary,
                 cursor: 'pointer',
-                fontSize: '10px',
+                fontSize: '11px',
                 ':focus-visible': { outline: `2px solid ${tok.accent}` },
               })}
             >
@@ -1141,7 +1141,7 @@ function UnitCandidate({ candidate }: { candidate: CallerMapUnitCandidate }) {
       padding: '7px 8px',
       borderLeft: `2px solid ${tok.cardBorder}`,
       backgroundColor: tok.bandBg,
-      fontSize: '9px',
+      fontSize: '11px',
       lineHeight: '15px',
     })}>
       <div className={css({ color: tok.textPrimary, fontFamily: FONTS.MONO, overflowWrap: 'anywhere' })}>
@@ -1194,7 +1194,7 @@ function Pager({
       >
         Previous page
       </Button>
-      <span className={css({ color: tok.textTertiary, fontSize: '10px' })}>
+      <span className={css({ color: tok.textTertiary, fontSize: '11px' })}>
         Page {pageIndex + 1}
       </span>
       <Button
@@ -1257,7 +1257,7 @@ function filterLabelStyle(color: string) {
     display: 'grid',
     gap: '5px',
     color,
-    fontSize: '10px',
+    fontSize: '11px',
     lineHeight: '15px',
     fontWeight: 650,
   } as const
@@ -1273,7 +1273,7 @@ function viewButtonStyle(
     border: `1px solid ${active ? tok.accent : tok.cardBorder}`,
     backgroundColor: active ? tok.selectedLineBg : tok.pageBg,
     color: active ? tok.selectedText : tok.textSecondary,
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: 650,
     cursor: 'pointer',
     ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },

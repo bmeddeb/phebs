@@ -20,7 +20,7 @@ import { SectionHelp } from '../components/SectionHelp'
 import { ClaimBoundary } from '../components/kit'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { type GlossaryTermId } from '../glossary.generated'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
 import { isAbortError } from '../util'
 
@@ -168,7 +168,7 @@ export default function ImpactPage({
           {mode === 'field' && (
             <>
               <div className={css({ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr) minmax(0, 1fr) 150px', gap: '10px', '@media screen and (max-width: 820px)': { gridTemplateColumns: '1fr' } })}>
-                <label className={css({ display: 'grid', gap: '5px', color: tok.textSecondary, fontSize: '10px', fontWeight: 650 })}>
+                <label className={css({ display: 'grid', gap: '5px', color: tok.textSecondary, fontSize: '11px', fontWeight: 650 })}>
                   Field protocol
                   <select
                     aria-label="Field protocol"
@@ -446,13 +446,13 @@ function EvidenceRow({ row, unresolved }: { row: ImpactEvidenceRow; unresolved: 
           <span>{row.repository}/{row.path}:{row.start_line}{row.end_line !== row.start_line ? `–${row.end_line}` : ''}</span>
           <OpenIcon size={13} />
         </a>
-        <div className={css({ marginTop: '3px', fontFamily: FONTS.MONO, fontSize: '10px', color: tok.gutter })}>
+        <div data-evidence-metadata="impact-evidence-byte-qualifier" className={css({ marginTop: '3px', fontFamily: FONTS.MONO, fontSize: TYPE.evidenceMetadata.fontSize, color: tok.textTertiary })}>
           {shortCommit(row.commit)} · bytes {row.start_byte}–{row.end_byte} · {row.evidence_atom_id}
         </div>
       </Cell>
       <Cell>
         <div>{row.protocol || 'unknown'}</div>
-        <div className={css({ marginTop: '2px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '10px' })}>
+        <div className={css({ marginTop: '2px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '11px' })}>
           {row.domain}
         </div>
       </Cell>
@@ -531,8 +531,8 @@ function CoverageSection({
             overflowWrap: 'anywhere',
             textAlign: 'right',
             fontFamily: FONTS.MONO,
-            fontSize: '10px',
-            color: tok.gutter,
+            fontSize: '11px',
+            color: tok.textTertiary,
             '@media screen and (max-width: 620px)': {
               display: 'none',
             },
@@ -615,7 +615,7 @@ function SectionHeading({
 function HeaderCell({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <th className={css({ textAlign: 'left', padding: '0 14px 8px 0', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '15px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', borderBottom: `1px solid ${tok.cardBorder}` })}>{children}</th>
+  return <th className={css({ textAlign: 'left', padding: '0 14px 8px 0', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '15px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', borderBottom: `1px solid ${tok.cardBorder}` })}>{children}</th>
 }
 
 function Cell({ children, mono = false }: { children: React.ReactNode; mono?: boolean }) {

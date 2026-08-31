@@ -26,9 +26,10 @@ export const FONTS = { MONO, SANS }
 // Counts and other numerals align in columns (charter §3).
 export const NUMERIC = { fontVariantNumeric: 'tabular-nums' } as const
 
-// Type scale (charter §3). caption is the floor: nothing persistent renders
-// below 11px. Adoption is enforced through the T43.3 kit; new work uses these
-// directly.
+// Type scale (charter §3). Caption is the interface floor. The single
+// evidenceMetadata role is the narrow T43R.1 exception: supplementary,
+// non-interactive machine metadata that repeats or qualifies information
+// already present at 11px or larger. It may never carry essential meaning.
 export const TYPE = {
   display: { fontSize: '20px', lineHeight: '28px', fontWeight: 600 },
   title: { fontSize: '17px', lineHeight: '24px', fontWeight: 600 },
@@ -36,6 +37,7 @@ export const TYPE = {
   body: { fontSize: '13px', lineHeight: '20px', fontWeight: 450 },
   small: { fontSize: '12px', lineHeight: '18px', fontWeight: 450 },
   caption: { fontSize: '11px', lineHeight: '16px', fontWeight: 450 },
+  evidenceMetadata: { fontSize: '10px', lineHeight: '15px', fontWeight: 450 },
 } as const
 
 export const SPACE = { xs: '4px', sm: '8px', md: '12px', lg: '16px', xl: '20px', xxl: '28px' } as const

@@ -107,6 +107,24 @@ the repository-wide merge bar in [BACKLOG.md](./BACKLOG.md).
   in the audit altitude. Expired or superseded citations fail closed with a
   refresh path.
 
+### Typography
+
+- **Interface text has an 11 px minimum.** A single named 10 px
+  `evidenceMetadata` token may be used only for non-interactive,
+  supplementary machine metadata that repeats or qualifies information
+  already presented at 11 px or larger. It must never carry the sole status,
+  warning, error, caveat, action, navigation label, field label, or authority
+  claim. Metadata meets the normal-text contrast requirement and remains
+  readable without clipping at 200% zoom and at the 390 px viewport.
+- **The exception is closed.** No arbitrary 8 px, 9 px, 9.5 px, 10 px, or
+  10.5 px values exist outside the named token. Font shorthand, font-size
+  keywords, aliases, `calc()`, standalone relative values, and unresolved
+  dynamic sizes are not alternate routes around the floor; a responsive
+  `clamp()` must name an absolute minimum of at least 11 px. Controls and
+  actionable text remain at least 11 px. If removing the small text would
+  remove essential meaning, it is at least 11 px. Every legacy site is
+  adjudicated; the exception does not automatically legitimize prior usage.
+
 ### Layout, density, and input
 
 - **Tables are the evidence surface.** Diagrams, charts, and summaries are

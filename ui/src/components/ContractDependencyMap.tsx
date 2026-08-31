@@ -46,7 +46,7 @@ export default function ContractDependencyMap({
             margin: '3px 0 0',
             maxWidth: '760px',
             color: tok.textTertiary,
-            fontSize: '10px',
+            fontSize: '11px',
             lineHeight: '16px',
           })}>
             One source-evidence hop around this declaration. Registration,
@@ -56,7 +56,7 @@ export default function ContractDependencyMap({
         <span className={css({
           color: tok.textTertiary,
           fontFamily: FONTS.MONO,
-          fontSize: '10px',
+          fontSize: '11px',
           lineHeight: '16px',
         })}>
           {edges.length} edges · {complete ? 'complete bounded set' : 'truncated bounded set'}
@@ -103,7 +103,10 @@ export default function ContractDependencyMap({
               className={css({
                 display: 'block',
                 width: '100%',
-                minWidth: '760px',
+                // Preserve the viewBox's 1:1 CSS-pixel scale. Shrinking the
+                // 960px drawing would silently pull its 11px SVG labels below
+                // the interface type floor; the containing region owns scroll.
+                minWidth: `${layout.width}px`,
                 height: 'auto',
               })}
             >
@@ -131,7 +134,7 @@ export default function ContractDependencyMap({
                 y={layout.centerY - 7}
                 textAnchor="middle"
                 fill={tok.textTertiary}
-                fontSize="10"
+                fontSize="11"
                 fontFamily={FONTS.MONO}
               >
                 DECLARED OPERATION
@@ -166,7 +169,7 @@ export default function ContractDependencyMap({
               borderBottom: 'none',
               backgroundColor: tok.bandBg,
               color: tok.textSecondary,
-              fontSize: '10px',
+              fontSize: '11px',
               lineHeight: '16px',
               '@media screen and (max-width: 760px)': { display: 'block' },
             })}
@@ -192,7 +195,7 @@ export default function ContractDependencyMap({
           <caption className={css({
             padding: '0 0 7px',
             color: tok.textTertiary,
-            fontSize: '10px',
+            fontSize: '11px',
             lineHeight: '16px',
             textAlign: 'left',
           })}>
@@ -231,7 +234,7 @@ export default function ContractDependencyMap({
                     marginTop: '2px',
                     color: tok.textTertiary,
                     fontFamily: FONTS.MONO,
-                    fontSize: '9px',
+                    fontSize: '11px',
                     overflowWrap: 'anywhere',
                   })}>
                     {edge.id}
@@ -258,7 +261,7 @@ export default function ContractDependencyMap({
                       display: 'block',
                       marginTop: '2px',
                       color: tok.textTertiary,
-                      fontSize: '10px',
+                      fontSize: '11px',
                     })}>
                       {humanize(edge.reason)}
                     </span>
@@ -278,7 +281,7 @@ export default function ContractDependencyMap({
       <div className={css({
         marginTop: '8px',
         color: tok.textTertiary,
-        fontSize: '10px',
+        fontSize: '11px',
         lineHeight: '16px',
       })}>
         Scope: {operation.coverage.repository_count} visible repositories ·
@@ -345,19 +348,19 @@ function DependencyDiagramEdge({
         x={edge.x + 10}
         y={edge.y + 18}
         fill={tok.textPrimary}
-        fontSize="10"
+        fontSize="11"
         fontWeight="600"
       >
-        {relationshipName(edge.kind)} · {humanize(edge.classification)}
+        {truncate(`${relationshipName(edge.kind)} · ${humanize(edge.classification)}`, 31)}
       </text>
       <text
         x={edge.x + 10}
         y={edge.y + 35}
         fill={tok.textTertiary}
-        fontSize="9"
+        fontSize="11"
         fontFamily={FONTS.MONO}
       >
-        {truncate(edge.label, 43)}
+        {truncate(edge.label, 31)}
       </text>
     </a>
   )
@@ -372,7 +375,7 @@ function DependencyHeader({ children }: { children: React.ReactNode }) {
       borderBottom: `1px solid ${tok.cardBorder}`,
       backgroundColor: tok.bandBg,
       color: tok.textTertiary,
-      fontSize: '9px',
+      fontSize: '11px',
       fontWeight: 650,
       letterSpacing: '0.04em',
       textAlign: 'left',
@@ -397,7 +400,7 @@ function DependencyCell({
       padding: '8px 9px',
       color: tok.textSecondary,
       fontFamily: mono ? FONTS.MONO : 'inherit',
-      fontSize: mono ? '9px' : '10px',
+      fontSize: '11px',
       lineHeight: '15px',
       verticalAlign: 'top',
       overflowWrap: 'anywhere',

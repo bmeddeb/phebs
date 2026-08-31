@@ -6,7 +6,7 @@ import {
   type CallerMapSource,
 } from '../api'
 import { CitationChip, IdentityText, StatusChip } from '../components/kit'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
 /**
@@ -91,10 +91,10 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
             <StatusChip tone="blue">exact citation unavailable</StatusChip>
           </>
         )}
-        {loading && <span role="status" className={css({ color: tok.textSecondary, fontSize: '10px' })}>Reading exact citation…</span>}
+        {loading && <span role="status" className={css({ color: tok.textSecondary, fontSize: '11px' })}>Reading exact citation…</span>}
       </div>
       <div className={css({
-        marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '14px',
+        marginTop: '3px', color: tok.textTertiary, fontSize: '11px', lineHeight: '14px',
       })}>
         Repository-overlay occurrence; source access is limited to its authorized byte range.
       </div>
@@ -102,14 +102,14 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
         <div role="alert" className={css({
           marginTop: '7px', display: 'flex', alignItems: 'baseline', gap: '9px', flexWrap: 'wrap',
         })}>
-          <span className={css({ color: tok.status.conflict.text, fontSize: '10px', lineHeight: '15px' })}>
+          <span className={css({ color: tok.status.conflict.text, fontSize: '11px', lineHeight: '15px' })}>
             Exact citation unavailable: {error}
           </span>
           {onRefreshRows && (
             <button
               type="button"
               onClick={onRefreshRows}
-              className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '10px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' })}
+              className={css({ border: 0, padding: 0, background: 'transparent', color: tok.textPrimary, fontSize: '11px', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' })}
             >
               Refresh caller rows
             </button>
@@ -129,18 +129,18 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
             padding: '6px 8px',
             borderBottom: `1px solid ${tok.innerSep}`,
             color: tok.textTertiary,
-            fontSize: '9px',
+            fontSize: '11px',
             lineHeight: '14px',
           })}>
             Exact cited bytes · repository-overlay
           </div>
-          <div className={css({
+          <div data-evidence-metadata="exact-caller-citation-identifiers" className={css({
             padding: '6px 8px',
             borderBottom: `1px solid ${tok.innerSep}`,
             display: 'grid',
             gap: '3px',
             color: tok.textTertiary,
-            fontSize: '9px',
+            fontSize: TYPE.evidenceMetadata.fontSize,
             lineHeight: '14px',
           })}>
             <span>generation <IdentityText>{citation.generation.generation_digest}</IdentityText></span>
@@ -156,7 +156,7 @@ export default function ExactCallerCitation({ source, onRefreshRows }: {
               overflowX: 'auto',
               color: tok.textPrimary,
               fontFamily: FONTS.MONO,
-              fontSize: '10px',
+              fontSize: '11px',
               lineHeight: '16px',
               whiteSpace: 'pre-wrap',
               overflowWrap: 'anywhere',
@@ -189,4 +189,3 @@ function exactCitationMatches(
     confirmed.end_line === source.end_line &&
     typeof citation.content === 'string'
 }
-

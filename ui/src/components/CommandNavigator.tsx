@@ -179,7 +179,7 @@ export function CommandNavigator({ surfaces, scope, principal, onClose }: {
               })}
             >
               <span className={css({ minWidth: 0, color: tok.textPrimary, fontSize: '13px', lineHeight: '19px', overflowWrap: 'anywhere' })}>{item.label}</span>
-              {item.detail && <span className={css({ color: tok.textTertiary, fontSize: '10.5px', whiteSpace: 'nowrap' })}>{item.detail}</span>}
+              {item.detail && <span className={css({ color: tok.textTertiary, fontSize: '11px', whiteSpace: 'nowrap' })}>{item.detail}</span>}
             </li>
           ))}
         </ul>

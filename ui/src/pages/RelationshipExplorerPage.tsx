@@ -297,7 +297,7 @@ function FilterField({ label, required = false, children }: { label: string; req
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <label className={css({ display: 'grid', gap: '5px', minWidth: 0, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '15px' })}>
+    <label className={css({ display: 'grid', gap: '5px', minWidth: 0, color: tok.textSecondary, fontSize: '11px', lineHeight: '15px' })}>
       <span>{label}{required && <span aria-hidden="true"> · required</span>}</span>
       {children}
     </label>
@@ -320,11 +320,11 @@ function CoverageStrip({ page }: { page: ServiceRelationshipPage }) {
   return (
     <section aria-label="Relationship coverage" className={css({ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', marginBottom: '10px', overflow: 'hidden', '@media screen and (max-width: 720px)': { display: 'grid', gridTemplateColumns: '1fr 1fr' } })}>
       {metrics.map(([label, value]) => (
-        <div key={label} className={css({ minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '9px', borderRight: `1px solid ${tok.innerSep}`, fontSize: '10.5px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { minWidth: 0, padding: '8px 10px', justifyContent: 'space-between', borderBottom: `1px solid ${tok.innerSep}` } })}>
+        <div key={label} className={css({ minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '9px', borderRight: `1px solid ${tok.innerSep}`, fontSize: '11px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { minWidth: 0, padding: '8px 10px', justifyContent: 'space-between', borderBottom: `1px solid ${tok.innerSep}` } })}>
           <span>{label}</span><strong className={css({ color: tok.textPrimary, fontSize: '15px', fontVariantNumeric: 'tabular-nums' })}>{value}</strong>
         </div>
       ))}
-      <div className={css({ flex: '1 1 260px', minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', color: partial ? tok.status.stale.text : tok.textTertiary, fontSize: '10.5px', lineHeight: '16px', '@media screen and (max-width: 720px)': { gridColumn: '1 / -1' } })}>
+      <div className={css({ flex: '1 1 260px', minHeight: '48px', padding: '8px 14px', display: 'flex', alignItems: 'center', color: partial ? tok.status.stale.text : tok.textTertiary, fontSize: '11px', lineHeight: '16px', '@media screen and (max-width: 720px)': { gridColumn: '1 / -1' } })}>
         {partial
           ? `Partial · ${page.coverage.truncated ? 'reference admission cap reached' : `${gaps} failed or unavailable root${gaps === 1 ? '' : 's'}`}`
           : 'Bounded exact roots · completeness beyond the published authority is not claimed'}
@@ -409,7 +409,7 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
     <section aria-labelledby="exact-relationship-rows" className={css({ minWidth: 0, border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', overflow: 'hidden' })}>
       <h2 id="exact-relationship-rows" className={css({ margin: 0, padding: '10px 12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.cardBorder}`, color: tok.textPrimary, fontSize: '12px', lineHeight: '17px' })}>Exact source rows</h2>
       <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '8px', padding: '9px 12px', borderBottom: `1px solid ${tok.innerSep}`, backgroundColor: tok.bandBg, '@media screen and (max-width: 480px)': { gridTemplateColumns: '1fr' } })}>
-        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>
           Narrow loaded rows
           <input
             type="search"
@@ -419,7 +419,7 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
             className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}
           />
         </label>
-        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>
           Group
           <select
             value={route.group === 'class' ? 'class' : ''}
@@ -444,7 +444,7 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
         <>
           <div aria-hidden="true" className={css({ display: 'grid', gridTemplateColumns: columns, gap: '8px', padding: `5px 12px`, borderBottom: `1px solid ${tok.innerSep}`, backgroundColor: tok.bandBg, '@media screen and (max-width: 720px)': { gridTemplateColumns: '44px minmax(0, 1fr) 96px' } })}>
             {['ID', 'Evidence', 'Contract / topic', 'Service route', 'Class'].map((label, index) => (
-              <span key={label} className={css({ color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px', fontWeight: 600, ...(index === 2 || index === 3 ? { '@media screen and (max-width: 720px)': { display: 'none' } } : {}) })}>{label}</span>
+              <span key={label} className={css({ color: tok.textTertiary, fontSize: '11px', lineHeight: '14px', fontWeight: 600, ...(index === 2 || index === 3 ? { '@media screen and (max-width: 720px)': { display: 'none' } } : {}) })}>{label}</span>
             ))}
           </div>
           <VirtualList<ExplorerListItem>
@@ -462,8 +462,8 @@ function ExactRows({ page, route, onCitation }: { page: ServiceRelationshipPage;
             isHeader={(item) => item.kind === 'header'}
             renderRow={(item, _index, rowProps, active) => item.kind === 'header' ? (
               <div {...rowProps} className={css({ display: 'flex', alignItems: 'flex-end', gap: '7px', padding: '0 12px 4px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}` })}>
-                <span className={css({ fontSize: '10px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
-                <span className={css({ fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
+                <span className={css({ fontSize: '11px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
+                <span className={css({ fontSize: '11px', lineHeight: '14px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
               </div>
             ) : (
               <ExplorerRow item={item} rowProps={rowProps} active={active} selected={pinMatches(item.row)} columns={columns} cellText={cellText} onSelect={() => selectRow(item.row)} />
@@ -517,10 +517,10 @@ function ExplorerRow({ item, rowProps, active, selected, columns, cellText, onSe
       })}
     >
       <span className={css(idBadge(tok))}>{rowID(item.pageIndex)}</span>
-      <span title={row.evidence.path} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '10px', color: tok.textSecondary })}>{row.evidence.path}:{row.evidence.span.start_line}–{row.evidence.span.end_line}</span>
-      <span title={subject} className={css({ ...cellText, fontSize: '10.5px', color: tok.textPrimary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{subject}</span>
-      <span title={`${route.from} → ${route.to}`} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '10px', color: tok.textSecondary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{route.from} <span aria-hidden="true">→</span> {route.to}</span>
-      <span className={css({ ...cellText, fontSize: '10px', fontWeight: 600, color: labelColor })}>{label}</span>
+      <span title={row.evidence.path} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textSecondary })}>{row.evidence.path}:{row.evidence.span.start_line}–{row.evidence.span.end_line}</span>
+      <span title={subject} className={css({ ...cellText, fontSize: '11px', color: tok.textPrimary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{subject}</span>
+      <span title={`${route.from} → ${route.to}`} className={css({ ...cellText, fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textSecondary, '@media screen and (max-width: 720px)': { display: 'none' } })}>{route.from} <span aria-hidden="true">→</span> {route.to}</span>
+      <span className={css({ ...cellText, fontSize: '11px', fontWeight: 600, color: labelColor })}>{label}</span>
     </div>
   )
 }
@@ -542,7 +542,7 @@ function RowDetail({ row, id, route, onCitation }: { row: ServiceRelationshipRow
         </div>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '10px' })}>
           <CitationButton row={row} onCitation={onCitation} />
-          <a href={explorerHref({ ...route, selectedRepo: '', selectedRow: '' })} className={css({ color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'underline', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) })}>Clear selection</a>
+          <a href={explorerHref({ ...route, selectedRepo: '', selectedRow: '' })} className={css({ color: tok.textSecondary, fontSize: '11px', textDecoration: 'underline', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) })}>Clear selection</a>
         </div>
       </div>
       <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px 16px', marginTop: '10px', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
@@ -558,7 +558,7 @@ function RowDetail({ row, id, route, onCitation }: { row: ServiceRelationshipRow
         </div>
         <div>
           <DetailLabel>Exact route</DetailLabel>
-          <div className={css({ fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '16px', color: tok.textSecondary, overflowWrap: 'anywhere' })}>
+          <div className={css({ fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', color: tok.textSecondary, overflowWrap: 'anywhere' })}>
             <strong className={css({ color: tok.textPrimary })}>{exact.from}</strong><span aria-hidden="true"> → </span><strong className={css({ color: tok.textPrimary })}>{exact.to}</strong>
           </div>
           <div className={css(meta(tok))}>{exact.posture}</div>
@@ -575,7 +575,7 @@ function RowDetail({ row, id, route, onCitation }: { row: ServiceRelationshipRow
 function DetailLabel({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <div className={css({ marginBottom: '4px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>{children}</div>
+  return <div className={css({ marginBottom: '4px', color: tok.textTertiary, fontSize: '11px', lineHeight: '13px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>{children}</div>
 }
 
 interface ExactRoute { from: string; to: string; posture: string }
@@ -598,7 +598,7 @@ function ClassificationCell({ row }: { row: ServiceRelationshipRow }) {
   const tok = usePhebsTokens()
   const label = classificationLabel(row)
   const color = label === 'Ambiguous' ? tok.status.conflict.text : label === 'Unowned' || label === 'Unsupported' || label === 'Unresolved' ? tok.status.stale.text : tok.textSecondary
-  return <div><span className={css({ color, fontSize: '10.5px', lineHeight: '15px', fontWeight: 600 })}>{label}</span><div className={css(meta(tok))}>{row.participation.join(' + ') || 'unattributed'}{row.evidence.reason ? ` · ${row.evidence.reason}` : ''}</div></div>
+  return <div><span className={css({ color, fontSize: '11px', lineHeight: '15px', fontWeight: 600 })}>{label}</span><div className={css(meta(tok))}>{row.participation.join(' + ') || 'unattributed'}{row.evidence.reason ? ` · ${row.evidence.reason}` : ''}</div></div>
 }
 
 function CitationButton({ row, onCitation }: { row: ServiceRelationshipRow; onCitation: (row: ServiceRelationshipRow) => void }) {
@@ -610,7 +610,7 @@ function PageDiagram({ page, route }: { page: ServiceRelationshipPage; route: Ex
   const tok = usePhebsTokens()
   return (
     <figure aria-labelledby="page-diagram-title" className={css({ margin: 0, border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', overflow: 'hidden' })}>
-      <figcaption id="page-diagram-title" className={css({ padding: '10px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '16px' })}>Current page only · the row list remains authoritative</figcaption>
+      <figcaption id="page-diagram-title" className={css({ padding: '10px 12px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textSecondary, fontSize: '11px', lineHeight: '16px' })}>Current page only · the row list remains authoritative</figcaption>
       <ol className={css({ margin: 0, padding: 0, listStyle: 'none' })}>
         {page.rows.map((row, index) => {
           const exact = exactRoute(row)
@@ -639,7 +639,7 @@ function PageDiagram({ page, route }: { page: ServiceRelationshipPage; route: Ex
 function DiagramNode({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <span className={css({ minWidth: 0, padding: '7px 6px', border: `1px solid ${tok.accent}`, borderRadius: '4px', color: tok.textPrimary, fontFamily: FONTS.MONO, fontSize: '9.5px', lineHeight: '14px', textAlign: 'center', overflowWrap: 'anywhere' })}>{children}</span>
+  return <span className={css({ minWidth: 0, padding: '7px 6px', border: `1px solid ${tok.accent}`, borderRadius: '4px', color: tok.textPrimary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '14px', textAlign: 'center', overflowWrap: 'anywhere' })}>{children}</span>
 }
 
 function PageNavigation({ route, page }: { route: ExplorerRoute; page: ServiceRelationshipPage }) {
@@ -783,11 +783,11 @@ function boundedError(cause: unknown): string { const value = String(cause).repl
 
 function breadcrumb(tok: PhebsTokens) { return { color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) } }function inputStyle(tok: PhebsTokens) { return { width: '100%', height: '36px', boxSizing: 'border-box' as const, padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontFamily: 'inherit', fontSize: '11.5px', ':focus': { borderColor: tok.accent }, ':focus-visible': focusRing(tok) } }
 function primaryButton(tok: PhebsTokens) { return { minHeight: '36px', padding: '0 13px', border: '0', borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) } }
-function resetLink(tok: PhebsTokens) { return { minHeight: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tok.selectedText, fontSize: '10.5px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
+function resetLink(tok: PhebsTokens) { return { minHeight: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tok.selectedText, fontSize: '11px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
 function statusBox(tok: PhebsTokens) { return { minHeight: '90px', boxSizing: 'border-box' as const, display: 'flex', alignItems: 'center', padding: '20px', border: `1px solid ${tok.cardBorder}`, borderRadius: '7px', color: tok.textTertiary, fontSize: '11.5px', lineHeight: '18px' } }
-function codeWrap(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '9.5px', lineHeight: '15px', whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const } }
-function meta(tok: PhebsTokens) { return { marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '13px', overflowWrap: 'anywhere' as const } }
-function idLink(tok: PhebsTokens) { return { color: tok.selectedText, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600, textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
-function idBadge(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '10px', fontWeight: 600 } }
-function secondaryLink(tok: PhebsTokens) { return { minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', color: tok.textSecondary, fontSize: '10.5px', textDecoration: 'none', ':focus-visible': focusRing(tok) } }
+function codeWrap(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '15px', whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const } }
+function meta(tok: PhebsTokens) { return { marginTop: '3px', color: tok.textTertiary, fontSize: '11px', lineHeight: '13px', overflowWrap: 'anywhere' as const } }
+function idLink(tok: PhebsTokens) { return { color: tok.selectedText, fontFamily: FONTS.MONO, fontSize: '11px', fontWeight: 600, textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) } }
+function idBadge(tok: PhebsTokens) { return { color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '11px', fontWeight: 600 } }
+function secondaryLink(tok: PhebsTokens) { return { minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', color: tok.textSecondary, fontSize: '11px', textDecoration: 'none', ':focus-visible': focusRing(tok) } }
 function primaryLink(tok: PhebsTokens) { return { ...secondaryLink(tok), border: 'none', backgroundColor: tok.textPrimary, color: tok.pageBg, fontWeight: 600 } }

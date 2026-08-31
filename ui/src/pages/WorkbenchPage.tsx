@@ -797,8 +797,8 @@ function StepRail({
           >
             <span className={css({
               fontFamily: FONTS.MONO,
-              fontSize: '10px',
-              color: current ? tok.accent : tok.gutter,
+              fontSize: '11px',
+              color: current ? tok.accent : tok.textTertiary,
             })}>
               {item.eyebrow}
             </span>
@@ -1155,7 +1155,7 @@ function WhatEditor({
                     display: 'block',
                     marginTop: '3px',
                     color: tok.textTertiary,
-                    fontSize: '10px',
+                    fontSize: '11px',
                     fontWeight: 400,
                     lineHeight: '15px',
                   })}>
@@ -1543,7 +1543,7 @@ function EndpointDiscovery({
                   marginTop: '3px',
                   color: tok.textTertiary,
                   overflowWrap: 'anywhere',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   lineHeight: '15px',
                 })}>
                   {item.protocol} · {item.repository} · {item.declaration_lineage}
@@ -1579,7 +1579,7 @@ function EndpointDiscovery({
         <span className={css({
           color: tok.textTertiary,
           fontFamily: FONTS.MONO,
-          fontSize: '10px',
+          fontSize: '11px',
         })}>
           Atlas page {pageIndex + 1}; prior result rows are not retained.
         </span>
@@ -1736,7 +1736,7 @@ function StoredProposal({
             gap: '12px',
             color: tok.textTertiary,
             fontFamily: FONTS.MONO,
-            fontSize: '10px',
+            fontSize: '11px',
           })}
         >
           <span>{file.path}</span>
@@ -1891,7 +1891,7 @@ function PreviewDock({
                 )}
               </div>
               {preview.compatibility.status === 'unavailable' && (
-                <p className={css({ margin: '7px 0 0', color: tok.textTertiary, fontSize: '10px', lineHeight: '16px' })}>
+                <p className={css({ margin: '7px 0 0', color: tok.textTertiary, fontSize: '11px', lineHeight: '16px' })}>
                   Unavailable is not a compatible verdict. The selected
                   protocol, capability, or current endpoint does not support
                   this preview.
@@ -2419,7 +2419,7 @@ function eyebrowStyle(tok: PhebsTokens) {
   return {
     color: tok.textTertiary,
     fontFamily: FONTS.MONO,
-    fontSize: '9px',
+    fontSize: '11px',
     lineHeight: '14px',
     letterSpacing: '0.08em',
     textTransform: 'uppercase' as const,
@@ -2449,7 +2449,7 @@ function fieldLabelStyle(tok: PhebsTokens) {
 function fieldHintStyle(tok: PhebsTokens) {
   return {
     color: tok.textTertiary,
-    fontSize: '9px',
+    fontSize: '11px',
     lineHeight: '14px',
     fontWeight: 400,
   }
@@ -2534,7 +2534,7 @@ function minorHeadingStyle(tok: PhebsTokens) {
   return {
     margin: '0px',
     color: tok.textSecondary,
-    fontSize: '10px',
+    fontSize: '11px',
     lineHeight: '15px',
     letterSpacing: '0.06em',
     textTransform: 'uppercase' as const,

@@ -18,7 +18,7 @@ import {
 } from '../api'
 import { OpenIcon } from '../icons'
 import { href, navigate } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
 import { ClaimBoundary, StatusChip } from '../components/kit'
@@ -261,7 +261,7 @@ function ReplacementPicker({ oldEndpoint }: { oldEndpoint: CallerMapEndpoint }) 
                 <span className={css({ fontFamily: FONTS.MONO, fontSize: '12px', overflowWrap: 'anywhere' })}>
                   {operation.operation}
                 </span>
-                <span className={css({ color: tok.textTertiary, fontSize: '10px', overflowWrap: 'anywhere' })}>
+                <span className={css({ color: tok.textTertiary, fontSize: '11px', overflowWrap: 'anywhere' })}>
                   {operation.protocol} · {operation.repository} · {shortID(operation.declaration_lineage)}
                 </span>
               </a>
@@ -688,7 +688,7 @@ function ComparisonRows({ page, onRefreshRows }: { page: ComparisonResponse; onR
             <StatusChip tone={CLASSIFICATION_TONE[row.classification]}>
               {CLASSIFICATION_LABEL[row.classification]}
             </StatusChip>
-            <span className={css({ color: tok.textTertiary, fontSize: '10px' })}>
+            <span data-evidence-metadata="caller-comparison-level" className={css({ color: tok.textTertiary, fontSize: TYPE.evidenceMetadata.fontSize })}>
               {row.level}
             </span>
           </div>
@@ -696,14 +696,14 @@ function ComparisonRows({ page, onRefreshRows }: { page: ComparisonResponse; onR
             marginTop: '6px',
             color: tok.textPrimary,
             fontFamily: FONTS.MONO,
-            fontSize: '10px',
+            fontSize: '11px',
             lineHeight: '16px',
             overflowWrap: 'anywhere',
           })}>
             {row.key}
           </div>
           {row.unit && (
-            <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '10px' })}>
+            <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '11px' })}>
               unit {row.unit.id}
               {row.unit.logical_services?.length ? ` · ${row.unit.logical_services.join(', ')}` : ''}
               {row.unit.owners?.length ? ` · ${row.unit.owners.join(', ')}` : ''}
@@ -734,11 +734,11 @@ function ComparisonSide({ label, side, onRefreshRows }: { label: string; side: C
       border: `1px solid ${tok.cardBorder}`,
       backgroundColor: tok.bandBg,
     })}>
-      <div className={css({ color: tok.textSecondary, fontSize: '10px', fontWeight: 650 })}>
+      <div className={css({ color: tok.textSecondary, fontSize: '11px', fontWeight: 650 })}>
         {label} · {side.occurrence_count}
       </div>
       {side.rows.length === 0 ? (
-        <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '10px' })}>
+        <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '11px' })}>
           No retained occurrence sample on this side; runtime absence is not inferred.
         </div>
       ) : side.rows.map((row) => (
@@ -747,7 +747,7 @@ function ComparisonSide({ label, side, onRefreshRows }: { label: string; side: C
         </div>
       ))}
       {side.rows_truncated && (
-        <div className={css({ marginTop: '5px', color: tok.status.stale.text, fontSize: '9px' })}>
+        <div className={css({ marginTop: '5px', color: tok.status.stale.text, fontSize: '11px' })}>
           Citation sample is bounded; {side.occurrence_count - side.rows.length} more occurrence(s).
         </div>
       )}
@@ -778,7 +778,7 @@ function EndpointIdentity({
     })}>
       <div className={css({
         color: tok.textTertiary,
-        fontSize: '9px',
+        fontSize: '11px',
         fontWeight: 650,
         textTransform: 'uppercase',
       })}>
@@ -794,7 +794,7 @@ function EndpointIdentity({
       })}>
         {endpoint.operation}
       </div>
-      <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '9px', overflowWrap: 'anywhere' })}>
+      <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '11px', overflowWrap: 'anywhere' })}>
         {endpoint.protocol} · {endpoint.repository} · {shortID(endpoint.declaration_lineage)}
       </div>
       {generation && (
@@ -809,7 +809,7 @@ function EndpointIdentity({
             paddingTop: '6px',
             borderTop: `1px solid ${tok.innerSep}`,
             color: tok.textTertiary,
-            fontSize: '9px',
+            fontSize: '11px',
             lineHeight: '14px',
           })}
         >
@@ -829,7 +829,7 @@ function EndpointIdentity({
         </div>
       )}
       {!generation && snapshot && (snapshot.coverage_digest || snapshot.attribution_digest) && (
-        <div className={css({ marginTop: '5px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '8px' })}>
+        <div data-evidence-metadata="caller-comparison-coverage-digests" className={css({ marginTop: '5px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: TYPE.evidenceMetadata.fontSize })}>
           {snapshot.coverage_digest && `coverage ${shortID(snapshot.coverage_digest)}`}
           {snapshot.coverage_digest && snapshot.attribution_digest && ' · '}
           {snapshot.attribution_digest && `attribution ${shortID(snapshot.attribution_digest)}`}
@@ -850,7 +850,7 @@ function EndpointIdentity({
             gap: '4px',
             marginTop: '6px',
             color: tok.accent,
-            fontSize: '9px',
+            fontSize: '11px',
             textDecoration: 'none',
             ':hover': { textDecoration: 'underline' },
             ':focus-visible': { outline: `2px solid ${tok.accent}` },
@@ -947,7 +947,7 @@ function Pager({
       <Button type="button" size={BUTTON_SIZE.compact} kind={BUTTON_KIND.secondary} disabled={pageIndex === 0} onClick={onPrevious}>
         Previous page
       </Button>
-      <span className={css({ color: tok.textTertiary, fontSize: '10px' })}>Page {pageIndex + 1}</span>
+      <span className={css({ color: tok.textTertiary, fontSize: '11px' })}>Page {pageIndex + 1}</span>
       <Button type="button" size={BUTTON_SIZE.compact} kind={BUTTON_KIND.secondary} disabled={!nextCursor || !canRememberNext} onClick={onNext}>
         Next page
       </Button>
@@ -1084,7 +1084,7 @@ function labelStyle(color: string) {
     display: 'grid',
     gap: '5px',
     color,
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: 650,
   } as const
 }

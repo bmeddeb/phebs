@@ -22,6 +22,7 @@ export function BrandLockup({
 }: BrandLockupProps) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const safeWordmarkSize = Math.max(11, wordmarkSize)
   const lockupClass = `${className ?? ''} ${css({
     display: 'inline-flex',
     alignItems: 'center',
@@ -35,7 +36,7 @@ export function BrandLockup({
   const content = (
     <>
       <PhebsMark size={markSize} />
-      <span className={css({ fontFamily: FONTS.SANS, fontSize: `${wordmarkSize}px`, lineHeight: 1, fontWeight: 700 })}>
+      <span className={css({ fontFamily: FONTS.SANS, fontSize: `${safeWordmarkSize}px`, lineHeight: 1, fontWeight: 700 })}>
         phebs
       </span>
     </>

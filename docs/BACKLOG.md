@@ -3251,10 +3251,42 @@ surfaces × 2 themes × 2 densities + the themed sign-in pair), cardinality
 derived from the manifest by test. Post-closure residue, PR-sized and
 unscheduled:
 
-**T43R.1 · Type-floor adjudication (F14)** — adjudicate charter §3's 11px
-floor against the shipped 9–10.5px evidence-metadata dialect (138 sites):
-enforce the floor as written, or amend the charter with a named metadata
-exception; then enforce the ruling through the kit.
+**T43R.1 · Type-floor adjudication (F14)** — interface text has an 11px
+minimum. One named 10px `evidenceMetadata` token is permitted only for
+non-interactive supplementary machine metadata that repeats or qualifies
+information already presented at 11px or larger. It never carries the sole
+status, warning, error, caveat, action, navigation label, field label, or
+authority claim. Controls and actionable text remain at least 11px; removing
+small text must not remove essential meaning. The current exact-tree audit
+supersedes the historical 138-site ledger count: adjudicate every current
+site, promote the former 8/9/9.5/10.5px dialect to the named token or 11px,
+ban raw sub-floor and relative undercut values with a source-contract test,
+retain normal-text contrast, and verify unclipped 200% zoom at desktop and
+390px. *Decision adopted 2026-08-30; implementation active on the dedicated
+presentation ticket branch.* *Branch implementation 2026-08-30:* the exact
+base audit found 190 non-decorative static declarations (191 literal branches)
+plus one prop-driven Brand site. Of the static declarations, 178 are now at
+least 11px and 12 use the explicit review ledger for `evidenceMetadata`; the
+Brand wordmark is clamped to 11px. The fail-closed AST/text gate rejects raw
+sub-floor values, font shorthand, keywords, aliases, `calc()`, standalone
+relative values, unresolved dynamic expressions, unreviewed JSX, new token
+sites, and SVG downscaling; retained responsive clamps have absolute minima
+above the floor. Independent review found and the branch corrected two
+actionable 10px uses, SVG scaling and label overflow, and the earlier fail-open
+Brand/CSS paths. Every retained token node now has a unique static semantic
+ledger attribute; whole-token spread/alias use and unledgered moves fail the
+source gate. The complete 605-test UI suite, focused type/contrast tests, lint,
+build, docs, glossary, and whitespace gates pass. The main chunk moves from
+339,217/96,508 bytes raw/gzip to 339,224/96,512 (+7/+4); all 160 JS chunks move
+from 6,836,095/2,028,854 to 6,837,499/2,029,336 bytes (+1,404/+482). Runtime
+cost is 12 bounded static DOM attributes on their metadata nodes, with no new
+event or interaction path. Source-free
+authenticated Settings QA at 1440px, 390px, and the 720-CSS-pixel reflow
+equivalent of 200% on a 1440px viewport found zero document overflow, zero
+interactive sub-floor text, and no clipped 10px metadata. The retained
+neutral-cohort screenshot update remains open because this host lacks the
+pinned `surreal` executable required by `make dev`; this record does not mark
+T43R.1 complete or merge-ready.
 
 **T43R.2 · Commit diff density (F34)** — per-file grouping and
 `contentVisibility` for the Commit page's flat div-per-line diff.

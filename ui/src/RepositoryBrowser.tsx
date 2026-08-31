@@ -369,7 +369,7 @@ export default function RepositoryBrowser({
       {sorted.length > 0 && (
         <>
           <div className={css({ display: 'grid', gap: '8px', padding: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
-            <label className={css({ display: 'grid', gap: '5px', fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: tok.textTertiary })}>
+            <label className={css({ display: 'grid', gap: '5px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: tok.textTertiary })}>
               Repository
               <select
                 aria-label="Repository"

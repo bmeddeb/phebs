@@ -293,7 +293,7 @@ function CodeNavigationPanel({
 function PanelTitle({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <h3 className={css({ marginTop: 0, marginBottom: '7px', fontSize: '10.5px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.05em', color: tok.textTertiary, textTransform: 'uppercase' })}>{children}</h3>
+  return <h3 className={css({ marginTop: 0, marginBottom: '7px', fontSize: '11px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.05em', color: tok.textTertiary, textTransform: 'uppercase' })}>{children}</h3>
 }
 
 function PanelMessage({ children }: { children: React.ReactNode }) {

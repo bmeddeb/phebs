@@ -11,7 +11,7 @@ import type {
 } from '../api'
 import { SectionHelp } from './SectionHelp'
 import { RefusalCard, StatusChip } from './kit'
-import { FONTS, type PhebsTokens, usePhebsTokens } from '../theme'
+import { FONTS, TYPE, type PhebsTokens, usePhebsTokens } from '../theme'
 
 const maximumMountedRepositories = 24
 const maximumMountedRows = 24
@@ -271,9 +271,9 @@ export function AnalysisScopePanel({
             <span className={css({
               minWidth: 0,
               marginLeft: 'auto',
-              color: tok.gutter,
+              color: tok.textTertiary,
               fontFamily: FONTS.MONO,
-              fontSize: '9px',
+              fontSize: '11px',
               overflowWrap: 'anywhere',
               textAlign: 'right',
               '@media screen and (max-width: 620px)': { display: 'none' },
@@ -331,7 +331,7 @@ export function AnalysisScopePanel({
                         display: 'block',
                         marginTop: '2px',
                         color: tok.textTertiary,
-                        fontSize: '10px',
+                        fontSize: '11px',
                       })}>
                         {candidate.unit
                           ? `service unit ${candidate.unit.name}`
@@ -370,7 +370,7 @@ export function AnalysisScopePanel({
                 className={css({
                   padding: '10px 12px',
                   color: tok.textSecondary,
-                  fontSize: '10px',
+                  fontSize: '11px',
                   lineHeight: '16px',
                 })}
               >
@@ -381,7 +381,7 @@ export function AnalysisScopePanel({
               <div role="status" className={css({
                 padding: '9px 12px',
                 color: tok.status.stale.text,
-                fontSize: '10px',
+                fontSize: '11px',
                 lineHeight: '16px',
               })}>
                 DOM bound reached: {omittedRepositories}{' '}
@@ -532,7 +532,7 @@ function RepositoryDetail({
               <div className={css({
                 marginTop: '9px',
                 color: tok.status.stale.text,
-                fontSize: '10px',
+                fontSize: '11px',
                 lineHeight: '15px',
               })}>
                 This active unit still uses the retained whole-repository search
@@ -548,11 +548,11 @@ function RepositoryDetail({
                 typed index {humanize(repository.unit.typedIndexPosture)}
               </StatusChip>
               {repository.unit.typedIndexPath && (
-                <div className={css({
+                <div data-evidence-metadata="analysis-scope-typed-index-qualifier" className={css({
                   marginTop: '4px',
                   color: tok.textTertiary,
                   fontFamily: FONTS.MONO,
-                  fontSize: '9px',
+                  fontSize: TYPE.evidenceMetadata.fontSize,
                   overflowWrap: 'anywhere',
                 })}>
                   {repository.unit.typedIndexKind} · {repository.unit.typedIndexPath}
@@ -562,7 +562,7 @@ function RepositoryDetail({
                 <div className={css({
                   marginTop: '4px',
                   color: tok.status.stale.text,
-                  fontSize: '10px',
+                  fontSize: '11px',
                   lineHeight: '15px',
                 })}>
                   Typed navigation is not bound to this unit; typed-index results
@@ -626,7 +626,7 @@ function PathBlock({ label, paths }: { label: string; paths: string[] }) {
         backgroundColor: tok.pageBg,
         color: tok.textSecondary,
         fontFamily: FONTS.MONO,
-        fontSize: '9px',
+        fontSize: '11px',
         lineHeight: '14px',
       })}>{paths.length > 0 ? paths.join('\n') : 'none selected'}</pre>
     </div>
@@ -662,7 +662,7 @@ function DomainStatus({ run }: { run: CoverageRun }) {
         <span className={css({
           color: tok.textPrimary,
           fontFamily: FONTS.MONO,
-          fontSize: '10px',
+          fontSize: '11px',
           fontWeight: 650,
         })}>{run.domain}</span>
         <StatusChip tone={domainTone(disposition, run)}>{humanize(label)}</StatusChip>
@@ -678,14 +678,14 @@ function DomainStatus({ run }: { run: CoverageRun }) {
       {reason && <div className={css({
         marginTop: '4px',
         color: tok.textTertiary,
-        fontSize: '10px',
+        fontSize: '11px',
         lineHeight: '15px',
         overflowWrap: 'anywhere',
       })}>{reason}</div>}
       {recordedFailureCount > 0 && <div className={css({
         marginTop: '4px',
         color: tok.status.stale.text,
-        fontSize: '10px',
+        fontSize: '11px',
         lineHeight: '15px',
         overflowWrap: 'anywhere',
       })}>
@@ -700,7 +700,7 @@ function DomainStatus({ run }: { run: CoverageRun }) {
           marginTop: '6px',
           color: tok.textTertiary,
           fontFamily: FONTS.MONO,
-          fontSize: '9px',
+          fontSize: '11px',
         })}>
           <span>{candidate.plane} plane</span>
           {candidate.base_source_file_count !== undefined && (
@@ -746,7 +746,7 @@ function ReceiptSummary({
       <div className={css({
         marginTop: '6px',
         color: tok.status.stale.text,
-        fontSize: '9px',
+        fontSize: '11px',
         lineHeight: '14px',
       })}>
         Schema-only bounded receipt; work counts and timings are unavailable.
@@ -764,7 +764,7 @@ function ReceiptSummary({
       <summary className={css({
         cursor: 'pointer',
         color: tok.textSecondary,
-        fontSize: '9px',
+        fontSize: '11px',
         ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
       })}>Bounded domain receipt</summary>
       <div className={css({
@@ -774,7 +774,7 @@ function ReceiptSummary({
         marginTop: '6px',
         color: tok.textTertiary,
         fontFamily: FONTS.MONO,
-        fontSize: '9px',
+        fontSize: '11px',
         lineHeight: '14px',
         '@media screen and (max-width: 520px)': { gridTemplateColumns: '1fr' },
       })}>
@@ -822,7 +822,7 @@ function CallerPlane({ generation }: { generation: CallerMapGeneration }) {
         {generation.reason && <div className={css({
           marginTop: '4px',
           color: tok.textTertiary,
-          fontSize: '10px',
+          fontSize: '11px',
           lineHeight: '15px',
         })}>{generation.reason}</div>}
       </div>
@@ -835,7 +835,7 @@ function CallerPlane({ generation }: { generation: CallerMapGeneration }) {
         flexWrap: 'wrap',
         color: tok.textTertiary,
         fontFamily: FONTS.MONO,
-        fontSize: '9px',
+        fontSize: '11px',
         overflowWrap: 'anywhere',
         '@media screen and (max-width: 620px)': { justifyContent: 'flex-start' },
       })}>
@@ -882,7 +882,7 @@ function StatusRow({ row }: { row: AnalysisScopeStatusRow }) {
   return (
     <div className={css({ minWidth: 0 })}>
       <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' })}>
-        <span className={css({ color: tok.textPrimary, fontSize: '10px', fontWeight: 650 })}>
+        <span className={css({ color: tok.textPrimary, fontSize: '11px', fontWeight: 650 })}>
           {row.label}
         </span>
         <StatusChip tone={statusTone(row.state)}>{humanize(row.state)}</StatusChip>
@@ -890,7 +890,7 @@ function StatusRow({ row }: { row: AnalysisScopeStatusRow }) {
       {row.detail && <div className={css({
         marginTop: '3px',
         color: tok.textTertiary,
-        fontSize: '9px',
+        fontSize: '11px',
         lineHeight: '14px',
         overflowWrap: 'anywhere',
       })}>{row.detail}</div>}
@@ -913,14 +913,14 @@ function GapStatus({ gap }: { gap: AnalysisScopeGap }) {
       })}>
         <span className={css({
           color: tok.textPrimary,
-          fontSize: '10px',
+          fontSize: '11px',
           fontWeight: 650,
         })}>{subject}</span>
         {gap.code && (
           <code className={css({
             color: tok.textTertiary,
             fontFamily: FONTS.MONO,
-            fontSize: '9px',
+            fontSize: '11px',
           })}>{gap.code}</code>
         )}
         <StatusChip tone={gapTone(gap.state)}>{humanize(gap.state)}</StatusChip>
@@ -928,7 +928,7 @@ function GapStatus({ gap }: { gap: AnalysisScopeGap }) {
       {gap.reason && <div className={css({
         marginTop: '3px',
         color: tok.textTertiary,
-        fontSize: '9px',
+        fontSize: '11px',
         lineHeight: '14px',
         overflowWrap: 'anywhere',
       })}>{gap.reason}</div>}
@@ -942,7 +942,7 @@ function MountBoundNotice({ children }: { children: ReactNode }) {
   return (
     <div role="status" className={css({
       color: tok.status.stale.text,
-      fontSize: '9px',
+      fontSize: '11px',
       lineHeight: '14px',
     })}>{children}</div>
   )
@@ -957,7 +957,7 @@ function IdentityLine({ label, value }: { label: string; value?: string }) {
       marginTop: '3px',
       color: tok.textTertiary,
       fontFamily: FONTS.MONO,
-      fontSize: '9px',
+      fontSize: '11px',
       overflowWrap: 'anywhere',
     })}>{label} {value}</div>
   )
@@ -1015,7 +1015,7 @@ function eyebrowStyle(tok: PhebsTokens) {
   return {
     color: tok.textTertiary,
     fontFamily: FONTS.MONO,
-    fontSize: '8px',
+    fontSize: '11px',
     lineHeight: '13px',
     letterSpacing: '0.05em',
     textTransform: 'uppercase' as const,

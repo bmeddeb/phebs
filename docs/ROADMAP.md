@@ -160,6 +160,21 @@ baseline, zero open blockers, five residue items queued as T43R.1–5. It
 touched no scale plane, authority, or claim; T40.13 remains the next scale
 ticket.
 
+T43R.1 entered the presentation track on 2026-08-30. The adopted type-floor
+rule keeps interface text at 11px or larger and permits one named 10px token
+only for supplementary, non-interactive machine metadata whose essential
+meaning is already present at 11px or larger. The ticket audits the complete
+current tree rather than inheriting the historical 138-site count, closes raw
+sub-floor values through a source contract, and requires 200% zoom plus 390px
+verification. The branch audit found 190 non-decorative static declarations
+(191 literal branches) plus one dynamic Brand site; 178 static declarations are
+now at least 11px, 12 remain on the closed reviewed token ledger, and the Brand
+site is clamped. Source, contrast, full UI, lint/build, documentation, and local
+responsive browser gates pass. The retained neutral-cohort screenshot update
+is still open because this host lacks the pinned `surreal` executable, so the
+ticket remains active and unmerged. It changes no product authority or
+scale-plane behavior.
+
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
 recorded GO after proving a focused zoekt child and exact shard-set validation

@@ -197,8 +197,8 @@ export default function ServiceOverview({
             <OverviewState state={snapshot.state} reason={snapshot.reason} />
             {relationshipsAvailable && (
               <>
-                <a href={href('/workbench', { service_repository: detail.repository.repository, source_service: detail.service.key, ...(detail.service.active_desired_generation ? { scope_generation: detail.service.active_desired_generation } : {}) })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Assess change in Workbench</a>
-                <a href={href('/relationships', { repository: detail.repository.repository, service_key: detail.service.key })} className={css({ color: tok.selectedText, fontSize: '10.5px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Explore across repositories</a>
+                <a href={href('/workbench', { service_repository: detail.repository.repository, source_service: detail.service.key, ...(detail.service.active_desired_generation ? { scope_generation: detail.service.active_desired_generation } : {}) })} className={css({ color: tok.selectedText, fontSize: '11px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Assess change in Workbench</a>
+                <a href={href('/relationships', { repository: detail.repository.repository, service_key: detail.service.key })} className={css({ color: tok.selectedText, fontSize: '11px', lineHeight: '16px', textDecoration: 'none', ':hover': { textDecoration: 'underline' }, ':focus-visible': focusRing(tok) })}>Explore across repositories</a>
               </>
             )}
           </div>
@@ -317,7 +317,7 @@ function SummaryLink({ view, page, error, active, href, border }: {
         <span className={css({ fontSize: '12px', lineHeight: '17px', fontWeight: 600 })}>{viewTitle(view)}</span>
         <strong className={css({ fontSize: '18px', lineHeight: '22px', fontVariantNumeric: 'tabular-nums', color: error ? tok.status.conflict.text : tok.textPrimary })}>{value}</strong>
       </div>
-      <span className={css({ display: 'block', marginTop: '4px', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
+      <span className={css({ display: 'block', marginTop: '4px', fontSize: '11px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
     </a>
   )
 }
@@ -329,7 +329,7 @@ function RelationshipTableHeader({ view, page }: { view: ServiceRelationshipView
     <div className={css({ padding: '11px 12px', backgroundColor: tok.bandBg, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' })}>
       <div>
         <h4 className={css({ margin: 0, fontSize: '12px', lineHeight: '17px', color: tok.textPrimary })}>{viewTitle(view)}</h4>
-        <span className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
+        <span className={css({ fontSize: '11px', lineHeight: '15px', color: tok.textTertiary })}>{viewDescription(view)}</span>
       </div>
       {page?.coverage.truncated && <StateText label="Partial · admitted reference cap" color={tok.status.stale.text} />}
     </div>
@@ -354,7 +354,7 @@ function RelationshipRowView({ row, onCitation }: { row: ServiceRelationshipRow;
       <td className={css(tableCell(tok))}>
         {row.counterpart_services.length > 0 ? (
           <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '4px' })}>{row.counterpart_services.map((service) => <StatusChip key={service} tone="neutral">{service}</StatusChip>)}</div>
-        ) : <span className={css({ fontSize: '10.5px', color: tok.textTertiary })}>No accepted counterpart</span>}
+        ) : <span className={css({ fontSize: '11px', color: tok.textTertiary })}>No accepted counterpart</span>}
         <div className={css({ display: 'grid', gap: '3px', marginTop: '6px' })}>
           {placements.map((placement) => <PlacementSummary key={placement.path} placement={placement} />)}
         </div>
@@ -379,7 +379,7 @@ function PlacementSummary({ placement }: { placement: ServiceRelationshipPlaceme
   return (
     <div className={css({ minWidth: 0 })}>
       <code className={css(codeWrap(tok))}>{placement.path}</code>
-      <span className={css({ marginLeft: '5px', fontSize: '9.5px', lineHeight: '14px', color: posture === 'ambiguous' ? tok.status.conflict.text : posture === 'unowned' ? tok.status.stale.text : tok.textTertiary })}>{posture}</span>
+      <span className={css({ marginLeft: '5px', fontSize: '11px', lineHeight: '14px', color: posture === 'ambiguous' ? tok.status.conflict.text : posture === 'unowned' ? tok.status.stale.text : tok.textTertiary })}>{posture}</span>
       {placement.claims.length > 0 && (
         <div className={css(metaLine(tok))}>
           {placement.claims.map((claim) => `${claim.service_key}:${claim.disposition}[${claim.roles.map((role) => `${role.role}/${role.origin}`).join(',')}]`).join(' · ')}
@@ -409,7 +409,7 @@ function GapLedger({ detail, pages, errors, snapshot }: {
   return (
     <details className={css({ marginTop: '12px', borderTop: `1px solid ${tok.innerSep}`, paddingTop: '10px' })}>
       <summary className={css({ cursor: 'pointer', fontSize: '11px', lineHeight: '16px', fontWeight: 600, color: tok.textSecondary, ':focus-visible': focusRing(tok) })}>Gaps and claim boundary</summary>
-      <ul className={css({ margin: '7px 0 0', paddingLeft: '18px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '17px' })}>
+      <ul className={css({ margin: '7px 0 0', paddingLeft: '18px', color: tok.textTertiary, fontSize: '11px', lineHeight: '17px' })}>
         {gaps.map((gap) => <li key={gap}>{gap}</li>)}
         <li>{Object.values(pages).find((page) => page?.caveat)?.caveat ?? RELATIONSHIP_CAVEAT_MIRROR}</li>
       </ul>
@@ -485,12 +485,12 @@ function validateRelationshipPage(
 function OverviewState({ state, reason }: SnapshotState) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <span title={reason} className={css({ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: '24px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', fontSize: '10.5px', lineHeight: '15px', color: tok.textSecondary })}><span aria-hidden="true" className={css({ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: snapshotColor(state, tok) })} />{titleCase(state)} · {reason}</span>
+  return <span title={reason} className={css({ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: '24px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', fontSize: '11px', lineHeight: '15px', color: tok.textSecondary })}><span aria-hidden="true" className={css({ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: snapshotColor(state, tok) })} />{titleCase(state)} · {reason}</span>
 }
 
 function StateText({ label, color }: { label: string; color: string }) {
   const [css] = useStyletron()
-  return <span className={css({ fontSize: '10.5px', lineHeight: '15px', color })}>{label}</span>
+  return <span className={css({ fontSize: '11px', lineHeight: '15px', color })}>{label}</span>
 }
 
 function classificationLabel(row: ServiceRelationshipRow): string {
@@ -551,23 +551,23 @@ function emptyState(tok: PhebsTokens) {
 }
 
 function tableHead(tok: PhebsTokens) {
-  return { padding: '7px 9px', textAlign: 'left' as const, borderTop: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px', fontWeight: 600 }
+  return { padding: '7px 9px', textAlign: 'left' as const, borderTop: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg, color: tok.textTertiary, fontSize: '11px', lineHeight: '14px', fontWeight: 600 }
 }
 
 function tableCell(tok: PhebsTokens) {
-  return { padding: '9px', verticalAlign: 'top' as const, color: tok.textSecondary, fontSize: '10.5px', lineHeight: '16px', overflowWrap: 'anywhere' as const }
+  return { padding: '9px', verticalAlign: 'top' as const, color: tok.textSecondary, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' as const }
 }
 
 function codeWrap(tok: PhebsTokens) {
-  return { fontFamily: FONTS.MONO, fontSize: '10px', lineHeight: '15px', color: tok.textSecondary, whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const }
+  return { fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '15px', color: tok.textSecondary, whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const }
 }
 
 function metaLine(tok: PhebsTokens) {
-  return { marginTop: '3px', fontSize: '9.5px', lineHeight: '14px', color: tok.textTertiary, overflowWrap: 'anywhere' as const }
+  return { marginTop: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary, overflowWrap: 'anywhere' as const }
 }
 
 function quietButton(tok: PhebsTokens) {
-  return { minHeight: '30px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textSecondary, fontSize: '10.5px', cursor: 'pointer', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) }
+  return { minHeight: '30px', padding: '0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', backgroundColor: tok.pageBg, color: tok.textSecondary, fontSize: '11px', cursor: 'pointer', ':hover': { color: tok.textPrimary }, ':focus-visible': focusRing(tok) }
 }
 
 function quietLink(tok: PhebsTokens) {
@@ -575,5 +575,5 @@ function quietLink(tok: PhebsTokens) {
 }
 
 function primaryLink(tok: PhebsTokens) {
-  return { display: 'inline-flex', minHeight: '30px', padding: '0 9px', alignItems: 'center', boxSizing: 'border-box' as const, borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, textDecoration: 'none', fontSize: '10.5px', fontWeight: 600, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) }
+  return { display: 'inline-flex', minHeight: '30px', padding: '0 9px', alignItems: 'center', boxSizing: 'border-box' as const, borderRadius: '5px', backgroundColor: tok.textPrimary, color: tok.pageBg, textDecoration: 'none', fontSize: '11px', fontWeight: 600, ':hover': { opacity: 0.84 }, ':focus-visible': focusRing(tok) }
 }

@@ -8,7 +8,7 @@ import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '
 import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
-import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
+import { usePhebsTokens, useMode, usePalette, FONTS, TYPE } from '../theme'
 import { PALETTES, PALETTE_NAMES, isPaletteName } from '../palette'
 import type { Token } from '../highlight'
 import { isAbortError, relTime } from '../util'
@@ -279,7 +279,7 @@ function AppearanceSection() {
         Code highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.
       </div>
       <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', padding: '12px 14px', display: 'grid', gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)', gap: '14px', alignItems: 'start', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
-        <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+        <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>
           Code highlight palette
           <select
             value={palette}
@@ -429,7 +429,7 @@ function LifecyclePanel({ status }: { status: LifecycleStatus }) {
                 <div key={owner.name} className={css({ display: 'flex', gap: '7px', alignItems: 'baseline', minWidth: 0 })}>
                   <code className={css({ fontFamily: FONTS.MONO, fontSize: '11px', overflowWrap: 'anywhere', minWidth: 0 })}>{owner.name}</code>
                   {owner.attempted_at && Number.isFinite(Date.parse(owner.attempted_at)) && (
-                    <span className={css({ color: tok.textTertiary, fontSize: '10.5px' })}>
+                    <span data-evidence-metadata="settings-lifecycle-attempt-time" className={css({ color: tok.textTertiary, fontSize: TYPE.evidenceMetadata.fontSize })}>
                       attempted <time dateTime={owner.attempted_at}>{relTime(owner.attempted_at)} · {new Date(owner.attempted_at).toLocaleString()}</time>
                     </span>
                   )}
@@ -459,7 +459,7 @@ function LifecycleCard({ title, children }: { title: string; children: React.Rea
   const tok = usePhebsTokens()
   return (
     <section aria-label={title} className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', padding: '12px 14px', minWidth: 0 })}>
-      <h2 className={css({ margin: '0 0 8px', fontSize: '10px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{title}</h2>
+      <h2 className={css({ margin: '0 0 8px', fontSize: '11px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: tok.textTertiary })}>{title}</h2>
       {children}
     </section>
   )

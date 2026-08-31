@@ -615,7 +615,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt, dra
     : ''
   return (
     <fieldset className={css({ margin: '12px 0 0', padding: '10px 12px', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', minWidth: 0 })}>
-      <legend className={css({ padding: '0 5px', color: tok.textTertiary, fontSize: '10.5px', lineHeight: '14px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>
+      <legend className={css({ padding: '0 5px', color: tok.textTertiary, fontSize: '11px', lineHeight: '14px', textTransform: 'uppercase', letterSpacing: '0.07em' })}>
         Search scope
       </legend>
       <div className={css({ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' })}>
@@ -637,7 +637,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt, dra
         ) : (
           <a href={href('/services')} className={css(scopeChoice(tok, false))}>Choose a service</a>
         )}
-        <span role="status" className={css({ marginLeft: 'auto', minWidth: 0, fontSize: '10.5px', lineHeight: '16px', color: tok.textTertiary, overflowWrap: 'anywhere', '@media screen and (max-width: 620px)': { width: '100%', marginLeft: 0 } })}>
+        <span role="status" className={css({ marginLeft: 'auto', minWidth: 0, fontSize: '11px', lineHeight: '16px', color: tok.textTertiary, overflowWrap: 'anywhere', '@media screen and (max-width: 620px)': { width: '100%', marginLeft: 0 } })}>
           {kind === 'service'
             ? receipt
               ? `${receipt.service_status} · shared paths included · unowned paths excluded · ${receipt.result_files} cited files`
@@ -651,7 +651,7 @@ function SearchScopeSelector({ kind, repository, serviceKey, query, receipt, dra
         <div className={css({ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexWrap: 'wrap' })}>
           {receipt && <AuthorityChipButton receipt={receipt} onOpen={openDrawer} />}
           {kind === 'service' && repository && (
-            <span className={css({ minWidth: 0, fontFamily: FONTS.MONO, fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
+            <span className={css({ minWidth: 0, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '15px', color: tok.textTertiary, overflowWrap: 'anywhere' })}>
               {repository}
             </span>
           )}

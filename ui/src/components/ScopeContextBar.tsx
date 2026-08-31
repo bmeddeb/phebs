@@ -108,7 +108,7 @@ export function ScopeContextBar({ scope, path, params, principal }: {
         '@media screen and (max-width: 720px)': { paddingLeft: '16px', paddingRight: '16px' },
       })}
     >
-      <span className={css({ color: tok.textTertiary, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '10px' })}>
+      <span className={css({ color: tok.textTertiary, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '11px' })}>
         Scope
       </span>
       <span className={css({ minWidth: 0, color: tok.textSecondary })}>

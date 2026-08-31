@@ -17,7 +17,7 @@ import ServiceOverview from '../components/ServiceOverview'
 import { StateNotice, StatusWord } from '../components/kit'
 import { VirtualList, type VirtualRowProps } from '../components/VirtualList'
 import { href, navigate, replaceRoute } from '../router'
-import { FONTS, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens, type ToneName } from '../theme'
+import { FONTS, TYPE, focusRing, useDensity, usePhebsTokens, type DensityName, type PhebsTokens, type ToneName } from '../theme'
 import { isAbortError, relTime } from '../util'
 
 const PAGE_SIZE = 50
@@ -270,7 +270,7 @@ function RepositorySummary({ inventory }: { inventory: ServiceInventory }) {
     <div className={css({ marginTop: '16px', border: `1px solid ${tok.cardBorder}`, borderRadius: '10px', overflow: 'hidden', backgroundColor: tok.pageBg })}>
       <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.4fr) repeat(5, minmax(92px, 0.55fr))', '@media screen and (max-width: 980px)': { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }, '@media screen and (max-width: 560px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } })}>
         <div className={css({ padding: '14px 16px', borderRight: `1px solid ${tok.innerSep}`, '@media screen and (max-width: 980px)': { gridColumn: '1 / -1', borderRight: 'none', borderBottom: `1px solid ${tok.innerSep}` } })}>
-          <div className={css({ fontSize: '10.5px', lineHeight: '14px', textTransform: 'uppercase', letterSpacing: '0.08em', color: tok.textTertiary })}>Authority</div>
+          <div className={css({ fontSize: '11px', lineHeight: '14px', textTransform: 'uppercase', letterSpacing: '0.08em', color: tok.textTertiary })}>Authority</div>
           <div className={css({ marginTop: '4px', fontSize: '13px', lineHeight: '18px', color: tok.textPrimary, fontWeight: 600 })}>
             {repository.authority.id}
           </div>
@@ -282,7 +282,7 @@ function RepositorySummary({ inventory }: { inventory: ServiceInventory }) {
         {metrics.map(([label, value]) => (
           <div key={label} className={css({ padding: '14px 12px', borderRight: `1px solid ${tok.innerSep}`, ':last-child': { borderRight: 'none' }, '@media screen and (max-width: 980px)': { borderTop: `1px solid ${tok.innerSep}` } })}>
             <div className={css({ fontSize: '20px', lineHeight: '24px', fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: tok.textPrimary })}>{value}</div>
-            <div className={css({ marginTop: '2px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>{label}</div>
+            <div className={css({ marginTop: '2px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>{label}</div>
           </div>
         ))}
       </div>
@@ -350,7 +350,7 @@ function ServiceList({ inventory, route, onRoute }: {
           Include removed identities
         </label>
         <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '8px', marginTop: '9px', '@media screen and (max-width: 480px)': { gridTemplateColumns: '1fr' } })}>
-          <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+          <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>
             Narrow loaded rows
             <input
               type="search"
@@ -422,8 +422,8 @@ function ServiceList({ inventory, route, onRoute }: {
           isHeader={(item) => item.kind === 'header'}
           renderRow={(item, _index, rowProps, active) => item.kind === 'header' ? (
             <div {...rowProps} className={css({ display: 'flex', alignItems: 'flex-end', gap: '7px', padding: `0 12px ${density === 'dense' ? '5px' : '8px'}`, backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}` })}>
-              <span className={css({ fontSize: '10.5px', lineHeight: '15px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
-              <span className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
+              <span className={css({ fontSize: '11px', lineHeight: '15px', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: tok.textTertiary })}>{item.label}</span>
+              <span className={css({ fontSize: '11px', lineHeight: '15px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{item.count}</span>
             </div>
           ) : (
             <ServiceListRow service={item.service} route={route} rowProps={rowProps} active={active} density={density} />
@@ -455,7 +455,7 @@ function FilterSelect({ label, value, options, onChange, emptyLabel = 'All' }: {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <label className={css({ display: 'grid', gap: '3px', fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary })}>
+    <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>
       {label}
       <select value={value} onChange={(event) => onChange(event.currentTarget.value)} className={css({ width: '100%', height: '30px', boxSizing: 'border-box', padding: '0 28px 0 8px', border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.textPrimary, fontSize: '12px', ':focus-visible': focusRing(tok) })}>
         <option value="">{emptyLabel}</option>
@@ -494,7 +494,7 @@ function ServiceListRow({ service, route, rowProps, active, density }: {
   ].join(' · ')
   const fullName = `${service.display_name} · ${service.key} · incarnation ${service.incarnation} · ${titleCase(service.status)} · ${facts}`
   const factsRun = (
-    <span className={css({ minWidth: 0, flex: '1 1 0', fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{facts}</span>
+    <span className={css({ minWidth: 0, flex: '1 1 0', fontSize: '11px', lineHeight: '15px', color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{facts}</span>
   )
   return (
     <a
@@ -527,12 +527,12 @@ function ServiceListRow({ service, route, rowProps, active, density }: {
       </div>
       {dense ? (
         <div className={css({ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0, whiteSpace: 'nowrap' })}>
-          <code className={css({ flex: '0 1 auto', minWidth: 0, fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis' })}>{service.key} · incarnation {service.incarnation}</code>
+          <code className={css({ flex: '0 1 auto', minWidth: 0, fontSize: '11px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis' })}>{service.key} · incarnation {service.incarnation}</code>
           {factsRun}
         </div>
       ) : (
         <>
-          <div className={css({ fontSize: '10.5px', lineHeight: '15px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.key} · incarnation {service.incarnation}</div>
+          <div className={css({ fontSize: '11px', lineHeight: '15px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{service.key} · incarnation {service.incarnation}</div>
           <div className={css({ display: 'flex', minWidth: 0 })}>{factsRun}</div>
         </>
       )}
@@ -563,7 +563,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
   if (detailError) {
     return (
       <aside role="alert" className={css({ minHeight: '220px', border: `1px solid ${tok.cardBorder}`, borderRadius: '10px', padding: '24px', boxSizing: 'border-box', color: tok.textSecondary })}>
-        <div className={css({ fontSize: '10.5px', lineHeight: '14px', letterSpacing: '0.08em', textTransform: 'uppercase', color: tok.status.conflict.text })}>
+        <div className={css({ fontSize: '11px', lineHeight: '14px', letterSpacing: '0.08em', textTransform: 'uppercase', color: tok.status.conflict.text })}>
           Service detail unavailable
         </div>
         <h2 className={css({ margin: '7px 0 0', fontSize: '17px', lineHeight: '23px', color: tok.textPrimary })}>
@@ -586,7 +586,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
       <header className={css({ padding: '16px', borderBottom: `1px solid ${tok.cardBorder}`, backgroundColor: tok.bandBg })}>
         <div className={css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' })}>
           <div className={css({ minWidth: 0 })}>
-            <div className={css({ fontSize: '10.5px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflowWrap: 'anywhere' })}>{service.key}</div>
+            <div className={css({ fontSize: '11px', lineHeight: '14px', color: tok.textTertiary, fontFamily: FONTS.MONO, overflowWrap: 'anywhere' })}>{service.key}</div>
             <h2 className={css({ margin: '3px 0 0', fontSize: '20px', lineHeight: '25px', letterSpacing: '-0.015em', color: tok.textPrimary })}>{service.display_name}</h2>
           </div>
           <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
@@ -628,7 +628,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
         </div>
 
         <h3 className={css({ ...sectionHeading(tok), marginTop: '20px' })}>Source roles & deployable attribution</h3>
-        <p className={css({ margin: '5px 0 0', fontSize: '10.5px', lineHeight: '16px', color: tok.textTertiary })}>
+        <p className={css({ margin: '5px 0 0', fontSize: '11px', lineHeight: '16px', color: tok.textTertiary })}>
           Exact catalog roles attribute paths to this service identity. Shared, generated, typed, proposal, and rejected authority remain explicit; no runtime owner is inferred.
         </p>
         {detail.memberships.length === 0 ? (
@@ -646,7 +646,7 @@ function ServiceDetailPanel({ detail, detailError, selectedKey, route, relations
             ))}
           </div>
         )}
-        <div className={css({ marginTop: '12px', fontSize: '10.5px', lineHeight: '16px', color: tok.textTertiary })}>
+        <div data-evidence-metadata="service-directory-change-summary" className={css({ marginTop: '12px', fontSize: TYPE.evidenceMetadata.fontSize, lineHeight: '16px', color: tok.textTertiary })}>
           Changed <time dateTime={service.changed_at} title={new Date(service.changed_at).toLocaleString()}>{relTime(service.changed_at)}</time> · {service.membership_count} role records across {service.distinct_path_count} paths
         </div>
       </div>
@@ -716,8 +716,8 @@ function Identity({ label, value }: { label: string; value?: string }) {
   const tok = usePhebsTokens()
   return (
     <div className={css({ minWidth: 0 })}>
-      <div className={css({ fontSize: '10px', lineHeight: '14px', color: tok.textTertiary, textTransform: 'uppercase', letterSpacing: '0.06em' })}>{label}</div>
-      <code title={value} className={css({ display: 'block', marginTop: '2px', fontFamily: FONTS.MONO, fontSize: '10.5px', lineHeight: '16px', color: value ? tok.textSecondary : tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
+      <div className={css({ fontSize: '11px', lineHeight: '14px', color: tok.textTertiary, textTransform: 'uppercase', letterSpacing: '0.06em' })}>{label}</div>
+      <code title={value} className={css({ display: 'block', marginTop: '2px', fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', color: value ? tok.textSecondary : tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
         {value ? shortIdentity(value) : 'unavailable'}
       </code>
     </div>
@@ -731,7 +731,7 @@ function StatusBadge({ service }: { service: ServiceRecord }) {
 function SmallTag({ text, quiet = false }: { text: string; quiet?: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <span className={css({ flexShrink: 0, padding: '2px 6px', borderRadius: '4px', backgroundColor: quiet ? tok.pageBg : tok.fill, border: quiet ? `1px solid ${tok.innerSep}` : 'none', color: quiet ? tok.textTertiary : tok.textSecondary, fontSize: '9.5px', lineHeight: '13px', whiteSpace: 'nowrap' })}>{text}</span>
+  return <span className={css({ flexShrink: 0, padding: '2px 6px', borderRadius: '4px', backgroundColor: quiet ? tok.pageBg : tok.fill, border: quiet ? `1px solid ${tok.innerSep}` : 'none', color: quiet ? tok.textTertiary : tok.textSecondary, fontSize: '11px', lineHeight: '13px', whiteSpace: 'nowrap' })}>{text}</span>
 }
 
 function roleEntries(service: ServiceRecord): [ServiceMembershipRole, number][] {

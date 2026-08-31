@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MOTION, TOKENS, type Mode, type PhebsTokens } from './theme'
+import { MOTION, TOKENS, TYPE, type Mode, type PhebsTokens } from './theme'
 import { PALETTES, PALETTE_NAMES, type RoleName } from './palette'
 
 // WCAG relative luminance / contrast ratio.
@@ -33,6 +33,22 @@ describe('status text tones are WCAG AA on every surface', () => {
           expect(contrast(tone.text, bg)).toBeGreaterThanOrEqual(4.5)
         })
       }
+    }
+  }
+})
+
+describe('evidence metadata retains normal-text contrast at its 10px exception', () => {
+  it('is the single named size below the 11px caption floor', () => {
+    expect(TYPE.caption.fontSize).toBe('11px')
+    expect(TYPE.evidenceMetadata.fontSize).toBe('10px')
+  })
+
+  for (const mode of ['light', 'dark'] as Mode[]) {
+    const tok = TOKENS[mode]
+    for (const [surface, bg] of Object.entries(surfaces(tok))) {
+      it(`${mode} textTertiary on ${surface}`, () => {
+        expect(contrast(tok.textTertiary, bg)).toBeGreaterThanOrEqual(4.5)
+      })
     }
   }
 })

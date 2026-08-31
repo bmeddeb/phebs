@@ -208,7 +208,7 @@ export function WorkbenchWhereStep({
           padding: '10px 16px',
           borderTop: `1px solid ${tok.innerSep}`,
           color: tok.textTertiary,
-          fontSize: '10.5px',
+          fontSize: '11px',
           lineHeight: '17px',
         })}>
           Source and target are optional exact service keys. A blank repository
@@ -676,7 +676,7 @@ function ServiceImpactInventory({
         padding: '10px 16px',
         borderBottom: `1px solid ${tok.innerSep}`,
         color: tok.textSecondary,
-        fontSize: '10.5px',
+        fontSize: '11px',
         lineHeight: '17px',
       })}>
         Preview authority <Mono>{shortDigest(impact.authority.digest)}</Mono>.
@@ -753,15 +753,15 @@ function AuthorityMetric({ label, value }: { label: string; value: string }) {
       padding: '10px 14px',
       borderRight: `1px solid ${tok.innerSep}`,
     })}>
-      <div className={css({ color: tok.textTertiary, fontSize: '9.5px', lineHeight: '14px' })}>{label}</div>
-      <div className={css({ marginTop: '2px', color: tok.textPrimary, fontSize: '10.5px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{value}</div>
+      <div className={css({ color: tok.textTertiary, fontSize: '11px', lineHeight: '14px' })}>{label}</div>
+      <div className={css({ marginTop: '2px', color: tok.textPrimary, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{value}</div>
     </div>
   )
 }
 
 function Mono({ children }: { children: string }) {
   const [css] = useStyletron()
-  return <code className={css({ fontFamily: FONTS.MONO, fontSize: '0.95em' })}>{children}</code>
+  return <code className={css({ fontFamily: FONTS.MONO })}>{children}</code>
 }
 
 function ServiceImpactRow({
@@ -811,7 +811,7 @@ function ServiceImpactRow({
           })}
           className={css({
             color: tok.selectedText,
-            fontSize: '10px',
+            fontSize: '11px',
             textDecoration: 'none',
             ':hover': { textDecoration: 'underline' },
           })}
@@ -831,7 +831,7 @@ function serviceImpactHeaderStyle(tok: PhebsTokens) {
     padding: '8px 16px',
     borderBottom: `1px solid ${tok.innerSep}`,
     color: tok.textTertiary,
-    fontSize: '9px',
+    fontSize: '11px',
     lineHeight: '14px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.04em',
@@ -1344,7 +1344,7 @@ function ImplementationEvidence({
                     backgroundColor: tok.pageBg,
                     color: tok.textSecondary,
                     fontFamily: FONTS.MONO,
-                    fontSize: '10px',
+                    fontSize: '11px',
                     lineHeight: '16px',
                     whiteSpace: 'pre-wrap',
                   })}>
@@ -1546,7 +1546,7 @@ function ChecklistEntry({
             {entry.suggestion.evidence.map((reference) => (
               <div
                 key={`${reference.plane}:${reference.kind}:${reference.id}`}
-                className={css({ fontSize: '10px', color: tok.textTertiary })}
+                className={css({ fontSize: '11px', color: tok.textTertiary })}
               >
                 {reference.repository && reference.commit && reference.path ? (
                   <SourceLink
@@ -2029,7 +2029,7 @@ function CallerEvidenceRow({
           <div className={css({
             marginTop: '5px',
             color: tok.status.stale.text,
-            fontSize: '10px',
+            fontSize: '11px',
             lineHeight: '15px',
           })}>
             {row.unit.candidate_total ?? candidates.length} candidate units
@@ -2111,7 +2111,7 @@ function SourceLink({
         minWidth: 0,
         color: tok.textTertiary,
         fontFamily: FONTS.MONO,
-        fontSize: '10px',
+        fontSize: '11px',
         overflowWrap: 'anywhere',
       })}>
         {label}
@@ -2130,7 +2130,7 @@ function SourceLink({
         minWidth: 0,
         color: tok.accent,
         fontFamily: FONTS.MONO,
-        fontSize: '10px',
+        fontSize: '11px',
         lineHeight: '16px',
         overflowWrap: 'anywhere',
         textDecoration: 'none',
@@ -2144,7 +2144,7 @@ function SourceLink({
       <span className={css({
         display: 'block',
         color: tok.textTertiary,
-        fontSize: '9px',
+        fontSize: '11px',
       })}>
         {repository} @ {shortDigest(commit)}
       </span>
@@ -2181,7 +2181,7 @@ function PageControls({
         padding: '10px 0',
         color: tok.textTertiary,
         fontFamily: FONTS.MONO,
-        fontSize: '10px',
+        fontSize: '11px',
       })}
     >
       <Button
@@ -2368,7 +2368,7 @@ function EvidenceNotice({ children }: { children: React.ReactNode }) {
       padding: '10px 16px',
       borderBottom: `1px solid ${tok.innerSep}`,
       color: tok.status.stale.text,
-      fontSize: '10px',
+      fontSize: '11px',
       lineHeight: '16px',
     })}>
       {children}
@@ -2583,7 +2583,7 @@ function eyebrowStyle(tok: PhebsTokens) {
   return {
     color: tok.textTertiary,
     fontFamily: FONTS.MONO,
-    fontSize: '8px',
+    fontSize: '11px',
     lineHeight: '13px',
     letterSpacing: '0.075em',
     textTransform: 'uppercase' as const,
@@ -2595,7 +2595,7 @@ function fieldLabelStyle(tok: PhebsTokens) {
     display: 'grid',
     gap: '5px',
     color: tok.textSecondary,
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: 600,
     lineHeight: '15px',
   }
@@ -2632,7 +2632,7 @@ function summaryStyle(tok: PhebsTokens) {
     padding: '11px 14px',
     color: tok.textSecondary,
     cursor: 'pointer',
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: 650,
     ':focus-visible': {
       outline: `2px solid ${tok.accent}`,
@@ -2672,7 +2672,7 @@ function rowDetailStyle(tok: PhebsTokens) {
     display: 'block',
     margin: '3px 0 0',
     color: tok.textTertiary,
-    fontSize: '10px',
+    fontSize: '11px',
     lineHeight: '16px',
     overflowWrap: 'anywhere' as const,
   }

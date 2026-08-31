@@ -273,12 +273,13 @@ function SummaryBand({ envelope }: { envelope: InvestigationEnvelope }) {
     { title: 'What changed', value: '—', detail: 'No comparison in this view' },
     { title: 'What needs action', value: action, detail: blockerCount > 0 ? `${blockerCount} blocker code${blockerCount === 1 ? '' : 's'}` : 'Derived from current evidence' },
   ]
+  const compactValueLength = 8
   return (
     <section aria-label="Investigation overview" className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', borderBottom: `1px solid ${tok.cardBorder}`, '@media screen and (max-width: 800px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, '@media screen and (max-width: 480px)': { gridTemplateColumns: '1fr' } })}>
       {cells.map((cell) => (
         <div key={cell.title} className={css({ minHeight: '118px', boxSizing: 'border-box', padding: '20px 22px', borderRight: `1px solid ${tok.cardBorder}`, ':last-child': { borderRight: 0 } })}>
           <h2 className={css({ margin: 0, fontSize: '13px', lineHeight: '18px', fontWeight: 600 })}>{cell.title}</h2>
-          <div className={css({ marginTop: '9px', color: tok.accent, fontSize: cell.value.length > 8 ? '18px' : '30px', lineHeight: cell.value.length > 8 ? '26px' : '34px', fontWeight: 650 })}>{cell.value}</div>
+          <div className={css({ marginTop: '9px', color: tok.accent, fontSize: cell.value.length > compactValueLength ? '18px' : '30px', lineHeight: cell.value.length > compactValueLength ? '26px' : '34px', fontWeight: 650 })}>{cell.value}</div>
           <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '12px', lineHeight: '17px' })}>{cell.detail}</div>
         </div>
       ))}
@@ -514,9 +515,9 @@ function DerivationRow({ fact }: { fact: InvestigationFact }) {
         <div className={css({ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } })}>
           {Object.entries(fact.attribution_states).map(([hop, state]) => (
             <div key={hop}>
-              <div className={css({ color: tok.textTertiary, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' })}>{humanize(hop)}</div>
+              <div className={css({ color: tok.textTertiary, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' })}>{humanize(hop)}</div>
               <div className={css({ marginTop: '3px', color: state.state === 'resolved' ? tok.status.current.text : tok.status.stale.text, fontSize: '12px' })}>{humanize(state.state)}</div>
-              {state.reason_codes.length > 0 && <div className={css({ marginTop: '3px', fontFamily: FONTS.MONO, color: tok.textTertiary, fontSize: '10px', overflowWrap: 'anywhere' })}>{state.reason_codes.join(' · ')}</div>}
+              {state.reason_codes.length > 0 && <div className={css({ marginTop: '3px', fontFamily: FONTS.MONO, color: tok.textTertiary, fontSize: '11px', overflowWrap: 'anywhere' })}>{state.reason_codes.join(' · ')}</div>}
             </div>
           ))}
         </div>
@@ -544,7 +545,7 @@ function RailItem({ label, value, mono = false, tone }: { label: string; value: 
   const tok = usePhebsTokens()
   return (
     <div className={css({ minWidth: 0, padding: '10px 12px', borderRight: `1px solid ${tok.cardBorder}` })}>
-      <div className={css({ color: tok.textTertiary, fontSize: '10px', lineHeight: '14px' })}>{label}</div>
+      <div className={css({ color: tok.textTertiary, fontSize: '11px', lineHeight: '14px' })}>{label}</div>
       <div className={css({ marginTop: '3px', color: tone ?? tok.textPrimary, fontFamily: mono ? FONTS.MONO : FONTS.SANS, fontSize: '11px', lineHeight: '16px', overflowWrap: 'anywhere' })}>{value}</div>
     </div>
   )
@@ -563,7 +564,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function HeaderCell({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <th className={css({ padding: '8px 10px', textAlign: 'left', color: tok.textTertiary, backgroundColor: tok.bandBg, fontSize: '10px', lineHeight: '14px', fontWeight: 600, whiteSpace: 'nowrap' })}>{children}</th>
+  return <th className={css({ padding: '8px 10px', textAlign: 'left', color: tok.textTertiary, backgroundColor: tok.bandBg, fontSize: '11px', lineHeight: '14px', fontWeight: 600, whiteSpace: 'nowrap' })}>{children}</th>
 }
 
 function Cell({ children, mono = false }: { children: React.ReactNode; mono?: boolean }) {
