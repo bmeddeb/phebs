@@ -12,11 +12,23 @@ const T307_REPO = 'local/Users/ben/phebs-ux/docs/fixtures/t30.7-neutral-service/
 const T307_COMMIT = 'b7f443ed7e89dbaede855a6cfd30767bbe13dfbb'
 const T307_FILE = 'api/orders.proto'
 
+// Receipt-only source identity. The Playwright harness serves this exact
+// repository, revision, path, and root tree from a committed Markdown file;
+// it never enters the dev instance's repository or search state.
+export const MARKDOWN_PREVIEW_FIXTURE = {
+  repository: 'receipt-fixture/markdown-preview',
+  revision: 'fixture-markdown-preview-v1',
+  path: 'README.md',
+} as const
+
 const q = (params: Record<string, string>) => new URLSearchParams(params).toString()
 
 export interface ReceiptRoute {
   name: string
   path: string
+  // Page-scoped API fixture installed only for this route. It exercises the
+  // product surface without mutating the shared neutral dev cohorts.
+  fixture?: 'markdown-preview'
   // Regions that mutate BECAUSE a receipts run happens (e.g. the audit log
   // records the harness's own login) are masked, never baselined.
   mask?: string[]
@@ -90,6 +102,17 @@ export const ROUTES: ReceiptRoute[] = [
   { name: 'kafka-topic-usage', path: `/topics?${q({ topic: 'orders.created.v1' })}` },
   { name: 'kafka-topic-usage-expanded-390', path: `/topics?${q({ topic: 'orders.created.v1' })}`, expand: true, viewport: { width: 390, height: 844 } },
   { name: 'file', path: `/file?${q({ repo: T307_REPO, path: T307_FILE })}` },
+  {
+    name: 'markdown-preview',
+    path: `/file?${q({
+      repo: MARKDOWN_PREVIEW_FIXTURE.repository,
+      path: MARKDOWN_PREVIEW_FIXTURE.path,
+      ref: MARKDOWN_PREVIEW_FIXTURE.revision,
+      view: 'preview',
+    })}`,
+    fixture: 'markdown-preview',
+    awaitVisible: ['[data-markdown-preview-ready="true"]'],
+  },
   { name: 'history', path: `/history?${q({ repo: T307_REPO, path: T307_FILE })}` },
   { name: 'blame', path: `/blame?${q({ repo: T307_REPO, path: T307_FILE })}` },
   { name: 'commit', path: `/commit?${q({ repo: T307_REPO, ref: T307_COMMIT })}` },

@@ -22,7 +22,11 @@ describe('mermaid initialization contract', () => {
   }
 })
 
-import { hasRendererDirective, svgViolatesPolicy } from './mermaidConfig'
+import {
+  hasExternalResourceReference,
+  hasRendererDirective,
+  svgViolatesPolicy,
+} from './mermaidConfig'
 
 // T44.4f: the load-bearing security predicates. Mermaid cannot render in
 // jsdom (it needs real browser layout APIs), so the renderer wrapper
@@ -37,6 +41,9 @@ describe('mermaid renderer-directive refusal (T44.4f)', () => {
   it('refuses config-bearing YAML frontmatter', () => {
     expect(hasRendererDirective('---\nconfig:\n  layout: dagre\n---\ngraph TD\nA-->B')).toBe(true)
     expect(hasRendererDirective('---\ntitle: fine\nconfig:\n  htmlLabels: true\n---\ngraph TD')).toBe(true)
+    expect(hasRendererDirective('---\n"config":\n  themeCSS: dangerous\n---\ngraph TD')).toBe(true)
+    expect(hasRendererDirective('---\n{config: {htmlLabels: true}}\n---\ngraph TD')).toBe(true)
+    expect(hasRendererDirective('---\n"con\\u0066ig":\n  layout: dagre\n---\ngraph TD')).toBe(true)
   })
   it('allows a plain diagram and benign title-only frontmatter', () => {
     expect(hasRendererDirective('graph TD\nA-->B')).toBe(false)
@@ -45,12 +52,56 @@ describe('mermaid renderer-directive refusal (T44.4f)', () => {
 })
 
 describe('mermaid output-policy enforcement (T44.4f)', () => {
-  it('rejects foreignObject (HTML labels), scripts, and event handlers', () => {
+  it('rejects foreignObject, scripts, images, resource CSS, links, and event handlers', () => {
     expect(svgViolatesPolicy('<svg><foreignObject><b>x</b></foreignObject></svg>')).toBe(true)
     expect(svgViolatesPolicy('<svg><script>alert(1)</script></svg>')).toBe(true)
+    expect(svgViolatesPolicy('<svg><image href="https://example.invalid/x.png"></image></svg>')).toBe(true)
+    expect(svgViolatesPolicy('<svg><path fill="url(https://example.invalid/x.svg)"></path></svg>')).toBe(true)
+    expect(svgViolatesPolicy('<svg><a href="https://example.invalid/"><text>x</text></a></svg>')).toBe(true)
+    expect(svgViolatesPolicy('<svg><a href="/local"><text>x</text></a></svg>')).toBe(true)
+    expect(svgViolatesPolicy('<svg><use xlink:href="//example.invalid/icon.svg#x"></use></svg>')).toBe(true)
     expect(svgViolatesPolicy('<svg><g onclick="x()"></g></svg>')).toBe(true)
   })
-  it('accepts SVG-text-only output', () => {
+  it('accepts text and same-document marker paint servers', () => {
     expect(svgViolatesPolicy('<svg><g><text>orders-api</text></g></svg>')).toBe(false)
+    expect(svgViolatesPolicy('<svg><path marker-end="url(#flowchart-pointEnd)"></path></svg>')).toBe(false)
+    expect(svgViolatesPolicy('<svg><path fill="url(\'#local-gradient\')"></path></svg>')).toBe(false)
+    expect(svgViolatesPolicy('<svg><use xlink:href="#local-icon"></use></svg>')).toBe(false)
+  })
+})
+
+describe('mermaid external-resource refusal (T44.3/T44.4 closure)', () => {
+  it('refuses image-shape, URL, CSS-resource, and import forms before render', () => {
+    expect(hasExternalResourceReference('flowchart TD\nA@{ img: "./local.png" }')).toBe(true)
+    expect(hasExternalResourceReference("flowchart TD\nA@{ 'img': 'https://example.invalid/x.png' }")).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\nclassDef x fill:url(/texture.svg)')).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\nA[https://example.invalid/]')).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\n@import "theme.css"')).toBe(true)
+    expect(hasExternalResourceReference('sequenceDiagram\nparticipant A@{ "icon": "//example.invalid/x.png" }')).toBe(true)
+    expect(hasExternalResourceReference('sequenceDiagram\nparticipant A@{ icon: "/local.png" }')).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\nA[![alt](./local.png)]')).toBe(true)
+    expect(hasExternalResourceReference('C4Context\nPerson(a, "A", "", $sprite="//example.invalid/x.png")')).toBe(true)
+  })
+
+  it('refuses decoded property keys, positional sprites, KaTeX, HTML, and authored CSS', () => {
+    expect(hasExternalResourceReference(String.raw`flowchart TD
+A@{ "\u0069mg": "\u002f\u002fevil/x.png" }`)).toBe(true)
+    expect(hasExternalResourceReference(String.raw`sequenceDiagram
+participant A@{ "\u0069con": "\u002f\u002fevil/x.png" }`)).toBe(true)
+    expect(hasExternalResourceReference('C4Context\nPerson(a, "A", "desc", "./sprite.png")')).toBe(true)
+    expect(hasExternalResourceReference(String.raw`sequenceDiagram
+A->>B: $$\includegraphics{./pixel.png}$$`)).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\nA["&lt;img src=./pixel.png&gt;"]')).toBe(true)
+    expect(hasExternalResourceReference('flowchart TD\nA-->B; classDef x background-image:image-set("./pixel.png")')).toBe(true)
+    expect(hasExternalResourceReference(String.raw`flowchart TD
+A-->B
+classDef ex fill:\75rl\28//example.invalid/pixel.svg\29
+class A ex`)).toBe(true)
+  })
+
+  it('allows resource-free diagram labels and edges', () => {
+    expect(hasExternalResourceReference('flowchart TD\nA[image unavailable]-->B')).toBe(false)
+    expect(hasExternalResourceReference('flowchart TD\nA[price $5 & quality]-->B')).toBe(false)
+    expect(hasExternalResourceReference('sequenceDiagram\nA->>B: ordinary message')).toBe(false)
   })
 })

@@ -45,6 +45,17 @@ vi.mock('../highlight', () => ({
   highlightStyle: highlighting.highlightStyle,
 }))
 
+vi.mock('../markdownPreview', async () => {
+  const parser = await vi.importActual<typeof import('../markdown')>('../markdown')
+  const sanitizer = await vi.importActual<typeof import('../markdownSanitize')>('../markdownSanitize')
+  return {
+    renderMarkdownPreview: async (source: string, signal?: AbortSignal) => {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      return sanitizer.sanitizeMarkdownSegments(parser.segmentMarkdown(source))
+    },
+  }
+})
+
 const engine = new Client()
 const view = (params: string, palette: PaletteName = 'phebs') => (
   <StyletronProvider value={engine}>
@@ -164,6 +175,7 @@ test('markdown files default to source and offer a preview toggle (T44.3)', asyn
     api.sourceCalls[0].resolve({ content: '# Title\n\ntext', encoding: 'utf8', size: 13 })
   })
   // Source is the default: the toggle is present, Markdown active.
+  expect(screen.getByRole('group', { name: 'Markdown view' })).toBeTruthy()
   const markdownTab = screen.getByRole('link', { name: 'Markdown' })
   const previewTab = screen.getByRole('link', { name: 'Preview' })
   expect(markdownTab.getAttribute('aria-current')).toBe('true')
@@ -171,6 +183,39 @@ test('markdown files default to source and offer a preview toggle (T44.3)', asyn
   expect(previewTab.getAttribute('href')).toBe('#/file?repo=r&path=docs%2FREADME.md&ref=abc123&view=preview')
   // Default view shows raw source, not rendered HTML.
   expect(screen.queryByRole('heading', { name: 'Title' })).toBeNull()
+})
+
+test('same-mounted Markdown and Preview views reuse the exact source response (T44.3)', async () => {
+  const rendered = render(view('repo=r&path=docs%2FREADME.md&ref=abc123'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Reused\n\ntext', encoding: 'utf8', size: 14 })
+  })
+  expect(api.sourceCalls).toHaveLength(1)
+
+  rendered.rerender(view('repo=r&path=docs%2FREADME.md&ref=abc123&view=preview'))
+  expect(await screen.findByRole('heading', { name: 'Reused' })).toBeTruthy()
+  expect(api.sourceCalls).toHaveLength(1)
+
+  rendered.rerender(view('repo=r&path=docs%2FREADME.md&ref=abc123'))
+  expect(screen.queryByRole('heading', { name: 'Reused' })).toBeNull()
+  expect(api.sourceCalls).toHaveLength(1)
+})
+
+test('same-mounted cross-file navigation never relabels prior preview bytes', async () => {
+  const rendered = render(view('repo=r&path=docs%2FA.md&ref=abc123&view=preview'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: '# Alpha', encoding: 'utf8', size: 7 })
+  })
+  expect(await screen.findByRole('heading', { name: 'Alpha' })).toBeTruthy()
+
+  rendered.rerender(view('repo=r&path=docs%2FB.md&ref=abc123&view=preview'))
+  expect(screen.queryByRole('heading', { name: 'Alpha' })).toBeNull()
+  expect(api.sourceCalls).toHaveLength(2)
+
+  await act(async () => {
+    api.sourceCalls[1].resolve({ content: '# Beta', encoding: 'utf8', size: 6 })
+  })
+  expect(await screen.findByRole('heading', { name: 'Beta' })).toBeTruthy()
 })
 
 test('preview renders sanitized markdown; non-markdown files get no toggle (T44.3)', async () => {
@@ -236,6 +281,8 @@ test('a mermaid fence renders as a diagram; the source shows while loading (T44.
   })
   const diagram = await screen.findByRole('img', { name: 'Mermaid diagram' })
   expect(diagram.querySelector('svg')).not.toBeNull()
+  expect(screen.getByText('Diagram source').closest('details')).not.toBeNull()
+  expect(screen.getByText(/graph TD/)).toBeTruthy()
   // Prose around the fence rendered too.
   expect(screen.getByRole('heading', { name: 'D' })).toBeTruthy()
 })
@@ -250,7 +297,7 @@ test('a failing fence keeps its source with a one-line error — never a blank (
   expect(screen.queryByRole('img', { name: 'Mermaid diagram' })).toBeNull()
 })
 
-test('beyond the diagram cap, excess fences stay source and never call the renderer (T44.4f)', async () => {
+test('beyond the diagram cap, excess fences stay code without mounting renderers (T44.4f)', async () => {
   const mermaidMod = await import('../mermaid')
   const renderSpy = mermaidMod.renderMermaid as unknown as { mock: { calls: unknown[] } }
   const before = renderSpy.mock.calls.length
@@ -260,9 +307,7 @@ test('beyond the diagram cap, excess fences stay source and never call the rende
   await act(async () => {
     api.sourceCalls[0].resolve({ content: fences, encoding: 'utf8', size: fences.length })
   })
-  // The 2 excess fences stay source with the cap note (proves the cap fired).
-  await waitFor(() => expect(screen.getAllByText(/preview renders at most 20 diagrams/).length).toBe(2))
-  // Security invariant: the renderer is invoked at most 20 times for this
-  // document — the excess fences never import or call mermaid.
+  expect(await screen.findByText(/N20-->M20/)).toBeTruthy()
+  expect(screen.getByText(/N21-->M21/)).toBeTruthy()
   expect(renderSpy.mock.calls.length - before).toBeLessThanOrEqual(20)
 })

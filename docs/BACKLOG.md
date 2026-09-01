@@ -3316,6 +3316,33 @@ is now inert 🖼+alt text. Suite 570/570. The review header cited four
 findings but only three reached the track (the third truncated, the
 fourth absent); any fourth is a separate follow-up.
 
+Closure follow-up (2026-08-31): the deferred receipt is closed by a
+page-scoped synthetic repository fixture that intercepts only its exact
+auth/status/source/folder identities and fails closed on an unexpected
+fixture identity, without adding a repository to the shared cohort. The
+manifest is now 33 routes/134 PNGs; all four new theme/density baselines were
+reviewed and pass a fresh isolated comparison. Preview parsing moved to a
+one-shot Worker with a 131,072-UTF-16-unit input cap, 1-s deadline,
+524,288-returned-unit cap, at most 41 validated segments, and unconditional
+termination. The
+parser lexes once and preserves document-wide reference definitions across
+Mermaid fences. The sanitizer remains main-thread and isolated; empty,
+relative, and unsafe links become prose, images become neutral named
+placeholders, and returned segments are validated before sanitization.
+FilePage binds loaded bytes and preview state to the exact repository, path,
+and revision so a late response cannot appear under a new route. Preview
+prose uses a 72-character reading measure; the mobile view control and
+diagram-source disclosure have 44px hit regions. The complete 774-test UI
+suite, lint, typecheck/build, 4/4 targeted retained comparisons, and
+1280px/390px browser checks pass. The browser checks cover keyboard URL
+state, Back/Forward without a source reread, exact source identity, safe
+Mermaid rendering, resource refusal, accessible source disclosure, no
+external request, no stranded Mermaid host, a clean console, and no document
+overflow. The full unrelated authenticated matrix was not rerun because the
+saved session does not match the current backend and credentials were absent;
+the page-scoped route is the canonical isolated T44.3 contract. T44.3 is
+complete on this branch; T44.2 remains its stacked integration dependency.
+
 **T44.4 · Mermaid rendering with ELK** *(needs T44.3)* — mermaid fences
 in preview render as diagrams. AC: mermaid 11 with the ELK layout as the
 default, themed from the design tokens, `securityLevel: 'strict'`, no
@@ -3364,6 +3391,21 @@ source and never import the engine. Mermaid cannot render in jsdom, so
 the predicates and the wrapper refusal are unit-tested on the exact
 override payloads and verified live (normal fence → ELK diagram, 0
 foreignObjects; hostile fence → refused, source shown).
+
+T44.3 closure hardening (2026-08-31): the post-SVG check was not early enough
+for Mermaid 11.16.1 paths that allocate live resources while drawing. The
+wrapper now refuses every property bag, the positional-sprite C4 family,
+authored styles/backslash escapes, raw/entity HTML, Markdown images, KaTeX,
+URL schemes, and imports before render; config frontmatter is title-only.
+Returned SVG permits fragment-local paint servers/symbol references and
+refuses every other URL/href, resource element, foreignObject, script, and
+event attribute. Mermaid's global renderer is serialized to one active plus
+20 pending jobs, queued stale work is abortable, and every attempt owns one
+offscreen layout host removed on both success and failure. A successful
+diagram keeps a native keyboard-reachable source disclosure; refused and
+failed diagrams keep their source. The entry chunk is 39,440 raw/13,310
+deterministic-gzip bytes at this branch (+1,715/+709 over the stacked base);
+the large inherited ELK/per-diagram assets remain lazy and fence-gated.
 
 **T44.5 · Header instance-surface icons** *(last — re-captures the full
 matrix once)* — Audit, Analytics, and Settings are instance surfaces,
