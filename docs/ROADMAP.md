@@ -164,8 +164,7 @@ T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
-exhausted-result recovery is complete on its ticket branch; T41.9 is next
-after that repair integrates.
+exhausted-result recovery is integrated; T41.9 is next.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -1005,8 +1004,8 @@ catalog, relationship, or correctness authority.
   extraction authority before publication, makes point reads member-local,
   and adds complete canonical recovery, archive/restore, lease, rollback, and
   bounded lifecycle ownership. It is integrated. T41.8a's catalog-absence and
-  exhausted-result recovery is complete on its ticket branch; T41.9 is next
-  after that repair integrates and remains the only runtime-selector owner.
+  exhausted-result recovery is integrated; T41.9 is next and remains the only
+  runtime-selector owner.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.
