@@ -11,17 +11,26 @@ import { Client as Styletron } from 'styletron-engine-monolithic'
 import { CaveatCollapse, CitationChip, CitationPanel, EmptyState, ErrorNotice, IdentityText, LoadingBlock, RefusalCard, StateNotice, StatusChip, StatusWord } from './kit'
 import type { ServiceRelationshipCitation } from '../api'
 import { ModeContext, PaletteContext, TOKENS, darkTheme, focusRing, lightTheme } from '../theme'
+import type { PaletteName } from '../palette'
 
 const engine = new Styletron()
 
-function mount(node: React.ReactNode) {
-  return render(
+function wrapped(node: React.ReactNode, palette: PaletteName = 'phebs') {
+  return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={lightTheme}>
-        <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>{node}</ModeContext.Provider>
+        <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
+          <PaletteContext.Provider value={{ palette, setPalette: () => {} }}>
+            {node}
+          </PaletteContext.Provider>
+        </ModeContext.Provider>
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
+}
+
+function mount(node: React.ReactNode) {
+  return render(wrapped(node))
 }
 
 describe('StatusChip', () => {
@@ -194,20 +203,10 @@ describe('CitationPanel', () => {
 
   it('re-colors cited bytes under a different palette preference (T44.2)', async () => {
     const goCitation = { ...citation, content: 'return "ok"' }
-    const phebs = mount(<CitationPanel id="pal-a" loading={false} error="" citation={goCitation} onClose={() => {}} />)
+    const citationPanel = <CitationPanel id="pal" loading={false} error="" citation={goCitation} onClose={() => {}} />
+    const rendered = render(wrapped(citationPanel))
     const phebsColor = (await keywordSpan()).style.color
-    phebs.unmount()
-    render(
-      <StyletronProvider value={engine}>
-        <BaseProvider theme={lightTheme}>
-          <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
-            <PaletteContext.Provider value={{ palette: 'classic', setPalette: () => {} }}>
-              <CitationPanel id="pal-b" loading={false} error="" citation={goCitation} onClose={() => {}} />
-            </PaletteContext.Provider>
-          </ModeContext.Provider>
-        </BaseProvider>
-      </StyletronProvider>,
-    )
+    rendered.rerender(wrapped(citationPanel, 'classic'))
     const classicColor = (await keywordSpan()).style.color
     expect(classicColor).not.toBe(phebsColor)
   })

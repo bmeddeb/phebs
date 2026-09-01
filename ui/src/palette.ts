@@ -1,10 +1,10 @@
 // T44.2: the curated syntax-palette registry. A palette defines all seven
 // roles in both themes. Every value passes the AA gate in theme.test.ts —
-// ≥4.5:1 against the code background (pageBg) AND the anchor-line tint
-// (selectedLineBg) in its mode; the high-contrast palette holds ≥7:1
-// against the page. This module carries data only (no CodeMirror imports),
-// so the shell can read names and colors without touching the lazy
-// highlighting chunks.
+// ≥4.5:1 against every shipped code surface: page and citation-band
+// backgrounds, search-row hover, the anchor-line tint, and the search-match
+// tint in its mode; the high-contrast palette holds ≥7:1 against the page.
+// This module carries data only (no CodeMirror imports), so the shell can
+// read names and colors without touching the lazy highlighting chunks.
 
 export type PaletteName = 'phebs' | 'quiet' | 'classic' | 'high-contrast'
 

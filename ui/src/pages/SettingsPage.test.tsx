@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BaseProvider, LightTheme } from 'baseui'
@@ -5,6 +6,7 @@ import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import SettingsPage from './SettingsPage'
 import { PaletteContext } from '../theme'
+import type { PaletteName } from '../palette'
 
 const api = vi.hoisted(() => ({
   createAPIKey: vi.fn(),
@@ -16,6 +18,15 @@ const api = vi.hoisted(() => ({
 vi.mock('../api', () => api)
 
 const engine = new Client()
+
+function StatefulPalettePage() {
+  const [palette, setPalette] = useState<PaletteName>('phebs')
+  return (
+    <PaletteContext.Provider value={{ palette, setPalette }}>
+      <SettingsPage />
+    </PaletteContext.Provider>
+  )
+}
 
 function renderPage(isAdmin = false) {
   return render(
@@ -94,13 +105,10 @@ beforeEach(() => {
 afterEach(cleanup)
 
 test('Appearance offers every curated palette and commits through the preference (T44.2)', async () => {
-  const setPalette = vi.fn()
   render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <PaletteContext.Provider value={{ palette: 'phebs', setPalette }}>
-          <SettingsPage />
-        </PaletteContext.Provider>
+        <StatefulPalettePage />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -109,12 +117,24 @@ test('Appearance offers every curated palette and commits through the preference
   expect(Array.from(select.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
     'Phebs', 'Quiet', 'Classic', 'High contrast',
   ])
-  fireEvent.change(select, { target: { value: 'classic' } })
-  expect(setPalette).toHaveBeenCalledWith('classic')
-  // The live specimen renders through the lazy tokenizer.
+  let phebsColor = ''
   await waitFor(() => {
+    expect(document.querySelector('[data-palette-ready="true"]')).toBeTruthy()
     const keyword = Array.from(document.querySelectorAll('pre span span')).find((el) => el.textContent === 'func') as HTMLElement | undefined
     expect(keyword?.style.color).toBeTruthy()
+    phebsColor = keyword!.style.color
+  })
+
+  fireEvent.change(select, { target: { value: 'classic' } })
+  expect((select as HTMLSelectElement).value).toBe('classic')
+  // The prior palette's spans are not presented under the new selection.
+  expect(document.querySelector('[data-palette-ready="true"]')).toBeNull()
+  // The same mounted specimen then re-colors through the lazy tokenizer.
+  await waitFor(() => {
+    expect(document.querySelector('[data-palette-ready="true"]')).toBeTruthy()
+    const keyword = Array.from(document.querySelectorAll('pre span span')).find((el) => el.textContent === 'func') as HTMLElement | undefined
+    expect(keyword?.style.color).toBeTruthy()
+    expect(keyword!.style.color).not.toBe(phebsColor)
   })
 })
 

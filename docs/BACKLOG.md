@@ -3248,6 +3248,37 @@ surfaces. The persisted-value guard uses an own-property check, not
 to the default instead of indexing to undefined; pinned by
 palette.test.ts.
 
+Closure audit (2026-08-31): Settings token rows are now bound to their exact
+theme/palette identity and fall back to the plain specimen during every new
+lazy tokenization, so old colors cannot be relabelled or stranded after a
+failure. Same-mounted File, Search, relationship-citation, and exact-caller
+tests prove live recoloring without restarting or refetching their underlying
+work. The AA matrix now covers `pageBg`, `bandBg`, `hoverFill`,
+`selectedLineBg`, and `matchBg`. The receipt harness explicitly seeds the
+Phebs default and waits for specimen readiness on both Settings routes. The
+complete 753-test UI suite, lint, typecheck/build, and desktop/390px browser
+checks pass; the production JavaScript delta is +114 raw/+62 individually
+gzipped bytes with no dependency or chunk. Twelve local browser-driven
+transitions settled in 56–109 ms (60-ms median), recorded as mechanics rather
+than an SLO. The manifest stays at 32 authenticated routes/130 PNGs and no
+baseline byte changes. The targeted eight-comparison retained Settings run
+stopped before comparison because the stored session was stale and receipt
+credentials were absent. T44.2 therefore remains open: no clean retained
+comparison, baseline refresh, completion, merge, or integration is claimed.
+
+Retained-comparison follow-up (2026-08-31): receipt setup now validates a
+saved Secure loopback session through Chromium, matching the browser path that
+captures the receipts instead of incorrectly rejecting it through an API-only
+request context. The authenticated retry against the current branch UI reached
+all eight Settings comparisons. All four 390px theme/density variants pass.
+The four desktop variants differ by 1,200 pixels in light mode and 1,242 in
+dark mode, confined to the noncanonical operator identity and two retained
+pre-T43R.1 label bands; the Code Navigation region has zero differing pixels,
+and the visible palette specimen is pixel-identical to the retained specimen
+and already highlighted in every variant. No baseline byte changed. This
+supersedes the authentication blocker only: T44.2 remains open without a clean
+retained comparison, baseline refresh, completion, merge, or integration.
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force

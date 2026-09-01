@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -6,6 +6,8 @@ import { BaseProvider, LightTheme } from 'baseui'
 import SearchPage from './SearchPage'
 import { repoFilter, runeColumnToUTF16Offset } from '../util'
 import type { Chunk, FileResult, Range, RepoStatus, SearchResult, SearchScopeReceipt, Stats, TreeEntry } from '../api'
+import { PaletteContext } from '../theme'
+import type { PaletteName } from '../palette'
 
 // streamSearch fake: tests drive the captured callbacks to simulate the SSE stream.
 type Callbacks = {
@@ -24,6 +26,9 @@ const repositoryAPI = vi.hoisted(() => ({
   folderCalls: [] as { repo: string; ref: string; path: string; signal: AbortSignal }[],
   folderFailures: new Map<string, number>(),
   folders: new Map<string, TreeEntry[]>(),
+}))
+const highlighting = vi.hoisted(() => ({
+  tokenize: vi.fn((line: string) => [{ from: 0, to: line.length, color: '' }]),
 }))
 
 const folderFixtureKey = (repo: string, path: string) => `${repo}\0${path}`
@@ -68,7 +73,7 @@ vi.mock('../lang', () => ({
   langName: () => 'x',
 }))
 vi.mock('../highlight', () => ({
-  tokenize: (line: string) => [{ from: 0, to: line.length, color: '' }],
+  tokenize: highlighting.tokenize,
   highlightStyle: () => ({}), // unused; satisfies FilePage's import via ../App
 }))
 
@@ -114,14 +119,16 @@ const batch = (files: FileResult[]): SearchResult => ({
 })
 
 const engine = new Client()
-const renderSearch = (params = 'q=foo') =>
-  render(
-    <StyletronProvider value={engine}>
-      <BaseProvider theme={LightTheme}>
+const searchView = (params = 'q=foo', palette: PaletteName = 'phebs') => (
+  <StyletronProvider value={engine}>
+    <BaseProvider theme={LightTheme}>
+      <PaletteContext.Provider value={{ palette, setPalette: () => {} }}>
         <SearchPage params={new URLSearchParams(params)} />
-      </BaseProvider>
-    </StyletronProvider>,
-  )
+      </PaletteContext.Provider>
+    </BaseProvider>
+  </StyletronProvider>
+)
+const renderSearch = (params = 'q=foo', palette: PaletteName = 'phebs') => render(searchView(params, palette))
 
 // The search input autofocuses on mount; keyboard tests need it blurred.
 const blurInput = () => act(async () => (document.activeElement as HTMLElement | null)?.blur())
@@ -143,6 +150,7 @@ beforeEach(() => {
   stream.calls = []
   repositoryAPI.statusCalls = 0
   repositoryAPI.statusFailures = 0
+  highlighting.tokenize.mockClear()
   repositoryAPI.statuses = []
   repositoryAPI.folderCalls = []
   repositoryAPI.folderFailures = new Map()
@@ -460,6 +468,18 @@ test('streaming skeleton unmounts when the stream completes', async () => {
   await act(async () => stream.onDone!({ match_count: 1, file_count: 1, duration_ms: 3 }))
   expect(screen.queryByTestId('streaming-skeleton')).toBeNull()
   expect(screen.getByRole('button', { name: /github\.com\/a\/one/, expanded: true })).toBeTruthy()
+})
+
+test('re-colors mounted search chunks without restarting the stream (T44.2)', async () => {
+  const rendered = renderSearch('q=foo')
+  await act(async () => stream.onBatch!(batch([aMain])))
+  await waitFor(() => expect(highlighting.tokenize).toHaveBeenCalledWith('func main() {', null, 'light', 'phebs'))
+  const searchCalls = stream.calls?.length ?? 0
+
+  rendered.rerender(searchView('q=foo', 'classic'))
+
+  await waitFor(() => expect(highlighting.tokenize).toHaveBeenCalledWith('func main() {', null, 'light', 'classic'))
+  expect(stream.calls).toHaveLength(searchCalls)
 })
 
 test('stopping a stream preserves partial-state semantics', async () => {

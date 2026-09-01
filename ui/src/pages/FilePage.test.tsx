@@ -5,6 +5,8 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import FilePage from './FilePage'
 import type { SourceFile, TreeEntry } from '../api'
+import { PaletteContext } from '../theme'
+import type { PaletteName } from '../palette'
 
 interface SourceCall {
   path: string
@@ -18,6 +20,9 @@ const api = vi.hoisted(() => ({
   folderCalls: [] as { path: string; ref: string; signal: AbortSignal }[],
   folders: new Map<string, TreeEntry[]>(),
   statuses: [] as { name: string; indexed_commit_hash?: string; clone_url: string; orphaned: boolean }[],
+}))
+const highlighting = vi.hoisted(() => ({
+  highlightStyle: vi.fn(() => ({})),
 }))
 
 vi.mock('../api', () => ({
@@ -37,14 +42,16 @@ vi.mock('../lang', () => ({
 }))
 
 vi.mock('../highlight', () => ({
-  highlightStyle: () => ({}),
+  highlightStyle: highlighting.highlightStyle,
 }))
 
 const engine = new Client()
-const view = (params: string) => (
+const view = (params: string, palette: PaletteName = 'phebs') => (
   <StyletronProvider value={engine}>
     <BaseProvider theme={LightTheme}>
-      <FilePage params={new URLSearchParams(params)} />
+      <PaletteContext.Provider value={{ palette, setPalette: () => {} }}>
+        <FilePage params={new URLSearchParams(params)} />
+      </PaletteContext.Provider>
     </BaseProvider>
   </StyletronProvider>
 )
@@ -54,6 +61,7 @@ beforeEach(() => {
   api.folderCalls = []
   api.folders = new Map()
   api.statuses = []
+  highlighting.highlightStyle.mockClear()
 })
 
 afterEach(cleanup)
@@ -112,6 +120,20 @@ test('a route without an indexed revision never falls back to mutable HEAD', asy
   expect(await screen.findByText('repository has no indexed revision')).toBeTruthy()
   expect(api.sourceCalls).toHaveLength(0)
   expect(api.folderCalls).toHaveLength(0)
+})
+
+test('re-colors the mounted source viewer without refetching the file (T44.2)', async () => {
+  const rendered = render(view('repo=r&path=main.go&ref=abc123'))
+  await act(async () => {
+    api.sourceCalls[0].resolve({ content: 'package main', encoding: 'utf8', size: 12 })
+  })
+  await waitFor(() => expect(highlighting.highlightStyle).toHaveBeenCalledWith('light', 'phebs'))
+  expect(api.sourceCalls).toHaveLength(1)
+
+  rendered.rerender(view('repo=r&path=main.go&ref=abc123', 'classic'))
+
+  await waitFor(() => expect(highlighting.highlightStyle).toHaveBeenCalledWith('light', 'classic'))
+  expect(api.sourceCalls).toHaveLength(1)
 })
 
 test('open-in-search safely quotes filenames with whitespace', async () => {
