@@ -1564,17 +1564,24 @@ is a failure or terminal refusal.
 - **Markdown preview** (T44.3): a Markdown | Preview control on the file
   viewer for `.md`/`.markdown` files. Source is the default and the view
   is URL-borne (`?view=preview`); a line deep-link (`?L=`) forces source,
-  since line numbers are a source concept. Rendering is sanitized —
-  repository markdown is untrusted, so scripts, event handlers, styles,
-  and unsafe link schemes are stripped, surviving links open with
-  `rel="noopener noreferrer nofollow"`, and images are not fetched (the
-  alt text shows as a placeholder). The renderer loads lazily, only on
-  first preview. A ```mermaid fenced block in a rendered document becomes
-  a diagram (ELK layout, themed from the design tokens, mermaid strict
-  mode — labels escaped, no click bindings, no script); mermaid and the
-  ELK engine load as one extra chunk fetched only when a rendered
-  document actually contains a fence, and a fence that fails to parse
-  keeps its source visible with a one-line reason above it.
+  since line numbers are a source concept. Preview reuses the exact loaded
+  repository/path/revision bytes; toggling the view or using Back/Forward does
+  not reread the source. Documents over 131,072 UTF-16 units remain
+  source-only. Smaller documents parse in a one-shot Worker with a 1-second
+  deadline, then pass a
+  bounded result through the sanitizer. Repository Markdown is untrusted:
+  scripts, event handlers, styles, and unsafe attributes are stripped; only
+  absolute `http`, `https`, and `mailto` links survive and open with
+  `rel="noopener noreferrer nofollow"`; empty and relative links become
+  ordinary prose; and images are never fetched, instead reading **Image
+  unavailable:** plus their alt text. At most 20 top-level `mermaid` fences
+  render as diagrams; excess fences remain code. Diagrams use ELK and the
+  current design tokens under Mermaid strict mode. Resource-capable syntax,
+  renderer configuration, C4 diagrams, and unsafe returned SVG fail closed to
+  visible source. A parse/draw failure also keeps its source with a one-line
+  reason. A successful diagram has a **Diagram source** disclosure for
+  keyboard and assistive-technology access. The parser, sanitizer, Mermaid,
+  and ELK assets remain preview/fence-lazy.
 - **Code highlight palette** (T44.2): Settings · Appearance offers four
   curated syntax palettes — Phebs (default), Quiet (near-monochrome
   reading), Classic (traditional editor hues), and High contrast

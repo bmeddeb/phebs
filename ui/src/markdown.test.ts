@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown, segmentMarkdown } from './markdown'
+import { segmentMarkdown } from './markdown'
+import { sanitizeMarkdownSegments } from './markdownSanitize'
+
+const segmentsFor = (source: string) => sanitizeMarkdownSegments(segmentMarkdown(source))
+const renderMarkdown = (source: string) => segmentsFor(source)
+  .filter((segment) => segment.kind === 'prose')
+  .map((segment) => segment.kind === 'prose' ? segment.html : '')
+  .join('')
 
 // T44.3: the renderer is the trust boundary over untrusted repository
 // content. These are adversarial: every case asserts the dangerous
@@ -37,12 +44,29 @@ describe('renderMarkdown trust boundary', () => {
   it('neutralizes javascript: links', () => {
     const html = renderMarkdown('[x](javascript:alert(1))')
     expect(html).not.toContain('javascript:')
+    expect(html).not.toContain('<a')
+    expect(html).toContain('x')
   })
 
   it('drops data: URI links', () => {
     const html = renderMarkdown('[x](data:text/html,<script>alert(1)</script>)')
     expect(html).not.toContain('data:')
     expect(html).not.toContain('<script')
+  })
+
+  it('keeps relative-link text without presenting a false actionable link', () => {
+    const html = renderMarkdown('[local guide](./guide.md)')
+    expect(html).toContain('local guide')
+    expect(html).not.toContain('<a')
+    expect(html).not.toContain('href=')
+  })
+
+  it('keeps empty-link text without making the current Phebs page actionable', () => {
+    const html = renderMarkdown('[markdown empty]() and <a href="   ">raw empty</a>')
+    expect(html).toContain('markdown empty')
+    expect(html).toContain('raw empty')
+    expect(html).not.toContain('<a')
+    expect(html).not.toContain('href=')
   })
 
   it('forces safe rel/target on surviving links', () => {
@@ -56,7 +80,7 @@ describe('renderMarkdown trust boundary', () => {
     const html = renderMarkdown('![a diagram](./secret-relative.png)')
     expect(html).not.toContain('src=')
     expect(html).not.toContain('secret-relative.png')
-    expect(html).toContain('🖼 a diagram')
+    expect(html).toContain('Image unavailable: a diagram')
   })
 
   it('strips style tags and attributes', () => {
@@ -93,7 +117,7 @@ describe('renderMarkdown trust boundary', () => {
 
   it('renders images as an inert text placeholder with no attributes at all', () => {
     const html = renderMarkdown('![alt text](x.png)')
-    expect(html).toContain('🖼 alt text')
+    expect(html).toContain('Image unavailable: alt text')
     expect(html).not.toContain('src=')
     // With class stripped from the allowlist and the placeholder carrying
     // no attributes, no class survives anywhere in rendered output.
@@ -103,7 +127,7 @@ describe('renderMarkdown trust boundary', () => {
 
 describe('segmentMarkdown (T44.4)', () => {
   it('splits top-level mermaid fences out of the prose', () => {
-    const segments = segmentMarkdown('# Doc\n\nintro\n\n```mermaid\ngraph TD\nA-->B\n```\n\nafter')
+    const segments = segmentsFor('# Doc\n\nintro\n\n```mermaid\ngraph TD\nA-->B\n```\n\nafter')
     expect(segments.map((segment) => segment.kind)).toEqual(['prose', 'mermaid', 'prose'])
     const [before, fence, after] = segments
     expect(before.kind === 'prose' && before.html).toContain('<h1>Doc</h1>')
@@ -114,22 +138,60 @@ describe('segmentMarkdown (T44.4)', () => {
   })
 
   it('returns one prose segment when no fence exists', () => {
-    const segments = segmentMarkdown('# Just prose\n\ntext')
+    const segments = segmentsFor('# Just prose\n\ntext')
     expect(segments.length).toBe(1)
     expect(segments[0].kind).toBe('prose')
   })
 
   it('leaves non-mermaid and nested fences as ordinary code blocks', () => {
-    const segments = segmentMarkdown('```go\nfunc main() {}\n```\n\n> quote\n> ```mermaid\n> graph TD\n> ```')
+    const segments = segmentsFor('```go\nfunc main() {}\n```\n\n> quote\n> ```mermaid\n> graph TD\n> ```')
     expect(segments.every((segment) => segment.kind === 'prose')).toBe(true)
     const html = segments.map((segment) => segment.kind === 'prose' ? segment.html : '').join('')
     expect(html).toContain('func main()')
   })
 
   it('sanitizes each prose segment exactly like renderMarkdown', () => {
-    const segments = segmentMarkdown('<script>bad()</script>\n\n```mermaid\ngraph TD\n```\n\n<p onclick="x()">y</p>')
+    const segments = segmentsFor('<script>bad()</script>\n\n```mermaid\ngraph TD\n```\n\n<p onclick="x()">y</p>')
     const html = segments.filter((segment) => segment.kind === 'prose').map((segment) => segment.kind === 'prose' ? segment.html : '').join('')
     expect(html).not.toContain('<script')
     expect(html).not.toContain('onclick')
+  })
+
+  it('preserves document-wide reference links across a diagram boundary', () => {
+    const segments = segmentsFor([
+      'Before [early] and [late].',
+      '',
+      '[early]: https://example.com/early',
+      '',
+      '```mermaid',
+      'graph TD',
+      'A-->B',
+      '```',
+      '',
+      'After [early] and [late].',
+      '',
+      '[late]: https://example.com/late',
+    ].join('\n'))
+    const prose = segments
+      .filter((segment) => segment.kind === 'prose')
+      .map((segment) => segment.kind === 'prose' ? segment.html : '')
+      .join('')
+    expect(prose.match(/href="https:\/\/example\.com\/early"/g)).toHaveLength(2)
+    expect(prose.match(/href="https:\/\/example\.com\/late"/g)).toHaveLength(2)
+  })
+
+  it('admits only twenty diagram components and keeps every excess fence as code', () => {
+    const source = Array.from(
+      { length: 22 },
+      (_, index) => `\`\`\`mermaid\ngraph TD\nN${index}-->M${index}\n\`\`\``,
+    ).join('\n\n')
+    const segments = segmentsFor(source)
+    expect(segments.filter((segment) => segment.kind === 'mermaid')).toHaveLength(20)
+    const prose = segments
+      .filter((segment) => segment.kind === 'prose')
+      .map((segment) => segment.kind === 'prose' ? segment.html : '')
+      .join('')
+    expect(prose).toContain('N20--&gt;M20')
+    expect(prose).toContain('N21--&gt;M21')
   })
 })

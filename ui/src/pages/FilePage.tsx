@@ -22,7 +22,8 @@ import type {
 import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
 import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
-import type { MarkdownSegment } from '../markdown'
+import { MARKDOWN_PREVIEW_MAX_UNITS } from '../markdownBounds'
+import type { MarkdownSegment } from '../markdownSanitize'
 import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
 import { fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
@@ -44,6 +45,12 @@ interface CodeNavigationState {
   error?: string
 }
 
+type SourceState =
+  | { identity: string; kind: 'loading' }
+  | { identity: string; kind: 'text'; content: string }
+  | { identity: string; kind: 'binary' }
+  | { identity: string; kind: 'error'; message: string }
+
 // T5.3/T5.5: CodeMirror 6 read-only viewer with breadcrumbs, a sticky
 // metadata header, ?L= deep-link line, and syntax highlighting.
 export default function FilePage({ params }: { params: URLSearchParams }) {
@@ -58,9 +65,7 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   const preview = markdown && params.get('view') === 'preview' && line <= 0
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [content, setContent] = useState<string | null>(null)
-  const [error, setError] = useState('')
-  const [binary, setBinary] = useState(false)
+  const [source, setSource] = useState<SourceState | null>(null)
   const [meta, setMeta] = useState<RepoStatus | null>(null)
   const [metaLoaded, setMetaLoaded] = useState(false)
   const [navPosition, setNavPosition] = useState<SourcePosition | null>(null)
@@ -70,35 +75,40 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   const navGeneration = useRef(0)
   const resolvingRef = !ref && !metaLoaded
   const effectiveRef = ref || meta?.indexed_commit_hash || ''
+  const sourceIdentity = `${repo}\u0000${path}\u0000${effectiveRef}`
+  const currentSource = source?.identity === sourceIdentity ? source : null
+  const content = currentSource?.kind === 'text' ? currentSource.content : null
+  const error = currentSource?.kind === 'error' ? currentSource.message : ''
+  const binary = currentSource?.kind === 'binary'
 
   useEffect(() => {
     const generation = ++sourceGeneration.current
     const controller = new AbortController()
-    setContent(null)
-    setError('')
-    setBinary(false)
+    setSource({ identity: sourceIdentity, kind: 'loading' })
     setNavPosition(null)
     setNavigation(null)
     if (resolvingRef) return
     if (!repo || !path) {
-      setError('missing repo or path')
+      setSource({ identity: sourceIdentity, kind: 'error', message: 'missing repo or path' })
       return
     }
     if (!effectiveRef) {
-      setError('repository has no indexed revision')
+      setSource({ identity: sourceIdentity, kind: 'error', message: 'repository has no indexed revision' })
       return
     }
     fetchSource(repo, path, effectiveRef, controller.signal)
       .then((f) => {
         if (generation !== sourceGeneration.current) return
-        if (f.encoding === 'base64') setBinary(true)
-        else setContent(f.content)
+        if (f.encoding === 'base64') setSource({ identity: sourceIdentity, kind: 'binary' })
+        else setSource({ identity: sourceIdentity, kind: 'text', content: f.content })
       })
       .catch((e) => {
-        if (!isAbortError(e) && generation === sourceGeneration.current) setError(String(e))
+        if (!isAbortError(e) && generation === sourceGeneration.current) {
+          setSource({ identity: sourceIdentity, kind: 'error', message: String(e) })
+        }
       })
     return () => controller.abort()
-  }, [repo, path, effectiveRef, resolvingRef])
+  }, [repo, path, effectiveRef, resolvingRef, sourceIdentity])
 
   useEffect(() => {
     const generation = ++metaGeneration.current
@@ -496,11 +506,13 @@ function isMarkdownPath(path: string): boolean {
 // whole app; a scoped <style> avoids that entirely (T44.3f P1). Every value
 // is a design-token constant, never user input, so the string is inert.
 const MARKDOWN_PROSE_CLASS = 'phebs-md'
+const MERMAID_DIAGRAM_CLASS = 'phebs-mermaid-diagram'
 
 function markdownProseCss(tok: ReturnType<typeof usePhebsTokens>): string {
   const s = MARKDOWN_PROSE_CLASS
+  const m = MERMAID_DIAGRAM_CLASS
   return [
-    `.${s}{padding:20px 22px;max-width:760px;color:${tok.textPrimary};font-size:14px;line-height:1.65;overflow-wrap:anywhere}`,
+    `.${s}{padding:20px 22px;max-width:72ch;margin:0 auto;color:${tok.textPrimary};font-size:14px;line-height:1.65;overflow-wrap:anywhere}`,
     `.${s}>:first-child{margin-top:0}`,
     `.${s} h1{font-size:24px;line-height:1.3;font-weight:600;margin:28px 0 12px;letter-spacing:-0.02em}`,
     `.${s} h2{font-size:19px;line-height:1.35;font-weight:600;margin:24px 0 10px;padding-bottom:5px;border-bottom:1px solid ${tok.innerSep}}`,
@@ -520,22 +532,9 @@ function markdownProseCss(tok: ReturnType<typeof usePhebsTokens>): string {
     `.${s} table{border-collapse:collapse;margin:0 0 14px;font-size:13px;display:block;overflow-x:auto}`,
     `.${s} th,.${s} td{border:1px solid ${tok.cardBorder};padding:6px 10px;text-align:left}`,
     `.${s} th{background-color:${tok.bandBg};font-weight:600}`,
+    `.${m}>svg{display:block;margin-left:auto;margin-right:auto}`,
   ].join('')
 }
-
-// /api/source admits up to 10 MiB; marked + DOMPurify run synchronously on
-// the main thread, so an adversarial large document is bounded here (T44.3f
-// P1) before any render work — 128K UTF-16 units comfortably covers real
-// docs while capping the worst case. Over the bound, the source is offered
-// instead of freezing the tab.
-const MARKDOWN_PREVIEW_MAX_UNITS = 131_072
-
-// T44.4f: aggregate diagram bound. The 128 KiB document limit still admits
-// thousands of tiny fences, each of which would import the renderer and
-// queue a full ELK render (uncancellable, re-queued on theme change). Only
-// the first N fences render; the rest stay source and never touch mermaid,
-// so an adversarial document cannot wedge the tab.
-const MAX_RENDERED_DIAGRAMS = 20
 
 function ViewTab({ href, label, active }: { href: string; label: string; active: boolean }) {
   const [css] = useStyletron()
@@ -546,6 +545,8 @@ function ViewTab({ href, label, active }: { href: string; label: string; active:
       aria-current={active ? 'true' : undefined}
       className={css({
         padding: '3px 10px',
+        display: 'inline-flex',
+        alignItems: 'center',
         fontSize: '11px',
         lineHeight: '18px',
         fontWeight: active ? 600 : 400,
@@ -554,6 +555,7 @@ function ViewTab({ href, label, active }: { href: string; label: string; active:
         backgroundColor: active ? tok.textPrimary : 'transparent',
         ':hover': active ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
         ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+        '@media screen and (max-width: 720px)': { minHeight: '44px' },
       })}
     >
       {label}
@@ -561,65 +563,61 @@ function ViewTab({ href, label, active }: { href: string; label: string; active:
   )
 }
 
-// T44.3: rendered markdown. The renderer (marked + DOMPurify) is the trust
-// boundary and lives in its own lazy chunk — imported only when a preview
-// actually renders, so the initial bundle never carries it. A render
-// failure falls back to a bounded notice, never a blank or raw HTML.
+// T44.3: rendered markdown. marked runs in a one-shot worker with a hard
+// termination deadline; its bounded HTML result is sanitized on the main
+// thread by an isolated DOMPurify instance. Both assets stay preview-lazy.
 function MarkdownPreview({ content }: { content: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  // The bound is checked before the lazy import, so an oversized document
-  // never touches marked/DOMPurify on the main thread.
   const tooLarge = content.length > MARKDOWN_PREVIEW_MAX_UNITS
-  const [segments, setSegments] = useState<MarkdownSegment[] | null>(null)
-  const [failed, setFailed] = useState(false)
+  const [rendered, setRendered] = useState<{
+    source: string
+    status: 'ready'
+    segments: MarkdownSegment[]
+  } | {
+    source: string
+    status: 'failed'
+  } | null>(null)
+  const current = rendered?.source === content ? rendered : null
   useEffect(() => {
     if (tooLarge) return
-    let active = true
-    setSegments(null)
-    setFailed(false)
-    void import('../markdown')
-      .then((mod) => {
-        if (active) setSegments(mod.segmentMarkdown(content))
+    const controller = new AbortController()
+    setRendered(null)
+    void import('../markdownPreview')
+      .then((mod) => mod.renderMarkdownPreview(content, controller.signal))
+      .then((segments) => {
+        if (!controller.signal.aborted) setRendered({ source: content, status: 'ready', segments })
       })
-      .catch(() => {
-        if (active) setFailed(true)
+      .catch((cause) => {
+        if (!controller.signal.aborted && !isAbortError(cause)) {
+          setRendered({ source: content, status: 'failed' })
+        }
       })
-    return () => { active = false }
+    return () => controller.abort()
   }, [content, tooLarge])
   if (tooLarge) {
     return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px', lineHeight: '18px' })}>This document is {Math.round(content.length / 1024)} KB; the preview is bounded to {MARKDOWN_PREVIEW_MAX_UNITS / 1024} KB. Switch to Markdown to read the full source.</div>
   }
-  if (failed) {
+  if (current?.status === 'failed') {
     return <div role="alert" className={css({ padding: '16px', color: tok.status.conflict.text, fontSize: '12px' })}>The preview could not be rendered. Switch to Markdown to read the source.</div>
   }
-  if (segments === null) {
+  if (current?.status !== 'ready') {
     return <div role="status" className={css({ padding: '16px', color: tok.textSecondary, fontSize: '12px' })}>Rendering preview…</div>
   }
   return (
-    <>
+    <div data-markdown-preview-ready="true">
       {/* Scoped, inert stylesheet (see markdownProseCss) — the class scopes
           every rule to the preview subtree (T44.3f). */}
       <style>{markdownProseCss(tok)}</style>
-      {(() => {
-        let diagram = 0
-        return segments.map((segment, index) => {
-          if (segment.kind === 'prose') {
-            return (
-              <div
-                key={index}
-                className={MARKDOWN_PROSE_CLASS}
-                // eslint-disable-next-line react/no-danger
-                dangerouslySetInnerHTML={{ __html: segment.html }}
-              />
-            )
-          }
-          const render = diagram < MAX_RENDERED_DIAGRAMS
-          diagram += 1
-          return <MermaidFence key={index} source={segment.source} render={render} />
-        })
-      })()}
-    </>
+      {current.segments.map((segment, index) => segment.kind === 'prose' ? (
+        <div
+          key={index}
+          className={MARKDOWN_PROSE_CLASS}
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: segment.html }}
+        />
+      ) : <MermaidFence key={index} source={segment.source} />)}
+    </div>
   )
 }
 
@@ -628,47 +626,53 @@ function MarkdownPreview({ content }: { content: string }) {
 // lazy renderer (mermaid + ELK, one async chunk fetched only because this
 // fence exists) succeeds. A failing fence keeps the source visible with a
 // one-line error above it: never a blank.
-function MermaidFence({ source, render }: { source: string; render: boolean }) {
+function MermaidFence({ source }: { source: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode } = useMode()
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState('')
   useEffect(() => {
-    // Beyond the aggregate cap the fence stays source and never imports the
-    // renderer (T44.4f) — this is what bounds an adversarial fence flood.
-    if (!render) {
-      setError(`preview renders at most ${MAX_RENDERED_DIAGRAMS} diagrams; this one is shown as source`)
-      return
-    }
+    const controller = new AbortController()
     let active = true
     setSvg(null)
     setError('')
     void import('../mermaid')
-      .then((mod) => mod.renderMermaid(source, mode, tok))
+      .then((mod) => mod.renderMermaid(source, mode, tok, controller.signal))
       .then((rendered) => {
         if (active) setSvg(rendered)
       })
       .catch((cause) => {
-        if (active) setError(String(cause).replace(/^Error:\s*/, '').split('\n')[0].slice(0, 200) || 'diagram failed to render')
+        if (active && !isAbortError(cause)) {
+          setError(String(cause).replace(/^Error:\s*/, '').split('\n')[0].slice(0, 200) || 'diagram failed to render')
+        }
       })
-    return () => { active = false }
-  }, [source, mode, tok, render])
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [source, mode, tok])
   if (svg !== null && error === '') {
     return (
-      <div
-        role="img"
-        aria-label="Mermaid diagram"
-        className={css({ margin: '0 0 14px', maxWidth: '760px', padding: '14px', border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto', backgroundColor: tok.pageBg })}
-        // Mermaid strict-mode output (labels escaped, no click bindings,
-        // no HTML labels) — the documented boundary, recorded in PLAN.md.
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: svg }}
-      />
+      <div className={css({ margin: '0 auto 14px', maxWidth: 'calc(72ch + 44px)' })}>
+        <div
+          role="img"
+          aria-label="Mermaid diagram"
+          className={`${MERMAID_DIAGRAM_CLASS} ${css({ padding: '14px', border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto', backgroundColor: tok.pageBg })}`}
+          // Mermaid strict-mode output (labels escaped, no click bindings,
+          // no HTML labels) — the documented boundary, recorded in PLAN.md.
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+        <details className={css({ marginTop: '6px', color: tok.textSecondary, fontSize: '11px', lineHeight: '16px' })}>
+          <summary className={css({ cursor: 'pointer', width: 'fit-content', minHeight: '24px', lineHeight: '24px', ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' }, '@media screen and (max-width: 720px)': { minHeight: '44px', lineHeight: '44px' } })}>Diagram source</summary>
+          <pre className={css({ margin: '6px 0 0', padding: '12px 14px', backgroundColor: tok.bandBg, border: `1px solid ${tok.innerSep}`, borderRadius: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '1.6', color: tok.plainCode })}>{source}</pre>
+        </details>
+      </div>
     )
   }
   return (
-    <div className={css({ margin: '0 0 14px', maxWidth: '760px' })}>
+    <div className={css({ margin: '0 auto 14px', maxWidth: 'calc(72ch + 44px)' })}>
       {error !== '' && (
         <div role="alert" className={css({ marginBottom: '6px', fontSize: '11px', lineHeight: '16px', color: tok.status.conflict.text })}>
           Diagram not rendered: {error}

@@ -195,6 +195,16 @@ specimen and already highlighted in every variant. No baseline changed. This
 supersedes the authentication blocker only; T44.2 remains open pending a clean
 retained comparison or a separately explicit exception.
 
+T44.3 is implementation-complete on a branch stacked above that open T44.2
+lineage. It closes the deferred Markdown receipt through an isolated
+page-scoped fixture (33 routes/134 PNGs), moves bounded parsing to a one-shot
+Worker, binds preview state to exact source identity, and closes Mermaid's
+pre-render resource and failed-layout-host boundaries. The complete 774-test
+UI suite, lint/build, four new retained comparisons, and desktop/390px browser
+checks pass. This does not complete T44.2 or authorize merge/integration;
+T44.5 remains the next unimplemented Epic 44 UI ticket after dependency-order
+routing.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

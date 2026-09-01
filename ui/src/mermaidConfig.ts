@@ -50,19 +50,60 @@ export function mermaidInitConfig(mode: 'light' | 'dark', tok: PhebsTokens) {
 // checks around it and the browser verifies the end-to-end path).
 
 // Untrusted diagram source may not reconfigure the renderer. A mermaid
-// directive block (%%{ init ... }%%, or any %%{...}%%) or a config-bearing
-// YAML frontmatter block can override layout/htmlLabels even with the secure
-// list set on some mermaid paths — so such a fence is refused outright and
-// shown as source. Benign title-only frontmatter is allowed.
+// directive block (%%{ init ... }%%, or any %%{...}%%) or YAML frontmatter
+// other than one conservative plain `title:` line is refused outright and
+// shown as source. This intentionally avoids approximating Mermaid/js-yaml
+// semantics: quoted, escaped, and flow-map config keys all fail closed.
 export function hasRendererDirective(source: string): boolean {
   if (/%%\{/.test(source)) return true
   const frontmatter = source.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/)
-  return frontmatter !== null && /(^|\n)\s*config\s*:/.test(frontmatter[1])
+  if (frontmatter === null) return false
+  const body = frontmatter[1].trim()
+  return !/^title:\s*[a-z0-9][a-z0-9 ._:/()-]*$/i.test(body)
+}
+
+// Mermaid creates live DOM while rendering. Some grammars can allocate an
+// Image, embed XHTML/KaTeX, or apply repository-authored CSS before the final
+// SVG exists, so post-render inspection is too late to prevent a fetch.
+// Refuse those grammar surfaces before Mermaid parses or renders:
+//   - property objects (`@{...}`) carry flowchart images and sequence icons;
+//   - C4's positional sprite argument cannot be distinguished lexically from
+//     ordinary strings, so C4 fails closed as a family;
+//   - raw/entity HTML, Markdown images, KaTeX, backslash escapes, and authored
+//     style directives are pre-DOM resource paths.
+// URL-looking labels also fail closed. The fence source remains visible.
+export function hasExternalResourceReference(source: string): boolean {
+  return /@\s*\{/i.test(source) ||
+    /(?:^|\n)\s*C4(?:Context|Container|Component|Dynamic|Deployment)\b/i.test(source) ||
+    /!\s*\[/i.test(source) ||
+    /<\s*\/?\s*[a-z!]/i.test(source) ||
+    /&(?:#[a-z0-9]+|[a-z][a-z0-9]+);/i.test(source) ||
+    /\\/.test(source) ||
+    /\$\$/.test(source) ||
+    /(?:^|[;\n])\s*(?:classDef|style|linkStyle)\b/i.test(source) ||
+    /\burl\s*\(/i.test(source) ||
+    /\b(?:https?|data|blob|file):/i.test(source) ||
+    /@import\b/i.test(source)
 }
 
 // Enforce the rendered-output contract regardless of how mermaid was
 // configured: no HTML labels (foreignObject), no script, no inline event
 // handlers. A violating SVG is refused and the source is shown instead.
 export function svgViolatesPolicy(svg: string): boolean {
-  return /<foreignObject/i.test(svg) || /<script/i.test(svg) || /\son[a-z]+\s*=/i.test(svg)
+  // Mermaid uses same-document fragment paint servers for ordinary markers
+  // (for example marker-end="url(#arrowhead)"). Those cannot fetch a
+  // resource. Remove only that exact closed form, then refuse every remaining
+  // url() so remote, protocol-relative, data, blob, and relative resources
+  // still fail closed.
+  const withoutFragmentPaintServers = svg.replace(
+    /\burl\(\s*(["']?)#[a-z0-9_.:-]+\1\s*\)/gi,
+    '',
+  )
+  const withoutFragmentLinks = withoutFragmentPaintServers.replace(
+    /\b(?:xlink:)?href\s*=\s*(["'])#[a-z0-9_.:-]+\1/gi,
+    '',
+  )
+  return /<(?:foreignObject|script|image|video|audio|iframe|object|embed|link)\b/i.test(svg) ||
+    /\son[a-z]+\s*=/i.test(svg) || /\burl\s*\(/i.test(withoutFragmentLinks) ||
+    /\b(?:xlink:)?href\s*=/i.test(withoutFragmentLinks)
 }

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './routes'
 import { DEFAULT_PALETTE } from '../src/palette'
+import { installReceiptFixture } from './fixture'
 
 type ReceiptWindow = typeof window & { __phebsReceiptPending?: number }
 
@@ -19,7 +20,7 @@ async function waitForReceiptReady(page: Page) {
     const states = await applicationMain.locator('[role="status"]').evaluateAll((nodes) =>
       nodes.map((node) => `${node.getAttribute('aria-label') ?? ''} ${node.textContent ?? ''}`.trim()),
     )
-    return states.some((state) => /\b(loading|reading|checking|searching)\b/i.test(state))
+    return states.some((state) => /\b(loading|reading|checking|searching|rendering)\b/i.test(state))
   }, { message: 'receipt route still renders a loading state', timeout: 30_000 }).toBe(false)
 
   let prior = ''
@@ -39,6 +40,7 @@ async function waitForReceiptReady(page: Page) {
 async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], density: (typeof DENSITIES)[number], name: string) {
   const { path } = route
   if (route.viewport) await page.setViewportSize(route.viewport)
+  await installReceiptFixture(page, route.fixture)
   // Fixed Date only — timers, rAF, and CodeMirror layout stay live; age copy
   // stops drifting between capture and check runs.
   await page.clock.setFixedTime(FROZEN_NOW)
