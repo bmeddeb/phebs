@@ -21,12 +21,19 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
+	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/resolvernamespace"
+	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
+	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -126,6 +133,17 @@ connections:
 	if err != nil {
 		t.Fatal(err)
 	}
+	serviceStatesV3BeforeRestore, err := st.ListAcceptedServiceStateV3Rows(
+		ctx, names[0], servicecatalogv3.MaxTotalServices,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relationshipV3BeforeRestore := publishRecoveryRelationshipV3(
+		t, ctx, dataDir, indexedBefore.IndexedCommitHash,
+		openedCatalogV3BeforeRestore.Generation, serviceStatesV3BeforeRestore,
+		*serviceStateV3SummaryBeforeRestore, st,
+	)
 	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -565,8 +583,20 @@ connections:
 	if report, err := restored.ValidateServiceCatalogV3Precious(ctx); err != nil ||
 		report.HistoricalRoots != 1 || report.CollectingRoots != 0 ||
 		report.Members != len(catalogV3BeforeRestore.Members) ||
-		report.StateRows != 1 || report.StateSummaries != 1 || report.StatePlans != 0 {
+		report.StateRows != 1 || report.StateSummaries != 1 || report.StatePlans != 0 ||
+		report.RelationshipReferences != 1 {
 		t.Fatalf("restored catalog v3 precious = %+v, %v", report, err)
+	}
+	restoredRelationshipV3, err := relationshippublication.OpenCurrentV3(
+		ctx, filepath.Join(dataDir, "relationships"), names[0],
+	)
+	if err != nil || !reflect.DeepEqual(
+		restoredRelationshipV3.Root(), relationshipV3BeforeRestore,
+	) {
+		t.Fatalf(
+			"restored relationship v3 = %+v, %v; want %+v",
+			restoredRelationshipV3, err, relationshipV3BeforeRestore,
+		)
 	}
 	serviceStateV3SummaryAfterRestore, err := restored.GetServiceStateV3Summary(ctx, names[0])
 	if err != nil || !reflect.DeepEqual(
@@ -790,6 +820,105 @@ connections:
 	}); err == nil || !strings.Contains(err.Error(), "not empty") {
 		t.Fatalf("second restore error = %v, want non-empty-target refusal", err)
 	}
+}
+
+type recoveryRelationshipSource struct {
+	authority observationpublication.DownstreamAuthority
+}
+
+func (source recoveryRelationshipSource) DownstreamAuthority() observationpublication.DownstreamAuthority {
+	return source.authority
+}
+
+func (recoveryRelationshipSource) WalkObserved(
+	ctx context.Context,
+	_ func(observationpublication.Record, sourceobservation.Observation) error,
+) error {
+	return ctx.Err()
+}
+
+func publishRecoveryRelationshipV3(
+	t *testing.T,
+	ctx context.Context,
+	dataDir, commit string,
+	catalog servicecatalogv3.Generation,
+	states []servicecatalog.ServiceState,
+	summary servicecatalog.RepositoryState,
+	pins relationshippublication.PublishPinStoreV3,
+) relationshippublication.RootV3 {
+	t.Helper()
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	repository := catalog.Root.Binding.Repository
+	for _, name := range []string{
+		"relationships", "relationship-resolver-namespaces",
+		"relationship-rpc-postings", "relationship-kafka-postings",
+	} {
+		if err := os.MkdirAll(filepath.Join(dataDir, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	observation := observationpublication.DownstreamAuthority{
+		Version: observationpublication.DownstreamAuthorityV2, Repository: repository,
+		SourceGenerationDigest: digest("1"), SourceRootDigest: digest("2"),
+		ObservationGenerationDigest: digest("3"), ObservationRootDigest: digest("4"),
+		PartitionPolicyDigest: digest("5"), ObservationPolicyDigest: digest("6"),
+		InventoryPolicyDigest: digest("7"),
+	}
+	upstream, err := downstreamauthority.Build(observation, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolverStage, err := resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
+		BuildRequest: resolvernamespace.BuildRequest{
+			Root:       filepath.Join(dataDir, "relationship-resolver-namespaces"),
+			Repository: repository, Commit: commit,
+			ResolverGenerationDigest: digest("8"), ResolverManifestDigest: digest("9"),
+		},
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver, err := resolverStage.Publish(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := recoveryRelationshipSource{authority: observation}
+	rpcStage, err := rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
+		Root:         filepath.Join(dataDir, "relationship-rpc-postings"),
+		Observations: source, Resolver: resolver, Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpc, err := rpcStage.Publish(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafkaStage, err := kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
+		Root:         filepath.Join(dataDir, "relationship-kafka-postings"),
+		Observations: source, Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kafka, err := kafkaStage.Publish(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := relationshippublication.BuildV3(ctx, relationshippublication.BuildRequestV3{
+		Root: filepath.Join(dataDir, "relationships"), Catalog: catalog,
+		States: states, ServiceSummary: summary, Resolver: resolver,
+		RPC: rpc, Kafka: kafka, Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := relationshippublication.PublishV3(ctx, prepared, pins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return publication.Root()
 }
 
 func requireRecoveryJob(

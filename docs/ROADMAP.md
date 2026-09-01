@@ -163,7 +163,8 @@ and T43R.2 completed on 2026-08-30 and T43R.3–5 completed on 2026-08-31.
 T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
-release claim; T41.2–T41.7 are integrated. T41.8 is next.
+release claim; T41.2–T41.7 are integrated. T41.8 is complete on its ticket
+branch, and T41.9 is next after integration.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -925,10 +926,12 @@ service count × repository bytes
   segmented service-query runtime, and one-pass relationship state snapshots.
   T41.7 adds authorization-first directory/search transport parity,
   HMAC-bound continuations, and the approved bounded existing-directory
-  handoff while v3 remains runtime-dark. Next, bucket relationship
-  publications and close on a neutral
-  10,000-service recovery/lifecycle/product gate. No constants-only increase
-  is permitted.
+  handoff while v3 remains runtime-dark. T41.8 adds the separately pinned,
+  bucketed dark relationship root, sparse service/repository reads, exact
+  recovery/archive ownership, and a sixteenth bounded lifecycle owner without
+  selecting it. T41.9 next owns atomic runtime registration and reverse
+  transition; T41.10 closes on the neutral 10,000-service recovery/lifecycle/
+  product gate. No constants-only increase is permitted.
 - **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
   freeze a deterministic combined corpus and independent oracle, execute cold,
   no-op, delta, A→B→A, interruption, restore, pressure, lifecycle, and product
@@ -992,7 +995,14 @@ catalog, relationship, or correctness authority.
   clearing plans, and indexed desired/active roots protect historical catalogs.
   The 10,000-service proof bounds every chunk at 512 rows, cold writes at
   10,000 rows, activation writes at 10,000, and one-service deltas at one row.
-  T41.3–T41.7 are integrated; T41.8 is next.
+  T41.3–T41.7 are integrated.
+- T41.8 keeps v3 runtime-dark while publishing an at-most-256-KiB control root,
+  256 repository buckets, and at-most-512-service ranges. It retains accepted
+  references and every nonaccepted placement claim, pins exact catalog and
+  extraction authority before publication, makes point reads member-local,
+  and adds complete canonical recovery, archive/restore, lease, rollback, and
+  bounded lifecycle ownership. It is complete on its ticket branch; T41.9 is
+  next after integration and remains the only runtime-selector owner.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

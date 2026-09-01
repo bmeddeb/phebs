@@ -7,20 +7,21 @@ import (
 )
 
 const (
-	CatalogOwner       = "catalog-generations"
-	CatalogV3Owner     = "catalog-v3-generations"
-	SourceOwner        = "source-generations"
-	SearchOwner        = "search-generations"
-	ObservationOwner   = "observation-namespaces"
-	ObservationV2Owner = "observation-v2-generations"
-	ResolverOwner      = "resolver-namespaces"
-	RelationshipOwner  = "relationship-namespaces"
-	ProofOwner         = "proof-bundles"
-	InvestigationOwner = "investigations"
-	ReaderOwner        = "readers"
-	JobOwner           = "durable-jobs"
-	TombstoneOwner     = "service-tombstones"
-	PartialStageOwner  = "partial-stages"
+	CatalogOwner        = "catalog-generations"
+	CatalogV3Owner      = "catalog-v3-generations"
+	SourceOwner         = "source-generations"
+	SearchOwner         = "search-generations"
+	ObservationOwner    = "observation-namespaces"
+	ObservationV2Owner  = "observation-v2-generations"
+	ResolverOwner       = "resolver-namespaces"
+	RelationshipOwner   = "relationship-namespaces"
+	RelationshipV3Owner = "relationship-v3-namespaces"
+	ProofOwner          = "proof-bundles"
+	InvestigationOwner  = "investigations"
+	ReaderOwner         = "readers"
+	JobOwner            = "durable-jobs"
+	TombstoneOwner      = "service-tombstones"
+	PartialStageOwner   = "partial-stages"
 )
 
 type StaticOwner struct {

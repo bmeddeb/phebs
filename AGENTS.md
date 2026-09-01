@@ -714,7 +714,10 @@ reviewed runtime-dark v3 contract is integrated. T41.3's dark ingestion and
 immutable authority, T41.4's recovery/lifecycle ownership, and T41.5's
 resumable state reconcile/activation are also integrated. T41.6's sparse
 catalog/state/search backend and T41.7's authorized directory/search transport
-parity are integrated; T41.8 is next. Epic 42 still owns combined-scale proof.
+parity are integrated. T41.8's runtime-dark bucketed relationship publication,
+canonical recovery/archive ownership, exact pins, sparse reads, and sixteenth
+bounded lifecycle owner are complete on its ticket branch; T41.9 is next after
+integration and alone owns runtime selection. Epic 42 still owns combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

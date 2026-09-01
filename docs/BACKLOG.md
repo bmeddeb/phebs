@@ -3037,24 +3037,8 @@ projection is 3,052,846 bytes and cannot fit the existing 1-MiB wire, so T41.1
 selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
-production constant or runtime registration. T41.2–T41.7 are integrated. T41.8
-is next.
-
-**T41.8 · Dark bucketed relationship publication** — replace
-one-file-per-service relationship storage and the monolithic hot root with a
-small control root plus bounded buckets in the v3 shadow namespace. Preserve
-accepted-placement and nonaccepted-claim evidence. Keep the existing
-20-million total-reference,
-one-million per-service, 512-MiB resident, and 20-GiB generation ceilings unless
-T41.1 reduces them. AC: T41.1's exact empty/mixed/dense reference and
-claims-per-placement distributions drive maximum tests; repository/service
-reads touch required buckets only; full build streams catalog/state once;
-service-local failure remains visible; root identity binds incarnation/
-desired set and every upstream generation; complete validation/recovery is
-before pointer swap; lifecycle drains bounded buckets rather than one file per
-service; pins, leases, rollback floor, archive/restore, pressure, and corrupt
-derived omission remain exact; v1/v2 relationship authority remains
-byte-identical and selected; full merge bar.
+production constant or runtime registration. T41.2–T41.7 are integrated;
+T41.8 is complete on its ticket branch, and T41.9 is next after integration.
 
 **T41.9 · Atomic v3 runtime registration and reverse transition** — add an
 explicit operator/config opt-in only after dark catalog, state, search, and

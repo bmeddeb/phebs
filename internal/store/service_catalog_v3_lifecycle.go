@@ -36,15 +36,16 @@ type ServiceCatalogV3StartupReport struct {
 }
 
 type ServiceCatalogV3PreciousReport struct {
-	HistoricalRoots int
-	CollectingRoots int
-	Members         int
-	StateRows       int
-	StateSummaries  int
-	StatePlans      int
-	LogicalBytes    int64
-	RootBytes       int64
-	MemberBytes     int64
+	HistoricalRoots        int
+	CollectingRoots        int
+	Members                int
+	StateRows              int
+	StateSummaries         int
+	StatePlans             int
+	RelationshipReferences int
+	LogicalBytes           int64
+	RootBytes              int64
+	MemberBytes            int64
 }
 
 type ServiceCatalogV3LifecycleSweep struct {
@@ -931,6 +932,7 @@ SELECT * FROM service_catalog_v3_lifecycle
 	}
 	report := ServiceCatalogV3PreciousReport{}
 	states := make(map[string]string, len(rows))
+	repositories := make(map[string]string, len(rows))
 	for _, record := range rows {
 		if !validSHA256Digest(record.RootDigest) {
 			return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
@@ -965,6 +967,7 @@ SELECT * FROM service_catalog_v3_lifecycle
 			return ServiceCatalogV3PreciousReport{}, validateErr
 		}
 		states[record.RootDigest] = record.State
+		repositories[record.RootDigest] = record.Repository
 		report.RootBytes += int64(record.RootBytes)
 		report.MemberBytes += memberBytes
 		report.Members += members
@@ -1045,6 +1048,35 @@ SELECT * FROM service_catalog_v3_state_reference
 			return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
 		}
 	}
+	relationshipReferenceResults, err := surrealdb.Query[[]serviceCatalogV3RelationshipReferenceRec](ctx, s.db, `
+SELECT * FROM service_catalog_v3_relationship_reference
+	ORDER BY id LIMIT $limit`, map[string]any{
+		"limit": MaxServiceCatalogV3RelationshipReferences + 1,
+	})
+	if err != nil {
+		return ServiceCatalogV3PreciousReport{}, err
+	}
+	relationshipReferences := firstDomainRows(relationshipReferenceResults)
+	if len(relationshipReferences) > MaxServiceCatalogV3RelationshipReferences {
+		return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
+	}
+	for _, reference := range relationshipReferences {
+		wanted := ServiceCatalogV3RelationshipReference{
+			Repository:                   reference.Repository,
+			RelationshipGenerationDigest: reference.RelationshipGenerationDigest,
+			RelationshipRootDigest:       reference.RelationshipRootDigest,
+			CatalogRootDigest:            reference.CatalogRootDigest,
+			CatalogControlRevision:       reference.CatalogControlRevision,
+			StateControlRevision:         reference.StateControlRevision,
+			StateSummaryDigest:           reference.StateSummaryDigest,
+		}
+		if validateServiceCatalogV3RelationshipReference(wanted) != nil ||
+			!equalServiceCatalogV3RelationshipReference(reference, wanted) ||
+			states[reference.CatalogRootDigest] != serviceCatalogV3Historical ||
+			repositories[reference.CatalogRootDigest] != reference.Repository {
+			return ServiceCatalogV3PreciousReport{}, ErrInvalidServiceCatalogV3Lifecycle
+		}
+	}
 	stateRows, stateSummaries, statePlans, err := s.validateServiceStateV3Precious(
 		ctx, states, candidateRoots,
 	)
@@ -1054,6 +1086,7 @@ SELECT * FROM service_catalog_v3_state_reference
 	report.StateRows = stateRows
 	report.StateSummaries = stateSummaries
 	report.StatePlans = statePlans
+	report.RelationshipReferences = len(relationshipReferences)
 	return report, nil
 }
 
@@ -1173,6 +1206,9 @@ LET $candidate = (SELECT root_digest FROM service_catalog_v3_candidate
 	WHERE repository = $repository LIMIT 1)[0].root_digest;
 LET $state_refs = array::len(SELECT id FROM service_catalog_v3_state_reference
 	WHERE root_digest = $digest LIMIT 1);
+LET $relationship_refs = array::len(SELECT id
+	FROM service_catalog_v3_relationship_reference
+	WHERE catalog_root_digest = $digest LIMIT 1);
 LET $desired_refs = array::len(SELECT id FROM service_state_v3_current
 	WHERE desired_catalog_generation = $digest LIMIT 1);
 LET $active_refs = array::len(SELECT id FROM service_state_v3_current
@@ -1187,7 +1223,8 @@ LET $eligible = $row != NONE AND $row.root_digest = $digest
 	AND $row.member_cursor = 0 AND $row.member_count = $member_count
 	AND $row.logical_bytes = $logical_bytes AND $row.root_bytes = $root_bytes
 	AND $row.member_bytes = $member_bytes AND $candidate != $digest
-	AND $state_refs = 0 AND $desired_refs = 0 AND $active_refs = 0
+	AND $state_refs = 0 AND $relationship_refs = 0
+	AND $desired_refs = 0 AND $active_refs = 0
 	AND $digest NOT IN $newest_prior;
 LET $transitioned = IF $eligible THEN
 	(UPDATE $rid SET state = 'collecting', tombstoned_at = time::now()
@@ -1288,10 +1325,14 @@ LET $candidate = (SELECT root_digest FROM service_catalog_v3_candidate
 	WHERE repository = $repository LIMIT 1)[0].root_digest;
 LET $state_refs = array::len(SELECT id FROM service_catalog_v3_state_reference
 	WHERE root_digest = $root_digest LIMIT 1);
+LET $relationship_refs = array::len(SELECT id
+	FROM service_catalog_v3_relationship_reference
+	WHERE catalog_root_digest = $root_digest LIMIT 1);
 IF $row = NONE OR $row.state != 'collecting'
 	OR $row.root_digest != $root_digest OR $row.repository != $repository
 	OR $row.member_cursor != $member_cursor OR $row.member_count != $member_count
-	OR $candidate = $root_digest OR $state_refs != 0 {
+	OR $candidate = $root_digest OR $state_refs != 0
+	OR $relationship_refs != 0 {
 	THROW 'phebs-permanent: service catalog v3 collecting fence changed'
 };
 LET $edge = (SELECT * FROM $edge_rid LIMIT 1)[0];
@@ -1349,11 +1390,14 @@ LET $candidate = (SELECT root_digest FROM service_catalog_v3_candidate
 	WHERE repository = $repository LIMIT 1)[0].root_digest;
 LET $state_refs = array::len(SELECT id FROM service_catalog_v3_state_reference
 	WHERE root_digest = $root_digest LIMIT 1);
+LET $relationship_refs = array::len(SELECT id
+	FROM service_catalog_v3_relationship_reference
+	WHERE catalog_root_digest = $root_digest LIMIT 1);
 LET $edges = array::len(SELECT id FROM service_catalog_v3_root_member
 	WHERE root_digest = $root_digest LIMIT 1);
 IF $row = NONE OR $row.state != 'collecting'
 	OR $row.member_cursor != $row.member_count OR $candidate = $root_digest
-	OR $state_refs != 0 OR $edges != 0 {
+	OR $state_refs != 0 OR $relationship_refs != 0 OR $edges != 0 {
 	THROW 'phebs-permanent: service catalog v3 finalize fence changed'
 };
 LET $deleted_root = DELETE $root_rid RETURN BEFORE;

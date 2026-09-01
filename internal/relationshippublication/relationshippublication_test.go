@@ -1496,7 +1496,7 @@ func TestRecoveryDiscoveryReservesUnionHeadroomAtRelationshipCeiling(t *testing.
 	if err := os.MkdirAll(filepath.Join(componentBase, extra), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	hashes, _, invalid, err := discoverRecoveryNamespaces(dataDir)
+	hashes, _, invalid, err := discoverRecoveryNamespaces(t.Context(), dataDir)
 	if err != nil || invalid != 0 || len(hashes) != MaxLifecycleRepositories+1 || hashes[len(hashes)-1] != extra {
 		t.Fatalf("recovery union = %d namespaces, invalid=%d, err=%v", len(hashes), invalid, err)
 	}
@@ -1514,12 +1514,15 @@ func TestRecoveryOwnerSelectionIsIndependentOfRepairGenerationEnvelope(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	protected, err := recoveryProtectedGenerations(directory, entries)
+	protected, incomplete, err := recoveryProtectedGenerations(directory, entries)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(protected) != RetainedGenerations-1 || MaxRecoveryOwners != 16_384 {
-		t.Fatalf("protected owners = %d, global bound = %d", len(protected), MaxRecoveryOwners)
+	if len(protected) != RetainedGenerations-1 || !incomplete || MaxRecoveryOwners != 32_768 {
+		t.Fatalf(
+			"protected owners = %d, incomplete=%t, global bound = %d",
+			len(protected), incomplete, MaxRecoveryOwners,
+		)
 	}
 }
 

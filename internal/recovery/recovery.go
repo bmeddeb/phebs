@@ -612,6 +612,18 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("repair restored catalog v3 state: %w", err)
 	}
+	relationshipReport, err := relationshippublication.RecoverAll(ctx, target, st)
+	if err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("repair restored relationship publications: %w", err)
+	}
+	if relationshipReport.Invalid != 0 {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf(
+			"repair restored relationship publications: %d invalid namespace(s)",
+			relationshipReport.Invalid,
+		)
+	}
 	if _, err := st.ValidateServiceCatalogV3Precious(ctx); err != nil {
 		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("validate restored catalog v3 inventory: %w", err)

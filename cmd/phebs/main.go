@@ -561,6 +561,7 @@ func serve(args []string) error {
 	observationCache := &observationpublication.Cache{}
 	observationInventoryCache := &observationpublication.InventoryCacheV2{}
 	relationshipCache := &relationshippublication.Cache{}
+	relationshipV3Cache := &relationshippublication.CacheV3{}
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ObservationGenerationOwner{
 		Root: filepath.Join(cfg.Server.DataDir, "observations"),
 		Pins: observationCache, Acquire: acquireLifecycleMutation,
@@ -572,6 +573,10 @@ func serve(args []string) error {
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwner{
 		DataDir: cfg.Server.DataDir, Pins: relationshipCache,
+		AcquireExclusive: acquireObservationTransition, Store: st,
+	})
+	lifecycleOwners = append(lifecycleOwners, lifecycle.RelationshipGenerationOwnerV3{
+		DataDir: cfg.Server.DataDir, Pins: relationshipV3Cache,
 		AcquireExclusive: acquireObservationTransition, Store: st,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ExtractionStageOwner{
@@ -650,13 +655,9 @@ func serve(args []string) error {
 		observationpublication.RecoverInventoryPublicationsV2(
 			ctx, filepath.Join(cfg.Server.DataDir, "observations"),
 		)
-	var relationshipRecovery relationshippublication.RecoveryReport
-	var relationshipRecoveryErr error
-	if relationshipRuntime != nil {
-		relationshipRecovery, relationshipRecoveryErr = relationshippublication.RecoverAll(
-			ctx, cfg.Server.DataDir, st,
-		)
-	}
+	relationshipRecovery, relationshipRecoveryErr := relationshippublication.RecoverAll(
+		ctx, cfg.Server.DataDir, st,
+	)
 	releaseObservationRecovery()
 	if observationV2RecoveryErr != nil {
 		return fmt.Errorf("recover observation v2 publications: %w", observationV2RecoveryErr)

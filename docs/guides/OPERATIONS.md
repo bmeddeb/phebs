@@ -2945,6 +2945,7 @@ may override these protections.
 | joint v2 observation generations | 14 days | current + 1 rollback per repository | separate 20 GiB encoded-member and 20 GiB segment-charged observation-byte ceilings per generation |
 | resolver namespaces | 14 days | 2 per repository | 10 GiB encoded members per repository |
 | relationship namespaces | 14 days | 2 per repository | 20 GiB encoded members per repository |
+| dark relationship-v3 namespaces | 14 days | current + 1 rollback per repository | 20 GiB encoded repository/service members per generation |
 | abandoned partial stages | 24 hours | 2 per repository/stage | charged to the owning artifact class |
 | settled generation schedules/chunks | 7 days | 2 per repository/stage | row count only; no byte substitution |
 | terminal rows in each existing durable job table | 30 days | 100,000 per table | row count only; no database-byte claim |
@@ -2974,7 +2975,7 @@ prior generation leave the live-root set. Proof and Investigation pins and
 active leases always win, even if disk remains above 90%. T35.3 rechecks all
 roots immediately before collection and coordinates with backup.
 
-The installed controller has fifteen closed owners and advances one owner per
+The installed controller has sixteen closed owners and advances one owner per
 turn through durable CAS cursors. A successful turn uses at most sixteen store
 queries including four cursor operations, 64 candidate rows, sixteen deleted
 rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
@@ -3112,8 +3113,9 @@ Administrators can open Settings or request `GET /api/lifecycle-status` to see
 the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
 source. The response is capped at 16 KiB and reports only enabled state, fixed
 turn/watermark limits, the latest allocated-capacity class, and one latest
-source-free result for each of the fifteen owners, including the real
-`search-generations` and dark `catalog-v3-generations` owners. The latter adds
+source-free result for each of the sixteen owners, including the real
+`search-generations` and dark `catalog-v3-generations` and
+`relationship-v3-namespaces` owners. The catalog-v3 owner adds
 exact latest-turn `logical_bytes`, `root_bytes`, and `member_bytes`; other
 owners report zero for those metric kinds. The response contains no cursor,
 repository, generation, path, retained content, or raw error. A status request
@@ -4088,6 +4090,72 @@ corrupt or in-flight relationship state is counted as omitted and rebuilt
 after restore rather than blocking the precious database export. Operators
 must continue to treat these roots as derived immutable authority and never
 edit or promote them manually.
+
+T41.8 adds a separate `relationship-publications-v3-shadow` namespace and
+`relationship-v3-namespaces` lifecycle owner. It remains dark: no current
+configuration, HTTP, MCP, UI, search, or relationship request selects it.
+Each complete v3 generation has one at-most-256-KiB control root, at most 256
+repository buckets, and ordered service-range members holding at most 512
+services each. A repository projection with many placement claims is split
+into aligned at-most-512-claim fragments, up to eight; nonaccepted and unowned
+placement evidence remains present, while only accepted claims create service
+references. A current point service or projection inspection reads its pointer
+twice, cold-opens and hashes the control root once, and reads and hashes one
+required member. Warm reuse removes only the root read and hash. Use the
+complete validator—not sparse reads—for publication, recovery, archive, or
+operator diagnosis.
+
+The v3 relationship cache has no separate entry-count cap. Within the
+at-most-4,096-repository recovered namespace it retains one decoded current
+root per accessed repository, plus any replaced root whose lease is still
+live; explicit historical roots leave after their final lease. Its one mutex
+protects only map reservations, retirement, and reference counts. File I/O and
+validation remain outside the mutex. Historical cold fills coalesce, while
+concurrent current cold misses can repeat the bounded root read. A changed
+pointer replaces that repository's entry; no cache-wide invalidation scan runs.
+
+V3 publication fully validates the staged generation, then installs the exact
+catalog-root reference and extraction-run owners before its marker and current
+pointer. Startup accepts only canonical controls, reconstructs each valid pin
+additively before any complete-set reconcile, and defers both reconciles when
+an additional regular generation remains readable outside the current and
+rollback audit. Lifecycle then performs the required rename-before-unpin. A
+corrupt derived namespace stays invisible without allowing one corrupt sibling
+to unprotect a valid catalog root. The owner keeps current plus one rollback
+generation, respects exact cache leases, renames a retired generation out of
+read authority, releases extraction and catalog pins, and then drains only the
+configured delete limit. Shared resolver/RPC/Kafka bytes remain until neither
+retained v1/v2 nor v3 roots reference them; a v3-only root union above 64
+generations defers rather than widening one lifecycle turn.
+
+The first store upgrade performs the empty-table preflight, schema and index
+definitions, marker transaction, and verification read. A later startup does
+one marker read, then holds the existing exclusive relationship-mutation lock
+across observation and relationship recovery. A retained marker receives one
+catalog-reference repair plus bounded extraction-owner repair; the protected
+audit repeats those idempotent repairs once per valid v3 root. A complete
+current/rollback audit also writes each of at most 16,384 catalog references
+once, performs one bounded reference inventory/delete pass, and reconciles the
+fixed extraction-owner set.
+
+Each v3 lifecycle turn holds that exclusive lock through its filesystem sweep,
+store unpins, and confirmation. It inventories at most 4,096 repository
+directories and at most 20,000 direct entries for the selected repository,
+inspects at most 64 retirement candidates, validates at most one admitted
+generation, and drains only the configured delete limit. The retained-component
+union reads and validates at most 64 v3 roots before the existing bounded
+resolver/RPC/Kafka sweep; more roots defer the turn.
+
+When v3 is present, live archive full-validates each current generation (at
+most 769 files), walks its exact resolver/RPC/Kafka publication trees, and
+copies within the shared 20,000,000-entry and 1-TiB limits. It then extracts
+and revalidates the completed archive once. Restore extracts and validates once
+into a stage, installs it, then runs bounded relationship recovery before
+serving. A missing v3 namespace adds one presence lookup and no generation or
+component read; shared component bytes are deduplicated when legacy and v3
+authority coexist. Do not copy, edit, promote, or manually delete v3 controls,
+members, references, or collecting directories. T41.9 owns any future runtime
+selection or reverse transition.
 
 When resolver adapters are enabled, T37.5 exposes the shared exact reader over
 HTTP and MCP. `GET /api/service-relationships` (MCP

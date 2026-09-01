@@ -149,6 +149,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateServiceStateV3Schema(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateServiceCatalogV3RelationshipReferenceSchema(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilityPreMigrationSchema, nil)
 	if err != nil {
 		return err

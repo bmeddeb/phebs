@@ -1065,7 +1065,10 @@ func readRegular(path string, limit int) ([]byte, error) {
 	}
 	defer func() { _ = file.Close() }()
 	opened, err := file.Stat()
-	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
 		return nil, fmt.Errorf("%w: file identity changed", ErrInvalid)
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, int64(limit)+1))
@@ -1074,7 +1077,13 @@ func readRegular(path string, limit int) ([]byte, error) {
 	}
 	afterOpen, openErr := file.Stat()
 	afterPath, pathErr := os.Lstat(path)
-	if openErr != nil || pathErr != nil || len(raw) > limit || !os.SameFile(opened, afterOpen) ||
+	if openErr != nil {
+		return nil, openErr
+	}
+	if pathErr != nil {
+		return nil, pathErr
+	}
+	if len(raw) > limit || !os.SameFile(opened, afterOpen) ||
 		!os.SameFile(opened, afterPath) || afterPath.Mode()&os.ModeSymlink != 0 ||
 		int64(len(raw)) != afterOpen.Size() || opened.Size() != afterOpen.Size() ||
 		!opened.ModTime().Equal(afterOpen.ModTime()) {

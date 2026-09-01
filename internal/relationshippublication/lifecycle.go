@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,6 +36,7 @@ type LifecycleResult struct {
 	Deleted          int
 	More             bool
 	ReleasedPinOwner string
+	ReleasedRootV3   *RootV3
 }
 
 type PinChecker interface {
@@ -255,6 +258,18 @@ func SweepLifecycle(
 	if err != nil {
 		return result, err
 	}
+	v3Deferred, err := addComponentReferencesV3(
+		&references,
+		filepath.Join(root, RelationshipPublicationsV3Shadow, result.Cursor),
+		result.Cursor,
+	)
+	if err != nil {
+		return result, err
+	}
+	if v3Deferred {
+		result.More = true
+		return result, nil
+	}
 	deleted, more, scanned, err := sweepOrphanComponent(
 		dataDir, result.Cursor, references, deleteLimit,
 	)
@@ -270,13 +285,17 @@ type componentReferenceSet struct {
 	kafka    map[string]struct{}
 }
 
-func componentReferences(
-	repositoryDirectory string, generations []lifecycleGeneration,
-) (componentReferenceSet, error) {
-	result := componentReferenceSet{
+func newComponentReferenceSet() componentReferenceSet {
+	return componentReferenceSet{
 		resolver: make(map[string]struct{}), rpc: make(map[string]struct{}),
 		kafka: make(map[string]struct{}),
 	}
+}
+
+func componentReferences(
+	repositoryDirectory string, generations []lifecycleGeneration,
+) (componentReferenceSet, error) {
+	result := newComponentReferenceSet()
 	for _, generation := range generations {
 		raw, err := readRegular(filepath.Join(repositoryDirectory, generation.name, "root.json"), MaxRootBytes)
 		if err != nil {
@@ -516,6 +535,9 @@ func drainFlatGeneration(directory string, budget int) (int, bool, error) {
 }
 
 func boundedLifecycleDirectory(path string, limit int) ([]os.DirEntry, error) {
+	if limit < 0 {
+		return nil, ErrLimit
+	}
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
@@ -523,13 +545,32 @@ func boundedLifecycleDirectory(path string, limit int) ([]os.DirEntry, error) {
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, invalidLifecycle("lifecycle directory")
 	}
-	entries, err := os.ReadDir(path)
+	directory, err := os.Open(path)
 	if err != nil {
 		return nil, err
+	}
+	opened, statErr := directory.Stat()
+	if statErr != nil || !os.SameFile(info, opened) || !opened.IsDir() {
+		_ = directory.Close()
+		if statErr != nil {
+			return nil, statErr
+		}
+		return nil, invalidLifecycle("lifecycle directory identity")
+	}
+	entries, readErr := directory.ReadDir(limit + 1)
+	closeErr := directory.Close()
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		return nil, readErr
+	}
+	if closeErr != nil {
+		return nil, closeErr
 	}
 	if len(entries) > limit {
 		return nil, ErrLimit
 	}
+	slices.SortFunc(entries, func(left, right os.DirEntry) int {
+		return strings.Compare(left.Name(), right.Name())
+	})
 	return entries, nil
 }
 
@@ -539,11 +580,22 @@ func boundedLifecycleDirectory(path string, limit int) ([]os.DirEntry, error) {
 func ConfirmLifecycleUnpin(
 	ctx context.Context, dataDir, repositoryHashValue, owner string,
 ) error {
+	return confirmLifecycleUnpinAt(
+		ctx, dataDir, "relationship-publications", repositoryHashValue, owner,
+	)
+}
+
+func confirmLifecycleUnpinAt(
+	ctx context.Context,
+	dataDir, namespace, repositoryHashValue, owner string,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if !filepath.IsAbs(dataDir) || len(repositoryHashValue) != 64 ||
-		!validLowerHex(repositoryHashValue) || !strings.HasPrefix(owner, "relationship:sha256:") {
+		!validLowerHex(repositoryHashValue) ||
+		(namespace != "relationship-publications" && namespace != RelationshipPublicationsV3Shadow) ||
+		!strings.HasPrefix(owner, "relationship:sha256:") {
 		return invalidLifecycle("collection unpin identity")
 	}
 	generation := strings.TrimPrefix(owner, "relationship:sha256:")
@@ -551,7 +603,7 @@ func ConfirmLifecycleUnpin(
 		return invalidLifecycle("collection generation")
 	}
 	directory := filepath.Join(
-		dataDir, "relationships", "relationship-publications", repositoryHashValue,
+		dataDir, "relationships", namespace, repositoryHashValue,
 		"collecting-"+generation,
 	)
 	info, err := os.Lstat(directory)
@@ -589,7 +641,13 @@ func collectionUnpinned(directory string) (bool, error) {
 }
 
 func drainUnpinnedCollection(directory string, budget int) (int, bool, error) {
-	entries, err := boundedLifecycleDirectory(directory, MaxRepositoryRepairEntries)
+	return drainUnpinnedCollectionBounded(directory, budget, MaxRepositoryRepairEntries)
+}
+
+func drainUnpinnedCollectionBounded(
+	directory string, budget, inventoryLimit int,
+) (int, bool, error) {
+	entries, err := boundedLifecycleDirectory(directory, inventoryLimit)
 	if err != nil {
 		return 0, false, err
 	}
@@ -659,7 +717,7 @@ func readCurrentPointer(root, repository string) (Pointer, error) {
 	return value, nil
 }
 
-func invalidLifecycle(label string) error { return errors.Join(ErrInvalid, errors.New(label)) }
+func invalidLifecycle(label string) error { return fmt.Errorf("%w: %s", ErrInvalid, label) }
 
 func jsonMarshal(value any) ([]byte, error) { return json.Marshal(value) }
 

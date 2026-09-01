@@ -10663,3 +10663,93 @@ schema migration, worker, child, Git/source/corpus read, lifecycle turn, new
 lock, cache enlargement, production cap, release/SLO, topology, migration, or
 decommission claim is added. T41.6–T41.7 are integrated on the current-main
 lineage; T41.8 is next and T41.9 still owns runtime selection.
+
+**T41.8 ✅ · Dark bucketed relationship publication**
+*(2026-08-31; high)* — the runtime-dark v3 relationship authority now replaces
+the monolithic root and one-file-per-service layout with one at-most-256-KiB
+control root, at most 256 deterministic repository buckets, and at most 512
+ordered service ranges of at most 512 services each. A projection with up to
+4,000 claims is represented by at most eight aligned 512-claim fragments.
+Accepted claims alone create service references; proposal, conflict, rejected,
+and unowned placement evidence remains in repository members. V1/v2 bytes and
+selection are unchanged, and T41.9 alone may register v3 at runtime.
+
+The root binds the accepted service key/incarnation/desired set, exact catalog
+and state authority, every resolver/RPC/Kafka generation and root, and the full
+upstream run authority. Build decodes the catalog once, derives state and
+placement indexes once, and walks each RPC and Kafka posting stream once.
+Repository and service point reads strict-open the small root plus one required
+member; a complete audit is capped at 769 files. Per-service encoded,
+reference, and resident-limit failures stay explicit without hiding complete
+sibling services.
+
+Publication full-validates the private stage and installs current-fenced
+catalog/extraction pins before a canonical marker owns its exact stage. The
+same-parent generation rename and current swap follow that commit point.
+Recovery promotes a marker-owned stage, repairs historical-safe pins before
+global reconciliation, removes only exact uncommitted marker temporaries, and
+never turns corrupt derived bytes into visible authority. Both complete-set
+reconciles defer whenever an additional regular generation lies
+outside the current-plus-rollback audit, preserving its existing pins until
+lifecycle performs the required rename-before-unpin. The separate
+`relationship-v3-namespaces` lifecycle owner is the sixteenth closed owner: it
+retains current plus one rollback generation, honors exact cache leases,
+releases exact pins before bounded drain, and contributes retained roots to
+shared resolver/RPC/Kafka collection. Archive and restore carry and validate
+the legacy and shadow namespaces independently while deduplicating shared
+component bytes.
+
+The exact 12,500-service profiles passed for empty, mixed, and dense
+relationship shapes. The dense shape contains 237,500 accepted references and
+11,875 twenty-claim projections; its repository/service payloads are
+29,908,779/93,255,790 bytes across 282 generation files. The mixed profile is
+7,518,154/8,899,540 bytes across 282 files, and the empty profile is
+0/3,930,790 bytes across 26 files. Focused crash, corrupt-omission, sparse-read,
+pin, lease, rollback-floor, lifecycle, archive/restore, normal, and race
+regressions pass together with the complete repository merge bar and final
+independent review.
+
+Ordinary requests, queries, sync ticks, retries/no-ops, relationship workers,
+and publication selection remain v2 and add no work. The first store upgrade
+performs one marker read, an empty-table preflight/probe, schema and index
+definitions, one marker transaction, and one verification read; a later
+startup performs only the marker read. Startup then holds the existing
+exclusive relationship-mutation lock across bounded observation and
+relationship recovery and adds the sixteenth lifecycle owner. A retained
+marker receives one catalog-reference repair plus bounded extraction-owner
+repair; the protected audit repeats those idempotent repairs once per valid v3
+root. A complete current/rollback audit also writes each of at most 16,384
+catalog references once, performs one bounded reference inventory/delete pass,
+and reconciles the fixed extraction-owner set.
+
+Explicit v3 build retains the existing 512-MiB pre-growth relationship charge
+plus one at-most-128-MiB member marshal within the existing one-GiB worker
+class. When a prior generation is supplied, unchanged-member comparison also
+reads one at-most-128-MiB prior member while the new marshal remains live; this
+is not an RSS claim. A transition full-validates at most 769 files once,
+performs one catalog-reference operation plus bounded extraction pin
+operations, and may temporarily hold one at-most-20-GiB stage. A same-current
+retry validates the selected generation and removes its stage without
+repinning or rewriting controls.
+
+A current sparse read performs two pointer reads, a cold root read/hash, and
+one member read/hash; warm reuse removes only the root work. The cache mutex
+protects map, reservation, retirement, and reference-count work while file I/O
+and validation remain outside it. There is no separate entry-count cap: one
+decoded current root remains per accessed repository within the at-most-4,096
+repository namespace, replaced roots remain only for live leases, and explicit
+historical roots leave at final release. Pointer replacement invalidates one
+repository entry without a scan; historical cold fills coalesce while current
+cold misses can repeat the bounded root read.
+
+Each lifecycle turn holds the existing exclusive mutation lock through sweep,
+store unpin, and confirmation; inventories at most 4,096 repositories and
+20,000 direct entries for the selected repository; inspects at most 64
+candidates; full-validates at most one generation; and reads/validates at most
+64 retained roots before the bounded shared component sweep. A present v3
+archive full-validates each current at-most-769-file generation, walks exact
+component publication trees, copies under the shared 20,000,000-entry/1-TiB
+limits, then extracts and revalidates once. Restore extracts and validates once
+and runs bounded relationship recovery. This ticket changes no production cap,
+release posture, ceremony, SLO, topology, migration-completion, or
+decommission claim; T41.9 is next after integration.

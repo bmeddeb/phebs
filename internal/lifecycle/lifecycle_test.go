@@ -484,9 +484,10 @@ func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	}
 }
 
-func TestRunnerCompletesFourteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
+func TestRunnerCompletesSixteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
 	names := []string{
 		CatalogOwner,
+		CatalogV3Owner,
 		JobOwner,
 		GenerationScheduleOwner,
 		InvestigationOwner,
@@ -496,6 +497,7 @@ func TestRunnerCompletesFourteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
 		ProofOwner,
 		ReaderOwner,
 		RelationshipOwner,
+		RelationshipV3Owner,
 		ResolverOwner,
 		SearchOwner,
 		TombstoneOwner,
@@ -532,8 +534,8 @@ func TestRunnerCompletesFourteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
 			if next != 0 {
 				want = append(want, names...)
 			}
-			if len(want) > 27 {
-				t.Fatalf("clean cycle turns = %d; want at most 27", len(want))
+			if len(want) > 31 {
+				t.Fatalf("clean cycle turns = %d; want at most 31", len(want))
 			}
 
 			ctx, cancel := context.WithCancel(t.Context())
