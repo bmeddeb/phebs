@@ -184,6 +184,17 @@ comparison ran. T44.2 remains the next presentation ticket pending a clean
 retained comparison or a separately explicit exception; neither a baseline
 refresh nor completion is claimed.
 
+A later authenticated T44.2 retry against the current branch UI reached all
+eight Settings comparisons after receipt setup was corrected to validate the
+saved Secure loopback session through Chromium. All four 390px theme/density
+variants pass. The four desktop variants differ by 1,200 pixels in light mode
+and 1,242 in dark mode, confined to the noncanonical operator identity and two
+retained pre-T43R.1 label bands. The Code Navigation region has zero differing
+pixels, and the visible palette specimen is pixel-identical to the retained
+specimen and already highlighted in every variant. No baseline changed. This
+supersedes the authentication blocker only; T44.2 remains open pending a clean
+retained comparison or a separately explicit exception.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

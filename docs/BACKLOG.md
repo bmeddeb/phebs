@@ -3266,6 +3266,19 @@ stopped before comparison because the stored session was stale and receipt
 credentials were absent. T44.2 therefore remains open: no clean retained
 comparison, baseline refresh, completion, merge, or integration is claimed.
 
+Retained-comparison follow-up (2026-08-31): receipt setup now validates a
+saved Secure loopback session through Chromium, matching the browser path that
+captures the receipts instead of incorrectly rejecting it through an API-only
+request context. The authenticated retry against the current branch UI reached
+all eight Settings comparisons. All four 390px theme/density variants pass.
+The four desktop variants differ by 1,200 pixels in light mode and 1,242 in
+dark mode, confined to the noncanonical operator identity and two retained
+pre-T43R.1 label bands; the Code Navigation region has zero differing pixels,
+and the visible palette specimen is pixel-identical to the retained specimen
+and already highlighted in every variant. No baseline byte changed. This
+supersedes the authentication blocker only: T44.2 remains open without a clean
+retained comparison, baseline refresh, completion, merge, or integration.
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force
