@@ -163,8 +163,7 @@ and T43R.2 completed on 2026-08-30 and T43R.3–5 completed on 2026-08-31.
 T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
-release claim; T41.2–T41.7 are integrated. T41.8 is complete on its ticket
-branch, and T41.9 is next after integration.
+release claim; T41.2–T41.8 are integrated, and T41.9 is next.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit

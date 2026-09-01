@@ -3038,7 +3038,7 @@ selects `placement-claim-buckets-v1` with at most 512 claims/eight buckets;
 the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration. T41.2–T41.7 are integrated;
-T41.8 is complete on its ticket branch, and T41.9 is next after integration.
+T41.8 is integrated, and T41.9 is next.
 
 **T41.9 · Atomic v3 runtime registration and reverse transition** — add an
 explicit operator/config opt-in only after dark catalog, state, search, and

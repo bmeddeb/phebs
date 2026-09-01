@@ -10752,4 +10752,4 @@ component publication trees, copies under the shared 20,000,000-entry/1-TiB
 limits, then extracts and revalidates once. Restore extracts and validates once
 and runs bounded relationship recovery. This ticket changes no production cap,
 release posture, ceremony, SLO, topology, migration-completion, or
-decommission claim; T41.9 is next after integration.
+decommission claim. T41.8 is integrated; T41.9 is next.
