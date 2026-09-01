@@ -826,6 +826,69 @@ func TestRuntimeExhaustionPreservesPriorPointerAndReportsFailure(t *testing.T) {
 	}
 }
 
+func TestRuntimeExhaustionPreservesInstalledResultAcrossSettlementCallback(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		callbackRecovers bool
+	}{
+		{name: "callback recovers", callbackRecovers: true},
+		{name: "callback remains unavailable"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan := buildTestPlan(t, "sha256:"+strings.Repeat("5", 64), true)
+			runtime, state, source, executor, _, fence, domain := newRuntimeFixture(t, plan)
+			callbackErr := errors.New("downstream callback unavailable")
+			callbackAvailable := false
+			callbackCalls := 0
+			runtime.OnSettled = func(context.Context, string) error {
+				callbackCalls++
+				if !callbackAvailable {
+					return callbackErr
+				}
+				return nil
+			}
+			if _, err := runtime.Reconcile(
+				t.Context(), plan.Repository, []DomainPlan{domain},
+			); err != nil {
+				t.Fatal(err)
+			}
+			chunk := currentChunk(t, state, plan.Repository, 0)
+			if err := runtime.Handle(t.Context(), chunk); !errors.Is(err, callbackErr) {
+				t.Fatalf("settlement callback error = %v, want %v", err, callbackErr)
+			}
+			state.settle(plan.Repository, 1)
+			callbackAvailable = test.callbackRecovers
+			err := runtime.OnExhausted(t.Context(), chunk, callbackErr)
+			if test.callbackRecovers && err != nil {
+				t.Fatalf("recovered exhaustion = %v", err)
+			}
+			if !test.callbackRecovers && !errors.Is(err, callbackErr) {
+				t.Fatalf("repeated callback error = %v, want %v", err, callbackErr)
+			}
+			if err != nil && strings.Contains(err.Error(), "partition result collision") {
+				t.Fatalf("exhaustion replaced the installed result: %v", err)
+			}
+			if acquired, released := source.counts(); acquired != 1 || released != 1 ||
+				executor.callCount() != 1 {
+				t.Fatalf(
+					"exhaustion repeated content work: source=%d/%d executor=%d",
+					acquired, released, executor.callCount(),
+				)
+			}
+			current, currentErr := runtime.Current(t.Context(), plan.Repository, plan.Domain)
+			if currentErr != nil || current.Disposition != candidate.PartitionResultSuccess {
+				t.Fatalf("current result = %+v, %v", current, currentErr)
+			}
+			if callbackCalls != 2 {
+				t.Fatalf("settlement callback calls = %d, want 2", callbackCalls)
+			}
+			if fence.calls != 2 {
+				t.Fatalf("publication fence calls = %d, want 2", fence.calls)
+			}
+		})
+	}
+}
+
 func TestRuntimeSupersededLeaseStopsBeforeSourceAcquisition(t *testing.T) {
 	planA := buildTestPlan(t, "sha256:"+strings.Repeat("d", 64), true)
 	runtime, state, source, _, _, fence, domainA := newRuntimeFixture(t, planA)

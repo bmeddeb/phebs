@@ -10753,3 +10753,45 @@ limits, then extracts and revalidates once. Restore extracts and validates once
 and runs bounded relationship recovery. This ticket changes no production cap,
 release posture, ceremony, SLO, topology, migration-completion, or
 decommission claim. T41.8 is integrated; T41.9 is next.
+
+**T41.8a ✅ · Catalog-absence and exhausted-result recovery**
+*(2026-09-01; repair)* — an exact-main OpenTelemetry whole-repository run
+exposed one pre-existing T40.11 classification gap after T41.8 integration.
+Its configuration selected neither a service catalog nor an analysis unit, so
+the missing `service_catalog_current` row was valid absence. The optimized
+point reader nevertheless collapsed zero rows with malformed authority into
+`ErrConflict`. Extraction installed both immutable results and all four domain
+pointers, then the final domain's downstream relationship callback failed on
+that conflict for all five scheduler attempts. Exhaustion subsequently tried
+to install retryable bytes at the already-valid result path and reported the
+secondary `partition result collision`. Search and health remained available;
+relationship authority stayed explicitly unavailable. No T41.8 byte caused
+the failure and no database or derived control was corrupt.
+
+Zero pointer rows now return wrapped `ErrNotFound`; malformed/duplicate
+pointers and catalog/state mismatches remain `ErrConflict`. The existing
+relationship boundary converts not-found state to explicit not-ready authority,
+so a whole-repository installation without service authority no longer fails
+successful extraction, resolver, or caller jobs during their downstream
+callback. `OnExhausted` strict-opens the selected at-most-8-KiB result before
+writing: a valid existing result is reassembled and republished through the
+current schedule and control-only authority fence without reacquiring source or
+rerunning the extractor, while an absent result retains the established
+retryable outcome. Invalid bytes continue to fail closed, and a repeated
+callback failure returns its real cause rather than a collision.
+
+Ordinary request/query, sync, startup, successful job, retry-before-exhaustion,
+publication, lifecycle, schema, lock, cache, memory/disk, goroutine, child,
+Git/source/corpus, and shard costs are unchanged. Catalog absence pays the same
+single point read. Only terminal exhaustion adds one bounded result read; a
+present result can repeat existing control/root validation, authority fencing,
+pointer publication, and downstream reconciliation. No manual data cleanup is
+needed. Focused and broader normal/race coverage passes across store,
+extraction publication, relationship publication, service-catalog ingestion,
+generation scheduling, and command integration. The serial full store package
+passes under its prescribed allowances in 1098.660 seconds normal and 1194.062
+seconds with the race detector; an initial default-timeout run stopped only on
+the inherited ten-minute package alarm in an unrelated Workbench schema test,
+and no test Surreal process survives. Independent review reports zero critical,
+high, medium, or low findings. T41.9 remains the sole v3 runtime-selector owner
+and follows this repair's integration.

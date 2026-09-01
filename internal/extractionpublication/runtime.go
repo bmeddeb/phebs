@@ -936,9 +936,10 @@ func (runtime *Runtime) emitPartitionTiming(report PartitionTimingReport) {
 	}()
 }
 
-// OnExhausted is wired to generationscheduler.Class.OnExhausted. It records a
-// zero-work retryable result only after the scheduler atomically consumes the
-// final attempt.
+// OnExhausted is wired to generationscheduler.Class.OnExhausted. It preserves
+// a result installed before a post-result failure; otherwise it records a
+// zero-work retryable result after the scheduler atomically consumes the final
+// attempt.
 func (runtime *Runtime) OnExhausted(
 	ctx context.Context,
 	chunk store.GenerationChunk,
@@ -971,13 +972,24 @@ func (runtime *Runtime) OnExhausted(
 	if err != nil {
 		return err
 	}
+	path := filepath.Join(directory, domainKey(descriptor.Domain), resultName(localOrdinal))
+	if _, present, err := readPartitionResult(path, domain.Plan, localOrdinal); err != nil {
+		return err
+	} else if present {
+		// The scheduler consumed the final lease before calling OnExhausted.
+		// Reuse the immutable result without content work; publication still
+		// rechecks current upstream authority through the control-only fence.
+		return runtime.tryAssemble(
+			ctx, store.GenerationChunk{Repository: chunk.Repository, Stage: chunk.Stage},
+			directory, descriptor, domain, localOrdinal,
+		)
+	}
 	result, err := candidate.BuildPartitionResult(domain.Plan, localOrdinal, candidate.PartitionResultSpec{
 		Disposition: candidate.PartitionResultRetryable, Reason: RetryFailureReason,
 	})
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(directory, domainKey(descriptor.Domain), resultName(localOrdinal))
 	if err := installPartitionResult(path, result); err != nil {
 		return err
 	}

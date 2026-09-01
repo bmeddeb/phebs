@@ -3958,6 +3958,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | a focused repo rebuilds after restore                             | its focused generation was invalid/incomplete at backup time and was omitted as derived state          | let the forced replacement finish; the precious database export remains authoritative                 |
 | startup logs `artifact reconciliation: … lifecycle=N`            | a prior process left private build/restore workspace or temporary-marker residue                       | no action if startup continues; phebs reclaimed only prior-process derived residue                     |
 | extraction reports `candidate publication is incomplete`         | a stable candidate `.publishing` marker covers an interrupted or active publication, so even a no-op extraction refuses | let reconciliation finish; if the error repeats with phebs stopped, retain logs, move `$DATA/candidates` aside for diagnosis, and restart to rebuild derived state |
+| an unselected whole-repository install logs `catalog pointer: malformed or absent pointer: conflict` followed by `partition result collision` | a pre-T41.8a binary misclassified the absent catalog, then its failed downstream callback tried to replace an already-valid extraction result | upgrade to the repaired binary and restart; do not edit the database or derived controls, and configure an explicit service catalog only when service relationships are wanted |
 | focused evidence is unpublished after a same-HEAD scope or typed-designation edit | prior evidence belongs to the old unit digest or candidate receipt and exact lookup correctly refuses to reuse it | allow the forced index → candidate → extraction chain to finish; inspect the typed-input and candidate refusal rather than repairing evidence rows by hand |
 | repository listing/startup reports `invalid committed analysis unit` | the stored focused claim is malformed or was tampered with, so repository reads fail closed instance-wide | restore a validated backup; without one, keep phebs stopped and escalate to the witnessed atomic row repair above |
 | restore rejects a sparse tar member                               | the focused archive uses PAX/GNU sparse expansion, which phebs never accepts                            | recreate the backup with `phebs backup`; do not rewrite or manually extract the archive               |
@@ -4005,6 +4006,19 @@ mixed writer generations refuse startup permanently; do not edit the marker.
 Historical v1 filesystem/archive bytes retain their v1 validation algorithm
 and remain evidence, while normal lifecycle cleanup reclaims unreferenced v1
 artifacts after v2 becomes current.
+
+T41.8a preserves that rebuild for an ordinary whole-repository installation
+with no selected service catalog. A missing catalog-current point is typed
+not-found, so relationship authority remains explicitly not ready without
+failing an otherwise successful extraction, resolver, or caller job; malformed,
+duplicate, or catalog/state-mismatched authority still fails closed as a
+conflict. If the final scheduler attempt follows a downstream callback failure
+after an immutable partition result was installed, exhaustion strict-opens and
+reassembles that result through the control-only current-authority fence. It
+does not reacquire source or rerun the extractor, and it synthesizes the
+existing retryable result only when no valid result exists. Do not delete or
+rewrite either the database or derived controls; the repaired restart reuses
+the exact completed work.
 
 The cutover is O(indexed repositories) through the existing uncapped startup
 backfill and can pay one bounded resolver materialization plus caller and

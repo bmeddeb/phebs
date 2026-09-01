@@ -1,10 +1,14 @@
 package store
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	surrealdb "github.com/surrealdb/surrealdb.go"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
@@ -54,5 +58,40 @@ func TestServiceStateMaximumCurrentPlanIsBounded(t *testing.T) {
 		summary.UnavailableCount != servicecatalog.MaxServices ||
 		summary.ControlRevision != 1 {
 		t.Fatalf("maximum summary = %+v", summary)
+	}
+}
+
+func TestGetServiceStateSummaryDistinguishesAbsentAndMalformedCatalogPointer(t *testing.T) {
+	state, err := OpenLocalMemory(t.Context(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = state.Close(context.Background()) })
+
+	const repository = "example.com/acme/catalog-pointer"
+	if _, err := state.GetServiceStateSummary(t.Context(), repository); !errors.Is(err, ErrNotFound) ||
+		errors.Is(err, ErrConflict) {
+		t.Fatalf("absent catalog pointer = %v, want ErrNotFound", err)
+	}
+
+	results, err := surrealdb.Query[any](t.Context(), state.db, `CREATE $rid CONTENT {
+		repository: $repository,
+		generation_digest: 'malformed',
+		control_revision: 1,
+		published_at: time::now()
+	}`, map[string]any{
+		"rid": serviceCatalogCurrentID(repository), "repository": repository,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range *results {
+		if result.Error != nil {
+			t.Fatal(result.Error.Message)
+		}
+	}
+	if _, err := state.GetServiceStateSummary(t.Context(), repository); !errors.Is(err, ErrConflict) ||
+		errors.Is(err, ErrNotFound) {
+		t.Fatalf("malformed catalog pointer = %v, want ErrConflict", err)
 	}
 }

@@ -319,9 +319,12 @@ func (s *Surreal) serviceCatalogPointer(
 		return "", 0, err
 	}
 	rows := firstDomainRows(results)
+	if len(rows) == 0 {
+		return "", 0, fmt.Errorf("absent pointer: %w", ErrNotFound)
+	}
 	if len(rows) != 1 || !validSHA256Digest(rows[0].GenerationDigest) ||
 		rows[0].ControlRevision == 0 {
-		return "", 0, fmt.Errorf("malformed or absent pointer: %w", ErrConflict)
+		return "", 0, fmt.Errorf("malformed pointer: %w", ErrConflict)
 	}
 	return rows[0].GenerationDigest, rows[0].ControlRevision, nil
 }
