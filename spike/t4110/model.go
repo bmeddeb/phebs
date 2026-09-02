@@ -84,6 +84,7 @@ var composedGateTests = map[string][]string{
 		"go:internal/relationshippublication#TestT411MaximumProfileDenseBuildPublishV3",
 	},
 	"service_runtime_and_recovery": {
+		"go:spike/t4110#TestTargetRelationshipScheduleExpandsBeforeClaim",
 		"go:internal/relationshippublication#TestRuntimeV3DirectBuildDoesNotRequireV2Relationship",
 		"go:internal/store#TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation",
 		"go:internal/store#TestServiceStateV3RemovalReaddAndABA",

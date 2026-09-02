@@ -329,29 +329,33 @@ func (h *liveHarness) reconcileEmptyRelationshipV3(
 		return relationshippublication.RootV3{}, err
 	}
 	if !current {
-		chunk, claimErr := h.state.ClaimGenerationChunk(
-			ctx, store.GenerationResourceMemory, "t4110-relationship-v3",
-		)
+		schedule, chunk, claimErr := h.claimTargetRelationshipV3Chunk(ctx)
 		if claimErr != nil {
 			return relationshippublication.RootV3{}, fmt.Errorf(
 				"claim target relationship v3 chunk: %w", claimErr,
 			)
 		}
-		if chunk.Repository != liveRepository ||
-			chunk.Stage != relationshippublication.ScheduleStageV3 ||
-			chunk.Offset != 0 || chunk.Length != 1 {
-			return relationshippublication.RootV3{}, errors.New(
-				"claimed chunk is not the target relationship v3 schedule",
-			)
-		}
-		if err := runtime.HandleV3(ctx, *chunk); err != nil {
+		if err := runtime.HandleV3(ctx, chunk); err != nil {
 			return relationshippublication.RootV3{}, fmt.Errorf(
 				"handle target relationship v3 chunk: %w", err,
 			)
 		}
-		if err := h.state.CompleteGenerationChunk(ctx, *chunk); err != nil {
+		if err := h.state.CompleteGenerationChunk(ctx, chunk); err != nil {
 			return relationshippublication.RootV3{}, fmt.Errorf(
 				"complete target relationship v3 chunk: %w", err,
+			)
+		}
+		settled, err := h.state.GetGenerationSchedule(
+			ctx, liveRepository, relationshippublication.ScheduleStageV3,
+		)
+		if err != nil || settled == nil || settled.Digest != schedule.Digest ||
+			settled.Generation != schedule.Generation ||
+			settled.Status != store.GenerationScheduleSettled ||
+			settled.NextOffset != 1 || settled.Materialized != 1 ||
+			settled.Pending != 0 || settled.Running != 0 ||
+			settled.Succeeded != 1 || settled.Failed != 0 {
+			return relationshippublication.RootV3{}, errors.Join(
+				errors.New("target relationship v3 schedule did not settle exactly"), err,
 			)
 		}
 		cost.RelationshipScheduleChunks++
@@ -412,6 +416,68 @@ func (h *liveHarness) reconcileEmptyRelationshipV3(
 		}
 	}
 	return root, nil
+}
+
+func (h *liveHarness) claimTargetRelationshipV3Chunk(
+	ctx context.Context,
+) (store.GenerationSchedule, store.GenerationChunk, error) {
+	schedule, err := h.state.GetGenerationSchedule(
+		ctx, liveRepository, relationshippublication.ScheduleStageV3,
+	)
+	if err != nil || schedule == nil {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, errors.Join(
+			errors.New("read target relationship v3 schedule"), err,
+		)
+	}
+	if schedule.Repository != liveRepository ||
+		schedule.Stage != relationshippublication.ScheduleStageV3 ||
+		schedule.ResourceClass != store.GenerationResourceMemory ||
+		schedule.TotalItems != 1 || schedule.ChunkItems != 1 ||
+		schedule.TotalChunks != 1 ||
+		schedule.MaxAttempts != relationshippublication.ScheduleMaxAttempts ||
+		schedule.RepositoryTokens != relationshippublication.ScheduleRepositoryTokens ||
+		schedule.Status != store.GenerationScheduleActive {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, errors.New(
+			"target relationship v3 schedule has an unexpected shape",
+		)
+	}
+	expanded, err := h.state.ExpandGenerationSchedule(
+		ctx, schedule.Repository, schedule.Stage, schedule.Generation,
+	)
+	if err != nil {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, fmt.Errorf(
+			"expand target relationship v3 schedule: %w", err,
+		)
+	}
+	if expanded == nil || expanded.Digest != schedule.Digest ||
+		expanded.Generation != schedule.Generation || expanded.NextOffset != 1 ||
+		expanded.Materialized != 1 || expanded.Pending != 1 ||
+		expanded.Running != 0 || expanded.Succeeded != 0 || expanded.Failed != 0 ||
+		expanded.Status != store.GenerationScheduleActive {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, errors.New(
+			"target relationship v3 schedule did not materialize exactly",
+		)
+	}
+	chunk, err := h.state.ClaimGenerationChunk(
+		ctx, store.GenerationResourceMemory, "t4110-relationship-v3",
+	)
+	if err != nil {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, err
+	}
+	if chunk.ScheduleDigest != expanded.Digest ||
+		chunk.Repository != liveRepository ||
+		chunk.Stage != relationshippublication.ScheduleStageV3 ||
+		chunk.Generation != expanded.Generation ||
+		chunk.ResourceClass != store.GenerationResourceMemory ||
+		chunk.Offset != 0 || chunk.Length != 1 || chunk.Attempt != 0 ||
+		chunk.Priority != store.GenerationPriorityNeverRun ||
+		chunk.Status != store.GenerationChunkRunning ||
+		chunk.ClaimedBy != "t4110-relationship-v3" || chunk.LeaseToken == "" {
+		return store.GenerationSchedule{}, store.GenerationChunk{}, errors.New(
+			"claimed chunk is not the target relationship v3 schedule",
+		)
+	}
+	return *expanded, *chunk, nil
 }
 
 func (h *liveHarness) recordRelationshipComponentPublicationCost(
