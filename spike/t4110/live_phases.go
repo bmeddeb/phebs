@@ -394,7 +394,7 @@ func mappedTransitionCatalog(
 			next.Memberships = removeMemberships(next.Memberships, targetKey)
 		}
 	}
-	if err := servicecatalog.Validate(next); err != nil {
+	if err := servicecatalogv3.ValidateCatalog(next); err != nil {
 		return servicecatalog.Catalog{}, fmt.Errorf("validate mapped transition: %w", err)
 	}
 	return next, nil

@@ -61,6 +61,8 @@ var composedGateNames = []string{
 
 var composedGateTests = map[string][]string{
 	"t411_input_and_bound_contract": {
+		"go:spike/t4110#TestLiveTargetCatalogUsesExpandedV3Input",
+		"go:spike/t4110#TestMappedTransitionRetainsExpandedV3Target",
 		"go:spike/t411#TestFrozenEnvelopeIsDeterministicAndExact",
 		"go:spike/t411#TestRetainedArtifactsMatchFrozenEnvelope",
 		"go:spike/t411#TestEveryAggregateLimitAcceptsExactAndRefusesOneOver",

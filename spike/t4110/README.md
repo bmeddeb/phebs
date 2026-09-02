@@ -9,6 +9,10 @@ canonical accepted-10,000 target and small transition-profile digests. The
 live gate consumes those corpora through `t411.BuildTargetCorpus` and
 `t411.BuildTransitionCorpus`; it does not copy the T41.1 service, membership,
 placement, fixture, or transition generators.
+The target file is encoded for the strict expanded v3 decoder; it must not pass
+through the legacy v2 canonicalizer or validator, whose 4,000-service ceiling
+continues to govern v2 only. Mapped transition successors use the same v3
+validation boundary.
 
 The frozen target contains no protobuf source and therefore has a truthful
 empty relationship distribution. The live gate derives an exact proto-only

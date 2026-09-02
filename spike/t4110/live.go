@@ -2,6 +2,7 @@ package t4110
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -582,11 +583,11 @@ func (h *liveHarness) cold(
 	cost.SearchDeclaredBytes = uint64(controls.Source.RegularDeclaredBytes)
 
 	catalogPath := filepath.Join(h.root, "target-catalog.json")
-	canonical, err := servicecatalog.Canonical(corpus.Catalog)
+	encoded, err := encodeLiveV3Catalog(corpus.Catalog)
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(catalogPath, canonical, 0o600); err != nil {
+	if err := os.WriteFile(catalogPath, encoded, 0o600); err != nil {
 		return err
 	}
 	h.catalogPath = catalogPath
@@ -648,4 +649,8 @@ func (h *liveHarness) cold(
 		return err
 	}
 	return nil
+}
+
+func encodeLiveV3Catalog(catalog servicecatalog.Catalog) ([]byte, error) {
+	return json.Marshal(catalog)
 }
