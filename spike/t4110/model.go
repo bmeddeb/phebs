@@ -90,6 +90,7 @@ var composedGateTests = map[string][]string{
 		"go:internal/store#TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation",
 		"go:internal/store#TestServiceStateV3RemovalReaddAndABA",
 		"go:internal/store#TestServiceStateV3PartialActivationKeepsMatchingSummaryReadable",
+		"go:internal/store#TestSelectedV3SnapshotSurvivesSparseSuccessor",
 		"go:internal/store#TestServiceStateV3CrashReplay",
 		"go:internal/store#TestServiceStateV3CatalogSuccessorSupersedesActivationLease",
 		"go:internal/store#TestGenerationScheduleRetryCoalescingAndStaleFence",
