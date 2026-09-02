@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
+	"slices"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
@@ -65,22 +65,7 @@ func verifySelectedService(
 				expectedMemberships = append(expectedMemberships, membership)
 			}
 		}
-		row := read.Entry.State
-		wantRemoved := expected.Disposition == servicecatalog.DispositionRejected
-		wantStatus := map[string]string{
-			servicecatalog.DispositionAccepted: servicecatalog.StatusCurrent,
-			servicecatalog.DispositionProposal: servicecatalog.StatusUnavailable,
-			servicecatalog.DispositionConflict: servicecatalog.StatusConflict,
-			servicecatalog.DispositionRejected: servicecatalog.StatusRemoved,
-		}[expected.Disposition]
-		if wantStatus == "" || read.Entry.Projection == nil ||
-			read.Entry.Projection.Removed != wantRemoved ||
-			!reflect.DeepEqual(read.Entry.Projection.Service, *expected) ||
-			!reflect.DeepEqual(read.Entry.Projection.Memberships, expectedMemberships) ||
-			row.Removed != wantRemoved || row.Status != wantStatus ||
-			row.DisplayName != expected.DisplayName || row.Disposition != expected.Disposition ||
-			row.Origin != expected.Origin || row.Reason != expected.Reason ||
-			!reflect.DeepEqual(row.Successors, expected.Successors) {
+		if !selectedServiceValuesMatch(read.Entry, *expected, expectedMemberships) {
 			return PhaseCost{}, errors.New("selected service values differ from the exact catalog")
 		}
 	}
@@ -99,6 +84,35 @@ func verifySelectedService(
 		SelectedStateMemberValidations: stats.MemberValidations,
 		ProductQueries:                 1,
 	}, nil
+}
+
+func sameCatalogService(left, right servicecatalog.Service) bool {
+	return left.Key == right.Key && left.DisplayName == right.DisplayName &&
+		left.Disposition == right.Disposition && left.Origin == right.Origin &&
+		left.Reason == right.Reason && slices.Equal(left.Successors, right.Successors)
+}
+
+func selectedServiceValuesMatch(
+	entry store.ServiceStateEntry,
+	expected servicecatalog.Service,
+	expectedMemberships []servicecatalog.Membership,
+) bool {
+	wantRemoved := expected.Disposition == servicecatalog.DispositionRejected
+	wantStatus := map[string]string{
+		servicecatalog.DispositionAccepted: servicecatalog.StatusCurrent,
+		servicecatalog.DispositionProposal: servicecatalog.StatusUnavailable,
+		servicecatalog.DispositionConflict: servicecatalog.StatusConflict,
+		servicecatalog.DispositionRejected: servicecatalog.StatusRemoved,
+	}[expected.Disposition]
+	row := entry.State
+	return wantStatus != "" && entry.Projection != nil &&
+		entry.Projection.Removed == wantRemoved &&
+		sameCatalogService(entry.Projection.Service, expected) &&
+		slices.Equal(entry.Projection.Memberships, expectedMemberships) &&
+		row.Removed == wantRemoved && row.Status == wantStatus &&
+		row.DisplayName == expected.DisplayName && row.Disposition == expected.Disposition &&
+		row.Origin == expected.Origin && row.Reason == expected.Reason &&
+		slices.Equal(row.Successors, expected.Successors)
 }
 
 func querySelectedServices(

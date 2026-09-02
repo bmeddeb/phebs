@@ -558,8 +558,10 @@ func firstCatalogServiceDifference(
 	for _, key := range ordered {
 		leftService, leftMemberships := serviceAndMemberships(left, key)
 		rightService, rightMemberships := serviceAndMemberships(right, key)
-		if !reflect.DeepEqual(leftService, rightService) ||
-			!reflect.DeepEqual(leftMemberships, rightMemberships) {
+		sameService := leftService == nil && rightService == nil ||
+			leftService != nil && rightService != nil &&
+				sameCatalogService(*leftService, *rightService)
+		if !sameService || !slices.Equal(leftMemberships, rightMemberships) {
 			return key, nil
 		}
 	}

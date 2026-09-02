@@ -85,6 +85,7 @@ var composedGateTests = map[string][]string{
 	},
 	"service_runtime_and_recovery": {
 		"go:spike/t4110#TestTargetRelationshipScheduleExpandsBeforeClaim",
+		"go:spike/t4110#TestSelectedServiceComparisonUsesSemanticSlices",
 		"go:internal/relationshippublication#TestRuntimeV3DirectBuildDoesNotRequireV2Relationship",
 		"go:internal/store#TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation",
 		"go:internal/store#TestServiceStateV3RemovalReaddAndABA",
