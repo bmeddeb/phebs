@@ -134,6 +134,7 @@ var composedGateTests = map[string][]string{
 	},
 	"cost_and_source_free_evidence": {
 		"go:spike/t4013#TestCustodyCommandCancellationTerminatesProcessSession",
+		"go:spike/t4013#TestSummarizeProcessTreeAcceptsZeroResidentChild",
 		"go:spike/t411#TestReusableTargetAndTransitionCorporaMatchFrozenEnvelope",
 		"go:spike/t4110#TestT4110ReceiptRoundTripIsCanonicalAndSourceFree",
 		"go:spike/t4110#TestT4110AuthorIsCreateOnlyAndAtomic",
@@ -257,12 +258,17 @@ var checkEvidence = map[string]checkEvidenceBinding{
 		},
 	},
 	"no_service_count_times_repository_bytes": {
-		Phases: []string{"cold_publish_activate"}, ReceiptOracle: true,
+		Phases:        []string{"cold_publish_activate"},
+		Tests:         []string{"go:spike/t4013#TestSummarizeProcessTreeAcceptsZeroResidentChild"},
+		ReceiptOracle: true,
 	},
 	"source_free_receipt": {
 		Tests: []string{"go:spike/t4110#TestT4110ReceiptRoundTripIsCanonicalAndSourceFree"},
 	},
-	"clean_teardown": {ReceiptOracle: true},
+	"clean_teardown": {
+		Tests:         []string{"go:spike/t4013#TestSummarizeProcessTreeAcceptsZeroResidentChild"},
+		ReceiptOracle: true,
+	},
 }
 
 var forbiddenReceiptFragments = []string{

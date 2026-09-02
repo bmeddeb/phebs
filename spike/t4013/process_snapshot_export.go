@@ -27,19 +27,29 @@ func ObserveProcessTree(
 	if err != nil {
 		return ProcessTreeObservation{}, err
 	}
-	if len(pids) == 0 || len(pids) > maxProcessDescendants+1 || processes[rootPID].rssBytes <= 0 {
+	return summarizeProcessTree(rootPID, pids, processes)
+}
+
+func summarizeProcessTree(
+	rootPID int,
+	pids []int,
+	processes map[int]processSnapshot,
+) (ProcessTreeObservation, error) {
+	root, rootPresent := processes[rootPID]
+	if len(pids) == 0 || len(pids) > maxProcessDescendants+1 || !rootPresent || root.rssBytes <= 0 {
 		return ProcessTreeObservation{}, errors.New("native process-tree observation is incomplete")
 	}
 	var total int64
 	for _, pid := range pids {
 		process, present := processes[pid]
-		if !present || process.rssBytes <= 0 {
+		if !present || process.rssBytes < 0 {
 			return ProcessTreeObservation{}, errors.New("native process-tree record is incomplete")
 		}
-		total, err = checkedAddInt64(total, process.rssBytes)
+		next, err := checkedAddInt64(total, process.rssBytes)
 		if err != nil {
 			return ProcessTreeObservation{}, err
 		}
+		total = next
 	}
 	return ProcessTreeObservation{RSSBytes: total, Descendants: len(pids) - 1}, nil
 }

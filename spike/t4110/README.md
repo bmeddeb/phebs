@@ -31,6 +31,9 @@ RSS of the author process tree, absolute logical and allocated custody footprint
 exact selected-state `ReadCache` root/member reads and their committed
 root/member validations, state-chunk transactions, and state-row counts,
 physical source work, production-reader queries, and sparse-preimage work.
+A coherent present descendant with zero resident bytes contributes zero to that
+instantaneous sample; the author root must remain positive and absent records
+still refuse the measurement.
 `physical_work.corpus_passes` is frozen at exactly one and counts the sole
 full-corpus search/index pass. The cold relationship setup separately selects
 the 10,000 proto-path blobs: its 16-member observation inventory performs
@@ -189,9 +192,9 @@ passed validation.
 | `backup_restore` | live target relationship collection through the production relationship-v3 owner, then `archive_restore`; independent v3 composite archive test |
 | `collection` | live `collection`; catalog lifecycle retention test |
 | `authorized_http_mcp_ui` | live production selected-reader/scoped-search phase; exact 10,000-row service-directory pagination, v3 search stream parity, HTTP/MCP/SSE authority parity, and both named UI tests |
-| `no_service_count_times_repository_bytes` | live cold physical-work counters and corpus-pass oracle |
+| `no_service_count_times_repository_bytes` | live cold physical-work counters, corpus-pass oracle, and zero-resident-child sampler regression |
 | `source_free_receipt` | canonical source-free receipt test |
-| `clean_teardown` | exact teardown oracle |
+| `clean_teardown` | exact teardown oracle and zero-resident-child sampler regression |
 
 The live target itself traverses the production selected state reader,
 selector-aware v3 scoped searcher, and authorized HTTP/MCP inventory, detail,

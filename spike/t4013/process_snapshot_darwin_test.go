@@ -35,6 +35,22 @@ func TestObserveProcessTreeIncludesCurrentProcess(t *testing.T) {
 	}
 }
 
+func TestSummarizeProcessTreeAcceptsZeroResidentChild(t *testing.T) {
+	const rootPID, childPID = 41, 42
+	processes := map[int]processSnapshot{
+		rootPID:  {rssBytes: 4096},
+		childPID: {parent: rootPID},
+	}
+	observed, err := summarizeProcessTree(rootPID, []int{rootPID, childPID}, processes)
+	if err != nil || observed.RSSBytes != 4096 || observed.Descendants != 1 {
+		t.Fatalf("zero-resident child process tree = %+v, %v", observed, err)
+	}
+	delete(processes, childPID)
+	if _, err := summarizeProcessTree(rootPID, []int{rootPID, childPID}, processes); err == nil {
+		t.Fatal("missing child process record passed")
+	}
+}
+
 func TestObserveProcessTreeTracksDescendantExit(t *testing.T) {
 	child := exec.Command("/bin/sleep", "30")
 	if err := child.Start(); err != nil {
