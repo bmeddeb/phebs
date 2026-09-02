@@ -969,6 +969,65 @@ func (publication *PublicationV3) ReadProjection(
 	return flattenProjectionBucketsV3(member.Fragments[fragmentIndex : fragmentIndex+count])
 }
 
+// ReadProjections batches one page of projection lookups by repository bucket.
+// Each selected member is opened once even when several requested projections
+// share it.
+func (publication *PublicationV3) ReadProjections(
+	ctx context.Context,
+	digests []string,
+) (map[string]Projection, error) {
+	if publication == nil || len(digests) == 0 || len(digests) > 100 {
+		return nil, fmt.Errorf("%w: v3 projection page", ErrInvalid)
+	}
+	wanted := make(map[int]map[string]struct{})
+	for _, digest := range digests {
+		if !validDigest(digest) {
+			return nil, fmt.Errorf("%w: v3 projection page digest", ErrInvalid)
+		}
+		bucket := projectionBucket(digest)
+		if wanted[bucket] == nil {
+			wanted[bucket] = make(map[string]struct{})
+		}
+		wanted[bucket][digest] = struct{}{}
+	}
+	result := make(map[string]Projection, len(digests))
+	for bucket, bucketWanted := range wanted {
+		index, found := slices.BinarySearchFunc(
+			publication.rootValue.RepositoryMembers,
+			bucket,
+			func(value RepositoryReceiptV3, target int) int { return value.Bucket - target },
+		)
+		if !found {
+			return nil, ErrNotFound
+		}
+		member, err := publication.openRepositoryMemberV3(
+			ctx, publication.rootValue.RepositoryMembers[index],
+		)
+		if err != nil {
+			return nil, err
+		}
+		for offset := 0; offset < len(member.Fragments); {
+			fragment := member.Fragments[offset]
+			end := offset + fragment.Count
+			if fragment.Ordinal != 0 || fragment.Count < 1 || end > len(member.Fragments) {
+				return nil, fmt.Errorf("%w: v3 projection fragment range", ErrInvalid)
+			}
+			if _, present := bucketWanted[fragment.ProjectionDigest]; present {
+				projection, flattenErr := flattenProjectionBucketsV3(member.Fragments[offset:end])
+				if flattenErr != nil {
+					return nil, flattenErr
+				}
+				result[projection.Digest] = projection
+			}
+			offset = end
+		}
+	}
+	if len(result) != len(digests) {
+		return nil, ErrNotFound
+	}
+	return result, nil
+}
+
 func (publication *PublicationV3) ConfirmCurrent() error {
 	if publication == nil || publication.base == "" || len(publication.pointerRaw) == 0 {
 		return fmt.Errorf("%w: v3 current confirmation", ErrInvalid)

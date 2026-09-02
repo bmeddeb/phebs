@@ -338,16 +338,52 @@ type RelationshipCitation struct {
 }
 
 type relationshipSource struct {
-	repository  store.Repo
-	lease       *relationshippublication.Lease
-	publication *relationshippublication.Publication
-	unavailable *relationshippublication.Unavailable
-	root        relationshippublication.Root
-	receipt     relationshippublication.ServiceReceipt
-	evidence    *relationshippublication.EvidenceReader
-	current     bool
-	state       string
-	reason      string
+	repository             store.Repo
+	lease                  relationshipLease
+	publication            relationshipPublication
+	unavailable            *relationshippublication.Unavailable
+	root                   relationshippublication.Root
+	receipt                relationshippublication.ServiceReceipt
+	selector               *store.ServiceRuntimeSelector
+	catalogControlRevision uint64
+	evidence               *relationshippublication.EvidenceReader
+	current                bool
+	state                  string
+	reason                 string
+}
+
+type relationshipLease interface {
+	Release()
+}
+
+type relationshipPublication interface {
+	ReadService(context.Context, string) (
+		relationshippublication.ServiceReceipt,
+		*relationshippublication.ServiceMember,
+		error,
+	)
+	ReadProjection(context.Context, string) (relationshippublication.Projection, error)
+	ReadProjections(context.Context, []string) (map[string]relationshippublication.Projection, error)
+	OpenEvidenceReader(context.Context, string) (*relationshippublication.EvidenceReader, error)
+	ReadEvidence(
+		context.Context,
+		string,
+		relationshippublication.Projection,
+	) (relationshippublication.Evidence, error)
+	ConfirmCurrent() error
+}
+
+type relationshipPublicationV2 struct {
+	*relationshippublication.Publication
+}
+
+type relationshipPublicationV3 struct {
+	*relationshippublication.PublicationV3
+}
+
+type relationshipRuntime struct {
+	backend  string
+	selector *store.ServiceRuntimeSelector
 }
 
 type relationshipLocator struct {
@@ -395,6 +431,8 @@ type relationshipCitationToken struct {
 type RelationshipService struct {
 	opts           Options
 	cache          *relationshippublication.Cache
+	cacheV3        *relationshippublication.CacheV3
+	selectors      store.ServiceRuntimeSelectorReader
 	secret         [sha256.Size]byte
 	reads          chan struct{}
 	citations      chan struct{}
@@ -430,6 +468,47 @@ func NewRelationshipService(
 		return nil
 	}
 	return service
+}
+
+// NewRuntimeRelationshipService keeps the legacy backend for repositories
+// without a selector and routes explicitly selected repositories to one exact
+// v2 or v3 relationship generation.
+func NewRuntimeRelationshipService(
+	opts Options,
+	cache *relationshippublication.Cache,
+	cacheV3 *relationshippublication.CacheV3,
+) *RelationshipService {
+	selectors, ok := opts.Store.(store.ServiceRuntimeSelectorReader)
+	if !ok || selectors == nil || cacheV3 == nil {
+		return nil
+	}
+	service := NewRelationshipService(opts, cache)
+	if service == nil {
+		return nil
+	}
+	service.cacheV3 = cacheV3
+	service.selectors = selectors
+	return service
+}
+
+func (publication relationshipPublicationV3) ReadService(
+	ctx context.Context,
+	serviceKey string,
+) (relationshippublication.ServiceReceipt, *relationshippublication.ServiceMember, error) {
+	record, err := publication.PublicationV3.ReadService(ctx, serviceKey)
+	receipt := relationshippublication.ServiceReceipt{
+		ServiceKey: record.ServiceKey, Incarnation: record.Incarnation,
+		ServiceGeneration: record.ServiceGeneration, State: record.State,
+		Reason: record.Reason, ReferenceCount: len(record.References),
+	}
+	if err != nil {
+		return receipt, nil, err
+	}
+	return receipt, &relationshippublication.ServiceMember{
+		ServiceKey: record.ServiceKey, Incarnation: record.Incarnation,
+		ServiceGeneration: record.ServiceGeneration,
+		References:        slices.Clone(record.References),
+	}, nil
 }
 
 func (service *RelationshipService) List(
@@ -703,7 +782,7 @@ func (service *RelationshipService) ReadCitation(
 		token.Schema != relationshipCitationSchema || token.Repository == "" {
 		return nil, huma.Error400BadRequest("service relationship citation is invalid")
 	}
-	authorized, _, authorizationErr := service.authorizeRepositories(
+	authorized, authorization, authorizationErr := service.authorizeRepositories(
 		ctx, []string{token.Repository},
 	)
 	if authorizationErr != nil || len(authorized) != 1 || authorized[0].Name != token.Repository {
@@ -736,13 +815,19 @@ func (service *RelationshipService) ReadCitation(
 	if err != nil {
 		return nil, relationshipReadError("read relationship citation content", err)
 	}
-	return &RelationshipCitation{
+	citation := &RelationshipCitation{
 		SchemaVersion: relationshipCitationSchema, Repository: source.repository.Name,
 		RootSchema: source.root.Schema, Generation: source.root.GenerationDigest,
 		RootDigest: source.root.Digest, AuthorityDigest: source.root.AuthorityDigest,
 		Projection: projectRelationshipProjection(projection),
 		Evidence:   projectRelationshipEvidence(evidence), Content: string(content),
-	}, nil
+	}
+	if err := service.confirmCitationSource(
+		ctx, source, authorized[0], authorization,
+	); err != nil {
+		return nil, err
+	}
+	return citation, nil
 }
 
 // RootCoverage is the source-free proof/Workbench annex. Authorization for
@@ -764,55 +849,29 @@ func (service *RelationshipService) RootCoverage(
 		Visibility:    authorization, VisibleRepositoryCount: len(resolved),
 		Roots: []RelationshipRootReceipt{}, State: "exact",
 	}
-	publications := make([]*relationshippublication.Publication, len(resolved))
-	unavailable := make([]relationshippublication.Unavailable, len(resolved))
-	unavailablePresent := make([]bool, len(resolved))
-	leases := []*relationshippublication.Lease{}
-	defer func() {
-		for _, lease := range leases {
-			lease.Release()
+	binding := &relationshipBinding{
+		authorization: authorization, repositories: slices.Clone(resolved),
+		sources: make([]relationshipSource, 0, len(resolved)),
+	}
+	defer binding.release()
+	for _, repository := range resolved {
+		runtime, runtimeErr := service.relationshipRuntime(ctx, repository.Name)
+		if runtimeErr != nil {
+			return nil, relationshipReadError("read relationship runtime selector", runtimeErr)
 		}
-	}()
-	for index, repository := range resolved {
-		receipt := RelationshipRootReceipt{Repository: repository.Name, State: "unavailable", Reason: "relationship_root_unavailable"}
-		lease, openErr := service.cache.Acquire(
-			ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
-		)
-		if openErr == nil {
-			publication := lease.Publication()
-			if publication == nil {
-				lease.Release()
-				return nil, errors.New("relationship coverage lease has no publication")
-			}
-			root := publication.Root()
-			authority := projectRelationshipAuthority(root.Authority)
-			receipt.RootSchema = root.Schema
-			receipt.Generation, receipt.RootDigest = root.GenerationDigest, root.Digest
-			receipt.AuthorityDigest, receipt.Authority = root.AuthorityDigest, &authority
-			receipt.RepositoryComplete, receipt.AllServicesComplete = root.RepositoryComplete, root.AllServicesComplete
-			receipt.FailedServiceCount = root.FailedServiceCount
-			if root.AllServicesComplete {
-				receipt.State, receipt.Reason = "complete", ""
-			} else {
-				receipt.State, receipt.Reason = "failed", "service_partition_failed"
-			}
-			leases = append(leases, lease)
-			publications[index] = publication
-		} else if errors.Is(openErr, relationshippublication.ErrNotFound) {
-			marker, present, markerErr := relationshippublication.ReadUnavailable(
-				ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
-			)
-			if markerErr != nil {
-				return nil, relationshipReadError("read relationship unavailable authority", markerErr)
-			}
-			if present {
-				receipt.Reason = marker.Reason
-				receipt.Unavailable = projectRelationshipUnavailable(marker)
-				unavailable[index], unavailablePresent[index] = marker, true
-			}
-		} else {
+		source, openErr := service.openRuntimeRoot(ctx, repository, runtime)
+		if openErr != nil {
 			return nil, relationshipReadError("read relationship proof coverage", openErr)
 		}
+		if source.publication != nil {
+			if source.root.AllServicesComplete {
+				source.state = "complete"
+			} else {
+				source.state, source.reason = "failed", "service_partition_failed"
+			}
+		}
+		binding.sources = append(binding.sources, source)
+		receipt := relationshipReceipts(binding.sources[len(binding.sources)-1:])[0]
 		if receipt.State == "complete" {
 			result.ExactRootCount++
 		} else {
@@ -821,37 +880,8 @@ func (service *RelationshipService) RootCoverage(
 		}
 		result.Roots = append(result.Roots, receipt)
 	}
-	confirmed, confirmedAuthorization, err := service.authorizeRepositories(ctx, repositoryNames(resolved))
-	if err != nil {
+	if err := service.confirmBinding(ctx, binding, authorization); err != nil {
 		return nil, err
-	}
-	if confirmedAuthorization != authorization || len(confirmed) != len(resolved) {
-		return nil, huma.Error409Conflict("relationship coverage authorization changed; retry")
-	}
-	for index := range confirmed {
-		if !sameRelationshipRepo(confirmed[index], resolved[index]) {
-			return nil, huma.Error409Conflict("relationship coverage repository authority changed; retry")
-		}
-	}
-	for index, publication := range publications {
-		if publication != nil {
-			if err := publication.ConfirmCurrent(); err != nil {
-				return nil, huma.Error409Conflict("relationship coverage changed; retry")
-			}
-			continue
-		}
-		var expected *relationshippublication.Unavailable
-		if unavailablePresent[index] {
-			expected = &unavailable[index]
-		}
-		if err := relationshippublication.ConfirmUnavailable(
-			ctx, filepath.Join(service.opts.DataDir, "relationships"), resolved[index].Name, expected,
-		); err != nil {
-			if errors.Is(err, relationshippublication.ErrPublishing) {
-				return nil, huma.Error409Conflict("relationship coverage changed; retry")
-			}
-			return nil, relationshipReadError("confirm relationship proof coverage", err)
-		}
 	}
 	result.Digest = digestJSON(struct {
 		Schema                 string                    `json:"schema"`
@@ -917,15 +947,21 @@ func (service *RelationshipService) buildComparisonBinding(
 		createdAt: time.Now(), queryDigest: queryDigest, authorization: authorization,
 		repositories: []store.Repo{repository}, sources: []relationshipSource{}, entries: []relationshipEntry{},
 	}
+	runtime, err := service.relationshipRuntime(ctx, repository.Name)
+	if err != nil {
+		return nil, relationshipReadError("read relationship runtime selector", err)
+	}
 	before, beforeRefs, err := service.openGenerationSource(
-		ctx, repository, query.ServiceKey, query.BeforeGeneration, query.BeforeRootDigest,
+		ctx, repository, runtime, query.ServiceKey,
+		query.BeforeGeneration, query.BeforeRootDigest,
 	)
 	if err != nil {
 		return nil, relationshipReadError("open before relationship root", err)
 	}
 	binding.sources = append(binding.sources, before)
 	after, afterRefs, err := service.openGenerationSource(
-		ctx, repository, query.ServiceKey, query.AfterGeneration, query.AfterRootDigest,
+		ctx, repository, runtime, query.ServiceKey,
+		query.AfterGeneration, query.AfterRootDigest,
 	)
 	if err != nil {
 		binding.release()
@@ -970,39 +1006,210 @@ func (service *RelationshipService) buildComparisonBinding(
 	return binding, nil
 }
 
+func (service *RelationshipService) relationshipRuntime(
+	ctx context.Context,
+	repository string,
+) (relationshipRuntime, error) {
+	if service.selectors == nil {
+		return relationshipRuntime{backend: store.ServiceRuntimeV2}, nil
+	}
+	selector, err := service.selectors.GetServiceRuntimeSelector(ctx, repository)
+	if errors.Is(err, store.ErrNotFound) {
+		return relationshipRuntime{backend: store.ServiceRuntimeV2}, nil
+	}
+	if err != nil {
+		return relationshipRuntime{}, err
+	}
+	if selector.Repository != repository ||
+		selector.Backend != store.ServiceRuntimeV2 && selector.Backend != store.ServiceRuntimeV3 {
+		return relationshipRuntime{}, store.ErrInvalidServiceRuntimeSelector
+	}
+	return relationshipRuntime{backend: selector.Backend, selector: &selector}, nil
+}
+
+func (service *RelationshipService) openRuntimeRoot(
+	ctx context.Context,
+	repository store.Repo,
+	runtime relationshipRuntime,
+) (relationshipSource, error) {
+	source := relationshipSource{
+		repository: repository, selector: runtime.selector, state: "unavailable",
+	}
+	root := filepath.Join(service.opts.DataDir, "relationships")
+	if runtime.selector == nil {
+		source.current = true
+		lease, err := service.cache.Acquire(ctx, root, repository.Name)
+		if errors.Is(err, relationshippublication.ErrNotFound) {
+			marker, present, markerErr := relationshippublication.ReadUnavailable(
+				ctx, root, repository.Name,
+			)
+			if markerErr != nil {
+				return source, markerErr
+			}
+			if present {
+				source.unavailable, source.reason = &marker, marker.Reason
+			} else {
+				source.reason = "relationship_root_unavailable"
+			}
+			return source, nil
+		}
+		if err != nil {
+			return source, err
+		}
+		value := lease.Publication()
+		if value == nil {
+			lease.Release()
+			return source, errors.New("relationship lease has no publication")
+		}
+		source.lease = lease
+		source.publication = relationshipPublicationV2{Publication: value}
+		source.root = value.Root()
+		return source, nil
+	}
+
+	source, err := service.openGenerationRoot(
+		ctx, repository, runtime,
+		runtime.selector.RelationshipGenerationDigest,
+		runtime.selector.RelationshipRootDigest,
+	)
+	if err != nil {
+		return source, err
+	}
+	if !relationshipRootMatchesSelector(
+		source.root, source.catalogControlRevision, *runtime.selector,
+	) {
+		source.lease.Release()
+		source.lease = nil
+		return source, relationshippublication.ErrPublishing
+	}
+	return source, nil
+}
+
+func (service *RelationshipService) openGenerationRoot(
+	ctx context.Context,
+	repository store.Repo,
+	runtime relationshipRuntime,
+	generation, rootDigest string,
+) (relationshipSource, error) {
+	source := relationshipSource{
+		repository: repository, selector: runtime.selector, state: "unavailable",
+	}
+	root := filepath.Join(service.opts.DataDir, "relationships")
+	switch runtime.backend {
+	case store.ServiceRuntimeV2:
+		lease, err := service.cache.AcquireGeneration(
+			ctx, root, repository.Name, generation, rootDigest,
+		)
+		if err != nil {
+			return source, err
+		}
+		value := lease.Publication()
+		if value == nil {
+			lease.Release()
+			return source, errors.New("relationship generation lease has no publication")
+		}
+		source.lease = lease
+		source.publication = relationshipPublicationV2{Publication: value}
+		source.root = value.Root()
+	case store.ServiceRuntimeV3:
+		lease, err := service.cacheV3.AcquireGeneration(
+			ctx, root, repository.Name, generation, rootDigest,
+		)
+		if err != nil {
+			return source, err
+		}
+		value := lease.Publication()
+		if value == nil {
+			lease.Release()
+			return source, errors.New("relationship v3 generation lease has no publication")
+		}
+		source.lease = lease
+		source.publication = relationshipPublicationV3{PublicationV3: value}
+		rootV3 := value.Root()
+		source.root = normalizeRelationshipRootV3(rootV3)
+		source.catalogControlRevision = rootV3.Authority.CatalogControlRevision
+	default:
+		return source, store.ErrInvalidServiceRuntimeSelector
+	}
+	return source, nil
+}
+
+func normalizeRelationshipRootV3(value relationshippublication.RootV3) relationshippublication.Root {
+	upstream := value.Authority.Upstream
+	return relationshippublication.Root{
+		Schema: value.Schema,
+		Authority: relationshippublication.Authority{
+			Repository:                  value.Authority.Repository,
+			CatalogGenerationDigest:     value.Authority.CatalogRootDigest,
+			CatalogDigest:               value.Authority.CatalogLogicalDigest,
+			CatalogSourceGeneration:     value.Authority.CatalogSourceGeneration,
+			ServiceStateSetDigest:       value.Authority.ServiceStateSetDigest,
+			ServiceStateSummaryDigest:   value.Authority.ServiceStateSummaryDigest,
+			ServiceStateControlRevision: value.Authority.ServiceStateControlRevision,
+			ObservationGenerationDigest: value.Authority.ObservationGenerationDigest,
+			ObservationManifestDigest:   value.Authority.ObservationManifestDigest,
+			ObservationSourceDigest:     value.Authority.ObservationSourceDigest,
+			ResolverGenerationDigest:    value.Authority.ResolverGenerationDigest,
+			ResolverRootDigest:          value.Authority.ResolverRootDigest,
+			RPCGenerationDigest:         value.Authority.RPCGenerationDigest,
+			RPCRootDigest:               value.Authority.RPCRootDigest,
+			KafkaGenerationDigest:       value.Authority.KafkaGenerationDigest,
+			KafkaRootDigest:             value.Authority.KafkaRootDigest,
+			PolicyDigest:                value.Authority.PolicyDigest,
+			Upstream:                    &upstream,
+		},
+		AuthorityDigest:        value.AuthorityDigest,
+		RepositoryComplete:     value.RepositoryComplete,
+		AllServicesComplete:    value.AllServicesComplete,
+		ProjectionCount:        value.ProjectionCount,
+		ServiceCount:           value.ServiceCount,
+		CompleteServiceCount:   value.CompleteServiceCount,
+		EmptyServiceCount:      value.EmptyServiceCount,
+		FailedServiceCount:     value.FailedServiceCount,
+		ServiceReferenceCount:  value.ServiceReferenceCount,
+		EncodedRepositoryBytes: value.EncodedRepositoryBytes,
+		EncodedServiceBytes:    value.EncodedServiceBytes,
+		GenerationDigest:       value.GenerationDigest,
+		Digest:                 value.Digest,
+	}
+}
+
+func relationshipRootMatchesSelector(
+	root relationshippublication.Root,
+	catalogControlRevision uint64,
+	selector store.ServiceRuntimeSelector,
+) bool {
+	catalog := selector.CatalogGenerationDigest
+	if selector.Backend == store.ServiceRuntimeV3 {
+		catalog = selector.CatalogRootDigest
+	}
+	return root.Authority.Repository == selector.Repository &&
+		root.GenerationDigest == selector.RelationshipGenerationDigest &&
+		root.Digest == selector.RelationshipRootDigest &&
+		root.Authority.CatalogGenerationDigest == catalog &&
+		root.Authority.ServiceStateSummaryDigest == selector.StateSummaryDigest &&
+		root.Authority.ServiceStateControlRevision == selector.StateControlRevision &&
+		(selector.Backend != store.ServiceRuntimeV3 ||
+			catalogControlRevision == selector.CatalogControlRevision)
+}
+
 func (service *RelationshipService) openCurrentSource(
 	ctx context.Context,
 	repository store.Repo,
 	serviceKey string,
 ) (relationshipSource, []relationshippublication.ServiceReference, error) {
-	source := relationshipSource{repository: repository, current: true, state: "unavailable"}
-	source.receipt.ServiceKey = serviceKey
-	lease, err := service.cache.Acquire(
-		ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
-	)
-	if errors.Is(err, relationshippublication.ErrNotFound) {
-		marker, present, markerErr := relationshippublication.ReadUnavailable(
-			ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
-		)
-		if markerErr != nil {
-			return source, nil, markerErr
-		}
-		if present {
-			source.unavailable, source.reason = &marker, marker.Reason
-		} else {
-			source.reason = "relationship_root_unavailable"
-		}
-		return source, []relationshippublication.ServiceReference{}, nil
+	runtime, err := service.relationshipRuntime(ctx, repository.Name)
+	if err != nil {
+		return relationshipSource{}, nil, err
 	}
+	source, err := service.openRuntimeRoot(ctx, repository, runtime)
 	if err != nil {
 		return source, nil, err
 	}
-	source.lease, source.publication = lease, lease.Publication()
+	source.receipt.ServiceKey = serviceKey
 	if source.publication == nil {
-		source.lease.Release()
-		return source, nil, errors.New("relationship lease has no publication")
+		return source, []relationshippublication.ServiceReference{}, nil
 	}
-	source.root = source.publication.Root()
 	// The cache lease pins this immutable generation. The shared result-time
 	// control snapshot below is the only mutable-current fence needed here.
 	receipt, member, err := source.publication.ReadService(ctx, serviceKey)
@@ -1023,23 +1230,16 @@ func (service *RelationshipService) openCurrentSource(
 func (service *RelationshipService) openGenerationSource(
 	ctx context.Context,
 	repository store.Repo,
+	runtime relationshipRuntime,
 	serviceKey, generation, rootDigest string,
 ) (relationshipSource, []relationshippublication.ServiceReference, error) {
-	source := relationshipSource{repository: repository, state: "unavailable"}
-	source.receipt.ServiceKey = serviceKey
-	lease, err := service.cache.AcquireGeneration(
-		ctx, filepath.Join(service.opts.DataDir, "relationships"), repository.Name,
-		generation, rootDigest,
+	source, err := service.openGenerationRoot(
+		ctx, repository, runtime, generation, rootDigest,
 	)
 	if err != nil {
 		return source, nil, err
 	}
-	source.lease, source.publication = lease, lease.Publication()
-	if source.publication == nil {
-		source.lease.Release()
-		return source, nil, errors.New("relationship generation lease has no publication")
-	}
-	source.root = source.publication.Root()
+	source.receipt.ServiceKey = serviceKey
 	receipt, member, err := source.publication.ReadService(ctx, serviceKey)
 	source.receipt = receipt
 	switch {
@@ -1337,6 +1537,78 @@ func (service *RelationshipService) confirmBinding(
 			return relationshipReadError("confirm relationship publication", err)
 		}
 	}
+	confirmedSelectors := make(map[string]struct{}, len(binding.sources))
+	for index := range binding.sources {
+		selector := binding.sources[index].selector
+		if selector == nil {
+			if service.selectors == nil {
+				continue
+			}
+			repository := binding.sources[index].repository.Name
+			key := repository + "\x00absent"
+			if _, present := confirmedSelectors[key]; present {
+				continue
+			}
+			if err := store.ConfirmServiceRuntimeSelectorAbsent(
+				ctx, service.selectors, repository,
+			); err != nil {
+				return relationshipReadError("confirm absent relationship runtime selector", err)
+			}
+			confirmedSelectors[key] = struct{}{}
+			continue
+		}
+		key := selector.Repository + "\x00" + selector.Digest
+		if _, present := confirmedSelectors[key]; present {
+			continue
+		}
+		if service.selectors == nil {
+			return huma.Error409Conflict("relationship runtime selector is unavailable; retry")
+		}
+		if err := service.selectors.ConfirmServiceRuntimeSelector(ctx, *selector); err != nil {
+			return relationshipReadError("confirm relationship runtime selector", err)
+		}
+		confirmedSelectors[key] = struct{}{}
+	}
+	return nil
+}
+
+func (service *RelationshipService) confirmCitationSource(
+	ctx context.Context,
+	source *relationshipSource,
+	repository store.Repo,
+	authorization VisibilityContext,
+) error {
+	confirmed, confirmedAuthorization, err := service.authorizeRepositories(
+		ctx, []string{repository.Name},
+	)
+	if err != nil {
+		return err
+	}
+	if len(confirmed) != 1 || confirmedAuthorization != authorization ||
+		!sameRelationshipRepo(confirmed[0], repository) {
+		return huma.Error409Conflict("relationship citation authorization changed; retry")
+	}
+	if source.current && source.publication != nil {
+		if err := source.publication.ConfirmCurrent(); err != nil {
+			return huma.Error409Conflict("relationship publication changed; retry")
+		}
+	}
+	if source.selector != nil {
+		if service.selectors == nil {
+			return huma.Error409Conflict("relationship runtime selector is unavailable; retry")
+		}
+		if err := service.selectors.ConfirmServiceRuntimeSelector(
+			ctx, *source.selector,
+		); err != nil {
+			return relationshipReadError("confirm relationship runtime selector", err)
+		}
+	} else if service.selectors != nil {
+		if err := store.ConfirmServiceRuntimeSelectorAbsent(
+			ctx, service.selectors, source.repository.Name,
+		); err != nil {
+			return relationshipReadError("confirm absent relationship runtime selector", err)
+		}
+	}
 	return nil
 }
 
@@ -1627,6 +1899,9 @@ func relationshipReadError(operation string, err error) error {
 	switch {
 	case errors.Is(err, relationshippublication.ErrPublishing):
 		return huma.Error409Conflict("service relationship authority changed; retry")
+	case errors.Is(err, store.ErrConflict),
+		errors.Is(err, store.ErrInvalidServiceRuntimeSelector):
+		return huma.Error409Conflict("service relationship runtime authority changed; retry")
 	case errors.Is(err, relationshippublication.ErrNotFound), errors.Is(err, relationshippublication.ErrServiceUnavailable):
 		return huma.Error409Conflict("service relationship authority unavailable")
 	case errors.Is(err, relationshippublication.ErrLimit):

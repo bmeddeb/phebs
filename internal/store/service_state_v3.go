@@ -78,6 +78,8 @@ type ServiceStateV3Begin struct {
 type ServiceStateV3ChunkResult struct {
 	Applied int
 	Read    int
+	// Settled means the durable plan is terminal. The generation scheduler
+	// still owns this chunk lease and completes it after downstream handoff.
 	Settled bool
 }
 
@@ -552,20 +554,33 @@ func (s *Surreal) beginServiceStateV3Plan(
 		plan.CreatedAt = time.Time{}
 		plan.UpdatedAt = time.Time{}
 	}
-	plan.Digest = serviceStateV3PlanDigest(
-		plan.Repository, plan.Phase, plan.CatalogRoot,
-		plan.CatalogControlRevision, plan.SearchGeneration, plan.Repair,
-	)
 	remaining := plan.TotalChunks - plan.BaseChunk
 	if remaining < 1 {
 		return ServiceStateV3Begin{}, ErrInvalidServiceStateV3
 	}
-	schedule, err := s.EnqueueGenerationSchedule(ctx, GenerationScheduleSpec{
-		Repository: plan.Repository, Stage: serviceStateV3Stage(plan.Phase),
-		Generation: plan.Digest, ResourceClass: GenerationResourceCPU,
-		TotalItems: int64(remaining), ChunkItems: 1,
-		MaxAttempts: MaxGenerationAttempts, RepositoryTokens: 1,
-	})
+	var (
+		schedule *GenerationSchedule
+		err      error
+	)
+	for {
+		plan.Digest = serviceStateV3PlanDigest(
+			plan.Repository, plan.Phase, plan.CatalogRoot,
+			plan.CatalogControlRevision, plan.SearchGeneration, plan.Repair,
+		)
+		schedule, err = s.EnqueueGenerationSchedule(ctx, GenerationScheduleSpec{
+			Repository: plan.Repository, Stage: serviceStateV3Stage(plan.Phase),
+			Generation: plan.Digest, ResourceClass: GenerationResourceCPU,
+			TotalItems: int64(remaining), ChunkItems: 1,
+			MaxAttempts: MaxGenerationAttempts, RepositoryTokens: 1,
+		})
+		if !errors.Is(err, ErrGenerationStale) {
+			break
+		}
+		if plan.Repair >= MaxGenerationAttempts {
+			return ServiceStateV3Begin{}, ErrGenerationExhausted
+		}
+		plan.Repair++
+	}
 	if err != nil {
 		return ServiceStateV3Begin{}, fmt.Errorf("begin service state v3 plan: enqueue: %w", err)
 	}
@@ -598,7 +613,7 @@ func (s *Surreal) retireTerminalServiceStateV3Schedule(
 	}
 	terminal := plan.State == serviceStateV3Reconciled ||
 		plan.State == serviceStateV3Activated || plan.State == serviceStateV3Superseded
-	if !terminal {
+	if !terminal || schedule.Status != GenerationScheduleSettled {
 		return nil
 	}
 	if err := s.RetireCurrentGenerationSchedule(ctx, *schedule); err != nil &&
@@ -694,9 +709,9 @@ func serviceStateV3PlanContent(plan ServiceStateV3Plan) map[string]any {
 	}
 }
 
-// ProcessServiceStateV3Chunk applies one exact leased scheduler chunk and then
-// settles that lease. A crash between those steps is safe: the retry observes
-// the advanced plan cursor and only settles its successor attempt.
+// ProcessServiceStateV3Chunk applies one exact leased scheduler chunk. The
+// scheduler owns completion so any post-apply runtime handoff failure can
+// retry the same idempotent plan chunk before settling its lease.
 func (s *Surreal) ProcessServiceStateV3Chunk(
 	ctx context.Context,
 	chunk GenerationChunk,
@@ -742,28 +757,6 @@ func (s *Surreal) ProcessServiceStateV3Chunk(
 	} else if plan.NextChunk == plan.TotalChunks &&
 		(plan.State == serviceStateV3Reconciled || plan.State == serviceStateV3Activated) {
 		result.Settled = true
-	}
-	if err := s.CompleteGenerationChunk(ctx, chunk); err != nil {
-		return result, fmt.Errorf("process service state v3 chunk: settle lease: %w", err)
-	}
-	if result.Settled {
-		schedule, scheduleErr := s.GetGenerationSchedule(ctx, plan.Repository, chunk.Stage)
-		if scheduleErr != nil {
-			return result, fmt.Errorf("process service state v3 chunk: read settled schedule: %w", scheduleErr)
-		}
-		if schedule.Digest != chunk.ScheduleDigest {
-			return result, fmt.Errorf("process service state v3 chunk: schedule did not settle: %w", ErrConflict)
-		}
-		if schedule.Status == GenerationScheduleActive {
-			result.Settled = false
-			return result, nil
-		}
-		if schedule.Status != GenerationScheduleSettled {
-			return result, fmt.Errorf("process service state v3 chunk: schedule did not settle: %w", ErrConflict)
-		}
-		if err := s.RetireCurrentGenerationSchedule(ctx, *schedule); err != nil {
-			return result, fmt.Errorf("process service state v3 chunk: retire schedule: %w", err)
-		}
 	}
 	return result, nil
 }
@@ -1384,6 +1377,7 @@ func (s *Surreal) commitServiceStateV3Chunk(
 	}
 	results, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
 BEGIN;
+LET $repository_state = (SELECT deleting FROM $repository_rid LIMIT 1)[0];
 LET $candidate = (SELECT root_digest, control_revision FROM $candidate_rid LIMIT 1)[0];
 LET $current = (SELECT schedule_digest FROM $schedule_current LIMIT 1)[0].schedule_digest;
 LET $schedule = (SELECT digest, generation, status FROM $schedule_rid LIMIT 1)[0];
@@ -1410,7 +1404,8 @@ LET $drained = !$require_removal_drain OR array::len(
 		WHERE repository = $repository AND removed = false
 			AND service_key > $removal_cursor LIMIT 1
 ) = 0;
-IF $candidate = NONE OR $candidate.root_digest != $catalog_root OR
+IF $repository_state = NONE OR $repository_state.deleting = true OR
+	$candidate = NONE OR $candidate.root_digest != $catalog_root OR
 	$candidate.control_revision != $catalog_revision OR $current != $schedule_digest OR
 	$schedule = NONE OR $schedule.digest != $schedule_digest OR
 	$schedule.generation != $plan_digest OR $schedule.status != 'active' OR
@@ -1431,7 +1426,8 @@ IF $write_summary {
 };
 UPDATE $plan_rid CONTENT $plan_content RETURN AFTER;
 COMMIT;`, map[string]any{
-		"candidate_rid": serviceCatalogV3CandidateID(priorPlan.Repository),
+		"candidate_rid":  serviceCatalogV3CandidateID(priorPlan.Repository),
+		"repository_rid": repoID(priorPlan.Repository),
 		"schedule_current": models.NewRecordID(
 			"generation_schedule_current",
 			strings.TrimPrefix(generationCurrentID(priorPlan.Repository, chunk.Stage), "sha256:"),

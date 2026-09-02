@@ -413,9 +413,10 @@ func makeFixtureUnavailable(t *testing.T, st *serviceSearchStore) {
 }
 
 type serviceSearchFixture struct {
-	indexDir string
-	store    *serviceSearchStore
-	search   repositoryindex.SearchManifest
+	indexDir      string
+	repositoryDir string
+	store         *serviceSearchStore
+	search        repositoryindex.SearchManifest
 }
 
 func buildServiceSearchFixture(t *testing.T) serviceSearchFixture {
@@ -527,7 +528,7 @@ func buildServiceSearchFixture(t *testing.T) serviceSearchFixture {
 		t.Fatal(err)
 	}
 	return serviceSearchFixture{
-		indexDir: indexDir, search: search,
+		indexDir: indexDir, repositoryDir: repositoryDir, search: search,
 		store: &serviceSearchStore{
 			repo: store.Repo{
 				Name: repository, IndexedCommitHash: commit,
@@ -536,6 +537,84 @@ func buildServiceSearchFixture(t *testing.T) serviceSearchFixture {
 			publication: publication, summary: summary, state: state,
 		},
 	}
+}
+
+func advanceServiceSearchGeneration(
+	t *testing.T,
+	fixture serviceSearchFixture,
+) repositoryindex.SearchManifest {
+	t.Helper()
+	for name, content := range map[string]string{
+		"services/orders/main.go": "package orders\nconst Replacement = \"T419_REPLACEMENT\"\n",
+		"outside/main.go":         "package outside\nconst Replacement = \"T419_REPLACEMENT\"\n",
+	} {
+		path := filepath.Join(fixture.repositoryDir, filepath.FromSlash(name))
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runServiceGit(t, fixture.repositoryDir, "add", "--all")
+	runServiceGit(t, fixture.repositoryDir, "commit", "-q", "-m", "replacement")
+	commit := runServiceGit(t, fixture.repositoryDir, "rev-parse", "HEAD")
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD", Commit: commit,
+	}}
+	shardStage := t.TempDir()
+	builder, err := index.NewBuilder(index.Options{
+		IndexDir: shardStage, ShardPrefixOverride: "t419",
+		ShardMax: 100 << 20, Parallelism: 1, DisableCTags: true,
+		RepositoryDescription: zoekt.Repository{
+			Name:     fixture.store.repo.Name,
+			Branches: []zoekt.RepositoryBranch{{Name: "HEAD", Version: commit}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"outside/main.go", "services/orders/main.go"} {
+		content, readErr := os.ReadFile(
+			filepath.Join(fixture.repositoryDir, filepath.FromSlash(path)),
+		)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if err := builder.Add(index.Document{
+			Name: path, Content: content, Branches: []string{"HEAD"},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := builder.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	sourceStage := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(
+		t.Context(), fixture.repositoryDir, sourceStage,
+		fixture.store.repo.Name, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := focusedindex.PublishWholeGeneration(
+		t.Context(), fixture.indexDir, shardStage, sourceStage,
+		fixture.store.repo.Name, revisions, source,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := focusedindex.FinishPublication(
+		fixture.indexDir, fixture.store.repo.Name,
+	); err != nil {
+		t.Fatal(err)
+	}
+	search, err := focusedindex.ValidateRepositorySearchGeneration(
+		t.Context(), fixture.indexDir, fixture.store.repo.Name, revisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.store.repo.IndexedCommitHash = commit
+	fixture.store.repo.IndexedRevisions = slices.Clone(revisions)
+	return search
 }
 
 func serviceSearchPublication(

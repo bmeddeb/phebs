@@ -79,6 +79,16 @@ type SearchGenerationReceipt struct {
 	FileCount         int                     `json:"file_count"`
 }
 
+// SearchGenerationControls is one exact immutable search-generation view.
+// Directory names the already lifecycle-pinned root used by hot readers;
+// Search and Source are strict control-only reads from that root.
+type SearchGenerationControls struct {
+	Directory string
+	Receipt   SearchGenerationReceipt
+	Search    repositoryindex.SearchManifest
+	Source    repositoryindex.SourceManifest
+}
+
 type SearchGenerationRoot struct {
 	Schema     string               `json:"schema"`
 	Repository string               `json:"repository"`
@@ -460,8 +470,9 @@ func sameSearchRevisions(left, right []store.IndexedRevision) bool {
 // lifecycle. Publication roots remain the durable authority; pins only delay
 // retirement after a reader has already bound an exact immutable generation.
 type SearchGenerationPins struct {
-	mu   sync.Mutex
-	pins map[string]int
+	mu       sync.Mutex
+	pins     map[string]int
+	retiring map[string]struct{}
 }
 
 type SearchGenerationLease struct {
@@ -476,12 +487,47 @@ func (pins *SearchGenerationPins) Acquire(repository, generation string) (*Searc
 	}
 	key := repository + "\x00" + generation
 	pins.mu.Lock()
+	if _, retiring := pins.retiring[key]; retiring {
+		pins.mu.Unlock()
+		return nil, errSearchGenerationPinned
+	}
 	if pins.pins == nil {
 		pins.pins = make(map[string]int)
 	}
 	pins.pins[key]++
 	pins.mu.Unlock()
 	return &SearchGenerationLease{pins: pins, key: key}, nil
+}
+
+// BeginRetire atomically excludes a new lease after proving that no reader is
+// pinned. The caller holds the returned guard through the durable rename.
+func (pins *SearchGenerationPins) BeginRetire(repository, generation string) (func(), bool) {
+	if pins == nil {
+		return nil, false
+	}
+	key := repository + "\x00" + generation
+	pins.mu.Lock()
+	if pins.pins[key] != 0 {
+		pins.mu.Unlock()
+		return nil, false
+	}
+	if pins.retiring == nil {
+		pins.retiring = make(map[string]struct{})
+	}
+	if _, present := pins.retiring[key]; present {
+		pins.mu.Unlock()
+		return nil, false
+	}
+	pins.retiring[key] = struct{}{}
+	pins.mu.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			pins.mu.Lock()
+			delete(pins.retiring, key)
+			pins.mu.Unlock()
+		})
+	}, true
 }
 
 func (pins *SearchGenerationPins) Pinned(repository, generation string) bool {
@@ -737,6 +783,62 @@ func validateImmutableSearchGeneration(
 	receipt.AllocatedState = allocatedState
 	receipt.AllocatedBytes = allocated
 	return receipt, nil
+}
+
+// ValidateSearchGeneration strict-validates one retained immutable generation
+// by exact digest. Runtime selectors use it for startup and backup fencing;
+// unlike the current-root reader, it also admits the lease-protected prior.
+func ValidateSearchGeneration(
+	ctx context.Context, indexDir, repository, digest string,
+) (SearchGenerationReceipt, error) {
+	return validateImmutableSearchGeneration(ctx, indexDir, repository, digest)
+}
+
+// ReadSearchGenerationControls opens one retained immutable generation by
+// digest without consulting the mutable flat publication or lifecycle root.
+// It validates only bounded controls; whole-reader cache fill owns the one
+// complete member validation before serving queries.
+func ReadSearchGenerationControls(
+	ctx context.Context,
+	indexDir, repository, digest string,
+) (SearchGenerationControls, error) {
+	if err := ctx.Err(); err != nil {
+		return SearchGenerationControls{}, err
+	}
+	directory, err := searchGenerationDirectory(indexDir, repository, digest)
+	if err != nil {
+		return SearchGenerationControls{}, err
+	}
+	if err := ensureRealDirectory(directory); err != nil {
+		return SearchGenerationControls{}, err
+	}
+	receipt, err := readSearchGenerationReceipt(directory, repository)
+	if err != nil {
+		return SearchGenerationControls{}, err
+	}
+	if receipt.SearchDigest != digest {
+		return SearchGenerationControls{}, errors.New(
+			"search generation directory identity mismatch",
+		)
+	}
+	search, source, err := ReadRepositorySearchGeneration(
+		directory, repository, receipt.Revisions,
+	)
+	if err != nil {
+		return SearchGenerationControls{}, err
+	}
+	if search.Digest != receipt.SearchDigest ||
+		search.SourceGenerationDigest != receipt.SourceDigest ||
+		source.Digest != receipt.SourceDigest ||
+		!sameSearchRevisions(search.Revisions, receipt.Revisions) ||
+		!sameSearchRevisions(source.Revisions, receipt.Revisions) {
+		return SearchGenerationControls{}, errors.New(
+			"search generation controls disagree with receipt",
+		)
+	}
+	return SearchGenerationControls{
+		Directory: directory, Receipt: receipt, Search: search, Source: source,
+	}, nil
 }
 
 func adoptLegacySearchGeneration(

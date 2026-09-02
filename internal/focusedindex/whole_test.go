@@ -1,8 +1,10 @@
 package focusedindex
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,12 +74,43 @@ func TestRepositorySearchGenerationArchiveIsExactAndFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	archivePath := filepath.Join(t.TempDir(), "search-index.tar")
-	report, err := CreateArchiveWithReport(indexDir, archivePath)
+	report, err := CreateArchiveWithSelections(
+		t.Context(), indexDir, archivePath, []ArchiveSearchGeneration{{
+			Repository: repository, GenerationDigest: search.Digest,
+		}},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if report != (ArchiveReport{Publications: 1}) {
 		t.Fatalf("repository-search archive report = %+v", report)
+	}
+	archiveFile, err := os.Open(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := tar.NewReader(archiveFile)
+	selectedEntries := 0
+	for {
+		header, err := reader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.HasPrefix(header.Name, searchGenerationDirectoryName+"/") {
+			selectedEntries++
+			if filepath.Base(header.Name) != searchGenerationReceiptName {
+				t.Fatalf("selected current duplicated archive data as %q", header.Name)
+			}
+		}
+	}
+	if err := archiveFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if selectedEntries != 1 {
+		t.Fatalf("selected-current archive entries = %d, want receipt only", selectedEntries)
 	}
 	restored := filepath.Join(t.TempDir(), "index")
 	if err := RestoreArchive(archivePath, restored); err != nil {
@@ -145,6 +178,79 @@ func TestRepositorySearchGenerationArchiveIsExactAndFailClosed(t *testing.T) {
 	if omitted.Publications != 0 || omitted.OmittedPublications != 1 ||
 		omitted.OmittedArtifacts == 0 {
 		t.Fatalf("corrupt repository-search archive report = %+v", omitted)
+	}
+}
+
+func TestArchivePreservesSelectedSearchGenerationAfterCurrentAdvances(t *testing.T) {
+	repositoryDir := t.TempDir()
+	git(t, repositoryDir, "init", "-b", "main")
+	const repository = "example.com/acme/selected-search"
+	indexDir := t.TempDir()
+	publish := func(content string) SearchGenerationRoot {
+		t.Helper()
+		if err := os.WriteFile(
+			filepath.Join(repositoryDir, "main.go"), []byte(content), 0o600,
+		); err != nil {
+			t.Fatal(err)
+		}
+		git(t, repositoryDir, "add", "main.go")
+		git(t, repositoryDir, "commit", "-m", content)
+		revisions := []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD",
+			Commit: git(t, repositoryDir, "rev-parse", "HEAD"),
+		}}
+		wholeStage := buildWholeStageFixture(t, repository, revisions, 1)
+		sourceStage := filepath.Join(t.TempDir(), "source")
+		source, err := repositoryindex.BuildSourceGeneration(
+			t.Context(), repositoryDir, sourceStage, repository, revisions,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := PublishWholeGeneration(
+			t.Context(), indexDir, wholeStage, sourceStage,
+			repository, revisions, source,
+		); err != nil {
+			t.Fatal(err)
+		}
+		if err := FinishPublication(indexDir, repository); err != nil {
+			t.Fatal(err)
+		}
+		root, err := ReadSearchGenerationRoot(indexDir, repository)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return root
+	}
+
+	first := publish("package main\nconst Selected = 1\n")
+	second := publish("package main\nconst Selected = 2\n")
+	if second.Prior == nil ||
+		second.Prior.GenerationDigest != first.Current.GenerationDigest {
+		t.Fatalf("advanced search root = %+v", second)
+	}
+	archive := filepath.Join(t.TempDir(), "selected-search.tar")
+	if _, err := CreateArchiveWithSelections(
+		t.Context(), indexDir, archive, []ArchiveSearchGeneration{{
+			Repository: repository, GenerationDigest: first.Current.GenerationDigest,
+		}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	restored := filepath.Join(t.TempDir(), "index")
+	if err := RestoreArchive(archive, restored); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateSearchGeneration(
+		t.Context(), restored, repository, first.Current.GenerationDigest,
+	); err != nil {
+		t.Fatalf("open restored selected generation: %v", err)
+	}
+	if search, err := repositoryindex.ReadSearchManifest(restored, repository); err != nil || search.Digest != second.Current.GenerationDigest {
+		t.Fatalf("restored current search = %+v, %v", search, err)
+	}
+	if _, err := VerifyArchiveWithReport(archive); err != nil {
+		t.Fatalf("verify selected search archive: %v", err)
 	}
 }
 

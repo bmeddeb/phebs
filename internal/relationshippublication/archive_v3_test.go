@@ -165,7 +165,7 @@ func TestArchiveV3IndependentCompositeRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	legacyNext, resolverNext := fixture.publishLegacyWithNewResolver(t)
+	legacyNext, resolverNext, _ := fixture.publishLegacyWithNewResolver(t)
 	divergentArchive := filepath.Join(t.TempDir(), "divergent-resolver.tar")
 	divergentReport, err := CreateArchive(
 		t.Context(), fixture.dataDir, divergentArchive,
@@ -199,6 +199,275 @@ func TestArchiveV3IndependentCompositeRoundTrip(t *testing.T) {
 		t.Fatalf("restored divergent legacy relationship = %+v, %v", legacyRestored, err)
 	}
 	assertArchiveV3Current(t, restoredDivergent, fixture.repository, shadow.Root())
+}
+
+func TestArchivePreservesSelectedV2AndV3GenerationsAfterCurrentAdvances(
+	t *testing.T,
+) {
+	fixture := newArchiveV3Fixture(t)
+	root := filepath.Join(fixture.dataDir, "relationships")
+	selectedV2, err := OpenCurrent(t.Context(), root, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedV3 := fixture.publishV3(t)
+	currentV2, resolverNext, rpcNext := fixture.publishLegacyWithNewResolver(t)
+
+	catalog, states, summary := archiveV3CatalogState(t, fixture.catalog)
+	summary.ControlRevision++
+	summary.UpdatedAt = summary.UpdatedAt.Add(time.Second)
+	if err := servicecatalogv3.SetRepositoryStateDigest(&summary); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := BuildV3(t.Context(), BuildRequestV3{
+		Root: root, Catalog: catalog, States: states, ServiceSummary: summary,
+		Resolver: resolverNext, RPC: rpcNext, Kafka: fixture.kafka,
+		Upstream: fixture.upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentV3, err := PublishV3(t.Context(), prepared, archiveV3Pins{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if currentV2.Root().GenerationDigest == selectedV2.Root().GenerationDigest ||
+		currentV3.Root().GenerationDigest == selectedV3.Root().GenerationDigest {
+		t.Fatal("fixture did not advance both relationship pointers")
+	}
+	selectedAuthority := selectedV2.Root().Authority
+	if resolverNext.Root().GenerationDigest == selectedAuthority.ResolverGenerationDigest ||
+		rpcNext.Root().GenerationDigest == selectedAuthority.RPCGenerationDigest {
+		t.Fatal("fixture did not advance selected relationship components")
+	}
+
+	archive := filepath.Join(t.TempDir(), "selected-relationships.tar")
+	if _, err := CreateArchiveWithSelections(
+		t.Context(), fixture.dataDir, archive,
+		[]ArchiveRelationshipGeneration{
+			{
+				Repository:       fixture.repository,
+				GenerationDigest: selectedV2.Root().GenerationDigest,
+				RootDigest:       selectedV2.Root().Digest,
+			},
+			{
+				Repository:       fixture.repository,
+				GenerationDigest: selectedV3.Root().GenerationDigest,
+				RootDigest:       selectedV3.Root().Digest,
+				V3:               true,
+			},
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	restored := t.TempDir()
+	if err := RestoreArchive(t.Context(), archive, restored); err != nil {
+		t.Fatal(err)
+	}
+	restoredRoot := filepath.Join(restored, "relationships")
+	restoredSelectedV2, err := OpenGeneration(
+		t.Context(), restoredRoot, fixture.repository,
+		selectedV2.Root().GenerationDigest, selectedV2.Root().Digest,
+	)
+	if err != nil {
+		t.Fatalf("open restored selected v2 generation: %v", err)
+	}
+	restoredSelectedV3, err := ValidateGenerationV3(
+		t.Context(), restoredRoot, fixture.repository,
+		selectedV3.Root().GenerationDigest, selectedV3.Root().Digest,
+	)
+	if err != nil {
+		t.Fatalf("open restored selected v3 generation: %v", err)
+	}
+	if _, err := restoredSelectedV2.OpenEvidenceReader(
+		t.Context(), restored,
+	); err != nil {
+		t.Fatalf("open restored selected v2 evidence: %v", err)
+	}
+	if _, err := restoredSelectedV3.OpenEvidenceReader(
+		t.Context(), restored,
+	); err != nil {
+		t.Fatalf("open restored selected v3 evidence: %v", err)
+	}
+	if _, err := openArchivedResolverGeneration(
+		t.Context(), restored, fixture.repository,
+		archiveComponentAuthority{
+			resolverGeneration: selectedAuthority.ResolverGenerationDigest,
+			resolverRoot:       selectedAuthority.ResolverRootDigest,
+		},
+	); err != nil {
+		t.Fatalf("open restored selected resolver generation: %v", err)
+	}
+	if current, err := OpenCurrent(t.Context(), restoredRoot, fixture.repository); err != nil || current.Root().Digest != currentV2.Root().Digest {
+		t.Fatalf("restored current v2 = %+v, %v", current, err)
+	}
+	if current, err := OpenCurrentV3(t.Context(), restoredRoot, fixture.repository); err != nil || current.Root().Digest != currentV3.Root().Digest {
+		t.Fatalf("restored current v3 = %+v, %v", current, err)
+	}
+	selectedV3Directory, err := GenerationPathV3(
+		restoredRoot, fixture.repository, selectedV3.Root().GenerationDigest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		filepath.Join(generationPath(
+			restoredRoot, fixture.repository, selectedV2.Root().GenerationDigest,
+		), "root.json"),
+		filepath.Join(selectedV3Directory, "root.json"),
+		filepath.Join(rpcGenerationDirectory(
+			restored, fixture.repository, selectedAuthority.RPCGenerationDigest,
+		), "root.json"),
+	} {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := validateArchiveTree(t.Context(), restored); err == nil {
+			t.Fatalf("archive validation accepted corrupt selected generation %q", path)
+		}
+		if err := os.WriteFile(path, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestArchivePreservesSelectedV2AndV3WithoutCurrentPointers(t *testing.T) {
+	fixture := newArchiveV3Fixture(t)
+	root := filepath.Join(fixture.dataDir, "relationships")
+	selectedV2, err := OpenCurrent(t.Context(), root, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedV3 := fixture.publishV3(t)
+	v2Current := filepath.Join(
+		repositoryRoot(root, fixture.repository), "current.json",
+	)
+	v3Base, err := RepositoryRootV3(root, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v3Current := filepath.Join(v3Base, "current.json")
+	v2PointerRaw, err := os.ReadFile(v2Current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v3PointerRaw, err := os.ReadFile(v3Current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{v2Current, v3Current} {
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	archive := filepath.Join(t.TempDir(), "historical-only-relationships.tar")
+	report, err := CreateArchiveWithSelections(
+		t.Context(), fixture.dataDir, archive,
+		[]ArchiveRelationshipGeneration{
+			{
+				Repository:       fixture.repository,
+				GenerationDigest: selectedV2.Root().GenerationDigest,
+				RootDigest:       selectedV2.Root().Digest,
+			},
+			{
+				Repository:       fixture.repository,
+				GenerationDigest: selectedV3.Root().GenerationDigest,
+				RootDigest:       selectedV3.Root().Digest,
+				V3:               true,
+			},
+		},
+	)
+	if err != nil || report.Publications != 0 {
+		t.Fatalf("historical-only archive = %+v, %v", report, err)
+	}
+	if verified, err := VerifyArchive(t.Context(), archive); err != nil ||
+		verified.Publications != 0 {
+		t.Fatalf("verify historical-only archive = %+v, %v", verified, err)
+	}
+	restored := t.TempDir()
+	if err := RestoreArchive(t.Context(), archive, restored); err != nil {
+		t.Fatal(err)
+	}
+	restoredRoot := filepath.Join(restored, "relationships")
+	if _, err := OpenGeneration(
+		t.Context(), restoredRoot, fixture.repository,
+		selectedV2.Root().GenerationDigest, selectedV2.Root().Digest,
+	); err != nil {
+		t.Fatalf("open historical-only v2: %v", err)
+	}
+	if _, err := ValidateGenerationV3(
+		t.Context(), restoredRoot, fixture.repository,
+		selectedV3.Root().GenerationDigest, selectedV3.Root().Digest,
+	); err != nil {
+		t.Fatalf("open historical-only v3: %v", err)
+	}
+	restoredV3Base, err := RepositoryRootV3(restoredRoot, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoredV3Generation, err := GenerationPathV3(
+		restoredRoot, fixture.repository, selectedV3.Root().GenerationDigest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		filepath.Join(repositoryRoot(restoredRoot, fixture.repository), "current.json"),
+		filepath.Join(restoredV3Base, "current.json"),
+	} {
+		if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := validateArchiveTree(t.Context(), restored); err == nil {
+			t.Fatalf("historical-only archive accepted corrupt pointer %q", path)
+		}
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, current := range []struct {
+		pointer string
+		raw     []byte
+		root    string
+	}{
+		{
+			pointer: filepath.Join(repositoryRoot(restoredRoot, fixture.repository), "current.json"),
+			raw:     v2PointerRaw,
+			root: filepath.Join(generationPath(
+				restoredRoot, fixture.repository, selectedV2.Root().GenerationDigest,
+			), "root.json"),
+		},
+		{
+			pointer: filepath.Join(restoredV3Base, "current.json"),
+			raw:     v3PointerRaw,
+			root:    filepath.Join(restoredV3Generation, "root.json"),
+		},
+	} {
+		rootRaw, err := os.ReadFile(current.root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(current.pointer, current.raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(current.root); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := validateArchiveTree(t.Context(), restored); err == nil {
+			t.Fatalf("archive accepted present pointer with missing root %q", current.root)
+		}
+		if err := os.WriteFile(current.root, rootRaw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(current.pointer); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestArchiveAdmissionBoundsAggregateUniqueFiles(t *testing.T) {
@@ -361,7 +630,7 @@ func (fixture archiveV3Fixture) publishV3(t *testing.T) *PublicationV3 {
 
 func (fixture archiveV3Fixture) publishLegacyWithNewResolver(
 	t *testing.T,
-) (*Publication, *resolvernamespace.Publication) {
+) (*Publication, *resolvernamespace.Publication, *rpccallerposting.Publication) {
 	t.Helper()
 	resolverStage, err := resolvernamespace.BuildV2(t.Context(), resolvernamespace.BuildRequestV2{
 		BuildRequest: resolvernamespace.BuildRequest{
@@ -407,7 +676,7 @@ func (fixture archiveV3Fixture) publishLegacyWithNewResolver(
 	if err != nil {
 		t.Fatal(err)
 	}
-	return publication, resolver
+	return publication, resolver, rpc
 }
 
 func archiveV3CatalogState(

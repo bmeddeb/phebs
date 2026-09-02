@@ -435,16 +435,19 @@ func (s *Surreal) derivedRetentionReadiness(
 		return false, errors.New("unknown derived retention readiness fence")
 	}
 	rows, err := surrealdb.Query[[]retentionMarkerState](ctx, s.db,
-		"SELECT version FROM $rid WHERE version = $version LIMIT 1",
-		map[string]any{"rid": rid, "version": version})
+		"SELECT version FROM $rid LIMIT 1", map[string]any{"rid": rid})
 	if err != nil {
 		return false, fmt.Errorf("derived retention readiness %d: %w", kind, err)
 	}
 	if err := retentionQueryResultsError(rows); err != nil {
 		return false, fmt.Errorf("derived retention readiness %d: %w", kind, err)
 	}
-	return len((*rows)[0].Result) == 1 &&
-		(*rows)[0].Result[0].Version == version, nil
+	if len((*rows)[0].Result) != 1 {
+		return false, nil
+	}
+	actual := (*rows)[0].Result[0].Version
+	return actual == version || kind == derivedRetentionCandidate &&
+		actual == serviceRuntimeSelectorCompatibilityMigrationVersion, nil
 }
 
 func derivedRetentionSummary(

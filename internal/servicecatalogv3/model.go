@@ -1,4 +1,4 @@
-// Package servicecatalogv3 defines the runtime-dark segmented service-catalog
+// Package servicecatalogv3 defines the segmented service-catalog
 // contract selected by T41.2. Storage, source-census proof, and activation are
 // deliberately owned by later tickets.
 package servicecatalogv3

@@ -61,15 +61,29 @@ type Config struct {
 	ServiceCatalogs map[string]ServiceCatalog `yaml:"service_catalogs"`
 }
 
+const (
+	ServiceCatalogRuntimeV2 = "v2"
+	ServiceCatalogRuntimeV3 = "v3"
+)
+
 // ServiceCatalog selects one exact normalized catalog input. Both kinds use an
 // absolute local Path; committed content must declare the indexed HEAD as its
-// Version, while operator content uses the explicit configured Version. T33.2
-// deliberately installs no build-system or directory adapter.
+// Version, while operator content uses the explicit configured Version. Runtime
+// is an explicit v3 opt-in; omission preserves v2. T33.2 deliberately installs
+// no build-system or directory adapter.
 type ServiceCatalog struct {
 	Kind    string `yaml:"kind" json:"kind"`
 	ID      string `yaml:"id" json:"id"`
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 	Path    string `yaml:"path" json:"path"`
+	Runtime string `yaml:"runtime,omitempty" json:"runtime,omitempty"`
+}
+
+func (catalog ServiceCatalog) RuntimeVersion() string {
+	if catalog.Runtime == "" {
+		return ServiceCatalogRuntimeV2
+	}
+	return catalog.Runtime
 }
 
 // MaxIndexedRevisions is the total per-repository revision ceiling, including
@@ -704,6 +718,8 @@ func (c *Config) validate(lines []int) error {
 	}
 
 	serviceCatalogRepos := make([]string, 0, len(c.ServiceCatalogs))
+	relationshipExtractionEnabled := c.Experimental.ProvisionalProtoExtraction ||
+		c.Experimental.ProvisionalThriftExtraction
 	for repo := range c.ServiceCatalogs {
 		serviceCatalogRepos = append(serviceCatalogRepos, repo)
 	}
@@ -751,6 +767,18 @@ func (c *Config) validate(lines []int) error {
 			errs = append(errs, fmt.Errorf(
 				"service_catalogs[%s]: kind must be %q or %q",
 				repo, servicecatalog.AuthorityCommitted, servicecatalog.AuthorityOperator,
+			))
+		}
+		if runtime := selection.RuntimeVersion(); runtime != ServiceCatalogRuntimeV2 &&
+			runtime != ServiceCatalogRuntimeV3 {
+			errs = append(errs, fmt.Errorf(
+				"service_catalogs[%s]: runtime must be %q or %q",
+				repo, ServiceCatalogRuntimeV2, ServiceCatalogRuntimeV3,
+			))
+		} else if runtime == ServiceCatalogRuntimeV3 && !relationshipExtractionEnabled {
+			errs = append(errs, fmt.Errorf(
+				"service_catalogs[%s]: runtime %q requires provisional protobuf or Thrift extraction",
+				repo, ServiceCatalogRuntimeV3,
 			))
 		}
 	}

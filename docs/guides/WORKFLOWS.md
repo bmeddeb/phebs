@@ -506,13 +506,16 @@ poll, accumulate prior inventory pages, cache authority across principals, or
 turn catalog paths into evidence. **Search this service** uses the exact
 service-search scope when the service is current or explicitly stale.
 
-Directory continuations for ordinary v2 and the runtime-dark v3 adapter are
-HMAC-authenticated and process-local, so a server restart requires a fresh
-first-page route. V3 additionally binds the exact immutable member range and
-keeps the verified member lease until response validation and the final
-authorization/authority fence complete. No configuration or production
-selector exposes that adapter before T41.9. If a continuation refuses, the
-directory preserves its filters and offers a first-page route. Concurrent
+Directory continuations for v2 and v3 are HMAC-authenticated and process-local,
+so a server restart requires a fresh first-page route. An explicit repository
+runtime selector chooses exactly one backend; an absent selector preserves v2.
+V3 additionally binds the exact immutable member range and keeps the verified
+member lease until response validation and the final authorization/authority
+fence complete. Runtime transitions keep the final idempotent state chunk
+retryable until the next durable state or relationship schedule exists or the
+exact selector commits; a temporary not-ready handoff never exposes a partial
+backend. If a continuation refuses, the directory preserves its filters
+and offers a first-page route. Concurrent
 inventory/detail responses render detail only when repository, catalog
 generation/revision, and state revision match; otherwise the inventory remains
 available and the detail fails closed with retry and clear-selection actions.
@@ -1214,21 +1217,27 @@ known service generation/state unavailability returns 409. Unexpected store,
 reader, or runtime faults remain HTTP 500 rather than being relabeled as an
 ordinary unavailable service.
 
-The v3 catalog and v3 service-state machinery remains runtime-dark and adds no
-selected or advertised production v3 HTTP, MCP, UI, or configuration surface.
-Explicit store reconciliation writes at most 512 rows per durable chunk and
-keeps strict v3 reads unavailable until the final matching-summary CAS.
-Explicit activation then updates at most 512 rows plus that matching summary
-atomically, so services already activated from the same catalog remain readable
-while later chunks settle.
+The v3 catalog and service-state runtime writes at most 512 rows per durable
+reconcile or activation chunk and keeps strict reads unavailable until the
+final matching-summary CAS. Services already activated from the same catalog
+remain readable while later chunks settle. `service_catalogs.<repository>.
+runtime: v3` selects the complete v3 catalog/state/search/relationship tuple
+only after it validates; omission preserves v2, and neither path falls back to
+the other after an explicit selector exists. Compatibility-mode v2 confirms
+selector absence again at response emission, while explicit v2 and v3 confirm
+the exact selector. V3 state chunks share the selector/backup mutation fence
+and move a selected v3 reader to complete v2 authority before changing its
+mutable state summary.
 
-Its dark query compiler/runtime can now consume a verified v3 root/member
-lease without changing the existing query authority receipt. Current service
-scope reads one member; stale scope may open exactly one historical member,
-and the lease stays pinned through the final repository/catalog/state/search
-fence. The same unregistered adapter now projects that exact scope and receipt
-through HTTP, streamed HTTP, and MCP. Ordinary product search continues to use
-the selected v2 path; T41.9 alone may select the v3 stack in production.
+The query compiler consumes a verified v3 root/member lease without changing
+the existing query authority receipt. Current service scope reads one member;
+stale scope may open exactly one historical member, and the lease stays pinned
+through the final repository/catalog/state/search and selector fence. HTTP,
+streamed HTTP, and MCP share this selector-aware boundary. An ambiguous
+selector-commit response keeps both possible filesystem targets pinned until
+an exact follow-up read resolves the durable winner. Once any selector exists,
+disabling both relationship-capable extraction packs refuses startup rather
+than leaving a requested reverse transition permanently pending.
 
 
 ### Revision scopes

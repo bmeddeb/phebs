@@ -31,6 +31,7 @@ type wholeCache struct {
 
 	mu        sync.Mutex
 	repos     map[string]*wholeRepoCache
+	selected  map[string]*wholeRepoCache
 	closed    bool
 	closeCtx  context.Context
 	cancel    context.CancelFunc
@@ -73,6 +74,7 @@ type wholeSharedCandidate struct {
 }
 
 type wholeCacheEntry struct {
+	directory    string
 	revisions    []store.IndexedRevision
 	fingerprint  focusedFingerprint
 	searchDigest string
@@ -86,6 +88,8 @@ type wholeCacheEntry struct {
 
 type wholeCacheLoad struct {
 	ready     chan struct{}
+	directory string
+	digest    string
 	revisions []store.IndexedRevision
 	entry     *wholeCacheEntry
 	err       error
@@ -123,6 +127,7 @@ func newWholeCache(indexDir string) *wholeCache {
 	return &wholeCache{
 		indexDir:  indexDir,
 		repos:     make(map[string]*wholeRepoCache),
+		selected:  make(map[string]*wholeRepoCache),
 		closeCtx:  closeCtx,
 		cancel:    cancel,
 		loadSlots: make(chan struct{}, maxConcurrentWholeLoads),
@@ -540,6 +545,31 @@ func (c *wholeCache) acquireExact(
 	repository string,
 	revisions []store.IndexedRevision,
 ) (*wholeLease, error) {
+	return c.acquireExactAt(
+		ctx, repo, repository, c.indexDir, "", revisions,
+	)
+}
+
+func (c *wholeCache) acquireSelected(
+	ctx context.Context,
+	repository, directory, digest string,
+	revisions []store.IndexedRevision,
+) (*wholeLease, error) {
+	repo, err := c.selectedRepo(repository)
+	if err != nil {
+		return nil, err
+	}
+	return c.acquireExactAt(
+		ctx, repo, repository, directory, digest, revisions,
+	)
+}
+
+func (c *wholeCache) acquireExactAt(
+	ctx context.Context,
+	repo *wholeRepoCache,
+	repository, directory, digest string,
+	revisions []store.IndexedRevision,
+) (*wholeLease, error) {
 	expected := append([]store.IndexedRevision(nil), revisions...)
 	for {
 		if err := ctx.Err(); err != nil {
@@ -552,6 +582,8 @@ func (c *wholeCache) acquireExact(
 		}
 		entry := repo.entry
 		if entry != nil && !entry.retired &&
+			entry.directory == directory &&
+			(digest == "" || entry.searchDigest == digest) &&
 			slices.Equal(entry.revisions, expected) {
 			if entry.searcher != nil {
 				entry.refs++
@@ -559,11 +591,11 @@ func (c *wholeCache) acquireExact(
 			repo.mu.Unlock()
 			expectedFingerprint := entry.fingerprint
 			current, err := focusedFingerprintKnownNames(
-				ctx, c.indexDir, expectedFingerprint,
+				ctx, entry.directory, expectedFingerprint,
 			)
 			valid := err == nil &&
 				equalFocusedFingerprint(expectedFingerprint, current) &&
-				!focusedindex.IsPublishing(c.indexDir, repository)
+				!focusedindex.IsPublishing(entry.directory, repository)
 			repo.mu.Lock()
 			valid = valid && !repo.pruned && repo.entry == entry &&
 				!entry.retired && !c.isClosed()
@@ -602,10 +634,11 @@ func (c *wholeCache) acquireExact(
 		}
 		if repo.load != nil {
 			load := repo.load
-			sameGeneration := slices.Equal(load.revisions, expected)
+			sameGeneration := load.directory == directory &&
+				load.digest == digest && slices.Equal(load.revisions, expected)
 			repo.mu.Unlock()
-			lease, err := c.waitForLoad(
-				ctx, repo, load, repository, expected,
+			lease, err := c.waitForLoadAt(
+				ctx, repo, load, repository, directory, digest, expected,
 			)
 			if lease != nil || sameGeneration {
 				return lease, err
@@ -616,7 +649,7 @@ func (c *wholeCache) acquireExact(
 			c.closeCtx, WholeGenerationWarmingTimeout,
 		)
 		load := &wholeCacheLoad{
-			ready:     make(chan struct{}),
+			ready: make(chan struct{}), directory: directory, digest: digest,
 			revisions: append([]store.IndexedRevision(nil), expected...),
 			ctx:       loadCtx,
 			cancel:    cancel,
@@ -624,10 +657,10 @@ func (c *wholeCache) acquireExact(
 		}
 		repo.retryFailures = 0
 		repo.load = load
-		go c.fill(repo, load, repository, expected)
+		go c.fill(repo, load, repository, directory, digest, expected)
 		repo.mu.Unlock()
-		return c.waitForLoad(
-			ctx, repo, load, repository, expected,
+		return c.waitForLoadAt(
+			ctx, repo, load, repository, directory, digest, expected,
 		)
 	}
 }
@@ -637,6 +670,22 @@ func (c *wholeCache) waitForLoad(
 	repo *wholeRepoCache,
 	load *wholeCacheLoad,
 	repository string,
+	revisions []store.IndexedRevision,
+) (*wholeLease, error) {
+	directory := load.directory
+	if directory == "" {
+		directory = c.indexDir
+	}
+	return c.waitForLoadAt(
+		ctx, repo, load, repository, directory, load.digest, revisions,
+	)
+}
+
+func (c *wholeCache) waitForLoadAt(
+	ctx context.Context,
+	repo *wholeRepoCache,
+	load *wholeCacheLoad,
+	repository, directory, digest string,
 	revisions []store.IndexedRevision,
 ) (*wholeLease, error) {
 	select {
@@ -654,7 +703,8 @@ func (c *wholeCache) waitForLoad(
 		}
 		if requestErr != nil {
 			if errors.Is(requestErr, context.DeadlineExceeded) &&
-				!repo.pruned && slices.Equal(load.revisions, revisions) {
+				!repo.pruned && load.directory == directory && load.digest == digest &&
+				slices.Equal(load.revisions, revisions) {
 				return nil, errors.Join(ErrWholeGenerationWarming, requestErr)
 			}
 			return nil, requestErr
@@ -662,6 +712,8 @@ func (c *wholeCache) waitForLoad(
 		entry := load.entry
 		if entry == nil || repo.pruned || repo.entry != entry ||
 			entry.retired || entry.searcher == nil ||
+			entry.directory != directory ||
+			(digest != "" && entry.searchDigest != digest) ||
 			!slices.Equal(entry.revisions, revisions) {
 			return nil, nil
 		}
@@ -678,6 +730,7 @@ func (c *wholeCache) waitForLoad(
 	if requestErr != nil {
 		if errors.Is(requestErr, context.DeadlineExceeded) &&
 			!repo.pruned && repo.load == load &&
+			load.directory == directory && load.digest == digest &&
 			slices.Equal(load.revisions, revisions) {
 			return nil, errors.Join(ErrWholeGenerationWarming, requestErr)
 		}
@@ -689,7 +742,7 @@ func (c *wholeCache) waitForLoad(
 func (c *wholeCache) fill(
 	repo *wholeRepoCache,
 	load *wholeCacheLoad,
-	repository string,
+	repository, directory, digest string,
 	revisions []store.IndexedRevision,
 ) {
 	defer load.cancel()
@@ -700,7 +753,7 @@ func (c *wholeCache) fill(
 	select {
 	case c.loadSlots <- struct{}{}:
 		entry, err = c.load(
-			load.ctx, repository, revisions, load.failures,
+			load.ctx, directory, repository, digest, revisions, load.failures,
 		)
 		<-c.loadSlots
 	case <-load.ctx.Done():
@@ -732,33 +785,34 @@ func (c *wholeCache) fill(
 
 func (c *wholeCache) load(
 	ctx context.Context,
-	repository string,
+	directory, repository, digest string,
 	revisions []store.IndexedRevision,
 	priorFailures int,
 ) (*wholeCacheEntry, error) {
 	beforeManifest, before, err := wholePublicationSnapshot(
-		ctx, c.indexDir, repository,
+		ctx, directory, repository,
 		revisions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	if focusedindex.IsPublishing(c.indexDir, repository) {
+	if focusedindex.IsPublishing(directory, repository) {
 		return nil, errors.New("whole-repository publication is in progress")
 	}
 	manifest, err := validateWholeSearchPublication(
-		ctx, c.indexDir, repository, revisions,
+		ctx, directory, repository, revisions,
 	)
 	if err != nil {
 		if !contextTermination(err) {
 			_, after, snapshotErr := wholePublicationSnapshot(
-				ctx, c.indexDir, repository, revisions,
+				ctx, directory, repository, revisions,
 			)
 			if snapshotErr == nil &&
 				equalFocusedFingerprint(before, after) &&
-				!focusedindex.IsPublishing(c.indexDir, repository) {
+				!focusedindex.IsPublishing(directory, repository) {
 				failures := min(priorFailures+1, 32)
 				return &wholeCacheEntry{
+					directory: directory, searchDigest: digest,
 					revisions: append(
 						[]store.IndexedRevision(nil), revisions...,
 					),
@@ -785,7 +839,7 @@ func (c *wholeCache) load(
 		})
 	}
 	searcher, err := materializeStaticShards(
-		ctx, c.indexDir, "whole-repository", repository, members,
+		ctx, directory, "whole-repository", repository, members,
 	)
 	if err != nil {
 		return nil, err
@@ -807,12 +861,12 @@ func (c *wholeCache) load(
 		)
 	}
 	afterManifest, after, err := wholePublicationSnapshot(
-		ctx, c.indexDir, repository,
+		ctx, directory, repository,
 		revisions,
 	)
 	if err != nil || afterManifest.Digest != manifest.Digest ||
 		!equalFocusedFingerprint(before, after) ||
-		focusedindex.IsPublishing(c.indexDir, repository) {
+		focusedindex.IsPublishing(directory, repository) {
 		searcher.Close()
 		if err != nil {
 			return nil, err
@@ -821,10 +875,16 @@ func (c *wholeCache) load(
 			"whole-repository publication changed during exact binding",
 		)
 	}
+	searchDigest := repositorySearchDigest(directory, repository)
+	if digest != "" && searchDigest != digest {
+		searcher.Close()
+		return nil, errors.New("bound whole-repository search generation mismatch")
+	}
 	return &wholeCacheEntry{
+		directory:    directory,
 		revisions:    append([]store.IndexedRevision(nil), revisions...),
 		fingerprint:  after,
-		searchDigest: repositorySearchDigest(c.indexDir, repository),
+		searchDigest: searchDigest,
 		searcher:     searcher,
 	}, nil
 }
@@ -1020,7 +1080,7 @@ func (l *wholeLease) current(
 ) bool {
 	if l == nil || ctx.Err() != nil ||
 		!wholeRepoIdentityMatches(repo, l.entry.revisions) ||
-		focusedindex.IsPublishing(l.cache.indexDir, l.repository) {
+		focusedindex.IsPublishing(l.entry.directory, l.repository) {
 		return false
 	}
 	l.repo.mu.Lock()
@@ -1032,17 +1092,37 @@ func (l *wholeLease) current(
 			return false
 		}
 		current, err := focusedFingerprintKnownNames(
-			ctx, l.cache.indexDir, l.entry.fingerprint[:1],
+			ctx, l.entry.directory, l.entry.fingerprint[:1],
 		)
 		return err == nil && equalFocusedFingerprint(
 			l.entry.fingerprint[:1], current,
 		)
 	}
 	current, err := focusedFingerprintKnownNames(
-		ctx, l.cache.indexDir, l.entry.fingerprint,
+		ctx, l.entry.directory, l.entry.fingerprint,
 	)
 	return err == nil &&
 		equalFocusedFingerprint(l.entry.fingerprint, current)
+}
+
+func (l *wholeLease) selectedCurrent(ctx context.Context, full bool) bool {
+	if l == nil || ctx.Err() != nil || l.entry.directory == "" ||
+		focusedindex.IsPublishing(l.entry.directory, l.repository) {
+		return false
+	}
+	l.repo.mu.Lock()
+	active := !l.cache.isClosed() && !l.repo.pruned &&
+		l.repo.entry == l.entry && !l.entry.retired
+	l.repo.mu.Unlock()
+	if !active {
+		return false
+	}
+	expected := l.entry.fingerprint[:1]
+	if full {
+		expected = l.entry.fingerprint
+	}
+	current, err := focusedFingerprintKnownNames(ctx, l.entry.directory, expected)
+	return err == nil && equalFocusedFingerprint(expected, current)
 }
 
 func (l *wholeLease) release() {
@@ -1112,6 +1192,20 @@ func (c *wholeCache) repo(repository string) (*wholeRepoCache, error) {
 	return repo, nil
 }
 
+func (c *wholeCache) selectedRepo(repository string) (*wholeRepoCache, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return nil, errors.New("whole-repository search cache is closed")
+	}
+	repo := c.selected[repository]
+	if repo == nil {
+		repo = &wholeRepoCache{}
+		c.selected[repository] = repo
+	}
+	return repo, nil
+}
+
 func (c *wholeCache) isClosed() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1120,8 +1214,9 @@ func (c *wholeCache) isClosed() bool {
 
 func (c *wholeCache) prune(keep map[string]struct{}) {
 	type candidate struct {
-		name string
-		repo *wholeRepoCache
+		name     string
+		repo     *wholeRepoCache
+		selected bool
 	}
 	c.mu.Lock()
 	var candidates []candidate
@@ -1130,17 +1225,32 @@ func (c *wholeCache) prune(keep map[string]struct{}) {
 			candidates = append(candidates, candidate{name: name, repo: repo})
 		}
 	}
+	for name, repo := range c.selected {
+		if _, ok := keep[name]; !ok {
+			candidates = append(candidates, candidate{
+				name: name, repo: repo, selected: true,
+			})
+		}
+	}
 	c.mu.Unlock()
 	for _, candidate := range candidates {
 		candidate.repo.mu.Lock()
 		c.mu.Lock()
-		if c.repos[candidate.name] != candidate.repo {
+		current := c.repos[candidate.name]
+		if candidate.selected {
+			current = c.selected[candidate.name]
+		}
+		if current != candidate.repo {
 			c.mu.Unlock()
 			candidate.repo.mu.Unlock()
 			continue
 		}
 		candidate.repo.pruned = true
-		delete(c.repos, candidate.name)
+		if candidate.selected {
+			delete(c.selected, candidate.name)
+		} else {
+			delete(c.repos, candidate.name)
+		}
 		if candidate.repo.load != nil {
 			candidate.repo.load.cancel()
 		}
@@ -1165,6 +1275,9 @@ func (c *wholeCache) close() {
 	c.cancel()
 	repos := make([]*wholeRepoCache, 0, len(c.repos))
 	for _, repo := range c.repos {
+		repos = append(repos, repo)
+	}
+	for _, repo := range c.selected {
 		repos = append(repos, repo)
 	}
 	c.mu.Unlock()

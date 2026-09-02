@@ -8,7 +8,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 )
 
-// RelationshipGenerationOwnerV3 owns only the dark v3 shadow namespace. Its
+// RelationshipGenerationOwnerV3 owns only the v3 relationship namespace. Its
 // presence in lifecycle does not register or select v3 for runtime reads.
 type RelationshipGenerationOwnerV3 struct {
 	DataDir string

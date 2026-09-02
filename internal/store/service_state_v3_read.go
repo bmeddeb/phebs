@@ -77,6 +77,7 @@ type ServiceStateV3Read struct {
 
 	currentLease *servicecatalogv3.ReadLease
 	activeLease  *servicecatalogv3.ReadLease
+	selector     *ServiceRuntimeSelector
 	closeOnce    sync.Once
 }
 
@@ -103,6 +104,7 @@ type ServiceStateV3Page struct {
 	Continuation *ServiceStatePosition
 
 	lease     *servicecatalogv3.ReadLease
+	selector  *ServiceRuntimeSelector
 	closeOnce sync.Once
 }
 
@@ -138,6 +140,34 @@ func (reader *ServiceStateV3Reader) OpenService(
 		}
 		return nil, fmt.Errorf("open service state v3: catalog pointer: %w", err)
 	}
+	if pointer.Repository != repository {
+		return nil, fmt.Errorf("open service state v3: catalog pointer: %w", ErrConflict)
+	}
+	return reader.openService(ctx, pointer, nil, serviceKey)
+}
+
+// OpenServiceSelected opens the exact catalog and state authority named by a
+// selected v3 runtime. It deliberately does not consult the independently
+// advancing dark-candidate pointer.
+func (reader *ServiceStateV3Reader) OpenServiceSelected(
+	ctx context.Context,
+	selector ServiceRuntimeSelector,
+	serviceKey string,
+) (_ *ServiceStateV3Read, retErr error) {
+	pointer, err := serviceStateV3SelectorPointer(selector)
+	if reader == nil || err != nil || serviceKey == "" {
+		return nil, fmt.Errorf("open selected service state v3: %w", ErrInvalidServiceStateV3)
+	}
+	return reader.openService(ctx, pointer, &selector, serviceKey)
+}
+
+func (reader *ServiceStateV3Reader) openService(
+	ctx context.Context,
+	pointer ServiceCatalogV3Pointer,
+	selector *ServiceRuntimeSelector,
+	serviceKey string,
+) (_ *ServiceStateV3Read, retErr error) {
+	repository := pointer.Repository
 	current, err := reader.cache.Open(
 		ctx, reader.source, repository, pointer.RootDigest,
 	)
@@ -147,7 +177,10 @@ func (reader *ServiceStateV3Reader) OpenService(
 			serviceStateV3AuthorityError(err),
 		)
 	}
-	read := &ServiceStateV3Read{Pointer: pointer, currentLease: current}
+	read := &ServiceStateV3Read{
+		Pointer: pointer, currentLease: current,
+		selector: cloneServiceRuntimeSelectorPointer(selector),
+	}
 	defer func() {
 		if retErr != nil {
 			read.Close()
@@ -167,6 +200,9 @@ func (reader *ServiceStateV3Reader) OpenService(
 	}
 	if !sameServiceStateV3Fence(pointer, summary) {
 		return nil, fmt.Errorf("open service state v3: unreconciled summary: %w", ErrConflict)
+	}
+	if selector != nil && !sameSelectedServiceStateV3Fence(*selector, summary) {
+		return nil, fmt.Errorf("open service state v3: selector summary: %w", ErrConflict)
 	}
 	read.Summary = summary
 	state, err := reader.source.GetServiceStateV3Point(ctx, repository, serviceKey)
@@ -255,6 +291,41 @@ func (reader *ServiceStateV3Reader) ListServices(
 		}
 		return nil, fmt.Errorf("list service states v3: catalog pointer: %w", err)
 	}
+	if pointer.Repository != repository {
+		return nil, fmt.Errorf("list service states v3: catalog pointer: %w", ErrConflict)
+	}
+	return reader.listServices(ctx, pointer, nil, filter, after, limit)
+}
+
+// ListServicesSelected reads the exact catalog root named by the selected v3
+// runtime while joining it to the still-selected current state summary/rows.
+// A newer dark candidate pointer is intentionally irrelevant.
+func (reader *ServiceStateV3Reader) ListServicesSelected(
+	ctx context.Context,
+	selector ServiceRuntimeSelector,
+	filter ServiceStateFilter,
+	after ServiceStatePosition,
+	limit int,
+) (_ *ServiceStateV3Page, retErr error) {
+	pointer, err := serviceStateV3SelectorPointer(selector)
+	if reader == nil || err != nil || validateServiceStateFilter(filter) != nil ||
+		limit < 1 || limit > MaxServiceStateReadPage ||
+		(after.ServiceKey == "") != (after.Incarnation == 0) ||
+		(after.ServiceKey == "") != (after.MemberRangeDigest == "") {
+		return nil, fmt.Errorf("list selected service states v3: %w", ErrInvalidServiceStateV3)
+	}
+	return reader.listServices(ctx, pointer, &selector, filter, after, limit)
+}
+
+func (reader *ServiceStateV3Reader) listServices(
+	ctx context.Context,
+	pointer ServiceCatalogV3Pointer,
+	selector *ServiceRuntimeSelector,
+	filter ServiceStateFilter,
+	after ServiceStatePosition,
+	limit int,
+) (_ *ServiceStateV3Page, retErr error) {
+	repository := pointer.Repository
 	lease, err := reader.cache.Open(ctx, reader.source, repository, pointer.RootDigest)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -280,6 +351,9 @@ func (reader *ServiceStateV3Reader) ListServices(
 	}
 	if !sameServiceStateV3Fence(pointer, summary) {
 		return nil, fmt.Errorf("list service states v3: unreconciled summary: %w", ErrConflict)
+	}
+	if selector != nil && !sameSelectedServiceStateV3Fence(*selector, summary) {
+		return nil, fmt.Errorf("list service states v3: selector summary: %w", ErrConflict)
 	}
 	if after.ServiceKey != "" {
 		anchor, anchorErr := reader.source.GetServiceStateV3Point(
@@ -376,9 +450,7 @@ func (reader *ServiceStateV3Reader) ListServices(
 		}
 		continuation = &position
 	}
-	if err := reader.source.ConfirmServiceStateV3Snapshot(
-		ctx, pointer, summary,
-	); err != nil {
+	if err := reader.confirmSnapshot(ctx, pointer, summary, selector); err != nil {
 		return nil, fmt.Errorf(
 			"list service states v3: final fence: %w",
 			serviceStateV3AuthorityError(err),
@@ -387,6 +459,7 @@ func (reader *ServiceStateV3Reader) ListServices(
 	return &ServiceStateV3Page{
 		Pointer: pointer, Root: root, Summary: summary,
 		Entries: entries, Continuation: continuation, lease: lease,
+		selector: cloneServiceRuntimeSelectorPointer(selector),
 	}, nil
 }
 
@@ -505,8 +578,8 @@ func (reader *ServiceStateV3Reader) Confirm(
 	if _, valid := read.currentLease.Root(); !valid {
 		return fmt.Errorf("confirm service state v3 read: closed lease: %w", ErrConflict)
 	}
-	if err := reader.source.ConfirmServiceStateV3Snapshot(
-		ctx, read.Pointer, read.Summary,
+	if err := reader.confirmSnapshot(
+		ctx, read.Pointer, read.Summary, read.selector,
 	); err != nil {
 		return fmt.Errorf(
 			"confirm service state v3 read: %w",
@@ -529,8 +602,8 @@ func (reader *ServiceStateV3Reader) ConfirmPage(
 	if _, valid := page.lease.Root(); !valid {
 		return fmt.Errorf("confirm service state v3 page: closed lease: %w", ErrConflict)
 	}
-	if err := reader.source.ConfirmServiceStateV3Snapshot(
-		ctx, page.Pointer, page.Summary,
+	if err := reader.confirmSnapshot(
+		ctx, page.Pointer, page.Summary, page.selector,
 	); err != nil {
 		return fmt.Errorf(
 			"confirm service state v3 page: %w",
@@ -538,6 +611,35 @@ func (reader *ServiceStateV3Reader) ConfirmPage(
 		)
 	}
 	return nil
+}
+
+func (reader *ServiceStateV3Reader) confirmSnapshot(
+	ctx context.Context,
+	pointer ServiceCatalogV3Pointer,
+	summary servicecatalog.RepositoryState,
+	selector *ServiceRuntimeSelector,
+) error {
+	if selector == nil {
+		return reader.source.ConfirmServiceStateV3Snapshot(ctx, pointer, summary)
+	}
+	if !sameServiceStateV3Fence(pointer, summary) ||
+		!sameSelectedServiceStateV3Fence(*selector, summary) {
+		return ErrConflict
+	}
+	current, err := reader.source.GetServiceStateV3SummaryPoint(ctx, pointer.Repository)
+	if err != nil {
+		return fmt.Errorf("selected summary: %w", err)
+	}
+	if !sameServiceStateV3Summary(summary, current) {
+		return ErrConflict
+	}
+	selectors, ok := reader.source.(ServiceRuntimeSelectorReader)
+	if !ok {
+		return ErrInvalidServiceRuntimeSelector
+	}
+	// This is deliberately last: a successful return linearizes the catalog,
+	// state, and selector snapshot after every selected state read.
+	return selectors.ConfirmServiceRuntimeSelector(ctx, *selector)
 }
 
 func serviceStateV3Position(
@@ -728,6 +830,52 @@ func sameServiceStateV3Fence(
 	return pointer.Repository == summary.Repository &&
 		pointer.RootDigest == summary.CatalogGeneration &&
 		pointer.ControlRevision == summary.CatalogControlRevision
+}
+
+func serviceStateV3SelectorPointer(
+	selector ServiceRuntimeSelector,
+) (ServiceCatalogV3Pointer, error) {
+	if validateServiceRuntimeSelector(selector) != nil ||
+		selector.Backend != ServiceRuntimeV3 {
+		return ServiceCatalogV3Pointer{}, ErrInvalidServiceRuntimeSelector
+	}
+	return ServiceCatalogV3Pointer{
+		Repository: selector.Repository, RootDigest: selector.CatalogRootDigest,
+		ControlRevision: selector.CatalogControlRevision,
+		PublishedAt:     selector.ChangedAt,
+	}, nil
+}
+
+func sameSelectedServiceStateV3Fence(
+	selector ServiceRuntimeSelector,
+	summary servicecatalog.RepositoryState,
+) bool {
+	return selector.Backend == ServiceRuntimeV3 &&
+		selector.Repository == summary.Repository &&
+		selector.CatalogRootDigest == summary.CatalogGeneration &&
+		selector.CatalogControlRevision == summary.CatalogControlRevision &&
+		selector.StateControlRevision == summary.ControlRevision &&
+		selector.StateSummaryDigest == summary.SummaryDigest
+}
+
+func sameServiceStateV3Summary(
+	expected, current servicecatalog.RepositoryState,
+) bool {
+	return expected.Repository == current.Repository &&
+		expected.CatalogGeneration == current.CatalogGeneration &&
+		expected.CatalogControlRevision == current.CatalogControlRevision &&
+		expected.ControlRevision == current.ControlRevision &&
+		expected.SummaryDigest == current.SummaryDigest
+}
+
+func cloneServiceRuntimeSelectorPointer(
+	selector *ServiceRuntimeSelector,
+) *ServiceRuntimeSelector {
+	if selector == nil {
+		return nil
+	}
+	cloned := *selector
+	return &cloned
 }
 
 func cloneServiceStateV3(state servicecatalog.ServiceState) servicecatalog.ServiceState {

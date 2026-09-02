@@ -29,6 +29,7 @@ const (
 	MaxGenerationActiveStagesPerRepository       = 8
 	maxGenerationScheduleClaimCandidates         = MaxGenerationClaimCandidates * MaxGenerationActiveStagesPerRepository
 	MaxGenerationAttempts                        = 8
+	ServiceRelationshipV3ScheduleStage           = "service-relationship-v3-shadow"
 	MaxGenerationRepositoryTokens                = 8
 	MaxGenerationWorkerBytes                     = 256
 	MaxGenerationErrorBytes                      = 2_048

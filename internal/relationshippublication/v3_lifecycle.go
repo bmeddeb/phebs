@@ -34,8 +34,8 @@ type lifecycleControlsV3 struct {
 	markerGeneration  string
 }
 
-// SweepLifecycleV3 advances at most one repository in the dark v3 shadow
-// namespace. It never selects v3 for reads. A retired generation is renamed
+// SweepLifecycleV3 advances at most one repository in the v3 shadow namespace.
+// Runtime selection remains outside lifecycle. A retired generation is renamed
 // out of authority first, then returned with its exact root so the caller can
 // remove catalog and extraction references before confirming bounded drain.
 func SweepLifecycleV3(

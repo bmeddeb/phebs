@@ -222,6 +222,32 @@ func Open(ctx context.Context, root string, expected Root) (*Publication, error)
 	return openGeneration(ctx, directory, rootValue, true)
 }
 
+// OpenGeneration opens one exact immutable resolver generation without
+// consulting the mutable current pointer. It validates only the bounded root
+// control; namespace members remain sparse reads.
+func OpenGeneration(
+	ctx context.Context,
+	root, repository, generation, rootDigest string,
+) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	pointer := Pointer{
+		Schema: PointerSchema, Repository: repository,
+		GenerationDigest: generation, RootDigest: rootDigest,
+		RootFile: "root.json",
+	}
+	if err := setPointerDigest(&pointer); err != nil || validatePointer(pointer) != nil {
+		return nil, fmt.Errorf("%w: generation lookup", ErrInvalid)
+	}
+	directory := generationPath(root, repository, generation)
+	rootValue, err := readRoot(directory, pointer)
+	if err != nil {
+		return nil, err
+	}
+	return openGeneration(ctx, directory, rootValue, false)
+}
+
 func (publication *Publication) Root() Root {
 	if publication == nil {
 		return Root{}

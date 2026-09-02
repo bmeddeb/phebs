@@ -65,6 +65,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/servicequery"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -702,35 +703,14 @@ func serve(args []string) error {
 		)
 	}
 	reportT4013Startup("authority_recovery_complete")
+	var lifecycleController *lifecycle.Controller
 	if cfg.Lifecycle.EnabledFor() {
-		lifecycleController, lifecycleErr := lifecycle.NewController(
+		lifecycleController, lifecycleErr = lifecycle.NewController(
 			st, lifecycleOwners...,
 		)
 		if lifecycleErr != nil {
 			return fmt.Errorf("configure lifecycle maintenance: %w", lifecycleErr)
 		}
-		runBackground(func() {
-			lifecycle.Run(
-				ctx, lifecycleController, capacityGate,
-				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
-				func(result lifecycle.OwnerResult) {
-					lifecycleStatus.ObserveOwner(result)
-					if result.Err != nil {
-						diagnostics.Logf(
-							"lifecycle owner=%q completeness=%s: %v",
-							result.Owner, result.Completeness, result.Err,
-						)
-					} else if result.Deleted > 0 {
-						diagnostics.Logf(
-							"lifecycle owner=%q completeness=%s scanned=%d deleted=%d backlog=%t",
-							result.Owner, result.Completeness, result.Scanned,
-							result.Deleted, result.More,
-						)
-					}
-				},
-				lifecycleStatus.ObserveCapacity,
-			)
-		})
 	}
 
 	// T10.1: one audit recorder feeds the auth surface and the huma middleware.
@@ -902,17 +882,36 @@ func serve(args []string) error {
 	catalogReconciler := &servicecatalogingest.Reconciler{
 		DataDir: cfg.Server.DataDir, Store: st, Selections: cfg.ServiceCatalogs,
 	}
-	if relationshipRuntime != nil {
-		catalogReconciler.OnPublished = func(
-			publishedCtx context.Context,
-			repository string,
-		) error {
-			return afterServiceCatalogPublication(
+	v3CatalogReconciler := &servicecatalogingest.V3Reconciler{
+		DataDir: cfg.Server.DataDir, Store: st,
+		Selections: cfg.ServiceCatalogs,
+	}
+	serviceRuntime := newServiceRuntimeController(
+		cfg.Server.DataDir, st, cfg.ServiceCatalogs, v3CatalogReconciler,
+		relationshipRuntime, acquireLifecycleMutation, searchGenerationPins,
+		relationshipCache, relationshipV3Cache,
+	)
+	catalogReconciler.WithMutation = serviceRuntime.withV2Mutation
+	defer func() {
+		stopBackground()
+		serviceRuntime.Close()
+	}()
+	catalogReconciler.OnPublished = func(
+		publishedCtx context.Context,
+		repository string,
+	) error {
+		var relationshipErr error
+		if relationshipRuntime != nil {
+			relationshipErr = afterServiceCatalogPublication(
 				publishedCtx, repository, reconcileRelationship,
 				st.EnqueuePending,
 				candidatePublicationPresent(cfg.Server.DataDir, repository),
 			)
 		}
+		return errors.Join(
+			relationshipErr,
+			serviceRuntime.Advance(publishedCtx, repository),
+		)
 	}
 	serviceCatalogReport, err := catalogReconciler.Reconcile(ctx)
 	if err != nil {
@@ -948,6 +947,12 @@ func serve(args []string) error {
 	}
 	sort.Strings(serviceNames)
 	for _, repository := range serviceNames {
+		if _, configured := cfg.ServiceCatalogs[repository]; configured {
+			// Reconciler.OnPublished already advanced the selected runtime under
+			// its transition fence. Legacy analysis-unit state retains the direct
+			// v2 backfill below.
+			continue
+		}
 		outcome, reconcileErr := reconcileServiceSearchGeneration(
 			ctx, st, cfg.Server.DataDir, repository,
 		)
@@ -965,11 +970,40 @@ func serve(args []string) error {
 			)
 		}
 	}
+	if err := serviceRuntime.PinSelections(ctx); err != nil {
+		return fmt.Errorf("validate and pin selected service runtimes: %w", err)
+	}
+	if lifecycleController != nil {
+		runBackground(func() {
+			lifecycle.Run(
+				ctx, lifecycleController, capacityGate,
+				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
+				func(result lifecycle.OwnerResult) {
+					lifecycleStatus.ObserveOwner(result)
+					if result.Err != nil {
+						diagnostics.Logf(
+							"lifecycle owner=%q completeness=%s: %v",
+							result.Owner, result.Completeness, result.Err,
+						)
+					} else if result.Deleted > 0 {
+						diagnostics.Logf(
+							"lifecycle owner=%q completeness=%s scanned=%d deleted=%d backlog=%t",
+							result.Owner, result.Completeness, result.Scanned,
+							result.Deleted, result.More,
+						)
+					}
+				},
+				lifecycleStatus.ObserveCapacity,
+			)
+		})
+	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
 	runner := &store.Runner{Store: st, Kind: store.JobSync,
-		Handle:   phebssync.HandlerWithCallerLifecycle(cfg, st, callerPublications),
+		Handle: phebssync.HandlerWithLifecycles(
+			cfg, st, callerPublications, serviceRuntime,
+		),
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
@@ -999,6 +1033,10 @@ func serve(args []string) error {
 			}
 			if _, err := catalogReconciler.ReconcileRepository(ctx, repository); err != nil {
 				return err
+			}
+			if _, configured := cfg.ServiceCatalogs[repository]; configured {
+				// The catalog callback already advanced the selected runtime.
+				return nil
 			}
 			_, err := reconcileServiceSearchGeneration(
 				ctx, st, cfg.Server.DataDir, repository,
@@ -1062,7 +1100,14 @@ func serve(args []string) error {
 					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
 				},
 				Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
-					return observationRuntime.Handle(workerCtx, chunk)
+					switch chunk.Stage {
+					case store.ServiceStateV3ReconcileStage,
+						store.ServiceStateV3ActivateStage:
+						_, err := serviceRuntime.ProcessServiceStateV3Chunk(workerCtx, chunk)
+						return err
+					default:
+						return observationRuntime.Handle(workerCtx, chunk)
+					}
 				},
 			},
 		},
@@ -1086,7 +1131,16 @@ func serve(args []string) error {
 						MaxMemoryBytes: 1 << 30, MaxDescriptors: 32,
 					},
 					Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
-						return relationshipRuntime.Handle(workerCtx, chunk)
+						var err error
+						if chunk.Stage == relationshippublication.ScheduleStageV3 {
+							err = relationshipRuntime.HandleV3(workerCtx, chunk)
+						} else {
+							err = relationshipRuntime.Handle(workerCtx, chunk)
+						}
+						if err == nil {
+							err = serviceRuntime.Advance(workerCtx, chunk.Repository)
+						}
+						return err
 					},
 				},
 			},
@@ -1558,6 +1612,15 @@ func serve(args []string) error {
 	// startup failures before the searcher exists.
 	defer stopBackground()
 	searcher.Contexts = cfg.Contexts // T8.1: context:<name> filters
+	serviceCatalogV3Cache := servicecatalogv3.NewDefaultReadCache()
+	serviceStateV3Reader, err := store.NewServiceStateV3Reader(st, serviceCatalogV3Cache)
+	if err != nil {
+		return fmt.Errorf("configure selected service state reader: %w", err)
+	}
+	runtimeScopedSearch, err := search.NewRuntimeScopedSearcher(searcher, serviceStateV3Reader)
+	if err != nil {
+		return fmt.Errorf("configure selected service search: %w", err)
+	}
 	// T10.2: one usage event per completed search (REST, SSE, and MCP all
 	// funnel through the searcher). Local only — phebs never phones home.
 	searcher.Usage = func(ctx context.Context, event store.UsageEvent) {
@@ -1611,7 +1674,8 @@ func serve(args []string) error {
 	retentionStatus := retentionstatus.New(cfg.Server.DataDir, st)
 	apiOpts := api.Options{
 		Version: version,
-		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
+		Store:   st, Search: searcher, ScopedSearch: runtimeScopedSearch,
+		DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation,
 		RetentionStatusSource: api.NewCompleteRetentionStatusSource(
 			st, retentionStatus, nil,
@@ -1682,7 +1746,9 @@ func serve(args []string) error {
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
-	apiOpts.ServiceDirectory = api.NewServiceDirectoryService(apiOpts)
+	apiOpts.ServiceDirectory = api.NewRuntimeServiceDirectoryService(
+		apiOpts, serviceStateV3Reader,
+	)
 	apiOpts.ObservationProgress = api.NewObservationProgressService(
 		apiOpts,
 		&observationpublication.ProgressReader{
@@ -1692,7 +1758,9 @@ func serve(args []string) error {
 	)
 	apiOpts.ExtractionProgress = api.NewExtractionProgressService(apiOpts, partitionRuntime)
 	if relationshipRuntime != nil {
-		apiOpts.Relationships = api.NewRelationshipService(apiOpts, relationshipCache)
+		apiOpts.Relationships = api.NewRuntimeRelationshipService(
+			apiOpts, relationshipCache, relationshipV3Cache,
+		)
 		if apiOpts.Relationships == nil {
 			return errors.New("configure exact relationship readers")
 		}
@@ -1777,7 +1845,8 @@ func serve(args []string) error {
 	// named key carrying investigation:write; handlers recheck that predicate
 	// before every preview-bound or durable mutation call.
 	mcpOpts := phebsmcp.Options{
-		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+		Version: version, Store: st, Search: searcher, ScopedSearch: runtimeScopedSearch,
+		DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
 		Compatibility:         mcpCompatibility,
 		ContractCatalog:       catalogQueries,

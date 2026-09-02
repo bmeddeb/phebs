@@ -53,9 +53,8 @@ type Options struct {
 	Store   store.Store
 	Search  *search.Searcher // nil with no ScopedSearch = search endpoints answer 503
 	// ScopedSearch optionally supplies one preconstructed shared search
-	// boundary. Nil preserves the ordinary v2 Search path. T41.7 uses this seam
-	// only to prove the runtime-dark v3 path through HTTP/SSE; T41.9 owns
-	// production selection.
+	// boundary. Nil preserves the ordinary v2 Search path; production supplies
+	// the selector-aware v2/v3 boundary.
 	ScopedSearch search.ScopedSearcher
 	CodeNav      *codenav.Service // nil = precise code navigation answers 503
 	DataDir      string           // bare mirrors for file serving (T4.4)

@@ -35,10 +35,11 @@ type repositoryStore interface {
 // Reconciler reads only explicitly selected inputs. It never guesses a
 // service from directory shape and never clears a prior current authority.
 type Reconciler struct {
-	DataDir     string
-	Store       repositoryStore
-	Selections  map[string]config.ServiceCatalog
-	OnPublished func(context.Context, string) error
+	DataDir      string
+	Store        repositoryStore
+	Selections   map[string]config.ServiceCatalog
+	WithMutation func(context.Context, string, servicecatalog.Publication, func() error) error
+	OnPublished  func(context.Context, string) error
 }
 
 type Outcome string
@@ -188,7 +189,9 @@ func (r *Reconciler) reconcileV2(
 		// exact catalog/source identity avoids the repository census entirely.
 		// T33.3 still strict-reconciles its point summary so a crash between the
 		// catalog and state transactions repairs on retry.
-		if err := r.Store.ReconcileServiceStates(ctx, *current); err != nil {
+		if err := r.withMutation(ctx, repository.Name, *current, func() error {
+			return r.Store.ReconcileServiceStates(ctx, *current)
+		}); err != nil {
 			return "", err
 		}
 		return OutcomeCurrent, nil
@@ -204,10 +207,12 @@ func (r *Reconciler) reconcileV2(
 	if err != nil {
 		return "", err
 	}
-	if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
-		return "", err
-	}
-	if err := r.reconcilePublishedServiceStates(ctx, repository.Name); err != nil {
+	if err := r.withMutation(ctx, repository.Name, publication, func() error {
+		if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
+			return err
+		}
+		return r.reconcilePublishedServiceStates(ctx, repository.Name)
+	}); err != nil {
 		return "", err
 	}
 	return OutcomePublished, nil
@@ -222,7 +227,9 @@ func (r *Reconciler) reconcileLegacy(
 	if current != nil && current.SourceKind == servicecatalog.SourceAnalysisUnitV1 &&
 		current.SourceCommit == repository.IndexedCommitHash &&
 		current.LegacyAnalysisUnitDigest == unit.Digest {
-		if err := r.Store.ReconcileServiceStates(ctx, *current); err != nil {
+		if err := r.withMutation(ctx, repository.Name, *current, func() error {
+			return r.Store.ReconcileServiceStates(ctx, *current)
+		}); err != nil {
 			return "", err
 		}
 		return OutcomeCurrent, nil
@@ -251,13 +258,27 @@ func (r *Reconciler) reconcileLegacy(
 	if err != nil {
 		return "", err
 	}
-	if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
-		return "", err
-	}
-	if err := r.reconcilePublishedServiceStates(ctx, repository.Name); err != nil {
+	if err := r.withMutation(ctx, repository.Name, publication, func() error {
+		if err := r.Store.PublishServiceCatalog(ctx, publication); err != nil {
+			return err
+		}
+		return r.reconcilePublishedServiceStates(ctx, repository.Name)
+	}); err != nil {
 		return "", err
 	}
 	return OutcomeLegacyImported, nil
+}
+
+func (r *Reconciler) withMutation(
+	ctx context.Context,
+	repository string,
+	publication servicecatalog.Publication,
+	mutate func() error,
+) error {
+	if r.WithMutation == nil {
+		return mutate()
+	}
+	return r.WithMutation(ctx, repository, publication, mutate)
 }
 
 func (r *Reconciler) reconcilePublishedServiceStates(

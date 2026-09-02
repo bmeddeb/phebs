@@ -32,7 +32,7 @@ const (
 	RelationshipPublicationsV3Shadow = "relationship-publications-v3-shadow"
 )
 
-// PolicyV3 freezes every admission and wire bound used by the dark v3 layout.
+// PolicyV3 freezes every admission and wire bound used by the v3 layout.
 type PolicyV3 struct {
 	Schema                       string `json:"schema"`
 	RepositoryBuckets            int    `json:"repository_buckets"`

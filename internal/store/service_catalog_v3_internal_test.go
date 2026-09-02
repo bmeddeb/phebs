@@ -185,6 +185,43 @@ DEFINE FIELD OVERWRITE member_cursor ON service_catalog_v3_lifecycle TYPE string
 	}
 }
 
+func TestServiceCatalogV3RepublishReadmitsInterruptedCollectingRoot(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	record, _, generation := collectingServiceCatalogV3RelationshipReference(t, s)
+	deleted, _, _, more, err := s.drainServiceCatalogV3Generation(
+		t.Context(), record, 1,
+	)
+	if err != nil || deleted != 1 || !more {
+		t.Fatalf("interrupt collection = deleted %d, more %t, %v", deleted, more, err)
+	}
+	record = serviceCatalogV3LifecycleRecord(t, s, generation.Root.Digest)
+	if record.State != serviceCatalogV3Collecting || record.MemberCursor != 1 {
+		t.Fatalf("interrupted lifecycle = %+v", record)
+	}
+	if err := s.PublishServiceCatalogV3Candidate(t.Context(), generation); err != nil {
+		t.Fatalf("republish collecting root: %v", err)
+	}
+	candidate, err := s.GetServiceCatalogV3Candidate(
+		t.Context(), generation.Root.Binding.Repository,
+	)
+	if err != nil || candidate.Generation.Root.Digest != generation.Root.Digest {
+		t.Fatalf("readmitted candidate = %+v, %v", candidate, err)
+	}
+	record = serviceCatalogV3LifecycleRecord(t, s, generation.Root.Digest)
+	if record.State != serviceCatalogV3Historical || record.MemberCursor != 0 ||
+		record.TombstonedAt != nil {
+		t.Fatalf("readmitted lifecycle = %+v", record)
+	}
+	if _, _, err := s.validateServiceCatalogV3Edges(
+		t.Context(), record, generation.Root, true,
+	); err != nil {
+		t.Fatalf("readmitted edges: %v", err)
+	}
+	if _, err := s.ValidateServiceCatalogV3Precious(t.Context()); err != nil {
+		t.Fatalf("readmitted precious inventory: %v", err)
+	}
+}
+
 func TestServiceCatalogV3StartupRepairIsStrictBoundedAndRemovesOrphan(t *testing.T) {
 	t.Run("repairs complete candidate and removes orphan", func(t *testing.T) {
 		s := newServiceCatalogV3InternalStore(t)

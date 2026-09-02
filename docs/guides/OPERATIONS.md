@@ -255,12 +255,19 @@ performs a structural tar pass on the same open file descriptor. Only canonical
 regular USTAR/PAX entries are accepted; PAX may carry only an exact `path` and
 exact decimal `size`. Every GNU, sparse, or unknown record is rejected before
 the index directory, stage, or output is created. The archive is limited to
-100,000 entries, 255-byte basenames, 16 GiB per focused entry, and 64 GiB for
-both the physical archive and aggregate declared logical bytes; a small sparse
-input cannot expand into a large filesystem write. A newly created archive is
-self-verified before backup returns. Restore then imports through an isolated
-SurrealDB child, restores focused shard/sidecar bytes before their manifests,
-and opens the store once to apply and validate the supported schema/migrations.
+100,000 entries, 512-byte paths, 16 GiB per focused entry, and 97 GiB for both
+the physical archive and aggregate declared logical bytes. The 97-GiB bound is
+the 96-GiB retained current-plus-prior search ceiling plus 1 GiB for canonical
+tar framing and bounded controls; a small sparse input cannot expand into a
+large filesystem write. A selected current search generation adds only its
+immutable receipt: restore hard-links the already verified flat publication
+into the exact native generation directory before validating the selector. A
+selected non-current generation adds its complete revalidated immutable bytes.
+Mutable lifecycle controls and unrelated rollback generations remain omitted.
+A newly created archive is self-verified before backup returns. Restore then
+imports through an isolated SurrealDB child, restores focused shard/sidecar
+bytes before their manifests, and opens the store once to apply and validate
+the supported schema/migrations.
 That validation open clears every imported candidate-publication pointer
 because `$DATA/candidates` is deliberately absent from the backup. Durable
 domain outcomes are present in the imported database, but they are ineligible
@@ -3005,10 +3012,10 @@ active catalog reference, and current plus two rollback generations. It scans
 at most eleven candidates and deletes one immutable generation per turn;
 authority-version claims remain. Generation-schedule collection protects the
 current pointer and every running lease, then removes no more than fifteen
-chunks plus an empty schedule. Runtime-dark v3 service-state reconcile and
-activation plans reuse this scheduler ownership; collecting a settled schedule
-removes its non-running shadow plan in the same transaction. Its wrapped key
-cursor reconsiders a schedule after a lease releases.
+chunks plus an empty schedule. V3 service-state reconcile and activation plans
+reuse this scheduler ownership; collecting a settled schedule removes its
+non-running plan in the same transaction. Its wrapped key cursor reconsiders a
+schedule after a lease releases.
 
 Job maintenance covers all eight durable job tables. It deletes at most
 sixteen terminal rows older than 30 days, performs a restart-resumable 64-row
@@ -3123,23 +3130,24 @@ does not run a turn, probe the filesystem, acquire the mutation lock, or read
 the store; it copies the bounded in-memory monitor populated by normal
 maintenance and index admission.
 
-Catalog-v3 remains runtime-dark. Startup repairs lifecycle metadata only for a
-complete strict-valid pre-lifecycle inventory and refuses more than 64 such
-roots; it never changes the v1/v2 pointer. Live backup validates every
-referenced historical or partially collecting root/member under the existing
-exclusive mutation lock and writes no durable pin. Restore repeats that repair
-and validation before serving. Collection protects the dark candidate, future
-current/desired/active state references, and two newest prior roots; an atomic
-`collecting` transition removes an eligible root from history before one
-member edge per turn drains, with shared content deleted only by its last root.
-V3 state rows and repository summaries remain precious across backup/restore;
-restartable v3 state plans are cleared on restore and reconstructed from the
-bounded surviving rows. Indexed desired/active catalog references pin their
-historical roots. Reconcile keeps the summary catalog-mismatched until its final
-CAS; activation updates at most 512 rows plus the matching summary atomically.
-Neither protocol is registered with the production scheduler yet.
+Catalog-v3 lifecycle authority remains separate from v1/v2. Startup repairs
+lifecycle metadata only for a complete strict-valid pre-lifecycle inventory
+and refuses more than 64 such roots. Live backup validates every referenced
+historical or partially collecting root/member under the existing exclusive
+mutation lock and writes no durable pin. Restore repeats that repair and
+validation before serving. Collection protects the candidate, every selected
+or state-referenced root, and two newest prior roots; an atomic `collecting`
+transition removes an eligible root from history before one member edge per
+turn drains, with shared content deleted only by its last root. V3 state rows
+and repository summaries remain precious across backup/restore; restartable v3
+state plans are cleared on restore and reconstructed from the bounded surviving
+rows. Indexed desired/active catalog references pin their historical roots.
+Reconcile keeps the summary catalog-mismatched until its final CAS; activation
+updates at most 512 rows plus the matching summary atomically. The production
+scheduler runs these workers for repositories with an explicit service-catalog
+configuration; only the durable runtime selector makes their results visible.
 
-The dark v3 read backend strict-opens the candidate pointer and summary before
+The v3 read backend strict-opens the selected catalog root and summary before
 serving state. A bounded verified cache retains at most eight roots and 128
 decoded service members; concurrent cold fills coalesce, and an active detail
 or search lease delays eviction through response validation and its final
@@ -3150,9 +3158,9 @@ are per-process HMAC-authenticated and bind page size, authorization context,
 catalog/summary authority, seek incarnation, and the immutable member range.
 Cache saturation with only leased entries refuses the new fill rather than
 exceeding the bound. Malformed, partial, or unreconciled v3 never falls back to
-v2. Explicit shared adapters prove identical HTTP, streamed HTTP, and MCP wire
-semantics and preserve the existing schemas consumed by the UI, but no operator
-setting or product selector exposes this path; T41.9 owns selection.
+v2. The shared HTTP, streamed HTTP, and MCP adapters preserve their existing
+wire schemas; production routing selects the exact v2 or v3 backend recorded
+by the repository-local runtime selector.
 
 The retained source-free receipt at `spike/t354/results.json` binds T32.3's
 synthetic 1,000/5,000-service profiles to production-path gates for catalog
@@ -4162,14 +4170,89 @@ resolver/RPC/Kafka sweep; more roots defer the turn.
 
 When v3 is present, live archive full-validates each current generation (at
 most 769 files), walks its exact resolver/RPC/Kafka publication trees, and
-copies within the shared 20,000,000-entry and 1-TiB limits. It then extracts
+copies within the shared 20,000,000-entry and 1-TiB limits. A runtime selector
+may also retain a non-current v2 or v3 relationship root; archive copies that
+exact composite generation and the resolver/RPC/Kafka component generations
+named by it, without synthesizing historical current pointers. It then extracts
 and revalidates the completed archive once. Restore extracts and validates once
 into a stage, installs it, then runs bounded relationship recovery before
 serving. A missing v3 namespace adds one presence lookup and no generation or
-component read; shared component bytes are deduplicated when legacy and v3
-authority coexist. Do not copy, edit, promote, or manually delete v3 controls,
-members, references, or collecting directories. T41.9 owns any future runtime
-selection or reverse transition.
+component read; shared component bytes are deduplicated when legacy, v3, and
+selected historical authority coexist. An archive containing only selected
+historical relationship generations is valid with no mutable `current.json`;
+if that pointer is present, it and its pointed generation must validate. Every
+historical root must derive the same repository identity and validate its exact
+component roots. The manifest explicitly lists restartable
+`relationship-v3-schedules/` bindings as excluded derived state. Do not copy,
+edit, promote, or manually delete v3 controls, members, references, or
+collecting directories.
+Restore syncs every extracted regular file and the staged directory tree
+bottom-up before installing any top-level relationship namespace, then syncs
+the destination parent after the renames.
+
+T41.9 permits one explicit production selection with
+`service_catalogs.<repository>.runtime: v3`; omission and `runtime: v2` retain
+the v2 runtime. The dark candidate is never activation authority. Phebs first
+reconciles and strict-validates the exact v3 catalog, state summary, search
+generation, and relationship root, pins the selected filesystem generations,
+then changes all service-aware readers through one repository-local selector
+CAS. Search, directory, HTTP, and MCP requests authorize before reading that
+selector and never try the other backend when an explicit selection is stale
+or unavailable.
+
+If the selector commit response is lost, Phebs performs one bounded exact read
+outside the canceled request context. A matching selector completes the
+transition. If that read is also unavailable, both the old and prospective
+search/relationship generations remain process-pinned until a later exact read
+resolves which tuple committed; lifecycle cannot collect either candidate in
+the meantime.
+
+Removing the v3 setting is also a complete transition, not a pointer edit.
+Phebs keeps v3 selected while it rebuilds and validates the current v2 catalog,
+state, search, and relationship tuple; only the final selector CAS returns
+traffic to v2. After the irreversible selector floor exists, an explicitly v2
+repository also maintains a complete unselected v3 holding tuple aligned with
+the current v2 source generation. An explicit v2 target that cannot be mapped
+inside the v3 envelope refuses before its selector CAS. A later v3 catalog
+replacement first parks the selector on that holding tuple before the candidate
+pointer may move, then builds and selects the replacement. Before any v3 state
+chunk mutates the selected summary, the same fence parks readers on complete v2
+authority; the chunk waits behind live backup and cannot race its exported
+database image. The state handler leaves its terminal scheduler lease owned
+until the controller has either selected the exact complete target or durably
+recorded the next state/relationship continuation. A transient not-ready
+handoff defers and replays that same idempotent terminal chunk with zero state
+writes; the scheduler alone completes the lease. An implicit-v2 repository
+creates no v3 work. Operators should
+therefore leave the process running when a requested transition reports
+not-ready authority; repair the named upstream catalog, search, extraction, or
+relationship failure rather than editing selectors or derived controls.
+
+An exact v3 holding root that lifecycle has already begun collecting is
+readmitted by the publication transaction: missing immutable members and root
+edges are recreated, its lifecycle cursor returns to historical zero, and only
+then may the candidate pointer move.
+
+Startup refuses before serving when any durable selected root is absent,
+malformed, or mismatched, including its exact resolver, RPC, and Kafka
+component roots. Once any durable selector exists, startup also refuses when
+both provisional protobuf and Thrift extraction are disabled, even if the
+desired runtime is v2, because reversal and holding repair would otherwise
+remain permanently unavailable. Live backup checks the same tuple while
+holding its existing exclusive mutation lock, carries selected historical
+search and relationship generations, and restore checks the result again after
+clearing restartable schedules and derived pointers. Repository deletion
+retires the selector, its
+current v3 catalog reference, active v3 state and shadow-relationship schedules
+and plans, and their current schedule projections only after the durable
+deleting fence. Immutable
+schedule/plan history and precious state remain lifecycle-owned. If the same
+repository name returns with an unchanged target, a bounded new repair identity
+is enqueued; no pre-deletion claim can mutate the new incarnation. The
+compatibility marker remains. Once any selector has committed,
+the data directory carries an irreversible compatibility floor: binaries from
+before T41.9 refuse it even after selection returns to v2. Downgrading requires
+a separately designed data migration; changing YAML is not a downgrade tool.
 
 When resolver adapters are enabled, T37.5 exposes the shared exact reader over
 HTTP and MCP. `GET /api/service-relationships` (MCP

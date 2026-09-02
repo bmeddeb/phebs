@@ -17,12 +17,13 @@ type v3RepositoryStore interface {
 	ListRepos(context.Context) ([]store.Repo, error)
 }
 
-// V3Reconciler publishes only the runtime-dark T41.3 candidate pointer. It is
-// deliberately not registered by the server before T41.9.
+// V3Reconciler publishes only the T41.3 candidate pointer. The runtime
+// controller may build from it, but the candidate never selects itself.
 type V3Reconciler struct {
-	DataDir    string
-	Store      v3RepositoryStore
-	Selections map[string]config.ServiceCatalog
+	DataDir       string
+	Store         v3RepositoryStore
+	Selections    map[string]config.ServiceCatalog
+	BeforePublish func(context.Context, string) error
 }
 
 func (r *V3Reconciler) Reconcile(ctx context.Context) (Report, error) {
@@ -142,6 +143,11 @@ func (r *V3Reconciler) reconcile(
 	}
 	if err := servicecatalogv3.ValidateGeneration(generation); err != nil {
 		return "", err
+	}
+	if r.BeforePublish != nil {
+		if err := r.BeforePublish(ctx, repository.Name); err != nil {
+			return "", err
+		}
 	}
 	if err := r.Store.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
 		return "", err

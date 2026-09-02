@@ -32,6 +32,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
@@ -155,6 +156,163 @@ func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
 	)
 	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) {
 		t.Fatalf("resolver callback error = %v, want both sentinels", err)
+	}
+}
+
+func TestExplicitV2RefreshesV3HoldingAfterV2IsCurrent(t *testing.T) {
+	events := []string{}
+	err := advanceV2WithHolding(
+		true,
+		func() error {
+			events = append(events, "select-v2-b")
+			return nil
+		},
+		func() error {
+			events = append(events, "prepare-v3-b")
+			return nil
+		},
+	)
+	if err != nil || !slices.Equal(events, []string{"select-v2-b", "prepare-v3-b"}) {
+		t.Fatalf("explicit v2 holding sequence = %v, %v", events, err)
+	}
+
+	events = events[:0]
+	err = advanceV2WithHolding(
+		false,
+		func() error {
+			events = append(events, "implicit-v2")
+			return nil
+		},
+		func() error {
+			events = append(events, "unexpected-v3")
+			return nil
+		},
+	)
+	if err != nil || !slices.Equal(events, []string{"implicit-v2"}) {
+		t.Fatalf("implicit v2 holding sequence = %v, %v", events, err)
+	}
+
+	v2Pending := errors.New("v2 target pending")
+	events = events[:0]
+	err = advanceV2WithHolding(
+		true,
+		func() error {
+			events = append(events, "pending-v2-c")
+			return v2Pending
+		},
+		func() error {
+			events = append(events, "unsafe-v3-c")
+			return nil
+		},
+	)
+	if !errors.Is(err, v2Pending) || !slices.Equal(events, []string{"pending-v2-c"}) {
+		t.Fatalf("pending v2 holding sequence = %v, %v", events, err)
+	}
+}
+
+func TestServiceRuntimeTransitionLockOrder(t *testing.T) {
+	mutationAcquired := make(chan struct{})
+	releaseOrder := make(chan bool, 1)
+	controller := &serviceRuntimeController{}
+	controller.acquire = func(context.Context) (func(), error) {
+		close(mutationAcquired)
+		return func() {
+			controllerUnlocked := controller.mu.TryLock()
+			if controllerUnlocked {
+				controller.mu.Unlock()
+			}
+			releaseOrder <- controllerUnlocked
+		}, nil
+	}
+	type lockResult struct {
+		release func()
+		err     error
+	}
+	locked := make(chan lockResult, 1)
+	controller.mu.Lock()
+	go func() {
+		release, err := controller.lockTransition(t.Context())
+		locked <- lockResult{release: release, err: err}
+	}()
+	select {
+	case <-mutationAcquired:
+	case <-time.After(time.Second):
+		controller.mu.Unlock()
+		t.Fatal("transition waited for controller lock before acquiring mutation exclusion")
+	}
+	select {
+	case result := <-locked:
+		controller.mu.Unlock()
+		if result.release != nil {
+			result.release()
+		}
+		t.Fatal("transition acquired an already-held controller lock")
+	default:
+	}
+	controller.mu.Unlock()
+	var result lockResult
+	select {
+	case result = <-locked:
+	case <-time.After(time.Second):
+		t.Fatal("transition did not acquire controller lock after release")
+	}
+	if result.err != nil || result.release == nil {
+		t.Fatalf("transition lock acquired=%t, error=%v", result.release != nil, result.err)
+	}
+	result.release()
+	if controllerUnlocked := <-releaseOrder; !controllerUnlocked {
+		t.Fatal("transition released mutation exclusion before controller lock")
+	}
+}
+
+func TestServiceRuntimeAmbiguousPinsRemainUntilSelectorReconciles(t *testing.T) {
+	const repository = "example.com/acme/ambiguous-selector"
+	digest := func(fill string) string { return "sha256:" + strings.Repeat(fill, 64) }
+	selector := func(backend, fill string) store.ServiceRuntimeSelector {
+		return store.ServiceRuntimeSelector{
+			Repository: repository, Backend: backend,
+			CatalogGenerationDigest: digest(fill), CatalogRootDigest: digest(fill),
+			CatalogControlRevision: 1, StateControlRevision: 1,
+			StateSummaryDigest: digest(fill), SearchGenerationDigest: digest(fill),
+			RelationshipGenerationDigest: digest(fill),
+			RelationshipRootDigest:       digest(fill),
+		}
+	}
+	searchPins := &focusedindex.SearchGenerationPins{}
+	oldSelector := selector(store.ServiceRuntimeV2, "a")
+	newSelector := selector(store.ServiceRuntimeV3, "b")
+	oldLease, err := searchPins.Acquire(repository, oldSelector.SearchGenerationDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newLease, err := searchPins.Acquire(repository, newSelector.SearchGenerationDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller := &serviceRuntimeController{
+		pins: map[string]*serviceRuntimeProcessPins{
+			repository: {selector: oldSelector, search: oldLease},
+		},
+		uncertainPins: map[string]*serviceRuntimeProcessPins{
+			repository: {selector: newSelector, search: newLease},
+		},
+	}
+	if release, ok := searchPins.BeginRetire(
+		repository, newSelector.SearchGenerationDigest,
+	); ok {
+		release()
+		t.Fatal("ambiguous selected generation was retirement-eligible")
+	}
+	controller.resolveUncertainPinsLocked(repository, &newSelector)
+	if searchPins.Pinned(repository, oldSelector.SearchGenerationDigest) ||
+		!searchPins.Pinned(repository, newSelector.SearchGenerationDigest) ||
+		controller.pins[repository].selector != newSelector ||
+		controller.uncertainPins[repository] != nil {
+		t.Fatal("selector reconciliation did not retain only the selected pins")
+	}
+	controller.Close()
+	if searchPins.Pinned(repository, newSelector.SearchGenerationDigest) {
+		t.Fatal("controller close retained reconciled selector pins")
 	}
 }
 

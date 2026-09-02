@@ -717,8 +717,15 @@ catalog/state/search backend and T41.7's authorized directory/search transport
 parity are integrated. T41.8's runtime-dark bucketed relationship publication,
 canonical recovery/archive ownership, exact pins, sparse reads, and sixteenth
 bounded lifecycle owner are integrated. T41.8a's catalog-absence and
-exhausted-result recovery is integrated; T41.9 is next and alone owns runtime
-selection. Epic 42 still owns combined-scale proof.
+exhausted-result recovery is integrated. T41.9's branch-complete durable
+selector, complete v2↔v3 transitions, selector-aware HTTP/MCP consumers,
+startup/backup/restore/lifecycle ownership, and irreversible predecessor floor
+include scheduler-owned retryable terminal handoff, ambiguous-commit dual pins,
+historical-only selected archive verification, deletion/re-add repair, and the
+startup extraction-liveness fence. Full store normal/race, affected non-store
+normal/race, static, documentation-except-exact-main fossils, and zero-finding
+review gates pass. T41.9 awaits integration; T41.10 follows that integration. Epic 42 still owns
+combined-scale proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active
