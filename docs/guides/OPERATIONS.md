@@ -4249,10 +4249,14 @@ deleting fence. Immutable
 schedule/plan history and precious state remain lifecycle-owned. If the same
 repository name returns with an unchanged target, a bounded new repair identity
 is enqueued; no pre-deletion claim can mutate the new incarnation. The
-compatibility marker remains. Once any selector has committed,
-the data directory carries an irreversible compatibility floor: binaries from
-before T41.9 refuse it even after selection returns to v2. Downgrading requires
-a separately designed data migration; changing YAML is not a downgrade tool.
+compatibility markers remain. Once any selector has committed, the data
+directory carries the irreversible T41.9 floor even after selection returns to
+v2. Opening the directory with T41.10 or later separately raises the versioned
+v3 source-generation floor once that migration commits, whether or not a
+selector exists and even if later startup work fails; the immediately
+preceding binary then refuses the directory before serving. Downgrading across
+either floor requires a separately designed data migration; changing YAML is
+not a downgrade tool.
 
 When resolver adapters are enabled, T37.5 exposes the shared exact reader over
 HTTP and MCP. `GET /api/service-relationships` (MCP

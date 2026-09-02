@@ -338,9 +338,8 @@ func TestServiceCatalogV3LifecyclePinsRestartAndMalformedIsolation(t *testing.T)
 				t.Fatal(err)
 			}
 			generations = append(generations, generation)
-			time.Sleep(time.Millisecond)
 		}
-		pinned := generations[0].Root.Digest
+		pinned := oldestServiceCatalogV3Prior(t, s, generations).Root.Digest
 		if _, err := surrealdb.Query[any](ctx, s.db, `CREATE service_catalog_v3_state_reference:active_pin CONTENT {
 			repository: $repository, root_digest: $root_digest, kind: 'active',
 			service_key: 'orders', state_root_digest: $state_root_digest,
@@ -551,6 +550,41 @@ func internalOperatorServiceCatalogV3Generation(
 		t.Fatal(err)
 	}
 	return generation
+}
+
+func oldestServiceCatalogV3Prior(
+	t *testing.T,
+	s *Surreal,
+	generations []servicecatalogv3.Generation,
+) servicecatalogv3.Generation {
+	t.Helper()
+	if len(generations) < 2 {
+		t.Fatal("oldest catalog-v3 prior requires a candidate and prior")
+	}
+	repository := generations[0].Root.Binding.Repository
+	candidate := generations[len(generations)-1].Root.Digest
+	results, err := surrealdb.Query[[]struct {
+		RootDigest string `json:"root_digest"`
+	}](t.Context(), s.db, `
+SELECT root_digest, recorded_at FROM service_catalog_v3_lifecycle
+	WHERE repository = $repository AND root_digest != $candidate
+	ORDER BY recorded_at ASC, root_digest ASC LIMIT 1`, map[string]any{
+		"repository": repository, "candidate": candidate,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		t.Fatalf("oldest catalog-v3 prior = %+v", rows)
+	}
+	for _, generation := range generations {
+		if generation.Root.Digest == rows[0].RootDigest {
+			return generation
+		}
+	}
+	t.Fatalf("oldest catalog-v3 prior %q is absent", rows[0].RootDigest)
+	return servicecatalogv3.Generation{}
 }
 
 func serviceCatalogV3TableCounts(t *testing.T, s *Surreal) [4]int {

@@ -16,6 +16,18 @@ const memberEnvelopeReserve = 32 << 10
 // Build creates canonical root and member bytes without registering or
 // publishing them anywhere.
 func Build(binding Binding, catalog servicecatalog.Catalog) (Generation, error) {
+	return build(binding, catalog, RootSchemaV2)
+}
+
+// Rebuild recreates a validated generation under its existing root schema.
+func Rebuild(root Root, catalog servicecatalog.Catalog) (Generation, error) {
+	if err := ValidateRoot(root); err != nil {
+		return Generation{}, err
+	}
+	return build(root.Binding, catalog, root.Schema)
+}
+
+func build(binding Binding, catalog servicecatalog.Catalog, rootSchema string) (Generation, error) {
 	normalized, stats, err := normalize(catalog)
 	if err != nil {
 		return Generation{}, err
@@ -55,7 +67,7 @@ func Build(binding Binding, catalog servicecatalog.Catalog) (Generation, error) 
 	}
 
 	root := Root{
-		Schema: RootSchema, Binding: cloneBinding(binding), Policy: FrozenPolicy(), PolicyDigest: PolicyDigest(),
+		Schema: rootSchema, Binding: cloneBinding(binding), Policy: FrozenPolicy(), PolicyDigest: PolicyDigest(),
 		LogicalBytes: logicalBytes, LogicalDigest: logicalDigest, MappedV2Digest: mappedV2, Services: len(normalized.Services),
 		Dispositions: stats.dispositions, Memberships: len(normalized.Memberships), Roles: stats.roles,
 		Paths: stats.paths, Unowned: len(normalized.Unowned), Successors: stats.successors, Claims: stats.claims,

@@ -403,11 +403,15 @@ restart accepts only a selector whose complete target still validates; a
 corrupt or incomplete selected target stops startup before HTTP or MCP serves.
 In-flight reads final-confirm the same selector revision after their ordinary
 authorization and authority fences; compatibility-mode v2 reads final-confirm
-that the selector is still absent. Once a selector has been written, the
-store raises an irreversible compatibility floor so a pre-T41.9 binary refuses
-that data directory rather than ignoring the selection. Backup and restore
-carry and revalidate the same selector; neither operation changes the evidence
-release posture.
+that the selector is still absent. The store keeps layered irreversible
+compatibility floors. Writing the first selector raises the T41.9 floor so an
+older binary cannot ignore the selection. Opening the data directory with
+T41.10 or later also raises the source-generation floor once that migration
+commits, even when no selector exists and even if later startup work fails, so
+the immediately preceding binary cannot misread the versioned v3 source
+identity. Backup and restore carry and
+revalidate the same selector and floors; neither operation changes the
+evidence release posture.
 
 A `committed` catalog's JSON uses the repository's exact indexed HEAD commit
 as `authority.version`; configuration omits `version` because the indexed

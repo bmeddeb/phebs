@@ -155,6 +155,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateServiceStateV3SnapshotSchema(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateServiceSourceGenerationCompatibility(ctx); err != nil {
+		return err
+	}
 	if err := s.migrateServiceCatalogV3RelationshipReferenceSchema(ctx); err != nil {
 		return err
 	}
@@ -272,7 +275,8 @@ COMMIT;`, map[string]any{
 	}
 	if markerVersion == candidateControlRevisionMigrationVersion ||
 		markerVersion == serviceRuntimeSelectorCompatibilityMigrationVersion ||
-		markerVersion == serviceStateV3SnapshotCompatibilityMigrationVersion {
+		markerVersion == serviceStateV3SnapshotCompatibilityMigrationVersion ||
+		markerVersion == serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		return nil
 	}
 	if markerVersion != "" {

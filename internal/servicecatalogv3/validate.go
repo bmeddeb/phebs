@@ -376,7 +376,7 @@ func writeLogical(writer io.Writer, catalog servicecatalog.Catalog) error {
 }
 
 func ValidateRoot(root Root) error {
-	if root.Schema != RootSchema || reponame.Validate(root.Binding.Repository) != nil || validateBinding(root.Binding) != nil ||
+	if (root.Schema != RootSchema && root.Schema != RootSchemaV2) || reponame.Validate(root.Binding.Repository) != nil || validateBinding(root.Binding) != nil ||
 		root.PolicyDigest != PolicyDigest() || !reflect.DeepEqual(root.Policy, FrozenPolicy()) ||
 		root.LogicalBytes < 1 || root.LogicalBytes > MaxLogicalBytes || !validDigest(root.LogicalDigest) ||
 		root.MappedV2Digest != "" && !validDigest(root.MappedV2Digest) ||

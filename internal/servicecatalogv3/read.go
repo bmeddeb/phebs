@@ -330,7 +330,7 @@ func (lease *ReadLease) Service(
 		},
 	)
 	if !found {
-		return servicecatalog.ServiceProjection{}, ErrInvalid
+		return servicecatalog.ServiceProjection{}, os.ErrNotExist
 	}
 	return cloneReadProjection(entry.projections[index]), nil
 }

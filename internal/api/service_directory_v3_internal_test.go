@@ -69,6 +69,7 @@ func (fake *serviceDirectoryV3TestStore) ConfirmServiceStateSnapshot(
 
 type serviceDirectoryV3SelectorAuthority struct {
 	selector        store.ServiceRuntimeSelector
+	reads           int
 	confirmations   int
 	failConfirmAt   int
 	selectorMissing bool
@@ -78,6 +79,7 @@ func (authority *serviceDirectoryV3SelectorAuthority) GetServiceRuntimeSelector(
 	_ context.Context,
 	repository string,
 ) (store.ServiceRuntimeSelector, error) {
+	authority.reads++
 	if authority.selectorMissing || repository != authority.selector.Repository {
 		return store.ServiceRuntimeSelector{}, store.ErrNotFound
 	}
@@ -177,6 +179,20 @@ func (fake *serviceDirectoryV3TestSource) GetServiceStateV3SummaryPoint(
 	return fake.summary, nil
 }
 
+func (fake *serviceDirectoryV3TestSource) GetServiceStateV3SummarySnapshot(
+	_ context.Context,
+	repository string,
+	revision uint64,
+	digest string,
+) (servicecatalog.RepositoryState, error) {
+	fake.calls = append(fake.calls, "summary")
+	if fake.missingSummary || repository != fake.summary.Repository || revision != fake.summary.ControlRevision ||
+		digest != fake.summary.SummaryDigest {
+		return servicecatalog.RepositoryState{}, store.ErrNotFound
+	}
+	return fake.summary, nil
+}
+
 func (fake *serviceDirectoryV3TestSource) GetServiceStateV3Point(
 	_ context.Context,
 	repository, serviceKey string,
@@ -191,6 +207,18 @@ func (fake *serviceDirectoryV3TestSource) GetServiceStateV3Point(
 	}
 	state.Successors = append([]string(nil), state.Successors...)
 	return state, nil
+}
+
+func (fake *serviceDirectoryV3TestSource) GetServiceStateV3PointSnapshot(
+	ctx context.Context,
+	repository, serviceKey string,
+	revision uint64,
+	digest string,
+) (servicecatalog.ServiceState, error) {
+	if revision != fake.summary.ControlRevision || digest != fake.summary.SummaryDigest {
+		return servicecatalog.ServiceState{}, store.ErrNotFound
+	}
+	return fake.GetServiceStateV3Point(ctx, repository, serviceKey)
 }
 
 func (fake *serviceDirectoryV3TestSource) ListServiceStateV3Rows(
@@ -214,6 +242,19 @@ func (fake *serviceDirectoryV3TestSource) ListServiceStateV3Rows(
 		}
 	}
 	return result, nil
+}
+
+func (fake *serviceDirectoryV3TestSource) ListServiceStateV3RowsSnapshot(
+	ctx context.Context,
+	repository, after string,
+	limit int,
+	revision uint64,
+	digest string,
+) ([]servicecatalog.ServiceState, error) {
+	if revision != fake.summary.ControlRevision || digest != fake.summary.SummaryDigest {
+		return nil, store.ErrNotFound
+	}
+	return fake.ListServiceStateV3Rows(ctx, repository, after, limit)
 }
 
 func (fake *serviceDirectoryV3TestSource) ListAcceptedServiceStateV3Rows(
@@ -481,6 +522,25 @@ func TestServiceDirectoryV3AuthorizationPrecedesAuthorityReads(t *testing.T) {
 	if len(fixture.source.calls) != 0 {
 		t.Fatalf("hidden service performed v3 authority reads: %v", fixture.source.calls)
 	}
+	runtime := fixture.runtimeService(Options{
+		Visible: func(context.Context) func(store.Repo) bool {
+			return func(store.Repo) bool { return false }
+		},
+	})
+	_, runtimeListErr := runtime.List(t.Context(), ServiceInventoryQuery{
+		Repository: serviceDirectoryV3TestRepository,
+	}, serviceMaxPageSize+1, "not-a-cursor")
+	_, runtimeDetailErr := runtime.Detail(
+		t.Context(), serviceDirectoryV3TestRepository, "missing",
+	)
+	if humaStatus(runtimeListErr) != http.StatusNotFound ||
+		humaStatus(runtimeDetailErr) != http.StatusNotFound ||
+		fixture.store.reads != 0 || len(fixture.source.calls) != 0 {
+		t.Fatalf(
+			"hidden runtime list/detail = %v / %v; selector=%d source=%v",
+			runtimeListErr, runtimeDetailErr, fixture.store.reads, fixture.source.calls,
+		)
+	}
 }
 
 func TestRuntimeServiceDirectoryKeepsSelectedV3AcrossDarkCandidateAdvance(t *testing.T) {
@@ -546,6 +606,15 @@ func TestRuntimeServiceDirectoryKeepsSelectedV3AcrossDarkCandidateAdvance(t *tes
 			"selected v3 detail = %+v; source=%v confirms=%d v2=%v",
 			detail, fixture.source.calls, fixture.store.confirmations, fixture.store.v2Calls,
 		)
+	}
+
+	fixture.source.missingSummary = true
+	fixture.source.calls = nil
+	if _, err := service.Detail(
+		t.Context(), serviceDirectoryV3TestRepository, "orders",
+	); humaStatus(err) != http.StatusConflict ||
+		!slices.Equal(fixture.source.calls, []string{"summary"}) {
+		t.Fatalf("missing selected v3 summary = %v; source=%v", err, fixture.source.calls)
 	}
 }
 

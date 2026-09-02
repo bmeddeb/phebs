@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -194,6 +195,31 @@ func TestReadCacheRejectsMalformedRootWithoutFallback(t *testing.T) {
 	if stats := cache.Stats(); stats.RootEntries != 0 || stats.RootReads != 1 ||
 		stats.RootValidations != 1 {
 		t.Fatalf("malformed-root stats = %+v", stats)
+	}
+}
+
+func TestReadCacheReturnsNotExistForServiceRangeHole(t *testing.T) {
+	catalog := acceptedCatalog(3, false)
+	catalog.Services = append(catalog.Services[:1], catalog.Services[2:]...)
+	catalog.Memberships = append(catalog.Memberships[:1], catalog.Memberships[2:]...)
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := newReadTestSource(generation)
+	cache := NewDefaultReadCache()
+	lease, err := cache.Open(
+		t.Context(), source, generation.Root.Binding.Repository, generation.Root.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Close()
+	if _, err := lease.Service(t.Context(), source, "service-00001"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("routed service-range hole = %v, want not exist", err)
+	}
+	if stats := cache.Stats(); stats.MemberReads != 1 || stats.MemberValidations != 1 {
+		t.Fatalf("range-hole member was not strict-opened: %+v", stats)
 	}
 }
 

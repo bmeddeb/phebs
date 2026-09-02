@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 
@@ -97,13 +96,13 @@ func TestServiceCatalogV3RelationshipReferenceReconcileAndLifecycleFence(t *test
 			t.Fatal(err)
 		}
 		generations = append(generations, generation)
-		time.Sleep(time.Millisecond)
 	}
+	oldestGeneration := oldestServiceCatalogV3Prior(t, s, generations)
 	reference := ServiceCatalogV3RelationshipReference{
 		Repository:                   repository,
 		RelationshipGenerationDigest: "sha256:" + strings.Repeat("a", 64),
 		RelationshipRootDigest:       "sha256:" + strings.Repeat("b", 64),
-		CatalogRootDigest:            generations[0].Root.Digest,
+		CatalogRootDigest:            oldestGeneration.Root.Digest,
 		CatalogControlRevision:       1,
 		StateControlRevision:         1,
 		StateSummaryDigest:           "sha256:" + strings.Repeat("c", 64),
@@ -114,7 +113,7 @@ func TestServiceCatalogV3RelationshipReferenceReconcileAndLifecycleFence(t *test
 		t.Fatalf("reconstruct historical reference: %v", err)
 	}
 	oldest := serviceCatalogV3LifecycleRecord(
-		t, s, generations[0].Root.Digest,
+		t, s, oldestGeneration.Root.Digest,
 	)
 	if retired, err := s.retireServiceCatalogV3Generation(
 		ctx, oldest, ServiceCatalogV3Retained,
@@ -147,7 +146,15 @@ func TestServiceCatalogV3RelationshipReferenceReconcileAndLifecycleFence(t *test
 	}
 
 	collision := reference
-	collision.CatalogRootDigest = generations[1].Root.Digest
+	candidate, err := s.GetServiceCatalogV3Candidate(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	collision.CatalogRootDigest = candidate.Generation.Root.Digest
+	if collision.CatalogRootDigest == reference.CatalogRootDigest ||
+		serviceCatalogV3LifecycleRecord(t, s, collision.CatalogRootDigest).State != serviceCatalogV3Historical {
+		t.Fatal("immutable collision fixture lacks a distinct retained candidate")
+	}
 	if err := s.ReconcileServiceCatalogV3RelationshipReferences(
 		ctx, []ServiceCatalogV3RelationshipReference{collision},
 	); !errors.Is(err, ErrConflict) {
@@ -429,7 +436,7 @@ func collectingServiceCatalogV3RelationshipReference(
 	repository := "example.com/acme/v3-relationship-collecting-" + strings.ToLower(t.Name())
 	commit := strings.Repeat("7", 40)
 	seedServiceCatalogV3Repo(t, s, repository, commit)
-	var oldest servicecatalogv3.Generation
+	generations := make([]servicecatalogv3.Generation, 0, 5)
 	for index := range 5 {
 		generation := internalOperatorServiceCatalogV3Generation(
 			t, repository, commit, fmt.Sprintf("collecting-v%d", index),
@@ -437,11 +444,9 @@ func collectingServiceCatalogV3RelationshipReference(
 		if err := s.PublishServiceCatalogV3Candidate(t.Context(), generation); err != nil {
 			t.Fatal(err)
 		}
-		if index == 0 {
-			oldest = generation
-		}
-		time.Sleep(time.Millisecond)
+		generations = append(generations, generation)
 	}
+	oldest := oldestServiceCatalogV3Prior(t, s, generations)
 	record := serviceCatalogV3LifecycleRecord(t, s, oldest.Root.Digest)
 	retired, err := s.retireServiceCatalogV3Generation(
 		t.Context(), record, ServiceCatalogV3Retained,

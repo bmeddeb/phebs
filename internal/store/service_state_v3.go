@@ -1796,8 +1796,9 @@ COMMIT;`, map[string]any{
 }
 
 const (
-	serviceStateV3SnapshotSchemaMigrationVersion        = "t41.10-service-state-v3-snapshot-v1"
-	serviceStateV3SnapshotCompatibilityMigrationVersion = "t41.10-service-state-v3-snapshot-compat-v1"
+	serviceStateV3SnapshotSchemaMigrationVersion                  = "t41.10-service-state-v3-snapshot-v1"
+	serviceStateV3SnapshotCompatibilityMigrationVersion           = "t41.10-service-state-v3-snapshot-compat-v1"
+	serviceCatalogV3SourceGenerationCompatibilityMigrationVersion = "t41.10-service-catalog-v3-source-generation-compat-v1"
 )
 
 func serviceStateV3SnapshotSchemaMigrationID() models.RecordID {
@@ -1896,15 +1897,18 @@ LET $versions = SELECT version FROM $rid LIMIT 2;
 IF array::len($versions) != 1 OR
 	($versions[0].version != $candidate AND
 	 $versions[0].version != $selector AND
-	 $versions[0].version != $snapshot) {
+	 $versions[0].version != $snapshot AND
+	 $versions[0].version != $source_generation) {
 	THROW 'phebs-permanent: unsupported service state v3 snapshot compatibility marker';
 };
-UPDATE $rid SET version = $snapshot RETURN NONE;
+UPDATE $rid SET version = IF $versions[0].version = $source_generation
+	THEN $source_generation ELSE $snapshot END RETURN NONE;
 COMMIT;`, map[string]any{
-		"rid":       candidateControlRevisionMigrationID(),
-		"candidate": candidateControlRevisionMigrationVersion,
-		"selector":  serviceRuntimeSelectorCompatibilityMigrationVersion,
-		"snapshot":  serviceStateV3SnapshotCompatibilityMigrationVersion,
+		"rid":               candidateControlRevisionMigrationID(),
+		"candidate":         candidateControlRevisionMigrationVersion,
+		"selector":          serviceRuntimeSelectorCompatibilityMigrationVersion,
+		"snapshot":          serviceStateV3SnapshotCompatibilityMigrationVersion,
+		"source_generation": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: compatibility latch: %w", err)
@@ -1943,6 +1947,41 @@ COMMIT;`, map[string]any{
 	for index, result := range *written {
 		if result.Error != nil {
 			return fmt.Errorf("migrate service state v3 snapshot marker statement %d: %s", index, result.Error.Message)
+		}
+	}
+	return nil
+}
+
+// migrateServiceSourceGenerationCompatibility irreversibly raises the common
+// service compatibility marker for catalog-v3 source-generation semantics
+// after the snapshot schema is available. It changes no schema or catalog row.
+func (s *Surreal) migrateServiceSourceGenerationCompatibility(
+	ctx context.Context,
+) error {
+	results, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $versions = SELECT version FROM $rid LIMIT 2;
+IF array::len($versions) != 1 OR
+	($versions[0].version != $snapshot AND
+	 $versions[0].version != $source_generation) {
+	THROW 'phebs-permanent: unsupported service catalog v3 source generation compatibility marker';
+};
+UPDATE $rid SET version = $source_generation RETURN NONE;
+COMMIT;`, map[string]any{
+		"rid":               candidateControlRevisionMigrationID(),
+		"snapshot":          serviceStateV3SnapshotCompatibilityMigrationVersion,
+		"source_generation": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate service catalog v3 source generation compatibility: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate service catalog v3 source generation compatibility statement %d: %s",
+				index,
+				result.Error.Message,
+			)
 		}
 	}
 	return nil

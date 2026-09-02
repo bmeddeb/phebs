@@ -26,8 +26,8 @@ const (
 	MaxServiceRuntimeSelectors = MaxServiceCatalogV3LifecycleRoots
 
 	serviceRuntimeSelectorSchemaMigrationVersion = "t41.9-service-runtime-selector-schema-v1"
-	// This version is deliberately written into a marker understood by the
-	// full supported predecessor set. Those binaries accept only the prior
+	// This historical version was written into a marker understood by the full
+	// supported predecessor set. Those binaries accept only the prior
 	// candidate-control value and therefore refuse an activated selector before
 	// any of them can serve.
 	serviceRuntimeSelectorCompatibilityMigrationVersion = "t41.9-service-runtime-selector-compat-v1"
@@ -539,7 +539,8 @@ func (s *Surreal) selectServiceRuntime(
 	}
 	if compatibility != candidateControlRevisionMigrationVersion &&
 		compatibility != serviceRuntimeSelectorCompatibilityMigrationVersion &&
-		compatibility != serviceStateV3SnapshotCompatibilityMigrationVersion {
+		compatibility != serviceStateV3SnapshotCompatibilityMigrationVersion &&
+		compatibility != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: unsupported compatibility marker %q", backend, compatibility)
 	}
 	if backend == ServiceRuntimeV2 {
@@ -570,11 +571,11 @@ func (s *Surreal) selectServiceRuntime(
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: %w", backend, ErrInvalidServiceRuntimeSelector)
 	}
 
-	if compatibility != serviceStateV3SnapshotCompatibilityMigrationVersion {
+	if compatibility != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		updated, updateErr := surrealdb.Query[any](ctx, tx, `
 UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
 			"rid":     candidateControlRevisionMigrationID(),
-			"version": serviceStateV3SnapshotCompatibilityMigrationVersion,
+			"version": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
 		})
 		if updateErr != nil {
 			return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: latch compatibility: %w", backend, updateErr)
@@ -1180,7 +1181,7 @@ func (s *Surreal) validateServiceRuntimeSelectorStore(ctx context.Context) error
 	if len(markerRows) != 1 {
 		return fmt.Errorf("validate service runtime selector store: %w", ErrInvalidServiceRuntimeSelector)
 	}
-	if markerRows[0].Version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+	if markerRows[0].Version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		return fmt.Errorf("validate service runtime selector store: unsupported compatibility latch: %w", ErrInvalidServiceRuntimeSelector)
 	}
 	referenceResults, err := surrealdb.Query[[]serviceCatalogV3StateReferenceRec](ctx, s.db, `

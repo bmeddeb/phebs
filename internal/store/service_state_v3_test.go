@@ -505,6 +505,34 @@ func serviceStateV3Generation(
 	return generation
 }
 
+func legacyServiceCatalogV3Generation(
+	t *testing.T,
+	generation servicecatalogv3.Generation,
+) servicecatalogv3.Generation {
+	t.Helper()
+	root := generation.Root
+	root.Schema = servicecatalogv3.RootSchema
+	root.Digest = "sha256:" + strings.Repeat("0", 64)
+	for range 4 {
+		raw, err := json.Marshal(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root.RootBytes = len(raw) + 1
+		root.EncodedBytes = root.RootBytes + root.EncodedMemberBytes
+	}
+	digest, err := servicecatalogv3.RootDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Digest = digest
+	generation.Root = root
+	if err := servicecatalogv3.ValidateGeneration(generation); err != nil {
+		t.Fatal(err)
+	}
+	return generation
+}
+
 func serviceStateV2Publication(
 	t *testing.T,
 	repository, commit string,
@@ -665,6 +693,56 @@ UPDATE $compatibility SET version = $prior RETURN NONE;`, map[string]any{
 	if version := serviceRuntimeCompatibilityMarker(t, s); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatalf("failed schema migration did not preserve compatibility latch: %q", version)
 	}
+}
+
+func TestServiceCatalogV3SourceGenerationCompatibilityMigration(t *testing.T) {
+	t.Run("snapshot advances and self is idempotent", func(t *testing.T) {
+		s := newServiceCatalogV3InternalStore(t)
+		if _, err := surrealdb.Query[any](t.Context(), s.db, `
+UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
+			"rid":     candidateControlRevisionMigrationID(),
+			"version": serviceStateV3SnapshotCompatibilityMigrationVersion,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.migrateServiceSourceGenerationCompatibility(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.migrateServiceSourceGenerationCompatibility(t.Context()); err != nil {
+			t.Fatalf("idempotent source-generation compatibility migration: %v", err)
+		}
+		if version := serviceRuntimeCompatibilityMarker(t, s); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
+			t.Fatalf("source-generation compatibility marker = %q", version)
+		}
+	})
+
+	t.Run("snapshot migration preserves latest", func(t *testing.T) {
+		s := newServiceCatalogV3InternalStore(t)
+		if err := s.migrateServiceStateV3SnapshotSchema(t.Context()); err != nil {
+			t.Fatalf("snapshot migration rejected latest compatibility marker: %v", err)
+		}
+		if version := serviceRuntimeCompatibilityMarker(t, s); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
+			t.Fatalf("snapshot migration downgraded compatibility marker to %q", version)
+		}
+	})
+
+	t.Run("unknown refuses without mutation", func(t *testing.T) {
+		s := newServiceCatalogV3InternalStore(t)
+		const unknown = "t41.10-service-catalog-v3-source-generation-compat-v999"
+		if _, err := surrealdb.Query[any](t.Context(), s.db, `
+UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
+			"rid":     candidateControlRevisionMigrationID(),
+			"version": unknown,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.migrateServiceSourceGenerationCompatibility(t.Context()); err == nil {
+			t.Fatal("unknown source-generation compatibility marker was accepted")
+		}
+		if version := serviceRuntimeCompatibilityMarker(t, s); version != unknown {
+			t.Fatalf("unknown compatibility marker changed to %q", version)
+		}
+	})
 }
 
 func TestServiceStateV3LeavesV1V2AuthorityByteIdentical(t *testing.T) {
@@ -1354,8 +1432,11 @@ func TestServiceStateV3SparseSuccessorKeepsUnchangedCatalogProvenance(t *testing
 			Origin:      servicecatalog.OriginBase,
 		}
 	}
-	first := serviceStateV3Generation(t, repository, commit, "sparse-a", services)
-	if err := s.PublishServiceCatalogV3Candidate(ctx, first); err != nil {
+	legacy := legacyServiceCatalogV3Generation(
+		t,
+		serviceStateV3Generation(t, repository, commit, "sparse-legacy", services),
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, legacy); err != nil {
 		t.Fatal(err)
 	}
 	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
@@ -1369,6 +1450,44 @@ func TestServiceStateV3SparseSuccessorKeepsUnchangedCatalogProvenance(t *testing
 		t.Fatal(err)
 	}
 	runServiceStateV3Plan(t, s, activation)
+
+	first := serviceStateV3Generation(t, repository, commit, "sparse-v2", services)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, first); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err = s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	assertServiceStateV3PlanBounds(t, s, reconcile.Plan.Digest, serviceCount*2, serviceCount)
+	migrating := serviceStateV3Row(t, s, repository, "service-000")
+	if migrating.DesiredCatalogGeneration != first.Root.Digest ||
+		migrating.ActiveCatalogGeneration != legacy.Root.Digest {
+		t.Fatalf("legacy transition state = %+v", migrating)
+	}
+	_, migratingReader, _ := newServiceStateV3CountingReader(t, s)
+	migratingRead, err := migratingReader.OpenService(ctx, repository, "service-000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if migratingRead.Root.Digest != first.Root.Digest ||
+		migratingRead.ActiveRoot.Digest != legacy.Root.Digest {
+		t.Fatalf("legacy transition read = %+v", migratingRead)
+	}
+	if err := migratingReader.Confirm(ctx, migratingRead); err != nil {
+		t.Fatal(err)
+	}
+	migratingRead.Close()
+	if _, err := s.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("legacy transition precious validation: %v", err)
+	}
+	activation, err = s.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, activation)
+	assertServiceStateV3PlanBounds(t, s, activation.Plan.Digest, serviceCount, serviceCount)
 	unchangedA := serviceStateV3Row(t, s, repository, "service-000")
 
 	successorServices := slices.Clone(services)
@@ -1415,6 +1534,9 @@ func TestServiceStateV3SparseSuccessorKeepsUnchangedCatalogProvenance(t *testing
 		unchangedRead.ActiveRoot.Digest != first.Root.Digest {
 		t.Fatalf("unchanged successor active provenance = %+v", unchangedRead)
 	}
+	if _, err := s.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("mixed-schema precious validation: %v", err)
+	}
 }
 
 func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T) {
@@ -1431,8 +1553,23 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 			Disposition: servicecatalog.DispositionAccepted, Origin: servicecatalog.OriginBase,
 		}
 	}
+	buildGeneration := func(version string, values []servicecatalog.Service) servicecatalogv3.Generation {
+		generation := serviceStateV3Generation(t, repository, commit, version, values)
+		catalog, err := generation.Catalog()
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding := generation.Root.Binding
+		binding.Source.FileCount = servicesCount
+		binding.Source.AcceptedFileCount = servicesCount
+		generation, err = servicecatalogv3.Build(binding, catalog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return generation
+	}
 	started := time.Now()
-	first := serviceStateV3Generation(t, repository, commit, "ten-thousand-a", services)
+	first := buildGeneration("ten-thousand-a", services)
 	if err := s.PublishServiceCatalogV3Candidate(ctx, first); err != nil {
 		t.Fatal(err)
 	}
@@ -1566,7 +1703,7 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 
 	deltaServices := append([]servicecatalog.Service(nil), services...)
 	deltaServices[len(deltaServices)-1].DisplayName = "Changed service"
-	second := serviceStateV3Generation(t, repository, commit, "ten-thousand-b", deltaServices)
+	second := buildGeneration("ten-thousand-b", deltaServices)
 	if err := s.PublishServiceCatalogV3Candidate(ctx, second); err != nil {
 		t.Fatal(err)
 	}
@@ -1614,8 +1751,95 @@ func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T
 	}
 	runServiceStateV3Plan(t, s, aba)
 	assertServiceStateV3PlanBounds(t, s, aba.Plan.Digest, servicesCount*2, 1)
+
+	baseCatalog, err := first.Catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	siblingBefore := serviceStateV3Row(t, s, repository, "service-00000")
+	removedBefore := serviceStateV3Row(t, s, repository, "service-09999")
+	removedCatalog := baseCatalog
+	removedCatalog.Services = slices.Clone(baseCatalog.Services)
+	removedCatalog.Memberships = slices.Clone(baseCatalog.Memberships)
+	removedCatalog.Authority.Version = "ten-thousand-remove"
+	removedCatalog.Services = slices.DeleteFunc(
+		removedCatalog.Services,
+		func(service servicecatalog.Service) bool { return service.Key == "service-09999" },
+	)
+	removedCatalog.Memberships = slices.DeleteFunc(
+		removedCatalog.Memberships,
+		func(membership servicecatalog.Membership) bool {
+			return membership.ServiceKey == "service-09999"
+		},
+	)
+	removedCatalog.Unowned = []servicecatalog.UnownedPlacement{{
+		Path: "svc/09999", Origin: servicecatalog.OriginBase,
+	}}
+	removedBinding := first.Root.Binding
+	removedBinding.Authority = removedCatalog.Authority
+	removedBinding.Source.AcceptedFileCount = servicesCount - 1
+	removedBinding.Source.UnownedFileCount = 1
+	removedGeneration, err := servicecatalogv3.Build(removedBinding, removedCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstSource, err := servicecatalogv3.SourceGenerationDigest(first.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	removedSource, err := servicecatalogv3.SourceGenerationDigest(removedGeneration.Root)
+	if err != nil || removedSource != firstSource {
+		t.Fatalf("complement-only source generation = %q, want %q: %v", removedSource, firstSource, err)
+	}
+	if err := s.PublishServiceCatalogV3Candidate(ctx, removedGeneration); err != nil {
+		t.Fatal(err)
+	}
+	removedPlan, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, removedPlan)
+	assertServiceStateV3PlanBounds(t, s, removedPlan.Plan.Digest, servicesCount*2, 1)
+	removedState := serviceStateV3Row(t, s, repository, "service-09999")
+	if !removedState.Removed || removedState.Incarnation != removedBefore.Incarnation {
+		t.Fatalf("10,000-service honest removal = %+v", removedState)
+	}
+
+	readdCatalog := baseCatalog
+	readdCatalog.Services = slices.Clone(baseCatalog.Services)
+	readdCatalog.Memberships = slices.Clone(baseCatalog.Memberships)
+	readdCatalog.Authority.Version = "ten-thousand-readd"
+	readdBinding := first.Root.Binding
+	readdBinding.Authority = readdCatalog.Authority
+	readdGeneration, err := servicecatalogv3.Build(readdBinding, readdCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishServiceCatalogV3Candidate(ctx, readdGeneration); err != nil {
+		t.Fatal(err)
+	}
+	readdPlan, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, readdPlan)
+	assertServiceStateV3PlanBounds(t, s, readdPlan.Plan.Digest, servicesCount*2, 1)
+	readdActivation, err := s.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, readdActivation)
+	assertServiceStateV3PlanBounds(t, s, readdActivation.Plan.Digest, servicesCount, 1)
+	siblingAfter := serviceStateV3Row(t, s, repository, "service-00000")
+	readdedState := serviceStateV3Row(t, s, repository, "service-09999")
+	if siblingAfter.StateDigest != siblingBefore.StateDigest ||
+		siblingAfter.DesiredCatalogGeneration != first.Root.Digest ||
+		siblingAfter.ActiveCatalogGeneration != first.Root.Digest ||
+		readdedState.Removed || readdedState.Incarnation != removedBefore.Incarnation+1 {
+		t.Fatalf("10,000-service honest re-add sibling=%+v readded=%+v", siblingAfter, readdedState)
+	}
 	if time.Since(started) > 10*time.Minute {
-		t.Fatalf("10,000-service cold/no-op/delta/A-B-A exceeded ten minutes: %s", time.Since(started))
+		t.Fatalf("10,000-service cold/no-op/delta/A-B-A/removal/re-add exceeded ten minutes: %s", time.Since(started))
 	}
 }
 

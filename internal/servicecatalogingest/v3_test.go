@@ -2,11 +2,13 @@ package servicecatalogingest
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -98,6 +100,12 @@ func TestV3ReconcilerCommittedCensusNoopAndVersionRefusal(t *testing.T) {
 		root.Binding.Authority.Version != commit || state.revisions[repository] != 1 {
 		t.Fatalf("v3 binding = %+v", root.Binding)
 	}
+	legacy := legacyServiceCatalogV3Generation(t, state.history[root.Digest])
+	current := state.current[repository]
+	current.Root = legacy.Root
+	state.current[repository] = current
+	state.history[legacy.Root.Digest] = legacy
+	root = legacy.Root
 
 	hidden := mirror + ".hidden"
 	if err := os.Rename(mirror, hidden); err != nil {
@@ -115,6 +123,34 @@ func TestV3ReconcilerCommittedCensusNoopAndVersionRefusal(t *testing.T) {
 	if state.revisions[repository] != 1 || state.current[repository].Root.Digest != root.Digest {
 		t.Fatal("same-version refusal changed the v3 candidate")
 	}
+}
+
+func legacyServiceCatalogV3Generation(
+	t *testing.T,
+	generation servicecatalogv3.Generation,
+) servicecatalogv3.Generation {
+	t.Helper()
+	root := generation.Root
+	root.Schema = servicecatalogv3.RootSchema
+	root.Digest = "sha256:" + strings.Repeat("0", 64)
+	for range 4 {
+		raw, err := json.Marshal(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root.RootBytes = len(raw) + 1
+		root.EncodedBytes = root.RootBytes + root.EncodedMemberBytes
+	}
+	digest, err := servicecatalogv3.RootDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root.Digest = digest
+	generation.Root = root
+	if err := servicecatalogv3.ValidateGeneration(generation); err != nil {
+		t.Fatal(err)
+	}
+	return generation
 }
 
 func TestV3ReconcilerOperatorAndCensusRefusal(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 
 const (
 	RootSchema            = "phebs-service-catalog-v3"
+	RootSchemaV2          = "phebs-service-catalog-v3-root-v2"
 	ServiceMemberSchema   = "phebs-service-catalog-v3-service-member"
 	PlacementMemberSchema = "phebs-service-catalog-v3-placement-member"
 

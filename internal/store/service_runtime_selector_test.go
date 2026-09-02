@@ -1399,7 +1399,7 @@ func TestServiceRuntimeSelectorTargetMismatchDoesNotLatch(t *testing.T) {
 			); !errors.Is(err, ErrNotFound) {
 				t.Fatalf("failed CAS wrote selector: %v", err)
 			}
-			if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+			if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 				t.Fatalf("failed CAS latched compatibility marker %q", version)
 			}
 		})
@@ -1417,13 +1417,14 @@ func TestServiceRuntimeSelectorCompatibilityLatchIsIrreversible(t *testing.T) {
 		t.Fatal(err)
 	}
 	version := serviceRuntimeCompatibilityMarker(t, fixture.store)
-	if version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+	if version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		t.Fatalf("activated compatibility marker = %q", version)
 	}
 	// This is the exact predecessor's acceptance predicate. Its v1-only
 	// migrator therefore refuses before returning a usable store.
 	if version == candidateControlRevisionMigrationVersion ||
-		version == serviceRuntimeSelectorCompatibilityMigrationVersion {
+		version == serviceRuntimeSelectorCompatibilityMigrationVersion ||
+		version == serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatal("predecessor unexpectedly accepts activated selector marker")
 	}
 	if relationshipVersion := serviceRuntimeMigrationMarker(
@@ -1452,9 +1453,72 @@ func TestServiceRuntimeSelectorCompatibilityLatchIsIrreversible(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		t.Fatalf("reverse weakened compatibility latch to %q", version)
 	}
+}
+
+func TestServiceRuntimeSelectorCASAdvancesSupportedCompatibilityMarkers(
+	t *testing.T,
+) {
+	for _, version := range []string{
+		candidateControlRevisionMigrationVersion,
+		serviceRuntimeSelectorCompatibilityMigrationVersion,
+		serviceStateV3SnapshotCompatibilityMigrationVersion,
+		serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
+	} {
+		t.Run(version, func(t *testing.T) {
+			fixture := newServiceRuntimeSelectorFixture(t)
+			if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
+				"rid":     candidateControlRevisionMigrationID(),
+				"version": version,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fixture.store.SelectServiceRuntimeV3(
+				t.Context(),
+				ServiceRuntimeSelectionRequest{
+					Repository: fixture.repository,
+					Target:     fixture.v3,
+				},
+			); err != nil {
+				t.Fatalf("select from compatibility marker %q: %v", version, err)
+			}
+			if got := serviceRuntimeCompatibilityMarker(t, fixture.store); got != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
+				t.Fatalf("compatibility marker after CAS = %q", got)
+			}
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		fixture := newServiceRuntimeSelectorFixture(t)
+		const unknown = "t41.10-service-catalog-v3-source-generation-compat-v999"
+		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
+			"rid":     candidateControlRevisionMigrationID(),
+			"version": unknown,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := fixture.store.SelectServiceRuntimeV3(
+			t.Context(),
+			ServiceRuntimeSelectionRequest{
+				Repository: fixture.repository,
+				Target:     fixture.v3,
+			},
+		); err == nil || !strings.Contains(err.Error(), "unsupported compatibility marker") {
+			t.Fatalf("select from unknown compatibility marker = %v", err)
+		}
+		if got := serviceRuntimeCompatibilityMarker(t, fixture.store); got != unknown {
+			t.Fatalf("unknown compatibility marker changed to %q", got)
+		}
+		if _, err := fixture.store.GetServiceRuntimeSelector(
+			t.Context(), fixture.repository,
+		); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("unknown compatibility marker wrote selector: %v", err)
+		}
+	})
 }
 
 func TestServiceRuntimeSelectorRepositoryDeletionRetiresAuthority(t *testing.T) {
@@ -1501,7 +1565,7 @@ SELECT * FROM service_catalog_v3_state_reference
 	if rows := firstDomainRows(references); len(rows) != 0 {
 		t.Fatalf("retired selector retained current catalog reference: %+v", rows)
 	}
-	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		t.Fatalf("retirement weakened compatibility latch to %q", version)
 	}
 	if err := fixture.store.validateServiceRuntimeSelectorStore(ctx); err != nil {
@@ -1552,11 +1616,26 @@ UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
 	})
 	t.Run("schema latch without selector", func(t *testing.T) {
 		fixture := newServiceRuntimeSelectorFixture(t)
-		if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+		if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 			t.Fatalf("schema compatibility latch = %q", version)
 		}
 		if err := fixture.store.validateServiceRuntimeSelectorStore(t.Context()); err != nil {
 			t.Fatalf("schema latch without selector = %v", err)
+		}
+	})
+	t.Run("snapshot predecessor without selector", func(t *testing.T) {
+		fixture := newServiceRuntimeSelectorFixture(t)
+		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
+			"rid":     candidateControlRevisionMigrationID(),
+			"version": serviceStateV3SnapshotCompatibilityMigrationVersion,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := fixture.store.validateServiceRuntimeSelectorStore(
+			t.Context(),
+		); !errors.Is(err, ErrInvalidServiceRuntimeSelector) {
+			t.Fatalf("snapshot predecessor startup validation = %v", err)
 		}
 	})
 }

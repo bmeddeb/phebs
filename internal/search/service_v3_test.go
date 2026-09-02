@@ -91,6 +91,22 @@ func (source *serviceV3SearchSource) GetServiceStateV3SummaryPoint(
 	return source.summary, nil
 }
 
+func (source *serviceV3SearchSource) GetServiceStateV3SummarySnapshot(
+	_ context.Context,
+	repository string,
+	revision uint64,
+	digest string,
+) (servicecatalog.RepositoryState, error) {
+	source.record("state-summary-snapshot")
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	if repository != source.summary.Repository || revision != source.summary.ControlRevision ||
+		digest != source.summary.SummaryDigest {
+		return servicecatalog.RepositoryState{}, store.ErrNotFound
+	}
+	return source.summary, nil
+}
+
 func (source *serviceV3SearchSource) GetServiceStateV3Point(
 	_ context.Context,
 	repository, serviceKey string,
@@ -106,6 +122,24 @@ func (source *serviceV3SearchSource) GetServiceStateV3Point(
 	return state, nil
 }
 
+func (source *serviceV3SearchSource) GetServiceStateV3PointSnapshot(
+	_ context.Context,
+	repository, serviceKey string,
+	revision uint64,
+	digest string,
+) (servicecatalog.ServiceState, error) {
+	source.record("service-state-snapshot")
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	if repository != source.state.Repository || serviceKey != source.state.ServiceKey ||
+		revision != source.summary.ControlRevision || digest != source.summary.SummaryDigest {
+		return servicecatalog.ServiceState{}, store.ErrNotFound
+	}
+	state := source.state
+	state.Successors = slices.Clone(source.state.Successors)
+	return state, nil
+}
+
 func (source *serviceV3SearchSource) ListServiceStateV3Rows(
 	context.Context,
 	string,
@@ -113,6 +147,24 @@ func (source *serviceV3SearchSource) ListServiceStateV3Rows(
 	int,
 ) ([]servicecatalog.ServiceState, error) {
 	source.record("list-service-state")
+	return nil, nil
+}
+
+func (source *serviceV3SearchSource) ListServiceStateV3RowsSnapshot(
+	_ context.Context,
+	repository string,
+	_ string,
+	_ int,
+	revision uint64,
+	digest string,
+) ([]servicecatalog.ServiceState, error) {
+	source.record("list-service-state-snapshot")
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	if repository != source.summary.Repository || revision != source.summary.ControlRevision ||
+		digest != source.summary.SummaryDigest {
+		return nil, store.ErrNotFound
+	}
 	return nil, nil
 }
 

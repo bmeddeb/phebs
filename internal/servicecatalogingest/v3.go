@@ -104,7 +104,7 @@ func (r *V3Reconciler) reconcile(
 	}
 	if current != nil && current.Root.Binding.Authority == catalog.Authority &&
 		sameOverride(current.Root.Binding.Override, catalog.Override) {
-		candidate, buildErr := servicecatalogv3.Build(current.Root.Binding, catalog)
+		candidate, buildErr := servicecatalogv3.Rebuild(current.Root, catalog)
 		if buildErr != nil {
 			return "", buildErr
 		}

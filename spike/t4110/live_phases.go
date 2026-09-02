@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -408,6 +409,10 @@ func (h *liveHarness) applySuccessor(
 ) (PhaseCost, error) {
 	var measured PhaseCost
 	priorCatalog := cloneCatalog(h.catalog)
+	next, binding, err := h.bindSuccessorSource(next)
+	if err != nil {
+		return PhaseCost{}, err
+	}
 	changedKey, err := firstCatalogServiceDifference(priorCatalog, next)
 	if err != nil {
 		return PhaseCost{}, err
@@ -416,9 +421,6 @@ func (h *liveHarness) applySuccessor(
 	if err != nil {
 		return PhaseCost{}, err
 	}
-	binding := h.generation.Root.Binding
-	binding.Authority = next.Authority
-	binding.Override = next.Override
 	generation, err := servicecatalogv3.Build(binding, next)
 	if err != nil {
 		return PhaseCost{}, fmt.Errorf("build %s successor: %w", worker, err)
@@ -518,6 +520,67 @@ func (h *liveHarness) applySuccessor(
 		)
 	}
 	return measured, nil
+}
+
+func (h *liveHarness) bindSuccessorSource(
+	next servicecatalog.Catalog,
+) (servicecatalog.Catalog, servicecatalogv3.Binding, error) {
+	binding := h.generation.Root.Binding
+	if binding.Source.FileCount != len(h.corpus.Files) {
+		return servicecatalog.Catalog{}, servicecatalogv3.Binding{},
+			errors.New("successor source inventory differs from the frozen corpus")
+	}
+	dispositions := make(map[string]string, len(next.Services))
+	for _, service := range next.Services {
+		dispositions[service.Key] = service.Disposition
+	}
+	acceptedPaths := make(map[string]struct{}, len(next.Memberships))
+	placementHits := make(map[string]bool, len(next.Memberships))
+	for _, membership := range next.Memberships {
+		placementHits[membership.Path] = false
+		if dispositions[membership.ServiceKey] == servicecatalog.DispositionAccepted {
+			acceptedPaths[membership.Path] = struct{}{}
+		}
+	}
+	next.Unowned = next.Unowned[:0]
+	acceptedFiles := 0
+	for _, file := range h.corpus.Files {
+		accepted := false
+		for current := file.Path; current != "."; current = path.Dir(current) {
+			if _, exists := placementHits[current]; exists {
+				placementHits[current] = true
+			}
+			if _, exists := acceptedPaths[current]; exists {
+				accepted = true
+			}
+		}
+		if accepted {
+			acceptedFiles++
+			continue
+		}
+		next.Unowned = append(next.Unowned, servicecatalog.UnownedPlacement{
+			Path: file.Path, Origin: servicecatalog.OriginBase,
+		})
+	}
+	missing := ""
+	for placement, hit := range placementHits {
+		if !hit && (missing == "" || placement < missing) {
+			missing = placement
+		}
+	}
+	if missing != "" {
+		return servicecatalog.Catalog{}, servicecatalogv3.Binding{},
+			fmt.Errorf("catalog placement %q is absent from the frozen corpus", missing)
+	}
+	if err := servicecatalogv3.ValidateCatalog(next); err != nil {
+		return servicecatalog.Catalog{}, servicecatalogv3.Binding{},
+			fmt.Errorf("validate source-bound successor: %w", err)
+	}
+	binding.Authority = next.Authority
+	binding.Override = next.Override
+	binding.Source.AcceptedFileCount = acceptedFiles
+	binding.Source.UnownedFileCount = len(h.corpus.Files) - acceptedFiles
+	return next, binding, nil
 }
 
 func firstCatalogServiceDifference(

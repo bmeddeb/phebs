@@ -448,7 +448,8 @@ func (s *Surreal) derivedRetentionReadiness(
 	actual := (*rows)[0].Result[0].Version
 	return actual == version || kind == derivedRetentionCandidate &&
 		(actual == serviceRuntimeSelectorCompatibilityMigrationVersion ||
-			actual == serviceStateV3SnapshotCompatibilityMigrationVersion), nil
+			actual == serviceStateV3SnapshotCompatibilityMigrationVersion ||
+			actual == serviceCatalogV3SourceGenerationCompatibilityMigrationVersion), nil
 }
 
 func derivedRetentionSummary(

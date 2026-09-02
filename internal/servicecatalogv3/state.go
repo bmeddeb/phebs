@@ -13,6 +13,7 @@ const (
 	desiredServiceSchema     = "phebs-service-desired-v3-shadow"
 	desiredGenerationSchema  = "phebs-service-desired-generation-v3-shadow"
 	sourceGenerationSchema   = "phebs-service-source-generation-v3-shadow"
+	sourceGenerationSchemaV2 = "phebs-service-source-generation-v3-shadow-v2"
 	serviceStateDigestDomain = "phebs-service-state-v3-shadow\x00"
 	repositoryDigestDomain   = "phebs-service-state-repository-v3-shadow\x00"
 )
@@ -52,6 +53,25 @@ func SourceGenerationDigest(root Root) (string, error) {
 }
 
 func sourceGenerationDigest(root Root) (string, error) {
+	if root.Schema == RootSchemaV2 {
+		binding := struct {
+			Schema             string `json:"schema"`
+			Repository         string `json:"repository"`
+			SourceCommit       string `json:"source_commit"`
+			SourceCensusDigest string `json:"source_census_digest"`
+			SourceFileCount    int    `json:"source_file_count"`
+		}{
+			Schema: sourceGenerationSchemaV2, Repository: root.Binding.Repository,
+			SourceCommit:       root.Binding.Source.Commit,
+			SourceCensusDigest: root.Binding.Source.CensusDigest,
+			SourceFileCount:    root.Binding.Source.FileCount,
+		}
+		raw, err := canonical(binding)
+		if err != nil {
+			return "", err
+		}
+		return digest(sourceGenerationSchemaV2+"\x00", raw), nil
+	}
 	binding := struct {
 		Schema     string `json:"schema"`
 		Repository string `json:"repository"`
