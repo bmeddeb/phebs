@@ -16,6 +16,8 @@ import (
 )
 
 type serviceV3SearchSource struct {
+	*serviceV3SelectorAuthority
+
 	mu sync.Mutex
 
 	pointer store.ServiceCatalogV3Pointer
@@ -167,8 +169,55 @@ func (source *serviceV3SearchSource) confirmations() int {
 
 type orderedServiceV3SearchStore struct {
 	*serviceSearchStore
+	*serviceV3SelectorAuthority
 	mu    sync.Mutex
 	calls []string
+}
+
+type serviceV3SelectorAuthority struct {
+	mu            sync.Mutex
+	selector      store.ServiceRuntimeSelector
+	confirmations int
+	failConfirmAt int
+}
+
+func (authority *serviceV3SelectorAuthority) GetServiceRuntimeSelector(
+	_ context.Context,
+	repository string,
+) (store.ServiceRuntimeSelector, error) {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	if repository != authority.selector.Repository {
+		return store.ServiceRuntimeSelector{}, store.ErrNotFound
+	}
+	return authority.selector, nil
+}
+
+func (authority *serviceV3SelectorAuthority) ConfirmServiceRuntimeSelector(
+	_ context.Context,
+	expected store.ServiceRuntimeSelector,
+) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	authority.confirmations++
+	if authority.failConfirmAt == authority.confirmations ||
+		expected != authority.selector {
+		return store.ErrConflict
+	}
+	return nil
+}
+
+func (authority *serviceV3SelectorAuthority) reset(failConfirmAt int) {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	authority.confirmations = 0
+	authority.failConfirmAt = failConfirmAt
+}
+
+func (authority *serviceV3SelectorAuthority) confirmationCount() int {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	return authority.confirmations
 }
 
 func (st *orderedServiceV3SearchStore) GetRepo(
@@ -339,6 +388,82 @@ func TestServiceSearchV3StreamMatchesScopedReceipt(t *testing.T) {
 	}
 }
 
+func TestRuntimeScopedSearchKeepsSelectedV3AcrossDarkCandidateAdvance(t *testing.T) {
+	fixture := buildServiceV3SearchFixture(t)
+	scoped, err := NewRuntimeScopedSearcher(fixture.searcher, fixture.reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.source.mu.Lock()
+	fixture.source.pointer.RootDigest = "sha256:" + strings.Repeat("f", 64)
+	fixture.source.pointer.ControlRevision++
+	fixture.source.mu.Unlock()
+	fixture.source.resetCalls()
+	fixture.store.reset(0)
+
+	result, err := scoped.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeService, Repository: fixture.store.repo.Name, ServiceKey: "orders",
+	}, "T343_NEEDLE", Options{MaxMatches: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 || result.Scope == nil || result.Scope.Authority == nil ||
+		result.Scope.Authority.CurrentCatalogGeneration != fixture.generation.Root.Digest {
+		t.Fatalf("selected v3 result after dark advance = %+v", result)
+	}
+	if calls := fixture.source.observedCalls(); slices.Contains(calls, "catalog-pointer") {
+		t.Fatalf("selected v3 search followed dark candidate pointer: %v", calls)
+	}
+	if confirmations := fixture.store.confirmationCount(); confirmations != 3 {
+		t.Fatalf("selected v3 selector confirmations = %d, want 3", confirmations)
+	}
+}
+
+func TestRuntimeScopedSearchKeepsSelectedV3AfterFlatCurrentAdvances(t *testing.T) {
+	fixture := buildServiceV3SearchFixture(t)
+	selectedSearch := fixture.base.search.Digest
+	scoped, err := NewRuntimeScopedSearcher(fixture.searcher, fixture.reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := advanceServiceSearchGeneration(t, fixture.base)
+	if replacement.Digest == selectedSearch {
+		t.Fatal("replacement did not advance the flat search generation")
+	}
+
+	result, err := scoped.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeService, Repository: fixture.store.repo.Name, ServiceKey: "orders",
+	}, "T343_NEEDLE", Options{MaxMatches: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 || result.Files[0].Path != "services/orders/main.go" ||
+		result.Scope == nil || result.Scope.Authority == nil ||
+		result.Scope.Authority.RepositorySearchGeneration != selectedSearch ||
+		result.Scope.Authority.CurrentCatalogGeneration != fixture.generation.Root.Digest {
+		t.Fatalf("selected v3 result after flat advance = %+v", result)
+	}
+}
+
+func TestRuntimeScopedSearchV3RefusesFinalSelectorDrift(t *testing.T) {
+	fixture := buildServiceV3SearchFixture(t)
+	scoped, err := NewRuntimeScopedSearcher(fixture.searcher, fixture.reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.store.reset(3)
+	result, err := scoped.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeService, Repository: fixture.store.repo.Name, ServiceKey: "orders",
+	}, "T343_NEEDLE", Options{MaxMatches: 10})
+	if result != nil || !errors.Is(err, servicequery.ErrUnavailable) ||
+		!strings.Contains(err.Error(), "final fence") {
+		t.Fatalf("drifted selected v3 result = %+v, %v", result, err)
+	}
+	if confirmations := fixture.store.confirmationCount(); confirmations != 3 {
+		t.Fatalf("drifted selected v3 confirmations = %d, want 3", confirmations)
+	}
+}
+
 func TestServiceSearchV3MapsLifecyclePosturesWithoutFallback(t *testing.T) {
 	t.Run("stale", func(t *testing.T) {
 		fixture := buildServiceV3SearchFixture(t)
@@ -425,20 +550,40 @@ func buildServiceV3SearchFixture(t *testing.T) serviceV3SearchFixture {
 	summary := serviceV3Summary(
 		t, generation.Root, 1, servicecatalog.StatusCurrent,
 	)
+	pointer := store.ServiceCatalogV3Pointer{
+		Repository: base.store.repo.Name, RootDigest: generation.Root.Digest,
+		ControlRevision: 1, PublishedAt: time.Now().UTC(),
+	}
+	selectorAuthority := &serviceV3SelectorAuthority{
+		selector: runtimeSelectorForSearchTest(store.ServiceRuntimeSelector{
+			Schema:     store.ServiceRuntimeSelectorSchema,
+			Repository: base.store.repo.Name, Backend: store.ServiceRuntimeV3,
+			CatalogRootDigest:            generation.Root.Digest,
+			CatalogControlRevision:       pointer.ControlRevision,
+			StateControlRevision:         summary.ControlRevision,
+			StateSummaryDigest:           summary.SummaryDigest,
+			SearchGenerationDigest:       base.search.Digest,
+			RelationshipGenerationDigest: "sha256:" + strings.Repeat("a", 64),
+			RelationshipRootDigest:       "sha256:" + strings.Repeat("b", 64),
+			ControlRevision:              1,
+			ChangedAt:                    pointer.PublishedAt,
+		}),
+	}
 	source := &serviceV3SearchSource{
-		pointer: store.ServiceCatalogV3Pointer{
-			Repository: base.store.repo.Name, RootDigest: generation.Root.Digest,
-			ControlRevision: 1, PublishedAt: time.Now().UTC(),
-		},
-		roots:   map[string]servicecatalogv3.Root{generation.Root.Digest: generation.Root},
-		members: members, summary: summary, state: state,
+		serviceV3SelectorAuthority: selectorAuthority,
+		pointer:                    pointer,
+		roots:                      map[string]servicecatalogv3.Root{generation.Root.Digest: generation.Root},
+		members:                    members, summary: summary, state: state,
 	}
 	cache := servicecatalogv3.NewDefaultReadCache()
 	reader, err := store.NewServiceStateV3Reader(source, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
-	orderedStore := &orderedServiceV3SearchStore{serviceSearchStore: base.store}
+	orderedStore := &orderedServiceV3SearchStore{
+		serviceSearchStore:         base.store,
+		serviceV3SelectorAuthority: selectorAuthority,
+	}
 	searcher, err := Open(base.indexDir, orderedStore)
 	if err != nil {
 		t.Fatal(err)

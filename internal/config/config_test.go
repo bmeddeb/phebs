@@ -126,6 +126,21 @@ connections:
 			"",
 		},
 		{
+			"segmented service catalog runtime valid",
+			"experimental: {provisional_proto_extraction: true}\nservice_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, version: 2026-08-04.1, path: /tmp/catalog.json, runtime: v3}\n",
+			"",
+		},
+		{
+			"segmented service catalog runtime requires relationships",
+			"experimental: {provisional_kafka_extraction: true}\nservice_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, version: 2026-08-04.1, path: /tmp/catalog.json, runtime: v3}\n",
+			"runtime \"v3\" requires provisional protobuf or Thrift extraction",
+		},
+		{
+			"service catalog runtime closed",
+			"service_catalogs:\n  github.com/acme/api: {kind: operator, id: platform, version: 2026-08-04.1, path: /tmp/catalog.json, runtime: latest}\n",
+			"runtime must be \"v2\" or \"v3\"",
+		},
+		{
 			"committed service catalog version is implicit",
 			"service_catalogs:\n  github.com/acme/api: {kind: committed, id: build-catalog, version: main, path: /tmp/catalog.json}\n",
 			"committed version is the indexed HEAD and must be omitted",

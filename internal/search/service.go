@@ -61,10 +61,8 @@ func (s *Searcher) SearchService(
 	return s.searchService(ctx, request, opts, runtime)
 }
 
-// SearchServiceV3 is the explicit runtime-dark segmented-catalog search seam.
-// It shares the complete authorization, exact-reader, query, and result path
-// with SearchService while substituting only the v3 scope open/final fence.
-// No production caller selects this method; T41.9 owns runtime selection.
+// SearchServiceV3 is the fixed-backend segmented-catalog search seam retained
+// for tests and embeddings. Production calls SearchServiceSelected.
 func (s *Searcher) SearchServiceV3(
 	ctx context.Context,
 	reader *store.ServiceStateV3Reader,
@@ -86,6 +84,37 @@ func (s *Searcher) SearchServiceV3(
 		}
 		runtime.confirm = func(ctx context.Context, scope servicequery.RuntimeScope) error {
 			return servicequery.ConfirmRuntimeScopeV3(
+				ctx, s.indexDir, runtimeStore, reader, scope,
+			)
+		}
+	}
+	return s.searchService(ctx, request, opts, runtime)
+}
+
+// SearchServiceSelected resolves the repository-local runtime selector only
+// after searchService has authorized the repository. The selected scope owns
+// both the backend fence and the final selector confirmation.
+func (s *Searcher) SearchServiceSelected(
+	ctx context.Context,
+	reader *store.ServiceStateV3Reader,
+	request ServiceRequest,
+	opts Options,
+) (*ServiceResult, error) {
+	if s == nil || s.st == nil {
+		return nil, fmt.Errorf("service search: runtime authority is unavailable")
+	}
+	runtimeStore, ok := s.st.(servicequery.RuntimeSelectorStore)
+	runtime := serviceScopeRuntime{}
+	if ok && reader != nil {
+		runtime.open = func(
+			ctx context.Context, repository, serviceKey string,
+		) (servicequery.RuntimeScope, error) {
+			return servicequery.OpenSelectedRuntimeScope(
+				ctx, s.indexDir, runtimeStore, reader, repository, serviceKey,
+			)
+		}
+		runtime.confirm = func(ctx context.Context, scope servicequery.RuntimeScope) error {
+			return servicequery.ConfirmSelectedRuntimeScope(
 				ctx, s.indexDir, runtimeStore, reader, scope,
 			)
 		}
@@ -118,23 +147,37 @@ func (s *Searcher) searchService(
 	if !valid || !searchValid {
 		return nil, fmt.Errorf("service search: invalid runtime scope")
 	}
-	repoCache, err := s.whole.repo(request.Repository)
-	if err != nil {
-		return nil, fmt.Errorf("service search: %w", err)
+	exactDirectory, selectedExact := opened.ExactSearchDirectory()
+	var lease *wholeLease
+	if selectedExact {
+		lease, err = s.whole.acquireSelected(
+			ctx, request.Repository, exactDirectory, searchGeneration.Digest,
+			searchGeneration.Revisions,
+		)
+	} else {
+		var repoCache *wholeRepoCache
+		repoCache, err = s.whole.repo(request.Repository)
+		if err == nil {
+			lease, err = s.whole.acquireExact(
+				ctx, repoCache, request.Repository, searchGeneration.Revisions,
+			)
+		}
 	}
-	lease, err := s.whole.acquireExact(
-		ctx, repoCache, request.Repository, searchGeneration.Revisions,
-	)
-	if err == nil && lease != nil &&
+	if !selectedExact && err == nil && lease != nil &&
 		!lease.matchesSearchDigest(searchGeneration.Digest) {
 		// A legacy-v1 entry can predate a side-by-side v2 backfill while
 		// retaining identical shard bytes. Retire it and fill once under the
 		// v2 source/search root before executing a service predicate.
 		lease.invalidate()
 		lease.release()
-		lease, err = s.whole.acquireExact(
-			ctx, repoCache, request.Repository, searchGeneration.Revisions,
-		)
+		repoCache, repoErr := s.whole.repo(request.Repository)
+		if repoErr != nil {
+			err = repoErr
+		} else {
+			lease, err = s.whole.acquireExact(
+				ctx, repoCache, request.Repository, searchGeneration.Revisions,
+			)
+		}
 	}
 	if err != nil || lease == nil {
 		bindErr := err
@@ -183,7 +226,13 @@ func (s *Searcher) searchService(
 	if repoErr != nil {
 		return nil, fmt.Errorf("service search: repository reauthorization: %w", repoErr)
 	}
-	if !lease.current(ctx, *currentRepo, true) {
+	var leaseCurrent bool
+	if selectedExact {
+		leaseCurrent = lease.selectedCurrent(ctx, true)
+	} else {
+		leaseCurrent = lease.current(ctx, *currentRepo, true)
+	}
+	if !leaseCurrent {
 		lease.invalidate()
 		return nil, fmt.Errorf(
 			"service search: %w: reader generation changed", servicequery.ErrUnavailable,

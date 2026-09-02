@@ -29,6 +29,79 @@ type relationshipCitationAuthorizationStore struct {
 	onGet      func()
 }
 
+type relationshipSelectorStore struct {
+	store.Store
+	repositories   map[string]store.Repo
+	selectors      map[string]store.ServiceRuntimeSelector
+	calls          *[]string
+	selectorReads  int
+	selectorAtRead int
+	selectorOnRead store.ServiceRuntimeSelector
+}
+
+func (value *relationshipSelectorStore) GetRepo(
+	_ context.Context,
+	name string,
+) (*store.Repo, error) {
+	if value.calls != nil {
+		*value.calls = append(*value.calls, "authorize:"+name)
+	}
+	repository, present := value.repositories[name]
+	if !present {
+		return nil, store.ErrNotFound
+	}
+	return &repository, nil
+}
+
+func (value *relationshipSelectorStore) ListRepos(context.Context) ([]store.Repo, error) {
+	result := make([]store.Repo, 0, len(value.repositories))
+	for _, repository := range value.repositories {
+		result = append(result, repository)
+	}
+	return result, nil
+}
+
+func (value *relationshipSelectorStore) GetServiceRuntimeSelector(
+	_ context.Context,
+	repository string,
+) (store.ServiceRuntimeSelector, error) {
+	value.selectorReads++
+	if value.selectorAtRead > 0 && value.selectorReads >= value.selectorAtRead &&
+		value.selectorOnRead.Repository == repository {
+		return value.selectorOnRead, nil
+	}
+	selector, present := value.selectors[repository]
+	if !present {
+		return store.ServiceRuntimeSelector{}, store.ErrNotFound
+	}
+	return selector, nil
+}
+
+func (value *relationshipSelectorStore) ConfirmServiceRuntimeSelector(
+	_ context.Context,
+	selector store.ServiceRuntimeSelector,
+) error {
+	if value.calls != nil {
+		*value.calls = append(*value.calls, "selector:"+selector.Repository)
+	}
+	current, present := value.selectors[selector.Repository]
+	if !present || current != selector {
+		return store.ErrConflict
+	}
+	return nil
+}
+
+type relationshipPublicationFenceFake struct {
+	relationshipPublication
+	calls *[]string
+	name  string
+}
+
+func (value relationshipPublicationFenceFake) ConfirmCurrent() error {
+	*value.calls = append(*value.calls, "current:"+value.name)
+	return nil
+}
+
 func (value *relationshipCitationAuthorizationStore) GetRepo(
 	_ context.Context, name string,
 ) (*store.Repo, error) {
@@ -74,6 +147,193 @@ func TestRelationshipCitationAuthorizesBeforeBindingLookup(t *testing.T) {
 	if err == nil || state.calls != 1 || usesAtAuthorization != 0 || binding.uses != 0 {
 		t.Fatalf("citation authorization order: calls=%d uses-at-auth=%d uses=%d err=%v",
 			state.calls, usesAtAuthorization, binding.uses, err)
+	}
+}
+
+func TestRelationshipRuntimeSelectionDefaultsAndDoesNotFallback(t *testing.T) {
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	repositories := map[string]store.Repo{
+		"example.com/acme/legacy": {
+			Name: "example.com/acme/legacy", IndexedCommitHash: strings.Repeat("1", 40),
+		},
+		"example.com/acme/v2": {
+			Name: "example.com/acme/v2", IndexedCommitHash: strings.Repeat("3", 40),
+		},
+		"example.com/acme/selected": {
+			Name: "example.com/acme/selected", IndexedCommitHash: strings.Repeat("2", 40),
+		},
+	}
+	selector := store.ServiceRuntimeSelector{
+		Schema: store.ServiceRuntimeSelectorSchema, Repository: "example.com/acme/selected",
+		Backend: store.ServiceRuntimeV3, CatalogRootDigest: digest("1"),
+		CatalogControlRevision: 1, StateControlRevision: 2,
+		StateSummaryDigest: digest("2"), SearchGenerationDigest: digest("3"),
+		RelationshipGenerationDigest: digest("4"), RelationshipRootDigest: digest("5"),
+		ControlRevision: 1, Digest: digest("6"), ChangedAt: time.Unix(1, 0).UTC(),
+	}
+	v2Selector := selector
+	v2Selector.Repository = "example.com/acme/v2"
+	v2Selector.Backend = store.ServiceRuntimeV2
+	v2Selector.CatalogGenerationDigest = digest("7")
+	v2Selector.CatalogRootDigest = ""
+	v2Selector.Digest = digest("8")
+	state := &relationshipSelectorStore{
+		repositories: repositories,
+		selectors: map[string]store.ServiceRuntimeSelector{
+			selector.Repository: selector, v2Selector.Repository: v2Selector,
+		},
+	}
+	service := NewRuntimeRelationshipService(Options{
+		Store: state, DataDir: t.TempDir(),
+	}, &relationshippublication.Cache{}, &relationshippublication.CacheV3{})
+	if service == nil {
+		t.Fatal("runtime relationship service was not constructed")
+	}
+	legacy, err := service.relationshipRuntime(t.Context(), "example.com/acme/legacy")
+	if err != nil || legacy.backend != store.ServiceRuntimeV2 || legacy.selector != nil {
+		t.Fatalf("legacy runtime = %+v, %v", legacy, err)
+	}
+	v2, err := service.relationshipRuntime(t.Context(), v2Selector.Repository)
+	if err != nil || v2.backend != store.ServiceRuntimeV2 ||
+		v2.selector == nil || *v2.selector != v2Selector {
+		t.Fatalf("selected v2 runtime = %+v, %v", v2, err)
+	}
+	selected, err := service.relationshipRuntime(t.Context(), selector.Repository)
+	if err != nil || selected.backend != store.ServiceRuntimeV3 ||
+		selected.selector == nil || *selected.selector != selector {
+		t.Fatalf("selected runtime = %+v, %v", selected, err)
+	}
+	source, err := service.openRuntimeRoot(
+		t.Context(), repositories[selector.Repository], selected,
+	)
+	if err == nil || source.publication != nil {
+		t.Fatalf("missing selected v3 root fell back to legacy: source=%+v err=%v", source, err)
+	}
+}
+
+func TestRelationshipV3AuthorityNormalizesAndMatchesSelector(t *testing.T) {
+	digest := func(value string) string { return "sha256:" + strings.Repeat(value, 64) }
+	repository := "example.com/acme/selected"
+	value := relationshippublication.RootV3{
+		Schema: relationshippublication.RootSchemaV3,
+		Authority: relationshippublication.AuthorityV3{
+			Repository: repository, CatalogRootDigest: digest("1"),
+			CatalogLogicalDigest: digest("2"), CatalogSourceGeneration: digest("3"),
+			CatalogControlRevision: 6,
+			ServiceStateSetDigest:  digest("4"), ServiceStateSummaryDigest: digest("5"),
+			ServiceStateControlRevision: 7, ObservationGenerationDigest: digest("6"),
+			ObservationManifestDigest: digest("7"), ObservationSourceDigest: digest("8"),
+			ResolverGenerationDigest: digest("9"), ResolverRootDigest: digest("a"),
+			RPCGenerationDigest: digest("b"), RPCRootDigest: digest("c"),
+			KafkaGenerationDigest: digest("d"), KafkaRootDigest: digest("e"),
+			PolicyDigest: digest("f"),
+		},
+		AuthorityDigest: digest("a"), RepositoryComplete: true, AllServicesComplete: true,
+		GenerationDigest: digest("b"), Digest: digest("c"),
+	}
+	root := normalizeRelationshipRootV3(value)
+	selector := store.ServiceRuntimeSelector{
+		Repository: repository, Backend: store.ServiceRuntimeV3,
+		CatalogRootDigest:            value.Authority.CatalogRootDigest,
+		CatalogControlRevision:       value.Authority.CatalogControlRevision,
+		StateSummaryDigest:           value.Authority.ServiceStateSummaryDigest,
+		StateControlRevision:         value.Authority.ServiceStateControlRevision,
+		RelationshipGenerationDigest: value.GenerationDigest,
+		RelationshipRootDigest:       value.Digest,
+	}
+	if root.Schema != relationshippublication.RootSchemaV3 ||
+		root.Authority.CatalogGenerationDigest != value.Authority.CatalogRootDigest ||
+		root.Authority.CatalogDigest != value.Authority.CatalogLogicalDigest ||
+		root.Authority.Upstream == nil || !relationshipRootMatchesSelector(
+		root, value.Authority.CatalogControlRevision, selector,
+	) {
+		t.Fatalf("normalized v3 relationship root = %+v", root)
+	}
+}
+
+func TestRelationshipSelectorConfirmationIsTheFinalFence(t *testing.T) {
+	repositories := map[string]store.Repo{
+		"example.com/acme/legacy": {
+			Name: "example.com/acme/legacy", IndexedCommitHash: strings.Repeat("1", 40),
+		},
+		"example.com/acme/selected": {
+			Name: "example.com/acme/selected", IndexedCommitHash: strings.Repeat("2", 40),
+		},
+	}
+	selector := store.ServiceRuntimeSelector{
+		Repository: "example.com/acme/selected", Backend: store.ServiceRuntimeV3,
+		Digest: "sha256:" + strings.Repeat("a", 64),
+	}
+	var calls []string
+	state := &relationshipSelectorStore{
+		repositories: repositories,
+		selectors:    map[string]store.ServiceRuntimeSelector{selector.Repository: selector},
+		calls:        &calls,
+	}
+	service := NewRuntimeRelationshipService(Options{
+		Store: state, DataDir: t.TempDir(),
+	}, &relationshippublication.Cache{}, &relationshippublication.CacheV3{})
+	resolved, authorization, err := service.authorizeRepositories(
+		t.Context(), []string{"example.com/acme/legacy", "example.com/acme/selected"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls = nil
+	binding := &relationshipBinding{
+		authorization: authorization, repositories: resolved,
+		sources: []relationshipSource{
+			{repository: repositories["example.com/acme/legacy"], current: true,
+				publication: relationshipPublicationFenceFake{calls: &calls, name: "legacy"}},
+			{repository: repositories["example.com/acme/selected"], selector: &selector},
+		},
+	}
+	if err := service.confirmBinding(t.Context(), binding, authorization); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"authorize:example.com/acme/legacy", "authorize:example.com/acme/selected",
+		"current:legacy", "selector:example.com/acme/selected",
+	}
+	if !slices.Equal(calls, want) {
+		t.Fatalf("fence order = %v, want %v", calls, want)
+	}
+}
+
+func TestRelationshipImplicitV2RefusesSelectorActivation(t *testing.T) {
+	repository := store.Repo{
+		Name: "example.com/acme/legacy", IndexedCommitHash: strings.Repeat("1", 40),
+	}
+	state := &relationshipSelectorStore{
+		repositories:   map[string]store.Repo{repository.Name: repository},
+		selectors:      map[string]store.ServiceRuntimeSelector{},
+		selectorAtRead: 2,
+		selectorOnRead: store.ServiceRuntimeSelector{
+			Repository: repository.Name, Backend: store.ServiceRuntimeV3,
+		},
+	}
+	service := NewRuntimeRelationshipService(Options{
+		Store: state, DataDir: t.TempDir(),
+	}, &relationshippublication.Cache{}, &relationshippublication.CacheV3{})
+	runtime, err := service.relationshipRuntime(t.Context(), repository.Name)
+	if err != nil || runtime.selector != nil {
+		t.Fatalf("initial implicit v2 runtime = %+v, %v", runtime, err)
+	}
+	resolved, authorization, err := service.authorizeRepositories(
+		t.Context(), []string{repository.Name},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := &relationshipBinding{
+		authorization: authorization, repositories: resolved,
+		sources: []relationshipSource{{
+			repository: repository, current: true,
+			publication: relationshipPublicationFenceFake{name: repository.Name, calls: new([]string)},
+		}},
+	}
+	if err := service.confirmBinding(t.Context(), binding, authorization); humaStatus(err) != 409 {
+		t.Fatalf("implicit v2 selector activation = %v", err)
 	}
 }
 

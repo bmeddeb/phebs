@@ -44,8 +44,8 @@ type Options struct {
 	Store   store.Store
 	Search  *search.Searcher // nil with no ScopedSearch = search_code unavailable
 	// ScopedSearch optionally supplies the same preconstructed search boundary
-	// used by HTTP. Nil preserves the ordinary v2 Search path; production does
-	// not select the runtime-dark T41.7 v3 adapter.
+	// used by HTTP. Nil preserves the ordinary legacy v2 Search path; production
+	// supplies the runtime-selector-aware boundary when service catalogs exist.
 	ScopedSearch search.ScopedSearcher
 	DataDir      string                    // bare mirrors for read_file
 	CodeNav      *codenav.Service          // nil = SCIP tools report unavailable

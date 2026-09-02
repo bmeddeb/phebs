@@ -2,10 +2,13 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +22,9 @@ const serviceDirectoryV3TestRepository = "example.com/acme/mono"
 
 type serviceDirectoryV3TestStore struct {
 	store.Store
+	*serviceDirectoryV3SelectorAuthority
 	repository store.Repo
+	v2Calls    []string
 }
 
 func (fake *serviceDirectoryV3TestStore) GetRepo(
@@ -33,7 +38,67 @@ func (fake *serviceDirectoryV3TestStore) GetRepo(
 	return &result, nil
 }
 
+func (fake *serviceDirectoryV3TestStore) GetServiceStateRead(
+	context.Context,
+	string,
+	string,
+) (*store.ServiceStateRead, error) {
+	fake.v2Calls = append(fake.v2Calls, "detail")
+	return nil, store.ErrConflict
+}
+
+func (fake *serviceDirectoryV3TestStore) ListServiceStates(
+	context.Context,
+	string,
+	store.ServiceStateFilter,
+	store.ServiceStatePosition,
+	int,
+) (*store.ServiceStatePage, error) {
+	fake.v2Calls = append(fake.v2Calls, "list")
+	return nil, store.ErrConflict
+}
+
+func (fake *serviceDirectoryV3TestStore) ConfirmServiceStateSnapshot(
+	context.Context,
+	string,
+	servicecatalog.RepositoryState,
+) error {
+	fake.v2Calls = append(fake.v2Calls, "confirm")
+	return store.ErrConflict
+}
+
+type serviceDirectoryV3SelectorAuthority struct {
+	selector        store.ServiceRuntimeSelector
+	confirmations   int
+	failConfirmAt   int
+	selectorMissing bool
+}
+
+func (authority *serviceDirectoryV3SelectorAuthority) GetServiceRuntimeSelector(
+	_ context.Context,
+	repository string,
+) (store.ServiceRuntimeSelector, error) {
+	if authority.selectorMissing || repository != authority.selector.Repository {
+		return store.ServiceRuntimeSelector{}, store.ErrNotFound
+	}
+	return authority.selector, nil
+}
+
+func (authority *serviceDirectoryV3SelectorAuthority) ConfirmServiceRuntimeSelector(
+	_ context.Context,
+	expected store.ServiceRuntimeSelector,
+) error {
+	authority.confirmations++
+	if authority.failConfirmAt == authority.confirmations ||
+		expected != authority.selector {
+		return store.ErrConflict
+	}
+	return nil
+}
+
 type serviceDirectoryV3TestSource struct {
+	*serviceDirectoryV3SelectorAuthority
+
 	generation servicecatalogv3.Generation
 	members    map[string][]byte
 	pointer    store.ServiceCatalogV3Pointer
@@ -298,13 +363,31 @@ func newServiceDirectoryV3TestFixture(
 	}
 	summary.ControlRevision = 11
 	summary.UpdatedAt = now
+	pointer := store.ServiceCatalogV3Pointer{
+		Repository: serviceDirectoryV3TestRepository,
+		RootDigest: generation.Root.Digest, ControlRevision: 7, PublishedAt: now,
+	}
+	selectorAuthority := &serviceDirectoryV3SelectorAuthority{
+		selector: runtimeSelectorForDirectoryTest(store.ServiceRuntimeSelector{
+			Schema:     store.ServiceRuntimeSelectorSchema,
+			Repository: serviceDirectoryV3TestRepository, Backend: store.ServiceRuntimeV3,
+			CatalogRootDigest:            generation.Root.Digest,
+			CatalogControlRevision:       pointer.ControlRevision,
+			StateControlRevision:         summary.ControlRevision,
+			StateSummaryDigest:           summary.SummaryDigest,
+			SearchGenerationDigest:       "sha256:" + strings.Repeat("d", 64),
+			RelationshipGenerationDigest: "sha256:" + strings.Repeat("e", 64),
+			RelationshipRootDigest:       "sha256:" + strings.Repeat("f", 64),
+			ControlRevision:              3,
+			ChangedAt:                    now,
+		}),
+	}
 	source := &serviceDirectoryV3TestSource{
-		generation: generation, members: members,
-		pointer: store.ServiceCatalogV3Pointer{
-			Repository: serviceDirectoryV3TestRepository,
-			RootDigest: generation.Root.Digest, ControlRevision: 7, PublishedAt: now,
-		},
-		summary: summary, states: states, byKey: byKey,
+		serviceDirectoryV3SelectorAuthority: selectorAuthority,
+		generation:                          generation,
+		members:                             members,
+		pointer:                             pointer,
+		summary:                             summary, states: states, byKey: byKey,
 	}
 	reader, err := store.NewServiceStateV3Reader(
 		source, servicecatalogv3.NewDefaultReadCache(),
@@ -314,7 +397,8 @@ func newServiceDirectoryV3TestFixture(
 	}
 	return &serviceDirectoryV3TestFixture{
 		store: &serviceDirectoryV3TestStore{
-			repository: store.Repo{Name: serviceDirectoryV3TestRepository},
+			serviceDirectoryV3SelectorAuthority: selectorAuthority,
+			repository:                          store.Repo{Name: serviceDirectoryV3TestRepository},
 		},
 		source: source, reader: reader,
 	}
@@ -325,6 +409,47 @@ func (fixture *serviceDirectoryV3TestFixture) service(
 ) *ServiceDirectoryService {
 	opts.Store = fixture.store
 	return NewServiceDirectoryServiceV3(opts, fixture.reader)
+}
+
+func (fixture *serviceDirectoryV3TestFixture) runtimeService(
+	opts Options,
+) *ServiceDirectoryService {
+	opts.Store = fixture.store
+	return NewRuntimeServiceDirectoryService(opts, fixture.reader)
+}
+
+func runtimeSelectorForDirectoryTest(
+	selector store.ServiceRuntimeSelector,
+) store.ServiceRuntimeSelector {
+	payload := struct {
+		Schema                       string `json:"schema"`
+		Repository                   string `json:"repository"`
+		Backend                      string `json:"backend"`
+		CatalogGenerationDigest      string `json:"catalog_generation_digest"`
+		CatalogRootDigest            string `json:"catalog_root_digest"`
+		CatalogControlRevision       uint64 `json:"catalog_control_revision"`
+		StateControlRevision         uint64 `json:"state_control_revision"`
+		StateSummaryDigest           string `json:"state_summary_digest"`
+		SearchGenerationDigest       string `json:"search_generation_digest"`
+		RelationshipGenerationDigest string `json:"relationship_generation_digest"`
+		RelationshipRootDigest       string `json:"relationship_root_digest"`
+		ControlRevision              uint64 `json:"control_revision"`
+	}{
+		Schema: selector.Schema, Repository: selector.Repository, Backend: selector.Backend,
+		CatalogGenerationDigest:      selector.CatalogGenerationDigest,
+		CatalogRootDigest:            selector.CatalogRootDigest,
+		CatalogControlRevision:       selector.CatalogControlRevision,
+		StateControlRevision:         selector.StateControlRevision,
+		StateSummaryDigest:           selector.StateSummaryDigest,
+		SearchGenerationDigest:       selector.SearchGenerationDigest,
+		RelationshipGenerationDigest: selector.RelationshipGenerationDigest,
+		RelationshipRootDigest:       selector.RelationshipRootDigest,
+		ControlRevision:              selector.ControlRevision,
+	}
+	raw, _ := json.Marshal(payload)
+	digest := sha256.Sum256(raw)
+	selector.Digest = "sha256:" + hex.EncodeToString(digest[:])
+	return selector
 }
 
 func serviceDirectoryV3Accepted(key string) servicecatalog.Service {
@@ -355,6 +480,92 @@ func TestServiceDirectoryV3AuthorizationPrecedesAuthorityReads(t *testing.T) {
 	}
 	if len(fixture.source.calls) != 0 {
 		t.Fatalf("hidden service performed v3 authority reads: %v", fixture.source.calls)
+	}
+}
+
+func TestRuntimeServiceDirectoryKeepsSelectedV3AcrossDarkCandidateAdvance(t *testing.T) {
+	fixture := newServiceDirectoryV3TestFixture(t, []servicecatalog.Service{
+		serviceDirectoryV3Accepted("orders"), serviceDirectoryV3Accepted("payments"),
+	})
+	fixture.source.pointer.RootDigest = "sha256:" + strings.Repeat("0", 64)
+	fixture.source.pointer.ControlRevision++
+	fixture.source.calls = nil
+	fixture.store.confirmations = 0
+	service := fixture.runtimeService(Options{})
+	if service == nil {
+		t.Fatal("runtime service directory constructor returned nil")
+	}
+	inventory, err := service.List(t.Context(), ServiceInventoryQuery{
+		Repository: serviceDirectoryV3TestRepository,
+	}, 1, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inventory.Services) != 1 || inventory.Services[0].Key != "orders" ||
+		inventory.Repository.CatalogGeneration != fixture.source.generation.Root.Digest ||
+		inventory.Pagination.NextCursor == "" {
+		t.Fatalf("selected v3 inventory after dark advance = %+v", inventory)
+	}
+	payload, _, ok := strings.Cut(inventory.Pagination.NextCursor, ".")
+	if !ok {
+		t.Fatalf("selected v3 cursor omitted signature: %q", inventory.Pagination.NextCursor)
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cursor serviceInventoryCursor
+	if err := json.Unmarshal(raw, &cursor); err != nil {
+		t.Fatal(err)
+	}
+	if cursor.RuntimeBackend != store.ServiceRuntimeV3 ||
+		cursor.RuntimeSelectorRevision != fixture.store.selector.ControlRevision {
+		t.Fatalf("selected v3 cursor runtime binding = %+v", cursor)
+	}
+	if slices.Contains(fixture.source.calls, "pointer") || len(fixture.store.v2Calls) != 0 {
+		t.Fatalf(
+			"selected v3 followed nonselected authority: source=%v v2=%v",
+			fixture.source.calls, fixture.store.v2Calls,
+		)
+	}
+	if fixture.store.confirmations != 2 {
+		t.Fatalf("selected v3 list confirmations = %d, want 2", fixture.store.confirmations)
+	}
+
+	fixture.source.calls = nil
+	fixture.store.confirmations = 0
+	detail, err := service.Detail(
+		t.Context(), serviceDirectoryV3TestRepository, "orders",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Service.Key != "orders" || slices.Contains(fixture.source.calls, "pointer") ||
+		fixture.store.confirmations != 1 || len(fixture.store.v2Calls) != 0 {
+		t.Fatalf(
+			"selected v3 detail = %+v; source=%v confirms=%d v2=%v",
+			detail, fixture.source.calls, fixture.store.confirmations, fixture.store.v2Calls,
+		)
+	}
+}
+
+func TestRuntimeServiceDirectoryV3RefusesFinalSelectorDrift(t *testing.T) {
+	fixture := newServiceDirectoryV3TestFixture(t, []servicecatalog.Service{
+		serviceDirectoryV3Accepted("orders"), serviceDirectoryV3Accepted("payments"),
+	})
+	fixture.store.failConfirmAt = 2
+	result, err := fixture.runtimeService(Options{}).List(
+		t.Context(), ServiceInventoryQuery{Repository: serviceDirectoryV3TestRepository},
+		1, "",
+	)
+	if result != nil || humaStatus(err) != http.StatusConflict {
+		t.Fatalf("drifted selected v3 directory = %+v, %v", result, err)
+	}
+	if fixture.store.confirmations != 2 || len(fixture.store.v2Calls) != 0 {
+		t.Fatalf(
+			"drifted selected v3 confirms=%d v2=%v",
+			fixture.store.confirmations, fixture.store.v2Calls,
+		)
 	}
 }
 

@@ -14,6 +14,9 @@ import (
 type searchLifecycleNoPins struct{}
 
 func (searchLifecycleNoPins) Pinned(string, string) bool { return false }
+func (searchLifecycleNoPins) BeginRetire(string, string) (func(), bool) {
+	return func() {}, true
+}
 
 func TestSearchGenerationOwnerAdvancesPastMalformedRepository(t *testing.T) {
 	indexDir := t.TempDir()

@@ -445,6 +445,17 @@ func HandlerWithCallerLifecycle(
 	st store.Store,
 	callerLifecycle CallerPublicationLifecycle,
 ) func(context.Context, store.Job) error {
+	return HandlerWithLifecycles(cfg, st, callerLifecycle, nil)
+}
+
+// HandlerWithLifecycles also routes selected-runtime retirement through the
+// live controller during background orphan cleanup.
+func HandlerWithLifecycles(
+	cfg *config.Config,
+	st store.Store,
+	callerLifecycle CallerPublicationLifecycle,
+	runtimeLifecycle ServiceRuntimeLifecycle,
+) func(context.Context, store.Job) error {
 	return func(ctx context.Context, job store.Job) error {
 		var conn *config.Connection
 		for i := range cfg.Connections {
@@ -470,8 +481,9 @@ func HandlerWithCallerLifecycle(
 			return err
 		}
 		if cfg.Sync.CleanupOrphans {
-			_, err := ReconcileArtifactsWithCallerLifecycle(
+			_, err := ReconcileArtifactsWithLifecycles(
 				ctx, st, cfg.Server.DataDir, true, callerLifecycle,
+				runtimeLifecycle,
 			)
 			if errors.Is(err, errReconcileRepositoryLockBusy) {
 				return store.WithDeferral(err)
@@ -547,8 +559,22 @@ func CleanupOrphansWithCallerLifecycle(
 	dataDir string,
 	callerLifecycle CallerPublicationLifecycle,
 ) error {
-	_, err := ReconcileArtifactsWithCallerLifecycle(
-		ctx, st, dataDir, true, callerLifecycle,
+	return CleanupOrphansWithLifecycles(
+		ctx, st, dataDir, callerLifecycle, nil,
+	)
+}
+
+// CleanupOrphansWithLifecycles preserves both caller and selected-runtime
+// leases while retiring an orphan repository.
+func CleanupOrphansWithLifecycles(
+	ctx context.Context,
+	st store.Store,
+	dataDir string,
+	callerLifecycle CallerPublicationLifecycle,
+	runtimeLifecycle ServiceRuntimeLifecycle,
+) error {
+	_, err := ReconcileArtifactsWithLifecycles(
+		ctx, st, dataDir, true, callerLifecycle, runtimeLifecycle,
 	)
 	return err
 }

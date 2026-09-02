@@ -180,11 +180,18 @@ func runServiceStateV3Plan(t *testing.T, s *Surreal, begin ServiceStateV3Begin) 
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := s.ProcessServiceStateV3Chunk(ctx, *chunk)
+		_, err = s.ProcessServiceStateV3Chunk(ctx, *chunk)
 		if err != nil {
 			t.Fatalf("process chunk offset %d: %v", chunk.Offset, err)
 		}
-		if result.Settled {
+		if err := s.CompleteGenerationChunk(ctx, *chunk); err != nil {
+			t.Fatalf("complete chunk offset %d: %v", chunk.Offset, err)
+		}
+		settled, err := s.GetGenerationSchedule(ctx, schedule.Repository, schedule.Stage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if settled.Status == GenerationScheduleSettled {
 			return
 		}
 	}
@@ -400,6 +407,108 @@ DEFINE EVENT service_state_v3_rollback_trap ON TABLE service_state_v3_current
 	}
 }
 
+func TestServiceStateV3ChunkRefusesDeletingRepository(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-deleting"
+	commit := strings.Repeat("4", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	generation := serviceStateV3Generation(
+		t, repository, commit, "deleting", []servicecatalog.Service{{
+			Key: "orders", DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
+		t.Fatal(err)
+	}
+	begin, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expandServiceStateV3Plan(t, s, begin)
+	chunk, err := s.ClaimGenerationChunk(ctx, GenerationResourceCPU, "deleting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	shadow, err := s.EnqueueGenerationSchedule(ctx, GenerationScheduleSpec{
+		Repository: repository, Stage: ServiceRelationshipV3ScheduleStage,
+		Generation:    "sha256:" + strings.Repeat("e", 64),
+		ResourceClass: GenerationResourceMemory, TotalItems: 1, ChunkItems: 1,
+		MaxAttempts: MaxGenerationAttempts, RepositoryTokens: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ExpandGenerationSchedule(
+		ctx, repository, ServiceRelationshipV3ScheduleStage, shadow.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoDeleting(ctx, repository, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ProcessServiceStateV3Chunk(ctx, *chunk); err == nil {
+		t.Fatal("deleting repository accepted a service-state v3 chunk")
+	}
+	plan, err := s.getServiceStateV3Plan(ctx, begin.Plan.Digest)
+	if err != nil || plan.NextChunk != 0 {
+		t.Fatalf("deleting repository advanced plan = %+v, %v", plan, err)
+	}
+	rows, err := s.ListServiceStateV3Rows(ctx, repository, "", 1)
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("deleting repository wrote state rows = %+v, %v", rows, err)
+	}
+	if err := s.DeleteRepo(ctx, repository); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetGenerationSchedule(
+		ctx, repository, ServiceRelationshipV3ScheduleStage,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleted repository retained current v3 relationship schedule: %v", err)
+	}
+	retiredShadow, err := s.generationScheduleByDigest(ctx, shadow.Digest)
+	if err != nil || retiredShadow.Status != GenerationScheduleSuperseded {
+		t.Fatalf("deleted repository shadow schedule = %+v, %v", retiredShadow, err)
+	}
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ProcessServiceStateV3Chunk(ctx, *chunk); err == nil {
+		t.Fatal("recreated repository accepted a pre-deletion chunk")
+	}
+	plan, err = s.getServiceStateV3Plan(ctx, begin.Plan.Digest)
+	if err != nil || plan.State != serviceStateV3Superseded || plan.NextChunk != 0 {
+		t.Fatalf("retired deletion plan = %+v, %v", plan, err)
+	}
+	fresh, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || fresh.Plan == nil || fresh.Schedule == nil ||
+		fresh.Plan.Repair != begin.Plan.Repair+1 ||
+		fresh.Plan.Digest == begin.Plan.Digest ||
+		fresh.Schedule.Digest == begin.Schedule.Digest ||
+		fresh.Schedule.Status != GenerationScheduleActive {
+		t.Fatalf("fresh post-deletion reconcile = %+v, %v", fresh, err)
+	}
+	if _, err := s.ProcessServiceStateV3Chunk(ctx, *chunk); err == nil {
+		t.Fatal("fresh post-deletion schedule accepted a pre-deletion chunk")
+	}
+	if _, err := s.ClaimGenerationChunk(
+		ctx, GenerationResourceMemory, "recreated-shadow",
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("fresh repository exposed pre-deletion shadow work: %v", err)
+	}
+	rows, err = s.ListServiceStateV3Rows(ctx, repository, "", 1)
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("pre-deletion chunk changed recreated state = %+v, %v", rows, err)
+	}
+}
+
 func TestServiceStateV3PlanUsesGenerationScheduleLifecycle(t *testing.T) {
 	s := newServiceCatalogV3InternalStore(t)
 	ctx := t.Context()
@@ -547,13 +656,22 @@ func TestServiceStateV3CrashReplay(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if err := s.CompleteGenerationChunk(ctx, *chunk); err != nil {
+			t.Fatal(err)
+		}
 		if chunk.Offset == first.Offset {
 			if result.Applied != 0 {
 				t.Fatalf("replayed chunk applied rows = %+v", result)
 			}
 			replayed = true
 		}
-		if result.Settled {
+		schedule, scheduleErr := s.GetGenerationSchedule(
+			ctx, begin.Schedule.Repository, begin.Schedule.Stage,
+		)
+		if scheduleErr != nil {
+			t.Fatal(scheduleErr)
+		}
+		if schedule.Status == GenerationScheduleSettled {
 			break
 		}
 	}
@@ -563,6 +681,88 @@ func TestServiceStateV3CrashReplay(t *testing.T) {
 	summary, err := s.GetServiceStateV3Summary(ctx, repository)
 	if err != nil || summary.LiveServiceCount != len(services) {
 		t.Fatalf("replayed summary = %+v, %v", summary, err)
+	}
+}
+
+func TestServiceStateV3TerminalHandoffCanRetryBeforeLeaseSettlement(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-handoff-retry"
+	commit := strings.Repeat("9", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	generation := serviceStateV3Generation(
+		t, repository, commit, "handoff-retry", []servicecatalog.Service{{
+			Key: "orders", DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
+		t.Fatal(err)
+	}
+	begin, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expandServiceStateV3Plan(t, s, begin)
+	var terminal *GenerationChunk
+	for terminal == nil {
+		chunk, claimErr := s.ClaimGenerationChunk(
+			ctx, GenerationResourceCPU, "handoff-first",
+		)
+		if claimErr != nil {
+			t.Fatal(claimErr)
+		}
+		result, processErr := s.ProcessServiceStateV3Chunk(ctx, *chunk)
+		if processErr != nil {
+			t.Fatal(processErr)
+		}
+		if result.Settled {
+			terminal = chunk
+			break
+		}
+		if completeErr := s.CompleteGenerationChunk(ctx, *chunk); completeErr != nil {
+			t.Fatal(completeErr)
+		}
+	}
+	running, err := s.generationChunkByIdentity(ctx, terminal.Identity)
+	if err != nil || running.Status != GenerationChunkRunning || running.LeaseToken == "" {
+		t.Fatalf("terminal lease after state apply = %+v, %v", running, err)
+	}
+	noop, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || !noop.Noop {
+		t.Fatalf("terminal active plan = %+v, %v", noop, err)
+	}
+	active, err := s.GetGenerationSchedule(ctx, repository, terminal.Stage)
+	if err != nil || active.Status != GenerationScheduleActive || active.Running != 1 {
+		t.Fatalf("terminal schedule before handoff = %+v, %v", active, err)
+	}
+	if _, err := s.RetryGenerationChunk(
+		ctx, *terminal, "injected runtime handoff failure", time.Now().UTC().Add(-time.Second),
+	); err != nil {
+		t.Fatal(err)
+	}
+	retry, err := s.ClaimGenerationChunk(ctx, GenerationResourceCPU, "handoff-retry")
+	if err != nil || retry.Offset != terminal.Offset || retry.Attempt != terminal.Attempt+1 {
+		t.Fatalf("handoff retry lease = %+v, %v", retry, err)
+	}
+	result, err := s.ProcessServiceStateV3Chunk(ctx, *retry)
+	if err != nil || !result.Settled || result.Applied != 0 {
+		t.Fatalf("handoff retry result = %+v, %v", result, err)
+	}
+	if err := s.CompleteGenerationChunk(ctx, *retry); err != nil {
+		t.Fatal(err)
+	}
+	settled, err := s.GetGenerationSchedule(ctx, repository, retry.Stage)
+	if err != nil || settled.Status != GenerationScheduleSettled {
+		t.Fatalf("settled retry schedule = %+v, %v", settled, err)
+	}
+	noop, err = s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || !noop.Noop {
+		t.Fatalf("settled terminal plan = %+v, %v", noop, err)
+	}
+	if _, err := s.GetGenerationSchedule(ctx, repository, retry.Stage); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("settled terminal schedule remained current: %v", err)
 	}
 }
 
@@ -593,6 +793,9 @@ func TestServiceStateV3TerminalRepairContinues(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := s.ProcessServiceStateV3Chunk(ctx, *first); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CompleteGenerationChunk(ctx, *first); err != nil {
 		t.Fatal(err)
 	}
 	for {
@@ -720,6 +923,9 @@ func TestServiceStateV3PartialActivationKeepsMatchingSummaryReadable(t *testing.
 	result, err := s.ProcessServiceStateV3Chunk(ctx, *chunk)
 	if err != nil || result.Applied != servicecatalogv3.MaxServicesPerMember || result.Settled {
 		t.Fatalf("first activation chunk = %+v, %v", result, err)
+	}
+	if err := s.CompleteGenerationChunk(ctx, *chunk); err != nil {
+		t.Fatal(err)
 	}
 	summary, err := s.GetServiceStateV3Summary(ctx, repository)
 	if err != nil || summary.CurrentCount != servicecatalogv3.MaxServicesPerMember ||

@@ -366,6 +366,62 @@ func TestReconcileIsRepositoryIndependentAndDoesNotGuess(t *testing.T) {
 	}
 }
 
+func TestV2MutationFenceCoversPublishAndCurrentStateRepair(t *testing.T) {
+	const repository = "example.com/acme/runtime-fence"
+	dataDir, _, commit := testMirror(t, repository, map[string]string{
+		"README.md": "mono\n", "shared/schema.proto": "schema\n",
+		"svc/main.go": "package main\n",
+	})
+	catalogPath := filepath.Join(t.TempDir(), "catalog.json")
+	writeCatalog(t, catalogPath, testCatalog(commit, "Orders"))
+	state := &memoryStore{repositories: map[string]store.Repo{
+		repository: {Name: repository, IndexedCommitHash: commit},
+	}}
+	fenceErr := errors.New("runtime selector fence unavailable")
+	blocked, calls := true, 0
+	reconciler := Reconciler{
+		DataDir: dataDir, Store: state,
+		Selections: map[string]config.ServiceCatalog{
+			repository: {
+				Kind: servicecatalog.AuthorityCommitted,
+				ID:   "build-catalog", Path: catalogPath,
+			},
+		},
+		WithMutation: func(
+			_ context.Context,
+			_ string,
+			_ servicecatalog.Publication,
+			mutate func() error,
+		) error {
+			calls++
+			if blocked {
+				return fenceErr
+			}
+			return mutate()
+		},
+	}
+	if _, err := reconciler.ReconcileRepository(
+		t.Context(), repository,
+	); !errors.Is(err, fenceErr) || len(state.current) != 0 || state.stateReconciles != 0 {
+		t.Fatalf("blocked publication = current %d, reconciles %d, err %v",
+			len(state.current), state.stateReconciles, err)
+	}
+	blocked = false
+	if outcome, err := reconciler.ReconcileRepository(
+		t.Context(), repository,
+	); err != nil || outcome != OutcomePublished || state.stateReconciles != 1 {
+		t.Fatalf("published = %q, reconciles %d, err %v",
+			outcome, state.stateReconciles, err)
+	}
+	blocked = true
+	if _, err := reconciler.ReconcileRepository(
+		t.Context(), repository,
+	); !errors.Is(err, fenceErr) || state.stateReconciles != 1 || calls != 3 {
+		t.Fatalf("blocked current repair = calls %d, reconciles %d, err %v",
+			calls, state.stateReconciles, err)
+	}
+}
+
 type memoryStore struct {
 	repositories    map[string]store.Repo
 	current         map[string]servicecatalog.Publication

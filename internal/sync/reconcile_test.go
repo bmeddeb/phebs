@@ -25,14 +25,16 @@ import (
 
 type reconcileStore struct {
 	store.Store
-	repo          store.Repo
-	orphan        bool
-	enqueued      int
-	enqueuedForce bool
-	cleared       int
-	deleted       bool
-	canceledKinds []store.JobKind
-	cancelErr     error
+	repo                 store.Repo
+	orphan               bool
+	enqueued             int
+	enqueuedForce        bool
+	cleared              int
+	deleted              bool
+	canceledKinds        []store.JobKind
+	cancelErr            error
+	runtimeRetired       []string
+	runtimeRetirementErr error
 }
 
 func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
@@ -224,6 +226,17 @@ func (s *reconcileStore) SetRepoDeleting(_ context.Context, _ string, deleting b
 func (s *reconcileStore) DeleteRepo(context.Context, string) error {
 	s.deleted = true
 	return nil
+}
+
+func (s *reconcileStore) RetireServiceRuntimeSelectorForRepositoryDeletion(
+	_ context.Context,
+	repository string,
+) error {
+	s.runtimeRetired = append(s.runtimeRetired, repository)
+	if !s.repo.Deleting {
+		return store.ErrConflict
+	}
+	return s.runtimeRetirementErr
 }
 
 func (s *reconcileStore) CancelPendingJobs(_ context.Context, kind store.JobKind, _ string) (int, error) {
@@ -1038,6 +1051,9 @@ func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 	if err != nil || !deleted {
 		t.Fatalf("deleteRepoArtifacts = %v, %v; want successful deletion", deleted, err)
 	}
+	if got, want := st.runtimeRetired, []string{st.repo.Name}; !slices.Equal(got, want) {
+		t.Fatalf("selected runtime retirements = %v, want %v", got, want)
+	}
 	if _, err := os.Stat(candidatePath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("repository candidate artifact survived deletion: %v", err)
 	}
@@ -1074,6 +1090,90 @@ func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 	}
 }
 
+func TestDeleteRepoArtifactsRetirementFailureIsPreFilesystemFailClosed(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/runtime-retirement-failure"
+	directory := RepoDir(dataDir, repository)
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	artifact := filepath.Join(indexDir, focusedindex.WholeManifestName(repository))
+	if err := os.WriteFile(artifact, []byte("selected\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	injected := errors.New("selector retirement unavailable")
+	state := &reconcileStore{
+		repo: store.Repo{Name: repository}, orphan: true,
+		runtimeRetirementErr: injected,
+	}
+	deleted, err := deleteRepoArtifacts(t.Context(), state, dataDir, repository)
+	if deleted || !errors.Is(err, injected) {
+		t.Fatalf("delete with failed selector retirement = %t, %v", deleted, err)
+	}
+	if !state.repo.Deleting || state.deleted {
+		t.Fatalf(
+			"failed selector retirement authorization state: deleting=%t deleted=%t",
+			state.repo.Deleting, state.deleted,
+		)
+	}
+	if got, want := state.runtimeRetired, []string{repository}; !slices.Equal(got, want) {
+		t.Fatalf("selected runtime retirements = %v, want %v", got, want)
+	}
+	if _, err := os.Lstat(artifact); err != nil {
+		t.Fatalf("selector retirement failure removed search authority: %v", err)
+	}
+	if _, err := os.Lstat(directory); err != nil {
+		t.Fatalf("selector retirement failure removed mirror: %v", err)
+	}
+}
+
+func TestDeleteRepoArtifactsRetriesAfterRuntimeRetirement(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/runtime-retirement-retry"
+	if err := os.MkdirAll(RepoDir(dataDir, repository), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dataDir, "index"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	candidateArtifact := filepath.Join(
+		dataDir, "candidates", candidate.ManifestName(repository),
+	)
+	if err := os.MkdirAll(candidateArtifact, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	state := &reconcileStore{
+		repo: store.Repo{Name: repository}, orphan: true,
+	}
+	deleted, err := deleteRepoArtifacts(t.Context(), state, dataDir, repository)
+	if deleted || err == nil {
+		t.Fatalf("post-retirement filesystem failure = %t, %v", deleted, err)
+	}
+	if !state.repo.Deleting || state.deleted {
+		t.Fatalf(
+			"post-retirement failure state: deleting=%t deleted=%t",
+			state.repo.Deleting, state.deleted,
+		)
+	}
+	if got, want := state.runtimeRetired, []string{repository}; !slices.Equal(got, want) {
+		t.Fatalf("first runtime retirement = %v, want %v", got, want)
+	}
+	if err := os.RemoveAll(candidateArtifact); err != nil {
+		t.Fatal(err)
+	}
+	deleted, err = deleteRepoArtifacts(t.Context(), state, dataDir, repository)
+	if err != nil || !deleted {
+		t.Fatalf("retry after runtime retirement = %t, %v", deleted, err)
+	}
+	if got, want := state.runtimeRetired, []string{repository, repository}; !slices.Equal(got, want) {
+		t.Fatalf("idempotent runtime retirements = %v, want %v", got, want)
+	}
+}
+
 type callerLifecycleRecorder struct {
 	repositories []string
 	err          error
@@ -1085,6 +1185,48 @@ func (lifecycle *callerLifecycleRecorder) RemoveRepository(
 ) error {
 	lifecycle.repositories = append(lifecycle.repositories, repository)
 	return lifecycle.err
+}
+
+type serviceRuntimeLifecycleRecorder struct {
+	state        *reconcileStore
+	repositories []string
+	err          error
+}
+
+func (lifecycle *serviceRuntimeLifecycleRecorder) RetireRepository(
+	_ context.Context,
+	repository string,
+) error {
+	lifecycle.repositories = append(lifecycle.repositories, repository)
+	if lifecycle.state == nil || !lifecycle.state.repo.Deleting {
+		return store.ErrConflict
+	}
+	return lifecycle.err
+}
+
+func TestDeleteRepoArtifactsDelegatesRuntimeRetirementToLiveController(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/selected-runtime-delete"
+	if err := os.MkdirAll(RepoDir(dataDir, repository), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	state := &reconcileStore{
+		repo: store.Repo{Name: repository}, orphan: true,
+	}
+	lifecycle := &serviceRuntimeLifecycleRecorder{state: state}
+	deleted, err := deleteRepoArtifactsWithLifecyclesAndLocks(
+		t.Context(), state, dataDir, repository, nil, lifecycle,
+		newReconcileRepositoryLocks(reconcileRepositoryLockWait),
+	)
+	if err != nil || !deleted {
+		t.Fatalf("delete with service runtime lifecycle = %v, %v", deleted, err)
+	}
+	if got, want := lifecycle.repositories, []string{repository}; !slices.Equal(got, want) {
+		t.Fatalf("service runtime lifecycle calls = %v, want %v", got, want)
+	}
+	if len(state.runtimeRetired) != 0 {
+		t.Fatalf("sync bypassed live service runtime lifecycle: %v", state.runtimeRetired)
+	}
 }
 
 func TestDeleteRepoArtifactsDelegatesCallerRemovalToLeaseLifecycle(t *testing.T) {

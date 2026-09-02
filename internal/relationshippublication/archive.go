@@ -31,6 +31,15 @@ type ArchiveReport struct {
 	Omitted      int
 }
 
+// ArchiveRelationshipGeneration names one immutable relationship generation
+// that a durable runtime selector still exposes after current advances.
+type ArchiveRelationshipGeneration struct {
+	Repository       string
+	GenerationDigest string
+	RootDigest       string
+	V3               bool
+}
+
 type archiveFile struct {
 	path string
 	name string
@@ -62,6 +71,17 @@ var archiveRoots = []string{
 // their exact resolver/RPC/Kafka component generations. Corrupt or in-flight
 // derived state is visibly omitted and never blocks the precious DB export.
 func CreateArchive(ctx context.Context, dataDir, output string) (ArchiveReport, error) {
+	return CreateArchiveWithSelections(ctx, dataDir, output, nil)
+}
+
+// CreateArchiveWithSelections additionally preserves the exact immutable
+// relationship bytes named by durable runtime selectors. Current-pointer and
+// component-generation behavior remains unchanged.
+func CreateArchiveWithSelections(
+	ctx context.Context,
+	dataDir, output string,
+	selections []ArchiveRelationshipGeneration,
+) (ArchiveReport, error) {
 	var report ArchiveReport
 	if !filepath.IsAbs(dataDir) || !filepath.IsAbs(output) {
 		return report, invalidLifecycle("archive paths")
@@ -100,6 +120,35 @@ func CreateArchive(ctx context.Context, dataDir, output string) (ArchiveReport, 
 				}
 			}
 			report.Publications++
+		}
+	}
+	selected := make(map[string]bool, len(selections))
+	for _, selection := range selections {
+		if err := ctx.Err(); err != nil {
+			return report, err
+		}
+		key := selection.Repository + "\x00" + selection.GenerationDigest +
+			"\x00" + selection.RootDigest
+		if selection.V3 {
+			key += "\x00v3"
+		}
+		if selected[key] {
+			continue
+		}
+		selected[key] = true
+		publicationFiles, err := archiveSelectedRelationshipGeneration(
+			ctx, dataDir, selection,
+		)
+		if err != nil {
+			return report, err
+		}
+		for _, item := range publicationFiles {
+			plannedBytes, err = admitArchiveFile(
+				files, item, plannedBytes, MaxArchiveEntries, MaxArchiveBytes,
+			)
+			if err != nil {
+				return report, err
+			}
 		}
 	}
 	ordered := make([]archiveFile, 0, len(files))
@@ -182,6 +231,73 @@ func CreateArchive(ctx context.Context, dataDir, output string) (ArchiveReport, 
 	}
 	complete = true
 	return report, nil
+}
+
+func archiveSelectedRelationshipGeneration(
+	ctx context.Context,
+	dataDir string,
+	selection ArchiveRelationshipGeneration,
+) ([]archiveFile, error) {
+	root := filepath.Join(dataDir, "relationships")
+	var (
+		directory  string
+		components archiveComponentAuthority
+	)
+	if selection.V3 {
+		publication, err := ValidateGenerationV3(
+			ctx, root, selection.Repository,
+			selection.GenerationDigest, selection.RootDigest,
+		)
+		if err != nil {
+			return nil, err
+		}
+		directory, err = GenerationPathV3(
+			root, selection.Repository, selection.GenerationDigest,
+		)
+		if err != nil {
+			return nil, err
+		}
+		authority := publication.Root().Authority
+		components = archiveComponentAuthority{
+			resolverGeneration: authority.ResolverGenerationDigest,
+			resolverRoot:       authority.ResolverRootDigest,
+			rpcGeneration:      authority.RPCGenerationDigest,
+			rpcRoot:            authority.RPCRootDigest,
+			kafkaGeneration:    authority.KafkaGenerationDigest,
+			kafkaRoot:          authority.KafkaRootDigest,
+		}
+	} else {
+		publication, err := OpenGeneration(
+			ctx, root, selection.Repository,
+			selection.GenerationDigest, selection.RootDigest,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := openDirectoryComplete(
+			ctx, publication.directory, publication.rootValue,
+		); err != nil {
+			return nil, err
+		}
+		directory = publication.directory
+		authority := publication.Root().Authority
+		components = archiveComponentAuthority{
+			resolverGeneration: authority.ResolverGenerationDigest,
+			resolverRoot:       authority.ResolverRootDigest,
+			rpcGeneration:      authority.RPCGenerationDigest,
+			rpcRoot:            authority.RPCRootDigest,
+			kafkaGeneration:    authority.KafkaGenerationDigest,
+			kafkaRoot:          authority.KafkaRootDigest,
+		}
+	}
+	files, err := collectArchiveTree(dataDir, directory)
+	if err != nil {
+		return nil, err
+	}
+	componentFiles, err := archiveBoundComponents(
+		ctx, dataDir, selection.Repository, components,
+	)
+	return append(files, componentFiles...), err
 }
 
 func admitArchiveFile(
@@ -371,25 +487,23 @@ func archiveCurrentPublicationV3(
 		kafkaGeneration:    authority.KafkaGenerationDigest,
 		kafkaRoot:          authority.KafkaRootDigest,
 	}
-	resolverRoot, err := openArchivedResolverGeneration(
+	componentFiles, err := archiveBoundComponents(
 		ctx, dataDir, pointer.Repository, components,
 	)
-	if err != nil || resolverRoot.Digest != components.resolverRoot {
-		return nil, errors.Join(err, invalidLifecycle("archive v3 resolver authority"))
-	}
-	rpcRoot, err := openArchivedRPC(ctx, dataDir, pointer.Repository, components)
+	return append(files, componentFiles...), err
+}
+
+func archiveBoundComponents(
+	ctx context.Context,
+	dataDir, repository string,
+	authority archiveComponentAuthority,
+) ([]archiveFile, error) {
+	directories, err := validateBoundComponents(ctx, dataDir, repository, authority)
 	if err != nil {
 		return nil, err
 	}
-	kafkaRoot, err := openArchivedKafka(ctx, dataDir, pointer.Repository, components)
-	if err != nil {
-		return nil, err
-	}
-	for _, directory := range []string{
-		resolverGenerationDirectory(dataDir, pointer.Repository, resolverRoot.GenerationDigest),
-		rpcGenerationDirectory(dataDir, pointer.Repository, rpcRoot.GenerationDigest),
-		kafkaGenerationDirectory(dataDir, pointer.Repository, kafkaRoot.GenerationDigest),
-	} {
+	var files []archiveFile
+	for _, directory := range directories {
 		values, err := collectArchiveTree(dataDir, directory)
 		if err != nil {
 			return nil, err
@@ -397,6 +511,32 @@ func archiveCurrentPublicationV3(
 		files = append(files, values...)
 	}
 	return files, nil
+}
+
+func validateBoundComponents(
+	ctx context.Context,
+	dataDir, repository string,
+	authority archiveComponentAuthority,
+) ([]string, error) {
+	resolverRoot, err := openArchivedResolverGeneration(
+		ctx, dataDir, repository, authority,
+	)
+	if err != nil || resolverRoot.Digest != authority.resolverRoot {
+		return nil, errors.Join(err, invalidLifecycle("archive resolver authority"))
+	}
+	rpcRoot, err := openArchivedRPC(ctx, dataDir, repository, authority)
+	if err != nil {
+		return nil, err
+	}
+	kafkaRoot, err := openArchivedKafka(ctx, dataDir, repository, authority)
+	if err != nil {
+		return nil, err
+	}
+	return []string{
+		resolverGenerationDirectory(dataDir, repository, resolverRoot.GenerationDigest),
+		rpcGenerationDirectory(dataDir, repository, rpcRoot.GenerationDigest),
+		kafkaGenerationDirectory(dataDir, repository, kafkaRoot.GenerationDigest),
+	}, nil
 }
 
 func openArchivedResolverGeneration(
@@ -584,6 +724,9 @@ func RestoreArchive(ctx context.Context, archivePath, dataDir string) error {
 	if _, err := validateArchiveTree(ctx, stage); err != nil {
 		return err
 	}
+	if err := syncArchiveTree(stage); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return err
 	}
@@ -648,14 +791,37 @@ func extractArchive(ctx context.Context, archivePath, root string) (ArchiveRepor
 			return report, err
 		}
 		written, copyErr := io.CopyN(output, reader, header.Size)
+		syncErr := output.Sync()
 		closeErr := output.Close()
-		if copyErr != nil || closeErr != nil || written != header.Size {
-			return report, errors.Join(copyErr, closeErr, io.ErrShortWrite)
+		if copyErr != nil || syncErr != nil || closeErr != nil || written != header.Size {
+			return report, errors.Join(copyErr, syncErr, closeErr, io.ErrShortWrite)
 		}
 		report.Files++
 		report.Bytes += header.Size
 	}
 	return report, nil
+}
+
+func syncArchiveTree(root string) error {
+	directories := make([]string, 0)
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			directories = append(directories, path)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	slices.Reverse(directories)
+	for _, directory := range directories {
+		if err := syncDirectory(directory); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func archiveHeaderSparse(header *tar.Header) bool {
@@ -684,13 +850,193 @@ func validateArchiveTree(ctx context.Context, dataDir string) (int, error) {
 			if !entry.IsDir() || len(entry.Name()) != 64 || !validLowerHex(entry.Name()) {
 				return 0, invalidLifecycle("archive repository inventory")
 			}
+			currentPath := filepath.Join(namespace.base, entry.Name(), "current.json")
+			if _, err := os.Lstat(currentPath); errors.Is(err, os.ErrNotExist) {
+				continue
+			} else if err != nil {
+				return 0, err
+			}
 			if _, err := namespace.current(ctx, dataDir, entry.Name()); err != nil {
 				return 0, err
 			}
 			publications++
 		}
 	}
+	if err := validateArchivedRelationshipGenerations(ctx, dataDir); err != nil {
+		return 0, err
+	}
 	return publications, nil
+}
+
+func validateArchivedRelationshipGenerations(
+	ctx context.Context,
+	dataDir string,
+) error {
+	root := filepath.Join(dataDir, "relationships")
+	for _, namespace := range []struct {
+		base string
+		v3   bool
+	}{
+		{base: filepath.Join(root, "relationship-publications")},
+		{base: ShadowBase(root), v3: true},
+	} {
+		repositories, err := boundedLifecycleDirectory(
+			namespace.base, MaxLifecycleRepositories,
+		)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		for _, repositoryEntry := range repositories {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if !repositoryEntry.IsDir() || len(repositoryEntry.Name()) != 64 ||
+				!validLowerHex(repositoryEntry.Name()) {
+				return invalidLifecycle("archived relationship repository")
+			}
+			directory := filepath.Join(namespace.base, repositoryEntry.Name())
+			pointerLimit := MaxRootBytes
+			if namespace.v3 {
+				pointerLimit = MaxRootBytesV3
+			}
+			pointerRaw, err := readRegular(filepath.Join(directory, "current.json"), pointerLimit)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			var repository, current string
+			if err == nil && namespace.v3 {
+				var pointer PointerV3
+				if decodeExact(pointerRaw, MaxRootBytesV3, &pointer) != nil ||
+					validatePointerV3(pointer) != nil {
+					return invalidLifecycle("archived relationship v3 pointer")
+				}
+				repository, current = pointer.Repository, pointer.GenerationDigest
+			} else if err == nil {
+				var pointer Pointer
+				if decodeExact(pointerRaw, MaxRootBytes, &pointer) != nil ||
+					validatePointer(pointer) != nil {
+					return invalidLifecycle("archived relationship pointer")
+				}
+				repository, current = pointer.Repository, pointer.GenerationDigest
+			}
+			if repository != "" && repositoryHash(repository) != repositoryEntry.Name() {
+				return invalidLifecycle("archived relationship pointer path")
+			}
+			entryLimit := MaxRepositoryGenerations
+			if err == nil {
+				entryLimit++
+			}
+			entries, err := boundedLifecycleDirectory(directory, entryLimit)
+			if err != nil {
+				return err
+			}
+			for _, entry := range entries {
+				if entry.Name() == "current.json" && !entry.IsDir() &&
+					entry.Type()&os.ModeSymlink == 0 {
+					continue
+				}
+				if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 ||
+					len(entry.Name()) != 64 || !validLowerHex(entry.Name()) {
+					return invalidLifecycle("archived relationship generation inventory")
+				}
+				generation := "sha256:" + entry.Name()
+				if generation == current {
+					continue
+				}
+				if namespace.v3 {
+					generationDirectory := filepath.Join(directory, entry.Name())
+					raw, err := readRegular(
+						filepath.Join(generationDirectory, "root.json"), MaxRootBytesV3,
+					)
+					if err != nil {
+						return err
+					}
+					var value RootV3
+					if decodeExact(raw, MaxRootBytesV3, &value) != nil ||
+						ValidateRootV3(value) != nil ||
+						value.GenerationDigest != generation {
+						return invalidLifecycle("archived relationship v3 generation root")
+					}
+					if repository == "" {
+						repository = value.Authority.Repository
+					}
+					if repository != value.Authority.Repository ||
+						repositoryHash(repository) != repositoryEntry.Name() {
+						return invalidLifecycle("archived relationship v3 generation path")
+					}
+					if _, err := ValidateGenerationV3(
+						ctx, root, repository, generation, value.Digest,
+					); err != nil {
+						return err
+					}
+					if _, err := validateBoundComponents(
+						ctx, dataDir, repository,
+						archiveComponentAuthority{
+							resolverGeneration: value.Authority.ResolverGenerationDigest,
+							resolverRoot:       value.Authority.ResolverRootDigest,
+							rpcGeneration:      value.Authority.RPCGenerationDigest,
+							rpcRoot:            value.Authority.RPCRootDigest,
+							kafkaGeneration:    value.Authority.KafkaGenerationDigest,
+							kafkaRoot:          value.Authority.KafkaRootDigest,
+						},
+					); err != nil {
+						return err
+					}
+					continue
+				}
+				generationDirectory := filepath.Join(directory, entry.Name())
+				raw, err := readRegular(
+					filepath.Join(generationDirectory, "root.json"), MaxRootBytes,
+				)
+				if err != nil {
+					return err
+				}
+				var value Root
+				if decodeExact(raw, MaxRootBytes, &value) != nil ||
+					validateRoot(value) != nil || value.GenerationDigest != generation {
+					return invalidLifecycle("archived relationship generation root")
+				}
+				if repository == "" {
+					repository = value.Authority.Repository
+				}
+				if repository != value.Authority.Repository ||
+					repositoryHash(repository) != repositoryEntry.Name() {
+					return invalidLifecycle("archived relationship generation path")
+				}
+				publication, err := OpenGeneration(
+					ctx, root, repository, generation, value.Digest,
+				)
+				if err != nil {
+					return err
+				}
+				if _, err := openDirectoryComplete(
+					ctx, publication.directory, publication.rootValue,
+				); err != nil {
+					return err
+				}
+				if _, err := validateBoundComponents(
+					ctx, dataDir, repository,
+					archiveComponentAuthority{
+						resolverGeneration: value.Authority.ResolverGenerationDigest,
+						resolverRoot:       value.Authority.ResolverRootDigest,
+						rpcGeneration:      value.Authority.RPCGenerationDigest,
+						rpcRoot:            value.Authority.RPCRootDigest,
+						kafkaGeneration:    value.Authority.KafkaGenerationDigest,
+						kafkaRoot:          value.Authority.KafkaRootDigest,
+					},
+				); err != nil {
+					return err
+				}
+			}
+			if repository == "" {
+				return invalidLifecycle("archived relationship repository identity")
+			}
+		}
+	}
+	return nil
 }
 
 func archiveNamespaces(dataDir string) []archiveNamespace {

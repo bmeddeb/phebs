@@ -184,6 +184,34 @@ func (s *Surreal) PublishServiceCatalogV3Candidate(
 	ctx context.Context,
 	generation servicecatalogv3.Generation,
 ) error {
+	return s.publishServiceCatalogV3Candidate(ctx, generation, nil)
+}
+
+// PublishServiceCatalogV3Holding rebuilds the dark candidate from the exact
+// v2 authority that is still selected. This is the crash-recovery exception to
+// the ordinary current-repository fence: the selected v2 tuple, not a later
+// indexed commit, is the source of truth until its replacement can be fenced.
+func (s *Surreal) PublishServiceCatalogV3Holding(
+	ctx context.Context,
+	selector ServiceRuntimeSelector,
+	generation servicecatalogv3.Generation,
+) error {
+	if validateServiceRuntimeSelector(selector) != nil ||
+		selector.Backend != ServiceRuntimeV2 ||
+		selector.Repository != generation.Root.Binding.Repository {
+		return fmt.Errorf(
+			"publish service catalog v3 holding candidate: %w",
+			ErrInvalidServiceRuntimeSelector,
+		)
+	}
+	return s.publishServiceCatalogV3Candidate(ctx, generation, &selector)
+}
+
+func (s *Surreal) publishServiceCatalogV3Candidate(
+	ctx context.Context,
+	generation servicecatalogv3.Generation,
+	holding *ServiceRuntimeSelector,
+) error {
 	if err := servicecatalogv3.ValidateGeneration(generation); err != nil {
 		return fmt.Errorf("publish service catalog v3 candidate: %w", err)
 	}
@@ -199,7 +227,9 @@ func (s *Surreal) PublishServiceCatalogV3Candidate(
 		return fmt.Errorf("publish service catalog v3 candidate: root: %w", err)
 	}
 	for attempt := 0; ; attempt++ {
-		err = s.publishServiceCatalogV3CandidateOnce(ctx, generation, rootRaw)
+		err = s.publishServiceCatalogV3CandidateOnce(
+			ctx, generation, rootRaw, holding,
+		)
 		if err == nil || !isRetryableEnqueue(err) || ctx.Err() != nil ||
 			attempt+1 >= maxServiceCatalogV3PublishAttempts {
 			break
@@ -222,6 +252,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 	ctx context.Context,
 	generation servicecatalogv3.Generation,
 	rootRaw []byte,
+	holding *ServiceRuntimeSelector,
 ) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -243,9 +274,17 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		return err
 	}
 	repos := firstDomainRows(repoResults)
-	if len(repos) != 1 || repos[0].Deleting ||
-		repos[0].IndexedCommitHash != root.Binding.Source.Commit {
+	if len(repos) != 1 || repos[0].Deleting {
 		return ErrConflict
+	}
+	if holding == nil {
+		if repos[0].IndexedCommitHash != root.Binding.Source.Commit {
+			return ErrConflict
+		}
+	} else if err := verifyServiceCatalogV3HoldingFence(
+		ctx, tx, root, *holding,
+	); err != nil {
+		return err
 	}
 
 	memberRecords := serviceCatalogV3MemberRecords(generation, now)
@@ -397,7 +436,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		}
 	}
 	if _, err := ensureServiceCatalogV3LifecycleMetadata(
-		ctx, tx, root, rootWanted.RecordedAt,
+		ctx, tx, root, rootWanted.RecordedAt, true,
 	); err != nil {
 		return err
 	}
@@ -454,6 +493,93 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+func verifyServiceCatalogV3HoldingFence(
+	ctx context.Context,
+	tx *surrealdb.Transaction,
+	root servicecatalogv3.Root,
+	selector ServiceRuntimeSelector,
+) error {
+	if validateServiceRuntimeSelector(selector) != nil ||
+		selector.Backend != ServiceRuntimeV2 ||
+		selector.Repository != root.Binding.Repository ||
+		root.MappedV2Digest == "" {
+		return ErrInvalidServiceRuntimeSelector
+	}
+	selectorResults, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
+		ctx, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceRuntimeSelectorID(selector.Repository)},
+	)
+	if err != nil {
+		return err
+	}
+	selectorRows := firstDomainRows(selectorResults)
+	if len(selectorRows) != 1 {
+		return ErrConflict
+	}
+	current, err := serviceRuntimeSelectorFromRec(selectorRows[0])
+	if err != nil || current != selector {
+		return ErrConflict
+	}
+	target := ServiceRuntimeTarget{
+		CatalogGenerationDigest:      selector.CatalogGenerationDigest,
+		CatalogControlRevision:       selector.CatalogControlRevision,
+		StateControlRevision:         selector.StateControlRevision,
+		StateSummaryDigest:           selector.StateSummaryDigest,
+		SearchGenerationDigest:       selector.SearchGenerationDigest,
+		RelationshipGenerationDigest: selector.RelationshipGenerationDigest,
+		RelationshipRootDigest:       selector.RelationshipRootDigest,
+	}
+	if err := verifyServiceRuntimeV2Target(
+		ctx, tx, selector.Repository, target,
+	); err != nil {
+		return err
+	}
+	generationResults, err := surrealdb.Query[[]serviceCatalogGenerationRec](
+		ctx, tx, "SELECT * FROM $rid",
+		map[string]any{
+			"rid": serviceCatalogGenerationID(selector.CatalogGenerationDigest),
+		},
+	)
+	if err != nil {
+		return err
+	}
+	generations := firstDomainRows(generationResults)
+	if len(generations) != 1 || !serviceCatalogV3HoldingMatchesV2(
+		root, selector.CatalogGenerationDigest, generations[0],
+	) {
+		return ErrConflict
+	}
+	return nil
+}
+
+func serviceCatalogV3HoldingMatchesV2(
+	root servicecatalogv3.Root,
+	digest string,
+	generation serviceCatalogGenerationRec,
+) bool {
+	overrideID, overrideVersion := "", ""
+	if root.Binding.Override != nil {
+		overrideID = root.Binding.Override.ID
+		overrideVersion = root.Binding.Override.Version
+	}
+	return generation.Repository == root.Binding.Repository &&
+		generation.GenerationDigest == digest &&
+		generation.SourceKind == root.Binding.Source.Kind &&
+		generation.SourcePath == root.Binding.Source.Path &&
+		generation.SourceCommit == root.Binding.Source.Commit &&
+		generation.SourceCensusDigest == root.Binding.Source.CensusDigest &&
+		generation.SourceFileCount == root.Binding.Source.FileCount &&
+		generation.AcceptedFileCount == root.Binding.Source.AcceptedFileCount &&
+		generation.UnownedFileCount == root.Binding.Source.UnownedFileCount &&
+		generation.LegacyAnalysisUnitDigest == root.Binding.Source.LegacyDigest &&
+		generation.AuthorityKind == root.Binding.Authority.Kind &&
+		generation.AuthorityID == root.Binding.Authority.ID &&
+		generation.AuthorityVersion == root.Binding.Authority.Version &&
+		generation.OverrideID == overrideID &&
+		generation.OverrideVersion == overrideVersion &&
+		generation.CatalogDigest == root.MappedV2Digest
 }
 
 func equalServiceCatalogV3Root(

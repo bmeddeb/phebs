@@ -164,7 +164,8 @@ T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
-exhausted-result recovery is integrated; T41.9 is next.
+exhausted-result recovery is integrated. T41.9 is branch-complete and awaits
+integration; T41.10 follows that integration.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -930,9 +931,10 @@ service count × repository bytes
   bucketed dark relationship root, sparse service/repository reads, exact
   recovery/archive ownership, and a sixteenth bounded lifecycle owner without
   selecting it. T41.8a corrects whole-repository catalog absence and preserves
-  an immutable extraction result across a failed downstream callback. T41.9
-  next owns atomic runtime registration and reverse transition; T41.10 closes
-  on the neutral 10,000-service recovery/lifecycle/product gate. No
+  an immutable extraction result across a failed downstream callback. T41.9's
+  branch-complete runtime selector provides atomic registration and reverse
+  transition and awaits integration; T41.10 then closes on the neutral
+  10,000-service recovery/lifecycle/product gate. No
   constants-only increase is permitted.
 - **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
   freeze a deterministic combined corpus and independent oracle, execute cold,
@@ -1004,8 +1006,8 @@ catalog, relationship, or correctness authority.
   extraction authority before publication, makes point reads member-local,
   and adds complete canonical recovery, archive/restore, lease, rollback, and
   bounded lifecycle ownership. It is integrated. T41.8a's catalog-absence and
-  exhausted-result recovery is integrated; T41.9 is next and remains the only
-  runtime-selector owner.
+  exhausted-result recovery is integrated. T41.9 is branch-complete and awaits
+  integration; T41.10 follows it.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

@@ -276,7 +276,7 @@ func TestServiceCatalogV3RelationshipReferenceDrainAndFinalizeFences(t *testing.
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			s := newServiceCatalogV3InternalStore(t)
-			record, reference := collectingServiceCatalogV3RelationshipReference(t, s)
+			record, reference, _ := collectingServiceCatalogV3RelationshipReference(t, s)
 			ctx := t.Context()
 			if err := s.ReconcileServiceCatalogV3RelationshipReferences(
 				ctx, []ServiceCatalogV3RelationshipReference{reference},
@@ -420,7 +420,11 @@ func serviceCatalogV3LifecycleRecord(
 func collectingServiceCatalogV3RelationshipReference(
 	t *testing.T,
 	s *Surreal,
-) (serviceCatalogV3LifecycleRec, ServiceCatalogV3RelationshipReference) {
+) (
+	serviceCatalogV3LifecycleRec,
+	ServiceCatalogV3RelationshipReference,
+	servicecatalogv3.Generation,
+) {
 	t.Helper()
 	repository := "example.com/acme/v3-relationship-collecting-" + strings.ToLower(t.Name())
 	commit := strings.Repeat("7", 40)
@@ -454,7 +458,7 @@ func collectingServiceCatalogV3RelationshipReference(
 		CatalogControlRevision:       1,
 		StateControlRevision:         1,
 		StateSummaryDigest:           "sha256:" + strings.Repeat("6", 64),
-	}
+	}, oldest
 }
 
 func createServiceCatalogV3RelationshipReference(

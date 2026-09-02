@@ -152,6 +152,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateServiceCatalogV3RelationshipReferenceSchema(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateServiceRuntimeSelectorSchema(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilityPreMigrationSchema, nil)
 	if err != nil {
 		return err
@@ -165,6 +168,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 		return err
 	}
 	if err := s.migrateCandidateControlRevisions(ctx); err != nil {
+		return err
+	}
+	if err := s.validateServiceRuntimeSelectorStore(ctx); err != nil {
 		return err
 	}
 	if err := s.migrateResolverCatalogWriter(ctx); err != nil {
@@ -261,7 +267,8 @@ COMMIT;`, map[string]any{
 			markerVersion = row.Version
 		}
 	}
-	if markerVersion == candidateControlRevisionMigrationVersion {
+	if markerVersion == candidateControlRevisionMigrationVersion ||
+		markerVersion == serviceRuntimeSelectorCompatibilityMigrationVersion {
 		return nil
 	}
 	if markerVersion != "" {
@@ -1632,6 +1639,16 @@ UPDATE resolver_catalog_job SET status = 'canceled', error = 'repository deletin
 UPDATE caller_leaf_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE generation_schedule SET status = 'superseded', updated_at = time::now()
+    WHERE repository = $name AND status = 'active'
+        AND stage IN [$state_reconcile_stage, $state_activate_stage,
+            $relationship_v3_stage] RETURN NONE;
+UPDATE service_state_v3_plan SET state = 'superseded', updated_at = time::now()
+    WHERE repository = $name AND state = 'running'
+        AND phase IN ['reconcile', 'activate'] RETURN NONE;
+DELETE generation_schedule_current WHERE repository = $name
+    AND stage IN [$state_reconcile_stage, $state_activate_stage,
+        $relationship_v3_stage] RETURN NONE;
 DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
 DELETE resolver_catalog_publication WHERE repository = $name RETURN NONE;
 DELETE caller_generation_publication WHERE repository = $name RETURN NONE;
@@ -1640,7 +1657,12 @@ DELETE caller_generation_admission WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
-COMMIT;`, map[string]any{"rid": repoID(name), "name": name})
+COMMIT;`, map[string]any{
+				"rid": repoID(name), "name": name,
+				"state_reconcile_stage": ServiceStateV3ReconcileStage,
+				"state_activate_stage":  ServiceStateV3ActivateStage,
+				"relationship_v3_stage": ServiceRelationshipV3ScheduleStage,
+			})
 		if err != nil && isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 			continue
 		}

@@ -27,7 +27,7 @@ const (
 	serviceDirectoryCapability   = "service-catalog-v2"
 	serviceInventorySchema       = "phebs-service-inventory-v1"
 	serviceDetailSchema          = "phebs-service-detail-v1"
-	serviceCursorSchema          = "phebs-service-inventory-cursor-v2"
+	serviceCursorSchema          = "phebs-service-inventory-cursor-v3"
 	serviceInventoryOrder        = "service_key:asc"
 	serviceDefaultPageSize       = 50
 	serviceMaxPageSize           = 100
@@ -57,10 +57,11 @@ type serviceDirectoryStore interface {
 // ServiceDirectoryService is the one authorization, cursor, projection, and
 // response-boundary implementation shared by HTTP and MCP.
 type ServiceDirectoryService struct {
-	opts   Options
-	states serviceDirectoryStore
-	v3     *store.ServiceStateV3Reader
-	secret [sha256.Size]byte
+	opts      Options
+	states    serviceDirectoryStore
+	v3        *store.ServiceStateV3Reader
+	selectors store.ServiceRuntimeSelectorReader
+	secret    [sha256.Size]byte
 }
 
 func NewServiceDirectoryService(opts Options) *ServiceDirectoryService {
@@ -75,8 +76,8 @@ func NewServiceDirectoryService(opts Options) *ServiceDirectoryService {
 	return service
 }
 
-// NewServiceDirectoryServiceV3 constructs the runtime-dark segmented backend.
-// T41.9 owns selecting it for production traffic.
+// NewServiceDirectoryServiceV3 constructs the fixed-backend segmented service
+// used by tests and embeddings. Production uses the runtime selector wrapper.
 func NewServiceDirectoryServiceV3(
 	opts Options,
 	reader *store.ServiceStateV3Reader,
@@ -89,6 +90,31 @@ func NewServiceDirectoryServiceV3(
 		return nil
 	}
 	return service
+}
+
+// NewRuntimeServiceDirectoryService constructs the production per-repository
+// selector boundary while retaining both exact reader backends.
+func NewRuntimeServiceDirectoryService(
+	opts Options,
+	reader *store.ServiceStateV3Reader,
+) *ServiceDirectoryService {
+	states, statesOK := opts.Store.(serviceDirectoryStore)
+	selectors, selectorsOK := opts.Store.(store.ServiceRuntimeSelectorReader)
+	if !statesOK || states == nil || !selectorsOK || selectors == nil || reader == nil {
+		return nil
+	}
+	service := &ServiceDirectoryService{
+		opts: opts, states: states, v3: reader, selectors: selectors,
+	}
+	if _, err := rand.Read(service.secret[:]); err != nil {
+		return nil
+	}
+	return service
+}
+
+type serviceDirectoryRuntime struct {
+	backend  string
+	selector *store.ServiceRuntimeSelector
 }
 
 // ServiceInventoryQuery is the closed filter set for one authorized
@@ -200,18 +226,20 @@ type ServiceDetail struct {
 }
 
 type serviceInventoryCursor struct {
-	Schema                 string            `json:"schema"`
-	QueryDigest            string            `json:"query_digest"`
-	Authorization          VisibilityContext `json:"authorization"`
-	CatalogGeneration      string            `json:"catalog_generation"`
-	CatalogControlRevision uint64            `json:"catalog_control_revision"`
-	SummaryDigest          string            `json:"summary_digest"`
-	SummaryControlRevision uint64            `json:"summary_control_revision"`
-	Order                  string            `json:"order"`
-	AfterServiceKey        string            `json:"after_service_key"`
-	AfterIncarnation       uint64            `json:"after_incarnation"`
-	CatalogView            string            `json:"catalog_view,omitempty"`
-	MemberRangeDigest      string            `json:"member_range_digest,omitempty"`
+	Schema                  string            `json:"schema"`
+	QueryDigest             string            `json:"query_digest"`
+	Authorization           VisibilityContext `json:"authorization"`
+	CatalogGeneration       string            `json:"catalog_generation"`
+	CatalogControlRevision  uint64            `json:"catalog_control_revision"`
+	SummaryDigest           string            `json:"summary_digest"`
+	SummaryControlRevision  uint64            `json:"summary_control_revision"`
+	Order                   string            `json:"order"`
+	AfterServiceKey         string            `json:"after_service_key"`
+	AfterIncarnation        uint64            `json:"after_incarnation"`
+	CatalogView             string            `json:"catalog_view,omitempty"`
+	MemberRangeDigest       string            `json:"member_range_digest,omitempty"`
+	RuntimeBackend          string            `json:"runtime_backend"`
+	RuntimeSelectorRevision uint64            `json:"runtime_selector_revision"`
 }
 
 func (service *ServiceDirectoryService) List(
@@ -232,6 +260,10 @@ func (service *ServiceDirectoryService) List(
 	if err != nil {
 		return nil, err
 	}
+	runtime, err := service.runtime(ctx, repository.Name)
+	if err != nil {
+		return nil, err
+	}
 	queryDigest := digestJSON(struct {
 		Schema   string                `json:"schema"`
 		Order    string                `json:"order"`
@@ -239,7 +271,7 @@ func (service *ServiceDirectoryService) List(
 		PageSize int                   `json:"page_size"`
 	}{serviceInventorySchema, serviceInventoryOrder, query, pageSize})
 	cursor, err := service.decodeServiceInventoryCursor(
-		encodedCursor, queryDigest, authorization, service.catalogView(),
+		encodedCursor, queryDigest, authorization, runtime,
 	)
 	if err != nil {
 		return nil, err
@@ -259,10 +291,16 @@ func (service *ServiceDirectoryService) List(
 		catalogRevision      uint64
 		v3Page               *store.ServiceStateV3Page
 	)
-	if service.v3 != nil {
-		v3Page, err = service.v3.ListServices(
-			ctx, query.Repository, filter, after, pageSize,
-		)
+	if runtime.backend == store.ServiceRuntimeV3 {
+		if runtime.selector == nil {
+			v3Page, err = service.v3.ListServices(
+				ctx, query.Repository, filter, after, pageSize,
+			)
+		} else {
+			v3Page, err = service.v3.ListServicesSelected(
+				ctx, *runtime.selector, filter, after, pageSize,
+			)
+		}
 		if err != nil {
 			return nil, serviceDirectoryReadError("list service inventory", err)
 		}
@@ -301,6 +339,9 @@ func (service *ServiceDirectoryService) List(
 			position = *page.Continuation
 		}
 	}
+	if !runtime.matches(catalogGeneration, catalogRevision, summary) {
+		return nil, huma.Error409Conflict("service runtime authority changed; retry")
+	}
 	if err := validateServiceCursorSnapshot(
 		cursor, catalogGeneration, catalogRevision, summary,
 	); err != nil {
@@ -308,7 +349,7 @@ func (service *ServiceDirectoryService) List(
 	}
 	rows := make([]Service, 0, len(entries))
 	for _, entry := range entries {
-		row, projectionErr := projectServiceRowBounded(entry, service.successorLimit())
+		row, projectionErr := projectServiceRowBounded(entry, runtime.successorLimit())
 		if projectionErr != nil {
 			return nil, huma.Error500InternalServerError("project service inventory", projectionErr)
 		}
@@ -333,8 +374,10 @@ func (service *ServiceDirectoryService) List(
 				SummaryDigest:          summary.SummaryDigest,
 				SummaryControlRevision: summary.ControlRevision,
 				Order:                  serviceInventoryOrder, AfterServiceKey: position.ServiceKey,
-				AfterIncarnation: position.Incarnation, CatalogView: service.catalogView(),
-				MemberRangeDigest: position.MemberRangeDigest,
+				AfterIncarnation: position.Incarnation, CatalogView: runtime.catalogView(),
+				MemberRangeDigest:       position.MemberRangeDigest,
+				RuntimeBackend:          runtime.backend,
+				RuntimeSelectorRevision: runtime.selectorRevision(),
 			},
 		)
 		if err != nil {
@@ -345,7 +388,7 @@ func (service *ServiceDirectoryService) List(
 		return nil, err
 	}
 	if err := service.confirmPage(
-		ctx, repository, authorization, summary, v3Page,
+		ctx, repository, authorization, summary, v3Page, runtime,
 	); err != nil {
 		return nil, err
 	}
@@ -366,14 +409,24 @@ func (service *ServiceDirectoryService) Detail(
 	if strings.TrimSpace(serviceKey) == "" {
 		return nil, huma.Error404NotFound("service not found")
 	}
+	runtime, err := service.runtime(ctx, repository.Name)
+	if err != nil {
+		return nil, err
+	}
 	var (
 		repositoryProjection ServiceRepository
 		summary              servicecatalog.RepositoryState
 		entry                store.ServiceStateEntry
 		v3Read               *store.ServiceStateV3Read
 	)
-	if service.v3 != nil {
-		v3Read, err = service.v3.OpenService(ctx, repository.Name, serviceKey)
+	if runtime.backend == store.ServiceRuntimeV3 {
+		if runtime.selector == nil {
+			v3Read, err = service.v3.OpenService(ctx, repository.Name, serviceKey)
+		} else {
+			v3Read, err = service.v3.OpenServiceSelected(
+				ctx, *runtime.selector, serviceKey,
+			)
+		}
 		if err != nil {
 			return nil, serviceDirectoryReadError("read service detail", err)
 		}
@@ -391,7 +444,13 @@ func (service *ServiceDirectoryService) Detail(
 		repositoryProjection = projectServiceRepository(read.Publication, read.Summary)
 		summary, entry = read.Summary, read.Entry
 	}
-	row, err := projectServiceRowBounded(entry, service.successorLimit())
+	catalogGeneration := repositoryProjection.CatalogGeneration
+	if !runtime.matches(
+		catalogGeneration, repositoryProjection.CatalogControlRevision, summary,
+	) {
+		return nil, huma.Error409Conflict("service runtime authority changed; retry")
+	}
+	row, err := projectServiceRowBounded(entry, runtime.successorLimit())
 	if err != nil {
 		return nil, huma.Error500InternalServerError("project service detail", err)
 	}
@@ -402,32 +461,96 @@ func (service *ServiceDirectoryService) Detail(
 		Successors:    append([]string{}, entry.State.Successors...),
 		Memberships:   projectServiceMemberships(entry.Projection),
 	}
-	if err := validateServiceDetailPaths(detail, service.successorLimit()); err != nil {
+	if err := validateServiceDetailPaths(detail, runtime.successorLimit()); err != nil {
 		return nil, huma.Error500InternalServerError("project service detail", err)
 	}
 	if err := validateServiceResponseSize(detail); err != nil {
 		return nil, err
 	}
 	if err := service.confirmDetail(
-		ctx, repository, authorization, summary, v3Read,
+		ctx, repository, authorization, summary, v3Read, runtime,
 	); err != nil {
 		return nil, err
 	}
 	return detail, nil
 }
 
-func (service *ServiceDirectoryService) catalogView() string {
-	if service != nil && service.v3 != nil {
+func (runtime serviceDirectoryRuntime) catalogView() string {
+	if runtime.backend == store.ServiceRuntimeV3 {
 		return serviceCatalogViewV3
 	}
 	return ""
 }
 
-func (service *ServiceDirectoryService) successorLimit() int {
-	if service != nil && service.v3 != nil {
+func (runtime serviceDirectoryRuntime) successorLimit() int {
+	if runtime.backend == store.ServiceRuntimeV3 {
 		return servicecatalogv3.MaxServiceSuccessors
 	}
 	return servicecatalog.MaxSuccessorEdges
+}
+
+func (runtime serviceDirectoryRuntime) selectorRevision() uint64 {
+	if runtime.selector == nil {
+		return 0
+	}
+	return runtime.selector.ControlRevision
+}
+
+func (runtime serviceDirectoryRuntime) matches(
+	catalogGeneration string,
+	catalogRevision uint64,
+	summary servicecatalog.RepositoryState,
+) bool {
+	if runtime.selector == nil {
+		return true
+	}
+	wantCatalog := runtime.selector.CatalogGenerationDigest
+	if runtime.backend == store.ServiceRuntimeV3 {
+		wantCatalog = runtime.selector.CatalogRootDigest
+	}
+	return wantCatalog != "" && catalogGeneration == wantCatalog &&
+		catalogRevision == runtime.selector.CatalogControlRevision &&
+		summary.Repository == runtime.selector.Repository &&
+		summary.CatalogGeneration == wantCatalog &&
+		summary.CatalogControlRevision == runtime.selector.CatalogControlRevision &&
+		summary.ControlRevision == runtime.selector.StateControlRevision &&
+		summary.SummaryDigest == runtime.selector.StateSummaryDigest
+}
+
+func (service *ServiceDirectoryService) runtime(
+	ctx context.Context,
+	repository string,
+) (serviceDirectoryRuntime, error) {
+	if service.selectors == nil {
+		if service.v3 != nil && service.states == nil {
+			return serviceDirectoryRuntime{backend: store.ServiceRuntimeV3}, nil
+		}
+		return serviceDirectoryRuntime{backend: store.ServiceRuntimeV2}, nil
+	}
+	selector, err := service.selectors.GetServiceRuntimeSelector(ctx, repository)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return serviceDirectoryRuntime{backend: store.ServiceRuntimeV2}, nil
+		}
+		if errors.Is(err, store.ErrInvalidServiceRuntimeSelector) ||
+			errors.Is(err, store.ErrConflict) {
+			return serviceDirectoryRuntime{}, huma.Error409Conflict(
+				"service runtime authority unavailable; retry",
+			)
+		}
+		return serviceDirectoryRuntime{}, huma.Error500InternalServerError(
+			"read service runtime selector", err,
+		)
+	}
+	if selector.Repository != repository ||
+		selector.Backend == store.ServiceRuntimeV2 && service.states == nil ||
+		selector.Backend == store.ServiceRuntimeV3 && service.v3 == nil ||
+		selector.Backend != store.ServiceRuntimeV2 && selector.Backend != store.ServiceRuntimeV3 {
+		return serviceDirectoryRuntime{}, huma.Error409Conflict(
+			"service runtime authority unavailable; retry",
+		)
+	}
+	return serviceDirectoryRuntime{backend: selector.Backend, selector: &selector}, nil
 }
 
 func (service *ServiceDirectoryService) authorize(
@@ -480,11 +603,12 @@ func (service *ServiceDirectoryService) confirmPage(
 	authorization VisibilityContext,
 	summary servicecatalog.RepositoryState,
 	page *store.ServiceStateV3Page,
+	runtime serviceDirectoryRuntime,
 ) error {
 	if err := service.confirmAuthorization(ctx, repository, authorization); err != nil {
 		return err
 	}
-	if service.v3 != nil {
+	if runtime.backend == store.ServiceRuntimeV3 {
 		if err := service.v3.ConfirmPage(ctx, page); err != nil {
 			return serviceDirectoryReadError("confirm service inventory", err)
 		}
@@ -495,6 +619,19 @@ func (service *ServiceDirectoryService) confirmPage(
 	); err != nil {
 		return serviceDirectoryReadError("confirm service inventory", err)
 	}
+	if runtime.selector != nil {
+		if err := service.selectors.ConfirmServiceRuntimeSelector(
+			ctx, *runtime.selector,
+		); err != nil {
+			return serviceDirectoryReadError("confirm service runtime selector", err)
+		}
+	} else if service.selectors != nil {
+		if err := store.ConfirmServiceRuntimeSelectorAbsent(
+			ctx, service.selectors, repository.Name,
+		); err != nil {
+			return serviceDirectoryReadError("confirm absent service runtime selector", err)
+		}
+	}
 	return nil
 }
 
@@ -504,11 +641,12 @@ func (service *ServiceDirectoryService) confirmDetail(
 	authorization VisibilityContext,
 	summary servicecatalog.RepositoryState,
 	read *store.ServiceStateV3Read,
+	runtime serviceDirectoryRuntime,
 ) error {
 	if err := service.confirmAuthorization(ctx, repository, authorization); err != nil {
 		return err
 	}
-	if service.v3 != nil {
+	if runtime.backend == store.ServiceRuntimeV3 {
 		if err := service.v3.Confirm(ctx, read); err != nil {
 			return serviceDirectoryReadError("confirm service detail", err)
 		}
@@ -518,6 +656,19 @@ func (service *ServiceDirectoryService) confirmDetail(
 		ctx, repository.Name, summary,
 	); err != nil {
 		return serviceDirectoryReadError("confirm service detail", err)
+	}
+	if runtime.selector != nil {
+		if err := service.selectors.ConfirmServiceRuntimeSelector(
+			ctx, *runtime.selector,
+		); err != nil {
+			return serviceDirectoryReadError("confirm service runtime selector", err)
+		}
+	} else if service.selectors != nil {
+		if err := store.ConfirmServiceRuntimeSelectorAbsent(
+			ctx, service.selectors, repository.Name,
+		); err != nil {
+			return serviceDirectoryReadError("confirm absent service runtime selector", err)
+		}
 	}
 	return nil
 }
@@ -732,7 +883,7 @@ func validateServiceCursorSnapshot(
 func (service *ServiceDirectoryService) decodeServiceInventoryCursor(
 	encoded, queryDigest string,
 	authorization VisibilityContext,
-	catalogView string,
+	runtime serviceDirectoryRuntime,
 ) (*serviceInventoryCursor, error) {
 	if encoded == "" {
 		return nil, nil
@@ -767,11 +918,17 @@ func (service *ServiceDirectoryService) decodeServiceInventoryCursor(
 	}
 	if cursor.Schema != serviceCursorSchema || cursor.Order != serviceInventoryOrder ||
 		cursor.AfterServiceKey == "" || cursor.AfterIncarnation == 0 ||
+		(cursor.RuntimeBackend != store.ServiceRuntimeV2 &&
+			cursor.RuntimeBackend != store.ServiceRuntimeV3) ||
+		(cursor.CatalogView == serviceCatalogViewV3) !=
+			(cursor.RuntimeBackend == store.ServiceRuntimeV3) ||
 		(cursor.CatalogView == serviceCatalogViewV3) != (cursor.MemberRangeDigest != "") {
 		return nil, huma.Error400BadRequest("service inventory cursor is invalid")
 	}
 	if cursor.QueryDigest != queryDigest || cursor.Authorization != authorization ||
-		cursor.CatalogView != catalogView {
+		cursor.CatalogView != runtime.catalogView() ||
+		cursor.RuntimeBackend != runtime.backend ||
+		cursor.RuntimeSelectorRevision != runtime.selectorRevision() {
 		return nil, huma.Error409Conflict("service inventory cursor is no longer valid")
 	}
 	return &cursor, nil

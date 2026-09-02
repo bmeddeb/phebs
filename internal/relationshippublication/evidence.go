@@ -59,16 +59,44 @@ func (publication *Publication) OpenEvidenceReader(
 		return nil, fmt.Errorf("%w: evidence reader", ErrInvalid)
 	}
 	authority := publication.rootValue.Authority
+	return openEvidenceReader(
+		ctx, dataDir, authority.Repository,
+		authority.RPCGenerationDigest, authority.RPCRootDigest,
+		authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+	)
+}
+
+// OpenEvidenceReader validates each exact v3-bound component root once for a
+// bounded response binding. Page reads still validate selected members.
+func (publication *PublicationV3) OpenEvidenceReader(
+	ctx context.Context,
+	dataDir string,
+) (*EvidenceReader, error) {
+	if publication == nil || !filepath.IsAbs(dataDir) {
+		return nil, fmt.Errorf("%w: v3 evidence reader", ErrInvalid)
+	}
+	authority := publication.rootValue.Authority
+	return openEvidenceReader(
+		ctx, dataDir, authority.Repository,
+		authority.RPCGenerationDigest, authority.RPCRootDigest,
+		authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+	)
+}
+
+func openEvidenceReader(
+	ctx context.Context,
+	dataDir, repository, rpcGeneration, rpcRoot, kafkaGeneration, kafkaRoot string,
+) (*EvidenceReader, error) {
 	rpc, err := rpccallerposting.OpenGeneration(
 		ctx, filepath.Join(dataDir, "relationship-rpc-postings"),
-		authority.Repository, authority.RPCGenerationDigest, authority.RPCRootDigest,
+		repository, rpcGeneration, rpcRoot,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("open relationship RPC evidence: %w", err)
 	}
 	kafka, err := kafkatopicposting.OpenGeneration(
 		ctx, filepath.Join(dataDir, "relationship-kafka-postings"),
-		authority.Repository, authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+		repository, kafkaGeneration, kafkaRoot,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("open relationship Kafka evidence: %w", err)
@@ -89,11 +117,44 @@ func (publication *Publication) ReadEvidence(
 		return Evidence{}, fmt.Errorf("%w: evidence lookup", ErrInvalid)
 	}
 	authority := publication.rootValue.Authority
+	return readEvidence(
+		ctx, dataDir, authority.Repository,
+		authority.RPCGenerationDigest, authority.RPCRootDigest,
+		authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+		projection,
+	)
+}
+
+// ReadEvidence resolves a projection through the exact component generation
+// bound into a v3 relationship root.
+func (publication *PublicationV3) ReadEvidence(
+	ctx context.Context,
+	dataDir string,
+	projection Projection,
+) (Evidence, error) {
+	if publication == nil || validateProjection(projection) != nil ||
+		projection.Kind == "" || !filepath.IsAbs(dataDir) {
+		return Evidence{}, fmt.Errorf("%w: v3 evidence lookup", ErrInvalid)
+	}
+	authority := publication.rootValue.Authority
+	return readEvidence(
+		ctx, dataDir, authority.Repository,
+		authority.RPCGenerationDigest, authority.RPCRootDigest,
+		authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+		projection,
+	)
+}
+
+func readEvidence(
+	ctx context.Context,
+	dataDir, repository, rpcGeneration, rpcRoot, kafkaGeneration, kafkaRoot string,
+	projection Projection,
+) (Evidence, error) {
 	switch projection.Kind {
 	case "rpc":
 		component, err := rpccallerposting.OpenGeneration(
 			ctx, filepath.Join(dataDir, "relationship-rpc-postings"),
-			authority.Repository, authority.RPCGenerationDigest, authority.RPCRootDigest,
+			repository, rpcGeneration, rpcRoot,
 		)
 		if err != nil {
 			return Evidence{}, fmt.Errorf("open relationship RPC evidence: %w", err)
@@ -116,7 +177,7 @@ func (publication *Publication) ReadEvidence(
 	case "kafka":
 		component, err := kafkatopicposting.OpenGeneration(
 			ctx, filepath.Join(dataDir, "relationship-kafka-postings"),
-			authority.Repository, authority.KafkaGenerationDigest, authority.KafkaRootDigest,
+			repository, kafkaGeneration, kafkaRoot,
 		)
 		if err != nil {
 			return Evidence{}, fmt.Errorf("open relationship Kafka evidence: %w", err)

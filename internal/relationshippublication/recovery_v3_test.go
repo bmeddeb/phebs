@@ -589,11 +589,20 @@ func runRecoveryServiceStateV3Plan(
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := catalogStore.ProcessServiceStateV3Chunk(t.Context(), *chunk)
+		_, err = catalogStore.ProcessServiceStateV3Chunk(t.Context(), *chunk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if result.Settled {
+		if err := catalogStore.CompleteGenerationChunk(t.Context(), *chunk); err != nil {
+			t.Fatal(err)
+		}
+		settled, err := catalogStore.GetGenerationSchedule(
+			t.Context(), schedule.Repository, schedule.Stage,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if settled.Status == store.GenerationScheduleSettled {
 			return
 		}
 	}

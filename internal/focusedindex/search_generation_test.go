@@ -161,6 +161,35 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 	}
 }
 
+func TestSearchGenerationPinsExcludeRetirement(t *testing.T) {
+	pins := &SearchGenerationPins{}
+	repository := "example.com/acme/runtime"
+	generation := "sha256:" + strings.Repeat("a", 64)
+	lease, err := pins.Acquire(repository, generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if release, admitted := pins.BeginRetire(repository, generation); admitted {
+		release()
+		t.Fatal("retirement admitted while generation was pinned")
+	}
+	lease.Release()
+	release, admitted := pins.BeginRetire(repository, generation)
+	if !admitted {
+		t.Fatal("retirement refused after lease release")
+	}
+	if lease, err := pins.Acquire(repository, generation); err == nil {
+		lease.Release()
+		t.Fatal("lease admitted during retirement")
+	}
+	release()
+	if lease, err := pins.Acquire(repository, generation); err != nil {
+		t.Fatalf("lease after retirement = %v", err)
+	} else {
+		lease.Release()
+	}
+}
+
 func TestSearchGenerationRecoveryRestoresLifecycleRootFromFlatPublication(t *testing.T) {
 	repositoryDir := t.TempDir()
 	git(t, repositoryDir, "init", "-b", "main")

@@ -303,7 +303,7 @@ func TestServiceDirectoryCursorBindsSnapshotAndIncarnation(t *testing.T) {
 		}, 1}),
 		catalogVisibilityContext(t.Context(), service.opts, []store.Repo{
 			fake.repositories[fake.publication.Repository],
-		}), service.catalogView(),
+		}), serviceDirectoryRuntime{backend: store.ServiceRuntimeV2},
 	)
 	if err != nil || decoded.AfterIncarnation == fake.entries[0].State.Incarnation {
 		t.Fatalf("cursor incarnation binding = %+v, err %v", decoded, err)

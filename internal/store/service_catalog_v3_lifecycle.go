@@ -168,6 +168,7 @@ func ensureServiceCatalogV3LifecycleMetadata(
 	tx *surrealdb.Transaction,
 	root servicecatalogv3.Root,
 	recordedAt time.Time,
+	readmitCollecting bool,
 ) (bool, error) {
 	wanted := serviceCatalogV3LifecycleWanted(root, recordedAt)
 	results, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
@@ -179,8 +180,46 @@ func ensureServiceCatalogV3LifecycleMetadata(
 	}
 	rows := firstDomainRows(results)
 	created := false
-	if len(rows) > 1 || len(rows) == 1 && !equalServiceCatalogV3Lifecycle(rows[0], wanted) {
+	if len(rows) > 1 {
 		return false, ErrConflict
+	}
+	if len(rows) == 1 && !equalServiceCatalogV3Lifecycle(rows[0], wanted) {
+		row := rows[0]
+		if !readmitCollecting || row.State != serviceCatalogV3Collecting ||
+			!validServiceCatalogV3LifecycleRecord(
+				row, root, serviceCatalogV3RootRec{RecordedAt: recordedAt},
+			) {
+			return false, ErrConflict
+		}
+		updated, updateErr := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
+			ctx, tx, `UPDATE $rid SET state = $historical, member_cursor = 0,
+				tombstoned_at = NONE
+				WHERE root_digest = $root_digest AND repository = $repository
+					AND authority_version_id = $authority_version_id
+					AND state = $collecting AND member_cursor = $member_cursor
+					AND member_count = $member_count AND logical_bytes = $logical_bytes
+					AND root_bytes = $root_bytes AND member_bytes = $member_bytes
+				RETURN AFTER`, map[string]any{
+				"rid":         serviceCatalogV3LifecycleID(root.Digest),
+				"historical":  serviceCatalogV3Historical,
+				"collecting":  serviceCatalogV3Collecting,
+				"root_digest": wanted.RootDigest, "repository": wanted.Repository,
+				"authority_version_id": wanted.AuthorityVersion,
+				"member_cursor":        row.MemberCursor, "member_count": wanted.MemberCount,
+				"logical_bytes": wanted.LogicalBytes, "root_bytes": wanted.RootBytes,
+				"member_bytes": wanted.MemberBytes,
+			},
+		)
+		if updateErr != nil {
+			return false, updateErr
+		}
+		updatedRows := firstDomainRows(updated)
+		if len(updatedRows) != 1 || !equalServiceCatalogV3Lifecycle(
+			updatedRows[0], wanted,
+		) {
+			return false, ErrConflict
+		}
+		created = true
 	}
 	if len(rows) == 0 {
 		createdRows, createErr := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
@@ -567,7 +606,7 @@ SELECT root_digest FROM service_catalog_v3_root
 				return report, beginErr
 			}
 			created, repairErr := ensureServiceCatalogV3LifecycleMetadata(
-				ctx, tx, generation.Root, rootRecord.RecordedAt,
+				ctx, tx, generation.Root, rootRecord.RecordedAt, false,
 			)
 			if repairErr == nil {
 				repairErr = tx.Commit(ctx)
@@ -1021,7 +1060,7 @@ SELECT * FROM service_catalog_v3_candidate
 		}
 		candidateRoots[candidate.Repository] = candidate.RootDigest
 	}
-	const maxStateReferences = servicecatalogv3.MaxTotalServices*2 + 1
+	const maxStateReferences = servicecatalogv3.MaxTotalServices*2 + MaxServiceRuntimeSelectors
 	referenceResults, err := surrealdb.Query[[]serviceCatalogV3StateReferenceRec](ctx, s.db, `
 SELECT * FROM service_catalog_v3_state_reference
 	ORDER BY id LIMIT $limit`, map[string]any{"limit": maxStateReferences + 1})

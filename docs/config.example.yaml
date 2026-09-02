@@ -209,7 +209,7 @@ analysis_units: {}
 #       kind: scip
 #       path: services/payments/index.scip
 
-# Optional multi-service v2 catalog input (T33.2). The map key is the exact
+# Optional multi-service catalog input. The map key is the exact
 # repository name and selects one normalized JSON file; phebs never scans a
 # directory or invokes a build-system adapter to invent service authority.
 # Both kinds require an absolute, clean, non-symlink regular file. A committed
@@ -223,6 +223,13 @@ analysis_units: {}
 # removing a v2 entry therefore makes that v1 import current on reconciliation.
 # Each current catalog also reconciles independent service lifecycle rows;
 # a catalog/state crash gap is unavailable until the exact retry repairs it.
+# `runtime: v3` explicitly selects the segmented runtime only after its complete
+# catalog, state, search, and relationship target is reconciled. Omission (or
+# `runtime: v2`) preserves the v2 runtime; a dark v3 candidate never promotes
+# itself. Provisional protobuf or Thrift extraction must be enabled so the
+# required relationship target can be built. Once any durable selector exists,
+# keep at least one of those packs enabled so reverse and holding repair remain
+# live, including while the desired runtime is v2.
 service_catalogs: {}
 # service_catalogs:
 #   github.com/acme/monorepo:
@@ -230,6 +237,7 @@ service_catalogs: {}
 #     id: platform-catalog
 #     version: "2026-08-04.1"
 #     path: /etc/phebs/service-catalog.json
+#     runtime: v3 # v2 | v3; omitted defaults to v2
 
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must

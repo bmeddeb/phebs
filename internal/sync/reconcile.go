@@ -88,6 +88,13 @@ type CallerPublicationLifecycle interface {
 	RemoveRepository(context.Context, string) error
 }
 
+// ServiceRuntimeLifecycle retires one selected service runtime and releases
+// its process pins. ReconcileArtifacts already holds the shared mutation lock;
+// implementations must not try to reacquire it.
+type ServiceRuntimeLifecycle interface {
+	RetireRepository(context.Context, string) error
+}
+
 // ReconcileArtifacts audits repository rows, mirrors, and zoekt shards. It
 // always scrubs persisted URL userinfo and reclaims prior-process private
 // staging. Destructive orphan cleanup is gated by cleanupEnabled. Confirmed
@@ -107,6 +114,22 @@ func ReconcileArtifactsWithCallerLifecycle(
 	dataDir string,
 	cleanupEnabled bool,
 	callerLifecycle CallerPublicationLifecycle,
+) (ReconcileReport, error) {
+	return ReconcileArtifactsWithLifecycles(
+		ctx, st, dataDir, cleanupEnabled, callerLifecycle, nil,
+	)
+}
+
+// ReconcileArtifactsWithLifecycles additionally routes selected-runtime
+// retirement through the live controller so its process pins are released
+// only after durable selection authority is gone.
+func ReconcileArtifactsWithLifecycles(
+	ctx context.Context,
+	st store.Store,
+	dataDir string,
+	cleanupEnabled bool,
+	callerLifecycle CallerPublicationLifecycle,
+	runtimeLifecycle ServiceRuntimeLifecycle,
 ) (ReconcileReport, error) {
 	var report ReconcileReport
 	var errs []error
@@ -183,8 +206,9 @@ func ReconcileArtifactsWithCallerLifecycle(
 		if invalidNames[status.Name] {
 			continue // quarantined legacy collisions are never touched automatically
 		}
-		deleted, err := deleteRepoArtifactsWithCallerLifecycleAndLocks(
-			ctx, st, dataDir, status.Name, callerLifecycle, repositoryLocks,
+		deleted, err := deleteRepoArtifactsWithLifecyclesAndLocks(
+			ctx, st, dataDir, status.Name, callerLifecycle, runtimeLifecycle,
+			repositoryLocks,
 		)
 		if err != nil {
 			errs = append(errs, err)
@@ -559,6 +583,19 @@ func deleteRepoArtifactsWithCallerLifecycleAndLocks(
 	callerLifecycle CallerPublicationLifecycle,
 	repositoryLocks *reconcileRepositoryLocks,
 ) (bool, error) {
+	return deleteRepoArtifactsWithLifecyclesAndLocks(
+		ctx, st, dataDir, name, callerLifecycle, nil, repositoryLocks,
+	)
+}
+
+func deleteRepoArtifactsWithLifecyclesAndLocks(
+	ctx context.Context,
+	st store.Store,
+	dataDir, name string,
+	callerLifecycle CallerPublicationLifecycle,
+	runtimeLifecycle ServiceRuntimeLifecycle,
+	repositoryLocks *reconcileRepositoryLocks,
+) (bool, error) {
 	dir, err := SafeRepoDir(dataDir, name)
 	if err != nil {
 		return false, fmt.Errorf("refuse cleanup of %q: %w", name, err)
@@ -621,6 +658,16 @@ func deleteRepoArtifactsWithCallerLifecycleAndLocks(
 	destructiveFailure := func(cause error) (bool, error) {
 		return false, cause
 	}
+	if err := retireServiceRuntimeSelection(
+		ctx, st, runtimeLifecycle, name,
+	); err != nil {
+		// The transaction may have committed before an interrupted confirmation.
+		// Keep authorization disabled instead of reactivating a repository whose
+		// selected authority may already be retired.
+		return destructiveFailure(fmt.Errorf(
+			"cleanup %s selected service runtime: %w", name, err,
+		))
+	}
 	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
 		return destructiveFailure(fmt.Errorf("cleanup %s shards: %w", name, err))
 	}
@@ -670,6 +717,22 @@ func deleteRepoArtifactsWithCallerLifecycleAndLocks(
 		}
 	}
 	return true, nil
+}
+
+func retireServiceRuntimeSelection(
+	ctx context.Context,
+	st store.Store,
+	runtimeLifecycle ServiceRuntimeLifecycle,
+	repository string,
+) error {
+	if runtimeLifecycle != nil {
+		return runtimeLifecycle.RetireRepository(ctx, repository)
+	}
+	retirer, ok := st.(store.ServiceRuntimeSelectorRetirer)
+	if !ok {
+		return errors.New("service runtime selector retirement is unavailable")
+	}
+	return retirer.RetireServiceRuntimeSelectorForRepositoryDeletion(ctx, repository)
 }
 
 func planRepoShardsByMetadata(

@@ -10795,3 +10795,109 @@ the inherited ten-minute package alarm in an unrelated Workbench schema test,
 and no test Surreal process survives. Independent review reports zero critical,
 high, medium, or low findings. T41.9 remains the sole v3 runtime-selector owner
 and follows this repair's integration.
+
+**T41.9 ✅ · Atomic v3 runtime registration and reverse transition**
+*(2026-09-01; high)* — `service_catalogs.<repository>.runtime` is closed to
+`v2` and `v3`; omission preserves the compatibility v2 path, and v3 requires
+one configured protobuf or Thrift relationship pack. One schema-full durable
+selector is the sole product linearization point. It binds the exact catalog
+generation/root and control revision, state summary digest/revision, search
+generation, relationship generation/root, monotonic selector revision, digest,
+and transition time. The first selector CAS atomically raises an irreversible
+store-compatibility floor, so pre-T41.9 binaries refuse the directory even
+after a reverse transition or repository removal. A complete dark candidate
+never selects itself.
+
+The process controller takes the existing shared mutation/backup lock and one
+bounded global transition mutex, acquires search and relationship generation
+leases before validating, strict-opens the selected catalog, state, search,
+relationship, resolver, RPC, and Kafka authority, and changes visibility only
+through the selector CAS. A lost commit response gets one bounded detached
+exact-selector read; if that read is unavailable, both possible filesystem
+targets remain pinned until exact reconciliation. V3 activation builds behind
+selected v2. A changed selected v3 input and every selected-v3 state chunk
+first build and select a complete v2 target; explicit v2 proves that its exact
+catalog can also build the v3 holding target before selection. Crash recovery
+can reconstruct a missing holding generation from the selector's immutable
+historical v2 bytes. An exact holding root interrupted during lifecycle
+collection is transactionally readmitted to historical state with its missing
+immutable members and edges recreated before its candidate pointer moves.
+The state worker commits only its idempotent plan/data mutation; the generation
+scheduler remains the sole lease-completion owner. A terminal chunk stays
+retryable until the controller reaches the exact selector or records a durable
+reconcile, activation, or relationship continuation. Plain not-ready authority
+defers that lease without consuming an attempt, and replay applies zero rows.
+HTTP, streamed HTTP, and MCP service search, directory, and relationship reads
+authorize first, use exactly the selected backend, retain exact filesystem
+leases, repeat authority and authorization fences, and confirm the selector or
+its continued absence last. There is no cross-backend fallback.
+
+Startup validates and process-pins every selector before lifecycle begins. Any
+durable selector requires an enabled relationship-capable extraction runtime,
+including while desired configuration is v2.
+
+Backup repeats that validation under its exclusive lock and retains selected
+historical search, relationship, resolver, RPC, and Kafka generations. Restore
+syncs every extracted relationship file and the complete staged directory tree
+before install, clears restartable controls and derived pointers, and
+strict-validates the selected targets after recovery. Historical-only selected
+relationship generations validate without a synthesized mutable pointer;
+every present pointer remains mandatory and strict. The manifest explicitly
+names restartable v3 relationship-schedule bindings as excluded derived state.
+Search retirement now uses the existing reserve/retire handshake, closing the
+validation-to-rename race. Repository deletion atomically removes its selector and current v3
+reference, supersedes active v3 state and shadow-relationship schedules and
+plans, and removes their current projections while leaving precious state and
+immutable lifecycle rows owned. A same-name re-add probes bounded higher repair
+identities instead of reviving retained work, so an old claimed chunk remains
+stale. Orphan cleanup removes only selectors for repositories already behind
+the deleting fence and never lowers the compatibility floor.
+
+Ordinary whole-repository search adds no selector work. An implicit-v2 service
+request adds two selector-absence point reads; an explicit v2/v3 request adds
+one initial selector read and one final exact confirmation. Existing catalog,
+state, member, shard, authorization, and relationship work stays bounded.
+Startup adds one marker point read, an at-most-4,096-selector scan, one strict
+open of each selected catalog/state/search/composite and resolver/RPC/Kafka
+root, and one process lease per selected search and relationship generation.
+A selector-commit ambiguity adds one detached confirmation point read and at
+most one prospective search/relationship lease per repository until resolved;
+the startup pack check reuses the selector scan. Exact collecting-root
+readmission performs at most 64 member/edge point reads and conditional creates
+inside the existing publication transaction.
+
+A transition performs one bounded target build/validation, one selector CAS,
+and one confirmation while holding the existing filesystem lock. Each v3 state
+chunk takes that lock; only the first chunk reached under selected v3 pays a
+complete reverse transition. Successful state chunks now use one scheduler
+completion transaction instead of a handler completion plus scheduler
+reconciliation. A failed terminal handoff repeats only the bounded transition
+step and zero-write idempotent chunk check at the existing deferral/retry
+cadence. Archive verification full-validates at most 64 relationship
+generations per repository plus their bounded component roots. An explicit
+selected service query now runs one final full artifact-fingerprint pass, not
+both the mutable-current and immutable-selected passes. Search lifecycle adds
+one constant in-memory retirement reservation. Restore adds one file sync per extracted entry and one
+bottom-up directory sync pass. Repository deletion adds two bounded stage
+updates plus one shadow-relationship stage update, one running-plan update,
+and one current-projection delete; unchanged same-name re-add makes at most nine
+deterministic enqueue probes while repair identities zero through eight remain
+retained.
+
+Focused selector, handoff, archive/restore, deletion/re-add, recovery, API,
+search, and lifecycle tests pass. The serial full store package passes in
+1153.943 seconds normal and 1216.544 seconds under the race detector. Every
+non-store production package passes normally, and the complete changed plus
+prescribed non-store race set passes serially. Repository-wide compile-only,
+vet, module verification, glossary, whitespace, and repository-pinned
+golangci-lint 2.12.2 (`run ./...`) pass. The complete repository normal run
+retains four failures reproduced unchanged in a detached exact `origin/main`
+worktree: the UI-owned missing `service-boundary.png` documentation fixture,
+the T21.1 glossary contract fossil, the T30.6m allocation fossil, and the T32.4
+receipt-input fossil. Fresh independent review reports zero critical, high,
+medium, or low findings and no missing acceptance-criteria test.
+
+No new goroutine, polling cadence, OS lock primitive, child, network call,
+Git/source/corpus/shard read, production cap, evidence release, SLO, topology,
+migration-completion, decommission, ceremony, or Epic-42 claim is added.
+T41.10 follows integration.

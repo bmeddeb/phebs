@@ -54,6 +54,7 @@ var derivedExclusions = []string{
 	"candidates/ (content-addressed candidate manifests and partition rows)",
 	"observation-plans/ (restartable source-partition planning state)",
 	"relationship-schedules/ (restartable relationship scheduler bindings)",
+	"relationship-v3-schedules/ (restartable v3 relationship scheduler bindings)",
 	"invalid, in-flight, unreferenced, and non-current relationship component publications",
 	"caller-leaves/ invalid, incomplete, marker-covered, and unreferenced derived caller publications",
 	"temporary extraction and build caches",
@@ -249,6 +250,17 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		_ = validationStore.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("validate live catalog v3 precious inventory: %w", err)
 	}
+	selectors, err := validationStore.ListServiceRuntimeSelectors(ctx)
+	if err != nil {
+		_ = validationStore.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("list live service runtime selectors: %w", err)
+	}
+	if err := validateServiceRuntimeSelections(
+		ctx, dataDir, validationStore, selectors,
+	); err != nil {
+		_ = validationStore.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("validate live service runtime selections: %w", err)
+	}
 	if err := validationStore.Close(context.WithoutCancel(ctx)); err != nil {
 		return Manifest{}, fmt.Errorf("close catalog v3 validation store: %w", err)
 	}
@@ -275,9 +287,29 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	searchSelections := make(
+		[]focusedindex.ArchiveSearchGeneration, 0, len(selectors),
+	)
+	relationshipSelections := make(
+		[]relationshippublication.ArchiveRelationshipGeneration, 0, len(selectors),
+	)
+	for _, selector := range selectors {
+		searchSelections = append(searchSelections, focusedindex.ArchiveSearchGeneration{
+			Repository: selector.Repository, GenerationDigest: selector.SearchGenerationDigest,
+		})
+		relationshipSelections = append(
+			relationshipSelections,
+			relationshippublication.ArchiveRelationshipGeneration{
+				Repository:       selector.Repository,
+				GenerationDigest: selector.RelationshipGenerationDigest,
+				RootDigest:       selector.RelationshipRootDigest,
+				V3:               selector.Backend == store.ServiceRuntimeV3,
+			},
+		)
+	}
 	focusedPath := filepath.Join(stage, FocusedIndexName)
-	focusedReport, err := focusedindex.CreateArchiveWithReportContext(
-		ctx, filepath.Join(dataDir, "index"), focusedPath,
+	focusedReport, err := focusedindex.CreateArchiveWithSelections(
+		ctx, filepath.Join(dataDir, "index"), focusedPath, searchSelections,
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("archive focused index publications: %w", err)
@@ -401,8 +433,8 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		return Manifest{}, err
 	}
 	relationshipPath := filepath.Join(stage, RelationshipPublicationName)
-	relationshipReport, err := relationshippublication.CreateArchive(
-		ctx, dataDir, relationshipPath,
+	relationshipReport, err := relationshippublication.CreateArchiveWithSelections(
+		ctx, dataDir, relationshipPath, relationshipSelections,
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("archive relationship publications: %w", err)
@@ -654,6 +686,10 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		return Manifest{}, fmt.Errorf(
 			"clear derived resolver catalog publications after restore: %w", err,
 		)
+	}
+	if err := ValidateServiceRuntimeSelections(ctx, target, st); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf("validate restored service runtime selections: %w", err)
 	}
 	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
 		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)

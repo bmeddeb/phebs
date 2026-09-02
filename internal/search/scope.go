@@ -79,9 +79,13 @@ type v3ScopedSearcher struct {
 	reader   *store.ServiceStateV3Reader
 }
 
-// NewV3ScopedSearcher binds the explicit runtime-dark v3 point/page reader to
-// the shared transport boundary. Production constructs no such adapter; T41.9
-// owns selecting it atomically with the remaining v3 consumers.
+type runtimeScopedSearcher struct {
+	searcher *Searcher
+	reader   *store.ServiceStateV3Reader
+}
+
+// NewV3ScopedSearcher binds the fixed-backend v3 point/page reader used by
+// tests and embeddings. Production constructs NewRuntimeScopedSearcher.
 func NewV3ScopedSearcher(
 	searcher *Searcher,
 	reader *store.ServiceStateV3Reader,
@@ -115,6 +119,52 @@ func (scoped *v3ScopedSearcher) StreamScoped(
 
 var _ ScopedSearcher = (*v3ScopedSearcher)(nil)
 
+// NewRuntimeScopedSearcher constructs the production selector-aware search
+// boundary. All-code queries remain selector-free; service queries choose and
+// final-fence one repository-local runtime through SearchServiceSelected.
+func NewRuntimeScopedSearcher(
+	searcher *Searcher,
+	reader *store.ServiceStateV3Reader,
+) (ScopedSearcher, error) {
+	if searcher == nil || reader == nil || searcher.st == nil {
+		return nil, errors.New("runtime scoped search requires a searcher and state reader")
+	}
+	if _, ok := searcher.st.(servicequery.RuntimeSelectorStore); !ok {
+		return nil, errors.New("runtime scoped search requires a selector store")
+	}
+	return &runtimeScopedSearcher{searcher: searcher, reader: reader}, nil
+}
+
+func (scoped *runtimeScopedSearcher) SearchScoped(
+	ctx context.Context,
+	selector ScopeSelector,
+	expression string,
+	opts Options,
+) (*Result, error) {
+	return scoped.searcher.searchScoped(
+		ctx, selector, expression, opts,
+		func(
+			ctx context.Context, request ServiceRequest, opts Options,
+		) (*ServiceResult, error) {
+			return scoped.searcher.SearchServiceSelected(ctx, scoped.reader, request, opts)
+		},
+	)
+}
+
+func (scoped *runtimeScopedSearcher) StreamScoped(
+	ctx context.Context,
+	selector ScopeSelector,
+	expression string,
+	opts Options,
+	sink func(*Result),
+) (*Stats, *ScopeReceipt, error) {
+	return scoped.searcher.streamScoped(
+		ctx, selector, expression, opts, sink, scoped.SearchScoped,
+	)
+}
+
+var _ ScopedSearcher = (*runtimeScopedSearcher)(nil)
+
 // SearchScoped selects the ordinary All code reader or the exact v2 service
 // reader and attaches one closed receipt to the existing result wire shape.
 func (s *Searcher) SearchScoped(
@@ -126,9 +176,9 @@ func (s *Searcher) SearchScoped(
 	return s.searchScoped(ctx, selector, expression, opts, s.SearchService)
 }
 
-// SearchScopedV3 is the explicit runtime-dark product-parity seam for a
-// segmented service scope. It preserves the existing selector, authority, and
-// receipt schemas; ordinary SearchScoped remains v2-selected until T41.9.
+// SearchScopedV3 is the explicit segmented-service backend used behind the
+// runtime selector. It preserves the existing selector, authority, and receipt
+// schemas.
 func (s *Searcher) SearchScopedV3(
 	ctx context.Context,
 	reader *store.ServiceStateV3Reader,
@@ -206,9 +256,8 @@ func (s *Searcher) StreamScoped(
 	return s.streamScoped(ctx, selector, expression, opts, sink, s.SearchScoped)
 }
 
-// StreamScopedV3 is the runtime-dark SSE-equivalent of SearchScopedV3. Service
-// scope remains one exact bounded batch; All code retains ordinary progressive
-// streaming. Production StreamScoped remains v2-selected until T41.9.
+// StreamScopedV3 is the SSE-equivalent of SearchScopedV3. Service scope remains
+// one exact bounded batch; All code retains ordinary progressive streaming.
 func (s *Searcher) StreamScopedV3(
 	ctx context.Context,
 	reader *store.ServiceStateV3Reader,

@@ -121,17 +121,16 @@ Administrators can inspect the fixed 16-KiB-bounded
 `GET /api/lifecycle-status` or Settings projection; it copies in-memory
 aggregate state only and exposes no cursor, repository, generation, path,
 retained content, or raw error.
-The dark `catalog-v3-generations` owner is independently listed and reports
+The `catalog-v3-generations` owner is independently listed and reports
 only source-free scan/delete/backlog state plus exact retired logical bytes and
 physically deleted root/member bytes for its latest turn. These counters are
 zero for owners that do not publish those metric kinds. There is no v3
-retention configuration key and no valid dark candidate auto-promotes.
-V3 service-state reconcile and activation likewise have no configuration key
-or production worker: they are explicit store-only protocols until the later
-runtime-selector ticket. T41.7 hardens ordinary directory cursors with a
-process-local HMAC and adds only preconstructed, runtime-dark directory/search
-adapters for parity tests; no v3 runtime-selection key or capability is added,
-and T41.9 owns any production selection.
+retention configuration key and no valid candidate auto-promotes. T41.9
+registers v3 state workers and selector-aware directory/search adapters. V3
+work runs for an explicit `service_catalogs.<repository>.runtime: v3`
+transition and, after the irreversible selector floor exists, to maintain the
+complete holding target needed by a safe v2 transition. The candidate remains
+non-authoritative until the complete selector CAS.
 
 T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,
@@ -376,7 +375,39 @@ service_catalogs:
     id: platform-catalog
     version: "2026-08-04.1"
     path: /srv/phebs-catalogs/other-repo.json
+    runtime: v3
 ```
+
+`runtime` is closed to `v2` and `v3`; omission means `v2`. The `v3` value is
+the explicit operator opt-in for the segmented catalog/state/search/
+relationship runtime and requires provisional protobuf or Thrift extraction;
+without one of those relationship-capable packs, configuration validation
+refuses a requested v3 transition because no complete relationship target can
+be built. After the first selector commit, startup also refuses if all
+relationship-capable packs are disabled, including when YAML requests v2:
+reversal and later mutation still require the complete holding authority. A
+complete v3 candidate alone never changes product reads. Phebs keeps serving
+the selected v2 authority while it builds and verifies every v3 target, then
+changes all service-aware consumers at one durable selector CAS. Removing
+`runtime: v3` performs the inverse operation:
+v3 remains selected until a complete v2 target is rebuilt and verified, so a
+missing or stale reverse target refuses instead of falling back or moving only
+one pointer. Once the compatibility floor exists, an explicit v2 target is
+accepted only when its immutable catalog can also reconstruct the holding v3
+authority needed for a later safe mutation; a v2-valid shape outside the v3
+envelope refuses before the selector changes.
+
+Each selected runtime records a monotonic repository-local revision and the
+exact catalog, state summary, search generation, and relationship root. A
+restart accepts only a selector whose complete target still validates; a
+corrupt or incomplete selected target stops startup before HTTP or MCP serves.
+In-flight reads final-confirm the same selector revision after their ordinary
+authorization and authority fences; compatibility-mode v2 reads final-confirm
+that the selector is still absent. Once a selector has been written, the
+store raises an irreversible compatibility floor so a pre-T41.9 binary refuses
+that data directory rather than ignoring the selection. Backup and restore
+carry and revalidate the same selector; neither operation changes the evidence
+release posture.
 
 A `committed` catalog's JSON uses the repository's exact indexed HEAD commit
 as `authority.version`; configuration omits `version` because the indexed

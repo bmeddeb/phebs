@@ -87,6 +87,12 @@ connections:
 	if err != nil || indexedBefore.IndexedCommitHash == "" {
 		t.Fatalf("initial indexed repo = %+v, %v", indexedBefore, err)
 	}
+	selectedSearchRoot, err := focusedindex.ReadSearchGenerationRoot(
+		filepath.Join(dataDir, "index"), names[0],
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	serviceCatalogBeforeRestore := recoveryServiceCatalogPublication(
 		t, names[0], indexedBefore.IndexedCommitHash,
 		filepath.Join(root, "service-catalog.json"),
@@ -123,7 +129,7 @@ connections:
 	}
 	runRecoveryServiceStateV3Plan(t, ctx, st, serviceStateV3Reconcile)
 	serviceStateV3Activation, err := st.BeginServiceStateV3Activation(
-		ctx, names[0], "sha256:"+strings.Repeat("9", 64),
+		ctx, names[0], selectedSearchRoot.Current.GenerationDigest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -144,9 +150,84 @@ connections:
 		openedCatalogV3BeforeRestore.Generation, serviceStatesV3BeforeRestore,
 		*serviceStateV3SummaryBeforeRestore, st,
 	)
-	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
+	catalogV3Pointer, err := st.GetServiceCatalogV3CandidatePointer(ctx, names[0])
 	if err != nil {
 		t.Fatal(err)
+	}
+	selectedRuntimeBeforeRestore, err := st.SelectServiceRuntimeV3(
+		ctx, store.ServiceRuntimeSelectionRequest{
+			Repository: names[0],
+			Target: store.ServiceRuntimeTarget{
+				CatalogRootDigest:            catalogV3Pointer.RootDigest,
+				CatalogControlRevision:       catalogV3Pointer.ControlRevision,
+				StateControlRevision:         serviceStateV3SummaryBeforeRestore.ControlRevision,
+				StateSummaryDigest:           serviceStateV3SummaryBeforeRestore.SummaryDigest,
+				SearchGenerationDigest:       selectedSearchRoot.Current.GenerationDigest,
+				RelationshipGenerationDigest: relationshipV3BeforeRestore.GenerationDigest,
+				RelationshipRootDigest:       relationshipV3BeforeRestore.Digest,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("select pre-backup v3 runtime: %v", err)
+	}
+	repositorySum := sha256.Sum256([]byte(names[0]))
+	repositoryKey := hex.EncodeToString(repositorySum[:])
+	selectedRelationshipAuthority := relationshipV3BeforeRestore.Authority
+	for _, component := range []struct {
+		name string
+		path string
+	}{
+		{
+			name: "resolver",
+			path: filepath.Join(
+				dataDir, "relationship-resolver-namespaces", "resolver-namespaces",
+				repositoryKey, "generation-"+strings.TrimPrefix(
+					selectedRelationshipAuthority.ResolverGenerationDigest, "sha256:",
+				), "root.json",
+			),
+		},
+		{
+			name: "RPC",
+			path: filepath.Join(
+				dataDir, "relationship-rpc-postings", "rpc-caller-postings",
+				repositoryKey, strings.TrimPrefix(
+					selectedRelationshipAuthority.RPCGenerationDigest, "sha256:",
+				), "root.json",
+			),
+		},
+		{
+			name: "Kafka",
+			path: filepath.Join(
+				dataDir, "relationship-kafka-postings", "kafka-topic-postings",
+				repositoryKey, strings.TrimPrefix(
+					selectedRelationshipAuthority.KafkaGenerationDigest, "sha256:",
+				), "root.json",
+			),
+		},
+	} {
+		rootBytes, readErr := os.ReadFile(component.path)
+		if readErr != nil {
+			t.Fatalf("read selected %s component root: %v", component.name, readErr)
+		}
+		if writeErr := os.WriteFile(component.path, []byte("corrupt\n"), 0o600); writeErr != nil {
+			t.Fatalf("corrupt selected %s component root: %v", component.name, writeErr)
+		}
+		validationErr := recovery.ValidateServiceRuntimeSelections(ctx, dataDir, st)
+		if validationErr == nil || !strings.Contains(validationErr.Error(), component.name) {
+			t.Fatalf(
+				"selected %s component corruption validation = %v",
+				component.name, validationErr,
+			)
+		}
+		if writeErr := os.WriteFile(component.path, rootBytes, 0o600); writeErr != nil {
+			t.Fatalf("restore selected %s component root: %v", component.name, writeErr)
+		}
+		if validationErr := recovery.ValidateServiceRuntimeSelections(
+			ctx, dataDir, st,
+		); validationErr != nil {
+			t.Fatalf("restored selected %s component validation: %v", component.name, validationErr)
+		}
 	}
 	if err := st.ReconcileServiceStates(ctx, serviceCatalogBeforeRestore); err != nil {
 		t.Fatalf("reconcile pre-backup service state: %v", err)
@@ -485,6 +566,52 @@ connections:
 	); err != nil {
 		t.Fatalf("persist pre-backup lifecycle cursor: %v", err)
 	}
+	if err := os.WriteFile(
+		filepath.Join(origin, "main.go"),
+		[]byte("package main\n\nfunc RecoveryNeedleAdvanced() {}\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitArgs := []string{
+		"-c", "user.name=Recovery Test", "-c", "user.email=recovery@example.test",
+		"-C", origin,
+	}
+	for _, args := range [][]string{{"add", "main.go"}, {"commit", "-m", "advance recovery fixture"}} {
+		if output, err := exec.CommandContext(ctx, "git", append(gitArgs, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, output)
+		}
+	}
+	if _, err := phebssync.SyncConnection(ctx, st, dataDir, cfg.Connections[0], nil); err != nil {
+		t.Fatalf("advance pre-backup sync: %v", err)
+	}
+	if err := (&indexer.Indexer{DataDir: dataDir, Bin: bin, Store: st}).Index(
+		ctx, store.Repo{Name: names[0]}, false,
+	); err != nil {
+		t.Fatalf("advance pre-backup index: %v", err)
+	}
+	indexedBefore, err = st.GetRepo(ctx, names[0])
+	if err != nil || indexedBefore.IndexedCommitHash == selectedSearchRoot.Current.Revisions[0].Commit {
+		t.Fatalf("advanced indexed repo = %+v, %v", indexedBefore, err)
+	}
+	currentSearchRoot, err := focusedindex.ReadSearchGenerationRoot(
+		filepath.Join(dataDir, "index"), names[0],
+	)
+	if err != nil || currentSearchRoot.Current.GenerationDigest == selectedRuntimeBeforeRestore.SearchGenerationDigest {
+		t.Fatalf("advanced search root = %+v, %v", currentSearchRoot, err)
+	}
+	relationshipV3CurrentBeforeRestore := publishRecoveryRelationshipV3(
+		t, ctx, dataDir, indexedBefore.IndexedCommitHash,
+		openedCatalogV3BeforeRestore.Generation, serviceStatesV3BeforeRestore,
+		*serviceStateV3SummaryBeforeRestore, st,
+	)
+	if relationshipV3CurrentBeforeRestore.GenerationDigest ==
+		selectedRuntimeBeforeRestore.RelationshipGenerationDigest {
+		t.Fatal("relationship v3 current generation did not advance")
+	}
+	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -515,6 +642,7 @@ connections:
 	}
 	exclusions := strings.Join(manifest.DerivedExclusions, "\n")
 	if !strings.Contains(exclusions, "caller-leaves/ invalid") ||
+		!strings.Contains(exclusions, "relationship-v3-schedules/ (restartable") ||
 		strings.Contains(exclusions, "caller-leaves/ (derived direct") {
 		t.Fatalf("backup manifest caller classification = %+v", manifest.DerivedExclusions)
 	}
@@ -584,19 +712,43 @@ connections:
 		report.HistoricalRoots != 1 || report.CollectingRoots != 0 ||
 		report.Members != len(catalogV3BeforeRestore.Members) ||
 		report.StateRows != 1 || report.StateSummaries != 1 || report.StatePlans != 0 ||
-		report.RelationshipReferences != 1 {
+		report.RelationshipReferences != 2 {
 		t.Fatalf("restored catalog v3 precious = %+v, %v", report, err)
 	}
 	restoredRelationshipV3, err := relationshippublication.OpenCurrentV3(
 		ctx, filepath.Join(dataDir, "relationships"), names[0],
 	)
 	if err != nil || !reflect.DeepEqual(
-		restoredRelationshipV3.Root(), relationshipV3BeforeRestore,
+		restoredRelationshipV3.Root(), relationshipV3CurrentBeforeRestore,
 	) {
 		t.Fatalf(
 			"restored relationship v3 = %+v, %v; want %+v",
-			restoredRelationshipV3, err, relationshipV3BeforeRestore,
+			restoredRelationshipV3, err, relationshipV3CurrentBeforeRestore,
 		)
+	}
+	selectedRuntimeAfterRestore, err := restored.GetServiceRuntimeSelector(ctx, names[0])
+	if err != nil || !reflect.DeepEqual(selectedRuntimeAfterRestore, selectedRuntimeBeforeRestore) {
+		t.Fatalf(
+			"restored runtime selector = %+v, %v; want %+v",
+			selectedRuntimeAfterRestore, err, selectedRuntimeBeforeRestore,
+		)
+	}
+	if _, err := focusedindex.ValidateSearchGeneration(
+		ctx, filepath.Join(dataDir, "index"), names[0],
+		selectedRuntimeAfterRestore.SearchGenerationDigest,
+	); err != nil {
+		t.Fatalf("open restored selected search generation: %v", err)
+	}
+	selectedRelationship, err := relationshippublication.ValidateGenerationV3(
+		ctx, filepath.Join(dataDir, "relationships"), names[0],
+		selectedRuntimeAfterRestore.RelationshipGenerationDigest,
+		selectedRuntimeAfterRestore.RelationshipRootDigest,
+	)
+	if err != nil {
+		t.Fatalf("open restored selected relationship generation: %v", err)
+	}
+	if _, err := selectedRelationship.OpenEvidenceReader(ctx, dataDir); err != nil {
+		t.Fatalf("open restored selected relationship evidence: %v", err)
 	}
 	serviceStateV3SummaryAfterRestore, err := restored.GetServiceStateV3Summary(ctx, names[0])
 	if err != nil || !reflect.DeepEqual(
@@ -1013,11 +1165,18 @@ func runRecoveryServiceStateV3Plan(
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := state.ProcessServiceStateV3Chunk(ctx, *chunk)
+		_, err = state.ProcessServiceStateV3Chunk(ctx, *chunk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if result.Settled {
+		if err := state.CompleteGenerationChunk(ctx, *chunk); err != nil {
+			t.Fatal(err)
+		}
+		settled, err := state.GetGenerationSchedule(ctx, schedule.Repository, schedule.Stage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if settled.Status == store.GenerationScheduleSettled {
 			return
 		}
 	}

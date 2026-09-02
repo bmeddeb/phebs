@@ -23,6 +23,7 @@ type SearchGenerationLifecycleResult struct {
 
 type SearchGenerationPinChecker interface {
 	Pinned(repository, generation string) bool
+	BeginRetire(repository, generation string) (func(), bool)
 }
 
 // SweepSearchGenerationLifecycle examines one bounded repository namespace.
@@ -253,9 +254,14 @@ func SweepSearchGenerationLifecycle(
 		); err != nil {
 			return result, err
 		}
+		releaseRetire, admitted := pins.BeginRetire(repository, candidate.digest)
+		if !admitted {
+			continue
+		}
 		if err := searchGenerationLifecycleFence(
 			indexDir, repository, candidate.digest, pins,
 		); err != nil {
+			releaseRetire()
 			if errors.Is(err, errSearchGenerationPinned) {
 				continue
 			}
@@ -264,11 +270,14 @@ func SweepSearchGenerationLifecycle(
 		collectingName := "collecting-" + candidate.name
 		collectingPath := filepath.Join(repositoryDirectory, collectingName)
 		if err := os.Rename(filepath.Join(repositoryDirectory, candidate.name), collectingPath); err != nil {
+			releaseRetire()
 			return result, err
 		}
 		if err := syncDirectory(repositoryDirectory); err != nil {
+			releaseRetire()
 			return result, err
 		}
+		releaseRetire()
 		deleted, complete, err := deleteSearchGenerationStep(collectingPath, deleteLimit)
 		result.Deleted = deleted
 		result.More = result.More || !complete

@@ -2,6 +2,7 @@ package focusedindex
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -22,9 +23,9 @@ import (
 
 const (
 	maxArchiveEntries    = 100_000
-	maxArchiveBytes      = int64(64 << 30)
+	maxArchiveBytes      = MaxRetainedSearchLogicalBytes + int64(1<<30)
 	maxArchiveEntryBytes = int64(16 << 30)
-	maxArchiveNameBytes  = 255
+	maxArchiveNameBytes  = 512
 )
 
 // ArchiveReport records derived search state that was safe to preserve and
@@ -35,6 +36,13 @@ type ArchiveReport struct {
 	OmittedPublications int
 	OmittedArtifacts    int
 	StaleMarkers        int
+}
+
+// ArchiveSearchGeneration names one immutable generation that a durable
+// runtime selector still exposes even when the mutable current root advances.
+type ArchiveSearchGeneration struct {
+	Repository       string
+	GenerationDigest string
 }
 
 func VerifyArchive(archivePath string) error {
@@ -89,7 +97,20 @@ func CreateArchiveWithReportContext(
 	ctx context.Context,
 	indexDir, destination string,
 ) (ArchiveReport, error) {
-	expectations, report, err := archivablePublications(ctx, indexDir)
+	return CreateArchiveWithSelections(
+		ctx, indexDir, destination, nil,
+	)
+}
+
+// CreateArchiveWithSelections additionally preserves exact immutable search
+// generations named by durable runtime selectors. It does not preserve their
+// mutable lifecycle pointers or unrelated rollback generations.
+func CreateArchiveWithSelections(
+	ctx context.Context,
+	indexDir, destination string,
+	selections []ArchiveSearchGeneration,
+) (ArchiveReport, error) {
+	expectations, report, err := archivablePublications(ctx, indexDir, selections)
 	if err != nil {
 		return report, err
 	}
@@ -367,11 +388,26 @@ func RestoreArchive(archivePath, indexDir string) error {
 	if !slices.Equal(preflight, extracted) {
 		return errors.New("focused archive changed between validation passes")
 	}
+	materialized, err := materializeSelectedCurrentSearchGenerations(stage)
+	if err != nil {
+		return fmt.Errorf("materialize selected current search generation: %w", err)
+	}
 	_, declared, err := validatedPublications(stage)
 	if err != nil {
 		return fmt.Errorf("validate focused restore archive: %w", err)
 	}
+	selected, err := validatedSelectedSearchGenerations(stage)
+	if err != nil {
+		return fmt.Errorf("validate selected search restore archive: %w", err)
+	}
+	for name := range selected {
+		if materialized[name] {
+			continue
+		}
+		declared = append(declared, name)
+	}
 	sort.Strings(extracted)
+	sort.Strings(declared)
 	if !slices.Equal(extracted, declared) {
 		return fmt.Errorf(
 			"focused restore archive inventory mismatch: actual=%v declared=%v",
@@ -383,8 +419,30 @@ func RestoreArchive(archivePath, indexDir string) error {
 			return fmt.Errorf("focused restore target %q already exists", name)
 		}
 	}
+	searchGenerations := filepath.Join(stage, searchGenerationDirectoryName)
+	if _, err := os.Lstat(searchGenerations); err == nil {
+		if _, err := os.Lstat(filepath.Join(indexDir, searchGenerationDirectoryName)); !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("focused restore target %q already exists", searchGenerationDirectoryName)
+		}
+		if err := syncSelectedSearchDirectories(stage, extracted); err != nil {
+			return err
+		}
+		if err := os.Rename(
+			searchGenerations, filepath.Join(indexDir, searchGenerationDirectoryName),
+		); err != nil {
+			return err
+		}
+		if err := syncDirectory(indexDir); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	manifests := make([]string, 0)
 	for _, name := range extracted {
+		if strings.HasPrefix(name, searchGenerationDirectoryName+string(filepath.Separator)) {
+			continue
+		}
 		if strings.HasSuffix(name, ".manifest.json") {
 			manifests = append(manifests, name)
 			continue
@@ -445,6 +503,9 @@ func scanArchive(
 				)
 			}
 		} else {
+			if err := os.MkdirAll(filepath.Dir(filepath.Join(destination, header.Name)), 0o700); err != nil {
+				return nil, err
+			}
 			output, err := os.OpenFile(
 				filepath.Join(destination, header.Name),
 				os.O_WRONLY|os.O_CREATE|os.O_EXCL,
@@ -478,7 +539,6 @@ func validateArchiveHeader(
 	if header.Typeflag != tar.TypeReg ||
 		(header.Format != tar.FormatUSTAR && header.Format != tar.FormatPAX) ||
 		len(name) == 0 || len(name) > maxArchiveNameBytes ||
-		filepath.Base(name) != name ||
 		!safeArchiveName(name) ||
 		seen[name] ||
 		header.Linkname != "" ||
@@ -513,10 +573,14 @@ func validateArchiveHeader(
 func archivablePublications(
 	ctx context.Context,
 	indexDir string,
+	selections []ArchiveSearchGeneration,
 ) (map[string]archiveExpectation, ArchiveReport, error) {
 	var report ArchiveReport
 	entries, err := os.ReadDir(indexDir)
 	if errors.Is(err, os.ErrNotExist) {
+		if len(selections) != 0 {
+			return nil, report, errors.New("selected search archive root is absent")
+		}
 		return map[string]archiveExpectation{}, report, nil
 	}
 	if err != nil {
@@ -599,6 +663,45 @@ func archivablePublications(
 		publications["search:"+search.Repository] = search.Digest
 		selectedMarkers[PublishingName(search.Repository)] = true
 		for name, expectation := range publicationFiles {
+			files[name] = expectation
+		}
+	}
+	selected := make(map[string]bool, len(selections))
+	for _, selection := range selections {
+		if err := ctx.Err(); err != nil {
+			return nil, report, err
+		}
+		key := selection.Repository + "\x00" + selection.GenerationDigest
+		if selected[key] {
+			continue
+		}
+		selected[key] = true
+		var generationFiles map[string]archiveExpectation
+		if publications["search:"+selection.Repository] == selection.GenerationDigest {
+			receipt, ok := files[searchGenerationArchiveReceiptName(selection.Repository)]
+			if !ok {
+				return nil, report, errors.New("selected current search receipt is absent")
+			}
+			name := filepath.Join(
+				searchGenerationDirectoryName, repositoryKey(selection.Repository),
+				strings.TrimPrefix(selection.GenerationDigest, "sha256:"),
+				searchGenerationReceiptName,
+			)
+			receipt.source = name
+			generationFiles = map[string]archiveExpectation{name: receipt}
+		} else {
+			var err error
+			generationFiles, err = archiveSelectedSearchGenerationExpectations(
+				ctx, indexDir, selection,
+			)
+			if err != nil {
+				return nil, report, fmt.Errorf(
+					"archive selected search generation for %q: %w",
+					selection.Repository, err,
+				)
+			}
+		}
+		for name, expectation := range generationFiles {
 			files[name] = expectation
 		}
 	}
@@ -737,6 +840,270 @@ func archiveRepositorySearchExpectations(
 		return nil, rootErr
 	}
 	return files, nil
+}
+
+func archiveSelectedSearchGenerationExpectations(
+	ctx context.Context,
+	indexDir string,
+	selection ArchiveSearchGeneration,
+) (map[string]archiveExpectation, error) {
+	receipt, err := validateImmutableSearchGeneration(
+		ctx, indexDir, selection.Repository, selection.GenerationDigest,
+	)
+	if err != nil {
+		return nil, err
+	}
+	directory, err := searchGenerationDirectory(
+		indexDir, selection.Repository, selection.GenerationDigest,
+	)
+	if err != nil {
+		return nil, err
+	}
+	search, err := repositoryindex.ReadSearchManifest(directory, selection.Repository)
+	if err != nil {
+		return nil, err
+	}
+	flat, err := archiveRepositorySearchExpectations(directory, search)
+	if err != nil {
+		return nil, err
+	}
+	prefix := filepath.Join(
+		searchGenerationDirectoryName, repositoryKey(selection.Repository),
+		strings.TrimPrefix(selection.GenerationDigest, "sha256:"),
+	)
+	files := make(map[string]archiveExpectation, len(flat)+1)
+	for name, expectation := range flat {
+		expectation.source = filepath.Join(prefix, name)
+		files[filepath.Join(prefix, name)] = expectation
+	}
+	var snapshot SearchGenerationReceipt
+	expectation, err := archiveControlExpectation(
+		filepath.Join(directory, searchGenerationReceiptName), &snapshot,
+	)
+	snapshot.AllocatedBytes = receipt.AllocatedBytes
+	snapshot.AllocatedState = receipt.AllocatedState
+	if err != nil || !reflect.DeepEqual(snapshot, receipt) {
+		return nil, errors.New("selected search receipt changed after validation")
+	}
+	expectation.source = filepath.Join(prefix, searchGenerationReceiptName)
+	files[filepath.Join(prefix, searchGenerationReceiptName)] = expectation
+	return files, nil
+}
+
+func validatedSelectedSearchGenerations(
+	indexDir string,
+) (map[string]bool, error) {
+	files := map[string]bool{}
+	root := SearchGenerationRootDirectory(indexDir)
+	repositories, err := os.ReadDir(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return files, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(repositories) > MaxSearchLifecycleRepositories {
+		return nil, errors.New("archived search repository inventory exceeds policy")
+	}
+	for _, repositoryEntry := range repositories {
+		if !repositoryEntry.IsDir() || repositoryEntry.Type()&os.ModeSymlink != 0 ||
+			!validArchiveHex(repositoryEntry.Name()) {
+			return nil, errors.New("invalid archived search repository directory")
+		}
+		repositoryDirectory := filepath.Join(root, repositoryEntry.Name())
+		generations, err := os.ReadDir(repositoryDirectory)
+		if err != nil {
+			return nil, err
+		}
+		if len(generations) < 1 || len(generations) > MaxSearchRepositoryGenerations {
+			return nil, errors.New("archived search generation inventory exceeds policy")
+		}
+		for _, generationEntry := range generations {
+			if !generationEntry.IsDir() || generationEntry.Type()&os.ModeSymlink != 0 ||
+				!validArchiveHex(generationEntry.Name()) {
+				return nil, errors.New("invalid archived search generation directory")
+			}
+			directory := filepath.Join(repositoryDirectory, generationEntry.Name())
+			var envelope SearchGenerationReceipt
+			if err := readControlFile(
+				filepath.Join(directory, searchGenerationReceiptName), &envelope,
+			); err != nil {
+				return nil, err
+			}
+			digest := "sha256:" + generationEntry.Name()
+			if repositoryKey(envelope.Repository) != repositoryEntry.Name() ||
+				envelope.SearchDigest != digest {
+				return nil, errors.New("archived search generation path identity mismatch")
+			}
+			receipt, err := validateImmutableSearchGeneration(
+				context.Background(), indexDir, envelope.Repository, digest,
+			)
+			envelope.AllocatedBytes = receipt.AllocatedBytes
+			envelope.AllocatedState = receipt.AllocatedState
+			if err != nil || !reflect.DeepEqual(receipt, envelope) {
+				return nil, errors.Join(err, errors.New("archived search generation is invalid"))
+			}
+			search, err := repositoryindex.ReadSearchManifest(directory, envelope.Repository)
+			if err != nil {
+				return nil, err
+			}
+			source, err := repositoryindex.ReadSourceManifest(directory, envelope.Repository)
+			if err != nil {
+				return nil, err
+			}
+			whole, err := ReadWholeManifest(directory, envelope.Repository, search.Revisions)
+			if err != nil {
+				return nil, err
+			}
+			expected := make(map[string]bool, receipt.FileCount+1)
+			for _, name := range searchGenerationFiles(source, whole) {
+				expected[name] = true
+			}
+			expected[searchGenerationReceiptName] = true
+			entries, err := os.ReadDir(directory)
+			if err != nil || len(entries) != len(expected) {
+				return nil, errors.Join(err, errors.New("archived search generation inventory mismatch"))
+			}
+			prefix := filepath.Join(
+				searchGenerationDirectoryName, repositoryEntry.Name(), generationEntry.Name(),
+			)
+			for _, entry := range entries {
+				if !expected[entry.Name()] || entry.IsDir() ||
+					entry.Type()&os.ModeSymlink != 0 {
+					return nil, errors.New("archived search generation contains an undeclared artifact")
+				}
+				info, err := entry.Info()
+				if err != nil || !info.Mode().IsRegular() {
+					return nil, errors.Join(err, errors.New("archived search generation contains a special artifact"))
+				}
+				files[filepath.Join(prefix, entry.Name())] = true
+			}
+		}
+	}
+	return files, nil
+}
+
+func materializeSelectedCurrentSearchGenerations(
+	indexDir string,
+) (map[string]bool, error) {
+	materialized := map[string]bool{}
+	root := SearchGenerationRootDirectory(indexDir)
+	repositories, err := os.ReadDir(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return materialized, nil
+	}
+	if err != nil || len(repositories) > MaxSearchLifecycleRepositories {
+		return nil, errors.Join(err, errors.New("selected search repository inventory exceeds policy"))
+	}
+	for _, repositoryEntry := range repositories {
+		if !repositoryEntry.IsDir() || repositoryEntry.Type()&os.ModeSymlink != 0 ||
+			!validArchiveHex(repositoryEntry.Name()) {
+			return nil, errors.New("invalid selected search repository directory")
+		}
+		repositoryDirectory := filepath.Join(root, repositoryEntry.Name())
+		generations, err := os.ReadDir(repositoryDirectory)
+		if err != nil || len(generations) > MaxSearchRepositoryGenerations {
+			return nil, errors.Join(err, errors.New("selected search generation inventory exceeds policy"))
+		}
+		for _, generationEntry := range generations {
+			directory := filepath.Join(repositoryDirectory, generationEntry.Name())
+			entries, err := os.ReadDir(directory)
+			if err != nil || !generationEntry.IsDir() ||
+				generationEntry.Type()&os.ModeSymlink != 0 ||
+				!validArchiveHex(generationEntry.Name()) {
+				return nil, errors.Join(err, errors.New("invalid selected search generation directory"))
+			}
+			if len(entries) != 1 || entries[0].Name() != searchGenerationReceiptName {
+				continue
+			}
+			var envelope SearchGenerationReceipt
+			if err := readControlFile(
+				filepath.Join(directory, searchGenerationReceiptName), &envelope,
+			); err != nil {
+				return nil, err
+			}
+			receipt, err := readSearchGenerationReceipt(directory, envelope.Repository)
+			if err != nil || repositoryKey(receipt.Repository) != repositoryEntry.Name() ||
+				strings.TrimPrefix(receipt.SearchDigest, "sha256:") != generationEntry.Name() {
+				return nil, errors.Join(err, errors.New("selected search receipt path identity mismatch"))
+			}
+			search, err := repositoryindex.ReadSearchManifest(indexDir, receipt.Repository)
+			if err != nil || search.Digest != receipt.SearchDigest {
+				return nil, errors.Join(err, errors.New("selected receipt-only generation is not current"))
+			}
+			if _, err := validateFlatSearchGenerationReceipt(
+				indexDir, receipt.Repository, search,
+			); err != nil {
+				return nil, err
+			}
+			nestedReceipt, err := os.ReadFile(filepath.Join(directory, searchGenerationReceiptName))
+			if err != nil {
+				return nil, err
+			}
+			flatReceipt, err := os.ReadFile(filepath.Join(
+				indexDir, searchGenerationArchiveReceiptName(receipt.Repository),
+			))
+			if err != nil || !bytes.Equal(nestedReceipt, flatReceipt) {
+				return nil, errors.Join(err, errors.New("selected current receipt bytes differ"))
+			}
+			source, err := repositoryindex.ReadSourceManifest(indexDir, receipt.Repository)
+			if err != nil {
+				return nil, err
+			}
+			whole, err := ReadWholeManifest(indexDir, receipt.Repository, search.Revisions)
+			if err != nil {
+				return nil, err
+			}
+			prefix := filepath.Join(
+				searchGenerationDirectoryName, repositoryEntry.Name(), generationEntry.Name(),
+			)
+			for _, name := range searchGenerationFiles(source, whole) {
+				if err := os.Link(filepath.Join(indexDir, name), filepath.Join(directory, name)); err != nil {
+					return nil, err
+				}
+				materialized[filepath.Join(prefix, name)] = true
+			}
+			if err := syncDirectory(directory); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return materialized, nil
+}
+
+func validArchiveHex(value string) bool {
+	if len(value) != sha256.Size*2 || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}
+
+func syncSelectedSearchDirectories(stage string, names []string) error {
+	directories := map[string]bool{}
+	prefix := searchGenerationDirectoryName + string(filepath.Separator)
+	for _, name := range names {
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		for directory := filepath.Dir(filepath.Join(stage, name)); directory != stage; directory = filepath.Dir(directory) {
+			directories[directory] = true
+		}
+	}
+	ordered := make([]string, 0, len(directories))
+	for directory := range directories {
+		ordered = append(ordered, directory)
+	}
+	sort.Slice(ordered, func(i, j int) bool {
+		return strings.Count(ordered[i], string(filepath.Separator)) >
+			strings.Count(ordered[j], string(filepath.Separator))
+	})
+	for _, directory := range ordered {
+		if err := syncDirectory(directory); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func archiveControlExpectation(
@@ -895,10 +1262,30 @@ func validatedPublications(indexDir string) (map[string]string, []string, error)
 }
 
 func safeArchiveName(name string) bool {
+	if filepath.Base(name) != name {
+		return safeSelectedSearchArchiveName(name)
+	}
 	return strings.HasPrefix(name, "phebs-focus-") ||
 		strings.HasPrefix(name, "phebs-source-") ||
 		strings.HasPrefix(name, "phebs-search-") ||
 		strings.HasPrefix(name, "phebs-whole-")
+}
+
+func safeSelectedSearchArchiveName(name string) bool {
+	parts := strings.Split(filepath.ToSlash(name), "/")
+	if len(parts) != 4 || parts[0] != searchGenerationDirectoryName ||
+		len(parts[1]) != sha256.Size*2 || len(parts[2]) != sha256.Size*2 ||
+		strings.ToLower(parts[1]) != parts[1] || strings.ToLower(parts[2]) != parts[2] {
+		return false
+	}
+	if _, err := hex.DecodeString(parts[1]); err != nil {
+		return false
+	}
+	if _, err := hex.DecodeString(parts[2]); err != nil {
+		return false
+	}
+	return parts[3] == searchGenerationReceiptName ||
+		(filepath.Base(parts[3]) == parts[3] && safeArchiveName(parts[3]))
 }
 
 func isSearchArchiveArtifact(name string) bool {

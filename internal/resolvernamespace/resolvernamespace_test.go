@@ -111,6 +111,62 @@ func TestOnlyAffectedNamespaceRebuilds(t *testing.T) {
 	}
 }
 
+func TestOpenGenerationUsesExactHistoricalRootOnly(t *testing.T) {
+	root := t.TempDir()
+	repository := "github.com/acme/repo"
+	firstDescriptor := descriptor(
+		"grpc", "example.test/history", "HistoryClient", "Read",
+		"history.Service/Read", "a",
+	)
+	first := buildPublication(
+		t, root, "sha256:"+strings.Repeat("1", 64),
+		[]gocaller.DirectDescriptor{firstDescriptor}, nil,
+	)
+	firstRoot := first.Root()
+	secondDescriptor := descriptor(
+		"grpc", "example.test/history", "HistoryClient", "Read",
+		"history.Service/ReadV2", "b",
+	)
+	second := buildPublication(
+		t, root, "sha256:"+strings.Repeat("2", 64),
+		[]gocaller.DirectDescriptor{secondDescriptor}, first,
+	)
+	if second.Root().GenerationDigest == firstRoot.GenerationDigest {
+		t.Fatal("successor did not advance the resolver generation")
+	}
+
+	historical, err := OpenGeneration(
+		t.Context(), root, repository,
+		firstRoot.GenerationDigest, firstRoot.Digest,
+	)
+	if err != nil || historical.Root().Digest != firstRoot.Digest {
+		t.Fatalf("open exact historical resolver generation = %+v, %v", historical, err)
+	}
+	if _, err := OpenGeneration(
+		t.Context(), root, repository,
+		firstRoot.GenerationDigest, "sha256:"+strings.Repeat("f", 64),
+	); err == nil {
+		t.Fatal("wrong historical resolver root digest was accepted")
+	}
+
+	memberPath := filepath.Join(first.directory, firstRoot.Namespaces[0].Member)
+	if err := os.WriteFile(memberPath, []byte("corrupt\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	historical, err = OpenGeneration(
+		t.Context(), root, repository,
+		firstRoot.GenerationDigest, firstRoot.Digest,
+	)
+	if err != nil {
+		t.Fatalf("root-only historical open scanned a namespace member: %v", err)
+	}
+	if _, err := historical.LookupNamespace(
+		t.Context(), LanguageGo, "grpc", "example.test/history",
+	); err == nil {
+		t.Fatal("historical resolver member corruption was not detected on sparse read")
+	}
+}
+
 func TestConflictAndAmbiguityRemainRecords(t *testing.T) {
 	root := t.TempDir()
 	first := descriptor("grpc", "example.test/shared", "SharedClient", "Get", "one.Service/Get", "a")
