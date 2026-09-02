@@ -195,7 +195,10 @@ passed validation.
 
 The live target itself traverses the production selected state reader,
 selector-aware v3 scoped searcher, and authorized HTTP/MCP inventory, detail,
-and search transports. Every returned target-search path is binary-searched in
+and search transports. The HTTP leg requires Huma's exact same-origin `Link`
+header and one matching top-level `$schema`, removes only that transport field,
+and then applies the same strict application decode used by MCP; MCP continues
+to reject HTTP-only schema metadata. Every returned target-search path is binary-searched in
 the frozen fixture inventory and must carry that file's exact fixture content
 plus the exact first-line marker range. Its truthful empty relationship root traverses the
 production v3 scheduler/runtime and production relationship-v3 lifecycle

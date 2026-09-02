@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -23,6 +24,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+const productHTTPHost = "127.0.0.1"
 
 func (h *liveHarness) querySelectedProductTransports(
 	ctx context.Context,
@@ -266,12 +269,17 @@ func getProductJSON[T any](
 	if err != nil {
 		return result, err
 	}
+	request.Host = productHTTPHost
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK {
 		return result, fmt.Errorf("status %d", recorder.Code)
 	}
-	if err := decodeProductJSON(recorder.Body.Bytes(), &result); err != nil {
+	schemaPath, err := productResponseSchemaLink(recorder.Header().Values("Link"))
+	if err != nil {
+		return result, err
+	}
+	if err := decodeProductHTTPJSON(recorder.Body.Bytes(), schemaPath, &result); err != nil {
 		return result, err
 	}
 	return result, nil
@@ -313,4 +321,100 @@ func decodeProductJSON(data []byte, destination any) error {
 		return errors.New("product response contains trailing JSON")
 	}
 	return nil
+}
+
+func productResponseSchemaLink(headers []string) (string, error) {
+	if len(headers) != 1 {
+		return "", errors.New("product HTTP response schema header is invalid")
+	}
+	value, ok := strings.CutPrefix(headers[0], "<")
+	if !ok {
+		return "", errors.New("product HTTP response schema header is invalid")
+	}
+	value, ok = strings.CutSuffix(value, `>; rel="describedBy"`)
+	if !ok || strings.ContainsAny(value, "?#") {
+		return "", errors.New("product HTTP response schema header is invalid")
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme != "" || parsed.Host != "" ||
+		parsed.User != nil || parsed.ForceQuery || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.RawPath != "" ||
+		!strings.HasPrefix(parsed.Path, "/schemas/") {
+		return "", errors.New("product HTTP response schema link is invalid")
+	}
+	name := strings.TrimPrefix(parsed.Path, "/schemas/")
+	if len(name) < len("A.json") || len(name) > 160 || strings.Contains(name, "/") ||
+		!strings.HasSuffix(name, ".json") {
+		return "", errors.New("product HTTP response schema name is invalid")
+	}
+	for _, character := range strings.TrimSuffix(name, ".json") {
+		if character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' ||
+			character >= '0' && character <= '9' || character == '_' || character == '-' {
+			continue
+		}
+		return "", errors.New("product HTTP response schema name is invalid")
+	}
+	return parsed.Path, nil
+}
+
+func decodeProductHTTPJSON(data []byte, schemaPath string, destination any) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		return errors.New("product HTTP response is not an object")
+	}
+	seen := make(map[string]struct{}, 16)
+	var body bytes.Buffer
+	body.Grow(len(data))
+	body.WriteByte('{')
+	first := true
+	schemaSeen := false
+	for decoder.More() {
+		token, err := decoder.Token()
+		key, ok := token.(string)
+		if err != nil || !ok {
+			return errors.New("product HTTP response key is invalid")
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return errors.New("product HTTP response has a duplicate key")
+		}
+		seen[key] = struct{}{}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return errors.New("product HTTP response value is invalid")
+		}
+		if key == "$schema" {
+			var actual string
+			if err := decodeProductJSON(value, &actual); err != nil || strings.ContainsAny(actual, "?#") {
+				return errors.New("product HTTP response schema link is invalid")
+			}
+			parsed, parseErr := url.Parse(actual)
+			if parseErr != nil || parsed.Scheme != "http" || parsed.Host != productHTTPHost ||
+				parsed.User != nil || parsed.ForceQuery || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.RawPath != "" ||
+				parsed.Path != schemaPath {
+				return errors.New("product HTTP response schema link differs from its header")
+			}
+			schemaSeen = true
+			continue
+		}
+		encodedKey, err := json.Marshal(key)
+		if err != nil {
+			return err
+		}
+		if !first {
+			body.WriteByte(',')
+		}
+		first = false
+		body.Write(encodedKey)
+		body.WriteByte(':')
+		body.Write(value)
+	}
+	closing, err := decoder.Token()
+	if err != nil || closing != json.Delim('}') || !schemaSeen {
+		return errors.New("product HTTP response lacks its schema link")
+	}
+	if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
+		return errors.New("product HTTP response contains trailing JSON")
+	}
+	body.WriteByte('}')
+	return decodeProductJSON(body.Bytes(), destination)
 }
