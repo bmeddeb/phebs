@@ -28,9 +28,9 @@ import (
 
 // prepareRelationshipRuntimeInputs derives the real repository-shared
 // authorities used by the production v3 relationship runtime. The frozen
-// target has no protobuf files, so the closed proto-only source policy and
-// candidate policy truthfully produce an empty observation/resolver input
-// without changing or supplementing the T41.1 fixture bytes.
+// target has 10,000 .proto-named neutral fixture blobs. They produce exact
+// unsupported observation and candidate controls but no observed source,
+// resolver declaration, or relationship evidence.
 func (h *liveHarness) prepareRelationshipRuntimeInputs(
 	ctx context.Context,
 	cost *PhaseCost,
@@ -82,8 +82,15 @@ func (h *liveHarness) prepareRelationshipRuntimeInputs(
 	if err != nil {
 		return fmt.Errorf("build target observation source root: %w", err)
 	}
-	if sourceRoot.MemberCount < 0 {
-		return errors.New("target observation source root contains negative accounting")
+	if sourceRoot.MemberCount != targetRelationshipObservationMembers ||
+		sourceRoot.BlobCount != targetRelationshipRecords ||
+		sourceRoot.PlacementCount != targetRelationshipRecords ||
+		sourceRoot.DeclaredBytes != targetRelationshipDeclaredBytes {
+		return fmt.Errorf(
+			"target observation source shape members=%d blobs=%d placements=%d bytes=%d",
+			sourceRoot.MemberCount, sourceRoot.BlobCount,
+			sourceRoot.PlacementCount, sourceRoot.DeclaredBytes,
+		)
 	}
 	cost.ObservationInputMembers = uint64(sourceRoot.MemberCount)
 	plan, err := sourcepartition.OpenSuperRoot(
@@ -103,9 +110,25 @@ func (h *liveHarness) prepareRelationshipRuntimeInputs(
 	if err != nil {
 		return fmt.Errorf("build target observation inventory: %w", err)
 	}
-	if inventory.MemberCount < 0 || inventory.RecordCount < 0 ||
-		inventory.ObservedCount < 0 || inventory.OperationReceipt.SourceBlobReads < 0 {
-		return errors.New("target observation inventory contains negative accounting")
+	operation := inventory.OperationReceipt
+	if inventory.MemberCount != targetRelationshipObservationMembers ||
+		inventory.RecordCount != targetRelationshipRecords ||
+		inventory.ObservedCount != 0 ||
+		inventory.UnsupportedCount != targetRelationshipRecords ||
+		inventory.ObservationCount != 0 || inventory.ObservationBytes != 0 ||
+		operation.InputBlobs != targetRelationshipRecords ||
+		operation.SourceBlobReads != targetRelationshipRecords ||
+		operation.ObservedBlobs != 0 || operation.ParsedObservations != 0 ||
+		operation.ReusedObservations != 0 ||
+		operation.UnsupportedBlobs != targetRelationshipRecords ||
+		len(operation.UnsupportedReasons) != 1 ||
+		operation.UnsupportedReasons[0].Reason != "parse_error" ||
+		operation.UnsupportedReasons[0].Count != targetRelationshipRecords {
+		return fmt.Errorf(
+			"target observation inventory shape members=%d records=%d observed=%d unsupported=%d reads=%d",
+			inventory.MemberCount, inventory.RecordCount, inventory.ObservedCount,
+			inventory.UnsupportedCount, operation.SourceBlobReads,
+		)
 	}
 	cost.ObservationMembers = uint64(inventory.MemberCount)
 	cost.ObservationRecords = uint64(inventory.RecordCount)
@@ -122,8 +145,14 @@ func (h *liveHarness) prepareRelationshipRuntimeInputs(
 	if err != nil {
 		return fmt.Errorf("read target observation authority: %w", err)
 	}
-	if observation.RecordCount != 0 || observation.ObservedCount != 0 {
-		return errors.New("frozen target produced non-empty relationship observations")
+	if observation.SourceRootDigest != sourceRoot.Digest ||
+		observation.ObservationRootDigest != inventory.Digest ||
+		observation.RecordCount != targetRelationshipRecords ||
+		observation.ObservedCount != 0 {
+		return fmt.Errorf(
+			"target observation authority records=%d observed=%d",
+			observation.RecordCount, observation.ObservedCount,
+		)
 	}
 
 	candidateWorker, _, err := candidatejob.New(
@@ -155,12 +184,24 @@ func (h *liveHarness) prepareRelationshipRuntimeInputs(
 	if reports != 1 || candidateReport.Schema != candidatejob.CandidateOperationSchema ||
 		candidateReport.Decision != "rebuild" || candidateReport.Outcome != "done" ||
 		!candidateReport.ManifestSummaryPresent ||
-		candidateReport.Planes.Repository.Members < 0 ||
-		candidateReport.Planes.Repository.Records < 0 ||
-		candidateReport.Planes.Local.Members < 0 || candidateReport.Planes.Local.Records < 0 ||
-		candidateReport.Planes.Caller.Members < 0 || candidateReport.Planes.Caller.Records < 0 ||
-		candidateReport.DeclaredSourceBytes < 0 {
-		return errors.New("target candidate operation receipt is incomplete")
+		candidateReport.Planes.Repository.Members != targetRelationshipCandidateMembers ||
+		candidateReport.Planes.Repository.Records != targetRelationshipRecords ||
+		candidateReport.Planes.Repository.DeclaredBytes != targetRelationshipDeclaredBytes ||
+		candidateReport.Planes.Repository.CanonicalBytes <= 0 ||
+		candidateReport.Planes.Local.Members != 0 || candidateReport.Planes.Local.Records != 0 ||
+		candidateReport.Planes.Caller.Members != 0 || candidateReport.Planes.Caller.Records != 0 ||
+		candidateReport.DeclaredSourceBytes != h.corpus.Profile.Fixture.ContentBytes {
+		return fmt.Errorf(
+			"target candidate operation shape repository=%d/%d local=%d/%d caller=%d/%d selected_bytes=%d source_bytes=%d",
+			candidateReport.Planes.Repository.Members,
+			candidateReport.Planes.Repository.Records,
+			candidateReport.Planes.Local.Members,
+			candidateReport.Planes.Local.Records,
+			candidateReport.Planes.Caller.Members,
+			candidateReport.Planes.Caller.Records,
+			candidateReport.Planes.Repository.DeclaredBytes,
+			candidateReport.DeclaredSourceBytes,
+		)
 	}
 	cost.CandidateInputReadsUnavailable = true
 	cost.CandidateResultMembers = uint64(

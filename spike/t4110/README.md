@@ -14,15 +14,16 @@ through the legacy v2 canonicalizer or validator, whose 4,000-service ceiling
 continues to govern v2 only. Mapped transition successors use the same v3
 validation boundary.
 
-The frozen target contains no protobuf source and therefore has a truthful
-empty relationship distribution. The live gate derives an exact proto-only
-observation inventory, candidate manifest, and empty resolver catalog from
-that repository and commit, then drives the production `ReconcileV3` path,
-claims its durable memory chunk, runs `HandleV3`, and completes the chunk. It
-requires the selected root to contain every live service and exactly zero
-projections or references. The retained T41.1 mixed and dense distributions
-remain separately composed `BuildV3`/`PublishV3` evidence; they are not
-relabeled as target-backed production-runtime evidence.
+The frozen target contains exactly 10,000 `.proto`-named neutral fixture blobs,
+but no valid protobuf declarations or observed Go-source records, and therefore
+has a truthful empty semantic relationship distribution. The live gate derives
+an exact proto-only observation inventory, candidate manifest, and empty
+resolver catalog from that repository and commit, then drives the production
+`ReconcileV3` path, claims its durable memory chunk, runs `HandleV3`, and
+completes the chunk. It requires the selected root to contain every live
+service and exactly zero projections or references. The retained T41.1 mixed
+and dense distributions remain separately composed `BuildV3`/`PublishV3`
+evidence; they are not relabeled as target-backed production-runtime evidence.
 
 `measured_phases` is the fixed inventory of work measured directly by the
 live runner. Each phase records wall time, the highest 50-ms sampled aggregate
@@ -31,14 +32,17 @@ exact selected-state `ReadCache` root/member reads and their committed
 root/member validations, state-chunk transactions, and state-row counts,
 physical source work, production-reader queries, and sparse-preimage work.
 `physical_work.corpus_passes` is frozen at exactly one and counts the sole
-content-bearing search/index pass.
-The cold relationship setup additionally performs production repository
-metadata censuses for the proto-only observation and candidate authorities;
-because the frozen target has no `.proto` file, those authorities select zero
-fixture blobs. The receipt does not misstate those metadata censuses as
-mixed/dense relationship work. Cold cost records the repository-source census
-records/members/placements/declared bytes, observation input members and
-immutable inventory receipt, candidate result members/records/declared bytes,
+full-corpus search/index pass. The cold relationship setup separately selects
+the 10,000 proto-path blobs: its 16-member observation inventory performs
+exactly 10,000 source-blob reads and records 10,000 unsupported `parse_error`
+rows, zero observed rows, and no observation objects. Candidate planning emits
+three repository members and 10,000 records; its declared-source field is the
+operation's whole-corpus 1,835,100-byte census, while the selected candidate
+plane declares 580,000 bytes. The receipt does not misstate those inputs as
+semantic or mixed/dense relationship evidence. Cold cost records the
+repository-source census records/members/placements/declared bytes, observation
+input members and immutable inventory receipt, candidate result
+members/records/declared bytes,
 claimed relationship chunks, component-root publications, and relationship
 publication members/records. The production candidate operation receipt does
 not expose a tree-entry input-read count, so the cold cost explicitly records

@@ -138,6 +138,12 @@ func TestT4110ValidationRejectsOpenInventoriesClaimsAndPhysicalMultiplication(t 
 		{name: "cold corpus multiplication", mutate: func(value *Receipt) {
 			value.MeasuredPhases[0].Cost.SearchContentReads = uint64(value.Population.RegularFiles) + 1
 		}},
+		{name: "cold observation inventory erased", mutate: func(value *Receipt) {
+			value.MeasuredPhases[0].Cost.ObservationRecords = 0
+		}},
+		{name: "cold candidate census erased", mutate: func(value *Receipt) {
+			value.MeasuredPhases[0].Cost.CandidateResultRecords = 0
+		}},
 		{name: "blank disk custody", mutate: func(value *Receipt) {
 			value.MeasuredPhases[0].Cost.DataAllocatedBytes = 0
 		}},
@@ -388,7 +394,13 @@ func validTestReceipt(t *testing.T) Receipt {
 	receipt.MeasuredPhases[0].Cost.SourceCensusMembers = 1
 	receipt.MeasuredPhases[0].Cost.SourceCensusPlacements = uint64(receipt.Population.RegularFiles)
 	receipt.MeasuredPhases[0].Cost.SourceCensusDeclaredBytes = uint64(receipt.Population.FixtureContentBytes)
+	receipt.MeasuredPhases[0].Cost.ObservationInputMembers = targetRelationshipObservationMembers
+	receipt.MeasuredPhases[0].Cost.ObservationMembers = targetRelationshipObservationMembers
+	receipt.MeasuredPhases[0].Cost.ObservationRecords = targetRelationshipRecords
+	receipt.MeasuredPhases[0].Cost.ObservationSourceBlobReads = targetRelationshipRecords
 	receipt.MeasuredPhases[0].Cost.CandidateInputReadsUnavailable = true
+	receipt.MeasuredPhases[0].Cost.CandidateResultMembers = targetRelationshipCandidateMembers
+	receipt.MeasuredPhases[0].Cost.CandidateResultRecords = targetRelationshipRecords
 	receipt.MeasuredPhases[0].Cost.CandidateDeclaredBytes = uint64(receipt.Population.FixtureContentBytes)
 	receipt.MeasuredPhases[0].Cost.RelationshipScheduleChunks = 1
 	receipt.MeasuredPhases[0].Cost.RelationshipComponentPublishes = 3

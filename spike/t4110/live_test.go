@@ -1,10 +1,19 @@
 package t4110
 
 import (
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
+	"github.com/bmeddeb/phebs/internal/sourceobservation"
+	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/spike/t411"
 )
 
@@ -55,5 +64,46 @@ func TestMappedTransitionRetainsExpandedV3Target(t *testing.T) {
 	)
 	if err != nil || len(mapped.Services) != t411.AcceptedServiceTarget {
 		t.Fatalf("mapped expanded transition services=%d: %v", len(mapped.Services), err)
+	}
+}
+
+func TestFrozenTargetRelationshipInputShape(t *testing.T) {
+	target, err := t411.BuildTargetCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	extractor := protodecl.New()
+	bins := make([]int, 1<<sourcepartition.InitialPrefixBits)
+	selected, declared := 0, 0
+	var first []byte
+	for _, file := range target.Files {
+		if !extractor.Candidate(file.Path) {
+			continue
+		}
+		selected++
+		declared += len(file.Content)
+		if first == nil {
+			first = file.Content
+		}
+		blob := sha1.New()
+		_, _ = fmt.Fprintf(blob, "blob %d\x00", len(file.Content))
+		_, _ = blob.Write(file.Content)
+		objectID := hex.EncodeToString(blob.Sum(nil))
+		sum := sha256.Sum256([]byte(sourcepartition.BlobHashPolicy + "\x00" + objectID))
+		bins[int(sum[0]>>(8-sourcepartition.InitialPrefixBits))]++
+	}
+	wantBins := []int{598, 640, 649, 669, 575, 598, 643, 634, 635, 648, 573, 598, 642, 667, 595, 636}
+	candidateMembers := (selected + candidate.MaxRecordsPerArtifact - 1) / candidate.MaxRecordsPerArtifact
+	if selected != targetRelationshipRecords || declared != targetRelationshipDeclaredBytes ||
+		candidateMembers != targetRelationshipCandidateMembers || !slices.Equal(bins, wantBins) {
+		t.Fatalf(
+			"relationship input selected=%d bytes=%d candidate_members=%d bins=%v",
+			selected, declared, candidateMembers, bins,
+		)
+	}
+	if _, err := sourceobservation.Parse(t.Context(), sourceobservation.Input{
+		Path: "source.go", Content: string(first),
+	}); err == nil {
+		t.Fatal("neutral proto-path fixture unexpectedly produced an observed source record")
 	}
 }

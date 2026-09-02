@@ -27,8 +27,12 @@ const (
 	ReceiptSchema   = "t4110-neutral-service-closure-receipt-v1"
 	MaxReceiptBytes = 128 << 10
 
-	recoveryArtifactCount    = 6
-	maxRecoveryArtifactBytes = uint64(9 << 40)
+	recoveryArtifactCount                = 6
+	maxRecoveryArtifactBytes             = uint64(9 << 40)
+	targetRelationshipObservationMembers = 16
+	targetRelationshipRecords            = t411.AcceptedServiceTarget
+	targetRelationshipCandidateMembers   = 3
+	targetRelationshipDeclaredBytes      = 580_000
 
 	OutcomePassed = "passed"
 	StepPassed    = "passed"
@@ -63,6 +67,7 @@ var composedGateTests = map[string][]string{
 	"t411_input_and_bound_contract": {
 		"go:spike/t4110#TestLiveTargetCatalogUsesExpandedV3Input",
 		"go:spike/t4110#TestMappedTransitionRetainsExpandedV3Target",
+		"go:spike/t4110#TestFrozenTargetRelationshipInputShape",
 		"go:spike/t411#TestFrozenEnvelopeIsDeterministicAndExact",
 		"go:spike/t411#TestRetainedArtifactsMatchFrozenEnvelope",
 		"go:spike/t411#TestEveryAggregateLimitAcceptsExactAndRefusesOneOver",
@@ -777,11 +782,14 @@ func validateMeasuredPhaseOracles(receipt Receipt) error {
 		cold.SourceCensusMembers == 0 ||
 		cold.SourceCensusPlacements != uint64(receipt.Population.RegularFiles) ||
 		cold.SourceCensusDeclaredBytes != uint64(receipt.Population.FixtureContentBytes) ||
-		cold.ObservationInputMembers != 0 || cold.ObservationMembers != 0 ||
-		cold.ObservationRecords != 0 || cold.ObservationObservedRecords != 0 ||
-		cold.ObservationSourceBlobReads != 0 ||
-		!cold.CandidateInputReadsUnavailable || cold.CandidateResultMembers != 0 ||
-		cold.CandidateResultRecords != 0 ||
+		cold.ObservationInputMembers != targetRelationshipObservationMembers ||
+		cold.ObservationMembers != targetRelationshipObservationMembers ||
+		cold.ObservationRecords != targetRelationshipRecords ||
+		cold.ObservationObservedRecords != 0 ||
+		cold.ObservationSourceBlobReads != targetRelationshipRecords ||
+		!cold.CandidateInputReadsUnavailable ||
+		cold.CandidateResultMembers != targetRelationshipCandidateMembers ||
+		cold.CandidateResultRecords != targetRelationshipRecords ||
 		cold.CandidateDeclaredBytes != uint64(receipt.Population.FixtureContentBytes) ||
 		cold.RelationshipScheduleChunks != 1 ||
 		cold.RelationshipComponentPublishes != 3 ||
