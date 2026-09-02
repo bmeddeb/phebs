@@ -187,9 +187,13 @@ func ValidateStateProjection(
 		return nil
 	}
 	service := projection.Service
+	// DesiredCatalogGeneration records the immutable root where this
+	// service-local desired identity last changed. A sibling-only catalog
+	// successor therefore keeps the older provenance while the desired digest,
+	// source generation, and complete service projection remain exact. Active
+	// validation above stays root-exact because it opens that historical root.
 	if state.DesiredGeneration != desired ||
 		state.DesiredSourceGeneration != projection.SourceGeneration ||
-		state.DesiredCatalogGeneration != projection.CatalogGeneration ||
 		state.ServiceKey != service.Key || state.DisplayName != service.DisplayName ||
 		state.Disposition != service.Disposition || state.Origin != service.Origin ||
 		state.Reason != service.Reason ||

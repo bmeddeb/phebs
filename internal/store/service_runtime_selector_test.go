@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +21,13 @@ type serviceRuntimeSelectorFixture struct {
 	repository string
 	v2         ServiceRuntimeTarget
 	v3         ServiceRuntimeTarget
+}
+
+// currentOnlyServiceStateV3ReadSource deliberately exposes only the original
+// current-state interface, even when its concrete source also implements
+// selected-revision reads.
+type currentOnlyServiceStateV3ReadSource struct {
+	ServiceStateV3ReadSource
 }
 
 func newServiceRuntimeSelectorFixture(t *testing.T) serviceRuntimeSelectorFixture {
@@ -201,6 +210,825 @@ func TestServiceRuntimeSelectorCASAndReverseAreMonotonic(t *testing.T) {
 	if err := fixture.store.validateServiceRuntimeSelectorStore(ctx); err != nil {
 		t.Fatalf("selector store integrity: %v", err)
 	}
+}
+
+func TestSelectedV3SnapshotSurvivesSparseSuccessor(t *testing.T) {
+	fixture := newServiceRuntimeSelectorFixture(t)
+	ctx := t.Context()
+	selected, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository: fixture.repository,
+			Target:     fixture.v3,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewServiceStateV3Reader(
+		fixture.store,
+		servicecatalogv3.NewDefaultReadCache(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := reader.OpenServiceSelected(ctx, selected, "orders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := before.Entry.State
+	before.Close()
+
+	commit := strings.Repeat("7", 40)
+	successorServices := make([]servicecatalog.Service, 0, 601)
+	successorServices = append(successorServices, servicecatalog.Service{
+		Key:         "orders",
+		DisplayName: "Orders V3 successor",
+		Disposition: servicecatalog.DispositionAccepted,
+		Origin:      servicecatalog.OriginBase,
+	})
+	for index := range 600 {
+		successorServices = append(successorServices, servicecatalog.Service{
+			Key:         fmt.Sprintf("z-service-%03d", index),
+			DisplayName: fmt.Sprintf("Successor service %03d", index),
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		})
+	}
+	successor := serviceStateV3Generation(
+		t,
+		fixture.repository,
+		commit,
+		"runtime-v3-successor",
+		successorServices,
+	)
+	if err := fixture.store.PublishServiceCatalogV3Candidate(ctx, successor); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := fixture.store.BeginServiceStateV3Reconcile(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expandServiceStateV3Plan(t, fixture.store, reconcile)
+	firstChunk, err := fixture.store.ClaimGenerationChunk(
+		ctx,
+		GenerationResourceCPU,
+		"service-runtime-snapshot-test",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstResult, err := fixture.store.ProcessServiceStateV3Chunk(ctx, *firstChunk)
+	if err != nil || firstResult.Settled {
+		t.Fatalf("partial successor chunk = %+v, %v", firstResult, err)
+	}
+	if err := fixture.store.CompleteGenerationChunk(ctx, *firstChunk); err != nil {
+		t.Fatal(err)
+	}
+	partialSummary, err := fixture.store.GetServiceStateV3SummaryPoint(
+		ctx,
+		fixture.repository,
+	)
+	if err != nil || partialSummary.ControlRevision != selected.StateControlRevision ||
+		partialSummary.SummaryDigest != selected.StateSummaryDigest {
+		t.Fatalf("partial selected summary = %+v, %v", partialSummary, err)
+	}
+	partialPreimages, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_repository_preimage
+	WHERE repository = $repository`, map[string]any{"repository": fixture.repository})
+	if err != nil || len(firstDomainRows(partialPreimages)) != 1 {
+		t.Fatalf("partial summary preimage = %+v, %v", firstDomainRows(partialPreimages), err)
+	}
+	if report, err := fixture.store.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("partial precious preimage validation = %+v, %v", report, err)
+	}
+	runServiceStateV3Plan(t, fixture.store, reconcile)
+	nextSearch := selectorTestDigest("b")
+	activation, err := fixture.store.BeginServiceStateV3Activation(
+		ctx,
+		fixture.repository,
+		nextSearch,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, fixture.store, activation)
+
+	if err := fixture.store.ValidateServiceRuntimeDatabaseTarget(
+		ctx,
+		fixture.repository,
+		ServiceRuntimeV3,
+		fixture.v3,
+	); err != nil {
+		t.Fatalf("historical selected target: %v", err)
+	}
+	oldRead, err := reader.OpenServiceSelected(ctx, selected, "orders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oldRead.Entry.State.StateDigest != original.StateDigest ||
+		oldRead.Entry.State.DisplayName != original.DisplayName {
+		t.Fatalf("selected state changed = %+v; want %+v", oldRead.Entry.State, original)
+	}
+	if err := reader.Confirm(ctx, oldRead); err != nil {
+		t.Fatal(err)
+	}
+	oldRead.Close()
+	oldPage, err := reader.ListServicesSelected(
+		ctx,
+		selected,
+		ServiceStateFilter{},
+		ServiceStatePosition{},
+		10,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(oldPage.Entries) != 1 ||
+		oldPage.Entries[0].State.ServiceKey != "orders" ||
+		oldPage.Entries[0].State.StateDigest != original.StateDigest {
+		t.Fatalf("selected page = %+v", oldPage.Entries)
+	}
+	oldPage.Close()
+
+	rowResults, err := surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_preimage
+	WHERE repository = $repository`, map[string]any{"repository": fixture.repository})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows := firstDomainRows(rowResults); len(rows) != 1 ||
+		rows[0].SnapshotRevision != selected.StateControlRevision ||
+		rows[0].SnapshotDigest != selected.StateSummaryDigest {
+		t.Fatalf("sparse preimages = %+v", rows)
+	}
+	if report, err := fixture.store.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("precious preimage validation = %+v, %v", report, err)
+	}
+
+	nextPointer, err := fixture.store.GetServiceCatalogV3CandidatePointer(
+		ctx,
+		fixture.repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextSummary, err := fixture.store.GetServiceStateV3SummaryPoint(
+		ctx,
+		fixture.repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextRelationshipGeneration := selectorTestDigest("c")
+	nextRelationshipRoot := selectorTestDigest("d")
+	if err := fixture.store.PinServiceCatalogV3RelationshipReference(
+		ctx,
+		ServiceCatalogV3RelationshipReference{
+			Repository:                   fixture.repository,
+			RelationshipGenerationDigest: nextRelationshipGeneration,
+			RelationshipRootDigest:       nextRelationshipRoot,
+			CatalogRootDigest:            nextPointer.RootDigest,
+			CatalogControlRevision:       nextPointer.ControlRevision,
+			StateControlRevision:         nextSummary.ControlRevision,
+			StateSummaryDigest:           nextSummary.SummaryDigest,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	next, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository:              fixture.repository,
+			ExpectedControlRevision: selected.ControlRevision,
+			ExpectedDigest:          selected.Digest,
+			Target: ServiceRuntimeTarget{
+				CatalogRootDigest:            nextPointer.RootDigest,
+				CatalogControlRevision:       nextPointer.ControlRevision,
+				StateControlRevision:         nextSummary.ControlRevision,
+				StateSummaryDigest:           nextSummary.SummaryDigest,
+				SearchGenerationDigest:       nextSearch,
+				RelationshipGenerationDigest: nextRelationshipGeneration,
+				RelationshipRootDigest:       nextRelationshipRoot,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextRead, err := reader.OpenServiceSelected(ctx, next, "orders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nextRead.Entry.State.DisplayName != "Orders V3 successor" ||
+		nextRead.Entry.State.StateDigest == original.StateDigest {
+		t.Fatalf("successor state = %+v", nextRead.Entry.State)
+	}
+	nextRead.Close()
+
+	cursor := ""
+	remaining := 2
+	for turn := range 16 {
+		sweep, sweepErr := fixture.store.SweepServiceCatalogV3Lifecycle(
+			ctx,
+			cursor,
+			64,
+			1,
+			8,
+		)
+		if sweepErr != nil {
+			t.Fatalf("preimage lifecycle turn %d: %v", turn, sweepErr)
+		}
+		cursor = sweep.Cursor
+		counts, countErr := surrealdb.Query[[]struct {
+			Count int `json:"count"`
+		}](ctx, fixture.store.db, `
+RETURN [{ count: array::len(SELECT id FROM service_state_v3_preimage
+	WHERE repository = $repository) + array::len(
+		SELECT id FROM service_state_v3_repository_preimage
+			WHERE repository = $repository) }]`, map[string]any{
+			"repository": fixture.repository,
+		})
+		if countErr != nil {
+			t.Fatal(countErr)
+		}
+		countRows := firstDomainRows(counts)
+		if len(countRows) != 1 || countRows[0].Count < 0 ||
+			remaining-countRows[0].Count > 1 {
+			t.Fatalf("bounded preimage cleanup = %+v; prior %d", countRows, remaining)
+		}
+		deleted := remaining - countRows[0].Count
+		if sweep.Deleted != deleted {
+			t.Fatalf("reported preimage cleanup = %d; actual %d", sweep.Deleted, deleted)
+		}
+		remaining = countRows[0].Count
+		if remaining == 0 {
+			if report, validateErr := fixture.store.ValidateServiceCatalogV3Precious(ctx); validateErr != nil {
+				t.Fatalf("post-cleanup precious validation = %+v, %v", report, validateErr)
+			}
+			return
+		}
+	}
+	t.Fatalf("preimage lifecycle did not converge: %d records", remaining)
+}
+
+func TestSelectedV3ReaderRefusesCurrentOnlySource(t *testing.T) {
+	fixture := newServiceRuntimeSelectorFixture(t)
+	selected, err := fixture.store.SelectServiceRuntimeV3(
+		t.Context(),
+		ServiceRuntimeSelectionRequest{
+			Repository: fixture.repository,
+			Target:     fixture.v3,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewServiceStateV3Reader(
+		currentOnlyServiceStateV3ReadSource{ServiceStateV3ReadSource: fixture.store},
+		servicecatalogv3.NewDefaultReadCache(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reader.OpenServiceSelected(
+		t.Context(), selected, "orders",
+	); !errors.Is(err, ErrInvalidServiceStateV3) || !errors.Is(err, ErrConflict) {
+		t.Fatalf("selected current-only source = %v", err)
+	}
+}
+
+func TestSelectedV3SuccessorDefersUntilPriorSnapshotDrains(t *testing.T) {
+	fixture := newServiceRuntimeSelectorFixture(t)
+	ctx := t.Context()
+	selectedA, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository: fixture.repository,
+			Target:     fixture.v3,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commit := strings.Repeat("7", 40)
+	servicesB := []servicecatalog.Service{
+		{
+			Key: "orders", DisplayName: "Orders V3",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		},
+		{
+			Key: "users", DisplayName: "Users",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		},
+	}
+	generationB := serviceStateV3Generation(
+		t, fixture.repository, commit, "snapshot-b", servicesB,
+	)
+	if err := fixture.store.PublishServiceCatalogV3Candidate(ctx, generationB); err != nil {
+		t.Fatal(err)
+	}
+	reconcileB, err := fixture.store.BeginServiceStateV3Reconcile(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, fixture.store, reconcileB)
+	activationB, err := fixture.store.BeginServiceStateV3Activation(
+		ctx, fixture.repository, fixture.v3.SearchGenerationDigest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, fixture.store, activationB)
+	pointerB, err := fixture.store.GetServiceCatalogV3CandidatePointer(
+		ctx, fixture.repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaryB, err := fixture.store.GetServiceStateV3SummaryPoint(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetB := ServiceRuntimeTarget{
+		CatalogRootDigest:            pointerB.RootDigest,
+		CatalogControlRevision:       pointerB.ControlRevision,
+		StateControlRevision:         summaryB.ControlRevision,
+		StateSummaryDigest:           summaryB.SummaryDigest,
+		SearchGenerationDigest:       fixture.v3.SearchGenerationDigest,
+		RelationshipGenerationDigest: selectorTestDigest("a"),
+		RelationshipRootDigest:       selectorTestDigest("b"),
+	}
+	if err := fixture.store.PinServiceCatalogV3RelationshipReference(
+		ctx,
+		ServiceCatalogV3RelationshipReference{
+			Repository:                   fixture.repository,
+			RelationshipGenerationDigest: targetB.RelationshipGenerationDigest,
+			RelationshipRootDigest:       targetB.RelationshipRootDigest,
+			CatalogRootDigest:            targetB.CatalogRootDigest,
+			CatalogControlRevision:       targetB.CatalogControlRevision,
+			StateControlRevision:         targetB.StateControlRevision,
+			StateSummaryDigest:           targetB.StateSummaryDigest,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	selectedB, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository:              fixture.repository,
+			ExpectedControlRevision: selectedA.ControlRevision,
+			ExpectedDigest:          selectedA.Digest,
+			Target:                  targetB,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.store.UnpinServiceCatalogV3RelationshipReference(
+		ctx,
+		ServiceCatalogV3RelationshipReference{
+			Repository:                   fixture.repository,
+			RelationshipGenerationDigest: fixture.v3.RelationshipGenerationDigest,
+			RelationshipRootDigest:       fixture.v3.RelationshipRootDigest,
+			CatalogRootDigest:            fixture.v3.CatalogRootDigest,
+			CatalogControlRevision:       fixture.v3.CatalogControlRevision,
+			StateControlRevision:         fixture.v3.StateControlRevision,
+			StateSummaryDigest:           fixture.v3.StateSummaryDigest,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	ordersB := serviceStateV3Row(t, fixture.store, fixture.repository, "orders")
+	if ordersB.DesiredCatalogGeneration != fixture.v3.CatalogRootDigest ||
+		ordersB.ActiveCatalogGeneration != fixture.v3.CatalogRootDigest {
+		t.Fatalf("B unchanged orders provenance = %+v", ordersB)
+	}
+
+	servicesC := slices.Clone(servicesB)
+	servicesC[0].DisplayName = "Orders C"
+	generationC := serviceStateV3Generation(
+		t, fixture.repository, commit, "snapshot-c", servicesC,
+	)
+	if err := fixture.store.PublishServiceCatalogV3Candidate(ctx, generationC); err != nil {
+		t.Fatal(err)
+	}
+	reconcileC, err := fixture.store.BeginServiceStateV3Reconcile(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expandServiceStateV3Plan(t, fixture.store, reconcileC)
+	chunk, err := fixture.store.ClaimGenerationChunk(
+		ctx, GenerationResourceCPU, "snapshot-c",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planBefore, err := fixture.store.getServiceStateV3Plan(ctx, reconcileC.Plan.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.store.ProcessServiceStateV3Chunk(
+		ctx, *chunk,
+	); !IsDeferral(err) || !errors.Is(err, ErrConflict) {
+		t.Fatalf("successor before stale snapshot cleanup = %v", err)
+	}
+	planAfter, err := fixture.store.getServiceStateV3Plan(ctx, reconcileC.Plan.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ordersAfterDeferral := serviceStateV3Row(t, fixture.store, fixture.repository, "orders")
+	if planAfter.NextChunk != planBefore.NextChunk ||
+		planAfter.RowsWritten != planBefore.RowsWritten ||
+		ordersAfterDeferral.StateDigest != ordersB.StateDigest {
+		t.Fatalf("deferred successor mutated plan/state: before=%+v after=%+v state=%+v",
+			planBefore, planAfter, ordersAfterDeferral,
+		)
+	}
+	candidateA := serviceCatalogV3LifecycleRecord(
+		t, fixture.store, fixture.v3.CatalogRootDigest,
+	)
+	deleted, err := fixture.store.drainServiceStateV3Preimages(ctx, candidateA, 1)
+	if err != nil || deleted != 1 {
+		t.Fatalf("drain A snapshot = %d, %v", deleted, err)
+	}
+	result, err := fixture.store.ProcessServiceStateV3Chunk(ctx, *chunk)
+	if err != nil || result.Applied != 1 {
+		t.Fatalf("successor after stale snapshot cleanup = %+v, %v", result, err)
+	}
+	if err := fixture.store.CompleteGenerationChunk(ctx, *chunk); err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, fixture.store, reconcileC)
+	activationC, err := fixture.store.BeginServiceStateV3Activation(
+		ctx, fixture.repository, fixture.v3.SearchGenerationDigest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, fixture.store, activationC)
+
+	preimageRows, err := surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_preimage WHERE repository = $repository`, map[string]any{
+		"repository": fixture.repository,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := firstDomainRows(preimageRows)
+	preimageSummaries, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_repository_preimage
+	WHERE repository = $repository`, map[string]any{"repository": fixture.repository})
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaries := firstDomainRows(preimageSummaries)
+	if len(rows) != 1 || len(summaries) != 1 ||
+		rows[0].DesiredCatalogGeneration != fixture.v3.CatalogRootDigest ||
+		rows[0].ActiveCatalogGeneration != fixture.v3.CatalogRootDigest ||
+		summaries[0].CatalogGeneration != generationB.Root.Digest {
+		t.Fatalf("mixed B-owned snapshot = rows %+v summaries %+v", rows, summaries)
+	}
+	pointerC, err := fixture.store.GetServiceCatalogV3CandidatePointer(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaryC, err := fixture.store.GetServiceStateV3SummaryPoint(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetC := ServiceRuntimeTarget{
+		CatalogRootDigest:            pointerC.RootDigest,
+		CatalogControlRevision:       pointerC.ControlRevision,
+		StateControlRevision:         summaryC.ControlRevision,
+		StateSummaryDigest:           summaryC.SummaryDigest,
+		SearchGenerationDigest:       fixture.v3.SearchGenerationDigest,
+		RelationshipGenerationDigest: selectorTestDigest("c"),
+		RelationshipRootDigest:       selectorTestDigest("d"),
+	}
+	if err := fixture.store.PinServiceCatalogV3RelationshipReference(
+		ctx,
+		ServiceCatalogV3RelationshipReference{
+			Repository:                   fixture.repository,
+			RelationshipGenerationDigest: targetC.RelationshipGenerationDigest,
+			RelationshipRootDigest:       targetC.RelationshipRootDigest,
+			CatalogRootDigest:            targetC.CatalogRootDigest,
+			CatalogControlRevision:       targetC.CatalogControlRevision,
+			StateControlRevision:         targetC.StateControlRevision,
+			StateSummaryDigest:           targetC.StateSummaryDigest,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository:              fixture.repository,
+			ExpectedControlRevision: selectedB.ControlRevision,
+			ExpectedDigest:          selectedB.Digest,
+			Target:                  targetC,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if deleted, err := fixture.store.drainServiceStateV3Preimages(
+		ctx, candidateA, 1,
+	); err != nil || deleted != 0 {
+		t.Fatalf("A drained B-owned snapshot = %d, %v", deleted, err)
+	}
+	if retired, err := fixture.store.retireServiceCatalogV3Generation(
+		ctx, candidateA, 1,
+	); err != nil || retired {
+		t.Fatalf("A retired before B-owned snapshot drained = %t, %v", retired, err)
+	}
+	candidateB := serviceCatalogV3LifecycleRecord(t, fixture.store, generationB.Root.Digest)
+	for turn := range 2 {
+		deleted, err := fixture.store.drainServiceStateV3Preimages(ctx, candidateB, 1)
+		if err != nil || deleted != 1 {
+			t.Fatalf("drain B snapshot turn %d = %d, %v", turn, deleted, err)
+		}
+	}
+	currentRows, err := surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_current`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preimageRows, err = surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_preimage`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(firstDomainRows(preimageRows)) > len(firstDomainRows(currentRows)) {
+		t.Fatalf("preimage row ceiling: current=%d preimage=%d",
+			len(firstDomainRows(currentRows)), len(firstDomainRows(preimageRows)),
+		)
+	}
+	if report, err := fixture.store.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("post-drain precious = %+v, %v", report, err)
+	}
+	if retired, err := fixture.store.retireServiceCatalogV3Generation(
+		ctx, candidateA, 1,
+	); err != nil || !retired {
+		t.Fatalf("A retirement after B snapshot drain = %t, %v", retired, err)
+	}
+}
+
+func TestSelectedV3SuccessorMutationRefusesCorruptSelector(t *testing.T) {
+	fixture := newServiceRuntimeSelectorFixture(t)
+	ctx := t.Context()
+	if _, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository: fixture.repository,
+			Target:     fixture.v3,
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	prior := serviceStateV3Row(t, fixture.store, fixture.repository, "orders")
+	successor := serviceStateV3Generation(
+		t,
+		fixture.repository,
+		strings.Repeat("7", 40),
+		"corrupt-selector-successor",
+		[]servicecatalog.Service{{
+			Key: "orders", DisplayName: "Orders successor",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	if err := fixture.store.PublishServiceCatalogV3Candidate(ctx, successor); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := fixture.store.BeginServiceStateV3Reconcile(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expandServiceStateV3Plan(t, fixture.store, reconcile)
+	chunk, err := fixture.store.ClaimGenerationChunk(
+		ctx, GenerationResourceCPU, "corrupt-selector",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](ctx, fixture.store.db, `
+UPDATE $rid SET schema = 'corrupt' RETURN NONE`, map[string]any{
+		"rid": serviceRuntimeSelectorID(fixture.repository),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.store.ProcessServiceStateV3Chunk(
+		ctx, *chunk,
+	); !errors.Is(err, ErrInvalidServiceRuntimeSelector) {
+		t.Fatalf("corrupt selector mutation = %v", err)
+	}
+	after := serviceStateV3Row(t, fixture.store, fixture.repository, "orders")
+	if after.StateDigest != prior.StateDigest ||
+		after.ControlRevision != prior.ControlRevision {
+		t.Fatalf("corrupt selector mutated state: prior=%+v after=%+v", prior, after)
+	}
+	preimages, err := surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_preimage WHERE repository = $repository`, map[string]any{
+		"repository": fixture.repository,
+	})
+	if err != nil || len(firstDomainRows(preimages)) != 0 {
+		t.Fatalf("corrupt selector created preimages = %+v, %v", firstDomainRows(preimages), err)
+	}
+}
+
+func TestSelectV3RefusesStateOutsideTargetSnapshot(t *testing.T) {
+	fixture := newServiceRuntimeSelectorFixture(t)
+	ctx := t.Context()
+	if _, err := surrealdb.Query[any](ctx, fixture.store.db, `
+UPDATE $rid SET visible_from = $visible_from RETURN NONE`, map[string]any{
+		"rid":          serviceStateV3ID(fixture.repository, "orders"),
+		"visible_from": fixture.v3.StateControlRevision + 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.store.SelectServiceRuntimeV3(
+		ctx,
+		ServiceRuntimeSelectionRequest{
+			Repository: fixture.repository,
+			Target:     fixture.v3,
+		},
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("state outside selected snapshot = %v", err)
+	}
+	if report, err := fixture.store.ValidateServiceCatalogV3Precious(
+		ctx,
+	); !errors.Is(err, ErrInvalidServiceStateV3) {
+		t.Fatalf("precious visible boundary = %+v, %v", report, err)
+	}
+}
+
+func TestServiceStateV3PreciousRejectsPreimageCardinalityCorruption(t *testing.T) {
+	type snapshotFixture struct {
+		serviceRuntimeSelectorFixture
+		summary serviceRepositoryStateRec
+		row     serviceStateRec
+	}
+	setup := func(t *testing.T) snapshotFixture {
+		t.Helper()
+		fixture := newServiceRuntimeSelectorFixture(t)
+		ctx := t.Context()
+		if _, err := fixture.store.SelectServiceRuntimeV3(
+			ctx,
+			ServiceRuntimeSelectionRequest{
+				Repository: fixture.repository,
+				Target:     fixture.v3,
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		successor := serviceStateV3Generation(
+			t,
+			fixture.repository,
+			strings.Repeat("7", 40),
+			"preimage-cardinality",
+			[]servicecatalog.Service{{
+				Key: "orders", DisplayName: "Orders successor",
+				Disposition: servicecatalog.DispositionAccepted,
+				Origin:      servicecatalog.OriginBase,
+			}},
+		)
+		if err := fixture.store.PublishServiceCatalogV3Candidate(ctx, successor); err != nil {
+			t.Fatal(err)
+		}
+		reconcile, err := fixture.store.BeginServiceStateV3Reconcile(
+			ctx, fixture.repository,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expandServiceStateV3Plan(t, fixture.store, reconcile)
+		chunk, err := fixture.store.ClaimGenerationChunk(
+			ctx, GenerationResourceCPU, "preimage-cardinality",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := fixture.store.ProcessServiceStateV3Chunk(ctx, *chunk); err != nil {
+			t.Fatal(err)
+		}
+		summaryResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_repository_preimage
+	WHERE repository = $repository`, map[string]any{"repository": fixture.repository})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rowResults, err := surrealdb.Query[[]serviceStateRec](ctx, fixture.store.db, `
+SELECT * FROM service_state_v3_preimage
+	WHERE repository = $repository`, map[string]any{"repository": fixture.repository})
+		if err != nil {
+			t.Fatal(err)
+		}
+		summaries := firstDomainRows(summaryResults)
+		rows := firstDomainRows(rowResults)
+		if len(summaries) != 1 || len(rows) != 1 {
+			t.Fatalf("seeded snapshot = summaries %+v rows %+v", summaries, rows)
+		}
+		if report, err := fixture.store.ValidateServiceCatalogV3Precious(ctx); err != nil {
+			t.Fatalf("seeded precious = %+v, %v", report, err)
+		}
+		return snapshotFixture{
+			serviceRuntimeSelectorFixture: fixture,
+			summary:                       summaries[0],
+			row:                           rows[0],
+		}
+	}
+	t.Run("second snapshot summary", func(t *testing.T) {
+		fixture := setup(t)
+		summary, err := serviceStateV3RepositoryFromRec(fixture.summary)
+		if err != nil {
+			t.Fatal(err)
+		}
+		extra := *summary
+		extra.ControlRevision++
+		if err := servicecatalogv3.SetRepositoryStateDigest(&extra); err != nil {
+			t.Fatal(err)
+		}
+		content := serviceRepositoryStateContent(extra)
+		content["snapshot_revision"] = extra.ControlRevision
+		content["snapshot_digest"] = extra.SummaryDigest
+		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+CREATE service_state_v3_repository_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": content,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if report, err := fixture.store.ValidateServiceCatalogV3Precious(
+			t.Context(),
+		); !errors.Is(err, ErrInvalidServiceStateV3) {
+			t.Fatalf("second summary precious = %+v, %v", report, err)
+		}
+	})
+	t.Run("row without current counterpart", func(t *testing.T) {
+		fixture := setup(t)
+		state, err := serviceStateV3FromRec(fixture.row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		orphan := *state
+		orphan.ServiceKey = "orphan"
+		orphan.DisplayName = "Orphan"
+		orphan.Successors = slices.Clone(state.Successors)
+		orphan.ControlRevision++
+		if err := servicecatalogv3.SetServiceStateDigest(&orphan); err != nil {
+			t.Fatal(err)
+		}
+		content := serviceStateContent(orphan)
+		content["visible_from"] = fixture.row.VisibleFrom
+		content["snapshot_revision"] = fixture.row.SnapshotRevision
+		content["snapshot_digest"] = fixture.row.SnapshotDigest
+		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+CREATE service_state_v3_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": content,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if report, err := fixture.store.ValidateServiceCatalogV3Precious(
+			t.Context(),
+		); !errors.Is(err, ErrInvalidServiceStateV3) {
+			t.Fatalf("orphan row precious = %+v, %v", report, err)
+		}
+	})
+	t.Run("row without preimage summary", func(t *testing.T) {
+		fixture := newServiceRuntimeSelectorFixture(t)
+		rowResults, err := surrealdb.Query[[]serviceStateRec](t.Context(), fixture.store.db, `
+SELECT * FROM service_state_v3_current
+	WHERE repository = $repository AND service_key = 'orders'`, map[string]any{
+			"repository": fixture.repository,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := firstDomainRows(rowResults)
+		if len(rows) != 1 {
+			t.Fatalf("current state rows = %+v", rows)
+		}
+		state, err := serviceStateV3FromRec(rows[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		content := serviceStateContent(*state)
+		content["visible_from"] = rows[0].VisibleFrom
+		content["snapshot_revision"] = fixture.v3.StateControlRevision
+		content["snapshot_digest"] = fixture.v3.StateSummaryDigest
+		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
+CREATE service_state_v3_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": content,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if report, err := fixture.store.ValidateServiceCatalogV3Precious(
+			t.Context(),
+		); !errors.Is(err, ErrInvalidServiceStateV3) {
+			t.Fatalf("ownerless row precious = %+v, %v", report, err)
+		}
+	})
 }
 
 func TestServiceRuntimeSelectorReconcilesLostCommitResponseAfterCancellation(
@@ -571,7 +1399,7 @@ func TestServiceRuntimeSelectorTargetMismatchDoesNotLatch(t *testing.T) {
 			); !errors.Is(err, ErrNotFound) {
 				t.Fatalf("failed CAS wrote selector: %v", err)
 			}
-			if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != candidateControlRevisionMigrationVersion {
+			if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 				t.Fatalf("failed CAS latched compatibility marker %q", version)
 			}
 		})
@@ -589,13 +1417,13 @@ func TestServiceRuntimeSelectorCompatibilityLatchIsIrreversible(t *testing.T) {
 		t.Fatal(err)
 	}
 	version := serviceRuntimeCompatibilityMarker(t, fixture.store)
-	if version != serviceRuntimeSelectorCompatibilityMigrationVersion ||
-		version == candidateControlRevisionMigrationVersion {
+	if version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatalf("activated compatibility marker = %q", version)
 	}
 	// This is the exact predecessor's acceptance predicate. Its v1-only
 	// migrator therefore refuses before returning a usable store.
-	if version == candidateControlRevisionMigrationVersion {
+	if version == candidateControlRevisionMigrationVersion ||
+		version == serviceRuntimeSelectorCompatibilityMigrationVersion {
 		t.Fatal("predecessor unexpectedly accepts activated selector marker")
 	}
 	if relationshipVersion := serviceRuntimeMigrationMarker(
@@ -624,7 +1452,7 @@ func TestServiceRuntimeSelectorCompatibilityLatchIsIrreversible(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceRuntimeSelectorCompatibilityMigrationVersion {
+	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatalf("reverse weakened compatibility latch to %q", version)
 	}
 }
@@ -673,7 +1501,7 @@ SELECT * FROM service_catalog_v3_state_reference
 	if rows := firstDomainRows(references); len(rows) != 0 {
 		t.Fatalf("retired selector retained current catalog reference: %+v", rows)
 	}
-	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceRuntimeSelectorCompatibilityMigrationVersion {
+	if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatalf("retirement weakened compatibility latch to %q", version)
 	}
 	if err := fixture.store.validateServiceRuntimeSelectorStore(ctx); err != nil {
@@ -722,26 +1550,13 @@ UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
 			t.Fatalf("selector without latch startup validation = %v", err)
 		}
 	})
-	t.Run("latch without selector", func(t *testing.T) {
+	t.Run("schema latch without selector", func(t *testing.T) {
 		fixture := newServiceRuntimeSelectorFixture(t)
-		if _, err := fixture.store.SelectServiceRuntimeV3(
-			t.Context(), ServiceRuntimeSelectionRequest{
-				Repository: fixture.repository,
-				Target:     fixture.v3,
-			},
-		); err != nil {
-			t.Fatal(err)
+		if version := serviceRuntimeCompatibilityMarker(t, fixture.store); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+			t.Fatalf("schema compatibility latch = %q", version)
 		}
-		if _, err := surrealdb.Query[any](t.Context(), fixture.store.db, `
-DELETE $rid RETURN NONE`, map[string]any{
-			"rid": serviceRuntimeSelectorID(fixture.repository),
-		}); err != nil {
-			t.Fatal(err)
-		}
-		if err := fixture.store.validateServiceRuntimeSelectorStore(
-			t.Context(),
-		); !errors.Is(err, ErrInvalidServiceRuntimeSelector) {
-			t.Fatalf("latch without selector startup validation = %v", err)
+		if err := fixture.store.validateServiceRuntimeSelectorStore(t.Context()); err != nil {
+			t.Fatalf("schema latch without selector = %v", err)
 		}
 	})
 }

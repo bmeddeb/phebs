@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os/exec"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -162,6 +164,275 @@ func TestServiceStateV3ReconcileActivationAndSuccessorFence(t *testing.T) {
 	}
 }
 
+func TestServiceStateV3PreciousRejectsCrossRepositoryCatalogRoots(t *testing.T) {
+	t.Run("current and snapshot rows", func(t *testing.T) {
+		s, repository, otherRoot, summary := newServiceStateV3ProvenanceFixture(t)
+		ctx := t.Context()
+		rowResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_current
+	WHERE repository = $repository ORDER BY service_key`, map[string]any{
+			"repository": repository,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := firstDomainRows(rowResults)
+		if len(rows) != 1 {
+			t.Fatalf("current rows = %+v", rows)
+		}
+		original, err := serviceStateV3FromRec(rows[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		replaceCurrent := func(state servicecatalog.ServiceState) {
+			t.Helper()
+			content := serviceStateContent(state)
+			content["visible_from"] = rows[0].VisibleFrom
+			if _, updateErr := surrealdb.Query[any](ctx, s.db,
+				"UPDATE $rid CONTENT $content RETURN NONE",
+				map[string]any{"rid": *rows[0].RecID, "content": content},
+			); updateErr != nil {
+				t.Fatal(updateErr)
+			}
+		}
+		assertRejected := func(label string) {
+			t.Helper()
+			if report, validateErr := s.ValidateServiceCatalogV3Precious(ctx); !errors.Is(validateErr, ErrInvalidServiceStateV3) {
+				t.Fatalf("%s = %+v, %v", label, report, validateErr)
+			}
+		}
+
+		crossDesired := *original
+		crossDesired.DesiredCatalogGeneration = otherRoot
+		if err := servicecatalogv3.SetServiceStateDigest(&crossDesired); err != nil {
+			t.Fatal(err)
+		}
+		replaceCurrent(crossDesired)
+		assertRejected("cross-repository current desired root")
+		replaceCurrent(*original)
+
+		crossActive := *original
+		crossActive.ActiveCatalogGeneration = otherRoot
+		if err := servicecatalogv3.SetServiceStateDigest(&crossActive); err != nil {
+			t.Fatal(err)
+		}
+		replaceCurrent(crossActive)
+		assertRejected("cross-repository current active root")
+		replaceCurrent(*original)
+
+		crossSummary := summary
+		crossSummary.CatalogGeneration = otherRoot
+		if err := servicecatalogv3.SetRepositoryStateDigest(&crossSummary); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := surrealdb.Query[any](ctx, s.db,
+			"UPDATE $rid CONTENT $content RETURN NONE",
+			map[string]any{
+				"rid":     serviceStateV3RepositoryID(repository),
+				"content": serviceRepositoryStateContent(crossSummary),
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		assertRejected("cross-repository current summary root")
+		if _, err := surrealdb.Query[any](ctx, s.db,
+			"UPDATE $rid CONTENT $content RETURN NONE",
+			map[string]any{
+				"rid":     serviceStateV3RepositoryID(repository),
+				"content": serviceRepositoryStateContent(summary),
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		preimageSummaryContent := serviceRepositoryStateContent(summary)
+		preimageSummaryContent["snapshot_revision"] = summary.ControlRevision
+		preimageSummaryContent["snapshot_digest"] = summary.SummaryDigest
+		if _, err := surrealdb.Query[any](ctx, s.db, `
+CREATE service_state_v3_repository_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": preimageSummaryContent,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		preimageContent := serviceStateContent(*original)
+		preimageContent["visible_from"] = rows[0].VisibleFrom
+		preimageContent["snapshot_revision"] = summary.ControlRevision
+		preimageContent["snapshot_digest"] = summary.SummaryDigest
+		if _, err := surrealdb.Query[any](ctx, s.db, `
+CREATE service_state_v3_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": preimageContent,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_preimage WHERE repository = $repository`, map[string]any{
+			"repository": repository,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		preimages := firstDomainRows(preimageResults)
+		if len(preimages) != 1 {
+			t.Fatalf("preimage rows = %+v", preimages)
+		}
+		replacePreimage := func(state servicecatalog.ServiceState, snapshotDigest string) {
+			t.Helper()
+			content := serviceStateContent(state)
+			content["visible_from"] = rows[0].VisibleFrom
+			content["snapshot_revision"] = summary.ControlRevision
+			content["snapshot_digest"] = snapshotDigest
+			if _, updateErr := surrealdb.Query[any](ctx, s.db,
+				"UPDATE $rid CONTENT $content RETURN NONE",
+				map[string]any{"rid": *preimages[0].RecID, "content": content},
+			); updateErr != nil {
+				t.Fatal(updateErr)
+			}
+		}
+
+		replacePreimage(crossDesired, summary.SummaryDigest)
+		assertRejected("cross-repository preimage desired root")
+		replacePreimage(*original, summary.SummaryDigest)
+		replacePreimage(crossActive, summary.SummaryDigest)
+		assertRejected("cross-repository preimage active root")
+		replacePreimage(*original, summary.SummaryDigest)
+
+		crossPreimageSummary := summary
+		crossPreimageSummary.CatalogGeneration = otherRoot
+		if err := servicecatalogv3.SetRepositoryStateDigest(&crossPreimageSummary); err != nil {
+			t.Fatal(err)
+		}
+		crossPreimageSummaryContent := serviceRepositoryStateContent(crossPreimageSummary)
+		crossPreimageSummaryContent["snapshot_revision"] = summary.ControlRevision
+		crossPreimageSummaryContent["snapshot_digest"] = crossPreimageSummary.SummaryDigest
+		if _, err := surrealdb.Query[any](ctx, s.db, `
+UPDATE service_state_v3_repository_preimage CONTENT $content RETURN NONE`, map[string]any{
+			"content": crossPreimageSummaryContent,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		replacePreimage(*original, crossPreimageSummary.SummaryDigest)
+		assertRejected("cross-repository preimage summary root")
+	})
+
+	t.Run("plan", func(t *testing.T) {
+		s, repository, otherRoot, summary := newServiceStateV3ProvenanceFixture(t)
+		ctx := t.Context()
+		other, err := s.GetServiceCatalogV3CandidatePointer(
+			ctx, "example.com/acme/service-state-v3-provenance-b",
+		)
+		if err != nil || other.RootDigest != otherRoot {
+			t.Fatalf("other pointer = %+v, %v", other, err)
+		}
+		planDigest := serviceStateV3PlanDigest(
+			repository, serviceStateV3Reconcile, otherRoot,
+			other.ControlRevision, "", 0,
+		)
+		schedule, err := s.EnqueueGenerationSchedule(ctx, GenerationScheduleSpec{
+			Repository: repository, Stage: ServiceStateV3ReconcileStage,
+			Generation: planDigest, ResourceClass: GenerationResourceCPU,
+			TotalItems: 1, ChunkItems: 1, MaxAttempts: MaxGenerationAttempts,
+			RepositoryTokens: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		now := time.Now().UTC()
+		plan := ServiceStateV3Plan{
+			Schema: serviceStateV3PlanSchema, Digest: planDigest,
+			Repository: repository, Phase: serviceStateV3Reconcile,
+			CatalogRoot: otherRoot, CatalogControlRevision: other.ControlRevision,
+			ScheduleDigest: schedule.Digest, State: serviceStateV3Running,
+			TotalChunks: 1, CatalogServiceCount: 1, LiveServiceCount: 1,
+			CurrentCount: 1, SummaryControlRevision: summary.ControlRevision,
+			SummaryDigest: summary.SummaryDigest, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := validateServiceStateV3Plan(plan); err != nil {
+			t.Fatalf("cross-repository plan fixture: %v", err)
+		}
+		if _, err := surrealdb.Query[any](ctx, s.db,
+			"CREATE $rid CONTENT $content RETURN NONE",
+			map[string]any{
+				"rid":     serviceStateV3PlanID(plan.Digest),
+				"content": serviceStateV3PlanContent(plan),
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if report, err := s.ValidateServiceCatalogV3Precious(ctx); !errors.Is(err, ErrInvalidServiceStateV3) {
+			t.Fatalf("cross-repository plan root = %+v, %v", report, err)
+		}
+	})
+
+	t.Run("state reference", func(t *testing.T) {
+		s, repository, otherRoot, _ := newServiceStateV3ProvenanceFixture(t)
+		if _, err := surrealdb.Query[any](t.Context(), s.db, `
+CREATE service_catalog_v3_state_reference:cross_repository CONTENT {
+	repository: $repository, root_digest: $root_digest, kind: 'current',
+	service_key: '', state_root_digest: '', recorded_at: time::now()
+} RETURN NONE`, map[string]any{
+			"repository": repository, "root_digest": otherRoot,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if report, err := s.ValidateServiceCatalogV3Precious(t.Context()); !errors.Is(err, ErrInvalidServiceCatalogV3Lifecycle) {
+			t.Fatalf("cross-repository state reference root = %+v, %v", report, err)
+		}
+	})
+}
+
+func newServiceStateV3ProvenanceFixture(
+	t *testing.T,
+) (*Surreal, string, string, servicecatalog.RepositoryState) {
+	t.Helper()
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	const repository = "example.com/acme/service-state-v3-provenance-a"
+	const otherRepository = "example.com/acme/service-state-v3-provenance-b"
+	commit := strings.Repeat("7", 40)
+	for _, name := range []string{repository, otherRepository} {
+		seedServiceCatalogV3Repo(t, s, name, commit)
+	}
+	generation := serviceStateV3Generation(
+		t, repository, commit, "provenance-a", []servicecatalog.Service{{
+			Key: "orders", DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	otherGeneration := serviceStateV3Generation(
+		t, otherRepository, commit, "provenance-b", []servicecatalog.Service{{
+			Key: "other", DisplayName: "Other",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	for _, candidate := range []servicecatalogv3.Generation{generation, otherGeneration} {
+		if err := s.PublishServiceCatalogV3Candidate(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	activation, err := s.BeginServiceStateV3Activation(
+		ctx, repository, "sha256:"+strings.Repeat("9", 64),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, activation)
+	summary, err := s.GetServiceStateV3Summary(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report, err := s.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatalf("baseline precious = %+v, %v", report, err)
+	}
+	return s, repository, otherGeneration.Root.Digest, *summary
+}
+
 func runServiceStateV3Plan(t *testing.T, s *Surreal, begin ServiceStateV3Begin) {
 	t.Helper()
 	ctx := t.Context()
@@ -300,6 +571,99 @@ DEFINE FIELD OVERWRITE max_chunk_rows ON service_state_v3_plan TYPE string;`, ma
 	}
 	if _, err := s.getRawServiceStateV3Summary(t.Context(), "example.com/acme/missing"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing v3 summary = %v", err)
+	}
+}
+
+func TestServiceStateV3SnapshotSchemaMigrationBackfillsVisibleRevision(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-snapshot-migration"
+	commit := strings.Repeat("5", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	generation := serviceStateV3Generation(
+		t,
+		repository,
+		commit,
+		"snapshot-migration",
+		[]servicecatalog.Service{{
+			Key:         "orders",
+			DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}},
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	results, err := surrealdb.Query[any](ctx, s.db, `
+DELETE $marker;
+UPDATE $compatibility SET version = $prior RETURN NONE;
+DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE option<int>;
+UPDATE service_state_v3_current UNSET visible_from;`, map[string]any{
+		"marker":        serviceStateV3SnapshotSchemaMigrationID(),
+		"compatibility": candidateControlRevisionMigrationID(),
+		"prior":         serviceRuntimeSelectorCompatibilityMigrationVersion,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range *results {
+		if result.Error != nil {
+			t.Fatal(result.Error.Message)
+		}
+	}
+	if err := s.migrateServiceStateV3SnapshotSchema(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.migrateServiceStateV3SnapshotSchema(ctx); err != nil {
+		t.Fatalf("idempotent snapshot migration: %v", err)
+	}
+	version := serviceRuntimeCompatibilityMarker(t, s)
+	if version != serviceStateV3SnapshotCompatibilityMigrationVersion ||
+		version == candidateControlRevisionMigrationVersion ||
+		version == serviceRuntimeSelectorCompatibilityMigrationVersion {
+		t.Fatalf("snapshot compatibility latch = %q", version)
+	}
+	rows, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_current WHERE repository = $repository`, map[string]any{
+		"repository": repository,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := firstDomainRows(rows)
+	if len(got) != 1 || got[0].VisibleFrom != 1 {
+		t.Fatalf("migrated visible revision = %+v", got)
+	}
+
+	broken, err := surrealdb.Query[any](ctx, s.db, `
+DELETE $marker;
+UPDATE $compatibility SET version = $prior RETURN NONE;`, map[string]any{
+		"marker":        serviceStateV3SnapshotSchemaMigrationID(),
+		"compatibility": candidateControlRevisionMigrationID(),
+		"prior":         serviceRuntimeSelectorCompatibilityMigrationVersion,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range *broken {
+		if result.Error != nil {
+			t.Fatal(result.Error.Message)
+		}
+	}
+	if err := s.migrateServiceStateV3SnapshotSchemaWithDefinition(
+		ctx,
+		"THROW 'forced snapshot schema failure';",
+	); err == nil {
+		t.Fatal("forced snapshot schema failure unexpectedly completed migration")
+	}
+	if version := serviceRuntimeCompatibilityMarker(t, s); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
+		t.Fatalf("failed schema migration did not preserve compatibility latch: %q", version)
 	}
 }
 
@@ -603,8 +967,20 @@ func TestServiceStateV3CatalogSuccessorSupersedesActivationLease(t *testing.T) {
 }
 
 func TestServiceStateV3CrashReplay(t *testing.T) {
-	s := newServiceCatalogV3InternalStore(t)
 	ctx := t.Context()
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	dataDir := t.TempDir()
+	s, err := OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if s != nil {
+			_ = s.Close(context.Background())
+		}
+	})
 	repository := "example.com/acme/service-state-v3-replay"
 	commit := strings.Repeat("8", 40)
 	seedServiceCatalogV3Repo(t, s, repository, commit)
@@ -630,21 +1006,45 @@ func TestServiceStateV3CrashReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opened, err := s.GetServiceCatalogV3CandidateRoot(ctx, repository)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := s.processServiceStateV3ReconcileChunk(
-		ctx, *first, *begin.Plan, *opened, 0,
-	)
+	result, err := s.ProcessServiceStateV3Chunk(ctx, *first)
 	if err != nil || result.Applied == 0 {
 		t.Fatalf("pre-crash apply = %+v, %v", result, err)
 	}
 	if _, err := s.GetServiceStateV3Summary(ctx, repository); err == nil {
 		t.Fatal("partial reconcile exposed a strict v3 summary")
 	}
-	if err := s.ReleaseGenerationChunk(ctx, *first, "injected crash after state commit"); err != nil {
+	if err := s.Close(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+	s = nil
+	s, err = OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RepairServiceCatalogV3Startup(ctx); err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := s.generationChunkByIdentity(ctx, first.Identity)
+	if err != nil || persisted.Status != GenerationChunkRunning || persisted.HeartbeatAt == nil {
+		t.Fatalf("persisted crashed service-state lease = %+v, %v", persisted, err)
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*persisted),
+			"old":   time.Now().UTC().Add(-time.Hour),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if reaped, err := s.ReapStaleGenerationChunks(
+		ctx, GenerationResourceCPU, time.Minute,
+	); err != nil || reaped != 1 {
+		t.Fatalf("reap crashed service-state lease = %d, %v", reaped, err)
+	}
+	if stale, err := s.ProcessServiceStateV3Chunk(ctx, *first); err != nil || stale.Applied != 0 {
+		t.Fatalf("crashed service-state worker replay mutated rows: %+v, %v", stale, err)
+	}
+	if err := s.CompleteGenerationChunk(ctx, *first); !errors.Is(err, ErrGenerationLeaseLost) {
+		t.Fatalf("crashed service-state worker retained completion authority: %v", err)
 	}
 	replayed := false
 	for {
@@ -660,6 +1060,9 @@ func TestServiceStateV3CrashReplay(t *testing.T) {
 			t.Fatal(err)
 		}
 		if chunk.Offset == first.Offset {
+			if chunk.ID != first.ID || chunk.LeaseToken == first.LeaseToken {
+				t.Fatalf("replayed chunk lease = %+v, prior %+v", chunk, first)
+			}
 			if result.Applied != 0 {
 				t.Fatalf("replayed chunk applied rows = %+v", result)
 			}
@@ -933,6 +1336,85 @@ func TestServiceStateV3PartialActivationKeepsMatchingSummaryReadable(t *testing.
 		t.Fatalf("partial activation summary = %+v, %v", summary, err)
 	}
 	runServiceStateV3Plan(t, s, activation)
+}
+
+func TestServiceStateV3SparseSuccessorKeepsUnchangedCatalogProvenance(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-sparse-successor"
+	commit := strings.Repeat("6", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	const serviceCount = 100
+	services := make([]servicecatalog.Service, serviceCount)
+	for index := range services {
+		services[index] = servicecatalog.Service{
+			Key:         fmt.Sprintf("service-%03d", index),
+			DisplayName: fmt.Sprintf("Service %03d", index),
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		}
+	}
+	first := serviceStateV3Generation(t, repository, commit, "sparse-a", services)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, first); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	search := "sha256:" + strings.Repeat("7", 64)
+	activation, err := s.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, activation)
+	unchangedA := serviceStateV3Row(t, s, repository, "service-000")
+
+	successorServices := slices.Clone(services)
+	successorServices[serviceCount-1].DisplayName = "Changed service"
+	second := serviceStateV3Generation(
+		t, repository, commit, "sparse-b", successorServices,
+	)
+	if err := s.PublishServiceCatalogV3Candidate(ctx, second); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err = s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	assertServiceStateV3PlanBounds(t, s, reconcile.Plan.Digest, serviceCount*2, 1)
+
+	unchangedB := serviceStateV3Row(t, s, repository, "service-000")
+	changedB := serviceStateV3Row(t, s, repository, "service-099")
+	if unchangedB.StateDigest != unchangedA.StateDigest ||
+		unchangedB.DesiredCatalogGeneration != first.Root.Digest ||
+		changedB.DesiredCatalogGeneration != second.Root.Digest {
+		t.Fatalf("sparse successor states: unchanged=%+v changed=%+v", unchangedB, changedB)
+	}
+	_, reader, _ := newServiceStateV3CountingReader(t, s)
+	snapshot, err := reader.AcceptedSnapshot(ctx, repository)
+	if err != nil || len(snapshot.States) != serviceCount {
+		t.Fatalf("sparse successor relationship snapshot = %d states, %v", len(snapshot.States), err)
+	}
+
+	activation, err = s.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServiceStateV3Plan(t, s, activation)
+	assertServiceStateV3PlanBounds(t, s, activation.Plan.Digest, serviceCount, 1)
+	unchangedRead, err := reader.OpenService(ctx, repository, "service-000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unchangedRead.Close()
+	if unchangedRead.Entry.State.ActiveCatalogGeneration != first.Root.Digest ||
+		unchangedRead.Root.Digest != second.Root.Digest ||
+		unchangedRead.ActiveRoot.Digest != first.Root.Digest {
+		t.Fatalf("unchanged successor active provenance = %+v", unchangedRead)
+	}
 }
 
 func TestServiceStateV3TenThousandBoundedColdNoopDeltaAndActivation(t *testing.T) {

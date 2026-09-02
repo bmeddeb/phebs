@@ -146,7 +146,12 @@ func validateServiceRuntimeTarget(
 		if catalog.Digest != target.CatalogRootDigest {
 			return fmt.Errorf("selected v3 catalog changed: %w", store.ErrConflict)
 		}
-		summary, err := st.GetServiceStateV3SummaryPoint(ctx, repository)
+		summary, err := st.GetServiceStateV3SummarySnapshot(
+			ctx,
+			repository,
+			target.StateControlRevision,
+			target.StateSummaryDigest,
+		)
 		if err != nil {
 			return fmt.Errorf("open selected v3 state: %w", err)
 		}

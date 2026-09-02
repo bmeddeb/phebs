@@ -144,6 +144,12 @@ func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
 			}
 			return reconcileErr
 		},
+		func(_ context.Context, target string) error {
+			if target != repository {
+				t.Fatalf("advance target = %q", target)
+			}
+			return errors.New("runtime pending")
+		},
 		func(
 			_ context.Context, kind store.JobKind, target string, force bool,
 		) (*store.Job, error) {
@@ -154,8 +160,103 @@ func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
 		},
 		true,
 	)
-	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) {
+	if !errors.Is(err, reconcileErr) || !errors.Is(err, enqueueErr) ||
+		!strings.Contains(err.Error(), "runtime pending") {
 		t.Fatalf("resolver callback error = %v, want both sentinels", err)
+	}
+}
+
+func TestExplicitV3ResolverPublicationSkipsLegacyRelationshipReconcile(t *testing.T) {
+	repository := "example.com/repository"
+	v2Sentinel := errors.New("malformed legacy v2 relationship pointer")
+	tests := []struct {
+		name       string
+		selections map[string]config.ServiceCatalog
+		wantV2     bool
+	}{
+		{name: "implicit v2", selections: nil, wantV2: true},
+		{
+			name: "explicit v2",
+			selections: map[string]config.ServiceCatalog{
+				repository: {Runtime: config.ServiceCatalogRuntimeV2},
+			},
+			wantV2: true,
+		},
+		{
+			name: "explicit v3",
+			selections: map[string]config.ServiceCatalog{
+				repository: {Runtime: config.ServiceCatalogRuntimeV3},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v2Calls := 0
+			v3Calls := 0
+			reconcile := legacyRelationshipReconcileFor(
+				repository,
+				tt.selections,
+				func(context.Context, string) error {
+					v2Calls++
+					return v2Sentinel
+				},
+			)
+			err := afterResolverPublication(
+				t.Context(), repository, reconcile,
+				func(context.Context, string) error {
+					v3Calls++
+					return nil
+				},
+				nil, false,
+			)
+			if v3Calls != 1 {
+				t.Fatalf("v3 advance calls = %d, want 1", v3Calls)
+			}
+			if tt.wantV2 {
+				if v2Calls != 1 || !errors.Is(err, v2Sentinel) {
+					t.Fatalf("legacy callback = (%d, %v), want (1, sentinel)", v2Calls, err)
+				}
+				return
+			}
+			if v2Calls != 0 || err != nil {
+				t.Fatalf("explicit v3 callback = (%d, %v), want (0, nil)", v2Calls, err)
+			}
+		})
+	}
+}
+
+func TestExplicitV3ObservationPublicationSkipsLegacyAndQueuesExtraction(t *testing.T) {
+	repository := "example.com/repository"
+	v2Sentinel := errors.New("malformed legacy v2 relationship pointer")
+	v2Calls := 0
+	enqueueCalls := 0
+	reconcile := legacyRelationshipReconcileFor(
+		repository,
+		map[string]config.ServiceCatalog{
+			repository: {Runtime: config.ServiceCatalogRuntimeV3},
+		},
+		func(context.Context, string) error {
+			v2Calls++
+			return v2Sentinel
+		},
+	)
+	err := afterObservationPublication(
+		t.Context(), repository, reconcile,
+		func(
+			_ context.Context, kind store.JobKind, target string, force bool,
+		) (*store.Job, error) {
+			enqueueCalls++
+			if kind != store.JobExtract || target != repository || force {
+				t.Fatalf("enqueue = %q, %q, %t", kind, target, force)
+			}
+			return nil, nil
+		},
+	)
+	if err != nil || v2Calls != 0 || enqueueCalls != 1 {
+		t.Fatalf(
+			"explicit v3 observation callback = (%v, v2=%d, enqueue=%d), want (nil, 0, 1)",
+			err, v2Calls, enqueueCalls,
+		)
 	}
 }
 
@@ -207,6 +308,22 @@ func TestExplicitV2RefreshesV3HoldingAfterV2IsCurrent(t *testing.T) {
 	)
 	if !errors.Is(err, v2Pending) || !slices.Equal(events, []string{"pending-v2-c"}) {
 		t.Fatalf("pending v2 holding sequence = %v, %v", events, err)
+	}
+}
+
+func TestLegacyServiceCatalogSelectionsExcludeV3(t *testing.T) {
+	selections := map[string]config.ServiceCatalog{
+		"example.com/implicit-v2": {},
+		"example.com/explicit-v2": {Runtime: config.ServiceCatalogRuntimeV2},
+		"example.com/v3":          {Runtime: config.ServiceCatalogRuntimeV3},
+	}
+	legacy := legacyServiceCatalogSelections(selections)
+	if len(legacy) != 2 || legacy["example.com/implicit-v2"].RuntimeVersion() != config.ServiceCatalogRuntimeV2 ||
+		legacy["example.com/explicit-v2"].RuntimeVersion() != config.ServiceCatalogRuntimeV2 {
+		t.Fatalf("legacy selections = %#v", legacy)
+	}
+	if _, ok := legacy["example.com/v3"]; ok {
+		t.Fatal("v3 catalog entered the legacy decoder")
 	}
 }
 
@@ -449,7 +566,7 @@ func TestCandidateStartupRepairRequeuesPointerlessFailedCallerThroughResolver(
 	}
 	resolverJob.Status = store.StatusRunning
 	if err := afterResolverPublication(
-		ctx, repository, nil, state.EnqueuePending, true,
+		ctx, repository, nil, nil, state.EnqueuePending, true,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -566,6 +683,37 @@ func TestPartitionSettlementQueuesResolverBeforeCaller(t *testing.T) {
 		false, false,
 	); err != nil || len(seen) != 0 {
 		t.Fatalf("pending partitions callback = %v, enqueued=%v", err, seen)
+	}
+
+	v2Calls := 0
+	seen = nil
+	err = afterPartitionExtractionSettlement(
+		t.Context(), repository,
+		legacyRelationshipReconcileFor(
+			repository,
+			map[string]config.ServiceCatalog{
+				repository: {Runtime: config.ServiceCatalogRuntimeV3},
+			},
+			func(context.Context, string) error {
+				v2Calls++
+				return errors.New("malformed legacy v2 relationship pointer")
+			},
+		),
+		func(
+			_ context.Context, kind store.JobKind, _ string, _ bool,
+		) (*store.Job, error) {
+			seen = append(seen, kind)
+			return nil, nil
+		},
+		true, true,
+	)
+	if err != nil || v2Calls != 0 || !slices.Equal(seen, []store.JobKind{
+		store.JobResolverCatalog, store.JobCallerLeaf,
+	}) {
+		t.Fatalf(
+			"explicit v3 settlement callback = (%v, v2=%d, enqueued=%v)",
+			err, v2Calls, seen,
+		)
 	}
 }
 

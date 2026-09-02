@@ -42,6 +42,13 @@ func NewGate(dataDir string) *Gate {
 	return &Gate{dataDir: dataDir, probe: ProbeCapacity}
 }
 
+// NewGateWithProbe constructs the production gate around a caller-supplied
+// capacity probe. It is intended for deterministic offline verification; the
+// resulting capacity observations establish only the supplied probe's facts.
+func NewGateWithProbe(dataDir string, probe CapacityProbe) *Gate {
+	return &Gate{dataDir: dataDir, probe: probe}
+}
+
 func ProbeCapacity(ctx context.Context, dataDir string) (Capacity, error) {
 	if err := ctx.Err(); err != nil {
 		return Capacity{}, err

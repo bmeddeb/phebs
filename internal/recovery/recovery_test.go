@@ -608,6 +608,158 @@ connections:
 		selectedRuntimeBeforeRestore.RelationshipGenerationDigest {
 		t.Fatal("relationship v3 current generation did not advance")
 	}
+	successorCatalog := logicalCatalog
+	successorCatalog.Services = append(
+		[]servicecatalog.Service(nil),
+		logicalCatalog.Services...,
+	)
+	successorCatalog.Memberships = append(
+		[]servicecatalog.Membership(nil),
+		logicalCatalog.Memberships...,
+	)
+	successorCatalog.Authority.Version = indexedBefore.IndexedCommitHash
+	successorCatalog.Services[0].DisplayName = "Recovery successor"
+	for index := range servicecatalogv3.MaxServicesPerMember {
+		serviceKey := fmt.Sprintf("aaa-successor-%04d", index)
+		if index == servicecatalogv3.MaxServicesPerMember-1 {
+			serviceKey = "zzz-successor"
+		}
+		successorCatalog.Services = append(successorCatalog.Services, servicecatalog.Service{
+			Key:         serviceKey,
+			DisplayName: fmt.Sprintf("Successor %04d", index),
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		})
+		successorCatalog.Memberships = append(
+			successorCatalog.Memberships,
+			servicecatalog.Membership{
+				ServiceKey: serviceKey,
+				Path:       fmt.Sprintf("successor/%04d.go", index),
+				Role:       servicecatalog.RolePrimary,
+				Origin:     servicecatalog.OriginBase,
+			},
+		)
+	}
+	successorBinding := openedCatalogV3BeforeRestore.Generation.Root.Binding
+	successorBinding.Source.Commit = indexedBefore.IndexedCommitHash
+	successorBinding.Authority.Version = indexedBefore.IndexedCommitHash
+	successorCatalogV3, err := servicecatalogv3.Build(successorBinding, successorCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.PublishServiceCatalogV3Candidate(ctx, successorCatalogV3); err != nil {
+		t.Fatalf("publish successor catalog v3: %v", err)
+	}
+	partialReconcile, err := st.BeginServiceStateV3Reconcile(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	partialSchedule := partialReconcile.Schedule
+	for partialSchedule.NextOffset < partialSchedule.TotalItems {
+		partialSchedule, err = st.ExpandGenerationSchedule(
+			ctx,
+			partialSchedule.Repository,
+			partialSchedule.Stage,
+			partialSchedule.Generation,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	partialChunk, err := st.ClaimGenerationChunk(
+		ctx,
+		store.GenerationResourceCPU,
+		"recovery-partial-successor",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	partialResult, err := st.ProcessServiceStateV3Chunk(ctx, *partialChunk)
+	if err != nil || partialResult.Settled {
+		t.Fatalf("partial successor chunk = %+v, %v", partialResult, err)
+	}
+	if err := st.CompleteGenerationChunk(ctx, *partialChunk); err != nil {
+		t.Fatal(err)
+	}
+	selectedStateDuringSuccessor, err := st.GetServiceStateV3PointSnapshot(
+		ctx,
+		names[0],
+		"recovery",
+		selectedRuntimeBeforeRestore.StateControlRevision,
+		selectedRuntimeBeforeRestore.StateSummaryDigest,
+	)
+	if err != nil || selectedStateDuringSuccessor.DisplayName != "Recovery" {
+		t.Fatalf("selected state during partial successor = %+v, %v", selectedStateDuringSuccessor, err)
+	}
+	heldSelectedChunk, err := st.ClaimGenerationChunk(
+		ctx,
+		store.GenerationResourceCPU,
+		"recovery-selected-hold",
+	)
+	if err != nil || heldSelectedChunk.Repository != names[0] {
+		t.Fatalf("hold selected successor chunk = %+v, %v", heldSelectedChunk, err)
+	}
+	const unselectedRepository = "example.com/acme/unselected-restore"
+	if err := st.UpsertRepo(ctx, store.Repo{
+		Name: unselectedRepository, CloneURL: "https://example.com/acme/unselected-restore.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRepoIndexed(
+		ctx,
+		unselectedRepository,
+		indexedBefore.IndexedCommitHash,
+		time.Now().UTC(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	unselectedBinding := successorBinding
+	unselectedBinding.Repository = unselectedRepository
+	unselectedCatalogV3, err := servicecatalogv3.Build(unselectedBinding, successorCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.PublishServiceCatalogV3Candidate(ctx, unselectedCatalogV3); err != nil {
+		t.Fatalf("publish unselected catalog v3: %v", err)
+	}
+	unselectedReconcile, err := st.BeginServiceStateV3Reconcile(ctx, unselectedRepository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unselectedSchedule := unselectedReconcile.Schedule
+	for unselectedSchedule.NextOffset < unselectedSchedule.TotalItems {
+		unselectedSchedule, err = st.ExpandGenerationSchedule(
+			ctx,
+			unselectedSchedule.Repository,
+			unselectedSchedule.Stage,
+			unselectedSchedule.Generation,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	unselectedChunk, err := st.ClaimGenerationChunk(
+		ctx,
+		store.GenerationResourceCPU,
+		"recovery-unselected-partial",
+	)
+	if err != nil || unselectedChunk.Repository != unselectedRepository {
+		t.Fatalf("claim unselected successor chunk = %+v, %v", unselectedChunk, err)
+	}
+	unselectedResult, err := st.ProcessServiceStateV3Chunk(ctx, *unselectedChunk)
+	if err != nil || unselectedResult.Settled {
+		t.Fatalf("partial unselected successor chunk = %+v, %v", unselectedResult, err)
+	}
+	if err := st.CompleteGenerationChunk(ctx, *unselectedChunk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.GetServiceStateV3Point(
+		ctx,
+		unselectedRepository,
+		"aaa-successor-0000",
+	); err != nil {
+		t.Fatalf("partial unselected successor row: %v", err)
+	}
 	catalogV3PreciousBeforeBackup, err := st.ValidateServiceCatalogV3Precious(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -701,16 +853,17 @@ connections:
 	}
 	openedCatalogV3AfterRestore, err := restored.GetServiceCatalogV3Candidate(ctx, names[0])
 	if err != nil || !reflect.DeepEqual(
-		openedCatalogV3AfterRestore, openedCatalogV3BeforeRestore,
+		openedCatalogV3AfterRestore.Generation, successorCatalogV3,
 	) {
 		t.Fatalf(
 			"restored catalog v3 = %+v, %v; want %+v",
-			openedCatalogV3AfterRestore, err, openedCatalogV3BeforeRestore,
+			openedCatalogV3AfterRestore, err, successorCatalogV3,
 		)
 	}
 	if report, err := restored.ValidateServiceCatalogV3Precious(ctx); err != nil ||
-		report.HistoricalRoots != 1 || report.CollectingRoots != 0 ||
-		report.Members != len(catalogV3BeforeRestore.Members) ||
+		report.HistoricalRoots != catalogV3PreciousBeforeBackup.HistoricalRoots ||
+		report.CollectingRoots != 0 ||
+		report.Members != catalogV3PreciousBeforeBackup.Members ||
 		report.StateRows != 1 || report.StateSummaries != 1 || report.StatePlans != 0 ||
 		report.RelationshipReferences != 2 {
 		t.Fatalf("restored catalog v3 precious = %+v, %v", report, err)
@@ -750,14 +903,104 @@ connections:
 	if _, err := selectedRelationship.OpenEvidenceReader(ctx, dataDir); err != nil {
 		t.Fatalf("open restored selected relationship evidence: %v", err)
 	}
-	serviceStateV3SummaryAfterRestore, err := restored.GetServiceStateV3Summary(ctx, names[0])
+	serviceStateV3SummaryAfterRestore, err := restored.GetServiceStateV3SummaryPoint(ctx, names[0])
 	if err != nil || !reflect.DeepEqual(
-		serviceStateV3SummaryAfterRestore, serviceStateV3SummaryBeforeRestore,
+		serviceStateV3SummaryAfterRestore, *serviceStateV3SummaryBeforeRestore,
 	) {
 		t.Fatalf(
 			"restored service state v3 summary = %+v, %v; want %+v",
 			serviceStateV3SummaryAfterRestore, err, serviceStateV3SummaryBeforeRestore,
 		)
+	}
+	restoredSelectedState, err := restored.GetServiceStateV3Point(ctx, names[0], "recovery")
+	if err != nil || restoredSelectedState.DisplayName != "Recovery" ||
+		restoredSelectedState.StateDigest != serviceStatesV3BeforeRestore[0].StateDigest {
+		t.Fatalf("restored selected v3 state = %+v, %v", restoredSelectedState, err)
+	}
+	if _, err := restored.GetServiceStateV3Point(
+		ctx,
+		names[0],
+		"aaa-successor-0000",
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored successor-only row = %v, want ErrNotFound", err)
+	}
+	if _, err := restored.GetGenerationSchedule(
+		ctx,
+		partialSchedule.Repository,
+		partialSchedule.Stage,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored partial successor schedule = %v, want ErrNotFound", err)
+	}
+	restoredSuccessorReconcile, err := restored.BeginServiceStateV3Reconcile(ctx, names[0])
+	if err != nil {
+		t.Fatalf("restart successor reconcile: %v", err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, restored, restoredSuccessorReconcile)
+	restoredSuccessorActivation, err := restored.BeginServiceStateV3Activation(
+		ctx,
+		names[0],
+		selectedRuntimeAfterRestore.SearchGenerationDigest,
+	)
+	if err != nil {
+		t.Fatalf("restart successor activation: %v", err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, restored, restoredSuccessorActivation)
+	restoredSuccessorSummary, err := restored.GetServiceStateV3SummaryPoint(ctx, names[0])
+	if err != nil || restoredSuccessorSummary.CatalogGeneration != successorCatalogV3.Root.Digest ||
+		restoredSuccessorSummary.CatalogServiceCount != len(successorCatalog.Services) ||
+		restoredSuccessorSummary.CurrentCount != len(successorCatalog.Services) {
+		t.Fatalf("restored successor summary = %+v, %v", restoredSuccessorSummary, err)
+	}
+	restoredSuccessorState, err := restored.GetServiceStateV3Point(ctx, names[0], "recovery")
+	if err != nil || restoredSuccessorState.DisplayName != "Recovery successor" ||
+		restoredSuccessorState.ActiveSearchGeneration != selectedRuntimeAfterRestore.SearchGenerationDigest {
+		t.Fatalf("restored successor state = %+v, %v", restoredSuccessorState, err)
+	}
+	if _, err := restored.GetServiceStateV3SummaryPoint(
+		ctx,
+		unselectedRepository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored unselected partial summary = %v, want ErrNotFound", err)
+	}
+	if _, err := restored.GetServiceStateV3Point(
+		ctx,
+		unselectedRepository,
+		"aaa-successor-0000",
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored unselected partial row = %v, want ErrNotFound", err)
+	}
+	if _, err := restored.GetGenerationSchedule(
+		ctx,
+		unselectedSchedule.Repository,
+		unselectedSchedule.Stage,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored unselected partial schedule = %v, want ErrNotFound", err)
+	}
+	restoredUnselectedReconcile, err := restored.BeginServiceStateV3Reconcile(
+		ctx,
+		unselectedRepository,
+	)
+	if err != nil {
+		t.Fatalf("restart unselected reconcile: %v", err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, restored, restoredUnselectedReconcile)
+	restoredUnselectedActivation, err := restored.BeginServiceStateV3Activation(
+		ctx,
+		unselectedRepository,
+		selectedRuntimeAfterRestore.SearchGenerationDigest,
+	)
+	if err != nil {
+		t.Fatalf("restart unselected activation: %v", err)
+	}
+	runRecoveryServiceStateV3Plan(t, ctx, restored, restoredUnselectedActivation)
+	restoredUnselectedSummary, err := restored.GetServiceStateV3SummaryPoint(
+		ctx,
+		unselectedRepository,
+	)
+	if err != nil || restoredUnselectedSummary.CatalogGeneration != unselectedCatalogV3.Root.Digest ||
+		restoredUnselectedSummary.CatalogServiceCount != len(successorCatalog.Services) ||
+		restoredUnselectedSummary.CurrentCount != len(successorCatalog.Services) {
+		t.Fatalf("restored unselected successor summary = %+v, %v", restoredUnselectedSummary, err)
 	}
 	serviceStateAfterRestore, err := restored.GetServiceState(
 		ctx, names[0], "recovery",
@@ -910,7 +1153,7 @@ connections:
 	// boot sync recreates the excluded mirror and queues the ordinary index
 	// handoff, whose exact no-op path must retain the restored generation.
 	report, err := phebssync.ReconcileArtifacts(ctx, restored, dataDir, false)
-	if err != nil || report.RevisionRepairs != 0 {
+	if err != nil || report.RevisionRepairs != 1 {
 		t.Fatalf("startup reconcile = %+v, %v", report, err)
 	}
 	revisions := indexedBefore.IndexedRevisions

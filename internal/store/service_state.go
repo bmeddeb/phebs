@@ -177,6 +177,9 @@ type serviceStateRec struct {
 	StateDigest              string           `json:"state_digest"`
 	ControlRevision          uint64           `json:"control_revision"`
 	ChangedAt                time.Time        `json:"changed_at"`
+	VisibleFrom              uint64           `json:"visible_from"`
+	SnapshotRevision         uint64           `json:"snapshot_revision"`
+	SnapshotDigest           string           `json:"snapshot_digest"`
 	RecID                    *models.RecordID `json:"id"`
 }
 
@@ -195,6 +198,8 @@ type serviceRepositoryStateRec struct {
 	SummaryDigest          string           `json:"summary_digest"`
 	ControlRevision        uint64           `json:"control_revision"`
 	UpdatedAt              time.Time        `json:"updated_at"`
+	SnapshotRevision       uint64           `json:"snapshot_revision"`
+	SnapshotDigest         string           `json:"snapshot_digest"`
 	RecID                  *models.RecordID `json:"id"`
 }
 

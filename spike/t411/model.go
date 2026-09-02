@@ -21,6 +21,14 @@ const (
 	TransitionSchema = "t411-service-transition-profile-v1"
 	ReceiptSchema    = "t411-service-load-receipt-v1"
 
+	// RetainedEnvelopeSHA256 and RetainedReceiptSHA256 bind downstream gates
+	// to the exact reviewed T41.1 inputs without making them duplicate the
+	// frozen profile generator or its retained bytes.
+	RetainedEnvelopeSHA256          = "sha256:99ec8a3dc79537bf1db842234f6fe054abd03c9af7503987f78c5530fdfd525f"
+	RetainedReceiptSHA256           = "sha256:c9a30ab63960fee682558a04e79b66f1d1fcf2b9a7f2bfc2e3a012139291dc55"
+	RetainedTargetProfileSHA256     = "sha256:f54f6c634dea5ce780df1f82591d876ddd229e125444549c1288d7ee4483cf91"
+	RetainedTransitionProfileSHA256 = "sha256:07c61f86d879f1febb5ff9ab24166c0b0ba0679d24a28c407b48ce7a3d1e258b"
+
 	AcceptedServiceFloor  = 8_000
 	AcceptedServiceTarget = 10_000
 	MaxTotalServices      = 12_500
@@ -79,6 +87,30 @@ type AuthorityRule struct {
 type Count struct {
 	Name  string `json:"name"`
 	Count int    `json:"count"`
+}
+
+// ProfileIdentity is the allocation-free retained identity used by later
+// evidence validators. BuildTargetCorpus remains the separate execution seam
+// that materializes the generated catalog and fixture files.
+type ProfileIdentity struct {
+	SHA256              string
+	AcceptedServices    int
+	TotalServiceRecords int
+	Memberships         int
+	DistinctPaths       int
+	RegularFiles        int
+	FixtureContentBytes int64
+}
+
+// TargetProfileIdentity returns the exact reviewed accepted-10,000 identity
+// without materializing the target corpus.
+func TargetProfileIdentity() ProfileIdentity {
+	return ProfileIdentity{
+		SHA256:           RetainedTargetProfileSHA256,
+		AcceptedServices: AcceptedServiceTarget, TotalServiceRecords: AcceptedServiceTarget,
+		Memberships: 60_000, DistinctPaths: 31_600, RegularFiles: 31_600,
+		FixtureContentBytes: 1_835_100,
+	}
 }
 
 type ArtifactIdentity struct {

@@ -37,6 +37,9 @@ func TestVerifyRefusesExecutableReplacementAndSymlink(t *testing.T) {
 			if err := os.WriteFile(path, original, 0o700); err != nil {
 				t.Fatal(err)
 			}
+			if actual, err := Digest(path); err != nil || actual != expected {
+				t.Fatalf("digest = %q, %v", actual, err)
+			}
 			if err := Verify(path, expected); err != nil {
 				t.Fatal(err)
 			}

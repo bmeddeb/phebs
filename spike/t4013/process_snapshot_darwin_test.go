@@ -28,6 +28,47 @@ func TestDarwinProcessObservationIsCoherent(t *testing.T) {
 	}
 }
 
+func TestObserveProcessTreeIncludesCurrentProcess(t *testing.T) {
+	observed, err := ObserveProcessTree(t.Context(), os.Getpid())
+	if err != nil || observed.RSSBytes <= 0 || observed.Descendants < 0 {
+		t.Fatalf("process tree = %+v, %v", observed, err)
+	}
+}
+
+func TestObserveProcessTreeTracksDescendantExit(t *testing.T) {
+	child := exec.Command("/bin/sleep", "30")
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if child.ProcessState == nil {
+			_ = child.Process.Kill()
+			_ = child.Wait()
+		}
+	}()
+	observed, err := ObserveProcessTree(t.Context(), os.Getpid())
+	if err != nil || observed.Descendants < 1 {
+		t.Fatalf("live descendant process tree = %+v, %v", observed, err)
+	}
+	if err := child.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	if err := child.Wait(); err == nil {
+		t.Fatal("killed child returned success")
+	}
+	deadline := time.Now().Add(time.Second)
+	for {
+		observed, err = ObserveProcessTree(t.Context(), os.Getpid())
+		if err == nil && observed.Descendants == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("exited descendant process tree = %+v, %v", observed, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestDarwinChildPIDsAndMissingObservation(t *testing.T) {
 	child := exec.Command("/bin/sleep", "30")
 	if err := child.Start(); err != nil {

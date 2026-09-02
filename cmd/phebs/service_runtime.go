@@ -80,15 +80,12 @@ func newServiceRuntimeController(
 		pins:                make(map[string]*serviceRuntimeProcessPins),
 		uncertainPins:       make(map[string]*serviceRuntimeProcessPins),
 	}
-	if v3Catalog != nil {
-		v3Catalog.BeforePublish = controller.beforeV3Publish
-	}
 	return controller
 }
 
 // lockTransition preserves the global lock order used by orphan cleanup:
 // shared filesystem mutation exclusion first, then controller serialization.
-// Every path that can reach beforeV3Publish or selectLocked enters here.
+// Every path that can reach selectLocked enters here.
 func (controller *serviceRuntimeController) lockTransition(
 	ctx context.Context,
 ) (func(), error) {
@@ -158,7 +155,7 @@ func (controller *serviceRuntimeController) advanceLocked(
 }
 
 // ProcessServiceStateV3Chunk keeps state mutation inside the selector and
-// backup fence. A selected v3 reader is first moved to complete v2 authority.
+// backup fence. The store preserves the selected v3 preimage before mutation.
 func (controller *serviceRuntimeController) ProcessServiceStateV3Chunk(
 	ctx context.Context,
 	chunk store.GenerationChunk,
@@ -171,18 +168,6 @@ func (controller *serviceRuntimeController) ProcessServiceStateV3Chunk(
 		return store.ServiceStateV3ChunkResult{}, err
 	}
 	defer release()
-	selector, err := controller.currentSelector(ctx, chunk.Repository)
-	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return store.ServiceStateV3ChunkResult{}, err
-	}
-	if err == nil && selector.Backend == store.ServiceRuntimeV3 {
-		if err := controller.advanceV2Locked(ctx, chunk.Repository, true); err != nil {
-			if errors.Is(err, errServiceRuntimePending) {
-				err = store.WithDeferral(err)
-			}
-			return store.ServiceStateV3ChunkResult{}, err
-		}
-	}
 	result, err := controller.store.ProcessServiceStateV3Chunk(ctx, chunk)
 	if err != nil || !result.Settled {
 		return result, err
@@ -205,27 +190,6 @@ func advanceV2WithHolding(
 		return err
 	}
 	return prepareV3()
-}
-
-func (controller *serviceRuntimeController) beforeV3Publish(
-	ctx context.Context,
-	repository string,
-) error {
-	selector, err := controller.currentSelector(ctx, repository)
-	if errors.Is(err, store.ErrNotFound) || err == nil && selector.Backend == store.ServiceRuntimeV2 {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if err := controller.advanceV2Locked(ctx, repository, true); err != nil {
-		return err
-	}
-	selector, err = controller.currentSelector(ctx, repository)
-	if err != nil || selector.Backend != store.ServiceRuntimeV2 {
-		return errors.Join(err, errServiceRuntimePending)
-	}
-	return nil
 }
 
 // withV2Mutation moves an explicit v2 reader to the last complete v3

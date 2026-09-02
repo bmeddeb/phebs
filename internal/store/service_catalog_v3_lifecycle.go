@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -1078,6 +1079,7 @@ SELECT * FROM service_catalog_v3_state_reference
 			validateCandidateRepository(reference.Repository) != nil ||
 			!validSHA256Digest(reference.RootDigest) ||
 			states[reference.RootDigest] != serviceCatalogV3Historical ||
+			repositories[reference.RootDigest] != reference.Repository ||
 			reference.RecordedAt.IsZero() ||
 			reference.Kind == "current" &&
 				(reference.ServiceKey != "" || reference.StateRootDigest != "") ||
@@ -1117,7 +1119,7 @@ SELECT * FROM service_catalog_v3_relationship_reference
 		}
 	}
 	stateRows, stateSummaries, statePlans, err := s.validateServiceStateV3Precious(
-		ctx, states, candidateRoots,
+		ctx, states, repositories, candidateRoots,
 	)
 	if err != nil {
 		return ServiceCatalogV3PreciousReport{}, err
@@ -1181,6 +1183,19 @@ SELECT * FROM service_catalog_v3_lifecycle
 		sweep.Cursor = candidate.RootDigest
 		switch candidate.State {
 		case serviceCatalogV3Historical:
+			preimagesDeleted, preimageErr := s.drainServiceStateV3Preimages(
+				ctx,
+				candidate,
+				deleteLimit,
+			)
+			if preimageErr != nil {
+				return sweep, preimageErr
+			}
+			if preimagesDeleted > 0 {
+				sweep.Deleted += preimagesDeleted
+				sweep.More = true
+				return sweep, nil
+			}
 			generation, rootRecord, openErr := s.openServiceCatalogV3Generation(
 				ctx, candidate.RootDigest,
 			)
@@ -1233,6 +1248,224 @@ SELECT * FROM service_catalog_v3_lifecycle
 	return sweep, nil
 }
 
+func (s *Surreal) drainServiceStateV3Preimages(
+	ctx context.Context,
+	candidate serviceCatalogV3LifecycleRec,
+	deleteLimit int,
+) (int, error) {
+	repository := candidate.Repository
+	catalogRoot := candidate.RootDigest
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("drain service state v3 preimages: begin: %w", err)
+	}
+	defer func() {
+		cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = tx.Cancel(cancelCtx)
+	}()
+	type ownerScan struct {
+		Lifecycle serviceCatalogV3LifecycleRec `json:"lifecycle"`
+		Root      serviceCatalogV3RootRec      `json:"root"`
+		Summaries []serviceRepositoryStateRec  `json:"summaries"`
+	}
+	results, err := surrealdb.Query[[]ownerScan](ctx, tx, `
+RETURN [{
+	lifecycle: (SELECT * FROM $lifecycle_rid LIMIT 1)[0],
+	root: (SELECT * FROM $root_rid LIMIT 1)[0],
+	summaries: (SELECT * FROM service_state_v3_repository_preimage
+		WHERE repository = $repository AND catalog_generation = $catalog_root
+		ORDER BY snapshot_revision, snapshot_digest LIMIT 2)
+}];`, map[string]any{
+		"lifecycle_rid": serviceCatalogV3LifecycleID(catalogRoot),
+		"root_rid":      serviceCatalogV3RootID(catalogRoot),
+		"repository":    repository, "catalog_root": catalogRoot,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("scan service state v3 preimages: %w", err)
+	}
+	scans := firstDomainRows(results)
+	if len(scans) != 1 {
+		return 0, ErrInvalidServiceCatalogV3Lifecycle
+	}
+	lifecycle := scans[0].Lifecycle
+	root := scans[0].Root
+	if !validServiceCatalogV3RecordID(
+		lifecycle.RecID,
+		"service_catalog_v3_lifecycle",
+		strings.TrimPrefix(catalogRoot, "sha256:"),
+	) || lifecycle.Repository != candidate.Repository ||
+		lifecycle.RootDigest != candidate.RootDigest ||
+		lifecycle.AuthorityVersion != candidate.AuthorityVersion ||
+		lifecycle.MemberCount != candidate.MemberCount ||
+		lifecycle.LogicalBytes != candidate.LogicalBytes ||
+		lifecycle.RootBytes != candidate.RootBytes ||
+		lifecycle.MemberBytes != candidate.MemberBytes ||
+		!lifecycle.RecordedAt.Equal(candidate.RecordedAt) ||
+		lifecycle.State != serviceCatalogV3Historical || lifecycle.MemberCursor != 0 ||
+		lifecycle.TombstonedAt != nil ||
+		!validServiceCatalogV3RecordID(
+			root.RecID,
+			"service_catalog_v3_root",
+			strings.TrimPrefix(catalogRoot, "sha256:"),
+		) || root.RootDigest != catalogRoot || root.Repository != repository ||
+		root.RootBytes != candidate.RootBytes ||
+		!root.RecordedAt.Equal(candidate.RecordedAt) {
+		return 0, ErrInvalidServiceCatalogV3Lifecycle
+	}
+	summaries := scans[0].Summaries
+	if len(summaries) == 0 {
+		return 0, nil
+	}
+	selectorResults, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
+		ctx,
+		tx,
+		"SELECT * FROM $rid",
+		map[string]any{"rid": serviceRuntimeSelectorID(repository)},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("drain service state v3 preimages: selector: %w", err)
+	}
+	selectorRows := firstDomainRows(selectorResults)
+	if len(selectorRows) > 1 {
+		return 0, ErrInvalidServiceStateV3
+	}
+	var selector *ServiceRuntimeSelector
+	if len(selectorRows) == 1 {
+		decoded, selectorErr := serviceRuntimeSelectorFromRec(selectorRows[0])
+		if selectorErr != nil {
+			return 0, ErrInvalidServiceStateV3
+		}
+		selector = &decoded
+	}
+	var stale *serviceRepositoryStateRec
+	for index := range summaries {
+		record := &summaries[index]
+		summary, summaryErr := serviceStateV3RepositoryFromRec(*record)
+		if summaryErr != nil || summary.Repository != repository ||
+			summary.CatalogGeneration != catalogRoot ||
+			record.SnapshotRevision != summary.ControlRevision ||
+			record.SnapshotDigest != summary.SummaryDigest ||
+			!validServiceStateV3PreimageRecord(
+				record.RecID,
+				"service_state_v3_repository_preimage",
+			) {
+			return 0, ErrInvalidServiceStateV3
+		}
+		selected := selector != nil && selector.Backend == ServiceRuntimeV3 &&
+			selector.StateControlRevision == record.SnapshotRevision &&
+			selector.StateSummaryDigest == record.SnapshotDigest
+		if !selected {
+			stale = record
+			break
+		}
+	}
+	if stale == nil {
+		return 0, nil
+	}
+	rowResults, err := surrealdb.Query[[]struct {
+		ServiceKey string           `json:"service_key"`
+		RecID      *models.RecordID `json:"id"`
+	}](ctx, tx, `
+SELECT id, service_key FROM service_state_v3_preimage
+	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest
+	ORDER BY service_key LIMIT $limit`, map[string]any{
+		"repository": repository, "snapshot_revision": stale.SnapshotRevision,
+		"snapshot_digest": stale.SnapshotDigest, "limit": deleteLimit,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("drain service state v3 preimages: rows: %w", err)
+	}
+	rows := firstDomainRows(rowResults)
+	rowIDs := make([]models.RecordID, 0, len(rows))
+	priorServiceKey := ""
+	for _, row := range rows {
+		if row.ServiceKey == "" || row.ServiceKey <= priorServiceKey ||
+			!validServiceStateV3PreimageRecord(
+				row.RecID,
+				"service_state_v3_preimage",
+			) {
+			return 0, ErrInvalidServiceStateV3
+		}
+		priorServiceKey = row.ServiceKey
+		rowIDs = append(rowIDs, *row.RecID)
+	}
+	var deletedRows []serviceStateRec
+	if len(rowIDs) != 0 {
+		deletedResults, deleteErr := surrealdb.Query[[]serviceStateRec](ctx, tx, `
+DELETE service_state_v3_preimage WHERE id IN $ids RETURN BEFORE`, map[string]any{
+			"ids": rowIDs,
+		})
+		if deleteErr != nil {
+			return 0, fmt.Errorf("drain service state v3 preimages: delete rows: %w", deleteErr)
+		}
+		deletedRows = firstDomainRows(deletedResults)
+		if len(deletedRows) != len(rowIDs) {
+			return 0, ErrInvalidServiceStateV3
+		}
+		deletedIDs := make(map[string]struct{}, len(deletedRows))
+		for _, deleted := range deletedRows {
+			if !validServiceStateV3PreimageRecord(
+				deleted.RecID,
+				"service_state_v3_preimage",
+			) || deleted.Repository != repository ||
+				deleted.SnapshotRevision != stale.SnapshotRevision ||
+				deleted.SnapshotDigest != stale.SnapshotDigest {
+				return 0, ErrInvalidServiceStateV3
+			}
+			identifier, _ := deleted.RecID.ID.(string)
+			if _, duplicate := deletedIDs[identifier]; duplicate {
+				return 0, ErrInvalidServiceStateV3
+			}
+			deletedIDs[identifier] = struct{}{}
+		}
+	}
+	deletedSummary := false
+	if len(deletedRows) < deleteLimit {
+		remainingResults, remainingErr := surrealdb.Query[[]struct {
+			RecID *models.RecordID `json:"id"`
+		}](ctx, tx, `
+SELECT id FROM service_state_v3_preimage
+	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest LIMIT 1`, map[string]any{
+			"repository": repository, "snapshot_revision": stale.SnapshotRevision,
+			"snapshot_digest": stale.SnapshotDigest,
+		})
+		if remainingErr != nil {
+			return 0, fmt.Errorf("drain service state v3 preimages: remaining: %w", remainingErr)
+		}
+		if len(firstDomainRows(remainingResults)) == 0 {
+			deleted, deleteErr := surrealdb.Query[any](
+				ctx,
+				tx,
+				"DELETE $rid RETURN NONE",
+				map[string]any{"rid": *stale.RecID},
+			)
+			if deleteErr != nil {
+				return 0, fmt.Errorf("drain service state v3 preimages: delete summary: %w", deleteErr)
+			}
+			for _, result := range *deleted {
+				if result.Error != nil {
+					return 0, fmt.Errorf(
+						"drain service state v3 preimages: delete summary: %s",
+						result.Error.Message,
+					)
+				}
+			}
+			deletedSummary = true
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("drain service state v3 preimages: commit: %w", err)
+	}
+	deleted := len(deletedRows)
+	if deletedSummary {
+		deleted++
+	}
+	return deleted, nil
+}
+
 func (s *Surreal) retireServiceCatalogV3Generation(
 	ctx context.Context,
 	candidate serviceCatalogV3LifecycleRec,
@@ -1252,6 +1485,13 @@ LET $desired_refs = array::len(SELECT id FROM service_state_v3_current
 	WHERE desired_catalog_generation = $digest LIMIT 1);
 LET $active_refs = array::len(SELECT id FROM service_state_v3_current
 	WHERE active_catalog_generation = $digest LIMIT 1);
+LET $preimage_desired_refs = array::len(SELECT id FROM service_state_v3_preimage
+	WHERE desired_catalog_generation = $digest LIMIT 1);
+LET $preimage_active_refs = array::len(SELECT id FROM service_state_v3_preimage
+	WHERE active_catalog_generation = $digest LIMIT 1);
+LET $preimage_summary_refs = array::len(
+	SELECT id FROM service_state_v3_repository_preimage
+		WHERE catalog_generation = $digest LIMIT 1);
 LET $prior_retained = IF $candidate = NONE THEN $retained ELSE $retained - 1 END;
 LET $newest_prior = SELECT VALUE root_digest FROM service_catalog_v3_lifecycle
 	WHERE repository = $repository AND state = 'historical'
@@ -1264,6 +1504,8 @@ LET $eligible = $row != NONE AND $row.root_digest = $digest
 	AND $row.member_bytes = $member_bytes AND $candidate != $digest
 	AND $state_refs = 0 AND $relationship_refs = 0
 	AND $desired_refs = 0 AND $active_refs = 0
+	AND $preimage_desired_refs = 0 AND $preimage_active_refs = 0
+	AND $preimage_summary_refs = 0
 	AND $digest NOT IN $newest_prior;
 LET $transitioned = IF $eligible THEN
 	(UPDATE $rid SET state = 'collecting', tombstoned_at = time::now()

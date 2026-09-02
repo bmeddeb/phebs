@@ -176,6 +176,9 @@ func executablePath(candidate string) (string, error) {
 type Indexer struct {
 	DataDir string // mirrors under DataDir/repos, shards under DataDir/index
 	Bin     string // zoekt-git-index path (FindBinary)
+	// BinSHA256, when set, is rechecked immediately before the whole-repository
+	// index child launches. Ordinary callers retain the environment fence.
+	BinSHA256 string
 	// FocusedBin is the same-module phebs-focused-index child. It is required
 	// only for repositories with a configured analysis unit.
 	FocusedBin string
@@ -403,6 +406,8 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	expectedSHA256 := os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")
 	if unit != nil {
 		expectedSHA256 = os.Getenv("PHEBS_FOCUSED_INDEX_SHA256")
+	} else if ix.BinSHA256 != "" {
+		expectedSHA256 = ix.BinSHA256
 	}
 	if err := executableidentity.Verify(cmd.Path, expectedSHA256); err != nil {
 		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)

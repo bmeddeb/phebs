@@ -62,6 +62,50 @@ func TestDecodeCatalogExpandedBoundsAndRootRoundTrip(t *testing.T) {
 	}
 }
 
+func TestValidateStateProjectionAllowsUnchangedDesiredCatalogSuccessor(t *testing.T) {
+	projection := servicecatalog.ServiceProjection{
+		Repository: "example/catalog",
+		Service: servicecatalog.Service{
+			Key: "orders", DisplayName: "Orders",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
+		},
+		SourceGeneration:  "sha256:" + strings.Repeat("1", 64),
+		CatalogGeneration: "sha256:" + strings.Repeat("2", 64),
+		GenerationDigest:  "sha256:" + strings.Repeat("3", 64),
+	}
+	desired, err := ServiceDesiredGeneration(projection, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := servicecatalog.ServiceState{
+		Schema: ServiceStateSchema, Repository: projection.Repository,
+		ServiceKey: projection.Service.Key, DisplayName: projection.Service.DisplayName,
+		Disposition: projection.Service.Disposition, Origin: projection.Service.Origin,
+		Incarnation: 1, DesiredGeneration: desired,
+		DesiredSourceGeneration:  projection.SourceGeneration,
+		DesiredCatalogGeneration: projection.CatalogGeneration,
+		ActiveDesiredGeneration:  desired,
+		ActiveSourceGeneration:   projection.SourceGeneration,
+		ActiveCatalogGeneration:  projection.CatalogGeneration,
+		ActiveSearchGeneration:   "sha256:" + strings.Repeat("4", 64),
+		Status:                   servicecatalog.StatusCurrent,
+		ControlRevision:          1,
+		ChangedAt:                time.Unix(1, 0).UTC(),
+	}
+	if err := SetServiceStateDigest(&state); err != nil {
+		t.Fatal(err)
+	}
+	successor := projection
+	successor.CatalogGeneration = "sha256:" + strings.Repeat("5", 64)
+	if err := ValidateStateProjection(state, successor, false); err != nil {
+		t.Fatalf("unchanged desired projection in successor: %v", err)
+	}
+	if err := ValidateStateProjection(state, successor, true); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("active projection accepted wrong catalog root: %v", err)
+	}
+}
+
 func testBinding(authority servicecatalog.Authority) Binding {
 	commit := strings.Repeat("a", 40)
 	if authority.Kind == servicecatalog.AuthorityCommitted {
@@ -486,6 +530,106 @@ func TestMaximumServiceAndPlacementFitOneMember(t *testing.T) {
 	if err != nil || len(raw) > MaxMemberBytes {
 		t.Fatalf("maximum-path compact placement bytes = %d, %v", len(raw), err)
 	}
+}
+
+func TestT411ExactAggregateAndByteBoundaries(t *testing.T) {
+	catalog := t411MaximumShapeCatalog()
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if generation.Root.Services != MaxTotalServices ||
+		generation.Root.Memberships != MaxMemberships ||
+		generation.Root.Paths != MaxDistinctPaths {
+		t.Fatalf(
+			"maximum aggregate root = services %d memberships %d paths %d",
+			generation.Root.Services, generation.Root.Memberships, generation.Root.Paths,
+		)
+	}
+
+	membershipOverflow := catalog
+	existingPath := catalog.Memberships[0].Path
+	membershipOverflow.Memberships = append(slices.Clone(catalog.Memberships), servicecatalog.Membership{
+		ServiceKey: catalog.Services[0].Key, Path: existingPath,
+		Role: servicecatalog.RoleSupporting, Origin: servicecatalog.OriginBase,
+	})
+	if len(membershipOverflow.Memberships) != MaxMemberships+1 ||
+		membershipOverflow.Memberships[len(membershipOverflow.Memberships)-1].Path != existingPath {
+		t.Fatal("membership one-over fixture did not isolate the membership bound")
+	}
+	if _, err := Build(testBinding(catalog.Authority), membershipOverflow); !errors.Is(err, ErrLimit) {
+		t.Fatalf("membership one-over = %v", err)
+	}
+	pathOverflow := catalog
+	pathOverflow.Unowned = append(slices.Clone(catalog.Unowned), servicecatalog.UnownedPlacement{
+		Path: "overflow/path", Origin: servicecatalog.OriginBase,
+	})
+	if _, err := Build(testBinding(catalog.Authority), pathOverflow); !errors.Is(err, ErrLimit) {
+		t.Fatalf("distinct-path one-over = %v", err)
+	}
+
+	if err := admitLogicalBytes(MaxLogicalBytes); err != nil {
+		t.Fatalf("exact logical-byte admission = %v", err)
+	}
+	if err := admitLogicalBytes(MaxLogicalBytes + 1); !errors.Is(err, ErrLimit) {
+		t.Fatalf("logical-byte one-over = %v", err)
+	}
+	if err := admitPublicationBytes(
+		MaxRootBytes,
+		MaxPublicationBytes-MaxRootBytes,
+	); err != nil {
+		t.Fatalf("exact publication-byte admission = %v", err)
+	}
+	if err := admitPublicationBytes(
+		MaxRootBytes,
+		MaxPublicationBytes-MaxRootBytes+1,
+	); !errors.Is(err, ErrLimit) {
+		t.Fatalf("publication-byte one-over = %v", err)
+	}
+}
+
+func t411MaximumShapeCatalog() servicecatalog.Catalog {
+	authority := servicecatalog.Authority{
+		Kind: servicecatalog.AuthorityCommitted, ID: "catalog",
+		Version: strings.Repeat("b", 40),
+	}
+	catalog := servicecatalog.Catalog{
+		Schema: servicecatalog.Schema, Authority: authority,
+		Services:    make([]servicecatalog.Service, 0, MaxTotalServices),
+		Memberships: make([]servicecatalog.Membership, 0, MaxMemberships),
+		Unowned:     make([]servicecatalog.UnownedPlacement, 0, MaxDistinctPaths-3*MaxTotalServices),
+	}
+	roles := []string{
+		servicecatalog.RoleSupporting, servicecatalog.RoleShared,
+		servicecatalog.RoleGenerated, servicecatalog.RoleTyped,
+	}
+	for index := range MaxTotalServices {
+		key := fmt.Sprintf("service-%05d", index)
+		catalog.Services = append(catalog.Services, servicecatalog.Service{
+			Key: key, DisplayName: key, Disposition: servicecatalog.DispositionAccepted,
+			Origin: servicecatalog.OriginBase,
+		})
+		catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+			ServiceKey: key, Path: fmt.Sprintf("primary/%05d", index),
+			Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+		})
+		for _, role := range roles {
+			catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+				ServiceKey: key, Path: fmt.Sprintf("support/%05d", index),
+				Role: role, Origin: servicecatalog.OriginBase,
+			})
+		}
+		catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+			ServiceKey: key, Path: fmt.Sprintf("shared/%05d", index),
+			Role: servicecatalog.RoleShared, Origin: servicecatalog.OriginBase,
+		})
+	}
+	for index := range MaxDistinctPaths - 3*MaxTotalServices {
+		catalog.Unowned = append(catalog.Unowned, servicecatalog.UnownedPlacement{
+			Path: fmt.Sprintf("unowned/%05d", index), Origin: servicecatalog.OriginBase,
+		})
+	}
+	return catalog
 }
 
 func replacePlacementMember(t *testing.T, generation *Generation, ordinal int, member PlacementMember) {

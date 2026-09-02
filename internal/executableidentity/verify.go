@@ -26,14 +26,24 @@ func Verify(path, expected string) error {
 	if _, err := hex.DecodeString(strings.TrimPrefix(expected, "sha256:")); err != nil {
 		return errors.New("expected executable digest is invalid")
 	}
+	actual, err := Digest(path)
+	if err != nil || actual != expected {
+		return errors.Join(err, errors.New("executable identity changed before launch"))
+	}
+	return nil
+}
+
+// Digest returns the exact sha256 identity of one stable executable regular
+// file while rejecting path replacement during the read.
+func Digest(path string) (string, error) {
 	before, err := os.Lstat(path)
 	if err != nil || !before.Mode().IsRegular() || before.Mode()&os.ModeSymlink != 0 ||
 		before.Mode()&0o111 == 0 || before.Size() <= 0 || before.Size() > maxExecutableBytes {
-		return errors.Join(err, errors.New("executable identity changed before launch"))
+		return "", errors.Join(err, errors.New("executable identity changed during digest"))
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	opened, openStatErr := file.Stat()
 	hash := sha256.New()
@@ -44,11 +54,11 @@ func Verify(path, expected string) error {
 	if openStatErr != nil || copyErr != nil || afterOpenErr != nil || closeErr != nil ||
 		afterPathErr != nil || !os.SameFile(before, opened) || !os.SameFile(opened, afterOpen) ||
 		!os.SameFile(afterOpen, afterPath) || afterPath.Mode()&os.ModeSymlink != 0 ||
-		written != before.Size() || "sha256:"+hex.EncodeToString(hash.Sum(nil)) != expected {
-		return errors.Join(
+		written != before.Size() {
+		return "", errors.Join(
 			openStatErr, copyErr, afterOpenErr, closeErr, afterPathErr,
-			errors.New("executable identity changed before launch"),
+			errors.New("executable identity changed during digest"),
 		)
 	}
-	return nil
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
 }

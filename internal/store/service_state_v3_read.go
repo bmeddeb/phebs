@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"slices"
 	"sync"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
@@ -48,6 +50,33 @@ type ServiceStateV3ReadSource interface {
 		ServiceCatalogV3Pointer,
 		servicecatalog.RepositoryState,
 	) error
+}
+
+// serviceStateV3SnapshotReadSource is the production selected-runtime seam.
+// The narrower assertion keeps existing in-memory read sources usable for
+// current-only tests while Surreal resolves immutable selected revisions.
+type serviceStateV3SnapshotReadSource interface {
+	GetServiceStateV3SummarySnapshot(
+		context.Context,
+		string,
+		uint64,
+		string,
+	) (servicecatalog.RepositoryState, error)
+	GetServiceStateV3PointSnapshot(
+		context.Context,
+		string,
+		string,
+		uint64,
+		string,
+	) (servicecatalog.ServiceState, error)
+	ListServiceStateV3RowsSnapshot(
+		context.Context,
+		string,
+		string,
+		int,
+		uint64,
+		string,
+	) ([]servicecatalog.ServiceState, error)
 }
 
 var _ ServiceStateV3ReadSource = (*Surreal)(nil)
@@ -191,7 +220,7 @@ func (reader *ServiceStateV3Reader) openService(
 		return nil, fmt.Errorf("open service state v3: current catalog lease: %w", ErrConflict)
 	}
 	read.Root = root
-	summary, err := reader.source.GetServiceStateV3SummaryPoint(ctx, repository)
+	summary, err := reader.getSummary(ctx, repository, selector)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"open service state v3: summary: %w",
@@ -205,7 +234,7 @@ func (reader *ServiceStateV3Reader) openService(
 		return nil, fmt.Errorf("open service state v3: selector summary: %w", ErrConflict)
 	}
 	read.Summary = summary
-	state, err := reader.source.GetServiceStateV3Point(ctx, repository, serviceKey)
+	state, err := reader.getPoint(ctx, repository, serviceKey, selector)
 	if err != nil {
 		if !errors.Is(err, ErrNotFound) && !errors.Is(err, os.ErrNotExist) {
 			err = serviceStateV3AuthorityError(err)
@@ -342,7 +371,7 @@ func (reader *ServiceStateV3Reader) listServices(
 	if !valid {
 		return nil, fmt.Errorf("list service states v3: catalog lease: %w", ErrConflict)
 	}
-	summary, err := reader.source.GetServiceStateV3SummaryPoint(ctx, repository)
+	summary, err := reader.getSummary(ctx, repository, selector)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"list service states v3: summary: %w",
@@ -356,8 +385,8 @@ func (reader *ServiceStateV3Reader) listServices(
 		return nil, fmt.Errorf("list service states v3: selector summary: %w", ErrConflict)
 	}
 	if after.ServiceKey != "" {
-		anchor, anchorErr := reader.source.GetServiceStateV3Point(
-			ctx, repository, after.ServiceKey,
+		anchor, anchorErr := reader.getPoint(
+			ctx, repository, after.ServiceKey, selector,
 		)
 		if anchorErr != nil {
 			anchorErr = serviceStateV3AuthorityError(anchorErr)
@@ -371,8 +400,8 @@ func (reader *ServiceStateV3Reader) listServices(
 			return nil, fmt.Errorf("list service states v3: seek changed: %w", ErrConflict)
 		}
 	}
-	rows, err := reader.source.ListServiceStateV3Rows(
-		ctx, repository, after.ServiceKey, maxServiceStateScanPage+1,
+	rows, err := reader.listRows(
+		ctx, repository, after.ServiceKey, maxServiceStateScanPage+1, selector,
 	)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -626,7 +655,7 @@ func (reader *ServiceStateV3Reader) confirmSnapshot(
 		!sameSelectedServiceStateV3Fence(*selector, summary) {
 		return ErrConflict
 	}
-	current, err := reader.source.GetServiceStateV3SummaryPoint(ctx, pointer.Repository)
+	current, err := reader.getSummary(ctx, pointer.Repository, selector)
 	if err != nil {
 		return fmt.Errorf("selected summary: %w", err)
 	}
@@ -640,6 +669,70 @@ func (reader *ServiceStateV3Reader) confirmSnapshot(
 	// This is deliberately last: a successful return linearizes the catalog,
 	// state, and selector snapshot after every selected state read.
 	return selectors.ConfirmServiceRuntimeSelector(ctx, *selector)
+}
+
+func (reader *ServiceStateV3Reader) getSummary(
+	ctx context.Context,
+	repository string,
+	selector *ServiceRuntimeSelector,
+) (servicecatalog.RepositoryState, error) {
+	if selector == nil {
+		return reader.source.GetServiceStateV3SummaryPoint(ctx, repository)
+	}
+	snapshots, ok := reader.source.(serviceStateV3SnapshotReadSource)
+	if !ok {
+		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+	}
+	return snapshots.GetServiceStateV3SummarySnapshot(
+		ctx,
+		repository,
+		selector.StateControlRevision,
+		selector.StateSummaryDigest,
+	)
+}
+
+func (reader *ServiceStateV3Reader) getPoint(
+	ctx context.Context,
+	repository, serviceKey string,
+	selector *ServiceRuntimeSelector,
+) (servicecatalog.ServiceState, error) {
+	if selector == nil {
+		return reader.source.GetServiceStateV3Point(ctx, repository, serviceKey)
+	}
+	snapshots, ok := reader.source.(serviceStateV3SnapshotReadSource)
+	if !ok {
+		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+	}
+	return snapshots.GetServiceStateV3PointSnapshot(
+		ctx,
+		repository,
+		serviceKey,
+		selector.StateControlRevision,
+		selector.StateSummaryDigest,
+	)
+}
+
+func (reader *ServiceStateV3Reader) listRows(
+	ctx context.Context,
+	repository, after string,
+	limit int,
+	selector *ServiceRuntimeSelector,
+) ([]servicecatalog.ServiceState, error) {
+	if selector == nil {
+		return reader.source.ListServiceStateV3Rows(ctx, repository, after, limit)
+	}
+	snapshots, ok := reader.source.(serviceStateV3SnapshotReadSource)
+	if !ok {
+		return nil, ErrInvalidServiceStateV3
+	}
+	return snapshots.ListServiceStateV3RowsSnapshot(
+		ctx,
+		repository,
+		after,
+		limit,
+		selector.StateControlRevision,
+		selector.StateSummaryDigest,
+	)
 }
 
 func serviceStateV3Position(
@@ -697,6 +790,75 @@ func (s *Surreal) GetServiceStateV3SummaryPoint(
 	return *summary, nil
 }
 
+// GetServiceStateV3SummarySnapshot resolves one selected immutable state
+// summary. Current dark authority remains on GetServiceStateV3SummaryPoint.
+func (s *Surreal) GetServiceStateV3SummarySnapshot(
+	ctx context.Context,
+	repository string,
+	snapshotRevision uint64,
+	snapshotDigest string,
+) (servicecatalog.RepositoryState, error) {
+	if validateCandidateRepository(repository) != nil || snapshotRevision == 0 ||
+		snapshotRevision > math.MaxInt64 || !validSHA256Digest(snapshotDigest) {
+		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+	}
+	currentResults, err := surrealdb.Query[[]serviceRepositoryStateRec](
+		ctx,
+		s.db,
+		"SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3RepositoryID(repository)},
+	)
+	if err != nil {
+		return servicecatalog.RepositoryState{}, err
+	}
+	currentRows := firstDomainRows(currentResults)
+	if len(currentRows) > 1 {
+		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+	}
+	if len(currentRows) == 1 &&
+		currentRows[0].ControlRevision == snapshotRevision &&
+		currentRows[0].SummaryDigest == snapshotDigest {
+		summary, summaryErr := serviceStateV3RepositoryFromRec(currentRows[0])
+		if summaryErr != nil || summary.Repository != repository ||
+			!validServiceCatalogV3RecordID(
+				currentRows[0].RecID,
+				"service_state_v3_repository",
+				repository,
+			) {
+			return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+		}
+		return *summary, nil
+	}
+	preimageResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_repository_preimage
+	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
+		"repository": repository, "snapshot_revision": snapshotRevision,
+		"snapshot_digest": snapshotDigest,
+	})
+	if err != nil {
+		return servicecatalog.RepositoryState{}, err
+	}
+	preimages := firstDomainRows(preimageResults)
+	if len(preimages) == 0 {
+		return servicecatalog.RepositoryState{}, ErrNotFound
+	}
+	if len(preimages) != 1 ||
+		!validServiceStateV3PreimageRecord(preimages[0].RecID, "service_state_v3_repository_preimage") ||
+		preimages[0].Repository != repository ||
+		preimages[0].SnapshotRevision != snapshotRevision ||
+		preimages[0].SnapshotDigest != snapshotDigest ||
+		preimages[0].ControlRevision != snapshotRevision ||
+		preimages[0].SummaryDigest != snapshotDigest {
+		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+	}
+	summary, err := serviceStateV3RepositoryFromRec(preimages[0])
+	if err != nil {
+		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
+	}
+	return *summary, nil
+}
+
 func (s *Surreal) GetServiceStateV3Point(
 	ctx context.Context,
 	repository, serviceKey string,
@@ -729,6 +891,77 @@ func (s *Surreal) GetServiceStateV3Point(
 	return cloneServiceStateV3(*state), nil
 }
 
+// GetServiceStateV3PointSnapshot resolves a selected row without consulting a
+// successor's replacement. An unchanged current row is its own sparse image.
+func (s *Surreal) GetServiceStateV3PointSnapshot(
+	ctx context.Context,
+	repository, serviceKey string,
+	snapshotRevision uint64,
+	snapshotDigest string,
+) (servicecatalog.ServiceState, error) {
+	if validateCandidateRepository(repository) != nil || serviceKey == "" ||
+		snapshotRevision == 0 || snapshotRevision > math.MaxInt64 ||
+		!validSHA256Digest(snapshotDigest) {
+		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+	}
+	results, err := surrealdb.Query[[]serviceStateRec](
+		ctx,
+		s.db,
+		"SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3ID(repository, serviceKey)},
+	)
+	if err != nil {
+		return servicecatalog.ServiceState{}, err
+	}
+	rows := firstDomainRows(results)
+	if len(rows) > 1 {
+		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+	}
+	if len(rows) == 1 && rows[0].VisibleFrom > 0 &&
+		rows[0].VisibleFrom <= snapshotRevision {
+		state, stateErr := serviceStateV3FromRec(rows[0])
+		identifier, _ := serviceStateV3ID(repository, serviceKey).ID.(string)
+		if stateErr != nil || state.Repository != repository ||
+			state.ServiceKey != serviceKey || !validServiceCatalogV3RecordID(
+			rows[0].RecID,
+			"service_state_v3_current",
+			identifier,
+		) {
+			return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+		}
+		return cloneServiceStateV3(*state), nil
+	}
+	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_preimage
+	WHERE repository = $repository AND service_key = $service_key
+		AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
+		"repository": repository, "service_key": serviceKey,
+		"snapshot_revision": snapshotRevision, "snapshot_digest": snapshotDigest,
+	})
+	if err != nil {
+		return servicecatalog.ServiceState{}, err
+	}
+	preimages := firstDomainRows(preimageResults)
+	if len(preimages) == 0 {
+		return servicecatalog.ServiceState{}, ErrNotFound
+	}
+	if len(preimages) != 1 {
+		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+	}
+	state, err := decodeServiceStateV3Preimage(
+		repository,
+		serviceKey,
+		snapshotRevision,
+		snapshotDigest,
+		preimages[0],
+	)
+	if err != nil {
+		return servicecatalog.ServiceState{}, err
+	}
+	return state, nil
+}
+
 func (s *Surreal) ListServiceStateV3Rows(
 	ctx context.Context,
 	repository, after string,
@@ -748,6 +981,64 @@ SELECT * FROM service_state_v3_current
 		return nil, err
 	}
 	return decodeServiceStateV3Rows(repository, firstDomainRows(results), limit)
+}
+
+// ListServiceStateV3RowsSnapshot merges the unchanged current subset with the
+// exact sparse preimages written for one selected revision.
+func (s *Surreal) ListServiceStateV3RowsSnapshot(
+	ctx context.Context,
+	repository, after string,
+	limit int,
+	snapshotRevision uint64,
+	snapshotDigest string,
+) ([]servicecatalog.ServiceState, error) {
+	if validateCandidateRepository(repository) != nil || limit < 1 ||
+		limit > maxServiceStateScanPage+1 || snapshotRevision == 0 ||
+		snapshotRevision > math.MaxInt64 || !validSHA256Digest(snapshotDigest) {
+		return nil, ErrInvalidServiceStateV3
+	}
+	currentResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_current
+	WHERE repository = $repository AND service_key > $after
+		AND visible_from <= $snapshot_revision
+	ORDER BY service_key LIMIT $limit`, map[string]any{
+		"repository": repository, "after": after, "limit": limit,
+		"snapshot_revision": snapshotRevision,
+	})
+	if err != nil {
+		return nil, err
+	}
+	current, err := decodeServiceStateV3Rows(
+		repository,
+		firstDomainRows(currentResults),
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_preimage
+	WHERE repository = $repository AND service_key > $after
+		AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest
+	ORDER BY service_key LIMIT $limit`, map[string]any{
+		"repository": repository, "after": after, "limit": limit,
+		"snapshot_revision": snapshotRevision, "snapshot_digest": snapshotDigest,
+	})
+	if err != nil {
+		return nil, err
+	}
+	preimages, err := decodeServiceStateV3PreimageRows(
+		repository,
+		snapshotRevision,
+		snapshotDigest,
+		firstDomainRows(preimageResults),
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return mergeServiceStateV3SnapshotRows(current, preimages, limit)
 }
 
 func (s *Surreal) ListAcceptedServiceStateV3Rows(
@@ -821,6 +1112,96 @@ func decodeServiceStateV3Rows(
 		states = append(states, cloneServiceStateV3(*state))
 	}
 	return states, nil
+}
+
+func decodeServiceStateV3PreimageRows(
+	repository string,
+	snapshotRevision uint64,
+	snapshotDigest string,
+	rows []serviceStateRec,
+	limit int,
+) ([]servicecatalog.ServiceState, error) {
+	if len(rows) > limit {
+		return nil, ErrInvalidServiceStateV3
+	}
+	states := make([]servicecatalog.ServiceState, 0, len(rows))
+	prior := ""
+	for _, row := range rows {
+		state, err := decodeServiceStateV3Preimage(
+			repository,
+			row.ServiceKey,
+			snapshotRevision,
+			snapshotDigest,
+			row,
+		)
+		if err != nil || state.ServiceKey <= prior {
+			return nil, ErrInvalidServiceStateV3
+		}
+		prior = state.ServiceKey
+		states = append(states, state)
+	}
+	return states, nil
+}
+
+func decodeServiceStateV3Preimage(
+	repository, serviceKey string,
+	snapshotRevision uint64,
+	snapshotDigest string,
+	row serviceStateRec,
+) (servicecatalog.ServiceState, error) {
+	state, err := serviceStateV3FromRec(row)
+	if err != nil || state.Repository != repository || state.ServiceKey != serviceKey ||
+		row.VisibleFrom == 0 || row.VisibleFrom > snapshotRevision ||
+		row.SnapshotRevision != snapshotRevision ||
+		row.SnapshotDigest != snapshotDigest ||
+		!validServiceStateV3PreimageRecord(row.RecID, "service_state_v3_preimage") {
+		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
+	}
+	return cloneServiceStateV3(*state), nil
+}
+
+func validServiceStateV3PreimageRecord(record *models.RecordID, table string) bool {
+	if record == nil || record.Table != table {
+		return false
+	}
+	identifier, ok := record.ID.(string)
+	return ok && identifier != ""
+}
+
+func mergeServiceStateV3SnapshotRows(
+	current, preimages []servicecatalog.ServiceState,
+	limit int,
+) ([]servicecatalog.ServiceState, error) {
+	rows := make([]servicecatalog.ServiceState, 0, min(limit, len(current)+len(preimages)))
+	currentIndex := 0
+	preimageIndex := 0
+	for len(rows) < limit &&
+		(currentIndex < len(current) || preimageIndex < len(preimages)) {
+		switch {
+		case preimageIndex == len(preimages):
+			rows = append(rows, current[currentIndex])
+			currentIndex++
+		case currentIndex == len(current):
+			rows = append(rows, preimages[preimageIndex])
+			preimageIndex++
+		case current[currentIndex].ServiceKey < preimages[preimageIndex].ServiceKey:
+			rows = append(rows, current[currentIndex])
+			currentIndex++
+		case current[currentIndex].ServiceKey > preimages[preimageIndex].ServiceKey:
+			rows = append(rows, preimages[preimageIndex])
+			preimageIndex++
+		default:
+			if current[currentIndex].StateDigest != preimages[preimageIndex].StateDigest ||
+				current[currentIndex].ControlRevision !=
+					preimages[preimageIndex].ControlRevision {
+				return nil, ErrInvalidServiceStateV3
+			}
+			rows = append(rows, preimages[preimageIndex])
+			currentIndex++
+			preimageIndex++
+		}
+	}
+	return rows, nil
 }
 
 func sameServiceStateV3Fence(

@@ -145,6 +145,18 @@ func TestProjectionBucketsV3PreserveMaximumAlignedClaims(t *testing.T) {
 	if reconstructed.Source.Claims[1].Disposition != servicecatalog.DispositionConflict {
 		t.Fatal("nonaccepted placement evidence was lost")
 	}
+	overflow := fragments[0]
+	overflow.Source.Claims = append(slices.Clone(overflow.Source.Claims), ServiceClaim{
+		ServiceKey: "service-overflow", Disposition: servicecatalog.DispositionAccepted,
+		Roles: []RoleClaim{{Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase}},
+	})
+	if len(overflow.Source.Claims) != MaxClaimsPerProjectionBucketV3+1 ||
+		len(overflow.Target.Claims) != MaxClaimsPerProjectionBucketV3 {
+		t.Fatal("projection claim one-over fixture did not isolate the source-claim bound")
+	}
+	if err := validatePlacementBucketV3(overflow.Source); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("projection bucket claim one-over = %v", err)
+	}
 }
 
 func TestRepositoryMemberAdmissionRefusesConcentratedBucketBeforeMarshal(t *testing.T) {

@@ -101,6 +101,7 @@ func afterResolverPublication(
 	ctx context.Context,
 	repository string,
 	reconcile func(context.Context, string) error,
+	advance func(context.Context, string) error,
 	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
 	callerEnabled bool,
 ) error {
@@ -108,10 +109,28 @@ func afterResolverPublication(
 	if reconcile != nil {
 		reconcileErr = reconcile(ctx, repository)
 	}
+	var advanceErr error
+	if advance != nil {
+		advanceErr = advance(ctx, repository)
+	}
 	if !callerEnabled {
-		return reconcileErr
+		return errors.Join(reconcileErr, advanceErr)
 	}
 	_, enqueueErr := enqueue(ctx, store.JobCallerLeaf, repository, false)
+	return errors.Join(reconcileErr, advanceErr, enqueueErr)
+}
+
+func afterObservationPublication(
+	ctx context.Context,
+	repository string,
+	reconcile func(context.Context, string) error,
+	enqueue func(context.Context, store.JobKind, string, bool) (*store.Job, error),
+) error {
+	var reconcileErr error
+	if reconcile != nil {
+		reconcileErr = reconcile(ctx, repository)
+	}
+	_, enqueueErr := enqueue(ctx, store.JobExtract, repository, false)
 	return errors.Join(reconcileErr, enqueueErr)
 }
 
@@ -638,14 +657,14 @@ func serve(args []string) error {
 			publishedCtx context.Context,
 			repository string,
 		) error {
-			var priorErr error
-			if observationAfterPublication != nil {
-				priorErr = observationAfterPublication(publishedCtx, repository)
-			}
-			_, enqueueErr := st.EnqueuePending(
-				publishedCtx, store.JobExtract, repository, false,
+			return afterObservationPublication(
+				publishedCtx,
+				repository,
+				legacyRelationshipReconcileFor(
+					repository, cfg.ServiceCatalogs, observationAfterPublication,
+				),
+				st.EnqueuePending,
 			)
-			return errors.Join(priorErr, enqueueErr)
 		}
 	}
 	releaseObservationRecovery, recoveryLockErr := acquireObservationTransition(ctx)
@@ -880,7 +899,8 @@ func serve(args []string) error {
 		log.Printf("analysis unit reconciliation: queued %d index rebuild(s)", queued)
 	}
 	catalogReconciler := &servicecatalogingest.Reconciler{
-		DataDir: cfg.Server.DataDir, Store: st, Selections: cfg.ServiceCatalogs,
+		DataDir: cfg.Server.DataDir, Store: st,
+		Selections: legacyServiceCatalogSelections(cfg.ServiceCatalogs),
 	}
 	v3CatalogReconciler := &servicecatalogingest.V3Reconciler{
 		DataDir: cfg.Server.DataDir, Store: st,
@@ -947,10 +967,18 @@ func serve(args []string) error {
 	}
 	sort.Strings(serviceNames)
 	for _, repository := range serviceNames {
-		if _, configured := cfg.ServiceCatalogs[repository]; configured {
+		if selection, configured := cfg.ServiceCatalogs[repository]; configured {
 			// Reconciler.OnPublished already advanced the selected runtime under
-			// its transition fence. Legacy analysis-unit state retains the direct
-			// v2 backfill below.
+			// its transition fence for v2. V3 deliberately bypasses the legacy
+			// 4,000-service decoder and starts through its own reconciler.
+			if selection.RuntimeVersion() == config.ServiceCatalogRuntimeV3 {
+				if err := serviceRuntime.Advance(ctx, repository); err != nil {
+					diagnostics.Logf(
+						"service runtime v3 reconciliation unavailable: repository=%q error=%v",
+						repository, err,
+					)
+				}
+			}
 			continue
 		}
 		outcome, reconcileErr := reconcileServiceSearchGeneration(
@@ -1026,10 +1054,14 @@ func serve(args []string) error {
 	var onIndexed func(context.Context, string, string) error
 	if len(cfg.ServiceCatalogs)+len(analysisUnits) > 0 {
 		onIndexed = func(ctx context.Context, repository, _ string) error {
-			if _, selected := cfg.ServiceCatalogs[repository]; !selected {
+			selection, selected := cfg.ServiceCatalogs[repository]
+			if !selected {
 				if _, legacy := analysisUnits[repository]; !legacy {
 					return nil
 				}
+			}
+			if selected && selection.RuntimeVersion() == config.ServiceCatalogRuntimeV3 {
+				return serviceRuntime.Advance(ctx, repository)
 			}
 			if _, err := catalogReconciler.ReconcileRepository(ctx, repository); err != nil {
 				return err
@@ -1303,7 +1335,10 @@ func serve(args []string) error {
 				settledCtx, repository,
 			)
 			return afterPartitionExtractionSettlement(
-				settledCtx, repository, reconcileRelationship,
+				settledCtx, repository,
+				legacyRelationshipReconcileFor(
+					repository, cfg.ServiceCatalogs, reconcileRelationship,
+				),
 				st.EnqueuePending,
 				resolverRegistry.Enabled() && partitionsCurrent,
 				callerRegistry.Enabled() && partitionsCurrent &&
@@ -1366,7 +1401,11 @@ func serve(args []string) error {
 					repository string,
 				) error {
 					return afterResolverPublication(
-						publishedCtx, repository, reconcileRelationship,
+						publishedCtx, repository,
+						legacyRelationshipReconcileFor(
+							repository, cfg.ServiceCatalogs, reconcileRelationship,
+						),
+						serviceRuntime.Advance,
 						st.EnqueuePending, callerRegistry.Enabled(),
 					)
 				}
@@ -1389,7 +1428,18 @@ func serve(args []string) error {
 				return fmt.Errorf("configure caller-leaf execution: %w", err)
 			}
 			if relationshipRuntime != nil {
-				callerWorker.OnPublished = reconcileRelationship
+				callerWorker.OnPublished = func(
+					publishedCtx context.Context,
+					repository string,
+				) error {
+					reconcile := legacyRelationshipReconcileFor(
+						repository, cfg.ServiceCatalogs, reconcileRelationship,
+					)
+					if reconcile == nil {
+						return nil
+					}
+					return reconcile(publishedCtx, repository)
+				}
 			}
 			callerRunner = &store.Runner{
 				Store: st, Kind: store.JobCallerLeaf,
@@ -1906,6 +1956,30 @@ func serve(args []string) error {
 	<-shutdownDone
 	stopBackground()
 	return t4013ExactReportTerminalError(exactReportFailed)
+}
+
+func legacyServiceCatalogSelections(
+	selections map[string]config.ServiceCatalog,
+) map[string]config.ServiceCatalog {
+	legacy := make(map[string]config.ServiceCatalog, len(selections))
+	for repository, selection := range selections {
+		if selection.RuntimeVersion() != config.ServiceCatalogRuntimeV3 {
+			legacy[repository] = selection
+		}
+	}
+	return legacy
+}
+
+func legacyRelationshipReconcileFor(
+	repository string,
+	selections map[string]config.ServiceCatalog,
+	reconcile func(context.Context, string) error,
+) func(context.Context, string) error {
+	selection, configured := selections[repository]
+	if configured && selection.RuntimeVersion() == config.ServiceCatalogRuntimeV3 {
+		return nil
+	}
+	return reconcile
 }
 
 func openStoreAfterRetentionWarning(

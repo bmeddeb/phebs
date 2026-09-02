@@ -30,8 +30,8 @@ func Build(binding Binding, catalog servicecatalog.Catalog) (Generation, error) 
 	if err != nil {
 		return Generation{}, err
 	}
-	if logicalBytes > MaxLogicalBytes {
-		return Generation{}, limitf("logical bytes")
+	if err := admitLogicalBytes(logicalBytes); err != nil {
+		return Generation{}, err
 	}
 	mappedV2 := ""
 	if value, digestErr := servicecatalog.Digest(normalized); digestErr == nil {
@@ -92,8 +92,8 @@ func Build(binding Binding, catalog servicecatalog.Catalog) (Generation, error) 
 		generation.Members = append(generation.Members, EncodedMember{Kind: "placement", Ordinal: ordinal, Content: raw})
 		root.EncodedMemberBytes += len(raw)
 	}
-	if root.EncodedMemberBytes >= MaxPublicationBytes {
-		return Generation{}, limitf("encoded member bytes")
+	if err := admitPublicationBytes(1, root.EncodedMemberBytes); err != nil {
+		return Generation{}, err
 	}
 	if err := finalizeRoot(&root); err != nil {
 		return Generation{}, err
@@ -304,8 +304,8 @@ func finalizeRoot(root *Root) error {
 		root.RootBytes = len(raw)
 		root.EncodedBytes = len(raw) + root.EncodedMemberBytes
 	}
-	if root.RootBytes > MaxRootBytes || root.EncodedBytes > MaxPublicationBytes {
-		return limitf("root or publication bytes")
+	if err := admitPublicationBytes(root.RootBytes, root.EncodedMemberBytes); err != nil {
+		return err
 	}
 	digest, err := RootDigest(*root)
 	if err != nil {
@@ -315,6 +315,21 @@ func finalizeRoot(root *Root) error {
 	raw, err := canonical(*root)
 	if err != nil || len(raw) != root.RootBytes {
 		return invalidf("unstable root byte count")
+	}
+	return nil
+}
+
+func admitLogicalBytes(logicalBytes int) error {
+	if logicalBytes < 1 || logicalBytes > MaxLogicalBytes {
+		return limitf("logical bytes")
+	}
+	return nil
+}
+
+func admitPublicationBytes(rootBytes, memberBytes int) error {
+	if rootBytes < 1 || rootBytes > MaxRootBytes || memberBytes < 0 ||
+		memberBytes > MaxPublicationBytes-rootBytes {
+		return limitf("root or publication bytes")
 	}
 	return nil
 }

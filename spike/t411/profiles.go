@@ -112,6 +112,33 @@ type countingHash struct {
 	bytes int64
 }
 
+// FixtureFile is one deterministic generated file in a frozen T41.1 neutral
+// corpus. Callers may write these bytes into disposable test repositories;
+// source identities and bytes must not be copied into source-free receipts.
+type FixtureFile struct {
+	Path    string
+	Content []byte
+}
+
+// Corpus is the reusable authoring form of one frozen accepted-service
+// profile. Profile and ProfileDigest are the source-free identity; Catalog and
+// Files are the neutral production-shaped inputs used only while executing a
+// live gate.
+type Corpus struct {
+	Profile       Profile
+	ProfileDigest string
+	Catalog       servicecatalog.Catalog
+	Files         []FixtureFile
+}
+
+// TransitionCorpus is the reusable authoring form of the frozen small
+// transition profile. The profile already contains its ordered production
+// catalogs, so no second transition representation is maintained.
+type TransitionCorpus struct {
+	Profile       TransitionProfile
+	ProfileDigest string
+}
+
 func (writer *countingHash) Write(content []byte) (int, error) {
 	written, err := writer.hash.Write(content)
 	writer.bytes += int64(written)
@@ -151,6 +178,69 @@ func ProfileDigest(profile Profile) (string, error) {
 	return SHA256(content), nil
 }
 
+// TransitionProfileDigest returns the canonical identity of a frozen
+// transition profile.
+func TransitionProfileDigest(profile TransitionProfile) (string, error) {
+	content, err := MarshalCanonical(profile)
+	if err != nil {
+		return "", err
+	}
+	return SHA256(content), nil
+}
+
+// BuildCorpus returns one of T41.1's three frozen accepted-service corpora.
+// It deliberately reuses the private profile generator so later live gates do
+// not copy service, membership, placement, or fixture-generation rules.
+func BuildCorpus(serviceCount int) (Corpus, error) {
+	catalog, paths, membershipsByService, maxFanout, maxClaims, err := generateCatalog(serviceCount)
+	if err != nil {
+		return Corpus{}, err
+	}
+	profile, err := buildAcceptedProfileFromCatalog(
+		serviceCount, catalog, paths, membershipsByService, maxFanout, maxClaims,
+	)
+	if err != nil {
+		return Corpus{}, err
+	}
+	digest, err := ProfileDigest(profile)
+	if err != nil {
+		return Corpus{}, err
+	}
+	files := make([]FixtureFile, 0, len(paths))
+	for _, path := range paths {
+		files = append(files, FixtureFile{Path: path.Path, Content: fixtureContent(path.Path)})
+	}
+	return Corpus{
+		Profile: profile, ProfileDigest: digest,
+		Catalog: servicecatalog.Catalog{
+			Schema: servicecatalog.Schema, Authority: catalog.Authority,
+			Services:    slices.Clone(catalog.Services),
+			Memberships: slices.Clone(catalog.Memberships),
+			Unowned:     slices.Clone(catalog.Unowned),
+		},
+		Files: files,
+	}, nil
+}
+
+// BuildTargetCorpus returns T41.1's accepted 10,000-service target.
+func BuildTargetCorpus() (Corpus, error) {
+	return BuildCorpus(AcceptedServiceTarget)
+}
+
+// BuildTransitionCorpus returns the separate frozen authority/lifecycle
+// transition corpus without building the three large accepted profiles.
+func BuildTransitionCorpus() (TransitionCorpus, error) {
+	profile, err := buildTransitionProfile()
+	if err != nil {
+		return TransitionCorpus{}, err
+	}
+	digest, err := TransitionProfileDigest(profile)
+	if err != nil {
+		return TransitionCorpus{}, err
+	}
+	return TransitionCorpus{Profile: profile, ProfileDigest: digest}, nil
+}
+
 func buildEnvelope() (Envelope, error) {
 	profiles := make([]Profile, 0, 3)
 	for _, services := range []int{AcceptedServiceFloor, AcceptedServiceTarget, MaxTotalServices} {
@@ -179,6 +269,19 @@ func buildAcceptedProfile(serviceCount int) (Profile, error) {
 	if err != nil {
 		return Profile{}, err
 	}
+	return buildAcceptedProfileFromCatalog(
+		serviceCount, catalog, paths, membershipsByService, maxFanout, maxClaims,
+	)
+}
+
+func buildAcceptedProfileFromCatalog(
+	serviceCount int,
+	catalog logicalCatalog,
+	paths []pathRecord,
+	membershipsByService map[string][]servicecatalog.Membership,
+	maxFanout int,
+	maxClaims int,
+) (Profile, error) {
 	logicalBytes, err := json.Marshal(catalog)
 	if err != nil {
 		return Profile{}, err
@@ -343,7 +446,7 @@ func fixtureIdentity(paths []pathRecord) (FixtureIdentity, error) {
 	var contentBytes int64
 	var length [8]byte
 	for _, record := range paths {
-		content := []byte("t411-neutral-fixture-v1\n" + record.Path + "\n")
+		content := fixtureContent(record.Path)
 		binary.BigEndian.PutUint64(length[:], uint64(len(record.Path)))
 		if _, err := digest.Write(length[:]); err != nil {
 			return FixtureIdentity{}, err
@@ -365,6 +468,10 @@ func fixtureIdentity(paths []pathRecord) (FixtureIdentity, error) {
 		RegularFiles: len(paths), DistinctContents: len(paths), ContentBytes: contentBytes,
 		SHA256: "sha256:" + hex.EncodeToString(digest.Sum(nil)),
 	}, nil
+}
+
+func fixtureContent(path string) []byte {
+	return []byte("t411-neutral-fixture-v1\n" + path + "\n")
 }
 
 func projectPublication(

@@ -2,6 +2,9 @@ package t411
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -110,6 +113,79 @@ func TestTransitionProfileUsesRealV2Semantics(t *testing.T) {
 	}
 }
 
+func TestReusableTargetAndTransitionCorporaMatchFrozenEnvelope(t *testing.T) {
+	envelope, err := BuildEnvelope()
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := BuildTargetCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(target.Profile, envelope.Profiles[1]) {
+		t.Fatal("reusable target profile differs from the frozen envelope")
+	}
+	wantTargetDigest, err := ProfileDigest(envelope.Profiles[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if target.ProfileDigest != wantTargetDigest ||
+		target.Catalog.Schema != servicecatalog.Schema ||
+		len(target.Catalog.Services) != AcceptedServiceTarget ||
+		len(target.Catalog.Memberships) != 6*AcceptedServiceTarget ||
+		len(target.Files) != target.Profile.Fixture.RegularFiles {
+		t.Fatalf("reusable target corpus is incomplete: profile=%s services=%d memberships=%d files=%d",
+			target.ProfileDigest, len(target.Catalog.Services), len(target.Catalog.Memberships), len(target.Files))
+	}
+	identity := TargetProfileIdentity()
+	if identity.SHA256 != target.ProfileDigest ||
+		identity.AcceptedServices != target.Profile.AcceptedServices ||
+		identity.TotalServiceRecords != target.Profile.TotalServiceRecords ||
+		identity.Memberships != target.Profile.Memberships ||
+		identity.DistinctPaths != target.Profile.DistinctPaths ||
+		identity.RegularFiles != target.Profile.Fixture.RegularFiles ||
+		identity.FixtureContentBytes != target.Profile.Fixture.ContentBytes {
+		t.Fatalf("allocation-free target identity = %+v", identity)
+	}
+	fixtureHash := sha256.New()
+	var framedLength [8]byte
+	for index, file := range target.Files {
+		if index > 0 && target.Files[index-1].Path >= file.Path {
+			t.Fatalf("fixture files are not strictly ordered at %q", file.Path)
+		}
+		if !bytes.Equal(file.Content, []byte("t411-neutral-fixture-v1\n"+file.Path+"\n")) {
+			t.Fatalf("fixture content differs at %q", file.Path)
+		}
+		binary.BigEndian.PutUint64(framedLength[:], uint64(len(file.Path)))
+		_, _ = fixtureHash.Write(framedLength[:])
+		_, _ = fixtureHash.Write([]byte(file.Path))
+		binary.BigEndian.PutUint64(framedLength[:], uint64(len(file.Content)))
+		_, _ = fixtureHash.Write(framedLength[:])
+		_, _ = fixtureHash.Write(file.Content)
+	}
+	if got := "sha256:" + hex.EncodeToString(fixtureHash.Sum(nil)); got != target.Profile.Fixture.SHA256 {
+		t.Fatalf("reusable fixture digest = %s, want %s", got, target.Profile.Fixture.SHA256)
+	}
+
+	transition, err := BuildTransitionCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(transition.Profile, envelope.Transition) {
+		t.Fatal("reusable transition profile differs from the frozen envelope")
+	}
+	wantTransitionDigest, err := TransitionProfileDigest(envelope.Transition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if transition.ProfileDigest != wantTransitionDigest {
+		t.Fatalf("transition digest = %s, want %s", transition.ProfileDigest, wantTransitionDigest)
+	}
+	if transition.ProfileDigest != RetainedTransitionProfileSHA256 {
+		t.Fatalf("retained transition digest = %s", transition.ProfileDigest)
+	}
+}
+
 func TestMeasureBindsPreservedT323AndClosedCosts(t *testing.T) {
 	envelope, receipt, err := Measure(filepath.Join("..", ".."))
 	if err != nil {
@@ -148,7 +224,7 @@ func TestRetainedArtifactsMatchFrozenEnvelope(t *testing.T) {
 	if !bytes.Equal(gotBytes, wantBytes) {
 		t.Fatal("retained envelope differs from frozen generator")
 	}
-	if digest := SHA256(gotBytes); digest != "sha256:99ec8a3dc79537bf1db842234f6fe054abd03c9af7503987f78c5530fdfd525f" {
+	if digest := SHA256(gotBytes); digest != RetainedEnvelopeSHA256 {
 		t.Fatalf("retained envelope digest = %s", digest)
 	}
 	decoded, err := DecodeStrict[Envelope](gotBytes)
@@ -159,7 +235,7 @@ func TestRetainedArtifactsMatchFrozenEnvelope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if digest := SHA256(receiptBytes); digest != "sha256:c9a30ab63960fee682558a04e79b66f1d1fcf2b9a7f2bfc2e3a012139291dc55" {
+	if digest := SHA256(receiptBytes); digest != RetainedReceiptSHA256 {
 		t.Fatalf("retained receipt digest = %s", digest)
 	}
 	receipt, err := DecodeStrict[Receipt](receiptBytes)

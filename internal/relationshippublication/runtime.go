@@ -114,6 +114,32 @@ type runtimeSnapshot struct {
 	states  []servicecatalog.ServiceState
 }
 
+// runtimeComponentRoots names one already-published shared component set. It
+// is only a reuse hint: every opened generation is still validated against the
+// exact upstream and resolver authority bound by the durable schedule.
+type runtimeComponentRoots struct {
+	resolverGeneration string
+	resolverRoot       string
+	rpcGeneration      string
+	rpcRoot            string
+	kafkaGeneration    string
+	kafkaRoot          string
+}
+
+type runtimeComponents struct {
+	resolver *resolvernamespace.Publication
+	rpc      *rpccallerposting.Publication
+	kafka    *kafkatopicposting.Publication
+}
+
+type runtimeComponentBuildRequest struct {
+	repository            string
+	observationGeneration string
+	resolverGeneration    string
+	upstream              *downstreamauthority.Authority
+	prior                 runtimeComponentRoots
+}
+
 // Reconcile binds current observation, catalog, and resolver controls to one
 // durable one-chunk build. No derived member or index is opened on the no-op
 // path; a worker performs the admitted full joins.
@@ -387,148 +413,27 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return err
 	}
 	defer release()
-	var observationsV1 *observationpublication.Publication
-	var observationsV2 observationpublication.DownstreamSource
-	if isPartitionedBinding(binding.Schema) {
-		if binding.Upstream == nil || runtime.InventoryCache == nil {
-			return fmt.Errorf("%w: relationship v2 observation configuration", ErrInvalid)
-		}
-		lease, acquireErr := runtime.InventoryCache.AcquireCurrent(
-			ctx, filepath.Join(runtime.DataDir, "observations"), chunk.Repository,
-			binding.Upstream.Observation,
-		)
-		if acquireErr != nil {
-			return fmt.Errorf("open relationship observations v2: %w", acquireErr)
-		}
-		defer lease.Release()
-		observationsV2 = lease.Publication()
-	} else {
-		lease, acquireErr := runtime.Cache.Acquire(
-			ctx, filepath.Join(runtime.DataDir, "observations"), chunk.Repository,
-		)
-		if acquireErr != nil {
-			return fmt.Errorf("open relationship observations: %w", acquireErr)
-		}
-		defer lease.Release()
-		observationsV1 = lease.Publication()
-		if observationsV1 == nil || observationsV1.Manifest().GenerationDigest != binding.ObservationGeneration {
-			return fmt.Errorf("%w: observation generation changed", ErrPublishing)
-		}
-	}
-
-	resolverPointer, err := runtime.Store.GetResolverCatalogPublication(ctx, chunk.Repository)
-	if err != nil || resolverPointer == nil || resolverPointer.GenerationDigest != binding.ResolverGeneration {
-		return fmt.Errorf("%w: resolver generation changed", ErrPublishing)
-	}
-	resolverCurrent, err := runtime.Store.ResolverCatalogPublicationCurrent(ctx, *resolverPointer)
-	if err != nil || !resolverCurrent {
-		return fmt.Errorf("%w: resolver generation changed", ErrPublishing)
-	}
-	resolverState := resolvermaterialize.StateFromStore(*resolverPointer)
-	protocols := resolverProtocols(resolverState)
-	var descriptors []gocaller.DirectDescriptor
-	if len(protocols) != 0 {
-		_, views, openErr := resolvermaterialize.OpenCallerResolvers(
-			ctx, filepath.Join(runtime.DataDir, "resolver-catalogs"), resolverState, protocols,
-		)
-		if openErr != nil {
-			return fmt.Errorf("open relationship resolver catalog: %w", openErr)
-		}
-		for _, protocol := range protocols {
-			descriptors = append(descriptors, views[protocol].Descriptors()...)
-		}
-	}
-	var prior *resolvernamespace.Publication
-	var priorRPC *rpccallerposting.Publication
-	var priorKafka *kafkatopicposting.Publication
 	var priorRelationship *Publication
+	var priorComponents runtimeComponentRoots
 	if current, openErr := OpenCurrent(ctx, runtime.relationshipRoot(), chunk.Repository); openErr == nil {
 		priorRelationship = current
 		authority := current.Root().Authority
-		priorRPC, _ = rpccallerposting.OpenGeneration(
-			ctx, runtime.rpcRoot(), chunk.Repository,
-			authority.RPCGenerationDigest, authority.RPCRootDigest,
-		)
-		priorKafka, _ = kafkatopicposting.OpenGeneration(
-			ctx, runtime.kafkaRoot(), chunk.Repository,
-			authority.KafkaGenerationDigest, authority.KafkaRootDigest,
-		)
+		priorComponents = runtimeComponentRoots{
+			resolverGeneration: authority.ResolverGenerationDigest,
+			resolverRoot:       authority.ResolverRootDigest,
+			rpcGeneration:      authority.RPCGenerationDigest,
+			rpcRoot:            authority.RPCRootDigest,
+			kafkaGeneration:    authority.KafkaGenerationDigest,
+			kafkaRoot:          authority.KafkaRootDigest,
+		}
 	}
-	if current, openErr := resolvernamespace.OpenCurrent(
-		ctx, runtime.resolverNamespaceRoot(), chunk.Repository,
-	); openErr == nil {
-		prior = current
-	}
-	resolverRequest := resolverNamespaceBuildRequest(
-		runtime.resolverNamespaceRoot(), resolverState, descriptors, prior,
-	)
-	var resolverStage *resolvernamespace.Prepared
-	if isPartitionedBinding(binding.Schema) {
-		resolverStage, err = resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
-			BuildRequest: resolverRequest, Upstream: *binding.Upstream,
-		})
-	} else {
-		resolverStage, err = resolvernamespace.Build(ctx, resolverRequest)
-	}
+	components, err := runtime.buildRuntimeComponents(ctx, runtimeComponentBuildRequest{
+		repository: chunk.Repository, observationGeneration: binding.ObservationGeneration,
+		resolverGeneration: binding.ResolverGeneration, upstream: binding.Upstream,
+		prior: priorComponents,
+	})
 	if err != nil {
-		return relationshipBuildFailure(
-			err, "build relationship resolver namespaces",
-			resolvernamespace.ErrLimit,
-			pipelinerefusal.StageRelationshipResolverNamespaces,
-		)
-	}
-	defer func() { retErr = errors.Join(retErr, resolverStage.Discard()) }()
-	resolverPublication, err := resolverStage.Publish(ctx)
-	if err != nil {
-		return fmt.Errorf("publish relationship resolver namespaces: %w", err)
-	}
-	var rpcStage *rpccallerposting.Prepared
-	if isPartitionedBinding(binding.Schema) {
-		rpcStage, err = rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
-			Root: runtime.rpcRoot(), Observations: observationsV2, Resolver: resolverPublication,
-			Upstream: *binding.Upstream, Prior: priorRPC, ResidentLimitBytes: RPCResidentLimit,
-		})
-	} else {
-		rpcStage, err = rpccallerposting.Build(ctx, rpccallerposting.BuildRequest{
-			Root: runtime.rpcRoot(), Observations: observationsV1, Resolver: resolverPublication,
-			ResidentLimitBytes: RPCResidentLimit,
-		})
-	}
-	if err != nil {
-		return relationshipBuildFailure(
-			err, "build relationship RPC postings",
-			rpccallerposting.ErrLimit,
-			pipelinerefusal.StageRelationshipRPCPostings,
-		)
-	}
-	defer func() { retErr = errors.Join(retErr, rpcStage.Discard()) }()
-	rpcPublication, err := rpcStage.Publish(ctx)
-	if err != nil {
-		return fmt.Errorf("publish relationship RPC postings: %w", err)
-	}
-	var kafkaStage *kafkatopicposting.Prepared
-	if isPartitionedBinding(binding.Schema) {
-		kafkaStage, err = kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
-			Root: runtime.kafkaRoot(), Observations: observationsV2,
-			Upstream: *binding.Upstream, Prior: priorKafka, ResidentLimitBytes: KafkaResidentLimit,
-		})
-	} else {
-		kafkaStage, err = kafkatopicposting.Build(ctx, kafkatopicposting.BuildRequest{
-			Root: runtime.kafkaRoot(), Observations: observationsV1,
-			ResidentLimitBytes: KafkaResidentLimit,
-		})
-	}
-	if err != nil {
-		return relationshipBuildFailure(
-			err, "build relationship Kafka postings",
-			kafkatopicposting.ErrLimit,
-			pipelinerefusal.StageRelationshipKafkaProjection,
-		)
-	}
-	defer func() { retErr = errors.Join(retErr, kafkaStage.Discard()) }()
-	kafkaPublication, err := kafkaStage.Publish(ctx)
-	if err != nil {
-		return fmt.Errorf("publish relationship Kafka postings: %w", err)
+		return err
 	}
 
 	snapshot, err := runtime.loadServiceSnapshot(ctx, chunk.Repository)
@@ -549,7 +454,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	}
 	buildRequest := BuildRequest{
 		Root: runtime.relationshipRoot(), Catalog: snapshot.catalog, States: snapshot.states,
-		Resolver: resolverPublication, RPC: rpcPublication, Kafka: kafkaPublication,
+		Resolver: components.resolver, RPC: components.rpc, Kafka: components.kafka,
 	}
 	var stage *Prepared
 	if isPartitionedBinding(binding.Schema) {
@@ -612,6 +517,183 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		return fmt.Errorf("publish relationship root: %w", err)
 	}
 	return nil
+}
+
+// buildRuntimeComponents is the single production builder for the shared
+// resolver/RPC/Kafka layer. Both v2 relationship roots and direct v3 roots use
+// it so a v3 transition never needs to fabricate a v2 catalog/state authority
+// merely to obtain repository-level evidence components.
+func (runtime *Runtime) buildRuntimeComponents(
+	ctx context.Context,
+	request runtimeComponentBuildRequest,
+) (_ runtimeComponents, retErr error) {
+	if runtime == nil || reponame.Validate(request.repository) != nil ||
+		!validDigest(request.resolverGeneration) {
+		return runtimeComponents{}, fmt.Errorf("%w: relationship component request", ErrInvalid)
+	}
+	partitioned := request.upstream != nil
+	var observationsV1 *observationpublication.Publication
+	var observationsV2 observationpublication.DownstreamSource
+	if partitioned {
+		if runtime.InventoryCache == nil ||
+			downstreamauthority.RequireUsable(*request.upstream) != nil ||
+			request.upstream.Repository != request.repository {
+			return runtimeComponents{}, fmt.Errorf(
+				"%w: relationship v2 observation configuration", ErrInvalid,
+			)
+		}
+		lease, err := runtime.InventoryCache.AcquireCurrent(
+			ctx, filepath.Join(runtime.DataDir, "observations"), request.repository,
+			request.upstream.Observation,
+		)
+		if err != nil {
+			return runtimeComponents{}, fmt.Errorf("open relationship observations v2: %w", err)
+		}
+		defer lease.Release()
+		observationsV2 = lease.Publication()
+	} else {
+		if !validDigest(request.observationGeneration) || runtime.Cache == nil {
+			return runtimeComponents{}, fmt.Errorf(
+				"%w: relationship observation configuration", ErrInvalid,
+			)
+		}
+		lease, err := runtime.Cache.Acquire(
+			ctx, filepath.Join(runtime.DataDir, "observations"), request.repository,
+		)
+		if err != nil {
+			return runtimeComponents{}, fmt.Errorf("open relationship observations: %w", err)
+		}
+		defer lease.Release()
+		observationsV1 = lease.Publication()
+		if observationsV1 == nil ||
+			observationsV1.Manifest().GenerationDigest != request.observationGeneration {
+			return runtimeComponents{}, fmt.Errorf("%w: observation generation changed", ErrPublishing)
+		}
+	}
+
+	resolverPointer, err := runtime.Store.GetResolverCatalogPublication(ctx, request.repository)
+	if err != nil || resolverPointer == nil ||
+		resolverPointer.GenerationDigest != request.resolverGeneration {
+		return runtimeComponents{}, fmt.Errorf("%w: resolver generation changed", ErrPublishing)
+	}
+	resolverCurrent, err := runtime.Store.ResolverCatalogPublicationCurrent(ctx, *resolverPointer)
+	if err != nil || !resolverCurrent {
+		return runtimeComponents{}, fmt.Errorf("%w: resolver generation changed", ErrPublishing)
+	}
+	resolverState := resolvermaterialize.StateFromStore(*resolverPointer)
+	protocols := resolverProtocols(resolverState)
+	var descriptors []gocaller.DirectDescriptor
+	if len(protocols) != 0 {
+		_, views, openErr := resolvermaterialize.OpenCallerResolvers(
+			ctx, filepath.Join(runtime.DataDir, "resolver-catalogs"), resolverState, protocols,
+		)
+		if openErr != nil {
+			return runtimeComponents{}, fmt.Errorf("open relationship resolver catalog: %w", openErr)
+		}
+		for _, protocol := range protocols {
+			descriptors = append(descriptors, views[protocol].Descriptors()...)
+		}
+	}
+
+	var priorResolver *resolvernamespace.Publication
+	if current, openErr := resolvernamespace.OpenCurrent(
+		ctx, runtime.resolverNamespaceRoot(), request.repository,
+	); openErr == nil {
+		priorResolver = current
+	}
+	var priorRPC *rpccallerposting.Publication
+	if validDigest(request.prior.rpcGeneration) && validDigest(request.prior.rpcRoot) {
+		priorRPC, _ = rpccallerposting.OpenGeneration(
+			ctx, runtime.rpcRoot(), request.repository,
+			request.prior.rpcGeneration, request.prior.rpcRoot,
+		)
+	}
+	var priorKafka *kafkatopicposting.Publication
+	if validDigest(request.prior.kafkaGeneration) && validDigest(request.prior.kafkaRoot) {
+		priorKafka, _ = kafkatopicposting.OpenGeneration(
+			ctx, runtime.kafkaRoot(), request.repository,
+			request.prior.kafkaGeneration, request.prior.kafkaRoot,
+		)
+	}
+
+	resolverRequest := resolverNamespaceBuildRequest(
+		runtime.resolverNamespaceRoot(), resolverState, descriptors, priorResolver,
+	)
+	var resolverStage *resolvernamespace.Prepared
+	if partitioned {
+		resolverStage, err = resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
+			BuildRequest: resolverRequest, Upstream: *request.upstream,
+		})
+	} else {
+		resolverStage, err = resolvernamespace.Build(ctx, resolverRequest)
+	}
+	if err != nil {
+		return runtimeComponents{}, relationshipBuildFailure(
+			err, "build relationship resolver namespaces",
+			resolvernamespace.ErrLimit,
+			pipelinerefusal.StageRelationshipResolverNamespaces,
+		)
+	}
+	defer func() { retErr = errors.Join(retErr, resolverStage.Discard()) }()
+	resolverPublication, err := resolverStage.Publish(ctx)
+	if err != nil {
+		return runtimeComponents{}, fmt.Errorf("publish relationship resolver namespaces: %w", err)
+	}
+
+	var rpcStage *rpccallerposting.Prepared
+	if partitioned {
+		rpcStage, err = rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
+			Root: runtime.rpcRoot(), Observations: observationsV2,
+			Resolver: resolverPublication, Upstream: *request.upstream,
+			Prior: priorRPC, ResidentLimitBytes: RPCResidentLimit,
+		})
+	} else {
+		rpcStage, err = rpccallerposting.Build(ctx, rpccallerposting.BuildRequest{
+			Root: runtime.rpcRoot(), Observations: observationsV1,
+			Resolver: resolverPublication, ResidentLimitBytes: RPCResidentLimit,
+		})
+	}
+	if err != nil {
+		return runtimeComponents{}, relationshipBuildFailure(
+			err, "build relationship RPC postings",
+			rpccallerposting.ErrLimit,
+			pipelinerefusal.StageRelationshipRPCPostings,
+		)
+	}
+	defer func() { retErr = errors.Join(retErr, rpcStage.Discard()) }()
+	rpcPublication, err := rpcStage.Publish(ctx)
+	if err != nil {
+		return runtimeComponents{}, fmt.Errorf("publish relationship RPC postings: %w", err)
+	}
+
+	var kafkaStage *kafkatopicposting.Prepared
+	if partitioned {
+		kafkaStage, err = kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
+			Root: runtime.kafkaRoot(), Observations: observationsV2,
+			Upstream: *request.upstream, Prior: priorKafka,
+			ResidentLimitBytes: KafkaResidentLimit,
+		})
+	} else {
+		kafkaStage, err = kafkatopicposting.Build(ctx, kafkatopicposting.BuildRequest{
+			Root: runtime.kafkaRoot(), Observations: observationsV1,
+			ResidentLimitBytes: KafkaResidentLimit,
+		})
+	}
+	if err != nil {
+		return runtimeComponents{}, relationshipBuildFailure(
+			err, "build relationship Kafka postings",
+			kafkatopicposting.ErrLimit,
+			pipelinerefusal.StageRelationshipKafkaProjection,
+		)
+	}
+	defer func() { retErr = errors.Join(retErr, kafkaStage.Discard()) }()
+	kafkaPublication, err := kafkaStage.Publish(ctx)
+	if err != nil {
+		return runtimeComponents{}, fmt.Errorf("publish relationship Kafka postings: %w", err)
+	}
+	return runtimeComponents{
+		resolver: resolverPublication, rpc: rpcPublication, kafka: kafkaPublication,
+	}, nil
 }
 
 func (runtime *Runtime) rollbackPartitionedPins(

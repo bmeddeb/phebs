@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -31,6 +32,8 @@ const (
 	serviceStateV3Activated  = "activated"
 	serviceStateV3Failed     = "failed"
 	serviceStateV3Superseded = "superseded"
+
+	serviceStateV3PreimageBacklogMarker = "phebs-deferred: service state v3 preimage backlog"
 )
 
 var ErrInvalidServiceStateV3 = errors.New("invalid service state v3")
@@ -1351,17 +1354,36 @@ func (s *Surreal) commitServiceStateV3Chunk(
 			expectedSummary.SummaryDigest != priorPlan.SummaryDigest) {
 		return ErrInvalidServiceStateV3
 	}
+	if priorPlan.SummaryControlRevision >= math.MaxInt64 {
+		return ErrInvalidServiceStateV3
+	}
+	selector, selectorErr := s.GetServiceRuntimeSelector(ctx, priorPlan.Repository)
+	selectorPresent := true
+	if errors.Is(selectorErr, ErrNotFound) {
+		selectorPresent = false
+		selectorErr = nil
+	}
+	if selectorErr != nil {
+		return fmt.Errorf("commit service state v3 chunk: selector preflight: %w", selectorErr)
+	}
+	selectorContent := map[string]any{}
+	if selectorPresent {
+		selectorContent = serviceRuntimeSelectorContent(selector)
+	}
+	nextVisibleFrom := priorPlan.SummaryControlRevision + 1
 	encodedUpdates := make([]map[string]any, 0, len(updates))
 	for _, update := range updates {
 		if update.State.Repository != priorPlan.Repository ||
 			servicecatalogv3.ValidateServiceState(update.State, true) != nil {
 			return ErrInvalidServiceStateV3
 		}
+		content := serviceStateContent(update.State)
+		content["visible_from"] = nextVisibleFrom
 		encodedUpdates = append(encodedUpdates, map[string]any{
 			"rid":               serviceStateV3ID(update.State.Repository, update.State.ServiceKey),
 			"expected_revision": update.ExpectedRevision,
 			"expected_digest":   update.ExpectedDigest,
-			"content":           serviceStateContent(update.State),
+			"content":           content,
 		})
 	}
 	writeSummary := nextSummary != nil
@@ -1384,7 +1406,56 @@ LET $schedule = (SELECT digest, generation, status FROM $schedule_rid LIMIT 1)[0
 LET $chunk = (SELECT identity, schedule_digest, repository, stage, generation,
 	status, attempt, lease_token, claimed_by FROM $chunk_rid LIMIT 1)[0];
 LET $plan = (SELECT * FROM $plan_rid LIMIT 1)[0];
-LET $summary = (SELECT summary_digest, control_revision FROM $summary_rid LIMIT 1)[0];
+LET $selector = (SELECT schema, repository, backend,
+	catalog_generation_digest, catalog_root_digest, catalog_control_revision,
+	state_control_revision, state_summary_digest, search_generation_digest,
+	relationship_generation_digest, relationship_root_digest,
+	control_revision, digest, changed_at FROM $selector_rid LIMIT 1)[0];
+LET $selector_ok = IF $selector_present THEN $selector != NONE
+	AND $selector.schema = $expected_selector.schema
+	AND $selector.repository = $expected_selector.repository
+	AND $selector.backend = $expected_selector.backend
+	AND $selector.catalog_generation_digest = $expected_selector.catalog_generation_digest
+	AND $selector.catalog_root_digest = $expected_selector.catalog_root_digest
+	AND $selector.catalog_control_revision = $expected_selector.catalog_control_revision
+	AND $selector.state_control_revision = $expected_selector.state_control_revision
+	AND $selector.state_summary_digest = $expected_selector.state_summary_digest
+	AND $selector.search_generation_digest = $expected_selector.search_generation_digest
+	AND $selector.relationship_generation_digest = $expected_selector.relationship_generation_digest
+	AND $selector.relationship_root_digest = $expected_selector.relationship_root_digest
+	AND $selector.control_revision = $expected_selector.control_revision
+	AND $selector.digest = $expected_selector.digest
+	AND $selector.changed_at = $expected_selector.changed_at
+	ELSE $selector = NONE END;
+IF !$selector_ok {
+	THROW 'phebs-permanent: service state v3 selector fence changed';
+};
+LET $preimage_summaries = SELECT snapshot_revision, snapshot_digest
+	FROM service_state_v3_repository_preimage
+	WHERE repository = $repository ORDER BY snapshot_revision LIMIT 2;
+LET $preimage_row_snapshots = SELECT snapshot_revision, snapshot_digest
+	FROM service_state_v3_preimage WHERE repository = $repository
+	GROUP BY snapshot_revision, snapshot_digest
+	ORDER BY snapshot_revision LIMIT 2;
+IF array::len($preimage_summaries) > 1 OR
+	array::len($preimage_row_snapshots) > 1 OR
+	(array::len($preimage_summaries) = 0 AND
+		array::len($preimage_row_snapshots) != 0) OR
+	(array::len($preimage_row_snapshots) = 1 AND
+		($preimage_row_snapshots[0].snapshot_revision !=
+			$preimage_summaries[0].snapshot_revision OR
+		$preimage_row_snapshots[0].snapshot_digest !=
+			$preimage_summaries[0].snapshot_digest)) {
+	THROW 'phebs-permanent: invalid service state v3 preimage ownership';
+};
+LET $preimage_snapshot = $preimage_summaries[0];
+IF $preimage_snapshot != NONE AND ($selector = NONE OR
+	$selector.backend != 'v3' OR
+	$preimage_snapshot.snapshot_revision != $selector.state_control_revision OR
+	$preimage_snapshot.snapshot_digest != $selector.state_summary_digest) {
+	THROW 'phebs-deferred: service state v3 preimage backlog';
+};
+LET $summary = (SELECT * FROM $summary_rid LIMIT 1)[0];
 LET $summary_ok = IF $expected_summary_revision = 0 THEN $summary = NONE
 	ELSE $summary != NONE AND $summary.control_revision = $expected_summary_revision
 		AND $summary.summary_digest = $expected_summary_digest END;
@@ -1409,17 +1480,101 @@ IF $repository_state = NONE OR $repository_state.deleting = true OR
 	$candidate.control_revision != $catalog_revision OR $current != $schedule_digest OR
 	$schedule = NONE OR $schedule.digest != $schedule_digest OR
 	$schedule.generation != $plan_digest OR $schedule.status != 'active' OR
-	!$plan_ok OR !$lease_ok OR !$summary_ok OR !$drained {
+	!$selector_ok OR !$plan_ok OR !$lease_ok OR !$summary_ok OR !$drained {
 	THROW 'phebs-permanent: service state v3 chunk fence changed';
 };
 FOR $update IN $updates {
-	LET $existing = (SELECT state_digest, control_revision FROM $update.rid LIMIT 1)[0];
+	LET $existing = (SELECT * FROM $update.rid LIMIT 1)[0];
 	LET $revision = IF $existing = NONE THEN 0 ELSE $existing.control_revision END;
 	LET $digest = IF $existing = NONE THEN '' ELSE $existing.state_digest END;
 	IF $revision != $update.expected_revision OR $digest != $update.expected_digest {
 		THROW 'phebs-permanent: service state v3 row compare-and-swap conflict';
 	};
+	LET $preserve = $existing != NONE AND $selector != NONE
+		AND $selector.backend = 'v3'
+		AND ($existing.visible_from ?? 1) <= $selector.state_control_revision;
+	IF $preserve {
+		LET $prior_rows = SELECT state_digest, control_revision, snapshot_digest
+			FROM service_state_v3_preimage
+			WHERE repository = $repository
+				AND snapshot_revision = $selector.state_control_revision
+				AND service_key = $update.content.service_key LIMIT 2;
+		IF array::len($prior_rows) > 1 {
+			THROW 'phebs-permanent: duplicate service state v3 preimage';
+		};
+		LET $prior = $prior_rows[0];
+		IF $prior = NONE {
+			CREATE service_state_v3_preimage CONTENT {
+				schema: $existing.schema, repository: $existing.repository,
+				service_key: $existing.service_key,
+				display_name: $existing.display_name,
+				disposition: $existing.disposition, origin: $existing.origin,
+				reason: $existing.reason, successors: $existing.successors,
+				incarnation: $existing.incarnation,
+				desired_generation: $existing.desired_generation,
+				desired_source_generation: $existing.desired_source_generation,
+				desired_catalog_generation: $existing.desired_catalog_generation,
+				active_desired_generation: $existing.active_desired_generation,
+				active_source_generation: $existing.active_source_generation,
+				active_catalog_generation: $existing.active_catalog_generation,
+				active_search_generation: $existing.active_search_generation,
+				status: $existing.status, removed: $existing.removed,
+				state_digest: $existing.state_digest,
+				control_revision: $existing.control_revision,
+				changed_at: $existing.changed_at,
+				visible_from: $existing.visible_from ?? 1,
+				snapshot_revision: $selector.state_control_revision,
+				snapshot_digest: $selector.state_summary_digest
+			} RETURN NONE;
+		} ELSE IF $prior.state_digest != $existing.state_digest
+			OR $prior.control_revision != $existing.control_revision
+			OR $prior.snapshot_digest != $selector.state_summary_digest {
+			THROW 'phebs-permanent: service state v3 preimage conflict';
+		};
+	};
 	UPSERT $update.rid CONTENT $update.content RETURN NONE;
+};
+LET $preserved_rows = IF $selector = NONE THEN 0 ELSE array::len(
+	SELECT id FROM service_state_v3_preimage
+		WHERE repository = $repository
+			AND snapshot_revision = $selector.state_control_revision
+			AND snapshot_digest = $selector.state_summary_digest LIMIT 1
+) END;
+LET $preserve_summary = $summary != NONE AND $selector != NONE
+	AND $selector.backend = 'v3' AND ($preserved_rows = 1 OR $write_summary)
+	AND $summary.control_revision = $selector.state_control_revision
+	AND $summary.summary_digest = $selector.state_summary_digest;
+IF $preserve_summary {
+	LET $prior_summary_rows = SELECT summary_digest, snapshot_digest
+		FROM service_state_v3_repository_preimage
+		WHERE repository = $repository
+			AND snapshot_revision = $selector.state_control_revision LIMIT 2;
+	IF array::len($prior_summary_rows) > 1 {
+		THROW 'phebs-permanent: duplicate service state v3 summary preimage';
+	};
+	LET $prior_summary = $prior_summary_rows[0];
+	IF $prior_summary = NONE {
+		CREATE service_state_v3_repository_preimage CONTENT {
+			schema: $summary.schema, repository: $summary.repository,
+			catalog_generation: $summary.catalog_generation,
+			catalog_control_revision: $summary.catalog_control_revision,
+			catalog_service_count: $summary.catalog_service_count,
+			live_service_count: $summary.live_service_count,
+			current_count: $summary.current_count,
+			stale_count: $summary.stale_count,
+			unavailable_count: $summary.unavailable_count,
+			conflict_count: $summary.conflict_count,
+			tombstone_count: $summary.tombstone_count,
+			summary_digest: $summary.summary_digest,
+			control_revision: $summary.control_revision,
+			updated_at: $summary.updated_at,
+			snapshot_revision: $selector.state_control_revision,
+			snapshot_digest: $selector.state_summary_digest
+		} RETURN NONE;
+	} ELSE IF $prior_summary.summary_digest != $summary.summary_digest
+		OR $prior_summary.snapshot_digest != $selector.state_summary_digest {
+		THROW 'phebs-permanent: service state v3 summary preimage conflict';
+	};
 };
 IF $write_summary {
 	UPSERT $summary_rid CONTENT $summary_content RETURN NONE;
@@ -1435,12 +1590,15 @@ COMMIT;`, map[string]any{
 		"schedule_rid": models.NewRecordID(
 			"generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
 		),
-		"chunk_rid":        models.NewRecordID("generation_schedule_chunk", chunk.ID),
-		"plan_rid":         serviceStateV3PlanID(priorPlan.Digest),
-		"summary_rid":      serviceStateV3RepositoryID(priorPlan.Repository),
-		"catalog_root":     priorPlan.CatalogRoot,
-		"catalog_revision": priorPlan.CatalogControlRevision,
-		"schedule_digest":  priorPlan.ScheduleDigest, "plan_digest": priorPlan.Digest,
+		"chunk_rid":         models.NewRecordID("generation_schedule_chunk", chunk.ID),
+		"plan_rid":          serviceStateV3PlanID(priorPlan.Digest),
+		"summary_rid":       serviceStateV3RepositoryID(priorPlan.Repository),
+		"selector_rid":      serviceRuntimeSelectorID(priorPlan.Repository),
+		"selector_present":  selectorPresent,
+		"expected_selector": selectorContent,
+		"catalog_root":      priorPlan.CatalogRoot,
+		"catalog_revision":  priorPlan.CatalogControlRevision,
+		"schedule_digest":   priorPlan.ScheduleDigest, "plan_digest": priorPlan.Digest,
 		"repository": priorPlan.Repository, "stage": chunk.Stage,
 		"chunk_identity": chunk.Identity, "attempt": chunk.Attempt,
 		"lease": chunk.LeaseToken, "worker": chunk.ClaimedBy,
@@ -1455,6 +1613,12 @@ COMMIT;`, map[string]any{
 		"plan_content":    serviceStateV3PlanContent(nextPlan),
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), serviceStateV3PreimageBacklogMarker) {
+			return WithDeferral(fmt.Errorf(
+				"commit service state v3 chunk: preimage lifecycle backlog: %w",
+				ErrConflict,
+			))
+		}
 		return fmt.Errorf("commit service state v3 chunk: %w", err)
 	}
 	rows := firstDomainRows(results)
@@ -1499,6 +1663,7 @@ DEFINE FIELD OVERWRITE removed ON service_state_v3_current TYPE bool;
 DEFINE FIELD OVERWRITE state_digest ON service_state_v3_current TYPE string;
 DEFINE FIELD OVERWRITE control_revision ON service_state_v3_current TYPE int ASSERT $value >= 1;
 DEFINE FIELD OVERWRITE changed_at ON service_state_v3_current TYPE datetime;
+DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE int ASSERT $value >= 1;
 DEFINE INDEX OVERWRITE service_state_v3_repository_key ON service_state_v3_current FIELDS repository, service_key UNIQUE;
 DEFINE INDEX OVERWRITE service_state_v3_desired_root ON service_state_v3_current FIELDS desired_catalog_generation;
 DEFINE INDEX OVERWRITE service_state_v3_active_root ON service_state_v3_current FIELDS active_catalog_generation;
@@ -1625,6 +1790,159 @@ COMMIT;`, map[string]any{
 	for index, result := range *marker {
 		if result.Error != nil {
 			return fmt.Errorf("migrate service state v3 marker statement %d: %s", index, result.Error.Message)
+		}
+	}
+	return nil
+}
+
+const (
+	serviceStateV3SnapshotSchemaMigrationVersion        = "t41.10-service-state-v3-snapshot-v1"
+	serviceStateV3SnapshotCompatibilityMigrationVersion = "t41.10-service-state-v3-snapshot-compat-v1"
+)
+
+func serviceStateV3SnapshotSchemaMigrationID() models.RecordID {
+	return models.NewRecordID("store_migration", "service_state_v3_snapshot_schema")
+}
+
+const serviceStateV3SnapshotSchema = `
+DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE option<int>;
+UPDATE service_state_v3_current SET visible_from = 1 WHERE visible_from = NONE;
+DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE int ASSERT $value >= 1;
+
+DEFINE TABLE OVERWRITE service_state_v3_preimage SCHEMAFULL;
+DEFINE FIELD OVERWRITE schema ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE repository ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE service_key ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE display_name ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE disposition ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE origin ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE reason ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE successors ON service_state_v3_preimage TYPE array<string>;
+DEFINE FIELD OVERWRITE incarnation ON service_state_v3_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE desired_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE desired_source_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE desired_catalog_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE active_desired_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE active_source_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE active_catalog_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE active_search_generation ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE status ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE removed ON service_state_v3_preimage TYPE bool;
+DEFINE FIELD OVERWRITE state_digest ON service_state_v3_preimage TYPE string;
+DEFINE FIELD OVERWRITE control_revision ON service_state_v3_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE changed_at ON service_state_v3_preimage TYPE datetime;
+DEFINE FIELD OVERWRITE visible_from ON service_state_v3_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE snapshot_revision ON service_state_v3_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE snapshot_digest ON service_state_v3_preimage TYPE string;
+DEFINE INDEX OVERWRITE service_state_v3_preimage_snapshot ON service_state_v3_preimage FIELDS repository, snapshot_revision, service_key UNIQUE;
+DEFINE INDEX OVERWRITE service_state_v3_preimage_desired_root ON service_state_v3_preimage FIELDS desired_catalog_generation;
+DEFINE INDEX OVERWRITE service_state_v3_preimage_active_root ON service_state_v3_preimage FIELDS active_catalog_generation;
+
+DEFINE TABLE OVERWRITE service_state_v3_repository_preimage SCHEMAFULL;
+DEFINE FIELD OVERWRITE schema ON service_state_v3_repository_preimage TYPE string;
+DEFINE FIELD OVERWRITE repository ON service_state_v3_repository_preimage TYPE string;
+DEFINE FIELD OVERWRITE catalog_generation ON service_state_v3_repository_preimage TYPE string;
+DEFINE FIELD OVERWRITE catalog_control_revision ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE catalog_service_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE live_service_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE current_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE stale_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE unavailable_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE conflict_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0 AND $value <= 12500;
+DEFINE FIELD OVERWRITE tombstone_count ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE summary_digest ON service_state_v3_repository_preimage TYPE string;
+DEFINE FIELD OVERWRITE control_revision ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE updated_at ON service_state_v3_repository_preimage TYPE datetime;
+DEFINE FIELD OVERWRITE snapshot_revision ON service_state_v3_repository_preimage TYPE int ASSERT $value >= 1;
+DEFINE FIELD OVERWRITE snapshot_digest ON service_state_v3_repository_preimage TYPE string;
+DEFINE INDEX OVERWRITE service_state_v3_repository_preimage_snapshot ON service_state_v3_repository_preimage FIELDS repository, snapshot_revision UNIQUE;
+DEFINE INDEX OVERWRITE service_state_v3_repository_preimage_catalog ON service_state_v3_repository_preimage FIELDS repository, catalog_generation, snapshot_revision;
+
+`
+
+func (s *Surreal) migrateServiceStateV3SnapshotSchema(ctx context.Context) error {
+	return s.migrateServiceStateV3SnapshotSchemaWithDefinition(
+		ctx,
+		serviceStateV3SnapshotSchema,
+	)
+}
+
+func (s *Surreal) migrateServiceStateV3SnapshotSchemaWithDefinition(
+	ctx context.Context,
+	definition string,
+) error {
+	marker := serviceStateV3SnapshotSchemaMigrationID()
+	results, err := surrealdb.Query[[]struct {
+		Version string `json:"version"`
+	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker})
+	if err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: marker: %w", err)
+	}
+	rows := firstDomainRows(results)
+	current := false
+	if len(rows) == 1 {
+		if rows[0].Version == serviceStateV3SnapshotSchemaMigrationVersion {
+			current = true
+		} else {
+			return fmt.Errorf("migrate service state v3 snapshot schema: unsupported marker %q", rows[0].Version)
+		}
+	}
+	if len(rows) > 1 {
+		return errors.New("migrate service state v3 snapshot schema: duplicate marker")
+	}
+	latched, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $versions = SELECT version FROM $rid LIMIT 2;
+IF array::len($versions) != 1 OR
+	($versions[0].version != $candidate AND
+	 $versions[0].version != $selector AND
+	 $versions[0].version != $snapshot) {
+	THROW 'phebs-permanent: unsupported service state v3 snapshot compatibility marker';
+};
+UPDATE $rid SET version = $snapshot RETURN NONE;
+COMMIT;`, map[string]any{
+		"rid":       candidateControlRevisionMigrationID(),
+		"candidate": candidateControlRevisionMigrationVersion,
+		"selector":  serviceRuntimeSelectorCompatibilityMigrationVersion,
+		"snapshot":  serviceStateV3SnapshotCompatibilityMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: compatibility latch: %w", err)
+	}
+	for index, result := range *latched {
+		if result.Error != nil {
+			return fmt.Errorf("migrate service state v3 snapshot compatibility statement %d: %s", index, result.Error.Message)
+		}
+	}
+	if current {
+		return nil
+	}
+	defined, err := surrealdb.Query[any](ctx, s.db, definition, nil)
+	if err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: define: %w", err)
+	}
+	for index, result := range *defined {
+		if result.Error != nil {
+			return fmt.Errorf("migrate service state v3 snapshot schema statement %d: %s", index, result.Error.Message)
+		}
+	}
+	written, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
+IF $current != NONE AND $current != $version {
+	THROW 'phebs-permanent: unsupported service state v3 snapshot schema migration';
+};
+UPSERT $rid SET version = IF $current = NONE THEN $version ELSE $current END,
+	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END RETURN NONE;
+COMMIT;`, map[string]any{
+		"rid": marker, "version": serviceStateV3SnapshotSchemaMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: marker write: %w", err)
+	}
+	for index, result := range *written {
+		if result.Error != nil {
+			return fmt.Errorf("migrate service state v3 snapshot marker statement %d: %s", index, result.Error.Message)
 		}
 	}
 	return nil
@@ -1831,6 +2149,7 @@ type serviceStateV3CurrentScheduleRec struct {
 func (s *Surreal) validateServiceStateV3Precious(
 	ctx context.Context,
 	roots map[string]string,
+	rootRepositories map[string]string,
 	candidateRoots map[string]string,
 ) (int, int, int, error) {
 	const maxStateRows = servicecatalogv3.MaxTotalServices * 2
@@ -1846,19 +2165,27 @@ SELECT * FROM service_state_v3_current ORDER BY id LIMIT $limit`, map[string]any
 		return 0, 0, 0, ErrInvalidServiceStateV3
 	}
 	counts := make(map[string]serviceStateV3Counts)
+	currentStateKeys := make(map[string]struct{}, len(rows))
 	for _, record := range rows {
 		state, stateErr := serviceStateV3FromRec(record)
 		if stateErr != nil {
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
+		stateKey := state.Repository + "\x00" + state.ServiceKey
+		if _, duplicate := currentStateKeys[stateKey]; duplicate {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		currentStateKeys[stateKey] = struct{}{}
 		expected := serviceStateV3ID(state.Repository, state.ServiceKey)
 		expectedID, _ := expected.ID.(string)
 		if !validServiceCatalogV3RecordID(
 			record.RecID, "service_state_v3_current", expectedID,
-		) || state.DesiredCatalogGeneration != "" &&
-			roots[state.DesiredCatalogGeneration] != serviceCatalogV3Historical ||
+		) || record.VisibleFrom == 0 || state.DesiredCatalogGeneration != "" &&
+			(roots[state.DesiredCatalogGeneration] != serviceCatalogV3Historical ||
+				rootRepositories[state.DesiredCatalogGeneration] != state.Repository) ||
 			state.ActiveCatalogGeneration != "" &&
-				roots[state.ActiveCatalogGeneration] != serviceCatalogV3Historical {
+				(roots[state.ActiveCatalogGeneration] != serviceCatalogV3Historical ||
+					rootRepositories[state.ActiveCatalogGeneration] != state.Repository) {
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 		current := counts[state.Repository]
@@ -1897,6 +2224,7 @@ SELECT * FROM service_state_v3_repository ORDER BY repository LIMIT $limit`, map
 		summary, summaryErr := serviceStateV3RepositoryFromRec(record)
 		if summaryErr != nil ||
 			roots[summary.CatalogGeneration] != serviceCatalogV3Historical ||
+			rootRepositories[summary.CatalogGeneration] != summary.Repository ||
 			!validServiceCatalogV3RecordID(
 				record.RecID, "service_state_v3_repository", summary.Repository,
 			) {
@@ -1906,6 +2234,168 @@ SELECT * FROM service_state_v3_repository ORDER BY repository LIMIT $limit`, map
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 		summaries[summary.Repository] = *summary
+	}
+	const maxPreimageSummaries = MaxServiceCatalogV3LifecycleRoots
+	preimageSummaries := make(
+		map[string]servicecatalog.RepositoryState,
+		len(summaryRows),
+	)
+	for _, summary := range summaries {
+		preimageSummaries[serviceStateV3SnapshotKey(
+			summary.Repository,
+			summary.ControlRevision,
+			summary.SummaryDigest,
+		)] = summary
+	}
+	preimageSummaryResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_repository_preimage
+	ORDER BY repository, snapshot_revision LIMIT $limit`, map[string]any{
+		"limit": maxPreimageSummaries + 1,
+	})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	preimageSummaryRows := firstDomainRows(preimageSummaryResults)
+	if len(preimageSummaryRows) > maxPreimageSummaries {
+		return 0, 0, 0, ErrInvalidServiceStateV3
+	}
+	preimageSummaryRepositories := make(map[string]struct{}, len(preimageSummaryRows))
+	preimageSummaryOwners := make(map[string]struct{}, len(preimageSummaryRows))
+	for _, record := range preimageSummaryRows {
+		summary, summaryErr := serviceStateV3RepositoryFromRec(record)
+		key := serviceStateV3SnapshotKey(
+			record.Repository,
+			record.SnapshotRevision,
+			record.SnapshotDigest,
+		)
+		existing := preimageSummaries[key]
+		if summaryErr != nil || record.SnapshotRevision != summary.ControlRevision ||
+			record.SnapshotDigest != summary.SummaryDigest ||
+			roots[summary.CatalogGeneration] != serviceCatalogV3Historical ||
+			rootRepositories[summary.CatalogGeneration] != summary.Repository ||
+			!validServiceStateV3PreimageRecord(
+				record.RecID,
+				"service_state_v3_repository_preimage",
+			) || existing.Repository != "" &&
+			!sameServiceStateV3Summary(existing, *summary) {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		if _, duplicate := preimageSummaryRepositories[record.Repository]; duplicate {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		preimageSummaryRepositories[record.Repository] = struct{}{}
+		preimageSummaryOwners[key] = struct{}{}
+		preimageSummaries[key] = *summary
+	}
+	preimageRowResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+SELECT * FROM service_state_v3_preimage
+	ORDER BY repository, snapshot_revision, service_key LIMIT $limit`, map[string]any{
+		"limit": maxStateRows + 1,
+	})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	preimageRows := firstDomainRows(preimageRowResults)
+	if len(preimageRows) > maxStateRows || len(preimageRows) > len(rows) {
+		return 0, 0, 0, ErrInvalidServiceStateV3
+	}
+	priorPreimageKey := ""
+	for _, record := range preimageRows {
+		state, stateErr := serviceStateV3FromRec(record)
+		snapshotKey := serviceStateV3SnapshotKey(
+			record.Repository,
+			record.SnapshotRevision,
+			record.SnapshotDigest,
+		)
+		rowKey := snapshotKey + "\x00" + record.ServiceKey
+		_, hasCurrent := currentStateKeys[record.Repository+"\x00"+record.ServiceKey]
+		_, hasPreimageSummary := preimageSummaryOwners[snapshotKey]
+		if stateErr != nil || !hasCurrent || !hasPreimageSummary ||
+			record.VisibleFrom == 0 ||
+			record.VisibleFrom > record.SnapshotRevision ||
+			preimageSummaries[snapshotKey].Repository != record.Repository ||
+			!validServiceStateV3PreimageRecord(
+				record.RecID,
+				"service_state_v3_preimage",
+			) || rowKey <= priorPreimageKey ||
+			state.DesiredCatalogGeneration != "" &&
+				(roots[state.DesiredCatalogGeneration] != serviceCatalogV3Historical ||
+					rootRepositories[state.DesiredCatalogGeneration] != state.Repository) ||
+			state.ActiveCatalogGeneration != "" &&
+				(roots[state.ActiveCatalogGeneration] != serviceCatalogV3Historical ||
+					rootRepositories[state.ActiveCatalogGeneration] != state.Repository) {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		priorPreimageKey = rowKey
+	}
+	selectors, err := s.ListServiceRuntimeSelectors(ctx)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	selectedByRepository := make(map[string]ServiceRuntimeSelector, len(selectors))
+	selectedStates := make(map[string]map[string]servicecatalog.ServiceState, len(selectors))
+	for _, selector := range selectors {
+		if selector.Backend != ServiceRuntimeV3 {
+			continue
+		}
+		selectedByRepository[selector.Repository] = selector
+		selectedStates[selector.Repository] = make(map[string]servicecatalog.ServiceState)
+	}
+	for _, record := range rows {
+		selector, selected := selectedByRepository[record.Repository]
+		if !selected || record.VisibleFrom > selector.StateControlRevision {
+			continue
+		}
+		state, stateErr := serviceStateV3FromRec(record)
+		if stateErr != nil || selectedStates[record.Repository][state.ServiceKey].Repository != "" {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		selectedStates[record.Repository][state.ServiceKey] = *state
+	}
+	for _, record := range preimageRows {
+		selector, selected := selectedByRepository[record.Repository]
+		if !selected || record.SnapshotRevision != selector.StateControlRevision ||
+			record.SnapshotDigest != selector.StateSummaryDigest {
+			continue
+		}
+		state, stateErr := serviceStateV3FromRec(record)
+		if stateErr != nil || selectedStates[record.Repository][state.ServiceKey].Repository != "" {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		selectedStates[record.Repository][state.ServiceKey] = *state
+	}
+	for repository, selector := range selectedByRepository {
+		summary := preimageSummaries[serviceStateV3SnapshotKey(
+			repository,
+			selector.StateControlRevision,
+			selector.StateSummaryDigest,
+		)]
+		if summary.Repository != repository {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
+		var snapshotCounts serviceStateV3Counts
+		for _, state := range selectedStates[repository] {
+			if state.Removed {
+				snapshotCounts.Tombstones++
+				continue
+			}
+			snapshotCounts.Live++
+			switch state.Status {
+			case servicecatalog.StatusCurrent:
+				snapshotCounts.Current++
+			case servicecatalog.StatusStale:
+				snapshotCounts.Stale++
+			case servicecatalog.StatusUnavailable:
+				snapshotCounts.Unavailable++
+			case servicecatalog.StatusConflict:
+				snapshotCounts.Conflict++
+			default:
+				return 0, 0, 0, ErrInvalidServiceStateV3
+			}
+		}
+		if !snapshotCounts.matchesSummary(summary) {
+			return 0, 0, 0, ErrInvalidServiceStateV3
+		}
 	}
 	const maxPlans = MaxServiceCatalogV3LifecycleRoots * 6
 	planResults, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
@@ -1969,7 +2459,8 @@ SELECT repository, stage, schedule_digest FROM generation_schedule_current
 		schedule, ok := schedules[plan.ScheduleDigest]
 		if validateServiceStateV3Plan(plan) != nil ||
 			!validServiceCatalogV3RecordID(record.RecID, "service_state_v3_plan", expectedID) ||
-			roots[plan.CatalogRoot] != serviceCatalogV3Historical || !ok ||
+			roots[plan.CatalogRoot] != serviceCatalogV3Historical ||
+			rootRepositories[plan.CatalogRoot] != plan.Repository || !ok ||
 			schedule.Generation != plan.Digest || schedule.Repository != plan.Repository ||
 			schedule.Stage != serviceStateV3Stage(plan.Phase) {
 			return 0, 0, 0, ErrInvalidServiceStateV3
@@ -1983,6 +2474,13 @@ SELECT repository, stage, schedule_digest FROM generation_schedule_current
 			if plan.Phase == serviceStateV3Reconcile {
 				runningReconcile[plan.Repository] = true
 			}
+		}
+	}
+	for _, record := range rows {
+		summary, present := summaries[record.Repository]
+		if present && record.VisibleFrom > summary.ControlRevision &&
+			!runningReconcile[record.Repository] {
+			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 	}
 	for repository, summary := range summaries {
@@ -1999,5 +2497,14 @@ SELECT repository, stage, schedule_digest FROM generation_schedule_current
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 	}
-	return len(rows), len(summaryRows), len(planRows), nil
+	return len(rows) + len(preimageRows),
+		len(summaryRows) + len(preimageSummaryRows), len(planRows), nil
+}
+
+func serviceStateV3SnapshotKey(
+	repository string,
+	snapshotRevision uint64,
+	snapshotDigest string,
+) string {
+	return fmt.Sprintf("%s\x00%020d\x00%s", repository, snapshotRevision, snapshotDigest)
 }

@@ -461,14 +461,16 @@ func TestIndexRevalidatesExpectedChildDigestBeforeLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(original)
-	t.Setenv("PHEBS_ZOEKT_GIT_INDEX_SHA256", "sha256:"+hex.EncodeToString(sum[:]))
+	expectedSHA256 := "sha256:" + hex.EncodeToString(sum[:])
 	marker := filepath.Join(t.TempDir(), "replacement-ran")
 	t.Setenv("T4013_REPLACEMENT_MARKER", marker)
 	if err := os.WriteFile(path, []byte("#!/bin/sh\n: > \"$T4013_REPLACEMENT_MARKER\"\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	st := &indexLogStore{repo: store.Repo{Name: name}}
-	ix := &indexer.Indexer{DataDir: dataDir, Bin: path, Store: st}
+	ix := &indexer.Indexer{
+		DataDir: dataDir, Bin: path, BinSHA256: expectedSHA256, Store: st,
+	}
 	if err := ix.Index(ctx, st.repo, true); err == nil || !strings.Contains(err.Error(), "identity before launch") {
 		t.Fatalf("replacement indexer error = %v", err)
 	}

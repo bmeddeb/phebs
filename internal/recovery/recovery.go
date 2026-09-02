@@ -656,9 +656,9 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 			relationshipReport.Invalid,
 		)
 	}
-	if _, err := st.ValidateServiceCatalogV3Precious(ctx); err != nil {
+	if err := st.RestoreSelectedServiceStateV3ForRestore(ctx); err != nil {
 		_ = st.Close(context.WithoutCancel(ctx))
-		return Manifest{}, fmt.Errorf("validate restored catalog v3 inventory: %w", err)
+		return Manifest{}, fmt.Errorf("restore selected catalog v3 state: %w", err)
 	}
 	if err := clearGenerationScheduleState(ctx, st); err != nil {
 		_ = st.Close(context.WithoutCancel(ctx))

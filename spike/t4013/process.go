@@ -357,6 +357,13 @@ func runCustodyCombinedOutput(command *exec.Cmd) ([]byte, error) {
 	)
 }
 
+// RunCustodyCombinedOutput executes one command as the root of a private
+// process session and fails after bounded cleanup if any session member
+// survives it.
+func RunCustodyCombinedOutput(command *exec.Cmd) ([]byte, error) {
+	return runCustodyCombinedOutput(command)
+}
+
 func signaledCommandShutdownUnproven(err error) error {
 	var exit *exec.ExitError
 	if errors.As(err, &exit) && exit.ExitCode() == -1 {

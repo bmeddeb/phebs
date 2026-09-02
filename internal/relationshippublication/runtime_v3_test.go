@@ -3,11 +3,13 @@ package relationshippublication
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -125,6 +127,267 @@ func (state *runtimeTestStoreV3) EnqueueGenerationSchedule(
 	}
 	value := *state.schedule
 	return &value, nil
+}
+
+func TestRuntimeV3DirectBuildDoesNotRequireV2Relationship(t *testing.T) {
+	fixture := newRuntimeHandleCleanupFixture(t)
+	if err := fixture.runtime.Handle(t.Context(), fixture.chunk); err != nil {
+		t.Fatal(err)
+	}
+	for _, root := range []string{
+		fixture.runtime.relationshipRoot(), fixture.runtime.resolverNamespaceRoot(),
+		fixture.runtime.rpcRoot(), fixture.runtime.kafkaRoot(),
+	} {
+		if err := os.RemoveAll(root); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := fixture.runtime.ensureBuildRoots(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenCurrent(
+		t.Context(), fixture.runtime.relationshipRoot(), fixture.chunk.Repository,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("removed v2 relationship source = %v", err)
+	}
+
+	catalog, generation := relationshipCatalogV3Test(t, fixture.chunk.Repository, 2)
+	states, summary := relationshipStatesV3Test(t, generation.Root, catalog)
+	v3Store := &runtimeTestStoreV3{
+		runtimeHandleCleanupStore: fixture.store,
+		candidate: &store.ServiceCatalogV3Candidate{
+			Generation: generation, ControlRevision: summary.CatalogControlRevision,
+			PublishedAt: time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC),
+		},
+		summary: summary, states: states,
+	}
+	fixture.runtime.Store = v3Store
+	if current, err := fixture.runtime.ReconcileV3(
+		t.Context(), fixture.chunk.Repository,
+	); err != nil || current {
+		t.Fatalf("direct v3 reconcile current=%t err=%v", current, err)
+	}
+	if len(v3Store.enqueues) != 1 {
+		t.Fatalf("direct v3 schedules = %d", len(v3Store.enqueues))
+	}
+	binding, err := fixture.runtime.readRuntimeBindingV3(
+		fixture.chunk.Repository, v3Store.enqueues[0].Generation,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if binding.Schema != runtimeBindingSchemaV3Direct || binding.Upstream == nil ||
+		binding.ResolverGeneration != fixture.store.resolver.GenerationDigest ||
+		binding.SourceGeneration != "" || binding.SourceRoot != "" {
+		t.Fatalf("direct v3 binding = %+v", binding)
+	}
+	if err := fixture.runtime.HandleV3(t.Context(), store.GenerationChunk{
+		Repository: fixture.chunk.Repository, Stage: ScheduleStageV3,
+		Generation: binding.ScheduleGeneration, Offset: 0, Length: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	publication, err := OpenCurrentV3(
+		t.Context(), fixture.runtime.relationshipRoot(), fixture.chunk.Repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if publication.Root().Authority.UpstreamDigest != fixture.upstream.Digest {
+		t.Fatalf("direct v3 upstream = %+v", publication.Root().Authority.Upstream)
+	}
+	if _, err := OpenCurrent(
+		t.Context(), fixture.runtime.relationshipRoot(), fixture.chunk.Repository,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("direct v3 build recreated v2 relationship = %v", err)
+	}
+}
+
+func TestBuildV3AcceptsSparseSuccessorWithMixedCatalogProvenance(t *testing.T) {
+	repository := "example.com/acme/relationship-v3-sparse-successor"
+	catalogA, generationA := relationshipCatalogV3Test(t, repository, 100)
+	statesA, _ := relationshipStatesV3Test(t, generationA.Root, catalogA)
+	catalogB := catalogA
+	catalogB.Services = append([]servicecatalog.Service(nil), catalogA.Services...)
+	catalogB.Memberships = append(
+		[]servicecatalog.Membership(nil), catalogA.Memberships...,
+	)
+	catalogB.Services[len(catalogB.Services)-1].DisplayName = "Changed service"
+	generationB, err := servicecatalogv3.Build(generationA.Root.Binding, catalogB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	openedB, err := generationB.Catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	statesB, summaryB := relationshipStatesV3Test(t, generationB.Root, openedB)
+	for index := 0; index < len(statesB)-1; index++ {
+		statesB[index] = statesA[index]
+	}
+	if statesB[0].DesiredCatalogGeneration != generationA.Root.Digest ||
+		statesB[len(statesB)-1].DesiredCatalogGeneration != generationB.Root.Digest {
+		t.Fatalf("mixed successor provenance = first %q last %q",
+			statesB[0].DesiredCatalogGeneration,
+			statesB[len(statesB)-1].DesiredCatalogGeneration,
+		)
+	}
+	upstream := relationshipUpstreamV3Test(t, repository)
+	resolver := relationshipResolverV3Test(t, repository, upstream)
+	rpc := fakeRPC{root: relationshipRPCV3Test(t, repository, resolver.root, upstream, nil)}
+	kafka := fakeKafka{
+		root: relationshipKafkaV3Test(t, repository, rpc.root.Authority, upstream, nil),
+	}
+	prepared, err := BuildV3(t.Context(), BuildRequestV3{
+		Root: t.TempDir(), Catalog: generationB, States: statesB,
+		ServiceSummary: summaryB, Resolver: resolver, RPC: rpc, Kafka: kafka,
+		Upstream: upstream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Root().Authority.CatalogRootDigest != generationB.Root.Digest ||
+		prepared.Root().ServiceCount != len(statesB) {
+		t.Fatalf("mixed successor build = %+v", prepared.Root())
+	}
+}
+
+func TestRuntimeV3V1ScheduleRemainsRestartable(t *testing.T) {
+	fixture := newRuntimeHandleCleanupFixture(t)
+	if err := fixture.runtime.Handle(t.Context(), fixture.chunk); err != nil {
+		t.Fatal(err)
+	}
+	_, sourceRoot, err := fixture.runtime.openCurrentV2Source(
+		t.Context(), fixture.chunk.Repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, generation := relationshipCatalogV3Test(t, fixture.chunk.Repository, 1)
+	states, summary := relationshipStatesV3Test(t, generation.Root, catalog)
+	policy, err := digestValue(FrozenPolicyV3())
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := runtimeTargetShadowV3(
+		fixture.chunk.Repository, sourceRoot.GenerationDigest, sourceRoot.Digest,
+		generation.Root.Digest, summary.CatalogControlRevision,
+		summary.SummaryDigest, summary.ControlRevision, policy,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := runtimeBindingV3{
+		Schema: runtimeBindingSchemaV3, Repository: fixture.chunk.Repository,
+		ScheduleGeneration: target, TargetGeneration: target,
+		SourceGeneration: sourceRoot.GenerationDigest, SourceRoot: sourceRoot.Digest,
+		CatalogRoot:     generation.Root.Digest,
+		CatalogRevision: summary.CatalogControlRevision,
+		StateSummary:    summary.SummaryDigest, StateRevision: summary.ControlRevision,
+		PolicyDigest: policy,
+	}
+	if err := setRuntimeBindingDigestV3(&binding); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.runtime.writeRuntimeBindingV3(binding); err != nil {
+		t.Fatal(err)
+	}
+	v3Store := &runtimeTestStoreV3{
+		runtimeHandleCleanupStore: fixture.store,
+		candidate: &store.ServiceCatalogV3Candidate{
+			Generation: generation, ControlRevision: summary.CatalogControlRevision,
+		},
+		summary: summary, states: states,
+		schedule: &store.GenerationSchedule{
+			Repository: fixture.chunk.Repository, Stage: ScheduleStageV3,
+			Generation: target, Status: store.GenerationScheduleActive,
+		},
+	}
+	fixture.runtime.Store = v3Store
+	if current, err := fixture.runtime.ReconcileV3(
+		t.Context(), fixture.chunk.Repository,
+	); err != nil || current || len(v3Store.enqueues) != 0 ||
+		v3Store.schedule.Generation != target {
+		t.Fatalf(
+			"resume v1 schedule reconcile current=%t enqueues=%d schedule=%+v err=%v",
+			current, len(v3Store.enqueues), v3Store.schedule, err,
+		)
+	}
+	if err := fixture.runtime.HandleV3(t.Context(), store.GenerationChunk{
+		Repository: fixture.chunk.Repository, Stage: ScheduleStageV3,
+		Generation: target, Offset: 0, Length: 1,
+	}); err != nil {
+		t.Fatalf("resume v1 v3 schedule: %v", err)
+	}
+	publication, err := OpenCurrentV3(
+		t.Context(), fixture.runtime.relationshipRoot(), fixture.chunk.Repository,
+	)
+	if err != nil || publication.Root().Authority.CatalogRootDigest != generation.Root.Digest {
+		t.Fatalf("v1 schedule publication = %+v, %v", publication, err)
+	}
+}
+
+func TestRuntimeV3DirectScheduleFencesComponentAuthorityDrift(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*runtimeHandleCleanupStore)
+	}{
+		{
+			name: "upstream provenance",
+			mutate: func(state *runtimeHandleCleanupStore) {
+				domain := state.domains["proto-contract"]
+				domain.RunID += "-replacement"
+				state.domains[domain.Domain] = domain
+			},
+		},
+		{
+			name: "resolver generation",
+			mutate: func(state *runtimeHandleCleanupStore) {
+				state.resolver.GenerationDigest = fixedDigest("9")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newRuntimeHandleCleanupFixture(t)
+			catalog, generation := relationshipCatalogV3Test(
+				t, fixture.chunk.Repository, 1,
+			)
+			states, summary := relationshipStatesV3Test(t, generation.Root, catalog)
+			v3Store := &runtimeTestStoreV3{
+				runtimeHandleCleanupStore: fixture.store,
+				candidate: &store.ServiceCatalogV3Candidate{
+					Generation: generation, ControlRevision: summary.CatalogControlRevision,
+				},
+				summary: summary, states: states,
+			}
+			fixture.runtime.Store = v3Store
+			if _, err := fixture.runtime.ReconcileV3(
+				t.Context(), fixture.chunk.Repository,
+			); err != nil {
+				t.Fatal(err)
+			}
+			binding, err := fixture.runtime.readRuntimeBindingV3(
+				fixture.chunk.Repository, v3Store.schedule.Generation,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(fixture.store)
+			err = fixture.runtime.HandleV3(t.Context(), store.GenerationChunk{
+				Repository: fixture.chunk.Repository, Stage: ScheduleStageV3,
+				Generation: binding.ScheduleGeneration, Offset: 0, Length: 1,
+			})
+			if !errors.Is(err, ErrPublishing) {
+				t.Fatalf("direct component drift = %v", err)
+			}
+			if _, err := OpenCurrentV3(
+				t.Context(), fixture.runtime.relationshipRoot(), fixture.chunk.Repository,
+			); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("component drift published v3 current: %v", err)
+			}
+		})
+	}
 }
 
 func TestRuntimeV3ReconcileSkipsRetainedScheduleIdentity(t *testing.T) {
