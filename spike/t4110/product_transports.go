@@ -79,11 +79,7 @@ func (h *liveHarness) querySelectedProductTransports(
 	if err != nil {
 		return fmt.Errorf("HTTP service detail: %w", err)
 	}
-	searchQuery := url.Values{
-		"q": {"t411-neutral-fixture-v1"}, "scope": {phebssearch.ScopeService},
-		"repository": {liveRepository}, "service_key": {serviceKey},
-		"max_matches": {"10"},
-	}
+	searchQuery, mcpSearchArguments := productSearchInputs(serviceKey)
 	httpSearch, err := getProductJSON[phebssearch.Result](
 		ctx, handler, api.SearchPath+"?"+searchQuery.Encode(),
 	)
@@ -143,11 +139,7 @@ func (h *liveHarness) querySelectedProductTransports(
 		return err
 	}
 	mcpSearch, err := callProductTool[phebssearch.Result](
-		ctx, clientSession, "search_code", map[string]any{
-			"query": "t411-neutral-fixture-v1", "scope": phebssearch.ScopeService,
-			"repository": liveRepository, "service_key": serviceKey,
-			"max_matches": 10,
-		},
+		ctx, clientSession, "search_code", mcpSearchArguments,
 	)
 	if err != nil {
 		return err
@@ -201,6 +193,18 @@ func (h *liveHarness) querySelectedProductTransports(
 		BrowserProductReads:            uint64(browserReport.InventoryRequests + browserReport.DetailRequests),
 	}
 	return nil
+}
+
+func productSearchInputs(serviceKey string) (url.Values, map[string]any) {
+	return url.Values{
+			"q": {"t411-neutral-fixture-v1"}, "scope": {phebssearch.ScopeService},
+			"repository": {liveRepository}, "service_key": {serviceKey},
+			"max_matches": {"10"}, "context_lines": {"1"},
+		}, map[string]any{
+			"query": "t411-neutral-fixture-v1", "scope": phebssearch.ScopeService,
+			"repository": liveRepository, "service_key": serviceKey,
+			"max_matches": 10, "context_lines": 1,
+		}
 }
 
 func (h *liveHarness) validateSelectedDirectory(

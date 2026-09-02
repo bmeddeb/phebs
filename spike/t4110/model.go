@@ -107,6 +107,7 @@ var composedGateTests = map[string][]string{
 		"go:internal/store#TestServiceRuntimeSelectorCASAndReverseAreMonotonic",
 	},
 	"authorized_product_parity": {
+		"go:spike/t4110#TestProductSearchInputsAndCitationRequireExactContext",
 		"go:spike/t4110#TestProductHTTPJSONAdmitsOnlyHumaSchemaEnvelope",
 		"go:internal/search#TestServiceSearchV3StreamMatchesScopedReceipt",
 		"go:internal/search#TestRuntimeScopedSearchKeepsSelectedV3AcrossDarkCandidateAdvance",
@@ -244,6 +245,7 @@ var checkEvidence = map[string]checkEvidenceBinding{
 	"authorized_http_mcp_ui": {
 		Phases: []string{"product_reader_queries"},
 		Tests: []string{
+			"go:spike/t4110#TestProductSearchInputsAndCitationRequireExactContext",
 			"go:spike/t4110#TestProductHTTPJSONAdmitsOnlyHumaSchemaEnvelope",
 			"go:internal/search#TestServiceSearchV3StreamMatchesScopedReceipt",
 			"go:internal/search#TestRuntimeScopedSearchKeepsSelectedV3AcrossDarkCandidateAdvance",

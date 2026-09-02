@@ -55,11 +55,18 @@ func TestRecoveryManifestCostRequiresExactBoundedInventory(t *testing.T) {
 	}
 }
 
-func TestFixtureSearchCitationRequiresExactContentAndRange(t *testing.T) {
+func TestProductSearchInputsAndCitationRequireExactContext(t *testing.T) {
 	const (
 		marker = "t411-neutral-fixture-v1"
 		path   = "service/fixture.go"
 	)
+	httpInput, mcpInput := productSearchInputs("svc.fixture")
+	if values := httpInput["context_lines"]; len(values) != 1 || values[0] != "1" {
+		t.Fatalf("HTTP product search context = %v", values)
+	}
+	if value, ok := mcpInput["context_lines"].(int); !ok || value != 1 {
+		t.Fatalf("MCP product search context = %#v", mcpInput["context_lines"])
+	}
 	harness := liveHarness{corpus: t411.Corpus{Files: []t411.FixtureFile{
 		{Path: path, Content: []byte(marker + "\n" + path + "\n")},
 	}}}
@@ -78,6 +85,9 @@ func TestFixtureSearchCitationRequiresExactContentAndRange(t *testing.T) {
 	}{
 		{name: "wrong path content", mutate: func(value *phebssearch.FileResult) {
 			value.Chunks[0].Content = marker + "\nother.go\n"
+		}},
+		{name: "zero-context truncation", mutate: func(value *phebssearch.FileResult) {
+			value.Chunks[0].Content = marker + "\n"
 		}},
 		{name: "wrong marker", mutate: func(value *phebssearch.FileResult) {
 			value.Chunks[0].Content = "wrong-marker\n" + path + "\n"
