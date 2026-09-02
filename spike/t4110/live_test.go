@@ -69,6 +69,51 @@ func TestMappedTransitionRetainsExpandedV3Target(t *testing.T) {
 	}
 }
 
+func TestMappedTransitionIncarnationOracleTracksOmissionAndExplicitRejection(t *testing.T) {
+	target, err := t411.BuildTargetCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	transition, err := t411.BuildTransitionCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapping := make(map[string]string, len(transition.Profile.Revisions[0].Catalog.Services))
+	incarnations := make(map[string]uint64, len(mapping))
+	for index, service := range transition.Profile.Revisions[0].Catalog.Services {
+		targetKey := target.Catalog.Services[index].Key
+		mapping[service.Key] = targetKey
+		incarnations[targetKey] = 1
+	}
+	prior := target.Catalog
+	for _, revision := range transition.Profile.Revisions {
+		next, mapErr := mappedTransitionCatalog(target.Catalog, revision, mapping)
+		if mapErr != nil {
+			t.Fatal(mapErr)
+		}
+		advanceTransitionIncarnations(prior, next, mapping, incarnations)
+		prior = next
+	}
+	if got := incarnations[mapping["svc.readd"]]; got != 2 {
+		t.Fatalf("omission re-add incarnation = %d, want 2", got)
+	}
+	if got := incarnations[mapping["svc.legacy"]]; got != 1 {
+		t.Fatalf("rejected service incarnation before final restore = %d, want 1", got)
+	}
+	advanceTransitionIncarnations(prior, target.Catalog, mapping, incarnations)
+	for sourceKey, want := range map[string]uint64{
+		"svc.alpha":  1,
+		"svc.beta":   1,
+		"svc.gamma":  1,
+		"svc.legacy": 2,
+		"svc.readd":  2,
+	} {
+		if got := incarnations[mapping[sourceKey]]; got != want {
+			t.Fatalf("%s final incarnation = %d, want %d", sourceKey, got, want)
+		}
+	}
+}
+
 func TestSuccessorCatalogRebindsFrozenSourceComplement(t *testing.T) {
 	target, err := t411.BuildTargetCorpus()
 	if err != nil {

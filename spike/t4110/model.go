@@ -67,6 +67,7 @@ var composedGateTests = map[string][]string{
 	"t411_input_and_bound_contract": {
 		"go:spike/t4110#TestLiveTargetCatalogUsesExpandedV3Input",
 		"go:spike/t4110#TestMappedTransitionRetainsExpandedV3Target",
+		"go:spike/t4110#TestMappedTransitionIncarnationOracleTracksOmissionAndExplicitRejection",
 		"go:spike/t4110#TestFrozenTargetRelationshipInputShape",
 		"go:spike/t411#TestFrozenEnvelopeIsDeterministicAndExact",
 		"go:spike/t411#TestRetainedArtifactsMatchFrozenEnvelope",
@@ -179,7 +180,10 @@ var checkEvidence = map[string]checkEvidenceBinding{
 	},
 	"transition_profile": {
 		Phases: []string{"transition_profile"},
-		Tests:  []string{"go:spike/t411#TestTransitionProfileUsesRealV2Semantics"},
+		Tests: []string{
+			"go:spike/t411#TestTransitionProfileUsesRealV2Semantics",
+			"go:spike/t4110#TestMappedTransitionIncarnationOracleTracksOmissionAndExplicitRejection",
+		},
 	},
 	"exact_bound_and_one_over": {
 		Tests: []string{

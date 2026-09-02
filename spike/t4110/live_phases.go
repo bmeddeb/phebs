@@ -285,6 +285,7 @@ func (h *liveHarness) transitionProfile(ctx context.Context, cost *PhaseCost) er
 	}
 	slices.Sort(sourceKeys)
 	wants := []uint64{3, 2, 2}
+	prior := base
 	for index, revision := range h.transition.Profile.Revisions {
 		next, err := mappedTransitionCatalog(base, revision, mapping)
 		if err != nil {
@@ -296,14 +297,11 @@ func (h *liveHarness) transitionProfile(ctx context.Context, cost *PhaseCost) er
 		if err != nil {
 			return err
 		}
+		advanceTransitionIncarnations(prior, next, mapping, incarnations)
 		for _, sourceKey := range sourceKeys {
 			targetKey := mapping[sourceKey]
-			incarnation := incarnations[targetKey]
-			if sourceKey == "svc.readd" && index == 2 {
-				incarnation++
-			}
 			exact, verifyErr := verifySelectedService(
-				ctx, h.state, h.selector, next, targetKey, incarnation,
+				ctx, h.state, h.selector, next, targetKey, incarnations[targetKey],
 			)
 			if verifyErr != nil {
 				return verifyErr
@@ -311,6 +309,7 @@ func (h *liveHarness) transitionProfile(ctx context.Context, cost *PhaseCost) er
 			mergePhaseCosts(&measured, exact)
 		}
 		mergePhaseCosts(cost, measured)
+		prior = next
 	}
 	final := cloneCatalog(base)
 	final.Authority.Version = "t4110-transition-final-v1"
@@ -318,14 +317,11 @@ func (h *liveHarness) transitionProfile(ctx context.Context, cost *PhaseCost) er
 	if err != nil {
 		return err
 	}
+	advanceTransitionIncarnations(prior, final, mapping, incarnations)
 	for _, sourceKey := range sourceKeys {
 		targetKey := mapping[sourceKey]
-		incarnation := incarnations[targetKey]
-		if sourceKey == "svc.readd" {
-			incarnation++
-		}
 		exact, verifyErr := verifySelectedService(
-			ctx, h.state, h.selector, final, targetKey, incarnation,
+			ctx, h.state, h.selector, final, targetKey, incarnations[targetKey],
 		)
 		if verifyErr != nil {
 			return verifyErr
@@ -338,10 +334,32 @@ func (h *liveHarness) transitionProfile(ctx context.Context, cost *PhaseCost) er
 		return errors.New("frozen transition profile omits the re-add case")
 	}
 	state, err := h.state.GetServiceStateV3Point(ctx, liveRepository, readdKey)
-	if err != nil || state.Incarnation != incarnations[readdKey]+1 || state.Removed {
+	if err != nil || state.Incarnation != incarnations[readdKey] || state.Removed {
 		return errors.Join(errors.New("transition profile re-add did not survive"), err)
 	}
 	return nil
+}
+
+func advanceTransitionIncarnations(
+	prior, next servicecatalog.Catalog,
+	mapping map[string]string,
+	incarnations map[string]uint64,
+) {
+	for _, targetKey := range mapping {
+		if transitionServiceRemoved(prior, targetKey) &&
+			!transitionServiceRemoved(next, targetKey) {
+			incarnations[targetKey]++
+		}
+	}
+}
+
+func transitionServiceRemoved(catalog servicecatalog.Catalog, serviceKey string) bool {
+	for _, service := range catalog.Services {
+		if service.Key == serviceKey {
+			return service.Disposition == servicecatalog.DispositionRejected
+		}
+	}
+	return true
 }
 
 func mappedTransitionCatalog(
