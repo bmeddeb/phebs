@@ -77,7 +77,8 @@ Fault-only, authorization, and transport regressions are not relabeled as measur
 beside the live run.
 
 The receipt is pass-only. Every phase, composed gate, and acceptance check must
-appear once in frozen order and pass. The target must publish and expose 10,000
+appear once in frozen order and pass; any named Go test or subtest skip refuses
+the composed gate even if its parent later reports pass. The target must publish and expose 10,000
 accepted services, match 10,000 independent queries exactly, exercise
 target-backed authorized HTTP/MCP reads plus three live reads through the unchanged
 production UI and the closed UI regressions, bound the cold corpus work, perform zero
@@ -103,7 +104,10 @@ recheck the exact clean commit, lock/checksum files, and admitted tools. The
 composed source tree is reconstructed from exact HEAD blob IDs, so ignored
 local files and checkout attributes cannot enter it. Its private Git metadata
 fetches only that commit with depth one; ancestors, tags, and unrelated refs do
-not enter composed custody.
+not enter composed custody. The temporary closed environment gives legacy test
+preflights a private `surreal` symlink to the admitted executable; the exact
+executable and digest remain bound by `PHEBS_SURREAL` and
+`PHEBS_SURREAL_SHA256`, and the alias is removed with composed custody.
 
 The final `RunAndAuthor` step validates and canonicalizes the completed receipt, writes a synced
 mode-0600 temporary file, then atomically links the destination without

@@ -87,6 +87,7 @@ var composedGateTests = map[string][]string{
 		"go:internal/relationshippublication#TestT411MaximumProfileDenseBuildPublishV3",
 	},
 	"service_runtime_and_recovery": {
+		"go:spike/t4110#TestComposedEnvironmentExposesAdmittedSurrealToGoTests",
 		"go:spike/t4110#TestTargetRelationshipScheduleExpandsBeforeClaim",
 		"go:spike/t4110#TestSelectedServiceComparisonUsesSemanticSlices",
 		"go:spike/t4110#TestSuccessorCatalogRebindsFrozenSourceComplement",
@@ -137,6 +138,8 @@ var composedGateTests = map[string][]string{
 		"go:spike/t4013#TestCustodyCommandCancellationTerminatesProcessSession",
 		"go:spike/t4013#TestSummarizeProcessTreeAcceptsZeroResidentChild",
 		"go:spike/t411#TestReusableTargetAndTransitionCorporaMatchFrozenEnvelope",
+		"go:spike/t4110#TestT4110PassedGoTestsRequiresExactNamedPasses",
+		"go:spike/t4110#TestT4110PassedGoTestsRejectsNamedSkips",
 		"go:spike/t4110#TestT4110ReceiptRoundTripIsCanonicalAndSourceFree",
 		"go:spike/t4110#TestT4110AuthorIsCreateOnlyAndAtomic",
 	},
@@ -220,6 +223,7 @@ var checkEvidence = map[string]checkEvidenceBinding{
 	},
 	"stale_worker": {
 		Tests: []string{
+			"go:spike/t4110#TestComposedEnvironmentExposesAdmittedSurrealToGoTests",
 			"go:internal/store#TestServiceStateV3CatalogSuccessorSupersedesActivationLease",
 			"go:internal/store#TestGenerationScheduleRetryCoalescingAndStaleFence",
 		},
@@ -265,7 +269,10 @@ var checkEvidence = map[string]checkEvidenceBinding{
 		ReceiptOracle: true,
 	},
 	"source_free_receipt": {
-		Tests: []string{"go:spike/t4110#TestT4110ReceiptRoundTripIsCanonicalAndSourceFree"},
+		Tests: []string{
+			"go:spike/t4110#TestT4110PassedGoTestsRejectsNamedSkips",
+			"go:spike/t4110#TestT4110ReceiptRoundTripIsCanonicalAndSourceFree",
+		},
 	},
 	"clean_teardown": {
 		Tests:         []string{"go:spike/t4013#TestSummarizeProcessTreeAcceptsZeroResidentChild"},

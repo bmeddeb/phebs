@@ -363,12 +363,15 @@ func removeComposedTree(path string) error {
 	return nil
 }
 
-func prepareComposedEnvironment(repositoryRoot string) error {
+func prepareComposedEnvironment(
+	repositoryRoot string,
+	surreal admittedExecutable,
+) error {
 	root := filepath.Join(repositoryRoot, composedExecutionDir)
 	if err := os.Mkdir(root, 0o700); err != nil {
 		return err
 	}
-	for _, name := range []string{"home", "tmp", "go-cache", "npm-prefix"} {
+	for _, name := range []string{"home", "tmp", "go-cache", "npm-prefix", "bin"} {
 		if err := os.Mkdir(filepath.Join(root, name), 0o700); err != nil {
 			return err
 		}
@@ -384,7 +387,7 @@ func prepareComposedEnvironment(repositoryRoot string) error {
 			return err
 		}
 	}
-	return nil
+	return os.Symlink(surreal.path, filepath.Join(root, "bin", "surreal"))
 }
 
 func composedEnvironment(
@@ -400,6 +403,7 @@ func composedEnvironment(
 		filepath.Dir(tools.goTool.path),
 		filepath.Dir(tools.node.path),
 		filepath.Dir(tools.git.path),
+		filepath.Join(root, "bin"),
 		"/usr/bin",
 		"/bin",
 	}

@@ -108,7 +108,7 @@ func prepareComposedTree(
 	repositoryRoot string,
 	tools composedToolchain,
 ) error {
-	if err := prepareComposedEnvironment(repositoryRoot); err != nil {
+	if err := prepareComposedEnvironment(repositoryRoot, tools.surreal); err != nil {
 		return fmt.Errorf("prepare closed composed environment: %w", err)
 	}
 	goVerify := exec.CommandContext(ctx, tools.goTool.path, "mod", "verify")
@@ -297,8 +297,13 @@ func passedGoTests(data []byte) (map[string]bool, error) {
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return nil, fmt.Errorf("decode go test event: %w", err)
 		}
-		if event.Action == "pass" && event.Test != "" {
-			result[event.Test] = true
+		if event.Test != "" {
+			switch event.Action {
+			case "skip":
+				return nil, fmt.Errorf("go test %s reported skip", event.Test)
+			case "pass":
+				result[event.Test] = true
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {

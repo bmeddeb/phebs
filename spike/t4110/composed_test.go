@@ -14,15 +14,33 @@ import (
 func TestT4110PassedGoTestsRequiresExactNamedPasses(t *testing.T) {
 	data := strings.Join([]string{
 		`{"Action":"pass","Test":"TestAlpha"}`,
-		`{"Action":"skip","Test":"TestBeta"}`,
 		`{"Action":"pass","Package":"example.invalid/package"}`,
 	}, "\n") + "\n"
 	passed, err := passedGoTests([]byte(data))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !passed["TestAlpha"] || passed["TestBeta"] || len(passed) != 1 {
+	if !passed["TestAlpha"] || len(passed) != 1 {
 		t.Fatalf("passed tests = %v", passed)
+	}
+}
+
+func TestT4110PassedGoTestsRejectsNamedSkips(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		data string
+	}{
+		{name: "direct", data: `{"Action":"skip","Test":"TestAlpha"}` + "\n"},
+		{name: "child before parent pass", data: strings.Join([]string{
+			`{"Action":"skip","Test":"TestAlpha/missing_dependency"}`,
+			`{"Action":"pass","Test":"TestAlpha"}`,
+		}, "\n") + "\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := passedGoTests([]byte(test.data)); err == nil {
+				t.Fatal("named skip was accepted")
+			}
+		})
 	}
 }
 
@@ -46,6 +64,60 @@ func TestT4110PassedVitestRequiresExactAllPassedReport(t *testing.T) {
 func TestT4110PassedGoTestsRejectsNonJSONOutput(t *testing.T) {
 	if _, err := passedGoTests([]byte("not-json\n")); err == nil {
 		t.Fatal("non-JSON go test output was accepted")
+	}
+}
+
+func TestComposedEnvironmentExposesAdmittedSurrealToGoTests(t *testing.T) {
+	surrealDirectory := filepath.Join(t.TempDir(), "surreal-bin")
+	if err := os.Mkdir(surrealDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	surrealPath := filepath.Join(surrealDirectory, "surreal-3.2.0")
+	if err := os.WriteFile(surrealPath, []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	tools := composedToolchain{
+		git:     admittedExecutable{path: "/admitted/git/bin/git"},
+		goTool:  admittedExecutable{path: "/admitted/go/bin/go"},
+		node:    admittedExecutable{path: "/admitted/node/bin/node"},
+		surreal: admittedExecutable{path: surrealPath, sha256: "sha256:" + strings.Repeat("a", 64)},
+	}
+	repositoryRoot := t.TempDir()
+	if err := prepareComposedEnvironment(repositoryRoot, tools.surreal); err != nil {
+		t.Fatal(err)
+	}
+	environment := composedEnvironment(tools, repositoryRoot, true)
+	wantDirectory := filepath.Join(repositoryRoot, composedExecutionDir, "bin")
+	closedPath := ""
+	foundDirectory := false
+	foundOverride := false
+	foundDigest := false
+	for _, entry := range environment {
+		if entry == "PHEBS_SURREAL="+tools.surreal.path {
+			foundOverride = true
+		}
+		if entry == "PHEBS_SURREAL_SHA256="+tools.surreal.sha256 {
+			foundDigest = true
+		}
+		if path, ok := strings.CutPrefix(entry, "PATH="); ok {
+			closedPath = path
+			for _, directory := range strings.Split(path, ":") {
+				foundDirectory = foundDirectory || directory == wantDirectory
+			}
+		}
+	}
+	if !foundDirectory || !foundOverride || !foundDigest {
+		t.Fatalf("closed environment omits admitted SurrealDB: %v", environment)
+	}
+	t.Setenv("PATH", closedPath)
+	resolved, err := exec.LookPath("surreal")
+	if err != nil {
+		t.Fatalf("resolve admitted SurrealDB = %q, %v", resolved, err)
+	}
+	resolved, err = filepath.EvalSymlinks(resolved)
+	wantResolved, wantErr := filepath.EvalSymlinks(surrealPath)
+	if err != nil || wantErr != nil || resolved != wantResolved {
+		t.Fatalf("resolved SurrealDB target = %q, %v", resolved, err)
 	}
 }
 
