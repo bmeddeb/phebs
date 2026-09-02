@@ -30,10 +30,10 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epic 40 closed on
-2026-08-30 after neutral-47 passed the frozen mechanics gate. Epic 41 is now
-the active scale track and separately targets
-at least 8,000 accepted services and measures 10,000 accepted logical services,
-and Epic 42 composes the physical-repository and service-cardinality envelopes.
+2026-08-30 after neutral-47 passed the frozen mechanics gate. Epic 41 is
+branch-complete and awaits T41.10 integration after separately proving the
+8,000-service floor and 10,000 accepted logical-service target. Epic 42 then
+composes the physical-repository and service-cardinality envelopes.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -2942,7 +2942,7 @@ Steady-state cost: documentation only; no compiled, embedded, fixture, corpus,
 harness, request, worker, retry, publication, lifecycle, store, child, lock,
 cache, schema, bound, or persistent product state changes.
 
-## Epic 41 · Ten-thousand-service authority and sparse consumers *(active)*
+## Epic 41 · Ten-thousand-service authority and sparse consumers *(branch-complete; integration pending)*
 
 Raise logical-service capacity through segmented authority and bounded state/
 publication design, not a constants-only change. The required floor is 8,000
@@ -3039,23 +3039,10 @@ the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration. T41.2–T41.7 are integrated;
 T41.8 is integrated. T41.8a's catalog-absence and exhausted-result recovery is
-integrated; T41.9 is branch-complete and awaits integration. T41.10 is next
-after that integration.
-
-**T41.10 · Neutral 10,000-service closure gate** — exercise the T41.1 target on
-the deliberately small physical corpus through ingestion, state reconcile/
-activation, shared search, relationships, authorized HTTP/MCP/UI reads,
-archive/restore, and lifecycle. AC: 10,000 accepted services publish and become
-independently queryable; the floor of 8,000 accepted services is explicit; the
-separate transition profile passes; exact-bound and one-over behavior match
-T41.1; cold, no-op, point/page, one-service and 1% deltas, removal/re-add,
-A→B→A, partial activation,
-crash, stale worker, authorization, pressure, backup/restore, and collection
-pass; receipt records root/member/cache/transaction/query/read/write/RSS/disk
-cost without source identity; no operation performs service-count × repository
-bytes work. The result establishes no large-repository envelope, target SLO,
-supported customer limit, accuracy/completeness, release, migration, or
-decommission claim.
+integrated; T41.9 is integrated. T41.10 is branch-complete at exact
+implementation `7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` with canonical source-free
+PASS receipt `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`
+and awaits integration. Epic 42 follows that integration.
 
 ## Epic 42 · Combined scale gate and topology decision *(scheduled after Epics 40–41)*
 

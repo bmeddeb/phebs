@@ -916,7 +916,8 @@ service count × repository bytes
   versioned v2 plan with a measured 1-GiB aggregate while preserving v1 restart
   validity. Serialized extraction throughput must also be measured before any
   Take 17 freeze. No rerun or bound change is authorized by this record.
-- **Epic 41 — 10,000-service authority and sparse consumers (active):** T41.1
+- **Epic 41 — 10,000-service authority and sparse consumers (branch-complete;
+  integration pending):** T41.1
   froze production-valid 8,000/10,000/12,500 profiles and selected the
   reduce-only aggregate envelope; T41.2 retains v2 semantics in
   a v3 root with dual service/path member views; T41.3 streams exact census
@@ -932,10 +933,10 @@ service count × repository bytes
   recovery/archive ownership, and a sixteenth bounded lifecycle owner without
   selecting it. T41.8a corrects whole-repository catalog absence and preserves
   an immutable extraction result across a failed downstream callback. T41.9's
-  branch-complete runtime selector provides atomic registration and reverse
-  transition and awaits integration; T41.10 then closes on the neutral
-  10,000-service recovery/lifecycle/product gate. No
-  constants-only increase is permitted.
+  integrated runtime selector provides atomic registration and reverse
+  transition. T41.10 is branch-complete: its canonical source-free receipt
+  passes the neutral 10,000-service recovery/lifecycle/product gate and awaits
+  integration. No constants-only increase is permitted.
 - **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
   freeze a deterministic combined corpus and independent oracle, execute cold,
   no-op, delta, A→B→A, interruption, restore, pressure, lifecycle, and product
@@ -1006,8 +1007,8 @@ catalog, relationship, or correctness authority.
   extraction authority before publication, makes point reads member-local,
   and adds complete canonical recovery, archive/restore, lease, rollback, and
   bounded lifecycle ownership. It is integrated. T41.8a's catalog-absence and
-  exhausted-result recovery is integrated. T41.9 is branch-complete and awaits
-  integration; T41.10 follows it.
+  exhausted-result recovery and T41.9 are integrated. T41.10 adds the retained
+  neutral 10,000-service closure proof.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

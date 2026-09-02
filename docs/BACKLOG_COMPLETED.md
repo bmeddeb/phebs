@@ -10900,4 +10900,61 @@ medium, or low findings and no missing acceptance-criteria test.
 No new goroutine, polling cadence, OS lock primitive, child, network call,
 Git/source/corpus/shard read, production cap, evidence release, SLO, topology,
 migration-completion, decommission, ceremony, or Epic-42 claim is added.
-T41.10 follows integration.
+
+**T41.10 ✅ · Neutral 10,000-service closure gate**
+*(2026-09-02; high)* — exact clean implementation
+`7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` authored the canonical
+source-free receipt at `spike/t4110/results.json`: 35,931 bytes,
+`sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`.
+Independent `Decode` plus `MarshalCanonical` round-trip validation accepts the
+exact bytes, forbidden-fragment fence, `passed` outcome, implementation and
+tool identities, eleven measured phases, five composed gates, and twenty-three
+acceptance checks. Every phase, gate, and check reports `passed`.
+
+The deliberately small target contains 31,600 regular files and 1,835,100
+fixture bytes. It publishes exactly 10,000 accepted services over 60,000
+memberships and 31,600 distinct paths, retains the explicit 8,000-service
+floor, and independently matches all 10,000 service queries with zero missing
+or unexpected services. Cold work performs exactly one physical corpus pass,
+offers and reads all 31,600 search files once, records the exact source census,
+reads the 10,000 selected proto blobs once into the truthful unsupported-only
+observation plane, and publishes the exact empty semantic relationship shape.
+Every later service-only phase records zero Git/source/corpus reads.
+
+The live sequence passes cold publication and activation, warm no-op,
+point/page queries, one-service and one-percent sparse deltas, removal/re-add,
+A→B→A, the independent transition profile, archive/restore, pressure-driven
+collection, and authorized product readers. The one-service delta applies one
+changed row and the one-percent delta applies 100; removal/re-add and A→B→A
+retain exact incarnation and sparse-preimage behavior. The six-artifact archive
+and restore inventories agree at 200,451,274 bytes in each direction.
+Collection performs 192 bounded owner turns, observes one exact `collect` and
+191 exact `normal` samples, and deletes 152 lifecycle records under the frozen
+policy. Final product proof performs nine authorized HTTP/MCP queries plus
+three real-browser reads. Composed tests separately pass exact bound/one-over,
+partial activation, crash, stale-worker, authorization-first, pressure,
+archive/lifecycle, HTTP/MCP/UI parity, cost, and source-free evidence contracts.
+
+The highest retained phase RSS is 2,563,080,192 bytes during archive/restore;
+the final logical and allocated custody gauges are 721,099,436 and 722,280,448
+bytes. These are offline measured evidence, not an SLO. Teardown closes the
+store, removes all temporary custody, and retains zero child processes; an
+independent host process and composed-root check is also empty. The first
+post-commit invocation was refused before live work because supplied binaries
+came from a full-history clone and stale embedded UI rather than the frozen
+depth-one/fresh-UI reference path. It authored no receipt. Rebuilding through
+the exact reference path made the supplied Phebs and author binaries
+byte-identical to their in-run references and produced the retained PASS.
+
+The correction package passes focused repetitions, complete T41.10 normal and
+race tests, vet, repository-pinned lint, glossary, format, and whitespace.
+Both independent exact-commit reviews report zero critical, high, medium, or
+low findings. Documentation validation retains only the inherited UI-owned
+missing `ui/receipts/fixtures/service-boundary.png` link target and this scale
+branch does not cross that ownership boundary.
+
+This closes T41.10 on its ticket branch and makes it eligible for integration;
+Epic 41 closes only when that branch is integrated. The receipt establishes no
+large-repository envelope, target SLO, supported customer limit,
+accuracy/completeness, release, migration/decommission, topology, or Epic-42
+result. T42.1 owns the separately frozen combined physical-plus-logical gate.

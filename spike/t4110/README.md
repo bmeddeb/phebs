@@ -1,8 +1,19 @@
 # T41.10 — Neutral 10,000-service closure receipt
 
-> **Retained engineering contract.** This package defines the source-free
-> receipt and authoring seam for T41.10. It does not yet contain or claim a
-> passing live runner result.
+> **Retained PASS evidence.** `results.json` is the canonical source-free
+> T41.10 receipt: 35,931 bytes,
+> `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`,
+> binding exact clean implementation commit
+> `7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` on 2026-09-02.
+
+Independent decode/re-encode validation accepts the receipt as canonical and
+source-free. All eleven measured phases, five composed gates, and twenty-three
+acceptance checks pass; the target publishes and independently matches all
+10,000 accepted services with zero missing or unexpected services, one
+physical corpus pass, and exact clean teardown with zero remaining children.
+This closes T41.10's deliberately small-corpus gate only. It establishes no
+large-repository envelope, target SLO, supported limit, accuracy/completeness,
+release, migration, decommission, topology, or Epic-42 result.
 
 The receipt binds the exact retained T41.1 envelope and receipt plus the
 canonical accepted-10,000 target and small transition-profile digests. The
