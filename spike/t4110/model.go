@@ -120,6 +120,7 @@ var composedGateTests = map[string][]string{
 		"vitest:ServiceDirectoryPage#offers a filter-preserving first-page route when a cursor is invalid",
 	},
 	"archive_restore_and_lifecycle": {
+		"go:internal/observationpublication#TestObservationArchiveRoundTripsUnsupportedOnlyV1AndV2",
 		"go:internal/relationshippublication#TestArchiveV3IndependentCompositeRoundTrip",
 		"go:internal/store#TestServiceCatalogV3LifecycleRetainsCandidateAndTwoPrior",
 		"go:internal/store#TestServiceCatalogV3RepublishReadmitsInterruptedCollectingRoot",
@@ -229,7 +230,10 @@ var checkEvidence = map[string]checkEvidenceBinding{
 	},
 	"backup_restore": {
 		Phases: []string{"archive_restore"},
-		Tests:  []string{"go:internal/relationshippublication#TestArchiveV3IndependentCompositeRoundTrip"},
+		Tests: []string{
+			"go:internal/observationpublication#TestObservationArchiveRoundTripsUnsupportedOnlyV1AndV2",
+			"go:internal/relationshippublication#TestArchiveV3IndependentCompositeRoundTrip",
+		},
 	},
 	"collection": {
 		Phases: []string{"collection"},

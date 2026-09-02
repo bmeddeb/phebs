@@ -507,6 +507,178 @@ func TestObservationArchiveV2RoundTripsV1V2AndResumesRestore(t *testing.T) {
 	}
 }
 
+func TestObservationArchiveRoundTripsUnsupportedOnlyV1AndV2(t *testing.T) {
+	fixtureDirectory, commit := observationFixture(t, map[string][]byte{
+		"bad.go": []byte("not valid Go"),
+	})
+	root := filepath.Join(t.TempDir(), "observations")
+	repository := "example/archive-unsupported-only"
+	v1Plan := buildObservationPlan(t, fixtureDirectory, commit, repository, "unsupported-v1")
+	v1, err := Publish(t.Context(), root, fixtureDirectory, v1Plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v1.manifest.ObservedCount != 0 || v1.manifest.UnsupportedCount != 1 ||
+		v1.manifest.ObservationBytes != 0 {
+		t.Fatalf("unsupported-only v1 manifest = %+v", v1.manifest)
+	}
+	transition, err := BeginInventoryPublicationV2(root, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inventory := buildInventoryPublicationTransitionV2(
+		t, transition, fixtureDirectory, repository, commit,
+	)
+	if inventory.ObservedCount != 0 || inventory.UnsupportedCount != 1 ||
+		inventory.ObservationCount != 0 || inventory.ObservationBytes != 0 {
+		t.Fatalf("unsupported-only v2 inventory = %+v", inventory)
+	}
+	v2, err := CompleteInventoryPublicationV2(
+		t.Context(), root, repository, transition.TransitionID, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fixtureDirectory, "bad2.go"), []byte("still not valid Go"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runObservationGit(t, fixtureDirectory, "add", "bad2.go")
+	runObservationGit(t, fixtureDirectory, "commit", "-m", "unsupported v2 successor")
+	commitB := strings.TrimSpace(runObservationGit(t, fixtureDirectory, "rev-parse", "HEAD"))
+	transitionB, err := BeginInventoryPublicationV2(root, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inventoryB := buildInventoryPublicationTransitionV2(
+		t, transitionB, fixtureDirectory, repository, commitB,
+	)
+	if inventoryB.ObservedCount != 0 || inventoryB.UnsupportedCount != 2 ||
+		inventoryB.ObservationCount != 0 || inventoryB.ObservationBytes != 0 {
+		t.Fatalf("unsupported-only v2 successor inventory = %+v", inventoryB)
+	}
+	v2B, err := CompleteInventoryPublicationV2(
+		t.Context(), root, repository, transitionB.TransitionID, nil,
+	)
+	if err != nil || v2B.Prior == nil || *v2B.Prior != v2.Current {
+		t.Fatalf("unsupported-only v2 rollback floor = %+v, %v", v2B, err)
+	}
+	v2Generations := []struct {
+		ref       InventoryGenerationRefV2
+		inventory InventoryRootV2
+	}{
+		{ref: v2B.Current, inventory: inventoryB},
+		{ref: *v2B.Prior, inventory: inventory},
+	}
+
+	objectDirectories := func(base string) []string {
+		result := []string{
+			filepath.Join(generationDirectory(base, repository, v1.manifest.GenerationDigest), "objects"),
+		}
+		for _, generation := range v2Generations {
+			inventoryDirectory := filepath.Join(
+				inventoryGenerationDirectoryV2(base, repository, generation.ref.GenerationDigest),
+				InventoryPublicationInventoryNameV2,
+			)
+			for _, segment := range generation.inventory.Segments {
+				result = append(result, filepath.Join(inventoryDirectory, segment.Directory, "objects"))
+			}
+		}
+		return result
+	}
+	assertEmptyDirectories := func(paths []string) {
+		t.Helper()
+		for _, directory := range paths {
+			info, statErr := os.Lstat(directory)
+			entries, readErr := os.ReadDir(directory)
+			if statErr != nil || readErr != nil || !info.IsDir() ||
+				info.Mode()&os.ModeSymlink != 0 || len(entries) != 0 {
+				t.Fatalf("empty object directory %q = %+v, %v, %v", directory, entries, statErr, readErr)
+			}
+		}
+	}
+	assertEmptyDirectories(objectDirectories(root))
+
+	regular := 0
+	if err := filepath.WalkDir(root, func(_ string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !entry.IsDir() {
+			regular++
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	archive := filepath.Join(t.TempDir(), "unsupported-only.tar")
+	report, err := CreateArchive(t.Context(), root, archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Publications != 3 || report.V1Publications != 1 || report.V2Publications != 2 ||
+		report.Files != regular || report.Bytes == 0 {
+		t.Fatalf("unsupported-only archive report = %+v, regular=%d", report, regular)
+	}
+
+	restored := filepath.Join(t.TempDir(), "restored")
+	if err := RestoreArchive(t.Context(), archive, restored); err != nil {
+		t.Fatal(err)
+	}
+	restoredV1, err := Open(t.Context(), restored, repository)
+	if err != nil || restoredV1.manifest.Digest != v1.manifest.Digest {
+		t.Fatalf("restored unsupported-only v1 = %+v, %v", restoredV1, err)
+	}
+	restoredV2, err := ReadInventoryPublicationRootV2(restored, repository)
+	if err != nil || restoredV2.Current != v2B.Current || restoredV2.Prior == nil ||
+		*restoredV2.Prior != *v2B.Prior {
+		t.Fatalf("restored unsupported-only v2 = %+v, %v", restoredV2, err)
+	}
+	for _, generation := range v2Generations {
+		restoredDirectory := inventoryGenerationDirectoryV2(
+			restored, repository, generation.ref.GenerationDigest,
+		)
+		validated, validateErr := validateInventoryPublicationStageV2(t.Context(), InventoryPublicationTransitionV2{
+			Repository:         repository,
+			Directory:          restoredDirectory,
+			SourceDirectory:    filepath.Join(restoredDirectory, InventoryPublicationSourceNameV2),
+			InventoryDirectory: filepath.Join(restoredDirectory, InventoryPublicationInventoryNameV2),
+		})
+		if validateErr != nil || validated != generation.ref {
+			t.Fatalf("strict restored unsupported-only v2 = %+v, %v", validated, validateErr)
+		}
+	}
+	assertEmptyDirectories(objectDirectories(restored))
+
+	resumeRoot := filepath.Join(t.TempDir(), "resumed")
+	resumeStage := resumeRoot + ".restore"
+	for _, directory := range objectDirectories(root) {
+		relative, relErr := filepath.Rel(root, directory)
+		if relErr != nil {
+			t.Fatal(relErr)
+		}
+		if err := os.MkdirAll(filepath.Join(resumeStage, relative), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := RestoreArchiveWithStage(t.Context(), archive, resumeRoot, resumeStage); err != nil {
+		t.Fatalf("resume with canonical empty object directories: %v", err)
+	}
+	assertEmptyDirectories(objectDirectories(resumeRoot))
+
+	unknownRoot := filepath.Join(t.TempDir(), "unknown")
+	unknownStage := unknownRoot + ".restore"
+	if err := os.MkdirAll(
+		filepath.Join(repositoryDirectory(unknownStage, repository), "unknown-empty"),
+		0o700,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := RestoreArchiveWithStage(t.Context(), archive, unknownRoot, unknownStage); err == nil ||
+		!strings.Contains(err.Error(), "archive-absent directory") {
+		t.Fatalf("unknown empty restore directory = %v", err)
+	}
+}
+
 func TestObservationArchiveRestoreRefusesDuplicatePathsAndStageSymlinks(t *testing.T) {
 	duplicateArchive := filepath.Join(t.TempDir(), "duplicate.tar")
 	file, err := os.OpenFile(duplicateArchive, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)

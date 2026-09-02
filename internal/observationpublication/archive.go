@@ -445,9 +445,6 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 	if err := file.Close(); err != nil {
 		return err
 	}
-	if err := validateRestoreStageInventory(stage, seen, seenDirectories); err != nil {
-		return err
-	}
 	repositories, err := boundedDirectory(stage, MaxLifecycleRepositories)
 	if err != nil {
 		return err
@@ -459,11 +456,19 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 		validAuthority := false
 		raw, pointerErr := readBoundedRegular(filepath.Join(stage, repository.Name(), "current.json"), MaxManifestBytes)
 		if pointerErr == nil {
-			var pointer Pointer
-			if decodeCanonical(raw, &pointer) != nil || repositoryHash(pointer.Repository) != repository.Name() {
+			var encoded Pointer
+			if decodeCanonical(raw, &encoded) != nil || repositoryHash(encoded.Repository) != repository.Name() {
 				return invalid("restored pointer")
 			}
-			if _, err := Open(ctx, stage, pointer.Repository); err != nil {
+			pointer, err := readPointer(stage, encoded.Repository)
+			if err != nil || pointer != encoded {
+				return errors.Join(err, invalid("restored pointer"))
+			}
+			manifest, err := restoreEmptyObservationObjectDirectory(stage, pointer, seenDirectories)
+			if err != nil {
+				return err
+			}
+			if _, err := openGeneration(ctx, stage, manifest); err != nil {
 				return err
 			}
 			validAuthority = true
@@ -487,6 +492,11 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 			}
 			for _, ref := range refs {
 				directory := filepath.Join(stage, repository.Name(), InventoryPublicationDirectoryV2, ref.Directory)
+				if err := restoreEmptyInventoryObjectDirectoriesV2(
+					stage, publicationRoot.Repository, directory, ref, seenDirectories,
+				); err != nil {
+					return errors.Join(err, invalid("restored inventory v2 generation"))
+				}
 				validated, err := validateInventoryPublicationStageV2(ctx, InventoryPublicationTransitionV2{
 					Repository: publicationRoot.Repository, Directory: directory,
 					SourceDirectory:    filepath.Join(directory, InventoryPublicationSourceNameV2),
@@ -504,6 +514,9 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 			return invalid("restored repository has no publication authority")
 		}
 	}
+	if err := validateRestoreStageInventory(stage, seen, seenDirectories); err != nil {
+		return err
+	}
 	if rootExists {
 		if err := os.Remove(root); err != nil {
 			return err
@@ -515,12 +528,93 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 	return nil
 }
 
+func restoreEmptyObservationObjectDirectory(
+	stage string,
+	pointer Pointer,
+	directories map[string]bool,
+) (Manifest, error) {
+	raw, err := readBoundedRegular(
+		filepath.Join(repositoryDirectory(stage, pointer.Repository), pointer.ManifestName),
+		MaxManifestBytes,
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	var manifest Manifest
+	if decodeCanonical(raw, &manifest) != nil || validateManifest(manifest) != nil ||
+		manifest.Repository != pointer.Repository || manifest.GenerationDigest != pointer.GenerationDigest ||
+		manifest.Digest != pointer.ManifestDigest {
+		return Manifest{}, invalid("restored manifest")
+	}
+	if manifest.ObservedCount != 0 {
+		return manifest, nil
+	}
+	err = ensureRestoreDirectory(
+		stage,
+		filepath.Join(generationDirectory(stage, manifest.Repository, manifest.GenerationDigest), "objects"),
+		directories,
+	)
+	return manifest, err
+}
+
+func restoreEmptyInventoryObjectDirectoriesV2(
+	stage, repository, directory string,
+	ref InventoryGenerationRefV2,
+	directories map[string]bool,
+) error {
+	inventoryDirectory := filepath.Join(directory, InventoryPublicationInventoryNameV2)
+	root, err := ReadInventoryRootV2(inventoryDirectory, repository)
+	if err != nil {
+		return err
+	}
+	if root.GenerationDigest != ref.GenerationDigest || root.Digest != ref.InventoryDigest ||
+		len(root.Segments) != ref.InventorySegments {
+		return invalid("restored inventory v2 root reference")
+	}
+	for _, segment := range root.Segments {
+		if segment.ObservationCount != 0 {
+			continue
+		}
+		if err := ensureRestoreDirectory(
+			stage,
+			filepath.Join(inventoryDirectory, segment.Directory, "objects"),
+			directories,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func pathsOverlap(left, right string) bool {
 	leftToRight, leftErr := filepath.Rel(left, right)
 	rightToLeft, rightErr := filepath.Rel(right, left)
 	return leftErr != nil || rightErr != nil || leftToRight == "." || rightToLeft == "." ||
 		leftToRight != ".." && !strings.HasPrefix(leftToRight, ".."+string(filepath.Separator)) ||
 		rightToLeft != ".." && !strings.HasPrefix(rightToLeft, ".."+string(filepath.Separator))
+}
+
+func ensureRestoreDirectory(stage, directory string, seen map[string]bool) error {
+	relative, err := filepath.Rel(stage, directory)
+	if err != nil || relative == "." || relative == ".." ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return invalid("restore directory escapes stage")
+	}
+	if err := ensureRestoreParent(stage, filepath.Dir(directory)); err != nil {
+		return err
+	}
+	info, err := os.Lstat(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		if err := os.Mkdir(directory, 0o700); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return invalid("restore directory is special")
+	}
+	seen[filepath.ToSlash(relative)] = true
+	return nil
 }
 
 func validateRestoreStageInventory(stage string, files, directories map[string]bool) error {

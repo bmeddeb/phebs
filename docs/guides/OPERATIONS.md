@@ -141,8 +141,12 @@ omitted rather than blocking the precious database export. The archive admits
 at most 10,000,000 regular entries and 1 TiB of declared bytes. Restore accepts
 only safe regular paths, caps those same dimensions, retains a deterministic
 private stage across interruption, reuses only byte-identical completed
-entries, rejects every staged path absent from the selected tar, validates
-every restored publication, and installs the private tree by one rename. The
+entries, validates every restored publication, and installs the private tree
+by one rename. It rejects every staged path absent from the selected tar except
+for a canonical empty `objects/` directory required
+by an authenticated v1 manifest or v2 inventory segment with zero observations;
+restore reconstructs that directory before strict publication validation and
+still rejects every other path absent from the selected tar. The
 top-level restore performs this extraction first through a sibling
 `<data>.observation-restore` stage; until the final observation rename the data
 directory remains empty, so a subsequent invocation reaches and resumes an
