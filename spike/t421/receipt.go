@@ -218,6 +218,8 @@ type ReceiptMetrics struct {
 	DataLogicalBytes                 Bytes        `json:"data_logical_bytes"`
 	DirectRecoveryLimits             CountMetric  `json:"direct_recovery_topology_limits"`
 	GitReads                         CountMetric  `json:"git_reads"`
+	CensusChildren                   CountMetric  `json:"census_children,omitempty"`
+	CensusRecords                    CountMetric  `json:"census_records,omitempty"`
 	IndexFiles                       CountMetric  `json:"index_files"`
 	JobAttempts                      CountMetric  `json:"job_attempts"`
 	LogicalMemberships               CountMetric  `json:"logical_memberships"`
@@ -294,6 +296,7 @@ type AuthorityState struct {
 	CallerRootSHA256                string      `json:"caller_root_sha256,omitempty"`
 	RelationshipGenerationSHA256    string      `json:"relationship_generation_sha256,omitempty"`
 	RelationshipRootSHA256          string      `json:"relationship_root_sha256,omitempty"`
+	RelationshipProvenanceSHA256    string      `json:"relationship_provenance_sha256,omitempty"`
 	SearchInventory                 SetIdentity `json:"search_inventory"`
 	ObservationInputInventory       SetIdentity `json:"observation_input_inventory"`
 	ExtractionRootsSHA256           string      `json:"extraction_roots_sha256,omitempty"`
@@ -602,44 +605,45 @@ type TransitionFailureProjection struct {
 }
 
 type InjectionTransition struct {
-	Schema                      string                    `json:"schema"`
-	FailurePoint                string                    `json:"failure_point"`
-	ArmCount                    uint64                    `json:"arm_count"`
-	HitCount                    uint64                    `json:"hit_count"`
-	RecoveryCount               uint64                    `json:"recovery_count"`
-	ResidueBefore               uint64                    `json:"residue_before"`
-	ResidueAtHit                uint64                    `json:"residue_at_hit"`
-	ResidueAfter                uint64                    `json:"residue_after"`
-	TargetSHA256                string                    `json:"target_sha256"`
-	TargetIdentitySHA256        string                    `json:"target_identity_sha256"`
-	StableTargetSHA256          string                    `json:"stable_target_sha256"`
-	Target                      InjectionTargetProjection `json:"target"`
-	HitReportSHA256             string                    `json:"hit_report_sha256"`
-	RecoveryProjectionSHA256    string                    `json:"recovery_projection_sha256"`
-	ArmEventOrdinal             uint64                    `json:"arm_event_ordinal"`
-	HitEventOrdinal             uint64                    `json:"hit_event_ordinal"`
-	RecoveryEventOrdinal        uint64                    `json:"recovery_event_ordinal"`
-	ClearEventOrdinal           uint64                    `json:"clear_event_ordinal"`
-	TargetGenerationBefore      string                    `json:"target_generation_before,omitempty"`
-	TargetGenerationAfter       string                    `json:"target_generation_after,omitempty"`
-	RequeueCount                uint64                    `json:"requeue_count"`
-	SuccessCount                uint64                    `json:"success_count"`
-	AuthorityBeforeSHA256       string                    `json:"authority_before_sha256"`
-	AuthorityAtHitSHA256        string                    `json:"authority_at_hit_sha256"`
-	AuthorityAfterSHA256        string                    `json:"authority_after_sha256"`
-	ObservedRecoveryBranch      string                    `json:"observed_recovery_branch"`
-	RecoveredCandidates         uint64                    `json:"recovered_candidates"`
-	CollectedCandidates         uint64                    `json:"collected_candidates"`
-	ProcessEpochBefore          uint64                    `json:"process_epoch_before,omitempty"`
-	ProcessEpochAfter           uint64                    `json:"process_epoch_after,omitempty"`
-	ProcessIdentityBeforeSHA256 string                    `json:"process_identity_before_sha256,omitempty"`
-	ProcessIdentityAfterSHA256  string                    `json:"process_identity_after_sha256,omitempty"`
-	ProcessImageSHA256          string                    `json:"process_image_sha256,omitempty"`
-	ProcessStopEventOrdinal     uint64                    `json:"process_stop_event_ordinal,omitempty"`
-	ProcessStartEventOrdinal    uint64                    `json:"process_start_event_ordinal,omitempty"`
-	ElapsedMS                   uint64                    `json:"elapsed_ms"`
-	DeadlineMS                  uint64                    `json:"deadline_ms"`
-	Checkpoint                  *CheckpointRecovery       `json:"checkpoint,omitempty"`
+	Schema                      string                     `json:"schema"`
+	FailurePoint                string                     `json:"failure_point"`
+	ArmCount                    uint64                     `json:"arm_count"`
+	HitCount                    uint64                     `json:"hit_count"`
+	RecoveryCount               uint64                     `json:"recovery_count"`
+	ResidueBefore               uint64                     `json:"residue_before"`
+	ResidueAtHit                uint64                     `json:"residue_at_hit"`
+	ResidueAfter                uint64                     `json:"residue_after"`
+	TargetSHA256                string                     `json:"target_sha256"`
+	TargetIdentitySHA256        string                     `json:"target_identity_sha256"`
+	StableTargetSHA256          string                     `json:"stable_target_sha256"`
+	Target                      InjectionTargetProjection  `json:"target"`
+	HitReportSHA256             string                     `json:"hit_report_sha256"`
+	RecoveryProjectionSHA256    string                     `json:"recovery_projection_sha256"`
+	ArmEventOrdinal             uint64                     `json:"arm_event_ordinal"`
+	HitEventOrdinal             uint64                     `json:"hit_event_ordinal"`
+	RecoveryEventOrdinal        uint64                     `json:"recovery_event_ordinal"`
+	ClearEventOrdinal           uint64                     `json:"clear_event_ordinal"`
+	TargetGenerationBefore      string                     `json:"target_generation_before,omitempty"`
+	TargetGenerationAfter       string                     `json:"target_generation_after,omitempty"`
+	RequeueCount                uint64                     `json:"requeue_count"`
+	SuccessCount                uint64                     `json:"success_count"`
+	AuthorityBeforeSHA256       string                     `json:"authority_before_sha256"`
+	AuthorityAtHitSHA256        string                     `json:"authority_at_hit_sha256"`
+	AuthorityAfterSHA256        string                     `json:"authority_after_sha256"`
+	ObservedRecoveryBranch      string                     `json:"observed_recovery_branch"`
+	RecoveredCandidates         uint64                     `json:"recovered_candidates"`
+	CollectedCandidates         uint64                     `json:"collected_candidates"`
+	ProcessEpochBefore          uint64                     `json:"process_epoch_before,omitempty"`
+	ProcessEpochAfter           uint64                     `json:"process_epoch_after,omitempty"`
+	ProcessIdentityBeforeSHA256 string                     `json:"process_identity_before_sha256,omitempty"`
+	ProcessIdentityAfterSHA256  string                     `json:"process_identity_after_sha256,omitempty"`
+	ProcessImageSHA256          string                     `json:"process_image_sha256,omitempty"`
+	ProcessStopEventOrdinal     uint64                     `json:"process_stop_event_ordinal,omitempty"`
+	ProcessStartEventOrdinal    uint64                     `json:"process_start_event_ordinal,omitempty"`
+	ElapsedMS                   uint64                     `json:"elapsed_ms"`
+	DeadlineMS                  uint64                     `json:"deadline_ms"`
+	Checkpoint                  *CheckpointRecovery        `json:"checkpoint,omitempty"`
+	Preparation                 *RecoveryPreparationResult `json:"preparation,omitempty"`
 }
 
 type InjectionTargetProjection struct {
@@ -678,6 +682,8 @@ type CheckpointRecovery struct {
 	CanonicalResultExistsAtHit  bool   `json:"canonical_result_exists_at_hit"`
 	ResultDirectorySyncedAtHit  bool   `json:"result_directory_synced_at_hit"`
 	CompletionAbsentAtHit       bool   `json:"completion_absent_at_hit"`
+	CompletionFileExistsAtHit   bool   `json:"completion_file_exists_at_hit,omitempty"`
+	CompletionBitClearAtHit     bool   `json:"completion_bit_clear_at_hit,omitempty"`
 	RootAbsentAtHit             bool   `json:"root_absent_at_hit"`
 	SameResultBytesReused       bool   `json:"same_result_bytes_reused"`
 	CompletionExistsAfter       bool   `json:"completion_exists_after"`
@@ -1233,7 +1239,7 @@ func ValidateReceipt(
 	if err := validateTransitionResults(receipt.TransitionResults, outcomes, stopped, resolvedAuthority, receipt.Measurements, plan, freeze); err != nil {
 		return fmt.Errorf("T42.2 transition results: %w", err)
 	}
-	if err := validatePhaseRuntimeTransitionBindings(receipt.StateResults, receipt.TransitionResults); err != nil {
+	if err := validatePhaseRuntimeTransitionBindings(receipt.StateResults, receipt.TransitionResults, freeze.Profile.Epochs); err != nil {
 		return fmt.Errorf("T42.2 runtime transition binding: %w", err)
 	}
 	productAuthoritySHA256 := ""
@@ -1726,7 +1732,11 @@ func validateReceiptMeasurements(
 	plan Plan,
 	freeze ExecutionFreeze,
 ) error {
-	if !slices.Equal(plan.ReceiptContract.RequiredMetrics, receiptMetricNames) ||
+	wantMetrics := receiptMetricNames
+	if plan.Schema == PlanV2Schema {
+		wantMetrics = correctedReceiptMetricNames()
+	}
+	if !slices.Equal(plan.ReceiptContract.RequiredMetrics, wantMetrics) ||
 		len(values) != len(plan.PhaseOrder) || len(plan.PhaseDeadlines) != len(plan.PhaseOrder) ||
 		len(plan.WorkEnvelope.Phases) != len(plan.PhaseOrder) {
 		return errors.New("T42.2 measurement inventory differs from the frozen contract")
@@ -1951,6 +1961,8 @@ func boundedPhaseMetricValues(metrics ReceiptMetrics, bounds PhaseWorkBounds) []
 		{"changed_physical_files", uint64(metrics.ChangedPhysicalFiles), bounds.ChangedPhysicalFiles},
 		{"changed_logical_services", uint64(metrics.ChangedLogicalServices), bounds.ChangedLogicalServices},
 		{"git_reads", uint64(metrics.GitReads), bounds.GitReads},
+		{"census_children", uint64(metrics.CensusChildren), bounds.CensusChildren},
+		{"census_records", uint64(metrics.CensusRecords), bounds.CensusRecords},
 		{"index_files", uint64(metrics.IndexFiles), bounds.IndexFiles},
 		{"observation_parses", uint64(metrics.ObservationParses), bounds.ObservationParses},
 		{"source_logical_bytes", uint64(metrics.SourceLogicalBytes), bounds.SourceLogicalBytes},
@@ -2064,7 +2076,7 @@ func validateFrozenMetricOracles(
 		}
 		if state.SourceAction == "reuse" && state.SearchAction == "reuse" &&
 			state.ObservationAction == "reuse" && state.CatalogAction == "reuse" &&
-			state.RelationshipAction == "reuse" && metrics.PublicationWrites != 0 {
+			state.RelationshipAction == "reuse" && state.RecoveryPreparation == "" && metrics.PublicationWrites != 0 {
 			return fmt.Errorf("T42.2 phase %q published during a complete no-op", state.Phase)
 		}
 	}
@@ -2344,6 +2356,9 @@ func validateTransitionResults(
 			seenInjectionTargets[target] = struct{}{}
 		}
 	}
+	if err := validateRecoveryPreparationLineage(values, plan); err != nil {
+		return err
+	}
 	if outcomes["pressure_80"] == "passed" || outcomes["pressure_90"] == "passed" || outcomes["pressure_75"] == "passed" {
 		if err := validatePressureTransitions(values, outcomes, authority, metrics, plan, freeze); err != nil {
 			return err
@@ -2506,7 +2521,7 @@ func validateInjectionTransition(
 	hitSHA256, hitErr := injectionHitReportSHA256(value, point)
 	recoverySHA256, recoveryErr := injectionRecoveryProjectionSHA256(value, point)
 	authorityAtHitOK := value.AuthorityAtHitSHA256 == authorityBeforeSHA256
-	if point.Name == "checkpointed_hard_restart" {
+	if point.Name == "checkpointed_hard_restart" && plan.Schema != PlanV2Schema {
 		authorityAtHitOK = validDigest(value.AuthorityAtHitSHA256) &&
 			value.AuthorityAtHitSHA256 != authorityBeforeSHA256 && value.AuthorityAtHitSHA256 != authorityAfterSHA256
 	}
@@ -2529,6 +2544,9 @@ func validateInjectionTransition(
 		value.ElapsedMS > point.RecoveryDeadlineMS || value.ElapsedMS > uint64(metrics.WallMS) ||
 		value.DeadlineMS != point.RecoveryDeadlineMS {
 		return errors.New("injection lifecycle is not exact")
+	}
+	if err := validateRecoveryPreparation(value, phaseAuthority, metrics, startEventOrdinal, plan); err != nil {
+		return err
 	}
 	switch point.Name {
 	case "partial_service_activation":
@@ -2566,7 +2584,7 @@ func validateInjectionTransition(
 		})
 		if rootIndex < 0 || value.ObservedRecoveryBranch != "fence_stale_lease_requeue_then_complete" ||
 			value.RecoveredCandidates != 1 || value.CollectedCandidates != 0 ||
-			!injectionTargetMatchesExtraction(value.Target, phaseAuthority.ExtractionRoots[rootIndex]) ||
+			!injectionTargetMatchesPreparedExtraction(value, phaseAuthority.ExtractionRoots[rootIndex]) ||
 			value.TargetGenerationBefore != value.Target.GenerationSHA256 ||
 			value.TargetGenerationAfter != value.Target.GenerationSHA256 || value.RequeueCount != 1 ||
 			value.SuccessCount != 1 || value.Checkpoint != nil || hasProcessEvidence(value) {
@@ -2599,6 +2617,12 @@ func validateCheckpointRecovery(
 	imageSHA256 := freeze.Tools[toolIndex].SHA256
 	beforeIdentity := recipeDigest("t422-phebs-process-identity-v1", imageSHA256, fmt.Sprint(value.ProcessEpochBefore))
 	afterIdentity := recipeDigest("t422-phebs-process-identity-v1", imageSHA256, fmt.Sprint(value.ProcessEpochAfter))
+	beforeEpoch, _, beforeOK := expectedPhaseRuntime(freeze.Profile.Epochs, "stale_lease")
+	afterEpoch, _, afterOK := expectedPhaseRuntime(freeze.Profile.Epochs, "process_restart")
+	completionAtHit := checkpoint.CompletionAbsentAtHit && !checkpoint.CompletionFileExistsAtHit && !checkpoint.CompletionBitClearAtHit
+	if value.Preparation != nil {
+		completionAtHit = !checkpoint.CompletionAbsentAtHit && checkpoint.CompletionFileExistsAtHit && checkpoint.CompletionBitClearAtHit
+	}
 	digests := []string{
 		checkpoint.ResultIdentitySHA256, checkpoint.ResultDigestSHA256, checkpoint.PlanSHA256,
 		checkpoint.ExpectationSHA256, checkpoint.PartitionSHA256, checkpoint.CandidateGenerationSHA256,
@@ -2611,7 +2635,7 @@ func validateCheckpointRecovery(
 		}
 	}
 	if checkpoint.Domain != value.Target.Domain || !safeToken(checkpoint.ExtractorVersion, 128) ||
-		!injectionTargetMatchesExtraction(value.Target, root) ||
+		!injectionTargetMatchesPreparedExtraction(value, root) ||
 		checkpoint.ResultIdentitySHA256 != value.Target.UnitSHA256 ||
 		checkpoint.ResultDigestSHA256 != partition.ResultDigestSHA256 ||
 		checkpoint.PlanSHA256 != root.PlanSHA256 || checkpoint.ExpectationSHA256 != partition.ExpectationSHA256 ||
@@ -2620,7 +2644,7 @@ func validateCheckpointRecovery(
 		checkpoint.SourceGenerationSHA256 != root.SourceGenerationSHA256 ||
 		checkpoint.ObservationGenerationSHA256 != authority.ObservationGenerationSHA256 ||
 		!checkpoint.CanonicalResultExistsAtHit || !checkpoint.ResultDirectorySyncedAtHit ||
-		!checkpoint.CompletionAbsentAtHit || !checkpoint.RootAbsentAtHit ||
+		!completionAtHit || !checkpoint.RootAbsentAtHit ||
 		!checkpoint.SameResultBytesReused || !checkpoint.CompletionExistsAfter ||
 		!checkpoint.RootExistsAfter || !checkpoint.CurrentAfter || checkpoint.StartCount != 2 ||
 		checkpoint.CompletionCount != 1 || checkpoint.RetrySuccessorCount != 0 ||
@@ -2629,7 +2653,7 @@ func validateCheckpointRecovery(
 		!checkpoint.HardDeath || checkpoint.CooperativeRelease || children[phebsChildren].Count != 1 ||
 		value.ObservedRecoveryBranch != "hard_restart_reap_and_reuse_checkpoint" ||
 		value.RecoveredCandidates != 1 || value.CollectedCandidates != 0 ||
-		value.ProcessEpochBefore != 1 || value.ProcessEpochAfter != 2 ||
+		!beforeOK || !afterOK || value.ProcessEpochBefore != beforeEpoch || value.ProcessEpochAfter != afterEpoch ||
 		value.ProcessImageSHA256 != imageSHA256 || value.ProcessIdentityBeforeSHA256 != beforeIdentity ||
 		value.ProcessIdentityAfterSHA256 != afterIdentity || beforeIdentity == afterIdentity ||
 		value.ProcessStopEventOrdinal <= value.HitEventOrdinal ||
@@ -2713,7 +2737,7 @@ func injectionHitReportSHA256(value InjectionTransition, point FailurePoint) (st
 			value.Checkpoint.PriorityBefore, value.Checkpoint.AttemptBefore,
 		}
 	}
-	return receiptSHA256(struct {
+	legacy, err := receiptSHA256(struct {
 		Schema, Trigger, FailurePoint, StableTargetSHA256, AuthorityBeforeSHA256, AuthorityAtHitSHA256 string
 		Target                                                                                         InjectionTargetProjection
 		ArmCount, HitCount, ResidueBefore, ResidueAtHit, ArmEventOrdinal, HitEventOrdinal              uint64
@@ -2724,10 +2748,30 @@ func injectionHitReportSHA256(value InjectionTransition, point FailurePoint) (st
 		value.ArmCount, value.HitCount, value.ResidueBefore, value.ResidueAtHit,
 		value.ArmEventOrdinal, value.HitEventOrdinal, checkpoint,
 	})
+	if err != nil || value.Preparation == nil {
+		return legacy, err
+	}
+	preparation := value.Preparation
+	fileExists, bitClear := false, false
+	if value.Checkpoint != nil {
+		fileExists, bitClear = value.Checkpoint.CompletionFileExistsAtHit, value.Checkpoint.CompletionBitClearAtHit
+	}
+	prefix, err := receiptSHA256(struct {
+		PrepareEventOrdinal                                                                                                         uint64
+		AuthoritySHA256, RootsSHA256, TargetGenerationSHA256, PriorScheduleSHA256, RecoveryGenerationSHA256, RecoveryScheduleSHA256 string
+		ScheduleWrites, CompletionWrites, Deletes                                                                                   uint64
+		CompletionFileExists, CompletionBitClear                                                                                    bool
+	}{preparation.PrepareEventOrdinal, preparation.AuthoritySHA256, preparation.PreservedRootsSHA256,
+		preparation.TargetGenerationSHA256, preparation.PriorScheduleSHA256, preparation.RecoveryGenerationSHA256, preparation.RecoveryScheduleSHA256,
+		preparation.ScheduleWrites, preparation.PreparationCompletionWrites, preparation.PreparationDeletes, fileExists, bitClear})
+	if err != nil {
+		return "", err
+	}
+	return recipeDigest("t422-prepared-exact-control-hit-report-v1", legacy, prefix), nil
 }
 
 func injectionRecoveryProjectionSHA256(value InjectionTransition, point FailurePoint) (string, error) {
-	return receiptSHA256(struct {
+	legacy, err := receiptSHA256(struct {
 		Schema, FailurePoint, StableTargetSHA256, AuthorityAfterSHA256, Branch   string
 		RecoveryCount, ResidueAfter, RecoveryEventOrdinal, ClearEventOrdinal     uint64
 		TargetGenerationBefore, TargetGenerationAfter                            string
@@ -2747,6 +2791,14 @@ func injectionRecoveryProjectionSHA256(value InjectionTransition, point FailureP
 		value.ProcessStopEventOrdinal, value.ProcessStartEventOrdinal, value.ElapsedMS, value.DeadlineMS,
 		value.Checkpoint,
 	})
+	if err != nil || value.Preparation == nil {
+		return legacy, err
+	}
+	preparation, err := receiptSHA256(value.Preparation)
+	if err != nil {
+		return "", err
+	}
+	return recipeDigest("t422-prepared-exact-control-recovery-projection-v1", legacy, preparation), nil
 }
 
 func validateArchiveTransition(
@@ -3646,6 +3698,9 @@ func validateAuthorityResults(
 		if value.Phase != phase || value.Outcome != outcomes[phase] {
 			return fmt.Errorf("phase %q binding is invalid", phase)
 		}
+		if plan.Schema == PlanSchema && value.RelationshipProvenanceSHA256 != "" {
+			return fmt.Errorf("phase %q retained prospective provenance in a V1 receipt", phase)
+		}
 		if value.Outcome == "not_run" {
 			if value.PhysicalRevision != "" || value.LogicalRevision != "" ||
 				value.PhysicalCommit != "" || value.PhysicalTree != "" ||
@@ -3656,7 +3711,7 @@ func validateAuthorityResults(
 				value.ResolverCatalogGenerationSHA256 != "" ||
 				value.ResolverCatalogRootSHA256 != "" || value.CallerGenerationSHA256 != "" ||
 				value.CallerRootSHA256 != "" || value.RelationshipGenerationSHA256 != "" ||
-				value.RelationshipRootSHA256 != "" || value.SearchInventory != (SetIdentity{}) ||
+				value.RelationshipRootSHA256 != "" || value.RelationshipProvenanceSHA256 != "" || value.SearchInventory != (SetIdentity{}) ||
 				value.ObservationInputInventory != (SetIdentity{}) || value.ExtractionRootsSHA256 != "" ||
 				value.ExtractionRoots != nil || value.Current {
 				return fmt.Errorf("phase %q retained not-run authority", phase)
@@ -3684,6 +3739,7 @@ func validateAuthorityResults(
 				!validDigest(value.ResolverCatalogGenerationSHA256) || !validDigest(value.ResolverCatalogRootSHA256) ||
 				!validDigest(value.CallerGenerationSHA256) || !validDigest(value.CallerRootSHA256) ||
 				!validDigest(value.RelationshipGenerationSHA256) ||
+				plan.Schema == PlanV2Schema && !validDigest(value.RelationshipProvenanceSHA256) ||
 				!validDigest(value.RelationshipRootSHA256) || !value.Current ||
 				validateAuthorityCoverage(value, physicalPlan, plan) != nil {
 				return fmt.Errorf("phase %q authority is not exact", phase)
@@ -3699,7 +3755,7 @@ func validateAuthorityResults(
 				!optionalDigest(value.ResolverCatalogGenerationSHA256) || !optionalDigest(value.ResolverCatalogRootSHA256) ||
 				!optionalDigest(value.CallerGenerationSHA256) || !optionalDigest(value.CallerRootSHA256) ||
 				!optionalDigest(value.RelationshipGenerationSHA256) ||
-				!optionalDigest(value.RelationshipRootSHA256) {
+				!optionalDigest(value.RelationshipRootSHA256) || !optionalDigest(value.RelationshipProvenanceSHA256) {
 				return fmt.Errorf("phase %q stopped authority is invalid", phase)
 			}
 			if physical.PhysicalOutcome == "passed" &&
@@ -3720,7 +3776,7 @@ func validateAuthorityResults(
 			return fmt.Errorf("phase %q outcome is invalid", phase)
 		}
 	}
-	if err := validateAuthorityContinuity(passed); err != nil {
+	if err := validateAuthorityContinuity(passed, plan); err != nil {
 		return err
 	}
 	return nil
@@ -3739,12 +3795,21 @@ func validateAuthorityCoverage(value AuthorityPhaseResult, physical PhysicalRevi
 		candidates := physical.ExpectedCandidateInventories[index]
 		typedRevision, typedRevisionOK := namedTypedScopeRevision(expected.TypedScopeRevisions, physical.Name)
 		partitionResultsSHA256, partitionErr := receiptSHA256(root.PartitionResults)
+		membersOK := validPossiblyEmptySetIdentity(root.Members)
+		if plan.Schema == PlanV2Schema {
+			members, err := extractionResultMembers(root.PartitionResults)
+			membersOK = err == nil && root.Members == members
+		}
+		scheduleOK := validDigest(root.ScheduleSHA256)
+		if plan.Schema == PlanV2Schema {
+			scheduleOK = root.ScheduleSHA256 == ""
+		}
 		if root.Domain != domain || !root.Current || !validDigest(root.GenerationSHA256) ||
 			!validDigest(root.RootSHA256) || root.CandidateGenerationSHA256 != value.CandidateGenerationSHA256 ||
 			root.SourceGenerationSHA256 != value.SourceGenerationSHA256 ||
 			root.ObservationGenerationSHA256 != value.ObservationGenerationSHA256 ||
-			!validDigest(root.PlanSHA256) || !validDigest(root.ScheduleSHA256) ||
-			!validPossiblyEmptySetIdentity(root.Members) ||
+			!validDigest(root.PlanSHA256) || !scheduleOK ||
+			!membersOK ||
 			expected.Domain != domain || candidates.Domain != domain || root.Candidates != candidates.Candidates ||
 			root.MemberPartitions != expected.MemberPartitions || root.TypedPartitions != expected.TypedPartitions ||
 			root.TypedScopeRecords != expected.TypedScopeRecords ||
@@ -3798,7 +3863,7 @@ func validPossiblyEmptySetIdentity(value SetIdentity) bool {
 	return value.FramedBytes > 0 && validDigest(value.SHA256)
 }
 
-func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
+func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Plan) error {
 	equal := func(left, right string) bool { return reflect.DeepEqual(values[left], withPhase(values[right], left)) }
 	if _, ok := values["warm_noop"]; ok {
 		if _, prior := values["cold"]; !prior || !equal("warm_noop", "cold") {
@@ -3808,6 +3873,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
 	if current, ok := values["physical_delta_b"]; ok {
 		prior, priorOK := values["warm_noop"]
 		if !priorOK || current.PhysicalCommit == prior.PhysicalCommit || current.PhysicalTree == prior.PhysicalTree ||
+			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 == prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 == prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 == prior.ObservationGenerationSHA256 ||
@@ -3827,7 +3893,22 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
 	}
 	if current, ok := values["logical_delta_b"]; ok {
 		prior, priorOK := values["physical_delta_b"]
+		// Repository-level identities exclude logical service catalog state.
+		// V1 is retained exactly; the prospective V2 contract follows those
+		// production inputs instead of requiring deterministic output changes.
+		resolverCallerChanged := current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 &&
+			current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 &&
+			current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 &&
+			current.CallerRootSHA256 != prior.CallerRootSHA256
+		resolverCallerValid := resolverCallerChanged
+		if plan.Schema == PlanV2Schema {
+			resolverCallerValid = current.ResolverCatalogGenerationSHA256 == prior.ResolverCatalogGenerationSHA256 &&
+				current.ResolverCatalogRootSHA256 == prior.ResolverCatalogRootSHA256 &&
+				current.CallerGenerationSHA256 == prior.CallerGenerationSHA256 &&
+				current.CallerRootSHA256 == prior.CallerRootSHA256
+		}
 		if !priorOK || current.PhysicalCommit != prior.PhysicalCommit || current.PhysicalTree != prior.PhysicalTree ||
+			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 != prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 != prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 != prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 != prior.ObservationGenerationSHA256 ||
@@ -3838,10 +3919,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
 			current.CatalogActivationPlanSHA256 == prior.CatalogActivationPlanSHA256 ||
 			current.CatalogActivationScheduleSHA256 == prior.CatalogActivationScheduleSHA256 ||
 			current.CatalogActivationUnitSHA256 == prior.CatalogActivationUnitSHA256 ||
-			current.ResolverCatalogGenerationSHA256 == prior.ResolverCatalogGenerationSHA256 ||
-			current.ResolverCatalogRootSHA256 == prior.ResolverCatalogRootSHA256 ||
-			current.CallerGenerationSHA256 == prior.CallerGenerationSHA256 ||
-			current.CallerRootSHA256 == prior.CallerRootSHA256 ||
+			!resolverCallerValid ||
 			current.RelationshipGenerationSHA256 == prior.RelationshipGenerationSHA256 ||
 			current.RelationshipRootSHA256 == prior.RelationshipRootSHA256 {
 			return errors.New("logical delta changed physical authority or reused logical authority")
@@ -3852,6 +3930,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
 		cold, coldOK := values["cold"]
 		if !priorOK || !coldOK || current.PhysicalTree != cold.PhysicalTree ||
 			current.PhysicalCommit == prior.PhysicalCommit ||
+			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 == prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 == prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 == prior.ObservationGenerationSHA256 ||
@@ -3885,6 +3964,23 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult) error {
 		if !priorOK || !sameAuthorityExceptRelationship(current, prior) {
 			return errors.New("archive restore did not preserve semantic authority")
 		}
+		if plan.Schema == PlanV2Schema &&
+			(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
+				current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
+				current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
+				current.CallerRootSHA256 != prior.CallerRootSHA256) {
+			return errors.New("archive restore changed immutable resolver or caller authority")
+		}
+		if plan.Schema == PlanV2Schema {
+			sameProvenance := current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256
+			sameRelationship := current.RelationshipGenerationSHA256 == prior.RelationshipGenerationSHA256 &&
+				current.RelationshipRootSHA256 == prior.RelationshipRootSHA256
+			changedRelationship := current.RelationshipGenerationSHA256 != prior.RelationshipGenerationSHA256 &&
+				current.RelationshipRootSHA256 != prior.RelationshipRootSHA256
+			if sameProvenance && !sameRelationship || !sameProvenance && !changedRelationship {
+				return errors.New("archive relationship identity does not follow extraction provenance")
+			}
+		}
 	}
 	for _, phase := range []string{"lifecycle_collection", "product_queries"} {
 		if _, ok := values[phase]; ok {
@@ -3909,6 +4005,7 @@ func sameAuthorityExceptRelationship(left, right AuthorityPhaseResult) bool {
 	left.Phase, right.Phase = "", ""
 	left.RelationshipGenerationSHA256, right.RelationshipGenerationSHA256 = "", ""
 	left.RelationshipRootSHA256, right.RelationshipRootSHA256 = "", ""
+	left.RelationshipProvenanceSHA256, right.RelationshipProvenanceSHA256 = "", ""
 	left.ResolverCatalogGenerationSHA256, right.ResolverCatalogGenerationSHA256 = "", ""
 	left.ResolverCatalogRootSHA256, right.ResolverCatalogRootSHA256 = "", ""
 	left.CallerGenerationSHA256, right.CallerGenerationSHA256 = "", ""

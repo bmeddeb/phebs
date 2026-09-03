@@ -75,6 +75,10 @@ func frozenReaderProbe() (ReaderProbeProfile, error) {
 }
 
 func expectedCombinedSourceIdentities(profile CombinedProfile) (map[string]sourceTreeIdentity, error) {
+	return expectedCombinedSourceIdentitiesForScope(profile, false)
+}
+
+func expectedCombinedSourceIdentitiesForScope(profile CombinedProfile, goOnly bool) (map[string]sourceTreeIdentity, error) {
 	structural, err := frozenStructuralProfile()
 	if err != nil {
 		return nil, err
@@ -100,7 +104,7 @@ func expectedCombinedSourceIdentities(profile CombinedProfile) (map[string]sourc
 	}
 	result := make(map[string]sourceTreeIdentity, 3)
 	for _, revision := range []string{"a", "b"} {
-		identity, err := expectedCombinedSourceIdentity(structural, revision, baseTrees[revision], additions)
+		identity, err := expectedCombinedSourceIdentityForScope(structural, revision, baseTrees[revision], additions, goOnly)
 		if err != nil {
 			return nil, err
 		}
@@ -115,11 +119,19 @@ func expectedCombinedSourceIdentity(
 	revision, expectedBaseTree string,
 	additions []sourceTreeRecord,
 ) (sourceTreeIdentity, error) {
+	return expectedCombinedSourceIdentityForScope(structural, revision, expectedBaseTree, additions, false)
+}
+
+func expectedCombinedSourceIdentityForScope(
+	structural t401.Profile, revision, expectedBaseTree string,
+	additions []sourceTreeRecord, goOnly bool,
+) (sourceTreeIdentity, error) {
 	policies, err := combinedCandidatePolicies()
 	if err != nil {
 		return sourceTreeIdentity{}, err
 	}
 	combined := newTreeInventoryAccumulator(policies)
+	combined.goOnly = goOnly
 	baseTree := newGitTreeHasher()
 	addition := 0
 	structuralGoOrdinal := uint64(0)
@@ -169,6 +181,7 @@ type treeInventoryAccumulator struct {
 	tree             *gitTreeHasher
 	candidates       []candidateInventoryAccumulator
 	lastPath         string
+	goOnly           bool
 }
 
 type candidateInventoryAccumulator struct {
@@ -202,7 +215,7 @@ func (value *treeInventoryAccumulator) add(record sourceTreeRecord) error {
 		value.identity.writeFrame([]byte(field))
 	}
 	value.identity.records++
-	if supportedObservationPath(record.Path) {
+	if supportedObservationPath(record.Path) && (!value.goOnly || strings.HasSuffix(record.Path, ".go")) {
 		for _, field := range fields {
 			value.observationInput.writeFrame([]byte(field))
 		}

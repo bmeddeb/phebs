@@ -725,7 +725,7 @@ historical-only selected archive verification, deletion/re-add repair, and the
 startup extraction-liveness fence. T41.9 is integrated. T41.10's canonical
 source-free 10,000-service PASS is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41. T42.1 is the
-branch-complete combined-scale freeze-contract ticket: it composes the
+integrated combined-scale freeze-contract ticket: it composes the
 retained two-million-owner and 10,000-service authorities without a Cartesian
 materialization and freezes typed revisions, production replay, native
 failure targets, ordinary-production execution identity, exact reader,
@@ -746,12 +746,29 @@ glossary, and whitespace gates, and independent critical/high/medium/low
 independently reproduced exact-base findings: the UI-owned missing
 `service-boundary.png` fixture and unused
 `internal/relationshippublication/runtime_v3.go:719 matchesRuntimeAuthorityV3`.
-T42.1 is eligible only for separate integration; it neither authorizes nor
-records T42.2 execution or a combined gate result.
-Subsequent ordinary-path validation exposed contract contradictions and a
-separate production declaration-visibility defect. The unmerged T42.1r1
-contract correction remains isolated; its retained predecessor plan is not
-mutated or execution-ready. T42.1r2 is the separately approved native
+Ben integrated and pushed T42.1 closure
+`ea9dd555e5b19a752255fb099ae43721b4df971f`, then authorized T42.2 runner
+implementation on `codex/t42.2-combined-ceremony`. Its pre-implementation audit
+found frozen authority/work-contract conflicts: logical-only changes cannot
+replace immutable repository-level resolver/caller identities; required
+ordinary blob reads and watched-Git polling exceed the frozen child budgets;
+and post-completion stale/checkpoint recovery lacks a defined target-preparation
+transition and publication-write budget. Ben approved T42.1r1 prospective
+correction, including ordinary census work and five phase-derived server
+epochs for restart-bound logical updates. Its constructor, regression, and
+independent-review gates are in progress; runner work remains held. The small
+ordinary-server regression stopped before restart on a source-confirmed
+partitioned assertion-reader visibility gap: resolver selects a sealed staged
+partitioned run, but legacy `ListAssertions` requires a published run. That
+production prerequisite is now integrated separately as T42.1r2. The
+2026-09-02 PLAN decision also records the Go-only observation correction,
+result-preserving recovery preparation, and nonzero archive rematerialization.
+Preserve the retained plan
+and historical review evidence; do not silently adjust its oracle or budgets,
+invent telemetry, or replace ordinary workers with the in-process T41.10
+harness. No T42.2 runner or ceremony result is claimed; ceremony execution
+remains unexecuted and requires separate authorization.
+T42.1r2 is the separately approved native
 partitioned declaration-reader ticket on
 `codex/t42.1r2-partitioned-declaration-reader`. It preserves staged/sealed
 writer semantics and legacy visibility, requires exact current-root fences
@@ -771,9 +788,11 @@ with clean teardown, five upgrade blob commands, no indexing, and one census
 plus zero blob/index work after logical restart. Independent full exact-source
 manual review reports `0/0/0/0`; external cutover review is complete with zero
 findings and does not reclassify the older external store-reader timeout.
-The reader ticket is branch-complete and eligible only for a separate merge
-request. T42.1r1 remains isolated and required before any new freeze. No merge,
-deployment, freeze, or ceremony execution is authorized by this work.
+Ben approved local fast-forward integration of T42.1r2 through
+`529cb1d5e5d65274f41851d93ad2df6bfaf3e3fe`. T42.1r1 resumes separately on
+`codex/t42.1r1-contract-correction`; its original draft is preserved at
+`afcaef1d` on `codex/t42.2-combined-ceremony`. No deployment, new freeze, or
+ceremony execution is authorized by this integration.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

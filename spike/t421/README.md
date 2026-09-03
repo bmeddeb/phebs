@@ -263,10 +263,86 @@ Both reproduce unchanged from exact base
 `d92b6673db6d4b582c2223536fe52358629ae60e`, and no T42.1-owned path causes
 either finding.
 
-T42.1 is branch-complete and eligible for a separate integration request. This
-retained plan is not an exact-main execution freeze and does not authorize a
-merge, T42.2 execution, a combined gate result, topology selection, SLO,
-supported limit, accuracy/completeness, private replay, or release.
+Ben integrated and pushed closure
+`ea9dd555e5b19a752255fb099ae43721b4df971f`. This retained plan is not an
+exact-main execution freeze and does not authorize T42.2 execution, a combined
+gate result, topology selection, SLO, supported limit, accuracy/completeness,
+private replay, or release.
+
+## T42.2 execution-readiness hold
+
+The 2026-09-02 runner implementation audit found conflicts between this
+contract and ordinary production behavior. The historical contract tests and
+bounded replay results above remain exact; they did not prove that an actual
+run could satisfy all phase predicates together.
+
+- `receipt.go` requires replacement resolver/caller generations on
+  `logical_delta_b` while preserving their immutable source, candidate, and
+  extraction inputs. Production `resolvercatalog.NewIdentity` and
+  `callerexecute.GenerationIdentity` do not bind the service catalog, so an
+  unchanged-input rebuild cannot supply the required new identities.
+- `plan.go` allows only 64 cold Git children, but the ordinary resolver uses
+  10,002 one-child `gitobj.ReadBlob` calls before caller and other Git work.
+  Logical delta requires those same 10,002 resolver reads while allowing zero
+  Git reads and children. The required watched local connection also invokes
+  `git rev-parse HEAD` every three seconds, including zero-child phases.
+  The frozen meter counts distinct executed descendants, not concurrency.
+- Stale/checkpoint phases follow complete exact authority, whose ordinary
+  reconciler takes the reuse path. Their required unfinished same-generation
+  targets need an explicit preparation transition; resetting durable jobs or
+  deleting published controls is not an implicit runner action. Their zero
+  publication-write budgets also do not cover recovery assembly.
+
+T42.2 runner implementation is authorized on
+`codex/t42.2-combined-ceremony`, but the approved T42.1r1 prospective contract
+correction and its gates must finish before it can continue. Native failure controls, complete server
+telemetry, real private admission constructors, and source-free sealing remain
+implementation work. Do not substitute fixture counters, change production
+identities to satisfy the oracle, silently enlarge budgets, or reuse the old
+T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
+has been launched, and no execution command is ready.
+
+### Prospective correction
+
+The owning decision is the T42.1r1 row in [PLAN.md](../../PLAN.md). V1 authoring
+and validation remain available internally for exact retained-byte tests;
+new plan authoring targets v2. No superseding artifact has been sealed yet.
+The production identity derivation table and checked budget formulas are part
+of that prospective plan, not changes to the retained `plan.json`.
+The compact table's `changes.physical_revision` expands to `physical_delta_b`
+and `return_a`; other keys name their exact phase. Cold means initial, and
+every unlisted operational phase requires equality. The strict expander checks
+all thirteen cells and rejects overlapping aliases; the plan ceiling is unchanged.
+
+The constructor acceptance test authors the exact frozen Git commits and
+uses native source, candidate, extraction, resolver, caller, catalog, activation,
+and relationship constructors. Its search leaf and measurements are explicit
+test models: acceptance proves a coherent constructor graph can satisfy the
+contract, not that an ordinary combined-scale run has passed. The separate
+small server restart regression must cover the logical-update/census/read path.
+Both are required before independent review and new canonical plan authoring.
+
+The first small-server attempt stopped before restart (373.143 seconds): native
+proto extraction completed with four facts/eight rows, but resolver declaration
+reads returned empty. The worker selects the partitioned RunID, then calls legacy
+`ListAssertions`, which accepts only `published` runs; native partitioned
+publication seals the run while deliberately retaining `staged` status. Both
+the resolver mock and the constructor replay bypass that visibility predicate.
+This source-confirmed production prerequisite needs separate authorization;
+do not weaken the legacy reader or mark partitioned runs published to make the
+fixture pass. No restart, full constructor-fixture pass, new plan, or freeze is
+established. The exploratory constructor test passed all three native physical
+graphs, then stopped on a missing test state directory; that harness fix remains
+unconfirmed by a complete rerun. No test/server process survives.
+
+Working-tree checks: focused identity/table checks passed in 23.128 seconds;
+retained-v1 preservation and v2 canonical/size/framing checks passed in 54.876
+seconds. The prospective plan encodes to 259,673 bytes under the unchanged
+262,144-byte cap; no artifact was authored. Epoch/preparation checks passed
+normally and under race, and `go vet ./spike/t421`, glossary, and whitespace
+checks passed. `make docs-check` retains the independently reproduced baseline
+missing `ui/receipts/fixtures/service-boundary.png` link. Full-package, complete
+constructor, live restart, and independent exact-source review gates remain open.
 
 ## Cost and nonclaims
 

@@ -443,16 +443,30 @@ func executionProfileTestAdmission(
 		verifiedBeforeWork:        true,
 	}
 	var err error
+	if plan.Schema == PlanV2Schema {
+		for _, epoch := range correctedExecutionServerEpochs() {
+			state := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == epoch.LaunchPhase })
+			admission.epochConfigBytesSHA256 = append(admission.epochConfigBytesSHA256, SHA256([]byte("t422-test-config/"+plan.PhaseStates[state].LogicalRevision)))
+		}
+		admission.configBytesSHA256, err = canonicalSHA256(admission.epochConfigBytesSHA256)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	admission.commandsSHA256, err = canonicalSHA256(frozenExecutionCommands())
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := frozenExecutionConfig(admission.configBytesSHA256)
+	config := frozenExecutionConfig(plan, admission.configBytesSHA256)
 	admission.configProjectionSHA256, err = executionConfigProjectionSHA256(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	config.ProjectionSHA256 = admission.configProjectionSHA256
+	epochs, err := admittedExecutionServerEpochs(plan, admission)
+	if err != nil {
+		t.Fatal(err)
+	}
 	profile := ExecutionProfile{
 		Schema:                   plan.ToolPolicy.ExecutionProfileSchema,
 		Posture:                  "ordinary-production-workers-exact-v1",
@@ -465,7 +479,7 @@ func executionProfileTestAdmission(
 		Config:                   config,
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),
-		Epochs:                   frozenExecutionServerEpochs(),
+		Epochs:                   epochs,
 	}
 	profile.InvocationSHA256, err = executionInvocationSHA256(profile, tools)
 	if err != nil {

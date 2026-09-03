@@ -33,11 +33,16 @@ retained as engineering evidence, not as a scale pass. Epic 40 closed on
 2026-08-30 after neutral-47 passed the frozen mechanics gate. T41.10 is
 integrated at main `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic
 41 after separately proving the 8,000-service floor and 10,000 accepted
-logical-service target. T42.1 is branch-complete at exact implementation
+logical-service target. T42.1 is integrated through closure
+`ea9dd555e5b19a752255fb099ae43721b4df971f`, with exact implementation
 `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`; canonical source-free
 `spike/t421/plan.json` is 199,561 bytes at
 `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
-Integration remains separate, and T42.2 remains unauthorized and unexecuted.
+T42.2 runner implementation is authorized, but its readiness audit found
+frozen authority/work-contract conflicts. T42.1r1 prospective correction is
+approved and in progress, with its real-server regression blocked by a
+partitioned assertion-reader visibility gap requiring separate production-fix
+authorization. Ceremony execution remains unauthorized and unexecuted.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3047,10 +3052,11 @@ integrated; T41.9 is integrated. T41.10 is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e` from exact
 implementation `7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` with canonical source-free
 PASS receipt `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`
-and closes Epic 41. T42.1 is branch-complete; integration remains pending and
-T42.2 remains unauthorized and unexecuted.
+and closes Epic 41. T42.1 is integrated; T42.2 runner implementation is
+authorized but held for the approved T42.1r1 contract correction. Ceremony
+execution remains unauthorized and unexecuted.
 
-## Epic 42 · Combined scale gate and topology decision *(T42.1 branch-complete; integration pending)*
+## Epic 42 · Combined scale gate and topology decision *(T42.1 integrated; T42.2 contract-readiness hold)*
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
@@ -3078,14 +3084,34 @@ evidence.
   freshness-under-cadence evidence. That operating gate remains owned by a
   separately authorized successor to the stopped T39.2 operating gate.
 
-**T42.1 ✅ · Combined gate freeze and deterministic corpus** — branch-complete
-at exact implementation `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`.
+**T42.1 ✅ · Combined gate freeze and deterministic corpus** — integrated
+through closure `ea9dd555e5b19a752255fb099ae43721b4df971f`, with exact
+implementation `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`.
 Canonical source-free `spike/t421/plan.json` is 199,561 bytes at
 `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`;
 an independent second build and strict decode/re-encode were byte-identical.
-The complete merge bar and independent zero-finding review pass. T42.1 is
-eligible only for separate integration. This retained plan is not an exact-main
-execution freeze, and T42.2 remains unauthorized and unexecuted.
+The recorded merge bar and independent zero-finding review are preserved.
+The later T42.2 call-graph audit below identifies execution-readiness defects
+not established by those contract fixtures and bounded production replays.
+This retained plan is not an exact-main execution freeze or a combined pass.
+
+**T42.1r1 · Ordinary-path contract correction (approved, in progress)** —
+supersede, never mutate, the retained v1 plan. AC: production-derived identity
+table and complete constructor-fixture acceptance; formula-based workload,
+census, watcher, executable-image and preparation budgets; five phase-derived
+server epochs with separately admitted config bytes; Go-only observation
+inventory; result-preserving native recovery preparation and counterexamples;
+real-server logical restart plus authorized search/caller/relationship reads
+with no unexpected blob materialization; fresh independent exact-source review;
+and a new canonical plan/digest. Production code and ceremony execution remain
+out of scope. A future live catalog-reload feature is a contract-revision
+trigger: this restart-based receipt cannot establish live-reload behavior.
+The first real-server attempt stopped before restart: partitioned extraction
+seals a staged run, while the resolver's legacy assertion reader accepts only
+published runs. A separate exact-partition-root-fenced assertion bridge needs
+authorization; do not loosen staged-run visibility or mint a new freeze first.
+The full constructor witness also remains unpassed after a test setup failure;
+three native physical graphs passed, but that is not ordinary-path acceptance.
 
 **T42.1r2 ✅ · Partitioned-native declaration reader and versioned repair** —
 branch-complete at exact implementation
@@ -3159,6 +3185,20 @@ transport/trigger coverage nor a ceremony pass; no merge or push was performed.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
+Runner implementation was authorized on 2026-09-02 and branched as
+`codex/t42.2-combined-ceremony`; no ceremony was launched. Implementation is
+held pending completion of the approved T42.1r1 prospective correction. The retained
+contract incorrectly requires resolver/caller identity replacement on a
+logical-only change; permits at most 64 cold Git children despite 10,002
+ordinary resolver blob children alone; assigns zero Git children to phases
+with the required three-second Git watcher; and lacks a target-preparation
+transition and publication-write budget for post-completion stale/checkpoint
+recovery. Logical delta also demands 10,002 resolver reads with zero Git
+reads/children. The owning 2026-09-02 PLAN decision records the hold. Retained
+plan bytes, production identities, and caps remain unchanged. Native failure
+controls, full server telemetry, private admission verifiers, and the signed
+launcher remain unimplemented, not passed prerequisites.
+
 AC: one shared physical source/search/observation generation per frozen
 physical revision, each with at least 2,000,000 regular-file owners, serves all
 10,000 services without a service-count multiplier; applicable extraction and

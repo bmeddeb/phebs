@@ -123,7 +123,7 @@ func TestReceiptAuthorityRejectsMixedCandidateGenerationAndLogicalRootChange(t *
 	logical.ExtractionRoots[0].PlanSHA256 = testDigest("logical", "changed-plan")
 	logical.ExtractionRootsSHA256 = mustReceiptSHA256(t, logical.ExtractionRoots)
 	byPhase[logical.Phase] = logical
-	if err := validateAuthorityContinuity(byPhase); err == nil {
+	if err := validateAuthorityContinuity(byPhase, plan); err == nil {
 		t.Fatal("logical-only delta changed extraction authority")
 	}
 }
@@ -1050,12 +1050,18 @@ func completeTestAuthorities(
 	operational := plan.PhaseOrder[1 : len(plan.PhaseOrder)-1]
 	results := make([]AuthorityPhaseResult, len(operational))
 	statesByGroup := make(map[string]AuthorityPhaseResult)
+	if plan.Schema == PlanV2Schema {
+		statesByGroup = productionAuthorityFixture(t, plan)
+	}
 	for index, phase := range operational {
 		stateIndex := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == phase })
 		phaseState := plan.PhaseStates[stateIndex]
 		group := testAuthorityGroup(phase)
 		template, ok := statesByGroup[group]
 		if !ok {
+			if plan.Schema == PlanV2Schema {
+				t.Fatalf("native constructor fixture omitted authority group %q", group)
+			}
 			physical, _ := namedPhysicalRevision(plan.Revisions.Physical, phaseState.PhysicalRevision)
 			revision, _ := namedRevisionResult(revisions, phaseState.PhysicalRevision)
 			state := AuthorityState{
@@ -1081,10 +1087,12 @@ func completeTestAuthorities(
 			case "archive":
 				base := statesByGroup["a-return"]
 				state, roots = base.AuthorityState, base.ExtractionRoots
-				state.ResolverCatalogGenerationSHA256 = testDigest(group, "resolver-generation")
-				state.ResolverCatalogRootSHA256 = testDigest(group, "resolver-root")
-				state.CallerGenerationSHA256 = testDigest(group, "caller-generation")
-				state.CallerRootSHA256 = testDigest(group, "caller-root")
+				if plan.Schema == PlanSchema {
+					state.ResolverCatalogGenerationSHA256 = testDigest(group, "resolver-generation")
+					state.ResolverCatalogRootSHA256 = testDigest(group, "resolver-root")
+					state.CallerGenerationSHA256 = testDigest(group, "caller-generation")
+					state.CallerRootSHA256 = testDigest(group, "caller-root")
+				}
 				state.RelationshipGenerationSHA256 = testDigest(group, "relationship-generation")
 				state.RelationshipRootSHA256 = testDigest(group, "relationship-root")
 			case "b-logical":
@@ -1095,10 +1103,12 @@ func completeTestAuthorities(
 				state.CatalogActivationPlanSHA256 = testDigest(group, "activation-plan")
 				state.CatalogActivationScheduleSHA256 = testDigest(group, "activation-schedule")
 				state.CatalogActivationUnitSHA256 = testDigest(group, "activation-unit")
-				state.ResolverCatalogGenerationSHA256 = testDigest(group, "resolver-generation")
-				state.ResolverCatalogRootSHA256 = testDigest(group, "resolver-root")
-				state.CallerGenerationSHA256 = testDigest(group, "caller-generation")
-				state.CallerRootSHA256 = testDigest(group, "caller-root")
+				if plan.Schema == PlanSchema {
+					state.ResolverCatalogGenerationSHA256 = testDigest(group, "resolver-generation")
+					state.ResolverCatalogRootSHA256 = testDigest(group, "resolver-root")
+					state.CallerGenerationSHA256 = testDigest(group, "caller-generation")
+					state.CallerRootSHA256 = testDigest(group, "caller-root")
+				}
 				state.RelationshipGenerationSHA256 = testDigest(group, "relationship-generation")
 				state.RelationshipRootSHA256 = testDigest(group, "relationship-root")
 			default:
@@ -1107,6 +1117,10 @@ func completeTestAuthorities(
 			state.ExtractionRootsSHA256 = mustReceiptSHA256(t, roots)
 			template = AuthorityPhaseResult{AuthorityState: state, ExtractionRoots: roots}
 			statesByGroup[group] = template
+		}
+		template.ExtractionRoots = slices.Clone(template.ExtractionRoots)
+		for index := range template.ExtractionRoots {
+			template.ExtractionRoots[index].PartitionResults = slices.Clone(template.ExtractionRoots[index].PartitionResults)
 		}
 		template.Phase, template.Outcome = phase, outcomes[phase]
 		results[index] = template
@@ -1266,7 +1280,7 @@ func testPhaseRuntime(
 	measurements []PhaseMeasurement,
 ) PhaseRuntimeBinding {
 	t.Helper()
-	epoch, launchPhase, ok := expectedPhaseRuntime(phase)
+	epoch, launchPhase, ok := expectedPhaseRuntime(freeze.Profile.Epochs, phase)
 	if !ok {
 		t.Fatalf("phase %q has no runtime epoch", phase)
 	}
@@ -1313,6 +1327,8 @@ func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMea
 		UnsupportedSourceFiles: CountMetric(bound.UnsupportedSourceFiles.Minimum),
 	}
 	metrics.CacheRootReads = CountMetric(bound.CacheRootReads.Minimum)
+	metrics.CensusChildren = CountMetric(bound.CensusChildren.Minimum)
+	metrics.CensusRecords = CountMetric(bound.CensusRecords.Minimum)
 	metrics.CacheRootValidations = metrics.CacheRootReads
 	metrics.CacheMemberReads = CountMetric(bound.CacheMemberReads.Minimum)
 	metrics.CacheMemberValidations = metrics.CacheMemberReads
@@ -1521,16 +1537,39 @@ func testInjectionTransition(
 		value.Target.UnitSHA256 = partition.ResultIdentitySHA256
 		value.TargetGenerationBefore, value.TargetGenerationAfter = root.GenerationSHA256, root.GenerationSHA256
 		value.RequeueCount, value.SuccessCount = 1, 1
+		if plan.Schema == PlanV2Schema {
+			recovery := productionRecoveryScheduleFixture(t, plan, point.Phase)
+			preparationIndex := slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == point.Phase })
+			preparation := plan.Correction.RecoveryPreparations[preparationIndex]
+			if recovery.Target != root.GenerationSHA256 {
+				t.Fatal("native recovery schedule targets a different immutable generation")
+			}
+			value.Preparation = &RecoveryPreparationResult{
+				Schema: "t422-native-recovery-preparation-v1", Phase: point.Phase,
+				PrepareEventOrdinal: transition.StartEventOrdinal + 5,
+				AuthoritySHA256:     beforeSHA256, PreservedRootsSHA256: phaseAuthority.ExtractionRootsSHA256,
+				TargetGenerationSHA256: recovery.Target, PriorScheduleSHA256: recovery.Prior,
+				RecoveryGenerationSHA256: recovery.RecoveryGeneration, RecoveryScheduleSHA256: recovery.RecoverySchedule,
+				ScheduleWrites: preparation.ScheduleWrites, Chunks: preparation.Chunks, Starts: preparation.Starts,
+				Successes: preparation.Successes, Requeues: preparation.Requeues,
+				PreparationCompletionWrites: preparation.PreparationCompletionWrites, PreparationDeletes: preparation.PreparationDeletes,
+				RecoveryCompletionWrites: preparation.RecoveryCompletionWrites, RecoveryRootInstalls: preparation.RecoveryRootInstalls,
+				PublicationCalls:        preparation.PublicationCalls.Minimum,
+				StoreAuthorityUnchanged: true, PreparedBeforeArm: true, DirectoriesSynced: true, LocksReleasedBeforeWait: true,
+			}
+			value.Target.ScheduleSHA256 = recovery.RecoverySchedule
+		}
 		if point.Name == "stale_partition_lease" {
 			value.ObservedRecoveryBranch = "fence_stale_lease_requeue_then_complete"
 		} else {
 			value.ObservedRecoveryBranch = "hard_restart_reap_and_reuse_checkpoint"
 			value.AuthorityAtHitSHA256 = testDigest("checkpoint", "authority-at-hit")
-			value.ProcessEpochBefore, value.ProcessEpochAfter = 1, 2
+			value.ProcessEpochBefore, _, _ = expectedPhaseRuntime(freeze.Profile.Epochs, "stale_lease")
+			value.ProcessEpochAfter, _, _ = expectedPhaseRuntime(freeze.Profile.Epochs, "process_restart")
 			imageIndex := slices.IndexFunc(freeze.Tools, func(tool ExecutionToolIdentity) bool { return tool.Role == "phebs" })
 			value.ProcessImageSHA256 = freeze.Tools[imageIndex].SHA256
-			value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, "1")
-			value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, "2")
+			value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochBefore))
+			value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochAfter))
 			value.ProcessStopEventOrdinal = transition.StartEventOrdinal + 30
 			value.ProcessStartEventOrdinal = transition.StartEventOrdinal + 50
 			value.Checkpoint = &CheckpointRecovery{
@@ -1545,6 +1584,12 @@ func testInjectionTransition(
 				CompletionExistsAfter: true, RootExistsAfter: true, CurrentAfter: true,
 				StartCount: 2, CompletionCount: 1, PriorityAfter: 2, AttemptBefore: 1, AttemptAfter: 1,
 				PrivateLeaseTokenChanged: true, HardDeath: true,
+			}
+			if plan.Schema == PlanV2Schema {
+				value.AuthorityAtHitSHA256 = beforeSHA256
+				value.Checkpoint.CompletionAbsentAtHit = false
+				value.Checkpoint.CompletionFileExistsAtHit = true
+				value.Checkpoint.CompletionBitClearAtHit = true
 			}
 			childIndex := slices.IndexFunc(measurement.ChildProcessRoles, func(value Count) bool { return value.Name == "phebs" })
 			if childIndex >= 0 {

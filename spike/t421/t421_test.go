@@ -23,7 +23,7 @@ var (
 
 func frozenTestPlan(t *testing.T) Plan {
 	t.Helper()
-	testPlanOnce.Do(func() { testPlan, testPlanErr = BuildPlan(testSourceCommit) })
+	testPlanOnce.Do(func() { testPlan, testPlanErr = buildPlanV1(testSourceCommit) })
 	if testPlanErr != nil {
 		t.Fatal(testPlanErr)
 	}
@@ -32,7 +32,7 @@ func frozenTestPlan(t *testing.T) Plan {
 
 func TestPlanIsByteIdenticalAndStrict(t *testing.T) {
 	first := frozenTestPlan(t)
-	second, err := BuildPlan(testSourceCommit)
+	second, err := buildPlanV1(testSourceCommit)
 	if err != nil {
 		t.Fatal(err)
 	}

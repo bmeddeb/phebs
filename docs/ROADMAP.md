@@ -150,12 +150,17 @@ passed T40.13's frozen mechanics gate and the 2026-08-30 disposition closed
 Epic 40. T41.10 is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41 after proving its
 8,000 accepted-service floor and 10,000 accepted-service target. T42.1 is
-branch-complete at exact implementation
+integrated through closure `ea9dd555e5b19a752255fb099ae43721b4df971f`, with
+exact implementation
 `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`; canonical source-free
 `spike/t421/plan.json` is 199,561 bytes at
 `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
-Integration remains pending. No T42.2 execution, private rerun, or release is
-authorized.
+T42.2 runner implementation is authorized, but the pre-implementation audit
+found frozen authority/work-contract conflicts. T42.1r1 correction is approved
+and in progress. Its small-server regression exposed a pre-restart partitioned
+assertion-reader visibility gap requiring a separately authorized production
+bridge; no corrected freeze is ready. No T42.2 execution, private rerun, or
+release is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -171,7 +176,8 @@ comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
 exhausted-result recovery, T41.9, and T41.10 are integrated, closing Epic 41.
-T42.1 is branch-complete; integration remains separate and T42.2 remains
+T42.1 is integrated; T42.2 runner implementation is authorized but held for
+completion of the approved T42.1r1 contract correction. Ceremony execution remains
 unauthorized and unexecuted.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
@@ -945,7 +951,7 @@ service count × repository bytes
   10,000-service recovery/lifecycle/product gate and is integrated at main
   `d92b6673db6d4b582c2223536fe52358629ae60e`, closing the epic. No
   constants-only increase is permitted.
-- **Epic 42 — combined scale gate and topology decision (T42.1 branch-complete; integration pending):**
+- **Epic 42 — combined scale gate and topology decision (T42.1 integrated; T42.2 contract-readiness hold):**
   T42.1 freezes the deterministic combined corpus, independent oracle, typed
   revisions, native failure targets, ordinary-production execution profile,
   reader/archive/pressure transitions, and content-addressed receipt contract.
@@ -953,8 +959,14 @@ service count × repository bytes
   interruption, restore, pressure, lifecycle, and product paths through
   ordinary workers. T42.3 then retains single-node direct topology, requests a
   bounded cohort experiment, requests a P6 investigation, or stops according
-  to the frozen rule. T42.1 is eligible only for separate integration and
-  records no execution or gate result.
+  to the frozen rule. T42.2 runner implementation is authorized on
+  `codex/t42.2-combined-ceremony`, but the readiness audit found an impossible
+  logical-only resolver/caller identity transition, ordinary Git costs outside
+  the frozen child budgets, and missing recovery-target preparation/cost
+  definitions. Ben approved T42.1r1 correction, including census accounting
+  and restart-bound logical changes; its proof and review gates must finish
+  before runner work resumes. The retained plan remains unchanged and records no
+  execution or gate result.
 
 The scale corpus is first-party and profile-separated. A streaming author
 creates external scratch bare-Git generations with fixed identities and A→B→A
@@ -1047,8 +1059,10 @@ relationship, or correctness authority.
   An independent second build and strict round trip were byte-identical. The
   complete normal/race and extraction normal/race gates pass, and independent
   exact-commit review reports critical/high/medium/low `0/0/0/0`. T42.1 is
-  eligible only for separate integration; it does not authorize T42.2 or
-  establish a combined gate result.
+  integrated through closure `ea9dd555e5b19a752255fb099ae43721b4df971f`.
+  Those historical gates did not establish executable ordinary-worker phase
+  continuity or cost feasibility; the later T42.2 readiness hold is recorded
+  in the 2026-09-02 PLAN decision. No combined gate result is established.
 - Subsequent ordinary-path validation selected two isolated prerequisites:
   the unmerged T42.1r1 contract correction and the separately approved
   T42.1r2 partitioned-native declaration reader. T42.1r2 repairs a production
@@ -1068,10 +1082,9 @@ relationship, or correctness authority.
   teardown; full exact-source manual review reports `0/0/0/0`, and separate
   external cutover review finds no issue. Upgrade work is five blob commands
   with no indexing; later logical restart has one census and no blob/index
-  work. This closes the reader ticket's upgrade/review bar and makes it
-  eligible for a separate merge request, not deployment or ceremony.
-  Contract validation resumes only after this reader ticket clears its own
-  bar; no new freeze, execution, or combined result is established.
+  work. Ben approved local fast-forward integration through `529cb1d5`.
+  Contract validation now resumes on `codex/t42.1r1-contract-correction`;
+  no deployment, new freeze, execution, or combined result is established.
 - T42.1r3 is implemented and independently reviewed on
   `codex/t42.1r3-recovery-preparation`, based on local main's integrated
   T42.1r2 bytes. It adds a default-inactive in-process completed-generation

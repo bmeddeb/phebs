@@ -19,6 +19,23 @@ const (
 )
 
 func BuildPlan(sourceCommit string) (Plan, error) {
+	plan, err := buildPlanV1(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	plan.Schema = PlanV2Schema
+	if err := applyContractCorrection(&plan); err != nil {
+		return Plan{}, err
+	}
+	if err := validatePlan(plan, &plan.Revisions); err != nil {
+		return Plan{}, err
+	}
+	return plan, nil
+}
+
+// buildPlanV1 preserves the superseded contract and its retained canonical bytes.
+// New authoring uses BuildPlan; v1 remains available only for exact validation.
+func buildPlanV1(sourceCommit string) (Plan, error) {
 	if !validCommit(sourceCommit) {
 		return Plan{}, errors.New("T42.1 plan requires one exact source commit")
 	}
@@ -97,7 +114,11 @@ func BuildPlan(sourceCommit string) (Plan, error) {
 }
 
 func ValidateFrozenPlan(plan Plan) error {
-	want, err := BuildPlan(plan.SourceCommit)
+	build := BuildPlan
+	if plan.Schema == PlanSchema {
+		build = buildPlanV1
+	}
+	want, err := build(plan.SourceCommit)
 	if err != nil {
 		return err
 	}
@@ -112,7 +133,7 @@ func ValidatePlan(plan Plan) error {
 }
 
 func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
-	if plan.Schema != PlanSchema || plan.FrozenOn != frozenDate || !validCommit(plan.SourceCommit) {
+	if (plan.Schema != PlanSchema && plan.Schema != PlanV2Schema) || plan.FrozenOn != frozenDate || !validCommit(plan.SourceCommit) {
 		return errors.New("T42.1 plan identity is invalid")
 	}
 	if err := validateInputBindings(plan.Inputs); err != nil {
@@ -130,7 +151,7 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	wantRevisions := RevisionHistory{}
 	if knownRevisions == nil {
 		var err error
-		wantRevisions, err = frozenRevisionHistory(plan.Profile, plan.Revisions.Logical)
+		wantRevisions, err = revisionHistoryForScope(plan.Profile, plan.Revisions.Logical, plan.Schema == PlanV2Schema)
 		if err != nil {
 			return err
 		}
@@ -148,6 +169,9 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 		return errors.New("T42.1 revision history is not the frozen A-B-A shape")
 	}
 	supportedInputs := plan.Profile.Pipeline.SupportedGoFiles + plan.Profile.Pipeline.SupportedIDLFiles
+	if plan.Schema == PlanV2Schema {
+		supportedInputs = plan.Profile.Pipeline.SupportedGoFiles
+	}
 	for _, revision := range plan.Revisions.Physical {
 		if !validSetIdentity(revision.ExpectedTreeInventory) ||
 			revision.ExpectedTreeInventory.Records != plan.Profile.Physical.CombinedRegularFiles ||
@@ -200,27 +224,15 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 		plan.Revisions.Logical[0].CatalogSource.SHA256 == plan.Revisions.Logical[2].CatalogSource.SHA256 {
 		return errors.New("T42.1 logical catalog source identities are not revision-specific")
 	}
-	if !reflect.DeepEqual(plan.PhaseOrder, frozenPhaseOrder()) ||
-		!reflect.DeepEqual(plan.PhaseStates, frozenPhaseStates()) ||
-		!reflect.DeepEqual(plan.PhaseDeadlines, frozenPhaseDeadlines()) ||
-		!reflect.DeepEqual(plan.FailurePoints, frozenFailurePoints()) ||
-		!reflect.DeepEqual(plan.SafetyEnvelope, frozenSafetyEnvelope()) ||
-		!reflect.DeepEqual(plan.WorkEnvelope, frozenWorkEnvelope(plan.Profile)) ||
-		plan.MeterPolicy != frozenMeterPolicy() ||
-		!reflect.DeepEqual(plan.ToolPolicy, frozenToolPolicy()) ||
-		!reflect.DeepEqual(plan.SealPolicy, frozenSealPolicy()) ||
-		!reflect.DeepEqual(plan.StopRules, frozenStopRules()) ||
-		plan.Teardown != frozenTeardownRule() ||
-		!reflect.DeepEqual(plan.ReceiptContract, frozenReceiptContract()) ||
-		plan.Claims != frozenClaims() {
-		return errors.New("T42.1 execution contract differs from the frozen plan")
+	if err := validatePlanExecutionContract(plan); err != nil {
+		return err
 	}
 	raw, err := MarshalCanonical(plan)
 	if err != nil {
 		return err
 	}
 	if len(raw) > MaxPlanBytes {
-		return errors.New("T42.1 plan exceeds its frozen byte bound")
+		return fmt.Errorf("T42.1 plan exceeds its frozen byte bound: observed=%d limit=%d", len(raw), MaxPlanBytes)
 	}
 	return rejectSourceBearingPlan(raw)
 }
@@ -232,7 +244,7 @@ func validSetIdentity(value SetIdentity) bool {
 func validateCombinedProfile(profile CombinedProfile) error {
 	physical, logical, overlay := profile.Physical, profile.Logical, profile.Overlay
 	mapping, typed, pipeline, bytes := profile.GeneratedMapping, profile.TypedIndex, profile.Pipeline, profile.Bytes
-	if profile.Schema != combinedProfileSchema || profile.Name != "combined-2m-10k-v1" ||
+	if (profile.Schema != combinedProfileSchema && profile.Schema != combinedProfileV2Schema) || profile.Name != "combined-2m-10k-v1" ||
 		profile.Seed != "t421-neutral-combined-v1" ||
 		physical.StructuralPhysicalOwners != 2_000_002 || physical.StructuralRegularFiles != 2_000_002 ||
 		physical.StructuralEligibleGoFiles != 2_000_000 || physical.StructuralControlFiles != 2 ||
@@ -319,11 +331,15 @@ func validateCombinedProfile(profile CombinedProfile) error {
 		typedScopeBytes > candidate.MaxSparseAggregateScopeBytes {
 		return errors.New("T42.1 extraction partition total is not exact")
 	}
+	observationBytes := (2_000_000-structuralNonCandidateFiles)*4_608 + bytes.OverlayLogicalSourceBytes
+	if profile.Schema == combinedProfileV2Schema {
+		observationBytes -= bytes.OverlayIDLBytes
+	}
 	if bytes.StructuralDeclaredGoBytes != 9_216_000_000 ||
 		bytes.StructuralLogicalSourceBytes != 9_216_000_076 ||
 		bytes.StructuralUniqueContentBytes != 512*4_608+76 ||
 		bytes.StructuralNonCandidateBytes != structuralNonCandidateFiles*4_608 ||
-		bytes.CombinedObservationInputBytes != (2_000_000-structuralNonCandidateFiles)*4_608+bytes.OverlayLogicalSourceBytes ||
+		bytes.CombinedObservationInputBytes != observationBytes ||
 		bytes.CombinedNonObservationBytes != bytes.CombinedLogicalSourceBytes-bytes.CombinedObservationInputBytes ||
 		bytes.OverlayGeneratedGoBytes != 7_836_000 ||
 		bytes.OverlayGeneratedGoBytes+bytes.OverlayServiceGoBytes+bytes.OverlayNeutralGoBytes != bytes.OverlayGoBytes ||
@@ -560,6 +576,10 @@ func frozenInputs() []InputBinding {
 }
 
 func frozenRevisionHistory(profile CombinedProfile, logical []LogicalRevision) (RevisionHistory, error) {
+	return revisionHistoryForScope(profile, logical, false)
+}
+
+func revisionHistoryForScope(profile CombinedProfile, logical []LogicalRevision, goOnly bool) (RevisionHistory, error) {
 	recipe := SourceRecipe{
 		Schema:          "t421-combined-source-recipe-v1",
 		Composition:     "t401-owner-and-byte-preserving-nonsource-adapter-plus-disjoint-generated-control-and-t421-overlay-v3",
@@ -603,7 +623,7 @@ func frozenRevisionHistory(profile CombinedProfile, logical []LogicalRevision) (
 		{name: "b", parent: "a", posture: "bounded_delta", changed: 1, commit: "73644b82d26a7e4eb354f7293d583ea577816318", tree: "f58ccffd268a5cf4bc40dcd9d2c5a64476589aec"},
 		{name: "a-return", parent: "b", posture: "content_return", changed: 1, commit: "abf9ec6f3849e3f4708e31592f5eb72ddf6759db", tree: "96b33ec020abad515767d23b0ab0a3c12933ae22"},
 	}
-	sourceIdentities, err := expectedCombinedSourceIdentities(profile)
+	sourceIdentities, err := expectedCombinedSourceIdentitiesForScope(profile, goOnly)
 	if err != nil {
 		return RevisionHistory{}, err
 	}

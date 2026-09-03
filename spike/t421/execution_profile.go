@@ -114,9 +114,13 @@ type ExecutionRootProfile struct {
 }
 
 type ExecutionServerEpochProfile struct {
-	ServerEpoch uint64   `json:"server_epoch"`
-	LaunchPhase string   `json:"launch_phase"`
-	Phases      []string `json:"phases"`
+	ServerEpoch            uint64   `json:"server_epoch"`
+	LaunchPhase            string   `json:"launch_phase"`
+	Phases                 []string `json:"phases"`
+	LogicalRevision        string   `json:"logical_revision,omitempty"`
+	CatalogSourceSHA256    string   `json:"catalog_source_sha256,omitempty"`
+	ConfigBytesSHA256      string   `json:"config_bytes_sha256,omitempty"`
+	ServerHealthDeadlineMS uint64   `json:"server_health_deadline_ms,omitempty"`
 }
 
 // ExecutionProfileAdmissionBinding is issued by the T42.2 private launcher
@@ -129,6 +133,7 @@ type ExecutionProfileAdmissionBinding struct {
 	harnessCommandSetSHA256   string
 	pressureCommandSetSHA256  string
 	configBytesSHA256         string
+	epochConfigBytesSHA256    []string
 	configProjectionSHA256    string
 	recoveryEnvironmentSHA256 string
 	serverEnvironmentSHA256   string
@@ -175,8 +180,12 @@ func expectedExecutionProfile(
 	if err != nil {
 		return ExecutionProfile{}, err
 	}
-	config := frozenExecutionConfig(admission.configBytesSHA256)
+	config := frozenExecutionConfig(plan, admission.configBytesSHA256)
 	config.ProjectionSHA256, err = executionConfigProjectionSHA256(config)
+	if err != nil {
+		return ExecutionProfile{}, err
+	}
+	epochs, err := admittedExecutionServerEpochs(plan, admission)
 	if err != nil {
 		return ExecutionProfile{}, err
 	}
@@ -192,7 +201,7 @@ func expectedExecutionProfile(
 		Config:                   config,
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),
-		Epochs:                   frozenExecutionServerEpochs(),
+		Epochs:                   epochs,
 	}
 	profile.InvocationSHA256, err = executionInvocationSHA256(profile, tools)
 	if err != nil {
@@ -267,8 +276,8 @@ func frozenExecutionEnvironment(admission ExecutionProfileAdmissionBinding) Exec
 	}
 }
 
-func frozenExecutionConfig(bytesSHA256 string) ExecutionConfigProfile {
-	return ExecutionConfigProfile{
+func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile {
+	value := ExecutionConfigProfile{
 		Schema: "t422-execution-config-projection-v1", Policy: "exact-bytes-and-closed-semantic-projection-v1",
 		BytesSHA256: bytesSHA256, ListenSurface: "ipv4-loopback-reserved-config-only-v1", AddressOverride: false,
 		StoreMode: "supervised-local-surrealkv-v1", Authentication: "generated-single-tenant-api-key-loopback-cookie-v1",
@@ -289,6 +298,11 @@ func frozenExecutionConfig(bytesSHA256 string) ExecutionConfigProfile {
 			"analysis_units", "contexts", "demo_environment", "permissions", "revisions", "webhook",
 		},
 	}
+	if plan.Schema == PlanV2Schema {
+		value.Schema = "t422-execution-config-projection-v2"
+		value.Policy = "ordered-epoch-config-bytes-set-and-closed-semantic-projection-v2"
+	}
+	return value
 }
 
 func executionConfigProjectionSHA256(value ExecutionConfigProfile) (string, error) {
@@ -335,6 +349,42 @@ func frozenExecutionServerEpochs() []ExecutionServerEpochProfile {
 	}
 }
 
+func admittedExecutionServerEpochs(plan Plan, admission ExecutionProfileAdmissionBinding) ([]ExecutionServerEpochProfile, error) {
+	if plan.Schema != PlanV2Schema {
+		if len(admission.epochConfigBytesSHA256) != 0 {
+			return nil, errors.New("v1 admission retained prospective epoch configs")
+		}
+		return frozenExecutionServerEpochs(), nil
+	}
+	epochs := correctedExecutionServerEpochs()
+	if len(admission.epochConfigBytesSHA256) != len(epochs) {
+		return nil, errors.New("each derived epoch requires externally admitted config bytes")
+	}
+	digest, err := canonicalSHA256(admission.epochConfigBytesSHA256)
+	if err != nil || digest != admission.configBytesSHA256 {
+		return nil, errors.New("epoch config set differs from admission")
+	}
+	for index := range epochs {
+		epoch := &epochs[index]
+		state := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == epoch.LaunchPhase })
+		if state < 0 || !validExecutionSHA256(admission.epochConfigBytesSHA256[index]) {
+			return nil, errors.New("epoch configuration binding is invalid")
+		}
+		epoch.LogicalRevision = plan.PhaseStates[state].LogicalRevision
+		logical := slices.IndexFunc(plan.Revisions.Logical, func(value LogicalRevision) bool { return value.Name == epoch.LogicalRevision })
+		if logical < 0 {
+			return nil, errors.New("epoch catalog revision is absent")
+		}
+		epoch.CatalogSourceSHA256 = plan.Revisions.Logical[logical].CatalogSource.SHA256
+		epoch.ConfigBytesSHA256 = admission.epochConfigBytesSHA256[index]
+		epoch.ServerHealthDeadlineMS = plan.SafetyEnvelope.ServerHealthDeadlineMS
+		if index > 0 && epoch.LogicalRevision != epochs[index-1].LogicalRevision && epoch.ConfigBytesSHA256 == epochs[index-1].ConfigBytesSHA256 {
+			return nil, errors.New("changed operator version reused prior config bytes")
+		}
+	}
+	return epochs, nil
+}
+
 func executionPhaseRecipeSHA256(plan Plan) string {
 	phaseOrderSHA256, _ := canonicalSHA256(plan.PhaseOrder)
 	phaseStatesSHA256, _ := canonicalSHA256(plan.PhaseStates)
@@ -375,8 +425,8 @@ func cloneExecutionProfile(value ExecutionProfile) ExecutionProfile {
 	return value
 }
 
-func expectedPhaseRuntime(phase string) (epoch uint64, launchPhase string, ok bool) {
-	for _, value := range frozenExecutionServerEpochs() {
+func expectedPhaseRuntime(epochs []ExecutionServerEpochProfile, phase string) (epoch uint64, launchPhase string, ok bool) {
+	for _, value := range epochs {
 		if slices.Contains(value.Phases, phase) {
 			return value.ServerEpoch, value.LaunchPhase, true
 		}
@@ -416,7 +466,7 @@ func validatePhaseRuntimeBindings(
 	epochs := make(map[uint64]epochIdentity, len(freeze.Profile.Epochs))
 	for index, phase := range phases {
 		value := values[index]
-		epoch, launchPhase, ok := expectedPhaseRuntime(phase)
+		epoch, launchPhase, ok := expectedPhaseRuntime(freeze.Profile.Epochs, phase)
 		if !ok {
 			return fmt.Errorf("phase %q lacks a frozen server epoch", phase)
 		}
@@ -477,6 +527,7 @@ func validatePhaseRuntimeBindings(
 func validatePhaseRuntimeTransitionBindings(
 	states []ExactPhaseEvidence,
 	transitions []TransitionResult,
+	epochs []ExecutionServerEpochProfile,
 ) error {
 	runtimeFor := func(phase string) *PhaseRuntimeBinding {
 		index := slices.IndexFunc(states, func(value ExactPhaseEvidence) bool { return value.Phase == phase })
@@ -494,7 +545,9 @@ func validatePhaseRuntimeTransitionBindings(
 			return errors.New("process restart lacks its phase runtime binding")
 		}
 		injection := restart.Injections[index]
-		if before.ServerEpoch != 1 || after.ServerEpoch != 2 ||
+		beforeEpoch, _, beforeOK := expectedPhaseRuntime(epochs, "stale_lease")
+		afterEpoch, _, afterOK := expectedPhaseRuntime(epochs, "process_restart")
+		if !beforeOK || !afterOK || before.ServerEpoch != beforeEpoch || after.ServerEpoch != afterEpoch ||
 			before.ProcessIdentitySHA256 != injection.ProcessIdentityBeforeSHA256 ||
 			after.ProcessIdentitySHA256 != injection.ProcessIdentityAfterSHA256 ||
 			after.ProcessImageSHA256 != injection.ProcessImageSHA256 ||
@@ -504,7 +557,8 @@ func validatePhaseRuntimeTransitionBindings(
 	}
 	if archive, ok := namedTransition(transitions, "archive_restore"); ok && archive.Outcome == "passed" {
 		runtime := runtimeFor("archive_restore")
-		if runtime == nil || archive.Archive == nil || runtime.ServerEpoch != 3 ||
+		epoch, _, found := expectedPhaseRuntime(epochs, "archive_restore")
+		if !found || runtime == nil || archive.Archive == nil || runtime.ServerEpoch != epoch ||
 			runtime.StartEventOrdinal <= archive.Archive.RestoreStartedEventOrdinal ||
 			runtime.StartEventOrdinal >= archive.Archive.ComparisonEventOrdinal {
 			return errors.New("archive restore differs from its phase runtime binding")

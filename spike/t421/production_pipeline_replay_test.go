@@ -379,6 +379,38 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	}
 	dataDir := t.TempDir()
 	repositoryDir, commit := t421ProductionReplayRepositoryFixture(t, ctx, dataDir)
+	runProductionIdentityPipeline(t, ctx, combined, oracle, productionPipelineInput{
+		DataDir: dataDir, RepositoryDir: repositoryDir, Repository: t421ProductionReplayRepository, Commit: commit,
+		SourceDigest: SHA256([]byte("t421-production-source")), ObservationDigest: SHA256([]byte("t421-production-observation")),
+	})
+}
+
+type productionPipelineInput struct {
+	DataDir, RepositoryDir, Repository, Commit string
+	ControlSuffix                              string
+	SourceDigest, ObservationDigest            string
+	ReadBlob                                   resolvermaterialize.BlobReader
+}
+
+type productionPipelineResult struct {
+	Candidate   candidate.Manifest
+	Sparse      candidate.SparseRoot
+	Plans       map[string]candidate.DomainResultPlan
+	Roots       map[string]candidate.DomainResultRoot
+	Resolver    resolvercatalog.State
+	Caller      callerpublication.Manifest
+	Descriptors []gocaller.DirectDescriptor
+}
+
+func runProductionIdentityPipeline(
+	t *testing.T, ctx context.Context, combined CombinedCorpus, oracle Oracle, input productionPipelineInput,
+) productionPipelineResult {
+	t.Helper()
+	dataDir, repositoryDir, commit := input.DataDir, input.RepositoryDir, input.Commit
+	readBlob := input.ReadBlob
+	if readBlob == nil {
+		readBlob = gitobj.ReadBlob
+	}
 	extractors := t421ProductionReplayExtractors()
 	policies, err := extract.CandidatePolicies(extractors)
 	if err != nil {
@@ -393,20 +425,20 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	if err := os.MkdirAll(candidateRoot, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	candidateStage := filepath.Join(dataDir, "candidate-stage")
+	candidateStage := filepath.Join(dataDir, "candidate-stage"+input.ControlSuffix)
 	if err := os.Mkdir(candidateStage, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	manifest, err := candidate.Build(ctx, candidate.Request{
 		RepoDir: repositoryDir, OutputDir: candidateStage,
-		Repository: t421ProductionReplayRepository, Commit: commit,
+		Repository: input.Repository, Commit: commit,
 		Policies: policies,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedCandidate := candidate.Expected{
-		Repository: t421ProductionReplayRepository, Commit: commit,
+		Repository: input.Repository, Commit: commit,
 		Policies: identities, PolicyDigest: manifest.PolicyDigest,
 		GenerationDigest: manifest.GenerationDigest, ManifestDigest: manifest.Digest,
 	}
@@ -416,7 +448,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := candidate.FinishPublication(candidateRoot, t421ProductionReplayRepository); err != nil {
+	if err := candidate.FinishPublication(candidateRoot, input.Repository); err != nil {
 		t.Fatal(err)
 	}
 	publication, err := candidate.OpenContext(ctx, candidateRoot, expectedCandidate)
@@ -425,7 +457,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	}
 	t421ProductionReplayCheckCandidate(t, manifest, combined.Profile.Pipeline)
 
-	sparseDirectory := filepath.Join(dataDir, "candidate-sparse")
+	sparseDirectory := filepath.Join(dataDir, "candidate-sparse"+input.ControlSuffix)
 	if err := os.Mkdir(sparseDirectory, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -454,10 +486,10 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 			t.Fatalf("open sparse domain %s: %v", expectedDomain.Domain, openErr)
 		}
 		plan, planErr := extractionpublication.BuildReservedPlan(domain, candidate.DomainResultAuthority{
-			SourceGenerationDigest:      SHA256([]byte("t421-production-source")),
-			ObservationGenerationDigest: SHA256([]byte("t421-production-observation")),
+			SourceGenerationDigest:      input.SourceDigest,
+			ObservationGenerationDigest: input.ObservationDigest,
 			ExtractorVersion:            versions[expectedDomain.Domain],
-			ExtractionPolicyDigest:      SHA256([]byte("t421-production-extraction-policy")),
+			ExtractionPolicyDigest:      sparseRoot.PolicyDigest,
 		})
 		if planErr != nil {
 			t.Fatalf("build reserved plan %s: %v", expectedDomain.Domain, planErr)
@@ -579,14 +611,14 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 		t.Fatal(err)
 	}
 	manifestView, err := provider.OpenCandidateManifest(ctx, extract.CandidateManifestRequest{
-		Repository: t421ProductionReplayRepository, Commit: commit,
+		Repository: input.Repository, Commit: commit,
 		Domains: resolverRegistry.CandidateDomains(),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	callerPlan, err := provider.OpenCandidateCallerPlan(ctx, extract.CandidateManifestRequest{
-		Repository: t421ProductionReplayRepository, Commit: commit,
+		Repository: input.Repository, Commit: commit,
 		Domains: callerRegistry.CandidateDomains(),
 	})
 	if err != nil {
@@ -601,19 +633,19 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 		PlanDigest:       protoPlan.Digest, RootDigest: protoRoot.Digest,
 	}
 	resolverIdentity, err := resolvercatalog.NewIdentity(
-		t421ProductionReplayRepository, commit, "", manifestView.Identity(),
+		input.Repository, commit, "", manifestView.Identity(),
 		[]resolvercatalog.DeclarationPublication{declaration}, resolverRegistry.Packs(),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	resolverRoot := filepath.Join(dataDir, "resolver-catalogs")
-	if err := os.Mkdir(resolverRoot, 0o700); err != nil {
+	if err := os.MkdirAll(resolverRoot, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	var resolverBlobReads, resolverBlobBytes uint64
 	readResolverBlob := func(ctx context.Context, dir, oid string, limit int64) ([]byte, error) {
-		content, err := gitobj.ReadBlob(ctx, dir, oid, limit)
+		content, err := readBlob(ctx, dir, oid, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -668,7 +700,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 			combined.Profile.Pipeline.ResolverBlobBytesPerBuild)
 	}
 
-	repository := &store.Repo{Name: t421ProductionReplayRepository, IndexedCommitHash: commit}
+	repository := &store.Repo{Name: input.Repository, IndexedCommitHash: commit}
 	resolverPointer := t421ProductionReplayResolverPointer(resolverState)
 	generation, err := callerexecute.GenerationIdentity(callerexecute.GenerationAuthority{
 		Repository: repository, Candidate: &pointer, Resolver: &resolverPointer,
@@ -699,7 +731,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 		t.Fatalf("production caller pairs = %d, want %d", len(pairs), len(wantedPairs))
 	}
 	callerRoot := filepath.Join(dataDir, "caller-leaves")
-	if err := os.Mkdir(callerRoot, 0o700); err != nil {
+	if err := os.MkdirAll(callerRoot, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	pairReceipts := make([]callerpublication.PairReceipt, 0, len(pairs))
@@ -720,7 +752,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 		if executeErr := callerexecute.ExecutePair(ctx, callerexecute.ExecuteRequest{
 			RepositoryDir: repositoryDir, Plan: callerPlan, Pair: pair,
 			Protocol: string(protocol), ResolverCatalogDigest: generation.ResolverManifestDigest,
-			Resolver: resolverView.Resolver(), Stage: stage,
+			Resolver: resolverView.Resolver(), Stage: stage, ReadBlob: callerexecute.BlobReader(readBlob),
 		}); executeErr != nil {
 			_ = stage.Discard()
 			t.Fatalf("execute %s caller leaf %s: %v", protocol, pair.Candidate.Prefix, executeErr)
@@ -819,6 +851,10 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	}
 	if err := callerpublication.ValidateManifest(reopenedManifest); err != nil {
 		t.Fatal(err)
+	}
+	return productionPipelineResult{
+		Candidate: manifest, Sparse: sparseRoot, Plans: plans, Roots: roots, Resolver: resolverState,
+		Caller: reopenedManifest, Descriptors: grpcResolver.Descriptors(),
 	}
 }
 

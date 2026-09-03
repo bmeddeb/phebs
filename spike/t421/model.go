@@ -16,6 +16,7 @@ import (
 
 const (
 	PlanSchema      = "t421-combined-gate-plan-v1"
+	PlanV2Schema    = "t421-combined-gate-plan-v2"
 	OracleSchema    = "t421-independent-combined-oracle-v1"
 	ReceiptSchema   = "t422-combined-convergence-receipt-v1"
 	MaxPlanBytes    = 256 << 10
@@ -23,27 +24,28 @@ const (
 )
 
 type Plan struct {
-	Schema          string             `json:"schema"`
-	FrozenOn        string             `json:"frozen_on"`
-	SourceCommit    string             `json:"source_commit"`
-	Inputs          []InputBinding     `json:"inputs"`
-	Profile         CombinedProfile    `json:"profile"`
-	Oracle          Oracle             `json:"oracle"`
-	Revisions       RevisionHistory    `json:"revision_history"`
-	PhaseStates     []PhaseState       `json:"phase_states"`
-	PhaseOrder      []string           `json:"phase_order"`
-	PhaseDeadlines  []PhaseDeadline    `json:"phase_deadlines"`
-	FailurePoints   []FailurePoint     `json:"failure_points"`
-	ReaderProbe     ReaderProbeProfile `json:"reader_probe"`
-	SafetyEnvelope  SafetyEnvelope     `json:"safety_envelope"`
-	WorkEnvelope    WorkEnvelope       `json:"work_envelope"`
-	MeterPolicy     MeterPolicy        `json:"meter_policy"`
-	ToolPolicy      ToolPolicy         `json:"tool_policy"`
-	SealPolicy      SealPolicy         `json:"seal_policy"`
-	StopRules       []StopRule         `json:"stop_rules"`
-	Teardown        TeardownRule       `json:"teardown_rule"`
-	ReceiptContract ReceiptContract    `json:"receipt_contract"`
-	Claims          Claims             `json:"claims"`
+	Schema          string              `json:"schema"`
+	FrozenOn        string              `json:"frozen_on"`
+	SourceCommit    string              `json:"source_commit"`
+	Inputs          []InputBinding      `json:"inputs"`
+	Profile         CombinedProfile     `json:"profile"`
+	Oracle          Oracle              `json:"oracle"`
+	Revisions       RevisionHistory     `json:"revision_history"`
+	PhaseStates     []PhaseState        `json:"phase_states"`
+	PhaseOrder      []string            `json:"phase_order"`
+	PhaseDeadlines  []PhaseDeadline     `json:"phase_deadlines"`
+	FailurePoints   []FailurePoint      `json:"failure_points"`
+	ReaderProbe     ReaderProbeProfile  `json:"reader_probe"`
+	SafetyEnvelope  SafetyEnvelope      `json:"safety_envelope"`
+	WorkEnvelope    WorkEnvelope        `json:"work_envelope"`
+	MeterPolicy     MeterPolicy         `json:"meter_policy"`
+	ToolPolicy      ToolPolicy          `json:"tool_policy"`
+	SealPolicy      SealPolicy          `json:"seal_policy"`
+	StopRules       []StopRule          `json:"stop_rules"`
+	Teardown        TeardownRule        `json:"teardown_rule"`
+	ReceiptContract ReceiptContract     `json:"receipt_contract"`
+	Claims          Claims              `json:"claims"`
+	Correction      *ContractCorrection `json:"correction,omitempty"`
 }
 
 type InputBinding struct {
@@ -436,6 +438,7 @@ type PhaseState struct {
 	CatalogAction            string `json:"catalog_action"`
 	RelationshipAction       string `json:"relationship_action"`
 	ExpectedCurrentAuthority string `json:"expected_current_authority"`
+	RecoveryPreparation      string `json:"recovery_preparation,omitempty"`
 }
 
 type FailurePoint struct {
@@ -547,6 +550,8 @@ type PhaseWorkBounds struct {
 	ChangedPhysicalFiles      CounterBound `json:"changed_physical_files"`
 	ChangedLogicalServices    CounterBound `json:"changed_logical_services"`
 	GitReads                  CounterBound `json:"git_reads"`
+	CensusChildren            CounterBound `json:"census_children,omitzero"`
+	CensusRecords             CounterBound `json:"census_records,omitzero"`
 	IndexFiles                CounterBound `json:"index_files"`
 	ObservationParses         CounterBound `json:"observation_parses"`
 	SourceLogicalBytes        CounterBound `json:"source_logical_bytes"`
