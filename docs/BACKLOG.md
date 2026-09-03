@@ -33,9 +33,11 @@ retained as engineering evidence, not as a scale pass. Epic 40 closed on
 2026-08-30 after neutral-47 passed the frozen mechanics gate. T41.10 is
 integrated at main `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic
 41 after separately proving the 8,000-service floor and 10,000 accepted
-logical-service target. T42.1 is active and now composes the
-physical-repository and service-cardinality envelopes into a prospective
-execution freeze.
+logical-service target. T42.1 is branch-complete at exact implementation
+`8ca0d92410e3763b5c6c6664b26dc44ef2773edf`; canonical source-free
+`spike/t421/plan.json` is 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+Integration remains separate, and T42.2 remains unauthorized and unexecuted.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3045,9 +3047,10 @@ integrated; T41.9 is integrated. T41.10 is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e` from exact
 implementation `7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` with canonical source-free
 PASS receipt `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`
-and closes Epic 41. T42.1 is active.
+and closes Epic 41. T42.1 is branch-complete; integration remains pending and
+T42.2 remains unauthorized and unexecuted.
 
-## Epic 42 · Combined scale gate and topology decision *(T42.1 active)*
+## Epic 42 · Combined scale gate and topology decision *(T42.1 branch-complete; integration pending)*
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
@@ -3075,67 +3078,14 @@ evidence.
   freshness-under-cadence evidence. That operating gate remains owned by a
   separately authorized successor to the stopped T39.2 operating gate.
 
-**T42.1 · Combined gate freeze and deterministic corpus** — construct the
-minimal deterministic corpus/profile adapter that composes the exact T40 and
-T41 authorities without materializing service-count × file-count bytes. Freeze
-revision history, ownership/membership oracle, query and relationship oracle,
-small-delta/A→B→A transitions, failure injection points, host/tool identities,
-resource ceilings, stop/teardown rules, and receipt schema before execution.
-Neutral chain, layered-DAG, bounded-fan-out, and hotspot families use fixed
-seeds and closed expected edges. External runtime traces may inform aggregate
-shape only after license review; their rows and opaque identities are not
-vendored and cannot become source, service, placement, relationship, or result
-authority.
-AC: independent oracle generation does not consume phebs results; two builds
-are byte-identical; physical owners, unique content, catalog membership and
-unowned prefixes, inherited placement-claim duplications, logical memberships,
-accepted fan-out, and every byte kind are separately reported; the exact main
-commit and upstream receipts are digest-bound; the typed input, all nine
-extraction domains, and all 56 partitions are exact; production cap replay
-separately proves repository-local candidate/caller work and ordinary global
-direct-resolver caller work; query cases carry per-transport read bounds and
-their aggregate reads fit the owning phase meter; reader A/B/delete evidence,
-archive destroy/empty-target/restore ordering, allocation-unit pressure
-reconciliation, native failure selectors, and exact per-phase process/runtime
-identity are frozen; authority snapshots are content-addressed, referenced
-without duplication, every current nine-root inventory binds one shared
-candidate generation, logical-only deltas preserve that inventory exactly,
-and a fully populated complete receipt stays below the
-512-KiB ceiling; the replay-selected executor correction keeps repository-wide
-attribution out of partial hash leaves, enforces reads through the existing
-`Required` ledger rather than `Enumerate`-only controls, and returns canonical
-empty results for zero-total partitions; no production cap or release state
-changes; independent plan review and full merge bar.
-
-The active adapter composes 2,000,002 structural physical owners with the
-31,600-path service corpus by converting 1,999,999 structural `.go` paths to
-`.txt` and retaining structural ordinal zero as Go. The combined A shape has
-2,031,604 regular owners, 21,601 eligible Go paths, 10,000 IDL paths, 10,000
-accepted services, 60,000 memberships, 31,602 distinct catalog paths, 31,605
-selectors, 105 logical unowned entries, and 2,000,104 unowned physical owners.
-It materializes zero of the 20,316,040,000 possible service/owner pairs;
-unique-content counts remain distinct at A/B/A `32,116/32,117/32,116`. The
-two-byte `index.scip` is fixed at
-`sha256:102b51b9765a56a3e899f7cf0ee38e5251f9c503b357b330a49183eb7b155604`.
-This ticket authors and validates the source-free freeze contract only: it
-does not sign an exact-main freeze, authorize T42.2 execution, or establish a
-combined gate result.
-
-The production merge-bar replay authors only the 31,604 candidate-equivalent
-Git files, omitting 1,999,999 known noncandidate structural `.txt` owners. It
-builds and reopens candidate/sparse authority, executes all 56 production
-partitions, materializes the resolver catalog, executes and installs all
-sixteen caller protocol/leaf pairs, and publishes and reopens the complete
-caller generation under a 15-minute test bound. Its exact 10,002 resolver reads
-and 11,601 caller-source reads use the existing one-shot Git blob path, so the
-test launches about 21,603 sequential Git children plus bounded setup commands;
-observed runs took about 381--384 seconds. The two replay-selected executor
-fixes add one immutable scope branch per attribution request; a partition
-request also adds one cancellation check and a short existing-corpus-mutex
-snapshot while avoiding the repository-wide attribution load. They add no lock
-class, persistent work, production read, request, worker, retry, publication,
-lifecycle, cache, schema, child, or cap; zero-total completion removes one
-unnecessary empty-list digest.
+**T42.1 ✅ · Combined gate freeze and deterministic corpus** — branch-complete
+at exact implementation `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`.
+Canonical source-free `spike/t421/plan.json` is 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`;
+an independent second build and strict decode/re-encode were byte-identical.
+The complete merge bar and independent zero-finding review pass. T42.1 is
+eligible only for separate integration. This retained plan is not an exact-main
+execution freeze, and T42.2 remains unauthorized and unexecuted.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

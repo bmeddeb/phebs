@@ -10958,3 +10958,76 @@ Epic 41 closes only when that branch is integrated. The receipt establishes no
 large-repository envelope, target SLO, supported customer limit,
 accuracy/completeness, release, migration/decommission, topology, or Epic-42
 result. T42.1 owns the separately frozen combined physical-plus-logical gate.
+
+**T42.1 ✅ · Combined gate freeze and deterministic corpus**
+*(2026-09-02; high)* — constructs the minimal deterministic corpus/profile
+adapter that composes the exact T40 and T41 authorities without materializing
+service-count × file-count bytes. The source-free plan freezes revision
+history, ownership/membership and relationship oracles, query bounds,
+small-delta/A→B→A transitions, native failure targets, host/tool identity
+requirements, resource ceilings, stop/teardown rules, and complete-or-stopped
+receipt schema.
+Neutral chain, layered-DAG, bounded-fan-out, and hotspot families use fixed
+seeds and closed expected edges; no external trace row or opaque identity is
+vendored or made authoritative.
+
+Independent oracle generation consumes no Phebs result. The adapter composes
+2,000,002 structural physical owners with the 31,600-path service corpus by
+converting 1,999,999 structural `.go` paths to `.txt` and retaining structural
+ordinal zero as Go. The combined A shape has 2,031,604 regular owners, 21,601
+eligible Go paths, 10,000 IDL paths, 10,000 accepted services, 60,000
+memberships, 31,602 distinct catalog paths, 31,605 selectors, 105 logical
+unowned entries, and 2,000,104 unowned physical owners. It materializes zero of
+the 20,316,040,000 possible service/owner pairs; unique-content counts remain
+distinct at A/B/A `32,116/32,117/32,116`. The exact two-byte `index.scip` is
+`sha256:102b51b9765a56a3e899f7cf0ee38e5251f9c503b357b330a49183eb7b155604`.
+All nine extraction domains and 56 partitions, source/catalog revisions,
+reader A/B/delete projections, archive destroy/empty-target/restore order,
+allocation-unit pressure geometry, thirteen phase states across three process
+epochs, authorization/read bounds, content-addressed authority snapshots, and
+current-root candidate-generation bindings are exact. The completed receipt
+fixture is 479,496 bytes, leaving 44,792 bytes below its 512-KiB ceiling.
+
+The production merge-bar replay authors only the 31,604 candidate-equivalent
+Git files and omits 1,999,999 known noncandidate structural `.txt` owners. It
+builds and reopens candidate/sparse authority, executes all 56 production
+partitions, materializes the resolver catalog with exactly 10,002 blob reads,
+executes and installs all sixteen caller protocol/leaf pairs with exactly
+11,601 source reads, and publishes and reopens the complete caller generation.
+Those reads use the existing one-shot Git blob path, so the replay launches
+about 21,603 sequential Git children plus bounded setup commands. The selected
+production corrections keep repository-wide attribution out of partial hash
+leaves, charge completion through the existing `Required` read ledger rather
+than `Enumerate`-only controls, and return the canonical empty result for a
+zero-total partition. Every attribution request adds one immutable scope
+branch; a partition request also adds a cancellation check and short snapshot
+under the existing corpus mutex while avoiding the repository-wide attribution
+load. No lock class, persistent work, production cap, or release state is
+added; zero-total completion removes one unnecessary empty-list digest.
+
+Exact clean implementation `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`
+authored canonical source-free `spike/t421/plan.json`: 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`,
+62,583 bytes below the 256-KiB ceiling. An independent second build and strict
+decode/re-encode were byte-identical. The corrected complete T42.1 package
+passed normally in 363.839 seconds and under the race detector in 1,614.282
+seconds; production extraction passed normally in 15.727 seconds and under the
+race detector in 78.127 seconds. Scoped lint, vet, module verification,
+glossary, and whitespace checks pass. Independent exact-commit review reports
+critical/high/medium/low `0/0/0/0`.
+
+Repository-wide documentation validation retains only the exact-base UI-owned
+missing `ui/receipts/fixtures/service-boundary.png` target referenced by
+`ui/receipts/fixtures/markdown-preview.md`; repository-wide lint retains only
+exact-base unused
+`internal/relationshippublication/runtime_v3.go:719 matchesRuntimeAuthorityV3`.
+Both reproduce unchanged from exact base
+`d92b6673db6d4b582c2223536fe52358629ae60e`, and no T42.1-owned path causes
+either finding.
+
+This closes T42.1 on its ticket branch and makes it eligible for a separate
+integration request. Epic 42 remains open, and T42.2 requires exact-main
+admission plus separate authorization. The retained plan is not an execution
+freeze and establishes no combined gate result, topology selection, SLO,
+supported limit, accuracy/completeness, migration/decommissioning, private
+replay, release, or `GATE2-V2` result.

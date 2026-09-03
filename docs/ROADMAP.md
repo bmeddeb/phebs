@@ -149,9 +149,13 @@ product consumers across retained v1 and current v2 roots. Neutral-47 later
 passed T40.13's frozen mechanics gate and the 2026-08-30 disposition closed
 Epic 40. T41.10 is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41 after proving its
-8,000 accepted-service floor and 10,000 accepted-service target. T42.1 is now
-active and freezes the combined dimensions. No T42.2 execution, private rerun,
-or release is authorized.
+8,000 accepted-service floor and 10,000 accepted-service target. T42.1 is
+branch-complete at exact implementation
+`8ca0d92410e3763b5c6c6664b26dc44ef2773edf`; canonical source-free
+`spike/t421/plan.json` is 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+Integration remains pending. No T42.2 execution, private rerun, or release is
+authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -167,7 +171,8 @@ comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
 exhausted-result recovery, T41.9, and T41.10 are integrated, closing Epic 41.
-T42.1 is the active scale ticket.
+T42.1 is branch-complete; integration remains separate and T42.2 remains
+unauthorized and unexecuted.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -940,7 +945,7 @@ service count × repository bytes
   10,000-service recovery/lifecycle/product gate and is integrated at main
   `d92b6673db6d4b582c2223536fe52358629ae60e`, closing the epic. No
   constants-only increase is permitted.
-- **Epic 42 — combined scale gate and topology decision (T42.1 active):**
+- **Epic 42 — combined scale gate and topology decision (T42.1 branch-complete; integration pending):**
   T42.1 freezes the deterministic combined corpus, independent oracle, typed
   revisions, native failure targets, ordinary-production execution profile,
   reader/archive/pressure transitions, and content-addressed receipt contract.
@@ -948,7 +953,8 @@ service count × repository bytes
   interruption, restore, pressure, lifecycle, and product paths through
   ordinary workers. T42.3 then retains single-node direct topology, requests a
   bounded cohort experiment, requests a P6 investigation, or stops according
-  to the frozen rule. T42.1 records no execution or gate result.
+  to the frozen rule. T42.1 is eligible only for separate integration and
+  records no execution or gate result.
 
 The scale corpus is first-party and profile-separated. A streaming author
 creates external scratch bare-Git generations with fixed identities and A→B→A
@@ -1034,8 +1040,15 @@ relationship, or correctness authority.
   immutable scope branch; partition requests add a cancellation check and short
   existing-corpus-mutex snapshot while removing the invalid repository-wide
   load. They add no lock class, persistent work, or production cap; zero-total
-  completion removes an empty digest. T42.1 does not authorize T42.2 or establish a combined
-  gate result.
+  completion removes an empty digest. Exact clean implementation
+  `8ca0d92410e3763b5c6c6664b26dc44ef2773edf` authored canonical source-free
+  `spike/t421/plan.json`: 199,561 bytes at
+  `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+  An independent second build and strict round trip were byte-identical. The
+  complete normal/race and extraction normal/race gates pass, and independent
+  exact-commit review reports critical/high/medium/low `0/0/0/0`. T42.1 is
+  eligible only for separate integration; it does not authorize T42.2 or
+  establish a combined gate result.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

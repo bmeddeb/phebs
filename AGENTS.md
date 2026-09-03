@@ -725,7 +725,7 @@ historical-only selected archive verification, deletion/re-add repair, and the
 startup extraction-liveness fence. T41.9 is integrated. T41.10's canonical
 source-free 10,000-service PASS is integrated at main
 `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41. T42.1 is the
-active prospective combined-scale freeze-contract ticket: it composes the
+branch-complete combined-scale freeze-contract ticket: it composes the
 retained two-million-owner and 10,000-service authorities without a Cartesian
 materialization and freezes typed revisions, production replay, native
 failure targets, ordinary-production execution identity, exact reader,
@@ -736,7 +736,18 @@ request adds one immutable scope branch; partition requests add one cancellation
 check and short existing-corpus-mutex snapshot while removing an invalid
 repository-wide attribution load. No lock class or persistent work is added,
 and zero-total completion removes one empty digest.
-It neither authorizes nor records T42.2 execution or a combined gate result.
+Exact clean implementation `8ca0d92410e3763b5c6c6664b26dc44ef2773edf`
+authored canonical source-free `spike/t421/plan.json`: 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+An independent second build and strict round trip were byte-identical. Complete
+T42.1 normal/race and extraction normal/race gates, scoped lint, vet, module,
+glossary, and whitespace gates, and independent critical/high/medium/low
+`0/0/0/0` review pass. Repository-wide documentation and lint retain only two
+independently reproduced exact-base findings: the UI-owned missing
+`service-boundary.png` fixture and unused
+`internal/relationshippublication/runtime_v3.go:719 matchesRuntimeAuthorityV3`.
+T42.1 is eligible only for separate integration; it neither authorizes nor
+records T42.2 execution or a combined gate result.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

@@ -215,11 +215,13 @@ headroom.
 
 ## Reproduction
 
-The author accepts only an exact clean `HEAD`, writes a mode-0600 temporary
-file, syncs it, and atomically hard-links a destination that must not exist.
+From a clean checkout at exact implementation
+`8ca0d92410e3763b5c6c6664b26dc44ef2773edf`, the author writes a mode-0600
+temporary file, syncs it, and atomically hard-links a destination that must not
+exist.
 
 ```sh
-T421_SOURCE_COMMIT="$(git rev-parse HEAD)"
+T421_SOURCE_COMMIT=8ca0d92410e3763b5c6c6664b26dc44ef2773edf
 go run ./spike/t421/cmd/author \
   -repository-root . \
   -source-commit "$T421_SOURCE_COMMIT" \
@@ -237,6 +239,34 @@ corpus for every table row or binding. The public freeze and receipt-binding
 entry points still reconstruct and compare the exact plan on every call. The
 receipt binder owns a complete copy of the at-most-64-KiB freeze before that
 one-time validation and retention.
+
+## Retained plan and branch closure
+
+Exact clean implementation
+`8ca0d92410e3763b5c6c6664b26dc44ef2773edf` authored canonical source-free
+`spike/t421/plan.json`: 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`,
+62,583 bytes below the 256-KiB ceiling. An independent second build and strict
+decode/re-encode were byte-identical. The complete T42.1 package passed
+normally in 363.839 seconds and under the race detector in 1,614.282 seconds;
+the production extraction packages passed normally in 15.727 seconds and
+under the race detector in 78.127 seconds. Scoped lint, vet, module
+verification, glossary, and whitespace checks pass, and independent
+exact-commit review reports critical/high/medium/low `0/0/0/0`.
+
+Repository-wide documentation validation retains only the exact-base UI-owned
+missing `ui/receipts/fixtures/service-boundary.png` target referenced by
+`ui/receipts/fixtures/markdown-preview.md`; repository-wide lint retains only
+exact-base unused
+`internal/relationshippublication/runtime_v3.go:719 matchesRuntimeAuthorityV3`.
+Both reproduce unchanged from exact base
+`d92b6673db6d4b582c2223536fe52358629ae60e`, and no T42.1-owned path causes
+either finding.
+
+T42.1 is branch-complete and eligible for a separate integration request. This
+retained plan is not an exact-main execution freeze and does not authorize a
+merge, T42.2 execution, a combined gate result, topology selection, SLO,
+supported limit, accuracy/completeness, private replay, or release.
 
 ## Cost and nonclaims
 
@@ -287,4 +317,5 @@ no ordinary steady-state child.
 This plan establishes no combined execution pass, target SLO, supported
 customer scale, accuracy/completeness, commit cadence, queue catch-up,
 freshness-under-cadence, migration/decommission, topology, private replay,
-release, or `GATE2-V2` result. T42.2 owns execution.
+release, or `GATE2-V2` result. T42.2 requires separate authorization and
+remains unexecuted.

@@ -40,6 +40,9 @@ evidence.
   [paired-build receipt](../spike/t401/reproducibility.json),
   [structural](../spike/t401/structural/manifest.json) and
   [semantic](../spike/t401/semantic/manifest.json) authoring records
+- [T42.1 combined-gate freeze contract](../spike/t421/README.md) and canonical
+  [source-free plan](../spike/t421/plan.json). The plan is not an exact-main
+  execution freeze and grants no T42.2 execution or release authority.
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
