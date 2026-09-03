@@ -2,6 +2,8 @@ package t421
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"slices"
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
@@ -94,11 +96,12 @@ func injectionTargetMatchesPreparedExtraction(value InjectionTransition, root Ex
 	return injectionTargetMatchesExtraction(value.Target, root)
 }
 
-func validateRecoveryPreparationLineage(values []TransitionResult, plan Plan) error {
+func validateRecoveryPreparationLineage(values []TransitionResult, authority map[string]AuthorityPhaseResult, plan Plan) error {
 	if plan.Correction == nil {
 		return nil
 	}
 	var prior, target string
+	var chunks uint64
 	for _, row := range plan.Correction.RecoveryPreparations {
 		transition, ok := namedTransition(values, row.Phase)
 		if !ok || transition.Outcome != "passed" {
@@ -109,22 +112,55 @@ func validateRecoveryPreparationLineage(values []TransitionResult, plan Plan) er
 		}
 		p := transition.Injections[0].Preparation
 		if prior == "" {
-			target = p.TargetGenerationSHA256
 			var err error
-			prior, err = store.GenerationScheduleDigest(store.GenerationScheduleSpec{
-				Repository: t401.RepositoryName, Stage: extractionpublication.ScheduleStage,
-				Generation: target, ResourceClass: store.GenerationResourceExtraction,
-				TotalItems: int64(row.Chunks), ChunkItems: extractionpublication.ScheduleChunkItems,
-				MaxAttempts: extractionpublication.ScheduleMaxAttempts, RepositoryTokens: extractionpublication.ScheduleRepositoryTokens,
-			})
+			target, prior, chunks, err = ordinaryReturnASchedule(authority)
 			if err != nil {
 				return err
 			}
 		}
-		if p.TargetGenerationSHA256 != target || p.PriorScheduleSHA256 != prior {
+		if p.TargetGenerationSHA256 != target || p.PriorScheduleSHA256 != prior ||
+			p.Chunks != chunks || row.Chunks != chunks {
 			return errors.New("recovery preparation did not continue the exact prior native schedule")
 		}
 		prior = p.RecoveryScheduleSHA256
 	}
 	return nil
+}
+
+// ordinaryReturnASchedule follows Runtime.enqueue's predecessor-bound identity
+// rule. Only cold has no predecessor; physical B and return A each inherit the
+// preceding operational schedule. Logical-only replacement creates none.
+// The authority map has already been resolved and validated by the receipt.
+func ordinaryReturnASchedule(authority map[string]AuthorityPhaseResult) (string, string, uint64, error) {
+	var target, prior string
+	var chunks uint64
+	for _, phase := range []string{"cold", "physical_delta_b", "return_a"} {
+		value, ok := authority[phase]
+		if !ok || value.Outcome != "passed" || len(value.ExtractionRoots) == 0 {
+			return "", "", 0, fmt.Errorf("ordinary extraction schedule authority is absent for %q", phase)
+		}
+		target, chunks = value.ExtractionRoots[0].GenerationSHA256, 0
+		for _, root := range value.ExtractionRoots {
+			if !validDigest(root.GenerationSHA256) || root.GenerationSHA256 != target ||
+				root.ApplicablePartitions > math.MaxInt64-chunks {
+				return "", "", 0, fmt.Errorf("ordinary extraction schedule authority is invalid for %q", phase)
+			}
+			chunks += root.ApplicablePartitions
+		}
+		generation := target
+		if prior != "" {
+			generation = SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + target + "\x00" + prior))
+		}
+		var err error
+		prior, err = store.GenerationScheduleDigest(store.GenerationScheduleSpec{
+			Repository: t401.RepositoryName, Stage: extractionpublication.ScheduleStage,
+			Generation: generation, ResourceClass: store.GenerationResourceExtraction,
+			TotalItems: int64(chunks), ChunkItems: extractionpublication.ScheduleChunkItems,
+			MaxAttempts: extractionpublication.ScheduleMaxAttempts, RepositoryTokens: extractionpublication.ScheduleRepositoryTokens,
+		})
+		if err != nil {
+			return "", "", 0, fmt.Errorf("derive ordinary extraction schedule for %q: %w", phase, err)
+		}
+	}
+	return target, prior, chunks, nil
 }

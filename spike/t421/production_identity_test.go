@@ -201,11 +201,23 @@ func productionExtractionSchedules(t *testing.T, ctx context.Context, state *sto
 		if name == "a-return" {
 			productionRecoveryCache = make(map[string]productionRecoverySchedule, 2)
 			for _, phase := range []string{"stale_lease", "process_restart"} {
+				// Each recovery must start from the frozen completed precondition,
+				// not settled counters modeled over unfinished filesystem controls.
+				// This bar remains unpassed until the native preparation is proved.
+				for _, domain := range domains {
+					current, err := runtime.Current(ctx, t401.RepositoryName, domain.Plan.Domain)
+					if err != nil || !reflect.DeepEqual(current, value.Roots[domain.Plan.Domain]) {
+						t.Fatalf("recovery preparation requires the completed native %s root: %v", domain.Plan.Domain, err)
+					}
+				}
+				if store.ValidateGenerationSchedule(*schedule) != nil || schedule.Status != store.GenerationScheduleSettled ||
+					schedule.Succeeded != schedule.TotalChunks || schedule.Pending != 0 || schedule.Running != 0 || schedule.Failed != 0 {
+					t.Fatal("recovery preparation requires a genuinely settled schedule")
+				}
 				prior := schedule.Digest
-				// The settled status is a labeled test input, not a claim that
-				// these unexecuted partitions completed. Native Reconcile owns
-				// both recovery hashes and writes/validates their binding.
-				runtime.Store = productionSettledScheduleInput{Surreal: state}
+				// Ordinary Reconcile deliberately reuses a completed same-target
+				// schedule. A separate approved native control is required here;
+				// never manufacture its prerequisite through a permissive store.
 				got, err := runtime.Reconcile(ctx, t401.RepositoryName, domains)
 				if err != nil || got != generation {
 					t.Fatalf("native %s recovery constructor: target=%q error=%v", phase, got, err)
@@ -214,6 +226,9 @@ func productionExtractionSchedules(t *testing.T, ctx context.Context, state *sto
 				if err != nil || store.ValidateGenerationSchedule(*schedule) != nil {
 					t.Fatalf("native %s recovery schedule: %v", phase, err)
 				}
+				if schedule.Digest == prior {
+					t.Fatalf("native %s preparation did not create a new predecessor-bound schedule", phase)
+				}
 				productionRecoveryCache[phase] = productionRecoverySchedule{
 					Target: generation, Prior: prior,
 					RecoveryGeneration: schedule.Generation, RecoverySchedule: schedule.Digest,
@@ -221,24 +236,6 @@ func productionExtractionSchedules(t *testing.T, ctx context.Context, state *sto
 			}
 		}
 	}
-}
-
-type productionSettledScheduleInput struct{ *store.Surreal }
-
-func (input productionSettledScheduleInput) GetGenerationSchedule(ctx context.Context, repository, stage string) (*store.GenerationSchedule, error) {
-	current, err := input.Surreal.GetGenerationSchedule(ctx, repository, stage)
-	if err != nil {
-		return nil, err
-	}
-	value := *current
-	value.Status = store.GenerationScheduleSettled
-	value.NextOffset = value.TotalItems
-	value.Materialized, value.Succeeded = value.TotalChunks, value.TotalChunks
-	value.Pending, value.Running, value.Failed = 0, 0, 0
-	if err := store.ValidateGenerationSchedule(value); err != nil {
-		return nil, err
-	}
-	return &value, nil
 }
 
 type productionIdentityRuntimeStubs struct{}

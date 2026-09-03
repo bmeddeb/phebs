@@ -74,10 +74,6 @@ func frozenReaderProbe() (ReaderProbeProfile, error) {
 	}, nil
 }
 
-func expectedCombinedSourceIdentities(profile CombinedProfile) (map[string]sourceTreeIdentity, error) {
-	return expectedCombinedSourceIdentitiesForScope(profile, false)
-}
-
 func expectedCombinedSourceIdentitiesForScope(profile CombinedProfile, goOnly bool) (map[string]sourceTreeIdentity, error) {
 	structural, err := frozenStructuralProfile()
 	if err != nil {
@@ -112,14 +108,6 @@ func expectedCombinedSourceIdentitiesForScope(profile CombinedProfile, goOnly bo
 	}
 	result["a-return"] = result["a"]
 	return result, nil
-}
-
-func expectedCombinedSourceIdentity(
-	structural t401.Profile,
-	revision, expectedBaseTree string,
-	additions []sourceTreeRecord,
-) (sourceTreeIdentity, error) {
-	return expectedCombinedSourceIdentityForScope(structural, revision, expectedBaseTree, additions, false)
 }
 
 func expectedCombinedSourceIdentityForScope(

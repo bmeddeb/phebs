@@ -328,21 +328,44 @@ reads returned empty. The worker selects the partitioned RunID, then calls legac
 `ListAssertions`, which accepts only `published` runs; native partitioned
 publication seals the run while deliberately retaining `staged` status. Both
 the resolver mock and the constructor replay bypass that visibility predicate.
-This source-confirmed production prerequisite needs separate authorization;
-do not weaken the legacy reader or mark partitioned runs published to make the
-fixture pass. No restart, full constructor-fixture pass, new plan, or freeze is
-established. The exploratory constructor test passed all three native physical
-graphs, then stopped on a missing test state directory; that harness fix remains
-unconfirmed by a complete rerun. No test/server process survives.
+T42.1r2 subsequently repaired that prerequisite on its separate reviewed branch:
+exact-source upgrade from the actual predecessor and a later logical restart
+passed in 179.87 seconds. The logical restart recorded one census, zero source
+blob reads, and zero index children. Ben integrated its closure `529cb1d5`
+locally; the strict native replay mock and successful server regression remain
+unchanged. The contract draft is preserved at `afcaef1d`, and correction now
+continues on `codex/t42.1r1-contract-correction`.
 
-Working-tree checks: focused identity/table checks passed in 23.128 seconds;
+The full constructor fixture remains unpassed. The resumed audit found that
+return-A's schedule must retain the cold/B predecessor chain, configured
+startup deadlines lack independent readiness evidence, and the preparation
+fixture models settled counters over unfinished files. An ordinary reconcile
+of genuinely complete same-target files reuses its schedule; it does not
+establish the frozen forced-recovery preparation. Resolve that executable
+preparation boundary before another expensive acceptance run or new artifact.
+
+The contract-only lineage and startup checks are now corrected and pass focused
+normal/race tests. Each passed V2 server epoch requires a digest-bound readiness
+event and elapsed duration within its frozen deadline; stopped startup preserves
+not-ready, late-ready, or unavailable-duration evidence without claiming success.
+Retained V1 bytes stay exact. The constructor helper no longer substitutes fake
+settled counters: it requires actual current roots and successful real-store
+settlement, and rejects a recovery schedule that never advances. The small native
+runtime regression creates completed files and proves ordinary reconciliation
+reuses the schedule and source work; its scheduler settlement remains a labeled
+test double, not a real-store or zero-publication-write claim. A separately
+approved T42.1r3 same-process preparation control is still required; no complete
+constructor rerun, new artifact, or ceremony is claimed.
+
+Earlier draft checks: focused identity/table checks passed in 23.128 seconds;
 retained-v1 preservation and v2 canonical/size/framing checks passed in 54.876
 seconds. The prospective plan encodes to 259,673 bytes under the unchanged
 262,144-byte cap; no artifact was authored. Epoch/preparation checks passed
 normally and under race, and `go vet ./spike/t421`, glossary, and whitespace
 checks passed. `make docs-check` retains the independently reproduced baseline
 missing `ui/receipts/fixtures/service-boundary.png` link. Full-package, complete
-constructor, live restart, and independent exact-source review gates remain open.
+constructor and independent exact-source review gates remain open. The separate
+integrated real-server restart/upgrade gate above supersedes its earlier hold.
 
 ## Cost and nonclaims
 

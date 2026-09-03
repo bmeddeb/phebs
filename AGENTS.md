@@ -793,6 +793,13 @@ Ben approved local fast-forward integration of T42.1r2 through
 `codex/t42.1r1-contract-correction`; its original draft is preserved at
 `afcaef1d` on `codex/t42.2-combined-ceremony`. No deployment, new freeze, or
 ceremony execution is authorized by this integration.
+The resumed contract audit also requires exact ordinary schedule lineage and
+per-epoch readiness evidence. Its recovery fixture does not yet prove the
+completed-state precondition: ordinary reconciliation of complete same-target
+files correctly reuses the settled schedule. A proposed separate T42.1r3
+default-inactive preparation control requires approval before production code
+is changed. Keep full constructor acceptance and new canonical plan authoring
+pending; do not treat synthetic settled counters as that missing proof.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

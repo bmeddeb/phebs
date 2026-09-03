@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	ExecutionProfileSchema    = "t422-ordinary-production-execution-profile-v1"
-	PhaseRuntimeBindingSchema = "t422-phase-runtime-binding-v1"
+	ExecutionProfileSchema      = "t422-ordinary-production-execution-profile-v1"
+	PhaseRuntimeBindingSchema   = "t422-phase-runtime-binding-v1"
+	PhaseRuntimeBindingV2Schema = "t422-phase-runtime-binding-v2"
 )
 
 // ExecutionProfile is the canonical, source-free projection of the commands,
@@ -148,14 +149,32 @@ type ExecutionProfileAdmissionBinding struct {
 // invocation and to the source-free identity of the server process epoch that
 // produced it.
 type PhaseRuntimeBinding struct {
-	Schema                string `json:"schema"`
-	Phase                 string `json:"phase"`
-	ProfileSHA256         string `json:"profile_sha256"`
-	InvocationSHA256      string `json:"invocation_sha256"`
-	ProcessImageSHA256    string `json:"process_image_sha256"`
-	ProcessIdentitySHA256 string `json:"process_identity_sha256"`
-	ServerEpoch           uint64 `json:"server_epoch"`
-	StartEventOrdinal     uint64 `json:"start_event_ordinal"`
+	Schema                string                 `json:"schema"`
+	Phase                 string                 `json:"phase"`
+	ProfileSHA256         string                 `json:"profile_sha256"`
+	InvocationSHA256      string                 `json:"invocation_sha256"`
+	ProcessImageSHA256    string                 `json:"process_image_sha256"`
+	ProcessIdentitySHA256 string                 `json:"process_identity_sha256"`
+	ServerEpoch           uint64                 `json:"server_epoch"`
+	StartEventOrdinal     uint64                 `json:"start_event_ordinal"`
+	Startup               *ServerStartupEvidence `json:"startup,omitempty"`
+}
+
+// ServerStartupEvidence appears only on its epoch's launch phase. Finish is
+// the observed readiness event, or the terminal observation before readiness.
+// An unavailable elapsed measurement is explicit and can never establish ready.
+type ServerStartupEvidence struct {
+	ServerEpoch        uint64  `json:"server_epoch"`
+	Outcome            string  `json:"outcome"`
+	FinishEventOrdinal uint64  `json:"finish_event_ordinal"`
+	ElapsedMS          *uint64 `json:"elapsed_ms"`
+}
+
+func phaseRuntimeBindingSchema(plan Plan) string {
+	if plan.Schema == PlanV2Schema {
+		return PhaseRuntimeBindingV2Schema
+	}
+	return PhaseRuntimeBindingSchema
 }
 
 func expectedExecutionProfile(
@@ -192,7 +211,7 @@ func expectedExecutionProfile(
 	profile := ExecutionProfile{
 		Schema:                   plan.ToolPolicy.ExecutionProfileSchema,
 		Posture:                  "ordinary-production-workers-exact-v1",
-		RuntimeBindingSchema:     PhaseRuntimeBindingSchema,
+		RuntimeBindingSchema:     phaseRuntimeBindingSchema(plan),
 		PhaseRecipeSHA256:        executionPhaseRecipeSHA256(plan),
 		Commands:                 commands,
 		HarnessCommandSetSHA256:  admission.harnessCommandSetSHA256,
@@ -507,6 +526,19 @@ func validatePhaseRuntimeBindings(
 			value.RuntimeSHA256 != bindingSHA256 {
 			return fmt.Errorf("phase %q runtime binding is invalid", phase)
 		}
+		if freeze.Profile.RuntimeBindingSchema == PhaseRuntimeBindingV2Schema {
+			epochIndex := slices.IndexFunc(freeze.Profile.Epochs, func(value ExecutionServerEpochProfile) bool {
+				return value.ServerEpoch == epoch
+			})
+			if epochIndex < 0 {
+				return fmt.Errorf("phase %q startup epoch is absent", phase)
+			}
+			if err := validateServerStartup(binding, value.Outcome, freeze.Profile.Epochs[epochIndex], launchMeasurement); err != nil {
+				return fmt.Errorf("phase %q startup: %w", phase, err)
+			}
+		} else if binding.Startup != nil {
+			return fmt.Errorf("phase %q retained prospective startup evidence", phase)
+		}
 		identity := epochIdentity{binding.StartEventOrdinal, binding.ProcessIdentitySHA256}
 		if previous, present := epochs[epoch]; present && previous != identity {
 			return fmt.Errorf("phase %q changed server identity inside epoch %d", phase, epoch)
@@ -520,6 +552,42 @@ func validatePhaseRuntimeBindings(
 		if value.Outcome != outcomes[phase] {
 			return fmt.Errorf("phase %q runtime outcome binding is invalid", phase)
 		}
+	}
+	return nil
+}
+
+func validateServerStartup(binding PhaseRuntimeBinding, outcome string, epoch ExecutionServerEpochProfile, launch PhaseMeasurement) error {
+	if binding.Phase != epoch.LaunchPhase {
+		if binding.Startup != nil {
+			return errors.New("nonlaunch phase repeated the epoch startup")
+		}
+		return nil
+	}
+	value := binding.Startup
+	if value == nil {
+		return errors.New("launched epoch lacks its terminal startup observation")
+	}
+	if value.ServerEpoch != binding.ServerEpoch || epoch.ServerHealthDeadlineMS == 0 ||
+		value.FinishEventOrdinal <= binding.StartEventOrdinal || value.FinishEventOrdinal >= launch.FinishEventOrdinal ||
+		value.ElapsedMS != nil && launch.Metrics.WallMS != 0 && *value.ElapsedMS > uint64(launch.Metrics.WallMS) {
+		return errors.New("startup observation differs from its launch epoch or measurement")
+	}
+	switch value.Outcome {
+	case "ready":
+		if value.ElapsedMS == nil {
+			return errors.New("ready startup lacks its elapsed measurement")
+		}
+		// A stopped receipt may truthfully preserve readiness first observed
+		// after the deadline. It must never turn that evidence into a pass.
+		if *value.ElapsedMS > epoch.ServerHealthDeadlineMS && outcome != "stopped" {
+			return errors.New("ready startup exceeded its frozen health deadline")
+		}
+	case "not_ready":
+		if outcome != "stopped" {
+			return errors.New("unready startup cannot establish a passed epoch")
+		}
+	default:
+		return errors.New("startup outcome is invalid")
 	}
 	return nil
 }

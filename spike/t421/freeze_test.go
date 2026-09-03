@@ -470,7 +470,7 @@ func executionProfileTestAdmission(
 	profile := ExecutionProfile{
 		Schema:                   plan.ToolPolicy.ExecutionProfileSchema,
 		Posture:                  "ordinary-production-workers-exact-v1",
-		RuntimeBindingSchema:     PhaseRuntimeBindingSchema,
+		RuntimeBindingSchema:     phaseRuntimeBindingSchema(plan),
 		PhaseRecipeSHA256:        executionPhaseRecipeSHA256(plan),
 		Commands:                 frozenExecutionCommands(),
 		HarnessCommandSetSHA256:  admission.harnessCommandSetSHA256,

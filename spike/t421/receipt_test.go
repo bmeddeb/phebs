@@ -1290,13 +1290,20 @@ func testPhaseRuntime(
 		t.Fatal("runtime fixture lacks launch measurement or phebs image")
 	}
 	image := freeze.Tools[imageIndex].SHA256
-	return PhaseRuntimeBinding{
+	value := PhaseRuntimeBinding{
 		Schema: freeze.Profile.RuntimeBindingSchema, Phase: phase,
 		ProfileSHA256: mustReceiptSHA256(t, freeze.Profile), InvocationSHA256: freeze.Profile.InvocationSHA256,
 		ProcessImageSHA256:    image,
 		ProcessIdentitySHA256: recipeDigest("t422-phebs-process-identity-v1", image, fmt.Sprint(epoch)),
 		ServerEpoch:           epoch, StartEventOrdinal: measurements[launchIndex].StartEventOrdinal + 50,
 	}
+	if value.Schema == PhaseRuntimeBindingV2Schema && phase == launchPhase {
+		elapsed := uint64(1)
+		value.Startup = &ServerStartupEvidence{
+			ServerEpoch: epoch, Outcome: "ready", FinishEventOrdinal: value.StartEventOrdinal + 1, ElapsedMS: &elapsed,
+		}
+	}
+	return value
 }
 
 func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMeasurement {

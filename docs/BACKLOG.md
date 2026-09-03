@@ -3106,18 +3106,21 @@ with no unexpected blob materialization; fresh independent exact-source review;
 and a new canonical plan/digest. Production code and ceremony execution remain
 out of scope. A future live catalog-reload feature is a contract-revision
 trigger: this restart-based receipt cannot establish live-reload behavior.
-The first real-server attempt stopped before restart: partitioned extraction
-seals a staged run, while the resolver's legacy assertion reader accepts only
-published runs. A separate exact-partition-root-fenced assertion bridge needs
-authorization; do not loosen staged-run visibility or mint a new freeze first.
-The full constructor witness also remains unpassed after a test setup failure;
-three native physical graphs passed, but that is not ordinary-path acceptance.
+The first real-server attempt exposed the native declaration-visibility defect;
+the separately integrated T42.1r2 reader/cutover now closes that prerequisite
+with an exact-source real upgrade and logical-restart pass. The original draft
+is retained at `afcaef1d`; correction resumes on
+`codex/t42.1r1-contract-correction` atop main `529cb1d5`. The full constructor
+witness remains unpassed. The resumed audit requires exact cold/B/return-A
+schedule lineage, independently checked per-epoch startup timing, and recovery
+preparation from genuinely completed files rather than modeled settled counters
+over an unfinished generation. No new canonical plan or freeze is ready.
 
 **T42.1r2 ✅ · Partitioned-native declaration reader and versioned repair** —
-branch-complete at exact implementation
-`7da08fb67b75087f8501e2d8990bfcba65d41b20`;
+integrated locally through closure `529cb1d5e5d65274f41851d93ad2df6bfaf3e3fe`,
+with exact implementation `7da08fb67b75087f8501e2d8990bfcba65d41b20`;
 separate production prerequisite to the unmerged T42.1r1 contract correction,
-on `codex/t42.1r2-partitioned-declaration-reader`. Correct silent resolver
+formerly on `codex/t42.1r2-partitioned-declaration-reader`. Correct silent resolver
 declaration omission for native staged/sealed domain publications without
 changing writers, schema, legacy visibility, contract counts, or leaf scope.
 AC: exact current-root/plan/run/candidate/repository fence on every bounded
@@ -3127,7 +3130,7 @@ resolver/replay doubles; real store empty/stale/quarantined/foreign/bounded
 page coverage and superseded-root refusal; small real-server logical restart
 plus authorized search/caller/relationship regression; steady-state-cost pass
 and independent exact-source review. Validation and any upgrade disposition
-must be explicit before branch closure. No merge or ceremony authorization.
+must be explicit before branch closure. No ceremony authorization.
 
 The 10,000-descriptor native replay and real store normal/race checks pass.
 The corrected fresh-data ordinary-server regression passes in 100.25 seconds:
@@ -3149,9 +3152,10 @@ census and zero blob/index work. The fresh 10,000-descriptor replay and
 canonical plan/receipt checks pass. Independent full exact-source manual
 review reports `0/0/0/0`; external cutover review is complete with zero
 findings, without reclassifying the earlier external store timeout. Cleanup
-is verified and retained contract bytes are unchanged. Eligible only for a
-separate integration request; no main merge, deployment, freeze, or ceremony
-is authorized, and T42.1r1 remains the next contract prerequisite.
+is verified and retained contract bytes are unchanged. Ben approved local
+fast-forward integration; the clean temporary branch/worktree was removed,
+with all commits retained on main. No push, deployment, freeze, or ceremony
+was performed, and T42.1r1 remains the next contract prerequisite.
 
 **T42.1r3 · Exact completed-generation recovery preparation (implemented; integration pending)** —
 separate default-inactive production primitive on

@@ -596,6 +596,42 @@ func TestRuntimePointerLastRestartAndSettledRetryReuse(t *testing.T) {
 	}
 }
 
+// A completed generation is not an executable recovery-preparation path.
+// Freezing a forced same-target schedule requires a separate exact control;
+// ordinary reconciliation must continue to reuse the settled schedule.
+func TestRuntimeCompletedSameTargetReconcilePreservesSchedule(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("1", 64), true)
+	runtime, state, source, executor, _, _, domain := newRuntimeFixture(t, plan)
+	target, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Handle(t.Context(), currentChunk(t, state, plan.Repository, 0)); err != nil {
+		t.Fatal(err)
+	}
+	state.settle(plan.Repository, 0)
+	directory := runtime.generationDirectory(plan.Repository, target)
+	generation, err := runtime.openGeneration(directory, plan.Repository, target)
+	if err != nil || !runtime.generationSettled(generation, directory) {
+		t.Fatalf("precondition requires genuinely completed files: %v", err)
+	}
+	before, err := state.GetGenerationSchedule(t.Context(), plan.Repository, ScheduleStage)
+	if err != nil || before.Status != store.GenerationScheduleSettled {
+		t.Fatalf("precondition requires settled schedule: %v", err)
+	}
+	prior := before.Digest
+	if got, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil || got != target {
+		t.Fatalf("completed reconcile = %q, %v", got, err)
+	}
+	after, err := state.GetGenerationSchedule(t.Context(), plan.Repository, ScheduleStage)
+	if err != nil || after.Digest != prior || after.Status != store.GenerationScheduleSettled {
+		t.Fatalf("ordinary reconcile forced a completed same-target schedule: %+v, %v", after, err)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 || executor.callCount() != 1 {
+		t.Fatal("completed same-target reconciliation repeated source work")
+	}
+}
+
 func TestRuntimeReleasesSourceLeaseBeforePublicationFence(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("f", 64), true)
 	runtime, state, source, _, _, fence, domain := newRuntimeFixture(t, plan)

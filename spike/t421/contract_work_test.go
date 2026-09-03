@@ -243,6 +243,78 @@ func TestCorrectedWorkBudgetsCountCensusWatcherAndEveryRole(t *testing.T) {
 	}
 }
 
+func TestCorrectedLogicalBudgetAdmitsMeasuredDirectGitTrace(t *testing.T) {
+	work, derivations, err := correctedWorkEnvelope(retainedWorkPlan(t).Profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	index := slices.IndexFunc(derivations, func(value PhaseBudgetDerivation) bool { return value.Phase == "logical_delta_b" })
+	if index < 0 {
+		t.Fatal("logical restart budget is absent")
+	}
+	derivation, bounds := derivations[index], work.Phases[index]
+	// These are the directly instrumented command classes from the successful
+	// real-server logical restart, including its settled query window. Git's internal
+	// helpers are separately budgeted; this trace does not count or waive them.
+	observed := []struct {
+		command string
+		term    string
+		count   uint64
+	}{
+		{"catalog_census", "catalog_binding_census", 1},
+		{"startup_index_head", "ordinary_index_head", 2},
+		{"startup_origin", "startup_remote_metadata", 2},
+		{"startup_sync_fetch", "ordinary_sync_metadata", 2},
+		{"startup_sync_head", "ordinary_sync_metadata", 6},
+		{"startup_sync_origin", "ordinary_sync_metadata", 2},
+		{"watcher", "ordinary_watcher", 4},
+	}
+	byTerm := make(map[string]uint64)
+	for _, command := range observed {
+		t.Run(command.command, func(t *testing.T) {
+			if !slices.ContainsFunc(derivation.GitTerms, func(value ChildBudgetTerm) bool { return value.Name == command.term }) {
+				t.Fatalf("measured command %q has no budget term", command.command)
+			}
+		})
+		byTerm[command.term] += command.count
+	}
+	// The two settled-window watcher commands are a subset of the full trace,
+	// not two additional commands to add to its four-watch total.
+	if byTerm["ordinary_watcher"] < 2 {
+		t.Fatal("full trace excludes its two settled-window watcher commands")
+	}
+	for name, count := range byTerm {
+		termIndex := slices.IndexFunc(derivation.GitTerms, func(value ChildBudgetTerm) bool { return value.Name == name })
+		if termIndex < 0 {
+			t.Fatalf("measured term %q is absent", name)
+		}
+		term := derivation.GitTerms[termIndex]
+		if count > term.MaximumChildren {
+			t.Fatalf("measured %s=%d exceeds derived ceiling %d", name, count, term.MaximumChildren)
+		}
+		switch name {
+		case "ordinary_index_head":
+			if count != term.Units {
+				t.Fatal("measured two index intents differ from the admitted two sync intents")
+			}
+		case "ordinary_watcher":
+			// Four is this trace's elapsed-time result, not a frozen fixed
+			// allowance. The phase still uses ceil(deadline / 3 seconds).
+			continue
+		default:
+			if count != term.Units*term.ChildrenPerUnit {
+				t.Fatalf("measured no-retry %s=%d differs from its production-derived units", name, count)
+			}
+		}
+	}
+	if derivation.ServerEpochStarts != 1 ||
+		bounds.CensusChildren != (CounterBound{Minimum: 1, Maximum: 1}) ||
+		bounds.GitReads != (CounterBound{}) || bounds.ResolverBlobReads != (CounterBound{}) ||
+		bounds.ResolverBlobBytes != (CounterBound{}) || bounds.IndexFiles != (CounterBound{}) {
+		t.Fatal("metadata/census accounting permitted logical source work or lost its restart")
+	}
+}
+
 func TestCorrectedWorkPreservesIndependentSafetyCeilings(t *testing.T) {
 	profile := retainedWorkPlan(t).Profile
 	before := frozenWorkEnvelope(profile)

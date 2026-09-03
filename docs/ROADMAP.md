@@ -1085,6 +1085,11 @@ relationship, or correctness authority.
   work. Ben approved local fast-forward integration through `529cb1d5`.
   Contract validation now resumes on `codex/t42.1r1-contract-correction`;
   no deployment, new freeze, execution, or combined result is established.
+  The resumed audit requires predecessor-bound cold/B/return-A schedule
+  lineage, independently checked startup timing, and preparation from genuinely
+  completed files. Ordinary completed same-target reconciliation reuses the
+  settled schedule. Full constructor acceptance and new canonical plan
+  authoring remain pending use of the separately implemented boundary below.
 - T42.1r3 is implemented and independently reviewed on
   `codex/t42.1r3-recovery-preparation`, based on local main's integrated
   T42.1r2 bytes. It adds a default-inactive in-process completed-generation

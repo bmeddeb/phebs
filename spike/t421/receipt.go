@@ -2356,7 +2356,7 @@ func validateTransitionResults(
 			seenInjectionTargets[target] = struct{}{}
 		}
 	}
-	if err := validateRecoveryPreparationLineage(values, plan); err != nil {
+	if err := validateRecoveryPreparationLineage(values, authority, plan); err != nil {
 		return err
 	}
 	if outcomes["pressure_80"] == "passed" || outcomes["pressure_90"] == "passed" || outcomes["pressure_75"] == "passed" {
