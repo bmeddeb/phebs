@@ -40,9 +40,10 @@ logical-service target. T42.1 is integrated through closure
 `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
 T42.2 runner implementation is authorized, but its readiness audit found
 frozen authority/work-contract conflicts. T42.1r1 prospective correction is
-approved and in progress, with its real-server regression blocked by a
-partitioned assertion-reader visibility gap requiring separate production-fix
-authorization. Ceremony execution remains unauthorized and unexecuted.
+approved, with local checkpoint integration explicitly requested despite its
+known-red complete constructor. T42.1r2/r3 are integrated; the newly proposed
+T42.1r4 namespace prerequisite requires separate production-fix approval.
+Correction acceptance and ceremony execution remain unestablished.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3119,6 +3120,24 @@ integrated; wiring genuine worker completion into the constructor witness and
 accounting for the hook's exact control reads remain. No new canonical plan or
 freeze is ready.
 
+The September 3 correction now wires actual worker/store completion and both
+same-instance preparations; full acceptance is blocked on the proposed T42.1r4
+production prerequisite below. V2
+preparation records file/query attempts, cold opens and member visits, enqueue
+write attempts, and the exact remaining scoped phase-control total. Existing
+caps remain unchanged. Native 512-record projection-sort arithmetic supplies a
+cold-read floor, not a measured event ledger. T42 execution readiness must still
+prove the actual scoped event ledger and complete non-preparation inspection
+budget, including cadence/retries; the old topology proxy is not that meter.
+Constructor archive/injection execution and resource readings remain modeled.
+No production, UI, retained artifact, integration, push or freeze changes.
+
+Ben subsequently requested commit and local fast-forward merge of this
+checkpoint despite the disclosed constructor failure. This integration
+exception does not close T42.1r1, waive its remaining acceptance/review gates,
+approve T42.1r4 implementation, or authorize a push, freeze or ceremony. Retain
+the known-red regression and the original unmerged lineage at `afcaef1d`.
+
 **T42.1r2 ✅ · Partitioned-native declaration reader and versioned repair** —
 integrated locally through closure `529cb1d5e5d65274f41851d93ad2df6bfaf3e3fe`,
 with exact implementation `7da08fb67b75087f8501e2d8990bfcba65d41b20`;
@@ -3191,6 +3210,26 @@ UI screenshot is the only docs-check failure. This is neither binary-control
 transport/trigger coverage nor a ceremony pass. Ben approved the local
 fast-forward merge; the verified-clean merged worktree and branch were removed,
 with all commits retained on main. No push, freeze or ceremony was performed.
+
+**T42.1r4 · Bounded RPC namespace lookup (proposed; approval required)** —
+separate production prerequisite, not part of the contract-only T42.1r1 draft.
+The native constructor reaches the ordinary RPC namespace cache, where the
+frozen overlay requires 20,002 distinct protocol/import keys against a 16,384
+limit. Of these, 10,002 are successful-empty lookups answered from the immutable
+resolver root without member I/O; they still consume cache/read budget today.
+AC: correct bounded lookup/admission at the shared production seam without
+widening caps, reducing corpus inputs or changing exact outputs/root authority;
+account negative probes, actual member reads and retained memory separately;
+test many absent namespaces, genuine member-limit exhaustion, exact output
+preservation, corruption and cancellation; review policy/identity compatibility
+and per-query/tick/startup/retry/publication cost. Existing runtime retains this
+refusal as a closed same-target terminal failure: select and test an explicit
+build-policy-target revision so old failures can recover, while preserving
+historical publication reads, reuse and archive compatibility. Do not blindly
+bump the RPC artifact policy. Require the ordinary full
+component regression under native resident limits, independent review and
+separate integration before resuming complete T42.1r1 constructor acceptance.
+No implementation, branch, merge or execution approval is implied by this row.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

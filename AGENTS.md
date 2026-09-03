@@ -807,6 +807,30 @@ T42.1r1 draft is rebased onto it, with no production edits in the draft.
 The hook is available, but genuine completed-worker constructor wiring and
 prospective control-read accounting remain unpassed prerequisites. No remote
 push, new canonical plan, freeze or ceremony occurred.
+The September 3 correction wires genuine native completion and both live
+preparation paths. Its first attempt passed all three physical generations and
+both result-preserving recoveries, then stopped in the logical constructor on
+an absent component base directory. The fixture now reuses its existing root
+for the four native namespaced builders; full acceptance remains pending.
+Prospective V2 read subtotals include native query/write retries and cold
+artifact/spool visits under unchanged phase caps. An actual scoped event ledger
+and complete other-inspection cadence/retry budget remain execution-readiness
+requirements, not constructor measurements. No corrected artifact or freeze.
+The corrected full package passed 54 of 55 top-level tests but refused complete
+constructor acceptance at the ordinary RPC namespace cache: the frozen overlay
+requires 20,002 distinct protocol/import keys, including 10,002 successful-empty
+lookups with no member I/O, against its 16,384 cap. All three native physical
+generations and both result-preserving recoveries passed before this refusal.
+The fixture additionally pins the runtime's existing component resident limits;
+that tightening is not a fix or a completed acceptance result. Proposed T42.1r4
+requires separate approval, branch and production review; do not widen caps,
+filter the corpus or implement it in the contract-only draft. No further
+unchanged expensive rerun, corrected artifact, integration, push or freeze.
+Ben subsequently requested commit and local fast-forward integration of the
+T42.1r1 checkpoint with the disclosed constructor failure retained. This is an
+integration exception, not ticket closure or T42.1r4 implementation approval;
+acceptance/review, scoped metering and freeze remain open. Preserve the original
+unmerged lineage at `afcaef1d`; no push or ceremony is authorized.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

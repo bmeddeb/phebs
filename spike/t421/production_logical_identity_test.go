@@ -64,7 +64,6 @@ func productionLogicalAuthorities(
 	}); err != nil {
 		t.Fatal(err)
 	}
-	productionExtractionSchedules(t, ctx, state, plan, physical)
 	corpus, err := BuildCombinedCorpus()
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +113,7 @@ func productionLogicalAuthorities(
 		}
 		component, present := components[transition.physical]
 		if !present {
-			component = productionBuildRelationshipComponents(ctx, t, root, state, input)
+			component = productionBuildRelationshipComponents(ctx, t, root, input, input.NativeDomains)
 			components[transition.physical] = component
 		}
 		relationship := productionBuildRelationship(ctx, t, root, plan, generation, snapshot, component)
@@ -142,7 +141,8 @@ func productionLogicalAuthorities(
 	// semantic result is unchanged. Derive that changed input through the same
 	// native run constructor; do not invent an arbitrary archive-phase digest.
 	// This witnesses the provenance transition, not archive/restore execution.
-	restoredComponents := productionBuildRelationshipComponents(ctx, t, root, state, physical["a-return"])
+	restoredDomains := productionModeledArchiveDomains(ctx, t, state, physical["a-return"])
+	restoredComponents := productionBuildRelationshipComponents(ctx, t, root, physical["a-return"], restoredDomains)
 	restoredRoot := productionBuildRelationship(ctx, t, root, plan, returnGeneration, returnSnapshot, restoredComponents)
 	archive := result["a-return"]
 	archive.RelationshipGenerationSHA256 = restoredRoot.GenerationDigest
@@ -168,7 +168,7 @@ func productionBuildRelationship(
 ) relationshippublication.RootV3 {
 	t.Helper()
 	prepared, err := relationshippublication.BuildV3(ctx, relationshippublication.BuildRequestV3{
-		Root: filepath.Join(root, "relationships"), Catalog: generation,
+		Root: root, Catalog: generation,
 		States: snapshot.States, ServiceSummary: snapshot.Summary,
 		Resolver: components.resolver, RPC: components.rpc, Kafka: components.kafka, Upstream: components.upstream,
 	})
@@ -285,19 +285,18 @@ func productionRunStatePlan(
 	return units
 }
 
-func productionBuildRelationshipComponents(
+func productionModeledArchiveDomains(
 	ctx context.Context,
 	t *testing.T,
-	root string,
 	state *store.Surreal,
 	input productionIdentityState,
-) productionRelationshipComponents {
+) []candidate.DownstreamDomainAuthority {
 	t.Helper()
 	domains := make([]candidate.DownstreamDomainAuthority, 0, len(input.Plans))
 	for domain, plan := range input.Plans {
-		// Only native invisible run-token construction is exercised here. The
-		// full semantic result was derived separately by the native executor;
-		// this test does not pretend it published that evidence into this store.
+		// Archive is deliberately still a provenance constructor model. These
+		// fresh invisible tokens are not restored or re-extracted store authority;
+		// normal physical/logical components use the actual completed runs.
 		run, err := state.BeginPartitionedExtractionRun(ctx, store.ExtractionScope{
 			Repository: t401.RepositoryName, Commit: input.Authority.PhysicalCommit, Domain: domain,
 		}, plan.ExtractorVersion, plan.Digest, plan.CandidateManifestDigest, plan.Schema,
@@ -313,15 +312,30 @@ func productionBuildRelationshipComponents(
 		}
 		domains = append(domains, authority)
 	}
+	return domains
+}
+
+func productionBuildRelationshipComponents(
+	ctx context.Context,
+	t *testing.T,
+	root string,
+	input productionIdentityState,
+	domains []candidate.DownstreamDomainAuthority,
+) productionRelationshipComponents {
+	t.Helper()
+	if len(domains) != len(input.Plans) {
+		t.Fatal("relationship constructor lacks the complete native domain provenance inventory")
+	}
 	upstream, err := downstreamauthority.Build(input.ObservationSource.DownstreamAuthority(), domains)
 	if err != nil {
 		t.Fatal(err)
 	}
 	resolverStage, err := resolvernamespace.BuildV2(ctx, resolvernamespace.BuildRequestV2{
 		BuildRequest: resolvernamespace.BuildRequest{
-			Root: filepath.Join(root, "resolver-namespaces"), Repository: t401.RepositoryName,
+			Root: root, Repository: t401.RepositoryName,
 			Commit: input.Authority.PhysicalCommit, ResolverGenerationDigest: input.Authority.ResolverCatalogGenerationSHA256,
 			ResolverManifestDigest: input.Authority.ResolverCatalogRootSHA256, Descriptors: input.Descriptors,
+			ResidentLimitBytes: relationshippublication.ResolverResidentLimit,
 		}, Upstream: upstream,
 	})
 	if err != nil {
@@ -332,8 +346,8 @@ func productionBuildRelationshipComponents(
 		t.Fatal(err)
 	}
 	rpcStage, err := rpccallerposting.BuildV2(ctx, rpccallerposting.BuildRequestV2{
-		Root: filepath.Join(root, "rpc-postings"), Observations: input.ObservationSource,
-		Resolver: resolver, Upstream: upstream,
+		Root: root, Observations: input.ObservationSource,
+		Resolver: resolver, Upstream: upstream, ResidentLimitBytes: relationshippublication.RPCResidentLimit,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -343,7 +357,8 @@ func productionBuildRelationshipComponents(
 		t.Fatal(err)
 	}
 	kafkaStage, err := kafkatopicposting.BuildV2(ctx, kafkatopicposting.BuildRequestV2{
-		Root: filepath.Join(root, "kafka-postings"), Observations: input.ObservationSource, Upstream: upstream,
+		Root: root, Observations: input.ObservationSource, Upstream: upstream,
+		ResidentLimitBytes: relationshippublication.KafkaResidentLimit,
 	})
 	if err != nil {
 		t.Fatal(err)

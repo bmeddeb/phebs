@@ -1551,6 +1551,10 @@ func testInjectionTransition(
 			if recovery.Target != root.GenerationSHA256 {
 				t.Fatal("native recovery schedule targets a different immutable generation")
 			}
+			files, queries, err := recoveryPreparationReadBounds(plan, preparation)
+			if err != nil {
+				t.Fatal(err)
+			}
 			value.Preparation = &RecoveryPreparationResult{
 				Schema: "t422-native-recovery-preparation-v1", Phase: point.Phase,
 				PrepareEventOrdinal: transition.StartEventOrdinal + 5,
@@ -1561,9 +1565,21 @@ func testInjectionTransition(
 				Successes: preparation.Successes, Requeues: preparation.Requeues,
 				PreparationCompletionWrites: preparation.PreparationCompletionWrites, PreparationDeletes: preparation.PreparationDeletes,
 				RecoveryCompletionWrites: preparation.RecoveryCompletionWrites, RecoveryRootInstalls: preparation.RecoveryRootInstalls,
-				PublicationCalls:        preparation.PublicationCalls.Minimum,
+				PublicationCalls: preparation.PublicationCalls.Minimum,
+				// Read/resource measurements remain a labeled receipt model; the
+				// native constructor witness above supplies identities, not a
+				// production event ledger or an executable injection protocol.
+				ControlFileReads:        files.Minimum,
+				StoreReadAttempts:       queries.Minimum,
+				StoreWriteAttempts:      1,
+				OtherPhaseControlReads:  uint64(measurement.Metrics.ControlReads),
 				StoreAuthorityUnchanged: true, PreparedBeforeArm: true, DirectoriesSynced: true, LocksReleasedBeforeWait: true,
 			}
+			controls := files.Minimum + queries.Minimum
+			if uint64(measurement.Metrics.ControlReads) > math.MaxUint64-controls {
+				t.Fatal("modeled preparation control total overflows")
+			}
+			measurement.Metrics.ControlReads += CountMetric(controls)
 			value.Target.ScheduleSHA256 = recovery.RecoverySchedule
 		}
 		if point.Name == "stale_partition_lease" {

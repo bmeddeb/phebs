@@ -384,6 +384,133 @@ missing `ui/receipts/fixtures/service-boundary.png` link. Full-package, complete
 constructor and independent exact-source review gates remain open. The separate
 integrated real-server restart/upgrade gate above supersedes its earlier hold.
 
+### September 3 native completion and read accounting
+
+The constructor now replaces its mocked extraction pass with one real volatile
+store and live reconciler/runtime. It finishes each physical generation before
+replacing its candidate, executes the 56 native partitions and publishes all
+nine roots, and carries actual run provenance into resolver and relationship
+construction. The zero-partition Thrift root remains downstream authority, not
+a fabricated resolver declaration. Operational schedule generations retain the
+native cold/B/return-A predecessor chain independently of immutable extraction
+generations. After genuine return-A settlement, the same enabled reconciler
+prepares and drains both native recovery modes. Bounded result-file hashes,
+store publications, source acquisitions and evidence appends fence reuse.
+This is not stale-lease/process-death injection, trigger arming or archive
+execution; those remain explicitly modeled, as do receipt resource readings,
+signing and the search leaf. Source/observation files are real constructor
+outputs with test-selected references, not ordinary-server publication proof.
+
+Prospective V2 read accounting covers inspection, readiness, native preparation
+and public-query work; it does not claim every pipeline I/O. A control read is
+one file-control read attempt or read-only store query attempt. Metadata probes
+are excluded. The inherited T40 topology proxy is not an event count. For one
+successful native preparation, with D domains, N partitions and checkpoint
+indicator C:
+
+- Warm file attempts are `24 + 4D + N + C + B`, where B is zero or one
+  existing-successor-binding reread. One cold candidate open adds one manifest
+  read. For D=9 and N=56 this is 116–117 or 117–118 before the cold addition.
+- Read-only store attempts are `D + 10 + sum(A1..A4)`, with each of the four
+  schedule reads using the native 1–64 attempt bound: 23–275 here. One native
+  enqueue is one schedule-write call but 1–64 attempted write transactions.
+- Phase control reads must equal preparation file attempts plus preparation
+  query attempts plus the separately recorded other scoped controls. The
+  existing 4,096 phase cap still applies. The maximum preparation subtotals
+  are 393/394, leaving at most 3,703/3,702 for other work at that maximum;
+  this subtraction is admission arithmetic, not a full-phase cost proof.
+- A warm candidate cache adds zero member visits. A cold open charges every
+  actual artifact and projection-spool record visit, including rereads. The
+  maximum per-domain population within each of the repository and caller
+  artifact planes supplies a conservative 53,204-record floor without summing
+  overlapping domains. Native 512-record binary-carry/final-merge arithmetic
+  makes its artifact/spool floor 470,732 visits. The actual event count may be
+  higher and remains charged to the unchanged phase member-read ceiling.
+
+The fixed 64-level run-length calculation holds no source records, uses the
+native admitted population bound and performs no I/O; native sorter or retry
+changes require contract review. These are prospective receipt predicates,
+not an implemented event meter. The complete other-inspection call graph,
+cadence and retries must fit the remaining allowance, with a real scoped event
+ledger, before T42 execution readiness. No production query, sync tick,
+startup/restart, retry/no-op, publication, lock, cache, child or schema changes.
+Full constructor acceptance, complete branch gates, independent review and
+new canonical artifact authoring remain pending.
+
+The first native-completion attempt stopped after 558.563 seconds. All three
+physical generations settled their 56 chunks/nine roots; both completed-state
+preparations then recovered 56 existing results with unchanged result-file
+bytes/store publications and zero source acquisition/evidence appends. The
+first logical catalog also activated before the constructor failed on an absent
+resolver-namespace base directory. Four downstream constructor calls had passed
+uncreated nested bases even though each native builder owns its own distinct
+namespace. They now receive the existing shared temporary root; no production
+directory policy changes. The test removed its workspace and both local stores;
+no matching constructor or database process survived. This is partial fixture
+evidence, not complete acceptance. The corrected full-package outcome follows.
+
+Focused correction normal tests pass in 46.145 seconds and compact race tests
+in 2.345 seconds. Plan sizing passes at 260,554/262,144 bytes. Repository-wide
+compilation, scoped vet/pinned lint, module verification, glossary and whitespace
+checks pass; docs-check retains only the known UI screenshot link. Independent
+working-tree manual source and documentation reviews found one operational vs
+immutable schedule comparison defect, corrected before the first native run,
+and no other findings in their stated scope. Supplemental external review was
+blocked before launch pending permission to transmit the changed source to its
+configured provider; no external-review result exists.
+The broader contract race selector subsequently passed in 567.092 seconds under
+its 15-minute test allowance, including retained V1 decode/re-encode, prospective
+corpus/safety preservation, epochs, work formulas and preparation accounting.
+This closes that selector's earlier five-minute timeout, not the separate full
+package/constructor race bar or any ceremony deadline.
+
+The corrected full normal suite failed in 990.689 seconds: 54 of 55 top-level
+tests passed, including the separate strict production pipeline replay
+(287.29 seconds). Complete constructor acceptance alone failed (567.01 seconds).
+It again passed all three physical generations and both result-preserving
+recoveries, then reached `RPC caller posting bound exceeded` in ordinary RPC
+component construction. No completed constructor receipt was produced, and all
+test/database processes exited.
+
+The binding arm is the shared namespace cache, not posting volume or recovery.
+RPC probes every nonblank import for both gRPC and Thrift. The frozen overlay's
+10,000 provider namespaces plus Sarama require 20,002 distinct protocol/import
+keys: 10,000 present namespaces and 10,002 successful-empty misses. The cache
+charges and retains all of them against `MaxNamespaceReads=16,384`, even though
+the immutable resolver root answers misses without reading a member. The
+ordinary V3 runtime uses the same complete inventory, descriptors and builder;
+prior-member reuse occurs after this walk and cannot avoid the refusal.
+
+Separately, the fixture's three component requests omitted native resident
+limits. They now pin `ResolverResidentLimit`, `RPCResidentLimit` and
+`KafkaResidentLimit` (128/192/160 MiB). Their previous unrestricted defaults
+did not cause the namespace refusal; this tightening may expose another bound
+and is not a completed acceptance result. No expensive unchanged rerun is
+useful. Proposed T42.1r4 requires separate production authorization and review
+for bounded namespace handling with unchanged caps, corpus and exact output/root
+authority, including policy/identity compatibility and steady-state-cost checks.
+Production retains this bound as a closed same-target terminal failure. The
+separate prerequisite must explicitly review an existing build-policy-target
+revision and test old-terminal replacement plus historical publication/reuse/
+archive compatibility; an implementation-only optimization would leave existing
+failures stuck, while a blind RPC artifact-policy bump could break old readers.
+The contract draft remains held; no production fix, new canonical plan, merge,
+push, freeze or ceremony is claimed.
+After pinning the native resident limits, compact preparation/runtime race tests
+pass in 1.629 seconds; scoped vet, pinned lint, glossary and whitespace checks
+also pass. This compiles but does not execute the complete constructor. The
+unchanged missing UI screenshot remains the only docs-check failure. Retained
+plan, T41.10 receipt and logical-restart regression hashes remain unchanged.
+
+### Checkpoint integration decision
+
+Ben subsequently requested commit and local fast-forward merge of this
+checkpoint, with the known-red constructor explicitly retained. This is not
+T42.1r1 acceptance or closure and does not waive its remaining review/metering
+gates. T42.1r4 implementation still requires separate approval. The original
+unmerged draft remains at `afcaef1d` on `codex/t42.2-combined-ceremony`; no push,
+new canonical artifact, freeze or ceremony is authorized by this integration.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

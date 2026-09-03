@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -34,6 +36,12 @@ type RecoveryPreparationResult struct {
 	RecoveryCompletionWrites    uint64 `json:"recovery_completion_writes"`
 	RecoveryRootInstalls        uint64 `json:"recovery_root_installs"`
 	PublicationCalls            uint64 `json:"publication_calls"`
+	ControlFileReads            uint64 `json:"control_file_reads"`
+	StoreReadAttempts           uint64 `json:"store_read_attempts"`
+	CandidateColdOpens          uint64 `json:"candidate_cold_opens"`
+	MemberReads                 uint64 `json:"member_reads"`
+	StoreWriteAttempts          uint64 `json:"store_write_attempts"`
+	OtherPhaseControlReads      uint64 `json:"other_phase_control_reads"`
 	OldJobsReset                uint64 `json:"old_jobs_reset"`
 	ResultFilesRemoved          uint64 `json:"result_files_removed"`
 	EvidenceRowsRemoved         uint64 `json:"evidence_rows_removed"`
@@ -45,7 +53,7 @@ type RecoveryPreparationResult struct {
 
 func validateRecoveryPreparation(value InjectionTransition, authority AuthorityPhaseResult, metrics ReceiptMetrics, start uint64, plan Plan) error {
 	index := -1
-	if plan.Correction != nil {
+	if plan.Schema == PlanV2Schema && plan.Correction != nil {
 		index = slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == value.Target.Phase })
 	}
 	if index < 0 {
@@ -82,7 +90,121 @@ func validateRecoveryPreparation(value InjectionTransition, authority AuthorityP
 		!p.StoreAuthorityUnchanged || !p.PreparedBeforeArm || !p.DirectoriesSynced || !p.LocksReleasedBeforeWait {
 		return errors.New("recovery preparation differs from the frozen native transition")
 	}
+	return validateRecoveryPreparationReads(*p, want, metrics, plan)
+}
+
+// The native store's internal transaction/query conflict loop is independent
+// of generation-job retries. This pins internal/store.maxQueueRetries, not the
+// five-attempt generation budget. Preparation itself is never retried.
+const recoveryPreparationStoreAttempts = uint64(64)
+
+// Bounds are for one warm native call; a cold candidate open adds one manifest
+// control. The optional extra file read is an existing successor-binding check.
+func recoveryPreparationReadBounds(plan Plan, row RecoveryPreparation) (CounterBound, CounterBound, error) {
+	domains := plan.Profile.Pipeline.ExtractionDomains
+	if len(domains) == 0 || len(domains) > extractionpublication.MaxDomains || row.PreparationCompletionWrites > 1 {
+		return CounterBound{}, CounterBound{}, errors.New("recovery preparation read inventory is invalid")
+	}
+	var partitions uint64
+	for _, domain := range domains {
+		if domain.ApplicablePartitions > uint64(candidate.MaxDomainResultPartitions) {
+			return CounterBound{}, CounterBound{}, errors.New("recovery preparation partition read bound is invalid")
+		}
+		partitions += domain.ApplicablePartitions
+	}
+	if partitions != row.Chunks {
+		return CounterBound{}, CounterBound{}, errors.New("recovery preparation read inventory differs from its schedule")
+	}
+	domainCount := uint64(len(domains))
+	// Core: generation/selected-plan/six bindings + four controls per domain
+	// + every result + optional checkpoint reread. The main callback adds four
+	// latest/latest/source/latest authority confirmations (sixteen controls).
+	files := 24 + 4*domainCount + partitions + row.PreparationCompletionWrites
+	return CounterBound{Minimum: files, Maximum: files + 1}, CounterBound{
+		Minimum: domainCount + 10 + 4, Maximum: domainCount + 10 + 4*recoveryPreparationStoreAttempts,
+	}, nil
+}
+
+func validateRecoveryPreparationReads(p RecoveryPreparationResult, row RecoveryPreparation, metrics ReceiptMetrics, plan Plan) error {
+	files, queries, err := recoveryPreparationReadBounds(plan, row)
+	if err != nil || p.CandidateColdOpens > 1 {
+		return errors.New("recovery preparation read inventory is invalid")
+	}
+	if p.ControlFileReads < files.Minimum+p.CandidateColdOpens || p.ControlFileReads > files.Maximum+p.CandidateColdOpens ||
+		p.StoreReadAttempts < queries.Minimum || p.StoreReadAttempts > queries.Maximum ||
+		p.StoreWriteAttempts == 0 || p.StoreWriteAttempts > recoveryPreparationStoreAttempts ||
+		uint64(metrics.StoreTransactions) < p.StoreWriteAttempts {
+		return errors.New("recovery preparation read/write attempts differ from the native call graph")
+	}
+	if p.CandidateColdOpens == 0 {
+		if p.MemberReads != 0 {
+			return errors.New("warm preparation retained candidate member reads")
+		}
+	} else {
+		minimum, err := recoveryPreparationColdMemberMinimum(plan.Profile.Pipeline.ExtractionDomains)
+		if err != nil || p.MemberReads < minimum {
+			return errors.New("cold preparation omitted candidate artifact or projection reads")
+		}
+	}
+	if uint64(metrics.MemberReads) < p.MemberReads ||
+		p.StoreReadAttempts > math.MaxUint64-p.ControlFileReads {
+		return errors.New("recovery preparation read subtotal is unavailable or overflows")
+	}
+	controls := p.ControlFileReads + p.StoreReadAttempts
+	if p.OtherPhaseControlReads > math.MaxUint64-controls || uint64(metrics.ControlReads) != controls+p.OtherPhaseControlReads {
+		return errors.New("recovery preparation and other scoped controls differ from the phase total")
+	}
 	return nil
+}
+
+func recoveryPreparationColdMemberMinimum(domains []ExtractionDomainProfile) (uint64, error) {
+	var repository, caller uint64
+	for _, domain := range domains {
+		if domain.CandidateRecords > uint64(candidate.MaxCorpusEntries) {
+			return 0, errors.New("candidate read population exceeds native admission")
+		}
+		if strings.HasSuffix(domain.Domain, "-caller") {
+			caller = max(caller, domain.CandidateRecords)
+		} else {
+			repository = max(repository, domain.CandidateRecords)
+		}
+	}
+	// Domains overlap within each plane, but the two physical planes are read
+	// separately. Their largest admitted domain supplies a conservative record
+	// floor without charging the same plane once for every extractor.
+	records := repository + caller
+	if records == 0 {
+		return 0, errors.New("cold candidate read inventory is empty")
+	}
+	// Native candidate.projectionSorter uses 512-record runs, binary carries,
+	// then a low-to-high final merge. Count only run lengths, never source data:
+	// one artifact traversal, each merge input, and the final projection scan.
+	reads := 2 * records
+	var levels [64]uint64
+	for remaining := records; remaining > 0; {
+		run := min(remaining, uint64(512))
+		remaining -= run
+		for level := range levels {
+			if levels[level] == 0 {
+				levels[level] = run
+				break
+			}
+			run += levels[level]
+			reads += run
+			levels[level] = 0
+		}
+	}
+	var result uint64
+	for _, run := range levels {
+		if run == 0 {
+			continue
+		}
+		if result != 0 {
+			reads += result + run
+		}
+		result += run
+	}
+	return reads, nil
 }
 
 func injectionTargetMatchesPreparedExtraction(value InjectionTransition, root ExtractionRootResult) bool {

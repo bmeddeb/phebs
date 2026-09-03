@@ -157,10 +157,11 @@ exact implementation
 `sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
 T42.2 runner implementation is authorized, but the pre-implementation audit
 found frozen authority/work-contract conflicts. T42.1r1 correction is approved
-and in progress. Its small-server regression exposed a pre-restart partitioned
-assertion-reader visibility gap requiring a separately authorized production
-bridge; no corrected freeze is ready. No T42.2 execution, private rerun, or
-release is authorized.
+with local checkpoint integration explicitly requested despite known-red
+complete-constructor acceptance. T42.1r2/r3 are integrated; the proposed T42.1r4
+namespace prerequisite needs separate production-fix approval. Correction
+acceptance and freeze remain open. No T42.2 execution, private rerun, or release
+is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -1102,6 +1103,28 @@ relationship, or correctness authority.
   bytes; genuine completed-constructor wiring and prospective control-read
   accounting remain next. There is no push, new binary transport or
   trigger-arming claim, corrected freeze, or execution authorization.
+- T42.1r1's September 3 correction wires genuine native constructor completion
+  and same-instance preparation/recovery. The complete acceptance test remains
+  blocked as recorded below. Prospective read subtotals distinguish control-file attempts,
+  read-only queries, enqueue write attempts and cold artifact/spool visits;
+  phase totals include preparation and other scoped inspection work exactly.
+  The unchanged caps are not evidence of a complete meter: actual scoped event
+  capture and a full non-preparation inspector/cadence bound remain execution
+  readiness gates. No production or retained-artifact change, corrected freeze
+  or combined result is established.
+- The full T42.1 package then passed 54 of 55 top-level tests but failed complete
+  constructor acceptance at ordinary RPC namespace lookup: 20,002 distinct
+  protocol/import keys exceed its 16,384 cap, including 10,002 no-member-I/O
+  misses. Three native physical generations and both result-preserving recovery
+  preparations passed before that refusal. T42.1r4 is proposed as a separate
+  production prerequisite requiring Ben's approval, preserving caps, corpus and
+  exact authority/output. The fixture now also pins existing runtime resident
+  limits; no complete pass under those tighter fences is claimed. No unchanged
+  expensive rerun, production fix, new canonical artifact, freeze or ceremony.
+- Ben subsequently requested commit and local fast-forward integration of the
+  current T42.1r1 checkpoint, retaining its known-red constructor. Integration
+  is not ticket closure or a waiver of acceptance/review gates, and does not
+  approve T42.1r4 implementation, remote push, corrected freeze or execution.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

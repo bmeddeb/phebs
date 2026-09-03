@@ -13,8 +13,13 @@ import (
 // corpus. The separate ordinary-pass test supplies native full-corpus IDs.
 func TestRecoveryPreparationRejectsMissingWorkAndDestructiveRecipes(t *testing.T) {
 	plan := Plan{Schema: PlanV2Schema, Correction: &ContractCorrection{RecoveryPreparations: correctedRecoveryPreparations()}}
+	plan.Profile.Pipeline.ExtractionDomains = frozenExtractionDomains()
 	for _, row := range plan.Correction.RecoveryPreparations {
 		t.Run(row.Phase, func(t *testing.T) {
+			files, queries, boundsErr := recoveryPreparationReadBounds(plan, row)
+			if boundsErr != nil {
+				t.Fatal(boundsErr)
+			}
 			target, prior := SHA256([]byte("test-target")), SHA256([]byte("test-prior"))
 			generation := SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + target + "\x00" + prior))
 			schedule, err := store.GenerationScheduleDigest(store.GenerationScheduleSpec{
@@ -35,10 +40,12 @@ func TestRecoveryPreparationRejectsMissingWorkAndDestructiveRecipes(t *testing.T
 				PreparationCompletionWrites: row.PreparationCompletionWrites, PreparationDeletes: row.PreparationDeletes,
 				RecoveryCompletionWrites: row.RecoveryCompletionWrites, RecoveryRootInstalls: row.RecoveryRootInstalls,
 				PublicationCalls: row.PublicationCalls.Minimum, StoreAuthorityUnchanged: true, PreparedBeforeArm: true, DirectoriesSynced: true, LocksReleasedBeforeWait: true,
+				ControlFileReads: files.Minimum, StoreReadAttempts: queries.Minimum, StoreWriteAttempts: 1,
 			}
 			value := InjectionTransition{Target: InjectionTargetProjection{Phase: row.Phase, GenerationSHA256: target, ScheduleSHA256: schedule},
 				ArmEventOrdinal: 3, AuthorityBeforeSHA256: digest, AuthorityAfterSHA256: digest, Preparation: &p}
-			metrics := ReceiptMetrics{PublicationWrites: CountMetric(p.PublicationCalls), JobAttempts: CountMetric(p.Starts), StoreTransactions: CountMetric(p.ScheduleWrites)}
+			metrics := ReceiptMetrics{PublicationWrites: CountMetric(p.PublicationCalls), JobAttempts: CountMetric(p.Starts), StoreTransactions: CountMetric(p.ScheduleWrites),
+				ControlReads: CountMetric(p.ControlFileReads + p.StoreReadAttempts)}
 			if err := validateRecoveryPreparation(value, authority, metrics, 1, plan); err != nil {
 				t.Fatal(err)
 			}
@@ -55,6 +62,9 @@ func TestRecoveryPreparationRejectsMissingWorkAndDestructiveRecipes(t *testing.T
 				"changed_product_authority": func(p *RecoveryPreparationResult) { p.StoreAuthorityUnchanged = false },
 				"locks_held_while_waiting":  func(p *RecoveryPreparationResult) { p.LocksReleasedBeforeWait = false },
 				"invented_schedule":         func(p *RecoveryPreparationResult) { p.RecoveryScheduleSHA256 = prior },
+				"unmetered_file_reads":      func(p *RecoveryPreparationResult) { p.ControlFileReads = 0 },
+				"unmetered_store_reads":     func(p *RecoveryPreparationResult) { p.StoreReadAttempts = 0 },
+				"unmetered_write_attempt":   func(p *RecoveryPreparationResult) { p.StoreWriteAttempts = 0 },
 			} {
 				t.Run(name, func(t *testing.T) {
 					changed := p
@@ -78,6 +88,148 @@ func TestRecoveryPreparationRejectsMissingWorkAndDestructiveRecipes(t *testing.T
 				t.Fatal("v1 accepted prospective preparation")
 			}
 		})
+	}
+}
+
+func TestRecoveryPreparationReadAccounting(t *testing.T) {
+	plan := Plan{Schema: PlanV2Schema}
+	plan.Profile.Pipeline.ExtractionDomains = frozenExtractionDomains()
+	for index, row := range correctedRecoveryPreparations() {
+		t.Run(row.Phase, func(t *testing.T) {
+			files, queries, err := recoveryPreparationReadBounds(plan, row)
+			if err != nil || files.Minimum != 116+uint64(index) || files.Maximum != files.Minimum+1 || queries.Minimum != 23 || queries.Maximum != 275 {
+				t.Fatalf("read bounds: files=%+v queries=%+v err=%v", files, queries, err)
+			}
+			warm := RecoveryPreparationResult{ControlFileReads: files.Minimum, StoreReadAttempts: queries.Minimum,
+				StoreWriteAttempts: 1, OtherPhaseControlReads: 7}
+			measured := func(p RecoveryPreparationResult) ReceiptMetrics {
+				return ReceiptMetrics{ControlReads: CountMetric(p.ControlFileReads + p.StoreReadAttempts + p.OtherPhaseControlReads),
+					MemberReads: CountMetric(p.MemberReads), StoreTransactions: CountMetric(p.StoreWriteAttempts)}
+			}
+			if err := validateRecoveryPreparationReads(warm, row, measured(warm), plan); err != nil {
+				t.Fatal(err)
+			}
+			coldMinimum, err := recoveryPreparationColdMemberMinimum(plan.Profile.Pipeline.ExtractionDomains)
+			if err != nil || coldMinimum != 470_732 {
+				t.Fatalf("cold minimum=%d err=%v", coldMinimum, err)
+			}
+			cold := warm
+			cold.CandidateColdOpens, cold.MemberReads = 1, coldMinimum
+			cold.ControlFileReads++
+			for name, p := range map[string]RecoveryPreparationResult{
+				"cold_artifacts_and_all_spool_reads": cold,
+				"existing_binding_reread": func() RecoveryPreparationResult {
+					value := warm
+					value.ControlFileReads++
+					return value
+				}(),
+				"native_conflict_attempts": func() RecoveryPreparationResult {
+					value := warm
+					value.StoreReadAttempts, value.StoreWriteAttempts = queries.Maximum, recoveryPreparationStoreAttempts
+					return value
+				}(),
+			} {
+				t.Run(name, func(t *testing.T) {
+					if err := validateRecoveryPreparationReads(p, row, measured(p), plan); err != nil {
+						t.Fatal(err)
+					}
+				})
+			}
+			for name, mutate := range map[string]func(*RecoveryPreparationResult){
+				"missing_file":        func(p *RecoveryPreparationResult) { p.ControlFileReads-- },
+				"unplanned_file":      func(p *RecoveryPreparationResult) { p.ControlFileReads += 2 },
+				"missing_query":       func(p *RecoveryPreparationResult) { p.StoreReadAttempts-- },
+				"extra_query_attempt": func(p *RecoveryPreparationResult) { p.StoreReadAttempts = queries.Maximum + 1 },
+				"missing_write":       func(p *RecoveryPreparationResult) { p.StoreWriteAttempts = 0 },
+				"extra_write_attempt": func(p *RecoveryPreparationResult) { p.StoreWriteAttempts = recoveryPreparationStoreAttempts + 1 },
+				"extra_cold_open":     func(p *RecoveryPreparationResult) { p.CandidateColdOpens = 2 },
+				"warm_member_read":    func(p *RecoveryPreparationResult) { p.MemberReads = 1 },
+				"cold_omits_manifest": func(p *RecoveryPreparationResult) { p.CandidateColdOpens, p.MemberReads = 1, coldMinimum },
+				"cold_omits_spool": func(p *RecoveryPreparationResult) {
+					*p = cold
+					p.MemberReads = 53_204
+				},
+				"cold_undercounted": func(p *RecoveryPreparationResult) {
+					*p = cold
+					p.MemberReads--
+				},
+			} {
+				t.Run(name, func(t *testing.T) {
+					p := warm
+					mutate(&p)
+					if validateRecoveryPreparationReads(p, row, measured(p), plan) == nil {
+						t.Fatal("invalid native read projection accepted")
+					}
+				})
+			}
+			for name, mutate := range map[string]func(*ReceiptMetrics){
+				"aggregate_omits_prep": func(m *ReceiptMetrics) { m.ControlReads = CountMetric(warm.OtherPhaseControlReads) },
+				"aggregate_omits_other": func(m *ReceiptMetrics) {
+					m.ControlReads = CountMetric(warm.ControlFileReads + warm.StoreReadAttempts)
+				},
+				"aggregate_double_counts": func(m *ReceiptMetrics) { m.ControlReads++ },
+				"missing_write_attempts":  func(m *ReceiptMetrics) { m.StoreTransactions-- },
+			} {
+				t.Run(name, func(t *testing.T) {
+					metrics := measured(warm)
+					mutate(&metrics)
+					if validateRecoveryPreparationReads(warm, row, metrics, plan) == nil {
+						t.Fatal("inexact phase accounting accepted")
+					}
+				})
+			}
+			t.Run("cold_missing_phase_member_charge", func(t *testing.T) {
+				metrics := measured(cold)
+				metrics.MemberReads--
+				if validateRecoveryPreparationReads(cold, row, metrics, plan) == nil {
+					t.Fatal("cold member work disappeared from phase")
+				}
+			})
+			t.Run("query_retries_missing_from_phase", func(t *testing.T) {
+				p := warm
+				p.StoreReadAttempts++
+				if validateRecoveryPreparationReads(p, row, measured(warm), plan) == nil {
+					t.Fatal("native query retry disappeared from phase")
+				}
+			})
+			t.Run("subtotal_overflow", func(t *testing.T) {
+				p := warm
+				p.OtherPhaseControlReads = math.MaxUint64
+				metrics := ReceiptMetrics{ControlReads: CountMetric(p.ControlFileReads + p.StoreReadAttempts - 1), StoreTransactions: 1}
+				if validateRecoveryPreparationReads(p, row, metrics, plan) == nil {
+					t.Fatal("wrapped subtotal accepted")
+				}
+			})
+		})
+	}
+}
+
+func TestRecoveryPreparationColdMemberFloor(t *testing.T) {
+	for _, test := range []struct{ records, reads uint64 }{
+		{1, 2}, {511, 1_022}, {512, 1_024}, {513, 1_539},
+		{1_023, 3_069}, {1_024, 3_072}, {1_025, 4_099},
+		{1_536, 5_632}, {2_047, 8_188}, {2_048, 8_192}, {2_049, 10_243},
+	} {
+		domains := []ExtractionDomainProfile{{Domain: "proto-contract", CandidateRecords: test.records}}
+		got, err := recoveryPreparationColdMemberMinimum(domains)
+		if err != nil || got != test.reads {
+			t.Fatalf("records=%d reads=%d want=%d err=%v", test.records, got, test.reads, err)
+		}
+	}
+	t.Run("overlapping_domains_not_summed", func(t *testing.T) {
+		domains := []ExtractionDomainProfile{
+			{Domain: "proto-contract", CandidateRecords: 512}, {Domain: "scip-proto-field", CandidateRecords: 512},
+			{Domain: "grpc-caller", CandidateRecords: 1}, {Domain: "thrift-caller", CandidateRecords: 1},
+		}
+		got, err := recoveryPreparationColdMemberMinimum(domains)
+		if err != nil || got != 1_539 {
+			t.Fatalf("overlapping plane floor=%d err=%v", got, err)
+		}
+	})
+	for _, records := range []uint64{0, math.MaxUint64} {
+		if _, err := recoveryPreparationColdMemberMinimum([]ExtractionDomainProfile{{Domain: "proto-contract", CandidateRecords: records}}); err == nil {
+			t.Fatalf("invalid record population %d accepted", records)
+		}
 	}
 }
 

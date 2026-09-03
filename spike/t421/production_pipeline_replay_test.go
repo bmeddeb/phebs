@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -390,6 +391,8 @@ type productionPipelineInput struct {
 	ControlSuffix                              string
 	SourceDigest, ObservationDigest            string
 	ReadBlob                                   resolvermaterialize.BlobReader
+	SourceDirectory, ObservationDirectory      string
+	Runtime                                    *productionRuntimeIdentity
 }
 
 type productionPipelineResult struct {
@@ -400,6 +403,7 @@ type productionPipelineResult struct {
 	Resolver    resolvercatalog.State
 	Caller      callerpublication.Manifest
 	Descriptors []gocaller.DirectDescriptor
+	Runtime     *productionRuntimeResult
 }
 
 func runProductionIdentityPipeline(
@@ -448,6 +452,9 @@ func runProductionIdentityPipeline(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if input.Runtime != nil {
+		input.Runtime.publishCandidate(t, ctx, input, candidateState)
+	}
 	if err := candidate.FinishPublication(candidateRoot, input.Repository); err != nil {
 		t.Fatal(err)
 	}
@@ -472,8 +479,20 @@ func runProductionIdentityPipeline(
 		t.Fatal(err)
 	}
 
-	evidence := newT421ProductionReplayEvidence()
-	executor := &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors}
+	var evidence *t421ProductionReplayEvidence
+	var executor *extract.EvidencePartitionExecutor
+	var assertions resolvermaterialize.AssertionReader
+	var native *productionRuntimeResult
+	if input.Runtime != nil {
+		native = input.Runtime.execute(t, ctx, combined.Profile.Pipeline)
+		assertions = input.Runtime.state
+	} else {
+		// The separately labeled standalone replay retains its strict model;
+		// the full constructor route above never consults that evidence store.
+		evidence = newT421ProductionReplayEvidence()
+		executor = &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors}
+		assertions = evidence
+	}
 	versions := make(map[string]string, len(identities))
 	for _, identity := range identities {
 		versions[identity.Domain] = identity.Version
@@ -497,6 +516,25 @@ func runProductionIdentityPipeline(
 		plans[expectedDomain.Domain] = plan
 		partitions := domain.Partitions()
 		t421ProductionReplayCheckPlan(t, plan, partitions, expectedDomain)
+		if native != nil {
+			stored := native.Publications[expectedDomain.Domain]
+			actualPlan, err := candidate.DecodeDomainResultPlanControl(strings.NewReader(stored.Plan))
+			if err != nil || !reflect.DeepEqual(actualPlan, plan) {
+				t.Fatalf("native %s execution plan differs from independently derived reservation: %v", expectedDomain.Domain, err)
+			}
+			root, err := candidate.DecodeDomainResultRoot(strings.NewReader(stored.Root), plan)
+			if err != nil || len(root.Results) != len(expectedDomain.Partitions) {
+				t.Fatalf("native %s result inventory differs from frozen profile: %v", expectedDomain.Domain, err)
+			}
+			for ordinal, result := range root.Results {
+				if result.Totals != t421ProductionReplayTotals(expectedDomain.Partitions[ordinal].Expected) ||
+					result.Reserved != t421ProductionReplayTotals(expectedDomain.Partitions[ordinal].Reservation) {
+					t.Fatalf("native %s partition %d totals/reservation differ from frozen profile", expectedDomain.Domain, ordinal)
+				}
+			}
+			roots[expectedDomain.Domain] = root
+			continue
+		}
 		source := extractionpublication.GitSparseSource{
 			DataDir: dataDir,
 			OpenDomain: func(
@@ -596,11 +634,19 @@ func runProductionIdentityPipeline(
 		ManifestDigest: candidateState.ManifestDigest, GenerationDigest: candidateState.GenerationDigest,
 		ManifestPath: candidateState.Manifest, ControlRevision: 1, PublishedAt: time.Now().UTC(),
 	}
-	provider, err := candidatejob.NewProvider(
-		dataDir, &t421ProductionReplayPointerStore{pointer: pointer}, policySet,
-	)
-	if err != nil {
-		t.Fatal(err)
+	var provider *candidatejob.Provider
+	if native != nil {
+		provider = input.Runtime.provider
+		actual, err := input.Runtime.state.GetCandidateManifestPublication(ctx, input.Repository)
+		if err != nil || actual == nil {
+			t.Fatalf("read current native candidate for downstream constructors: %v", err)
+		}
+		pointer = *actual
+	} else {
+		provider, err = candidatejob.NewProvider(dataDir, &t421ProductionReplayPointerStore{pointer: pointer}, policySet)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	resolverRegistry, err := resolvermaterialize.NewRegistry(extractors)
 	if err != nil {
@@ -631,6 +677,9 @@ func runProductionIdentityPipeline(
 		GenerationDigest: protoRoot.Digest,
 		AuthoritySchema:  store.PartitionedExtractionDomainSchema,
 		PlanDigest:       protoPlan.Digest, RootDigest: protoRoot.Digest,
+	}
+	if native != nil {
+		declaration.RunID = native.Publications[declaration.Domain].RunID
 	}
 	resolverIdentity, err := resolvercatalog.NewIdentity(
 		input.Repository, commit, "", manifestView.Identity(),
@@ -668,7 +717,7 @@ func runProductionIdentityPipeline(
 			PlanDigest:       declaration.PlanDigest, RootDigest: declaration.RootDigest,
 			CandidatePolicyDigest: protoPlan.CandidatePolicyDigest,
 		}},
-		Assertions: evidence, ReadBlob: readResolverBlob,
+		Assertions: assertions, ReadBlob: readResolverBlob,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -854,7 +903,7 @@ func runProductionIdentityPipeline(
 	}
 	return productionPipelineResult{
 		Candidate: manifest, Sparse: sparseRoot, Plans: plans, Roots: roots, Resolver: resolverState,
-		Caller: reopenedManifest, Descriptors: grpcResolver.Descriptors(),
+		Caller: reopenedManifest, Descriptors: grpcResolver.Descriptors(), Runtime: native,
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,7 +20,6 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
-	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
@@ -98,162 +96,78 @@ type productionIdentityState struct {
 	Descriptors       []gocaller.DirectDescriptor
 	DataDir           string
 	ExtractionRoots   []ExtractionRootResult
+	NativeDomains     []candidate.DownstreamDomainAuthority
 }
 
-func productionExtractionSchedules(t *testing.T, ctx context.Context, state *store.Surreal, frozen Plan, physical map[string]productionIdentityState) {
+func productionExtractionRoots(t *testing.T, frozen Plan, name string, value productionIdentityState, native *productionRuntimeResult) productionIdentityState {
 	t.Helper()
-	// Retire the final constructor schedule before the logical state helper
-	// claims any work. Supersession retires the earlier schedules normally.
-	defer func() {
-		schedule, err := state.GetGenerationSchedule(ctx, t401.RepositoryName, extractionpublication.ScheduleStage)
-		if err != nil {
-			t.Errorf("read final extraction constructor schedule: %v", err)
-			return
-		}
-		if err := state.RetireCurrentGenerationSchedule(ctx, *schedule); err != nil {
-			t.Errorf("retire final extraction constructor schedule: %v", err)
-		}
-	}()
-	for _, name := range []string{"a", "b", "a-return"} {
-		value := physical[name]
-		physicalRevision, _ := namedPhysicalRevision(frozen.Revisions.Physical, name)
-		domains := make([]extractionpublication.DomainPlan, 0, len(value.Plans))
-		for _, domain := range []string{"grpc-caller", "grpc-consumer", "kafka-consumer", "kafka-producer", "proto-contract", "scip-proto-field", "thrift-caller", "thrift-consumer", "thrift-contract"} {
-			domains = append(domains, extractionpublication.DomainPlan{
-				Schema: extractionpublication.DomainSchema, RunID: "t421-production-" + domain, Plan: value.Plans[domain],
-			})
-		}
-		stubs := productionIdentityRuntimeStubs{}
-		runtime := extractionpublication.Runtime{
-			Root: filepath.Join(value.DataDir, "extraction-constructor-control"), Store: state,
-			Source: stubs, Executor: stubs, Publisher: stubs, Fence: stubs,
-		}
-		generation, err := runtime.Reconcile(ctx, t401.RepositoryName, domains)
-		if err != nil {
-			t.Fatal(err)
-		}
-		schedule, err := state.GetGenerationSchedule(ctx, t401.RepositoryName, extractionpublication.ScheduleStage)
-		if err != nil {
-			t.Fatal(err)
-		}
-		value.ExtractionRoots = make([]ExtractionRootResult, 0, len(domains))
-		for domainIndex, domain := range domains {
-			plan, root := domain.Plan, value.Roots[domain.Plan.Domain]
-			profile := frozen.Profile.Pipeline.ExtractionDomains[domainIndex]
-			if profile.Domain != plan.Domain || len(profile.Partitions) != len(root.Results) {
-				t.Fatal("native extraction inventory differs from the frozen profile")
-			}
-			partitions := make([]ExtractionPartitionResult, len(root.Results))
-			for index, result := range root.Results {
-				expected := profile.Partitions[index]
-				if result.Totals != t421ProductionReplayTotals(expected.Expected) || result.Reserved != t421ProductionReplayTotals(expected.Reservation) {
-					t.Fatal("native extraction result differs from frozen exact totals")
-				}
-				partitions[index] = ExtractionPartitionResult{
-					Ordinal: uint64(result.PartitionOrdinal), Kind: plan.Expected[index].Kind,
-					MemberOrdinal: expected.MemberOrdinal, CallerPrefix: expected.CallerPrefix,
-					SourceStart: uint64(result.SourceStart), SourceEnd: uint64(result.SourceEnd),
-					MemberRecordStart: expected.MemberRecordStart, MemberRecordEnd: expected.MemberRecordEnd,
-					AdmittedRecords: expected.AdmittedRecords, Reservation: expected.Reservation, Totals: expected.Expected,
-					PartitionSHA256: result.PartitionDigest, ExpectationSHA256: result.ExpectationDigest,
-					ResultDigestSHA256: result.Digest, ResultIdentitySHA256: result.Identity,
-					Disposition: result.Disposition,
-				}
-			}
-			members, err := extractionResultMembers(partitions)
-			if err != nil {
-				t.Fatal(err)
-			}
-			converted := ExtractionRootResult{
-				Domain: plan.Domain, Current: true, GenerationSHA256: generation, RootSHA256: root.Digest,
-				CandidateGenerationSHA256: plan.CandidateGenerationDigest, SourceGenerationSHA256: plan.SourceGenerationDigest,
-				ObservationGenerationSHA256: plan.ObservationGenerationDigest, PlanSHA256: plan.Digest,
-				Members:              members,
-				ApplicablePartitions: uint64(root.ExpectedResults), MemberPartitions: profile.MemberPartitions, TypedPartitions: profile.TypedPartitions,
-				TypedScopeRecords: profile.TypedScopeRecords, TypedScopePathBytes: profile.TypedScopePathBytes, TypedScopeEncodedBytes: profile.TypedScopeEncodedBytes,
-				Candidates: physicalRevision.ExpectedCandidateInventories[domainIndex].Candidates,
-				Reserved:   profile.Reserved, Totals: profile.Expected, PartitionResults: partitions,
-				PartitionResultsSHA256: mustReceiptSHA256(t, partitions),
-			}
-			if typed, ok := namedTypedScopeRevision(profile.TypedScopeRevisions, name); ok {
-				found := false
-				for _, descriptor := range value.Sparse.Domains {
-					if descriptor.Domain != plan.Domain {
-						continue
-					}
-					found = true
-					scope := descriptor.TypedScope
-					if scope == nil || uint64(scope.Records) != profile.TypedScopeRecords ||
-						uint64(scope.ContentBytes) != profile.TypedScopeEncodedBytes ||
-						scope.ContentDigest != typed.SHA256 || scope.ContentDigest != typed.DescriptorContentSHA256 {
-						t.Fatalf("native %s typed scope differs from the frozen %s digest/count/bytes", plan.Domain, name)
-					}
-					converted.TypedScopeSHA256, converted.TypedScopeContentSHA256 = scope.ContentDigest, scope.ContentDigest
-				}
-				if !found {
-					t.Fatalf("native sparse root lacks %s typed scope", plan.Domain)
-				}
-			}
-			value.ExtractionRoots = append(value.ExtractionRoots, converted)
-		}
-		value.Authority.ExtractionRootsSHA256 = mustReceiptSHA256(t, value.ExtractionRoots)
-		physical[name] = value
-		if name == "a-return" {
-			productionRecoveryCache = make(map[string]productionRecoverySchedule, 2)
-			for _, phase := range []string{"stale_lease", "process_restart"} {
-				// Each recovery must start from the frozen completed precondition,
-				// not settled counters modeled over unfinished filesystem controls.
-				// This bar remains unpassed until the native preparation is proved.
-				for _, domain := range domains {
-					current, err := runtime.Current(ctx, t401.RepositoryName, domain.Plan.Domain)
-					if err != nil || !reflect.DeepEqual(current, value.Roots[domain.Plan.Domain]) {
-						t.Fatalf("recovery preparation requires the completed native %s root: %v", domain.Plan.Domain, err)
-					}
-				}
-				if store.ValidateGenerationSchedule(*schedule) != nil || schedule.Status != store.GenerationScheduleSettled ||
-					schedule.Succeeded != schedule.TotalChunks || schedule.Pending != 0 || schedule.Running != 0 || schedule.Failed != 0 {
-					t.Fatal("recovery preparation requires a genuinely settled schedule")
-				}
-				prior := schedule.Digest
-				// Ordinary Reconcile deliberately reuses a completed same-target
-				// schedule. A separate approved native control is required here;
-				// never manufacture its prerequisite through a permissive store.
-				got, err := runtime.Reconcile(ctx, t401.RepositoryName, domains)
-				if err != nil || got != generation {
-					t.Fatalf("native %s recovery constructor: target=%q error=%v", phase, got, err)
-				}
-				schedule, err = state.GetGenerationSchedule(ctx, t401.RepositoryName, extractionpublication.ScheduleStage)
-				if err != nil || store.ValidateGenerationSchedule(*schedule) != nil {
-					t.Fatalf("native %s recovery schedule: %v", phase, err)
-				}
-				if schedule.Digest == prior {
-					t.Fatalf("native %s preparation did not create a new predecessor-bound schedule", phase)
-				}
-				productionRecoveryCache[phase] = productionRecoverySchedule{
-					Target: generation, Prior: prior,
-					RecoveryGeneration: schedule.Generation, RecoverySchedule: schedule.Digest,
-				}
-			}
-		}
+	if native == nil || native.Schedule.Status != store.GenerationScheduleSettled ||
+		native.Schedule.Succeeded != native.Schedule.TotalChunks || native.Schedule.Pending != 0 || native.Schedule.Running != 0 || native.Schedule.Failed != 0 {
+		t.Fatal("extraction receipt requires the genuine completed native schedule")
 	}
-}
-
-type productionIdentityRuntimeStubs struct{}
-
-func (productionIdentityRuntimeStubs) AcquirePartition(context.Context, candidate.DomainResultPlan, int) (extractionpublication.PartitionLease, error) {
-	return nil, errors.New("constructor witness must not acquire runtime work")
-}
-
-func (productionIdentityRuntimeStubs) ExecutePartition(context.Context, candidate.DomainResultPlan, int, extractionpublication.PartitionLease, string) (candidate.PartitionResultSpec, error) {
-	return candidate.PartitionResultSpec{}, errors.New("constructor witness must not execute runtime work")
-}
-
-func (productionIdentityRuntimeStubs) PublishDomain(_ context.Context, plan candidate.DomainResultPlan, root candidate.DomainResultRoot, _ string) error {
-	return candidate.ValidateDomainResultRoot(root, plan)
-}
-
-func (productionIdentityRuntimeStubs) FenceDomain(context.Context, extractionpublication.FenceRequest) (func(), error) {
-	return func() {}, nil
+	physicalRevision, _ := namedPhysicalRevision(frozen.Revisions.Physical, name)
+	value.NativeDomains = slices.Clone(native.Domains)
+	value.ExtractionRoots = make([]ExtractionRootResult, 0, len(native.Domains))
+	for domainIndex, profile := range frozen.Profile.Pipeline.ExtractionDomains {
+		plan, root := value.Plans[profile.Domain], value.Roots[profile.Domain]
+		if profile.Domain != plan.Domain || len(profile.Partitions) != len(root.Results) {
+			t.Fatal("native extraction inventory differs from the frozen profile")
+		}
+		partitions := make([]ExtractionPartitionResult, len(root.Results))
+		for index, result := range root.Results {
+			expected := profile.Partitions[index]
+			if result.Totals != t421ProductionReplayTotals(expected.Expected) || result.Reserved != t421ProductionReplayTotals(expected.Reservation) {
+				t.Fatal("native extraction result differs from frozen exact totals")
+			}
+			partitions[index] = ExtractionPartitionResult{
+				Ordinal: uint64(result.PartitionOrdinal), Kind: plan.Expected[index].Kind,
+				MemberOrdinal: expected.MemberOrdinal, CallerPrefix: expected.CallerPrefix,
+				SourceStart: uint64(result.SourceStart), SourceEnd: uint64(result.SourceEnd),
+				MemberRecordStart: expected.MemberRecordStart, MemberRecordEnd: expected.MemberRecordEnd,
+				AdmittedRecords: expected.AdmittedRecords, Reservation: expected.Reservation, Totals: expected.Expected,
+				PartitionSHA256: result.PartitionDigest, ExpectationSHA256: result.ExpectationDigest,
+				ResultDigestSHA256: result.Digest, ResultIdentitySHA256: result.Identity,
+				Disposition: result.Disposition,
+			}
+		}
+		members, err := extractionResultMembers(partitions)
+		if err != nil {
+			t.Fatal(err)
+		}
+		converted := ExtractionRootResult{
+			Domain: plan.Domain, Current: true, GenerationSHA256: native.Generation, RootSHA256: root.Digest,
+			CandidateGenerationSHA256: plan.CandidateGenerationDigest, SourceGenerationSHA256: plan.SourceGenerationDigest,
+			ObservationGenerationSHA256: plan.ObservationGenerationDigest, PlanSHA256: plan.Digest,
+			Members:              members,
+			ApplicablePartitions: uint64(root.ExpectedResults), MemberPartitions: profile.MemberPartitions, TypedPartitions: profile.TypedPartitions,
+			TypedScopeRecords: profile.TypedScopeRecords, TypedScopePathBytes: profile.TypedScopePathBytes, TypedScopeEncodedBytes: profile.TypedScopeEncodedBytes,
+			Candidates: physicalRevision.ExpectedCandidateInventories[domainIndex].Candidates,
+			Reserved:   profile.Reserved, Totals: profile.Expected, PartitionResults: partitions,
+			PartitionResultsSHA256: mustReceiptSHA256(t, partitions),
+		}
+		if typed, ok := namedTypedScopeRevision(profile.TypedScopeRevisions, name); ok {
+			found := false
+			for _, descriptor := range value.Sparse.Domains {
+				if descriptor.Domain != plan.Domain {
+					continue
+				}
+				found = true
+				scope := descriptor.TypedScope
+				if scope == nil || uint64(scope.Records) != profile.TypedScopeRecords ||
+					uint64(scope.ContentBytes) != profile.TypedScopeEncodedBytes ||
+					scope.ContentDigest != typed.SHA256 || scope.ContentDigest != typed.DescriptorContentSHA256 {
+					t.Fatalf("native %s typed scope differs from the frozen %s digest/count/bytes", plan.Domain, name)
+				}
+				converted.TypedScopeSHA256, converted.TypedScopeContentSHA256 = scope.ContentDigest, scope.ContentDigest
+			}
+			if !found {
+				t.Fatalf("native sparse root lacks %s typed scope", plan.Domain)
+			}
+		}
+		value.ExtractionRoots = append(value.ExtractionRoots, converted)
+	}
+	value.Authority.ExtractionRootsSHA256 = mustReceiptSHA256(t, value.ExtractionRoots)
+	return value
 }
 
 // productionPhysicalIdentities calls native source, observation, candidate,
@@ -266,6 +180,8 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 	defer cancel()
 	dataDir := t.TempDir()
 	repository := productionIdentityRepository(t, ctx, plan, dataDir)
+	native := newProductionRuntimeIdentity(t, ctx, dataDir)
+	defer native.close(t)
 	combined, err := BuildCombinedCorpus()
 	if err != nil {
 		t.Fatal(err)
@@ -349,8 +265,9 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 			DataDir: dataDir, RepositoryDir: repository, Repository: t401.RepositoryName, Commit: physical.ExpectedCommit,
 			ControlSuffix: "-" + physical.Name, SourceDigest: source.Digest,
 			ObservationDigest: observations.GenerationDigest, ReadBlob: readBlob,
+			SourceDirectory: sourceDir, ObservationDirectory: observationDir, Runtime: native,
 		})
-		result[physical.Name] = productionIdentityState{
+		value := productionIdentityState{
 			Authority: AuthorityState{
 				PhysicalRevision: physical.Name, PhysicalCommit: physical.ExpectedCommit, PhysicalTree: physical.ExpectedTree,
 				SourceGenerationSHA256: source.Digest, SearchGenerationSHA256: search.Digest,
@@ -361,6 +278,10 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 			},
 			Source: source, Sparse: pipeline.Sparse, Plans: pipeline.Plans, Roots: pipeline.Roots, ObservationSource: observed,
 			Descriptors: pipeline.Descriptors, DataDir: dataDir,
+		}
+		result[physical.Name] = productionExtractionRoots(t, plan, physical.Name, value, pipeline.Runtime)
+		if physical.Name == "a-return" {
+			native.prepareRecoveries(t, ctx, plan, pipeline.Runtime)
 		}
 	}
 	return result
