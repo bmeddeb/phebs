@@ -21,10 +21,12 @@ import (
 )
 
 type partitionExecutorCorpus struct {
-	repository string
-	commit     string
-	path       string
-	content    string
+	repository     string
+	commit         string
+	path           string
+	content        string
+	controlPath    string
+	controlContent string
 }
 
 func (corpus partitionExecutorCorpus) RepoName() string { return corpus.repository }
@@ -33,15 +35,23 @@ func (corpus partitionExecutorCorpus) WalkFiles(ctx context.Context, visit func(
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return visit(corpus.path)
+	if err := visit(corpus.path); err != nil || corpus.controlPath == "" {
+		return err
+	}
+	return visit(corpus.controlPath)
 }
 func (corpus partitionExecutorCorpus) Read(_ context.Context, path string) (sdk.Blob, error) {
-	if path != corpus.path {
+	content := corpus.content
+	if path == corpus.controlPath {
+		content = corpus.controlContent
+	} else if path != corpus.path {
 		return sdk.Blob{}, store.ErrNotFound
 	}
-	digest := sha256.Sum256([]byte(corpus.content))
-	return sdk.Blob{Content: corpus.content, Digest: "sha256:" + hex.EncodeToString(digest[:])}, nil
+	digest := sha256.Sum256([]byte(content))
+	return sdk.Blob{Content: content, Digest: "sha256:" + hex.EncodeToString(digest[:])}, nil
 }
+
+type partitionExecutorControl struct{ path, content string }
 
 type partitionExecutorLease struct {
 	corpus      sdk.Corpus
@@ -179,6 +189,70 @@ func TestEvidencePartitionExecutorStagesOnlyBoundedT407Chunks(t *testing.T) {
 	}
 }
 
+func TestEvidencePartitionExecutorKeepsRepositoryControlsOutOfPartialLeafAttribution(t *testing.T) {
+	control := partitionExecutorControl{
+		path:    generatedFromSnapshotPath,
+		content: `{"version":"t20-generated-from-v1","mappings":[]}`,
+	}
+	plan, path, commit := partitionExecutorPlanFor(
+		t, "grpc-caller", "partition-attribution-test-v1", ".proto",
+		"message Fixture {}\n", control,
+	)
+	evidence := newMemoryEvidence()
+	run, err := evidence.BeginExtractionRun(t.Context(), store.ExtractionScope{
+		Repository: plan.Repository, Commit: commit, Domain: plan.Domain,
+	}, plan.ExtractorVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var provider sdk.AttributionCorpus
+	extractor := unitExtractor{
+		domain: plan.Domain, version: plan.ExtractorVersion,
+		candidate: func(value string) bool { return strings.HasSuffix(value, ".proto") },
+		extract: func(ctx context.Context, corpus sdk.Corpus, _ sdk.Emit) (sdk.Coverage, error) {
+			current, ok := corpus.(sdk.AttributionCorpus)
+			if !ok {
+				return sdk.Coverage{}, errors.New("verified corpus lost attribution capability")
+			}
+			provider = current
+			canceled, cancel := context.WithCancel(ctx)
+			cancel()
+			if _, err := provider.AttributionSource(canceled); !errors.Is(err, context.Canceled) {
+				return sdk.Coverage{}, errors.New("partial attribution ignored cancellation")
+			}
+			source, err := provider.AttributionSource(ctx)
+			if err != nil || source != nil {
+				return sdk.Coverage{}, errors.New("partial leaf exposed repository attribution")
+			}
+			blob, err := corpus.Read(ctx, path)
+			if err != nil || blob.Content == "" {
+				return sdk.Coverage{}, errors.New("required source was not readable")
+			}
+			return sdk.Coverage{}, nil
+		},
+	}
+	lease := partitionExecutorLease{
+		corpus: partitionExecutorCorpus{
+			repository: plan.Repository, commit: commit, path: path,
+			content: "message Fixture {}\n", controlPath: control.path,
+			controlContent: control.content,
+		},
+		records: 2,
+	}
+	executor := &EvidencePartitionExecutor{Evidence: evidence, Extractors: []Extractor{extractor}}
+	result, err := executor.ExecutePartition(t.Context(), plan, 0, lease, run.ID)
+	if err != nil || result.Disposition != candidate.PartitionResultEmpty ||
+		result.Totals.Facts != 0 || result.Totals.Rows != 0 || result.Totals.References != 0 {
+		t.Fatalf("partition result = %+v, %v", result, err)
+	}
+	if _, err := candidate.BuildPartitionResult(plan, 0, result); err != nil {
+		t.Fatalf("empty partition result does not close: %v", err)
+	}
+	if _, err := provider.AttributionSource(context.Background()); err == nil {
+		t.Fatal("partial attribution remained available after the extractor returned")
+	}
+}
+
 func TestEvidencePartitionExecutorReturnsClosedTerminalResult(t *testing.T) {
 	plan, content, commit := partitionExecutorPlan(t)
 	evidence := newMemoryEvidence()
@@ -310,6 +384,7 @@ func partitionExecutorPlanFor(
 	version,
 	suffix,
 	content string,
+	controls ...partitionExecutorControl,
 ) (candidate.DomainResultPlan, string, string) {
 	t.Helper()
 	repository := "example.invalid/executor"
@@ -321,14 +396,31 @@ func partitionExecutorPlanFor(
 	if err := os.WriteFile(filepath.Join(directory, path), []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	partitionGit(t, directory, "add", "--", path)
+	addPaths := []string{"add", "--", path}
+	for _, control := range controls {
+		if err := os.WriteFile(filepath.Join(directory, control.path), []byte(control.content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		addPaths = append(addPaths, control.path)
+	}
+	partitionGit(t, directory, addPaths...)
 	partitionGit(t, directory, "commit", "-q", "-m", "fixture")
 	commit := strings.TrimSpace(partitionGit(t, directory, "rev-parse", "HEAD"))
 	policies := []candidate.Policy{{
 		Domain: domainName, Version: version,
 		EnumerationPolicy: domainName + "-partition-paths-v1", Plane: candidate.PlaneRepository,
-		Enumerate: func(path string) bool { return strings.HasSuffix(path, suffix) },
-		Required:  func(path string) bool { return strings.HasSuffix(path, suffix) },
+		Enumerate: func(path string) bool {
+			if strings.HasSuffix(path, suffix) {
+				return true
+			}
+			for _, control := range controls {
+				if path == control.path {
+					return true
+				}
+			}
+			return false
+		},
+		Required: func(path string) bool { return strings.HasSuffix(path, suffix) },
 	}}
 	identities, err := candidate.PolicyIdentities(policies)
 	if err != nil {

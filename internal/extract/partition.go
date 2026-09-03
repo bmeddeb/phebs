@@ -83,6 +83,7 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 	}
 	allowTerminalResult = true
 	verified := newVerifiedCorpus(corpus)
+	verified.partitionScope = true
 	verified.typedPartition = typed != nil
 	operation := &domainOperationRecorder{now: time.Now}
 	candidatePredicate := extractor.extractor.Candidate
@@ -162,7 +163,6 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		)
 	}
 	if len(coverage.Failures) != 0 || coverage.UnresolvedCount != sink.unresolvedCount ||
-		(typed == nil && stats.readFileCount != lease.CandidateRecords()) ||
 		(typed != nil && (stats.readFileCount < 1 ||
 			stats.readFileCount > lease.TypedSourceRecords()+1)) {
 		return candidate.PartitionResultSpec{}, partitionBoundaryFailure(
@@ -176,12 +176,11 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		CanonicalBytes: sink.canonicalBytes, EncodedBytes: sink.encodedBytes,
 		MemberBytes: lease.MemberBytes(), Members: lease.Members(),
 	}
-	disposition := candidate.PartitionResultSuccess
 	if totals == (candidate.DomainResultTotals{}) {
-		disposition = candidate.PartitionResultEmpty
+		return candidate.PartitionResultSpec{Disposition: candidate.PartitionResultEmpty}, nil
 	}
 	return candidate.PartitionResultSpec{
-		Disposition: disposition, Totals: totals,
+		Disposition: candidate.PartitionResultSuccess, Totals: totals,
 		ContentDigest: partitionContentDigest(sink.stagedChunkIDs),
 	}, nil
 }

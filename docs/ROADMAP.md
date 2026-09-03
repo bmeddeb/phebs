@@ -147,9 +147,11 @@ authority, T40.11 migrated downstream generations plus their recovery,
 archive, rollback, pin, and lifecycle ownership, and T40.12 replayed authorized
 product consumers across retained v1 and current v2 roots. Neutral-47 later
 passed T40.13's frozen mechanics gate and the 2026-08-30 disposition closed
-Epic 40. Epic 41 is now active, separately targeting 10,000 accepted services
-with an 8,000 accepted-service floor; Epic 42 composes both dimensions. No
-private rerun or release is authorized.
+Epic 40. T41.10 is integrated at main
+`d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41 after proving its
+8,000 accepted-service floor and 10,000 accepted-service target. T42.1 is now
+active and freezes the combined dimensions. No T42.2 execution, private rerun,
+or release is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -164,8 +166,8 @@ T43R.5 closes under an explicit retained-receipt exception, not a passing
 comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
-exhausted-result recovery is integrated. T41.9 is branch-complete and awaits
-integration; T41.10 follows that integration.
+exhausted-result recovery, T41.9, and T41.10 are integrated, closing Epic 41.
+T42.1 is the active scale ticket.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -916,8 +918,8 @@ service count × repository bytes
   versioned v2 plan with a measured 1-GiB aggregate while preserving v1 restart
   validity. Serialized extraction throughput must also be measured before any
   Take 17 freeze. No rerun or bound change is authorized by this record.
-- **Epic 41 — 10,000-service authority and sparse consumers (branch-complete;
-  integration pending):** T41.1
+- **Epic 41 — 10,000-service authority and sparse consumers (completed
+  2026-09-02):** T41.1
   froze production-valid 8,000/10,000/12,500 profiles and selected the
   reduce-only aggregate envelope; T41.2 retains v2 semantics in
   a v3 root with dual service/path member views; T41.3 streams exact census
@@ -934,28 +936,37 @@ service count × repository bytes
   selecting it. T41.8a corrects whole-repository catalog absence and preserves
   an immutable extraction result across a failed downstream callback. T41.9's
   integrated runtime selector provides atomic registration and reverse
-  transition. T41.10 is branch-complete: its canonical source-free receipt
-  passes the neutral 10,000-service recovery/lifecycle/product gate and awaits
-  integration. No constants-only increase is permitted.
-- **Epic 42 — combined scale gate and topology decision (after Epics 40–41):**
-  freeze a deterministic combined corpus and independent oracle, execute cold,
-  no-op, delta, A→B→A, interruption, restore, pressure, lifecycle, and product
-  paths through ordinary workers, then retain single-node direct topology,
-  request a bounded cohort experiment, request a P6 investigation, or stop
-  according to the frozen rule.
+  transition. T41.10's canonical source-free receipt passes the neutral
+  10,000-service recovery/lifecycle/product gate and is integrated at main
+  `d92b6673db6d4b582c2223536fe52358629ae60e`, closing the epic. No
+  constants-only increase is permitted.
+- **Epic 42 — combined scale gate and topology decision (T42.1 active):**
+  T42.1 freezes the deterministic combined corpus, independent oracle, typed
+  revisions, native failure targets, ordinary-production execution profile,
+  reader/archive/pressure transitions, and content-addressed receipt contract.
+  A later separately authorized T42.2 may execute cold, no-op, delta, A→B→A,
+  interruption, restore, pressure, lifecycle, and product paths through
+  ordinary workers. T42.3 then retains single-node direct topology, requests a
+  bounded cohort experiment, requests a P6 investigation, or stops according
+  to the frozen rule. T42.1 records no execution or gate result.
 
 The scale corpus is first-party and profile-separated. A streaming author
 creates external scratch bare-Git generations with fixed identities and A→B→A
 transitions; the repository retains generators, independent oracles, schemas,
 and source-free receipts rather than the giant generated tree. The physical
-profile separates two-million eligible-Go-path and declared-byte pressure from unique
-semantic content; the semantic profile separately exceeds the observation and
-IDL dimensions; the logical profiles carry 8,000/10,000/12,500 explicit
-accepted-service authority with shared fan-out at most 20; and T42 composes the
-10,000-service target without duplicating physical bytes. Bazel/Gazelle and
-bulk third-party code generators are not corpus dependencies. Runtime-trace
-datasets may inform neutral aggregate graph shapes only; they are not source,
-catalog, relationship, or correctness authority.
+profile separates two-million eligible-Go-path and declared-byte pressure from
+unique semantic content; the semantic profile separately exceeds the
+observation and IDL dimensions; and the logical profiles carry
+8,000/10,000/12,500 explicit accepted-service authority with shared fan-out at
+most 20. T42.1 composes the 10,000-service target over 2,000,002 structural
+physical owners by converting 1,999,999 structural `.go` paths to `.txt` and
+retaining ordinal zero as Go. The resulting A authority has 2,031,604 regular
+owners, 21,601 eligible Go paths, 10,000 IDL paths, 10,000 accepted services,
+and 60,000 memberships without duplicating physical bytes or materializing any
+of the 20,316,040,000 possible service/owner pairs. Bazel/Gazelle and bulk
+third-party code generators are not corpus dependencies. Runtime-trace datasets
+may inform neutral aggregate graph shapes only; they are not source, catalog,
+relationship, or correctness authority.
 
 ### Decision and claim boundary
 
@@ -1007,8 +1018,24 @@ catalog, relationship, or correctness authority.
   extraction authority before publication, makes point reads member-local,
   and adds complete canonical recovery, archive/restore, lease, rollback, and
   bounded lifecycle ownership. It is integrated. T41.8a's catalog-absence and
-  exhausted-result recovery and T41.9 are integrated. T41.10 adds the retained
-  neutral 10,000-service closure proof.
+  exhausted-result recovery, T41.9, and T41.10 are integrated. T41.10's
+  retained neutral 10,000-service closure proof closes Epic 41 at main
+  `d92b6673db6d4b582c2223536fe52358629ae60e`.
+- T42.1 freezes nine extraction domains and 56 exact partitions; the two-byte
+  `index.scip`; repository-local candidate/caller and ordinary global caller
+  cap replay; thirteen phase states across three exact process epochs;
+  reader A/B/delete, archive destroy/restore, and allocation-unit pressure
+  evidence; and nested content-addressed receipt authority. Its complete
+  fixture is 479,496 bytes, leaving 44,792 bytes below the 512-KiB ceiling.
+  Its production replay selected two bounded executor corrections: a partial
+  hash leaf cannot expose repository-wide attribution, `Required` records—not
+  `Enumerate`-only controls—own the read obligation, and a zero-total partition
+  returns the canonical empty result. Every attribution request adds one
+  immutable scope branch; partition requests add a cancellation check and short
+  existing-corpus-mutex snapshot while removing the invalid repository-wide
+  load. They add no lock class, persistent work, or production cap; zero-total
+  completion removes an empty digest. T42.1 does not authorize T42.2 or establish a combined
+  gate result.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

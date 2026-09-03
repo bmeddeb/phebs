@@ -722,10 +722,21 @@ selector, complete v2↔v3 transitions, selector-aware HTTP/MCP consumers,
 startup/backup/restore/lifecycle ownership, and irreversible predecessor floor
 include scheduler-owned retryable terminal handoff, ambiguous-commit dual pins,
 historical-only selected archive verification, deletion/re-add repair, and the
-startup extraction-liveness fence. Full store normal/race, affected non-store
-normal/race, static, documentation-except-exact-main fossils, and zero-finding
-review gates pass. T41.9 awaits integration; T41.10 follows that integration. Epic 42 still owns
-combined-scale proof.
+startup extraction-liveness fence. T41.9 is integrated. T41.10's canonical
+source-free 10,000-service PASS is integrated at main
+`d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic 41. T42.1 is the
+active prospective combined-scale freeze-contract ticket: it composes the
+retained two-million-owner and 10,000-service authorities without a Cartesian
+materialization and freezes typed revisions, production replay, native
+failure targets, ordinary-production execution identity, exact reader,
+pressure, archive, query, measurement, and content-addressed receipt evidence.
+Its production replay selected the bounded partition-attribution/read-ledger
+and canonical empty-result corrections without moving a cap. Every attribution
+request adds one immutable scope branch; partition requests add one cancellation
+check and short existing-corpus-mutex snapshot while removing an invalid
+repository-wide attribution load. No lock class or persistent work is added,
+and zero-total completion removes one empty digest.
+It neither authorizes nor records T42.2 execution or a combined gate result.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

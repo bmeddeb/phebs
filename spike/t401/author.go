@@ -871,6 +871,40 @@ func FrozenStructuralGoFixture(profile Profile, ordinal uint64) (string, []byte,
 	), content, nil
 }
 
+// FrozenTreeRecord is one source-free expected Git leaf for the frozen
+// structural corpus. BlobOID is the canonical Git SHA-1 object identity.
+type FrozenTreeRecord struct {
+	Path    string
+	Bytes   uint64
+	BlobOID string
+}
+
+// WalkFrozenTreeRecords streams one frozen structural revision in canonical
+// path order without authoring its two-million-file working tree.
+func WalkFrozenTreeRecords(profile Profile, revision string, visit func(FrozenTreeRecord) error) error {
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+	if visit == nil || profile.Name != StructuralProfileName || profile.Kind != "structural" ||
+		profile.Scale != "frozen" || revision != "a" && revision != "b" && revision != "a-return" {
+		return errors.New("T40.1 frozen tree-record request is invalid")
+	}
+	oids, err := structuralTemplateOIDs(profile)
+	if err != nil {
+		return err
+	}
+	for index := uint64(0); index < profile.Aggregate.RegularFiles; index++ {
+		path, bytes, oid, err := expectedTreeRecord(profile, revision, index, oids)
+		if err != nil {
+			return err
+		}
+		if err := visit(FrozenTreeRecord{Path: path, Bytes: bytes, BlobOID: oid}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // FrozenCallerControlFixture returns the exact committed go.mod selected by
 // the caller candidate policy for either frozen profile.
 func FrozenCallerControlFixture(profile Profile) (string, []byte, error) {

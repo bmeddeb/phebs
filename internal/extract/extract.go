@@ -1581,6 +1581,7 @@ type verifiedCorpus struct {
 	typedInputKind    string
 	typedInputPresent bool
 	typedPartition    bool
+	partitionScope    bool
 	manifestBound     bool
 	scoped            bool
 	pathInScope       func(string) bool
@@ -1990,6 +1991,24 @@ func (c *verifiedCorpus) SCIPTypedPartition() bool {
 }
 
 func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
+	// A hash partition cannot validate repository-wide snapshot mappings whose
+	// source and declaration paths intentionally live in other partitions.
+	// The complete caller pipeline consumes those controls separately.
+	if c.partitionScope {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		c.mu.Lock()
+		closed, inventoryComplete := c.closed, c.inventoryComplete
+		c.mu.Unlock()
+		if closed {
+			return nil, errors.New("corpus used after extractor returned")
+		}
+		if !inventoryComplete {
+			return nil, errors.New("corpus attribution requested before complete inventory")
+		}
+		return nil, nil
+	}
 	c.attributionOnce.Do(func() {
 		c.attributionSource, c.attributionErr = loadAttributionSource(ctx, c)
 	})

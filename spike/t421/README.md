@@ -1,0 +1,290 @@
+# T42.1 combined gate freeze
+
+T42.1 freezes the source-free plan for the later T42.2 combined execution.
+It does not execute the two-million-file gate, change a production limit,
+select a topology, or authorize release. Its production replay selected two
+narrow executor correctness fixes that are part of this ticket.
+
+## Exact inputs
+
+The plan binds the reviewed T40 structural authority, the neutral-47
+mechanics pass, the T41 target profile, and the T41.10 neutral closure. The
+canonical input inventory in `plan.go` includes every retained digest plus the
+exact T41.10 implementation and integrated-main commits. It deliberately does
+not bind the older stopped `spike/t4013/results.json` as a pass.
+
+| Selected authority | Frozen identity |
+| --- | --- |
+| T40.1 envelope | `sha256:92cce848e6e42942c24e2fa066968571fb5693252b7b41b7a91c889881fe7f94` |
+| T40.1 structural profile | `sha256:4227b0a75cc6a2cf1120e5d9e4c228fe23c0dbc2261313f513b6ae809364d430` |
+| T40.1 structural oracle | `sha256:8974c843fb9a9bcdb8864367f5e42394d97069058e87481d9d7e8f21e77944df` |
+| Neutral-47 package | `sha256:7130d80bd6c4b59ae8d4cfe0fdefd456d6287a6aef35781577b53ce2acb6c2e0` |
+| T41.1 envelope | `sha256:99ec8a3dc79537bf1db842234f6fe054abd03c9af7503987f78c5530fdfd525f` |
+| T41.1 target profile | `sha256:f54f6c634dea5ce780df1f82591d876ddd229e125444549c1288d7ee4483cf91` |
+| T41.10 receipt | `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680` |
+| T41.10 integrated main | `d92b6673db6d4b582c2223536fe52358629ae60e` |
+
+## Combined corpus adapter
+
+The adapter reuses `t401.FrozenProfiles` and the digest-checked
+`t411.BuildTargetCorpus`. It walks the 31,600-file T41 overlay, adds one
+production-format generated-source snapshot and one committed typed-index
+blob, and never creates a
+service-count by physical-file-count map or byte tree.
+
+| Dimension | Frozen value |
+| --- | ---: |
+| T40 physical owners | 2,000,002 |
+| Combined regular files | 2,031,604 |
+| Combined unique contents (A / B / A-return) | 32,116 / 32,117 / 32,116 |
+| Accepted services | 10,000 |
+| Memberships | 60,000 |
+| Distinct combined paths | 31,602 |
+| Distinct service/path claims | 50,000 |
+| Duplicate role memberships | 10,000 |
+| Maximum accepted path fan-out | 20 |
+| Potential Cartesian owner pairs | 20,316,040,000 |
+| Materialized Cartesian owner pairs | 0 |
+
+The 31,500 accepted overlay files retain T41's six memberships per service.
+One contract path carries both supporting and typed roles. Shared paths group
+at most 20 services and generated shared paths group at most ten. The 100 T41
+unowned files remain exact; the generated-source snapshot and typed-index blob
+are two explicit base-origin unowned files. Three override-origin selectors classify the
+2,000,002-file T40 complement without enumerating it, yielding 105 catalog
+unowned entries, 31,605 catalog selectors, and 2,000,104 unowned physical
+files. Inherited placement claims are measured separately and remain zero.
+
+The adapter replaces each per-service placeholder contract, generated client,
+and main file with deterministic source-backed protobuf, gRPC, and Kafka
+content. The generated client path becomes `api_grpc.pb.go`, matching the
+production generated-source recognizer. The remaining 1,600 invalid Go
+placeholders become valid neutral Go. A canonical 10,000-record,
+1,940,048-byte generated-source snapshot binds every generated file to its
+contract. Production limits remain unchanged: 10,100 resolver declarations
+leave 14,900 records of headroom and 10,000 generated mappings leave 15,000.
+The two-byte `index.scip` blob is a first-class typed input with identity
+`sha256:102b51b9765a56a3e899f7cf0ee38e5251f9c503b357b330a49183eb7b155604`;
+it is not synthesized from the extraction result.
+The plan separately records structural, overlay, generated-control, combined
+logical, per-revision unique-content, catalog logical/encoded, and inherited-
+claim bytes; allocated bytes remain explicitly unmeasured.
+
+## Independent oracles
+
+The author and independent logical traversals use different construction
+paths and are compared before a plan can be built. They close exact service,
+membership, placement, unowned-prefix, and service-query set identities. The
+independent path calls neither the corpus author, Git, nor Phebs results.
+
+Relationship source and relationship oracle enumeration are also separate:
+
+| Family | Protocol | Edges | Max in | Max out | Acyclic |
+| --- | --- | ---: | ---: | ---: | --- |
+| Chain | gRPC | 9,999 | 1 | 1 | yes |
+| Layered DAG | gRPC | 200 | 2 | 2 | yes |
+| Bounded fan-out | gRPC | 800 | 8 | 8 | no |
+| Hotspot groups | Kafka | 9,500 | 1 | 19 | yes |
+
+Every expected edge is a framed canonical semantic record. The two edge
+enumerators must produce identical record counts, degrees, framed byte counts,
+and SHA-256 identities. Product extraction separately freezes 10,999 RPC
+postings, 500 Kafka producers, 9,500 Kafka consumers, 20,999 projections, and
+31,998 service references. Kafka semantic pairs are not claimed as product
+co-occurrence rows.
+
+The production paths remain deliberately separate. Repository-partition
+`grpc-consumer` extraction emits 10,950 local facts. Repository-partition
+`grpc-caller` emits only prefix `110`'s 165 facts, 330 rows, and 165
+references. The ordinary catalog-wide direct resolver then consumes all
+21,603 caller candidates and publishes 10,999 resolved postings, 11,603
+abstentions, 22,602 records, and 21,656,043 encoded bytes across eight exact
+leaves. Only that last publication is the product RPC oracle.
+Repository-wide attribution controls remain admitted caller inputs for that
+direct resolver, but a single hash partition does not expose them as a
+complete attribution corpus. Partition extraction still inventories every
+admitted record and must read every extractor-`Required` record; it does not
+invent a read obligation for an `Enumerate`-only downstream control.
+
+The runnable source-free HTTP/MCP inventory freezes:
+
+- one bounded structural All-code marker result while binding the exact
+  combined physical authority;
+- one existence-hiding unauthorized-repository result with no repository or
+  generation read;
+- first-service detail with six memberships over five paths;
+- one 20-claim shared placement;
+- one unowned exclusion;
+- chain callers and dependency, layered-DAG dependency, and bounded-fan-out
+  dependency cases with cursor exhaustion;
+- Kafka producer and consumer participation without a pair claim.
+
+Selectors are source-free enums. Their projection digests commit the exact
+independent records rather than embedding generated source or paths in the
+retained plan.
+Every HTTP and MCP result separately records request-local control and member
+reads. Visible cases require at least one read and cannot exceed the matching
+`product_queries` phase-work maximum; the existence-hiding denial is exact
+zero/zero. Overflow-safe sums across both transports must fit the measured
+`product_queries` phase totals.
+
+## Frozen execution contract
+
+Physical and logical histories are each exact A→B→A-return sequences. The
+plan binds deterministic source tree/commit recipes over the exact T40 base
+commits; T42.2 records the actual authored combined Git object IDs. The
+physical delta changes one T40 file and returns to the original combined tree.
+The logical delta changes one service and returns to the original semantic
+digest under a new authority digest.
+
+The phase order freezes preflight, cold, warm no-op, physical and logical
+deltas, A return, stale-lease and hard-restart recovery, 80/90/75 pressure
+transitions, archive/restore, lifecycle collection, product queries, and
+teardown. The physical delta holds the old search reader while publishing and
+retiring the new generation. Each injection leaves one bounded recoverable
+target; a stopped receipt marks the remaining suffix `not_run`.
+
+Each failure point is bound to a native production selector rather than only a
+harness label. Catalog activation selects service 5,000, member 9, source range
+`[4608,5120)`, and member range `[0,512)`. Interrupted publication selects the
+exact relationship generation/root unit. Stale-lease recovery selects
+`grpc-caller` prefix `110`, partition 6, source range `[16126,18830)`, and its
+whole member. Hard restart selects `proto-contract` partition 2, source range
+`[4096,6144)`, and member 1 range `[0,2048)`. Every selector also binds its
+native generation, schedule, plan, and unit identities.
+
+The safety envelope retains the 24-GiB memory and 120-GiB available-disk
+minimums, 20-GiB peak-RSS and 96-GiB allocated-data ceilings, five-attempt
+unit retry ceiling, 15-minute server-health, four-hour convergence,
+20-minute revalidation, 80-GiB ballast, 68-GiB pre-pressure, and 18-hour total
+wall ceilings. Pressure uses an exact 96-GiB sparse APFS data volume and first
+requires live used and allocated bytes in the 8–68-GiB range. Every ballast,
+data-allocation, and volume-used delta must reconcile within the frozen
+allocation-unit tolerance: 80 percent collects, 90 and 75 percent refuse, and
+zero ballast plus at most 74 percent recovers to normal. The 90-percent target
+preserves at least the frozen 8-GiB custody margin. Before execution, a
+separate canonical freeze binds
+the clean integration and execution commits, executed-file SHA-256 identities,
+bounded public tool versions, and source-free host/disk geometry. The closed
+ordinary-production profile additionally binds normalized serve, backup, and
+restore commands; a closed public environment projection plus private recovery
+and server-environment digests; an exact raw-config digest plus its source-free
+semantic projection; runtime constants; symbolic root/volume roles; private
+harness and pressure-command digests; and the final invocation digest. Its
+tool inventory includes the exact Go, Git, SurrealDB, Zoekt, Buf, Phebs, and
+repository-built `phebs-focused-index` images actually executed by the closed
+server environment. Phase runtime evidence binds epoch 1 from `cold` through
+`stale_lease`, epoch 2 from `process_restart` through `pressure_75`, and epoch
+3 from `archive_restore` through `product_queries`. Every passed phase and
+every stop after its epoch server starts retains that exact runtime binding;
+only an epoch-launch stop whose phase meter records zero Phebs children may
+omit it.
+
+The receipt schema requires that freeze plus typed
+physical/logical/allocated byte metrics, store rows and transactions, source
+and Git reads, observation and relationship work, cache/reuse, retries,
+children, per-phase wall/RSS, decision, nonclaims, and clean teardown.
+One fail-closed measurement stop may name a sorted unique subset of the six
+frozen gauges; every named gauge must be absent in that phase while every
+unnamed required gauge remains present.
+
+The physical-delta reader evidence binds distinct one-record A and B
+projections while the old generation remains leased, then requires the retired
+old generation to return `not_found` after deletion. Archive evidence binds six
+exact components and five omission-free reports, destroys the original
+installation, observes an empty restore target, restores into that target, and
+compares content-addressed native authority snapshots plus the semantic state;
+no scratch-source path may remain.
+
+Receipt authority stores each distinct nine-domain/56-partition root inventory
+once, then references it from sorted, unique, content-addressed authority
+snapshots and per-phase references. Successful state evidence retains the exact
+observed projection digest; an `exact_oracle_mismatch` must additionally retain
+the full mismatched projection for diagnosis. Unused root or authority
+snapshots, snapshots on `not_run`, and mismatched native authority bindings are
+refused. Every current authority snapshot binds one shared candidate-generation
+digest, and every extraction root must name that same generation. A logical-only
+delta must retain the complete extraction-root inventory byte-for-byte. A
+stopped transition embeds only the same compact authority state and
+its extraction-root snapshot digest; canonical decoding rehydrates roots from
+the globally validated inventory rather than duplicating them.
+The canonical plan, freeze, receipt, package, and expanded-package ceilings are
+256 KiB, 64 KiB, 512 KiB, 4 MiB, and 4 MiB respectively. The fully populated
+successful receipt fixture is 479,496 bytes, leaving 44,792 bytes of receipt
+headroom.
+
+## Reproduction
+
+The author accepts only an exact clean `HEAD`, writes a mode-0600 temporary
+file, syncs it, and atomically hard-links a destination that must not exist.
+
+```sh
+T421_SOURCE_COMMIT="$(git rev-parse HEAD)"
+go run ./spike/t421/cmd/author \
+  -repository-root . \
+  -source-commit "$T421_SOURCE_COMMIT" \
+  -out /absolute/new/plan.json
+go test -count=1 ./spike/t421/...
+```
+
+Two builds must be byte-identical. Strict decode rejects oversized,
+unknown-field, trailing-value, noncanonical, source-bearing, or generator-
+divergent plans. The retained `plan.json` is authored only after the exact
+implementation commit is clean and independently reviewed.
+Freeze mutation and receipt-fixture tests reuse the freeze and plan already
+validated by their shared fixture instead of rebuilding the 10,000-service
+corpus for every table row or binding. The public freeze and receipt-binding
+entry points still reconstruct and compare the exact plan on every call. The
+receipt binder owns a complete copy of the at-most-64-KiB freeze before that
+one-time validation and retention.
+
+## Cost and nonclaims
+
+The production correction is confined to the existing partition executor. A
+partitioned caller invocation returns no repository-wide attribution projection;
+the global direct-resolver path remains its owner. Completion reuses the
+verified corpus's existing `Required` read ledger instead of comparing reads to
+all admitted records. A zero-total partition now returns the canonical empty
+result without hashing an empty chunk list. Partitioned caller work removes the
+invalid repository-wide attribution load. Every attribution request adds one
+constant immutable partition-scope branch. A partition request additionally
+checks cancellation and takes one short snapshot under the existing corpus
+mutex before returning no repository-wide source; full-source work is otherwise
+unchanged. This adds no lock class or persistent work. Startup, restart,
+requests, queries, sync ticks, retries/no-ops, publication transitions,
+lifecycle turns, caches, stores, children, limits, and schemas gain no work.
+
+Offline plan construction holds the existing 10,000-service/60,000-membership
+T41 catalog, a 31,602-entry path map, and bounded digest/claim maps. The corpus
+path transforms the 31,600-file overlay once; the independent oracle instead
+enumerates closed logical and relationship records. Construction creates one
+10,000-record control snapshot, samples 512 reused T40 content classes,
+enumerates 10,999 RPC plus 9,500 Kafka semantic pairs through independent
+paths, inventories 31,602 addition records, and streams the 2,000,002-record
+structural inventory twice to compute the exact A and B combined tree
+identities. The reader probe stops after the first changed structural record
+in each revision.
+Plan construction authors no two-million-file working tree and performs no
+corpus Git read, SurrealDB work, network access, or Cartesian source
+materialization. The canonical CLI separately runs the existing bounded
+clean-HEAD Git metadata checks before authoring.
+
+The merge-bar production replay authors a temporary candidate-equivalent
+31,604-file bare repository, builds and reopens candidate and sparse authority,
+executes all 56 production partitions, materializes the resolver catalog from
+exactly 10,002 bounded blob reads, executes and installs sixteen protocol/leaf
+pairs with exactly 11,601 further source reads, and publishes and reopens one
+complete caller generation. Those reads use the existing one-shot
+`git cat-file blob` path, so the replay launches about 21,603 sequential Git
+children plus its candidate, fixture, and batch Git commands; observed runs
+took about 381--384 seconds. It is bounded by a 15-minute test context, uses an
+in-memory evidence store, and removes its temporary Git and artifact custody
+through the test harness. The fixture omits the 1,999,999 structural `.txt`
+owners that match no production candidate policy, so this test-only replay is
+not a second complete physical-corpus scan or a scale execution claim and adds
+no ordinary steady-state child.
+
+This plan establishes no combined execution pass, target SLO, supported
+customer scale, accuracy/completeness, commit cadence, queue catch-up,
+freshness-under-cadence, migration/decommission, topology, private replay,
+release, or `GATE2-V2` result. T42.2 owns execution.

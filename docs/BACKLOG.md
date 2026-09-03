@@ -30,10 +30,12 @@ no-release decision, closing Epic 39. T39.R1's mirror-lock contention closure
 is also complete without authorizing or superseding a target rerun. A
 source-free diagnostic from a later unfrozen very-large-monorepo run is
 retained as engineering evidence, not as a scale pass. Epic 40 closed on
-2026-08-30 after neutral-47 passed the frozen mechanics gate. Epic 41 is
-branch-complete and awaits T41.10 integration after separately proving the
-8,000-service floor and 10,000 accepted logical-service target. Epic 42 then
-composes the physical-repository and service-cardinality envelopes.
+2026-08-30 after neutral-47 passed the frozen mechanics gate. T41.10 is
+integrated at main `d92b6673db6d4b582c2223536fe52358629ae60e`, closing Epic
+41 after separately proving the 8,000-service floor and 10,000 accepted
+logical-service target. T42.1 is active and now composes the
+physical-repository and service-cardinality envelopes into a prospective
+execution freeze.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -2942,7 +2944,7 @@ Steady-state cost: documentation only; no compiled, embedded, fixture, corpus,
 harness, request, worker, retry, publication, lifecycle, store, child, lock,
 cache, schema, bound, or persistent product state changes.
 
-## Epic 41 · Ten-thousand-service authority and sparse consumers *(branch-complete; integration pending)*
+## Epic 41 · Ten-thousand-service authority and sparse consumers *(completed 2026-09-02)*
 
 Raise logical-service capacity through segmented authority and bounded state/
 publication design, not a constants-only change. The required floor is 8,000
@@ -3039,12 +3041,13 @@ the measured maximum bucket is 408,942 bytes. Epic 40's later closure removes
 the dependency gate and the T41.1 merge bar is accepted. This ticket changes no
 production constant or runtime registration. T41.2–T41.7 are integrated;
 T41.8 is integrated. T41.8a's catalog-absence and exhausted-result recovery is
-integrated; T41.9 is integrated. T41.10 is branch-complete at exact
+integrated; T41.9 is integrated. T41.10 is integrated at main
+`d92b6673db6d4b582c2223536fe52358629ae60e` from exact
 implementation `7a06e5dc24d1c9b5370ebf6111fd6aa926eb6b07` with canonical source-free
 PASS receipt `sha256:e751ea4c16284a5f3e69e7b7dde3b2bcaa9274f242d1cf4914bc2757c3b2e680`
-and awaits integration. Epic 42 follows that integration.
+and closes Epic 41. T42.1 is active.
 
-## Epic 42 · Combined scale gate and topology decision *(scheduled after Epics 40–41)*
+## Epic 42 · Combined scale gate and topology decision *(T42.1 active)*
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
@@ -3087,13 +3090,58 @@ AC: independent oracle generation does not consume phebs results; two builds
 are byte-identical; physical owners, unique content, catalog membership and
 unowned prefixes, inherited placement-claim duplications, logical memberships,
 accepted fan-out, and every byte kind are separately reported; the exact main
-commit and upstream receipts are digest-bound; no production behavior, cap, or
-release state changes; independent plan review and full merge bar.
+commit and upstream receipts are digest-bound; the typed input, all nine
+extraction domains, and all 56 partitions are exact; production cap replay
+separately proves repository-local candidate/caller work and ordinary global
+direct-resolver caller work; query cases carry per-transport read bounds and
+their aggregate reads fit the owning phase meter; reader A/B/delete evidence,
+archive destroy/empty-target/restore ordering, allocation-unit pressure
+reconciliation, native failure selectors, and exact per-phase process/runtime
+identity are frozen; authority snapshots are content-addressed, referenced
+without duplication, every current nine-root inventory binds one shared
+candidate generation, logical-only deltas preserve that inventory exactly,
+and a fully populated complete receipt stays below the
+512-KiB ceiling; the replay-selected executor correction keeps repository-wide
+attribution out of partial hash leaves, enforces reads through the existing
+`Required` ledger rather than `Enumerate`-only controls, and returns canonical
+empty results for zero-total partitions; no production cap or release state
+changes; independent plan review and full merge bar.
+
+The active adapter composes 2,000,002 structural physical owners with the
+31,600-path service corpus by converting 1,999,999 structural `.go` paths to
+`.txt` and retaining structural ordinal zero as Go. The combined A shape has
+2,031,604 regular owners, 21,601 eligible Go paths, 10,000 IDL paths, 10,000
+accepted services, 60,000 memberships, 31,602 distinct catalog paths, 31,605
+selectors, 105 logical unowned entries, and 2,000,104 unowned physical owners.
+It materializes zero of the 20,316,040,000 possible service/owner pairs;
+unique-content counts remain distinct at A/B/A `32,116/32,117/32,116`. The
+two-byte `index.scip` is fixed at
+`sha256:102b51b9765a56a3e899f7cf0ee38e5251f9c503b357b330a49183eb7b155604`.
+This ticket authors and validates the source-free freeze contract only: it
+does not sign an exact-main freeze, authorize T42.2 execution, or establish a
+combined gate result.
+
+The production merge-bar replay authors only the 31,604 candidate-equivalent
+Git files, omitting 1,999,999 known noncandidate structural `.txt` owners. It
+builds and reopens candidate/sparse authority, executes all 56 production
+partitions, materializes the resolver catalog, executes and installs all
+sixteen caller protocol/leaf pairs, and publishes and reopens the complete
+caller generation under a 15-minute test bound. Its exact 10,002 resolver reads
+and 11,601 caller-source reads use the existing one-shot Git blob path, so the
+test launches about 21,603 sequential Git children plus bounded setup commands;
+observed runs took about 381--384 seconds. The two replay-selected executor
+fixes add one immutable scope branch per attribution request; a partition
+request also adds one cancellation check and a short existing-corpus-mutex
+snapshot while avoiding the repository-wide attribution load. They add no lock
+class, persistent work, production read, request, worker, retry, publication,
+lifecycle, cache, schema, child, or cap; zero-total completion removes one
+unnecessary empty-list digest.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
-AC: one physical source/search/observation generation with at least 2,000,000
-regular-file owners serves all 10,000 services; applicable extraction and
+AC: one shared physical source/search/observation generation per frozen
+physical revision, each with at least 2,000,000 regular-file owners, serves all
+10,000 services without a service-count multiplier; applicable extraction and
 relationship roots become current; exact All code/service/relationship queries
 match the oracle; cold, warm, small
 physical delta, small logical delta, A→B→A, partial service failure,
@@ -3101,8 +3149,11 @@ interrupted publication, stale lease, process restart, backup/restore, reader
 lease, lifecycle collection, and 80/90/75 pressure cases settle under bounded
 work; measurements enumerate per-phase wall/RSS, children, physical/logical/
 allocated bytes, store rows/transactions, member reads, cache behavior, and
-reuse; any stop remains a stopped receipt with later phases `not_run`; no SLO
-or release inference; full recovery and merge bars.
+reuse; every operational phase that observes an admitted server binds the exact
+admitted execution profile, server epoch, process image, process identity, and
+launch event; any stop remains a stopped receipt with later phases `not_run`;
+no SLO or release inference; full recovery and merge bars. T42.1 completion
+alone does not authorize this execution.
 
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
