@@ -754,6 +754,11 @@ func TestWorkerWarmCachedNoOpSkipsStrictInputs(t *testing.T) {
 	if err := fixture.handle(false); err != nil {
 		t.Fatal(err)
 	}
+	for _, pack := range fixture.state.pointer.ResolverPacks {
+		if pack.Version != "1.1.1" {
+			t.Fatalf("warm current fixture has obsolete resolver pack: %+v", pack)
+		}
+	}
 	baselineOpens := fixture.provider.openCalls
 	baselinePublishes := fixture.state.publishCalls
 	baselineAssertions := fixture.state.assertionCalls
@@ -779,6 +784,34 @@ func TestWorkerWarmCachedNoOpSkipsStrictInputs(t *testing.T) {
 			fixture.state.authorityCalls,
 			fixture.worker.cached(fixture.repository),
 		)
+	}
+}
+
+func TestResolverPack111ChangesOnlyVersionBoundIdentity(t *testing.T) {
+	registry := newMaterializeTestRegistry(t, ProtocolGRPC, ProtocolThrift)
+	packs := registry.Packs()
+	if len(packs) != 3 {
+		t.Fatalf("current registry packs = %+v, want all three", packs)
+	}
+	for _, pack := range packs {
+		if pack.Version != "1.1.1" {
+			t.Fatalf("current registry has obsolete resolver pack: %+v", pack)
+		}
+	}
+	declarations := []DeclarationInput{materializeTestDeclaration(ProtocolGRPC), materializeTestDeclaration(ProtocolThrift)}
+	current := newMaterializeTestIdentity(t, registry, testManifestDigest, declarations)
+	oldPacks := slices.Clone(packs)
+	for index := range oldPacks {
+		oldPacks[index].Version = "1.1.0"
+	}
+	prior, err := resolvercatalog.NewIdentity(current.Repository, current.Commit, current.UnitDigest,
+		current.CandidateManifestDigest, current.Declarations, oldPacks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.GenerationDigest == prior.GenerationDigest || current.ResolverPackSetDigest == prior.ResolverPackSetDigest ||
+		current.DeclarationSetDigest != prior.DeclarationSetDigest || current.CatalogPolicyDigest != prior.CatalogPolicyDigest {
+		t.Fatalf("pack-only upgrade did not isolate resolver identity: prior=%+v current=%+v", prior, current)
 	}
 }
 

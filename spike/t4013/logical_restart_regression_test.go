@@ -34,6 +34,8 @@ import (
 )
 
 const logicalRestartRegressionEnvironment = "PHEBS_T421_LOGICAL_RESTART_REGRESSION"
+const declarationUpgradeRegressionEnvironment = "PHEBS_T421_DECLARATION_UPGRADE_REGRESSION"
+const declarationUpgradePredecessor = "ea9dd555e5b19a752255fb099ae43721b4df971f"
 
 // This is a small ordinary-server restart regression, not a signed ceremony,
 // scale pass, or hermetic executable-admission proof. Its test-only PATH probe
@@ -42,6 +44,21 @@ func TestLogicalCatalogRestartRetainsPhysicalReaders(t *testing.T) {
 	if os.Getenv(logicalRestartRegressionEnvironment) != "1" {
 		t.Skip("set " + logicalRestartRegressionEnvironment + "=1 for the bounded real-server restart regression")
 	}
+	logicalRestartRegression(t, false)
+}
+
+func TestPartitionedDeclarationUpgradeRepairsPreviousCatalog(t *testing.T) {
+	if os.Getenv(declarationUpgradeRegressionEnvironment) != "1" {
+		t.Skip("set " + declarationUpgradeRegressionEnvironment + "=1 for the bounded real-server upgrade regression")
+	}
+	if resolvermaterialize.PackVersion != "1.1.1" {
+		t.Fatal("upgrade regression requires the approved 1.1.1 resolver pack")
+	}
+	logicalRestartRegression(t, true)
+}
+
+func logicalRestartRegression(t *testing.T, upgrade bool) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Minute)
 	defer cancel()
 	moduleRoot, err := filepath.Abs("../..")
@@ -65,10 +82,7 @@ func TestLogicalCatalogRestartRetainsPhysicalReaders(t *testing.T) {
 		"PHEBS_T421_GIT_TRACE=" + tracePath,
 		"PHEBS_T421_NATIVE_GIT=" + toolchain.host.git.path,
 	}
-	server, err := launchPrivateServer(ctx, profile, toolchain, "logical-cold")
-	if err != nil {
-		t.Fatal(err)
-	}
+	var server *privateServer
 	defer func() {
 		if err := server.stop(30 * time.Second); err != nil {
 			t.Errorf("stop logical restart regression: %v", err)
@@ -78,10 +92,51 @@ func TestLogicalCatalogRestartRetainsPhysicalReaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var predecessor *logicalRestartUpgradeSnapshot
+	if upgrade {
+		oldWorkspace := filepath.Join(workspace, "predecessor")
+		if err := os.Mkdir(oldWorkspace, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		oldSource := filepath.Join(oldWorkspace, "source")
+		if err := exportReviewedSource(ctx, moduleRoot, declarationUpgradePredecessor, oldSource); err != nil {
+			t.Fatal(err)
+		}
+		oldToolchain, err := buildWorkingTreeToolchain(ctx, oldSource, oldWorkspace)
+		if err != nil {
+			t.Fatal(err)
+		}
+		oldToolchain.extraEnvironment = []string{
+			"PATH=" + probeDir + string(os.PathListSeparator) + oldToolchain.controls.GitExecPath,
+			"PHEBS_T421_GIT_TRACE=" + filepath.Join(workspace, "git-predecessor.ndjson"),
+			"PHEBS_T421_NATIVE_GIT=" + oldToolchain.host.git.path,
+		}
+		server, err = launchPrivateServer(ctx, profile, oldToolchain, "pre-reader-1-1-0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		value := logicalRestartAwaitPredecessor(t, ctx, inspector, profile, server)
+		predecessor = &value
+		t.Logf("ordinary predecessor %s produced current 1.1.0 native resolver with zero declaration operations", declarationUpgradePredecessor)
+		if err := server.stop(30 * time.Second); err != nil {
+			t.Fatal(err)
+		}
+	}
+	server, err = launchPrivateServer(ctx, profile, toolchain, "logical-cold")
+	if err != nil {
+		t.Fatal(err)
+	}
 	endpoint := logicalRestartAwaitEndpoint(t, ctx, inspector, profile, server)
 	t.Log("ordinary cold resolver declaration is current; endpoint discovered without Contract Atlas")
 	before := logicalRestartAwaitReads(t, ctx, inspector, profile, endpoint, "a", server)
 	t.Log("ordinary cold authorized search, caller, and relationship reads passed")
+	if predecessor != nil {
+		current, err := logicalRestartReadResolver(ctx, inspector, profile, resolvermaterialize.PackVersion)
+		if err != nil {
+			t.Fatal(err)
+		}
+		logicalRestartCheckUpgrade(t, *predecessor, before, current, logicalRestartReadTrace(t, tracePath), server)
+	}
 	if err := server.stop(30 * time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -151,6 +206,80 @@ type logicalRestartReadSnapshot struct {
 	source, search, catalog string
 	caller                  apiresponse.CallerMapGeneration
 	relationship            apiresponse.RelationshipRootReceipt
+}
+
+type logicalRestartResolverSnapshot struct {
+	manifest   resolvercatalog.Manifest
+	caller     apiresponse.CallerMapGeneration
+	endpoint   apiresponse.CallerMapEndpoint
+	operations int
+}
+
+type logicalRestartUpgradeSnapshot struct {
+	read     logicalRestartReadSnapshot
+	resolver logicalRestartResolverSnapshot
+}
+
+func logicalRestartAwaitPredecessor(t *testing.T, ctx context.Context, inspector *profileInspector, profile PreparedProfile, server *privateServer) logicalRestartUpgradeSnapshot {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Minute)
+	var last error
+	for time.Now().Before(deadline) && ctx.Err() == nil {
+		resolver, err := logicalRestartReadResolver(ctx, inspector, profile, "1.1.0")
+		if err == nil {
+			if resolver.operations != 0 || resolver.endpoint.Lineage != "" {
+				t.Fatal("ordinary predecessor did not reproduce the missing-declaration defect")
+			}
+			read, readErr := logicalRestartReadBase(ctx, inspector, profile, "a", false)
+			if readErr == nil {
+				confirmed, confirmErr := logicalRestartReadResolver(ctx, inspector, profile, "1.1.0")
+				if confirmErr == nil && reflect.DeepEqual(resolver, confirmed) {
+					read.caller = resolver.caller
+					return logicalRestartUpgradeSnapshot{read: read, resolver: resolver}
+				}
+				readErr = fmt.Errorf("predecessor resolver changed during physical authority read: %v", confirmErr)
+			}
+			err = readErr
+		}
+		last = err
+		time.Sleep(500 * time.Millisecond)
+	}
+	t.Fatalf("ordinary predecessor did not converge: %v; %s", last, rehearsalLogTail(server.logPath))
+	return logicalRestartUpgradeSnapshot{}
+}
+
+func logicalRestartCheckUpgrade(t *testing.T, old logicalRestartUpgradeSnapshot, current logicalRestartReadSnapshot, resolver logicalRestartResolverSnapshot, trace []logicalRestartGitCommand, server *privateServer) {
+	t.Helper()
+	if old.read.source != current.source || old.read.search != current.search || old.read.catalog != current.catalog ||
+		old.read.caller.Commit != current.caller.Commit || old.read.caller.UnitDigest != current.caller.UnitDigest ||
+		old.read.caller.CandidateManifest != current.caller.CandidateManifest ||
+		!reflect.DeepEqual(old.resolver.manifest.Identity.Declarations, resolver.manifest.Identity.Declarations) ||
+		!reflect.DeepEqual(old.read.relationship.Authority.Upstream, current.relationship.Authority.Upstream) {
+		t.Fatal("pack upgrade replaced physical, catalog, candidate, or extraction/observation authority")
+	}
+	if old.read.caller.GenerationDigest == current.caller.GenerationDigest ||
+		old.read.caller.ManifestDigest == current.caller.ManifestDigest ||
+		old.read.caller.ResolverManifest == current.caller.ResolverManifest ||
+		old.resolver.manifest.Identity.GenerationDigest == resolver.manifest.Identity.GenerationDigest ||
+		resolver.operations != 1 || resolver.endpoint.Lineage == "" ||
+		current.caller.GenerationDigest != resolver.caller.GenerationDigest || current.caller.ManifestDigest != resolver.caller.ManifestDigest ||
+		current.caller.ResolverManifest != resolver.caller.ResolverManifest {
+		t.Fatal("pack upgrade did not replace both resolver/caller publications with the real declaration")
+	}
+	blobReads := 0
+	for _, row := range trace {
+		args := logicalRestartGitArguments(row.Args)
+		if len(args) == 3 && args[0] == "cat-file" && args[1] == "blob" {
+			blobReads++
+		}
+	}
+	_, _, indexChildren, _, sampleErr := server.sampler.metrics()
+	if blobReads == 0 || sampleErr != nil || indexChildren != 0 {
+		t.Fatalf("upgrade work lacks expected materialization or rebuilt physical index: blobs=%d index_children=%d err=%v", blobReads, indexChildren, sampleErr)
+	}
+	t.Logf("ordinary 1.1.0 -> 1.1.1 upgrade: declaration operations 0 -> %d; resolver %s -> %s; caller %s -> %s; source-blob commands=%d; index children=0; physical/candidate/extraction authority unchanged",
+		resolver.operations, old.resolver.manifest.Identity.GenerationDigest, resolver.manifest.Identity.GenerationDigest,
+		old.read.caller.GenerationDigest, current.caller.GenerationDigest, blobReads)
 }
 
 func logicalRestartProfile(t *testing.T, ctx context.Context, workspace string) PreparedProfile {
@@ -262,28 +391,47 @@ func logicalRestartAwaitEndpoint(t *testing.T, ctx context.Context, inspector *p
 // authority, not fixture-seeded lineages. This is not a Contract Atlas test:
 // that independent product reader still uses legacy published-run visibility.
 func logicalRestartResolverEndpoint(ctx context.Context, inspector *profileInspector, profile PreparedProfile) (apiresponse.CallerMapEndpoint, error) {
+	resolver, err := logicalRestartReadResolver(ctx, inspector, profile, resolvermaterialize.PackVersion)
+	if err != nil {
+		return apiresponse.CallerMapEndpoint{}, err
+	}
+	if resolver.operations != 1 || resolver.endpoint.Lineage == "" {
+		return apiresponse.CallerMapEndpoint{}, errors.New("native resolver declaration is absent or duplicated")
+	}
+	return resolver.endpoint, nil
+}
+
+func logicalRestartReadResolver(ctx context.Context, inspector *profileInspector, profile PreparedProfile, packVersion string) (logicalRestartResolverSnapshot, error) {
 	progressPath := apiresponse.CallerGenerationProgressPath + "?repository=" + url.QueryEscape(profile.RepositoryName)
 	var before apiresponse.CallerGenerationProgress
 	if err := inspector.get(ctx, profile, progressPath, &before); err != nil {
-		return apiresponse.CallerMapEndpoint{}, err
+		return logicalRestartResolverSnapshot{}, err
 	}
 	if before.Generation.State != "current" {
-		return apiresponse.CallerMapEndpoint{}, errors.New("native caller generation is not current")
+		return logicalRestartResolverSnapshot{}, errors.New("native caller generation is not current")
 	}
 	root := filepath.Join(profile.DataDir, "resolver-catalogs")
 	raw, err := readAtomicRegular(filepath.Join(root, resolvercatalogid.ManifestName(profile.RepositoryName)), resolvercatalog.MaxManifestBytes)
 	if err != nil {
-		return apiresponse.CallerMapEndpoint{}, err
+		return logicalRestartResolverSnapshot{}, err
 	}
 	var manifest resolvercatalog.Manifest
 	if err := decodeStrict(raw, &manifest); err != nil {
-		return apiresponse.CallerMapEndpoint{}, err
+		return logicalRestartResolverSnapshot{}, err
 	}
 	if manifest.Identity.Repository != profile.RepositoryName || manifest.Identity.Commit != profile.Revisions["a"] ||
 		manifest.AuthorityDigest != before.Generation.ResolverManifest ||
 		manifest.Identity.CandidateManifestDigest != before.Generation.CandidateManifest ||
 		manifest.Identity.DeclarationSetDigest != before.Generation.DeclarationSetDigest {
-		return apiresponse.CallerMapEndpoint{}, errors.New("resolver output differs from authorized caller authority")
+		return logicalRestartResolverSnapshot{}, errors.New("resolver output differs from authorized caller authority")
+	}
+	if len(manifest.Identity.ResolverPacks) == 0 {
+		return logicalRestartResolverSnapshot{}, errors.New("resolver output has no pack identities")
+	}
+	for _, pack := range manifest.Identity.ResolverPacks {
+		if pack.Version != packVersion {
+			return logicalRestartResolverSnapshot{}, fmt.Errorf("resolver pack version %q, want %q", pack.Version, packVersion)
+		}
 	}
 	nativeDeclaration := false
 	for _, declaration := range manifest.Identity.Declarations {
@@ -292,9 +440,10 @@ func logicalRestartResolverEndpoint(ctx context.Context, inspector *profileInspe
 		}
 	}
 	if !nativeDeclaration {
-		return apiresponse.CallerMapEndpoint{}, errors.New("resolver has no partitioned-native declaration authority")
+		return logicalRestartResolverSnapshot{}, errors.New("resolver has no partitioned-native declaration authority")
 	}
 	var endpoint apiresponse.CallerMapEndpoint
+	operations := 0
 	publication, err := resolvercatalog.OpenWithVisitor(ctx, root, manifest.State(), func(member resolvercatalog.MemberReceipt, _ int, raw json.RawMessage) error {
 		if member.Name != resolvermaterialize.GRPCGeneratedPackName+"-v2.ndjson" {
 			return nil
@@ -321,10 +470,11 @@ func logicalRestartResolverEndpoint(ctx context.Context, inspector *profileInspe
 			return err
 		}
 		if declaration.Schema != resolvercatalog.RecordSchema || declaration.RecordSchema != resolvermaterialize.DeclarationRecordSchema ||
-			declaration.Pack != resolvermaterialize.GRPCGeneratedPackName || declaration.PackVersion != resolvermaterialize.PackVersion ||
+			declaration.Pack != resolvermaterialize.GRPCGeneratedPackName || declaration.PackVersion != packVersion ||
 			declaration.State != resolvermaterialize.StateResolved || declaration.Protocol != string(resolvermaterialize.ProtocolGRPC) || declaration.Lineage == "" {
 			return errors.New("native resolver declaration record is invalid")
 		}
+		operations++
 		if declaration.Path == t40r1DescriptorDeclaration && "/"+declaration.Operation == t40r1DescriptorOperation {
 			if endpoint.Lineage != "" {
 				return errors.New("native resolver operation is duplicated")
@@ -334,16 +484,16 @@ func logicalRestartResolverEndpoint(ctx context.Context, inspector *profileInspe
 		return nil
 	})
 	if err != nil {
-		return apiresponse.CallerMapEndpoint{}, err
+		return logicalRestartResolverSnapshot{}, err
 	}
 	var after apiresponse.CallerGenerationProgress
 	if err := inspector.get(ctx, profile, progressPath, &after); err != nil {
-		return apiresponse.CallerMapEndpoint{}, err
+		return logicalRestartResolverSnapshot{}, err
 	}
-	if !reflect.DeepEqual(before.Generation, after.Generation) || !publication.Current() || endpoint.Lineage == "" {
-		return apiresponse.CallerMapEndpoint{}, errors.New("native resolver declaration is absent or changed during discovery")
+	if !reflect.DeepEqual(before.Generation, after.Generation) || !publication.Current() {
+		return logicalRestartResolverSnapshot{}, errors.New("native resolver changed during discovery")
 	}
-	return endpoint, nil
+	return logicalRestartResolverSnapshot{manifest: manifest, caller: before.Generation, endpoint: endpoint, operations: operations}, nil
 }
 
 func logicalRestartAwaitReads(t *testing.T, ctx context.Context, inspector *profileInspector, profile PreparedProfile, endpoint apiresponse.CallerMapEndpoint, version string, server *privateServer) logicalRestartReadSnapshot {
@@ -363,6 +513,23 @@ func logicalRestartAwaitReads(t *testing.T, ctx context.Context, inspector *prof
 }
 
 func logicalRestartRead(ctx context.Context, inspector *profileInspector, profile PreparedProfile, endpoint apiresponse.CallerMapEndpoint, version string) (logicalRestartReadSnapshot, error) {
+	value, err := logicalRestartReadBase(ctx, inspector, profile, version, true)
+	if err != nil {
+		return logicalRestartReadSnapshot{}, err
+	}
+	query := url.Values{"repository": {endpoint.Repository}, "protocol": {endpoint.Protocol}, "lineage": {endpoint.Lineage}, "operation": {endpoint.Operation}, "page_size": {"100"}}
+	var callers apiresponse.CallerMapPage
+	if err := inspector.get(ctx, profile, "/api/contract_callers?"+query.Encode(), &callers); err != nil {
+		return logicalRestartReadSnapshot{}, err
+	}
+	if callers.Generation == nil || callers.Generation.State != "current" || len(callers.Rows) != 1 || callers.Rows[0].Operation != endpoint.Operation {
+		return logicalRestartReadSnapshot{}, errors.New("authorized exact caller read is not current with one real row")
+	}
+	value.caller = *callers.Generation
+	return value, nil
+}
+
+func logicalRestartReadBase(ctx context.Context, inspector *profileInspector, profile PreparedProfile, version string, requireRelationshipRows bool) (logicalRestartReadSnapshot, error) {
 	var inventory apiresponse.ServiceInventory
 	if err := inspector.get(ctx, profile, "/api/services?repository="+url.QueryEscape(profile.RepositoryName), &inventory); err != nil {
 		return logicalRestartReadSnapshot{}, err
@@ -384,19 +551,12 @@ func logicalRestartRead(ctx context.Context, inspector *profileInspector, profil
 		found.Scope.ServiceStatus != "current" || found.Scope.Authority == nil {
 		return logicalRestartReadSnapshot{}, errors.New("authorized service search lacks real rows and current service authority")
 	}
-	query := url.Values{"repository": {endpoint.Repository}, "protocol": {endpoint.Protocol}, "lineage": {endpoint.Lineage}, "operation": {endpoint.Operation}, "page_size": {"100"}}
-	var callers apiresponse.CallerMapPage
-	if err := inspector.get(ctx, profile, "/api/contract_callers?"+query.Encode(), &callers); err != nil {
-		return logicalRestartReadSnapshot{}, err
-	}
-	if callers.Generation == nil || callers.Generation.State != "current" || len(callers.Rows) != 1 || callers.Rows[0].Operation != endpoint.Operation {
-		return logicalRestartReadSnapshot{}, errors.New("authorized exact caller read is not current with one real row")
-	}
 	var relationships apiresponse.RelationshipPage
 	if err := inspector.get(ctx, profile, "/api/service-relationships?repository="+url.QueryEscape(profile.RepositoryName)+"&service_key=orders&page_size=100", &relationships); err != nil {
 		return logicalRestartReadSnapshot{}, err
 	}
-	if len(relationships.Roots) != 1 || relationships.Roots[0].Authority == nil || len(relationships.Rows) == 0 {
+	if len(relationships.Roots) != 1 || relationships.Roots[0].Authority == nil || relationships.Roots[0].Authority.Upstream == nil ||
+		(requireRelationshipRows && len(relationships.Rows) == 0) {
 		return logicalRestartReadSnapshot{}, errors.New("authorized relationship read lacks real rows and exact authority")
 	}
 	source, err := repositoryindex.ReadSourceManifest(filepath.Join(profile.DataDir, "index"), profile.RepositoryName)
@@ -407,7 +567,7 @@ func logicalRestartRead(ctx context.Context, inspector *profileInspector, profil
 	if err != nil {
 		return logicalRestartReadSnapshot{}, err
 	}
-	return logicalRestartReadSnapshot{source: source.Digest, search: manifest.Digest, catalog: inventory.Repository.CatalogGeneration, caller: *callers.Generation, relationship: relationships.Roots[0]}, nil
+	return logicalRestartReadSnapshot{source: source.Digest, search: manifest.Digest, catalog: inventory.Repository.CatalogGeneration, relationship: relationships.Roots[0]}, nil
 }
 
 type logicalRestartGitCommand struct {
@@ -473,16 +633,7 @@ func logicalRestartCheckTrace(t *testing.T, rows []logicalRestartGitCommand, pro
 	t.Helper()
 	counts := make(map[string]int)
 	for _, row := range rows {
-		args := slices.Clone(row.Args)
-		for len(args) > 0 {
-			if args[0] == "--no-replace-objects" {
-				args = args[1:]
-			} else if len(args) > 1 && (args[0] == "-c" || args[0] == "-C" || args[0] == "--git-dir") {
-				args = args[2:]
-			} else {
-				break
-			}
-		}
+		args := logicalRestartGitArguments(row.Args)
 		kind := ""
 		switch {
 		case reflect.DeepEqual(args, []string{"rev-parse", "HEAD"}) && row.Dir == profile.Repository:
@@ -511,6 +662,45 @@ func logicalRestartCheckTrace(t *testing.T, rows []logicalRestartGitCommand, pro
 		counts[kind]++
 	}
 	return counts
+}
+
+func logicalRestartGitArguments(args []string) []string {
+	for len(args) > 0 {
+		if args[0] == "--no-replace-objects" {
+			args = args[1:]
+		} else if len(args) > 1 && (args[0] == "-c" || args[0] == "-C" || args[0] == "--git-dir") {
+			args = args[2:]
+		} else {
+			break
+		}
+	}
+	return args
+}
+
+func TestLogicalRestartGitArgumentClassification(t *testing.T) {
+	profile := PreparedProfile{Repository: "/neutral/repository", Revisions: map[string]string{"a": strings.Repeat("a", 40)}}
+	for _, test := range []struct {
+		name    string
+		row     logicalRestartGitCommand
+		want    string
+		settled bool
+	}{
+		{"watcher", logicalRestartGitCommand{Args: []string{"rev-parse", "HEAD"}, Dir: profile.Repository}, "watcher", true},
+		{"census", logicalRestartGitCommand{Args: []string{"--no-replace-objects", "-c", "core.hooksPath=/dev/null", "-C", "/neutral/mirror", "ls-tree", "-rz", "--full-tree", profile.Revisions["a"]}}, "catalog_census", false},
+		{"index_head", logicalRestartGitCommand{Args: []string{"--git-dir", "/neutral/mirror", "rev-parse", "HEAD"}}, "startup_index_head", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			original := slices.Clone(test.row.Args)
+			counts := logicalRestartCheckTrace(t, []logicalRestartGitCommand{test.row}, profile, test.settled)
+			if len(counts) != 1 || counts[test.want] != 1 || !slices.Equal(original, test.row.Args) {
+				t.Fatalf("Git classification changed command or attribution: %v", counts)
+			}
+		})
+	}
+	args := logicalRestartGitArguments([]string{"--no-replace-objects", "-C", "/neutral/mirror", "cat-file", "blob", strings.Repeat("b", 40)})
+	if len(args) != 3 || args[0] != "cat-file" || args[1] != "blob" {
+		t.Fatal("upgrade materialization is not recognized as a blob command")
+	}
 }
 
 func logicalRestartGitProbe(t *testing.T, ctx context.Context, workspace string, toolchain privateToolchain) string {

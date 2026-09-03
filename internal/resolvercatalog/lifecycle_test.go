@@ -1234,6 +1234,77 @@ func TestReconcileMarkedSameGenerationConflictFailsClosed(t *testing.T) {
 	})
 }
 
+func TestReconcileResolverPack111Cutover(t *testing.T) {
+	currentPacks := []ResolverPack{
+		{Name: "go-module", Version: "1.1.1"},
+		{Name: "grpc-generated-attribution", Version: "1.1.1"},
+		{Name: "thrift-generated-attribution", Version: "1.1.1"},
+	}
+	for _, test := range []struct {
+		name       string
+		marked     bool
+		queueFails bool
+	}{
+		{name: "current pointer"},
+		{name: "marked publication", marked: true},
+		{name: "queue failure preserves pointer", queueFails: true},
+		{name: "queue failure preserves marker", marked: true, queueFails: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), "catalogs")
+			repository := "example.invalid/resolver-pack-upgrade"
+			oldPacks := slices.Clone(currentPacks)
+			for index := range oldPacks {
+				oldPacks[index].Version = "1.1.0"
+			}
+			state := testInstallWithMembers(t, root, repository, oldPacks,
+				"go-module-v2.ndjson", "grpc-generated-attribution-v2.ndjson", "thrift-generated-attribution-v2.ndjson")
+			if !test.marked {
+				if err := ClearPublishing(root, repository); err != nil {
+					t.Fatal(err)
+				}
+			}
+			fake := newFakeReconcileStore()
+			fake.publications[repository] = storeFromState(state)
+			if test.queueFails {
+				fake.queueErr = errors.New("replacement queue unavailable")
+			}
+			memberOpens := 0
+			priorOpen := testAfterStableOpen
+			testAfterStableOpen = func(path string) {
+				if strings.HasSuffix(path, ".ndjson") {
+					memberOpens++
+				}
+			}
+			t.Cleanup(func() { testAfterStableOpen = priorOpen })
+			report, err := Reconcile(t.Context(), root, fake, currentPacks)
+			if memberOpens != 0 {
+				t.Fatalf("obsolete pack opened %d members before rejection", memberOpens)
+			}
+			if test.queueFails {
+				if !errors.Is(err, fake.queueErr) || report.ReplacementsQueued != 0 || report.PointersCleared != 0 ||
+					!slices.Equal(fake.operations, []string{"queue:" + repository}) || len(fake.jobs) != 0 {
+					t.Fatalf("queue refusal = %+v, %v; operations=%v jobs=%v", report, err, fake.operations, fake.jobs)
+				}
+				if !statesEqual(stateFromStore(fake.publications[repository]), state) ||
+					IsPublishing(root, repository) != test.marked ||
+					readTestManifest(t, root, state).Digest != state.ManifestDigest {
+					t.Fatal("queue failure changed prior pointer, manifest, or marker")
+				}
+				return
+			}
+			if err != nil || report.ReplacementsQueued != 1 || report.PointersCleared != 1 ||
+				!slices.Equal(fake.operations, []string{"queue:" + repository, "clear:" + repository}) ||
+				len(fake.jobs) != 1 || !fake.jobs[0].Force || fake.jobs[0].Kind != store.JobResolverCatalog {
+				t.Fatalf("upgrade retirement = %+v, %v; operations=%v jobs=%v", report, err, fake.operations, fake.jobs)
+			}
+			if _, exists := fake.publications[repository]; exists || IsPublishing(root, repository) {
+				t.Fatal("obsolete pack retained current authority after queued replacement")
+			}
+		})
+	}
+}
+
 func TestReconcilePreservesAuthorityOnCatalogIO(t *testing.T) {
 	inject := func(t *testing.T, target string) {
 		t.Helper()
@@ -1670,6 +1741,7 @@ type fakeReconcileStore struct {
 	jobs         []store.Job
 	operations   []string
 	publishErr   error
+	queueErr     error
 	stale        map[string]bool
 }
 
@@ -1745,7 +1817,10 @@ func (fake *fakeReconcileStore) EnqueuePending(
 		return nil, errors.New("unexpected replacement request")
 	}
 	fake.operations = append(fake.operations, "queue:"+target)
-	job := store.Job{ID: "job", Target: target, Status: store.StatusPending, Force: force}
+	if fake.queueErr != nil {
+		return nil, fake.queueErr
+	}
+	job := store.Job{ID: "job", Kind: kind, Target: target, Status: store.StatusPending, Force: force}
 	fake.jobs = append(fake.jobs, job)
 	return &job, nil
 }

@@ -1060,8 +1060,11 @@ relationship, or correctness authority.
   The native 10,000-descriptor replay, store normal/race checks, and corrected
   fresh-data ordinary-server restart/authorized-reader regression now pass;
   the latter took 100.25 seconds and observed one census, no source-blob
-  commands, and no index children. Existing-catalog repair and final review
-  remain open; this is not exact-clean-commit or ceremony provenance.
+  commands, and no index children. The global resolver-pack `1.1.1` cutover
+  is now separately approved to rebuild existing incomplete catalogs through
+  startup's existing queue-before-clear path; its upgrade regression and final
+  review remain open. Earlier results are not exact-clean-commit or ceremony
+  provenance for that version change.
   Contract validation resumes only after this reader ticket clears its own
   bar; no new freeze, execution, or combined result is established.
 - Later tickets stay dependency-ordered

@@ -762,8 +762,11 @@ independent review remain its closure bar. Native replay and real store
 normal/race gates pass. The corrected fresh-data ordinary-server restart and
 authorized-reader regression passes in 100.25 seconds with one census, zero
 source-blob commands, and zero index children; exact-clean-commit provenance,
-existing-catalog repair, and final review remain open. No merge, new freeze,
-or ceremony execution is authorized by this work.
+existing-catalog repair, and final review remain open. Ben subsequently
+approved resolver-pack `1.1.1` and its global version-triggered resolver/caller
+rebuilds through the existing queue-before-clear startup path; upgrade
+validation and final exact-source review remain required. No merge, new
+freeze, or ceremony execution is authorized by this work.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

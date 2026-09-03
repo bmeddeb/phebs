@@ -3109,8 +3109,10 @@ the settled reader window contains watcher commands only. These are
 working-tree observations, not an exact-clean-commit or existing-upgrade
 proof. Four-file independent cross-review reports zero findings; external
 review is partial (three files complete without findings, store reader
-timeout). Final immutable-source review and the pack-version cutover decision
-remain open.
+timeout). Ben subsequently approved the global `1.1.0` to `1.1.1` resolver-pack
+cutover and its bounded resolver/caller rebuilds. The existing startup
+queue-before-clear path owns that replacement; upgrade regressions and final
+immutable-source review remain open. Retained contract bytes are unchanged.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

@@ -332,19 +332,20 @@ and stored-source-locator reads. A change during those reads fails closed;
 this grants neither arbitrary staged visibility nor historical-native access,
 and does not reopen source blobs.
 
-The reader correction alone does not repair an already materialized incomplete
-`1.1.0` catalog: its unchanged identity can still be reused. Existing generation
-artifacts are immutable; do not force different output under that identity or
-delete publication controls manually. Repair needs a separately reviewed
-versioned rebuild, and a restart alone is not evidence of that repair.
+Resolver packs `1.1.1` repair already materialized incomplete `1.1.0` catalogs
+through the existing versioned rebuild path. Existing generation artifacts
+are immutable; do not force different output under the old identity or delete
+publication controls manually. After upgrading, verify that the replacement
+resolver and caller generations are current; successful process startup alone
+is not evidence that rebuilding has completed.
 
 The enabled extraction registry determines one ordered resolver generation.
 The current resolver set contains `go-module` plus the enabled
 `grpc-generated-attribution` and `thrift-generated-attribution` packs, all at
-version `1.1.0`. A build is eligible only when its repository, indexed HEAD,
+version `1.1.1`. A build is eligible only when its repository, indexed HEAD,
 committed analysis unit, candidate-manifest-v4 digest/policy/control revision,
-and current
-published protobuf/Thrift declaration runs and generation digests agree.
+and current protobuf/Thrift declaration publications and generation digests
+agree, using legacy published-run or native exact-root visibility as selected.
 Candidate generation/control transitions and every successful protobuf/Thrift
 declaration publication atomically ensure one forced pending
 `resolver_catalog_job`, including when a prior catalog did not yet consume that
@@ -356,17 +357,23 @@ downgrading an existing force; startup also
 backfills one deduplicated pending job for every indexed, non-deleting
 repository when an adapter is enabled.
 
-Upgrading from resolver packs 1.0.0 to 1.1.0 is a deliberate derived-state
+Upgrading from resolver packs 1.0.0 or 1.1.0 to 1.1.1 is a deliberate derived-state
 cutover. Startup rejects each old pack set before opening member content,
 force-queues its replacement, and clears the retired pointer; every indexed,
 non-deleting repository with an enabled caller adapter then rematerializes its
 catalog (including mapped generated-Go reads), and the accepted replacement
-triggers that repository's first complete caller-leaf execution.
+triggers complete caller-leaf execution for the new resolver identity. This
+global version change also rebuilds eligible catalogs that used legacy
+declaration runs. Queries requiring those derived generations remain
+unavailable until their replacements are current. If replacement enqueue
+fails, startup retains the old pointer; retrying after the failure is resolved
+uses the same queue-before-clear ordering. Once 1.1.1 is current, later
+unchanged restarts reuse it without another version-triggered rebuild.
 
 Materialization replays immutable candidate rows and pages the exact published
 declaration assertions. It opens candidate-declared regular `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` blobs, plus each
-mapped generated `base`-lane Go source needed by resolver pack 1.1.0. The
+mapped generated `base`-lane Go source needed by resolver pack 1.1.1. The
 layout snapshot is an optional validation fence; unmapped ordinary candidate
 source and declaration blobs are not opened. The worker never invokes a build, `go list`,
 dependency query, generator, corpus program, mutable checkout, or network
