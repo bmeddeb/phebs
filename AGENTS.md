@@ -764,9 +764,16 @@ authorized-reader regression passes in 100.25 seconds with one census, zero
 source-blob commands, and zero index children; exact-clean-commit provenance,
 existing-catalog repair, and final review remain open. Ben subsequently
 approved resolver-pack `1.1.1` and its global version-triggered resolver/caller
-rebuilds through the existing queue-before-clear startup path; upgrade
-validation and final exact-source review remain required. No merge, new
-freeze, or ceremony execution is authorized by this work.
+rebuilds through the existing queue-before-clear startup path. Exact clean
+implementation `7da08fb67b75087f8501e2d8990bfcba65d41b20` subsequently passed
+the actual old-binary upgrade and logical-restart regression in 179.87 seconds
+with clean teardown, five upgrade blob commands, no indexing, and one census
+plus zero blob/index work after logical restart. Independent full exact-source
+manual review reports `0/0/0/0`; external cutover review is complete with zero
+findings and does not reclassify the older external store-reader timeout.
+The reader ticket is branch-complete and eligible only for a separate merge
+request. T42.1r1 remains isolated and required before any new freeze. No merge,
+deployment, freeze, or ceremony execution is authorized by this work.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

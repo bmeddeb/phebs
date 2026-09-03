@@ -3087,7 +3087,9 @@ The complete merge bar and independent zero-finding review pass. T42.1 is
 eligible only for separate integration. This retained plan is not an exact-main
 execution freeze, and T42.2 remains unauthorized and unexecuted.
 
-**T42.1r2 · Partitioned-native declaration reader (approved, in progress)** —
+**T42.1r2 ✅ · Partitioned-native declaration reader and versioned repair** —
+branch-complete at exact implementation
+`7da08fb67b75087f8501e2d8990bfcba65d41b20`;
 separate production prerequisite to the unmerged T42.1r1 contract correction,
 on `codex/t42.1r2-partitioned-declaration-reader`. Correct silent resolver
 declaration omission for native staged/sealed domain publications without
@@ -3111,8 +3113,19 @@ proof. Four-file independent cross-review reports zero findings; external
 review is partial (three files complete without findings, store reader
 timeout). Ben subsequently approved the global `1.1.0` to `1.1.1` resolver-pack
 cutover and its bounded resolver/caller rebuilds. The existing startup
-queue-before-clear path owns that replacement; upgrade regressions and final
-immutable-source review remain open. Retained contract bytes are unchanged.
+queue-before-clear path owns that replacement. Its single exact-clean-source
+upgrade regression now passes in 179.87 seconds: the actual pre-fix binary
+produces zero declarations, 1.1.1 repairs the same data and all three authorized
+readers pass. Resolver/caller identities change while source/search/catalog,
+candidate, and extraction/observation authority stay unchanged. Upgrade work is five
+blob commands and zero index children; later logical restart work is one
+census and zero blob/index work. The fresh 10,000-descriptor replay and
+canonical plan/receipt checks pass. Independent full exact-source manual
+review reports `0/0/0/0`; external cutover review is complete with zero
+findings, without reclassifying the earlier external store timeout. Cleanup
+is verified and retained contract bytes are unchanged. Eligible only for a
+separate integration request; no main merge, deployment, freeze, or ceremony
+is authorized, and T42.1r1 remains the next contract prerequisite.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

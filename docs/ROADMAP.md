@@ -1062,9 +1062,14 @@ relationship, or correctness authority.
   the latter took 100.25 seconds and observed one census, no source-blob
   commands, and no index children. The global resolver-pack `1.1.1` cutover
   is now separately approved to rebuild existing incomplete catalogs through
-  startup's existing queue-before-clear path; its upgrade regression and final
-  review remain open. Earlier results are not exact-clean-commit or ceremony
-  provenance for that version change.
+  startup's existing queue-before-clear path. Exact implementation
+  `7da08fb67b75087f8501e2d8990bfcba65d41b20` now passes the actual old-binary
+  upgrade and subsequent logical restart in 179.87 seconds, with clean
+  teardown; full exact-source manual review reports `0/0/0/0`, and separate
+  external cutover review finds no issue. Upgrade work is five blob commands
+  with no indexing; later logical restart has one census and no blob/index
+  work. This closes the reader ticket's upgrade/review bar and makes it
+  eligible for a separate merge request, not deployment or ceremony.
   Contract validation resumes only after this reader ticket clears its own
   bar; no new freeze, execution, or combined result is established.
 - Later tickets stay dependency-ordered
